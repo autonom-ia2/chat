@@ -1,5 +1,134 @@
 {
   "RELACIONAMENTOS_TRAZER": {
-    "TITULO": "Trazer minha lista"
+    "TITULO": "Traga sua lista. A gente organiza.",
+    "PESSOAS": "Pessoas",
+    "ETAPAS": {
+      "LISTA": "Etapas",
+      "ENVIAR": "Enviar",
+      "CONFERIR": "Conferir",
+      "PRONTO": "Pronto",
+      "FEITA": "feita"
+    },
+    "ENVIAR": {
+      "SOLTAR": "Arraste a planilha aqui ou clique para escolher",
+      "APOIO": "Excel ou CSV. Precisa ter nome e telefone ou e-mail.",
+      "ERRO_TIPO": "Este arquivo não é uma planilha. Use Excel ou CSV.",
+      "ERRO_LEITURA": "Não consegui ler esta planilha. Tente de novo.",
+      "LENDO": "Lendo sua planilha…",
+      "USAR_EXEMPLO": "Usar uma planilha de exemplo"
+    },
+    "PERGUNTAS": {
+      "CLIENTES": {
+        "TITULO": "Essas pessoas já são suas clientes?",
+        "SIM_TODAS": "Sim, todas",
+        "AINDA_NAO": "Ainda não",
+        "ALGUMAS": "Algumas",
+        "QUAL_COLUNA": "Qual coluna diz quem é cliente?"
+      },
+      "TELEFONE": {
+        "TITULO": "A coluna “{coluna}” é telefone de quem?",
+        "DA_PESSOA": "Da pessoa",
+        "DA_EMPRESA": "Da empresa",
+        "NAO_USAR": "Não usar"
+      }
+    },
+    "CONFERIR": {
+      "FRASE": {
+        "TOTAL": "Achei {count} pessoa. | Achei {count} pessoas.",
+        "NOVAS": "{count} é nova | {count} são novas",
+        "COMPLETADAS": "{count} já estava aqui e vai ser completada | {count} já estavam aqui e vão ser completadas",
+        "PRECISAM": "{count} precisa de você | {count} precisam de você",
+        "DEIXADAS": "{count} ficou de fora | {count} ficaram de fora"
+      },
+      "EXEMPLOS": "Como vão ficar",
+      "SOSSEGO": "Você pode desfazer por 7 dias.",
+      "TRAZER": "Trazer {count} pessoa | Trazer {count} pessoas"
+    },
+    "PRECISAM": {
+      "TITULO": "Precisam de você ({count})",
+      "RESOLVIDO": "Tudo resolvido",
+      "PRONTO": "Pronto",
+      "DEIXADA": "Deixada de fora",
+      "GUARDAR": "Guardar",
+      "DEIXAR_DE_FORA": "Deixar de fora",
+      "NA_PLANILHA": "Na planilha: {valor}",
+      "FICAR_COM": "Ficar com a linha {linha}",
+      "PROBLEMA": {
+        "TELEFONE": "Linha {linha}: falta um número no telefone",
+        "EMAIL": "Linha {linha}: o e-mail está sem “{'@'}”",
+        "NOME": "Linha {linha}: falta o nome",
+        "DUPLICADA": "Linhas {outraLinha} e {linha}: é a mesma pessoa. Qual fica?",
+        "SEM_CONTATO": "Linha {linha}: não tem telefone nem e-mail"
+      },
+      "CAMPO": {
+        "TELEFONE": "Telefone certo",
+        "PAIS": "País do telefone",
+        "EMAIL": "E-mail certo",
+        "NOME": "Nome"
+      }
+    },
+    "GUARDAR": {
+      "TITULO": "O que vou guardar",
+      "VAI_PARA": "vai para",
+      "VIRA_INFORMACAO": "Vira uma informação da pessoa chamada “{coluna}”",
+      "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
+      "TROCAR": "Trocar",
+      "ROTULO_TROCAR": "Para onde vai a coluna “{coluna}”",
+      "NAO_GUARDAR": "Não guardar"
+    },
+    "DESTINOS": {
+      "NOME": "Nome",
+      "TELEFONE": "Telefone",
+      "TELEFONE_DA_EMPRESA": "Telefone da empresa",
+      "EMAIL": "E-mail",
+      "EMPRESA": "Empresa",
+      "CIDADE": "Cidade",
+      "CLIENTE": "Se é cliente",
+      "INFORMACAO": "Informação da pessoa",
+      "NAO_GUARDAR": "Não guardar"
+    },
+    "ANDAMENTO": {
+      "TITULO": "Trazendo… {porcentagem}%.",
+      "APOIO": "Pode fechar esta tela; eu aviso quando terminar.",
+      "ROTULO": "Andamento"
+    },
+    "PRONTO": {
+      "CHEGARAM": "{count} pessoa chegou. | {count} pessoas chegaram.",
+      "VER": "Ver as pessoas",
+      "OUTRA": "Trazer outra lista"
+    },
+    "HISTORICO": {
+      "TITULO": "O que eu já trouxe",
+      "VAZIO": "Você ainda não trouxe nenhuma lista.",
+      "PESSOAS": "{count} pessoa | {count} pessoas",
+      "POR": "por {nome}",
+      "EM": "em {data}",
+      "SITUACAO": {
+        "PRONTO": "Pronto",
+        "TRAZENDO": "Trazendo {porcentagem}%",
+        "DESFEITO": "Desfeito"
+      },
+      "DESFAZER": "Desfazer",
+      "ATE": "até {data}",
+      "PRAZO_ACABOU": "Prazo para desfazer acabou",
+      "ROTULO_DESFAZER": "Desfazer a lista {arquivo}"
+    },
+    "DESFAZER": {
+      "TITULO": "Desfazer esta lista?",
+      "TIRA": "Isto tira {count} pessoa que veio nesta lista | Isto tira {count} pessoas que vieram nesta lista",
+      "DEVOLVE_JUNTO": "e devolve {count} ao que era antes | e devolve {count} ao que eram antes",
+      "DEVOLVE_SOZINHO": "Isto devolve {count} ao que era antes | Isto devolve {count} ao que eram antes",
+      "CONVERSAS": "As conversas que já aconteceram ficam.",
+      "CAMPANHA": "{count} pessoa já recebeu uma campanha. A mensagem enviada não volta. | {count} pessoas já receberam uma campanha. A mensagem enviada não volta.",
+      "CONFIRMAR": "Desfazer",
+      "ERRO_PREVIA": "Não consegui ver o que sai. Tente de novo."
+    },
+    "ERROS": {
+      "GUARDAR": "Não consegui guardar. Tente de novo.",
+      "DESFAZER": "Não consegui desfazer. Tente de novo.",
+      "TRAZER": "Não consegui trazer a lista. Tente de novo.",
+      "ANDAMENTO": "Não consegui ver como está indo. Tente de novo.",
+      "HISTORICO": "Não consegui mostrar o que você já trouxe. Tente de novo."
+    }
   }
 }

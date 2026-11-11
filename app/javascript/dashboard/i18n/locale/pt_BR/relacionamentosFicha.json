@@ -4,7 +4,191 @@
       "TITULO": "Ficha da pessoa"
     },
     "EMPRESA": {
-      "TITULO": "Ficha da empresa"
+      "TITULO": "Ficha da empresa",
+      "PESSOAS": "Pessoas",
+      "PESSOAS_VAZIO": "Ninguém nesta empresa ainda.",
+      "INFORMACOES": {
+        "CNPJ": "CNPJ",
+        "SITE": "Site",
+        "PESSOAS": "Pessoas",
+        "CLIENTES": "Clientes"
+      },
+      "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
+      "NOVO_CARD": "Aqui abre um card novo para {nome}.",
+      "VER_TODAS": "Aqui abrem todas as conversas de {nome}."
+    },
+    "VOLTAR": {
+      "PESSOAS": "Pessoas",
+      "EMPRESAS": "Empresas",
+      "ROTULO_PESSOAS": "Voltar para Pessoas",
+      "ROTULO_EMPRESAS": "Voltar para Empresas"
+    },
+    "ESTADOS": {
+      "NAO_ACHEI_PESSOA": "Não achei esta pessoa.",
+      "NAO_ACHEI_EMPRESA": "Não achei esta empresa.",
+      "VOLTAR_PARA_LISTA": "Voltar para a lista",
+      "ERRO": "Não consegui abrir esta ficha. Tente de novo."
+    },
+    "CABECALHO": {
+      "CLIENTE_DESDE": "Cliente desde {data}",
+      "MARCAR_CLIENTE": "Marcar como cliente",
+      "CLIENTE_MARCADO": "Pronto. {nome} agora é cliente.",
+      "ERRO_MARCAR": "Não consegui marcar como cliente. Tente de novo.",
+      "COPIAR": "Copiar {item}",
+      "COPIADO": "Copiado.",
+      "NAO_COPIOU": "Não consegui copiar. Tente de novo.",
+      "ITEM_TELEFONE": "telefone",
+      "ITEM_CPF": "CPF",
+      "ITEM_CNPJ": "CNPJ",
+      "ETIQUETAS": "Etiquetas",
+      "ACOES": "O que fazer com {nome}"
+    },
+    "ACOES": {
+      "NOVO_CARD": "Novo card",
+      "LEMBRETE": "Lembrete",
+      "MAIS": "Mais ações",
+      "ALTERAR_INFORMACOES": "Alterar informações",
+      "JUNTAR": "Juntar com outra pessoa",
+      "BLOQUEAR": "Bloquear",
+      "APAGAR": "Apagar"
+    },
+    "AVISOS": {
+      "CONVERSAR": "Aqui abre a conversa com {nome}.",
+      "NOVO_CARD": "Aqui abre um card novo para {nome}.",
+      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}.",
+      "VER_TODAS": "Aqui abrem todas as conversas com {nome}.",
+      "JUNTAR": "Aqui você escolhe com quem juntar {nome}.",
+      "BLOQUEAR": "Aqui você confirma que quer bloquear {nome}.",
+      "APAGAR": "Aqui você confirma que quer apagar {nome}."
+    },
+    "FAIXA": {
+      "TEXTO": "Pediu para não receber mensagens em {data}. Veio de: {origem}.",
+      "LIBERAR": "Liberar",
+      "CONFIRMA_TITULO": "Liberar mensagens para {nome}?",
+      "CONFIRMA_TEXTO": "{nome} volta a poder receber mensagens suas.",
+      "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
+      "ERRO": "Não consegui liberar. Tente de novo.",
+      "ORIGEM": {
+        "manual": "você marcou assim",
+        "campaign_reply": "resposta a uma campanha",
+        "follow_up_reply": "resposta a uma mensagem automática",
+        "email_unsubscribe": "pedido por e-mail",
+        "prospecting": "pedido durante a busca de clientes",
+        "outra": "outro motivo"
+      }
+    },
+    "CONVERSAS": {
+      "TITULO": "Conversas",
+      "VER_TODAS": "Ver todas",
+      "VAZIO": "Ainda não conversaram.",
+      "DE": "{pessoa}: {trecho}",
+      "CANAL": {
+        "whatsapp": "WhatsApp",
+        "email": "E-mail",
+        "instagram": "Instagram",
+        "site": "Site"
+      },
+      "SITUACAO": {
+        "aberta": "Em andamento",
+        "pendente": "Esperando resposta",
+        "resolvida": "Resolvida"
+      }
+    },
+    "CARDS": {
+      "TITULO": "Cards",
+      "VAZIO": "Nenhum card ainda.",
+      "NOVO": "Novo card",
+      "ABRIR": "Abrir o card {titulo}",
+      "FUNIL_ETAPA": "{funil} · {etapa}",
+      "DE": "de {pessoa}",
+      "SITUACAO": {
+        "aberto": "Em aberto",
+        "ganho": "Fechou",
+        "perdido": "Não fechou"
+      },
+      "GAVETA": {
+        "FECHAR": "Fechar",
+        "FUNIL": "Funil",
+        "ETAPA": "Etapa",
+        "VALOR": "Valor",
+        "SITUACAO": "Situação",
+        "ABRIR_NO_CRM": "Abrir no CRM"
+      }
+    },
+    "NOTAS": {
+      "TITULO": "Notas",
+      "CAMPO": "Escreva uma nota",
+      "GUARDAR": "Guardar",
+      "GUARDADA": "Nota guardada.",
+      "ERRO": "Não consegui guardar a nota. Tente de novo.",
+      "VAZIO": "Nenhuma nota ainda.",
+      "POR": "{autor} · {quando}"
+    },
+    "ARQUIVOS": {
+      "TITULO": "Arquivos",
+      "VAZIO": "Nada foi trocado nas conversas ainda.",
+      "TIPO": {
+        "imagem": "Imagem",
+        "documento": "Documento",
+        "audio": "Áudio",
+        "video": "Vídeo"
+      }
+    },
+    "INFORMACOES": {
+      "TITULO": "Informações",
+      "ALTERAR": "Alterar",
+      "TELEFONE": "Telefone",
+      "EMAIL": "E-mail",
+      "CPF": "CPF",
+      "CIDADE": "Cidade",
+      "EMPRESA": "Empresa",
+      "REDES": "Redes sociais",
+      "CNPJ": "CNPJ",
+      "SITE": "Site",
+      "PESSOAS": "Pessoas",
+      "CLIENTES": "Clientes"
+    },
+    "ORIGEM": {
+      "TITULO": "De onde veio",
+      "LISTA": "Veio da lista “{nome}”, em {data}",
+      "CANAL": "Chegou pelo {canal} em {data}",
+      "CANAL_NOME": {
+        "whatsapp": "WhatsApp",
+        "email": "e-mail",
+        "instagram": "Instagram",
+        "site": "site"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Alterar informações",
+      "FECHAR": "Fechar",
+      "NOME": "Nome",
+      "TELEFONE": "Telefone",
+      "PAIS": "País do telefone",
+      "EMAIL": "E-mail",
+      "CPF": "CPF",
+      "CIDADE": "Cidade",
+      "EMPRESA": "Empresa",
+      "REDES": "Redes sociais",
+      "OUTRAS": "Outras informações",
+      "SALVAR": "Salvar",
+      "SALVO": "Informações guardadas.",
+      "ERRO_AO_SALVAR": "Não consegui guardar. Tente de novo.",
+      "ERRO": {
+        "NOME": "Escreva o nome.",
+        "EMAIL": "Confira o e-mail. Parece que falta algo.",
+        "CPF": "Confira o CPF. Ele tem 11 números."
+      },
+      "REDE": {
+        "linkedin": "LinkedIn",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "tiktok": "TikTok",
+        "twitter": "X (Twitter)",
+        "github": "GitHub"
+      }
     }
   }
 }

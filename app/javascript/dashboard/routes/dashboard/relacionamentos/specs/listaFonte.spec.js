@@ -329,3 +329,122 @@ describe('fonte real', () => {
     });
   });
 });
+
+describe('listar: filtros de "Mais filtros" (#2894)', () => {
+  const pessoas = () => todasAsPaginas(cheia(), { aba: 'pessoas' });
+
+  it('só traz quem é da empresa escolhida', async () => {
+    const todas = await pessoas();
+    const empresa = todas.find(p => p.company_id).company_id;
+    const itens = await todasAsPaginas(cheia(), {
+      aba: 'pessoas',
+      filtros: { empresa },
+    });
+    expect(itens.length).toBeGreaterThan(0);
+    expect(itens.every(p => p.company_id === empresa)).toBe(true);
+    expect(itens.length).toBeLessThan(todas.length);
+  });
+
+  it('só traz quem tem a etiqueta e mora na cidade escolhidas', async () => {
+    const todas = await pessoas();
+    const { labels, additional_attributes: extra } = todas[0];
+    const itens = await todasAsPaginas(cheia(), {
+      aba: 'pessoas',
+      filtros: { etiqueta: labels[0], cidade: extra.city },
+    });
+    expect(itens.map(p => p.id)).toContain(todas[0].id);
+    expect(
+      itens.every(
+        p =>
+          p.labels.includes(labels[0]) &&
+          p.additional_attributes.city === extra.city
+      )
+    ).toBe(true);
+  });
+
+  it('só traz quem chegou no período escolhido', async () => {
+    const itens = await todasAsPaginas(cheia(), {
+      aba: 'pessoas',
+      filtros: { chegouEm: 'ultimos_30' },
+    });
+    const limite = Date.now() / 1000 - 30 * 24 * 60 * 60;
+    expect(itens.every(p => p.created_at >= limite)).toBe(true);
+  });
+
+  it('soma filtro com grupo e busca', async () => {
+    const clientes = await todasAsPaginas(cheia(), {
+      aba: 'pessoas',
+      grupo: 'clientes',
+    });
+    const cidade = clientes[0].additional_attributes.city;
+    const itens = await todasAsPaginas(cheia(), {
+      aba: 'pessoas',
+      grupo: 'clientes',
+      filtros: { cidade },
+    });
+    expect(itens.every(p => p.contact_type === 'customer')).toBe(true);
+    expect(itens.every(p => p.additional_attributes.city === cidade)).toBe(
+      true
+    );
+  });
+
+  it('não filtra empresas por filtro de pessoa', async () => {
+    const { total } = await cheia().listar({
+      aba: 'empresas',
+      filtros: { cidade: 'Inexistente' },
+    });
+    expect(total).toBe(38);
+  });
+});
+
+describe('listarTodos', () => {
+  it('traz todos os 42 de um grupo de uma vez, sem paginar', async () => {
+    const { itens, total } = await cheia().listarTodos({
+      aba: 'pessoas',
+      grupo: 'sumiu_1_a_3_meses',
+    });
+    expect(total).toBe(42);
+    expect(itens).toHaveLength(42);
+  });
+
+  it('respeita a busca', async () => {
+    const { itens } = await cheia().listarTodos({
+      aba: 'pessoas',
+      busca: 'zzzzqx',
+    });
+    expect(itens).toEqual([]);
+  });
+});
+
+describe('opcoesDeFiltro', () => {
+  it('oferece só empresas, etiquetas e cidades que existem na base', async () => {
+    const { empresas, etiquetas, cidades } = await cheia().opcoesDeFiltro();
+    expect(empresas).toHaveLength(38);
+    expect(empresas[0]).toEqual({
+      value: expect.any(Number),
+      label: expect.any(String),
+    });
+    expect(etiquetas.map(o => o.value)).toEqual(
+      [...etiquetas.map(o => o.value)].sort()
+    );
+    expect(etiquetas.length).toBeGreaterThan(0);
+    expect(cidades.length).toBeGreaterThan(0);
+  });
+
+  it('não oferece nada na conta vazia', async () => {
+    expect(await vazia().opcoesDeFiltro()).toEqual({
+      empresas: [],
+      etiquetas: [],
+      cidades: [],
+    });
+  });
+
+  it('diz que a fonte real ainda não existe', async () => {
+    await expect(
+      listaFonte({ demo: null }).opcoesDeFiltro()
+    ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
+    await expect(
+      listaFonte({ demo: null }).listarTodos({})
+    ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
+  });
+});

@@ -6,6 +6,7 @@ import {
   pertenceAoGrupo,
 } from './grupos';
 import { normalizado, soDigitos } from './texto';
+import { pessoaPassaNosFiltros } from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
 // autonomia/prospecting/achar/utils/acharFonte.js). A tela recebe sempre o mesmo
@@ -33,7 +34,7 @@ const LOCALE_DA_ORDEM_ALFABETICA = 'pt-BR';
 
 const BASE_VAZIA = { pessoas: () => [], empresas: () => [] };
 
-const esperar = ms =>
+export const esperar = ms =>
   new Promise(resolve => {
     setTimeout(resolve, ms);
   });
@@ -126,6 +127,28 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   const contarGrupo = (lista, regras, grupoId, agora) =>
     lista.filter(item => regras.pertence(item, grupoId, agora)).length;
 
+  const achar = async ({
+    aba = ABAS.PESSOAS,
+    grupo = GRUPO_PADRAO[aba],
+    busca = '',
+    ordem = ORDENS.ULTIMA_CONVERSA,
+    filtros = {},
+  }) => {
+    const agora = Date.now();
+    const regras = regrasDaAba(aba);
+    const ordenador = ORDENADORES[ordem] || ORDENADORES[ORDENS.ULTIMA_CONVERSA];
+    const filtrosDaAba =
+      aba === ABAS.PESSOAS
+        ? item => pessoaPassaNosFiltros(item, filtros, agora)
+        : () => true;
+    return regras
+      .daBase(await baseDaDemo(), agora)
+      .filter(item => regras.pertence(item, grupo || GRUPO_PADRAO[aba], agora))
+      .filter(item => combinaComBusca(busca, regras.campos(item)))
+      .filter(filtrosDaAba)
+      .sort(ordenador);
+  };
+
   return {
     usaDemo: true,
     async resumo() {
@@ -154,29 +177,36 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
         ])
       );
     },
-    async listar({
-      aba = ABAS.PESSOAS,
-      grupo = GRUPO_PADRAO[aba],
-      busca = '',
-      ordem = ORDENS.ULTIMA_CONVERSA,
-      pagina = PRIMEIRA_PAGINA,
-    } = {}) {
-      const agora = Date.now();
-      const regras = regrasDaAba(aba);
-      const ordenador =
-        ORDENADORES[ordem] || ORDENADORES[ORDENS.ULTIMA_CONVERSA];
-      const achados = regras
-        .daBase(await baseDaDemo(), agora)
-        .filter(item =>
-          regras.pertence(item, grupo || GRUPO_PADRAO[aba], agora)
-        )
-        .filter(item => combinaComBusca(busca, regras.campos(item)))
-        .sort(ordenador);
+    async listar(pedido = {}) {
+      const { pagina = PRIMEIRA_PAGINA } = pedido;
+      const achados = await achar(pedido);
       const inicio = (pagina - PRIMEIRA_PAGINA) * POR_PAGINA;
       return {
         itens: achados.slice(inicio, inicio + POR_PAGINA),
         total: achados.length,
         temMais: inicio + POR_PAGINA < achados.length,
+      };
+    },
+    // Todos os que a consulta acha, sem paginar ("Marcar todas as 42").
+    async listarTodos(pedido = {}) {
+      const achados = await achar(pedido);
+      return { itens: achados, total: achados.length };
+    },
+    // O que a gaveta "Mais filtros" oferece: só o que existe na base.
+    async opcoesDeFiltro() {
+      const base = await baseDaDemo();
+      const gente = base.pessoas(Date.now());
+      const unicos = lista => [...new Set(lista.filter(Boolean))].sort();
+      const comoOpcao = valor => ({ value: valor, label: valor });
+      return {
+        empresas: base
+          .empresas(Date.now())
+          .map(({ id, name }) => ({ value: id, label: name }))
+          .sort((a, b) => porNome({ name: a.label }, { name: b.label })),
+        etiquetas: unicos(gente.flatMap(p => p.labels || [])).map(comoOpcao),
+        cidades: unicos(gente.map(p => p.additional_attributes?.city)).map(
+          comoOpcao
+        ),
       };
     },
   };
@@ -193,6 +223,8 @@ const fonteReal = () => {
     resumo: pendente,
     contagens: pendente,
     listar: pendente,
+    listarTodos: pendente,
+    opcoesDeFiltro: pendente,
   };
 };
 

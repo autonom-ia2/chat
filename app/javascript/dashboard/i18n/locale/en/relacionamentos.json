@@ -1,7 +1,123 @@
 {
   "RELACIONAMENTOS": {
     "LISTA": {
-      "TITULO": "Relationships"
+      "TITULO": "Relationships",
+      "HEROI": {
+        "VAZIA": "Bring in the people you already talk to.",
+        "SUMIRAM": "{count} person hasn't talked to you in over a month. | {count} people haven't talked to you in over a month.",
+        "PESSOAS_AQUI": "You have {count} person here. | You have {count} people here.",
+        "JA_SAO_CLIENTES": "{count} is already a customer. | {count} are already customers.",
+        "VER_QUEM_SUMIU": "See who went quiet",
+        "VER_CLIENTES": "See customers"
+      },
+      "ABAS": {
+        "ROTULO": "People or companies",
+        "PESSOAS": "People",
+        "EMPRESAS": "Companies"
+      },
+      "BUSCA": {
+        "ROTULO": "Search",
+        "PLACEHOLDER_PESSOAS": "Search by name, phone or document",
+        "PLACEHOLDER_EMPRESAS": "Search by name or document",
+        "LIMPAR": "Clear search"
+      },
+      "ORDENAR": {
+        "ROTULO": "Sort",
+        "ULTIMA_CONVERSA": "Last chat",
+        "NOME": "Name",
+        "MAIS_NOVOS": "Newest"
+      },
+      "FILTROS": {
+        "BOTAO": "More filters",
+        "BOTAO_COM_CONTAGEM": "More filters · {count}",
+        "TITULO": "More filters",
+        "FECHAR": "Close",
+        "EMPRESA": "Company",
+        "ETIQUETA": "Label",
+        "CIDADE": "City",
+        "CHEGOU_EM": "Arrived",
+        "TODAS": "All",
+        "QUALQUER_DATA": "Any date",
+        "ULTIMOS_7": "In the last 7 days",
+        "ULTIMOS_30": "In the last 30 days",
+        "ULTIMOS_90": "In the last 90 days",
+        "VER_RESULTADO": "See results",
+        "LIMPAR": "Clear"
+      },
+      "LINHA": {
+        "SEM_TELEFONE": "No phone",
+        "FALOU_HOJE": "Talked today",
+        "FALOU_ONTEM": "Talked yesterday",
+        "FALOU_HA_DIAS": "Talked {count} days ago",
+        "FALOU_HA_MESES": "Talked {count} month ago | Talked {count} months ago",
+        "NUNCA_CONVERSOU": "Never talked",
+        "PESSOAS_DA_EMPRESA": "No one yet | {count} person | {count} people",
+        "MARCAR": "Select {nome}",
+        "CONVERSAR_COM": "Chat with {nome}",
+        "ABRINDO_CONVERSA": "Opening the chat with {nome}"
+      },
+      "MOSTRAR_MAIS": {
+        "BOTAO": "Show more",
+        "CONTAGEM": "Showing {mostradas} of {total}"
+      },
+      "MARCADAS": {
+        "QUANTAS": "{count} selected | {count} selected",
+        "MARCAR_TODAS": "Select all {count} in this group",
+        "DESMARCAR": "Clear selection"
+      },
+      "BARRA": {
+        "ROTULO": "What to do with the people you selected",
+        "MANDAR_MENSAGEM": "Send message",
+        "CRIAR_CARDS": "Create cards",
+        "ETIQUETA": "Label",
+        "MAIS": "More actions",
+        "APAGAR": "Delete"
+      },
+      "MENSAGEM": {
+        "TITULO": "Send message",
+        "RECEBEM": "{count} person will receive it. | {count} people will receive it.",
+        "NINGUEM_RECEBE": "No one will receive it.",
+        "FORA": "{count} is left out: {motivos}. | {count} are left out: {motivos}.",
+        "MOTIVO_NAO_QUER": "{count} asked not to receive messages | {count} asked not to receive messages",
+        "MOTIVO_SEM_TELEFONE": "{count} has no phone | {count} have no phone",
+        "ABRINDO_CAMPANHA": "Opening the campaign with {count} person. | Opening the campaign with {count} people."
+      },
+      "CARDS": {
+        "TITULO": "Create cards",
+        "FUNIL": "Which funnel?",
+        "ETAPA": "Which stage?",
+        "CRIAR": "Create {count} card | Create {count} cards",
+        "CRIADOS": "{count} card created. | {count} cards created.",
+        "FICARAM_DE_FORA": "Left out:",
+        "MOTIVO_JA_TEM_CARD": "Already has a card in this funnel",
+        "PRONTO": "Done",
+        "ERRO": "I couldn't create the cards. Try again."
+      },
+      "ETIQUETA": {
+        "TITULO": "Add a label",
+        "PERGUNTA": "Which label?",
+        "ESCOLHA": "Choose a label",
+        "APLICAR": "Add label",
+        "APLICADA": "Label “{etiqueta}” added to {count} person. | Label “{etiqueta}” added to {count} people.",
+        "ERRO": "I couldn't add the label. Try again."
+      },
+      "APAGAR": {
+        "TITULO": "Delete {count} person? | Delete {count} people?",
+        "AVISO": "This can't be undone.",
+        "CONFIRMAR": "Delete",
+        "APAGADAS": "{count} person deleted. | {count} people deleted.",
+        "ERRO": "I couldn't delete. Try again."
+      },
+      "ESTADOS": {
+        "CONTA_VAZIA": "No one is here yet.",
+        "GRUPO_VAZIO": "No one in this group right now.",
+        "GRUPO_VAZIO_EMPRESAS": "No company in this group right now.",
+        "BUSCA_SEM_RESULTADO": "I couldn't find anyone matching “{busca}”.",
+        "BUSCA_SEM_RESULTADO_EMPRESAS": "I couldn't find any company matching “{busca}”.",
+        "LIMPAR_BUSCA": "Clear search",
+        "FILTROS_SEM_RESULTADO": "I couldn't find anyone with these filters.",
+        "LIMPAR_FILTROS": "Clear filters"
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Try again",

@@ -6,17 +6,16 @@ import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
-import ListaPage from '../pages/ListaPage.vue';
-import FichaDaPessoaPage from '../pages/FichaDaPessoaPage.vue';
-import FichaDaEmpresaPage from '../pages/FichaDaEmpresaPage.vue';
-import TrazerListaPage from '../pages/TrazerListaPage.vue';
 import RelacionamentosInicio from '../pages/RelacionamentosInicio.vue';
 
-// As peças comuns e as cascas das telas de Relacionamentos (#2894).
+// As peças comuns e a porta de Relacionamentos (#2894). Cada tela tem o spec dela em
+// specs/lista, specs/ficha e specs/trazer.
 const flagsLigadas = vi.hoisted(() => new Set());
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
-vi.mock('vue-router', () => ({ useRoute: () => ({ query: {} }) }));
+vi.mock('../pages/ListaPage.vue', () => ({
+  default: { name: 'ListaPage', template: '<div data-pagina-nova />' },
+}));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     isCloudFeatureEnabled: flag => flagsLigadas.has(flag),
@@ -141,32 +140,19 @@ describe('PilulasDeGrupo', () => {
   });
 });
 
-describe('cascas das telas', () => {
-  it.each([
-    [ListaPage, 'lista', 'RELACIONAMENTOS.LISTA.TITULO'],
-    [FichaDaPessoaPage, 'pessoa', 'RELACIONAMENTOS_FICHA.PESSOA.TITULO'],
-    [FichaDaEmpresaPage, 'empresa', 'RELACIONAMENTOS_FICHA.EMPRESA.TITULO'],
-    [TrazerListaPage, 'trazer', 'RELACIONAMENTOS_TRAZER.TITULO'],
-  ])('mostra o título e a marca da tela %#', (Pagina, nome, chave) => {
-    const w = mount(Pagina);
-    expect(w.attributes('data-relacionamentos')).toBe(nome);
-    expect(w.get('h1').text()).toBe(chave);
-  });
-});
-
 describe('RelacionamentosInicio', () => {
   afterEach(() => flagsLigadas.clear());
 
   it('abre a lista nova com relacionamentos_novo ligada', () => {
     flagsLigadas.add(FEATURE_FLAGS.RELACIONAMENTOS_NOVO);
     const w = mount(RelacionamentosInicio);
-    expect(w.find('[data-relacionamentos="lista"]').exists()).toBe(true);
+    expect(w.find('[data-pagina-nova]').exists()).toBe(true);
     expect(w.find('[data-pagina-antiga]').exists()).toBe(false);
   });
 
   it('abre a página de hoje com a flag desligada', () => {
     const w = mount(RelacionamentosInicio);
     expect(w.find('[data-pagina-antiga]').exists()).toBe(true);
-    expect(w.find('[data-relacionamentos="lista"]').exists()).toBe(false);
+    expect(w.find('[data-pagina-nova]').exists()).toBe(false);
   });
 });

@@ -1,7 +1,123 @@
 {
   "RELACIONAMENTOS": {
     "LISTA": {
-      "TITULO": "Relacionamentos"
+      "TITULO": "Relacionamentos",
+      "HEROI": {
+        "VAZIA": "Traga as pessoas com quem você já fala.",
+        "SUMIRAM": "{count} pessoa não fala com você há mais de um mês. | {count} pessoas não falam com você há mais de um mês.",
+        "PESSOAS_AQUI": "Você tem {count} pessoa aqui. | Você tem {count} pessoas aqui.",
+        "JA_SAO_CLIENTES": "{count} já é cliente. | {count} já são clientes.",
+        "VER_QUEM_SUMIU": "Ver quem sumiu",
+        "VER_CLIENTES": "Ver clientes"
+      },
+      "ABAS": {
+        "ROTULO": "Pessoas ou empresas",
+        "PESSOAS": "Pessoas",
+        "EMPRESAS": "Empresas"
+      },
+      "BUSCA": {
+        "ROTULO": "Buscar",
+        "PLACEHOLDER_PESSOAS": "Buscar por nome, telefone ou documento",
+        "PLACEHOLDER_EMPRESAS": "Buscar por nome ou documento",
+        "LIMPAR": "Limpar busca"
+      },
+      "ORDENAR": {
+        "ROTULO": "Ordenar",
+        "ULTIMA_CONVERSA": "Última conversa",
+        "NOME": "Nome",
+        "MAIS_NOVOS": "Mais novos"
+      },
+      "FILTROS": {
+        "BOTAO": "Mais filtros",
+        "BOTAO_COM_CONTAGEM": "Mais filtros · {count}",
+        "TITULO": "Mais filtros",
+        "FECHAR": "Fechar",
+        "EMPRESA": "Empresa",
+        "ETIQUETA": "Etiqueta",
+        "CIDADE": "Cidade",
+        "CHEGOU_EM": "Chegou em",
+        "TODAS": "Todas",
+        "QUALQUER_DATA": "Qualquer data",
+        "ULTIMOS_7": "Nos últimos 7 dias",
+        "ULTIMOS_30": "Nos últimos 30 dias",
+        "ULTIMOS_90": "Nos últimos 90 dias",
+        "VER_RESULTADO": "Ver resultado",
+        "LIMPAR": "Limpar"
+      },
+      "LINHA": {
+        "SEM_TELEFONE": "Sem telefone",
+        "FALOU_HOJE": "Falou hoje",
+        "FALOU_ONTEM": "Falou ontem",
+        "FALOU_HA_DIAS": "Falou há {count} dias",
+        "FALOU_HA_MESES": "Falou há {count} mês | Falou há {count} meses",
+        "NUNCA_CONVERSOU": "Nunca conversou",
+        "PESSOAS_DA_EMPRESA": "Ninguém ainda | {count} pessoa | {count} pessoas",
+        "MARCAR": "Marcar {nome}",
+        "CONVERSAR_COM": "Conversar com {nome}",
+        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}"
+      },
+      "MOSTRAR_MAIS": {
+        "BOTAO": "Mostrar mais",
+        "CONTAGEM": "Mostrando {mostradas} de {total}"
+      },
+      "MARCADAS": {
+        "QUANTAS": "{count} marcada | {count} marcadas",
+        "MARCAR_TODAS": "Marcar todas as {count} deste grupo",
+        "DESMARCAR": "Desmarcar todas"
+      },
+      "BARRA": {
+        "ROTULO": "O que fazer com quem você marcou",
+        "MANDAR_MENSAGEM": "Mandar mensagem",
+        "CRIAR_CARDS": "Criar cards",
+        "ETIQUETA": "Etiqueta",
+        "MAIS": "Mais ações",
+        "APAGAR": "Apagar"
+      },
+      "MENSAGEM": {
+        "TITULO": "Mandar mensagem",
+        "RECEBEM": "{count} pessoa vai receber. | {count} pessoas vão receber.",
+        "NINGUEM_RECEBE": "Ninguém vai receber.",
+        "FORA": "{count} fica de fora: {motivos}. | {count} ficam de fora: {motivos}.",
+        "MOTIVO_NAO_QUER": "{count} pediu para não receber | {count} pediram para não receber",
+        "MOTIVO_SEM_TELEFONE": "{count} está sem telefone | {count} estão sem telefone",
+        "ABRINDO_CAMPANHA": "Abrindo a campanha com {count} pessoa. | Abrindo a campanha com {count} pessoas."
+      },
+      "CARDS": {
+        "TITULO": "Criar cards",
+        "FUNIL": "Em qual funil?",
+        "ETAPA": "Em qual etapa?",
+        "CRIAR": "Criar {count} card | Criar {count} cards",
+        "CRIADOS": "{count} card criado. | {count} cards criados.",
+        "FICARAM_DE_FORA": "Ficaram de fora:",
+        "MOTIVO_JA_TEM_CARD": "Já tem um card neste funil",
+        "PRONTO": "Pronto",
+        "ERRO": "Não consegui criar os cards. Tente de novo."
+      },
+      "ETIQUETA": {
+        "TITULO": "Colocar etiqueta",
+        "PERGUNTA": "Qual etiqueta?",
+        "ESCOLHA": "Escolha uma etiqueta",
+        "APLICAR": "Colocar etiqueta",
+        "APLICADA": "Etiqueta “{etiqueta}” colocada em {count} pessoa. | Etiqueta “{etiqueta}” colocada em {count} pessoas.",
+        "ERRO": "Não consegui colocar a etiqueta. Tente de novo."
+      },
+      "APAGAR": {
+        "TITULO": "Apagar {count} pessoa? | Apagar {count} pessoas?",
+        "AVISO": "Isto não volta.",
+        "CONFIRMAR": "Apagar",
+        "APAGADAS": "{count} pessoa apagada. | {count} pessoas apagadas.",
+        "ERRO": "Não consegui apagar. Tente de novo."
+      },
+      "ESTADOS": {
+        "CONTA_VAZIA": "Ainda não tem ninguém aqui.",
+        "GRUPO_VAZIO": "Ninguém neste grupo agora.",
+        "GRUPO_VAZIO_EMPRESAS": "Nenhuma empresa neste grupo agora.",
+        "BUSCA_SEM_RESULTADO": "Não achei ninguém com “{busca}”.",
+        "BUSCA_SEM_RESULTADO_EMPRESAS": "Não achei nenhuma empresa com “{busca}”.",
+        "LIMPAR_BUSCA": "Limpar busca",
+        "FILTROS_SEM_RESULTADO": "Não achei ninguém com esses filtros.",
+        "LIMPAR_FILTROS": "Limpar filtros"
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Tentar de novo",
