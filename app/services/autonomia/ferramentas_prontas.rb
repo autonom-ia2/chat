@@ -43,8 +43,18 @@ module Autonomia::FerramentasProntas
     fonte.present? && ligada?(account) && (fonte.flag.nil? || account.feature_enabled?(fonte.flag))
   end
 
+  # As liberadas que a conta vê na vitrine e nas sugestões: fora as de uso interno (`Fonte#na_vitrine?` falso).
+  def da_vitrine(account)
+    disponiveis(account).select(&:na_vitrine?)
+  end
+
+  # A fonte pode ser oferecida e incluída pela vitrine (o "Incluir", o Experimente, a sugestão e o Construtor).
+  def na_vitrine?(account, fonte)
+    disponivel?(account, fonte) && fonte.na_vitrine?
+  end
+
   # A ferramenta entra no turno deste agente? A cadastrada, sempre; a pronta, só com a flag, fora da Lia e com a fonte
-  # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha).
+  # ainda no catálogo (uma fonte que saiu do código não derruba o turno de quem a tinha). A que saiu da vitrine continua.
   def no_turno?(tool, agent)
     return true unless tool.pronta?
 

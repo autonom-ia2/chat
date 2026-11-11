@@ -56,6 +56,18 @@ module FerramentasProntasHelper
     Autonomia::FerramentasProntas::Incluir.new(account: conta, agent: agente, fonte: fonte, usar_quando: usar_quando).call.ferramenta
   end
 
+  # A pronta que o agente já tem, gravada antes de a fonte sair da vitrine (`Fonte#na_vitrine?` falso): o "Incluir" de
+  # hoje recusa, mas a linha que já existe continua valendo no turno.
+  def pronta_ja_incluida(fonte, conta:, agente:, usar_quando: 'o cliente informar o dado')
+    catalogada = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
+    Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: conta.id, fonte: catalogada.chave)
+    agente.tools.create!(
+      account: conta, slug: catalogada.slug, name: catalogada.nome, fonte_pronta: catalogada.chave, enabled: true,
+      description: usar_quando, http_method: 'GET', endpoint_url: '', timeout_seconds: catalogada.prazo_maximo + 1,
+      headers_config: [], param_schema: [], request_body_template: nil, response_mapping: {}
+    )
+  end
+
   def executar_pronta(ferramenta, argumentos)
     JSON.parse(Autonomia::FerramentasProntas::Execucao.new(tool: ferramenta, params: argumentos).call)
   end

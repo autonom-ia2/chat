@@ -145,6 +145,7 @@ describe('useVitrine · mudanças', () => {
     ['nome_em_uso', 'NOME_EM_USO'],
     ['agente_de_cotacao', 'COTACAO'],
     ['desligada', 'DESLIGADA'],
+    ['fora_da_vitrine', 'DESLIGADA'],
     ['pessoa_de_outra_conta', 'GERAL'],
   ])('a refused include (%s) carries the reason %s', async (motivo, chave) => {
     const vitrine = await novoEstado();

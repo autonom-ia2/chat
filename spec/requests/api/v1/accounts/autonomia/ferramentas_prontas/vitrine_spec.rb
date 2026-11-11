@@ -144,6 +144,48 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
     end
   end
 
+  # Decisão do Rodrigo (11/11): a fonte continua no catálogo, para os agentes de garantia e de transporte (#2881), mas
+  # sai da vitrine como card avulso.
+  describe 'fonte fora da vitrine (Produtos das seguradoras)' do
+    before { account.enable_features!('agente_ferramentas_prontas_lote2') }
+
+    it 'não aparece na lista; a que o agente já tem continua listada, e ele ainda consulta' do
+      ja_tem = pronta_ja_incluida('produtos_seguradoras', conta: account, agente: agent)
+
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['fontes'].pluck('chave')).to include('corretor_susep')
+      expect(response.parsed_body['fontes'].pluck('chave')).not_to include('produtos_seguradoras')
+      expect(response.parsed_body['incluidas'].sole).to include('id' => ja_tem.id, 'fonte' => 'produtos_seguradoras', 'ligada' => true)
+      expect(Autonomia::FerramentasProntas.no_turno?(ja_tem, agent)).to be(true)
+    end
+
+    it 'o Incluir e o Experimente recusam, sem consultar nada' do
+      incluir(admin, fonte: 'produtos_seguradoras')
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['motivo']).to eq('fora_da_vitrine')
+      expect(agent.tools.count).to eq(0)
+
+      post "#{base}/experimentar", params: { fonte: 'produtos_seguradoras', valor: 'Allianz transporte' },
+                                   headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to eq('situacao' => 'desligada')
+      expect(a_request(:get, /opinbrasil/)).not_to have_been_made
+    end
+
+    it 'a que o agente já tem ainda se desliga e se tira' do
+      ja_tem = pronta_ja_incluida('produtos_seguradoras', conta: account, agente: agent)
+
+      patch "#{base}/#{ja_tem.id}", params: { ligada: false }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(ja_tem.reload.enabled).to be(false)
+
+      delete "#{base}/#{ja_tem.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:no_content)
+    end
+  end
+
   describe 'POST incluir' do
     it 'recusa a Lia, com o motivo' do
       incluir(admin, agente: lia)

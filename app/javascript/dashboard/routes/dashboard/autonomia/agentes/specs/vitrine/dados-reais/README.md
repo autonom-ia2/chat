@@ -37,6 +37,8 @@ gravado e sem chamada nova: `fipe.json` (preco) tem o valor em número, o mês e
 
 `ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
 adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
+`produtos_seguradoras.json` também, quando a fonte ficou só com seguro garantia e transporte (o ramo de riscos
+cibernéticos saiu) e ganhou o filtro de servidor de teste e de link de exemplo.
 
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
@@ -57,7 +59,7 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 | compras_governo.json | Uberlândia MG, últimos 7 dias, pregão eletrônico | PNCP (órgãos públicos) |
 | estacoes.json | Uberlândia MG | INMET |
 | chuva.json | Uberlândia MG, 04 a 10/11/2026 | Open-Meteo |
-| produtos_seguradoras.json | seguradoras "Allianz"; produtos Allianz, riscos cibernéticos | Open Insurance Brasil |
+| produtos_seguradoras.json | seguradoras "Allianz"; produtos Allianz, transporte | Open Insurance Brasil |
 | corretor_susep.json | por_nome "corretora de seguros", pessoa jurídica | SUSEP |
 
 Anonimizado pelo script:
