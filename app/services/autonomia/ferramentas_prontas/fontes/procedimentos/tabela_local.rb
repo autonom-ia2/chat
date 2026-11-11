@@ -2,7 +2,9 @@
 # CID-10 das doenças, que não têm API aberta. O provedor é local (`HOST = nil`): sem rede, sem teto e sem cache (a
 # tabela já está aqui). Cada fonte é uma subclasse com `NOME` e `ARQUIVO` (CSV com cabeçalho `codigo;nome`, em UTF-8).
 #   - pelo código: o nome oficial; o código da tabela e o pedido passam pela mesma `chave` (`Parametro` da fonte);
-#   - pela busca: todas as palavras no nome, sem acento e sem caixa (`Lista.filtrar`), com o total e no máximo `MAXIMO`.
+#   - pela busca: todas as palavras no nome, sem acento e sem caixa (`Lista.filtrar`), com o total e no máximo `MAXIMO`;
+#     antes do corte vêm os nomes em que cada palavra da busca começa uma palavra do nome ("asma" em "Asma brônquica"),
+#     e só depois os que a têm no meio de outra ("Histoplasmose"), cada grupo na ordem do código.
 # O arquivo que falta (ainda não baixado) é falha da fonte (`tabela_ausente`), não "não tem".
 # Fica na pasta dos procedimentos porque nasceu com eles; a CID-10 (`doencas/cid10.rb`) herda daqui.
 class Autonomia::FerramentasProntas::Fontes::Procedimentos::TabelaLocal < Autonomia::FerramentasProntas::Provedor
@@ -67,7 +69,17 @@ class Autonomia::FerramentasProntas::Fontes::Procedimentos::TabelaLocal < Autono
     achados = Autonomia::FerramentasProntas::Lista.filtrar(self.class.itens, busca, &:nome)
     raise NaoEncontrado if achados.empty?
 
+    achados = em_ordem(achados, busca)
+
     itens = achados.map { |item| { 'codigo' => self.class.exibir(item.codigo), 'nome' => item.nome } }
     Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAXIMO)
+  end
+
+  def em_ordem(achados, busca)
+    palavras = Autonomia::FerramentasProntas::Lista.comparavel(busca).split
+    achados.each_with_index.sort_by do |item, posicao|
+      nome = Autonomia::FerramentasProntas::Lista.comparavel(item.nome).split
+      [palavras.all? { |palavra| nome.any? { |parte| parte.start_with?(palavra) } } ? 0 : 1, posicao]
+    end.map(&:first)
   end
 end

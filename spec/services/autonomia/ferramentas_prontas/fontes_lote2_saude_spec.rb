@@ -168,11 +168,11 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         .to include('nome' => 'Asma predominantemente alérgica')
     end
 
-    it 'a busca pelo nome: todas com o pedaco do nome, sem acento e sem caixa, com o total' do
+    it 'a busca pelo nome: sem acento e sem caixa, com o total; primeiro onde a palavra comeca, depois no meio de outra' do
       saida = executar_pronta(ferramenta, 'consulta' => 'busca', 'busca' => 'ASMA')
 
-      expect(saida['dados']).to include('total' => 3)
-      expect(saida['dados']['itens'].pluck('codigo')).to eq(%w[J45 J45.0 J46])
+      expect(saida['dados']).to include('total' => 4)
+      expect(saida['dados']['itens'].pluck('codigo')).to eq(%w[J45 J45.0 J46 B39])
     end
 
     it 'codigo que nao esta na tabela: nao encontrado' do

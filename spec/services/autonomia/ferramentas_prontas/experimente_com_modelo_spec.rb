@@ -92,15 +92,19 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 
-  # Meio-dia: o `reservar!` daqui conta no dia da plataforma (UTC), e o Experimente lê o dia no fuso da conta. Entre 21h
-  # e meia-noite de Brasília os dois dias eram diferentes e o exemplo falhava.
-  it 'limite do dia da fonte esgotado: nem chama o modelo' do
-    travel_to(Time.zone.parse('2026-11-10 15:00'))
-    Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
-    2.times { Autonomia::FerramentasProntas::Uso.reservar!(account_id: account.id, fonte: 'fipe', limite: 2) }
+  # O contador é gravado no dia do fuso da conta (a Execucao roda dentro do `Time.use_zone` dela), e o Experimente lê o
+  # dia nesse mesmo fuso. Reservar fora do fuso gravava o dia em UTC: das 21h à meia-noite de Brasília (00h a 03h UTC)
+  # os dois dias eram diferentes e o exemplo falhava. 01h UTC prova a virada; 15h UTC, o meio do dia.
+  ['2026-11-10 01:00 UTC', '2026-11-10 15:00 UTC'].each do |instante|
+    it "limite do dia da fonte esgotado: nem chama o modelo (#{instante})" do
+      travel_to(Time.find_zone('UTC').parse(instante))
+      fuso = ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
+      Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
+      Time.use_zone(fuso) { 2.times { Autonomia::FerramentasProntas::Uso.reservar!(account_id: account.id, fonte: 'fipe', limite: 2) } }
 
-    expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
-    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+      expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
   end
 
   it 'o preço achado não some quando a última versão do lote é recusada (formato real da recusa)' do

@@ -140,16 +140,36 @@ def anotar_licenca(caminho, corpo, linhas):
         arquivo.write(texto)
 
 
-def resumo(nome, antes, depois):
+def sha_registrado(caminho):
+    """O sha256 do zip anotado na linha "Baixado em ... sha256 <hex>)." do arquivo de origem (vazio se não houver)."""
+    if not os.path.exists(caminho):
+        return ''
+    with open(caminho, encoding='utf-8') as arquivo:
+        for linha in arquivo:
+            if linha.startswith('Baixado em ') and 'sha256 ' in linha:
+                return linha.split('sha256 ', 1)[1].split(')', 1)[0].strip()
+    return ''
+
+
+def resumo(nome, antes, depois, sha_antes, sha_depois):
     novos = sorted(set(depois) - set(antes))
     saidos = sorted(set(antes) - set(depois))
     mudados = sorted(codigo for codigo in set(antes) & set(depois) if antes[codigo] != depois[codigo])
     partes = [f'- **{nome}**: {len(antes)} → {len(depois)} linhas; {len(novos)} novas, {len(saidos)} saíram, '
               f'{len(mudados)} mudaram de nome.']
-    for titulo, codigos in (('Novas', novos), ('Saíram', saidos), ('Mudaram', mudados)):
+    partes.append(f'  - zip: sha256 `{sha_antes or "(sem registro)"}` → `{sha_depois}`')
+    for titulo, codigos in (('Novas', novos), ('Saíram', saidos)):
         if codigos:
             amostra = ', '.join(codigos[:15]) + (' …' if len(codigos) > 15 else '')
             partes.append(f'  - {titulo}: {amostra}')
+    # O nome que mudou vai inteiro, antes e depois: é o que chega ao agente, e ninguém lê um diff de milhares de linhas.
+    # A CID-10 vem por http, então esta é a conferência de que nada foi trocado no caminho.
+    if mudados:
+        partes.append('  - Mudaram (antes → depois):')
+        for codigo in mudados[:30]:
+            partes.append(f'    - {codigo}: {antes[codigo]} → {depois[codigo]}')
+        if len(mudados) > 30:
+            partes.append(f'    - … e mais {len(mudados) - 30}')
     return '\n'.join(partes)
 
 
@@ -157,17 +177,22 @@ def main():
     mudancas = []
     for tabela in TABELAS:
         caminho = os.path.join(LIB, tabela['csv'])
+        licenca = os.path.join(LIB, tabela['licenca'])
         corpo = baixar(tabela['url'])
+        sha_antes = sha_registrado(licenca)
+        sha_depois = hashlib.sha256(corpo).hexdigest()
         depois = LEITORES[tabela['csv']](corpo)
         antes = atuais(caminho)
         if len(depois) < tabela['minimo'] or (antes and len(depois) < len(antes) * tabela['encolher_ate']):
             raise FonteQuebrada(f"{tabela['nome']}: {len(depois)} linhas (antes {len(antes)}): a fonte parece quebrada")
         if depois == antes:
+            if sha_antes and sha_antes != sha_depois:
+                print(f"::warning::{tabela['nome']}: o zip mudou (sha256 {sha_depois}) e a tabela ficou igual")
             print(f"{tabela['nome']}: igual ({len(depois)} linhas)")
             continue
         gravar(caminho, depois)
-        anotar_licenca(os.path.join(LIB, tabela['licenca']), corpo, len(depois))
-        mudancas.append(resumo(tabela['nome'], antes, depois))
+        anotar_licenca(licenca, corpo, len(depois))
+        mudancas.append(resumo(tabela['nome'], antes, depois, sha_antes, sha_depois))
         print(f"{tabela['nome']}: mudou ({len(antes)} → {len(depois)} linhas)")
 
     saida = os.environ.get('GITHUB_OUTPUT')

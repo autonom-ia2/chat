@@ -34,6 +34,9 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # O token não fica no .git: o script baixa arquivo de fora e roda sem ele. Só o passo do PR usa o token.
+          persist-credentials: false
 
       - id: tabelas
         name: Baixar e regenerar as tabelas
@@ -59,7 +62,7 @@ jobs:
           git add lib/ferramentas_prontas/procedimentos.csv lib/ferramentas_prontas/doencas.csv \
                   lib/ferramentas_prontas/LICENCA-procedimentos-tuss.txt lib/ferramentas_prontas/LICENCA-doencas-cid10.txt
           git commit -m "chore(prontas): tabelas oficiais atualizadas (TUSS e CID-10)"
-          git push origin "$ramo"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$ramo"
           {
             echo "O robô diário das ferramentas prontas (#2858) achou mudança nas tabelas oficiais."
             echo
