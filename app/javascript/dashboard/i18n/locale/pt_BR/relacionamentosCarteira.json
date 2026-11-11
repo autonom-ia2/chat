@@ -225,8 +225,7 @@
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
         "APOLICE_NOVA": "Apólice nova guardada.",
         "PDF_GUARDADO": "PDF guardado.",
-        "DESFAZER": "Desfazer",
-        "MENSAGEM_PRONTA": "Mensagem pronta para {nome}: “{texto}”"
+        "DESFAZER": "Desfazer"
       },
       "DADOS": {
         "TITULO": "Dados do seguro",
@@ -266,7 +265,14 @@
         "VOLTAR_A_ATIVO": "Voltar a ativo"
       },
       "PARCELA": {
-        "MENSAGEM": "Oi, {nome}! A parcela de {data} do seu seguro {tipo} está em aberto. Quer que eu te mande o boleto de novo?"
+        "MENSAGEM": "Oi, {nome}! A parcela de {data} do seu seguro {tipo} está em aberto. Quer que eu te mande o boleto de novo?",
+        "TITULO": "Avisar {nome} da parcela",
+        "ENVIADA": "Mensagem enviada a {nome}.",
+        "FORA": {
+          "NAO_QUER": "{nome} pediu para não receber mensagens. Avise na conversa.",
+          "BLOQUEADO": "Alguém da equipe bloqueou {nome}. A mensagem não sai.",
+          "SEM_TELEFONE": "{nome} está sem telefone. A mensagem não chega."
+        }
       }
     },
     "CORRIGIR": {
@@ -367,7 +373,8 @@
         "PDF_PEDIDO": "PDF do resumo pedido de novo.",
         "PROPOSTA_PEDIDA": "Proposta pedida: {seguradora}.",
         "PROPOSTA_ANEXADA": "Proposta anexada.",
-        "PALAVRAS_ENVIADAS": "“Seu seguro em palavras simples” enviado."
+        "PALAVRAS_ENVIADAS": "“Seu seguro em palavras simples” enviado.",
+        "PARCELA_AVISADA": "Aviso da parcela enviado."
       },
       "SUBIU": "Subiu {count}%.",
       "BAIXOU": "Baixou {count}%."
@@ -597,6 +604,13 @@
       "SITUACAO": {
         "NAO_COMECOU": "A renovação ainda não começou.",
         "COTANDO": "A cotação está sendo feita.",
+        "PRECOS_CHEGANDO": "Os preços estão chegando.",
+        "FALTA_UM_DADO": "Falta um dado para cotar.",
+        "COTACAO_PAROU": "A cotação parou.",
+        "FALTA_A_COTACAO": "Falta a cotação.",
+        "PRONTA_FALTA_O_TELEFONE": "A proposta está pronta. Falta o telefone.",
+        "PRONTA_ENVIE_NA_CONVERSA": "A proposta está pronta. Envie na conversa.",
+        "PRECO_SEM_PDF": "O preço chegou. O PDF não veio.",
         "COTACAO_PRONTA": "A cotação está pronta. Falta enviar.",
         "OPCOES_ENVIADAS": "As opções já foram enviadas. Falta a resposta.",
         "NEGOCIACAO": "A resposta chegou. Falta fechar o valor.",
@@ -660,7 +674,7 @@
         "DEMOROU": "A cotação demorou e parou. Tente de novo.",
         "FALHOU": "Não consegui cotar. Tente de novo.",
         "COTAR_DE_NOVO": "Cotar de novo",
-        "NAO_COTA": "Esta conta não cota sozinha. Faça a cotação e ponha a proposta aqui.",
+        "NAO_COTA": "Faça a cotação e ponha a proposta aqui.",
         "ANEXAR_PROPOSTA": "Anexar proposta",
         "NAO_QUER": "{nome} pediu para não receber mensagens. A proposta não sai sozinha. Envie na conversa.",
         "CONVERSAR": "Conversar",
@@ -672,6 +686,7 @@
         "APOIO": "É assim que a mensagem chega no WhatsApp.",
         "MENSAGEM_RESUMO": "Oi, {nome}! Aqui está a renovação do seu seguro {tipo}: {seguradora}, {valor} por ano. O resumo vai junto, em PDF. Posso seguir?",
         "MENSAGEM_PROPOSTA": "Oi, {nome}! Aqui está a renovação do seu seguro {tipo}: {seguradora}, {valor} por ano. A proposta vai junto, em PDF. Posso seguir?",
+        "MENSAGEM_SEM_PDF": "Oi, {nome}! Aqui está a renovação do seu seguro {tipo}: {seguradora}, {valor} por ano. Posso seguir?",
         "ARQUIVO_RESUMO": "Resumo da cotação.pdf",
         "ARQUIVO_PROPOSTA": "Proposta.pdf",
         "ENVIAR": "Enviar",
@@ -753,11 +768,11 @@
       },
       "QUEM_COTA": {
         "TITULO": "Quem faz a cotação?",
-        "ROBO": "Robô de renovação",
-        "ROBO_APOIO": "Cota no Agger e deixa a proposta pronta na renovação.",
-        "AGENTE_APOIO": "{agente} cota e conversa com a pessoa.",
-        "NINGUEM": "Ninguém",
-        "NINGUEM_APOIO": "A equipe cota e recebe o aviso quando a renovação começa."
+        "ROBO": "O sistema",
+        "ROBO_APOIO": "Cota no Agger com os dados que já tem e deixa a proposta pronta.",
+        "AGENTE_APOIO": "É o seu agente: conversa com a pessoa sozinho, pede o que faltar e cota.",
+        "NINGUEM": "A equipe",
+        "NINGUEM_APOIO": "Alguém da equipe cota e põe a proposta na renovação."
       },
       "COMO_ENVIA": {
         "TITULO": "Como a proposta chega à pessoa?",
@@ -768,6 +783,8 @@
       "QUEM_RESPONDE": {
         "TITULO": "Quem responde depois?",
         "EQUIPE": "A equipe",
+        "EQUIPE_APOIO": "Alguém da equipe responde.",
+        "AGENTE_APOIO": "É o seu agente: responde sozinho, na hora.",
         "SEM_AGENTE": "Quer que um agente responda sozinho? Veja em Agentes."
       },
       "PALAVRAS": {
@@ -780,11 +797,7 @@
       "COTAR_SOZINHO": {
         "TITULO": "Cotação",
         "SEM_AGGER": "Para cotar sozinho, ligue sua conta ao Agger.",
-        "LIGAR_AGGER": "Ligar ao Agger",
-        "DESLIGADA": "A cotação automática ainda não está ligada na sua conta.",
-        "QUERO_LIGAR": "Quero ligar",
-        "DIALOGO_TITULO": "Cotação automática",
-        "DIALOGO_TEXTO": "A cotação automática é ligada pela equipe da {instalacao}. Fale com quem cuida da sua conta para ligar."
+        "LIGAR_AGGER": "Ligar ao Agger"
       }
     },
     "RESULTADOS": {

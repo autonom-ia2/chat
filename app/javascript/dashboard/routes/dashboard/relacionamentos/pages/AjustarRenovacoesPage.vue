@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, ref, useId, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useBranding } from 'shared/composables/useBranding';
 import Button from 'dashboard/components-next/button/Button.vue';
 import {
   ALGO_MUDOU,
@@ -26,7 +25,6 @@ import { usarDemo } from '../fonte/modoDemo';
 import { renovacoesFonte } from '../fonte/renovacoesFonte';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
-import DialogoDaFicha from '../components/ficha/DialogoDaFicha.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CartaoDeAjuste from '../components/carteira/renovacao/CartaoDeAjuste.vue';
@@ -37,14 +35,15 @@ import PreviaDeMensagem from '../components/carteira/renovacao/PreviaDeMensagem.
 // pergunta, todos já respondidos com o padrão. Ninguém precisa responder nada
 // para a renovação andar; quem quiser muda e salva. Salvar fica sempre ligado:
 // sem mudança, ou faltando algo, o clique diz o que é. Se a pessoa escolhe que
-// a proposta sai sozinha, ela sai sozinha: não há outra confirmação.
+// a proposta sai sozinha, ela sai sozinha: não há outra confirmação. Conta com
+// o Agger ligado e a cotação desligada não vê cartão de cotação nenhum: recurso
+// desligado é invisível.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
 const route = useRoute();
 const router = useRouter();
 const textos = useTextosDoSeguro();
-const { installationName } = useBranding();
 const id = useId();
 
 const tela = useAjustesDaRenovacao(
@@ -59,7 +58,6 @@ const { conta, rascunho } = tela;
 
 const raiz = useTemplateRef('raiz');
 const onde = useTemplateRef('onde');
-const dialogoDeLigar = useTemplateRef('dialogoDeLigar');
 // O que o Salvar tem a dizer: { tipo: 'alerta' | 'feito', texto }.
 const recado = ref({ tipo: '', texto: '' });
 const faltaEmOnde = ref('');
@@ -72,13 +70,15 @@ const escolha = (valor, chave, extras = {}) => ({
 const com = (chave, valores) => ({ descricao: ta(chave, valores) });
 
 const opcoes = computed(() => {
+  // O nome é o que o corretor deu ao agente de cotação da conta: pode ser
+  // qualquer um. O cartão mostra o nome e a linha de apoio diz o que ele é.
   const { agente } = conta.value;
   const doAgente = agente
     ? [
         {
           id: QUEM_COTA.AGENTE,
           rotulo: agente,
-          ...com('QUEM_COTA.AGENTE_APOIO', { agente }),
+          ...com('QUEM_COTA.AGENTE_APOIO'),
         },
       ]
     : [];
@@ -109,8 +109,20 @@ const opcoes = computed(() => {
       }),
     ],
     quemResponde: [
-      ...(agente ? [{ id: QUEM_RESPONDE.AGENTE, rotulo: agente }] : []),
-      escolha(QUEM_RESPONDE.EQUIPE, 'QUEM_RESPONDE.EQUIPE'),
+      ...(agente
+        ? [
+            {
+              id: QUEM_RESPONDE.AGENTE,
+              rotulo: agente,
+              ...com('QUEM_RESPONDE.AGENTE_APOIO'),
+            },
+          ]
+        : []),
+      escolha(
+        QUEM_RESPONDE.EQUIPE,
+        'QUEM_RESPONDE.EQUIPE',
+        com('QUEM_RESPONDE.EQUIPE_APOIO')
+      ),
     ],
     palavras: [
       escolha(PALAVRAS.CONFIRO, 'PALAVRAS.CONFIRO'),
@@ -359,41 +371,23 @@ onMounted(async () => {
             </CartaoDeAjuste>
           </template>
           <CartaoDeAjuste
-            v-else
+            v-else-if="!conta.aggerLigado"
             marca="ajuste-cotacao"
             :titulo="ta('COTAR_SOZINHO.TITULO')"
           >
-            <template v-if="conta.aggerLigado">
-              <p class="m-0 text-base text-n-slate-12">
-                {{ ta('COTAR_SOZINHO.DESLIGADA') }}
-              </p>
-              <div>
-                <Button
-                  slate
-                  faded
-                  size="lg"
-                  data-carteira="quero-ligar"
-                  aria-haspopup="dialog"
-                  :label="ta('COTAR_SOZINHO.QUERO_LIGAR')"
-                  @click="dialogoDeLigar?.open()"
-                />
-              </div>
-            </template>
-            <template v-else>
-              <p class="m-0 text-base text-n-slate-12">
-                {{ ta('COTAR_SOZINHO.SEM_AGGER') }}
-              </p>
-              <div>
-                <Button
-                  slate
-                  faded
-                  size="lg"
-                  data-carteira="ligar-agger"
-                  :label="ta('COTAR_SOZINHO.LIGAR_AGGER')"
-                  @click="ligarAgger"
-                />
-              </div>
-            </template>
+            <p class="m-0 text-base text-n-slate-12">
+              {{ ta('COTAR_SOZINHO.SEM_AGGER') }}
+            </p>
+            <div>
+              <Button
+                slate
+                faded
+                size="lg"
+                data-carteira="ligar-agger"
+                :label="ta('COTAR_SOZINHO.LIGAR_AGGER')"
+                @click="ligarAgger"
+              />
+            </div>
           </CartaoDeAjuste>
 
           <CartaoDeAjuste
@@ -419,10 +413,13 @@ onMounted(async () => {
         class="sticky bottom-0 z-10 border-t border-n-weak bg-n-solid-1"
       >
         <div
-          class="flex flex-wrap items-center w-full max-w-3xl gap-3 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] mx-auto md:px-8"
+          class="flex flex-wrap items-center w-full max-w-3xl gap-3 ps-20 pe-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] mx-auto md:ps-8 md:pe-8"
         >
-          <!-- O "Salvo." mora numa região viva fixa (nasce vazia); o alerta
-               nasce com o texto, que é como o leitor de tela o anuncia. -->
+          <!-- Abaixo de `md` o conteúdo começa depois do canto do botão ☰ do
+               app (fixo embaixo, no início da linha): `ps-20`, como a barra
+               de ação da lista. O "Salvo." mora numa região viva fixa (nasce
+               vazia); o alerta nasce com o texto, que é como o leitor de tela
+               o anuncia. -->
           <p
             data-carteira="ajustes-salvos"
             role="status"
@@ -454,15 +451,5 @@ onMounted(async () => {
         </div>
       </footer>
     </main>
-
-    <DialogoDaFicha
-      ref="dialogoDeLigar"
-      so-entendi
-      :titulo="ta('COTAR_SOZINHO.DIALOGO_TITULO')"
-      :texto="
-        ta('COTAR_SOZINHO.DIALOGO_TEXTO', { instalacao: installationName })
-      "
-      :entendi="t('RELACIONAMENTOS.COMUM.ENTENDI')"
-    />
   </section>
 </template>

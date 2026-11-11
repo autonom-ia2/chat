@@ -18,17 +18,6 @@ import {
 // "Como as renovações andam" e "Resultados das renovações" (#2897, telas 13 e
 // 14), com a conta fictícia e o texto de verdade em pt_BR. A demonstração entra
 // pelo endereço (`?demo=`), como no navegador.
-vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
-  default: (await import('./apoio')).DialogoFalso,
-}));
-vi.mock('shared/composables/useBranding', async () => {
-  const { computed } = await import('vue');
-  return {
-    useBranding: () => ({
-      installationName: computed(() => 'Casa de Exemplo'),
-    }),
-  };
-});
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: '' });
@@ -43,7 +32,7 @@ vi.mock('../../fonte/renovacoesFonte', async importOriginal => {
   };
 });
 
-withFullI18n('pt_BR');
+const i18n = withFullI18n('pt_BR');
 vi.setConfig({ testTimeout: 30000 });
 
 const rota = useRoute();
@@ -80,6 +69,7 @@ afterEach(() => {
   aberta = null;
   esquecerEscritasDaCarteira();
   usarDemo({ demo: 'desligado' });
+  i18n.global.locale.value = 'pt_BR';
   vi.clearAllMocks();
 });
 
@@ -114,11 +104,15 @@ describe('Tela 13: como as renovações andam', () => {
       'Mandar sozinho aos 30, 15 e 7 dias'
     );
     expect(escolhido(w, 'ajuste-algo-mudou')).toBe('Perguntar');
-    expect(escolhido(w, 'ajuste-quem-cota')).toContain('Robô de renovação');
+    expect(escolhido(w, 'ajuste-quem-cota')).toContain('O sistema');
     expect(escolhido(w, 'ajuste-como-envia')).toBe(
       'Uma pessoa confere e aperta Enviar'
     );
-    expect(escolhido(w, 'ajuste-quem-responde')).toBe('Lia');
+    // O nome é o que o corretor deu ao agente dele; a tela diz o que ele é.
+    expect(escolhido(w, 'ajuste-quem-responde')).toContain('Nina');
+    expect(escolhido(w, 'ajuste-quem-responde')).toContain(
+      'É o seu agente: responde sozinho, na hora.'
+    );
     expect(escolhido(w, 'ajuste-palavras-simples')).toBe('Eu confiro antes');
   });
 
@@ -176,6 +170,19 @@ describe('Tela 13: como as renovações andam', () => {
     );
   });
 
+  it('o rodapé do Salvar deixa livre o canto do botão do menu do app no celular', async () => {
+    const w = await ajustar();
+
+    const rodape = w.get('footer');
+    expect(rodape.classes()).toEqual(
+      expect.arrayContaining(['sticky', 'bottom-0'])
+    );
+    expect(rodape.get('div').classes()).toEqual(
+      expect.arrayContaining(['ps-20', 'md:ps-8'])
+    );
+    expect(rodape.find(daCarteira('salvar-ajustes')).exists()).toBe(true);
+  });
+
   it('"sai sozinha": uma escolha simples, sem outra confirmação; salvar guarda e diz "Salvo."', async () => {
     const w = await ajustar();
 
@@ -185,7 +192,7 @@ describe('Tela 13: como as renovações andam', () => {
     );
     await clicar(w, daCarteira('salvar-ajustes'));
 
-    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+    expect(w.find('dialog, [role="dialog"]').exists()).toBe(false);
     const salvo = w.get(daCarteira('ajustes-salvos'));
     expect(salvo.attributes('role')).toBe('status');
     expect(salvo.text()).toBe('Salvo.');
@@ -262,7 +269,36 @@ describe('Tela 13: como as renovações andam', () => {
     expect(ajustesDaDemo().palavras).toBe('sozinho');
   });
 
-  it('conta sem Agger: um cartão só, que leva a ligar; com a cotação desligada, explica quem liga', async () => {
+  it('quem faz a cotação: o sistema, quem atende sozinho ou a equipe, cada um com o que faz', async () => {
+    const w = await ajustar();
+
+    expect(
+      w
+        .findAll(`${daCarteira('ajuste-quem-cota')} [role="radio"]`)
+        .map(cartao => cartao.text().split('\n').join(' '))
+        .map(texto => texto.split(' ').filter(Boolean).join(' '))
+    ).toEqual([
+      'O sistema Cota no Agger com os dados que já tem e deixa a proposta pronta.',
+      'Nina É o seu agente: conversa com a pessoa sozinho, pede o que faltar e cota.',
+      'A equipe Alguém da equipe cota e põe a proposta na renovação.',
+    ]);
+  });
+
+  it('quem responde depois: o agente da conta ou a equipe, cada um com o que faz', async () => {
+    const w = await ajustar();
+
+    expect(
+      w
+        .findAll(`${daCarteira('ajuste-quem-responde')} [role="radio"]`)
+        .map(cartao => cartao.text().split('\n').join(' '))
+        .map(texto => texto.split(' ').filter(Boolean).join(' '))
+    ).toEqual([
+      'Nina É o seu agente: responde sozinho, na hora.',
+      'A equipe Alguém da equipe responde.',
+    ]);
+  });
+
+  it('conta sem Agger: um cartão só, que leva a ligar; com a cotação desligada, o cartão não aparece', async () => {
     const semAgger = await ajustar({ demo: 'sem-seguros' });
     expect(semAgger.find(daCarteira('ajuste-quem-cota')).exists()).toBe(false);
     expect(semAgger.find(daCarteira('ajuste-como-envia')).exists()).toBe(false);
@@ -276,18 +312,20 @@ describe('Tela 13: como as renovações andam', () => {
     });
     semAgger.unmount();
 
+    // Recurso desligado é invisível: nada de cartão, botão ou diálogo.
     const desligada = await ajustar({ cotacao: 'desligada' });
-    expect(textoDe(desligada, daCarteira('ajuste-cotacao'))).toContain(
-      'A cotação automática ainda não está ligada na sua conta.'
-    );
-    await clicar(desligada, daCarteira('quero-ligar'));
-    expect(desligada.get(doBlocoA('titulo-do-dialogo')).text()).toBe(
-      'Cotação automática'
-    );
-    expect(desligada.get('[data-dialogo-falso]').text()).toContain(
-      'A cotação automática é ligada pela equipe da Casa de Exemplo. Fale com quem cuida da sua conta para ligar.'
-    );
-    expect(desligada.get(doBlocoA('entendi')).text()).toBe('Entendi');
+    expect(
+      desligada
+        .findAll('section[data-carteira^="ajuste-"] h2')
+        .map(h2 => h2.text())
+    ).toEqual([
+      'Onde ficam as renovações?',
+      'Mensagens antes de vencer',
+      'Algo mudou?',
+      'Seu seguro em palavras simples',
+    ]);
+    expect(desligada.find(daCarteira('ajuste-cotacao')).exists()).toBe(false);
+    expect(desligada.text()).not.toContain('cotação automática');
   });
 
   it('sem quem atenda sozinho, só a equipe responde; sem permissão de funil, o cartão só mostra a escolha de hoje', async () => {
@@ -295,8 +333,9 @@ describe('Tela 13: como as renovações andam', () => {
     expect(
       semAgente
         .findAll(`${daCarteira('ajuste-quem-responde')} [role="radio"]`)
-        .map(cartao => cartao.text())
-    ).toEqual(['A equipe']);
+        .map(cartao => cartao.text().split('\n').join(' '))
+        .map(texto => texto.split(' ').filter(Boolean).join(' '))
+    ).toEqual(['A equipe Alguém da equipe responde.']);
     expect(textoDe(semAgente, daCarteira('ajuste-quem-responde'))).toContain(
       'Quer que um agente responda sozinho? Veja em Agentes.'
     );
@@ -398,6 +437,29 @@ describe('Tela 14: resultados das renovações', () => {
       'Bia Lunardelli 8 de 11 renovaram',
       'Caio Tavarone 6 de 8 renovaram',
     ]);
+  });
+
+  it('o período e as pílulas acompanham o idioma que chega depois de a tela nascer', async () => {
+    const periodoEscolhido = w =>
+      w.get(`${daCarteira('periodo')} button`).text();
+    const pilulas = w =>
+      w
+        .findAll(`${daCarteira('recorte')} [data-grupo]`)
+        .map(pilula => pilula.text());
+    i18n.global.locale.value = 'en';
+    const w = await resultados();
+    expect(periodoEscolhido(w)).toContain('Last 30 days');
+    expect(pilulas(w)[0]).toBe('Type of insurance');
+
+    i18n.global.locale.value = 'pt_BR';
+    await assentar();
+
+    expect(periodoEscolhido(w)).toContain('Últimos 30 dias');
+    expect(pilulas(w)).toEqual(['Tipo de seguro', 'Seguradora', 'Quem cuida']);
+    await w.get(`${daCarteira('periodo')} button`).trigger('click');
+    expect(
+      w.findAll(`${daCarteira('periodo')} [role="option"]`).map(o => o.text())
+    ).toEqual(['Últimos 30 dias', 'Últimos 90 dias', 'Últimos 12 meses']);
   });
 
   it('o período muda o herói, os motivos e para onde a ação leva', async () => {

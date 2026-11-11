@@ -20,11 +20,20 @@ const contexto = vi.hoisted(() => ({
   empurrar: vi.fn(),
 }));
 
+// O idioma de quem usa chega depois de a tela nascer: fora do pt_BR a chave
+// leva o idioma na frente, para o teste ver o texto mudar.
+const idioma = await vi.hoisted(async () => {
+  const { ref } = await import('vue');
+  return ref('pt_BR');
+});
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
-    t: (chave, valores) =>
-      valores ? `${chave} ${JSON.stringify(valores)}` : chave,
-    locale: { value: 'pt_BR' },
+    t: (chave, valores) => {
+      const texto = valores ? `${chave} ${JSON.stringify(valores)}` : chave;
+      return idioma.value === 'pt_BR' ? texto : `[${idioma.value}] ${texto}`;
+    },
+    locale: idioma,
   }),
 }));
 vi.mock('vue-router', () => ({
@@ -95,6 +104,38 @@ beforeEach(() => {
 });
 afterEach(() => {
   document.body.innerHTML = '';
+  idioma.value = 'pt_BR';
+});
+
+describe('o aviso de "carregando" das fichas', () => {
+  it.each([
+    ['pessoa', FichaDaPessoaPage, { contactId: String(ID_CLIENTE_COMPLETO) }],
+    [
+      'empresa',
+      FichaDaEmpresaPage,
+      { companyId: String(ID_EMPRESA_COM_GENTE) },
+    ],
+  ])(
+    'ficha da %s: acompanha o idioma que chega depois de a tela nascer',
+    async (_qual, pagina, params) => {
+      idioma.value = 'en';
+      contexto.demo = 'carregando';
+      contexto.params = params;
+      const w = mount(pagina, { attachTo: document.body, global: { stubs } });
+      await flushPromises();
+      expect(marca(w, 'aviso-vivo').text()).toBe(
+        '[en] RELACIONAMENTOS.COMUM.CARREGANDO'
+      );
+
+      idioma.value = 'pt_BR';
+      await flushPromises();
+
+      expect(marca(w, 'aviso-vivo').text()).toBe(
+        'RELACIONAMENTOS.COMUM.CARREGANDO'
+      );
+      w.unmount();
+    }
+  );
 });
 
 describe('FichaDaPessoaPage', () => {

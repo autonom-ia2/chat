@@ -5,6 +5,7 @@ import {
   onMounted,
   ref,
   toRef,
+  useId,
   useTemplateRef,
   watch,
 } from 'vue';
@@ -25,6 +26,7 @@ import {
 import { useSeguroAberto } from '../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../ficha/useEstadoDaFicha';
+import { motivoDeFora } from '../../lista/quemFicaDeFora';
 import AvisoComDesfazer from './AvisoComDesfazer.vue';
 import CorrigirSeguro from './CorrigirSeguro.vue';
 import DadosDoSeguro from './DadosDoSeguro.vue';
@@ -32,6 +34,7 @@ import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
 import FraseDoSeguro from './FraseDoSeguro.vue';
 import HistoriaDoSeguro from './HistoriaDoSeguro.vue';
 import RenovacaoDoSeguro from './RenovacaoDoSeguro.vue';
+import DialogoDePrevia from './renovacao/DialogoDePrevia.vue';
 import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 
 // #2897 — a gaveta do seguro: tudo de um seguro e o próximo passo dele (um só
@@ -62,9 +65,13 @@ const corrigindo = ref(false);
 const seguradoras = ref([]);
 const erroAoSalvar = ref(false);
 const aviso = ref({ texto: '', desfazer: null });
+// Por que o próximo passo não dá para fazer agora (role="alert").
+const alerta = ref('');
+const idDoAlerta = useId();
 const corpo = useTemplateRef('corpo');
 const formulario = useTemplateRef('formulario');
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
+const previaDaParcela = useTemplateRef('previaDaParcela');
 
 const pronto = computed(() => aberto.estado.value === ESTADOS.PRONTO);
 const tipo = computed(() => (seguro.value ? textos.tipo(seguro.value) : ''));
@@ -88,6 +95,7 @@ const emRenovacao = computed(
 
 const dizer = (texto, desfazer = null) => {
   aviso.value = { texto, desfazer };
+  alerta.value = '';
 };
 const simular = (chave, valores) => useAlert(tg(`AVISOS.${chave}`, valores));
 const focarTitulo = async () => {
@@ -126,19 +134,36 @@ const aoGuardarPdf = ({ seguro: novo, apoliceNova }) => {
 
 const abrirRenovacao = () => emit('abrirRenovacao', seguro.value.id);
 
-// "Avisar <nome>": a mensagem da parcela em aberto fica pronta para quem
-// atende conferir e enviar; nada sai sozinho.
-const avisarDaParcela = () =>
-  dizer(
-    tg('AVISOS.MENSAGEM_PRONTA', {
-      nome: primeiroNome.value,
-      texto: tg('PARCELA.MENSAGEM', {
+// "Avisar <nome>": a mensagem da parcela em aberto passa pela conferência (como
+// a proposta da renovação) e só sai no "Enviar". Quem não pode receber (regra
+// de lista/quemFicaDeFora.js): o clique diz o motivo e a conferência não abre.
+const mensagemDaParcela = computed(() =>
+  seguro.value?.parcelaAbertaEm
+    ? tg('PARCELA.MENSAGEM', {
         nome: primeiroNome.value,
         data: textos.diaMes(seguro.value.parcelaAbertaEm, props.agora),
         tipo: tipo.value,
-      }),
-    })
+      })
+    : ''
+);
+const avisarDaParcela = () => {
+  const motivo = motivoDeFora(seguro.value.pessoa);
+  dizer('');
+  if (motivo) {
+    alerta.value = tg(`PARCELA.FORA.${motivo.toUpperCase()}`, {
+      nome: primeiroNome.value,
+    });
+    return;
+  }
+  previaDaParcela.value?.abrir();
+};
+const enviarAvisoDaParcela = async () => {
+  await agir(
+    () => aberto.fazer('avisarDaParcela'),
+    tg('PARCELA.ENVIADA', { nome: primeiroNome.value })
   );
+  previaDaParcela.value?.fechar();
+};
 
 // "Seu seguro em palavras simples": salvar o texto alterado e enviar.
 const salvarPalavras = texto =>
@@ -349,6 +374,15 @@ onMounted(() => {
             :desfazendo="Boolean(aberto.ocupado.value)"
             @desfazer="aviso.desfazer?.()"
           />
+          <p
+            v-if="alerta"
+            :id="idDoAlerta"
+            role="alert"
+            data-carteira="alerta-da-gaveta"
+            class="m-0 text-base font-medium basis-full text-n-ruby-11"
+          >
+            {{ alerta }}
+          </p>
           <div
             class="flex basis-full sm:basis-auto"
             :data-carteira="
@@ -362,6 +396,7 @@ onMounted(() => {
               class="flex-1"
               data-carteira="gaveta-acao"
               :data-acao="situacao.acao"
+              :aria-describedby="alerta ? idDoAlerta : undefined"
               :label="tg(`ACAO.${situacao.acao}`, { nome: primeiroNome })"
               @click="proximoPasso"
             />
@@ -390,5 +425,12 @@ onMounted(() => {
     ref="dialogoDoPdf"
     :fonte="fonte"
     @guardado="aoGuardarPdf"
+  />
+  <DialogoDePrevia
+    ref="previaDaParcela"
+    :titulo="tg('PARCELA.TITULO', { nome: primeiroNome })"
+    :texto="mensagemDaParcela"
+    :enviando="aberto.ocupado.value === 'avisarDaParcela'"
+    @enviar="enviarAvisoDaParcela"
   />
 </template>

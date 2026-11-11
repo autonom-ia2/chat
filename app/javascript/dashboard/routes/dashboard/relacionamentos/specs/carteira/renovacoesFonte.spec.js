@@ -27,7 +27,7 @@ describe('os ajustes', () => {
     expect(dados).toMatchObject({
       aggerLigado: true,
       cotaSozinha: true,
-      agente: 'Lia',
+      agente: 'Nina',
       semPermissao: false,
     });
     expect(dados.exemplo).toMatchObject({ nome: 'Fábio', tipo: 'auto' });

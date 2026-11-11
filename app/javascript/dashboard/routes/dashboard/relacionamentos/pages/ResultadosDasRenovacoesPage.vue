@@ -57,10 +57,13 @@ const buscar = async aindaVale => {
 const periodo = computed(() =>
   periodoEscolhido(resultados.value?.periodos, dias.value)
 );
-const opcoesDePeriodo = PERIODOS.map(quantos => ({
-  value: quantos,
-  label: tr(`PERIODO.${quantos}`),
-}));
+// Os rótulos são `computed`: o idioma de quem usa chega depois de a tela nascer.
+const opcoesDePeriodo = computed(() =>
+  PERIODOS.map(quantos => ({
+    value: quantos,
+    label: tr(`PERIODO.${quantos}`),
+  }))
+);
 const motivos = computed(() =>
   periodo.value.motivos.map(({ motivo, quantos }) => ({
     id: motivo,
@@ -70,10 +73,12 @@ const motivos = computed(() =>
     quantos,
   }))
 );
-const pilulasDoRecorte = RECORTES.map(nome => ({
-  id: nome,
-  nome: tr(`RECORTE.${nome.toUpperCase()}`),
-}));
+const pilulasDoRecorte = computed(() =>
+  RECORTES.map(nome => ({
+    id: nome,
+    nome: tr(`RECORTE.${nome.toUpperCase()}`),
+  }))
+);
 const linhasDoRecorte = computed(() =>
   periodo.value.recortes[recorte.value].map(linha => ({
     ...linha,

@@ -98,7 +98,7 @@ const NOMEADOS = [
       etapa: 'A vencer',
       cuida: BIA,
       faltou: 'nascimento',
-      perguntou: 'Lia',
+      perguntou: 'Nina',
     },
   },
   {
@@ -152,7 +152,12 @@ const NOMEADOS = [
     numero: 'SA-119340',
     valor: 700,
     dias: 25,
-    renovacao: { etapa: 'A vencer', cuida: BIA },
+    // Proposta pronta, pessoa sem telefone: não chega.
+    renovacao: {
+      etapa: 'Cotando',
+      cuida: BIA,
+      proposta: { valor: 735, variacao: 5 },
+    },
   },
   {
     id: 105,
@@ -162,7 +167,12 @@ const NOMEADOS = [
     numero: 'AT-001502',
     valor: 2300,
     dias: 40,
-    renovacao: { etapa: 'A vencer', cuida: CAIO },
+    // Proposta pronta, pessoa não quer mensagens: não sai sozinha.
+    renovacao: {
+      etapa: 'Cotando',
+      cuida: CAIO,
+      proposta: { valor: 2369, variacao: 3 },
+    },
   },
   {
     id: 102,

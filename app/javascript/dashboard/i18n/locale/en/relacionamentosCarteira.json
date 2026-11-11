@@ -225,8 +225,7 @@
         "NAO_DEU": "I could not do that. Try again.",
         "APOLICE_NOVA": "New policy saved.",
         "PDF_GUARDADO": "PDF saved.",
-        "DESFAZER": "Undo",
-        "MENSAGEM_PRONTA": "Message ready for {nome}: “{texto}”"
+        "DESFAZER": "Undo"
       },
       "DADOS": {
         "TITULO": "Policy details",
@@ -266,7 +265,14 @@
         "VOLTAR_A_ATIVO": "Make active again"
       },
       "PARCELA": {
-        "MENSAGEM": "Hi, {nome}! The {data} instalment of your {tipo} insurance is still open. Shall I send you the payment slip again?"
+        "MENSAGEM": "Hi, {nome}! The {data} instalment of your {tipo} insurance is still open. Shall I send you the payment slip again?",
+        "TITULO": "Tell {nome} about the instalment",
+        "ENVIADA": "Message sent to {nome}.",
+        "FORA": {
+          "NAO_QUER": "{nome} asked not to get messages. Tell them in the conversation.",
+          "BLOQUEADO": "Someone on the team blocked {nome}. The message does not go out.",
+          "SEM_TELEFONE": "{nome} has no phone number. The message does not arrive."
+        }
       }
     },
     "CORRIGIR": {
@@ -367,7 +373,8 @@
         "PDF_PEDIDO": "Summary PDF requested again.",
         "PROPOSTA_PEDIDA": "Proposal requested: {seguradora}.",
         "PROPOSTA_ANEXADA": "Proposal attached.",
-        "PALAVRAS_ENVIADAS": "“Your insurance in plain words” sent."
+        "PALAVRAS_ENVIADAS": "“Your insurance in plain words” sent.",
+        "PARCELA_AVISADA": "Instalment notice sent."
       },
       "SUBIU": "Went up {count}%.",
       "BAIXOU": "Went down {count}%."
@@ -597,6 +604,13 @@
       "SITUACAO": {
         "NAO_COMECOU": "The renewal has not started yet.",
         "COTANDO": "The quote is being prepared.",
+        "PRECOS_CHEGANDO": "The prices are coming in.",
+        "FALTA_UM_DADO": "One detail is missing to quote.",
+        "COTACAO_PAROU": "The quote stopped.",
+        "FALTA_A_COTACAO": "The quote is missing.",
+        "PRONTA_FALTA_O_TELEFONE": "The proposal is ready. The phone number is missing.",
+        "PRONTA_ENVIE_NA_CONVERSA": "The proposal is ready. Send it in the conversation.",
+        "PRECO_SEM_PDF": "The price arrived. The PDF did not come.",
         "COTACAO_PRONTA": "The quote is ready. It still has to be sent.",
         "OPCOES_ENVIADAS": "The options have been sent. Waiting for the answer.",
         "NEGOCIACAO": "The answer arrived. The price still has to be agreed.",
@@ -660,7 +674,7 @@
         "DEMOROU": "The quote took too long and stopped. Try again.",
         "FALHOU": "I could not quote. Try again.",
         "COTAR_DE_NOVO": "Quote again",
-        "NAO_COTA": "This account does not quote automatically. Do the quote and put the proposal here.",
+        "NAO_COTA": "Do the quote and put the proposal here.",
         "ANEXAR_PROPOSTA": "Attach proposal",
         "NAO_QUER": "{nome} asked not to get messages. The proposal does not go out automatically. Send it in the conversation.",
         "CONVERSAR": "Talk",
@@ -672,6 +686,7 @@
         "APOIO": "This is how the message arrives on WhatsApp.",
         "MENSAGEM_RESUMO": "Hi, {nome}! Here is the renewal of your {tipo} insurance: {seguradora}, {valor} a year. The summary goes along, in PDF. May I go ahead?",
         "MENSAGEM_PROPOSTA": "Hi, {nome}! Here is the renewal of your {tipo} insurance: {seguradora}, {valor} a year. The proposal goes along, in PDF. May I go ahead?",
+        "MENSAGEM_SEM_PDF": "Hi, {nome}! Here is the renewal of your {tipo} insurance: {seguradora}, {valor} a year. May I go ahead?",
         "ARQUIVO_RESUMO": "Quote summary.pdf",
         "ARQUIVO_PROPOSTA": "Proposal.pdf",
         "ENVIAR": "Send",
@@ -753,11 +768,11 @@
       },
       "QUEM_COTA": {
         "TITULO": "Who does the quote?",
-        "ROBO": "Renewal robot",
-        "ROBO_APOIO": "Quotes in Agger and leaves the proposal ready in the renewal.",
-        "AGENTE_APOIO": "{agente} quotes and talks to the person.",
-        "NINGUEM": "Nobody",
-        "NINGUEM_APOIO": "The team quotes and gets a notice when the renewal starts."
+        "ROBO": "The system",
+        "ROBO_APOIO": "Quotes in Agger with the details it already has and leaves the proposal ready.",
+        "AGENTE_APOIO": "Your agent: talks to the person on its own, asks for what is missing and quotes.",
+        "NINGUEM": "The team",
+        "NINGUEM_APOIO": "Someone on the team quotes and puts the proposal in the renewal."
       },
       "COMO_ENVIA": {
         "TITULO": "How does the proposal reach the person?",
@@ -768,6 +783,8 @@
       "QUEM_RESPONDE": {
         "TITULO": "Who replies afterwards?",
         "EQUIPE": "The team",
+        "EQUIPE_APOIO": "Someone on the team replies.",
+        "AGENTE_APOIO": "Your agent: replies on its own, right away.",
         "SEM_AGENTE": "Want an agent to reply automatically? See Agents."
       },
       "PALAVRAS": {
@@ -780,11 +797,7 @@
       "COTAR_SOZINHO": {
         "TITULO": "Quote",
         "SEM_AGGER": "To quote automatically, connect your account to Agger.",
-        "LIGAR_AGGER": "Connect to Agger",
-        "DESLIGADA": "Automatic quoting is not turned on in your account yet.",
-        "QUERO_LIGAR": "I want it on",
-        "DIALOGO_TITULO": "Automatic quoting",
-        "DIALOGO_TEXTO": "Automatic quoting is turned on by the {instalacao} team. Talk to whoever looks after your account to turn it on."
+        "LIGAR_AGGER": "Connect to Agger"
       }
     },
     "RESULTADOS": {

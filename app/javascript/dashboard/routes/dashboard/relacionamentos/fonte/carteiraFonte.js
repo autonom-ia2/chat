@@ -155,6 +155,8 @@ const ESCRITAS = [
   'desfazerPdf',
   'cotar',
   'lerPdf',
+  // O aviso da parcela em aberto (Tela 18).
+  'avisarDaParcela',
   // O card da renovação (Telas 11 e 12) e o texto em palavras simples (19).
   'enviarProposta',
   'renovou',

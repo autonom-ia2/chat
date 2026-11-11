@@ -15,6 +15,10 @@ const POR_ETAPA = {
 // Antes de a proposta sair, quem manda é a cotação e não o nome da etapa.
 const ANTES_DE_ENVIAR = ['NAO_COMECOU', 'COTANDO'];
 
+// A renovação ainda está antes de as opções saírem ("A vencer" ou "Cotando").
+export const antesDeAsOpcoesSairem = renovacao =>
+  ANTES_DE_ENVIAR.includes(POR_ETAPA[renovacao?.etapa]);
+
 export const situacaoDaRenovacao = (renovacao = {}) => {
   if (renovacao.desfecho === DESFECHOS.NAO_RENOVOU) {
     return { id: 'NAO_RENOVOU' };

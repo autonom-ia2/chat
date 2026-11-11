@@ -84,14 +84,14 @@ const aoTecla = (evento, indice) => {
       <span
         v-if="opcao.descricao"
         data-texto-do-cartao
-        class="flex flex-col min-w-0 gap-1"
+        class="flex flex-col min-w-0 gap-1 break-words"
       >
         {{ opcao.rotulo }}
         <span class="text-base font-normal text-n-slate-11">
           {{ opcao.descricao }}
         </span>
       </span>
-      <span v-else data-texto-do-cartao class="min-w-0">
+      <span v-else data-texto-do-cartao class="min-w-0 break-words">
         {{ opcao.rotulo }}
       </span>
       <span

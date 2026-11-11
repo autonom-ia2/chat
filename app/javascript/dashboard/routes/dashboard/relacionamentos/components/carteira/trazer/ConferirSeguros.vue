@@ -182,10 +182,12 @@ const irParaPrecisam = () => {
 
     <!-- A ação principal fica sempre à vista: a barra gruda no fim da área de
          conteúdo. Ela ocupa lugar na página (não flutua por cima), então o
-         último bloco nunca fica coberto. -->
+         último bloco nunca fica coberto. Abaixo de `md` o conteúdo começa
+         depois do canto do botão ☰ do app (`ps-20`, como o rodapé dos
+         ajustes e a barra de ação da lista). -->
     <div
       data-carteira="barra-de-trazer"
-      class="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 px-5 pt-4 -mx-5 border-t md:-mx-8 md:px-8 border-n-weak bg-n-surface-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+      class="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 ps-20 pe-5 pt-4 -mx-5 border-t md:-mx-8 md:ps-8 md:pe-8 border-n-weak bg-n-surface-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
     >
       <Button
         :data-carteira="marcas.botao"

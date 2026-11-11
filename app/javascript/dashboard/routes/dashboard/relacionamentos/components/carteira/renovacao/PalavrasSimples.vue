@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import { useTextosDoSeguro } from '../../../carteira/useTextosDoSeguro';
 import PreviaDeMensagem from './PreviaDeMensagem.vue';
 
@@ -9,7 +10,9 @@ import PreviaDeMensagem from './PreviaDeMensagem.vue';
 // nova: o que o seguro cobre e o que fazer se precisar, do jeito que a pessoa
 // vai ler. Quem escolheu conferir antes vê o texto, pode alterar e envia; quem
 // escolheu "sai sozinho" só vê que já foi. A última frase ("Vale o que está
-// escrito na sua apólice.") vai sempre e não entra no que se altera.
+// escrito na sua apólice.") vai sempre e não entra no que se altera. Ao alterar,
+// o campo abre do tamanho do texto e cresce com ele: nada fica atrás de uma
+// rolagem dentro do campo.
 const props = defineProps({
   seguro: { type: Object, required: true },
   // O nome da ação que está rodando ('' = nenhuma).
@@ -135,22 +138,21 @@ const salvar = () => {
       <label :for="`${id}-texto`" class="text-base text-n-slate-12">
         {{ tp('TEXTO') }}
       </label>
-      <textarea
+      <TextArea
         :id="`${id}-texto`"
         v-model="rascunho"
-        rows="6"
+        auto-height
+        min-height="6rem"
+        max-height="none"
         data-carteira="texto-das-palavras"
-        :aria-invalid="falta ? 'true' : undefined"
-        :aria-describedby="`${id}-vale ${falta ? `${id}-falta` : ''}`"
-        class="block w-full px-3 py-2.5 text-base border-0 rounded-lg reset-base outline outline-1 outline-offset-[-1px] bg-n-alpha-black2 text-n-slate-12 focus:outline-n-brand"
-        :class="falta ? 'outline-n-ruby-8' : 'outline-n-weak'"
+        custom-text-area-class="!text-base"
+        :message-type="falta ? 'error' : 'info'"
       />
-      <p :id="`${id}-vale`" class="m-0 text-sm text-n-slate-11">
+      <p class="m-0 text-sm text-n-slate-11">
         {{ tp('VALE') }}
       </p>
       <p
         v-if="falta"
-        :id="`${id}-falta`"
         role="alert"
         class="m-0 text-base font-medium text-n-ruby-11"
       >

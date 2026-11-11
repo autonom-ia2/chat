@@ -369,6 +369,15 @@ export const cotar = (id, agora = Date.now()) => {
   return seguroPorId(id, agora);
 };
 
+// "Avisar <nome>" da parcela em aberto: a mensagem saiu e fica na história. A
+// parcela continua em aberto até a pessoa pagar.
+export const avisarDaParcela = (id, agora = Date.now()) => {
+  escrever(id, atual => ({
+    feitos: feito(atual, 'parcela_avisada', agora),
+  }));
+  return seguroPorId(id, agora);
+};
+
 // ---- seguro de outra corretora (Tela 20) -------------------------------------
 
 export const arquivosDaConversa = (pessoaId, agora = Date.now()) => ({
@@ -408,6 +417,7 @@ export const demoDaCarteira = {
   guardarPdf,
   desfazerPdf,
   cotar,
+  avisarDaParcela,
   arquivosDaConversa,
   lerDeFora,
   guardarDeFora,

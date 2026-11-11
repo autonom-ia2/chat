@@ -93,14 +93,14 @@ onMounted(ficha.carregar);
 watch(id, novo => {
   if (idValido(novo)) ficha.carregar();
 });
-watch(
-  ficha.estado,
-  estado =>
-    anunciar(
-      estado === ESTADOS.CARREGANDO ? t('RELACIONAMENTOS.COMUM.CARREGANDO') : ''
-    ),
-  { immediate: true }
+// `computed`: o idioma de quem usa chega depois de a tela nascer, e o aviso
+// de "carregando" precisa acompanhar.
+const avisoDeCarregando = computed(() =>
+  ficha.estado.value === ESTADOS.CARREGANDO
+    ? t('RELACIONAMENTOS.COMUM.CARREGANDO')
+    : ''
 );
+watch(avisoDeCarregando, anunciar, { immediate: true });
 </script>
 
 <template>

@@ -1452,18 +1452,6 @@
           "pausa": 1000
         },
         {
-          "nome": "falta-motivo",
-          "passos": [
-            {
-              "clicar": "[data-carteira=\"salvar-motivo\"]"
-            },
-            {
-              "esperar": "[data-carteira=\"motivo\"] [role=\"alert\"]"
-            }
-          ],
-          "pausa": 800
-        },
-        {
           "nome": "motivo-outro",
           "passos": [
             {
@@ -1476,13 +1464,22 @@
           "pausa": 800
         },
         {
+          "nome": "falta-motivo",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"salvar-motivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"motivo\"] [role=\"alert\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
           "nome": "nao-renovou",
           "passos": [
             {
               "clicar": "[data-carteira=\"motivo-caro\"]"
-            },
-            {
-              "clicar": "[data-carteira=\"salvar-motivo\"]"
             },
             {
               "esperar": "[data-carteira=\"como-terminou\"]"
@@ -1536,7 +1533,7 @@
           "nome": "proposta-enviada",
           "passos": [
             {
-              "clicar": "[data-carteira=\"enviar\"]"
+              "clicar": "dialog[open] [data-carteira=\"enviar\"]"
             },
             {
               "esperar": "[data-cotacao=\"ENVIADA_POR_VOCE\"]"
@@ -1696,6 +1693,18 @@
           "pausa": 1500
         },
         {
+          "nome": "preco-sem-pdf-previa",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"enviar-ao-cliente\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"previa-envio\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
           "nome": "agger-fora",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_agger_fora",
           "esperar": "[data-cotacao=\"AGGER_FORA\"]",
@@ -1841,20 +1850,18 @@
         {
           "nome": "cotacao-desligada",
           "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&cotacao=desligada",
-          "esperar": "[data-carteira=\"quero-ligar\"]",
-          "pausa": 1500
-        },
-        {
-          "nome": "quero-ligar",
           "passos": [
             {
-              "clicar": "[data-carteira=\"quero-ligar\"]"
+              "esperar": "[data-carteira=\"ajuste-palavras-simples\"]"
             },
             {
-              "esperar": "dialog[open]"
+              "clicar": "[data-carteira=\"ajuste-palavras-simples\"] h2"
+            },
+            {
+              "tecla": "End"
             }
           ],
-          "pausa": 1000
+          "pausa": 1500
         },
         {
           "nome": "sem-permissao",
@@ -1941,6 +1948,18 @@
           "pausa": 1200
         },
         {
+          "nome": "quem-renovou-mais",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"recorte\"] h2"
+            },
+            {
+              "tecla": "End"
+            }
+          ],
+          "pausa": 800
+        },
+        {
           "nome": "por-seguradora",
           "passos": [
             {
@@ -1948,6 +1967,9 @@
             },
             {
               "esperar": "[data-carteira=\"recorte\"] [data-carteira=\"barra-de-resultado\"]"
+            },
+            {
+              "tecla": "End"
             }
           ],
           "pausa": 800
@@ -1960,6 +1982,9 @@
             },
             {
               "esperar": "[data-carteira=\"recorte\"] [data-carteira=\"barra-de-resultado\"]"
+            },
+            {
+              "tecla": "End"
             }
           ],
           "pausa": 800
@@ -2018,10 +2043,22 @@
               "clicar": "[data-carteira=\"avisar-parcela\"] button"
             },
             {
-              "esperar": "[data-carteira=\"aviso-vivo\"] span"
+              "esperar": "[data-carteira=\"previa-envio\"]"
             }
           ],
           "pausa": 1200
+        },
+        {
+          "nome": "enviada",
+          "passos": [
+            {
+              "clicar": "dialog[open] [data-carteira=\"enviar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"aviso-vivo\"] span"
+            }
+          ],
+          "pausa": 1500
         },
         {
           "nome": "vazio",
@@ -2065,7 +2102,7 @@
               "clicar": "[data-carteira=\"alterar-palavras\"]"
             },
             {
-              "esperar": "[data-carteira=\"texto-das-palavras\"]"
+              "esperar": "[data-carteira=\"texto-das-palavras\"] textarea"
             }
           ],
           "pausa": 800
@@ -2075,7 +2112,7 @@
           "passos": [
             {
               "preencher": [
-                "[data-carteira=\"texto-das-palavras\"]",
+                "[data-carteira=\"texto-das-palavras\"] textarea",
                 " "
               ]
             },
@@ -2093,7 +2130,7 @@
           "passos": [
             {
               "preencher": [
-                "[data-carteira=\"texto-das-palavras\"]",
+                "[data-carteira=\"texto-das-palavras\"] textarea",
                 "Seu carro está coberto contra batida, roubo e furto. Qualquer coisa, me chame aqui."
               ]
             },

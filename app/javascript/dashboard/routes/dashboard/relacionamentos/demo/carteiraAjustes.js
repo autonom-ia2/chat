@@ -13,8 +13,9 @@ export const FUNIS_DA_DEMO = [
   { nome: 'Vendas', etapas: ['Novo contato', 'Em conversa', 'Proposta'] },
   { nome: 'Atendimento', etapas: ['Aberto', 'Em andamento', 'Resolvido'] },
 ];
-// O agente da conta fictícia.
-export const AGENTE_DA_DEMO = 'Lia';
+// O agente da conta fictícia. Nome inventado: cada corretor dá ao agente dele
+// o nome que quiser.
+export const AGENTE_DA_DEMO = 'Nina';
 
 // { ajustes, em } — `em` é quando foi salvo (segundos).
 let guardados = null;

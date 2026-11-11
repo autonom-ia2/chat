@@ -18,9 +18,11 @@ import VazioComUmBotao from '../../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../../ficha/GavetaLateral.vue';
 import {
   FIM,
+  cotacaoDoCard,
   esperaEnvio,
   fimDaRenovacao,
 } from '../../../carteira/cotacaoDoCard';
+import { tituloDaRenovacao } from '../../../carteira/tituloDaRenovacao';
 import { useSeguroAberto } from '../../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../../carteira/useTextosDoSeguro';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../../ficha/useEstadoDaFicha';
@@ -33,10 +35,11 @@ import PreviaDaProposta from './PreviaDaProposta.vue';
 
 // #2897 — a renovação de um seguro, do começo ao fim, numa gaveta
 // (`?renovacao=<id do seguro>`): em que pé está, o seguro, a cotação e como
-// terminou. Uma ação principal por vez, no rodapé: enviar a proposta que espera
-// alguém; senão, "Renovou". "Renovou" e "Não renovou" não pedem confirmação: o
-// aviso traz "Desfazer", sem prazo. Com a proposta saindo sozinha, nada aqui
-// pede clique: a gaveta só mostra o que já saiu. `seguroId` nulo = fechada.
+// terminou. Uma ação principal por vez, no rodapé: enviar a proposta (ou só o
+// preço, se o PDF não veio) que espera alguém; senão, "Renovou". "Renovou" e
+// "Não renovou" não pedem confirmação: o aviso traz "Desfazer", sem prazo. Com
+// a proposta saindo sozinha, nada aqui pede clique: a gaveta só mostra o que
+// já saiu. `seguroId` nulo = fechada.
 const props = defineProps({
   seguroId: { type: Number, default: null },
   fonte: { type: Object, required: true },
@@ -81,9 +84,16 @@ const titulo = computed(() => {
     : t('RELACIONAMENTOS_CARTEIRA.GAVETA.RENOVACAO.TITULO');
 });
 const fim = computed(() => fimDaRenovacao(seguro.value?.renovacao));
-const esperando = computed(() =>
-  esperaEnvio(seguro.value, { cotaSozinha: props.fonte.cotaSozinha })
-);
+const daConta = computed(() => ({ cotaSozinha: props.fonte.cotaSozinha }));
+const esperando = computed(() => esperaEnvio(seguro.value, daConta.value));
+// O título: a etapa e a cotação dizem a mesma coisa (carteira/tituloDaRenovacao).
+const emQuePe = computed(() => {
+  const { id, etapa } = tituloDaRenovacao(
+    seguro.value.renovacao,
+    cotacaoDoCard(seguro.value, daConta.value)
+  );
+  return t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.SITUACAO.${id}`, { etapa });
+});
 // A apólice nova chega sozinha quando o seguro veio do Agger.
 const chegaSozinha = computed(() => seguro.value?.origem.tipo === 'agger');
 const nomeDoMotivo = motivo =>
@@ -219,7 +229,7 @@ onMounted(() => {
             data-carteira="situacao-da-renovacao"
             class="m-0 text-xl font-semibold leading-snug text-balance text-n-slate-12"
           >
-            {{ textos.renovacao(seguro.renovacao) }}
+            {{ emQuePe }}
           </p>
           <p
             v-else

@@ -41,7 +41,7 @@ describe('cotacaoDoCard: um estado de cada vez', () => {
     [{ etapa: 'A vencer' }, false, COTACAO.NAO_COTA],
     [{ etapa: 'Cotando', cotando: true }, true, COTACAO.COTANDO],
     [
-      { etapa: 'A vencer', faltou: 'nascimento', perguntou: 'Lia' },
+      { etapa: 'A vencer', faltou: 'nascimento', perguntou: 'Nina' },
       true,
       COTACAO.FALTOU_PERGUNTADO,
     ],
@@ -88,7 +88,21 @@ describe('cotacaoDoCard: um estado de cada vez', () => {
     expect(cotacaoDoCard(seguro(renovacao), { cotaSozinha })).toBe(esperado);
   });
 
-  it('sem telefone e "não quer mensagens" vêm antes de tudo que ainda não saiu', () => {
+  it('sem telefone e "não quer mensagens" só falam quando há o que enviar; antes disso a cotação segue à vista', () => {
+    const semFone = { ...pessoa, phone_number: null };
+    const recusou = { ...pessoa, opted_out_at: 123 };
+    const cotandoAinda = { etapa: 'Cotando', cotando: true };
+    const semNada = { etapa: 'A vencer' };
+
+    expect(cotacaoDoCard(seguro(cotandoAinda, semFone))).toBe(COTACAO.COTANDO);
+    expect(cotacaoDoCard(seguro(cotandoAinda, recusou))).toBe(COTACAO.COTANDO);
+    expect(cotacaoDoCard(seguro(semNada, semFone), { cotaSozinha: true })).toBe(
+      COTACAO.NAO_COMECOU
+    );
+    expect(cotacaoDoCard(seguro(semNada, recusou))).toBe(COTACAO.NAO_COTA);
+  });
+
+  it('com a proposta pronta, sem telefone e "não quer mensagens" dizem o que impede de chegar', () => {
     const semTelefone = { ...pessoa, phone_number: null };
     const naoQuer = { ...pessoa, opted_out_at: 123 };
     const pronta = { etapa: 'Cotando', proposta };
@@ -103,6 +117,13 @@ describe('cotacaoDoCard: um estado de cada vez', () => {
     expect(cotacaoDoCard(seguro(pronta, naoQuer))).toBe(COTACAO.NAO_QUER);
     expect(esperaEnvio(seguro(pronta, semTelefone))).toBe(false);
     expect(esperaEnvio(seguro(pronta))).toBe(true);
+    // Só o preço, sem o PDF: dá para enviar o preço.
+    const soOPreco = { ...pronta, proposta: { ...proposta, semPdf: true } };
+    expect(esperaEnvio(seguro(soOPreco))).toBe(true);
+    expect(esperaEnvio(seguro(soOPreco, semTelefone))).toBe(false);
+    expect(esperaEnvio(seguro({ etapa: 'Cotando', cotando: true }))).toBe(
+      false
+    );
     // O que já saiu continua dito como saiu.
     expect(cotacaoDoCard(seguro(enviada, semTelefone))).toBe(
       COTACAO.ENVIADA_POR

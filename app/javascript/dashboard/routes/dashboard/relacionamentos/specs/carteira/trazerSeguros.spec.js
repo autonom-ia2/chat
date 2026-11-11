@@ -242,6 +242,10 @@ describe('Tela 9: planilha com seguros', () => {
         .classes()
         .some(classe => classe.includes('env(safe-area-inset-bottom)'))
     ).toBe(true);
+    // E deixa livre o canto do botão do menu do app (abaixo de `md`).
+    expect(barra.classes()).toEqual(
+      expect.arrayContaining(['ps-20', 'md:ps-8'])
+    );
     expect(barra.get(daCarteira('trazer-seguros')).text()).toBe(
       'Trazer 164 seguros'
     );

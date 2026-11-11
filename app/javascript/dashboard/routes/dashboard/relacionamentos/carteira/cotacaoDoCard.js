@@ -1,7 +1,9 @@
 // #2897 — a cotação dentro da renovação de um seguro: em que estado ela está,
 // um de cada vez, e se a renovação já terminou. Funções puras: devolvem o nome
 // do estado; quem desenha traduz e põe o botão. A ordem importa: o que já saiu
-// vem antes de tudo; depois, o que impede a proposta de chegar à pessoa.
+// vem antes de tudo. O que impede a proposta de chegar à pessoa (sem telefone,
+// não quer mensagens) só fala quando há o que enviar: antes disso a cotação
+// continua à vista, com o botão dela.
 import { DESFECHOS } from './situacaoDaRenovacao';
 
 export const COTACAO = {
@@ -58,19 +60,23 @@ const antesDeEnviar = (renovacao, cotaSozinha) => {
   return cotaSozinha ? COTACAO.NAO_COMECOU : COTACAO.NAO_COTA;
 };
 
+// O que espera alguém apertar Enviar: a proposta pronta ou, quando o PDF não
+// veio, só o preço.
+const ESPERAM_ENVIO = [COTACAO.PRONTA, COTACAO.PRECO_SEM_PDF];
+
 // `null` quando não há cotação a mostrar (sem renovação, ou ela já terminou).
 export const cotacaoDoCard = (seguro, { cotaSozinha = false } = {}) => {
   const { renovacao, pessoa } = seguro ?? {};
   if (!renovacao || fimDaRenovacao(renovacao)) return null;
   if (renovacao.proposta?.enviadaEm) return enviada(renovacao.proposta);
+  const estado = antesDeEnviar(renovacao, cotaSozinha);
+  if (!ESPERAM_ENVIO.includes(estado)) return estado;
   if (!pessoa?.phone_number) return COTACAO.SEM_TELEFONE;
-  if (pessoa.opted_out_at) return COTACAO.NAO_QUER;
-  return antesDeEnviar(renovacao, cotaSozinha);
+  return pessoa.opted_out_at ? COTACAO.NAO_QUER : estado;
 };
 
-// A proposta que espera alguém apertar Enviar.
 export const esperaEnvio = (seguro, opcoes) =>
-  cotacaoDoCard(seguro, opcoes) === COTACAO.PRONTA;
+  ESPERAM_ENVIO.includes(cotacaoDoCard(seguro, opcoes));
 
 // Quantas seguradoras já deram preço e quantas ainda não responderam.
 export const contarRespostas = (respostas = []) => {

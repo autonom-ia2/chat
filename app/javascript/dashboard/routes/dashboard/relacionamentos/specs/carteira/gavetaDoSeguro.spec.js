@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
+import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import GavetaDoSeguro from '../../components/carteira/GavetaDoSeguro.vue';
 import { baixarArquivo } from '../../carteira/exportarHistoria';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
@@ -139,7 +140,7 @@ describe('gaveta do seguro: uma frase e um próximo passo por situação', () =>
     expect(acao(w).text()).toMatch('Conversar com ');
   });
 
-  it('parcela atrasada: o passo é avisar a pessoa', async () => {
+  it('parcela atrasada: avisar passa pela conferência; depois de enviar, o aviso e a história', async () => {
     const w = await abrir(PARCELA_ATRASADA);
 
     expect(textoDe(w, daCarteira('frase-do-seguro'))).toContain(
@@ -150,17 +151,87 @@ describe('gaveta do seguro: uma frase e um próximo passo por situação', () =>
       acao(w).element
     );
 
-    // A mensagem fica pronta para quem atende conferir: nada sai sozinho.
+    // A mensagem aparece como chega no WhatsApp: nada sai antes do "Enviar".
     await acao(w).trigger('click');
-    const aviso = textoDe(w, daCarteira('aviso-vivo'));
-    expect(aviso).toContain(
-      'Mensagem pronta para Karina: “Oi, Karina! A parcela de '
+    const previa = w.get(daCarteira('previa-envio'));
+    expect(previa.get(doBlocoA('titulo-do-dialogo')).text()).toBe(
+      'Avisar Karina da parcela'
     );
-    expect(aviso).toContain(
-      ' do seu seguro Auto está em aberto. Quer que eu te mande o boleto de novo?”'
+    expect(previa.text()).toContain(
+      'É assim que a mensagem chega no WhatsApp.'
+    );
+    const bolha = textoDe(w, daCarteira('previa-de-mensagem'));
+    expect(bolha).toMatch('Oi, Karina! A parcela de ');
+    expect(bolha).toContain(
+      ' do seu seguro Auto está em aberto. Quer que eu te mande o boleto de novo?'
+    );
+    expect(
+      w.findAll('[data-dialogo-falso] button').map(botao => botao.text())
+    ).toEqual(['Voltar', 'Enviar']);
+    expect(textoDe(w, daCarteira('aviso-vivo'))).toBe('');
+    expect(w.find('[data-passo="parcela_avisada"]').exists()).toBe(false);
+
+    await w.get('[data-dialogo-falso]').trigger('submit');
+    await assentar();
+
+    expect(w.find(daCarteira('previa-envio')).exists()).toBe(false);
+    const aviso = w.get(daCarteira('aviso-vivo'));
+    expect(aviso.attributes('role')).toBe('status');
+    expect(aviso.text()).toBe('Mensagem enviada a Karina.');
+    expect(w.emitted('mudou')).toHaveLength(1);
+    expect(textoDe(w, '[data-passo="parcela_avisada"]')).toContain(
+      'Aviso da parcela enviado. · Você'
     );
     expect(useAlert).not.toHaveBeenCalled();
   });
+
+  it('parcela atrasada: "Voltar" fecha a conferência e nada sai', async () => {
+    const w = await abrir(PARCELA_ATRASADA);
+
+    await acao(w).trigger('click');
+    await w.get('[data-dialogo-falso] button').trigger('click');
+    await assentar();
+
+    expect(w.find(daCarteira('previa-envio')).exists()).toBe(false);
+    expect(textoDe(w, daCarteira('aviso-vivo'))).toBe('');
+    expect(w.emitted('mudou')).toBeUndefined();
+  });
+
+  it.each([
+    [{ phone_number: null }, 'Karina está sem telefone. A mensagem não chega.'],
+    [
+      { opted_out_at: 1 },
+      'Karina pediu para não receber mensagens. Avise na conversa.',
+    ],
+    [
+      { blocked: true },
+      'Alguém da equipe bloqueou Karina. A mensagem não sai.',
+    ],
+  ])(
+    'parcela atrasada, pessoa %j: o clique diz por que não dá e não abre a conferência',
+    async (daPessoa, frase) => {
+      const fonte = fonteDaDemo();
+      const w = await abrir(PARCELA_ATRASADA, {
+        ...fonte,
+        seguro: async id => {
+          const seguro = await fonte.seguro(id);
+          return { ...seguro, pessoa: { ...seguro.pessoa, ...daPessoa } };
+        },
+      });
+      expect(acao(w).attributes('disabled')).toBeUndefined();
+
+      await acao(w).trigger('click');
+
+      const alerta = w.get(daCarteira('alerta-da-gaveta'));
+      expect(alerta.attributes('role')).toBe('alert');
+      expect(alerta.text()).toBe(frase);
+      expect(acao(w).attributes('aria-describedby')).toBe(
+        alerta.attributes('id')
+      );
+      expect(w.find(daCarteira('previa-envio')).exists()).toBe(false);
+      expect(w.emitted('mudou')).toBeUndefined();
+    }
+  );
 
   it('cancelado: o menu oferece voltar a ativo, não cancelar de novo', async () => {
     const w = await abrir(CANCELADO);
@@ -373,7 +444,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
 
     await w.get(daCarteira('alterar-palavras')).trigger('click');
     await assentar();
-    const campo = w.get(daCarteira('texto-das-palavras'));
+    const campo = w.get(`${daCarteira('texto-das-palavras')} textarea`);
     expect(document.activeElement).toBe(campo.element);
     expect(campo.element.value).toContain('O que ele cobre: batida');
     expect(campo.element.value).not.toContain('Vale o que está escrito');
@@ -385,7 +456,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(palavras(w).get('[role="alert"]').text()).toBe(
       'Escreva o texto da mensagem.'
     );
-    expect(campo.attributes('aria-invalid')).toBe('true');
+    expect(w.getComponent(TextArea).props('messageType')).toBe('error');
     expect(document.activeElement).toBe(campo.element);
 
     await campo.setValue('Seu carro está coberto. Qualquer coisa, me chame.');
@@ -399,6 +470,28 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     );
     expect(previa).toContain('Vale o que está escrito na sua apólice.');
     expect(previa).not.toContain('O que ele cobre');
+  });
+
+  it('alterar o texto: o campo abre do tamanho do texto e cresce ao digitar, sem rolagem interna', async () => {
+    // O jsdom não mede altura: o teste diz quanto o texto ocupa.
+    let alturaDoTexto = 240;
+    const medida = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(() => alturaDoTexto);
+    const w = await abrir(APOLICE_NOVA);
+
+    await w.get(daCarteira('alterar-palavras')).trigger('click');
+    await assentar();
+    const campo = w.get(`${daCarteira('texto-das-palavras')} textarea`);
+    expect(campo.element.style.height).toBe('240px');
+    // Sem teto de altura: nada fica escondido atrás de uma rolagem do campo.
+    expect(campo.element.style.maxHeight).toBe('none');
+
+    alturaDoTexto = 320;
+    await campo.setValue(`${campo.element.value}\nMais uma linha.`);
+    await assentar();
+    expect(campo.element.style.height).toBe('320px');
+    medida.mockRestore();
   });
 
   it('enquanto lê a apólice e quando não consegue escrever, diz isso no lugar do texto', async () => {
