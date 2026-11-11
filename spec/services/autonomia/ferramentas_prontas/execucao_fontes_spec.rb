@@ -90,6 +90,24 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       )
     end
 
+    # O endereço que o open-cep pode inventar não fica 30 dias valendo para todas as contas: a próxima consulta do
+    # mesmo CEP vai de novo à ViaCEP. A resposta da principal continua no cache.
+    it 'a resposta da BrasilAPI nao vai ao cache, e a do ViaCEP vai' do
+      loja = cache_em_memoria
+      allow(loja).to receive(:write).and_call_original
+      fonte_fora(viacep, status: 502)
+      fonte_fora(awesomeapi, status: 503)
+      fonte_responde(brasilapi, da_brasilapi)
+
+      expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to eq(esperado)
+      expect(loja).not_to have_received(:write).with(start_with('autonomia:prontas:'), anything, anything)
+
+      fonte_responde(viacep, do_viacep)
+      2.times { expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to eq(esperado) }
+      # Uma vez fora (502), uma respondendo; a terceira consulta sai do cache que o ViaCEP gravou.
+      expect(a_request(:get, viacep)).to have_been_made.twice
+    end
+
     it 'com uma dizendo que nao tem e a outra fora, nao afirma que o CEP nao existe e nao vai a BrasilAPI' do
       fonte_responde(viacep, { erro: 'true' })
       fonte_fora(awesomeapi, status: 503)

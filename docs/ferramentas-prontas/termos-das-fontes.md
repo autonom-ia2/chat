@@ -27,7 +27,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 
 | Host | Fontes | O que o termo pede | Teto global | Cache |
 |---|---|---|---|---|
-| `brasilapi.com.br` | CEP (última reserva do endereço, só quando nenhuma anterior disse "não tem"), CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
+| `brasilapi.com.br` | CEP (última reserva do endereço, só quando nenhuma anterior disse "não tem"), CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta; CEP sem cache |
 | `viacep.com.br` | CEP (principal do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade, `Cep::Referencia`, uma chamada por cidade a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
 | `cep.awesomeapi.com.br` | CEP (1ª reserva do endereço; não busca o CEP pela rua) | Sem chave: **limite não publicado**. Com a chave gratuita (cabeçalho `x-api-key`): **100 mil pedidos por mês** ([docs.awesomeapi.com.br/instrucoes-api-key.md](https://docs.awesomeapi.com.br/instrucoes-api-key.md), consultado em 11/11/2026). | Sem chave: 30 por minuto e 1.000 por dia (conservador). Com chave: 120 por minuto e 3.000 por dia (~90% de 100 mil ÷ 30) | 30 dias |
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
@@ -65,8 +65,12 @@ Limitações conhecidas, aceitas:
   para termos margem de rate limit").** A ordem do endereço pelo CEP é ViaCEP, AwesomeAPI e BrasilAPI. Medido em
   11/11/2026: a BrasilAPI responde todo CEP pelo `open-cep`, um espelho do ViaCEP que inventa endereço para o CEP que
   não existe (99999-999 vira "Avenida das Torres, Sarandi-PR"). Por isso ela só responde quando nenhuma fonte anterior
-  disse "não tem". **Risco residual, aceito:** com o ViaCEP e a AwesomeAPI fora do ar ao mesmo tempo, um CEP que não
-  existe pode receber um endereço inventado da BrasilAPI. A chave gratuita da AwesomeAPI é opcional: o código lê da
+  disse "não tem". **Quando ela responde:** sempre que o ViaCEP e a AwesomeAPI ficam sem resposta, por qualquer falha,
+  e não só quando caem: prazo estourado, erro 5xx, limite da fonte (429) e o teto do provedor. A fatia de cada conta sem
+  chave é ViaCEP 15 por minuto e AwesomeAPI 7 por minuto e 250 por dia, então uma conta ativa chega à BrasilAPI no uso
+  normal. **Risco residual, aceito:** nesses casos, um CEP que não existe pode receber um endereço inventado da
+  BrasilAPI. Por isso a resposta dela **não vai ao cache**: o endereço inventado não fica 30 dias valendo para todas as
+  contas, e a próxima consulta do mesmo CEP vai de novo ao ViaCEP. A chave gratuita da AwesomeAPI é opcional: o código lê da
   variável de ambiente `AUTONOMIA_AWESOMEAPI_CHAVE` e funciona sem ela. Criar a conta no serviço é decisão do Rodrigo.
 - **Localização (motivo técnico do provedor).** O Photon pede uso justo: a fatia de cada conta é 15 pedidos por minuto,
   e acima disso a reserva (a sede mais próxima, sem rede) responde. O limite diário segue 500.
