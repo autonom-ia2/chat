@@ -3241,7 +3241,8 @@
         "RAMOS_PUBLICADOS": "Ramos que ela publica",
         "ENCONTRADAS": "Seguradoras achadas",
         "CORRETORES": "Corretores",
-        "REGISTRO_SUSEP": "Registro na SUSEP"
+        "REGISTRO_SUSEP": "Registro na SUSEP",
+        "PRIMEIRO_DA_LISTA": "Primeiro da lista"
       },
       "PRONTAS": {
         "TITULO": "Prontas",

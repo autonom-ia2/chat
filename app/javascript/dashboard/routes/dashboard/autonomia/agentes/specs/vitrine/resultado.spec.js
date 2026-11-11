@@ -31,6 +31,14 @@ const ROTULOS = {
   itens: 'Resultados',
   corretores: 'Corretores',
   registro_susep: 'Registro na SUSEP',
+  primeiro_da_lista: 'Primeiro da lista',
+  estabelecimentos: 'Locais de saúde',
+  endereco: 'Endereço',
+  telefone: 'Telefone',
+  nome: 'Nome',
+  nome_completo: 'Nome completo',
+  valor_estimado: 'Valor estimado (R$)',
+  data: 'Data',
   ramos: 'Ramos',
   seguradoras: 'Seguradoras',
   seguradora: 'Seguradora',
@@ -126,6 +134,7 @@ describe('linhasDoResultado', () => {
     ).toEqual([
       ['Dias úteis', '14'],
       ['Feriados no período', 'Dia da Consciência Negra'],
+      ['Data', new Date(2026, 10, 20).toLocaleDateString('pt-BR')],
     ]);
   });
 
@@ -168,8 +177,9 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
-  // #2858 F4 — a busca da NCM: o nome de cada item é a descrição; depois, o primeiro aberto (o código).
-  it('a list named by another field (descricao) shows the names, then the first one', () => {
+  // #2858 F4 — a busca da NCM: o nome de cada item é a descrição (sem os traços da tabela); o primeiro aberto traz o
+  // nome dele na primeira linha, para não parecer que o código vale para todos.
+  it('a list named by another field (descricao) shows the names, then the first one with its name', () => {
     expect(
       linhasDoResultado(
         {
@@ -178,11 +188,11 @@ describe('linhasDoResultado', () => {
           mostrando: 2,
           itens: [
             {
-              codigo: '73.18',
-              descricao: 'Parafusos, pinos ou pernos',
+              codigo: '7318.14.00',
+              descricao: '-- Parafusos autoperfurantes',
               vigente_desde: '2022-04-01',
             },
-            { codigo: '7318.14.00', descricao: '-- Parafusos autoperfurantes' },
+            { codigo: '73.18', descricao: 'Parafusos, pinos ou pernos' },
           ],
         },
         textos
@@ -191,14 +201,57 @@ describe('linhasDoResultado', () => {
       ['Busca', 'parafuso'],
       [
         'Resultados',
-        'Parafusos, pinos ou pernos, -- Parafusos autoperfurantes e mais 10',
+        'Parafusos autoperfurantes, Parafusos, pinos ou pernos e mais 10',
       ],
-      ['Código', '73.18'],
+      ['Primeiro da lista', 'Parafusos autoperfurantes'],
+      ['Código', '7318.14.00'],
       ['Em vigor desde', new Date(2022, 3, 1).toLocaleDateString('pt-BR')],
     ]);
   });
 
-  it('a list of named items also opens the details of the first one', () => {
+  it('opens the first of many only with two labeled fields besides the name', () => {
+    expect(
+      linhasDoResultado(
+        {
+          total: 20,
+          estabelecimentos: [
+            {
+              nome: 'HOSPITAL EXEMPLO',
+              endereco: 'RUA A, 1',
+              telefone: '19 0000-0000',
+              cnes: '1',
+            },
+            { nome: 'CLÍNICA EXEMPLO', endereco: 'RUA B, 2' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Locais de saúde', 'HOSPITAL EXEMPLO, CLÍNICA EXEMPLO e mais 18'],
+      ['Primeiro da lista', 'HOSPITAL EXEMPLO'],
+      ['Endereço', 'RUA A, 1'],
+      ['Telefone', '19 0000-0000'],
+    ]);
+    // Um campo só (o código da marca, a data do feriado): só os nomes.
+    expect(
+      linhasDoResultado(
+        {
+          feriados_no_periodo: [
+            { data: '2026-11-15', nome: 'Proclamação da República' },
+            { data: '2026-11-20', nome: 'Dia da consciência negra' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      [
+        'Feriados no período',
+        'Proclamação da República e Dia da consciência negra',
+      ],
+    ]);
+  });
+
+  it('a list of one opens its details without repeating the name', () => {
     expect(
       linhasDoResultado(
         {
@@ -232,14 +285,35 @@ describe('linhasDoResultado', () => {
         {
           seguradoras: [
             { seguradora: 'Seguradora Exemplo', total: 10, produtos },
-            { seguradora: 'Outra Exemplo', total: 0, produtos: [] },
           ],
         },
         textos
       )
     ).toEqual([
-      ['Seguradoras', 'Seguradora Exemplo e Outra Exemplo'],
+      ['Seguradoras', 'Seguradora Exemplo'],
       ['Produtos', 'Cyber A, Cyber B, Cyber C e mais 7'],
+    ]);
+  });
+
+  it('money has the thousands separator; the full name equal to the name does not repeat', () => {
+    expect(
+      linhasDoResultado({ compras: [{ valor_estimado: 1789431.34 }] }, textos)
+    ).toEqual([['Valor estimado (R$)', '1.789.431,34']]);
+    expect(
+      linhasDoResultado({ venda: 12345.5, unidade: 'R$' }, textos)
+    ).toEqual([['Venda', 'R$ 12.345,5']]);
+    expect(
+      linhasDoResultado(
+        {
+          codigo: '341',
+          nome: 'ITAÚ UNIBANCO S.A.',
+          nome_completo: 'ITAÚ UNIBANCO S.A.',
+        },
+        textos
+      )
+    ).toEqual([
+      ['Código', '341'],
+      ['Nome', 'ITAÚ UNIBANCO S.A.'],
     ]);
   });
 

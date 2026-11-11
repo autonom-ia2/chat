@@ -35,8 +35,11 @@ const linhas = (fonte, consulta, textos = PT) =>
 const valor = (fonte, consulta, rotulo) =>
   (linhas(fonte, consulta).find(([nome]) => nome === rotulo) || [])[1];
 
+// Chave com "_" na frente é anotação do arquivo (a "_origem" da fixture feita à mão), não consulta.
 const CONSULTAS = Object.entries(porFonte).flatMap(([fonte, consultas]) =>
-  Object.keys(consultas).map(consulta => [fonte, consulta])
+  Object.keys(consultas)
+    .filter(consulta => !consulta.startsWith('_'))
+    .map(consulta => [fonte, consulta])
 );
 
 describe('linhasDoResultado com o dado real de cada fonte', () => {
@@ -44,7 +47,11 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     const semDadoReal = FERRAMENTAS.map(item => item.id).filter(
       id => !porFonte[id]
     );
-    expect(semDadoReal).toEqual([]);
+    expect(
+      semDadoReal,
+      'Fonte nova sem dado real: grave specs/vitrine/dados-reais/<id>.json pelo script (ver README.md), ' +
+        'anonimize pessoa física e ponha uma asserção do essencial'
+    ).toEqual([]);
   });
 
   it.each(CONSULTAS)(
@@ -98,10 +105,19 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   it('F4: NCM com código e descrição, a busca já na ordem de relevância', () => {
     expect(valor('ncm', 'codigo', 'Código')).toBe('7318.15.00');
     expect(valor('ncm', 'codigo', 'Descrição')).toContain('parafusos');
+    // Sem os traços da tabela, e o código de 8 dígitos (o da nota) antes da posição de 4.
     expect(
-      valor('ncm', 'buscar', 'Resultados').startsWith('Parafusos, pinos')
+      valor('ncm', 'buscar', 'Resultados').startsWith(
+        'Parafusos autoperfurantes, '
+      )
     ).toBe(true);
-    expect(valor('ncm', 'buscar', 'Código')).toBe('73.18');
+    expect(valor('ncm', 'buscar', 'Primeiro da lista')).toBe(
+      'Parafusos autoperfurantes'
+    );
+    expect(valor('ncm', 'buscar', 'Código')).toBe('7318.14.00');
+    expect(
+      valor('ncm', 'codigo', 'Descrição').startsWith('Outros parafusos')
+    ).toBe(true);
   });
 
   it('F4: compras, estações e chuva com os valores', () => {
@@ -110,10 +126,14 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       primeira.objeto
     );
     expect(valor('compras_governo', 'compras', 'Órgão')).toBe(primeira.orgao);
-    // `unidade` da compra é a unidade do órgão, não a de medida: o valor sai sem ela.
-    expect(valor('compras_governo', 'compras', 'Valor estimado (R$)')).toBe(
-      String(primeira.valor_estimado)
+    expect(valor('compras_governo', 'compras', 'Primeiro da lista')).toBe(
+      primeira.objeto
     );
+    // A primeira compra do dado real tem o valor sigiloso (0 no PNCP): o servidor tira o campo, e a linha não aparece.
+    expect(primeira.valor_estimado).toBeUndefined();
+    expect(
+      valor('compras_governo', 'compras', 'Valor estimado (R$)')
+    ).toBeUndefined();
     expect(valor('estacoes', 'estacoes', 'Estações')).toContain('UBERLANDIA');
     expect(valor('estacoes', 'estacoes', 'Distância (km)')).toBe('2');
     expect(valor('estacoes', 'estacoes', 'Situação')).toBe('Operante');
@@ -139,5 +159,30 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       'CORRETORA EXEMPLO 1 LTDA'
     );
     expect(valor('corretor_susep', 'por_nome', 'Situação')).toBe('Suspenso');
+  });
+
+  // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
+  // Suspenso" depois dos corretores, "Código: 1" depois das marcas, "Estado: AC" depois dos estados).
+  it('saída completa: corretores, marcas, estados e feriados', () => {
+    expect(linhas('corretor_susep', 'por_nome')).toEqual([
+      [
+        'Corretores',
+        'CORRETORA EXEMPLO 1 LTDA, CORRETORA EXEMPLO 2 LTDA, CORRETORA EXEMPLO 3 LTDA e mais 225',
+      ],
+      ['Primeiro da lista', 'CORRETORA EXEMPLO 1 LTDA'],
+      ['Situação', 'Suspenso'],
+      ['Registro na SUSEP', '100000001'],
+    ]);
+    expect(linhas('fipe', 'marcas')).toEqual([
+      ['Marcas', 'Acura, Agrale, Alfa Romeo e mais 105'],
+    ]);
+    expect(linhas('cidades', 'estados')).toEqual([
+      ['Estados', 'Acre, Alagoas, Amapá e mais 24'],
+    ]);
+    expect(linhas('feriados', 'feriados')).toEqual([
+      ['Ano', '2026'],
+      ['Feriados', 'Confraternização mundial, Carnaval, Carnaval e mais 11'],
+      ['Observação', porFonte.feriados.feriados.dados.observacao],
+    ]);
   });
 });

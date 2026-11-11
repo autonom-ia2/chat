@@ -6,6 +6,26 @@ Como foi feito, em 11/11/2026: uma chamada real por consulta, pelo próprio adap
 `app/services/autonomia/ferramentas_prontas/fontes`, depois o `refinar` da consulta e o `Resposta.enxugar`), sem cache.
 Cada arquivo guarda, por consulta, o provedor que respondeu e o `dados`. Sem IA e sem fonte paga.
 
+O script está versionado: `script/ferramentas_prontas/gravar_dados_reais.rb` (a lista de pedidos é o `CASOS` dele). Ele
+desliga o cache (`Rails.cache` vira NullStore), não usa conta nem contador e anonimiza o corretor. Para gravar de novo,
+no ambiente de teste e nunca no de produção:
+
+```sh
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb            # todas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb ncm chuva  # só essas
+```
+
+Fonte nova: ponha os pedidos dela no `CASOS`, rode só ela, confira o arquivo (pessoa física anonimizada, CNPJ de
+exemplo onde for empresa privada) e ponha no spec uma asserção do essencial. O spec falha enquanto uma fonte do
+catálogo da vitrine não tiver arquivo aqui.
+
+Fonte paga (a BigDataCorp, na F7): não se chama a fonte para gravar a fixture. O arquivo é feito à mão a partir da
+resposta documentada pelo fornecedor, passado pelo adaptador do servidor num spec, com dados fictícios, e leva no topo
+a marca `"_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real"`.
+
+`ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
+adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
+
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
 | cep.json | endereco: 01001-000 | BrasilAPI |

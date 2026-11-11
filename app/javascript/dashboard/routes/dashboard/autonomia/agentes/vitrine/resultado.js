@@ -4,8 +4,9 @@
 // 19"); um objeto dentro de outro abre um nível só, com o rótulo <PAI>_<CAMPO>.
 // #2858 F4 — lista de objetos: o nome de cada um vem do primeiro campo de CAMPOS_DE_NOME que todos têm (a seguradora,
 // a descrição da NCM, o objeto da compra). Depois dos nomes, o primeiro item aberto (a situação do corretor, a
-// distância da estação), e as listas dentro dele viram nomes também, um nível só. Lista sem campo de nome: o primeiro
-// aberto e quantos são.
+// distância da estação), e as listas dentro dele viram nomes também, um nível só. Com mais de um item, o primeiro só
+// abre com 2 campos com rótulo além do nome, e a primeira linha diz de qual item se trata ("Primeiro da lista"):
+// sem isso, o endereço de um hospital parecia valer para todos. Lista sem campo de nome: o primeiro aberto e quantos são.
 //
 // `textos`:
 //   rotulo(chave)          -> o rótulo do campo, ou '' quando não tem (o campo não aparece);
@@ -39,10 +40,14 @@ const dataLegivel = (texto, idioma) => {
   return new Date(ano, mes - 1, dia).toLocaleDateString(idioma);
 };
 
-const numeroLegivel = (numero, idioma, unidade) => {
+// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem separador de milhar; ano e código não.
+const ehDinheiro = (chave, unidade) =>
+  unidade.startsWith('R$') || String(chave).startsWith('valor_');
+
+const numeroLegivel = (numero, idioma, unidade, comMilhar = false) => {
   const texto = new Intl.NumberFormat(idioma, {
     maximumFractionDigits: 4,
-    useGrouping: false,
+    useGrouping: comMilhar,
   }).format(numero);
   if (!unidade) return texto;
   return unidade.startsWith('R$')
@@ -50,19 +55,35 @@ const numeroLegivel = (numero, idioma, unidade) => {
     : `${texto} ${unidade}`;
 };
 
+// "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes".
+const semTracoInicial = texto => {
+  let resto = texto;
+  while (resto.startsWith('-') || resto.startsWith(' ')) resto = resto.slice(1);
+  return resto || texto;
+};
+
+// O nome completo igual ao nome (o banco) não se repete.
+const repete = (objeto, chave, valor) =>
+  chave === 'nome_completo' && valor === objeto.nome;
+
 const valorLegivel = (chave, valor, textos, unidade) => {
   if (typeof valor === 'boolean') return valor ? textos.sim : textos.nao;
   if (typeof valor === 'number') {
     if (chave === 'ano_modelo' && valor === ANO_ZERO_KM) return textos.zeroKm;
-    return numeroLegivel(valor, textos.idioma, unidade);
+    return numeroLegivel(
+      valor,
+      textos.idioma,
+      unidade,
+      ehDinheiro(chave, unidade)
+    );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
-  return String(valor);
+  return semTracoInicial(String(valor));
 };
 
 const resumoDaLista = (nomes, total, textos) => {
   const quantos = Math.max(total ?? 0, nomes.length);
-  const primeiros = nomes.slice(0, PRIMEIROS);
+  const primeiros = nomes.slice(0, PRIMEIROS).map(semTracoInicial);
   const resto = quantos - primeiros.length;
   if (resto > 0) {
     return textos.maisN({ nomes: primeiros.join(', '), n: resto });
@@ -110,7 +131,7 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   const comNomeDoEstado = typeof objeto.estado === 'string';
   const total = Number.isInteger(objeto.total) ? objeto.total : null;
   return Object.entries(objeto).flatMap(([chave, valor]) => {
-    if (chave === omitir) return [];
+    if (chave === omitir || repete(objeto, chave, valor)) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
     if (Array.isArray(valor)) {
       return resumoDentro(valor, rotuloDe(chave), total, textos);
@@ -118,6 +139,17 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
     const rotulo = ehPrimitivo(valor) ? rotuloDe(chave) : '';
     return rotulo ? [[rotulo, valorLegivel(chave, valor, textos, '')]] : [];
   });
+};
+
+// O primeiro item de uma lista com nome. Item único: os detalhes dele (o nome já está na lista). Mais de um: só com
+// MINIMO_PARA_ABRIR campos com rótulo além do nome, e com o nome dele na primeira linha.
+const MINIMO_PARA_ABRIR = 2;
+const primeiroAberto = (itens, campo, textos) => {
+  const detalhes = linhasSimples(itens[0], textos.rotulo, textos, campo);
+  if (itens.length === 1) return detalhes;
+  if (detalhes.length < MINIMO_PARA_ABRIR) return [];
+  const nome = semTracoInicial(itens[0][campo]);
+  return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
 };
 
 const linhasDaLista = (chave, itens, total, textos) => {
@@ -134,10 +166,7 @@ const linhasDaLista = (chave, itens, total, textos) => {
     const resumo = rotulo
       ? [[rotulo, resumoDaLista(nomes, total, textos)]]
       : [];
-    return [
-      ...resumo,
-      ...linhasSimples(itens[0], textos.rotulo, textos, campo),
-    ];
+    return [...resumo, ...primeiroAberto(itens, campo, textos)];
   }
   // Lista de objetos sem nome (os preços de cada ano na tabela do carro): o primeiro aberto e quantos são.
   const primeiro = ehObjeto(itens[0])
@@ -159,6 +188,7 @@ export const linhasDoResultado = (dados, textos) => {
   return Object.entries(dados).flatMap(([chave, valor]) => {
     if (valor === null || valor === undefined) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
+    if (repete(dados, chave, valor)) return [];
     if (Array.isArray(valor)) return linhasDaLista(chave, valor, total, textos);
     if (ehObjeto(valor)) {
       const prefixo = `${chave}_`;
