@@ -776,6 +776,9 @@ en:
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'
       rule_funnel_manage_only: 'A rule that changes the pipeline also needs the pipeline settings permission in your role.'
       automation_view_only: 'For this you need permission to see the automatic rules in your role.'
+      automacao_sem_porta: 'In this account, automations made with the Guide are still the old kind. Ask the account admin to turn on the new Automations.'
+      automacao_ligada_vale_na_hora: 'This automation is on: the change starts working as soon as you confirm.'
+      automacao_desligar_sem_desfazer: 'This cannot be undone here. To turn it on again, just tap Turn on in the automation screen.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'
@@ -828,6 +831,13 @@ en:
       undo:
         already_undone: 'This was already undone.'
         expired: 'The 5 days to undo this have passed.'
+        conflitos:
+          ligar_na_tela: 'The automation stayed off. To turn it on again, just tap Turn on in the automation screen.'
+          automacao_ja_ligada: 'The automation was already turned on, so it stayed as it is.'
+          automacao_ja_executada: 'The automation already ran, so it stayed as it is.'
+          versao_ja_executada: 'This version of the automation already ran, so it stayed.'
+          versao_mais_nova: 'Someone saved a newer version after this, so it stayed.'
+          mudou_depois: 'Someone changed the automation after this, so it stayed as it is.'
       records:
         automation_rule: 'Automation'
       fields:

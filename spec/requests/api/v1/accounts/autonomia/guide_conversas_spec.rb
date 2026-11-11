@@ -227,18 +227,32 @@ RSpec.describe 'Guia da Plataforma — conversas guardadas', type: :request do
   # Tela de editar automação: o Guia retoma a conversa em que a automação foi montada ou mexida por
   # último, em vez de abrir em branco com os modelos de automação nova (conta 16, 05/10/2026).
   describe 'GET conversas/da_automacao/:automacao_id' do
-    def mexeu_na_automacao(conversa, automacao_id, quando:)
+    def mexeu_na_automacao(conversa, automacao_id, quando:, tipo: 'AutomationRule')
       execucao = Autonomia::Guide::Execucao.create!(account: account, user: conversa.user, passos: [])
-      Autonomia::Guide::Mudanca.create!(execucao: execucao, operacao: 'create', record_type: 'AutomationRule',
+      Autonomia::Guide::Mudanca.create!(execucao: execucao, operacao: 'create', record_type: tipo,
                                         record_id: automacao_id, tabela: 'automation_rules', antes: {}, depois: {},
                                         ordem: 1, passo: 1)
       turno = Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: SecureRandom.uuid, pergunta: 'monta', tela: 'automacoes_nova')
       turno.update!(execution_id: execucao.id, created_at: quando)
     end
 
-    def da_automacao(user, id)
-      get "#{base}/conversas/da_automacao/#{id}", headers: user.create_new_auth_token, as: :json
+    def da_automacao(user, id, motor: nil)
+      get "#{base}/conversas/da_automacao/#{id}#{"?motor=#{motor}" if motor}", headers: user.create_new_auth_token, as: :json
       response.parsed_body
+    end
+
+    # #2889: os ids das automações do motor novo e das regras se repetem; motor=novo só vale com a porta.
+    it 'motor=novo procura pela automação do motor novo, e só com a porta ligada', :aggregate_failures do
+      da_regra = conversa_de(admin, 'regra 8')
+      do_motor = conversa_de(admin, 'automação 8')
+      mexeu_na_automacao(da_regra, 8, quando: 2.hours.ago)
+      mexeu_na_automacao(do_motor, 8, quando: 3.hours.ago, tipo: 'Autonomia::Automacao::Definicao')
+
+      expect(da_automacao(admin, 8, motor: 'novo')['id']).to eq(da_regra.id)
+
+      account.enable_features!('automacao_porta', 'automacao_editor')
+      expect(da_automacao(admin, 8, motor: 'novo')['id']).to eq(do_motor.id)
+      expect(da_automacao(admin, 8)['id']).to eq(da_regra.id)
     end
 
     it 'devolve a conversa que mexeu por último naquela automação, só da própria pessoa', :aggregate_failures do

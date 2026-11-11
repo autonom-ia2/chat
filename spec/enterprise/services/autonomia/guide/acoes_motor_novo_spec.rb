@@ -18,7 +18,7 @@ RSpec.describe Autonomia::Guide::Acoes do
   before { account.enable_features!('automacao_editor', 'automacao_porta', 'automacao_fundacao') }
 
   def com_funcao(permissions)
-    user, account_user = create_crm_agent(account: account, name: 'Juliana Prado')
+    user, account_user = create_crm_agent(account: account, name: 'Pessoa de Teste')
     account_user.update!(custom_role: CustomRole.create!(account: account, name: "Função #{SecureRandom.hex(4)}",
                                                          permissions: permissions))
     user
@@ -51,7 +51,36 @@ RSpec.describe Autonomia::Guide::Acoes do
 
       expect(patch.call(vista).ok).to be(true)
       expect(automacao.reload.versao_ativa.receita.dig('passos', 0, 'duracao', 'valor')).to eq(2)
-      expect(patch.call(vista).ok).to be(false)
+      velha = patch.call(vista)
+      expect(velha.ok).to be(false)
+      expect(velha.mensagem).to eq(I18n.t('autonomia.automacao.editor.versao_mudou'))
+    end
+
+    it 'sem a porta (só com o editor), o Guia não mexe no motor novo' do
+      account.disable_features!('automacao_porta')
+
+      expect { criar }.to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automacao_sem_porta'))
+    end
+
+    # Ajustar a ligada vale na hora: passa pela confirmação da pessoa, com o aviso. A desligada segue direto.
+    it 'ajustar uma automação ligada pede confirmação; a desligada não', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      dados = { caminho: { id: automacao.id }, corpo: { 'receita' => outra_receita, 'base_versao_id' => automacao.versao_ativa_id },
+                descricao: 'Esperar dois dias' }
+
+      expect(para(admin).desfazivel?('PATCH autonomia/automacoes/:id', dados)).to be(true)
+
+      automacao.assumir_e_religar!(admin, versao_id: automacao.versao_ativa_id)
+      expect(para(admin).desfazivel?('PATCH autonomia/automacoes/:id', dados)).to be(false)
+      expect { para(admin).conferir!('PATCH autonomia/automacoes/:id', dados) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.needs_confirmation'))
+      expect(para(admin).descrever('PATCH autonomia/automacoes/:id', dados)[:aviso])
+        .to eq(I18n.t('autonomia.guide.automacao_ligada_vale_na_hora'))
+    end
+
+    it 'o sinal do Guia volta a desligado mesmo quando o pedido levanta', :aggregate_failures do
+      expect { Autonomia::Guide::PeloGuia.durante { raise ArgumentError, 'falhou' } }.to raise_error(ArgumentError)
+      expect(Autonomia::Guide::PeloGuia.agora?).to be(false)
     end
 
     it 'com automation_manage, cria sem ser administrador' do
@@ -113,9 +142,35 @@ RSpec.describe Autonomia::Guide::Acoes do
 
       relatorio = desfazer
 
-      expect(relatorio['conflitos'].pluck('motivo')).to include('in_use')
+      expect(relatorio['conflitos'].pluck('motivo')).to include('changed_after', 'versao_mais_nova')
+      expect(relatorio['conflitos'].pluck('texto')).to include(I18n.t('autonomia.guide.undo.conflitos.versao_mais_nova'))
       expect(automacao.reload.versao_ativa_id).to eq(depois.id)
       expect(automacao.versoes.count).to eq(3)
+    end
+
+    it 'a automação que a pessoa já ligou não some com o desfazer da criação', :aggregate_failures do
+      id = gravando(0) { criar }.registro
+      automacao = Autonomia::Automacao::Definicao.find(id)
+      automacao.assumir_e_religar!(admin, versao_id: automacao.versao_ativa_id)
+
+      relatorio = desfazer
+
+      expect(relatorio['conflitos'].pluck('motivo')).to include('automacao_ja_ligada')
+      expect(automacao.reload.versao_ativa).to be_present
+      expect(automacao.ativa).to be(true)
+    end
+
+    # Defesa em profundidade: mesmo que um desligar entre no caderno, o desfazer não religa.
+    it 'o desfazer nunca religa: a automação desligada continua desligada', :aggregate_failures do
+      automacao = Autonomia::Automacao::Definicao.find(criar.registro)
+      automacao.assumir_e_religar!(admin, versao_id: automacao.versao_ativa_id)
+      gravando(0) { automacao.desligar! }
+
+      relatorio = desfazer
+
+      expect(relatorio['conflitos'].pluck('motivo')).to eq(['ligar_na_tela'])
+      expect(relatorio['conflitos'].first['texto']).to eq(I18n.t('autonomia.guide.undo.conflitos.ligar_na_tela'))
+      expect(automacao.reload.ativa).to be(false)
     end
   end
 
@@ -129,13 +184,17 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(automacao.reload.ativa).to be(false)
     end
 
-    it 'desligar o Guia pode' do
+    # Desligar não tem desfazer (desfazer religaria sem "assumir"): vai pela confirmação, com o aviso de onde religar.
+    it 'desligar o Guia pode, com a confirmação da pessoa e sem desfazer', :aggregate_failures do
       automacao = Autonomia::Automacao::Definicao.find(criar.registro)
       automacao.assumir_e_religar!(admin, versao_id: automacao.versao_ativa_id)
+      desligar = 'POST autonomia/automacoes/:id/desligar'
+      dados = { caminho: { id: automacao.id }, corpo: {}, descricao: 'Desligar o lembrete' }
 
-      resultado = para(admin).executar('POST autonomia/automacoes/:id/desligar', { caminho: { id: automacao.id }, corpo: {} })
-
-      expect(resultado.ok).to be(true)
+      expect { para(admin).conferir!(desligar, dados) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.needs_confirmation'))
+      expect(para(admin).descrever(desligar, dados)[:aviso]).to eq(I18n.t('autonomia.guide.automacao_desligar_sem_desfazer'))
+      expect(para(admin).executar(desligar, dados).ok).to be(true)
       expect(automacao.reload.ativa).to be(false)
     end
   end
@@ -162,10 +221,12 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(texto).to include('Tela atual: automacoes_editar. Registro aberto na tela: id=7. ')
     end
 
-    it 'automação de outra conta não entra no cabeçalho' do
+    it 'automação de outra conta não entra no cabeçalho; a da conta entra', :aggregate_failures do
       outra = create(:account)
       alheia = Autonomia::Automacao::Definicao.create!(account: outra, nome: 'x', origem: 'manual')
+      propria = Autonomia::Automacao::Definicao.find(criar.registro)
 
+      expect(cabecalho('automacoes_guia_editar', { 'id' => propria.id })).to include("automação id=#{propria.id}, versão atual")
       expect(cabecalho('automacoes_guia_editar', { 'id' => alheia.id })).not_to include('versão atual')
     end
   end

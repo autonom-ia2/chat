@@ -1269,6 +1269,9 @@ pt_BR:
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'
       rule_funnel_manage_only: 'Regra que mexe no funil também precisa da permissão de configurar funis na sua função.'
       automation_view_only: 'Para isso você precisa da permissão de ver as regras automáticas na sua função.'
+      automacao_sem_porta: 'Nesta conta, as automações montadas com o Guia ainda são as do jeito antigo. Peça a quem administra a conta para ligar as Automações novas.'
+      automacao_ligada_vale_na_hora: 'Esta automação está ligada: a mudança vale assim que você confirmar.'
+      automacao_desligar_sem_desfazer: 'Isto não tem desfazer aqui. Para ligar de novo, é só tocar em Ligar automação na tela dela.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
@@ -1321,6 +1324,13 @@ pt_BR:
       undo:
         already_undone: 'Isto já foi desfeito.'
         expired: 'Os 5 dias para desfazer isto já passaram.'
+        conflitos:
+          ligar_na_tela: 'A automação ficou desligada. Para ligar de novo, é só tocar em Ligar automação na tela dela.'
+          automacao_ja_ligada: 'A automação já tinha sido ligada, então ficou como está.'
+          automacao_ja_executada: 'A automação já rodou, então ficou como está.'
+          versao_ja_executada: 'Esta versão da automação já rodou, então ficou.'
+          versao_mais_nova: 'Alguém salvou uma versão mais nova depois, então esta ficou.'
+          mudou_depois: 'Alguém mexeu na automação depois, então ela ficou como está.'
       records:
         automation_rule: 'Automação'
       fields:

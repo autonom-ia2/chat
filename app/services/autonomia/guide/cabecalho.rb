@@ -28,12 +28,9 @@ module Autonomia::Guide::Cabecalho
 
   # #2889 — com a porta da Automação (e o editor, que a API pede), o Guia monta automação no motor novo
   # (autonomia/automacoes), e não em automation_rules. Sem as duas flags, a linha não existe e tudo segue como antes.
-  FLAGS_DO_MOTOR_NOVO = %w[automacao_porta automacao_editor].freeze
   TELA_DO_MOTOR_NOVO = 'automacoes_guia_editar'.freeze
 
-  def self.motor_novo?(account)
-    account.present? && FLAGS_DO_MOTOR_NOVO.all? { |flag| account.feature_enabled?(flag) }
-  end
+  def self.motor_novo?(account) = ::Autonomia::Automacao.porta?(account)
 
   def self.motor_das_automacoes(account)
     motor_novo?(account) ? ' Motor das automações desta conta: novo (autonomia/automacoes).' : ''

@@ -30,7 +30,7 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
   # editar retomar dali. Sai do registro do que o Guia fez (#855): a mudança aponta
   # a automação, a execução e o turno. Sem nenhuma, `{}` e a tela começa limpa.
   def da_automacao
-    tipo = REGISTRO_DA_AUTOMACAO.fetch(params[:motor].to_s, 'AutomationRule')
+    tipo = motor_novo? ? REGISTRO_DA_AUTOMACAO.fetch(params[:motor].to_s, 'AutomationRule') : 'AutomationRule'
     conversa = conversas.joins(turnos: { execucao: :mudancas })
                         .where(autonomia_guide_changes: { record_type: tipo, record_id: params[:automacao_id] })
                         .reorder('autonomia_guide_turns.created_at DESC, autonomia_guide_turns.id DESC')
@@ -53,6 +53,9 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
   def conversas
     ::Autonomia::Guide::Conversa.de(Current.account, Current.user)
   end
+
+  # #2889: o motor novo só com a porta da Automação.
+  def motor_novo? = ::Autonomia::Automacao.porta?(Current.account)
 
   def carregar_conversa
     @conversa = conversas.find_by(id: params[:id])

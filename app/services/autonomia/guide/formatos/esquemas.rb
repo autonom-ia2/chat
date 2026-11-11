@@ -33,14 +33,14 @@ module Autonomia::Guide::Formatos::Esquemas
       return "#{associacao.klass.name}##{nome}" if da_coluna(associacao.klass, nome)
     end
     nil
-  rescue NameError
-    nil
   end
 
   # O esquema de uma referência "Modelo#coluna", lido do validador do modelo na hora (o formato só guarda o nome).
+  # Referência que não resolve é erro de quem gerou o arquivo: levanta na carga, em vez de o esquema sumir calado.
   def da_referencia(referencia)
     modelo, coluna = referencia.to_s.split('#', 2)
-    da_coluna(modelo.safe_constantize, coluna) if coluna.present?
+    esquema = da_coluna(modelo.to_s.safe_constantize, coluna.to_s) if coluna.present?
+    esquema || raise(ArgumentError, "esquema_de sem esquema: #{referencia}")
   end
 
   # Troca cada `esquema_de` do formato pelo esquema que ele cita. Chamado ao ler o arquivo (`Formatos.todos`).
@@ -48,7 +48,7 @@ module Autonomia::Guide::Formatos::Esquemas
     case valor
     when Hash
       resolvido = valor.transform_values { |item| resolver_referencias(item) }
-      valor.key?('esquema_de') ? resolvido.merge('esquema' => da_referencia(valor['esquema_de'])).compact : resolvido
+      valor.key?('esquema_de') ? resolvido.merge('esquema' => da_referencia(valor['esquema_de'])) : resolvido
     when Array then valor.map { |item| resolver_referencias(item) }
     else valor
     end

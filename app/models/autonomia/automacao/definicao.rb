@@ -51,11 +51,29 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
 
   # O desfazer do Guia (#2889): a automação que o Guia criou sai com o desfazer se ainda não rodou nenhuma vez. Já
   # rodou (ligaram e ela agiu), fica: o histórico aponta para ela, e o desfazer avisa o conflito.
+  # Já ligada alguma vez (a pessoa assumiu), também fica: apagar tiraria de quem ligou uma automação que ela aprovou.
   def apagar_ao_desfazer
-    return 'in_use' if execucoes.exists? || versoes.exists?
+    with_lock do
+      next 'automacao_ja_ligada' if ja_ligada?
+      next 'automacao_ja_executada' if execucoes.exists?
+      next 'mudou_depois' if versoes.exists?
 
-    destroy!
-    nil
+      destroy!
+      nil
+    end
+  end
+
+  # Ligada agora ou alguma vez (alguém assumiu e ligou).
+  def ja_ligada? = ativa || ligada_em.present?
+
+  # O desfazer nunca deixa a automação ligada de novo (#2889): ligar é só na tela (assumir_e_religar!). Nem troca a
+  # versão de uma automação ligada: ela rodaria uma versão que quem ligou não viu.
+  def self.recusa_ao_restaurar(antes, atual)
+    antes = antes.to_h
+    ligada = atual.to_h['ativa'] == true
+    return 'ligar_na_tela' if antes['ativa'] == true && !ligada
+
+    'automacao_ja_ligada' if ligada && antes.key?('versao_ativa_id')
   end
 
   # A versão que a pessoa viu na tela já não é a ativa: outra pessoa salvou no meio. A tela (F5) responde 409 e mostra
