@@ -1,7 +1,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FerramentasProntasAPI from 'dashboard/api/autonomia/ferramentasProntas';
-import { chaveDoTexto, ferramentaPorId } from './catalogo';
+import { chaveDoTexto, oferecida } from './catalogo';
 import { useVitrine } from './useVitrine';
 import { useVitrineLigada } from './useVitrineLigada';
 
@@ -25,7 +25,7 @@ export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
     construtorNaConta.value
       ? (lista || []).filter(
           id =>
-            ferramentaPorId(id) &&
+            oferecida(id) &&
             !tiradas.value.includes(id) &&
             !vitrine.tem(agenteId.value, id)
         )

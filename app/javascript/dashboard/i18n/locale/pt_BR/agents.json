@@ -3449,13 +3449,13 @@
         },
         "PRODUTOS_SEGURADORAS": {
           "NOME": "Produtos das seguradoras",
-          "FAZ": "Mostra os seguros que cada seguradora oferece, com as coberturas e o link das condições, direto da fonte oficial.",
-          "CONSEGUE": "dizer que seguros uma seguradora tem",
-          "CLIENTE": "Que seguro cyber a Allianz tem?",
-          "AGENTE": "A Allianz tem o seguro de Riscos Cibernéticos, que cobre danos causados a outras pessoas. As condições estão no site dela.",
-          "USE_QUANDO": "Use quando o cliente perguntar que seguros ou coberturas uma seguradora oferece.",
+          "FAZ": "Mostra os seguros garantia e de transporte que as seguradoras publicam no Open Insurance, com as coberturas e o link das condições. Junto, Pottencial, Akad e Fairfax não publicam.",
+          "CONSEGUE": "dizer que seguro garantia ou de transporte uma seguradora publica",
+          "CLIENTE": "A Allianz tem seguro para o sumiço da carga?",
+          "AGENTE": "Entre as seguradoras que publicam no Open Insurance, a Allianz tem o RCF-DC, que cobre o sumiço da carga junto com o caminhão. As condições estão no site dela.",
+          "USE_QUANDO": "Use quando o cliente perguntar que seguro garantia ou de transporte uma seguradora oferece.",
           "ROTULO": "Seguradora e tipo de seguro",
-          "EXEMPLO": "seguro cyber da Allianz",
+          "EXEMPLO": "seguro de transporte da Allianz",
           "CONSULTAS": "achar a seguradora, ver os produtos de um ramo"
         },
         "CORRETOR_SUSEP": {
