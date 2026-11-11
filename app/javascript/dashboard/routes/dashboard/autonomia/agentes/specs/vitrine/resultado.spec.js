@@ -65,6 +65,7 @@ const ROTULOS = {
   ano: 'Ano',
   dias: 'Dias',
   feriados: 'Feriados',
+  compras: 'Compras',
 };
 const dataPt = (ano, mes, dia) =>
   new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR');
@@ -722,6 +723,25 @@ describe('linhasDoResultado', () => {
     ).toEqual([['Corretores', 'Corretora A']]);
     expect(
       linhasDoResultado({ plano: { coberturas } }, { ...textos, rotulo })
+    ).toEqual([]);
+  });
+
+  // C27 do testador: a lista sem rótulo no nível de cima não aparece por nenhum caminho (item único, lista com nome).
+  it('a list without a label shows nothing at the top level, with one item or with names', () => {
+    const rotulo = chave =>
+      chave === 'coberturas' ? '' : ROTULOS[chave] || '';
+    const em = dados => linhasDoResultado(dados, { ...textos, rotulo });
+    expect(
+      em({ coberturas: [{ ano: 2024, valor: 10, descricao: 'X' }] })
+    ).toEqual([]);
+    expect(em({ coberturas: [{ ano: 2024, valor: 10 }] })).toEqual([]);
+    expect(
+      em({
+        coberturas: [
+          { nome: 'A', valor: 'R$ 1,00', endereco: 'RUA A', telefone: '1' },
+          { nome: 'B', valor: 'R$ 2,00', endereco: 'RUA B', telefone: '2' },
+        ],
+      })
     ).toEqual([]);
   });
 

@@ -400,8 +400,6 @@ const linhasDePares = (itens, ids, id, textos) =>
 // lista com nome), o primeiro sob "Primeiro da lista". Sem identificador, só quantos são, com o rótulo da lista (abrir
 // o primeiro faria os campos dele parecerem valer para todos).
 const listaSemNome = (rotulo, itens, total, textos) => {
-  // Lista sem rótulo não aparece (coberturas, condicoes), nem pelo identificador nem pelos pares.
-  if (!rotulo) return [];
   const id = campoIdentificador(itens, textos);
   if (!id) return [[rotulo, quantosSao(itens, total, textos)]];
   const ids = identificadores(itens, id, textos);
@@ -426,12 +424,14 @@ const listaSemNome = (rotulo, itens, total, textos) => {
   return [...resumo, [textos.rotulo('primeiro_da_lista'), ids[0]], ...detalhes];
 };
 
+// Lista sem rótulo não aparece (coberturas, condicoes) por nenhum caminho: nem o item único, nem o primeiro da lista
+// com nome, nem os identificadores ou os pares.
 const linhasDaLista = (chave, itens, total, textos) => {
-  if (!itens.length) return [];
   const rotulo = textos.rotulo(chave);
+  if (!rotulo || !itens.length) return [];
   if (itens.every(ehPrimitivo)) {
     const valores = itens.map(item => legivel(chave, item, textos));
-    return rotulo ? [[rotulo, resumoDaLista(valores, total, textos)]] : [];
+    return [[rotulo, resumoDaLista(valores, total, textos)]];
   }
   const umSo = Math.max(total ?? 0, itens.length) === 1;
   const campo = campoDeNome(itens);
@@ -440,7 +440,7 @@ const linhasDaLista = (chave, itens, total, textos) => {
     // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
     // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …"). Chave de
     // identificação (o código da marca, o CID, a UF) não vira par: a lista mostra só os nomes.
-    const doPar = rotulo ? campoDosPares(itens, campo, textos) : '';
+    const doPar = campoDosPares(itens, campo, textos);
     if (doPar && !identificaNoPar(doPar)) {
       const pares = itens.map(
         (item, i) => `${nomes[i]}: ${valorDoPar(item, doPar, textos)}`
@@ -449,10 +449,10 @@ const linhasDaLista = (chave, itens, total, textos) => {
         [rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
       ];
     }
-    const resumo = rotulo
-      ? [[rotulo, resumoDaLista(nomes, total, textos)]]
-      : [];
-    return [...resumo, ...primeiroAberto(itens, campo, umSo, textos)];
+    return [
+      [rotulo, resumoDaLista(nomes, total, textos)],
+      ...primeiroAberto(itens, campo, umSo, textos),
+    ];
   }
   // Um item só sem nome (o preço do carro de um ano): ele inteiro.
   if (umSo) {
