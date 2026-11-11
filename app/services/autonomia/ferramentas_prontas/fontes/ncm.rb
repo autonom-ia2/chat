@@ -39,7 +39,13 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     falha = Autonomia::FerramentasProntas::Provedor::Falha
     raise falha, 'resposta_invalida' unless dado.is_a?(Hash) && dado['codigo'].present? && dado['descricao'].present?
 
-    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => dado['descricao'].to_s.squish, 'vigente_desde' => dado['data_inicio'].presence }.compact
+    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => texto(dado['descricao']), 'vigente_desde' => dado['data_inicio'].presence }.compact
+  end
+
+  # A tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>"): fica o texto, com as
+  # entidades decodificadas ("&amp;" -> "&").
+  def texto(descricao)
+    Nokogiri::HTML5.fragment(descricao.to_s).text.squish
   end
 
   # Só o que vale hoje: a tabela também traz o código que já saiu (data de fim no passado).

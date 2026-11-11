@@ -23,6 +23,7 @@ const textosEm = (mensagens, idioma, maisN) => {
     sim: 'S',
     nao: 'N',
     zeroKm: '0km',
+    nenhumValor: mensagens.AGENTS.VITRINE.RESULTADO.NENHUM_VALOR,
     idioma,
   };
 };
@@ -98,10 +99,18 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     ).toBeDefined();
     expect(valor('banco_central', 'dolar', 'Venda')).toContain('R$');
     // A unidade da mediana vem em `unidades` (C02): sem ela, "5,2195" sem o "%".
+    // Varredura P13: os dois anos com a previsão de cada um, sem abrir só o primeiro.
     expect(
       valor('banco_central', 'focus', 'Previsão do mercado (mediana)')
-    ).toBe('5,2195 %');
-    expect(valor('banco_central', 'focus', 'Primeiro da lista')).toBe('2026');
+    ).toBe('2026: 5,2195 % · 2027: 4,9005 %');
+    expect(
+      valor('banco_central', 'focus', 'Primeiro da lista')
+    ).toBeUndefined();
+    // Regra A: a linha dos identificadores leva o rótulo do identificador (Ano), não o da lista.
+    expect(valor('banco_central', 'focus', 'Ano')).toContain('2026');
+    expect(
+      valor('banco_central', 'focus', 'Anos com previsão')
+    ).toBeUndefined();
     expect(valor('cidades', 'estados', 'Estados')).toContain('Acre');
     expect(valor('cidades', 'cidades', 'Cidades')).toContain('Acrelândia');
     expect(valor('ddd', 'ddd', 'Cidades')).toContain('ARAGUARI');
@@ -171,11 +180,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('estacoes', 'estacoes', 'Distância (km)')).toBe('2');
     expect(valor('estacoes', 'estacoes', 'Situação')).toBe('Operante');
     expect(valor('chuva', 'chuva', 'Chuva no período (mm)')).toBe('64,4');
-    // Vários dias (lista sem nome, um campo só além da data): cada dia com a chuva dele, numa linha.
+    // Vários dias (lista sem nome, um campo só além da data): cada dia com a chuva dele, numa linha com o rótulo do
+    // campo; o rótulo da lista ("Dias") não aparece.
     const dia = d => new Date(2026, 10, d).toLocaleDateString('pt-BR');
-    expect(valor('chuva', 'chuva', 'Dias')).toBe(
-      `${dia(4)}: 0,9 · ${dia(5)}: 6,2 · ${dia(6)}: 0,9 e mais 4`
+    expect(valor('chuva', 'chuva', 'Chuva no dia (mm)')).toBe(
+      `${dia(4)}: 0,9 · ${dia(5)}: 6,2 · ${dia(6)}: 0,9 · e mais 4`
     );
+    expect(valor('chuva', 'chuva', 'Dias')).toBeUndefined();
     expect(valor('chuva', 'chuva', 'Primeiro da lista')).toBeUndefined();
     expect(valor('chuva', 'chuva', 'Lugar')).toBe('Uberlândia (MG)');
   });
@@ -203,6 +214,8 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
   // Suspenso" depois dos corretores, "Código: 1" depois das marcas, "Estado: AC" depois dos estados).
   it('saída completa: corretores, marcas, estados e feriados', () => {
+    const dia = (ano, mes, d) =>
+      new Date(ano, mes - 1, d).toLocaleDateString('pt-BR');
     expect(linhas('corretor_susep', 'por_nome')).toEqual([
       [
         'Corretores',
@@ -212,15 +225,19 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ['Situação', 'Suspenso'],
       ['Registro na SUSEP', '100000001'],
     ]);
+    // Varredura P03/P04: nome e um só campo com rótulo (o código da marca) vira par "nome: valor".
     expect(linhas('fipe', 'marcas')).toEqual([
-      ['Marcas', 'Acura, Agrale, Alfa Romeo e mais 105'],
+      ['Marcas', 'Acura: 1 · Agrale: 2 · Alfa Romeo: 3 · e mais 105'],
     ]);
     expect(linhas('cidades', 'estados')).toEqual([
-      ['Estados', 'Acre, Alagoas, Amapá e mais 24'],
+      ['Estados', 'Acre: AC · Alagoas: AL · Amapá: AP · e mais 24'],
     ]);
     expect(linhas('feriados', 'feriados')).toEqual([
       ['Ano', '2026'],
-      ['Feriados', 'Confraternização mundial, Carnaval, Carnaval e mais 11'],
+      [
+        'Feriados',
+        `Confraternização mundial: ${dia(2026, 1, 1)} · Carnaval: ${dia(2026, 2, 16)} · Carnaval: ${dia(2026, 2, 17)} · e mais 11`,
+      ],
       ['Observação', porFonte.feriados.feriados.dados.observacao],
     ]);
   });

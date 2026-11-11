@@ -9,11 +9,15 @@
 // sem isso, o endereço de um hospital parecia valer para todos. Lista sem campo de nome (#2858 F7): um item só abre
 // inteiro; com mais de um, o item é identificado por CAMPOS_IDENTIFICADORES e o primeiro vai sob "Primeiro da lista";
 // sem identificador, só a contagem. Uma unidade de campo pode vir em `unidades` (campo -> unidade), no nível de cima.
+// #2858 regra final da lista sem nome: a linha dos identificadores leva o rótulo do próprio identificador ("Combustível:
+// Gasolina e Flex"); o rótulo da lista só aparece na contagem. Todos os itens com o mesmo único campo além do
+// identificador viram pares numa linha com o rótulo desse campo ("Chuva no dia (mm): 04/11/2026: 0,9 · …").
 //
 // `textos`:
 //   rotulo(chave)          -> o rótulo do campo, ou '' quando não tem (o campo não aparece);
 //   maisN({ nomes, n })    -> "Acrelândia, Assis Brasil, Brasiléia e mais 19";
 //   sim, nao, zeroKm       -> os textos de verdadeiro, falso e do ano 32000 da tabela do carro;
+//   nenhumValor            -> o "—" do item da linha de pares que veio sem o valor;
 //   idioma                 -> o idioma do navegador ("pt-BR") para datas, números e a lista curta.
 
 const PRIMEIROS = 3;
@@ -37,26 +41,44 @@ const ehDataIso = texto =>
   texto[7] === '-' &&
   [...texto.split('-').join('')].every(ehDigito);
 
+// O Date empurra a data impossível para outra ("2026-02-31" vira 03/03): se ano, mês e dia não batem com o texto, a
+// data não existe.
+const bateComODia = (data, ano, mes, dia) =>
+  data.getFullYear() === ano &&
+  data.getMonth() === mes - 1 &&
+  data.getDate() === dia;
+
 const dataLegivel = (texto, idioma) => {
   const [ano, mes, dia] = texto.split('-').map(Number);
-  return new Date(ano, mes - 1, dia).toLocaleDateString(idioma);
+  const data = new Date(ano, mes - 1, dia);
+  if (!bateComODia(data, ano, mes, dia)) return texto;
+  return data.toLocaleDateString(idioma);
 };
 
-// "2026-11-11 03:10" ou "2026-11-11T03:10:00" (com ou sem fuso no fim), conferido caractere a caractere.
-const TAMANHO_DA_DATA_COM_HORA = 16;
+// "AAAA-MM-DD HH:MM", com ":ss" e fração opcionais, com espaço ou "T" no meio; hora até 23, minuto e segundo até 59.
+// Com fuso no fim ou qualquer outro texto, não é data com hora: o texto vai como veio (nenhuma fonte manda fuso).
+const HORA_MAXIMA = 23;
+const MINUTO_MAXIMO = 59;
+const ehNumeroDeDoisDigitos = (texto, maximo) =>
+  texto.length === 2 && [...texto].every(ehDigito) && Number(texto) <= maximo;
+const ehFracao = resto =>
+  resto === '' ||
+  (resto.startsWith('.') &&
+    resto.length > 1 &&
+    [...resto.slice(1)].every(ehDigito));
+const ehSegundos = resto =>
+  resto === '' ||
+  (resto.startsWith(':') &&
+    ehNumeroDeDoisDigitos(resto.slice(1, 3), MINUTO_MAXIMO) &&
+    ehFracao(resto.slice(3)));
 const ehDataComHora = texto =>
   typeof texto === 'string' &&
-  texto.length >= TAMANHO_DA_DATA_COM_HORA &&
   ehDataIso(texto.slice(0, TAMANHO_DA_DATA)) &&
   [' ', 'T'].includes(texto[TAMANHO_DA_DATA]) &&
+  ehNumeroDeDoisDigitos(texto.slice(11, 13), HORA_MAXIMA) &&
   texto[13] === ':' &&
-  [...`${texto.slice(11, 13)}${texto.slice(14, 16)}`].every(ehDigito);
-
-// Com fuso ("Z", "-03:00"), a hora vai para o fuso de quem olha; sem fuso, fica a hora que veio.
-const temFuso = texto => {
-  const resto = texto.slice(TAMANHO_DA_DATA_COM_HORA);
-  return resto.endsWith('Z') || resto.includes('+') || resto.includes('-');
-};
+  ehNumeroDeDoisDigitos(texto.slice(14, 16), MINUTO_MAXIMO) &&
+  ehSegundos(texto.slice(16));
 
 const dataComHoraLegivel = (texto, idioma) => {
   const [ano, mes, dia] = texto
@@ -64,10 +86,8 @@ const dataComHoraLegivel = (texto, idioma) => {
     .split('-')
     .map(Number);
   const [hora, minuto] = [texto.slice(11, 13), texto.slice(14, 16)].map(Number);
-  const data = temFuso(texto)
-    ? new Date(`${texto.slice(0, TAMANHO_DA_DATA)}T${texto.slice(11)}`)
-    : new Date(ano, mes - 1, dia, hora, minuto);
-  if (Number.isNaN(data.getTime())) return texto;
+  const data = new Date(ano, mes - 1, dia, hora, minuto);
+  if (!bateComODia(data, ano, mes, dia)) return texto;
   const horario = data.toLocaleTimeString(idioma, {
     hour: '2-digit',
     minute: '2-digit',
@@ -75,22 +95,74 @@ const dataComHoraLegivel = (texto, idioma) => {
   return `${data.toLocaleDateString(idioma)} ${horario}`;
 };
 
-// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem de 2 a 4 casas (a PTAX tem 4). Número
-// com unidade (kW, ha, mm, R$) ou dinheiro tem separador de milhar; sem unidade (ano, código, CEP, registro) não.
+// Dinheiro (a unidade "R$", ou o campo valor_*: o valor estimado da compra) tem de 2 a 4 casas (a PTAX tem 4).
 const ehDinheiro = (chave, unidade) =>
   unidade.startsWith('R$') || String(chave).startsWith('valor_');
 
-const numeroLegivel = (numero, idioma, unidade, dinheiro = false) => {
+// Todo número tem separador de milhar, menos o que identifica (ano, CEP, código, registro, documento): esse vai como
+// veio e sem unidade, nem quando há `unidade` no nível de cima.
+const CHAVES_DE_IDENTIFICACAO = [
+  'ano',
+  'ano_modelo',
+  'cep',
+  'matricula',
+  'numero',
+  'cnpj',
+  'cpf',
+  'ispb',
+  'cnes',
+  'ddd',
+  'rntrc',
+];
+const PREFIXOS_DE_IDENTIFICACAO = ['codigo', 'registro'];
+const ehIdentificacao = chave =>
+  CHAVES_DE_IDENTIFICACAO.includes(chave) ||
+  PREFIXOS_DE_IDENTIFICACAO.some(prefixo => String(chave).startsWith(prefixo));
+
+const MIN_CASAS_DO_DINHEIRO = 2;
+const MAX_CASAS = 4;
+const numeroLegivel = (
+  numero,
+  idioma,
+  unidade = '',
+  dinheiro = false,
+  agrupa = true,
+  casas = MIN_CASAS_DO_DINHEIRO
+) => {
   const texto = new Intl.NumberFormat(idioma, {
-    minimumFractionDigits: dinheiro ? 2 : 0,
+    minimumFractionDigits: dinheiro ? casas : 0,
     maximumFractionDigits: 4,
-    useGrouping: dinheiro || Boolean(unidade),
+    useGrouping: agrupa,
   }).format(numero);
   if (!unidade) return texto;
   return unidade.startsWith('R$')
     ? `${unidade} ${texto}`
     : `${texto} ${unidade}`;
 };
+
+// O dinheiro do mesmo item com as mesmas casas (varredura P12: "R$ 5,5834" e "R$ 5,5840" na compra e na venda): a
+// maior entre os valores de dinheiro dele, de 2 a 4. `unidadeDaChave` dá a unidade de cada campo.
+const casasDecimais = numero => {
+  const texto = String(Math.abs(numero));
+  if (texto.includes('e')) return MAX_CASAS;
+  const [, fracao = ''] = texto.split('.');
+  return fracao.length;
+};
+const casasDoDinheiro = (objeto, unidadeDaChave) =>
+  Math.min(
+    MAX_CASAS,
+    Math.max(
+      MIN_CASAS_DO_DINHEIRO,
+      ...Object.entries(objeto)
+        .filter(
+          ([chave, valor]) =>
+            typeof valor === 'number' &&
+            !ehIdentificacao(chave) &&
+            ehDinheiro(chave, unidadeDaChave(chave))
+        )
+        .map(([, valor]) => casasDecimais(valor))
+    )
+  );
 
 // "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes". Só no nome do item e na
 // descrição: em outro texto o traço pode ser o sinal ("-0,5").
@@ -108,11 +180,16 @@ const valorLegivel = (chave, valor, textos, unidade) => {
   if (typeof valor === 'boolean') return valor ? textos.sim : textos.nao;
   if (typeof valor === 'number') {
     if (chave === 'ano_modelo' && valor === ANO_ZERO_KM) return textos.zeroKm;
+    if (ehIdentificacao(chave)) {
+      return numeroLegivel(valor, textos.idioma, '', false, false);
+    }
     return numeroLegivel(
       valor,
       textos.idioma,
       unidade,
-      ehDinheiro(chave, unidade)
+      ehDinheiro(chave, unidade),
+      true,
+      textos.casas
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
@@ -121,13 +198,16 @@ const valorLegivel = (chave, valor, textos, unidade) => {
 };
 
 // A lista curta: os três primeiros (já legíveis) e quantos faltam. Com `separador` (os pares "data: valor"), ele
-// separa os itens, porque a vírgula se confundiria com a do número.
+// separa os itens, porque a vírgula se confundiria com a do número, e vem também antes do "e mais N".
 const resumoDaLista = (legiveis, total, textos, separador = '') => {
   const quantos = Math.max(total ?? 0, legiveis.length);
   const primeiros = legiveis.slice(0, PRIMEIROS);
   const resto = quantos - primeiros.length;
   if (resto > 0) {
-    return textos.maisN({ nomes: primeiros.join(separador || ', '), n: resto });
+    const nomes = separador
+      ? `${primeiros.join(separador)}${separador.trimEnd()}`
+      : primeiros.join(', ');
+    return textos.maisN({ nomes, n: numeroLegivel(resto, textos.idioma) });
   }
   if (separador) return primeiros.join(separador);
   return new Intl.ListFormat(textos.idioma, { type: 'conjunction' }).format(
@@ -173,11 +253,14 @@ const campoDeNome = itens =>
   campoComum(itens, CAMPOS_DE_NOME, valor => typeof valor === 'string');
 const todosDiferentes = (itens, campo) =>
   new Set(itens.map(item => item[campo])).size === itens.length;
-const campoIdentificador = itens =>
-  CAMPOS_IDENTIFICADORES.filter(campo =>
-    campoComum(itens, [campo], valor =>
-      ['string', 'number'].includes(typeof valor)
-    )
+// O identificador precisa de rótulo: é ele que dá nome à linha ("Combustível: Gasolina e Flex").
+const campoIdentificador = (itens, textos) =>
+  CAMPOS_IDENTIFICADORES.filter(
+    campo =>
+      textos.rotulo(campo) &&
+      campoComum(itens, [campo], valor =>
+        ['string', 'number'].includes(typeof valor)
+      )
   ).find(campo => todosDiferentes(itens, campo));
 
 // A unidade de um campo: `unidades` (campo -> unidade), mandada no nível de cima (a mediana do Focus).
@@ -200,20 +283,29 @@ const identificadores = (itens, campo, textos) =>
 const quantosSao = (itens, total, textos) =>
   numeroLegivel(Math.max(total ?? 0, itens.length), textos.idioma);
 
-// Os itens de uma lista, legíveis, na ordem: valores simples, nomes ou identificadores; null quando não há nenhum.
+// Os itens de uma lista, legíveis: valores simples ou nomes; null quando não há nenhum dos dois.
 const legiveisDaLista = (chave, itens, textos) => {
   if (itens.every(ehPrimitivo)) {
     return itens.map(item => legivel(chave, item, textos));
   }
   const nome = campoDeNome(itens);
-  if (nome) return nomesLegiveis(itens, nome);
-  const id = campoIdentificador(itens);
-  return id ? identificadores(itens, id, textos) : null;
+  return nome ? nomesLegiveis(itens, nome) : null;
+};
+
+// Lista sem nome com identificador: a linha leva o rótulo do identificador. null quando não é esse o caso.
+const linhaDosIdentificadores = (itens, total, textos) => {
+  if (itens.every(ehPrimitivo) || campoDeNome(itens)) return null;
+  const id = campoIdentificador(itens, textos);
+  if (!id) return null;
+  const ids = identificadores(itens, id, textos);
+  return [textos.rotulo(id), resumoDaLista(ids, total, textos)];
 };
 
 // Uma lista dentro do item aberto: os nomes, os identificadores ou só quantos são (não abre de novo).
 const resumoDentro = (chave, itens, rotulo, total, textos) => {
   if (!rotulo || !itens.length) return [];
+  const doIdentificador = linhaDosIdentificadores(itens, total, textos);
+  if (doIdentificador) return [doIdentificador];
   const legiveis = legiveisDaLista(chave, itens, textos);
   const valor = legiveis
     ? resumoDaLista(legiveis, total, textos)
@@ -227,6 +319,8 @@ const resumoDentro = (chave, itens, rotulo, total, textos) => {
 const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   const comNomeDoEstado = typeof objeto.estado === 'string';
   const total = Number.isInteger(objeto.total) ? objeto.total : null;
+  const casas = casasDoDinheiro(objeto, chave => unidadeDe(textos, chave));
+  const textosDoItem = { ...textos, casas };
   return Object.entries(objeto).flatMap(([chave, valor]) => {
     if (chave === omitir || repete(objeto, chave, valor)) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
@@ -234,7 +328,7 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
       return resumoDentro(chave, valor, rotuloDe(chave), total, textos);
     }
     const rotulo = ehPrimitivo(valor) ? rotuloDe(chave) : '';
-    return rotulo ? [[rotulo, legivel(chave, valor, textos)]] : [];
+    return rotulo ? [[rotulo, legivel(chave, valor, textosDoItem)]] : [];
   });
 };
 
@@ -250,24 +344,82 @@ const primeiroAberto = (itens, campo, umSo, textos) => {
   return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
 };
 
-// Lista sem nome e com mais de um item. Cada item com 1 campo com rótulo além do identificador (os focos de cada dia):
-// os pares numa linha só ("10/11/2026: 5 · 11/11/2026: 3"). Senão, os identificadores e, com MINIMO_PARA_ABRIR campos
-// com rótulo (a mesma regra da lista com nome), o primeiro sob "Primeiro da lista". Sem identificador, só quantos são
-// (abrir o primeiro faria os campos dele parecerem valer para todos).
 const SEPARADOR_DE_PARES = ' · ';
-const listaSemNome = (rotulo, itens, total, textos) => {
-  const id = campoIdentificador(itens);
-  if (!id) return rotulo ? [[rotulo, quantosSao(itens, total, textos)]] : [];
-  const ids = identificadores(itens, id, textos);
-  const detalhesDeCada = itens.map(item =>
-    linhasSimples(item, textos.rotulo, textos, id)
+
+// O campo da linha de pares: o único campo com rótulo além do identificador, o mesmo em todos os itens, com valor
+// simples. Item sem o campo, ou com ele nulo, entra com "—". '' quando os itens têm campos diferentes ou mais de um.
+const campoDosPares = (itens, id, textos) => {
+  const campos = new Set(
+    itens.flatMap(item =>
+      Object.keys(item).filter(chave => chave !== id && textos.rotulo(chave))
+    )
   );
-  if (rotulo && detalhesDeCada.every(linhas => linhas.length === 1)) {
-    const pares = ids.map((nome, i) => `${nome}: ${detalhesDeCada[i][0][1]}`);
-    return [[rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)]];
+  if (campos.size !== 1) return '';
+  const [campo] = campos;
+  const simples = itens.every(
+    item =>
+      item[campo] === null ||
+      item[campo] === undefined ||
+      ehPrimitivo(item[campo])
+  );
+  return simples ? campo : '';
+};
+
+const valorDoPar = (item, campo, textos) =>
+  item[campo] === null || item[campo] === undefined
+    ? textos.nenhumValor
+    : legivel(campo, item[campo], textos);
+
+// Varredura P13: lista identificada de até MAXIMO_PARA_PARES itens mostra, para cada campo com rótulo que todos têm (até
+// MAXIMO_DE_CAMPOS, na ordem do primeiro item), uma linha de pares ("Previsão do mercado (mediana): 2026: 5,2195 % ·
+// 2027: 4,9005 %"), em vez de abrir só o primeiro: sem isso, a previsão de 2027 sumia.
+const MAXIMO_PARA_PARES = 5;
+const MAXIMO_DE_CAMPOS = 4;
+const camposComuns = (itens, id, textos) =>
+  Object.keys(itens[0])
+    .filter(
+      chave =>
+        chave !== id &&
+        textos.rotulo(chave) &&
+        itens.every(item => ehPrimitivo(item[chave]))
+    )
+    .slice(0, MAXIMO_DE_CAMPOS);
+const linhasDePares = (itens, ids, id, textos) =>
+  camposComuns(itens, id, textos).map(campo => [
+    textos.rotulo(campo),
+    itens
+      .map((item, i) => `${ids[i]}: ${legivel(campo, item[campo], textos)}`)
+      .join(SEPARADOR_DE_PARES),
+  ]);
+
+// Lista sem nome e com mais de um item. Todos com o mesmo único campo além do identificador (a chuva de cada dia): os
+// pares numa linha com o rótulo do campo ("Chuva no dia (mm): 04/11/2026: 0,9 · 05/11/2026: 6,2 · e mais 4").
+// Senão, os identificadores com o rótulo do identificador e, com MINIMO_PARA_ABRIR campos com rótulo (a mesma regra da
+// lista com nome), o primeiro sob "Primeiro da lista". Sem identificador, só quantos são, com o rótulo da lista (abrir
+// o primeiro faria os campos dele parecerem valer para todos).
+const listaSemNome = (rotulo, itens, total, textos) => {
+  // Lista sem rótulo não aparece (coberturas, condicoes), nem pelo identificador nem pelos pares.
+  if (!rotulo) return [];
+  const id = campoIdentificador(itens, textos);
+  if (!id) return [[rotulo, quantosSao(itens, total, textos)]];
+  const ids = identificadores(itens, id, textos);
+  const campo = campoDosPares(itens, id, textos);
+  if (campo) {
+    const pares = itens.map(
+      (item, i) => `${ids[i]}: ${valorDoPar(item, campo, textos)}`
+    );
+    return [
+      [
+        textos.rotulo(campo),
+        resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES),
+      ],
+    ];
   }
-  const resumo = rotulo ? [[rotulo, resumoDaLista(ids, total, textos)]] : [];
-  const [detalhes] = detalhesDeCada;
+  const resumo = [[textos.rotulo(id), resumoDaLista(ids, total, textos)]];
+  if (Math.max(total ?? 0, itens.length) <= MAXIMO_PARA_PARES) {
+    return [...resumo, ...linhasDePares(itens, ids, id, textos)];
+  }
+  const detalhes = linhasSimples(itens[0], textos.rotulo, textos, id);
   if (detalhes.length < MINIMO_PARA_ABRIR) return resumo;
   return [...resumo, [textos.rotulo('primeiro_da_lista'), ids[0]], ...detalhes];
 };
@@ -283,6 +435,17 @@ const linhasDaLista = (chave, itens, total, textos) => {
   const campo = campoDeNome(itens);
   if (campo) {
     const nomes = nomesLegiveis(itens, campo);
+    // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
+    // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …").
+    const doPar = rotulo ? campoDosPares(itens, campo, textos) : '';
+    if (doPar) {
+      const pares = itens.map(
+        (item, i) => `${nomes[i]}: ${valorDoPar(item, doPar, textos)}`
+      );
+      return [
+        [rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
+      ];
+    }
     const resumo = rotulo
       ? [[rotulo, resumoDaLista(nomes, total, textos)]]
       : [];
@@ -305,6 +468,11 @@ export const linhasDoResultado = (dados, textosDaTela) => {
   const unidade = typeof dados.unidade === 'string' ? dados.unidade : '';
   // A sigla do estado só aparece quando o nome dele não veio junto.
   const comNomeDoEstado = typeof dados.estado === 'string';
+  const casas = casasDoDinheiro(
+    dados,
+    chave => unidade || unidadeDe(textos, chave)
+  );
+  const textosDoNivel = { ...textos, casas };
   return Object.entries(dados).flatMap(([chave, valor]) => {
     if (valor === null || valor === undefined || chave === 'unidades') {
       return [];
@@ -323,7 +491,7 @@ export const linhasDoResultado = (dados, textosDaTela) => {
     const rotulo = textos.rotulo(chave);
     const daLinha = unidade || unidadeDe(textos, chave);
     return rotulo
-      ? [[rotulo, valorLegivel(chave, valor, textos, daLinha)]]
+      ? [[rotulo, valorLegivel(chave, valor, textosDoNivel, daLinha)]]
       : [];
   });
 };

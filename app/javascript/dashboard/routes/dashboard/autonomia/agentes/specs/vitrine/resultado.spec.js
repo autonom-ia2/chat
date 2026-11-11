@@ -19,7 +19,7 @@ const ROTULOS = {
   valor: 'Valor',
   modelo: 'Modelo',
   ano_modelo: 'Ano',
-  precos: 'Anos na tabela',
+  precos: 'Preços na tabela',
   compra: 'Compra',
   venda: 'Venda',
   dias_uteis: 'Dias úteis',
@@ -56,6 +56,15 @@ const ROTULOS = {
   obras: 'Obras',
   veiculos: 'Veículos',
   variacoes: 'Variações',
+  combustivel: 'Combustível',
+  numero: 'Número',
+  placa: 'Placa',
+  cno: 'CNO',
+  mm: 'Chuva no dia (mm)',
+  observacao: 'Observação',
+  ano: 'Ano',
+  dias: 'Dias',
+  feriados: 'Feriados',
 };
 const dataPt = (ano, mes, dia) =>
   new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR');
@@ -65,6 +74,7 @@ const textos = {
   sim: 'Sim',
   nao: 'Não',
   zeroKm: 'Zero quilômetro',
+  nenhumValor: '—',
   idioma: 'pt-BR',
 };
 
@@ -148,8 +158,10 @@ describe('linhasDoResultado', () => {
       )
     ).toEqual([
       ['Dias úteis', '14'],
-      ['Feriados no período', 'Dia da Consciência Negra'],
-      ['Data', new Date(2026, 10, 20).toLocaleDateString('pt-BR')],
+      [
+        'Feriados no período',
+        `Dia da Consciência Negra: ${dataPt(2026, 11, 20)}`,
+      ],
     ]);
   });
 
@@ -187,10 +199,9 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
-      ['Anos na tabela', '2020 e Zero quilômetro'],
-      ['Primeiro da lista', '2020'],
-      ['Valor', 'R$ 60.822,00'],
-      ['Modelo', 'ONIX LT'],
+      ['Ano', '2020 e Zero quilômetro'],
+      ['Valor', '2020: R$ 60.822,00 · Zero quilômetro: R$ 99.000,00'],
+      ['Modelo', '2020: ONIX LT · Zero quilômetro: ONIX LT'],
     ]);
   });
 
@@ -206,10 +217,9 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
-      ['Telefones', '(11) 1111-1111 e (11) 2222-2222'],
-      ['Primeiro da lista', '(11) 1111-1111'],
-      ['Tipo', 'celular'],
-      ['Endereço', 'RUA A, 1'],
+      ['Número', '(11) 1111-1111 e (11) 2222-2222'],
+      ['Tipo', '(11) 1111-1111: celular · (11) 2222-2222: fixo'],
+      ['Endereço', '(11) 1111-1111: RUA A, 1 · (11) 2222-2222: RUA B, 2'],
     ]);
   });
 
@@ -271,8 +281,48 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
-      ['Obras', '90.000.00001/71: RUA A, 1 · 90.000.00002/72: RUA B, 2'],
-      ['Veículos', 'ABC1D23 e XYZ9W87'],
+      ['Endereço', '90.000.00001/71: RUA A, 1 · 90.000.00002/72: RUA B, 2'],
+      ['Modelo', 'ABC1D23: ONIX · XYZ9W87: —'],
+    ]);
+  });
+
+  // Regra A (#2858, regra final): identificador sem rótulo não identifica (nunca a chave crua nem o rótulo da lista).
+  it('an identifier without a label does not identify: the list is counted', () => {
+    expect(
+      linhasDoResultado(
+        {
+          telefones: [
+            { numero: '1111', tipo: 'celular', endereco: 'RUA A' },
+            { numero: '2222', tipo: 'fixo', endereco: 'RUA B' },
+          ],
+        },
+        {
+          ...textos,
+          rotulo: chave => (chave === 'numero' ? '' : ROTULOS[chave] || ''),
+        }
+      )
+    ).toEqual([['Telefones', '2']]);
+  });
+
+  it('a list inside the opened item also uses the label of its identifier', () => {
+    expect(
+      linhasDoResultado(
+        {
+          corretores: [
+            {
+              nome: 'Corretora A',
+              telefones: [
+                { numero: '1111', tipo: 'celular' },
+                { numero: '2222', tipo: 'fixo' },
+              ],
+            },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Corretores', 'Corretora A'],
+      ['Número', '1111 e 2222'],
     ]);
   });
 
@@ -296,11 +346,10 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
-      ['Anos na tabela', 'Gasolina e Flex'],
-      ['Primeiro da lista', 'Gasolina'],
-      ['Valor', 'R$ 56.043,00'],
-      ['Modelo', 'ONIX'],
-      ['Ano', '2020'],
+      ['Combustível', 'Gasolina e Flex'],
+      ['Valor', 'Gasolina: R$ 56.043,00 · Flex: R$ 58.000,00'],
+      ['Modelo', 'Gasolina: ONIX · Flex: ONIX'],
+      ['Ano', 'Gasolina: 2020 · Flex: 2020'],
     ]);
     expect(
       linhasDoResultado(
@@ -313,9 +362,21 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([['Telefones', '2']]);
+    // Mesmo ano e mesmo combustível: nenhum identificador distinto, só a contagem com o rótulo da lista.
+    expect(
+      linhasDoResultado(
+        {
+          precos: [
+            preco('R$ 56.043,00', 'Flex'),
+            preco('R$ 58.000,00', 'Flex'),
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Preços na tabela', '2']]);
   });
 
-  it('several days of rain, the first without a value: only the days', () => {
+  it('several days of rain, the first without a value: the pairs with a dash', () => {
     expect(
       linhasDoResultado(
         {
@@ -328,22 +389,65 @@ describe('linhasDoResultado', () => {
         {
           ...textos,
           rotulo: chave =>
-            ({ dias: 'Dias', mm: 'Chuva no dia (mm)' })[chave] || '',
+            ({ dias: 'Dias', data: 'Data', mm: 'Chuva no dia (mm)' })[chave] ||
+            '',
         }
       )
     ).toEqual([
       [
-        'Dias',
-        `${dataPt(2026, 11, 8)}, ${dataPt(2026, 11, 9)} e ${dataPt(2026, 11, 10)}`,
+        'Chuva no dia (mm)',
+        `${dataPt(2026, 11, 8)}: — · ${dataPt(2026, 11, 9)}: 1,2 · ${dataPt(2026, 11, 10)}: 1,8`,
       ],
     ]);
+    expect(
+      linhasDoResultado(
+        { dias: [{ data: '2026-11-09', mm: 1.2 }, { data: '2026-11-10' }] },
+        textos
+      )
+    ).toEqual([
+      [
+        'Chuva no dia (mm)',
+        `${dataPt(2026, 11, 9)}: 1,2 · ${dataPt(2026, 11, 10)}: —`,
+      ],
+    ]);
+  });
+
+  // A chuva de hoje: o dia de hoje ainda sem mm e com observação. Campos diferentes entre os itens não viram par.
+  it('items with different fields do not become pairs', () => {
+    expect(
+      linhasDoResultado(
+        {
+          dias: [
+            { data: '2026-11-10', mm: 1.8 },
+            { data: '2026-11-11', mm: null, observacao: 'Ainda sem medição' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Data', `${dataPt(2026, 11, 10)} e ${dataPt(2026, 11, 11)}`]]);
+    expect(
+      linhasDoResultado(
+        {
+          dias: [
+            { data: '2026-11-10', mm: 1 },
+            { data: '2026-11-11', focos: 3 },
+          ],
+        },
+        {
+          ...textos,
+          rotulo: chave => (chave === 'focos' ? 'Focos' : ROTULOS[chave] || ''),
+        }
+      )
+    ).toEqual([['Data', `${dataPt(2026, 11, 10)} e ${dataPt(2026, 11, 11)}`]]);
   });
 
   it('one labeled field besides the identifier: the pairs in one line', () => {
     const queimadas = {
       ...textos,
       rotulo: chave =>
-        ({ dias_com_focos: 'Dias com focos', focos: 'Focos' })[chave] || '',
+        ({ dias_com_focos: 'Dias com focos', data: 'Data', focos: 'Focos' })[
+          chave
+        ] || '',
     };
     expect(
       linhasDoResultado(
@@ -356,10 +460,7 @@ describe('linhasDoResultado', () => {
         queimadas
       )
     ).toEqual([
-      [
-        'Dias com focos',
-        `${dataPt(2026, 11, 10)}: 5 · ${dataPt(2026, 11, 11)}: 3`,
-      ],
+      ['Focos', `${dataPt(2026, 11, 10)}: 5 · ${dataPt(2026, 11, 11)}: 3`],
     ]);
     const dias = [6, 7, 8, 9, 10].map(dia => ({
       data: `2026-11-${String(dia).padStart(2, '0')}`,
@@ -369,81 +470,284 @@ describe('linhasDoResultado', () => {
       linhasDoResultado({ total: 9, dias_com_focos: dias }, queimadas)
     ).toEqual([
       [
-        'Dias com focos',
-        `${dataPt(2026, 11, 6)}: 6 · ${dataPt(2026, 11, 7)}: 7 · ${dataPt(2026, 11, 8)}: 8 e mais 6`,
+        'Focos',
+        `${dataPt(2026, 11, 6)}: 6 · ${dataPt(2026, 11, 7)}: 7 · ${dataPt(2026, 11, 8)}: 8 · e mais 6`,
       ],
     ]);
   });
 
-  it('a date with time is shown in the language, with the hour', () => {
-    const rotulo = chave => ({ data: 'Data', datas: 'Datas' })[chave] || '';
-    const hora = { hour: '2-digit', minute: '2-digit' };
-    expect(
-      linhasDoResultado({ data: '2026-11-11 03:10' }, { ...textos, rotulo })
-    ).toEqual([['Data', `${dataPt(2026, 11, 11)} 03:10`]]);
-    expect(
-      linhasDoResultado({ data: '2026-11-11T03:10:00' }, { ...textos, rotulo })
-    ).toEqual([['Data', `${dataPt(2026, 11, 11)} 03:10`]]);
+  it('a date with time is shown in the language, with the hour, without time zone conversion', () => {
+    const rotulo = chave => (chave === 'data' ? 'Data' : '');
+    const em = (data, idioma = 'pt-BR') =>
+      linhasDoResultado({ data }, { ...textos, rotulo, idioma });
+    const pt = `${dataPt(2026, 11, 11)} 03:10`;
+    expect(em('2026-11-11 03:10')).toEqual([['Data', pt]]);
+    expect(em('2026-11-11T03:10')).toEqual([['Data', pt]]);
+    expect(em('2026-11-11 03:10:45')).toEqual([['Data', pt]]);
+    expect(em('2026-11-11T03:10:00.123456')).toEqual([['Data', pt]]);
     const local = new Date(2026, 10, 11, 3, 10);
+    const hora = local.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    expect(em('2026-11-11 03:10', 'en-US')).toEqual([
+      ['Data', `${local.toLocaleDateString('en-US')} ${hora}`],
+    ]);
+  });
+
+  // Revisão do 99654ff88f: lista sem rótulo não aparece, nem pelo identificador (coberturas fica de fora de propósito).
+  // Varredura P03/P04: feriados do ano e dias úteis com 1 e com 2 feriados, no mesmo formato.
+  it('a named list whose items have one labeled field: the pairs with the list label', () => {
+    const nomes = [
+      'Confraternização mundial',
+      'Carnaval',
+      'Carnaval',
+      'Sexta-feira Santa',
+      'Páscoa',
+      'Tiradentes',
+      'Dia do trabalho',
+      'Corpus Christi',
+      'Independência do Brasil',
+      'Nossa Senhora Aparecida',
+      'Finados',
+      'Proclamação da República',
+      'Dia da consciência negra',
+      'Natal',
+    ];
+    const feriados = nomes.map((nome, i) => ({
+      data: `2026-${String(i < 13 ? 1 + Math.floor(i / 2) : 12).padStart(2, '0')}-${String(10 + i).padStart(2, '0')}`,
+      nome,
+    }));
+    expect(linhasDoResultado({ ano: 2026, feriados }, textos)).toEqual([
+      ['Ano', '2026'],
+      [
+        'Feriados',
+        `Confraternização mundial: ${dataPt(2026, 1, 10)} · Carnaval: ${dataPt(2026, 1, 11)} · Carnaval: ${dataPt(2026, 2, 12)} · e mais 11`,
+      ],
+    ]);
     expect(
       linhasDoResultado(
-        { data: '2026-11-11 03:10' },
-        { ...textos, rotulo, idioma: 'en-US' }
+        {
+          dias_uteis: 13,
+          feriados_no_periodo: [
+            { data: '2026-11-20', nome: 'Dia da consciência negra' },
+          ],
+        },
+        textos
       )
     ).toEqual([
+      ['Dias úteis', '13'],
       [
-        'Data',
-        `${local.toLocaleDateString('en-US')} ${local.toLocaleTimeString('en-US', hora)}`,
+        'Feriados no período',
+        `Dia da consciência negra: ${dataPt(2026, 11, 20)}`,
       ],
     ]);
-    const utc = new Date(Date.UTC(2026, 10, 11, 6, 10));
     expect(
-      linhasDoResultado({ data: '2026-11-11T06:10:00Z' }, { ...textos, rotulo })
+      linhasDoResultado(
+        {
+          dias_uteis: 5,
+          feriados_no_periodo: [
+            { data: '2026-12-25', nome: 'Natal' },
+            { data: '2027-01-01', nome: 'Confraternização mundial' },
+          ],
+        },
+        textos
+      )
     ).toEqual([
+      ['Dias úteis', '5'],
       [
-        'Data',
-        `${utc.toLocaleDateString('pt-BR')} ${utc.toLocaleTimeString('pt-BR', hora)}`,
+        'Feriados no período',
+        `Natal: ${dataPt(2026, 12, 25)} · Confraternização mundial: ${dataPt(2027, 1, 1)}`,
       ],
     ]);
   });
 
-  it('a number with a unit has the thousands separator; year, code and register do not', () => {
+  // Varredura P13: lista identificada de até 5 itens mostra cada campo comum (até 4) em pares, em vez de abrir só o
+  // primeiro; com mais de 5, a regra de sempre.
+  it('an identified list of up to five items shows each common field in pairs', () => {
+    const anos = [2026, 2027, 2028, 2029, 2030, 2031];
+    const item = ano => ({
+      ano,
+      mediana: ano - 2020,
+      valor: `R$ ${ano}`,
+      modelo: `M${ano}`,
+      descricao_x: 'x',
+      data_do_boletim: '2026-11-06',
+      endereco: `RUA ${ano}`,
+    });
+    expect(
+      linhasDoResultado(
+        {
+          unidades: { mediana: '%' },
+          expectativas: anos.slice(0, 2).map(item),
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ano', '2026 e 2027'],
+      ['Previsão do mercado (mediana)', '2026: 6 % · 2027: 7 %'],
+      ['Valor', '2026: R$ 2026 · 2027: R$ 2027'],
+      ['Modelo', '2026: M2026 · 2027: M2027'],
+      [
+        'Boletim de',
+        `2026: ${dataPt(2026, 11, 6)} · 2027: ${dataPt(2026, 11, 6)}`,
+      ],
+    ]);
+    expect(linhasDoResultado({ expectativas: anos.map(item) }, textos)).toEqual(
+      [
+        ['Ano', '2026, 2027, 2028 e mais 3'],
+        ['Primeiro da lista', '2026'],
+        ['Previsão do mercado (mediana)', '6'],
+        ['Valor', 'R$ 2026'],
+        ['Modelo', 'M2026'],
+        ['Boletim de', dataPt(2026, 11, 6)],
+        ['Endereço', 'RUA 2026'],
+      ]
+    );
+  });
+
+  // Varredura P05: o N do "e mais N" com separador de milhar.
+  it('the N of "and N more" has the thousands separator', () => {
+    expect(
+      linhasDoResultado(
+        {
+          total: 3396,
+          itens: [
+            { codigo: '0101.29.00', descricao: 'Outros' },
+            { codigo: '0101.90.00', descricao: 'Outros' },
+            { codigo: '0102.21.90', descricao: 'Outros' },
+          ],
+        },
+        textos
+      )[0]
+    ).toEqual([
+      'Resultados',
+      'Outros: 0101.29.00 · Outros: 0101.90.00 · Outros: 0102.21.90 · e mais 3.393',
+    ]);
+  });
+
+  // Varredura P12: o dinheiro do mesmo item com as mesmas casas (a maior entre eles, até 4).
+  it('money in the same item has the same number of decimals', () => {
+    expect(
+      linhasDoResultado({ compra: 5.5834, venda: 5.584, unidade: 'R$' }, textos)
+    ).toEqual([
+      ['Compra', 'R$ 5,5834'],
+      ['Venda', 'R$ 5,5840'],
+    ]);
+    expect(
+      linhasDoResultado({ compra: 5.5, venda: 5.25, unidade: 'R$' }, textos)
+    ).toEqual([
+      ['Compra', 'R$ 5,50'],
+      ['Venda', 'R$ 5,25'],
+    ]);
+  });
+
+  it('a list without a label shows nothing, not even by its identifier', () => {
+    const coberturas = [
+      { ano: 2020, valor: 'R$ 1,00', modelo: 'A' },
+      { ano: 2021, valor: 'R$ 2,00', modelo: 'B' },
+    ];
     const rotulo = chave =>
-      ({
-        potencia: 'Potência',
-        area: 'Área',
-        codigo: 'Código',
-        registro_susep: 'Registro na SUSEP',
-        ano: 'Ano',
-        cep: 'CEP',
-      })[chave] || '';
+      chave === 'coberturas' ? '' : ROTULOS[chave] || '';
+    expect(linhasDoResultado({ coberturas }, { ...textos, rotulo })).toEqual(
+      []
+    );
+    expect(
+      linhasDoResultado(
+        { coberturas: coberturas.map(({ ano, valor }) => ({ ano, valor })) },
+        { ...textos, rotulo }
+      )
+    ).toEqual([]);
+    expect(
+      linhasDoResultado(
+        { corretores: [{ nome: 'Corretora A', coberturas }] },
+        { ...textos, rotulo }
+      )
+    ).toEqual([['Corretores', 'Corretora A']]);
+    expect(
+      linhasDoResultado({ plano: { coberturas } }, { ...textos, rotulo })
+    ).toEqual([]);
+  });
+
+  it('an impossible date comes as it was sent, with or without the hour', () => {
+    const rotulo = chave => (chave === 'data' ? 'Data' : '');
+    const em = data => linhasDoResultado({ data }, { ...textos, rotulo });
+    [
+      '2026-02-31',
+      '2026-00-10',
+      '2026-02-31 10:00',
+      '2026-00-10 10:00',
+    ].forEach(texto => expect(em(texto)).toEqual([['Data', texto]]));
+  });
+
+  it('a date with time out of the exact format comes as it was sent', () => {
+    const rotulo = chave => (chave === 'data' ? 'Data' : '');
+    const em = data => linhasDoResultado({ data }, { ...textos, rotulo });
+    [
+      '2026-11-11 25:99',
+      '2026-11-11 23:60',
+      '2026-11-11 03:10 reunião do conselho',
+      '2026-11-11T03:10:00Z',
+      '2026-11-11T03:10:00-03:00',
+      '2026-11-11T03:10:00.',
+      '2026-11-11 03:1',
+    ].forEach(texto => expect(em(texto)).toEqual([['Data', texto]]));
+  });
+
+  it('every number has the thousands separator, except the identification ones', () => {
+    const rotulo = chave => chave;
     expect(
       linhasDoResultado(
         {
           potencia: 54977.7,
-          area: 12500,
-          codigo: 73181500,
-          registro_susep: 202012345,
+          total_mm: 1234.5,
+          populacao: 1500000,
           ano: 2026,
+          ano_modelo: 2020,
           cep: 38400100,
-          unidades: { potencia: 'kW', area: 'ha' },
+          codigo: 7318,
+          codigo_ibge: 3170206,
+          registro_susep: 202012345,
+          matricula: 123456,
+          numero: 10001,
+          cnpj: 12345678000199,
+          cpf: 12345678909,
+          ispb: 60701190,
+          cnes: 2146355,
+          ddd: 3400,
+          rntrc: 12345678,
+          unidades: { potencia: 'kW' },
         },
         { ...textos, rotulo }
       )
     ).toEqual([
-      ['Potência', '54.977,7 kW'],
-      ['Área', '12.500 ha'],
-      ['Código', '73181500'],
-      ['Registro na SUSEP', '202012345'],
-      ['Ano', '2026'],
-      ['CEP', '38400100'],
+      ['potencia', '54.977,7 kW'],
+      ['total_mm', '1.234,5'],
+      ['populacao', '1.500.000'],
+      ['ano', '2026'],
+      ['ano_modelo', '2020'],
+      ['cep', '38400100'],
+      ['codigo', '7318'],
+      ['codigo_ibge', '3170206'],
+      ['registro_susep', '202012345'],
+      ['matricula', '123456'],
+      ['numero', '10001'],
+      ['cnpj', '12345678000199'],
+      ['cpf', '12345678909'],
+      ['ispb', '60701190'],
+      ['cnes', '2146355'],
+      ['ddd', '3400'],
+      ['rntrc', '12345678'],
     ]);
     expect(
       linhasDoResultado(
-        { total_mm: 1234.5, unidade: 'mm' },
-        { ...textos, rotulo: chave => (chave === 'total_mm' ? 'Chuva' : '') }
+        { ano: 2026, valor: 1234.5, unidade: '%' },
+        { ...textos, rotulo: chave => (chave === 'unidade' ? '' : chave) }
       )
-    ).toEqual([['Chuva', '1.234,5 mm']]);
+    ).toEqual([
+      ['ano', '2026'],
+      ['valor', '1.234,5 %'],
+    ]);
   });
 
   it('a field named like an Object property is not taken as a unit', () => {
@@ -489,10 +793,12 @@ describe('linhasDoResultado', () => {
       )
     ).toEqual([
       ['Indicador', 'Focus: IPCA'],
-      ['Anos com previsão', '2026 e 2027'],
-      ['Primeiro da lista', '2026'],
-      ['Previsão do mercado (mediana)', '5,2195 %'],
-      ['Boletim de', new Date(2026, 10, 6).toLocaleDateString('pt-BR')],
+      ['Ano', '2026 e 2027'],
+      ['Previsão do mercado (mediana)', '2026: 5,2195 % · 2027: 4,9 %'],
+      [
+        'Boletim de',
+        `2026: ${dataPt(2026, 11, 6)} · 2027: ${dataPt(2026, 11, 6)}`,
+      ],
     ]);
     expect(
       linhasDoResultado(
@@ -502,7 +808,10 @@ describe('linhasDoResultado', () => {
         },
         textos
       )
-    ).toEqual([['Previsão do mercado (mediana)', 'R$ 5,40']]);
+    ).toEqual([
+      ['Ano', '2026'],
+      ['Previsão do mercado (mediana)', 'R$ 5,40'],
+    ]);
   });
 
   // #2858 (C14) — lista de valores simples: número no formato do idioma, e o sinal fica.
@@ -567,7 +876,7 @@ describe('linhasDoResultado', () => {
       ['Endereço', 'RUA A, 1'],
       ['Telefone', '19 0000-0000'],
     ]);
-    // Um campo só (o código da marca, a data do feriado): só os nomes.
+    // Um campo só além do nome (a data do feriado): os pares "nome: data" com o rótulo da lista (varredura P03/P04).
     expect(
       linhasDoResultado(
         {
@@ -581,7 +890,7 @@ describe('linhasDoResultado', () => {
     ).toEqual([
       [
         'Feriados no período',
-        'Proclamação da República e Dia da consciência negra',
+        `Proclamação da República: ${dataPt(2026, 11, 15)} · Dia da consciência negra: ${dataPt(2026, 11, 20)}`,
       ],
     ]);
   });
@@ -656,7 +965,7 @@ describe('linhasDoResultado', () => {
         },
         textos
       )
-    ).toEqual([['Corretores', 'CORRETORA EXEMPLO LTDA e mais 4']]);
+    ).toEqual([['Corretores', 'CORRETORA EXEMPLO LTDA: Ativo · e mais 4']]);
   });
 
   it('money has the thousands separator; the full name equal to the name does not repeat', () => {
@@ -669,12 +978,12 @@ describe('linhasDoResultado', () => {
     expect(
       linhasDoResultado({ venda: 12345.5, unidade: 'R$' }, textos)
     ).toEqual([['Venda', 'R$ 12.345,50']]);
-    // A PTAX tem 4 casas: dinheiro mostra no mínimo 2 e no máximo 4.
+    // A PTAX tem 4 casas: dinheiro mostra no mínimo 2 e no máximo 4, as mesmas no item inteiro (varredura P12).
     expect(
       linhasDoResultado({ compra: 5.5834, venda: 5.5, unidade: 'R$' }, textos)
     ).toEqual([
       ['Compra', 'R$ 5,5834'],
-      ['Venda', 'R$ 5,50'],
+      ['Venda', 'R$ 5,5000'],
     ]);
     expect(
       linhasDoResultado(
@@ -703,7 +1012,7 @@ describe('linhasDoResultado', () => {
         },
         textos
       )
-    ).toEqual([['Anos na tabela', '2020: R$ 1,00 · 2021: R$ 2,00 e mais 35']]);
+    ).toEqual([['Valor', '2020: R$ 1,00 · 2021: R$ 2,00 · e mais 35']]);
   });
 
   it('formats dates, numbers with the unit, and the brand-new year', () => {
@@ -715,7 +1024,7 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
-      ['Compra', 'R$ 5,514'],
+      ['Compra', 'R$ 5,5140'],
       ['Venda', 'R$ 5,5146'],
     ]);
     expect(
