@@ -4,8 +4,8 @@
 # começo de palavra, sem acento e sem caixa.
 #   - um só: segue com o código, e o agente nem fica sabendo;
 #   - mais de um (as versões do Gol), com o ano: só as versões que têm aquele ano (`MODELOS_DO_ANO`); uma só segue com o
-#     código; várias seguem com os códigos de duas (`Fipe::MAX_VERSOES`), e o preço vem em faixa, sem exigir a escolha
-#     (varredura F12); nenhuma: pedido inválido no ano, com o ano que não existe (F13);
+#     código; várias seguem com os códigos de duas de exemplo (`Fipe::MAX_VERSOES`), e vem o preço das duas, sem exigir a
+#     escolha (varredura F12); nenhuma: pedido inválido no ano, com o ano que não existe (F13);
 #   - mais de um sem o ano: pedido inválido no ano (é ele que estreita), com as versões em candidatos;
 #   - nenhum: pedido inválido no campo (marca ou modelo, nunca o código FIPE), com o que fazer.
 module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
@@ -81,16 +81,18 @@ module Autonomia::FerramentasProntas::Fontes::Fipe::PeloNome
     Falta.new(campo: 'ano', candidatos: candidatos, orientacao: format(VARIOS_MODELOS, total: achados.size))
   end
 
-  # As versões que têm o ano. Várias: duas delas, a de nome mais curto e a de nome mais longo, e o preço sai em faixa
-  # (`Parallelum#versoes`), com o aviso de que o exato depende da versão. Não é o mínimo e o máximo garantidos: isso
-  # pediria o preço de cada versão, uma chamada por versão à reserva de teto diário.
+  # As versões que têm o ano. Várias: duas delas de exemplo, a de nome mais curto e a de nome mais longo, e o preço das
+  # duas (`Parallelum#versoes`), com o aviso de que o exato depende da versão. Não é o mínimo e o máximo garantidos: isso
+  # pediria o preço de cada versão, uma chamada por versão à reserva de teto diário (decisão do Rodrigo, #2906). Os
+  # códigos vão com as duas primeiro e as outras depois, só para o texto dizer "há outras" quando há.
   def do_ano(achados, params, apoio)
     do_ano = Array(apoio.dados(Fipe::MODELOS_DO_ANO, params.slice('tipo', 'marca', 'ano'))&.dig('modelos')).pluck('codigo')
     no_ano = achados.select { |item| do_ano.include?(item['codigo']) }
     return [nil, Falta.new(campo: 'ano', orientacao: format(ANO_QUE_NAO_EXISTE, ano: params['ano']))] if no_ano.empty?
     return [no_ano.first['codigo'], nil] if no_ano.one?
 
-    [no_ano.minmax_by { |item| item['nome'].to_s.length }.pluck('codigo').uniq, nil]
+    exemplos = no_ano.minmax_by { |item| item['nome'].to_s.length }.pluck('codigo').uniq
+    [exemplos + (no_ano.pluck('codigo') - exemplos), nil]
   end
 
   def pelo_nome(lista, nome)

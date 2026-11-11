@@ -71,6 +71,8 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     { 'precos' => escolhidos.map { |ano| preco_do_ano(params, do_veiculo, ano) } }
   end
 
+  # `params['modelo']`: as duas versões de exemplo primeiro, e depois as outras do ano (`PeloNome#do_ano`), só para
+  # saber se há outras.
   def versoes(params)
     precos = params['modelo'].first(Fipe::MAX_VERSOES).filter_map do |modelo|
       um = params.merge('modelo' => modelo)
@@ -80,7 +82,10 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     end
     raise NaoEncontrado if precos.empty?
 
-    { 'precos' => precos.sort_by { |preco| preco['valor'].to_f } }.merge(precos.many? ? { 'observacao' => Fipe::VERSOES } : {})
+    ordenados = { 'precos' => precos.sort_by { |preco| preco['valor'].to_f } }
+    return ordenados unless precos.many?
+
+    ordenados.merge('observacao' => params['modelo'].size > Fipe::MAX_VERSOES ? Fipe::VERSOES_E_OUTRAS : Fipe::VERSOES)
   end
 
   # O ano que o veículo não tem: os anos que ele tem, para o agente dizer ao cliente (varredura F13).

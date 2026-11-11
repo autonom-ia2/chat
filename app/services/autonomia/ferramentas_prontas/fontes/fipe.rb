@@ -23,11 +23,16 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   ZERO_KM = 32_000
   FAIXA = 'Sem o ano: o preço do ano mais antigo e do mais novo (a faixa). Mostre a faixa ao cliente e só então pergunte ' \
           'o ano-modelo.'.freeze
-  # Várias versões do modelo no ano (o Gol 2020): o preço de duas delas, sem exigir a escolha (varredura F12).
+  # Várias versões do modelo no ano (o Gol 2020): o preço de duas delas, sem exigir a escolha (varredura F12). De
+  # propósito (decisão do Rodrigo, #2906): duas versões de exemplo, a de nome mais curto e a de nome mais longo, não o
+  # mínimo e o máximo da tabela; o texto não as apresenta como "entre X e Y".
   MAX_VERSOES = 2
   # Os textos que vão nos dados cabem em `Resposta::MAX_TEXTO` (160): o resto seria cortado.
-  VERSOES = 'Preço de 2 versões desse modelo no ano (há outras): o exato depende da versão. Mostre a faixa; se o cliente ' \
-            'quiser o exato, pergunte a versão.'.freeze
+  VERSOES = 'Preço das 2 versões desse modelo no ano: o exato depende da versão. Se o cliente quiser o exato, pergunte a ' \
+            'versão.'.freeze
+  # Mais de 2 versões no ano: "há outras" só aqui.
+  VERSOES_E_OUTRAS = 'Preço de 2 versões desse modelo no ano, como exemplo (há outras): não é o mínimo nem o máximo da ' \
+                     'tabela. Para o exato, pergunte a versão.'.freeze
   SEM_O_ANO = 'Não há o ano-modelo %<ano>s deste veículo na tabela FIPE. Os anos que existem vêm na resposta: diga isso ao ' \
               'cliente e confirme o ano.'.freeze
   # O preço vai em número e o mês em AAAA-MM (varredura P09): quem formata é a tela, no idioma dela, e o agente lê o

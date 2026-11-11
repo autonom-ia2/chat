@@ -149,6 +149,34 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(a_request(:get, "#{vw}/models/9/years")).not_to have_been_made
     end
 
+    # Decisão do Rodrigo (#2906): a faixa sai de 2 versões, de propósito. O texto ao agente diz que são exemplos, não o
+    # mínimo e o máximo da tabela; "há outras" só quando há mais de 2.
+    it 'F12: com exatamente 2 versoes no ano, o texto nao diz que ha outras nem fala em faixa' do
+      fonte_responde("#{vw}/models/1/years", [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{vw}/models/1/years/2020-5", preco_de('Gol 1.0 Mi Total Flex 8V 4p', 'R$ 41.000,00'))
+      fonte_responde("#{vw}/models/2/years", [{ code: '2020-1', name: '2020 Gasolina' }])
+      fonte_responde("#{vw}/models/2/years/2020-1", preco_de('Gol 1.6 Power', 'R$ 52.500,50'))
+
+      observacao = preco('modelo' => 'Gol', 'ano' => 2020)['dados']['observacao']
+
+      expect(observacao).to include('2 versões')
+      expect(observacao).not_to include('há outras', 'faixa', 'mínimo')
+    end
+
+    it 'F12: com mais de 2 versoes no ano, o texto diz que sao exemplos (nao o minimo e o maximo) e que ha outras' do
+      fonte_responde("#{vw}/years/2020-5/models", [{ code: '1', name: 'Gol 1.0 Mi Total Flex 8V 4p' }, { code: '9', name: 'Gol GTi 2.0' }])
+      fonte_responde("#{vw}/models/9/years", [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{vw}/models/9/years/2020-5", preco_de('Gol GTi 2.0', 'R$ 90.000,00'))
+      fonte_responde("#{vw}/models/1/years", [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde("#{vw}/models/1/years/2020-5", preco_de('Gol 1.0 Mi Total Flex 8V 4p', 'R$ 41.000,00'))
+
+      saida = preco('modelo' => 'Gol', 'ano' => 2020)
+
+      expect(saida['dados']['precos'].pluck('modelo')).to contain_exactly('Gol GTi 2.0', 'Gol 1.0 Mi Total Flex 8V 4p')
+      expect(saida['dados']['observacao']).to include('há outras', 'exemplo', 'não é o mínimo nem o máximo')
+      expect(a_request(:get, "#{vw}/models/2/years")).not_to have_been_made
+    end
+
     # Revisão do #2906: cada combustível tem o seu código de ano, e só os 3 primeiros eram lidos.
     it 'F12: o ano com 4 ou mais combustiveis le todos os codigos do ano' do
       fonte_responde("#{vw}/years", %w[1 2 3 4 5].map { |codigo| { code: "2020-#{codigo}", name: "2020 #{codigo}" } })
