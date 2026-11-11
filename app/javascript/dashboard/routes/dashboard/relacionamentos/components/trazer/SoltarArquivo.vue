@@ -6,7 +6,7 @@ import { ACEITA_NO_SELETOR } from '../../trazer/arquivo';
 // #2894 — a área grande de soltar a planilha. É um botão de verdade: Enter e
 // Espaço abrem o seletor; arrastar por cima realça. Quem usa recebe `arquivo`
 // com o File escolhido (conferir se é planilha é com quem usa).
-defineProps({
+const props = defineProps({
   erro: { type: String, default: '' },
   // Qual foi o problema (tipo, vazia, sem_contato): fica no `data-erro`.
   tipoDeErro: { type: String, default: '' },
@@ -16,8 +16,13 @@ defineProps({
   apoio: { type: String, default: '' },
   icone: { type: String, default: 'i-lucide-file-spreadsheet' },
   aceita: { type: String, default: ACEITA_NO_SELETOR },
+  // Vários de uma vez (os PDFs das apólices): sai `arquivos`, com todos.
+  varios: { type: Boolean, default: false },
+  // Faltou escolher: a área fica marcada e aponta para o aviso de quem usa.
+  invalido: { type: Boolean, default: false },
+  descritoPor: { type: String, default: '' },
 });
-const emit = defineEmits(['arquivo']);
+const emit = defineEmits(['arquivo', 'arquivos']);
 
 const { t } = useI18n();
 const id = useId();
@@ -27,8 +32,10 @@ const arrastando = ref(false);
 const abrirSeletor = () => seletor.value?.click();
 
 const entregar = arquivos => {
-  const [arquivo] = arquivos || [];
-  if (arquivo) emit('arquivo', arquivo);
+  const escolhidos = [...(arquivos || [])];
+  if (!escolhidos.length) return;
+  if (props.varios) emit('arquivos', escolhidos);
+  else emit('arquivo', escolhidos[0]);
 };
 
 const aoEscolher = evento => {
@@ -48,7 +55,10 @@ const aoSoltar = evento => {
     <button
       type="button"
       data-relacionamentos="soltar-arquivo"
-      :aria-describedby="`${id}-apoio`"
+      :aria-describedby="
+        descritoPor ? `${id}-apoio ${descritoPor}` : `${id}-apoio`
+      "
+      :aria-invalid="invalido ? 'true' : undefined"
       class="flex flex-col items-center justify-center gap-4 p-8 text-center transition-colors border-2 min-h-64 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
       :class="
         arrastando
@@ -84,6 +94,7 @@ const aoSoltar = evento => {
       tabindex="-1"
       aria-hidden="true"
       :accept="aceita"
+      :multiple="varios"
       @change="aoEscolher"
     />
     <p

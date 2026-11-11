@@ -4,12 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
-import { pecaPedida } from '../../fonte/modoCarteira';
+import { casoPedido, pecaPedida } from '../../fonte/modoCarteira';
 import { estadoDemo } from '../../fonte/modoDemo';
 import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
 import { useSegurosDe } from '../../carteira/useSegurosDe';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
+import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import SecaoSeguros from './SecaoSeguros.vue';
 
@@ -31,6 +32,7 @@ const textos = useTextosDoSeguro();
 const fonte = carteiraFonte({
   demo: estadoDemo(),
   peca: pecaPedida(route.query),
+  caso: casoPedido(route.query),
 });
 const { apolice, abrir, fechar } = useApoliceNaUrl();
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
@@ -73,7 +75,16 @@ onMounted(lista.carregar);
     @pdf="verPdf"
     @anexar="dialogoDoPdf?.abrir($event)"
     @tentar="lista.carregar"
-  />
+  >
+    <template v-if="!daEmpresa" #depois>
+      <EntradaDeFora
+        marca="ficha-guardar-de-fora"
+        :pessoa-id="donoId"
+        :fonte="fonte"
+        @mudou="lista.atualizar"
+      />
+    </template>
+  </SecaoSeguros>
   <GavetaDoSeguro
     :apolice-id="apolice"
     :fonte="fonte"

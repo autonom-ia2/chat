@@ -6,6 +6,7 @@ import SeloDeEstado from '../comum/SeloDeEstado.vue';
 
 // #2894 — uma das três fichas de exemplo da conferência: como a pessoa vai
 // ficar. Mostra só o que a planilha trouxe; o selo "Cliente" vem das respostas.
+// #2897 — quem usa pode pôr mais linhas embaixo (os seguros da pessoa).
 const props = defineProps({
   pessoa: { type: Object, required: true },
 });
@@ -75,5 +76,6 @@ const linhas = computed(() =>
         </span>
       </li>
     </ul>
+    <slot />
   </article>
 </template>

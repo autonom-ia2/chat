@@ -9,6 +9,7 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 
 // #2894 — o diálogo de Desfazer: mostra ANTES quem sai, quem fica aqui (já
 // conversou ou recebeu campanha) e o que volta ao que era. Destrutivo: tocar fora não fecha.
+// #2897 — quem desfaz outra coisa (os seguros) diz o que sai no slot `previa`.
 const props = defineProps({
   // O nome da lista que vai ser desfeita, no título.
   arquivo: { type: String, default: '' },
@@ -74,12 +75,12 @@ defineExpose({
       aria-live="polite"
     >
       <TituloDoDialogo :titulo="titulo" />
-      <template v-if="previa">
+      <slot v-if="previa" name="previa" :previa="previa">
         <p class="m-0 text-n-slate-12">{{ fraseDoQueSai }}</p>
         <p class="m-0">
           {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_RECEBER') }}
         </p>
-      </template>
+      </slot>
       <ErroComTentarDeNovo
         v-else-if="comErroNaPrevia"
         :mensagem="t('RELACIONAMENTOS_TRAZER.DESFAZER.ERRO_PREVIA')"

@@ -20,7 +20,7 @@ export const ERROS = {
   ANDAMENTO: 'andamento',
 };
 
-const ERROS_DA_LEITURA = {
+export const ERROS_DA_LEITURA = {
   PLANILHA_VAZIA: ERROS.VAZIA,
   PLANILHA_SEM_CONTATO: ERROS.SEM_CONTATO,
 };
@@ -84,18 +84,24 @@ export const useTrazerLista = ({
     estado.value = proximo(estado.value, { tipo });
   };
 
+  // A leitura chegou: começam as perguntas (ou, sem elas, a conferência).
+  // #2897 — também é por aqui que entra a leitura que outra jornada já fez
+  // (a planilha que, na conta de seguros, só tinha as pessoas).
+  const receber = lida => {
+    leitura.value = lida;
+    respostas.value = {};
+    estado.value = proximo(estado.value, {
+      tipo: EVENTOS.LEU,
+      perguntas: lida.perguntas.length,
+    });
+  };
+
   const ler = async arquivo => {
     ultimaEntrada = { arquivo };
     lendo.value = true;
     erro.value = ERROS.NENHUM;
     try {
-      const lida = await fonte.ler(arquivo);
-      leitura.value = lida;
-      respostas.value = {};
-      estado.value = proximo(estado.value, {
-        tipo: EVENTOS.LEU,
-        perguntas: lida.perguntas.length,
-      });
+      receber(await fonte.ler(arquivo));
     } catch (falha) {
       erro.value = ERROS_DA_LEITURA[falha?.name] ?? ERROS.LEITURA;
     } finally {
@@ -253,6 +259,7 @@ export const useTrazerLista = ({
     totalAtrazer,
     escolherArquivo,
     usarExemplo,
+    receber,
     responder,
     escolherColunaDeCliente,
     continuar,

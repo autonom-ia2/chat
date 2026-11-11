@@ -165,14 +165,19 @@ describe('ficha da pessoa: o bloco Seguros', () => {
     );
   });
 
-  it('sem seguro: só a frase', async () => {
+  it('sem seguro: a frase e o link de guardar o de outra corretora', async () => {
     const w = await abrirPessoa(SEM_SEGURO);
 
     expect(w.get(`${daCarteira('seguros')} h2`).text()).toBe('Seguros (0)');
     expect(w.get(daCarteira('seguros-vazio')).text()).toBe(
       'Nenhum seguro ainda.'
     );
-    expect(w.get(daCarteira('seguros')).find('button').exists()).toBe(false);
+    expect(
+      w
+        .get(daCarteira('seguros'))
+        .findAll('button')
+        .map(botao => botao.text())
+    ).toEqual(['Guardar seguro de outra corretora']);
   });
 
   it('seguro em outra corretora: só informa, com o lembrete', async () => {
@@ -277,11 +282,6 @@ describe('painel da conversa: os seguros da pessoa', () => {
 
     await w.get(daCarteira('painel-pdf')).trigger('click');
     expect(useAlert).toHaveBeenCalledWith('Abrindo o PDF do seguro Auto');
-
-    await w.get(daCarteira('painel-guardar-de-fora')).trigger('click');
-    expect(useAlert).toHaveBeenLastCalledWith(
-      'Abrindo o passo de guardar o seguro de outra corretora'
-    );
 
     await w.get(daCarteira('painel-ver-ficha')).trigger('click');
     expect(roteador.push).toHaveBeenCalledWith({

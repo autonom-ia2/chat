@@ -412,6 +412,837 @@
           "pausa": 1000
         }
       ]
+    },
+    {
+      "nome": "7-trazer-planilha",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "como-trazer",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=sem-seguros",
+          "esperar": "[data-carteira=\"cartao-planilha\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "falta-escolher",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"continuar-como\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"falta-escolher\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "enviar-planilha",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"cartao-planilha\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"continuar-como\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"soltar-arquivo\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "pergunta-seguros",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pergunta-seguros\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "conferir",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"planilha-conferir\"]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "precisam-de-voce",
+          "passos": [
+            {
+              "clicar": "[data-contador=\"PRECISAM\"] button"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"precisam-de-voce\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "falta-quando-termina",
+          "passos": [
+            {
+              "clicar": "[data-linha=\"52\"] [data-carteira=\"salvar-problema\"]"
+            },
+            {
+              "esperar": "[data-linha=\"52\"] [data-carteira=\"falta\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "resolvidos",
+          "passos": [
+            {
+              "preencher": [
+                "[data-linha=\"52\"] input[type=\"date\"]",
+                "2027-03-10"
+              ]
+            },
+            {
+              "clicar": "[data-linha=\"52\"] [data-carteira=\"salvar-problema\"]"
+            },
+            {
+              "clicar": "[data-linha=\"131\"] [data-opcao=\"88\"]"
+            },
+            {
+              "clicar": "[data-linha=\"71\"] [data-carteira=\"deixar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-linha=\"140\"] [data-carteira=\"deixar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-contador=\"DEIXADOS\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "andamento",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"trazer-seguros\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"andamento\"]"
+            }
+          ],
+          "pausa": 600
+        },
+        {
+          "nome": "pronto",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ver-os-seguros\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "desfazer",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"historico\"] [data-relacionamentos=\"desfazer\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"o-que-sai\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "so-as-pessoas",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=planilha&demo=sem-seguros",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"so-pessoas\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"so-pessoas\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"pergunta\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "erro-ao-trazer",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=planilha&demo=sem-seguros&caso=trazer_falhou",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"trazer-seguros\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"trazer-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"planilha-conferir\"] [data-carteira=\"erro\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "historico-cheio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "esperar": "[data-carteira=\"agger-historico\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=vazio",
+          "esperar": "[data-relacionamentos=\"historico\"] [data-relacionamentos=\"vazio\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=sem-seguros&demo-carteira=carregando",
+          "esperar": "[data-carteira=\"como-trazer\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=sem-seguros&demo-carteira=erro",
+          "esperar": "[data-carteira=\"como-trazer\"] [data-carteira=\"erro\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "fora-do-segmento",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=fora-do-segmento",
+          "esperar": "[data-relacionamentos=\"soltar-arquivo\"]",
+          "pausa": 1500
+        }
+      ]
+    },
+    {
+      "nome": "8-trazer-pdfs",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=pdfs&demo=sem-seguros",
+          "esperar": "[data-carteira=\"pdfs-soltar\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "falta-escolher",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ler-pdfs\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"falta-pdfs\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "escolhidos",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"pdfs-usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-escolhidos\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"pdfs-ver-nomes\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "carregando",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ler-pdfs\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-lendo\"]"
+            }
+          ],
+          "pausa": 600
+        },
+        {
+          "nome": "conferir-pdfs",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"pdfs-conferir\"]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "precisam-e-nao-e-apolice",
+          "passos": [
+            {
+              "clicar": "[data-contador=\"PRECISAM\"] button"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-nao-e-apolice\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "resolvidos",
+          "passos": [
+            {
+              "preencher": [
+                "[data-linha=\"1\"] input[type=\"date\"]",
+                "2027-04-15"
+              ]
+            },
+            {
+              "clicar": "[data-linha=\"1\"] [data-carteira=\"salvar-problema\"]"
+            },
+            {
+              "clicar": "[data-linha=\"2\"] [data-carteira=\"seguir-sem-telefone\"]"
+            },
+            {
+              "esperar": "[data-linha=\"2\"] [data-carteira=\"voltar-atras\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "andamento",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"trazer-pdfs\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"andamento\"]"
+            }
+          ],
+          "pausa": 600
+        },
+        {
+          "nome": "pronto",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ver-os-seguros\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=pdfs&demo=sem-seguros&caso=pdfs_nao_leu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"pdfs-usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"pdfs-usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-escolhidos\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"ler-pdfs\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-erro\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "foto-escura",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=pdfs&demo=sem-seguros&caso=foto_escura",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"pdfs-usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"pdfs-usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"pdfs-escolhidos\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"ler-pdfs\"]"
+            },
+            {
+              "esperar": "[data-problema=\"foto_escura\"]"
+            }
+          ],
+          "pausa": 1500
+        }
+      ]
+    },
+    {
+      "nome": "9-trazer-agger",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "agger-login",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=sem-seguros",
+          "esperar": "[data-carteira=\"agger-usuario\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "falta-login",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-entrar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-entrar-form\"] [data-carteira=\"falta\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "senha-errada",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"agger-usuario\"]",
+                "corretora.exemplo"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"agger-senha\"]",
+                "errada"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"agger-entrar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-erro\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "buscando",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"agger-senha\"]",
+                "exemplo"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"agger-entrar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-seguradora\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "como-resolver",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-como-resolver\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-dialogo-senha\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "busca-terminou",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-fechar-dialogo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-continuar\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "conferir-agger",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-continuar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-conferir\"]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "andamento",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"trazer-agger\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"andamento\"]"
+            }
+          ],
+          "pausa": 600
+        },
+        {
+          "nome": "pronto",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ver-os-seguros\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "agger-ja-ligado",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=cheio",
+          "esperar": "[data-carteira=\"agger-ligado\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "historico-agger",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "esperar": "[data-carteira=\"agger-historico\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "parou-de-buscar",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-parar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-voltar-a-buscar\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "nao-respondeu",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=sem-seguros&caso=agger_nao_respondeu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"agger-usuario\"]"
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"agger-usuario\"]",
+                "corretora.exemplo"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"agger-senha\"]",
+                "exemplo"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"agger-entrar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-nao-respondeu\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=sem-seguros&caso=agger_sem_apolices",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"agger-usuario\"]"
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"agger-usuario\"]",
+                "corretora.exemplo"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"agger-senha\"]",
+                "exemplo"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"agger-entrar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-sem-apolices\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=sem-seguros&demo-carteira=carregando",
+          "esperar": "[data-carteira=\"trazer\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=agger&demo=sem-seguros&demo-carteira=erro",
+          "esperar": "[data-carteira=\"trazer\"] [data-carteira=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "10-seguro-de-fora",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "de-fora",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-arquivo\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "nao-parece-seguro",
+          "passos": [
+            {
+              "clicar": "li:nth-child(3) [data-carteira=\"de-fora-arquivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-erro\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "foto-escura",
+          "passos": [
+            {
+              "clicar": "li:nth-child(2) [data-carteira=\"de-fora-arquivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-erro\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "de-fora-lido",
+          "passos": [
+            {
+              "clicar": "li:nth-child(1) [data-carteira=\"de-fora-arquivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-quer\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "falta-resposta",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"guardar-lembrete\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-quer\"] [data-carteira=\"falta\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "ainda-nao-perguntei",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"de-fora-quer\"] [data-resposta=\"ainda_nao\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-perguntar\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "lembrete-guardado",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"de-fora-quer\"] [data-resposta=\"sim\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"guardar-lembrete\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"desfazer\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "lembrete-desfeito",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"desfazer\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"painel-seguro\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "nao-achei-a-data",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-arquivo\"]"
+            },
+            {
+              "clicar": "li:nth-child(4) [data-carteira=\"de-fora-arquivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-nao-achei\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_sem_arquivos",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora\"] [data-relacionamentos=\"soltar-arquivo\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_carregando",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora\"] [data-carteira=\"carregando\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&caso=de_fora_erro",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora\"] [data-carteira=\"erro\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "painel-sem-seguro",
+          "url": "/app/accounts/{conta}/conversations/1?demo=cheio&demo-carteira=vazio",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-arquivo\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "pela-ficha",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/27?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ficha-guardar-de-fora\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"ficha-guardar-de-fora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"de-fora-arquivo\"]"
+            }
+          ],
+          "pausa": 1200
+        }
+      ]
     }
   ]
 }

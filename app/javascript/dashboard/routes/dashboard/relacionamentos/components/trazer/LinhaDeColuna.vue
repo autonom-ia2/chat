@@ -11,6 +11,8 @@ import { DESTINOS, LISTA_DE_DESTINOS } from '../../trazer/destinos';
 const props = defineProps({
   coluna: { type: Object, required: true },
   ocupado: { type: Boolean, default: false },
+  // #2897 — destinos além dos de sempre, já com o nome: [{ value, label }].
+  destinosAMais: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['trocar']);
 
@@ -32,14 +34,17 @@ const raiz = ref(null);
 const escolha = ref(null);
 const caixaDaEscolha = ref(null);
 
-const nomeDoDestino = destino => t(CHAVES_DOS_DESTINOS[destino]);
+const nomeDoDestino = destino =>
+  props.destinosAMais.find(({ value }) => value === destino)?.label ??
+  t(CHAVES_DOS_DESTINOS[destino]);
 
-const opcoes = computed(() =>
-  LISTA_DE_DESTINOS.map(destino => ({
+const opcoes = computed(() => [
+  ...LISTA_DE_DESTINOS.map(destino => ({
     value: destino,
     label: nomeDoDestino(destino),
-  }))
-);
+  })),
+  ...props.destinosAMais,
+]);
 
 const naoGuarda = computed(() => props.coluna.destino === DESTINOS.NAO_GUARDAR);
 const virouInformacao = computed(

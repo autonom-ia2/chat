@@ -75,3 +75,27 @@ describe('pecaPedida (?demo-carteira=)', () => {
     expect(pecaPedida({ 'demo-carteira': 'erro' }, false)).toBeNull();
   });
 });
+
+describe('casoPedido (?caso=)', () => {
+  it.each([
+    'pdfs_nao_leu',
+    'foto_escura',
+    'agger_nao_respondeu',
+    'agger_sem_apolices',
+    'trazer_falhou',
+    'de_fora_carregando',
+    'de_fora_erro',
+    'de_fora_sem_arquivos',
+  ])('aceita "%s"', async caso => {
+    const { casoPedido } = await carregar();
+    expect(casoPedido({ caso })).toBe(caso);
+  });
+
+  it('ignora valor desconhecido, falta do parâmetro e o ambiente de produção', async () => {
+    const { casoPedido } = await carregar();
+    expect(casoPedido({ caso: 'inventado' })).toBeNull();
+    expect(casoPedido({})).toBeNull();
+    expect(casoPedido()).toBeNull();
+    expect(casoPedido({ caso: 'trazer_falhou' }, false)).toBeNull();
+  });
+});

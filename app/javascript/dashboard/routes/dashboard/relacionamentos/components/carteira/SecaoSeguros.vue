@@ -8,7 +8,8 @@ import LinhaDoSeguroNaFicha from './LinhaDoSeguroNaFicha.vue';
 
 // #2897 — o bloco Seguros da ficha: o que a pessoa (ou a empresa) tem com a
 // corretora. É leitura: não tem botão cheio. Vazio é só uma frase; o erro fica
-// dentro do cartão e o resto da ficha continua.
+// dentro do cartão e o resto da ficha continua. Quem usa pode pôr um link
+// depois da lista (slot `depois`), que só aparece com os seguros carregados.
 defineProps({
   seguros: { type: Array, required: true },
   estado: { type: String, default: ESTADOS.PRONTO },
@@ -57,5 +58,11 @@ const tf = (chave, valores) =>
         @anexar="emit('anexar', $event)"
       />
     </ul>
+    <div
+      v-if="estado === ESTADOS.PRONTO && $slots.depois"
+      class="flex flex-col items-start gap-2"
+    >
+      <slot name="depois" />
+    </div>
   </CartaoDaSecao>
 </template>

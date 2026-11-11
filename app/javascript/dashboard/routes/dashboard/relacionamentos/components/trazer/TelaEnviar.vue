@@ -11,6 +11,8 @@ const props = defineProps({
   lendo: { type: Boolean, default: false },
   erro: { type: String, default: '' },
   mostrarExemplo: { type: Boolean, default: false },
+  // #2897 — outra linha de apoio na área de soltar (conta de seguros).
+  apoio: { type: String, default: '' },
 });
 const emit = defineEmits(['arquivo', 'exemplo', 'tentar']);
 
@@ -69,6 +71,7 @@ const erroDoArquivo = computed(() =>
       <SoltarArquivo
         :erro="erroDoArquivo"
         :tipo-de-erro="erro"
+        :apoio="apoio"
         @arquivo="emit('arquivo', $event)"
       />
       <button

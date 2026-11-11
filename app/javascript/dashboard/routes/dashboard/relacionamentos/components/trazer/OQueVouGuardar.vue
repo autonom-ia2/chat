@@ -8,6 +8,8 @@ import LinhaDeColuna from './LinhaDeColuna.vue';
 defineProps({
   colunas: { type: Array, required: true },
   ocupado: { type: Boolean, default: false },
+  // #2897 — destinos além dos de sempre: [{ value, label }].
+  destinosAMais: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['trocar']);
 
@@ -51,6 +53,7 @@ const aberto = ref(false);
         :key="coluna.nome"
         :coluna="coluna"
         :ocupado="ocupado"
+        :destinos-a-mais="destinosAMais"
         @trocar="(nome, destino) => emit('trocar', nome, destino)"
       />
     </ul>

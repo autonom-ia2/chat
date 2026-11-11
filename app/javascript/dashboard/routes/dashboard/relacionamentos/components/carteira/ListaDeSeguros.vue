@@ -30,8 +30,9 @@ import LinhaDeSeguro from './LinhaDeSeguro.vue';
 // #2897 — a aba Seguros de Relacionamentos (`?aba=seguros`): herói com a frase
 // do dia, abas, grupos, busca, ordem, "Mais filtros", um seguro por linha, a
 // barra de quem está marcado e a gaveta do seguro (`?apolice=<id>`). Fala só
-// com `carteiraFonte`. Trazer, Resultados, Ajustar renovações e a conversa são
-// de outras entregas: por ora, um aviso diz o que vai abrir.
+// com `carteiraFonte`. "Trazer seguros" leva à tela de trazer. Resultados,
+// Ajustar renovações e a conversa são de outras entregas: por ora, um aviso diz
+// o que vai abrir.
 const props = defineProps({
   demo: { type: String, default: null },
 });
@@ -67,6 +68,7 @@ const acoesEmGrupo = useAcoesEmGrupo({
 });
 
 const simular = (chave, valores) => useAlert(tc(chave, valores));
+const trazer = () => router.push({ name: 'relacionamentos_trazer' });
 const abrirCampanha = quantas =>
   useAlert(
     t(
@@ -129,7 +131,7 @@ onMounted(lista.iniciar);
         <HeroiDeSeguros
           v-if="lista.resumo.value"
           :resumo="lista.resumo.value"
-          @trazer="simular('ABRINDO_TRAZER')"
+          @trazer="trazer"
           @ver-grupo="lista.escolherGrupo"
         />
         <AbasDaLista

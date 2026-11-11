@@ -3,8 +3,10 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { casoPedido, contaDeSeguros, pecaPedida } from '../fonte/modoCarteira';
 import { usarDemo } from '../fonte/modoDemo';
 import { trazerFonte } from '../fonte/trazerFonte';
+import { trazerSegurosFonte } from '../fonte/trazerSegurosFonte';
 import { ETAPAS } from '../trazer/etapas';
 import { ERROS, useTrazerLista } from '../trazer/useTrazerLista';
 import { useHistoricoDeListas } from '../trazer/useHistoricoDeListas';
@@ -15,10 +17,17 @@ import PerguntaDaVez from '../components/trazer/PerguntaDaVez.vue';
 import TelaConferir from '../components/trazer/TelaConferir.vue';
 import TelaEnviar from '../components/trazer/TelaEnviar.vue';
 import TelaPronto from '../components/trazer/TelaPronto.vue';
+import HistoricoDaCarteira from '../components/carteira/trazer/HistoricoDaCarteira.vue';
+import OQueSaiDosSeguros from '../components/carteira/trazer/OQueSaiDosSeguros.vue';
+import TrazerSeguros from '../components/carteira/trazer/TrazerSeguros.vue';
 
 // #2894 — "Trazer minha lista": uma entrada só, em três etapas (Enviar →
 // Conferir → Pronto), com o histórico e o Desfazer. O protótipo não lê o arquivo
 // no navegador: a fonte (fonte/trazerFonte.js) devolve a leitura fictícia.
+// #2897 — na conta de seguros a entrada é "Como você quer trazer seus clientes
+// e seguros?" (components/carteira/trazer/TrazerSeguros.vue). A planilha que só
+// tem as pessoas segue por aqui, pelas mesmas telas de sempre. Fora da conta de
+// seguros nada muda.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -29,11 +38,28 @@ const planilha = demo && import.meta.env.DEV ? route.query.planilha : undefined;
 const fonte = trazerFonte({ demo, planilha });
 const avisar = chave => useAlert(t(chave));
 
+// Só existe na conta de seguros. Ela embrulha a fonte das listas: o histórico e
+// o Desfazer mostram os seguros e as listas de pessoas juntos.
+const fonteDeSeguros = contaDeSeguros()
+  ? trazerSegurosFonte({
+      demo,
+      peca: pecaPedida(route.query),
+      caso: casoPedido(route.query),
+      listas: fonte,
+    })
+  : null;
+
 const tela = useTrazerLista({ fonte, avisar });
-const historico = useHistoricoDeListas({ fonte, avisar });
+const historico = useHistoricoDeListas({
+  fonte: fonteDeSeguros ?? fonte,
+  avisar,
+});
 
 const raiz = ref(null);
 const dialogo = ref(null);
+const seguros = ref(null);
+// Na conta de seguros a pessoa começa (e volta) nas telas da carteira.
+const naCarteira = ref(Boolean(fonteDeSeguros));
 
 const trazendo = computed(() => tela.etapa.value === ETAPAS.TRAZENDO);
 const noFim = computed(() =>
@@ -45,8 +71,26 @@ const chegou = computed(() => tela.etapa.value === ETAPAS.PRONTO);
 onMounted(() => {
   historico.carregar();
   // `?planilha=` (só em demonstração) já cai no estado pedido, sem clique.
-  if (fonte.planilhaDeDemo) tela.usarExemplo();
+  if (fonte.planilhaDeDemo && !fonteDeSeguros) tela.usarExemplo();
 });
+
+// "Não, só as pessoas": a planilha já foi lida; segue pelas telas de sempre.
+const seguirSoComPessoas = lida => {
+  naCarteira.value = false;
+  tela.receber(lida);
+};
+
+// Na conta de seguros, quando as telas de sempre voltam ao começo, quem aparece
+// é a carteira: na pergunta dos seguros (Voltar) ou na escolha (outra lista).
+watch(
+  () => tela.etapa.value,
+  (agora, antes) => {
+    if (!fonteDeSeguros || agora !== ETAPAS.ENVIAR) return;
+    naCarteira.value = true;
+    if (antes === ETAPAS.PERGUNTAS) seguros.value?.voltarAPergunta();
+    else seguros.value?.recomecar();
+  }
+);
 
 // A cada tela nova o foco vai para o título dela (leitor de tela e teclado).
 watch(
@@ -61,6 +105,13 @@ watch(
 watch(chegou, agora => {
   if (agora) historico.carregar({ silencioso: true });
 });
+
+const doHistorico = computed(() => ({
+  listas: historico.listas.value,
+  carregando: historico.carregando.value,
+  comErro: historico.erro.value,
+}));
+const recarregarHistorico = () => historico.carregar({ silencioso: true });
 
 const verAsPessoas = () => router.push({ name: 'relationships_home' });
 
@@ -91,92 +142,123 @@ const confirmarDesfazer = async () => {
         data-relacionamentos="trazer-conteudo"
         class="flex flex-col w-full max-w-3xl gap-8 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10 md:pb-10"
       >
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <router-link
-            :to="{ name: 'relationships_home' }"
-            class="inline-flex items-center gap-1 text-sm min-h-11 rounded-lg text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          >
-            <span
-              class="i-lucide-chevron-left size-4 rtl:rotate-180"
-              aria-hidden="true"
+        <template v-if="!naCarteira">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <router-link
+              :to="{ name: 'relationships_home' }"
+              class="inline-flex items-center gap-1 text-sm min-h-11 rounded-lg text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            >
+              <span
+                class="i-lucide-chevron-left size-4 rtl:rotate-180"
+                aria-hidden="true"
+              />
+              {{ t('RELACIONAMENTOS_TRAZER.PESSOAS') }}
+            </router-link>
+            <EtapasDoTopo
+              :atual="tela.etapaAtualDoTopo.value"
+              :trazendo="trazendo"
             />
-            {{ t('RELACIONAMENTOS_TRAZER.PESSOAS') }}
-          </router-link>
-          <EtapasDoTopo
-            :atual="tela.etapaAtualDoTopo.value"
-            :trazendo="trazendo"
-          />
-        </div>
+          </div>
 
-        <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
-          <TelaEnviar
-            :lendo="tela.lendo.value"
-            :erro="tela.erro.value"
-            :mostrar-exemplo="Boolean(demo)"
-            @arquivo="tela.escolherArquivo"
-            @exemplo="tela.usarExemplo"
+          <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
+            <TelaEnviar
+              :lendo="tela.lendo.value"
+              :erro="tela.erro.value"
+              :mostrar-exemplo="Boolean(demo)"
+              @arquivo="tela.escolherArquivo"
+              @exemplo="tela.usarExemplo"
+              @tentar="tela.tentarDeNovo"
+            />
+            <HistoricoDeListas
+              :listas="historico.listas.value"
+              :carregando="historico.carregando.value"
+              :com-erro="historico.erro.value"
+              @desfazer="abrirDesfazer"
+              @tentar="historico.carregar"
+            />
+          </template>
+
+          <PerguntaDaVez
+            v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
+            :key="tela.estado.value.pergunta"
+            :pergunta="tela.perguntaAtual.value"
+            :respostas="tela.respostas.value"
+            :colunas="tela.leitura.value.colunas"
+            :pode-continuar="tela.podeContinuar.value"
+            :ocupado="tela.ocupado.value"
+            @responder="tela.responder"
+            @escolher-coluna="tela.escolherColunaDeCliente"
+            @continuar="tela.continuar"
+            @voltar="tela.voltar"
+          />
+
+          <TelaConferir
+            v-else-if="tela.etapa.value === ETAPAS.CONFERIR"
+            :leitura="tela.leitura.value"
+            :resumo="tela.resumo.value"
+            :total="tela.totalAtrazer.value"
+            :ocupado="tela.ocupado.value"
+            :com-erro="tela.erro.value === ERROS.TRAZER"
+            @guardar="tela.guardar"
+            @deixar-de-fora="tela.deixarDeFora"
+            @reabrir="tela.reabrir"
+            @trocar="tela.trocarDestino"
+            @trazer="tela.trazer"
+            @escolher-outra="trazerOutra"
+            @voltar="tela.voltar"
             @tentar="tela.tentarDeNovo"
           />
-          <HistoricoDeListas
-            :listas="historico.listas.value"
-            :carregando="historico.carregando.value"
-            :com-erro="historico.erro.value"
-            @desfazer="abrirDesfazer"
-            @tentar="historico.carregar"
+
+          <TelaPronto
+            v-else-if="noFim"
+            :trazendo="trazendo"
+            :porcentagem="tela.porcentagem.value"
+            :novas="tela.novasTrazidas.value"
+            :completadas="tela.completadasTrazidas.value"
+            :com-erro="tela.erro.value === ERROS.ANDAMENTO"
+            @ver="verAsPessoas"
+            @outra="trazerOutra"
+            @tentar="tela.tentarDeNovo"
           />
+
+          <template v-if="chegou">
+            <HistoricoDaCarteira
+              v-if="fonteDeSeguros"
+              v-bind="doHistorico"
+              :fonte="fonteDeSeguros"
+              @desfazer="abrirDesfazer"
+              @tentar="historico.carregar"
+              @mudou="recarregarHistorico"
+            />
+            <HistoricoDeListas
+              v-else
+              v-bind="doHistorico"
+              @desfazer="abrirDesfazer"
+              @tentar="historico.carregar"
+            />
+          </template>
         </template>
 
-        <PerguntaDaVez
-          v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
-          :key="tela.estado.value.pergunta"
-          :pergunta="tela.perguntaAtual.value"
-          :respostas="tela.respostas.value"
-          :colunas="tela.leitura.value.colunas"
-          :pode-continuar="tela.podeContinuar.value"
-          :ocupado="tela.ocupado.value"
-          @responder="tela.responder"
-          @escolher-coluna="tela.escolherColunaDeCliente"
-          @continuar="tela.continuar"
-          @voltar="tela.voltar"
-        />
-
-        <TelaConferir
-          v-else-if="tela.etapa.value === ETAPAS.CONFERIR"
-          :leitura="tela.leitura.value"
-          :resumo="tela.resumo.value"
-          :total="tela.totalAtrazer.value"
-          :ocupado="tela.ocupado.value"
-          :com-erro="tela.erro.value === ERROS.TRAZER"
-          @guardar="tela.guardar"
-          @deixar-de-fora="tela.deixarDeFora"
-          @reabrir="tela.reabrir"
-          @trocar="tela.trocarDestino"
-          @trazer="tela.trazer"
-          @escolher-outra="trazerOutra"
-          @voltar="tela.voltar"
-          @tentar="tela.tentarDeNovo"
-        />
-
-        <TelaPronto
-          v-else-if="noFim"
-          :trazendo="trazendo"
-          :porcentagem="tela.porcentagem.value"
-          :novas="tela.novasTrazidas.value"
-          :completadas="tela.completadasTrazidas.value"
-          :com-erro="tela.erro.value === ERROS.ANDAMENTO"
-          @ver="verAsPessoas"
-          @outra="trazerOutra"
-          @tentar="tela.tentarDeNovo"
-        />
-
-        <HistoricoDeListas
-          v-if="chegou"
-          :listas="historico.listas.value"
-          :carregando="historico.carregando.value"
-          :com-erro="historico.erro.value"
-          @desfazer="abrirDesfazer"
-          @tentar="historico.carregar"
-        />
+        <TrazerSeguros
+          v-if="fonteDeSeguros"
+          v-show="naCarteira"
+          ref="seguros"
+          :fonte="fonteDeSeguros"
+          :mostrar-exemplo="Boolean(demo)"
+          @so-pessoas="seguirSoComPessoas"
+          @chegou="recarregarHistorico"
+          @recomecou="historico.carregar"
+        >
+          <template #historico>
+            <HistoricoDaCarteira
+              v-bind="doHistorico"
+              :fonte="fonteDeSeguros"
+              @desfazer="abrirDesfazer"
+              @tentar="historico.carregar"
+              @mudou="recarregarHistorico"
+            />
+          </template>
+        </TrazerSeguros>
       </div>
     </main>
 
@@ -189,6 +271,10 @@ const confirmarDesfazer = async () => {
       @confirmar="confirmarDesfazer"
       @fechar="historico.fecharDesfazer"
       @tentar="() => historico.abrirDesfazer(historico.alvo.value)"
-    />
+    >
+      <template v-if="historico.previa.value?.origem" #previa="{ previa }">
+        <OQueSaiDosSeguros :previa="previa" />
+      </template>
+    </DialogoDesfazer>
   </section>
 </template>

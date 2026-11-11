@@ -7,13 +7,18 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
-import { PESSOA_DO_PAINEL_NA_DEMO, pecaPedida } from '../../fonte/modoCarteira';
+import {
+  PESSOA_DO_PAINEL_NA_DEMO,
+  casoPedido,
+  pecaPedida,
+} from '../../fonte/modoCarteira';
 import { estadoDemo } from '../../fonte/modoDemo';
 import {
   ESTADOS_DOS_SEGUROS as ESTADOS,
   useSegurosDe,
 } from '../../carteira/useSegurosDe';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
+import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import LinhaDoSeguroNaFicha from './LinhaDoSeguroNaFicha.vue';
 
@@ -22,7 +27,7 @@ import LinhaDoSeguroNaFicha from './LinhaDoSeguroNaFicha.vue';
 // Recolhe e abre pelo título; começa aberto. Na demonstração a conversa é de
 // verdade e a pessoa dela não está na base inventada: o painel mostra os
 // seguros da pessoa de exemplo das outras jornadas. "Guardar seguro de outra
-// corretora" é de outra entrega: por ora, o aviso diz o que vai abrir.
+// corretora" abre a gaveta da Tela 20 (EntradaDeFora).
 const { t } = useI18n();
 const tp = chave => t(`RELACIONAMENTOS_CARTEIRA.PAINEL.${chave}`);
 const router = useRouter();
@@ -30,11 +35,13 @@ const textos = useTextosDoSeguro();
 const idDaLista = useId();
 
 const pessoaId = PESSOA_DO_PAINEL_NA_DEMO;
+const doEndereco = Object.fromEntries(
+  new URLSearchParams(window.location.search)
+);
 const fonte = carteiraFonte({
   demo: estadoDemo(),
-  peca: pecaPedida(
-    Object.fromEntries(new URLSearchParams(window.location.search))
-  ),
+  peca: pecaPedida(doEndereco),
+  caso: casoPedido(doEndereco),
 });
 const lista = useSegurosDe(() => fonte.daPessoa(pessoaId));
 
@@ -125,13 +132,11 @@ onMounted(lista.carregar);
             :label="tp('VER_NA_FICHA')"
             @click="verNaFicha"
           />
-          <Button
-            link
-            size="lg"
-            class="text-start"
-            data-carteira="painel-guardar-de-fora"
-            :label="tp('GUARDAR_DE_FORA')"
-            @click="useAlert(tp('ABRINDO_GUARDAR_DE_FORA'))"
+          <EntradaDeFora
+            marca="painel-guardar-de-fora"
+            :pessoa-id="pessoaId"
+            :fonte="fonte"
+            @mudou="lista.atualizar"
           />
         </div>
       </template>

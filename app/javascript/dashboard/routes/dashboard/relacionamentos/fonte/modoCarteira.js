@@ -44,3 +44,22 @@ export const pecaPedida = (
   const valor = query?.['demo-carteira'];
   return permitida && PECAS_DA_CARTEIRA.includes(valor) ? valor : null;
 };
+
+// `?caso=<nome>` faz a demonstração cair num estado que o exemplo de sempre não
+// mostra (uma leitura que falha, o Agger que não responde, a conversa sem
+// arquivo). Como `?demo-carteira=`, não "gruda" e só vale no desenvolvimento.
+export const CASOS_DA_DEMO = [
+  'pdfs_nao_leu',
+  'foto_escura',
+  'agger_nao_respondeu',
+  'agger_sem_apolices',
+  'trazer_falhou',
+  'de_fora_carregando',
+  'de_fora_erro',
+  'de_fora_sem_arquivos',
+];
+
+export const casoPedido = (
+  query = {},
+  permitida = Boolean(import.meta.env.DEV)
+) => (permitida && CASOS_DA_DEMO.includes(query?.caso) ? query.caso : null);

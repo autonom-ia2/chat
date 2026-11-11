@@ -3,25 +3,29 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
-import { SITUACOES_DA_LISTA, formatarDia } from '../../trazer/prazo';
+import { SITUACOES_DA_LISTA } from '../../trazer/prazo';
+import DetalheDaLista from './DetalheDaLista.vue';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
+// #2897 — quem usa pode dar outro título, trocar a linha de detalhe de uma
+// lista (slot `detalhe`) e pôr mais uma ação ao lado do Desfazer (slot `acoes`).
 defineProps({
+  // Sem título próprio, é o de sempre.
+  titulo: { type: String, default: '' },
   listas: { type: Array, required: true },
   carregando: { type: Boolean, default: false },
   comErro: { type: Boolean, default: false },
 });
 const emit = defineEmits(['desfazer', 'tentar']);
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 const SELOS = {
   [SITUACOES_DA_LISTA.PRONTO]: 'bg-n-teal-3 text-n-teal-11',
   [SITUACOES_DA_LISTA.TRAZENDO]: 'bg-n-blue-3 text-n-blue-11',
   [SITUACOES_DA_LISTA.DESFEITO]: 'bg-n-alpha-2 text-n-slate-11',
 };
-const dia = ms => formatarDia(ms, locale.value);
 
 const NOMES = {
   [SITUACOES_DA_LISTA.PRONTO]:
@@ -36,7 +40,7 @@ const NOMES = {
 <template>
   <section data-relacionamentos="historico" class="flex flex-col gap-4">
     <h2 class="m-0 text-2xl font-semibold tracking-tight text-n-slate-12">
-      {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.TITULO') }}
+      {{ titulo || t('RELACIONAMENTOS_TRAZER.HISTORICO.TITULO') }}
     </h2>
 
     <div v-if="carregando" data-relacionamentos="carregando">
@@ -67,25 +71,9 @@ const NOMES = {
             {{ lista.arquivo }}
           </p>
           <p class="m-0 text-sm text-n-slate-11">
-            {{
-              t('RELACIONAMENTOS_TRAZER.HISTORICO.EM', {
-                data: dia(lista.quando),
-              })
-            }}
-            ·
-            {{
-              t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
-            }}
-            ·
-            <span class="tabular-nums">
-              {{
-                t(
-                  'RELACIONAMENTOS_TRAZER.HISTORICO.PESSOAS',
-                  { count: lista.total },
-                  lista.total
-                )
-              }}
-            </span>
+            <slot name="detalhe" :lista="lista">
+              <DetalheDaLista :lista="lista" />
+            </slot>
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3 sm:justify-end">
@@ -109,6 +97,7 @@ const NOMES = {
             "
             @click="emit('desfazer', lista)"
           />
+          <slot name="acoes" :lista="lista" />
         </div>
       </li>
     </ul>

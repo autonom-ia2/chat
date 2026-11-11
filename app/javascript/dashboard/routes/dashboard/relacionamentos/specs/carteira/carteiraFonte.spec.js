@@ -380,3 +380,96 @@ describe('escritas (ficam só na memória)', () => {
     ]);
   });
 });
+
+describe('seguro de outra corretora (Tela 20)', () => {
+  const comCaso = caso =>
+    carteiraFonte({
+      demo: 'cheio',
+      caso,
+      atraso: 0,
+      carregarDemo: () => import('../../demo/carteira.js'),
+    });
+  const PESSOA = 27;
+
+  it('diz de quem é a conversa e os arquivos que vieram nela', async () => {
+    const conversa = await fonte().arquivosDaConversa(PESSOA);
+
+    expect(conversa.pessoa.id).toBe(PESSOA);
+    expect(conversa.arquivos.map(arquivo => arquivo.nome)).toEqual([
+      'apolice-auto.pdf',
+      'foto-da-apolice.jpg',
+      'foto-do-carro.jpg',
+      'apolice-sem-data.pdf',
+    ]);
+  });
+
+  it('lê o arquivo; foto escura e o que não é seguro dizem por quê; sem data, a data vem vazia', async () => {
+    const f = fonte();
+    const nome = erro => erro.name;
+
+    const lido = await f.lerDeFora({ nome: 'apolice-auto.pdf' });
+    expect(lido.tipo).toBe('auto');
+    expect(lido.seguradora).toBe('Seguradora Aurora');
+    expect(lido.termina).toBeGreaterThan(Date.now() / 1000);
+    expect(
+      (await f.lerDeFora({ nome: 'apolice-sem-data.pdf' })).termina
+    ).toBeNull();
+    await expect(
+      f.lerDeFora({ nome: 'foto-da-apolice.jpg' }).catch(nome)
+    ).resolves.toBe('FOTO_ESCURA');
+    await expect(
+      f.lerDeFora({ nome: 'foto-do-carro.jpg' }).catch(nome)
+    ).resolves.toBe('NAO_PARECE_SEGURO');
+  });
+
+  it('guardar põe o seguro na ficha, fora da carteira e sem virar cliente; desfazer tira', async () => {
+    const f = fonte();
+    const termina = Math.floor(Date.UTC(2027, 1, 20, 12) / 1000);
+    const antes = (await f.resumo()).total;
+
+    const guardado = await f.guardarDeFora(PESSOA, {
+      tipo: 'auto',
+      seguradora: 'Seguradora Aurora',
+      termina,
+    });
+
+    expect(guardado.deFora).toBe(true);
+    expect(guardado.termina).toBe(termina);
+    // O lembrete é 60 dias antes de terminar.
+    expect(guardado.lembreteEm).toBe(termina - 60 * 24 * 60 * 60);
+    expect((await f.daPessoa(PESSOA)).map(s => s.id)).toEqual([guardado.id]);
+    expect((await f.resumo()).total).toBe(antes);
+    expect((await f.resumoPorPessoa())[PESSOA]).toBeUndefined();
+
+    await f.desfazerDeFora(guardado.id);
+    expect(await f.daPessoa(PESSOA)).toEqual([]);
+  });
+
+  it('os casos da demonstração: sem arquivos, erro e carregando', async () => {
+    expect(
+      (await comCaso('de_fora_sem_arquivos').arquivosDaConversa(PESSOA))
+        .arquivos
+    ).toEqual([]);
+    await expect(
+      comCaso('de_fora_erro').arquivosDaConversa(PESSOA)
+    ).rejects.toThrow();
+
+    const nuncaResponde =
+      comCaso('de_fora_carregando').arquivosDaConversa(PESSOA);
+    const corrida = await Promise.race([
+      nuncaResponde,
+      new Promise(resolve => {
+        setTimeout(() => resolve('ainda esperando'), 50);
+      }),
+    ]);
+    expect(corrida).toBe('ainda esperando');
+  });
+
+  it('sem demonstração, a fonte real está pendente', async () => {
+    await expect(
+      carteiraFonte()
+        .arquivosDaConversa(PESSOA)
+        .catch(erro => erro.name)
+    ).resolves.toBe('FONTE_REAL_PENDENTE');
+  });
+});

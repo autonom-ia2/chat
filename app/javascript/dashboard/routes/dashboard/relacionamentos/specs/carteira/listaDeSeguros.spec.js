@@ -192,12 +192,22 @@ describe('aba Seguros: cheia', () => {
     expect(textoDe(w, daCarteira('linha'))).toContain('Sem telefone');
   });
 
-  it('Resultados, Ajustar renovações, Trazer e Conversar avisam o que vão abrir', async () => {
+  it('"Trazer seguros" leva à tela de trazer', async () => {
+    const w = await abrirSeguros();
+
+    await w.get(daCarteira('heroi-trazer')).trigger('click');
+
+    expect(roteador.push).toHaveBeenLastCalledWith({
+      name: 'relacionamentos_trazer',
+    });
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('Resultados, Ajustar renovações e Conversar avisam o que vão abrir', async () => {
     const w = await abrirSeguros();
 
     await w.get(daCarteira('resultados')).trigger('click');
     await w.get(daCarteira('ajustar')).trigger('click');
-    await w.get(daCarteira('heroi-trazer')).trigger('click');
     await linhaDo(w, 110)
       .get('button[aria-label^="Conversar"]')
       .trigger('click');
@@ -205,7 +215,6 @@ describe('aba Seguros: cheia', () => {
     expect(useAlert.mock.calls.map(([texto]) => texto)).toEqual([
       'Abrindo os resultados das renovações',
       'Abrindo os ajustes das renovações',
-      'Abrindo o passo de trazer seguros',
       expect.stringMatching('Abrindo a conversa com '),
     ]);
   });

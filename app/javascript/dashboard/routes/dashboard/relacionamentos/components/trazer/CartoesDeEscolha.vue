@@ -5,6 +5,8 @@ import { computed, ref } from 'vue';
 // uma parada no Tab, setas movem e escolhem, Espaço/Enter escolhem. O texto de
 // cada cartão vem de quem usa.
 //   opcoes: [{ id, rotulo }]    v-model: o id escolhido ('' = nenhum)
+// #2897 — a opção pode trazer uma linha de apoio (`descricao`) e atributos
+// próprios do cartão (`atributos`, por exemplo a marca de quem usa).
 const props = defineProps({
   opcoes: { type: Array, required: true },
   modelValue: { type: String, default: '' },
@@ -62,6 +64,7 @@ const aoTecla = (evento, indice) => {
       role="radio"
       data-relacionamentos="resposta"
       :data-resposta="opcao.id"
+      v-bind="opcao.atributos"
       :aria-checked="modelValue === opcao.id ? 'true' : 'false'"
       :tabindex="indice === comTab ? 0 : -1"
       class="flex items-center justify-between gap-3 px-5 py-4 text-lg font-semibold text-start transition-colors min-h-16 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
@@ -73,7 +76,13 @@ const aoTecla = (evento, indice) => {
       @click="emit('update:modelValue', opcao.id)"
       @keydown="aoTecla($event, indice)"
     >
-      {{ opcao.rotulo }}
+      <span v-if="opcao.descricao" class="flex flex-col gap-1">
+        {{ opcao.rotulo }}
+        <span class="text-base font-normal text-n-slate-11">
+          {{ opcao.descricao }}
+        </span>
+      </span>
+      <template v-else>{{ opcao.rotulo }}</template>
       <span
         v-if="modelValue === opcao.id"
         class="i-lucide-check size-5 shrink-0 text-n-blue-11"

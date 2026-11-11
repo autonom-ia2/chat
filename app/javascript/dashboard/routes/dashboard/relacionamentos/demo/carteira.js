@@ -8,6 +8,7 @@
 import { empresas, pessoas } from './base';
 import { cpfFalso } from './documentosFalsos';
 import { historiaDaDemo } from './carteiraHistoria';
+import { arquivosDeExemplo, lerDeFora } from './seguroDeFora';
 import {
   FUNIL_DE_RENOVACAO,
   PLANILHA_DE_ORIGEM,
@@ -128,9 +129,13 @@ const montar = (item, { gente, firmas }, agora) => {
 
 // id do seguro -> { campos, feitos, antesDoPdf }
 let escritas = new Map();
+// Os seguros de outra corretora guardados na demonstração (Tela 20).
+let guardadosDeFora = [];
+const PRIMEIRO_GUARDADO_DE_FORA = 9001;
 
 export const esquecerEscritasDaCarteira = () => {
   escritas = new Map();
+  guardadosDeFora = [];
 };
 
 const SEM_ESCRITA = { campos: {}, feitos: [], antesDoPdf: null };
@@ -155,12 +160,27 @@ const contexto = agora => ({
   firmas: new Map(empresas(agora).map(empresa => [empresa.id, empresa])),
 });
 
+// O que a pessoa guardou diz quando termina (não "daqui a tantos dias").
+const montarGuardado = ({ termina, ...item }, base, agora) => ({
+  ...montar(
+    { ...item, dias: 0, deFora: true, numero: '', valor: null },
+    base,
+    agora
+  ),
+  termina,
+  comeca: termina - DIAS_DO_ANO * SEGUNDOS_POR_DIA,
+  lembreteEm: termina - DIAS_DO_LEMBRETE * SEGUNDOS_POR_DIA,
+});
+
 const originais = agora => {
   const plano = planoDaCarteira();
   const base = contexto(agora);
   return {
     daCarteira: plano.daCarteira.map(item => montar(item, base, agora)),
-    deFora: plano.deFora.map(item => montar(item, base, agora)),
+    deFora: [
+      ...plano.deFora.map(item => montar(item, base, agora)),
+      ...guardadosDeFora.map(item => montarGuardado(item, base, agora)),
+    ],
   };
 };
 
@@ -337,6 +357,33 @@ export const cotar = (id, agora = Date.now()) => {
   return seguroPorId(id, agora);
 };
 
+// ---- seguro de outra corretora (Tela 20) -------------------------------------
+
+export const arquivosDaConversa = (pessoaId, agora = Date.now()) => ({
+  pessoa: resumoDaPessoa(contexto(agora).gente.get(pessoaId)),
+  arquivos: arquivosDeExemplo(),
+});
+
+// Guarda o lembrete: a pessoa não vira cliente; o seguro entra na ficha dela
+// com o selo "Em outra corretora".
+export const guardarDeFora = (
+  pessoaId,
+  { tipo, seguradora, termina },
+  agora = Date.now()
+) => {
+  const id = PRIMEIRO_GUARDADO_DE_FORA + guardadosDeFora.length;
+  guardadosDeFora = [
+    ...guardadosDeFora,
+    { id, pessoaId, tipo, seguradora, termina },
+  ];
+  return seguroPorId(id, agora);
+};
+
+export const desfazerDeFora = id => {
+  guardadosDeFora = guardadosDeFora.filter(item => item.id !== id);
+  return { id };
+};
+
 export const demoDaCarteira = {
   segurosDaCarteira,
   segurosComOsDeFora,
@@ -349,4 +396,8 @@ export const demoDaCarteira = {
   guardarPdf,
   desfazerPdf,
   cotar,
+  arquivosDaConversa,
+  lerDeFora,
+  guardarDeFora,
+  desfazerDeFora,
 };

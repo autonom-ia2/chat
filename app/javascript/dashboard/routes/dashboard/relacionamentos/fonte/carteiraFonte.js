@@ -5,6 +5,7 @@
 //      Os dados são inventados (demo/carteira.js), a escrita só fica na memória
 //      e tudo demora um instante, como a rede.
 // `peca` é o `?demo-carteira=`: muda só esta fonte (carregando, erro, vazio).
+// `caso` é o `?caso=` (fonte/modoCarteira.js): um estado que o exemplo não mostra.
 import {
   ABA_SEGUROS,
   GRUPO_PADRAO_DE_SEGUROS,
@@ -142,6 +143,11 @@ const ESCRITAS = [
   'lerPdf',
 ];
 
+// O seguro que a pessoa tem em outra corretora (Tela 20): os arquivos que
+// vieram na conversa, a leitura de um deles, guardar o lembrete e desfazer.
+const ESCRITAS_DE_FORA = ['lerDeFora', 'guardarDeFora', 'desfazerDeFora'];
+const DE_FORA = ['arquivosDaConversa', ...ESCRITAS_DE_FORA];
+
 const erroDaDemo = () =>
   Object.assign(new Error('A demonstração pediu o erro desta peça.'), {
     name: 'ERRO_DA_DEMO',
@@ -152,7 +158,7 @@ const naoAchei = () =>
     name: 'NAO_ACHEI',
   });
 
-const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
+const fonteDemo = ({ estado, peca, caso, carregarDemo, atraso }) => {
   const semSeguro = ESTADOS_SEM_SEGURO.includes(estado) || peca === 'vazio';
   const aggerLigado = aggerLigadoNaDemo(estado);
 
@@ -276,6 +282,22 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
       return resumoPorDono(await daCarteira(agora), empresaSegurada, agora);
     },
     ...Object.fromEntries(ESCRITAS.map(nome => [nome, escrita(nome)])),
+    // `?caso=` mostra a gaveta carregando, com erro ou sem arquivo na conversa.
+    async arquivosDaConversa(pessoaId) {
+      if (caso === 'de_fora_carregando') return esperarParaSempre();
+      const dados = await demo();
+      if (caso === 'de_fora_erro') throw erroDaDemo();
+      const conversa = dados.arquivosDaConversa(pessoaId);
+      return caso === 'de_fora_sem_arquivos'
+        ? { ...conversa, arquivos: [] }
+        : conversa;
+    },
+    ...Object.fromEntries(
+      ESCRITAS_DE_FORA.map(nome => [
+        nome,
+        async (...dados) => (await demo())[nome](...dados),
+      ])
+    ),
   };
 };
 
@@ -303,7 +325,7 @@ const fonteReal = () => {
     usaDemo: false,
     cotaSozinha: false,
     ...Object.fromEntries(
-      [...LEITURAS, ...ESCRITAS].map(nome => [nome, pendente])
+      [...LEITURAS, ...ESCRITAS, ...DE_FORA].map(nome => [nome, pendente])
     ),
   };
 };
@@ -311,11 +333,12 @@ const fonteReal = () => {
 export const carteiraFonte = ({
   demo = null,
   peca = null,
+  caso = null,
   carregarDemo = CARREGAR_DEMO,
   atraso = ATRASO_DA_CARTEIRA_MS,
 } = {}) =>
   demo && carregarDemo
-    ? fonteDemo({ estado: demo, peca, carregarDemo, atraso })
+    ? fonteDemo({ estado: demo, peca, caso, carregarDemo, atraso })
     : fonteReal();
 
 export { ABA_SEGUROS };
