@@ -3146,6 +3146,7 @@
         "SIM": "Yes",
         "NAO": "No",
         "ZERO_KM": "Brand new",
+        "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "The lookup found nothing for this value. Check it and try again.",
         "NAO_CONSEGUI": "Could not look it up right now. Try again in a moment.",
         "PEDIDO_INVALIDO": "This value is not in the right format. See the example and try again.",

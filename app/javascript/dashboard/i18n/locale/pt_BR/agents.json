@@ -3146,6 +3146,7 @@
         "SIM": "Sim",
         "NAO": "Não",
         "ZERO_KM": "Zero quilômetro",
+        "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "A consulta não achou nada para esse valor. Confira e tente de novo.",
         "NAO_CONSEGUI": "Não deu para consultar agora. Tente de novo daqui a pouco.",
         "PEDIDO_INVALIDO": "Esse valor não está no formato certo. Veja o exemplo e tente de novo.",

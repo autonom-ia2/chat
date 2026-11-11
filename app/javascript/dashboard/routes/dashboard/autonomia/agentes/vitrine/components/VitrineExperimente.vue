@@ -71,6 +71,7 @@ const textosDoResultado = computed(() => ({
   sim: t(`${NS}.RESULTADO.SIM`),
   nao: t(`${NS}.RESULTADO.NAO`),
   zeroKm: t(`${NS}.RESULTADO.ZERO_KM`),
+  nenhumValor: t(`${NS}.RESULTADO.NENHUM_VALOR`),
   idioma: idiomaDoNavegador(locale.value),
 }));
 
