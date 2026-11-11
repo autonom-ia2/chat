@@ -76,6 +76,8 @@ const props = defineProps({
   // Tela de uma automação que já existe: a conversa em que ela foi montada ou
   // mexida por último volta, em vez de começar em branco.
   automacaoId: { type: Number, default: null },
+  // #2889: a automação aberta é do motor novo (autonomia/automacoes).
+  automacaoDoMotor: { type: Boolean, default: false },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
 // que o pedido inicial saiu, para a tela gastá-lo (#859).
@@ -993,7 +995,9 @@ watch(
     if (isSending.value || store.pendente()) return;
     abrirConversa(
       async () => {
-        const resposta = await AutonomiaGuideAPI.conversaDaAutomacao(id);
+        const resposta = props.automacaoDoMotor
+          ? await AutonomiaGuideAPI.conversaDaAutomacao(id, { motor: true })
+          : await AutonomiaGuideAPI.conversaDaAutomacao(id);
         const mesma =
           resposta.data?.id && resposta.data.id === store.conversaAtual();
         return mesma ? { data: {} } : resposta;

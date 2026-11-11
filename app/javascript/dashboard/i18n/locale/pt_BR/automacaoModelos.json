@@ -104,6 +104,11 @@
         "TITULO": "Venda fechada entra no seu sistema",
         "TEXTO": "Ao fechar, o sistema pega os dados que faltam, envia ao seu sistema de cobrança e manda as boas-vindas."
       }
+    },
+    "GUIA": {
+      "TESTAR": "Testar com conversas reais",
+      "VERSAO_MUDOU": "Alguém mudou esta automação agora. A versão nova está na tela: confira e toque em Ligar de novo.",
+      "ERRO_RESUMO": "Não consegui mostrar esta automação agora. Recarregue a página para tentar de novo."
     }
   }
 }
