@@ -7,7 +7,9 @@
 # incluiu fica gravado no primeiro "Incluir".
 #
 # `EXEMPLOS`: a consulta de cada fonte e em qual parâmetro entra o valor digitado. Fonte sem campo (o Banco Central)
-# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só.
+# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só. `senao`: a consulta de quando o
+# valor não serve no campo (o banco: "341" vai pelo código, "Itaú" pelo nome). Quem decide é o formato do parâmetro
+# (`Parametro#normalizar`), não uma lista de palavras.
 #
 # `COM_TEXTO_LIVRE`: a fonte em que a pessoa escreve como falaria ("Onix 2020", "Ribeirão Preto", "dias úteis até
 # 30/11"). Quem entende o texto é o modelo, pela IA da conta (`Experimente::ComModelo`), como o agente faria.
@@ -19,10 +21,9 @@ class Autonomia::FerramentasProntas::Experimente
     'banco_central' => { 'consulta' => 'dolar' },
     'ddd' => { 'consulta' => 'ddd', 'campo' => 'ddd' },
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
-    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
+    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo', 'senao' => { 'consulta' => 'por_nome', 'campo' => 'nome' } }
   }.freeze
-  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
-                       corretor_susep].freeze
+  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva corretor_susep].freeze
   MAX_VALOR = 100
 
   def initialize(account:, fonte:, valor:)
@@ -33,7 +34,7 @@ class Autonomia::FerramentasProntas::Experimente
 
   # -> o que o agente receberia, sem os textos de orientação ao modelo: { 'situacao', 'dados'? }.
   def call
-    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
+    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.na_vitrine?(@account, @fonte)
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
     return ComModelo.new(account: @account, fonte: @fonte, valor: @valor).call if COM_TEXTO_LIVRE.include?(@fonte.chave)
@@ -48,8 +49,13 @@ class Autonomia::FerramentasProntas::Experimente
     Autonomia::Agents::Tool.new(account: @account, fonte_pronta: @fonte.chave)
   end
 
+  def serve?(exemplo)
+    @fonte.consulta(exemplo['consulta']).parametro(exemplo['campo']).normalizar(@valor).present?
+  end
+
   def argumentos
     exemplo = EXEMPLOS.fetch(@fonte.chave, {})
+    exemplo = exemplo['senao'] if exemplo['senao'] && !serve?(exemplo)
     base = { 'consulta' => exemplo['consulta'] }.merge(exemplo.fetch('fixos', {}))
     return base.merge(exemplo['campo'] => @valor) if exemplo['campo']
     return base unless exemplo['campos']

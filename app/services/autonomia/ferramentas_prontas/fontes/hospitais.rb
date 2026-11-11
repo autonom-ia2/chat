@@ -1,7 +1,8 @@
 # HOSPITAIS E CLÍNICAS (#2858, F4): os estabelecimentos de saúde de uma cidade, do CNES (Cadastro Nacional de
 # Estabelecimentos de Saúde, Ministério da Saúde), com filtro opcional pelo tipo de unidade e pelo nome.
-#   - a cidade vem pelo código IBGE (7 dígitos, ou os 6 que o CNES usa) ou pelo nome e a UF, conferidos na tabela das
-#     sedes municipais (`Municipios`): a cidade que não existe naquele estado é pedido inválido, e nada é consultado;
+#   - a cidade vem pelo código IBGE (7 dígitos, ou os 6 que o CNES usa) ou pelo nome (a UF sai dele; só a homônima a
+#     pede), conferidos na tabela das sedes municipais (`Municipios`): a cidade que não existe é pedido inválido, e nada
+#     é consultado;
 #   - fonte única: a API de dados abertos do Ministério da Saúde (`hospitais/cnes.rb`). Não há outra API aberta e
 #     documentada do CNES para servir de reserva;
 #   - a API devolve no máximo 20 por pedido: o tipo vai à fonte, e a busca pelo nome filtra esses 20 aqui;
@@ -14,6 +15,11 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
 
   FLAG = 'agente_ferramentas_prontas_lote2'.freeze
   MAX_ESTABELECIMENTOS = 20
+  POR_PAGINA = 20
+  MAX_PAGINAS = 5
+  # Cabe em `Resposta::MAX_TEXTO` (160).
+  AMOSTRA = 'É uma amostra: os %<lidos>d primeiros cadastros da cidade, e o total é só deles. Para achar pelo nome, mande ' \
+            'a busca e, se souber, o tipo (santa casa é hospital).'.freeze
   # O tipo de unidade que o modelo escolhe -> o código do CNES (`/cnes/tipounidades`).
   TIPOS = {
     'hospital' => 5, 'hospital_especializado' => 7, 'hospital_dia' => 62, 'pronto_socorro' => 20,
@@ -22,34 +28,47 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
     'caps' => 70, 'centro_de_parto' => 61, 'vacinacao' => 85
   }.freeze
 
+  # O CNES não busca pelo nome: o nome é procurado nas páginas lidas, e a cidade grande só é lida em parte (varredura
+  # F22: a "santa casa" de Campinas, sem o tipo, ficou fora das 100 primeiras).
+  NAO_ENCONTRADO = 'Nada com esse nome entre os cadastros lidos da cidade. Mande de novo com o tipo do lugar (santa casa ' \
+                   'é hospital), que estreita a lista; se ainda não achar, diga isso ao cliente. Não invente.'.freeze
+
   module_function
 
-  # Cidade obrigatória: o código IBGE, ou o nome com a UF (e o nome tem de ser um município daquela UF).
+  # Cidade obrigatória: o código IBGE, ou o nome (com a UF só quando o nome existe em mais de um estado).
   def regra(params)
     return if params['codigo_ibge']
-    return 'cidade' if params['cidade'].nil?
-    return 'uf' if params['uf'].nil?
 
-    'cidade' if Municipios.buscar(params['uf'], params['cidade']).nil?
+    Municipios.falta(params['uf'], params['cidade'])
   end
 
+  # O filtro pelo nome roda sobre todas as páginas lidas. Lista que não veio inteira (`amostra`): a observação diz que o
+  # total é só do que foi lido (varredura F21).
   def refinar(dados, params)
-    achados = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['estabelecimentos']), params['busca']) { |item| item['nome'] }
+    todos = Array(dados['estabelecimentos'])
+    achados = Autonomia::FerramentasProntas::Lista.filtrar(todos, params['busca']) { |item| item['nome'] }
     return if achados.empty?
 
-    dados.except('estabelecimentos').merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
+    resposta = dados.except('estabelecimentos', 'amostra', 'pagina_falhou')
+                    .merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
+    dados['amostra'] ? resposta.merge('observacao' => format(AMOSTRA, lidos: todos.size)) : resposta
   end
 
-  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade (7 dígitos), se já souber. Opcional.') do |valor|
+  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade (7 dígitos), se já souber. Opcional.',
+                              deduza: 'deixe o código vazio e mande o nome da cidade.') do |valor|
     digitos = valor.to_s.delete("^#{Parametro::DIGITOS}")
     codigo = digitos.length == 7 ? digitos[0, 6] : digitos
     codigo if codigo.length == Municipios::DIGITOS_CNES && Municipios.por_codigo_cnes(codigo)
   end
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (ex.: Campinas). Vai com a uf.') { |valor| Parametro.texto_curto(valor) }
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade (ex.: sp).',
-                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
-  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de unidade, se o cliente pediu um. Opcional.', opcoes: TIPOS.keys)
-  BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Parte do nome do estabelecimento. Opcional.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (ex.: Campinas).', pergunte: 'a cidade') do |valor|
+    Parametro.texto_curto(valor)
+  end
+  UF = Municipios.parametro_uf
+  TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de unidade, se o cliente pediu um. Opcional.', opcoes: TIPOS.keys,
+                       deduza: 'escolha da lista o tipo que o cliente pediu, ou deixe vazio.')
+  BUSCA = Parametro.new(nome: 'busca', local: true,
+                        descricao: 'Parte do nome do estabelecimento. Opcional. Com ela, mande também o tipo quando souber (santa ' \
+                                   'casa é hospital): cidade grande tem milhares de cadastros, e só os primeiros são lidos.') do |valor|
     Parametro.texto_curto(valor)
   end
 
@@ -61,7 +80,7 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'estabelecimentos', descricao: 'os estabelecimentos de saúde da cidade',
         opcionais: [CODIGO_IBGE, CIDADE, UF, TIPO, BUSCA], provedores: [Cnes], validade: 7.days, prazo_por_fonte: 4,
-        prazo_total: 5, regra: method(:regra), refinar: method(:refinar)
+        prazo_total: 8, regra: method(:regra), refinar: method(:refinar), nao_encontrado: NAO_ENCONTRADO
       )
     ],
     limite_diario: 500,

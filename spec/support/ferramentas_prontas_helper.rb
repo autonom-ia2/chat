@@ -10,7 +10,8 @@ module FerramentasProntasHelper
     # F4
     'apidadosabertos.saude.gov.br' => '93.184.216.53', 'pncp.gov.br' => '93.184.216.55',
     'apitempo.inmet.gov.br' => '93.184.216.56', 'archive-api.open-meteo.com' => '93.184.216.57',
-    'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59'
+    'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59',
+    'cep.awesomeapi.com.br' => '93.184.216.60'
   }.freeze
 
   # Também zera o teto global por provedor (#2858 F1): ele vive no Redis e passaria de um exemplo para o outro.
@@ -49,6 +50,18 @@ module FerramentasProntasHelper
 
   def incluir_pronta(fonte, conta:, agente:, usar_quando: 'o cliente informar o dado')
     Autonomia::FerramentasProntas::Incluir.new(account: conta, agent: agente, fonte: fonte, usar_quando: usar_quando).call.ferramenta
+  end
+
+  # A pronta que o agente já tem, gravada antes de a fonte sair da vitrine (`Fonte#na_vitrine?` falso): o "Incluir" de
+  # hoje recusa, mas a linha que já existe continua valendo no turno.
+  def pronta_ja_incluida(fonte, conta:, agente:, usar_quando: 'o cliente informar o dado')
+    catalogada = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
+    Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: conta.id, fonte: catalogada.chave)
+    agente.tools.create!(
+      account: conta, slug: catalogada.slug, name: catalogada.nome, fonte_pronta: catalogada.chave, enabled: true,
+      description: usar_quando, http_method: 'GET', endpoint_url: '', timeout_seconds: catalogada.prazo_maximo + 1,
+      headers_config: [], param_schema: [], request_body_template: nil, response_mapping: {}
+    )
   end
 
   def executar_pronta(ferramenta, argumentos)

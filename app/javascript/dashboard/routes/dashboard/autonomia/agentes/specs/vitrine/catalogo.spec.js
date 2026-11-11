@@ -6,6 +6,7 @@ import {
   emDestaque,
   ferramentaPorId,
   liberadas,
+  oferecida,
 } from '../../vitrine/catalogo';
 
 // #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4), com as chaves dele, os textos no i18n e o
@@ -56,9 +57,35 @@ describe('catálogo da vitrine', () => {
     });
   });
 
+  // #2858, regra "QI 70": o exemplo do Experimente é o que um leigo escreveria, não o código técnico.
+  it('examples are what a lay person types, not technical codes', () => {
+    const { t } = i18n.global;
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.PROCEDIMENTOS.EXEMPLO')).toBe(
+      'hemograma'
+    );
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.DOENCAS.EXEMPLO')).toBe('asma');
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.EXEMPLO')).toBe('Itaú');
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.USE_QUANDO')).toContain(
+      'o nome ou o código de um banco'
+    );
+  });
+
   it('shows only what the server released, in the showcase order', () => {
     expect(liberadas(['bancos', 'cep', 'desconhecida']).map(i => i.id)).toEqual(
       ['cep', 'bancos']
+    );
+  });
+
+  // Decisão do Rodrigo (11/11/2026): Produtos das seguradoras fica só para os agentes de garantia e de transporte.
+  it('never offers an internal-use source, even if the server sends it, but still knows it for the agent drawer', () => {
+    expect(liberadas(CHAVES_DO_SERVIDOR).map(i => i.id)).not.toContain(
+      'produtos_seguradoras'
+    );
+    expect(oferecida('produtos_seguradoras')).toBe(false);
+    expect(oferecida('corretor_susep')).toBe(true);
+    expect(oferecida('desconhecida')).toBe(false);
+    expect(ferramentaPorId('produtos_seguradoras').icone).toBe(
+      'i-lucide-file-search'
     );
   });
 
@@ -68,7 +95,6 @@ describe('catálogo da vitrine', () => {
       'cpf',
       'cep',
       'fipe',
-      'produtos_seguradoras',
       'corretor_susep',
     ]);
     expect(emDestaque(todas, []).map(i => i.id)).toEqual([

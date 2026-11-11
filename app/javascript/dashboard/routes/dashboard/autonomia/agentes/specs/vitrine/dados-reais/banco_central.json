@@ -4,14 +4,14 @@
     "dados": {
       "indicador": "Selic (meta do Copom)",
       "valor": 13.75,
-      "unidade": "% ao ano"
+      "unidade": "percentual_ao_ano"
     }
   },
   "ipca": {
     "provedor": "sgs",
     "dados": {
       "indicador": "IPCA",
-      "mes_de_referencia": "09/2026",
+      "mes_de_referencia": "2026-09",
       "variacao_no_mes": 0.82,
       "acumulado_12_meses": 4.58,
       "unidade": "%"

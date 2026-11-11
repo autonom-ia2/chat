@@ -385,6 +385,39 @@ describe('AutonomiaGuideContainer', () => {
     expect(AutonomiaGuideAPI.executarAcao).toHaveBeenCalledOnce();
   });
 
+  // #2889: a tela que embute o Guia lê de novo o que a ação confirmada mudou.
+  it('tells the host screen which action the person confirmed', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockResolvedValue({
+      data: { mensagem: 'Pronto, feito.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toEqual([[ACAO.nome]]);
+  });
+
+  it('does not tell the host screen when the action failed', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: { data: { error: 'Este funil não existe mais.' } },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toBeUndefined();
+  });
+
   it('warns instead of losing the outcome when the record is gone', async () => {
     const store = comAcaoProposta();
     let resolverAcao;
@@ -468,6 +501,26 @@ describe('AutonomiaGuideContainer', () => {
       acaoResultado: 'Pronto, feito.',
     });
     expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeFalsy();
+  });
+
+  // #2889: feita em outra aba também mudou o registro; quem embute relê.
+  it('tells the host screen when the action was already done in another tab', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { acao_estado: 'feita', mensagem: 'Pronto, feito.' },
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(wrapper.emitted('acaoConfirmada')).toEqual([[ACAO.nome]]);
   });
 
   // Revisão da #861: a conversa aberta foi apagada (em outra aba ou pelo próprio

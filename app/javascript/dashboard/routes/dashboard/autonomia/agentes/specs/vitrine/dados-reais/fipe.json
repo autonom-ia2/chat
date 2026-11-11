@@ -604,15 +604,18 @@
     "dados": {
       "precos": [
         {
-          "valor": "R$ 56.043,00",
+          "valor": 56043.0,
           "marca": "GM - Chevrolet",
           "modelo": "ONIX HATCH LT 1.0 12V Flex 5p Mec.",
           "ano_modelo": 2020,
           "combustivel": "Flex",
           "codigo_fipe": "004517-9",
-          "mes_de_referencia": "novembro de 2026"
+          "mes_de_referencia": "2026-11"
         }
-      ]
+      ],
+      "unidades": {
+        "valor": "R$"
+      }
     }
   }
 }

@@ -16,6 +16,7 @@ module DadosReaisDasProntas
 
   CASOS = [
     ['cep', 'endereco', { 'cep' => '01001-000' }],
+    ['cep', 'por_endereco', { 'logradouro' => 'Avenida Paulista', 'cidade' => 'São Paulo' }],
     ['cnpj', 'empresa', { 'cnpj' => '33.000.167/0001-01' }],
     ['cpf', 'conferir', { 'cpf' => '111.444.777-35' }],
     ['fipe', 'marcas', { 'tipo' => 'carros' }],
@@ -32,6 +33,7 @@ module DadosReaisDasProntas
     ['ddd', 'ddd', { 'ddd' => '34' }],
     ['localizacao', 'cidade', { 'latitude' => -18.9186, 'longitude' => -48.2772 }],
     ['bancos', 'banco', { 'codigo' => '341' }],
+    ['bancos', 'por_nome', { 'nome' => 'Itaú' }],
     ['hospitais', 'estabelecimentos', { 'cidade' => 'Campinas', 'uf' => 'sp', 'tipo' => 'hospital' }],
     ['procedimentos', 'codigo', { 'codigo' => '10101012' }],
     ['procedimentos', 'busca', { 'busca' => 'hemograma' }],
@@ -44,7 +46,7 @@ module DadosReaisDasProntas
     # Vários dias: a lista de itens sem nome (identificados pela data) passa pelo spec de cobertura.
     ['chuva', 'chuva', { 'cidade' => 'Uberlândia', 'uf' => 'mg', 'de' => '2026-11-04', 'ate' => '2026-11-10' }],
     ['produtos_seguradoras', 'seguradoras', { 'busca' => 'Allianz' }],
-    ['produtos_seguradoras', 'produtos', { 'seguradora' => 'Allianz', 'ramo' => 'riscos_ciberneticos' }],
+    ['produtos_seguradoras', 'produtos', { 'seguradora' => 'Allianz', 'ramo' => 'transporte' }],
     ['corretor_susep', 'por_nome', { 'nome' => 'corretora de seguros', 'tipo_pessoa' => 'pj' }]
   ].freeze
 
@@ -64,7 +66,7 @@ module DadosReaisDasProntas
 
   # Cada fonte: :sem_pessoa_fisica (o motivo ao lado) ou o anonimizador.
   ANONIMIZACAO = {
-    'cep' => :sem_pessoa_fisica, # endereço público (praça, rua), sem morador
+    'cep' => :sem_pessoa_fisica, # endereço público (praça, rua, faixa de número), sem morador
     'cnpj' => CNPJ,
     'cpf' => :sem_pessoa_fisica, # conta local sobre um número de exemplo; o dado não traz o CPF
     'fipe' => :sem_pessoa_fisica, # tabela de preços de veículos

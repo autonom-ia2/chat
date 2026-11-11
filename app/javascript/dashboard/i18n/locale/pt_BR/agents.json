@@ -3157,6 +3157,9 @@
         "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida.",
         "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui."
       },
+      "UNIDADES": {
+        "PERCENTUAL_AO_ANO": "% ao ano"
+      },
       "CAMPOS": {
         "CEP": "CEP",
         "LOGRADOURO": "Rua",
@@ -3245,7 +3248,8 @@
         "ENCONTRADAS": "Seguradoras achadas",
         "CORRETORES": "Corretores",
         "REGISTRO_SUSEP": "Registro na SUSEP",
-        "PRIMEIRO_DA_LISTA": "Primeiro da lista"
+        "PRIMEIRO_DA_LISTA": "Primeiro da lista",
+        "COMPLEMENTO": "Complemento"
       },
       "PRONTAS": {
         "TITULO": "Prontas",
@@ -3288,7 +3292,7 @@
         },
         "CEP": {
           "NOME": "Endereço pelo CEP",
-          "FAZ": "Acha rua, bairro, cidade e estado a partir do CEP.",
+          "FAZ": "Acha rua, bairro, cidade e estado a partir do CEP, e o CEP a partir da rua e da cidade.",
           "CONSEGUE": "achar um endereço pelo CEP",
           "CLIENTE": "Meu CEP é 01001-000.",
           "AGENTE": "Achei: Praça da Sé, bairro Sé, São Paulo – SP. Qual o número?",
@@ -3364,14 +3368,14 @@
         },
         "BANCOS": {
           "NOME": "Nome do banco",
-          "APOIO": "pelo código",
-          "FAZ": "Diz o nome de um banco pelo código de até três números.",
+          "APOIO": "pelo nome ou código",
+          "FAZ": "Diz o nome de um banco pelo código de até três números, e o código pelo nome do banco.",
           "CONSEGUE": "dizer o nome de um banco pelo código",
-          "CLIENTE": "Meu banco é o 341.",
-          "AGENTE": "O 341 é o Itaú Unibanco.",
-          "USE_QUANDO": "Use quando o cliente informar o código de um banco.",
-          "ROTULO": "Código do banco",
-          "EXEMPLO": "341"
+          "CLIENTE": "Qual o código do Itaú?",
+          "AGENTE": "O código do Itaú Unibanco é 341.",
+          "USE_QUANDO": "Use quando o cliente informar o nome ou o código de um banco.",
+          "ROTULO": "Nome ou código do banco",
+          "EXEMPLO": "Itaú"
         },
         "HOSPITAIS": {
           "NOME": "Hospitais e clínicas",
@@ -3393,7 +3397,7 @@
           "AGENTE": "Esse código é de consulta em consultório, no horário normal.",
           "USE_QUANDO": "Use quando o cliente mandar um código de exame ou procedimento do plano de saúde, ou quiser saber o código de um exame.",
           "ROTULO": "Código ou nome do exame",
-          "EXEMPLO": "10101012",
+          "EXEMPLO": "hemograma",
           "CONSULTAS": "nome pelo código, código pelo nome"
         },
         "DOENCAS": {
@@ -3405,7 +3409,7 @@
           "AGENTE": "O J45 é asma.",
           "USE_QUANDO": "Use quando o cliente mandar um código de doença (CID) de atestado ou guia, ou quiser saber o código de uma doença.",
           "ROTULO": "Código ou nome da doença",
-          "EXEMPLO": "J45",
+          "EXEMPLO": "asma",
           "CONSULTAS": "nome pelo código, código pelo nome"
         },
         "NCM": {
@@ -3451,13 +3455,13 @@
         },
         "PRODUTOS_SEGURADORAS": {
           "NOME": "Produtos das seguradoras",
-          "FAZ": "Mostra os seguros que cada seguradora oferece, com as coberturas e o link das condições, direto da fonte oficial.",
-          "CONSEGUE": "dizer que seguros uma seguradora tem",
-          "CLIENTE": "Que seguro cyber a Allianz tem?",
-          "AGENTE": "A Allianz tem o seguro de Riscos Cibernéticos, que cobre danos causados a outras pessoas. As condições estão no site dela.",
-          "USE_QUANDO": "Use quando o cliente perguntar que seguros ou coberturas uma seguradora oferece.",
+          "FAZ": "Mostra os seguros garantia e de transporte que as seguradoras publicam no Open Insurance, com as coberturas e o link das condições. Junto, Pottencial, Akad e Fairfax não publicam.",
+          "CONSEGUE": "dizer que seguro garantia ou de transporte uma seguradora publica",
+          "CLIENTE": "A Allianz tem seguro para o sumiço da carga?",
+          "AGENTE": "Entre as seguradoras que publicam no Open Insurance, a Allianz tem o RCF-DC, que cobre o sumiço da carga junto com o caminhão. As condições estão no site dela.",
+          "USE_QUANDO": "Use quando o cliente perguntar que seguro garantia ou de transporte uma seguradora oferece.",
           "ROTULO": "Seguradora e tipo de seguro",
-          "EXEMPLO": "seguro cyber da Allianz",
+          "EXEMPLO": "seguro de transporte da Allianz",
           "CONSULTAS": "achar a seguradora, ver os produtos de um ramo"
         },
         "CORRETOR_SUSEP": {

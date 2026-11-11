@@ -3253,7 +3253,8 @@
       "automation_list",
       "automacoes_lista",
       "automacoes_nova",
-      "automacoes_editar"
+      "automacoes_editar",
+      "automacoes_guia_editar"
      ],
      "me_leve_ate_la": {
       "rota": "automation_list",
@@ -3265,7 +3266,7 @@
       "porques: Criar automacoes"
      ],
      "revisar": true,
-     "nota": "Cobertura fraca no estudo: 03.16 só ensinava a condição 'Nome do Time'; ninguém ensinava a criar a regra do zero. #859 — Automações saiu das Configurações e virou item do menu principal (automacoes_lista, automacoes_nova, automacoes_editar), com a automação montada conversando com o Guia e o formulário antigo como modo manual. Estas rotas ficam aqui até o artigo próprio da tela nova ser escrito; o texto deste artigo ainda descreve o caminho por Configurações e precisa de revisão humana."
+     "nota": "Cobertura fraca no estudo: 03.16 só ensinava a condição 'Nome do Time'; ninguém ensinava a criar a regra do zero. #859 — Automações saiu das Configurações e virou item do menu principal (automacoes_lista, automacoes_nova, automacoes_editar), com a automação montada conversando com o Guia e o formulário antigo como modo manual. Estas rotas ficam aqui até o artigo próprio da tela nova ser escrito; o texto deste artigo ainda descreve o caminho por Configurações e precisa de revisão humana. #2889 — com a porta da Automação, a automação montada conversando é do motor novo e abre em automacoes_guia_editar; fica aqui pelo mesmo motivo."
     },
     {
      "id": "12.02",

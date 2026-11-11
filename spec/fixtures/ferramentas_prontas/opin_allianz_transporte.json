@@ -1,0 +1,212 @@
+{
+ "data": {
+  "brand": {
+   "name": "Allianz",
+   "companies": [
+    {
+     "name": "Allianz Seguros S/A",
+     "cnpjNumber": "00000000000000",
+     "products": [
+      {
+       "name": "RCTR-C",
+       "code": "309",
+       "coverages": [
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_DO_TRANSPORTADOR_RODOVIARIO_CARGA_RCTR",
+         "coverageDescription": "Cobertura para colisão e/ou capotagem e/ou abalroamento e/ou tombamento do veiculo transportador e incêndio ou explosão no veículo transportador.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.001925/2005-04",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      },
+      {
+       "name": "RCF-DC",
+       "code": "312",
+       "coverages": [
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_DO_TRANSPORTADOR_RODOVIARIO_POR_DESAPARECIMENTO_DE_CARGA_RC_DC",
+         "coverageDescription": "Cobertura para desaparecimento total da carga, com concomitantemente com o do veículo, durante o transporte, em decorrência de apropriação indébita e/ou estelionato, furtos simples ou qualificado e extorção simples ou mediante sequestro.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.002923/2011-72",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      },
+      {
+       "name": "Transporte Nacional",
+       "code": "308",
+       "coverages": [
+        {
+         "coverage": "EMBARCADOR_AMPLA_A_RISCOS_DE_PERDA_OU_DANO_MATERIAL_SOFRIDOS_PELO_OBJETO_SEGURADO_EM_CONSEQUENCIA_DE_QUAISQUER_CAUSAS_EXTERNAS_EXCETO_AS_PREVISTAS_NA_CLAUSULA_DE_PREJUIZOS_NAO_INDENIZAVEIS",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "EMBARCADOR_RESTRITA_B_COBERTURAS_ELENCADAS_NA_EMBARCADOR_RESTRITA_C_E_INCLUI_INUNDACAO_TRANSBORDAMENTO_DE_CURSOS_DAGUA_REPRESAS_LAGOS_OU_LAGOAS_DURANTE_A_VIAGEM_TERRESTRE_DESMORONAMENTO_OU_QUEDA_DE_PEDRAS_TERRAS_OBRAS_DE_ARTE_DE_QUALQUER_NATUREZA_OU_OUTROS_OBJETOS_DURANTE_A_VIAGEM_TERRESTRE_TERREMOTO_OU_ERUPCAO_VULCANICA_E",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "EMBARCADOR_RESTRITA_C_PERDAS_E_DANOS_MATERIAIS_CAUSADOS_AO_OBJETO_SEGURADO_EXCLUSIVAMENTE_POR_INCENDIO_RAIO_OU_EXPLOSAO_ENCALHE",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.000485/2008-11",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/transporte-nacional-e-internacional/documentos.html#/content/onemarketing/iberolatam/allianz-br/pt_BR/seguros/veja-outros-seguros/transportes/transporte-nacional-e-internacional/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      }
+     ]
+    },
+    {
+     "name": "SulAmérica Seguros de Automóveis e Massificados S.A.",
+     "cnpjNumber": "00000000000000",
+     "products": [
+      {
+       "name": "RCTR-C",
+       "code": "309",
+       "coverages": [
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_DO_TRANSPORTADOR_RODOVIARIO_CARGA_RCTR",
+         "coverageDescription": "Cobertura para colisão e/ou capotagem e/ou abalroamento e/ou tombamento do veiculo transportador e incêndio ou explosão no veículo transportador.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.001925/2005-04",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      },
+      {
+       "name": "RCF-DC",
+       "code": "312",
+       "coverages": [
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_DO_TRANSPORTADOR_RODOVIARIO_POR_DESAPARECIMENTO_DE_CARGA_RC_DC",
+         "coverageDescription": "Cobertura para desaparecimento total da carga, com concomitantemente com o do veículo, durante o transporte, em decorrência de apropriação indébita e/ou estelionato, furtos simples ou qualificado e extorção simples ou mediante sequestro.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.002923/2011-72",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      },
+      {
+       "name": "Transporte Nacional",
+       "code": "308",
+       "coverages": [
+        {
+         "coverage": "EMBARCADOR_AMPLA_A_RISCOS_DE_PERDA_OU_DANO_MATERIAL_SOFRIDOS_PELO_OBJETO_SEGURADO_EM_CONSEQUENCIA_DE_QUAISQUER_CAUSAS_EXTERNAS_EXCETO_AS_PREVISTAS_NA_CLAUSULA_DE_PREJUIZOS_NAO_INDENIZAVEIS",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "EMBARCADOR_RESTRITA_B_COBERTURAS_ELENCADAS_NA_EMBARCADOR_RESTRITA_C_E_INCLUI_INUNDACAO_TRANSBORDAMENTO_DE_CURSOS_DAGUA_REPRESAS_LAGOS_OU_LAGOAS_DURANTE_A_VIAGEM_TERRESTRE_DESMORONAMENTO_OU_QUEDA_DE_PEDRAS_TERRAS_OBRAS_DE_ARTE_DE_QUALQUER_NATUREZA_OU_OUTROS_OBJETOS_DURANTE_A_VIAGEM_TERRESTRE_TERREMOTO_OU_ERUPCAO_VULCANICA_E",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "EMBARCADOR_RESTRITA_C_PERDAS_E_DANOS_MATERIAIS_CAUSADOS_AO_OBJETO_SEGURADO_EXCLUSIVAMENTE_POR_INCENDIO_RAIO_OU_EXPLOSAO_ENCALHE",
+         "coverageDescription": "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais.",
+         "allowApartPurchase": false
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "0",
+         "unitType": "MONETARIO",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.000485/2008-11",
+        "definition": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/transporte-nacional-e-internacional/documentos.html#/content/onemarketing/iberolatam/allianz-br/pt_BR/seguros/veja-outros-seguros/transportes/transporte-nacional-e-internacional/documentos.html"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "links": {
+  "self": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/transport?page=1&page-size=10",
+  "first": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/transport?page=1&page-size=10",
+  "last": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/transport?page=1&page-size=10"
+ },
+ "meta": {
+  "totalRecords": 6,
+  "totalPages": 1
+ }
+}

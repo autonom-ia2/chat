@@ -78,7 +78,7 @@ describe('VitrineExperimente', () => {
       situacao: 'encontrado',
       dados: { campo_sem_rotulo: 'x', lista_sem_rotulo: [{ a: 1 }] },
     });
-    const wrapper = montar('produtos_seguradoras');
+    const wrapper = montar('corretor_susep');
     await rodar(wrapper);
     const resultado = wrapper.find('[data-experimente-resultado]');
     expect(resultado.find('[data-experimente-sem-linhas]').text()).toBe(
@@ -87,19 +87,16 @@ describe('VitrineExperimente', () => {
     expect(resultado.find('dl').exists()).toBe(false);
     expect(aviso).toHaveBeenCalledWith(
       'Experimente: resposta sem campo com rótulo',
-      'produtos_seguradoras',
+      'corretor_susep',
       ['campo_sem_rotulo', 'lista_sem_rotulo']
     );
     aviso.mockRestore();
   });
 
-  it('the F4 health and insurance boxes ask for city with state and for insurer with the kind of insurance', () => {
+  it('the F4 health box asks for city with state', () => {
     const hospitais = montar('hospitais');
     expect(rotulo(hospitais)).toBe('Cidade e estado');
     expect(campo(hospitais).element.value).toBe('Campinas SP');
-    const produtos = montar('produtos_seguradoras');
-    expect(rotulo(produtos)).toBe('Seguradora e tipo de seguro');
-    expect(campo(produtos).element.value).toBe('seguro cyber da Allianz');
   });
 
   // #2858 (C26) — o CNPJ de exemplo é fictício e a SUSEP não o acha: o exemplo é a busca pelo nome, que acha.

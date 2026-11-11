@@ -18,7 +18,10 @@
 //   maisN({ nomes, n })    -> "Acrelândia, Assis Brasil, Brasiléia e mais 19";
 //   sim, nao, zeroKm       -> os textos de verdadeiro, falso e do ano 32000 da tabela do carro;
 //   nenhumValor            -> o "—" do item da linha de pares que veio sem o valor;
-//   idioma                 -> o idioma do navegador ("pt-BR") para datas, números e a lista curta.
+//   idioma                 -> o idioma do navegador ("pt-BR") para datas, números e a lista curta;
+//   unidade(codigo)        -> a unidade que o servidor manda em código ("percentual_ao_ano") no idioma da tela, ou o
+//                             próprio código quando não há tradução ("%", "R$"). #2906 P09/P10: o servidor manda o
+//                             número, o mês em AAAA-MM e a unidade em código; quem formata é a tela.
 
 const PRIMEIROS = 3;
 // Na tabela do carro, o ano 32000 é o zero quilômetro.
@@ -40,6 +43,29 @@ const ehDataIso = texto =>
   texto[4] === '-' &&
   texto[7] === '-' &&
   [...texto.split('-').join('')].every(ehDigito);
+
+// O mês "2026-11" (a FIPE, o IPCA) -> "novembro de 2026" / "November 2026", no idioma da tela.
+const TAMANHO_DO_MES = 7;
+const MESES_NO_ANO = 12;
+const ehMesIso = texto => {
+  if (typeof texto !== 'string' || texto.length !== TAMANHO_DO_MES) {
+    return false;
+  }
+  const [ano, mes] = texto.split('-');
+  return (
+    texto[4] === '-' &&
+    [...`${ano}${mes}`].every(ehDigito) &&
+    Number(mes) >= 1 &&
+    Number(mes) <= MESES_NO_ANO
+  );
+};
+const mesLegivel = (texto, idioma) => {
+  const [ano, mes] = texto.split('-').map(Number);
+  return new Date(ano, mes - 1, 1).toLocaleDateString(idioma, {
+    month: 'long',
+    year: 'numeric',
+  });
+};
 
 // O Date empurra a data impossível para outra ("2026-02-31" vira 03/03): se ano, mês e dia não batem com o texto, a
 // data não existe.
@@ -180,6 +206,11 @@ const semTracoInicial = texto => {
 const repete = (objeto, chave, valor) =>
   chave === 'nome_completo' && valor === objeto.nome;
 
+const unidadeNaTela = (unidade, textos) =>
+  unidade && typeof textos.unidade === 'function'
+    ? textos.unidade(unidade)
+    : unidade;
+
 const valorLegivel = (chave, valor, textos, unidade) => {
   if (typeof valor === 'boolean') return valor ? textos.sim : textos.nao;
   if (typeof valor === 'number') {
@@ -190,13 +221,17 @@ const valorLegivel = (chave, valor, textos, unidade) => {
     return numeroLegivel(
       valor,
       textos.idioma,
-      unidade,
+      unidadeNaTela(unidade, textos),
       ehDinheiro(chave, unidade),
       true,
       textos.casas
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
+  // O código com a forma de um mês ("7318-12") é identificação, não mês (revisão do #2906).
+  if (!ehIdentificacao(chave) && ehMesIso(valor)) {
+    return mesLegivel(valor, textos.idioma);
+  }
   if (ehDataComHora(valor)) return dataComHoraLegivel(valor, textos.idioma);
   return chave === 'descricao' ? semTracoInicial(String(valor)) : String(valor);
 };
@@ -227,6 +262,7 @@ const CAMPOS_DE_NOME = [
   'objeto',
   'razao_social',
 ];
+// Os CEPs de uma rua (#2906) chegam com `nome` (rua, faixa e bairro) do servidor: o CEP vai como campo.
 // #2858 F7 — sem nome, o que identifica cada item (o número do telefone, a placa, o ano do preço), na ordem de
 // preferência. Só identifica o campo que tem valor diferente em cada item: dois combustíveis do mesmo ano pulam o
 // ano. `tipo` fica fora: é categoria ("Hospital geral" em vários). Sem nenhum, a lista de mais de um item é contada.

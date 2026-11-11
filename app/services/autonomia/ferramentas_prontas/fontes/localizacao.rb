@@ -16,19 +16,27 @@ module Autonomia::FerramentasProntas::Fontes::Localizacao
 
   module_function
 
+  # A vírgula decimal ("-23,55", como o brasileiro escreve) vale como ponto (varredura F15); com ponto e vírgula juntos,
+  # não: não dá para saber qual é o decimal.
   def coordenada(valor, limite)
-    numero = valor.is_a?(Numeric) ? valor.to_f : Float(valor.to_s.strip, exception: false)
+    numero = valor.is_a?(Numeric) ? valor.to_f : Float(com_ponto(valor.to_s.strip), exception: false)
     numero.round(CASAS) if numero&.finite? && numero.abs <= limite
+  end
+
+  def com_ponto(texto)
+    texto.include?('.') || texto.count(',') != 1 ? texto : texto.tr(',', '.')
   end
 
   def cidade(cidade, sigla)
     { 'cidade' => cidade }.merge(Autonomia::FerramentasProntas::Ufs.com_nome(sigla)).merge('fonte_dos_dados' => ATRIBUICAO)
   end
 
-  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.') do |valor|
+  LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.',
+                           deduza: 'mande latitude e longitude juntas, em número, como vieram na localização que o cliente mandou.') do |valor|
     coordenada(valor, 90)
   end
-  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.') do |valor|
+  LONGITUDE = Parametro.new(nome: 'longitude', tipo: 'number', descricao: 'A longitude da localização que o cliente mandou.',
+                            deduza: 'mande latitude e longitude juntas, em número, como vieram na localização que o cliente mandou.') do |valor|
     coordenada(valor, 180)
   end
 
