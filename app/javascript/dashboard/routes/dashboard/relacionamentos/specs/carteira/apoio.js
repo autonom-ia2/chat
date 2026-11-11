@@ -79,9 +79,17 @@ export const carregarDemonstracao = () =>
   Promise.all([
     import('../../demo/base.js'),
     import('../../demo/carteira.js'),
+    import('../../demo/carteiraRenovacao.js'),
+    import('../../demo/carteiraAjustes.js'),
+    import('../../demo/carteiraResultados.js'),
     import('../../demo/ficha.js'),
     import('../../demo/acoesDaLista.js'),
   ]);
+
+// O <ul> das opções rola até a escolhida; o jsdom não tem `scrollIntoView`.
+export const semRolagem = () => {
+  HTMLElement.prototype.scrollIntoView ??= () => {};
+};
 
 export const textoDe = (w, seletor) =>
   w.get(seletor).text().split(' ').join(' ');

@@ -6,9 +6,9 @@ import { formatarCnpj, formatarCpf } from '../../ficha/formatos';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 
 // #2897 — "Dados do seguro": a lista "nome: valor" da gaveta. Número da apólice
-// e documento ficam à vista, com copiar. O que chegou com dúvida mostra
-// "Confira" ao lado; o que falta mostra "Não informado". O nome do segurado leva
-// à ficha.
+// e documento ficam à vista, com copiar. O que chegou com dúvida mostra "Pode
+// ter mudado" ao lado; o que falta mostra "Não informado". O nome do segurado
+// leva à ficha.
 const props = defineProps({
   seguro: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
@@ -104,7 +104,7 @@ const linhas = computed(() => {
               data-carteira="confira"
               class="px-1.5 text-xs font-medium leading-5 rounded-md bg-n-amber-3 text-n-amber-11"
             >
-              {{ td('CONFIRA') }}
+              {{ td('PODE_TER_MUDADO') }}
             </span>
           </dd>
         </div>

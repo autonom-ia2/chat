@@ -181,12 +181,12 @@ describe('corrigir o seguro', () => {
 });
 
 describe('anexar o PDF e ver o que mudou', () => {
-  it('diz quanto custa ler, antes de ler', async () => {
+  it('a área de soltar só convida: não fala de custo nem de planilha', async () => {
     const w = await abrir(ATIVO);
     await abrirPdfPeloMenu(w);
 
-    expect(textoDe(w, daCarteira('soltar-pdf'))).toContain(
-      'Ler este PDF custa cerca de R$ 0,03.'
+    expect(textoDe(w, daCarteira('soltar-pdf'))).toBe(
+      'Arraste o PDF aqui ou clique para escolher'
     );
   });
 

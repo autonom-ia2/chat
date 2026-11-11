@@ -32,17 +32,24 @@ import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
 import FraseDoSeguro from './FraseDoSeguro.vue';
 import HistoriaDoSeguro from './HistoriaDoSeguro.vue';
 import RenovacaoDoSeguro from './RenovacaoDoSeguro.vue';
+import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 
 // #2897 — a gaveta do seguro: tudo de um seguro e o próximo passo dele (um só
 // por vez, no rodapé: fica à vista também no celular). "Corrigir" troca o
 // conteúdo da mesma gaveta. Marcar como cancelado não pede confirmação: o aviso
-// traz "Desfazer", sem prazo. `apoliceId` nulo = fechada.
+// traz "Desfazer", sem prazo. "Abrir a renovação" passa a vez à gaveta da
+// renovação (quem hospeda troca uma pela outra). `apoliceId` nulo = fechada.
 const props = defineProps({
   apoliceId: { type: Number, default: null },
   fonte: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
 });
-const emit = defineEmits(['fechar', 'mudou', 'abrirSegurado']);
+const emit = defineEmits([
+  'fechar',
+  'mudou',
+  'abrirSegurado',
+  'abrirRenovacao',
+]);
 
 const { t } = useI18n();
 const tg = (chave, valores) =>
@@ -117,16 +124,44 @@ const aoGuardarPdf = ({ seguro: novo, apoliceNova }) => {
   );
 };
 
-// O próximo passo do seguro. Renovação, conversa e PDF de verdade são de outras
+const abrirRenovacao = () => emit('abrirRenovacao', seguro.value.id);
+
+// "Avisar <nome>": a mensagem da parcela em aberto fica pronta para quem
+// atende conferir e enviar; nada sai sozinho.
+const avisarDaParcela = () =>
+  dizer(
+    tg('AVISOS.MENSAGEM_PRONTA', {
+      nome: primeiroNome.value,
+      texto: tg('PARCELA.MENSAGEM', {
+        nome: primeiroNome.value,
+        data: textos.diaMes(seguro.value.parcelaAbertaEm, props.agora),
+        tipo: tipo.value,
+      }),
+    })
+  );
+
+// "Seu seguro em palavras simples": salvar o texto alterado e enviar.
+const salvarPalavras = texto =>
+  agir(
+    () => aberto.fazer('salvarPalavras', { texto }),
+    t('RELACIONAMENTOS_CARTEIRA.PALAVRAS.AVISO_SALVO')
+  );
+const enviarPalavras = () =>
+  agir(
+    () => aberto.fazer('enviarPalavras'),
+    t('RELACIONAMENTOS_CARTEIRA.PALAVRAS.AVISO_ENVIADO', {
+      nome: seguro.value.pessoa.name,
+    })
+  );
+
+// O próximo passo do seguro. A conversa e o PDF de verdade são de outras
 // entregas: por ora, o aviso diz o que vai abrir.
 const PASSOS = {
-  [ACOES_DO_SEGURO.ABRIR_RENOVACAO]: () =>
-    simular('ABRINDO_RENOVACAO', { tipo: tipo.value }),
+  [ACOES_DO_SEGURO.ABRIR_RENOVACAO]: abrirRenovacao,
   [ACOES_DO_SEGURO.VER_PDF]: () => simular('ABRINDO_PDF', { tipo: tipo.value }),
   [ACOES_DO_SEGURO.ANEXAR_PDF]: abrirPdf,
   [ACOES_DO_SEGURO.ANEXAR_APOLICE_NOVA]: abrirPdf,
-  [ACOES_DO_SEGURO.AVISAR]: () =>
-    simular('ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name }),
+  [ACOES_DO_SEGURO.AVISAR]: avisarDaParcela,
   [ACOES_DO_SEGURO.CONVERSAR_COM]: () =>
     simular('ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name }),
 };
@@ -253,8 +288,17 @@ onMounted(() => {
           :mostra-abrir="situacao.acao !== ACOES_DO_SEGURO.ABRIR_RENOVACAO"
           :pode-cotar="fonte.cotaSozinha && emRenovacao"
           :pedindo-cotacao="aberto.ocupado.value === 'cotar'"
-          @abrir="simular('ABRINDO_RENOVACAO', { tipo })"
+          @abrir="abrirRenovacao"
           @cotar="cotar"
+        />
+        <PalavrasSimples
+          v-if="seguro.palavras"
+          :seguro="seguro"
+          :ocupado="aberto.ocupado.value"
+          :agora="agora"
+          @salvar="salvarPalavras"
+          @enviar="enviarPalavras"
+          @tentar="aberto.carregar"
         />
         <HistoriaDoSeguro
           :itens="aberto.historia.value"
@@ -305,14 +349,23 @@ onMounted(() => {
             :desfazendo="Boolean(aberto.ocupado.value)"
             @desfazer="aviso.desfazer?.()"
           />
-          <Button
-            size="lg"
-            class="basis-full sm:basis-auto"
-            data-carteira="gaveta-acao"
-            :data-acao="situacao.acao"
-            :label="tg(`ACAO.${situacao.acao}`, { nome: primeiroNome })"
-            @click="proximoPasso"
-          />
+          <div
+            class="flex basis-full sm:basis-auto"
+            :data-carteira="
+              situacao.acao === ACOES_DO_SEGURO.AVISAR
+                ? 'avisar-parcela'
+                : undefined
+            "
+          >
+            <Button
+              size="lg"
+              class="flex-1"
+              data-carteira="gaveta-acao"
+              :data-acao="situacao.acao"
+              :label="tg(`ACAO.${situacao.acao}`, { nome: primeiroNome })"
+              @click="proximoPasso"
+            />
+          </div>
           <Button
             slate
             faded

@@ -13,6 +13,7 @@ import { TIPOS_DE_SEGURO, chaveDoTipo } from '../../carteira/tiposDeSeguro';
 import {
   PASSOS_DE_FORA as PASSOS,
   QUER,
+  primeiroNomeDe,
   useSeguroDeFora,
 } from '../../carteira/useSeguroDeFora';
 import CampoDoSeguro from './CampoDoSeguro.vue';
@@ -25,6 +26,9 @@ const props = defineProps({
   aberta: { type: Boolean, default: false },
   pessoaId: { type: Number, required: true },
   fonte: { type: Object, required: true },
+  // Na conversa, quem está falando é o contato dela: a pergunta, o aviso e a
+  // faixa usam o primeiro nome dele. Sem isso, vale o nome da ficha.
+  nomeDoContato: { type: String, default: '' },
 });
 const emit = defineEmits(['fechar', 'guardado', 'perguntar']);
 
@@ -47,7 +51,9 @@ const seguro = useSeguroDeFora({
   pessoaId: () => props.pessoaId,
 });
 const { passo, lido, naoAchou, falta, quer } = seguro;
-const nome = computed(() => seguro.primeiroNome.value);
+const nome = computed(
+  () => primeiroNomeDe(props.nomeDoContato) || seguro.primeiroNome.value
+);
 
 watch(
   () => props.aberta,
@@ -214,6 +220,7 @@ const guardar = async () => {
             :model-value="quer"
             :opcoes="respostas"
             :rotulo-id="ids.quer"
+            duas-colunas
             :invalido="falta.quer"
             :descrito-por="falta.quer ? ids.faltaQuer : undefined"
             @update:model-value="seguro.responder"

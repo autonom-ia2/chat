@@ -4,8 +4,13 @@ import {
   esquecerTrazerSeguros,
   trazerSegurosFonte,
 } from '../../fonte/trazerSegurosFonte';
+import { quantosEntram } from '../../carteira/ajustesDaRenovacao';
 import { totalDeSeguros } from '../../carteira/contagemDeSeguros';
 import { DESTINOS_DE_SEGURO } from '../../carteira/destinosDeSeguro';
+import {
+  FUNIS_DA_DEMO,
+  esquecerAjustesDaDemo,
+} from '../../demo/carteiraAjustes';
 
 // A fonte falsa de "trazer seguros" (#2897, telas 8, 9, 16 e 17): os números da
 // especificação, o que cada caso da demonstração devolve e o histórico junto
@@ -42,12 +47,28 @@ beforeEach(() => {
   relogio = AGORA;
   esquecerMemoriaDaDemo();
   esquecerTrazerSeguros();
+  esquecerAjustesDaDemo();
 });
 
 describe('o começo: a conta já está ligada ao Agger?', () => {
   it('na conta cheia sim; em sem-seguros ainda não', async () => {
-    expect(await fonte('cheio').comeco()).toEqual({ aggerLigado: true });
-    expect(await fonte('sem-seguros').comeco()).toEqual({ aggerLigado: false });
+    expect((await fonte('cheio').comeco()).aggerLigado).toBe(true);
+    expect((await fonte('sem-seguros').comeco()).aggerLigado).toBe(false);
+  });
+
+  it('diz se a conta já escolheu onde ficam as renovações, e os funis dela', async () => {
+    expect((await fonte('cheio').comeco()).renovacoes).toEqual({
+      escolhido: true,
+      funis: FUNIS_DA_DEMO,
+      semPermissao: false,
+    });
+    expect((await fonte('sem-seguros').comeco()).renovacoes.escolhido).toBe(
+      false
+    );
+    expect(
+      (await fonte('sem-seguros', { caso: 'sem_permissao_de_funil' }).comeco())
+        .renovacoes.semPermissao
+    ).toBe(true);
   });
 
   it('`demo-carteira=erro` falha; sem demonstração, a fonte real está pendente', async () => {
@@ -55,6 +76,34 @@ describe('o começo: a conta já está ligada ao Agger?', () => {
     await expect(
       trazerSegurosFonte({ demo: null }).comeco().catch(nome)
     ).resolves.toBe('FONTE_REAL_PENDENTE');
+  });
+});
+
+describe('onde ficam as renovações (a primeira vez que a conta traz seguros)', () => {
+  it('guarda a escolha, refaz a linha do que entra amanhã cedo e não pergunta de novo', async () => {
+    const f = fonte();
+    const leitura = await f.lerPlanilha(null);
+
+    const escolhida = await f.escolherRenovacoes(leitura.id, {
+      onde: 'usar',
+      funil: 'Vendas',
+      etapa: 'Novo contato',
+      dias: 30,
+    });
+
+    expect(escolhida.efeito).toMatchObject({ dias: 30, seguros: 17 });
+    expect((await f.comeco()).renovacoes.escolhido).toBe(true);
+  });
+
+  it('seguir sem escolher: os seguros entram, mas nenhuma renovação começa ainda', async () => {
+    const f = fonte('sem-seguros', { caso: 'sem_permissao_de_funil' });
+    const leitura = await f.lerPlanilha(null);
+
+    const seguiu = await f.escolherRenovacoes(leitura.id, null);
+
+    expect(seguiu.efeito.seguros).toBe(0);
+    expect(seguiu.prontos).toBe(164);
+    expect((await f.comeco()).renovacoes.escolhido).toBe(false);
   });
 });
 
@@ -67,7 +116,9 @@ describe('planilha com seguros', () => {
     expect(leitura.achei).toEqual({ seguros: 168, pessoas: 120 });
     expect(leitura.prontos).toBe(164);
     expect(leitura.jaEstavam).toBe(120);
-    expect(leitura.efeito).toEqual({ dias: 60, seguros: 22 });
+    expect(leitura.efeito).toMatchObject({ dias: 60, seguros: 22 });
+    // A linha do efeito muda com os dias: com 30, entram 17.
+    expect(quantosEntram(leitura.efeito.vencimentos, 30)).toBe(17);
     expect(leitura.problemas.map(p => [p.tipo, p.nome, p.estado])).toEqual([
       ['falta_termina', 'Hugo Orsolini', 'aberto'],
       ['seguradora', 'Karina Tavolari', 'aberto'],
@@ -262,7 +313,7 @@ describe('PDFs das apólices', () => {
     expect(leitura.achei).toEqual({ pdfs: 40, seguros: 39, pessoas: 31 });
     expect(leitura.prontos).toBe(37);
     expect(leitura.naoEApolice).toEqual(['boleto-marco.pdf']);
-    expect(leitura.efeito).toEqual({ dias: 60, seguros: 6 });
+    expect(leitura.efeito).toMatchObject({ dias: 60, seguros: 6 });
     expect(leitura.problemas.map(p => [p.tipo, p.nome])).toEqual([
       ['falta_termina', 'Marina Tavolari'],
       ['telefone', 'Bruno Zambelli'],
@@ -304,13 +355,13 @@ describe('Agger', () => {
     await expect(
       f.entrarNoAgger({ ...login, senha: NAO_ENTRA_NA_DEMO }).catch(nome)
     ).resolves.toBe('LOGIN_NAO_CONFERE');
-    expect(await f.comeco()).toEqual({ aggerLigado: false });
+    expect((await f.comeco()).aggerLigado).toBe(false);
   });
 
   it('entra, busca seguradora por seguradora e acha os 156 seguros que a carteira tem do Agger', async () => {
     const f = fonte();
     const { buscaId } = await f.entrarNoAgger(login);
-    expect(await f.comeco()).toEqual({ aggerLigado: true });
+    expect((await f.comeco()).aggerLigado).toBe(true);
 
     passar(3000);
     const noMeio = await f.andamentoDaBusca(buscaId);
@@ -329,7 +380,7 @@ describe('Agger', () => {
     expect(leitura.prontos).toBe(152);
     expect(leitura.semTelefone).toBe(4);
     expect(leitura.jaEstavam).toBe(116);
-    expect(leitura.efeito).toEqual({ dias: 60, seguros: 21 });
+    expect(leitura.efeito).toMatchObject({ dias: 60, seguros: 21 });
     expect(totalDeSeguros(leitura)).toBe(156);
   });
 

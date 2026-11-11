@@ -22,6 +22,13 @@ const FRASE_DO_ERRO = {
 const NAO_LEU = 'NAO_LEU';
 const NAO_GUARDOU = 'NAO_GUARDOU';
 
+// "Marcela Antunes Prado" -> "Marcela" ('' quando não há nome).
+export const primeiroNomeDe = nome =>
+  String(nome ?? '')
+    .trim()
+    .split(' ')
+    .at(0);
+
 const LIDO_VAZIO = { tipo: '', seguradora: '', termina: '' };
 const SEM_FALTA = { termina: false, quer: false };
 
@@ -37,12 +44,7 @@ export const useSeguroDeFora = ({ fonte, pessoaId }) => {
   const falta = ref({ ...SEM_FALTA });
   const guardando = ref(false);
 
-  const primeiroNome = computed(() =>
-    String(pessoa.value?.name ?? '')
-      .trim()
-      .split(' ')
-      .at(0)
-  );
+  const primeiroNome = computed(() => primeiroNomeDe(pessoa.value?.name));
 
   const abrir = async () => {
     passo.value = PASSOS_DE_FORA.ABRINDO;

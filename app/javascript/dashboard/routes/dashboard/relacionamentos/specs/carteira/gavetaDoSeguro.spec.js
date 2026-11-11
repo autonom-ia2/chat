@@ -4,7 +4,12 @@ import { useAlert } from 'dashboard/composables';
 import GavetaDoSeguro from '../../components/carteira/GavetaDoSeguro.vue';
 import { baixarArquivo } from '../../carteira/exportarHistoria';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
+import { pessoaPorId } from '../../demo/base';
 import { esquecerEscritasDaCarteira } from '../../demo/carteira';
+import {
+  esquecerAjustesDaDemo,
+  salvarAjustesNaDemo,
+} from '../../demo/carteiraAjustes';
 import {
   assentar,
   carregarDemonstracao,
@@ -37,6 +42,8 @@ const RENOVADO = 102;
 const VENCIDO = 103;
 const CANCELADO = 101;
 const PARCELA_ATRASADA = 108;
+const APOLICE_NOVA = 109;
+const PESSOA_DA_APOLICE_NOVA = 48;
 const NAO_EXISTE = 9999;
 
 const fonteDaDemo = (opcoes = {}) =>
@@ -66,22 +73,34 @@ afterEach(() => {
   aberta?.unmount();
   aberta = null;
   esquecerEscritasDaCarteira();
+  esquecerAjustesDaDemo();
   vi.clearAllMocks();
 });
 
 describe('gaveta do seguro: uma frase e um próximo passo por situação', () => {
-  it('em renovação: diz quando vence e onde a renovação está, e abre a renovação', async () => {
+  it('em renovação: diz quando vence, o que já foi feito e o que falta', async () => {
     const w = await abrir(EM_RENOVACAO);
 
     expect(textoDe(w, '[data-view-title]')).toBe('Auto · Seguradora Atlântica');
     const frase = textoDe(w, daCarteira('frase-do-seguro'));
     expect(frase).toContain('Vence em 18 dias.');
-    expect(frase).toContain('A renovação está em “Opções enviadas”.');
+    expect(frase).toContain('As opções já foram enviadas. Falta a resposta.');
+    // Nada de nome de mecanismo na frase de gente.
+    expect(frase).not.toContain('Opções enviadas');
+    expect(textoDe(w, daCarteira('situacao-da-renovacao'))).toBe(
+      'As opções já foram enviadas. Falta a resposta.'
+    );
+    expect(textoDe(w, daCarteira('quem-cuida'))).toBe(
+      'Quem cuida: Bia Lunardelli'
+    );
+    expect(textoDe(w, daCarteira('renovacao'))).not.toContain('Funil');
     expect(acao(w).text()).toBe('Abrir a renovação');
     expect(w.findAll(daCarteira('gaveta-acao'))).toHaveLength(1);
 
+    // "Abrir a renovação" passa a vez à gaveta da renovação deste seguro.
     await acao(w).trigger('click');
-    expect(useAlert).toHaveBeenCalledWith('Abrindo a renovação do seguro Auto');
+    expect(w.emitted('abrirRenovacao')).toEqual([[EM_RENOVACAO]]);
+    expect(useAlert).not.toHaveBeenCalled();
   });
 
   it('o foco vai ao título da gaveta que já nasce aberta', async () => {
@@ -99,16 +118,16 @@ describe('gaveta do seguro: uma frase e um próximo passo por situação', () =>
     );
   });
 
-  it('renovado: falta a apólice nova, e o dado em dúvida pede conferência', async () => {
+  it('renovado: falta a apólice nova, e o valor avisa que pode ter mudado', async () => {
     const w = await abrir(RENOVADO);
 
     expect(textoDe(w, daCarteira('frase-do-seguro'))).toContain(
       'Falta a apólice nova.'
     );
     expect(acao(w).text()).toBe('Anexar a apólice nova');
-    expect(
-      w.get('[data-dado="valor"]').find(daCarteira('confira')).exists()
-    ).toBe(true);
+    expect(w.get('[data-dado="valor"]').get(daCarteira('confira')).text()).toBe(
+      'Pode ter mudado'
+    );
   });
 
   it('vencido: diz há quanto tempo e o motivo, e chama para conversar', async () => {
@@ -124,11 +143,23 @@ describe('gaveta do seguro: uma frase e um próximo passo por situação', () =>
     const w = await abrir(PARCELA_ATRASADA);
 
     expect(textoDe(w, daCarteira('frase-do-seguro'))).toContain(
-      'está em aberto. Avise antes de o seguro cair.'
+      'está em aberto. Avise antes que o seguro seja cancelado.'
     );
-    expect(acao(w).text()).toMatch('Avisar ');
+    expect(acao(w).text()).toBe('Avisar Karina');
+    expect(w.find(`${daCarteira('avisar-parcela')} button`).element).toBe(
+      acao(w).element
+    );
+
+    // A mensagem fica pronta para quem atende conferir: nada sai sozinho.
     await acao(w).trigger('click');
-    expect(useAlert.mock.calls[0][0]).toMatch('Abrindo a conversa com ');
+    const aviso = textoDe(w, daCarteira('aviso-vivo'));
+    expect(aviso).toContain(
+      'Mensagem pronta para Karina: “Oi, Karina! A parcela de '
+    );
+    expect(aviso).toContain(
+      ' do seu seguro Auto está em aberto. Quer que eu te mande o boleto de novo?”'
+    );
+    expect(useAlert).not.toHaveBeenCalled();
   });
 
   it('cancelado: o menu oferece voltar a ativo, não cancelar de novo', async () => {
@@ -286,5 +317,127 @@ describe('gaveta do seguro: carregando, erro e seguro que sumiu', () => {
   it('sem seguro pedido, a gaveta não existe', async () => {
     const w = await abrir(null);
     expect(w.find('[role="dialog"]').exists()).toBe(false);
+  });
+});
+
+describe('gaveta do seguro: seu seguro em palavras simples', () => {
+  const palavras = w => w.get(daCarteira('palavras-simples'));
+
+  it('só a apólice nova tem o texto', async () => {
+    const w = await abrir(ATIVO_COM_ENDOSSO);
+
+    expect(w.find(daCarteira('palavras-simples')).exists()).toBe(false);
+  });
+
+  it('mostra o texto como a pessoa vai ler e envia com um botão que diz o nome', async () => {
+    const w = await abrir(APOLICE_NOVA);
+    const primeiroNome = pessoaPorId(PESSOA_DA_APOLICE_NOVA).name.split(' ')[0];
+
+    expect(palavras(w).get('h3').text()).toBe('Seu seguro em palavras simples');
+    const previa = textoDe(w, daCarteira('previa-de-mensagem'));
+    expect(previa).toContain(
+      `Oi, ${primeiroNome}! Seu seguro Auto com a Seguradora Atlântica começou em `
+    );
+    expect(previa).toContain(
+      'O que ele cobre: batida, roubo e furto, vidros e guincho.'
+    );
+    expect(previa).toContain(
+      'Se acontecer alguma coisa: me chame aqui no WhatsApp. Eu te digo o que fazer.'
+    );
+    expect(previa).toContain('Vale o que está escrito na sua apólice.');
+    expect(w.get(daCarteira('enviar-palavras')).text()).toBe(
+      `Enviar a ${primeiroNome}`
+    );
+
+    await w.get(daCarteira('enviar-palavras')).trigger('click');
+    await assentar();
+
+    expect(textoDe(w, daCarteira('aviso-vivo'))).toContain('Texto enviado a ');
+    expect(textoDe(w, daCarteira('palavras-enviado'))).toContain('Enviado em ');
+    expect(w.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    // O que foi enviado fica guardado, e abre quando se pede.
+    const ver = w.get(daCarteira('ver-palavras-enviadas'));
+    expect(ver.text()).toBe('Ver o que foi enviado');
+    expect(ver.attributes('aria-expanded')).toBe('false');
+    expect(w.find(daCarteira('previa-de-mensagem')).exists()).toBe(false);
+    await ver.trigger('click');
+    expect(ver.attributes('aria-expanded')).toBe('true');
+    expect(textoDe(w, daCarteira('previa-de-mensagem'))).toContain(
+      'Vale o que está escrito na sua apólice.'
+    );
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('alterar o texto: Salvar fica sempre ligado e diz o que falta; a última frase não se altera', async () => {
+    const w = await abrir(APOLICE_NOVA);
+
+    await w.get(daCarteira('alterar-palavras')).trigger('click');
+    await assentar();
+    const campo = w.get(daCarteira('texto-das-palavras'));
+    expect(document.activeElement).toBe(campo.element);
+    expect(campo.element.value).toContain('O que ele cobre: batida');
+    expect(campo.element.value).not.toContain('Vale o que está escrito');
+    const salvar = w.get(daCarteira('salvar-palavras'));
+    expect(salvar.attributes('disabled')).toBeUndefined();
+
+    await campo.setValue('   ');
+    await salvar.trigger('click');
+    expect(palavras(w).get('[role="alert"]').text()).toBe(
+      'Escreva o texto da mensagem.'
+    );
+    expect(campo.attributes('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(campo.element);
+
+    await campo.setValue('Seu carro está coberto. Qualquer coisa, me chame.');
+    await salvar.trigger('click');
+    await assentar();
+
+    expect(textoDe(w, daCarteira('aviso-vivo'))).toContain('Texto salvo.');
+    const previa = textoDe(w, daCarteira('previa-de-mensagem'));
+    expect(previa).toContain(
+      'Seu carro está coberto. Qualquer coisa, me chame.'
+    );
+    expect(previa).toContain('Vale o que está escrito na sua apólice.');
+    expect(previa).not.toContain('O que ele cobre');
+  });
+
+  it('enquanto lê a apólice e quando não consegue escrever, diz isso no lugar do texto', async () => {
+    const lendo = await abrir(
+      APOLICE_NOVA,
+      fonteDaDemo({ caso: 'palavras_lendo' })
+    );
+    expect(lendo.get(daCarteira('palavras-lendo')).text()).toBe(
+      'Lendo a apólice para escrever…'
+    );
+    expect(lendo.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    lendo.unmount();
+
+    const erro = await abrir(
+      APOLICE_NOVA,
+      fonteDaDemo({ caso: 'palavras_erro' })
+    );
+    const aviso = erro.get(daCarteira('palavras-erro'));
+    expect(aviso.attributes('role')).toBe('alert');
+    expect(aviso.text()).toContain(
+      'Não consegui escrever o texto. Tente de novo.'
+    );
+    expect(aviso.get('button').text()).toBe('Tentar de novo');
+  });
+
+  it('quem escolheu que sai sozinho só vê que já foi; quem escolheu não mandar não vê nada', async () => {
+    salvarAjustesNaDemo({ palavras: 'sozinho' });
+    const sozinho = await abrir(APOLICE_NOVA);
+    expect(textoDe(sozinho, daCarteira('palavras-enviado'))).toContain(
+      'Enviado sozinho em '
+    );
+    expect(sozinho.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    expect(sozinho.find(daCarteira('ver-palavras-enviadas')).exists()).toBe(
+      true
+    );
+    sozinho.unmount();
+
+    salvarAjustesNaDemo({ palavras: 'nao_mandar' });
+    const semTexto = await abrir(APOLICE_NOVA);
+    expect(semTexto.find(daCarteira('palavras-simples')).exists()).toBe(false);
   });
 });

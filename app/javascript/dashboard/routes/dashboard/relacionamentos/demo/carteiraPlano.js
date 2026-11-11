@@ -93,7 +93,13 @@ const NOMEADOS = [
     numero: 'SA-120077',
     valor: 890,
     dias: 2,
-    renovacao: { etapa: 'A vencer', cuida: BIA },
+    // Faltou um dado para cotar; quem atende sozinho já perguntou.
+    renovacao: {
+      etapa: 'A vencer',
+      cuida: BIA,
+      faltou: 'nascimento',
+      perguntou: 'Lia',
+    },
   },
   {
     id: 111,
@@ -248,13 +254,23 @@ const VENCE_EM_ATE_30 = [9, 11, 12, 14, 16, 19, 21, 23, 27, 29];
 const VENCE_EM_ATE_60 = [33, 44, 52, 58];
 const VENCE_EM_ATE_90 = [63, 66, 69, 72, 75, 78, 81, 85, 88];
 const VENCE_DEPOIS = serie(84, 95, 3);
-const VENCIDOS_NO_ANO = serie(38, 5, 9);
+// Há quantos dias cada vencido terminou. Com o seguro 103 (12 dias), são 5 nos
+// últimos 30 dias, 11 nos últimos 90 e 39 nos últimos 12 meses: os mesmos
+// "não renovou" da tela de resultados.
+const VENCIDOS_NO_ANO = [5, 14, 23, 29, ...serie(34, 41, 9)];
 const VENCIDOS_ANTIGOS = [380, 410];
+// O motivo de cada um, na mesma ordem. Com o 103 (achou caro), os motivos dos
+// últimos 30 dias somam 2 · 1 · 1 · 1; dos 90, 5 · 3 · 1 · 2; do ano, 17 · 10 ·
+// 5 · 7 (achou caro · outra corretora · vendeu o bem · não respondeu).
 const MOTIVOS_NO_ANO = [
-  ...repetir('achou_caro', 16),
-  ...repetir('outra_corretora', 10),
-  ...repetir('vendeu_o_bem', 5),
-  ...repetir('nao_respondeu', 7),
+  ...['achou_caro', 'outra_corretora', 'vendeu_o_bem', 'nao_respondeu'],
+  ...repetir('achou_caro', 3),
+  ...repetir('outra_corretora', 2),
+  'nao_respondeu',
+  ...repetir('achou_caro', 12),
+  ...repetir('outra_corretora', 7),
+  ...repetir('vendeu_o_bem', 4),
+  ...repetir('nao_respondeu', 5),
 ];
 const PARCELAS_HA_DIAS = [12, 20];
 const QUANTOS_ESPECIAIS = 5;

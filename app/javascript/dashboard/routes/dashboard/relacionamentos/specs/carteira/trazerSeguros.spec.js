@@ -12,6 +12,7 @@ import {
   fecharTrazer,
   ligarRelogio,
   passar,
+  passarPelasRenovacoes,
   problema,
 } from './apoioDeTrazer';
 
@@ -59,6 +60,12 @@ const rota = useRoute();
 const roteador = useRouter();
 const abrir = query => abrirTrazer(rota, query);
 
+// O título e a linha de apoio de um cartão de "como trazer".
+const doCartao = (w, como) =>
+  w
+    .findAll(`${daCarteira(`cartao-${como}`)} [data-texto-do-cartao] > span`)
+    .map(parte => parte.text());
+
 const TITULO_DA_ESCOLHA = 'Como você quer trazer as pessoas e os seguros?';
 const DURACAO_DE_TRAZER_MS = 8000;
 
@@ -68,6 +75,7 @@ const irAteConferir = async query => {
   await w.get(doBlocoA('usar-exemplo')).trigger('click');
   await assentarBem();
   await clicar(w, 'tem-seguros');
+  await passarPelasRenovacoes(w);
   return w;
 };
 
@@ -80,20 +88,40 @@ afterEach(() => {
 });
 
 describe('Tela 8: como você quer trazer?', () => {
-  it('na conta de seguros a entrada é a escolha, com três cartões e um botão', async () => {
+  it('na conta de seguros a entrada é a escolha: três cartões, cada um com o seu ícone, e mais nada para apertar', async () => {
     const w = await abrir();
 
     expect(w.get('h1').text()).toBe(TITULO_DA_ESCOLHA);
-    expect(textoDe(w, daCarteira('cartao-planilha'))).toBe(
-      'Planilha Excel ou CSV, com os seguros ou só as pessoas.'
-    );
-    expect(textoDe(w, daCarteira('cartao-pdfs'))).toBe(
-      'PDFs das apólices Arraste os PDFs. Eu leio cada um.'
-    );
-    expect(textoDe(w, daCarteira('cartao-agger'))).toBe(
-      'Agger Traga direto do seu Agger e mantenha em dia sozinho.'
-    );
-    expect(w.get(daCarteira('continuar-como')).text()).toBe('Continuar');
+    expect(doCartao(w, 'planilha')).toEqual([
+      'Planilha',
+      'Excel ou CSV, com os seguros ou só as pessoas.',
+    ]);
+    expect(doCartao(w, 'pdfs')).toEqual([
+      'PDFs das apólices',
+      'Arraste os PDFs. Eu leio cada um.',
+    ]);
+    expect(doCartao(w, 'agger')).toEqual([
+      'Agger',
+      'Para quem usa o Agger: traga direto e mantenha em dia sozinho.',
+    ]);
+    // Cada cartão é um botão de verdade (Enter e Espaço são do navegador), com
+    // um ícone próprio que o leitor de tela não lê.
+    const icones = ['planilha', 'pdfs', 'agger'].map(como => {
+      const cartao = w.get(daCarteira(`cartao-${como}`));
+      expect(cartao.element.tagName).toBe('BUTTON');
+      expect(cartao.attributes('type')).toBe('button');
+      expect(cartao.attributes('role')).toBeUndefined();
+      const icone = cartao.get('[data-icone]');
+      expect(icone.attributes('aria-hidden')).toBe('true');
+      return icone.attributes('data-icone');
+    });
+    expect(icones).toEqual(['planilha', 'pdfs', 'agger']);
+    expect(
+      w.get(daCarteira('cartoes-de-como')).attributes('aria-labelledby')
+    ).toBe(w.get('h1').attributes('id'));
+    // Clicar no cartão já avança: não há "Continuar" nem aviso de escolha.
+    expect(w.find(daCarteira('continuar-como')).exists()).toBe(false);
+    expect(w.find(daCarteira('falta-escolher')).exists()).toBe(false);
     // As etapas do topo e a área de soltar só vêm depois da escolha.
     expect(w.find('ol').exists()).toBe(false);
     expect(w.find(doBlocoA('soltar-arquivo')).exists()).toBe(false);
@@ -102,31 +130,10 @@ describe('Tela 8: como você quer trazer?', () => {
     );
   });
 
-  it('Continuar fica ligado: sem escolha, diz o que falta e leva o foco aos cartões', async () => {
-    const w = await abrir();
-    const continuar = w.get(daCarteira('continuar-como'));
-    expect(continuar.attributes('disabled')).toBeUndefined();
-
-    await continuar.trigger('click');
-
-    const aviso = w.get(daCarteira('falta-escolher'));
-    expect(aviso.attributes('role')).toBe('alert');
-    expect(aviso.text()).toBe('Escolha de onde vêm as pessoas e os seguros.');
-    const grupo = w.get('[role="radiogroup"]');
-    expect(grupo.attributes('aria-invalid')).toBe('true');
-    expect(grupo.attributes('aria-describedby')).toBe(aviso.attributes('id'));
-    expect(emFoco()).toBe(w.get(daCarteira('cartao-planilha')).element);
-    expect(roteador.push).not.toHaveBeenCalled();
-
-    await w.get(daCarteira('cartao-pdfs')).trigger('click');
-    expect(w.find(daCarteira('falta-escolher')).exists()).toBe(false);
-  });
-
-  it('a escolha vai para o endereço e abre o passo daquele jeito', async () => {
+  it('clicar no cartão já avança: a escolha vai para o endereço e abre o passo daquele jeito', async () => {
     const w = await abrir();
 
-    await w.get(daCarteira('cartao-planilha')).trigger('click');
-    await clicar(w, 'continuar-como');
+    await clicar(w, 'cartao-planilha');
 
     expect(roteador.push).toHaveBeenCalledWith({
       query: { demo: 'sem-seguros', como: 'planilha' },
@@ -144,9 +151,10 @@ describe('Tela 8: como você quer trazer?', () => {
   it('na conta cheia o Agger já está ligado e o histórico mostra o que veio dele', async () => {
     const w = await abrir({ demo: 'cheio' });
 
-    expect(textoDe(w, daCarteira('cartao-agger'))).toBe(
-      'Agger Sua conta já está ligada ao Agger.'
-    );
+    expect(doCartao(w, 'agger')).toEqual([
+      'Agger',
+      'Sua conta já está ligada ao Agger.',
+    ]);
     const doAgger = w.get('[data-lista="seguros-do-agger"]');
     expect(doAgger.text()).toContain('Agger');
     expect(doAgger.text()).toContain('156 seguros');
@@ -202,12 +210,17 @@ describe('Tela 9: planilha com seguros', () => {
     expect(emFoco()).toBe(w.get('h1').element);
     await clicar(w, 'tem-seguros');
 
+    // Primeira vez da conta: antes de conferir, onde ficam as renovações.
+    expect(w.get('h1').text()).toBe('Onde ficam as renovações?');
+    expect(emFoco()).toBe(w.get('h1').element);
+    await passarPelasRenovacoes(w);
+
     expect(w.get('h1').text()).toBe('Achei 168 seguros de 120 pessoas.');
     expect(contador(w, 'PRONTOS')).toBe('164 prontos');
     expect(contador(w, 'PRECISAM')).toBe('4 precisam de você');
     expect(contador(w, 'JA_ESTAVAM')).toBe('120 pessoas já estavam aqui');
     expect(w.get(daCarteira('efeito-renovacao')).text()).toBe(
-      'Amanhã cedo, 22 seguros que vencem em até 60 dias viram card de renovação.'
+      'Amanhã cedo, 22 seguros que vencem em até 60 dias entram em renovação.'
     );
     expect(w.get(daCarteira('trazer-seguros')).text()).toBe(
       'Trazer 164 seguros'
@@ -215,6 +228,48 @@ describe('Tela 9: planilha com seguros', () => {
     expect(w.get(daCarteira('planilha-conferir')).text()).toContain(
       'Você pode desfazer quando quiser.'
     );
+  });
+
+  it('conferir: a ação principal fica numa barra sempre à vista e os blocos vêm na ordem de quem decide', async () => {
+    const w = await irAteConferir();
+
+    const barra = w.get(daCarteira('barra-de-trazer'));
+    expect(barra.classes()).toContain('sticky');
+    expect(barra.classes()).toContain('bottom-0');
+    // No celular a barra respeita a área segura de baixo.
+    expect(
+      barra
+        .classes()
+        .some(classe => classe.includes('env(safe-area-inset-bottom)'))
+    ).toBe(true);
+    expect(barra.get(daCarteira('trazer-seguros')).text()).toBe(
+      'Trazer 164 seguros'
+    );
+    expect(barra.get(daCarteira('voltar-do-conferir')).text()).toBe('Voltar');
+    expect(barra.get(daCarteira('sossego')).text()).toBe(
+      'Você pode desfazer quando quiser.'
+    );
+
+    // Números, aviso da renovação, o que precisa da pessoa, como vão ficar, o
+    // que vou guardar. A barra é o último bloco (ocupa lugar: não cobre nada).
+    const tela = w.get(daCarteira('planilha-conferir')).element;
+    const blocos = [
+      daCarteira('contadores'),
+      daCarteira('efeito-renovacao'),
+      doBlocoA('precisam-de-voce'),
+      daCarteira('exemplos'),
+      doBlocoA('o-que-vou-guardar'),
+      daCarteira('barra-de-trazer'),
+    ].map(seletor => tela.querySelector(seletor));
+    blocos.forEach(bloco => expect(bloco).not.toBeNull());
+    blocos.slice(1).forEach((bloco, indice) => {
+      const depois =
+        // eslint-disable-next-line no-bitwise
+        blocos[indice].compareDocumentPosition(bloco) &
+        Node.DOCUMENT_POSITION_FOLLOWING;
+      expect(Boolean(depois)).toBe(true);
+    });
+    expect(tela.lastElementChild).toBe(barra.element);
   });
 
   it('as fichas de exemplo mostram os seguros de cada pessoa; quem está sem telefone diz isso', async () => {
@@ -259,7 +314,27 @@ describe('Tela 9: planilha com seguros', () => {
     await salvar.trigger('click');
     await assentarBem();
 
-    expect(problema(w, 52).text()).toContain('Pronto');
+    // A linha resolvida diz o que ficou decidido, com o selo e "Mudar".
+    const resolvida = problema(w, 52);
+    expect(textoDe(resolvida, daCarteira('decidido'))).toBe(
+      'Seguro de Hugo Orsolini · termina em 10/03/2027'
+    );
+    expect(resolvida.text()).not.toContain('falta quando termina');
+    const selo = resolvida.get(daCarteira('selo-do-problema'));
+    expect(selo.text()).toBe('Pronto');
+    expect(selo.attributes('data-selo')).toBe('guardado');
+    const mudar = resolvida.get(daCarteira('mudar'));
+    expect(mudar.text()).toBe('Mudar');
+    expect(mudar.attributes('aria-label')).toBe(
+      'Mudar o seguro de Hugo Orsolini'
+    );
+    // Sempre no mesmo lugar: embaixo no celular, à direita em tela grande.
+    const linha = resolvida.get(daCarteira('linha-resolvida'));
+    expect(linha.classes()).toEqual(
+      expect.arrayContaining(['flex-col', 'sm:flex-row', 'sm:justify-between'])
+    );
+    expect(linha.element.lastElementChild).toBe(mudar.element);
+    expect(resolvida.find(daCarteira('voltar-atras')).exists()).toBe(false);
     expect(contador(w, 'PRONTOS')).toBe('165 prontos');
     expect(contador(w, 'PRECISAM')).toBe('3 precisam de você');
     expect(w.get(daCarteira('anuncio-precisam')).text()).toBe(
@@ -276,6 +351,10 @@ describe('Tela 9: planilha com seguros', () => {
     const w = await irAteConferir();
 
     const semSeguradora = problema(w, 71);
+    // Vazio, o campo diz o que se espera dele.
+    expect(semSeguradora.get('[role="combobox"]').text()).toBe(
+      'Escolha a seguradora'
+    );
     await semSeguradora.get(daCarteira('salvar-problema')).trigger('click');
     expect(semSeguradora.get('[role="alert"]').text()).toBe(
       'Escolha a seguradora.'
@@ -315,19 +394,48 @@ describe('Tela 9: planilha com seguros', () => {
       'Na planilha: R$ 3.410,00',
       'Na planilha: R$ 3.140,00',
     ]);
+    // Cada opção é um cartão-botão inteiro: o valor, de que linha veio e
+    // "Ficar com este". Não há link solto dentro dele.
+    opcoes.forEach(opcao => {
+      expect(opcao.element.tagName).toBe('BUTTON');
+      expect(opcao.classes()).toEqual(
+        expect.arrayContaining(['w-full', 'min-h-11'])
+      );
+      expect(opcao.find('a').exists()).toBe(false);
+    });
+    expect(textoDe(opcoes[0], daCarteira('linha-da-opcao'))).toBe(
+      'Linha 88 da planilha'
+    );
+    expect(textoDe(opcoes[1], daCarteira('linha-da-opcao'))).toBe(
+      'Linha 131 da planilha'
+    );
+    expect(
+      opcoes.map(opcao => textoDe(opcao, daCarteira('ficar-com-este')))
+    ).toEqual(['Ficar com este', 'Ficar com este']);
+    expect(repetido.text()).not.toContain('Ficar com a linha');
     await opcoes[0].trigger('click');
     await assentarBem();
-    expect(problema(w, 131).text()).toContain('Pronto');
+    expect(textoDe(problema(w, 131), daCarteira('decidido'))).toBe(
+      'Seguro de Paula Aguiardo · fica o da linha 88'
+    );
+    expect(problema(w, 131).get(daCarteira('selo-do-problema')).text()).toBe(
+      'Pronto'
+    );
 
     await problema(w, 71).get(daCarteira('deixar-de-fora')).trigger('click');
     await assentarBem();
-    expect(problema(w, 71).text()).toContain('Deixado de fora');
+    expect(textoDe(problema(w, 71), daCarteira('decidido'))).toBe(
+      'Seguro de Karina Tavolari'
+    );
+    const deixado = problema(w, 71).get(daCarteira('selo-do-problema'));
+    expect(deixado.text()).toBe('Deixado de fora');
+    expect(deixado.attributes('data-selo')).toBe('deixado');
     expect(contador(w, 'DEIXADOS')).toBe('1 ficou de fora');
     expect(w.get(doBlocoA('precisam-titulo')).text()).toBe(
       'Precisam de você (2)'
     );
 
-    await problema(w, 71).get(daCarteira('voltar-atras')).trigger('click');
+    await problema(w, 71).get(daCarteira('mudar')).trigger('click');
     await assentarBem();
     expect(problema(w, 71).text()).toContain('não conheço a seguradora “Atl.”');
     expect(w.find('[data-contador="DEIXADOS"]').exists()).toBe(false);

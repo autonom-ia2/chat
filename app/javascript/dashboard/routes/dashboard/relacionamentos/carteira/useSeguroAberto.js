@@ -73,6 +73,8 @@ export const useSeguroAberto = (fonte, id) => {
     carregar: () => carregar(buscar),
     carregarHistoria,
     receber,
+    // As ações do card da renovação e do texto em palavras simples, pelo nome.
+    fazer: (nome, dados) => acao(nome)(dados),
     cancelar: acao('cancelar'),
     voltarAAtivo: acao('voltarAAtivo'),
     corrigir: acao('corrigir'),

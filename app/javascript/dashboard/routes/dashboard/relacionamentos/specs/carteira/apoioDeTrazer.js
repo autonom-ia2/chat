@@ -1,5 +1,6 @@
 import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
 import TrazerListaPage from '../../pages/TrazerListaPage.vue';
+import { esquecerAjustesDaDemo } from '../../demo/carteiraAjustes';
 import { usarDemo } from '../../fonte/modoDemo';
 import { esquecerMemoriaDaDemo } from '../../fonte/trazerFonte';
 import { esquecerTrazerSeguros } from '../../fonte/trazerSegurosFonte';
@@ -55,6 +56,7 @@ export const fecharTrazer = () => {
   aberta = null;
   esquecerMemoriaDaDemo();
   esquecerTrazerSeguros();
+  esquecerAjustesDaDemo();
   usarDemo({ demo: 'desligado' });
 };
 
@@ -62,6 +64,10 @@ export const clicar = async (w, nome) => {
   await w.get(daCarteira(nome)).trigger('click');
   await assentarBem();
 };
+
+// Na primeira vez que a conta traz seguros, antes de conferir vem "Onde ficam
+// as renovações?". O padrão já vem respondido: é só continuar.
+export const passarPelasRenovacoes = w => clicar(w, 'continuar-renovacoes');
 
 export const contador = (w, chave) =>
   w

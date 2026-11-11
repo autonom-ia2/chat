@@ -154,10 +154,24 @@ const fonteDemo = ({
     arquivoDeExemplo: () => listas.arquivoDeExemplo?.() ?? null,
     pdfsDeExemplo: async () => (await carregar()).pdfsDeExemplo(),
 
+    // `renovacoes`: se a conta já escolheu onde ficam as renovações (senão a
+    // pergunta aparece antes de conferir), os funis dela e se quem está usando
+    // pode mexer neles.
     async comeco() {
-      const { mem } = await dados();
-      return { aggerLigado: mem.aggerLigado };
+      const { demo, mem } = await dados();
+      return {
+        aggerLigado: mem.aggerLigado,
+        renovacoes: {
+          ...demo.renovacoesNaDemo(estado),
+          semPermissao: caso === 'sem_permissao_de_funil',
+        },
+      };
     },
+    // `escolha` nula = seguir sem escolher (quem não pode mexer em funis).
+    escolherRenovacoes: (leituraId, escolha) =>
+      escrever(leituraId, (demo, leitura) =>
+        demo.escolherRenovacoes(leitura, escolha, agora())
+      ),
 
     // ---- planilha
     async lerPlanilha(arquivo) {
@@ -340,6 +354,7 @@ const fonteDemo = ({
 const METODOS = [
   'pdfsDeExemplo',
   'comeco',
+  'escolherRenovacoes',
   'lerPlanilha',
   'lerPdfs',
   'andamentoDosPdfs',

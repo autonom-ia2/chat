@@ -4,7 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
-import { casoPedido, pecaPedida } from '../../fonte/modoCarteira';
+import {
+  casoPedido,
+  cotacaoDesligada,
+  pecaPedida,
+} from '../../fonte/modoCarteira';
 import { estadoDemo } from '../../fonte/modoDemo';
 import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
 import { useSegurosDe } from '../../carteira/useSegurosDe';
@@ -13,10 +17,11 @@ import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
 import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import SecaoSeguros from './SecaoSeguros.vue';
+import GavetaDaRenovacao from './renovacao/GavetaDaRenovacao.vue';
 
 // #2897 — os seguros dentro de uma ficha (pessoa ou empresa): o bloco, a
-// gaveta do seguro (o endereço ganha `?apolice=<id>`) e o diálogo de anexar o
-// PDF direto da linha. A ficha só põe esta peça no lugar; ela mesma fala com a
+// gaveta do seguro (o endereço ganha `?apolice=<id>`), a da renovação dele
+// (`?renovacao=<id>`) e o diálogo de anexar o PDF direto da linha. A ficha só põe esta peça no lugar; ela mesma fala com a
 // fonte da carteira. `desde` avisa a ficha quando o seguro mais antigo começou
 // (o "Cliente desde" do cabeçalho).
 const props = defineProps({
@@ -33,8 +38,9 @@ const fonte = carteiraFonte({
   demo: estadoDemo(),
   peca: pecaPedida(route.query),
   caso: casoPedido(route.query),
+  cotacaoDesligada: cotacaoDesligada(route.query),
 });
-const { apolice, abrir, fechar } = useApoliceNaUrl();
+const { apolice, renovacao, abrir, abrirRenovacao, fechar } = useApoliceNaUrl();
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
 
 const lista = useSegurosDe(() =>
@@ -87,6 +93,15 @@ onMounted(lista.carregar);
   </SecaoSeguros>
   <GavetaDoSeguro
     :apolice-id="apolice"
+    :fonte="fonte"
+    :agora="agora"
+    @fechar="fechar"
+    @mudou="lista.atualizar"
+    @abrir-segurado="emit('abrirSegurado', $event)"
+    @abrir-renovacao="abrirRenovacao"
+  />
+  <GavetaDaRenovacao
+    :seguro-id="renovacao"
     :fonte="fonte"
     :agora="agora"
     @fechar="fechar"

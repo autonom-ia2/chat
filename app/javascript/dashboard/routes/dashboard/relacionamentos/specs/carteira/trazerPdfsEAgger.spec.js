@@ -2,6 +2,7 @@ import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
 import SoltarArquivo from '../../components/trazer/SoltarArquivo.vue';
+import { salvarAjustesNaDemo } from '../../demo/carteiraAjustes';
 import { daCarteira, doBlocoA, textoDe } from './apoio';
 import {
   abrirTrazer,
@@ -91,7 +92,12 @@ const seguradoras = w =>
     ]);
 
 beforeAll(carregarDemonstracaoDeTrazer, 60000);
-beforeEach(ligarRelogio);
+// A conta destes testes já escolheu onde ficam as renovações: o passo da
+// primeira vez tem os testes dele (ondeFicamAsRenovacoes.spec.js).
+beforeEach(() => {
+  ligarRelogio();
+  salvarAjustesNaDemo({});
+});
 afterEach(() => {
   fecharTrazer();
   vi.useRealTimers();
@@ -264,8 +270,42 @@ describe('Tela 17: trazer pelo Agger', () => {
     await assentarBem();
     expect(emFoco()).toBe(senha.element);
 
-    await w.get(daCarteira('agger-mostrar-senha')).trigger('click');
+    // "Mostrar a senha" fica junto do campo e diz se está apertado.
+    const mostrar = w.get(daCarteira('agger-mostrar-senha'));
+    expect(
+      w.get(daCarteira('agger-campo-senha')).element.contains(senha.element)
+    ).toBe(true);
+    expect(
+      w.get(daCarteira('agger-campo-senha')).element.contains(mostrar.element)
+    ).toBe(true);
+    expect(mostrar.attributes('aria-label')).toBe('Mostrar a senha');
+    expect(mostrar.attributes('aria-pressed')).toBe('false');
+    await mostrar.trigger('click');
     expect(senha.attributes('type')).toBe('text');
+    expect(mostrar.attributes('aria-pressed')).toBe('true');
+    expect(mostrar.attributes('aria-label')).toBe('Mostrar a senha');
+    await mostrar.trigger('click');
+    expect(senha.attributes('type')).toBe('password');
+  });
+
+  it('o login diz para que serve a senha, e o primeiro passo do topo se chama Buscar', async () => {
+    const w = await abrir({ como: 'agger' });
+
+    const sossego = w.get(daCarteira('agger-senha-segura'));
+    expect(sossego.text()).toBe(
+      'Sua senha fica guardada com segurança. Ela só serve para buscar os seus seguros.'
+    );
+    expect(
+      w.get(daCarteira('agger-senha')).attributes('aria-describedby')
+    ).toContain(sossego.attributes('id'));
+    const passos = w.findAll('ol li').map(passo => passo.text());
+    expect(passos[0]).toContain('Buscar');
+    expect(passos.join(' ')).not.toContain('Enviar');
+    fecharTrazer();
+
+    // Na planilha e nos PDFs o primeiro passo continua "Enviar".
+    const planilha = await abrir({ como: 'planilha' });
+    expect(planilha.findAll('ol li')[0].text()).toContain('Enviar');
   });
 
   it('usuário ou senha que não conferem: a tela diz e fica no login', async () => {
@@ -312,6 +352,10 @@ describe('Tela 17: trazer pelo Agger', () => {
     await clicar(w, 'agger-como-resolver');
     expect(w.get(doBlocoA('titulo-do-dialogo')).text()).toBe(
       'Falta a senha da Seguradora Aurora'
+    );
+    // Rótulo curto: cabe inteiro ao lado de "Entendi".
+    expect(w.get(daCarteira('agger-buscar-de-novo')).text()).toBe(
+      'Buscar agora'
     );
 
     await clicar(w, 'agger-continuar');

@@ -203,20 +203,50 @@ describe('aba Seguros: cheia', () => {
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  it('Resultados, Ajustar renovações e Conversar avisam o que vão abrir', async () => {
+  it('Resultados e Ajustar renovações levam às telas deles; Conversar avisa o que vai abrir', async () => {
     const w = await abrirSeguros();
 
     await w.get(daCarteira('resultados')).trigger('click');
+    expect(roteador.push).toHaveBeenLastCalledWith({
+      name: 'relacionamentos_resultados',
+    });
     await w.get(daCarteira('ajustar')).trigger('click');
+    expect(roteador.push).toHaveBeenLastCalledWith({
+      name: 'relacionamentos_renovacoes',
+    });
     await linhaDo(w, 110)
       .get('button[aria-label^="Conversar"]')
       .trigger('click');
 
     expect(useAlert.mock.calls.map(([texto]) => texto)).toEqual([
-      'Abrindo os resultados das renovações',
-      'Abrindo os ajustes das renovações',
       expect.stringMatching('Abrindo a conversa com '),
     ]);
+  });
+
+  it('`?grupo=` abre a lista já no grupo; "Não renovaram" só existe quando os resultados levam até ele', async () => {
+    const semPedido = await abrirSeguros();
+    expect(semPedido.find('[data-grupo="nao_renovaram_30"]').exists()).toBe(
+      false
+    );
+    aberta.unmount();
+
+    const w = await abrirSeguros({ grupo: 'nao_renovaram_30' });
+    const temporario = w.get('[data-grupo="nao_renovaram_30"]');
+    expect(temporario.attributes('aria-pressed')).toBe('true');
+    expect(textoDe(w, '[data-grupo="nao_renovaram_30"]')).toBe(
+      'Não renovaram (últimos 30 dias) 5'
+    );
+    expect(textoDe(w, daCarteira('explicacao-do-grupo'))).toBe(
+      'Venceram nos últimos 30 dias e não foram renovados.'
+    );
+    expect(w.findAll(daCarteira('linha'))).toHaveLength(5);
+    aberta.unmount();
+
+    // Um grupo que não existe cai no de sempre.
+    const inventado = await abrirSeguros({ grupo: 'nao_existe' });
+    expect(
+      inventado.get('[data-grupo="todos"]').attributes('aria-pressed')
+    ).toBe('true');
   });
 });
 
@@ -258,8 +288,18 @@ describe('aba Seguros: marcar e mandar mensagem', () => {
 });
 
 describe('aba Seguros: sem seguro, carregando e erro', () => {
-  it('sem seguro: só o herói, com um botão', async () => {
+  it('sem seguro: o herói com um botão e, embaixo, a lista de exemplo apagada', async () => {
     const w = await abrirSeguros({ demo: 'sem-seguros' });
+
+    const exemplo = w.get(daCarteira('seguros-de-exemplo'));
+    expect(exemplo.attributes('aria-hidden')).toBe('true');
+    expect(exemplo.get('p').text()).toBe(
+      'Sua lista de seguros vai ficar assim:'
+    );
+    expect(exemplo.findAll('[data-linha-de-exemplo]')).toHaveLength(5);
+    // É só desenho: nada ali se clica nem se marca.
+    expect(exemplo.findAll('button, a, input')).toHaveLength(0);
+    expect(linhas(w)).toHaveLength(0);
 
     const heroi = textoDe(w, daCarteira('heroi'));
     expect(heroi).toContain('Traga os seguros da sua carteira.');

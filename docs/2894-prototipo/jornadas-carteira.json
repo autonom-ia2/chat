@@ -461,25 +461,10 @@
           "pausa": 2000
         },
         {
-          "nome": "falta-escolher",
-          "passos": [
-            {
-              "clicar": "[data-carteira=\"continuar-como\"]"
-            },
-            {
-              "esperar": "[data-carteira=\"falta-escolher\"]"
-            }
-          ],
-          "pausa": 800
-        },
-        {
           "nome": "enviar-planilha",
           "passos": [
             {
               "clicar": "[data-carteira=\"cartao-planilha\"]"
-            },
-            {
-              "clicar": "[data-carteira=\"continuar-como\"]"
             },
             {
               "esperar": "[data-relacionamentos=\"soltar-arquivo\"]"
@@ -500,10 +485,61 @@
           "pausa": 1200
         },
         {
-          "nome": "conferir",
+          "nome": "onde-renovacoes",
           "passos": [
             {
               "clicar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"onde-renovacoes\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "onde-usar-funil",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"usar-funil\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"escolher-funil\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "onde-falta-funil",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"falta-nas-renovacoes\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "onde-dias",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"criar-funil\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"dias-antes\"] [data-dias=\"menos\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"efeito-dias\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "conferir",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
             },
             {
               "esperar": "[data-carteira=\"planilha-conferir\"]"
@@ -618,6 +654,28 @@
           "pausa": 1200
         },
         {
+          "nome": "onde-sem-permissao",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?como=planilha&demo=sem-seguros&caso=sem_permissao_de_funil",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"sem-permissao-de-funil\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
           "nome": "erro-ao-trazer",
           "url": "/app/accounts/{conta}/relacionamentos/trazer?como=planilha&demo=sem-seguros&caso=trazer_falhou",
           "passos": [
@@ -632,6 +690,12 @@
             },
             {
               "clicar": "[data-carteira=\"tem-seguros\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"continuar-renovacoes\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
             },
             {
               "esperar": "[data-carteira=\"trazer-seguros\"]"
@@ -732,8 +796,20 @@
           "pausa": 600
         },
         {
+          "nome": "onde-renovacoes",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"onde-renovacoes\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
           "nome": "conferir-pdfs",
           "passos": [
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
+            },
             {
               "esperar": "[data-carteira=\"pdfs-conferir\"]"
             }
@@ -768,7 +844,7 @@
               "clicar": "[data-linha=\"2\"] [data-carteira=\"seguir-sem-telefone\"]"
             },
             {
-              "esperar": "[data-linha=\"2\"] [data-carteira=\"voltar-atras\"]"
+              "esperar": "[data-linha=\"2\"] [data-carteira=\"mudar\"]"
             }
           ],
           "pausa": 1200
@@ -833,6 +909,12 @@
               "clicar": "[data-carteira=\"ler-pdfs\"]"
             },
             {
+              "esperar": "[data-carteira=\"continuar-renovacoes\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
+            },
+            {
               "esperar": "[data-problema=\"foto_escura\"]"
             }
           ],
@@ -863,6 +945,24 @@
             },
             {
               "esperar": "[data-carteira=\"agger-entrar-form\"] [data-carteira=\"falta\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "mostrar-senha",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"agger-senha\"]",
+                "exemplo"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"agger-mostrar-senha\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-mostrar-senha\"][aria-pressed=\"true\"]"
             }
           ],
           "pausa": 800
@@ -934,10 +1034,22 @@
           "pausa": 800
         },
         {
-          "nome": "conferir-agger",
+          "nome": "onde-renovacoes",
           "passos": [
             {
               "clicar": "[data-carteira=\"agger-continuar\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"onde-renovacoes\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "conferir-agger",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"continuar-renovacoes\"]"
             },
             {
               "esperar": "[data-carteira=\"agger-conferir\"]"
@@ -1309,6 +1421,732 @@
             }
           ],
           "pausa": 1200
+        }
+      ]
+    },
+    {
+      "nome": "11-renovacao",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "opcoes-enviadas",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&renovacao=1",
+          "esperar": "[data-carteira=\"situacao-da-renovacao\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "nao-renovou-motivo",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"nao-renovou\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"motivo\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "falta-motivo",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"salvar-motivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"motivo\"] [role=\"alert\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "motivo-outro",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"motivo-outro\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"motivo-escrito\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "nao-renovou",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"motivo-caro\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-motivo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"como-terminou\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "desfeito",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"desfazer\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"nao-renovou\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "renovou",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"renovou\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"como-terminou\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "proposta-pronta",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/24?demo=cheio&renovacao=112",
+          "esperar": "[data-carteira=\"enviar-ao-cliente\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "previa-envio",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"enviar-ao-cliente\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"previa-envio\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "proposta-enviada",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"enviar\"]"
+            },
+            {
+              "esperar": "[data-cotacao=\"ENVIADA_POR_VOCE\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "renovado-falta-apolice",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/38?demo=cheio&renovacao=102",
+          "esperar": "[data-carteira=\"anexar-apolice-nova\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "pela-gaveta-do-seguro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&apolice=1",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"gaveta-acao\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"gaveta-acao\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"situacao-da-renovacao\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "pela-conversa",
+          "url": "/app/accounts/{conta}/conversations/2?demo=cheio",
+          "passos": [
+            {
+              "esperar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "clicar": "button:has(.i-ph-user-bold)"
+            },
+            {
+              "esperar": "[data-carteira=\"painel-seguro\"][data-apolice=\"1\"] button"
+            },
+            {
+              "clicar": "[data-carteira=\"painel-seguro\"][data-apolice=\"1\"] button"
+            },
+            {
+              "esperar": "[data-carteira=\"gaveta-acao\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"gaveta-acao\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"situacao-da-renovacao\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&renovacao=9999",
+          "esperar": "[data-carteira=\"renovacao-nao-esta\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&demo-carteira=carregando&renovacao=1",
+          "esperar": "[data-carteira=\"card-renovacao\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&demo-carteira=erro&renovacao=1",
+          "esperar": "[data-carteira=\"card-renovacao\"] [data-relacionamentos=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "12-cotacao",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "cotando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/4?demo=cheio&renovacao=107",
+          "esperar": "[data-cotacao=\"COTANDO\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "faltou-dado",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/117?demo=cheio&renovacao=110",
+          "esperar": "[data-cotacao=\"FALTOU_PERGUNTADO\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "faltou-dado-sem-agente",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/117?demo=cheio&renovacao=110&caso=cotacao_sem_agente",
+          "esperar": "[data-cotacao=\"FALTOU_SEM_AGENTE\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "falta-o-dado",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"cotar-com-dado\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"cotacao\"] [role=\"alert\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "cotar-com-o-dado",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"]",
+                "14/08/1987"
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"cotar-com-dado\"]"
+            },
+            {
+              "esperar": "[data-cotacao=\"COTANDO\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "parcial",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_parcial",
+          "esperar": "[data-carteira=\"respostas-da-cotacao\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "pedir-proposta",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"pedir-proposta\"]"
+            },
+            {
+              "esperar": "[data-cotacao=\"PRONTA\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "preco-sem-pdf",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_sem_pdf",
+          "esperar": "[data-cotacao=\"PRECO_SEM_PDF\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "agger-fora",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_agger_fora",
+          "esperar": "[data-cotacao=\"AGGER_FORA\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "demorou",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_demorou",
+          "esperar": "[data-cotacao=\"DEMOROU\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "falhou",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_falhou",
+          "esperar": "[data-cotacao=\"FALHOU\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "conta-nao-cota",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&cotacao=desligada",
+          "esperar": "[data-cotacao=\"NAO_COTA\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "proposta-anexada",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"anexar-proposta\"]"
+            },
+            {
+              "esperar": "[data-cotacao=\"PRONTA\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "sem-telefone",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/59?demo=cheio&renovacao=104",
+          "esperar": "[data-cotacao=\"SEM_TELEFONE\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "nao-quer-mensagens",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/203?demo=cheio&renovacao=105",
+          "esperar": "[data-cotacao=\"NAO_QUER\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "enviada-sozinha",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/105?demo=cheio&renovacao=113",
+          "esperar": "[data-cotacao=\"ENVIADA_SOZINHA\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111",
+          "esperar": "[data-cotacao=\"NAO_COMECOU\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/4?demo=cheio&demo-carteira=carregando&renovacao=107",
+          "esperar": "[data-carteira=\"card-renovacao\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/4?demo=cheio&demo-carteira=erro&renovacao=107",
+          "esperar": "[data-carteira=\"card-renovacao\"] [data-relacionamentos=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "13-ajustar-renovacoes",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "ajustes",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio",
+          "esperar": "[data-carteira=\"ajuste-onde\"]",
+          "pausa": 2500
+        },
+        {
+          "nome": "nada-mudou",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"salvar-ajustes\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"alerta-dos-ajustes\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "envia-sozinha",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ajuste-como-envia\"] [data-carteira=\"envia-sozinha\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"sai-sozinha\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "falta-o-funil",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ajuste-onde\"] [data-carteira=\"usar-funil\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-ajustes\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"alerta-dos-ajustes\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "salvo",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ajuste-onde\"] [data-carteira=\"criar-funil\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-ajustes\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"ajustes-salvos\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "cotacao-desligada",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&cotacao=desligada",
+          "esperar": "[data-carteira=\"quero-ligar\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "quero-ligar",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"quero-ligar\"]"
+            },
+            {
+              "esperar": "dialog[open]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "sem-permissao",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&caso=sem_permissao_de_funil",
+          "esperar": "[data-carteira=\"sem-permissao-de-funil\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "nao-salvou",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&caso=ajustes_nao_salvou",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ajuste-como-envia\"] [data-carteira=\"envia-sozinha\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"ajuste-como-envia\"] [data-carteira=\"envia-sozinha\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-ajustes\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"alerta-dos-ajustes\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=sem-seguros",
+          "esperar": "[data-carteira=\"ligar-agger\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&demo-carteira=carregando",
+          "esperar": "[data-carteira=\"ajustes\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&demo-carteira=erro",
+          "esperar": "[data-carteira=\"ajustes\"] [data-carteira=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "14-resultados",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "resultados",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/resultados?demo=cheio",
+          "esperar": "[data-carteira=\"resultados-heroi\"]",
+          "pausa": 2500
+        },
+        {
+          "nome": "periodo-aberto",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"periodo\"] [role=\"combobox\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"periodo\"] [role=\"option\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "periodo-90-dias",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"periodo\"] [role=\"option\"][data-value=\"90\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"resultados-heroi\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "por-seguradora",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"recorte\"] [data-grupo=\"seguradora\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"recorte\"] [data-carteira=\"barra-de-resultado\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "por-quem-cuida",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"recorte\"] [data-grupo=\"cuida\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"recorte\"] [data-carteira=\"barra-de-resultado\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "ver-nao-renovaram",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ver-nao-renovaram\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"linha\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/resultados?demo=sem-seguros",
+          "esperar": "[data-carteira=\"resultados-vazio\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/resultados?demo=cheio&demo-carteira=carregando",
+          "esperar": "[data-carteira=\"resultados\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/resultados?demo=cheio&demo-carteira=erro",
+          "esperar": "[data-carteira=\"resultados\"] [data-carteira=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "18-parcela-atrasada",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "parcela-atrasada",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/13?demo=cheio&apolice=108",
+          "esperar": "[data-carteira=\"avisar-parcela\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "mensagem-pronta",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"avisar-parcela\"] button"
+            },
+            {
+              "esperar": "[data-carteira=\"aviso-vivo\"] span"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&apolice=2",
+          "esperar": "[data-carteira=\"gaveta-acao\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/13?demo=cheio&demo-carteira=carregando&apolice=108",
+          "esperar": "[data-carteira=\"gaveta-seguro\"] [data-carteira=\"carregando\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/13?demo=cheio&demo-carteira=erro&apolice=108",
+          "esperar": "[data-carteira=\"gaveta-seguro\"] [data-relacionamentos=\"erro\"]",
+          "pausa": 1000
+        }
+      ]
+    },
+    {
+      "nome": "19-palavras-simples",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "palavras-simples",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109",
+          "esperar": "[data-carteira=\"enviar-palavras\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "alterar-o-texto",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"alterar-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"texto-das-palavras\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "falta-o-texto",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"texto-das-palavras\"]",
+                " "
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-simples\"] [role=\"alert\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "texto-salvo",
+          "passos": [
+            {
+              "preencher": [
+                "[data-carteira=\"texto-das-palavras\"]",
+                "Seu carro está coberto contra batida, roubo e furto. Qualquer coisa, me chame aqui."
+              ]
+            },
+            {
+              "clicar": "[data-carteira=\"salvar-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"enviar-palavras\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "enviado",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"enviar-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-enviado\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "ver-o-que-foi-enviado",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"ver-palavras-enviadas\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-simples\"] [data-carteira=\"previa-de-mensagem\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "vazio",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&apolice=1",
+          "esperar": "[data-carteira=\"gaveta-acao\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_lendo",
+          "esperar": "[data-carteira=\"palavras-lendo\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_erro",
+          "esperar": "[data-carteira=\"palavras-erro\"]",
+          "pausa": 1000
         }
       ]
     }

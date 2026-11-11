@@ -154,4 +154,22 @@ describe('ConversationSidebar com a chave da conta (celular, 390 px)', () => {
       expect.objectContaining({ is_contact_sidebar_open: false })
     );
   });
+
+  // #2897 — a gaveta do seguro abre por cima do painel, fora dele no DOM
+  // (teleporte para o body). Um toque dentro dela não pode fechar o painel:
+  // fechava, e a gaveta sumia junto no meio do preenchimento.
+  it('ligada: o clique dentro de uma gaveta aberta por cima do painel não fecha o painel', async () => {
+    montarGaveta({ painel_contato_enxuto: true });
+    const gaveta = document.createElement('div');
+    gaveta.setAttribute('role', 'dialog');
+    gaveta.setAttribute('aria-modal', 'true');
+    const botao = document.createElement('button');
+    gaveta.appendChild(botao);
+    document.body.appendChild(gaveta);
+    botao.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    botao.click();
+    await flushPromises();
+    gaveta.remove();
+    expect(ui.updateUISettings).not.toHaveBeenCalled();
+  });
 });

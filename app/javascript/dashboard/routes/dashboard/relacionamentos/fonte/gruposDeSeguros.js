@@ -2,8 +2,10 @@
 // cuida da carteira ("quem vence esta semana?"). Só a regra: a tela e a fonte
 // usam as mesmas funções. Os de vencimento acumulam: "em até 30 dias" inclui
 // quem vence amanhã.
+import { PERIODOS, grupoDosQueNaoRenovaram } from '../carteira/resultados';
 import {
   SELOS,
+  diasDesde,
   diasParaTerminar,
   estaValendo,
   seloDoSeguro,
@@ -36,9 +38,24 @@ const TODOS_OS_GRUPOS = [
   grupo(GRUPO_PARCELA, 'PARCELA_ATRASADA'),
 ];
 
+// Os grupos temporários "Não renovaram (últimos N dias)": só aparecem quando a
+// tela de resultados leva até eles (`?grupo=<id>`).
+const TEMPORARIOS = PERIODOS.map(dias =>
+  grupo(grupoDosQueNaoRenovaram(dias), `NAO_RENOVARAM_${dias}`)
+);
+export const grupoTemporario = id =>
+  TEMPORARIOS.find(item => item.id === id) ?? null;
+
 // "Parcela atrasada" só existe com o Agger ligado: é ele quem conta a parcela.
-export const gruposDeSeguros = ({ aggerLigado = true } = {}) =>
-  TODOS_OS_GRUPOS.filter(item => aggerLigado || item.id !== GRUPO_PARCELA);
+// `temporario`: o id do grupo temporário pedido, que entra no fim da fila.
+export const gruposDeSeguros = ({ aggerLigado = true, temporario = '' } = {}) =>
+  [...TODOS_OS_GRUPOS, grupoTemporario(temporario)].filter(
+    item => item && (aggerLigado || item.id !== GRUPO_PARCELA)
+  );
+
+// Um grupo que o endereço pode pedir: um dos de sempre ou um temporário.
+export const grupoConhecido = id =>
+  [...TODOS_OS_GRUPOS, ...TEMPORARIOS].some(item => item.id === id) ? id : '';
 
 // O grupo que a lista de pessoas ganha em conta de seguros, depois de "Clientes".
 export const GRUPO_DE_PESSOAS_SO_UM_SEGURO = grupo(
@@ -48,6 +65,12 @@ export const GRUPO_DE_PESSOAS_SO_UM_SEGURO = grupo(
 
 const venceEmAte = dias => (seguro, agora) =>
   estaValendo(seguro, agora) && diasParaTerminar(seguro, agora) <= dias;
+
+// Venceu nos últimos N dias e ficou com o motivo de não ter renovado.
+const naoRenovouEmAte = dias => (seguro, agora) =>
+  seloDoSeguro(seguro, agora) === SELOS.VENCIDO &&
+  Boolean(seguro.motivo) &&
+  diasDesde(seguro.termina, agora) <= dias;
 
 const REGRAS = {
   todos: () => true,
@@ -59,6 +82,9 @@ const REGRAS = {
   vencido: (seguro, agora) => seloDoSeguro(seguro, agora) === SELOS.VENCIDO,
   [GRUPO_SEM_TELEFONE]: seguro => !seguro.pessoa?.phone_number,
   [GRUPO_PARCELA]: temParcelaAtrasada,
+  ...Object.fromEntries(
+    PERIODOS.map(dias => [grupoDosQueNaoRenovaram(dias), naoRenovouEmAte(dias)])
+  ),
 };
 
 export const seguroPertenceAoGrupo = (seguro, grupoId, agora = Date.now()) => {

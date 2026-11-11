@@ -177,7 +177,7 @@ onMounted(() => {
     @fechar="closeContactPanel"
   >
     <template v-if="PainelDeSeguros" #depois-do-contato>
-      <PainelDeSeguros />
+      <PainelDeSeguros :nome-do-contato="contact?.name" />
     </template>
   </PainelDoContato>
   <div v-else class="w-full">
@@ -195,7 +195,7 @@ onMounted(() => {
       :contact="contact"
       :conversation-id="conversationId"
     />
-    <PainelDeSeguros v-if="PainelDeSeguros" />
+    <PainelDeSeguros v-if="PainelDeSeguros" :nome-do-contato="contact?.name" />
     <ContactOriginsPanel
       :contact-id="contactId"
       :conversation-attributes="conversationAdditionalAttributes"

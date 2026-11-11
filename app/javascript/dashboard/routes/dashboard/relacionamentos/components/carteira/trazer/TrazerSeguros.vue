@@ -15,6 +15,7 @@ import EnviarPdfs from './EnviarPdfs.vue';
 import LigarAgger from './LigarAgger.vue';
 import PerguntaDeSeguros from './PerguntaDeSeguros.vue';
 import ProntoDeSeguros from './ProntoDeSeguros.vue';
+import PassoOndeRenovacoes from '../renovacao/PassoOndeRenovacoes.vue';
 import { COMO, PASSOS } from '../../../carteira/passosDeTrazerSeguros';
 import { useBuscaNoAgger } from '../../../carteira/useBuscaNoAgger';
 import { useComoNaUrl } from '../../../carteira/useComoNaUrl';
@@ -22,9 +23,10 @@ import { useLeituraDePdfs } from '../../../carteira/useLeituraDePdfs';
 import { COMECO, useTrazerSeguros } from '../../../carteira/useTrazerSeguros';
 import { ERROS } from '../../../trazer/useTrazerLista';
 
-// #2897 — "Trazer clientes e seguros" na conta de seguros (telas 8, 9, 16 e
-// 17): a escolha de como trazer e, de cada jeito, o caminho até o Pronto. Uma
-// pergunta por tela. O histórico ("O que você já trouxe") vem de quem usa, no
+// #2897 — "Trazer clientes e seguros" na conta de seguros (telas 8, 9, 10, 16
+// e 17): a escolha de como trazer e, de cada jeito, o caminho até o Pronto. Uma
+// pergunta por tela; na primeira vez, antes de conferir, "Onde ficam as
+// renovações?". O histórico ("O que você já trouxe") vem de quem usa, no
 // slot `historico`, porque é o mesmo das listas de pessoas.
 const props = defineProps({
   fonte: { type: Object, required: true },
@@ -136,6 +138,11 @@ defineExpose({
         v-if="tela.etapaDoTopo.value"
         :atual="tela.etapaDoTopo.value"
         :trazendo="trazendo"
+        :primeiro="
+          como === COMO.AGGER
+            ? t('RELACIONAMENTOS_CARTEIRA.TRAZER.AGGER.ETAPA_BUSCAR')
+            : ''
+        "
       />
     </div>
 
@@ -179,6 +186,16 @@ defineExpose({
       @tem-seguros="tela.conferir()"
       @so-pessoas="emit('soPessoas', tela.leitura.value.pessoas)"
       @voltar="tela.voltar"
+    />
+
+    <PassoOndeRenovacoes
+      v-else-if="passo === PASSOS.ONDE"
+      :funis="tela.renovacoes.value.funis"
+      :vencimentos="tela.leitura.value.efeito.vencimentos"
+      :sem-permissao="tela.renovacoes.value.semPermissao"
+      :ocupado="tela.ocupado.value"
+      @escolher="tela.escolherRenovacoes"
+      @voltar="voltar"
     />
 
     <template v-else-if="passo === PASSOS.LIGAR">

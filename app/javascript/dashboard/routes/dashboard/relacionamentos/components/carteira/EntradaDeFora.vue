@@ -15,6 +15,8 @@ const props = defineProps({
   pessoaId: { type: Number, required: true },
   fonte: { type: Object, required: true },
   marca: { type: String, required: true },
+  // O nome de quem está na conversa (só o painel da conversa manda).
+  nomeDoContato: { type: String, default: '' },
 });
 const emit = defineEmits(['mudou']);
 
@@ -84,6 +86,7 @@ const perguntar = () => {
     :aberta="aberta"
     :pessoa-id="pessoaId"
     :fonte="fonte"
+    :nome-do-contato="nomeDoContato"
     @fechar="aberta = false"
     @guardado="aoGuardar"
     @perguntar="perguntar"

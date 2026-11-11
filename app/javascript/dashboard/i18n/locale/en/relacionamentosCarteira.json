@@ -23,7 +23,8 @@
       "OUTRA_CORRETORA": "went to another broker",
       "VENDEU_O_BEM": "sold the insured item",
       "NAO_RESPONDEU": "did not answer",
-      "CANCELOU": "cancelled the policy"
+      "CANCELOU": "cancelled the policy",
+      "OUTRO": "another reason"
     },
     "HEROI": {
       "SEM_SEGURO": "Bring in the policies you look after.",
@@ -56,7 +57,7 @@
       },
       "EM_RENOVACAO": {
         "NOME": "In renewal",
-        "EXPLICACAO": "They already have a renewal card in progress."
+        "EXPLICACAO": "The renewal has already started."
       },
       "VENCIDO": {
         "NOME": "Expired",
@@ -68,15 +69,27 @@
       },
       "PARCELA_ATRASADA": {
         "NOME": "Late payment",
-        "EXPLICACAO": "A payment is open. Warn the person before the policy lapses."
+        "EXPLICACAO": "A payment is open. Warn the person before the policy is cancelled."
       },
       "SO_UM_SEGURO": {
         "NOME": "Has only one policy",
         "EXPLICACAO": "Customers with a single policy. A good time to offer another one."
+      },
+      "NAO_RENOVARAM_30": {
+        "NOME": "Not renewed (last 30 days)",
+        "EXPLICACAO": "Ended in the last 30 days and were not renewed."
+      },
+      "NAO_RENOVARAM_90": {
+        "NOME": "Not renewed (last 90 days)",
+        "EXPLICACAO": "Ended in the last 90 days and were not renewed."
+      },
+      "NAO_RENOVARAM_365": {
+        "NOME": "Not renewed (last 12 months)",
+        "EXPLICACAO": "Ended in the last 12 months and were not renewed."
       }
     },
     "LISTA": {
-      "BUSCA": "Search by name, document, plate or policy number",
+      "BUSCA": "Search by name, plate or document",
       "BUSCA_CURTA": "Search policy",
       "BUSCA_DE_PESSOAS": "Search by name, phone, document or plate",
       "ORDENAR": {
@@ -103,8 +116,6 @@
       "RESULTADOS": "Results",
       "AJUSTAR": "Adjust renewals",
       "MAIS": "More options",
-      "ABRINDO_RESULTADOS": "Opening the renewal results",
-      "ABRINDO_AJUSTES": "Opening the renewal settings",
       "MARCAR": "Select the {tipo} policy of {nome}",
       "ABRIR": "Open the {tipo} policy of {nome}",
       "SEM_TELEFONE": "No phone",
@@ -119,7 +130,8 @@
       "MARCAR_TODOS": "Select all {count} in this group",
       "DESMARCAR": "Clear selection",
       "MANDAR_MENSAGEM": "Send message",
-      "BARRA": "What to do with the policies you selected"
+      "BARRA": "What to do with the policies you selected",
+      "EXEMPLO_LEGENDA": "Your list of policies will look like this:"
     },
     "QUANDO": {
       "LISTA": {
@@ -130,7 +142,8 @@
         "VENCEU_ONTEM": "expired yesterday",
         "CANCELADO_EM": "cancelled on {data}",
         "RENOVOU_EM": "renewed on {data} · the new policy is missing",
-        "EM_OUTRA_CORRETORA": "is with another broker"
+        "EM_OUTRA_CORRETORA": "is with another broker",
+        "VENCE_NA_DATA": "ends on {data}"
       },
       "FICHA": {
         "VENCE_EM": "Ends in {count} days · {data}",
@@ -140,7 +153,8 @@
         "VENCEU_ONTEM": "Expired yesterday",
         "CANCELADO_EM": "Cancelled on {data}",
         "RENOVOU_EM": "Renewed on {data} · the new policy is missing",
-        "EM_OUTRA_CORRETORA": "With another broker"
+        "EM_OUTRA_CORRETORA": "With another broker",
+        "VENCE_NA_DATA": "Ends on {data}"
       },
       "PAINEL": {
         "VENCE_EM": "ends in {count} days",
@@ -150,7 +164,8 @@
         "VENCEU_ONTEM": "expired yesterday",
         "CANCELADO_EM": "cancelled on {data}",
         "RENOVOU_EM": "renewed on {data}",
-        "EM_OUTRA_CORRETORA": "with another broker"
+        "EM_OUTRA_CORRETORA": "with another broker",
+        "VENCE_NA_DATA": "ends on {data}"
       }
     },
     "PESSOAS": {
@@ -181,16 +196,16 @@
         "VENCE_EM": "Ends in {count} days.",
         "VENCE_AMANHA": "Ends tomorrow.",
         "VENCE_HOJE": "Ends today.",
-        "RENOVACAO_EM": "The renewal is in “{etapa}”.",
         "VALE_ATE": "Valid until {data}.",
         "SEM_PDF": "The PDF is still missing.",
-        "PARCELA": "The payment due {data} is open. Warn the person before the policy lapses.",
+        "PARCELA": "The payment due {data} is open. Warn the person before the policy is cancelled.",
         "RENOVOU_EM": "Renewed on {data}. The new policy is missing.",
         "VENCEU_HA": "Expired {count} days ago and was not renewed.",
         "VENCEU_ONTEM": "Expired yesterday and was not renewed.",
         "VENCEU_HOJE": "Expired today and was not renewed.",
         "MOTIVO": "Reason: {motivo}.",
-        "CANCELADO_EM": "Cancelled on {data}."
+        "CANCELADO_EM": "Cancelled on {data}.",
+        "VENCE_NA_DATA": "Ends on {data}."
       },
       "ACAO": {
         "ABRIR_RENOVACAO": "Open the renewal",
@@ -201,7 +216,6 @@
         "CONVERSAR_COM": "Chat with {nome}"
       },
       "AVISOS": {
-        "ABRINDO_RENOVACAO": "Opening the renewal of the {tipo} policy",
         "ABRINDO_PDF": "Opening the PDF of the {tipo} policy",
         "ABRINDO_CONVERSA": "Opening the chat with {nome}",
         "ABRINDO_PROPOSTA": "Opening the proposal",
@@ -211,7 +225,8 @@
         "NAO_DEU": "I could not do that. Try again.",
         "APOLICE_NOVA": "New policy saved.",
         "PDF_GUARDADO": "PDF saved.",
-        "DESFAZER": "Undo"
+        "DESFAZER": "Undo",
+        "MENSAGEM_PRONTA": "Message ready for {nome}: “{texto}”"
       },
       "DADOS": {
         "TITULO": "Policy details",
@@ -229,20 +244,19 @@
         "ORIGEM": "Came from",
         "VEIO_DO_AGGER": "Agger, on {data}",
         "VEIO_DA_PLANILHA": "Spreadsheet “{arquivo}”, on {data}",
-        "CONFIRA": "Check this",
         "NAO_INFORMADO": "Not informed",
-        "ABRIR_FICHA_DE": "Open the page of {nome}"
+        "ABRIR_FICHA_DE": "Open the page of {nome}",
+        "PODE_TER_MUDADO": "May have changed"
       },
       "RENOVACAO": {
         "TITULO": "Renewal",
-        "FUNIL": "Pipeline {funil} · {etapa} · handled by: {cuida}",
         "SUBIU": "Went up {count}% compared to last year.",
         "BAIXOU": "Went down {count}% compared to last year.",
         "IGUAL": "Same as last year.",
         "ABRIR": "Open the renewal",
         "COTAR_AGORA": "Get a quote now",
-        "USA_CONSULTA": "Uses one lookup from your Agger.",
-        "COTANDO": "Getting the quote… this can take a few minutes."
+        "COTANDO": "Getting the quote… this can take a few minutes.",
+        "QUEM_CUIDA": "Handled by: {nome}"
       },
       "RODAPE": {
         "CORRIGIR": "Fix",
@@ -250,6 +264,9 @@
         "ANEXAR_OUTRO_PDF": "Attach another PDF",
         "MARCAR_CANCELADO": "Mark as cancelled",
         "VOLTAR_A_ATIVO": "Make active again"
+      },
+      "PARCELA": {
+        "MENSAGEM": "Hi, {nome}! The {data} instalment of your {tipo} insurance is still open. Shall I send you the payment slip again?"
       }
     },
     "CORRIGIR": {
@@ -267,7 +284,7 @@
       "SALVAR": "Save",
       "VOLTAR": "Back",
       "SALVO": "Saved.",
-      "SALVO_CARD_AMANHA": "Saved. The renewal card is created early tomorrow.",
+      "SALVO_CARD_AMANHA": "Saved. The renewal starts tomorrow morning.",
       "ERRO_AO_SALVAR": "I could not save. Try again.",
       "FALTA": {
         "NADA_MUDOU": "You have not changed anything yet. Change what is wrong and save.",
@@ -283,7 +300,6 @@
       "TITULO": "Attach the PDF of the {tipo} policy",
       "TITULO_APOLICE_NOVA": "Attach the new policy",
       "SOLTAR": "Drag the PDF here or click to choose",
-      "CUSTO": "Reading this PDF costs about {valor}.",
       "USAR_EXEMPLO": "Use a sample PDF",
       "LENDO": "Reading the PDF…",
       "NAO_E_APOLICE": "This file is not a policy PDF. Choose another one.",
@@ -332,7 +348,7 @@
       "TIPOS": {
         "CHEGOU_AGGER": "Arrived from Agger.",
         "CHEGOU_PLANILHA": "Arrived from the spreadsheet “{arquivo}”.",
-        "CARD_NASCEU": "Renewal card created in the {funil} pipeline, in “{etapa}”.",
+        "CARD_NASCEU": "The renewal started.",
         "RESPONDEU_ALGO_MUDOU": "{nome} answered “Did anything change?”: Nothing changed.",
         "PROPOSTA_PRONTA": "Proposal ready: {seguradora}, {valor}.",
         "PROPOSTA_ENVIADA": "Proposal sent",
@@ -345,7 +361,13 @@
         "VOLTOU_A_ATIVO": "The policy is active again.",
         "PDF_ANEXADO": "PDF attached.",
         "APOLICE_NOVA": "New policy saved. The previous one was no. {anterior}.",
-        "COTACAO_PEDIDA": "Quote requested."
+        "COTACAO_PEDIDA": "Quote requested.",
+        "PROPOSTA_ENVIADA_SOZINHA": "Proposal sent automatically.",
+        "NAO_RENOVOU_OUTRO": "Did not renew: {texto}.",
+        "PDF_PEDIDO": "Summary PDF requested again.",
+        "PROPOSTA_PEDIDA": "Proposal requested: {seguradora}.",
+        "PROPOSTA_ANEXADA": "Proposal attached.",
+        "PALAVRAS_ENVIADAS": "“Your insurance in plain words” sent."
       },
       "SUBIU": "Went up {count}%.",
       "BAIXOU": "Went down {count}%."
@@ -355,7 +377,8 @@
       "VAZIO": "No insurance with you.",
       "ERRO": "I could not show the policies. Try again.",
       "VER_NA_FICHA": "See on the person's page",
-      "GUARDAR_DE_FORA": "Save a policy from another broker"
+      "GUARDAR_DE_FORA": "Save a policy from another broker",
+      "DE_FORA_TERMINA": "ends on {data}"
     },
     "TRAZER": {
       "DESTINO_DOCUMENTO": "CPF or CNPJ",
@@ -366,9 +389,8 @@
         "PDFS": "Policy PDFs",
         "PDFS_APOIO": "Drag the PDFs in. I read each one.",
         "AGGER": "Agger",
-        "AGGER_APOIO": "Bring them straight from your Agger and keep them up to date automatically.",
+        "AGGER_APOIO": "For Agger users: bring them straight in and keep them up to date automatically.",
         "AGGER_LIGADO": "Your account is already connected to Agger.",
-        "FALTA_ESCOLHER": "Choose where your people and policies come from.",
         "ERRO": "I couldn't open this. Try again.",
         "JA_TROUXE": "What you have already brought in"
       },
@@ -391,7 +413,7 @@
           "NAO_E_APOLICE": "is not a policy | are not policies",
           "DEIXADOS": "left out | left out"
         },
-        "EFEITO": "Tomorrow morning, {count} policy ending within {dias} days becomes a renewal card. | Tomorrow morning, {count} policies ending within {dias} days become renewal cards.",
+        "EFEITO": "Tomorrow morning, {count} insurance ending within {dias} days goes into renewal. | Tomorrow morning, {count} insurances ending within {dias} days go into renewal.",
         "SEM_TELEFONE_APOIO": "These people come in without a phone. The renewal message will not reach them until you add the phone.",
         "EXEMPLOS": "How they will look",
         "SEGUROS_DE": "Policies of {nome}",
@@ -436,15 +458,26 @@
         "DEIXAR_DE_FORA": "Leave out",
         "SEGUIR_SEM_TELEFONE": "Go on without a phone",
         "TROCAR_O_ARQUIVO": "Replace the file",
-        "FICAR_COM_A_LINHA": "Keep row {linha}",
         "PRONTO": "Done",
         "DEIXADO": "Left out",
-        "VOLTAR_ATRAS": "Undo",
-        "VOLTAR_ATRAS_EM": "Undo for {quem}",
         "ANUNCIO": {
           "PRONTO": "{quem}: done",
           "DEIXADO": "{quem}: left out",
           "REABERTO": "{quem}: back for you to check"
+        },
+        "ESCOLHA_A_SEGURADORA": "Choose the insurer",
+        "FICAR_COM_ESTE": "Keep this one",
+        "MUDAR": "Change",
+        "MUDAR_O_SEGURO_DE": "Change the policy of {nome}",
+        "MUDAR_O_ARQUIVO": "Change “{arquivo}”",
+        "DECIDIDO": {
+          "SEGURO_DE": "Policy of {nome}",
+          "ARQUIVO": "“{arquivo}”",
+          "TERMINA": "ends on {data}",
+          "FICA_A_LINHA": "keeping the one in row {linha}",
+          "TELEFONE": "phone {telefone}",
+          "SEM_TELEFONE": "no phone",
+          "ARQUIVO_NOVO": "new file: {arquivo}"
         }
       },
       "PRONTO": {
@@ -480,7 +513,6 @@
         "USUARIO": "Agger username",
         "SENHA": "Agger password",
         "MOSTRAR_SENHA": "Show the password",
-        "ESCONDER_SENHA": "Hide the password",
         "ENTRAR": "Sign in and bring in",
         "APOIO": "It is the same login you use in Agger.",
         "FALTA_USUARIO": "Type your Agger username.",
@@ -501,9 +533,11 @@
         "COMO_RESOLVER_DE": "How to fix the password for {seguradora}",
         "COMO_RESOLVER_TITULO": "The password for {seguradora} is missing",
         "COMO_RESOLVER_TEXTO": "Go to your Agger, save the password for {seguradora} and come back here. I will search again on my own tomorrow morning.",
-        "BUSCAR_DE_NOVO": "Search again now",
+        "BUSCAR_DE_NOVO": "Search now",
         "NAO_RESPONDEU": "Agger did not answer just now. I will try again on my own; what already arrived is kept.",
-        "TENTAR_AGORA": "Try now"
+        "TENTAR_AGORA": "Try now",
+        "SENHA_SEGURA": "Your password is kept safe. It is only used to fetch your policies.",
+        "ETAPA_BUSCAR": "Fetch"
       },
       "HISTORICO": {
         "SEGUROS": "{count} policy | {count} policies",
@@ -527,7 +561,7 @@
           "AGGER": "This removes the policy that came from Agger, with its PDF. | This removes the {count} policies that came from Agger, with their PDFs."
         },
         "PESSOAS_FICAM": "The person stays here, as before. | The {count} people stay here, as before.",
-        "CARDS": "The renewal card born from these policies leaves the funnel. | The {count} renewal cards born from these policies leave the funnel.",
+        "CARDS": "The renewal that started with this insurance is undone. | The {count} renewals that started with these insurances are undone.",
         "PROPOSTAS": "{count} proposal was already sent. What was sent does not come back. | {count} proposals were already sent. What was sent does not come back."
       }
     },
@@ -558,6 +592,251 @@
       "NAO_GUARDOU": "I couldn't save the reminder. Try again.",
       "GUARDADO": "Reminder saved. We will reach out to {nome} on {data}.",
       "DESFEITO": "Reminder undone."
+    },
+    "RENOVACAO": {
+      "SITUACAO": {
+        "NAO_COMECOU": "The renewal has not started yet.",
+        "COTANDO": "The quote is being prepared.",
+        "COTACAO_PRONTA": "The quote is ready. It still has to be sent.",
+        "OPCOES_ENVIADAS": "The options have been sent. Waiting for the answer.",
+        "NEGOCIACAO": "The answer arrived. The price still has to be agreed.",
+        "RENOVOU": "Already renewed. The new policy is missing.",
+        "NAO_RENOVOU": "Did not renew.",
+        "EM_ETAPA": "The renewal is in “{etapa}”."
+      },
+      "CARD": {
+        "TITULO": "Renewal of the {tipo} insurance",
+        "CARREGANDO": "Opening the renewal",
+        "ERRO": "I could not open this renewal. Try again.",
+        "NAO_ESTA_MAIS": "This renewal is no longer here.",
+        "VOLTAR": "Back",
+        "SEGURO": "Insurance",
+        "SEGURO_LINHA": "{tipo} · {seguradora} · no. {numero}",
+        "VER_APOLICE": "See policy",
+        "DESFECHO": "How it ended",
+        "RENOVOU": "Renewed",
+        "NAO_RENOVOU": "Did not renew",
+        "RENOVOU_AGGER": "Renewed. The new policy arrives by itself in the next Agger search.",
+        "RENOVOU_FALTA": "Renewed. The new policy is missing.",
+        "NAO_RENOVOU_MOTIVO": "Did not renew: {motivo}.",
+        "ABRIR_NO_CRM": "Open in the CRM",
+        "ABRINDO_NO_CRM": "Opening the renewal in the CRM",
+        "RENOVACAO_MARCADA": "Renewal marked.",
+        "PROPOSTA_ENVIADA": "Proposal sent to {nome}."
+      },
+      "COTACAO": {
+        "TITULO": "Quote",
+        "NAO_COMECOU": "The quote has not started yet.",
+        "PRONTA_RESUMO": "Quote summary ready: {seguradora}, {valor} a year.",
+        "PRONTA_PROPOSTA": "Proposal ready: {seguradora}, {valor} a year.",
+        "VER_RESUMO": "See summary",
+        "VER_PROPOSTA": "See proposal",
+        "ABRINDO_RESUMO": "Opening the quote summary",
+        "ENVIAR_A": "Send to {nome}",
+        "ENVIADA_POR": "Proposal sent by {nome} on {data}.",
+        "ENVIADA_POR_VOCE": "Proposal sent by you on {data}.",
+        "ENVIADA_SOZINHA": "Proposal sent automatically on {data}, at {hora}.",
+        "FALTOU": "One piece of information was missing to quote: {dado} of {nome}.",
+        "DADO": {
+          "NASCIMENTO": "the date of birth"
+        },
+        "JA_PERGUNTOU": "{agente} has already asked.",
+        "PERGUNTE": "Ask and write it here.",
+        "ROTULO_DO_DADO": {
+          "NASCIMENTO": "Date of birth of {nome}"
+        },
+        "COTAR_COM_DADO": "Quote with this",
+        "FALTA_O_DADO": "Write the missing information.",
+        "JA_DERAM": "{count} insurer has given a price. | {count} insurers have given a price.",
+        "AINDA_NAO": "{count} has not replied yet. | {count} have not replied yet.",
+        "AINDA_NAO_RESPONDEU": "has not replied yet",
+        "PEDIR_PROPOSTA": "Ask this one for a proposal",
+        "PEDIR_PROPOSTA_DE": "Ask for the proposal: {seguradora}",
+        "SEM_PDF_DE_PROPOSTA": "This insurer gives no proposal in PDF. The person gets the summary.",
+        "PRECO_SEM_PDF": "The price arrived: {seguradora}, {valor} a year. The summary PDF did not come.",
+        "PEDIR_PDF": "Ask for the PDF again",
+        "AGGER_FORA": "I could not get into Agger. Without it there is no quoting.",
+        "ENTRAR_NO_AGGER": "Sign in to Agger again",
+        "DEMOROU": "The quote took too long and stopped. Try again.",
+        "FALHOU": "I could not quote. Try again.",
+        "COTAR_DE_NOVO": "Quote again",
+        "NAO_COTA": "This account does not quote automatically. Do the quote and put the proposal here.",
+        "ANEXAR_PROPOSTA": "Attach proposal",
+        "NAO_QUER": "{nome} asked not to get messages. The proposal does not go out automatically. Send it in the conversation.",
+        "CONVERSAR": "Talk",
+        "SEM_TELEFONE": "{nome} has no phone number. The proposal does not arrive.",
+        "POR_O_TELEFONE": "Add the phone number"
+      },
+      "PREVIA": {
+        "TITULO": "Send the proposal to {nome}",
+        "APOIO": "This is how the message arrives on WhatsApp.",
+        "MENSAGEM_RESUMO": "Hi, {nome}! Here is the renewal of your {tipo} insurance: {seguradora}, {valor} a year. The summary goes along, in PDF. May I go ahead?",
+        "MENSAGEM_PROPOSTA": "Hi, {nome}! Here is the renewal of your {tipo} insurance: {seguradora}, {valor} a year. The proposal goes along, in PDF. May I go ahead?",
+        "ARQUIVO_RESUMO": "Quote summary.pdf",
+        "ARQUIVO_PROPOSTA": "Proposal.pdf",
+        "ENVIAR": "Send",
+        "VOLTAR": "Back"
+      },
+      "MOTIVO": {
+        "TITULO": "Why did it not renew?",
+        "NOME": {
+          "ACHOU_CARO": "Too expensive",
+          "OUTRA_CORRETORA": "Went to another broker",
+          "VENDEU_O_BEM": "Sold the item",
+          "NAO_RESPONDEU": "Did not reply"
+        },
+        "OUTRO": "Another reason",
+        "QUAL": "What was the reason?",
+        "SALVAR": "Save",
+        "FALTA": "Write the reason.",
+        "FECHAR": "Back"
+      }
+    },
+    "AJUSTES": {
+      "TITULO": "How renewals run",
+      "APOIO": "It already works this way. Change only what you want.",
+      "VOLTAR": "Insurance",
+      "VOLTAR_ROTULO": "Back to insurance",
+      "ERRO": "I could not open the settings. Try again.",
+      "SALVAR": "Save",
+      "SALVO": "Saved.",
+      "ERRO_SALVAR": "I could not save. Try again.",
+      "NADA_MUDOU": "You have not changed anything yet. Change what you want and save.",
+      "ONDE": {
+        "TITULO": "Where do renewals go?",
+        "CRIAR": "Create the Renewal funnel",
+        "CRIAR_APOIO": "It comes with the steps: Due soon, Quoting, Options sent, Negotiation, Renewed.",
+        "USAR": "Use a funnel I already have",
+        "FUNIL": "Funnel",
+        "ETAPA": "Which stage does the renewal start in?",
+        "QUEM_CUIDA": "Whoever already looks after this funnel looks after the renewal.",
+        "DIAS": "How many days before the end does the renewal show up?",
+        "DIAS_MENOS": "One day less",
+        "DIAS_MAIS": "One day more",
+        "COM_DIAS": "With {count} day, | With {count} days,",
+        "ENTRAM": "no insurance goes into renewal tomorrow morning. | {count} insurance goes into renewal tomorrow morning. | {count} insurances go into renewal tomorrow morning.",
+        "HOJE": "Today: {funil} funnel, {count} day before the end. | Today: {funil} funnel, {count} days before the end.",
+        "FUNIL_RENOVACAO": "Renewal",
+        "SEM_PERMISSAO": "Whoever looks after your account's funnels needs to make this choice. The insurance still comes in; renewals start once the choice is made.",
+        "SEGUIR_SEM_ESCOLHER": "Continue without choosing",
+        "FALTA": {
+          "ONDE": "Choose where renewals go.",
+          "FUNIL": "Choose the funnel.",
+          "DIAS": "Write how many days before, from 1 up."
+        }
+      },
+      "MENSAGENS": {
+        "TITULO": "Messages before it ends",
+        "MANDAR": "Send automatically at 30, 15 and 7 days",
+        "NAO_MANDAR": "Do not send",
+        "PREVIA": "How the messages arrive",
+        "AOS": "{count} days before",
+        "TEXTO_30": "Hi, {nome}! Your {tipo} insurance ends on {data}. We are already taking care of the renewal. Any questions, just reply here.",
+        "TEXTO_15": "Hi, {nome}! Your {tipo} insurance ends in 15 days, on {data}. Shall we go ahead with the renewal?",
+        "TEXTO_7": "Hi, {nome}! Your {tipo} insurance ends in 7 days, on {data}. Reply here to renew in time.",
+        "APOIO": "People who asked not to get messages do not get them. You change the texts in Automations."
+      },
+      "ALGO_MUDOU": {
+        "TITULO": "Did anything change?",
+        "PERGUNTA": "Before quoting, ask the person whether anything changed?",
+        "PERGUNTAR": "Ask",
+        "NAO_PERGUNTAR": "Do not ask",
+        "PREVIA": "How the question arrives",
+        "TEXTO": "Hi, {nome}! Your {tipo} insurance ends on {data}. Before renewing: did anything change?",
+        "NADA_MUDOU": "Nothing changed",
+        "MUDOU_ALGO": "Something changed",
+        "DEPOIS": "After “Something changed”",
+        "O_QUE_MUDOU": "What changed?",
+        "CARRO": "I changed cars",
+        "ENDERECO": "I moved house",
+        "OUTRA": "Something else"
+      },
+      "QUEM_COTA": {
+        "TITULO": "Who does the quote?",
+        "ROBO": "Renewal robot",
+        "ROBO_APOIO": "Quotes in Agger and leaves the proposal ready in the renewal.",
+        "AGENTE_APOIO": "{agente} quotes and talks to the person.",
+        "NINGUEM": "Nobody",
+        "NINGUEM_APOIO": "The team quotes and gets a notice when the renewal starts."
+      },
+      "COMO_ENVIA": {
+        "TITULO": "How does the proposal reach the person?",
+        "CONFERE": "Someone checks it and presses Send",
+        "SOZINHA": "It goes out automatically on WhatsApp",
+        "SOZINHA_APOIO": "It goes out with nobody pressing anything. You see everything that went out in each renewal."
+      },
+      "QUEM_RESPONDE": {
+        "TITULO": "Who replies afterwards?",
+        "EQUIPE": "The team",
+        "SEM_AGENTE": "Want an agent to reply automatically? See Agents."
+      },
+      "PALAVRAS": {
+        "TITULO": "Your insurance in plain words",
+        "PERGUNTA": "When the new policy is out, send the person what the insurance covers?",
+        "CONFIRO": "I check it first",
+        "SOZINHO": "It goes out automatically",
+        "NAO_MANDAR": "Do not send"
+      },
+      "COTAR_SOZINHO": {
+        "TITULO": "Quote",
+        "SEM_AGGER": "To quote automatically, connect your account to Agger.",
+        "LIGAR_AGGER": "Connect to Agger",
+        "DESLIGADA": "Automatic quoting is not turned on in your account yet.",
+        "QUERO_LIGAR": "I want it on",
+        "DIALOGO_TITULO": "Automatic quoting",
+        "DIALOGO_TEXTO": "Automatic quoting is turned on by the {instalacao} team. Talk to whoever looks after your account to turn it on."
+      }
+    },
+    "RESULTADOS": {
+      "TITULO": "Renewal results",
+      "HEROI": {
+        "30": "In the last 30 days, you renewed {renovou} of {count} insurance. | In the last 30 days, you renewed {renovou} of {count} insurances.",
+        "90": "In the last 90 days, you renewed {renovou} of {count} insurance. | In the last 90 days, you renewed {renovou} of {count} insurances.",
+        "365": "In the last 12 months, you renewed {renovou} of {count} insurance. | In the last 12 months, you renewed {renovou} of {count} insurances."
+      },
+      "VER_NAO_RENOVARAM": "See the one not renewed | See the {count} not renewed",
+      "VOLTAR": "Back to insurance",
+      "PERIODO": {
+        "ROTULO": "Period",
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "365": "Last 12 months"
+      },
+      "MOTIVOS": "Why it was not renewed",
+      "RECORTE": {
+        "TITULO": "Who renewed the most",
+        "ROTULO": "View by",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "CUIDA": "Who looks after it"
+      },
+      "RENOVARAM": "{count} of {total} renewed | {count} of {total} renewed",
+      "VENCEM_30": "Ending in the next 30 days: {count}.",
+      "VER_QUAIS": "See which",
+      "VAZIO": "No insurance ended in this period.",
+      "ERRO": "I could not show the results. Try again."
+    },
+    "PALAVRAS": {
+      "TITULO": "Your insurance in plain words",
+      "LENDO": "Reading the policy to write…",
+      "ERRO": "I could not write the text. Try again.",
+      "TENTAR": "Try again",
+      "OI": "Hi, {nome}! Your {tipo} insurance with {seguradora} started on {data}.",
+      "COBRE": "What it covers: {cobre}.",
+      "SE_ACONTECER": "If anything happens: message me here on WhatsApp. I will tell you what to do.",
+      "VALE": "What is written in your policy is what counts.",
+      "ENVIAR_A": "Send to {nome}",
+      "ALTERAR": "Change the text",
+      "TEXTO": "Message text",
+      "SALVAR": "Save",
+      "VOLTAR": "Back",
+      "FALTA_TEXTO": "Write the message text.",
+      "ENVIADO": "Sent on {data}, at {hora}.",
+      "ENVIADO_SOZINHO": "Sent automatically on {data}, at {hora}.",
+      "VER_ENVIADO": "See what was sent",
+      "ESCONDER": "Hide what was sent",
+      "AVISO_ENVIADO": "Text sent to {nome}.",
+      "AVISO_SALVO": "Text saved."
     }
   }
 }

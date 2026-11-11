@@ -11,9 +11,10 @@ import { CHAVES_DOS_DESTINOS_DE_SEGURO } from '../../../carteira/destinosDeSegur
 import { COMO } from '../../../carteira/passosDeTrazerSeguros';
 
 // #2897 — "Conferir" dos seguros, igual para a planilha, os PDFs e o Agger: a
-// frase do que achei, os contadores, o que acontece amanhã cedo, as fichas de
-// exemplo, o que precisa da pessoa, o que não é apólice, o que vou guardar e o
-// botão único de trazer, que sobe a cada problema resolvido.
+// frase do que achei, os contadores, o que acontece amanhã cedo, o que precisa
+// da pessoa, as fichas de exemplo, o que não é apólice e o que vou guardar. O
+// botão único de trazer (que sobe a cada problema resolvido), o Voltar e a
+// frase do desfazer ficam numa barra sempre à vista, no fim da área de conteúdo.
 const props = defineProps({
   leitura: { type: Object, required: true },
   contadores: { type: Array, required: true },
@@ -129,11 +130,6 @@ const irParaPrecisam = () => {
       </p>
     </div>
 
-    <ExemplosComSeguros
-      v-if="leitura.exemplos.length"
-      :exemplos="leitura.exemplos"
-    />
-
     <PrecisamDosSeguros
       v-if="leitura.problemas.length"
       :problemas="leitura.problemas"
@@ -143,6 +139,11 @@ const irParaPrecisam = () => {
       @guardar="(linha, valor) => emit('guardar', linha, valor)"
       @deixar-de-fora="linha => emit('deixarDeFora', linha)"
       @reabrir="linha => emit('reabrir', linha)"
+    />
+
+    <ExemplosComSeguros
+      v-if="leitura.exemplos.length"
+      :exemplos="leitura.exemplos"
     />
 
     <section
@@ -172,33 +173,43 @@ const irParaPrecisam = () => {
       @trocar="(coluna, destino) => emit('trocar', coluna, destino)"
     />
 
-    <div class="flex flex-col gap-4">
-      <p class="flex items-center gap-2 m-0 text-base text-n-slate-11">
-        <span class="i-lucide-undo-2 size-5 shrink-0" aria-hidden="true" />
+    <div v-if="comErro" data-carteira="erro">
+      <ErroComTentarDeNovo
+        :mensagem="tc('ERRO_TRAZER')"
+        @tentar="emit('tentar')"
+      />
+    </div>
+
+    <!-- A ação principal fica sempre à vista: a barra gruda no fim da área de
+         conteúdo. Ela ocupa lugar na página (não flutua por cima), então o
+         último bloco nunca fica coberto. -->
+    <div
+      data-carteira="barra-de-trazer"
+      class="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 px-5 pt-4 -mx-5 border-t md:-mx-8 md:px-8 border-n-weak bg-n-surface-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+    >
+      <Button
+        :data-carteira="marcas.botao"
+        size="lg"
+        class="flex-1 sm:flex-none"
+        :label="tc('TRAZER', { count: total }, total)"
+        :disabled="ocupado"
+        @click="emit('trazer')"
+      />
+      <Button
+        slate
+        faded
+        size="lg"
+        data-carteira="voltar-do-conferir"
+        :label="t('RELACIONAMENTOS.COMUM.VOLTAR')"
+        @click="emit('voltar')"
+      />
+      <p
+        data-carteira="sossego"
+        class="flex items-center gap-2 m-0 text-sm basis-full sm:basis-auto text-n-slate-11"
+      >
+        <span class="i-lucide-undo-2 size-4 shrink-0" aria-hidden="true" />
         {{ tc('SOSSEGO') }}
       </p>
-      <div v-if="comErro" data-carteira="erro">
-        <ErroComTentarDeNovo
-          :mensagem="tc('ERRO_TRAZER')"
-          @tentar="emit('tentar')"
-        />
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <Button
-          :data-carteira="marcas.botao"
-          size="lg"
-          :label="tc('TRAZER', { count: total }, total)"
-          :disabled="ocupado"
-          @click="emit('trazer')"
-        />
-        <Button
-          slate
-          faded
-          size="lg"
-          :label="t('RELACIONAMENTOS.COMUM.VOLTAR')"
-          @click="emit('voltar')"
-        />
-      </div>
     </div>
   </section>
 </template>

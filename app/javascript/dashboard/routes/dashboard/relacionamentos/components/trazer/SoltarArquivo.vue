@@ -12,6 +12,7 @@ const props = defineProps({
   tipoDeErro: { type: String, default: '' },
   // #2897 — outro arquivo que não a planilha (o PDF do seguro): quem usa diz o
   // título, o apoio, o ícone e o que o seletor aceita. Sem isso, é a planilha.
+  // Com título próprio e sem apoio, a linha de apoio não aparece.
   titulo: { type: String, default: '' },
   apoio: { type: String, default: '' },
   icone: { type: String, default: 'i-lucide-file-spreadsheet' },
@@ -83,8 +84,9 @@ const aoSoltar = evento => {
       <span
         :id="`${id}-apoio`"
         class="text-base pointer-events-none text-n-slate-11"
+        :class="{ hidden: titulo && !apoio }"
       >
-        {{ apoio || t('RELACIONAMENTOS_TRAZER.ENVIAR.APOIO') }}
+        {{ apoio || (titulo ? '' : t('RELACIONAMENTOS_TRAZER.ENVIAR.APOIO')) }}
       </span>
     </button>
     <input

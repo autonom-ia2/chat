@@ -10,6 +10,7 @@ import { carteiraFonte } from '../../fonte/carteiraFonte';
 import {
   PESSOA_DO_PAINEL_NA_DEMO,
   casoPedido,
+  cotacaoDesligada,
   pecaPedida,
 } from '../../fonte/modoCarteira';
 import { estadoDemo } from '../../fonte/modoDemo';
@@ -21,13 +22,19 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import LinhaDoSeguroNaFicha from './LinhaDoSeguroNaFicha.vue';
+import GavetaDaRenovacao from './renovacao/GavetaDaRenovacao.vue';
 
 // #2897 — os seguros da pessoa no painel da conversa: quem atende vê sem sair
 // do chat. É leitura: cada linha abre a gaveta do seguro por cima da conversa.
 // Recolhe e abre pelo título; começa aberto. Na demonstração a conversa é de
 // verdade e a pessoa dela não está na base inventada: o painel mostra os
 // seguros da pessoa de exemplo das outras jornadas. "Guardar seguro de outra
-// corretora" abre a gaveta da Tela 20 (EntradaDeFora).
+// corretora" abre a gaveta da Tela 20 (EntradaDeFora), que fala com o primeiro
+// nome de quem está na conversa (`nomeDoContato`).
+defineProps({
+  nomeDoContato: { type: String, default: '' },
+});
+
 const { t } = useI18n();
 const tp = chave => t(`RELACIONAMENTOS_CARTEIRA.PAINEL.${chave}`);
 const router = useRouter();
@@ -42,11 +49,18 @@ const fonte = carteiraFonte({
   demo: estadoDemo(),
   peca: pecaPedida(doEndereco),
   caso: casoPedido(doEndereco),
+  cotacaoDesligada: cotacaoDesligada(doEndereco),
 });
 const lista = useSegurosDe(() => fonte.daPessoa(pessoaId));
 
 const aberto = ref(true);
 const apoliceAberta = ref(null);
+const renovacaoAberta = ref(null);
+// As duas gavetas não ficam abertas juntas.
+const abrirRenovacao = id => {
+  apoliceAberta.value = null;
+  renovacaoAberta.value = id;
+};
 
 const verNaFicha = () =>
   router.push({
@@ -55,6 +69,7 @@ const verNaFicha = () =>
   });
 const abrirSegurado = ({ tipo, id }) => {
   apoliceAberta.value = null;
+  renovacaoAberta.value = null;
   return router.push(
     tipo === 'empresa'
       ? { name: 'relacionamentos_empresa', params: { companyId: id } }
@@ -123,7 +138,10 @@ onMounted(lista.carregar);
             @pdf="verPdf"
           />
         </ul>
-        <div class="flex flex-col items-start">
+        <div
+          data-carteira="painel-acoes"
+          class="flex flex-col items-start gap-3"
+        >
           <Button
             v-if="lista.seguros.value.length"
             link
@@ -136,6 +154,7 @@ onMounted(lista.carregar);
             marca="painel-guardar-de-fora"
             :pessoa-id="pessoaId"
             :fonte="fonte"
+            :nome-do-contato="nomeDoContato"
             @mudou="lista.atualizar"
           />
         </div>
@@ -145,6 +164,14 @@ onMounted(lista.carregar);
       :apolice-id="apoliceAberta"
       :fonte="fonte"
       @fechar="apoliceAberta = null"
+      @mudou="lista.atualizar"
+      @abrir-segurado="abrirSegurado"
+      @abrir-renovacao="abrirRenovacao"
+    />
+    <GavetaDaRenovacao
+      :seguro-id="renovacaoAberta"
+      :fonte="fonte"
+      @fechar="renovacaoAberta = null"
       @mudou="lista.atualizar"
       @abrir-segurado="abrirSegurado"
     />

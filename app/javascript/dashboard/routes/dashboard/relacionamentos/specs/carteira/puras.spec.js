@@ -193,6 +193,10 @@ describe('fraseDoHeroiDeSeguros', () => {
 describe('quandoDoSeguro', () => {
   it.each([
     [{ termina: em(18) }, { id: 'VENCE_EM', count: 18, data: em(18) }],
+    [{ termina: em(90) }, { id: 'VENCE_EM', count: 90, data: em(90) }],
+    // Acima de 90 dias ninguém conta em dias: só a data.
+    [{ termina: em(91) }, { id: 'VENCE_NA_DATA', data: em(91) }],
+    [{ termina: em(214) }, { id: 'VENCE_NA_DATA', data: em(214) }],
     [{ termina: em(1) }, { id: 'VENCE_AMANHA', data: em(1) }],
     [{ termina: em(0) }, { id: 'VENCE_HOJE' }],
     [{ termina: em(-1) }, { id: 'VENCEU_ONTEM' }],

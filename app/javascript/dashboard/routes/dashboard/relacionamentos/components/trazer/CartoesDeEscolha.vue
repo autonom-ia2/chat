@@ -14,6 +14,9 @@ const props = defineProps({
   // Faltou escolher: o grupo fica marcado como inválido e aponta para o aviso.
   invalido: { type: Boolean, default: false },
   descritoPor: { type: String, default: undefined },
+  // #2897 — duas respostas lado a lado, com a mesma largura (numa gaveta
+  // estreita três colunas espremem o texto). O padrão segue três colunas.
+  duasColunas: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -54,7 +57,8 @@ const aoTecla = (evento, indice) => {
     :aria-labelledby="rotuloId"
     :aria-invalid="invalido ? 'true' : undefined"
     :aria-describedby="descritoPor"
-    class="grid gap-3 sm:grid-cols-3"
+    class="grid gap-3"
+    :class="duasColunas ? 'grid-cols-2' : 'sm:grid-cols-3'"
   >
     <button
       v-for="(opcao, indice) in opcoes"
@@ -67,22 +71,29 @@ const aoTecla = (evento, indice) => {
       v-bind="opcao.atributos"
       :aria-checked="modelValue === opcao.id ? 'true' : 'false'"
       :tabindex="indice === comTab ? 0 : -1"
-      class="flex items-center justify-between gap-3 px-5 py-4 text-lg font-semibold text-start transition-colors min-h-16 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      :class="
+      class="flex items-center justify-between min-w-0 font-semibold text-start transition-colors min-h-16 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      :class="[
         modelValue === opcao.id
           ? 'bg-n-blue-3 text-n-slate-12 ring-2 ring-inset ring-n-blue-9'
-          : 'bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1'
-      "
+          : 'bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1',
+        duasColunas ? 'gap-2 px-4 py-3 text-base' : 'gap-3 px-5 py-4 text-lg',
+      ]"
       @click="emit('update:modelValue', opcao.id)"
       @keydown="aoTecla($event, indice)"
     >
-      <span v-if="opcao.descricao" class="flex flex-col gap-1">
+      <span
+        v-if="opcao.descricao"
+        data-texto-do-cartao
+        class="flex flex-col min-w-0 gap-1"
+      >
         {{ opcao.rotulo }}
         <span class="text-base font-normal text-n-slate-11">
           {{ opcao.descricao }}
         </span>
       </span>
-      <template v-else>{{ opcao.rotulo }}</template>
+      <span v-else data-texto-do-cartao class="min-w-0">
+        {{ opcao.rotulo }}
+      </span>
       <span
         v-if="modelValue === opcao.id"
         class="i-lucide-check size-5 shrink-0 text-n-blue-11"

@@ -36,6 +36,14 @@ const marca = nome => (props.compacta ? `painel-${nome}` : `seguro-${nome}`);
 
 const linhas = computed(() => {
   const { seguro, agora, compacta } = props;
+  // No painel o selo já diz "Em outra corretora": a linha diz quando termina.
+  if (compacta && deFora.value) {
+    return [
+      t('RELACIONAMENTOS_CARTEIRA.PAINEL.DE_FORA_TERMINA', {
+        data: textos.dataInteira(seguro.termina),
+      }),
+    ];
+  }
   if (compacta) return [textos.quando(seguro, agora, ONDE.PAINEL)];
   if (deFora.value) {
     return [

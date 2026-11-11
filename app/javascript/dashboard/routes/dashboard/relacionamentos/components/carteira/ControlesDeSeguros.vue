@@ -9,7 +9,10 @@ import { ORDENS_DE_SEGUROS } from '../../fonte/carteiraFonte';
 
 // #2897 — a faixa de controles da aba Seguros: busca, ordem, "Mais filtros" e
 // os dois atalhos discretos (Resultados e Ajustar renovações). Em 390 px os
-// atalhos vão para o menu "⋯".
+// atalhos vão para o menu "⋯". A busca nunca fica mais estreita que o texto de
+// exemplo dela: 26rem menos os 6rem das duas margens do campo dão 20rem para
+// "Buscar por nome, placa ou documento" (cerca de 18,5rem); sem esse espaço, os
+// atalhos descem para a linha de baixo.
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -59,7 +62,10 @@ const itensDoMenu = computed(() =>
 
 <template>
   <div class="flex flex-wrap items-center min-w-0 gap-3">
-    <div data-carteira="busca" class="w-full md:w-auto md:min-w-72 md:flex-1">
+    <div
+      data-carteira="busca"
+      class="w-full md:w-auto md:min-w-[26rem] md:flex-1"
+    >
       <CampoDeBusca
         :model-value="busca"
         :placeholder="tc('BUSCA')"

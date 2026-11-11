@@ -9,6 +9,12 @@
 // para tudo bater entre as telas.
 import { pessoas } from './base';
 import { segurosDaCarteira } from './carteira';
+import {
+  FUNIS_DA_DEMO,
+  ajustesDaDemo,
+  jaEscolheuNaDemo,
+  salvarAjustesNaDemo,
+} from './carteiraAjustes';
 import { PLANILHA_DE_ORIGEM, SEGURADORAS } from './carteiraPlano';
 import {
   aplicarConserto,
@@ -18,9 +24,10 @@ import {
   porcentagemDaTrazida,
   quemTrouxeNaDemo,
 } from './trazer';
+import { quantosEntram } from '../carteira/ajustesDaRenovacao';
 import { DESTINOS_DE_SEGURO } from '../carteira/destinosDeSeguro';
 import { DIA_EM_MS } from '../fonte/grupos';
-import { SELOS, seloDoSeguro } from '../fonte/selosDoSeguro';
+import { diasParaTerminar, estaValendo } from '../fonte/selosDoSeguro';
 import { SITUACAO_DO_PROBLEMA } from '../trazer/contagem';
 import { DESTINOS } from '../trazer/destinos';
 import { SITUACOES_DA_LISTA } from '../trazer/prazo';
@@ -28,8 +35,42 @@ import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 export const ORIGENS = { PLANILHA: 'planilha', PDFS: 'pdfs', AGGER: 'agger' };
 
 const [ATLANTICA, HORIZONTE, SERRA_AZUL, AURORA] = SEGURADORAS;
-const DIAS_ANTES = 60;
 const SEM_SEGUROS = 0;
+
+// ---- o que acontece amanhã cedo: quantos seguros entram em renovação ---------
+
+// Em quantos dias termina cada seguro que ainda vale. A linha "Amanhã cedo, N
+// seguros…" sai daqui e dos dias que a conta escolheu (Tela 10 e Tela 13).
+const vencimentosDe = (seguros, agora) =>
+  seguros
+    .filter(seguro => estaValendo(seguro, agora))
+    .map(seguro => diasParaTerminar(seguro, agora));
+
+const efeitoDe = (vencimentos, dias = ajustesDaDemo().dias) => ({
+  dias,
+  seguros: quantosEntram(vencimentos, dias),
+  vencimentos,
+});
+
+// Os 39 seguros dos PDFs não estão na carteira fictícia: estes são os que
+// terminam nos próximos três meses (6 deles em até 60 dias).
+const VENCIMENTOS_DOS_PDFS = [4, 12, 21, 28, 45, 58, 75, 88];
+
+// A conta sem seguro ainda não escolheu onde ficam as renovações: a pergunta
+// aparece na primeira vez que ela traz seguros (Tela 10).
+export const renovacoesNaDemo = estado => ({
+  escolhido: estado === 'cheio' || jaEscolheuNaDemo(),
+  funis: FUNIS_DA_DEMO,
+});
+
+// Guarda a escolha e refaz a linha do que acontece amanhã cedo. Sem escolha
+// (quem não pode mexer em funis segue sem escolher), nenhum seguro entra ainda.
+export const escolherRenovacoes = (leitura, escolha, agora) => {
+  const { vencimentos } = leitura.efeito;
+  if (!escolha) return { ...leitura, efeito: efeitoDe([]), semEscolha: true };
+  const { dias } = salvarAjustesNaDemo(escolha, agora);
+  return { ...leitura, efeito: efeitoDe(vencimentos, dias) };
+};
 
 // Cada problema é de uma pessoa da base (`pessoaId`): o nome vem de lá.
 const abertos = (problemas, agora) => {
@@ -111,7 +152,7 @@ export const leituraDaPlanilha = (id, arquivo, agora) => ({
   jaEstavam: 120,
   semTelefone: SEM_SEGUROS,
   naoEApolice: [],
-  efeito: { dias: DIAS_ANTES, seguros: 22 },
+  efeito: efeitoDe(vencimentosDe(segurosDaCarteira(agora), agora)),
   seguradoras: [...SEGURADORAS],
   exemplos: exemplosDe(EXEMPLOS_DA_PLANILHA, agora),
   problemas: abertos(PROBLEMAS_DA_PLANILHA, agora),
@@ -169,7 +210,7 @@ export const leituraDosPdfs = (id, agora, caso = null) => ({
   jaEstavam: SEM_SEGUROS,
   semTelefone: SEM_SEGUROS,
   naoEApolice: [BOLETO],
-  efeito: { dias: DIAS_ANTES, seguros: 6 },
+  efeito: efeitoDe(VENCIMENTOS_DOS_PDFS),
   seguradoras: [...SEGURADORAS],
   exemplos: exemplosDe(EXEMPLOS_DOS_PDFS, agora),
   problemas: abertos(
@@ -252,12 +293,7 @@ export const leituraDoAgger = (id, agora) => {
     jaEstavam: quantasPessoas,
     semTelefone,
     naoEApolice: [],
-    efeito: {
-      dias: DIAS_ANTES,
-      seguros: doAgger.filter(
-        seguro => seloDoSeguro(seguro, agora) === SELOS.EM_RENOVACAO
-      ).length,
-    },
+    efeito: efeitoDe(vencimentosDe(doAgger, agora)),
     seguradoras: [...SEGURADORAS],
     exemplos: [],
     problemas: [],
@@ -362,6 +398,8 @@ export const demoDeTrazerSeguros = {
   leituraDosPdfs,
   buscaDoAgger,
   leituraDoAgger,
+  renovacoesNaDemo,
+  escolherRenovacoes,
   historicoDeSeguros,
   entradaTrazida,
   aplicarConserto,

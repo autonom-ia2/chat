@@ -1,26 +1,36 @@
-// #2897 — o seguro aberto mora no endereço (`?apolice=<id>`): o link e o print
-// abrem a gaveta direto. Abrir e fechar só trocam esse pedaço do endereço.
+// #2897 — o seguro aberto mora no endereço (`?apolice=<id>`), e a renovação
+// dele também (`?renovacao=<id do seguro>`): o link e o print abrem a gaveta
+// direto. Abrir e fechar só trocam esse pedaço do endereço. As duas gavetas não
+// ficam abertas juntas: abrir uma tira a outra do endereço.
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+
+const CHAVES = ['apolice', 'renovacao'];
 
 export const useApoliceNaUrl = () => {
   const route = useRoute();
   const router = useRouter();
 
-  const apolice = computed(() => {
-    const id = Number(route.query?.apolice);
-    return Number.isInteger(id) && id > 0 ? id : null;
-  });
+  const idEm = chave =>
+    computed(() => {
+      const id = Number(route.query?.[chave]);
+      return Number.isInteger(id) && id > 0 ? id : null;
+    });
 
-  const semApolice = () =>
+  const semGaveta = () =>
     Object.fromEntries(
-      Object.entries(route.query ?? {}).filter(([chave]) => chave !== 'apolice')
+      Object.entries(route.query ?? {}).filter(
+        ([chave]) => !CHAVES.includes(chave)
+      )
     );
+  const abrirEm = chave => id =>
+    router.push({ query: { ...semGaveta(), [chave]: String(id) } });
 
   return {
-    apolice,
-    abrir: id =>
-      router.push({ query: { ...semApolice(), apolice: String(id) } }),
-    fechar: () => router.push({ query: semApolice() }),
+    apolice: idEm('apolice'),
+    renovacao: idEm('renovacao'),
+    abrir: abrirEm('apolice'),
+    abrirRenovacao: abrirEm('renovacao'),
+    fechar: () => router.push({ query: semGaveta() }),
   };
 };

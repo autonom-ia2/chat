@@ -31,9 +31,11 @@ const isSmallScreen = computed(
 );
 
 // #2138: com o painel novo, um clique dentro de um Dialog aberto não fecha o painel.
+// #2897: nem dentro de uma gaveta aberta por cima dele (fica no body, fora do painel).
+const POR_CIMA_DO_PAINEL = 'dialog[open], [role="dialog"][aria-modal="true"]';
 const painelNovo = usePainelNovo();
 const closeContactPanel = event => {
-  if (painelNovo.value && event?.target?.closest?.('dialog[open]')) return;
+  if (painelNovo.value && event?.target?.closest?.(POR_CIMA_DO_PAINEL)) return;
   if (isSmallScreen.value && uiSettings.value?.is_contact_sidebar_open) {
     updateUISettings({
       is_contact_sidebar_open: false,

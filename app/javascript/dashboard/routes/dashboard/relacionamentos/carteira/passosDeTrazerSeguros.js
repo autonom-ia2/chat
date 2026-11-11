@@ -1,7 +1,9 @@
 // #2897 — os passos de "trazer seguros", em funções puras. Primeiro a escolha
 // de como trazer (planilha, PDFs ou Agger); depois cada jeito tem o seu começo
 // e todos terminam igual: conferir -> trazendo -> pronto. Ler os PDFs e buscar
-// no Agger acontecem dentro do primeiro passo de cada um (enviar e ligar).
+// no Agger acontecem dentro do primeiro passo de cada um (enviar e ligar). Na
+// primeira vez que a conta traz seguros, antes de conferir vem a pergunta
+// "Onde ficam as renovações?".
 import { ETAPAS } from '../trazer/etapas';
 
 export const COMO = { PLANILHA: 'planilha', PDFS: 'pdfs', AGGER: 'agger' };
@@ -14,6 +16,7 @@ export const PASSOS = {
   ENVIAR: 'enviar',
   PERGUNTA: 'pergunta',
   LIGAR: 'ligar',
+  ONDE: 'onde',
   CONFERIR: 'conferir',
   TRAZENDO: 'trazendo',
   PRONTO: 'pronto',
@@ -31,10 +34,17 @@ export const primeiroPasso = como => PRIMEIRO[como] ?? PASSOS.COMO;
 const ANTES = {
   [COMO.PLANILHA]: {
     [PASSOS.PERGUNTA]: PASSOS.ENVIAR,
+    [PASSOS.ONDE]: PASSOS.PERGUNTA,
     [PASSOS.CONFERIR]: PASSOS.PERGUNTA,
   },
-  [COMO.PDFS]: { [PASSOS.CONFERIR]: PASSOS.ENVIAR },
-  [COMO.AGGER]: { [PASSOS.CONFERIR]: PASSOS.LIGAR },
+  [COMO.PDFS]: {
+    [PASSOS.ONDE]: PASSOS.ENVIAR,
+    [PASSOS.CONFERIR]: PASSOS.ENVIAR,
+  },
+  [COMO.AGGER]: {
+    [PASSOS.ONDE]: PASSOS.LIGAR,
+    [PASSOS.CONFERIR]: PASSOS.LIGAR,
+  },
 };
 
 export const passoAnterior = (como, passo) =>

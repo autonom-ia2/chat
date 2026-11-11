@@ -19,7 +19,11 @@ const emit = defineEmits(['entrar', 'buscar', 'voltar']);
 const { t } = useI18n();
 const ta = chave => t(`RELACIONAMENTOS_CARTEIRA.TRAZER.AGGER.${chave}`);
 const id = useId();
-const ids = { usuario: `${id}-usuario`, senha: `${id}-senha` };
+const ids = {
+  usuario: `${id}-usuario`,
+  senha: `${id}-senha`,
+  senhaSegura: `${id}-senha-segura`,
+};
 
 const usuario = ref('');
 const senha = ref('');
@@ -135,24 +139,49 @@ watch(senha, () => {
         :rotulo="ta('USUARIO')"
         :falta="falta.usuario"
       />
-      <CampoDoSeguro
-        :id="ids.senha"
-        v-model="senha"
-        :type="senhaVisivel ? 'text' : 'password'"
-        autocomplete="off"
-        data-carteira="agger-senha"
-        :rotulo="ta('SENHA')"
-        :falta="falta.senha"
-      />
-      <button
-        type="button"
-        data-carteira="agger-mostrar-senha"
-        :aria-pressed="senhaVisivel"
-        class="self-start p-0 text-sm underline bg-transparent border-0 rounded-lg min-h-11 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-        @click="senhaVisivel = !senhaVisivel"
-      >
-        {{ ta(senhaVisivel ? 'ESCONDER_SENHA' : 'MOSTRAR_SENHA') }}
-      </button>
+      <div data-carteira="agger-campo-senha" class="flex flex-col gap-1.5">
+        <CampoDoSeguro
+          :id="ids.senha"
+          v-model="senha"
+          :type="senhaVisivel ? 'text' : 'password'"
+          autocomplete="off"
+          data-carteira="agger-senha"
+          :rotulo="ta('SENHA')"
+          :falta="falta.senha"
+          :descrito-por="ids.senhaSegura"
+        >
+          <template #dentro>
+            <!-- O nome do botão não muda: quem diz se a senha está à mostra é o
+                 aria-pressed. -->
+            <button
+              type="button"
+              data-carteira="agger-mostrar-senha"
+              :aria-label="ta('MOSTRAR_SENHA')"
+              :title="ta('MOSTRAR_SENHA')"
+              :aria-pressed="senhaVisivel ? 'true' : 'false'"
+              class="absolute inset-y-0 inline-flex items-center justify-center p-0 bg-transparent border-0 rounded-lg end-0 size-12 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              @click="senhaVisivel = !senhaVisivel"
+            >
+              <span
+                class="size-5"
+                :class="senhaVisivel ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                aria-hidden="true"
+              />
+            </button>
+          </template>
+        </CampoDoSeguro>
+        <p
+          :id="ids.senhaSegura"
+          data-carteira="agger-senha-segura"
+          class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
+        >
+          <span
+            class="i-lucide-lock size-4 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          {{ ta('SENHA_SEGURA') }}
+        </p>
+      </div>
       <p class="m-0 text-sm text-n-slate-11">{{ ta('APOIO') }}</p>
     </div>
     <p

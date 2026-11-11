@@ -9,6 +9,9 @@ const props = defineProps({
   atual: { type: String, required: true },
   // Enquanto ainda está trazendo, o passo 3 se chama "Trazendo".
   trazendo: { type: Boolean, default: false },
+  // #2897 — quando não se envia arquivo (a busca no Agger), o passo 1 tem
+  // outro nome; quem usa manda o texto pronto.
+  primeiro: { type: String, default: '' },
 });
 
 const { t } = useI18n();
@@ -17,6 +20,15 @@ const NOMES = {
   [ETAPAS.ENVIAR]: 'RELACIONAMENTOS_TRAZER.ETAPAS.ENVIAR',
   [ETAPAS.CONFERIR]: 'RELACIONAMENTOS_TRAZER.ETAPAS.CONFERIR',
   [ETAPAS.PRONTO]: 'RELACIONAMENTOS_TRAZER.ETAPAS.PRONTO',
+};
+
+const nomeDe = item => {
+  if (item.id === ETAPAS.ENVIAR && props.primeiro) return props.primeiro;
+  return t(
+    item.atual && props.trazendo && item.id === ETAPAS.PRONTO
+      ? 'RELACIONAMENTOS_TRAZER.ETAPAS.TRAZENDO'
+      : NOMES[item.id]
+  );
 };
 
 const itens = computed(() => {
@@ -58,13 +70,7 @@ const itens = computed(() => {
         <span v-if="item.feita" class="i-lucide-check size-3.5" />
         <template v-else>{{ item.numero }}</template>
       </span>
-      <span>{{
-        t(
-          item.atual && trazendo && item.id === ETAPAS.PRONTO
-            ? 'RELACIONAMENTOS_TRAZER.ETAPAS.TRAZENDO'
-            : NOMES[item.id]
-        )
-      }}</span>
+      <span>{{ nomeDe(item) }}</span>
       <span v-if="item.feita" class="sr-only">
         {{ t('RELACIONAMENTOS_TRAZER.ETAPAS.FEITA') }}
       </span>

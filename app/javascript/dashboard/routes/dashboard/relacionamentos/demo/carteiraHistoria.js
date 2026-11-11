@@ -63,8 +63,41 @@ const daRenovacaoCompleta = (seguro, agora) => {
 };
 
 const SEGURO_DA_RENOVACAO_COMPLETA = 1;
+const MINUTOS_ATE_ENVIAR = 25 * 60;
+const PRONTA_HA_DIAS = 1;
 
-const daSituacao = (seguro, agora) => {
+// A proposta de uma renovação qualquer: quando ficou pronta e, se já saiu, se
+// alguém enviou ou se saiu sozinha. O que a pessoa enviou agora já está nos
+// "feitos" (enviadaPor com papel), e não se repete aqui.
+const daProposta = (seguro, agora) => {
+  const { proposta } = seguro.renovacao ?? {};
+  if (!proposta) return [];
+  const pronta = passo(
+    'proposta_pronta',
+    proposta.enviadaEm
+      ? proposta.enviadaEm - MINUTOS_ATE_ENVIAR
+      : diaEHora(agora, PRONTA_HA_DIAS, 9, 40),
+    {
+      quem: ROBO,
+      valores: {
+        seguradora: proposta.seguradora ?? seguro.seguradora,
+        valor: proposta.valor,
+        variacao: proposta.variacao,
+      },
+    }
+  );
+  if (!proposta.enviadaEm || proposta.enviadaPor?.papel) return [pronta];
+  const envio = proposta.enviadaSozinha
+    ? passo('proposta_enviada_sozinha', proposta.enviadaEm)
+    : passo('proposta_enviada', proposta.enviadaEm, {
+        quem: { nome: proposta.enviadaPor },
+        acao: 'ver_proposta',
+      });
+  return [envio, pronta];
+};
+
+const daSituacao = (seguro, agora, feitos) => {
+  const jaFeito = tipo => feitos.some(item => item.tipo === tipo);
   if (
     seguro.id === SEGURO_DA_RENOVACAO_COMPLETA &&
     seguro.renovacao?.proposta
@@ -72,6 +105,7 @@ const daSituacao = (seguro, agora) => {
     return daRenovacaoCompleta(seguro, agora);
   }
   return [
+    ...daProposta(seguro, agora),
     seguro.renovacao
       ? passo('card_nasceu', diaEHora(agora, CARD_NASCE_HA_DIAS, 7, 0), {
           valores: { funil: seguro.renovacao.funil, etapa: 'A vencer' },
@@ -88,8 +122,11 @@ const daSituacao = (seguro, agora) => {
           ],
         })
       : null,
-    seguro.renovadoEm ? passo('renovou', seguro.renovadoEm) : null,
-    seguro.motivo
+    // O que foi marcado agora no card já está nos "feitos".
+    seguro.renovadoEm && !jaFeito('renovou')
+      ? passo('renovou', seguro.renovadoEm)
+      : null,
+    seguro.motivo && !seguro.renovacao
       ? passo('nao_renovou', seguro.termina, {
           valores: { motivo: seguro.motivo },
         })
@@ -106,7 +143,7 @@ const doQueFoiFeito = feitos =>
 export const historiaDaDemo = (seguro, feitos = [], agora = Date.now()) =>
   [
     ...doQueFoiFeito(feitos).reverse(),
-    ...daSituacao(seguro, agora),
+    ...daSituacao(seguro, agora, feitos),
     chegada(seguro),
   ]
     .map((item, ordem) => ({ ...item, ordem }))

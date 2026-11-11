@@ -6,6 +6,7 @@
 // memória deste módulo, para a tela refletir o que foi feito, e devolvem uma
 // cópia nova: nada que chega é alterado.
 import { empresas, pessoas } from './base';
+import { comOsAjustes, esquecerAjustesDaDemo } from './carteiraAjustes';
 import { cpfFalso } from './documentosFalsos';
 import { historiaDaDemo } from './carteiraHistoria';
 import { arquivosDeExemplo, lerDeFora } from './seguroDeFora';
@@ -26,7 +27,7 @@ const DIAS_DO_LEMBRETE = 60;
 const AUMENTO_DA_APOLICE_NOVA = 1.03;
 const SALTO_DO_NUMERO_NOVO = 1000;
 
-const emSegundos = ms => Math.floor(ms / 1000);
+export const emSegundos = ms => Math.floor(ms / 1000);
 const daquiA = (agora, dias) => emSegundos(agora + dias * DIA_EM_MS);
 const ha = (agora, dias) => (dias ? daquiA(agora, -dias) : null);
 
@@ -136,19 +137,30 @@ const PRIMEIRO_GUARDADO_DE_FORA = 9001;
 export const esquecerEscritasDaCarteira = () => {
   escritas = new Map();
   guardadosDeFora = [];
+  esquecerAjustesDaDemo();
 };
 
 const SEM_ESCRITA = { campos: {}, feitos: [], antesDoPdf: null };
-const escritaDe = id => escritas.get(id) ?? SEM_ESCRITA;
 
-const escrever = (id, mudanca) => {
+// Exportadas para as escritas da renovação (demo/carteiraRenovacao.js).
+export const escritaDe = id => escritas.get(id) ?? SEM_ESCRITA;
+
+export const escrever = (id, mudanca) => {
   const atual = escritaDe(id);
   escritas = new Map(escritas).set(id, { ...atual, ...mudanca(atual) });
 };
 
-const comEscritas = seguro => ({ ...seguro, ...escritaDe(seguro.id).campos });
+// Volta a escrita de um seguro para como estava num momento guardado.
+export const reporEscrita = (id, anterior) => {
+  escritas = new Map(escritas).set(id, anterior);
+};
 
-const feito = (atual, tipo, agora, valores = {}) => [
+// O que foi escrito e, por cima, o que os ajustes da conta mudam (a proposta
+// que sai sozinha, o texto em palavras simples).
+const comEscritas = seguro =>
+  comOsAjustes({ ...seguro, ...escritaDe(seguro.id).campos });
+
+export const feito = (atual, tipo, agora, valores = {}) => [
   ...atual.feitos,
   { tipo, quando: emSegundos(agora), valores },
 ];
@@ -344,7 +356,7 @@ export const guardarPdf = (id, { usar = [] } = {}, agora = Date.now()) => {
 
 export const desfazerPdf = (id, agora = Date.now()) => {
   const { antesDoPdf } = escritaDe(id);
-  if (antesDoPdf) escritas = new Map(escritas).set(id, antesDoPdf);
+  if (antesDoPdf) reporEscrita(id, antesDoPdf);
   return seguroPorId(id, agora);
 };
 

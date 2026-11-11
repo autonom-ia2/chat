@@ -5,10 +5,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import SoltarArquivo from '../trazer/SoltarArquivo.vue';
-import { formatarValor } from '../../carteira/formatosDoSeguro';
 import { ETAPAS_DO_PDF, useAnexarPdf } from '../../carteira/useAnexarPdf';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
-import { useIdioma } from '../../ficha/idioma';
 import OQueMudou from './OQueMudou.vue';
 
 // #2897 — anexar o PDF de um seguro e ver, lado a lado, o que o PDF diz de
@@ -20,9 +18,6 @@ const props = defineProps({
 });
 const emit = defineEmits(['guardado']);
 
-// Custo de leitura por PDF: número de demonstração (o real sai da bateria com
-// orçamento aprovado; a frase e o lugar ficam).
-const CUSTO_POR_PDF = 0.03;
 const ARQUIVO_DE_EXEMPLO = { name: 'apolice-de-exemplo.pdf' };
 const SO_PDF = '.pdf,application/pdf';
 
@@ -30,7 +25,6 @@ const { t } = useI18n();
 const tp = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.PDF.${chave}`, valores);
 const textos = useTextosDoSeguro();
-const idioma = useIdioma();
 const dialogo = useTemplateRef('dialogo');
 const corpo = useTemplateRef('corpo');
 const pdf = useAnexarPdf(props.fonte);
@@ -41,9 +35,6 @@ const titulo = computed(() => {
     ? tp('TITULO_APOLICE_NOVA')
     : tp('TITULO', { tipo: textos.tipo(pdf.seguro.value) });
 });
-const custo = computed(() =>
-  tp('CUSTO', { valor: formatarValor(CUSTO_POR_PDF, idioma.value) })
-);
 const temMudanca = computed(() => pdf.mudancas.value.length > 0);
 
 // Ao chegar no "O que mudou", o foco vai ao título dele: o leitor de tela diz
@@ -89,7 +80,6 @@ defineExpose({
           <SoltarArquivo
             icone="i-lucide-file-text"
             :titulo="tp('SOLTAR')"
-            :apoio="custo"
             :aceita="SO_PDF"
             @arquivo="ler"
           />

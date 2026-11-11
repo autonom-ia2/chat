@@ -17,7 +17,12 @@ import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
 import { pessoasDosSeguros } from './pessoasDosSeguros';
 
-export const useListaDeSeguros = fonte => {
+// `grupoInicial`: o grupo que o endereço pediu (`?grupo=`); `temporario`: o
+// grupo "Não renovaram" que só existe quando a tela de resultados leva até ele.
+export const useListaDeSeguros = (
+  fonte,
+  { grupoInicial = '', temporario = '' } = {}
+) => {
   const { t } = useI18n();
   const daLista = (chave, valores) =>
     t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores);
@@ -27,14 +32,17 @@ export const useListaDeSeguros = fonte => {
     fonte,
     aba: ref(ABA_SEGUROS),
     aoMudarConsulta: marcados.limpar,
-    grupoPadrao: () => GRUPO_PADRAO_DE_SEGUROS,
+    grupoPadrao: () => grupoInicial || GRUPO_PADRAO_DE_SEGUROS,
     ordemPadrao: ORDENS_DE_SEGUROS.VENCE_PRIMEIRO,
     filtrosVazios: FILTROS_DE_SEGUROS_VAZIOS,
     contar: contarFiltrosDeSeguros,
   });
 
   const gruposDaConta = computed(() =>
-    gruposDeSeguros({ aggerLigado: lista.resumo.value?.aggerLigado })
+    gruposDeSeguros({
+      aggerLigado: lista.resumo.value?.aggerLigado,
+      temporario,
+    })
   );
   const grupos = computed(() =>
     gruposDaConta.value.map(({ id, nome }) => ({

@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { diasDesde, diasParaTerminar } from '../../fonte/selosDoSeguro';
+import { diasDesde } from '../../fonte/selosDoSeguro';
+import { quandoDoSeguro } from '../../carteira/quandoDoSeguro';
 import { SITUACOES, situacaoDoSeguro } from '../../carteira/situacaoDoSeguro';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import SelosDoSeguro from './SelosDoSeguro.vue';
@@ -18,11 +19,12 @@ const textos = useTextosDoSeguro();
 const tf = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.GAVETA.FRASE.${chave}`, valores);
 
-const AMANHA = 1;
-const quandoVence = dias => {
-  if (dias === 0) return tf('VENCE_HOJE');
-  return dias === AMANHA ? tf('VENCE_AMANHA') : tf('VENCE_EM', { count: dias });
+// Quando vence: a mesma regra da lista e da ficha (`quandoDoSeguro`).
+const quandoVence = (seguro, agora) => {
+  const { id, count, data } = quandoDoSeguro(seguro, agora);
+  return tf(id, { count, data: data ? textos.dataInteira(data) : '' });
 };
+const AMANHA = 1;
 const quandoVenceu = dias => {
   if (dias === 0) return tf('VENCEU_HOJE');
   return dias === AMANHA
@@ -32,11 +34,10 @@ const quandoVenceu = dias => {
 
 const frases = computed(() => {
   const { seguro, agora } = props;
-  const dias = diasParaTerminar(seguro, agora);
   const porSituacao = {
     [SITUACOES.EM_RENOVACAO]: () => [
-      quandoVence(dias),
-      tf('RENOVACAO_EM', { etapa: seguro.renovacao.etapa }),
+      quandoVence(seguro, agora),
+      textos.renovacao(seguro.renovacao),
     ],
     [SITUACOES.ATIVO]: () => [
       tf('VALE_ATE', { data: textos.dataInteira(seguro.termina) }),

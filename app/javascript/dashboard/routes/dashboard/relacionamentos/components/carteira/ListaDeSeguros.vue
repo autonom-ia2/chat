@@ -13,8 +13,16 @@ import EstadoSemResultado from '../lista/EstadoSemResultado.vue';
 import ListaDeLinhas from '../lista/ListaDeLinhas.vue';
 import MostrarMais from '../lista/MostrarMais.vue';
 import { ABA_SEGUROS, carteiraFonte } from '../../fonte/carteiraFonte';
-import { GRUPO_SEM_TELEFONE } from '../../fonte/gruposDeSeguros';
-import { pecaPedida } from '../../fonte/modoCarteira';
+import {
+  GRUPO_SEM_TELEFONE,
+  grupoConhecido,
+  grupoTemporario,
+} from '../../fonte/gruposDeSeguros';
+import {
+  casoPedido,
+  cotacaoDesligada,
+  pecaPedida,
+} from '../../fonte/modoCarteira';
 import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 import { useAcoesEmGrupo } from '../../lista/useAcoesEmGrupo';
 import { useRolarPilula } from '../../lista/useRolarPilula';
@@ -26,13 +34,16 @@ import GavetaDeFiltrosDeSeguros from './GavetaDeFiltrosDeSeguros.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import HeroiDeSeguros from './HeroiDeSeguros.vue';
 import LinhaDeSeguro from './LinhaDeSeguro.vue';
+import GavetaDaRenovacao from './renovacao/GavetaDaRenovacao.vue';
+import SegurosDeExemplo from './SegurosDeExemplo.vue';
 
 // #2897 — a aba Seguros de Relacionamentos (`?aba=seguros`): herói com a frase
 // do dia, abas, grupos, busca, ordem, "Mais filtros", um seguro por linha, a
-// barra de quem está marcado e a gaveta do seguro (`?apolice=<id>`). Fala só
-// com `carteiraFonte`. "Trazer seguros" leva à tela de trazer. Resultados,
-// Ajustar renovações e a conversa são de outras entregas: por ora, um aviso diz
-// o que vai abrir.
+// barra de quem está marcado, a gaveta do seguro (`?apolice=<id>`) e a da
+// renovação (`?renovacao=<id>`). Fala só com `carteiraFonte`. "Trazer seguros",
+// "Resultados" e "Ajustar renovações" levam às telas deles. `?grupo=<id>` abre
+// a lista já num grupo (é assim que os resultados mostram quem não renovou). A
+// conversa é de outra entrega: por ora, um aviso diz o que vai abrir.
 const props = defineProps({
   demo: { type: String, default: null },
 });
@@ -43,9 +54,14 @@ const tc = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores, plural);
 const route = useRoute();
 const router = useRouter();
+const grupoInicial = grupoConhecido(route.query.grupo);
+const temporario = grupoTemporario(grupoInicial)?.id ?? '';
 const fonte = carteiraFonte({
   demo: props.demo,
   peca: pecaPedida(route.query),
+  caso: casoPedido(route.query),
+  cotacaoDesligada: cotacaoDesligada(route.query),
+  temporario,
 });
 const {
   lista,
@@ -57,8 +73,8 @@ const {
   semSeguros,
   faltamMarcar,
   avisoDaLista,
-} = useListaDeSeguros(fonte);
-const { apolice, abrir, fechar } = useApoliceNaUrl();
+} = useListaDeSeguros(fonte, { grupoInicial, temporario });
+const { apolice, renovacao, abrir, abrirRenovacao, fechar } = useApoliceNaUrl();
 
 const acoesEmGrupo = useAcoesEmGrupo({
   lista,
@@ -69,6 +85,8 @@ const acoesEmGrupo = useAcoesEmGrupo({
 
 const simular = (chave, valores) => useAlert(tc(chave, valores));
 const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
+const ajustar = () => router.push({ name: 'relacionamentos_renovacoes' });
 const abrirCampanha = quantas =>
   useAlert(
     t(
@@ -151,7 +169,8 @@ onMounted(lista.iniciar);
               @tentar="lista.recarregar"
             />
           </div>
-          <template v-else-if="!semSeguros">
+          <SegurosDeExemplo v-else-if="semSeguros" />
+          <template v-else>
             <div data-carteira="grupos" class="flex flex-col">
               <PilulasDeGrupo
                 :grupos="grupos"
@@ -174,8 +193,8 @@ onMounted(lista.iniciar);
               @update:busca="lista.mudarBusca"
               @update:ordem="lista.mudarOrdem"
               @abrir-filtros="abrirFiltros"
-              @resultados="simular('ABRINDO_RESULTADOS')"
-              @ajustar="simular('ABRINDO_AJUSTES')"
+              @resultados="verResultados"
+              @ajustar="ajustar"
             />
             <div v-if="lista.erro.value" data-carteira="erro">
               <ErroComTentarDeNovo
@@ -261,6 +280,14 @@ onMounted(lista.iniciar);
     />
     <GavetaDoSeguro
       :apolice-id="apolice"
+      :fonte="fonte"
+      @fechar="fechar"
+      @mudou="lista.recarregar"
+      @abrir-segurado="abrirSegurado"
+      @abrir-renovacao="abrirRenovacao"
+    />
+    <GavetaDaRenovacao
+      :seguro-id="renovacao"
       :fonte="fonte"
       @fechar="fechar"
       @mudou="lista.recarregar"

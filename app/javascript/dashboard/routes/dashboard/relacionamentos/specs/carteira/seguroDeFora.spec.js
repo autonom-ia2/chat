@@ -45,9 +45,10 @@ const rota = useRoute();
 const noEndereco = busca => window.history.replaceState({}, '', `/${busca}`);
 
 let aberta;
-const montar = async pagina => {
+const montar = async (pagina, props = {}) => {
   aberta = mount(pagina, {
     attachTo: document.body,
+    props,
     global: { stubs: { transition: true } },
   });
   await assentar();
@@ -55,13 +56,13 @@ const montar = async pagina => {
   return aberta;
 };
 // O painel mostra a pessoa de exemplo das jornadas (Fábio, com três seguros).
-const abrirPainel = async (busca = '') => {
+const abrirPainel = async (busca = '', props = {}) => {
   usarDemo({ demo: 'cheio' });
   noEndereco(busca);
-  return montar(PainelDeSeguros);
+  return montar(PainelDeSeguros, props);
 };
-const abrirGaveta = async (busca = '') => {
-  const w = await abrirPainel(busca);
+const abrirGaveta = async (busca = '', props = {}) => {
+  const w = await abrirPainel(busca, props);
   await w.get(daCarteira('painel-guardar-de-fora')).trigger('click');
   await assentar();
   return w;
@@ -141,6 +142,50 @@ describe('Tela 20: guardar seguro de outra corretora, pelo painel da conversa', 
     ).toEqual(['Sim, quer', 'Ainda não perguntei']);
   });
 
+  it('as duas respostas têm a mesma largura e o ✓ fica dentro do cartão escolhido', async () => {
+    const w = await abrirGaveta();
+    await escolher(w, 'apolice-auto.pdf');
+
+    const grupo = w.get(`${daCarteira('de-fora-quer')} [role="radiogroup"]`);
+    expect(grupo.classes()).toContain('grid-cols-2');
+    expect(grupo.classes()).not.toContain('sm:grid-cols-3');
+
+    await responder(w, 'Sim, quer');
+    const escolhido = grupo.get('[aria-checked="true"]');
+    expect(escolhido.text()).toBe('Sim, quer');
+    expect(escolhido.find('.i-lucide-check').exists()).toBe(true);
+    // O texto encolhe antes do ✓: ele nunca sai do cartão.
+    expect(escolhido.get('[data-texto-do-cartao]').classes()).toContain(
+      'min-w-0'
+    );
+  });
+
+  it('na conversa, a pergunta, o aviso e a faixa usam o primeiro nome de quem está na conversa', async () => {
+    const w = await abrirGaveta('', {
+      nomeDoContato: 'Marcela Antunes Prado',
+    });
+    await escolher(w, 'apolice-auto.pdf');
+
+    expect(w.get(`${daCarteira('de-fora-quer')} h3`).text()).toBe(
+      'Marcela quer que você lembre antes de vencer?'
+    );
+    await guardar(w);
+    expect(w.get(`${daCarteira('de-fora-quer')} [role="alert"]`).text()).toBe(
+      'Diga se Marcela quer o lembrete.'
+    );
+
+    await w
+      .get(`${daCarteira('de-fora-lido')} input[type="date"]`)
+      .setValue('2027-02-20');
+    await responder(w, 'Sim, quer');
+    await guardar(w);
+
+    expect(w.get(daCarteira('aviso-vivo')).text()).toContain(
+      'Lembrete guardado. Vamos chamar Marcela em 22/12.'
+    );
+    expect(w.text()).not.toContain('Fábio');
+  });
+
   it('"Guardar lembrete" fica ligado: sem a resposta, diz o que falta e leva o foco', async () => {
     const w = await abrirGaveta();
     await escolher(w, 'apolice-auto.pdf');
@@ -181,9 +226,18 @@ describe('Tela 20: guardar seguro de outra corretora, pelo painel da conversa', 
     );
     const linhas = w.findAll(daCarteira('painel-seguro'));
     expect(linhas).toHaveLength(4);
-    expect(
-      linhas.some(linha => linha.text().includes('Em outra corretora'))
-    ).toBe(true);
+    // A linha do seguro de fora: o selo diz onde ele está; a segunda linha,
+    // quando termina (sem repetir "em outra corretora").
+    const deFora = linhas.find(linha =>
+      linha.text().includes('Em outra corretora')
+    );
+    expect(textoDe(deFora, 'p')).toBe('termina em 20/02/2027');
+    expect(deFora.text()).not.toContain('em outra corretora');
+    // "Ver na ficha", a faixa do lembrete e o link de guardar têm respiro.
+    const acoes = w.get(daCarteira('painel-acoes'));
+    expect(acoes.classes()).toEqual(
+      expect.arrayContaining(['flex', 'flex-col', 'gap-3'])
+    );
 
     await w.get(daCarteira('desfazer')).trigger('click');
     await assentar();

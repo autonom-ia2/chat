@@ -36,6 +36,9 @@ export const useTrazerSeguros = ({
   const passo = ref(primeiroPasso(como.value));
   const comeco = ref(COMECO.CARREGANDO);
   const aggerLigado = ref(false);
+  // Onde ficam as renovações: se a conta já escolheu, os funis dela e se quem
+  // está usando pode mexer neles.
+  const renovacoes = ref({ escolhido: true, funis: [], semPermissao: false });
   const leitura = ref(null);
   const lendo = ref(false);
   const ocupado = ref(false);
@@ -75,7 +78,9 @@ export const useTrazerSeguros = ({
   const carregarComeco = async () => {
     comeco.value = COMECO.CARREGANDO;
     try {
-      aggerLigado.value = (await fonte.comeco()).aggerLigado;
+      const resposta = await fonte.comeco();
+      aggerLigado.value = resposta.aggerLigado;
+      renovacoes.value = resposta.renovacoes;
       comeco.value = COMECO.PRONTO;
     } catch {
       comeco.value = COMECO.ERRO;
@@ -118,11 +123,27 @@ export const useTrazerSeguros = ({
   };
 
   // ---- conferir: a leitura chegou (dos PDFs e do Agger, direto; da planilha,
-  // depois da pergunta)
+  // depois da pergunta). Na primeira vez que a conta traz seguros, antes vem a
+  // pergunta de onde ficam as renovações.
   const conferir = lida => {
     if (lida) leitura.value = lida;
     erro.value = ERROS.NENHUM;
-    passo.value = PASSOS.CONFERIR;
+    passo.value = renovacoes.value.escolhido ? PASSOS.CONFERIR : PASSOS.ONDE;
+  };
+
+  // `escolha` nula = seguir sem escolher (quem não pode mexer em funis). A
+  // linha do que acontece amanhã cedo passa a usar os dias escolhidos.
+  const escolherRenovacoes = async escolha => {
+    ocupado.value = true;
+    try {
+      leitura.value = await fonte.escolherRenovacoes(leitura.value.id, escolha);
+      renovacoes.value = { ...renovacoes.value, escolhido: true };
+      passo.value = PASSOS.CONFERIR;
+    } catch {
+      avisar(AVISO_ERRO_SALVAR);
+    } finally {
+      ocupado.value = false;
+    }
   };
 
   const voltarAPergunta = () => {
@@ -218,6 +239,7 @@ export const useTrazerSeguros = ({
     etapaDoTopo,
     comeco,
     aggerLigado,
+    renovacoes,
     leitura,
     lendo,
     ocupado,
@@ -231,6 +253,7 @@ export const useTrazerSeguros = ({
     escolherPlanilha,
     usarPlanilhaDeExemplo,
     conferir,
+    escolherRenovacoes,
     voltarAPergunta,
     guardar,
     deixarDeFora,

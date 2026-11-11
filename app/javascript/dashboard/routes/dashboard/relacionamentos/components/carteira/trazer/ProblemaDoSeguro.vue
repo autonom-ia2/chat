@@ -8,6 +8,7 @@ import CampoDoSeguro from '../CampoDoSeguro.vue';
 import { ACEITA_APOLICES } from '../../../carteira/arquivosDeApolice';
 import {
   doCampoDeData,
+  formatarDataInteira,
   formatarValor,
 } from '../../../carteira/formatosDoSeguro';
 import { useIdioma } from '../../../ficha/idioma';
@@ -18,6 +19,8 @@ import { SITUACAO_DO_PROBLEMA } from '../../../trazer/contagem';
 // palavras simples e o conserto ali mesmo (quando termina, qual seguradora,
 // qual das duas linhas fica, o telefone, outra foto). Salvar fica sempre
 // ligado: sem o dado, o clique diz o que falta, marca o campo e leva o foco.
+// Resolvido, a linha diz o que ficou decidido, com o selo e "Mudar" sempre no
+// mesmo lugar (à direita em tela grande, embaixo no celular).
 const props = defineProps({
   problema: { type: Object, required: true },
   seguradoras: { type: Array, default: () => [] },
@@ -111,6 +114,31 @@ const deOnde = computed(() => {
 const naPlanilha = dinheiro =>
   tp('NA_PLANILHA', { valor: formatarValor(dinheiro, idioma.value) });
 
+// ---- a linha resolvida: de quem é e o que ficou decidido ---------------------
+const quem = computed(() =>
+  props.problema.nome
+    ? tp('DECIDIDO.SEGURO_DE', props.problema)
+    : tp('DECIDIDO.ARQUIVO', props.problema)
+);
+const DECISAO_DO_TIPO = {
+  falta_termina: corrigido =>
+    tp('DECIDIDO.TERMINA', {
+      data: formatarDataInteira(corrigido, idioma.value),
+    }),
+  seguradora: corrigido => corrigido,
+  duplicado: corrigido => tp('DECIDIDO.FICA_A_LINHA', { linha: corrigido }),
+  telefone: corrigido =>
+    corrigido
+      ? tp('DECIDIDO.TELEFONE', { telefone: corrigido })
+      : tp('DECIDIDO.SEM_TELEFONE'),
+  foto_escura: corrigido => tp('DECIDIDO.ARQUIVO_NOVO', { arquivo: corrigido }),
+};
+const decidido = computed(() => {
+  const { tipo, corrigido } = props.problema;
+  if (!guardado.value) return quem.value;
+  return [quem.value, DECISAO_DO_TIPO[tipo](corrigido)].join(' · ');
+});
+
 const trocarOArquivo = evento => {
   const [arquivo] = evento.target.files ?? [];
   if (arquivo) emit('guardar', props.problema.linha, arquivo.name);
@@ -154,6 +182,7 @@ const trocarOArquivo = evento => {
             :trigger-id="idDoCampo"
             :options="opcoesDeSeguradora"
             :aria-label="tp('ROTULO.SEGURADORA')"
+            :placeholder="tp('ESCOLHA_A_SEGURADORA')"
             :invalid="Boolean(falta)"
             :described-by="falta ? idDaFalta : undefined"
           />
@@ -188,17 +217,17 @@ const trocarOArquivo = evento => {
           :disabled="ocupado"
           @click="emit('guardar', problema.linha, repetida.linha)"
         >
-          <span class="text-base font-medium tabular-nums text-n-slate-12">
+          <span class="text-lg font-semibold tabular-nums text-n-slate-12">
             {{ naPlanilha(repetida.valor) }}
           </span>
+          <span data-carteira="linha-da-opcao" class="text-sm text-n-slate-11">
+            {{ tp('LINHA', { linha: repetida.linha }) }}
+          </span>
           <span
-            class="flex items-center gap-1 text-sm font-medium text-n-blue-11"
+            data-carteira="ficar-com-este"
+            class="inline-flex items-center justify-center w-full px-4 mt-2 text-base font-medium rounded-lg min-h-11 bg-n-blue-3 text-n-blue-11"
           >
-            {{ tp('FICAR_COM_A_LINHA', { linha: repetida.linha }) }}
-            <span
-              class="i-lucide-arrow-right size-4 rtl:rotate-180"
-              aria-hidden="true"
-            />
+            {{ tp('FICAR_COM_ESTE') }}
           </span>
         </button>
       </div>
@@ -255,31 +284,48 @@ const trocarOArquivo = evento => {
         />
       </div>
     </form>
-    <div v-else class="flex flex-wrap items-center justify-between gap-2">
-      <p class="flex items-center gap-2 m-0 text-base text-n-slate-11">
+    <div
+      v-else
+      data-carteira="linha-resolvida"
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="flex flex-wrap items-center min-w-0 gap-x-3 gap-y-2">
+        <p
+          data-carteira="decidido"
+          class="m-0 text-base font-medium break-words text-n-slate-12"
+        >
+          {{ decidido }}
+        </p>
         <span
-          class="size-5 shrink-0"
+          data-carteira="selo-do-problema"
+          :data-selo="problema.estado"
+          class="inline-flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium rounded-full shrink-0"
           :class="
             guardado
-              ? 'i-lucide-circle-check text-n-teal-11'
-              : 'i-lucide-circle-minus'
+              ? 'bg-n-teal-3 text-n-teal-11'
+              : 'bg-n-alpha-2 text-n-slate-11'
           "
-          aria-hidden="true"
-        />
-        <span>{{ texto }}</span>
-        <span class="font-medium text-n-slate-12">
+        >
+          <span
+            class="size-4 shrink-0"
+            :class="guardado ? 'i-lucide-check' : 'i-lucide-minus'"
+            aria-hidden="true"
+          />
           {{ tp(guardado ? 'PRONTO' : 'DEIXADO') }}
         </span>
-      </p>
+      </div>
       <Button
-        ghost
         slate
+        faded
         type="button"
         size="lg"
-        data-carteira="voltar-atras"
-        :label="tp('VOLTAR_ATRAS')"
+        class="self-start shrink-0 sm:self-auto"
+        data-carteira="mudar"
+        :label="tp('MUDAR')"
         :aria-label="
-          tp('VOLTAR_ATRAS_EM', { quem: problema.nome || problema.arquivo })
+          problema.nome
+            ? tp('MUDAR_O_SEGURO_DE', problema)
+            : tp('MUDAR_O_ARQUIVO', problema)
         "
         :disabled="ocupado"
         @click="emit('reabrir', problema.linha)"

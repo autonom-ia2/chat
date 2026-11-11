@@ -57,9 +57,27 @@ export const CASOS_DA_DEMO = [
   'de_fora_carregando',
   'de_fora_erro',
   'de_fora_sem_arquivos',
+  // Onda 3 — a cotação do card da renovação em estados que o exemplo não tem.
+  'cotacao_parcial',
+  'cotacao_sem_pdf',
+  'cotacao_agger_fora',
+  'cotacao_demorou',
+  'cotacao_falhou',
+  'cotacao_sem_agente',
+  'sem_permissao_de_funil',
+  'ajustes_nao_salvou',
+  'palavras_lendo',
+  'palavras_erro',
 ];
 
 export const casoPedido = (
   query = {},
   permitida = Boolean(import.meta.env.DEV)
 ) => (permitida && CASOS_DA_DEMO.includes(query?.caso) ? query.caso : null);
+
+// `?cotacao=desligada` simula a chave "Cotação de renovação" desligada numa
+// conta com o Agger ligado (a chave de verdade é da administração da casa).
+export const cotacaoDesligada = (
+  query = {},
+  permitida = Boolean(import.meta.env.DEV)
+) => permitida && query?.cotacao === 'desligada';

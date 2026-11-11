@@ -6,6 +6,8 @@
 //      e tudo demora um instante, como a rede.
 // `peca` é o `?demo-carteira=`: muda só esta fonte (carregando, erro, vazio).
 // `caso` é o `?caso=` (fonte/modoCarteira.js): um estado que o exemplo não mostra.
+// `temporario` é o grupo "Não renovaram" que a tela de resultados pediu, e
+// `cotacaoDesligada` simula a chave da cotação automática desligada.
 import {
   ABA_SEGUROS,
   GRUPO_PADRAO_DE_SEGUROS,
@@ -29,8 +31,20 @@ import {
   seloDoSeguro,
 } from './selosDoSeguro';
 
+// A carteira e, por cima, o que se faz no card da renovação.
 const CARREGAR_DEMO = import.meta.env.DEV
-  ? () => import('../demo/carteira.js')
+  ? async () => {
+      const [carteira, renovacao] = await Promise.all([
+        import('../demo/carteira.js'),
+        import('../demo/carteiraRenovacao.js'),
+      ]);
+      return {
+        demoDaCarteira: {
+          ...carteira.demoDaCarteira,
+          ...renovacao.demoDaRenovacao,
+        },
+      };
+    }
   : null;
 
 export const ATRASO_DA_CARTEIRA_MS = 300;
@@ -141,7 +155,23 @@ const ESCRITAS = [
   'desfazerPdf',
   'cotar',
   'lerPdf',
+  // O card da renovação (Telas 11 e 12) e o texto em palavras simples (19).
+  'enviarProposta',
+  'renovou',
+  'naoRenovou',
+  'desfazerDesfecho',
+  'cotarComDado',
+  'pedirPdf',
+  'pedirProposta',
+  'anexarProposta',
+  'salvarPalavras',
+  'enviarPalavras',
 ];
+
+const ESTADO_DAS_PALAVRAS = {
+  palavras_lendo: 'lendo',
+  palavras_erro: 'erro',
+};
 
 // O seguro que a pessoa tem em outra corretora (Tela 20): os arquivos que
 // vieram na conversa, a leitura de um deles, guardar o lembrete e desfazer.
@@ -158,9 +188,26 @@ const naoAchei = () =>
     name: 'NAO_ACHEI',
   });
 
-const fonteDemo = ({ estado, peca, caso, carregarDemo, atraso }) => {
+const fonteDemo = ({
+  estado,
+  peca,
+  caso,
+  temporario,
+  cotacaoDesligada,
+  carregarDemo,
+  atraso,
+}) => {
   const semSeguro = ESTADOS_SEM_SEGURO.includes(estado) || peca === 'vazio';
   const aggerLigado = aggerLigadoNaDemo(estado);
+  // `?caso=` no seguro aberto: a cotação e o texto em palavras simples num
+  // estado que o exemplo de sempre não mostra.
+  const comOCaso = (dados, seguro) => {
+    const visto = dados.comOCaso?.(seguro, caso) ?? seguro;
+    const estadoDasPalavras = ESTADO_DAS_PALAVRAS[caso];
+    return visto?.palavras && estadoDasPalavras
+      ? { ...visto, palavras: { ...visto.palavras, estado: estadoDasPalavras } }
+      : visto;
+  };
 
   const demo = async () => {
     if (estado === DEMO_CARREGANDO || peca === 'carregando') {
@@ -195,14 +242,14 @@ const fonteDemo = ({ estado, peca, caso, carregarDemo, atraso }) => {
     async (id, ...resto) => {
       const dados = await demo();
       if (semSeguro || !dados.seguroPorId(id)) throw naoAchei();
-      return dados[nome](id, ...resto);
+      return comOCaso(dados, dados[nome](id, ...resto));
     };
 
   return {
     usaDemo: true,
-    // Cota sozinha quem tem o Agger ligado (na entrega real, também a chave da
-    // cotação de renovação).
-    cotaSozinha: aggerLigado,
+    // Cota sozinha quem tem o Agger ligado e a chave da cotação de renovação.
+    aggerLigado,
+    cotaSozinha: aggerLigado && !cotacaoDesligada,
     async resumo() {
       const agora = Date.now();
       const seguros = await daCarteira(agora);
@@ -224,7 +271,7 @@ const fonteDemo = ({ estado, peca, caso, carregarDemo, atraso }) => {
       const agora = Date.now();
       const lista = (await daCarteira(agora)).filter(passaNaConsulta(consulta));
       return Object.fromEntries(
-        gruposDeSeguros({ aggerLigado }).map(({ id }) => [
+        gruposDeSeguros({ aggerLigado, temporario }).map(({ id }) => [
           id,
           lista.filter(seguro => seguroPertenceAoGrupo(seguro, id, agora))
             .length,
@@ -267,7 +314,7 @@ const fonteDemo = ({ estado, peca, caso, carregarDemo, atraso }) => {
     },
     async seguro(id) {
       const dados = await demo();
-      return semSeguro ? null : dados.seguroPorId(id);
+      return semSeguro ? null : comOCaso(dados, dados.seguroPorId(id));
     },
     async historia(id) {
       const dados = await demo();
@@ -323,6 +370,7 @@ const fonteReal = () => {
   };
   return {
     usaDemo: false,
+    aggerLigado: false,
     cotaSozinha: false,
     ...Object.fromEntries(
       [...LEITURAS, ...ESCRITAS, ...DE_FORA].map(nome => [nome, pendente])
@@ -334,11 +382,21 @@ export const carteiraFonte = ({
   demo = null,
   peca = null,
   caso = null,
+  temporario = '',
+  cotacaoDesligada = false,
   carregarDemo = CARREGAR_DEMO,
   atraso = ATRASO_DA_CARTEIRA_MS,
 } = {}) =>
   demo && carregarDemo
-    ? fonteDemo({ estado: demo, peca, caso, carregarDemo, atraso })
+    ? fonteDemo({
+        estado: demo,
+        peca,
+        caso,
+        temporario,
+        cotacaoDesligada,
+        carregarDemo,
+        atraso,
+      })
     : fonteReal();
 
 export { ABA_SEGUROS };
