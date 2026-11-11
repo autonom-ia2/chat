@@ -32,7 +32,7 @@ module Autonomia::FerramentasProntas::Premium::Parametros
     'uf' => { deduza: Autonomia::FerramentasProntas::Municipios::DEDUZA_UF },
     'cidade' => { pergunte: 'a cidade do endereço' },
     'rua' => { pergunte: 'a rua do endereço' },
-    'bairro' => { pergunte: 'o bairro: a rua tem mais de um CEP na cidade' }
+    'bairro' => { pergunte: 'o bairro: a rua tem mais de um CEP na cidade, em bairros diferentes' }
   }.freeze
 
   # QI 70: pergunte.

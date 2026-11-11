@@ -114,4 +114,58 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
       expect(described_class.cep(cidade: 'Nao Existe', uf: 'SP', rua: 'Rua A')).to be_nil
     end
   end
+
+  # C15c/C15d do testador: com o bairro já informado e mais de um CEP sobrando, pedia o bairro de novo, e o agente ficava
+  # em laço. Dados reais do ViaCEP (11/11/2026).
+  describe '.cep com o bairro e o número' do
+    let(:augusta) { 'https://viacep.com.br/ws/SP/Sao%20Paulo/Rua%20Augusta/json/' }
+    let(:sete_de_setembro) { 'https://viacep.com.br/ws/SP/Campinas/Rua%20Sete%20de%20Setembro/json/' }
+
+    def real(nome)
+      Rails.root.join('spec/fixtures/ferramentas_prontas', nome).read
+    end
+
+    before do
+      fonte_responde(augusta, real('viacep_rua_augusta_sao_paulo.json'))
+      fonte_responde(sete_de_setembro, real('viacep_rua_sete_de_setembro_campinas.json'))
+    end
+
+    it 'Rua Augusta, Consolação, nº 100: o número escolhe pela faixa ("até 698 - lado par")' do
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '100'))
+        .to eq('cep' => '01304-000')
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '101'))
+        .to eq('cep' => '01305-000')
+    end
+
+    it 'Rua Augusta, Consolação, sem o número: pede o NÚMERO, não o bairro de novo' do
+      resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação')
+
+      expect(resultado['falta']).to eq('numero')
+      expect(resultado['candidatos'].pluck('bairro').uniq).to eq(['Consolação'])
+    end
+
+    it 'Rua Augusta sem o bairro, em bairros diferentes: pede o bairro, mesmo com o número (outra Rua Augusta sem faixa pode ter o 100)' do
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta')['falta']).to eq('bairro')
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', numero: '100')['falta']).to eq('bairro')
+    end
+
+    it 'Vila Industrial, sem número: o CEP da rua (13035-350) e não o especial do prédio (13035-901)' do
+      expect(described_class.cep(cidade: 'Campinas', uf: 'SP', rua: 'Rua Sete de Setembro', bairro: 'Vila Industrial'))
+        .to eq('cep' => '13035-350')
+    end
+
+    it 'Vila Industrial com um número que não é o do prédio: o CEP da rua; com o número do prédio, o CEP dele' do
+      expect(described_class.cep(cidade: 'Campinas', uf: 'SP', rua: 'Rua Sete de Setembro', bairro: 'Vila Industrial', numero: '50'))
+        .to eq('cep' => '13035-350')
+      expect(described_class.cep(cidade: 'Campinas', uf: 'SP', rua: 'Rua Sete de Setembro', bairro: 'Vila Industrial', numero: '189'))
+        .to eq('cep' => '13035-901')
+    end
+
+    it 'Rua Sete de Setembro sem o bairro, em Sousas e na Vila Industrial: pede o bairro' do
+      resultado = described_class.cep(cidade: 'Campinas', uf: 'SP', rua: 'Rua Sete de Setembro')
+
+      expect(resultado['falta']).to eq('bairro')
+      expect(resultado['candidatos'].pluck('cep')).to contain_exactly('13106-022', '13035-350', '13035-901')
+    end
+  end
 end

@@ -35,9 +35,10 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
     before { allow(referencia).to receive(:cep).and_return(nil) }
 
     it 'passa a cidade, a UF, a rua, o bairro e a conta' do
-      described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', conta: 42)
+      described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', numero: '10', conta: 42)
 
-      expect(referencia).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', conta: 42)
+      expect(referencia).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', numero: '10',
+                                                     conta: 42)
     end
 
     it 'devolve o CEP só com os dígitos, como a BigDataCorp recebe' do
@@ -72,7 +73,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'São Paulo', 'uf' => 'sp')
 
       expect(resposta['situacao']).to eq('encontrado')
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: nil, bairro: nil, conta: account.id)
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: nil, bairro: nil, numero: nil, conta: account.id)
       expect(pediu('/enderecos', 'zipcode{01001000}')).to have_been_made.once
     end
 
@@ -92,7 +93,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia')
 
       expect(resposta['situacao']).to eq('encontrado')
-      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: nil, rua: nil, bairro: nil, conta: account.id)
+      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: nil, rua: nil, bairro: nil, numero: nil, conta: account.id)
     end
 
     it 'a UF pelo nome do estado vira a sigla' do
@@ -101,7 +102,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
 
       executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia', 'uf' => 'Minas Gerais')
 
-      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: 'MG', rua: nil, bairro: nil, conta: account.id)
+      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: 'MG', rua: nil, bairro: nil, numero: nil, conta: account.id)
     end
 
     it 'cidade com o mesmo nome em mais de um estado e sem UF: recusa na uf, com as candidatas, sem procurar nem cobrar' do
@@ -148,7 +149,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
                                          'uf' => 'sp')
 
       expect(resposta['situacao']).to eq('encontrado')
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: nil, conta: account.id)
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: nil, numero: '10',
+                                                          conta: account.id)
       expect(pediu('/enderecos', 'zipcode{01001000},addressnumber{10}')).to have_been_made.once
     end
 
@@ -171,7 +173,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       executar_premium(risco, 'consulta' => 'vistoria', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'bairro' => 'Sé', 'cidade' => 'São Paulo',
                               'uf' => 'sp')
 
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO', bairro: 'Sé', conta: account.id)
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO', bairro: 'Sé', numero: '10',
+                                                          conta: account.id)
     end
 
     it 'o número continua obrigatório: ele não dá para deduzir' do
@@ -216,11 +219,11 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(registros_premium.pluck(:resultado)).to eq(['encontrado'])
     end
 
-    it 'área de risco pela rua com dois CEPs: recusa no bairro com os candidatos, e a BigDataCorp não é chamada' do
+    it 'área de risco pela rua com dois CEPs e um número fora das duas faixas: recusa no bairro, e a BigDataCorp não é chamada' do
       fonte_responde(paulista, [de_sp.merge(cep: '01310-100', complemento: 'de 1 a 609 - lado ímpar', bairro: 'Bela Vista'),
                                 de_sp.merge(cep: '01311-000', complemento: 'de 611 a 1045', bairro: 'Cerqueira César')])
 
-      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Avenida Paulista', 'numero' => '700',
+      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Avenida Paulista', 'numero' => '5000',
                                          'cidade' => 'São Paulo')
 
       expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'bairro')
@@ -247,6 +250,27 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'cep')
       expect(chamou_a_bigdatacorp?).to be(false)
       expect(registros_premium).to be_empty
+    end
+  end
+
+  # C15c/C15d do testador, de ponta a ponta com os dados reais do ViaCEP (11/11/2026): com o bairro dito, o número escolhe
+  # o CEP; sem o número, pede o número e não o bairro de novo.
+  describe 'o bairro e o número escolhem o CEP da rua' do
+    let(:augusta) { 'https://viacep.com.br/ws/SP/Sao%20Paulo/Rua%20Augusta/json/' }
+
+    before do
+      resolver_hosts_das_prontas
+      fonte_responde(augusta, Rails.root.join('spec/fixtures/ferramentas_prontas/viacep_rua_augusta_sao_paulo.json').read)
+    end
+
+    it 'Rua Augusta, Consolação, nº 100: consulta pelo 01304-000 ("até 698 - lado par")' do
+      bigdatacorp_responde('/enderecos', 'address_risk', 'AddressRiskData', { 'Point' => 3 })
+
+      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Rua Augusta', 'numero' => '100', 'bairro' => 'Consolação',
+                                         'cidade' => 'São Paulo')
+
+      expect(resposta['situacao']).to eq('encontrado')
+      expect(pediu('/enderecos', 'zipcode{01304000},addressnumber{100}')).to have_been_made.once
     end
   end
 

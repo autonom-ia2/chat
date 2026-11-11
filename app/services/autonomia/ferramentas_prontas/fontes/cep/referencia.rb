@@ -7,14 +7,22 @@
 # valem só o teto global do ViaCEP (`TetoDoProvedor`, pela `conta`) e o cache da fonte CEP.
 #
 # INTERFACE ESTÁVEL (a F7 usa). O método que a F7 chama é `Autonomia::FerramentasProntas::Premium::Endereco.cep(cidade:,
-# uf:, rua: nil, bairro: nil)`, que devolve `{'cep'=>…}`, `{'candidatos'=>[…]}` ou nil; ele só precisa delegar a:
-#   Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil)
+# uf:, rua: nil, bairro: nil, numero: nil)`, que devolve `{'cep'=>…}`, `{'candidatos'=>[…], 'falta'=>…}` ou nil; ele
+# só precisa delegar a:
+#   Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep(cidade:, uf: nil, rua: nil, bairro: nil, numero: nil, conta: nil)
 #   - sem rua: `{'cep' => cep_da_cidade(...)}`, ou nil;
 #   - com rua: a MESMA consulta `por_endereco` (mesma normalização, mesmo cache de 30 dias e mesma chave, pelo `Apoio`):
-#     até `Cep::MAX_CEPS` CEPs, o da rua (faixa de número) antes do especial de prédio. O bairro, quando vem, filtra
-#     (todas as palavras, sem acento); se o filtro esvaziar a lista ("Jardim America" contra "Jd America"), vale a lista
-#     sem ele. Um só -> `{'cep' => '01311-000'}`; vários -> `{'candidatos' => [{ 'cep', 'logradouro', 'complemento',
-#     'bairro' }]}`; nenhum, cidade que não existe, homônima sem UF ou UF errada, fonte fora -> nil.
+#     até `Cep::MAX_CEPS` CEPs, o da rua (faixa de número) antes do especial de prédio. Depois, em ordem:
+#       1. o bairro, quando vem, filtra (todas as palavras, sem acento); se esvaziar a lista ("Jardim America" contra
+#          "Jd America"), vale a lista sem ele;
+#       2. o número, quando vem, escolhe pela faixa do `complemento` (`Cep::Faixa`): os que cobrem o número; senão os
+#          sem faixa (a rua inteira); senão a lista como estava;
+#       3. sem número, com todos da mesma rua e do mesmo bairro: o CEP de faixa vale mais que o especial de prédio
+#          (sufixo 900+, `Cep.especial?`), se sobrar um só.
+#     Um só -> `{'cep' => '01311-000'}`; vários -> `{'candidatos' => [{ 'cep', 'logradouro', 'complemento', 'bairro' }],
+#     'falta' => 'bairro' | 'numero'}`: o bairro só quando ele não veio e os CEPs estão em bairros diferentes; senão o
+#     número (C15c/C15d do testador: com o bairro já dito, pedir o bairro de novo deixava o agente em laço). Nenhum,
+#     cidade que não existe, homônima sem UF ou UF errada, fonte fora -> nil.
 # E o CEP de referência sozinho:
 #   Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep_da_cidade(cidade: 'Uberlândia', uf: nil, conta: 42)
 #   -> "38400-263" (String, com traço), ou nil.
@@ -51,14 +59,55 @@ module Autonomia::FerramentasProntas::Fontes::Cep::Referencia
     da_fonte(municipio, conta).tap { |cep| gravar(municipio, cep) if cep }
   end
 
-  def cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil) # rubocop:disable Naming/MethodParameterName
+  def cep(cidade:, uf: nil, rua: nil, bairro: nil, numero: nil, conta: nil) # rubocop:disable Naming/MethodParameterName,Metrics/ParameterLists
     return cep_da_cidade(cidade: cidade, uf: uf, conta: conta)&.then { |achado| { 'cep' => achado } } if rua.blank?
 
-    ceps = do_bairro(da_rua(cidade, uf, rua, conta), bairro)
+    ceps = do_numero(do_bairro(da_rua(cidade, uf, rua, conta), bairro), numero)
     return if ceps.empty?
-    return { 'cep' => ceps.first['cep'] } if ceps.one?
 
-    { 'candidatos' => ceps }
+    escolhido = unico(ceps, numero)
+    return { 'cep' => escolhido['cep'] } if escolhido
+
+    { 'candidatos' => ceps, 'falta' => falta(ceps, bairro) }
+  end
+
+  # Os CEPs que podem ter o número: os cuja faixa o cobre (`certos`) e os sem faixa (`possiveis`: a rua inteira, ou texto
+  # que não é faixa). Os certos sozinhos só quando os possíveis são da mesma rua e do mesmo bairro (o prédio "189" contra
+  # a Rua Sete de Setembro inteira, na Vila Industrial); com um possível noutro bairro (outra Rua Augusta da cidade), os
+  # dois ficam, e o bairro decide. Nenhum dos dois: a lista como estava.
+  def do_numero(ceps, numero)
+    return ceps if numero.blank? || ceps.size < 2
+
+    cobertura = ceps.group_by { |item| Autonomia::FerramentasProntas::Fontes::Cep::Faixa.cobre?(item['complemento'], numero) }
+    pelo_numero(cobertura.fetch(true, []), cobertura.fetch(nil, [])).presence || ceps
+  end
+
+  def pelo_numero(certos, possiveis)
+    return certos if certos.any? && (possiveis.empty? || mesma_rua_e_bairro?(certos + possiveis))
+
+    certos + possiveis
+  end
+
+  # Um só; ou, sem número e todos da mesma rua e do mesmo bairro, o único CEP de faixa entre os especiais de prédio.
+  def unico(ceps, numero)
+    return ceps.first if ceps.one?
+    return if numero.present? || !mesma_rua_e_bairro?(ceps)
+
+    da_rua = ceps.reject { |item| Autonomia::FerramentasProntas::Fontes::Cep.especial?(item['cep']) }
+    da_rua.first if da_rua.one?
+  end
+
+  def mesma_rua_e_bairro?(ceps)
+    ceps.map { |item| [comparavel(item['logradouro']), comparavel(item['bairro'])] }.uniq.one?
+  end
+
+  # O bairro só quando o cliente não o disse e os CEPs estão em bairros diferentes; no resto, o número.
+  def falta(ceps, bairro)
+    bairro.blank? && ceps.map { |item| comparavel(item['bairro']) }.uniq.size > 1 ? 'bairro' : 'numero'
+  end
+
+  def comparavel(texto)
+    Autonomia::FerramentasProntas::Lista.comparavel(texto)
   end
 
   # O filtro do bairro que esvazia a lista não vale: o bairro do cliente pode estar escrito de outro jeito.
