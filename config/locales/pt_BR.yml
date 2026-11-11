@@ -1288,6 +1288,15 @@ pt_BR:
         linha_media: '%{nome}: %{valor} agora, mais de %{vezes} vezes a média da semana (%{media}).'
         resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
         pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
+        base_das_prontas:
+          texto: 'Ferramentas prontas: a base "%{base}" não atualizou (%{motivo}). Os agentes seguem com a cópia de %{desde}. Ela tenta de novo na próxima rodada.'
+          sem_copia: 'Ferramentas prontas: a base "%{base}" ainda não foi baixada (%{motivo}). A ferramenta dela responde "não consegui consultar" até ela entrar. Ela tenta de novo na próxima rodada.'
+          bases:
+            planos_de_saude: 'Planos de saúde (ANS)'
+            aeronaves: 'Aeronaves (ANAC)'
+            geracao_solar: 'Placas solares (ANEEL)'
+            transportadoras: 'Transportadoras (ANTT)'
+            queimadas: 'Focos de queimada (INPE)'
         whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
         whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
         whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'

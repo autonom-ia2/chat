@@ -116,6 +116,18 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response.body).not_to include('brasilapi', 'http', 'chave_interna')
     end
 
+    it 'F5: a base baixada leva o dia em que foi atualizada (nil antes de baixar); as outras fontes não levam o campo' do
+      account.enable_features!(Autonomia::FerramentasProntas::Bases::FLAG)
+      Autonomia::FerramentasProntas::Bases::Estado.create!(base: 'aeronaves', geracao_ativa: 1, atualizado_em: Time.zone.parse('2026-11-11 10:47'))
+
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      fontes = response.parsed_body['fontes'].index_by { |fonte| fonte['chave'] }
+      expect(fontes['aeronaves']).to eq('chave' => 'aeronaves', 'atualizado_em' => '2026-11-11')
+      expect(fontes['transportadoras']).to eq('chave' => 'transportadoras', 'atualizado_em' => nil)
+      expect(fontes['cep']).to eq('chave' => 'cep')
+    end
+
     it 'não mostra as prontas de outra conta' do
       outra = create(:account)
       ligar_consultas(outra)

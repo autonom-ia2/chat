@@ -795,6 +795,15 @@ en:
         linha_media: '%{nome}: %{valor} now, more than %{vezes} times the weekly average (%{media}).'
         resumo: 'Yesterday I held back %{n} warnings so I would not flood you:'
         pausada: 'I paused the watch "%{nome}": the person who created it is no longer an admin. If you still want it, turn it back on or ask me.'
+        base_das_prontas:
+          texto: 'Ready-made tools: the "%{base}" database did not update (%{motivo}). Agents keep using the copy from %{desde}. It tries again on the next round.'
+          sem_copia: 'Ready-made tools: the "%{base}" database was never downloaded (%{motivo}). Its tool answers "could not check" until it comes in. It tries again on the next round.'
+          bases:
+            planos_de_saude: 'Health plans (ANS)'
+            aeronaves: 'Aircraft (ANAC)'
+            geracao_solar: 'Solar panels (ANEEL)'
+            transportadoras: 'Carriers (ANTT)'
+            queimadas: 'Fire spots (INPE)'
         whatsapp_api_caiu: 'WhatsApp API on the inbox "%{caixa}" disconnected. Until you reconnect it in the inbox WhatsApp API tab, replies after 24 hours need an approved template. Do you want me to show you how to reconnect?'
         whatsapp_api_perto_do_limite: 'WhatsApp is close to limiting new conversations on the inbox "%{caixa}" (cycle ends on %{fim}). I already slowed down sending through WhatsApp API. Avoid starting conversations with new contacts there for now. Want to see the numbers?'
         whatsapp_api_bloqueado: 'WhatsApp blocked new conversations through WhatsApp API on the inbox "%{caixa}" until %{fim}. Replies to people you already talk to keep going; for new contacts use an approved template. Want me to explain?'

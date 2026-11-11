@@ -67,6 +67,16 @@ class Autonomia::Guide::Entrega
     end
   end
 
+  # Uma base das ferramentas prontas não atualizou (#2858, F5): alerta da PLATAFORMA, urgente, para os administradores da
+  # conta da plataforma (`Autonomia::FerramentasProntas::Bases::Alerta`). Um por base por dia: a chave leva o dia.
+  def base_das_prontas!(base, motivo, atualizado_em)
+    dia = @agora.to_date.iso8601
+    administradores.find_each do |user|
+      entregar(user, chave: "prontas_base:#{user.id}:#{base}:#{dia}", gravidade: AVISO::URGENTE, sinal: {},
+                     texto: @texto.base_das_prontas(base, motivo, atualizado_em))
+    end
+  end
+
   # O resumo dos adiados de dias anteriores: um por pessoa, no primeiro pulso do dia.
   def resumir_adiados!
     adiados = AVISO.where(account: @account, estado: AVISO::ADIADO).where(created_at: ...@agora.beginning_of_day).includes(:user)

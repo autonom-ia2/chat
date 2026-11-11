@@ -22,7 +22,7 @@ class Autonomia::FerramentasProntas::Experimente
     'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
   }.freeze
   COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
-                       corretor_susep].freeze
+                       corretor_susep planos_de_saude aeronaves geracao_solar transportadoras queimadas].freeze
   MAX_VALOR = 100
 
   def initialize(account:, fonte:, valor:)
