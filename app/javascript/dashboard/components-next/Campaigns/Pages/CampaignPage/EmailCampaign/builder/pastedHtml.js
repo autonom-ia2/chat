@@ -1,7 +1,9 @@
 // HTML pasted or dropped on the e-mail canvas (#2908): an e-mail or text from Word, Google Docs, a site
 // or an AI chat. Keeps what reads as formatting (paragraphs, bold, italic, underline, lists, links) and
 // drops the rest (styles, classes, Word/Docs markup). Images are taken out: they become Image blocks
-// (useImageDrop.js), never loose <img> inside a text. DOMParser walking — no regex.
+// (useImageDrop.js), never loose <img> inside a text. The result keeps the order of what was pasted —
+// text, image, text… — so an e-mail pasted whole comes back as it was written. DOMParser walking and
+// DOM Range splitting — no regex.
 
 const BLOCK_TAGS = new Set(['p', 'ul', 'ol', 'li']);
 const INLINE_TAGS = new Set(['strong', 'em', 'u']);
@@ -86,17 +88,22 @@ const hasBlock = nodes =>
       BLOCK_TAGS.has(node.tagName.toLowerCase())
   );
 
+const MARKER = 'data-pasted-image';
+
 let cleanChildren;
 
 const cleanElement = (el, doc, images) => {
   const name = el.tagName.toLowerCase();
   if (DROPPED.has(name)) return [];
   if (name === 'img') {
+    // A marker where the image was: the text is split there afterwards.
+    const marker = doc.createElement('img');
+    marker.setAttribute(MARKER, String(images.length));
     images.push({
       src: el.getAttribute('src') || '',
       alt: el.getAttribute('alt') || '',
     });
-    return [];
+    return [marker];
   }
   if (name === 'br') return [doc.createElement('br')];
   const children = cleanChildren(el, doc, images);
@@ -134,14 +141,45 @@ cleanChildren = (el, doc, images) =>
     return [];
   });
 
-// A paragraph left with nothing but spaces (Word spacing, a removed image) is dropped.
-const isBlank = node =>
-  node.nodeType === Node.ELEMENT_NODE &&
-  node.tagName.toLowerCase() === 'p' &&
-  !node.querySelector('br') &&
-  !node.textContent.trim();
+// Whatever holds no text and no line break (Word spacing, the empty half of a split paragraph).
+const isEmptyNode = node =>
+  node.nodeType === Node.TEXT_NODE
+    ? !node.data.trim()
+    : node.nodeType === Node.ELEMENT_NODE &&
+      !node.querySelector('br') &&
+      node.tagName.toLowerCase() !== 'br' &&
+      !node.textContent.trim();
 
-// -> { html: clean HTML for an mj-text (may be ''), images: [{ src, alt }] in document order }
+const textSegment = (doc, fragment) => {
+  const holder = doc.createElement('div');
+  Array.from(fragment.childNodes)
+    .filter(node => !isEmptyNode(node))
+    .forEach(node => holder.appendChild(node));
+  const html = holder.innerHTML.trim();
+  return html ? [{ type: 'text', html }] : [];
+};
+
+// Splits the cleaned tree at each image marker; a paragraph holding an image becomes two paragraphs.
+const splitAtImages = (doc, root, images) => {
+  const segments = [];
+  const range = doc.createRange();
+  range.setStart(root, 0);
+  root.querySelectorAll(`img[${MARKER}]`).forEach(marker => {
+    range.setEndBefore(marker);
+    segments.push(...textSegment(doc, range.cloneContents()));
+    segments.push({
+      type: 'image',
+      ...images[Number(marker.getAttribute(MARKER))],
+    });
+    range.setStartAfter(marker);
+  });
+  range.setEnd(root, root.childNodes.length);
+  segments.push(...textSegment(doc, range.cloneContents()));
+  return segments;
+};
+
+// -> { segments: [{ type: 'text', html } | { type: 'image', src, alt }] in pasted order,
+//      html: all the text together (may be ''), images: [{ src, alt }] }
 export const sanitizePastedHtml = source => {
   const parsed = new DOMParser().parseFromString(
     String(source || ''),
@@ -149,11 +187,15 @@ export const sanitizePastedHtml = source => {
   );
   const images = [];
   const out = parsed.createElement('div');
-  cleanChildren(parsed.body, parsed, images)
-    .filter(node => !isBlank(node))
-    .forEach(node => out.appendChild(node));
-  const hasText = out.textContent.trim() !== '';
-  return { html: hasText ? out.innerHTML.trim() : '', images };
+  cleanChildren(parsed.body, parsed, images).forEach(node =>
+    out.appendChild(node)
+  );
+  const segments = splitAtImages(parsed, out, images);
+  const html = segments
+    .filter(segment => segment.type === 'text')
+    .map(segment => segment.html)
+    .join('');
+  return { segments, html, images };
 };
 
 const escapeText = text =>

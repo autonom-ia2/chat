@@ -83,6 +83,34 @@ describe('loose content in mj-column on load (#2908)', () => {
     expect(out).not.toContain('<p font-family');
   });
 
+  it('repairs loose HTML written the HTML way (<img> and <br> without closing)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = canonicalizeMjml(
+      '<mj-section><mj-column><img src="#" alt="foto.jpg" style="width:549px">' +
+        'Linha 1<br>Linha 2<hr></mj-column></mj-section>'
+    );
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(out).toBe(
+      `<mj-section><mj-column><mj-image src="${UPLOAD_PLACEHOLDER_SRC}" alt="foto.jpg"></mj-image>` +
+        `<mj-text ${ARIAL} font-size="15px" color="#1f2937" line-height="1.6">Linha 1<br/>Linha 2<hr/></mj-text>` +
+        '</mj-column></mj-section>'
+    );
+    warn.mockRestore();
+  });
+
+  it('keeps <br> inside mj-text and an already closed <img></img> as they were', () => {
+    const out = canonicalizeMjml(
+      '<mj-section><mj-column><mj-text>a<br>b</mj-text>' +
+        '<img src="https://cdn.exemplo.com.br/a.png" alt="A"></img></mj-column></mj-section>'
+    );
+
+    expect(out).toBe(
+      '<mj-section><mj-column><mj-text>a<br>b</mj-text>' +
+        '<mj-image src="https://cdn.exemplo.com.br/a.png" alt="A"></mj-image></mj-column></mj-section>'
+    );
+  });
+
   it('loads the repaired draft in GrapesJS with only MJML blocks, and saves it repaired', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);

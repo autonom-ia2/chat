@@ -2,6 +2,7 @@ import grapesjs from 'grapesjs';
 import mjmlPlugin from 'grapesjs-mjml';
 import EmailCampaignAssetsAPI from 'dashboard/api/emailCampaignAssets';
 import {
+  UPLOAD_TIMEOUT_MS,
   attachImageDrop,
   handleDrop,
   handlePaste,
@@ -27,7 +28,7 @@ const EMAIL =
   '<mj-section css-class="footer-locked"><mj-column><mj-text>Rodapé</mj-text></mj-column></mj-section>' +
   '</mj-body></mjml>';
 
-const CAMPAIGN = () => 7;
+const CAMPAIGN = 7;
 const fileOf = (name, type = 'image/jpeg') => new File(['x'], name, { type });
 const uploaded = url => ({ data: { url } });
 
@@ -100,7 +101,8 @@ describe('image dropped on the canvas (#2908)', () => {
     expect(uploadingCount.value).toBe(0);
     expect(EmailCampaignAssetsAPI.upload).toHaveBeenCalledWith(
       7,
-      expect.any(File)
+      expect.any(File),
+      { timeout: UPLOAD_TIMEOUT_MS }
     );
     expect(classesOf()).toEqual(['topo', 'novo', 'foto', 'footer-locked']);
     expect(blockImage(1).get('src')).toBe('https://app.exemplo.com.br/a.jpg');
@@ -229,6 +231,84 @@ describe('image dropped on the canvas (#2908)', () => {
     expect(saved).not.toContain('<p style');
   });
 
+  it('keeps the order on retry: the image that failed goes back to its place', async () => {
+    EmailCampaignAssetsAPI.upload
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/1.jpg'))
+      .mockRejectedValueOnce(new Error('timeout of 90000ms exceeded'))
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/3.jpg'))
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/2.jpg'));
+
+    drop(
+      { files: [fileOf('1.jpg'), fileOf('2.jpg'), fileOf('3.jpg')] },
+      blockText(0)
+    );
+    await waitForImageUploads();
+    useImageDrop().notice.value.retry();
+    await waitForImageUploads();
+
+    expect(classesOf()).toEqual([
+      'topo',
+      'novo',
+      'novo',
+      'novo',
+      'foto',
+      'footer-locked',
+    ]);
+    expect([1, 2, 3].map(index => blockImage(index).get('src'))).toEqual([
+      'https://app.exemplo.com.br/1.jpg',
+      'https://app.exemplo.com.br/2.jpg',
+      'https://app.exemplo.com.br/3.jpg',
+    ]);
+  });
+
+  it('keeps the order of two failed images in a row on retry', async () => {
+    EmailCampaignAssetsAPI.upload
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/3.jpg'))
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/1.jpg'))
+      .mockResolvedValueOnce(uploaded('https://app.exemplo.com.br/2.jpg'));
+
+    drop(
+      { files: [fileOf('1.jpg'), fileOf('2.jpg'), fileOf('3.jpg')] },
+      blockText(0)
+    );
+    await waitForImageUploads();
+    useImageDrop().notice.value.retry();
+    await waitForImageUploads();
+
+    expect([1, 2, 3].map(index => blockImage(index).get('src'))).toEqual([
+      'https://app.exemplo.com.br/1.jpg',
+      'https://app.exemplo.com.br/2.jpg',
+      'https://app.exemplo.com.br/3.jpg',
+    ]);
+  });
+
+  it('keeps a whole pasted e-mail in order: text, image, text', () => {
+    drop(
+      {
+        html:
+          '<p>Olá, cliente.</p><p><img src="https://cdn.exemplo.com.br/oferta.png" alt="Oferta"></p>' +
+          '<p>Até logo.</p>',
+      },
+      blockText(0)
+    );
+
+    expect(classesOf()).toEqual([
+      'topo',
+      'novo',
+      'novo',
+      'novo',
+      'foto',
+      'footer-locked',
+    ]);
+    expect(blockText(1).toHTML()).toContain('<p>Olá, cliente.</p>');
+    expect(blockImage(2).get('src')).toBe(
+      'https://cdn.exemplo.com.br/oferta.png'
+    );
+    expect(blockText(3).toHTML()).toContain('<p>Até logo.</p>');
+  });
+
   it('makes plain text dropped on the canvas a Text block', () => {
     drop({ text: 'Linha 1\nLinha 2' });
 
@@ -243,7 +323,7 @@ describe('image dropped on the canvas (#2908)', () => {
         finish = resolve;
       })
     );
-    const detach = attachImageDrop(editor, CAMPAIGN);
+    const detach = attachImageDrop(editor, () => CAMPAIGN);
 
     drop({ files: [fileOf('a.jpg')] });
     detach();
@@ -256,7 +336,7 @@ describe('image dropped on the canvas (#2908)', () => {
 });
 
 describe('image pasted on the canvas (#2908)', () => {
-  it('replaces the selected image with a pasted print', async () => {
+  it('never replaces the selected image: a pasted print goes below it', async () => {
     EmailCampaignAssetsAPI.upload.mockResolvedValue(
       uploaded('https://app.exemplo.com.br/print.png')
     );
@@ -267,7 +347,11 @@ describe('image pasted on the canvas (#2908)', () => {
     await waitForImageUploads();
 
     expect(event.preventDefault).toHaveBeenCalled();
+    expect(classesOf()).toEqual(['topo', 'foto', 'novo', 'footer-locked']);
     expect(blockImage(1).get('src')).toBe(
+      'https://cdn.exemplo.com.br/velha.png'
+    );
+    expect(blockImage(2).get('src')).toBe(
       'https://app.exemplo.com.br/print.png'
     );
   });
@@ -316,12 +400,95 @@ describe('image pasted on the canvas (#2908)', () => {
     expect(blockImage(1).get('src')).toBe(UPLOAD_PLACEHOLDER_SRC);
   });
 
-  it('leaves a text paste outside a text to GrapesJS', () => {
+  it('makes a text paste outside a text into blocks below the selected one', () => {
+    editor.select(blockText(0));
+    const event = pasteEvent({ html: '<p>Oi</p>' });
+
+    handlePaste(editor, event, CAMPAIGN);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(classesOf()).toEqual(['topo', 'novo', 'foto', 'footer-locked']);
+  });
+
+  it('leaves the paste to GrapesJS when it is pasting blocks copied in the editor', () => {
+    editor.select(blockText(0));
+    editor.getModel().set('clipboard', [blocks()[0]]);
     const event = pasteEvent({ html: '<p>Oi</p>' });
 
     handlePaste(editor, event, CAMPAIGN);
 
     expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
+  });
+});
+
+describe('drop wiring on the canvas frame (#2908)', () => {
+  const transfer = text => ({
+    files: [],
+    getData: type => (type === 'text/plain' ? text : ''),
+  });
+  const frameEvent = (name, dt) => {
+    const event = new Event(name);
+    Object.defineProperty(event, 'dataTransfer', { value: dt });
+    return event;
+  };
+  const tick = () =>
+    new Promise(resolve => {
+      setTimeout(resolve, 0);
+    });
+  let frame;
+  let detach;
+
+  beforeEach(() => {
+    frame = new EventTarget();
+    detach = attachImageDrop(editor, () => CAMPAIGN);
+    editor.trigger('canvas:frame:load', { window: frame });
+  });
+  afterEach(() => detach());
+
+  const dropOnFrame = text => {
+    const dt = transfer(text);
+    frame.dispatchEvent(frameEvent('drop', dt));
+    const result = { setContent: vi.fn() };
+    editor.trigger('canvas:dragdata', dt, result);
+    return result;
+  };
+
+  it('cancels the GrapesJS drop and inserts a block itself', async () => {
+    const result = dropOnFrame('De outra aba');
+    await tick();
+
+    expect(result.setContent).toHaveBeenCalledWith('');
+    expect(classesOf()).toEqual(['topo', 'foto', 'novo', 'footer-locked']);
+  });
+
+  it('ignores a drag that started inside the canvas (moving selected text): no new block', async () => {
+    frame.dispatchEvent(new Event('dragstart'));
+    const result = dropOnFrame('texto movido');
+    await tick();
+
+    expect(result.setContent).toHaveBeenCalledWith('');
+    expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
+  });
+
+  it('does nothing for a GrapesJS read without a drop of ours, nor twice for one drop', async () => {
+    const stale = { setContent: vi.fn() };
+    editor.trigger('canvas:dragdata', transfer('x'), stale);
+    dropOnFrame('Uma vez');
+    const again = { setContent: vi.fn() };
+    editor.trigger('canvas:dragdata', transfer('x'), again);
+    await tick();
+
+    expect(stale.setContent).not.toHaveBeenCalled();
+    expect(again.setContent).not.toHaveBeenCalled();
+    expect(classesOf()).toEqual(['topo', 'foto', 'novo', 'footer-locked']);
+  });
+
+  it('inserts nothing when the editor closes right after the drop', async () => {
+    dropOnFrame('Tarde demais');
+    detach();
+    await tick();
+
     expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
   });
 });

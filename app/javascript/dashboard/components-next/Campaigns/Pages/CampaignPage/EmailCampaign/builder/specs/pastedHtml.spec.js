@@ -16,16 +16,31 @@ describe('sanitizePastedHtml (#2908)', () => {
     expect(images).toEqual([]);
   });
 
-  it('takes images out of the text, in order, with their address and description', () => {
-    const { html, images } = sanitizePastedHtml(
+  it('keeps the pasted order: text, image, text (an e-mail pasted whole)', () => {
+    const { segments, html, images } = sanitizePastedHtml(
       '<p>Antes</p><p><img src="https://cdn.exemplo.com.br/a.png" alt="A"></p>' +
         '<div><img src="data:image/png;base64,AAAA"></div><p>Depois</p>'
     );
 
+    expect(segments).toEqual([
+      { type: 'text', html: '<p>Antes</p>' },
+      { type: 'image', src: 'https://cdn.exemplo.com.br/a.png', alt: 'A' },
+      { type: 'image', src: 'data:image/png;base64,AAAA', alt: '' },
+      { type: 'text', html: '<p>Depois</p>' },
+    ]);
     expect(html).toBe('<p>Antes</p><p>Depois</p>');
-    expect(images).toEqual([
-      { src: 'https://cdn.exemplo.com.br/a.png', alt: 'A' },
-      { src: 'data:image/png;base64,AAAA', alt: '' },
+    expect(images).toHaveLength(2);
+  });
+
+  it('splits a paragraph that holds an image into the text before and after it', () => {
+    const { segments } = sanitizePastedHtml(
+      '<p>Olá <b>cliente</b>,<img src="https://cdn.exemplo.com.br/b.png"> veja a oferta</p>'
+    );
+
+    expect(segments).toEqual([
+      { type: 'text', html: '<p>Olá <strong>cliente</strong>,</p>' },
+      { type: 'image', src: 'https://cdn.exemplo.com.br/b.png', alt: '' },
+      { type: 'text', html: '<p> veja a oferta</p>' },
     ]);
   });
 
@@ -57,12 +72,14 @@ describe('sanitizePastedHtml (#2908)', () => {
   });
 
   it('returns no text when only an image came', () => {
-    expect(
-      sanitizePastedHtml('<img src="https://cdn.exemplo.com.br/a.png">')
-    ).toEqual({
-      html: '',
-      images: [{ src: 'https://cdn.exemplo.com.br/a.png', alt: '' }],
-    });
+    const { html, segments } = sanitizePastedHtml(
+      '<img src="https://cdn.exemplo.com.br/a.png">'
+    );
+
+    expect(html).toBe('');
+    expect(segments).toEqual([
+      { type: 'image', src: 'https://cdn.exemplo.com.br/a.png', alt: '' },
+    ]);
   });
 });
 

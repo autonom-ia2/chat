@@ -67,112 +67,137 @@ const REFUSED = {
 
 // ---- upload ----
 
+// A stalled upload would hold save, test send and review (they wait for it): it fails instead, with
+// "Tentar de novo". Generous for a 10 MB file on a slow connection; reduced photos take seconds.
+export const UPLOAD_TIMEOUT_MS = 90 * 1000;
+
 const uploadOne = async (file, campaignId) => {
   if (!campaignId) throw new Error('campaign not saved');
   const prepared = await prepareImageFile(file);
-  const { data } = await EmailCampaignAssetsAPI.upload(campaignId, prepared);
+  const { data } = await EmailCampaignAssetsAPI.upload(campaignId, prepared, {
+    timeout: UPLOAD_TIMEOUT_MS,
+  });
   return data.url;
 };
 
+const sameAnchor = (a, b) =>
+  Boolean(a && b) && a.block === b.block && a.after === b.after;
+
 let uploadFiles;
 
-const reportFailures = (failed, ctx) => {
+// Each failed file keeps where it was going (its anchor, or the image it was replacing), so a retry
+// puts it back in its place, not at the end.
+const reportFailures = (editor, failed, campaignId) => {
   const retryable = failed.filter(({ error }) => !REFUSED[errorCode(error)]);
-  if (retryable.length) {
-    notice.value = {
-      key: 'UPLOAD_FAILED',
-      count: retryable.length,
-      retry: () => {
-        dismissNotice();
-        uploadFiles(
-          ctx.editor,
-          retryable.map(({ file }) => file),
-          ctx
-        );
-      },
-    };
+  if (!retryable.length) {
+    notice.value = { key: REFUSED[errorCode(failed[0].error)] };
     return;
   }
-  notice.value = { key: REFUSED[errorCode(failed[0].error)] };
+  notice.value = {
+    key: 'UPLOAD_FAILED',
+    count: retryable.length,
+    retry: () => {
+      dismissNotice();
+      uploadFiles(
+        editor,
+        retryable.map(({ file, anchor, replace }) => ({
+          file,
+          anchor,
+          replace,
+        })),
+        { campaignId }
+      );
+    },
+  };
 };
 
 // Puts one uploaded image on the canvas; returns where the next one goes.
 const placeImage = (editor, url, file, { next, target }) => {
   if (target) {
     replaceImageSrc(target, url);
-    return { next: anchorFor(target), target: null };
+    return anchorFor(target);
   }
   const alt = altFromFileName(file.name);
-  return {
-    next: insertBlock(editor, next, imageSectionMjml({ src: url, alt })),
-    target: null,
-  };
+  return insertBlock(editor, next, imageSectionMjml({ src: url, alt }));
 };
 
-// Uploads in order; the first image replaces `replace` (an mj-image) when given, the others enter as
-// Image blocks one after the other from `anchor`.
-uploadFiles = (editor, files, { anchor, replace = null, getCampaignId }) => {
-  uploadingCount.value += files.length;
+// Where this item goes: its own recorded place, or right after the previous item of the same place.
+const itemPlace = (item, previous, next) => {
+  if (item.replace) return { target: item.replace, next };
+  if (item.anchor && !sameAnchor(item.anchor, previous?.anchor)) {
+    return { target: null, next: item.anchor };
+  }
+  return { target: null, next };
+};
+
+// items: [{ file, anchor?, replace? }] in order. Only the first item of a drop carries the anchor (or the
+// image to replace); the others follow it. The campaign is read once, when the upload starts.
+uploadFiles = (editor, items, { campaignId }) => {
+  uploadingCount.value += items.length;
   const startedIn = generation;
   const run = async () => {
-    let place = { next: anchor, target: replace };
+    let next = items[0]?.anchor || anchorFor(null);
+    let previous = null;
     const failed = [];
     // eslint-disable-next-line no-restricted-syntax
-    for (const file of files) {
+    for (const item of items) {
+      const place = itemPlace(item, previous, next);
+      previous = item;
       try {
         // eslint-disable-next-line no-await-in-loop
-        const url = await uploadOne(file, getCampaignId());
+        const url = await uploadOne(item.file, campaignId);
         // The editor may have been closed meanwhile: then there is nothing to insert into.
         if (startedIn === generation) {
-          place = placeImage(editor, url, file, place);
+          next = placeImage(editor, url, item.file, place);
         }
       } catch (error) {
-        failed.push({ file, error });
+        failed.push({
+          file: item.file,
+          error,
+          replace: place.target,
+          anchor: place.target ? null : place.next,
+        });
+        next = place.target ? anchorFor(place.target) : place.next;
       } finally {
         uploadingCount.value -= 1;
       }
     }
     if (failed.length && startedIn === generation) {
-      reportFailures(failed, {
-        editor,
-        anchor: place.next,
-        replace: place.target,
-        getCampaignId,
-      });
+      reportFailures(editor, failed, campaignId);
     }
   };
   return track(run());
 };
 
-// ---- images and text that came as HTML (paste from Word/Docs, drag from another site) ----
+const dropItems = (files, { anchor, replace = null }) =>
+  files.map((file, index) =>
+    index === 0 ? { file, anchor, replace } : { file }
+  );
+
+// ---- pasted/dropped HTML: text and images in the order they came ----
 
 // Images with a public address enter as they are; the others become the "Clique para subir sua imagem"
-// frame, with a notice saying so.
-const insertImages = (editor, images, anchor, replace = null) => {
+// frame, with a notice saying so. `replace` (an image dropped on) only takes a lone public image.
+const insertSegments = (editor, segments, anchor, replace = null) => {
+  const lonePublicImage =
+    segments.length === 1 &&
+    segments[0].type === 'image' &&
+    isPublicImageSrc(segments[0].src);
+  if (replace && lonePublicImage) {
+    replaceImageSrc(replace, segments[0].src.trim());
+    return;
+  }
   let next = anchor;
-  let target = replace;
   let missing = 0;
-  images.forEach(image => {
-    const isPublic = isPublicImageSrc(image.src);
-    if (!isPublic) missing += 1;
-    if (target && isPublic) {
-      replaceImageSrc(target, image.src.trim());
-      next = anchorFor(target);
-      target = null;
+  segments.forEach(segment => {
+    if (segment.type === 'text') {
+      next = insertBlock(editor, next, textSectionMjml(segment.html));
       return;
     }
-    next = insertBlock(editor, next, imageSectionMjml(image));
+    if (!isPublicImageSrc(segment.src)) missing += 1;
+    next = insertBlock(editor, next, imageSectionMjml(segment));
   });
   if (missing) notice.value = { key: 'MISSING_PUBLIC', count: missing };
-  return next;
-};
-
-const insertHtml = (editor, html, anchor, replace) => {
-  const { html: clean, images } = sanitizePastedHtml(html);
-  const next = clean
-    ? insertBlock(editor, anchor, textSectionMjml(clean))
-    : anchor;
-  insertImages(editor, images, next, clean ? null : replace);
 };
 
 // ---- drop ----
@@ -196,9 +221,10 @@ const dropAnchor = (component, clientY) => {
 export const handleDrop = (
   editor,
   { payload, component, clientY },
-  getCampaignId
+  campaignId
 ) => {
   const anchor = dropAnchor(component, clientY);
+  // Dropping on an image replaces it: the person aimed at that picture.
   const replace = component ? imageAt(component) : null;
   if (payload.files) {
     const images = payload.files.filter(isImageFile);
@@ -206,12 +232,19 @@ export const handleDrop = (
       notice.value = { key: 'ONLY_IMAGES' };
     }
     if (images.length) {
-      uploadFiles(editor, images, { anchor, replace, getCampaignId });
+      uploadFiles(editor, dropItems(images, { anchor, replace }), {
+        campaignId,
+      });
     }
     return;
   }
   if (payload.html) {
-    insertHtml(editor, payload.html, anchor, replace);
+    insertSegments(
+      editor,
+      sanitizePastedHtml(payload.html).segments,
+      anchor,
+      replace
+    );
     return;
   }
   const html = plainTextToHtml(payload.text);
@@ -225,33 +258,55 @@ const isEditableTarget = target =>
     target?.isContentEditable || target?.closest?.('[contenteditable="true"]')
   );
 
-export const handlePaste = (editor, event, getCampaignId) => {
+// GrapesJS pastes its own copied blocks (core:paste reads only its internal clipboard) when something
+// is selected; then the system clipboard is not ours to insert.
+const grapesPastesBlocks = editor =>
+  Boolean(editor.getModel().get('clipboard')?.length && editor.getSelected());
+
+const pasteInText = (editor, event, segments, anchor) => {
+  event.preventDefault();
+  const [first, ...rest] = segments;
+  // The text before the first image goes where the cursor is; what follows enters as blocks, in order.
+  if (first.type === 'text') {
+    event.target.ownerDocument.execCommand('insertHTML', false, first.html);
+    insertSegments(editor, rest, anchor);
+  } else {
+    insertSegments(editor, segments, anchor);
+  }
+};
+
+// A paste never replaces an image: it goes below the selected block (replacing is for a drop aimed
+// at the image).
+export const handlePaste = (editor, event, campaignId) => {
   const dt = event.clipboardData;
   if (!dt) return;
   const inText = isEditableTarget(event.target);
   const html = dt.getData('text/html');
   // Word and Excel also put a picture of the copied text on the clipboard: text wins over files.
-  const cleaned = html ? sanitizePastedHtml(html) : { html: '', images: [] };
-  const selected = editor.getEditing?.() || editor.getSelected?.();
-  const anchor = anchorFor(selected);
+  const cleaned = html
+    ? sanitizePastedHtml(html)
+    : { html: '', segments: [], images: [] };
+  const anchor = anchorFor(editor.getEditing?.() || editor.getSelected?.());
+  if (cleaned.html && inText) {
+    pasteInText(editor, event, cleaned.segments, anchor);
+    return;
+  }
   if (cleaned.html) {
-    // Outside a text the paste belongs to GrapesJS (copy/paste of blocks).
-    if (!inText) return;
+    // Outside a text, a text paste is ours only when GrapesJS is not pasting copied blocks.
+    if (grapesPastesBlocks(editor)) return;
     event.preventDefault();
-    event.target.ownerDocument.execCommand('insertHTML', false, cleaned.html);
-    if (cleaned.images.length) insertImages(editor, cleaned.images, anchor);
+    insertSegments(editor, cleaned.segments, anchor);
     return;
   }
   const files = Array.from(dt.files || []).filter(isImageFile);
-  const replace = !inText && selected ? imageAt(selected) : null;
   if (files.length) {
     event.preventDefault();
-    uploadFiles(editor, files, { anchor, replace, getCampaignId });
+    uploadFiles(editor, dropItems(files, { anchor }), { campaignId });
     return;
   }
-  if (cleaned.images.length) {
+  if (cleaned.segments.length) {
     event.preventDefault();
-    insertImages(editor, cleaned.images, anchor, replace);
+    insertSegments(editor, cleaned.segments, anchor);
   }
 };
 
@@ -261,11 +316,27 @@ export const handlePaste = (editor, event, getCampaignId) => {
 export const attachImageDrop = (editor, getCampaignId) => {
   let lastDrop = null;
   let frameWindow = null;
+  // A drag that started inside the canvas (moving selected text): never a new block.
+  let dragFromFrame = false;
+  const attachedIn = generation;
+  const isAlive = () => attachedIn === generation;
 
+  const onDragStart = () => {
+    dragFromFrame = true;
+  };
+  const onDragEnd = () => {
+    dragFromFrame = false;
+  };
   // Capture phase on the frame: runs before GrapesJS reads the drop, while the data is readable.
   const onDrop = event => {
+    lastDrop = null;
     // A block dragged from our panel: GrapesJS places it.
     if (editor.getModel().get('dragSource')?.content) return;
+    if (dragFromFrame) {
+      dragFromFrame = false;
+      lastDrop = { ignore: true };
+      return;
+    }
     const payload = readTransfer(event.dataTransfer);
     if (!payload) return;
     lastDrop = {
@@ -276,23 +347,36 @@ export const attachImageDrop = (editor, getCampaignId) => {
   };
   // GrapesJS asks what to drop: nothing (the drop is cancelled), we insert it ourselves.
   const onDragData = (_dt, result) => {
-    if (!lastDrop) return;
     const drop = lastDrop;
     lastDrop = null;
+    if (!drop || !isAlive()) return;
+    if (editor.getModel().get('dragSource')?.content) return;
     result.setContent('');
-    setTimeout(() => handleDrop(editor, drop, getCampaignId));
+    if (drop.ignore) return;
+    const campaignId = getCampaignId();
+    setTimeout(() => {
+      if (isAlive()) handleDrop(editor, drop, campaignId);
+    });
   };
-  const onPaste = event => handlePaste(editor, event, getCampaignId);
+  const onPaste = event => handlePaste(editor, event, getCampaignId());
 
+  const LISTENERS = [
+    ['dragstart', onDragStart],
+    ['dragend', onDragEnd],
+    ['drop', onDrop],
+    ['paste', onPaste],
+  ];
   const unbindFrame = () => {
-    frameWindow?.removeEventListener('drop', onDrop, true);
-    frameWindow?.removeEventListener('paste', onPaste, true);
+    LISTENERS.forEach(([name, fn]) =>
+      frameWindow?.removeEventListener(name, fn, true)
+    );
   };
   const bindFrame = ({ window: loadedWindow } = {}) => {
     unbindFrame();
     frameWindow = loadedWindow || editor.Canvas.getWindow();
-    frameWindow?.addEventListener('drop', onDrop, true);
-    frameWindow?.addEventListener('paste', onPaste, true);
+    LISTENERS.forEach(([name, fn]) =>
+      frameWindow?.addEventListener(name, fn, true)
+    );
   };
 
   editor.on('canvas:dragdata', onDragData);
@@ -301,6 +385,7 @@ export const attachImageDrop = (editor, getCampaignId) => {
 
   return () => {
     unbindFrame();
+    lastDrop = null;
     editor.off('canvas:dragdata', onDragData);
     editor.off('canvas:frame:load', bindFrame);
     generation += 1;
