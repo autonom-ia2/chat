@@ -307,6 +307,15 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(dados['observacao']).not_to include('estabelecimentos', 'olhei', 'li ')
     end
 
+    it 'F22 (hospitais/12, real): o nome nao achado orienta mandar o tipo junto (a cidade grande so e lida em parte)' do
+      fonte_responde("#{base}&offset=0", { estabelecimentos: [unidade('CLINICA A')] })
+
+      saida = turno('hospitais', 'cidade' => 'Campinas', 'uf' => 'sp', 'busca' => 'santa casa')
+
+      expect(saida['situacao']).to eq('nao_encontrado')
+      expect(saida['orientacao']).to include('tipo', 'santa casa é hospital')
+    end
+
     it 'P14: o CEP do estabelecimento vem com o traco' do
       fonte_responde("#{base}&offset=0", { estabelecimentos: [unidade('HOSPITAL A')] })
 

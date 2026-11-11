@@ -28,6 +28,11 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
     'caps' => 70, 'centro_de_parto' => 61, 'vacinacao' => 85
   }.freeze
 
+  # O CNES não busca pelo nome: o nome é procurado nas páginas lidas, e a cidade grande só é lida em parte (varredura
+  # F22: a "santa casa" de Campinas, sem o tipo, ficou fora das 100 primeiras).
+  NAO_ENCONTRADO = 'Nada com esse nome entre os cadastros lidos da cidade. Mande de novo com o tipo do lugar (santa casa ' \
+                   'é hospital), que estreita a lista; se ainda não achar, diga isso ao cliente. Não invente.'.freeze
+
   module_function
 
   # Cidade obrigatória: o código IBGE, ou o nome (com a UF só quando o nome existe em mais de um estado).
@@ -75,7 +80,7 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'estabelecimentos', descricao: 'os estabelecimentos de saúde da cidade',
         opcionais: [CODIGO_IBGE, CIDADE, UF, TIPO, BUSCA], provedores: [Cnes], validade: 7.days, prazo_por_fonte: 4,
-        prazo_total: 8, regra: method(:regra), refinar: method(:refinar)
+        prazo_total: 8, regra: method(:regra), refinar: method(:refinar), nao_encontrado: NAO_ENCONTRADO
       )
     ],
     limite_diario: 500,
