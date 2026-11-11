@@ -60,8 +60,18 @@ class Autonomia::FerramentasProntas::ClienteHttp
   def initialize(hosts:, prazo_final:, conta: nil)
     @conta = conta
     @hosts = hosts.map(&:downcase)
+    @de_fora = []
     @prazo_final = prazo_final
     @chamadas = 0
+  end
+
+  # O host que só se conhece na hora (o endereço de cada seguradora, lido do diretório do Open Insurance, que já confere
+  # HTTPS na 443): passa a valer neste cliente, com as mesmas proteções, a fatia da conta no teto e a contagem. Como veio
+  # de fora, ainda é resolvido uma vez aqui e conferido contra rede interna antes de cada pedido (`resolucao`).
+  def permitir_host!(host)
+    nome = host.to_s.downcase
+    @hosts |= [nome]
+    @de_fora |= [nome]
   end
 
   def self.agora
@@ -72,9 +82,18 @@ class Autonomia::FerramentasProntas::ClienteHttp
   # da resposta, quando a fonte oficial só entrega a lista inteira (os municípios de MG no IBGE passam de 256 KB).
   # `cabecalhos`: os próprios do provedor (`Provedor.cabecalhos`), por baixo dos fixos daqui.
   def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
-    JSON.parse(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
-  rescue JSON::ParserError, EncodingError => e
-    raise traduzir(e)
+    ler_json(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
+  end
+
+  # O mesmo, para o provedor que responde sem corpo quando não há registro (o PNCP manda 204): o vazio vira "não
+  # encontrado". Só quem pede: para as outras fontes, 200 vazio continua sendo resposta quebrada. O tipo da resposta não
+  # é conferido aqui, porque o 204 pode vir sem `Content-Type`; o corpo que não é JSON continua recusado (`ler_json`).
+  def get_json_vazio_e_nao_encontrado(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
+    aceita = { tipos: TIPOS, cabecalhos: cabecalhos, conferir_tipo: false }
+    corpo = buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: aceita)
+    raise NaoEncontrado, 'nao_encontrado' if corpo.to_s.strip.empty?
+
+    ler_json(corpo)
   end
 
   # -> as linhas do CSV (com cabeçalho), em UTF-8.
@@ -90,13 +109,20 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   private
 
+  def ler_json(corpo)
+    JSON.parse(corpo)
+  rescue JSON::ParserError, EncodingError => e
+    raise traduzir(e)
+  end
+
   # `aceita`: os tipos de resposta aceitos (`tipos`) e os cabeçalhos do provedor (`cabecalhos`).
   def buscar(host, caminho, prazo:, max_bytes:, aceita:)
     url = endereco(host, caminho)
     segundos = prazo_da_chamada(prazo)
+    fixos = resolucao(host)
     liberar!(host)
     @chamadas += 1
-    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita)) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
+    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita), **fixos) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
   rescue SafeFetch::Error => e
     raise traduzir(e)
   rescue *TRANSPORTE
@@ -113,6 +139,22 @@ class Autonomia::FerramentasProntas::ClienteHttp
     aberto
   rescue Zlib::Error
     raise Falha, 'resposta_invalida'
+  end
+
+  # O host que veio de fora (`permitir_host!`): o nome é resolvido UMA vez aqui, todo IP é conferido (privado, loopback,
+  # link-local com o metadata, reservado) e o SafeFetch conecta só nesses IPs. Vale também numa instalação com
+  # SAFE_FETCH_ALLOW_PRIVATE_NETWORK, em que o SsrfFilter sai do caminho; é a mesma barreira do webhook da Automação.
+  # Os hosts fixos do catálogo seguem com a resolução do próprio SafeFetch.
+  def resolucao(host)
+    return {} unless @de_fora.include?(host.to_s.downcase)
+
+    ips = Resolv.getaddresses(host.to_s).map { |ip| IPAddr.new(ip) }
+    raise Falha, 'falha_de_rede' if ips.empty?
+    raise Falha, 'endereco_recusado' if ips.any? { |ip| Autonomia::Automacao::EnvioDoWebhook.endereco_interno?(ip) }
+
+    { resolver: ->(_nome) { ips } }
+  rescue IPAddr::InvalidAddressError
+    raise Falha, 'endereco_recusado'
   end
 
   def liberar!(host)
@@ -146,7 +188,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
       method: :get, headers: aceita.fetch(:cabecalhos).merge(CABECALHOS, 'Accept' => tipos.first), max_bytes: max_bytes,
       open_timeout: [ABERTURA, segundos].min, read_timeout: segundos, total_timeout: segundos,
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
-      allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: true,
+      allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: aceita.fetch(:conferir_tipo, true),
       sensitive_headers: aceita.fetch(:cabecalhos).keys # se um dia o salto para outra origem for aceito, a chave cai antes
     }
   end

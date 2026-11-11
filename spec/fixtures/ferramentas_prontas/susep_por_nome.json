@@ -1,0 +1,30 @@
+{
+  "retorno": {
+    "paginaAtual": 1,
+    "tamanhoPagina": 25,
+    "totalRegistros": 2,
+    "registros": [
+      {
+        "corretorId": 900001,
+        "cpfCnpj": "11222333000181",
+        "protocolo": "202000001",
+        "nome": "CORRETORA EXEMPLO DE SEGUROS LTDA",
+        "recadastrado": true,
+        "situacao": "Ativo",
+        "produtos": "Seguros de Danos, Seguros de Pessoas, Planos de Capitalização"
+      },
+      {
+        "corretorId": 900002,
+        "cpfCnpj": "99000000000100",
+        "protocolo": "202000002",
+        "nome": "CORRETORA EXEMPLO DOIS LTDA",
+        "recadastrado": false,
+        "situacao": "Suspenso",
+        "produtos": null
+      }
+    ]
+  },
+  "mensagem": null,
+  "validacoes": [],
+  "protocolo": "00000000-0000-0000-0000-000000000000"
+}
