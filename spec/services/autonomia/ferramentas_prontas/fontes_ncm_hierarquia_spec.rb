@@ -153,4 +153,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(pedidos.size).to eq(2)
     end
   end
+
+  # Revisão do #2891 (f e g).
+  describe 'o HTML da descricao' do
+    let(:dado) { { codigo: '73.18', descricao: '', data_inicio: '2022-04-01' } }
+
+    it 'a quebra de linha vira espaco: as duas linhas nao colam' do
+      fonte_responde("#{api}/7318", dado.merge(descricao: 'Parafusos de aço<br>com porca'))
+
+      expect(codigo('7318')['dados']['descricao']).to eq('Parafusos de aço com porca')
+    end
+
+    it 'descricao feita so de tags: resposta invalida, e o agente ouve "nao consegui"' do
+      fonte_responde("#{api}/7318", dado.merge(descricao: '<br><i></i>'))
+
+      expect(codigo('7318')['situacao']).to eq('nao_consegui_consultar')
+      expect(uso.motivos).to eq('brasilapi.resposta_invalida' => 1)
+    end
+  end
 end

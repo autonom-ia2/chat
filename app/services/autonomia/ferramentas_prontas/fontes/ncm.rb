@@ -42,19 +42,24 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   end
 
   # Um item da tabela, enxuto, com a descrição completa (`indice`: os itens da mesma resposta, `Descricao.indice`). Sem
-  # código ou descrição: falha, e o agente ouve "não consegui".
+  # código ou descrição: falha, e o agente ouve "não consegui". A descrição feita só de tags ("<br>") também (revisão
+  # do #2891).
   def item(dado, indice = {})
     falha = Autonomia::FerramentasProntas::Provedor::Falha
     raise falha, 'resposta_invalida' unless dado.is_a?(Hash) && dado['codigo'].present? && dado['descricao'].present?
+    raise falha, 'resposta_invalida' if Descricao.propria(dado).empty?
 
     { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => Descricao.completa(dado, indice),
       'vigente_desde' => dado['data_inicio'].presence }.compact
   end
 
   # A tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>"): fica o texto, com as
-  # entidades decodificadas ("&amp;" -> "&").
+  # entidades decodificadas ("&amp;" -> "&"). A quebra de linha vira espaço: o Nokogiri colava as duas linhas
+  # ("linha<br>outra" -> "linhaoutra", revisão do #2891).
   def texto(descricao)
-    Nokogiri::HTML5.fragment(descricao.to_s).text.squish
+    fragmento = Nokogiri::HTML5.fragment(descricao.to_s)
+    fragmento.css('br').each { |quebra| quebra.replace(Nokogiri::XML::Text.new(' ', fragmento.document)) }
+    fragmento.text.squish
   end
 
   # Só o que vale hoje: a tabela também traz o código que já saiu (data de fim no passado).
