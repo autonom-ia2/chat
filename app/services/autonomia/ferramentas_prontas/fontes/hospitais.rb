@@ -49,7 +49,7 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
     achados = Autonomia::FerramentasProntas::Lista.filtrar(todos, params['busca']) { |item| item['nome'] }
     return if achados.empty?
 
-    resposta = dados.except('estabelecimentos', 'amostra')
+    resposta = dados.except('estabelecimentos', 'amostra', 'pagina_falhou')
                     .merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
     dados['amostra'] ? resposta.merge('observacao' => format(AMOSTRA, lidos: todos.size)) : resposta
   end

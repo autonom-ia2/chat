@@ -6,6 +6,8 @@ class Autonomia::FerramentasProntas::Fontes::Hospitais::Cnes < Autonomia::Ferram
   NOME = 'cnes'.freeze
   HOST = 'apidadosabertos.saude.gov.br'.freeze
   PESSOA_FISICA = '4'.freeze
+  # Como a lista veio (`paginas`) -> as marcas da resposta. A `pagina_falhou` sai no `refinar` e não chega ao agente.
+  AMOSTRAS = { inteira: {}, teto: { 'amostra' => true }, falhou: { 'amostra' => true, 'pagina_falhou' => true } }.freeze
   # O nome de cada tipo de unidade (`/cnes/tipounidades`, lido em 10/11/2026).
   TIPOS = {
     1 => 'Posto de saúde', 2 => 'Unidade básica de saúde', 4 => 'Policlínica', 5 => 'Hospital geral',
@@ -22,15 +24,21 @@ class Autonomia::FerramentasProntas::Fontes::Hospitais::Cnes < Autonomia::Ferram
     85 => 'Centro de imunização'
   }.freeze
 
+  # A amostra que veio de uma página que falhou (`pagina_falhou`) não vai ao cache: a próxima consulta tenta a lista de
+  # novo (revisão do #2906; antes ficava 7 dias). A amostra do teto de páginas é sempre a mesma, e vai.
+  def self.validade_da_resposta(dados)
+    dados['pagina_falhou'] ? 0 : validade
+  end
+
   def consultar(_consulta, params)
     municipio = municipio(params)
-    lidos, completo = paginas(municipio.codigo_cnes, params['tipo'])
+    lidos, situacao = paginas(municipio.codigo_cnes, params['tipo'])
     estabelecimentos = lidos.reject { |item| pessoa_fisica?(item) }
     raise NaoEncontrado if estabelecimentos.empty?
 
     { 'cidade' => municipio.nome }.merge(Autonomia::FerramentasProntas::Ufs.com_nome(municipio.uf))
                                   .merge('estabelecimentos' => estabelecimentos.map { |item| estabelecimento(item) })
-                                  .merge(completo ? {} : { 'amostra' => true })
+                                  .merge(AMOSTRAS.fetch(situacao))
   end
 
   private
@@ -43,20 +51,20 @@ class Autonomia::FerramentasProntas::Fontes::Hospitais::Cnes < Autonomia::Ferram
 
   # A API devolve POR_PAGINA por vez: as páginas seguintes até a que vem incompleta (a lista acabou) ou até
   # `MAX_PAGINAS` (varredura F21/F22: a "santa casa" estava depois da primeira página). Falha numa página depois da
-  # primeira (o prazo da consulta acabando): o que já veio serve, como amostra. -> [itens, a lista veio inteira?]
+  # primeira (o prazo da consulta acabando): o que já veio serve, como amostra. -> [itens, :inteira | :teto | :falhou]
   def paginas(codigo, tipo)
     hospitais = Autonomia::FerramentasProntas::Fontes::Hospitais
     lidos = []
     hospitais::MAX_PAGINAS.times do |pagina|
       itens = pagina(codigo, tipo, pagina * hospitais::POR_PAGINA)
       lidos.concat(itens)
-      return [lidos, true] if itens.size < hospitais::POR_PAGINA
+      return [lidos, :inteira] if itens.size < hospitais::POR_PAGINA
     rescue Falha
       raise if lidos.empty?
 
-      return [lidos, false]
+      return [lidos, :falhou]
     end
-    [lidos, false]
+    [lidos, :teto]
   end
 
   def pagina(codigo, tipo, deslocamento)

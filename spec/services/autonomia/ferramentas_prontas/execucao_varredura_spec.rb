@@ -311,6 +311,31 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(dados['observacao']).not_to include('estabelecimentos', 'olhei', 'li ')
     end
 
+    # Revisão do #2906: a amostra de uma página que falhou ia ao cache por 7 dias, e a cidade ficava uma semana sem o resto.
+    it 'F21: a amostra que veio de uma pagina que falhou nao vai ao cache; a do teto de paginas vai' do
+      loja = cache_em_memoria
+      allow(loja).to receive(:write).and_call_original
+      fonte_responde("#{base}&offset=0", { estabelecimentos: Array.new(20) { |i| unidade("U #{i}") } })
+      fonte_fora("#{base}&offset=20", status: 503)
+
+      2.times { expect(turno('hospitais', 'cidade' => 'Campinas', 'uf' => 'sp')['dados']['observacao']).to include('amostra') }
+
+      expect(loja).not_to have_received(:write)
+      expect(a_request(:get, "#{base}&offset=0")).to have_been_made.twice
+    end
+
+    it 'F21: a amostra do teto de paginas (sem falha) fica no cache da consulta' do
+      loja = cache_em_memoria
+      allow(loja).to receive(:write).and_call_original
+      Autonomia::FerramentasProntas::Fontes::Hospitais::MAX_PAGINAS.times do |pagina|
+        fonte_responde("#{base}&offset=#{pagina * 20}", { estabelecimentos: Array.new(20) { |i| unidade("U #{pagina}-#{i}") } })
+      end
+
+      turno('hospitais', 'cidade' => 'Campinas', 'uf' => 'sp')
+
+      expect(loja).to have_received(:write).with(anything, hash_including('situacao' => 'encontrado'), expires_in: 7.days)
+    end
+
     it 'F22 (hospitais/12, real): o nome nao achado orienta mandar o tipo junto (a cidade grande so e lida em parte)' do
       fonte_responde("#{base}&offset=0", { estabelecimentos: [unidade('CLINICA A')] })
 
