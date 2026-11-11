@@ -101,6 +101,38 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(buscas_feitas.select { |termo| termo.length < ncm::POSICAO }).to eq([])
     end
 
+    # Revisão do #2917 (3): escolher o produto que o cliente quis dizer é do modelo, não de ranking de palavra (regra do
+    # Rodrigo). "celular" empata a marcenaria (44.18, painéis celulares) com os telefones (85.17): nada abre.
+    it '"celular" real: grupos empatados nao abrem, e o modelo e orientado a buscar pelo codigo do grupo' do
+      fonte_responde("#{api}?search=celular", fixture('ncm_busca_celular.json'))
+
+      dados = buscar('celular')['dados']
+
+      expect(dados['observacao']).to eq(ncm::ESCOLHA_O_GRUPO)
+      expect(dados['itens'].pluck('codigo')).to include('44.18', '85.17')
+      expect(buscas_feitas).to eq(['celular'])
+    end
+
+    it '"cafe" real: o grupo de dentro conta como o de fora, e so a posicao 09.01 abre' do
+      fonte_responde("#{api}?search=caf%C3%A9", fixture('ncm_busca_cafe.json'))
+      pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      dados = buscar('café')['dados']
+
+      codigos = dados['itens'].pluck('codigo')
+      expect(codigos).to include('0901.11.10', '0901.12.00', '0901.21.00', '0901.22.00', '0901.90.00', '21.01')
+      expect(codigos).not_to include('09.01', '0901.1', '0901.2')
+      expect(dados).not_to have_key('observacao')
+      expect(pela_posicao).to have_been_made.once
+    end
+
+    it 'as observacoes cabem inteiras no texto que vai ao modelo, e nenhuma manda buscar um capitulo' do
+      textos = [format(ncm::SEM_OS_DA_NOTA, grupo: '8517.62.6'), ncm::ESCOLHA_O_GRUPO]
+
+      expect(textos.map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
+      expect(ncm::ESCOLHA_O_GRUPO).to include('4 dígitos ou mais')
+    end
+
     it '"parafuso" continua bom: os parafusos primeiro, com a descricao completa, e a posicao 73.18 aberta' do
       fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
       fonte_responde("#{api}?search=7318", fixture('ncm_busca_7318.json'))
@@ -141,7 +173,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
       expect(dados).to eq('busca' => 'café torrado', 'total' => 1,
                           'itens' => [{ 'codigo' => '0901.2', 'descricao' => 'Café torrado', 'vigente_desde' => '2022-04-01' }],
-                          'observacao' => ncm::SEM_OS_DA_NOTA)
+                          'observacao' => format(ncm::SEM_OS_DA_NOTA, grupo: '0901.2'))
       expect(a_request(:get, "#{api}?search=0901")).not_to have_been_made
       expect(ncm::BrasilApi.validade_da_resposta(dados)).to eq(0)
     end

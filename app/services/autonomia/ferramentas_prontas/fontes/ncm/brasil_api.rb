@@ -7,7 +7,7 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
 
   # Sem cache a resposta incompleta: a próxima consulta tenta a chamada a mais de novo.
   def self.validade_da_resposta(dados)
-    Autonomia::FerramentasProntas::Fontes::Ncm::INCOMPLETAS.include?(dados['observacao']) ? 0 : validade
+    dados['observacao'].to_s.include?(Autonomia::FerramentasProntas::Fontes::Ncm::NAO_VIERAM) ? 0 : validade
   end
 
   def consultar(consulta, params)
@@ -20,14 +20,14 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
     Autonomia::FerramentasProntas::Fontes::Ncm
   end
 
-  # O grupo mais relevante que veio (o "Café torrado:", 0901.2) abre nos códigos de 8 dígitos dele.
+  # O grupo que abre sozinho (o "Café torrado:", 0901.2) abre nos códigos de 8 dígitos dele.
   def buscar(busca)
     achados = procurar(busca)
     raise NaoEncontrado if achados.empty?
 
     niveis = ncm.niveis(achados)
     grupo = ncm.grupo_a_abrir(busca, niveis)
-    return ncm.lista(busca, niveis) unless grupo
+    return ncm.sem_abrir(busca, niveis, grupo) if grupo.nil? || grupo == ncm::EMPATE
 
     ncm.aberta(busca, niveis, grupo, descendentes(busca, grupo, achados))
   end
