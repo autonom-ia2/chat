@@ -1344,7 +1344,7 @@
 # migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: nesta branch, sobre a main
 # de 11/11 (41 flags na ext_2), cai na 42 (bit 1 << 41). A Orquestração reservou a 44 (1 << 43) para ela, depois da F5
 # e da F7 da vitrine #2858 (42 e 43), que ainda não entraram; quem entrar antes fica com o número menor. O bit que vale
-# é o que a Orquestração confirmar na hora do OK; nenhum spec ou SQL cita o número.
+# é o que a Orquestração confirmar na hora do OK; o spec/models/account_spec.rb cita o bit e acompanha essa confirmação.
 - name: automacao_porta
   display_name: Automação › porta única e modelos por segmento
   enabled: false
