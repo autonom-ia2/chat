@@ -64,11 +64,9 @@ describe('catálogo da vitrine', () => {
         ['NOME', 'FAZ', 'CONSEGUE', 'CLIENTE', 'AGENTE', 'USE_QUANDO'].forEach(
           campo => expect(te(`${base}.${campo}`, locale)).toBe(true)
         );
-        // O card Premium não tem "Experimente": nem rótulo nem exemplo de campo.
-        if (!item.premium) {
-          expect(te(`${base}.ROTULO`, locale)).toBe(true);
-          if (!item.semCampo) expect(te(`${base}.EXEMPLO`, locale)).toBe(true);
-        }
+        // Todo card tem "Experimente", o Premium também (F7, decisão A do Rodrigo, 11/11).
+        expect(te(`${base}.ROTULO`, locale)).toBe(true);
+        if (!item.semCampo) expect(te(`${base}.EXEMPLO`, locale)).toBe(true);
         expect(GRUPOS.some(grupo => grupo.id === item.grupo)).toBe(true);
       });
     });

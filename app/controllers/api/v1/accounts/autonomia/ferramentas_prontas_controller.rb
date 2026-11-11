@@ -33,9 +33,14 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
     render json: { motivo: e.motivo }, status: :unprocessable_entity
   end
 
+  # `confirmou_preco` (F7): o clique no botão com o preço, quando as grátis do card Premium acabaram. Só `true` (ou
+  # "true") paga; qualquer outro valor ("sim", lista, objeto) é "não confirmou".
+  VALORES_DE_CONFIRMACAO = [true, 'true'].freeze
+
   def experimentar
     render json: Autonomia::FerramentasProntas::Experimente.new(
-      account: Current.account, fonte: params.require(:fonte).to_s, valor: params[:valor]
+      account: Current.account, fonte: params.require(:fonte).to_s, valor: params[:valor],
+      confirmou_preco: VALORES_DE_CONFIRMACAO.include?(params[:confirmou_preco])
     ).call
   end
 

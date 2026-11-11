@@ -3162,7 +3162,9 @@
         "SEM_IA": "Para experimentar esta ferramenta, a conta precisa ter a IA ligada. Peça a quem administra a conta.",
         "NAO_ENTENDI": "Não deu para entender o que consultar. Escreva como no exemplo e tente de novo.",
         "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida.",
-        "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui."
+        "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui.",
+        "CONFIRMAR_PRECO": "As grátis do mês acabaram. Para testar, clique no botão com o preço.",
+        "DOCUMENTO_INVALIDO": "A consulta foi feita, mas esse número não existe. Confira e tente de novo."
       },
       "UNIDADES": {
         "PERCENTUAL_AO_ANO": "% ao ano"
@@ -3671,6 +3673,8 @@
           "EXEMPLO": "Sorriso, MT, desde ontem"
         },
         "CERTIDOES_EMPRESA": {
+          "ROTULO": "Certidão e CNPJ da empresa",
+          "EXEMPLO": "certidão trabalhista da 11.222.333/0001-81",
           "NOME": "Certidões da empresa",
           "APOIO": "pelo CNPJ",
           "FAZ": "Tira na hora as certidões de uma empresa: dívida com a União, trabalhista, FGTS, improbidade e cadastro de quem deve ao governo.",
@@ -3681,6 +3685,8 @@
           "CONSULTAS": "dívida com a União, débito trabalhista, FGTS, improbidade (CNJ) e cadastro de quem deve ao governo (CADIN)"
         },
         "RAIO_X_EMPRESA": {
+          "ROTULO": "O que ver e o CNPJ da empresa",
+          "EXEMPLO": "processos da 11.222.333/0001-81",
           "NOME": "Raio-X da empresa",
           "APOIO": "pelo CNPJ",
           "FAZ": "Mostra processos, sanções, crescimento, grupo de empresas e obras de uma empresa.",
@@ -3691,6 +3697,8 @@
           "CONSULTAS": "processos, sanções e listas, crescimento, grupo de empresas e obras"
         },
         "CONFERIR_PESSOA": {
+          "ROTULO": "O que conferir e o CPF",
+          "EXEMPLO": "situação do CPF 111.444.777-35",
           "NOME": "Conferir a pessoa",
           "APOIO": "pelo CPF",
           "FAZ": "Confere a situação do CPF na Receita, o nome e a data de nascimento, e o registro no conselho da profissão.",
@@ -3701,6 +3709,8 @@
           "CONSULTAS": "situação do CPF na Receita, nome e nascimento, e registro no conselho da profissão"
         },
         "HISTORICO_PLACA": {
+          "ROTULO": "Placa do veículo",
+          "EXEMPLO": "ABC1D23",
           "NOME": "Histórico da placa",
           "APOIO": "pela placa",
           "FAZ": "Mostra modelo, ano, restrições e quantos donos o carro já teve. Não mostra o nome do dono.",
@@ -3710,6 +3720,8 @@
           "USE_QUANDO": "Use quando o cliente passar a placa de um veículo para cotar ou conferir."
         },
         "RISCO_ENDERECO": {
+          "ROTULO": "Endereço",
+          "EXEMPLO": "área de risco da Rua Augusta, 1500, São Paulo",
           "NOME": "Risco do endereço",
           "APOIO": "pelo endereço ou pelo CEP",
           "FAZ": "Mostra se o endereço fica em área de risco, os crimes na cidade e a vistoria do imóvel.",
@@ -3720,6 +3732,8 @@
           "CONSULTAS": "área de risco, crimes na cidade (só SP, RJ e MG) e vistoria do imóvel"
         },
         "IMOVEL_RURAL": {
+          "ROTULO": "Recibo do CAR ou CNPJ da empresa",
+          "EXEMPLO": "embargo do IBAMA da 11.222.333/0001-81",
           "NOME": "Imóvel rural",
           "APOIO": "pelo recibo do cadastro rural ou pelo CNPJ",
           "FAZ": "Mostra a situação da fazenda no Cadastro Ambiental Rural e se a empresa dona tem área embargada pelo IBAMA.",
@@ -3730,6 +3744,8 @@
           "CONSULTAS": "situação no Cadastro Ambiental Rural e embargo do IBAMA"
         },
         "CONTATO_EMPRESA": {
+          "ROTULO": "O que buscar e o CNPJ da empresa",
+          "EXEMPLO": "telefone da 11.222.333/0001-81",
           "NOME": "Contato e mercado de empresas",
           "APOIO": "pelo CNPJ ou pelo endereço",
           "FAZ": "Mostra o telefone e o e-mail de uma empresa e quantas empresas há numa região. Não busca contato de pessoas.",
@@ -3771,6 +3787,9 @@
         "RESTAM": "Restam {n} de {gratis} grátis no mês",
         "RESTA_UMA": "Resta 1 de {gratis} grátis no mês",
         "ACABARAM": "As grátis do mês acabaram",
+        "TESTE_GRATIS": "O teste usa 1 das grátis do mês.",
+        "TESTAR_POR": "Testar por {preco}",
+        "TESTAR_POR_ATE": "Testar por até {preco}",
         "TITULO": "Quanto custa",
         "CONTADOR": {
           "RESTAM": "de {gratis} grátis restam neste mês",

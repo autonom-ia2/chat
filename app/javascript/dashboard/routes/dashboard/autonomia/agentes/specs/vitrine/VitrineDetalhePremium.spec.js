@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 
-// #2858 F7 — o detalhe do card Premium troca o "Experimente" (cada consulta é paga) pelo quadro "Quanto custa". O card
-// grátis continua com o "Experimente".
+// #2858 F7 — o detalhe do card Premium mostra o quadro "Quanto custa" e, desde a decisão A do Rodrigo (11/11), também o
+// "Experimente", que usa as grátis do card. O card grátis tem só o "Experimente".
 const vitrine = vi.hoisted(() => ({
   premiumDe: vi.fn(),
   tem: vi.fn(() => false),
@@ -33,7 +33,7 @@ const montar = id =>
   });
 
 describe('VitrineDetalhe · Premium', () => {
-  it('the Premium card shows how much it costs and no "Try it"', () => {
+  it('the Premium card shows how much it costs and "Try it"', () => {
     vitrine.premiumDe.mockReturnValue({
       gratis: 20,
       restantes: 3,
@@ -49,7 +49,7 @@ describe('VitrineDetalhe · Premium', () => {
       '3 de 20 grátis restam neste mês'
     );
     expect(wrapper.find('[data-vitrine-selo-premium]').exists()).toBe(true);
-    expect(wrapper.find('[data-stub-experimente]').exists()).toBe(false);
+    expect(wrapper.find('[data-stub-experimente]').exists()).toBe(true);
   });
 
   it('the free card keeps "Try it"', () => {

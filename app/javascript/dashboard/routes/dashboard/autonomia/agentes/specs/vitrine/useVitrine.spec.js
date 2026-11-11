@@ -207,7 +207,36 @@ describe('useVitrine · experimentar e busca', () => {
       situacao: 'encontrado',
       dados: { cidade: 'São Paulo' },
     });
-    expect(api.experimentar).toHaveBeenCalledWith('cep', '01001-000');
+    expect(api.experimentar).toHaveBeenCalledWith('cep', '01001-000', false);
+  });
+
+  // F7: o "Experimente" do Premium devolve o contador novo do card; a tela o mostra sem recarregar a lista.
+  it('updates the free lookups left of a Premium card after a test, and sends the price click', async () => {
+    api.listar.mockResolvedValue({
+      data: {
+        ...LISTA,
+        fontes: [
+          ...LISTA.fontes,
+          {
+            chave: 'historico_placa',
+            premium: { gratis: 20, restantes: 1, precos: ['0.09'] },
+          },
+        ],
+      },
+    });
+    const vitrine = await novoEstado();
+    await vitrine.carregar();
+    const novo = { gratis: 20, restantes: 0, precos: ['0.09'] };
+    api.experimentar.mockResolvedValue({
+      data: { situacao: 'encontrado', dados: {}, premium: novo },
+    });
+    await vitrine.experimentar('historico_placa', 'ABC1D23', true);
+    expect(api.experimentar).toHaveBeenCalledWith(
+      'historico_placa',
+      'ABC1D23',
+      true
+    );
+    expect(vitrine.premiumDe('historico_placa')).toEqual(novo);
   });
 
   it('a failed call becomes one situation the screen can say', async () => {

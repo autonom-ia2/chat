@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 20 de 220 |
-| Leituras cruas tipadas | 225 de 317 |
+| Leituras cruas tipadas | 225 de 318 |
 
 ## Incompletas por motivo
 
@@ -55,7 +55,7 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: message
 - `POST autonomia/ferramentas_prontas/buscas_sem_resultado` — leitura crua sem tipo: termo (repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar)
-- `POST autonomia/ferramentas_prontas/experimentar` — leitura crua sem tipo: valor (repassada a Autonomia::FerramentasProntas::Experimente.new)
+- `POST autonomia/ferramentas_prontas/experimentar` — leitura crua sem tipo: confirmou_preco (repassada a VALORES_DE_CONFIRMACAO.include?), valor (repassada a Autonomia::FerramentasProntas::Experimente.new)
 - `POST autonomia/ferramentas_prontas/incluir` — leitura crua sem tipo: usar_quando (repassada a Autonomia::FerramentasProntas::Incluir.new)
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.broker_name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.business_hours (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new)
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)
@@ -140,6 +140,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/conversation_copilot#create` task — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` tone — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/ferramentas_prontas#buscas_sem_resultado` termo — repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar
+- `api/v1/accounts/autonomia/ferramentas_prontas#experimentar` confirmou_preco — repassada a VALORES_DE_CONFIRMACAO.include?
 - `api/v1/accounts/autonomia/ferramentas_prontas#experimentar` valor — repassada a Autonomia::FerramentasProntas::Experimente.new
 - `api/v1/accounts/autonomia/ferramentas_prontas#incluir` usar_quando — repassada a Autonomia::FerramentasProntas::Incluir.new
 - `api/v1/accounts/autonomia/insurance/quote_agent#create` quote_agent.behavior — repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new

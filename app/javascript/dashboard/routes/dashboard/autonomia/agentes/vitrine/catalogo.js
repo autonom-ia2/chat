@@ -30,8 +30,8 @@ const DIAS_DO_EXEMPLO = 20;
 // `semCampo`: o "Experimente" não pede valor (o servidor responde o dólar do dia).
 // `exemplo`: o valor de exemplo que muda com o tempo (a data final da contagem de dias úteis); sem ele, o do i18n.
 // `base`: a fonte é uma base que a plataforma baixa (F5); o cartão diz de quando é a cópia.
-// `premium`: consulta paga (F7). Não tem "Experimente" e não entra no destaque; o preço e as grátis que restam vêm do
-// servidor (`premium` de cada fonte em `listar`).
+// `premium`: consulta paga (F7). Não entra no destaque; o preço e as grátis que restam vêm do servidor (`premium` de
+// cada fonte em `listar`). O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
 export const FERRAMENTAS = [
   { id: 'cnpj', grupo: 'PESSOAS', icone: 'i-lucide-building-2' },
   {

@@ -379,10 +379,5 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(Autonomia::FerramentasProntas.calculada_aqui?(certidoes)).to be(false)
   end
 
-  it 'o Experimente da vitrine não roda consulta paga' do
-    resposta = Autonomia::FerramentasProntas::Experimente.new(account: account, fonte: 'certidoes_empresa', valor: '11222333000181').call
-
-    expect(resposta).to eq('situacao' => 'premium')
-    expect(chamou_a_bigdatacorp?).to be(false)
-  end
+  # O Experimente do card Premium (decisão A do Rodrigo, 11/11) está em `experimente_premium_spec.rb`.
 end

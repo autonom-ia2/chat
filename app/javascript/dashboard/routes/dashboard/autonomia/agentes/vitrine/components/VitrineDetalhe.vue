@@ -78,7 +78,7 @@ const opcoes = computed(() =>
 );
 
 const consultas = computed(() => texto('CONSULTAS'));
-// F7: o card Premium não tem "Experimente" (cada consulta é paga); no lugar, o preço e como funciona.
+// F7: o card Premium mostra o preço e como funciona, e o "Experimente" usa as grátis do card (decisão A do Rodrigo).
 const premium = computed(() => vitrine.premiumDe(props.ferramenta.id));
 
 const ensinar = async () => {
@@ -177,7 +177,7 @@ const ensinar = async () => {
       </section>
 
       <VitrineQuantoCusta v-if="premium" :premium="premium" />
-      <VitrineExperimente v-else :ferramenta="ferramenta" />
+      <VitrineExperimente :ferramenta="ferramenta" :premium="premium" />
 
       <section class="flex flex-col gap-3">
         <h3 class="m-0 text-base font-semibold text-n-slate-12">

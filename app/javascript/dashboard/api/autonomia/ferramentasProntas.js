@@ -10,7 +10,9 @@ import ApiClient from '../ApiClient';
 //   mudarLigada   -> a pronta
 //   tirar         -> 204
 //   experimentar  -> { situacao: 'encontrado' | 'nao_encontrado' | 'nao_consegui_consultar' | 'pedido_invalido' |
-//                    'desligada' | 'premium', dados? } ('premium': card pago, sem "Experimente")
+//                    'desligada' | 'documento_invalido' | 'confirmar_preco', dados?, premium? } (F7: no card Premium,
+//                    `premium` é o contador novo; `confirmar_preco`, as grátis acabaram e faltou o clique no preço,
+//                    que vai em `confirmou_preco`)
 //   buscaSemResultado -> 204
 //   sugestoes     -> { ferramentas: [chave] } (F3: o cartão "pode ganhar"; sem a flag do Construtor, 404)
 //   dispensar     -> 204 ("Agora não": aquela sugestão não volta para o agente)
@@ -39,8 +41,12 @@ class AutonomiaFerramentasProntasAPI extends ApiClient {
     return axios.delete(`${this.url}/${id}`);
   }
 
-  experimentar(fonte, valor) {
-    return axios.post(`${this.url}/experimentar`, { fonte, valor });
+  experimentar(fonte, valor, confirmouPreco = false) {
+    return axios.post(`${this.url}/experimentar`, {
+      fonte,
+      valor,
+      confirmou_preco: confirmouPreco,
+    });
   }
 
   buscaSemResultado(termo) {

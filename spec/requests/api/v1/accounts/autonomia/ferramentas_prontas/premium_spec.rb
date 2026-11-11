@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #2858 F7 — os cards Premium na API da vitrine: aparecem só com a flag do Premium, cada um com as 20 grátis, quantas
-# restam à conta e os preços depois delas; o "Experimente" não roda consulta paga; o "Incluir" recusa sem a flag. Nada
-# técnico na resposta (nem dataset, nem rota, nem custo).
+# restam à conta e os preços depois delas; o "Experimente" consulta pelas grátis do card e, acabadas elas, só com o clique
+# no preço; o "Incluir" recusa sem a flag. Nada técnico na resposta (nem dataset, nem rota, nem custo).
 RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
   include FerramentasProntasHelper
 
@@ -73,13 +73,68 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     expect(response.parsed_body['motivo']).to eq('desligada')
   end
 
-  it 'o "Incluir" de um card Premium funciona com a flag, e o "Experimente" não consulta' do
+  it 'o "Incluir" de um card Premium funciona com a flag' do
     post "#{base}/incluir", params: { fonte: 'certidoes_empresa', agent_id: agent.id, usar_quando: 'pedirem certidão' },
                             headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:created)
+  end
 
-    post "#{base}/experimentar", params: { fonte: 'certidoes_empresa', valor: '11222333000181' }, headers: admin.create_new_auth_token, as: :json
-    expect(response.parsed_body).to eq('situacao' => 'premium')
-    expect(chamou_a_bigdatacorp?).to be(false)
+  # Decisão A do Rodrigo (11/11): o Premium ganha o "Experimente", que usa as grátis do card. O modelo da conta é
+  # dublado e a BigDataCorp vem do WebMock: nenhuma chamada real.
+  describe 'o "Experimente" do card Premium' do
+    let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
+    let(:chamada) do
+      { 'name' => 'pronta_certidoes_empresa', 'call_id' => 'c1',
+        'arguments' => { consulta: 'divida_uniao', cnpj: FerramentasPremiumHelper::CNPJ_EXEMPLO }.to_json }
+    end
+
+    around { |example| com_credencial_da_bigdatacorp { example.run } }
+
+    before do
+      cache_em_memoria
+      token_da_bigdatacorp
+      bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', [{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste', source: :system }))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+      allow(cliente).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
+        executor.call([chamada])
+        { text: { mais_provavel: false }.to_json }
+      end
+    end
+
+    def experimentar(**extras)
+      post "#{base}/experimentar", params: { fonte: 'certidoes_empresa', valor: 'dívida com a União da 11.222.333/0001-81', **extras },
+                                   headers: admin.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    it 'consulta, usa uma das grátis e devolve o contador novo para a tela' do
+      corpo = experimentar
+
+      expect(response).to have_http_status(:ok)
+      expect(corpo['situacao']).to eq('encontrado')
+      expect(corpo['premium']).to include('gratis' => 20, 'restantes' => 19)
+      expect(registros_premium.sole).to have_attributes(cobranca: 'gratis', autonomia_agent_id: nil)
+      expect(response.body).not_to include('bigdatacorp', 'custo', 'ondemand')
+    end
+
+    it 'acabadas as grátis, só consulta com o clique no preço' do
+      saldo_premium!(account, 'certidoes_empresa', 20)
+
+      expect(experimentar).to include('situacao' => 'confirmar_preco')
+      expect(chamou_a_bigdatacorp?).to be(false)
+
+      expect(experimentar(confirmou_preco: true)['situacao']).to eq('encontrado')
+      expect(registros_premium.sole).to have_attributes(cobranca: 'cobrada', numero: 21)
+    end
+
+    it 'confirmou_preco só vale como verdadeiro: outro valor não paga' do
+      saldo_premium!(account, 'certidoes_empresa', 20)
+
+      expect(experimentar(confirmou_preco: 'sim')).to include('situacao' => 'confirmar_preco')
+      expect(experimentar(confirmou_preco: ['true'])).to include('situacao' => 'confirmar_preco')
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
   end
 end
