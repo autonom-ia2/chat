@@ -1,6 +1,6 @@
-# A NCM na BrasilAPI (fonte única). Código que não existe: 404, lido como `NaoEncontrado`. Busca sem resultado: lista
-# vazia, também "não encontrado". No máximo uma chamada a mais por consulta, pela posição do código ("search=0901"): os
-# códigos de 8 dígitos do grupo que a busca achou, ou os níveis de cima do código pedido, para a descrição completa.
+# A NCM na BrasilAPI (fonte única). Código de 2 ou 4 dígitos que não existe: 404, lido como `NaoEncontrado`. O de 8
+# dígitos vem da busca pela posição dele ("search=0901"), uma chamada só; fora dela, também "não encontrado". Busca sem
+# resultado: lista vazia, "não encontrado". A busca faz no máximo uma chamada a mais, pela posição do grupo que achou.
 class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::FerramentasProntas::Provedor
   NOME = 'brasilapi'.freeze
   HOST = 'brasilapi.com.br'.freeze
@@ -32,15 +32,12 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
     ncm.aberta(busca, niveis, grupo, descendentes(busca, grupo, achados))
   end
 
-  # O de 8 dígitos sobe pela hierarquia da posição dele; o de 2 e o de 4 já têm o texto inteiro.
+  # O de 8 dígitos numa chamada só, pela posição dele, que já traz o código e os níveis de cima. O de 2 e o de 4 já
+  # têm o texto inteiro.
   def codigo(codigo)
-    nivel = ncm::Nivel.de(objeto!(get("/api/ncm/v1/#{codigo}")))
-    return ncm.do_codigo(ncm.item(nivel), codigo) unless codigo.length == ncm::DA_NOTA
+    return ncm.da_nota(codigo, procurar(ncm.prefixo_da_busca(codigo))) if codigo.length == ncm::DA_NOTA
 
-    hierarquia = a_tempo { procurar(ncm.prefixo_da_busca(codigo)) }
-    return ncm.item(nivel).merge('observacao' => ncm::SO_O_ULTIMO_NIVEL) if hierarquia.nil?
-
-    ncm.item(nivel, ncm::Descricao.indice(ncm.validos(hierarquia)))
+    ncm.do_codigo(ncm.item(ncm::Nivel.de(objeto!(get("/api/ncm/v1/#{codigo}")))), codigo)
   end
 
   # Os itens vigentes de uma busca na fonte (palavra ou parte do código).

@@ -101,6 +101,14 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     end.first
   end
 
+  # O código de 8 dígitos na resposta da posição dele, com a descrição completa. Fora dela: não encontrado.
+  def da_nota(codigo, achados)
+    alvo = achados.find { |dado| dado.is_a?(Hash) && digitos(dado['codigo']) == codigo }
+    raise Autonomia::FerramentasProntas::Provedor::NaoEncontrado if alvo.nil?
+
+    item(Nivel.de(alvo), Descricao.indice(validos(achados)))
+  end
+
   # Onde procurar os filhos de um código: a posição dele (4 dígitos), que traz também os níveis de cima da descrição.
   def prefixo_da_busca(codigo)
     digitos(codigo).first(POSICAO)
@@ -158,8 +166,7 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # uma cabe no texto que vai ao modelo (`Resposta::MAX_TEXTO`).
   SEM_OS_DA_NOTA = 'Os códigos de 8 dígitos do grupo não vieram a tempo, e o grupo não vai na nota: faça a consulta ' \
                    'buscar com o código do grupo.'.freeze
-  SO_O_ULTIMO_NIVEL = 'A descrição é só a do último nível da tabela: os níveis de cima não vieram a tempo.'.freeze
-  INCOMPLETAS = [SEM_OS_DA_NOTA, SO_O_ULTIMO_NIVEL].freeze
+  INCOMPLETAS = [SEM_OS_DA_NOTA].freeze
 
   # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
   def self.do_codigo(item, codigo)

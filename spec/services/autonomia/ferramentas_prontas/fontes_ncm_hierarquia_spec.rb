@@ -149,23 +149,20 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   end
 
   describe 'codigo' do
-    it '0901.21.00: a descricao completa, pela posicao do codigo' do
-      fonte_responde("#{api}/09012100", fixture('ncm_codigo_09012100.json'))
-      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+    # Revisão do #2917 (4): uma chamada só, pela posição, que já traz o código e os níveis de cima.
+    it '0901.21.00: a descricao completa, numa chamada so pela posicao' do
+      pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
       expect(codigo('0901.21.00')['dados'])
         .to eq('codigo' => '0901.21.00', 'descricao' => 'Café torrado, não descafeinado', 'vigente_desde' => '2022-04-01')
+      expect(pela_posicao).to have_been_made.once
+      expect(a_request(:get, "#{api}/09012100")).not_to have_been_made
     end
 
-    it 'o prazo acaba antes da segunda chamada: a descricao do ultimo nivel, com a observacao' do
-      allow(Autonomia::FerramentasProntas::ClienteHttp).to receive(:agora).and_return(0.0, 0.0, 100.0)
-      fonte_responde("#{api}/09012100", fixture('ncm_codigo_09012100.json'))
+    it 'codigo de 8 digitos que nao esta na posicao: nao encontrado' do
+      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
-      dados = codigo('0901.21.00')['dados']
-
-      expect(dados).to eq('codigo' => '0901.21.00', 'descricao' => 'Não descafeinado', 'vigente_desde' => '2022-04-01',
-                          'observacao' => ncm::SO_O_ULTIMO_NIVEL)
-      expect(ncm::BrasilApi.validade_da_resposta(dados)).to eq(0)
+      expect(codigo('0901.99.99')['situacao']).to eq('nao_encontrado')
     end
 
     it 'capitulo (2) e posicao (4): o texto inteiro deles, sem chamada a mais' do
