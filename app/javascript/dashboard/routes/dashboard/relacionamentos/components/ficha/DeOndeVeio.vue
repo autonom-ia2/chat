@@ -36,6 +36,8 @@ const frase = computed(() => {
 });
 </script>
 
+<!-- Sem origem conhecida a seção não existe: quem usa não precisa saber disso. -->
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <CartaoDaSecao
     v-if="origem"

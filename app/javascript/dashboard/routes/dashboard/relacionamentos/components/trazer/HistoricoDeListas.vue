@@ -4,6 +4,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import { SITUACOES_DA_LISTA, formatarDia } from '../../trazer/prazo';
+import { PONTO } from '../comum/ponto';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
@@ -72,11 +73,11 @@ const NOMES = {
                 data: dia(lista.quando),
               })
             }}
-            ·
+            {{ PONTO }}
             {{
               t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
             }}
-            ·
+            {{ PONTO }}
             <span class="tabular-nums">
               {{
                 t(

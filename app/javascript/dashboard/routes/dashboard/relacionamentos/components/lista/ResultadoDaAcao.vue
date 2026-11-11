@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { PONTO } from '../comum/ponto';
 
 // #2894 — o que uma ação em grupo (criar cards, etiquetar, apagar) diz dentro
 // do diálogo. É a região viva permanente: já está na tela, vazia, antes de a
@@ -42,7 +43,7 @@ const motivoEmPalavras = motivo => t(`${ACAO}.MOTIVO_${motivo.toUpperCase()}`);
           class="flex flex-col gap-1 p-0 m-0 overflow-y-auto text-sm list-none max-h-60 text-n-slate-12"
         >
           <li v-for="item in resultado.deFora" :key="item.id">
-            {{ item.nome || t(`${ACAO}.SEM_NOME`) }} ·
+            {{ item.nome || t(`${ACAO}.SEM_NOME`) }} {{ PONTO }}
             {{ motivoEmPalavras(item.motivo) }}
           </li>
         </ul>

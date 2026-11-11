@@ -27,7 +27,7 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
-  default: (await import('./dialogoFalso')).TeleportFalso,
+  default: (await import('./teleportFalso')).TeleportFalso,
 }));
 
 withFullI18n('pt_BR');
