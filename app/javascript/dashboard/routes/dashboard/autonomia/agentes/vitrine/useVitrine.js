@@ -38,6 +38,8 @@ const comMotivo = erro =>
   });
 
 const fontes = ref([]);
+// #2858 F5: chave da base baixada -> o dia em que a cópia que vale entrou ("2026-11-11"), ou null antes de baixar.
+const atualizacoes = ref({});
 const incluidas = ref([]);
 const carregando = ref(false);
 const carregada = ref(false);
@@ -60,6 +62,11 @@ const carregar = () => {
       velha = versaoDoPedido !== versao;
       if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
+      atualizacoes.value = Object.fromEntries(
+        (data?.fontes || [])
+          .filter(item => 'atualizado_em' in item)
+          .map(item => [item.chave, item.atualizado_em || null])
+      );
       incluidas.value = data?.incluidas || [];
       carregada.value = true;
     })
@@ -146,9 +153,13 @@ const registrarBuscaSemResultado = async termo => {
   }
 };
 
+// O dia da cópia de uma base baixada; null antes de baixar; undefined para quem não é base.
+const atualizadoEm = fonte => atualizacoes.value[fonte];
+
 export const useVitrine = () => ({
   carregar,
   fontes: computed(() => fontes.value),
+  atualizadoEm,
   incluidas: computed(() => incluidas.value),
   carregando: computed(() => carregando.value),
   carregada: computed(() => carregada.value),

@@ -3049,7 +3049,9 @@
       },
       "CARTAO": {
         "CONSULTAS": "Responde {n} tipos de pergunta",
-        "JA_SABE": "{nome} já sabe"
+        "JA_SABE": "{nome} já sabe",
+        "ATUALIZADO_EM": "Atualizado em {data}",
+        "PREPARANDO": "Os dados chegam em até 1 dia"
       },
       "BUSCA": {
         "NADA": "Nada com “{termo}” por aqui ainda.",
@@ -3421,6 +3423,62 @@
           "ROTULO": "CPF, CNPJ ou nome",
           "EXEMPLO": "11.222.333/0001-81",
           "CONSULTAS": "pelo CPF ou CNPJ, pelo nome"
+        },
+        "PLANOS_DE_SAUDE": {
+          "NOME": "Planos de saúde",
+          "APOIO": "cadastro oficial da ANS",
+          "FAZ": "Diz se uma operadora de plano de saúde está ativa ou foi cancelada, pelo CNPJ, pelo número na ANS ou pelo nome.",
+          "CONSEGUE": "conferir se o plano de saúde está ativo",
+          "CLIENTE": "Esse plano que me ofereceram está funcionando?",
+          "AGENTE": "Conferi na ANS: a operadora está ativa, é de medicina de grupo e fica em Campinas.",
+          "USE_QUANDO": "Use quando o cliente quiser saber se uma operadora de plano de saúde está ativa ou foi cancelada.",
+          "ROTULO": "CNPJ, número na ANS ou nome",
+          "EXEMPLO": "Unimed Campinas"
+        },
+        "AERONAVES": {
+          "NOME": "Aeronaves",
+          "APOIO": "registro oficial da ANAC",
+          "FAZ": "Diz o modelo, o ano, os assentos e a situação de um avião ou helicóptero pela matrícula, e se tem alguma restrição. Dono pessoa física não aparece.",
+          "CONSEGUE": "conferir um avião pela matrícula",
+          "CLIENTE": "Quero segurar o avião PR-ABC.",
+          "AGENTE": "É um helicóptero Robinson R66 de 2020, com 5 lugares, registro em dia e certificado válido até 2027.",
+          "USE_QUANDO": "Use quando o cliente informar a matrícula de um avião ou helicóptero.",
+          "ROTULO": "Matrícula",
+          "EXEMPLO": "PR-ABC"
+        },
+        "GERACAO_SOLAR": {
+          "NOME": "Placas solares",
+          "APOIO": "registro oficial da ANEEL",
+          "FAZ": "Diz quantas casas e empresas têm placa solar ligada à rede num CEP ou numa cidade, e a potência somada. Não diz de quem é.",
+          "CONSEGUE": "saber quem tem placa solar na região",
+          "CLIENTE": "Tem muita placa solar aqui em Sorriso?",
+          "AGENTE": "Tem, sim: a cidade tem mais de 5 mil sistemas ligados, a maioria em casas.",
+          "USE_QUANDO": "Use quando o cliente perguntar sobre placas solares num CEP ou numa cidade.",
+          "ROTULO": "CEP ou cidade",
+          "EXEMPLO": "Sorriso, MT",
+          "CONSULTAS": "pelo CEP, pela cidade"
+        },
+        "TRANSPORTADORAS": {
+          "NOME": "Transportadoras",
+          "APOIO": "registro oficial da ANTT",
+          "FAZ": "Diz se o registro de transportador de carga na ANTT (o RNTRC) está ativo, pelo número dele ou pelo CNPJ da empresa.",
+          "CONSEGUE": "conferir se a transportadora pode levar carga",
+          "CLIENTE": "A transportadora que vai levar minha carga está em dia?",
+          "AGENTE": "Conferi na ANTT: o registro dela está ativo desde 2017.",
+          "USE_QUANDO": "Use quando o cliente quiser saber se uma transportadora ou um caminhoneiro tem o registro da ANTT ativo.",
+          "ROTULO": "Número do registro ou CNPJ",
+          "EXEMPLO": "11.222.333/0001-81"
+        },
+        "QUEIMADAS": {
+          "NOME": "Focos de queimada",
+          "APOIO": "satélites do INPE",
+          "FAZ": "Diz quantos focos de queimada os satélites viram numa cidade ou perto de um lugar nos últimos dias.",
+          "CONSEGUE": "saber se teve queimada perto",
+          "CLIENTE": "Teve queimada perto da fazenda em Sorriso ontem?",
+          "AGENTE": "Os satélites viram 3 focos em Sorriso desde ontem, o mais perto a 12 km da cidade.",
+          "USE_QUANDO": "Use quando o cliente perguntar se teve queimada numa cidade ou perto de um lugar.",
+          "ROTULO": "Cidade e quando",
+          "EXEMPLO": "Sorriso, MT, desde ontem"
         }
       },
       "JA_VEM": {

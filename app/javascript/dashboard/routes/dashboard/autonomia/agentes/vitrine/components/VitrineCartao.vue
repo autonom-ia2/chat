@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { chaveDoTexto } from '../catalogo';
+import { useVitrine } from '../useVitrine';
 
 // #2858 F2 — o cartão de uma ferramenta pronta: o que ela faz em uma frase, o apoio ("tabela FIPE") só como detalhe, e
 // um selo: o agente escolhido já sabe, ou quantas perguntas ela responde. O cartão inteiro é o botão que abre o
@@ -17,7 +18,21 @@ const props = defineProps({
 const emit = defineEmits(['abrir']);
 
 const NS = 'AGENTS.VITRINE';
-const { t, te } = useI18n();
+const { t, te, locale } = useI18n();
+const { atualizadoEm } = useVitrine();
+
+// #2858 F5 — a base que a plataforma baixa diz de quando é a cópia ("Atualizado em 11/11/2026"); antes da primeira
+// cópia, que os dados chegam logo. O dia vem do servidor ("2026-11-11") e é mostrado no formato do idioma da tela.
+const atualizacao = computed(() => {
+  if (!props.ferramenta.base) return '';
+  const dia = atualizadoEm(props.ferramenta.id);
+  if (!dia) return t(`${NS}.CARTAO.PREPARANDO`);
+  const [ano, mes, diaDoMes] = dia.split('-').map(Number);
+  const texto = new Date(ano, mes - 1, diaDoMes).toLocaleDateString(
+    String(locale.value).replace('_', '-')
+  );
+  return t(`${NS}.CARTAO.ATUALIZADO_EM`, { data: texto });
+});
 
 const textos = computed(() => {
   const base = `${NS}.FERRAMENTAS.${chaveDoTexto(props.ferramenta.id)}`;
@@ -84,6 +99,14 @@ const selo = computed(() => {
     </span>
     <span class="flex-1 text-sm leading-relaxed text-n-slate-11">
       {{ textos.faz }}
+    </span>
+    <span
+      v-if="atualizacao"
+      data-vitrine-atualizado
+      class="inline-flex items-center gap-1.5 text-xs text-n-slate-11"
+    >
+      <span class="i-lucide-refresh-cw size-3.5" aria-hidden="true" />
+      {{ atualizacao }}
     </span>
     <span
       v-if="selo"
