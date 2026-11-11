@@ -89,7 +89,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
       expect(saldos.sole.contadas).to eq(0)
     end
 
-    it 'a cobrada vira sem cobrança com preço zero; o saldo não muda e o custo nosso fica' do
+    # Revisor (cobranca.rb:62): a cobrada desfeita também não contou, e o contador baixa (antes ficava em 21).
+    it 'a cobrada vira sem cobrança com preço zero; o saldo baixa um e o custo nosso fica' do
       saldo_premium!(account, 'certidoes_empresa', 20)
       run = abrir_consulta
       executar_e_morrer(run)
@@ -97,7 +98,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
       described_class.incerta(run.reload)
 
       expect(registros.sole).to have_attributes(cobranca: 'sem_cobranca', preco: 0, custo: BigDecimal('0.10'), motivo: 'entrega_incerta')
-      expect(saldos.sole.contadas).to eq(21)
+      expect(saldos.sole.contadas).to eq(20)
     end
 
     it 'a execução viva que grava entre a busca e a inserção da entrega incerta: a linha dela vira sem cobrança e a grátis volta' do

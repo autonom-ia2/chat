@@ -51,14 +51,51 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
     expect(premium::Saldo.contar!(account_id: account.id, fonte: 'certidoes_empresa', mes: mes)).to eq(10)
   end
 
-  it 'a cobrada desfeita só perde o preço: o saldo e as grátis não mudam' do
+  # Revisor (cobranca.rb:62): a cobrada desfeita também não contou. Sem baixar o contador, desfazer uma cobrada e depois
+  # uma grátis deixava o saldo um acima do real, e o cliente pagava uma consulta que devia ser grátis.
+  it 'a cobrada desfeita perde o preço e baixa o contador (não contou); as grátis não mudam' do
     registros = mes_com(25)
 
     described_class.desfazer_cobranca!(registros[24])
 
     expect(registros[24].reload).to have_attributes(cobranca: 'sem_cobranca', preco: 0)
     expect(premium::Registro.where(cobranca: 'gratis').count).to eq(20)
-    expect(premium::Saldo.sole.contadas).to eq(25)
+    expect(premium::Saldo.sole.contadas).to eq(24)
+  end
+
+  it 'saldo 21: desfaz a cobrada e depois uma grátis; a próxima consulta é grátis, e o mês fecha com 20 grátis' do
+    registros = mes_com(21)
+
+    described_class.desfazer_cobranca!(registros[20])
+    described_class.desfazer_cobranca!(registros[0])
+
+    expect(premium::Saldo.sole.contadas).to eq(19)
+    expect(premium::Saldo.contar!(account_id: account.id, fonte: 'certidoes_empresa', mes: mes)).to eq(20)
+  end
+
+  # Revisor (cobranca.rb:45): o `registrar!` trava o Saldo (contar!) e depois grava o Registro; o `entrega_incerta!`
+  # travava o Registro e depois o Saldo (`devolver!`). A ordem invertida podia virar deadlock: o Saldo vem antes.
+  it 'a entrega incerta trava o Saldo antes do Registro, na mesma ordem da cobrança' do
+    registros = mes_com(3)
+    agente = Autonomia::Agents::Agent.create!(account: account, name: 'Bot EXEMPLO', agent_type: 'custom')
+    account.enable_features!(Autonomia::FerramentasProntas::FLAG, premium::FLAG)
+    ferramenta = incluir_pronta('certidoes_empresa', conta: account, agente: agente)
+    registros[2].update!(tool_run_id: 4242)
+    run = instance_double(Autonomia::Agents::ToolRun, id: 4242, ferramenta: ferramenta, account: account,
+                                                      arguments: { 'consulta' => 'divida_uniao' })
+    ordem = []
+    { saldo: premium::Saldo, registro: premium::Registro }.each do |nome, modelo|
+      allow(modelo).to receive(:lock).and_wrap_original do |original, *args|
+        ordem << nome
+        original.call(*args)
+      end
+    end
+
+    described_class.entrega_incerta!(run)
+
+    expect(ordem.first).to eq(:saldo)
+    expect(registros[2].reload.cobranca).to eq('sem_cobranca')
+    expect(premium::Saldo.sole.contadas).to eq(2)
   end
 
   it 'a cobrada de outro card ou de outro mês nunca vira a grátis devolvida' do

@@ -35,24 +35,29 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
   #     grátis volta ao saldo do mês e o preço zera; o custo fica. Nenhuma linha nova;
   #   - não gravou: uma linha de falha `entrega_incerta`, com o custo do dataset.
   # Pronta grátis: nada. A telemetria não segura o fechamento da linha: a falha do banco vai ao rastreador e ao log.
+  # A trava do Saldo vem ANTES da do Registro, na mesma ordem do `registrar!` (o `contar!` e depois a linha): a ordem
+  # invertida podia travar as duas transações uma esperando a outra.
   def entrega_incerta!(run)
     tool = run.ferramenta
     fonte = tool&.fonte_do_catalogo
     consulta = Premium.fonte?(fonte) && fonte.consulta(run.arguments.to_h['consulta'])
     return unless consulta
 
-    ActiveRecord::Base.transaction(requires_new: true) do
-      gravada = Premium::Registro.lock.find_by(tool_run_id: run.id)
-      next desfazer_cobranca!(gravada) if gravada
-      # A execução viva pode gravar a linha dela entre a busca e a inserção: ON CONFLICT não insere, e a linha dela é
-      # desfeita como a de cima.
-      next if registrar_incerta!(run, tool, fonte, consulta)
-
-      desfazer_cobranca!(Premium::Registro.lock.find_by!(tool_run_id: run.id))
-    end
+    ActiveRecord::Base.transaction(requires_new: true) { fechar_incerta!(run, tool, fonte, consulta) }
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("[autonomia][premium] telemetria da entrega incerta falhou run=#{run.id} #{e.class}")
     ChatwootExceptionTracker.new(e, account: run.account).capture_exception
+  end
+
+  def fechar_incerta!(run, tool, fonte, consulta)
+    travar_saldo!(run, tool, fonte)
+    gravada = Premium::Registro.lock.find_by(tool_run_id: run.id)
+    return desfazer_cobranca!(gravada) if gravada
+    # A execução viva pode gravar a linha dela entre a busca e a inserção: ON CONFLICT não insere, e a linha dela é
+    # desfeita como a de cima.
+    return if registrar_incerta!(run, tool, fonte, consulta)
+
+    desfazer_cobranca!(Premium::Registro.lock.find_by!(tool_run_id: run.id))
   end
 
   # A FATURA LÊ `cobranca` ('cobrada' e o `preco` dela), NUNCA o `numero`. O número é a posição da consulta no mês na
@@ -62,20 +67,28 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
   def desfazer_cobranca!(registro)
     return if registro.cobranca == 'sem_cobranca'
 
-    devolver_gratis!(registro) if registro.cobranca == 'gratis'
+    devolver!(registro)
     registro.update!(cobranca: 'sem_cobranca', numero: nil, preco: 0, motivo: 'entrega_incerta')
   end
 
-  # A grátis desfeita volta ao cliente. O contador baixa um (a consulta não contou). Com o mês já acima das 20, isso só
-  # não basta: a próxima seguiria cobrada e o mês fecharia com 19 grátis. Então a cobrada mais antiga do mês, no mesmo
-  # card e na mesma conta, vira a grátis que faltou (preço zero; o custo nosso fica). Tudo sob a trava do saldo.
-  def devolver_gratis!(registro)
+  # A consulta desfeita não contou: o contador do mês baixa um, seja ela grátis ou cobrada (sem baixar na cobrada, uma
+  # grátis desfeita depois deixava o saldo um acima do real e o cliente pagava uma que devia ser grátis). A grátis
+  # desfeita volta ao cliente; com o mês já acima das 20, só baixar não basta: a próxima seguiria cobrada e o mês
+  # fecharia com 19 grátis. Então a cobrada mais antiga do mês, no mesmo card e na mesma conta, vira a grátis que faltou
+  # (preço zero; o custo nosso fica). Tudo sob a trava do saldo.
+  def devolver!(registro)
     mes = registro.dia.beginning_of_month
     saldo = Premium::Saldo.lock.find_by(account_id: registro.account_id, fonte: registro.fonte, mes: mes)
     return unless saldo&.contadas&.positive?
 
-    converter_cobrada_mais_antiga!(registro, mes) if saldo.contadas > Premium::GRATIS
+    converter_cobrada_mais_antiga!(registro, mes) if registro.cobranca == 'gratis' && saldo.contadas > Premium::GRATIS
     saldo.update!(contadas: saldo.contadas - 1)
+  end
+
+  # O Saldo do mês da linha desta execução (ou, sem linha ainda, o do mês de hoje da conta), travado antes do Registro.
+  def travar_saldo!(run, tool, fonte)
+    dia = Premium::Registro.where(tool_run_id: run.id).pick(:dia) || Premium.hoje_da_conta(tool.account)
+    Premium::Saldo.lock.find_by(account_id: tool.account_id, fonte: fonte.chave, mes: dia.beginning_of_month)
   end
 
   # O `FOR UPDATE` com ORDER BY e LIMIT volta vazio quando a linha que ele esperava muda de estado enquanto espera (outra
