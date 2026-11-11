@@ -133,6 +133,23 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: 0)
     end
 
+    # Revisor (lote 3): a entrega incerta vinha também do pedido que nem saiu (DNS, conexão recusada, rede fora, SSL que
+    # não fechou o aperto de mão). Só a conexão que caiu depois de aberta, e o 200 sem JSON, podem ter sido cobrados.
+    {
+      SocketError.new('getaddrinfo') => 0, Errno::ECONNREFUSED => 0, Errno::EHOSTUNREACH => 0, Errno::ENETUNREACH => 0,
+      OpenSSL::SSL::SSLError.new('SSL_connect returned=1 errno=0 state=error: certificate verify failed') => 0,
+      Errno::ECONNRESET => BigDecimal('0.10'), Errno::EPIPE => BigDecimal('0.10'), EOFError => BigDecimal('0.10'),
+      OpenSSL::SSL::SSLError.new('SSL_read: unexpected eof while reading') => BigDecimal('0.10')
+    }.each do |erro, custo|
+      it "erro de rede #{erro.is_a?(Exception) ? erro.class : erro} (#{erro.is_a?(Exception) ? erro.message : '-'}): custo #{custo}" do
+        stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_raise(erro)
+
+        executar_premium(certidoes, pgfn)
+
+        expect(falha_registrada).to have_attributes(motivo: 'entrega_incerta', custo: custo)
+      end
+    end
+
     it 'DATASET IS TOO SLOW e o 504 continuam sem custo' do
       pgfn_responde(nil, code: -1201, message: 'DATASET IS TOO SLOW. PLEASE TRY AGAIN IN A FEW MINUTES')
       executar_premium(certidoes, pgfn)

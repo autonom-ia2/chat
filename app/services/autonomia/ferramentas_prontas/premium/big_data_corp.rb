@@ -41,13 +41,26 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
     falha('tempo_esgotado', custo_possivel: true)
   end
 
-  # O pedido da consulta saiu e a BigDataCorp pode ter cobrado? A entrega incerta (a rede caiu com o pedido no ar, ou
-  # 200 sem JSON) e o tempo esgotado esperando a resposta. A conexão que nem abriu (`Net::OpenTimeout`, a causa do erro
-  # do cliente) não saiu; o erro de token, de configuração e o HTTP de erro também não cobram.
+  # A rede que falhou antes de o pedido sair (a causa do `BIGDATACORP_DELIVERY_UNKNOWN` do cliente): o nome que não
+  # resolveu, a conexão recusada, a rede ou o host fora de alcance. O SSL entra só no aperto de mão (`SSL_connect`, o
+  # texto fixo do OpenSSL); o SSL que cai no meio da leitura pode ter levado o pedido.
+  NAO_SAIU = [SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
+  APERTO_DE_MAO_DO_SSL = 'SSL_connect'.freeze
+
+  # O pedido da consulta saiu e a BigDataCorp pode ter cobrado? A entrega incerta (a conexão que caiu depois de aberta:
+  # ECONNRESET, EPIPE, EOFError; ou o 200 sem JSON, sem causa) e o tempo esgotado esperando a resposta. A conexão que nem
+  # abriu (`Net::OpenTimeout`, ou um erro de `NAO_SAIU`) não saiu; o erro de token, de configuração e o HTTP de erro
+  # também não cobram.
   def self.pedido_saiu?(erro)
-    return true if erro.code == 'BIGDATACORP_DELIVERY_UNKNOWN'
+    return !conexao_nao_abriu?(erro.cause) if erro.code == 'BIGDATACORP_DELIVERY_UNKNOWN'
 
     erro.code == 'BIGDATACORP_TIMEOUT' && !erro.cause.is_a?(Net::OpenTimeout)
+  end
+
+  def self.conexao_nao_abriu?(causa)
+    return true if NAO_SAIU.any? { |classe| causa.is_a?(classe) }
+
+    causa.is_a?(OpenSSL::SSL::SSLError) && causa.message.to_s.start_with?(APERTO_DE_MAO_DO_SSL)
   end
 
   # O código fechado do cliente -> o motivo curto do contador (`bigdatacorp.http_504`). Nunca a mensagem de fora.
