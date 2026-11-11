@@ -41,6 +41,14 @@ const erro = ref('');
 
 const passos = computed(() => atual.value.passos || []);
 const conflitos = computed(() => atual.value.relatorio?.conflitos || []);
+// O servidor explica alguns conflitos em frase (#2889); os sem frase ficam na
+// contagem genérica de "alguém mexeu depois".
+const textosDosConflitos = computed(() => [
+  ...new Set(conflitos.value.map(c => c.texto).filter(Boolean)),
+]);
+const conflitosSemTexto = computed(
+  () => conflitos.value.filter(c => !c.texto).length
+);
 const temPendencias = computed(() => (atual.value.pendencias || []).length > 0);
 const podeDesfazer = computed(
   () => atual.value.desfazivel && !desfazendo.value
@@ -111,8 +119,14 @@ const desfazer = async () => {
       <p class="mb-0 text-sm font-medium text-n-teal-11">
         {{ $t('AUTONOMIA_GUIDE.DONE.UNDONE') }}
       </p>
-      <p v-if="conflitos.length" class="mb-0 text-sm text-n-amber-11">
-        {{ $t('AUTONOMIA_GUIDE.DONE.CONFLICTS', { count: conflitos.length }) }}
+      <ul
+        v-if="textosDosConflitos.length"
+        class="flex flex-col gap-1 mb-0 list-none p-0 text-sm text-n-amber-11"
+      >
+        <li v-for="texto in textosDosConflitos" :key="texto">{{ texto }}</li>
+      </ul>
+      <p v-if="conflitosSemTexto" class="mb-0 text-sm text-n-amber-11">
+        {{ $t('AUTONOMIA_GUIDE.DONE.CONFLICTS', { count: conflitosSemTexto }) }}
       </p>
     </template>
     <p v-if="erro" class="mb-0 text-sm text-n-ruby-11">{{ erro }}</p>

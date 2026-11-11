@@ -47,8 +47,20 @@ class Autonomia::Guide::Desfazer
     classe = mudanca.record_type.safe_constantize
     return conflito(mudanca, 'unknown_type') if classe.nil?
 
-    classe.unscoped.find_by(classe.primary_key => mudanca.record_id)&.destroy!
+    registro = classe.unscoped.find_by(classe.primary_key => mudanca.record_id)
+    motivo = apagar(registro)
+    return conflito(mudanca, motivo) if motivo
+
     @relatorio['desfeitas'] += 1
+  end
+
+  # O registro que sabe como sair no desfazer responde por si (#2889: a versão da automação é só-leitura e não sai por
+  # `destroy!`); devolve o motivo do conflito quando não pode sair. Os outros saem por `destroy!`, como sempre.
+  def apagar(registro)
+    return registro.apagar_ao_desfazer if registro.respond_to?(:apagar_ao_desfazer)
+
+    registro&.destroy!
+    nil
   end
 
   def restaurar_alterado(mudanca)
@@ -58,8 +70,18 @@ class Autonomia::Guide::Desfazer
     mexidos = (mudanca.depois.keys - CARIMBOS).reject { |coluna| atual[coluna] == mudanca.depois[coluna] }
     return conflito(mudanca, 'changed_after', mexidos) if mexidos.any?
 
+    recusa = restauracao_recusada(mudanca, atual)
+    return conflito(mudanca, recusa) if recusa
+
     escrever(mudanca, mudanca.antes)
     @relatorio['desfeitas'] += 1
+  end
+
+  # O model que tem regra para voltar ao estado de antes responde por si (#2889: a automação do motor novo não volta a
+  # ficar ligada pelo desfazer; ligar é "assumir e religar", só na tela). Devolve o motivo do conflito, ou nil.
+  def restauracao_recusada(mudanca, atual)
+    classe = mudanca.record_type.safe_constantize
+    classe.recusa_ao_restaurar(mudanca.antes, atual) if classe.respond_to?(:recusa_ao_restaurar)
   end
 
   def recriar_apagado(mudanca)
@@ -71,7 +93,12 @@ class Autonomia::Guide::Desfazer
 
   def conflito(mudanca, motivo, colunas = [])
     @relatorio['conflitos'] << { 'tipo' => mudanca.record_type, 'id' => mudanca.record_id,
-                                 'motivo' => motivo, 'campos' => colunas }
+                                 'motivo' => motivo, 'campos' => colunas, 'texto' => texto_do_conflito(motivo) }.compact
+  end
+
+  # #2889: o motivo com frase para a pessoa, quando há (autonomia.guide.undo.conflitos.*).
+  def texto_do_conflito(motivo)
+    I18n.t("autonomia.guide.undo.conflitos.#{motivo}", default: nil)
   end
 
   def conexao
