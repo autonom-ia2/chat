@@ -229,18 +229,40 @@ describe('opcoesDeFiltro', () => {
   });
 });
 
-describe('erro do servidor', () => {
-  it.each([
-    ['resumo', 'resumo', []],
-    ['contagens', 'contagensDePessoas', ['pessoas']],
-    ['contagens', 'contagensDeEmpresas', ['empresas']],
-    ['listar', 'pessoas', [{ aba: 'pessoas' }]],
-    ['listar', 'empresas', [{ aba: 'empresas' }]],
-    ['listarTodos', 'todasAsPessoas', [{ aba: 'pessoas' }]],
-    ['opcoesDeFiltro', 'opcoesDeFiltro', []],
-  ])('%s (%s) repassa o erro sem engolir', async (metodo, daApi, args) => {
-    const recusado = erroHttp(422);
-    RelacionamentosAPI[daApi].mockRejectedValue(recusado);
-    await expect(real()[metodo](...args)).rejects.toBe(recusado);
-  });
+// Cada leitura da fonte: o método dela, o da API por baixo e os argumentos.
+const LEITURAS = [
+  ['resumo', 'resumo', []],
+  ['contagens', 'contagensDePessoas', ['pessoas']],
+  ['contagens', 'contagensDeEmpresas', ['empresas']],
+  ['listar', 'pessoas', [{ aba: 'pessoas' }]],
+  ['listar', 'empresas', [{ aba: 'empresas' }]],
+  ['listarTodos', 'todasAsPessoas', [{ aba: 'pessoas' }]],
+  ['opcoesDeFiltro', 'opcoesDeFiltro', []],
+];
+
+describe.each([422, 500])('erro do servidor (%i)', status => {
+  it.each(LEITURAS)(
+    '%s (%s) repassa o erro sem engolir',
+    async (metodo, daApi, args) => {
+      const recusado = erroHttp(status);
+      RelacionamentosAPI[daApi].mockRejectedValue(recusado);
+      await expect(real()[metodo](...args)).rejects.toBe(recusado);
+    }
+  );
+});
+
+// Quem não pode ver (401 ou 403) recebe uma falha com nome: a tela diz que a
+// pessoa não tem acesso em vez de oferecer "Tentar de novo".
+describe.each([401, 403])('sem acesso (%i)', status => {
+  it.each(LEITURAS)(
+    '%s (%s) vira a falha de nome SEM_ACESSO',
+    async (metodo, daApi, args) => {
+      RelacionamentosAPI[daApi].mockRejectedValue(erroHttp(status));
+      const falha = await real()
+        [metodo](...args)
+        .catch(erro => erro);
+      expect(falha).toBeInstanceOf(Error);
+      expect(falha.name).toBe('SEM_ACESSO');
+    }
+  );
 });
