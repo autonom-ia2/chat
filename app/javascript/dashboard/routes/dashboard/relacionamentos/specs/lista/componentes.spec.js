@@ -1391,6 +1391,32 @@ describe('DialogoCriarCards', () => {
     });
   });
 
+  it('funil sem etapa não recebe card: não entra na escolha', async () => {
+    const w = mount(DialogoCriarCards, {
+      props: {
+        pessoas: lote(2),
+        acoes: {
+          funis: async () => [{ id: 7, nome: 'Vazio', etapas: [] }, ...FUNIS],
+        },
+      },
+    });
+    await abrir(w);
+    const [funil] = w.findAllComponents(ChoiceSelect);
+    expect(funil.props('options')).toEqual([{ value: 1, label: 'Vendas' }]);
+    expect(funil.props('modelValue')).toBe(1);
+  });
+
+  it('só há funil sem etapa: diz que não há funil para receber os cards', async () => {
+    const w = mount(DialogoCriarCards, {
+      props: {
+        pessoas: lote(2),
+        acoes: { funis: async () => [{ id: 7, nome: 'Vazio', etapas: [] }] },
+      },
+    });
+    await abrir(w);
+    expect(w.find('[data-relacionamentos="sem-funil"]').exists()).toBe(true);
+  });
+
   describe('sem nenhum funil que a pessoa veja', () => {
     const montarSemFunil = async criarCards => {
       const w = mount(DialogoCriarCards, {
@@ -1708,6 +1734,30 @@ describe('DialogoApagar', () => {
       expect(w.find('[data-cancelar]').exists()).toBe(false);
       await w.get('[data-confirmar]').trigger('click');
       expect(w.emitted('concluido')).toEqual([[[]]]);
+    });
+
+    it('fechou no meio e a fatia em voo deu erro: o aviso diz o que apagou e quantas ainda não', async () => {
+      let responder;
+      const apagar = vi.fn(
+        () =>
+          new Promise(resolve => {
+            responder = resolve;
+          })
+      );
+      const w = mount(DialogoApagar, {
+        props: { pessoas: todas, acoes: { apagar } },
+      });
+      w.vm.abrir();
+      await w.vm.$nextTick();
+      await w.get('[data-confirmar]').trigger('click');
+      await w.get('[data-cancelar]').trigger('click');
+      responder(parouNoMeio('apagadas', 50, todas.slice(50)));
+      await assentar();
+      expect(useAlert).toHaveBeenCalledTimes(1);
+      expect(useAlert).toHaveBeenCalledWith(
+        '50 pessoas apagadas. 70 ainda não. Deu erro no meio do caminho.'
+      );
+      expect(w.emitted('concluido')).toEqual([[todas.slice(50)]]);
     });
 
     it('parou no meio: diz o que apagou e o que falta; tentar de novo manda só quem falta', async () => {

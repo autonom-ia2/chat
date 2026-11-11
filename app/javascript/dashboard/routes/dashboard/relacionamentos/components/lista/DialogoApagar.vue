@@ -6,6 +6,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import ResultadoDaAcao from './ResultadoDaAcao.vue';
 import {
+  resumoDoQueFoiFeito,
   rotuloDeCancelar,
   rotuloDeConfirmar,
   useEnvioEmFatias,
@@ -24,6 +25,8 @@ const emit = defineEmits(['concluido']);
 
 const { t } = useI18n();
 const dialogo = useTemplateRef('dialogo');
+const apagadas = count =>
+  t('RELACIONAMENTOS.LISTA.APAGAR.APAGADAS', { count }, count);
 const {
   enviando,
   andamento,
@@ -36,10 +39,8 @@ const {
   contagem: 'apagadas',
   mensagemDeErro: () => t('RELACIONAMENTOS.LISTA.APAGAR.ERRO'),
   aoConcluir: faltam => emit('concluido', faltam),
+  resumo: resumoDoQueFoiFeito(t, apagadas),
 });
-
-const apagadas = count =>
-  t('RELACIONAMENTOS.LISTA.APAGAR.APAGADAS', { count }, count);
 
 const abrir = () => {
   recomecar();

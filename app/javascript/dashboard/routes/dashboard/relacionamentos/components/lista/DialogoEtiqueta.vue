@@ -7,6 +7,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import ResultadoDaAcao from './ResultadoDaAcao.vue';
 import {
+  resumoDoQueFoiFeito,
   rotuloDeCancelar,
   rotuloDeConfirmar,
   useEnvioEmFatias,
@@ -35,6 +36,12 @@ const faltaEscolher = ref(false);
 watch(escolhida, () => {
   faltaEscolher.value = false;
 });
+const colocada = count =>
+  t(
+    'RELACIONAMENTOS.LISTA.ETIQUETA.APLICADA',
+    { count, etiqueta: escolhida.value },
+    count
+  );
 const {
   enviando,
   andamento,
@@ -47,21 +54,20 @@ const {
   contagem: 'aplicadas',
   mensagemDeErro: () => t('RELACIONAMENTOS.LISTA.ETIQUETA.ERRO'),
   aoConcluir: faltam => emit('concluido', faltam),
+  resumo: resumoDoQueFoiFeito(t, colocada),
 });
 
 const opcoes = computed(() =>
   etiquetas.value.map(nome => ({ value: nome, label: nome }))
 );
 
-const colocada = count =>
-  t(
-    'RELACIONAMENTOS.LISTA.ETIQUETA.APLICADA',
-    { count, etiqueta: escolhida.value },
-    count
-  );
-
 const abrir = async () => {
-  recomecar();
+  // Abriu de novo com o envio ainda rodando: só mostra o andamento; a escolha
+  // fica como estava.
+  if (!recomecar()) {
+    dialogo.value?.open();
+    return;
+  }
   escolhida.value = '';
   faltaEscolher.value = false;
   try {

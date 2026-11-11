@@ -7,6 +7,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import ResultadoDaAcao from './ResultadoDaAcao.vue';
 import {
+  resumoDoQueFoiFeito,
   rotuloDeCancelar,
   rotuloDeConfirmar,
   useEnvioEmFatias,
@@ -33,6 +34,8 @@ const idDaEtapa = useId();
 const funis = ref([]);
 const funilId = ref('');
 const etapaId = ref('');
+const criados = count =>
+  t('RELACIONAMENTOS.LISTA.CARDS.CRIADOS', { count }, count);
 const {
   enviando,
   andamento,
@@ -45,6 +48,7 @@ const {
   contagem: 'criados',
   mensagemDeErro: () => t('RELACIONAMENTOS.LISTA.CARDS.ERRO'),
   aoConcluir: faltam => emit('concluido', faltam),
+  resumo: resumoDoQueFoiFeito(t, criados),
 });
 
 const semFunil = computed(() => funis.value.length === 0);
@@ -63,9 +67,17 @@ const escolherFunil = id => {
 };
 
 const abrir = async () => {
-  recomecar();
+  // Abriu de novo com o envio ainda rodando: só mostra o andamento; funil e
+  // etapa ficam como estavam.
+  if (!recomecar()) {
+    dialogo.value?.open();
+    return;
+  }
   try {
-    funis.value = await props.acoes.funis();
+    // Funil sem etapa não tem onde pôr o card: não entra na escolha.
+    funis.value = (await props.acoes.funis()).filter(
+      ({ etapas }) => etapas.length
+    );
   } catch {
     useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'));
     return;
@@ -106,9 +118,6 @@ const rotuloDeSair = computed(() =>
     ? t('RELACIONAMENTOS.COMUM.FECHAR')
     : rotuloDeCancelar(t, resultado.value)
 );
-
-const criados = count =>
-  t('RELACIONAMENTOS.LISTA.CARDS.CRIADOS', { count }, count);
 
 defineExpose({ abrir });
 </script>

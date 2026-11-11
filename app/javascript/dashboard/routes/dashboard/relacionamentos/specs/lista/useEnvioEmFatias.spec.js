@@ -1,6 +1,9 @@
 import { effectScope } from 'vue';
 import { useAlert } from 'dashboard/composables';
-import { useEnvioEmFatias } from '../../lista/useEnvioEmFatias';
+import {
+  resumoDoQueFoiFeito,
+  useEnvioEmFatias,
+} from '../../lista/useEnvioEmFatias';
 
 // O envio de uma ação em grupo que a fonte manda em fatias (#2894): o andamento
 // enquanto roda, o resultado somado, o "tentar de novo" só com quem falta e a
@@ -18,6 +21,8 @@ const montar = () => {
       contagem: 'apagadas',
       mensagemDeErro: () => 'Não consegui apagar. Tente de novo.',
       aoConcluir,
+      resumo: ({ feitas, faltam }) =>
+        `${feitas} apagadas, ${faltam.length} não`,
     });
   });
   return { envio, aoConcluir };
@@ -175,5 +180,81 @@ describe('fechar', () => {
     await pronto;
     expect(aoConcluir).toHaveBeenCalledWith(PESSOAS.slice(2));
     expect(envio.resultado.value).toBeNull();
+  });
+
+  it('fechou no meio e a fatia em voo deu erro: avisa o que foi feito, conclui e não devolve resultado', async () => {
+    const { envio, aoConcluir } = montar();
+    const espera = adiada();
+    const pronto = envio.enviarOQueFalta(PESSOAS, () => espera.promessa);
+    envio.fechar();
+    espera.resolver({
+      apagadas: 2,
+      deFora: [],
+      faltam: PESSOAS.slice(2),
+      erro: FALHA,
+    });
+    expect(await pronto).toBeNull();
+    expect(useAlert).toHaveBeenCalledTimes(1);
+    expect(useAlert).toHaveBeenCalledWith('2 apagadas, 2 não');
+    expect(aoConcluir).toHaveBeenCalledWith(PESSOAS.slice(2));
+  });
+
+  it('fechou no meio e a fatia em voo deu certo: avisa o que foi feito', async () => {
+    const { envio } = montar();
+    const espera = adiada();
+    const pronto = envio.enviarOQueFalta(PESSOAS, () => espera.promessa);
+    envio.fechar();
+    espera.resolver({
+      apagadas: 2,
+      deFora: [],
+      faltam: PESSOAS.slice(2),
+      erro: null,
+    });
+    expect(await pronto).toBeNull();
+    expect(useAlert).toHaveBeenCalledWith('2 apagadas, 2 não');
+  });
+});
+
+describe('recomecar (o diálogo abriu de novo)', () => {
+  it('sem envio em curso zera o resultado e diz que começou do zero', async () => {
+    const { envio } = montar();
+    await envio.enviarOQueFalta(PESSOAS, vi.fn().mockResolvedValue(inteiro(4)));
+    expect(envio.recomecar()).toBe(true);
+    expect(envio.resultado.value).toBeNull();
+  });
+
+  it('com a fatia em voo retoma o mesmo envio: não para, não conclui por baixo nem avisa', async () => {
+    const { envio, aoConcluir } = montar();
+    const espera = adiada();
+    let parar;
+    const pronto = envio.enviarOQueFalta(PESSOAS, ({ deveParar }) => {
+      parar = deveParar;
+      return espera.promessa;
+    });
+    envio.fechar();
+    expect(envio.recomecar()).toBe(false);
+    expect(parar()).toBe(false);
+    espera.resolver(inteiro(4));
+    expect(await pronto).toMatchObject({ feitas: 4, faltam: [] });
+    expect(aoConcluir).not.toHaveBeenCalled();
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(envio.resultado.value).toMatchObject({ feitas: 4 });
+  });
+});
+
+describe('resumoDoQueFoiFeito', () => {
+  const t = (chave, valores) => `${chave} ${valores.count}`;
+  const resumo = resumoDoQueFoiFeito(t, count => `${count} apagadas.`);
+
+  it('sem erro diz só o que foi feito', () => {
+    expect(resumo({ feitas: 50, faltam: PESSOAS, erro: null })).toBe(
+      '50 apagadas.'
+    );
+  });
+
+  it('com erro diz também quantas ainda não', () => {
+    expect(resumo({ feitas: 50, faltam: PESSOAS, erro: FALHA })).toBe(
+      '50 apagadas. RELACIONAMENTOS.LISTA.ACAO.AINDA_NAO 4'
+    );
   });
 });

@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { useAlert } from 'dashboard/composables';
 import { useEnvio } from './useEnvio';
 
 const ACAO = 'RELACIONAMENTOS.LISTA.ACAO';
@@ -15,6 +16,18 @@ export const rotuloDeConfirmar = (t, resultado, antesDeComecar) => {
 export const rotuloDeCancelar = (t, resultado) =>
   t(resultado?.erro ? `${COMUM}.FECHAR` : `${COMUM}.CANCELAR`);
 
+// A frase do aviso quando o diálogo fechou com o trabalho no meio: o que foi
+// feito (`frase(feitas)`, a mesma do diálogo) e, se deu erro, quantas ainda não.
+export const resumoDoQueFoiFeito =
+  (t, frase) =>
+  ({ feitas, faltam, erro }) =>
+    [
+      frase(feitas),
+      erro ? t(`${ACAO}.AINDA_NAO`, { count: faltam.length }) : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+
 // #2894 — o envio de uma ação em grupo que a fonte manda em fatias (criar
 // cards, etiquetar, apagar):
 //  - `andamento` ({ feitas, total }) enquanto roda, para a tela dizer "50 de 120";
@@ -23,9 +36,17 @@ export const rotuloDeCancelar = (t, resultado) =>
 //  - `fechar`: o diálogo fechou. Entrega a quem usa (`aoConcluir(faltam)`) uma
 //    vez só e recomeça do zero. No meio do trabalho, pede para parar depois da
 //    fatia em voo e entrega quando ela voltar: fechar não deixa a ação seguindo
-//    escondida.
+//    escondida. Como o diálogo já não está na tela, o que foi feito vai num
+//    aviso (`resumo(resultado)`), para nada acontecer calado;
+//  - `recomecar`: o diálogo abriu. Devolve `false` se ainda há fatia em voo:
+//    nesse caso retoma o mesmo envio em vez de começar outro por cima.
 // `contagem` é o nome da contagem da ação na fonte (criados, aplicadas, apagadas).
-export const useEnvioEmFatias = ({ contagem, mensagemDeErro, aoConcluir }) => {
+export const useEnvioEmFatias = ({
+  contagem,
+  mensagemDeErro,
+  aoConcluir,
+  resumo,
+}) => {
   const { enviando, enviar } = useEnvio(mensagemDeErro);
   const andamento = ref(null);
   const resultado = ref(null);
@@ -67,8 +88,10 @@ export const useEnvioEmFatias = ({ contagem, mensagemDeErro, aoConcluir }) => {
     andamento.value = null;
     if (novo) resultado.value = somado(novo);
     const feito = novo ? resultado.value : null;
-    if (fechouNoMeio) entregar();
-    return feito;
+    if (!fechouNoMeio) return feito;
+    if (feito) useAlert(resumo(feito));
+    entregar();
+    return null;
   };
 
   const fechar = () => {
@@ -77,7 +100,12 @@ export const useEnvioEmFatias = ({ contagem, mensagemDeErro, aoConcluir }) => {
   };
 
   const recomecar = () => {
+    if (enviando.value) {
+      fechouNoMeio = false;
+      return false;
+    }
     resultado.value = null;
+    return true;
   };
 
   return {
