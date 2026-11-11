@@ -19,7 +19,7 @@ const ROTULOS = {
   valor: 'Valor',
   modelo: 'Modelo',
   ano_modelo: 'Ano',
-  precos: 'Anos na tabela',
+  precos: 'Preços na tabela',
   compra: 'Compra',
   venda: 'Venda',
   dias_uteis: 'Dias úteis',
@@ -372,7 +372,7 @@ describe('linhasDoResultado', () => {
         },
         textos
       )
-    ).toEqual([['Anos na tabela', '2']]);
+    ).toEqual([['Preços na tabela', '2']]);
   });
 
   it('several days of rain, the first without a value: the pairs with a dash', () => {
