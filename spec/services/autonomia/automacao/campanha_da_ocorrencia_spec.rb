@@ -305,15 +305,23 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
   end
 
   # O banco de teste usa a collation C, onde o índice comum também serve ao LIKE com prefixo; em produção não. Por isso,
-  # dentro da transação do exemplo, os outros índices que começam por automacao_id saem, e o plano tem de usar o da vez
-  # com o começo da marca na condição do índice.
+  # dentro da transação do exemplo, saem todos os outros índices da tabela (menos a chave primária, que é restrição), e
+  # o plano tem de usar o da vez com o começo da marca na condição do índice. Tirar só os que começam por automacao_id
+  # não basta (#2914): a consulta também filtra por account_id, e com poucas linhas e sem ANALYZE o índice de account_id
+  # empata no custo e às vezes ganha, com a marca no Filter.
   it 'as execuções da vez saem do índice pelo começo da marca (text_pattern_ops)', :aggregate_failures do
     linha = varredura
     conexao = ActiveRecord::Base.connection
     definicao_do_indice = conexao.select_value("SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_autonomia_automacao_execucoes_vez'")
     expect(definicao_do_indice).to include('text_pattern_ops')
 
-    conexao.execute('DROP INDEX idx_autonomia_automacao_execucoes_evento, index_autonomia_automacao_execucoes_on_automacao_id')
+    outros = conexao.select_values(<<~SQL.squish)
+      SELECT indexname FROM pg_indexes
+      WHERE schemaname = current_schema() AND tablename = 'autonomia_automacao_execucoes'
+        AND indexname NOT IN ('idx_autonomia_automacao_execucoes_vez', 'autonomia_automacao_execucoes_pkey')
+    SQL
+    expect(outros).to include('index_autonomia_automacao_execucoes_on_account_id')
+    conexao.execute("DROP INDEX #{outros.map { |nome| conexao.quote_column_name(nome) }.join(', ')}")
     conexao.execute('SET LOCAL enable_seqscan = off')
     relacao = Autonomia::Automacao::EstadoDaVez.new(linha).send(:execucoes)
     plano = conexao.select_values("EXPLAIN #{relacao.to_sql}").join("\n")
