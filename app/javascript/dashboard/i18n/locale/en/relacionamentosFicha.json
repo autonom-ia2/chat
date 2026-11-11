@@ -1,0 +1,10 @@
+{
+  "RELACIONAMENTOS_FICHA": {
+    "PESSOA": {
+      "TITULO": "Person profile"
+    },
+    "EMPRESA": {
+      "TITULO": "Company profile"
+    }
+  }
+}

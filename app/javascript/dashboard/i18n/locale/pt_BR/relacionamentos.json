@@ -1,0 +1,67 @@
+{
+  "RELACIONAMENTOS": {
+    "LISTA": {
+      "TITULO": "Relacionamentos"
+    },
+    "COMUM": {
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "ERRO_GENERICO": "Não consegui carregar. Tente de novo.",
+      "CARREGANDO": "Carregando",
+      "VOLTAR": "Voltar",
+      "CANCELAR": "Cancelar",
+      "CONTINUAR": "Continuar",
+      "SELO_CLIENTE": "Cliente",
+      "SELO_NAO_QUER_MENSAGENS": "Não quer mensagens",
+      "NAO_INFORMADO": "Não informado",
+      "TRAZER_MINHA_LISTA": "Trazer minha lista",
+      "CONVERSAR": "Conversar",
+      "GRUPOS": "Grupos"
+    },
+    "GRUPOS": {
+      "TODOS": {
+        "NOME": "Todos",
+        "EXPLICACAO": "Todo mundo que está aqui."
+      },
+      "CLIENTES": {
+        "NOME": "Clientes",
+        "EXPLICACAO": "Quem já comprou de você."
+      },
+      "FALOU_HA_POUCO": {
+        "NOME": "Falou há pouco",
+        "EXPLICACAO": "Quem conversou com você nos últimos 30 dias."
+      },
+      "SUMIU_1_A_3_MESES": {
+        "NOME": "Sumiu há 1 a 3 meses",
+        "EXPLICACAO": "Quem conversava e parou. Boa hora para chamar."
+      },
+      "SUMIU_MAIS_DE_3_MESES": {
+        "NOME": "Sumiu há mais de 3 meses",
+        "EXPLICACAO": "Quem não aparece faz tempo."
+      },
+      "NUNCA_CONVERSOU": {
+        "NOME": "Nunca conversou",
+        "EXPLICACAO": "Quem está aqui e ainda não falou com você."
+      },
+      "NAO_QUER_MENSAGENS": {
+        "NOME": "Não quer mensagens",
+        "EXPLICACAO": "Quem pediu para não receber. Ninguém daqui recebe campanha."
+      },
+      "EMPRESAS_TODAS": {
+        "NOME": "Todas",
+        "EXPLICACAO": "Todas as empresas que estão aqui."
+      },
+      "EMPRESAS_COM_CLIENTES": {
+        "NOME": "Com clientes",
+        "EXPLICACAO": "Empresas onde alguém já comprou de você."
+      },
+      "EMPRESAS_SEM_PESSOAS": {
+        "NOME": "Sem pessoas",
+        "EXPLICACAO": "Empresas que ainda não têm ninguém."
+      },
+      "EMPRESAS_SEM_CONVERSA_3_MESES": {
+        "NOME": "Sem conversa há 3 meses",
+        "EXPLICACAO": "Empresas que não falam com você faz tempo."
+      }
+    }
+  }
+}

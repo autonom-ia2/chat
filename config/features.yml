@@ -1336,3 +1336,12 @@
   display_name: Agentes › ferramentas prontas (lote 2 de consultas)
   enabled: false
   column: feature_flags_ext_2
+
+# Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
+# empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
+# Sem migration. Rollback: desligar a flag na conta. Posição reservada pela Orquestração: 45; a posição real segue a
+# ordem de chegada à main e é confirmada por ela antes do OK (hoje 42, 1 << 41 = 2199023255552).
+- name: relacionamentos_novo
+  display_name: Relacionamentos › telas novas
+  enabled: false
+  column: feature_flags_ext_2

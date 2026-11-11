@@ -137,6 +137,15 @@
     },
     {
       "file": "prospectingAchar.json"
+    },
+    {
+      "file": "relacionamentos.json"
+    },
+    {
+      "file": "relacionamentosFicha.json"
+    },
+    {
+      "file": "relacionamentosTrazer.json"
     }
   ],
   "pacotes": {

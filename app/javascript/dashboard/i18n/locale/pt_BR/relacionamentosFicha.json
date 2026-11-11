@@ -1,0 +1,10 @@
+{
+  "RELACIONAMENTOS_FICHA": {
+    "PESSOA": {
+      "TITULO": "Ficha da pessoa"
+    },
+    "EMPRESA": {
+      "TITULO": "Ficha da empresa"
+    }
+  }
+}

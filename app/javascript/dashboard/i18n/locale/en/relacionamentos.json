@@ -1,0 +1,67 @@
+{
+  "RELACIONAMENTOS": {
+    "LISTA": {
+      "TITULO": "Relationships"
+    },
+    "COMUM": {
+      "TENTAR_DE_NOVO": "Try again",
+      "ERRO_GENERICO": "I couldn't load this. Try again.",
+      "CARREGANDO": "Loading",
+      "VOLTAR": "Back",
+      "CANCELAR": "Cancel",
+      "CONTINUAR": "Continue",
+      "SELO_CLIENTE": "Customer",
+      "SELO_NAO_QUER_MENSAGENS": "Doesn't want messages",
+      "NAO_INFORMADO": "Not provided",
+      "TRAZER_MINHA_LISTA": "Bring in my list",
+      "CONVERSAR": "Chat",
+      "GRUPOS": "Groups"
+    },
+    "GRUPOS": {
+      "TODOS": {
+        "NOME": "Everyone",
+        "EXPLICACAO": "Everyone who is here."
+      },
+      "CLIENTES": {
+        "NOME": "Customers",
+        "EXPLICACAO": "People who already bought from you."
+      },
+      "FALOU_HA_POUCO": {
+        "NOME": "Talked recently",
+        "EXPLICACAO": "People who talked to you in the last 30 days."
+      },
+      "SUMIU_1_A_3_MESES": {
+        "NOME": "Quiet for 1 to 3 months",
+        "EXPLICACAO": "People who used to talk and stopped. A good time to reach out."
+      },
+      "SUMIU_MAIS_DE_3_MESES": {
+        "NOME": "Quiet for over 3 months",
+        "EXPLICACAO": "People you haven't heard from in a long time."
+      },
+      "NUNCA_CONVERSOU": {
+        "NOME": "Never talked",
+        "EXPLICACAO": "People who are here but haven't talked to you yet."
+      },
+      "NAO_QUER_MENSAGENS": {
+        "NOME": "Doesn't want messages",
+        "EXPLICACAO": "People who asked not to receive messages. Nobody here gets a campaign."
+      },
+      "EMPRESAS_TODAS": {
+        "NOME": "All",
+        "EXPLICACAO": "All the companies that are here."
+      },
+      "EMPRESAS_COM_CLIENTES": {
+        "NOME": "With customers",
+        "EXPLICACAO": "Companies where someone already bought from you."
+      },
+      "EMPRESAS_SEM_PESSOAS": {
+        "NOME": "Without people",
+        "EXPLICACAO": "Companies that don't have anyone yet."
+      },
+      "EMPRESAS_SEM_CONVERSA_3_MESES": {
+        "NOME": "No chat in 3 months",
+        "EXPLICACAO": "Companies that haven't talked to you in a while."
+      }
+    }
+  }
+}
