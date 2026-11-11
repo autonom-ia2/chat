@@ -33,8 +33,19 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     expect(saida['situacao']).to eq('encontrado')
     expect(saida['dados']).to include('cidade' => 'São Paulo', 'uf' => 'SP', 'total' => 2)
-    expect(saida['dados']['ceps'].first).to eq('cep' => '01311-300', 'logradouro' => 'Avenida Paulista',
+    expect(saida['dados']['ceps'].first).to eq('nome' => 'Avenida Paulista, de 1047 a 1865 - lado ímpar, Bela Vista',
+                                               'cep' => '01311-300', 'logradouro' => 'Avenida Paulista',
                                                'complemento' => 'de 1047 a 1865 - lado ímpar', 'bairro' => 'Bela Vista')
+  end
+
+  it 'cada CEP leva um nome legivel (rua, faixa e bairro): a tela lista as ruas, e o cep vai como campo' do
+    sem_faixa = { cep: '01310-000', logradouro: 'Avenida Paulista', bairro: 'Bela Vista', ibge: '3550308' }
+    fonte_responde(paulista, [*da_viacep, sem_faixa])
+
+    nomes = por_endereco('logradouro' => 'Avenida Paulista', 'cidade' => 'São Paulo')['dados']['ceps'].pluck('nome')
+
+    expect(nomes).to eq(['Avenida Paulista, de 1047 a 1865 - lado ímpar, Bela Vista',
+                         'Avenida Paulista, de 1 a 609 - lado ímpar, Bela Vista', 'Avenida Paulista, Bela Vista'])
   end
 
   it 'com limite de resultados: ate 10 CEPs, com o total' do

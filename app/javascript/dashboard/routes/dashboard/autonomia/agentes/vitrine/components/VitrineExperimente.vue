@@ -72,6 +72,14 @@ const textosDoResultado = computed(() => ({
   nao: t(`${NS}.RESULTADO.NAO`),
   zeroKm: t(`${NS}.RESULTADO.ZERO_KM`),
   nenhumValor: t(`${NS}.RESULTADO.NENHUM_VALOR`),
+  // Só o código ("percentual_ao_ano") tem tradução; o símbolo ("%", "R$") vai como veio.
+  unidade: codigo => {
+    const ehCodigo = [...codigo].every(
+      letra => (letra >= 'a' && letra <= 'z') || letra === '_'
+    );
+    const caminho = `${NS}.UNIDADES.${chaveDoTexto(codigo)}`;
+    return ehCodigo && te(caminho) ? t(caminho) : codigo;
+  },
   idioma: idiomaDoNavegador(locale.value),
 }));
 

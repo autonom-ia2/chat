@@ -21,8 +21,10 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
   POR_PAGINA = 50
   MAX_COMPRAS = 10
   MAX_OBJETO = 600
-  SO_A_PRIMEIRA_PAGINA = 'O período tem %<total>d compras; olhei as %<pagina>d primeiras publicadas. Para ver as outras, ' \
-                         'encurte o período.'.freeze
+  SO_A_PRIMEIRA_PAGINA = 'O período tem %<total>d compras; aqui estão as %<pagina>d primeiras publicadas. Para ver as ' \
+                         'outras, encurte o período.'.freeze
+  PARCIAL = 'Parcial: o portal demorou, e só deu para ler as compras do último dia do período. Para o resto, consulte de ' \
+            'novo com um período menor.'.freeze
   LINK = 'https://pncp.gov.br/app/editais/%<cnpj>s/%<ano>d/%<sequencial>d'.freeze
   # A modalidade que o modelo escolhe -> o código e o nome no PNCP (`/api/pncp/v1/modalidades`).
   MODALIDADES = {
@@ -99,7 +101,8 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     achadas = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['compras']), params['busca']) { |item| item['objeto'] }
     return if achadas.empty?
 
-    resposta = dados.except('compras').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'compras', MAX_COMPRAS))
+    resposta = dados.except('compras', 'parcial').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'compras', MAX_COMPRAS))
+    return resposta.merge('observacao' => PARCIAL) if dados['parcial']
     return resposta if dados['total_no_periodo'].to_i <= POR_PAGINA
 
     resposta.merge('observacao' => format(SO_A_PRIMEIRA_PAGINA, total: dados['total_no_periodo'], pagina: POR_PAGINA))
@@ -135,7 +138,7 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'compras', descricao: 'as compras publicadas numa cidade e num período',
         opcionais: [CODIGO_IBGE, CIDADE, UF, DE, ATE, MODALIDADE, BUSCA], provedores: [Pncp], validade: 1.hour,
-        prazo_por_fonte: 8, prazo_total: 8, regra: method(:regra), refinar: method(:refinar)
+        prazo_por_fonte: 7, prazo_total: 11, regra: method(:regra), refinar: method(:refinar)
       )
     ],
     limite_diario: 500,

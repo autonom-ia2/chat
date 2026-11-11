@@ -24,6 +24,8 @@ const textosEm = (mensagens, idioma, maisN) => {
     nao: 'N',
     zeroKm: '0km',
     nenhumValor: mensagens.AGENTS.VITRINE.RESULTADO.NENHUM_VALOR,
+    unidade: codigo =>
+      mensagens.AGENTS.VITRINE.UNIDADES[String(codigo).toUpperCase()] || codigo,
     idioma,
   };
 };
@@ -240,5 +242,33 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ],
       ['Observação', porFonte.feriados.feriados.dados.observacao],
     ]);
+  });
+  // #2906 P09/P10 — o servidor manda número, mês AAAA-MM e unidade em código; a tela formata no idioma dela.
+  it('price, month and per-year rate follow the screen language (en and pt_BR)', () => {
+    const em = (fonte, consulta, textos, rotulo) =>
+      (linhas(fonte, consulta, textos).find(([nome]) => nome === rotulo) ||
+        [])[1];
+    const rotuloEn = chave => en.AGENTS.VITRINE.CAMPOS[chave];
+    expect(em('fipe', 'preco', PT, 'Valor')).toBe('R$ 56.043,00');
+    expect(em('fipe', 'preco', EN, rotuloEn('VALOR'))).toBe('R$ 56,043.00');
+    expect(em('fipe', 'preco', PT, 'Mês de referência')).toBe(
+      'novembro de 2026'
+    );
+    expect(em('fipe', 'preco', EN, rotuloEn('MES_DE_REFERENCIA'))).toBe(
+      'November 2026'
+    );
+    expect(em('banco_central', 'selic', EN, rotuloEn('VALOR'))).toBe(
+      '13.75 % per year'
+    );
+    expect(em('banco_central', 'ipca', EN, rotuloEn('MES_DE_REFERENCIA'))).toBe(
+      'September 2026'
+    );
+    const tudo = JSON.stringify([
+      linhas('fipe', 'preco', EN),
+      linhas('banco_central', 'selic', EN),
+      linhas('banco_central', 'ipca', EN),
+    ]);
+    expect(tudo).not.toContain('ao ano');
+    expect(tudo).not.toContain('novembro');
   });
 });

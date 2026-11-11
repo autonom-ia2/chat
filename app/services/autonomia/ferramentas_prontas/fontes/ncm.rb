@@ -67,8 +67,11 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     codigo.to_s.delete("^#{Parametro::DIGITOS}")
   end
 
-  DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
-                       'letras.'.freeze
+  # A tabela da NCM tem o termo técnico da nomenclatura: "celular" acha a terapia celular (varredura F24). Quem traduz
+  # o que o cliente disse é o modelo; a ordem de relevância de sempre vale sobre o que a busca achar.
+  DESCRICAO_DA_BUSCA = 'Na consulta buscar: uma palavra da mercadoria no termo da nomenclatura (ex.: parafuso; telefones ' \
+                       'celulares, não celular; máquinas automáticas para processamento de dados, não computador) ou parte ' \
+                       "do código; ao menos #{MIN_BUSCA} letras.".freeze
   BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA,
                         deduza: "mande uma palavra do produto, com ao menos #{MIN_BUSCA} letras (ex.: parafuso).") { |valor| busca(valor) }
   CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).',

@@ -156,7 +156,7 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def achado(params, dados, provedor, reserva:, falhas:)
-    @cache.encontrado(dados, validade: provedor.validade)
+    @cache.encontrado(dados, validade: provedor.validade_da_resposta(dados))
     @provedor = provedor.nome
     entregar(dados, params, desfecho: reserva ? 'pela_reserva' : nil, motivos: falhas)
   end

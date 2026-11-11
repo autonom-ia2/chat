@@ -3157,6 +3157,9 @@
         "MAIS_PROVAVEL": "There was more than one option, so this shows the most likely one. In the conversation, the agent asks the customer when unsure.",
         "SEM_LINHAS": "The lookup answered, but it can't be shown here."
       },
+      "UNIDADES": {
+        "PERCENTUAL_AO_ANO": "% per year"
+      },
       "CAMPOS": {
         "CEP": "ZIP code",
         "LOGRADOURO": "Street",

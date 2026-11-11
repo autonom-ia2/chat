@@ -214,6 +214,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it 'prazo e erro do PNCP: "nao consegui"' do
       argumentos = { 'codigo_ibge' => '3170206', 'de' => '2026-11-01', 'ate' => '2026-11-05' }
       fonte_lenta(pncp)
+      # O período inteiro estourou o prazo: o último dia (#2906, F32/F33), lento também.
+      fonte_lenta(pncp.sub('dataInicial=20261101', 'dataInicial=20261105'))
       expect(nao_consegui?(executar_pronta(ferramenta, argumentos))).to be(true)
 
       fonte_fora(pncp, status: 503)
@@ -302,7 +304,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
     it 'sem lugar, cidade homonima sem uf, cidade de outro estado ou so a latitude: pedido invalido, sem chamar a fonte' do
       expect(executar_pronta(ferramenta, {})['campo']).to eq('cidade')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Palmas')).to include('campo' => 'uf', 'candidatos' => %w[PR TO])
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
       expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'RJ')).to include('campo' => 'uf', 'candidatos' => ['MG'])
       expect(executar_pronta(ferramenta, 'latitude' => -18.9)['campo']).to eq('longitude')
       expect(executar_pronta(ferramenta, 'latitude' => 'perto', 'longitude' => -48.2)['campo']).to eq('latitude')
@@ -374,7 +376,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
 
     it 'cidade homonima sem uf traz as UFs candidatas; cidade que nao existe pede a cidade' do
-      expect(executar_pronta(ferramenta, 'cidade' => 'Rio Branco')).to include('campo' => 'uf', 'candidatos' => %w[AC MT])
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
       expect(executar_pronta(ferramenta, 'cidade' => 'Cidade Que Nao Existe')['campo']).to eq('cidade')
       expect(nenhum_pedido_saiu?).to be(true)
     end

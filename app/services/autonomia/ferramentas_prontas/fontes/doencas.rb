@@ -22,8 +22,14 @@ module Autonomia::FerramentasProntas::Fontes::Doencas
                          deduza: 'se o cliente disse o nome da doença, use a consulta busca; o código é letra e dígitos.') do |valor|
     codigo(valor)
   end
-  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome da doença (ex.: asma).',
+  # A tabela tem o nome técnico: quem traduz o que o cliente disse é o modelo (varredura F27, "dor de cabeça").
+  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome da doença, no termo técnico da medicina (ex.: asma; ' \
+                                                  'cefaleia, não dor de cabeça).',
                         pergunte: 'o nome da doença') { |valor| Parametro.texto_curto(valor) }
+
+  NAO_ENCONTRADO = 'A tabela CID-10 do DATASUS não tem esse nome ou código. Ela usa o termo técnico: tente de novo com ele ' \
+                   '(cefaleia, não dor de cabeça; hipertensão, não pressão alta) antes de dizer ao cliente que não achou. ' \
+                   'Código novo da OMS (como o U07.1, da covid-19) pode não estar nesta tabela. Não invente.'.freeze
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'doencas', slug: 'pronta_doencas', nome: 'Nome de doenças',
@@ -32,9 +38,9 @@ module Autonomia::FerramentasProntas::Fontes::Doencas
                'tabela do DATASUS.',
     consultas: [
       Consulta.new(nome: 'codigo', descricao: 'o nome da doença do código; pede codigo', obrigatorios: [CODIGO],
-                   provedores: [Cid10], validade: nil, prazo_por_fonte: 1, prazo_total: 1),
+                   provedores: [Cid10], validade: nil, prazo_por_fonte: 1, prazo_total: 1, nao_encontrado: NAO_ENCONTRADO),
       Consulta.new(nome: 'busca', descricao: 'as doenças com o nome; pede busca', obrigatorios: [BUSCA],
-                   provedores: [Cid10], validade: nil, prazo_por_fonte: 1, prazo_total: 1)
+                   provedores: [Cid10], validade: nil, prazo_por_fonte: 1, prazo_total: 1, nao_encontrado: NAO_ENCONTRADO)
     ],
     limite_diario: 500,
     termos: 'CID-10 do DATASUS (Ministério da Saúde), guardada no repositório. Sem rede e sem cache.'

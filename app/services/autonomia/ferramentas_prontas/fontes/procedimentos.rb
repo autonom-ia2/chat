@@ -12,10 +12,16 @@ module Autonomia::FerramentasProntas::Fontes::Procedimentos
                          deduza: 'se o cliente disse o nome do exame, use a consulta busca; o código tem 8 dígitos.') do |valor|
     Parametro.digitos(valor, 8)
   end
-  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome do exame ou procedimento (ex.: hemograma).',
+  # A tabela tem o nome técnico: quem traduz o que o cliente disse é o modelo (varredura F30, "raio x").
+  BUSCA = Parametro.new(nome: 'busca', descricao: 'Parte do nome do exame ou procedimento, no termo técnico (ex.: hemograma; ' \
+                                                  'radiografia, não raio x).',
                         pergunte: 'o nome do exame ou procedimento') do |valor|
     Parametro.texto_curto(valor)
   end
+
+  NAO_ENCONTRADO = 'A tabela TUSS da ANS não tem esse nome ou código. Ela usa o termo técnico: tente de novo com ele ' \
+                   '(radiografia, não raio x; ultrassonografia, não ultrassom) antes de dizer ao cliente que não achou. ' \
+                   'Não invente.'.freeze
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'procedimentos', slug: 'pronta_procedimentos', nome: 'Exames e procedimentos',
@@ -24,9 +30,9 @@ module Autonomia::FerramentasProntas::Fontes::Procedimentos
                'pelo nome, na tabela da ANS.',
     consultas: [
       Consulta.new(nome: 'codigo', descricao: 'o nome do procedimento do código; pede codigo', obrigatorios: [CODIGO],
-                   provedores: [Tuss], validade: nil, prazo_por_fonte: 1, prazo_total: 1),
+                   provedores: [Tuss], validade: nil, prazo_por_fonte: 1, prazo_total: 1, nao_encontrado: NAO_ENCONTRADO),
       Consulta.new(nome: 'busca', descricao: 'os procedimentos com o nome; pede busca', obrigatorios: [BUSCA],
-                   provedores: [Tuss], validade: nil, prazo_por_fonte: 1, prazo_total: 1)
+                   provedores: [Tuss], validade: nil, prazo_por_fonte: 1, prazo_total: 1, nao_encontrado: NAO_ENCONTRADO)
     ],
     limite_diario: 500,
     termos: 'Tabela 22 da TUSS, publicada pela ANS como dado aberto, guardada no repositório. Sem rede e sem cache.'

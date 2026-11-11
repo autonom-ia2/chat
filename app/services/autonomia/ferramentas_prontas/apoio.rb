@@ -24,8 +24,9 @@ class Autonomia::FerramentasProntas::Apoio
   end
 
   # -> os dados da fonte (do cache ou do primeiro provedor que responder), ou nil quando a fonte diz que não tem.
-  def dados(nome_da_consulta, params)
-    consulta = @fonte.consulta(nome_da_consulta)
+  # `consulta`: o nome de uma consulta da fonte, ou a própria `Consulta` interna (fora da lista que o modelo vê).
+  def dados(consulta, params)
+    consulta = @fonte.consulta(consulta) unless consulta.is_a?(Autonomia::FerramentasProntas::Consulta)
     cache = Cache.new(@fonte, consulta, params)
     guardado = cache.ler
     return guardado['situacao'] == Cache::ENCONTRADO ? guardado['dados'] : nil if guardado
@@ -39,7 +40,7 @@ class Autonomia::FerramentasProntas::Apoio
     falhas = []
     consulta.provedores.select { |provedor| provedor.aplica?(consulta, params) }.each do |provedor|
       dados = provedor.new(@cliente, prazo: consulta.prazo_por_fonte).consultar(consulta, consulta.para_a_fonte(params))
-      cache.encontrado(dados, validade: provedor.validade)
+      cache.encontrado(dados, validade: provedor.validade_da_resposta(dados))
       return dados
     rescue Provedor::NaoEncontrado
       raise SemResposta, falhas if falhas.any?

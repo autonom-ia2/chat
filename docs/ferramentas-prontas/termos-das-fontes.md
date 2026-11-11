@@ -112,9 +112,12 @@ por 1 dia. "Cache frio" é a primeira pergunta sobre aquela marca e carro; "quen
 | Pergunta | Cache frio | Cache quente |
 |---|---|---|
 | Marca + modelo com uma versão só + ano ("Voyage 2020") | 4: marcas (BrasilAPI), modelos, anos e preço (parallelum) | 0 (preço do dia) ou 1 (preço de outro ano) |
-| Marca + modelo com várias versões ("Gol 2020") | 2 na recusa com os candidatos (marcas, modelos), que não gasta o limite da conta; depois 2 no preço da versão escolhida (anos e preço): 4 | 0 na recusa; 0 ou 1 no preço |
+| Marca + modelo com várias versões + ano ("Gol 2020", #2906) | até 10: marcas, modelos, anos da marca, os modelos de cada combustível do ano (até 3, `Fipe::MODELOS_DO_ANO`) e, com várias versões no ano, anos e preço de 2 delas (a faixa, sem exigir a escolha) | 0 (preço do dia); os modelos do ano ficam 7 dias |
+| Marca + modelo com várias versões, sem o ano ("quanto vale um Gol?") | 2 na recusa (marcas, modelos), que pergunta o ano e não gasta o limite da conta | 0 |
 | Sem o ano ("quanto vale um Voyage?") | 5: marcas, modelos, anos e o preço do ano mais antigo e do mais novo (a faixa) | 0 (a faixa do dia) |
 | Pelo código FIPE, com ou sem ano | 1 (BrasilAPI); com ela fora, 2 ou 3 na parallelum | 0 |
 
 Um ano com mais de um combustível soma uma chamada por combustível, até 3 (`MAX_ANOS_COM_PRECO`). Na parallelum sem
-chave (teto de 450 por dia na plataforma, 112 por conta), o cache frio de uma pergunta gasta 3 ou 4 desses pedidos.
+chave (teto de 450 por dia na plataforma, 112 por conta), o cache frio de uma pergunta gasta de 3 a 9 desses pedidos (o
+de mais versões, "Gol 2020", é o de 9). A faixa de versões é de duas delas (a de nome mais curto e a de nome mais
+longo), não o mínimo e o máximo garantidos: isso pediria uma chamada por versão.

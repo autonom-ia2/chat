@@ -3157,6 +3157,9 @@
         "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida.",
         "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui."
       },
+      "UNIDADES": {
+        "PERCENTUAL_AO_ANO": "% ao ano"
+      },
       "CAMPOS": {
         "CEP": "CEP",
         "LOGRADOURO": "Rua",

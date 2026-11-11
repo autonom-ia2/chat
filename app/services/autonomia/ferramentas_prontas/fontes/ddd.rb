@@ -9,6 +9,10 @@ module Autonomia::FerramentasProntas::Fontes::Ddd
 
   MAX_CIDADES = 200
   PAIS = '55'.freeze
+  # O 0 da ligação de longa distância ("034", "0 34 3333-4444"), às vezes com a operadora de 2 dígitos ("0 15 34 ..."):
+  # nenhum DDD começa com 0 (varredura F14).
+  LONGA_DISTANCIA = '0'.freeze
+  DIGITOS_DA_OPERADORA = 2
 
   module_function
 
@@ -28,10 +32,20 @@ module Autonomia::FerramentasProntas::Fontes::Ddd
   end
 
   def ddd_dos_digitos(digitos)
+    return da_longa_distancia(digitos.delete_prefix(LONGA_DISTANCIA)) if digitos.start_with?(LONGA_DISTANCIA)
+
     case digitos.length
     when 2 then digitos
     when 10, 11 then digitos[0, 2]
     when 12, 13 then digitos[2, 2] if digitos.start_with?(PAIS)
+    end
+  end
+
+  # Sem o 0: o DDD (2), o telefone (10 ou 11) ou a operadora na frente do telefone (12 ou 13).
+  def da_longa_distancia(digitos)
+    case digitos.length
+    when 2, 10, 11 then digitos[0, 2]
+    when 12, 13 then digitos[DIGITOS_DA_OPERADORA, 2]
     end
   end
 

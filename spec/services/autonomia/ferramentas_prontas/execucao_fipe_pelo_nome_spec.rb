@@ -38,21 +38,21 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     saida = preco('marca' => 'Volkswagen', 'modelo' => 'voyage', 'ano' => 2020)
 
     expect(saida['situacao']).to eq('encontrado')
-    expect(saida['dados']['precos'].first).to include('valor' => 'R$ 58.000,00', 'modelo' => 'Voyage 1.6 MSI Flex 8V 4p')
+    expect(saida['dados']['precos'].first).to include('valor' => 58_000.0, 'modelo' => 'Voyage 1.6 MSI Flex 8V 4p')
   end
 
-  it '"Quanto vale um Gol 2020?": varias versoes viram candidatos com codigo, para escolher ou mostrar a faixa' do
-    saida = preco('marca' => 'VW', 'modelo' => 'Gol', 'ano' => 2020)
+  # Com o ano, as versões daquele ano e a faixa: `execucao_varredura_spec` (#2906, F12).
+  it '"Quanto vale um Gol?": sem o ano, varias versoes pedem o ano (que estreita), com as versoes em candidatos' do
+    saida = preco('marca' => 'VW', 'modelo' => 'Gol')
 
-    expect(saida).to include('situacao' => 'pedido_invalido', 'campo' => 'modelo')
+    expect(saida).to include('situacao' => 'pedido_invalido', 'campo' => 'ano')
     expect(saida['candidatos']).to eq([{ 'codigo' => '1', 'nome' => 'Gol 1.0 Mi Total Flex 8V 4p' }, { 'codigo' => '2', 'nome' => 'Gol 1.6 Power' }])
-    expect(saida['orientacao']).to include('2 versões', 'codigo', 'uma consulta só')
-    expect(saida['orientacao']).not_to include('até 3')
+    expect(saida['orientacao']).to include('2 versões', 'ano-modelo', 'codigo')
     expect(saida['orientacao']).not_to include('Confira com o cliente')
   end
 
   it 'a recusa do resolver (candidatos, marca que nao existe) nao gasta o limite do dia' do
-    preco('marca' => 'VW', 'modelo' => 'Gol', 'ano' => 2020)
+    preco('marca' => 'VW', 'modelo' => 'Gol')
     preco('marca' => 'Gurgel Motors Ltda', 'modelo' => 'X', 'ano' => 2020)
 
     expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(consultas: 0, recusadas: 2)
@@ -114,7 +114,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     cache_em_memoria
     fonte_responde("#{modelos_vw}/3/years", [])
 
-    preco('marca' => 'Volkswagen', 'modelo' => 'Gol', 'ano' => 2020)
+    preco('marca' => 'Volkswagen', 'modelo' => 'Gol')
     preco('marca' => 'Volkswagen', 'modelo' => 'Golf', 'ano' => 2020)
 
     expect(a_request(:get, marcas)).to have_been_made.once
@@ -146,7 +146,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     dados = preco('marca' => 'Volkswagen', 'modelo' => 'Voyage')['dados']
 
     expect(dados['anos_disponiveis']).to eq(['Zero KM Gasolina', '2021 Gasolina', '2020 Gasolina'])
-    expect(dados['precos'].pluck('valor')).to eq(['R$ 58.000,00', 'R$ 90.000,00'])
+    expect(dados['precos'].pluck('valor')).to eq([58_000.0, 90_000.0])
     expect(dados['observacao']).to include('faixa', 'ano')
     expect(a_request(:get, "#{modelos_vw}/4/years/2021-1")).not_to have_been_made
   end

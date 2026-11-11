@@ -27,6 +27,7 @@ class Autonomia::FerramentasProntas::Parametro
     @descricao = descricao
     @opcoes = opcoes
     @local = local
+    @com_normalizador = !normalizar.nil?
     @normalizar = normalizar || ->(valor) { valor }
   end
 
@@ -45,10 +46,12 @@ class Autonomia::FerramentasProntas::Parametro
     Autonomia::FerramentasProntas::Resposta.pergunte(nome, @pergunte) if @pergunte
   end
 
-  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só).
+  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só). O marcador
+  # do valor que já não normalizou (`Fonte::FORA_DO_FORMATO`) nunca serve: sem isto, o parâmetro de texto livre o
+  # aceitava, e "(fora do formato)" ia no endereço da fonte (varredura F04 a F07).
   def normalizar(valor)
-    return nil if valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
-    return opcao(valor) if opcoes
+    return nil if vazio?(valor) || valor == Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO
+    return opcao(valor) || (@normalizar.call(valor) if @com_normalizador) if opcoes
 
     @normalizar.call(valor)
   end
@@ -63,6 +66,12 @@ class Autonomia::FerramentasProntas::Parametro
 
   private
 
+  def vazio?(valor)
+    valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
+  end
+
+  # Com opções, o bloco (se houver) traduz o valor para uma delas: a UF pelo nome do estado. O que ele devolve fora da
+  # lista não serve.
   def opcao(valor)
     texto = valor.to_s.strip.downcase
     opcoes.include?(texto) ? texto : nil
@@ -94,9 +103,16 @@ class Autonomia::FerramentasProntas::Parametro
     end
 
     # CNPJ numérico ou alfanumérico (Receita, a partir de 07/2026): 12 posições de letra ou dígito e 2 dígitos
-    # verificadores, conferidos pelo módulo 11 com o valor de cada caractere (código ASCII menos 48).
+    # verificadores, conferidos pelo módulo 11 com o valor de cada caractere (código ASCII menos 48). Primeiro só os
+    # dígitos, como no CEP e no CPF: o texto em volta ("cnpj 33.000.167/0001-01") sai (varredura F10).
     def cnpj(valor)
-      texto = valor.to_s.upcase.delete("^#{ALFANUMERICO}")
+      numerico = cnpj_valido(valor.to_s.delete("^#{DIGITOS}"))
+      return numerico if numerico
+
+      cnpj_valido(valor.to_s.upcase.delete("^#{ALFANUMERICO}"))
+    end
+
+    def cnpj_valido(texto)
       return nil unless texto.length == 14 && texto[12, 2].delete(DIGITOS).empty?
       return nil if texto.chars.uniq.size == 1
 

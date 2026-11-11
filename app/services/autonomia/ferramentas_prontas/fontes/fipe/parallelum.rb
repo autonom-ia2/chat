@@ -24,6 +24,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     case consulta.nome
     when 'marcas' then Fipe.lista(exigir!(itens(base(params, '/brands'))), 'marcas', Fipe::MAX_MARCAS)
     when 'modelos' then modelos(params)
+    when 'modelos_do_ano' then modelos_do_ano(params)
     else precos(params)
     end
   end
@@ -45,14 +46,48 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     { 'modelos' => exigir!(itens(base(params, "/brands/#{params['marca']}/models"))) }
   end
 
+  # Os modelos da marca que têm o ano-modelo: os códigos de ano da marca (um por combustível, "2020-1", "2020-5") e os
+  # modelos de cada um, até `MAX_ANOS_COM_PRECO` códigos.
+  def modelos_do_ano(params)
+    anos = itens(base(params, "/brands/#{params['marca']}/years"))
+    codigos = anos.select { |item| codigo_de_ano?(item['codigo']) && item['codigo'].split('-').first.to_i == params['ano'] }
+    modelos = codigos.first(Fipe::MAX_ANOS_COM_PRECO).flat_map do |ano|
+      itens(base(params, "/brands/#{params['marca']}/years/#{ano['codigo']}/models"))
+    end
+    { 'modelos' => modelos.uniq { |item| item['codigo'] } }
+  end
+
   # Sem o ano, os anos que existem e a faixa; com ele, o preço de cada combustível daquele ano (até `MAX_ANOS_COM_PRECO`).
+  # Vários modelos (as versões do ano, `PeloNome`): o preço de cada um, do mais barato ao mais caro.
   def precos(params)
+    return versoes(params) if params['modelo'].is_a?(Array)
+
     do_veiculo = params['codigo_fipe'] ? "/#{params['codigo_fipe']}" : "/brands/#{params['marca']}/models/#{params['modelo']}"
     anos = anos_do_veiculo(params, do_veiculo)
     raise NaoEncontrado if anos.empty?
     return faixa(params, do_veiculo, anos) if params['ano'].nil?
 
-    { 'precos' => do_ano(anos, params['ano']).map { |ano| preco_do_ano(params, do_veiculo, ano) } }
+    escolhidos = do_ano(anos, params['ano'])
+    return sem_o_ano(anos, params['ano']) if escolhidos.empty?
+
+    { 'precos' => escolhidos.map { |ano| preco_do_ano(params, do_veiculo, ano) } }
+  end
+
+  def versoes(params)
+    precos = params['modelo'].first(Fipe::MAX_VERSOES).filter_map do |modelo|
+      um = params.merge('modelo' => modelo)
+      do_veiculo = "/brands/#{params['marca']}/models/#{modelo}"
+      ano = do_ano(anos_do_veiculo(um, do_veiculo), params['ano']).first
+      preco_do_ano(um, do_veiculo, ano) if ano
+    end
+    raise NaoEncontrado if precos.empty?
+
+    { 'precos' => precos.sort_by { |preco| preco['valor'].to_f } }.merge(precos.many? ? { 'observacao' => Fipe::VERSOES } : {})
+  end
+
+  # O ano que o veículo não tem: os anos que ele tem, para o agente dizer ao cliente (varredura F13).
+  def sem_o_ano(anos, ano)
+    { 'anos_disponiveis' => anos.pluck('nome'), 'observacao' => format(Fipe::SEM_O_ANO, ano: ano) }
   end
 
   # Os anos de um veículo mudam uma vez por mês: ficam no cache da fonte por 7 dias (`Fipe::ANOS`), e o preço de outro
@@ -85,10 +120,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
   # O código do ano vem da própria fonte e volta ao caminho: só no formato "2020-5" (dígitos, hífen, dígitos).
   def do_ano(anos, ano)
     validos = anos.select { |item| codigo_de_ano?(item['codigo']) }
-    escolhidos = validos.select { |item| item['codigo'].split('-').first.to_i == ano }.first(Fipe::MAX_ANOS_COM_PRECO)
-    raise NaoEncontrado if escolhidos.empty?
-
-    escolhidos
+    validos.select { |item| item['codigo'].split('-').first.to_i == ano }.first(Fipe::MAX_ANOS_COM_PRECO)
   end
 
   def codigo_de_ano?(codigo)

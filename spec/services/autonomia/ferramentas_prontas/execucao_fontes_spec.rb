@@ -19,7 +19,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     let(:brasilapi) { 'https://brasilapi.com.br/api/cep/v2/01001000' }
     let(:viacep) { 'https://viacep.com.br/ws/01001000/json/' }
     let(:da_brasilapi) do
-      { cep: '01001000', state: 'SP', city: 'São Paulo', neighborhood: 'Sé', street: 'Praça da Sé', service: 'open-cep',
+      { cep: '01001000', state: 'SP', city: 'São Paulo', neighborhood: 'Sé', street: 'Praça da Sé', service: 'correios',
         location: { type: 'Point', coordinates: { longitude: '-46.63', latitude: '-23.55' } } }
     end
     let(:do_viacep) do
@@ -146,7 +146,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
         'cnpj' => '33.000.167/0001-01', 'razao_social' => 'EMPRESA EXEMPLO S A', 'nome_fantasia' => 'EXEMPLO',
         'situacao' => 'ATIVA', 'data_da_situacao' => '2005-11-03', 'abertura' => '1966-09-28',
         'natureza_juridica' => 'Sociedade de Economia Mista', 'porte' => 'DEMAIS', 'cidade' => 'RIO DE JANEIRO', 'uf' => 'RJ',
-        'atividade_principal' => { 'codigo' => '600001', 'descricao' => 'Extração de petróleo e gás natural' }
+        'atividade_principal' => { 'codigo' => '0600001', 'descricao' => 'Extração de petróleo e gás natural' }
       )
       expect(saida.to_json).not_to include('PESSOA SOCIA', 'contato@exemplo.test', '2100000000')
     end
@@ -195,8 +195,8 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
         modelYear: 2020, fuel: 'Flex', codeFipe: '004517-9', referenceMonth: 'novembro de 2026', fuelAcronym: 'F' }
     end
     let(:preco_esperado) do
-      { 'valor' => 'R$ 56.043,00', 'marca' => 'GM - Chevrolet', 'modelo' => 'ONIX HATCH LT 1.0 12V Flex 5p Mec.',
-        'ano_modelo' => 2020, 'combustivel' => 'Flex', 'codigo_fipe' => '004517-9', 'mes_de_referencia' => 'novembro de 2026' }
+      { 'valor' => 56_043.0, 'marca' => 'GM - Chevrolet', 'modelo' => 'ONIX HATCH LT 1.0 12V Flex 5p Mec.',
+        'ano_modelo' => 2020, 'combustivel' => 'Flex', 'codigo_fipe' => '004517-9', 'mes_de_referencia' => '2026-11' }
     end
 
     # O código do modelo só vale se está na lista da marca (o "208" da Peugeot é nome): a lista da GM, com o 8949.
@@ -222,7 +222,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
       saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'codigo_fipe' => '0045179', 'ano' => '2020')
 
-      expect(saida['dados']).to eq('precos' => [preco_esperado])
+      expect(saida['dados']).to eq('precos' => [preco_esperado], 'unidades' => { 'valor' => 'R$' })
     end
 
     it 'cai na reserva (anos e depois o preco) quando a principal esta fora' do
@@ -232,7 +232,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
       saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'codigo_fipe' => '004517-9', 'ano' => 2020)
 
-      expect(saida['dados']).to eq('precos' => [preco_esperado])
+      expect(saida['dados']).to eq('precos' => [preco_esperado], 'unidades' => { 'valor' => 'R$' })
       expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(pela_reserva: 1, motivos: { 'brasilapi.erro_da_fonte' => 1 })
     end
 
@@ -257,7 +257,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
       saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'marca' => '23', 'modelo' => '8949', 'ano' => 2020)
 
-      expect(saida['dados']).to eq('precos' => [preco_esperado])
+      expect(saida['dados']).to eq('precos' => [preco_esperado], 'unidades' => { 'valor' => 'R$' })
       expect(a_request(:get, /brasilapi/)).not_to have_been_made
       expect(Autonomia::FerramentasProntas::Uso.sole.pela_reserva).to eq(0)
     end

@@ -313,7 +313,7 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to contain_exactly('situacao', 'dados')
       expect(response.parsed_body['situacao']).to eq('encontrado')
-      expect(response.parsed_body.to_json).to include('R$ 60.822,00')
+      expect(response.parsed_body.to_json).to include('60822.0')
       expect(Autonomia::FerramentasProntas::Uso.find_by(account_id: account.id, fonte: 'fipe').consultas).to eq(1)
     end
   end

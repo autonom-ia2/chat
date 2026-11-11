@@ -44,6 +44,12 @@ class Autonomia::FerramentasProntas::Provedor
       const_defined?(:VALIDADE, false) ? self::VALIDADE : nil
     end
 
+    # A validade de UMA resposta: a resposta parcial (o PNCP que só deu o último dia) não vai ao cache, para a próxima
+    # consulta tentar o período inteiro. Sem sobrescrever: a `validade` do provedor.
+    def validade_da_resposta(_dados)
+      validade
+    end
+
     # Cabeçalhos próprios do provedor (a chave gratuita da parallelum). Só vão ao host dele: o redirecionamento para
     # outra origem é recusado antes de sair (`ClienteHttp`).
     def cabecalhos

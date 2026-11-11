@@ -4,7 +4,24 @@ class Autonomia::FerramentasProntas::Fontes::ComprasGoverno::Pncp < Autonomia::F
   NOME = 'pncp'.freeze
   HOST = 'pncp.gov.br'.freeze
 
+  # Sem cache a resposta parcial.
+  def self.validade_da_resposta(dados)
+    dados['parcial'] ? 0 : validade
+  end
+
+  # O período inteiro não veio no prazo (o PNCP leva mais de 10 s em cidade grande, varredura F32/F33): o último dia do
+  # período, com o que sobra do prazo da consulta, em vez de "não consegui". A resposta diz que é parcial.
   def consultar(_consulta, params)
+    do_periodo(params)
+  rescue Falha => e
+    raise unless e.motivo == 'tempo_esgotado' && params['de'] != params['ate']
+
+    do_periodo(params.merge('de' => params['ate'])).merge('parcial' => true)
+  end
+
+  private
+
+  def do_periodo(params)
     compras = Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     municipio = exigir!(compras.municipio(params))
     codigo, modalidade = compras::MODALIDADES.fetch(params.fetch('modalidade'))
@@ -16,8 +33,6 @@ class Autonomia::FerramentasProntas::Fontes::ComprasGoverno::Pncp < Autonomia::F
       'total_no_periodo' => dado['totalRegistros'].is_a?(Integer) ? dado['totalRegistros'] : itens.size,
       'compras' => itens.map { |item| compras.compra(objeto!(item)) } }
   end
-
-  private
 
   def caminho(municipio, modalidade, params)
     datas = %w[de ate].map { |campo| params.fetch(campo).delete('-') }

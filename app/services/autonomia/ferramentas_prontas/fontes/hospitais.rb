@@ -15,6 +15,11 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
 
   FLAG = 'agente_ferramentas_prontas_lote2'.freeze
   MAX_ESTABELECIMENTOS = 20
+  POR_PAGINA = 20
+  MAX_PAGINAS = 5
+  # Cabe em `Resposta::MAX_TEXTO` (160).
+  AMOSTRA = 'É uma amostra: os %<lidos>d primeiros cadastros da cidade, e o total é só deles. Para achar pelo nome, mande ' \
+            'a busca e, se souber, o tipo (santa casa é hospital).'.freeze
   # O tipo de unidade que o modelo escolhe -> o código do CNES (`/cnes/tipounidades`).
   TIPOS = {
     'hospital' => 5, 'hospital_especializado' => 7, 'hospital_dia' => 62, 'pronto_socorro' => 20,
@@ -32,11 +37,16 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
     Municipios.falta(params['uf'], params['cidade'])
   end
 
+  # O filtro pelo nome roda sobre todas as páginas lidas. Lista que não veio inteira (`amostra`): a observação diz que o
+  # total é só do que foi lido (varredura F21).
   def refinar(dados, params)
-    achados = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['estabelecimentos']), params['busca']) { |item| item['nome'] }
+    todos = Array(dados['estabelecimentos'])
+    achados = Autonomia::FerramentasProntas::Lista.filtrar(todos, params['busca']) { |item| item['nome'] }
     return if achados.empty?
 
-    dados.except('estabelecimentos').merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
+    resposta = dados.except('estabelecimentos', 'amostra')
+                    .merge(Autonomia::FerramentasProntas::Lista.cortar(achados, 'estabelecimentos', MAX_ESTABELECIMENTOS))
+    dados['amostra'] ? resposta.merge('observacao' => format(AMOSTRA, lidos: todos.size)) : resposta
   end
 
   CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade (7 dígitos), se já souber. Opcional.',
@@ -51,7 +61,9 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
   UF = Municipios.parametro_uf
   TIPO = Parametro.new(nome: 'tipo', descricao: 'O tipo de unidade, se o cliente pediu um. Opcional.', opcoes: TIPOS.keys,
                        deduza: 'escolha da lista o tipo que o cliente pediu, ou deixe vazio.')
-  BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Parte do nome do estabelecimento. Opcional.') do |valor|
+  BUSCA = Parametro.new(nome: 'busca', local: true,
+                        descricao: 'Parte do nome do estabelecimento. Opcional. Com ela, mande também o tipo quando souber (santa ' \
+                                   'casa é hospital): cidade grande tem milhares de cadastros, e só os primeiros são lidos.') do |valor|
     Parametro.texto_curto(valor)
   end
 
@@ -63,7 +75,7 @@ module Autonomia::FerramentasProntas::Fontes::Hospitais
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'estabelecimentos', descricao: 'os estabelecimentos de saúde da cidade',
         opcionais: [CODIGO_IBGE, CIDADE, UF, TIPO, BUSCA], provedores: [Cnes], validade: 7.days, prazo_por_fonte: 4,
-        prazo_total: 5, regra: method(:regra), refinar: method(:refinar)
+        prazo_total: 8, regra: method(:regra), refinar: method(:refinar)
       )
     ],
     limite_diario: 500,
