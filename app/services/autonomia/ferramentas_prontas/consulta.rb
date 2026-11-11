@@ -12,10 +12,14 @@
 # apoio; devolve [params, nil] ou [nil, a `Falta`] (com os candidatos, quando há mais de um).
 class Autonomia::FerramentasProntas::Consulta
   # A folga entre a janela do turno e o prazo da consulta (#2906). O turno espera `ConsultaNoTurno::ESPERA_DO_TURNO`
-  # contados do pré-disparo da rodada; o prazo da consulta (`prazo_total`) só começa depois, no job: a fila
-  # `agent_tools` e a carga da execução e da ferramenta. A consulta que tem de responder no mesmo turno usa
-  # `prazo_total <= ESPERA_DO_TURNO - FOLGA_DO_TURNO`. Estimativa, não medida em produção: a fila parada ou cheia come
-  # mais que isso, e aí o turno lê "em andamento" e o resultado chega no turno seguinte (#2749).
+  # contados do pré-disparo da rodada; o prazo da consulta (`prazo_total`) só começa depois, no job. E o prazo vale POR
+  # ETAPA, não como relógio único: o DNS fica fora; a conexão e o TLS têm o `open_timeout` (até 2 s); o `read_timeout`
+  # só conta depois da conexão e do TLS. Então a consulta pode passar do `prazo_total` pelo tempo das conexões. A folga
+  # cobre as duas coisas: a fila `agent_tools` (com a carga da execução e da ferramenta) E esse excesso da conexão. A
+  # consulta que tem de responder no mesmo turno usa `prazo_total <= ESPERA_DO_TURNO - FOLGA_DO_TURNO`. Medido em
+  # 11/11/2026 no PNCP (prazo total 7 s), as execuções com as duas chamadas estourando levaram de 7,03 s a 7,14 s.
+  # A fila não foi medida em produção: parada ou cheia, ela come mais que a folga, e aí o turno lê "em andamento" e o
+  # resultado chega no turno seguinte (#2749).
   FOLGA_DO_TURNO = 1
 
   attr_reader :nome, :descricao, :obrigatorios, :opcionais, :provedores, :validade, :prazo_por_fonte, :prazo_total

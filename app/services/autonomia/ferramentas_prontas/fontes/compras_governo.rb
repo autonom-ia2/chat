@@ -12,15 +12,20 @@
 # Fonte única: o PNCP é o portal oficial; não há reserva. Termos: dado aberto por lei (art. 174 da Lei 14.133), sem
 # chave e sem limite publicado. Cache de 1 hora.
 # Prazo: 4 s por chamada e 7 s no total, para o período inteiro e a tentativa do último dia (`Pncp#consultar`) caberem
-# na janela do turno menos a folga da fila (`ConsultaNoTurno::ESPERA_DO_TURNO` 8 s - `Consulta::FOLGA_DO_TURNO` 1 s).
-# Medido em 11/11/2026 (#2906), sem a repetição do Net::HTTP (`ClienteHttp`, `max_retries: 0`):
+# na janela do turno menos a folga (`ConsultaNoTurno::ESPERA_DO_TURNO` 8 s - `Consulta::FOLGA_DO_TURNO` 1 s). O prazo
+# vale POR ETAPA, não como relógio único (`ClienteHttp`, `SafeFetch::Deadline`): o DNS fica fora; a conexão e o TLS têm
+# o `open_timeout` (até 2 s); a espera pelos cabeçalhos tem o `read_timeout`, que só começa a contar depois da conexão
+# e do TLS. Uma chamada pode passar do seu prazo pelo tempo da conexão, e a consulta inteira também; a folga de 1 s
+# cobre a fila do job E esse excesso. Medido em 11/11/2026 (#2906), as execuções com as duas chamadas estourando
+# levaram de 7,03 s a 7,14 s, dentro da janela de 8 s. Sem a repetição do Net::HTTP (`ClienteHttp`, `max_retries: 0`):
 #   - PNCP A FRIO (cidade e modalidade que ninguém pediu há pouco): o período de 7 dias levou de 2,8 s a 17,2 s
 #     (Belém 2,8; Cuiabá 7,5; Manaus 9,6; Goiânia 10,8; Fortaleza 11,2; Porto Alegre 17,2), e só o último dia de 1,2 s a
-#     7,8 s. A frio, o PNCP quase nunca cabe na janela, seja qual for o prazo dentro dela. Pela execução inteira, 8 cidades a frio: 3 responderam
-#     no período (2,5 s a 3,9 s) e 5 ficaram sem resposta em 7,1 s, com a tentativa do último dia também estourando;
+#     7,8 s. A frio, o PNCP quase nunca cabe na janela, seja qual for o prazo dentro dela. Pela execução inteira, 8
+#     cidades a frio: 3 responderam no período (2,5 s a 3,9 s) e 5 ficaram sem resposta em até 7,1 s, com a tentativa
+#     do último dia também estourando;
 #   - O QUE ACONTECE EM CADA CASO: o período responde -> a resposta, com cache de 1 hora; o período estoura e o último
 #     dia responde -> a resposta parcial, sem cache (`PARCIAL`/`PARCIAL_SEM_COMPRAS`); os dois estouram -> "não
-#     consegui" no mesmo turno, em até 7 s. Se a fila do job atrasar além da folga, o turno lê "em andamento" e o
+#     consegui" no mesmo turno, em pouco mais de 7 s. Se a fila do job atrasar além da folga, o turno lê "em andamento" e o
 #     resultado chega no turno seguinte (#2749, termo de aceite 7);
 #   - O PNCP TERMINA A CONSULTA DEPOIS QUE DESISTIMOS e a guarda: a mesma consulta 15 s depois voltou em 0,1 s (4 de
 #     4), e as 5 cidades sem resposta, pedidas de novo, responderam em 0,1 s a 3,9 s. A segunda pergunta do cliente acha.
