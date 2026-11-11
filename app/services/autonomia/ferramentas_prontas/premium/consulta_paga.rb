@@ -16,11 +16,12 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
           prazo_total: dataset.prazo + FOLGA)
   end
 
-  def conferir(argumentos)
-    params, campo = super
+  # `conta`: o id da conta, que segue para a procura do CEP (a fatia da conta no teto do ViaCEP).
+  def conferir(argumentos, conta: nil)
+    params, campo = super(argumentos)
     return [params, campo] unless params && @pelo_endereco && params['cep'].nil?
 
-    com_cep(params)
+    com_cep(params, conta)
   end
 
   def paga?
@@ -29,11 +30,11 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
 
   private
 
-  def com_cep(params)
+  def com_cep(params, conta)
     return [nil, 'cep'] if params['cidade'].nil? || params['uf'].nil?
 
     achado = Autonomia::FerramentasProntas::Premium::Endereco.cep(cidade: params['cidade'], uf: params['uf'].upcase, rua: params['rua'],
-                                                                  bairro: params['bairro'])
+                                                                  bairro: params['bairro'], conta: conta)
     return [params.merge('cep' => achado['cep']), nil] if achado&.dig('cep')
 
     [nil, achado&.key?('candidatos') ? 'bairro' : 'cep']

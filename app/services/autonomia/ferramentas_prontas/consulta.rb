@@ -35,7 +35,8 @@ class Autonomia::FerramentasProntas::Consulta
 
   # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, nome do parâmetro que não serve].
   # O obrigatório que falta e o opcional informado fora do formato são o mesmo erro: nada é consultado.
-  def conferir(argumentos)
+  # `conta:` só a consulta paga usa (F7, a procura do CEP); as grátis o ignoram.
+  def conferir(argumentos, **)
     normalizados = {}
     parametros.each do |parametro|
       valor = parametro.normalizar(argumentos[parametro.nome])

@@ -4,13 +4,20 @@
 # consulta cep/por_endereco, e a troca acontece só aqui, sem duplicar o helper.
 #
 # -> { 'cep' => '01001000' }; { 'candidatos' => [...] } quando a rua tem mais de um CEP (o agente pergunta o bairro); nil
-# quando não achou (o agente pede o CEP). Até a QI 70 entrar, devolve nil: a interface já aceita a cidade e o endereço,
-# e o agente segue pedindo o CEP.
+# quando não achou (o agente pede o CEP).
+# Delega a `Fontes::Cep::Referencia.cep`, da branch da QI 70: até aquela branch entrar nesta, a constante não existe aqui
+# e o método só roda nos specs, com a Referencia dublada. A Referencia devolve o CEP com traço ("01311-000"); a
+# BigDataCorp recebe só os dígitos. `conta`: o id da conta, para a fatia dela no teto do ViaCEP.
 module Autonomia::FerramentasProntas::Premium::Endereco
+  TAMANHO_DO_CEP = 8
+
   module_function
 
   # `rua` nil: o CEP de referência da cidade (a criminalidade é por cidade). Com `rua`: o CEP do endereço.
-  def cep(cidade:, uf:, rua: nil, bairro: nil) # rubocop:disable Lint/UnusedMethodArgument, Naming/MethodParameterName
-    nil
+  def cep(cidade:, uf:, rua: nil, bairro: nil, conta: nil) # rubocop:disable Naming/MethodParameterName
+    achado = Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep(cidade: cidade, uf: uf, rua: rua, bairro: bairro, conta: conta)
+    return achado unless achado&.key?('cep')
+
+    Autonomia::FerramentasProntas::Parametro.digitos(achado['cep'], TAMANHO_DO_CEP)&.then { |digitos| { 'cep' => digitos } }
   end
 end

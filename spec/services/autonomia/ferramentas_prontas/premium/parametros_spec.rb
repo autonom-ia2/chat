@@ -34,4 +34,31 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Parametros do
     expect(described_class::CODIGO_CAR.normalizar("XX5107065#{'EXEMPLO0' * 4}")).to be_nil
     expect(described_class::CODIGO_CAR.normalizar('MT5107065')).to be_nil
   end
+
+  # Regra "QI 70" (11/11): cada parâmetro diz o que o agente faz quando o valor falta ou não serve. O formato é o da branch
+  # fix/2858-qi70-prontas (`Parametro.new(..., deduza:)` ou `pergunte:`), ainda não juntada: até lá as orientações ficam
+  # prontas em `ORIENTACOES`, e no merge cada parâmetro passa a recebê-las.
+  describe 'as orientações da QI 70' do
+    let(:parametros) { described_class.constants.map { |nome| described_class.const_get(nome) }.grep(Autonomia::FerramentasProntas::Parametro) }
+    let(:orientacoes) { described_class::ORIENTACOES }
+
+    it 'todo parâmetro Premium tem uma orientação só, deduza ou pergunte, com texto' do
+      expect(orientacoes.keys).to match_array(parametros.map(&:nome))
+      orientacoes.each_value do |orientacao|
+        expect(orientacao.keys).to contain_exactly(:deduza).or contain_exactly(:pergunte)
+        expect(orientacao.values.first).to be_present
+      end
+    end
+
+    it 'pergunta o que muda o resultado; deduz o CEP e a UF' do
+      perguntados = orientacoes.select { |_nome, orientacao| orientacao.key?(:pergunte) }.keys
+
+      expect(perguntados).to match_array(%w[cnpj cpf placa numero codigo_car cidade rua bairro])
+      expect(orientacoes.select { |_nome, orientacao| orientacao.key?(:deduza) }.keys).to match_array(%w[cep uf])
+    end
+
+    it 'o código do CAR diz onde achar: no recibo do CAR' do
+      expect(orientacoes['codigo_car'][:pergunte]).to include('recibo do CAR')
+    end
+  end
 end

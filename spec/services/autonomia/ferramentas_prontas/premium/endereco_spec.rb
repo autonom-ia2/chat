@@ -28,8 +28,46 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
     a_request(:post, "#{FerramentasPremiumHelper::BDC}#{rota}").with(body: hash_including('q' => busca))
   end
 
-  it 'antes da QI 70 ligar o helper, o método único não acha CEP nenhum' do
-    expect(described_class.cep(cidade: 'São Paulo', uf: 'SP')).to be_nil
+  # A `Fontes::Cep::Referencia` é da branch da QI 70 (fix/2858-qi70-prontas), ainda não juntada: aqui ela é dublada com
+  # a assinatura que aquela branch promete (fef3ca2c47). Depois do merge o dublê troca a de verdade, e o spec segue valendo.
+  describe 'o método único delega ao CEP de referência da QI 70' do
+    let(:interface) do
+      Module.new do
+        def self.cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil); end # rubocop:disable Naming/MethodParameterName
+      end
+    end
+    let(:referencia) { stub_const('Autonomia::FerramentasProntas::Fontes::Cep::Referencia', interface) }
+
+    before { allow(referencia).to receive(:cep).and_return(nil) }
+
+    it 'passa a cidade, a UF, a rua, o bairro e a conta' do
+      described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', conta: 42)
+
+      expect(referencia).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: 'Sé', conta: 42)
+    end
+
+    it 'devolve o CEP só com os dígitos, como a BigDataCorp recebe' do
+      allow(referencia).to receive(:cep).and_return('cep' => '01001-000')
+
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP')).to eq('cep' => '01001000')
+    end
+
+    it 'devolve os candidatos como vieram, para o agente perguntar o bairro' do
+      candidatos = [{ 'cep' => '01001-000', 'logradouro' => 'Rua EXEMPLO', 'complemento' => '', 'bairro' => 'Sé' }]
+      allow(referencia).to receive(:cep).and_return('candidatos' => candidatos)
+
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO')).to eq('candidatos' => candidatos)
+    end
+
+    it 'sem CEP achado, nil (o agente pede o CEP)' do
+      expect(described_class.cep(cidade: 'Cidade EXEMPLO', uf: 'SP')).to be_nil
+    end
+
+    it 'CEP que não tem 8 dígitos não serve: nil' do
+      allow(referencia).to receive(:cep).and_return('cep' => '0100')
+
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP')).to be_nil
+    end
   end
 
   describe 'criminalidade pela cidade e a UF' do
@@ -40,11 +78,12 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'São Paulo', 'uf' => 'sp')
 
       expect(resposta['situacao']).to eq('encontrado')
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: nil, bairro: nil)
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: nil, bairro: nil, conta: account.id)
       expect(pediu('/enderecos', 'zipcode{01001000}')).to have_been_made.once
     end
 
     it 'sem CEP achado, pede o CEP e não chama a BigDataCorp' do
+      allow(described_class).to receive(:cep).and_return(nil)
       resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Cidade EXEMPLO', 'uf' => 'sp')
 
       expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'cep')
@@ -73,7 +112,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
                                          'uf' => 'sp')
 
       expect(resposta['situacao']).to eq('encontrado')
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: nil)
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Praça da Sé', bairro: nil, conta: account.id)
       expect(pediu('/enderecos', 'zipcode{01001000},addressnumber{10}')).to have_been_made.once
     end
 
@@ -94,7 +133,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       executar_premium(risco, 'consulta' => 'vistoria', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'bairro' => 'Sé', 'cidade' => 'São Paulo',
                               'uf' => 'sp')
 
-      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO', bairro: 'Sé')
+      expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO', bairro: 'Sé', conta: account.id)
     end
 
     it 'o número continua obrigatório: ele não dá para deduzir' do

@@ -7,6 +7,8 @@
 #   - pergunte (muda o resultado e não dá para deduzir): CNPJ, CPF, PLACA, CODIGO_CAR e NUMERO do imóvel;
 #   - deduza (dá para tirar do que o cliente disse): CEP (pela cidade ou pelo endereço, `Premium::Endereco`) e UF (pela
 #     cidade). CIDADE, RUA e BAIRRO só existem para achar o CEP; o BAIRRO só se pergunta quando a rua tem mais de um CEP.
+# Os textos já estão no formato novo, em `ORIENTACOES` (o `pergunte:` completa "pergunte ao cliente ..."; o `deduza:` é a
+# frase de como deduzir). No merge da QI 70, cada parâmetro recebe a sua: `Parametro.new(..., **ORIENTACOES['cnpj'])`.
 module Autonomia::FerramentasProntas::Premium::Parametros
   Parametro = Autonomia::FerramentasProntas::Parametro
   LETRAS = 'A-Z'.freeze
@@ -15,6 +17,20 @@ module Autonomia::FerramentasProntas::Premium::Parametros
   # O código do imóvel no CAR: a sigla do estado, o código do município no IBGE (7 dígitos) e 32 letras ou dígitos.
   TAMANHO_DO_CAR = 41
   MAX_NUMERO = 10
+
+  ORIENTACOES = {
+    'cnpj' => { pergunte: 'o CNPJ completo da empresa, com as 14 posições' },
+    'cpf' => { pergunte: 'o CPF completo da pessoa, com os 11 dígitos' },
+    'placa' => { pergunte: 'a placa do veículo, antiga ou Mercosul' },
+    'numero' => { pergunte: 'o número do imóvel no endereço (só o número)' },
+    'codigo_car' => { pergunte: 'o código do imóvel no CAR, que está no recibo do CAR' },
+    'cep' => { deduza: 'no risco do endereço, mande a cidade e a UF (criminalidade) ou a rua, o número e a cidade (área de ' \
+                       'risco e vistoria), e o CEP sai daí; em empresas na região, pergunte a rua ou o bairro.' },
+    'uf' => { deduza: 'mande a sigla de 2 letras do estado, que sai do nome do estado ou da cidade que o cliente disse.' },
+    'cidade' => { pergunte: 'a cidade do endereço' },
+    'rua' => { pergunte: 'a rua do endereço' },
+    'bairro' => { pergunte: 'o bairro: a rua tem mais de um CEP na cidade' }
+  }.freeze
 
   # QI 70: pergunte.
   CNPJ = Parametro.new(
