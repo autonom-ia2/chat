@@ -103,6 +103,8 @@ const CAMPOS_DE_NOME = [
   'descricao',
   'objeto',
   'razao_social',
+  // Os CEPs de uma rua (#2858, regra "QI 70"): o próprio CEP é o nome de cada um.
+  'cep',
 ];
 
 const campoDeNome = itens =>
