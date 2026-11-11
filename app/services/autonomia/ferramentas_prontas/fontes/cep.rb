@@ -30,10 +30,12 @@ module Autonomia::FerramentasProntas::Fontes::Cep
     texto if texto && texto.delete(' ').length >= MIN_LOGRADOURO
   end
 
-  # O nome de cada CEP da rua, para a tela e para o agente: a rua, a faixa de número e o bairro ("Avenida Paulista, de
-  # 612 a 1510 - lado par, Bela Vista"). Sem ele, a lista era só a contagem.
+  # O nome de cada CEP da rua, para a tela e para o agente: a rua, a faixa de número e o bairro ("Avenida Paulista (de
+  # 612 a 1510 - lado par) – Bela Vista"). Sem vírgula dentro: a tela junta os nomes com vírgula. Sem ele, a lista
+  # era só a contagem.
   def self.com_nome(item)
-    nome = [item['logradouro'], item['complemento'], item['bairro']].compact_blank.join(', ')
+    rua = [item['logradouro'], item['complemento'].presence&.then { |faixa| "(#{faixa})" }].compact_blank.join(' ')
+    nome = [rua, item['bairro']].compact_blank.join(' – ')
     nome.present? ? { 'nome' => nome }.merge(item) : item
   end
 

@@ -42,7 +42,10 @@ module Autonomia::FerramentasProntas::Fontes::Cidades
   end
 
   UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado (ex.: ac, sp).', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase),
-                     deduza: 'mande a sigla de 2 letras do estado, que sai do nome do estado ou da cidade que o cliente disse.')
+                     deduza: 'mande a sigla de 2 letras do estado, que sai do nome do estado ou da cidade que o cliente disse.') do |valor|
+    # O nome do estado também vale ("são paulo", varredura F38).
+    Autonomia::FerramentasProntas::Ufs.sigla_pelo_nome(valor)&.downcase
+  end
   BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Parte do nome da cidade, para conferir se ela existe no estado. Opcional.') do |valor|
     Parametro.texto_curto(valor)
   end

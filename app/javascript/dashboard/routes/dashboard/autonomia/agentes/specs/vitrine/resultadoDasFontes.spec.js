@@ -121,15 +121,16 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   });
 
   it('QI 70: o CEP pela rua e o banco pelo nome', () => {
-    // A Paulista tem 50 CEPs: cada um vira nome da lista, e o primeiro abre com a faixa de número.
-    expect(valor('cep', 'por_endereco', 'CEPs encontrados')).toBe(
-      '01311-921, 01310-915, 01311-925 e mais 47'
+    // A Paulista tem 50 CEPs: cada um vira nome da lista (rua, faixa e bairro, #2906), e o primeiro abre com o CEP.
+    expect(valor('cep', 'por_endereco', 'CEPs')).toBe(
+      'Avenida Paulista (1159) – Bela Vista, Avenida Paulista (1294) – Bela Vista, Avenida Paulista (1415) – Bela Vista e mais 47'
     );
-    expect(valor('cep', 'por_endereco', 'Primeiro da lista')).toBe('01311-921');
+    expect(valor('cep', 'por_endereco', 'Primeiro da lista')).toBe(
+      'Avenida Paulista (1159) – Bela Vista'
+    );
+    expect(valor('cep', 'por_endereco', 'CEP')).toBe('01311-921');
     expect(valor('cep', 'por_endereco', 'Complemento')).toBe('1159');
-    expect(valor('bancos', 'por_nome', 'Bancos encontrados')).toBe(
-      'ITAÚ UNIBANCO S.A.'
-    );
+    expect(valor('bancos', 'por_nome', 'Bancos')).toBe('ITAÚ UNIBANCO S.A.');
     expect(valor('bancos', 'por_nome', 'Código')).toBe('341');
   });
 

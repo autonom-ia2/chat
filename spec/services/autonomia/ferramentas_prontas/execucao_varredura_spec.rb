@@ -320,6 +320,10 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect([uf.normalizar('são paulo'), uf.normalizar('SP'), uf.normalizar('Narnia')]).to eq(['sp', 'sp', nil])
     end
 
+    it 'F38 (cidades/cidades/03): a uf da consulta de cidades tambem vale pelo nome do estado' do
+      expect(Autonomia::FerramentasProntas::Fontes::Cidades::UF.normalizar('são paulo')).to eq('sp')
+    end
+
     it 'F39 (hospitais/06): "Rio Branco" sem uf e a capital; sem capital entre as homonimas, pergunta' do
       municipios = Autonomia::FerramentasProntas::Municipios
 

@@ -3249,9 +3249,7 @@
         "CORRETORES": "Corretores",
         "REGISTRO_SUSEP": "Registro na SUSEP",
         "PRIMEIRO_DA_LISTA": "Primeiro da lista",
-        "CEPS": "CEPs encontrados",
-        "COMPLEMENTO": "Complemento",
-        "BANCOS": "Bancos encontrados"
+        "COMPLEMENTO": "Complemento"
       },
       "PRONTAS": {
         "TITULO": "Prontas",

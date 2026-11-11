@@ -30,6 +30,11 @@ a marca `"_origem": "feito à mão a partir da documentação do fornecedor, sem
 (sufixo 900 a 999, de prédio ou órgão): a ordem dos 10 que estão aqui é a do ViaCEP, não a de hoje. Os campos e os
 rótulos são os mesmos; não foi gravado de novo para não fazer uma segunda chamada real pela mesma consulta.
 
+Depois da varredura real (#2906), três arquivos foram ajustados à mão ao formato novo do adaptador, sobre o mesmo dado
+gravado e sem chamada nova: `cep.json` (por_endereco) ganhou o `nome` de cada CEP (`Cep.com_nome`: rua, faixa e
+bairro); `fipe.json` (preco) tem o valor em número, o mês em AAAA-MM e a moeda em `unidades`; `banco_central.json` tem a
+unidade da Selic em código (`percentual_ao_ano`) e o mês do IPCA em AAAA-MM.
+
 `ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
 adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
 

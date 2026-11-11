@@ -3249,9 +3249,7 @@
         "CORRETORES": "Brokers",
         "REGISTRO_SUSEP": "SUSEP registration",
         "PRIMEIRO_DA_LISTA": "First on the list",
-        "CEPS": "ZIP codes found",
-        "COMPLEMENTO": "Complement",
-        "BANCOS": "Banks found"
+        "COMPLEMENTO": "Complement"
       },
       "PRONTAS": {
         "TITULO": "Ready-made",

@@ -258,9 +258,8 @@ const CAMPOS_DE_NOME = [
   'descricao',
   'objeto',
   'razao_social',
-  // Os CEPs de uma rua (#2858, regra "QI 70"): o próprio CEP é o nome de cada um.
-  'cep',
 ];
+// Os CEPs de uma rua (#2906) chegam com `nome` (rua, faixa e bairro) do servidor: o CEP vai como campo.
 // #2858 F7 — sem nome, o que identifica cada item (o número do telefone, a placa, o ano do preço), na ordem de
 // preferência. Só identifica o campo que tem valor diferente em cada item: dois combustíveis do mesmo ano pulam o
 // ano. `tipo` fica fora: é categoria ("Hospital geral" em vários). Sem nenhum, a lista de mais de um item é contada.
