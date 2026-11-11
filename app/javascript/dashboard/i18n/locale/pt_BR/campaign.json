@@ -758,6 +758,25 @@
             "FETCH_POSTER": "Buscar capa do vídeo",
             "POSTER_ERROR": "Não foi possível buscar a capa do vídeo. Verifique o link."
           }
+        },
+        "IMAGE_DROP": {
+          "UPLOADING": "Enviando imagem… | Enviando {count} imagens…",
+          "UPLOAD_FAILED": "Não foi possível enviar a imagem. Confira sua internet e tente de novo. | Não foi possível enviar {count} imagens. Confira sua internet e tente de novo.",
+          "TOO_LARGE": "Esta imagem passa de 10 MB, mesmo depois de reduzida. Use uma foto menor.",
+          "UNSUPPORTED": "Este arquivo não é uma imagem que dê para pôr no e-mail. Use uma foto JPG ou PNG.",
+          "UNREADABLE": "Não deu para abrir esta foto aqui. Salve como JPG ou PNG e tente de novo.",
+          "ONLY_IMAGES": "Aqui só entra imagem, como foto JPG ou PNG.",
+          "ONLY_IMAGES_VIDEO": "Aqui só entra imagem. Para vídeo, use o bloco Vídeo.",
+          "MISSING_PUBLIC": "1 imagem não veio junto. Clique no quadro \"Clique para subir sua imagem\" e suba o arquivo. | {count} imagens não vieram junto. Clique em cada quadro \"Clique para subir sua imagem\" e suba o arquivo.",
+          "RETRY": "Tentar de novo",
+          "CLOSE": "Fechar",
+          "LEAVE_TITLE": "Uma imagem ainda está subindo",
+          "LEAVE_CONFIRM": "Se sair agora, ela não entra no e-mail.",
+          "LEAVE_WAIT": "Esperar a imagem",
+          "LEAVE_ANYWAY": "Sair mesmo assim",
+          "PASTE_FAILED": "Não deu para colar aqui. Clique fora do texto e cole de novo.",
+          "DROP_HERE": "Solte a imagem para pôr no e-mail",
+          "CHOOSE_FIRST": "Primeiro escolha como começar. Depois é só arrastar a imagem para o e-mail."
         }
       },
       "AI": {
@@ -976,6 +995,7 @@
         "TIME": "Horário do envio",
         "FINAL_AUDIENCE": "Destinatários finais",
         "UNKNOWN_VARIABLES": "Alguns campos de personalização não estão na sua lista: {fields}. Revise o conteúdo.",
+        "MISSING_IMAGES": "Falta subir 1 imagem. Volte ao editor, clique no quadro da imagem e suba a sua. | Faltam subir {count} imagens. Volte ao editor, clique em cada quadro de imagem e suba a sua.",
         "CORRECT_PENDING": "Resolva os itens indicados acima antes de enviar.",
         "FINAL_CONFIRMATION_HINT": "Você verá uma confirmação final antes do envio da campanha.",
         "SEND_CAMPAIGN": "Enviar campanha",
