@@ -116,7 +116,20 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     executar_pronta(ferramenta, 'cep' => '01001000')
 
-    expect(loja).to have_received(:write).with(a_string_starting_with('autonomia:prontas:v1:cep:endereco:'), anything, expires_in: 30.days)
+    expect(loja).to have_received(:write).with(a_string_starting_with('autonomia:prontas:v2:cep:endereco:'), anything, expires_in: 30.days)
+  end
+
+  # Revisão do #2906: o `nome` dos CEPs da rua e o formato novo dos hospitais são montados antes do cache. A resposta
+  # guardada no formato antigo (v1) não pode chegar ao agente sem eles.
+  it 'a resposta guardada no formato antigo (v1) nao e lida' do
+    loja = cache_em_memoria
+    pedido = fonte_responde(principal, endereco)
+    antiga = described_class::Cache.new(Autonomia::FerramentasProntas::Fontes::Cep::FONTE,
+                                        Autonomia::FerramentasProntas::Fontes::Cep::FONTE.consulta('endereco'), 'cep' => '01001000')
+    loja.write(antiga.chave.sub(':v2:', ':v1:'), { 'situacao' => 'encontrado', 'dados' => { 'cep' => '01001-000' } })
+
+    expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to include('cidade' => 'São Paulo')
+    expect(pedido).to have_been_requested.once
   end
 
   it 'falha nao fica em cache: a consulta seguinte tenta a fonte de novo' do
