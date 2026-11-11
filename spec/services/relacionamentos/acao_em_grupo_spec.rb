@@ -77,6 +77,13 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
       expect { criar }.to raise_error(NoMethodError)
     end
 
+    # SQL que o banco recusa (coluna que não existe, sintaxe) é defeito nosso, não falha daquela pessoa.
+    it 'não disfarça consulta errada de "ficou de fora": o pedido estoura' do
+      criador_que_falha_com(bruno, ActiveRecord::StatementInvalid.new('PG::UndefinedColumn'))
+
+      expect { criar }.to raise_error(ActiveRecord::StatementInvalid)
+    end
+
     it 'deixa de fora quem foi apagada entre a conferência e a vez dela' do
       allow(Crm::Cards::Creator).to receive(:new).and_wrap_original do |original, **dados|
         Contact.where(id: carla.id).delete_all if dados[:params][:contact_id] == ana.id

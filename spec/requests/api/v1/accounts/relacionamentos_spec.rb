@@ -196,6 +196,18 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
     end
   end
 
+  # Os quatro filtros com os nomes que a tela manda (fonte/listaFonte.js): trocar um nome de um lado só vira 422 aqui.
+  it 'aceita os filtros como a tela manda, nas três leituras de pessoas' do
+    pessoa('Ana Albuquerino')
+    filtros = { empresa: '1', etiqueta: 'feira', cidade: 'Campinas', chegou_em: 'ultimos_30' }
+
+    %w[pessoas pessoas/contagens pessoas/todas].each do |caminho|
+      ler(caminho, grupo: 'todos', busca: 'ana', filtros: filtros)
+
+      expect(response).to have_http_status(:ok), "#{caminho}: #{response.body}"
+    end
+  end
+
   # O permit do Rails descarta em silêncio o que chega no formato errado; sem a conferência, o pedido seguiria sem filtro
   # e "Marcar todas" marcaria a base inteira.
   describe 'pedido malformado' do

@@ -12,6 +12,10 @@ class Relacionamentos::AcaoEmGrupo
   NAO_EXISTE_MAIS = 'nao_existe_mais'.freeze
   DADOS_INVALIDOS = 'dados_invalidos'.freeze
   ERRO = 'erro'.freeze
+  # Falha que é daquela pessoa naquele momento (trava, registro que não gravou ou não saiu). Consulta que o banco recusa
+  # (ActiveRecord::StatementInvalid) é defeito de programa e estoura.
+  FALHAS_DA_VEZ = [ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout, ActiveRecord::RecordNotSaved,
+                   ActiveRecord::RecordNotDestroyed, ActiveRecord::RecordNotUnique].freeze
 
   def initialize(account:, user:, pessoa_ids:)
     @account = account
@@ -52,7 +56,7 @@ class Relacionamentos::AcaoEmGrupo
     NAO_EXISTE_MAIS
   rescue ActiveRecord::RecordInvalid
     DADOS_INVALIDOS
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue *FALHAS_DA_VEZ => e
     Rails.logger.error("[relacionamentos.acao_em_grupo] #{self.class.name} pessoa=#{pessoa_id}: #{e.class}")
     ChatwootExceptionTracker.new(e, account: @account, user: @user).capture_exception
     ERRO
