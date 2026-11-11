@@ -228,7 +228,10 @@ const valorLegivel = (chave, valor, textos, unidade) => {
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
-  if (ehMesIso(valor)) return mesLegivel(valor, textos.idioma);
+  // O código com a forma de um mês ("7318-12") é identificação, não mês (revisão do #2906).
+  if (!ehIdentificacao(chave) && ehMesIso(valor)) {
+    return mesLegivel(valor, textos.idioma);
+  }
   if (ehDataComHora(valor)) return dataComHoraLegivel(valor, textos.idioma);
   return chave === 'descricao' ? semTracoInicial(String(valor)) : String(valor);
 };
