@@ -119,15 +119,18 @@ const ehIdentificacao = chave =>
   CHAVES_DE_IDENTIFICACAO.includes(chave) ||
   PREFIXOS_DE_IDENTIFICACAO.some(prefixo => String(chave).startsWith(prefixo));
 
+const MIN_CASAS_DO_DINHEIRO = 2;
+const MAX_CASAS = 4;
 const numeroLegivel = (
   numero,
   idioma,
   unidade = '',
   dinheiro = false,
-  agrupa = true
+  agrupa = true,
+  casas = MIN_CASAS_DO_DINHEIRO
 ) => {
   const texto = new Intl.NumberFormat(idioma, {
-    minimumFractionDigits: dinheiro ? 2 : 0,
+    minimumFractionDigits: dinheiro ? casas : 0,
     maximumFractionDigits: 4,
     useGrouping: agrupa,
   }).format(numero);
@@ -136,6 +139,30 @@ const numeroLegivel = (
     ? `${unidade} ${texto}`
     : `${texto} ${unidade}`;
 };
+
+// O dinheiro do mesmo item com as mesmas casas (varredura P12: "R$ 5,5834" e "R$ 5,5840" na compra e na venda): a
+// maior entre os valores de dinheiro dele, de 2 a 4. `unidadeDaChave` dá a unidade de cada campo.
+const casasDecimais = numero => {
+  const texto = String(Math.abs(numero));
+  if (texto.includes('e')) return MAX_CASAS;
+  const [, fracao = ''] = texto.split('.');
+  return fracao.length;
+};
+const casasDoDinheiro = (objeto, unidadeDaChave) =>
+  Math.min(
+    MAX_CASAS,
+    Math.max(
+      MIN_CASAS_DO_DINHEIRO,
+      ...Object.entries(objeto)
+        .filter(
+          ([chave, valor]) =>
+            typeof valor === 'number' &&
+            !ehIdentificacao(chave) &&
+            ehDinheiro(chave, unidadeDaChave(chave))
+        )
+        .map(([, valor]) => casasDecimais(valor))
+    )
+  );
 
 // "-- Parafusos autoperfurantes" (o recuo da tabela da NCM) -> "Parafusos autoperfurantes". Só no nome do item e na
 // descrição: em outro texto o traço pode ser o sinal ("-0,5").
@@ -160,7 +187,9 @@ const valorLegivel = (chave, valor, textos, unidade) => {
       valor,
       textos.idioma,
       unidade,
-      ehDinheiro(chave, unidade)
+      ehDinheiro(chave, unidade),
+      true,
+      textos.casas
     );
   }
   if (ehDataIso(valor)) return dataLegivel(valor, textos.idioma);
@@ -178,7 +207,7 @@ const resumoDaLista = (legiveis, total, textos, separador = '') => {
     const nomes = separador
       ? `${primeiros.join(separador)}${separador.trimEnd()}`
       : primeiros.join(', ');
-    return textos.maisN({ nomes, n: resto });
+    return textos.maisN({ nomes, n: numeroLegivel(resto, textos.idioma) });
   }
   if (separador) return primeiros.join(separador);
   return new Intl.ListFormat(textos.idioma, { type: 'conjunction' }).format(
@@ -288,6 +317,8 @@ const resumoDentro = (chave, itens, rotulo, total, textos) => {
 const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
   const comNomeDoEstado = typeof objeto.estado === 'string';
   const total = Number.isInteger(objeto.total) ? objeto.total : null;
+  const casas = casasDoDinheiro(objeto, chave => unidadeDe(textos, chave));
+  const textosDoItem = { ...textos, casas };
   return Object.entries(objeto).flatMap(([chave, valor]) => {
     if (chave === omitir || repete(objeto, chave, valor)) return [];
     if (chave === 'uf' && comNomeDoEstado) return [];
@@ -295,7 +326,7 @@ const linhasSimples = (objeto, rotuloDe, textos, omitir = '') => {
       return resumoDentro(chave, valor, rotuloDe(chave), total, textos);
     }
     const rotulo = ehPrimitivo(valor) ? rotuloDe(chave) : '';
-    return rotulo ? [[rotulo, legivel(chave, valor, textos)]] : [];
+    return rotulo ? [[rotulo, legivel(chave, valor, textosDoItem)]] : [];
   });
 };
 
@@ -310,6 +341,8 @@ const primeiroAberto = (itens, campo, umSo, textos) => {
   const [nome] = nomesLegiveis(itens, campo);
   return [[textos.rotulo('primeiro_da_lista'), nome], ...detalhes];
 };
+
+const SEPARADOR_DE_PARES = ' · ';
 
 // O campo da linha de pares: o único campo com rótulo além do identificador, o mesmo em todos os itens, com valor
 // simples. Item sem o campo, ou com ele nulo, entra com "—". '' quando os itens têm campos diferentes ou mais de um.
@@ -335,12 +368,33 @@ const valorDoPar = (item, campo, textos) =>
     ? textos.nenhumValor
     : legivel(campo, item[campo], textos);
 
+// Varredura P13: lista identificada de até MAXIMO_PARA_PARES itens mostra, para cada campo com rótulo que todos têm (até
+// MAXIMO_DE_CAMPOS, na ordem do primeiro item), uma linha de pares ("Previsão do mercado (mediana): 2026: 5,2195 % ·
+// 2027: 4,9005 %"), em vez de abrir só o primeiro: sem isso, a previsão de 2027 sumia.
+const MAXIMO_PARA_PARES = 5;
+const MAXIMO_DE_CAMPOS = 4;
+const camposComuns = (itens, id, textos) =>
+  Object.keys(itens[0])
+    .filter(
+      chave =>
+        chave !== id &&
+        textos.rotulo(chave) &&
+        itens.every(item => ehPrimitivo(item[chave]))
+    )
+    .slice(0, MAXIMO_DE_CAMPOS);
+const linhasDePares = (itens, ids, id, textos) =>
+  camposComuns(itens, id, textos).map(campo => [
+    textos.rotulo(campo),
+    itens
+      .map((item, i) => `${ids[i]}: ${legivel(campo, item[campo], textos)}`)
+      .join(SEPARADOR_DE_PARES),
+  ]);
+
 // Lista sem nome e com mais de um item. Todos com o mesmo único campo além do identificador (a chuva de cada dia): os
 // pares numa linha com o rótulo do campo ("Chuva no dia (mm): 04/11/2026: 0,9 · 05/11/2026: 6,2 · e mais 4").
 // Senão, os identificadores com o rótulo do identificador e, com MINIMO_PARA_ABRIR campos com rótulo (a mesma regra da
 // lista com nome), o primeiro sob "Primeiro da lista". Sem identificador, só quantos são, com o rótulo da lista (abrir
 // o primeiro faria os campos dele parecerem valer para todos).
-const SEPARADOR_DE_PARES = ' · ';
 const listaSemNome = (rotulo, itens, total, textos) => {
   // Lista sem rótulo não aparece (coberturas, condicoes), nem pelo identificador nem pelos pares.
   if (!rotulo) return [];
@@ -360,6 +414,9 @@ const listaSemNome = (rotulo, itens, total, textos) => {
     ];
   }
   const resumo = [[textos.rotulo(id), resumoDaLista(ids, total, textos)]];
+  if (Math.max(total ?? 0, itens.length) <= MAXIMO_PARA_PARES) {
+    return [...resumo, ...linhasDePares(itens, ids, id, textos)];
+  }
   const detalhes = linhasSimples(itens[0], textos.rotulo, textos, id);
   if (detalhes.length < MINIMO_PARA_ABRIR) return resumo;
   return [...resumo, [textos.rotulo('primeiro_da_lista'), ids[0]], ...detalhes];
@@ -376,6 +433,17 @@ const linhasDaLista = (chave, itens, total, textos) => {
   const campo = campoDeNome(itens);
   if (campo) {
     const nomes = nomesLegiveis(itens, campo);
+    // Varredura P03/P04: cada item com o nome e um só campo com rótulo (a data do feriado), o mesmo em todos: os pares
+    // "nome: valor" com o rótulo da lista, de um item ou de vários ("Feriados: Carnaval: 16/02/2026 · …").
+    const doPar = rotulo ? campoDosPares(itens, campo, textos) : '';
+    if (doPar) {
+      const pares = itens.map(
+        (item, i) => `${nomes[i]}: ${valorDoPar(item, doPar, textos)}`
+      );
+      return [
+        [rotulo, resumoDaLista(pares, total, textos, SEPARADOR_DE_PARES)],
+      ];
+    }
     const resumo = rotulo
       ? [[rotulo, resumoDaLista(nomes, total, textos)]]
       : [];
@@ -398,6 +466,11 @@ export const linhasDoResultado = (dados, textosDaTela) => {
   const unidade = typeof dados.unidade === 'string' ? dados.unidade : '';
   // A sigla do estado só aparece quando o nome dele não veio junto.
   const comNomeDoEstado = typeof dados.estado === 'string';
+  const casas = casasDoDinheiro(
+    dados,
+    chave => unidade || unidadeDe(textos, chave)
+  );
+  const textosDoNivel = { ...textos, casas };
   return Object.entries(dados).flatMap(([chave, valor]) => {
     if (valor === null || valor === undefined || chave === 'unidades') {
       return [];
@@ -416,7 +489,7 @@ export const linhasDoResultado = (dados, textosDaTela) => {
     const rotulo = textos.rotulo(chave);
     const daLinha = unidade || unidadeDe(textos, chave);
     return rotulo
-      ? [[rotulo, valorLegivel(chave, valor, textos, daLinha)]]
+      ? [[rotulo, valorLegivel(chave, valor, textosDoNivel, daLinha)]]
       : [];
   });
 };

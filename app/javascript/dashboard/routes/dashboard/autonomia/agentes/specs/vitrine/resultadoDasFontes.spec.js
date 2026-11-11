@@ -99,10 +99,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     ).toBeDefined();
     expect(valor('banco_central', 'dolar', 'Venda')).toContain('R$');
     // A unidade da mediana vem em `unidades` (C02): sem ela, "5,2195" sem o "%".
+    // Varredura P13: os dois anos com a previsão de cada um, sem abrir só o primeiro.
     expect(
       valor('banco_central', 'focus', 'Previsão do mercado (mediana)')
-    ).toBe('5,2195 %');
-    expect(valor('banco_central', 'focus', 'Primeiro da lista')).toBe('2026');
+    ).toBe('2026: 5,2195 % · 2027: 4,9005 %');
+    expect(
+      valor('banco_central', 'focus', 'Primeiro da lista')
+    ).toBeUndefined();
     // Regra A: a linha dos identificadores leva o rótulo do identificador (Ano), não o da lista.
     expect(valor('banco_central', 'focus', 'Ano')).toContain('2026');
     expect(
@@ -198,6 +201,8 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
   // Suspenso" depois dos corretores, "Código: 1" depois das marcas, "Estado: AC" depois dos estados).
   it('saída completa: corretores, marcas, estados e feriados', () => {
+    const dia = (ano, mes, d) =>
+      new Date(ano, mes - 1, d).toLocaleDateString('pt-BR');
     expect(linhas('corretor_susep', 'por_nome')).toEqual([
       [
         'Corretores',
@@ -207,15 +212,19 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ['Situação', 'Suspenso'],
       ['Registro na SUSEP', '100000001'],
     ]);
+    // Varredura P03/P04: nome e um só campo com rótulo (o código da marca) vira par "nome: valor".
     expect(linhas('fipe', 'marcas')).toEqual([
-      ['Marcas', 'Acura, Agrale, Alfa Romeo e mais 105'],
+      ['Marcas', 'Acura: 1 · Agrale: 2 · Alfa Romeo: 3 · e mais 105'],
     ]);
     expect(linhas('cidades', 'estados')).toEqual([
-      ['Estados', 'Acre, Alagoas, Amapá e mais 24'],
+      ['Estados', 'Acre: AC · Alagoas: AL · Amapá: AP · e mais 24'],
     ]);
     expect(linhas('feriados', 'feriados')).toEqual([
       ['Ano', '2026'],
-      ['Feriados', 'Confraternização mundial, Carnaval, Carnaval e mais 11'],
+      [
+        'Feriados',
+        `Confraternização mundial: ${dia(2026, 1, 1)} · Carnaval: ${dia(2026, 2, 16)} · Carnaval: ${dia(2026, 2, 17)} · e mais 11`,
+      ],
       ['Observação', porFonte.feriados.feriados.dados.observacao],
     ]);
   });
