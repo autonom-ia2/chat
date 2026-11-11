@@ -39,7 +39,7 @@ module Autonomia::Guide::Formatos
   end
 
   def todos
-    @todos ||= JSON.parse(ARQUIVO.read).freeze
+    @todos ||= Esquemas.resolver_referencias(JSON.parse(ARQUIVO.read)).freeze
   end
 
   def leituras

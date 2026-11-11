@@ -103,6 +103,11 @@
         "TITULO": "Closed sales go into your system",
         "TEXTO": "When a sale closes, the system gets the missing details, sends them to your billing system and sends a welcome message."
       }
+    },
+    "GUIA": {
+      "TESTAR": "Try it with real conversations",
+      "VERSAO_MUDOU": "Someone changed this automation just now. The new version is on screen: check it and tap Turn on again.",
+      "ERRO_RESUMO": "I could not show this automation right now. Reload the page to try again."
     }
   }
 }

@@ -23,8 +23,7 @@ class Autonomia::FerramentasProntas::Experimente
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
     'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo', 'senao' => { 'consulta' => 'por_nome', 'campo' => 'nome' } }
   }.freeze
-  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
-                       corretor_susep].freeze
+  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva corretor_susep].freeze
   MAX_VALOR = 100
 
   def initialize(account:, fonte:, valor:)
@@ -35,7 +34,7 @@ class Autonomia::FerramentasProntas::Experimente
 
   # -> o que o agente receberia, sem os textos de orientação ao modelo: { 'situacao', 'dados'? }.
   def call
-    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
+    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.na_vitrine?(@account, @fonte)
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
     return ComModelo.new(account: @account, fonte: @fonte, valor: @valor).call if COM_TEXTO_LIVRE.include?(@fonte.chave)

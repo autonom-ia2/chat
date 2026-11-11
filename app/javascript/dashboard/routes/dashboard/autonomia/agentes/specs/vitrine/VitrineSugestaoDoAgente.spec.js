@@ -52,6 +52,16 @@ afterEach(() => {
 });
 
 describe('VitrineSugestaoDoAgente', () => {
+  it('skips an internal-use source even if it was stored as a suggestion', async () => {
+    api.sugestoes.mockResolvedValue({
+      data: { ferramentas: ['produtos_seguradoras', 'fipe'] },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.text()).toContain('Ana pode ganhar: Valor do carro.');
+    expect(wrapper.text()).not.toContain('Produtos das seguradoras');
+  });
+
   it('shows one tool from the stored suggestion', async () => {
     const wrapper = await montar();
 

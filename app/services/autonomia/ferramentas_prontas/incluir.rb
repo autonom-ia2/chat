@@ -5,7 +5,7 @@
 # "Ferramentas dos agentes") é conferido por quem chama, na tela da F2.
 #
 # Recusa (`Recusado#motivo`): flag desligada (a das prontas ou a da fase da fonte),
-# agente de outra conta, a Lia, fonte fora do catálogo, ou o nome da função
+# agente de outra conta, a Lia, fonte fora do catálogo, fonte de uso interno (`fora_da_vitrine`), ou o nome da função
 # já usado por uma ferramenta cadastrada à mão no mesmo agente.
 class Autonomia::FerramentasProntas::Incluir
   MAX_USAR_QUANDO = 500
@@ -45,8 +45,14 @@ class Autonomia::FerramentasProntas::Incluir
     raise Recusado, 'agente_de_outra_conta' unless @agent.account_id == @account.id
     raise Recusado, 'pessoa_de_outra_conta' unless pessoa_da_conta?
     raise Recusado, 'agente_de_cotacao' if @agent.agent_type == Autonomia::FerramentasProntas::AGENTE_DE_COTACAO
+
+    conferir_fonte!
+  end
+
+  def conferir_fonte!
     raise Recusado, 'fonte_desconhecida' if @fonte.nil?
     raise Recusado, 'desligada' unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
+    raise Recusado, 'fora_da_vitrine' unless @fonte.na_vitrine?
   end
 
   def pessoa_da_conta?

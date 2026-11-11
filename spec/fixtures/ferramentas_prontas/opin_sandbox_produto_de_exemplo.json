@@ -1,0 +1,83 @@
+{
+ "data": {
+  "brand": {
+   "name": "EMPRESA A seguros",
+   "companies": [
+    {
+     "name": "ACME Seguros",
+     "cnpjNumber": "12345678901234",
+     "products": [
+      {
+       "name": "Produto de Seguro",
+       "code": "01234589-0",
+       "coverages": [
+        {
+         "coverage": "ACIDENTES_PESSOAIS_COM_PASSAGEIROS",
+         "coverageDescription": "string",
+         "allowApartPurchase": true,
+         "coverageAttributes": {
+          "insuredParticipation": "FRANQUIA",
+          "insuredParticipationDescription": "string"
+         }
+        }
+       ],
+       "maxLMG": {
+        "type": "FINANCEIRO",
+        "amount": {
+         "amount": "408334",
+         "unitType": "MONETARIO",
+         "unitTypeOthers": "string",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        },
+        "index": "FINANCEIRO_COBERTURA",
+        "maxIndexAmount": {
+         "amount": "4173",
+         "unitType": "MONETARIO",
+         "unitTypeOthers": "string",
+         "unit": {
+          "code": "R$",
+          "description": "BRL"
+         }
+        }
+       },
+       "assistanceServices": [
+        {
+         "assistanceServices": true,
+         "assistanceServicesPackage": "ATE_10_SERVICOS",
+         "complementaryAssistanceServicesDetail": "reboque pane seca",
+         "chargeTypeSignaling": "GRATUITO"
+        }
+       ],
+       "traits": false,
+       "validity": {
+        "term": "ANUAL",
+        "termOthers": "string"
+       },
+       "policyType": [
+        "AVULSA"
+       ],
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.622222/2222-22",
+        "definition": "https://www.seguradora.com.br/produto/tradicional/pdf/condicoes_gerais.pdf"
+       },
+       "minimumRequirements": {
+        "minimumRequirementDetails": "string"
+       },
+       "targetAudiences": "PESSOA_FISICA"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "links": {
+  "self": "https://mtls-open-api-sandbox.portoseguro.com.br/open-insurance/products-services/v2/transport?page=1&page-size=10"
+ },
+ "meta": {
+  "totalRecords": 1,
+  "totalPages": 1
+ }
+}
