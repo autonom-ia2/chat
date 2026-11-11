@@ -178,15 +178,15 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # Regra QI 70 (decisão de 11/11/2026, depois da eval paga): com códigos que diferem por um detalhe que o cliente não
   # disse, o agente deduz o caso comum e cita o outro, sem travar a conversa com pergunta. Vai na descrição da consulta
   # e no resultado do grupo com mais de um código; cabe inteira no teto de `Resposta::MAX_TEXTO`.
-  CASO_COMUM = 'Se os códigos diferem por um detalhe que o cliente não disse, responda com o do caso mais comum e cite o ' \
-               'outro; pergunte só quando não há caso comum.'.freeze
+  CASO_COMUM = 'Se os códigos diferem por um detalhe que o cliente não disse, responda com o do caso mais comum e cite os ' \
+               'outros; pergunte só quando não há caso comum.'.freeze
   SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
               "#{CASO_COMUM}".freeze
-  # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
-  # perguntar o material ali seria pergunta à toa).
+  # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo). Manda
+  # buscar, sem lista de material e sem pergunta ao cliente (revisão do #2920: a regra do caso comum vale aqui também).
   # Cabe inteira no teto de `Resposta::MAX_TEXTO` (revisão do #2917: com 209 letras, perdia "e use a consulta buscar").
-  NAO_E_O_DA_NOTA = 'Código de %<digitos>s dígitos não vai na nota fiscal, que leva o de 8 dígitos. Pergunte ao cliente o ' \
-                    'material (aço, cobre, plástico…) e use a consulta buscar.'.freeze
+  NAO_E_O_DA_NOTA = 'Código de %<digitos>s dígitos não vai na nota fiscal, que leva o de 8 dígitos. Faça a consulta buscar ' \
+                    'com o nome do produto ou com um código de 4 dígitos ou mais.'.freeze
 
   # A orientação da busca por palavra com grupo entre os itens. O grupo tem de 4 a 7 dígitos: nunca manda buscar um
   # capítulo. Cada texto cabe inteiro no que vai ao modelo (`Resposta::MAX_TEXTO`).

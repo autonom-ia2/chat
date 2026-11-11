@@ -163,6 +163,20 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   # O modelo escolheu o grupo: UMA chamada, pela posição dele (a BrasilAPI não acha "9503.00.3", e "0901.2" vem sem o
   # 09.01, que diz o material), e só os códigos da nota de dentro do grupo.
   describe 'buscar pelo codigo do grupo' do
+    # Revisão do #2920: a regra do caso comum só vem com mais de um código; o código da nota sozinho vai sem ela.
+    it '"0901.21.00": um codigo so, sem observacao' do
+      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      dados = buscar('0901.21.00')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[0901.21.00])
+      expect(dados).not_to have_key('observacao')
+    end
+
+    it 'a regra do caso comum fala dos outros codigos, no plural' do
+      expect(ncm::CASO_COMUM).to include('cite os outros')
+    end
+
     it '"0901.2": os codigos da nota do grupo, com a descricao completa, numa chamada so pela posicao' do
       pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
