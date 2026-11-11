@@ -1,13 +1,11 @@
 # O CEP QUE O CLIENTE NÃO PRECISA SABER (#2858, F7, regra "QI 70" do Rodrigo, 11/11/2026). As consultas do risco do
 # endereço vão à BigDataCorp pelo CEP, mas o cliente fala a cidade, ou a rua e o número. Este é o método ÚNICO que acha
-# o CEP: a branch da QI 70 (fix/2858-qi70-prontas) cria o helper do servidor com o CEP de referência da cidade e a
-# consulta cep/por_endereco, e a troca acontece só aqui, sem duplicar o helper.
+# o CEP, e delega ao helper da QI 70 (#2906): o CEP de referência da cidade e a consulta cep/por_endereco, sem duplicá-lo.
 #
 # -> { 'cep' => '01001000' }; { 'candidatos' => [...] } quando a rua tem mais de um CEP (o agente pergunta o bairro); nil
 # quando não achou (o agente pede o CEP).
-# Delega a `Fontes::Cep::Referencia.cep`, da branch da QI 70: até aquela branch entrar nesta, a constante não existe aqui
-# e o método só roda nos specs, com a Referencia dublada. A Referencia devolve o CEP com traço ("01311-000"); a
-# BigDataCorp recebe só os dígitos. `conta`: o id da conta, para a fatia dela no teto do ViaCEP.
+# Delega a `Fontes::Cep::Referencia.cep`. A Referencia devolve o CEP com traço ("01311-000"); a BigDataCorp recebe só os
+# dígitos. `uf` pode vir nil (a cidade única no Brasil basta). `conta`: o id da conta, para a fatia dela no teto do ViaCEP.
 module Autonomia::FerramentasProntas::Premium::Endereco
   TAMANHO_DO_CEP = 8
 

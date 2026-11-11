@@ -1,9 +1,10 @@
 require 'rails_helper'
 
 # #2858 (F7) com a regra "QI 70" do Rodrigo (11/11): a ferramenta deduz sozinha o dado técnico que dá para deduzir. No
-# risco do endereço, o cliente não precisa saber o CEP: a criminalidade aceita a cidade e a UF, e a área de risco e a
-# vistoria aceitam a rua, o número e a cidade. O CEP vem de um método único (`Premium::Endereco.cep`), que a branch da
-# QI 70 liga ao CEP de referência da cidade e à consulta cep/por_endereco. Aqui ele é dublado. Zero chamada real.
+# risco do endereço, o cliente não precisa saber o CEP: a criminalidade aceita a cidade (a UF é opcional), e a área de
+# risco e a vistoria aceitam a rua, o número e a cidade. O CEP vem de um método único (`Premium::Endereco.cep`), ligado
+# ao CEP de referência da cidade e à consulta cep/por_endereco da QI 70 (#2906). Zero chamada real: o ViaCEP e a
+# BigDataCorp vêm do WebMock.
 RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
   let(:account) { create(:account) }
   let(:agent) do
@@ -28,15 +29,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
     a_request(:post, "#{FerramentasPremiumHelper::BDC}#{rota}").with(body: hash_including('q' => busca))
   end
 
-  # A `Fontes::Cep::Referencia` é da branch da QI 70 (fix/2858-qi70-prontas), ainda não juntada: aqui ela é dublada com
-  # a assinatura que aquela branch promete (fef3ca2c47). Depois do merge o dublê troca a de verdade, e o spec segue valendo.
   describe 'o método único delega ao CEP de referência da QI 70' do
-    let(:interface) do
-      Module.new do
-        def self.cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil); end # rubocop:disable Naming/MethodParameterName
-      end
-    end
-    let(:referencia) { stub_const('Autonomia::FerramentasProntas::Fontes::Cep::Referencia', interface) }
+    let(:referencia) { Autonomia::FerramentasProntas::Fontes::Cep::Referencia }
 
     before { allow(referencia).to receive(:cep).and_return(nil) }
 
@@ -70,7 +64,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
     end
   end
 
-  describe 'criminalidade pela cidade e a UF' do
+  describe 'criminalidade pela cidade (a UF é opcional)' do
     it 'acha o CEP de referência da cidade e consulta por ele' do
       allow(described_class).to receive(:cep).and_return('cep' => '01001000')
       bigdatacorp_responde('/enderecos', 'criminal_statistics_data', 'CriminalStatisticsData', crimes)
@@ -84,9 +78,51 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
 
     it 'sem CEP achado, pede o CEP e não chama a BigDataCorp' do
       allow(described_class).to receive(:cep).and_return(nil)
-      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Cidade EXEMPLO', 'uf' => 'sp')
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia', 'uf' => 'mg')
 
       expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'cep')
+      expect(resposta['orientacao']).to include('Não pergunte ao cliente', 'mande a cidade')
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
+
+    it 'sem a UF: a cidade única no Brasil basta, e a UF vai nil à procura do CEP' do
+      allow(described_class).to receive(:cep).and_return('cep' => '38400263')
+      bigdatacorp_responde('/enderecos', 'criminal_statistics_data', 'CriminalStatisticsData', crimes)
+
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia')
+
+      expect(resposta['situacao']).to eq('encontrado')
+      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: nil, rua: nil, bairro: nil, conta: account.id)
+    end
+
+    it 'a UF pelo nome do estado vira a sigla' do
+      allow(described_class).to receive(:cep).and_return('cep' => '38400263')
+      bigdatacorp_responde('/enderecos', 'criminal_statistics_data', 'CriminalStatisticsData', crimes)
+
+      executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia', 'uf' => 'Minas Gerais')
+
+      expect(described_class).to have_received(:cep).with(cidade: 'Uberlândia', uf: 'MG', rua: nil, bairro: nil, conta: account.id)
+    end
+
+    it 'cidade com o mesmo nome em mais de um estado e sem UF: recusa na uf, com as candidatas, sem procurar nem cobrar' do
+      allow(described_class).to receive(:cep)
+
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Bom Jesus')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'uf')
+      expect(resposta['candidatos']).to include('PI', 'RS')
+      expect(described_class).not_to have_received(:cep)
+      expect(chamou_a_bigdatacorp?).to be(false)
+      expect(registros_premium).to be_empty
+    end
+
+    it 'cidade que não existe: recusa na cidade, sem procurar' do
+      allow(described_class).to receive(:cep)
+
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Cidade EXEMPLO')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'cidade')
+      expect(described_class).not_to have_received(:cep)
       expect(chamou_a_bigdatacorp?).to be(false)
     end
 
@@ -116,13 +152,15 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       expect(pediu('/enderecos', 'zipcode{01001000},addressnumber{10}')).to have_been_made.once
     end
 
-    it 'com mais de um CEP para a rua, pergunta o bairro e não chama a BigDataCorp' do
-      allow(described_class).to receive(:cep).and_return('candidatos' => %w[01001000 01002000])
+    it 'com mais de um CEP para a rua, recusa no bairro com os CEPs em candidatos e não chama a BigDataCorp' do
+      candidatos = [{ 'cep' => '01001-000', 'bairro' => 'Sé' }, { 'cep' => '01002-000', 'bairro' => 'Centro' }]
+      allow(described_class).to receive(:cep).and_return('candidatos' => candidatos)
 
       resposta = executar_premium(risco, 'consulta' => 'vistoria', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'cidade' => 'São Paulo',
                                          'uf' => 'sp')
 
-      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'bairro')
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'bairro', 'candidatos' => candidatos)
+      expect(resposta['orientacao']).to include('pergunte ao cliente o bairro', 'As opções estão em "candidatos".')
       expect(chamou_a_bigdatacorp?).to be(false)
     end
 
@@ -150,6 +188,65 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
 
       expect(consulta.para_a_fonte('cep' => '01001000', 'numero' => '10', 'cidade' => 'São Paulo', 'uf' => 'sp', 'rua' => 'x', 'bairro' => 'y'))
         .to eq('cep' => '01001000', 'numero' => '10')
+    end
+  end
+
+  # Antes da QI 70 nesta branch, a `Fontes::Cep::Referencia` não existia e o pedido sem CEP dava NameError (virava "não
+  # consegui"). Aqui nada é dublado do nosso lado: a procura vai de verdade ao helper da QI 70, e só o ViaCEP e a
+  # BigDataCorp vêm do WebMock.
+  describe 'sem CEP, de ponta a ponta com o CEP de referência da QI 70' do
+    let(:uberlandia) { 'https://viacep.com.br/ws/MG/Uberlandia/Rua/json/' }
+    let(:paulista) { 'https://viacep.com.br/ws/SP/Sao%20Paulo/Avenida%20Paulista/json/' }
+    let(:de_sp) { { logradouro: 'Avenida Paulista', localidade: 'São Paulo', uf: 'SP', ibge: '3550308' } }
+
+    before { resolver_hosts_das_prontas }
+
+    def rua_de_uberlandia(cep)
+      { cep: cep, logradouro: 'Rua EXEMPLO', bairro: 'Centro', localidade: 'Uberlândia', uf: 'MG', ibge: '3170206' }
+    end
+
+    it 'criminalidade só com a cidade: acha o CEP da cidade no ViaCEP e consulta a BigDataCorp por ele' do
+      fonte_responde(uberlandia, [rua_de_uberlandia('38410-776'), rua_de_uberlandia('38400-263')])
+      bigdatacorp_responde('/enderecos', 'criminal_statistics_data', 'CriminalStatisticsData', crimes)
+
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia')
+
+      expect(resposta['situacao']).to eq('encontrado')
+      expect(pediu('/enderecos', 'zipcode{38400263}')).to have_been_made.once
+      expect(registros_premium.pluck(:resultado)).to eq(['encontrado'])
+    end
+
+    it 'área de risco pela rua com dois CEPs: recusa no bairro com os candidatos, e a BigDataCorp não é chamada' do
+      fonte_responde(paulista, [de_sp.merge(cep: '01310-100', complemento: 'de 1 a 609 - lado ímpar', bairro: 'Bela Vista'),
+                                de_sp.merge(cep: '01311-000', complemento: 'de 611 a 1045', bairro: 'Cerqueira César')])
+
+      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Avenida Paulista', 'numero' => '700',
+                                         'cidade' => 'São Paulo')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'bairro')
+      expect(resposta['candidatos'].pluck('cep')).to eq(%w[01310-100 01311-000])
+      expect(chamou_a_bigdatacorp?).to be(false)
+    end
+
+    it 'o bairro escolhe o CEP, e a consulta segue com ele e o número' do
+      fonte_responde(paulista, [de_sp.merge(cep: '01310-100', bairro: 'Bela Vista'), de_sp.merge(cep: '01311-000', bairro: 'Cerqueira César')])
+      bigdatacorp_responde('/enderecos', 'address_risk', 'AddressRiskData', { 'Point' => 3 })
+
+      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Avenida Paulista', 'numero' => '700',
+                                         'bairro' => 'Cerqueira César', 'cidade' => 'São Paulo')
+
+      expect(resposta['situacao']).to eq('encontrado')
+      expect(pediu('/enderecos', 'zipcode{01311000},addressnumber{700}')).to have_been_made.once
+    end
+
+    it 'ViaCEP fora: pede o CEP, e a BigDataCorp não é chamada nem cobrada' do
+      fonte_fora(uberlandia)
+
+      resposta = executar_premium(risco, 'consulta' => 'criminalidade', 'cidade' => 'Uberlândia')
+
+      expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'cep')
+      expect(chamou_a_bigdatacorp?).to be(false)
+      expect(registros_premium).to be_empty
     end
   end
 

@@ -29,23 +29,23 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'risco_endereco', slug: 'pronta_risco_endereco', nome: 'Risco do endereço',
     descricao: 'Consulta paga: o risco de um endereço — se fica em área de comunidade, a criminalidade da cidade (só SP, ' \
-               'RJ e MG) ou a vistoria do imóvel. O cliente não precisa saber o CEP: mande a cidade e a UF, ou a rua e o ' \
-               'número. Não diz quem mora no endereço.',
+               'RJ e MG) ou a vistoria do imóvel. O cliente não precisa saber o CEP: mande a cidade, ou a rua, o número e a ' \
+               'cidade. Não diz quem mora no endereço.',
     consultas: [
       Premium::ConsultaPaga.new(
-        nome: 'area_de_risco', descricao: 'se o endereço fica em área de comunidade. Sem o CEP, mande a rua, o número, a cidade e a UF',
+        nome: 'area_de_risco', descricao: 'se o endereço fica em área de comunidade. Sem o CEP, mande a rua, o número e a cidade',
         obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
         dataset: Premium::Dataset.new(nome: 'address_risk', rota: '/enderecos', resposta: 'AddressRiskData', custo: '0.08',
                                       preco: '0.12', busca: POR_CEP_E_NUMERO, extrair: AREA)
       ),
       Premium::ConsultaPaga.new(
-        nome: 'criminalidade', descricao: 'as ocorrências de crime da cidade (SP, RJ e MG). Basta a cidade e a UF; o CEP também serve',
+        nome: 'criminalidade', descricao: 'as ocorrências de crime da cidade (SP, RJ e MG). Basta a cidade; o CEP também serve',
         obrigatorios: [], opcionais: [Premium::Parametros::CEP, Premium::Parametros::CIDADE, Premium::Parametros::UF], pelo_endereco: true,
         dataset: Premium::Dataset.new(nome: 'criminal_statistics_data', rota: '/enderecos', resposta: 'CriminalStatisticsData',
                                       custo: '0.06', preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: CRIMES)
       ),
       Premium::ConsultaPaga.new(
-        nome: 'vistoria', descricao: 'o tipo, a área e as notas da vistoria do imóvel. Sem o CEP, mande a rua, o número, a cidade e a UF',
+        nome: 'vistoria', descricao: 'o tipo, a área e as notas da vistoria do imóvel. Sem o CEP, mande a rua, o número e a cidade',
         obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
         dataset: Premium::Dataset.new(nome: 'partner_rede_vistorias_address', rota: '/marketplace', resposta: 'RedeVistoriasData',
                                       custo: '0.26', preco: '0.39', busca: POR_CEP_E_NUMERO, extrair: VISTORIA, prazo: 30,

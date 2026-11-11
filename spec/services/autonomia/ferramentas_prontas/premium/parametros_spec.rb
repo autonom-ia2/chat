@@ -35,9 +35,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Parametros do
     expect(described_class::CODIGO_CAR.normalizar('MT5107065')).to be_nil
   end
 
-  # Regra "QI 70" (11/11): cada parâmetro diz o que o agente faz quando o valor falta ou não serve. O formato é o da branch
-  # fix/2858-qi70-prontas (`Parametro.new(..., deduza:)` ou `pergunte:`), ainda não juntada: até lá as orientações ficam
-  # prontas em `ORIENTACOES`, e no merge cada parâmetro passa a recebê-las.
+  # Regra "QI 70" (11/11): cada parâmetro diz o que o agente faz quando o valor falta ou não serve, pelo `deduza:` ou
+  # `pergunte:` do `Parametro`, com o texto de `ORIENTACOES`.
   describe 'as orientações da QI 70' do
     let(:parametros) { described_class.constants.map { |nome| described_class.const_get(nome) }.grep(Autonomia::FerramentasProntas::Parametro) }
     let(:orientacoes) { described_class::ORIENTACOES }
@@ -55,6 +54,25 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Parametros do
 
       expect(perguntados).to match_array(%w[cnpj cpf placa numero codigo_car cidade rua bairro])
       expect(orientacoes.select { |_nome, orientacao| orientacao.key?(:deduza) }.keys).to match_array(%w[cep uf])
+    end
+
+    it 'cada parâmetro recebe a sua orientação, no texto da recusa' do
+      resposta = Autonomia::FerramentasProntas::Resposta
+      parametros.each do |parametro|
+        orientacao = orientacoes.fetch(parametro.nome)
+        esperado = if orientacao[:deduza]
+                     resposta.deduza(parametro.nome, orientacao[:deduza])
+                   else
+                     resposta.pergunte(parametro.nome, orientacao[:pergunte])
+                   end
+        expect(parametro.orientacao).to eq(esperado)
+      end
+    end
+
+    it 'a UF é opcional e a mesma das grátis: aceita o nome do estado' do
+      expect(described_class::UF.normalizar('Minas Gerais')).to eq('mg')
+      expect(described_class::UF.normalizar('sp')).to eq('sp')
+      expect(described_class::UF).to be_local
     end
 
     it 'o código do CAR diz onde achar: no recibo do CAR' do

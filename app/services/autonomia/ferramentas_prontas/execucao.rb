@@ -79,7 +79,7 @@ class Autonomia::FerramentasProntas::Execucao
     @consulta = @fonte.consulta(@argumentos[Autonomia::FerramentasProntas::Fonte::PARAMETRO_DA_CONSULTA])
     return recusar('pedido_invalido', Resposta.pedido_invalido('consulta', @fonte.parametro_da_consulta)) if @consulta.nil?
 
-    params, falta = @consulta.conferir(@argumentos, conta: @tool.account_id)
+    params, falta = @consulta.conferir(@argumentos, @tool.account_id)
     return recusar_pedido(falta) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
 
