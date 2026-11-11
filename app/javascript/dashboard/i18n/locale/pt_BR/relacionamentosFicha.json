@@ -15,7 +15,21 @@
       },
       "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",
-      "VER_TODAS": "Aqui abrem todas as conversas de {nome}."
+      "VER_TODAS": "Aqui abrem todas as conversas de {nome}.",
+      "MANDAR": "Mandar mensagem",
+      "ALTERAR": "Alterar",
+      "ACOES": "Ações de {nome}",
+      "GAVETA_TITULO": "Alterar informações da empresa",
+      "CONVERSAR_COM": "Conversar com {nome}",
+      "MENSAGEM": {
+        "TITULO": "Mandar mensagem para {nome}?",
+        "RECEBEM": "{n} pessoa vai receber. | {n} pessoas vão receber.",
+        "FORA": "{n} pessoa fica de fora, porque não pode receber agora. | {n} pessoas ficam de fora, porque não podem receber agora.",
+        "PROXIMO": "Você escreve a mensagem no próximo passo.",
+        "CONTINUAR": "Continuar",
+        "AVISO": "Vou abrir a mensagem para essas pessoas.",
+        "NINGUEM": "Ninguém desta empresa pode receber mensagem agora."
+      }
     },
     "VOLTAR": {
       "PESSOAS": "Pessoas",
@@ -62,19 +76,21 @@
       "APAGAR": "Aqui você confirma que quer apagar {nome}."
     },
     "FAIXA": {
-      "TEXTO": "Pediu para não receber mensagens em {data}. {origem}",
+      "TEXTO": "Não quer receber mensagens desde {data}. {origem}",
+      "TEXTO_SIMPLES": "Não quer receber mensagens desde {data}.",
       "LIBERAR": "Liberar",
-      "CONFIRMA_TITULO": "Liberar mensagens para {nome}?",
-      "CONFIRMA_TEXTO": "{nome} volta a poder receber mensagens suas.",
+      "CONFIRMA_TITULO": "{nome} pediu para voltar a receber?",
+      "CONFIRMA_TEXTO": "Só libere se a própria pessoa pediu. Ela volta a entrar em campanhas e mensagens automáticas.",
+      "CONFIRMA_BOTAO": "Sim, liberar",
+      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode responder quando ela escrever.",
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
         "manual": "Alguém da equipe marcou aqui.",
-        "campaign_reply": "Respondeu a uma campanha pedindo para sair.",
-        "follow_up_reply": "Respondeu a uma mensagem automática pedindo para sair.",
+        "campaign_reply": "Pediu ao responder uma campanha.",
+        "follow_up_reply": "Pediu ao responder uma mensagem automática.",
         "email_unsubscribe": "Pediu por e-mail.",
-        "prospecting": "Pediu durante a busca de clientes.",
-        "outra": "Outro motivo."
+        "prospecting": "Pediu durante a busca de clientes."
       }
     },
     "CONVERSAS": {
@@ -137,6 +153,7 @@
     "INFORMACOES": {
       "TITULO": "Informações",
       "ALTERAR": "Alterar",
+      "VAZIO": "Ainda não há mais informações.",
       "TELEFONE": "Telefone",
       "EMAIL": "E-mail",
       "CPF": "CPF",
@@ -178,7 +195,8 @@
       "ERRO": {
         "NOME": "Escreva o nome.",
         "EMAIL": "Confira o e-mail. Parece que falta algo.",
-        "CPF": "Confira o CPF. Ele tem 11 números."
+        "CPF": "Confira o CPF. Ele tem 11 números.",
+        "CNPJ": "Confira o CNPJ. Ele tem 14 números."
       },
       "REDE": {
         "linkedin": "LinkedIn",
@@ -189,7 +207,9 @@
         "tiktok": "TikTok",
         "twitter": "X (Twitter)",
         "github": "GitHub"
-      }
+      },
+      "CNPJ": "CNPJ",
+      "SITE": "Site"
     }
   }
 }

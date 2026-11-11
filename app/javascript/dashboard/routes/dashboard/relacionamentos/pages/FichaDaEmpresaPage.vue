@@ -2,10 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { useAlert } from 'dashboard/composables';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoVivo from '../components/ficha/AvisoVivo.vue';
 import CabecalhoDaEmpresa from '../components/ficha/CabecalhoDaEmpresa.vue';
+import DialogoMandarMensagem from '../components/ficha/DialogoMandarMensagem.vue';
+import GavetaDaEmpresa from '../components/ficha/GavetaDaEmpresa.vue';
 import CartaoDaSecao from '../components/ficha/CartaoDaSecao.vue';
 import EsqueletoDaFicha from '../components/ficha/EsqueletoDaFicha.vue';
 import GavetaDoCard from '../components/ficha/GavetaDoCard.vue';
@@ -17,6 +20,7 @@ import SecaoPessoasDaEmpresa from '../components/ficha/SecaoPessoasDaEmpresa.vue
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ABAS } from '../fonte/grupos';
+import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { linhasDaEmpresa } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -27,7 +31,9 @@ import {
 import { useFichaDaEmpresa } from '../ficha/useFichaDaEmpresa';
 
 // #2894 — a ficha da empresa: o mesmo desenho da pessoa, mais simples. Cabeçalho,
-// as pessoas dela, as conversas, os cards e as informações. Só leitura.
+// as pessoas dela, as conversas, os cards e as informações. A ação principal é
+// "Mandar mensagem" (confirma quem recebe e quem fica de fora); "Alterar" abre a
+// gaveta. No protótipo, continuar e salvar só simulam.
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
@@ -36,6 +42,8 @@ const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id);
 const agora = Date.now();
 const cardAberto = ref(null);
+const gavetaAberta = ref(false);
+const dialogoDaMensagem = ref(null);
 const { aviso, anunciar } = useAvisoVivo();
 
 const nome = computed(() => ficha.empresa.value?.name ?? '');
@@ -44,6 +52,35 @@ const linhas = computed(() =>
 );
 const avisar = chave =>
   acoes.avisar(`RELACIONAMENTOS_FICHA.EMPRESA.${chave}`, nome.value);
+
+const conta = computed(() => contaDaMensagem(ficha.pessoas.value));
+const podeMandar = computed(() => conta.value.recebem > 0);
+const motivoSemEnvio = computed(() =>
+  podeMandar.value ? '' : t('RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.NINGUEM')
+);
+
+const resultado = (deuCerto, certo, erro) => {
+  const texto = t(deuCerto ? certo : erro);
+  useAlert(texto);
+  anunciar(texto);
+};
+
+const continuarMensagem = () => {
+  dialogoDaMensagem.value?.close();
+  const texto = t('RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.AVISO');
+  useAlert(texto);
+  anunciar(texto);
+};
+
+const salvar = async dados => {
+  const certo = await ficha.salvar(dados);
+  if (certo) gavetaAberta.value = false;
+  resultado(
+    certo,
+    'RELACIONAMENTOS_FICHA.GAVETA.SALVO',
+    'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
+  );
+};
 
 const abrirNoCrm = () => {
   cardAberto.value = null;
@@ -109,7 +146,13 @@ watch(
           data-relacionamentos="ficha-empresa"
           class="flex flex-col min-w-0 gap-6"
         >
-          <CabecalhoDaEmpresa :empresa="ficha.empresa.value" />
+          <CabecalhoDaEmpresa
+            :empresa="ficha.empresa.value"
+            :pode-mandar="podeMandar"
+            :motivo-sem-envio="motivoSemEnvio"
+            @mandar-mensagem="dialogoDaMensagem?.open()"
+            @alterar="gavetaAberta = true"
+          />
           <div
             class="flex flex-col min-w-0 gap-6 lg:grid lg:grid-cols-3 lg:items-start"
           >
@@ -117,17 +160,22 @@ watch(
               <SecaoPessoasDaEmpresa
                 :pessoas="ficha.pessoas.value"
                 @abrir="acoes.abrirPessoa"
+                @conversar="
+                  pessoa =>
+                    acoes.avisar(
+                      'RELACIONAMENTOS_FICHA.AVISOS.CONVERSAR',
+                      pessoa.name
+                    )
+                "
               />
               <SecaoConversas
                 :conversas="ficha.conversas.value"
                 :agora="agora"
-                @conversar="avisar('CONVERSAR')"
                 @ver-todas="avisar('VER_TODAS')"
               />
               <SecaoCards
                 :cards="ficha.cards.value"
                 @abrir="card => (cardAberto = card)"
-                @novo-card="avisar('NOVO_CARD')"
               />
             </div>
             <CartaoDaSecao
@@ -144,6 +192,20 @@ watch(
       </div>
     </main>
 
+    <DialogoMandarMensagem
+      v-if="ficha.empresa.value"
+      ref="dialogoDaMensagem"
+      :empresa="ficha.empresa.value"
+      :pessoas="ficha.pessoas.value"
+      @continuar="continuarMensagem"
+    />
+    <GavetaDaEmpresa
+      :aberta="gavetaAberta"
+      :empresa="ficha.empresa.value"
+      :salvando="ficha.ocupado.value === 'salvar'"
+      @fechar="gavetaAberta = false"
+      @salvar="salvar"
+    />
     <GavetaDoCard
       :card="cardAberto"
       @fechar="cardAberto = null"

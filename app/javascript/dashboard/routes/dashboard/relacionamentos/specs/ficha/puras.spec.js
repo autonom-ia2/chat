@@ -183,23 +183,14 @@ describe('informações da pessoa', () => {
       rotulo: 'Melhor horário',
       valor: 'Tarde',
     });
-    expect(linhas.map(l => l.chave).slice(0, 5)).toEqual([
-      'telefone',
-      'email',
+    // Telefone e e-mail ficam só no cabeçalho.
+    expect(linhas.map(l => l.chave).slice(0, 3)).toEqual([
       'cpf',
       'cidade',
       'empresa',
     ]);
-  });
-
-  it('mostra o telefone formatado nas informações', () => {
-    const linhas = linhasDaPessoa({
-      ...pessoa,
-      phone_number: '+5511916820023',
-    });
-    expect(linhas.find(l => l.chave === 'telefone').valor).toBe(
-      '+55 11 91682-0023'
-    );
+    expect(por('telefone')).toBeUndefined();
+    expect(por('email')).toBeUndefined();
   });
 
   it('o nome das informações da conta leva acento', () => {
@@ -339,9 +330,8 @@ describe('informações da empresa', () => {
       contacts_count: 3,
       customers_count: 1,
     });
+    // CNPJ e site ficam só no cabeçalho.
     expect(linhas.map(l => [l.chave, l.valor])).toEqual([
-      ['cnpj', '11.222.333/0001-81'],
-      ['site', 'x.exemplo.com.br'],
       ['pessoas', '3'],
       ['clientes', '1'],
     ]);

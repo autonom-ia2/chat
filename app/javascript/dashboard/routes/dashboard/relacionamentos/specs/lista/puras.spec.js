@@ -150,6 +150,36 @@ describe('formatarTelefone', () => {
   });
 });
 
+describe('escolherFrase na aba Empresas', () => {
+  const resumo = (sem, total = 38) => ({
+    total: 280,
+    clientes: 120,
+    sumiu_1_a_3_meses: 42,
+    empresas: { total, sem_conversa_3_meses: sem },
+  });
+
+  it('empresas paradas: frase e botão do grupo sem conversa há 3 meses', () => {
+    const frase = escolherFrase(resumo(10), 'empresas');
+    expect(frase.partes).toEqual([
+      { chave: `${HEROI}.EMPRESAS_SEM_CONVERSA`, count: 10 },
+    ]);
+    expect(frase.principal.grupo).toBe('sem_conversa_3_meses');
+    expect(frase.mostraTrazerDiscreto).toBe(true);
+  });
+
+  it('nenhuma parada: só quantas empresas, sem botão de grupo', () => {
+    const frase = escolherFrase(resumo(0), 'empresas');
+    expect(frase.partes).toEqual([
+      { chave: `${HEROI}.EMPRESAS_AQUI`, count: 38 },
+    ]);
+    expect(frase.principal).toBeNull();
+  });
+
+  it('conta sem ninguém continua convidando a trazer a lista, em qualquer aba', () => {
+    expect(escolherFrase({ total: 0 }, 'empresas').id).toBe('vazia');
+  });
+});
+
 describe('contaDaMensagem (quem recebe e quem fica de fora)', () => {
   const comTelefone = id => ({
     id,
@@ -168,6 +198,30 @@ describe('contaDaMensagem (quem recebe e quem fica de fora)', () => {
       recebem: 10,
       fora: 2,
       naoQuer: 1,
+      bloqueados: 0,
+      semTelefone: 1,
+    });
+  });
+
+  it('bloqueado também fica de fora, com a precedência do backend: pediu para parar, depois bloqueado, depois sem telefone', () => {
+    const conta = contaDaMensagem([
+      { id: 1, phone_number: '+5511910310001', blocked: true },
+      { id: 2, phone_number: null, blocked: true },
+      {
+        id: 3,
+        phone_number: '+5511910310003',
+        blocked: true,
+        opted_out_at: 1700000000,
+      },
+      { id: 4, phone_number: null },
+      { id: 5, phone_number: '+5511910310005' },
+    ]);
+    expect(conta).toEqual({
+      total: 5,
+      recebem: 1,
+      fora: 4,
+      naoQuer: 1,
+      bloqueados: 2,
       semTelefone: 1,
     });
   });
@@ -197,6 +251,7 @@ describe('contaDaMensagem (quem recebe e quem fica de fora)', () => {
       recebem: 0,
       fora: 0,
       naoQuer: 0,
+      bloqueados: 0,
       semTelefone: 0,
     });
   });

@@ -12,8 +12,8 @@ import { falouHa } from '../../lista/tempoRelativo';
 // #2894 — uma pessoa na lista. Clicar no nome (ou Enter) abre a ficha: o botão
 // do nome estica a área de clique pela linha toda; a caixa de marcar e o
 // "Conversar" ficam por cima e não abrem a ficha. No desktop o "Conversar"
-// só some onde existe hover (aparece ao passar o mouse ou focar a linha); em
-// tela de toque fica sempre à vista. No celular é um ícone.
+// fica sempre à vista, discreto (ninguém descobre um botão que só aparece no
+// hover). No celular é um ícone.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
@@ -87,7 +87,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
     <Button
       slate
       faded
-      class="relative z-10 hidden min-h-11 sm:inline-flex [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+      class="relative z-10 hidden min-h-11 sm:inline-flex"
       :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
       @click="emit('conversar', pessoa)"
     />

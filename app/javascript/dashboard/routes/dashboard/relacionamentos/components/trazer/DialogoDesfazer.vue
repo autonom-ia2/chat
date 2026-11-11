@@ -5,10 +5,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
+import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 
 // #2894 — o diálogo de Desfazer: mostra ANTES o que sai e o que volta ao que
 // era, e se alguém já recebeu campanha. Destrutivo: tocar fora não fecha.
 const props = defineProps({
+  // O nome da lista que vai ser desfeita, no título.
+  arquivo: { type: String, default: '' },
   previa: { type: Object, default: null },
   comErroNaPrevia: { type: Boolean, default: false },
   desfazendo: { type: Boolean, default: false },
@@ -20,19 +23,30 @@ const dialogo = ref(null);
 
 const SEM_PESSOAS = 0;
 
+// Uma frase para quem sai e outra para quem volta ao que era; some a que é zero.
 const fraseDoQueSai = computed(() => {
   const { tira, devolve } = props.previa;
+  const frases = [];
   if (tira > SEM_PESSOAS) {
-    const parte = t(
-      'RELACIONAMENTOS_TRAZER.DESFAZER.TIRA',
-      { count: tira },
-      tira
+    frases.push(
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.TIRA', { count: tira }, tira)
     );
-    if (devolve === SEM_PESSOAS) return `${parte}.`;
-    return `${parte} ${t('RELACIONAMENTOS_TRAZER.DESFAZER.DEVOLVE_JUNTO', { count: devolve }, devolve)}.`;
   }
-  return `${t('RELACIONAMENTOS_TRAZER.DESFAZER.DEVOLVE_SOZINHO', { count: devolve }, devolve)}.`;
+  if (devolve > SEM_PESSOAS) {
+    frases.push(
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.DEVOLVE', { count: devolve }, devolve)
+    );
+  }
+  return frases.join(' ');
 });
+
+const titulo = computed(() =>
+  props.arquivo
+    ? t('RELACIONAMENTOS_TRAZER.DESFAZER.TITULO_ARQUIVO', {
+        arquivo: props.arquivo,
+      })
+    : t('RELACIONAMENTOS_TRAZER.DESFAZER.TITULO')
+);
 
 defineExpose({
   abrir: () => dialogo.value?.open(),
@@ -45,7 +59,6 @@ defineExpose({
     ref="dialogo"
     type="alert"
     width="md"
-    :title="t('RELACIONAMENTOS_TRAZER.DESFAZER.TITULO')"
     :close-on-outside-click="false"
     @close="emit('fechar')"
     @confirm="emit('confirmar')"
@@ -55,12 +68,16 @@ defineExpose({
       class="flex flex-col gap-3 text-sm text-n-slate-11"
       aria-live="polite"
     >
+      <TituloDoDialogo :titulo="titulo" />
       <template v-if="previa">
         <p class="m-0 text-n-slate-12">{{ fraseDoQueSai }}</p>
         <p class="m-0">{{ t('RELACIONAMENTOS_TRAZER.DESFAZER.CONVERSAS') }}</p>
+        <p class="m-0">
+          {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_RECEBER') }}
+        </p>
         <p
           v-if="previa.receberamCampanha"
-          class="m-0 font-medium text-n-amber-11"
+          class="p-3 m-0 font-medium rounded-lg bg-n-amber-3 text-n-amber-12"
         >
           {{
             t(

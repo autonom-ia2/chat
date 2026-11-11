@@ -9,12 +9,13 @@ import { ACOES_DO_HEROI, escolherFrase } from '../../lista/fraseDoHeroi';
 // a principal.
 const props = defineProps({
   resumo: { type: Object, required: true },
+  aba: { type: String, default: 'pessoas' },
 });
 const emit = defineEmits(['trazer', 'verGrupo']);
 
 const { t } = useI18n();
 
-const frase = computed(() => escolherFrase(props.resumo));
+const frase = computed(() => escolherFrase(props.resumo, props.aba));
 const texto = computed(() =>
   frase.value.partes
     .map(({ chave, count }) =>
@@ -33,7 +34,10 @@ const principal = () => {
 <template>
   <HeroiEscuro>
     <template #frase>{{ texto }}</template>
-    <template #acao>
+    <template v-if="frase.id === 'vazia'" #apoio>
+      {{ t('RELACIONAMENTOS.LISTA.HEROI.VAZIA_APOIO') }}
+    </template>
+    <template v-if="frase.principal" #acao>
       <button
         type="button"
         data-relacionamentos="heroi-acao"

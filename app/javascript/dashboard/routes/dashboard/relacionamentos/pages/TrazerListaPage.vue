@@ -24,7 +24,7 @@ const route = useRoute();
 const router = useRouter();
 
 const demo = usarDemo(route.query);
-const fonte = trazerFonte({ demo });
+const fonte = trazerFonte({ demo, planilha: route.query.planilha });
 const avisar = chave => useAlert(t(chave));
 
 const tela = useTrazerLista({ fonte, avisar });
@@ -38,7 +38,11 @@ const noFim = computed(() =>
   [ETAPAS.TRAZENDO, ETAPAS.PRONTO].includes(tela.etapa.value)
 );
 
-onMounted(() => historico.carregar());
+onMounted(() => {
+  historico.carregar();
+  // `?planilha=` (só em demonstração) já cai no estado pedido, sem clique.
+  if (fonte.planilhaDeDemo) tela.usarExemplo();
+});
 
 // A cada tela nova o foco vai para o título dela (leitor de tela e teclado).
 watch(
@@ -89,7 +93,10 @@ const confirmarDesfazer = async () => {
             />
             {{ t('RELACIONAMENTOS_TRAZER.PESSOAS') }}
           </router-link>
-          <EtapasDoTopo :atual="tela.etapaAtualDoTopo.value" />
+          <EtapasDoTopo
+            :atual="tela.etapaAtualDoTopo.value"
+            :trazendo="trazendo"
+          />
         </div>
 
         <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
@@ -156,6 +163,7 @@ const confirmarDesfazer = async () => {
 
     <DialogoDesfazer
       ref="dialogo"
+      :arquivo="historico.alvo.value?.arquivo"
       :previa="historico.previa.value"
       :com-erro-na-previa="historico.previaComErro.value"
       :desfazendo="historico.desfazendo.value"

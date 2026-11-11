@@ -15,7 +15,10 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
   default: (await import('./dialogoFalso')).TeleportFalso,
 }));
-vi.mock('../../fonte/modoDemo', () => ({ usarDemo: vi.fn() }));
+vi.mock('../../fonte/modoDemo', async importOriginal => ({
+  ...(await importOriginal()),
+  usarDemo: vi.fn(),
+}));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: 'relationships_home' });
@@ -207,7 +210,7 @@ describe('ListaPage: cheia', () => {
   it('abre com a frase de quem sumiu, as abas, os sete grupos e a primeira página', async () => {
     const w = await montar();
     expect(textoDe(w, '[data-heroi-frase]')).toBe(
-      '42 pessoas não falam com você há mais de um mês.'
+      '42 pessoas pararam de falar com você nos últimos 3 meses.'
     );
     expect(textoDe(w, marca('heroi-acao'))).toBe('Ver quem sumiu');
     expect(w.findAll('[role="tab"]').map(a => a.text())).toEqual([
@@ -224,9 +227,7 @@ describe('ListaPage: cheia', () => {
       'Não quer mensagens 9',
     ]);
     expect(pilula(w, 'todos').attributes('aria-pressed')).toBe('true');
-    expect(w.get('[aria-live="polite"]').text()).toBe(
-      'Todo mundo que está aqui.'
-    );
+    expect(w.get(marca('explicacao-do-grupo')).text()).toBe('');
     expect(linhas(w)).toHaveLength(25);
     expect(textoDe(w, marca('mostrar-mais')).length).toBeGreaterThan(0);
     expect(w.text()).toContain('Mostrando 25 de 280');
@@ -257,7 +258,7 @@ describe('ListaPage: cheia', () => {
     await pilula(w, 'clientes').trigger('click');
     await assentar();
     expect(pilula(w, 'clientes').attributes('aria-pressed')).toBe('true');
-    expect(w.get('[aria-live="polite"]').text()).toBe(
+    expect(w.get(marca('explicacao-do-grupo')).text()).toBe(
       'Quem já comprou de você.'
     );
     expect(linhas(w)).toHaveLength(25);
@@ -275,18 +276,62 @@ describe('ListaPage: cheia', () => {
     expect(w.text()).toContain('Mostrando 25 de 42');
   });
 
-  it('o botão do herói, vindo da aba Empresas, volta para Pessoas e marca o grupo', async () => {
+  it('"Todos" e "Todas" não explicam nada; a linha reserva a altura para a tela não pular', async () => {
+    const w = await montar();
+    const linha = w.get(marca('explicacao-do-grupo'));
+    expect(linha.text()).toBe('');
+    expect(linha.classes()).toContain('min-h-5');
+    await pilula(w, 'clientes').trigger('click');
+    await assentar();
+    expect(linha.text()).toBe('Quem já comprou de você.');
+    await w.get(marca('aba-empresas')).trigger('click');
+    await assentar();
+    expect(w.get(marca('explicacao-do-grupo')).text()).toBe('');
+    await pilula(w, 'sem_pessoas').trigger('click');
+    await assentar();
+    expect(w.get(marca('explicacao-do-grupo')).text()).not.toBe('');
+  });
+
+  it('a barra de marcadas diz quem fica de fora, com os números separados', async () => {
+    const w = await montar();
+    await pilula(w, 'nao_quer_mensagens').trigger('click');
+    await assentar();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    expect(textoDe(w, `${marca('barra')} p`)).toBe(
+      '1 marcada · 1 pediu para não receber'
+    );
+  });
+
+  it('na aba Empresas o herói fala de empresas e o botão marca o grupo delas', async () => {
     const w = await montar({ query: { aba: 'empresas' } });
+    expect(textoDe(w, '[data-heroi-frase]')).toMatch(/empresas? (estão|está)/);
+    expect(textoDe(w, marca('heroi-acao'))).toBe('Ver essas empresas');
     await w.get(marca('heroi-acao')).trigger('click');
     await assentar();
-    expect(roteador.push).toHaveBeenCalledWith({ query: {} });
-    expect(w.get(marca('aba-pessoas')).attributes('aria-selected')).toBe(
+    expect(roteador.push).not.toHaveBeenCalled();
+    expect(pilula(w, 'sem_conversa_3_meses').attributes('aria-pressed')).toBe(
       'true'
     );
-    expect(pilula(w, 'sumiu_1_a_3_meses').attributes('aria-pressed')).toBe(
-      'true'
+  });
+
+  it('?demo=desligado mostra o erro com "Tentar de novo" e o marcador do robô', async () => {
+    const w = await montar({ demo: null });
+    expect(textoDe(w, marca('erro'))).toContain(
+      'Não consegui carregar. Tente de novo.'
     );
-    expect(w.text()).toContain('Mostrando 25 de 42');
+    expect(w.get(`${marca('erro')} button`).exists()).toBe(true);
+  });
+
+  it('?demo=carregando deixa o esqueleto na tela, sem resposta', async () => {
+    usarDemo.mockReturnValue('carregando');
+    rota.name = 'relationships_home';
+    rota.query = {};
+    aberta = mount(ListaPage, COMO_NO_NAVEGADOR);
+    await assentar();
+    await avancar(5000);
+    expect(aberta.find(marca('carregando')).exists()).toBe(true);
+    expect(aberta.find(marca('erro')).exists()).toBe(false);
+    expect(aberta.find(marca('heroi-acao')).exists()).toBe(false);
   });
 
   it('rola a pílula escolhida para dentro da fila, sem mexer na rolagem vertical', async () => {
@@ -487,7 +532,7 @@ describe('ListaPage: marcar e agir em grupo', () => {
       .find(b => b.text().startsWith('Marcar todas'));
     await link.trigger('click');
     await assentar();
-    expect(textoDe(w, `${marca('barra')} p`)).toBe('280 marcadas');
+    expect(textoDe(w, `${marca('barra')} p`)).toMatch(/^280 marcadas · /);
     expect(w.text()).not.toContain('Marcar todas');
   });
 
@@ -513,7 +558,7 @@ describe('ListaPage: marcar e agir em grupo', () => {
     await marcar(w, 3);
     await w.get(marca('mandar-mensagem')).trigger('click');
     expect(textoDe(w, marca('dialogo-mensagem'))).toBe(
-      'Ninguém vai receber. 3 ficam de fora: 3 pediram para não receber.'
+      'Ninguém aqui pode receber: 3 pediram para não receber.'
     );
     await w.get('[data-cancelar]').trigger('click');
     await pilula(w, 'clientes').trigger('click');
@@ -556,7 +601,7 @@ describe('ListaPage: marcar e agir em grupo', () => {
     expect(w.getComponent(MarcarTodas).props('carregando')).toBe(true);
     pedidos[0]();
     await assentar();
-    expect(textoDe(w, `${marca('barra')} p`)).toBe('280 marcadas');
+    expect(textoDe(w, `${marca('barra')} p`)).toMatch(/^280 marcadas · /);
   });
 
   it('"Marcar todas" não aplica a resposta se o grupo mudou durante a espera', async () => {

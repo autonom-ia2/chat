@@ -118,6 +118,60 @@ describe('VazioComUmBotao', () => {
   });
 });
 
+describe('PilulasDeGrupo: sinal de que a fila continua', () => {
+  const grupos = [
+    { id: 'a', nome: 'Todos', total: 280 },
+    { id: 'b', nome: 'Clientes', total: 120 },
+  ];
+  const medir = (fila, { largura, conteudo, rolou }) => {
+    Object.defineProperty(fila.element, 'clientWidth', {
+      value: largura,
+      configurable: true,
+    });
+    Object.defineProperty(fila.element, 'scrollWidth', {
+      value: conteudo,
+      configurable: true,
+    });
+    fila.element.scrollLeft = rolou;
+    return fila.trigger('scroll');
+  };
+  const degrades = w => ({
+    direita: w.find('[data-degrade="direita"]').exists(),
+    esquerda: w.find('[data-degrade="esquerda"]').exists(),
+  });
+
+  it('sem transbordo, nada aparece', async () => {
+    const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
+    await medir(w.get('ul'), { largura: 500, conteudo: 500, rolou: 0 });
+    expect(degrades(w)).toEqual({ direita: false, esquerda: false });
+  });
+
+  it('transbordando, o degradê aparece onde há mais conteúdo, sem pegar toque', async () => {
+    const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
+    const fila = w.get('ul');
+    await medir(fila, { largura: 300, conteudo: 900, rolou: 0 });
+    expect(degrades(w)).toEqual({ direita: true, esquerda: false });
+    const direita = w.get('[data-degrade="direita"]');
+    expect(direita.classes()).toEqual(
+      expect.arrayContaining([
+        'pointer-events-none',
+        'bg-gradient-to-l',
+        'from-n-surface-1',
+      ])
+    );
+    expect(direita.attributes('aria-hidden')).toBe('true');
+    await medir(fila, { largura: 300, conteudo: 900, rolou: 300 });
+    expect(degrades(w)).toEqual({ direita: true, esquerda: true });
+    await medir(fila, { largura: 300, conteudo: 900, rolou: 600 });
+    expect(degrades(w)).toEqual({ direita: false, esquerda: true });
+  });
+
+  it('a pílula focada rola para longe da borda com degradê', () => {
+    const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
+    expect(w.get('ul').classes()).toContain('scroll-px-12');
+  });
+});
+
 describe('PilulasDeGrupo', () => {
   const grupos = [
     { id: 'a', nome: 'Todos', total: 280 },

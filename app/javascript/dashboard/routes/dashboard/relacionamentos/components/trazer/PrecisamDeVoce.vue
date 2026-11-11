@@ -92,6 +92,9 @@ watch(
           : t('RELACIONAMENTOS_TRAZER.PRECISAM.RESOLVIDO')
       }}
     </h2>
+    <p class="m-0 -mt-2 text-base text-n-slate-11">
+      {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.APOIO') }}
+    </p>
     <p data-relacionamentos="anuncio-precisam" role="status" class="sr-only">
       {{ anuncio }}
     </p>

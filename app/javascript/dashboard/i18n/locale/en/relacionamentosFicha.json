@@ -15,7 +15,21 @@
       },
       "CONVERSAR": "This opens a conversation with someone at {nome}.",
       "NOVO_CARD": "This opens a new card for {nome}.",
-      "VER_TODAS": "This opens all conversations with {nome}."
+      "VER_TODAS": "This opens all conversations with {nome}.",
+      "MANDAR": "Send a message",
+      "ALTERAR": "Change",
+      "ACOES": "Actions for {nome}",
+      "GAVETA_TITULO": "Change company details",
+      "CONVERSAR_COM": "Chat with {nome}",
+      "MENSAGEM": {
+        "TITULO": "Send a message to {nome}?",
+        "RECEBEM": "{n} person will receive it. | {n} people will receive it.",
+        "FORA": "{n} person is left out, because they cannot receive right now. | {n} people are left out, because they cannot receive right now.",
+        "PROXIMO": "You write the message in the next step.",
+        "CONTINUAR": "Continue",
+        "AVISO": "I will open the message for these people.",
+        "NINGUEM": "Nobody at this company can receive a message right now."
+      }
     },
     "VOLTAR": {
       "PESSOAS": "People",
@@ -62,19 +76,21 @@
       "APAGAR": "This is where you confirm deleting {nome}."
     },
     "FAIXA": {
-      "TEXTO": "Asked not to receive messages on {data}. {origem}",
+      "TEXTO": "Does not want messages since {data}. {origem}",
+      "TEXTO_SIMPLES": "Does not want messages since {data}.",
       "LIBERAR": "Allow again",
-      "CONFIRMA_TITULO": "Allow messages to {nome} again?",
-      "CONFIRMA_TEXTO": "{nome} can receive your messages again.",
+      "CONFIRMA_TITULO": "Did {nome} ask to receive messages again?",
+      "CONFIRMA_TEXTO": "Only allow it if the person asked. They go back into campaigns and automatic messages.",
+      "CONFIRMA_BOTAO": "Yes, allow",
+      "APOIO": "Not included in campaigns and gets no automatic messages. You can still reply when they write.",
       "LIBERADO": "Done. {nome} can receive messages again.",
       "ERRO": "I could not allow it. Try again.",
       "ORIGEM": {
         "manual": "Someone on the team marked it here.",
-        "campaign_reply": "Replied to a campaign asking to stop.",
-        "follow_up_reply": "Replied to an automatic message asking to stop.",
+        "campaign_reply": "Asked by replying to a campaign.",
+        "follow_up_reply": "Asked by replying to an automatic message.",
         "email_unsubscribe": "Asked by e-mail.",
-        "prospecting": "Asked during the customer search.",
-        "outra": "Another reason."
+        "prospecting": "Asked during the customer search."
       }
     },
     "CONVERSAS": {
@@ -137,6 +153,7 @@
     "INFORMACOES": {
       "TITULO": "Details",
       "ALTERAR": "Change",
+      "VAZIO": "There is no more information yet.",
       "TELEFONE": "Phone",
       "EMAIL": "E-mail",
       "CPF": "Personal tax ID",
@@ -178,7 +195,8 @@
       "ERRO": {
         "NOME": "Write the name.",
         "EMAIL": "Check the e-mail. Something seems to be missing.",
-        "CPF": "Check the personal tax ID. It has 11 numbers."
+        "CPF": "Check the personal tax ID. It has 11 numbers.",
+        "CNPJ": "Check the company tax ID. It has 14 numbers."
       },
       "REDE": {
         "linkedin": "LinkedIn",
@@ -189,7 +207,9 @@
         "tiktok": "TikTok",
         "twitter": "X (Twitter)",
         "github": "GitHub"
-      }
+      },
+      "CNPJ": "Company tax ID",
+      "SITE": "Website"
     }
   }
 }

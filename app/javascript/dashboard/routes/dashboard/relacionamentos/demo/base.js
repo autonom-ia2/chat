@@ -204,11 +204,31 @@ const planejarPessoas = agora => {
       .slice(0, TOTAL_SEM_TELEFONE)
   );
   const nomes = embaralhadoFixo(TOTAL_DE_PESSOAS, SEMENTES.nomes);
-  return { sorteio, ultimas, ehCliente, recusaram, semTelefone, nomes };
+  // Uma pessoa bloqueada, no grupo "Sumiu há 1 a 3 meses": já conversou, tem
+  // telefone e não pediu para parar. Bloqueio não muda nenhum total de grupo.
+  const dias = ultima => (agora / 1000 - ultima) / (DIA_EM_MS / 1000);
+  const bloqueada = ultimas.findIndex(
+    (ultima, i) =>
+      ultima !== null &&
+      dias(ultima) >= FAIXAS_DE_CONVERSA.umATresMeses.de &&
+      dias(ultima) <= FAIXAS_DE_CONVERSA.umATresMeses.ate &&
+      !recusaram.has(i) &&
+      !semTelefone.has(i)
+  );
+  return {
+    sorteio,
+    ultimas,
+    ehCliente,
+    recusaram,
+    semTelefone,
+    nomes,
+    bloqueada,
+  };
 };
 
 const pessoaDoPlano = (plano, agora, i, empresaDaPessoa) => {
   const { sorteio, ultimas, ehCliente, recusaram, semTelefone, nomes } = plano;
+  const bloqueada = plano.bloqueada === i;
   const nome = nomeDaPessoa(nomes[i]);
   const cliente = ehCliente.has(i);
   const empresa = empresaDaPessoa[i];
@@ -220,7 +240,7 @@ const pessoaDoPlano = (plano, agora, i, empresaDaPessoa) => {
     phone_number: semTelefone.has(i) ? null : telefoneFalso(i),
     thumbnail: '',
     availability_status: 'offline',
-    blocked: false,
+    blocked: bloqueada,
     identifier: null,
     contact_type: cliente ? 'customer' : 'lead',
     customer_since: cliente

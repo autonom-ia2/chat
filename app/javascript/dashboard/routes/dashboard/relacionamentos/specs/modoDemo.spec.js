@@ -92,3 +92,34 @@ describe('?demo=desligado', () => {
     expect(estadoDemo()).toBe('cheio');
   });
 });
+
+describe('?demo=carregando', () => {
+  it('é um estado conhecido e as fontes o consultam por demoCarregando()', async () => {
+    const { demoPedido, usarDemo, estadoDemo, demoCarregando } =
+      await carregar();
+    expect(demoPedido({ demo: 'carregando' })).toBe('carregando');
+    expect(demoCarregando()).toBe(false);
+    usarDemo({ demo: 'carregando' });
+    expect(estadoDemo()).toBe('carregando');
+    expect(demoCarregando()).toBe(true);
+    usarDemo({ demo: 'desligado' });
+    expect(demoCarregando()).toBe(false);
+  });
+
+  it('esperarParaSempre nunca resolve', async () => {
+    vi.useFakeTimers();
+    const { esperarParaSempre } = await carregar();
+    let resolveu = false;
+    esperarParaSempre().then(() => {
+      resolveu = true;
+    });
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(resolveu).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('fora do desenvolvimento não vale', async () => {
+    const { demoPedido } = await carregar();
+    expect(demoPedido({ demo: 'carregando' }, false)).toBeNull();
+  });
+});

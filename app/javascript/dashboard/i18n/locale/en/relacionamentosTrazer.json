@@ -7,6 +7,7 @@
       "ENVIAR": "Upload",
       "CONFERIR": "Check",
       "PRONTO": "Done",
+      "TRAZENDO": "Bringing in",
       "FEITA": "done"
     },
     "ENVIAR": {
@@ -14,6 +15,8 @@
       "APOIO": "Excel or CSV. It needs a name and a phone or e-mail.",
       "ERRO_TIPO": "This file is not a spreadsheet. Use Excel or CSV.",
       "ERRO_LEITURA": "I couldn't read this spreadsheet. Try again.",
+      "ERRO_VAZIA": "This spreadsheet is empty.",
+      "ERRO_SEM_CONTATO": "I couldn't find a name and a phone or e-mail in this spreadsheet.",
       "LENDO": "Reading your spreadsheet…",
       "USAR_EXEMPLO": "Use a sample spreadsheet"
     },
@@ -34,11 +37,15 @@
     },
     "CONFERIR": {
       "FRASE": {
-        "TOTAL": "I found {count} person. | I found {count} people.",
-        "NOVAS": "{count} is new | {count} are new",
-        "COMPLETADAS": "{count} was already here and will be completed | {count} were already here and will be completed",
-        "PRECISAM": "{count} needs you | {count} need you",
-        "DEIXADAS": "{count} was left out | {count} were left out"
+        "TOTAL": "I found {count} person. | I found {count} people."
+      },
+      "CONTADOR": {
+        "LISTA": "What I found in the spreadsheet",
+        "NOVAS": "new | new",
+        "COMPLETADAS": "was already here | were already here",
+        "PRECISAM": "needs you | need you",
+        "DEIXADAS": "was left out | were left out",
+        "IR_PARA_PRECISAM": "See the lines that need you"
       },
       "EXEMPLOS": "How they will look",
       "SOSSEGO": "You can undo this for 7 days.",
@@ -46,6 +53,12 @@
     },
     "PRECISAM": {
       "TITULO": "Need you ({count})",
+      "APOIO": "Anyone left unsolved stays out.",
+      "LINHA_DA_PLANILHA": "Line {linha} of the spreadsheet",
+      "LINHAS_DA_PLANILHA": "Lines {outraLinha} and {linha} of the spreadsheet",
+      "QUEM_SEM_NOME": "Line {linha}",
+      "SEM_TELEFONE": "no phone",
+      "SEM_EMAIL": "no e-mail",
       "RESOLVIDO": "All sorted",
       "PRONTO": "Done",
       "DEIXADA": "Left out",
@@ -61,11 +74,11 @@
         "REABERTA": "Line {linha}: back for you to check"
       },
       "PROBLEMA": {
-        "TELEFONE": "Line {linha}: the phone number is missing a digit",
-        "EMAIL": "Line {linha}: the e-mail has no “{'@'}”",
-        "NOME": "Line {linha}: the name is missing",
-        "DUPLICADA": "Lines {outraLinha} and {linha}: it's the same person. Which one stays?",
-        "SEM_CONTATO": "Line {linha}: there is no phone or e-mail"
+        "TELEFONE": "{quem}: the phone number is missing a digit",
+        "EMAIL": "{quem}: the e-mail has no “{'@'}”",
+        "NOME": "{quem}: the name is missing",
+        "DUPLICADA": "{quem} shows up twice. Which one stays?",
+        "SEM_CONTATO": "{quem}: there is no phone or e-mail"
       },
       "CAMPO": {
         "TELEFONE": "Correct phone",
@@ -78,10 +91,10 @@
       "TITULO": "What I will keep",
       "APOIO": "Each column of your spreadsheet and where it goes.",
       "VAI_PARA": "goes to",
-      "VIRA_INFORMACAO": "Becomes a detail about the person called “{coluna}”",
       "NAO_VOU_GUARDAR": "I won't keep “{coluna}”",
       "TROCAR": "Change",
       "ROTULO_TROCAR": "Where the “{coluna}” column goes",
+      "ROTULO_MUDAR": "Change where the {coluna} column goes",
       "NAO_GUARDAR": "Don't keep"
     },
     "DESTINOS": {
@@ -92,7 +105,7 @@
       "EMPRESA": "Company",
       "CIDADE": "City",
       "CLIENTE": "Whether they are a customer",
-      "INFORMACAO": "Detail about the person",
+      "INFORMACAO": "New detail",
       "NAO_GUARDAR": "Don't keep"
     },
     "ANDAMENTO": {
@@ -104,10 +117,10 @@
       "CHEGARAM": "{count} person arrived. | {count} people arrived.",
       "VER": "See the people",
       "OUTRA": "Bring in another list",
-      "SOSSEGO": "You can undo this for 7 days, in “What I’ve already brought in”."
+      "SOSSEGO": "You can undo this for 7 days, in “Lists you’ve already brought in”."
     },
     "HISTORICO": {
-      "TITULO": "What I've already brought in",
+      "TITULO": "Lists you've already brought in",
       "VAZIO": "You haven't brought in any list yet.",
       "PESSOAS": "{count} person | {count} people",
       "POR": "by {nome}",
@@ -124,10 +137,11 @@
     },
     "DESFAZER": {
       "TITULO": "Undo this list?",
-      "TIRA": "This removes {count} person who came with this list | This removes {count} people who came with this list",
-      "DEVOLVE_JUNTO": "and puts {count} back as they were | and puts {count} back as they were",
-      "DEVOLVE_SOZINHO": "This puts {count} back as they were | This puts {count} back as they were",
+      "TITULO_ARQUIVO": "Undo “{arquivo}”?",
+      "TIRA": "This removes the person who came with this list. | This removes the {count} people who came with this list.",
+      "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
       "CONVERSAS": "Conversations that already happened stay.",
+      "NAO_RECEBER": "People who asked not to get messages stay that way.",
       "CAMPANHA": "{count} person already got a campaign. The message that was sent can't be taken back. | {count} people already got a campaign. The message that was sent can't be taken back.",
       "CONFIRMAR": "Undo",
       "ERRO_PREVIA": "I couldn't see what will be removed. Try again."

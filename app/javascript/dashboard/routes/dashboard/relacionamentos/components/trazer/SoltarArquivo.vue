@@ -8,6 +8,8 @@ import { ACEITA_NO_SELETOR } from '../../trazer/arquivo';
 // com o File escolhido (conferir se é planilha é com quem usa).
 defineProps({
   erro: { type: String, default: '' },
+  // Qual foi o problema (tipo, vazia, sem_contato): fica no `data-erro`.
+  tipoDeErro: { type: String, default: '' },
 });
 const emit = defineEmits(['arquivo']);
 
@@ -78,7 +80,13 @@ const aoSoltar = evento => {
       :accept="ACEITA_NO_SELETOR"
       @change="aoEscolher"
     />
-    <p v-if="erro" role="alert" class="m-0 text-base text-n-ruby-11">
+    <p
+      v-if="erro"
+      data-relacionamentos="erro-da-planilha"
+      :data-erro="tipoDeErro || undefined"
+      role="alert"
+      class="m-0 text-base text-n-ruby-11"
+    >
       {{ erro }}
     </p>
   </div>

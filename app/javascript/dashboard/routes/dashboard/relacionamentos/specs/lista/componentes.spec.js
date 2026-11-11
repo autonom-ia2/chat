@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { contaDaMensagem } from '../../lista/quemFicaDeFora';
 import { acoesDaListaFonte } from '../../fonte/acoesDaListaFonte';
 import AbasDaLista from '../../components/lista/AbasDaLista.vue';
 import BarraDeAcaoEmGrupo from '../../components/lista/BarraDeAcaoEmGrupo.vue';
@@ -80,7 +81,9 @@ describe('HeroiDaLista', () => {
 
   it('quem sumiu: frase, botão principal e "trazer" discreto', async () => {
     const w = montar({ total: 280, clientes: 120, sumiu_1_a_3_meses: 42 });
-    expect(frase(w)).toBe('42 pessoas não falam com você há mais de um mês.');
+    expect(frase(w)).toBe(
+      '42 pessoas pararam de falar com você nos últimos 3 meses.'
+    );
     const principal = w.get('[data-relacionamentos="heroi-acao"]');
     expect(principal.text()).toBe('Ver quem sumiu');
     await principal.trigger('click');
@@ -108,12 +111,62 @@ describe('HeroiDaLista', () => {
     expect(w.emitted('trazer')).toHaveLength(1);
   });
 
+  it('conta vazia: uma linha de apoio entre a frase e o botão; só nela', () => {
+    const vazia = montar({ total: 0, clientes: 0, sumiu_1_a_3_meses: 0 });
+    expect(vazia.get('[data-heroi-apoio]').text()).toBe(
+      'Elas aparecem aqui, prontas para conversar.'
+    );
+    const filhos = [
+      ...vazia.get('[data-heroi-frase]').element.parentElement.children,
+    ];
+    expect(
+      filhos.map(
+        f =>
+          f.hasAttribute('data-heroi-frase') ||
+          f.hasAttribute('data-heroi-apoio') ||
+          f.hasAttribute('data-heroi-acao')
+      )
+    ).toEqual([true, true, true]);
+    expect(filhos[1].hasAttribute('data-heroi-apoio')).toBe(true);
+    const cheia = montar({ total: 280, clientes: 120, sumiu_1_a_3_meses: 42 });
+    expect(cheia.find('[data-heroi-apoio]').exists()).toBe(false);
+  });
+
+  it('aba Empresas: o herói fala de empresas e leva ao grupo sem conversa', async () => {
+    const resumo = {
+      total: 280,
+      clientes: 120,
+      sumiu_1_a_3_meses: 42,
+      empresas: { total: 38, sem_conversa_3_meses: 10 },
+    };
+    const w = mount(HeroiDaLista, { props: { resumo, aba: 'empresas' } });
+    expect(frase(w)).toBe('10 empresas estão sem conversa há 3 meses.');
+    const botao = w.get('[data-relacionamentos="heroi-acao"]');
+    expect(botao.text()).toBe('Ver essas empresas');
+    await botao.trigger('click');
+    expect(w.emitted('verGrupo')).toEqual([['sem_conversa_3_meses']]);
+    expect(w.find('[data-relacionamentos="heroi-trazer"]').exists()).toBe(true);
+  });
+
+  it('aba Empresas sem empresa parada: "N empresas estão aqui." e nenhum botão de grupo', () => {
+    const resumo = {
+      total: 280,
+      clientes: 120,
+      sumiu_1_a_3_meses: 42,
+      empresas: { total: 38, sem_conversa_3_meses: 0 },
+    };
+    const w = mount(HeroiDaLista, { props: { resumo, aba: 'empresas' } });
+    expect(frase(w)).toBe('38 empresas estão aqui.');
+    expect(w.find('[data-relacionamentos="heroi-acao"]').exists()).toBe(false);
+    expect(w.find('[data-relacionamentos="heroi-trazer"]').exists()).toBe(true);
+  });
+
   it('usa o singular quando é uma pessoa só', () => {
     expect(frase(montar({ total: 1, clientes: 1, sumiu_1_a_3_meses: 0 }))).toBe(
       'Você tem 1 pessoa aqui. 1 já é cliente.'
     );
     expect(frase(montar({ total: 5, clientes: 1, sumiu_1_a_3_meses: 1 }))).toBe(
-      '1 pessoa não fala com você há mais de um mês.'
+      '1 pessoa parou de falar com você nos últimos 3 meses.'
     );
   });
 });
@@ -440,6 +493,18 @@ describe('LinhaDePessoa', () => {
     );
   });
 
+  it('a caixa de marcar tem área de toque de 44 px: o label em volta é size-11', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa(), agora: AGORA },
+    });
+    const caixa = w.get('[data-relacionamentos="marcar"] input').element;
+    const label = caixa.closest('label');
+    expect(label).not.toBeNull();
+    expect([...label.classList]).toEqual(
+      expect.arrayContaining(['size-11', 'shrink-0'])
+    );
+  });
+
   it('o nome trunca e os selos não encolhem: se não couber, o selo desce de linha', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa({ opted_out_at: diasAtras(2) }), agora: AGORA },
@@ -463,11 +528,10 @@ describe('LinhaDePessoa', () => {
       .findAll('button')
       .filter(b => b.text() === 'Conversar' || b.attributes('aria-label'));
     const [desktop, celular] = botoes;
-    // Esconde só onde existe hover: em toque o botão fica sempre visível.
-    expect(desktop.classes()).toContain('[@media(hover:hover)]:opacity-0');
-    expect(desktop.classes()).not.toContain('sm:opacity-0');
-    expect(desktop.classes()).toContain('group-hover:opacity-100');
-    expect(desktop.classes()).toContain('group-focus-within:opacity-100');
+    // Sempre à vista, discreto: ninguém descobre um botão que só aparece no hover.
+    const classes = desktop.classes().join(' ');
+    expect(classes).not.toContain('opacity-0');
+    expect(classes).not.toContain('group-hover');
     expect(celular.attributes('aria-label')).toBe(
       'Conversar com Ana Albuquerino'
     );
@@ -573,6 +637,32 @@ describe('BarraDeAcaoEmGrupo', () => {
     expect(w.emitted('etiqueta')).toHaveLength(1);
     expect(w.emitted('fechar')).toHaveLength(1);
     w.unmount();
+  });
+
+  it('com gente de fora, diz os números separados; sem ninguém de fora, só "N marcadas"', () => {
+    const pessoas = [
+      { id: 1, phone_number: '+5511910310001' },
+      { id: 2, phone_number: '+5511910310002' },
+      { id: 3, phone_number: '+5511910310003', opted_out_at: 1700000000 },
+      { id: 4, phone_number: '+5511910310004', blocked: true },
+      { id: 5, phone_number: null },
+    ];
+    const w = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 5, conta: contaDaMensagem(pessoas) },
+    });
+    expect(w.get('p').text()).toBe(
+      '5 marcadas · 2 vão receber · 1 pediu para não receber · 1 bloqueada · 1 sem telefone'
+    );
+    const todos = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(0, 2)) },
+    });
+    expect(todos.get('p').text()).toBe('2 marcadas');
+    const ninguem = mount(BarraDeAcaoEmGrupo, {
+      props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(2, 4)) },
+    });
+    expect(ninguem.get('p').text()).toBe(
+      '2 marcadas · 1 pediu para não receber · 1 bloqueada'
+    );
   });
 
   it('no celular são duas linhas: marcadas e × em cima, o botão inteiro e o "⋯" embaixo', () => {
@@ -799,9 +889,12 @@ describe('DialogoMandarMensagem', () => {
   it('diz quantas recebem e quem fica de fora, com o motivo', async () => {
     const w = await abrir(doBlocoA());
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      '10 pessoas vão receber. 2 ficam de fora: 1 pediu para não receber, 1 está sem telefone.'
+      'Pessoa, Pessoa e mais 8 vão receber. 2 ficam de fora: 1 pediu para não receber, 1 está sem telefone.'
     );
     expect(w.get('h3').text()).toBe('Mandar mensagem');
+    expect(w.get('h3').classes()).toEqual(
+      expect.arrayContaining(['text-lg', 'font-semibold'])
+    );
   });
 
   it('Continuar entrega a quantidade que recebe e fecha', async () => {
@@ -812,9 +905,43 @@ describe('DialogoMandarMensagem', () => {
   });
 
   it('sem ninguém de fora, só diz quantos recebem (e usa o singular)', async () => {
-    const w = await abrir(lote(1));
+    const w = await abrir([pessoa({ name: 'Vânia Souza' })]);
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      '1 pessoa vai receber.'
+      'Vânia vai receber.'
+    );
+  });
+
+  it('mostra quem recebe: até 3 nomes juntos pelo idioma; acima disso, dois e o resto em número', async () => {
+    const nomes = ['Vânia Souza', 'Nádia Lima', 'Bruno Reis'];
+    const tres = await abrir(
+      nomes.map((name, i) => pessoa({ id: i + 1, name }))
+    );
+    expect(tres.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia, Nádia e Bruno vão receber.'
+    );
+    const dois = await abrir(
+      nomes.slice(0, 2).map((name, i) => pessoa({ id: i + 1, name }))
+    );
+    expect(dois.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia e Nádia vão receber.'
+    );
+    const muitos = await abrir(
+      [...nomes, ...Array.from({ length: 40 }, (_, i) => `Fulano ${i}`)].map(
+        (name, i) => pessoa({ id: i + 1, name })
+      )
+    );
+    expect(muitos.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia, Nádia e mais 41 vão receber.'
+    );
+  });
+
+  it('quem fica de fora não entra nos nomes', async () => {
+    const w = await abrir([
+      pessoa({ id: 1, name: 'Vânia Souza' }),
+      pessoa({ id: 2, name: 'Quem Pediu', opted_out_at: diasAtras(2) }),
+    ]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia vai receber. 1 fica de fora: 1 pediu para não receber.'
     );
   });
 
@@ -832,12 +959,33 @@ describe('DialogoMandarMensagem', () => {
     ).toBe(false);
   });
 
-  it('quando todo mundo fica de fora, avisa e não deixa continuar', async () => {
-    const w = await abrir([pessoa({ opted_out_at: diasAtras(1) })]);
+  it('quando ninguém pode receber, diz o motivo, sem prometer envio, e desliga o botão', async () => {
+    const w = await abrir([
+      pessoa({ id: 1, opted_out_at: diasAtras(1) }),
+      pessoa({ id: 2, opted_out_at: diasAtras(1) }),
+      pessoa({ id: 3, phone_number: null }),
+    ]);
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      'Ninguém vai receber. 1 fica de fora: 1 pediu para não receber.'
+      'Ninguém aqui pode receber: 2 pediram para não receber, 1 sem telefone.'
     );
     expect(w.get('[data-confirmar]').attributes('disabled')).toBeDefined();
+    expect(
+      w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
+    ).toBe(false);
+  });
+
+  it('bloqueado fica de fora: aparece no motivo e não conta como quem recebe', async () => {
+    const w = await abrir([
+      pessoa({ id: 1 }),
+      pessoa({ id: 2, blocked: true }),
+    ]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Ana vai receber. 1 fica de fora: 1 está bloqueada.'
+    );
+    const so = await abrir([pessoa({ id: 3, blocked: true })]);
+    expect(so.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Ninguém aqui pode receber: 1 bloqueada.'
+    );
   });
 });
 

@@ -7,6 +7,7 @@
       "ENVIAR": "Enviar",
       "CONFERIR": "Conferir",
       "PRONTO": "Pronto",
+      "TRAZENDO": "Trazendo",
       "FEITA": "feita"
     },
     "ENVIAR": {
@@ -14,6 +15,8 @@
       "APOIO": "Excel ou CSV. Precisa ter nome e telefone ou e-mail.",
       "ERRO_TIPO": "Este arquivo não é uma planilha. Use Excel ou CSV.",
       "ERRO_LEITURA": "Não consegui ler esta planilha. Tente de novo.",
+      "ERRO_VAZIA": "Esta planilha está vazia.",
+      "ERRO_SEM_CONTATO": "Não achei nome e telefone ou e-mail nesta planilha.",
       "LENDO": "Lendo sua planilha…",
       "USAR_EXEMPLO": "Usar uma planilha de exemplo"
     },
@@ -34,11 +37,15 @@
     },
     "CONFERIR": {
       "FRASE": {
-        "TOTAL": "Achei {count} pessoa. | Achei {count} pessoas.",
-        "NOVAS": "{count} é nova | {count} são novas",
-        "COMPLETADAS": "{count} já estava aqui e vai ser completada | {count} já estavam aqui e vão ser completadas",
-        "PRECISAM": "{count} precisa de você | {count} precisam de você",
-        "DEIXADAS": "{count} ficou de fora | {count} ficaram de fora"
+        "TOTAL": "Achei {count} pessoa. | Achei {count} pessoas."
+      },
+      "CONTADOR": {
+        "LISTA": "O que achei na planilha",
+        "NOVAS": "nova | novas",
+        "COMPLETADAS": "já estava aqui | já estavam aqui",
+        "PRECISAM": "precisa de você | precisam de você",
+        "DEIXADAS": "ficou de fora | ficaram de fora",
+        "IR_PARA_PRECISAM": "Ver as linhas que precisam de você"
       },
       "EXEMPLOS": "Como vão ficar",
       "SOSSEGO": "Você pode desfazer por 7 dias.",
@@ -46,6 +53,12 @@
     },
     "PRECISAM": {
       "TITULO": "Precisam de você ({count})",
+      "APOIO": "Quem ficar sem resolver fica de fora.",
+      "LINHA_DA_PLANILHA": "Linha {linha} da planilha",
+      "LINHAS_DA_PLANILHA": "Linhas {outraLinha} e {linha} da planilha",
+      "QUEM_SEM_NOME": "Linha {linha}",
+      "SEM_TELEFONE": "sem telefone",
+      "SEM_EMAIL": "sem e-mail",
       "RESOLVIDO": "Tudo resolvido",
       "PRONTO": "Pronto",
       "DEIXADA": "Deixada de fora",
@@ -61,11 +74,11 @@
         "REABERTA": "Linha {linha}: voltou para você conferir"
       },
       "PROBLEMA": {
-        "TELEFONE": "Linha {linha}: falta um número no telefone",
-        "EMAIL": "Linha {linha}: o e-mail está sem “{'@'}”",
-        "NOME": "Linha {linha}: falta o nome",
-        "DUPLICADA": "Linhas {outraLinha} e {linha}: é a mesma pessoa. Qual fica?",
-        "SEM_CONTATO": "Linha {linha}: não tem telefone nem e-mail"
+        "TELEFONE": "{quem}: falta um número no telefone",
+        "EMAIL": "{quem}: o e-mail está sem “{'@'}”",
+        "NOME": "{quem}: falta o nome",
+        "DUPLICADA": "{quem} aparece duas vezes. Qual fica?",
+        "SEM_CONTATO": "{quem}: não tem telefone nem e-mail"
       },
       "CAMPO": {
         "TELEFONE": "Telefone certo",
@@ -78,10 +91,10 @@
       "TITULO": "O que vou guardar",
       "APOIO": "Cada coluna da sua planilha e para onde ela vai.",
       "VAI_PARA": "vai para",
-      "VIRA_INFORMACAO": "Vira uma informação da pessoa chamada “{coluna}”",
       "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
-      "TROCAR": "Trocar",
+      "TROCAR": "Mudar",
       "ROTULO_TROCAR": "Para onde vai a coluna “{coluna}”",
+      "ROTULO_MUDAR": "Mudar para onde vai a coluna {coluna}",
       "NAO_GUARDAR": "Não guardar"
     },
     "DESTINOS": {
@@ -92,7 +105,7 @@
       "EMPRESA": "Empresa",
       "CIDADE": "Cidade",
       "CLIENTE": "Se é cliente",
-      "INFORMACAO": "Informação da pessoa",
+      "INFORMACAO": "Informação nova",
       "NAO_GUARDAR": "Não guardar"
     },
     "ANDAMENTO": {
@@ -104,10 +117,10 @@
       "CHEGARAM": "{count} pessoa chegou. | {count} pessoas chegaram.",
       "VER": "Ver as pessoas",
       "OUTRA": "Trazer outra lista",
-      "SOSSEGO": "Você pode desfazer por 7 dias, em “O que eu já trouxe”."
+      "SOSSEGO": "Você pode desfazer por 7 dias, em “Listas que você já trouxe”."
     },
     "HISTORICO": {
-      "TITULO": "O que eu já trouxe",
+      "TITULO": "Listas que você já trouxe",
       "VAZIO": "Você ainda não trouxe nenhuma lista.",
       "PESSOAS": "{count} pessoa | {count} pessoas",
       "POR": "por {nome}",
@@ -124,10 +137,11 @@
     },
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",
-      "TIRA": "Isto tira {count} pessoa que veio nesta lista | Isto tira {count} pessoas que vieram nesta lista",
-      "DEVOLVE_JUNTO": "e devolve {count} ao que era antes | e devolve {count} ao que eram antes",
-      "DEVOLVE_SOZINHO": "Isto devolve {count} ao que era antes | Isto devolve {count} ao que eram antes",
+      "TITULO_ARQUIVO": "Desfazer “{arquivo}”?",
+      "TIRA": "Isto tira a pessoa que veio nesta lista. | Isto tira as {count} pessoas que vieram nesta lista.",
+      "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
       "CONVERSAS": "As conversas que já aconteceram ficam.",
+      "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
       "CAMPANHA": "{count} pessoa já recebeu uma campanha. A mensagem enviada não volta. | {count} pessoas já receberam uma campanha. A mensagem enviada não volta.",
       "CONFIRMAR": "Desfazer",
       "ERRO_PREVIA": "Não consegui ver o que sai. Tente de novo."

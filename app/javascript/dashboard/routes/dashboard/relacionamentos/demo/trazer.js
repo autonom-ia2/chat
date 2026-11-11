@@ -71,13 +71,27 @@ const PROBLEMAS = [
     nome: 'Rita Carvalhedo',
     valor: 'rita.carvalhedo.exemplo.com.br',
   },
-  { linha: 62, tipo: 'nome', nome: '', valor: '' },
+  {
+    linha: 62,
+    tipo: 'nome',
+    nome: '',
+    valor: '',
+    contato: '+55 11 95412-0062',
+  },
   {
     linha: 143,
     tipo: 'duplicada',
     nome: 'Paulo Hortêncio',
     valor: 'Paulo Hortêncio',
     outraLinha: 88,
+    duplicadas: [
+      {
+        linha: 88,
+        telefone: '+55 11 94410-0088',
+        email: 'paulo.hortencio@exemplo.com.br',
+      },
+      { linha: 143, telefone: '+55 11 94410-0143', email: '' },
+    ],
   },
   { linha: 171, tipo: 'sem_contato', nome: 'Helena Ourivesco', valor: '' },
 ];

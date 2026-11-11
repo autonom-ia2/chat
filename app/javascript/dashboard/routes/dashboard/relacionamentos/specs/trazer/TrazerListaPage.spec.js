@@ -17,7 +17,10 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: empurrar }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: alertar }));
-vi.mock('../../fonte/modoDemo', () => ({ usarDemo: () => estado.demo }));
+vi.mock('../../fonte/modoDemo', async importOriginal => ({
+  ...(await importOriginal()),
+  usarDemo: () => estado.demo,
+}));
 // A fonte de verdade, sem as esperas da demonstração.
 vi.mock('../../fonte/trazerFonte', async importOriginal => {
   const original = await importOriginal();
@@ -205,9 +208,8 @@ describe('da planilha de exemplo até Pronto', () => {
   it('Conferir mostra a frase, as fichas e o botão; consertar muda os números na hora', async () => {
     const w = await abrir();
     await irAteConferir(w);
-    expect(w.get('h1').text()).toBe(
-      'Achei 200 pessoas. 180 são novas, 15 já estavam aqui e vão ser completadas, 5 precisam de você.'
-    );
+    expect(w.get('h1').text()).toBe('Achei 200 pessoas.');
+    expect(w.get('[data-contador="NOVAS"] .sr-only').text()).toBe('180 novas');
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
     expect(w.findAll('[data-ficha-de-exemplo]')).toHaveLength(3);
     expect(
@@ -220,8 +222,10 @@ describe('da planilha de exemplo até Pronto', () => {
     await esperarPor(() =>
       expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 196 pessoas')
     );
-    expect(w.get('h1').text()).toContain('181 são novas');
-    expect(w.get('h1').text()).toContain('4 precisam de você');
+    expect(w.get('[data-contador="NOVAS"] .sr-only').text()).toBe('181 novas');
+    expect(w.get('[data-contador="PRECISAM"] .sr-only').text()).toBe(
+      '4 precisam de você'
+    );
     expect(w.get('[data-linha="62"]').text()).toContain('Pronto');
     w.unmount();
   });
@@ -253,7 +257,9 @@ describe('da planilha de exemplo até Pronto', () => {
     await esperarPor(() =>
       expect(w.get('[data-linha="171"]').text()).toContain('Deixada de fora')
     );
-    expect(w.get('h1').text()).toContain('1 ficou de fora');
+    expect(w.get('[data-contador="DEIXADAS"] .sr-only').text()).toBe(
+      '1 ficou de fora'
+    );
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
     w.unmount();
   });
@@ -267,8 +273,9 @@ describe('da planilha de exemplo até Pronto', () => {
     expect(w.text()).toContain(
       'Pode fechar esta tela; eu aviso quando terminar.'
     );
+    // Enquanto traz, o passo 3 é "Trazendo"; vira "Pronto" só no fim.
     expect(marca(w, 'etapas').get('[aria-current="step"]').text()).toContain(
-      'Pronto'
+      'Trazendo'
     );
     await vi.advanceTimersByTimeAsync(3000);
     await esperarPor(() =>
@@ -366,16 +373,20 @@ describe('Desfazer', () => {
     const w = await abrirDialogoDaLista();
     await esperarPor(() =>
       expect(marca(w, 'dialogo-desfazer').text()).toContain(
-        'Isto tira 180 pessoas'
+        'Isto tira as 180 pessoas'
       )
     );
     const texto = marca(w, 'dialogo-desfazer').text();
-    expect(texto).toContain('e devolve 15 ao que eram antes.');
+    expect(texto).toContain(
+      'As 15 que já estavam aqui voltam a ser como eram.'
+    );
     expect(texto).toContain('As conversas que já aconteceram ficam.');
     expect(texto).toContain(
       '3 pessoas já receberam uma campanha. A mensagem enviada não volta.'
     );
-    expect(w.get('[data-dialog] h3').text()).toBe('Desfazer esta lista?');
+    expect(
+      w.get('[data-dialog] [data-relacionamentos="titulo-do-dialogo"]').text()
+    ).toBe('Desfazer “Clientes 2025.xlsx”?');
     w.unmount();
   });
 

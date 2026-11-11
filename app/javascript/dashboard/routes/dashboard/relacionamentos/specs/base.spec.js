@@ -231,3 +231,14 @@ describe('etiquetas fictícias', () => {
     expect(ETIQUETAS).not.toContain('indicacao');
   });
 });
+
+describe('pessoa bloqueada na demonstração', () => {
+  it('há uma, no grupo "Sumiu há 1 a 3 meses", com telefone e sem ter pedido para parar', () => {
+    const bloqueadas = pessoas(AGORA).filter(p => p.blocked);
+    expect(bloqueadas).toHaveLength(1);
+    const [pessoa] = bloqueadas;
+    expect(pertenceAoGrupo(pessoa, 'sumiu_1_a_3_meses', AGORA)).toBe(true);
+    expect(pessoa.phone_number).toBeTruthy();
+    expect(pessoa.opted_out_at).toBeNull();
+  });
+});

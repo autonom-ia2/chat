@@ -4,7 +4,11 @@
       "TITULO": "Relationships",
       "HEROI": {
         "VAZIA": "Bring in the people you already talk to.",
-        "SUMIRAM": "{count} person hasn't talked to you in over a month. | {count} people haven't talked to you in over a month.",
+        "VAZIA_APOIO": "They show up here, ready to talk.",
+        "SUMIRAM": "{count} person stopped talking to you in the last 3 months. | {count} people stopped talking to you in the last 3 months.",
+        "EMPRESAS_SEM_CONVERSA": "{count} company has had no conversation in 3 months. | {count} companies have had no conversation in 3 months.",
+        "EMPRESAS_AQUI": "{count} company is here. | {count} companies are here.",
+        "VER_EMPRESAS": "See these companies",
         "PESSOAS_AQUI": "You have {count} person here. | You have {count} people here.",
         "JA_SAO_CLIENTES": "{count} is already a customer. | {count} are already customers.",
         "VER_QUEM_SUMIU": "See who went quiet",
@@ -64,6 +68,7 @@
       },
       "MARCADAS": {
         "QUANTAS": "{count} selected | {count} selected",
+        "VAO_RECEBER": "{count} will receive it | {count} will receive it",
         "MARCAR_TODAS": "Select all {count} in this group",
         "DESMARCAR": "Clear selection"
       },
@@ -77,12 +82,18 @@
       },
       "MENSAGEM": {
         "TITULO": "Send message",
-        "RECEBEM": "{count} person will receive it. | {count} people will receive it.",
+        "QUEM_RECEBE": "{quem} will receive it. | {quem} will receive it.",
+        "E_MAIS": "{count} more",
         "PROXIMO_PASSO": "You write the message in the next step.",
         "NINGUEM_RECEBE": "No one will receive it.",
         "FORA": "{count} is left out: {motivos}. | {count} are left out: {motivos}.",
         "MOTIVO_NAO_QUER": "{count} asked not to receive messages | {count} asked not to receive messages",
         "MOTIVO_SEM_TELEFONE": "{count} has no phone | {count} have no phone",
+        "MOTIVO_BLOQUEADO": "{count} is blocked | {count} are blocked",
+        "MOTIVO_CURTO_NAO_QUER": "{count} asked not to receive messages | {count} asked not to receive messages",
+        "MOTIVO_CURTO_BLOQUEADO": "{count} blocked | {count} blocked",
+        "MOTIVO_CURTO_SEM_TELEFONE": "{count} has no phone | {count} have no phone",
+        "NINGUEM_PODE": "No one here can receive it: {motivos}.",
         "ABRINDO_CAMPANHA": "Opening the campaign with {count} person. | Opening the campaign with {count} people."
       },
       "CARDS": {

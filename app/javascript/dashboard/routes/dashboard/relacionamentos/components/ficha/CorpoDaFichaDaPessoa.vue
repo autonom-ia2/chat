@@ -27,14 +27,7 @@ defineProps({
   agora: { type: Number, required: true },
   guardandoNota: { type: Boolean, default: false },
 });
-const emit = defineEmits([
-  'conversar',
-  'verTodas',
-  'abrirCard',
-  'novoCard',
-  'guardarNota',
-  'alterar',
-]);
+const emit = defineEmits(['verTodas', 'abrirCard', 'guardarNota', 'alterar']);
 
 const { t } = useI18n();
 const caixaDeNotas = ref(null);
@@ -49,14 +42,12 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       class="lg:col-span-2 lg:col-start-1 lg:row-start-1"
       :conversas="conversas"
       :agora="agora"
-      @conversar="emit('conversar')"
       @ver-todas="emit('verTodas')"
     />
     <SecaoCards
       class="lg:col-span-2 lg:col-start-1 lg:row-start-2"
       :cards="cards"
       @abrir="card => emit('abrirCard', card)"
-      @novo-card="emit('novoCard')"
     />
     <CartaoDaSecao
       class="lg:col-start-3 lg:row-start-1 lg:row-span-2"

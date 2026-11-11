@@ -228,3 +228,28 @@ describe('redes sociais fictícias', () => {
     expect(linkedin).toContain('-');
   });
 });
+
+describe('cards e notas fictícios', () => {
+  it('os cards de uma mesma pessoa têm títulos diferentes', async () => {
+    const todos = await Promise.all(pessoas().map(p => fonte.cards(p.id)));
+    todos.forEach(lista => {
+      const titulos = lista.map(c => c.titulo);
+      expect(new Set(titulos).size).toBe(titulos.length);
+    });
+    expect(todos.some(lista => lista.length > 1)).toBe(true);
+  });
+
+  it('as notas têm datas variadas, todas depois de a pessoa chegar', async () => {
+    const DIA_EM_SEGUNDOS = 86_400;
+    const base = pessoas();
+    const listas = await Promise.all(base.map(p => fonte.notas(p.id)));
+    expect(listas.some(l => l.length > 1)).toBe(true);
+    listas.forEach((lista, i) => {
+      lista.forEach(nota =>
+        expect(nota.quando).toBeGreaterThan(base[i].created_at)
+      );
+      const dias = lista.map(n => Math.floor(n.quando / DIA_EM_SEGUNDOS));
+      expect(new Set(dias).size).toBe(lista.length);
+    });
+  });
+});

@@ -28,6 +28,9 @@ const emit = defineEmits([
 const { t } = useI18n();
 const idioma = useIdioma();
 
+// Quem pediu silêncio não recebe empurrão: "Conversar" vira discreto e o foco da
+// ficha é a faixa de aviso.
+const pediuSilencio = computed(() => Boolean(props.pessoa.opted_out_at));
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
 const clienteDesde = computed(() =>
   props.pessoa.customer_since
@@ -169,6 +172,8 @@ const empresa = computed(
       <Button
         data-relacionamentos="conversar"
         size="lg"
+        :variant="pediuSilencio ? 'faded' : 'solid'"
+        :color="pediuSilencio ? 'slate' : 'blue'"
         class="w-full lg:w-auto !min-h-12 !rounded-xl whitespace-nowrap shrink-0"
         icon="i-lucide-message-circle"
         :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"

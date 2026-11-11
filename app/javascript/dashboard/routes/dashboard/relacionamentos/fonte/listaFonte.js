@@ -6,6 +6,7 @@ import {
   pertenceAoGrupo,
 } from './grupos';
 import { normalizado, soDigitos } from './texto';
+import { DEMO_CARREGANDO, esperarParaSempre } from './modoDemo';
 import { pessoaPassaNosFiltros } from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
@@ -130,6 +131,8 @@ const passaNaConsulta = (aba, { busca = '', filtros = {} }, agora) => {
 
 const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   const baseDaDemo = async () => {
+    // `?demo=carregando`: a fonte nunca responde, para o print do esqueleto.
+    if (estado === DEMO_CARREGANDO) return esperarParaSempre();
     await esperar(atraso);
     return estado === 'vazio' ? BASE_VAZIA : carregarDemo();
   };
@@ -157,9 +160,21 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     usaDemo: true,
     async resumo() {
       const agora = Date.now();
-      const gente = (await baseDaDemo()).pessoas(agora);
+      const base = await baseDaDemo();
+      const gente = base.pessoas(agora);
       const regras = REGRAS_DA_ABA[ABAS.PESSOAS];
+      const empresas = base.empresas(agora);
+      const regrasDeEmpresa = REGRAS_DA_ABA[ABAS.EMPRESAS];
       return {
+        empresas: {
+          total: empresas.length,
+          sem_conversa_3_meses: contarGrupo(
+            empresas,
+            regrasDeEmpresa,
+            'sem_conversa_3_meses',
+            agora
+          ),
+        },
         total: gente.length,
         clientes: contarGrupo(gente, regras, 'clientes', agora),
         sumiu_1_a_3_meses: contarGrupo(

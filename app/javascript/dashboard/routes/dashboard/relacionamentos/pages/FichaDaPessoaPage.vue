@@ -65,6 +65,7 @@ const marcarCliente = async () =>
     { nome: nome.value }
   );
 
+// Na entrega real o backend grava quem liberou.
 const liberar = async () =>
   resultado(
     await ficha.liberar(),
@@ -199,10 +200,8 @@ watch(
             :redes="redes"
             :agora="agora"
             :guardando-nota="ficha.ocupado.value === 'guardarNota'"
-            @conversar="avisar('CONVERSAR')"
             @ver-todas="avisar('VER_TODAS')"
             @abrir-card="card => (cardAberto = card)"
-            @novo-card="avisar('NOVO_CARD')"
             @guardar-nota="guardarNota"
             @alterar="gavetaAberta = true"
           />

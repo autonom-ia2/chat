@@ -1,4 +1,5 @@
 import { ATRASO_DA_DEMO_MS, erroFonteRealPendente } from './listaFonte';
+import { demoCarregando, esperarParaSempre } from './modoDemo';
 import { resumoAoVivo, totalDaLeitura } from '../trazer/contagem';
 import { PRAZO, SITUACOES_DA_LISTA, situacaoDoPrazo } from '../trazer/prazo';
 
@@ -15,6 +16,21 @@ const CARREGAR_DEMO = import.meta.env.DEV
   : null;
 
 export const ATRASO_DA_LEITURA_MS = 1200;
+
+// `?planilha=` (só em demonstração): faz a leitura cair num estado que a
+// planilha de exemplo não mostra, sem precisar de arquivo de verdade.
+export const PLANILHAS_DE_DEMO = [
+  'nao_e_planilha',
+  'vazia',
+  'sem_contato',
+  'lendo',
+];
+const LENDO_PARA_SEMPRE_MS = 60 * 60 * 1000;
+const ARQUIVOS_DE_MENTIRA = {
+  nao_e_planilha: { name: 'foto.png' },
+  vazia: { name: 'Planilha vazia.xlsx' },
+  sem_contato: { name: 'Sem contato.xlsx' },
+};
 
 const esperar = ms =>
   new Promise(resolve => {
@@ -79,6 +95,7 @@ const vistaDaLista = (lista, agora, demo) => {
 
 const fonteDemo = ({
   estado,
+  planilha,
   carregarDemo,
   atraso,
   atrasoDaLeitura,
@@ -115,8 +132,18 @@ const fonteDemo = ({
 
   return {
     usaDemo: true,
+    planilhaDeDemo: planilha,
+    arquivoDeExemplo: () => ARQUIVOS_DE_MENTIRA[planilha] ?? null,
     async ler(arquivo) {
-      await esperar(atrasoDaLeitura);
+      await esperar(
+        planilha === 'lendo' ? LENDO_PARA_SEMPRE_MS : atrasoDaLeitura
+      );
+      if (planilha === 'vazia') {
+        throw erroNomeado('PLANILHA_VAZIA', 'A planilha está vazia.');
+      }
+      if (planilha === 'sem_contato') {
+        throw erroNomeado('PLANILHA_SEM_CONTATO', 'Não achei nome e contato.');
+      }
       const { demo, memoria: mem } = await dados();
       const id = proximoId('leitura', mem);
       const leitura = demo.leituraDeExemplo(id, arquivo?.name);
@@ -178,6 +205,8 @@ const fonteDemo = ({
       };
     },
     async historico() {
+      // `?demo=carregando`: o histórico fica no esqueleto, para o print.
+      if (demoCarregando()) return esperarParaSempre();
       await esperar(atraso);
       const dadosDaDemo = await dados();
       const momento = agora();
@@ -240,11 +269,19 @@ const fonteReal = () => {
 
 export const trazerFonte = ({
   demo = null,
+  planilha = null,
   carregarDemo = CARREGAR_DEMO,
   atraso = ATRASO_DA_DEMO_MS,
   atrasoDaLeitura = ATRASO_DA_LEITURA_MS,
   agora = Date.now,
 } = {}) =>
   demo && carregarDemo
-    ? fonteDemo({ estado: demo, carregarDemo, atraso, atrasoDaLeitura, agora })
+    ? fonteDemo({
+        estado: demo,
+        planilha: PLANILHAS_DE_DEMO.includes(planilha) ? planilha : null,
+        carregarDemo,
+        atraso,
+        atrasoDaLeitura,
+        agora,
+      })
     : fonteReal();

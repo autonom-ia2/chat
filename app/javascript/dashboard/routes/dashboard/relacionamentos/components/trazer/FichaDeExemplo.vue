@@ -58,7 +58,7 @@ const linhas = computed(() =>
       <div class="flex flex-col items-start min-w-0 gap-1">
         <h3
           :title="pessoa.nome"
-          class="m-0 text-base font-semibold break-words md:truncate md:max-w-full text-n-slate-12"
+          class="m-0 text-base font-semibold break-words line-clamp-2 md:min-h-12 text-n-slate-12"
         >
           {{ pessoa.nome }}
         </h3>

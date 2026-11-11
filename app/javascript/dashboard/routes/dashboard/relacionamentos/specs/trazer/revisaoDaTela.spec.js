@@ -161,7 +161,7 @@ describe('2. Trocar a coluna', () => {
       props: { coluna: { nome: 'Cel', destino: 'telefone' } },
     });
   const trocar = async w => {
-    await botao(w, 'Trocar').trigger('click');
+    await botao(w, 'Mudar').trigger('click');
     await flushPromises();
   };
   const escolha = w => w.get('[role="combobox"]');
@@ -171,7 +171,7 @@ describe('2. Trocar a coluna', () => {
     await trocar(w);
     expect(document.activeElement).toBe(escolha(w).element);
     expect(escolha(w).attributes('aria-expanded')).toBe('true');
-    expect(botao(w, 'Trocar')).toBeUndefined();
+    expect(botao(w, 'Mudar')).toBeUndefined();
   });
 
   it('fechar com Esc sem escolher volta ao Trocar, com o foco nele', async () => {
@@ -180,7 +180,7 @@ describe('2. Trocar a coluna', () => {
     await escolha(w).trigger('keydown', { key: 'Escape' });
     await flushPromises();
     expect(w.find('[role="combobox"]').exists()).toBe(false);
-    expect(document.activeElement).toBe(botao(w, 'Trocar').element);
+    expect(document.activeElement).toBe(botao(w, 'Mudar').element);
     expect(w.emitted('trocar')).toBeUndefined();
   });
 
@@ -189,8 +189,8 @@ describe('2. Trocar a coluna', () => {
     await trocar(w);
     await w.get('[role="option"][data-value="telefone"]').trigger('click');
     await flushPromises();
-    expect(botao(w, 'Trocar')).toBeDefined();
-    expect(document.activeElement).toBe(botao(w, 'Trocar').element);
+    expect(botao(w, 'Mudar')).toBeDefined();
+    expect(document.activeElement).toBe(botao(w, 'Mudar').element);
     expect(w.emitted('trocar')).toBeUndefined();
   });
 
@@ -200,7 +200,7 @@ describe('2. Trocar a coluna', () => {
     await w.get('[role="option"][data-value="email"]').trigger('click');
     await flushPromises();
     expect(w.emitted('trocar')).toEqual([['Cel', 'email']]);
-    expect(document.activeElement).toBe(botao(w, 'Trocar').element);
+    expect(document.activeElement).toBe(botao(w, 'Mudar').element);
   });
 
   it('clicar fora fecha e volta ao Trocar sem roubar o foco de outro lugar', async () => {
@@ -211,7 +211,7 @@ describe('2. Trocar a coluna', () => {
     outro.focus();
     await flushPromises();
     expect(document.activeElement).toBe(outro);
-    expect(botao(w, 'Trocar')).toBeDefined();
+    expect(botao(w, 'Mudar')).toBeDefined();
   });
 });
 
@@ -648,7 +648,7 @@ describe('rodada 3', () => {
     expect(email.text()).toBe('rita.carvalhedo.exemplo.com.br');
   });
 
-  it('T2. nome numa linha só a partir de md (selo alinhado), com title', () => {
+  it('T2/B2. nome em até 2 linhas, com altura reservada em md+ (selo alinhado)', () => {
     const w = mount(FichaDeExemplo, {
       props: {
         pessoa: {
@@ -662,8 +662,9 @@ describe('rodada 3', () => {
     });
     const nome = w.get('h3');
     expect(nome.classes()).toEqual(
-      expect.arrayContaining(['md:truncate', 'md:max-w-full'])
+      expect.arrayContaining(['line-clamp-2', 'md:min-h-12'])
     );
+    expect(nome.classes()).not.toContain('md:truncate');
     expect(nome.attributes('title')).toBe('Otávio Lourenzatto');
   });
 
@@ -671,7 +672,7 @@ describe('rodada 3', () => {
     const w = mount(TelaPronto, { props: { total: 195 } });
     expect(marca(w, 'pronto').exists()).toBe(true);
     expect(marca(w, 'pronto-sossego').text()).toBe(
-      'Você pode desfazer por 7 dias, em “O que eu já trouxe”.'
+      'Você pode desfazer por 7 dias, em “Listas que você já trouxe”.'
     );
     expect(marca(w, 'trazer-outra').text()).toBe('Trazer outra lista');
     expect(marca(w, 'trazer-outra').classes()).toContain('bg-white/10');

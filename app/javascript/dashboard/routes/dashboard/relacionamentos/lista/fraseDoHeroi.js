@@ -17,11 +17,33 @@ const verGrupo = (rotulo, grupo) => ({
   grupo,
 });
 
-export const escolherFrase = ({
+// Aba Empresas: o herói fala de empresas. O número da frase é sempre o total do
+// grupo para onde o botão leva.
+const GRUPO_EMPRESAS_SEM_CONVERSA = 'sem_conversa_3_meses';
+
+const escolherFraseDeEmpresas = ({
   total = 0,
-  clientes = 0,
-  sumiu_1_a_3_meses: sumiram = 0,
-} = {}) => {
+  sem_conversa_3_meses: sem = 0,
+}) =>
+  sem > 0
+    ? {
+        id: 'empresas_sem_conversa',
+        partes: [{ chave: `${HEROI}.EMPRESAS_SEM_CONVERSA`, count: sem }],
+        principal: verGrupo('VER_EMPRESAS', GRUPO_EMPRESAS_SEM_CONVERSA),
+        mostraTrazerDiscreto: true,
+      }
+    : {
+        id: 'empresas_resumo',
+        partes: [{ chave: `${HEROI}.EMPRESAS_AQUI`, count: total }],
+        principal: null,
+        mostraTrazerDiscreto: true,
+      };
+
+export const escolherFrase = (resumo = {}, aba = 'pessoas') => {
+  if (aba === 'empresas' && resumo.total > 0) {
+    return escolherFraseDeEmpresas(resumo.empresas ?? {});
+  }
+  const { total = 0, clientes = 0, sumiu_1_a_3_meses: sumiram = 0 } = resumo;
   if (total === 0) {
     return {
       id: 'vazia',

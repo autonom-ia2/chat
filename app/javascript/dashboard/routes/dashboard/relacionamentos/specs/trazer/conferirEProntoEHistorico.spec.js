@@ -26,6 +26,8 @@ beforeEach(() => {
 const DIA = 24 * 60 * 60 * 1000;
 const AGORA = Date.UTC(2026, 10, 11, 15);
 const marca = (w, nome) => w.find(`[data-relacionamentos="${nome}"]`);
+const contador = (w, chave) =>
+  w.get(`[data-contador="${chave}"] .sr-only`).text();
 const botao = (w, texto) => w.findAll('button').find(b => b.text() === texto);
 const problemaDe = (leitura, linha) =>
   leitura.problemas.find(p => p.linha === linha);
@@ -76,11 +78,11 @@ describe('ProblemaDaLinha', () => {
     mount(ProblemaDaLinha, { props: { problema: problemaDe(leitura, linha) } });
 
   it.each([
-    [14, 'Linha 14: falta um número no telefone'],
-    [37, 'Linha 37: o e-mail está sem “@”'],
-    [62, 'Linha 62: falta o nome'],
-    [143, 'Linhas 88 e 143: é a mesma pessoa. Qual fica?'],
-    [171, 'Linha 171: não tem telefone nem e-mail'],
+    [14, 'Tadeu Imbirussu: falta um número no telefone'],
+    [37, 'Rita Carvalhedo: o e-mail está sem “@”'],
+    [62, '+55 11 95412-0062: falta o nome'],
+    [143, 'Paulo Hortêncio aparece duas vezes. Qual fica?'],
+    [171, 'Helena Ourivesco: não tem telefone nem e-mail'],
   ])('a linha %s diz o problema em palavras simples', (linha, frase) => {
     expect(montar(linha).text()).toContain(frase);
   });
@@ -119,8 +121,9 @@ describe('ProblemaDaLinha', () => {
     const w = montar(143);
     expect(w.find('input').exists()).toBe(false);
     expect(botao(w, 'Salvar')).toBeUndefined();
-    await botao(w, 'Ficar com a linha 88').trigger('click');
-    await botao(w, 'Ficar com a linha 143').trigger('click');
+    expect(w.get('[data-opcao="88"]').text()).toContain('Ficar com a linha 88');
+    await w.get('[data-opcao="88"]').trigger('click');
+    await w.get('[data-opcao="143"]').trigger('click');
     expect(w.emitted('guardar')).toEqual([
       [143, 88],
       [143, 143],
@@ -175,7 +178,10 @@ describe('OQueVouGuardar', () => {
     expect(w.get('[data-coluna="Cel"]').text()).toContain('Cel');
     expect(w.get('[data-coluna="Cel"]').text()).toContain('Telefone');
     expect(w.get('[data-coluna="Aniversário"]').text()).toContain(
-      'Vira uma informação da pessoa chamada “Aniversário”'
+      'Aniversário'
+    );
+    expect(w.get('[data-coluna="Aniversário"]').text()).toContain(
+      'Informação nova'
     );
   });
 
@@ -194,7 +200,7 @@ describe('OQueVouGuardar', () => {
     const linha = w.get('[data-coluna="Cel"]');
     await linha
       .findAll('button')
-      .find(b => b.text() === 'Trocar')
+      .find(b => b.text() === 'Mudar')
       .trigger('click');
     expect(linha.find('select').exists()).toBe(false);
     const escolha = linha.get(
@@ -214,9 +220,10 @@ describe('OQueVouGuardar', () => {
 describe('TelaConferir', () => {
   it('a frase forte tem os números certos, no plural', () => {
     const w = conferir(leituraDeExemplo('l1'));
-    expect(w.get('h1').text()).toBe(
-      'Achei 200 pessoas. 180 são novas, 15 já estavam aqui e vão ser completadas, 5 precisam de você.'
-    );
+    expect(w.get('h1').text()).toBe('Achei 200 pessoas.');
+    expect(contador(w, 'NOVAS')).toBe('180 novas');
+    expect(contador(w, 'COMPLETADAS')).toBe('15 já estavam aqui');
+    expect(contador(w, 'PRECISAM')).toBe('5 precisam de você');
   });
 
   it('a frase usa o singular quando é 1', () => {
@@ -226,16 +233,18 @@ describe('TelaConferir', () => {
       resumo: { total: 1, novas: 1, completadas: 0, comProblema: 0 },
       problemas: [],
     };
-    expect(conferir(leitura).get('h1').text()).toBe(
-      'Achei 1 pessoa. 1 é nova.'
-    );
+    const um1 = conferir(leitura);
+    expect(um1.get('h1').text()).toBe('Achei 1 pessoa.');
+    expect(contador(um1, 'NOVAS')).toBe('1 nova');
+    expect(um1.find('[data-contador="COMPLETADAS"]').exists()).toBe(false);
     const um = {
       ...base,
       resumo: { total: 3, novas: 1, completadas: 1, comProblema: 1 },
     };
-    expect(conferir(um).get('h1').text()).toBe(
-      'Achei 3 pessoas. 1 é nova, 1 já estava aqui e vai ser completada, 5 precisam de você.'
-    );
+    const tres = conferir(um);
+    expect(tres.get('h1').text()).toBe('Achei 3 pessoas.');
+    expect(contador(tres, 'COMPLETADAS')).toBe('1 já estava aqui');
+    expect(contador(tres, 'PRECISAM')).toBe('5 precisam de você');
   });
 
   it('a ordem é: frase, três fichas, precisam de você, o que vou guardar, botão', () => {
@@ -268,9 +277,8 @@ describe('TelaConferir', () => {
       'Ana Brandolim'
     );
     const w = conferir(leitura);
-    expect(w.get('h1').text()).toBe(
-      'Achei 200 pessoas. 181 são novas, 15 já estavam aqui e vão ser completadas, 4 precisam de você.'
-    );
+    expect(contador(w, 'NOVAS')).toBe('181 novas');
+    expect(contador(w, 'PRECISAM')).toBe('4 precisam de você');
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 196 pessoas');
     expect(w.text()).toContain('Precisam de você (4)');
     expect(w.get('[data-linha="62"]').text()).toContain('Pronto');
@@ -279,7 +287,7 @@ describe('TelaConferir', () => {
   it('deixou de fora: a frase ganha "ficou de fora" e o botão não muda', () => {
     const leitura = aplicarDeixarDeFora(leituraDeExemplo('l1'), 62);
     const w = conferir(leitura);
-    expect(w.get('h1').text()).toContain('1 ficou de fora');
+    expect(contador(w, 'DEIXADAS')).toBe('1 ficou de fora');
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
   });
 
@@ -511,7 +519,10 @@ describe('DialogoDesfazer', () => {
     });
     const texto = marca(w, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      'Isto tira 180 pessoas que vieram nesta lista e devolve 15 ao que eram antes.'
+      'Isto tira as 180 pessoas que vieram nesta lista. As 15 que já estavam aqui voltam a ser como eram.'
+    );
+    expect(texto).toContain(
+      'Quem pediu para não receber mensagens continua assim.'
     );
     expect(texto).toContain('As conversas que já aconteceram ficam.');
     expect(texto).not.toContain('campanha');
@@ -531,7 +542,7 @@ describe('DialogoDesfazer', () => {
       previa: { tira: 1, devolve: 0, receberamCampanha: 1 },
     });
     expect(marca(um, 'dialogo-desfazer').text()).toContain(
-      'Isto tira 1 pessoa que veio nesta lista.'
+      'Isto tira a pessoa que veio nesta lista.'
     );
     expect(marca(um, 'dialogo-desfazer').text()).toContain(
       '1 pessoa já recebeu uma campanha.'
@@ -540,7 +551,7 @@ describe('DialogoDesfazer', () => {
       previa: { tira: 0, devolve: 15, receberamCampanha: 0 },
     });
     expect(marca(so, 'dialogo-desfazer').text()).toContain(
-      'Isto devolve 15 ao que eram antes.'
+      'As 15 que já estavam aqui voltam a ser como eram.'
     );
   });
 

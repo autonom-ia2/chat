@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -22,10 +22,11 @@ import ListaDeLinhas from '../components/lista/ListaDeLinhas.vue';
 import MarcarTodas from '../components/lista/MarcarTodas.vue';
 import MostrarMais from '../components/lista/MostrarMais.vue';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
-import { ABAS, gruposDaAba } from '../fonte/grupos';
+import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
+import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { useLista } from '../lista/useLista';
@@ -69,16 +70,9 @@ const trocarAba = nova => {
   });
 };
 
-// O botão do herói fala de gente (quem sumiu, clientes): na aba Empresas esses
-// grupos não existem. Troca para Pessoas e espera a lista assentar na aba nova
-// antes de escolher o grupo (a troca de aba volta ao grupo padrão).
-const verGrupo = async id => {
-  if (ehEmpresas.value) {
-    await trocarAba(ABAS.PESSOAS);
-    await nextTick();
-  }
-  lista.escolherGrupo(id);
-};
+// O herói acompanha a aba: o grupo para onde o botão leva é sempre da aba que
+// está aberta.
+const verGrupo = id => lista.escolherGrupo(id);
 
 const grupos = computed(() =>
   gruposDaAba(aba.value).map(({ id, nome }) => ({
@@ -87,10 +81,14 @@ const grupos = computed(() =>
     total: lista.contagens.value[id],
   }))
 );
+// "Todos" e "Todas" não dizem nada além do nome: sem explicação. A linha mantém
+// a altura (`min-h-5`) para a tela não pular ao trocar de grupo.
 const explicacao = computed(() => {
+  if (lista.grupo.value === GRUPO_PADRAO[aba.value]) return '';
   const atual = gruposDaAba(aba.value).find(g => g.id === lista.grupo.value);
   return atual ? t(atual.explicacao) : '';
 });
+const contaDeMarcados = computed(() => contaDaMensagem(marcados.pessoas.value));
 
 const contaVazia = computed(() => lista.resumo.value?.total === 0);
 const placeholder = computed(() =>
@@ -221,6 +219,7 @@ onMounted(lista.iniciar);
           <HeroiDaLista
             :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
+            :aba="aba"
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />
@@ -238,7 +237,11 @@ onMounted(lista.iniciar);
                   :model-value="lista.grupo.value"
                   @update:model-value="lista.escolherGrupo"
                 />
-                <p aria-live="polite" class="m-0 text-sm text-n-slate-11">
+                <p
+                  aria-live="polite"
+                  class="m-0 text-sm min-h-5 text-n-slate-11"
+                  data-relacionamentos="explicacao-do-grupo"
+                >
                   {{ explicacao }}
                 </p>
               </div>
@@ -318,6 +321,7 @@ onMounted(lista.iniciar);
             v-if="marcados.quantos.value > 0 && !ehEmpresas"
             class="sticky z-30 mt-auto bottom-4 ms-[72px] sm:ms-0"
             :quantas="marcados.quantos.value"
+            :conta="contaDeMarcados"
             @mandar-mensagem="dialogoDeMensagem.abrir()"
             @criar-cards="dialogoDeCards.abrir()"
             @etiqueta="dialogoDeEtiqueta.abrir()"

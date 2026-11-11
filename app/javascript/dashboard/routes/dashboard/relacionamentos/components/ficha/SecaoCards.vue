@@ -3,14 +3,13 @@ import { useI18n } from 'vue-i18n';
 import { formatarReais } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
-import VazioDaSecao from './VazioDaSecao.vue';
 
 // #2894 — os cards da pessoa: título, funil e etapa, valor e situação. Clicar
 // abre a gaveta do card. Na ficha da empresa cada card diz de quem é (`pessoa`).
 defineProps({
   cards: { type: Array, required: true },
 });
-const emit = defineEmits(['abrir', 'novoCard']);
+const emit = defineEmits(['abrir']);
 
 const TONS = {
   aberto: 'bg-n-blue-3 text-n-blue-11',
@@ -26,13 +25,14 @@ const ra = (chave, valores) =>
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="cards">
-    <VazioDaSecao
+    <p
       v-if="!cards.length"
+      data-vazio
       data-relacionamentos="vazio"
-      :frase="ra('VAZIO')"
-      :botao="ra('NOVO')"
-      @acao="emit('novoCard')"
-    />
+      class="m-0 text-base text-n-slate-11"
+    >
+      {{ ra('VAZIO') }}
+    </p>
     <ul v-else class="flex flex-col gap-2 p-0 m-0 list-none">
       <li v-for="card in cards" :key="card.id">
         <button

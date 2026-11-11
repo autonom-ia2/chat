@@ -14,8 +14,15 @@ export const ERROS = {
   NENHUM: '',
   TIPO: 'tipo',
   LEITURA: 'leitura',
+  VAZIA: 'vazia',
+  SEM_CONTATO: 'sem_contato',
   TRAZER: 'trazer',
   ANDAMENTO: 'andamento',
+};
+
+const ERROS_DA_LEITURA = {
+  PLANILHA_VAZIA: ERROS.VAZIA,
+  PLANILHA_SEM_CONTATO: ERROS.SEM_CONTATO,
 };
 
 const AVISO_ERRO_GUARDAR = 'RELACIONAMENTOS_TRAZER.ERROS.GUARDAR';
@@ -87,8 +94,8 @@ export const useTrazerLista = ({
         tipo: EVENTOS.LEU,
         perguntas: lida.perguntas.length,
       });
-    } catch {
-      erro.value = ERROS.LEITURA;
+    } catch (falha) {
+      erro.value = ERROS_DA_LEITURA[falha?.name] ?? ERROS.LEITURA;
     } finally {
       lendo.value = false;
     }
@@ -102,7 +109,12 @@ export const useTrazerLista = ({
     await ler(arquivo);
   };
 
-  const usarExemplo = () => ler(null);
+  // Em demonstração a fonte pode oferecer um arquivo de mentira (para mostrar
+  // os erros do arquivo sem precisar de um arquivo de verdade).
+  const usarExemplo = () => {
+    const exemplo = fonte.arquivoDeExemplo?.() ?? null;
+    return exemplo ? escolherArquivo(exemplo) : ler(null);
+  };
 
   const responder = (pergunta, valor) => {
     respostas.value = responderPergunta(respostas.value, pergunta, valor);

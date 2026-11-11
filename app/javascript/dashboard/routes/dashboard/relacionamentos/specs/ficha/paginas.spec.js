@@ -32,7 +32,11 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: contexto.empurrar }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-vi.mock('../../fonte/modoDemo', () => ({ usarDemo: () => contexto.demo }));
+vi.mock('../../fonte/modoDemo', async importOriginal => ({
+  ...(await importOriginal()),
+  usarDemo: () => contexto.demo,
+  demoCarregando: () => contexto.demo === 'carregando',
+}));
 vi.mock('../../fonte/fichaFonte', async importOriginal => {
   const original = await importOriginal();
   return {
@@ -45,7 +49,7 @@ const stubs = {
   TeleportWithDirection: { template: '<div><slot /></div>' },
   Dialog: {
     template:
-      '<div data-dialog><button data-confirmar @click="$emit(\'confirm\')" /></div>',
+      '<div data-dialog><slot /><slot name="footer" /><button data-confirmar @click="$emit(\'confirm\')" /></div>',
     methods: { open() {}, close() {} },
   },
 };
@@ -188,6 +192,19 @@ describe('FichaDaPessoaPage', () => {
     expect(w.classes()).toContain('min-w-0');
   });
 
+  it('?demo=carregando: a ficha fica no esqueleto, sem resposta', async () => {
+    contexto.demo = 'carregando';
+    contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };
+    const w = mount(FichaDaPessoaPage, { global: { stubs } });
+    await flushPromises();
+    await new Promise(r => {
+      setTimeout(r, 0);
+    });
+    expect(marca(w, 'carregando').exists()).toBe(true);
+    expect(marca(w, 'ficha-pessoa').exists()).toBe(false);
+    expect(marca(w, 'erro').exists()).toBe(false);
+  });
+
   it('a região viva existe desde o início e recebe o resultado depois', async () => {
     contexto.demo = 'cheio';
     contexto.params = { contactId: String(ID_RECUSOU_MANUAL) };
@@ -208,9 +225,11 @@ describe('FichaDaPessoaPage', () => {
     );
   });
 
-  it('quem nunca conversou: conversas e arquivos vazios, com uma ação cada', async () => {
+  it('quem nunca conversou: conversas e cards vazios, só com a frase', async () => {
     const w = await abrirPessoa(ID_NUNCA_CONVERSOU);
     expect(marca(w, 'conversas').find('[data-vazio]').exists()).toBe(true);
+    expect(marca(w, 'conversas').find('button').exists()).toBe(false);
+    expect(marca(w, 'cards').find('button').exists()).toBe(false);
     expect(marca(w, 'arquivos').find('li').exists()).toBe(false);
     expect(marca(w, 'marcar-cliente').exists()).toBe(true);
   });
@@ -345,6 +364,20 @@ describe('FichaDaPessoaPage', () => {
   });
 });
 
+describe('FichaDaEmpresaPage: estados', () => {
+  it('?demo=carregando: fica no esqueleto, sem resposta', async () => {
+    contexto.demo = 'carregando';
+    contexto.params = { companyId: String(ID_EMPRESA_COM_GENTE) };
+    const w = mount(FichaDaEmpresaPage, { global: { stubs } });
+    await flushPromises();
+    await new Promise(r => {
+      setTimeout(r, 0);
+    });
+    expect(marca(w, 'carregando').exists()).toBe(true);
+    expect(marca(w, 'ficha-empresa').exists()).toBe(false);
+  });
+});
+
 describe('FichaDaEmpresaPage: largura', () => {
   it('mesmo contêiner da lista e respiro embaixo', async () => {
     const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
@@ -377,9 +410,48 @@ describe('FichaDaEmpresaPage', () => {
     );
     expect(marca(w, 'conversas').exists()).toBe(true);
     expect(marca(w, 'cards').exists()).toBe(true);
-    expect(marca(w, 'informacoes').text()).toContain(
-      'EMPRESA.INFORMACOES.CNPJ'
+    expect(marca(w, 'informacoes').text()).toContain('INFORMACOES.PESSOAS');
+    expect(marca(w, 'informacoes').text()).not.toContain('INFORMACOES.CNPJ');
+    expect(marca(w, 'cabecalho').text()).toContain('/');
+  });
+
+  it('Mandar mensagem abre o diálogo e Continuar só avisa', async () => {
+    const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
+    await marca(w, 'mandar-mensagem').trigger('click');
+    await w.get('[data-confirmar]').trigger('click');
+    expect(useAlert).toHaveBeenCalledWith(
+      expect.stringContaining('MENSAGEM.AVISO')
     );
+  });
+
+  it('Alterar abre a gaveta com título de título, e salvar troca o nome', async () => {
+    const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
+    expect(marca(w, 'gaveta-empresa').exists()).toBe(false);
+    await marca(w, 'alterar-empresa').trigger('click');
+    const gaveta = marca(w, 'gaveta-empresa');
+    expect(gaveta.get('h2').classes()).toEqual(
+      expect.arrayContaining(['text-lg', 'font-semibold'])
+    );
+    await gaveta.get('[data-foco]').setValue('Empresa Nova Ltda');
+    await marca(w, 'salvar-empresa').trigger('click');
+    await esperarPor(() =>
+      expect(useAlert).toHaveBeenCalledWith(
+        expect.stringContaining('GAVETA.SALVO')
+      )
+    );
+    await esperarPor(() =>
+      expect(marca(w, 'gaveta-empresa').exists()).toBe(false)
+    );
+    expect(w.get('h1').text()).toBe('Empresa Nova Ltda');
+  });
+
+  it('conversar com uma pessoa da lista só avisa, não sai da ficha', async () => {
+    const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
+    await w
+      .get('[data-relacionamentos="conversar-com-pessoa"]')
+      .trigger('click');
+    expect(useAlert).toHaveBeenCalled();
+    expect(contexto.empurrar).not.toHaveBeenCalled();
   });
 
   it('uma pessoa da lista leva à ficha dela', async () => {

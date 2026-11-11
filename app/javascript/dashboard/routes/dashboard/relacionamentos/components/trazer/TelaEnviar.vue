@@ -16,8 +16,15 @@ const emit = defineEmits(['arquivo', 'exemplo', 'tentar']);
 
 const { t } = useI18n();
 
-const erroDoTipo = computed(() =>
-  props.erro === ERROS.TIPO ? t('RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_TIPO') : ''
+// O que está errado com o arquivo (não com a leitura): a frase vai embaixo da
+// área de soltar.
+const ERROS_DO_ARQUIVO = {
+  [ERROS.TIPO]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_TIPO',
+  [ERROS.VAZIA]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_VAZIA',
+  [ERROS.SEM_CONTATO]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_SEM_CONTATO',
+};
+const erroDoArquivo = computed(() =>
+  ERROS_DO_ARQUIVO[props.erro] ? t(ERROS_DO_ARQUIVO[props.erro]) : ''
 );
 </script>
 
@@ -38,7 +45,10 @@ const erroDoTipo = computed(() =>
       aria-busy="true"
       class="flex flex-col gap-4 p-8 border rounded-3xl border-n-weak bg-n-solid-1"
     >
-      <p class="m-0 text-lg text-n-slate-12">
+      <p
+        data-relacionamentos="lendo-planilha"
+        class="m-0 text-lg text-n-slate-12"
+      >
         {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.LENDO') }}
       </p>
       <div
@@ -56,7 +66,11 @@ const erroDoTipo = computed(() =>
           @tentar="emit('tentar')"
         />
       </div>
-      <SoltarArquivo :erro="erroDoTipo" @arquivo="emit('arquivo', $event)" />
+      <SoltarArquivo
+        :erro="erroDoArquivo"
+        :tipo-de-erro="erro"
+        @arquivo="emit('arquivo', $event)"
+      />
       <button
         v-if="mostrarExemplo"
         type="button"

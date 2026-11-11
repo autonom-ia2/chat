@@ -5,7 +5,6 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
-import VazioDaSecao from './VazioDaSecao.vue';
 
 // #2894 — as 3 últimas conversas: canal, trecho, "há 3 dias" e a situação em
 // palavra simples. Na ficha da empresa cada linha diz de quem é (`pessoa`).
@@ -13,7 +12,7 @@ const props = defineProps({
   conversas: { type: Array, required: true },
   agora: { type: Number, default: () => Date.now() },
 });
-const emit = defineEmits(['conversar', 'verTodas']);
+const emit = defineEmits(['verTodas']);
 
 const QUANTAS_MOSTRAR = 3;
 const ICONES = {
@@ -51,13 +50,14 @@ const trechoDa = conversa =>
         @click="emit('verTodas')"
       />
     </template>
-    <VazioDaSecao
+    <p
       v-if="!conversas.length"
+      data-vazio
       data-relacionamentos="vazio"
-      :frase="ra('VAZIO')"
-      :botao="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
-      @acao="emit('conversar')"
-    />
+      class="m-0 text-base text-n-slate-11"
+    >
+      {{ ra('VAZIO') }}
+    </p>
     <ul v-else class="flex flex-col gap-1 p-0 m-0 list-none">
       <li
         v-for="conversa in ultimas"

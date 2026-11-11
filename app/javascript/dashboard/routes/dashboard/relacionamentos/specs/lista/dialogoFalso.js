@@ -40,7 +40,7 @@ export const DialogoFalso = defineComponent({
               'data-carregando': String(props.isLoading),
             },
             [
-              h('h3', props.title),
+              props.title ? h('h3', props.title) : null,
               props.description ? h('p', props.description) : null,
               slots.default?.(),
               props.showCancelButton

@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BotaoCopiar from './BotaoCopiar.vue';
 
@@ -6,17 +7,25 @@ import BotaoCopiar from './BotaoCopiar.vue';
 // ficha/informacoes.js: { chave, valor, rotulo?, copiar? }. Sem `rotulo`, o nome
 // vem do catálogo (`<raiz>.<CHAVE>`). O que falta mostra "Não informado" em cinza.
 // `redes` são as redes sociais já preenchidas: { rede, usuario }.
-defineProps({
+// Sem nenhum valor e sem redes, mostra a frase de vazio em vez de uma lista de
+// "Não informado".
+const props = defineProps({
   linhas: { type: Array, required: true },
   raiz: { type: String, default: 'RELACIONAMENTOS_FICHA.INFORMACOES' },
   redes: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
+const semNada = computed(
+  () => !props.redes.length && props.linhas.every(linha => !linha.valor)
+);
 </script>
 
 <template>
-  <dl class="grid gap-4 m-0">
+  <p v-if="semNada" data-vazio class="m-0 text-base text-n-slate-11">
+    {{ t('RELACIONAMENTOS_FICHA.INFORMACOES.VAZIO') }}
+  </p>
+  <dl v-else class="grid gap-4 m-0">
     <div
       v-for="linha in linhas"
       :key="linha.chave"

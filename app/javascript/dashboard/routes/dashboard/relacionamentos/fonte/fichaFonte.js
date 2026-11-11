@@ -7,6 +7,7 @@
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e os
 // dados fictícios nem entram no pacote.
 import { erroFonteRealPendente } from './listaFonte';
+import { demoCarregando, esperarParaSempre } from './modoDemo';
 
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/ficha.js')
@@ -28,7 +29,13 @@ const LEITURAS = {
   conversasDaEmpresa: [],
   cardsDaEmpresa: [],
 };
-const ESCRITAS = ['salvar', 'marcarCliente', 'guardarNota', 'liberarMensagens'];
+const ESCRITAS = [
+  'salvar',
+  'salvarEmpresa',
+  'marcarCliente',
+  'guardarNota',
+  'liberarMensagens',
+];
 const METODOS = [...Object.keys(LEITURAS), ...ESCRITAS];
 
 const esperar = ms =>
@@ -39,10 +46,16 @@ const esperar = ms =>
 const naoAchei = () =>
   Object.assign(new Error('Não achei esta pessoa.'), { name: 'NAO_ACHEI' });
 
+// As leituras que abrem a ficha: em `?demo=carregando` nenhuma resposta chega.
+const LEITURAS_DA_FICHA = ['pessoa', 'empresa'];
+
 const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   const metodo =
     nome =>
     async (...argumentos) => {
+      if (LEITURAS_DA_FICHA.includes(nome) && demoCarregando()) {
+        return esperarParaSempre();
+      }
       await esperar(atraso);
       if (estado === 'vazio') {
         if (nome in LEITURAS) return LEITURAS[nome];

@@ -1,11 +1,13 @@
 <script setup>
+import { nextTick, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 
 // #2894 — os grupos em pílulas, cada um com o seu número. A escolhida fica
 // preenchida (aria-pressed, como a vitrine de ferramentas). No celular a fila
 // rola para o lado; cada pílula tem 44 px de altura.
 //   grupos: [{ id, nome, total }]    v-model: o id do grupo escolhido
-defineProps({
+const props = defineProps({
   grupos: { type: Array, required: true },
   modelValue: { type: String, default: '' },
   rotulo: { type: String, default: '' },
@@ -13,15 +15,38 @@ defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
+
+// Quando a fila transborda, um degradê na borda onde há mais conteúdo mostra que
+// ela continua (à direita; e à esquerda depois de rolar). Sem transbordo, nada.
+const fila = useTemplateRef('fila');
+const maisAEsquerda = ref(false);
+const maisADireita = ref(false);
+const FOLGA_PX = 2;
+const medir = () => {
+  const el = fila.value;
+  if (!el) return;
+  maisAEsquerda.value = el.scrollLeft > FOLGA_PX;
+  maisADireita.value =
+    el.scrollLeft + el.clientWidth < el.scrollWidth - FOLGA_PX;
+};
+onMounted(medir);
+useResizeObserver(fila, medir);
+watch(
+  () => props.grupos,
+  () => nextTick(medir),
+  { deep: true }
+);
 </script>
 
 <template>
   <nav
-    class="min-w-0"
+    class="relative min-w-0"
     :aria-label="rotulo || t('RELACIONAMENTOS.COMUM.GRUPOS')"
   >
     <ul
-      class="flex gap-2 p-0 pb-1 m-0 overflow-x-auto list-none snap-x scroll-px-4"
+      ref="fila"
+      class="flex gap-2 p-0 pb-1 m-0 overflow-x-auto list-none snap-x scroll-px-12"
+      @scroll.passive="medir"
     >
       <li v-for="grupo in grupos" :key="grupo.id" class="snap-start">
         <button
@@ -46,5 +71,17 @@ const { t } = useI18n();
         </button>
       </li>
     </ul>
+    <span
+      v-if="maisAEsquerda"
+      data-degrade="esquerda"
+      aria-hidden="true"
+      class="absolute inset-y-0 start-0 w-10 pointer-events-none bg-gradient-to-r from-n-surface-1 to-transparent rtl:bg-gradient-to-l"
+    />
+    <span
+      v-if="maisADireita"
+      data-degrade="direita"
+      aria-hidden="true"
+      class="absolute inset-y-0 end-0 w-10 pointer-events-none bg-gradient-to-l from-n-surface-1 to-transparent rtl:bg-gradient-to-r"
+    />
   </nav>
 </template>

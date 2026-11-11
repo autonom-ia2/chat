@@ -9,7 +9,7 @@ import CartaoDaSecao from './CartaoDaSecao.vue';
 defineProps({
   pessoas: { type: Array, required: true },
 });
-const emit = defineEmits(['abrir']);
+const emit = defineEmits(['abrir', 'conversar']);
 
 const { t } = useI18n();
 </script>
@@ -27,11 +27,15 @@ const { t } = useI18n();
       {{ t('RELACIONAMENTOS_FICHA.EMPRESA.PESSOAS_VAZIO') }}
     </p>
     <ul v-else class="flex flex-col gap-1 p-0 m-0 list-none">
-      <li v-for="pessoa in pessoas" :key="pessoa.id">
+      <li
+        v-for="pessoa in pessoas"
+        :key="pessoa.id"
+        class="flex items-center min-w-0 gap-1"
+      >
         <button
           type="button"
           data-relacionamentos="pessoa-da-empresa"
-          class="grid items-center w-full grid-cols-[auto_1fr_auto] px-2 py-2 gap-x-3 gap-y-0.5 text-start rounded-xl min-h-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="grid items-center flex-1 min-w-0 grid-cols-[auto_1fr_auto] px-2 py-2 gap-x-3 gap-y-0.5 text-start rounded-xl min-h-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="emit('abrir', pessoa.id)"
         >
           <Avatar
@@ -57,6 +61,19 @@ const { t } = useI18n();
           >
             {{ pessoa.email || pessoa.phone_number }}
           </span>
+        </button>
+        <button
+          type="button"
+          data-relacionamentos="conversar-com-pessoa"
+          :aria-label="
+            t('RELACIONAMENTOS_FICHA.EMPRESA.CONVERSAR_COM', {
+              nome: pessoa.name,
+            })
+          "
+          class="inline-flex items-center justify-center rounded-xl size-11 shrink-0 text-n-slate-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          @click="emit('conversar', pessoa)"
+        >
+          <span class="i-lucide-message-circle size-5" aria-hidden="true" />
         </button>
       </li>
     </ul>

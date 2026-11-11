@@ -9,6 +9,7 @@ export const useFichaDaEmpresa = (fonte, id) => {
   const pessoas = ref([]);
   const conversas = ref([]);
   const cards = ref([]);
+  const ocupado = ref('');
 
   const buscar = async aindaVale => {
     const [achada, gente, cc, kk] = await Promise.all([
@@ -26,7 +27,22 @@ export const useFichaDaEmpresa = (fonte, id) => {
     return true;
   };
 
+  // Devolve `true` se deu certo e `false` se falhou; a tela decide o aviso.
+  const salvar = async dados => {
+    ocupado.value = 'salvar';
+    try {
+      empresa.value = await fonte.salvarEmpresa(id.value, dados);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      ocupado.value = '';
+    }
+  };
+
   return {
+    ocupado,
+    salvar,
     estado,
     empresa,
     pessoas,

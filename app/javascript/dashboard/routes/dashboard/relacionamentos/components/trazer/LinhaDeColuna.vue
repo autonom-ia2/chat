@@ -104,17 +104,10 @@ onBeforeUnmount(() => observador?.disconnect());
   <li
     ref="raiz"
     :data-coluna="coluna.nome"
-    class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+    class="flex flex-wrap items-center justify-between gap-3 py-3"
   >
     <p class="flex flex-wrap items-center gap-2 m-0 text-base text-n-slate-12">
-      <template v-if="virouInformacao">
-        {{
-          t('RELACIONAMENTOS_TRAZER.GUARDAR.VIRA_INFORMACAO', {
-            coluna: coluna.nome,
-          })
-        }}
-      </template>
-      <template v-else-if="naoGuarda">
+      <template v-if="naoGuarda">
         {{
           t('RELACIONAMENTOS_TRAZER.GUARDAR.NAO_VOU_GUARDAR', {
             coluna: coluna.nome,
@@ -149,13 +142,13 @@ onBeforeUnmount(() => observador?.disconnect());
       </div>
       <Button
         v-else
-        ghost
+        faded
         slate
         data-relacionamentos="trocar-coluna"
         class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.TROCAR')"
         :aria-label="
-          t('RELACIONAMENTOS_TRAZER.GUARDAR.ROTULO_TROCAR', {
+          t('RELACIONAMENTOS_TRAZER.GUARDAR.ROTULO_MUDAR', {
             coluna: coluna.nome,
           })
         "
@@ -164,7 +157,7 @@ onBeforeUnmount(() => observador?.disconnect());
       />
       <Button
         v-if="virouInformacao && !trocando"
-        ghost
+        faded
         slate
         class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.NAO_GUARDAR')"

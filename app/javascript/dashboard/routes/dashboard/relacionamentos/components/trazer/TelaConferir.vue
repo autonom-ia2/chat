@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
@@ -28,37 +28,110 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
-const CHAVES_DA_FRASE = {
-  NOVAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.FRASE.NOVAS',
-  COMPLETADAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.FRASE.COMPLETADAS',
-  PRECISAM: 'RELACIONAMENTOS_TRAZER.CONFERIR.FRASE.PRECISAM',
-  DEIXADAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.FRASE.DEIXADAS',
+const raiz = ref(null);
+const ROTULOS_DO_CONTADOR = {
+  NOVAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.NOVAS',
+  COMPLETADAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.COMPLETADAS',
+  PRECISAM: 'RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.PRECISAM',
+  DEIXADAS: 'RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.DEIXADAS',
 };
 
-// "Achei 200 pessoas. 180 são novas, 15 já estavam aqui…, 5 precisam de você."
-const frase = computed(() => {
-  const achei = t(
+// "Achei 200 pessoas." — o título curto; os números vêm nos contadores.
+const frase = computed(() =>
+  t(
     'RELACIONAMENTOS_TRAZER.CONFERIR.FRASE.TOTAL',
     { count: props.resumo.total },
     props.resumo.total
+  )
+);
+
+// Contador com zero não aparece. "Precisam de você" leva ao bloco dos problemas.
+const contadores = computed(() =>
+  partesDaFrase(props.resumo).map(({ chave, count }) => {
+    const rotulo = t(ROTULOS_DO_CONTADOR[chave], count);
+    return {
+      chave,
+      count,
+      rotulo,
+      leitura: `${count} ${rotulo}`,
+      levaAosProblemas: chave === 'PRECISAM',
+    };
+  })
+);
+
+const irParaPrecisam = () => {
+  const secao = raiz.value?.querySelector(
+    '[data-relacionamentos="precisam-de-voce"]'
   );
-  const partes = partesDaFrase(props.resumo).map(({ chave, count }) =>
-    t(CHAVES_DA_FRASE[chave], { count }, count)
-  );
-  return partes.length ? `${achei} ${partes.join(', ')}.` : achei;
-});
+  if (!secao) return;
+  const reduz = window.matchMedia?.(
+    '(prefers-reduced-motion: reduce)'
+  )?.matches;
+  secao.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' });
+  secao
+    .querySelector('[data-relacionamentos="precisam-titulo"]')
+    ?.focus({ preventScroll: true });
+};
 </script>
 
 <template>
-  <section data-relacionamentos="conferir" class="flex flex-col gap-10">
-    <h1
-      data-titulo-da-tela
-      tabindex="-1"
-      aria-live="polite"
-      class="m-0 text-3xl font-bold leading-tight tracking-tight outline-none md:text-4xl text-n-slate-12"
-    >
-      {{ frase }}
-    </h1>
+  <section
+    ref="raiz"
+    data-relacionamentos="conferir"
+    class="flex flex-col gap-10"
+  >
+    <div class="flex flex-col gap-6">
+      <h1
+        data-titulo-da-tela
+        tabindex="-1"
+        class="m-0 text-3xl font-bold leading-tight tracking-tight outline-none md:text-4xl text-n-slate-12"
+      >
+        {{ frase }}
+      </h1>
+      <ul
+        v-if="contadores.length"
+        data-relacionamentos="contadores"
+        :aria-label="t('RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.LISTA')"
+        class="flex flex-wrap p-0 m-0 list-none gap-x-10 gap-y-4"
+      >
+        <li
+          v-for="contador in contadores"
+          :key="contador.chave"
+          :data-contador="contador.chave"
+        >
+          <component
+            :is="contador.levaAosProblemas ? 'button' : 'div'"
+            :type="contador.levaAosProblemas ? 'button' : undefined"
+            class="flex flex-col items-start gap-1 text-start"
+            :class="
+              contador.levaAosProblemas
+                ? 'min-h-11 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand'
+                : ''
+            "
+            @click="contador.levaAosProblemas ? irParaPrecisam() : undefined"
+          >
+            <span class="sr-only">{{ contador.leitura }}</span>
+            <span
+              class="text-4xl font-bold leading-none tabular-nums text-n-slate-12"
+              aria-hidden="true"
+            >
+              {{ contador.count }}
+            </span>
+            <span
+              class="text-sm text-n-slate-11"
+              :class="
+                contador.levaAosProblemas
+                  ? 'underline underline-offset-4 decoration-n-weak'
+                  : ''
+              "
+              aria-hidden="true"
+            >
+              {{ contador.rotulo }}
+            </span>
+          </component>
+        </li>
+      </ul>
+    </div>
 
     <section class="flex flex-col gap-4">
       <h2 class="m-0 text-2xl font-semibold tracking-tight text-n-slate-12">

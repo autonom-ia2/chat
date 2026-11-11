@@ -59,6 +59,7 @@ const TEXTOS_DE_NOTA = [
   'Indicou um amigo que também quer conhecer.',
   'Está comparando com outro fornecedor. Vale acompanhar.',
 ];
+const IDADE_DAS_NOTAS_EM_DIAS = [3, 35, 125, 200];
 const AUTORES_DE_NOTA = [
   'Sônia Guedelha',
   'Tiago Brandolim',
@@ -85,6 +86,7 @@ const CHANCE_DE_TER_CADA_REDE = 0.3;
 
 const memoria = {
   edicoes: new Map(),
+  empresas: new Map(),
   clientes: new Map(),
   liberadas: new Set(),
   notas: new Map(),
@@ -93,6 +95,7 @@ const memoria = {
 
 export const esquecerEscritas = () => {
   memoria.edicoes.clear();
+  memoria.empresas.clear();
   memoria.clientes.clear();
   memoria.liberadas.clear();
   memoria.notas.clear();
@@ -188,13 +191,13 @@ export const conversas = id => {
   });
 };
 
-const cardDe = (id, i, sorteio, situacao) => {
+const cardDe = (id, i, sorteio, situacao, titulo) => {
   const funil = escolher(sorteio, FUNIS);
   const passos = funil.etapas.length;
   const valor = VALOR_MINIMO + sorteio() * (VALOR_MAXIMO - VALOR_MINIMO);
   return {
     id: id * 100 + i,
-    titulo: escolher(sorteio, TITULOS_DE_CARD),
+    titulo,
     funil: funil.nome,
     etapa: situacao === 'ganho' ? funil.etapas[passos - 1] : funil.etapas[0],
     valor: Math.round(valor / MULTIPLO_DO_VALOR) * MULTIPLO_DO_VALOR,
@@ -210,6 +213,8 @@ export const cards = id => {
   const quantos = cliente
     ? 1 + (id % MAXIMO_DE_CARDS_DE_CLIENTE)
     : id % (MAXIMO_DE_CARDS_DE_NAO_CLIENTE + 1);
+  // Títulos em sequência a partir de um sorteado: nenhum se repete na pessoa.
+  const inicio = Math.floor(sorteio() * TITULOS_DE_CARD.length);
   return Array.from({ length: quantos }, (_, i) =>
     cardDe(
       id,
@@ -217,7 +222,8 @@ export const cards = id => {
       sorteio,
       cliente && i === 0
         ? 'ganho'
-        : escolher(sorteio, SITUACOES_DE_CARD_SEM_GANHO)
+        : escolher(sorteio, SITUACOES_DE_CARD_SEM_GANHO),
+      TITULOS_DE_CARD[(inicio + i) % TITULOS_DE_CARD.length]
     )
   );
 };
@@ -226,11 +232,18 @@ const notasDeBase = id => {
   const sorteio = sorteioDe(id, 13);
   const base = pessoaPorId(id);
   const quantas = id % (MAXIMO_DE_NOTAS + 1);
+  const agora = agoraEmSegundos();
   return Array.from({ length: quantas }, (_, i) => ({
     id: `base-${id}-${i}`,
     autor: escolher(sorteio, AUTORES_DE_NOTA),
-    quando:
-      (base?.created_at ?? agoraEmSegundos()) + (i + 1) * SEGUNDOS_POR_DIA,
+    // Datas variadas (há 3 dias, mês passado, há 4 meses...), sempre depois de
+    // a pessoa chegar.
+    quando: Math.max(
+      (base?.created_at ?? agora) + (i + 1) * SEGUNDOS_POR_DIA,
+      agora -
+        IDADE_DAS_NOTAS_EM_DIAS[i % IDADE_DAS_NOTAS_EM_DIAS.length] *
+          SEGUNDOS_POR_DIA
+    ),
     texto: TEXTOS_DE_NOTA[(id + i) % TEXTOS_DE_NOTA.length],
   }));
 };
@@ -325,7 +338,20 @@ export const liberarMensagens = id => {
 
 export const empresa = id => {
   const base = empresaPorId(id);
-  return base ? copia(base) : null;
+  return base ? copia({ ...base, ...memoria.empresas.get(id) }) : null;
+};
+
+export const salvarEmpresa = (id, dados) => {
+  if (!empresaPorId(id))
+    throw Object.assign(new Error('Empresa não encontrada.'), {
+      name: 'NAO_ACHEI',
+    });
+  memoria.empresas.set(id, {
+    name: dados.name,
+    cnpj: dados.cnpj,
+    domain: dados.domain,
+  });
+  return empresa(id);
 };
 
 const pessoasDaEmpresaBase = id =>
@@ -357,6 +383,7 @@ export const demoDaFicha = {
   arquivos,
   origem,
   salvar,
+  salvarEmpresa,
   marcarCliente,
   guardarNota,
   liberarMensagens,

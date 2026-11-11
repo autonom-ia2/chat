@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import { useEnvio } from '../../lista/useEnvio';
 
 // #2894 — "Em qual funil?" e "Em qual etapa?" (o primeiro de cada já vem
@@ -88,7 +89,6 @@ defineExpose({ abrir });
     ref="dialogo"
     type="edit"
     width="md"
-    :title="t('RELACIONAMENTOS.LISTA.CARDS.TITULO')"
     :confirm-button-label="rotuloDoBotao"
     :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
     :show-cancel-button="!resultado"
@@ -97,6 +97,7 @@ defineExpose({ abrir });
     @confirm="aoConfirmar"
     @close="aoFechar"
   >
+    <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.CARDS.TITULO')" />
     <div data-relacionamentos="dialogo-cards">
       <!-- Região viva permanente: já está aqui, vazia, quando o resultado chega. -->
       <div role="status" class="flex flex-col gap-3">

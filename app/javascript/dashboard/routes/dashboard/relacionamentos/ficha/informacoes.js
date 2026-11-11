@@ -2,7 +2,6 @@
 // gaveta e o que volta dele para a fonte. Funções puras, sem mutar o que recebem.
 import { formatarCnpj, formatarCpf } from './formatos';
 import { soDigitos } from '../fonte/texto';
-import { formatarTelefone } from '../lista/telefone';
 
 export const REDES = [
   'linkedin',
@@ -42,9 +41,8 @@ const extrasDaConta = pessoa =>
 export const linhasDaPessoa = pessoa => {
   const adicionais = pessoa.additional_attributes ?? {};
   const cpf = pessoa.custom_attributes?.[CHAVE_DO_CPF];
+  // Telefone e e-mail ficam só no cabeçalho (com copiar); a gaveta os edita.
   const fixas = [
-    { chave: 'telefone', valor: formatarTelefone(pessoa.phone_number) },
-    { chave: 'email', valor: pessoa.email },
     { chave: 'cpf', valor: cpf ? formatarCpf(cpf) : '', copiar: true },
     { chave: 'cidade', valor: adicionais.city },
     { chave: 'empresa', valor: adicionais.company_name },
@@ -120,9 +118,21 @@ export const dadosParaSalvar = (formulario, inicial = null) => ({
   ),
 });
 
+// CNPJ e site ficam só no cabeçalho da empresa.
 export const linhasDaEmpresa = empresa => [
-  { chave: 'cnpj', valor: empresa.cnpj ? formatarCnpj(empresa.cnpj) : '' },
-  { chave: 'site', valor: empresa.domain },
   { chave: 'pessoas', valor: String(empresa.contacts_count ?? 0) },
   { chave: 'clientes', valor: String(empresa.customers_count ?? 0) },
 ];
+
+// A gaveta "Alterar" da empresa: nome, CNPJ e site. O CNPJ vai só com os números.
+export const formularioDaEmpresa = empresa => ({
+  nome: empresa.name ?? '',
+  cnpj: formatarCnpj(empresa.cnpj ?? ''),
+  site: empresa.domain ?? '',
+});
+
+export const dadosDaEmpresaParaSalvar = formulario => ({
+  name: formulario.nome.trim(),
+  cnpj: soDigitos(formulario.cnpj),
+  domain: formulario.site.trim(),
+});

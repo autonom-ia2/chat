@@ -61,12 +61,39 @@ const guardar = () => {
   emit('guardar', props.problema.linha, texto);
 };
 
-const textoDoProblema = computed(() =>
-  t(TEXTO_DO_TIPO[props.problema.tipo], {
-    linha: props.problema.linha,
-    outraLinha: props.problema.outraLinha,
-  })
+// Quem é, em palavras da pessoa: o nome; sem nome, o telefone ou e-mail que
+// houver; sem nada, a linha. A linha da planilha vai como apoio, em cinza.
+const quem = computed(
+  () =>
+    props.problema.nome ||
+    props.problema.contato ||
+    t('RELACIONAMENTOS_TRAZER.PRECISAM.QUEM_SEM_NOME', {
+      linha: props.problema.linha,
+    })
 );
+const textoDoProblema = computed(() =>
+  t(TEXTO_DO_TIPO[props.problema.tipo], { quem: quem.value })
+);
+const apoioDaLinha = computed(() =>
+  props.problema.tipo === 'duplicada'
+    ? t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHAS_DA_PLANILHA', {
+        linha: props.problema.linha,
+        outraLinha: props.problema.outraLinha,
+      })
+    : t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHA_DA_PLANILHA', {
+        linha: props.problema.linha,
+      })
+);
+
+// Cada linha repetida mostra o que a distingue da outra: telefone e e-mail.
+const detalheDaLinha = linha => {
+  const dados = props.problema.duplicadas?.find(item => item.linha === linha);
+  if (!dados) return '';
+  return [
+    dados.telefone || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_TELEFONE'),
+    dados.email || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_EMAIL'),
+  ].join(' · ');
+};
 const naPlanilha = computed(() =>
   props.problema.valor && campo.value !== 'telefone'
     ? t('RELACIONAMENTOS_TRAZER.PRECISAM.NA_PLANILHA', {
@@ -90,9 +117,10 @@ const doTexto = computed(
     <template v-if="aberto">
       <form class="flex flex-col gap-4" novalidate @submit.prevent="guardar">
         <div class="flex flex-col gap-1">
-          <p class="m-0 text-base font-medium text-n-slate-12">
+          <p class="m-0 text-lg font-semibold text-n-slate-12">
             {{ textoDoProblema }}
           </p>
+          <p class="m-0 text-sm text-n-slate-11">{{ apoioDaLinha }}</p>
           <p v-if="naPlanilha" class="m-0 text-sm text-n-slate-11">
             {{ naPlanilha }}
           </p>
@@ -114,32 +142,36 @@ const doTexto = computed(
             )
           "
         />
-        <div v-else class="flex flex-wrap gap-3">
-          <Button
+        <div v-else class="grid gap-3 sm:grid-cols-2">
+          <button
             v-for="linha in [problema.outraLinha, problema.linha]"
             :key="linha"
-            slate
-            faded
             type="button"
-            class="min-h-11"
-            :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha })"
+            :data-opcao="linha"
+            class="flex flex-col items-start gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-solid-2 hover:enabled:bg-n-alpha-1 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :disabled="ocupado"
             @click="emit('guardar', problema.linha, linha)"
-          />
+          >
+            <span class="text-base font-medium text-n-slate-12">
+              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
+            </span>
+            <span class="text-sm break-all text-n-slate-11 tabular-nums">
+              {{ detalheDaLinha(linha) }}
+            </span>
+          </button>
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <Button
             v-if="campo"
             type="submit"
             slate
-            faded
             class="min-h-11"
             :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.GUARDAR')"
             :disabled="!preenchido || ocupado"
           />
           <Button
-            ghost
             slate
+            faded
             type="button"
             data-relacionamentos="deixar-de-fora"
             class="min-h-11"

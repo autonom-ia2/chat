@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 import { useEnvio } from '../../lista/useEnvio';
 
 // #2894 — diálogo pequeno: escolher uma etiqueta e colocar nas pessoas
@@ -61,13 +62,13 @@ defineExpose({ abrir });
     ref="dialogo"
     type="edit"
     width="sm"
-    :title="t('RELACIONAMENTOS.LISTA.ETIQUETA.TITULO')"
     :confirm-button-label="t('RELACIONAMENTOS.LISTA.ETIQUETA.APLICAR')"
     :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
     :disable-confirm-button="!escolhida"
     :is-loading="enviando"
     @confirm="aplicar"
   >
+    <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.ETIQUETA.TITULO')" />
     <div data-relacionamentos="dialogo-etiqueta" class="flex flex-col gap-2">
       <label :for="idDoCampo" class="text-sm font-medium text-n-slate-12">
         {{ t('RELACIONAMENTOS.LISTA.ETIQUETA.PERGUNTA') }}

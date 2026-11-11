@@ -2,13 +2,16 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { motivosEmPalavras } from '../../lista/motivosEmPalavras';
 import MenuMaisAcoes from './MenuMaisAcoes.vue';
 
 // #2894 — a barra que aparece embaixo ao marcar alguém: "12 marcadas", a ação
 // principal (Mandar mensagem) e as outras. Em 390 px só o principal fica à
 // vista; Criar cards e Etiqueta vão para o menu "⋯" junto com Apagar.
-defineProps({
+const props = defineProps({
   quantas: { type: Number, required: true },
+  // A conta de quem recebe (`contaDaMensagem`); sem ela, só "N marcadas".
+  conta: { type: Object, default: null },
 });
 const emit = defineEmits([
   'mandarMensagem',
@@ -28,6 +31,28 @@ const aoEscolherNoMenu = id => {
   };
   comandos[id]?.();
 };
+
+// "3 marcadas · 2 vão receber · 1 pediu para não receber": só quando alguém fica
+// de fora. Com todo mundo recebendo, fica só "3 marcadas".
+const frase = computed(() => {
+  const marcadas = t(
+    'RELACIONAMENTOS.LISTA.MARCADAS.QUANTAS',
+    { count: props.quantas },
+    props.quantas
+  );
+  const conta = props.conta;
+  if (!conta?.fora) return marcadas;
+  const receber = conta.recebem
+    ? [
+        t(
+          'RELACIONAMENTOS.LISTA.MARCADAS.VAO_RECEBER',
+          { count: conta.recebem },
+          conta.recebem
+        ),
+      ]
+    : [];
+  return [marcadas, ...receber, ...motivosEmPalavras(t, conta)].join(' · ');
+});
 
 const itensDoMenu = computed(() => [
   {
@@ -62,9 +87,7 @@ const itensDoMenu = computed(() => [
       aria-live="polite"
       class="order-1 flex-1 m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:order-1 sm:me-1 sm:flex-none"
     >
-      {{
-        t('RELACIONAMENTOS.LISTA.MARCADAS.QUANTAS', { count: quantas }, quantas)
-      }}
+      {{ frase }}
     </p>
     <Button
       class="order-3 flex-1 min-h-11 min-w-0 whitespace-nowrap sm:order-2 sm:flex-none"

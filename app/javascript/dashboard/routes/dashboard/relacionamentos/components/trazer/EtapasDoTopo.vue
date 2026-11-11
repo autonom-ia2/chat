@@ -7,6 +7,8 @@ import { ETAPAS, ETAPAS_DO_TOPO } from '../../trazer/etapas';
 // navegação: a etapa de agora leva aria-current="step"; as feitas, um ✓.
 const props = defineProps({
   atual: { type: String, required: true },
+  // Enquanto ainda está trazendo, o passo 3 se chama "Trazendo".
+  trazendo: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -56,7 +58,13 @@ const itens = computed(() => {
         <span v-if="item.feita" class="i-lucide-check size-3.5" />
         <template v-else>{{ item.numero }}</template>
       </span>
-      <span>{{ t(NOMES[item.id]) }}</span>
+      <span>{{
+        t(
+          item.atual && trazendo && item.id === ETAPAS.PRONTO
+            ? 'RELACIONAMENTOS_TRAZER.ETAPAS.TRAZENDO'
+            : NOMES[item.id]
+        )
+      }}</span>
       <span v-if="item.feita" class="sr-only">
         {{ t('RELACIONAMENTOS_TRAZER.ETAPAS.FEITA') }}
       </span>

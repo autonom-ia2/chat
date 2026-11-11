@@ -19,15 +19,38 @@ const todasAsPaginas = async (fonte, pedido) => {
 
 describe('resumo', () => {
   it('conta total, clientes e quem sumiu há 1 a 3 meses', async () => {
-    expect(await cheia().resumo()).toEqual({
+    expect(await cheia().resumo()).toMatchObject({
       total: 280,
       clientes: 120,
       sumiu_1_a_3_meses: 42,
     });
   });
 
+  it('traz também as empresas: quantas e quantas estão sem conversa há 3 meses', async () => {
+    const { empresas } = await cheia().resumo();
+    const todas = await cheia().listarTodos({
+      aba: 'empresas',
+      grupo: 'todas',
+    });
+    const paradas = await cheia().listarTodos({
+      aba: 'empresas',
+      grupo: 'sem_conversa_3_meses',
+    });
+    expect(empresas).toEqual({
+      total: todas.total,
+      sem_conversa_3_meses: paradas.total,
+    });
+    expect(empresas.total).toBe(38);
+  });
+
+  it('o número da frase é o total do grupo para onde o botão leva', async () => {
+    const { sumiu_1_a_3_meses: sumiram } = await cheia().resumo();
+    const grupo = await cheia().listarTodos({ grupo: 'sumiu_1_a_3_meses' });
+    expect(sumiram).toBe(grupo.total);
+  });
+
   it('zera tudo na conta vazia', async () => {
-    expect(await vazia().resumo()).toEqual({
+    expect(await vazia().resumo()).toMatchObject({
       total: 0,
       clientes: 0,
       sumiu_1_a_3_meses: 0,
@@ -482,5 +505,23 @@ describe('opcoesDeFiltro', () => {
     await expect(
       listaFonte({ demo: null }).listarTodos({})
     ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
+  });
+});
+
+describe('?demo=carregando', () => {
+  it('a fonte nunca responde, em nenhum método', async () => {
+    vi.useFakeTimers();
+    const fonte = listaFonte({ demo: 'carregando', atraso: 0 });
+    let respondeu = 0;
+    ['resumo', 'contagens', 'listar', 'listarTodos', 'opcoesDeFiltro'].forEach(
+      metodo => {
+        fonte[metodo]('pessoas').then(() => {
+          respondeu += 1;
+        });
+      }
+    );
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(respondeu).toBe(0);
+    vi.useRealTimers();
   });
 });

@@ -9,6 +9,8 @@ import SecaoArquivos from '../../components/ficha/SecaoArquivos.vue';
 import GavetaDoCard from '../../components/ficha/GavetaDoCard.vue';
 import GavetaDeInformacoes from '../../components/ficha/GavetaDeInformacoes.vue';
 import ListaDeInformacoes from '../../components/ficha/ListaDeInformacoes.vue';
+import DialogoDaFicha from '../../components/ficha/DialogoDaFicha.vue';
+import DialogoMandarMensagem from '../../components/ficha/DialogoMandarMensagem.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import BotaoCopiar from '../../components/ficha/BotaoCopiar.vue';
 import CampoDeTexto from '../../components/ficha/CampoDeTexto.vue';
@@ -33,7 +35,7 @@ const stubs = {
   TeleportWithDirection: { template: '<div><slot /></div>' },
   Dialog: {
     template:
-      '<div data-dialog><button data-confirmar @click="$emit(\'confirm\')" /></div>',
+      '<div data-dialog><slot /><slot name="footer" /><button data-confirmar @click="$emit(\'confirm\')" /></div>',
     methods: { open() {}, close() {} },
   },
 };
@@ -193,6 +195,103 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
   });
 });
 
+describe('CabecalhoDaPessoa: quem pediu silêncio', () => {
+  const conversar = w =>
+    w
+      .findAllComponents(Button)
+      .find(b => b.vm.$attrs['data-relacionamentos'] === 'conversar');
+
+  it('Conversar é cheio para quem recebe e discreto para quem pediu silêncio', () => {
+    const normal = mount(CabecalhoDaPessoa, {
+      props: { pessoa: pessoa() },
+      global: { stubs },
+    });
+    expect(conversar(normal).props()).toMatchObject({
+      variant: 'solid',
+      color: 'blue',
+    });
+    const calada = mount(CabecalhoDaPessoa, {
+      props: { pessoa: pessoa({ opted_out_at: SEGUNDOS }) },
+      global: { stubs },
+    });
+    expect(conversar(calada).props()).toMatchObject({
+      variant: 'faded',
+      color: 'slate',
+    });
+  });
+});
+
+describe('ficha da empresa: ações', () => {
+  const empresa = { id: 1, name: 'Padaria Dornelaz', cnpj: '11222333000181' };
+  const quemPodeReceber = pessoa({ id: 1 });
+  const quemPediuSilencio = pessoa({ id: 2, opted_out_at: SEGUNDOS });
+
+  it('o cabeçalho tem Mandar mensagem (cheio) e Alterar (discreto)', async () => {
+    const w = mount(CabecalhoDaEmpresa, { props: { empresa } });
+    const botoes = w.findAllComponents(Button);
+    const mandar = botoes.find(
+      b => b.vm.$attrs['data-relacionamentos'] === 'mandar-mensagem'
+    );
+    const alterar = botoes.find(
+      b => b.vm.$attrs['data-relacionamentos'] === 'alterar-empresa'
+    );
+    expect(mandar.props('variant')).toBeNull();
+    expect(alterar.vm.$attrs).toMatchObject({ slate: '', faded: '' });
+    await w.get('[data-relacionamentos="mandar-mensagem"]').trigger('click');
+    await w.get('[data-relacionamentos="alterar-empresa"]').trigger('click');
+    expect(w.emitted('mandarMensagem')).toHaveLength(1);
+    expect(w.emitted('alterar')).toHaveLength(1);
+  });
+
+  it('ninguém pode receber: botão desligado e o motivo embaixo', () => {
+    const w = mount(CabecalhoDaEmpresa, {
+      props: { empresa, podeMandar: false, motivoSemEnvio: 'Ninguém recebe.' },
+    });
+    expect(
+      w.get('[data-relacionamentos="mandar-mensagem"]').attributes('disabled')
+    ).toBeDefined();
+    expect(w.get('[data-relacionamentos="motivo-sem-envio"]').text()).toBe(
+      'Ninguém recebe.'
+    );
+  });
+
+  it('o diálogo diz quem recebe e quem fica de fora, e continuar emite', async () => {
+    const w = mount(DialogoMandarMensagem, {
+      props: { empresa, pessoas: [quemPodeReceber, quemPediuSilencio] },
+      global: { stubs },
+    });
+    const texto = w.get('[data-relacionamentos="quem-recebe"]').text();
+    expect(texto).toContain('MENSAGEM.RECEBEM');
+    expect(texto).toContain('"n":1');
+    expect(texto).toContain('MENSAGEM.FORA');
+    expect(texto).toContain('MENSAGEM.PROXIMO');
+    await w.get('[data-confirmar]').trigger('click');
+    expect(w.emitted('continuar')).toHaveLength(1);
+  });
+
+  it('sem ninguém de fora não fala em quem fica de fora', () => {
+    const w = mount(DialogoMandarMensagem, {
+      props: { empresa, pessoas: [quemPodeReceber] },
+      global: { stubs },
+    });
+    expect(w.find('[data-relacionamentos="quem-fica-de-fora"]').exists()).toBe(
+      false
+    );
+  });
+
+  it('cada pessoa da lista tem o botão de conversar, com nome para o leitor de tela', async () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [quemPodeReceber] },
+    });
+    const botao = w.get('[data-relacionamentos="conversar-com-pessoa"]');
+    expect(botao.attributes('aria-label')).toContain('CONVERSAR_COM');
+    expect(botao.classes()).toContain('size-11');
+    await botao.trigger('click');
+    expect(w.emitted('conversar')[0][0]).toMatchObject({ id: 1 });
+    expect(w.emitted('abrir')).toBeUndefined();
+  });
+});
+
 describe('CabecalhoDaPessoa: terceira rodada', () => {
   const montar = props =>
     mount(CabecalhoDaPessoa, { props, global: { stubs } });
@@ -295,6 +394,67 @@ describe('FaixaNaoQuer', () => {
     expect(w.emitted('liberar')).toHaveLength(1);
   });
 
+  it('diz o que a recusa significa, em frase de apoio', () => {
+    expect(
+      montar('manual').get('[data-relacionamentos="faixa-apoio"]').text()
+    ).toContain('FAIXA.APOIO');
+  });
+
+  it('Liberar tem contraste próprio e 44 px', () => {
+    const botao = montar('manual').get('[data-relacionamentos="liberar"]');
+    expect(botao.classes()).toEqual(
+      expect.arrayContaining(['min-h-11', 'bg-n-solid-1', 'ring-1'])
+    );
+  });
+
+  it('um clique em Liberar NUNCA libera sem passar pelo diálogo', async () => {
+    const abrir = vi.fn();
+    const w = mount(FaixaNaoQuer, {
+      props: {
+        pessoa: pessoa({
+          opted_out_at: Date.UTC(2026, 8, 12, 12) / 1000,
+          opt_out_source: 'manual',
+        }),
+        agora: AGORA,
+      },
+      global: {
+        stubs: {
+          ...stubs,
+          Dialog: {
+            template:
+              '<div data-dialog><slot /><slot name="footer" /><button data-confirmar @click="$emit(\'confirm\')" /></div>',
+            methods: { open: abrir, close() {} },
+          },
+        },
+      },
+    });
+    await w.get('[data-relacionamentos="liberar"]').trigger('click');
+    await w.get('[data-relacionamentos="liberar"]').trigger('click');
+    expect(abrir).toHaveBeenCalledTimes(2);
+    expect(w.emitted('liberar')).toBeUndefined();
+    expect(
+      w.get('[data-relacionamentos="liberar-confirmar"]').attributes('type')
+    ).toBe('submit');
+    await w.get('[data-confirmar]').trigger('click');
+    expect(w.emitted('liberar')).toHaveLength(1);
+  });
+
+  it('o diálogo pergunta se a própria pessoa pediu', () => {
+    const w = montar('manual');
+    const dialogo = w.findComponent(DialogoDaFicha);
+    expect(dialogo.props('titulo')).toContain('CONFIRMA_TITULO');
+    expect(dialogo.props('texto')).toContain('CONFIRMA_TEXTO');
+    expect(
+      w.get('[data-relacionamentos="liberar-confirmar"]').text()
+    ).toContain('CONFIRMA_BOTAO');
+  });
+
+  it('origem que a casa não conhece: só a primeira frase', () => {
+    const texto = montar('origem_nova').text();
+    expect(texto).toContain('FAIXA.TEXTO_SIMPLES');
+    expect(texto).not.toContain('FAIXA.ORIGEM');
+  });
+
   it('é aviso fixo: não nasce como região viva', () => {
     expect(montar('manual').find('[role="status"], [aria-live]').exists()).toBe(
       false
@@ -303,7 +463,9 @@ describe('FaixaNaoQuer', () => {
 
   it('não tem Liberar nas outras origens', () => {
     expect(
-      montar('email_unsubscribe').find('button:not([data-confirmar])').exists()
+      montar('email_unsubscribe')
+        .find('[data-relacionamentos="liberar"]')
+        .exists()
     ).toBe(false);
   });
 });
@@ -332,18 +494,15 @@ describe('SecaoConversas', () => {
     expect(w.emitted('verTodas')).toHaveLength(1);
   });
 
-  it('vazio dentro da seção: sem cartão interno e com botão discreto', () => {
+  it('vazio dentro da seção: só a frase, sem cartão interno nem botão', () => {
     const w = mount(SecaoConversas, { props: { conversas: [] } });
     const vazio = w.get('[data-vazio]');
     expect(vazio.classes()).not.toContain('border');
     expect(vazio.classes()).not.toContain('text-center');
-    expect(vazio.findComponent(Button).vm.$attrs).toMatchObject({
-      slate: '',
-      faded: '',
-    });
+    expect(vazio.find('button').exists()).toBe(false);
     const cards = mount(SecaoCards, { props: { cards: [] } });
     expect(cards.get('[data-vazio]').classes()).not.toContain('border');
-    expect(cards.findComponent(Button).vm.$attrs.faded).toBe('');
+    expect(cards.find('[data-vazio] button').exists()).toBe(false);
   });
 
   it('no celular o trecho tem 2 linhas e a situação desce para junto do tempo', () => {
@@ -356,11 +515,10 @@ describe('SecaoConversas', () => {
     expect(tempo.text()).toContain('SITUACAO.aberta');
   });
 
-  it('vazio: uma frase e Conversar', async () => {
+  it('vazio: só a frase (a ação já está no cabeçalho)', () => {
     const w = mount(SecaoConversas, { props: { conversas: [] } });
     expect(w.get('[data-vazio]').text()).toContain('CONVERSAS.VAZIO');
-    await w.get('[data-vazio] button').trigger('click');
-    expect(w.emitted('conversar')).toHaveLength(1);
+    expect(w.find('button').exists()).toBe(false);
     expect(w.text()).not.toContain('VER_TODAS');
   });
 
@@ -389,11 +547,10 @@ describe('SecaoCards', () => {
     expect(w.emitted('abrir')[0][0]).toMatchObject({ id: 2 });
   });
 
-  it('vazio: uma frase e Novo card', async () => {
+  it('vazio: só a frase', () => {
     const w = mount(SecaoCards, { props: { cards: [] } });
     expect(w.get('[data-vazio]').text()).toContain('CARDS.VAZIO');
-    await w.get('[data-vazio] button').trigger('click');
-    expect(w.emitted('novoCard')).toHaveLength(1);
+    expect(w.find('button').exists()).toBe(false);
   });
 });
 
@@ -587,6 +744,19 @@ describe('ListaDeInformacoes e De onde veio', () => {
       false
     );
     expect(w.get('[data-informacao="instagram"]').text()).toContain('@ana');
+  });
+
+  it('sem nada preenchido mostra a frase de vazio, não uma lista de "Não informado"', () => {
+    const w = mount(ListaDeInformacoes, {
+      props: {
+        linhas: [
+          { chave: 'cpf', valor: '' },
+          { chave: 'cidade', valor: '' },
+        ],
+      },
+    });
+    expect(w.get('[data-vazio]').text()).toContain('INFORMACOES.VAZIO');
+    expect(w.find('[data-informacao]').exists()).toBe(false);
   });
 
   it('diz a lista e a data, ou o canal e a data', () => {

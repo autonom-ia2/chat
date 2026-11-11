@@ -46,7 +46,7 @@
               "clicar": "[data-relacionamentos=\"marcar\"] >> nth=1"
             },
             {
-              "clicar": "[data-relacionamentos=\"marcar\"] >> nth=2"
+              "clicar": "[data-relacionamentos=\"marcar\"] >> nth=3"
             },
             {
               "esperar": "[data-relacionamentos=\"barra\"]"
@@ -96,6 +96,18 @@
           "url": "/app/accounts/{conta}/relationships?demo=vazio",
           "esperar": "[data-relacionamentos=\"vazio\"]",
           "pausa": 2000
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relationships?demo=carregando",
+          "esperar": "[data-relacionamentos=\"carregando\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relationships?demo=desligado",
+          "esperar": "[data-relacionamentos=\"erro\"]",
+          "pausa": 800
         }
       ]
     },
@@ -139,6 +151,18 @@
           "pausa": 2000
         },
         {
+          "nome": "liberar",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"liberar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"liberar-confirmar\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
           "nome": "nunca-conversou",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/39?demo=cheio",
           "esperar": "[data-relacionamentos=\"ficha-pessoa\"]",
@@ -149,6 +173,18 @@
           "url": "/app/accounts/{conta}/relacionamentos/empresas/2?demo=cheio",
           "esperar": "[data-relacionamentos=\"ficha-empresa\"]",
           "pausa": 2000
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=carregando",
+          "esperar": "[data-relacionamentos=\"carregando\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "erro",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=desligado",
+          "esperar": "[data-relacionamentos=\"erro\"]",
+          "pausa": 800
         }
       ]
     },
@@ -170,9 +206,6 @@
             },
             {
               "esperar": "[data-relacionamentos=\"pergunta\"][data-pergunta=\"clientes\"]"
-            },
-            {
-              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"sim_todas\"]"
             }
           ],
           "pausa": 800
@@ -181,13 +214,13 @@
           "nome": "pergunta-telefone",
           "passos": [
             {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"sim_todas\"]"
+            },
+            {
               "clicar": "[data-relacionamentos=\"continuar\"]"
             },
             {
               "esperar": "[data-relacionamentos=\"pergunta\"][data-pergunta=\"telefone\"]"
-            },
-            {
-              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"da_pessoa\"]"
             }
           ],
           "pausa": 800
@@ -195,6 +228,9 @@
         {
           "nome": "conferir",
           "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"da_pessoa\"]"
+            },
             {
               "clicar": "[data-relacionamentos=\"continuar\"]"
             },
@@ -212,6 +248,15 @@
             },
             {
               "tecla": "PageDown"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "o-que-vou-guardar-fechado",
+          "passos": [
+            {
+              "tecla": "End"
             }
           ],
           "pausa": 800
@@ -263,6 +308,36 @@
             }
           ],
           "pausa": 1000
+        },
+        {
+          "nome": "erro-nao-e-planilha",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=nao_e_planilha",
+          "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "erro-planilha-vazia",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=vazia",
+          "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "erro-sem-contato",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=sem_contato",
+          "esperar": "[data-relacionamentos=\"erro-da-planilha\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "lendo-planilha",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio&planilha=lendo",
+          "esperar": "[data-relacionamentos=\"lendo-planilha\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "carregando",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=carregando",
+          "esperar": "[data-relacionamentos=\"carregando\"]",
+          "pausa": 800
         }
       ]
     }

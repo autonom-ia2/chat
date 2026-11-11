@@ -1,6 +1,7 @@
 <script setup>
 // #2894 — o herói escuro das telas de Relacionamentos: uma frase, uma ação
-// principal e, se couber, uma ação discreta no canto. Mesmo desenho do herói de
+// principal (com uma linha de apoio opcional entre as duas) e, se couber, uma
+// ação discreta no canto. Mesmo desenho do herói de
 // Automações e do Resumo de hoje (token bg-n-heroi).
 </script>
 
@@ -26,6 +27,13 @@
         class="m-0 text-3xl font-bold leading-tight tracking-tight text-white md:text-4xl"
       >
         <slot name="frase" />
+      </p>
+      <p
+        v-if="$slots.apoio"
+        data-heroi-apoio
+        class="m-0 -mt-3 text-base text-white/80 md:text-lg"
+      >
+        <slot name="apoio" />
       </p>
       <div v-if="$slots.acao" data-heroi-acao class="flex flex-wrap gap-3">
         <slot name="acao" />

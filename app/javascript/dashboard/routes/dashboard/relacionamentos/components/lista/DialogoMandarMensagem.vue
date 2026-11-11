@@ -2,6 +2,9 @@
 import { computed, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
+import { nomesQueRecebem } from '../../lista/nomesQueRecebem';
+import { motivosEmPalavras } from '../../lista/motivosEmPalavras';
 import { contaDaMensagem } from '../../lista/quemFicaDeFora';
 
 // #2894 — "12 pessoas vão receber. 2 ficam de fora: 1 pediu para não receber,
@@ -13,35 +16,40 @@ const props = defineProps({
 });
 const emit = defineEmits(['continuar']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const dialogo = useTemplateRef('dialogo');
 
 const conta = computed(() => contaDaMensagem(props.pessoas));
 
-const motivos = computed(() => {
-  const { naoQuer, semTelefone } = conta.value;
-  return [
-    [naoQuer, 'MOTIVO_NAO_QUER'],
-    [semTelefone, 'MOTIVO_SEM_TELEFONE'],
-  ]
-    .filter(([quantos]) => quantos > 0)
-    .map(([count, chave]) =>
-      t(`RELACIONAMENTOS.LISTA.MENSAGEM.${chave}`, { count }, count)
-    );
-});
+// "Vânia, Nádia e mais 40": o idioma da tela (pt_BR -> pt-BR) escolhe o "e".
+const quemRecebe = computed(() =>
+  nomesQueRecebem(props.pessoas, {
+    idioma: locale.value.replace('_', '-'),
+    eMais: count =>
+      t('RELACIONAMENTOS.LISTA.MENSAGEM.E_MAIS', { count }, count),
+  })
+);
 
 const frases = computed(() => {
   const { recebem, fora } = conta.value;
-  const base = recebem
-    ? t('RELACIONAMENTOS.LISTA.MENSAGEM.RECEBEM', { count: recebem }, recebem)
-    : t('RELACIONAMENTOS.LISTA.MENSAGEM.NINGUEM_RECEBE');
-  if (!fora) return [base];
-  const deFora = t(
-    'RELACIONAMENTOS.LISTA.MENSAGEM.FORA',
-    { count: fora, motivos: motivos.value.join(', ') },
-    fora
+  if (recebem === 0) {
+    return [
+      t('RELACIONAMENTOS.LISTA.MENSAGEM.NINGUEM_PODE', {
+        motivos: motivosEmPalavras(t, conta.value).join(', '),
+      }),
+    ];
+  }
+  const base = t(
+    'RELACIONAMENTOS.LISTA.MENSAGEM.QUEM_RECEBE',
+    { quem: quemRecebe.value },
+    recebem
   );
-  return [base, deFora];
+  if (!fora) return [base];
+  const motivos = motivosEmPalavras(t, conta.value, 'MOTIVO').join(', ');
+  return [
+    base,
+    t('RELACIONAMENTOS.LISTA.MENSAGEM.FORA', { count: fora, motivos }, fora),
+  ];
 });
 
 // Sem ninguém de fora e com quem receba: só falta dizer o que vem depois.
@@ -62,12 +70,12 @@ defineExpose({ abrir: () => dialogo.value?.open() });
     ref="dialogo"
     type="edit"
     width="md"
-    :title="t('RELACIONAMENTOS.LISTA.MENSAGEM.TITULO')"
     :confirm-button-label="t('RELACIONAMENTOS.COMUM.CONTINUAR')"
     :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
     :disable-confirm-button="conta.recebem === 0"
     @confirm="continuar"
   >
+    <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.MENSAGEM.TITULO')" />
     <div class="flex flex-col gap-2">
       <p
         data-relacionamentos="dialogo-mensagem"
