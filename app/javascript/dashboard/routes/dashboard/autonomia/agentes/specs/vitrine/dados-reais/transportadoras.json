@@ -1,0 +1,153 @@
+{
+  "registro": {
+    "provedor": "antt",
+    "dados": {
+      "total": 1,
+      "registros": [
+        {
+          "rntrc": "000000001",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 1 LTDA",
+          "cnpj": "11222333000181",
+          "municipio": "DUQUE DE CAXIAS",
+          "uf": "RJ",
+          "cadastrado_em": "2004-06-16",
+          "situacao_desde": "2024-03-11",
+          "equiparado": true
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  },
+  "registro_pelo_nome": {
+    "provedor": "antt",
+    "dados": {
+      "total": 156,
+      "mostrando": 10,
+      "registros": [
+        {
+          "rntrc": "000000001",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 1 LTDA",
+          "cnpj": "11222333000181",
+          "municipio": "NOVA IGUAÇU",
+          "uf": "RJ",
+          "cadastrado_em": "2024-05-09",
+          "situacao_desde": "2024-05-09",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000002",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 2 LTDA",
+          "cnpj": "11444777000161",
+          "municipio": "RIO DE JANEIRO",
+          "uf": "RJ",
+          "cadastrado_em": "2008-03-06",
+          "situacao_desde": "2025-08-01",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000003",
+          "situacao": "pendente",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 3 LTDA",
+          "cnpj": "33444555000181",
+          "municipio": "JUNDIAÍ",
+          "uf": "SP",
+          "cadastrado_em": "2012-06-29",
+          "situacao_desde": "2026-08-11",
+          "equiparado": false
+        },
+        {
+          "rntrc": "000000004",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 4 LTDA",
+          "cnpj": "11222333000181",
+          "municipio": "JUNDIAÍ",
+          "uf": "SP",
+          "cadastrado_em": "2011-01-22",
+          "situacao_desde": "2026-02-10",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000005",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 5 LTDA",
+          "cnpj": "11444777000161",
+          "municipio": "CAJAMAR",
+          "uf": "SP",
+          "cadastrado_em": "2004-08-30",
+          "situacao_desde": "2026-10-09",
+          "equiparado": false
+        },
+        {
+          "rntrc": "000000006",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 6 LTDA",
+          "cnpj": "33444555000181",
+          "municipio": "GOIÂNIA",
+          "uf": "GO",
+          "cadastrado_em": "2013-12-06",
+          "situacao_desde": "2026-08-18",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000007",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 7 LTDA",
+          "cnpj": "11222333000181",
+          "municipio": "BIGUAÇU",
+          "uf": "SC",
+          "cadastrado_em": "2019-03-15",
+          "situacao_desde": "2025-07-25",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000008",
+          "situacao": "pendente",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 8 LTDA",
+          "cnpj": "11444777000161",
+          "municipio": "SÃO BERNARDO DO CAMPO",
+          "uf": "SP",
+          "cadastrado_em": "2010-04-08",
+          "situacao_desde": "2026-07-22",
+          "equiparado": false
+        },
+        {
+          "rntrc": "000000009",
+          "situacao": "ativo",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 9 LTDA",
+          "cnpj": "33444555000181",
+          "municipio": "CAMPINAS",
+          "uf": "SP",
+          "cadastrado_em": "2013-06-19",
+          "situacao_desde": "2026-02-20",
+          "equiparado": true
+        },
+        {
+          "rntrc": "000000010",
+          "situacao": "pendente",
+          "categoria": "empresa",
+          "nome": "TRANSPORTADORA EXEMPLO 10 LTDA",
+          "cnpj": "11222333000181",
+          "municipio": "RIO DE JANEIRO",
+          "uf": "RJ",
+          "cadastrado_em": "2023-06-14",
+          "situacao_desde": "2023-06-14",
+          "equiparado": false
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}

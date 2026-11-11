@@ -22,8 +22,10 @@ module Autonomia::FerramentasProntas::Bases
 
   module_function
 
+  # A ordem da rodada: as diárias pequenas primeiro (os focos de queimada, que envelhecem em 1 dia; planos de saúde;
+  # aeronaves), depois as mensais grandes.
   def importadores
-    [PlanosDeSaude, Aeronaves, GeracaoSolar, Transportadoras, Queimadas]
+    [Queimadas, PlanosDeSaude, Aeronaves, GeracaoSolar, Transportadoras]
   end
 
   def buscar(chave)

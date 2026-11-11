@@ -1155,6 +1155,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.string "rntrc", null: false
     t.string "cnpj"
     t.string "nome"
+    t.string "nome_busca"
     t.string "categoria", null: false
     t.string "situacao", null: false
     t.string "municipio"
@@ -1164,6 +1165,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.boolean "equiparado"
     t.index ["geracao", "cnpj"], name: "idx_prontas_transportadores_cnpj", where: "(cnpj IS NOT NULL)"
     t.index ["geracao", "rntrc"], name: "idx_prontas_transportadores_rntrc"
+    t.index ["nome_busca"], name: "idx_prontas_transportadores_nome", opclass: :gin_trgm_ops, where: "(nome_busca IS NOT NULL)", using: :gin
   end
 
   create_table "autonomia_prospecting_company_profiles", force: :cascade do |t|

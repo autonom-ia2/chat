@@ -87,6 +87,7 @@ class CreateFerramentasProntasBases < ActiveRecord::Migration[7.2]
       t.string :rntrc, null: false
       t.string :cnpj
       t.string :nome
+      t.string :nome_busca
       t.string :categoria, null: false
       t.string :situacao, null: false
       t.string :municipio
@@ -97,6 +98,9 @@ class CreateFerramentasProntasBases < ActiveRecord::Migration[7.2]
     end
     add_index :autonomia_prontas_transportadores, %i[geracao rntrc], name: 'idx_prontas_transportadores_rntrc'
     add_index :autonomia_prontas_transportadores, %i[geracao cnpj], name: 'idx_prontas_transportadores_cnpj', where: 'cnpj IS NOT NULL'
+    # A busca pelo nome, pelo começo das palavras (`nome_busca` começa com espaço: LIKE '% palavra%'), no índice de trigramas.
+    add_index :autonomia_prontas_transportadores, :nome_busca,
+              name: 'idx_prontas_transportadores_nome', using: :gin, opclass: :gin_trgm_ops, where: 'nome_busca IS NOT NULL'
   end
 
   def criar_focos

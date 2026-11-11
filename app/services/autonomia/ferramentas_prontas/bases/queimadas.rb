@@ -12,6 +12,8 @@ class Autonomia::FerramentasProntas::Bases::Queimadas < Autonomia::FerramentasPr
   MINIMO = 100
   # Queimada varia de verdade (a chuva apaga, a seca acende): a janela nova pode vir bem menor que a anterior.
   FRACAO_MINIMA = nil
+  # A base envelhece em 1 dia (a ferramenta passa a dizer "não consegui"): falhou, tenta de novo no mesmo dia.
+  NOVA_TENTATIVA_NO_DIA = true
   DIAS = 8
   PASTA = 'https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil'.freeze
   MAX_BYTES = 30.megabytes

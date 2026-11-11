@@ -1,0 +1,51 @@
+{
+  "aeronave": {
+    "provedor": "rab",
+    "dados": {
+      "total": 1,
+      "aeronaves": [
+        {
+          "matricula": "PPAAD",
+          "fabricante": "CESSNA AIRCRAFT",
+          "modelo": "680",
+          "tipo_icao": "C680",
+          "ano_de_fabricacao": "2009",
+          "numero_de_serie": "680-0260",
+          "categoria": "TRANSPORTE",
+          "operacao": "PRIVADO",
+          "motor": "MOTOR JATO/TURBOFAN",
+          "assentos": "11",
+          "passageiros_no_maximo": "9",
+          "peso_maximo_de_decolagem_kg": "13744",
+          "situacao": "registrada",
+          "certificado_de_aeronavegabilidade_valido_ate": "2029-10-30",
+          "gravames": [
+            "INTERCÂMBIO OPERACIONAL"
+          ],
+          "proprietarios_empresas": [
+            {
+              "uf": "SP",
+              "cnpj": "11222333000181",
+              "nome": "AVIACAO EXEMPLO 1 LTDA"
+            }
+          ],
+          "outros_proprietarios": 0,
+          "operadores_empresas": [
+            {
+              "uf": "SP",
+              "cnpj": "11222333000181",
+              "nome": "AVIACAO EXEMPLO 1 LTDA"
+            },
+            {
+              "uf": "SP",
+              "cnpj": "11444777000161",
+              "nome": "AVIACAO EXEMPLO 2 LTDA"
+            }
+          ],
+          "outros_operadores": 0
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}

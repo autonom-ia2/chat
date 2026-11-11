@@ -66,7 +66,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida['dados']).to include('total' => 1, 'atualizado_em' => '2026-11-11')
       expect(saida['dados']['operadoras']).to eq([{ 'razao_social' => 'SAÚDE EXEMPLO 1 LTDA', 'nome_fantasia' => 'PLANO EXEMPLO 1',
                                                     'registro_ans' => '300001', 'cnpj' => '11222333000181', 'situacao' => 'ativa',
-                                                    'modalidade' => 'Medicina de Grupo', 'cidade' => 'Campinas', 'uf' => 'SP',
+                                                    'tipo_de_operadora' => 'Medicina de Grupo', 'cidade' => 'Campinas', 'uf' => 'SP',
                                                     'registrada_em' => '2015-05-19' }])
     end
 
@@ -101,6 +101,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                                   'certificado_de_aeronavegabilidade_valido_ate' => '2027-11-03', 'outros_operadores' => 1)
       expect(aeronave['proprietarios_empresas'].sole).to include('nome' => 'AVIACAO EXEMPLO S.A')
       expect(saida.to_json).not_to include('FULANO', FerramentasProntasBasesHelper::CPF_PESSOA)
+      expect(aeronave.keys.first(6)).to eq(%w[matricula fabricante modelo tipo_icao ano_de_fabricacao numero_de_serie])
+      expect(aeronave.keys.last(3)).to eq(%w[proprietarios_empresas outros_proprietarios outros_operadores])
     end
 
     it 'a de pessoa física responde a aeronave, sem dono nenhum' do
@@ -127,14 +129,27 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       saida = executar_pronta(ferramenta, 'consulta' => 'cep', 'cep' => '78890-000')
 
       expect(saida['dados']).to include('cep' => '78890000', 'sistemas' => 3, 'potencia_kw' => 85.0,
-                                        'por_tipo' => { 'solar' => 3 }, 'por_classe' => { 'Residencial' => 2, 'Rural' => 1 },
+                                        'por_tipo' => [{ 'nome' => 'solar', 'sistemas' => 3, 'potencia_kw' => 85.0 }],
+                                        'por_classe' => [{ 'nome' => 'Residencial', 'sistemas' => 2, 'potencia_kw' => 10.0 },
+                                                         { 'nome' => 'Rural', 'sistemas' => 1, 'potencia_kw' => 75.0 }],
                                         'atualizado_em' => '2026-11-11')
     end
 
     it 'na cidade inteira, pelo nome e UF (Sorriso, MT)' do
       saida = executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'sorriso', 'uf' => 'MT')
 
-      expect(saida['dados']).to include('cidade' => 'Sorriso', 'uf' => 'MT', 'sistemas' => 4, 'por_tipo' => { 'solar' => 3, 'eólica' => 1 })
+      expect(saida['dados']).to include('cidade' => 'Sorriso', 'uf' => 'MT', 'sistemas' => 4)
+      expect(saida['dados']['por_tipo'].pluck('nome', 'sistemas')).to eq([['solar', 3], ['eólica', 1]])
+    end
+
+    it 'cidade sem UF: o Municipios resolve (cidade única) e a consulta vai; sem resolver, pede a UF, sem dizer "não tem"' do
+      sorriso = Autonomia::FerramentasProntas::Municipios.buscar('MT', 'Sorriso')
+      allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).and_call_original
+      allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).with(nil, 'sorriso').and_return(sorriso)
+
+      expect(executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'sorriso')['dados']).to include('cidade' => 'Sorriso', 'sistemas' => 4)
+      expect(executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'Bom Jesus'))
+        .to include('situacao' => 'pedido_invalido', 'campo' => 'uf')
     end
 
     it 'CEP sem nenhum sistema: não encontrado' do
@@ -168,6 +183,19 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida.to_json).not_to include('FULANO')
     end
 
+    it '"A transportadora Exemplo tem RNTRC?": pelo nome, sem acento e sem caixa, pelo começo das palavras; mais de uma, a lista' do
+      uma = executar_pronta(ferramenta, 'nome' => 'transportes exemplo')
+      duas = executar_pronta(ferramenta, 'nome' => 'EXEMPLÔ')
+
+      expect(uma['dados']).to include('total' => 1)
+      expect(uma['dados']['registros'].sole).to include('rntrc' => '050085788', 'nome' => 'TRANSPORTES EXEMPLO LTDA', 'situacao' => 'ativo')
+      expect(duas['dados']).to include('total' => 2)
+      expect(duas['dados']['registros'].pluck('nome')).to contain_exactly('TRANSPORTES EXEMPLO LTDA', 'COOPERATIVA EXEMPLO')
+      expect(executar_pronta(ferramenta, 'nome' => 'xemplo')['situacao']).to eq('nao_encontrado')
+      expect(executar_pronta(ferramenta, 'nome' => 'fulano')['situacao']).to eq('nao_encontrado')
+      expect(executar_pronta(ferramenta, {})).to include('situacao' => 'pedido_invalido')
+    end
+
     it 'sem registro na base: não encontrado (a ANTT só publica ativos e pendentes)' do
       expect(executar_pronta(ferramenta, 'rntrc' => '000000001')['situacao']).to eq('nao_encontrado')
       expect(executar_pronta(ferramenta, 'rntrc' => '12345678901')).to include('situacao' => 'pedido_invalido')
@@ -190,22 +218,37 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it '"Queimada em Sorriso ontem?": os do município, por dia, no fuso da conta' do
       saida = executar_pronta(ferramenta, 'cidade' => 'Sorriso', 'uf' => 'MT', 'dias' => 1)
 
-      expect(saida['dados']).to include('onde' => 'Sorriso (MT)', 'desde' => '2026-11-10', 'total' => 4,
-                                        'por_dia' => { '2026-11-11' => 2, '2026-11-10' => 2 })
-      expect(saida['dados']['mais_recentes'].first).to include('quando' => '2026-11-11 11:00', 'bioma' => 'Amazônia')
+      expect(saida['dados']).to include('onde' => 'Sorriso (MT)', 'desde' => '2026-11-10', 'focos_no_periodo' => 4,
+                                        'por_dia' => [{ 'data' => '2026-11-11', 'focos' => 2 }, { 'data' => '2026-11-10', 'focos' => 2 }])
+      expect(saida['dados']['mais_recentes'].first).to include('data' => '2026-11-11 11:00', 'bioma' => 'Amazônia')
     end
 
     it 'num raio em volta da sede, com a distância; o foco mais longe que o raio fica de fora' do
       saida = executar_pronta(ferramenta, 'cidade' => 'Sorriso', 'uf' => 'MT', 'raio_km' => 20, 'dias' => 7)
 
-      expect(saida['dados']).to include('onde' => 'até 20 km de Sorriso (MT)', 'total' => 8)
+      expect(saida['dados']).to include('onde' => 'até 20 km de Sorriso (MT)', 'focos_no_periodo' => 8)
       expect(saida['dados']['mais_recentes'].first['distancia_km']).to be < 20
     end
 
     it 'pela localização que o cliente mandou, 10 km por padrão' do
       saida = executar_pronta(ferramenta, 'latitude' => -3.1, 'longitude' => -60.0)
 
-      expect(saida['dados']).to include('onde' => 'até 10 km de a localização informada', 'total' => 2)
+      expect(saida['dados']).to include('onde' => 'até 10 km de a localização informada', 'focos_no_periodo' => 2)
+    end
+
+    it 'cidade sem UF: o Municipios resolve (cidade única) e a consulta vai; sem resolver, pede a UF' do
+      sorriso = Autonomia::FerramentasProntas::Municipios.buscar('MT', 'Sorriso')
+      allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).and_call_original
+      allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).with(nil, 'Sorriso').and_return(sorriso)
+
+      expect(executar_pronta(ferramenta, 'cidade' => 'Sorriso', 'dias' => 1)['dados']).to include('onde' => 'Sorriso (MT)', 'focos_no_periodo' => 4)
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('situacao' => 'pedido_invalido', 'campo' => 'uf')
+    end
+
+    it 'a descrição não exige a UF (pede só quando há outra cidade com o mesmo nome)' do
+      textos = [Autonomia::FerramentasProntas::Fontes::Queimadas::FONTE, Autonomia::FerramentasProntas::Fontes::GeracaoSolar::FONTE]
+               .flat_map { |fonte| fonte.consultas.map(&:descricao) }
+      expect(textos.join).not_to include('cidade e uf')
     end
 
     it 'sem cidade nem localização: pedido inválido' do
@@ -216,7 +259,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       saida = executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'SP')
 
       expect(saida['situacao']).to eq('encontrado')
-      expect(saida['dados']).to include('onde' => 'Campinas (SP)', 'total' => 0, 'atualizado_em' => '2026-11-11', 'mais_recentes' => [])
+      expect(saida['dados']).to include('onde' => 'Campinas (SP)', 'focos_no_periodo' => 0, 'atualizado_em' => '2026-11-11', 'mais_recentes' => [])
     end
 
     it 'base de focos com mais de 1 dia: "não consegui", nunca "nenhum foco"' do
@@ -230,7 +273,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   end
 
   describe 'a busca responde em até 1 s com a base no tamanho real' do
+    # Montar a base no tamanho real (com o índice de trigramas do nome) passa do teto de 14 s da busca: só aqui, sem teto.
     def gerar(sql)
+      ActiveRecord::Base.connection.execute('SET LOCAL statement_timeout = 0')
       ActiveRecord::Base.connection.execute(sql)
     end
 
@@ -245,8 +290,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         bases::Estado.create!(base: base, geracao_ativa: 1, atualizado_em: Time.current, linhas: 1)
       end
       gerar(<<~SQL.squish)
-        INSERT INTO autonomia_prontas_transportadores (geracao, rntrc, cnpj, nome, categoria, situacao)
-        SELECT g, lpad(n::text, 9, '0'), CASE WHEN n = 543210 THEN '11222333000181' WHEN n % 3 = 0 THEN lpad(n::text, 14, '0') END, 'EMPRESA ' || n, 'empresa', 'ativo'
+        INSERT INTO autonomia_prontas_transportadores (geracao, rntrc, cnpj, nome, nome_busca, categoria, situacao)
+        SELECT g, lpad(n::text, 9, '0'), CASE WHEN n = 543210 THEN '11222333000181' WHEN n % 3 = 0 THEN lpad(n::text, 14, '0') END, 'EMPRESA ' || n,
+               ' empresa ' || n, 'empresa', 'ativo'
         FROM generate_series(1, 2) g, generate_series(1, 600000) n
       SQL
       gerar(<<~SQL.squish)
@@ -268,6 +314,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       queimadas = incluir_pronta('queimadas', conta: account, agente: agent)
       consultas = [
         [transportadoras, { 'rntrc' => '000543210' }], [transportadoras, { 'cnpj' => '11222333000181' }],
+        [transportadoras, { 'nome' => 'empresa 543210' }],
         [solar, { 'consulta' => 'cep', 'cep' => '10123456' }], [solar, { 'consulta' => 'cidade', 'cidade' => 'Campinas', 'uf' => 'SP' }],
         [queimadas, { 'latitude' => -15.0, 'longitude' => -55.0, 'raio_km' => 50, 'dias' => 7 }]
       ]
@@ -319,8 +366,10 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       end
 
       expect(trocou).to be(true)
-      expect(saida['dados']).to include('sistemas' => 9, 'potencia_kw' => 90.0, 'por_tipo' => { 'solar' => 5, 'eólica' => 4 },
-                                        'por_classe' => { 'Residencial' => 5, 'Comercial' => 4 })
+      expect(saida['dados']).to include('sistemas' => 9, 'potencia_kw' => 90.0)
+      expect(saida['dados']['por_tipo']).to eq([{ 'nome' => 'solar', 'sistemas' => 5, 'potencia_kw' => 50.0 },
+                                                { 'nome' => 'eólica', 'sistemas' => 4, 'potencia_kw' => 40.0 }])
+      expect(saida['dados']['por_classe'].pluck('nome', 'sistemas')).to eq([['Residencial', 5], ['Comercial', 4]])
     end
 
     it 'planos de saúde: a lista e a contagem (quando passa de 10) vêm da mesma geração' do

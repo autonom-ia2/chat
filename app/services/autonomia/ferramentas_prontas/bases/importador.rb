@@ -12,11 +12,14 @@ class Autonomia::FerramentasProntas::Bases::Importador
 
   # A rodada nova que vier com menos que esta fração das linhas da anterior é recusada (arquivo cortado na fonte).
   FRACAO_MINIMA = 0.5
+  # A base que falhou tenta de novo no mesmo dia? Só a que envelhece rápido (os focos de queimada).
+  NOVA_TENTATIVA_NO_DIA = false
   DIAS_DO_MES = 28
   # Nenhum campo das fontes passa disso: um campo maior é arquivo que não é o esperado (e não ocupa a memória).
   MAX_CAMPO = 64.kilobytes
   DIGITOS_DO_CPF = 11
   SINAIS_DO_DOCUMENTO = './-'.freeze
+  DIGITOS = '0123456789'.freeze
 
   class << self
     def chave
@@ -75,10 +78,37 @@ class Autonomia::FerramentasProntas::Bases::Importador
       valor.to_s.delete('^0-9').presence
     end
 
-    # O nome de empresa sem nenhum CPF: o MEI leva o CPF do dono no fim da razão social ("FULANO 12345678909"). Sai cada
-    # pedaço que, sem pontos e traço, tem 11 dígitos e é um CPF válido (dígitos verificadores conferidos).
+    # O nome de empresa sem nenhum CPF: o MEI leva o CPF do dono no fim da razão social ("FULANO 12345678909"), às vezes
+    # grudado ("FULANO-12345678909"). Em cada pedaço, os 11 últimos dígitos (pontos e traço entre eles valem) que formam
+    # um CPF válido (dígitos verificadores conferidos) saem; o pedaço que era só o CPF some.
     def sem_cpf(nome)
-      texto(nome.to_s.split.reject { |pedaco| cpf?(pedaco.delete(SINAIS_DO_DOCUMENTO)) }.join(' '))
+      texto(nome.to_s.split.filter_map { |pedaco| sem_cpf_no_fim(pedaco).presence }.join(' '))
+    end
+
+    # "FULANO-123.456.789-09" -> "FULANO"; "123.456.789-09" -> ""; o resto, como veio.
+    def sem_cpf_no_fim(pedaco)
+      corte = inicio_dos_ultimos_digitos(pedaco)
+      return pedaco if corte.nil? || !cpf?(pedaco[corte..].delete(SINAIS_DO_DOCUMENTO))
+
+      resto = pedaco[0...corte]
+      resto = resto[..-2] while resto.end_with?(*SINAIS_DO_DOCUMENTO.chars)
+      resto
+    end
+
+    # Onde começam os 11 últimos dígitos do pedaço (só pontos e traço entre eles), ou nil quando o pedaço não acaba
+    # em 11 dígitos.
+    def inicio_dos_ultimos_digitos(pedaco)
+      digitos = 0
+      (pedaco.length - 1).downto(0) do |posicao|
+        caractere = pedaco[posicao]
+        if DIGITOS.include?(caractere)
+          digitos += 1
+          return posicao if digitos == DIGITOS_DO_CPF
+        elsif !(digitos.positive? && SINAIS_DO_DOCUMENTO.include?(caractere))
+          return nil
+        end
+      end
+      nil
     end
 
     def cpf?(pedaco)

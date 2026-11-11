@@ -1,0 +1,43 @@
+{
+  "operadora": {
+    "provedor": "ans",
+    "dados": {
+      "total": 1,
+      "operadoras": [
+        {
+          "razao_social": "UNIMED CAMPINAS - COOPERATIVA DE TRABALHO MÉDICO",
+          "nome_fantasia": "UNIMED CAMPINAS",
+          "registro_ans": "335690",
+          "cnpj": "46124624000111",
+          "situacao": "ativa",
+          "tipo_de_operadora": "Cooperativa Médica",
+          "cidade": "Campinas",
+          "uf": "SP",
+          "registrada_em": "1998-12-21"
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  },
+  "operadora_cancelada": {
+    "provedor": "ans",
+    "dados": {
+      "total": 1,
+      "operadoras": [
+        {
+          "razao_social": "2B ODONTOLOGIA OPERADORA DE PLANOS ODONTOLÓGICOS LTDA",
+          "registro_ans": "421545",
+          "cnpj": "22869997000153",
+          "situacao": "cancelada",
+          "tipo_de_operadora": "Odontologia de Grupo",
+          "cidade": "São Paulo",
+          "uf": "SP",
+          "registrada_em": "2019-06-13",
+          "cancelada_em": "2026-11-05",
+          "motivo_do_cancelamento": "INEXISTÊNCIA DE PRODUTO ATIVO POR MAIS DE 180 DIAS"
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}

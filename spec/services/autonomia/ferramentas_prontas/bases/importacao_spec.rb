@@ -200,6 +200,29 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(estado.call('planos_de_saude').motivo_da_falha).to eq('formato_mudou')
     end
 
+    it 'a trava do Redis sai mesmo quando soltar a do banco quebra' do
+      allow_any_instance_of(described_class).to receive(:destravar_no_banco).and_raise(PG::ConnectionBad, 'caiu') # rubocop:disable RSpec/AnyInstance
+
+      expect { importar('planos_de_saude') }.to raise_error(PG::ConnectionBad)
+
+      expect(Redis::Alfred.get('autonomia:prontas:base:planos_de_saude')).to be_nil
+    ensure
+      ActiveRecord::Base.connection.select_value('SELECT pg_advisory_unlock_all()')
+    end
+
+    it 'apagar a geração antiga também roda com o teto longo, lote a lote (não cai no statement_timeout da busca)' do
+      importar('planos_de_saude')
+      comandos = []
+      guardar = ->(*, payload) { comandos << payload[:sql].to_s }
+
+      travel 1.day
+      ActiveSupport::Notifications.subscribed(guardar, 'sql.active_record') { importar('planos_de_saude') }
+
+      apagar = comandos.each_index.select { |i| comandos[i].start_with?('DELETE FROM "autonomia_prontas_operadoras_ans"') }
+      expect(apagar).not_to be_empty
+      expect(apagar).to all(satisfy { |i| comandos[0...i].reverse.find { |sql| sql.include?('statement_timeout') }.include?("'2h'") })
+    end
+
     it 'a sobra de uma rodada que morreu no meio é apagada antes da próxima' do
       importar('planos_de_saude')
       bases::Operadora.create!(geracao: 7, registro_ans: '999999', ativa: true)
@@ -248,6 +271,18 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(donos).to eq([{ 'nome' => 'TAXI AEREO FULANO', 'cnpj' => FerramentasProntasBasesHelper::CNPJ_MEI, 'uf' => 'GO' },
                            { 'nome' => 'CICLANO ME', 'cnpj' => FerramentasProntasBasesHelper::CNPJ_OUTRA, 'uf' => 'GO' }])
       expect(bases::Aeronave.pluck(:dados).to_json).not_to include(FerramentasProntasBasesHelper::CPF_MEI, '987.654.321-00')
+    end
+
+    it 'o CPF grudado no nome ("FULANO-98765432100") também sai, pelos últimos 11 dígitos' do
+      mei = [{ 'NOME' => "AEROCLUBE FULANO-#{FerramentasProntasBasesHelper::CPF_MEI}", 'DOCUMENTO' => FerramentasProntasBasesHelper::CNPJ_MEI },
+             { 'NOME' => 'TAXI 987.654.321-00X', 'DOCUMENTO' => FerramentasProntasBasesHelper::CNPJ_OUTRA },
+             { 'NOME' => 'VOO 12345', 'DOCUMENTO' => FerramentasProntasBasesHelper::CNPJ_EMPRESA }]
+      arquivo_responde(url, "#{rab}\r\n#{rab_linha('PRGRU', proprietarios: mei)}")
+
+      importar('aeronaves')
+
+      nomes = bases::Aeronave.vigente.find_by(matricula: 'PRGRU').dados['proprietarios_empresas'].pluck('nome')
+      expect(nomes).to eq(['AEROCLUBE FULANO', 'TAXI 987.654.321-00X', 'VOO 12345'])
     end
 
     it 'o JSON de donos quebrado não vira "0 outros": a contagem some (não se sabe)' do
@@ -329,6 +364,16 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(bases::GeracaoDistribuida.vigente.count).to eq(3)
     end
 
+    it 'o CSV sem quebra de linha (bomba de zip numa linha só): formato mudado ao chegar no teto da linha, sem ler tudo' do
+      stub_const('Autonomia::FerramentasProntas::Bases::LeituraComTeto::MAX_LINHA', 1_000)
+      cabecalho = CSV.generate_line(FerramentasProntasBasesHelper::GD_COLUNAS, col_sep: ';').chomp
+      zip = Zip::OutputStream.write_buffer { |saida| saida.put_next_entry('gd.csv') && saida.write("#{cabecalho};#{'X' * 5_000}") }.string
+      arquivo_responde(url, zip, tipo: 'application/zip')
+
+      expect(importar('geracao_solar')).to eq(:falhou)
+      expect(estado.call('geracao_solar').motivo_da_falha).to eq('formato_mudou')
+    end
+
     it 'chaves demais na soma (o arquivo não é o que parece): formato mudado, sem estourar a memória' do
       stub_const('Autonomia::FerramentasProntas::Bases::GeracaoSolar::MAX_CHAVES', 2)
 
@@ -358,7 +403,7 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
     it 'acha o arquivo do mês no catálogo, lê em ISO-8859-1 e do autônomo não guarda nome nem CPF' do
       expect(importar('transportadoras')).to eq(:atualizada)
 
-      registros = bases::Transportador.vigente.order(:rntrc).map { |item| item.attributes.except('id', 'geracao') }
+      registros = bases::Transportador.vigente.order(:rntrc).map { |item| item.attributes.except('id', 'geracao', 'nome_busca') }
       expect(registros).to eq([
                                 { 'rntrc' => '044031531', 'cnpj' => nil, 'nome' => nil, 'categoria' => 'autônomo', 'situacao' => 'ativo',
                                   'municipio' => 'CAMPINA GRANDE', 'uf' => 'PB', 'cadastrado_em' => Date.new(2022, 8, 22),
@@ -371,6 +416,7 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
                                   'cadastrado_em' => Date.new(2023, 11, 1), 'situacao_desde' => Date.new(2023, 11, 1), 'equiparado' => false }
                               ])
       expect(bases::Transportador.pluck(:nome).compact).not_to include('FULANO DE TAL')
+      expect(bases::Transportador.where.not(nome: nil).pluck(:nome_busca)).to contain_exactly(' transportes exemplo ltda', ' cooperativa exemplo')
     end
 
     it 'nome só com CNPJ válido: o MEI sai sem o CPF; documento CPF ou categoria desconhecida não guarda nome' do

@@ -1,6 +1,6 @@
 # PLANOS DE SAÚDE (#2858, F5): "a operadora X está ativa na ANS?". Pelo CNPJ, pelo número do registro na ANS (6
 # dígitos) ou pelo nome. A base é baixada pela plataforma todo dia (`Bases::PlanosDeSaude`) e a busca é no banco.
-# Responde a situação (ativa ou cancelada, com a data e o motivo), a modalidade, a cidade e o registro.
+# Responde a situação (ativa ou cancelada, com a data e o motivo), o tipo de operadora (a modalidade na ANS), a cidade e o registro.
 # Termos: dado aberto da ANS. Detalhes em `docs/ferramentas-prontas/termos-das-fontes.md`.
 module Autonomia::FerramentasProntas::Fontes::PlanosDeSaude
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -23,7 +23,7 @@ module Autonomia::FerramentasProntas::Fontes::PlanosDeSaude
     chave: 'planos_de_saude', slug: 'pronta_planos_de_saude', nome: 'Planos de saúde',
     flag: Autonomia::FerramentasProntas::Bases::FLAG,
     descricao: 'Se uma operadora de plano de saúde está ativa ou cancelada na ANS, pelo CNPJ, pelo registro na ANS ou ' \
-               'pelo nome, com a modalidade e a cidade. A base é a cópia oficial da ANS; atualizado_em diz de quando é.',
+               'pelo nome, com o tipo de operadora e a cidade. A base é a cópia oficial da ANS; atualizado_em diz de quando é.',
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'operadora', descricao: 'a operadora na ANS; pede cnpj, registro_ans ou nome', opcionais: [CNPJ, REGISTRO, NOME],

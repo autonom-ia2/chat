@@ -1,7 +1,7 @@
 # Os focos do INPE na base baixada (#2858, F5). Na cidade sem raio: os do código IBGE do município. Com raio, ou com a
 # coordenada: um quadrado em volta do ponto pelo índice da latitude, e depois a distância de verdade (haversine). O
 # "desde" é o começo do dia, `dias` atrás, no fuso da conta (a `Execucao` roda nele); o dia de cada foco também.
-# Nenhum foco: total zero, com `atualizado_em` (o agente diz "nenhum foco até tal dia"). Base com mais de 1 dia (a
+# Nenhum foco: `focos_no_periodo` zero, com `atualizado_em` (o agente diz "nenhum foco até tal dia"). Base com mais de 1 dia (a
 # rodada diária falhou): falha `base_desatualizada`, e o agente ouve "não consegui", nunca "nenhum foco".
 class Autonomia::FerramentasProntas::Fontes::Queimadas::Inpe < Autonomia::FerramentasProntas::Bases::Provedor
   NOME = 'inpe'.freeze
@@ -44,14 +44,23 @@ class Autonomia::FerramentasProntas::Fontes::Queimadas::Inpe < Autonomia::Ferram
 
   def resumo(focos, rotulo, raio, desde)
     {
-      'onde' => raio ? "até #{raio} km de #{rotulo}" : rotulo, 'desde' => desde.to_date.iso8601, 'total' => focos.size,
-      'por_dia' => focos.group_by { |foco, _km| foco.detectado_em.in_time_zone.to_date.iso8601 }.transform_values(&:size),
+      'onde' => raio ? "até #{raio} km de #{rotulo}" : rotulo, 'desde' => desde.to_date.iso8601,
+      # Não é `total`: `total` é o tamanho da lista, e a lista mostra só os `MAXIMO` mais recentes.
+      'focos_no_periodo' => focos.size,
+      'por_dia' => por_dia(focos),
       'mais_recentes' => focos.first(MAXIMO).map { |foco, km| foco_enxuto(foco, km) }
     }
   end
 
+  # [{ 'data' => '2026-11-11', 'focos' => 377 }, ...], do dia mais recente para o mais antigo. `data` (não `dia`): é o campo
+  # que a tela do Experimente usa para identificar cada item da lista.
+  def por_dia(focos)
+    por_data = focos.group_by { |foco, _km| foco.detectado_em.in_time_zone.to_date.iso8601 }
+    por_data.map { |dia, do_dia| { 'data' => dia, 'focos' => do_dia.size } }
+  end
+
   def foco_enxuto(foco, distancia)
-    { 'quando' => foco.detectado_em.in_time_zone.strftime('%Y-%m-%d %H:%M'), 'latitude' => foco.latitude.to_f,
+    { 'data' => foco.detectado_em.in_time_zone.strftime('%Y-%m-%d %H:%M'), 'latitude' => foco.latitude.to_f,
       'longitude' => foco.longitude.to_f, 'distancia_km' => distancia, 'bioma' => foco.bioma }.compact
   end
 end

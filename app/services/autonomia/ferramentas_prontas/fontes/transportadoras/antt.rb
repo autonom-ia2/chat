@@ -1,4 +1,5 @@
-# O RNTRC na base baixada (#2858, F5): pelo número (um registro) ou pelo CNPJ (a empresa pode ter mais de um).
+# O RNTRC na base baixada (#2858, F5): pelo número (um registro), pelo CNPJ (a empresa pode ter mais de um) ou pelo nome
+# (todas as palavras, cada uma pelo começo, sem acento e sem caixa: só empresa e cooperativa têm nome), no máximo `MAXIMO`.
 class Autonomia::FerramentasProntas::Fontes::Transportadoras::Antt < Autonomia::FerramentasProntas::Bases::Provedor
   NOME = 'antt'.freeze
   BASE = 'transportadoras'.freeze
@@ -6,11 +7,19 @@ class Autonomia::FerramentasProntas::Fontes::Transportadoras::Antt < Autonomia::
 
   def buscar(_consulta, params)
     escopo = da_base(Autonomia::FerramentasProntas::Bases::Transportador)
-    escopo = params['rntrc'] ? escopo.where(rntrc: params['rntrc']) : escopo.where(cnpj: params.fetch('cnpj'))
-    com_data(listar(escopo.order(:rntrc), 'registros', MAXIMO) { |item| registro(item) })
+    com_data(listar(filtrar(escopo, params).order(:nome, :rntrc), 'registros', MAXIMO) { |item| registro(item) })
   end
 
   private
+
+  def filtrar(escopo, params)
+    return escopo.where(rntrc: params['rntrc']) if params['rntrc']
+    return escopo.where(cnpj: params['cnpj']) if params['cnpj']
+
+    Autonomia::FerramentasProntas::Lista.comparavel(params.fetch('nome')).split.inject(escopo) do |achados, palavra|
+      achados.where('nome_busca LIKE ?', "% #{ActiveRecord::Base.sanitize_sql_like(palavra)}%")
+    end
+  end
 
   def registro(item)
     {

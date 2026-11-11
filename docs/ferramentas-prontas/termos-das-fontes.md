@@ -113,16 +113,20 @@ então o teto global por host não se aplica aqui.
 
 Quando roda: o job passa a cada 5 minutos (`config/schedule.yml`) e só age depois do horário da stack, em UTC, na
 variável **`AUTONOMIA_PRONTAS_BASES_HORARIO_UTC`** (`"HH:MM"`). Sem ela, cada stack tira o seu do próprio endereço
-(`FRONTEND_URL`), entre 10:00 e 11:55 UTC, para as duas stacks não baixarem no mesmo minuto. Uma base por vez em toda a
-plataforma: a próxima entra quando a anterior termina, e a que já tentou no dia (mesmo falhando) espera o dia seguinte.
-A mensal vence pela data, do 28º dia em diante.
+(`FRONTEND_URL`), entre 10:00 e 11:55 UTC, para as duas stacks não baixarem no mesmo minuto. Valor fora de `HH:MM`
+(hora 0–23, minuto 0–59): alerta uma vez por dia (log e Sentry) e vale o horário da stack. Uma base por vez em toda a
+plataforma, as diárias pequenas primeiro (focos de queimada, planos de saúde, aeronaves; depois placas solares e
+transportadoras): a próxima entra quando a anterior termina. A que falhou no dia espera o dia seguinte, menos os focos
+de queimada, que tentam de novo 3 horas depois da última tentativa. A rodada que morreu no meio (nem atualizou nem
+registrou falha) também tenta de novo 3 horas depois: as travas de quem morreu vencem antes (2h30). A mensal vence
+pela data, do 28º dia em diante.
 
 | Base | Endereço | Formato e tamanho real | Licença e termos | Frequência | O que fica (e o que não fica) |
 |---|---|---|---|---|---|
 | Planos de saúde (ANS) | `dadosabertos.ans.gov.br/FTP/PDA/operadoras_de_plano_de_saude_ativas/Relatorio_cadop.csv` e `.../operadoras_de_plano_de_saude_canceladas/Relatorio_cadop_canceladas.csv` | CSV `;`, UTF-8; 345.634 B (ativas) + 1.039.052 B (canceladas); 4.186 operadoras | Dados abertos da ANS (PDA), Decreto 8.777/2016. **A licença do conjunto não está escrita na página**; parte das publicações da ANS usa CC BY-NC-SA (mesma ressalva da TUSS na F4). | diária | Registro, CNPJ, razão social, fantasia, modalidade, cidade, UF, datas e motivo do cancelamento. **Não fica**: representante (pessoa física), e-mail, telefone, endereço. |
 | Aeronaves (RAB da ANAC) | `sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv` | CSV `;`, UTF-8 com BOM e uma linha "Atualizado em" antes do cabeçalho; 24.353.159 B; 35.150 matrículas (74 repetidas no arquivo) | Dados abertos da ANAC, Decreto 8.777/2016. A página do conjunto não traz licença escrita. | diária | Fabricante, modelo, ano, assentos, peso, situação, cancelamento, validade do certificado, gravames e **só as empresas** (CNPJ válido) donas e operadoras, com o nome sem nenhum CPF (o MEI leva o do dono no nome). **Pessoa física nunca entra**: o arquivo traz ~29 mil CPFs e nomes de donos; viram só a contagem `outros_proprietarios`, sem nome, CPF ou UF. |
 | Placas solares (geração distribuída da ANEEL) | `dadosabertos.aneel.gov.br/dataset/5e0fafd2-…/resource/b1bd71e7-…/download/empreendimento-geracao-distribuida.zip` | ZIP de 113.020.800 B com um CSV `;`, UTF-8, de 1.556.562.996 B e 4.735.908 linhas | **ODbL** (Open Database License), no catálogo da ANEEL: uso livre com atribuição e compartilhamento pela mesma licença do banco derivado. | mensal (a ANEEL publica todo dia; o plano pediu mensal) | Só a **soma** por CEP, município, tipo e classe de consumo (~158 mil linhas). **Não fica**: titular (nome ou CPF/CNPJ tarjado), código do empreendimento, coordenada. O ZIP é lido do disco; o CSV, por streaming de dentro dele, com teto de 4 GB aberto. |
-| Transportadoras (RNTRC da ANTT) | descoberto a cada rodada no catálogo `dados.antt.gov.br/api/3/action/package_show?id=rntrc` (o arquivo do mês muda de endereço); hoje `.../transportadores_rntrc_10_2026.csv` | CSV `;`, ISO-8859-1; 164.851.598 B; 1.201.583 registros (853 mil autônomos, 348 mil empresas, 548 cooperativas), só ATIVO e PENDENTE | **Creative Commons Atribuição**, no catálogo da ANTT. | mensal (a ANTT publica perto do dia 10) | **Todos os registros ficam** (decisão do Rodrigo, 11/11/2026). Nome e CNPJ só da empresa e da cooperativa **com CNPJ válido**, e o nome sem nenhum CPF (o MEI leva o do dono no fim da razão social). **Autônomo (pessoa física)**, documento que é CPF ou categoria desconhecida: só RNTRC, categoria, situação, município, UF e datas; nome e CPF (que vem parcialmente mascarado) não ficam. |
+| Transportadoras (RNTRC da ANTT) | descoberto a cada rodada no catálogo `dados.antt.gov.br/api/3/action/package_show?id=rntrc` (o arquivo do mês muda de endereço); hoje `.../transportadores_rntrc_10_2026.csv` | CSV `;`, ISO-8859-1; 164.851.598 B; 1.201.583 registros (853 mil autônomos, 348 mil empresas, 548 cooperativas), só ATIVO e PENDENTE | **Creative Commons Atribuição**, no catálogo da ANTT. | mensal (a ANTT publica perto do dia 10) | **Todos os registros ficam** (decisão do Rodrigo, 11/11/2026). Nome e CNPJ só da empresa e da cooperativa **com CNPJ válido**, e o nome sem nenhum CPF (o MEI leva o do dono no fim da razão social, às vezes colado por um hífen). A busca pelo nome é no começo de cada palavra, sem acento e sem caixa; o autônomo não tem nome, e só se acha pelo RNTRC. **Autônomo (pessoa física)**, documento que é CPF ou categoria desconhecida: só RNTRC, categoria, situação, município, UF e datas; nome e CPF (que vem parcialmente mascarado) não ficam. |
 | Focos de queimada (INPE) | `dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` (link "Diários" da página de dados abertos do Programa Queimadas) | CSV `,`, UTF-8; ~1,2 MB e ~8.300 focos num dia de novembro | Dado aberto do INPE. **A página não traz licença escrita**; vale a política de dados abertos federal. | diária (janela de 8 dias baixada de novo a cada rodada, ~10 MB) | Quando, coordenada (3 casas), código IBGE do município, bioma e satélite. Nada de pessoa. |
 
 Ressalvas:
@@ -136,10 +140,11 @@ Ressalvas:
 - **Alerta = log e Sentry** (decisão do Rodrigo, 11/11/2026: "Deixa no log"). Toda falha grava o log
   `[autonomia][pronta] ALERTA base=… motivo=… vale_a_copia_de=…` e, quando a instalação tem `SENTRY_DSN`, vai ao
   Sentry. Nada vai para o Guia, para o sino ou por e-mail, e nada para conta de cliente. Falha depois da troca (ao
-  apagar a geração antiga) registra `limpeza_pendente`: a nova já vale, e a próxima rodada termina a limpeza.
+  apagar a geração antiga) registra `limpeza_pendente`: a nova já vale, e a rodada, 3 horas depois, só apaga a sobra
+  (sem baixar de novo). Os DELETEs rodam com o mesmo prazo longo do COPY (2 h).
 - **Licença não escrita em ANS, ANAC e INPE: sobem assim** (decisão do Rodrigo, 11/11/2026: "Sobe tudo"). A página de
   cada conjunto não traz licença escrita; o uso se apoia na política de dados abertos federal (Decreto 8.777/2016).
 - **Focos de queimada com mais de 1 dia** (a rodada diária falhou; 26 h de folga): a ferramenta responde "não consegui
-  consultar", nunca "nenhum foco". Sem nenhum foco no lugar, a resposta é total zero, com o dia da base.
+  consultar", nunca "nenhum foco". Sem nenhum foco no lugar, a resposta é `focos_no_periodo` zero, com o dia da base.
 - **Espaço no banco**: a maior tabela é a das transportadoras (~1,2 milhão de linhas). Durante a troca, a geração nova
   e a antiga convivem até a antiga ser apagada.

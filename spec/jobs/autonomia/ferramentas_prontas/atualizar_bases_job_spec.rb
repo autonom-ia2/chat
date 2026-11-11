@@ -29,8 +29,14 @@ RSpec.describe Autonomia::FerramentasProntas::AtualizarBasesJob do
     expect { described_class.perform_now }.not_to have_enqueued_job(fila)
   end
 
+  it 'as diárias pequenas vêm primeiro: queimadas, planos de saúde, aeronaves; depois as mensais' do
+    expect(Autonomia::FerramentasProntas::Bases.importadores.map(&:chave))
+      .to eq(%w[queimadas planos_de_saude aeronaves geracao_solar transportadoras])
+  end
+
   it 'uma base por vez: enfileira só a primeira vencida (a nunca baixada, a diária de ontem, a mensal do 28º dia)' do
     ligar
+    estado.create!(base: 'queimadas', geracao_ativa: 1, atualizado_em: 2.hours.ago)
     estado.create!(base: 'planos_de_saude', geracao_ativa: 1, atualizado_em: 2.hours.ago)
     estado.create!(base: 'aeronaves', geracao_ativa: 1, atualizado_em: 1.day.ago)
     estado.create!(base: 'geracao_solar', geracao_ativa: 1, atualizado_em: 27.days.ago)
@@ -43,12 +49,63 @@ RSpec.describe Autonomia::FerramentasProntas::AtualizarBasesJob do
 
   it 'pula a base que já tentou hoje (falhou): ela tenta de novo amanhã, e a próxima vencida entra' do
     ligar
+    estado.create!(base: 'queimadas', geracao_ativa: 1, atualizado_em: 2.hours.ago)
     estado.create!(base: 'planos_de_saude', geracao_ativa: 1, atualizado_em: 1.day.ago, tentado_em: 1.minute.ago, falhou_em: 1.minute.ago)
     estado.create!(base: 'aeronaves', geracao_ativa: 1, atualizado_em: 1.day.ago)
 
     described_class.perform_now
 
     expect(enfileiradas).to eq(['aeronaves'])
+  end
+
+  it 'queimadas que falhou tenta de novo no mesmo dia, 3 horas depois da última; as outras só amanhã' do
+    ligar
+    estado.create!(base: 'queimadas', geracao_ativa: 1, atualizado_em: 1.day.ago, tentado_em: 2.hours.ago, falhou_em: 2.hours.ago)
+    estado.create!(base: 'planos_de_saude', geracao_ativa: 1, atualizado_em: 1.day.ago, tentado_em: 4.hours.ago, falhou_em: 4.hours.ago)
+    %w[aeronaves].each { |base| estado.create!(base: base, geracao_ativa: 1, atualizado_em: 1.hour.ago) }
+    %w[geracao_solar transportadoras].each { |base| estado.create!(base: base, geracao_ativa: 1, atualizado_em: 2.days.ago) }
+
+    described_class.perform_now
+    expect(enfileiradas).to be_empty
+
+    travel 1.hour + 1.minute
+    described_class.perform_now
+    expect(enfileiradas).to eq(['queimadas'])
+  end
+
+  it 'a rodada que morreu no meio (trava da RODADA presa) tenta de novo 3 horas depois, já com as travas vencidas' do
+    ligar
+    %w[queimadas aeronaves].each { |base| estado.create!(base: base, geracao_ativa: 1, atualizado_em: 1.hour.ago) }
+    estado.create!(base: 'planos_de_saude', geracao_ativa: 1, atualizado_em: 1.day.ago, tentado_em: 2.hours.ago)
+    %w[geracao_solar transportadoras].each { |base| estado.create!(base: base, geracao_ativa: 1, atualizado_em: 2.days.ago) }
+
+    described_class.perform_now
+    expect(enfileiradas).to be_empty
+
+    travel 1.hour + 1.minute
+    described_class.perform_now
+    expect(enfileiradas).to eq(['planos_de_saude'])
+    expect(Autonomia::FerramentasProntas::AtualizarBaseJob::VALIDADE_DA_RODADA).to be < 3.hours
+    expect(Autonomia::FerramentasProntas::Bases::Importacao::VALIDADE_DA_TRAVA).to be < 3.hours
+  end
+
+  it 'a base com limpeza pendente entra só para limpar, sem baixar de novo' do
+    ligar
+    %w[queimadas planos_de_saude aeronaves].each { |base| estado.create!(base: base, geracao_ativa: 1, atualizado_em: 1.hour.ago) }
+    estado.create!(base: 'geracao_solar', geracao_ativa: 2, atualizado_em: 4.hours.ago, linhas: 1, tentado_em: 4.hours.ago,
+                   falhou_em: 4.hours.ago, motivo_da_falha: 'limpeza_pendente')
+    estado.create!(base: 'transportadoras', geracao_ativa: 1, atualizado_em: 2.days.ago)
+    Autonomia::FerramentasProntas::Bases::GeracaoDistribuida.create!(geracao: 1, cep: '78890000', tipo: 'solar', quantidade: 1, potencia_kw: 1)
+    Autonomia::FerramentasProntas::Bases::GeracaoDistribuida.create!(geracao: 2, cep: '78890000', tipo: 'solar', quantidade: 2, potencia_kw: 2)
+
+    described_class.perform_now
+    expect(enfileiradas).to eq(['geracao_solar'])
+
+    fila.perform_now('geracao_solar')
+
+    expect(Autonomia::FerramentasProntas::Bases::GeracaoDistribuida.pluck(:geracao)).to eq([2])
+    expect(estado.find_by(base: 'geracao_solar')).to have_attributes(geracao_ativa: 2, motivo_da_falha: nil)
+    expect(a_request(:get, Autonomia::FerramentasProntas::Bases::GeracaoSolar::ARQUIVO)).not_to have_been_made
   end
 
   it 'antes do horário da stack, nada; o horário vem do ENV, e sem ele cada stack tem o seu (pelo endereço)' do
@@ -59,9 +116,34 @@ RSpec.describe Autonomia::FerramentasProntas::AtualizarBasesJob do
     with_modified_env(AUTONOMIA_PRONTAS_BASES_HORARIO_UTC: nil, FRONTEND_URL: 'https://app.um.exemplo.test') do
       um = described_class.horario
       outro = with_modified_env(FRONTEND_URL: 'https://app.dois.exemplo.test') { described_class.horario }
-      expect([um, outro]).to all(be_between('10:00', '11:55'))
+      expect([um, outro]).to all(be_between(10 * 60, (11 * 60) + 55))
       expect(um).not_to eq(outro)
     end
+  end
+
+  it 'compara o horário em minutos: "9:05" vale 09:05 (antes das 10:47 entra)' do
+    ligar
+    with_modified_env(AUTONOMIA_PRONTAS_BASES_HORARIO_UTC: '9:05') { described_class.perform_now }
+
+    expect(enfileiradas).to eq(['queimadas'])
+  end
+
+  it 'horário inválido: alerta uma vez (log e Sentry) e cai no horário da stack' do
+    sentry = stub_const('Sentry', Class.new { def self.capture_message(*, **) = nil })
+    allow(sentry).to receive(:capture_message)
+    allow(Rails.logger).to receive(:warn).and_call_original
+    padrao = with_modified_env(AUTONOMIA_PRONTAS_BASES_HORARIO_UTC: nil) { described_class.horario }
+
+    %w[25:00 10:60 10h47 abc 10:4x].each do |invalido|
+      valor = with_modified_env(AUTONOMIA_PRONTAS_BASES_HORARIO_UTC: invalido, SENTRY_DSN: 'https://chave@sentry.exemplo.test/1') do
+        Array.new(2) { described_class.horario }
+      end
+      expect(valor).to eq([padrao, padrao])
+    end
+    expect(Rails.logger).to have_received(:warn).with(include('ALERTA horario_invalido')).once
+    expect(sentry).to have_received(:capture_message).once
+  ensure
+    Redis::Alfred.delete(described_class::ALERTA_DO_HORARIO)
   end
 
   it 'T28: atualizou pelo job às 10:47:30; 28 dias depois, na rodada das 10:47:00, a mensal entra na fila' do

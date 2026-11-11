@@ -1,0 +1,83 @@
+{
+  "focos": {
+    "provedor": "inpe",
+    "dados": {
+      "onde": "Almeirim (PA)",
+      "desde": "2026-11-10",
+      "focos_no_periodo": 1250,
+      "por_dia": [
+        {
+          "data": "2026-11-11",
+          "focos": 377
+        },
+        {
+          "data": "2026-11-10",
+          "focos": 873
+        }
+      ],
+      "mais_recentes": [
+        {
+          "data": "2026-11-11 03:10",
+          "latitude": -1.184,
+          "longitude": -53.556,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 03:00",
+          "latitude": -1.184,
+          "longitude": -53.556,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 03:00",
+          "latitude": -1.184,
+          "longitude": -53.576,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:50",
+          "latitude": -1.184,
+          "longitude": -53.576,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:50",
+          "latitude": -1.165,
+          "longitude": -53.556,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:50",
+          "latitude": -1.184,
+          "longitude": -53.556,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:48",
+          "latitude": -1.517,
+          "longitude": -53.012,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:48",
+          "latitude": -1.516,
+          "longitude": -52.421,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:46",
+          "latitude": -1.179,
+          "longitude": -53.567,
+          "bioma": "Amazônia"
+        },
+        {
+          "data": "2026-11-11 02:46",
+          "latitude": -1.173,
+          "longitude": -53.561,
+          "bioma": "Amazônia"
+        }
+      ],
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}

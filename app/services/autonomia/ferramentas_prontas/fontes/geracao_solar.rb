@@ -6,8 +6,17 @@ module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
   Parametro = Autonomia::FerramentasProntas::Parametro
 
   CEP = Parametro.new(nome: 'cep', descricao: 'O CEP, 8 dígitos.') { |valor| Parametro.digitos(valor, 8) }
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (com uf).') { |valor| Parametro.texto_curto(valor) }
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade.', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade.') { |valor| Parametro.texto_curto(valor) }
+  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado, quando há cidade com o mesmo nome em outro estado.',
+                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+
+  module_function
+
+  # A cidade que o `Municipios` não acha sem a UF (há outra com o mesmo nome) pede a UF; achou, a consulta vai. -> o
+  # parâmetro que falta, ou nil.
+  def regra(params)
+    'uf' if params['uf'].nil? && Autonomia::FerramentasProntas::Municipios.buscar(nil, params['cidade']).nil?
+  end
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'geracao_solar', slug: 'pronta_geracao_solar', nome: 'Placas solares', flag: Autonomia::FerramentasProntas::Bases::FLAG,
@@ -20,8 +29,9 @@ module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
         provedores: [Aneel], validade: nil, prazo_por_fonte: 1, prazo_total: 1
       ),
       Autonomia::FerramentasProntas::Consulta.new(
-        nome: 'cidade', descricao: 'os sistemas na cidade; pede cidade e uf', obrigatorios: [CIDADE, UF],
-        provedores: [Aneel], validade: nil, prazo_por_fonte: 1, prazo_total: 1
+        nome: 'cidade', descricao: 'os sistemas na cidade; pede cidade (e uf, se houver outra com o mesmo nome)',
+        obrigatorios: [CIDADE], opcionais: [UF], provedores: [Aneel], validade: nil, prazo_por_fonte: 1, prazo_total: 1,
+        regra: method(:regra)
       )
     ],
     limite_diario: 500,

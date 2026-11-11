@@ -5,7 +5,8 @@
 #   - um CSV (`transportadores_rntrc_MM_AAAA.csv`, ~160 MB, ~1,2 milhão de registros), separado por ";", em
 #     ISO-8859-1 (convertido para UTF-8 na leitura);
 #   - todos os registros ficam (decisão do Rodrigo, 11/11): o RNTRC, a categoria, a situação, o município, a UF e as datas;
-#   - o NOME e o CNPJ só da empresa (ETC) e da cooperativa (CTC) com CNPJ válido, e o nome sem nenhum CPF (o MEI leva o
+#   - o NOME (e o nome de busca, sem acento e sem caixa) e o CNPJ só da empresa (ETC) e da cooperativa (CTC) com CNPJ
+#     válido, e o nome sem nenhum CPF (o MEI leva o
 #     do dono no fim). AUTÔNOMO (TAC), documento que é CPF ou categoria desconhecida: sem nome e sem documento.
 class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::FerramentasProntas::Bases::Importador
   CHAVE = 'transportadoras'.freeze
@@ -18,7 +19,7 @@ class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::Ferrame
   NOME_DO_ARQUIVO = 'transportadores_rntrc_'.freeze
   MAX_BYTES = 400.megabytes
   PRAZO = 1_800
-  COLUNAS = %w[rntrc cnpj nome categoria situacao municipio uf cadastrado_em situacao_desde equiparado].freeze
+  COLUNAS = %w[rntrc cnpj nome nome_busca categoria situacao municipio uf cadastrado_em situacao_desde equiparado].freeze
   CABECALHO = %w[nome_transportador numero_rntrc data_primeiro_cadastro situacao_rntrc cpfcnpjtransportador
                  categoria_transportador municipio uf equiparado data_situacao_rntrc].freeze
   CATEGORIAS = { 'ETC' => 'empresa', 'CTC' => 'cooperativa', 'TAC' => 'autônomo' }.freeze
@@ -65,12 +66,19 @@ class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::Ferrame
        equiparado(linha['equiparado'])]
     end
 
-    # [CNPJ, nome] da empresa e da cooperativa com CNPJ válido; de qualquer outro, nada.
+    # [CNPJ, nome, nome de busca] da empresa e da cooperativa com CNPJ válido; de qualquer outro, nada.
     def identidade(linha, sigla)
       cnpj = Autonomia::FerramentasProntas::Parametro.cnpj(linha['cpfcnpjtransportador']) if COM_CNPJ.include?(sigla)
-      return [nil, nil] if cnpj.nil?
+      return [nil, nil, nil] if cnpj.nil?
 
-      [cnpj, sem_cpf(nome(linha['nome_transportador']))]
+      nome = sem_cpf(nome(linha['nome_transportador']))
+      [cnpj, nome, nome_busca(nome)]
+    end
+
+    # "Transportes Exemplo" -> " transportes exemplo": sem acento e sem caixa, com um espaço na frente, para a busca pelo
+    # começo de cada palavra (LIKE '% palavra%').
+    def nome_busca(nome)
+      " #{Autonomia::FerramentasProntas::Lista.comparavel(nome)}" if nome
     end
 
     # "50085788" e "050085788" -> "050085788".

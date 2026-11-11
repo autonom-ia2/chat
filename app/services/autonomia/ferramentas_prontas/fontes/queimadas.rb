@@ -11,10 +11,11 @@ module Autonomia::FerramentasProntas::Fontes::Queimadas
   MAX_RAIO = 100
   RAIO_PADRAO = 10
 
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (com uf). Sem cidade: latitude e longitude.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade. Sem cidade: latitude e longitude.') do |valor|
     Parametro.texto_curto(valor)
   end
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade.', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado, quando há cidade com o mesmo nome em outro estado.',
+                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
   LATITUDE = Parametro.new(nome: 'latitude', tipo: 'number', descricao: 'A latitude da localização que o cliente mandou.') do |valor|
     Autonomia::FerramentasProntas::Fontes::Localizacao.coordenada(valor, 90)
   end
@@ -36,11 +37,12 @@ module Autonomia::FerramentasProntas::Fontes::Queimadas
   def ponto(params)
     return [params['latitude'], params['longitude'], 'a localização informada', nil] if params['latitude'] && params['longitude']
 
-    municipio = params['cidade'] && params['uf'] && Municipios.buscar(params['uf'], params['cidade'])
+    municipio = params['cidade'] && Municipios.buscar(params['uf'], params['cidade'])
     [municipio.latitude, municipio.longitude, municipio.rotulo, municipio] if municipio
   end
 
-  # A cidade com a UF, ou a coordenada inteira (como nas Estações do tempo). -> o parâmetro que falta, ou nil.
+  # A cidade (a UF só quando o `Municipios` não acha sem ela), ou a coordenada inteira (como nas Estações do tempo).
+  # -> o parâmetro que falta, ou nil.
   def regra(params)
     return if ponto(params)
     return 'longitude' if params['latitude']
@@ -56,7 +58,7 @@ module Autonomia::FerramentasProntas::Fontes::Queimadas
                'incêndio confirmado. atualizado_em diz de quando é a base.',
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
-        nome: 'focos', descricao: 'os focos detectados; pede cidade e uf, ou latitude e longitude',
+        nome: 'focos', descricao: 'os focos detectados; pede cidade (e uf, se houver outra com o mesmo nome), ou latitude e longitude',
         opcionais: [CIDADE, UF, LATITUDE, LONGITUDE, RAIO, DIAS],
         provedores: [Inpe], validade: nil, prazo_por_fonte: 1, prazo_total: 1, regra: method(:regra)
       )

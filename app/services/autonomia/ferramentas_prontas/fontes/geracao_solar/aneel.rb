@@ -10,15 +10,18 @@ class Autonomia::FerramentasProntas::Fontes::GeracaoSolar::Aneel < Autonomia::Fe
     raise NaoEncontrado if total.zero?
 
     com_data(onde.merge('sistemas' => total, 'potencia_kw' => escopo.sum(:potencia_kw).to_f.round(2),
-                        'por_tipo' => contagem(escopo, :tipo),
-                        'por_classe' => contagem(escopo, :classe).transform_keys { |classe| classe || 'outra' }))
+                        'por_tipo' => contagem(escopo, :tipo), 'por_classe' => contagem(escopo, :classe)))
   end
 
   private
 
-  # Quantos sistemas em cada valor da coluna, do maior para o menor.
+  # Cada valor da coluna (o tipo, a classe), com quantos sistemas e a potência, do maior para o menor:
+  # [{ 'nome' => 'Residencial', 'sistemas' => 2, 'potencia_kw' => 10.0 }, ...]. Classe vazia no arquivo: 'outra'.
   def contagem(escopo, coluna)
-    escopo.group(coluna).sum(:quantidade).sort_by { |_valor, quantidade| -quantidade }.to_h
+    somas = escopo.group(coluna).pluck(coluna, Arel.sql('SUM(quantidade)'), Arel.sql('SUM(potencia_kw)'))
+    somas.sort_by { |_valor, sistemas, _potencia| -sistemas }.map do |valor, sistemas, potencia|
+      { 'nome' => valor || 'outra', 'sistemas' => sistemas.to_i, 'potencia_kw' => potencia.to_f.round(2) }
+    end
   end
 
   def modelo
@@ -30,7 +33,7 @@ class Autonomia::FerramentasProntas::Fontes::GeracaoSolar::Aneel < Autonomia::Fe
   end
 
   def na_cidade(params)
-    municipio = Autonomia::FerramentasProntas::Municipios.buscar(params.fetch('uf'), params.fetch('cidade'))
+    municipio = Autonomia::FerramentasProntas::Municipios.buscar(params['uf'], params.fetch('cidade'))
     raise NaoEncontrado if municipio.nil?
 
     [{ 'cidade' => municipio.nome, 'uf' => municipio.uf }, modelo.where(codigo_municipio: municipio.codigo)]
