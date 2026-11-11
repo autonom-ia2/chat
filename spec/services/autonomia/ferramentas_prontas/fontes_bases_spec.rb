@@ -125,20 +125,19 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       importar('geracao_solar')
     end
 
-    it '"Tem geração solar no CEP X?": quantos sistemas, a potência, por tipo e por classe' do
+    it '"Tem geração solar no CEP X?": o total de sistemas, a potência total e por classe; só solar, sem o detalhe por tipo' do
       saida = executar_pronta(ferramenta, 'consulta' => 'cep', 'cep' => '78890-000')
 
-      expect(saida['dados']).to include('cep' => '78890000', 'sistemas' => 3, 'potencia_kw' => 85.0,
-                                        'por_tipo' => [{ 'nome' => 'solar', 'sistemas' => 3, 'potencia_kw' => 85.0 }],
-                                        'por_classe' => [{ 'nome' => 'Residencial', 'sistemas' => 2, 'potencia_kw' => 10.0 },
-                                                         { 'nome' => 'Rural', 'sistemas' => 1, 'potencia_kw' => 75.0 }],
-                                        'atualizado_em' => '2026-11-11')
+      expect(saida['dados']).to eq('cep' => '78890000', 'total_de_sistemas' => 3, 'potencia_total_kw' => 85.0,
+                                   'por_classe' => [{ 'nome' => 'Residencial', 'sistemas' => 2, 'potencia_kw' => 10.0 },
+                                                    { 'nome' => 'Rural', 'sistemas' => 1, 'potencia_kw' => 75.0 }],
+                                   'atualizado_em' => '2026-11-11')
     end
 
-    it 'na cidade inteira, pelo nome e UF (Sorriso, MT)' do
+    it 'na cidade inteira, pelo nome e UF (Sorriso, MT); com mais de um tipo de geração, o detalhe por tipo vem' do
       saida = executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'sorriso', 'uf' => 'MT')
 
-      expect(saida['dados']).to include('cidade' => 'Sorriso', 'uf' => 'MT', 'sistemas' => 4)
+      expect(saida['dados']).to include('cidade' => 'Sorriso', 'uf' => 'MT', 'total_de_sistemas' => 4)
       expect(saida['dados']['por_tipo'].pluck('nome', 'sistemas')).to eq([['solar', 3], ['eólica', 1]])
     end
 
@@ -147,7 +146,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).and_call_original
       allow(Autonomia::FerramentasProntas::Municipios).to receive(:buscar).with(nil, 'sorriso').and_return(sorriso)
 
-      expect(executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'sorriso')['dados']).to include('cidade' => 'Sorriso', 'sistemas' => 4)
+      expect(executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'sorriso')['dados'])
+        .to include('cidade' => 'Sorriso', 'total_de_sistemas' => 4)
       expect(executar_pronta(ferramenta, 'consulta' => 'cidade', 'cidade' => 'Bom Jesus'))
         .to include('situacao' => 'pedido_invalido', 'campo' => 'uf')
     end
@@ -366,7 +366,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       end
 
       expect(trocou).to be(true)
-      expect(saida['dados']).to include('sistemas' => 9, 'potencia_kw' => 90.0)
+      expect(saida['dados']).to include('total_de_sistemas' => 9, 'potencia_total_kw' => 90.0)
       expect(saida['dados']['por_tipo']).to eq([{ 'nome' => 'solar', 'sistemas' => 5, 'potencia_kw' => 50.0 },
                                                 { 'nome' => 'eólica', 'sistemas' => 4, 'potencia_kw' => 40.0 }])
       expect(saida['dados']['por_classe'].pluck('nome', 'sistemas')).to eq([['Residencial', 5], ['Comercial', 4]])

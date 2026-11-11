@@ -3,15 +3,8 @@
     "provedor": "aneel",
     "dados": {
       "cep": "41300400",
-      "sistemas": 2373,
-      "potencia_kw": 54977.7,
-      "por_tipo": [
-        {
-          "nome": "solar",
-          "sistemas": 2373,
-          "potencia_kw": 54977.7
-        }
-      ],
+      "total_de_sistemas": 2373,
+      "potencia_total_kw": 54977.7,
       "por_classe": [
         {
           "nome": "Comercial",
@@ -52,15 +45,8 @@
     "dados": {
       "cidade": "Campinas",
       "uf": "SP",
-      "sistemas": 18164,
-      "potencia_kw": 143834.24,
-      "por_tipo": [
-        {
-          "nome": "solar",
-          "sistemas": 18164,
-          "potencia_kw": 143834.24
-        }
-      ],
+      "total_de_sistemas": 18164,
+      "potencia_total_kw": 143834.24,
       "por_classe": [
         {
           "nome": "Residencial",

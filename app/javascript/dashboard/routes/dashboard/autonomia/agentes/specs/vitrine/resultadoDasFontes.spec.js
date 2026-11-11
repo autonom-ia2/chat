@@ -257,23 +257,41 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     );
   });
 
-  it('F5 ANEEL: placas solares da cidade e do CEP, com sistemas, potência e tipos de consumidor', () => {
+  it('F5 ANEEL: placas solares da cidade e do CEP, com o total e os sistemas de cada tipo de consumidor', () => {
     expect(valor('geracao_solar', 'cidade', 'Cidade')).toBe('Campinas');
     expect(valor('geracao_solar', 'cidade', 'Estado')).toBe('SP');
-    // A primeira linha de cada rótulo é o total da cidade.
-    expect(valor('geracao_solar', 'cidade', 'Sistemas instalados')).toBe(
-      '18.164'
-    );
-    expect(valor('geracao_solar', 'cidade', 'Potência (kW)')).toBe(
+    expect(
+      valor('geracao_solar', 'cidade', 'Total de sistemas instalados')
+    ).toBe('18.164');
+    expect(valor('geracao_solar', 'cidade', 'Potência total (kW)')).toBe(
       '143.834,24'
     );
-    expect(valor('geracao_solar', 'cidade', 'Tipos de consumidor')).toBe(
-      'Residencial, Comercial, Industrial e mais 5'
+    // Cada tipo de consumidor com os sistemas dele, numa linha só.
+    expect(
+      valor('geracao_solar', 'cidade', 'Sistemas por tipo de consumidor')
+    ).toBe(
+      'Residencial: 16.577 · Comercial: 1.332 · Industrial: 107 · e mais 5'
     );
+    // Cada rótulo aparece uma vez: o total não se repete no detalhe (só solar: sem a linha por tipo de geração).
+    const rotulos = linhas('geracao_solar', 'cidade').map(([rotulo]) => rotulo);
+    expect(rotulos.length).toBe(new Set(rotulos).size);
+    expect(
+      valor('geracao_solar', 'cidade', 'Sistemas por tipo de geração')
+    ).toBeUndefined();
+    expect(
+      valor('geracao_solar', 'cidade', 'Primeiro da lista')
+    ).toBeUndefined();
     // CEP é chave de identificação: sem milhar.
     expect(valor('geracao_solar', 'cep', 'CEP')).toBe('41300400');
-    expect(valor('geracao_solar', 'cep', 'Sistemas instalados')).toBe('2.373');
-    expect(valor('geracao_solar', 'cep', 'Potência (kW)')).toBe('54.977,7');
+    expect(valor('geracao_solar', 'cep', 'Total de sistemas instalados')).toBe(
+      '2.373'
+    );
+    expect(valor('geracao_solar', 'cep', 'Potência total (kW)')).toBe(
+      '54.977,7'
+    );
+    expect(
+      valor('geracao_solar', 'cep', 'Sistemas por tipo de consumidor')
+    ).toBe('Comercial: 1.478 · Residencial: 691 · Industrial: 92 · e mais 3');
     expect(valor('geracao_solar', 'cep', 'Base atualizada em')).toBe(
       diaF5(2026, 11, 11)
     );

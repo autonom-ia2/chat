@@ -1,6 +1,7 @@
 # PLACAS SOLARES (#2858, F5): "tem geração solar no CEP X?" ou "quantas casas têm placa solar em Sorriso?". Quantos
 # sistemas de geração distribuída (micro e minigeração: placas solares, quase todos) estão registrados na ANEEL no CEP
-# ou no município, com a potência somada, por tipo e por classe de consumo (residencial, comercial, rural...).
+# ou no município, com a potência somada, por classe de consumo (residencial, comercial, rural...) e, quando há mais de
+# um, por tipo de geração.
 # Nenhum titular é mostrado: a base guarda só a soma. Ela é baixada pela plataforma todo mês (`Bases::GeracaoSolar`).
 module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -21,8 +22,9 @@ module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'geracao_solar', slug: 'pronta_geracao_solar', nome: 'Placas solares', flag: Autonomia::FerramentasProntas::Bases::FLAG,
     descricao: 'Quantos sistemas de geração própria de energia (placas solares, quase todos) a ANEEL tem registrados num CEP ' \
-               'ou numa cidade, com a potência somada em kW, por tipo e por classe (residencial, comercial, rural...). Não ' \
-               'diz de quem é. Um CEP geral de cidade pequena junta a cidade inteira. atualizado_em diz de quando é.',
+               'ou numa cidade, com a potência somada em kW, por classe (residencial, comercial, rural...) e, quando há mais ' \
+               'de um, por tipo. Não diz de quem é. Um CEP geral de cidade pequena junta a cidade inteira. atualizado_em ' \
+               'diz de quando é.',
     consultas: [
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'cep', descricao: 'os sistemas no CEP; pede cep', obrigatorios: [CEP],
