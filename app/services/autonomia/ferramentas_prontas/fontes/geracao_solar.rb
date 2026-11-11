@@ -6,17 +6,18 @@
 module Autonomia::FerramentasProntas::Fontes::GeracaoSolar
   Parametro = Autonomia::FerramentasProntas::Parametro
 
-  CEP = Parametro.new(nome: 'cep', descricao: 'O CEP, 8 dígitos.') { |valor| Parametro.digitos(valor, 8) }
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade.') { |valor| Parametro.texto_curto(valor) }
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado, quando há cidade com o mesmo nome em outro estado.',
-                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  CEP = Parametro.new(nome: 'cep', descricao: 'O CEP, 8 dígitos.',
+                      deduza: 'o CEP tem 8 dígitos; se o cliente disse só a cidade, use a consulta cidade.') { |valor| Parametro.digitos(valor, 8) }
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade.', pergunte: 'a cidade') { |valor| Parametro.texto_curto(valor) }
+  # Regra "QI 70": a UF sai da cidade e também vale pelo nome do estado ("mato grosso").
+  UF = Autonomia::FerramentasProntas::Municipios.parametro_uf
 
   module_function
 
-  # A cidade que o `Municipios` não acha sem a UF (há outra com o mesmo nome) pede a UF; achou, a consulta vai. -> o
-  # parâmetro que falta, ou nil.
+  # A cidade que o `Municipios` acha (com a UF, ou sem ela quando o nome é único) vai à consulta. Senão, a `Falta` dele:
+  # a UF com os estados candidatos (cidade com o mesmo nome em outro estado, ou UF errada), ou a cidade que não existe.
   def regra(params)
-    'uf' if params['uf'].nil? && Autonomia::FerramentasProntas::Municipios.buscar(nil, params['cidade']).nil?
+    Autonomia::FerramentasProntas::Municipios.falta(params['uf'], params['cidade'])
   end
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(

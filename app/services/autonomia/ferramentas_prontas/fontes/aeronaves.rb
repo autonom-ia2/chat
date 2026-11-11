@@ -5,7 +5,9 @@
 module Autonomia::FerramentasProntas::Fontes::Aeronaves
   Parametro = Autonomia::FerramentasProntas::Parametro
 
-  MATRICULA = Parametro.new(nome: 'matricula', descricao: 'A matrícula (as marcas) da aeronave, 5 letras começando por P (ex.: PR-ABC).') do |valor|
+  MATRICULA = Parametro.new(nome: 'matricula', descricao: 'A matrícula (as marcas) da aeronave, 5 letras começando por P (ex.: PR-ABC).',
+                            pergunte: 'a matrícula da aeronave, as 5 letras pintadas nela começando por P (ex.: PR-ABC); com ou ' \
+                                      'sem hífen serve') do |valor|
     Autonomia::FerramentasProntas::Bases::Aeronaves.matricula(valor)
   end
 
