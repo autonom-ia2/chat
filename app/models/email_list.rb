@@ -110,7 +110,7 @@ class EmailList < ApplicationRecord
   end
 
   def self.elegiveis_de(contatos)
-    contatos.not_opted_out.where.not(email: [nil, ''])
+    contatos.campaign_reachable.where.not(email: [nil, ''])
   end
 
   # Quem está na lista agora: os contatos da conta com a etiqueta. `distinct`: o contato com a etiqueta escrita de dois
@@ -119,8 +119,9 @@ class EmailList < ApplicationRecord
     account.contacts.tagged_with(label.title, on: :labels).distinct
   end
 
-  # Quem receberia agora: com e-mail e sem ter pedido para não receber. O descadastro e o bloqueio (EmailSuppression)
-  # ficam para o envio, que os grava como `suppressed`.
+  # Quem receberia agora: com e-mail, sem ter pedido para não receber e sem estar bloqueado (`campaign_reachable`, a
+  # mesma regra do envio). O descadastro e o bloqueio do endereço (EmailSuppression) ficam para o envio, que os grava
+  # como `suppressed`.
   def elegiveis
     self.class.elegiveis_de(contatos)
   end

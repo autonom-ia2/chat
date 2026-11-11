@@ -374,6 +374,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 20: venda fechada já entra no siste
 
     expect(card.reload.stage_id).to eq(etapa)
     expect(cliente_do_banco.label_list).to be_empty
+    expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando trinta_dias])
   end
 
   it 'passo 7: 30 dias depois, a pergunta do uso sai pelo modelo aprovado, e a automação espera a resposta', :aggregate_failures do
@@ -419,7 +420,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 20: venda fechada já entra no siste
 
     expect(mencoes_para(ricardo).count).to eq(1)
     aviso = conversa.messages.where(private: true).where('content LIKE ?', "%mention://user/#{ricardo.id}/%").sole
-    expect(aviso.content).to include('voltou para a planilha')
+    expect(aviso.content).to include('Marina quer cancelar: a equipe voltou para a planilha.')
     expect(cliente_do_banco.label_list).not_to include(dicas_do_mes.label.title)
   end
 

@@ -29,6 +29,13 @@ module EmailLists::CampaignList
   def email_list_sem_publico_nem_planilha
     errors.add(:email_list_id, 'audience_linked') if persisted? && CampaignAudienceLink.for_campaign(self)
     errors.add(:email_list_id, 'import_in_progress') if persisted? && recipient_import_active?
+    errors.add(:email_list_id, 'spreadsheet_recipients') if planilha_ja_importada?
+  end
+
+  # O rascunho que já tem gente da planilha não troca para lista: a montagem da lista tiraria esses pendentes sem aviso
+  # (EmailLists::Recipients#remove_stale). Trocar de uma lista para outra continua valendo.
+  def planilha_ja_importada?
+    persisted? && email_list_id_was.nil? && email_campaign_recipients.exists?
   end
 
   # O estado vale o do banco, relido sob a trava (`with_lock` recarrega a campanha): o objeto em memória pode estar

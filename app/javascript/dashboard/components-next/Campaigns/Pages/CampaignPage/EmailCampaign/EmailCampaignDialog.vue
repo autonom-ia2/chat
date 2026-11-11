@@ -297,9 +297,13 @@ const submit = async ({ openEditor = false } = {}) => {
       close();
     }
   } catch (error) {
-    if (error?.message !== 'base_import_failed') {
-      useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.ERROR'));
-    }
+    if (error?.message === 'base_import_failed') return;
+    const codigo = error?.response?.data?.message || '';
+    useAlert(
+      codigo.includes('spreadsheet_recipients')
+        ? t('EMAIL_LISTS.TEM_PLANILHA')
+        : t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.ERROR')
+    );
   }
 };
 </script>

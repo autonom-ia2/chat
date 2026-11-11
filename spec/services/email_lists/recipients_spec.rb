@@ -60,6 +60,26 @@ RSpec.describe EmailLists::Recipients, :aggregate_failures do
       expect(campanha).not_to be_valid
       expect(campanha.errors[:email_list_id]).to include('audience_linked')
     end
+
+    it 'rascunho com gente da planilha não troca para lista: os pendentes da planilha ficam' do
+      campanha.email_campaign_recipients.create!(email: 'planilha@exemplo.com', status: :pending)
+      na_lista('ana@exemplo.com')
+
+      expect { campanha.update!(email_list: lista) }.to raise_error(ActiveRecord::RecordInvalid, /spreadsheet_recipients/)
+      expect(campanha.reload.email_list_id).to be_nil
+      expect(emails).to eq(['planilha@exemplo.com'])
+    end
+
+    it 'trocar de uma lista para outra continua valendo' do
+      na_lista('ana@exemplo.com')
+      campanha.update!(email_list: lista)
+      outra = EmailList.criar(account: account, name: 'Saudade')
+      create(:contact, account: account, email: 'bia@exemplo.com').update_labels([outra.label.title])
+
+      campanha.update!(email_list: outra)
+
+      expect(emails).to eq(['bia@exemplo.com'])
+    end
   end
 
   describe 'na hora do envio' do

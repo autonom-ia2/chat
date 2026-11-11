@@ -120,16 +120,18 @@ RSpec.describe EmailList do
   describe 'quem está na lista' do
     let(:lista) { described_class.criar(account: account, name: 'Dicas do mês') }
 
-    it 'contatos são os da conta com a etiqueta; elegíveis têm e-mail e não pediram para não receber' do
+    it 'contatos são os da conta com a etiqueta; elegíveis têm e-mail, não pediram para não receber e não estão bloqueados' do
       ana = create(:contact, account: account, email: 'ana@exemplo.com')
       sem_email = create(:contact, account: account, email: nil, phone_number: '+5511988887777')
       recusou = create(:contact, account: account, email: 'bia@exemplo.com')
       fora = create(:contact, account: account, email: 'caio@exemplo.com')
-      [ana, sem_email, recusou].each { |contato| contato.update_labels([lista.label.title]) }
+      bloqueado = create(:contact, account: account, email: 'dani@exemplo.com', blocked: true)
+      [ana, sem_email, recusou, bloqueado].each { |contato| contato.update_labels([lista.label.title]) }
       recusou.opt_out!(source: 'manual')
 
-      expect(lista.contatos).to contain_exactly(ana, sem_email, recusou)
+      expect(lista.contatos).to contain_exactly(ana, sem_email, recusou, bloqueado)
       expect(lista.elegiveis).to contain_exactly(ana)
+      expect(described_class.contagens(account, [lista])[lista.id]).to eq(contatos: 4, recebem: 1)
       expect(lista.contatos).not_to include(fora)
     end
 

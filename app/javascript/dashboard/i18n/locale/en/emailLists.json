@@ -19,6 +19,7 @@
     "FALHOU_CRIAR": "Could not create the list. Try again.",
     "NOME_REPETIDO": "There is already a list with this name.",
     "NOME_INVALIDO": "Use at least one letter or number in the name.",
+    "TEM_PLANILHA": "This campaign already has people from a spreadsheet. To send to a list, create a new campaign.",
     "FALHA": {
       "VAZIA": "Not sent: when it was time to send, nobody on the list could receive it (no one left on the list, no e-mail, or they asked not to receive messages).",
       "TODOS_BLOQUEADOS": "Not sent: when it was time to send, everyone on the list had unsubscribed or their address was blocked."
