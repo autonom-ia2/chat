@@ -198,6 +198,121 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('corretor_susep', 'por_nome', 'Situação')).toBe('Suspenso');
   });
 
+  // F5: as bases que a plataforma baixa (dado real gravado por script/ferramentas_prontas/gravar_dados_reais_das_bases.rb).
+  // Toda base mostra a data em que foi atualizada: é o que diz ao dono se o dado ainda vale.
+  const diaF5 = (ano, mes, d) =>
+    new Date(ano, mes - 1, d).toLocaleDateString('pt-BR');
+
+  it('F5 ANS: operadora com registro, situação e tipo; a cancelada com data e motivo', () => {
+    expect(valor('planos_de_saude', 'operadora', 'Operadoras')).toBe(
+      'UNIMED CAMPINAS - COOPERATIVA DE TRABALHO MÉDICO'
+    );
+    // Registro é chave de identificação: sem milhar.
+    expect(valor('planos_de_saude', 'operadora', 'Registro na ANS')).toBe(
+      '335690'
+    );
+    expect(valor('planos_de_saude', 'operadora', 'Situação')).toBe('ativa');
+    expect(valor('planos_de_saude', 'operadora', 'Tipo de operadora')).toBe(
+      'Cooperativa Médica'
+    );
+    expect(valor('planos_de_saude', 'operadora', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+    expect(valor('planos_de_saude', 'operadora_cancelada', 'Situação')).toBe(
+      'cancelada'
+    );
+    expect(
+      valor('planos_de_saude', 'operadora_cancelada', 'Cancelada em')
+    ).toBe(diaF5(2026, 11, 5));
+    expect(
+      valor('planos_de_saude', 'operadora_cancelada', 'Motivo do cancelamento')
+    ).toBe('INEXISTÊNCIA DE PRODUTO ATIVO POR MAIS DE 180 DIAS');
+  });
+
+  it('F5 ANAC: aeronave pela matrícula, com situação, certificado, gravames e empresas', () => {
+    expect(valor('aeronaves', 'aeronave', 'Matrícula')).toBe('PPAAD');
+    expect(valor('aeronaves', 'aeronave', 'Fabricante')).toBe(
+      'CESSNA AIRCRAFT'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Modelo')).toBe('680');
+    expect(valor('aeronaves', 'aeronave', 'Situação')).toBe('registrada');
+    expect(
+      valor(
+        'aeronaves',
+        'aeronave',
+        'Certificado de aeronavegabilidade válido até'
+      )
+    ).toBe(diaF5(2029, 10, 30));
+    expect(valor('aeronaves', 'aeronave', 'Gravames (ônus registrados)')).toBe(
+      'INTERCÂMBIO OPERACIONAL'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Empresas proprietárias')).toBe(
+      'AVIACAO EXEMPLO 1 LTDA'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Empresas operadoras')).toBe(
+      'AVIACAO EXEMPLO 1 LTDA e AVIACAO EXEMPLO 2 LTDA'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+  });
+
+  it('F5 ANEEL: placas solares da cidade e do CEP, com sistemas, potência e tipos de consumidor', () => {
+    expect(valor('geracao_solar', 'cidade', 'Cidade')).toBe('Campinas');
+    expect(valor('geracao_solar', 'cidade', 'Estado')).toBe('SP');
+    // A primeira linha de cada rótulo é o total da cidade.
+    expect(valor('geracao_solar', 'cidade', 'Sistemas instalados')).toBe(
+      '18.164'
+    );
+    expect(valor('geracao_solar', 'cidade', 'Potência (kW)')).toBe(
+      '143.834,24'
+    );
+    expect(valor('geracao_solar', 'cidade', 'Tipos de consumidor')).toBe(
+      'Residencial, Comercial, Industrial e mais 5'
+    );
+    // CEP é chave de identificação: sem milhar.
+    expect(valor('geracao_solar', 'cep', 'CEP')).toBe('41300400');
+    expect(valor('geracao_solar', 'cep', 'Sistemas instalados')).toBe('2.373');
+    expect(valor('geracao_solar', 'cep', 'Potência (kW)')).toBe('54.977,7');
+    expect(valor('geracao_solar', 'cep', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+  });
+
+  it('F5 ANTT: transportadora com RNTRC, situação e equiparação; pelo nome, a lista com o total', () => {
+    // RNTRC é chave de identificação: os zeros da frente ficam e não há milhar.
+    expect(valor('transportadoras', 'registro', 'RNTRC')).toBe('000000001');
+    expect(valor('transportadoras', 'registro', 'Registros')).toBe(
+      'TRANSPORTADORA EXEMPLO 1 LTDA'
+    );
+    expect(valor('transportadoras', 'registro', 'Situação')).toBe('ativo');
+    expect(
+      valor('transportadoras', 'registro', 'Equiparada a autônomo (TAC)')
+    ).toBe('S');
+    expect(valor('transportadoras', 'registro', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+    expect(valor('transportadoras', 'registro_pelo_nome', 'Registros')).toBe(
+      'TRANSPORTADORA EXEMPLO 1 LTDA, TRANSPORTADORA EXEMPLO 2 LTDA, TRANSPORTADORA EXEMPLO 3 LTDA e mais 153'
+    );
+    expect(
+      valor('transportadoras', 'registro_pelo_nome', 'Primeiro da lista')
+    ).toBe('TRANSPORTADORA EXEMPLO 1 LTDA');
+  });
+
+  it('F5 INPE: focos de queimada no lugar, no período e por dia', () => {
+    expect(valor('queimadas', 'focos', 'Onde')).toBe('Almeirim (PA)');
+    expect(valor('queimadas', 'focos', 'Focos no período')).toBe('1.250');
+    // Regra B: cada dia com os focos dele, numa linha com o rótulo do campo; o rótulo da lista não aparece.
+    expect(valor('queimadas', 'focos', 'Focos no dia')).toBe(
+      `${diaF5(2026, 11, 11)}: 377 · ${diaF5(2026, 11, 10)}: 873`
+    );
+    expect(valor('queimadas', 'focos', 'Dias com focos')).toBeUndefined();
+    expect(valor('queimadas', 'focos', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+  });
+
   // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
   // Suspenso" depois dos corretores, "Código: 1" depois das marcas, "Estado: AC" depois dos estados).
   // C27: lista sem rótulo não aparece. As listas do banco por nome e do CEP por endereço precisam do rótulo no i18n,

@@ -19,9 +19,7 @@
           "peso_maximo_de_decolagem_kg": "13744",
           "situacao": "registrada",
           "certificado_de_aeronavegabilidade_valido_ate": "2029-10-30",
-          "gravames": [
-            "INTERCÂMBIO OPERACIONAL"
-          ],
+          "gravames": ["INTERCÂMBIO OPERACIONAL"],
           "proprietarios_empresas": [
             {
               "uf": "SP",
