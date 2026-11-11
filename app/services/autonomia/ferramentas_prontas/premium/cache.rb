@@ -4,6 +4,13 @@
 #   - vale até o fim do dia da conta (a `Execucao` roda no fuso dela), para o encontrado e para o sem registro, que
 #     também foi contado.
 # A chave continua com o HMAC dos parâmetros: quem lê o Redis não reverte o CNPJ, o CPF ou a placa.
+#
+# SEM TRAVA ENTRE DUAS IGUAIS AO MESMO TEMPO (revisor, BAIXO; decidido não fazer agora): duas consultas iguais da mesma
+# conta que chegam juntas, antes de a primeira gravar o cache, chamam a BigDataCorp duas vezes, e as duas contam. Uma
+# trava curta no Redis pela chave não é simples nem segura aqui: a segunda teria de esperar a primeira (até o prazo do
+# dataset, 55 s nas sob demanda) segurando um worker da fila `agent_tools`, ou responder "não consegui" a uma pergunta
+# que tem resposta; e a trava que fica presa (o worker morre) bloquearia a consulta até vencer. O caso pede a mesma
+# pergunta, na mesma conta, no mesmo segundo; a telemetria registra as duas linhas, então a conferência do dia acha.
 class Autonomia::FerramentasProntas::Premium::Cache < Autonomia::FerramentasProntas::Cache
   DOCUMENTO_INVALIDO = 'documento_invalido'.freeze
 
