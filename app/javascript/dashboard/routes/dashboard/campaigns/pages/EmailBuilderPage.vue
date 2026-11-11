@@ -368,10 +368,15 @@ const leaveAnyway = () => {
   leaveDialog.value?.close();
   if (!leaveTarget.value) return;
   leaveConfirmed = true;
-  router.push(leaveTarget.value);
+  // The page lives in keep-alive: the next visit must ask again.
+  router.push(leaveTarget.value).finally(() => {
+    leaveConfirmed = false;
+  });
 };
 watch(isUploadingImages, uploading => {
-  if (!uploading) leaveDialog.value?.close();
+  if (uploading) return;
+  leaveConfirmed = false;
+  leaveDialog.value?.close();
 });
 const warnBeforeUnload = event => {
   if (!isUploadingImages.value) return;
