@@ -14,7 +14,7 @@ module Autonomia::FerramentasProntas::Catalogo
   module_function
 
   def todas
-    [*fundacao_e_lote1, *lote2]
+    [*fundacao_e_lote1, *lote2, *premium]
   end
 
   def fundacao_e_lote1
@@ -45,6 +45,19 @@ module Autonomia::FerramentasProntas::Catalogo
       Autonomia::FerramentasProntas::Fontes::Chuva::FONTE,
       Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::FONTE,
       Autonomia::FerramentasProntas::Fontes::CorretorSusep::FONTE
+    ]
+  end
+
+  # F7 (flag `agente_ferramentas_prontas_premium`): as consultas pagas à BigDataCorp, um card por tema.
+  def premium
+    [
+      Autonomia::FerramentasProntas::Fontes::Premium::Certidoes::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::RaioX::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::Pessoa::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::Placa::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa::FONTE
     ]
   end
 

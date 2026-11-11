@@ -19,6 +19,8 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
       Autonomia::FerramentasProntas.disponivel?(Current.account, fonte)
     end
     @incluidas = prontas_scope.order(:id)
+    # F7: nos cards Premium, quantas grátis restam à conta e os preços depois delas.
+    @premium = Autonomia::FerramentasProntas::Premium.para_tela(Current.account, @fontes)
   end
 
   def incluir

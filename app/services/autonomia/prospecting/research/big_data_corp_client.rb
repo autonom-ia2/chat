@@ -1,6 +1,7 @@
 require 'net/http'
 
-# Cliente da BigDataCorp só para a consulta de empresas (porte de lib/services/bigdatacorp/client.ts do Orth, #679).
+# Cliente da BigDataCorp para a consulta de empresas (porte de lib/services/bigdatacorp/client.ts do Orth, #679). A F7 do
+# #2858 (ferramentas Premium) usa o mesmo cliente em outras rotas (`query_route`), sem mudar a consulta de empresas.
 #
 # Fluxo: POST /tokens/gerar com BIGDATACORP_USER e BIGDATACORP_PASSWORD (só ENV, por Setting.platform_config) e depois
 # POST /empresas com AccessToken e TokenId. O token fica em memória desta instância por TOKEN_TTL.
@@ -15,6 +16,7 @@ require 'net/http'
 class Autonomia::Prospecting::Research::BigDataCorpClient
   BASE_URI = URI('https://plataforma.bigdatacorp.com.br').freeze
   COMPANIES_PATH = '/empresas'.freeze
+  ROUTES = [COMPANIES_PATH, '/pessoas', '/veiculos', '/enderecos', '/ondemand', '/marketplace'].freeze
   USER_ENV = 'BIGDATACORP_USER'.freeze
   PASSWORD_ENV = 'BIGDATACORP_PASSWORD'.freeze
   RETRY_BASE_DELAY_SECONDS = 0.25
@@ -79,8 +81,16 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   # Devolve Response(payload: Hash, metadata: { provider_attempts:, token_generations:, provider_request_id: }).
   # Levanta Error com código fechado.
   def search_companies(query:, limit: 3, datasets: 'basic_data')
+    query_route(COMPANIES_PATH, query: query, datasets: datasets, limit: limit)
+  end
+
+  # #2858 F7: a mesma consulta paga em outra rota da plataforma (as ferramentas Premium da vitrine). Só as rotas de
+  # `ROUTES`; o resto (token, retentativa, erros, segredo fora de log) é o mesmo da consulta de empresas.
+  def query_route(path, query:, datasets:, limit: 1)
+    raise ArgumentError, 'rota da BigDataCorp fora da lista' unless ROUTES.include?(path)
+
     @token_generations = 0
-    dispatch_with_retries({ Datasets: datasets, q: query, Limit: limit }.to_json)
+    dispatch_with_retries(path, { Datasets: datasets, q: query, Limit: limit }.to_json)
   end
 
   # Transporte, usado também pelo BigDataCorpTokenIssuer.
@@ -119,12 +129,12 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
 
   private
 
-  def dispatch_with_retries(body)
+  def dispatch_with_retries(path, body)
     state = { attempts: 0, refreshed: false, force_refresh: false }
     while state[:attempts] < @options[:max_provider_attempts]
       credential = provider_credential(state)
       state[:attempts] += 1
-      outcome = classify(post_companies(body, credential, state[:attempts]), state)
+      outcome = classify(post_query(path, body, credential, state[:attempts]), state)
       return outcome if outcome
     end
     raise Error.new('BIGDATACORP_PROVIDER_UNAVAILABLE', phase: :provider, provider_attempts: state[:attempts])
@@ -175,8 +185,8 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     Error.new(code, phase: :provider, status: status, provider_attempts: attempts)
   end
 
-  def post_companies(body, token, attempts)
-    post(COMPANIES_PATH, body, { 'AccessToken' => token.access_token, 'TokenId' => token.token_id })
+  def post_query(path, body, token, attempts)
+    post(path, body, { 'AccessToken' => token.access_token, 'TokenId' => token.token_id })
   rescue Timeout::Error
     raise failure('BIGDATACORP_TIMEOUT', nil, attempts)
   rescue *NETWORK_ERRORS

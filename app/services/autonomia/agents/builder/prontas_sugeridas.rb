@@ -37,7 +37,7 @@ module Autonomia::Agents::Builder::ProntasSugeridas
   def contexto(account)
     return unless ligado?(account)
 
-    linhas = Autonomia::FerramentasProntas.disponiveis(account).map { |fonte| "- #{fonte.chave}: #{fonte.nome}. #{fonte.descricao}" }
+    linhas = Autonomia::FerramentasProntas.sugeriveis(account).map { |fonte| "- #{fonte.chave}: #{fonte.nome}. #{fonte.descricao}" }
     return if linhas.empty?
 
     [TITULO, *linhas].join("\n")
@@ -49,7 +49,7 @@ module Autonomia::Agents::Builder::ProntasSugeridas
   def dividir(account, parsed, fora: [])
     return { sugeridas: [], tambem: [] } unless ligado?(account)
 
-    liberadas = Autonomia::FerramentasProntas.disponiveis(account).map(&:chave) - Array(fora)
+    liberadas = Autonomia::FerramentasProntas.sugeriveis(account).map(&:chave) - Array(fora)
     chaves = Array(parsed.to_h[CAMPO]).map(&:to_s).uniq.select { |chave| liberadas.include?(chave) }
     { sugeridas: chaves.first(MAXIMO), tambem: chaves.drop(MAXIMO).first(MAX_TAMBEM) }
   end

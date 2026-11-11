@@ -31,6 +31,11 @@ class Autonomia::FerramentasProntas::Fonte
     consultas.find { |consulta| consulta.nome == nome.to_s }
   end
 
+  # Card Premium (F7): as consultas são pagas, à BigDataCorp.
+  def premium?
+    consultas.any?(&:paga?)
+  end
+
   def varias_consultas?
     consultas.size > 1
   end

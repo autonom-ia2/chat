@@ -38,6 +38,12 @@ module Autonomia::FerramentasProntas
     Catalogo.todas.select { |fonte| disponivel?(account, fonte) }
   end
 
+  # As que o Construtor e o cartão "pode ganhar" (F3) podem sugerir: as liberadas, menos as Premium (F7). Consulta paga
+  # só entra no agente pela escolha de uma pessoa, na vitrine.
+  def sugeriveis(account)
+    disponiveis(account).reject(&:premium?)
+  end
+
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.
   def disponivel?(account, fonte)
     fonte.present? && ligada?(account) && (fonte.flag.nil? || account.feature_enabled?(fonte.flag))
@@ -71,6 +77,7 @@ module Autonomia::FerramentasProntas
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
   def executor_para(tool, params:, **opcoes)
+    return Premium::Execucao.new(tool: tool, params: params) if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
     ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)

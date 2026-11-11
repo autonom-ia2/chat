@@ -28,6 +28,11 @@ class Autonomia::FerramentasProntas::Consulta
     obrigatorios + opcionais
   end
 
+  # A consulta paga (F7, `Premium::ConsultaPaga`) responde verdadeiro.
+  def paga?
+    false
+  end
+
   # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, nome do parâmetro que não serve].
   # O obrigatório que falta e o opcional informado fora do formato são o mesmo erro: nada é consultado.
   def conferir(argumentos)

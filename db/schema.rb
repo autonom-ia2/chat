@@ -863,6 +863,36 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
   end
 
+  create_table "autonomia_ferramentas_premium_consultas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id"
+    t.string "fonte", null: false
+    t.string "consulta", null: false
+    t.string "dataset", null: false
+    t.date "dia", null: false
+    t.string "resultado", null: false
+    t.string "cobranca", null: false
+    t.boolean "do_cache", default: false, null: false
+    t.integer "numero"
+    t.decimal "custo", precision: 10, scale: 4, default: "0.0", null: false
+    t.decimal "preco", precision: 10, scale: 4, default: "0.0", null: false
+    t.string "motivo"
+    t.string "id_na_fonte"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte", "dia"], name: "idx_premium_consultas_conta_fonte_dia"
+    t.index ["dia"], name: "idx_premium_consultas_dia"
+  end
+
+  create_table "autonomia_ferramentas_premium_saldos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.integer "contadas", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte"], name: "idx_premium_saldos_conta_fonte", unique: true
+  end
+
   create_table "autonomia_ferramentas_prontas_acessos", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "fonte", null: false
@@ -4820,6 +4850,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_premium_consultas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_premium_saldos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_ferramentas_prontas_acessos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_ferramentas_prontas_usos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade

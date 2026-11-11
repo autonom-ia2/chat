@@ -34,6 +34,8 @@ class Autonomia::FerramentasProntas::Experimente
   # -> o que o agente receberia, sem os textos de orientação ao modelo: { 'situacao', 'dados'? }.
   def call
     return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
+    # F7: consulta paga não tem "Experimente" (seria consulta grátis sem fim, paga pela plataforma).
+    return { 'situacao' => 'premium' } if @fonte.premium?
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
     return ComModelo.new(account: @account, fonte: @fonte, valor: @valor).call if COM_TEXTO_LIVRE.include?(@fonte.chave)

@@ -1336,3 +1336,25 @@
   display_name: Agentes › ferramentas prontas (lote 2 de consultas)
   enabled: false
   column: feature_flags_ext_2
+
+# RESERVA da F5 do #2858 (bases importadas), posição 42 (2199023255552, 1 << 41), dada pela Orquestração em 10/11.
+# Fica aqui só para a F7 (abaixo) cair na posição 43 enquanto a F5 não sobe: o PR da F5 troca este bloco pelo dela (nome
+# e texto definitivos). Nada lê esta flag.
+- name: agente_ferramentas_prontas_bases
+  display_name: Agentes › ferramentas prontas (bases importadas)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F7 (#2858): as consultas Premium, pagas, à BigDataCorp. Ligada (junto com
+# `agente_ferramentas_prontas`): a vitrine ganha o grupo Premium com 7 cards (certidões da empresa, raio-X da empresa,
+# conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas), cada um com o
+# selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
+# plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
+# da vitrine, do turno e do "Incluir" de uma vez; a Cotação e a Prospecção não leem esta flag. Migration 20261110000000
+# (telemetria e saldo das grátis). Rollback: desligar a flag. Posição 43 (4398046511104, 1 << 42), dada pela
+# Orquestração em 10/11; entra depois da F5 (posição 42). Ligar em todas só depois da conferência em produção com OK do
+# Rodrigo (consulta paga).
+- name: agente_ferramentas_prontas_premium
+  display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
+  enabled: false
+  column: feature_flags_ext_2

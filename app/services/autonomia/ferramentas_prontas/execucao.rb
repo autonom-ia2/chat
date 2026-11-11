@@ -82,8 +82,13 @@ class Autonomia::FerramentasProntas::Execucao
     return recusar('pedido_invalido', Resposta.pedido_invalido(campo)) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
 
-    @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
+    @cache = novo_cache(params)
     do_cache(params) || consultar(params)
+  end
+
+  # O cache das grátis é da fonte; o da consulta paga (F7, `Premium::Execucao`) é da conta.
+  def novo_cache(params)
+    Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
   end
 
   def do_cache(params)
