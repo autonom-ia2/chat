@@ -44,6 +44,15 @@ class Autonomia::FerramentasProntas::Uso < ApplicationRecord
       contou
     end
 
+    # Desfaz uma reserva (`reservar!`) do dia: a consulta que o resolver recusou (regra "QI 70": candidatos, marca que
+    # não existe) não gasta o limite, como o pedido inválido de antes do limite.
+    def devolver!(account_id:, fonte:)
+      sql = "UPDATE #{table_name} SET consultas = GREATEST(consultas - 1, 0), updated_at = NOW() " \
+            'WHERE account_id = :conta AND fonte = :fonte AND dia = :dia'
+      connection.exec_update(sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje }]))
+      connection.clear_query_cache
+    end
+
     # Soma 1 no desfecho (`DESFECHOS`) e em cada motivo. Desfecho fora da lista é defeito nosso: levanta.
     def anotar!(account_id:, fonte:, desfecho: nil, motivos: [])
       raise ArgumentError, "desfecho desconhecido: #{desfecho}" if desfecho && DESFECHOS.exclude?(desfecho.to_s)

@@ -9,8 +9,8 @@ class Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::OpenInsurance 
   HOST = 'data.directory.opinbrasil.com.br'.freeze
   MAX_MARCAS = 2
   MAX_OUTRAS = 10
-  SEM_O_RAMO = 'A seguradora não publica produtos deste ramo no Open Insurance. Os ramos que ela publica estão em ' \
-               'ramos_publicados.'.freeze
+  SEM_O_RAMO = 'A seguradora não publica produtos deste ramo no Open Insurance. Os ramos que ela publica vêm na ' \
+               'resposta.'.freeze
 
   def consultar(consulta, params)
     indice = Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Diretorio.indice do

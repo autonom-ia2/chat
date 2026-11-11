@@ -67,16 +67,33 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     codigo.to_s.delete("^#{Parametro::DIGITOS}")
   end
 
-  DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
-                       'letras.'.freeze
-  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA) { |valor| busca(valor) }
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).') do |valor|
+  # A tabela da NCM tem o termo técnico da nomenclatura: "celular" acha a terapia celular (varredura F24). Quem traduz
+  # o que o cliente disse é o modelo; a ordem de relevância de sempre vale sobre o que a busca achar.
+  DESCRICAO_DA_BUSCA = 'Na consulta buscar: uma palavra da mercadoria no termo da nomenclatura (ex.: parafuso; telefones ' \
+                       'celulares, não celular; máquinas automáticas para processamento de dados, não computador) ou parte ' \
+                       "do código; ao menos #{MIN_BUSCA} letras.".freeze
+  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA,
+                        deduza: "mande uma palavra do produto, com ao menos #{MIN_BUSCA} letras (ex.: parafuso).") { |valor| busca(valor) }
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).',
+                         deduza: 'o código tem 2, 4 ou 8 dígitos; se o cliente disse o produto, use a consulta buscar.') do |valor|
     codigo(valor)
   end
 
   SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
               'Com mais de uma opção de 8 dígitos, pergunte ao cliente o material (aço, cobre, plástico…) antes de ' \
               'dizer o código.'.freeze
+  # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
+  # perguntar o material ali seria pergunta à toa).
+  NAO_E_O_DA_NOTA = 'Este código tem %<digitos>s dígitos: é o capítulo ou a posição, e não serve na nota fiscal (lá vai o de ' \
+                    '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
+                    'consulta buscar.'.freeze
+
+  # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
+  def self.do_codigo(item, codigo)
+    return item if codigo.length == 8
+
+    item.merge('observacao' => format(NAO_E_O_DA_NOTA, digitos: codigo.length))
+  end
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'ncm', slug: 'pronta_ncm', nome: 'Código de mercadoria', flag: FLAG,
@@ -84,7 +101,7 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     consultas: [
       Consulta.new(nome: 'buscar', descricao: "os códigos de uma mercadoria; pede busca. #{SO_O_DE_8}", obrigatorios: [BUSCA],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4),
-      Consulta.new(nome: 'codigo', descricao: "a descrição oficial de um código; pede codigo. #{SO_O_DE_8}", obrigatorios: [CODIGO],
+      Consulta.new(nome: 'codigo', descricao: 'a descrição oficial de um código; pede codigo', obrigatorios: [CODIGO],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4)
     ],
     limite_diario: 500,

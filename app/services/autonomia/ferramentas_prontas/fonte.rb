@@ -10,13 +10,22 @@
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 # `na_vitrine`: falso na fonte que fica no catálogo para uso interno (os agentes de um ramo), sem card avulso: a vitrine,
 # o "Incluir", o Experimente e as sugestões não a oferecem; o agente que já a tem continua consultando.
+# `consulta_padrao`: a consulta de quando o modelo não diz qual, na fonte que ganhou uma segunda consulta depois (o CEP
+# ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
+  # Regra "QI 70" do Rodrigo (11/11/2026), num texto só: vai em toda ferramenta pronta, no turno real e no Experimente
+  # (que usa o mesmo `openai_schema`). O que cada fonte resolve sozinha está na descrição dela e das consultas.
+  DEDUZIR = 'Dado técnico que dá para tirar da conversa (a cidade em vez da UF, o telefone em vez do DDD, o nome em ' \
+            'vez do código) você manda como o cliente disse, e a plataforma resolve. Pergunte ao cliente só o que muda ' \
+            'o resultado e não dá para deduzir. Em pedido_invalido, siga a orientacao e consulte de novo.'.freeze
   FORA_DO_FORMATO = '(fora do formato)'.freeze
 
   attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
-  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil, na_vitrine: true) # rubocop:disable Metrics/ParameterLists
+  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil, consulta_padrao: nil, # rubocop:disable Metrics/ParameterLists
+                 na_vitrine: true)
+    @consulta_padrao = consulta_padrao
     @flag = flag
     @na_vitrine = na_vitrine
     @chave = chave
@@ -34,12 +43,21 @@ class Autonomia::FerramentasProntas::Fonte
 
   def consulta(nome)
     return consultas.first if consultas.one? && nome.blank?
+    return consulta(@consulta_padrao) if @consulta_padrao && nome.blank?
 
     consultas.find { |consulta| consulta.nome == nome.to_s }
   end
 
   def varias_consultas?
     consultas.size > 1
+  end
+
+  # O parâmetro `consulta`, só para a orientação da recusa: a consulta sai do sentido da conversa, nunca do cliente.
+  def parametro_da_consulta
+    @parametro_da_consulta ||= Autonomia::FerramentasProntas::Parametro.new(
+      nome: PARAMETRO_DA_CONSULTA, descricao: 'Qual consulta fazer.',
+      deduza: "escolha pelo sentido da conversa uma destas consultas: #{consultas.map(&:nome).join(', ')}."
+    )
   end
 
   def provedores
@@ -87,6 +105,7 @@ class Autonomia::FerramentasProntas::Fonte
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]
     partes << "Consultas: #{consultas.map { |consulta| "#{consulta.nome} (#{consulta.descricao})" }.join('; ')}." if varias_consultas?
+    partes << DEDUZIR
     partes << "Use quando: #{usar_quando.to_s.strip}" if usar_quando.present?
     partes.join(' ')
   end

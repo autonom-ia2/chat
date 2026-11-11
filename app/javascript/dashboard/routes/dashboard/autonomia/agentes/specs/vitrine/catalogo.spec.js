@@ -57,6 +57,19 @@ describe('catálogo da vitrine', () => {
     });
   });
 
+  // #2858, regra "QI 70": o exemplo do Experimente é o que um leigo escreveria, não o código técnico.
+  it('examples are what a lay person types, not technical codes', () => {
+    const { t } = i18n.global;
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.PROCEDIMENTOS.EXEMPLO')).toBe(
+      'hemograma'
+    );
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.DOENCAS.EXEMPLO')).toBe('asma');
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.EXEMPLO')).toBe('Itaú');
+    expect(t('AGENTS.VITRINE.FERRAMENTAS.BANCOS.USE_QUANDO')).toContain(
+      'o nome ou o código de um banco'
+    );
+  });
+
   it('shows only what the server released, in the showcase order', () => {
     expect(liberadas(['bancos', 'cep', 'desconhecida']).map(i => i.id)).toEqual(
       ['cep', 'bancos']

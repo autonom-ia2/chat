@@ -33,7 +33,8 @@ class Autonomia::FerramentasProntas::Provedor
     end
 
     # A reserva aproximada (a sede mais próxima) não responde depois que uma fonte disse "não tem" (o ponto é de outro
-    # país): ela inventaria uma cidade. As outras respondem.
+    # país): ela inventaria uma cidade. Nem a BrasilAPI do CEP (o open-cep inventa endereço para o CEP que não existe).
+    # As outras respondem.
     def depois_de_nao_encontrado?
       !(const_defined?(:SO_SEM_RESPOSTA, false) && self::SO_SEM_RESPOSTA)
     end
@@ -42,6 +43,19 @@ class Autonomia::FerramentasProntas::Provedor
     # sem as cidades) declara `VALIDADE` curta, ou 0 (não grava). nil: a validade da consulta.
     def validade
       const_defined?(:VALIDADE, false) ? self::VALIDADE : nil
+    end
+
+    # A validade de UMA resposta: a resposta parcial (o PNCP que só deu o último dia) não vai ao cache, para a próxima
+    # consulta tentar o período inteiro. Sem sobrescrever: a `validade` do provedor.
+    def validade_da_resposta(_dados)
+      validade
+    end
+
+    # A chave opcional do provedor, lida da variável de ambiente `nome` (só o nome fica no código). Colada com quebra de
+    # linha no fim, vale sem ela; com quebra no meio, não vale (seria outro cabeçalho), e o provedor segue sem chave.
+    def chave_do_ambiente(nome)
+      valor = ENV.fetch(nome, nil).to_s.strip
+      valor.presence unless valor.include?("\r") || valor.include?("\n")
     end
 
     # Cabeçalhos próprios do provedor (a chave gratuita da parallelum). Só vão ao host dele: o redirecionamento para

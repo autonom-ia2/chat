@@ -477,6 +477,20 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
+  // Revisão do #2906: o código que tem a forma de um mês ("7318-12") não vira "dezembro de 7318".
+  it('an identification key shaped like a month stays as it came; a month elsewhere is readable', () => {
+    const mes = new Date(2026, 10, 1).toLocaleDateString('pt-BR', {
+      month: 'long',
+      year: 'numeric',
+    });
+    expect(linhasDoResultado({ codigo: '7318-12' }, textos)).toEqual([
+      ['Código', '7318-12'],
+    ]);
+    expect(linhasDoResultado({ data: '2026-11' }, textos)).toEqual([
+      ['Data', mes],
+    ]);
+  });
+
   it('a date with time is shown in the language, with the hour, without time zone conversion', () => {
     const rotulo = chave => (chave === 'data' ? 'Data' : '');
     const em = (data, idioma = 'pt-BR') =>
