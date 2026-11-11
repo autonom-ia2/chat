@@ -29,6 +29,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   # O mesmo código de recusa sem contexto de entrega da `ver_resultado_da_cotacao` (`Tools::Recusa::MOTIVOS`).
   SEM_CONTEXTO = 'lista_indisponivel_nesta_superficie'.freeze
   NOME = 'Proposta'.freeze
+  NOME_DO_RESUMO = 'Resumo da cotação'.freeze
 
   # Os textos ao modelo. Nenhum vai ao cliente, e nenhum leva valor.
   SEM_COTACAO = 'Não há cotação nesta conversa com proposta para enviar. Não abra cotação nova por causa deste ' \
@@ -47,6 +48,14 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   ENVIADA = 'A proposta da %<nome>s foi enviada ao cliente nesta conversa, como arquivo PDF. Escreva você a ' \
             'mensagem que acompanha o arquivo, sem link e sem travessão. ' \
             "#{::Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos::ORDEM_DO_ARQUIVO}".freeze
+  # O PORTAL SEM O DOCUMENTO DA SEGURADORA (chat#2886): o adapter imprime o resumo da cotação, e a Lia o chamava de
+  # proposta da seguradora. Mandar o resumo é melhor do que nada (decisão do Rodrigo); o nome é que precisa ser o
+  # certo.
+  ENVIADO_RESUMO = 'O portal não trouxe a proposta oficial da %<nome>s. Foi enviado ao cliente nesta conversa, como ' \
+                   'arquivo PDF, o resumo da cotação dela, com preço e coberturas. Escreva você a mensagem que ' \
+                   'acompanha o arquivo, sem link e sem travessão: diga que é o resumo da cotação e que a proposta ' \
+                   'oficial da seguradora não saiu, e não o chame de proposta. ' \
+                   "#{::Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos::ORDEM_DO_ARQUIVO}".freeze
   SEM_PROPOSTA = '%<nome>s não fez proposta nesta cotação, e não há proposta dela para enviar. Nada foi enviado ao ' \
                  'cliente.'.freeze
   AINDA_NAO = '%<nome>s ainda não respondeu, e a cotação continua correndo. Nada foi enviado ao cliente.'.freeze
@@ -142,12 +151,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   #
   # Sem sessão viva ou sem URL https, o motivo vai ao log como código curto; o download que falha, o publicador já
   # registra com o motivo dele (`arquivo indisponivel`).
+  #
+  # `official: false` é o resumo que o portal imprime quando não tem o documento da seguradora; sem o campo (adapter
+  # anterior ao chat#2886), segue como proposta.
   def enviar(codigo, nome)
-    url = url_da_proposta(codigo)
+    proposta = proposta_do_portal(codigo)
+    url = proposta['url'].presence
+    resumo = proposta['official'] == false
     return falhou(nome, 'sem_url') unless url.to_s.match?(Arquivo::URL_SEGURA)
-    return falhou(nome, 'nao_publicada') unless publicar(url, nome).published?
+    return falhou(nome, 'nao_publicada') unless publicar(url, nome, resumo: resumo).published?
 
-    format(ENVIADA, nome: nome)
+    format(resumo ? ENVIADO_RESUMO : ENVIADA, nome: nome)
   rescue ::Autonomia::Insurance::Connector::Error => e
     return format(SEM_PROPOSTA, nome: nome) if e.kind == :validation
 
@@ -156,18 +170,17 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     falhou(nome, e.class.name)
   end
 
-  def url_da_proposta(codigo)
-    proposta = sessions.with_live_session do |sessao|
+  def proposta_do_portal(codigo)
+    sessions.with_live_session do |sessao|
       connector.quote_proposal(provider: connection.provider, session: sessao, quote_id: run_da_cotacao.handle['quote_id'],
                                insurer_code: codigo)
-    end
-    proposta.to_h['url'].presence
+    end.to_h
   end
 
   # SEM LEGENDA, como todo arquivo do motor desde a PR C: a frase é da Lia. O publicador baixa, grava e anexa; o
   # download que falha não publica nada.
-  def publicar(url, nome)
-    arquivo = Arquivo.new(url: url, nome: nome_do_arquivo(nome))
+  def publicar(url, nome, resumo:)
+    arquivo = Arquivo.new(url: url, nome: nome_do_arquivo(nome, resumo: resumo))
     ::Autonomia::Agents::Tools::AsyncPublisher.new(run: run_da_cotacao).publish!(arquivo)
   end
 
@@ -184,14 +197,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
     ::Autonomia::Insurance::NotaNaHora.postar(delivery&.conversation, texto, chave: "proposta:#{delivery&.turno}:#{nome}")
   end
 
-  # "Proposta Usebens, placa HIK9383.pdf", no molde do comparativo (`InsuranceQuote::Comparativo#nome_do_comparativo`):
-  # vírgula, e não travessão nem dois pontos; sem placa, o ramo. O nome da seguradora vem do portal: barra e dois
-  # pontos saem, porque o sistema do cliente os recusa em nome de arquivo.
-  def nome_do_arquivo(nome)
+  # "Proposta Usebens, placa HIK9383.pdf" ("Resumo da cotação Usebens, ..." sem o documento oficial), no molde do
+  # comparativo (`InsuranceQuote::Comparativo#nome_do_comparativo`): vírgula, e não travessão nem dois pontos; sem
+  # placa, o ramo. O nome da seguradora vem do portal: barra e dois pontos saem, porque o sistema do cliente os recusa
+  # em nome de arquivo.
+  def nome_do_arquivo(nome, resumo:)
     argumentos = run_da_cotacao.arguments.to_h
     placa = argumentos.dig('vehicle', 'plate').to_s.upcase.gsub(/[^A-Z0-9]/, '')
     sufixo = placa.present? ? "placa #{placa}" : (argumentos['produto'].presence || 'auto').to_s.tr('_', ' ')
-    "#{NOME} #{nome.to_s.gsub(%r{[/\\:]}, ' ').squish}, #{sufixo}.pdf"
+    "#{resumo ? NOME_DO_RESUMO : NOME} #{nome.to_s.gsub(%r{[/\\:]}, ' ').squish}, #{sufixo}.pdf"
   end
 
   def run_da_cotacao
