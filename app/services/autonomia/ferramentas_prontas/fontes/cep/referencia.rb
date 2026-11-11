@@ -2,7 +2,17 @@
 # cidade, usar o CEP padrão da cidade". Para a fonte cujo dado é por cidade e que pede um CEP (a criminalidade da F7):
 # a plataforma acha um CEP da cidade sozinha, e o agente não pergunta ao cliente.
 #
-# INTERFACE ESTÁVEL (a F7 usa):
+# INTERFACE ESTÁVEL (a F7 usa). O método que a F7 chama é `Autonomia::FerramentasProntas::Premium::Endereco.cep(cidade:,
+# uf:, rua: nil, bairro: nil)`, que devolve `{'cep'=>…}`, `{'candidatos'=>[…]}` ou nil; ele só precisa delegar a:
+#   Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil)
+#   - sem rua: `{'cep' => cep_da_cidade(...)}`, ou nil;
+#   - com rua: os CEPs da rua no ViaCEP (a mesma busca da consulta `por_endereco`, `ViaCep#ceps_da_rua`), filtrados
+#     pelo bairro quando vem (todas as palavras, sem acento); um só -> `{'cep' => '01311-000'}`; vários ->
+#     `{'candidatos' => [{ 'cep', 'logradouro', 'complemento', 'bairro' }]}`, até `Cep::MAX_CEPS`, o CEP da rua (faixa
+#     de número) antes do especial de prédio; nenhum, cidade que não existe ou homônima sem UF, fonte fora -> nil.
+#   Cada pedido com rua é uma chamada ao ViaCEP (o cache é o da consulta `por_endereco` só quando ela roda pela
+#   `Execucao`); nunca levanta.
+# E o CEP de referência sozinho:
 #   Autonomia::FerramentasProntas::Fontes::Cep::Referencia.cep_da_cidade(cidade: 'Uberlândia', uf: nil, conta: 42)
 #   -> "38400-263" (String, com traço), ou nil.
 #   - `cidade`: o nome, como o cliente disse; `uf`: opcional (a cidade única no Brasil basta; a homônima sem UF dá nil);
@@ -35,12 +45,36 @@ module Autonomia::FerramentasProntas::Fontes::Cep::Referencia
     da_fonte(municipio, conta).tap { |cep| gravar(municipio, cep) if cep }
   end
 
-  def da_fonte(municipio, conta)
-    via_cep = Autonomia::FerramentasProntas::Fontes::Cep::ViaCep
+  def cep(cidade:, uf: nil, rua: nil, bairro: nil, conta: nil) # rubocop:disable Naming/MethodParameterName
+    return cep_da_cidade(cidade: cidade, uf: uf, conta: conta)&.then { |achado| { 'cep' => achado } } if rua.blank?
+
+    municipio = Autonomia::FerramentasProntas::Municipios.buscar(uf, cidade)
+    return if municipio.nil?
+
+    ceps = Autonomia::FerramentasProntas::Lista.filtrar(da_rua(municipio, rua, conta), bairro) { |item| item['bairro'].to_s }
+    return if ceps.empty?
+    return { 'cep' => ceps.first['cep'] } if ceps.one?
+
+    { 'candidatos' => Autonomia::FerramentasProntas::Fontes::Cep.lista(municipio, rua, ceps)['ceps'] }
+  end
+
+  def da_rua(municipio, rua, conta)
+    via_cep(conta).ceps_da_rua(municipio, rua.to_s.squish)
+  rescue Autonomia::FerramentasProntas::Provedor::Falha, Autonomia::FerramentasProntas::Provedor::NaoEncontrado => e
+    Rails.logger.warn("[autonomia][pronta] cep da rua sem resposta municipio=#{municipio.codigo} #{e.class}")
+    []
+  end
+
+  def via_cep(conta)
+    classe = Autonomia::FerramentasProntas::Fontes::Cep::ViaCep
     cliente = Autonomia::FerramentasProntas::ClienteHttp.new(
-      hosts: [via_cep.host], prazo_final: Autonomia::FerramentasProntas::ClienteHttp.agora + PRAZO, conta: conta
+      hosts: [classe.host], prazo_final: Autonomia::FerramentasProntas::ClienteHttp.agora + PRAZO, conta: conta
     )
-    via_cep.new(cliente, prazo: PRAZO).ceps_da_rua(municipio, RUA).pluck('cep').min
+    classe.new(cliente, prazo: PRAZO)
+  end
+
+  def da_fonte(municipio, conta)
+    via_cep(conta).ceps_da_rua(municipio, RUA).pluck('cep').min
   rescue Autonomia::FerramentasProntas::Provedor::Falha, Autonomia::FerramentasProntas::Provedor::NaoEncontrado => e
     Rails.logger.warn("[autonomia][pronta] cep de referencia sem resposta municipio=#{municipio.codigo} #{e.class}")
     nil

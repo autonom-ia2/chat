@@ -43,4 +43,34 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
     expect(described_class.cep_da_cidade(cidade: 'Uberlândia')).to be_nil
     expect(a_request(:get, /Bom|Nao/)).not_to have_been_made
   end
+
+  describe '.cep (o que a F7 chama em Premium::Endereco.cep)' do
+    let(:paulista) { 'https://viacep.com.br/ws/SP/Sao%20Paulo/Avenida%20Paulista/json/' }
+    let(:de_sp) { { logradouro: 'Avenida Paulista', localidade: 'São Paulo', uf: 'SP', ibge: '3550308' } }
+
+    it 'sem rua: o CEP de referencia da cidade' do
+      fonte_responde(uberlandia, [rua('38400-263', 'Tabajaras')])
+
+      expect(described_class.cep(cidade: 'Uberlândia', uf: 'MG')).to eq('cep' => '38400-263')
+    end
+
+    it 'com a rua: um CEP so vira cep; varios viram candidatos, o da rua antes do especial; o bairro filtra' do
+      fonte_responde(paulista, [de_sp.merge(cep: '01311-921', complemento: '1159', bairro: 'Bela Vista'),
+                                de_sp.merge(cep: '01310-100', complemento: 'de 1 a 609 - lado ímpar', bairro: 'Bela Vista'),
+                                de_sp.merge(cep: '01311-000', complemento: 'de 611 a 1045', bairro: 'Cerqueira César')])
+
+      candidatos = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista')['candidatos']
+
+      expect(candidatos.pluck('cep')).to eq(%w[01310-100 01311-000 01311-921])
+      expect(candidatos.first).to include('bairro' => 'Bela Vista', 'complemento' => 'de 1 a 609 - lado ímpar')
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista', bairro: 'cerqueira')).to eq('cep' => '01311-000')
+    end
+
+    it 'rua que nao existe, cidade que nao existe ou fonte fora: nil' do
+      fonte_responde(paulista, [])
+
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Avenida Paulista')).to be_nil
+      expect(described_class.cep(cidade: 'Nao Existe', uf: 'SP', rua: 'Rua A')).to be_nil
+    end
+  end
 end
