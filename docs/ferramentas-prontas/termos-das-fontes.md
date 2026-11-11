@@ -118,6 +118,21 @@ Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é a
   uma linha só na telemetria (`tool_run_id` único). Se a execução já tinha gravado a linha dela, a linha vira
   `sem_cobranca` com motivo `entrega_incerta`: a grátis volta ao saldo do mês e o preço zera; o custo nosso fica. Se não
   tinha, entra uma linha de falha `entrega_incerta` com o custo do dataset, porque a BigDataCorp pode ter cobrado.
+- **Documento inválido: depende de quem recusa** (Rodrigo, 11/11, "A, não conta"). O CPF ou o CNPJ com dígito errado é
+  recusado por nós antes de chamar a BigDataCorp e não conta como consulta. O documento que a BigDataCorp recusa depois
+  de receber o pedido (-114 "INVALID DOC PARAMETER", -155 "INVALID CAR NUMBER PARAMETER") conta e é cobrado como o sem
+  registro (grátis até 20, cobrado da 21ª em diante), e o mesmo documento no mesmo dia vem do cache.
+- **A falha com o pedido já no ar leva o custo na telemetria, sem contar para o cliente**: a resposta 200 que não lemos,
+  o tempo esgotado esperando a resposta e a entrega incerta. A BigDataCorp pode ter cobrado, e a telemetria precisa bater
+  com o painel dela. DATASET IS TOO SLOW, o 504, a conexão que nem abriu e o erro de token seguem sem custo. A resposta
+  que levanta ao ser montada (defeito nosso) também vira falha com o nosso custo, sem contar para o cliente.
+- **A grátis devolvida acima de 20 não se perde**: quando a entrega incerta desfaz uma grátis num mês que já passou das
+  20, a cobrada mais antiga do mês no mesmo card vira grátis.
+- **A telemetria que falha no banco deixa marca** no contador do dia: o motivo `premium.telemetria_falhou` em
+  `autonomia_ferramentas_prontas_usos.motivos` (por conta, card e dia). A conferência do dia lê ali (consulta no
+  comentário de `Premium::Execucao#cobrar`), porque o log some e o rastreador está desligado em produção.
+- **Duas consultas iguais da mesma conta no mesmo instante** chamam a BigDataCorp duas vezes e contam as duas. Não há
+  trava: ver o comentário de `Premium::Cache`.
 - **O 401 da BigDataCorp** apaga o token guardado e permite um reenvio com token novo (o 401 não é cobrado). A
   Prospecção não ganha o reenvio extra; só passa a apagar o token recusado.
 - **Preço em centavos inteiros:** custo × 1,5, arredondado para cima ao centavo (o embargo do IBAMA, R$ 0,225, é
