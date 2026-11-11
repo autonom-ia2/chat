@@ -124,12 +124,9 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
     acesso = Autonomia::FerramentasProntas::Acesso.find_by(account_id: @account.id, fonte: @fonte.chave)
     return false if acesso.nil?
 
-    limite = acesso.limite_do_dia
-    return false if limite.nil? # sem limite do dia (as Premium, que nem chegam aqui)
-
     hoje = Autonomia::FerramentasProntas.fuso_da_conta(@account).today
     usadas = Autonomia::FerramentasProntas::Uso.where(account_id: @account.id, fonte: @fonte.chave, dia: hoje).pick(:consultas)
-    usadas.to_i >= limite
+    usadas.to_i >= acesso.limite_do_dia
   end
 
   def ferramenta

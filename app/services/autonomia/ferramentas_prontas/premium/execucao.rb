@@ -9,6 +9,7 @@
 # chamada e nada vai à telemetria (o contador do dia, `Uso`, guarda o motivo).
 class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasProntas::Execucao
   Premium = Autonomia::FerramentasProntas::Premium
+  INDICE_DA_EXECUCAO = 'idx_premium_consultas_tool_run'.freeze
 
   # `tool_run_id`: a execução em segundo plano (`HttpAssincronaJob`), que vai à telemetria; nil no turno.
   def initialize(tool:, params: {}, tool_run_id: nil)
@@ -58,9 +59,11 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # rastreador e ao log (o contador volta atrás junto, na mesma transação). Outro erro é defeito nosso: levanta.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
-  rescue ActiveRecord::RecordNotUnique
+  rescue ActiveRecord::RecordNotUnique => e
     # A linha desta execução já existe: o varredor a fechou como entrega incerta (`Cobranca.entrega_incerta!`). Não é
-    # defeito; a transação desfez a posição no saldo.
+    # defeito; a transação desfez a posição no saldo. Duplicidade em outro índice é defeito: levanta.
+    raise unless e.message.include?(INDICE_DA_EXECUCAO)
+
     Rails.logger.info("#{PREFIXO} telemetria premium já fechada como entrega incerta conta=#{@tool.account_id} fonte=#{@fonte.chave}")
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")

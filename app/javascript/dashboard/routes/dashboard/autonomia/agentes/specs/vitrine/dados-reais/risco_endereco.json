@@ -1,0 +1,49 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "area_de_risco": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/enderecos-enderecos-em-area-de-risco",
+    "dados": {
+      "no_ponto": 3,
+      "raio_25m": 3,
+      "raio_100m": 2,
+      "legenda": "1 = dentro de comunidade mapeada pelo IBGE; 2 = comunidade não mapeada; 3 = fora de comunidade."
+    }
+  },
+  "criminalidade": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/enderecos-estatisticas-criminais",
+    "dados": {
+      "cidade": "SAO PAULO",
+      "uf": "SP",
+      "ocorrencias_12_meses": 1200,
+      "media_por_mes": 100,
+      "por_tipo": [
+        {
+          "tipo": "FURTO",
+          "ocorrencias_12_meses": 700
+        },
+        {
+          "tipo": "ROUBO A RESIDENCIA",
+          "ocorrencias_12_meses": 500
+        }
+      ]
+    }
+  },
+  "vistoria": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/marketplace-qualificacao-do-imovel-rede-vistorias",
+    "dados": {
+      "tipo": "APARTAMENTO",
+      "uso": "RESIDENCIAL",
+      "area_m2": 33,
+      "comodos": 3,
+      "nota_da_estrutura": "0,85",
+      "nota_do_acabamento": "0,8",
+      "endereco_exato": true,
+      "bairro": "SE",
+      "cidade": "SAO PAULO",
+      "uf": "SP"
+    }
+  }
+}

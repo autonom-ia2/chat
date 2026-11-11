@@ -107,15 +107,13 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
-  it 'o dia do contador vem do fuso único da conta (FerramentasProntas.fuso_da_conta), sem cálculo próprio' do
+  it 'o dia do contador é o do fuso da conta: 01h UTC de 10/11 ainda é 09/11 em São Paulo, e o 09 esgotado recusa' do
+    account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' })
     travel_to(Time.find_zone('UTC').parse('2026-11-10 01:00 UTC'))
-    allow(Autonomia::FerramentasProntas).to receive(:fuso_da_conta).and_call_original
-    allow(Crm::Timezone::Resolver).to receive(:new).and_raise(ActiveRecord::ConnectionNotEstablished)
     Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
-    Autonomia::FerramentasProntas::Uso.create!(account_id: account.id, fonte: 'fipe', dia: Time.zone.today, consultas: 2)
+    Autonomia::FerramentasProntas::Uso.create!(account_id: account.id, fonte: 'fipe', dia: Date.new(2026, 11, 9), consultas: 2)
 
     expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
-    expect(Autonomia::FerramentasProntas).to have_received(:fuso_da_conta).with(account).at_least(:once)
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 

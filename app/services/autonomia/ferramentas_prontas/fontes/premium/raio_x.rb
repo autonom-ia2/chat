@@ -10,19 +10,22 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
   TIPO_EMPRESA = 'CNPJ'.freeze
 
   PROCESSOS = lambda do |dado|
-    resumo = Extrair.campos(dado, primeiro: 'FirstLawsuitDate', ultimo: 'LastLawsuitDate', ultimos_30_dias: 'Last30DaysLawsuits',
-                                  ultimos_365_dias: 'Last365DaysLawsuits')
+    resumo = Extrair.ajustar(Extrair.campos(dado, primeiro: 'FirstLawsuitDate', ultimo: 'LastLawsuitDate', ultimos_30_dias: 'Last30DaysLawsuits',
+                                                  ultimos_365_dias: 'Last365DaysLawsuits'), datas: %w[primeiro ultimo])
     lista = Array(dado['Lawsuits'])
     processos = Extrair.itens(lista, numero: 'Number', tribunal: 'CourtName', tipo: 'Type', assunto: 'MainSubject',
-                                     situacao: 'Status', valor: 'Value', ultima_movimentacao: 'LastMovementDate')
+                                     situacao: 'Status', valor_da_causa: 'Value', ultima_movimentacao: 'LastMovementDate')
+                       .map { |processo| Extrair.ajustar(processo, datas: %w[ultima_movimentacao], positivos: %w[valor_da_causa]) }
     Extrair.sem_vazio({ 'total' => lista.size }.merge(resumo).merge('processos' => processos))
   end
 
   SANCOES = lambda do |dado|
     resumo = Extrair.campos(dado, sancionada_hoje: 'IsCurrentlySanctioned', ja_foi_sancionada: 'WasPreviouslySanctioned',
                                   ultima_sancao: 'LastSanctionDate', sancoes_no_ultimo_ano: 'Last365DaysSanctions')
+    resumo = Extrair.ajustar(resumo, datas: %w[ultima_sancao])
     lista = Extrair.itens(dado['SanctionsHistory'], fonte: 'Source', tipo: 'StandardizedSanctionType', inicio: 'StartDate',
                                                     fim: 'EndDate', ainda_na_lista: 'IsCurrentlyPresentOnSource')
+                   .map { |sancao| Extrair.ajustar(sancao, datas: %w[inicio fim]) }
     Extrair.sem_vazio(resumo.merge('sancoes' => lista))
   end
 
@@ -49,6 +52,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
                                   terminadas: 'TotalNumberOfFinishedRecords')
     lista = Extrair.itens(dado['Records'], cno: 'CNO', cidade: 'City', uf: 'State', situacao: 'Status', inicio: 'StartDate',
                                            area: 'Area', tipo: 'Typology')
+                   .map { |obra| Extrair.ajustar(obra, datas_americanas: %w[inicio]) }
     Extrair.sem_vazio(resumo.merge('obras' => lista))
   end
 

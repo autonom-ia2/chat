@@ -20,6 +20,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural
     extra = certidao['AdditionalOutputData'].is_a?(Hash) ? certidao['AdditionalOutputData'] : {}
     embargos = extra['Embargo'].is_a?(Hash) ? extra['Embargo'].values : Array(extra['Embargo'])
     lista = Extrair.itens(embargos, numero: 'Number', cidade: 'AreaCity', uf: 'AreaUF', desde: 'IssuedDate')
+                   .map { |embargo| Extrair.ajustar(embargo, datas: %w[desde]) }
     Extrair.sem_vazio({ 'situacao' => situacao, 'embargos' => lista })
   end
 

@@ -4,6 +4,12 @@
 # `Resposta`.
 module Autonomia::FerramentasProntas::Premium::Extrair
   MAX_ITENS = 5
+  TAMANHO_DA_DATA = 10
+  # A BigDataCorp marca "sem data de fim" com o ano 9999.
+  SEM_FIM = '9999'.freeze
+  FORMATO_AMERICANO = '%m/%d/%Y'.freeze
+  SIM = 'true'.freeze
+  NAO = 'false'.freeze
 
   module_function
 
@@ -40,7 +46,48 @@ module Autonomia::FerramentasProntas::Premium::Extrair
     situacao = valor(certidao['BaseStatus'])
     return nil if situacao.nil?
 
-    { 'situacao' => situacao }.merge(campos(certidao['AdditionalOutputData'], CERTIDAO))
+    extra = ajustar(campos(certidao['AdditionalOutputData'], CERTIDAO), datas: %w[emitida_em validade], sim_ou_nao: %w[em_debito])
+    { 'situacao' => situacao }.merge(extra)
+  end
+
+  # Os campos de um hash já extraído, no formato que não leva a leitura errada (as fixtures da vitrine, 11/11):
+  #   - `datas`: "2026-10-01T09:00:00" -> "2026-10-01"; o fim 9999 (sem fim) sai; outro formato fica como veio;
+  #   - `datas_americanas`: "02/20/2025 00:00:00" (mês/dia, as obras) -> "2025-02-20";
+  #   - `positivos`: número negativo (o -1 de "desconhecido") sai;
+  #   - `sim_ou_nao`: o "True" e o "False" em texto viram verdadeiro e falso.
+  def ajustar(hash, datas: [], datas_americanas: [], positivos: [], sim_ou_nao: [])
+    ajustes = { method(:data) => datas, method(:data_americana) => datas_americanas, method(:positivo) => positivos,
+                method(:sim_ou_nao) => sim_ou_nao }
+    hash.to_h do |chave, item|
+      ajuste = ajustes.find { |_metodo, chaves| chaves.include?(chave) }&.first
+      [chave, ajuste ? ajuste.call(item) : item]
+    end.compact
+  end
+
+  def data(texto)
+    return nil if texto.nil? || texto.start_with?(SEM_FIM)
+
+    Date.iso8601(texto.first(TAMANHO_DA_DATA)).iso8601
+  rescue Date::Error
+    texto
+  end
+
+  def data_americana(texto)
+    return nil if texto.nil?
+
+    Date.strptime(texto.first(TAMANHO_DA_DATA), FORMATO_AMERICANO).iso8601
+  rescue Date::Error
+    texto
+  end
+
+  def positivo(numero)
+    numero.is_a?(Numeric) && numero.negative? ? nil : numero
+  end
+
+  def sim_ou_nao(item)
+    return item if [true, false].include?(item)
+
+    { SIM => true, NAO => false }[item.to_s.strip.downcase]
   end
 
   def sem_vazio(hash)

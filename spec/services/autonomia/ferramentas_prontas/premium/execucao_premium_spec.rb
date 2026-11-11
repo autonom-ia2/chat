@@ -51,7 +51,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     resposta = executar_premium(certidoes, pgfn)
 
     expect(resposta['situacao']).to eq('encontrado')
-    expect(resposta['dados']).to include('situacao' => 'NEGATIVA', 'emitida_em' => '2026-11-10 10:00:00Z')
+    expect(resposta['dados']).to include('situacao' => 'NEGATIVA', 'emitida_em' => '2026-11-10')
     expect(resposta.to_json).not_to include('arquivo.exemplo.test', FerramentasPremiumHelper::CNPJ_EXEMPLO)
     expect(registros_premium.sole).to have_attributes(
       account_id: account.id, autonomia_agent_id: agent.id, fonte: 'certidoes_empresa', consulta: 'divida_uniao',
@@ -251,6 +251,18 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
       expect(saldos.count).to eq(0)
       expect(logs.string).to include('telemetria premium falhou', 'ActiveRecord::RecordInvalid')
+    end
+
+    it 'duplicidade em outro índice não é a entrega incerta: sobe como defeito da execução, ao rastreador' do
+      pgfn_responde
+      allow(Autonomia::FerramentasProntas::Premium::Registro).to receive(:create!)
+        .and_raise(ActiveRecord::RecordNotUnique, 'duplicate key value violates unique constraint "outro_indice"')
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(usos.sole.motivos).to eq('defeito' => 1)
+      expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(ActiveRecord::RecordNotUnique), account: account)
+      expect(logs.string).not_to include('já fechada como entrega incerta')
     end
 
     it 'erro que não é do banco não é tratado como telemetria: sobe como defeito da execução, ao rastreador' do

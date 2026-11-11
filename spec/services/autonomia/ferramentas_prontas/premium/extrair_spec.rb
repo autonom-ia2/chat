@@ -28,7 +28,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
     expect(ler('certidoes_empresa', 'fgts', fgts).dados).to eq('situacao' => 'REGULAR', 'periodo' => '01/11/2026 - 30/11/2026')
     cndt = [{ 'BaseStatus' => 'NAO CONSTA', 'AdditionalOutputData' => { 'IsInDebt' => 'False', 'Expiration' => '10/05/2027',
                                                                         'RawCertificateText' => 'longo' } }]
-    expect(ler('certidoes_empresa', 'trabalhista', cndt).dados).to eq('situacao' => 'NAO CONSTA', 'em_debito' => 'False',
+    expect(ler('certidoes_empresa', 'trabalhista', cndt).dados).to eq('situacao' => 'NAO CONSTA', 'em_debito' => false,
                                                                       'vence_em' => '10/05/2027')
   end
 
@@ -144,6 +144,33 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
 
     expect(ler('contato_empresa', 'telefone', fones).dados)
       .to eq('telefones' => [{ 'telefone' => '11 990000000', 'tipo' => 'MOBILE' }, { 'telefone' => '21 980000000', 'tipo' => 'PERSONAL' }])
+  end
+
+  describe 'nada que leve a leitura errada (as fixtures da vitrine, 11/11)' do
+    it 'data com hora vira só a data; a data americana das obras vira a do servidor; o fim 9999 (sem fim) sai' do
+      processos = { 'FirstLawsuitDate' => '2019-03-12T10:00:00', 'Lawsuits' => [{ 'Number' => '1', 'LastMovementDate' => '2026-10-01T09:00:00' }] }
+      expect(ler('raio_x_empresa', 'processos', processos).dados)
+        .to include('primeiro' => '2019-03-12', 'processos' => [{ 'numero' => '1', 'ultima_movimentacao' => '2026-10-01' }])
+      sancoes = { 'LastSanctionDate' => '2024-03-01T00:00:00',
+                  'SanctionsHistory' => [{ 'Source' => 'ceis', 'StartDate' => '2024-03-01T00:00:00', 'EndDate' => '9999-12-31T23:59:59.9999999' }] }
+      expect(ler('raio_x_empresa', 'sancoes', sancoes).dados)
+        .to eq('ultima_sancao' => '2024-03-01', 'sancoes' => [{ 'fonte' => 'ceis', 'inicio' => '2024-03-01' }])
+      obras = { 'Records' => [{ 'CNO' => '9', 'StartDate' => '02/20/2025 00:00:00' }] }
+      expect(ler('raio_x_empresa', 'obras', obras).dados['obras']).to eq([{ 'cno' => '9', 'inicio' => '2025-02-20' }])
+      pgfn = [{ 'BaseStatus' => 'NEGATIVA', 'AdditionalOutputData' => { 'EmissionDate' => '2026-11-10 10:00:00Z' } }]
+      expect(ler('certidoes_empresa', 'divida_uniao', pgfn).dados).to eq('situacao' => 'NEGATIVA', 'emitida_em' => '2026-11-10')
+    end
+
+    it 'o valor da causa desconhecido (-1 na BigDataCorp) sai; o conhecido vai como valor_da_causa' do
+      dado = { 'Lawsuits' => [{ 'Number' => '1', 'Value' => -1 }, { 'Number' => '2', 'Value' => 15_000.0 }] }
+      expect(ler('raio_x_empresa', 'processos', dado).dados['processos'])
+        .to eq([{ 'numero' => '1' }, { 'numero' => '2', 'valor_da_causa' => 15_000.0 }])
+    end
+
+    it 'o "False" e o "True" em texto da certidão trabalhista viram sim ou não' do
+      cndt = [{ 'BaseStatus' => 'NAO CONSTA', 'AdditionalOutputData' => { 'IsInDebt' => 'False' } }]
+      expect(ler('certidoes_empresa', 'trabalhista', cndt).dados).to eq('situacao' => 'NAO CONSTA', 'em_debito' => false)
+    end
   end
 
   it 'formato que mudou vira falha (não conta), nunca exceção' do

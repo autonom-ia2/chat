@@ -1,0 +1,34 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "situacao_cpf": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-receita-federal-status-do-cpf-pessoa",
+    "dados": {
+      "situacao_na_receita": "REGULAR"
+    }
+  },
+  "nome_e_nascimento": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/pessoas-dados-cadastrais-basicos",
+    "dados": {
+      "nome": "PESSOA EXEMPLO DA SILVA",
+      "nascimento": "1990-05-01"
+    }
+  },
+  "conselho": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/pessoas-conselhos-de-classe",
+    "dados": {
+      "registros_ativos": 1,
+      "registros": [
+        {
+          "conselho": "CREMESP",
+          "uf": "SP",
+          "categoria": "MEDICO",
+          "registro": "000000",
+          "situacao": "ATIVO"
+        }
+      ]
+    }
+  }
+}

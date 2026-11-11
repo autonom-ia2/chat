@@ -1,0 +1,34 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "placa": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/veiculos-dados-historicos-de-placa-de-veiculo",
+    "dados": {
+      "marca": "GM",
+      "modelo": "ONIX",
+      "versao": "LT 1.0",
+      "ano_de_fabricacao": "2019",
+      "ano_do_modelo": "2020",
+      "combustivel": "ALCOOL/GASOLINA",
+      "tipo": "PASSAGEIRO",
+      "donos_ao_longo_da_vida": 2,
+      "restricao_hoje": false,
+      "ja_teve_restricao": true,
+      "alertas": 1,
+      "historico": [
+        {
+          "cor": "PRATA",
+          "categoria": "PARTICULAR",
+          "cidade": "CAMPINAS",
+          "uf": "SP"
+        },
+        {
+          "cor": "PRATA",
+          "categoria": "PARTICULAR",
+          "cidade": "SAO PAULO",
+          "uf": "SP"
+        }
+      ]
+    }
+  }
+}
