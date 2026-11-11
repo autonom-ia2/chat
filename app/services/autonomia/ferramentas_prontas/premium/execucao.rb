@@ -12,6 +12,7 @@
 class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasProntas::Execucao
   Premium = Autonomia::FerramentasProntas::Premium
   INDICE_DA_EXECUCAO = 'idx_premium_consultas_tool_run'.freeze
+  TELEMETRIA_FALHOU = 'premium.telemetria_falhou'.freeze
 
   # `tool_run_id`: a execução em segundo plano (`HttpAssincronaJob`), que vai à telemetria; nil no turno.
   def initialize(tool:, params: {}, tool_run_id: nil)
@@ -82,6 +83,11 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
 
   # A telemetria é a base da fatura, mas a resposta ao cliente não depende dela: a falha do banco ao gravar vai ao
   # rastreador e ao log (o contador volta atrás junto, na mesma transação). Outro erro é defeito nosso: levanta.
+  # O log some e o rastreador está desligado em produção: o rastro durável é o motivo `premium.telemetria_falhou` no
+  # contador do dia (`autonomia_ferramentas_prontas_usos.motivos`, por conta, card e dia). A conferência do dia lê ali:
+  #   SELECT account_id, fonte, dia, motivos->>'premium.telemetria_falhou' AS falhas
+  #   FROM autonomia_ferramentas_prontas_usos WHERE dia = CURRENT_DATE AND motivos ? 'premium.telemetria_falhou';
+  # Com o banco inteiro fora, a marca também não grava: aí sobram o log e o rastreador.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
   rescue ActiveRecord::RecordNotUnique => e
@@ -93,5 +99,12 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
     ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
+    marcar_telemetria_falhou
+  end
+
+  def marcar_telemetria_falhou
+    Autonomia::FerramentasProntas::Uso.anotar!(account_id: @tool.account_id, fonte: @fonte.chave, motivos: [TELEMETRIA_FALHOU])
+  rescue StandardError => e
+    Rails.logger.error("#{PREFIXO} marca da telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
   end
 end

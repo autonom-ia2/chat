@@ -165,4 +165,28 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(registros_premium.sole).to have_attributes(resultado: 'encontrado', cobranca: 'gratis', numero: 1)
     end
   end
+
+  # Revisor (execucao.rb:68): o log some e o Sentry está desligado em produção. A falha da telemetria deixa marca no
+  # contador do dia (`Uso#motivos`), que a conferência do dia lê.
+  describe 'o rastro da telemetria que falha' do
+    it 'a falha do banco ao gravar a linha marca premium.telemetria_falhou no contador do dia, e a resposta segue' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Autonomia::FerramentasProntas::Premium::Registro).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+      uso = Autonomia::FerramentasProntas::Uso.sole
+      expect(uso).to have_attributes(account_id: account.id, fonte: 'certidoes_empresa', dia: Time.zone.today)
+      expect(uso.motivos).to include('premium.telemetria_falhou' => 1)
+    end
+
+    it 'a marca também falhando não derruba a resposta' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Autonomia::FerramentasProntas::Premium::Registro).to receive(:create!).and_raise(ActiveRecord::ConnectionNotEstablished)
+      allow(Autonomia::FerramentasProntas::Uso).to receive(:anotar!).and_call_original
+      allow(Autonomia::FerramentasProntas::Uso).to receive(:anotar!).with(hash_including(motivos: ['premium.telemetria_falhou']))
+                                                                    .and_raise(ActiveRecord::ConnectionNotEstablished)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+    end
+  end
 end
