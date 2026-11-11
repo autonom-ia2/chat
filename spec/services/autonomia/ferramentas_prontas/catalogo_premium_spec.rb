@@ -98,7 +98,10 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
 
   it 'nenhum card tem parâmetro de contato, endereço ou parente de pessoa física (recusa por desenho do schema)' do
     parametros = catalogo.premium.flat_map { |card| card.consultas.flat_map(&:parametros).map(&:nome) }.uniq
-    expect(parametros).to contain_exactly('cnpj', 'cpf', 'placa', 'cep', 'numero', 'codigo_car')
+    expect(parametros).to contain_exactly('cnpj', 'cpf', 'placa', 'cep', 'numero', 'codigo_car', 'cidade', 'uf', 'rua', 'bairro')
+    # O endereço (QI 70) só no risco do endereço, para achar o CEP: nunca para achar quem mora lá.
+    fora_do_risco = catalogo.premium.reject { |card| card.chave == 'risco_endereco' }
+    expect(fora_do_risco.flat_map { |card| card.consultas.flat_map(&:parametros).map(&:nome) }).not_to include('cidade', 'uf', 'rua', 'bairro')
 
     contato = catalogo.buscar('contato_empresa')
     expect(contato.consultas.flat_map(&:parametros).map(&:nome).uniq).to contain_exactly('cnpj', 'cep')

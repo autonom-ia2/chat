@@ -30,7 +30,8 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural
                'embargo do IBAMA, pelo CNPJ.',
     consultas: [
       Premium::ConsultaPaga.new(
-        nome: 'car', descricao: 'a situação do imóvel no Cadastro Ambiental Rural', obrigatorios: [Premium::Parametros::CODIGO_CAR],
+        nome: 'car', descricao: 'a situação do imóvel no Cadastro Ambiental Rural, pelo código que está no recibo do CAR',
+        obrigatorios: [Premium::Parametros::CODIGO_CAR],
         dataset: Premium::Dataset.new(nome: 'sicar_property_data', rota: '/enderecos', resposta: 'SicarProperty', custo: '0.10',
                                       preco: '0.15', busca: ->(params) { "carnumber{#{params['codigo_car']}}" }, extrair: CAR)
       ),

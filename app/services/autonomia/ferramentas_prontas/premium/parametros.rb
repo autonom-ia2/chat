@@ -2,6 +2,11 @@
 # inválido, e a BigDataCorp não é chamada. É aqui que a recusa acontece por desenho: o card de contato só aceita CNPJ
 # (um CPF não passa no dígito do CNPJ), e nenhum card tem parâmetro de telefone, e-mail, endereço ou parente de pessoa.
 # Sem regex: método de string e a regra de cada documento.
+#
+# Regra "QI 70" do Rodrigo (11/11/2026), à espera da interface `deduza:`/`pergunte:` da branch fix/2858-qi70-prontas:
+#   - pergunte (muda o resultado e não dá para deduzir): CNPJ, CPF, PLACA, CODIGO_CAR e NUMERO do imóvel;
+#   - deduza (dá para tirar do que o cliente disse): CEP (pela cidade ou pelo endereço, `Premium::Endereco`) e UF (pela
+#     cidade). CIDADE, RUA e BAIRRO só existem para achar o CEP; o BAIRRO só se pergunta quando a rua tem mais de um CEP.
 module Autonomia::FerramentasProntas::Premium::Parametros
   Parametro = Autonomia::FerramentasProntas::Parametro
   LETRAS = 'A-Z'.freeze
@@ -11,10 +16,12 @@ module Autonomia::FerramentasProntas::Premium::Parametros
   TAMANHO_DO_CAR = 41
   MAX_NUMERO = 10
 
+  # QI 70: pergunte.
   CNPJ = Parametro.new(
     nome: 'cnpj', descricao: 'O CNPJ da empresa como o cliente escreveu (14 posições, com ou sem pontuação).'
   ) { |valor| Parametro.cnpj(valor) }
 
+  # QI 70: pergunte.
   CPF = Parametro.new(
     nome: 'cpf', descricao: 'O CPF da pessoa como o cliente escreveu (11 dígitos, com ou sem pontos e traço).'
   ) do |valor|
@@ -22,21 +29,41 @@ module Autonomia::FerramentasProntas::Premium::Parametros
     cpf if cpf && Autonomia::FerramentasProntas::Fontes::Cpf.valido?(cpf)
   end
 
+  # QI 70: pergunte.
   PLACA = Parametro.new(
     nome: 'placa', descricao: 'A placa do veículo como o cliente escreveu (antiga ou Mercosul, com ou sem traço).'
   ) { |valor| Autonomia::FerramentasProntas::Premium::Parametros.placa(valor) }
 
+  # QI 70: deduza (no risco do endereço, pela cidade ou pelo endereço; no contato da empresa, a região é a do CEP).
   CEP = Parametro.new(
     nome: 'cep', descricao: 'O CEP do endereço como o cliente escreveu (8 dígitos, com ou sem traço).'
   ) { |valor| Parametro.digitos(valor, 8) }
 
+  # QI 70: pergunte.
   NUMERO = Parametro.new(
     nome: 'numero', descricao: 'O número do imóvel no endereço (só o número, sem complemento).'
   ) { |valor| Autonomia::FerramentasProntas::Premium::Parametros.numero(valor) }
 
+  # QI 70: pergunte (está no recibo do CAR).
   CODIGO_CAR = Parametro.new(
     nome: 'codigo_car', descricao: 'O código do imóvel rural no CAR, como está no recibo do cadastro (começa com a sigla do estado).'
   ) { |valor| Autonomia::FerramentasProntas::Premium::Parametros.codigo_car(valor) }
+
+  # Só para achar o CEP (`Premium::Endereco`): locais, não vão à BigDataCorp nem à chave do cache.
+  # QI 70: deduza (a UF pela cidade).
+  CIDADE = Parametro.new(nome: 'cidade', local: true, descricao: 'A cidade do endereço, quando o cliente não sabe o CEP.') do |valor|
+    Parametro.texto_curto(valor)
+  end
+  UF = Parametro.new(nome: 'uf', local: true, descricao: 'A sigla do estado da cidade (ex.: sp).',
+                     opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  RUA = Parametro.new(nome: 'rua', local: true, descricao: 'A rua do endereço, quando o cliente não sabe o CEP.') do |valor|
+    Parametro.texto_curto(valor)
+  end
+  # QI 70: pergunte só quando a rua tem mais de um CEP na cidade.
+  BAIRRO = Parametro.new(nome: 'bairro', local: true, descricao: 'O bairro, quando a rua tem mais de um CEP na cidade.') do |valor|
+    Parametro.texto_curto(valor)
+  end
+  PELO_ENDERECO = [CEP, RUA, BAIRRO, CIDADE, UF].freeze
 
   module_function
 

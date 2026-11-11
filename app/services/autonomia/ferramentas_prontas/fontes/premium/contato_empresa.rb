@@ -48,7 +48,10 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
                                       preco: '0.09', busca: POR_CNPJ, extrair: EMAILS)
       ),
       Premium::ConsultaPaga.new(
-        nome: 'empresas_na_regiao', descricao: 'quantas empresas há na região do CEP (só números)', obrigatorios: [Premium::Parametros::CEP],
+        nome: 'empresas_na_regiao',
+        descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira: ' \
+                   'sem o CEP, peça a rua ou o bairro, e não use o CEP geral da cidade sem avisar o cliente',
+        obrigatorios: [Premium::Parametros::CEP],
         dataset: Premium::Dataset.new(nome: 'companies_statistics', rota: '/enderecos', resposta: 'CompaniesStatistics', custo: '0.06',
                                       preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO)
       )
