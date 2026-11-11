@@ -175,6 +175,12 @@ describe('escolherFrase na aba Empresas', () => {
     expect(frase.principal).toBeNull();
   });
 
+  it('com pessoas e nenhuma empresa, não diz "0 empresas": cai na frase de pessoas', () => {
+    const frase = escolherFrase(resumo(0, 0), 'empresas');
+    expect(frase.id).toBe('sumiram');
+    expect(frase.partes).toEqual([{ chave: `${HEROI}.SUMIRAM`, count: 42 }]);
+  });
+
   it('conta sem ninguém continua convidando a trazer a lista, em qualquer aba', () => {
     expect(escolherFrase({ total: 0 }, 'empresas').id).toBe('vazia');
   });

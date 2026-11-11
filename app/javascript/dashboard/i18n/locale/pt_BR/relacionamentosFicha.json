@@ -8,8 +8,6 @@
       "PESSOAS": "Pessoas",
       "PESSOAS_VAZIO": "Ninguém nesta empresa ainda.",
       "INFORMACOES": {
-        "CNPJ": "CNPJ",
-        "SITE": "Site",
         "PESSOAS": "Pessoas",
         "CLIENTES": "Clientes"
       },
@@ -22,13 +20,8 @@
       "GAVETA_TITULO": "Alterar informações da empresa",
       "CONVERSAR_COM": "Conversar com {nome}",
       "MENSAGEM": {
-        "TITULO": "Mandar mensagem para {nome}?",
-        "RECEBEM": "{n} pessoa vai receber. | {n} pessoas vão receber.",
-        "FORA": "{n} pessoa fica de fora, porque não pode receber agora. | {n} pessoas ficam de fora, porque não podem receber agora.",
-        "PROXIMO": "Você escreve a mensagem no próximo passo.",
-        "CONTINUAR": "Continuar",
         "AVISO": "Vou abrir a mensagem para essas pessoas.",
-        "NINGUEM": "Ninguém desta empresa pode receber mensagem agora."
+        "SEM_PESSOAS": "Esta empresa ainda não tem pessoas."
       }
     },
     "VOLTAR": {
@@ -52,7 +45,6 @@
       "COPIADO": "Copiado.",
       "NAO_COPIOU": "Não consegui copiar. Tente de novo.",
       "ITEM_TELEFONE": "telefone",
-      "ITEM_CPF": "CPF",
       "ITEM_CNPJ": "CNPJ",
       "ETIQUETAS": "Etiquetas",
       "ACOES": "O que fazer com {nome}"
@@ -82,7 +74,7 @@
       "CONFIRMA_TITULO": "{nome} pediu para voltar a receber?",
       "CONFIRMA_TEXTO": "Só libere se a própria pessoa pediu. Ela volta a entrar em campanhas e mensagens automáticas.",
       "CONFIRMA_BOTAO": "Sim, liberar",
-      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode responder quando ela escrever.",
+      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode conversar com ela.",
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
@@ -113,7 +105,6 @@
     "CARDS": {
       "TITULO": "Cards",
       "VAZIO": "Nenhum card ainda.",
-      "NOVO": "Novo card",
       "ABRIR": "Abrir o card {titulo}",
       "FUNIL_ETAPA": "{funil} · {etapa}",
       "DE": "de {pessoa}",
@@ -123,7 +114,6 @@
         "perdido": "Não fechou"
       },
       "GAVETA": {
-        "FECHAR": "Fechar",
         "FUNIL": "Funil",
         "ETAPA": "Etapa",
         "VALOR": "Valor",
@@ -154,8 +144,6 @@
       "TITULO": "Informações",
       "ALTERAR": "Alterar",
       "VAZIO": "Ainda não há mais informações.",
-      "TELEFONE": "Telefone",
-      "EMAIL": "E-mail",
       "CPF": "CPF",
       "CIDADE": "Cidade",
       "EMPRESA": "Empresa",

@@ -8,8 +8,6 @@
       "PESSOAS": "People",
       "PESSOAS_VAZIO": "Nobody in this company yet.",
       "INFORMACOES": {
-        "CNPJ": "Company tax ID",
-        "SITE": "Website",
         "PESSOAS": "People",
         "CLIENTES": "Customers"
       },
@@ -22,13 +20,8 @@
       "GAVETA_TITULO": "Change company details",
       "CONVERSAR_COM": "Chat with {nome}",
       "MENSAGEM": {
-        "TITULO": "Send a message to {nome}?",
-        "RECEBEM": "{n} person will receive it. | {n} people will receive it.",
-        "FORA": "{n} person is left out, because they cannot receive right now. | {n} people are left out, because they cannot receive right now.",
-        "PROXIMO": "You write the message in the next step.",
-        "CONTINUAR": "Continue",
         "AVISO": "I will open the message for these people.",
-        "NINGUEM": "Nobody at this company can receive a message right now."
+        "SEM_PESSOAS": "This company has no people yet."
       }
     },
     "VOLTAR": {
@@ -52,7 +45,6 @@
       "COPIADO": "Copied.",
       "NAO_COPIOU": "I could not copy. Try again.",
       "ITEM_TELEFONE": "phone number",
-      "ITEM_CPF": "personal tax ID",
       "ITEM_CNPJ": "company tax ID",
       "ETIQUETAS": "Labels",
       "ACOES": "What to do with {nome}"
@@ -82,7 +74,7 @@
       "CONFIRMA_TITULO": "Did {nome} ask to receive messages again?",
       "CONFIRMA_TEXTO": "Only allow it if the person asked. They go back into campaigns and automatic messages.",
       "CONFIRMA_BOTAO": "Yes, allow",
-      "APOIO": "Not included in campaigns and gets no automatic messages. You can still reply when they write.",
+      "APOIO": "Not included in campaigns and gets no automatic messages. You can still chat with them.",
       "LIBERADO": "Done. {nome} can receive messages again.",
       "ERRO": "I could not allow it. Try again.",
       "ORIGEM": {
@@ -113,7 +105,6 @@
     "CARDS": {
       "TITULO": "Cards",
       "VAZIO": "No cards yet.",
-      "NOVO": "New card",
       "ABRIR": "Open the card {titulo}",
       "FUNIL_ETAPA": "{funil} · {etapa}",
       "DE": "from {pessoa}",
@@ -123,7 +114,6 @@
         "perdido": "Not closed"
       },
       "GAVETA": {
-        "FECHAR": "Close",
         "FUNIL": "Pipeline",
         "ETAPA": "Stage",
         "VALOR": "Value",
@@ -154,8 +144,6 @@
       "TITULO": "Details",
       "ALTERAR": "Change",
       "VAZIO": "There is no more information yet.",
-      "TELEFONE": "Phone",
-      "EMAIL": "E-mail",
       "CPF": "Personal tax ID",
       "CIDADE": "City",
       "EMPRESA": "Company",

@@ -1,23 +1,24 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { contaDaMensagem } from '../../lista/quemFicaDeFora';
+import { useFrasesDaMensagem } from '../../lista/useFrasesDaMensagem';
 import DialogoDaFicha from './DialogoDaFicha.vue';
 
-// #2894 — "Mandar mensagem" da empresa: diz quem recebe e quem fica de fora
-// (a conta é a da lista, `contaDaMensagem`) e só então deixa continuar. Quem
-// escreve a mensagem é o passo seguinte, que no protótipo só avisa.
+// #2894 — "Mandar mensagem" da empresa: o mesmo que o diálogo da lista (quem
+// recebe pelo nome, quem fica de fora com o motivo; mesma regra e mesmas
+// frases). O botão do cabeçalho abre sempre este diálogo: se ninguém pode
+// receber, ele diz quem e por quê e só o Continuar fica desligado. Quem escreve a
+// mensagem é o passo seguinte, que no protótipo só avisa.
 const props = defineProps({
-  empresa: { type: Object, required: true },
   pessoas: { type: Array, required: true },
 });
 const emit = defineEmits(['continuar']);
 
 const { t } = useI18n();
 const dialogo = ref(null);
-const conta = computed(() => contaDaMensagem(props.pessoas));
-const ra = (chave, valores, quantos) =>
-  t(`RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.${chave}`, valores, quantos);
+const { conta, frases, alguemRecebe } = useFrasesDaMensagem(
+  () => props.pessoas
+);
 
 defineExpose({
   open: () => dialogo.value?.open(),
@@ -28,23 +29,31 @@ defineExpose({
 <template>
   <DialogoDaFicha
     ref="dialogo"
-    :titulo="ra('TITULO', { nome: empresa.name })"
-    :confirmar="ra('CONTINUAR')"
+    :titulo="t('RELACIONAMENTOS.LISTA.MENSAGEM.TITULO')"
+    :confirmar="t('RELACIONAMENTOS.COMUM.CONTINUAR')"
     :cancelar="t('RELACIONAMENTOS.COMUM.CANCELAR')"
+    :desligado="conta.recebem === 0"
     marca-confirmar="mandar-mensagem-continuar"
     @confirm="emit('continuar')"
   >
-    <div
-      data-relacionamentos="quem-recebe"
-      class="flex flex-col gap-1 text-sm text-n-slate-11"
-    >
-      <p class="m-0 text-base font-medium text-n-slate-12">
-        {{ ra('RECEBEM', { n: conta.recebem }, conta.recebem) }}
+    <div class="flex flex-col gap-2">
+      <p
+        data-relacionamentos="dialogo-mensagem"
+        class="m-0 text-base text-n-slate-12"
+      >
+        {{
+          pessoas.length
+            ? frases.join(' ')
+            : t('RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.SEM_PESSOAS')
+        }}
       </p>
-      <p v-if="conta.fora" data-relacionamentos="quem-fica-de-fora" class="m-0">
-        {{ ra('FORA', { n: conta.fora }, conta.fora) }}
+      <p
+        v-if="alguemRecebe"
+        data-relacionamentos="dialogo-mensagem-proximo"
+        class="m-0 text-sm text-n-slate-11"
+      >
+        {{ t('RELACIONAMENTOS.LISTA.MENSAGEM.PROXIMO_PASSO') }}
       </p>
-      <p class="m-0">{{ ra('PROXIMO') }}</p>
     </div>
   </DialogoDaFicha>
 </template>

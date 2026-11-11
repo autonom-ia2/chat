@@ -20,7 +20,6 @@ import SecaoPessoasDaEmpresa from '../components/ficha/SecaoPessoasDaEmpresa.vue
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ABAS } from '../fonte/grupos';
-import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { linhasDaEmpresa } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -32,7 +31,8 @@ import { useFichaDaEmpresa } from '../ficha/useFichaDaEmpresa';
 
 // #2894 — a ficha da empresa: o mesmo desenho da pessoa, mais simples. Cabeçalho,
 // as pessoas dela, as conversas, os cards e as informações. A ação principal é
-// "Mandar mensagem" (confirma quem recebe e quem fica de fora); "Alterar" abre a
+// "Mandar mensagem" (sempre abre o diálogo que diz quem recebe e quem fica de
+// fora); "Alterar" abre a
 // gaveta. No protótipo, continuar e salvar só simulam.
 const { t } = useI18n();
 const route = useRoute();
@@ -52,12 +52,6 @@ const linhas = computed(() =>
 );
 const avisar = chave =>
   acoes.avisar(`RELACIONAMENTOS_FICHA.EMPRESA.${chave}`, nome.value);
-
-const conta = computed(() => contaDaMensagem(ficha.pessoas.value));
-const podeMandar = computed(() => conta.value.recebem > 0);
-const motivoSemEnvio = computed(() =>
-  podeMandar.value ? '' : t('RELACIONAMENTOS_FICHA.EMPRESA.MENSAGEM.NINGUEM')
-);
 
 const resultado = (deuCerto, certo, erro) => {
   const texto = t(deuCerto ? certo : erro);
@@ -148,8 +142,6 @@ watch(
         >
           <CabecalhoDaEmpresa
             :empresa="ficha.empresa.value"
-            :pode-mandar="podeMandar"
-            :motivo-sem-envio="motivoSemEnvio"
             @mandar-mensagem="dialogoDaMensagem?.open()"
             @alterar="gavetaAberta = true"
           />
@@ -195,7 +187,6 @@ watch(
     <DialogoMandarMensagem
       v-if="ficha.empresa.value"
       ref="dialogoDaMensagem"
-      :empresa="ficha.empresa.value"
       :pessoas="ficha.pessoas.value"
       @continuar="continuarMensagem"
     />

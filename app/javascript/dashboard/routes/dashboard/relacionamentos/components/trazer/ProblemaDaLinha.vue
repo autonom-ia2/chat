@@ -6,6 +6,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
 import { soDigitos } from '../../fonte/texto';
 import { emailValido } from '../../ficha/validacao';
+import { partesDoEmail } from '../../trazer/emailEmPartes';
 import { SITUACAO_DO_PROBLEMA, nomeValido } from '../../trazer/contagem';
 
 // #2894 — uma linha da planilha que precisa da pessoa: o problema em palavras
@@ -88,14 +89,19 @@ const apoioDaLinha = computed(() =>
 // Cada linha repetida mostra o que a distingue da outra: telefone e e-mail.
 const detalheDaLinha = linha => {
   const dados = props.problema.duplicadas?.find(item => item.linha === linha);
-  if (!dados) return '';
-  return [
-    dados.telefone || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_TELEFONE'),
-    dados.email || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_EMAIL'),
-  ].join(' · ');
+  if (!dados) return null;
+  return {
+    telefone:
+      dados.telefone || t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_TELEFONE'),
+    email: dados.email
+      ? partesDoEmail(dados.email)
+      : [t('RELACIONAMENTOS_TRAZER.PRECISAM.SEM_EMAIL')],
+  };
 };
 const naPlanilha = computed(() =>
-  props.problema.valor && campo.value !== 'telefone'
+  props.problema.valor &&
+  campo.value !== 'telefone' &&
+  props.problema.tipo !== 'duplicada'
     ? t('RELACIONAMENTOS_TRAZER.PRECISAM.NA_PLANILHA', {
         valor: props.problema.valor,
       })
@@ -148,16 +154,26 @@ const doTexto = computed(
             :key="linha"
             type="button"
             :data-opcao="linha"
-            class="flex flex-col items-start gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-solid-2 hover:enabled:bg-n-alpha-1 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            class="flex flex-col items-start w-full gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-alpha-1 hover:enabled:bg-n-alpha-2 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
             :disabled="ocupado"
             @click="emit('guardar', problema.linha, linha)"
           >
             <span class="text-base font-medium text-n-slate-12">
               {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
             </span>
-            <span class="text-sm break-all text-n-slate-11 tabular-nums">
-              {{ detalheDaLinha(linha) }}
-            </span>
+            <template v-if="detalheDaLinha(linha)">
+              <span class="text-sm text-n-slate-11 tabular-nums">
+                {{ detalheDaLinha(linha).telefone }}
+              </span>
+              <span class="text-sm break-words text-n-slate-11">
+                <template
+                  v-for="(parte, posicao) in detalheDaLinha(linha).email"
+                  :key="posicao"
+                >
+                  <wbr v-if="posicao" />{{ parte }}
+                </template>
+              </span>
+            </template>
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-3">

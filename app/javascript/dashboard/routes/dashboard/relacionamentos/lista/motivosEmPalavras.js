@@ -1,10 +1,9 @@
 // #2894 — os motivos de quem fica de fora, em palavras, na ordem da regra de
-// envio. `prefixo` escolhe o jeito de falar: 'MOTIVO' ("1 está sem telefone",
-// dentro de "2 ficam de fora: …") ou 'MOTIVO_CURTO' ("1 sem telefone", na barra
-// e no "ninguém aqui pode receber: …").
+// envio. Uma regra de texto só (neutra de gênero) para a barra e o diálogo:
+// "1 pediu para não receber", "1 com bloqueio", "1 sem telefone".
 const MENSAGEM = 'RELACIONAMENTOS.LISTA.MENSAGEM';
 
-export const motivosEmPalavras = (t, conta, prefixo = 'MOTIVO_CURTO') =>
+export const motivosEmPalavras = (t, conta) =>
   [
     [conta.naoQuer, 'NAO_QUER'],
     [conta.bloqueados, 'BLOQUEADO'],
@@ -12,5 +11,5 @@ export const motivosEmPalavras = (t, conta, prefixo = 'MOTIVO_CURTO') =>
   ]
     .filter(([quantos]) => quantos > 0)
     .map(([count, chave]) =>
-      t(`${MENSAGEM}.${prefixo}_${chave}`, { count }, count)
+      t(`${MENSAGEM}.MOTIVO_${chave}`, { count }, count)
     );

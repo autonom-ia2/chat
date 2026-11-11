@@ -9,8 +9,6 @@ import BotaoCopiar from './BotaoCopiar.vue';
 // ações: "Mandar mensagem" (a única preenchida) e "Alterar" (discreta).
 defineProps({
   empresa: { type: Object, required: true },
-  podeMandar: { type: Boolean, default: true },
-  motivoSemEnvio: { type: String, default: '' },
 });
 const emit = defineEmits(['mandarMensagem', 'alterar']);
 
@@ -83,8 +81,6 @@ const { t } = useI18n();
           size="lg"
           class="w-full sm:w-auto !min-h-12 !rounded-xl whitespace-nowrap shrink-0"
           icon="i-lucide-send"
-          :disabled="!podeMandar"
-          :aria-describedby="podeMandar ? undefined : 'motivo-sem-envio'"
           :label="t('RELACIONAMENTOS_FICHA.EMPRESA.MANDAR')"
           @click="emit('mandarMensagem')"
         />
@@ -97,14 +93,6 @@ const { t } = useI18n();
           @click="emit('alterar')"
         />
       </div>
-      <p
-        v-if="!podeMandar"
-        id="motivo-sem-envio"
-        data-relacionamentos="motivo-sem-envio"
-        class="m-0 text-sm text-n-slate-11"
-      >
-        {{ motivoSemEnvio }}
-      </p>
     </div>
   </header>
 </template>

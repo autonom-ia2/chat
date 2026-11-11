@@ -34,5 +34,9 @@ export const useEstadoDaFicha = () => {
     }
   };
 
-  return { estado, carregar };
+  // A geração muda a cada `carregar`: quem faz uma escrita guarda a de antes e
+  // confere depois (se o id trocou no meio, a resposta velha não vale).
+  const geracao = () => ultimoPedido;
+
+  return { estado, carregar, geracao };
 };

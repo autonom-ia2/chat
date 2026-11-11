@@ -24,7 +24,9 @@ const route = useRoute();
 const router = useRouter();
 
 const demo = usarDemo(route.query);
-const fonte = trazerFonte({ demo, planilha: route.query.planilha });
+// `?planilha=` só vale em demonstração (e a demonstração só existe no DEV).
+const planilha = demo && import.meta.env.DEV ? route.query.planilha : undefined;
+const fonte = trazerFonte({ demo, planilha });
 const avisar = chave => useAlert(t(chave));
 
 const tela = useTrazerLista({ fonte, avisar });
@@ -112,7 +114,6 @@ const confirmarDesfazer = async () => {
             :listas="historico.listas.value"
             :carregando="historico.carregando.value"
             :com-erro="historico.erro.value"
-            :prazo-de="historico.prazoDe"
             @desfazer="abrirDesfazer"
             @tentar="historico.carregar"
           />

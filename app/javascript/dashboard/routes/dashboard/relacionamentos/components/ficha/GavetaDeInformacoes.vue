@@ -26,10 +26,12 @@ const {
   dadosSeValido,
 } = useFormularioDaPessoa();
 
+// Só na transição fechada -> aberta: a pessoa pode mudar com a gaveta aberta
+// (Marcar como cliente, por exemplo), e isso não pode apagar o que foi digitado.
 watch(
-  [toRef(props, 'aberta'), toRef(props, 'pessoa')],
-  ([estaAberta, pessoa]) => {
-    if (estaAberta && pessoa) abrir(pessoa);
+  toRef(props, 'aberta'),
+  (estaAberta, estavaAberta) => {
+    if (estaAberta && !estavaAberta && props.pessoa) abrir(props.pessoa);
   },
   { immediate: true }
 );

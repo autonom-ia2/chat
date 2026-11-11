@@ -4,7 +4,7 @@ import { ref } from 'vue';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
 
 export const useFichaDaEmpresa = (fonte, id) => {
-  const { estado, carregar } = useEstadoDaFicha();
+  const { estado, carregar, geracao } = useEstadoDaFicha();
   const empresa = ref(null);
   const pessoas = ref([]);
   const conversas = ref([]);
@@ -27,11 +27,15 @@ export const useFichaDaEmpresa = (fonte, id) => {
     return true;
   };
 
-  // Devolve `true` se deu certo e `false` se falhou; a tela decide o aviso.
+  // Devolve `true` se deu certo e `false` se falhou; a tela decide o aviso. Se a
+  // ficha trocou de empresa durante o salvamento, o que foi salvo ficou salvo,
+  // mas a resposta velha não sobrescreve a empresa que está na tela.
   const salvar = async dados => {
     ocupado.value = 'salvar';
+    const geracaoDoPedido = geracao();
     try {
-      empresa.value = await fonte.salvarEmpresa(id.value, dados);
+      const salva = await fonte.salvarEmpresa(id.value, dados);
+      if (geracaoDoPedido === geracao()) empresa.value = salva;
       return true;
     } catch {
       return false;

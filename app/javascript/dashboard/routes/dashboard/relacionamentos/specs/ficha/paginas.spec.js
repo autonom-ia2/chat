@@ -160,6 +160,14 @@ describe('FichaDaPessoaPage', () => {
     ['informacoes', 'de-onde-veio'].forEach(nome =>
       expect(marca(w, nome).classes()).toContain('lg:col-start-3')
     );
+    // Informações atravessa a linha-folga (1fr): a altura dela nunca estica as
+    // seções vazias da coluna principal.
+    expect(marca(w, 'informacoes').classes()).toContain('lg:row-span-3');
+    expect(
+      w.get('[data-relacionamentos="ficha-pessoa"] > div:last-child').classes()
+    ).toEqual(
+      expect.arrayContaining(['lg:grid-rows-[auto_auto_1fr_auto_auto]'])
+    );
   });
 
   it('sair da ficha (parâmetro some) não dispara carga nem mostra "não achei"', async () => {
@@ -197,9 +205,6 @@ describe('FichaDaPessoaPage', () => {
     contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };
     const w = mount(FichaDaPessoaPage, { global: { stubs } });
     await flushPromises();
-    await new Promise(r => {
-      setTimeout(r, 0);
-    });
     expect(marca(w, 'carregando').exists()).toBe(true);
     expect(marca(w, 'ficha-pessoa').exists()).toBe(false);
     expect(marca(w, 'erro').exists()).toBe(false);
@@ -370,9 +375,6 @@ describe('FichaDaEmpresaPage: estados', () => {
     contexto.params = { companyId: String(ID_EMPRESA_COM_GENTE) };
     const w = mount(FichaDaEmpresaPage, { global: { stubs } });
     await flushPromises();
-    await new Promise(r => {
-      setTimeout(r, 0);
-    });
     expect(marca(w, 'carregando').exists()).toBe(true);
     expect(marca(w, 'ficha-empresa').exists()).toBe(false);
   });

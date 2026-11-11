@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { partesDoEmail } from '../../trazer/emailEmPartes';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 
 // #2894 — uma das três fichas de exemplo da conferência: como a pessoa vai
@@ -20,13 +21,6 @@ const iniciais = computed(() =>
     .map(parte => parte[0].toUpperCase())
     .join('')
 );
-
-// O e-mail só pode quebrar no "@": duas partes com <wbr> entre elas. Sem "@"
-// (linha com problema), vem inteiro.
-const partesDoEmail = email => {
-  const arroba = email.indexOf('@');
-  return arroba > 0 ? [email.slice(0, arroba), email.slice(arroba)] : [email];
-};
 
 const linhas = computed(() =>
   [

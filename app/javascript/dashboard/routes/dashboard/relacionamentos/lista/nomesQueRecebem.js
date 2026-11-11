@@ -11,8 +11,7 @@ const primeiroNome = nome =>
     .trim()
     .split(' ')[0];
 
-export const nomesQueRecebem = (pessoas, { idioma, eMais }) => {
-  const nomes = quemRecebe(pessoas).map(({ name }) => primeiroNome(name));
+const juntar = (nomes, { idioma, eMais }) => {
   const itens =
     nomes.length > NOMES_A_MOSTRAR
       ? [
@@ -25,3 +24,16 @@ export const nomesQueRecebem = (pessoas, { idioma, eMais }) => {
     type: 'conjunction',
   }).format(itens);
 };
+
+export const nomesQueRecebem = (pessoas, opcoes) =>
+  juntar(
+    quemRecebe(pessoas).map(({ name }) => primeiroNome(name)),
+    opcoes
+  );
+
+// Nomes de quem fica de fora por um motivo (poucos: não precisa de "e mais").
+export const nomesDe = (pessoas, opcoes) =>
+  juntar(
+    pessoas.map(({ name }) => primeiroNome(name)),
+    opcoes
+  );

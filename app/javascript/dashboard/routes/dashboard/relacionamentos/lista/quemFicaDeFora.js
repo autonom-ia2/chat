@@ -8,7 +8,7 @@ export const MOTIVOS_DE_FORA = {
   SEM_TELEFONE: 'sem_telefone',
 };
 
-const motivoDeFora = pessoa => {
+export const motivoDeFora = pessoa => {
   if (pessoa.opted_out_at) return MOTIVOS_DE_FORA.NAO_QUER;
   if (pessoa.blocked) return MOTIVOS_DE_FORA.BLOQUEADO;
   if (!pessoa.phone_number) return MOTIVOS_DE_FORA.SEM_TELEFONE;
@@ -35,3 +35,12 @@ export const contaDaMensagem = (pessoas = []) => {
 // Quem recebe, na ordem em que foi marcado.
 export const quemRecebe = (pessoas = []) =>
   pessoas.filter(pessoa => motivoDeFora(pessoa) === null);
+
+// Quem fica de fora, agrupado por motivo, na ordem da regra de envio.
+export const foraPorMotivo = (pessoas = []) =>
+  Object.values(MOTIVOS_DE_FORA)
+    .map(motivo => [
+      motivo,
+      pessoas.filter(pessoa => motivoDeFora(pessoa) === motivo),
+    ])
+    .filter(([, quem]) => quem.length > 0);

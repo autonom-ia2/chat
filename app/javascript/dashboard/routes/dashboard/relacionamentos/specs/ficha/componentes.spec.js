@@ -9,6 +9,7 @@ import SecaoArquivos from '../../components/ficha/SecaoArquivos.vue';
 import GavetaDoCard from '../../components/ficha/GavetaDoCard.vue';
 import GavetaDeInformacoes from '../../components/ficha/GavetaDeInformacoes.vue';
 import ListaDeInformacoes from '../../components/ficha/ListaDeInformacoes.vue';
+import GavetaDaEmpresa from '../../components/ficha/GavetaDaEmpresa.vue';
 import DialogoDaFicha from '../../components/ficha/DialogoDaFicha.vue';
 import DialogoMandarMensagem from '../../components/ficha/DialogoMandarMensagem.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -195,29 +196,31 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
   });
 });
 
-describe('CabecalhoDaPessoa: quem pediu silêncio', () => {
+describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
   const conversar = w =>
     w
       .findAllComponents(Button)
       .find(b => b.vm.$attrs['data-relacionamentos'] === 'conversar');
 
-  it('Conversar é cheio para quem recebe e discreto para quem pediu silêncio', () => {
+  it('Conversar segue como botão principal, cheio e clicável, mesmo com a faixa de não quer', async () => {
     const normal = mount(CabecalhoDaPessoa, {
       props: { pessoa: pessoa() },
       global: { stubs },
-    });
-    expect(conversar(normal).props()).toMatchObject({
-      variant: 'solid',
-      color: 'blue',
     });
     const calada = mount(CabecalhoDaPessoa, {
       props: { pessoa: pessoa({ opted_out_at: SEGUNDOS }) },
       global: { stubs },
     });
-    expect(conversar(calada).props()).toMatchObject({
-      variant: 'faded',
-      color: 'slate',
+    [normal, calada].forEach(w => {
+      expect(conversar(w).props('variant')).toBeNull();
+      expect(conversar(w).props('color')).toBeNull();
+      expect(conversar(w).vm.$attrs).not.toHaveProperty('faded');
+      expect(conversar(w).vm.$attrs).not.toHaveProperty('slate');
     });
+    const botao = calada.get('[data-relacionamentos="conversar"]');
+    expect(botao.attributes('disabled')).toBeUndefined();
+    await botao.trigger('click');
+    expect(calada.emitted('conversar')).toHaveLength(1);
   });
 });
 
@@ -243,40 +246,60 @@ describe('ficha da empresa: ações', () => {
     expect(w.emitted('alterar')).toHaveLength(1);
   });
 
-  it('ninguém pode receber: botão desligado e o motivo embaixo', () => {
-    const w = mount(CabecalhoDaEmpresa, {
-      props: { empresa, podeMandar: false, motivoSemEnvio: 'Ninguém recebe.' },
-    });
+  it('Mandar mensagem nunca fica desligado, nem explica o motivo no cabeçalho', () => {
+    const w = mount(CabecalhoDaEmpresa, { props: { empresa } });
     expect(
       w.get('[data-relacionamentos="mandar-mensagem"]').attributes('disabled')
-    ).toBeDefined();
-    expect(w.get('[data-relacionamentos="motivo-sem-envio"]').text()).toBe(
-      'Ninguém recebe.'
+    ).toBeUndefined();
+    expect(w.find('[data-relacionamentos="motivo-sem-envio"]').exists()).toBe(
+      false
     );
   });
 
-  it('o diálogo diz quem recebe e quem fica de fora, e continuar emite', async () => {
-    const w = mount(DialogoMandarMensagem, {
-      props: { empresa, pessoas: [quemPodeReceber, quemPediuSilencio] },
+  const montarDialogo = pessoas =>
+    mount(DialogoMandarMensagem, {
+      props: { pessoas },
       global: { stubs },
     });
-    const texto = w.get('[data-relacionamentos="quem-recebe"]').text();
-    expect(texto).toContain('MENSAGEM.RECEBEM');
-    expect(texto).toContain('"n":1');
-    expect(texto).toContain('MENSAGEM.FORA');
-    expect(texto).toContain('MENSAGEM.PROXIMO');
+  const continuar = w =>
+    w.get('[data-relacionamentos="mandar-mensagem-continuar"]');
+
+  it('o diálogo diz quem recebe pelo nome e quem fica de fora com o motivo', async () => {
+    const w = montarDialogo([
+      quemPodeReceber,
+      pessoa({ id: 2, name: 'Bruno Ouriveira', opted_out_at: SEGUNDOS }),
+    ]);
+    const texto = w.get('[data-relacionamentos="dialogo-mensagem"]').text();
+    expect(texto).toContain('LISTA.MENSAGEM.QUEM_RECEBE');
+    expect(texto).toContain('"quem":"Ana"');
+    expect(texto).toContain('FORA_NOMES_NAO_QUER');
+    expect(texto).toContain('"quem":"Bruno"');
+    expect(
+      w.get('[data-relacionamentos="dialogo-mensagem-proximo"]').text()
+    ).toContain('PROXIMO_PASSO');
+    expect(continuar(w).attributes('disabled')).toBeUndefined();
     await w.get('[data-confirmar]').trigger('click');
     expect(w.emitted('continuar')).toHaveLength(1);
   });
 
-  it('sem ninguém de fora não fala em quem fica de fora', () => {
-    const w = mount(DialogoMandarMensagem, {
-      props: { empresa, pessoas: [quemPodeReceber] },
-      global: { stubs },
-    });
-    expect(w.find('[data-relacionamentos="quem-fica-de-fora"]').exists()).toBe(
-      false
+  it('ninguém pode receber: o diálogo abre, diz quem e por quê, e Continuar fica desligado', () => {
+    const w = montarDialogo([quemPediuSilencio]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toContain(
+      'NINGUEM_PODE'
     );
+    expect(w.findComponent(DialogoDaFicha).props('desligado')).toBe(true);
+    expect(continuar(w).attributes('disabled')).toBeDefined();
+    expect(
+      w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
+    ).toBe(false);
+  });
+
+  it('empresa sem pessoas: uma frase simples e Continuar desligado', () => {
+    const w = montarDialogo([]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toContain(
+      'SEM_PESSOAS'
+    );
+    expect(continuar(w).attributes('disabled')).toBeDefined();
   });
 
   it('cada pessoa da lista tem o botão de conversar, com nome para o leitor de tela', async () => {
@@ -812,8 +835,19 @@ describe('ficha da empresa: celular', () => {
       props: { pessoas: [pessoa({ contact_type: 'customer' })] },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
-    expect(email.classes()).toContain('col-span-3');
-    expect(email.classes()).toContain('truncate');
+    expect(email.classes()).toContain('col-span-2');
+    const linha = w.get('[data-relacionamentos="pessoa-da-empresa"]');
+    // Celular: nome em até 2 linhas (sem reticências) e o selo desce para
+    // baixo do nome; o botão de conversar fica na primeira linha.
+    expect(linha.get('span.line-clamp-2').classes()).toContain('md:truncate');
+    expect(w.get('[data-selo="cliente"]').classes()).toContain('col-start-2');
+    expect(
+      w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
+    ).toContain('absolute');
+    // Celular: o e-mail inteiro (quebra se preciso); md+: uma linha com reticências.
+    expect(email.classes()).toEqual(
+      expect.arrayContaining(['break-words', 'md:truncate'])
+    );
     expect(w.get('[data-selo="cliente"]').exists()).toBe(true);
   });
 });
@@ -884,5 +918,48 @@ describe('CampoDeTexto: região viva', () => {
     await w.setProps({ erro: 'Escreva o nome.' });
     expect(w.get('[aria-live="polite"]').element).toBe(regiao.element);
     expect(regiao.text()).toBe('Escreva o nome.');
+  });
+});
+
+describe('gavetas: não apagam o que a pessoa digitou', () => {
+  const empresa = { id: 1, name: 'Padaria Dornelaz', cnpj: '11222333000181' };
+
+  it('GavetaDaEmpresa só reabre na transição fechada para aberta', async () => {
+    const w = mount(GavetaDaEmpresa, {
+      props: { aberta: true, empresa },
+      attachTo: document.body,
+      global: { stubs },
+    });
+    const campo = () => document.querySelector('[data-foco]');
+    campo().value = 'Digitei isto';
+    campo().dispatchEvent(new Event('input'));
+    await w.vm.$nextTick();
+    await w.setProps({
+      empresa: { ...empresa, domain: 'novo.exemplo.com.br' },
+    });
+    expect(campo().value).toBe('Digitei isto');
+    await w.setProps({ aberta: false });
+    await w.setProps({ aberta: true });
+    // A gaveta sai por uma transição: o campo novo é o último no documento.
+    await vi.waitFor(() => {
+      const campos = [...document.querySelectorAll('[data-foco]')];
+      expect(campos.at(-1).value).toBe('Padaria Dornelaz');
+    });
+    w.unmount();
+  });
+
+  it('GavetaDeInformacoes também', async () => {
+    const w = mount(GavetaDeInformacoes, {
+      props: { aberta: true, pessoa: pessoa() },
+      attachTo: document.body,
+      global: { stubs },
+    });
+    const campo = () => document.querySelector('[data-foco]');
+    campo().value = 'Digitei isto';
+    campo().dispatchEvent(new Event('input'));
+    await w.vm.$nextTick();
+    await w.setProps({ pessoa: pessoa({ contact_type: 'customer' }) });
+    expect(campo().value).toBe('Digitei isto');
+    w.unmount();
   });
 });

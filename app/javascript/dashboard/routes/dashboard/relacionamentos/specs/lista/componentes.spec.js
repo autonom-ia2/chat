@@ -651,7 +651,7 @@ describe('BarraDeAcaoEmGrupo', () => {
       props: { quantas: 5, conta: contaDaMensagem(pessoas) },
     });
     expect(w.get('p').text()).toBe(
-      '5 marcadas · 2 vão receber · 1 pediu para não receber · 1 bloqueada · 1 sem telefone'
+      '5 marcadas · 2 vão receber · 1 pediu para não receber · 1 com bloqueio · 1 sem telefone'
     );
     const todos = mount(BarraDeAcaoEmGrupo, {
       props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(0, 2)) },
@@ -661,7 +661,7 @@ describe('BarraDeAcaoEmGrupo', () => {
       props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(2, 4)) },
     });
     expect(ninguem.get('p').text()).toBe(
-      '2 marcadas · 1 pediu para não receber · 1 bloqueada'
+      '2 marcadas · 1 pediu para não receber · 1 com bloqueio'
     );
   });
 
@@ -889,7 +889,7 @@ describe('DialogoMandarMensagem', () => {
   it('diz quantas recebem e quem fica de fora, com o motivo', async () => {
     const w = await abrir(doBlocoA());
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      'Pessoa, Pessoa e mais 8 vão receber. 2 ficam de fora: 1 pediu para não receber, 1 está sem telefone.'
+      'Pessoa, Pessoa e mais 8 vão receber. Quem fica de fora: pediu para não receber. Sem fica de fora: está sem telefone.'
     );
     expect(w.get('h3').text()).toBe('Mandar mensagem');
     expect(w.get('h3').classes()).toEqual(
@@ -941,7 +941,7 @@ describe('DialogoMandarMensagem', () => {
       pessoa({ id: 2, name: 'Quem Pediu', opted_out_at: diasAtras(2) }),
     ]);
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      'Vânia vai receber. 1 fica de fora: 1 pediu para não receber.'
+      'Vânia vai receber. Quem fica de fora: pediu para não receber.'
     );
   });
 
@@ -952,11 +952,55 @@ describe('DialogoMandarMensagem', () => {
     expect(proximo.classes()).toContain('text-n-slate-11');
   });
 
-  it('com gente de fora, não repete o próximo passo', async () => {
-    const w = await abrir(doBlocoA());
+  it('bloqueado fica de fora: aparece o nome e o motivo, sem depender de gênero', async () => {
+    const w = await abrir([
+      pessoa({ id: 1, name: 'Vânia Souza' }),
+      pessoa({ id: 2, name: 'Hugo Dias', blocked: true }),
+    ]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia vai receber. Hugo fica de fora: alguém da equipe bloqueou.'
+    );
+    const so = await abrir([pessoa({ id: 3, blocked: true })]);
+    expect(so.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Ninguém aqui pode receber: 1 com bloqueio.'
+    );
+  });
+
+  it('até 3 de fora: uma frase por motivo, com os nomes e a concordância', async () => {
+    const w = await abrir([
+      pessoa({ id: 1, name: 'Vânia Souza' }),
+      pessoa({ id: 2, name: 'Elisa Prado', opted_out_at: diasAtras(2) }),
+      pessoa({ id: 3, name: 'Bruno Reis', phone_number: null }),
+      pessoa({ id: 4, name: 'Ana Lima', phone_number: null }),
+    ]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia vai receber. Elisa fica de fora: pediu para não receber. Bruno e Ana ficam de fora: estão sem telefone.'
+    );
+  });
+
+  it('mais de 3 de fora: só os números, sem repetir quem', async () => {
+    const w = await abrir([
+      pessoa({ id: 1, name: 'Vânia Souza' }),
+      ...[2, 3, 4].map(id =>
+        pessoa({ id, name: `Fulano ${id}`, opted_out_at: diasAtras(2) })
+      ),
+      ...[5, 6].map(id =>
+        pessoa({ id, name: `Beltrano ${id}`, phone_number: null })
+      ),
+    ]);
+    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
+      'Vânia vai receber. 5 ficam de fora: 3 pediram para não receber, 2 sem telefone.'
+    );
+  });
+
+  it('o "próximo passo" fica em cinza sempre que alguém vai receber, até com gente de fora', async () => {
+    const com = await abrir([
+      pessoa({ id: 1 }),
+      pessoa({ id: 2, opted_out_at: diasAtras(2) }),
+    ]);
     expect(
-      w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
-    ).toBe(false);
+      com.get('[data-relacionamentos="dialogo-mensagem-proximo"]').text()
+    ).toBe('Você escreve a mensagem no próximo passo.');
   });
 
   it('quando ninguém pode receber, diz o motivo, sem prometer envio, e desliga o botão', async () => {
@@ -972,20 +1016,6 @@ describe('DialogoMandarMensagem', () => {
     expect(
       w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
     ).toBe(false);
-  });
-
-  it('bloqueado fica de fora: aparece no motivo e não conta como quem recebe', async () => {
-    const w = await abrir([
-      pessoa({ id: 1 }),
-      pessoa({ id: 2, blocked: true }),
-    ]);
-    expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      'Ana vai receber. 1 fica de fora: 1 está bloqueada.'
-    );
-    const so = await abrir([pessoa({ id: 3, blocked: true })]);
-    expect(so.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
-      'Ninguém aqui pode receber: 1 bloqueada.'
-    );
   });
 });
 

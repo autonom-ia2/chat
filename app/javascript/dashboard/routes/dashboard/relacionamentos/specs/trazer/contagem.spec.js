@@ -8,15 +8,8 @@ import {
   totalATrazer,
   totalDaLeitura,
 } from '../../trazer/contagem';
-import {
-  PRAZO,
-  SITUACOES_DA_LISTA,
-  formatarDia,
-  prazoParaDesfazer,
-  situacaoDoPrazo,
-} from '../../trazer/prazo';
+import { formatarDia } from '../../trazer/prazo';
 
-const DIA = 24 * 60 * 60 * 1000;
 const leituraCom = estados => ({
   resumo: { total: 200, novas: 180, completadas: 15, comProblema: 5 },
   problemas: estados.map((estado, i) => ({ linha: i + 1, estado })),
@@ -147,34 +140,7 @@ describe('ehPlanilha', () => {
   ])('recusa %s', nome => expect(ehPlanilha(nome)).toBe(false));
 });
 
-describe('prazo para desfazer', () => {
-  const quando = Date.UTC(2026, 10, 8, 12);
-
-  it('é 7 dias depois de trazer', () => {
-    expect(prazoParaDesfazer(quando)).toBe(quando + 7 * DIA);
-  });
-
-  it('lista pronta dentro dos 7 dias está aberta', () => {
-    const lista = { situacao: SITUACOES_DA_LISTA.PRONTO, quando };
-    expect(situacaoDoPrazo(lista, quando + 3 * DIA)).toBe(PRAZO.ABERTO);
-    expect(situacaoDoPrazo(lista, quando + 7 * DIA)).toBe(PRAZO.ABERTO);
-  });
-
-  it('passado o prazo acaba', () => {
-    const lista = { situacao: SITUACOES_DA_LISTA.PRONTO, quando };
-    expect(situacaoDoPrazo(lista, quando + 7 * DIA + 1)).toBe(PRAZO.ACABOU);
-  });
-
-  it('lista trazendo ou desfeita não tem prazo', () => {
-    const agora = quando + DIA;
-    expect(
-      situacaoDoPrazo({ situacao: SITUACOES_DA_LISTA.TRAZENDO, quando }, agora)
-    ).toBe(PRAZO.NAO_SE_APLICA);
-    expect(
-      situacaoDoPrazo({ situacao: SITUACOES_DA_LISTA.DESFEITO, quando }, agora)
-    ).toBe(PRAZO.NAO_SE_APLICA);
-  });
-
+describe('formatarDia', () => {
   it('escreve o dia como dia/mês no Brasil', () => {
     expect(formatarDia(Date.UTC(2026, 10, 18, 15), 'pt_BR')).toBe('18/11');
   });

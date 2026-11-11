@@ -40,8 +40,8 @@ const escolherFraseDeEmpresas = ({
       };
 
 export const escolherFrase = (resumo = {}, aba = 'pessoas') => {
-  if (aba === 'empresas' && resumo.total > 0) {
-    return escolherFraseDeEmpresas(resumo.empresas ?? {});
+  if (aba === 'empresas' && resumo.empresas?.total > 0) {
+    return escolherFraseDeEmpresas(resumo.empresas);
   }
   const { total = 0, clientes = 0, sumiu_1_a_3_meses: sumiram = 0 } = resumo;
   if (total === 0) {

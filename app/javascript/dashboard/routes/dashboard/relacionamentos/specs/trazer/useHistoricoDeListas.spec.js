@@ -1,5 +1,4 @@
 import { effectScope } from 'vue';
-import { PRAZO } from '../../trazer/prazo';
 import {
   INTERVALO_DO_HISTORICO_MS,
   useHistoricoDeListas,
@@ -33,9 +32,7 @@ const montar = fonteParcial => {
     desfazer: vi.fn(async () => ({})),
     ...fonteParcial,
   };
-  const historico = escopo.run(() =>
-    useHistoricoDeListas({ fonte, avisar, agora: () => AGORA })
-  );
+  const historico = escopo.run(() => useHistoricoDeListas({ fonte, avisar }));
   return { historico, fonte, avisar, parar: () => escopo.stop() };
 };
 
@@ -99,17 +96,6 @@ describe('lista sendo trazida', () => {
     parar();
     await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 3);
     expect(historicoDaFonte).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('prazo', () => {
-  it('diz se o prazo da lista está aberto ou acabou', () => {
-    const { historico } = montar();
-    expect(historico.prazoDe(lista('a', 'pronto'))).toBe(PRAZO.ABERTO);
-    expect(
-      historico.prazoDe(lista('b', 'pronto', { quando: AGORA - 8 * DIA }))
-    ).toBe(PRAZO.ACABOU);
-    expect(historico.prazoDe(lista('c', 'desfeito'))).toBe(PRAZO.NAO_SE_APLICA);
   });
 });
 

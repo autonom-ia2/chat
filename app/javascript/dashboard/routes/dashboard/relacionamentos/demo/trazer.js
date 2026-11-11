@@ -216,6 +216,17 @@ export const historicoInicial = (agora, estado = 'cheio') =>
           completadas: 0,
           receberamCampanha: 0,
         },
+        {
+          id: 'trazida-antiga-3',
+          arquivo: 'Contatos de outubro.xlsx',
+          quando: agora - 40 * DIA_EM_MS,
+          quem: QUEM_TROUXE,
+          situacao: SITUACOES_DA_LISTA.PRONTO,
+          total: 62,
+          novas: 55,
+          completadas: 7,
+          receberamCampanha: 2,
+        },
       ];
 
 export const quemTrouxeNaDemo = () => QUEM_TROUXE;

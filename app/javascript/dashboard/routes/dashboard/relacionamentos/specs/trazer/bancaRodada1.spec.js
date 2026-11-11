@@ -132,7 +132,7 @@ describe('B2. nome inteiro na ficha', () => {
 describe('B3. textos', () => {
   it('histórico: título novo', () => {
     const w = mount(HistoricoDeListas, {
-      props: { listas: [], prazoDe: () => 'aberto' },
+      props: { listas: [] },
     });
     expect(w.get('h2').text()).toBe('Listas que você já trouxe');
   });
@@ -140,7 +140,7 @@ describe('B3. textos', () => {
   it('Pronto cita o título novo', () => {
     const w = mount(TelaPronto, { props: { total: 195 } });
     expect(marca(w, 'pronto-sossego').text()).toBe(
-      'Você pode desfazer por 7 dias, em “Listas que você já trouxe”.'
+      'Você pode desfazer quando quiser, em “Listas que você já trouxe”.'
     );
   });
 
@@ -342,14 +342,34 @@ describe('B5. pergunta de clientes nasce sem resposta', () => {
   });
 });
 
+describe('E2. contadores com a mesma caixa', () => {
+  it('o botão não traz padding, margem nem borda próprios; três em grid-cols-3, quatro em 2×2', () => {
+    const w = conferir();
+    const botao = w.get('[data-contador="PRECISAM"] button');
+    expect(botao.classes()).toEqual(
+      expect.arrayContaining(['p-0', 'm-0', 'border-0', 'min-h-11'])
+    );
+    const caixaDosOutros = w.get('[data-contador="NOVAS"] > div');
+    ['p-0', 'm-0', 'min-h-11', 'justify-start'].forEach(classe => {
+      expect(caixaDosOutros.classes()).toContain(classe);
+      expect(botao.classes()).toContain(classe);
+    });
+    const lista = marca(w, 'contadores');
+    expect(lista.classes()).toContain('grid-cols-3');
+    const quatro = conferir(aplicarDeixarDeFora(leitura, 62));
+    expect(marca(quatro, 'contadores').classes()).toContain('grid-cols-2');
+  });
+});
+
 describe('B6. andamento e etapas do topo', () => {
-  it('a barra anda em ≤150 ms (sem transition-all de 500 ms)', () => {
+  it('a largura da barra troca de uma vez, sem classe de transição', () => {
     const w = mount(TelaPronto, {
       props: { trazendo: true, porcentagem: 50 },
     });
     const barra = w.get('[role="progressbar"] > div');
     expect(barra.classes()).toContain('w-[50%]');
-    expect(barra.classes()).toContain('duration-150');
+    expect(barra.classes().join(' ')).not.toContain('transition');
+    expect(barra.classes().join(' ')).not.toContain('duration-');
     expect(barra.classes()).not.toContain('duration-500');
   });
 
@@ -403,11 +423,27 @@ describe('B7. problemas com o nome da pessoa', () => {
     const a = w.get('[data-opcao="88"]');
     const b = w.get('[data-opcao="143"]');
     expect(a.text()).toContain('Ficar com a linha 88');
-    expect(a.text()).toContain(
-      '+55 11 94410-0088 · paulo.hortencio@exemplo.com.br'
+    // Telefone e e-mail em linhas separadas; o e-mail só quebra no "@".
+    const linhasDeA = a.findAll('span').map(s => s.text());
+    expect(linhasDeA).toContain('+55 11 94410-0088');
+    expect(a.html()).toContain('paulo.hortencio<wbr>@exemplo.com.br');
+    expect(b.findAll('span').map(s => s.text())).toEqual([
+      'Ficar com a linha 143',
+      '+55 11 94410-0143',
+      'sem e-mail',
+    ]);
+    expect(a.classes()).toEqual(
+      expect.arrayContaining([
+        'min-h-11',
+        'border',
+        'border-n-weak',
+        'rounded-xl',
+        'focus-visible:outline-2',
+      ])
     );
-    expect(b.text()).toContain('+55 11 94410-0143 · sem e-mail');
-    expect(a.classes()).toContain('min-h-11');
+    expect(a.classes().join(' ')).toContain('hover:enabled:bg-');
+    expect(w.text()).not.toContain('Na planilha:');
+    expect(a.element.parentElement.className).toContain('sm:grid-cols-2');
     await b.trigger('click');
     expect(w.emitted('guardar')).toEqual([[143, 143]]);
   });
@@ -482,5 +518,110 @@ describe('B9. diálogo Desfazer', () => {
       expect.arrayContaining(['text-n-amber-12', 'bg-n-amber-3'])
     );
     expect(aviso.classes()).not.toContain('text-n-amber-11');
+  });
+});
+
+describe('T1. Desfazer sem prazo', () => {
+  const lista = (id, situacao) => ({
+    id,
+    arquivo: `${id}.xlsx`,
+    quando: Date.UTC(2020, 0, 1),
+    quem: 'Marina Dornelaz',
+    total: 5,
+    situacao,
+    porcentagem: 100,
+  });
+
+  it('só a lista pronta tem Desfazer, por mais antiga que seja; trazendo e desfeita não', () => {
+    const w = mount(HistoricoDeListas, {
+      props: {
+        listas: [
+          lista('a', 'pronto'),
+          lista('b', 'trazendo'),
+          lista('c', 'desfeito'),
+        ],
+      },
+    });
+    const tem = id =>
+      w.find(`[data-lista="${id}"] [data-relacionamentos="desfazer"]`).exists();
+    expect([tem('a'), tem('b'), tem('c')]).toEqual([true, false, false]);
+    expect(w.text()).not.toContain('Prazo');
+    expect(w.text()).not.toContain('até');
+  });
+
+  it('os textos de prazo saíram do catálogo', async () => {
+    const pt = (
+      await import('dashboard/i18n/locale/pt_BR/relacionamentosTrazer.json')
+    ).default.RELACIONAMENTOS_TRAZER;
+    expect(pt.HISTORICO.ATE).toBeUndefined();
+    expect(pt.HISTORICO.PRAZO_ACABOU).toBeUndefined();
+    expect(pt.CONFERIR.CONTADOR.IR_PARA_PRECISAM).toBeUndefined();
+    expect(pt.CONFERIR.SOSSEGO).toBe('Você pode desfazer quando quiser.');
+  });
+});
+
+describe('T2. achados da revisão', () => {
+  it('?planilha= só vale com a demonstração ligada', async () => {
+    estado.demo = null;
+    estado.planilha = 'vazia';
+    const w = mount(TrazerListaPage, {
+      attachTo: document.body,
+      global: {
+        stubs: { RouterLink: RouterLinkStub, Dialog: { template: '<div />' } },
+      },
+    });
+    await vi.waitFor(() =>
+      expect(marca(w, 'soltar-arquivo').exists()).toBe(true)
+    );
+    expect(marca(w, 'erro-da-planilha').exists()).toBe(false);
+    expect(marca(w, 'lendo-planilha').exists()).toBe(false);
+    estado.demo = 'cheio';
+    w.unmount();
+  });
+
+  it('os contadores avisam a mudança por uma região viva só', () => {
+    const w = conferir();
+    expect(marca(w, 'contadores').attributes('aria-live')).toBe('polite');
+    expect(w.findAll('[aria-live]')).toHaveLength(1);
+  });
+
+  it('exemplos com o mesmo nome não repetem a chave do v-for', () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const repetida = {
+      ...leitura,
+      exemplos: [leitura.exemplos[0], leitura.exemplos[0], leitura.exemplos[1]],
+    };
+    const w = conferir(repetida);
+    expect(w.findAll('[data-ficha-de-exemplo]')).toHaveLength(3);
+    const duplicadas = aviso.mock.calls.filter(chamada =>
+      String(chamada[0]).includes('Duplicate keys')
+    );
+    expect(duplicadas).toEqual([]);
+    aviso.mockRestore();
+  });
+
+  it('?planilha=lendo nunca termina, nem com horas de relógio', async () => {
+    vi.useFakeTimers();
+    try {
+      const fonte = trazerFonte({
+        demo: 'cheio',
+        planilha: 'lendo',
+        carregarDemo: () => import('../../demo/trazer.js'),
+        atraso: 0,
+      });
+      let terminou = false;
+      fonte.ler(null).then(
+        () => {
+          terminou = true;
+        },
+        () => {
+          terminou = true;
+        }
+      );
+      await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1000);
+      expect(terminou).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -19,10 +19,12 @@ const { t } = useI18n();
 const { formulario, erros, abrir, mudar, dadosSeValido } =
   useFormularioDaEmpresa();
 
+// Só na transição fechada -> aberta: a empresa pode ser trocada com a gaveta
+// aberta, e isso não pode apagar o que a pessoa digitou.
 watch(
-  [toRef(props, 'aberta'), toRef(props, 'empresa')],
-  ([estaAberta, empresa]) => {
-    if (estaAberta && empresa) abrir(empresa);
+  toRef(props, 'aberta'),
+  (estaAberta, estavaAberta) => {
+    if (estaAberta && !estavaAberta && props.empresa) abrir(props.empresa);
   },
   { immediate: true }
 );

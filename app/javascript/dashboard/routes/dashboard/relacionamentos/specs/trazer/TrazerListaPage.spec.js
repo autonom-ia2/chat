@@ -1,7 +1,7 @@
 import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import TrazerListaPage from '../../pages/TrazerListaPage.vue';
-import { esquecerMemoriaDaDemo } from '../../fonte/trazerFonte';
+import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
 
 // A página "Trazer minha lista" inteira (#2894), da planilha de exemplo ao
 // Pronto e ao Desfazer, com o texto real em pt_BR e relógio falso.
@@ -122,7 +122,7 @@ describe('Enviar', () => {
     );
     expect(marca(w, 'soltar-arquivo').exists()).toBe(true);
     expect(marca(w, 'usar-exemplo').exists()).toBe(true);
-    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(3));
     expect(w.get('a').text()).toContain('Pessoas');
     w.unmount();
   });
@@ -300,7 +300,7 @@ describe('da planilha de exemplo até Pronto', () => {
     await aparece(w, 'pronto');
     await botao(w, 'Trazer outra lista').trigger('click');
     await aparece(w, 'enviar');
-    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(3));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(4));
     expect(w.findAll('[data-lista]')[0].text()).toContain(
       'Planilha de exemplo.xlsx'
     );
@@ -320,7 +320,7 @@ describe('da planilha de exemplo até Pronto', () => {
 
     const volta = await abrir();
     await esperarPor(() =>
-      expect(volta.findAll('[data-lista]')).toHaveLength(3)
+      expect(volta.findAll('[data-lista]')).toHaveLength(4)
     );
     // O relógio anda um pouco enquanto a tela monta: 40% ou 41%.
     const situacao = volta
@@ -361,7 +361,7 @@ describe('da planilha de exemplo até Pronto', () => {
 describe('Desfazer', () => {
   const abrirDialogoDaLista = async () => {
     const w = await abrir();
-    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(3));
     await w
       .get('[data-lista] [data-relacionamentos="desfazer"]')
       .trigger('click');
@@ -401,7 +401,7 @@ describe('Desfazer', () => {
     await some(w, 'dialogo-desfazer');
     expect(
       w.findAll('[data-lista] [data-situacao]').map(s => s.text())
-    ).toEqual(['Pronto', 'Desfeito']);
+    ).toEqual(['Pronto', 'Desfeito', 'Pronto']);
     w.unmount();
   });
 
@@ -417,9 +417,15 @@ describe('Desfazer', () => {
     await esperarPor(() =>
       expect(
         w.findAll('[data-lista] [data-situacao]').map(s => s.text())
-      ).toEqual(['Desfeito', 'Desfeito'])
+      ).toEqual(['Desfeito', 'Desfeito', 'Pronto'])
     );
-    expect(marca(w, 'desfazer').exists()).toBe(false);
+    expect(
+      w
+        .find(
+          '[data-lista="trazida-antiga-1"] [data-relacionamentos="desfazer"]'
+        )
+        .exists()
+    ).toBe(false);
     w.unmount();
   });
 
@@ -430,8 +436,12 @@ describe('Desfazer', () => {
         marca(w, 'desfazer-confirmar').attributes('disabled')
       ).toBeUndefined()
     );
-    // Passado o prazo, a fonte recusa.
-    await vi.advanceTimersByTimeAsync(5 * 24 * 60 * 60 * 1000);
+    // Outra aba já desfez esta lista: a fonte recusa.
+    const outraAba = trazerFonte({ demo: 'cheio' }).desfazer(
+      'trazida-antiga-1'
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    await outraAba;
     await w.get('[data-dialog]').trigger('submit');
     await esperarPor(() =>
       expect(alertar).toHaveBeenCalledWith(

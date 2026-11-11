@@ -1,7 +1,7 @@
 import { ATRASO_DA_DEMO_MS, erroFonteRealPendente } from './listaFonte';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 import { resumoAoVivo, totalDaLeitura } from '../trazer/contagem';
-import { PRAZO, SITUACOES_DA_LISTA, situacaoDoPrazo } from '../trazer/prazo';
+import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 // #2894 — de onde "Trazer minha lista" lê e para onde escreve (molde:
 // fonte/listaFonte.js). A tela recebe sempre o mesmo formato, venha de onde vier:
@@ -25,7 +25,6 @@ export const PLANILHAS_DE_DEMO = [
   'sem_contato',
   'lendo',
 ];
-const LENDO_PARA_SEMPRE_MS = 60 * 60 * 1000;
 const ARQUIVOS_DE_MENTIRA = {
   nao_e_planilha: { name: 'foto.png' },
   vazia: { name: 'Planilha vazia.xlsx' },
@@ -135,9 +134,9 @@ const fonteDemo = ({
     planilhaDeDemo: planilha,
     arquivoDeExemplo: () => ARQUIVOS_DE_MENTIRA[planilha] ?? null,
     async ler(arquivo) {
-      await esperar(
-        planilha === 'lendo' ? LENDO_PARA_SEMPRE_MS : atrasoDaLeitura
-      );
+      // `?planilha=lendo`: a leitura nunca termina, para o print do "lendo".
+      if (planilha === 'lendo') return esperarParaSempre();
+      await esperar(atrasoDaLeitura);
       if (planilha === 'vazia') {
         throw erroNomeado('PLANILHA_VAZIA', 'A planilha está vazia.');
       }
@@ -227,9 +226,9 @@ const fonteDemo = ({
       await esperar(atraso);
       const dadosDaDemo = await dados();
       const lista = listaDe(dadosDaDemo, trazidaId);
-      const momento = agora();
-      const vista = vistaDaLista(lista, momento, dadosDaDemo.demo);
-      if (situacaoDoPrazo(vista, momento) !== PRAZO.ABERTO) {
+      const vista = vistaDaLista(lista, agora(), dadosDaDemo.demo);
+      // Pronta desfaz sempre, sem data limite; trazendo e desfeita não.
+      if (vista.situacao !== SITUACOES_DA_LISTA.PRONTO) {
         throw erroNomeado(
           'NAO_PODE_DESFAZER',
           'Essa lista não pode mais ser desfeita.'

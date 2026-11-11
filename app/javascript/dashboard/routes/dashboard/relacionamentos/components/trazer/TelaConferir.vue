@@ -91,8 +91,10 @@ const irParaPrecisam = () => {
       <ul
         v-if="contadores.length"
         data-relacionamentos="contadores"
+        aria-live="polite"
         :aria-label="t('RELACIONAMENTOS_TRAZER.CONFERIR.CONTADOR.LISTA')"
-        class="flex flex-wrap p-0 m-0 list-none gap-x-10 gap-y-4"
+        class="grid p-0 m-0 list-none gap-x-6 gap-y-4 md:flex md:flex-wrap md:gap-x-10"
+        :class="contadores.length === 4 ? 'grid-cols-2' : 'grid-cols-3'"
       >
         <li
           v-for="contador in contadores"
@@ -102,10 +104,10 @@ const irParaPrecisam = () => {
           <component
             :is="contador.levaAosProblemas ? 'button' : 'div'"
             :type="contador.levaAosProblemas ? 'button' : undefined"
-            class="flex flex-col items-start gap-1 text-start"
+            class="flex flex-col items-start justify-start gap-1 p-0 m-0 bg-transparent border-0 min-h-11 text-start"
             :class="
               contador.levaAosProblemas
-                ? 'min-h-11 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand'
+                ? 'rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand'
                 : ''
             "
             @click="contador.levaAosProblemas ? irParaPrecisam() : undefined"
@@ -139,8 +141,8 @@ const irParaPrecisam = () => {
       </h2>
       <div class="grid gap-3 md:grid-cols-3">
         <FichaDeExemplo
-          v-for="pessoa in leitura.exemplos"
-          :key="pessoa.nome"
+          v-for="(pessoa, posicao) in leitura.exemplos"
+          :key="posicao"
           :pessoa="pessoa"
         />
       </div>

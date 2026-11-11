@@ -1,5 +1,5 @@
 import { onScopeDispose, ref } from 'vue';
-import { SITUACOES_DA_LISTA, situacaoDoPrazo } from './prazo';
+import { SITUACOES_DA_LISTA } from './prazo';
 
 // #2894 — "O que eu já trouxe": a lista de listas, a prévia do que sai e o
 // desfazer. Enquanto alguma lista ainda está sendo trazida, a tela pergunta de
@@ -11,7 +11,6 @@ const AVISO_ERRO_DESFAZER = 'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER';
 export const useHistoricoDeListas = ({
   fonte,
   avisar = () => {},
-  agora = Date.now,
   intervalo = INTERVALO_DO_HISTORICO_MS,
 }) => {
   const listas = ref([]);
@@ -84,8 +83,6 @@ export const useHistoricoDeListas = ({
     }
   };
 
-  const prazoDe = lista => situacaoDoPrazo(lista, agora());
-
   onScopeDispose(() => {
     encerrado = true;
     clearTimeout(relogio);
@@ -103,6 +100,5 @@ export const useHistoricoDeListas = ({
     abrirDesfazer,
     fecharDesfazer,
     confirmarDesfazer,
-    prazoDe,
   };
 };

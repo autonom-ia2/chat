@@ -183,10 +183,14 @@ describe('escritas na leitura', () => {
 });
 
 describe('historico', () => {
-  it('cheio traz duas listas antigas: uma pronta com prazo aberto e uma desfeita', async () => {
+  it('cheio traz três listas antigas: duas prontas (uma bem antiga) e uma desfeita', async () => {
     const { fonte } = fonteComRelogio('cheio');
     const listas = await fonte.historico();
-    expect(listas.map(l => l.situacao)).toEqual(['pronto', 'desfeito']);
+    expect(listas.map(l => l.situacao)).toEqual([
+      'pronto',
+      'desfeito',
+      'pronto',
+    ]);
     expect(listas[0]).toMatchObject({
       arquivo: 'Clientes 2025.xlsx',
       total: 195,
@@ -264,7 +268,7 @@ describe('trazer e andamento', () => {
 });
 
 describe('desfazer', () => {
-  it('desfaz a lista pronta com prazo aberto', async () => {
+  it('desfaz a lista pronta', async () => {
     const { fonte } = fonteComRelogio();
     const [pronta] = await fonte.historico();
     await fonte.desfazer(pronta.id);
@@ -272,13 +276,21 @@ describe('desfazer', () => {
     expect(depois.situacao).toBe('desfeito');
   });
 
-  it('não desfaz depois do prazo', async () => {
+  it('lista pronta antiga tem Desfazer, com prévia própria', async () => {
     const { fonte, relogio } = fonteComRelogio();
-    const [pronta] = await fonte.historico();
-    relogio.agora = AGORA + 5 * DIA;
-    await expect(fonte.desfazer(pronta.id)).rejects.toMatchObject({
-      name: 'NAO_PODE_DESFAZER',
-    });
+    relogio.agora = AGORA + 400 * DIA;
+    const antiga = (await fonte.historico()).find(
+      l => l.id === 'trazida-antiga-3'
+    );
+    expect(antiga.situacao).toBe('pronto');
+    const previa = await fonte.previaDoDesfazer(antiga.id);
+    const primeira = await fonte.previaDoDesfazer('trazida-antiga-1');
+    expect(previa).toEqual({ tira: 55, devolve: 7, receberamCampanha: 2 });
+    expect(previa).not.toEqual(primeira);
+    expect(previa.tira + previa.devolve).toBe(antiga.total);
+    await fonte.desfazer(antiga.id);
+    const depois = (await fonte.historico()).find(l => l.id === antiga.id);
+    expect(depois.situacao).toBe('desfeito');
   });
 
   it('não desfaz lista que ainda está sendo trazida nem lista já desfeita', async () => {

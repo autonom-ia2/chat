@@ -40,7 +40,7 @@ const { t } = useI18n();
       class="h-3 overflow-hidden rounded-full bg-n-alpha-2"
     >
       <div
-        class="h-full transition-[width] duration-150 ease-out rounded-full bg-n-blue-11 dark:bg-n-blue-9"
+        class="h-full rounded-full bg-n-blue-11 dark:bg-n-blue-9"
         :class="larguraDaBarra(porcentagem)"
       />
     </div>

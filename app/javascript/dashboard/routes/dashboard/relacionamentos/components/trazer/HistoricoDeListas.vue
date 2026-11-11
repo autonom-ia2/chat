@@ -3,20 +3,14 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
-import {
-  PRAZO,
-  SITUACOES_DA_LISTA,
-  formatarDia,
-  prazoParaDesfazer,
-} from '../../trazer/prazo';
+import { SITUACOES_DA_LISTA, formatarDia } from '../../trazer/prazo';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
-// situação e o Desfazer com o prazo. Vazio é uma frase, sem botão.
+// situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
 defineProps({
   listas: { type: Array, required: true },
   carregando: { type: Boolean, default: false },
   comErro: { type: Boolean, default: false },
-  prazoDe: { type: Function, required: true },
 });
 const emit = defineEmits(['desfazer', 'tentar']);
 
@@ -27,6 +21,8 @@ const SELOS = {
   [SITUACOES_DA_LISTA.TRAZENDO]: 'bg-n-blue-3 text-n-blue-11',
   [SITUACOES_DA_LISTA.DESFEITO]: 'bg-n-alpha-2 text-n-slate-11',
 };
+const dia = ms => formatarDia(ms, locale.value);
+
 const NOMES = {
   [SITUACOES_DA_LISTA.PRONTO]:
     'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.PRONTO',
@@ -35,8 +31,6 @@ const NOMES = {
   [SITUACOES_DA_LISTA.DESFEITO]:
     'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.DESFEITO',
 };
-
-const dia = ms => formatarDia(ms, locale.value);
 </script>
 
 <template>
@@ -102,36 +96,20 @@ const dia = ms => formatarDia(ms, locale.value);
           >
             {{ t(NOMES[lista.situacao], { porcentagem: lista.porcentagem }) }}
           </span>
-          <template v-if="prazoDe(lista) === PRAZO.ABERTO">
-            <div class="flex flex-col items-center gap-1">
-              <Button
-                slate
-                faded
-                data-relacionamentos="desfazer"
-                class="min-h-11"
-                :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER')"
-                :aria-label="
-                  t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_DESFAZER', {
-                    arquivo: lista.arquivo,
-                  })
-                "
-                @click="emit('desfazer', lista)"
-              />
-              <span class="text-xs text-n-slate-11">
-                {{
-                  t('RELACIONAMENTOS_TRAZER.HISTORICO.ATE', {
-                    data: dia(prazoParaDesfazer(lista.quando)),
-                  })
-                }}
-              </span>
-            </div>
-          </template>
-          <span
-            v-else-if="prazoDe(lista) === PRAZO.ACABOU"
-            class="text-sm text-n-slate-11"
-          >
-            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.PRAZO_ACABOU') }}
-          </span>
+          <Button
+            v-if="lista.situacao === SITUACOES_DA_LISTA.PRONTO"
+            slate
+            faded
+            data-relacionamentos="desfazer"
+            class="min-h-11"
+            :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER')"
+            :aria-label="
+              t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_DESFAZER', {
+                arquivo: lista.arquivo,
+              })
+            "
+            @click="emit('desfazer', lista)"
+          />
         </div>
       </li>
     </ul>

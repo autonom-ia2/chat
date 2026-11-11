@@ -266,7 +266,7 @@ describe('TelaConferir', () => {
   it('o botão único diz quantas pessoas vão chegar', () => {
     const w = conferir(leituraDeExemplo('l1'));
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
-    expect(w.text()).toContain('Você pode desfazer por 7 dias.');
+    expect(w.text()).toContain('Você pode desfazer quando quiser.');
     expect(w.text()).toContain('Precisam de você (5)');
   });
 
@@ -414,16 +414,12 @@ describe('HistoricoDeListas', () => {
     porcentagem: 100,
     ...extra,
   });
-  const prazoDe = item => {
-    if (item.situacao !== 'pronto') return 'nao_se_aplica';
-    return item.quando + 7 * DIA >= AGORA ? 'aberto' : 'acabou';
-  };
   const montar = props =>
     mount(HistoricoDeListas, {
-      props: { listas: [], prazoDe, ...props },
+      props: { listas: [], ...props },
     });
 
-  it('cheio: arquivo, quando, quem, pessoas, situação e Desfazer com o prazo', () => {
+  it('cheio: arquivo, quando, quem, pessoas, situação e Desfazer, sem data limite', () => {
     const w = montar({ listas: [lista('Clientes 2025', 'pronto')] });
     const linha = w.get('[data-lista="Clientes 2025"]');
     expect(linha.text()).toContain('Clientes 2025.xlsx');
@@ -431,7 +427,7 @@ describe('HistoricoDeListas', () => {
     expect(linha.text()).toContain('por Marina Dornelaz');
     expect(linha.text()).toContain('195 pessoas');
     expect(linha.get('[data-situacao]').text()).toBe('Pronto');
-    expect(linha.text()).toContain('até 15/11');
+    expect(linha.text()).not.toContain('até');
     expect(marca(w, 'desfazer').text()).toBe('Desfazer');
     expect(marca(w, 'desfazer').attributes('aria-label')).toBe(
       'Desfazer a lista Clientes 2025.xlsx'
@@ -457,12 +453,13 @@ describe('HistoricoDeListas', () => {
     expect(marca(w, 'desfazer').exists()).toBe(false);
   });
 
-  it('passado o prazo o botão some e fica a frase', () => {
+  it('lista pronta antiga tem Desfazer sempre, sem prazo nem data', () => {
     const w = montar({
-      listas: [lista('a', 'pronto', { quando: AGORA - 9 * DIA })],
+      listas: [lista('a', 'pronto', { quando: AGORA - 400 * DIA })],
     });
-    expect(marca(w, 'desfazer').exists()).toBe(false);
-    expect(w.text()).toContain('Prazo para desfazer acabou');
+    expect(marca(w, 'desfazer').exists()).toBe(true);
+    expect(w.text()).not.toContain('Prazo');
+    expect(w.text()).not.toContain('até');
   });
 
   it('vazio: uma frase curta, sem botão', () => {

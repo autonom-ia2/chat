@@ -147,3 +147,42 @@ describe('useFichaDaEmpresa', () => {
     expect(erro.estado.value).toBe(ESTADOS.ERRO);
   });
 });
+
+describe('useFichaDaEmpresa: salvar com guarda de geração', () => {
+  it('se o id mudar durante o salvamento, a resposta velha não sobrescreve', async () => {
+    const id = ref(1);
+    const velha = adiada();
+    const fonte = {
+      empresa: vi
+        .fn()
+        .mockImplementation(async i => ({ id: i, name: `E${i}` })),
+      pessoasDaEmpresa: vi.fn().mockResolvedValue([]),
+      conversasDaEmpresa: vi.fn().mockResolvedValue([]),
+      cardsDaEmpresa: vi.fn().mockResolvedValue([]),
+      salvarEmpresa: vi.fn().mockImplementation(() => velha.promessa),
+    };
+    const ficha = useFichaDaEmpresa(fonte, id);
+    await ficha.carregar();
+    const salvando = ficha.salvar({ name: 'Velha' });
+    id.value = 2;
+    await ficha.carregar();
+    velha.resolver({ id: 1, name: 'Velha' });
+    await salvando;
+    expect(ficha.empresa.value).toMatchObject({ id: 2, name: 'E2' });
+    expect(ficha.ocupado.value).toBe('');
+  });
+
+  it('sem troca de id, salvar atualiza a empresa', async () => {
+    const fonte = {
+      empresa: vi.fn().mockResolvedValue({ id: 1, name: 'E1' }),
+      pessoasDaEmpresa: vi.fn().mockResolvedValue([]),
+      conversasDaEmpresa: vi.fn().mockResolvedValue([]),
+      cardsDaEmpresa: vi.fn().mockResolvedValue([]),
+      salvarEmpresa: vi.fn().mockResolvedValue({ id: 1, name: 'Nova' }),
+    };
+    const ficha = useFichaDaEmpresa(fonte, ref(1));
+    await ficha.carregar();
+    expect(await ficha.salvar({ name: 'Nova' })).toBe(true);
+    expect(ficha.empresa.value.name).toBe('Nova');
+  });
+});

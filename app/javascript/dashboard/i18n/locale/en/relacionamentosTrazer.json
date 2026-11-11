@@ -44,11 +44,10 @@
         "NOVAS": "new | new",
         "COMPLETADAS": "was already here | were already here",
         "PRECISAM": "needs you | need you",
-        "DEIXADAS": "was left out | were left out",
-        "IR_PARA_PRECISAM": "See the lines that need you"
+        "DEIXADAS": "was left out | were left out"
       },
       "EXEMPLOS": "How they will look",
-      "SOSSEGO": "You can undo this for 7 days.",
+      "SOSSEGO": "You can undo this whenever you want.",
       "TRAZER": "Bring in {count} person | Bring in {count} people"
     },
     "PRECISAM": {
@@ -117,7 +116,7 @@
       "CHEGARAM": "{count} person arrived. | {count} people arrived.",
       "VER": "See the people",
       "OUTRA": "Bring in another list",
-      "SOSSEGO": "You can undo this for 7 days, in “Lists you’ve already brought in”."
+      "SOSSEGO": "You can undo this whenever you want, in “Lists you’ve already brought in”."
     },
     "HISTORICO": {
       "TITULO": "Lists you've already brought in",
@@ -131,8 +130,6 @@
         "DESFEITO": "Undone"
       },
       "DESFAZER": "Undo",
-      "ATE": "until {data}",
-      "PRAZO_ACABOU": "The time to undo has passed",
       "ROTULO_DESFAZER": "Undo the list {arquivo}"
     },
     "DESFAZER": {

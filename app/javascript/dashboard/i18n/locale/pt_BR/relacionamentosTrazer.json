@@ -44,11 +44,10 @@
         "NOVAS": "nova | novas",
         "COMPLETADAS": "já estava aqui | já estavam aqui",
         "PRECISAM": "precisa de você | precisam de você",
-        "DEIXADAS": "ficou de fora | ficaram de fora",
-        "IR_PARA_PRECISAM": "Ver as linhas que precisam de você"
+        "DEIXADAS": "ficou de fora | ficaram de fora"
       },
       "EXEMPLOS": "Como vão ficar",
-      "SOSSEGO": "Você pode desfazer por 7 dias.",
+      "SOSSEGO": "Você pode desfazer quando quiser.",
       "TRAZER": "Trazer {count} pessoa | Trazer {count} pessoas"
     },
     "PRECISAM": {
@@ -117,7 +116,7 @@
       "CHEGARAM": "{count} pessoa chegou. | {count} pessoas chegaram.",
       "VER": "Ver as pessoas",
       "OUTRA": "Trazer outra lista",
-      "SOSSEGO": "Você pode desfazer por 7 dias, em “Listas que você já trouxe”."
+      "SOSSEGO": "Você pode desfazer quando quiser, em “Listas que você já trouxe”."
     },
     "HISTORICO": {
       "TITULO": "Listas que você já trouxe",
@@ -131,8 +130,6 @@
         "DESFEITO": "Desfeito"
       },
       "DESFAZER": "Desfazer",
-      "ATE": "até {data}",
-      "PRAZO_ACABOU": "Prazo para desfazer acabou",
       "ROTULO_DESFAZER": "Desfazer a lista {arquivo}"
     },
     "DESFAZER": {

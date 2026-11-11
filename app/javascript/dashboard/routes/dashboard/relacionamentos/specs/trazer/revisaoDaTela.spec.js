@@ -22,7 +22,6 @@ import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
 import OQueVouGuardar from '../../components/trazer/OQueVouGuardar.vue';
 import TelaPronto from '../../components/trazer/TelaPronto.vue';
 import FichaDeExemplo from '../../components/trazer/FichaDeExemplo.vue';
-import HistoricoDeListas from '../../components/trazer/HistoricoDeListas.vue';
 import SoltarArquivo from '../../components/trazer/SoltarArquivo.vue';
 import LinhaDeColuna from '../../components/trazer/LinhaDeColuna.vue';
 import PrecisamDeVoce from '../../components/trazer/PrecisamDeVoce.vue';
@@ -541,33 +540,6 @@ describe('V4. soltar arquivo', () => {
   });
 });
 
-describe('V5. histórico: prazo junto do botão Desfazer', () => {
-  it('"até dd/mm" fica no mesmo bloco do botão, em cinza pequeno', () => {
-    const w = mount(HistoricoDeListas, {
-      props: {
-        listas: [
-          {
-            id: 'a',
-            arquivo: 'a.xlsx',
-            quando: Date.UTC(2026, 10, 8, 15),
-            quem: 'Marina Dornelaz',
-            total: 5,
-            situacao: 'pronto',
-            porcentagem: 100,
-          },
-        ],
-        prazoDe: () => 'aberto',
-      },
-    });
-    const bloco = marca(w, 'desfazer').element.parentElement;
-    expect(bloco.textContent).toContain('até 15/11');
-    const prazo = [...bloco.querySelectorAll('span')].find(el =>
-      el.textContent.includes('até')
-    );
-    expect(prazo.className).toContain('text-xs');
-  });
-});
-
 describe('rodada 3', () => {
   it('1. "O que vou guardar": título do tamanho dos outros, botão no h2 e apoio quando fechado', async () => {
     const w = mount(OQueVouGuardar, {
@@ -672,7 +644,7 @@ describe('rodada 3', () => {
     const w = mount(TelaPronto, { props: { total: 195 } });
     expect(marca(w, 'pronto').exists()).toBe(true);
     expect(marca(w, 'pronto-sossego').text()).toBe(
-      'Você pode desfazer por 7 dias, em “Listas que você já trouxe”.'
+      'Você pode desfazer quando quiser, em “Listas que você já trouxe”.'
     );
     expect(marca(w, 'trazer-outra').text()).toBe('Trazer outra lista');
     expect(marca(w, 'trazer-outra').classes()).toContain('bg-white/10');

@@ -14,8 +14,11 @@ import SecaoNotas from './SecaoNotas.vue';
 // do leitor de tela): Conversas, Cards, Informações, Notas, Arquivos, De onde
 // veio. No desktop um grid com colunas e linhas explícitas põe as quatro seções
 // principais nas colunas 1-2 e Informações e De onde veio na coluna 3, sem
-// `order-*`. Informações ocupa as duas primeiras linhas, ao lado de Conversas e
-// Cards; De onde veio fica ao lado de Notas.
+// `order-*`. Informações atravessa as linhas 1 a 3, e a 3 é uma linha-folga
+// (`1fr`, vazia): a altura extra de Informações cai nela, então Conversas e Cards
+// ficam do tamanho do próprio conteúdo (seção vazia não estica). De onde veio
+// começa na linha 4, ao lado de Notas. O espaço entre as seções no desktop vem de
+// `mb-6` (não de `gap-y`), para a linha-folga não somar um vão a mais.
 defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -37,20 +40,22 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
 </script>
 
 <template>
-  <div class="flex flex-col min-w-0 gap-6 lg:grid lg:grid-cols-3">
+  <div
+    class="flex flex-col min-w-0 gap-6 lg:grid lg:grid-cols-3 lg:gap-y-0 lg:grid-rows-[auto_auto_1fr_auto_auto]"
+  >
     <SecaoConversas
-      class="lg:col-span-2 lg:col-start-1 lg:row-start-1"
+      class="lg:col-span-2 lg:col-start-1 lg:row-start-1 lg:mb-6"
       :conversas="conversas"
       :agora="agora"
       @ver-todas="emit('verTodas')"
     />
     <SecaoCards
-      class="lg:col-span-2 lg:col-start-1 lg:row-start-2"
+      class="lg:col-span-2 lg:col-start-1 lg:row-start-2 lg:mb-6"
       :cards="cards"
       @abrir="card => emit('abrirCard', card)"
     />
     <CartaoDaSecao
-      class="lg:col-start-3 lg:row-start-1 lg:row-span-2"
+      class="lg:col-start-3 lg:row-start-1 lg:row-span-3 lg:mb-6"
       :titulo="t('RELACIONAMENTOS_FICHA.INFORMACOES.TITULO')"
       data-relacionamentos="informacoes"
     >
@@ -68,19 +73,19 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
     </CartaoDaSecao>
     <SecaoNotas
       ref="caixaDeNotas"
-      class="lg:col-span-2 lg:col-start-1 lg:row-start-3"
+      class="lg:col-span-2 lg:col-start-1 lg:row-start-4 lg:mb-6"
       :notas="notas"
       :guardando="guardandoNota"
       :agora="agora"
       @guardar="texto => emit('guardarNota', texto)"
     />
     <SecaoArquivos
-      class="lg:col-span-2 lg:col-start-1 lg:row-start-4"
+      class="lg:col-span-2 lg:col-start-1 lg:row-start-5"
       :arquivos="arquivos"
       :agora="agora"
     />
     <DeOndeVeio
-      class="lg:col-start-3 lg:row-start-3 lg:self-start"
+      class="lg:col-start-3 lg:row-start-4 lg:self-start"
       :origem="origem"
       :agora="agora"
     />
