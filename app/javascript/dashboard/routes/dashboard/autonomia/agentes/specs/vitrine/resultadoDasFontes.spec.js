@@ -86,6 +86,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       'EMPRESA EXEMPLO LTDA'
     );
     expect(valor('cnpj', 'empresa', 'Situação')).toBe('ATIVA');
+    // A tela mostra a descrição da atividade; o código (os 7 dígitos da CNAE) vai no dado ao agente.
+    expect(valor('cnpj', 'empresa', 'Atividade principal')).toBe(
+      'Extração de petróleo e gás natural'
+    );
+    expect(porFonte.cnpj.empresa.dados.atividade_principal.codigo).toBe(
+      '0600001'
+    );
     expect(valor('cpf', 'conferir', 'Número válido?')).toBe('S');
     expect(valor('fipe', 'marcas', 'Marcas')).toContain('Acura');
     expect(valor('fipe', 'modelos', 'Modelos')).toContain('ONIX');
@@ -138,10 +145,14 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
   });
 
   it('F4: saúde (hospitais, procedimentos, doenças)', () => {
-    expect(valor('hospitais', 'estabelecimentos', 'Locais de saúde')).toContain(
-      'HOSPITAL'
+    // Resposta real de 11/11/2026: 22 no total, 20 lidos (`mostrando`); o "e mais" conta do total, e o CEP vem com traço.
+    expect(valor('hospitais', 'estabelecimentos', 'Locais de saúde')).toBe(
+      'HOSPITAL SAMARITANO UNIDADE II, HOSPITAL E MATERNIDADE DE CAMPINAS, HOSPITAL SANTA TEREZA e mais 19'
     );
-    expect(valor('hospitais', 'estabelecimentos', 'Endereço')).toBeDefined();
+    expect(valor('hospitais', 'estabelecimentos', 'CEP')).toBe('13040-145');
+    expect(valor('hospitais', 'estabelecimentos', 'Endereço')).toBe(
+      'SAO JOSE DOS CAMPOS, 256'
+    );
     expect(valor('procedimentos', 'codigo', 'Nome')).toContain('Consulta');
     expect(valor('procedimentos', 'busca', 'Resultados')).toContain(
       'Hemograma'

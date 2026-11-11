@@ -31,10 +31,9 @@ três mudanças no adaptador: o CEP da rua (faixa de número) antes do CEP espec
 com o ViaCEP como principal do endereço; o CEP dos hospitais com traço, e o total da fonte com quantos vieram
 (`mostrando`); e o código da atividade do CNPJ com os 7 dígitos da CNAE ("0600001").
 
-Depois da varredura real (#2906), três arquivos foram ajustados à mão ao formato novo do adaptador, sobre o mesmo dado
-gravado e sem chamada nova: `cep.json` (por_endereco) ganhou o `nome` de cada CEP (`Cep.com_nome`: rua, faixa e
-bairro); `fipe.json` (preco) tem o valor em número, o mês em AAAA-MM e a moeda em `unidades`; `banco_central.json` tem a
-unidade da Selic em código (`percentual_ao_ano`) e o mês do IPCA em AAAA-MM.
+Depois da varredura real (#2906), dois arquivos foram ajustados à mão ao formato novo do adaptador, sobre o mesmo dado
+gravado e sem chamada nova: `fipe.json` (preco) tem o valor em número, o mês em AAAA-MM e a moeda em `unidades`;
+`banco_central.json` tem a unidade da Selic em código (`percentual_ao_ano`) e o mês do IPCA em AAAA-MM.
 
 `ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
 adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
