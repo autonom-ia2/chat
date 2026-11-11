@@ -36,7 +36,7 @@ export const useFormularioDaPessoa = () => {
     const problemas = errosDoFormulario(inicial.value, formulario.value);
     return Object.keys(problemas).length
       ? null
-      : dadosParaSalvar(formulario.value);
+      : dadosParaSalvar(formulario.value, inicial.value);
   };
 
   return {

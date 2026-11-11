@@ -2,6 +2,7 @@
 // gaveta e o que volta dele para a fonte. Funções puras, sem mutar o que recebem.
 import { formatarCnpj, formatarCpf } from './formatos';
 import { soDigitos } from '../fonte/texto';
+import { formatarTelefone } from '../lista/telefone';
 
 export const REDES = [
   'linkedin',
@@ -18,8 +19,17 @@ const CHAVE_DO_CPF = 'cpf';
 
 const preenchido = valor => String(valor ?? '').trim() !== '';
 
-// "melhor_horario" -> "Melhor horario": o nome que a conta deu à informação.
+// O nome que a conta deu à informação. A chave não tem acento, então os nomes
+// conhecidos vêm daqui; os outros saem da própria chave ("cor_favorita" ->
+// "Cor favorita"). No servidor o nome de exibição da informação substitui isto
+// (entrega E2, #2895).
+const NOMES_CONHECIDOS = {
+  melhor_horario: 'Melhor horário',
+  como_prefere_ser_chamado: 'Como prefere ser chamado',
+};
+
 export const nomeDaInformacao = chave => {
+  if (NOMES_CONHECIDOS[chave]) return NOMES_CONHECIDOS[chave];
   const palavras = String(chave).split('_').filter(Boolean).join(' ');
   return palavras.charAt(0).toUpperCase() + palavras.slice(1);
 };
@@ -33,7 +43,7 @@ export const linhasDaPessoa = pessoa => {
   const adicionais = pessoa.additional_attributes ?? {};
   const cpf = pessoa.custom_attributes?.[CHAVE_DO_CPF];
   const fixas = [
-    { chave: 'telefone', valor: pessoa.phone_number },
+    { chave: 'telefone', valor: formatarTelefone(pessoa.phone_number) },
     { chave: 'email', valor: pessoa.email },
     { chave: 'cpf', valor: cpf ? formatarCpf(cpf) : '', copiar: true },
     { chave: 'cidade', valor: adicionais.city },
@@ -75,25 +85,39 @@ export const formularioDaPessoa = pessoa => {
   };
 };
 
-const soOQuePreencheu = objeto =>
+// O que a pessoa preencheu, mais `''` explícito para o que existia no formulário
+// inicial e ela apagou (limpar um campo tem de limpar). O que nunca existiu fica
+// de fora. Contrato com o servidor (merge de `additional_attributes`) fecha na
+// entrega E2 (#2895).
+const comVaziosExplicitos = (atual, inicial) =>
   Object.fromEntries(
-    Object.entries(objeto).filter(([, valor]) => preenchido(valor))
+    Object.entries(atual).flatMap(([chave, valor]) => {
+      if (preenchido(valor)) return [[chave, valor]];
+      return preenchido(inicial?.[chave]) ? [[chave, '']] : [];
+    })
   );
 
-// O formato que a fonte recebe (o mesmo do contato no servidor).
-export const dadosParaSalvar = formulario => ({
+// O formato que a fonte recebe (o mesmo do contato no servidor). `inicial` é o
+// formulário de quando a gaveta abriu.
+export const dadosParaSalvar = (formulario, inicial = null) => ({
   name: formulario.nome.trim(),
   phone_number: formulario.telefone || null,
   email: formulario.email.trim() || null,
   additional_attributes: {
     city: formulario.cidade.trim(),
     company_name: formulario.empresa.trim(),
-    social_profiles: soOQuePreencheu(formulario.redes),
+    social_profiles: comVaziosExplicitos(formulario.redes, inicial?.redes),
   },
-  custom_attributes: soOQuePreencheu({
-    ...(formulario.cpf ? { [CHAVE_DO_CPF]: soDigitos(formulario.cpf) } : {}),
-    ...formulario.extras,
-  }),
+  custom_attributes: comVaziosExplicitos(
+    {
+      [CHAVE_DO_CPF]: formulario.cpf ? soDigitos(formulario.cpf) : '',
+      ...formulario.extras,
+    },
+    {
+      [CHAVE_DO_CPF]: inicial?.cpf,
+      ...inicial?.extras,
+    }
+  ),
 });
 
 export const linhasDaEmpresa = empresa => [

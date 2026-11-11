@@ -8,7 +8,9 @@ import { useIdioma } from '../../ficha/idioma';
 import { chaveDaOrigem, podeLiberar } from '../../ficha/origemDaRecusa';
 
 // #2894 — a faixa âmbar de quem pediu para não receber mensagens. "Liberar" só
-// aparece nas origens que a casa já deixa desfazer; pede confirmação antes.
+// aparece nas origens que a casa já deixa desfazer; pede confirmação antes. É
+// aviso fixo, não região viva: o resultado de Liberar é anunciado pela região
+// viva da página.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   liberando: { type: Boolean, default: false },
@@ -33,7 +35,6 @@ const liberavel = computed(() => podeLiberar(props.pessoa.opt_out_source));
 <template>
   <div
     data-relacionamentos="faixa-nao-quer"
-    role="status"
     class="flex flex-col gap-3 px-5 py-4 rounded-2xl bg-n-amber-3 text-n-amber-11 sm:flex-row sm:items-center sm:justify-between"
   >
     <p class="flex items-start gap-3 m-0 text-base font-medium">

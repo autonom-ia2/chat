@@ -23,22 +23,30 @@ export const useHistoricoDeListas = ({
   const desfazendo = ref(false);
   let relogio = null;
   let encerrado = false;
+  // Número da última carga pedida: resposta de carga mais velha é descartada.
+  let ultimaCarga = 0;
 
   const emAndamento = lista => lista.situacao === SITUACOES_DA_LISTA.TRAZENDO;
 
   const carregar = async ({ silencioso = false } = {}) => {
+    if (encerrado) return;
+    ultimaCarga += 1;
+    const minha = ultimaCarga;
     if (!silencioso) carregando.value = true;
     erro.value = false;
     clearTimeout(relogio);
     try {
-      listas.value = await fonte.historico();
-      if (!encerrado && listas.value.some(emAndamento)) {
+      const recebidas = await fonte.historico();
+      if (encerrado || minha !== ultimaCarga) return;
+      listas.value = recebidas;
+      if (recebidas.some(emAndamento)) {
+        clearTimeout(relogio);
         relogio = setTimeout(() => carregar({ silencioso: true }), intervalo);
       }
     } catch {
-      erro.value = true;
+      if (!encerrado && minha === ultimaCarga) erro.value = true;
     } finally {
-      carregando.value = false;
+      if (minha === ultimaCarga) carregando.value = false;
     }
   };
 

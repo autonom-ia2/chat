@@ -43,36 +43,38 @@ const rotuloDosFiltros = computed(() =>
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center gap-3">
+  <div class="flex flex-wrap items-center min-w-0 gap-3">
     <CampoDeBusca
       class="w-full md:w-auto md:min-w-72 md:flex-1"
       :model-value="busca"
       :placeholder="placeholder"
       @update:model-value="emit('update:busca', $event)"
     />
-    <div class="flex items-center gap-2">
-      <label :for="idDaOrdem" class="text-sm text-n-slate-11">
-        {{ t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO') }}
-      </label>
-      <ChoiceSelect
-        :model-value="ordem"
-        :options="opcoesDeOrdem"
-        :trigger-id="idDaOrdem"
-        :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
-        compact
-        @update:model-value="emit('update:ordem', $event)"
+    <div class="flex items-center w-full gap-3 md:w-auto">
+      <div class="flex items-center gap-2">
+        <label :for="idDaOrdem" class="text-sm text-n-slate-11">
+          {{ t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO') }}
+        </label>
+        <ChoiceSelect
+          :model-value="ordem"
+          :options="opcoesDeOrdem"
+          :trigger-id="idDaOrdem"
+          :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
+          compact
+          @update:model-value="emit('update:ordem', $event)"
+        />
+      </div>
+      <Button
+        v-if="comFiltros"
+        slate
+        faded
+        class="min-h-11"
+        icon="i-lucide-sliders-horizontal"
+        data-relacionamentos="mais-filtros"
+        aria-haspopup="dialog"
+        :label="rotuloDosFiltros"
+        @click="emit('abrirFiltros')"
       />
     </div>
-    <Button
-      v-if="comFiltros"
-      slate
-      faded
-      class="min-h-11"
-      icon="i-lucide-sliders-horizontal"
-      data-relacionamentos="mais-filtros"
-      aria-haspopup="dialog"
-      :label="rotuloDosFiltros"
-      @click="emit('abrirFiltros')"
-    />
   </div>
 </template>

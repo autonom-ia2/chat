@@ -7,6 +7,8 @@
 // continuam em demonstração mesmo sem o parâmetro, porque a navegação interna
 // (lista -> ficha -> trazer) não leva a query.
 export const ESTADOS_DE_DEMO = ['cheio', 'vazio'];
+// `?demo=desligado` zera o estado guardado (também só em desenvolvimento).
+export const DEMO_DESLIGADO = 'desligado';
 
 const ehEstadoConhecido = valor =>
   typeof valor === 'string' && ESTADOS_DE_DEMO.includes(valor);
@@ -27,6 +29,7 @@ export const usarDemo = (
   query = {},
   permitida = Boolean(import.meta.env.DEV)
 ) => {
+  if (permitida && query?.demo === DEMO_DESLIGADO) estadoGuardado = null;
   const pedido = demoPedido(query, permitida);
   if (pedido) estadoGuardado = pedido;
   return estadoGuardado;

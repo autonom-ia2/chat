@@ -1,7 +1,10 @@
 import { ref } from 'vue';
 import { useFichaDaPessoa } from '../../ficha/useFichaDaPessoa';
 import { useFichaDaEmpresa } from '../../ficha/useFichaDaEmpresa';
-import { ESTADOS_DA_FICHA as ESTADOS } from '../../ficha/useEstadoDaFicha';
+import {
+  ESTADOS_DA_FICHA as ESTADOS,
+  idValido,
+} from '../../ficha/useEstadoDaFicha';
 
 // O estado das fichas e o que acontece quando a fonte falha (#2894).
 const pessoa = { id: 1, name: 'Ana' };
@@ -19,6 +22,40 @@ const fonteDaPessoa = (extra = {}) => ({
   salvar: vi.fn().mockResolvedValue({ ...pessoa, name: 'Ana Maria' }),
   liberarMensagens: vi.fn().mockResolvedValue(pessoa),
   ...extra,
+});
+
+const adiada = () => {
+  let resolver;
+  const promessa = new Promise(r => {
+    resolver = r;
+  });
+  return { promessa, resolver };
+};
+
+describe('ordem dos pedidos', () => {
+  it('a resposta velha é descartada quando já saiu outro pedido', async () => {
+    const id = ref(1);
+    const velha = adiada();
+    const fonte = fonteDaPessoa({
+      pessoa: vi
+        .fn()
+        .mockImplementationOnce(() => velha.promessa)
+        .mockResolvedValue({ id: 2, name: 'Bia' }),
+    });
+    const ficha = useFichaDaPessoa(fonte, id);
+    const primeira = ficha.carregar();
+    id.value = 2;
+    await ficha.carregar();
+    velha.resolver({ id: 1, name: 'Ana' });
+    await primeira;
+    expect(ficha.pessoa.value.name).toBe('Bia');
+    expect(ficha.estado.value).toBe(ESTADOS.PRONTO);
+  });
+
+  it('só carrega com id válido', () => {
+    expect([1, 42].every(idValido)).toBe(true);
+    expect([NaN, undefined, 0, -1, 1.5].some(idValido)).toBe(false);
+  });
 });
 
 describe('useFichaDaPessoa', () => {

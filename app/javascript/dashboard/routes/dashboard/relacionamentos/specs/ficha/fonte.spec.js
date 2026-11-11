@@ -49,6 +49,16 @@ describe('fichaFonte com ?demo=vazio', () => {
 });
 
 describe('dados da demonstração', () => {
+  // Os horários são "tantos dias atrás" a partir de agora: com o relógio
+  // parado, duas leituras seguidas não cruzam a virada de um segundo.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-11T12:00:00Z'));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('são sempre os mesmos para o mesmo id', async () => {
     expect(await fonte.conversas(ID_CLIENTE_COMPLETO)).toEqual(
       await fonte.conversas(ID_CLIENTE_COMPLETO)

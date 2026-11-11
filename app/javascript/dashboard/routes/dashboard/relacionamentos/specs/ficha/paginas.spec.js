@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import FichaDaPessoaPage from '../../pages/FichaDaPessoaPage.vue';
@@ -50,11 +51,16 @@ const stubs = {
 };
 const marca = (w, nome) => w.find(`[data-relacionamentos="${nome}"]`);
 
+// Telas inteiras montam devagar numa máquina carregada (a CI também): o limite
+// de 5 s por teste é de relógio, não de lógica.
+vi.setConfig({ testTimeout: 30000 });
+
+// Espera por condição, com folga para máquina carregada (o padrão é 1 s).
+const esperarPor = (verificacao, opcoes) =>
+  vi.waitFor(verificacao, { timeout: 5000, ...opcoes });
 // O módulo de demonstração entra por import() dinâmico: espera o esqueleto sair.
 const terminouDeCarregar = async w => {
-  await vi.waitFor(() => expect(marca(w, 'carregando').exists()).toBe(false), {
-    timeout: 5000,
-  });
+  await esperarPor(() => expect(marca(w, 'carregando').exists()).toBe(false));
   await flushPromises();
 };
 
@@ -117,28 +123,89 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'carregando').exists()).toBe(false);
   });
 
-  it('em 390 px a ordem é conversas, cards, informações, notas, arquivos, de onde veio', async () => {
+  it('a ordem do DOM é a do celular, sem order-* nem contents', async () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
-    const ordem = [
+    const nomes = [
       'conversas',
       'cards',
       'informacoes',
       'notas',
       'arquivos',
       'de-onde-veio',
-    ].map(nome =>
-      marca(w, nome)
-        .classes()
-        .find(c => c.startsWith('order-') && c !== 'order-none')
+    ];
+    const noDom = [...w.element.querySelectorAll('[data-relacionamentos]')].map(
+      el => el.getAttribute('data-relacionamentos')
     );
-    expect(ordem).toEqual([
-      'order-1',
-      'order-2',
-      'order-3',
-      'order-4',
-      'order-5',
-      'order-6',
+    const posicoes = nomes.map(nome => noDom.indexOf(nome));
+    expect(posicoes.every(p => p >= 0)).toBe(true);
+    expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
+    const classes = [...w.element.querySelectorAll('[class]')].flatMap(el => [
+      ...el.classList,
     ]);
+    expect(
+      classes.filter(c => c.includes('order-') && !c.includes('border'))
+    ).toEqual([]);
+    expect(w.find('.contents').exists()).toBe(false);
+  });
+
+  it('no desktop as seções do lado ocupam a coluna 3 e a principal as colunas 1 e 2', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    ['conversas', 'cards', 'notas', 'arquivos'].forEach(nome =>
+      expect(marca(w, nome).classes()).toContain('lg:col-span-2')
+    );
+    ['informacoes', 'de-onde-veio'].forEach(nome =>
+      expect(marca(w, nome).classes()).toContain('lg:col-start-3')
+    );
+  });
+
+  it('sair da ficha (parâmetro some) não dispara carga nem mostra "não achei"', async () => {
+    contexto.demo = 'cheio';
+    contexto.params = reactive({ contactId: String(ID_CLIENTE_COMPLETO) });
+    const w2 = mount(FichaDaPessoaPage, {
+      attachTo: document.body,
+      global: { stubs },
+    });
+    await terminouDeCarregar(w2);
+    contexto.params.contactId = undefined;
+    await flushPromises();
+    expect(marca(w2, 'carregando').exists()).toBe(false);
+    expect(marca(w2, 'vazio').exists()).toBe(false);
+    expect(marca(w2, 'ficha-pessoa').exists()).toBe(true);
+  });
+
+  it('o contêiner é o mesmo da lista, sem estourar a largura e com respiro embaixo', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    const raiz = w.get('main > div').classes();
+    expect(raiz).toEqual(
+      expect.arrayContaining([
+        'w-full',
+        'max-w-6xl',
+        'mx-auto',
+        'min-w-0',
+        'pb-24',
+      ])
+    );
+    expect(w.classes()).toContain('min-w-0');
+  });
+
+  it('a região viva existe desde o início e recebe o resultado depois', async () => {
+    contexto.demo = 'cheio';
+    contexto.params = { contactId: String(ID_RECUSOU_MANUAL) };
+    const w = mount(FichaDaPessoaPage, {
+      attachTo: document.body,
+      global: { stubs },
+    });
+    const regiao = marca(w, 'aviso-vivo').element;
+    expect(regiao.getAttribute('role')).toBe('status');
+    await terminouDeCarregar(w);
+    expect(marca(w, 'aviso-vivo').element).toBe(regiao);
+    expect(
+      w.find('[data-relacionamentos="faixa-nao-quer"][role]').exists()
+    ).toBe(false);
+    await w.get('[data-confirmar]').trigger('click');
+    await esperarPor(() =>
+      expect(regiao.textContent).toContain('FAIXA.LIBERADO')
+    );
   });
 
   it('quem nunca conversou: conversas e arquivos vazios, com uma ação cada', async () => {
@@ -151,7 +218,7 @@ describe('FichaDaPessoaPage', () => {
   it('Marcar como cliente simula e o selo aparece', async () => {
     const w = await abrirPessoa(ID_NUNCA_CONVERSOU);
     await marca(w, 'marcar-cliente').trigger('click');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(useAlert).toHaveBeenCalledWith(
         expect.stringContaining('CLIENTE_MARCADO')
       )
@@ -164,7 +231,7 @@ describe('FichaDaPessoaPage', () => {
     const w = await abrirPessoa(ID_RECUSOU_MANUAL);
     expect(marca(w, 'faixa-nao-quer').exists()).toBe(true);
     await w.get('[data-confirmar]').trigger('click');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(useAlert).toHaveBeenCalledWith(
         expect.stringContaining('FAIXA.LIBERADO')
       )
@@ -177,7 +244,7 @@ describe('FichaDaPessoaPage', () => {
     const caixa = marca(w, 'nota-caixa');
     await caixa.setValue('Mandar a proposta amanhã.');
     await marca(w, 'guardar-nota').trigger('click');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(useAlert).toHaveBeenCalledWith(
         expect.stringContaining('NOTAS.GUARDADA')
       )
@@ -197,12 +264,15 @@ describe('FichaDaPessoaPage', () => {
       .get('[data-foco]')
       .setValue('Nome Novo da Silva');
     await marca(w, 'salvar-informacoes').trigger('click');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(useAlert).toHaveBeenCalledWith(
         expect.stringContaining('GAVETA.SALVO')
       )
     );
-    expect(marca(w, 'gaveta-informacoes').exists()).toBe(false);
+    // A gaveta sai por uma transição (quadro de animação): espera ela sumir.
+    await esperarPor(() =>
+      expect(marca(w, 'gaveta-informacoes').exists()).toBe(false)
+    );
     expect(w.get('h1').text()).toBe('Nome Novo da Silva');
   });
 
@@ -237,7 +307,7 @@ describe('FichaDaPessoaPage', () => {
       params: undefined,
       query: undefined,
     });
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(marca(w, 'gaveta-card').exists()).toBe(false)
     );
   });
@@ -272,6 +342,21 @@ describe('FichaDaPessoaPage', () => {
     await marca(w, 'erro').get('button').trigger('click');
     await flushPromises();
     expect(marca(w, 'ficha-pessoa').exists()).toBe(false);
+  });
+});
+
+describe('FichaDaEmpresaPage: largura', () => {
+  it('mesmo contêiner da lista e respiro embaixo', async () => {
+    const w = await abrirEmpresa(ID_EMPRESA_COM_GENTE);
+    expect(w.get('main > div').classes()).toEqual(
+      expect.arrayContaining([
+        'w-full',
+        'max-w-6xl',
+        'mx-auto',
+        'min-w-0',
+        'pb-24',
+      ])
+    );
   });
 });
 

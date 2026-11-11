@@ -28,6 +28,7 @@ describe('fonte real (pendente)', () => {
     'responder',
     'consertar',
     'deixarDeFora',
+    'reabrir',
     'trocarDestino',
     'trazer',
     'andamento',

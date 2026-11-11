@@ -2,7 +2,6 @@ import { ehPlanilha } from '../../trazer/arquivo';
 import {
   SITUACAO_DO_PROBLEMA,
   contarProblemas,
-  emailValido,
   nomeValido,
   partesDaFrase,
   resumoAoVivo,
@@ -125,22 +124,6 @@ describe('resumoAoVivo e partesDaFrase', () => {
 });
 
 describe('campos de conserto', () => {
-  it.each([
-    ['ana@exemplo.com.br', true],
-    ['  ana@exemplo.com.br ', true],
-    ['ana.exemplo.com.br', false],
-    ['@exemplo.com.br', false],
-    ['ana@exemplo', false],
-    ['ana@@exemplo.com', false],
-    ['ana @exemplo.com', false],
-    ['ana@.com', false],
-    ['ana@exemplo.', false],
-    ['', false],
-    [undefined, false],
-  ])('emailValido(%j) é %s', (valor, esperado) => {
-    expect(emailValido(valor)).toBe(esperado);
-  });
-
   it('nomeValido pede alguma letra', () => {
     expect(nomeValido('Ana')).toBe(true);
     expect(nomeValido('   ')).toBe(false);

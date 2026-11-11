@@ -18,13 +18,16 @@ const PERMISSIONS = [
   'attribute_manage',
 ];
 const FLAG = FEATURE_FLAGS.RELACIONAMENTOS_NOVO;
+// As mesmas flags da lista (`relationships_home`): a tela nova mora dentro do
+// menu de Relacionamentos, então quem não o tem não chega nas fichas por link.
+const FLAGS = [FLAG, FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION];
 
 const rota = (path, name, component) => ({
   path: frontendURL(`accounts/:accountId/relacionamentos/${path}`),
   name,
   component,
   meta: { featureFlag: FLAG, permissions: PERMISSIONS },
-  beforeEnter: comFlags(FLAG),
+  beforeEnter: comFlags(...FLAGS),
 });
 
 export const routes = [

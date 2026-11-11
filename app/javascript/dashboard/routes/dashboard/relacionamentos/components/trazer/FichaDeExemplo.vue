@@ -42,12 +42,14 @@ const linhas = computed(() =>
       >
         {{ iniciais }}
       </span>
-      <h3 class="m-0 text-base font-semibold truncate text-n-slate-12">
-        {{ pessoa.nome }}
-      </h3>
-      <SeloDeEstado v-if="pessoa.cliente" tom="cliente">
-        {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
-      </SeloDeEstado>
+      <div class="flex flex-col items-start min-w-0 gap-1">
+        <h3 class="m-0 text-base font-semibold break-words text-n-slate-12">
+          {{ pessoa.nome }}
+        </h3>
+        <SeloDeEstado v-if="pessoa.cliente" tom="cliente">
+          {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
+        </SeloDeEstado>
+      </div>
     </header>
     <ul class="flex flex-col gap-2 p-0 m-0 text-sm list-none text-n-slate-11">
       <li
@@ -56,7 +58,7 @@ const linhas = computed(() =>
         class="flex items-center gap-2 min-w-0"
       >
         <span class="size-4 shrink-0" :class="icone" aria-hidden="true" />
-        <span class="truncate tabular-nums">{{ texto }}</span>
+        <span class="truncate tabular-nums" :title="texto">{{ texto }}</span>
       </li>
     </ul>
   </article>

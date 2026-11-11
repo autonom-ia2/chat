@@ -15,6 +15,8 @@ import GavetaDeFiltros from '../../components/lista/GavetaDeFiltros.vue';
 import HeroiDaLista from '../../components/lista/HeroiDaLista.vue';
 import LinhaDeEmpresa from '../../components/lista/LinhaDeEmpresa.vue';
 import LinhaDePessoa from '../../components/lista/LinhaDePessoa.vue';
+import MenuMaisAcoes from '../../components/lista/MenuMaisAcoes.vue';
+import EstadoSemResultado from '../../components/lista/EstadoSemResultado.vue';
 import MostrarMais from '../../components/lista/MostrarMais.vue';
 
 // As peças da lista de Relacionamentos (#2894), com o texto de verdade em pt_BR.
@@ -50,13 +52,23 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-// A fonte de demonstração espera num setTimeout (atraso 0): só um tempo de
-// verdade deixa as respostas chegarem.
+// A fonte de demonstração espera num setTimeout (atraso 0). Os diálogos que
+// dependem dela rodam com relógio falso (`comRelogioFalso`): o tempo avança
+// por comando, não pelo relógio da máquina.
 const assentar = async () => {
-  await new Promise(resolve => {
-    setTimeout(resolve, 30);
-  });
+  await vi.advanceTimersByTimeAsync(30);
   await flushPromises();
+};
+const comRelogioFalso = () => {
+  // Os dados da demonstração vêm por import() dinâmico (tempo de verdade):
+  // carregar antes deixa as respostas só por conta do relógio falso.
+  beforeAll(() => import('../../demo/acoesDaLista.js'), 60000);
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 };
 
 describe('HeroiDaLista', () => {
@@ -193,7 +205,30 @@ describe('CampoDeBusca', () => {
   });
 });
 
+describe('CampoDeBusca', () => {
+  it('deixa recuo para a lupa e tem a altura dos outros controles', () => {
+    const w = mount(CampoDeBusca, { props: { placeholder: 'Buscar' } });
+    const classes = w.get('input').classes();
+    expect(classes).toEqual(
+      expect.arrayContaining(['!pl-12', '!pr-12', '!mb-0', 'h-11', 'min-h-11'])
+    );
+  });
+});
+
 describe('BarraDeControles', () => {
+  it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
+    const w = mount(BarraDeControles, {
+      props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
+    });
+    expect(
+      w.get('[data-relacionamentos="busca"]').element.parentElement.classList
+    ).toContain('w-full');
+    const grupo = w.get('[data-relacionamentos="mais-filtros"]').element
+      .parentElement;
+    expect(grupo.classList).toContain('w-full');
+    expect(grupo.querySelector('label')).not.toBeNull();
+  });
+
   const montar = (props = {}) =>
     mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar', ...props },
@@ -303,6 +338,21 @@ describe('LinhaDePessoa', () => {
     );
   });
 
+  it('o nome trunca e os selos não encolhem: se não couber, o selo desce de linha', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa({ opted_out_at: diasAtras(2) }), agora: AGORA },
+    });
+    const nome = w.get('[data-relacionamentos="linha"] button');
+    expect(nome.classes()).toEqual(
+      expect.arrayContaining(['truncate', 'min-w-0', 'max-w-full'])
+    );
+    expect(nome.element.parentElement.classList).toContain('flex-wrap');
+    expect(w.get('[data-selo]').classes()).toContain('shrink-0');
+    expect(w.get('[data-relacionamentos="linha"]').classes()).toContain(
+      'min-w-0'
+    );
+  });
+
   it('tem "Conversar" no desktop e um ícone com nome no celular', async () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
@@ -311,7 +361,10 @@ describe('LinhaDePessoa', () => {
       .findAll('button')
       .filter(b => b.text() === 'Conversar' || b.attributes('aria-label'));
     const [desktop, celular] = botoes;
-    expect(desktop.classes()).toContain('sm:opacity-0');
+    // Esconde só onde existe hover: em toque o botão fica sempre visível.
+    expect(desktop.classes()).toContain('[@media(hover:hover)]:opacity-0');
+    expect(desktop.classes()).not.toContain('sm:opacity-0');
+    expect(desktop.classes()).toContain('group-hover:opacity-100');
     expect(desktop.classes()).toContain('group-focus-within:opacity-100');
     expect(celular.attributes('aria-label')).toBe(
       'Conversar com Ana Albuquerino'
@@ -430,6 +483,55 @@ describe('BarraDeAcaoEmGrupo', () => {
     w.unmount();
   });
 
+  describe('foco do menu', () => {
+    const itens = [
+      { id: 'etiqueta', rotulo: 'Etiqueta', icone: 'i-lucide-tag' },
+      { id: 'apagar', rotulo: 'Apagar', icone: 'i-lucide-trash' },
+    ];
+
+    it('ao escolher, o foco volta ao "⋯" antes de avisar', async () => {
+      let focoAoAvisar = null;
+      const w = mount(MenuMaisAcoes, {
+        props: {
+          itens,
+          onEscolher: () => {
+            focoAoAvisar = document.activeElement;
+          },
+        },
+        attachTo: document.body,
+      });
+      const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
+      await gatilho.trigger('click');
+      expect(document.activeElement).toBe(
+        w.get('[data-acao="etiqueta"]').element
+      );
+      await w.get('[data-acao="etiqueta"]').trigger('click');
+      expect(focoAoAvisar).toBe(gatilho.element);
+      w.unmount();
+    });
+
+    it('fecha quando o foco sai para fora do menu e fica aberto dentro dele', async () => {
+      const fora = document.createElement('button');
+      document.body.append(fora);
+      const w = mount(MenuMaisAcoes, {
+        props: { itens },
+        attachTo: document.body,
+      });
+      const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
+      await gatilho.trigger('click');
+      await w.get('[data-acao="etiqueta"]').trigger('focusout', {
+        relatedTarget: w.get('[data-acao="apagar"]').element,
+      });
+      expect(gatilho.attributes('aria-expanded')).toBe('true');
+      await w
+        .get('[data-acao="etiqueta"]')
+        .trigger('focusout', { relatedTarget: fora });
+      expect(gatilho.attributes('aria-expanded')).toBe('false');
+      w.unmount();
+      fora.remove();
+    });
+  });
+
   it('no celular o menu também leva Criar cards e Etiqueta', async () => {
     const w = montar(3);
     await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
@@ -443,6 +545,14 @@ describe('BarraDeAcaoEmGrupo', () => {
     await doCelular[0].trigger('click');
     expect(w.emitted('criarCards')).toHaveLength(1);
     w.unmount();
+  });
+});
+
+describe('EstadoSemResultado', () => {
+  it('só desenha a frase: quem anuncia é a região viva da página', () => {
+    const w = mount(EstadoSemResultado, { props: { frase: 'Nada.' } });
+    expect(w.text()).toBe('Nada.');
+    expect(w.attributes('role')).toBeUndefined();
   });
 });
 
@@ -568,6 +678,20 @@ describe('DialogoMandarMensagem', () => {
     );
   });
 
+  it('sem ninguém de fora, diz em cinza o que vem depois', async () => {
+    const w = await abrir(lote(2));
+    const proximo = w.get('[data-relacionamentos="dialogo-mensagem-proximo"]');
+    expect(proximo.text()).toBe('Você escreve a mensagem no próximo passo.');
+    expect(proximo.classes()).toContain('text-n-slate-11');
+  });
+
+  it('com gente de fora, não repete o próximo passo', async () => {
+    const w = await abrir(doBlocoA());
+    expect(
+      w.find('[data-relacionamentos="dialogo-mensagem-proximo"]').exists()
+    ).toBe(false);
+  });
+
   it('quando todo mundo fica de fora, avisa e não deixa continuar', async () => {
     const w = await abrir([pessoa({ opted_out_at: diasAtras(1) })]);
     expect(w.get('[data-relacionamentos="dialogo-mensagem"]').text()).toBe(
@@ -578,6 +702,7 @@ describe('DialogoMandarMensagem', () => {
 });
 
 describe('DialogoCriarCards', () => {
+  comRelogioFalso();
   const montar = (pessoas = lote(12)) =>
     mount(DialogoCriarCards, {
       props: {
@@ -601,6 +726,18 @@ describe('DialogoCriarCards', () => {
     expect(funil.props('modelValue')).toBe('vendas');
     expect(etapa.props('modelValue')).toBe('primeira-conversa');
     expect(w.get('[data-confirmar]').text()).toBe('Criar 12 cards');
+  });
+
+  it('a região viva já existe, vazia, quando o diálogo abre e recebe o resultado depois', async () => {
+    const w = montar(lote(2));
+    await abrir(w);
+    const regiao = w.get('[role="status"]');
+    expect(regiao.text()).toBe('');
+    const marca = regiao.element;
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(w.get('[role="status"]').element).toBe(marca);
+    expect(w.get('[role="status"]').text()).toBe('2 cards criados.');
   });
 
   it('trocar o funil escolhe a primeira etapa dele', async () => {
@@ -679,6 +816,7 @@ describe('DialogoCriarCards', () => {
 });
 
 describe('DialogoEtiqueta', () => {
+  comRelogioFalso();
   const montar = (pessoas = lote(3)) =>
     mount(DialogoEtiqueta, {
       props: {
@@ -734,6 +872,7 @@ describe('DialogoEtiqueta', () => {
 });
 
 describe('DialogoApagar', () => {
+  comRelogioFalso();
   const montar = (pessoas = lote(12)) =>
     mount(DialogoApagar, {
       props: {

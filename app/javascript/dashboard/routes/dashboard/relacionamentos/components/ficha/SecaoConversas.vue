@@ -62,7 +62,7 @@ const trechoDa = conversa =>
       <li
         v-for="conversa in ultimas"
         :key="conversa.id"
-        class="flex items-start gap-3 py-3"
+        class="flex items-start min-w-0 gap-3 py-3"
       >
         <span
           class="mt-0.5 size-5 shrink-0 text-n-slate-11"

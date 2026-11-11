@@ -18,6 +18,11 @@ import DialogoDesfazer from '../../components/trazer/DialogoDesfazer.vue';
 // Conferir, Pronto, histórico e o diálogo de Desfazer (#2894), com o texto real em pt_BR.
 withFullI18n('pt_BR');
 
+// O jsdom não tem scrollIntoView, que o ChoiceSelect chama ao abrir a lista.
+beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
 const DIA = 24 * 60 * 60 * 1000;
 const AGORA = Date.UTC(2026, 10, 11, 15);
 const marca = (w, nome) => w.find(`[data-relacionamentos="${nome}"]`);
@@ -37,18 +42,18 @@ const conferir = (leitura, extra = {}) =>
 
 describe('FichaDeExemplo', () => {
   const pessoa = {
-    nome: 'Marina Teixeira',
+    nome: 'Marina Esteveira',
     telefone: '+55 11 94271-0003',
-    email: 'marina.teixeira@exemplo.com.br',
+    email: 'marina.esteveira@exemplo.com.br',
     empresa: 'Casa Aurora',
     cliente: true,
   };
 
   it('mostra nome, telefone, e-mail, empresa e o selo Cliente', () => {
     const w = mount(FichaDeExemplo, { props: { pessoa } });
-    expect(w.text()).toContain('Marina Teixeira');
+    expect(w.text()).toContain('Marina Esteveira');
     expect(w.text()).toContain('+55 11 94271-0003');
-    expect(w.text()).toContain('marina.teixeira@exemplo.com.br');
+    expect(w.text()).toContain('marina.esteveira@exemplo.com.br');
     expect(w.text()).toContain('Casa Aurora');
     expect(w.get('[data-selo="cliente"]').text()).toBe('Cliente');
   });
@@ -83,21 +88,21 @@ describe('ProblemaDaLinha', () => {
     expect(guardar.attributes('disabled')).toBeDefined();
     await w.get('input').setValue('rita@exemplo');
     expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
-    await w.get('input').setValue(' rita.nogueira@exemplo.com.br ');
+    await w.get('input').setValue(' rita.carvalhedo@exemplo.com.br ');
     expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
     await w.get('form').trigger('submit');
     expect(w.emitted('guardar')).toEqual([
-      [37, 'rita.nogueira@exemplo.com.br'],
+      [37, 'rita.carvalhedo@exemplo.com.br'],
     ]);
   });
 
   it('nome: Salvar só com algum texto', async () => {
     const w = montar(62);
     expect(botao(w, 'Salvar').attributes('disabled')).toBeDefined();
-    await w.get('input').setValue('Ana Lima');
+    await w.get('input').setValue('Ana Brandolim');
     await botao(w, 'Salvar').trigger('click');
     await w.get('form').trigger('submit');
-    expect(w.emitted('guardar')[0]).toEqual([62, 'Ana Lima']);
+    expect(w.emitted('guardar')[0]).toEqual([62, 'Ana Brandolim']);
   });
 
   it('telefone: usa o campo de telefone e Salvar espera o número ficar completo', () => {
@@ -127,17 +132,21 @@ describe('ProblemaDaLinha', () => {
     expect(w.emitted('deixarDeFora')).toEqual([[171]]);
   });
 
-  it('consertada vira "Pronto" e deixada de fora vira "Deixada de fora", sem botões', () => {
+  it('consertada vira "Pronto" e deixada de fora vira "Deixada de fora", só com Voltar atrás', () => {
     const guardada = mount(ProblemaDaLinha, {
       props: { problema: problemaDe(aplicarConserto(leitura, 62, 'Ana'), 62) },
     });
     expect(guardada.text()).toContain('Pronto');
-    expect(guardada.find('button').exists()).toBe(false);
+    expect(guardada.findAll('button').map(b => b.text())).toEqual([
+      'Voltar atrás',
+    ]);
     const deixada = mount(ProblemaDaLinha, {
       props: { problema: problemaDe(aplicarDeixarDeFora(leitura, 62), 62) },
     });
     expect(deixada.text()).toContain('Deixada de fora');
-    expect(deixada.find('button').exists()).toBe(false);
+    expect(deixada.findAll('button').map(b => b.text())).toEqual([
+      'Voltar atrás',
+    ]);
   });
 });
 
@@ -250,7 +259,11 @@ describe('TelaConferir', () => {
   });
 
   it('consertou: a frase, o título e o botão mudam na hora e a linha vira Pronto', () => {
-    const leitura = aplicarConserto(leituraDeExemplo('l1'), 62, 'Ana Lima');
+    const leitura = aplicarConserto(
+      leituraDeExemplo('l1'),
+      62,
+      'Ana Brandolim'
+    );
     const w = conferir(leitura);
     expect(w.get('h1').text()).toBe(
       'Achei 200 pessoas. 181 são novas, 15 já estavam aqui e vão ser completadas, 4 precisam de você.'
@@ -384,7 +397,7 @@ describe('HistoricoDeListas', () => {
     id,
     arquivo: `${id}.xlsx`,
     quando: AGORA - 3 * DIA,
-    quem: 'Marina Alves',
+    quem: 'Marina Dornelaz',
     total: 195,
     situacao,
     porcentagem: 100,
@@ -404,7 +417,7 @@ describe('HistoricoDeListas', () => {
     const linha = w.get('[data-lista="Clientes 2025"]');
     expect(linha.text()).toContain('Clientes 2025.xlsx');
     expect(linha.text()).toContain('em 08/11');
-    expect(linha.text()).toContain('por Marina Alves');
+    expect(linha.text()).toContain('por Marina Dornelaz');
     expect(linha.text()).toContain('195 pessoas');
     expect(linha.get('[data-situacao]').text()).toBe('Pronto');
     expect(linha.text()).toContain('até 15/11');

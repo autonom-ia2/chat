@@ -20,6 +20,7 @@ const props = defineProps({
 const emit = defineEmits([
   'guardar',
   'deixarDeFora',
+  'reabrir',
   'trocar',
   'trazer',
   'voltar',
@@ -78,6 +79,7 @@ const frase = computed(() => {
       :ocupado="ocupado"
       @guardar="(linha, valor) => emit('guardar', linha, valor)"
       @deixar-de-fora="linha => emit('deixarDeFora', linha)"
+      @reabrir="linha => emit('reabrir', linha)"
     />
 
     <OQueVouGuardar

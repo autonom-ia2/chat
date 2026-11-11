@@ -16,7 +16,10 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <nav :aria-label="rotulo || t('RELACIONAMENTOS.COMUM.GRUPOS')">
+  <nav
+    class="min-w-0"
+    :aria-label="rotulo || t('RELACIONAMENTOS.COMUM.GRUPOS')"
+  >
     <ul
       class="flex gap-2 p-0 pb-1 m-0 overflow-x-auto list-none snap-x scroll-px-4"
     >

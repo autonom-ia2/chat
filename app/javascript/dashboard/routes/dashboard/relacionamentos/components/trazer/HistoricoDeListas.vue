@@ -103,26 +103,28 @@ const dia = ms => formatarDia(ms, locale.value);
             {{ t(NOMES[lista.situacao], { porcentagem: lista.porcentagem }) }}
           </span>
           <template v-if="prazoDe(lista) === PRAZO.ABERTO">
-            <span class="text-sm text-n-slate-11">
-              {{
-                t('RELACIONAMENTOS_TRAZER.HISTORICO.ATE', {
-                  data: dia(prazoParaDesfazer(lista.quando)),
-                })
-              }}
-            </span>
-            <Button
-              slate
-              faded
-              data-relacionamentos="desfazer"
-              class="min-h-11"
-              :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER')"
-              :aria-label="
-                t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_DESFAZER', {
-                  arquivo: lista.arquivo,
-                })
-              "
-              @click="emit('desfazer', lista)"
-            />
+            <div class="flex flex-col items-center gap-1">
+              <Button
+                slate
+                faded
+                data-relacionamentos="desfazer"
+                class="min-h-11"
+                :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER')"
+                :aria-label="
+                  t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_DESFAZER', {
+                    arquivo: lista.arquivo,
+                  })
+                "
+                @click="emit('desfazer', lista)"
+              />
+              <span class="text-xs text-n-slate-11">
+                {{
+                  t('RELACIONAMENTOS_TRAZER.HISTORICO.ATE', {
+                    data: dia(prazoParaDesfazer(lista.quando)),
+                  })
+                }}
+              </span>
+            </div>
           </template>
           <span
             v-else-if="prazoDe(lista) === PRAZO.ACABOU"

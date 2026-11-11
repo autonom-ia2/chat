@@ -1,12 +1,11 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
-import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AbasDaLista from '../components/lista/AbasDaLista.vue';
 import BarraDeAcaoEmGrupo from '../components/lista/BarraDeAcaoEmGrupo.vue';
 import BarraDeControles from '../components/lista/BarraDeControles.vue';
@@ -27,6 +26,7 @@ import { ABAS, gruposDaAba } from '../fonte/grupos';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
+import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
 
@@ -41,9 +41,15 @@ const router = useRouter();
 const demo = usarDemo(route.query);
 const acoes = acoesDaListaFonte({ demo });
 
-const aba = computed(() =>
-  route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS
-);
+// A aba vem da URL, mas só enquanto a rota ainda é a da lista: ao sair para uma
+// ficha a query perde o `aba` e, sem isto, a lista dispararia uma carga à toa.
+const ROTA_DA_LISTA = 'relationships_home';
+let abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+const aba = computed(() => {
+  if (route.name && route.name !== ROTA_DA_LISTA) return abaDaUrl;
+  abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+  return abaDaUrl;
+});
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
 
 const marcados = useMarcados();
@@ -57,9 +63,20 @@ const trocarAba = nova => {
   const resto = Object.fromEntries(
     Object.entries(route.query).filter(([chave]) => chave !== 'aba')
   );
-  router.push({
+  return router.push({
     query: nova === ABAS.EMPRESAS ? { ...resto, aba: nova } : resto,
   });
+};
+
+// O botão do herói fala de gente (quem sumiu, clientes): na aba Empresas esses
+// grupos não existem. Troca para Pessoas e espera a lista assentar na aba nova
+// antes de escolher o grupo (a troca de aba volta ao grupo padrão).
+const verGrupo = async id => {
+  if (ehEmpresas.value) {
+    await trocarAba(ABAS.PESSOAS);
+    await nextTick();
+  }
+  lista.escolherGrupo(id);
 };
 
 const grupos = computed(() =>
@@ -84,6 +101,38 @@ const faltamMarcar = computed(
   () => marcados.quantos.value > 0 && marcados.quantos.value < lista.total.value
 );
 
+// A lista sem ninguém: a frase (e a saída, quando há) depende do que a pessoa
+// pediu. Nasce sempre da mesma conta, para a tela e o aviso falado coincidirem.
+const semResultado = computed(() => {
+  if (lista.itens.value.length) return null;
+  const sufixo = ehEmpresas.value ? '_EMPRESAS' : '';
+  const estados = 'RELACIONAMENTOS.LISTA.ESTADOS';
+  if (lista.busca.value) {
+    return {
+      frase: t(`${estados}.BUSCA_SEM_RESULTADO${sufixo}`, {
+        busca: lista.busca.value,
+      }),
+      botao: t(`${estados}.LIMPAR_BUSCA`),
+      acao: () => lista.mudarBusca(''),
+    };
+  }
+  if (lista.filtrosAtivos.value) {
+    return {
+      frase: t(`${estados}.FILTROS_SEM_RESULTADO`),
+      botao: t(`${estados}.LIMPAR_FILTROS`),
+      acao: lista.limparFiltros,
+    };
+  }
+  return { frase: t(`${estados}.GRUPO_VAZIO${sufixo}`), botao: '', acao: null };
+});
+// Região viva única e permanente: o leitor de tela só anuncia o que muda dentro
+// de uma região que já estava na página, não a que nasce junto com o texto.
+const avisoDaLista = computed(() =>
+  !lista.erro.value && !lista.carregando.value && semResultado.value
+    ? semResultado.value.frase
+    : ''
+);
+
 const trazer = () => router.push({ name: 'relacionamentos_trazer' });
 const abrirPessoa = ({ id }) =>
   router.push({ name: 'relacionamentos_pessoa', params: { contactId: id } });
@@ -101,13 +150,12 @@ const abrirCampanha = quantas =>
     )
   );
 
-const marcarTodas = async () => {
-  try {
-    marcados.marcarVarias(await lista.todosDoGrupo());
-  } catch {
-    useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'));
-  }
-};
+const acoesEmGrupo = useAcoesEmGrupo({
+  lista,
+  marcados,
+  aba,
+  aoFalhar: () => useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')),
+});
 
 const dialogoDeMensagem = useTemplateRef('dialogoDeMensagem');
 const dialogoDeCards = useTemplateRef('dialogoDeCards');
@@ -138,14 +186,17 @@ onMounted(lista.iniciar);
 
 <template>
   <section
-    class="flex flex-col h-full bg-n-surface-1"
+    class="flex flex-col h-full min-w-0 bg-n-surface-1"
     data-relacionamentos="lista"
   >
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 min-w-0 overflow-y-auto">
       <div
-        class="flex flex-col max-w-6xl min-h-full gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
+        class="flex flex-col w-full min-w-0 max-w-6xl min-h-full gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10"
       >
         <h1 class="sr-only">{{ t('RELACIONAMENTOS.LISTA.TITULO') }}</h1>
+        <p role="status" class="sr-only" data-relacionamentos="aviso-da-lista">
+          {{ avisoDaLista }}
+        </p>
 
         <ErroComTentarDeNovo
           v-if="lista.erro.value && !lista.resumo.value"
@@ -158,24 +209,18 @@ onMounted(lista.iniciar);
         />
         <template v-else>
           <HeroiDaLista
+            :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
             @trazer="trazer"
-            @ver-grupo="lista.escolherGrupo"
+            @ver-grupo="verGrupo"
           />
-          <VazioComUmBotao
-            v-if="contaVazia"
-            data-relacionamentos="vazio"
-            :frase="t('RELACIONAMENTOS.LISTA.ESTADOS.CONTA_VAZIA')"
-            :botao="t('RELACIONAMENTOS.COMUM.TRAZER_MINHA_LISTA')"
-            @acao="trazer"
-          />
-          <template v-else>
+          <template v-if="!contaVazia">
             <AbasDaLista :model-value="aba" @update:model-value="trocarAba" />
             <div
               :id="PAINEL_DAS_ABAS"
               role="tabpanel"
               :aria-labelledby="idDaAba(aba)"
-              class="flex flex-col gap-5"
+              class="flex flex-col min-w-0 gap-5"
             >
               <div class="flex flex-col gap-3">
                 <PilulasDeGrupo
@@ -207,39 +252,17 @@ onMounted(lista.iniciar);
                 data-relacionamentos="carregando"
               />
               <EstadoSemResultado
-                v-else-if="!lista.itens.value.length && lista.busca.value"
-                :frase="
-                  t(
-                    `RELACIONAMENTOS.LISTA.ESTADOS.BUSCA_SEM_RESULTADO${ehEmpresas ? '_EMPRESAS' : ''}`,
-                    { busca: lista.busca.value }
-                  )
-                "
-                :botao="t('RELACIONAMENTOS.LISTA.ESTADOS.LIMPAR_BUSCA')"
-                @acao="lista.mudarBusca('')"
-              />
-              <EstadoSemResultado
-                v-else-if="
-                  !lista.itens.value.length && lista.filtrosAtivos.value
-                "
-                :frase="
-                  t('RELACIONAMENTOS.LISTA.ESTADOS.FILTROS_SEM_RESULTADO')
-                "
-                :botao="t('RELACIONAMENTOS.LISTA.ESTADOS.LIMPAR_FILTROS')"
-                @acao="lista.limparFiltros"
-              />
-              <EstadoSemResultado
-                v-else-if="!lista.itens.value.length"
-                :frase="
-                  t(
-                    `RELACIONAMENTOS.LISTA.ESTADOS.GRUPO_VAZIO${ehEmpresas ? '_EMPRESAS' : ''}`
-                  )
-                "
+                v-else-if="semResultado"
+                :frase="semResultado.frase"
+                :botao="semResultado.botao"
+                @acao="semResultado.acao"
               />
               <template v-else>
                 <MarcarTodas
                   v-if="!ehEmpresas && faltamMarcar"
                   :total="lista.total.value"
-                  @marcar-todas="marcarTodas"
+                  :carregando="acoesEmGrupo.marcandoTodas.value"
+                  @marcar-todas="acoesEmGrupo.marcarTodas"
                 />
                 <ListaDeLinhas>
                   <template v-if="ehEmpresas">
@@ -282,7 +305,7 @@ onMounted(lista.iniciar);
         >
           <BarraDeAcaoEmGrupo
             v-if="marcados.quantos.value > 0 && !ehEmpresas"
-            class="sticky z-30 mt-auto bottom-4"
+            class="sticky z-30 mt-auto bottom-4 ms-[72px] sm:ms-0"
             :quantas="marcados.quantos.value"
             @mandar-mensagem="dialogoDeMensagem.abrir()"
             @criar-cards="dialogoDeCards.abrir()"
@@ -311,19 +334,19 @@ onMounted(lista.iniciar);
       ref="dialogoDeCards"
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
-      @concluido="marcados.limpar"
+      @concluido="acoesEmGrupo.depoisDeAgir"
     />
     <DialogoEtiqueta
       ref="dialogoDeEtiqueta"
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
-      @concluido="marcados.limpar"
+      @concluido="acoesEmGrupo.depoisDeAgir"
     />
     <DialogoApagar
       ref="dialogoDeApagar"
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
-      @concluido="marcados.limpar"
+      @concluido="acoesEmGrupo.depoisDeAgir"
     />
   </section>
 </template>

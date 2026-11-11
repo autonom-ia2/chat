@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import {
   formatarCnpj,
   formatarCpf,
@@ -172,7 +173,7 @@ describe('informações da pessoa', () => {
     expect(por('cpf')).toMatchObject({ valor: '529.982.247-25', copiar: true });
     expect(por('empresa').valor).toBe('');
     expect(por('conta:melhor_horario')).toMatchObject({
-      rotulo: 'Melhor horario',
+      rotulo: 'Melhor horário',
       valor: 'Tarde',
     });
     expect(linhas.map(l => l.chave).slice(0, 5)).toEqual([
@@ -182,6 +183,20 @@ describe('informações da pessoa', () => {
       'cidade',
       'empresa',
     ]);
+  });
+
+  it('mostra o telefone formatado nas informações', () => {
+    const linhas = linhasDaPessoa({
+      ...pessoa,
+      phone_number: '+5511916820023',
+    });
+    expect(linhas.find(l => l.chave === 'telefone').valor).toBe(
+      '+55 11 91682-0023'
+    );
+  });
+
+  it('o nome das informações da conta leva acento', () => {
+    expect(nomeDaInformacao('melhor_horario')).toBe('Melhor horário');
   });
 
   it('só mostra redes conhecidas e preenchidas', () => {
@@ -224,6 +239,64 @@ describe('informações da pessoa', () => {
     });
     expect(dados.phone_number).toBeNull();
     expect(dados.email).toBeNull();
+  });
+});
+
+describe('dadosParaSalvar: campos esvaziados', () => {
+  const pessoaCheia = {
+    name: 'Ana',
+    phone_number: '+5511900001007',
+    email: 'ana@exemplo.com.br',
+    additional_attributes: {
+      city: 'Santos',
+      social_profiles: { instagram: '@ana', github: '' },
+    },
+    custom_attributes: { cpf: CPF_VALIDO, melhor_horario: 'Tarde' },
+  };
+
+  it('manda vazio explícito para o que existia e a pessoa apagou', () => {
+    const inicial = formularioDaPessoa(pessoaCheia);
+    const dados = dadosParaSalvar(
+      {
+        ...inicial,
+        cpf: '',
+        redes: { ...inicial.redes, instagram: '' },
+        extras: { melhor_horario: '' },
+      },
+      inicial
+    );
+    expect(dados.custom_attributes).toEqual({ cpf: '', melhor_horario: '' });
+    expect(dados.additional_attributes.social_profiles).toEqual({
+      instagram: '',
+    });
+  });
+
+  it('continua omitindo o que nunca existiu, e não muda a entrada', () => {
+    const inicial = formularioDaPessoa(pessoaCheia);
+    const formulario = { ...inicial, cpf: '' };
+    const antes = JSON.stringify([inicial, formulario]);
+    const dados = dadosParaSalvar(formulario, inicial);
+    expect(dados.additional_attributes.social_profiles).toEqual({
+      instagram: '@ana',
+    });
+    expect(
+      Object.keys(dados.additional_attributes.social_profiles)
+    ).not.toContain('github');
+    expect(JSON.stringify([inicial, formulario])).toBe(antes);
+  });
+});
+
+describe('origens liberáveis', () => {
+  it('batem com UNDOABLE_SOURCES do servidor', () => {
+    const codigo = readFileSync(
+      'app/controllers/api/v1/accounts/contacts/opt_outs_controller.rb',
+      'utf8'
+    );
+    const linha = codigo
+      .split('\n')
+      .find(l => l.includes('UNDOABLE_SOURCES = %w['));
+    const valores = linha.split('%w[')[1].split(']')[0].split(' ');
+    expect([...ORIGENS_LIBERAVEIS].sort()).toEqual([...valores].sort());
   });
 });
 

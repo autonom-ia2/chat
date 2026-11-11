@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   DropdownBody,
@@ -13,6 +14,7 @@ import {
 const emit = defineEmits(['acao']);
 
 const { t } = useI18n();
+const raizDoMenu = ref(null);
 
 const ITENS = [
   { evento: 'alterar', chave: 'ALTERAR_INFORMACOES', icone: 'i-lucide-pencil' },
@@ -20,6 +22,27 @@ const ITENS = [
   { evento: 'bloquear', chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
   { evento: 'apagar', chave: 'APAGAR', icone: 'i-lucide-trash-2' },
 ];
+
+const botaoDoMenu = () =>
+  raizDoMenu.value?.querySelector('[data-relacionamentos="mais-acoes"]');
+
+// O item some ao escolher; o foco volta ao "⋯" antes de emitir, para que o
+// diálogo ou a gaveta que abrir guarde o "⋯" (e não um item escondido) como
+// quem abriu e devolva o foco a ele ao fechar.
+const escolher = evento => {
+  botaoDoMenu()?.focus();
+  emit('acao', evento);
+};
+
+// Foco que sai do menu para um elemento de fora fecha o menu (pelo clique no
+// "⋯", o jeito do contêiner alternar). `relatedTarget` nulo (a janela perdeu o
+// foco, o item sumiu) não fecha nada.
+const aoSairDoFoco = evento => {
+  const destino = evento.relatedTarget;
+  const botao = botaoDoMenu();
+  if (!destino || evento.currentTarget.contains(destino)) return;
+  if (botao?.getAttribute('aria-expanded') === 'true') botao.click();
+};
 
 const PASSO_DA_SETA = { ArrowDown: 1, ArrowUp: -1 };
 
@@ -47,7 +70,12 @@ const aoTeclar = evento => {
 </script>
 
 <template>
-  <div class="relative" @keydown="aoTeclar">
+  <div
+    ref="raizDoMenu"
+    class="relative"
+    @keydown="aoTeclar"
+    @focusout="aoSairDoFoco"
+  >
     <DropdownContainer>
       <template #trigger="{ toggle, isOpen }">
         <button
@@ -68,7 +96,7 @@ const aoTeclar = evento => {
           :key="item.evento"
           :icon="item.icone"
           :label="t(`RELACIONAMENTOS_FICHA.ACOES.${item.chave}`)"
-          :click="() => emit('acao', item.evento)"
+          :click="() => escolher(item.evento)"
           class="min-h-11"
         />
       </DropdownBody>

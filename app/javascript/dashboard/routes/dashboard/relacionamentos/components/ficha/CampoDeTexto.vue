@@ -18,8 +18,8 @@ const idDoErro = `${id}-erro`;
 </script>
 
 <template>
-  <div class="flex flex-col min-w-0 gap-1">
-    <label :for="id" class="mb-0.5 text-heading-3 text-n-slate-12">
+  <div class="flex flex-col min-w-0">
+    <label :for="id" class="mb-1.5 text-heading-3 text-n-slate-12">
       {{ rotulo }}
     </label>
     <input
@@ -35,11 +35,12 @@ const idDoErro = `${id}-erro`;
           : 'outline-n-weak hover:outline-n-slate-6'
       "
     />
+    <!-- Região viva fixa: nasce vazia e recebe o texto do erro depois. -->
     <p
-      v-if="erro"
       :id="idDoErro"
       aria-live="polite"
-      class="min-w-0 mt-1 mb-0 text-label-small text-n-ruby-9 break-words"
+      class="min-w-0 mb-0 text-label-small text-n-ruby-9 break-words"
+      :class="erro ? 'mt-2' : 'mt-0'"
     >
       {{ erro }}
     </p>

@@ -44,6 +44,11 @@ const frases = computed(() => {
   return [base, deFora];
 });
 
+// Sem ninguém de fora e com quem receba: só falta dizer o que vem depois.
+const contaSemNinguemDeFora = computed(
+  () => conta.value.fora === 0 && conta.value.recebem > 0
+);
+
 const continuar = () => {
   emit('continuar', conta.value.recebem);
   dialogo.value?.close();
@@ -63,11 +68,20 @@ defineExpose({ abrir: () => dialogo.value?.open() });
     :disable-confirm-button="conta.recebem === 0"
     @confirm="continuar"
   >
-    <p
-      data-relacionamentos="dialogo-mensagem"
-      class="m-0 text-base text-n-slate-12"
-    >
-      {{ frases.join(' ') }}
-    </p>
+    <div class="flex flex-col gap-2">
+      <p
+        data-relacionamentos="dialogo-mensagem"
+        class="m-0 text-base text-n-slate-12"
+      >
+        {{ frases.join(' ') }}
+      </p>
+      <p
+        v-if="contaSemNinguemDeFora"
+        data-relacionamentos="dialogo-mensagem-proximo"
+        class="m-0 text-sm text-n-slate-11"
+      >
+        {{ t('RELACIONAMENTOS.LISTA.MENSAGEM.PROXIMO_PASSO') }}
+      </p>
+    </div>
   </Dialog>
 </template>

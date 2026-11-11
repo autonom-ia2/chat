@@ -41,11 +41,11 @@ const aoSoltar = evento => {
       type="button"
       data-relacionamentos="soltar-arquivo"
       :aria-describedby="`${id}-apoio`"
-      class="flex flex-col items-center justify-center gap-4 p-8 text-center transition-colors border-2 border-dashed min-h-64 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      class="flex flex-col items-center justify-center gap-4 p-8 text-center transition-colors border-2 min-h-64 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
       :class="
         arrastando
-          ? 'border-n-blue-9 bg-n-blue-3'
-          : 'border-n-weak bg-n-solid-1 hover:border-n-blue-8 hover:bg-n-alpha-1'
+          ? 'border-solid border-n-blue-9 bg-n-blue-2'
+          : 'border-dashed border-n-weak bg-n-solid-1 hover:border-n-blue-8 hover:bg-n-alpha-1'
       "
       @click="abrirSeletor"
       @dragenter.prevent="arrastando = true"
@@ -54,15 +54,18 @@ const aoSoltar = evento => {
       @drop.prevent="aoSoltar"
     >
       <span
-        class="flex items-center justify-center rounded-full size-16 bg-n-blue-3 text-n-blue-11"
+        class="flex items-center justify-center rounded-full pointer-events-none size-16 bg-n-blue-3 text-n-blue-11"
         aria-hidden="true"
       >
         <span class="i-lucide-file-spreadsheet size-8" />
       </span>
-      <span class="text-xl font-semibold text-n-slate-12">
+      <span class="text-xl font-semibold pointer-events-none text-n-slate-12">
         {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.SOLTAR') }}
       </span>
-      <span :id="`${id}-apoio`" class="text-base text-n-slate-11">
+      <span
+        :id="`${id}-apoio`"
+        class="text-base pointer-events-none text-n-slate-11"
+      >
         {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.APOIO') }}
       </span>
     </button>

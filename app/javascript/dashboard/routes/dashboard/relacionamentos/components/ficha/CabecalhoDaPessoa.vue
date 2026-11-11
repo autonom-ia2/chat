@@ -5,6 +5,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
 import { formatarMes } from '../../ficha/formatos';
+import { formatarTelefone } from '../../lista/telefone';
 import { useIdioma } from '../../ficha/idioma';
 import BotaoCopiar from './BotaoCopiar.vue';
 import MenuMais from './MenuMais.vue';
@@ -43,9 +44,9 @@ const empresa = computed(
 <template>
   <header
     data-relacionamentos="cabecalho"
-    class="flex flex-col gap-6 p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 md:p-8 lg:flex-row lg:items-start lg:justify-between"
+    class="flex flex-col w-full min-w-0 gap-6 p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 md:p-8 lg:flex-row lg:items-start lg:justify-between"
   >
-    <div class="flex min-w-0 gap-4 md:gap-6">
+    <div class="flex w-full min-w-0 gap-4 md:gap-6">
       <Avatar
         :name="pessoa.name"
         :src="pessoa.thumbnail"
@@ -75,31 +76,59 @@ const empresa = computed(
             @click="emit('marcarCliente')"
           />
         </div>
-        <div
-          v-if="pessoa.phone_number"
-          class="flex items-center gap-1 text-base text-n-slate-12"
-        >
-          <span class="tabular-nums">{{ pessoa.phone_number }}</span>
-          <BotaoCopiar
-            :valor="pessoa.phone_number"
-            :item="t('RELACIONAMENTOS_FICHA.CABECALHO.ITEM_TELEFONE')"
-          />
+        <div class="flex flex-col min-w-0 gap-1">
+          <div
+            v-if="pessoa.phone_number"
+            data-contato="telefone"
+            class="flex items-center min-w-0 gap-2 text-base text-n-slate-12"
+          >
+            <span
+              class="i-lucide-phone size-4 shrink-0 text-n-slate-10"
+              aria-hidden="true"
+            />
+            <span class="tabular-nums">
+              {{ formatarTelefone(pessoa.phone_number) }}
+            </span>
+            <BotaoCopiar
+              class="-my-2"
+              :valor="pessoa.phone_number"
+              :item="t('RELACIONAMENTOS_FICHA.CABECALHO.ITEM_TELEFONE')"
+            />
+          </div>
+          <div
+            v-if="pessoa.email"
+            data-contato="email"
+            class="flex items-center min-w-0 gap-2 text-base text-n-slate-11"
+          >
+            <span
+              class="i-lucide-mail size-4 shrink-0 text-n-slate-10"
+              aria-hidden="true"
+            />
+            <span class="min-w-0 break-all" :title="pessoa.email">
+              {{ pessoa.email }}
+            </span>
+          </div>
+          <div
+            v-if="empresa"
+            data-contato="empresa"
+            class="flex items-center min-w-0 gap-2 text-base text-n-slate-11"
+          >
+            <span
+              class="i-lucide-building-2 size-4 shrink-0 text-n-slate-10"
+              aria-hidden="true"
+            />
+            <button
+              v-if="pessoa.company_id"
+              type="button"
+              data-relacionamentos="empresa-da-pessoa"
+              class="p-0 -my-2 font-medium bg-transparent border-0 min-w-0 text-start text-n-blue-11 hover:underline min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              @click="emit('abrirEmpresa', pessoa.company_id)"
+            >
+              {{ empresa }}
+            </button>
+            <span v-else class="min-w-0 break-words">{{ empresa }}</span>
+          </div>
         </div>
-        <p v-if="pessoa.email" class="m-0 text-base break-all text-n-slate-11">
-          {{ pessoa.email }}
-        </p>
-        <button
-          v-if="empresa && pessoa.company_id"
-          type="button"
-          data-relacionamentos="empresa-da-pessoa"
-          class="self-start text-base font-medium text-start text-n-blue-11 hover:underline min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          @click="emit('abrirEmpresa', pessoa.company_id)"
-        >
-          {{ empresa }}
-        </button>
-        <p v-else-if="empresa" class="m-0 text-base text-n-slate-11">
-          {{ empresa }}
-        </p>
         <ul
           v-if="pessoa.labels?.length"
           :aria-label="t('RELACIONAMENTOS_FICHA.CABECALHO.ETIQUETAS')"
@@ -120,31 +149,36 @@ const empresa = computed(
       :aria-label="
         t('RELACIONAMENTOS_FICHA.CABECALHO.ACOES', { nome: pessoa.name })
       "
-      class="flex flex-wrap items-center gap-3 shrink-0"
+      class="flex flex-col w-full min-w-0 gap-3 lg:w-auto lg:flex-row lg:items-center lg:shrink-0"
     >
       <Button
         data-relacionamentos="conversar"
         size="lg"
-        class="!min-h-12 !rounded-xl"
+        class="w-full lg:w-auto !min-h-12 !rounded-xl"
         icon="i-lucide-message-circle"
         :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
         @click="emit('conversar')"
       />
-      <Button
-        slate
-        faded
-        class="min-h-11"
-        :label="t('RELACIONAMENTOS_FICHA.ACOES.NOVO_CARD')"
-        @click="emit('novoCard')"
-      />
-      <Button
-        slate
-        faded
-        class="min-h-11"
-        :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
-        @click="emit('lembrete')"
-      />
-      <MenuMais @acao="escolha => emit('maisAcao', escolha)" />
+      <div
+        data-relacionamentos="acoes-secundarias"
+        class="grid grid-cols-[1fr_1fr_auto] items-center gap-3 lg:flex"
+      >
+        <Button
+          slate
+          faded
+          class="w-full min-h-11"
+          :label="t('RELACIONAMENTOS_FICHA.ACOES.NOVO_CARD')"
+          @click="emit('novoCard')"
+        />
+        <Button
+          slate
+          faded
+          class="w-full min-h-11"
+          :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
+          @click="emit('lembrete')"
+        />
+        <MenuMais @acao="escolha => emit('maisAcao', escolha)" />
+      </div>
     </div>
   </header>
 </template>

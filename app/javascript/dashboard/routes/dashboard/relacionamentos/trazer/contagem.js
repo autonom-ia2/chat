@@ -1,6 +1,6 @@
 // #2894 — as contas da conferência, em funções puras: quantas pessoas vão
-// chegar, a frase do topo e a checagem dos campos de conserto. Conferir texto
-// digitado é método de string, sem regex.
+// chegar, a frase do topo e a checagem do nome. O e-mail é conferido por
+// ficha/validacao.js (uma regra só).
 export const SITUACAO_DO_PROBLEMA = {
   ABERTO: 'aberto',
   GUARDADO: 'guardado',
@@ -8,9 +8,6 @@ export const SITUACAO_DO_PROBLEMA = {
 };
 
 const ZERO = 0;
-const ARROBA = '@';
-const PONTO = '.';
-const ESPACO = ' ';
 
 const quantosEm = (problemas, situacao) =>
   problemas.filter(problema => problema.estado === situacao).length;
@@ -69,16 +66,3 @@ export const partesDaFrase = resumo =>
   );
 
 export const nomeValido = valor => String(valor ?? '').trim().length > ZERO;
-
-export const emailValido = valor => {
-  const texto = String(valor ?? '').trim();
-  const posicao = texto.indexOf(ARROBA);
-  if (posicao < 1 || posicao !== texto.lastIndexOf(ARROBA)) return false;
-  if (texto.includes(ESPACO)) return false;
-  const dominio = texto.slice(posicao + 1);
-  return (
-    dominio.includes(PONTO) &&
-    !dominio.startsWith(PONTO) &&
-    !dominio.endsWith(PONTO)
-  );
-};

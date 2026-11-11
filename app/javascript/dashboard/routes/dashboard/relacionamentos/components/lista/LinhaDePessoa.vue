@@ -11,8 +11,8 @@ import { falouHa } from '../../lista/tempoRelativo';
 // #2894 — uma pessoa na lista. Clicar no nome (ou Enter) abre a ficha: o botão
 // do nome estica a área de clique pela linha toda; a caixa de marcar e o
 // "Conversar" ficam por cima e não abrem a ficha. No desktop o "Conversar"
-// aparece ao passar o mouse ou focar a linha; no celular é um ícone sempre à
-// vista.
+// só some onde existe hover (aparece ao passar o mouse ou focar a linha); em
+// tela de toque fica sempre à vista. No celular é um ícone.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
@@ -42,7 +42,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
 <template>
   <li
     data-relacionamentos="linha"
-    class="relative flex items-center gap-3 px-3 py-2 transition-colors group sm:px-5 hover:bg-n-alpha-1 focus-within:bg-n-alpha-1"
+    class="relative flex items-center min-w-0 gap-3 px-3 py-2 transition-colors group sm:px-5 hover:bg-n-alpha-1 focus-within:bg-n-alpha-1"
     :class="{ 'bg-n-alpha-1': marcada }"
   >
     <label
@@ -67,7 +67,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <button
           type="button"
-          class="min-w-0 p-0 text-base font-semibold text-start truncate border-0 bg-transparent text-n-slate-12 after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-n-brand focus-visible:after:rounded-2xl"
+          class="min-w-0 max-w-full p-0 text-base font-semibold text-start truncate border-0 bg-transparent text-n-slate-12 after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-n-brand focus-visible:after:rounded-2xl"
           @click="emit('abrir', pessoa)"
         >
           {{ pessoa.name }}
@@ -79,12 +79,14 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
           {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
         </SeloDeEstado>
       </div>
-      <p class="m-0 text-sm break-words text-n-slate-11">{{ segundaLinha }}</p>
+      <p class="m-0 text-sm break-words min-w-0 text-n-slate-11">
+        {{ segundaLinha }}
+      </p>
     </div>
     <Button
       slate
       faded
-      class="relative z-10 hidden min-h-11 sm:inline-flex sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+      class="relative z-10 hidden min-h-11 sm:inline-flex [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
       :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
       @click="emit('conversar', pessoa)"
     />

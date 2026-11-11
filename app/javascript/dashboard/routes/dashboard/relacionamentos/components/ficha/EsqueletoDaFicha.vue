@@ -1,19 +1,15 @@
 <script setup>
-import { useI18n } from 'vue-i18n';
-
 // #2894 — "carregando" da ficha: a forma dela em cinza que pulsa (cabeçalho,
-// coluna principal e coluna do lado), com o texto só para o leitor de tela.
-const { t } = useI18n();
+// coluna principal e coluna do lado). O leitor de tela ouve "Carregando" pela
+// região viva da página (`AvisoVivo`), que não nasce junto com o esqueleto.
 </script>
 
 <template>
   <div
     data-relacionamentos="carregando"
-    role="status"
     aria-busy="true"
     class="flex flex-col gap-6"
   >
-    <span class="sr-only">{{ t('RELACIONAMENTOS.COMUM.CARREGANDO') }}</span>
     <div
       aria-hidden="true"
       class="h-48 rounded-2xl bg-n-alpha-2 animate-pulse"

@@ -22,9 +22,12 @@ const botoes = () =>
     botao => botao.checkVisibility?.() ?? true
   );
 
+const focarGatilho = () =>
+  raiz.value?.querySelector('[aria-haspopup="menu"]')?.focus();
+
 const fechar = () => {
   aberto.value = false;
-  raiz.value?.querySelector('[aria-haspopup="menu"]')?.focus();
+  focarGatilho();
 };
 
 const alternar = async () => {
@@ -34,9 +37,21 @@ const alternar = async () => {
   botoes()[0]?.focus();
 };
 
+// O foco volta ao "⋯" antes de avisar: o item some ao fechar o menu e o diálogo
+// que a ação abre devolve o foco, ao fechar, a quem o tinha (um botão visível).
 const escolher = item => {
   aberto.value = false;
+  focarGatilho();
   emit('escolher', item.id);
+};
+
+// Tab para fora do menu fecha. Sem `relatedTarget` (clique em botão no Safari,
+// janela perdendo o foco) não decide: o clique fora já fecha por `onClickOutside`.
+const aoSairDoFoco = evento => {
+  const destino = evento.relatedTarget;
+  if (aberto.value && destino && !raiz.value?.contains(destino)) {
+    aberto.value = false;
+  }
 };
 
 const andar = passo => {
@@ -63,7 +78,7 @@ onClickOutside(raiz, () => {
 </script>
 
 <template>
-  <div ref="raiz" class="relative" @keydown="aoTeclar">
+  <div ref="raiz" class="relative" @keydown="aoTeclar" @focusout="aoSairDoFoco">
     <Button
       slate
       faded

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -28,6 +28,9 @@ const CHAVES_DOS_DESTINOS = {
   [DESTINOS.NAO_GUARDAR]: 'RELACIONAMENTOS_TRAZER.DESTINOS.NAO_GUARDAR',
 };
 const trocando = ref(false);
+const raiz = ref(null);
+const escolha = ref(null);
+const caixaDaEscolha = ref(null);
 
 const nomeDoDestino = destino => t(CHAVES_DOS_DESTINOS[destino]);
 
@@ -43,15 +46,63 @@ const virouInformacao = computed(
   () => props.coluna.destino === DESTINOS.INFORMACAO
 );
 
-const escolher = destino => {
+// Devolve o foco ao "Trocar" — só se o foco ainda está aqui ou se perdeu (no
+// corpo da página); quem clicou em outro campo não é arrastado de volta.
+const voltarAoTrocar = async () => {
+  await nextTick();
+  const ativo = document.activeElement;
+  const perdeu = !ativo || ativo === document.body;
+  if (!perdeu && !raiz.value?.contains(ativo)) return;
+  raiz.value?.querySelector('[data-relacionamentos="trocar-coluna"]')?.focus();
+};
+
+const sairDaTroca = () => {
   trocando.value = false;
+  voltarAoTrocar();
+};
+
+const escolher = destino => {
+  sairDaTroca();
   if (destino !== props.coluna.destino)
     emit('trocar', props.coluna.nome, destino);
 };
+
+// Ao abrir a troca, a lista já vem aberta e com o foco no gatilho.
+const abrirTroca = async () => {
+  trocando.value = true;
+  await nextTick();
+  escolha.value?.abrir();
+};
+
+// O ChoiceSelect não avisa quando fecha; o `aria-expanded` do gatilho avisa.
+// Fechou sem escolha (Esc, clique fora, mesma opção): volta ao estado normal.
+let observador = null;
+let jaAbriu = false;
+const observarFechamento = caixa => {
+  observador?.disconnect();
+  observador = null;
+  jaAbriu = false;
+  if (!caixa) return;
+  observador = new MutationObserver(() => {
+    const aberta = caixa
+      .querySelector('[aria-expanded]')
+      ?.getAttribute('aria-expanded');
+    if (aberta === 'true') jaAbriu = true;
+    else if (jaAbriu) sairDaTroca();
+  });
+  observador.observe(caixa, {
+    attributes: true,
+    attributeFilter: ['aria-expanded'],
+    subtree: true,
+  });
+};
+watch(caixaDaEscolha, observarFechamento);
+onBeforeUnmount(() => observador?.disconnect());
 </script>
 
 <template>
   <li
+    ref="raiz"
     :data-coluna="coluna.nome"
     class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
   >
@@ -83,8 +134,9 @@ const escolher = destino => {
       </template>
     </p>
     <div class="flex flex-wrap items-center gap-2">
-      <div v-if="trocando" class="w-64 max-w-full">
+      <div v-if="trocando" ref="caixaDaEscolha" class="w-64 max-w-full">
         <ChoiceSelect
+          ref="escolha"
           :model-value="coluna.destino"
           :options="opcoes"
           :aria-label="
@@ -99,6 +151,7 @@ const escolher = destino => {
         v-else
         ghost
         slate
+        data-relacionamentos="trocar-coluna"
         class="min-h-11"
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.TROCAR')"
         :aria-label="
@@ -107,7 +160,7 @@ const escolher = destino => {
           })
         "
         :disabled="ocupado"
-        @click="trocando = true"
+        @click="abrirTroca"
       />
       <Button
         v-if="virouInformacao && !trocando"

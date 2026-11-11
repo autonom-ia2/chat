@@ -51,10 +51,17 @@ const DialogFalso = {
 
 const marca = (w, nome) => w.find(`[data-relacionamentos="${nome}"]`);
 const botao = (w, texto) => w.findAll('button').find(b => b.text() === texto);
+// Telas inteiras montam devagar numa máquina carregada (a CI também): o limite
+// de 5 s por teste é de relógio, não de lógica.
+vi.setConfig({ testTimeout: 30000 });
+
+// Espera por condição, com folga para máquina carregada (o padrão é 1 s).
+const esperarPor = (verificacao, opcoes) =>
+  vi.waitFor(verificacao, { timeout: 5000, ...opcoes });
 const aparece = (w, nome) =>
-  vi.waitFor(() => expect(marca(w, nome).exists()).toBe(true));
+  esperarPor(() => expect(marca(w, nome).exists()).toBe(true));
 const some = (w, nome) =>
-  vi.waitFor(() => expect(marca(w, nome).exists()).toBe(false));
+  esperarPor(() => expect(marca(w, nome).exists()).toBe(false));
 
 const abrir = async () => {
   const w = mount(TrazerListaPage, {
@@ -80,7 +87,7 @@ const irAteConferir = async w => {
   await aparece(w, 'pergunta');
   await escolher(w, 'sim_todas');
   await continuar(w);
-  await vi.waitFor(() =>
+  await esperarPor(() =>
     expect(marca(w, 'pergunta').attributes('data-pergunta')).toBe('telefone')
   );
   await escolher(w, 'da_pessoa');
@@ -112,7 +119,7 @@ describe('Enviar', () => {
     );
     expect(marca(w, 'soltar-arquivo').exists()).toBe(true);
     expect(marca(w, 'usar-exemplo').exists()).toBe(true);
-    await vi.waitFor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
     expect(w.get('a').text()).toContain('Pessoas');
     w.unmount();
   });
@@ -121,7 +128,7 @@ describe('Enviar', () => {
     estado.demo = null;
     const w = await abrir();
     expect(marca(w, 'usar-exemplo').exists()).toBe(false);
-    await vi.waitFor(() => expect(marca(w, 'erro').exists()).toBe(true));
+    await esperarPor(() => expect(marca(w, 'erro').exists()).toBe(true));
     expect(marca(w, 'erro').text()).toContain(
       'Não consegui mostrar o que você já trouxe'
     );
@@ -187,7 +194,7 @@ describe('Perguntas', () => {
     const w = await abrir();
     await marca(w, 'usar-exemplo').trigger('click');
     await aparece(w, 'pergunta');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(document.activeElement).toBe(w.get('h1').element)
     );
     w.unmount();
@@ -208,9 +215,9 @@ describe('da planilha de exemplo até Pronto', () => {
     ).toHaveLength(3);
 
     const linha62 = w.get('[data-linha="62"]');
-    await linha62.get('input').setValue('Ana Lima');
+    await linha62.get('input').setValue('Ana Brandolim');
     await linha62.get('form').trigger('submit');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 196 pessoas')
     );
     expect(w.get('h1').text()).toContain('181 são novas');
@@ -229,7 +236,7 @@ describe('da planilha de exemplo até Pronto', () => {
     await linha.get('input').setValue('11973800014');
     expect(guardar().attributes('disabled')).toBeUndefined();
     await linha.get('form').trigger('submit');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(w.get('[data-linha="14"]').text()).toContain('Pronto')
     );
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 196 pessoas');
@@ -243,7 +250,7 @@ describe('da planilha de exemplo até Pronto', () => {
       .get('[data-linha="171"]')
       .get('[data-relacionamentos="deixar-de-fora"]')
       .trigger('click');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(w.get('[data-linha="171"]').text()).toContain('Deixada de fora')
     );
     expect(w.get('h1').text()).toContain('1 ficou de fora');
@@ -264,7 +271,7 @@ describe('da planilha de exemplo até Pronto', () => {
       'Pronto'
     );
     await vi.advanceTimersByTimeAsync(3000);
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(w.get('[role="progressbar"]').attributes('aria-valuenow')).toBe(
         '50'
       )
@@ -286,7 +293,7 @@ describe('da planilha de exemplo até Pronto', () => {
     await aparece(w, 'pronto');
     await botao(w, 'Trazer outra lista').trigger('click');
     await aparece(w, 'enviar');
-    await vi.waitFor(() => expect(w.findAll('[data-lista]')).toHaveLength(3));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(3));
     expect(w.findAll('[data-lista]')[0].text()).toContain(
       'Planilha de exemplo.xlsx'
     );
@@ -305,7 +312,7 @@ describe('da planilha de exemplo até Pronto', () => {
     await vi.advanceTimersByTimeAsync(2400);
 
     const volta = await abrir();
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(volta.findAll('[data-lista]')).toHaveLength(3)
     );
     // O relógio anda um pouco enquanto a tela monta: 40% ou 41%.
@@ -321,7 +328,7 @@ describe('da planilha de exemplo até Pronto', () => {
         .exists()
     ).toBe(false);
     await vi.advanceTimersByTimeAsync(4000);
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(
         volta.findAll('[data-lista]')[0].get('[data-situacao]').text()
       ).toBe('Pronto')
@@ -347,7 +354,7 @@ describe('da planilha de exemplo até Pronto', () => {
 describe('Desfazer', () => {
   const abrirDialogoDaLista = async () => {
     const w = await abrir();
-    await vi.waitFor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(2));
     await w
       .get('[data-lista] [data-relacionamentos="desfazer"]')
       .trigger('click');
@@ -357,7 +364,7 @@ describe('Desfazer', () => {
 
   it('mostra antes o que sai, o que volta e quem já recebeu campanha', async () => {
     const w = await abrirDialogoDaLista();
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(marca(w, 'dialogo-desfazer').text()).toContain(
         'Isto tira 180 pessoas'
       )
@@ -374,7 +381,7 @@ describe('Desfazer', () => {
 
   it('Cancelar fecha sem desfazer', async () => {
     const w = await abrirDialogoDaLista();
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(
         marca(w, 'desfazer-confirmar').attributes('disabled')
       ).toBeUndefined()
@@ -389,14 +396,14 @@ describe('Desfazer', () => {
 
   it('Desfazer faz a linha virar "Desfeito" e some o botão', async () => {
     const w = await abrirDialogoDaLista();
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(
         marca(w, 'desfazer-confirmar').attributes('disabled')
       ).toBeUndefined()
     );
     await w.get('[data-dialog]').trigger('submit');
     await some(w, 'dialogo-desfazer');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(
         w.findAll('[data-lista] [data-situacao]').map(s => s.text())
       ).toEqual(['Desfeito', 'Desfeito'])
@@ -407,7 +414,7 @@ describe('Desfazer', () => {
 
   it('erro ao desfazer avisa por toast e o diálogo continua aberto', async () => {
     const w = await abrirDialogoDaLista();
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(
         marca(w, 'desfazer-confirmar').attributes('disabled')
       ).toBeUndefined()
@@ -415,7 +422,7 @@ describe('Desfazer', () => {
     // Passado o prazo, a fonte recusa.
     await vi.advanceTimersByTimeAsync(5 * 24 * 60 * 60 * 1000);
     await w.get('[data-dialog]').trigger('submit');
-    await vi.waitFor(() =>
+    await esperarPor(() =>
       expect(alertar).toHaveBeenCalledWith(
         'Não consegui desfazer. Tente de novo.'
       )

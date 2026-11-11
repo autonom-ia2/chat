@@ -9,6 +9,8 @@ import SecaoArquivos from '../../components/ficha/SecaoArquivos.vue';
 import GavetaDoCard from '../../components/ficha/GavetaDoCard.vue';
 import GavetaDeInformacoes from '../../components/ficha/GavetaDeInformacoes.vue';
 import ListaDeInformacoes from '../../components/ficha/ListaDeInformacoes.vue';
+import BotaoCopiar from '../../components/ficha/BotaoCopiar.vue';
+import CampoDeTexto from '../../components/ficha/CampoDeTexto.vue';
 import DeOndeVeio from '../../components/ficha/DeOndeVeio.vue';
 import CabecalhoDaEmpresa from '../../components/ficha/CabecalhoDaEmpresa.vue';
 import SecaoPessoasDaEmpresa from '../../components/ficha/SecaoPessoasDaEmpresa.vue';
@@ -150,6 +152,80 @@ describe('MenuMais', () => {
   });
 });
 
+describe('CabecalhoDaPessoa: celular e contato', () => {
+  const montar = props =>
+    mount(CabecalhoDaPessoa, { props, global: { stubs } });
+
+  it('mostra o telefone formatado e copia o número inteiro', () => {
+    const w = montar({ pessoa: pessoa({ phone_number: '+5511916820023' }) });
+    expect(w.text()).toContain('+55 11 91682-0023');
+    expect(w.findComponent(BotaoCopiar).props('valor')).toBe('+5511916820023');
+  });
+
+  it('telefone, e-mail e empresa têm cada um um ícone e a mesma estrutura', () => {
+    const w = montar({ pessoa: pessoa() });
+    const icones = ['phone', 'mail', 'building-2'].map(nome =>
+      w.find(`[data-contato] .i-lucide-${nome}`).exists()
+    );
+    expect(icones).toEqual([true, true, true]);
+    expect(w.findAll('[data-contato]')).toHaveLength(3);
+  });
+
+  it('o e-mail quebra em vez de empurrar a página', () => {
+    const w = montar({ pessoa: pessoa() });
+    const email = w.get('[data-contato="email"]');
+    expect(email.classes()).toContain('min-w-0');
+    expect(email.get('p, span.break-all').classes()).toContain('break-all');
+  });
+
+  it('em 390 px Conversar ocupa a linha e as outras três dividem a de baixo', () => {
+    const w = montar({ pessoa: pessoa() });
+    expect(w.get('[data-relacionamentos="conversar"]').classes()).toContain(
+      'w-full'
+    );
+    expect(
+      w.get('[data-relacionamentos="acoes-secundarias"]').classes()
+    ).toEqual(expect.arrayContaining(['grid']));
+  });
+});
+
+describe('MenuMais: foco', () => {
+  it('ao escolher, o foco volta ao "⋯" antes de emitir', async () => {
+    let focoNaHoraDeEmitir = null;
+    const w = mount(MenuMais, {
+      attachTo: document.body,
+      props: {
+        onAcao: () => {
+          focoNaHoraDeEmitir = document.activeElement;
+        },
+      },
+      global: { stubs },
+    });
+    const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
+    await gatilho.trigger('click');
+    const item = w.findAll('.n-dropdown-item button')[0];
+    item.element.focus();
+    await item.trigger('click');
+    expect(focoNaHoraDeEmitir).toBe(gatilho.element);
+    w.unmount();
+  });
+
+  it('fecha quando o foco sai para fora do menu, mas não quando anda dentro dele', async () => {
+    const fora = document.createElement('button');
+    document.body.appendChild(fora);
+    const w = mount(MenuMais, { attachTo: document.body, global: { stubs } });
+    const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
+    await gatilho.trigger('click');
+    const itens = w.findAll('.n-dropdown-item button');
+    await itens[0].trigger('focusout', { relatedTarget: itens[1].element });
+    expect(gatilho.attributes('aria-expanded')).toBe('true');
+    await itens[0].trigger('focusout', { relatedTarget: fora });
+    expect(gatilho.attributes('aria-expanded')).toBe('false');
+    w.unmount();
+    fora.remove();
+  });
+});
+
 describe('FaixaNaoQuer', () => {
   const montar = origem =>
     mount(FaixaNaoQuer, {
@@ -174,6 +250,12 @@ describe('FaixaNaoQuer', () => {
     expect(w.text()).toContain('FAIXA.LIBERAR');
     await w.get('[data-confirmar]').trigger('click');
     expect(w.emitted('liberar')).toHaveLength(1);
+  });
+
+  it('é aviso fixo: não nasce como região viva', () => {
+    expect(montar('manual').find('[role="status"], [aria-live]').exists()).toBe(
+      false
+    );
   });
 
   it('não tem Liberar nas outras origens', () => {
@@ -451,6 +533,11 @@ describe('ListaDeInformacoes e De onde veio', () => {
       props: { origem: { tipo: 'canal', canal: 'whatsapp', quando: SEGUNDOS } },
     });
     expect(canal.text()).toContain('ORIGEM.CANAL');
+    const desconhecido = mount(DeOndeVeio, {
+      props: { origem: { tipo: 'canal', canal: 'telegram', quando: SEGUNDOS } },
+    });
+    expect(desconhecido.text()).toContain('ORIGEM.CANAL_DESCONHECIDO');
+    expect(desconhecido.text()).not.toContain('CANAL_NOME.telegram');
     expect(
       mount(DeOndeVeio, { props: { origem: null } })
         .find('section')
@@ -489,5 +576,16 @@ describe('ficha da empresa: peças', () => {
     expect(vazio.get('[data-relacionamentos="vazio"]').text()).toContain(
       'PESSOAS_VAZIO'
     );
+  });
+});
+
+describe('CampoDeTexto: região viva', () => {
+  it('a região do erro já existe sem erro e recebe o texto depois', async () => {
+    const w = mount(CampoDeTexto, { props: { rotulo: 'Nome', erro: '' } });
+    const regiao = w.get('[aria-live="polite"]');
+    expect(regiao.text()).toBe('');
+    await w.setProps({ erro: 'Escreva o nome.' });
+    expect(w.get('[aria-live="polite"]').element).toBe(regiao.element);
+    expect(regiao.text()).toBe('Escreva o nome.');
   });
 });

@@ -53,6 +53,13 @@
       "DEIXAR_DE_FORA": "Deixar de fora",
       "NA_PLANILHA": "Na planilha: {valor}",
       "FICAR_COM": "Ficar com a linha {linha}",
+      "VOLTAR_ATRAS": "Voltar atrás",
+      "VOLTAR_ATRAS_LINHA": "Voltar atrás na linha {linha}",
+      "ANUNCIO": {
+        "PRONTO": "Linha {linha}: pronto",
+        "DEIXADA": "Linha {linha}: deixada de fora",
+        "REABERTA": "Linha {linha}: voltou para você conferir"
+      },
       "PROBLEMA": {
         "TELEFONE": "Linha {linha}: falta um número no telefone",
         "EMAIL": "Linha {linha}: o e-mail está sem “{'@'}”",

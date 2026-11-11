@@ -69,7 +69,7 @@ describe('SoltarArquivo', () => {
     const w = mount(SoltarArquivo);
     const botao = marca(w, 'soltar-arquivo');
     await botao.trigger('dragenter');
-    expect(botao.classes()).toContain('bg-n-blue-3');
+    expect(botao.classes()).toContain('bg-n-blue-2');
     await botao.trigger('drop', {
       dataTransfer: { files: [arquivo('contatos.csv')] },
     });

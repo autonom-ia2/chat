@@ -70,3 +70,25 @@ describe('usarDemo e estadoDemo', () => {
     expect(estadoDemo()).toBe('vazio');
   });
 });
+
+describe('?demo=desligado', () => {
+  it('zera o estado guardado em desenvolvimento', async () => {
+    const { usarDemo, estadoDemo } = await carregar();
+    usarDemo({ demo: 'cheio' });
+    expect(usarDemo({ demo: 'desligado' })).toBeNull();
+    expect(estadoDemo()).toBeNull();
+    expect(usarDemo({})).toBeNull();
+  });
+
+  it('não é um estado de demonstração', async () => {
+    const { demoPedido } = await carregar();
+    expect(demoPedido({ demo: 'desligado' })).toBeNull();
+  });
+
+  it('fora do desenvolvimento não mexe em nada', async () => {
+    const { usarDemo, estadoDemo } = await carregar();
+    usarDemo({ demo: 'cheio' });
+    expect(usarDemo({ demo: 'desligado' }, false)).toBe('cheio');
+    expect(estadoDemo()).toBe('cheio');
+  });
+});

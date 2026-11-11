@@ -119,6 +119,15 @@ const REGRAS_DA_ABA = {
 
 const regrasDaAba = aba => REGRAS_DA_ABA[aba] || REGRAS_DA_ABA[ABAS.PESSOAS];
 
+// O que a busca e os filtros deixam passar, antes de olhar o grupo. A lista e as
+// contagens das pílulas usam esta mesma conta, para os números baterem.
+const passaNaConsulta = (aba, { busca = '', filtros = {} }, agora) => {
+  const regras = regrasDaAba(aba);
+  return item =>
+    combinaComBusca(busca, regras.campos(item)) &&
+    (aba !== ABAS.PESSOAS || pessoaPassaNosFiltros(item, filtros, agora));
+};
+
 const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   const baseDaDemo = async () => {
     await esperar(atraso);
@@ -137,15 +146,10 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     const agora = Date.now();
     const regras = regrasDaAba(aba);
     const ordenador = ORDENADORES[ordem] || ORDENADORES[ORDENS.ULTIMA_CONVERSA];
-    const filtrosDaAba =
-      aba === ABAS.PESSOAS
-        ? item => pessoaPassaNosFiltros(item, filtros, agora)
-        : () => true;
     return regras
       .daBase(await baseDaDemo(), agora)
       .filter(item => regras.pertence(item, grupo || GRUPO_PADRAO[aba], agora))
-      .filter(item => combinaComBusca(busca, regras.campos(item)))
-      .filter(filtrosDaAba)
+      .filter(passaNaConsulta(aba, { busca, filtros }, agora))
       .sort(ordenador);
   };
 
@@ -166,10 +170,14 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
         ),
       };
     },
-    async contagens(aba) {
+    // O número de cada pílula. Com `busca` e `filtros`, conta só quem combina
+    // com eles: o número bate com a lista que a pessoa vê.
+    async contagens(aba, consulta = {}) {
       const agora = Date.now();
       const regras = regrasDaAba(aba);
-      const lista = regras.daBase(await baseDaDemo(), agora);
+      const lista = regras
+        .daBase(await baseDaDemo(), agora)
+        .filter(passaNaConsulta(aba, consulta, agora));
       return Object.fromEntries(
         gruposDaAba(aba).map(grupo => [
           grupo.id,

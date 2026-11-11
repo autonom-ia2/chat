@@ -152,6 +152,7 @@
       "TITULO": "Where they came from",
       "LISTA": "Came from the list “{nome}”, on {data}",
       "CANAL": "Arrived through {canal} on {data}",
+      "CANAL_DESCONHECIDO": "Arrived on {data}",
       "CANAL_NOME": {
         "whatsapp": "WhatsApp",
         "email": "e-mail",

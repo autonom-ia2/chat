@@ -14,6 +14,9 @@ const props = defineProps({
 const { t } = useI18n();
 const idioma = useIdioma();
 
+// Os canais que têm nome em RELACIONAMENTOS_FICHA.ORIGEM.CANAL_NOME.
+const CANAIS_COM_NOME = ['whatsapp', 'email', 'instagram', 'site'];
+
 const frase = computed(() => {
   const { origem } = props;
   if (!origem) return '';
@@ -21,8 +24,14 @@ const frase = computed(() => {
   if (origem.tipo === 'lista') {
     return t('RELACIONAMENTOS_FICHA.ORIGEM.LISTA', { nome: origem.nome, data });
   }
-  const canal = t(`RELACIONAMENTOS_FICHA.ORIGEM.CANAL_NOME.${origem.canal}`);
-  return t('RELACIONAMENTOS_FICHA.ORIGEM.CANAL', { canal, data });
+  // Canal que a lista não conhece: frase genérica, nunca a chave crua.
+  if (!CANAIS_COM_NOME.includes(origem.canal)) {
+    return t('RELACIONAMENTOS_FICHA.ORIGEM.CANAL_DESCONHECIDO', { data });
+  }
+  return t('RELACIONAMENTOS_FICHA.ORIGEM.CANAL', {
+    canal: t(`RELACIONAMENTOS_FICHA.ORIGEM.CANAL_NOME.${origem.canal}`),
+    data,
+  });
 });
 </script>
 

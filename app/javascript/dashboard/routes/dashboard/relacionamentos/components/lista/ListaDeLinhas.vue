@@ -5,7 +5,7 @@
 
 <template>
   <ul
-    class="m-0 overflow-hidden list-none border divide-y p-0 rounded-2xl border-n-weak bg-n-solid-1 divide-n-weak/60"
+    class="m-0 min-w-0 overflow-hidden list-none border divide-y p-0 rounded-2xl border-n-weak bg-n-solid-1 divide-n-weak/60"
   >
     <slot />
   </ul>

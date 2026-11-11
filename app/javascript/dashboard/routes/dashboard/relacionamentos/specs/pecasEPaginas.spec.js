@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
+import store from 'dashboard/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import HeroiEscuro from '../components/comum/HeroiEscuro.vue';
 import SeloDeEstado from '../components/comum/SeloDeEstado.vue';
@@ -7,15 +8,26 @@ import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
 import RelacionamentosInicio from '../pages/RelacionamentosInicio.vue';
+import { routes } from '../relacionamentos.routes';
 
 // As peças comuns e a porta de Relacionamentos (#2894). Cada tela tem o spec dela em
 // specs/lista, specs/ficha e specs/trazer.
 const flagsLigadas = vi.hoisted(() => new Set());
+const carregamentos = vi.hoisted(() => ({ lista: 0 }));
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
-vi.mock('../pages/ListaPage.vue', () => ({
-  default: { name: 'ListaPage', template: '<div data-pagina-nova />' },
+vi.mock('dashboard/store', () => ({
+  default: { getters: {}, dispatch: vi.fn() },
 }));
+// Conta quantas vezes o módulo da tela nova foi carregado: com a flag desligada
+// ele não pode nem entrar no pacote da porta.
+vi.mock('../pages/ListaPage.vue', () => {
+  carregamentos.lista += 1;
+  return {
+    __esModule: true,
+    default: { name: 'ListaPage', template: '<div data-pagina-nova />' },
+  };
+});
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     isCloudFeatureEnabled: flag => flagsLigadas.has(flag),
@@ -143,9 +155,18 @@ describe('PilulasDeGrupo', () => {
 describe('RelacionamentosInicio', () => {
   afterEach(() => flagsLigadas.clear());
 
-  it('abre a lista nova com relacionamentos_novo ligada', () => {
+  // Primeiro de todos: depois dele o módulo da lista já foi carregado.
+  it('com a flag desligada, nem carrega o módulo da lista nova', async () => {
+    const w = mount(RelacionamentosInicio);
+    await flushPromises();
+    expect(w.find('[data-pagina-antiga]').exists()).toBe(true);
+    expect(carregamentos.lista).toBe(0);
+  });
+
+  it('abre a lista nova com relacionamentos_novo ligada', async () => {
     flagsLigadas.add(FEATURE_FLAGS.RELACIONAMENTOS_NOVO);
     const w = mount(RelacionamentosInicio);
+    await flushPromises();
     expect(w.find('[data-pagina-nova]').exists()).toBe(true);
     expect(w.find('[data-pagina-antiga]').exists()).toBe(false);
   });
@@ -155,4 +176,31 @@ describe('RelacionamentosInicio', () => {
     expect(w.find('[data-pagina-antiga]').exists()).toBe(true);
     expect(w.find('[data-pagina-nova]').exists()).toBe(false);
   });
+});
+
+describe('rotas de Relacionamentos', () => {
+  const para = { params: { accountId: '9' } };
+  const comFlags = ligadas => {
+    store.getters['accounts/getAccount'] = () => ({ id: 9 });
+    store.getters['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+      ligadas.includes(flag);
+  };
+
+  it.each(routes.map(rota => [rota.name, rota]))(
+    '%s pede as mesmas flags da lista: relacionamentos_novo e relationships_navigation',
+    async (_nome, rota) => {
+      const next = vi.fn();
+      comFlags([FEATURE_FLAGS.RELACIONAMENTOS_NOVO]);
+      await rota.beforeEnter(para, {}, next);
+      expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+
+      const liberada = vi.fn();
+      comFlags([
+        FEATURE_FLAGS.RELACIONAMENTOS_NOVO,
+        FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
+      ]);
+      await rota.beforeEnter(para, {}, liberada);
+      expect(liberada).toHaveBeenCalledWith();
+    }
+  );
 });

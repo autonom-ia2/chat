@@ -14,7 +14,7 @@ export const useFichaDaPessoa = (fonte, id) => {
   const origem = ref(null);
   const ocupado = ref('');
 
-  const buscar = async () => {
+  const buscar = async aindaVale => {
     const [achada, cc, kk, nn, aa, oo] = await Promise.all([
       fonte.pessoa(id.value),
       fonte.conversas(id.value),
@@ -23,6 +23,7 @@ export const useFichaDaPessoa = (fonte, id) => {
       fonte.arquivos(id.value),
       fonte.origem(id.value),
     ]);
+    if (!aindaVale()) return false;
     if (!achada) return false;
     pessoa.value = achada;
     conversas.value = cc;

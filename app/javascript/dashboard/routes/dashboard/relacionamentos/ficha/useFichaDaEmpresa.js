@@ -10,13 +10,14 @@ export const useFichaDaEmpresa = (fonte, id) => {
   const conversas = ref([]);
   const cards = ref([]);
 
-  const buscar = async () => {
+  const buscar = async aindaVale => {
     const [achada, gente, cc, kk] = await Promise.all([
       fonte.empresa(id.value),
       fonte.pessoasDaEmpresa(id.value),
       fonte.conversasDaEmpresa(id.value),
       fonte.cardsDaEmpresa(id.value),
     ]);
+    if (!aindaVale()) return false;
     if (!achada) return false;
     empresa.value = achada;
     pessoas.value = gente;

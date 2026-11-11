@@ -2,7 +2,8 @@
 // trazidas. Só é carregada no ambiente de desenvolvimento (fonte/trazerFonte.js,
 // `import.meta.env.DEV`); em produção o arquivo nem entra no pacote.
 //
-// Tudo é inventado e sempre igual: 200 pessoas (180 novas, 15 que já estavam na
+// Tudo é inventado e sempre igual (nomes com sobrenome que não existe, como em
+// demo/base.js): 200 pessoas (180 novas, 15 que já estavam na
 // conta e 5 linhas que precisam da pessoa). Telefones no bloco fictício
 // +55 11 9XXXX-00NN e e-mails @exemplo.com.br. Aqui ficam também as funções
 // puras que "gravam" na leitura: cada uma devolve uma leitura nova.
@@ -14,7 +15,7 @@ import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 export const DURACAO_DA_TRAZIDA_MS = 6000;
 const PORCENTAGEM_TOTAL = 100;
 const NOME_DO_ARQUIVO_DE_EXEMPLO = 'Planilha de exemplo.xlsx';
-const QUEM_TROUXE = 'Marina Alves';
+const QUEM_TROUXE = 'Marina Dornelaz';
 
 const RESUMO = { total: 200, novas: 180, completadas: 15, comProblema: 5 };
 
@@ -33,23 +34,23 @@ const PERGUNTAS = [{ id: 'clientes' }, { id: 'telefone', coluna: 'Fone 2' }];
 
 const EXEMPLOS = [
   {
-    nome: 'Marina Teixeira',
+    nome: 'Marina Esteveira',
     telefone: '+55 11 94271-0003',
-    email: 'marina.teixeira@exemplo.com.br',
+    email: 'marina.esteveira@exemplo.com.br',
     empresa: 'Casa Aurora',
     clienteNaPlanilha: true,
   },
   {
-    nome: 'Otávio Lacerda',
+    nome: 'Otávio Lourenzatto',
     telefone: '+55 11 96538-0007',
-    email: 'otavio.lacerda@exemplo.com.br',
+    email: 'otavio.lourenzatto@exemplo.com.br',
     empresa: '',
     clienteNaPlanilha: false,
   },
   {
-    nome: 'Sofia Brandão',
+    nome: 'Sofia Mendonzela',
     telefone: '+55 11 93816-0011',
-    email: 'sofia.brandao@exemplo.com.br',
+    email: 'sofia.mendonzela@exemplo.com.br',
     empresa: 'Estúdio Vila Nova',
     clienteNaPlanilha: true,
   },
@@ -61,24 +62,24 @@ const PROBLEMAS = [
   {
     linha: 14,
     tipo: 'telefone',
-    nome: 'Tadeu Marques',
+    nome: 'Tadeu Imbirussu',
     valor: '+55 11 9738-0014',
   },
   {
     linha: 37,
     tipo: 'email',
-    nome: 'Rita Nogueira',
-    valor: 'rita.nogueira.exemplo.com.br',
+    nome: 'Rita Carvalhedo',
+    valor: 'rita.carvalhedo.exemplo.com.br',
   },
   { linha: 62, tipo: 'nome', nome: '', valor: '' },
   {
     linha: 143,
     tipo: 'duplicada',
-    nome: 'Paulo Siqueira',
-    valor: 'Paulo Siqueira',
+    nome: 'Paulo Hortêncio',
+    valor: 'Paulo Hortêncio',
     outraLinha: 88,
   },
-  { linha: 171, tipo: 'sem_contato', nome: 'Helena Barreto', valor: '' },
+  { linha: 171, tipo: 'sem_contato', nome: 'Helena Ourivesco', valor: '' },
 ];
 
 const DESTINO_DO_TELEFONE = {
@@ -155,6 +156,17 @@ export const aplicarDeixarDeFora = (leitura, linha) =>
   problemaComSituacao(leitura, linha, {
     estado: SITUACAO_DO_PROBLEMA.DEIXADO,
   });
+
+// "Voltar atrás": a linha volta a ser problema aberto, sem o valor que a pessoa
+// tinha posto.
+export const aplicarReabrir = (leitura, linha) => ({
+  ...leitura,
+  problemas: leitura.problemas.map(problema => {
+    if (problema.linha !== linha) return problema;
+    const { corrigido, ...resto } = problema;
+    return { ...resto, estado: SITUACAO_DO_PROBLEMA.ABERTO };
+  }),
+});
 
 export const aplicarDestino = (leitura, coluna, destino) => ({
   ...leitura,

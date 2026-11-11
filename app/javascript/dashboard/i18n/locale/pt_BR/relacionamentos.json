@@ -76,6 +76,7 @@
       "MENSAGEM": {
         "TITULO": "Mandar mensagem",
         "RECEBEM": "{count} pessoa vai receber. | {count} pessoas vão receber.",
+        "PROXIMO_PASSO": "Você escreve a mensagem no próximo passo.",
         "NINGUEM_RECEBE": "Ninguém vai receber.",
         "FORA": "{count} fica de fora: {motivos}. | {count} ficam de fora: {motivos}.",
         "MOTIVO_NAO_QUER": "{count} pediu para não receber | {count} pediram para não receber",

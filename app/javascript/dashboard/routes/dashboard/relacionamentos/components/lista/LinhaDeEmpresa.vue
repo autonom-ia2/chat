@@ -35,7 +35,7 @@ const segundaLinha = computed(() => {
 <template>
   <li
     data-relacionamentos="linha"
-    class="relative flex items-center gap-3 px-3 py-2 transition-colors sm:px-5 min-h-16 hover:bg-n-alpha-1 focus-within:bg-n-alpha-1"
+    class="relative flex items-center min-w-0 gap-3 px-3 py-2 transition-colors sm:px-5 min-h-16 hover:bg-n-alpha-1 focus-within:bg-n-alpha-1"
   >
     <Avatar :name="empresa.name" :size="40" />
     <div class="flex flex-col flex-1 min-w-0 gap-0.5">

@@ -152,6 +152,7 @@
       "TITULO": "De onde veio",
       "LISTA": "Veio da lista “{nome}”, em {data}",
       "CANAL": "Chegou pelo {canal} em {data}",
+      "CANAL_DESCONHECIDO": "Chegou em {data}",
       "CANAL_NOME": {
         "whatsapp": "WhatsApp",
         "email": "e-mail",

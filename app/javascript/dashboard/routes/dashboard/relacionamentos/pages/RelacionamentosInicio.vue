@@ -1,9 +1,12 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import RelationshipsHome from '../../relationships/RelationshipsHome.vue';
-import ListaPage from './ListaPage.vue';
+
+// Carregada só quando a flag está ligada: a tela nova inteira não entra no
+// pacote de quem ainda está com a flag desligada.
+const ListaPage = defineAsyncComponent(() => import('./ListaPage.vue'));
 
 // #2894 — a porta de Relacionamentos: com relacionamentos_novo ligada, a lista
 // nova de pessoas e empresas; desligada, a página de hoje, sem mudança nenhuma.

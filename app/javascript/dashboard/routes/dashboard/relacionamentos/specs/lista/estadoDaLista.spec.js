@@ -1,5 +1,4 @@
 import { effectScope, nextTick, ref } from 'vue';
-import { flushPromises } from '@vue/test-utils';
 import { listaFonte } from '../../fonte/listaFonte';
 import { acoesDaListaFonte } from '../../fonte/acoesDaListaFonte';
 import { useLista } from '../../lista/useLista';
@@ -23,14 +22,9 @@ const montar = ({
   return { aba, lista, parar: () => escopo.stop() };
 };
 
-// A fonte de demonstração espera num setTimeout (atraso 0): só um tempo de
-// verdade deixa as respostas chegarem.
-const assentar = async () => {
-  await new Promise(resolve => {
-    setTimeout(resolve, 30);
-  });
-  await flushPromises();
-};
+// A fonte de demonstração espera num setTimeout (atraso 0): em vez de dormir,
+// cada teste espera pela condição que lhe interessa.
+const ate = verificacao => vi.waitFor(verificacao, { timeout: 5000 });
 
 describe('useLista', () => {
   it('carrega resumo, contagens e a primeira página ao iniciar', async () => {
@@ -107,11 +101,10 @@ describe('useLista', () => {
     await lista.mudarFiltros({ cidade: 'Santos' });
     aba.value = 'empresas';
     await nextTick();
-    await assentar();
+    await ate(() => expect(lista.total.value).toBe(38));
+    await ate(() => expect(lista.contagens.value.com_clientes).toBe(14));
     expect(lista.grupo.value).toBe('todas');
     expect(lista.filtrosAtivos.value).toBe(0);
-    expect(lista.contagens.value.com_clientes).toBe(14);
-    expect(lista.total.value).toBe(38);
     expect(aoMudarConsulta).toHaveBeenCalled();
   });
 
@@ -130,6 +123,49 @@ describe('useLista', () => {
     await lista.iniciar();
     expect(lista.erro.value).toMatchObject({ name: falha.name });
     expect(lista.resumo.value).toBeNull();
+  });
+
+  it('"mostrar mais" atropelado por um pedido da página 1 não deixa carregandoMais preso', async () => {
+    const pendentes = [];
+    const fonte = {
+      ...demo(),
+      listar: () =>
+        new Promise(resolve => {
+          pendentes.push(() =>
+            resolve({ itens: [{ id: 1 }], total: 40, temMais: true })
+          );
+        }),
+    };
+    const { lista } = montar({ fonte });
+    lista.temMais.value = true;
+    const mais = lista.mostrarMais();
+    expect(lista.carregandoMais.value).toBe(true);
+    const primeira = lista.mudarBusca('ana');
+    expect(lista.carregandoMais.value).toBe(false);
+    pendentes.forEach(responder => responder());
+    await Promise.all([mais, primeira]);
+    expect(lista.carregandoMais.value).toBe(false);
+    expect(lista.carregando.value).toBe(false);
+  });
+
+  it('busca e filtro refazem as contagens dos grupos; grupo e ordem não', async () => {
+    const fonte = demo();
+    const contagens = vi.spyOn(fonte, 'contagens');
+    const { lista } = montar({ fonte });
+    await lista.iniciar();
+    expect(contagens).toHaveBeenCalledTimes(1);
+    const { name } = lista.itens.value[0];
+    await lista.mudarBusca(name);
+    await ate(() => expect(contagens).toHaveBeenCalledTimes(2));
+    await ate(() =>
+      expect(lista.contagens.value.todos).toBe(lista.total.value)
+    );
+    expect(lista.contagens.value.todos).toBeLessThan(280);
+    await lista.mudarFiltros({ cidade: 'Santos' });
+    await ate(() => expect(contagens).toHaveBeenCalledTimes(3));
+    await lista.escolherGrupo('clientes');
+    await lista.mudarOrdem('nome');
+    expect(contagens).toHaveBeenCalledTimes(3);
   });
 
   it('a resposta de um pedido antigo não pisa na do pedido novo', async () => {

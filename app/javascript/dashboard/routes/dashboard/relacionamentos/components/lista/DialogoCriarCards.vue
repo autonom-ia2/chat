@@ -97,61 +97,57 @@ defineExpose({ abrir });
     @confirm="aoConfirmar"
     @close="aoFechar"
   >
-    <div
-      v-if="resultado"
-      data-relacionamentos="dialogo-cards"
-      role="status"
-      class="flex flex-col gap-3"
-    >
-      <p class="m-0 text-base font-medium text-n-slate-12">
-        {{
-          t(
-            'RELACIONAMENTOS.LISTA.CARDS.CRIADOS',
-            { count: resultado.criados },
-            resultado.criados
-          )
-        }}
-      </p>
-      <template v-if="resultado.deFora.length">
-        <p class="m-0 text-sm text-n-slate-11">
-          {{ t('RELACIONAMENTOS.LISTA.CARDS.FICARAM_DE_FORA') }}
-        </p>
-        <ul
-          class="flex flex-col gap-1 p-0 m-0 text-sm list-none text-n-slate-12"
-        >
-          <li v-for="item in resultado.deFora" :key="item.id">
-            {{ item.nome }} · {{ motivoEmPalavras(item.motivo) }}
-          </li>
-        </ul>
-      </template>
-    </div>
-    <div
-      v-else
-      data-relacionamentos="dialogo-cards"
-      class="flex flex-col gap-5"
-    >
-      <div class="flex flex-col gap-2">
-        <label :for="idDoFunil" class="text-sm font-medium text-n-slate-12">
-          {{ t('RELACIONAMENTOS.LISTA.CARDS.FUNIL') }}
-        </label>
-        <ChoiceSelect
-          :model-value="funilId"
-          :options="opcoesDeFunil"
-          :trigger-id="idDoFunil"
-          :aria-label="t('RELACIONAMENTOS.LISTA.CARDS.FUNIL')"
-          @update:model-value="escolherFunil"
-        />
+    <div data-relacionamentos="dialogo-cards">
+      <!-- Região viva permanente: já está aqui, vazia, quando o resultado chega. -->
+      <div role="status" class="flex flex-col gap-3">
+        <template v-if="resultado">
+          <p class="m-0 text-base font-medium text-n-slate-12">
+            {{
+              t(
+                'RELACIONAMENTOS.LISTA.CARDS.CRIADOS',
+                { count: resultado.criados },
+                resultado.criados
+              )
+            }}
+          </p>
+          <template v-if="resultado.deFora.length">
+            <p class="m-0 text-sm text-n-slate-11">
+              {{ t('RELACIONAMENTOS.LISTA.CARDS.FICARAM_DE_FORA') }}
+            </p>
+            <ul
+              class="flex flex-col gap-1 p-0 m-0 text-sm list-none text-n-slate-12"
+            >
+              <li v-for="item in resultado.deFora" :key="item.id">
+                {{ item.nome }} · {{ motivoEmPalavras(item.motivo) }}
+              </li>
+            </ul>
+          </template>
+        </template>
       </div>
-      <div class="flex flex-col gap-2">
-        <label :for="idDaEtapa" class="text-sm font-medium text-n-slate-12">
-          {{ t('RELACIONAMENTOS.LISTA.CARDS.ETAPA') }}
-        </label>
-        <ChoiceSelect
-          v-model="etapaId"
-          :options="opcoesDeEtapa"
-          :trigger-id="idDaEtapa"
-          :aria-label="t('RELACIONAMENTOS.LISTA.CARDS.ETAPA')"
-        />
+      <div v-if="!resultado" class="flex flex-col gap-5">
+        <div class="flex flex-col gap-2">
+          <label :for="idDoFunil" class="text-sm font-medium text-n-slate-12">
+            {{ t('RELACIONAMENTOS.LISTA.CARDS.FUNIL') }}
+          </label>
+          <ChoiceSelect
+            :model-value="funilId"
+            :options="opcoesDeFunil"
+            :trigger-id="idDoFunil"
+            :aria-label="t('RELACIONAMENTOS.LISTA.CARDS.FUNIL')"
+            @update:model-value="escolherFunil"
+          />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label :for="idDaEtapa" class="text-sm font-medium text-n-slate-12">
+            {{ t('RELACIONAMENTOS.LISTA.CARDS.ETAPA') }}
+          </label>
+          <ChoiceSelect
+            v-model="etapaId"
+            :options="opcoesDeEtapa"
+            :trigger-id="idDaEtapa"
+            :aria-label="t('RELACIONAMENTOS.LISTA.CARDS.ETAPA')"
+          />
+        </div>
       </div>
     </div>
   </Dialog>

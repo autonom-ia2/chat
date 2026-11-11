@@ -135,6 +135,10 @@ const fonteDemo = ({
       escrever(leituraId, (demo, leitura) =>
         demo.aplicarDeixarDeFora(leitura, linha)
       ),
+    reabrir: (leituraId, linha) =>
+      escrever(leituraId, (demo, leitura) =>
+        demo.aplicarReabrir(leitura, linha)
+      ),
     trocarDestino: (leituraId, coluna, destino) =>
       escrever(leituraId, (demo, leitura) =>
         demo.aplicarDestino(leitura, coluna, destino)
@@ -224,6 +228,7 @@ const fonteReal = () => {
     responder: pendente,
     consertar: pendente,
     deixarDeFora: pendente,
+    reabrir: pendente,
     trocarDestino: pendente,
     trazer: pendente,
     andamento: pendente,

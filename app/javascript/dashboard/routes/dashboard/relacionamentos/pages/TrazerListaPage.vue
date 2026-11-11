@@ -70,12 +70,13 @@ const confirmarDesfazer = async () => {
 <template>
   <section
     ref="raiz"
-    class="flex flex-col h-full bg-n-surface-1"
+    class="flex flex-col w-full h-full bg-n-surface-1"
     data-relacionamentos="trazer"
   >
     <main class="flex-1 overflow-y-auto">
       <div
-        class="flex flex-col max-w-4xl gap-8 px-5 py-8 mx-auto md:px-8 md:py-10"
+        data-relacionamentos="trazer-conteudo"
+        class="flex flex-col w-full max-w-3xl gap-8 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10 md:pb-10"
       >
         <div class="flex flex-wrap items-center justify-between gap-4">
           <router-link
@@ -133,6 +134,7 @@ const confirmarDesfazer = async () => {
           :com-erro="tela.erro.value === ERROS.TRAZER"
           @guardar="tela.guardar"
           @deixar-de-fora="tela.deixarDeFora"
+          @reabrir="tela.reabrir"
           @trocar="tela.trocarDestino"
           @trazer="tela.trazer"
           @voltar="tela.voltar"

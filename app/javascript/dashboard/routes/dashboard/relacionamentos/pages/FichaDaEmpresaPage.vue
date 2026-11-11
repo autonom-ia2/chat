@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
+import AvisoVivo from '../components/ficha/AvisoVivo.vue';
 import CabecalhoDaEmpresa from '../components/ficha/CabecalhoDaEmpresa.vue';
 import CartaoDaSecao from '../components/ficha/CartaoDaSecao.vue';
 import EsqueletoDaFicha from '../components/ficha/EsqueletoDaFicha.vue';
@@ -18,7 +19,11 @@ import { usarDemo } from '../fonte/modoDemo';
 import { ABAS } from '../fonte/grupos';
 import { linhasDaEmpresa } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
-import { ESTADOS_DA_FICHA as ESTADOS } from '../ficha/useEstadoDaFicha';
+import { useAvisoVivo } from '../ficha/useAvisoVivo';
+import {
+  ESTADOS_DA_FICHA as ESTADOS,
+  idValido,
+} from '../ficha/useEstadoDaFicha';
 import { useFichaDaEmpresa } from '../ficha/useFichaDaEmpresa';
 
 // #2894 — a ficha da empresa: o mesmo desenho da pessoa, mais simples. Cabeçalho,
@@ -31,6 +36,7 @@ const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id);
 const agora = Date.now();
 const cardAberto = ref(null);
+const { aviso, anunciar } = useAvisoVivo();
 
 const nome = computed(() => ficha.empresa.value?.name ?? '');
 const linhas = computed(() =>
@@ -45,17 +51,29 @@ const abrirNoCrm = () => {
 };
 
 onMounted(ficha.carregar);
-watch(id, ficha.carregar);
+// Ao sair da ficha o parâmetro some (id NaN): não é pedido, não é "não achei".
+watch(id, novo => {
+  if (idValido(novo)) ficha.carregar();
+});
+watch(
+  ficha.estado,
+  estado =>
+    anunciar(
+      estado === ESTADOS.CARREGANDO ? t('RELACIONAMENTOS.COMUM.CARREGANDO') : ''
+    ),
+  { immediate: true }
+);
 </script>
 
 <template>
   <section
-    class="flex flex-col h-full bg-n-surface-1"
+    class="flex flex-col w-full h-full min-w-0 bg-n-surface-1"
     data-relacionamentos="empresa"
   >
-    <main class="flex-1 overflow-y-auto">
+    <AvisoVivo :texto="aviso" />
+    <main class="flex-1 min-w-0 overflow-y-auto">
       <div
-        class="flex flex-col max-w-6xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
+        class="flex flex-col w-full max-w-6xl min-w-0 gap-6 px-5 pt-8 pb-24 mx-auto md:px-8 md:pt-10 md:pb-10"
       >
         <LinkDeVolta
           :texto="t('RELACIONAMENTOS_FICHA.VOLTAR.EMPRESAS')"
@@ -89,13 +107,13 @@ watch(id, ficha.carregar);
         <div
           v-else
           data-relacionamentos="ficha-empresa"
-          class="flex flex-col gap-6"
+          class="flex flex-col min-w-0 gap-6"
         >
           <CabecalhoDaEmpresa :empresa="ficha.empresa.value" />
           <div
-            class="flex flex-col gap-6 lg:grid lg:grid-cols-3 lg:items-start"
+            class="flex flex-col min-w-0 gap-6 lg:grid lg:grid-cols-3 lg:items-start"
           >
-            <div class="flex flex-col gap-6 lg:col-span-2">
+            <div class="flex flex-col min-w-0 gap-6 lg:col-span-2">
               <SecaoPessoasDaEmpresa
                 :pessoas="ficha.pessoas.value"
                 @abrir="acoes.abrirPessoa"

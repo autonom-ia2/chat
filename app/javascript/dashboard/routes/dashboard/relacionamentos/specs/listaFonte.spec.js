@@ -35,6 +35,42 @@ describe('resumo', () => {
   });
 });
 
+describe('contagens com busca e filtros', () => {
+  it('conta só quem combina com a busca, igual ao que a lista mostra', async () => {
+    const fonte = cheia();
+    const { itens } = await fonte.listar({ grupo: 'todos' });
+    const busca = itens[0].name;
+    const contagens = await fonte.contagens('pessoas', { busca });
+    const achados = await fonte.listarTodos({ grupo: 'todos', busca });
+    expect(contagens.todos).toBe(achados.total);
+    expect(contagens.todos).toBeLessThan(280);
+    expect(contagens.todos).toBeGreaterThan(0);
+  });
+
+  it('busca sem ninguém zera todos os grupos', async () => {
+    const contagens = await cheia().contagens('pessoas', { busca: 'zzzzqx' });
+    expect(Object.values(contagens).every(n => n === 0)).toBe(true);
+  });
+
+  it('conta só quem passa nos filtros', async () => {
+    const fonte = cheia();
+    const filtros = { cidade: 'Santos' };
+    const contagens = await fonte.contagens('pessoas', { filtros });
+    const achados = await fonte.listarTodos({ grupo: 'todos', filtros });
+    expect(contagens.todos).toBe(achados.total);
+    expect(contagens.todos).toBeLessThan(280);
+  });
+
+  it('busca em empresas também vale', async () => {
+    const fonte = cheia();
+    const { itens } = await fonte.listar({ aba: 'empresas', grupo: 'todas' });
+    const busca = itens[0].name;
+    const contagens = await fonte.contagens('empresas', { busca });
+    expect(contagens.todas).toBeGreaterThan(0);
+    expect(contagens.todas).toBeLessThan(38);
+  });
+});
+
 describe('contagens', () => {
   it('dá o número de cada grupo de pessoas', async () => {
     expect(await cheia().contagens('pessoas')).toEqual({

@@ -3,6 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
 import { usarDemo } from '../../fonte/modoDemo';
+import MarcarTodas from '../../components/lista/MarcarTodas.vue';
 import ListaPage from '../../pages/ListaPage.vue';
 
 // A lista de Relacionamentos inteira (#2894), com a base fictícia e o texto de
@@ -17,7 +18,7 @@ vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
 vi.mock('../../fonte/modoDemo', () => ({ usarDemo: vi.fn() }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
-  const rota = reactive({ query: {} });
+  const rota = reactive({ query: {}, name: 'relationships_home' });
   const roteador = {
     push: vi.fn(destino => {
       if (destino.query) rota.query = destino.query;
@@ -27,16 +28,22 @@ vi.mock('vue-router', async () => {
 });
 // A demonstração sem o atraso de 300 ms (os testes esperam as respostas).
 // `trocas.listar` deixa um teste responder a lista de um jeito só dele.
-const trocas = vi.hoisted(() => ({ listar: null }));
+const trocas = vi.hoisted(() => ({ listar: null, listarTodos: null }));
 vi.mock('../../fonte/listaFonte', async importOriginal => {
   const real = await importOriginal();
   return {
     ...real,
     listaFonte: opcoes => {
       const base = real.listaFonte({ ...opcoes, atraso: 0 });
-      return trocas.listar
-        ? { ...base, listar: pedido => trocas.listar(base, pedido) }
-        : base;
+      return {
+        ...base,
+        listar: pedido =>
+          trocas.listar ? trocas.listar(base, pedido) : base.listar(pedido),
+        listarTodos: pedido =>
+          trocas.listarTodos
+            ? trocas.listarTodos(base, pedido)
+            : base.listarTodos(pedido),
+      };
     },
   };
 });
@@ -51,6 +58,10 @@ vi.mock('../../fonte/acoesDaListaFonte', async importOriginal => {
 
 withFullI18n('pt_BR');
 
+// Telas inteiras montam devagar numa máquina carregada (a CI também): o limite
+// de 5 s por teste é de relógio, não de lógica.
+vi.setConfig({ testTimeout: 30000 });
+
 // Sem animação de saída: a barra e a gaveta somem na hora, como o teste espera.
 const COMO_NO_NAVEGADOR = {
   attachTo: document.body,
@@ -61,20 +72,24 @@ const rota = useRoute();
 const roteador = useRouter();
 const marca = nome => `[data-relacionamentos="${nome}"]`;
 
-const esperar = ms =>
-  new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
+// A fonte de demonstração e a busca esperam em setTimeout: com o relógio falso
+// o tempo é nosso, e a máquina carregada não muda o resultado.
+const avancar = ms => vi.advanceTimersByTimeAsync(ms);
 const assentar = async () => {
-  await esperar(40);
+  await avancar(40);
   await flushPromises();
 };
 
 const abrir = async ({ demo = 'cheio', query = {} } = {}) => {
   usarDemo.mockReturnValue(demo);
+  rota.name = 'relationships_home';
   rota.query = query;
   const w = mount(ListaPage, COMO_NO_NAVEGADOR);
   await assentar();
+  await vi.waitFor(
+    () => expect(w.find(marca('carregando')).exists()).toBe(false),
+    { timeout: 5000 }
+  );
   return w;
 };
 
@@ -88,14 +103,55 @@ const montar = async opcoes => {
   return aberta;
 };
 
+// As fontes de demonstração carregam os dados por import() dinâmico, que leva
+// tempo de verdade. Carregar antes deixa as respostas só por conta do relógio
+// falso, não da velocidade da máquina.
+beforeAll(async () => {
+  await Promise.all([
+    import('../../demo/base.js'),
+    import('../../demo/acoesDaLista.js'),
+  ]);
+}, 60000);
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   aberta?.unmount();
   aberta = null;
   trocas.listar = null;
+  trocas.listarTodos = null;
   vi.clearAllMocks();
 });
 
 const NINGUEM = { itens: [], total: 0, temMais: false };
+
+describe('ListaPage: largura e respiro', () => {
+  it('o contêiner ocupa a largura toda e nunca empurra a página para o lado', async () => {
+    const w = await montar();
+    const conteudo = w.get('main > div');
+    expect(conteudo.classes()).toEqual(
+      expect.arrayContaining(['w-full', 'min-w-0', 'max-w-6xl', 'mx-auto'])
+    );
+    expect(w.get('main').classes()).toContain('min-w-0');
+    expect(w.get(`[role="tabpanel"]`).classes()).toContain('min-w-0');
+  });
+
+  it('deixa respiro embaixo para a última linha não ficar atrás da barra nem do botão do app', async () => {
+    const w = await montar();
+    expect(w.get('main > div').classes()).toContain('pb-24');
+  });
+
+  it('a barra de ação deixa livre o canto do botão do menu do app no celular', async () => {
+    const w = await montar();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    expect(w.get(marca('barra')).classes()).toEqual(
+      expect.arrayContaining(['ms-[72px]', 'sm:ms-0'])
+    );
+  });
+});
 
 describe('ListaPage: carregando', () => {
   it('mostra o esqueleto enquanto a base não chegou e depois some', async () => {
@@ -200,6 +256,20 @@ describe('ListaPage: cheia', () => {
     expect(w.text()).toContain('Mostrando 25 de 42');
   });
 
+  it('o botão do herói, vindo da aba Empresas, volta para Pessoas e marca o grupo', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('heroi-acao')).trigger('click');
+    await assentar();
+    expect(roteador.push).toHaveBeenCalledWith({ query: {} });
+    expect(w.get(marca('aba-pessoas')).attributes('aria-selected')).toBe(
+      'true'
+    );
+    expect(pilula(w, 'sumiu_1_a_3_meses').attributes('aria-pressed')).toBe(
+      'true'
+    );
+    expect(w.text()).toContain('Mostrando 25 de 42');
+  });
+
   it('"Trazer minha lista" discreto leva à tela de trazer', async () => {
     const w = await montar();
     await w.get(marca('heroi-trazer')).trigger('click');
@@ -233,7 +303,7 @@ describe('ListaPage: busca, ordem e filtros', () => {
     const w = await montar();
     await w.get(marca('busca')).setValue('zzzzqx');
     expect(linhas(w)).toHaveLength(25);
-    await esperar(350);
+    await avancar(350);
     await assentar();
     expect(textoDe(w, marca('vazio'))).toContain(
       'Não achei ninguém com “zzzzqx”.'
@@ -245,6 +315,33 @@ describe('ListaPage: busca, ordem e filtros', () => {
     await assentar();
     expect(linhas(w)).toHaveLength(25);
     expect(w.get(marca('busca')).element.value).toBe('');
+  });
+
+  it('com busca, o número de cada pílula acompanha a lista', async () => {
+    const w = await montar();
+    const nome = linhas(w)[0].get('button').text();
+    await w.get(marca('busca')).setValue(nome);
+    await w.get(marca('busca')).trigger('keydown', { key: 'Enter' });
+    await assentar();
+    const mostradas = linhas(w).length;
+    expect(pilula(w, 'todos').text()).toBe(`Todos ${mostradas}`);
+    expect(w.text()).toContain(`Mostrando ${mostradas} de ${mostradas}`);
+  });
+
+  it('a região viva da página já existe vazia e anuncia o "não achei" depois', async () => {
+    const w = await montar();
+    const aviso = w.get(marca('aviso-da-lista'));
+    expect(aviso.attributes('role')).toBe('status');
+    expect(aviso.text()).toBe('');
+    await w.get(marca('busca')).setValue('zzzzqx');
+    await w.get(marca('busca')).trigger('keydown', { key: 'Enter' });
+    await assentar();
+    expect(w.get(marca('aviso-da-lista')).element).toBe(aviso.element);
+    expect(aviso.text()).toBe('Não achei ninguém com “zzzzqx”.');
+    await w.get(marca('busca')).setValue('');
+    await w.get(marca('busca')).trigger('keydown', { key: 'Enter' });
+    await assentar();
+    expect(aviso.text()).toBe('');
   });
 
   it('achou: filtra a lista pelo nome', async () => {
@@ -407,6 +504,63 @@ describe('ListaPage: marcar e agir em grupo', () => {
     expect(w.find(marca('barra')).exists()).toBe(false);
   });
 
+  it('"Marcar todas" mostra que está carregando e não atende clique duplo', async () => {
+    const pedidos = [];
+    trocas.listarTodos = (base, pedido) =>
+      new Promise(resolve => {
+        pedidos.push(() => resolve(base.listarTodos(pedido)));
+      });
+    const w = await montar();
+    await marcar(w, 1);
+    const link = () =>
+      w.findAll('button').find(b => b.text().startsWith('Marcar todas'));
+    await link().trigger('click');
+    await link().trigger('click');
+    expect(pedidos).toHaveLength(1);
+    expect(w.getComponent(MarcarTodas).props('carregando')).toBe(true);
+    pedidos[0]();
+    await assentar();
+    expect(textoDe(w, `${marca('barra')} p`)).toBe('280 marcadas');
+  });
+
+  it('"Marcar todas" não aplica a resposta se o grupo mudou durante a espera', async () => {
+    const pedidos = [];
+    trocas.listarTodos = (base, pedido) =>
+      new Promise(resolve => {
+        pedidos.push(() => resolve(base.listarTodos(pedido)));
+      });
+    const w = await montar();
+    await marcar(w, 1);
+    await w
+      .findAll('button')
+      .find(b => b.text().startsWith('Marcar todas'))
+      .trigger('click');
+    await pilula(w, 'clientes').trigger('click');
+    await assentar();
+    pedidos[0]();
+    await assentar();
+    expect(w.find(marca('barra')).exists()).toBe(false);
+  });
+
+  it('depois de criar cards, recarrega a lista (e desmarca)', async () => {
+    const chamadas = [];
+    trocas.listar = (base, pedido) => {
+      chamadas.push(pedido);
+      return base.listar(pedido);
+    };
+    const w = await montar();
+    await marcar(w, 2);
+    const antes = chamadas.length;
+    await w.get(marca('criar-cards')).trigger('click');
+    await assentar();
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(w.find(marca('barra')).exists()).toBe(false);
+    expect(chamadas.length).toBeGreaterThan(antes);
+  });
+
   it('Etiqueta e Apagar abrem o diálogo certo', async () => {
     const w = await montar();
     await marcar(w, 2);
@@ -448,6 +602,20 @@ describe('ListaPage: aba Empresas', () => {
     expect(w.find(marca('barra')).exists()).toBe(false);
   });
 
+  it('sair da página (a rota deixa de ser a lista) não dispara carga', async () => {
+    const chamadas = [];
+    trocas.listar = (base, pedido) => {
+      chamadas.push(pedido);
+      return base.listar(pedido);
+    };
+    await montar({ query: { aba: 'empresas' } });
+    chamadas.length = 0;
+    rota.name = 'relacionamentos_pessoa';
+    rota.query = {};
+    await assentar();
+    expect(chamadas).toHaveLength(0);
+  });
+
   it('clicar na empresa abre a ficha dela', async () => {
     const w = await montar({ query: { aba: 'empresas' } });
     await linhas(w)[0].get('button').trigger('click');
@@ -478,25 +646,29 @@ describe('ListaPage: aba Empresas', () => {
 });
 
 describe('ListaPage: conta vazia, erro', () => {
-  it('?demo=vazio mostra o herói de trazer a lista e "Ainda não tem ninguém aqui."', async () => {
+  it('?demo=vazio mostra só o herói de trazer a lista, sem cartão nem abas', async () => {
     const w = await montar({ demo: 'vazio' });
     expect(textoDe(w, '[data-heroi-frase]')).toBe(
       'Traga as pessoas com quem você já fala.'
     );
-    expect(textoDe(w, marca('vazio'))).toContain('Ainda não tem ninguém aqui.');
+    expect(w.get(marca('vazio')).find('[data-heroi-frase]').exists()).toBe(
+      true
+    );
+    expect(w.find('[data-vazio]').exists()).toBe(false);
+    expect(w.text()).not.toContain('Ainda não tem ninguém aqui.');
     expect(w.find('[role="tablist"]').exists()).toBe(false);
     expect(w.find(marca('busca')).exists()).toBe(false);
     expect(linhas(w)).toHaveLength(0);
   });
 
-  it('os dois botões da conta vazia levam a trazer a lista', async () => {
+  it('a conta vazia tem um botão só, "Trazer minha lista", e ele leva a trazer', async () => {
     const w = await montar({ demo: 'vazio' });
+    const botoes = w
+      .findAll('button')
+      .filter(b => b.text() === 'Trazer minha lista');
+    expect(botoes).toHaveLength(1);
     await w.get(marca('heroi-acao')).trigger('click');
-    await w.get(`${marca('vazio')} button`).trigger('click');
-    expect(roteador.push).toHaveBeenNthCalledWith(1, {
-      name: 'relacionamentos_trazer',
-    });
-    expect(roteador.push).toHaveBeenNthCalledWith(2, {
+    expect(roteador.push).toHaveBeenCalledWith({
       name: 'relacionamentos_trazer',
     });
   });

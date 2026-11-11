@@ -5,11 +5,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
 import { soDigitos } from '../../fonte/texto';
-import {
-  SITUACAO_DO_PROBLEMA,
-  emailValido,
-  nomeValido,
-} from '../../trazer/contagem';
+import { emailValido } from '../../ficha/validacao';
+import { SITUACAO_DO_PROBLEMA, nomeValido } from '../../trazer/contagem';
 
 // #2894 — uma linha da planilha que precisa da pessoa: o problema em palavras
 // simples e o conserto ali mesmo (telefone, e-mail, nome, qual duplicada fica).
@@ -18,7 +15,7 @@ const props = defineProps({
   problema: { type: Object, required: true },
   ocupado: { type: Boolean, default: false },
 });
-const emit = defineEmits(['guardar', 'deixarDeFora']);
+const emit = defineEmits(['guardar', 'deixarDeFora', 'reabrir']);
 
 const { t } = useI18n();
 
@@ -54,7 +51,7 @@ const preenchido = computed(() => {
   if (campo.value === 'telefone') {
     return Boolean(valor.value) && valor.value !== telefoneDeInicio;
   }
-  if (campo.value === 'email') return emailValido(valor.value);
+  if (campo.value === 'email') return emailValido(valor.value.trim());
   return nomeValido(valor.value);
 });
 
@@ -151,30 +148,43 @@ const doTexto = computed(
         </div>
       </form>
     </template>
-    <p
-      v-else
-      class="flex items-center gap-2 m-0 text-base text-n-slate-11"
-      role="status"
-    >
-      <span
-        class="size-5 shrink-0"
-        :class="
-          guardado
-            ? 'i-lucide-circle-check text-n-teal-11'
-            : 'i-lucide-circle-minus'
-        "
-        aria-hidden="true"
-      />
-      <span>{{ textoDoProblema }}</span>
-      <span class="font-medium text-n-slate-12">
-        {{
-          t(
+    <div v-else class="flex flex-wrap items-center justify-between gap-2">
+      <p class="flex items-center gap-2 m-0 text-base text-n-slate-11">
+        <span
+          class="size-5 shrink-0"
+          :class="
             guardado
-              ? 'RELACIONAMENTOS_TRAZER.PRECISAM.PRONTO'
-              : 'RELACIONAMENTOS_TRAZER.PRECISAM.DEIXADA'
-          )
-        }}
-      </span>
-    </p>
+              ? 'i-lucide-circle-check text-n-teal-11'
+              : 'i-lucide-circle-minus'
+          "
+          aria-hidden="true"
+        />
+        <span>{{ textoDoProblema }}</span>
+        <span class="font-medium text-n-slate-12">
+          {{
+            t(
+              guardado
+                ? 'RELACIONAMENTOS_TRAZER.PRECISAM.PRONTO'
+                : 'RELACIONAMENTOS_TRAZER.PRECISAM.DEIXADA'
+            )
+          }}
+        </span>
+      </p>
+      <Button
+        ghost
+        slate
+        type="button"
+        data-relacionamentos="voltar-atras"
+        class="min-h-11"
+        :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.VOLTAR_ATRAS')"
+        :aria-label="
+          t('RELACIONAMENTOS_TRAZER.PRECISAM.VOLTAR_ATRAS_LINHA', {
+            linha: problema.linha,
+          })
+        "
+        :disabled="ocupado"
+        @click="emit('reabrir', problema.linha)"
+      />
+    </div>
   </li>
 </template>

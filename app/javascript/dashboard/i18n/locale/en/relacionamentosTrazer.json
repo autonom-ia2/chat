@@ -53,6 +53,13 @@
       "DEIXAR_DE_FORA": "Leave out",
       "NA_PLANILHA": "In the spreadsheet: {valor}",
       "FICAR_COM": "Keep line {linha}",
+      "VOLTAR_ATRAS": "Go back",
+      "VOLTAR_ATRAS_LINHA": "Go back on line {linha}",
+      "ANUNCIO": {
+        "PRONTO": "Line {linha}: done",
+        "DEIXADA": "Line {linha}: left out",
+        "REABERTA": "Line {linha}: back for you to check"
+      },
       "PROBLEMA": {
         "TELEFONE": "Line {linha}: the phone number is missing a digit",
         "EMAIL": "Line {linha}: the e-mail has no “{'@'}”",

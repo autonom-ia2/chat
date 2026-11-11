@@ -1,0 +1,270 @@
+{
+  "pasta": "docs/2894-prototipo/prints",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "1-lista",
+      "etapas": [
+        {
+          "nome": "login",
+          "url": "/app/login",
+          "sem_login": true,
+          "esperar": "input[type=\"password\"]"
+        },
+        {
+          "nome": "lista-cheia",
+          "url": "/app/accounts/{conta}/relationships?demo=cheio",
+          "esperar": "[data-relacionamentos=\"linha\"]",
+          "pausa": 2500
+        },
+        {
+          "nome": "grupo-sumiu",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"heroi-acao\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"linha\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "marcadas",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"marcar\"] >> nth=0"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"marcar\"] >> nth=1"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"marcar\"] >> nth=2"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"barra\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "mandar-mensagem",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"mandar-mensagem\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"dialogo-mensagem\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "busca-sem-resultado",
+          "url": "/app/accounts/{conta}/relationships?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"linha\"]"
+            },
+            {
+              "preencher": [
+                "[data-relacionamentos=\"busca\"] input, input[data-relacionamentos=\"busca\"]",
+                "zzzz"
+              ]
+            },
+            {
+              "esperar": "[data-relacionamentos=\"vazio\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "empresas",
+          "url": "/app/accounts/{conta}/relationships?aba=empresas&demo=cheio",
+          "esperar": "[data-relacionamentos=\"linha\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "conta-vazia",
+          "url": "/app/accounts/{conta}/relationships?demo=vazio",
+          "esperar": "[data-relacionamentos=\"vazio\"]",
+          "pausa": 2000
+        }
+      ]
+    },
+    {
+      "nome": "2-ficha",
+      "etapas": [
+        {
+          "nome": "cliente",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio",
+          "esperar": "[data-relacionamentos=\"ficha-pessoa\"]",
+          "pausa": 2500
+        },
+        {
+          "nome": "cliente-mais-abaixo",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"cards\"] h2"
+            },
+            {
+              "tecla": "PageDown"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "alterar",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"alterar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"gaveta-informacoes\"]"
+            }
+          ],
+          "pausa": 1200
+        },
+        {
+          "nome": "nao-quer-mensagens",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/203?demo=cheio",
+          "esperar": "[data-relacionamentos=\"faixa-nao-quer\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "nunca-conversou",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/39?demo=cheio",
+          "esperar": "[data-relacionamentos=\"ficha-pessoa\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "empresa",
+          "url": "/app/accounts/{conta}/relacionamentos/empresas/2?demo=cheio",
+          "esperar": "[data-relacionamentos=\"ficha-empresa\"]",
+          "pausa": 2000
+        }
+      ]
+    },
+    {
+      "nome": "3-trazer",
+      "etapas": [
+        {
+          "nome": "enviar",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "esperar": "[data-relacionamentos=\"historico\"] [data-lista]",
+          "pausa": 1500,
+          "pagina_inteira": true
+        },
+        {
+          "nome": "pergunta-clientes",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"pergunta\"][data-pergunta=\"clientes\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"sim_todas\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "pergunta-telefone",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"continuar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"pergunta\"][data-pergunta=\"telefone\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"da_pessoa\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "conferir",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"continuar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"conferir\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "precisam-de-voce",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"precisam-titulo\"]"
+            },
+            {
+              "tecla": "PageDown"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "o-que-vou-guardar",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"o-que-vou-guardar\"] h2 button"
+            },
+            {
+              "pausa": 400
+            },
+            {
+              "tecla": "End"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "andamento",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"trazer-confirmar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"andamento\"]"
+            }
+          ],
+          "pausa": 2500
+        },
+        {
+          "nome": "pronto",
+          "esperar": "[data-relacionamentos=\"pronto\"]",
+          "pausa": 1000
+        },
+        {
+          "nome": "desfazer",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "passos": [
+            {
+              "esperar": "[data-relacionamentos=\"historico\"] [data-lista]"
+            },
+            {
+              "clicar": "[data-lista=\"trazida-antiga-1\"] [data-relacionamentos=\"desfazer\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"desfazer-confirmar\"]:not([disabled])"
+            }
+          ],
+          "pausa": 1000
+        }
+      ]
+    }
+  ]
+}

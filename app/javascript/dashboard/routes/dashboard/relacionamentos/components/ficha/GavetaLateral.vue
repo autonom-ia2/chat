@@ -77,7 +77,7 @@ const aoTeclar = evento => {
         </div>
         <footer
           v-if="$slots.rodape"
-          class="flex flex-wrap gap-3 px-5 py-4 border-t border-n-weak sm:px-6"
+          class="flex flex-wrap gap-3 px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-n-weak sm:px-6 [&>*]:flex-1 sm:[&>*]:flex-none"
         >
           <slot name="rodape" />
         </footer>

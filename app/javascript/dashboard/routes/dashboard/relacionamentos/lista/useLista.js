@@ -45,6 +45,9 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     pedidoAtual += 1;
     const meu = pedidoAtual;
     const aMais = numero > PRIMEIRA_PAGINA;
+    // Um pedido da página 1 atropela o "mostrar mais" em voo: a resposta dele
+    // será descartada e não zeraria o "carregando mais".
+    if (!aMais) carregandoMais.value = false;
     (aMais ? carregandoMais : carregando).value = true;
     try {
       const resposta = await fonte.listar({ ...consulta(), pagina: numero });
@@ -63,13 +66,20 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     }
   };
 
+  // Os números das pílulas seguem a busca e os filtros (como a lista). Resposta
+  // de pedido antigo não pisa na do mais novo.
+  let pedidoDeContagens = 0;
   const carregarContagens = async () => {
-    const daAba = aba.value;
+    pedidoDeContagens += 1;
+    const meu = pedidoDeContagens;
     try {
-      const resposta = await fonte.contagens(daAba);
-      if (daAba === aba.value) contagens.value = resposta;
+      const resposta = await fonte.contagens(aba.value, {
+        busca: busca.value,
+        filtros: filtros.value,
+      });
+      if (meu === pedidoDeContagens) contagens.value = resposta;
     } catch (falha) {
-      erro.value = falha;
+      if (meu === pedidoDeContagens) erro.value = falha;
     }
   };
 
@@ -96,17 +106,22 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     return buscarPagina(PRIMEIRA_PAGINA);
   };
 
-  const mudar = (alvo, valor) => {
+  // `recontar`: busca e filtro mudam o que cada pílula conta; grupo e ordem não.
+  const recomecarRecontando = () => {
+    carregarContagens();
+    return recomecar();
+  };
+
+  const mudar = (alvo, valor, recontar = false) => {
     if (alvo.value === valor) return undefined;
     alvo.value = valor;
-    return recomecar();
+    return recontar ? recomecarRecontando() : recomecar();
   };
 
   watch(aba, nova => {
     grupo.value = GRUPO_PADRAO[nova];
     filtros.value = { ...FILTROS_VAZIOS };
-    carregarContagens();
-    recomecar();
+    recomecarRecontando();
   });
 
   return {
@@ -126,15 +141,15 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     iniciar: recarregar,
     recarregar,
     escolherGrupo: id => mudar(grupo, id),
-    mudarBusca: texto => mudar(busca, texto),
+    mudarBusca: texto => mudar(busca, texto, true),
     mudarOrdem: nova => mudar(ordem, nova),
     mudarFiltros: novos => {
       filtros.value = { ...FILTROS_VAZIOS, ...novos };
-      return recomecar();
+      return recomecarRecontando();
     },
     limparFiltros: () => {
       filtros.value = { ...FILTROS_VAZIOS };
-      return recomecar();
+      return recomecarRecontando();
     },
     mostrarMais: () =>
       temMais.value && !carregandoMais.value

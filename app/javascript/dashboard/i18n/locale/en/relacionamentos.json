@@ -76,6 +76,7 @@
       "MENSAGEM": {
         "TITULO": "Send message",
         "RECEBEM": "{count} person will receive it. | {count} people will receive it.",
+        "PROXIMO_PASSO": "You write the message in the next step.",
         "NINGUEM_RECEBE": "No one will receive it.",
         "FORA": "{count} is left out: {motivos}. | {count} are left out: {motivos}.",
         "MOTIVO_NAO_QUER": "{count} asked not to receive messages | {count} asked not to receive messages",

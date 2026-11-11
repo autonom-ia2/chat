@@ -56,6 +56,9 @@ export const useTrazerLista = ({
   let trazidaId = null;
   let relogio = null;
   let encerrado = false;
+  // Sobe a cada parar/recomeçar: uma resposta que volta de uma geração velha
+  // (consulta em voo) é descartada em vez de mexer no estado zerado.
+  let geracao = 0;
 
   const etapa = computed(() => estado.value.etapa);
   const etapaAtualDoTopo = computed(() => etapaDoTopo(estado.value));
@@ -139,19 +142,24 @@ export const useTrazerLista = ({
     escrever(() => fonte.consertar(leitura.value.id, linha, valor));
   const deixarDeFora = linha =>
     escrever(() => fonte.deixarDeFora(leitura.value.id, linha));
+  const reabrir = linha =>
+    escrever(() => fonte.reabrir(leitura.value.id, linha));
   const trocarDestino = (coluna, destino) =>
     escrever(() => fonte.trocarDestino(leitura.value.id, coluna, destino));
 
   const parar = () => {
+    geracao += 1;
     clearTimeout(relogio);
     relogio = null;
   };
 
   const consultar = async () => {
     if (encerrado) return;
+    const minha = geracao;
+    const valeAinda = () => !encerrado && minha === geracao;
     try {
       const andamento = await fonte.andamento(trazidaId);
-      if (encerrado) return;
+      if (!valeAinda()) return;
       porcentagem.value = andamento.porcentagem;
       totalTrazido.value = andamento.total;
       if (andamento.situacao !== SITUACOES_DA_LISTA.TRAZENDO) {
@@ -160,17 +168,20 @@ export const useTrazerLista = ({
       }
       relogio = setTimeout(consultar, intervalo);
     } catch {
-      erro.value = ERROS.ANDAMENTO;
+      if (valeAinda()) erro.value = ERROS.ANDAMENTO;
     }
   };
 
   const trazer = async () => {
+    const minha = geracao;
     ocupado.value = true;
     erro.value = ERROS.NENHUM;
     try {
-      ({ trazidaId } = await fonte.trazer(leitura.value.id));
+      const { trazidaId: id } = await fonte.trazer(leitura.value.id);
+      if (encerrado || minha !== geracao) return;
+      trazidaId = id;
     } catch {
-      erro.value = ERROS.TRAZER;
+      if (!encerrado && minha === geracao) erro.value = ERROS.TRAZER;
       return;
     } finally {
       ocupado.value = false;
@@ -230,6 +241,7 @@ export const useTrazerLista = ({
     voltar,
     guardar,
     deixarDeFora,
+    reabrir,
     trocarDestino,
     trazer,
     tentarDeNovo,

@@ -13,7 +13,7 @@ const idDoTitulo = useId();
 <template>
   <section
     :aria-labelledby="idDoTitulo"
-    class="p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 md:p-6"
+    class="min-w-0 p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 md:p-6"
   >
     <header class="flex items-center justify-between gap-3 mb-4">
       <h2
