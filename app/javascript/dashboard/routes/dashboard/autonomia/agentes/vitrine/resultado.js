@@ -494,9 +494,17 @@ const listaSemNome = (rotulo, itens, total, textos) => {
 
 // Lista sem rótulo não aparece (coberturas, condicoes) por nenhum caminho: nem o item único, nem o primeiro da lista
 // com nome, nem os identificadores ou os pares.
-// O rótulo que traz a unidade no fim, entre parênteses: "Distância (km)", "Potência total (kW)".
-const rotuloComUnidade = rotulo =>
-  rotulo.endsWith(')') && rotulo.includes(' (');
+// Os campos cujo rótulo diz a unidade: "Distância (km)", "Potência total (kW)". Lista explícita: parênteses no rótulo
+// nem sempre são unidade ("Previsão do mercado (mediana)", "Tipo (código ICAO)"; revisão do #2917).
+const CAMPOS_COM_UNIDADE_NO_ROTULO = [
+  'distancia_km',
+  'distancia_do_foco_mais_perto_km',
+  'potencia_total_kw',
+  'peso_maximo_de_decolagem_kg',
+  'valor_estimado',
+  'total_mm',
+  'mm',
+];
 const linhasDaLista = (chave, itens, total, textos) => {
   const rotulo = textos.rotulo(chave);
   if (!rotulo || !itens.length) return [];
@@ -518,7 +526,7 @@ const linhasDaLista = (chave, itens, total, textos) => {
       const pares = paresDoCampo(itens, nomes, doPar, textos);
       const daLinha =
         itens.some(item => typeof item[doPar] === 'number') &&
-        rotuloComUnidade(textos.rotulo(doPar))
+        CAMPOS_COM_UNIDADE_NO_ROTULO.includes(doPar)
           ? textos.rotulo(doPar)
           : rotulo;
       return [

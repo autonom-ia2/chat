@@ -1237,6 +1237,18 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([['Cidades', 'A: 20 · B: 21']]);
+    // Parênteses no rótulo não são unidade: "Previsão do mercado (mediana)" (revisão do #2917, D).
+    expect(
+      linhasDoResultado(
+        {
+          cidades: [
+            { nome: 'A', mediana: 5.1 },
+            { nome: 'B', mediana: 4.9 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Cidades', 'A: 5,1 · B: 4,9']]);
     expect(
       linhasDoResultado(
         {
