@@ -4,24 +4,18 @@
 
 import { canonicalizeMjml } from './mjmlCanonical';
 import { editableFooterMjml } from './lockedFooter';
+// Image/text markup and the hosted placeholder are shared with the drop/paste on the canvas (#2908).
+import { FONT_FAMILY, TEXT_COLOR, placeholderImage } from './sectionMarkup';
+
+export { placeholderImage };
 
 const BRAND_COLOR = '#2563eb';
-const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
 // Contraste AA (>= 4,5:1, #1081): #6b7280 só passa sobre branco. Sobre BG_SOFT usa o cinza mais
 // escuro; sobre BRAND_COLOR, o azul quase branco (#dbeafe dava 4,24).
 const MUTED_ON_SOFT = '#4b5563';
 const TINT_ON_BRAND = '#eff6ff';
 const BG_SOFT = '#f4f4f4';
-// Fonte email-safe explícita em todo texto/botão: sem ela o MJML usa Ubuntu e importa a web font (#1081).
-const FONT_FAMILY = 'Arial, Helvetica, sans-serif';
-
-// Placeholder de imagem HOSPEDADO (PNG via placehold.co). data:image/svg+xml NÃO
-// renderiza no Gmail (bloqueado), então o placeholder precisa ser uma URL https
-// que devolve um raster — assim o bloco recém-arrastado já aparece no e-mail
-// enviado, antes mesmo de o usuário trocar pela imagem real.
-export const placeholderImage = (width, height, label) =>
-  `https://placehold.co/${width}x${height}/e2e8f0/64748b/png?text=${encodeURIComponent(label)}`;
 
 // Poster de vídeo placeholder (fundo escuro + rótulo). Para o vídeo real, o
 // usuário cola o link do YouTube/Vimeo e usa "Buscar capa do vídeo" (resolveVideo),

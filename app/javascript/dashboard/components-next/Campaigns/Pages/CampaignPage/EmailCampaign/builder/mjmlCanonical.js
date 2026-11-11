@@ -17,6 +17,7 @@
 // other) are read flat first, so their defaults come back too.
 
 import { collectHeadDefaults, resolveAttributes } from './mjmlHeadDefaults';
+import { serializeColumnChildren } from './looseColumnContent';
 
 // Tags whose content is HTML/text for MJML, never MJML children.
 const ENDING_TAGS = new Set([
@@ -216,10 +217,21 @@ const serializeElement = (el, ctx) => {
     inHead: ctx.inHead || tag === 'mj-head',
     inheritedClasses: el.getAttribute('mj-class') ?? ctx.inheritedClasses,
   };
-  const inner = Array.from(el.childNodes, node =>
-    serializeNode(node, childCtx)
-  );
-  return openTag(tag, attrs) + inner.join('') + `</${tag}>`;
+  // Loose <img>/text in a column become mj-image/mj-text (#2908, looseColumnContent.js).
+  const inner =
+    tag === 'mj-column' && !ctx.inHead
+      ? serializeColumnChildren(Array.from(el.childNodes), {
+          serialize: (node, { plain }) =>
+            serializeNode(
+              node,
+              plain ? { ...childCtx, defaults: null } : childCtx
+            ),
+          slotPrefix: ctx.slotPrefix,
+        })
+      : Array.from(el.childNodes, node => serializeNode(node, childCtx)).join(
+          ''
+        );
+  return openTag(tag, attrs) + inner + `</${tag}>`;
 };
 
 serializeNode = (node, ctx) => {
@@ -237,12 +249,13 @@ serializeNode = (node, ctx) => {
   }
 };
 
-const rootContext = root => {
+const rootContext = (root, nonce) => {
   const attributesEls = Array.from(root.getElementsByTagName('mj-attributes'));
   return {
     defaults: attributesEls.length ? collectHeadDefaults(attributesEls) : null,
     inHead: false,
     inheritedClasses: null,
+    slotPrefix: `MJSLOT${nonce}N`,
   };
 };
 
@@ -276,7 +289,7 @@ export const canonicalizeMjml = (mjml = '') => {
     );
     return mjml;
   }
-  const ctx = rootContext(root);
+  const ctx = rootContext(root, nonce);
   const xml = Array.from(root.childNodes, node =>
     serializeNode(node, ctx)
   ).join('');
