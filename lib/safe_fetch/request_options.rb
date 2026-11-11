@@ -6,6 +6,10 @@ class SafeFetch::RequestOptions
     open_timeout: SafeFetch::DEFAULT_OPEN_TIMEOUT,
     read_timeout: SafeFetch::DEFAULT_READ_TIMEOUT,
     total_timeout: SafeFetch::DEFAULT_TOTAL_TIMEOUT,
+    # Quantas vezes o `Net::HTTP` repete um GET que caiu antes do corpo (o `ReadTimeout` esperando os cabeçalhos, a
+    # conexão quebrada): nil deixa o padrão dele (1). Cada repetição abre conexão nova e espera o `read_timeout`
+    # inteiro de novo, então quem tem prazo para cumprir passa 0 — com 1, o prazo vira o dobro (#2906).
+    max_retries: nil,
     max_redirects: SafeFetch::DEFAULT_MAX_REDIRECTS,
     # false: um redirecionamento para outra origem é recusado (`CrossOriginRedirectError`), em vez de
     # seguido com os cabeçalhos sensíveis removidos. O padrão segue, como sempre seguiu.
@@ -29,7 +33,7 @@ class SafeFetch::RequestOptions
   }.freeze
 
   attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :error_body_bytes, :headers,
-              :http_basic_authentication, :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :schemes,
+              :http_basic_authentication, :max_redirects, :max_retries, :method, :open_timeout, :read_timeout, :resolver, :schemes,
               :sensitive_headers, :total_timeout, :uri, :url, :allowed_ports
 
   def initialize(url:, **options)
@@ -63,7 +67,7 @@ class SafeFetch::RequestOptions
       resolver: resolver,
       sensitive_headers: sensitive_headers,
       max_redirects: max_redirects,
-      http_options: { open_timeout: bounded_by_total(open_timeout), read_timeout: bounded_by_total(read_timeout) }
+      http_options: http_options
     }
     schemes ? options.merge(scheme_whitelist: schemes) : options
   end
@@ -108,6 +112,11 @@ class SafeFetch::RequestOptions
 
   private
 
+  def http_options
+    timeouts = { open_timeout: bounded_by_total(open_timeout), read_timeout: bounded_by_total(read_timeout) }
+    max_retries.nil? ? timeouts : timeouts.merge(max_retries: max_retries)
+  end
+
   # Caminho relativo sem barra ("outra") não é montado pelo ssrf_filter: recusado aqui, como antes do #1702.
   def resolve_location(location)
     destino = URI.parse(location.to_s)
@@ -122,6 +131,7 @@ class SafeFetch::RequestOptions
     @read_timeout = config[:read_timeout]
     @total_timeout = normalize_total_timeout(config[:total_timeout])
     @max_redirects = normalize_max_redirects(config[:max_redirects])
+    @max_retries = normalize_max_retries(config[:max_retries])
     @cross_origin_redirects = config[:cross_origin_redirects] != false
     @error_body_bytes = [config[:error_body_bytes].to_i, 0].max
     @allowed_ports = config[:allowed_ports]&.map(&:to_i)
@@ -156,6 +166,12 @@ class SafeFetch::RequestOptions
     return value if value.is_a?(Integer) && value >= 0
 
     raise ArgumentError, "max_redirects must be a non-negative Integer, got #{value.inspect}"
+  end
+
+  def normalize_max_retries(value)
+    return value if value.nil? || (value.is_a?(Integer) && value >= 0)
+
+    raise ArgumentError, "max_retries must be nil or a non-negative Integer, got #{value.inspect}"
   end
 
   def default_max_bytes

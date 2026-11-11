@@ -26,12 +26,21 @@ Fonte paga (a BigDataCorp, na F7): não se chama a fonte para gravar a fixture. 
 resposta documentada pelo fornecedor, passado pelo adaptador do servidor num spec, com dados fictícios, e leva no topo
 a marca `"_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real"`.
 
+`cep.json`, `hospitais.json` e `cnpj.json` foram gravados de novo pelo script em 11/11/2026, à tarde (#2906), depois de
+três mudanças no adaptador: o CEP da rua (faixa de número) antes do CEP especial (sufixo 900 a 999, de prédio ou órgão),
+com o ViaCEP como principal do endereço; o CEP dos hospitais com traço, e o total da fonte com quantos vieram
+(`mostrando`); e o código da atividade do CNPJ com os 7 dígitos da CNAE ("0600001").
+
+Depois da varredura real (#2906), dois arquivos foram ajustados à mão ao formato novo do adaptador, sobre o mesmo dado
+gravado e sem chamada nova: `fipe.json` (preco) tem o valor em número, o mês em AAAA-MM e a moeda em `unidades`;
+`banco_central.json` tem a unidade da Selic em código (`percentual_ao_ano`) e o mês do IPCA em AAAA-MM.
+
 `ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
 adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
 
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
-| cep.json | endereco: 01001-000 | BrasilAPI |
+| cep.json | endereco: 01001-000; por_endereco: Avenida Paulista, São Paulo (gravado em 11/11/2026, regra QI 70) | ViaCEP; ViaCEP |
 | cnpj.json | empresa: consultado com o CNPJ da Petrobras, gravado anonimizado | BrasilAPI |
 | cpf.json | conferir: 111.444.777-35 (número de exemplo; conta local, sem rede) | cálculo local |
 | fipe.json | marcas e modelos (carros, GM, "onix"); preco 004517-9 2020 | BrasilAPI; Parallelum (a BrasilAPI deu erro no preço) |
@@ -40,7 +49,7 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 | cidades.json | estados; cidades do AC | IBGE |
 | ddd.json | ddd 34 | BrasilAPI |
 | localizacao.json | cidade de -18.9186, -48.2772 | sedes (tabela local; o Photon não conferiu o município) |
-| bancos.json | banco 341 | BrasilAPI |
+| bancos.json | banco 341; por_nome "Itaú" (11/11/2026, regra QI 70) | BrasilAPI |
 | hospitais.json | Campinas SP, hospital | CNES (Ministério da Saúde) |
 | procedimentos.json | codigo 10101012; busca "hemograma" | TUSS (tabela no repositório) |
 | doencas.json | codigo J45; busca "asma" | CID-10 (tabela no repositório) |

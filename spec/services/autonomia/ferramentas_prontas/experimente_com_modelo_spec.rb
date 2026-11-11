@@ -197,7 +197,7 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
 
   it 'a fonte de valor exato (CEP) segue sem modelo' do
     resolver_hosts_das_prontas
-    fonte_responde('https://brasilapi.com.br/api/cep/v2/01001000', { cep: '01001000', state: 'SP', city: 'São Paulo' })
+    fonte_responde('https://viacep.com.br/ws/01001000/json/', { cep: '01001-000', localidade: 'São Paulo', uf: 'SP' })
 
     expect(experimentar('cep', '01001-000')['situacao']).to eq('encontrado')
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)

@@ -72,9 +72,10 @@ class Autonomia::Guide::ValoresLegiveis
     modelo if modelo.is_a?(Class) && modelo < ApplicationRecord && modelo.column_names.include?('account_id')
   end
 
+  # `nome` é o da automação do motor novo (#2889).
   def nome_do_registro(modelo, id)
     registro = modelo.find_by(id: id, account_id: @account.id)
-    %i[name title].filter_map { |atributo| registro.try(atributo).presence }.first if registro
+    %i[name title nome].filter_map { |atributo| registro.try(atributo).presence }.first if registro
   end
 
   # Nome de campo da API vira etiqueta legível, no idioma de quem está olhando.

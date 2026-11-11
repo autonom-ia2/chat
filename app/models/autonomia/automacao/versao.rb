@@ -22,6 +22,24 @@ class Autonomia::Automacao::Versao < ApplicationRecord
     persisted? || super
   end
 
+  # O desfazer do Guia (#2889): a versão que o Guia acabou de criar sai como se nunca tivesse existido, se nada a usou.
+  # Fica, com o motivo do conflito, quando uma execução a usou, quando já há versão mais nova, ou quando ainda é a
+  # ativa ao lado de outras (o desfazer não conseguiu voltar a anterior, porque alguém mexeu depois). A única versão da
+  # automação que o Guia criou sai, e a automação sai em seguida. Fora daqui a versão continua imutável (`readonly?`).
+  # A trava na automação (da mesma conta) faz a corrida com quem salva ou liga no mesmo instante virar conflito.
+  def apagar_ao_desfazer
+    dona = Autonomia::Automacao::Definicao.find_by(id: automacao_id, account_id: account_id)
+    return 'mudou_depois' if dona.nil?
+
+    dona.with_lock do
+      motivo = motivo_para_ficar(dona)
+      next motivo if motivo
+
+      self.class.where(id: id).delete_all
+      nil
+    end
+  end
+
   # A receita como sai para a tela. O show, o index e o histórico passam todos por aqui: o que precisar ser escondido
   # de quem só vê (a URL do webhook, #2450) é escondido num lugar só.
   def receita_para_tela
@@ -29,6 +47,18 @@ class Autonomia::Automacao::Versao < ApplicationRecord
   end
 
   private
+
+  # A ativa de uma automação que já foi ligada fica com ela: sem versão, a automação de quem ligou ficaria vazia.
+  def motivo_para_ficar(dona)
+    return 'versao_ja_executada' if usada?
+    return 'versao_mais_nova' if irmas.exists?(['numero > ?', numero])
+    return unless dona.versao_ativa_id == id
+
+    dona.ja_ligada? ? 'automacao_ja_ligada' : ('mudou_depois' if irmas.where.not(id: id).exists?)
+  end
+
+  def irmas = self.class.where(automacao_id: automacao_id)
+  def usada? = Autonomia::Automacao::Execucao.exists?(versao_id: id)
 
   def da_mesma_conta
     errors.add(:automacao, :invalid) if automacao && automacao.account_id != account_id

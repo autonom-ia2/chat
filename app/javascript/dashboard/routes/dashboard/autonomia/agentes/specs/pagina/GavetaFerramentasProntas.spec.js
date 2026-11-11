@@ -152,7 +152,7 @@ describe('GavetaFerramentas · prontas sem o cadastro manual', () => {
   it('shows what the tool does when there is no "use when" sentence', async () => {
     await montar({ incluidas: [{ ...CEP, usar_quando: null }] });
     expect(texto()).toContain(
-      'Acha rua, bairro, cidade e estado a partir do CEP.'
+      'Acha rua, bairro, cidade e estado a partir do CEP, e o CEP a partir da rua e da cidade.'
     );
   });
 

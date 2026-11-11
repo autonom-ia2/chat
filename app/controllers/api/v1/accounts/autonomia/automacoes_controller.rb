@@ -46,7 +46,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def create
     return recusar_funil if sem_funil?(receita)
 
-    automacao = escopo.new(nome: params[:nome], origem: 'manual')
+    automacao = escopo.new(nome: params[:nome], origem: origem)
     DEFINICAO.transaction do
       automacao.save!
       automacao.salvar_versao!(receita: receita, autor: Current.user)
@@ -57,12 +57,12 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   def update
-    conferir_versao!(:base_versao_id) if params.key?(:receita)
+    conferir_versao!(base_versao) if params.key?(:receita)
     return recusar_funil if params.key?(:receita) && sem_funil?(receita)
 
     DEFINICAO.transaction do
       @automacao.update!(nome: params[:nome]) if params.key?(:nome)
-      @automacao.salvar_versao!(receita: receita, autor: Current.user, base: versao_vista(:base_versao_id)) if params.key?(:receita)
+      salvar_versao_nova! if params.key?(:receita)
     end
     render json: para_tela(@automacao.reload, receita: true)
   rescue ActiveRecord::RecordInvalid => e
@@ -70,10 +70,10 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   def ligar
-    conferir_versao!(:versao_id)
+    conferir_versao!(params[:versao_id])
     return recusar_funil if sem_funil?(@automacao.versao_ativa&.receita)
 
-    recusa = @automacao.assumir_e_religar!(Current.user, versao_id: versao_vista(:versao_id))
+    recusa = @automacao.assumir_e_religar!(Current.user, versao_id: versao_vista(params[:versao_id]))
     return render json: para_tela(@automacao) if recusa.nil?
 
     render json: { error: I18n.t("autonomia.automacao.motivos.#{recusa.motivo}"), problemas: recusa.problemas },
@@ -124,15 +124,26 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
 
   # A versão que a tela mostrou. Chega como texto ou número; ausente ou inválida vale nil, e com versão ativa isso é
   # VersaoMudou, nunca "salva por cima". Sempre na base 10: "012" é 12, não octal, e "0x1f" é inválida (como no #2460).
-  def versao_vista(chave)
-    Integer(params[chave].to_s, 10, exception: false)
+  # Quem chama lê `params[:base_versao_id]`/`params[:versao_id]` pelo nome: é assim que o formato do Guia (#900) vê o
+  # campo (#2889).
+  def versao_vista(valor)
+    Integer(valor.to_s, 10, exception: false)
   end
 
   # A versão que a tela viu, conferida antes de qualquer outra recusa: quem viu uma versão velha precisa ver a nova
   # primeiro. O motor confere de novo dentro da trava.
-  def conferir_versao!(chave)
-    raise ::Autonomia::Automacao::Definicao::VersaoMudou if @automacao.versao_ativa_id != versao_vista(chave)
+  def conferir_versao!(valor)
+    raise ::Autonomia::Automacao::Definicao::VersaoMudou if @automacao.versao_ativa_id != versao_vista(valor)
   end
+
+  # A versão sobre a qual a tela (ou o Guia) montou o ajuste.
+  def base_versao = params[:base_versao_id]
+
+  def salvar_versao_nova! = @automacao.salvar_versao!(receita: receita, autor: Current.user, base: versao_vista(base_versao))
+
+  # #2889: a que o Guia cria nasce com origem 'guia'. O sinal é da thread do servidor (Autonomia::Guide::PeloGuia), não
+  # do pedido: um cliente de fora não o forja. É só rótulo; não muda o que a automação pode.
+  def origem = ::Autonomia::Guide::PeloGuia.agora? ? 'guia' : 'manual'
 
   # A receita é livre de propósito: o esquema e a Receita conferem tudo ao salvar, com erro em frase.
   def receita

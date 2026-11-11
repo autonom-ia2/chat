@@ -228,10 +228,8 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
 
     it 'lê a versão vista sempre na base 10 (🟡3 da qualidade no #2485)' do
       controlador = Api::V1::Accounts::Autonomia::AutomacoesController.new
-      vista = lambda do |valor|
-        allow(controlador).to receive(:params).and_return(ActionController::Parameters.new(versao_id: valor))
-        controlador.send(:versao_vista, :versao_id)
-      end
+      # #2889: recebe o valor lido pelo nome (params[:versao_id]), para o formato do Guia ver o campo.
+      vista = ->(valor) { controlador.send(:versao_vista, valor) }
 
       expect(vista.call('012')).to eq(12)
       expect(vista.call('0x1f')).to be_nil

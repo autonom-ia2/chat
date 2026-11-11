@@ -14,6 +14,33 @@ module Autonomia::FerramentasProntas::Lista
     { 'total' => itens.size }.merge(itens.size > maximo ? { 'mostrando' => maximo } : {}).merge(chave => itens.first(maximo))
   end
 
+  # -> os itens com esse NOME (regra "QI 70": o código sai do nome que o cliente disse), sem acento e sem caixa, em três
+  # passos, e o primeiro que acha vale: o nome inteiro igual; cada palavra procurada igual a uma palavra do nome ("Gol"
+  # acha "Gol 1.6", não "Golf"); cada palavra procurada no começo de uma palavra do nome ("volks" acha "VW - VolksWagen").
+  # `yield`: o nome de cada item. Sem regex: `split`, `start_with?` e comparação.
+  def pelo_nome(itens, texto)
+    alvo = comparavel(texto)
+    return [] if alvo.empty?
+
+    iguais = itens.select { |item| comparavel(yield(item)) == alvo }
+    return iguais if iguais.any?
+
+    procuradas = termos(texto)
+    inteiras = itens.select { |item| (procuradas - termos(yield(item))).empty? }
+    return inteiras if inteiras.any?
+
+    itens.select { |item| comeca_cada?(termos(yield(item)), procuradas) }
+  end
+
+  # As palavras de um nome, separadas também por hífen e barra ("VW - VolksWagen", "Mercedes-Benz").
+  def termos(texto)
+    comparavel(texto).tr('-/,()', '     ').split
+  end
+
+  def comeca_cada?(termos_do_nome, procuradas)
+    procuradas.all? { |procurada| termos_do_nome.any? { |termo| termo.start_with?(procurada) } }
+  end
+
   # -> os itens com todas as palavras da busca no nome (`nome`: o texto de cada item). Sem busca, todos.
   def filtrar(itens, busca)
     palavras = comparavel(busca).split

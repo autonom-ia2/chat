@@ -93,6 +93,50 @@ describe('GuideExecucao', () => {
     );
   });
 
+  // #2889: o conflito que o servidor explica em frase aparece com a frase; a
+  // contagem genérica fica só para os sem frase.
+  it('mostra a frase de cada conflito explicado e conta só os outros', () => {
+    const wrapper = montar({
+      execucao: execucao({
+        desfazivel: false,
+        desfeita_em: '2026-10-02T18:05:00Z',
+        relatorio: {
+          desfeitas: 0,
+          conflitos: [
+            { motivo: 'changed_after' },
+            {
+              motivo: 'versao_mais_nova',
+              texto: 'Alguém salvou uma versão mais nova depois.',
+            },
+          ],
+        },
+      }),
+    });
+
+    expect(wrapper.text()).toContain(
+      'Alguém salvou uma versão mais nova depois.'
+    );
+    expect(wrapper.text()).toContain(
+      'AUTONOMIA_GUIDE.DONE.CONFLICTS:{"count":1}'
+    );
+  });
+
+  it('sem conflito sem frase, não mostra a contagem genérica', () => {
+    const wrapper = montar({
+      execucao: execucao({
+        desfazivel: false,
+        desfeita_em: '2026-10-02T18:05:00Z',
+        relatorio: {
+          desfeitas: 0,
+          conflitos: [{ motivo: 'ficou_desligada', texto: 'Ficou desligada.' }],
+        },
+      }),
+    });
+
+    expect(wrapper.text()).toContain('Ficou desligada.');
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.DONE.CONFLICTS');
+  });
+
   it('avisa quando parte não tem volta', () => {
     const wrapper = montar({ execucao: execucao({ pendencias: ['labels'] }) });
 

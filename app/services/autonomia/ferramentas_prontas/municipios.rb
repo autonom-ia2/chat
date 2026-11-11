@@ -3,8 +3,18 @@
 # Campinas é 3509502 no IBGE e 350950 no CNES) e a coordenada da sede. Servem às fontes da F4 que pedem a cidade: Hospitais
 # (o código do CNES), Compras do governo (o IBGE), Estações do tempo e Quanto choveu (a coordenada). O nome compara sem
 # acento e sem caixa: é o nome oficial do município, não interpretação de texto.
+#
+# Regra "QI 70" do Rodrigo (11/11/2026): a cidade basta. A UF sai dela quando o nome é único no Brasil (Uberlândia), ou
+# quando, entre as do mesmo nome, uma só é capital (Rio Branco, Palmas: varredura F39); a cidade com o mesmo nome em mais
+# de um estado e sem capital entre elas (Bom Jesus) pede a UF, e a recusa já diz as candidatas. A UF informada tem
+# precedência, pela sigla ou pelo nome do estado ("são paulo", varredura F38).
 module Autonomia::FerramentasProntas::Municipios
   DIGITOS_CNES = 6
+  DEDUZA_UF = 'a UF sai da cidade: mande só a cidade, ou a sigla de 2 letras do estado dela.'.freeze
+  UF_ERRADA = 'Não há %<cidade>s nesse estado: há em %<ufs>s. Corrija você a uf (ou mande só a cidade), sem perguntar ' \
+              'ao cliente, salvo se a conversa disser outra cidade.'.freeze
+  HOMONIMA = 'Há cidade com esse nome em mais de um estado (%<ufs>s). Se a conversa já diz qual (o endereço, o DDD do ' \
+             'telefone), mande a uf; senão, pergunte ao cliente o estado. Não invente.'.freeze
 
   Municipio = Data.define(:codigo, :uf, :nome, :latitude, :longitude) do
     def codigo_cnes
@@ -18,6 +28,14 @@ module Autonomia::FerramentasProntas::Municipios
 
   module_function
 
+  # O parâmetro `uf` das fontes que pedem a cidade: opcional, porque sai da cidade (`buscar`). `local`: só filtra aqui.
+  def parametro_uf(local: false)
+    Autonomia::FerramentasProntas::Parametro.new(
+      nome: 'uf', local: local, descricao: 'A sigla do estado da cidade. Opcional: sai da cidade.',
+      opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase), deduza: DEDUZA_UF
+    ) { |valor| Autonomia::FerramentasProntas::Ufs.sigla_pelo_nome(valor)&.downcase }
+  end
+
   # "3170206" -> o município, ou nil.
   def por_codigo(codigo)
     por_codigo_indice[codigo.to_s]
@@ -28,9 +46,40 @@ module Autonomia::FerramentasProntas::Municipios
     por_codigo_cnes_indice[codigo.to_s]
   end
 
-  # ("MG", "uberlandia") -> o município, ou nil.
+  # ("MG", "uberlandia") -> o município, ou nil. Sem a UF (nil): o município, se o nome é único no Brasil, ou a única
+  # capital entre os do mesmo nome.
   def buscar(uf_sigla, nome)
+    return sem_uf(homonimas(nome)) if uf_sigla.blank?
+
     por_nome_indice[[uf_sigla.to_s.upcase, Autonomia::FerramentasProntas::Lista.comparavel(nome)]]
+  end
+
+  def sem_uf(achados)
+    return achados.first if achados.one?
+
+    capitais = achados.select { |municipio| Autonomia::FerramentasProntas::Ufs.capital?(municipio.uf, municipio.nome) }
+    capitais.first if capitais.one?
+  end
+
+  # Os municípios com esse nome, em qualquer estado.
+  def homonimas(nome)
+    por_nome_sem_uf_indice.fetch(Autonomia::FerramentasProntas::Lista.comparavel(nome), [])
+  end
+
+  # A regra das fontes que pedem a cidade. -> nil quando acha o município; senão a `Falta`: a UF com as candidatas
+  # (homônima sem UF, ou UF errada para a cidade que existe em outro estado), ou a cidade (não informada, ou que não
+  # existe no Brasil).
+  def falta(uf_sigla, nome)
+    falta = Autonomia::FerramentasProntas::Falta
+    return falta.new(campo: 'cidade') if nome.blank?
+    return if buscar(uf_sigla, nome)
+
+    # Sem a UF, `buscar` só falha com nenhuma ou com mais de uma: a de uma só nunca chega aqui.
+    ufs = homonimas(nome).map(&:uf).sort
+    return falta.new(campo: 'cidade') if ufs.empty?
+
+    texto = uf_sigla.present? ? format(UF_ERRADA, cidade: nome, ufs: ufs.join(', ')) : format(HOMONIMA, ufs: ufs.join(', '))
+    falta.new(campo: 'uf', candidatos: ufs, orientacao: texto)
   end
 
   def municipios
@@ -46,6 +95,10 @@ module Autonomia::FerramentasProntas::Municipios
 
   def por_codigo_cnes_indice
     @por_codigo_cnes_indice ||= municipios.index_by(&:codigo_cnes).freeze
+  end
+
+  def por_nome_sem_uf_indice
+    @por_nome_sem_uf_indice ||= municipios.group_by { |municipio| Autonomia::FerramentasProntas::Lista.comparavel(municipio.nome) }.freeze
   end
 
   def por_nome_indice

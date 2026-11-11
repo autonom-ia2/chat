@@ -6,7 +6,7 @@ class Autonomia::FerramentasProntas::Fontes::Ncm::BrasilApi < Autonomia::Ferrame
 
   def consultar(consulta, params)
     ncm = Autonomia::FerramentasProntas::Fontes::Ncm
-    return ncm.item(objeto!(get("/api/ncm/v1/#{params.fetch('codigo')}"))) if consulta.nome == 'codigo'
+    return ncm.do_codigo(ncm.item(objeto!(get("/api/ncm/v1/#{params.fetch('codigo')}"))), params.fetch('codigo')) if consulta.nome == 'codigo'
 
     busca = params.fetch('busca')
     achados = lista!(get("/api/ncm/v1?search=#{codificar(busca)}", max_bytes: ncm::MAX_BYTES_BUSCA))

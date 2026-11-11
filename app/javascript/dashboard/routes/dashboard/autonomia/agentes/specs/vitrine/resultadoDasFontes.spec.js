@@ -24,6 +24,8 @@ const textosEm = (mensagens, idioma, maisN) => {
     nao: 'N',
     zeroKm: '0km',
     nenhumValor: mensagens.AGENTS.VITRINE.RESULTADO.NENHUM_VALOR,
+    unidade: codigo =>
+      mensagens.AGENTS.VITRINE.UNIDADES[String(codigo).toUpperCase()] || codigo,
     idioma,
   };
 };
@@ -84,6 +86,13 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       'EMPRESA EXEMPLO LTDA'
     );
     expect(valor('cnpj', 'empresa', 'Situação')).toBe('ATIVA');
+    // A tela mostra a descrição da atividade; o código (os 7 dígitos da CNAE) vai no dado ao agente.
+    expect(valor('cnpj', 'empresa', 'Atividade principal')).toBe(
+      'Extração de petróleo e gás natural'
+    );
+    expect(porFonte.cnpj.empresa.dados.atividade_principal.codigo).toBe(
+      '0600001'
+    );
     expect(valor('cpf', 'conferir', 'Número válido?')).toBe('S');
     expect(valor('fipe', 'marcas', 'Marcas')).toContain('Acura');
     expect(valor('fipe', 'modelos', 'Modelos')).toContain('ONIX');
@@ -118,11 +127,32 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('bancos', 'banco', 'Nome')).toContain('ITAÚ');
   });
 
-  it('F4: saúde (hospitais, procedimentos, doenças)', () => {
-    expect(valor('hospitais', 'estabelecimentos', 'Locais de saúde')).toContain(
-      'HOSPITAL'
+  it('QI 70: o CEP pela rua e o banco pelo nome', () => {
+    // A Paulista tem 50 CEPs: cada um vira nome da lista (rua, faixa e bairro, #2906), e o primeiro abre com o CEP.
+    // O CEP da rua (faixa de número) vem antes do CEP especial de prédio ou órgão (resposta real de 11/11/2026).
+    expect(valor('cep', 'por_endereco', 'CEPs')).toBe(
+      'Avenida Paulista (até 610 - lado par) – Bela Vista, Avenida Paulista (de 1867 ao fim - lado ímpar) – Bela Vista, Avenida Paulista (de 1047 a 1865 - lado ímpar) – Bela Vista e mais 47'
     );
-    expect(valor('hospitais', 'estabelecimentos', 'Endereço')).toBeDefined();
+    expect(valor('cep', 'por_endereco', 'Primeiro da lista')).toBe(
+      'Avenida Paulista (até 610 - lado par) – Bela Vista'
+    );
+    expect(valor('cep', 'por_endereco', 'CEP')).toBe('01310-000');
+    expect(valor('cep', 'por_endereco', 'Complemento')).toBe(
+      'até 610 - lado par'
+    );
+    expect(valor('bancos', 'por_nome', 'Bancos')).toBe('ITAÚ UNIBANCO S.A.');
+    expect(valor('bancos', 'por_nome', 'Código')).toBe('341');
+  });
+
+  it('F4: saúde (hospitais, procedimentos, doenças)', () => {
+    // Resposta real de 11/11/2026: 22 no total, 20 lidos (`mostrando`); o "e mais" conta do total, e o CEP vem com traço.
+    expect(valor('hospitais', 'estabelecimentos', 'Locais de saúde')).toBe(
+      'HOSPITAL SAMARITANO UNIDADE II, HOSPITAL E MATERNIDADE DE CAMPINAS, HOSPITAL SANTA TEREZA e mais 19'
+    );
+    expect(valor('hospitais', 'estabelecimentos', 'CEP')).toBe('13040-145');
+    expect(valor('hospitais', 'estabelecimentos', 'Endereço')).toBe(
+      'SAO JOSE DOS CAMPOS, 256'
+    );
     expect(valor('procedimentos', 'codigo', 'Nome')).toContain('Consulta');
     expect(valor('procedimentos', 'busca', 'Resultados')).toContain(
       'Hemograma'
@@ -443,5 +473,33 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       ],
       ['Observação', porFonte.feriados.feriados.dados.observacao],
     ]);
+  });
+  // #2906 P09/P10 — o servidor manda número, mês AAAA-MM e unidade em código; a tela formata no idioma dela.
+  it('price, month and per-year rate follow the screen language (en and pt_BR)', () => {
+    const em = (fonte, consulta, textos, rotulo) =>
+      (linhas(fonte, consulta, textos).find(([nome]) => nome === rotulo) ||
+        [])[1];
+    const rotuloEn = chave => en.AGENTS.VITRINE.CAMPOS[chave];
+    expect(em('fipe', 'preco', PT, 'Valor')).toBe('R$ 56.043,00');
+    expect(em('fipe', 'preco', EN, rotuloEn('VALOR'))).toBe('R$ 56,043.00');
+    expect(em('fipe', 'preco', PT, 'Mês de referência')).toBe(
+      'novembro de 2026'
+    );
+    expect(em('fipe', 'preco', EN, rotuloEn('MES_DE_REFERENCIA'))).toBe(
+      'November 2026'
+    );
+    expect(em('banco_central', 'selic', EN, rotuloEn('VALOR'))).toBe(
+      '13.75 % per year'
+    );
+    expect(em('banco_central', 'ipca', EN, rotuloEn('MES_DE_REFERENCIA'))).toBe(
+      'September 2026'
+    );
+    const tudo = JSON.stringify([
+      linhas('fipe', 'preco', EN),
+      linhas('banco_central', 'selic', EN),
+      linhas('banco_central', 'ipca', EN),
+    ]);
+    expect(tudo).not.toContain('ao ano');
+    expect(tudo).not.toContain('novembro');
   });
 });

@@ -23,6 +23,19 @@ export const passoCriouAutomacao = passo =>
 export const passoMexeuEmAutomacao = passo =>
   Boolean(passo?.ok && (passo.acao || '').includes('automation_rules'));
 
+// #2889 — o motor novo (autonomia/automacoes). Os ids não se misturam com os de
+// automation_rules: a mesma conta tem a regra 7 e a automação 7.
+const CRIAR_NO_MOTOR = 'POST autonomia/automacoes';
+const RECURSO_DO_MOTOR = 'autonomia/automacoes';
+
+export const passoCriouNoMotor = passo =>
+  Boolean(passo?.ok && passo.registro && passo.acao === CRIAR_NO_MOTOR);
+
+export const passoMexeuNoMotor = passo =>
+  Boolean(
+    passo?.ok && (passo.acao || '').split(' ')[1]?.startsWith(RECURSO_DO_MOTOR)
+  );
+
 export function useCriadasPeloGuia() {
   const criadas = ref(new Set());
 

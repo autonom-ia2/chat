@@ -7,7 +7,9 @@
 # incluiu fica gravado no primeiro "Incluir".
 #
 # `EXEMPLOS`: a consulta de cada fonte e em qual parâmetro entra o valor digitado. Fonte sem campo (o Banco Central)
-# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só.
+# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só. `senao`: a consulta de quando o
+# valor não serve no campo (o banco: "341" vai pelo código, "Itaú" pelo nome). Quem decide é o formato do parâmetro
+# (`Parametro#normalizar`), não uma lista de palavras.
 #
 # `COM_TEXTO_LIVRE`: a fonte em que a pessoa escreve como falaria ("Onix 2020", "Ribeirão Preto", "dias úteis até
 # 30/11"). Quem entende o texto é o modelo, pela IA da conta (`Experimente::ComModelo`), como o agente faria.
@@ -19,7 +21,7 @@ class Autonomia::FerramentasProntas::Experimente
     'banco_central' => { 'consulta' => 'dolar' },
     'ddd' => { 'consulta' => 'ddd', 'campo' => 'ddd' },
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
-    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
+    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo', 'senao' => { 'consulta' => 'por_nome', 'campo' => 'nome' } }
   }.freeze
   COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
                        corretor_susep planos_de_saude aeronaves geracao_solar transportadoras queimadas].freeze
@@ -48,8 +50,13 @@ class Autonomia::FerramentasProntas::Experimente
     Autonomia::Agents::Tool.new(account: @account, fonte_pronta: @fonte.chave)
   end
 
+  def serve?(exemplo)
+    @fonte.consulta(exemplo['consulta']).parametro(exemplo['campo']).normalizar(@valor).present?
+  end
+
   def argumentos
     exemplo = EXEMPLOS.fetch(@fonte.chave, {})
+    exemplo = exemplo['senao'] if exemplo['senao'] && !serve?(exemplo)
     base = { 'consulta' => exemplo['consulta'] }.merge(exemplo.fetch('fixos', {}))
     return base.merge(exemplo['campo'] => @valor) if exemplo['campo']
     return base unless exemplo['campos']

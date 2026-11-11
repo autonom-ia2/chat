@@ -19,7 +19,7 @@ class Autonomia::Guide::Formatos::Metricas
   end
 
   def com_esquema
-    aninhados.count { |_chave, campo| campo['esquema'] }
+    aninhados.count { |_chave, campo| campo['esquema'] || campo['esquema_de'] }
   end
 
   def tipadas

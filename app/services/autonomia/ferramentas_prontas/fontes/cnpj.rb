@@ -14,12 +14,25 @@ module Autonomia::FerramentasProntas::Fontes::Cnpj
     raise Autonomia::FerramentasProntas::Provedor::Falha, 'resposta_invalida' if valores['razao_social'].nil?
 
     %w[situacao porte].each { |campo| valores[campo] = valores[campo]&.upcase }
-    principal = atividade.transform_values { |valor| valor.to_s.strip.presence }.compact.presence
-    { 'cnpj' => formatado(cnpj) }.merge(valores.compact).merge({ 'atividade_principal' => principal }.compact)
+    { 'cnpj' => formatado(cnpj) }.merge(valores.compact).merge({ 'atividade_principal' => atividade_principal(atividade) }.compact)
+  end
+
+  def self.atividade_principal(atividade)
+    principal = atividade.transform_values { |valor| valor.to_s.strip.presence }.compact
+    principal = principal.merge('codigo' => cnae(principal['codigo'])) if principal['codigo']
+    principal.presence
+  end
+
+  # O CNAE tem 7 dígitos; a BrasilAPI o manda em número e o zero da frente some (600001 é 0600001, varredura F09).
+  TAMANHO_DO_CNAE = 7
+
+  def self.cnae(codigo)
+    codigo.delete(Autonomia::FerramentasProntas::Parametro::DIGITOS).empty? ? codigo.rjust(TAMANHO_DO_CNAE, '0') : codigo
   end
 
   CNPJ = Autonomia::FerramentasProntas::Parametro.new(
-    nome: 'cnpj', descricao: 'O CNPJ como o cliente escreveu (14 posições, com ou sem pontuação).'
+    nome: 'cnpj', descricao: 'O CNPJ como o cliente escreveu (14 posições, com ou sem pontuação).',
+    pergunte: 'o CNPJ completo, com as 14 posições'
   ) { |valor| Autonomia::FerramentasProntas::Parametro.cnpj(valor) }
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
