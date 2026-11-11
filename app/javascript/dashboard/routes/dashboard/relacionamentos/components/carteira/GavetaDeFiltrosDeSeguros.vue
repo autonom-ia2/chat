@@ -1,0 +1,117 @@
+<script setup>
+import { computed, ref, useId, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import GavetaLateral from '../ficha/GavetaLateral.vue';
+import { FILTROS_DE_SEGUROS_VAZIOS } from '../../fonte/carteiraFonte';
+import { chaveDoTipo } from '../../carteira/tiposDeSeguro';
+
+// #2897 — "Mais filtros" da aba Seguros: tipo de seguro, seguradora e quem
+// cuida. "Ver resultado" aplica; "Limpar" tira todos e fecha. Só oferece o que
+// existe na carteira (`opcoes` vem da fonte).
+const props = defineProps({
+  aberta: { type: Boolean, default: false },
+  filtros: { type: Object, default: () => ({ ...FILTROS_DE_SEGUROS_VAZIOS }) },
+  opcoes: {
+    type: Object,
+    default: () => ({ tipos: [], seguradoras: [], cuida: [] }),
+  },
+});
+const emit = defineEmits(['fechar', 'aplicar', 'limpar']);
+
+const { t } = useI18n();
+const tc = chave => t(`RELACIONAMENTOS_CARTEIRA.LISTA.FILTROS.${chave}`);
+const idBase = useId();
+
+const rascunho = ref({ ...FILTROS_DE_SEGUROS_VAZIOS });
+watch(
+  () => props.aberta,
+  aberta => {
+    if (aberta) {
+      rascunho.value = { ...FILTROS_DE_SEGUROS_VAZIOS, ...props.filtros };
+    }
+  },
+  { immediate: true }
+);
+
+const comQualquer = (chave, lista) => [
+  { value: '', label: tc(chave) },
+  ...lista,
+];
+const iguais = lista => lista.map(valor => ({ value: valor, label: valor }));
+
+const campos = computed(() => [
+  {
+    chave: 'tipo',
+    rotulo: tc('TIPO'),
+    opcoes: comQualquer(
+      'TODOS',
+      props.opcoes.tipos.map(tipo => ({
+        value: tipo,
+        label: t(chaveDoTipo(tipo)),
+      }))
+    ),
+  },
+  {
+    chave: 'seguradora',
+    rotulo: tc('SEGURADORA'),
+    opcoes: comQualquer('TODAS', iguais(props.opcoes.seguradoras)),
+  },
+  {
+    chave: 'cuida',
+    rotulo: tc('CUIDA'),
+    opcoes: comQualquer('QUALQUER_PESSOA', iguais(props.opcoes.cuida)),
+  },
+]);
+
+const escolher = (chave, valor) => {
+  rascunho.value = { ...rascunho.value, [chave]: valor };
+};
+</script>
+
+<template>
+  <GavetaLateral
+    marca="gaveta-filtros"
+    :aberta="aberta"
+    :titulo="tc('TITULO')"
+    @fechar="emit('fechar')"
+  >
+    <div data-carteira="filtros" class="flex flex-col gap-5">
+      <div
+        v-for="campo in campos"
+        :key="campo.chave"
+        class="flex flex-col gap-2"
+      >
+        <label
+          :for="`${idBase}-${campo.chave}`"
+          class="text-sm font-medium text-n-slate-12"
+        >
+          {{ campo.rotulo }}
+        </label>
+        <ChoiceSelect
+          :model-value="rascunho[campo.chave]"
+          :options="campo.opcoes"
+          :trigger-id="`${idBase}-${campo.chave}`"
+          :aria-label="campo.rotulo"
+          @update:model-value="escolher(campo.chave, $event)"
+        />
+      </div>
+    </div>
+    <template #rodape>
+      <Button
+        size="lg"
+        data-carteira="ver-resultado"
+        :label="tc('VER_RESULTADO')"
+        @click="emit('aplicar', { ...rascunho })"
+      />
+      <Button
+        slate
+        faded
+        size="lg"
+        :label="tc('LIMPAR')"
+        @click="emit('limpar')"
+      />
+    </template>
+  </GavetaLateral>
+</template>

@@ -6,9 +6,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 
 // #2894 — o "⋯" da barra de ação em grupo: um menu de verdade (role="menu"),
 // que abre para cima, fecha com Esc ou clique fora e anda com as setas. Os
-// itens vêm de quem usa: { id, rotulo, icone, destrutivo?, soNoCelular? }.
+// itens vêm de quem usa: { id, rotulo, icone, destrutivo?, soNoCelular?,
+// atributos? } (`atributos` vai no botão do item: a marca do robô de print).
+// `rotulo` troca o nome acessível do "⋯"; `paraBaixo` abre a lista para baixo.
 const props = defineProps({
   itens: { type: Array, required: true },
+  rotulo: { type: String, default: '' },
+  paraBaixo: { type: Boolean, default: false },
 });
 const emit = defineEmits(['escolher']);
 
@@ -88,20 +92,22 @@ onClickOutside(raiz, () => {
       aria-haspopup="menu"
       :aria-expanded="aberto ? 'true' : 'false'"
       :aria-controls="idDoMenu"
-      :aria-label="t('RELACIONAMENTOS.LISTA.BARRA.MAIS')"
+      :aria-label="rotulo || t('RELACIONAMENTOS.LISTA.BARRA.MAIS')"
       @click="alternar"
     />
     <div
       v-show="aberto"
       :id="idDoMenu"
       role="menu"
-      class="absolute bottom-full mb-2 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak ltr:right-0 rtl:left-0"
+      class="absolute z-20 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak ltr:right-0 rtl:left-0"
+      :class="paraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'"
     >
       <button
         v-for="item in props.itens"
         :key="item.id"
         type="button"
         role="menuitem"
+        v-bind="item.atributos"
         :data-acao="item.id"
         class="flex items-center gap-3 px-3 text-sm font-medium text-start border-0 rounded-lg bg-transparent min-h-11 hover:bg-n-alpha-1 focus-visible:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :class="[

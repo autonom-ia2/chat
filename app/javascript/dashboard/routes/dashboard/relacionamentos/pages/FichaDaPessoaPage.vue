@@ -13,7 +13,9 @@ import FaixaNaoQuer from '../components/ficha/FaixaNaoQuer.vue';
 import GavetaDeInformacoes from '../components/ficha/GavetaDeInformacoes.vue';
 import GavetaDoCard from '../components/ficha/GavetaDoCard.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
+import SegurosDaFicha from '../components/carteira/SegurosDaFicha.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
+import { contaDeSeguros } from '../fonte/modoCarteira';
 import { usarDemo } from '../fonte/modoDemo';
 import { linhasDaPessoa, redesPreenchidas } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
@@ -28,6 +30,8 @@ import { useFichaDaPessoa } from '../ficha/useFichaDaPessoa';
 // passo a mais, de propósito (a gaveta "Alterar informações"). Em 390 px a ordem é
 // cabeçalho, faixa, Conversas, Cards, Informações, Notas, Arquivos, De onde veio
 // (o DOM segue essa ordem; ver `CorpoDaFichaDaPessoa`).
+// #2897 — em conta de seguros, o bloco Seguros vem antes de Conversas e o
+// "Cliente desde" passa a ser o começo do seguro mais antigo.
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
@@ -35,6 +39,16 @@ const fonte = fichaFonte({ demo: usarDemo(route.query) });
 const id = computed(() => Number(route.params?.contactId));
 const ficha = useFichaDaPessoa(fonte, id);
 const agora = Date.now();
+const comSeguros = contaDeSeguros();
+const comecoDoPrimeiroSeguro = ref(null);
+const pessoaDoCabecalho = computed(() => {
+  const pessoa = ficha.pessoa.value;
+  return pessoa?.customer_since && comecoDoPrimeiroSeguro.value
+    ? { ...pessoa, customer_since: comecoDoPrimeiroSeguro.value }
+    : pessoa;
+});
+const abrirSegurado = ({ tipo, id: donoId }) =>
+  tipo === 'empresa' ? acoes.abrirEmpresa(donoId) : acoes.abrirPessoa(donoId);
 
 const gavetaAberta = ref(false);
 const cardAberto = ref(null);
@@ -114,6 +128,7 @@ const abrirNoCrm = () => {
 onMounted(ficha.carregar);
 // Ao sair da ficha o parâmetro some (id NaN): não é pedido, não é "não achei".
 watch(id, novo => {
+  comecoDoPrimeiroSeguro.value = null;
   if (idValido(novo)) ficha.carregar();
 });
 watch(
@@ -171,7 +186,7 @@ watch(
           class="flex flex-col min-w-0 gap-6"
         >
           <CabecalhoDaPessoa
-            :pessoa="ficha.pessoa.value"
+            :pessoa="pessoaDoCabecalho"
             :marcando-cliente="ficha.ocupado.value === 'marcarCliente'"
             @conversar="avisar('CONVERSAR')"
             @novo-card="avisar('NOVO_CARD')"
@@ -204,7 +219,16 @@ watch(
             @abrir-card="card => (cardAberto = card)"
             @guardar-nota="guardarNota"
             @alterar="gavetaAberta = true"
-          />
+          >
+            <template v-if="comSeguros" #antes>
+              <SegurosDaFicha
+                :dono-id="id"
+                :agora="agora"
+                @abrir-segurado="abrirSegurado"
+                @desde="comecoDoPrimeiroSeguro = $event"
+              />
+            </template>
+          </CorpoDaFichaDaPessoa>
         </div>
       </div>
     </main>

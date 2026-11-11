@@ -60,7 +60,7 @@ const digitosContem = (campos, digitos) =>
 
 // Letras buscam em nome, e-mail e empresa; só número busca em telefone e
 // documento (com ou sem pontuação).
-const combinaComBusca = (busca, { textos, numeros }) => {
+export const combinaComBusca = (busca, { textos, numeros }) => {
   const termo = normalizado(busca);
   if (!termo) return true;
   if (temLetra(termo)) return textoContem(textos, termo);
@@ -122,14 +122,44 @@ const regrasDaAba = aba => REGRAS_DA_ABA[aba] || REGRAS_DA_ABA[ABAS.PESSOAS];
 
 // O que a busca e os filtros deixam passar, antes de olhar o grupo. A lista e as
 // contagens das pílulas usam esta mesma conta, para os números baterem.
-const passaNaConsulta = (aba, { busca = '', filtros = {} }, agora) => {
-  const regras = regrasDaAba(aba);
+const passaNaConsulta = (
+  aba,
+  { busca = '', filtros = {} },
+  agora,
+  regras = regrasDaAba(aba)
+) => {
   return item =>
     combinaComBusca(busca, regras.campos(item)) &&
     (aba !== ABAS.PESSOAS || pessoaPassaNosFiltros(item, filtros, agora));
 };
 
-const fonteDemo = ({ estado, carregarDemo, atraso }) => {
+// #2897 — o que outra frente soma à lista de pessoas: grupos a mais (id ->
+// quem pertence) e mais lugares onde a busca procura. Sem complemento, nada muda.
+const SEM_COMPLEMENTO = Object.freeze({
+  grupos: {},
+  campos: () => ({ textos: [], numeros: [] }),
+});
+
+const comComplemento = (regras, aba, extra) =>
+  aba !== ABAS.PESSOAS
+    ? regras
+    : {
+        ...regras,
+        pertence: (item, grupoId, agora) =>
+          grupoId in extra.grupos
+            ? extra.grupos[grupoId](item)
+            : regras.pertence(item, grupoId, agora),
+        campos: item => {
+          const daBase = regras.campos(item);
+          const aMais = extra.campos(item);
+          return {
+            textos: [...daBase.textos, ...aMais.textos],
+            numeros: [...daBase.numeros, ...aMais.numeros],
+          };
+        },
+      };
+
+const fonteDemo = ({ estado, carregarDemo, atraso, complemento }) => {
   const baseDaDemo = async () => {
     // `?demo=carregando`: a fonte nunca responde, para o print do esqueleto.
     if (estado === DEMO_CARREGANDO) return esperarParaSempre();
@@ -138,6 +168,8 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   };
   const contarGrupo = (lista, regras, grupoId, agora) =>
     lista.filter(item => regras.pertence(item, grupoId, agora)).length;
+  const extraDaDemo = async () =>
+    complemento ? complemento() : SEM_COMPLEMENTO;
 
   const achar = async ({
     aba = ABAS.PESSOAS,
@@ -147,12 +179,13 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     filtros = {},
   }) => {
     const agora = Date.now();
-    const regras = regrasDaAba(aba);
+    const base = await baseDaDemo();
+    const regras = comComplemento(regrasDaAba(aba), aba, await extraDaDemo());
     const ordenador = ORDENADORES[ordem] || ORDENADORES[ORDENS.ULTIMA_CONVERSA];
     return regras
-      .daBase(await baseDaDemo(), agora)
+      .daBase(base, agora)
       .filter(item => regras.pertence(item, grupo || GRUPO_PADRAO[aba], agora))
-      .filter(passaNaConsulta(aba, { busca, filtros }, agora))
+      .filter(passaNaConsulta(aba, { busca, filtros }, agora, regras))
       .sort(ordenador);
   };
 
@@ -189,15 +222,18 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     // com eles: o número bate com a lista que a pessoa vê.
     async contagens(aba, consulta = {}) {
       const agora = Date.now();
-      const regras = regrasDaAba(aba);
+      const base = await baseDaDemo();
+      const extra = await extraDaDemo();
+      const regras = comComplemento(regrasDaAba(aba), aba, extra);
       const lista = regras
-        .daBase(await baseDaDemo(), agora)
-        .filter(passaNaConsulta(aba, consulta, agora));
+        .daBase(base, agora)
+        .filter(passaNaConsulta(aba, consulta, agora, regras));
+      const ids = [
+        ...gruposDaAba(aba).map(grupo => grupo.id),
+        ...(aba === ABAS.PESSOAS ? Object.keys(extra.grupos) : []),
+      ];
       return Object.fromEntries(
-        gruposDaAba(aba).map(grupo => [
-          grupo.id,
-          contarGrupo(lista, regras, grupo.id, agora),
-        ])
+        ids.map(id => [id, contarGrupo(lista, regras, id, agora)])
       );
     },
     async listar(pedido = {}) {
@@ -255,7 +291,8 @@ export const listaFonte = ({
   demo = null,
   carregarDemo = CARREGAR_DEMO,
   atraso = ATRASO_DA_DEMO_MS,
+  complemento = null,
 } = {}) =>
   demo && carregarDemo
-    ? fonteDemo({ estado: demo, carregarDemo, atraso })
+    ? fonteDemo({ estado: demo, carregarDemo, atraso, complemento })
     : fonteReal();

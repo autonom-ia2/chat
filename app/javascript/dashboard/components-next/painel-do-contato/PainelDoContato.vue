@@ -213,6 +213,8 @@ const verPagina = () =>
         :contact="contact"
         :conversation-id="conversation.id"
       />
+      <!-- #2897 (protótipo): o que quem usa o painel põe logo abaixo do contato. -->
+      <slot name="depois-do-contato" />
       <div class="flex flex-col border-t border-n-weak">
         <BlocoQuemCuida
           ref="quemCuida"

@@ -44,6 +44,8 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       data-relacionamentos="coluna-principal"
       class="flex flex-col min-w-0 gap-6 lg:col-span-2"
     >
+      <!-- #2897: o que a pessoa "tem comigo" vem antes da conversa. -->
+      <slot name="antes" />
       <SecaoConversas
         :conversas="conversas"
         :agora="agora"

@@ -5,12 +5,23 @@
 //
 // Estados: `cheio`, `vazio`, `carregando` (a fonte nunca responde: esqueleto) e,
 // sem `?demo=` válido ou com `?demo=desligado`, a fonte real (hoje: erro).
+// #2897 — a carteira soma dois: `sem-seguros` (as pessoas, nenhum seguro) e
+// `fora-do-segmento` (as pessoas, conta de outro segmento: nada de seguro
+// aparece). Para o bloco A os dois são a conta cheia.
 //
 // O estado "gruda": depois que uma URL trouxe `?demo=`, as telas seguintes
 // continuam em demonstração mesmo sem o parâmetro, porque a navegação interna
 // (lista -> ficha -> trazer) não leva a query.
 export const DEMO_CARREGANDO = 'carregando';
-export const ESTADOS_DE_DEMO = ['cheio', 'vazio', DEMO_CARREGANDO];
+export const DEMO_SEM_SEGUROS = 'sem-seguros';
+export const DEMO_FORA_DO_SEGMENTO = 'fora-do-segmento';
+export const ESTADOS_DE_DEMO = [
+  'cheio',
+  'vazio',
+  DEMO_CARREGANDO,
+  DEMO_SEM_SEGUROS,
+  DEMO_FORA_DO_SEGMENTO,
+];
 // `?demo=desligado` zera o estado guardado (também só em desenvolvimento).
 export const DEMO_DESLIGADO = 'desligado';
 

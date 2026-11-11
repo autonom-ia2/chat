@@ -13,11 +13,13 @@ import CartaoDaSecao from '../components/ficha/CartaoDaSecao.vue';
 import EsqueletoDaFicha from '../components/ficha/EsqueletoDaFicha.vue';
 import GavetaDoCard from '../components/ficha/GavetaDoCard.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
+import SegurosDaFicha from '../components/carteira/SegurosDaFicha.vue';
 import ListaDeInformacoes from '../components/ficha/ListaDeInformacoes.vue';
 import SecaoCards from '../components/ficha/SecaoCards.vue';
 import SecaoConversas from '../components/ficha/SecaoConversas.vue';
 import SecaoPessoasDaEmpresa from '../components/ficha/SecaoPessoasDaEmpresa.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
+import { contaDeSeguros } from '../fonte/modoCarteira';
 import { usarDemo } from '../fonte/modoDemo';
 import { ABAS } from '../fonte/grupos';
 import { linhasDaEmpresa } from '../ficha/informacoes';
@@ -41,6 +43,11 @@ const fonte = fichaFonte({ demo: usarDemo(route.query) });
 const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id);
 const agora = Date.now();
+// #2897 — em conta de seguros, os seguros em nome da empresa vêm depois de
+// Pessoas.
+const comSeguros = contaDeSeguros();
+const abrirSegurado = ({ tipo, id: donoId }) =>
+  tipo === 'empresa' ? acoes.abrirEmpresa(donoId) : acoes.abrirPessoa(donoId);
 const cardAberto = ref(null);
 const gavetaAberta = ref(false);
 const dialogoDaMensagem = ref(null);
@@ -159,6 +166,13 @@ watch(
                       pessoa.name
                     )
                 "
+              />
+              <SegurosDaFicha
+                v-if="comSeguros"
+                da-empresa
+                :dono-id="id"
+                :agora="agora"
+                @abrir-segurado="abrirSegurado"
               />
               <SecaoConversas
                 :conversas="ficha.conversas.value"

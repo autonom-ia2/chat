@@ -10,6 +10,12 @@ defineProps({
   erro: { type: String, default: '' },
   // Qual foi o problema (tipo, vazia, sem_contato): fica no `data-erro`.
   tipoDeErro: { type: String, default: '' },
+  // #2897 — outro arquivo que não a planilha (o PDF do seguro): quem usa diz o
+  // título, o apoio, o ícone e o que o seletor aceita. Sem isso, é a planilha.
+  titulo: { type: String, default: '' },
+  apoio: { type: String, default: '' },
+  icone: { type: String, default: 'i-lucide-file-spreadsheet' },
+  aceita: { type: String, default: ACEITA_NO_SELETOR },
 });
 const emit = defineEmits(['arquivo']);
 
@@ -59,16 +65,16 @@ const aoSoltar = evento => {
         class="flex items-center justify-center rounded-full pointer-events-none size-16 bg-n-blue-3 text-n-blue-11"
         aria-hidden="true"
       >
-        <span class="i-lucide-file-spreadsheet size-8" />
+        <span class="size-8" :class="icone" />
       </span>
       <span class="text-xl font-semibold pointer-events-none text-n-slate-12">
-        {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.SOLTAR') }}
+        {{ titulo || t('RELACIONAMENTOS_TRAZER.ENVIAR.SOLTAR') }}
       </span>
       <span
         :id="`${id}-apoio`"
         class="text-base pointer-events-none text-n-slate-11"
       >
-        {{ t('RELACIONAMENTOS_TRAZER.ENVIAR.APOIO') }}
+        {{ apoio || t('RELACIONAMENTOS_TRAZER.ENVIAR.APOIO') }}
       </span>
     </button>
     <input
@@ -77,7 +83,7 @@ const aoSoltar = evento => {
       class="sr-only"
       tabindex="-1"
       aria-hidden="true"
-      :accept="ACEITA_NO_SELETOR"
+      :accept="aceita"
       @change="aoEscolher"
     />
     <p

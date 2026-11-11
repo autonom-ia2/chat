@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -22,10 +22,15 @@ import LinhaDePessoa from '../components/lista/LinhaDePessoa.vue';
 import ListaDeLinhas from '../components/lista/ListaDeLinhas.vue';
 import MarcarTodas from '../components/lista/MarcarTodas.vue';
 import MostrarMais from '../components/lista/MostrarMais.vue';
+import ListaDeSeguros from '../components/carteira/ListaDeSeguros.vue';
+import SeloDoMaisUrgente from '../components/carteira/SeloDoMaisUrgente.vue';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
-import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
+import { ABAS, GRUPO_PADRAO } from '../fonte/grupos';
+import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
+import { abaDeSegurosPermitida, contaDeSeguros } from '../fonte/modoCarteira';
 import { usarDemo } from '../fonte/modoDemo';
+import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
@@ -38,6 +43,9 @@ import { useMarcados } from '../lista/useMarcados';
 // filtros", a lista com ações em grupo e os estados (vazio, carregando, erro).
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
 // e as escritas só simulam.
+// #2897 — em conta de seguros: a aba Seguros (`?aba=seguros`, outra peça), o
+// selo do seguro mais urgente na linha, o grupo "Só tem um seguro" e a busca
+// por placa e número da apólice. Fora dela, nada muda.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -55,19 +63,27 @@ const aba = computed(() => {
 });
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
 
+const comSeguros = contaDeSeguros();
+const naAbaDeSeguros = computed(
+  () => route.query.aba === ABA_SEGUROS && abaDeSegurosPermitida()
+);
+const carteira = useCarteiraNaLista({ demo, ligada: comSeguros });
+
 const marcados = useMarcados();
 const lista = useLista({
-  fonte: listaFonte({ demo }),
+  fonte: listaFonte({ demo, complemento: carteira.complemento }),
   aba,
   aoMudarConsulta: marcados.limpar,
 });
 
 const trocarAba = nova => {
   const resto = Object.fromEntries(
-    Object.entries(route.query).filter(([chave]) => chave !== 'aba')
+    Object.entries(route.query).filter(
+      ([chave]) => chave !== 'aba' && chave !== 'apolice'
+    )
   );
   return router.push({
-    query: nova === ABAS.EMPRESAS ? { ...resto, aba: nova } : resto,
+    query: nova === ABAS.PESSOAS ? resto : { ...resto, aba: nova },
   });
 };
 
@@ -75,8 +91,9 @@ const trocarAba = nova => {
 // está aberta.
 const verGrupo = id => lista.escolherGrupo(id);
 
+const gruposDaConta = computed(() => carteira.grupos(aba.value));
 const grupos = computed(() =>
-  gruposDaAba(aba.value).map(({ id, nome }) => ({
+  gruposDaConta.value.map(({ id, nome }) => ({
     id,
     nome: t(nome),
     total: lista.contagens.value[id],
@@ -86,16 +103,18 @@ const grupos = computed(() =>
 // a altura (`min-h-5`) para a tela não pular ao trocar de grupo.
 const explicacao = computed(() => {
   if (lista.grupo.value === GRUPO_PADRAO[aba.value]) return '';
-  const atual = gruposDaAba(aba.value).find(g => g.id === lista.grupo.value);
+  const atual = gruposDaConta.value.find(g => g.id === lista.grupo.value);
   return atual ? t(atual.explicacao) : '';
 });
 const contaDeMarcados = computed(() => contaDaMensagem(marcados.pessoas.value));
 
 const contaVazia = computed(() => lista.resumo.value?.total === 0);
 const placeholder = computed(() =>
-  t(
-    `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
-  )
+  comSeguros && !ehEmpresas.value
+    ? t('RELACIONAMENTOS_CARTEIRA.LISTA.BUSCA_DE_PESSOAS')
+    : t(
+        `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
+      )
 );
 const placeholderCurto = computed(() =>
   t(
@@ -195,7 +214,17 @@ const barraVisivel = computed(
 const raiz = useTemplateRef('raiz');
 useRolarPilula(raiz, lista.grupo);
 
-onMounted(lista.iniciar);
+// Na aba Seguros quem carrega é a peça dela; ao voltar, a lista se atualiza
+// (um seguro pode ter mudado e, com ele, o selo da pessoa).
+onMounted(() => {
+  carteira.carregar();
+  if (!naAbaDeSeguros.value) lista.iniciar();
+});
+watch(naAbaDeSeguros, estaNela => {
+  if (estaNela) return;
+  carteira.carregar();
+  lista.recarregar();
+});
 </script>
 
 <template>
@@ -204,7 +233,12 @@ onMounted(lista.iniciar);
     class="flex flex-col flex-1 w-full h-full min-w-0 bg-n-surface-1"
     data-relacionamentos="lista"
   >
-    <main class="flex-1 min-w-0 overflow-y-auto">
+    <ListaDeSeguros
+      v-if="naAbaDeSeguros"
+      :demo="demo"
+      @trocar-aba="trocarAba"
+    />
+    <main v-else class="flex-1 min-w-0 overflow-y-auto">
       <div
         class="flex flex-col w-full min-w-0 max-w-6xl min-h-full gap-6 px-5 pt-8 mx-auto md:px-8 md:pt-10"
         :class="barraVisivel ? 'pb-48 md:pb-28' : 'pb-24 md:pb-10'"
@@ -235,7 +269,11 @@ onMounted(lista.iniciar);
           />
           <LinhasDeExemplo v-if="contaVazia" />
           <template v-else>
-            <AbasDaLista :model-value="aba" @update:model-value="trocarAba" />
+            <AbasDaLista
+              :com-seguros="comSeguros"
+              :model-value="aba"
+              @update:model-value="trocarAba"
+            />
             <div
               :id="PAINEL_DAS_ABAS"
               role="tabpanel"
@@ -298,7 +336,13 @@ onMounted(lista.iniciar);
                       :key="empresa.id"
                       :empresa="empresa"
                       @abrir="abrirEmpresa"
-                    />
+                    >
+                      <template v-if="carteira.daEmpresa(empresa.id)" #selos>
+                        <SeloDoMaisUrgente
+                          :resumo="carteira.daEmpresa(empresa.id)"
+                        />
+                      </template>
+                    </LinhaDeEmpresa>
                   </template>
                   <template v-else>
                     <LinhaDePessoa
@@ -306,10 +350,17 @@ onMounted(lista.iniciar);
                       :key="pessoa.id"
                       :pessoa="pessoa"
                       :marcada="marcados.ehMarcado(pessoa.id)"
+                      :partes-extras="carteira.partesDaPessoa(pessoa.id)"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
-                    />
+                    >
+                      <template v-if="carteira.daPessoa(pessoa.id)" #selos>
+                        <SeloDoMaisUrgente
+                          :resumo="carteira.daPessoa(pessoa.id)"
+                        />
+                      </template>
+                    </LinhaDePessoa>
                   </template>
                 </ListaDeLinhas>
                 <MostrarMais

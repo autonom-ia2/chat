@@ -1,0 +1,363 @@
+{
+  "RELACIONAMENTOS_CARTEIRA": {
+    "ABA": "Insurance",
+    "TITULO": "Insurance",
+    "TIPOS": {
+      "AUTO": "Auto",
+      "RESIDENCIAL": "Home",
+      "VIDA": "Life",
+      "EMPRESARIAL": "Business",
+      "OUTRO": "Other"
+    },
+    "SELOS": {
+      "ATIVO": "Active",
+      "EM_RENOVACAO": "In renewal",
+      "RENOVADO": "Renewed",
+      "VENCIDO": "Expired",
+      "CANCELADO": "Cancelled",
+      "PARCELA_ATRASADA": "Late payment",
+      "EM_OUTRA_CORRETORA": "With another broker"
+    },
+    "MOTIVOS": {
+      "ACHOU_CARO": "found it expensive",
+      "OUTRA_CORRETORA": "went to another broker",
+      "VENDEU_O_BEM": "sold the insured item",
+      "NAO_RESPONDEU": "did not answer",
+      "CANCELOU": "cancelled the policy"
+    },
+    "HEROI": {
+      "SEM_SEGURO": "Bring in the policies you look after.",
+      "SEM_SEGURO_APOIO": "They show up here and on each person's page.",
+      "VENCE_7": "{count} policy ends in the next 7 days. | {count} policies end in the next 7 days.",
+      "TODOS_EM_RENOVACAO": "It is already in renewal. | All of them are already in renewal.",
+      "EM_RENOVACAO": "{count} policy is in renewal. | {count} policies are in renewal.",
+      "RESUMO": "You have {count} policy. None ends in the next 90 days. | You have {count} policies. None ends in the next 90 days.",
+      "TRAZER_MEUS_SEGUROS": "Bring in my policies",
+      "TRAZER_SEGUROS": "Bring in policies",
+      "VER_QUAIS": "See which ones",
+      "VER_TODOS": "See all"
+    },
+    "GRUPOS": {
+      "ROTULO": "Policy groups",
+      "TODOS": {
+        "NOME": "All"
+      },
+      "VENCE_7_DIAS": {
+        "NOME": "Ends within 7 days",
+        "EXPLICACAO": "Policies that end this week."
+      },
+      "VENCE_30_DIAS": {
+        "NOME": "Ends within 30 days",
+        "EXPLICACAO": "Policies that end in the next month."
+      },
+      "VENCE_90_DIAS": {
+        "NOME": "Ends within 90 days",
+        "EXPLICACAO": "Policies that end in the next three months."
+      },
+      "EM_RENOVACAO": {
+        "NOME": "In renewal",
+        "EXPLICACAO": "They already have a renewal card in progress."
+      },
+      "VENCIDO": {
+        "NOME": "Expired",
+        "EXPLICACAO": "They ended and were not renewed."
+      },
+      "SEM_TELEFONE": {
+        "NOME": "No phone",
+        "EXPLICACAO": "The person has no phone. The renewal message does not arrive."
+      },
+      "PARCELA_ATRASADA": {
+        "NOME": "Late payment",
+        "EXPLICACAO": "A payment is open. Warn the person before the policy lapses."
+      },
+      "SO_UM_SEGURO": {
+        "NOME": "Has only one policy",
+        "EXPLICACAO": "Customers with a single policy. A good time to offer another one."
+      }
+    },
+    "LISTA": {
+      "BUSCA": "Search by name, document, plate or policy number",
+      "BUSCA_CURTA": "Search policy",
+      "BUSCA_DE_PESSOAS": "Search by name, phone, document or plate",
+      "ORDENAR": {
+        "ROTULO": "Sort",
+        "VENCE_PRIMEIRO": "Ends first",
+        "NOME": "Name",
+        "MAIS_NOVOS": "Newest"
+      },
+      "FILTROS": {
+        "BOTAO": "More filters",
+        "BOTAO_COM_CONTAGEM": "More filters · {count}",
+        "TITULO": "More filters",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "CUIDA": "Who looks after it",
+        "TODOS": "All",
+        "TODAS": "All",
+        "QUALQUER_PESSOA": "Anyone",
+        "VER_RESULTADO": "See result",
+        "LIMPAR": "Clear",
+        "SEM_RESULTADO": "No policy with these filters.",
+        "LIMPAR_FILTROS": "Clear filters"
+      },
+      "RESULTADOS": "Results",
+      "AJUSTAR": "Adjust renewals",
+      "MAIS": "More options",
+      "ABRINDO_RESULTADOS": "Opening the renewal results",
+      "ABRINDO_AJUSTES": "Opening the renewal settings",
+      "ABRINDO_TRAZER": "Opening the step to bring in policies",
+      "MARCAR": "Select the {tipo} policy of {nome}",
+      "ABRIR": "Open the {tipo} policy of {nome}",
+      "SEM_TELEFONE": "No phone",
+      "CONVERSAR": "Chat",
+      "CONVERSAR_COM": "Chat with {nome}",
+      "ABRINDO_CONVERSA": "Opening the chat with {nome}",
+      "GRUPO_VAZIO": "No policy in this group right now.",
+      "BUSCA_SEM_RESULTADO": "I found no policy with “{busca}”.",
+      "LIMPAR_BUSCA": "Clear search",
+      "ERRO": "I could not show the policies. Try again.",
+      "MARCADOS": "{count} selected | {count} selected",
+      "MARCAR_TODOS": "Select all {count} in this group",
+      "DESMARCAR": "Clear selection",
+      "MANDAR_MENSAGEM": "Send message",
+      "BARRA": "What to do with the policies you selected"
+    },
+    "QUANDO": {
+      "LISTA": {
+        "VENCE_EM": "ends in {count} days ({data})",
+        "VENCE_AMANHA": "ends tomorrow ({data})",
+        "VENCE_HOJE": "ends today",
+        "VENCEU_HA": "expired {count} days ago",
+        "VENCEU_ONTEM": "expired yesterday",
+        "CANCELADO_EM": "cancelled on {data}",
+        "RENOVOU_EM": "renewed on {data} · the new policy is missing",
+        "EM_OUTRA_CORRETORA": "is with another broker"
+      },
+      "FICHA": {
+        "VENCE_EM": "Ends in {count} days · {data}",
+        "VENCE_AMANHA": "Ends tomorrow · {data}",
+        "VENCE_HOJE": "Ends today",
+        "VENCEU_HA": "Expired {count} days ago",
+        "VENCEU_ONTEM": "Expired yesterday",
+        "CANCELADO_EM": "Cancelled on {data}",
+        "RENOVOU_EM": "Renewed on {data} · the new policy is missing",
+        "EM_OUTRA_CORRETORA": "With another broker"
+      },
+      "PAINEL": {
+        "VENCE_EM": "ends in {count} days",
+        "VENCE_AMANHA": "ends tomorrow",
+        "VENCE_HOJE": "ends today",
+        "VENCEU_HA": "expired {count} days ago",
+        "VENCEU_ONTEM": "expired yesterday",
+        "CANCELADO_EM": "cancelled on {data}",
+        "RENOVOU_EM": "renewed on {data}",
+        "EM_OUTRA_CORRETORA": "with another broker"
+      }
+    },
+    "PESSOAS": {
+      "TIPO_VENCE_EM": "{tipo} ends in {count} day | {tipo} ends in {count} days",
+      "TIPO_VENCE_HOJE": "{tipo} ends today"
+    },
+    "FICHA": {
+      "TITULO": "Insurance ({count})",
+      "TITULO_DA_EMPRESA": "Company insurance ({count})",
+      "VAZIO": "No insurance yet.",
+      "ERRO": "I could not show the policies. Try again.",
+      "SEGURADORA_E_NUMERO": "{seguradora} · no. {numero}",
+      "PDF": "PDF",
+      "VER_PDF_DE": "See the PDF of the {tipo} policy",
+      "ANEXAR_PDF": "Attach PDF",
+      "ANEXAR_PDF_DE": "Attach the PDF of the {tipo} policy",
+      "ABRIR": "Open the {tipo} policy",
+      "ABRINDO_PDF": "Opening the PDF of the {tipo} policy",
+      "LEMBRETE": "We will remind you on {data}, {dias} days before it ends."
+    },
+    "GAVETA": {
+      "TITULO": "{tipo} · {seguradora}",
+      "CARREGANDO": "Opening the policy",
+      "ERRO": "I could not open this policy. Try again.",
+      "NAO_ESTA_MAIS": "This policy is no longer here.",
+      "VOLTAR_PARA_LISTA": "Back to the list",
+      "FRASE": {
+        "VENCE_EM": "Ends in {count} days.",
+        "VENCE_AMANHA": "Ends tomorrow.",
+        "VENCE_HOJE": "Ends today.",
+        "RENOVACAO_EM": "The renewal is in “{etapa}”.",
+        "VALE_ATE": "Valid until {data}.",
+        "SEM_PDF": "The PDF is still missing.",
+        "PARCELA": "The payment due {data} is open. Warn the person before the policy lapses.",
+        "RENOVOU_EM": "Renewed on {data}. The new policy is missing.",
+        "VENCEU_HA": "Expired {count} days ago and was not renewed.",
+        "VENCEU_ONTEM": "Expired yesterday and was not renewed.",
+        "VENCEU_HOJE": "Expired today and was not renewed.",
+        "MOTIVO": "Reason: {motivo}.",
+        "CANCELADO_EM": "Cancelled on {data}."
+      },
+      "ACAO": {
+        "ABRIR_RENOVACAO": "Open the renewal",
+        "VER_PDF": "See PDF",
+        "ANEXAR_PDF": "Attach PDF",
+        "AVISAR": "Warn {nome}",
+        "ANEXAR_APOLICE_NOVA": "Attach the new policy",
+        "CONVERSAR_COM": "Chat with {nome}"
+      },
+      "AVISOS": {
+        "ABRINDO_RENOVACAO": "Opening the renewal of the {tipo} policy",
+        "ABRINDO_PDF": "Opening the PDF of the {tipo} policy",
+        "ABRINDO_CONVERSA": "Opening the chat with {nome}",
+        "ABRINDO_PROPOSTA": "Opening the proposal",
+        "CANCELADO": "Policy marked as cancelled.",
+        "VOLTOU_A_ATIVO": "The policy is active again.",
+        "DESFEITO": "Undone.",
+        "NAO_DEU": "I could not do that. Try again.",
+        "APOLICE_NOVA": "New policy saved.",
+        "PDF_GUARDADO": "PDF saved.",
+        "DESFAZER": "Undo"
+      },
+      "DADOS": {
+        "TITULO": "Policy details",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "NUMERO": "Policy number",
+        "COMECA": "Starts",
+        "TERMINA": "Ends",
+        "VALOR": "Policy price",
+        "VALOR_POR_ANO": "{valor} per year",
+        "SEGURADO": "Insured",
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "BEM": "What is insured",
+        "ORIGEM": "Came from",
+        "VEIO_DO_AGGER": "Agger, on {data}",
+        "VEIO_DA_PLANILHA": "Spreadsheet “{arquivo}”, on {data}",
+        "CONFIRA": "Check this",
+        "NAO_INFORMADO": "Not informed",
+        "ABRIR_FICHA_DE": "Open the page of {nome}"
+      },
+      "RENOVACAO": {
+        "TITULO": "Renewal",
+        "FUNIL": "Pipeline {funil} · {etapa} · handled by: {cuida}",
+        "SUBIU": "Went up {count}% compared to last year.",
+        "BAIXOU": "Went down {count}% compared to last year.",
+        "IGUAL": "Same as last year.",
+        "ABRIR": "Open the renewal",
+        "COTAR_AGORA": "Get a quote now",
+        "USA_CONSULTA": "Uses one lookup from your Agger.",
+        "COTANDO": "Getting the quote… this can take a few minutes."
+      },
+      "RODAPE": {
+        "CORRIGIR": "Fix",
+        "MAIS": "More options for this policy",
+        "ANEXAR_OUTRO_PDF": "Attach another PDF",
+        "MARCAR_CANCELADO": "Mark as cancelled",
+        "VOLTAR_A_ATIVO": "Make active again"
+      }
+    },
+    "CORRIGIR": {
+      "TITULO": "Fix the {tipo} policy",
+      "TIPO": "Type of insurance",
+      "SEGURADORA": "Insurer",
+      "OUTRA": "Another one",
+      "OUTRA_SEGURADORA": "Insurer name",
+      "NUMERO": "Policy number",
+      "COMECA": "Starts",
+      "TERMINA": "Ends",
+      "VALOR": "Policy price (R$)",
+      "BEM": "What is insured",
+      "APOIO": "What you fix here stays this way, even if this policy arrives again.",
+      "SALVAR": "Save",
+      "VOLTAR": "Back",
+      "SALVO": "Saved.",
+      "SALVO_CARD_AMANHA": "Saved. The renewal card is created early tomorrow.",
+      "ERRO_AO_SALVAR": "I could not save. Try again.",
+      "FALTA": {
+        "NADA_MUDOU": "You have not changed anything yet. Change what is wrong and save.",
+        "NUMERO": "Type the policy number.",
+        "COMECA": "Choose when the policy starts.",
+        "TERMINA": "Choose when the policy ends.",
+        "TERMINA_ANTES": "The policy ends after it starts. Check both dates.",
+        "VALOR": "Type the policy price in reais.",
+        "OUTRA_SEGURADORA": "Type the insurer name."
+      }
+    },
+    "PDF": {
+      "TITULO": "Attach the PDF of the {tipo} policy",
+      "TITULO_APOLICE_NOVA": "Attach the new policy",
+      "SOLTAR": "Drag the PDF here or click to choose",
+      "CUSTO": "Reading this PDF costs about {valor}.",
+      "USAR_EXEMPLO": "Use a sample PDF",
+      "LENDO": "Reading the PDF…",
+      "NAO_E_APOLICE": "This file is not a policy PDF. Choose another one.",
+      "NAO_LEU": "I could not read this PDF. Try again.",
+      "NAO_GUARDOU": "I could not save the PDF. Try again.",
+      "O_QUE_MUDOU": "What changed",
+      "LEGENDA": "What the PDF says differently",
+      "INFORMACAO": "Information",
+      "ANTES": "Before",
+      "NO_PDF": "In the PDF",
+      "CORRIGIU_A_MAO": "You fixed it by hand. Yours stays.",
+      "USAR_O_DO_PDF": "Use the one in the PDF",
+      "VAI_USAR_O_DO_PDF": "The one in the PDF will stay.",
+      "CONFERE": "The PDF matches what was already here.",
+      "USAR_O_QUE_ESTA_NO_PDF": "Use what is in the PDF",
+      "MANTER": "Keep as it is",
+      "GUARDAR": "Save the PDF",
+      "FECHAR": "Close",
+      "CAMPOS": {
+        "NUMERO": "Policy number",
+        "COMECA": "Starts",
+        "TERMINA": "Ends",
+        "VALOR": "Policy price",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "BEM": "What is insured"
+      }
+    },
+    "HISTORIA": {
+      "TITULO": "History",
+      "EXPORTAR": "Export",
+      "BAIXADO": "File downloaded.",
+      "ERRO": "I could not show the history. Try again.",
+      "VER_PROPOSTA": "See proposal",
+      "MUDOU_DE_PARA": "{item}: {antes} → {depois}",
+      "ARQUIVO": {
+        "DATA": "Date",
+        "HORA": "Time",
+        "O_QUE": "What happened",
+        "QUEM": "Who did it"
+      },
+      "QUEM": {
+        "ROBO": "Renewal robot",
+        "VOCE": "You"
+      },
+      "TIPOS": {
+        "CHEGOU_AGGER": "Arrived from Agger.",
+        "CHEGOU_PLANILHA": "Arrived from the spreadsheet “{arquivo}”.",
+        "CARD_NASCEU": "Renewal card created in the {funil} pipeline, in “{etapa}”.",
+        "RESPONDEU_ALGO_MUDOU": "{nome} answered “Did anything change?”: Nothing changed.",
+        "PROPOSTA_PRONTA": "Proposal ready: {seguradora}, {valor}.",
+        "PROPOSTA_ENVIADA": "Proposal sent",
+        "CLIENTE_RESPONDEU": "{nome} answered: “{texto}”",
+        "ENDOSSO": "Endorsement",
+        "RENOVOU": "Renewed.",
+        "NAO_RENOVOU": "Not renewed: {motivo}.",
+        "CORRIGIDO": "Policy fixed by hand.",
+        "CANCELADO": "Policy marked as cancelled.",
+        "VOLTOU_A_ATIVO": "The policy is active again.",
+        "PDF_ANEXADO": "PDF attached.",
+        "APOLICE_NOVA": "New policy saved. The previous one was no. {anterior}.",
+        "COTACAO_PEDIDA": "Quote requested."
+      },
+      "SUBIU": "Went up {count}%.",
+      "BAIXOU": "Went down {count}%."
+    },
+    "PAINEL": {
+      "TITULO": "Insurance",
+      "VAZIO": "No insurance with you.",
+      "ERRO": "I could not show the policies. Try again.",
+      "VER_NA_FICHA": "See on the person's page",
+      "GUARDAR_DE_FORA": "Save a policy from another broker",
+      "ABRINDO_GUARDAR_DE_FORA": "Opening the step to save a policy from another broker"
+    }
+  }
+}

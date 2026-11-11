@@ -51,6 +51,7 @@ const quandoFalou = computed(() => {
         <SeloDeEstado v-if="empresa.customers_count > 0" tom="cliente">
           {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
         </SeloDeEstado>
+        <slot name="selos" />
       </div>
       <SegundaLinha :partes="[pessoasDaEmpresa, quandoFalou]" />
     </div>

@@ -10,11 +10,21 @@ const PRIMEIRA_PAGINA = 1;
 // Trocar grupo, aba, busca, ordem ou filtro volta para a página 1 e chama
 // `aoMudarConsulta` (a tela usa para desmarcar quem estava marcado). Resposta
 // de pedido antigo nunca sobrescreve a de um pedido mais novo.
-export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
-  const grupo = ref(GRUPO_PADRAO[aba.value]);
+// #2897 — a aba Seguros usa o mesmo estado, com o grupo, a ordem e os filtros
+// dela (`grupoPadrao`, `ordemPadrao`, `filtrosVazios`, `contar`).
+export const useLista = ({
+  fonte,
+  aba,
+  aoMudarConsulta = () => {},
+  grupoPadrao = nome => GRUPO_PADRAO[nome],
+  ordemPadrao = ORDENS.ULTIMA_CONVERSA,
+  filtrosVazios = FILTROS_VAZIOS,
+  contar = contarFiltros,
+}) => {
+  const grupo = ref(grupoPadrao(aba.value));
   const busca = ref('');
-  const ordem = ref(ORDENS.ULTIMA_CONVERSA);
-  const filtros = ref({ ...FILTROS_VAZIOS });
+  const ordem = ref(ordemPadrao);
+  const filtros = ref({ ...filtrosVazios });
   const pagina = ref(PRIMEIRA_PAGINA);
   const itens = ref([]);
   const total = ref(0);
@@ -34,7 +44,7 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     filtros: filtros.value,
   });
 
-  const filtrosAtivos = computed(() => contarFiltros(filtros.value));
+  const filtrosAtivos = computed(() => contar(filtros.value));
 
   const terminar = (numero, aMais) => {
     if (numero !== pedidoAtual) return;
@@ -119,8 +129,8 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
   };
 
   watch(aba, nova => {
-    grupo.value = GRUPO_PADRAO[nova];
-    filtros.value = { ...FILTROS_VAZIOS };
+    grupo.value = grupoPadrao(nova);
+    filtros.value = { ...filtrosVazios };
     recomecarRecontando();
   });
 
@@ -144,11 +154,11 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     mudarBusca: texto => mudar(busca, texto, true),
     mudarOrdem: nova => mudar(ordem, nova),
     mudarFiltros: novos => {
-      filtros.value = { ...FILTROS_VAZIOS, ...novos };
+      filtros.value = { ...filtrosVazios, ...novos };
       return recomecarRecontando();
     },
     limparFiltros: () => {
-      filtros.value = { ...FILTROS_VAZIOS };
+      filtros.value = { ...filtrosVazios };
       return recomecarRecontando();
     },
     mostrarMais: () =>

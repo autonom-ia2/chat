@@ -1,0 +1,363 @@
+{
+  "RELACIONAMENTOS_CARTEIRA": {
+    "ABA": "Seguros",
+    "TITULO": "Seguros",
+    "TIPOS": {
+      "AUTO": "Auto",
+      "RESIDENCIAL": "Residencial",
+      "VIDA": "Vida",
+      "EMPRESARIAL": "Empresarial",
+      "OUTRO": "Outro"
+    },
+    "SELOS": {
+      "ATIVO": "Ativo",
+      "EM_RENOVACAO": "Em renovação",
+      "RENOVADO": "Renovado",
+      "VENCIDO": "Vencido",
+      "CANCELADO": "Cancelado",
+      "PARCELA_ATRASADA": "Parcela atrasada",
+      "EM_OUTRA_CORRETORA": "Em outra corretora"
+    },
+    "MOTIVOS": {
+      "ACHOU_CARO": "achou caro",
+      "OUTRA_CORRETORA": "foi para outra corretora",
+      "VENDEU_O_BEM": "vendeu o bem",
+      "NAO_RESPONDEU": "não respondeu",
+      "CANCELOU": "cancelou o seguro"
+    },
+    "HEROI": {
+      "SEM_SEGURO": "Traga os seguros da sua carteira.",
+      "SEM_SEGURO_APOIO": "Eles aparecem aqui e na ficha de cada pessoa.",
+      "VENCE_7": "{count} seguro vence nos próximos 7 dias. | {count} seguros vencem nos próximos 7 dias.",
+      "TODOS_EM_RENOVACAO": "Já está em renovação. | Todos já estão em renovação.",
+      "EM_RENOVACAO": "{count} seguro está em renovação. | {count} seguros estão em renovação.",
+      "RESUMO": "Você tem {count} seguro. Nenhum vence nos próximos 90 dias. | Você tem {count} seguros. Nenhum vence nos próximos 90 dias.",
+      "TRAZER_MEUS_SEGUROS": "Trazer meus seguros",
+      "TRAZER_SEGUROS": "Trazer seguros",
+      "VER_QUAIS": "Ver quais",
+      "VER_TODOS": "Ver todos"
+    },
+    "GRUPOS": {
+      "ROTULO": "Grupos de seguros",
+      "TODOS": {
+        "NOME": "Todos"
+      },
+      "VENCE_7_DIAS": {
+        "NOME": "Vence em até 7 dias",
+        "EXPLICACAO": "Seguros que terminam nesta semana."
+      },
+      "VENCE_30_DIAS": {
+        "NOME": "Vence em até 30 dias",
+        "EXPLICACAO": "Seguros que terminam no próximo mês."
+      },
+      "VENCE_90_DIAS": {
+        "NOME": "Vence em até 90 dias",
+        "EXPLICACAO": "Seguros que terminam nos próximos três meses."
+      },
+      "EM_RENOVACAO": {
+        "NOME": "Em renovação",
+        "EXPLICACAO": "Já têm card de renovação andando."
+      },
+      "VENCIDO": {
+        "NOME": "Vencido",
+        "EXPLICACAO": "Terminaram e não foram renovados."
+      },
+      "SEM_TELEFONE": {
+        "NOME": "Sem telefone",
+        "EXPLICACAO": "A pessoa está sem telefone. A mensagem da renovação não chega."
+      },
+      "PARCELA_ATRASADA": {
+        "NOME": "Parcela atrasada",
+        "EXPLICACAO": "Tem parcela em aberto. Avise antes de o seguro cair."
+      },
+      "SO_UM_SEGURO": {
+        "NOME": "Só tem um seguro",
+        "EXPLICACAO": "Clientes com um seguro só. Boa hora para oferecer outro."
+      }
+    },
+    "LISTA": {
+      "BUSCA": "Buscar por nome, documento, placa ou número da apólice",
+      "BUSCA_CURTA": "Buscar seguro",
+      "BUSCA_DE_PESSOAS": "Buscar por nome, telefone, documento ou placa",
+      "ORDENAR": {
+        "ROTULO": "Ordenar",
+        "VENCE_PRIMEIRO": "Vence primeiro",
+        "NOME": "Nome",
+        "MAIS_NOVOS": "Mais novos"
+      },
+      "FILTROS": {
+        "BOTAO": "Mais filtros",
+        "BOTAO_COM_CONTAGEM": "Mais filtros · {count}",
+        "TITULO": "Mais filtros",
+        "TIPO": "Tipo de seguro",
+        "SEGURADORA": "Seguradora",
+        "CUIDA": "Quem cuida",
+        "TODOS": "Todos",
+        "TODAS": "Todas",
+        "QUALQUER_PESSOA": "Qualquer pessoa",
+        "VER_RESULTADO": "Ver resultado",
+        "LIMPAR": "Limpar",
+        "SEM_RESULTADO": "Nenhum seguro com esses filtros.",
+        "LIMPAR_FILTROS": "Limpar filtros"
+      },
+      "RESULTADOS": "Resultados",
+      "AJUSTAR": "Ajustar renovações",
+      "MAIS": "Mais opções da carteira",
+      "ABRINDO_RESULTADOS": "Abrindo os resultados das renovações",
+      "ABRINDO_AJUSTES": "Abrindo os ajustes das renovações",
+      "ABRINDO_TRAZER": "Abrindo o passo de trazer seguros",
+      "MARCAR": "Marcar o seguro {tipo} de {nome}",
+      "ABRIR": "Abrir o seguro {tipo} de {nome}",
+      "SEM_TELEFONE": "Sem telefone",
+      "CONVERSAR": "Conversar",
+      "CONVERSAR_COM": "Conversar com {nome}",
+      "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}",
+      "GRUPO_VAZIO": "Nenhum seguro neste grupo agora.",
+      "BUSCA_SEM_RESULTADO": "Não achei nenhum seguro com “{busca}”.",
+      "LIMPAR_BUSCA": "Limpar busca",
+      "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
+      "MARCADOS": "{count} marcado | {count} marcados",
+      "MARCAR_TODOS": "Marcar todos os {count} deste grupo",
+      "DESMARCAR": "Desmarcar todos",
+      "MANDAR_MENSAGEM": "Mandar mensagem",
+      "BARRA": "O que fazer com os seguros que você marcou"
+    },
+    "QUANDO": {
+      "LISTA": {
+        "VENCE_EM": "vence em {count} dias ({data})",
+        "VENCE_AMANHA": "vence amanhã ({data})",
+        "VENCE_HOJE": "vence hoje",
+        "VENCEU_HA": "venceu há {count} dias",
+        "VENCEU_ONTEM": "venceu ontem",
+        "CANCELADO_EM": "cancelado em {data}",
+        "RENOVOU_EM": "renovou em {data} · falta a apólice nova",
+        "EM_OUTRA_CORRETORA": "está em outra corretora"
+      },
+      "FICHA": {
+        "VENCE_EM": "Vence em {count} dias · {data}",
+        "VENCE_AMANHA": "Vence amanhã · {data}",
+        "VENCE_HOJE": "Vence hoje",
+        "VENCEU_HA": "Venceu há {count} dias",
+        "VENCEU_ONTEM": "Venceu ontem",
+        "CANCELADO_EM": "Cancelado em {data}",
+        "RENOVOU_EM": "Renovou em {data} · falta a apólice nova",
+        "EM_OUTRA_CORRETORA": "Está em outra corretora"
+      },
+      "PAINEL": {
+        "VENCE_EM": "vence em {count} dias",
+        "VENCE_AMANHA": "vence amanhã",
+        "VENCE_HOJE": "vence hoje",
+        "VENCEU_HA": "venceu há {count} dias",
+        "VENCEU_ONTEM": "venceu ontem",
+        "CANCELADO_EM": "cancelado em {data}",
+        "RENOVOU_EM": "renovou em {data}",
+        "EM_OUTRA_CORRETORA": "em outra corretora"
+      }
+    },
+    "PESSOAS": {
+      "TIPO_VENCE_EM": "{tipo} vence em {count} dia | {tipo} vence em {count} dias",
+      "TIPO_VENCE_HOJE": "{tipo} vence hoje"
+    },
+    "FICHA": {
+      "TITULO": "Seguros ({count})",
+      "TITULO_DA_EMPRESA": "Seguros da empresa ({count})",
+      "VAZIO": "Nenhum seguro ainda.",
+      "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
+      "SEGURADORA_E_NUMERO": "{seguradora} · nº {numero}",
+      "PDF": "PDF",
+      "VER_PDF_DE": "Ver o PDF do seguro {tipo}",
+      "ANEXAR_PDF": "Anexar PDF",
+      "ANEXAR_PDF_DE": "Anexar o PDF do seguro {tipo}",
+      "ABRIR": "Abrir o seguro {tipo}",
+      "ABRINDO_PDF": "Abrindo o PDF do seguro {tipo}",
+      "LEMBRETE": "Vamos lembrar você em {data}, {dias} dias antes de vencer."
+    },
+    "GAVETA": {
+      "TITULO": "{tipo} · {seguradora}",
+      "CARREGANDO": "Abrindo o seguro",
+      "ERRO": "Não consegui abrir este seguro. Tente de novo.",
+      "NAO_ESTA_MAIS": "Este seguro não está mais aqui.",
+      "VOLTAR_PARA_LISTA": "Voltar para a lista",
+      "FRASE": {
+        "VENCE_EM": "Vence em {count} dias.",
+        "VENCE_AMANHA": "Vence amanhã.",
+        "VENCE_HOJE": "Vence hoje.",
+        "RENOVACAO_EM": "A renovação está em “{etapa}”.",
+        "VALE_ATE": "Vale até {data}.",
+        "SEM_PDF": "Ainda não tem o PDF.",
+        "PARCELA": "A parcela de {data} está em aberto. Avise antes de o seguro cair.",
+        "RENOVOU_EM": "Renovou em {data}. Falta a apólice nova.",
+        "VENCEU_HA": "Venceu há {count} dias e não foi renovado.",
+        "VENCEU_ONTEM": "Venceu ontem e não foi renovado.",
+        "VENCEU_HOJE": "Venceu hoje e não foi renovado.",
+        "MOTIVO": "Motivo: {motivo}.",
+        "CANCELADO_EM": "Cancelado em {data}."
+      },
+      "ACAO": {
+        "ABRIR_RENOVACAO": "Abrir a renovação",
+        "VER_PDF": "Ver PDF",
+        "ANEXAR_PDF": "Anexar PDF",
+        "AVISAR": "Avisar {nome}",
+        "ANEXAR_APOLICE_NOVA": "Anexar a apólice nova",
+        "CONVERSAR_COM": "Conversar com {nome}"
+      },
+      "AVISOS": {
+        "ABRINDO_RENOVACAO": "Abrindo a renovação do seguro {tipo}",
+        "ABRINDO_PDF": "Abrindo o PDF do seguro {tipo}",
+        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}",
+        "ABRINDO_PROPOSTA": "Abrindo a proposta",
+        "CANCELADO": "Seguro marcado como cancelado.",
+        "VOLTOU_A_ATIVO": "O seguro voltou a ativo.",
+        "DESFEITO": "Desfeito.",
+        "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
+        "APOLICE_NOVA": "Apólice nova guardada.",
+        "PDF_GUARDADO": "PDF guardado.",
+        "DESFAZER": "Desfazer"
+      },
+      "DADOS": {
+        "TITULO": "Dados do seguro",
+        "TIPO": "Tipo de seguro",
+        "SEGURADORA": "Seguradora",
+        "NUMERO": "Número da apólice",
+        "COMECA": "Começa",
+        "TERMINA": "Termina",
+        "VALOR": "Valor do seguro",
+        "VALOR_POR_ANO": "{valor} por ano",
+        "SEGURADO": "Segurado",
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "BEM": "O que está segurado",
+        "ORIGEM": "Veio de",
+        "VEIO_DO_AGGER": "Agger, em {data}",
+        "VEIO_DA_PLANILHA": "Planilha “{arquivo}”, em {data}",
+        "CONFIRA": "Confira",
+        "NAO_INFORMADO": "Não informado",
+        "ABRIR_FICHA_DE": "Abrir a ficha de {nome}"
+      },
+      "RENOVACAO": {
+        "TITULO": "Renovação",
+        "FUNIL": "Funil {funil} · {etapa} · cuida: {cuida}",
+        "SUBIU": "Subiu {count}% em relação ao ano passado.",
+        "BAIXOU": "Baixou {count}% em relação ao ano passado.",
+        "IGUAL": "Ficou igual ao ano passado.",
+        "ABRIR": "Abrir a renovação",
+        "COTAR_AGORA": "Cotar agora",
+        "USA_CONSULTA": "Usa uma consulta do seu Agger.",
+        "COTANDO": "Cotando… pode levar alguns minutos."
+      },
+      "RODAPE": {
+        "CORRIGIR": "Corrigir",
+        "MAIS": "Mais opções deste seguro",
+        "ANEXAR_OUTRO_PDF": "Anexar outro PDF",
+        "MARCAR_CANCELADO": "Marcar como cancelado",
+        "VOLTAR_A_ATIVO": "Voltar a ativo"
+      }
+    },
+    "CORRIGIR": {
+      "TITULO": "Corrigir o seguro {tipo}",
+      "TIPO": "Tipo de seguro",
+      "SEGURADORA": "Seguradora",
+      "OUTRA": "Outra",
+      "OUTRA_SEGURADORA": "Nome da seguradora",
+      "NUMERO": "Número da apólice",
+      "COMECA": "Começa",
+      "TERMINA": "Termina",
+      "VALOR": "Valor do seguro (R$)",
+      "BEM": "O que está segurado",
+      "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo.",
+      "SALVAR": "Salvar",
+      "VOLTAR": "Voltar",
+      "SALVO": "Salvo.",
+      "SALVO_CARD_AMANHA": "Salvo. O card da renovação nasce amanhã cedo.",
+      "ERRO_AO_SALVAR": "Não consegui salvar. Tente de novo.",
+      "FALTA": {
+        "NADA_MUDOU": "Você ainda não mudou nada. Mude o que está errado e salve.",
+        "NUMERO": "Escreva o número da apólice.",
+        "COMECA": "Escolha quando o seguro começa.",
+        "TERMINA": "Escolha quando o seguro termina.",
+        "TERMINA_ANTES": "O seguro termina depois de começar. Confira as duas datas.",
+        "VALOR": "Escreva o valor do seguro em reais.",
+        "OUTRA_SEGURADORA": "Escreva o nome da seguradora."
+      }
+    },
+    "PDF": {
+      "TITULO": "Anexar o PDF do seguro {tipo}",
+      "TITULO_APOLICE_NOVA": "Anexar a apólice nova",
+      "SOLTAR": "Arraste o PDF aqui ou clique para escolher",
+      "CUSTO": "Ler este PDF custa cerca de {valor}.",
+      "USAR_EXEMPLO": "Usar um PDF de exemplo",
+      "LENDO": "Lendo o PDF…",
+      "NAO_E_APOLICE": "Este arquivo não é um PDF de apólice. Escolha outro.",
+      "NAO_LEU": "Não consegui ler este PDF. Tente de novo.",
+      "NAO_GUARDOU": "Não consegui guardar o PDF. Tente de novo.",
+      "O_QUE_MUDOU": "O que mudou",
+      "LEGENDA": "O que o PDF diz de diferente",
+      "INFORMACAO": "Informação",
+      "ANTES": "Antes",
+      "NO_PDF": "No PDF",
+      "CORRIGIU_A_MAO": "Você corrigiu à mão. Fica o seu.",
+      "USAR_O_DO_PDF": "Usar o do PDF",
+      "VAI_USAR_O_DO_PDF": "Vai ficar o do PDF.",
+      "CONFERE": "O PDF confere com o que já estava aqui.",
+      "USAR_O_QUE_ESTA_NO_PDF": "Usar o que está no PDF",
+      "MANTER": "Manter como está",
+      "GUARDAR": "Guardar o PDF",
+      "FECHAR": "Fechar",
+      "CAMPOS": {
+        "NUMERO": "Número da apólice",
+        "COMECA": "Começa",
+        "TERMINA": "Termina",
+        "VALOR": "Valor do seguro",
+        "TIPO": "Tipo de seguro",
+        "SEGURADORA": "Seguradora",
+        "BEM": "O que está segurado"
+      }
+    },
+    "HISTORIA": {
+      "TITULO": "História",
+      "EXPORTAR": "Exportar",
+      "BAIXADO": "Arquivo baixado.",
+      "ERRO": "Não consegui mostrar a história. Tente de novo.",
+      "VER_PROPOSTA": "Ver proposta",
+      "MUDOU_DE_PARA": "{item}: {antes} → {depois}",
+      "ARQUIVO": {
+        "DATA": "Data",
+        "HORA": "Hora",
+        "O_QUE": "O que aconteceu",
+        "QUEM": "Quem fez"
+      },
+      "QUEM": {
+        "ROBO": "Robô de renovação",
+        "VOCE": "Você"
+      },
+      "TIPOS": {
+        "CHEGOU_AGGER": "Chegou do Agger.",
+        "CHEGOU_PLANILHA": "Chegou da planilha “{arquivo}”.",
+        "CARD_NASCEU": "Card de renovação nasceu no funil {funil}, em “{etapa}”.",
+        "RESPONDEU_ALGO_MUDOU": "{nome} respondeu “Algo mudou?”: Nada mudou.",
+        "PROPOSTA_PRONTA": "Proposta pronta: {seguradora}, {valor}.",
+        "PROPOSTA_ENVIADA": "Proposta enviada",
+        "CLIENTE_RESPONDEU": "{nome} respondeu: “{texto}”",
+        "ENDOSSO": "Endosso",
+        "RENOVOU": "Renovou.",
+        "NAO_RENOVOU": "Não renovou: {motivo}.",
+        "CORRIGIDO": "Seguro corrigido à mão.",
+        "CANCELADO": "Seguro marcado como cancelado.",
+        "VOLTOU_A_ATIVO": "O seguro voltou a ativo.",
+        "PDF_ANEXADO": "PDF anexado.",
+        "APOLICE_NOVA": "Apólice nova guardada. A anterior era a nº {anterior}.",
+        "COTACAO_PEDIDA": "Cotação pedida."
+      },
+      "SUBIU": "Subiu {count}%.",
+      "BAIXOU": "Baixou {count}%."
+    },
+    "PAINEL": {
+      "TITULO": "Seguros",
+      "VAZIO": "Nenhum seguro com você.",
+      "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
+      "VER_NA_FICHA": "Ver na ficha",
+      "GUARDAR_DE_FORA": "Guardar seguro de outra corretora",
+      "ABRINDO_GUARDAR_DE_FORA": "Abrindo o passo de guardar o seguro de outra corretora"
+    }
+  }
+}

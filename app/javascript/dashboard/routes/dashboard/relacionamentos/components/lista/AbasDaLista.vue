@@ -1,36 +1,44 @@
 <script setup>
-import { nextTick, useTemplateRef } from 'vue';
+import { computed, nextTick, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ABAS } from '../../fonte/grupos';
+import { ABA_SEGUROS } from '../../fonte/gruposDeSeguros';
 import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 
 // #2894 — Pessoas · Empresas. Abas de verdade (role="tablist"): setas, Home e
 // End trocam de aba e levam o foco junto; só a aba escolhida entra na ordem do
 // Tab. A escolha mora na URL (quem usa liga o v-model à rota).
+// #2897 — com `comSeguros` (conta de seguros), a terceira aba: Seguros.
 const props = defineProps({
   modelValue: { type: String, required: true },
+  comSeguros: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
 
-const ABAS_NA_ORDEM = [ABAS.PESSOAS, ABAS.EMPRESAS];
+const abasNaOrdem = computed(() => [
+  ABAS.PESSOAS,
+  ABAS.EMPRESAS,
+  ...(props.comSeguros ? [ABA_SEGUROS] : []),
+]);
 const NOMES = {
   [ABAS.PESSOAS]: 'RELACIONAMENTOS.LISTA.ABAS.PESSOAS',
   [ABAS.EMPRESAS]: 'RELACIONAMENTOS.LISTA.ABAS.EMPRESAS',
+  [ABA_SEGUROS]: 'RELACIONAMENTOS_CARTEIRA.ABA',
 };
 const lista = useTemplateRef('lista');
 
 const escolher = async indice => {
-  const aba = ABAS_NA_ORDEM[indice];
+  const aba = abasNaOrdem.value[indice];
   emit('update:modelValue', aba);
   await nextTick();
   lista.value?.querySelector(`#${idDaAba(aba)}`)?.focus();
 };
 
 const aoTeclar = evento => {
-  const atual = ABAS_NA_ORDEM.indexOf(props.modelValue);
-  const ultimo = ABAS_NA_ORDEM.length - 1;
+  const atual = abasNaOrdem.value.indexOf(props.modelValue);
+  const ultimo = abasNaOrdem.value.length - 1;
   const destinos = {
     ArrowRight: atual === ultimo ? 0 : atual + 1,
     ArrowLeft: atual === 0 ? ultimo : atual - 1,
@@ -52,7 +60,7 @@ const aoTeclar = evento => {
     @keydown="aoTeclar"
   >
     <button
-      v-for="aba in ABAS_NA_ORDEM"
+      v-for="aba in abasNaOrdem"
       :id="idDaAba(aba)"
       :key="aba"
       type="button"

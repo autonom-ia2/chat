@@ -17,14 +17,17 @@ const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
+  // #2897 — pedaços a mais no fim da segunda linha (quem usa já traduziu).
+  partesExtras: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['abrir', 'alternar', 'conversar']);
 
 const { t } = useI18n();
 
-const partes = computed(() =>
-  segundaLinhaDaPessoa(props.pessoa, props.agora, t)
-);
+const partes = computed(() => [
+  ...segundaLinhaDaPessoa(props.pessoa, props.agora, t),
+  ...props.partesExtras,
+]);
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
 </script>
@@ -66,6 +69,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
         <SeloDeEstado v-if="ehCliente" tom="cliente">
           {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
         </SeloDeEstado>
+        <slot name="selos" />
         <SeloDeEstado v-if="pessoa.opted_out_at" tom="alerta">
           {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
         </SeloDeEstado>

@@ -20,6 +20,7 @@ import sidebarFork from './sidebarFork.json';
 import telaInicial from './telaInicial.json';
 import relacionamentos from './relacionamentos.json';
 import relacionamentosFicha from './relacionamentosFicha.json';
+import relacionamentosCarteira from './relacionamentosCarteira.json';
 import relacionamentosTrazer from './relacionamentosTrazer.json';
 import seusPosts from './seusPosts.json';
 import metaAdsComentariosIa from './metaAdsComentariosIa.json';
@@ -116,6 +117,7 @@ export default {
   ...telaInicial,
   ...relacionamentos,
   ...relacionamentosFicha,
+  ...relacionamentosCarteira,
   ...relacionamentosTrazer,
   ...seusPosts,
   ...metaAdsComentariosIa,
