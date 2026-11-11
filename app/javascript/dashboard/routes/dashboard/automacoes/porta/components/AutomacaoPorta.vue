@@ -1,11 +1,10 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
 import CartaoDeCatalogo from 'dashboard/components-next/cartao-de-catalogo/CartaoDeCatalogo.vue';
-import AutomacaoHeroi from '../../components/AutomacaoHeroi.vue';
 import ModeloDetalhe from './ModeloDetalhe.vue';
 import { usePorta } from '../usePorta';
+import { useIrAoGuia } from '../useIrAoGuia';
 import {
   GRUPOS,
   camadaDoDestaque,
@@ -14,16 +13,15 @@ import {
   tomDoGrupo,
 } from '../modelos';
 
-// #2889 — a porta de Automações: uma pergunta ("O que você quer que aconteça sozinho?", o pedido vai para o Guia) e
-// os modelos prontos, com os do segmento da conta em destaque. Tocar num modelo abre o detalhe; "Usar este modelo"
-// leva o pedido ao Guia, que pergunta só o que é da conta. Nada liga sem a pessoa mandar.
+// #2889 — os modelos prontos da porta de Automações, com os do segmento da conta em destaque. A pergunta do topo
+// (herói) fica na lista, acima das automações da pessoa; os modelos vêm depois delas. Tocar num modelo abre o
+// detalhe; "Usar este modelo" leva o pedido ao Guia, que pergunta só o que é da conta. Nada liga sem a pessoa mandar.
 defineProps({
   desabilitado: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
-const route = useRoute();
-const router = useRouter();
+const { usarModelo: usar } = useIrAoGuia();
 
 const { camadas } = usePorta();
 
@@ -66,43 +64,16 @@ const tituloDoDestaque = computed(() =>
 const seloDe = modelo =>
   modelo.ia ? { texto: t(`${NS}.USA_IA`), icone: 'i-lucide-sparkles' } : null;
 
-// O pedido vai no estado da navegação, como no herói: só a própria tela pode escrevê-lo.
-const irAoGuia = estado =>
-  router.push({
-    name: 'automacoes_nova',
-    params: { accountId: route.params.accountId },
-    state: estado,
-  });
-
-const pedir = ({ texto, anexos }) =>
-  irAoGuia({
-    ...(texto ? { pedidoAutomacao: texto } : {}),
-    ...(anexos?.length ? { anexosAutomacao: anexos } : {}),
-  });
-
 const aberto = ref(null);
 const detalhe = ref(null);
 const abrir = modelo => {
   aberto.value = modelo;
   detalhe.value?.open();
 };
-const usar = modelo =>
-  irAoGuia({
-    pedidoAutomacao: t(`${NS}.PEDIDO`, {
-      titulo: modelo.titulo,
-      texto: modelo.texto,
-    }),
-  });
 </script>
 
 <template>
   <div data-porta class="flex flex-col gap-8">
-    <AutomacaoHeroi
-      :desabilitado="desabilitado"
-      @pedir="pedir"
-      @falar="irAoGuia({ pedidoPorVoz: true })"
-    />
-
     <section
       data-modelos
       aria-labelledby="modelos-titulo"
@@ -134,7 +105,7 @@ const usar = modelo =>
           class="px-4 text-sm font-medium transition border rounded-full shrink-0 min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
           :class="
             grupo === item.id
-              ? 'bg-n-blue-9 border-n-blue-9 text-white'
+              ? 'bg-n-blue-10 border-n-blue-10 text-white'
               : 'bg-n-slate-2 border-n-slate-6 text-n-slate-12 hover:border-n-blue-6'
           "
           @click="grupo = item.id"

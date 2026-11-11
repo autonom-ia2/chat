@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import AutomacaoPorta from '../components/AutomacaoPorta.vue';
 
-// #2889 — a porta: o pedido e o modelo vão ao Guia pelo estado da navegação, o destaque não se repete no grupo e o
-// filtro por objetivo mostra só o grupo escolhido.
+// #2889 — os modelos da porta: o modelo vai ao Guia pelo estado da navegação, o destaque não se repete no grupo e o
+// filtro por objetivo mostra só o grupo escolhido. A pergunta do topo tem spec própria (useIrAoGuia).
 const { routerPush, camadas } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   camadas: { value: [] },
@@ -29,18 +29,12 @@ const ModeloDetalheStub = {
   methods: { open() {} },
   template: '<div data-detalhe-stub />',
 };
-const HeroiStub = {
-  name: 'AutomacaoHeroi',
-  props: ['desabilitado'],
-  emits: ['pedir', 'falar'],
-  template: '<div data-heroi-stub />',
-};
 
 const montar = () =>
   mount(AutomacaoPorta, {
     global: {
       mocks: { $t: chave => chave },
-      stubs: { ModeloDetalhe: ModeloDetalheStub, AutomacaoHeroi: HeroiStub },
+      stubs: { ModeloDetalhe: ModeloDetalheStub },
     },
   });
 
@@ -85,24 +79,6 @@ describe('AutomacaoPorta', () => {
     expect(
       wrapper.find('[data-grupo="EQUIPE"]').attributes('aria-pressed')
     ).toBe('true');
-  });
-
-  it('o pedido escrito vai ao Guia pelo estado, com os anexos', () => {
-    const wrapper = montar();
-    wrapper
-      .findComponent(HeroiStub)
-      .vm.$emit('pedir', { texto: 'avisar o time', anexos: ['a'] });
-    expect(routerPush).toHaveBeenCalledWith({
-      name: 'automacoes_nova',
-      params: { accountId: 7 },
-      state: { pedidoAutomacao: 'avisar o time', anexosAutomacao: ['a'] },
-    });
-  });
-
-  it('falar abre o Guia já pronto para a voz', () => {
-    const wrapper = montar();
-    wrapper.findComponent(HeroiStub).vm.$emit('falar');
-    expect(routerPush.mock.calls[0][0].state).toEqual({ pedidoPorVoz: true });
   });
 
   it('usar o modelo leva título e texto dele ao Guia', async () => {
