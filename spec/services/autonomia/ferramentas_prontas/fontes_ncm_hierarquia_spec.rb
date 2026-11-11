@@ -32,13 +32,14 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     JSON.parse(fixture(nome))
   end
 
-  def pedidos
-    WebMock::RequestRegistry.instance.requested_signatures.hash.keys.map { |assinatura| assinatura.uri.to_s }
+  # O texto de cada busca feita à fonte, uma vez por busca diferente ("café torrado", "0901").
+  def buscas_feitas
+    WebMock::RequestRegistry.instance.requested_signatures.hash.keys
+                            .map { |assinatura| CGI.unescape(assinatura.uri.query.to_s.delete_prefix('search=')) }
   end
 
-  # O texto de cada busca feita à fonte ("café torrado", "0901").
-  def buscas_feitas
-    pedidos.map { |uri| CGI.unescape(URI(uri).query.to_s.delete_prefix('search=')) }
+  def grupo?(item)
+    ncm.digitos(item['codigo']).length.between?(ncm::POSICAO, ncm::DA_NOTA - 1)
   end
 
   def buscar(busca)
@@ -55,152 +56,88 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     expect(ncm::FONTE.consultas.map { |consulta| consulta.chave_do_cache({}) }).to all(include('versao_do_cache' => ncm::VERSAO_DO_CACHE))
   end
 
-  describe 'buscar' do
-    it '"cafe torrado": o grupo abre nos codigos da nota, com a descricao completa, em uma chamada a mais' do
-      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
-      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
-
-      dados = buscar('café torrado')['dados']
-
-      expect(dados).to eq(
-        'busca' => 'café torrado', 'total' => 2,
-        'itens' => [{ 'codigo' => '0901.21.00', 'descricao' => "#{cafe}, café torrado, não descafeinado", 'vigente_desde' => '2022-04-01' },
-                    { 'codigo' => '0901.22.00', 'descricao' => "#{cafe}, café torrado, descafeinado", 'vigente_desde' => '2022-04-01' }]
-      )
-      expect(pedidos.size).to eq(2)
-    end
-
-    # Revisão do #2917 (5): cada item passa uma vez só pelo Nokogiri (antes eram umas 10 passagens por item).
-    it 'cada item da resposta e lido uma vez so' do
-      allow(Nokogiri::HTML5).to receive(:fragment).and_call_original
-      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
-      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
-
-      buscar('café torrado')
-
-      expect(Nokogiri::HTML5).to have_received(:fragment).exactly(1 + real('ncm_busca_0901.json').size).times
-    end
-
-    # Revisão do #2917 (BAIXO): o item fora do formato na chamada a mais fica de lado, e a consulta segue.
-    it 'item sem descricao valida na chamada a mais nao derruba a consulta' do
-      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
-      fonte_responde("#{api}?search=0901", real('ncm_busca_0901.json') + [{ 'codigo' => '0901.23.00', 'descricao' => '<br>' }])
-
-      dados = buscar('café torrado')['dados']
-
-      expect(dados['itens'].pluck('codigo')).to eq(%w[0901.21.00 0901.22.00])
-    end
-
-    # Revisão do #2917 (2): o capítulo (2 dígitos) nunca abre. "veículos" abria o 86 (ferrovia) e "máquinas" o 85 (980
-    # itens, 206 KB, 2,2 s). Os candidatos a abrir são os grupos de 4 a 7 dígitos.
-    it 'o capitulo nunca abre: "veiculos" e "maquinas" reais' do
-      stub_request(:get, api).with(query: hash_including({})).to_return(body: '[]', headers: { 'Content-Type' => 'application/json' })
-      fonte_responde("#{api}?search=ve%C3%ADculos", fixture('ncm_busca_veiculos.json'))
-      fonte_responde("#{api}?search=m%C3%A1quinas", fixture('ncm_busca_maquinas.json'))
-
-      expect(buscar('veículos')['situacao']).to eq('encontrado')
-      expect(buscar('máquinas')['situacao']).to eq('encontrado')
-      expect(buscas_feitas.select { |termo| termo.length < ncm::POSICAO }).to eq([])
-    end
-
-    # Revisão do #2917 (3): escolher o produto que o cliente quis dizer é do modelo, não de ranking de palavra (regra do
-    # Rodrigo). "celular" empata a marcenaria (44.18, painéis celulares) com os telefones (85.17): nada abre.
-    it '"celular" real: grupos empatados nao abrem, e o modelo e orientado a buscar pelo codigo do grupo' do
-      fonte_responde("#{api}?search=celular", fixture('ncm_busca_celular.json'))
-
-      dados = buscar('celular')['dados']
-
-      expect(dados['observacao']).to eq(ncm::ESCOLHA_O_GRUPO)
-      expect(dados['itens'].pluck('codigo')).to include('44.18', '85.17')
-      expect(buscas_feitas).to eq(['celular'])
-    end
-
-    it '"cafe" real: o grupo de dentro conta como o de fora, e so a posicao 09.01 abre' do
-      fonte_responde("#{api}?search=caf%C3%A9", fixture('ncm_busca_cafe.json'))
-      pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
-
-      dados = buscar('café')['dados']
-
-      codigos = dados['itens'].pluck('codigo')
-      expect(codigos).to include('0901.11.10', '0901.12.00', '0901.21.00', '0901.22.00', '0901.90.00', '21.01')
-      expect(codigos).not_to include('09.01', '0901.1', '0901.2')
-      expect(dados).not_to have_key('observacao')
-      expect(pela_posicao).to have_been_made.once
-    end
-
-    it 'as observacoes cabem inteiras no texto que vai ao modelo, e nenhuma manda buscar um capitulo' do
-      textos = [format(ncm::SEM_OS_DA_NOTA, grupo: '8517.62.6'), ncm::ESCOLHA_O_GRUPO]
-
-      expect(textos.map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
-      expect(ncm::ESCOLHA_O_GRUPO).to include('4 dígitos ou mais')
-    end
-
-    # Revisão do #2917 (1): o texto vai ao modelo com teto (`Resposta::MAX_TEXTO`, 160) e o corte comia o texto do
-    # próprio código: "brinquedos" voltava 20 códigos com 3 descrições. O texto próprio cabe sempre inteiro.
-    it '"brinquedos" real: cada codigo com a sua descricao, inteira no fim, dentro do teto' do
-      fonte_responde("#{api}?search=brinquedos", fixture('ncm_busca_brinquedos.json'))
-      fonte_responde("#{api}?search=9503", fixture('ncm_busca_9503.json'))
-      proprios = (real('ncm_busca_brinquedos.json') + real('ncm_busca_9503.json'))
-                 .to_h { |dado| [dado['codigo'], ncm::Descricao.limpa(ncm.texto(dado['descricao'])).downcase] }
-
-      da_nota = buscar('brinquedos')['dados']['itens'].select { |item| item['codigo'].delete('.').length == 8 }
-
-      expect(da_nota.size).to be > 3
-      expect(da_nota.pluck('descricao').uniq.size).to eq(da_nota.size)
-      expect(da_nota.pluck('descricao').map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
-      expect(da_nota).to all(satisfy { |item| item['descricao'].downcase.end_with?(proprios.fetch(item['codigo'])) })
-    end
-
-    it '"parafuso" continua bom: os parafusos primeiro, com a descricao completa, e a posicao 73.18 aberta' do
-      fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
-      fonte_responde("#{api}?search=7318", fixture('ncm_busca_7318.json'))
-
-      dados = buscar('parafuso')['dados']
-
-      primeiros = dados['itens'].first(4)
-      expect(primeiros.pluck('codigo')).to eq(%w[7318.14.00 7415.33.00 7318.12.00 7318.15.00])
-      expect(primeiros.pluck('descricao')).to eq(
-        ['Parafusos, pinos ou pernos, roscados, porcas … e artigos semelhantes, de ferro fundido, ferro ou aço, artigos roscados, ' \
-         'parafusos autoperfurantes',
-         'Tachas, pregos, percevejos, escápulas (pregos para tacos) e … (incluindo as de pressão), e artigos semelhantes, de cobre, ' \
-         'parafusos; pinos ou pernos e porcas',
-         'Parafusos, pinos ou pernos, roscados, porcas … e artigos semelhantes, de ferro fundido, ferro ou aço, artigos roscados, ' \
-         'outros parafusos para madeira',
-         'Parafusos, pinos ou pernos … de ferro fundido, ferro ou aço, artigos roscados, outros parafusos e pinos ou pernos, mesmo ' \
-         'com as porcas e arruelas (anilhas)']
-      )
-      expect(dados['total']).to eq(20)
-      expect(dados).not_to have_key('mostrando')
-      expect(dados['itens'].pluck('codigo')).not_to include('73.18')
-      expect(dados['itens'].pluck('descricao').join).not_to include(' -', ':')
-      expect(pedidos.size).to eq(2)
-    end
-
-    it 'grupo sem filhos de 8 digitos: fica o grupo, com a descricao limpa' do
-      sem_os_da_nota = real('ncm_busca_0901.json').reject { |dado| dado['codigo'].delete('.').length == 8 }
-      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
-      fonte_responde("#{api}?search=0901", sem_os_da_nota)
-
-      dados = buscar('café torrado')['dados']
-
-      expect(dados).to eq('busca' => 'café torrado', 'total' => 1,
-                          'itens' => [{ 'codigo' => '0901.2', 'descricao' => "#{cafe}, café torrado", 'vigente_desde' => '2022-04-01' }])
-    end
-
-    it 'o prazo acaba antes da segunda chamada: o que veio, com a observacao, e fora do cache' do
-      allow(Autonomia::FerramentasProntas::ClienteHttp).to receive(:agora).and_return(0.0, 0.0, 100.0)
-      fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
+  # Revisão do #2917 (3), regra do Rodrigo ("a IA precisa dar conta"): nenhum ranking nosso escolhe o grupo. A busca
+  # por palavra devolve o que a BrasilAPI trouxe, numa chamada só: os códigos da nota com a descrição completa e os
+  # grupos (4 a 7 dígitos) com a orientação para o modelo buscar pelo código do grupo que fizer sentido na conversa.
+  describe 'buscar por palavra' do
+    it '"cafe torrado" real: o grupo vem com a descricao e a orientacao, sem chamada a mais' do
+      pela_palavra = fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))
 
       dados = buscar('café torrado')['dados']
 
       expect(dados).to eq('busca' => 'café torrado', 'total' => 1,
                           'itens' => [{ 'codigo' => '0901.2', 'descricao' => 'Café torrado', 'vigente_desde' => '2022-04-01' }],
-                          'observacao' => format(ncm::SEM_OS_DA_NOTA, grupo: '0901.2'))
+                          'observacao' => format(ncm::BUSQUE_O_GRUPO, grupo: '0901.2'))
+      expect(pela_palavra).to have_been_made.once
       expect(a_request(:get, "#{api}?search=0901")).not_to have_been_made
-      expect(ncm::BrasilApi.validade_da_resposta(dados)).to eq(0)
     end
 
-    it 'a busca pela propria posicao ja traz os filhos: sem chamada a mais, so os codigos da nota' do
+    it '"celular" real: os dois grupos vem, e quem escolhe e o modelo' do
+      pela_palavra = fonte_responde("#{api}?search=celular", fixture('ncm_busca_celular.json'))
+
+      dados = buscar('celular')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to include('44.18', '85.17', '8517.14', '4418.92.00')
+      expect(dados['observacao']).to eq(format(ncm::BUSQUE_O_GRUPO, grupo: dados['itens'].find { |item| grupo?(item) }['codigo']))
+      expect(pela_palavra).to have_been_made.once
+    end
+
+    # Revisão do #2917 (2): o capítulo (2 dígitos) nunca é oferecido para buscar: a busca pede ao menos 3 letras.
+    it '"veiculos" real: o exemplo da orientacao e um grupo de 4 digitos ou mais, nunca o capitulo' do
+      pela_palavra = fonte_responde("#{api}?search=ve%C3%ADculos", fixture('ncm_busca_veiculos.json'))
+
+      dados = buscar('veículos')['dados']
+
+      exemplo = dados['itens'].find { |item| grupo?(item) }['codigo']
+      expect(dados['observacao']).to eq(format(ncm::BUSQUE_O_GRUPO, grupo: exemplo))
+      expect(ncm.digitos(exemplo).length).to be_between(ncm::POSICAO, ncm::DA_NOTA - 1)
+      expect(pela_palavra).to have_been_made.once
+    end
+
+    it 'sem grupo entre os itens: sem a orientacao' do
+      fonte_responde("#{api}?search=parafuso", real('ncm_busca_parafuso.json').select { |dado| ncm.digitos(dado['codigo']).length == 8 })
+
+      expect(buscar('parafuso')['dados']).not_to have_key('observacao')
+    end
+
+    it 'as observacoes cabem inteiras no texto que vai ao modelo' do
+      textos = [format(ncm::BUSQUE_O_GRUPO, grupo: '8517.62.6')]
+
+      expect(textos.map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
+    end
+
+    it '"parafuso" real: os parafusos primeiro, com o material, numa chamada so' do
+      pela_palavra = fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
+
+      dados = buscar('parafuso')['dados']
+
+      primeiros = dados['itens'].first(3)
+      expect(primeiros.pluck('codigo')).to eq(%w[7318.14.00 7415.33.00 73.18])
+      expect(primeiros.first['descricao']).to include('de ferro fundido, ferro ou aço').and end_with('parafusos autoperfurantes')
+      expect(primeiros.second['descricao']).to include('de cobre').and end_with('parafusos; pinos ou pernos e porcas')
+      expect(dados['itens'].pluck('descricao').join).not_to include(' -', ':')
+      expect(pela_palavra).to have_been_made.once
+    end
+  end
+
+  # O modelo escolheu o grupo: UMA chamada, pela posição dele (a BrasilAPI não acha "9503.00.3", e "0901.2" vem sem o
+  # 09.01, que diz o material), e só os códigos da nota de dentro do grupo.
+  describe 'buscar pelo codigo do grupo' do
+    it '"0901.2": os codigos da nota do grupo, com a descricao completa, numa chamada so pela posicao' do
+      pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      dados = buscar('0901.2')['dados']
+
+      expect(dados).to eq(
+        'busca' => '0901.2', 'total' => 2,
+        'itens' => [{ 'codigo' => '0901.21.00', 'descricao' => "#{cafe}, café torrado, não descafeinado", 'vigente_desde' => '2022-04-01' },
+                    { 'codigo' => '0901.22.00', 'descricao' => "#{cafe}, café torrado, descafeinado", 'vigente_desde' => '2022-04-01' }]
+      )
+      expect(pela_posicao).to have_been_made.once
+      expect(buscas_feitas).to eq(['0901'])
+    end
+
+    it 'a posicao inteira ("0901"): todos os codigos da nota dela' do
       fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
       dados = buscar('0901')['dados']
@@ -209,9 +146,50 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         { 'codigo' => '0901.12.00', 'descricao' => "#{cafe}, café não torrado, descafeinado", 'vigente_desde' => '2022-04-01' },
         { 'codigo' => '0901.90.00', 'descricao' => "#{cafe}, outros", 'vigente_desde' => '2022-04-01' }
       )
-      expect(dados['itens'].pluck('codigo')).to all(satisfy { |codigo| codigo.delete('.').length == 8 })
+      expect(dados['itens'].pluck('codigo')).to all(satisfy { |codigo| ncm.digitos(codigo).length == 8 })
       expect(dados['total']).to eq(6)
-      expect(pedidos.size).to eq(1)
+    end
+
+    # Revisão do #2917 (1): o texto vai ao modelo com teto (`Resposta::MAX_TEXTO`, 160) e o corte comia o texto do
+    # próprio código: "brinquedos" voltava 20 códigos com 3 descrições. O texto próprio cabe sempre inteiro.
+    it '"9503.00" real: cada codigo com a sua descricao, inteira no fim, dentro do teto' do
+      fonte_responde("#{api}?search=9503", fixture('ncm_busca_9503.json'))
+      proprios = real('ncm_busca_9503.json').to_h { |dado| [dado['codigo'], ncm::Descricao.limpa(ncm.texto(dado['descricao'])).downcase] }
+
+      da_nota = buscar('9503.00')['dados']['itens']
+
+      expect(da_nota.size).to eq(15)
+      expect(da_nota.pluck('descricao').uniq.size).to eq(da_nota.size)
+      expect(da_nota.pluck('descricao').map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
+      expect(da_nota).to all(satisfy { |item| item['descricao'].downcase.end_with?(proprios.fetch(item['codigo'])) })
+    end
+
+    it '"brinquedos" real e depois o grupo 9503.00.3: as duas chamadas que o modelo faz' do
+      fonte_responde("#{api}?search=brinquedos", fixture('ncm_busca_brinquedos.json'))
+      fonte_responde("#{api}?search=9503", fixture('ncm_busca_9503.json'))
+
+      pela_palavra = buscar('brinquedos')['dados']
+      expect(pela_palavra['itens'].select { |item| grupo?(item) }.pluck('codigo')).to contain_exactly('9503.00', '9503.00.3')
+      expect(pela_palavra['observacao']).to eq(format(ncm::BUSQUE_O_GRUPO, grupo: pela_palavra['itens'].find { |item| grupo?(item) }['codigo']))
+      expect(buscar('9503.00.3')['dados']['itens'].pluck('codigo')).to eq(%w[9503.00.31 9503.00.39])
+      expect(buscas_feitas).to eq(%w[brinquedos 9503])
+    end
+
+    it 'grupo que nao existe: nao encontrado' do
+      fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
+
+      expect(buscar('0901.5')['situacao']).to eq('nao_encontrado')
+    end
+
+    # Revisão do #2917 (5 e BAIXO): cada item passa uma vez só pelo Nokogiri, e o item fora do formato fica de lado.
+    it 'cada item e lido uma vez so, e o item sem descricao valida nao derruba a busca' do
+      allow(Nokogiri::HTML5).to receive(:fragment).and_call_original
+      fonte_responde("#{api}?search=0901", real('ncm_busca_0901.json') + [{ 'codigo' => '0901.23.00', 'descricao' => '<br>' }])
+
+      dados = buscar('0901.2')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[0901.21.00 0901.22.00])
+      expect(Nokogiri::HTML5).to have_received(:fragment).exactly(real('ncm_busca_0901.json').size + 1).times
     end
   end
 
@@ -257,7 +235,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         'qualquer proporção.'
       )
       expect(codigo('09')['dados']['descricao']).to eq('Café, chá, mate e especiarias.')
-      expect(pedidos.size).to eq(2)
+      expect(a_request(:get, "#{api}/0901")).to have_been_made.once
+      expect(a_request(:get, "#{api}/09")).to have_been_made.once
     end
   end
 

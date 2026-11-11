@@ -9,9 +9,12 @@
 #   - a busca vai à fonte (é ela que procura): pede ao menos MIN_BUSCA letras, e a resposta tem teto de 1 MB (a palavra
 #     "outros" devolve 600 KB; uma busca mais vaga passa do teto e vira "não consegui").
 #   - a fonte acha o GRUPO e não o código da nota (teste em produção, 11/11/2026: "café torrado" devolve só
-#     "0901.2 | - Café torrado:"). O grupo mais relevante (menos de 8 dígitos) abre nos códigos de 8 dígitos dele, com
-#     uma chamada a mais pela posição ("search=0901"), dentro do mesmo prazo. Cada código vai com a descrição completa
-#     (`Descricao`: "Café torrado, não descafeinado"). Sem tempo para a chamada a mais: o que veio, com a observação.
+#     "0901.2 | - Café torrado:"). A busca por palavra devolve o que a fonte trouxe, numa chamada só: os códigos da
+#     nota e os grupos (4 a 7 dígitos), com a orientação para o modelo buscar pelo código do grupo. Nenhum ranking
+#     nosso escolhe o grupo: quem escolhe é o modelo, pelo sentido da conversa (regra do Rodrigo, revisão do #2917).
+#   - a busca pelo código de um grupo ("0901.2") é uma chamada pela posição dele ("search=0901"), que traz os níveis
+#     de cima (o material); vão os códigos da nota de dentro do grupo. Cada código vai com a descrição completa
+#     (`Descricao`: "Café, mesmo torrado …, café torrado, não descafeinado").
 # Termos: BrasilAPI pede uso com "natureza de uma pessoa real". A tabela muda por resolução da Camex: cache de 7 dias.
 module Autonomia::FerramentasProntas::Fontes::Ncm
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -74,12 +77,16 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     fim.empty? || fim == SEM_FIM || fim >= Time.zone.today.iso8601
   end
 
-  # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
-  # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois). No mesmo grupo, o
-  # código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2).
-  def lista(busca, niveis, indice = Descricao.indice(niveis))
+  # A busca por palavra. A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela,
+  # "parafuso" mostrava primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois).
+  # No mesmo grupo, o código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2). Com grupo entre os
+  # itens, a orientação para buscar pelo código dele, com o primeiro de exemplo.
+  def lista(busca, niveis)
+    indice = Descricao.indice(niveis)
     itens = em_ordem(busca, niveis, indice).map(&:first)
-    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    resposta = { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    grupo = resposta['itens'].find { |item| Nivel.grupo?(digitos(item['codigo'])) }
+    grupo ? resposta.merge('observacao' => format(BUSQUE_O_GRUPO, grupo: grupo['codigo'])) : resposta
   end
 
   # -> [[item, nivel], ...] na ordem de relevância, pelo texto do próprio nível: a descrição completa começa pela
@@ -91,37 +98,22 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     end
   end
 
-  # O grupo que abre sozinho: o único no melhor nível de relevância, contando o de dentro de outro como o de fora
-  # ("café": 0901.1 e 0901.2 estão dentro de 09.01). Só a posição, a subposição e o item (4 a 7 dígitos): o capítulo
-  # nunca abre ("veículos" abria o 86, a ferrovia). Mais de um no melhor nível ("celular": 44.18, marcenaria, e 85.17,
-  # telefones): escolher o produto que o cliente quis dizer é do modelo, não do ranking de palavra (regra do Rodrigo), e
-  # vem `EMPATE`. nil quando não veio grupo que abra.
-  def grupo_a_abrir(busca, niveis)
-    grupos = niveis.select(&:abre?)
-    return if grupos.empty?
-
-    relevancia = relevancia_dos(grupos, busca, Descricao.indice(niveis))
-    no_topo = grupos.select { |grupo| relevancia[grupo] == relevancia.values.min }
-    de_fora = no_topo.reject { |grupo| no_topo.any? { |outro| dentro?(grupo, outro) } }
-    de_fora.one? ? de_fora.first : EMPATE
+  # A busca é o código de um grupo (ou de um código da nota): só dígitos, pontos e espaços, de 4 a 8 dígitos. -> os
+  # dígitos, ou nil (a busca é por palavra).
+  def grupo_da_busca(busca)
+    numeros = digitos(busca)
+    numeros if busca.delete("#{Parametro::DIGITOS}. ").empty? && numeros.length.between?(POSICAO, DA_NOTA)
   end
 
-  # O grupo de relevância de cada um (`Lista`): o melhor entre a descrição completa e a do próprio nível.
-  def relevancia_dos(grupos, busca, indice)
-    lista = Autonomia::FerramentasProntas::Lista
-    procuradas = lista.palavras(busca)
-    grupos.to_h do |grupo|
-      [grupo, [Descricao.completa(grupo, indice), grupo.propria].map { |texto| lista.grupo(lista.palavras(texto), procuradas) }.min]
-    end
-  end
+  # Os códigos da nota de dentro do grupo, na resposta da posição dele, na ordem do código. Nenhum: não encontrado.
+  def do_grupo(busca, grupo, achados)
+    niveis = validos(achados)
+    indice = Descricao.indice(niveis)
+    da_nota = niveis.select { |nivel| nivel.da_nota? && nivel.digitos.start_with?(grupo) }
+    raise Autonomia::FerramentasProntas::Provedor::NaoEncontrado if da_nota.empty?
 
-  def dentro?(grupo, outro)
-    outro.digitos.length < grupo.digitos.length && grupo.digitos.start_with?(outro.digitos)
-  end
-
-  # A busca sem grupo que abra sozinho: como veio; no empate, com a orientação para o modelo escolher.
-  def sem_abrir(busca, niveis, grupo)
-    grupo == EMPATE ? lista(busca, niveis).merge('observacao' => ESCOLHA_O_GRUPO) : lista(busca, niveis)
+    itens = da_nota.map { |nivel| item(nivel, indice) }
+    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
   end
 
   # O código de 8 dígitos na resposta da posição dele, com a descrição completa. Fora dela: não encontrado.
@@ -137,29 +129,6 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     digitos(codigo).first(POSICAO)
   end
 
-  # O grupo aberto: no lugar dele, os códigos da nota que ele tem (`descendentes`: o que a chamada a mais trouxe), com a
-  # descrição completa. Grupo sem código da nota embaixo: fica o grupo. `descendentes` nil (a chamada a mais não veio a
-  # tempo): a busca como veio, com a observação.
-  def aberta(busca, niveis, grupo, descendentes)
-    return lista(busca, niveis).merge('observacao' => format(SEM_OS_DA_NOTA, grupo: grupo.codigo)) if descendentes.nil?
-
-    de_baixo = validos(descendentes)
-    indice = Descricao.indice(niveis + de_baixo)
-    da_nota = de_baixo.select { |nivel| nivel.da_nota? && nivel.digitos.start_with?(grupo.digitos) }
-    return lista(busca, niveis, indice) if da_nota.empty?
-
-    lista(busca, no_lugar_do_grupo(niveis, grupo, da_nota), indice)
-  end
-
-  # No lugar do grupo, os códigos da nota dele. O que mais era do grupo sai (volta entre os da nota, se for da nota).
-  def no_lugar_do_grupo(niveis, grupo, da_nota)
-    niveis.flat_map do |nivel|
-      next da_nota if nivel.equal?(grupo)
-
-      nivel.digitos.start_with?(grupo.digitos) ? [] : [nivel]
-    end
-  end
-
   def digitos(codigo)
     codigo.to_s.delete("^#{Parametro::DIGITOS}")
   end
@@ -167,8 +136,8 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # A tabela da NCM tem o termo técnico da nomenclatura: "celular" acha a terapia celular (varredura F24). Quem traduz
   # o que o cliente disse é o modelo; a ordem de relevância de sempre vale sobre o que a busca achar.
   DESCRICAO_DA_BUSCA = 'Na consulta buscar: uma palavra da mercadoria no termo da nomenclatura (ex.: parafuso; telefones ' \
-                       'celulares, não celular; máquinas automáticas para processamento de dados, não computador) ou parte ' \
-                       "do código; ao menos #{MIN_BUSCA} letras.".freeze
+                       'celulares, não celular; máquinas automáticas para processamento de dados, não computador) ou o ' \
+                       "código de um grupo (ex.: 0901.2); ao menos #{MIN_BUSCA} letras.".freeze
   BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA,
                         deduza: "mande uma palavra do produto, com ao menos #{MIN_BUSCA} letras (ex.: parafuso).") { |valor| busca(valor) }
   CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).',
@@ -185,16 +154,10 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
                     '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
                     'consulta buscar.'.freeze
 
-  # A resposta incompleta (a chamada a mais não veio a tempo): vai ao modelo com o que veio, e fica fora do cache
-  # (`BrasilApi.validade_da_resposta` procura `NAO_VIERAM`). O grupo que abre tem de 4 a 7 dígitos: a observação nunca
-  # manda buscar um capítulo. Cada texto cabe inteiro no que vai ao modelo (`Resposta::MAX_TEXTO`).
-  NAO_VIERAM = 'não vieram a tempo'.freeze
-  SEM_OS_DA_NOTA = "Os códigos de 8 dígitos do grupo %<grupo>s #{NAO_VIERAM}, e o grupo não vai na nota: faça a consulta " \
-                   'buscar com %<grupo>s.'.freeze
-  # Mais de um grupo no melhor nível de relevância (`grupo_a_abrir`).
-  EMPATE = :empate
-  ESCOLHA_O_GRUPO = 'Mais de um grupo combina com a busca: pergunte ao cliente qual é o produto e faça a consulta buscar ' \
-                    'com o código do grupo dele (4 dígitos ou mais).'.freeze
+  # A orientação da busca por palavra com grupo entre os itens. O grupo tem de 4 a 7 dígitos: nunca manda buscar um
+  # capítulo. Cada texto cabe inteiro no que vai ao modelo (`Resposta::MAX_TEXTO`).
+  BUSQUE_O_GRUPO = 'Código com menos de 8 dígitos é grupo e não vai na nota. Para ver os da nota, faça a consulta buscar ' \
+                   'com o código do grupo (ex.: %<grupo>s).'.freeze
 
   # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
   def self.do_codigo(item, codigo)

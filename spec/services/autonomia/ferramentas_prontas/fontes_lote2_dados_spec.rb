@@ -45,8 +45,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         tipo_ato: 'Res Camex', numero_ato: '000272', ano_ato: '2021' }
     end
     let(:vencido) { vigente.merge(codigo: '7318.15.90', data_fim: '2021-12-31') }
-    # A posição (73.18): a chamada a mais da busca e a única do código de 8 dígitos. Aqui sem os níveis de cima, para a
-    # descrição ficar a do próprio nível.
+    # A posição (73.18): a única chamada do código de 8 dígitos. Aqui sem os níveis de cima, para a descrição ficar a do
+    # próprio nível.
     let(:posicao) { 'https://brasilapi.com.br/api/ncm/v1?search=7318' }
 
     it '"Qual a NCM de parafuso de aco?": os codigos vigentes, com o texto da busca codificado na URL' do
@@ -66,7 +66,6 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       outros = (1..20).map { |n| item.call(format('34.%02d', n), "Preparações antiaderentes de porcas e parafusos #{n}") }
       fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
                      outros + [item.call('73.18', 'Parafusos, pinos ou pernos')])
-      fonte_responde(posicao, [])
 
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
@@ -82,13 +81,12 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                      [item.call('73', 'Parafusos de ferro'), item.call('73.18', 'Parafusos, pinos ou pernos'),
                       item.call('7318.14.00', '-- Parafusos autoperfurantes'), item.call('34.03', 'Preparações de porcas e parafusos'),
                       item.call('7318.15.00', '-- Outros parafusos e pinos')])
-      # O capítulo (73) nunca abre: abre a posição 73.18, pela busca da posição (revisão do #2917).
-      pela_posicao = fonte_responde(posicao, [])
 
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
       expect(dados['itens'].pluck('codigo')).to eq(%w[7318.14.00 73.18 73 7318.15.00 34.03])
-      expect(pela_posicao).to have_been_made.once
+      # Nenhum grupo abre sozinho (revisão do #2917): quem escolhe é o modelo.
+      expect(a_request(:get, posicao)).not_to have_been_made
     end
 
     it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do
