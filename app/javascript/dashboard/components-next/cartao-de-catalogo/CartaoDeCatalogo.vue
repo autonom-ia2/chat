@@ -1,12 +1,11 @@
 <script setup>
 import { classeDoTom } from './tons';
 // #2889 — o cartão de um item de catálogo (modelo de automação, e no futuro a ferramenta pronta da vitrine #2858):
-// ícone num quadrado com o tom do grupo, título, um apoio opcional, a frase do que faz e um selo. O cartão inteiro é o
+// ícone num quadrado com o tom do grupo, título, a frase do que faz e um selo. O cartão inteiro é o
 // botão que abre o detalhe. Recebe o texto pronto, sem depender do caminho do i18n, para servir a qualquer catálogo.
 defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
-  apoio: { type: String, default: '' },
   icone: { type: String, required: true },
   tom: { type: String, default: 'azul' },
   // { texto, icone } ou null.
@@ -36,9 +35,6 @@ const emit = defineEmits(['abrir']);
       <span class="flex flex-col min-w-0 gap-0.5">
         <span class="text-base font-semibold leading-snug text-n-slate-12">
           {{ titulo }}
-        </span>
-        <span v-if="apoio" class="text-xs text-n-slate-11">
-          {{ apoio }}
         </span>
       </span>
     </span>

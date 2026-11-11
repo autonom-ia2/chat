@@ -230,10 +230,11 @@ const voltar = () =>
     params: { accountId: accountId.value },
   });
 
-// #2889: com a porta ligada, o modo manual é o editor da Automação livre, e não a tela antiga do Chatwoot.
+// #2889: com a porta ligada, a automação nova no modo manual é montada no editor da Automação livre. A regra antiga
+// já aberta (regraId) segue para a tela de hoje, onde é editada; senão salvar viraria outra automação.
 const { ligada: portaLigada } = usePorta();
 const modoManual = () =>
-  portaLigada.value
+  portaLigada.value && !regraId.value
     ? router.push({
         name: 'automacoes_livre_nova',
         params: { accountId: accountId.value },

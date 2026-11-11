@@ -6,7 +6,13 @@ import CartaoDeCatalogo from 'dashboard/components-next/cartao-de-catalogo/Carta
 import AutomacaoHeroi from '../../components/AutomacaoHeroi.vue';
 import ModeloDetalhe from './ModeloDetalhe.vue';
 import { usePorta } from '../usePorta';
-import { GRUPOS, emDestaque, modelosDaConta, tomDoGrupo } from '../modelos';
+import {
+  GRUPOS,
+  camadaDoDestaque,
+  emDestaque,
+  modelosDaConta,
+  tomDoGrupo,
+} from '../modelos';
 
 // #2889 — a porta de Automações: uma pergunta ("O que você quer que aconteça sozinho?", o pedido vai para o Guia) e
 // os modelos prontos, com os do segmento da conta em destaque. Tocar num modelo abre o detalhe; "Usar este modelo"
@@ -52,7 +58,9 @@ const visiveis = computed(() =>
     .filter(item => item.modelos.length)
 );
 const tituloDoDestaque = computed(() =>
-  camadas.value.length ? t(`${NS}.DESTAQUE_RAMO`) : t(`${NS}.DESTAQUE_GERAL`)
+  camadaDoDestaque(camadas.value)
+    ? t(`${NS}.DESTAQUE_RAMO`)
+    : t(`${NS}.DESTAQUE_GERAL`)
 );
 
 const seloDe = modelo =>
@@ -66,11 +74,11 @@ const irAoGuia = estado =>
     state: estado,
   });
 
-const pedir = ({ texto, anexos }) => {
-  let estado = texto ? { pedidoAutomacao: texto } : {};
-  if (anexos?.length) estado = { ...estado, anexosAutomacao: anexos };
-  irAoGuia(estado);
-};
+const pedir = ({ texto, anexos }) =>
+  irAoGuia({
+    ...(texto ? { pedidoAutomacao: texto } : {}),
+    ...(anexos?.length ? { anexosAutomacao: anexos } : {}),
+  });
 
 const aberto = ref(null);
 const detalhe = ref(null);

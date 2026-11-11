@@ -1341,9 +1341,10 @@
 # Automações abre com "O que você quer que aconteça sozinho?" (o pedido vai para o Guia) e os 20 modelos prontos, com
 # os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); "Nova
 # automação" leva ao Guia, e "Montar do zero" fica como segunda opção. Desligada: a lista de hoje, sem mudança. Sem
-# migration. Rollback: desligar a flag na conta. Posição 44 na feature_flags_ext_2 (bit 1 << 43), reservada pela
-# Orquestração em 11/11 depois da 42 e da 43 (F5 e F7 da vitrine #2858). A posição vale pela ordem neste arquivo: se
-# este bloco entrar antes da F5 e da F7, cai na 42. O bit que vale é o que a Orquestração confirmar na hora do OK.
+# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: nesta branch, sobre a main
+# de 11/11 (41 flags na ext_2), cai na 42 (bit 1 << 41). A Orquestração reservou a 44 (1 << 43) para ela, depois da F5
+# e da F7 da vitrine #2858 (42 e 43), que ainda não entraram; quem entrar antes fica com o número menor. O bit que vale
+# é o que a Orquestração confirmar na hora do OK; nenhum spec ou SQL cita o número.
 - name: automacao_porta
   display_name: Automação › porta única e modelos por segmento
   enabled: false

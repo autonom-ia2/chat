@@ -177,9 +177,12 @@ export const modeloNaConta = (modelo, camadas = []) =>
 export const modelosDaConta = (camadas = []) =>
   MODELOS.map(modelo => modeloNaConta(modelo, camadas));
 
+// A camada do segmento que tem destaque próprio, ou null (vale o geral).
+export const camadaDoDestaque = (camadas = []) =>
+  [...camadas].reverse().find(nome => DESTAQUE[nome]) || null;
+
 export const emDestaque = (modelos, camadas = []) => {
-  const camada = [...camadas].reverse().find(nome => DESTAQUE[nome]);
-  const ids = DESTAQUE[camada] || DESTAQUE.geral;
+  const ids = DESTAQUE[camadaDoDestaque(camadas)] || DESTAQUE.geral;
   return ids
     .map(id => modelos.find(modelo => modelo.id === id))
     .filter(Boolean);
