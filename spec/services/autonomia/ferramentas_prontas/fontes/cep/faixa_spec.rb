@@ -30,6 +30,12 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Faixa do
     expect(described_class.cobre?('lado ímpar', '10')).to be(false)
   end
 
+  # Revisor (lote 3): o lado com um trecho que não é faixa dizia "cobre" para qualquer número daquele lado.
+  it 'o lado com um trecho que não é faixa: nil, não true' do
+    expect(described_class.cobre?('2766 Anexo 2770 - lado par', '10')).to be_nil
+    expect(described_class.cobre?('2766 Anexo 2770 - lado par', '11')).to be(false)
+  end
+
   it 'sem faixa, texto que não é faixa ou número que não é número: nil (não dá para dizer)' do
     expect(described_class.cobre?('', '10')).to be_nil
     expect(described_class.cobre?(nil, '10')).to be_nil

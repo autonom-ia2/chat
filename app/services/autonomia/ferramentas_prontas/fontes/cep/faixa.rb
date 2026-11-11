@@ -23,7 +23,8 @@ module Autonomia::FerramentasProntas::Fontes::Cep::Faixa
     return false unless lado_confere?(lado, alvo)
 
     minimo, maximo = limites(trecho)
-    return lado ? true : nil if minimo.nil?
+    # Só o lado ('lado par') é a rua inteira daquele lado; um trecho que não é faixa ('2766 Anexo 2770 - lado par') não diz.
+    return lado && trecho.nil? ? true : nil if minimo.nil?
 
     alvo.between?(minimo, maximo)
   end
