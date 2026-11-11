@@ -96,4 +96,15 @@ describe('catálogo da vitrine', () => {
     const exemplo = ferramentaPorId('feriados').exemplo(new Date(2026, 10, 10));
     expect(exemplo).toBe('30/11/2026');
   });
+
+  // Em inglês, "01/12/2026" se lê 12 de janeiro: o mês vai por extenso.
+  it('in English the business days example spells the month out', () => {
+    const feriados = ferramentaPorId('feriados');
+    expect(feriados.exemplo(new Date(2026, 10, 10), 'en')).toBe(
+      'November 30, 2026'
+    );
+    expect(feriados.exemplo(new Date(2026, 10, 10), 'pt_BR')).toBe(
+      '30/11/2026'
+    );
+  });
 });

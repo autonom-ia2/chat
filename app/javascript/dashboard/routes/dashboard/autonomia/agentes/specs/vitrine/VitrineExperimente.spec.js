@@ -102,6 +102,13 @@ describe('VitrineExperimente', () => {
     expect(campo(produtos).element.value).toBe('seguro cyber da Allianz');
   });
 
+  // #2858 (C26) — o CNPJ de exemplo é fictício e a SUSEP não o acha: o exemplo é a busca pelo nome, que acha.
+  it('the broker box asks for the name first, with an example the registry finds', () => {
+    const corretor = montar('corretor_susep');
+    expect(rotulo(corretor)).toBe('Nome, CPF ou CNPJ do corretor');
+    expect(campo(corretor).element.value).toBe('corretora de seguros');
+  });
+
   it('no notice when there was a single option', async () => {
     experimentar.mockResolvedValue({
       situacao: 'encontrado',
@@ -119,9 +126,9 @@ describe('VitrineExperimente', () => {
     const { locale } = wrapper.vm.$i18n;
     wrapper.vm.$i18n.locale = 'en';
     await flushPromises();
-    expect(
-      campo(wrapper).element.value.startsWith('business days until ')
-    ).toBe(true);
+    expect(campo(wrapper).element.value).toBe(
+      `business days until ${ferramentaPorId('feriados').exemplo(new Date(), 'en')}`
+    );
     await campo(wrapper).setValue('20/11');
     wrapper.vm.$i18n.locale = locale;
     await flushPromises();

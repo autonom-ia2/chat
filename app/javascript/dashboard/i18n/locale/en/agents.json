@@ -3467,8 +3467,8 @@
           "CLIENTE": "Is the broker who called me for real?",
           "AGENTE": "I checked SUSEP: they are active, registered, and can sell life and property insurance.",
           "USE_QUANDO": "Use when the customer wants to know whether a broker or brokerage is licensed to sell insurance.",
-          "ROTULO": "CPF, CNPJ or name",
-          "EXEMPLO": "11.222.333/0001-81",
+          "ROTULO": "Broker's name, CPF or CNPJ",
+          "EXEMPLO": "corretora de seguros",
           "CONSULTAS": "by CPF or CNPJ, by name"
         }
       },

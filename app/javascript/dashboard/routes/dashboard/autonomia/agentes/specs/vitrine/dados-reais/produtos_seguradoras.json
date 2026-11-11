@@ -35,9 +35,7 @@
           "produtos": [
             {
               "nome": "Responsabilidade Civil de Riscos Cibernéticos",
-              "coberturas": [
-                "RC perante terceiros"
-              ],
+              "coberturas": ["RC perante terceiros"],
               "condicoes": "https://www.allianz.com.br/seguros/veja-outros-seguros/responsabilidade-civil/riscos-ciberneticos.html"
             }
           ]

@@ -1,16 +1,19 @@
 # O Boletim Focus no serviço Olinda do Banco Central: a mediana mais recente da expectativa do mercado para o ano atual e
-# o seguinte (base de cálculo 0, a dos últimos 30 dias).
+# o seguinte (base de cálculo 0, a dos últimos 30 dias). A unidade da mediana vai em `unidades` (campo -> unidade).
 class Autonomia::FerramentasProntas::Fontes::BancoCentral::Focus < Autonomia::FerramentasProntas::Provedor
   NOME = 'focus'.freeze
   HOST = 'olinda.bcb.gov.br'.freeze
   LINHAS = 6
 
   def consultar(_consulta, params)
-    nome = Autonomia::FerramentasProntas::Fontes::BancoCentral::INDICADORES.fetch(params.fetch('indicador'))
+    banco_central = Autonomia::FerramentasProntas::Fontes::BancoCentral
+    indicador = params.fetch('indicador')
+    nome = banco_central::INDICADORES.fetch(indicador)
     ano = Time.zone.today.year
     linhas = lista!(objeto!(get(caminho(nome, ano)))['value']).map { |item| objeto!(item) }
     anos = [ano, ano + 1].filter_map { |referencia| mais_recente(linhas, referencia) }
-    { 'indicador' => "Focus: #{nome}", 'expectativas' => exigir!(anos) }
+    { 'indicador' => "Focus: #{nome}", 'unidades' => { 'mediana' => banco_central::UNIDADES_DO_FOCUS.fetch(indicador) },
+      'expectativas' => exigir!(anos) }
   end
 
   private

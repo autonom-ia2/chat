@@ -97,9 +97,11 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       valor('banco_central', 'ipca', 'Acumulado em 12 meses')
     ).toBeDefined();
     expect(valor('banco_central', 'dolar', 'Venda')).toContain('R$');
+    // A unidade da mediana vem em `unidades` (C02): sem ela, "5,2195" sem o "%".
     expect(
       valor('banco_central', 'focus', 'Previsão do mercado (mediana)')
-    ).toBeDefined();
+    ).toBe('5,2195 %');
+    expect(valor('banco_central', 'focus', 'Primeiro da lista')).toBe('2026');
     expect(valor('cidades', 'estados', 'Estados')).toContain('Acre');
     expect(valor('cidades', 'cidades', 'Cidades')).toContain('Acrelândia');
     expect(valor('ddd', 'ddd', 'Cidades')).toContain('ARAGUARI');

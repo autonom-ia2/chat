@@ -14,6 +14,8 @@ motivo) ou com o anonimizador dela; fonte fora da lista aborta antes de qualquer
 ```sh
 RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb            # todas
 RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb ncm chuva  # só essas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb banco_central.focus  # uma consulta
+pnpm exec prettier --write app/javascript/dashboard/routes/dashboard/autonomia/agentes/specs/vitrine/dados-reais/*.json
 ```
 
 Fonte nova: ponha os pedidos dela no `CASOS` e a decisão dela no `ANONIMIZACAO`, rode só ela, confira o arquivo e ponha
@@ -61,3 +63,6 @@ Anonimizado pelo script:
 
 O resto é dado público de órgão, empresa pública, seguradora ou tabela oficial; nenhum CPF real e nenhum nome de pessoa
 física.
+
+`banco_central.json` (focus) foi gravado de novo em 11/11/2026, pelo script, depois que a mediana do Focus passou a vir
+com a unidade em `unidades`.

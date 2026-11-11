@@ -43,6 +43,19 @@ const ROTULOS = {
   seguradoras: 'Seguradoras',
   seguradora: 'Seguradora',
   produtos: 'Produtos',
+  indicador: 'Indicador',
+  expectativas: 'Anos com previsão',
+  mediana: 'Previsão do mercado (mediana)',
+  data_do_boletim: 'Boletim de',
+  telefones: 'Telefones',
+  tipo: 'Tipo',
+  ocorrencias: 'Ocorrências',
+  ocorrencias_12_meses: 'Ocorrências em 12 meses',
+  processos: 'Processos',
+  assunto: 'Assunto',
+  obras: 'Obras',
+  veiculos: 'Veículos',
+  variacoes: 'Variações',
 };
 const textos = {
   rotulo: chave => ROTULOS[chave] || '',
@@ -158,7 +171,9 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
-  it('a list of unnamed items opens the first one and counts them', () => {
+  // #2858 F7 — lista sem nome com mais de um item: o primeiro sob "Primeiro da lista", identificado pelo primeiro campo
+  // identificador que houver (o ano do preço do carro); a lista mostra os identificadores, não só quantos são.
+  it('a list without a name field is identified by its first identifier field', () => {
     expect(
       linhasDoResultado(
         {
@@ -170,10 +185,127 @@ describe('linhasDoResultado', () => {
         textos
       )
     ).toEqual([
+      ['Anos na tabela', '2020 e Zero quilômetro'],
+      ['Primeiro da lista', '2020'],
       ['Valor', 'R$ 60.822,00'],
       ['Modelo', 'ONIX LT'],
-      ['Ano', '2020'],
-      ['Anos na tabela', '2'],
+    ]);
+  });
+
+  it('the second phone does not vanish, and the first one is named', () => {
+    expect(
+      linhasDoResultado(
+        {
+          telefones: [
+            { numero: '(11) 1111-1111', tipo: 'celular' },
+            { numero: '(11) 2222-2222', tipo: 'fixo' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Telefones', '(11) 1111-1111 e (11) 2222-2222'],
+      ['Primeiro da lista', '(11) 1111-1111'],
+      ['Tipo', 'celular'],
+    ]);
+  });
+
+  it('a field repeated inside the first item stays under it, not loose next to the total', () => {
+    expect(
+      linhasDoResultado(
+        {
+          ocorrencias_12_meses: 12,
+          ocorrencias: [
+            { tipo: 'Furto', ocorrencias_12_meses: 9 },
+            { tipo: 'Roubo', ocorrencias_12_meses: 3 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ocorrências em 12 meses', '12'],
+      ['Ocorrências', 'Furto e Roubo'],
+      ['Primeiro da lista', 'Furto'],
+      ['Ocorrências em 12 meses', '9'],
+    ]);
+  });
+
+  it('identifiers: works (cno) and vehicles (placa); dates as dates', () => {
+    expect(
+      linhasDoResultado(
+        {
+          obras: [
+            { cno: '90.000.00001/71', endereco: 'RUA A, 1' },
+            { cno: '90.000.00002/72', endereco: 'RUA B, 2' },
+          ],
+          veiculos: [
+            { placa: 'ABC1D23', modelo: 'ONIX' },
+            { placa: 'XYZ9W87' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Obras', '90.000.00001/71 e 90.000.00002/72'],
+      ['Primeiro da lista', '90.000.00001/71'],
+      ['Endereço', 'RUA A, 1'],
+      ['Veículos', 'ABC1D23 e XYZ9W87'],
+      ['Primeiro da lista', 'ABC1D23'],
+      ['Modelo', 'ONIX'],
+    ]);
+  });
+
+  it('without a name or an identifier, a list of many is only counted', () => {
+    expect(
+      linhasDoResultado(
+        {
+          total: 37,
+          processos: [
+            { assunto: 'Cobrança', valor: 'R$ 1,00' },
+            { assunto: 'Despejo', valor: 'R$ 2,00' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Processos', '37']]);
+  });
+
+  // #2858 F7 (C02) — a unidade de um campo dentro do item vem de `unidades` (campo -> unidade), no nível de cima.
+  it('the unit of a field inside the items comes from unidades', () => {
+    expect(
+      linhasDoResultado(
+        {
+          indicador: 'Focus: IPCA',
+          unidades: { mediana: '%' },
+          expectativas: [
+            { ano: 2026, mediana: 5.2195, data_do_boletim: '2026-11-06' },
+            { ano: 2027, mediana: 4.9, data_do_boletim: '2026-11-06' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Indicador', 'Focus: IPCA'],
+      ['Anos com previsão', '2026 e 2027'],
+      ['Primeiro da lista', '2026'],
+      ['Previsão do mercado (mediana)', '5,2195 %'],
+      ['Boletim de', new Date(2026, 10, 6).toLocaleDateString('pt-BR')],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          unidades: { mediana: 'R$' },
+          expectativas: [{ ano: 2026, mediana: 5.4 }],
+        },
+        textos
+      )
+    ).toEqual([['Previsão do mercado (mediana)', 'R$ 5,40']]);
+  });
+
+  // #2858 (C14) — lista de valores simples: número no formato do idioma, e o sinal fica.
+  it('a list of plain numbers keeps the sign and the language format', () => {
+    expect(linhasDoResultado({ variacoes: [-0.5, 1, 2.25] }, textos)).toEqual([
+      ['Variações', '-0,5, 1 e 2,25'],
     ]);
   });
 
@@ -356,15 +488,22 @@ describe('linhasDoResultado', () => {
     ]);
   });
 
-  it('the count of an unnamed list is the total, not just the ones sent', () => {
+  it('the identifiers of a list count by the total, not just the ones sent', () => {
     expect(
       linhasDoResultado(
-        { total: 37, precos: [{ valor: 'R$ 1,00' }, { valor: 'R$ 2,00' }] },
+        {
+          total: 37,
+          precos: [
+            { valor: 'R$ 1,00', ano_modelo: 2020 },
+            { valor: 'R$ 2,00', ano_modelo: 2021 },
+          ],
+        },
         textos
       )
     ).toEqual([
+      ['Anos na tabela', '2020, 2021 e mais 35'],
+      ['Primeiro da lista', '2020'],
       ['Valor', 'R$ 1,00'],
-      ['Anos na tabela', '37'],
     ]);
   });
 
@@ -373,7 +512,7 @@ describe('linhasDoResultado', () => {
     expect(data).toBe(new Date(1966, 8, 28).toLocaleDateString('pt-BR'));
     expect(
       linhasDoResultado(
-        { compra: 5.514, venda: 5.5146, unidade: 'R$', indicador: 'x' },
+        { compra: 5.514, venda: 5.5146, unidade: 'R$', serie: 'x' },
         textos
       )
     ).toEqual([

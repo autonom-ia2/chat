@@ -27,7 +27,9 @@ const base = computed(
 const rotulo = computed(() => t(`${base.value}.ROTULO`));
 const exemplo = () =>
   props.ferramenta.exemplo
-    ? t(`${base.value}.EXEMPLO`, { data: props.ferramenta.exemplo(new Date()) })
+    ? t(`${base.value}.EXEMPLO`, {
+        data: props.ferramenta.exemplo(new Date(), locale.value),
+      })
     : t(`${base.value}.EXEMPLO`);
 
 const valor = ref(props.ferramenta.semCampo ? '' : exemplo());
