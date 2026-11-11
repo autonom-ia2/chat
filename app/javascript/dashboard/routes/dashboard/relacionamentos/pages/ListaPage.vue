@@ -15,6 +15,7 @@ import DialogoApagar from '../components/lista/DialogoApagar.vue';
 import DialogoCriarCards from '../components/lista/DialogoCriarCards.vue';
 import DialogoEtiqueta from '../components/lista/DialogoEtiqueta.vue';
 import DialogoMandarMensagem from '../components/lista/DialogoMandarMensagem.vue';
+import EstadoSemAcesso from '../components/lista/EstadoSemAcesso.vue';
 import EstadoSemResultado from '../components/lista/EstadoSemResultado.vue';
 import LinhasDeExemplo from '../components/lista/LinhasDeExemplo.vue';
 import GavetaDeFiltros from '../components/lista/GavetaDeFiltros.vue';
@@ -28,6 +29,7 @@ import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
@@ -38,7 +40,8 @@ import { useMarcados } from '../lista/useMarcados';
 
 // #2894 — a lista de Relacionamentos: herói com a frase do dia, abas
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
-// filtros", a lista com ações em grupo e os estados (vazio, carregando, erro).
+// filtros", a lista com ações em grupo e os estados (vazio, carregando, erro,
+// sem acesso).
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
 // e as escritas só simulam. Fora da demonstração a lista lê do servidor e as
 // ações em grupo escrevem nele.
@@ -157,6 +160,13 @@ const semResultado = computed(() => {
   }
   return { frase: t(`${estados}.GRUPO_VAZIO${sufixo}`), botao: '', acao: null };
 });
+// Quem não pode ver lê só isto, sem "tentar de novo" e sem busca, grupos ou
+// filtros agindo sobre nada.
+const fraseSemAcesso = computed(() =>
+  ehEmpresas.value
+    ? t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO_EMPRESAS')
+    : t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO')
+);
 // Região viva única e permanente: o leitor de tela só anuncia o que muda dentro
 // de uma região que já estava na página, não a que nasce junto com o texto.
 const avisoDaLista = computed(() =>
@@ -202,8 +212,12 @@ const abrirFiltros = async () => {
   gavetaAberta.value = true;
   try {
     opcoesDeFiltro.value = await listaFonte({ demo }).opcoesDeFiltro();
-  } catch {
-    useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'));
+  } catch (falha) {
+    useAlert(
+      ehSemAcesso(falha)
+        ? fraseSemAcesso.value
+        : t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')
+    );
   }
 };
 const aplicarFiltros = novos => {
@@ -243,8 +257,12 @@ onMounted(lista.iniciar);
           {{ avisoDaLista }}
         </p>
 
+        <EstadoSemAcesso
+          v-if="lista.semAcesso.value && !lista.resumo.value"
+          :frase="fraseSemAcesso"
+        />
         <ErroComTentarDeNovo
-          v-if="lista.erro.value && !lista.resumo.value"
+          v-else-if="lista.erro.value && !lista.resumo.value"
           :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
           data-relacionamentos="erro"
           @tentar="lista.recarregar"
@@ -275,7 +293,7 @@ onMounted(lista.iniciar);
               :aria-labelledby="temEmpresas ? idDaAba(aba) : undefined"
               class="flex flex-col min-w-0 gap-5"
             >
-              <div class="flex flex-col">
+              <div v-if="!lista.semAcesso.value" class="flex flex-col">
                 <PilulasDeGrupo
                   :grupos="grupos"
                   :model-value="lista.grupo.value"
@@ -291,6 +309,7 @@ onMounted(lista.iniciar);
                 </p>
               </div>
               <BarraDeControles
+                v-if="!lista.semAcesso.value"
                 :busca="lista.busca.value"
                 :ordem="lista.ordem.value"
                 :filtros-ativos="lista.filtrosAtivos.value"
@@ -301,8 +320,12 @@ onMounted(lista.iniciar);
                 @update:ordem="lista.mudarOrdem"
                 @abrir-filtros="abrirFiltros"
               />
+              <EstadoSemAcesso
+                v-if="lista.semAcesso.value"
+                :frase="fraseSemAcesso"
+              />
               <ErroComTentarDeNovo
-                v-if="lista.erro.value"
+                v-else-if="lista.erro.value"
                 :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
                 data-relacionamentos="erro"
                 @tentar="lista.recarregar"

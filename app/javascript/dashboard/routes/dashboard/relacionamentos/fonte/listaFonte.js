@@ -8,14 +8,16 @@ import {
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { normalizado, soDigitos } from './texto';
 import { DEMO_CARREGANDO, esperarParaSempre } from './modoDemo';
+import { SEM_ACESSO } from '../lista/falhas';
 import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
 // autonomia/prospecting/achar/utils/acharFonte.js). A tela recebe sempre o mesmo
 // formato, venha de onde vier:
 //   1. fonte real: as leituras do servidor (dashboard/api/relacionamentos.js).
-//      Erro do servidor (422, 403, 500) sobe como veio: a tela mostra o erro
-//      com "tentar de novo";
+//      Erro do servidor (422, 500) sobe como veio: a tela mostra o erro com
+//      "tentar de novo". Quem não pode ver (401, 403) recebe a falha de nome
+//      `SEM_ACESSO`: a tela diz que a pessoa não tem acesso, sem o botão;
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/base.js) e nada é gravado.
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e a
@@ -267,33 +269,57 @@ const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
     ].filter(([, valor]) => preenchido(valor))
   );
 
+// O servidor responde 401 quando a permissão de ver recusa (e sem sessão) e
+// 403 quando Empresas está desligada na conta: nos dois a pessoa não pode ver.
+const STATUS_SEM_ACESSO = [401, 403];
+
+const erroSemAcesso = causa =>
+  Object.assign(new Error('Sem acesso a Relacionamentos.', { cause: causa }), {
+    name: SEM_ACESSO,
+  });
+
+// Toda leitura do servidor passa por aqui: a recusa por falta de acesso ganha
+// nome; qualquer outro erro sobe como veio.
+const doServidor = async pedido => {
+  try {
+    return (await pedido).data;
+  } catch (falha) {
+    throw STATUS_SEM_ACESSO.includes(falha?.response?.status)
+      ? erroSemAcesso(falha)
+      : falha;
+  }
+};
+
 const fonteReal = () => ({
   usaDemo: false,
   async resumo() {
-    return (await RelacionamentosAPI.resumo()).data;
+    return doServidor(RelacionamentosAPI.resumo());
   },
   async contagens(aba, { busca, filtros } = {}) {
     const params = paramsDoPedido({ aba, busca, filtros });
-    const resposta = await (aba === ABAS.EMPRESAS
-      ? RelacionamentosAPI.contagensDeEmpresas(params)
-      : RelacionamentosAPI.contagensDePessoas(params));
-    return resposta.data;
+    return doServidor(
+      aba === ABAS.EMPRESAS
+        ? RelacionamentosAPI.contagensDeEmpresas(params)
+        : RelacionamentosAPI.contagensDePessoas(params)
+    );
   },
   async listar(pedido = {}) {
     const params = paramsDoPedido(pedido);
-    const { data } = await (pedido.aba === ABAS.EMPRESAS
-      ? RelacionamentosAPI.empresas(params)
-      : RelacionamentosAPI.pessoas(params));
+    const data = await doServidor(
+      pedido.aba === ABAS.EMPRESAS
+        ? RelacionamentosAPI.empresas(params)
+        : RelacionamentosAPI.pessoas(params)
+    );
     return { itens: data.itens, total: data.total, temMais: data.tem_mais };
   },
   // "Marcar todas as N" só existe em Pessoas. De cada uma vem só o que as ações
   // em grupo leem: id, nome, telefone, bloqueio e se pediu para não receber.
   async listarTodos(pedido = {}) {
     const params = paramsDoPedido({ ...pedido, pagina: undefined });
-    return (await RelacionamentosAPI.todasAsPessoas(params)).data;
+    return doServidor(RelacionamentosAPI.todasAsPessoas(params));
   },
   async opcoesDeFiltro() {
-    return (await RelacionamentosAPI.opcoesDeFiltro()).data;
+    return doServidor(RelacionamentosAPI.opcoesDeFiltro());
   },
 });
 

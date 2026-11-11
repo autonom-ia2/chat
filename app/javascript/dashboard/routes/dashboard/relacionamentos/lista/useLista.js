@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue';
 import { GRUPO_PADRAO } from '../fonte/grupos';
 import { ORDENS } from '../fonte/listaFonte';
+import { ehSemAcesso } from './falhas';
 import { FILTROS_VAZIOS, contarFiltros } from './filtros';
 
 const PRIMEIRA_PAGINA = 1;
@@ -12,7 +13,9 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // `aoMudarConsulta` (a tela usa para desmarcar quem estava marcado). Resposta
 // de pedido antigo nunca sobrescreve a de um pedido mais novo. Resumo, contagens
 // e lista são leituras separadas: cada uma guarda o próprio erro, e a que
-// respondeu não apaga o erro da que falhou.
+// respondeu não apaga o erro da que falhou. Basta uma delas ser recusada por
+// falta de acesso para `semAcesso` ligar: a tela mostra um estado só, sem
+// "tentar de novo".
 export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
   const grupo = ref(GRUPO_PADRAO[aba.value]);
   const busca = ref('');
@@ -29,6 +32,9 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
   const erros = ref(SEM_ERRO);
   const erro = computed(
     () => erros.value.resumo || erros.value.contagens || erros.value.lista
+  );
+  const semAcesso = computed(() =>
+    Object.values(erros.value).some(ehSemAcesso)
   );
   const guardarErro = (leitura, falha) => {
     erros.value = { ...erros.value, [leitura]: falha };
@@ -149,6 +155,7 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     carregando,
     carregandoMais,
     erro,
+    semAcesso,
     filtrosAtivos,
     iniciar: recarregar,
     recarregar,

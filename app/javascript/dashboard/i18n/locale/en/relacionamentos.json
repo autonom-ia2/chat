@@ -139,6 +139,8 @@
       },
       "ESTADOS": {
         "CONTA_VAZIA": "No one is here yet.",
+        "SEM_ACESSO": "You don't have access to these people. Ask the account admin.",
+        "SEM_ACESSO_EMPRESAS": "You don't have access to these companies. Ask the account admin.",
         "GRUPO_VAZIO": "No one in this group right now.",
         "GRUPO_VAZIO_EMPRESAS": "No company in this group right now.",
         "BUSCA_SEM_RESULTADO": "I couldn't find anyone matching “{busca}”.",
