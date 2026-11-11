@@ -2,7 +2,8 @@
 # telemetria (`Registro`). Não cobra nada: a fatura do mês sai da telemetria (decisão do Rodrigo, 10/11).
 #
 #   - conta: a que a BigDataCorp respondeu (encontrado ou sem registro), fora do cache;
-#   - não conta: a falha (fonte lenta, 504, rede, token) e a que veio do cache;
+#   - não conta: a falha (fonte lenta, 504, rede, token) e a que veio do cache. A falha com o pedido já no ar
+#     (`custo_possivel`) leva o custo do dataset, sem contar nem cobrar: a telemetria bate com o painel da BigDataCorp;
 #   - a contada recebe a posição no card da conta no mês (`Saldo.contar!`): até 20, grátis; da 21ª do mês em diante,
 #     cobrada pelo preço do dataset. As 20 grátis renovam todo mês (decisão do Rodrigo, 11/11). Um card não mexe no
 #     contador do outro.
@@ -14,14 +15,15 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
   module_function
 
   # `resultado`: encontrado | sem_registro | falha. Roda no fuso da conta (a `Execucao`). -> o `Registro` gravado.
-  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil) # rubocop:disable Metrics/ParameterLists
+  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil, custo_possivel: false) # rubocop:disable Metrics/ParameterLists
     contada = !do_cache && resultado != 'falha'
     hoje = Time.zone.today
     ActiveRecord::Base.transaction(requires_new: true) do
       numero = contada ? Premium::Saldo.contar!(account_id: tool.account_id, fonte: fonte.chave, mes: hoje.beginning_of_month) : nil
       Premium::Registro.create!(
         **origem(tool, fonte, consulta, hoje), resultado: resultado, do_cache: do_cache, numero: numero, motivo: motivo,
-                                               id_na_fonte: id_na_fonte, tool_run_id: tool_run_id, **valores(consulta.dataset, resultado, numero)
+                                               id_na_fonte: id_na_fonte, tool_run_id: tool_run_id,
+                                               **valores(consulta.dataset, resultado, numero, custo_possivel: custo_possivel)
       )
     end
   end
@@ -80,10 +82,15 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
       dataset: consulta.dataset.nome, dia: dia }
   end
 
-  def valores(dataset, resultado, numero)
-    return { cobranca: 'sem_cobranca', custo: 0, preco: 0 } if numero.nil?
+  # Sem número (cache ou falha): nada para o cliente; o custo nosso só na falha com o pedido já no ar.
+  def valores(dataset, resultado, numero, custo_possivel: false)
+    return { cobranca: 'sem_cobranca', custo: custo_sem_numero(dataset, resultado, custo_possivel), preco: 0 } if numero.nil?
     return { cobranca: 'gratis', custo: dataset.custo_de(resultado), preco: 0 } if numero <= Premium::GRATIS
 
     { cobranca: 'cobrada', custo: dataset.custo_de(resultado), preco: dataset.preco }
+  end
+
+  def custo_sem_numero(dataset, resultado, custo_possivel)
+    resultado == 'falha' ? dataset.custo_de(resultado, custo_possivel: custo_possivel) : 0
   end
 end

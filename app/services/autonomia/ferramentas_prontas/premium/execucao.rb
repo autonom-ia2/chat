@@ -48,7 +48,7 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     @provedor = Premium::BigDataCorp::NOME
     @chamou = true
     leitura = Premium::BigDataCorp.new(nil, prazo: @consulta.prazo_por_fonte).ler(@consulta.dataset, @consulta.para_a_fonte(params))
-    cobrar(leitura.situacao, motivo: leitura.motivo, id_na_fonte: leitura.id_na_fonte)
+    cobrar(leitura.situacao, motivo: leitura.motivo, id_na_fonte: leitura.id_na_fonte, custo_possivel: leitura.custo_possivel?)
     responder(leitura, params)
   end
 

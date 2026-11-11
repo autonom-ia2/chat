@@ -34,9 +34,20 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
     end
     Autonomia::FerramentasProntas::Premium::Leitura.de(dataset, resposta.payload, id_na_fonte: resposta.metadata[:provider_request_id])
   rescue Cliente::Error => e
-    falha(self.class.motivo_do_erro(e))
+    falha(self.class.motivo_do_erro(e), custo_possivel: self.class.pedido_saiu?(e))
   rescue Timeout::Error
-    falha('tempo_esgotado')
+    # O teto da chamada inteira: o token tem prazo próprio e curto (`PRAZO_DO_TOKEN`, que levanta antes como
+    # `Cliente::Error` da fase do token), então quando este teto estoura a consulta já estava no ar.
+    falha('tempo_esgotado', custo_possivel: true)
+  end
+
+  # O pedido da consulta saiu e a BigDataCorp pode ter cobrado? A entrega incerta (a rede caiu com o pedido no ar, ou
+  # 200 sem JSON) e o tempo esgotado esperando a resposta. A conexão que nem abriu (`Net::OpenTimeout`, a causa do erro
+  # do cliente) não saiu; o erro de token, de configuração e o HTTP de erro também não cobram.
+  def self.pedido_saiu?(erro)
+    return true if erro.code == 'BIGDATACORP_DELIVERY_UNKNOWN'
+
+    erro.code == 'BIGDATACORP_TIMEOUT' && !erro.cause.is_a?(Net::OpenTimeout)
   end
 
   # O código fechado do cliente -> o motivo curto do contador (`bigdatacorp.http_504`). Nunca a mensagem de fora.
@@ -53,8 +64,8 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
 
   private
 
-  def falha(motivo)
-    Autonomia::FerramentasProntas::Premium::Leitura.falha(motivo)
+  def falha(motivo, custo_possivel: false)
+    Autonomia::FerramentasProntas::Premium::Leitura.falha(motivo, custo_possivel: custo_possivel)
   end
 
   def cliente

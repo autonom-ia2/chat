@@ -6,7 +6,10 @@
 #     documento com o cliente. O documento com dígito errado que NÓS recusamos antes (`Premium::Parametros`) nem chega
 #     aqui: não chama a BigDataCorp e não conta ("A, não conta", Rodrigo, 11/11);
 #   - `falha`: não conta para o cliente. Inclui a fonte lenta (`DATASET IS TOO SLOW`, código -1201), o 504 e toda falha
-#     de rede, token ou status da BigDataCorp.
+#     de rede, token ou status da BigDataCorp. `custo_possivel?`: o pedido já tinha saído e a BigDataCorp pode ter
+#     cobrado (a resposta 200 que não lemos, o tempo esgotado com o pedido no ar, a entrega incerta). A telemetria grava
+#     o custo do dataset sem contar para o cliente, para bater com o painel da BigDataCorp (aceite 11). A fonte lenta e
+#     o 504 continuam sem custo.
 # O `Status` vem por dataset (`{"kyc": [{"Code": 0, "Message": "OK"}]}`): os códigos são os da documentação pública
 # ("Códigos e descrições de status"). A comparação é com o código e a mensagem fixa da BigDataCorp, nunca com texto de
 # pessoa.
@@ -22,15 +25,20 @@ class Autonomia::FerramentasProntas::Premium::Leitura
 
   attr_reader :situacao, :dados, :motivo, :id_na_fonte
 
-  def initialize(situacao:, dados: nil, motivo: nil, id_na_fonte: nil)
+  def initialize(situacao:, dados: nil, motivo: nil, id_na_fonte: nil, custo_possivel: false)
     @situacao = situacao
     @dados = dados
     @motivo = motivo
     @id_na_fonte = id_na_fonte
+    @custo_possivel = custo_possivel
   end
 
-  def self.falha(motivo, id_na_fonte: nil)
-    new(situacao: 'falha', motivo: motivo, id_na_fonte: id_na_fonte)
+  def custo_possivel?
+    @custo_possivel
+  end
+
+  def self.falha(motivo, id_na_fonte: nil, custo_possivel: false)
+    new(situacao: 'falha', motivo: motivo, id_na_fonte: id_na_fonte, custo_possivel: custo_possivel)
   end
 
   def self.de(dataset, payload, id_na_fonte: nil)
@@ -38,7 +46,7 @@ class Autonomia::FerramentasProntas::Premium::Leitura
     return pelo_status if pelo_status
 
     dados = extrair(dataset, payload)
-    return falha('resposta_invalida', id_na_fonte: id_na_fonte) if dados == :invalida
+    return falha('resposta_invalida', id_na_fonte: id_na_fonte, custo_possivel: true) if dados == :invalida
 
     dados.blank? ? new(situacao: 'sem_registro', id_na_fonte: id_na_fonte) : new(situacao: 'encontrado', dados: dados, id_na_fonte: id_na_fonte)
   end

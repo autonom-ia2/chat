@@ -80,4 +80,66 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(saldos.sole.contadas).to eq(1)
     end
   end
+
+  # Aceite 11: a telemetria bate com o painel da BigDataCorp. A falha em que o pedido já saiu pode ter sido cobrada lá:
+  # o custo do dataset fica na linha, sem contar para o cliente (o padrão do `entrega_incerta!`).
+  describe 'o custo da falha depois de o pedido sair' do
+    def falha_registrada
+      registros_premium.sole.tap do |registro|
+        expect(registro).to have_attributes(resultado: 'falha', cobranca: 'sem_cobranca', numero: nil, preco: 0)
+      end
+    end
+
+    it 'a resposta 200 num formato que não lemos: custo do dataset, sem contar' do
+      pgfn_responde('texto solto')
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'resposta_invalida', custo: BigDecimal('0.10'))
+      expect(saldos.count).to eq(0)
+    end
+
+    it 'o tempo esgotado esperando a resposta (o pedido saiu): custo do dataset, sem contar' do
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_raise(Net::ReadTimeout)
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: BigDecimal('0.10'))
+    end
+
+    it 'o teto da chamada inteira (o token já veio, a consulta estava no ar): custo do dataset, sem contar' do
+      pgfn_responde([])
+      allow(Timeout).to receive(:timeout).and_call_original
+      allow(Timeout).to receive(:timeout).with(Autonomia::FerramentasProntas::Premium::Dataset::PRAZO_SOB_DEMANDA).and_raise(Timeout::Error)
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: BigDecimal('0.10'))
+    end
+
+    it 'a entrega incerta (a conexão caiu com o pedido no ar, ou 200 sem JSON): custo do dataset, sem contar' do
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_raise(Errno::ECONNRESET)
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'entrega_incerta', custo: BigDecimal('0.10'))
+    end
+
+    it 'a conexão que nem abriu (o pedido não saiu): sem custo' do
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_raise(Net::OpenTimeout)
+
+      executar_premium(certidoes, pgfn)
+
+      expect(falha_registrada).to have_attributes(motivo: 'tempo_esgotado', custo: 0)
+    end
+
+    it 'DATASET IS TOO SLOW e o 504 continuam sem custo' do
+      pgfn_responde(nil, code: -1201, message: 'DATASET IS TOO SLOW. PLEASE TRY AGAIN IN A FEW MINUTES')
+      executar_premium(certidoes, pgfn)
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return(status: 504, body: '')
+      executar_premium(certidoes, pgfn.merge('cnpj' => '11.444.777/0001-61'))
+
+      expect(registros_premium.map { |registro| [registro.motivo, registro.custo] }).to eq([['fonte_lenta', 0], ['http_504', 0]])
+    end
+  end
 end
