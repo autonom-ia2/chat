@@ -147,9 +147,11 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
       expect(resultado['candidatos'].pluck('bairro').uniq).to eq(['Consolação'])
     end
 
-    it 'Rua Augusta sem o bairro, em bairros diferentes: pede o bairro, mesmo com o número (outra Rua Augusta sem faixa pode ter o 100)' do
+    # Revisor (referencia.rb:96): "Rua Augusta Berta", "Rua Augusta de Jesus" e as outras que o ViaCEP devolve na busca são
+    # outras ruas. Nos possíveis só entra o mesmo logradouro dos certos: com o número, a faixa da Rua Augusta decide.
+    it 'Rua Augusta sem o bairro: sem o número, pede o bairro; com o número, a faixa da própria Rua Augusta decide' do
       expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta')['falta']).to eq('bairro')
-      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', numero: '100')['falta']).to eq('bairro')
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', numero: '100')).to eq('cep' => '01304-000')
     end
 
     it 'Vila Industrial, sem número: o CEP da rua (13035-350) e não o especial do prédio (13035-901)' do
@@ -174,11 +176,17 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
       end
     end
 
-    it 'Rua Augusta, Consolação, nº 1682 (nenhuma faixa da Consolação cobre): pede o bairro, com os candidatos' do
-      resultado = described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '1682')
+    # Revisor (referencia.rb:96): pedir o bairro, com o bairro já dito, era o laço. Nenhuma faixa da Consolação cobre o
+    # 1682; da Rua Augusta inteira, só "de 1682 a 2438 - lado par" (Cerqueira César). O "2766 Anexo 2770" não é faixa e
+    # não vale como rua inteira, e as "Rua Augusta X" são outras ruas.
+    it 'Rua Augusta, Consolação, nº 1682 (nenhuma faixa da Consolação cobre): o único CEP da rua que cobre o número' do
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Consolação', numero: '1682'))
+        .to eq('cep' => '01412-000')
+    end
 
-      expect(resultado['falta']).to eq('bairro')
-      expect(resultado['candidatos']).to be_present
+    it 'o trecho que não é faixa ("2766 Anexo 2770") não vale como a rua inteira: o 2766 fica na faixa par do fim' do
+      expect(described_class.cep(cidade: 'São Paulo', uf: 'SP', rua: 'Rua Augusta', bairro: 'Cerqueira César', numero: '2766'))
+        .to eq('cep' => '01412-100')
     end
 
     it 'com o número dito, nunca pede o número de novo' do
@@ -193,6 +201,18 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes::Cep::Referencia do
 
       expect(resultado).to eq('cep' => '01304-971')
       expect(resultado.to_s).not_to include('01304-001')
+    end
+
+    # Revisor (referencia.rb:96): com o bairro já dito e um só CEP da rua cobrindo o número, esse CEP. Mesmo com outro
+    # trecho do mesmo nome, sem faixa, noutro bairro: pedir o bairro de novo era o laço.
+    it 'bairro já dito e um só CEP da rua cobre o número: esse CEP, sem pedir o bairro de novo' do
+      flores = 'https://viacep.com.br/ws/MG/Uberlandia/Rua%20das%20Flores/json/'
+      trecho = ->(cep, complemento, bairro) { rua(cep, bairro).merge(logradouro: 'Rua das Flores', complemento: complemento) }
+      fonte_responde(flores, [trecho.call('38400-100', 'de 1 a 99', 'Centro'), trecho.call('38400-200', 'de 100 a 199', 'Fundinho'),
+                              trecho.call('38400-300', '', 'Tibery')])
+
+      expect(described_class.cep(cidade: 'Uberlândia', uf: 'MG', rua: 'Rua das Flores', bairro: 'Centro', numero: '150'))
+        .to eq('cep' => '38400-200')
     end
 
     it 'Rua Sete de Setembro sem o bairro, em Sousas e na Vila Industrial: pede o bairro' do

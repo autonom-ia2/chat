@@ -18,8 +18,9 @@
 #       1. o bairro, quando vem, filtra (todas as palavras, sem acento); se esvaziar a lista ("Jardim America" contra
 #          "Jd America"), vale a lista sem ele;
 #       2. o número, quando vem, escolhe pela faixa do `complemento` (`Cep::Faixa`): os que cobrem o número (entre eles,
-#          na mesma rua e no mesmo bairro, o do prédio cujo complemento é o próprio número); senão os sem faixa (a rua
-#          inteira); se nada no bairro dito cobre o número, a rua inteira de novo, pelo número;
+#          na mesma rua e no mesmo bairro, o do prédio cujo complemento é o próprio número); senão os sem complemento (a
+#          rua inteira; o trecho que não é faixa, como "2766 Anexo 2770", não conta); se nada no bairro dito cobre o
+#          número, a rua inteira de novo, pelo número, e com o bairro já dito o único CEP que cobre o número vale;
 #       3. sem número, com todos da mesma rua e do mesmo bairro: o CEP de faixa vale mais que o especial de prédio
 #          (sufixo 900+, `Cep.especial?`), se sobrar um só. Com número e todos da mesma rua e do mesmo bairro (faixas
 #          que se sobrepõem): o primeiro, porque todos cobrem o número.
@@ -82,21 +83,32 @@ module Autonomia::FerramentasProntas::Fontes::Cep::Referencia
     no_bairro = do_bairro(todos, bairro)
     return no_bairro if numero.blank?
 
-    do_numero(no_bairro, numero) || do_numero(todos, numero) || todos
+    do_numero(no_bairro, numero, bairro) || do_numero(todos, numero, bairro) || todos
   end
 
-  # Os CEPs que podem ter o número: os cuja faixa o cobre (`certos`) e os sem faixa (`possiveis`: a rua inteira, ou texto
-  # que não é faixa). Os certos sozinhos só quando os possíveis são da mesma rua e do mesmo bairro (o prédio "189" contra
-  # a Rua Sete de Setembro inteira, na Vila Industrial); com um possível noutro bairro (outra Rua Augusta da cidade), os
-  # dois ficam, e o bairro decide. Nenhum dos dois: nil.
-  def do_numero(ceps, numero)
-    return ceps if ceps.size < 2
-
+  # Os CEPs que podem ter o número: os cuja faixa o cobre (`certos`) e os da rua inteira (`possiveis`: sem complemento).
+  # O trecho com número que não é faixa ("2766 Anexo 2770") não é a rua inteira: não entra (revisor, referencia.rb:96).
+  # Com certos, só entra o possível do mesmo logradouro deles: a busca do ViaCEP por "Rua Augusta" traz também a "Rua
+  # Augusta Berta", que é outra rua. Os certos sozinhos quando os possíveis são da mesma rua e do mesmo bairro (o prédio
+  # "189" contra a Rua Sete de Setembro inteira, na Vila Industrial) ou quando o bairro já foi dito e só um cobre o
+  # número (pedir o bairro de novo era laço); com um possível noutro bairro (outra Rua Augusta da cidade), os dois
+  # ficam, e o bairro decide. Nenhum dos dois: nil.
+  def do_numero(ceps, numero, bairro)
     cobertura = ceps.group_by { |item| Autonomia::FerramentasProntas::Fontes::Cep::Faixa.cobre?(item['complemento'], numero) }
-    pelo_numero(do_predio(cobertura.fetch(true, []), numero), cobertura.fetch(nil, [])).presence
+    certos = do_predio(cobertura.fetch(true, []), numero)
+    pelo_numero(certos, rua_inteira(cobertura.fetch(nil, []), certos), bairro).presence
   end
 
-  def pelo_numero(certos, possiveis)
+  def rua_inteira(sem_faixa, certos)
+    inteiras = sem_faixa.select { |item| item['complemento'].blank? }
+    return inteiras if certos.empty?
+
+    logradouros = certos.map { |item| comparavel(item['logradouro']) }
+    inteiras.select { |item| logradouros.include?(comparavel(item['logradouro'])) }
+  end
+
+  def pelo_numero(certos, possiveis, bairro)
+    return certos if certos.one? && bairro.present?
     return certos if certos.any? && (possiveis.empty? || mesma_rua_e_bairro?(certos + possiveis))
 
     certos + possiveis
