@@ -36,10 +36,10 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural
       Premium::ConsultaPaga.new(
         nome: 'embargo_ibama', descricao: 'se a empresa tem área embargada pelo IBAMA', obrigatorios: [Premium::Parametros::CNPJ],
         dataset: Premium::Dataset.new(nome: 'ondemand_ibama_embargados_company', rota: '/ondemand', resposta: 'OnlineCertificates',
-                                      custo: '0.15', preco: '0.225', busca: ->(params) { "doc{#{params['cnpj']}}" }, extrair: EMBARGO)
+                                      custo: '0.15', preco: '0.23', busca: ->(params) { "doc{#{params['cnpj']}}" }, extrair: EMBARGO)
       )
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). CAR pelo código do recibo; embargo do IBAMA pelo CNPJ.'
   )
 end

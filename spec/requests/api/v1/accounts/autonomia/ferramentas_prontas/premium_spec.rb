@@ -25,9 +25,11 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     response.parsed_body['fontes'].index_by { |fonte| fonte['chave'] }
   end
 
-  it 'mostra os 7 cards com as grátis que restam e os preços; um card não mexe no do outro, nem outra conta' do
-    Autonomia::FerramentasProntas::Premium::Saldo.create!(account: account, fonte: 'certidoes_empresa', contadas: 5)
-    Autonomia::FerramentasProntas::Premium::Saldo.create!(account: outra_conta, fonte: 'raio_x_empresa', contadas: 20)
+  it 'mostra os 7 cards com as grátis que restam no mês e os preços; um card não mexe no do outro, nem outra conta' do
+    saldo_premium!(account, 'certidoes_empresa', 5)
+    saldo_premium!(outra_conta, 'raio_x_empresa', 20)
+    # O mês passado não conta: as 20 grátis renovam todo mês.
+    saldo_premium!(account, 'raio_x_empresa', 20, mes: Autonomia::FerramentasProntas::Premium.mes_da_conta(account).prev_month)
 
     lista = fontes
 
@@ -35,13 +37,13 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     expect(lista['certidoes_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 15, 'precos' => %w[0.06 0.15])
     expect(lista['raio_x_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09 0.12])
     expect(lista['historico_placa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09])
-    expect(lista['imovel_rural']['premium']['precos']).to eq(%w[0.15 0.225])
+    expect(lista['imovel_rural']['premium']['precos']).to eq(%w[0.15 0.23])
     expect(lista['cep']).not_to have_key('premium')
     expect(response.body).not_to include('ondemand', 'bigdatacorp', 'custo')
   end
 
   it 'passadas as 20, restam 0 (nunca negativo)' do
-    Autonomia::FerramentasProntas::Premium::Saldo.create!(account: account, fonte: 'historico_placa', contadas: 27)
+    saldo_premium!(account, 'historico_placa', 27)
 
     expect(fontes['historico_placa']['premium']['restantes']).to eq(0)
   end

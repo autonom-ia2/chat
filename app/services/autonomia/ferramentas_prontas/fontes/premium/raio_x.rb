@@ -72,7 +72,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
       consulta('grupo_economico', 'as empresas do mesmo grupo', 'economic_group_relationships', 'EconomicGroupRelationship', GRUPO),
       consulta('obras', 'obras de construção civil registradas', 'civil_construction_data', 'CivilConstructionData', OBRAS)
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Base própria dela, por CNPJ.'
   )
 end

@@ -60,11 +60,19 @@ class Autonomia::FerramentasProntas::Premium::Leitura
 
     bruto = resultado[dataset.resposta]
     return nil if bruto.blank?
-    return :invalida unless bruto.is_a?(Hash) || bruto.is_a?(Array)
+    raise TypeError, 'dado do dataset não é objeto nem lista' unless bruto.is_a?(Hash) || bruto.is_a?(Array)
 
     dataset.extrair.call(bruto)
-  rescue NoMethodError, TypeError, ArgumentError
+  rescue NoMethodError, TypeError, ArgumentError => e
     # A BigDataCorp mudou o formato: não conta para o cliente, e o motivo fica no contador.
+    avisar_formato(dataset, e)
     :invalida
+  end
+
+  # Ao rastreador e ao log: a classe do erro e o dataset. Nunca o valor consultado nem o dado de lá (a mensagem do erro
+  # original pode citar o dado; ao rastreador vai um erro novo, só com a classe e o dataset).
+  def self.avisar_formato(dataset, erro)
+    Rails.logger.warn("[autonomia][premium] resposta_invalida dataset=#{dataset.nome} erro=#{erro.class}")
+    ChatwootExceptionTracker.new(TypeError.new("premium resposta_invalida dataset=#{dataset.nome} erro=#{erro.class}")).capture_exception
   end
 end

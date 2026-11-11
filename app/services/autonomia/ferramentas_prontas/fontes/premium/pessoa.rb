@@ -47,7 +47,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Pessoa
                                       preco: '0.09', busca: POR_CPF, extrair: CONSELHO)
       )
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Dado pessoal: só conferência, nunca contato nem parentes.'
   )
 end

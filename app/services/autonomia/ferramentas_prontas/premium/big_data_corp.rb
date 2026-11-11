@@ -1,20 +1,41 @@
 # A CHAMADA À BIGDATACORP de uma consulta Premium (#2858, F7). Usa o cliente que a Prospecção já usa
-# (`Prospecting::Research::BigDataCorpClient#query_route`): a mesma credencial da plataforma, o mesmo token e os mesmos
-# erros com código fechado. Credencial, token e o valor consultado nunca vão a log, erro nem resposta.
+# (`Prospecting::Research::BigDataCorpClient#query_route`): a mesma credencial da plataforma e os mesmos erros com
+# código fechado. Credencial, token e o valor consultado nunca vão a log, erro nem resposta.
 #
-# Uma tentativa só (`max_provider_attempts: 1`): repetir um 5xx ou um timeout de consulta paga pode cobrar duas vezes.
-# O prazo é o do dataset. A resposta vira `Leitura` (encontrado, sem registro ou falha com motivo curto).
+# Prazos (a chamada inteira cabe no prazo da consulta, e este no `timeout_seconds` da ferramenta e na folga do
+# `HttpAssincronaJob`):
+#   - uma tentativa de consulta (`max_provider_attempts: 1`): repetir um 5xx ou um timeout de consulta paga pode cobrar
+#     duas vezes;
+#   - uma tentativa de token, com prazo curto (`PRAZO_DO_TOKEN`);
+#   - um teto da chamada inteira, token e consulta somados: o prazo do dataset (`Timeout.timeout`).
+# O token vale para o processo enquanto não vence (`TOKENS`): a consulta seguinte não gera outro. A Prospecção segue
+# com o token por instância do cliente (ela não passa `token_cache`).
+# A resposta vira `Leitura` (encontrado, sem registro ou falha com motivo curto).
 class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::FerramentasProntas::Provedor
   NOME = 'bigdatacorp'.freeze
   HOST = 'plataforma.bigdatacorp.com.br'.freeze
+  PRAZO_DO_TOKEN = 5
   Cliente = Autonomia::Prospecting::Research::BigDataCorpClient
 
-  # -> `Leitura`. Nunca levanta pelo que a BigDataCorp respondeu: falha de rede, de token ou de status vira motivo.
+  TOKENS = Autonomia::FerramentasProntas::Premium::Tokens.new
+
+  def self.esquecer_token!
+    TOKENS.write(nil)
+  end
+
+  # -> `Leitura`. Nunca levanta pelo que a BigDataCorp respondeu: falha de rede, de token, de status ou o teto da
+  # chamada vira motivo. Sem a credencial na plataforma, nem o token guardado é usado: tirar a credencial para tudo.
   def ler(dataset, params)
-    resposta = cliente.query_route(dataset.rota, query: dataset.busca.call(params), datasets: dataset.nome)
+    return falha('nao_configurada') unless Cliente.configured?
+
+    resposta = Timeout.timeout(@prazo) do
+      cliente.query_route(dataset.rota, query: dataset.busca.call(params), datasets: dataset.nome)
+    end
     Autonomia::FerramentasProntas::Premium::Leitura.de(dataset, resposta.payload, id_na_fonte: resposta.metadata[:provider_request_id])
   rescue Cliente::Error => e
-    Autonomia::FerramentasProntas::Premium::Leitura.falha(self.class.motivo_do_erro(e))
+    falha(self.class.motivo_do_erro(e))
+  rescue Timeout::Error
+    falha('tempo_esgotado')
   end
 
   # O código fechado do cliente -> o motivo curto do contador (`bigdatacorp.http_504`). Nunca a mensagem de fora.
@@ -31,7 +52,11 @@ class Autonomia::FerramentasProntas::Premium::BigDataCorp < Autonomia::Ferrament
 
   private
 
+  def falha(motivo)
+    Autonomia::FerramentasProntas::Premium::Leitura.falha(motivo)
+  end
+
   def cliente
-    Cliente.new(timeout: @prazo, max_provider_attempts: 1)
+    Cliente.new(timeout: @prazo, token_timeout: PRAZO_DO_TOKEN, max_provider_attempts: 1, max_token_attempts: 1, token_cache: TOKENS)
   end
 end

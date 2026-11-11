@@ -6,9 +6,11 @@
 #     (`Prospecting::Research::BigDataCorpClient`, mesma credencial `BIGDATACORP_USER`/`BIGDATACORP_PASSWORD`);
 #   - o cache (`Premium::Cache`): por conta e só até o fim do dia — a mesma consulta no mesmo dia não paga de novo, e uma
 #     conta nunca lê o que a outra pagou;
-#   - a cobrança (`Premium::Cobranca`): 20 consultas grátis por card e por conta; da 21ª em diante, registrada como
-#     cobrada, pelo custo × 1,5. Só registra: a fatura é feita a partir da telemetria (`Premium::Registro`);
-#   - o orçamento do mês (`Premium::Orcamento`): alerta à equipe quando o custo passa de 80%.
+#   - a cobrança (`Premium::Cobranca`): 20 consultas grátis por card e por conta A CADA MÊS (renovam no 1º dia, no
+#     fuso da conta); da 21ª do mês em diante, registrada como cobrada, pelo custo × 1,5 arredondado para cima ao
+#     centavo. Só registra: a fatura é feita a partir da telemetria (`Premium::Registro`);
+#   - sem limite diário por conta e card nem alerta de orçamento (decisões do Rodrigo, 11/11): o cache do dia segura a
+#     repetição, e a telemetria mostra o gasto.
 #
 # A flag `agente_ferramentas_prontas_premium` desligada tira os 7 cards da vitrine, do turno e do "Incluir" de uma vez,
 # sem tocar na Cotação nem na Prospecção (elas não leem esta flag). Os cards não entram no Construtor nem no cartão
@@ -16,9 +18,6 @@
 module Autonomia::FerramentasProntas::Premium
   FLAG = 'agente_ferramentas_prontas_premium'.freeze
   GRATIS = 20
-  # Limite diário por conta e por card (o acesso da conta pode ter o seu). Proposta da F7, para aprovação do Rodrigo:
-  # com o card mais caro (vistoria, R$ 0,39), 100 consultas dão no máximo R$ 39 por dia numa conta.
-  LIMITE_DIARIO = 100
 
   module_function
 
@@ -26,9 +25,20 @@ module Autonomia::FerramentasProntas::Premium
     fonte.present? && fonte.premium?
   end
 
-  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam e os preços depois delas.
+  # O dia de hoje no fuso da conta. Sem fuso legível, o da plataforma.
+  def hoje_da_conta(account)
+    fuso = ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
+    Time.current.in_time_zone(fuso).to_date
+  end
+
+  # O 1º dia do mês corrente no fuso da conta: a chave do saldo das grátis.
+  def mes_da_conta(account)
+    hoje_da_conta(account).beginning_of_month
+  end
+
+  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam no mês e os preços depois delas.
   def para_tela(account, fontes)
-    usadas = Saldo.da_conta_por_fonte(account)
+    usadas = Saldo.da_conta_por_fonte(account, mes: mes_da_conta(account))
     fontes.select(&:premium?).to_h do |fonte|
       [fonte.chave, { 'gratis' => GRATIS, 'restantes' => [GRATIS - usadas.fetch(fonte.chave, 0), 0].max,
                       'precos' => fonte.consultas.map { |consulta| consulta.dataset.preco.to_s('F') }.uniq.sort_by(&:to_d) }]

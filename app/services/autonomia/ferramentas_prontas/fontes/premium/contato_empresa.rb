@@ -53,7 +53,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
                                       preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO)
       )
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Só empresa; respeita a lista "não perturbe".'
   )
 end

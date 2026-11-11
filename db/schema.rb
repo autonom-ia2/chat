@@ -887,10 +887,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   create_table "autonomia_ferramentas_premium_saldos", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "fonte", null: false
+    t.date "mes", null: false
     t.integer "contadas", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "fonte"], name: "idx_premium_saldos_conta_fonte", unique: true
+    t.index ["account_id", "fonte", "mes"], name: "idx_premium_saldos_conta_fonte_mes", unique: true
   end
 
   create_table "autonomia_ferramentas_prontas_acessos", force: :cascade do |t|

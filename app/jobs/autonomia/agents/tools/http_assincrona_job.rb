@@ -94,6 +94,8 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     texto = ::Autonomia::FerramentasProntas::Resposta.nao_consegui
     return false unless run.fechar_leitura_perdida!(texto, vencida_antes_de: vencida_antes_de)
 
+    # #2858 (F7): a pronta Premium pode ter sido cobrada pela BigDataCorp; a telemetria ganha a falha `entrega_incerta`.
+    ::Autonomia::FerramentasProntas::Premium::Cobranca.entrega_incerta!(run)
     fechar(run.reload)
   end
 

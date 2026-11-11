@@ -26,7 +26,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Placa
                                       preco: '0.09', busca: ->(params) { "licenseplate{#{params['placa']}}" }, extrair: HISTORICO)
       )
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Base histórica até 07/2021.'
   )
 end

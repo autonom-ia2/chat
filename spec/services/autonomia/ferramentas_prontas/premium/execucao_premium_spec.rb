@@ -1,10 +1,9 @@
 require 'rails_helper'
 
 # #2858 (F7): a consulta Premium do começo ao fim, com a BigDataCorp dublada (zero chamada real). Os termos de aceite
-# da F7 que dá para provar sem produção: 20 grátis por card e por conta, a 21ª cobrada pelo custo × 1,5, o "não havia
-# registro" contado, a fonte lenta e o 504 que não contam, o cache do dia, o limite diário por conta e card, a recusa do
-# contato de pessoa física sem chamar a fonte, o alerta de 80% do orçamento, a flag que corta tudo e a credencial que
-# nunca aparece.
+# da F7 que dá para provar sem produção: 20 grátis por card e por conta a cada mês, a 21ª cobrada pelo custo × 1,5, o
+# "não havia registro" contado, a fonte lenta e o 504 que não contam, o cache do dia, sem limite diário no Premium, a
+# recusa do contato de pessoa física sem chamar a fonte, a flag que corta tudo e a credencial que nunca aparece.
 RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   let(:account) { create(:account) }
   let(:outra_conta) { create(:account) }
@@ -44,8 +43,6 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     cache_em_memoria
     token_da_bigdatacorp
     allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(logs))
-    chave_do_alerta = Autonomia::FerramentasProntas::Premium::Orcamento::CHAVE_DO_ALERTA
-    Redis::Alfred.with { |conn| conn.del("#{chave_do_alerta}:#{Time.zone.today.strftime('%Y-%m')}") }
   end
 
   it 'a primeira consulta do card é grátis e fica na telemetria com conta, card, dataset, custo, preço, resultado e dia' do
@@ -67,7 +64,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   it 'da 21ª em diante a consulta é cobrada pelo custo × 1,5, e um card não mexe no contador do outro' do
     pgfn_responde
     bigdatacorp_responde('/empresas', 'kyc', 'KycData', { 'IsCurrentlySanctioned' => false })
-    saldos.create!(account: account, fonte: 'certidoes_empresa', contadas: 20)
+    saldo_premium!(account, 'certidoes_empresa', 20)
 
     executar_premium(certidoes, pgfn)
     executar_premium(raio_x, 'consulta' => 'sancoes', 'cnpj' => FerramentasPremiumHelper::CNPJ_EXEMPLO)
@@ -78,9 +75,26 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(outra).to have_attributes(fonte: 'raio_x_empresa', numero: 1, cobranca: 'gratis', preco: 0)
   end
 
+  it 'as 20 grátis renovam todo mês: o mês passado cheio não cobra a primeira do mês' do
+    pgfn_responde
+    saldo_premium!(account, 'certidoes_empresa', 35, mes: Autonomia::FerramentasProntas::Premium.mes_da_conta(account).prev_month)
+
+    executar_premium(certidoes, pgfn)
+
+    expect(registros_premium.sole).to have_attributes(numero: 1, cobranca: 'gratis', preco: 0)
+    expect(saldos.order(:mes).pluck(:contadas)).to eq([35, 1])
+  end
+
+  it 'o mês das grátis é o do fuso da conta' do
+    account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' })
+    travel_to(Time.utc(2026, 12, 1, 2, 0, 0)) do
+      expect(Autonomia::FerramentasProntas::Premium.mes_da_conta(account)).to eq(Date.new(2026, 11, 1))
+    end
+  end
+
   it 'a 20ª ainda é grátis' do
     pgfn_responde
-    saldos.create!(account: account, fonte: 'certidoes_empresa', contadas: 19)
+    saldo_premium!(account, 'certidoes_empresa', 19)
 
     executar_premium(certidoes, pgfn)
 
@@ -89,7 +103,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
 
   it 'sem registro: a resposta diz "não havia registro" e a consulta conta' do
     pgfn_responde(nil)
-    saldos.create!(account: account, fonte: 'certidoes_empresa', contadas: 20)
+    saldo_premium!(account, 'certidoes_empresa', 20)
 
     resposta = executar_premium(certidoes, pgfn)
 
@@ -154,21 +168,14 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(registros_premium.last).to have_attributes(do_cache: true, resultado: 'sem_registro', cobranca: 'sem_cobranca')
   end
 
-  it 'o limite diário estourado bloqueia só aquela conta naquele card' do
+  it 'o Premium não tem limite diário: o contador do dia passa de qualquer teto sem recusar' do
     pgfn_responde
-    bigdatacorp_responde('/empresas', 'kyc', 'KycData', { 'IsCurrentlySanctioned' => false })
-    da_outra = incluir_pronta('certidoes_empresa', conta: outra_conta, agente: criar_agente(outra_conta))
     certidoes
-    Autonomia::FerramentasProntas::Acesso.find_by!(account_id: account.id, fonte: 'certidoes_empresa').update!(limite_diario: 1)
+    usos.create!(account: account, fonte: 'certidoes_empresa', dia: Time.zone.today, consultas: 10_000)
 
-    executar_premium(certidoes, pgfn)
-    bloqueada = executar_premium(certidoes, pgfn.merge('cnpj' => '11.444.777/0001-61'))
-
-    expect(bloqueada['situacao']).to eq('nao_consegui_consultar')
-    expect(usos.find_by(account_id: account.id, fonte: 'certidoes_empresa').motivos).to eq('limite_diario' => 1)
-    expect(executar_premium(da_outra, pgfn)['situacao']).to eq('encontrado')
-    expect(executar_premium(raio_x, 'consulta' => 'sancoes', 'cnpj' => FerramentasPremiumHelper::CNPJ_EXEMPLO)['situacao']).to eq('encontrado')
-    expect(registros_premium.where(account_id: account.id, fonte: 'certidoes_empresa').count).to eq(1)
+    expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+    expect(usos.sole).to have_attributes(consultas: 10_001, recusadas: 0)
+    expect(Autonomia::FerramentasProntas::Acesso.sole.limite_do_dia).to be_nil
   end
 
   it 'pedido de contato de pessoa física (um CPF no card de contato) é recusado sem chamar a BigDataCorp' do
@@ -223,24 +230,88 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(registros_premium.last).to have_attributes(resultado: 'falha', motivo: 'http_500')
   end
 
-  describe 'orçamento do mês' do
-    it 'avisa a equipe uma vez quando o custo passa de 80% do orçamento' do
+  it 'não existe mais o alerta de 80% do orçamento (decisão do Rodrigo, 11/11)' do
+    expect(defined?(Autonomia::FerramentasProntas::Premium::Orcamento)).to be_nil
+    expect(defined?(AdministratorNotifications::PremiumMailer)).to be_nil
+  end
+
+  describe 'a telemetria' do
+    it 'conta e registro andam juntos: se o registro falha, o contador volta atrás e a resposta segue' do
       pgfn_responde
-      with_modified_env(Autonomia::FerramentasProntas::Premium::Orcamento::CONFIG => '0,12') do
-        expect { executar_premium(certidoes, pgfn) }
-          .to have_enqueued_mail(AdministratorNotifications::PremiumMailer, :orcamento_do_mes).once
-        expect { executar_premium(certidoes, pgfn.merge('cnpj' => '11.444.777/0001-61')) }
-          .not_to have_enqueued_mail(AdministratorNotifications::PremiumMailer, :orcamento_do_mes)
-      end
-      expect(logs.string).to include('[autonomia][premium] orcamento_80')
+      allow(Autonomia::FerramentasProntas::Premium::Registro).to receive(:create!).and_raise(ActiveRecord::RecordInvalid)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+      expect(saldos.count).to eq(0)
+      expect(logs.string).to include('telemetria premium falhou', 'ActiveRecord::RecordInvalid')
     end
 
-    it 'abaixo de 80%, não avisa; e o padrão vale quando a configuração é inválida' do
+    it 'erro que não é do banco não é tratado como telemetria: sobe como defeito da execução, ao rastreador' do
       pgfn_responde
-      with_modified_env(Autonomia::FerramentasProntas::Premium::Orcamento::CONFIG => 'abc') do
-        expect(Autonomia::FerramentasProntas::Premium::Orcamento.valor).to eq(BigDecimal(500))
-        expect { executar_premium(certidoes, pgfn) }.not_to have_enqueued_mail(AdministratorNotifications::PremiumMailer, :orcamento_do_mes)
-      end
+      allow(Autonomia::FerramentasProntas::Premium::Cobranca).to receive(:registrar!).and_raise(NoMethodError)
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(usos.sole.motivos).to eq('defeito' => 1)
+      expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(NoMethodError), account: account)
+      expect(logs.string).not_to include('telemetria premium falhou')
+    end
+  end
+
+  describe 'a resposta da BigDataCorp fora do formato' do
+    it 'vai ao rastreador e ao log com a classe do erro e o dataset, sem o valor consultado' do
+      pgfn_responde('texto solto')
+      allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+      resposta = executar_premium(certidoes, pgfn)
+
+      expect(resposta['situacao']).to eq('nao_consegui_consultar')
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'resposta_invalida')
+      expect(logs.string).to include('[autonomia][premium] resposta_invalida dataset=ondemand_pgfn_company')
+      expect(logs.string).not_to include(FerramentasPremiumHelper::CNPJ_EXEMPLO, 'texto solto')
+      expect(ChatwootExceptionTracker).to have_received(:new)
+    end
+  end
+
+  describe 'o token e o prazo da chamada' do
+    it 'o token vale para as consultas seguintes do processo enquanto não vence' do
+      pgfn_responde
+
+      executar_premium(certidoes, pgfn)
+      executar_premium(certidoes, pgfn.merge('cnpj' => '11.444.777/0001-61'))
+
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/tokens/gerar")).to have_been_made.once
+      expect(a_bigdatacorp).to have_been_made.twice
+    end
+
+    it 'o token que não chega no prazo curto tem uma tentativa só, e a consulta não sai' do
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/tokens/gerar").to_timeout
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/tokens/gerar")).to have_been_made.once
+      expect(a_bigdatacorp).not_to have_been_made
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'token', cobranca: 'sem_cobranca')
+    end
+
+    it 'o prazo total da chamada cabe no prazo da consulta (e no da ferramenta)' do
+      cliente = Autonomia::FerramentasProntas::Premium::BigDataCorp.new(nil, prazo: 20).send(:cliente)
+      opcoes = cliente.instance_variable_get(:@options)
+
+      expect(opcoes).to include(max_provider_attempts: 1, max_token_attempts: 1,
+                                token_timeout: Autonomia::FerramentasProntas::Premium::BigDataCorp::PRAZO_DO_TOKEN)
+      expect(Autonomia::FerramentasProntas::Catalogo.premium.flat_map(&:consultas))
+        .to all(satisfy { |consulta| consulta.dataset.prazo <= consulta.prazo_total })
+      expect(Autonomia::FerramentasProntas::Catalogo.premium)
+        .to all(satisfy { |fonte| fonte.consultas.map { |consulta| consulta.dataset.prazo }.max < fonte.prazo_maximo + 1 })
+    end
+
+    it 'a chamada que passa do prazo total vira tempo esgotado, sem contar' do
+      pgfn_responde
+      allow(Timeout).to receive(:timeout).and_call_original
+      allow(Timeout).to receive(:timeout).with(Autonomia::FerramentasProntas::Premium::Dataset::PRAZO_SOB_DEMANDA).and_raise(Timeout::Error)
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'tempo_esgotado', cobranca: 'sem_cobranca')
+      expect(saldos.count).to eq(0)
     end
   end
 

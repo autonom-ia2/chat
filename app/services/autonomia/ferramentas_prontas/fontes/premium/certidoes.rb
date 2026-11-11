@@ -39,7 +39,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Certidoes
       certidao('cnj', 'improbidade administrativa (certidão do CNJ)', 'ondemand_cnj_negative_certificate_company', '0.10', '0.15'),
       CADIN
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma, repasse liberado pelo advogado). Certidões sob demanda, por CNPJ.'
   )
 end

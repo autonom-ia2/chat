@@ -50,7 +50,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco
                                       cobra_sem_registro: false)
       )
     ],
-    limite_diario: Premium::LIMITE_DIARIO, flag: Premium::FLAG,
+    limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma); a vistoria é da parceira Rede Vistorias, pela BigDataCorp.'
   )
 end

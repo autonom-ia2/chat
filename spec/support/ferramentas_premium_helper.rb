@@ -14,6 +14,11 @@ module FerramentasPremiumHelper
     with_modified_env(BIGDATACORP_USER: USUARIO_FALSO, BIGDATACORP_PASSWORD: SENHA_FALSA, &)
   end
 
+  # O saldo das grátis do card no mês corrente da conta (decisão do Rodrigo, 11/11: as 20 renovam todo mês).
+  def saldo_premium!(conta, fonte, contadas, mes: Autonomia::FerramentasProntas::Premium.mes_da_conta(conta))
+    Autonomia::FerramentasProntas::Premium::Saldo.create!(account: conta, fonte: fonte, mes: mes, contadas: contadas)
+  end
+
   def ligar_premium(conta)
     conta.enable_features!(Autonomia::FerramentasProntas::FLAG, Autonomia::FerramentasProntas::Premium::FLAG)
   end
@@ -53,4 +58,6 @@ end
 
 RSpec.configure do |config|
   config.include FerramentasPremiumHelper
+  # O token da BigDataCorp vale para o processo inteiro (`Premium::BigDataCorp`): cada exemplo começa sem ele.
+  config.before { Autonomia::FerramentasProntas::Premium::BigDataCorp.esquecer_token! }
 end

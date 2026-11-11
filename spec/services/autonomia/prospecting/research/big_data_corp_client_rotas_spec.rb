@@ -42,4 +42,27 @@ RSpec.describe Autonomia::Prospecting::Research::BigDataCorpClient do
 
     expect(client.search_companies(query: 'name{EXEMPLO}').payload).to eq('Result' => [])
   end
+
+  describe 'as opções da F7 (token_timeout e token_cache)' do
+    before { stub_request(:post, "#{base}/empresas").to_return(status: 200, body: { Result: [] }.to_json) }
+
+    it 'sem as opções, a Prospecção segue igual: o token é da instância e o prazo do token é o da consulta' do
+      2.times { described_class.new(credentials: credentials, sleeper: ->(_) {}).search_companies(query: 'name{EXEMPLO}') }
+
+      expect(a_request(:post, "#{base}/tokens/gerar")).to have_been_made.twice
+      expect(client.timeout_for('/tokens/gerar')).to eq(described_class::DEFAULTS[:timeout])
+    end
+
+    it 'com token_cache, a instância seguinte reaproveita o token; com token_timeout, o prazo do token é o próprio' do
+      cache = Autonomia::FerramentasProntas::Premium::Tokens.new
+      novo = -> { described_class.new(credentials: credentials, sleeper: ->(_) {}, token_cache: cache, token_timeout: 3, timeout: 20) }
+
+      novo.call.search_companies(query: 'name{EXEMPLO}')
+      novo.call.search_companies(query: 'name{EXEMPLO}')
+
+      expect(a_request(:post, "#{base}/tokens/gerar")).to have_been_made.once
+      expect([novo.call.timeout_for('/tokens/gerar'), novo.call.timeout_for('/empresas')]).to eq([3, 20])
+      expect(cache.inspect).not_to include('token-exemplo')
+    end
+  end
 end

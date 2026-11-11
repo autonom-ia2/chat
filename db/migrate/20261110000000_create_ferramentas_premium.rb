@@ -2,8 +2,9 @@
 # - `autonomia_ferramentas_premium_consultas`: a telemetria de cada consulta, para gerar a cobrança na fatura (decisão
 #   do Rodrigo, 10/11: sem crédito pré-pago e sem cobrança automática). Uma linha por consulta: conta, card, dataset,
 #   custo, preço, grátis ou cobrada, resultado, dia e se veio do cache. Nunca o valor consultado (CNPJ, CPF, placa).
-# - `autonomia_ferramentas_premium_saldos`: quantas consultas cada conta já usou em cada card, para as 20 grátis. Uma
-#   linha por conta e card, somada por SQL atômico.
+# - `autonomia_ferramentas_premium_saldos`: quantas consultas cada conta já usou em cada card NO MÊS, para as 20 grátis
+#   que renovam todo mês (decisão do Rodrigo, 11/11). Uma linha por conta, card e mês (o 1º dia do mês, no fuso da conta),
+#   somada por SQL atômico.
 # Só aditiva: duas tabelas novas. Nada é lido sem a flag `agente_ferramentas_prontas_premium`. O down remove as duas.
 class CreateFerramentasPremium < ActiveRecord::Migration[7.2]
   def change
@@ -39,9 +40,10 @@ class CreateFerramentasPremium < ActiveRecord::Migration[7.2]
     create_table :autonomia_ferramentas_premium_saldos do |t|
       t.references :account, null: false, foreign_key: { on_delete: :cascade }, index: false
       t.string :fonte, null: false
+      t.date :mes, null: false
       t.integer :contadas, null: false, default: 0
       t.timestamps
     end
-    add_index :autonomia_ferramentas_premium_saldos, %i[account_id fonte], unique: true, name: 'idx_premium_saldos_conta_fonte'
+    add_index :autonomia_ferramentas_premium_saldos, %i[account_id fonte mes], unique: true, name: 'idx_premium_saldos_conta_fonte_mes'
   end
 end

@@ -138,6 +138,14 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
       .to eq('empresas' => 10, 'ativas' => 8)
   end
 
+  it 'contato de MEI ou EI: o telefone sai sempre, mesmo celular ou pessoal (decisão do Rodrigo, 11/11)' do
+    fones = { 'Phones' => [{ 'AreaCode' => '11', 'Number' => '990000000', 'Type' => 'MOBILE' },
+                           { 'AreaCode' => '21', 'Number' => '980000000', 'Type' => 'PERSONAL' }] }
+
+    expect(ler('contato_empresa', 'telefone', fones).dados)
+      .to eq('telefones' => [{ 'telefone' => '11 990000000', 'tipo' => 'MOBILE' }, { 'telefone' => '21 980000000', 'tipo' => 'PERSONAL' }])
+  end
+
   it 'formato que mudou vira falha (não conta), nunca exceção' do
     resultado = ler('contato_empresa', 'telefone', { 'Phones' => 'texto' })
     expect(resultado.situacao).to eq('sem_registro')

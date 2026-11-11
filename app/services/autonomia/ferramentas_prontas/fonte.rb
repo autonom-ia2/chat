@@ -5,7 +5,8 @@
 # `chave`: o que fica gravado em `autonomia_agent_tools.fonte_pronta` e no acesso da conta; nunca muda.
 # `slug`: o nome da função que o modelo vê. Começa com `pronta_` para não colidir com as nativas (`Registry`).
 # `limite_diario`: o padrão por conta nesta fonte (o acesso da conta pode ter o seu). Decisão do Rodrigo (10/11): 500
-# por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte.
+# por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte. nil é sem limite: só as Premium (F7,
+# decisão do Rodrigo, 11/11), que o cache do dia e a telemetria seguram.
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 class Autonomia::FerramentasProntas::Fonte

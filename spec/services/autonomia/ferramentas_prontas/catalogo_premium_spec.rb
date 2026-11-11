@@ -36,7 +36,7 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
       },
       'imovel_rural' => {
         'car' => ['sicar_property_data', '/enderecos', '0.1', '0.15'],
-        'embargo_ibama' => ['ondemand_ibama_embargados_company', '/ondemand', '0.15', '0.225']
+        'embargo_ibama' => ['ondemand_ibama_embargados_company', '/ondemand', '0.15', '0.23']
       },
       'contato_empresa' => {
         'telefone' => ['phones_extended', '/empresas', '0.06', '0.09'],
@@ -60,17 +60,24 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
     expect(cards.sum { |card| card.consultas.size }).to eq(22)
   end
 
-  it 'o preço de todo dataset é o custo × 1,5' do
+  it 'todo preço do catálogo fecha em centavos inteiros (o embargo do IBAMA, R$ 0,225, sobe para R$ 0,23)' do
+    described_class.premium.flat_map(&:consultas).each do |consulta|
+      centavos = consulta.dataset.preco * 100
+      expect(centavos).to eq(centavos.to_i), consulta.nome
+    end
+  end
+
+  it 'o preço de todo dataset é o custo × 1,5, arredondado para cima ao centavo' do
     catalogo.premium.flat_map(&:consultas).each do |consulta|
       expect(consulta.dataset.preco_confere?).to be(true), consulta.nome
     end
   end
 
-  it 'todo card é Premium, da flag da F7, com o limite diário próprio e a BigDataCorp como host' do
+  it 'todo card é Premium, da flag da F7, sem limite diário (decisão do Rodrigo) e com a BigDataCorp como host' do
     catalogo.premium.each do |card|
       expect(card).to be_premium
       expect(card.flag).to eq(premium::FLAG)
-      expect(card.limite_diario).to eq(premium::LIMITE_DIARIO)
+      expect(card.limite_diario).to be_nil
       expect(card.hosts).to eq(['plataforma.bigdatacorp.com.br'])
       expect(card.slug).to start_with('pronta_')
     end

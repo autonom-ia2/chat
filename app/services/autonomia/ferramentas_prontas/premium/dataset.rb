@@ -3,7 +3,8 @@
 #
 # `nome`: o dataset no corpo do pedido. `rota`: `/empresas`, `/pessoas`, `/veiculos`, `/enderecos`, `/ondemand` ou
 #   `/marketplace`. `resposta`: a chave do dataset em `Result[0]`.
-# `custo`: o que a BigDataCorp cobra de nós. `preco`: o do plano aprovado (custo × 1,5), o que vai à fatura.
+# `custo`: o que a BigDataCorp cobra de nós. `preco`: o do plano aprovado, o que vai à fatura: custo × 1,5, arredondado
+#   para cima ao centavo (o embargo do IBAMA, R$ 0,225, é R$ 0,23; decisão do Rodrigo, 11/11).
 # `busca`: os parâmetros já normalizados -> o `q` da BigDataCorp (`doc{...}`, `licenseplate{...}`). Só dígito, letra
 #   maiúscula e o que o `Parametro` aceitou entram nele.
 # `extrair`: o dado da BigDataCorp -> só o que o agente precisa (nada de nome de parente, sócio pessoa física, link de
@@ -40,6 +41,6 @@ class Autonomia::FerramentasProntas::Premium::Dataset
   end
 
   def preco_confere?
-    (custo * MARGEM).round(4) == preco
+    (custo * MARGEM).round(2, BigDecimal::ROUND_CEILING) == preco
   end
 end

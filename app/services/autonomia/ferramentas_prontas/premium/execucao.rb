@@ -1,12 +1,12 @@
 # A EXECUÇÃO DE UMA CONSULTA PREMIUM (#2858, F7). A mesma ordem da `Execucao` das grátis — flag (a das prontas e a do
-# Premium), acesso e corte da conta, consulta e parâmetros normalizados, limite do dia por conta e por card, cache —, e
-# só muda o fim:
+# Premium), acesso e corte da conta, consulta e parâmetros normalizados, o contador do dia (sem limite no Premium:
+# decisão do Rodrigo, 11/11), cache —, e só muda o fim:
 #   - o cache é da conta, até o fim do dia (`Premium::Cache`);
 #   - a fonte é uma só, a BigDataCorp, sem reserva (`Premium::BigDataCorp`);
-#   - cada desfecho que passou do limite do dia vira uma linha de telemetria (`Premium::Cobranca`): encontrado, sem
-#     registro ("não havia registro"), falha (não conta) ou do cache (sem custo novo).
-# O pedido que não serve (parâmetro fora do formato, um CPF no lugar do CNPJ) e o limite estourado são recusados antes:
-# a BigDataCorp não é chamada e nada vai à telemetria (o contador do dia, `Uso`, guarda o motivo).
+#   - cada desfecho vira uma linha de telemetria (`Premium::Cobranca`): encontrado, sem registro ("não havia
+#     registro"), falha (não conta) ou do cache (sem custo novo).
+# O pedido que não serve (parâmetro fora do formato, um CPF no lugar do CNPJ) é recusado antes: a BigDataCorp não é
+# chamada e nada vai à telemetria (o contador do dia, `Uso`, guarda o motivo).
 class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasProntas::Execucao
   Premium = Autonomia::FerramentasProntas::Premium
 
@@ -48,10 +48,11 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     end
   end
 
-  # A telemetria é a base da fatura, mas a resposta ao cliente não depende dela: falhar aqui vai ao rastreador e ao log.
+  # A telemetria é a base da fatura, mas a resposta ao cliente não depende dela: a falha do banco ao gravar vai ao
+  # rastreador e ao log (o contador volta atrás junto, na mesma transação). Outro erro é defeito nosso: levanta.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, **)
-  rescue StandardError => e
+  rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("#{PREFIXO} telemetria premium falhou conta=#{@tool.account_id} fonte=#{@fonte.chave} #{e.class}")
     ChatwootExceptionTracker.new(e, account: @tool.account).capture_exception
   end

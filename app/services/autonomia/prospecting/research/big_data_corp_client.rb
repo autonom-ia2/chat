@@ -13,6 +13,10 @@ require 'net/http'
 #
 # Credencial e token nunca saem daqui: não vão para mensagem de erro, log nem inspect. O erro leva só código fechado,
 # fase, status HTTP e número de tentativas.
+#
+# Opções da F7 do #2858 (as ferramentas Premium), todas desligadas no padrão (a Prospecção segue igual):
+#   - `token_timeout`: o prazo do pedido de token; nil usa o `timeout`;
+#   - `token_cache`: onde guardar o token entre instâncias (`read`/`write`); nil guarda só nesta instância.
 class Autonomia::Prospecting::Research::BigDataCorpClient
   BASE_URI = URI('https://plataforma.bigdatacorp.com.br').freeze
   COMPANIES_PATH = '/empresas'.freeze
@@ -29,7 +33,9 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     token_ttl: 10.minutes.to_i,
     timeout: 20,
     max_provider_attempts: 3,
-    max_token_attempts: 3
+    max_token_attempts: 3,
+    token_timeout: nil,
+    token_cache: nil
   }.freeze
 
   # Segredo que não aparece em inspect, to_s nem pretty print.
@@ -97,11 +103,18 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   def post(path, body, headers)
     http = Net::HTTP.new(BASE_URI.host, BASE_URI.port)
     http.use_ssl = true
-    %i[open_timeout= read_timeout= write_timeout= ssl_timeout=].each { |setter| http.public_send(setter, @options[:timeout]) }
+    timeout = timeout_for(path)
+    %i[open_timeout= read_timeout= write_timeout= ssl_timeout=].each { |setter| http.public_send(setter, timeout) }
     http.max_retries = 0
     request = Net::HTTP::Post.new(path, { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }.merge(headers))
     request.body = body
     http.request(request)
+  end
+
+  def timeout_for(path)
+    return @options[:timeout] unless path == Autonomia::Prospecting::Research::BigDataCorpTokenIssuer::PATH
+
+    @options[:token_timeout] || @options[:timeout]
   end
 
   def retryable?(status)
@@ -169,6 +182,7 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) if state[:attempts] >= @options[:max_provider_attempts]
 
     @token = nil
+    @options[:token_cache]&.write(nil)
     state[:refreshed] = true
     state[:force_refresh] = true
     nil
@@ -194,12 +208,18 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   end
 
   def current_token(force_refresh: false)
-    @token = nil if force_refresh
+    @token = force_refresh ? nil : @token || @options[:token_cache]&.read
     return @token if @token && @token.expires_at > now
 
+    issue_token
+  end
+
+  def issue_token
     credentials = resolved_credentials
     @token_generations += 1
     @token = @issuer.issue(credentials)
+    @options[:token_cache]&.write(@token)
+    @token
   end
 
   def resolved_credentials
