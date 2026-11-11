@@ -19,6 +19,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import RecipientImportStatus from './RecipientImportStatus.vue';
+import { countPlaceholderImages } from './builder/sectionMarkup';
 
 const props = defineProps({ campaign: { type: Object, required: true } });
 const emit = defineEmits(['edit', 'recipients', 'sender', 'done']);
@@ -90,6 +91,10 @@ const preview = ref(null);
 const validation = ref(null);
 const readiness = computed(() => props.campaign.send_readiness);
 const checks = computed(() => readiness.value?.checks || {});
+// Image frames still waiting for the real picture (#2908): a warning before sending, not a block.
+const missingImages = computed(() =>
+  countPlaceholderImages(props.campaign.body_html)
+);
 const number = value => formatNumber(value, locale.value);
 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const scheduledAt = computed(() => {
@@ -509,6 +514,27 @@ onMounted(() => {
                   fields: validation.missing.join(', '),
                 })
               }}
+            </div>
+            <div
+              v-if="missingImages"
+              class="mt-4 rounded-xl bg-n-amber-3 p-3 text-xs leading-5 text-n-amber-11"
+            >
+              <p class="mb-0">
+                {{
+                  t(
+                    `${UX}.MISSING_IMAGES`,
+                    { count: missingImages },
+                    missingImages
+                  )
+                }}
+              </p>
+              <Button
+                :label="t(`${UX}.BACK_EDITOR`)"
+                variant="link"
+                amber
+                class="mt-2 !min-h-11 !text-n-amber-11"
+                @click="emit('edit')"
+              />
             </div>
             <div
               v-if="!isLoading && !readiness?.can_send"

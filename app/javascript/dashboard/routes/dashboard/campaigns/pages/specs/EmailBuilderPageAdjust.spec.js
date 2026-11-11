@@ -33,6 +33,7 @@ vi.mock('dashboard/composables/useRecipientImportPolling', () => ({
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 1, campaignId: 7 }, query: {} }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  onBeforeRouteLeave: vi.fn(),
 }));
 const api = vi.hoisted(() => ({
   status: vi.fn(),
