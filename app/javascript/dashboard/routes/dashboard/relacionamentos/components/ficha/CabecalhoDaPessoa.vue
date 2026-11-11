@@ -46,36 +46,51 @@ const empresa = computed(
     data-relacionamentos="cabecalho"
     class="flex flex-col w-full min-w-0 gap-6 p-5 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 md:p-8 lg:flex-row lg:items-start lg:justify-between"
   >
-    <div class="flex w-full min-w-0 gap-4 md:gap-6">
+    <!-- Celular: avatar e nome na primeira faixa; contato e etiquetas descem,
+         na largura toda. Desktop: tudo ao lado do avatar. -->
+    <div
+      class="grid w-full min-w-0 grid-cols-[auto_1fr] items-center gap-x-4 gap-y-4 md:items-start md:gap-x-6 lg:flex-1"
+    >
+      <Avatar
+        :name="pessoa.name"
+        :src="pessoa.thumbnail"
+        :size="56"
+        rounded-full
+        class="shrink-0 md:hidden"
+      />
       <Avatar
         :name="pessoa.name"
         :src="pessoa.thumbnail"
         :size="88"
         rounded-full
-        class="shrink-0"
+        class="hidden shrink-0 md:row-span-2 md:inline-flex"
       />
-      <div class="flex flex-col min-w-0 gap-2">
+      <div class="flex flex-col items-start min-w-0 gap-2">
         <h1
-          class="m-0 text-3xl font-bold leading-tight tracking-tight break-words md:text-4xl text-n-slate-12"
+          class="m-0 text-2xl font-bold leading-tight tracking-tight break-words md:text-4xl text-n-slate-12"
         >
           {{ pessoa.name }}
         </h1>
-        <div class="flex flex-wrap items-center gap-2">
-          <SeloDeEstado v-if="ehCliente" tom="cliente">
-            {{ clienteDesde }}
-          </SeloDeEstado>
-          <Button
-            v-else
-            data-relacionamentos="marcar-cliente"
-            slate
-            ghost
-            size="sm"
-            class="min-h-11"
-            :is-loading="marcandoCliente"
-            :label="t('RELACIONAMENTOS_FICHA.CABECALHO.MARCAR_CLIENTE')"
-            @click="emit('marcarCliente')"
-          />
-        </div>
+        <SeloDeEstado v-if="ehCliente" tom="cliente">
+          {{ clienteDesde }}
+        </SeloDeEstado>
+        <Button
+          v-else
+          data-relacionamentos="marcar-cliente"
+          slate
+          faded
+          size="sm"
+          icon="i-lucide-badge-check"
+          class="min-h-11 whitespace-nowrap shrink-0"
+          :is-loading="marcandoCliente"
+          :label="t('RELACIONAMENTOS_FICHA.CABECALHO.MARCAR_CLIENTE')"
+          @click="emit('marcarCliente')"
+        />
+      </div>
+      <div
+        data-relacionamentos="contato-e-etiquetas"
+        class="flex flex-col min-w-0 col-span-2 gap-3 md:col-span-1 md:col-start-2"
+      >
         <div class="flex flex-col min-w-0 gap-1">
           <div
             v-if="pessoa.phone_number"
@@ -86,7 +101,7 @@ const empresa = computed(
               class="i-lucide-phone size-4 shrink-0 text-n-slate-10"
               aria-hidden="true"
             />
-            <span class="tabular-nums">
+            <span class="tabular-nums whitespace-nowrap">
               {{ formatarTelefone(pessoa.phone_number) }}
             </span>
             <BotaoCopiar
@@ -104,7 +119,7 @@ const empresa = computed(
               class="i-lucide-mail size-4 shrink-0 text-n-slate-10"
               aria-hidden="true"
             />
-            <span class="min-w-0 break-all" :title="pessoa.email">
+            <span class="min-w-0 break-words" :title="pessoa.email">
               {{ pessoa.email }}
             </span>
           </div>
@@ -154,26 +169,26 @@ const empresa = computed(
       <Button
         data-relacionamentos="conversar"
         size="lg"
-        class="w-full lg:w-auto !min-h-12 !rounded-xl"
+        class="w-full lg:w-auto !min-h-12 !rounded-xl whitespace-nowrap shrink-0"
         icon="i-lucide-message-circle"
         :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
         @click="emit('conversar')"
       />
       <div
         data-relacionamentos="acoes-secundarias"
-        class="grid grid-cols-[1fr_1fr_auto] items-center gap-3 lg:flex"
+        class="grid grid-cols-[1fr_1fr_auto] items-center gap-3 lg:flex lg:shrink-0"
       >
         <Button
           slate
           faded
-          class="w-full min-h-11"
+          class="w-full min-h-11 whitespace-nowrap shrink-0 lg:w-auto"
           :label="t('RELACIONAMENTOS_FICHA.ACOES.NOVO_CARD')"
           @click="emit('novoCard')"
         />
         <Button
           slate
           faded
-          class="w-full min-h-11"
+          class="w-full min-h-11 whitespace-nowrap shrink-0 lg:w-auto"
           :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
           @click="emit('lembrete')"
         />

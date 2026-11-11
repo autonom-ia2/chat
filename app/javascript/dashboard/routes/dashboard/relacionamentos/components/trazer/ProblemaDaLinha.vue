@@ -131,6 +131,8 @@ const doTexto = computed(
           <Button
             v-if="campo"
             type="submit"
+            slate
+            faded
             class="min-h-11"
             :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.GUARDAR')"
             :disabled="!preenchido || ocupado"

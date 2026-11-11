@@ -40,6 +40,9 @@ const conferir = (leitura, extra = {}) =>
     },
   });
 
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
+
 describe('FichaDeExemplo', () => {
   const pessoa = {
     nome: 'Marina Esteveira',

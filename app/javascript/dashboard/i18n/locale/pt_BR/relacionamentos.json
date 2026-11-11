@@ -19,6 +19,8 @@
         "ROTULO": "Buscar",
         "PLACEHOLDER_PESSOAS": "Buscar por nome, telefone ou documento",
         "PLACEHOLDER_EMPRESAS": "Buscar por nome ou documento",
+        "PLACEHOLDER_CURTO_PESSOAS": "Buscar pessoa",
+        "PLACEHOLDER_CURTO_EMPRESAS": "Buscar empresa",
         "LIMPAR": "Limpar busca"
       },
       "ORDENAR": {

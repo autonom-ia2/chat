@@ -76,6 +76,7 @@
     },
     "GUARDAR": {
       "TITULO": "What I will keep",
+      "APOIO": "Each column of your spreadsheet and where it goes.",
       "VAI_PARA": "goes to",
       "VIRA_INFORMACAO": "Becomes a detail about the person called “{coluna}”",
       "NAO_VOU_GUARDAR": "I won't keep “{coluna}”",
@@ -102,7 +103,8 @@
     "PRONTO": {
       "CHEGARAM": "{count} person arrived. | {count} people arrived.",
       "VER": "See the people",
-      "OUTRA": "Bring in another list"
+      "OUTRA": "Bring in another list",
+      "SOSSEGO": "You can undo this for 7 days, in “What I’ve already brought in”."
     },
     "HISTORICO": {
       "TITULO": "What I've already brought in",

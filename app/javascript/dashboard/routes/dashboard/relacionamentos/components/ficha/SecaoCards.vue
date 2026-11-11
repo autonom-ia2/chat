@@ -1,9 +1,9 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
-import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import { formatarReais } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import VazioDaSecao from './VazioDaSecao.vue';
 
 // #2894 — os cards da pessoa: título, funil e etapa, valor e situação. Clicar
 // abre a gaveta do card. Na ficha da empresa cada card diz de quem é (`pessoa`).
@@ -26,7 +26,7 @@ const ra = (chave, valores) =>
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="cards">
-    <VazioComUmBotao
+    <VazioDaSecao
       v-if="!cards.length"
       data-relacionamentos="vazio"
       :frase="ra('VAZIO')"

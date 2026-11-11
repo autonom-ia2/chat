@@ -58,7 +58,9 @@ const linhas = computed(() =>
         class="flex items-center gap-2 min-w-0"
       >
         <span class="size-4 shrink-0" :class="icone" aria-hidden="true" />
-        <span class="truncate tabular-nums" :title="texto">{{ texto }}</span>
+        <span class="tabular-nums break-all line-clamp-2" :title="texto">{{
+          texto
+        }}</span>
       </li>
     </ul>
   </article>

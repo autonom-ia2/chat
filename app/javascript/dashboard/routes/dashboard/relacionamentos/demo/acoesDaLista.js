@@ -23,7 +23,7 @@ export const FUNIS = [
 
 export const ETIQUETAS = [
   'clientes-2025',
-  'indicacao',
+  'indicação',
   'feira',
   'site',
   'evento',

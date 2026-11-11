@@ -1,3 +1,4 @@
+import { ETIQUETAS } from '../demo/acoesDaLista';
 import { empresaPorId, empresas, pessoaPorId, pessoas } from '../demo/base';
 import { DIA_EM_MS, GRUPOS_DE_PESSOAS, pertenceAoGrupo } from '../fonte/grupos';
 
@@ -218,5 +219,15 @@ describe('empresas', () => {
       .forEach(p =>
         expect(p.additional_attributes.company_name).toBe(porId[p.company_id])
       );
+  });
+});
+
+describe('etiquetas fictícias', () => {
+  it('aparecem com acento, como a pessoa as escreveria', () => {
+    const usadas = new Set(pessoas(AGORA).flatMap(p => p.labels));
+    expect(usadas.has('indicação')).toBe(true);
+    expect(usadas.has('indicacao')).toBe(false);
+    expect(ETIQUETAS).toContain('indicação');
+    expect(ETIQUETAS).not.toContain('indicacao');
   });
 });

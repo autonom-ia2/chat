@@ -16,19 +16,19 @@ const emit = defineEmits(['abrir']);
 
 const { t } = useI18n();
 
-const segundaLinha = computed(() => {
-  const { contacts_count: pessoas, last_activity_at: ultima } = props.empresa;
-  const quando = falouHa(ultima, props.agora);
-  return [
-    t(
-      'RELACIONAMENTOS.LISTA.LINHA.PESSOAS_DA_EMPRESA',
-      { count: pessoas },
-      pessoas
-    ),
-    quando.count === undefined
-      ? t(quando.chave)
-      : t(quando.chave, { count: quando.count }, quando.count),
-  ].join(' · ');
+const pessoasDaEmpresa = computed(() => {
+  const pessoas = props.empresa.contacts_count;
+  return t(
+    'RELACIONAMENTOS.LISTA.LINHA.PESSOAS_DA_EMPRESA',
+    { count: pessoas },
+    pessoas
+  );
+});
+const quandoFalou = computed(() => {
+  const quando = falouHa(props.empresa.last_activity_at, props.agora);
+  return quando.count === undefined
+    ? t(quando.chave)
+    : t(quando.chave, { count: quando.count }, quando.count);
 });
 </script>
 
@@ -51,7 +51,11 @@ const segundaLinha = computed(() => {
           {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
         </SeloDeEstado>
       </div>
-      <p class="m-0 text-sm break-words text-n-slate-11">{{ segundaLinha }}</p>
+      <p class="m-0 text-sm break-words min-w-0 text-n-slate-11">
+        <span class="block sm:inline">{{ pessoasDaEmpresa }}</span>
+        <span class="hidden sm:inline"> · </span>
+        <span class="block sm:inline">{{ quandoFalou }}</span>
+      </p>
     </div>
   </li>
 </template>

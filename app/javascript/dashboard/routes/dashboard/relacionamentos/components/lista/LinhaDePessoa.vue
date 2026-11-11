@@ -22,19 +22,25 @@ const emit = defineEmits(['abrir', 'alternar', 'conversar']);
 
 const { t } = useI18n();
 
-const segundaLinha = computed(() => {
-  const { phone_number: telefone, additional_attributes: extra } = props.pessoa;
+const quandoFalou = computed(() => {
   const quando = falouHa(props.pessoa.last_activity_at, props.agora);
-  return [
-    formatarTelefone(telefone) || t('RELACIONAMENTOS.LISTA.LINHA.SEM_TELEFONE'),
-    extra?.company_name,
-    quando.count === undefined
-      ? t(quando.chave)
-      : t(quando.chave, { count: quando.count }, quando.count),
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  return quando.count === undefined
+    ? t(quando.chave)
+    : t(quando.chave, { count: quando.count }, quando.count);
 });
+
+// Celular: telefone numa linha e "Empresa · Falou hoje" embaixo; o "·" entre as
+// duas só aparece no desktop, onde tudo cabe numa linha.
+const telefone = computed(
+  () =>
+    formatarTelefone(props.pessoa.phone_number) ||
+    t('RELACIONAMENTOS.LISTA.LINHA.SEM_TELEFONE')
+);
+const resto = computed(() =>
+  [props.pessoa.additional_attributes?.company_name, quandoFalou.value]
+    .filter(Boolean)
+    .join(' · ')
+);
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
 </script>
@@ -80,7 +86,9 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
         </SeloDeEstado>
       </div>
       <p class="m-0 text-sm break-words min-w-0 text-n-slate-11">
-        {{ segundaLinha }}
+        <span class="block sm:inline">{{ telefone }}</span>
+        <span class="hidden sm:inline"> · </span>
+        <span class="block sm:inline">{{ resto }}</span>
       </p>
     </div>
     <Button

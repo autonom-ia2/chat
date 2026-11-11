@@ -40,6 +40,9 @@ vi.mock('../../relationships/RelationshipsHome.vue', () => ({
   },
 }));
 
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
+
 describe('HeroiEscuro', () => {
   it('mostra a frase, a ação principal e a discreta', () => {
     const w = mount(HeroiEscuro, {

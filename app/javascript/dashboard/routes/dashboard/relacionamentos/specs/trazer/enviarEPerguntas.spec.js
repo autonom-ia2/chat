@@ -12,6 +12,9 @@ withFullI18n('pt_BR');
 const arquivo = nome => new File(['x'], nome);
 const marca = (w, nome) => w.find(`[data-relacionamentos="${nome}"]`);
 
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
+
 describe('EtapasDoTopo', () => {
   it('marca a etapa de agora e põe ✓ nas feitas', () => {
     const w = mount(EtapasDoTopo, { props: { atual: 'conferir' } });

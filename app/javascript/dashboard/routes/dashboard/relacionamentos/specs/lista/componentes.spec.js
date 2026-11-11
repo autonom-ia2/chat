@@ -71,6 +71,9 @@ const comRelogioFalso = () => {
   });
 };
 
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
+
 describe('HeroiDaLista', () => {
   const montar = resumo => mount(HeroiDaLista, { props: { resumo } });
   const frase = w => w.get('[data-heroi-frase]').text();
@@ -205,6 +208,49 @@ describe('CampoDeBusca', () => {
   });
 });
 
+describe('CampoDeBusca: texto curto no celular', () => {
+  const comTela = larga => {
+    window.matchMedia = vi.fn().mockImplementation(consulta => ({
+      matches: larga,
+      media: consulta,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    }));
+  };
+  const montarCampo = () =>
+    mount(CampoDeBusca, {
+      props: {
+        placeholder: 'Buscar por nome, telefone ou documento',
+        placeholderCurto: 'Buscar pessoa',
+      },
+    });
+  afterEach(() => {
+    delete window.matchMedia;
+  });
+
+  it('em tela pequena usa o texto curto', () => {
+    comTela(false);
+    expect(montarCampo().get('input').attributes('placeholder')).toBe(
+      'Buscar pessoa'
+    );
+  });
+
+  it('a partir de sm usa o texto completo', () => {
+    comTela(true);
+    expect(montarCampo().get('input').attributes('placeholder')).toBe(
+      'Buscar por nome, telefone ou documento'
+    );
+  });
+
+  it('sem texto curto, usa o completo', () => {
+    comTela(false);
+    const w = mount(CampoDeBusca, { props: { placeholder: 'Buscar' } });
+    expect(w.get('input').attributes('placeholder')).toBe('Buscar');
+  });
+});
+
 describe('CampoDeBusca', () => {
   it('deixa recuo para a lupa e tem a altura dos outros controles', () => {
     const w = mount(CampoDeBusca, { props: { placeholder: 'Buscar' } });
@@ -216,6 +262,20 @@ describe('CampoDeBusca', () => {
 });
 
 describe('BarraDeControles', () => {
+  it('no celular o rótulo "Ordenar" só fica para o leitor de tela e os controles não encolhem', () => {
+    const w = mount(BarraDeControles, {
+      props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
+    });
+    const rotulo = w.get('label');
+    expect(rotulo.classes()).toEqual(
+      expect.arrayContaining(['sr-only', 'sm:not-sr-only'])
+    );
+    expect(rotulo.element.parentElement.classList).toContain('flex-1');
+    expect(w.get('[data-relacionamentos="mais-filtros"]').classes()).toEqual(
+      expect.arrayContaining(['shrink-0', 'whitespace-nowrap'])
+    );
+  });
+
   it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
     const w = mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
@@ -280,6 +340,39 @@ describe('LinhaDePessoa', () => {
     expect(w.text()).toContain(
       '+55 11 91031-0001 · Padaria Brandolim · Falou há 3 dias'
     );
+  });
+
+  it('no celular, telefone numa linha e o resto embaixo; o "·" só aparece no desktop entre as duas', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa(), agora: AGORA },
+    });
+    const [telefone, separador, resto] = w.get('p').findAll('span');
+    expect(telefone.text()).toBe('+55 11 91031-0001');
+    expect(telefone.classes()).toEqual(
+      expect.arrayContaining(['block', 'sm:inline'])
+    );
+    expect(separador.classes()).toEqual(
+      expect.arrayContaining(['hidden', 'sm:inline'])
+    );
+    expect(resto.text()).toBe('Padaria Brandolim · Falou há 3 dias');
+    expect(resto.classes()).toEqual(
+      expect.arrayContaining(['block', 'sm:inline'])
+    );
+  });
+
+  it('sem empresa, o resto é só "Falou há…" e não sobra "·" pendurado', () => {
+    const w = mount(LinhaDePessoa, {
+      props: {
+        pessoa: pessoa({ additional_attributes: {} }),
+        agora: AGORA,
+      },
+    });
+    const partes = w.get('p').findAll('span');
+    expect(partes.map(p => p.text())).toEqual([
+      '+55 11 91031-0001',
+      '·',
+      'Falou há 3 dias',
+    ]);
   });
 
   it('põe os selos Cliente e Não quer mensagens quando é o caso', () => {
@@ -464,6 +557,38 @@ describe('BarraDeAcaoEmGrupo', () => {
     expect(w.emitted('criarCards')).toHaveLength(1);
     expect(w.emitted('etiqueta')).toHaveLength(1);
     expect(w.emitted('fechar')).toHaveLength(1);
+    w.unmount();
+  });
+
+  it('no celular são duas linhas: marcadas e × em cima, o botão inteiro e o "⋯" embaixo', () => {
+    const w = montar(3);
+    const [quantas, fechar, quebra, mandar, menu] = [
+      w.get('p'),
+      w.get('button[aria-label="Desmarcar todas"]'),
+      w.get('[data-quebra-de-linha]'),
+      w.get('[data-relacionamentos="mandar-mensagem"]'),
+      w.get('[data-relacionamentos="mais-acoes"]').element.parentElement,
+    ];
+    expect(quantas.classes()).toEqual(
+      expect.arrayContaining(['order-1', 'flex-1', 'sm:flex-none'])
+    );
+    expect(fechar.classes()).toEqual(
+      expect.arrayContaining(['order-2', 'sm:order-6'])
+    );
+    expect(quebra.classes()).toEqual(
+      expect.arrayContaining(['order-2', 'basis-full', 'sm:hidden'])
+    );
+    expect(mandar.classes()).toEqual(
+      expect.arrayContaining([
+        'order-3',
+        'flex-1',
+        'min-w-0',
+        'whitespace-nowrap',
+      ])
+    );
+    expect([...menu.classList]).toEqual(
+      expect.arrayContaining(['order-4', 'sm:order-5'])
+    );
     w.unmount();
   });
 

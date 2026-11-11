@@ -15,6 +15,7 @@ const props = defineProps({
   filtrosAtivos: { type: Number, default: 0 },
   comFiltros: { type: Boolean, default: true },
   placeholder: { type: String, required: true },
+  placeholderCurto: { type: String, default: '' },
 });
 const emit = defineEmits(['update:busca', 'update:ordem', 'abrirFiltros']);
 
@@ -48,11 +49,15 @@ const rotuloDosFiltros = computed(() =>
       class="w-full md:w-auto md:min-w-72 md:flex-1"
       :model-value="busca"
       :placeholder="placeholder"
+      :placeholder-curto="placeholderCurto"
       @update:model-value="emit('update:busca', $event)"
     />
     <div class="flex items-center w-full gap-3 md:w-auto">
-      <div class="flex items-center gap-2">
-        <label :for="idDaOrdem" class="text-sm text-n-slate-11">
+      <div class="flex items-center flex-1 min-w-0 gap-2 md:flex-none">
+        <label
+          :for="idDaOrdem"
+          class="text-sm sr-only text-n-slate-11 sm:not-sr-only"
+        >
           {{ t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO') }}
         </label>
         <ChoiceSelect
@@ -61,6 +66,7 @@ const rotuloDosFiltros = computed(() =>
           :trigger-id="idDaOrdem"
           :aria-label="t('RELACIONAMENTOS.LISTA.ORDENAR.ROTULO')"
           compact
+          class="flex-1 min-w-0 md:flex-none"
           @update:model-value="emit('update:ordem', $event)"
         />
       </div>
@@ -68,7 +74,7 @@ const rotuloDosFiltros = computed(() =>
         v-if="comFiltros"
         slate
         faded
-        class="min-h-11"
+        class="min-h-11 shrink-0 whitespace-nowrap"
         icon="i-lucide-sliders-horizontal"
         data-relacionamentos="mais-filtros"
         aria-haspopup="dialog"

@@ -97,6 +97,11 @@ const placeholder = computed(() =>
     `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
   )
 );
+const placeholderCurto = computed(() =>
+  t(
+    `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_CURTO_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
+  )
+);
 const faltamMarcar = computed(
   () => marcados.quantos.value > 0 && marcados.quantos.value < lista.total.value
 );
@@ -238,6 +243,7 @@ onMounted(lista.iniciar);
                 :filtros-ativos="lista.filtrosAtivos.value"
                 :com-filtros="!ehEmpresas"
                 :placeholder="placeholder"
+                :placeholder-curto="placeholderCurto"
                 @update:busca="lista.mudarBusca"
                 @update:ordem="lista.mudarOrdem"
                 @abrir-filtros="abrirFiltros"

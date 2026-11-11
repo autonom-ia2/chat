@@ -55,39 +55,48 @@ const { t } = useI18n();
     </div>
   </section>
 
-  <HeroiEscuro v-else data-relacionamentos="pronto">
-    <template #frase>
-      <span
-        role="heading"
-        aria-level="1"
-        data-titulo-da-tela
-        tabindex="-1"
-        class="outline-none tabular-nums"
-      >
-        {{
-          t('RELACIONAMENTOS_TRAZER.PRONTO.CHEGARAM', { count: total }, total)
-        }}
-      </span>
-    </template>
-    <template #acao>
-      <button
-        type="button"
-        data-relacionamentos="ver-as-pessoas"
-        class="inline-flex items-center px-6 text-base font-semibold bg-white min-h-12 rounded-xl text-n-heroi hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-white"
-        @click="emit('ver')"
-      >
-        {{ t('RELACIONAMENTOS_TRAZER.PRONTO.VER') }}
-      </button>
-    </template>
-    <template #discreta>
-      <button
-        type="button"
-        data-relacionamentos="trazer-outra"
-        class="px-4 py-2 text-sm min-h-11 rounded-xl bg-white/10 text-white/90 ring-1 ring-inset ring-white/20 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white"
-        @click="emit('outra')"
-      >
-        {{ t('RELACIONAMENTOS_TRAZER.PRONTO.OUTRA') }}
-      </button>
-    </template>
-  </HeroiEscuro>
+  <div v-else class="flex flex-col gap-4">
+    <HeroiEscuro data-relacionamentos="pronto">
+      <template #frase>
+        <span
+          role="heading"
+          aria-level="1"
+          data-titulo-da-tela
+          tabindex="-1"
+          class="outline-none tabular-nums"
+        >
+          {{
+            t('RELACIONAMENTOS_TRAZER.PRONTO.CHEGARAM', { count: total }, total)
+          }}
+        </span>
+      </template>
+      <template #acao>
+        <button
+          type="button"
+          data-relacionamentos="ver-as-pessoas"
+          class="inline-flex items-center px-6 text-base font-semibold bg-white min-h-12 rounded-xl text-n-heroi hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-white"
+          @click="emit('ver')"
+        >
+          {{ t('RELACIONAMENTOS_TRAZER.PRONTO.VER') }}
+        </button>
+      </template>
+      <template #discreta>
+        <button
+          type="button"
+          data-relacionamentos="trazer-outra"
+          class="px-4 py-2 text-sm min-h-11 rounded-xl bg-white/10 text-white/90 ring-1 ring-inset ring-white/20 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-white"
+          @click="emit('outra')"
+        >
+          {{ t('RELACIONAMENTOS_TRAZER.PRONTO.OUTRA') }}
+        </button>
+      </template>
+    </HeroiEscuro>
+    <p
+      data-relacionamentos="pronto-sossego"
+      class="flex items-center gap-2 m-0 text-base text-n-slate-11"
+    >
+      <span class="i-lucide-undo-2 size-5 shrink-0" aria-hidden="true" />
+      {{ t('RELACIONAMENTOS_TRAZER.PRONTO.SOSSEGO') }}
+    </p>
+  </div>
 </template>

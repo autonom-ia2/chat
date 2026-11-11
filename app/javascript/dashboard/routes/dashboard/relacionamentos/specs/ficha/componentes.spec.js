@@ -9,6 +9,7 @@ import SecaoArquivos from '../../components/ficha/SecaoArquivos.vue';
 import GavetaDoCard from '../../components/ficha/GavetaDoCard.vue';
 import GavetaDeInformacoes from '../../components/ficha/GavetaDeInformacoes.vue';
 import ListaDeInformacoes from '../../components/ficha/ListaDeInformacoes.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import BotaoCopiar from '../../components/ficha/BotaoCopiar.vue';
 import CampoDeTexto from '../../components/ficha/CampoDeTexto.vue';
 import DeOndeVeio from '../../components/ficha/DeOndeVeio.vue';
@@ -74,6 +75,9 @@ const card = (id, extra = {}) => ({
   situacao: 'aberto',
   ...extra,
 });
+
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
 
 describe('CabecalhoDaPessoa', () => {
   const montar = props =>
@@ -175,7 +179,7 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
     const w = montar({ pessoa: pessoa() });
     const email = w.get('[data-contato="email"]');
     expect(email.classes()).toContain('min-w-0');
-    expect(email.get('p, span.break-all').classes()).toContain('break-all');
+    expect(email.get('span[title]').classes()).toContain('break-words');
   });
 
   it('em 390 px Conversar ocupa a linha e as outras três dividem a de baixo', () => {
@@ -186,6 +190,45 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
     expect(
       w.get('[data-relacionamentos="acoes-secundarias"]').classes()
     ).toEqual(expect.arrayContaining(['grid']));
+  });
+});
+
+describe('CabecalhoDaPessoa: terceira rodada', () => {
+  const montar = props =>
+    mount(CabecalhoDaPessoa, { props, global: { stubs } });
+
+  it('nenhum rótulo de botão do cabeçalho encolhe ou quebra', () => {
+    const w = montar({ pessoa: pessoa() });
+    const botoes = [
+      w.get('[data-relacionamentos="conversar"]'),
+      ...w.get('[data-relacionamentos="acoes-secundarias"]').findAll('button'),
+    ];
+    botoes.slice(0, 3).forEach(b => {
+      expect(b.classes()).toEqual(
+        expect.arrayContaining(['whitespace-nowrap', 'shrink-0'])
+      );
+    });
+  });
+
+  it('no celular o contato e as etiquetas descem sob a faixa do nome, na largura toda', () => {
+    const w = montar({ pessoa: pessoa() });
+    const baixo = w.get('[data-relacionamentos="contato-e-etiquetas"]');
+    expect(baixo.classes()).toContain('col-span-2');
+    expect(baixo.find('[data-contato="telefone"]').exists()).toBe(true);
+    expect(baixo.find('ul').exists()).toBe(true);
+    expect(
+      w.get('[data-contato="telefone"] span.tabular-nums').classes()
+    ).toContain('whitespace-nowrap');
+  });
+
+  it('Marcar como cliente é botão discreto com ícone de selo', () => {
+    const w = montar({ pessoa: pessoa() });
+    const botao = w.get('[data-relacionamentos="marcar-cliente"]');
+    expect(botao.html()).toContain('i-lucide-badge-check');
+    expect(w.findComponent(Button).vm.$attrs).toMatchObject({
+      slate: '',
+      faded: '',
+    });
   });
 });
 
@@ -287,6 +330,30 @@ describe('SecaoConversas', () => {
     });
     await w.get('button').trigger('click');
     expect(w.emitted('verTodas')).toHaveLength(1);
+  });
+
+  it('vazio dentro da seção: sem cartão interno e com botão discreto', () => {
+    const w = mount(SecaoConversas, { props: { conversas: [] } });
+    const vazio = w.get('[data-vazio]');
+    expect(vazio.classes()).not.toContain('border');
+    expect(vazio.classes()).not.toContain('text-center');
+    expect(vazio.findComponent(Button).vm.$attrs).toMatchObject({
+      slate: '',
+      faded: '',
+    });
+    const cards = mount(SecaoCards, { props: { cards: [] } });
+    expect(cards.get('[data-vazio]').classes()).not.toContain('border');
+    expect(cards.findComponent(Button).vm.$attrs.faded).toBe('');
+  });
+
+  it('no celular o trecho tem 2 linhas e a situação desce para junto do tempo', () => {
+    const w = mount(SecaoConversas, {
+      props: { conversas: [conversa(1)], agora: AGORA },
+    });
+    expect(w.get('li p').classes()).toContain('line-clamp-2');
+    const tempo = w.findAll('li p')[1];
+    expect(tempo.get('span').classes()).toContain('md:hidden');
+    expect(tempo.text()).toContain('SITUACAO.aberta');
   });
 
   it('vazio: uma frase e Conversar', async () => {

@@ -118,7 +118,7 @@ const CIDADES = [
   'Jundiaí',
   'Bauru',
 ];
-const ETIQUETAS = ['clientes-2025', 'indicacao', 'feira', 'site', 'evento'];
+const ETIQUETAS = ['clientes-2025', 'indicação', 'feira', 'site', 'evento'];
 const ORIGENS_DA_RECUSA = ['manual', 'follow_up_reply', 'email_unsubscribe'];
 
 const DOMINIO_DE_EMAIL = 'exemplo.com.br';

@@ -60,14 +60,14 @@ const itensDoMenu = computed(() => [
   >
     <p
       aria-live="polite"
-      class="m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:me-1"
+      class="order-1 flex-1 m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:order-1 sm:me-1 sm:flex-none"
     >
       {{
         t('RELACIONAMENTOS.LISTA.MARCADAS.QUANTAS', { count: quantas }, quantas)
       }}
     </p>
     <Button
-      class="flex-1 min-h-11 sm:flex-none"
+      class="order-3 flex-1 min-h-11 min-w-0 whitespace-nowrap sm:order-2 sm:flex-none"
       icon="i-lucide-send"
       data-relacionamentos="mandar-mensagem"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.MANDAR_MENSAGEM')"
@@ -76,7 +76,7 @@ const itensDoMenu = computed(() => [
     <Button
       slate
       faded
-      class="hidden min-h-11 sm:inline-flex"
+      class="hidden min-h-11 sm:order-3 sm:inline-flex"
       icon="i-lucide-kanban"
       data-relacionamentos="criar-cards"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.CRIAR_CARDS')"
@@ -85,20 +85,30 @@ const itensDoMenu = computed(() => [
     <Button
       slate
       faded
-      class="hidden min-h-11 sm:inline-flex"
+      class="hidden min-h-11 sm:order-4 sm:inline-flex"
       icon="i-lucide-tag"
       data-relacionamentos="etiqueta"
       :label="t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA')"
       @click="emit('etiqueta')"
     />
-    <MenuMaisAcoes :itens="itensDoMenu" @escolher="aoEscolherNoMenu" />
+    <MenuMaisAcoes
+      class="order-4 sm:order-5"
+      :itens="itensDoMenu"
+      @escolher="aoEscolherNoMenu"
+    />
     <Button
       ghost
       slate
-      class="ms-auto size-11"
+      class="order-2 size-11 sm:order-6 sm:ms-auto"
       icon="i-lucide-x"
       :aria-label="t('RELACIONAMENTOS.LISTA.MARCADAS.DESMARCAR')"
       @click="emit('fechar')"
+    />
+    <!-- Celular: quebra a linha entre "marcadas ×" e "Mandar mensagem ⋯". -->
+    <span
+      data-quebra-de-linha
+      class="order-2 h-0 basis-full sm:hidden"
+      aria-hidden="true"
     />
   </div>
 </template>

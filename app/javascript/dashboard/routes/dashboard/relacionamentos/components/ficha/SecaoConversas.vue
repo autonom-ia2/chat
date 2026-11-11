@@ -2,10 +2,10 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import VazioDaSecao from './VazioDaSecao.vue';
 
 // #2894 — as 3 últimas conversas: canal, trecho, "há 3 dias" e a situação em
 // palavra simples. Na ficha da empresa cada linha diz de quem é (`pessoa`).
@@ -51,7 +51,7 @@ const trechoDa = conversa =>
         @click="emit('verTodas')"
       />
     </template>
-    <VazioComUmBotao
+    <VazioDaSecao
       v-if="!conversas.length"
       data-relacionamentos="vazio"
       :frase="ra('VAZIO')"
@@ -71,15 +71,18 @@ const trechoDa = conversa =>
           role="img"
         />
         <div class="flex-1 min-w-0">
-          <p class="m-0 text-base truncate text-n-slate-12">
+          <p class="m-0 text-base line-clamp-2 md:truncate text-n-slate-12">
             {{ trechoDa(conversa) }}
           </p>
           <p class="m-0 text-sm text-n-slate-11">
             {{ quandoRelativo(conversa.quando, agora, idioma) }}
+            <span class="md:hidden">
+              · {{ ra(`SITUACAO.${conversa.situacao}`) }}
+            </span>
           </p>
         </div>
         <span
-          class="px-2 text-xs font-medium leading-5 rounded-md shrink-0"
+          class="hidden px-2 text-xs font-medium leading-5 rounded-md md:inline-block shrink-0"
           :class="TONS[conversa.situacao]"
         >
           {{ ra(`SITUACAO.${conversa.situacao}`) }}

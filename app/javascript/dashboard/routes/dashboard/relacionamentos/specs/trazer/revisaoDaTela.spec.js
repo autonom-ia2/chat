@@ -19,6 +19,8 @@ import {
   useHistoricoDeListas,
 } from '../../trazer/useHistoricoDeListas';
 import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
+import OQueVouGuardar from '../../components/trazer/OQueVouGuardar.vue';
+import TelaPronto from '../../components/trazer/TelaPronto.vue';
 import FichaDeExemplo from '../../components/trazer/FichaDeExemplo.vue';
 import HistoricoDeListas from '../../components/trazer/HistoricoDeListas.vue';
 import SoltarArquivo from '../../components/trazer/SoltarArquivo.vue';
@@ -40,6 +42,9 @@ const problemaDe = (l, linha) => l.problemas.find(p => p.linha === linha);
 afterEach(() => {
   document.body.innerHTML = '';
 });
+
+// Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
+vi.setConfig({ testTimeout: 30000 });
 
 describe('1. foco e anúncio ao resolver uma linha', () => {
   const montar = (l = leitura) =>
@@ -514,9 +519,9 @@ describe('V2. ficha: nome inteiro, selo embaixo', () => {
     ).toBe(true);
   });
 
-  it('o e-mail trunca com title', () => {
+  it('o e-mail tem title com o endereço inteiro', () => {
     const w = mount(FichaDeExemplo, { props: { pessoa } });
-    expect(w.get(`[title="${pessoa.email}"]`).classes()).toContain('truncate');
+    expect(w.find(`[title="${pessoa.email}"]`).exists()).toBe(true);
   });
 });
 
@@ -560,5 +565,77 @@ describe('V5. histórico: prazo junto do botão Desfazer', () => {
       el.textContent.includes('até')
     );
     expect(prazo.className).toContain('text-xs');
+  });
+});
+
+describe('rodada 3', () => {
+  it('1. "O que vou guardar": título do tamanho dos outros, botão no h2 e apoio quando fechado', async () => {
+    const w = mount(OQueVouGuardar, {
+      props: { colunas: leitura.colunas },
+    });
+    const botaoTitulo = w.get('h2 button');
+    expect(w.get('h2').classes()).toEqual(
+      expect.arrayContaining(['text-2xl', 'font-semibold'])
+    );
+    expect(botaoTitulo.classes()).toEqual(
+      expect.arrayContaining(['text-2xl', 'font-semibold'])
+    );
+    expect(botaoTitulo.attributes('aria-expanded')).toBe('false');
+    const apoio = marca(w, 'guardar-apoio');
+    expect(apoio.text()).toBe(
+      'Cada coluna da sua planilha e para onde ela vai.'
+    );
+    await botaoTitulo.trigger('click');
+    expect(botaoTitulo.attributes('aria-expanded')).toBe('true');
+    expect(marca(w, 'guardar-apoio').attributes('style') || '').toContain(
+      'display: none'
+    );
+  });
+
+  it('2. e-mail da ficha quebra em até duas linhas, sem truncar', () => {
+    const w = mount(FichaDeExemplo, {
+      props: {
+        pessoa: {
+          nome: 'Marina Esteveira',
+          telefone: '+55 11 94271-0003',
+          email: 'marina.esteveira@exemplo.com.br',
+          empresa: '',
+          cliente: false,
+        },
+      },
+    });
+    const email = w.get('[title="marina.esteveira@exemplo.com.br"]');
+    expect(email.classes()).toEqual(
+      expect.arrayContaining(['break-all', 'line-clamp-2'])
+    );
+    expect(email.classes()).not.toContain('truncate');
+  });
+
+  it('3. Pronto: linha de sossego abaixo do herói e "Trazer outra lista" discreta', () => {
+    const w = mount(TelaPronto, { props: { total: 195 } });
+    expect(marca(w, 'pronto').exists()).toBe(true);
+    expect(marca(w, 'pronto-sossego').text()).toBe(
+      'Você pode desfazer por 7 dias, em “O que eu já trouxe”.'
+    );
+    expect(marca(w, 'trazer-outra').text()).toBe('Trazer outra lista');
+    expect(marca(w, 'trazer-outra').classes()).toContain('bg-white/10');
+  });
+
+  it('4. Salvar é discreto: só "Trazer N pessoas" é preenchido na tela', () => {
+    const w = mount(TelaConferir, {
+      props: {
+        leitura,
+        resumo: contagem.resumoAoVivo(leitura),
+        total: contagem.totalDaLeitura(leitura),
+      },
+    });
+    const salvar = w.findAll('button').filter(b => b.text() === 'Salvar');
+    expect(salvar.length).toBeGreaterThan(0);
+    salvar.forEach(b => {
+      expect(b.classes().join(' ')).not.toContain('bg-n-blue-11');
+    });
+    expect(marca(w, 'trazer-confirmar').classes().join(' ')).toContain(
+      'bg-n-blue-11'
+    );
   });
 });

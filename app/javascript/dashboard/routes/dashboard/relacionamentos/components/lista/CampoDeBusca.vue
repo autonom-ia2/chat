@@ -1,5 +1,6 @@
 <script setup>
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 
 // #2894 — a busca da lista. Ao digitar espera 300 ms antes de avisar quem usa
@@ -8,12 +9,22 @@ import { useI18n } from 'vue-i18n';
 const props = defineProps({
   modelValue: { type: String, default: '' },
   placeholder: { type: String, required: true },
+  // Texto menor para tela estreita (o completo não cabe em 390 px).
+  placeholderCurto: { type: String, default: '' },
 });
 const emit = defineEmits(['update:modelValue']);
 
 const ESPERA_AO_DIGITAR_MS = 300;
 
 const { t } = useI18n();
+
+const SM_EM_DIANTE = '(min-width: 640px)';
+const telaLarga = useMediaQuery(SM_EM_DIANTE);
+const textoDoCampo = computed(() =>
+  !telaLarga.value && props.placeholderCurto
+    ? props.placeholderCurto
+    : props.placeholder
+);
 
 const texto = ref(props.modelValue);
 let relogio = null;
@@ -62,7 +73,7 @@ onBeforeUnmount(parar);
       type="search"
       data-relacionamentos="busca"
       autocomplete="off"
-      :placeholder="placeholder"
+      :placeholder="textoDoCampo"
       :aria-label="t('RELACIONAMENTOS.LISTA.BUSCA.ROTULO')"
       class="w-full h-11 min-h-11 !mb-0 rounded-xl border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
       @input="aoDigitar"

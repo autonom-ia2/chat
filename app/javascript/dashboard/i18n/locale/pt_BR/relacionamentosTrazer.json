@@ -76,6 +76,7 @@
     },
     "GUARDAR": {
       "TITULO": "O que vou guardar",
+      "APOIO": "Cada coluna da sua planilha e para onde ela vai.",
       "VAI_PARA": "vai para",
       "VIRA_INFORMACAO": "Vira uma informação da pessoa chamada “{coluna}”",
       "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
@@ -102,7 +103,8 @@
     "PRONTO": {
       "CHEGARAM": "{count} pessoa chegou. | {count} pessoas chegaram.",
       "VER": "Ver as pessoas",
-      "OUTRA": "Trazer outra lista"
+      "OUTRA": "Trazer outra lista",
+      "SOSSEGO": "Você pode desfazer por 7 dias, em “O que eu já trouxe”."
     },
     "HISTORICO": {
       "TITULO": "O que eu já trouxe",

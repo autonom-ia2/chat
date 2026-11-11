@@ -19,6 +19,8 @@
         "ROTULO": "Search",
         "PLACEHOLDER_PESSOAS": "Search by name, phone or document",
         "PLACEHOLDER_EMPRESAS": "Search by name or document",
+        "PLACEHOLDER_CURTO_PESSOAS": "Search people",
+        "PLACEHOLDER_CURTO_EMPRESAS": "Search companies",
         "LIMPAR": "Clear search"
       },
       "ORDENAR": {
