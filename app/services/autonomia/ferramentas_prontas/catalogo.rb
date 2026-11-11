@@ -14,6 +14,10 @@ module Autonomia::FerramentasProntas::Catalogo
   module_function
 
   def todas
+    [*fundacao_e_lote1, *lote2]
+  end
+
+  def fundacao_e_lote1
     [
       Autonomia::FerramentasProntas::Fontes::Cep::FONTE,
       Autonomia::FerramentasProntas::Fontes::Cnpj::FONTE,
@@ -26,6 +30,21 @@ module Autonomia::FerramentasProntas::Catalogo
       Autonomia::FerramentasProntas::Fontes::Ddd::FONTE,
       Autonomia::FerramentasProntas::Fontes::Localizacao::FONTE,
       Autonomia::FerramentasProntas::Fontes::Bancos::FONTE
+    ]
+  end
+
+  # F4 (flag `agente_ferramentas_prontas_lote2`)
+  def lote2
+    [
+      Autonomia::FerramentasProntas::Fontes::Hospitais::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Procedimentos::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Doencas::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Ncm::FONTE,
+      Autonomia::FerramentasProntas::Fontes::ComprasGoverno::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Estacoes::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Chuva::FONTE,
+      Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::FONTE,
+      Autonomia::FerramentasProntas::Fontes::CorretorSusep::FONTE
     ]
   end
 

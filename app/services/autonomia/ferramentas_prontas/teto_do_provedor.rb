@@ -21,6 +21,7 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
   CHAVE = 'autonomia:prontas:teto'.freeze
   DESLIGADOS = 'AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS'.freeze
   MINUTO = 60
+  HORA = 3_600
   DIA = 86_400
   FATIA = 0.25
   ERROS_DO_REDIS = [Redis::BaseError, RedisClient::Error, ConnectionPool::TimeoutError].freeze
@@ -30,7 +31,14 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
     'parallelum.com.br' => [[450, DIA]],
     'viacep.com.br' => [[60, MINUTO]],
     'brasilapi.com.br' => [[300, MINUTO]],
-    'date.nager.at' => [[30, MINUTO]]
+    'date.nager.at' => [[30, MINUTO]],
+    # F4. Sem número publicado: conservador.
+    'pncp.gov.br' => [[60, MINUTO]],
+    'apitempo.inmet.gov.br' => [[30, MINUTO]],
+    'data.directory.opinbrasil.com.br' => [[30, MINUTO]],
+    'www2.susep.gov.br' => [[30, MINUTO]],
+    # Open-Meteo: 90% dos 600 por minuto, 5.000 por hora e 10.000 por dia dos termos.
+    'archive-api.open-meteo.com' => [[540, MINUTO], [4_500, HORA], [9_000, DIA]]
   }.freeze
   PADRAO = [[120, MINUTO]].freeze
   # Com a chave gratuita da parallelum no ambiente, o termo sobe para 1.000 por dia.

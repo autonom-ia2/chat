@@ -1,0 +1,18 @@
+procedimentos.csv — Terminologia Unificada da Saúde Suplementar (TUSS), tabela 22: procedimentos e eventos em saúde.
+
+Fonte oficial: Agência Nacional de Saúde Suplementar (ANS), Plano de Dados Abertos, conjunto PDA-049.
+Arquivo: https://dadosabertos.ans.gov.br/FTP/PDA/terminologia_unificada_saude_suplementar_TUSS-049/pda-049-tuss.zip
+Baixado em 10/11/2026 (1.470.290 bytes, sha256 8d3bc59ee7814042c8ba7cb6d2a4cd13e0ab4bb53933eb726ee856b14c5bd8d7).
+O zip baixado nesta data era de 26/06/2026.
+
+O que foi feito: do arquivo pda-049-tabela_22_procedimentos_e_eventos_em_saude.csv ficaram só os termos em vigor
+(DT_FIM_VIGENCIA vazio) com código de 8 dígitos, e só as colunas CD_TERMO (codigo) e NM_TERMO (nome), com os espaços
+repetidos tirados. 5.966 linhas.
+
+Licença: dado aberto publicado pela ANS no Plano de Dados Abertos (Decreto nº 8.777/2016, que define dado aberto como de
+livre utilização). A licença específica do conjunto não foi confirmada na ficha oficial em 10/11/2026; parte das
+publicações da ANS sai em CC BY-NC-SA 4.0. Uso autorizado pelo Rodrigo em 10/11/2026 com essa dúvida registrada em
+docs/ferramentas-prontas/termos-das-fontes.md. Atribuição: "Fonte: ANS — TUSS".
+
+Atualização: o robô diário (.github/workflows/ferramentas-prontas-tabelas.yml) baixa o zip de novo, refaz a extração
+(scripts/ferramentas-prontas/atualizar_tabelas.py) e abre um PR quando a tabela muda.

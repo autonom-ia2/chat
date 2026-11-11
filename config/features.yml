@@ -1325,3 +1325,14 @@
   display_name: Agentes › ferramentas prontas (Construtor e sugestões)
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F4 (#2858): o lote 2 de consultas na hora. Ligada (junto com `agente_ferramentas_prontas`):
+# a vitrine e o turno ganham hospitais e clínicas (CNES), exames e procedimentos (TUSS), nome de doenças (CID-10),
+# código de mercadoria (NCM), compras do governo (PNCP), estações do tempo (INMET), quanto choveu
+# (Open-Meteo), produtos das seguradoras (Open Insurance) e corretor na SUSEP. Desligada: essas fontes somem da vitrine e
+# do turno; as da F0 e da F1 seguem. Sem migration. Rollback: desligar a flag na conta. Posição 41 (1099511627776,
+# 1 << 40), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_lote2
+  display_name: Agentes › ferramentas prontas (lote 2 de consultas)
+  enabled: false
+  column: feature_flags_ext_2

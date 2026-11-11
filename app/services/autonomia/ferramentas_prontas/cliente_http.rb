@@ -64,6 +64,12 @@ class Autonomia::FerramentasProntas::ClienteHttp
     @chamadas = 0
   end
 
+  # O host que só se conhece na hora (o endereço de cada seguradora, lido do diretório do Open Insurance, que já confere
+  # HTTPS na 443): passa a valer neste cliente, com as mesmas proteções, a fatia da conta no teto e a contagem.
+  def permitir_host!(host)
+    @hosts |= [host.to_s.downcase]
+  end
+
   def self.agora
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
@@ -72,9 +78,16 @@ class Autonomia::FerramentasProntas::ClienteHttp
   # da resposta, quando a fonte oficial só entrega a lista inteira (os municípios de MG no IBGE passam de 256 KB).
   # `cabecalhos`: os próprios do provedor (`Provedor.cabecalhos`), por baixo dos fixos daqui.
   def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
-    JSON.parse(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
-  rescue JSON::ParserError, EncodingError => e
-    raise traduzir(e)
+    ler_json(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
+  end
+
+  # O mesmo, para o provedor que responde sem corpo quando não há registro (o PNCP manda 204): o vazio vira "não
+  # encontrado". Só quem pede: para as outras fontes, 200 vazio continua sendo resposta quebrada.
+  def get_json_vazio_e_nao_encontrado(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
+    corpo = buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos })
+    raise NaoEncontrado, 'nao_encontrado' if corpo.to_s.strip.empty?
+
+    ler_json(corpo)
   end
 
   # -> as linhas do CSV (com cabeçalho), em UTF-8.
@@ -89,6 +102,12 @@ class Autonomia::FerramentasProntas::ClienteHttp
   end
 
   private
+
+  def ler_json(corpo)
+    JSON.parse(corpo)
+  rescue JSON::ParserError, EncodingError => e
+    raise traduzir(e)
+  end
 
   # `aceita`: os tipos de resposta aceitos (`tipos`) e os cabeçalhos do provedor (`cabecalhos`).
   def buscar(host, caminho, prazo:, max_bytes:, aceita:)

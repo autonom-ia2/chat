@@ -1,0 +1,377 @@
+[
+ {
+  "OrganisationId": "716d90a7-58b8-4146-97f3-8ca9dd88f92d",
+  "Status": "Active",
+  "OrganisationName": "HDI SEGUROS",
+  "AuthorisationServers": [
+   {
+    "CustomerFriendlyName": "HDI Seguros",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "3.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls.hdiseguros.opinb3.com.br/open-insurance/consents/v3/consents/{consentId}"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiseguros.opinb3.com.br/open-insurance/consents/v3/consents"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v2/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v2/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "1.7.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "1.6.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "1.6.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiseguros.opinb3.com.br/open-insurance/products-services/v1/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "2.5.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls.hdiseguros.opinb3.com.br/open-insurance/consents/v2"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiseguros.opinb3.com.br/open-insurance/consents/v2/consents"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiseguros.opinb3.com.br/open-insurance/consents/v2/consents/{consentId}"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "CustomerFriendlyName": "HDI Global",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "3.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v3/consents/{consentId}"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v3/consents"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "3.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v3/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v2/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "2.6.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v2/consents"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v2/consents/{consentId}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "1.4.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "1.3.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.hdiglobal.opinb3.com.br/open-insurance/products-services/v1/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "2.5.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v2"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v2/consents"
+       },
+       {
+        "ApiEndpoint": "https://mtls.hdiglobal.opinb3.com.br/open-insurance/consents/v2/consents/{consentId}"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "OrganisationId": "a3a2ae32-8450-4c13-a8a6-ecea080dcf98",
+  "Status": "Active",
+  "OrganisationName": "TOKIO MARINE SEGURADORA S.A",
+  "AuthorisationServers": [
+   {
+    "CustomerFriendlyName": "Tokio Marine Seguradora S/A",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "3.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls-auth.tokiomarine.com.br/open-insurance/consents/v3/consents/{consentId}"
+       },
+       {
+        "ApiEndpoint": "https://mtls-auth.tokiomarine.com.br/open-insurance/consents/v3/consents"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "1.7.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://auth.tokiomarine.com.br/open-insurance/products-services/v1/person"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "OrganisationId": "d818515a-93a1-454c-ac0f-71d3404bb1bb",
+  "Status": "Active",
+  "OrganisationName": "ALLIANZ SEGUROS S.A.",
+  "AuthorisationServers": [
+   {
+    "CustomerFriendlyName": "ALLIANZ SEGUROS",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiFamilyType": "consents",
+      "ApiVersion": "3.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://mtls-api-proxy.api.opin.allianz.com.br/open-insurance/consents/v3/consents/{consentId}"
+       },
+       {
+        "ApiEndpoint": "https://mtls-api-proxy.api.opin.allianz.com.br/open-insurance/consents/v3/consents"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v2/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "1.7.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/person"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "1.6.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_auto-insurance",
+      "ApiVersion": "1.5.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/auto-insurance/{vehicleOvernightZipCode}/{fipeCode}/{year}"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "1.4.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/cyber-risk"
+       }
+      ]
+     },
+     {
+      "ApiFamilyType": "products-services_person",
+      "ApiVersion": "1.6.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.opin.allianz.com.br/open-insurance/products-services/v1/person"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "OrganisationId": "00000000-0000-0000-0000-000000000000",
+  "Status": "Inactive",
+  "OrganisationName": "SEGURADORA INATIVA S.A.",
+  "AuthorisationServers": [
+   {
+    "CustomerFriendlyName": "Seguradora Inativa",
+    "Status": "Active",
+    "ApiResources": [
+     {
+      "ApiFamilyType": "products-services_cyber-risk",
+      "ApiVersion": "2.0.0",
+      "Status": "Active",
+      "ApiDiscoveryEndpoints": [
+       {
+        "ApiEndpoint": "https://api.inativa.exemplo.test/open-insurance/products-services/v2/cyber-risk"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+]

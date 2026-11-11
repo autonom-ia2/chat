@@ -1,0 +1,74 @@
+# Robô das tabelas oficiais das ferramentas prontas (#2858, F4).
+#
+# Todo dia baixa a TUSS 22 (ANS) e a CID-10 (DATASUS), regenera lib/ferramentas_prontas/procedimentos.csv e
+# doencas.csv (scripts/ferramentas-prontas/atualizar_tabelas.py) e, se algum mudou, abre um Pull Request com o resumo
+# do que entrou, saiu e mudou. Nada é baixado nem gravado em produção: a tabela nova chega às duas stacks pelo deploy
+# normal, depois do merge (decisão do Rodrigo, 10/11/2026, no lugar de um cron no servidor).
+#
+# Sem mudança: nenhum PR, nenhum aviso. Fonte fora do ar ou quebrada (zip grande demais, tabela que encolheu demais,
+# código fora do formato): o job fica VERMELHO com o motivo, e nada vai para o repositório.
+#
+# Já existe PR aberto do robô com o mesmo conteúdo: não abre outro.
+#
+# Precisa, como o modo aprendiz do Guia, de "Allow GitHub Actions to create and approve pull requests" ligado
+# (Settings > Actions > General). O PR aberto com o token do Actions não dispara o CI sozinho (regra do GitHub):
+# feche e reabra o PR para os checks rodarem antes do merge.
+name: Ferramentas prontas - tabelas oficiais
+
+on:
+  schedule:
+    # 09:17 UTC (06:17 em Brasília), fora da hora cheia.
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ferramentas-prontas-tabelas
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tabelas
+        name: Baixar e regenerar as tabelas
+        run: python3 -I scripts/ferramentas-prontas/atualizar_tabelas.py
+        env:
+          CORPO_DO_PR: ${{ runner.temp }}/corpo-do-pr.md
+
+      - name: Abrir o Pull Request
+        if: steps.tabelas.outputs.mudou == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORPO_DO_PR: ${{ runner.temp }}/corpo-do-pr.md
+        run: |
+          marca=$(cat lib/ferramentas_prontas/procedimentos.csv lib/ferramentas_prontas/doencas.csv | sha256sum | cut -c1-10)
+          ramo="robo/tabelas-prontas-${marca}"
+          if git ls-remote --exit-code --heads origin "$ramo" > /dev/null; then
+            echo "O PR deste conteúdo já existe ($ramo)."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$ramo"
+          git add lib/ferramentas_prontas/procedimentos.csv lib/ferramentas_prontas/doencas.csv \
+                  lib/ferramentas_prontas/LICENCA-procedimentos-tuss.txt lib/ferramentas_prontas/LICENCA-doencas-cid10.txt
+          git commit -m "chore(prontas): tabelas oficiais atualizadas (TUSS e CID-10)"
+          git push origin "$ramo"
+          {
+            echo "O robô diário das ferramentas prontas (#2858) achou mudança nas tabelas oficiais."
+            echo
+            cat "$CORPO_DO_PR"
+            echo
+            echo "Conferir antes do merge: feche e reabra este PR para o CI rodar (PR do robô não dispara os checks)."
+            echo
+            echo "Refs #2858"
+          } > "${RUNNER_TEMP}/corpo-final.md"
+          gh pr create --base main --head "$ramo" \
+            --title "Ferramentas prontas: tabelas oficiais atualizadas (${marca})" \
+            --body-file "${RUNNER_TEMP}/corpo-final.md"

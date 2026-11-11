@@ -6,7 +6,11 @@ module FerramentasProntasHelper
     'api.opencnpj.org' => '93.184.216.43', 'parallelum.com.br' => '93.184.216.44', 'fora.exemplo.test' => '93.184.216.45',
     'date.nager.at' => '93.184.216.46', 'api.bcb.gov.br' => '93.184.216.47', 'olinda.bcb.gov.br' => '93.184.216.48',
     'servicodados.ibge.gov.br' => '93.184.216.49', 'photon.komoot.io' => '93.184.216.50',
-    'www.bcb.gov.br' => '93.184.216.52'
+    'www.bcb.gov.br' => '93.184.216.52',
+    # F4
+    'apidadosabertos.saude.gov.br' => '93.184.216.53', 'pncp.gov.br' => '93.184.216.55',
+    'apitempo.inmet.gov.br' => '93.184.216.56', 'archive-api.open-meteo.com' => '93.184.216.57',
+    'data.directory.opinbrasil.com.br' => '93.184.216.58', 'www2.susep.gov.br' => '93.184.216.59'
   }.freeze
 
   # Também zera o teto global por provedor (#2858 F1): ele vive no Redis e passaria de um exemplo para o outro.

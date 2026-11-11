@@ -1,0 +1,15 @@
+doencas.csv — Classificação Estatística Internacional de Doenças e Problemas Relacionados à Saúde, 10ª revisão (CID-10).
+
+Fonte oficial: DATASUS / Centro Brasileiro de Classificação de Doenças (CBCD), versão 2008.
+Arquivo: http://www2.datasus.gov.br/cid10/V2008/downloads/CID10CSV.zip
+Baixado em 10/11/2026 (306.066 bytes, sha256 84f23809275575f751255048064bbb244b0de33fd5987ab98df0f98e5f5d2c95).
+
+O que foi feito: dos arquivos CID-10-CATEGORIAS.CSV (código de 3 posições, ex.: J45) e CID-10-SUBCATEGORIAS.CSV (4
+posições, sem o ponto, ex.: J450) ficaram só o código e a coluna DESCRICAO, convertidos de ISO-8859-1 para UTF-8, com os
+espaços repetidos tirados. 14.233 linhas.
+
+Licença: o DATASUS disponibiliza a tabela para uso, sem licença explícita; a classificação é da Organização Mundial da
+Saúde (OMS), em tradução oficial do CBCD. Atribuição: "Fonte: DATASUS — CID-10".
+
+Atualização: o mesmo robô diário da TUSS (.github/workflows/ferramentas-prontas-tabelas.yml) confere este arquivo e
+abre um PR se o DATASUS publicar outro.

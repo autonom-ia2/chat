@@ -92,7 +92,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 
+  # Meio-dia: o `reservar!` daqui conta no dia da plataforma (UTC), e o Experimente lê o dia no fuso da conta. Entre 21h
+  # e meia-noite de Brasília os dois dias eram diferentes e o exemplo falhava.
   it 'limite do dia da fonte esgotado: nem chama o modelo' do
+    travel_to(Time.zone.parse('2026-11-10 15:00'))
     Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
     2.times { Autonomia::FerramentasProntas::Uso.reservar!(account_id: account.id, fonte: 'fipe', limite: 2) }
 

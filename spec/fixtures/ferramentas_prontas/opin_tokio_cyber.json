@@ -1,0 +1,83 @@
+{
+ "data": {
+  "brand": {
+   "name": "Tokio Marine Seguradora S/A",
+   "companies": [
+    {
+     "name": "Tokio Marine Brasil Seguradora S.A",
+     "cnpjNumber": "00000000000000",
+     "products": [
+      {
+       "name": "Riscos Cibernéticos",
+       "code": "10001",
+       "coverages": [
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_PERANTE_TERCEIROS",
+         "coverageDescription": "RESPONSABILIDADE CIBERNÉTICA",
+         "allowApartPurchase": true
+        },
+        {
+         "coverage": "RESPONSABILIDADE_CIVIL_PERANTE_TERCEIROS",
+         "coverageDescription": "RESPONSABILIDADE CIBERNÉTICA",
+         "allowApartPurchase": true
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "CUSTOS DE EXTORSÃO CIBERNÉTICA",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "CUSTOS DE EXTORSÃO CIBERNÉTICA",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "CUSTOS DE REMEDIAÇÃO",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "CUSTOS DE REMEDIAÇÃO",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "MULTAS PCI E CUSTOS DE AVALIAÇÃO",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "MULTAS PCI E CUSTOS DE AVALIAÇÃO",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "PERDA POR INTERRUPÇÃO DE NEGÓCIOS",
+         "allowApartPurchase": false
+        },
+        {
+         "coverage": "OUTRAS",
+         "coverageDescription": "PERDA POR INTERRUPÇÃO DE NEGÓCIOS",
+         "allowApartPurchase": false
+        }
+       ],
+       "termsAndConditions": {
+        "susepProcessNumber": "15414.900628/2018-50",
+        "definition": "https://www.tokiomarine.com.br/seguros/seguro-riscos-ciberneticos/"
+       },
+       "targetAudiences": "PESSOA_JURIDICA"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "links": {
+  "self": "https://auth.tokiomarine.com.br/open-insurance/products-services/v2/cyber-risk"
+ },
+ "meta": {
+  "totalRecords": 1,
+  "totalPages": 1
+ }
+}

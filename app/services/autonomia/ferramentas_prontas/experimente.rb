@@ -21,7 +21,8 @@ class Autonomia::FerramentasProntas::Experimente
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
     'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
   }.freeze
-  COM_TEXTO_LIVRE = %w[fipe cidades feriados].freeze
+  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
+                       corretor_susep].freeze
   MAX_VALOR = 100
 
   def initialize(account:, fonte:, valor:)

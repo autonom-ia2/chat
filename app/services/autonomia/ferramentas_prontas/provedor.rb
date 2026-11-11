@@ -62,6 +62,11 @@ class Autonomia::FerramentasProntas::Provedor
     @cliente.get_json(self.class.host, caminho, prazo: @prazo, max_bytes: max_bytes, cabecalhos: self.class.cabecalhos)
   end
 
+  # Para o provedor que responde sem corpo quando não há registro (ver `ClienteHttp#get_json_vazio_e_nao_encontrado`).
+  def get_vazio_e_nao_encontrado(caminho)
+    @cliente.get_json_vazio_e_nao_encontrado(self.class.host, caminho, prazo: @prazo, cabecalhos: self.class.cabecalhos)
+  end
+
   def get_csv(caminho)
     @cliente.get_csv(self.class.host, caminho, prazo: @prazo, cabecalhos: self.class.cabecalhos)
   end
