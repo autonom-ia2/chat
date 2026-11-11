@@ -73,6 +73,15 @@ const marcarCliente = async () =>
     { nome: nome.value }
   );
 
+// Sem pergunta antes: volta com um clique em "Marcar como cliente".
+const desmarcarCliente = async () =>
+  resultado(
+    await ficha.desmarcarCliente(),
+    'RELACIONAMENTOS_FICHA.CABECALHO.CLIENTE_DESMARCADO',
+    'RELACIONAMENTOS_FICHA.CABECALHO.ERRO_DESMARCAR',
+    { nome: nome.value }
+  );
+
 // Quem liberou fica só no log do servidor; gravar isso é da fatia B do #2895.
 const liberar = async () =>
   resultado(
@@ -108,9 +117,11 @@ const AVISO_DO_MAIS = {
   apagar: 'APAGAR',
 };
 
-// "Alterar informações" abre a gaveta; as outras escolhas só avisam, por ora.
+// "Alterar informações" abre a gaveta e "Não é mais cliente" desmarca na hora;
+// as outras escolhas só avisam, por ora.
 const escolherNoMais = escolha => {
   if (escolha === 'alterar') gavetaAberta.value = true;
+  else if (escolha === 'desmarcar') desmarcarCliente();
   else avisar(AVISO_DO_MAIS[escolha]);
 };
 

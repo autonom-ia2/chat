@@ -42,6 +42,7 @@ const ESCRITAS = [
   'salvar',
   'salvarEmpresa',
   'marcarCliente',
+  'desmarcarCliente',
   'guardarNota',
   'liberarMensagens',
 ];
@@ -147,6 +148,10 @@ const fonteReal = () => ({
   },
   async marcarCliente(id) {
     await noServidor(() => ContactAPI.markCustomer(id));
+    return lerPessoa(id);
+  },
+  async desmarcarCliente(id) {
+    await noServidor(() => ContactAPI.removeCustomer(id));
     return lerPessoa(id);
   },
   async liberarMensagens(id) {

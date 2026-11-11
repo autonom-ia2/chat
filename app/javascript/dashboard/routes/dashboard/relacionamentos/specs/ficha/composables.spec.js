@@ -19,6 +19,9 @@ const fonteDaPessoa = (extra = {}) => ({
   marcarCliente: vi
     .fn()
     .mockResolvedValue({ ...pessoa, contact_type: 'customer' }),
+  desmarcarCliente: vi
+    .fn()
+    .mockResolvedValue({ ...pessoa, contact_type: 'lead' }),
   guardarNota: vi.fn().mockResolvedValue({ id: 'b' }),
   salvar: vi.fn().mockResolvedValue({ ...pessoa, name: 'Ana Maria' }),
   liberarMensagens: vi.fn().mockResolvedValue(pessoa),
@@ -186,10 +189,44 @@ describe('useFichaDaPessoa', () => {
     expect(fonte.cards).toHaveBeenCalledTimes(2);
   });
 
+  it('desmarcar cliente troca a pessoa e fica ocupado enquanto grava', async () => {
+    const gravando = adiada();
+    const fonte = fonteDaPessoa({
+      pessoa: vi
+        .fn()
+        .mockResolvedValue({ ...pessoa, contact_type: 'customer' }),
+      desmarcarCliente: vi.fn(() => gravando.promessa),
+    });
+    const ficha = useFichaDaPessoa(fonte, ref(1));
+    await ficha.carregar();
+    const desmarcando = ficha.desmarcarCliente();
+    expect(ficha.ocupado.value).toBe('desmarcarCliente');
+    gravando.resolver({ ...pessoa, contact_type: 'lead' });
+    expect(await desmarcando).toBe(true);
+    expect(fonte.desmarcarCliente).toHaveBeenCalledWith(1);
+    expect(ficha.pessoa.value.contact_type).toBe('lead');
+    expect(ficha.ocupado.value).toBe('');
+  });
+
+  it('desmarcar cliente que falha devolve false e deixa a pessoa como estava', async () => {
+    const cliente = { ...pessoa, contact_type: 'customer' };
+    const ficha = useFichaDaPessoa(
+      fonteDaPessoa({
+        pessoa: vi.fn().mockResolvedValue(cliente),
+        desmarcarCliente: vi.fn().mockRejectedValue(new Error('x')),
+      }),
+      ref(1)
+    );
+    await ficha.carregar();
+    expect(await ficha.desmarcarCliente()).toBe(false);
+    expect(ficha.pessoa.value).toEqual(cliente);
+  });
+
   // A ficha troca de pessoa sem desmontar a tela: a resposta de uma escrita
   // que saiu para a pessoa de antes não pode cair na pessoa de agora.
   it.each([
     ['marcarCliente', 'marcarCliente', []],
+    ['desmarcarCliente', 'desmarcarCliente', []],
     ['salvar', 'salvar', [{}]],
     ['liberar', 'liberarMensagens', []],
   ])(

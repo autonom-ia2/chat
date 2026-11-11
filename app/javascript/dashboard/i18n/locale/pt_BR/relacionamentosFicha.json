@@ -45,6 +45,8 @@
       "MARCAR_CLIENTE": "Marcar como cliente",
       "CLIENTE_MARCADO": "Pronto. {nome} agora é cliente.",
       "ERRO_MARCAR": "Não consegui marcar como cliente. Tente de novo.",
+      "CLIENTE_DESMARCADO": "{nome} não é mais cliente.",
+      "ERRO_DESMARCAR": "Não consegui mudar. Tente de novo.",
       "COPIAR": "Copiar {item}",
       "COPIADO": "Copiado.",
       "NAO_COPIOU": "Não consegui copiar. Tente de novo.",
@@ -58,6 +60,7 @@
       "LEMBRETE": "Lembrete",
       "MAIS": "Mais ações",
       "ALTERAR_INFORMACOES": "Alterar informações",
+      "DESMARCAR_CLIENTE": "Não é mais cliente",
       "JUNTAR": "Juntar com outra pessoa",
       "BLOQUEAR": "Bloquear",
       "APAGAR": "Apagar"

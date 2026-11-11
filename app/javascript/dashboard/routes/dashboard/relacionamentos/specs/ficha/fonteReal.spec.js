@@ -25,6 +25,7 @@ vi.mock('dashboard/api/contacts', () => ({
   default: {
     update: vi.fn(),
     markCustomer: vi.fn(),
+    removeCustomer: vi.fn(),
     removeOptOut: vi.fn(),
   },
 }));
@@ -60,6 +61,7 @@ const LEITURAS = [
 const ESCRITAS = [
   ['salvar', () => ContactAPI.update, [7, { name: 'Ana' }]],
   ['marcarCliente', () => ContactAPI.markCustomer, [7]],
+  ['desmarcarCliente', () => ContactAPI.removeCustomer, [7]],
   ['liberarMensagens', () => ContactAPI.removeOptOut, [7]],
   ['guardarNota', () => ContactNotesAPI.create, [7, 'Ligar amanhã.']],
   ['salvarEmpresa', () => CompanyAPI.update, [9, { name: 'Padaria' }]],
@@ -70,7 +72,7 @@ afterEach(() => {
 });
 
 describe('leituras', () => {
-  it('não é a demonstração e tem os 15 métodos', () => {
+  it('não é a demonstração e tem os 16 métodos', () => {
     const fonte = real();
     expect(fonte.usaDemo).toBe(false);
     [...LEITURAS, ...ESCRITAS].forEach(([metodo]) =>
@@ -159,6 +161,13 @@ describe('escritas da pessoa', () => {
     ContactAPI.markCustomer.mockResolvedValue({ data: {} });
     expect(await real().marcarCliente(7)).toEqual(relida);
     expect(ContactAPI.markCustomer).toHaveBeenCalledWith(7);
+    expect(RelacionamentosAPI.pessoa).toHaveBeenCalledWith(7);
+  });
+
+  it('desmarcar cliente escreve e relê a pessoa', async () => {
+    ContactAPI.removeCustomer.mockResolvedValue({ data: {} });
+    expect(await real().desmarcarCliente(7)).toEqual(relida);
+    expect(ContactAPI.removeCustomer).toHaveBeenCalledWith(7);
     expect(RelacionamentosAPI.pessoa).toHaveBeenCalledWith(7);
   });
 

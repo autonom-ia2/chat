@@ -132,6 +132,15 @@ describe('CabecalhoDaPessoa', () => {
     await itens[1].trigger('click');
     expect(w.emitted('maisAcao')[0]).toEqual(['juntar']);
   });
+
+  it('de quem é cliente, o "⋯" tem "Não é mais cliente" e repassa a escolha', async () => {
+    const w = montar({ pessoa: pessoa({ contact_type: 'customer' }) });
+    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
+    const itens = w.findAll('.n-dropdown-item button');
+    expect(itens[1].text()).toContain('ACOES.DESMARCAR_CLIENTE');
+    await itens[1].trigger('click');
+    expect(w.emitted('maisAcao')[0]).toEqual(['desmarcar']);
+  });
 });
 
 describe('MenuMais', () => {
@@ -158,6 +167,39 @@ describe('MenuMais', () => {
     await w.findAll('.n-dropdown-item button')[0].trigger('click');
     expect(w.emitted('acao')[0]).toEqual(['alterar']);
     expect(w.find('.n-dropdown-item').exists()).toBe(false);
+  });
+
+  const textosDoMenu = async props => {
+    const w = mount(MenuMais, { props, global: { stubs } });
+    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
+    return w.findAll('.n-dropdown-item button').map(item => item.text());
+  };
+
+  it('"Não é mais cliente" vem logo depois de "Alterar informações", só para quem é cliente', async () => {
+    const deCliente = await textosDoMenu({ ehCliente: true });
+    expect(deCliente).toHaveLength(5);
+    expect(deCliente[0]).toContain('ACOES.ALTERAR_INFORMACOES');
+    expect(deCliente[1]).toContain('ACOES.DESMARCAR_CLIENTE');
+    expect((await textosDoMenu({ ehCliente: false })).join(' ')).not.toContain(
+      'DESMARCAR_CLIENTE'
+    );
+    expect((await textosDoMenu()).join(' ')).not.toContain('DESMARCAR_CLIENTE');
+  });
+
+  it('quem só pode ver não tem "Não é mais cliente", mesmo com cliente', async () => {
+    const textos = await textosDoMenu({ ehCliente: true, podeAlterar: false });
+    expect(textos).toHaveLength(3);
+    expect(textos.join(' ')).not.toContain('DESMARCAR_CLIENTE');
+  });
+
+  it('escolher "Não é mais cliente" emite desmarcar', async () => {
+    const w = mount(MenuMais, {
+      props: { ehCliente: true },
+      global: { stubs },
+    });
+    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
+    await w.findAll('.n-dropdown-item button')[1].trigger('click');
+    expect(w.emitted('acao')[0]).toEqual(['desmarcar']);
   });
 });
 

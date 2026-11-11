@@ -156,6 +156,32 @@ describe('escritas da demonstração', () => {
     expect(cards.some(c => c.situacao === 'ganho')).toBe(true);
   });
 
+  it('desmarcar cliente desfaz o marcar, e marcar de novo volta', async () => {
+    await fonte.marcarCliente(ID_NUNCA_CONVERSOU);
+    const desmarcada = await fonte.desmarcarCliente(ID_NUNCA_CONVERSOU);
+    expect(desmarcada).toMatchObject({
+      contact_type: 'lead',
+      customer_since: null,
+    });
+    expect((await fonte.pessoa(ID_NUNCA_CONVERSOU)).contact_type).toBe('lead');
+    const deNovo = await fonte.marcarCliente(ID_NUNCA_CONVERSOU);
+    expect(deNovo.contact_type).toBe('customer');
+  });
+
+  it('desmarcar cliente vale também para quem já era cliente', async () => {
+    const antes = await fonte.pessoa(ID_CLIENTE_COMPLETO);
+    expect(antes.contact_type).toBe('customer');
+    const desmarcada = await fonte.desmarcarCliente(ID_CLIENTE_COMPLETO);
+    expect(desmarcada).toMatchObject({
+      contact_type: 'lead',
+      customer_since: null,
+    });
+    expect(await fonte.pessoa(ID_CLIENTE_COMPLETO)).toMatchObject({
+      contact_type: 'lead',
+      customer_since: null,
+    });
+  });
+
   it('guardar nota põe a nota no topo, com quem escreveu', async () => {
     const antes = await fonte.notas(ID_CLIENTE_COMPLETO);
     const nota = await fonte.guardarNota(
@@ -182,6 +208,9 @@ describe('escritas da demonstração', () => {
     await expect(fonte.marcarCliente(ID_QUE_NAO_EXISTE)).rejects.toMatchObject({
       name: 'NAO_ACHEI',
     });
+    await expect(
+      fonte.desmarcarCliente(ID_QUE_NAO_EXISTE)
+    ).rejects.toMatchObject({ name: 'NAO_ACHEI' });
     expect(await fonte.pessoa(ID_QUE_NAO_EXISTE)).toBeNull();
   });
 });

@@ -58,7 +58,12 @@ vi.mock('dashboard/api/relacionamentos', () => ({
   },
 }));
 vi.mock('dashboard/api/contacts', () => ({
-  default: { update: vi.fn(), markCustomer: vi.fn(), removeOptOut: vi.fn() },
+  default: {
+    update: vi.fn(),
+    markCustomer: vi.fn(),
+    removeCustomer: vi.fn(),
+    removeOptOut: vi.fn(),
+  },
 }));
 vi.mock('dashboard/api/contactNotes', () => ({
   default: { create: vi.fn() },
@@ -345,6 +350,47 @@ describe('ficha da pessoa: escritas', () => {
     );
   });
 
+  const CLIENTE = { ...ANA, contact_type: 'customer', customer_since: AGORA };
+  const escolherNoMais = async (w, texto) => {
+    await w.get(marca('mais-acoes')).trigger('click');
+    await w
+      .findAll('.n-dropdown-item button')
+      .find(item => item.text().includes(texto))
+      .trigger('click');
+    await flushPromises();
+  };
+
+  it('"Não é mais cliente", no ⋯, escreve na hora, relê a pessoa e o selo some', async () => {
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: CLIENTE });
+    ContactAPI.removeCustomer.mockResolvedValue({ data: {} });
+    const w = await abrirPessoa();
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: ANA });
+    await escolherNoMais(w, 'Não é mais cliente');
+    expect(ContactAPI.removeCustomer).toHaveBeenCalledWith(7);
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(false);
+    expect(w.find(marca('marcar-cliente')).exists()).toBe(true);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Ana Albuquerino não é mais cliente.'
+    );
+  });
+
+  it('se o servidor recusa o "Não é mais cliente", o selo fica e a tela avisa', async () => {
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: CLIENTE });
+    ContactAPI.removeCustomer.mockRejectedValue(erroHttp(500));
+    const w = await abrirPessoa();
+    await escolherNoMais(w, 'Não é mais cliente');
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+    expect(useAlert).toHaveBeenCalledWith('Não consegui mudar. Tente de novo.');
+  });
+
+  it('quem não é cliente não tem "Não é mais cliente" no ⋯', async () => {
+    const w = await abrirPessoa();
+    await w.get(marca('mais-acoes')).trigger('click');
+    expect(w.text()).toContain('Alterar informações');
+    expect(w.text()).not.toContain('Não é mais cliente');
+  });
+
   it('Salvar nota escreve e a nota entra no topo', async () => {
     ContactNotesAPI.create.mockResolvedValue({
       data: {
@@ -435,6 +481,18 @@ describe('ficha da pessoa: quem só pode ver', () => {
     expect(w.get(marca('notas')).text()).toContain('Ligar.');
     await w.get(marca('mais-acoes')).trigger('click');
     expect(w.text()).not.toContain('Alterar informações');
+  });
+
+  it('de cliente, vê o selo mas não tem "Não é mais cliente"', async () => {
+    pode.editar = false;
+    RelacionamentosAPI.pessoa.mockResolvedValue({
+      data: { ...ANA, contact_type: 'customer', customer_since: AGORA },
+    });
+    const w = await abrirPessoa();
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+    await w.get(marca('mais-acoes')).trigger('click');
+    expect(w.text()).toContain('Juntar com outra pessoa');
+    expect(w.text()).not.toContain('Não é mais cliente');
   });
 });
 

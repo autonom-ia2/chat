@@ -45,6 +45,8 @@
       "MARCAR_CLIENTE": "Mark as customer",
       "CLIENTE_MARCADO": "Done. {nome} is now a customer.",
       "ERRO_MARCAR": "I could not mark as customer. Try again.",
+      "CLIENTE_DESMARCADO": "{nome} is no longer a customer.",
+      "ERRO_DESMARCAR": "Could not change it. Try again.",
       "COPIAR": "Copy {item}",
       "COPIADO": "Copied.",
       "NAO_COPIOU": "I could not copy. Try again.",
@@ -58,6 +60,7 @@
       "LEMBRETE": "Reminder",
       "MAIS": "More actions",
       "ALTERAR_INFORMACOES": "Change details",
+      "DESMARCAR_CLIENTE": "No longer a customer",
       "JUNTAR": "Merge with another person",
       "BLOQUEAR": "Block",
       "APAGAR": "Delete"

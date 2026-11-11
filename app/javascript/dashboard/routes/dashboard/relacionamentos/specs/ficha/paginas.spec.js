@@ -375,7 +375,7 @@ describe('FichaDaPessoaPage', () => {
   it('"Alterar informações" do ⋯ também abre a gaveta; as outras só avisam', async () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
     await marca(w, 'mais-acoes').trigger('click');
-    await w.findAll('.n-dropdown-item button')[1].trigger('click');
+    await w.findAll('.n-dropdown-item button')[2].trigger('click');
     expect(useAlert).toHaveBeenCalledWith(
       expect.stringContaining('AVISOS.JUNTAR')
     );
@@ -383,6 +383,23 @@ describe('FichaDaPessoaPage', () => {
     await marca(w, 'mais-acoes').trigger('click');
     await w.findAll('.n-dropdown-item button')[0].trigger('click');
     expect(marca(w, 'gaveta-informacoes').exists()).toBe(true);
+  });
+
+  it('"Não é mais cliente" do ⋯ tira o selo na hora, e "Marcar como cliente" devolve', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+    await marca(w, 'mais-acoes').trigger('click');
+    await w.findAll('.n-dropdown-item button')[1].trigger('click');
+    await esperarPor(() =>
+      expect(useAlert).toHaveBeenCalledWith(
+        expect.stringContaining('CABECALHO.CLIENTE_DESMARCADO')
+      )
+    );
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(false);
+    await marca(w, 'marcar-cliente').trigger('click');
+    await esperarPor(() =>
+      expect(w.find('[data-selo="cliente"]').exists()).toBe(true)
+    );
   });
 
   it('Conversar e Novo card avisam o que vai acontecer', async () => {

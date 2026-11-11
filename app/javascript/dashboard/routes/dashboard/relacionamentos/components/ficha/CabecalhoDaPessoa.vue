@@ -12,9 +12,9 @@ import MenuMais from './MenuMais.vue';
 
 // #2894 — o cabeçalho da ficha da pessoa: quem é, desde quando é cliente, como
 // falar com ela, e as ações. Só "Conversar" é preenchido. Quem só pode ver o
-// contato (`podeEditar` falso) não tem "Marcar como cliente" nem "Alterar
-// informações"; quem não pode criar card (`podeCriarCards` falso) não tem "Novo
-// card".
+// contato (`podeEditar` falso) não tem "Marcar como cliente", "Não é mais
+// cliente" nem "Alterar informações"; quem não pode criar card
+// (`podeCriarCards` falso) não tem "Novo card".
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcandoCliente: { type: Boolean, default: false },
@@ -205,6 +205,7 @@ const empresa = computed(
         />
         <MenuMais
           :pode-alterar="podeEditar"
+          :eh-cliente="ehCliente"
           @acao="escolha => emit('maisAcao', escolha)"
         />
       </div>

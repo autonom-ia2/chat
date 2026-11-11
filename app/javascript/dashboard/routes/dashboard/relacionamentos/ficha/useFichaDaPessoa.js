@@ -65,6 +65,12 @@ export const useFichaDaPessoa = (fonte, id) => {
       await partes.reler('cards');
     });
 
+  const desmarcarCliente = () =>
+    executar('desmarcarCliente', async aindaVale => {
+      const desmarcada = await fonte.desmarcarCliente(id.value);
+      if (aindaVale()) pessoa.value = desmarcada;
+    });
+
   const guardarNota = texto =>
     executar('guardarNota', async aindaVale => {
       const nota = await fonte.guardarNota(id.value, texto);
@@ -97,6 +103,7 @@ export const useFichaDaPessoa = (fonte, id) => {
     carregar: () => carregar(buscar),
     relerParte: partes.reler,
     marcarCliente,
+    desmarcarCliente,
     guardarNota,
     salvar,
     liberar,
