@@ -82,12 +82,12 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
   end
 
-  # -> [[item, nivel], ...] na ordem de relevância. Vale o melhor entre a descrição completa e a do próprio nível:
-  # "Parafusos autoperfurantes" começa pela palavra, "Artigos roscados, parafusos autoperfurantes" não.
+  # -> [[item, nivel], ...] na ordem de relevância, pelo texto do próprio nível: a descrição completa começa pela
+  # posição, e com ela todos os filhos do 73.18 começavam por "Parafusos" (o tira-fundos vinha antes do parafuso).
   def em_ordem(busca, niveis, indice)
     pares = niveis.map { |nivel| [item(nivel, indice), nivel] }
-    Autonomia::FerramentasProntas::Lista.em_ordem(pares, busca, desempate: ->(par) { -par.last.digitos.length }) do |item, nivel|
-      [item['descricao'], nivel.propria]
+    Autonomia::FerramentasProntas::Lista.em_ordem(pares, busca, desempate: ->(par) { -par.last.digitos.length }) do |_item, nivel|
+      nivel.propria
     end
   end
 

@@ -14,6 +14,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   let(:ferramenta) { incluir_pronta('ncm', conta: account, agente: agent) }
   let(:api) { 'https://brasilapi.com.br/api/ncm/v1' }
   let(:uso) { Autonomia::FerramentasProntas::Uso.sole }
+  # O texto da posição 09.01, que entra na descrição de cada código dela (revisão do #2917, 6).
+  let(:cafe) { 'Café, mesmo torrado ou descafeinado; cascas e películas de café; sucedâneos do café que contenham café em qualquer proporção' }
 
   before do
     resolver_hosts_das_prontas
@@ -62,8 +64,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
       expect(dados).to eq(
         'busca' => 'café torrado', 'total' => 2,
-        'itens' => [{ 'codigo' => '0901.21.00', 'descricao' => 'Café torrado, não descafeinado', 'vigente_desde' => '2022-04-01' },
-                    { 'codigo' => '0901.22.00', 'descricao' => 'Café torrado, descafeinado', 'vigente_desde' => '2022-04-01' }]
+        'itens' => [{ 'codigo' => '0901.21.00', 'descricao' => "#{cafe}, café torrado, não descafeinado", 'vigente_desde' => '2022-04-01' },
+                    { 'codigo' => '0901.22.00', 'descricao' => "#{cafe}, café torrado, descafeinado", 'vigente_desde' => '2022-04-01' }]
       )
       expect(pedidos.size).to eq(2)
     end
@@ -155,13 +157,17 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
       dados = buscar('parafuso')['dados']
 
-      expect(dados['itens'].first(4)).to eq(
-        [{ 'codigo' => '7318.14.00', 'descricao' => 'Artigos roscados, parafusos autoperfurantes', 'vigente_desde' => '2022-04-01' },
-         { 'codigo' => '7415.33.00', 'descricao' => 'Parafusos; pinos ou pernos e porcas', 'vigente_desde' => '2022-04-01' },
-         { 'codigo' => '7318.12.00', 'descricao' => 'Artigos roscados, outros parafusos para madeira', 'vigente_desde' => '2022-04-01' },
-         { 'codigo' => '7318.15.00',
-           'descricao' => 'Artigos roscados, outros parafusos e pinos ou pernos, mesmo com as porcas e arruelas (anilhas)',
-           'vigente_desde' => '2022-04-01' }]
+      primeiros = dados['itens'].first(4)
+      expect(primeiros.pluck('codigo')).to eq(%w[7318.14.00 7415.33.00 7318.12.00 7318.15.00])
+      expect(primeiros.pluck('descricao')).to eq(
+        ['Parafusos, pinos ou pernos, roscados, porcas … e artigos semelhantes, de ferro fundido, ferro ou aço, artigos roscados, ' \
+         'parafusos autoperfurantes',
+         'Tachas, pregos, percevejos, escápulas (pregos para tacos) e … (incluindo as de pressão), e artigos semelhantes, de cobre, ' \
+         'parafusos; pinos ou pernos e porcas',
+         'Parafusos, pinos ou pernos, roscados, porcas … e artigos semelhantes, de ferro fundido, ferro ou aço, artigos roscados, ' \
+         'outros parafusos para madeira',
+         'Parafusos, pinos ou pernos … de ferro fundido, ferro ou aço, artigos roscados, outros parafusos e pinos ou pernos, mesmo ' \
+         'com as porcas e arruelas (anilhas)']
       )
       expect(dados['total']).to eq(20)
       expect(dados).not_to have_key('mostrando')
@@ -178,7 +184,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = buscar('café torrado')['dados']
 
       expect(dados).to eq('busca' => 'café torrado', 'total' => 1,
-                          'itens' => [{ 'codigo' => '0901.2', 'descricao' => 'Café torrado', 'vigente_desde' => '2022-04-01' }])
+                          'itens' => [{ 'codigo' => '0901.2', 'descricao' => "#{cafe}, café torrado", 'vigente_desde' => '2022-04-01' }])
     end
 
     it 'o prazo acaba antes da segunda chamada: o que veio, com a observacao, e fora do cache' do
@@ -200,16 +206,28 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = buscar('0901')['dados']
 
       expect(dados['itens']).to include(
-        { 'codigo' => '0901.11.10', 'descricao' => 'Café não torrado, não descafeinado, em grão', 'vigente_desde' => '2022-04-01' },
-        { 'codigo' => '0901.12.00', 'descricao' => 'Café não torrado, descafeinado', 'vigente_desde' => '2022-04-01' },
-        { 'codigo' => '0901.90.00',
-          'descricao' => 'Café, mesmo torrado ou descafeinado; cascas e películas de café; sucedâneos do café que contenham ' \
-                         'café em qualquer proporção, outros',
-          'vigente_desde' => '2022-04-01' }
+        { 'codigo' => '0901.12.00', 'descricao' => "#{cafe}, café não torrado, descafeinado", 'vigente_desde' => '2022-04-01' },
+        { 'codigo' => '0901.90.00', 'descricao' => "#{cafe}, outros", 'vigente_desde' => '2022-04-01' }
       )
       expect(dados['itens'].pluck('codigo')).to all(satisfy { |codigo| codigo.delete('.').length == 8 })
       expect(dados['total']).to eq(6)
       expect(pedidos.size).to eq(1)
+    end
+  end
+
+  # Revisão do #2917 (6): com subposição no meio, a posição saía e levava o material junto (7318.14.00 perdia "de ferro
+  # ou aço"; 7415.33.00, "de cobre"). A posição entra sempre que veio.
+  describe 'a descricao completa leva a posicao, com o material' do
+    def completa(codigo, arquivo)
+      niveis = ncm.niveis(real(arquivo))
+      ncm::Descricao.completa(niveis.find { |nivel| nivel.codigo == codigo }, ncm::Descricao.indice(niveis))
+    end
+
+    it 'o parafuso de aco e o de cobre' do
+      expect(completa('7318.14.00', 'ncm_busca_7318.json'))
+        .to start_with('Parafusos, pinos ou pernos').and include('de ferro fundido, ferro ou aço')
+        .and end_with('artigos roscados, parafusos autoperfurantes')
+      expect(completa('7415.33.00', 'ncm_busca_parafuso.json')).to include('de cobre').and end_with('parafusos; pinos ou pernos e porcas')
     end
   end
 
@@ -219,7 +237,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
       expect(codigo('0901.21.00')['dados'])
-        .to eq('codigo' => '0901.21.00', 'descricao' => 'Café torrado, não descafeinado', 'vigente_desde' => '2022-04-01')
+        .to eq('codigo' => '0901.21.00', 'descricao' => "#{cafe}, café torrado, não descafeinado", 'vigente_desde' => '2022-04-01')
       expect(pela_posicao).to have_been_made.once
       expect(a_request(:get, "#{api}/09012100")).not_to have_been_made
     end
