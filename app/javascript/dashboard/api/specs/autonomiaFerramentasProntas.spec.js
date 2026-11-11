@@ -59,6 +59,18 @@ describe('#AutonomiaFerramentasProntasAPI', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/experimentar`, {
       fonte: 'cep',
       valor: '01001-000',
+      confirmou_preco: false,
+    });
+    // F7: no card Premium sem grátis, o clique no botão com o preço manda a confirmação.
+    ferramentasProntas.experimentar(
+      'conferir_pessoa',
+      'CPF 111.444.777-35',
+      true
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/experimentar`, {
+      fonte: 'conferir_pessoa',
+      valor: 'CPF 111.444.777-35',
+      confirmou_preco: true,
     });
     ferramentasProntas.buscaSemResultado('passagem de avião');
     expect(axiosMock.post).toHaveBeenCalledWith(
