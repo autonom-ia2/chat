@@ -42,6 +42,12 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => codigo)
   end
 
+  # Revisão do #2917 (9): o formato guardado da NCM mudou, e só o cache dela deixa de valer; o global continua.
+  it 'a versao do cache muda so na NCM' do
+    expect(Autonomia::FerramentasProntas::Cache::VERSAO).to eq('v2')
+    expect(ncm::FONTE.consultas.map { |consulta| consulta.chave_do_cache({}) }).to all(include('versao_do_cache' => ncm::VERSAO_DO_CACHE))
+  end
+
   describe 'buscar' do
     it '"cafe torrado": o grupo abre nos codigos da nota, com a descricao completa, em uma chamada a mais' do
       fonte_responde("#{api}?search=caf%C3%A9%20torrado", fixture('ncm_busca_cafe_torrado.json'))

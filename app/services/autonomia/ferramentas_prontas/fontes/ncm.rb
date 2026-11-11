@@ -25,6 +25,9 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # O código da nota fiscal: 8 dígitos. A posição (4) é onde se procuram os filhos de um grupo.
   DA_NOTA = 8
   POSICAO = 4
+  # O formato do que a NCM guarda no cache (`Consulta#versao_do_cache`): 2 desde os códigos da nota do grupo com a
+  # descrição completa (#2858). Só o cache da NCM deixa de valer; o das outras prontas continua.
+  VERSAO_DO_CACHE = 2
   # A data de fim da NCM vigente na tabela do Siscomex.
   SEM_FIM = '9999-12-31'.freeze
 
@@ -175,9 +178,9 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     descricao: 'A NCM, o código fiscal da mercadoria: procura o código pelo nome do produto ou diz o que um código é.',
     consultas: [
       Consulta.new(nome: 'buscar', descricao: "os códigos de uma mercadoria; pede busca. #{SO_O_DE_8}", obrigatorios: [BUSCA],
-                   provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4),
+                   provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4, versao_do_cache: VERSAO_DO_CACHE),
       Consulta.new(nome: 'codigo', descricao: 'a descrição oficial de um código; pede codigo', obrigatorios: [CODIGO],
-                   provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4)
+                   provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4, versao_do_cache: VERSAO_DO_CACHE)
     ],
     limite_diario: 500,
     termos: 'BrasilAPI (uso de pessoa real), que repassa a tabela do Siscomex; sem reserva (o Siscomex só publica o ' \
