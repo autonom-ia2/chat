@@ -12,7 +12,11 @@ import {
   watch,
 } from 'vue';
 import { useResizeObserver } from '@vueuse/core';
+import { useRoute } from 'vue-router';
 import { useEmailEditor } from './composables/useEmailEditor';
+// Images/text dropped or pasted on the canvas become blocks, never loose HTML (#2908).
+import { attachImageDrop } from './composables/useImageDrop';
+import ImageDropNotice from './components/ImageDropNotice.vue';
 // Builder-scoped GrapesJS canvas theming (third-party chrome re-skin only).
 import './grapes-theme.css';
 
@@ -27,11 +31,13 @@ const props = defineProps({
 const emit = defineEmits(['scroll']);
 
 const containerRef = ref(null);
+const route = useRoute();
 const { init, destroy, setCanvasPreview, subscribeCanvasScroll } =
   useEmailEditor();
 
 let initialized = false;
 let stopScroll;
+let stopImageDrop;
 
 // init() guards on el.isConnected; under a <keep-alive> reactivation the container
 // can re-attach a tick late, so wait for it to be connected before initializing.
@@ -50,11 +56,13 @@ const mountEditor = async () => {
     if (!instance || !containerRef.value?.isConnected) return;
     initialized = true;
     stopScroll = subscribeCanvasScroll(top => emit('scroll', top));
+    stopImageDrop = attachImageDrop(instance, () => route.params.campaignId);
   }
 };
 
 const teardown = () => {
   stopScroll?.();
+  stopImageDrop?.();
   destroy();
   initialized = false;
 };
@@ -85,5 +93,8 @@ onActivated(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="email-builder-canvas h-full min-h-0" />
+  <div class="relative h-full min-h-0">
+    <div ref="containerRef" class="email-builder-canvas h-full min-h-0" />
+    <ImageDropNotice />
+  </div>
 </template>

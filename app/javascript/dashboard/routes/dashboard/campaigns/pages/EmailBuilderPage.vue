@@ -9,7 +9,7 @@ import {
   ref,
   watch,
 } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -38,6 +38,10 @@ import BlocksPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/
 import PropertiesPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PropertiesPanel.vue';
 import WelcomeChooser from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/WelcomeChooser.vue';
 import { useEmailEditor } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useEmailEditor';
+import {
+  useImageDrop,
+  waitForImageUploads,
+} from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useImageDrop';
 import { STARTER_MJML } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/starterMjml';
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -225,7 +229,10 @@ const reportSaveError = error => {
   useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
 };
 
+// An image dropped/pasted on the canvas may still be uploading (#2908): every save waits for it, so
+// the saved e-mail has the real image, never a half-done one.
 const persist = async extra => {
+  await waitForImageUploads();
   await store.dispatch('emailCampaigns/update', {
     id: campaignId.value,
     ...getEditorBodyPayload(),
@@ -344,6 +351,26 @@ watch([isReady, contentVersion, showWelcome], () => {
   contentTimer = setTimeout(refreshCanvasContent, CONTENT_CHECK_MS);
 });
 onBeforeUnmount(() => clearTimeout(contentTimer));
+
+// Leaving while an image uploads loses it (#2908): ask first, in the app and when closing the tab.
+const { isUploadingImages } = useImageDrop();
+onBeforeRouteLeave(
+  () =>
+    !isUploadingImages.value ||
+    // eslint-disable-next-line no-alert
+    window.confirm(
+      t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.IMAGE_DROP.LEAVE_CONFIRM')
+    )
+);
+const warnBeforeUnload = event => {
+  if (!isUploadingImages.value) return;
+  event.preventDefault();
+  event.returnValue = '';
+};
+window.addEventListener('beforeunload', warnBeforeUnload);
+onBeforeUnmount(() =>
+  window.removeEventListener('beforeunload', warnBeforeUnload)
+);
 const aiButtonLabel = computed(() =>
   canvasHasContent.value
     ? t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_ADJUST')
