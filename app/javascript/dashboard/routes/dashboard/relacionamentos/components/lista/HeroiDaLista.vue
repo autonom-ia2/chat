@@ -41,7 +41,7 @@ const principal = () => {
     <template v-if="frase.principal" #acao>
       <Button
         size="lg"
-        class="!bg-white !text-n-heroi hover:enabled:!bg-white/90 focus-visible:!bg-white/90 focus-visible:!outline-white dark:!bg-white dark:!text-n-heroi"
+        class="!bg-white !text-n-heroi font-semibold hover:enabled:!bg-white/90 focus-visible:!bg-white/90 focus-visible:!outline-white dark:!bg-white dark:!text-n-heroi"
         data-relacionamentos="heroi-acao"
         :label="t(frase.principal.rotulo)"
         @click="principal"
