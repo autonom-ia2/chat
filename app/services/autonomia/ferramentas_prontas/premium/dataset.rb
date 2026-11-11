@@ -35,7 +35,9 @@ class Autonomia::FerramentasProntas::Premium::Dataset
   # O que a BigDataCorp nos cobra por esta consulta, pelo resultado. A falha não custa, salvo quando o pedido já tinha
   # saído (`custo_possivel`: a resposta que não lemos, o tempo esgotado com o pedido no ar, a entrega incerta): aí a
   # BigDataCorp pode ter cobrado, e o custo fica na telemetria para bater com o painel dela (aceite 11), sem contar para
-  # o cliente. A fonte lenta (DATASET IS TOO SLOW) e o 504 não custam.
+  # o cliente. A fonte lenta (DATASET IS TOO SLOW) e o 504 não custam. O documento inválido (-114/-155) custa cheio. A
+  # fonte dessas regras: "Regras de contabilização de consulta" da BigDataCorp, citada em
+  # `docs/ferramentas-prontas/termos-das-fontes.md` (seção Premium).
   def custo_de(resultado, custo_possivel: false)
     return custo_possivel ? custo : BigDecimal(0) if resultado == 'falha'
     return BigDecimal(0) if resultado == 'sem_registro' && !@cobra_sem_registro

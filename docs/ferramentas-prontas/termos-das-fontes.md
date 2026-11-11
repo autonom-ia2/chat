@@ -121,11 +121,24 @@ Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é a
 - **Documento inválido: depende de quem recusa** (Rodrigo, 11/11, "A, não conta"). O CPF ou o CNPJ com dígito errado é
   recusado por nós antes de chamar a BigDataCorp e não conta como consulta. O documento que a BigDataCorp recusa depois
   de receber o pedido (-114 "INVALID DOC PARAMETER", -155 "INVALID CAR NUMBER PARAMETER") conta e é cobrado como o sem
-  registro (grátis até 20, cobrado da 21ª em diante), e o mesmo documento no mesmo dia vem do cache.
+  registro (grátis até 20, cobrado da 21ª em diante), e o mesmo documento no mesmo dia vem do cache. A telemetria
+  registra o custo cheio do dataset.
 - **A falha com o pedido já no ar leva o custo na telemetria, sem contar para o cliente**: a resposta 200 que não lemos,
   o tempo esgotado esperando a resposta e a entrega incerta. A BigDataCorp pode ter cobrado, e a telemetria precisa bater
-  com o painel dela. DATASET IS TOO SLOW, o 504, a conexão que nem abriu e o erro de token seguem sem custo. A resposta
-  que levanta ao ser montada (defeito nosso) também vira falha com o nosso custo, sem contar para o cliente.
+  com o painel dela. DATASET IS TOO SLOW, o 504, a conexão que nem abriu (o nome que não resolveu, a conexão recusada,
+  a rede ou o host fora de alcance, o SSL que não fechou o aperto de mão), o teto da chamada que estoura ainda no token
+  e o erro de token seguem sem custo. A resposta que levanta ao ser montada (defeito nosso) também vira falha com o
+  nosso custo, sem contar para o cliente.
+- **De onde vêm essas regras de custo:** a página "Regras de contabilização de consulta" da BigDataCorp
+  (<https://docs.bigdatacorp.com.br/plataforma/docs/regras-de-contabilização-de-consulta-plataforma-de-dados>,
+  atualizada em 07/07/2026, consultada em 09/11/2026 e de novo em 11/11/2026), ligada de "Como funciona a cobrança".
+  Ela diz "1 consulta = 1 cobrança" e traz a tabela: documento inválido **cobra** ("o retorno é acompanhado do código
+  `-114 — INVALID DOC PARAMETER`, que representa uma resposta válida da plataforma"); timeout inferior a 5 minutos
+  **cobra** (a consulta segue em processamento); a consulta sem retorno de dados **cobra**, exceto nos datasets de
+  contato com documento válido; DATASET IS TOO SLOW **não cobra**; o 504 **não cobra** (a requisição não chega à
+  plataforma); o -130 TOO MANY RESULTS sem `Limit` **não cobra**. A página cita só o -114; o -155 (o número do CAR
+  recusado) segue a mesma regra por ser o documento inválido do imóvel rural, e isso fica para conferir no painel da
+  BigDataCorp (BDC Center) na primeira consulta real.
 - **A grátis devolvida acima de 20 não se perde**: quando a entrega incerta desfaz uma grátis num mês que já passou das
   20, a cobrada mais antiga do mês no mesmo card vira grátis.
 - **A telemetria que falha no banco deixa marca** no contador do dia: o motivo `premium.telemetria_falhou` em
