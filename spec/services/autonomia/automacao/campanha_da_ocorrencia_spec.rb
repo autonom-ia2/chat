@@ -308,7 +308,9 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
   # dentro da transação do exemplo, saem todos os outros índices da tabela (menos a chave primária, que é restrição), e
   # o plano tem de usar o da vez com o começo da marca na condição do índice. Tirar só os que começam por automacao_id
   # não basta (#2914): a consulta também filtra por account_id, e com poucas linhas e sem ANALYZE o índice de account_id
-  # empata no custo e às vezes ganha, com a marca no Filter.
+  # empata no custo e às vezes ganha, com a marca no Filter. O ANALYZE (também desfeito no fim do exemplo) tira a
+  # estimativa do estado que outros exemplos deixaram no banco de teste: sem ele, até a varredura da chave primária
+  # pode empatar.
   it 'as execuções da vez saem do índice pelo começo da marca (text_pattern_ops)', :aggregate_failures do
     linha = varredura
     conexao = ActiveRecord::Base.connection
@@ -322,6 +324,7 @@ RSpec.describe Autonomia::Automacao::CampanhaDaOcorrencia, :automacao_motor do
     SQL
     expect(outros).to include('index_autonomia_automacao_execucoes_on_account_id')
     conexao.execute("DROP INDEX #{outros.map { |nome| conexao.quote_column_name(nome) }.join(', ')}")
+    conexao.execute('ANALYZE autonomia_automacao_execucoes')
     conexao.execute('SET LOCAL enable_seqscan = off')
     relacao = Autonomia::Automacao::EstadoDaVez.new(linha).send(:execucoes)
     plano = conexao.select_values("EXPLAIN #{relacao.to_sql}").join("\n")
