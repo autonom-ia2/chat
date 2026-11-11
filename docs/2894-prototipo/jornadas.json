@@ -175,6 +175,18 @@
           "pausa": 2000
         },
         {
+          "nome": "empresa-mandar-mensagem",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"ficha-empresa\"] [data-relacionamentos=\"mandar-mensagem\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"dialogo-mensagem\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
           "nome": "carregando",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=carregando",
           "esperar": "[data-relacionamentos=\"carregando\"]",
