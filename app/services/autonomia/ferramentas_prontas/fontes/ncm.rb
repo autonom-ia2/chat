@@ -13,7 +13,8 @@
 #     nota e os grupos (4 a 7 dígitos), com a orientação para o modelo buscar pelo código do grupo. Nenhum ranking
 #     nosso escolhe o grupo: quem escolhe é o modelo, pelo sentido da conversa (regra do Rodrigo, revisão do #2917).
 #   - a busca pelo código de um grupo ("0901.2") é uma chamada pela posição dele ("search=0901"), que traz os níveis
-#     de cima (o material); vão os códigos da nota de dentro do grupo. Cada código vai com a descrição completa
+#     de cima (o material); vão os códigos da nota de dentro do grupo (grupo com mais de MAX_ITENS: os filhos diretos,
+#     para o modelo estreitar). Cada código vai com a descrição completa
 #     (`Descricao`: "Café, mesmo torrado …, café torrado, não descafeinado").
 # Termos: BrasilAPI pede uso com "natureza de uma pessoa real". A tabela muda por resolução da Camex: cache de 7 dias.
 module Autonomia::FerramentasProntas::Fontes::Ncm
@@ -114,14 +115,34 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   end
 
   # Os códigos da nota de dentro do grupo, na resposta da posição dele, na ordem do código. Nenhum: não encontrado.
+  # Mais de MAX_ITENS: os filhos diretos do grupo (`para_estreitar`).
   def do_grupo(busca, grupo, achados)
     niveis = validos(achados)
     indice = Descricao.indice(niveis)
     da_nota = niveis.select { |nivel| nivel.da_nota? && nivel.digitos.start_with?(grupo) }
     raise Autonomia::FerramentasProntas::Provedor::NaoEncontrado if da_nota.empty?
+    return para_estreitar(busca, grupo, niveis, indice) if da_nota.size > MAX_ITENS
 
     itens = da_nota.map { |nivel| item(nivel, indice) }
     { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+  end
+
+  # O grupo grande demais para ir inteiro (a posição 30.04 tem 153 códigos da nota; o corte pela ordem do código
+  # mostrava só os 3004.10.xx, revisão do #2917): vão os filhos diretos dele, o subgrupo ou o código da nota sem
+  # subgrupo no meio (3004.60.00), com a orientação para o modelo buscar pelo subgrupo que fizer sentido.
+  def para_estreitar(busca, grupo, niveis, indice)
+    filhos = niveis.select { |nivel| filho?(nivel, grupo, indice) }
+    resposta = { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(filhos.map { |nivel| item(nivel, indice) },
+                                                                                      'itens', MAX_ITENS))
+    exemplo = filhos.find { |nivel| Nivel.grupo?(nivel.digitos) }
+    exemplo ? resposta.merge('observacao' => format(BUSQUE_O_GRUPO, grupo: exemplo.codigo)) : resposta
+  end
+
+  # Abaixo do grupo, sem outro nível do grupo no meio.
+  def filho?(nivel, grupo, indice)
+    numeros = nivel.digitos
+    numeros.length > grupo.length && numeros.start_with?(grupo) &&
+      ((grupo.length + 1)...numeros.length).none? { |tamanho| indice.key?(numeros.first(tamanho)) }
   end
 
   # O código de 8 dígitos na resposta da posição dele, com a descrição completa. Fora dela: não encontrado.

@@ -215,6 +215,21 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(buscas_feitas).to eq(%w[brinquedos 9503])
     end
 
+    # Revisão do #2917 (A): o grupo com mais de MAX_ITENS códigos da nota cortava pela ordem do código: "3004" (153
+    # códigos) mostrava só os 3004.10.xx. Vêm os filhos diretos do grupo, com a orientação para o modelo estreitar.
+    it '"3004" real, grupo grande: os filhos diretos, com a descricao completa e a orientacao para estreitar' do
+      pela_posicao = fonte_responde("#{api}?search=3004", fixture('ncm_busca_3004.json'))
+
+      dados = buscar('3004')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[3004.10 3004.20 3004.3 3004.4 3004.50 3004.60.00 3004.90])
+      expect(dados['total']).to eq(7)
+      expect(dados['observacao']).to eq(format(ncm::BUSQUE_O_GRUPO, grupo: '3004.10'))
+      expect(dados['itens'].pluck('descricao')).to all(start_with('Medicamentos'))
+      expect(dados['itens'].pluck('descricao').map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
+      expect(pela_posicao).to have_been_made.once
+    end
+
     it 'grupo que nao existe: nao encontrado' do
       fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
