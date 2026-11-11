@@ -264,6 +264,18 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(pela_reserva: 1, motivos: { 'brasilapi.erro_da_fonte' => 1 })
     end
 
+    # Revisão do #2906: o preço sem valor que se leia ia ao agente sem o valor; agora é falha, e a reserva tenta.
+    it 'o preco sem valor legivel na principal e falha, e a reserva responde' do
+      fonte_responde(preco_brasilapi, [{ valor: 'indisponível', anoModelo: 2020, codigoFipe: '004517-9' }])
+      fonte_responde(anos_parallelum, [{ code: '2020-5', name: '2020 Flex' }])
+      fonte_responde(preco_parallelum, da_parallelum)
+
+      saida = executar_pronta(ferramenta, 'consulta' => 'preco', 'tipo' => 'carros', 'codigo_fipe' => '004517-9', 'ano' => 2020)
+
+      expect(saida['dados']).to eq('precos' => [preco_esperado], 'unidades' => { 'valor' => 'R$' })
+      expect(Autonomia::FerramentasProntas::Uso.sole).to have_attributes(pela_reserva: 1, motivos: { 'brasilapi.resposta_invalida' => 1 })
+    end
+
     it 'com a chave gratuita no ambiente, a parallelum recebe o cabecalho; sem ela, nada vai' do
       anos = 'https://parallelum.com.br/fipe/api/v2/cars/brands/23/models/8949/years'
       fonte_responde(anos, [{ code: '2020-5', name: '2020 Flex' }])

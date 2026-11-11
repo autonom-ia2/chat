@@ -131,10 +131,13 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum < Autonomia::Ferra
     partes.size == 2 && partes.all? { |parte| Autonomia::FerramentasProntas::Parametro.codigo(parte) }
   end
 
+  # O preço sem valor que se leia (`Fipe.valor` devolve nil) não serve: falha (revisão do #2906).
   def preco_de(item)
     raise Falha, 'resposta_invalida' unless item.is_a?(Hash) && item['price'].present?
 
-    Fipe.preco(valor: item['price'], marca: item['brand'], modelo: item['model'], ano_modelo: item['modelYear'],
-               combustivel: item['fuel'], codigo_fipe: item['codeFipe'], mes_de_referencia: item['referenceMonth'])
+    preco = Fipe.preco(valor: item['price'], marca: item['brand'], modelo: item['model'], ano_modelo: item['modelYear'],
+                       combustivel: item['fuel'], codigo_fipe: item['codeFipe'], mes_de_referencia: item['referenceMonth'])
+    exigir!(preco['valor'])
+    preco
   end
 end
