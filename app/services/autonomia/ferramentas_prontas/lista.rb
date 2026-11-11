@@ -58,10 +58,11 @@ module Autonomia::FerramentasProntas::Lista
   #   1. cada palavra da busca começa uma palavra do texto ("Outros parafusos para madeira");
   #   2. o resto (a palavra no meio de outra: "asma" em "Histoplasmose").
   # `desempate` (opcional): um número por item, menor primeiro, dentro de cada grupo e antes da ordem da fonte.
+  # O bloco pode dar mais de um texto por item (a descrição completa e a do próprio nível, na NCM): vale o melhor grupo.
   def em_ordem(itens, busca, desempate: ->(_item) { 0 })
     procuradas = palavras(busca)
     itens.each_with_index.sort_by do |item, posicao|
-      [grupo(palavras(yield(item)), procuradas), desempate.call(item), posicao]
+      [[yield(item)].flatten.map { |texto| grupo(palavras(texto), procuradas) }.min, desempate.call(item), posicao]
     end.map(&:first)
   end
 

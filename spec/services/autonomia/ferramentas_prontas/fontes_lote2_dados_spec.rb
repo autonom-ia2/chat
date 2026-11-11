@@ -46,6 +46,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
         tipo_ato: 'Res Camex', numero_ato: '000272', ano_ato: '2021' }
     end
     let(:vencido) { vigente.merge(codigo: '7318.15.90', data_fim: '2021-12-31') }
+    # A chamada a mais pela posição (73.18): aqui sem os níveis de cima, para a descrição ficar a do próprio nível.
+    let(:posicao) { 'https://brasilapi.com.br/api/ncm/v1?search=7318' }
 
     it '"Qual a NCM de parafuso de aco?": os codigos vigentes, com o texto da busca codificado na URL' do
       fonte_responde(busca, [vigente, vencido])
@@ -53,7 +55,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => '  parafuso   de aço ')['dados']
 
       expect(dados).to eq('busca' => 'parafuso de aço', 'total' => 1,
-                          'itens' => [{ 'codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos',
+                          'itens' => [{ 'codigo' => '7318.15.00', 'descricao' => 'Outros parafusos e pinos ou pernos',
                                         'vigente_desde' => '2022-04-01' }])
     end
 
@@ -64,6 +66,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       outros = (1..20).map { |n| item.call(format('34.%02d', n), "Preparações antiaderentes de porcas e parafusos #{n}") }
       fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
                      outros + [item.call('73.18', 'Parafusos, pinos ou pernos')])
+      fonte_responde(posicao, [])
 
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
@@ -79,6 +82,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                      [item.call('73', 'Parafusos de ferro'), item.call('73.18', 'Parafusos, pinos ou pernos'),
                       item.call('7318.14.00', '-- Parafusos autoperfurantes'), item.call('34.03', 'Preparações de porcas e parafusos'),
                       item.call('7318.15.00', '-- Outros parafusos e pinos')])
+      # O grupo que abre é o mais largo dos mais relevantes: o capítulo 73.
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=73', [])
 
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
@@ -91,16 +96,18 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', 'material')
     end
 
-    it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos' do
+    it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos e sem os tracos do nivel' do
       fonte_responde(codigo, vigente)
+      fonte_responde(posicao, [])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados'])
-        .to eq('codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
+        .to eq('codigo' => '7318.15.00', 'descricao' => 'Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
     end
 
     # Varredura P11: a tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>").
     it 'a descricao vai sem as tags HTML, com o texto delas e as entidades decodificadas' do
       fonte_responde(codigo, vigente.merge(descricao: 'De peso igual ou superior a 600 g/m<sup>2</sup>, de <i>badminton</i> &amp; outros'))
+      fonte_responde(posicao, [])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']['descricao'])
         .to eq('De peso igual ou superior a 600 g/m2, de badminton & outros')

@@ -8,6 +8,10 @@
 #     Com a BrasilAPI fora, o agente ouve "não consegui".
 #   - a busca vai à fonte (é ela que procura): pede ao menos MIN_BUSCA letras, e a resposta tem teto de 1 MB (a palavra
 #     "outros" devolve 600 KB; uma busca mais vaga passa do teto e vira "não consegui").
+#   - a fonte acha o GRUPO e não o código da nota (teste em produção, 11/11/2026: "café torrado" devolve só
+#     "0901.2 | - Café torrado:"). O grupo mais relevante (menos de 8 dígitos) abre nos códigos de 8 dígitos dele, com
+#     uma chamada a mais pela posição ("search=0901"), dentro do mesmo prazo. Cada código vai com a descrição completa
+#     (`Descricao`: "Café torrado, não descafeinado"). Sem tempo para a chamada a mais: o que veio, com a observação.
 # Termos: BrasilAPI pede uso com "natureza de uma pessoa real". A tabela muda por resolução da Camex: cache de 7 dias.
 module Autonomia::FerramentasProntas::Fontes::Ncm
   Parametro = Autonomia::FerramentasProntas::Parametro
@@ -18,6 +22,9 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   MAX_ITENS = 20
   MAX_BYTES_BUSCA = 1.megabyte
   TAMANHOS_DO_CODIGO = [2, 4, 8].freeze
+  # O código da nota fiscal: 8 dígitos. A posição (4) é onde se procuram os filhos de um grupo.
+  DA_NOTA = 8
+  POSICAO = 4
   # A data de fim da NCM vigente na tabela do Siscomex.
   SEM_FIM = '9999-12-31'.freeze
 
@@ -34,12 +41,14 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     texto if texto && texto.delete(' ').length >= MIN_BUSCA
   end
 
-  # Um item da tabela, enxuto. Sem código ou descrição: falha, e o agente ouve "não consegui".
-  def item(dado)
+  # Um item da tabela, enxuto, com a descrição completa (`indice`: os itens da mesma resposta, `Descricao.indice`). Sem
+  # código ou descrição: falha, e o agente ouve "não consegui".
+  def item(dado, indice = {})
     falha = Autonomia::FerramentasProntas::Provedor::Falha
     raise falha, 'resposta_invalida' unless dado.is_a?(Hash) && dado['codigo'].present? && dado['descricao'].present?
 
-    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => texto(dado['descricao']), 'vigente_desde' => dado['data_inicio'].presence }.compact
+    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => Descricao.completa(dado, indice),
+      'vigente_desde' => dado['data_inicio'].presence }.compact
   end
 
   # A tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>"): fica o texto, com as
@@ -57,10 +66,64 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
   # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
   # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois). No mesmo grupo, o
   # código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2).
-  def lista(busca, itens)
-    lista = Autonomia::FerramentasProntas::Lista
-    ordem = lista.em_ordem(itens, busca, desempate: ->(item) { -digitos(item['codigo']).length }) { |item| item['descricao'] }
-    { 'busca' => busca }.merge(lista.cortar(ordem, 'itens', MAX_ITENS))
+  def lista(busca, dados, hierarquia = dados)
+    itens = em_ordem(busca, dados, Descricao.indice(hierarquia)).map(&:first)
+    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+  end
+
+  # -> [[item, dado], ...] na ordem de relevância. Vale o melhor entre a descrição completa e a do próprio nível:
+  # "Parafusos autoperfurantes" começa pela palavra, "Artigos roscados, parafusos autoperfurantes" não.
+  def em_ordem(busca, dados, indice)
+    pares = dados.map { |dado| [item(dado, indice), dado] }
+    Autonomia::FerramentasProntas::Lista.em_ordem(pares, busca, desempate: ->(par) { -digitos(par.first['codigo']).length }) do |item, dado|
+      [item['descricao'], Descricao.propria(dado)]
+    end
+  end
+
+  # O grupo (menos de 8 dígitos) mais relevante que a busca trouxe: é ele que abre. No mesmo grupo de relevância, o mais
+  # largo (a posição antes da subposição: abre mais códigos da nota). nil quando só veio código da nota. O item fora do
+  # formato falha antes (`item`), sem chamada a mais.
+  def grupo_a_abrir(busca, dados)
+    dados.each { |dado| item(dado) }
+    indice = Descricao.indice(dados)
+    grupos = dados.select { |dado| digitos(dado['codigo']).length < DA_NOTA }
+    Autonomia::FerramentasProntas::Lista.em_ordem(grupos, busca, desempate: ->(dado) { digitos(dado['codigo']).length }) do |dado|
+      [Descricao.completa(dado, indice), Descricao.propria(dado)]
+    end.first
+  end
+
+  # Onde procurar os filhos de um código: a posição dele (4 dígitos), que traz também os níveis de cima da descrição.
+  def prefixo_da_busca(codigo)
+    digitos(codigo).first(POSICAO)
+  end
+
+  # O grupo aberto: no lugar dele, os códigos da nota que ele tem (`descendentes`: o que a chamada a mais trouxe), com a
+  # descrição completa. Grupo sem código da nota embaixo: fica o grupo. `descendentes` nil (a chamada a mais não veio a
+  # tempo): a busca como veio, com a observação.
+  def aberta(busca, dados, grupo, descendentes)
+    return lista(busca, dados).merge('observacao' => SEM_OS_DA_NOTA) if descendentes.nil?
+
+    hierarquia = dados + descendentes
+    da_nota = da_nota_do_grupo(descendentes, digitos(grupo['codigo']))
+    return lista(busca, dados, hierarquia) if da_nota.empty?
+
+    lista(busca, no_lugar_do_grupo(dados, grupo, da_nota), hierarquia)
+  end
+
+  def da_nota_do_grupo(descendentes, do_grupo)
+    descendentes.select do |dado|
+      dado.is_a?(Hash) && digitos(dado['codigo']).length == DA_NOTA && digitos(dado['codigo']).start_with?(do_grupo)
+    end
+  end
+
+  # No lugar do grupo, os códigos da nota dele. O que mais era do grupo sai (volta entre os da nota, se for da nota).
+  def no_lugar_do_grupo(dados, grupo, da_nota)
+    do_grupo = digitos(grupo['codigo'])
+    dados.flat_map do |dado|
+      next da_nota if dado.equal?(grupo)
+
+      digitos(dado['codigo']).start_with?(do_grupo) ? [] : [dado]
+    end
   end
 
   def digitos(codigo)
@@ -88,9 +151,16 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
                     '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
                     'consulta buscar.'.freeze
 
+  # A resposta incompleta (a chamada a mais não veio a tempo): vai ao modelo com o que veio, e fica fora do cache. Cada
+  # uma cabe no texto que vai ao modelo (`Resposta::MAX_TEXTO`).
+  SEM_OS_DA_NOTA = 'Os códigos de 8 dígitos do grupo não vieram a tempo, e o grupo não vai na nota: faça a consulta ' \
+                   'buscar com o código do grupo.'.freeze
+  SO_O_ULTIMO_NIVEL = 'A descrição é só a do último nível da tabela: os níveis de cima não vieram a tempo.'.freeze
+  INCOMPLETAS = [SEM_OS_DA_NOTA, SO_O_ULTIMO_NIVEL].freeze
+
   # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
   def self.do_codigo(item, codigo)
-    return item if codigo.length == 8
+    return item if codigo.length == DA_NOTA
 
     item.merge('observacao' => format(NAO_E_O_DA_NOTA, digitos: codigo.length))
   end

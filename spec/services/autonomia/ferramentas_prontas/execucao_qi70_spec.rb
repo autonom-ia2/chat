@@ -113,6 +113,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     it 'codigo de 8 digitos: so a descricao, sem mandar perguntar o material' do
       fonte_responde('https://brasilapi.com.br/api/ncm/v1/73181500', item)
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=7318', [])
 
       dados = executar_pronta(pronta('ncm'), 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']
 

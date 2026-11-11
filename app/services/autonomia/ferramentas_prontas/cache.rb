@@ -11,8 +11,9 @@
 # O cache fora do ar é só um cache a menos: a leitura vira "não tem", a escrita é pulada, e a consulta segue.
 class Autonomia::FerramentasProntas::Cache
   # Sobe quando muda o formato do que a fonte guarda (o que é montado antes do cache): a resposta antiga não chega ao
-  # agente sem o campo novo. v2 (#2906): o `nome` dos CEPs da rua e o formato novo dos hospitais.
-  VERSAO = 'v2'.freeze
+  # agente sem o campo novo. v2 (#2906): o `nome` dos CEPs da rua e o formato novo dos hospitais. v3 (#2858): a NCM com
+  # os códigos da nota do grupo e a descrição completa (a guardada tinha só o grupo e o texto relativo, "-- Outros").
+  VERSAO = 'v3'.freeze
   VALIDADE_DO_NAO_ENCONTRADO = 1.hour
   NAO_ENCONTRADO = 'nao_encontrado'.freeze
   ENCONTRADO = 'encontrado'.freeze
