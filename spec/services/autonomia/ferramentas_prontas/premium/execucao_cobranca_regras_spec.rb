@@ -142,4 +142,27 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       expect(registros_premium.map { |registro| [registro.motivo, registro.custo] }).to eq([['fonte_lenta', 0], ['http_504', 0]])
     end
   end
+
+  # Revisor (execucao.rb:41): a cobrança vinha antes de montar a resposta. Se a montagem levantava, a linha ficava
+  # cobrada e o cliente recebia "não consegui".
+  describe 'a cobrança depois de montar a resposta' do
+    it 'a montagem que levanta não cobra o cliente: a linha é falha por defeito, com o nosso custo' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      allow(Autonomia::FerramentasProntas::Resposta).to receive(:encontrado).and_raise(NoMethodError)
+
+      resposta = executar_premium(certidoes, pgfn)
+
+      expect(resposta['situacao']).to eq('nao_consegui_consultar')
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'defeito', cobranca: 'sem_cobranca', numero: nil,
+                                                        custo: BigDecimal('0.10'), preco: 0)
+      expect(saldos.count).to eq(0)
+    end
+
+    it 'a resposta montada é cobrada uma vez só' do
+      pgfn_responde([{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+
+      expect(executar_premium(certidoes, pgfn)['situacao']).to eq('encontrado')
+      expect(registros_premium.sole).to have_attributes(resultado: 'encontrado', cobranca: 'gratis', numero: 1)
+    end
+  end
 end

@@ -44,12 +44,23 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
     terminar(Autonomia::FerramentasProntas::Resposta.documento_invalido(@fonte, @consulta), desfecho: 'do_cache')
   end
 
+  # A cobrança vem DEPOIS de montar a resposta: se a montagem levanta (defeito nosso), o cliente recebe "não consegui" e
+  # não pode ficar com a consulta contada. A linha vira falha por defeito, com o nosso custo (a BigDataCorp respondeu),
+  # e o defeito sobe ao rastreador pela `Execucao#call`.
   def consultar(params)
     @provedor = Premium::BigDataCorp::NOME
     @chamou = true
     leitura = Premium::BigDataCorp.new(nil, prazo: @consulta.prazo_por_fonte).ler(@consulta.dataset, @consulta.para_a_fonte(params))
+    texto = montar(leitura, params)
     cobrar(leitura.situacao, motivo: leitura.motivo, id_na_fonte: leitura.id_na_fonte, custo_possivel: leitura.custo_possivel?)
+    texto
+  end
+
+  def montar(leitura, params)
     responder(leitura, params)
+  rescue StandardError
+    cobrar('falha', motivo: 'defeito', id_na_fonte: leitura.id_na_fonte, custo_possivel: leitura.situacao != 'falha' || leitura.custo_possivel?)
+    raise
   end
 
   def responder(leitura, params)
