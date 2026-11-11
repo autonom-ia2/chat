@@ -62,9 +62,21 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
     registro.update!(cobranca: 'sem_cobranca', numero: nil, preco: 0, motivo: 'entrega_incerta')
   end
 
+  # A grátis desfeita volta ao cliente. O contador baixa um (a consulta não contou). Com o mês já acima das 20, isso só
+  # não basta: a próxima seguiria cobrada e o mês fecharia com 19 grátis. Então a cobrada mais antiga do mês, no mesmo
+  # card e na mesma conta, vira a grátis que faltou (preço zero; o custo nosso fica). Tudo sob a trava do saldo.
   def devolver_gratis!(registro)
-    saldo = Premium::Saldo.lock.find_by(account_id: registro.account_id, fonte: registro.fonte, mes: registro.dia.beginning_of_month)
-    saldo.update!(contadas: saldo.contadas - 1) if saldo&.contadas&.positive?
+    mes = registro.dia.beginning_of_month
+    saldo = Premium::Saldo.lock.find_by(account_id: registro.account_id, fonte: registro.fonte, mes: mes)
+    return unless saldo&.contadas&.positive?
+
+    converter_cobrada_mais_antiga!(registro, mes) if saldo.contadas > Premium::GRATIS
+    saldo.update!(contadas: saldo.contadas - 1)
+  end
+
+  def converter_cobrada_mais_antiga!(registro, mes)
+    Premium::Registro.lock.where(account_id: registro.account_id, fonte: registro.fonte, dia: mes..mes.end_of_month, cobranca: 'cobrada')
+                     .order(:numero, :id).first&.update!(cobranca: 'gratis', preco: 0)
   end
 
   # INSERT ... ON CONFLICT (tool_run_id) DO NOTHING. -> true quando inseriu. Os valores são fixos daqui (resultado,
