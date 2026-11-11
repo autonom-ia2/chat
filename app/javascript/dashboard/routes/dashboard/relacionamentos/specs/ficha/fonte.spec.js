@@ -1,6 +1,7 @@
 import { fichaFonte } from '../../fonte/fichaFonte';
 import { demoDaFicha, esquecerEscritas } from '../../demo/ficha';
 import { pessoas } from '../../demo/base';
+import { semAcento } from '../../fonte/texto';
 
 // A fonte da ficha e os dados fictícios dela (#2894).
 const ID_CLIENTE_COMPLETO = 23;
@@ -209,5 +210,21 @@ describe('empresa', () => {
 
   it('não acha empresa que não existe', async () => {
     expect(await fonte.empresa(ID_QUE_NAO_EXISTE)).toBeNull();
+  });
+});
+
+describe('redes sociais fictícias', () => {
+  it('sem acento, e o LinkedIn tem formato diferente do Instagram', async () => {
+    const todas = await Promise.all(pessoas().map(p => fonte.pessoa(p.id)));
+    const perfis = todas.flatMap(p =>
+      Object.entries(p.additional_attributes.social_profiles)
+    );
+    expect(perfis.length).toBeGreaterThan(0);
+    perfis.forEach(([, usuario]) => expect(usuario).toBe(semAcento(usuario)));
+    const insta = perfis.find(([rede]) => rede === 'instagram')[1];
+    const linkedin = perfis.find(([rede]) => rede === 'linkedin')[1];
+    expect(insta.startsWith('@')).toBe(true);
+    expect(linkedin.startsWith('@')).toBe(false);
+    expect(linkedin).toContain('-');
   });
 });

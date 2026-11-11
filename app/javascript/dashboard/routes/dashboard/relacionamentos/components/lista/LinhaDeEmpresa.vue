@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
+import SegundaLinha from './SegundaLinha.vue';
 import { falouHa } from '../../lista/tempoRelativo';
 
 // #2894 — uma empresa na lista (aba Empresas): iniciais, nome, "3 pessoas",
@@ -51,11 +52,7 @@ const quandoFalou = computed(() => {
           {{ t('RELACIONAMENTOS.COMUM.SELO_CLIENTE') }}
         </SeloDeEstado>
       </div>
-      <p class="m-0 text-sm break-words min-w-0 text-n-slate-11">
-        <span class="block sm:inline">{{ pessoasDaEmpresa }}</span>
-        <span class="hidden sm:inline"> · </span>
-        <span class="block sm:inline">{{ quandoFalou }}</span>
-      </p>
+      <SegundaLinha :partes="[pessoasDaEmpresa, quandoFalou]" />
     </div>
   </li>
 </template>

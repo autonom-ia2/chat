@@ -21,12 +21,25 @@ const iniciais = computed(() =>
     .join('')
 );
 
+// O e-mail só pode quebrar no "@": duas partes com <wbr> entre elas. Sem "@"
+// (linha com problema), vem inteiro.
+const partesDoEmail = email => {
+  const arroba = email.indexOf('@');
+  return arroba > 0 ? [email.slice(0, arroba), email.slice(arroba)] : [email];
+};
+
 const linhas = computed(() =>
   [
     ['i-lucide-phone', props.pessoa.telefone],
     ['i-lucide-mail', props.pessoa.email],
     ['i-lucide-building-2', props.pessoa.empresa],
-  ].filter(([, texto]) => texto)
+  ]
+    .filter(([, texto]) => texto)
+    .map(([icone, texto]) => ({
+      icone,
+      texto,
+      partes: icone === 'i-lucide-mail' ? partesDoEmail(texto) : [texto],
+    }))
 );
 </script>
 
@@ -43,7 +56,10 @@ const linhas = computed(() =>
         {{ iniciais }}
       </span>
       <div class="flex flex-col items-start min-w-0 gap-1">
-        <h3 class="m-0 text-base font-semibold break-words text-n-slate-12">
+        <h3
+          :title="pessoa.nome"
+          class="m-0 text-base font-semibold break-words md:truncate md:max-w-full text-n-slate-12"
+        >
           {{ pessoa.nome }}
         </h3>
         <SeloDeEstado v-if="pessoa.cliente" tom="cliente">
@@ -53,14 +69,16 @@ const linhas = computed(() =>
     </header>
     <ul class="flex flex-col gap-2 p-0 m-0 text-sm list-none text-n-slate-11">
       <li
-        v-for="[icone, texto] in linhas"
+        v-for="{ icone, texto, partes } in linhas"
         :key="icone"
         class="flex items-center gap-2 min-w-0"
       >
         <span class="size-4 shrink-0" :class="icone" aria-hidden="true" />
-        <span class="tabular-nums break-all line-clamp-2" :title="texto">{{
-          texto
-        }}</span>
+        <span class="tabular-nums break-words line-clamp-2" :title="texto">
+          <template v-for="(parte, posicao) in partes" :key="posicao">
+            <wbr v-if="posicao" />{{ parte }}
+          </template>
+        </span>
       </li>
     </ul>
   </article>

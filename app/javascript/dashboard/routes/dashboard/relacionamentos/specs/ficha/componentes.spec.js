@@ -613,6 +613,66 @@ describe('ListaDeInformacoes e De onde veio', () => {
   });
 });
 
+describe('ficha da empresa: celular', () => {
+  const empresa = {
+    id: 1,
+    name: 'Padaria Dornelaz',
+    cnpj: '11222333000181',
+    domain: 'farmacia-dornelaz.exemplo.com.br',
+  };
+
+  it('marca menor no celular; CNPJ e site descem, o CNPJ não quebra e o site é uma linha', () => {
+    const w = mount(CabecalhoDaEmpresa, { props: { empresa } });
+    const baixo = w.get('[data-relacionamentos="contato-da-empresa"]');
+    expect(baixo.classes()).toContain('col-span-2');
+    expect(baixo.get('span.tabular-nums').classes()).toContain(
+      'whitespace-nowrap'
+    );
+    const site = baixo.get('[title]');
+    expect(site.attributes('title')).toBe(empresa.domain);
+    expect(site.classes()).toEqual(
+      expect.arrayContaining(['truncate', 'whitespace-nowrap'])
+    );
+    expect(site.classes()).not.toContain('break-all');
+    expect(w.findAllComponents({ name: 'Avatar' })).toHaveLength(2);
+  });
+
+  it('na lista de pessoas o selo fica ao lado do nome e o e-mail ganha a linha toda', () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa({ contact_type: 'customer' })] },
+    });
+    const email = w.get('[data-relacionamentos="email-da-pessoa"]');
+    expect(email.classes()).toContain('col-span-3');
+    expect(email.classes()).toContain('truncate');
+    expect(w.get('[data-selo="cliente"]').exists()).toBe(true);
+  });
+});
+
+describe('datas com ano', () => {
+  const antigo = Date.UTC(2025, 10, 27, 12) / 1000;
+
+  it('De onde veio mostra o ano quando a data é de outro ano', () => {
+    const w = mount(DeOndeVeio, {
+      props: {
+        origem: { tipo: 'canal', canal: 'instagram', quando: antigo },
+        agora: AGORA,
+      },
+    });
+    expect(w.text()).toContain('"data":"27/11/2025"');
+  });
+
+  it('a faixa de quem não quer mensagens também', () => {
+    const w = mount(FaixaNaoQuer, {
+      props: {
+        pessoa: pessoa({ opted_out_at: antigo, opt_out_source: 'manual' }),
+        agora: AGORA,
+      },
+      global: { stubs },
+    });
+    expect(w.text()).toContain('"data":"27/11/2025"');
+  });
+});
+
 describe('ficha da empresa: peças', () => {
   it('cabeçalho mostra nome, CNPJ formatado com copiar e o site', () => {
     const w = mount(CabecalhoDaEmpresa, {

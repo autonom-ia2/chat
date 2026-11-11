@@ -129,6 +129,25 @@ afterEach(() => {
 const NINGUEM = { itens: [], total: 0, temMais: false };
 
 describe('ListaPage: largura e respiro', () => {
+  it('a raiz da página ocupa a largura disponível sempre, qualquer que seja o conteúdo', async () => {
+    // A raiz é filha de um contêiner flex: sem `w-full flex-1` ela encolheria
+    // até a largura do conteúdo (Empresas, conta vazia).
+    const pessoas = await montar();
+    expect(pessoas.classes()).toEqual(
+      expect.arrayContaining(['w-full', 'flex-1', 'min-w-0'])
+    );
+    pessoas.unmount();
+    const vazia = await montar({ demo: 'vazio' });
+    expect(vazia.classes()).toEqual(
+      expect.arrayContaining(['w-full', 'flex-1', 'min-w-0'])
+    );
+    vazia.unmount();
+    const empresas = await montar({ query: { aba: 'empresas' } });
+    expect(empresas.classes()).toEqual(
+      expect.arrayContaining(['w-full', 'flex-1', 'min-w-0'])
+    );
+  });
+
   it('o contêiner ocupa a largura toda e nunca empurra a página para o lado', async () => {
     const w = await montar();
     const conteudo = w.get('main > div');
@@ -268,6 +287,23 @@ describe('ListaPage: cheia', () => {
       'true'
     );
     expect(w.text()).toContain('Mostrando 25 de 42');
+  });
+
+  it('rola a pílula escolhida para dentro da fila, sem mexer na rolagem vertical', async () => {
+    const rolou = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = function rolar(opcoes) {
+      rolou({ grupo: this.dataset.grupo, opcoes });
+    };
+    const w = await montar();
+    expect(rolou).not.toHaveBeenCalled();
+    await w.get(marca('heroi-acao')).trigger('click');
+    await assentar();
+    HTMLElement.prototype.scrollIntoView = original;
+    expect(rolou).toHaveBeenCalledWith({
+      grupo: 'sumiu_1_a_3_meses',
+      opcoes: { inline: 'nearest', block: 'nearest' },
+    });
   });
 
   it('"Trazer minha lista" discreto leva à tela de trazer', async () => {

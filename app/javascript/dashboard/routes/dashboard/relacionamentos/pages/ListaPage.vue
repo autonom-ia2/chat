@@ -26,6 +26,7 @@ import { ABAS, gruposDaAba } from '../fonte/grupos';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
+import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
@@ -186,12 +187,16 @@ const limparFiltros = () => {
   lista.limparFiltros();
 };
 
+const raiz = useTemplateRef('raiz');
+useRolarPilula(raiz, lista.grupo);
+
 onMounted(lista.iniciar);
 </script>
 
 <template>
   <section
-    class="flex flex-col h-full min-w-0 bg-n-surface-1"
+    ref="raiz"
+    class="flex flex-col flex-1 w-full h-full min-w-0 bg-n-surface-1"
     data-relacionamentos="lista"
   >
     <main class="flex-1 min-w-0 overflow-y-auto">

@@ -50,6 +50,13 @@ describe('formatos', () => {
     expect(formatarDiaMes(SETEMBRO, 'en')).toBe('09/12');
   });
 
+  it('põe o ano quando a data não é do ano corrente', () => {
+    const marco2025 = Date.UTC(2025, 10, 27, 12) / 1000;
+    expect(formatarDiaMes(marco2025, 'pt-BR', AGORA)).toBe('27/11/2025');
+    expect(formatarDiaMes(marco2025, 'en', AGORA)).toBe('11/27/2025');
+    expect(formatarDiaMes(SETEMBRO, 'pt-BR', AGORA)).toBe('12/09');
+  });
+
   it('escreve o valor em reais sem centavos', () => {
     expect(formatarReais(1250, 'pt-BR').replaceAll('\u00a0', ' ')).toBe(
       'R$ 1.250'
@@ -284,6 +291,30 @@ describe('dadosParaSalvar: campos esvaziados', () => {
     ).not.toContain('github');
     expect(JSON.stringify([inicial, formulario])).toBe(antes);
   });
+});
+
+describe('texto da faixa de quem não quer mensagens', () => {
+  const catalogo = lingua =>
+    JSON.parse(
+      readFileSync(
+        `app/javascript/dashboard/i18n/locale/${lingua}/relacionamentosFicha.json`,
+        'utf8'
+      )
+    ).RELACIONAMENTOS_FICHA.FAIXA;
+
+  it.each(['en', 'pt_BR'])(
+    'em %s não tem "Veio de" nem "Came from"',
+    lingua => {
+      const faixa = catalogo(lingua);
+      expect(faixa.TEXTO).not.toContain('Veio de');
+      expect(faixa.TEXTO).not.toContain('Came from');
+      expect(faixa.TEXTO).toContain('{origem}');
+      Object.values(faixa.ORIGEM).forEach(frase => {
+        expect(frase.endsWith('.')).toBe(true);
+        expect(frase.charAt(0)).toBe(frase.charAt(0).toUpperCase());
+      });
+    }
+  );
 });
 
 describe('origens liberáveis', () => {

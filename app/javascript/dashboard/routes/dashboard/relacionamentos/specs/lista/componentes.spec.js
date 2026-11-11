@@ -342,33 +342,42 @@ describe('LinhaDePessoa', () => {
     );
   });
 
-  it('no celular, telefone numa linha e o resto embaixo; o "·" só aparece no desktop entre as duas', () => {
+  it('cada informação é um bloco no celular; o "·" só aparece de sm para cima, entre blocos', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
     });
-    const [telefone, separador, resto] = w.get('p').findAll('span');
-    expect(telefone.text()).toBe('+55 11 91031-0001');
-    expect(telefone.classes()).toEqual(
-      expect.arrayContaining(['block', 'sm:inline'])
+    const filhos = w.get('[data-segunda-linha]').findAll('span');
+    expect(filhos.map(f => f.text())).toEqual([
+      '+55 11 91031-0001',
+      '·',
+      'Padaria Brandolim',
+      '·',
+      'Falou há 3 dias',
+    ]);
+    const separadores = filhos.filter(f => f.text() === '·');
+    separadores.forEach(f =>
+      expect(f.classes()).toEqual(
+        expect.arrayContaining(['hidden', 'sm:inline'])
+      )
     );
-    expect(separador.classes()).toEqual(
-      expect.arrayContaining(['hidden', 'sm:inline'])
-    );
-    expect(resto.text()).toBe('Padaria Brandolim · Falou há 3 dias');
-    expect(resto.classes()).toEqual(
-      expect.arrayContaining(['block', 'sm:inline'])
-    );
+    filhos
+      .filter(f => f.text() !== '·')
+      .forEach(f =>
+        expect(f.classes()).toEqual(
+          expect.arrayContaining(['block', 'sm:inline'])
+        )
+      );
   });
 
-  it('sem empresa, o resto é só "Falou há…" e não sobra "·" pendurado', () => {
+  it('sem empresa, sobra um "·" só entre o telefone e o "Falou há…"', () => {
     const w = mount(LinhaDePessoa, {
       props: {
         pessoa: pessoa({ additional_attributes: {} }),
         agora: AGORA,
       },
     });
-    const partes = w.get('p').findAll('span');
-    expect(partes.map(p => p.text())).toEqual([
+    const filhos = w.get('[data-segunda-linha]').findAll('span');
+    expect(filhos.map(f => f.text())).toEqual([
       '+55 11 91031-0001',
       '·',
       'Falou há 3 dias',
@@ -486,6 +495,12 @@ describe('LinhaDeEmpresa', () => {
     });
     expect(w.text()).toContain('Padaria Brandolim');
     expect(w.text()).toContain('3 pessoas · Falou há 1 mês');
+    expect(
+      w
+        .get('[data-segunda-linha]')
+        .findAll('span')
+        .map(f => f.text())
+    ).toEqual(['3 pessoas', '·', 'Falou há 1 mês']);
     expect(w.get('[data-selo="cliente"]').text()).toBe('Cliente');
   });
 

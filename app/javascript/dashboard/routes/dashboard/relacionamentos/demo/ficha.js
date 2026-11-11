@@ -9,6 +9,7 @@
 import { empresaPorId, pessoaPorId, pessoas } from './base';
 import { sorteioFixo } from './sorteioFixo';
 import { DIA_EM_MS } from '../fonte/grupos';
+import { semAcento } from '../fonte/texto';
 
 const SEGUNDOS_POR_DIA = DIA_EM_MS / 1000;
 const SEMENTE_BASE = 1009;
@@ -119,11 +120,20 @@ const informacoesDaConta = pessoa => {
   );
 };
 
+// Rede social não tem acento. Instagram: "@fabio.23"; LinkedIn, em outro
+// formato: "fabio-figueirao".
+const USUARIO_DA_REDE = {
+  instagram: pessoa =>
+    `@${semAcento(pessoa.name.split(' ')[0]).toLowerCase()}.${pessoa.id}`,
+  linkedin: pessoa =>
+    semAcento(pessoa.name).toLowerCase().split(' ').filter(Boolean).join('-'),
+};
+
 const redesDaPessoa = pessoa => {
   const sorteio = sorteioDe(pessoa.id, 5);
   return Object.fromEntries(
     PERFIS_DAS_REDES.filter(() => sorteio() < CHANCE_DE_TER_CADA_REDE).map(
-      rede => [rede, `@${pessoa.name.split(' ')[0].toLowerCase()}.${pessoa.id}`]
+      rede => [rede, USUARIO_DA_REDE[rede](pessoa)]
     )
   );
 };

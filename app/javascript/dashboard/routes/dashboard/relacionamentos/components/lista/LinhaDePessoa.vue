@@ -5,6 +5,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import SeloDeEstado from '../comum/SeloDeEstado.vue';
+import SegundaLinha from './SegundaLinha.vue';
 import { formatarTelefone } from '../../lista/telefone';
 import { falouHa } from '../../lista/tempoRelativo';
 
@@ -29,17 +30,13 @@ const quandoFalou = computed(() => {
     : t(quando.chave, { count: quando.count }, quando.count);
 });
 
-// Celular: telefone numa linha e "Empresa · Falou hoje" embaixo; o "·" entre as
-// duas só aparece no desktop, onde tudo cabe numa linha.
-const telefone = computed(
-  () =>
+const partes = computed(() =>
+  [
     formatarTelefone(props.pessoa.phone_number) ||
-    t('RELACIONAMENTOS.LISTA.LINHA.SEM_TELEFONE')
-);
-const resto = computed(() =>
-  [props.pessoa.additional_attributes?.company_name, quandoFalou.value]
-    .filter(Boolean)
-    .join(' · ')
+      t('RELACIONAMENTOS.LISTA.LINHA.SEM_TELEFONE'),
+    props.pessoa.additional_attributes?.company_name,
+    quandoFalou.value,
+  ].filter(Boolean)
 );
 
 const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
@@ -85,11 +82,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
           {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
         </SeloDeEstado>
       </div>
-      <p class="m-0 text-sm break-words min-w-0 text-n-slate-11">
-        <span class="block sm:inline">{{ telefone }}</span>
-        <span class="hidden sm:inline"> · </span>
-        <span class="block sm:inline">{{ resto }}</span>
-      </p>
+      <SegundaLinha :partes="partes" />
     </div>
     <Button
       slate

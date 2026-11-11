@@ -42,12 +42,18 @@ export const formatarMes = (segundos, idioma) =>
     year: 'numeric',
   }).format(emData(segundos));
 
-// "12/09" (pt-BR) / "09/12" (en).
-export const formatarDiaMes = (segundos, idioma) =>
-  comFormatador(Intl.DateTimeFormat, idioma, {
+// "12/09" (pt-BR) / "09/12" (en). Com `agoraEmMs`, data de outro ano leva o
+// ano: "27/11/2025".
+export const formatarDiaMes = (segundos, idioma, agoraEmMs = null) => {
+  const doAnoCorrente =
+    agoraEmMs === null ||
+    emData(segundos).getFullYear() === new Date(agoraEmMs).getFullYear();
+  return comFormatador(Intl.DateTimeFormat, idioma, {
     day: '2-digit',
     month: '2-digit',
+    ...(doAnoCorrente ? {} : { year: 'numeric' }),
   }).format(emData(segundos));
+};
 
 export const formatarReais = (valor, idioma) =>
   comFormatador(Intl.NumberFormat, idioma, {

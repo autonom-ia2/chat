@@ -91,6 +91,7 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
     <DeOndeVeio
       class="lg:col-start-3 lg:row-start-3 lg:self-start"
       :origem="origem"
+      :agora="agora"
     />
   </div>
 </template>

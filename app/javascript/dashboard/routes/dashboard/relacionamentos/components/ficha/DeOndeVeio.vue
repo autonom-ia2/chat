@@ -9,6 +9,7 @@ import CartaoDaSecao from './CartaoDaSecao.vue';
 // onde ela chegou, e quando.
 const props = defineProps({
   origem: { type: Object, default: null },
+  agora: { type: Number, default: () => Date.now() },
 });
 
 const { t } = useI18n();
@@ -20,7 +21,7 @@ const CANAIS_COM_NOME = ['whatsapp', 'email', 'instagram', 'site'];
 const frase = computed(() => {
   const { origem } = props;
   if (!origem) return '';
-  const data = formatarDiaMes(origem.quando, idioma.value);
+  const data = formatarDiaMes(origem.quando, idioma.value, props.agora);
   if (origem.tipo === 'lista') {
     return t('RELACIONAMENTOS_FICHA.ORIGEM.LISTA', { nome: origem.nome, data });
   }

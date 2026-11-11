@@ -14,6 +14,7 @@ import { chaveDaOrigem, podeLiberar } from '../../ficha/origemDaRecusa';
 const props = defineProps({
   pessoa: { type: Object, required: true },
   liberando: { type: Boolean, default: false },
+  agora: { type: Number, default: () => Date.now() },
 });
 const emit = defineEmits(['liberar']);
 
@@ -23,7 +24,7 @@ const confirmacao = ref(null);
 
 const frase = computed(() =>
   t('RELACIONAMENTOS_FICHA.FAIXA.TEXTO', {
-    data: formatarDiaMes(props.pessoa.opted_out_at, idioma.value),
+    data: formatarDiaMes(props.pessoa.opted_out_at, idioma.value, props.agora),
     origem: t(
       `RELACIONAMENTOS_FICHA.FAIXA.ORIGEM.${chaveDaOrigem(props.pessoa.opt_out_source)}`
     ),

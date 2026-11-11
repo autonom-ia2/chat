@@ -184,6 +184,7 @@ watch(
             v-if="ficha.pessoa.value.opted_out_at"
             :pessoa="ficha.pessoa.value"
             :liberando="ficha.ocupado.value === 'liberar'"
+            :agora="agora"
             @liberar="liberar"
           />
 

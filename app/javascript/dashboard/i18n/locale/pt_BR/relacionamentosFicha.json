@@ -62,19 +62,19 @@
       "APAGAR": "Aqui você confirma que quer apagar {nome}."
     },
     "FAIXA": {
-      "TEXTO": "Pediu para não receber mensagens em {data}. Veio de: {origem}.",
+      "TEXTO": "Pediu para não receber mensagens em {data}. {origem}",
       "LIBERAR": "Liberar",
       "CONFIRMA_TITULO": "Liberar mensagens para {nome}?",
       "CONFIRMA_TEXTO": "{nome} volta a poder receber mensagens suas.",
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
-        "manual": "alguém da equipe marcou aqui",
-        "campaign_reply": "resposta a uma campanha",
-        "follow_up_reply": "resposta a uma mensagem automática",
-        "email_unsubscribe": "pedido por e-mail",
-        "prospecting": "pedido durante a busca de clientes",
-        "outra": "outro motivo"
+        "manual": "Alguém da equipe marcou aqui.",
+        "campaign_reply": "Respondeu a uma campanha pedindo para sair.",
+        "follow_up_reply": "Respondeu a uma mensagem automática pedindo para sair.",
+        "email_unsubscribe": "Pediu por e-mail.",
+        "prospecting": "Pediu durante a busca de clientes.",
+        "outra": "Outro motivo."
       }
     },
     "CONVERSAS": {

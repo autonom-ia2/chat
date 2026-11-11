@@ -606,9 +606,65 @@ describe('rodada 3', () => {
     });
     const email = w.get('[title="marina.esteveira@exemplo.com.br"]');
     expect(email.classes()).toEqual(
-      expect.arrayContaining(['break-all', 'line-clamp-2'])
+      expect.arrayContaining(['break-words', 'line-clamp-2'])
     );
+    expect(email.classes()).not.toContain('break-all');
     expect(email.classes()).not.toContain('truncate');
+  });
+
+  it('T1. o e-mail só quebra no "@", com <wbr> entre as duas partes', () => {
+    const w = mount(FichaDeExemplo, {
+      props: {
+        pessoa: {
+          nome: 'Marina Esteveira',
+          telefone: '',
+          email: 'marina.esteveira@exemplo.com.br',
+          empresa: '',
+          cliente: false,
+        },
+      },
+    });
+    const email = w.get('[title="marina.esteveira@exemplo.com.br"]');
+    expect(email.element.innerHTML).toContain(
+      'marina.esteveira<wbr>@exemplo.com.br'
+    );
+    expect(email.text()).toBe('marina.esteveira@exemplo.com.br');
+  });
+
+  it('T1. e-mail sem "@" (linha com problema) vem inteiro, sem <wbr>', () => {
+    const w = mount(FichaDeExemplo, {
+      props: {
+        pessoa: {
+          nome: 'Rita Carvalhedo',
+          telefone: '',
+          email: 'rita.carvalhedo.exemplo.com.br',
+          empresa: '',
+          cliente: false,
+        },
+      },
+    });
+    const email = w.get('[title="rita.carvalhedo.exemplo.com.br"]');
+    expect(email.element.innerHTML).not.toContain('<wbr>');
+    expect(email.text()).toBe('rita.carvalhedo.exemplo.com.br');
+  });
+
+  it('T2. nome numa linha só a partir de md (selo alinhado), com title', () => {
+    const w = mount(FichaDeExemplo, {
+      props: {
+        pessoa: {
+          nome: 'Otávio Lourenzatto',
+          telefone: '',
+          email: '',
+          empresa: '',
+          cliente: true,
+        },
+      },
+    });
+    const nome = w.get('h3');
+    expect(nome.classes()).toEqual(
+      expect.arrayContaining(['md:truncate', 'md:max-w-full'])
+    );
+    expect(nome.attributes('title')).toBe('Otávio Lourenzatto');
   });
 
   it('3. Pronto: linha de sossego abaixo do herói e "Trazer outra lista" discreta', () => {

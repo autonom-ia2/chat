@@ -62,19 +62,19 @@
       "APAGAR": "This is where you confirm deleting {nome}."
     },
     "FAIXA": {
-      "TEXTO": "Asked not to receive messages on {data}. Came from: {origem}.",
+      "TEXTO": "Asked not to receive messages on {data}. {origem}",
       "LIBERAR": "Allow again",
       "CONFIRMA_TITULO": "Allow messages to {nome} again?",
       "CONFIRMA_TEXTO": "{nome} can receive your messages again.",
       "LIBERADO": "Done. {nome} can receive messages again.",
       "ERRO": "I could not allow it. Try again.",
       "ORIGEM": {
-        "manual": "you marked it this way",
-        "campaign_reply": "a reply to a campaign",
-        "follow_up_reply": "a reply to an automatic message",
-        "email_unsubscribe": "a request by e-mail",
-        "prospecting": "a request during the customer search",
-        "outra": "another reason"
+        "manual": "Someone on the team marked it here.",
+        "campaign_reply": "Replied to a campaign asking to stop.",
+        "follow_up_reply": "Replied to an automatic message asking to stop.",
+        "email_unsubscribe": "Asked by e-mail.",
+        "prospecting": "Asked during the customer search.",
+        "outra": "Another reason."
       }
     },
     "CONVERSAS": {
