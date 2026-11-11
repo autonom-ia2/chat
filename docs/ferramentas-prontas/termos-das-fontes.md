@@ -28,7 +28,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | Host | Fontes | O que o termo pede | Teto global | Cache |
 |---|---|---|---|---|
 | `brasilapi.com.br` | CEP, CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta |
-| `viacep.com.br` | CEP (reserva) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
+| `viacep.com.br` | CEP (reserva do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade, `Cep::Referencia`, uma chamada por cidade a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
 | `api.opencnpj.org` | CNPJ (2ª reserva) | Não achamos número publicado na página de documentação. | 120 por minuto (padrão) | 1 dia |
 | `parallelum.com.br` | FIPE | **500 pedidos por dia por IP sem chave**; 1.000 com chave gratuita (documentação da API FIPE v2). | **450 por dia** | 1 dia (preço), 7 dias (listas) |

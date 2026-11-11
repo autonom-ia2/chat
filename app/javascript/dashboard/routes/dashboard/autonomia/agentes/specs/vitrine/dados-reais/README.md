@@ -24,12 +24,16 @@ Fonte paga (a BigDataCorp, na F7): não se chama a fonte para gravar a fixture. 
 resposta documentada pelo fornecedor, passado pelo adaptador do servidor num spec, com dados fictícios, e leva no topo
 a marca `"_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real"`.
 
+`cep.json` (por_endereco) foi gravado antes de o adaptador pôr o CEP da rua (faixa de número) antes do CEP especial
+(sufixo 900 a 999, de prédio ou órgão): a ordem dos 10 que estão aqui é a do ViaCEP, não a de hoje. Os campos e os
+rótulos são os mesmos; não foi gravado de novo para não fazer uma segunda chamada real pela mesma consulta.
+
 `ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
 adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
 
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
-| cep.json | endereco: 01001-000 | BrasilAPI |
+| cep.json | endereco: 01001-000; por_endereco: Avenida Paulista, São Paulo (gravado em 11/11/2026, regra QI 70) | BrasilAPI; ViaCEP |
 | cnpj.json | empresa: consultado com o CNPJ da Petrobras, gravado anonimizado | BrasilAPI |
 | cpf.json | conferir: 111.444.777-35 (número de exemplo; conta local, sem rede) | cálculo local |
 | fipe.json | marcas e modelos (carros, GM, "onix"); preco 004517-9 2020 | BrasilAPI; Parallelum (a BrasilAPI deu erro no preço) |

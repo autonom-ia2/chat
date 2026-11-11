@@ -8,13 +8,16 @@
 # por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte.
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
+# `consulta_padrao`: a consulta de quando o modelo não diz qual, na fonte que ganhou uma segunda consulta depois (o CEP
+# ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
   FORA_DO_FORMATO = '(fora do formato)'.freeze
 
   attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
 
-  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil) # rubocop:disable Metrics/ParameterLists
+  def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil, consulta_padrao: nil) # rubocop:disable Metrics/ParameterLists
+    @consulta_padrao = consulta_padrao
     @flag = flag
     @chave = chave
     @slug = slug
@@ -27,6 +30,7 @@ class Autonomia::FerramentasProntas::Fonte
 
   def consulta(nome)
     return consultas.first if consultas.one? && nome.blank?
+    return consulta(@consulta_padrao) if @consulta_padrao && nome.blank?
 
     consultas.find { |consulta| consulta.nome == nome.to_s }
   end

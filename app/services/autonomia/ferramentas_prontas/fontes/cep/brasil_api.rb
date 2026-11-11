@@ -3,6 +3,11 @@ class Autonomia::FerramentasProntas::Fontes::Cep::BrasilApi < Autonomia::Ferrame
   NOME = 'brasilapi'.freeze
   HOST = 'brasilapi.com.br'.freeze
 
+  # Só do CEP para o endereço: a BrasilAPI não busca o CEP pela rua.
+  def self.aplica?(consulta, _params)
+    consulta.nome == 'endereco'
+  end
+
   def consultar(_consulta, params)
     dado = objeto!(get("/api/cep/v2/#{params['cep']}"))
     Autonomia::FerramentasProntas::Fontes::Cep.enxuto(
