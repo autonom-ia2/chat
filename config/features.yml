@@ -1356,8 +1356,8 @@
 # solares (geração distribuída da ANEEL), transportadoras (RNTRC da ANTT) e focos de queimada (INPE), com o "atualizado
 # em…" no cartão. O job diário só baixa quando ao menos uma conta tem a flag. Migration aditiva 20261109990000 (seis
 # tabelas). Desligada: as cinco somem da vitrine e do turno. Rollback: desligar a flag na conta. Posição 43
-# (4398046511104, 1 << 42), confirmada pela Orquestração em 11/11, depois da automacao_porta (#2890). Depois do NO
-# AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+# (4398046511104, 1 << 42), confirmada pela Orquestração em 11/11, depois da automacao_porta (#2890). Exceção à regra
+# de 07/11: fica desligada até a F6, junto com a vitrine; antes disso, só a conta 1 para conferência (OK do Rodrigo).
 - name: agente_ferramentas_prontas_bases
   display_name: Agentes › ferramentas prontas (bases baixadas)
   enabled: false
