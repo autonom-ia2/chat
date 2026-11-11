@@ -40,6 +40,21 @@ beforeEach(() => {
 });
 
 describe('useVitrine · carregar', () => {
+  it('keeps the price and free lookups left of each Premium card (F7); free cards have none', async () => {
+    const premium = { gratis: 20, restantes: 12, precos: ['0.09'] };
+    api.listar.mockResolvedValue({
+      data: {
+        ...LISTA,
+        fontes: [...LISTA.fontes, { chave: 'historico_placa', premium }],
+      },
+    });
+    const vitrine = await novoEstado();
+    await vitrine.carregar();
+    expect(vitrine.fontes.value).toEqual(['cep', 'cnpj', 'historico_placa']);
+    expect(vitrine.premiumDe('historico_placa')).toEqual(premium);
+    expect(vitrine.premiumDe('cep')).toBeNull();
+  });
+
   it('reads the released sources and the tools of each agent', async () => {
     const vitrine = await novoEstado();
     await vitrine.carregar();

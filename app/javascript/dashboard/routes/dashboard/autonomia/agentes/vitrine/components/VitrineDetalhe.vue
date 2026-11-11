@@ -6,6 +6,7 @@ import AgenteGaveta from '../../components/AgenteGaveta.vue';
 import EscolhaRadio from '../../components/EscolhaRadio.vue';
 import VitrineConversa from './VitrineConversa.vue';
 import VitrineExperimente from './VitrineExperimente.vue';
+import VitrinePreco from './VitrinePreco.vue';
 import { chaveDoTexto } from '../catalogo';
 import { useVitrine } from '../useVitrine';
 
@@ -76,6 +77,8 @@ const opcoes = computed(() =>
 );
 
 const consultas = computed(() => texto('CONSULTAS'));
+// F7: o card Premium não tem "Experimente" (cada consulta é paga); no lugar, o preço e como funciona.
+const premium = computed(() => vitrine.premiumDe(props.ferramenta.id));
 
 const ensinar = async () => {
   if (!agenteEscolhido.value || ensinando.value) return;
@@ -166,7 +169,17 @@ const ensinar = async () => {
         </p>
       </section>
 
-      <VitrineExperimente :ferramenta="ferramenta" />
+      <section
+        v-if="premium"
+        data-vitrine-detalhe-premium
+        class="flex flex-col gap-3 p-4 rounded-2xl bg-n-iris-2 ring-1 ring-inset ring-n-iris-6"
+      >
+        <h3 class="m-0 text-base font-semibold text-n-slate-12">
+          {{ t(`${NS}.PREMIUM.TITULO`) }}
+        </h3>
+        <VitrinePreco :premium="premium" completo />
+      </section>
+      <VitrineExperimente v-else :ferramenta="ferramenta" />
 
       <section class="flex flex-col gap-3">
         <h3 class="m-0 text-base font-semibold text-n-slate-12">

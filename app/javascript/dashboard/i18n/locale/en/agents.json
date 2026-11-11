@@ -3107,6 +3107,10 @@
         "OUTROS": {
           "NOME": "Other",
           "TEXTO": "Goods and websites."
+        },
+        "PREMIUM": {
+          "NOME": "Premium",
+          "TEXTO": "More complete lookups. The first 20 of each one are free."
         }
       },
       "DETALHE": {
@@ -3421,6 +3425,75 @@
           "ROTULO": "CPF, CNPJ or name",
           "EXEMPLO": "11.222.333/0001-81",
           "CONSULTAS": "by CPF or CNPJ, by name"
+        },
+        "CERTIDOES_EMPRESA": {
+          "NOME": "Company certificates",
+          "APOIO": "by CNPJ",
+          "FAZ": "Gets a company's certificates right away: federal debt, labor, FGTS, misconduct and the list of government debtors.",
+          "CONSEGUE": "get a company's certificates",
+          "CLIENTE": "Does the company 11.222.333/0001-81 owe federal taxes?",
+          "AGENTE": "I just checked: the federal debt certificate came out clear, no debt.",
+          "USE_QUANDO": "Use when the customer asks to check whether a company has debts or up-to-date certificates.",
+          "CONSULTAS": "federal debt, labor debt, FGTS, misconduct (CNJ) and the list of government debtors (CADIN)"
+        },
+        "RAIO_X_EMPRESA": {
+          "NOME": "Company X-ray",
+          "APOIO": "by CNPJ",
+          "FAZ": "Shows a company's lawsuits, sanctions, growth, group of companies and construction works.",
+          "CONSEGUE": "see the X-ray of a company",
+          "CLIENTE": "Does the company 11.222.333/0001-81 have lawsuits?",
+          "AGENTE": "I found 2 lawsuits in the last year, both civil.",
+          "USE_QUANDO": "Use when the customer asks to assess a company before closing a deal.",
+          "CONSULTAS": "lawsuits, sanctions and lists, growth, group of companies and construction works"
+        },
+        "CONFERIR_PESSOA": {
+          "NOME": "Check the person",
+          "APOIO": "by CPF",
+          "FAZ": "Checks the CPF status with the Federal Revenue, the name and birth date, and the professional council registration.",
+          "CONSEGUE": "check who the person is",
+          "CLIENTE": "My CPF is 111.444.777-35. Can you check my details?",
+          "AGENTE": "Checked: the CPF is regular with the Federal Revenue and the birth date matches what you told me.",
+          "USE_QUANDO": "Use when you need to confirm the details the customer gave you.",
+          "CONSULTAS": "CPF status with the Federal Revenue, name and birth date, and professional council registration"
+        },
+        "HISTORICO_PLACA": {
+          "NOME": "License plate history",
+          "APOIO": "by plate",
+          "FAZ": "Shows model, year, restrictions and how many owners the car has had. It doesn't show the owner's name.",
+          "CONSEGUE": "see a car's history by its plate",
+          "CLIENTE": "Does plate ABC1D23 have any restriction?",
+          "AGENTE": "Checked: it's a 2020 Onix, no restriction today, and it has had 2 owners.",
+          "USE_QUANDO": "Use when the customer gives a vehicle's plate to quote or check."
+        },
+        "RISCO_ENDERECO": {
+          "NOME": "Address risk",
+          "APOIO": "by ZIP code and number",
+          "FAZ": "Shows whether the address is in a risk area, the crimes in the city and the property's inspection.",
+          "CONSEGUE": "see the risk of an address",
+          "CLIENTE": "My house is at ZIP code 01001-000, number 10. Is it a risk area?",
+          "AGENTE": "Checked: the address is outside a risk area.",
+          "USE_QUANDO": "Use when the customer wants to insure a property and gives the address.",
+          "CONSULTAS": "risk area, crimes in the city (SP, RJ and MG only) and property inspection"
+        },
+        "IMOVEL_RURAL": {
+          "NOME": "Rural property",
+          "APOIO": "by the rural registry receipt or CNPJ",
+          "FAZ": "Shows the farm's status in the Rural Environmental Registry and whether the owner company has an IBAMA embargo.",
+          "CONSEGUE": "check a rural property",
+          "CLIENTE": "Is my farm regular in the Rural Environmental Registry?",
+          "AGENTE": "I checked by the receipt: the registry is active, with 120 hectares in Mato Grosso.",
+          "USE_QUANDO": "Use when the customer gives the Rural Environmental Registry receipt or the CNPJ of the farm's owner company.",
+          "CONSULTAS": "Rural Environmental Registry status and IBAMA embargo"
+        },
+        "CONTATO_EMPRESA": {
+          "NOME": "Company contacts and market",
+          "APOIO": "by CNPJ or ZIP code",
+          "FAZ": "Shows a company's phone and email and how many companies there are in a region. It doesn't look up people's contacts.",
+          "CONSEGUE": "find a company's contact",
+          "CLIENTE": "What's the phone number of the company 11.222.333/0001-81?",
+          "AGENTE": "The company's main phone is (11) 3000-0000.",
+          "USE_QUANDO": "Use when the customer asks for a company's phone or email, or how many companies there are in a region.",
+          "CONSULTAS": "phone, email and companies in the region"
         }
       },
       "JA_VEM": {
@@ -3445,6 +3518,16 @@
         "INCLUIR": "Add",
         "AGORA_NAO": "Not now",
         "INCLUIDA": "Done! {nome} can now {consegue}."
+      },
+      "PREMIUM": {
+        "SELO": "Premium",
+        "PRECO": "{gratis} free, then {preco}",
+        "FAIXA": "from {min} to {max}",
+        "RESTAM": "{n} free left",
+        "RESTA_UMA": "1 free left",
+        "ACABARAM": "No free lookups left",
+        "TITULO": "How much it costs",
+        "COMO_FUNCIONA": "Every answered question counts, even when there is no record. After the free ones, the amount goes on your monthly bill. The same question on the same day is not charged again."
       }
     }
   }

@@ -38,6 +38,8 @@ const comMotivo = erro =>
   });
 
 const fontes = ref([]);
+// F7: { chave: { gratis, restantes, precos } } dos cards Premium liberados para a conta.
+const premium = ref({});
 const incluidas = ref([]);
 const carregando = ref(false);
 const carregada = ref(false);
@@ -60,6 +62,11 @@ const carregar = () => {
       velha = versaoDoPedido !== versao;
       if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
+      premium.value = Object.fromEntries(
+        (data?.fontes || [])
+          .filter(item => item.premium)
+          .map(item => [item.chave, item.premium])
+      );
       incluidas.value = data?.incluidas || [];
       carregada.value = true;
     })
@@ -73,6 +80,9 @@ const carregar = () => {
     .then(() => (velha ? carregar() : undefined));
   return pedido;
 };
+
+// O preço e as grátis que restam de um card Premium; null nos grátis.
+const premiumDe = fonte => premium.value[fonte] || null;
 
 const doAgente = agenteId =>
   incluidas.value.filter(item => item.agente_id === Number(agenteId));
@@ -153,6 +163,7 @@ export const useVitrine = () => ({
   carregando: computed(() => carregando.value),
   carregada: computed(() => carregada.value),
   erro: computed(() => erro.value),
+  premiumDe,
   doAgente,
   tem,
   incluir,
