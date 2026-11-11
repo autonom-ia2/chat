@@ -133,6 +133,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(ncm::ESCOLHA_O_GRUPO).to include('4 dígitos ou mais')
     end
 
+    # Revisão do #2917 (1): o texto vai ao modelo com teto (`Resposta::MAX_TEXTO`, 160) e o corte comia o texto do
+    # próprio código: "brinquedos" voltava 20 códigos com 3 descrições. O texto próprio cabe sempre inteiro.
+    it '"brinquedos" real: cada codigo com a sua descricao, inteira no fim, dentro do teto' do
+      fonte_responde("#{api}?search=brinquedos", fixture('ncm_busca_brinquedos.json'))
+      fonte_responde("#{api}?search=9503", fixture('ncm_busca_9503.json'))
+      proprios = (real('ncm_busca_brinquedos.json') + real('ncm_busca_9503.json'))
+                 .to_h { |dado| [dado['codigo'], ncm::Descricao.limpa(ncm.texto(dado['descricao'])).downcase] }
+
+      da_nota = buscar('brinquedos')['dados']['itens'].select { |item| item['codigo'].delete('.').length == 8 }
+
+      expect(da_nota.size).to be > 3
+      expect(da_nota.pluck('descricao').uniq.size).to eq(da_nota.size)
+      expect(da_nota.pluck('descricao').map(&:length)).to all(be <= Autonomia::FerramentasProntas::Resposta::MAX_TEXTO)
+      expect(da_nota).to all(satisfy { |item| item['descricao'].downcase.end_with?(proprios.fetch(item['codigo'])) })
+    end
+
     it '"parafuso" continua bom: os parafusos primeiro, com a descricao completa, e a posicao 73.18 aberta' do
       fonte_responde("#{api}?search=parafuso", fixture('ncm_busca_parafuso.json'))
       fonte_responde("#{api}?search=7318", fixture('ncm_busca_7318.json'))
