@@ -286,12 +286,28 @@ const grapesPastesBlocks = editor =>
 
 // Blocks added while a text is being edited are swallowed by it: closing the edit rereads the edited
 // element from the canvas, which the re-render filled with the new blocks. So the edit closes first.
+// If closing fails, nothing is added (the blocks would be swallowed) and the person is told.
 const closeTextEditing = async editor => {
-  const editing = editor.getEditing?.();
-  await editing?.view?.disableEditing?.();
+  try {
+    await editor.getEditing?.()?.view?.disableEditing?.();
+    return true;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[useImageDrop] closing the text edit failed', error);
+    notice.value = { key: 'PASTE_FAILED' };
+    return false;
+  }
 };
 
-const pasteInText = async (editor, event, segments, anchor) => {
+// Runs `insert` once the text being edited (if any) is closed, unless the editor went away meanwhile.
+const afterTextEditing = async (editor, inText, insert) => {
+  const startedIn = generation;
+  if (inText && !(await closeTextEditing(editor))) return;
+  if (startedIn !== generation) return;
+  insert();
+};
+
+const pasteInText = (editor, event, segments, anchor) => {
   event.preventDefault();
   const [first, ...rest] = segments;
   // The text before the first image goes where the cursor is; what follows enters as blocks, in order.
@@ -299,11 +315,10 @@ const pasteInText = async (editor, event, segments, anchor) => {
   if (first.type === 'text') {
     event.target.ownerDocument.execCommand('insertHTML', false, first.html);
   }
-  if (!blocks.length) return;
-  const startedIn = generation;
-  await closeTextEditing(editor);
-  if (startedIn !== generation) return;
-  insertSegments(editor, blocks, anchor);
+  if (!blocks.length) return Promise.resolve();
+  return afterTextEditing(editor, true, () =>
+    insertSegments(editor, blocks, anchor)
+  );
 };
 
 // A paste never replaces an image: it goes below the selected block (replacing is for a drop aimed
@@ -330,16 +345,19 @@ export const handlePaste = (editor, event, campaignId) => {
     insertSegments(editor, cleaned.segments, anchor);
     return;
   }
+  // An image alone (a print, or HTML that is only an <img>): pasted inside a text, the edit closes
+  // first, or the new block would be swallowed by it.
   const files = Array.from(dt.files || []).filter(isImageFile);
-  if (files.length) {
-    event.preventDefault();
-    uploadFiles(editor, dropItems(files, { anchor }), { campaignId });
-    return;
-  }
-  if (cleaned.segments.length) {
-    event.preventDefault();
-    insertSegments(editor, cleaned.segments, anchor);
-  }
+  if (!files.length && !cleaned.segments.length) return;
+  event.preventDefault();
+  // eslint-disable-next-line consistent-return
+  return afterTextEditing(editor, inText, () => {
+    if (files.length) {
+      uploadFiles(editor, dropItems(files, { anchor }), { campaignId });
+    } else {
+      insertSegments(editor, cleaned.segments, anchor);
+    }
+  });
 };
 
 // ---- wiring ----

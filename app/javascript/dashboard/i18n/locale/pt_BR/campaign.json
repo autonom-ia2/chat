@@ -774,6 +774,7 @@
           "LEAVE_CONFIRM": "Se sair agora, ela não entra no e-mail.",
           "LEAVE_WAIT": "Esperar a imagem",
           "LEAVE_ANYWAY": "Sair mesmo assim",
+          "PASTE_FAILED": "Não deu para colar aqui. Clique fora do texto e cole de novo.",
           "DROP_HERE": "Solte a imagem para pôr no e-mail",
           "CHOOSE_FIRST": "Primeiro escolha como começar. Depois é só arrastar a imagem para o e-mail."
         }

@@ -421,6 +421,59 @@ describe('image pasted on the canvas (#2908)', () => {
     expect(blockImage(1).get('src')).toBe(UPLOAD_PLACEHOLDER_SRC);
   });
 
+  const editingTarget = () => {
+    const target = document.createElement('div');
+    target.setAttribute('contenteditable', 'true');
+    return target;
+  };
+
+  it('closes the text being edited before a print pasted inside it goes in', async () => {
+    EmailCampaignAssetsAPI.upload.mockResolvedValue(
+      uploaded('https://app.exemplo.com.br/print.png')
+    );
+    editor.select(blockText(0));
+    const blocksWhenEditClosed = [];
+    const disableEditing = vi.fn(async () => {
+      blocksWhenEditClosed.push(...classesOf());
+    });
+    const editingText = blockText(0);
+    editingText.view = { disableEditing };
+    vi.spyOn(editor, 'getEditing').mockReturnValue(editingText);
+    const event = pasteEvent({
+      files: [fileOf('image.png', 'image/png')],
+      target: editingTarget(),
+    });
+
+    await handlePaste(editor, event, CAMPAIGN);
+    await waitForImageUploads();
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(disableEditing).toHaveBeenCalledTimes(1);
+    expect(blocksWhenEditClosed).toEqual(['topo', 'foto', 'footer-locked']);
+    expect(classesOf()).toEqual(['topo', 'novo', 'foto', 'footer-locked']);
+  });
+
+  it('adds nothing and tells the person when the text edit fails to close', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    editor.select(blockText(0));
+    const editingText = blockText(0);
+    editingText.view = {
+      disableEditing: vi.fn(async () => {
+        throw new Error('rte');
+      }),
+    };
+    vi.spyOn(editor, 'getEditing').mockReturnValue(editingText);
+    const event = pasteEvent({
+      html: '<p><img src="https://exemplo.com.br/a.png" alt="a"></p>',
+      target: editingTarget(),
+    });
+
+    await handlePaste(editor, event, CAMPAIGN);
+
+    expect(classesOf()).toEqual(['topo', 'foto', 'footer-locked']);
+    expect(useImageDrop().notice.value).toEqual({ key: 'PASTE_FAILED' });
+  });
+
   it('makes a text paste outside a text into blocks below the selected one', () => {
     editor.select(blockText(0));
     const event = pasteEvent({ html: '<p>Oi</p>' });
