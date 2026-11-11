@@ -76,3 +76,37 @@ com a unidade em `unidades`.
 
 `chuva.json` foi gravado de novo em 11/11/2026, pelo script, com 7 dias (04 a 10/11/2026): a lista de itens sem nome,
 identificados pela data, passa pelo spec de cobertura.
+
+## F5: as bases que a plataforma baixa
+
+As cinco bases da F5 não são chamadas a cada pergunta: a plataforma baixa o arquivo oficial e guarda no banco. O
+`dados` delas foi gravado em 11/11/2026 por `script/ferramentas_prontas/gravar_dados_reais_das_bases.rb`, que importa
+o arquivo oficial real no banco de TESTE (a mesma `Bases::Importacao` da rodada diária), passa cada consulta pelo
+adaptador do servidor e limpa as tabelas no fim. Baixa ~300 MB e leva uns 10 minutos. Só roda no ambiente de teste:
+
+```sh
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais_das_bases.rb            # todas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais_das_bases.rb queimadas  # só uma
+```
+
+| Arquivo | Consulta e pedido | Base oficial |
+|---|---|---|
+| planos_de_saude.json | operadora "unimed campinas"; operadora_cancelada: a cancelada mais recente | ANS (operadoras ativas e canceladas) |
+| aeronaves.json | aeronave: a 1a matrícula com empresa proprietária, empresa operadora e gravame | ANAC (Registro Aeronáutico Brasileiro) |
+| geracao_solar.json | cep: o CEP com mais sistemas; cidade: Campinas SP | ANEEL (geração distribuída) |
+| transportadoras.json | registro: a 1a empresa equiparada; registro_pelo_nome "transportes rapido" | ANTT (RNTRC) |
+| queimadas.json | focos: a cidade com mais focos desde ontem | INPE (focos de queimada) |
+
+Anonimizado pelo script: o nome, o CNPJ e o RNTRC das empresas de aeronave e das transportadoras viram exemplos
+("AVIACAO EXEMPLO N LTDA", "TRANSPORTADORA EXEMPLO N LTDA"), porque podem ser MEI. A matrícula e o número de série
+da aeronave também (PP-QZZ, que o RAB não registra, e "EXEMPLO-0001"): as reais levam ao dono pelo RAB público.
+Situação, datas e lugar são os reais. Planos de saúde, placas solares e focos não têm pessoa física.
+
+`geracao_solar.json` foi gravado de novo em 11/11/2026, pelo script, depois que o total passou a ter nome de total
+(`total_de_sistemas`, `potencia_total_kw`) e o detalhe por tipo de geração passou a vir só com mais de um tipo.
+
+`queimadas.json` foi gravado de novo em 11/11/2026, pelo script, depois que a lista dos últimos focos (coordenada e
+bioma) deu lugar a `ultimo_foco_em` e `distancia_do_foco_mais_perto_km`.
+
+`planos_de_saude.json`, `aeronaves.json` e `transportadoras.json` foram gravados de novo em 11/11/2026, pelo script,
+depois que o CNPJ passou a sair com a máscara (00.000.000/0000-00), como no card Dados da empresa.

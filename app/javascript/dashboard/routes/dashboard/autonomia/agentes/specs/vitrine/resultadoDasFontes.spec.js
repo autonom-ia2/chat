@@ -3,7 +3,7 @@ import { FERRAMENTAS } from '../../vitrine/catalogo';
 import en from 'dashboard/i18n/locale/en/agents.json';
 import ptBR from 'dashboard/i18n/locale/pt_BR/agents.json';
 
-// #2858 F4 — cobertura do resultado do "Experimente" com o `dados` REAL de cada fonte grátis no ar (F1 a F4): uma
+// #2858 F4 — cobertura do resultado do "Experimente" com o `dados` REAL de cada fonte grátis no ar (F1 a F5): uma
 // chamada real por consulta, passada pelo adaptador do servidor, gravada em ./dados-reais (de onde veio cada uma:
 // ./dados-reais/README.md). Os rótulos são os do i18n de verdade, em en e em pt_BR. Falha se uma fonte voltar sem
 // linhas, ou sem o essencial que o dono precisa ver.
@@ -226,6 +226,172 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
       'CORRETORA EXEMPLO 1 LTDA'
     );
     expect(valor('corretor_susep', 'por_nome', 'Situação')).toBe('Suspenso');
+  });
+
+  // F5: as bases que a plataforma baixa (dado real gravado por script/ferramentas_prontas/gravar_dados_reais_das_bases.rb).
+  // Toda base mostra a data em que foi atualizada: é o que diz ao dono se o dado ainda vale.
+  const diaF5 = (ano, mes, d) =>
+    new Date(ano, mes - 1, d).toLocaleDateString('pt-BR');
+
+  it('F5 ANS: operadora com registro, situação e tipo; a cancelada com data e motivo', () => {
+    expect(valor('planos_de_saude', 'operadora', 'Operadoras')).toBe(
+      'UNIMED CAMPINAS - COOPERATIVA DE TRABALHO MÉDICO'
+    );
+    // Registro é chave de identificação: sem milhar.
+    expect(valor('planos_de_saude', 'operadora', 'Registro na ANS')).toBe(
+      '335690'
+    );
+    // CNPJ com a máscara, como no card Dados da empresa (e sem milhar: é chave de identificação).
+    expect(valor('planos_de_saude', 'operadora', 'CNPJ')).toBe(
+      '46.124.624/0001-11'
+    );
+    expect(valor('planos_de_saude', 'operadora_cancelada', 'CNPJ')).toBe(
+      '22.869.997/0001-53'
+    );
+    expect(valor('planos_de_saude', 'operadora', 'Situação')).toBe('ativa');
+    expect(valor('planos_de_saude', 'operadora', 'Tipo de operadora')).toBe(
+      'Cooperativa Médica'
+    );
+    expect(valor('planos_de_saude', 'operadora', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+    expect(valor('planos_de_saude', 'operadora_cancelada', 'Situação')).toBe(
+      'cancelada'
+    );
+    expect(
+      valor('planos_de_saude', 'operadora_cancelada', 'Cancelada em')
+    ).toBe(diaF5(2026, 11, 5));
+    expect(
+      valor('planos_de_saude', 'operadora_cancelada', 'Motivo do cancelamento')
+    ).toBe('INEXISTÊNCIA DE PRODUTO ATIVO POR MAIS DE 180 DIAS');
+  });
+
+  it('F5 ANAC: aeronave pela matrícula, com situação, certificado, gravames e empresas', () => {
+    // Matrícula e número de série de exemplo: as reais levam ao dono pelo RAB público.
+    // Com o hífen depois do prefixo, como o leigo reconhece.
+    expect(valor('aeronaves', 'aeronave', 'Matrícula')).toBe('PP-QZZ');
+    expect(valor('aeronaves', 'aeronave', 'Número de série')).toBe(
+      'EXEMPLO-0001'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Fabricante')).toBe(
+      'CESSNA AIRCRAFT'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Modelo')).toBe('680');
+    expect(valor('aeronaves', 'aeronave', 'Situação')).toBe('registrada');
+    expect(
+      valor(
+        'aeronaves',
+        'aeronave',
+        'Certificado de aeronavegabilidade válido até'
+      )
+    ).toBe(diaF5(2029, 10, 30));
+    expect(valor('aeronaves', 'aeronave', 'Gravames (ônus registrados)')).toBe(
+      'INTERCÂMBIO OPERACIONAL'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Empresas proprietárias')).toBe(
+      'AVIACAO EXEMPLO 1 LTDA'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Empresas operadoras')).toBe(
+      'AVIACAO EXEMPLO 1 LTDA e AVIACAO EXEMPLO 2 LTDA'
+    );
+    expect(valor('aeronaves', 'aeronave', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+  });
+
+  it('F5 ANEEL: placas solares da cidade e do CEP, com o total e os sistemas de cada tipo de consumidor', () => {
+    expect(valor('geracao_solar', 'cidade', 'Cidade')).toBe('Campinas');
+    expect(valor('geracao_solar', 'cidade', 'Estado')).toBe('SP');
+    expect(
+      valor('geracao_solar', 'cidade', 'Total de sistemas instalados')
+    ).toBe('18.164');
+    expect(valor('geracao_solar', 'cidade', 'Potência total (kW)')).toBe(
+      '143.834,24'
+    );
+    // Cada tipo de consumidor com os sistemas dele, numa linha só.
+    expect(
+      valor('geracao_solar', 'cidade', 'Sistemas por tipo de consumidor')
+    ).toBe(
+      'Residencial: 16.577 · Comercial: 1.332 · Industrial: 107 · e mais 5'
+    );
+    // Cada rótulo aparece uma vez: o total não se repete no detalhe (só solar: sem a linha por tipo de geração).
+    const rotulos = linhas('geracao_solar', 'cidade').map(([rotulo]) => rotulo);
+    expect(rotulos.length).toBe(new Set(rotulos).size);
+    expect(
+      valor('geracao_solar', 'cidade', 'Sistemas por tipo de geração')
+    ).toBeUndefined();
+    expect(
+      valor('geracao_solar', 'cidade', 'Primeiro da lista')
+    ).toBeUndefined();
+    // CEP é chave de identificação: sem milhar.
+    expect(valor('geracao_solar', 'cep', 'CEP')).toBe('41300400');
+    expect(valor('geracao_solar', 'cep', 'Total de sistemas instalados')).toBe(
+      '2.373'
+    );
+    expect(valor('geracao_solar', 'cep', 'Potência total (kW)')).toBe(
+      '54.977,7'
+    );
+    expect(
+      valor('geracao_solar', 'cep', 'Sistemas por tipo de consumidor')
+    ).toBe('Comercial: 1.478 · Residencial: 691 · Industrial: 92 · e mais 3');
+    expect(valor('geracao_solar', 'cep', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+  });
+
+  it('F5 ANTT: transportadora com RNTRC, situação e equiparação; pelo nome, a lista com o total', () => {
+    // RNTRC é chave de identificação: os zeros da frente ficam e não há milhar.
+    expect(valor('transportadoras', 'registro', 'RNTRC')).toBe('000000001');
+    expect(valor('transportadoras', 'registro', 'Registros')).toBe(
+      'TRANSPORTADORA EXEMPLO 1 LTDA'
+    );
+    expect(valor('transportadoras', 'registro', 'CNPJ')).toBe(
+      '11.222.333/0001-81'
+    );
+    expect(valor('transportadoras', 'registro', 'Situação')).toBe('ativo');
+    expect(
+      valor('transportadoras', 'registro', 'Equiparada a autônomo (TAC)')
+    ).toBe('S');
+    expect(valor('transportadoras', 'registro', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
+    expect(valor('transportadoras', 'registro_pelo_nome', 'Registros')).toBe(
+      'TRANSPORTADORA EXEMPLO 1 LTDA, TRANSPORTADORA EXEMPLO 2 LTDA, TRANSPORTADORA EXEMPLO 3 LTDA e mais 153'
+    );
+    expect(
+      valor('transportadoras', 'registro_pelo_nome', 'Primeiro da lista')
+    ).toBe('TRANSPORTADORA EXEMPLO 1 LTDA');
+  });
+
+  it('F5 INPE: focos de queimada no lugar, no período, por dia, o último e o mais perto', () => {
+    expect(valor('queimadas', 'focos', 'Onde')).toBe('Almeirim (PA)');
+    expect(valor('queimadas', 'focos', 'Focos no período')).toBe('1.258');
+    // Regra B: cada dia com os focos dele, numa linha com o rótulo do campo; o rótulo da lista não aparece.
+    expect(valor('queimadas', 'focos', 'Focos no dia')).toBe(
+      `${diaF5(2026, 11, 11)}: 385 · ${diaF5(2026, 11, 10)}: 873`
+    );
+    expect(valor('queimadas', 'focos', 'Dias com focos')).toBeUndefined();
+    // Data com hora, sem conversão de fuso (regra C).
+    const horario = new Date(2026, 10, 11, 11, 10).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    expect(valor('queimadas', 'focos', 'Último foco detectado em')).toBe(
+      `${diaF5(2026, 11, 11)} ${horario}`
+    );
+    // O rótulo diz de onde a distância é medida.
+    expect(
+      valor(
+        'queimadas',
+        'focos',
+        'Distância do foco mais perto da cidade ou do ponto (km)'
+      )
+    ).toBe('6,4');
+    // A lista dos últimos focos (coordenada e bioma) não vai: na tela ela era só a contagem.
+    expect(valor('queimadas', 'focos', 'Focos mais recentes')).toBeUndefined();
+    expect(valor('queimadas', 'focos', 'Base atualizada em')).toBe(
+      diaF5(2026, 11, 11)
+    );
   });
 
   // A saída inteira das listas que já enganaram: o detalhe do primeiro item parecia valer para todos ("Situação:
