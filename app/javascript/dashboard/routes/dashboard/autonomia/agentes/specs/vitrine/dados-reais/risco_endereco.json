@@ -18,7 +18,7 @@
       "uf": "SP",
       "ocorrencias_12_meses": 1200,
       "media_por_mes": 100,
-      "por_tipo": [
+      "tipos_de_crime": [
         {
           "tipo": "FURTO",
           "ocorrencias_12_meses": 700

@@ -17,7 +17,8 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco
     resumo = Extrair.campos(dado, cidade: 'City', uf: 'State', ocorrencias_12_meses: 'TotalLast360DaysOccurrences',
                                   media_por_mes: 'AverageTotalOccurrencesByMonth')
     tipos = Extrair.itens(dado['CriminalOccurrencesByNature'], tipo: 'CriminalNature', ocorrencias_12_meses: 'Last360DaysOccurrences')
-    Extrair.sem_vazio(resumo.merge('por_tipo' => tipos))
+    # `tipos_de_crime`, e não `por_tipo`: o rótulo `POR_TIPO` é o das placas solares (F5), "Sistemas por tipo de geração".
+    Extrair.sem_vazio(resumo.merge('tipos_de_crime' => tipos))
   end
 
   VISTORIA = lambda do |dado|

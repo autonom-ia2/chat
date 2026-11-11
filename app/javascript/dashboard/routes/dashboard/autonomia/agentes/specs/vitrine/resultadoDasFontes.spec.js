@@ -45,6 +45,21 @@ const CONSULTAS = Object.entries(porFonte).flatMap(([fonte, consultas]) =>
     .map(consulta => [fonte, consulta])
 );
 
+// #2858: no merge da F7 com a F5, `POR_TIPO` virou "Tipos de crime" também nas placas solares. Cada fonte tem a sua
+// chave: as placas solares contam por tipo de geração, o risco do endereço, por tipo de crime.
+describe('rótulos que a F5 e a F7 não dividem', () => {
+  it('solar panels count by generation type and the address risk by crime type', () => {
+    expect(PT.rotulo('por_tipo')).toBe('Sistemas por tipo de geração');
+    expect(EN.rotulo('por_tipo')).toBe('Systems by generation type');
+    const crimes = linhas('risco_endereco', 'criminalidade').map(
+      ([rotulo]) => rotulo
+    );
+    expect(crimes).toContain('Tipos de crime');
+    expect(crimes).not.toContain('Sistemas por tipo de geração');
+    expect(EN.rotulo('ano_de_fabricacao')).toBe('Year built');
+  });
+});
+
 describe('linhasDoResultado com o dado real de cada fonte', () => {
   it('há dado real de toda fonte grátis do catálogo da vitrine', () => {
     const semDadoReal = FERRAMENTAS.map(item => item.id).filter(

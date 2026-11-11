@@ -109,7 +109,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
                'CriminalOccurrencesByNature' => [{ 'CriminalNature' => 'FURTO', 'Last360DaysOccurrences' => 60 }] }
     expect(ler('risco_endereco', 'criminalidade', crimes).dados)
       .to eq('cidade' => 'SAO PAULO', 'uf' => 'SP', 'ocorrencias_12_meses' => 100,
-             'por_tipo' => [{ 'tipo' => 'FURTO', 'ocorrencias_12_meses' => 60 }])
+             'tipos_de_crime' => [{ 'tipo' => 'FURTO', 'ocorrencias_12_meses' => 60 }])
     expect(ler('risco_endereco', 'vistoria', { 'Tipology' => 'APARTAMENTO', 'PropertyAreaInM2' => 33, 'Complement' => 'APTO 1' }).dados)
       .to eq('tipo' => 'APARTAMENTO', 'area_m2' => 33)
   end
