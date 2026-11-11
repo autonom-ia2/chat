@@ -1,4 +1,9 @@
-import { emReais, faixaDePreco } from '../../vitrine/premium';
+import {
+  emReais,
+  estadoDasGratis,
+  faixaDePreco,
+  marcasDasGratis,
+} from '../../vitrine/premium';
 
 // #2858 F7 — o preço dos cards Premium em texto de gente, a partir do que o servidor manda ("0.15").
 describe('premium · faixaDePreco', () => {
@@ -21,5 +26,25 @@ describe('premium · faixaDePreco', () => {
   it('nothing without a price', () => {
     expect(faixaDePreco([])).toBeNull();
     expect(faixaDePreco(undefined)).toBeNull();
+  });
+});
+
+describe('premium · grátis do mês', () => {
+  it('two or more left, exactly one left, none left', () => {
+    expect(estadoDasGratis(15)).toBe('RESTAM');
+    expect(estadoDasGratis(2)).toBe('RESTAM');
+    expect(estadoDasGratis(1)).toBe('RESTA_UMA');
+    expect(estadoDasGratis(0)).toBe('ACABARAM');
+    expect(estadoDasGratis(undefined)).toBe('ACABARAM');
+  });
+
+  it('one mark per free lookup, filled while it is left', () => {
+    const marcas = marcasDasGratis(20, 15);
+    expect(marcas).toHaveLength(20);
+    expect(marcas.filter(Boolean)).toHaveLength(15);
+    expect(marcas[0]).toBe(true);
+    expect(marcas[19]).toBe(false);
+    expect(marcasDasGratis(20, 0).some(Boolean)).toBe(false);
+    expect(marcasDasGratis(20, 99).every(Boolean)).toBe(true);
   });
 });

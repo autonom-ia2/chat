@@ -43,9 +43,12 @@ describe('VitrineDetalhe · Premium', () => {
     expect(wrapper.find('[data-vitrine-detalhe-premium]').text()).toContain(
       'Quanto custa'
     );
-    expect(wrapper.find('[data-vitrine-detalhe-premium]').text()).toContain(
-      'Restam 3 grátis no mês'
+    const quadro = wrapper.find('[data-vitrine-detalhe-premium]').text();
+    // O número grande e a frase são dois elementos: conta só a leitura, sem os espaços do template.
+    expect(quadro.split(' ').filter(Boolean).join(' ')).toContain(
+      '3 de 20 grátis restam neste mês'
     );
+    expect(wrapper.find('[data-vitrine-selo-premium]').exists()).toBe(true);
     expect(wrapper.find('[data-stub-experimente]').exists()).toBe(false);
   });
 
@@ -53,6 +56,7 @@ describe('VitrineDetalhe · Premium', () => {
     vitrine.premiumDe.mockReturnValue(null);
     const wrapper = montar('cep');
     expect(wrapper.find('[data-vitrine-detalhe-premium]').exists()).toBe(false);
+    expect(wrapper.find('[data-vitrine-selo-premium]').exists()).toBe(false);
     expect(wrapper.find('[data-stub-experimente]').exists()).toBe(true);
   });
 });

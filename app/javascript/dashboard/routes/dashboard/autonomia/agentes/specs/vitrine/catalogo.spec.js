@@ -151,13 +151,24 @@ describe('catálogo da vitrine', () => {
     ['pt_BR', 'en'].forEach(locale => {
       [
         'SELO',
-        'PRECO',
+        'DEPOIS',
+        'AGORA',
         'FAIXA',
         'RESTAM',
         'RESTA_UMA',
         'ACABARAM',
         'TITULO',
-        'COMO_FUNCIONA',
+        'CONTADOR.RESTAM',
+        'CONTADOR.RESTA_UMA',
+        'VOLTAM',
+        'PRECO_DEPOIS',
+        'PRECO_AGORA',
+        'POR_CONSULTA',
+        'REGRAS.SEM_RESULTADO',
+        'REGRAS.NUMERO_ERRADO',
+        'REGRAS.MESMO_DIA',
+        'REGRAS.FAIXA',
+        'REGRAS.FATURA',
       ].forEach(campo =>
         expect(te(`AGENTS.VITRINE.PREMIUM.${campo}`, locale)).toBe(true)
       );

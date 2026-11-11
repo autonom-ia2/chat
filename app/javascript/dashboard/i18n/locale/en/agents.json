@@ -3110,7 +3110,7 @@
         },
         "PREMIUM": {
           "NOME": "Premium",
-          "TEXTO": "More complete lookups. The first 20 of each one are free."
+          "TEXTO": "More complete lookups. Each one has 20 free per month."
         }
       },
       "DETALHE": {
@@ -3663,13 +3663,28 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
-        "PRECO": "{gratis} free per month, then {preco}",
+        "DEPOIS": "Then {preco} each",
+        "AGORA": "Now {preco} each",
         "FAIXA": "from {min} to {max}",
-        "RESTAM": "{n} free left this month",
-        "RESTA_UMA": "1 free left this month",
+        "RESTAM": "{n} of {gratis} free left this month",
+        "RESTA_UMA": "1 of {gratis} free left this month",
         "ACABARAM": "No free lookups left this month",
         "TITULO": "How much it costs",
-        "COMO_FUNCIONA": "Every answered question counts, even when there is no record. After the free ones, the amount goes on your monthly bill. The free ones come back at the start of every month. The same question on the same day is not charged again."
+        "CONTADOR": {
+          "RESTAM": "of {gratis} free left this month",
+          "RESTA_UMA": "of {gratis} free left this month"
+        },
+        "VOLTAM": "On the 1st of every month, {gratis} free come back.",
+        "PRECO_DEPOIS": "After the free ones",
+        "PRECO_AGORA": "Each lookup now costs",
+        "POR_CONSULTA": "{preco} per lookup",
+        "REGRAS": {
+          "SEM_RESULTADO": "It counts even when the lookup finds nothing.",
+          "NUMERO_ERRADO": "A CPF or CNPJ with a wrong number does not count.",
+          "MESMO_DIA": "The same lookup on the same day counts only once.",
+          "FAIXA": "The price depends on what the agent looks up.",
+          "FATURA": "The amount goes on your monthly bill."
+        }
       }
     }
   }

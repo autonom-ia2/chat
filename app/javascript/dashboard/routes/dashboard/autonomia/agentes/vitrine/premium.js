@@ -25,3 +25,18 @@ export const faixaDePreco = (precos, locale = 'pt_BR') => {
   const max = emReais(valores[valores.length - 1], locale);
   return min === max ? { unico: min } : { min, max };
 };
+
+// Em que ponto estão as grátis do mês: 'RESTAM' (duas ou mais), 'RESTA_UMA' ou 'ACABARAM'. A tela muda o texto e a cor
+// por aqui; o número vem do servidor.
+export const estadoDasGratis = restantes => {
+  const n = Number(restantes) || 0;
+  if (n <= 0) return 'ACABARAM';
+  return n === 1 ? 'RESTA_UMA' : 'RESTAM';
+};
+
+// Uma marca por consulta grátis do mês (20): true nas que ainda restam. É a barrinha do cartão e do "Quanto custa".
+export const marcasDasGratis = (gratis, restantes) => {
+  const total = Math.max(Number(gratis) || 0, 0);
+  const sobram = Math.min(Math.max(Number(restantes) || 0, 0), total);
+  return Array.from({ length: total }, (_, indice) => indice < sobram);
+};

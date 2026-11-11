@@ -1,50 +1,58 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { faixaDePreco } from '../premium';
+import { usePremium } from '../usePremium';
 
-// #2858 F7 — o preço de um card Premium, sem termo técnico: o selo "Premium", "20 grátis, depois R$ X" e quantas
-// grátis ainda restam à conta. Tudo vem do servidor (`premium` de cada fonte). `completo`: no detalhe, explica também
-// que a consulta sem registro conta e que o valor entra na fatura do mês.
+// #2858 F7 — o resumo do preço no cartão Premium: uma barrinha com uma marca por grátis do mês e uma linha com quantas
+// restam e quanto custa depois. Fica dentro do botão do cartão, por isso só `span`. O detalhe completo é o
+// `VitrineQuantoCusta`.
 const props = defineProps({
   premium: { type: Object, required: true },
-  completo: { type: Boolean, default: false },
 });
 
 const NS = 'AGENTS.VITRINE.PREMIUM';
-const { t, locale } = useI18n();
+const { t } = useI18n();
+const { gratis, restantes, estado, tom, marcas, preco } = usePremium(
+  toRef(props, 'premium')
+);
 
-const preco = computed(() => {
-  const faixa = faixaDePreco(props.premium.precos, locale.value);
-  if (!faixa) return '';
-  return faixa.unico || t(`${NS}.FAIXA`, { min: faixa.min, max: faixa.max });
-});
-
-const restantes = computed(() => {
-  const n = Number(props.premium.restantes) || 0;
-  if (n === 0) return t(`${NS}.ACABARAM`);
-  return n === 1 ? t(`${NS}.RESTA_UMA`) : t(`${NS}.RESTAM`, { n });
-});
+const situacao = computed(() =>
+  t(`${NS}.${estado.value}`, { n: restantes.value, gratis: gratis.value })
+);
+const depois = computed(() =>
+  t(estado.value === 'ACABARAM' ? `${NS}.AGORA` : `${NS}.DEPOIS`, {
+    preco: preco.value,
+  })
+);
 </script>
 
 <template>
-  <span class="flex flex-col gap-1.5" data-vitrine-premium>
-    <span class="inline-flex flex-wrap items-center gap-2">
+  <span
+    class="flex flex-col gap-2 pt-3 border-t border-n-weak"
+    data-vitrine-premium
+    :data-vitrine-estado="estado"
+  >
+    <span class="flex gap-0.5" aria-hidden="true">
       <span
-        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-md bg-n-iris-3 text-n-iris-11"
+        v-for="(sobra, indice) in marcas"
+        :key="indice"
+        class="flex-1 h-1.5 rounded-full"
+        :class="sobra ? tom.marca : 'bg-n-slate-6'"
+      />
+    </span>
+    <span
+      class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5"
+    >
+      <span
+        class="text-sm font-semibold"
+        :class="tom.texto"
+        data-vitrine-restantes
       >
-        <span class="i-lucide-gem size-3.5" aria-hidden="true" />
-        {{ t(`${NS}.SELO`) }}
+        {{ situacao }}
       </span>
-      <span class="text-sm font-medium text-n-slate-12" data-vitrine-preco>
-        {{ t(`${NS}.PRECO`, { gratis: premium.gratis, preco }) }}
+      <span class="text-sm text-n-slate-11" data-vitrine-preco>
+        {{ depois }}
       </span>
-    </span>
-    <span class="text-sm text-n-slate-11" data-vitrine-restantes>
-      {{ restantes }}
-    </span>
-    <span v-if="completo" class="text-sm text-n-slate-11">
-      {{ t(`${NS}.COMO_FUNCIONA`) }}
     </span>
   </span>
 </template>

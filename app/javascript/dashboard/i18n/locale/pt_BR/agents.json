@@ -3110,7 +3110,7 @@
         },
         "PREMIUM": {
           "NOME": "Premium",
-          "TEXTO": "Consultas mais completas. As 20 primeiras de cada uma são grátis."
+          "TEXTO": "Consultas mais completas. Cada uma tem 20 grátis por mês."
         }
       },
       "DETALHE": {
@@ -3663,13 +3663,28 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
-        "PRECO": "{gratis} grátis por mês, depois {preco}",
+        "DEPOIS": "Depois, {preco} cada",
+        "AGORA": "Agora, {preco} cada",
         "FAIXA": "de {min} a {max}",
-        "RESTAM": "Restam {n} grátis no mês",
-        "RESTA_UMA": "Resta 1 grátis no mês",
+        "RESTAM": "Restam {n} de {gratis} grátis no mês",
+        "RESTA_UMA": "Resta 1 de {gratis} grátis no mês",
         "ACABARAM": "As grátis do mês acabaram",
         "TITULO": "Quanto custa",
-        "COMO_FUNCIONA": "Cada pergunta respondida conta, mesmo quando não há registro. Depois das grátis, o valor entra na sua fatura do mês. As grátis voltam no começo de cada mês. A mesma pergunta no mesmo dia não paga de novo."
+        "CONTADOR": {
+          "RESTAM": "de {gratis} grátis restam neste mês",
+          "RESTA_UMA": "de {gratis} grátis resta neste mês"
+        },
+        "VOLTAM": "Todo dia 1º, voltam {gratis} grátis.",
+        "PRECO_DEPOIS": "Depois das grátis",
+        "PRECO_AGORA": "Agora, cada consulta custa",
+        "POR_CONSULTA": "{preco} por consulta",
+        "REGRAS": {
+          "SEM_RESULTADO": "Conta mesmo quando a consulta não acha nada.",
+          "NUMERO_ERRADO": "CPF ou CNPJ com número errado não conta.",
+          "MESMO_DIA": "A mesma consulta no mesmo dia conta uma vez só.",
+          "FAIXA": "O preço muda conforme o que o agente consulta.",
+          "FATURA": "O valor entra na sua fatura do mês."
+        }
       }
     }
   }

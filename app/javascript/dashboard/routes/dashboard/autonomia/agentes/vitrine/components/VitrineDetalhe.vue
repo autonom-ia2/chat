@@ -6,7 +6,8 @@ import AgenteGaveta from '../../components/AgenteGaveta.vue';
 import EscolhaRadio from '../../components/EscolhaRadio.vue';
 import VitrineConversa from './VitrineConversa.vue';
 import VitrineExperimente from './VitrineExperimente.vue';
-import VitrinePreco from './VitrinePreco.vue';
+import VitrineQuantoCusta from './VitrineQuantoCusta.vue';
+import VitrineSeloPremium from './VitrineSeloPremium.vue';
 import { chaveDoTexto } from '../catalogo';
 import { useVitrine } from '../useVitrine';
 
@@ -143,11 +144,17 @@ const ensinar = async () => {
       <div class="flex items-start gap-3">
         <span
           aria-hidden="true"
-          class="grid rounded-xl place-items-center size-12 shrink-0 bg-n-blue-3 text-n-blue-11"
+          class="grid rounded-xl place-items-center size-12 shrink-0"
+          :class="
+            premium
+              ? 'bg-n-iris-3 text-n-iris-11'
+              : 'bg-n-blue-3 text-n-blue-11'
+          "
         >
           <span :class="ferramenta.icone" class="size-6" />
         </span>
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col items-start gap-1">
+          <VitrineSeloPremium v-if="premium" class="mb-1" />
           <p class="m-0 text-base text-n-slate-12">{{ texto('FAZ') }}</p>
           <p v-if="texto('APOIO')" class="m-0 text-sm text-n-slate-11">
             {{ texto('APOIO') }}
@@ -169,16 +176,7 @@ const ensinar = async () => {
         </p>
       </section>
 
-      <section
-        v-if="premium"
-        data-vitrine-detalhe-premium
-        class="flex flex-col gap-3 p-4 rounded-2xl bg-n-iris-2 ring-1 ring-inset ring-n-iris-6"
-      >
-        <h3 class="m-0 text-base font-semibold text-n-slate-12">
-          {{ t(`${NS}.PREMIUM.TITULO`) }}
-        </h3>
-        <VitrinePreco :premium="premium" completo />
-      </section>
+      <VitrineQuantoCusta v-if="premium" :premium="premium" />
       <VitrineExperimente v-else :ferramenta="ferramenta" />
 
       <section class="flex flex-col gap-3">
