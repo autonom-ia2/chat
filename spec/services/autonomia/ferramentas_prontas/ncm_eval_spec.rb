@@ -13,9 +13,10 @@ require 'rails_helper'
 #   0901.21.00 café torrado, não descafeinado; 8517.13.00 telefones inteligentes (smartphones); 7318.12.00 outros
 #   parafusos para madeira (de ferro ou aço); 9503.00.31 brinquedos que representem animais, com enchimento; 4011.10.00
 #   pneumáticos novos de automóveis de passageiros; 8450.11.00 máquina de lavar roupa até 10 kg, inteiramente automática.
-# Passa quem diz um dos códigos aceitos. Onde o produto pede uma informação a mais (o bicho ou o boneco de pelúcia, a
-# capacidade da máquina, que veículo), perguntar também passa: quem lê se a resposta pergunta é um modelo barato, nunca
-# lista de palavras. "NCM de veículo" só passa perguntando. Conversas inventadas, sem dado de cliente.
+# Passa quem diz um dos códigos aceitos, com ou sem pontos, mesmo citando a alternativa ou com uma pergunta a mais
+# (regra QI 70, 11/11/2026: responde o caso comum e cita o outro). Onde não há caso comum (o bicho ou o boneco de
+# pelúcia, a capacidade da máquina, que veículo), perguntar também passa: quem lê se a resposta pergunta é um modelo
+# barato, nunca lista de palavras. "NCM de veículo" só passa perguntando. Conversas inventadas, sem dado de cliente.
 #
 # `AUTONOMIA_EVAL_CASOS=1,7` roda só esses casos. `AUTONOMIA_EVAL_RODADAS=3` troca as rodadas de ferramenta da produção
 # (uma, para o agente sem ajudante) por outra, para medir.
@@ -35,6 +36,12 @@ module AvaliacaoDaNcm
     [7, 'NCM 0901.21.00, o que é?', %w[0901.21.00], false, 'codigo'],
     [8, 'NCM de veículo', %w[], true, nil]
   ].freeze
+
+  # Disse um dos códigos aceitos, com ou sem pontos: conta pelos dígitos da resposta.
+  def self.disse?(resposta, aceitos)
+    digitos = resposta.to_s.delete('^0-9')
+    aceitos.any? { |codigo| digitos.include?(codigo.delete('^0-9')) }
+  end
 
   JUIZ = <<~TEXTO.freeze
     Você lê a resposta de um atendente a um cliente que pediu o código NCM de um produto. Diga se a resposta pede ao
@@ -124,12 +131,21 @@ RSpec.describe 'NCM: o modelo do agente acha o código da nota' do # rubocop:dis
 
   # Disse um código aceito; ou, onde perguntar passa, o modelo barato leu que a resposta pede a informação que falta.
   def passou?(resposta, aceitos, perguntar)
-    aceitos.any? { |codigo| resposta.include?(codigo) } || (perguntar && pede_informacao?(resposta))
+    AvaliacaoDaNcm.disse?(resposta, aceitos) || (perguntar && pede_informacao?(resposta))
   end
 
   def casos
     numeros = ENV.fetch('AUTONOMIA_EVAL_CASOS', '').split(',').map(&:strip).compact_blank.map(&:to_i)
     numeros.empty? ? AvaliacaoDaNcm::CASOS : AvaliacaoDaNcm::CASOS.select { |caso| numeros.include?(caso.first) }
+  end
+
+  # Sem IA: o agente escreve o código com ou sem pontos ("73181200", eval de 11/11/2026); conta pelos dígitos. Citar a
+  # alternativa do caso comum ("0901.21.00; se for descafeinado, 0901.22.00") também passa.
+  it 'o codigo conta com ou sem pontos, e a alternativa citada nao atrapalha' do
+    expect(AvaliacaoDaNcm.disse?('O NCM é 73181200.', %w[7318.12.00])).to be(true)
+    expect(AvaliacaoDaNcm.disse?('0901.21.00 (comum); se for descafeinado, 0901.22.00', %w[0901.21.00])).to be(true)
+    expect(AvaliacaoDaNcm.disse?('O NCM é 7318.15.00.', %w[7318.12.00])).to be(false)
+    expect(AvaliacaoDaNcm.disse?('Qual é o veículo?', %w[])).to be(false)
   end
 
   it 'os 8 casos de conversa chegam ao código da nota (ou perguntam o que falta)', :eval_pago do
