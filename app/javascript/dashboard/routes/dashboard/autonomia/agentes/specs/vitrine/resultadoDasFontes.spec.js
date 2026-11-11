@@ -3,7 +3,7 @@ import { FERRAMENTAS } from '../../vitrine/catalogo';
 import en from 'dashboard/i18n/locale/en/agents.json';
 import ptBR from 'dashboard/i18n/locale/pt_BR/agents.json';
 
-// #2858 F4 — cobertura do resultado do "Experimente" com o `dados` REAL de cada fonte grátis no ar (F1 a F4): uma
+// #2858 F4 — cobertura do resultado do "Experimente" com o `dados` REAL de cada fonte grátis no ar (F1 a F5): uma
 // chamada real por consulta, passada pelo adaptador do servidor, gravada em ./dados-reais (de onde veio cada uma:
 // ./dados-reais/README.md). Os rótulos são os do i18n de verdade, em en e em pt_BR. Falha se uma fonte voltar sem
 // linhas, ou sem o essencial que o dono precisa ver.
