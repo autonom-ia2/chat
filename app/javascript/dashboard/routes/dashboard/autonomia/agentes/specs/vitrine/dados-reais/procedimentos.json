@@ -1,0 +1,25 @@
+{
+  "codigo": {
+    "provedor": "tuss",
+    "dados": {
+      "codigo": "10101012",
+      "nome": "Consulta em consultório (no horário normal ou preestabelecido)"
+    }
+  },
+  "busca": {
+    "provedor": "tuss",
+    "dados": {
+      "total": 2,
+      "itens": [
+        {
+          "codigo": "40304361",
+          "nome": "Hemograma com contagem de plaquetas ou frações (eritrograma, leucograma, plaquetas)"
+        },
+        {
+          "codigo": "40304957",
+          "nome": "Adenograma (inclui hemograma)"
+        }
+      ]
+    }
+  }
+}

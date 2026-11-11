@@ -70,6 +70,45 @@ describe('VitrineExperimente', () => {
     );
   });
 
+  // #2858 F4 — "Deu certo" com nada embaixo (a resposta sem nenhum campo com rótulo): uma frase neutra, e o aviso no
+  // console de desenvolvimento. O spec de cobertura (resultadoDasFontes.spec.js) garante que as nossas fontes têm linhas.
+  it('a found answer without any labeled line says so instead of an empty box', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    experimentar.mockResolvedValue({
+      situacao: 'encontrado',
+      dados: { campo_sem_rotulo: 'x', lista_sem_rotulo: [{ a: 1 }] },
+    });
+    const wrapper = montar('produtos_seguradoras');
+    await rodar(wrapper);
+    const resultado = wrapper.find('[data-experimente-resultado]');
+    expect(resultado.find('[data-experimente-sem-linhas]').text()).toBe(
+      'A consulta respondeu, mas não consigo mostrar aqui.'
+    );
+    expect(resultado.find('dl').exists()).toBe(false);
+    expect(aviso).toHaveBeenCalledWith(
+      'Experimente: resposta sem campo com rótulo',
+      'produtos_seguradoras',
+      ['campo_sem_rotulo', 'lista_sem_rotulo']
+    );
+    aviso.mockRestore();
+  });
+
+  it('the F4 health and insurance boxes ask for city with state and for insurer with the kind of insurance', () => {
+    const hospitais = montar('hospitais');
+    expect(rotulo(hospitais)).toBe('Cidade e estado');
+    expect(campo(hospitais).element.value).toBe('Campinas SP');
+    const produtos = montar('produtos_seguradoras');
+    expect(rotulo(produtos)).toBe('Seguradora e tipo de seguro');
+    expect(campo(produtos).element.value).toBe('seguro cyber da Allianz');
+  });
+
+  // #2858 (C26) — o CNPJ de exemplo é fictício e a SUSEP não o acha: o exemplo é a busca pelo nome, que acha.
+  it('the broker box asks for the name first, with an example the registry finds', () => {
+    const corretor = montar('corretor_susep');
+    expect(rotulo(corretor)).toBe('Nome, CPF ou CNPJ do corretor');
+    expect(campo(corretor).element.value).toBe('corretora de seguros');
+  });
+
   it('no notice when there was a single option', async () => {
     experimentar.mockResolvedValue({
       situacao: 'encontrado',
@@ -87,9 +126,9 @@ describe('VitrineExperimente', () => {
     const { locale } = wrapper.vm.$i18n;
     wrapper.vm.$i18n.locale = 'en';
     await flushPromises();
-    expect(
-      campo(wrapper).element.value.startsWith('business days until ')
-    ).toBe(true);
+    expect(campo(wrapper).element.value).toBe(
+      `business days until ${ferramentaPorId('feriados').exemplo(new Date(), 'en')}`
+    );
     await campo(wrapper).setValue('20/11');
     wrapper.vm.$i18n.locale = locale;
     await flushPromises();

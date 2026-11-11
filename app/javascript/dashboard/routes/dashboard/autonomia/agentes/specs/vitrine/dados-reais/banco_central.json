@@ -1,0 +1,51 @@
+{
+  "selic": {
+    "provedor": "sgs",
+    "dados": {
+      "indicador": "Selic (meta do Copom)",
+      "valor": 13.75,
+      "unidade": "% ao ano"
+    }
+  },
+  "ipca": {
+    "provedor": "sgs",
+    "dados": {
+      "indicador": "IPCA",
+      "mes_de_referencia": "09/2026",
+      "variacao_no_mes": 0.82,
+      "acumulado_12_meses": 4.58,
+      "unidade": "%"
+    }
+  },
+  "dolar": {
+    "provedor": "ptax",
+    "dados": {
+      "indicador": "Dólar PTAX (Banco Central)",
+      "compra": 5.5834,
+      "venda": 5.584,
+      "data": "2026-11-10",
+      "unidade": "R$"
+    }
+  },
+  "focus": {
+    "provedor": "focus",
+    "dados": {
+      "indicador": "Focus: IPCA",
+      "unidades": {
+        "mediana": "%"
+      },
+      "expectativas": [
+        {
+          "ano": 2026,
+          "mediana": 5.2195,
+          "data_do_boletim": "2026-11-06"
+        },
+        {
+          "ano": 2027,
+          "mediana": 4.9005,
+          "data_do_boletim": "2026-11-06"
+        }
+      ]
+    }
+  }
+}
