@@ -1,12 +1,17 @@
 # UM SERVIDOR TLS MUDO em 127.0.0.1 (#2906): aceita a conexão, faz o TLS com um certificado próprio para `host`, lê o
 # pedido e não responde. É a fonte que demora a mandar os cabeçalhos, o que o WebMock não emula: ele não passa pelo
 # laço do `Net::HTTP` que repete o pedido (`transport_request`). Conta as conexões recebidas. Quem usa confia no
-# `certificado` (só neste exemplo) e desliga o WebMock (`sem_webmock`).
+# `certificado` (só neste exemplo), desliga o WebMock (`sem_webmock`) e chama `parar` no fim: ele fecha cada conexão
+# aceita e espera as threads, com prazo, para nada sobrar para o exemplo seguinte.
 class ServidorTlsMudo
+  PRAZO_PARA_PARAR = 2
+
   attr_reader :porta, :certificado
 
   def initialize(host)
     @conexoes = Queue.new
+    @aceitos = Queue.new
+    @threads = Queue.new
     @chave = OpenSSL::PKey::RSA.new(2048)
     @certificado = certificado_para(host)
     @tcp = TCPServer.new('127.0.0.1', 0)
@@ -18,12 +23,31 @@ class ServidorTlsMudo
     @conexoes.size
   end
 
+  # O aceitador primeiro (com o servidor fechado ele sai, e nada mais é aceito); depois as conexões e as threads delas.
   def parar
     @tcp.close unless @tcp.closed?
-    @thread.join(2) || @thread.kill
+    esperar(@thread)
+    fechar_aceitos
+    esvaziar(@threads).each { |thread| esperar(thread) }
   end
 
   private
+
+  def esperar(thread)
+    thread.join(PRAZO_PARA_PARAR) || thread.kill
+  end
+
+  def fechar_aceitos
+    esvaziar(@aceitos).each do |socket|
+      socket.close unless socket.closed?
+    rescue IOError, SystemCallError
+      nil
+    end
+  end
+
+  def esvaziar(fila)
+    Array.new(fila.size) { fila.pop(true) }
+  end
 
   def atender
     contexto = OpenSSL::SSL::SSLContext.new
@@ -32,7 +56,8 @@ class ServidorTlsMudo
     loop do
       tcp = @tcp.accept
       @conexoes << true
-      Thread.new(tcp) { |conexao| calar(OpenSSL::SSL::SSLSocket.new(conexao, contexto)) }
+      @aceitos << tcp
+      @threads << Thread.new(tcp) { |conexao| calar(OpenSSL::SSL::SSLSocket.new(conexao, contexto)) }
     end
   rescue IOError, Errno::EBADF
     nil

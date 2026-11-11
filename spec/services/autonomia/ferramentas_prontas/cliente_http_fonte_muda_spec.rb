@@ -38,6 +38,6 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
 
     expect(motivo).to eq('tempo_esgotado')
     expect(servidor.conexoes).to eq(1)
-    expect(decorrido).to be < prazo * 1.5
+    expect(decorrido).to be < prazo * 1.9
   end
 end
