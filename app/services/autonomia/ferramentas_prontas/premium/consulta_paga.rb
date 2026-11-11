@@ -2,8 +2,10 @@
 # sem reserva (`BigDataCorp`), e o prazo do dataset. A validade de 1 dia é só a marca de que passa pelo cache: o
 # `Premium::Cache` guarda até o fim do dia da conta.
 # `pelo_endereco: true` (regra "QI 70"): sem o CEP, ele vem da cidade e da UF, ou da rua (`Premium::Endereco.cep`). Sem
-# CEP achado, o pedido é inválido no `cep`; com mais de um CEP para a rua, no `bairro` (o agente pergunta o bairro).
+# CEP achado, o pedido é inválido no `cep`; com mais de um CEP para a rua, no `bairro`, com os CEPs em `candidatos` (o
+# agente escolhe pelo bairro ou pergunta). A recusa é uma `Falta`, como nas grátis.
 class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::FerramentasProntas::Consulta
+  Falta = Autonomia::FerramentasProntas::Falta
   FOLGA = 2
 
   attr_reader :dataset
@@ -18,8 +20,8 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
 
   # `conta`: o id da conta, que segue para a procura do CEP (a fatia da conta no teto do ViaCEP).
   def conferir(argumentos, conta: nil)
-    params, campo = super(argumentos)
-    return [params, campo] unless params && @pelo_endereco && params['cep'].nil?
+    params, falta = super(argumentos)
+    return [params, falta] unless params && @pelo_endereco && params['cep'].nil?
 
     com_cep(params, conta)
   end
@@ -31,12 +33,13 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
   private
 
   def com_cep(params, conta)
-    return [nil, 'cep'] if params['cidade'].nil? || params['uf'].nil?
+    return [nil, Falta.new(campo: 'cep')] if params['cidade'].nil? || params['uf'].nil?
 
     achado = Autonomia::FerramentasProntas::Premium::Endereco.cep(cidade: params['cidade'], uf: params['uf'].upcase, rua: params['rua'],
                                                                   bairro: params['bairro'], conta: conta)
     return [params.merge('cep' => achado['cep']), nil] if achado&.dig('cep')
+    return [nil, Falta.new(campo: 'bairro', candidatos: achado['candidatos'])] if achado&.key?('candidatos')
 
-    [nil, achado&.key?('candidatos') ? 'bairro' : 'cep']
+    [nil, Falta.new(campo: 'cep')]
   end
 end

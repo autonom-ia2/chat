@@ -1,0 +1,621 @@
+{
+  "marcas": {
+    "provedor": "brasilapi",
+    "dados": {
+      "total": 108,
+      "marcas": [
+        {
+          "codigo": "1",
+          "nome": "Acura"
+        },
+        {
+          "codigo": "2",
+          "nome": "Agrale"
+        },
+        {
+          "codigo": "3",
+          "nome": "Alfa Romeo"
+        },
+        {
+          "codigo": "4",
+          "nome": "AM Gen"
+        },
+        {
+          "codigo": "5",
+          "nome": "Asia Motors"
+        },
+        {
+          "codigo": "6",
+          "nome": "Audi"
+        },
+        {
+          "codigo": "7",
+          "nome": "BMW"
+        },
+        {
+          "codigo": "8",
+          "nome": "BRM"
+        },
+        {
+          "codigo": "10",
+          "nome": "Cadillac"
+        },
+        {
+          "codigo": "11",
+          "nome": "CBT Jipe"
+        },
+        {
+          "codigo": "12",
+          "nome": "Chrysler"
+        },
+        {
+          "codigo": "13",
+          "nome": "Citroën"
+        },
+        {
+          "codigo": "14",
+          "nome": "Cross Lander"
+        },
+        {
+          "codigo": "15",
+          "nome": "Daewoo"
+        },
+        {
+          "codigo": "16",
+          "nome": "Daihatsu"
+        },
+        {
+          "codigo": "17",
+          "nome": "Dodge"
+        },
+        {
+          "codigo": "18",
+          "nome": "Engesa"
+        },
+        {
+          "codigo": "19",
+          "nome": "Envemo"
+        },
+        {
+          "codigo": "20",
+          "nome": "Ferrari"
+        },
+        {
+          "codigo": "21",
+          "nome": "Fiat"
+        },
+        {
+          "codigo": "22",
+          "nome": "Ford"
+        },
+        {
+          "codigo": "23",
+          "nome": "GM - Chevrolet"
+        },
+        {
+          "codigo": "24",
+          "nome": "Gurgel"
+        },
+        {
+          "codigo": "25",
+          "nome": "Honda"
+        },
+        {
+          "codigo": "26",
+          "nome": "Hyundai"
+        },
+        {
+          "codigo": "27",
+          "nome": "Isuzu"
+        },
+        {
+          "codigo": "28",
+          "nome": "Jaguar"
+        },
+        {
+          "codigo": "29",
+          "nome": "Jeep"
+        },
+        {
+          "codigo": "30",
+          "nome": "JPX"
+        },
+        {
+          "codigo": "31",
+          "nome": "Kia Motors"
+        },
+        {
+          "codigo": "32",
+          "nome": "Lada"
+        },
+        {
+          "codigo": "33",
+          "nome": "Land Rover"
+        },
+        {
+          "codigo": "34",
+          "nome": "Lexus"
+        },
+        {
+          "codigo": "35",
+          "nome": "Lotus"
+        },
+        {
+          "codigo": "36",
+          "nome": "Maserati"
+        },
+        {
+          "codigo": "37",
+          "nome": "Matra"
+        },
+        {
+          "codigo": "38",
+          "nome": "Mazda"
+        },
+        {
+          "codigo": "39",
+          "nome": "Mercedes-Benz"
+        },
+        {
+          "codigo": "40",
+          "nome": "Mercury"
+        },
+        {
+          "codigo": "41",
+          "nome": "Mitsubishi"
+        },
+        {
+          "codigo": "42",
+          "nome": "Miura"
+        },
+        {
+          "codigo": "43",
+          "nome": "Nissan"
+        },
+        {
+          "codigo": "44",
+          "nome": "Peugeot"
+        },
+        {
+          "codigo": "45",
+          "nome": "Plymouth"
+        },
+        {
+          "codigo": "46",
+          "nome": "Pontiac"
+        },
+        {
+          "codigo": "47",
+          "nome": "Porsche"
+        },
+        {
+          "codigo": "48",
+          "nome": "Renault"
+        },
+        {
+          "codigo": "49",
+          "nome": "Rover"
+        },
+        {
+          "codigo": "50",
+          "nome": "Saab"
+        },
+        {
+          "codigo": "51",
+          "nome": "Saturn"
+        },
+        {
+          "codigo": "52",
+          "nome": "Seat"
+        },
+        {
+          "codigo": "54",
+          "nome": "Subaru"
+        },
+        {
+          "codigo": "55",
+          "nome": "Suzuki"
+        },
+        {
+          "codigo": "56",
+          "nome": "Toyota"
+        },
+        {
+          "codigo": "57",
+          "nome": "Troller"
+        },
+        {
+          "codigo": "58",
+          "nome": "Volvo"
+        },
+        {
+          "codigo": "59",
+          "nome": "VW - VolksWagen"
+        },
+        {
+          "codigo": "120",
+          "nome": "Walk"
+        },
+        {
+          "codigo": "123",
+          "nome": "Bugre"
+        },
+        {
+          "codigo": "125",
+          "nome": "SSANGYONG"
+        },
+        {
+          "codigo": "127",
+          "nome": "LOBINI"
+        },
+        {
+          "codigo": "136",
+          "nome": "CHANA"
+        },
+        {
+          "codigo": "140",
+          "nome": "Mahindra"
+        },
+        {
+          "codigo": "147",
+          "nome": "EFFA"
+        },
+        {
+          "codigo": "149",
+          "nome": "Fibravan"
+        },
+        {
+          "codigo": "152",
+          "nome": "HAFEI"
+        },
+        {
+          "codigo": "153",
+          "nome": "GREAT WALL"
+        },
+        {
+          "codigo": "154",
+          "nome": "JINBEI"
+        },
+        {
+          "codigo": "156",
+          "nome": "MINI"
+        },
+        {
+          "codigo": "157",
+          "nome": "smart"
+        },
+        {
+          "codigo": "161",
+          "nome": "Caoa Chery/Chery"
+        },
+        {
+          "codigo": "163",
+          "nome": "Wake"
+        },
+        {
+          "codigo": "165",
+          "nome": "TAC"
+        },
+        {
+          "codigo": "167",
+          "nome": "MG"
+        },
+        {
+          "codigo": "168",
+          "nome": "LIFAN"
+        },
+        {
+          "codigo": "170",
+          "nome": "Fyber"
+        },
+        {
+          "codigo": "171",
+          "nome": "LAMBORGHINI"
+        },
+        {
+          "codigo": "177",
+          "nome": "JAC"
+        },
+        {
+          "codigo": "182",
+          "nome": "CHANGAN"
+        },
+        {
+          "codigo": "183",
+          "nome": "SHINERAY"
+        },
+        {
+          "codigo": "185",
+          "nome": "RAM"
+        },
+        {
+          "codigo": "186",
+          "nome": "RELY"
+        },
+        {
+          "codigo": "189",
+          "nome": "ASTON MARTIN"
+        },
+        {
+          "codigo": "190",
+          "nome": "FOTON"
+        },
+        {
+          "codigo": "195",
+          "nome": "Rolls-Royce"
+        },
+        {
+          "codigo": "199",
+          "nome": "GEELY"
+        },
+        {
+          "codigo": "207",
+          "nome": "Baby"
+        },
+        {
+          "codigo": "208",
+          "nome": "IVECO"
+        },
+        {
+          "codigo": "211",
+          "nome": "Mclaren"
+        },
+        {
+          "codigo": "214",
+          "nome": "HITECH ELECTRIC"
+        },
+        {
+          "codigo": "236",
+          "nome": "CAB Motors"
+        },
+        {
+          "codigo": "238",
+          "nome": "BYD"
+        },
+        {
+          "codigo": "240",
+          "nome": "GWM"
+        },
+        {
+          "codigo": "241",
+          "nome": "D2D Motors"
+        },
+        {
+          "codigo": "245",
+          "nome": "Caoa Chery"
+        },
+        {
+          "codigo": "246",
+          "nome": "DFSK"
+        },
+        {
+          "codigo": "247",
+          "nome": "SERES"
+        },
+        {
+          "codigo": "249",
+          "nome": "FEVER"
+        },
+        {
+          "codigo": "250",
+          "nome": "NETA"
+        },
+        {
+          "codigo": "251",
+          "nome": "Jaecoo"
+        },
+        {
+          "codigo": "252",
+          "nome": "Omoda"
+        },
+        {
+          "codigo": "253",
+          "nome": "ZEEKR"
+        },
+        {
+          "codigo": "254",
+          "nome": "GAC"
+        },
+        {
+          "codigo": "260",
+          "nome": "Leapmotor"
+        },
+        {
+          "codigo": "263",
+          "nome": "Denza"
+        },
+        {
+          "codigo": "264",
+          "nome": "Jetour"
+        },
+        {
+          "codigo": "265",
+          "nome": "Caoa Changan"
+        },
+        {
+          "codigo": "269",
+          "nome": "ARROW"
+        }
+      ]
+    }
+  },
+  "modelos": {
+    "provedor": "parallelum",
+    "dados": {
+      "total": 38,
+      "modelos": [
+        {
+          "codigo": "6748",
+          "nome": "ONIX  Lollapalooza 1.0 F.Power 5p Mec."
+        },
+        {
+          "codigo": "8988",
+          "nome": "ONIX HATCH 1.0 12V Flex 5p Mec."
+        },
+        {
+          "codigo": "11615",
+          "nome": "ONIX HATCH 1.0 12V TB 5p Mec."
+        },
+        {
+          "codigo": "8889",
+          "nome": "ONIX HATCH 1.0 12V TB Flex 5p Aut."
+        },
+        {
+          "codigo": "11616",
+          "nome": "ONIX HATCH 100 Anos 1.0 12V 5p Mec."
+        },
+        {
+          "codigo": "12132",
+          "nome": "ONIX HATCH ACTIV 1.0 12V TB Flex 5p Aut."
+        },
+        {
+          "codigo": "7689",
+          "nome": "ONIX HATCH ACTIV 1.4 8V Flex 5P Aut."
+        },
+        {
+          "codigo": "7690",
+          "nome": "ONIX HATCH ACTIV 1.4 8V Flex 5p Mec."
+        },
+        {
+          "codigo": "8239",
+          "nome": "ONIX HATCH ADVANTAGE 1.4 8V Flex 5p Aut."
+        },
+        {
+          "codigo": "12024",
+          "nome": "ONIX HATCH ECO 1.0 12V TB 5p Aut."
+        },
+        {
+          "codigo": "7120",
+          "nome": "ONIX HATCH EFFECT 1.4 8V F.Power 5p Mec."
+        },
+        {
+          "codigo": "7691",
+          "nome": "ONIX HATCH Joy 1.0 8V Flex 5p Mec."
+        },
+        {
+          "codigo": "6231",
+          "nome": "ONIX HATCH LS 1.0 8V FlexPower 5p Mec."
+        },
+        {
+          "codigo": "8949",
+          "nome": "ONIX HATCH LT 1.0 12V Flex 5p Mec."
+        },
+        {
+          "codigo": "8890",
+          "nome": "ONIX HATCH LT 1.0 12V TB Flex 5p Aut."
+        },
+        {
+          "codigo": "8891",
+          "nome": "ONIX HATCH LT 1.0 12V TB Flex 5p Mec."
+        },
+        {
+          "codigo": "6232",
+          "nome": "ONIX HATCH LT 1.0 8V FlexPower 5p Mec."
+        },
+        {
+          "codigo": "6530",
+          "nome": "ONIX HATCH LT 1.4 8V FlexPower 5p Aut."
+        },
+        {
+          "codigo": "6233",
+          "nome": "ONIX HATCH LT 1.4 8V FlexPower 5p Mec."
+        },
+        {
+          "codigo": "8892",
+          "nome": "ONIX HATCH LTZ 1.0 12V TB Flex 5p Aut."
+        },
+        {
+          "codigo": "8893",
+          "nome": "ONIX HATCH LTZ 1.0 12V TB Flex 5p Mec."
+        },
+        {
+          "codigo": "6531",
+          "nome": "ONIX HATCH LTZ 1.4 8V FlexPower 5p Aut."
+        },
+        {
+          "codigo": "6234",
+          "nome": "ONIX HATCH LTZ 1.4 8V FlexPower 5p Mec."
+        },
+        {
+          "codigo": "8894",
+          "nome": "ONIX HATCH PREM. 1.0 12V TB Flex 5p Aut."
+        },
+        {
+          "codigo": "12025",
+          "nome": "ONIX HATCH PRO 1.0 12V 5p Mec."
+        },
+        {
+          "codigo": "9211",
+          "nome": "ONIX HATCH RS 1.0 TB 12V Flex 5p Aut."
+        },
+        {
+          "codigo": "7259",
+          "nome": "ONIX HATCH SELEÇÃO 1.0 8V Flex 5p Mec."
+        },
+        {
+          "codigo": "9212",
+          "nome": "ONIX SD. P. PR. MIDNIGHT 1.0 TB Flex Aut"
+        },
+        {
+          "codigo": "8823",
+          "nome": "ONIX SED. Plus PREM. 1.0 12V TB Flex Aut"
+        },
+        {
+          "codigo": "11617",
+          "nome": "ONIX SEDAN Plus 1.0 12V Mec."
+        },
+        {
+          "codigo": "8824",
+          "nome": "ONIX SEDAN Plus 1.0 12V TB Flex Aut."
+        },
+        {
+          "codigo": "11618",
+          "nome": "ONIX SEDAN Plus 1.0 12V TB Flex Mec."
+        },
+        {
+          "codigo": "12026",
+          "nome": "ONIX SEDAN Plus ECO 1.0 12V TB Aut."
+        },
+        {
+          "codigo": "8950",
+          "nome": "ONIX SEDAN Plus LT 1.0 12V Flex 4p Mec."
+        },
+        {
+          "codigo": "8825",
+          "nome": "ONIX SEDAN Plus LT 1.0 12V TB Flex Aut."
+        },
+        {
+          "codigo": "8826",
+          "nome": "ONIX SEDAN Plus LT 1.0 12V TB Flex Mec."
+        },
+        {
+          "codigo": "8827",
+          "nome": "ONIX SEDAN Plus LTZ 1.0 12V TB Flex Aut."
+        },
+        {
+          "codigo": "8828",
+          "nome": "ONIX SEDAN Plus LTZ 1.0 12V TB Flex Mec."
+        }
+      ]
+    }
+  },
+  "preco": {
+    "provedor": "parallelum",
+    "dados": {
+      "precos": [
+        {
+          "valor": 56043.0,
+          "marca": "GM - Chevrolet",
+          "modelo": "ONIX HATCH LT 1.0 12V Flex 5p Mec.",
+          "ano_modelo": 2020,
+          "combustivel": "Flex",
+          "codigo_fipe": "004517-9",
+          "mes_de_referencia": "2026-11"
+        }
+      ],
+      "unidades": {
+        "valor": "R$"
+      }
+    }
+  }
+}

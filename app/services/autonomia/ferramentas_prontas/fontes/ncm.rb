@@ -1,6 +1,7 @@
 # CÓDIGO DE MERCADORIA (#2858, F4): a NCM (Nomenclatura Comum do Mercosul), o código fiscal que classifica a
 # mercadoria na nota, na importação e no imposto. Duas consultas:
-#   - buscar: os códigos vigentes com uma palavra (ou parte do código) na descrição; vão ao modelo no máximo MAX_ITENS;
+#   - buscar: os códigos vigentes com uma palavra (ou parte do código) na descrição, por relevância; vão ao modelo no
+#     máximo MAX_ITENS;
 #   - codigo: a descrição oficial de um código (2, 4 ou 8 dígitos: capítulo, posição ou o código completo).
 #   - fonte única: a BrasilAPI, que repassa a tabela vigente do Siscomex. Sem reserva: o Portal Único (Siscomex) só
 #     publica a tabela inteira para baixar (3 MB, `classif/api/publico/nomenclatura/download/json`), não uma consulta.
@@ -38,7 +39,13 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     falha = Autonomia::FerramentasProntas::Provedor::Falha
     raise falha, 'resposta_invalida' unless dado.is_a?(Hash) && dado['codigo'].present? && dado['descricao'].present?
 
-    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => dado['descricao'].to_s.squish, 'vigente_desde' => dado['data_inicio'].presence }.compact
+    { 'codigo' => dado['codigo'].to_s.strip, 'descricao' => texto(dado['descricao']), 'vigente_desde' => dado['data_inicio'].presence }.compact
+  end
+
+  # A tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>"): fica o texto, com as
+  # entidades decodificadas ("&amp;" -> "&").
+  def texto(descricao)
+    Nokogiri::HTML5.fragment(descricao.to_s).text.squish
   end
 
   # Só o que vale hoje: a tabela também traz o código que já saiu (data de fim no passado).
@@ -47,22 +54,52 @@ module Autonomia::FerramentasProntas::Fontes::Ncm
     fim.empty? || fim == SEM_FIM || fim >= Time.zone.today.iso8601
   end
 
+  # A BrasilAPI devolve na ordem do código: a ordem por relevância vem antes do corte (sem ela, "parafuso" mostrava
+  # primeiro o 34.03, lubrificantes "antiaderentes de porcas e parafusos", e o 73.18 vinha depois). No mesmo grupo, o
+  # código completo (8 dígitos, o da nota) antes da posição (4) e do capítulo (2).
   def lista(busca, itens)
-    { 'busca' => busca }.merge(Autonomia::FerramentasProntas::Lista.cortar(itens, 'itens', MAX_ITENS))
+    lista = Autonomia::FerramentasProntas::Lista
+    ordem = lista.em_ordem(itens, busca, desempate: ->(item) { -digitos(item['codigo']).length }) { |item| item['descricao'] }
+    { 'busca' => busca }.merge(lista.cortar(ordem, 'itens', MAX_ITENS))
   end
 
-  DESCRICAO_DA_BUSCA = "Na consulta buscar: uma palavra da mercadoria (ex.: parafuso) ou parte do código; ao menos #{MIN_BUSCA} " \
-                       'letras.'.freeze
-  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA) { |valor| busca(valor) }
-  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).') do |valor|
+  def digitos(codigo)
+    codigo.to_s.delete("^#{Parametro::DIGITOS}")
+  end
+
+  # A tabela da NCM tem o termo técnico da nomenclatura: "celular" acha a terapia celular (varredura F24). Quem traduz
+  # o que o cliente disse é o modelo; a ordem de relevância de sempre vale sobre o que a busca achar.
+  DESCRICAO_DA_BUSCA = 'Na consulta buscar: uma palavra da mercadoria no termo da nomenclatura (ex.: parafuso; telefones ' \
+                       'celulares, não celular; máquinas automáticas para processamento de dados, não computador) ou parte ' \
+                       "do código; ao menos #{MIN_BUSCA} letras.".freeze
+  BUSCA = Parametro.new(nome: 'busca', descricao: DESCRICAO_DA_BUSCA,
+                        deduza: "mande uma palavra do produto, com ao menos #{MIN_BUSCA} letras (ex.: parafuso).") { |valor| busca(valor) }
+  CODIGO = Parametro.new(nome: 'codigo', descricao: 'Na consulta codigo: o código NCM, com ou sem pontos (ex.: 7318.15.00).',
+                         deduza: 'o código tem 2, 4 ou 8 dígitos; se o cliente disse o produto, use a consulta buscar.') do |valor|
     codigo(valor)
+  end
+
+  SO_O_DE_8 = 'Na nota fiscal vai só o código de 8 dígitos; 2 dígitos é o capítulo e 4 é a posição, não servem na nota. ' \
+              'Com mais de uma opção de 8 dígitos, pergunte ao cliente o material (aço, cobre, plástico…) antes de ' \
+              'dizer o código.'.freeze
+  # Na consulta codigo, só quando o código ainda não é o da nota (regra "QI 70": o de 8 dígitos já está certo, e
+  # perguntar o material ali seria pergunta à toa).
+  NAO_E_O_DA_NOTA = 'Este código tem %<digitos>s dígitos: é o capítulo ou a posição, e não serve na nota fiscal (lá vai o de ' \
+                    '8 dígitos). Para chegar ao da nota, pergunte ao cliente o material (aço, cobre, plástico…) e use a ' \
+                    'consulta buscar.'.freeze
+
+  # A descrição de um código. Abaixo de 8 dígitos, com a observação de que ainda não é o da nota.
+  def self.do_codigo(item, codigo)
+    return item if codigo.length == 8
+
+    item.merge('observacao' => format(NAO_E_O_DA_NOTA, digitos: codigo.length))
   end
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'ncm', slug: 'pronta_ncm', nome: 'Código de mercadoria', flag: FLAG,
     descricao: 'A NCM, o código fiscal da mercadoria: procura o código pelo nome do produto ou diz o que um código é.',
     consultas: [
-      Consulta.new(nome: 'buscar', descricao: 'os códigos de uma mercadoria; pede busca', obrigatorios: [BUSCA],
+      Consulta.new(nome: 'buscar', descricao: "os códigos de uma mercadoria; pede busca. #{SO_O_DE_8}", obrigatorios: [BUSCA],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4),
       Consulta.new(nome: 'codigo', descricao: 'a descrição oficial de um código; pede codigo', obrigatorios: [CODIGO],
                    provedores: [BrasilApi], validade: 7.days, prazo_por_fonte: 4, prazo_total: 4)

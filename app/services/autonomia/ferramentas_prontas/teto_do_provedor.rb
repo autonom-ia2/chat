@@ -30,6 +30,8 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
     'photon.komoot.io' => [[60, MINUTO]],
     'parallelum.com.br' => [[450, DIA]],
     'viacep.com.br' => [[60, MINUTO]],
+    # AwesomeAPI sem chave: o limite não é publicado, então o teto é conservador.
+    'cep.awesomeapi.com.br' => [[30, MINUTO], [1_000, DIA]],
     'brasilapi.com.br' => [[300, MINUTO]],
     'date.nager.at' => [[30, MINUTO]],
     # F4. Sem número publicado: conservador.
@@ -43,12 +45,15 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
   PADRAO = [[120, MINUTO]].freeze
   # Com a chave gratuita da parallelum no ambiente, o termo sobe para 1.000 por dia.
   PARALLELUM_COM_CHAVE = [[900, DIA]].freeze
+  # Com a chave gratuita da AwesomeAPI (100 mil por mês): ~90% de 100.000 / 30 por dia.
+  AWESOMEAPI_COM_CHAVE = [[120, MINUTO], [3_000, DIA]].freeze
 
   module_function
 
   def tetos(host)
     host = host.to_s.downcase
     return PARALLELUM_COM_CHAVE if host == 'parallelum.com.br' && Autonomia::FerramentasProntas::Fontes::Fipe::Parallelum.chave
+    return AWESOMEAPI_COM_CHAVE if host == 'cep.awesomeapi.com.br' && Autonomia::FerramentasProntas::Fontes::Cep::AwesomeApi.chave
 
     TETOS.fetch(host, PADRAO)
   end

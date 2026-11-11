@@ -57,11 +57,53 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                                         'vigente_desde' => '2022-04-01' }])
     end
 
+    # A BrasilAPI devolve na ordem do código: a palavra no meio da descrição de outro capítulo (34.03, lubrificantes
+    # "antiaderentes de porcas e parafusos") vinha antes do 73.18. A ordem por relevância vem antes do corte.
+    it '"Qual a NCM de parafuso?": primeiro a descricao que comeca pela palavra, e o corte vem depois da ordem' do
+      item = ->(codigo, descricao) { vigente.merge(codigo: codigo, descricao: descricao) }
+      outros = (1..20).map { |n| item.call(format('34.%02d', n), "Preparações antiaderentes de porcas e parafusos #{n}") }
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
+                     outros + [item.call('73.18', 'Parafusos, pinos ou pernos')])
+
+      dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
+
+      expect(dados).to include('total' => 21, 'mostrando' => 20)
+      expect(dados['itens'].first(3).pluck('codigo')).to eq(%w[73.18 34.01 34.02])
+      expect(dados['itens'].pluck('codigo')).not_to include('34.20')
+    end
+
+    # Só o código de 8 dígitos vai na nota: no mesmo grupo de relevância, ele vem antes da posição (4) e do capítulo (2).
+    it 'no mesmo grupo, o codigo de 8 digitos antes do de 4 e do de 2' do
+      item = ->(codigo, descricao) { vigente.merge(codigo: codigo, descricao: descricao) }
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=parafuso',
+                     [item.call('73', 'Parafusos de ferro'), item.call('73.18', 'Parafusos, pinos ou pernos'),
+                      item.call('7318.14.00', '-- Parafusos autoperfurantes'), item.call('34.03', 'Preparações de porcas e parafusos'),
+                      item.call('7318.15.00', '-- Outros parafusos e pinos')])
+
+      dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
+
+      expect(dados['itens'].pluck('codigo')).to eq(%w[7318.14.00 73.18 73 7318.15.00 34.03])
+    end
+
+    it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do
+      textos = Autonomia::FerramentasProntas::Catalogo.buscar('ncm').consultas.map(&:descricao).join(' ')
+
+      expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', 'material')
+    end
+
     it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos' do
       fonte_responde(codigo, vigente)
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados'])
         .to eq('codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
+    end
+
+    # Varredura P11: a tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>").
+    it 'a descricao vai sem as tags HTML, com o texto delas e as entidades decodificadas' do
+      fonte_responde(codigo, vigente.merge(descricao: 'De peso igual ou superior a 600 g/m<sup>2</sup>, de <i>badminton</i> &amp; outros'))
+
+      expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']['descricao'])
+        .to eq('De peso igual ou superior a 600 g/m2, de badminton & outros')
     end
 
     it 'codigo que nao existe (404) e busca sem resultado: "nao encontrado"' do
@@ -120,6 +162,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida.to_json).not_to include('Fulana', 'outro.exemplo')
     end
 
+    # Item real do PNCP (Uberlândia, 05/11/2026; em
+    # app/javascript/dashboard/routes/dashboard/autonomia/agentes/specs/vitrine/dados-reais/compras_governo.json): o valor
+    # sigiloso ou não informado vem como 0. Zero não é o valor da compra, então o campo sai e o agente não diz "R$ 0".
+    it 'valor estimado sigiloso (0 no PNCP): o campo nao vai ao agente' do
+      sigilosa = { orgaoEntidade: { cnpj: '15126437000305', razaoSocial: 'EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH' },
+                   unidadeOrgao: { nomeUnidade: 'HOSPITAL DAS CLIN DA UNIV FED DE UBERLÂNDIA' }, anoCompra: 2026, sequencialCompra: 4546,
+                   objetoCompra: 'PRODUTOS PARA SAÚDE - UROLOGIA - DIAGNÓSTICO POR IMAGEM E GINECOLOGIA - REEDIÇÃO',
+                   valorTotalEstimado: 0, dataPublicacaoPncp: '2026-11-05T09:12:00', situacaoCompraNome: 'Divulgada no PNCP' }
+      fonte_responde(pncp, { data: [sigilosa], totalRegistros: 1 })
+
+      dados = executar_pronta(ferramenta, 'cidade' => 'uberlandia', 'uf' => 'MG', 'de' => '2026-11-01', 'ate' => '2026-11-05')['dados']
+
+      expect(dados['compras'].first).not_to have_key('valor_estimado')
+      expect(dados['compras'].first).to include('orgao' => 'EMPRESA BRASILEIRA DE SERVICOS HOSPITALARES - EBSERH')
+    end
+
     it 'pelo codigo IBGE, com modalidade e busca local no objeto; acima de uma pagina, avisa que olhou so as primeiras' do
       fonte_responde(pncp.sub('codigoModalidadeContratacao=6', 'codigoModalidadeContratacao=8'),
                      { data: [compra, limpeza], totalRegistros: 120, totalPaginas: 3 })
@@ -156,6 +214,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it 'prazo e erro do PNCP: "nao consegui"' do
       argumentos = { 'codigo_ibge' => '3170206', 'de' => '2026-11-01', 'ate' => '2026-11-05' }
       fonte_lenta(pncp)
+      # O período inteiro estourou o prazo: o último dia (#2906, F32/F33), lento também.
+      fonte_lenta(pncp.sub('dataInicial=20261101', 'dataInicial=20261105'))
       expect(nao_consegui?(executar_pronta(ferramenta, argumentos))).to be(true)
 
       fonte_fora(pncp, status: 503)
@@ -163,9 +223,15 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(uso.motivos).to eq('pncp.tempo_esgotado' => 1, 'pncp.erro_da_fonte' => 1)
     end
 
-    it 'cidade que nao existe no estado, sem uf, codigo de 6 digitos ou periodo longo: pedido invalido, sem chamar a fonte' do
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'SP')['campo']).to eq('cidade')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia')['campo']).to eq('uf')
+    it 'so a cidade, unica no Brasil: a UF sai dela (regra QI 70)' do
+      fonte_responde(pncp, { data: [compra], totalRegistros: 1 })
+
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'de' => '2026-11-01', 'ate' => '2026-11-05')['situacao']).to eq('encontrado')
+    end
+
+    it 'cidade que nao existe no estado, homonima sem uf, codigo de 6 digitos ou periodo longo: pedido invalido, sem chamar a fonte' do
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'SP')).to include('campo' => 'uf', 'candidatos' => ['MG'])
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '317020')['campo']).to eq('codigo_ibge')
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '3170206', 'de' => '2026-09-01', 'ate' => '2026-11-05')['campo']).to eq('ate')
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '3170206', 'modalidade' => 'tomada_de_precos')['campo']).to eq('modalidade')
@@ -230,10 +296,16 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(uso.motivos).to eq('inmet.tempo_esgotado' => 1, 'inmet.erro_da_fonte' => 1)
     end
 
-    it 'sem lugar, cidade sem uf, cidade de outro estado ou so a latitude: pedido invalido, sem chamar a fonte' do
+    it 'so a cidade, unica no Brasil: a UF sai dela (regra QI 70)' do
+      fonte_responde(inmet, estacoes)
+
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia')['dados']['perto_de']).to eq('Uberlândia (MG)')
+    end
+
+    it 'sem lugar, cidade homonima sem uf, cidade de outro estado ou so a latitude: pedido invalido, sem chamar a fonte' do
       expect(executar_pronta(ferramenta, {})['campo']).to eq('cidade')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia')['campo']).to eq('uf')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'RJ')['campo']).to eq('cidade')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
+      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'uf' => 'RJ')).to include('campo' => 'uf', 'candidatos' => ['MG'])
       expect(executar_pronta(ferramenta, 'latitude' => -18.9)['campo']).to eq('longitude')
       expect(executar_pronta(ferramenta, 'latitude' => 'perto', 'longitude' => -48.2)['campo']).to eq('latitude')
       expect(nenhum_pedido_saiu?).to be(true)
@@ -299,9 +371,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(executar_pronta(ferramenta, lugar.merge('de' => '2026-10-01', 'ate' => '2026-10-20'))['campo']).to eq('ate')
       expect(executar_pronta(ferramenta, lugar.merge('de' => '2026-11-05', 'ate' => '2026-11-01'))['campo']).to eq('ate')
       expect(executar_pronta(ferramenta, lugar.merge('de' => 'semana passada'))['campo']).to eq('de')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Uberlândia')['campo']).to eq('uf')
       expect(executar_pronta(ferramenta, 'longitude' => -48.2)['campo']).to eq('latitude')
       expect(nenhum_pedido_saiu?).to be(true)
+    end
+
+    it 'cidade homonima sem uf traz as UFs candidatas; cidade que nao existe pede a cidade' do
+      expect(executar_pronta(ferramenta, 'cidade' => 'Bom Jesus')).to include('campo' => 'uf', 'candidatos' => %w[PB PI RN RS SC])
+      expect(executar_pronta(ferramenta, 'cidade' => 'Cidade Que Nao Existe')['campo']).to eq('cidade')
+      expect(nenhum_pedido_saiu?).to be(true)
+    end
+
+    it '"Vai chover em Uberlandia?": so a cidade basta, a UF sai dela' do
+      fonte_responde(uberlandia, resposta)
+
+      dados = executar_pronta(ferramenta, 'cidade' => 'Uberlândia', 'de' => '2026-11-08', 'ate' => '2026-11-10')['dados']
+
+      expect(dados).to include('local' => 'Uberlândia (MG)', 'total_mm' => 46.6)
     end
   end
 end

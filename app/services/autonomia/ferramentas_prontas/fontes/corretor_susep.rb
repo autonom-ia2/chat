@@ -32,14 +32,17 @@ module Autonomia::FerramentasProntas::Fontes::CorretorSusep
     documento.length == 11
   end
 
-  DOCUMENTO = Parametro.new(nome: 'documento', descricao: 'O CPF ou o CNPJ do corretor, como o cliente escreveu.') do |valor|
+  DOCUMENTO = Parametro.new(nome: 'documento', descricao: 'O CPF ou o CNPJ do corretor, como o cliente escreveu.',
+                            pergunte: 'o CPF ou o CNPJ completo do corretor (ou use a consulta por_nome)') do |valor|
     documento(valor)
   end
-  NOME = Parametro.new(nome: 'nome', descricao: 'O começo do nome do corretor ou da corretora (ao menos 3 letras).') do |valor|
+  NOME = Parametro.new(nome: 'nome', descricao: 'O começo do nome do corretor ou da corretora (ao menos 3 letras).',
+                       pergunte: 'o nome do corretor ou da corretora') do |valor|
     texto = Parametro.texto_curto(valor)
     texto if texto && texto.length >= MIN_NOME
   end
-  TIPO_PESSOA = Parametro.new(nome: 'tipo_pessoa', descricao: 'pf (pessoa física) ou pj (corretora). Opcional.', opcoes: %w[pf pj])
+  TIPO_PESSOA = Parametro.new(nome: 'tipo_pessoa', descricao: 'pf (pessoa física) ou pj (corretora). Opcional.', opcoes: %w[pf pj],
+                              deduza: 'pj quando o nome é de empresa (corretora, Ltda), pf quando é de pessoa; sem certeza, deixe vazio.')
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'corretor_susep', slug: 'pronta_corretor_susep', nome: 'Corretor na SUSEP', flag: FLAG,

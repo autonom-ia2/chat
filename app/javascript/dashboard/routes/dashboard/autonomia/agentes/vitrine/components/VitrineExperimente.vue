@@ -27,7 +27,9 @@ const base = computed(
 const rotulo = computed(() => t(`${base.value}.ROTULO`));
 const exemplo = () =>
   props.ferramenta.exemplo
-    ? t(`${base.value}.EXEMPLO`, { data: props.ferramenta.exemplo(new Date()) })
+    ? t(`${base.value}.EXEMPLO`, {
+        data: props.ferramenta.exemplo(new Date(), locale.value),
+      })
     : t(`${base.value}.EXEMPLO`);
 
 const valor = ref(props.ferramenta.semCampo ? '' : exemplo());
@@ -69,6 +71,15 @@ const textosDoResultado = computed(() => ({
   sim: t(`${NS}.RESULTADO.SIM`),
   nao: t(`${NS}.RESULTADO.NAO`),
   zeroKm: t(`${NS}.RESULTADO.ZERO_KM`),
+  nenhumValor: t(`${NS}.RESULTADO.NENHUM_VALOR`),
+  // Só o código ("percentual_ao_ano") tem tradução; o símbolo ("%", "R$") vai como veio.
+  unidade: codigo => {
+    const ehCodigo = [...codigo].every(
+      letra => (letra >= 'a' && letra <= 'z') || letra === '_'
+    );
+    const caminho = `${NS}.UNIDADES.${chaveDoTexto(codigo)}`;
+    return ehCodigo && te(caminho) ? t(caminho) : codigo;
+  },
   idioma: idiomaDoNavegador(locale.value),
 }));
 
@@ -81,6 +92,17 @@ const linhas = computed(() =>
     ? linhasDoResultado(resposta.value.dados, textosDoResultado.value)
     : []
 );
+// "Deu certo" sem nenhuma linha com rótulo: a tela diz isso em vez de uma caixa vazia (e avisa no console em dev).
+const semLinhas = computed(() => encontrado.value && !linhas.value.length);
+watch(semLinhas, vazio => {
+  if (!vazio || !import.meta.env.DEV) return;
+  // eslint-disable-next-line no-console
+  console.warn(
+    'Experimente: resposta sem campo com rótulo',
+    props.ferramenta.id,
+    Object.keys(resposta.value?.dados || {})
+  );
+});
 const aviso = computed(() => {
   if (!resposta.value || encontrado.value) return '';
   const chave = SITUACOES[resposta.value.situacao] || 'NAO_CONSEGUI';
@@ -159,6 +181,13 @@ const rodar = async () => {
             </dd>
           </template>
         </dl>
+        <p
+          v-else
+          data-experimente-sem-linhas
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t(`${NS}.RESULTADO.SEM_LINHAS`) }}
+        </p>
         <p
           v-if="maisProvavel"
           data-experimente-mais-provavel

@@ -34,8 +34,11 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
   describe 'Hospitais e clinicas (CNES)' do
     let(:ferramenta) { incluir_pronta('hospitais', conta: account, agente: agent) }
-    let(:base) { 'https://apidadosabertos.saude.gov.br/cnes/estabelecimentos?codigo_municipio=350950&status=1&limit=20' }
-    let(:hospitais) { "#{base}&codigo_tipo_unidade=5" }
+    # A primeira página (`offset=0`); as seguintes só quando ela vem cheia (#2906, varredura F21/F22).
+    let(:base) { 'https://apidadosabertos.saude.gov.br/cnes/estabelecimentos?codigo_municipio=350950&status=1&limit=20&offset=0' }
+    let(:hospitais) do
+      'https://apidadosabertos.saude.gov.br/cnes/estabelecimentos?codigo_municipio=350950&status=1&limit=20&codigo_tipo_unidade=5&offset=0'
+    end
     let(:hospital) do
       { codigo_cnes: 2_023_148, nome_fantasia: 'HOSPITAL SAMARITANO DE CAMPINAS', nome_razao_social: 'ASSOCIACAO EVANGELICA',
         codigo_tipo_unidade: 5, endereco_estabelecimento: 'R DOUTOR JOSE CAMARGO', numero_estabelecimento: '100',
@@ -58,7 +61,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(saida['dados']).to include('cidade' => 'Campinas', 'uf' => 'SP', 'estado' => 'São Paulo', 'total' => 1)
       expect(saida['dados']['estabelecimentos']).to eq([{ 'nome' => 'HOSPITAL SAMARITANO DE CAMPINAS', 'tipo' => 'Hospital geral',
                                                           'endereco' => 'R DOUTOR JOSE CAMARGO, 100', 'bairro' => 'VILA JOAO JORGE',
-                                                          'cep' => '13023000', 'telefone' => '(19) 3736-1000', 'cnes' => '2023148' }])
+                                                          'cep' => '13023-000', 'telefone' => '(19) 3736-1000', 'cnes' => '2023148' }])
       expect(saida.to_json).not_to include('FULANA', 'contato@', '00000000000191', 'ASSOCIACAO')
     end
 
@@ -108,10 +111,17 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(uso.motivos).to eq('cnes.resposta_invalida' => 1)
     end
 
-    it 'entrada fora do formato: cidade que nao e daquele estado, sem cidade, codigo que nao existe e tipo fora da lista' do
-      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'rj')).to include('situacao' => 'pedido_invalido', 'campo' => 'cidade')
+    it '"Tem hospital em Campinas?": so a cidade, unica no Brasil, basta (regra QI 70)' do
+      fonte_responde(hospitais, { estabelecimentos: [hospital] })
+
+      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'tipo' => 'hospital')['dados']).to include('cidade' => 'Campinas', 'uf' => 'SP')
+    end
+
+    it 'entrada fora do formato: cidade que nao e daquele estado, sem cidade, homonima sem uf, codigo que nao existe e tipo fora da lista' do
+      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'rj'))
+        .to include('situacao' => 'pedido_invalido', 'campo' => 'uf', 'candidatos' => ['SP'])
       expect(executar_pronta(ferramenta, 'uf' => 'sp')['campo']).to eq('cidade')
-      expect(executar_pronta(ferramenta, 'cidade' => 'Campinas')['campo']).to eq('uf')
+      expect(executar_pronta(ferramenta, 'cidade' => 'Santa Helena')).to include('campo' => 'uf', 'candidatos' => %w[MA PB PR SC])
       expect(executar_pronta(ferramenta, 'codigo_ibge' => '999999')['campo']).to eq('codigo_ibge')
       expect(executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'sp', 'tipo' => 'spa')['campo']).to eq('tipo')
       expect(a_request(:get, /saude\.gov\.br/)).not_to have_been_made

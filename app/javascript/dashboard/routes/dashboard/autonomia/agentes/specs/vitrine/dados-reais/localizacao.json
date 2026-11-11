@@ -1,0 +1,12 @@
+{
+  "cidade": {
+    "provedor": "sedes",
+    "dados": {
+      "cidade": "Uberlândia",
+      "uf": "MG",
+      "estado": "Minas Gerais",
+      "fonte_dos_dados": "© colaboradores do OpenStreetMap (ODbL)",
+      "observacao": "Aproximado: a sede de município mais próxima do ponto; perto da divisa, confirme a cidade com o cliente."
+    }
+  }
+}

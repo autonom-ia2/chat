@@ -13,6 +13,11 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
 
   # indicador -> o nome no Focus.
   INDICADORES = { 'ipca' => 'IPCA', 'selic' => 'Selic', 'cambio' => 'Câmbio', 'pib' => 'PIB Total' }.freeze
+  # A unidade da mediana do Focus em cada indicador: a variação do IPCA e do PIB no ano, a Selic ao ano e o dólar em reais.
+  # A taxa ao ano vai em código (`percentual_ao_ano`), não em texto: a tela traduz a unidade para o idioma dela, e o
+  # agente lê o código igual (varredura P10: "ao ano" aparecia na tela em inglês).
+  AO_ANO = 'percentual_ao_ano'.freeze
+  UNIDADES_DO_FOCUS = { 'ipca' => '%', 'selic' => AO_ANO, 'cambio' => 'R$', 'pib' => '%' }.freeze
 
   module_function
 
@@ -25,7 +30,13 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
   end
 
   def selic(valor)
-    { 'indicador' => 'Selic (meta do Copom)', 'valor' => valor, 'unidade' => '% ao ano' }
+    { 'indicador' => 'Selic (meta do Copom)', 'valor' => valor, 'unidade' => AO_ANO }
+  end
+
+  # "10/2026" (o mês do SGS) -> "2026-10": a tela formata o mês no idioma dela (varredura P10).
+  def mes_iso(mes_e_ano)
+    mes, ano = mes_e_ano.to_s.split('/')
+    ano && mes ? "#{ano}-#{mes}" : mes_e_ano
   end
 
   def ipca(mes:, no_mes:, em_12_meses:)
@@ -37,7 +48,8 @@ module Autonomia::FerramentasProntas::Fontes::BancoCentral
     { 'indicador' => 'Dólar PTAX (Banco Central)', 'compra' => compra, 'venda' => venda, 'data' => data, 'unidade' => 'R$' }
   end
 
-  INDICADOR = Parametro.new(nome: 'indicador', descricao: 'Na consulta focus: qual expectativa.', opcoes: INDICADORES.keys)
+  INDICADOR = Parametro.new(nome: 'indicador', descricao: 'Na consulta focus: qual expectativa.', opcoes: INDICADORES.keys,
+                            deduza: 'escolha da lista o indicador do que o cliente perguntou.')
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'banco_central', slug: 'pronta_banco_central', nome: 'Banco Central',

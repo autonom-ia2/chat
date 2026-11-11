@@ -1,0 +1,31 @@
+{
+  "estacoes": {
+    "provedor": "inmet",
+    "dados": {
+      "perto_de": "Uberlândia (MG)",
+      "estacoes": [
+        {
+          "nome": "UBERLANDIA",
+          "codigo": "A507",
+          "uf": "MG",
+          "situacao": "Operante",
+          "distancia_km": 2.0
+        },
+        {
+          "nome": "CATALAO",
+          "codigo": "A034",
+          "uf": "GO",
+          "situacao": "Operante",
+          "distancia_km": 92.0
+        },
+        {
+          "nome": "UBERABA",
+          "codigo": "A568",
+          "uf": "MG",
+          "situacao": "Operante",
+          "distancia_km": 94.4
+        }
+      ]
+    }
+  }
+}

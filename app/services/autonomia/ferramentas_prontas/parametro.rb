@@ -6,6 +6,9 @@
 # `padrao`: o valor quando o modelo não informa (ex.: "de hoje" na contagem de dias úteis), calculado na hora, antes do
 # cache: a chave do cache leva o valor efetivo.
 # `local: true`: o valor só filtra a resposta aqui dentro e nunca vai à fonte (ex.: a busca por nome de modelo da FIPE).
+# `deduza:` / `pergunte:` (regra "QI 70" do Rodrigo, 11/11/2026): o que o agente faz quando o valor falta ou não serve.
+# Dado que dá para deduzir da conversa (a UF pela cidade, o DDD pelo telefone): `deduza:` diz como, e o agente corrige
+# sem perguntar. Dado que muda o resultado e não dá para deduzir (o CPF, o ano do carro): `pergunte:` diz o quê.
 # Sem regex: método de string (`delete`, `count`) e a regra de cada documento.
 class Autonomia::FerramentasProntas::Parametro
   DIGITOS = '0-9'.freeze
@@ -14,13 +17,17 @@ class Autonomia::FerramentasProntas::Parametro
 
   attr_reader :nome, :tipo, :descricao, :opcoes
 
-  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, padrao: nil, &normalizar) # rubocop:disable Metrics/ParameterLists
+  def initialize(nome:, descricao:, tipo: 'string', opcoes: nil, local: false, padrao: nil, deduza: nil, pergunte: nil, # rubocop:disable Metrics/ParameterLists
+                 &normalizar)
+    @deduza = deduza
+    @pergunte = pergunte
     @padrao = padrao
     @nome = nome
     @tipo = tipo
     @descricao = descricao
     @opcoes = opcoes
     @local = local
+    @com_normalizador = !normalizar.nil?
     @normalizar = normalizar || ->(valor) { valor }
   end
 
@@ -32,10 +39,19 @@ class Autonomia::FerramentasProntas::Parametro
     @padrao&.call
   end
 
-  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só).
+  # O texto da recusa deste parâmetro, ou nil (vale o genérico da `Resposta`).
+  def orientacao
+    return Autonomia::FerramentasProntas::Resposta.deduza(nome, @deduza) if @deduza
+
+    Autonomia::FerramentasProntas::Resposta.pergunte(nome, @pergunte) if @pergunte
+  end
+
+  # -> o valor normalizado, ou nil quando não serve (lista e objeto nunca servem: o parâmetro é um valor só). O marcador
+  # do valor que já não normalizou (`Fonte::FORA_DO_FORMATO`) nunca serve: sem isto, o parâmetro de texto livre o
+  # aceitava, e "(fora do formato)" ia no endereço da fonte (varredura F04 a F07).
   def normalizar(valor)
-    return nil if valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
-    return opcao(valor) if opcoes
+    return nil if vazio?(valor) || valor == Autonomia::FerramentasProntas::Fonte::FORA_DO_FORMATO
+    return opcao(valor) || (@normalizar.call(valor) if @com_normalizador) if opcoes
 
     @normalizar.call(valor)
   end
@@ -50,6 +66,12 @@ class Autonomia::FerramentasProntas::Parametro
 
   private
 
+  def vazio?(valor)
+    valor.nil? || valor.is_a?(Hash) || valor.is_a?(Array) || (valor.respond_to?(:empty?) && valor.empty?)
+  end
+
+  # Com opções, o bloco (se houver) traduz o valor para uma delas: a UF pelo nome do estado. O que ele devolve fora da
+  # lista não serve.
   def opcao(valor)
     texto = valor.to_s.strip.downcase
     opcoes.include?(texto) ? texto : nil
@@ -81,9 +103,16 @@ class Autonomia::FerramentasProntas::Parametro
     end
 
     # CNPJ numérico ou alfanumérico (Receita, a partir de 07/2026): 12 posições de letra ou dígito e 2 dígitos
-    # verificadores, conferidos pelo módulo 11 com o valor de cada caractere (código ASCII menos 48).
+    # verificadores, conferidos pelo módulo 11 com o valor de cada caractere (código ASCII menos 48). Primeiro só os
+    # dígitos, como no CEP e no CPF: o texto em volta ("cnpj 33.000.167/0001-01") sai (varredura F10).
     def cnpj(valor)
-      texto = valor.to_s.upcase.delete("^#{ALFANUMERICO}")
+      numerico = cnpj_valido(valor.to_s.delete("^#{DIGITOS}"))
+      return numerico if numerico
+
+      cnpj_valido(valor.to_s.upcase.delete("^#{ALFANUMERICO}"))
+    end
+
+    def cnpj_valido(texto)
       return nil unless texto.length == 14 && texto[12, 2].delete(DIGITOS).empty?
       return nil if texto.chars.uniq.size == 1
 
