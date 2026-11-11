@@ -3,13 +3,15 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import LivreMarcar from './LivreMarcar.vue';
 
 // #2486 — quem o "avisar" chama: quem cuida da conversa, times e pessoas. O
-// motor confere, na hora, quem enxerga a conversa; aqui só se escolhe. G32: nos
-// gatilhos de reunião (`deReuniao`), também quem atende a reunião.
+// motor confere, na hora, quem enxerga a conversa; aqui só se escolhe. Também
+// quem atende a reunião: a do gatilho de reunião (G32) ou, nos outros, a próxima
+// reunião marcada do contato (G61). G9: nos gatilhos de card (`doCard`), quem
+// cuida do card, que nem sempre atende a conversa.
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: Object, default: () => ({}) },
   opcoes: { type: Object, required: true },
-  deReuniao: { type: Boolean, default: false },
+  doCard: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -42,7 +44,6 @@ const mudar = (chave, valor) => {
       />
     </label>
     <label
-      v-if="deReuniao || modelValue?.da_reuniao"
       class="flex items-center justify-between gap-3 cursor-pointer min-h-11"
     >
       <span class="flex flex-col gap-0.5">
@@ -59,6 +60,21 @@ const mudar = (chave, valor) => {
         :model-value="Boolean(modelValue?.da_reuniao)"
         :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DA_REUNIAO')"
         @update:model-value="valor => mudar('da_reuniao', valor)"
+      />
+    </label>
+    <label
+      v-if="doCard || modelValue?.responsavel_do_card"
+      class="flex items-center justify-between gap-3 cursor-pointer min-h-11"
+    >
+      <span class="text-[0.9375rem] text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL_DO_CARD') }}
+      </span>
+      <Switch
+        data-responsavel-do-card
+        class="mx-1.5 scale-[1.4]"
+        :model-value="Boolean(modelValue?.responsavel_do_card)"
+        :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL_DO_CARD')"
+        @update:model-value="valor => mudar('responsavel_do_card', valor)"
       />
     </label>
     <LivreMarcar

@@ -15,8 +15,9 @@ RSpec.describe Crm::MetaAds::LeadForms::PastLeads do
                                                     .to_return(status: 200, headers: json, body: { data: [] }.to_json)
   end
 
+  # Um segundo antes do marco: a Meta guarda o created_time em segundos (#2804).
   def filtering(since)
-    [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i }].to_json
+    [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i - 1 }].to_json
   end
 
   context 'with since:' do

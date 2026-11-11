@@ -34,9 +34,14 @@ RSpec.describe Autonomia::Automacao::Valores do
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
     # durante a espera (G11): resposta_spec. `card.tem_reuniao_marcada` (G32): g32_reuniao_spec.
     # `contato.tem_reuniao_marcada` (#2710): reuniao_lembrete_e_contato_spec. A situação do envio (#2680): envio_spec.
-    de_fora = %w[conversa.iniciada_por card.tem_reuniao_marcada contato.tem_reuniao_marcada envio.situacao]
+    # O nome da campanha (#2681) é escrito, sem opções fechadas: resposta_da_campanha_spec.
+    # Quem cuidava antes está ausente (G9): gatilho_troca_de_responsavel_spec. `card.origem` (G29): origem_do_card_spec.
+    # A nova entrada na etapa (G50): g50_se_repetir_spec.
+    de_fora = %w[conversa.iniciada_por card.tem_reuniao_marcada contato.tem_reuniao_marcada envio.situacao card.origem
+                 gatilho.responsavel_anterior_ausente card.entrou_de_novo]
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + de_fora + Autonomia::Automacao::Ausencia::FECHADOS.keys)
+      .to match_array(described_class::MENSAGEM.keys - ['mensagem.campanha'] + described_class::RESPOSTA.keys + de_fora +
+                      Autonomia::Automacao::Ausencia::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -84,6 +89,18 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(described_class.new(alvo: novo_card, quem: funil_admin).ler('card.valor')).to eq(0)
     end
 
+    # G29 (#2702): de onde o card veio e o anúncio do formulário. O grupo de cada source: origem_do_card_spec.
+    it 'lê a origem do card e o nome do anúncio do formulário', :aggregate_failures do
+      lead = novo_card(source: Crm::MetaAds::LeadForms::Importer::SOURCE,
+                       metadata: { 'meta_lead_form' => { 'ad_name' => 'Apartamento Jardim', 'form_name' => 'Visita' } })
+      da_conversa = novo_card(source: 'Channel::Whatsapp')
+
+      expect(described_class.new(alvo: lead, quem: nil).ler('card.origem')).to eq('formulario_de_anuncio')
+      expect(described_class.new(alvo: lead, quem: nil).ler('card.anuncio')).to eq('Apartamento Jardim')
+      expect(described_class.new(alvo: da_conversa, quem: nil).ler('card.origem')).to eq('conversa')
+      expect(described_class.new(alvo: da_conversa, quem: nil).ler('card.anuncio')).to be_nil
+    end
+
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do
       sem_conversa = novo_card(primary_conversation: nil)
 
@@ -93,7 +110,8 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
 
     it 'diz o que cada alvo alcança' do
-      expect(described_class.no_alvo?('card.valor', 'Conversation')).to be(false)
+      expect(described_class.no_alvo?('card.valor', 'Conversation')).to be(true) # #2716: o card da conversa, só para ler
+      expect(described_class.no_alvo?('card.valor', 'Contact')).to be(false)
       expect(described_class.no_alvo?('contato.nome', 'Crm::Card')).to be(true)
       expect(described_class.no_alvo?('conversa.status', 'Contact')).to be(false)
       expect(described_class.no_alvo?('mensagem.tipo', 'Conversation')).to be(true)
@@ -123,6 +141,55 @@ RSpec.describe Autonomia::Automacao::Valores do
       conversa.update!(assignee: agente)
 
       expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(false)
+    end
+  end
+
+  # G53: a mensagem que disparou o "mensagem que falhou" é lida pela marca da execução, sempre presa à conta e à
+  # conversa do alvo, e só a que saiu para o cliente.
+  describe 'falhou.texto (G53)' do
+    let(:recusada) { create(:message, account: account, conversation: conversa, message_type: :outgoing, content: 'Seu boleto vence sexta') }
+
+    def execucao_de(mensagem_id, alvo: conversa, gatilho: 'mensagem.falhou')
+      versao = create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: alvo.account))
+      create(:autonomia_automacao_execucao, versao: versao, alvo: alvo, chave_gatilho: gatilho, evento: "mensagem.falhou:#{mensagem_id}")
+    end
+
+    def lido(execucao, alvo: conversa)
+      described_class.new(alvo: Autonomia::Automacao::Contexto.de(alvo, execucao: execucao), quem: nil).ler('falhou.texto')
+    end
+
+    it 'lê o texto da mensagem que falhou na conversa da execução' do
+      expect(lido(execucao_de(recusada.id))).to eq('Seu boleto vence sexta')
+    end
+
+    it 'lê vazio: mensagem de outra conversa, de outra conta, recebida, nota privada ou apagada', :aggregate_failures do
+      outra_conversa = create(:conversation, account: account, contact: contato)
+      de_outra_conversa = create(:message, account: account, conversation: outra_conversa, message_type: :outgoing, content: 'outra')
+      de_outra_conta = create(:message, message_type: :outgoing, content: 'outra conta')
+      recebida = create(:message, account: account, conversation: conversa, message_type: :incoming, content: 'recebida')
+      nota = create(:message, account: account, conversation: conversa, message_type: :outgoing, private: true, content: 'nota')
+      apagada = create(:message, account: account, conversation: conversa, message_type: :outgoing, content: 'apagada',
+                                 content_attributes: { deleted: true })
+
+      [de_outra_conversa, de_outra_conta, recebida, nota, apagada].each do |mensagem|
+        expect(lido(execucao_de(mensagem.id))).to be_nil, "leu a mensagem #{mensagem.content}"
+      end
+    end
+
+    it 'lê vazio sem execução, em outro gatilho ou com a marca de outro evento', :aggregate_failures do
+      expect(described_class.new(alvo: conversa, quem: nil).ler('falhou.texto')).to be_nil
+      expect(lido(execucao_de(recusada.id, gatilho: 'mensagem.criada'))).to be_nil
+      expect(lido(execucao_de(recusada.id).tap { |execucao| execucao.update!(evento: "card.parado:#{recusada.id}") })).to be_nil
+    end
+
+    it 'só vale no gatilho dela, e só no alvo conversa', :aggregate_failures do
+      lugar = Autonomia::Automacao::LugarDoValor
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.falhou' })).to be_nil
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.criada' })).to eq(:falhou_so_no_gatilho)
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.falhou' }, no_filtro: true)).to eq(:falhou_no_filtro)
+      expect(lugar.fora('falhou.texto', gatilho: { 'tipo' => 'mensagem.criada' }, no_filtro: true)).to eq(:falhou_so_no_gatilho)
+      expect(described_class.no_alvo?('falhou.texto', 'Conversation')).to be(true)
+      expect(described_class.no_alvo?('falhou.texto', 'Crm::Card')).to be(false)
     end
   end
 end

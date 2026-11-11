@@ -31,7 +31,7 @@ import {
   TUDO_SEM_MEXER,
 } from './quemMonta';
 
-// #2308, especificação 6 e 7: o mapa fechado (24/24 módulos, 59/59 chaves), a recolhida e o Cuidado em três grupos.
+// #2308, especificação 6 e 7: o mapa fechado (25/25 módulos, 60/60 chaves, com a área de ferramentas do #1430), a recolhida e o Cuidado em três grupos.
 const permissoesDoServidor = () => {
   const fonte = readFileSync(
     resolve(process.cwd(), 'enterprise/app/models/custom_role.rb'),
@@ -47,7 +47,7 @@ const permissoesDoServidor = () => {
 };
 
 describe('mapa das áreas e chaves', () => {
-  it('24/24 módulos têm lugar, sem repetir', () => {
+  it('25/25 módulos têm lugar, sem repetir', () => {
     const lugares = [
       ...LINHAS,
       ...Object.keys(DENTRO_DE),
@@ -55,16 +55,16 @@ describe('mapa das áreas e chaves', () => {
       ...CONDICIONAL,
       ...SO_ADMIN,
     ];
-    expect(lugares).toHaveLength(24);
+    expect(lugares).toHaveLength(25);
     expect(new Set(lugares)).toEqual(new Set(MODULES.map(m => m.key)));
   });
 
-  it('59/59 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
+  it('60/60 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
     const donas = Object.values(DONO_DAS_CHAVES).flat();
     const servidor = permissoesDoServidor();
 
-    expect(servidor).toHaveLength(59);
-    expect(donas).toHaveLength(59);
+    expect(servidor).toHaveLength(60);
+    expect(donas).toHaveLength(60);
     expect(new Set(donas)).toEqual(new Set(servidor));
   });
 });
@@ -84,6 +84,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       permissions: comDesempenho,
       inicial: comDesempenho,
       comCotacoes: false,
+      temFlag: () => false,
     });
     expect(areas.subiram).toEqual([]);
     // Seus posts (#2302): a Carla não tem posts_view, então a área inteira fica fora do alcance dela.
@@ -117,9 +118,44 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       permissions: atendente,
       inicial: atendente,
       comCotacoes: true,
+      temFlag: () => false,
     });
     expect(areas.cadeado).toEqual([]);
     expect(areas.recolhidas).toHaveLength(17);
+  });
+
+  // #1430: a área de ferramentas só entra com a flag agente_ferramentas_delegadas. A chave é de delegação: quem não é
+  // administrador vê com cadeado; o administrador vê como as outras, logo depois de Robôs de IA.
+  it('Ferramentas dos agentes: só com a flag, com cadeado para quem não é administrador', () => {
+    const comFlag = flag => flag === 'agente_ferramentas_delegadas';
+    const daCarla = areasDaRecolhida({
+      giver: CARLA,
+      permissions: atendente,
+      inicial: atendente,
+      comCotacoes: false,
+      temFlag: comFlag,
+    });
+    expect(daCarla.cadeado.map(m => m.key)).toContain('AUTONOMIA_TOOLS');
+    const doAdmin = areasDaRecolhida({
+      giver: ADMIN,
+      permissions: atendente,
+      inicial: atendente,
+      comCotacoes: false,
+      temFlag: comFlag,
+    }).recolhidas.map(m => m.key);
+    expect(doAdmin.indexOf('AUTONOMIA_TOOLS')).toBe(
+      doAdmin.indexOf('AUTONOMIA') + 1
+    );
+    const semFlag = areasDaRecolhida({
+      giver: ADMIN,
+      permissions: atendente,
+      inicial: atendente,
+      comCotacoes: false,
+      temFlag: () => false,
+    });
+    expect(
+      [...semFlag.recolhidas, ...semFlag.cadeado].map(m => m.key)
+    ).not.toContain('AUTONOMIA_TOOLS');
   });
 
   it('Anúncios: "Pode mexer" com cadeado de delegação; Cotações: as duas com MISSING', () => {

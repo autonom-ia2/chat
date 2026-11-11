@@ -5,6 +5,11 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import { usePolicy } from 'dashboard/composables/usePolicy';
+import { useRouter } from 'vue-router';
+import {
+  CONTACT_IMPORTS_LIST_ROUTE,
+  isContactImportJourneyEnabled,
+} from 'dashboard/routes/dashboard/contacts/import/contactImport.routes';
 
 const props = defineProps({
   campaignImportEnabled: { type: Boolean, default: false },
@@ -20,6 +25,7 @@ const emit = defineEmits([
 
 const { t } = useI18n();
 const { checkPermissions } = usePolicy();
+const router = useRouter();
 
 const contactMenuItems = computed(() => [
   ...(checkPermissions(['administrator', 'agent', 'contact_manage'])
@@ -56,6 +62,17 @@ const contactMenuItems = computed(() => [
           value: 'import',
           icon: 'i-lucide-download',
         },
+        // Contatos > Importações (#2771): the imports from a file and from the automation.
+        ...(isContactImportJourneyEnabled()
+          ? [
+              {
+                label: t('CONTACT_IMPORT_JOURNEY.LIST.MENU'),
+                action: 'importsList',
+                value: 'importsList',
+                icon: 'i-lucide-history',
+              },
+            ]
+          : []),
       ]
     : []),
   ...(props.campaignImportEnabled
@@ -88,6 +105,8 @@ const handleContactAction = ({ action }) => {
     emit('campaignImport');
   } else if (action === 'campaignImportHistory') {
     emit('campaignImportHistory');
+  } else if (action === 'importsList') {
+    router.push({ name: CONTACT_IMPORTS_LIST_ROUTE });
   }
 };
 </script>

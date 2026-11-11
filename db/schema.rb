@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -459,6 +459,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.halfvec "embedding_large", limit: 3072
+    t.index "to_tsvector('portuguese'::regconfig, content)", name: "index_autonomia_agent_knowledge_on_texto_pt", using: :gin
     t.index ["account_id"], name: "index_autonomia_agent_knowledge_on_account_id"
     t.index ["autonomia_agent_id", "status"], name: "idx_autonomia_knowledge_agent_status"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_knowledge_on_autonomia_agent_id"
@@ -563,6 +564,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "timeout_seconds", default: 30, null: false
+    t.string "fonte_pronta"
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
@@ -601,6 +603,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
   end
 
+  create_table "autonomia_automacao_campanhas_da_vez", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "automacao_id", null: false
+    t.string "ocorrencia", null: false
+    t.string "passo", null: false
+    t.integer "lotes"
+    t.jsonb "lotes_feitos", default: [], null: false
+    t.integer "campanha_display_id"
+    t.datetime "fechada_em"
+    t.datetime "conferir_em"
+    t.integer "tentativas", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_automacao_campanhas_da_vez_on_account_id"
+    t.index ["automacao_id", "ocorrencia", "passo"], name: "idx_autonomia_automacao_campanhas_da_vez_unica", unique: true
+  end
+
   create_table "autonomia_automacao_conversoes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "antigo_tipo", null: false
@@ -632,10 +651,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.datetime "updated_at", null: false
     t.string "evento"
     t.jsonb "textos", default: {}, null: false
+    t.datetime "repetiu_em"
+    t.boolean "paralela", default: false, null: false
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
-    t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
+    t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas_unica", unique: true, where: "((finalizada_em IS NULL) AND (paralela = false))"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
+    t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
     t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
     t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"
@@ -680,6 +702,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "ligada_em"
+    t.integer "segredo_geracao", default: 0, null: false
     t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
     t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
     t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"
@@ -838,6 +861,36 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.index ["account_id", "sujeito_id", "iniciada_em"], name: "idx_autonomia_desempenho_rodadas_inicio"
     t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,chave_recusada,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
+  end
+
+  create_table "autonomia_ferramentas_prontas_acessos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.string "chave", null: false
+    t.integer "limite_diario"
+    t.datetime "cortada_em"
+    t.string "motivo_do_corte"
+    t.bigint "incluida_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte"], name: "idx_prontas_acessos_conta_fonte", unique: true
+    t.index ["chave"], name: "idx_prontas_acessos_chave", unique: true
+  end
+
+  create_table "autonomia_ferramentas_prontas_usos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.date "dia", null: false
+    t.integer "consultas", default: 0, null: false
+    t.integer "do_cache", default: 0, null: false
+    t.integer "pela_reserva", default: 0, null: false
+    t.integer "nao_encontradas", default: 0, null: false
+    t.integer "sem_resposta", default: 0, null: false
+    t.integer "recusadas", default: 0, null: false
+    t.jsonb "motivos", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte", "dia"], name: "idx_prontas_usos_conta_fonte_dia", unique: true
   end
 
   create_table "autonomia_guide_avisos", force: :cascade do |t|
@@ -2480,6 +2533,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.datetime "closed_at"
     t.string "external_id"
     t.jsonb "custom_attributes", default: {}, null: false
+    t.bigint "solicitante_contact_id"
     t.index "lower((title)::text) gin_trgm_ops", name: "idx_crm_cards_title_trgm", using: :gin
     t.index "lower(translate(NORMALIZE(title, NFD), '̧̨̀́̂̃̄̆̇̈̊̋̌'::text, ''::text)) gin_trgm_ops", name: "idx_crm_cards_titulo_sem_acento_trgm", using: :gin
     t.index ["account_id", "contact_id"], name: "idx_crm_cards_contact"
@@ -2509,6 +2563,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
     t.index ["owner_id"], name: "index_crm_cards_on_owner_id"
     t.index ["pipeline_id", "status", "score"], name: "index_crm_cards_on_pipeline_status_score"
     t.index ["pipeline_id"], name: "index_crm_cards_on_pipeline_id"
+    t.index ["solicitante_contact_id", "account_id", "status"], name: "idx_crm_cards_solicitante", where: "(solicitante_contact_id IS NOT NULL)"
     t.index ["stage_id"], name: "index_crm_cards_on_stage_id"
     t.index ["team_id"], name: "index_crm_cards_on_team_id"
   end
@@ -4734,6 +4789,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_campanhas_da_vez", "accounts"
+  add_foreign_key "autonomia_automacao_campanhas_da_vez", "autonomia_automacoes", column: "automacao_id"
   add_foreign_key "autonomia_automacao_conversoes", "accounts"
   add_foreign_key "autonomia_automacao_conversoes", "autonomia_automacoes", column: "definicao_id"
   add_foreign_key "autonomia_automacao_execucoes", "accounts"
@@ -4763,6 +4820,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_prontas_acessos", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_prontas_usos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade
@@ -4879,6 +4938,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_900000) do
   add_foreign_key "crm_card_conversations", "crm_cards", column: "card_id", on_delete: :cascade
   add_foreign_key "crm_card_conversations", "users", column: "linked_by_id"
   add_foreign_key "crm_cards", "accounts"
+  add_foreign_key "crm_cards", "contacts", column: "solicitante_contact_id", on_delete: :nullify
   add_foreign_key "crm_cards", "contacts", on_delete: :cascade
   add_foreign_key "crm_cards", "conversations", on_delete: :cascade
   add_foreign_key "crm_cards", "crm_pipeline_stages", column: "stage_id"

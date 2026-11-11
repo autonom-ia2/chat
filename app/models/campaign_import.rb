@@ -65,6 +65,8 @@ class CampaignImport < ApplicationRecord
   # Importar contatos (#1006): read and saved like an audience, but it is not a list for
   # campaigns: it never shows in Públicos, in the campaign base history or in a campaign.
   CONTACTS_FLOW = 'contacts'.freeze
+  # A contact import written by the automation step "para cada item" (#2771, decision 15): no file, one row per item.
+  AUTOMATION_ORIGIN = 'automacao'.freeze
   # Públicos (#1005, F2/N4): an audience can be deleted after it was saved, but not while it is being worked on.
   AUDIENCE_DELETE_BLOCKED_STATUSES = %w[validating confirmed queued importing undoing_labels].freeze
 
@@ -121,6 +123,10 @@ class CampaignImport < ApplicationRecord
 
   def contact_import?
     options.to_h['flow'] == CONTACTS_FLOW
+  end
+
+  def from_automation?
+    options.to_h['origem'] == AUTOMATION_ORIGIN
   end
 
   # Públicos and Importar contatos read name, phone, email, company and extra columns through

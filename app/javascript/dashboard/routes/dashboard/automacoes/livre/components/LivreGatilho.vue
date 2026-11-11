@@ -5,6 +5,8 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreSelecao from './LivreSelecao.vue';
+import LivreMudanca from './LivreMudanca.vue';
+import { mostraNaFrequencia } from '../recorrente';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
 // grupo (conversa e mensagem, card do funil), e o que o gatilho escolhido pede
@@ -14,8 +16,12 @@ import LivreSelecao from './LivreSelecao.vue';
 // antes ou depois e a hora. O lembrete antes da reunião (#2709) pede quanto
 // tempo antes. O recorrente (#2635, G7) pede a frequência, o dia (da semana ou
 // do mês, conforme a frequência), a hora e a seleção dos cards ou contatos
-// (LivreSelecao). #2680: no gatilho de card ou de contato, a caixa por onde a
-// mensagem abre a conversa de quem ainda não tem uma.
+// (LivreSelecao). O "card atualizado" (G27, #2661) pede a mudança: o campo do
+// card, a condição e o valor (LivreMudanca). #2680: no gatilho de card ou de
+// contato, a caixa por onde a mensagem abre a conversa de quem ainda não tem uma.
+// G60: a página de agenda de reserva, para o link da agenda quando ninguém atende.
+// G50: no gatilho que aceita (`se_repetir` no catálogo), o que fazer quando ele
+// acontece de novo com a automação ainda esperando no mesmo card ou conversa.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -32,6 +38,8 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const idTipo = useId();
 const idCaixa = useId();
+const idAgenda = useId();
+const idRepetir = useId();
 
 const opcao = item => ({ value: item.tipo, label: t(item.frase) });
 const grupos = computed(() => {
@@ -52,13 +60,9 @@ const pedePeca = (item, peca) =>
 
 const entrada = computed(() => entradaDo(props.modelValue?.tipo));
 const pede = peca => pedePeca(entrada.value, peca);
-// O dia da semana só no semanal; o do mês, só no mensal.
-const DIA_DA_FREQUENCIA = { dia_da_semana: 'semanal', dia_do_mes: 'mensal' };
 const parametros = computed(() =>
-  (entrada.value?.parametros || []).filter(
-    parametro =>
-      !DIA_DA_FREQUENCIA[parametro.nome] ||
-      DIA_DA_FREQUENCIA[parametro.nome] === props.modelValue?.frequencia
+  (entrada.value?.parametros || []).filter(parametro =>
+    mostraNaFrequencia(parametro.nome, props.modelValue?.frequencia)
   )
 );
 // O aviso de mover a etapa vale para "entrou" e "saiu da etapa". O "parado na
@@ -66,12 +70,19 @@ const parametros = computed(() =>
 const deEtapa = computed(() => pede('etapa') && !pede('dias'));
 const avisoDeTempo = computed(() => {
   if (pede('antes')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_LEMBRETE';
-  if (pede('frequencia'))
+  if (pede('frequencia')) {
+    // G39: o "uma vez só" não tem dia 29 a 31 nem vez anterior.
+    if (props.modelValue?.frequencia === 'uma_vez')
+      return pede('selecao')
+        ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ'
+        : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA';
     return pede('selecao')
       ? 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO'
       : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_CONTA';
+  }
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
+  if (pede('mudanca')) return 'AUTOMACAO_LIVRE.MUDANCA.AVISO';
   return null;
 });
 
@@ -98,7 +109,7 @@ const quando = computed(() =>
     label: t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`),
   }))
 );
-const FREQUENCIAS = ['diaria', 'semanal', 'mensal'];
+const FREQUENCIAS = ['diaria', 'semanal', 'mensal', 'uma_vez'];
 const frequencias = computed(() =>
   FREQUENCIAS.map(valor => ({
     value: valor,
@@ -141,6 +152,8 @@ const PADRAO_DO_LEMBRETE = { antes: { valor: 1, unidade: 'dias' } };
 const PADRAO_DO_RECORRENTE = { frequencia: 'diaria', hora: 8, selecao: {} };
 // O da conta não tem seleção: roda uma vez por ocorrência.
 const PADRAO_DA_CONTA = { frequencia: 'diaria', hora: 8 };
+// O card atualizado começa em "mudou"; o campo, a pessoa escolhe.
+const PADRAO_DA_MUDANCA = { mudanca: { condicao: 'mudou' } };
 const padraoDo = tipo => {
   const item = entradaDo(tipo);
   if (pedePeca(item, 'antes')) return PADRAO_DO_LEMBRETE;
@@ -148,6 +161,7 @@ const padraoDo = tipo => {
     return pedePeca(item, 'selecao') ? PADRAO_DO_RECORRENTE : PADRAO_DA_CONTA;
   if (pedePeca(item, 'campo')) return PADRAO_DA_DATA;
   if (pedePeca(item, 'dias')) return PADRAO_DO_PARADO;
+  if (pedePeca(item, 'mudanca')) return PADRAO_DA_MUDANCA;
   return {};
 };
 
@@ -180,27 +194,66 @@ const caixasDaConversa = computed(() => [
   ...(props.escolhas.caixas || []),
 ]);
 
+// G50: "Não começa outra vez" é a ausência da chave na receita.
+const COMECA_OUTRA = 'comeca_outra';
+const podeRepetir = tipo => Boolean(entradaDo(tipo)?.se_repetir);
+const repetir = computed(() => podeRepetir(props.modelValue?.tipo));
+const opcoesDeRepetir = computed(() =>
+  ['ignora', COMECA_OUTRA].map(valor => ({
+    value: valor,
+    label: t(`AUTOMACAO_LIVRE.SE_REPETIR.${valor.toUpperCase()}`),
+  }))
+);
+
+// G60 (decisão 10): a página fixa do link da agenda quando ninguém atende.
+// Vale onde há conversa, card ou contato; só aparece para quem lê as páginas
+// (a lista vem vazia para quem não lê).
+const ALVOS_DA_AGENDA = ['Conversation', 'Crm::Card', 'Contact'];
+const temAgenda = tipo => ALVOS_DA_AGENDA.includes(entradaDo(tipo)?.alvo);
+const pedeAgendaDeReserva = computed(
+  () =>
+    temAgenda(props.modelValue?.tipo) &&
+    ((props.escolhas.paginas || []).length > 0 ||
+      Boolean(props.modelValue?.agenda_de_reserva))
+);
+const paginasDeReserva = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.NENHUMA') },
+  ...(props.escolhas.paginas || []),
+]);
+
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
 // filtros: o painel mostra o que entra e o que sai deles. A caixa da conversa
-// nova fica enquanto o novo gatilho também pode não ter conversa.
+// nova fica enquanto o novo gatilho também pode não ter conversa; a página de
+// reserva, enquanto ele tem conversa, card ou contato; o "começa outra vez",
+// enquanto o novo gatilho também aceita.
 const trocarTipo = tipo => {
-  const { filtros, conversa_nova: conversaNova } = props.modelValue || {};
+  const {
+    filtros,
+    conversa_nova: conversaNova,
+    agenda_de_reserva: agendaDeReserva,
+    se_repetir: seRepetir,
+  } = props.modelValue || {};
   const novo = {
     tipo,
     ...padraoDo(tipo),
     ...(conversaNova && podeNaoTerConversa(tipo)
       ? { conversa_nova: conversaNova }
       : {}),
+    ...(agendaDeReserva && temAgenda(tipo)
+      ? { agenda_de_reserva: agendaDeReserva }
+      : {}),
+    ...(seRepetir && podeRepetir(tipo) ? { se_repetir: seRepetir } : {}),
   };
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
 };
 // Trocar a frequência troca o dia que ela pede: segunda no semanal, dia 1 no
-// mensal; o diário não pede dia.
+// mensal; o diário não pede dia, e o "uma vez" espera a pessoa escolher a data.
 const DIA_PADRAO = { semanal: { dia_da_semana: 1 }, mensal: { dia_do_mes: 1 } };
 const trocarFrequencia = frequencia => {
   const {
     dia_da_semana: _semana,
     dia_do_mes: _mes,
+    data: _data,
     ...resto
   } = props.modelValue || {};
   emit('update:modelValue', {
@@ -298,12 +351,27 @@ const mudar = (nome, valor) => {
         :options="diasDoMes"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
+      <Input
+        v-else-if="parametro.peca === 'data'"
+        :model-value="modelValue?.data ?? ''"
+        type="date"
+        class="w-44"
+        :aria-label="$t(parametro.frase)"
+        data-gatilho-data
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
       <LivreSelecao
         v-else-if="parametro.peca === 'selecao'"
         :model-value="modelValue?.selecao || {}"
         :alvo="entrada?.alvo"
         :escolhas="escolhas"
         :opcoes="opcoes"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
+      <LivreMudanca
+        v-else-if="parametro.peca === 'mudanca'"
+        :model-value="modelValue?.mudanca || {}"
+        :campos="escolhas.camposDoCard || []"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
       <ChoiceSelect
@@ -385,6 +453,54 @@ const mudar = (nome, valor) => {
       />
       <p class="mb-0 text-sm text-n-slate-11">
         {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.AJUDA') }}
+      </p>
+    </div>
+
+    <div
+      v-if="pedeAgendaDeReserva"
+      class="flex flex-col gap-1.5"
+      data-parametro="agenda_de_reserva"
+    >
+      <label :for="idAgenda" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.agenda_de_reserva?.pagina_id ?? ''"
+        :trigger-id="idAgenda"
+        :aria-label="$t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.TITULO')"
+        :options="paginasDeReserva"
+        @update:model-value="
+          valor =>
+            mudar(
+              'agenda_de_reserva',
+              valor === '' ? null : { pagina_id: valor }
+            )
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.AGENDA_DE_RESERVA.AJUDA') }}
+      </p>
+    </div>
+
+    <div
+      v-if="repetir"
+      class="flex flex-col gap-1.5"
+      data-parametro="se_repetir"
+    >
+      <label :for="idRepetir" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.SE_REPETIR.ROTULO') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.se_repetir || 'ignora'"
+        :trigger-id="idRepetir"
+        :aria-label="$t('AUTOMACAO_LIVRE.SE_REPETIR.ROTULO')"
+        :options="opcoesDeRepetir"
+        @update:model-value="
+          valor => mudar('se_repetir', valor === COMECA_OUTRA ? valor : '')
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.SE_REPETIR.AJUDA') }}
       </p>
     </div>
 

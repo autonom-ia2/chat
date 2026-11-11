@@ -14,14 +14,17 @@ class Autonomia::Agents::Retriever
   # query:String, top_k:Integer -> Array<Autonomia::Agents::KnowledgeEntry>
   # Escopo SEMPRE por agente (isolamento de conta/agente). Cada record expõe
   # .neighbor_distance. Retorna [] se o embedding vier vazio.
-  def retrieve(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
-    retrieve!(query, top_k: top_k)
+  # `por_palavra_sem_vetor:` (#2850) — quem lê a distância para decidir (o Answerer) aceita, sem o vetor da pergunta, os
+  # trechos só da busca por palavra, sem distância. Os demais (o Ajudante põe tudo no prompt; o Guia escolhe um fluxo de
+  # diagnóstico) recebem [] como antes: a busca por palavra não tem o teto de distância.
+  def retrieve(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K, por_palavra_sem_vetor: false)
+    buscar(query, top_k, so_palavra_sem_vetor: por_palavra_sem_vetor && busca_hibrida?, prazo: Autonomia::Agents::Config::PRAZO_DO_EMBEDDING_S)
   rescue RetrievalError
     raise
   rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
     # RESILIÊNCIA (Testar/operate): erro de embedding/credencial/provider/timeout NÃO pode quebrar o
     # fluxo. Degrada para [] → o Answerer responde pela personalidade/instrução ou faz handoff seguro.
-    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class}")
+    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class} motivo=#{e.motivo}")
     []
   rescue StandardError => e
     # NÃO mascarar BUG de programação como "sem KB": um typo/const errado (achado no B1: NameError no
@@ -35,7 +38,19 @@ class Autonomia::Agents::Retriever
 
   # #1431 (F0) — a mesma busca, sem degradar: a falha do embedding SOBE. É o caminho de quem MEDE a busca
   # (PlacarDaBase), onde uma falha lida como [] viraria "não achou" no placar.
+  # Sem o prazo da pergunta: quem mede não trava o turno de ninguém, e uma resposta lenta seria lida como falha.
   def retrieve!(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    buscar(query, top_k, so_palavra_sem_vetor: false, prazo: nil)
+  end
+
+  def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    retrieve(query, top_k: top_k).map(&:content)
+  end
+
+  private
+
+  # `so_palavra_sem_vetor` (#2850): sem o vetor da pergunta, segue só pela busca por palavra em vez de levantar.
+  def buscar(query, top_k, so_palavra_sem_vetor:, prazo:)
     # C1 (custo) — teto da query ANTES do embedding: sem isso, uma mensagem colada gigante viraria um
     # embedding igualmente gigante (custo por token / limite do provider) mesmo com o PromptBuilder
     # capando depois. Defesa CENTRAL aqui (único funil): cobre Answerer (Testar/copiloto/operate),
@@ -45,8 +60,13 @@ class Autonomia::Agents::Retriever
     # MESMO modelo (coerência dimensão↔coluna), mesmo se a config global virar no meio da operação.
     model = Autonomia::Agents::Config.active_embedding_model
     query = Autonomia::Agents::Config.truncate_text(query, Autonomia::Agents::Config::MAX_QUERY_CHARS)
-    vector = embedding_service(model).embed(query)
+    vector = Autonomia::Agents::VetorDaPergunta.new(embedding_service(model, prazo), agent: @agent, contar: !prazo.nil?)
+                                               .calcular(query, so_palavra_sem_vetor: so_palavra_sem_vetor)
+    # nil: o embedding falhou e a busca segue só pela palavra (#2850).
+    return so_pela_palavra(query, top_k, model) if vector.nil?
     return [] if vector.blank?
+
+    return busca_hibrida(vector, query, top_k, model) if busca_hibrida?
 
     # folga (top_k*4) p/ rerank, dedup por fonte e merge lexical
     rank_candidates(candidate_rows(vector, top_k, model), query, top_k)
@@ -59,11 +79,24 @@ class Autonomia::Agents::Retriever
     raise RetrievalError, 'retrieval_unavailable'
   end
 
-  def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
-    retrieve(query, top_k: top_k).map(&:content)
+  # Sem vetor, os trechos vêm só da busca por palavra, sem distância (nil): ninguém lê como acerto forte o que o
+  # vetor não mediu. O teto de distância não se aplica; o escopo (agente, prontos, sem material reprovado), sim.
+  def so_pela_palavra(query, top_k, model)
+    busca = Autonomia::Agents::BuscaHibrida.new(escopo: escopo_da_base, vector: nil, model: model, query: query)
+    dedup_by_source(secoes_dos_itens(busca.por_palavra(top_k * 4))).first(top_k)
   end
 
-  private
+  # #2810 — com a flag, a ordem sai da fusão do vetor com a busca por palavra (BuscaHibrida), no lugar do bônus por
+  # metadado e do reforço lexical; as seções dos itens e o dedup por fonte seguem como no caminho de hoje.
+  def busca_hibrida?
+    @agent.account&.feature_enabled?(Autonomia::Agents::BuscaHibrida::FLAG)
+  end
+
+  def busca_hibrida(vector, query, top_k, model)
+    busca = Autonomia::Agents::BuscaHibrida.new(escopo: escopo_da_base, vector: vector, model: model, query: query)
+    fundidos = busca.fundir(candidate_rows(vector, top_k, model).to_a, top_k * 4)
+    dedup_by_source(secoes_dos_itens(fundidos)).first(top_k)
+  end
 
   # Pipeline de ranqueamento sobre os candidatos vetoriais (top_k*4): teto frouxo -> rerank por
   # metadata -> dedup por fonte -> reforço lexical. Extraído do retrieve p/ manter cada método focado.
@@ -261,48 +294,9 @@ class Autonomia::Agents::Retriever
     parts.flatten.compact.join(' ').downcase
   end
 
-  # #1431 (PR 1b) — o trecho de item (CortePorSecao: item de lista, verbete, fileira de tabela) só serve para achar. No
-  # lugar dele volta o trecho da seção que o contém (`trecho_da_secao`), com a menor distância entre ele e os itens que o
-  # trouxeram, e cada trecho uma vez só, na ordem do melhor. O item sem `trecho_da_secao` (atravessa dois trechos da
-  # seção) ou cujo trecho não está no escopo volta ele mesmo. Sem item entre os candidatos (todo material lido antes do
-  # 1b), a lista volta igual.
+  # #1431 (PR 1b) — o item volta como o trecho da seção que o contém (SecoesDosItens, extraído no #2810).
   def secoes_dos_itens(entries)
-    itens = entries.select { |entry| item?(entry) }
-    return entries if itens.empty?
-
-    secoes = secoes_dos(itens, entries)
-    entries.map { |entry| secoes.fetch(chave_da_secao(entry), entry) }.uniq(&:id)
-  end
-
-  # O trecho da seção de cada um: o do item é o pai; o do trecho de seção, ele mesmo.
-  def chave_da_secao(entry)
-    [entry.source_id, item?(entry) ? entry.metadata['trecho_da_secao'] : entry.chunk_index]
-  end
-
-  def item?(entry)
-    metadata = entry.metadata.to_h
-    metadata['material_type'] == 'item' && !metadata['trecho_da_secao'].nil?
-  end
-
-  # { [source_id, chunk_index] => trecho da seção }, numa consulta só, no mesmo escopo da busca, com `neighbor_distance`
-  # no SELECT (o atributo de sempre, que o Answerer e o placar leem): a menor entre a do trecho, se veio, e a dos itens.
-  def secoes_dos(itens, entries)
-    pais = itens.map { |item| chave_da_secao(item) }.uniq
-    escopo_da_base.where(source_id: pais.map(&:first).uniq, chunk_index: pais.map(&:last).uniq)
-                  .select(Arel.sql("autonomia_agent_knowledge.*, #{distancia_por_trecho(pais, entries)} AS neighbor_distance"))
-                  .select { |secao| pais.include?([secao.source_id, secao.chunk_index]) }
-                  .index_by { |secao| [secao.source_id, secao.chunk_index] }
-  end
-
-  # CASE com a distância de cada trecho de seção (a menor entre a dele, se veio, e a dos itens dele), sanitizado.
-  def distancia_por_trecho(pais, entries)
-    distancias = entries.group_by { |entry| chave_da_secao(entry) }
-                        .transform_values { |mesma_secao| mesma_secao.map { |entry| entry.neighbor_distance.to_f }.min }
-    casos = pais.map do |source_id, chunk_index|
-      Autonomia::Agents::KnowledgeEntry.sanitize_sql_array(['WHEN source_id = ? AND chunk_index = ? THEN ?', source_id, chunk_index,
-                                                            distancias[[source_id, chunk_index]]])
-    end
-    "(CASE #{casos.join(' ')} END)::float"
+    Autonomia::Agents::SecoesDosItens.new(escopo_da_base).trocar(entries)
   end
 
   # Dedup por fonte (P2): 1 melhor trecho por fonte primeiro (já ordenados por distância pelo
@@ -313,10 +307,10 @@ class Autonomia::Agents::Retriever
     primary + (entries - primary)
   end
 
-  # Memoizado POR MODELO: se o modelo resolvido no retrieve mudar entre chamadas, não reusa um serviço
+  # Memoizado POR MODELO e prazo: se o modelo resolvido no retrieve mudar entre chamadas, não reusa um serviço
   # preso ao modelo antigo (coerência query↔coluna). `model` vem resolvido do retrieve (1x por operação).
-  def embedding_service(model = nil)
+  def embedding_service(model, prazo)
     @embedding_service ||= {}
-    @embedding_service[model] ||= Autonomia::Agents::EmbeddingService.new(account: @agent.account, model: model)
+    @embedding_service[[model, prazo]] ||= Autonomia::Agents::EmbeddingService.new(account: @agent.account, model: model, prazo: prazo)
   end
 end

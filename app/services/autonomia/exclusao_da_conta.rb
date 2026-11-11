@@ -110,6 +110,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Crm::MetaAdsCommentCare', :por_conta],
     ['Autonomia::Agents::Specialist', :por_conta],
     ['Autonomia::Agents::Tool', :por_conta],
+    # Ferramentas prontas (#2858): a chave da conta em cada fonte e o contador do dia.
+    ['Autonomia::FerramentasProntas::Uso', :por_conta],
+    ['Autonomia::FerramentasProntas::Acesso', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
@@ -124,6 +127,7 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
     ['Autonomia::Automacao::Conversao', :por_conta],
     ['Autonomia::Automacao::Registro', :por_conta],
+    ['Autonomia::Automacao::CampanhaDaVez', :por_conta],
     ['Autonomia::Automacao::Execucao', :por_conta],
     ['Autonomia::Automacao::Versao', :por_conta],
     ['Autonomia::Automacao::Definicao', :por_conta],

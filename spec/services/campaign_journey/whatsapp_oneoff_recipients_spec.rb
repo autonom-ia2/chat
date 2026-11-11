@@ -53,6 +53,18 @@ RSpec.describe CampaignJourney::WhatsappOneoffRecipients, :aggregate_failures do
     expect(recipients(campaign).keys).to contain_exactly('Bia Lima', 'Caio Reis')
   end
 
+  # chat#2733: a blocked contact is not eligible either.
+  it 'leaves blocked contacts out of the recipients' do
+    sent = stub_graph_messages
+    audience.campaign_import_rows.order(:row_number).first.contact.update!(blocked: true)
+    campaign = journey_campaign
+
+    Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+    expect(recipients(campaign).keys).to contain_exactly('Bia Lima', 'Caio Reis')
+    expect(sent.pluck('to')).not_to include('+5511987654321')
+  end
+
   # D2: every eligible contact gets a queued recipient before the first message is sent.
   it 'registers every eligible contact as queued before sending' do
     statuses_at_first_send = nil
@@ -110,6 +122,19 @@ RSpec.describe CampaignJourney::WhatsappOneoffRecipients, :aggregate_failures do
     expect(sent.pluck('to')).not_to include('+5531987654321')
     expect(recipients(campaign)['Caio Reis']).to be_skipped
     expect(recipients(campaign)['Caio Reis'].error_message).to eq('opted_out')
+  end
+
+  # chat#2733: who is blocked during the send is skipped "blocked" before their message.
+  it 'skips a contact blocked while the campaign is sending' do
+    campaign = journey_campaign
+    caio = audience.campaign_import_rows.find_by(row_number: 4).contact
+    sent = stub_graph_messages(on_send: ->(_body) { caio.update!(blocked: true) unless caio.reload.blocked? })
+
+    Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+    expect(sent.pluck('to')).not_to include('+5531987654321')
+    expect(recipients(campaign)['Caio Reis']).to be_skipped
+    expect(recipients(campaign)['Caio Reis'].error_message).to eq('blocked')
   end
 
   # B1b: variables resolved per person from the contact, the audience column and a fixed text.

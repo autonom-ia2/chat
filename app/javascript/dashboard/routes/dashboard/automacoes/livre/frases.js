@@ -2,10 +2,19 @@
 // passo é a chave do catálogo (AUTOMACAO_LIVRE.*). Das escolhas da conta, só a
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
-import { comColchetes } from './texto';
+import { comColchetes, nomeDoValor } from './texto';
 import { fraseDaCampanha } from './campanha';
 import { fraseDaListaDeEmail } from './listaDeEmail';
-import { fraseDoRetorno } from './retorno';
+import { fraseDaProspeccao } from './prospeccao';
+import { fraseDoParaCada } from './paraCada';
+import { fraseDoRetorno, quandoDoRetorno } from './retorno';
+import { SEM_PRAZO } from './receita';
+import {
+  TIPO as EM_OUTRO_REGISTRO,
+  fraseDoOutroRegistro,
+} from './outroRegistro';
+import { fraseDoWebhook } from './webhook';
+import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -87,9 +96,12 @@ const DIA_DO_RECORRENTE = {
   mensal: gatilho =>
     Number.isInteger(gatilho.dia_do_mes) ? gatilho.dia_do_mes : undefined,
   diaria: () => '',
+  // #2681: a data no idioma do painel ("26/11/2026", "11/26/2026").
+  uma_vez: (gatilho, _t, idioma) =>
+    formatAttributeDate(gatilho.data, idioma) || undefined,
 };
-const fraseDoRecorrente = (gatilho, entrada, t) => {
-  const dia = DIA_DO_RECORRENTE[gatilho.frequencia]?.(gatilho, t);
+const fraseDoRecorrente = (gatilho, entrada, t, idioma) => {
+  const dia = DIA_DO_RECORRENTE[gatilho.frequencia]?.(gatilho, t, idioma);
   if (dia === undefined || !Number.isInteger(gatilho.hora))
     return t(entrada.frase);
   const ALVOS = { Contact: 'CONTATOS', Account: 'CONTA' };
@@ -101,11 +113,39 @@ const fraseDoRecorrente = (gatilho, entrada, t) => {
   });
 };
 
-const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
+// G27 (#2661): o card atualizado diz o campo e a condição ("Quando o valor de
+// venda do card passa de 50000"). O campo personalizado vai pelo nome, ou pela
+// chave quando o nome ainda não chegou. Sem campo ou sem condição, a frase do
+// catálogo.
+const M = 'AUTOMACAO_LIVRE.MUDANCA';
+const fraseDaMudanca = (gatilho, entrada, t, nomes) => {
+  const { campo, chave, condicao, valor } = gatilho.mudanca || {};
+  const nome =
+    campo === 'valor'
+      ? t(`${M}.VALOR_DE_VENDA`)
+      : chave && (nomes.campoDoCard?.[chave] || chave);
+  const precisaDeValor = condicao && condicao !== 'mudou';
+  if (!nome || !condicao || (precisaDeValor && !valor)) return t(entrada.frase);
+  return t(`${M}.FRASE.${condicao.toUpperCase()}`, { campo: nome, valor });
+};
+
+const fraseSemPagina = (gatilho, catalogo, t, nomes, idioma) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
-    return comCaixa(fraseDoRecorrente(gatilho, entrada, t), gatilho, t, nomes);
+    return comCaixa(
+      fraseDoRecorrente(gatilho, entrada, t, idioma),
+      gatilho,
+      t,
+      nomes
+    );
+  if ((entrada.parametros || []).some(item => item.peca === 'mudanca'))
+    return comCaixa(
+      fraseDaMudanca(gatilho, entrada, t, nomes),
+      gatilho,
+      t,
+      nomes
+    );
   // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
   const parametros = (entrada.parametros || []).filter(
     item => !FIM_DA_FRASE.includes(item.peca)
@@ -135,8 +175,42 @@ const fraseSemPagina = (gatilho, catalogo, t, nomes) => {
   );
 };
 
-export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) =>
-  comPagina(fraseSemPagina(gatilho, catalogo, t, nomes), gatilho, t, nomes);
+// G50: o gatilho que começa outra vez quando se repete diz isso no fim.
+const comRepeticao = (frase, gatilho, t) =>
+  gatilho?.se_repetir === 'comeca_outra'
+    ? t('AUTOMACAO_LIVRE.SE_REPETIR.NA_FRASE', { frase })
+    : frase;
+
+// `idioma`: o locale do painel, para a data da frase ("pt_BR").
+export const fraseDoGatilho = (gatilho, catalogo, t, nomes, idioma) => {
+  const daConta = nomes || {};
+  return comRepeticao(
+    comPagina(
+      fraseSemPagina(gatilho, catalogo, t, daConta, idioma),
+      gatilho,
+      t,
+      daConta
+    ),
+    gatilho,
+    t
+  );
+};
+
+// G62 (#2829): `card.atributos.<campo>.nome` e `.ausente`, o nome e a ausência da
+// pessoa num campo do tipo pessoa da equipe. Devolve o sufixo do catálogo e o
+// campo, ou null.
+export const daPessoa = (caminho, catalogo) => {
+  const base = (catalogo?.valores || []).find(
+    item => item.da_pessoa && caminho?.startsWith(`${item.caminho}.`)
+  );
+  const resto = base && caminho.slice(base.caminho.length + 1);
+  const sufixo = base?.da_pessoa.find(item =>
+    resto.endsWith(`.${item.sufixo}`)
+  );
+  return sufixo
+    ? { sufixo, campo: resto.slice(0, -(sufixo.sufixo.length + 1)) }
+    : null;
+};
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".
 export const fraseDoValor = (caminho, catalogo, t) => {
@@ -145,13 +219,15 @@ export const fraseDoValor = (caminho, catalogo, t) => {
     item => item.caminho === caminho && !item.atributos
   );
   // #2679: o texto da IA (comTextosDaIa) chega com o rótulo pronto, sem frase.
-  if (fixo) return fixo.rotulo || t(fixo.frase);
+  if (fixo) return fixo.rotulo || nomeDoValor(fixo, t);
+  const pessoa = daPessoa(caminho, catalogo);
+  if (pessoa) return t(pessoa.sufixo.frase, { campo: pessoa.campo });
   const base = valores.find(
     item => item.atributos && caminho?.startsWith(`${item.caminho}.`)
   );
   if (base)
     return t(`${P}.ATRIBUTO`, {
-      base: t(base.frase),
+      base: nomeDoValor(base, t),
       chave: caminho.slice(base.caminho.length + 1),
     });
   return caminho || '';
@@ -169,6 +245,8 @@ export const opcoesDoValor = (caminho, catalogo) => {
     item => item.caminho === caminho
   )?.opcoes;
   if (proprias) return proprias;
+  const pessoa = daPessoa(caminho, catalogo);
+  if (pessoa) return pessoa.sufixo.opcoes || null;
   const [nome, campo] = ESCOLHA_DO_VALOR[caminho] || [];
   const passo = catalogo?.passos.find(item => item.nome === nome);
   return passo?.campos.find(item => item.nome === campo)?.opcoes || null;
@@ -178,9 +256,9 @@ export const opcoesDoValor = (caminho, catalogo) => {
 // outros, por todos. `pede_valor` vem sempre do operador do esquema.
 export const operadoresDoValor = (caminho, catalogo) => {
   const todos = catalogo?.operadores || [];
-  const proprios = catalogo?.valores?.find(
-    item => item.caminho === caminho
-  )?.operadores;
+  const proprios =
+    catalogo?.valores?.find(item => item.caminho === caminho)?.operadores ||
+    daPessoa(caminho, catalogo)?.sufixo.operadores;
   if (!proprios) return todos;
   return proprios.map(item => ({
     ...todos.find(op => op.op === item.op),
@@ -251,10 +329,14 @@ const emLista = (nomes, t) =>
         ultimo: nomes[nomes.length - 1],
       })
     : nomes[0];
-const fraseDasEtiquetas = (passo, entrada, t) => {
+// #2702 G29: a etiqueta com o nome de um dado ({ $valor }) sai pelo nome dele,
+// entre colchetes, como no texto da mensagem.
+const fraseDasEtiquetas = (passo, entrada, catalogo, t) => {
   const chave = `${P}.${ETIQUETAS_DE[entrada.nome]}`;
-  const [por, tirar] = ['por', 'tirar'].map(
-    nome => lerCampo(passo, entrada, nome) || []
+  const nomeDaEtiqueta = item =>
+    item?.$valor ? comColchetes(fraseDoValor(item.$valor, catalogo, t)) : item;
+  const [por, tirar] = ['por', 'tirar'].map(nome =>
+    (lerCampo(passo, entrada, nome) || []).map(nomeDaEtiqueta)
   );
   if (por.length && tirar.length)
     return t(`${chave}.POR_E_TIRAR`, {
@@ -296,6 +378,7 @@ const fraseDoTexto = (partes, catalogo, t) => {
 const quemAvisar = (para, t) => {
   const quem = [
     para?.responsavel && t(`${P}.RESPONSAVEL`),
+    para?.responsavel_do_card && t(`${P}.RESPONSAVEL_DO_CARD`),
     para?.times?.length &&
       t(`${P}.TIMES`, { n: para.times.length }, para.times.length),
     para?.pessoas?.length &&
@@ -327,12 +410,37 @@ const curto = texto =>
     : texto || '';
 // Ainda sem pergunta ou instrução, a linha diz o que falta, sem aspas vazias.
 const escrito = texto => (texto || '').trim();
+// G31: os nomes dos caminhos que decidem de novo ("nenhum" pelo nome da tela).
+const nomesDoDeNovo = (passo, t) =>
+  emLista(
+    (passo.de_novo.caminhos || []).map(chave =>
+      chave === 'nenhum'
+        ? t(`${P}.NENHUM_SE_APLICA`)
+        : (passo.caminhos || []).find(caminho => caminho.chave === chave)
+            ?.nome || chave
+    ),
+    t
+  );
 const FRASE_DA_IA = {
-  decidir: (passo, t) =>
-    t(`${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`, {
-      pergunta: curto(escrito(passo.pergunta)),
-      n: (passo.caminhos || []).length,
-    }),
+  decidir: (passo, t, catalogo) => {
+    const frase = t(
+      `${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`,
+      {
+        pergunta: curto(escrito(passo.pergunta)),
+        n: (passo.caminhos || []).length,
+      }
+    );
+    if (!passo.de_novo) return frase;
+    const caminhos = nomesDoDeNovo(passo, t) || '…';
+    // G46: o caminho marcado roda os passos dele e volta a um "esperar até".
+    if (passo.de_novo.desde)
+      return t(`${P}.DECIDIR_VOLTA`, { frase, caminhos });
+    return t(`${P}.DECIDIR_DE_NOVO`, {
+      frase,
+      caminhos,
+      prazo: fraseDaDuracao(passo.de_novo.prazo, catalogo, t),
+    });
+  },
   extrair: (passo, t) =>
     t(`${P}.EXTRAIR`, {
       lista:
@@ -360,6 +468,16 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     return t(`${P}.ESPERAR`, {
       duracao: fraseDaDuracao(passo.duracao, catalogo, t),
     });
+  // G64: a hora da conferência diária, quando marcada.
+  if (passo.tipo === 'esperar_ate' && passo.prazo === SEM_PRAZO)
+    return Number.isInteger(passo.conferir_as)
+      ? t(`${P}.ESPERAR_ATE_SEM_PRAZO_AS`, {
+          condicao: fraseDaCondicao(passo.condicao, catalogo, t),
+          hora: passo.conferir_as,
+        })
+      : t(`${P}.ESPERAR_ATE_SEM_PRAZO`, {
+          condicao: fraseDaCondicao(passo.condicao, catalogo, t),
+        });
   if (passo.tipo === 'esperar_ate')
     return t(`${P}.ESPERAR_ATE`, {
       condicao: fraseDaCondicao(passo.condicao, catalogo, t),
@@ -383,17 +501,44 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       quem: quemAvisar(passo.para, t),
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
-  if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (FRASE_DA_IA[passo.tipo])
+    return FRASE_DA_IA[passo.tipo](passo, t, catalogo);
   if (passo.tipo === 'campanha') return fraseDaCampanha(passo, t);
   if (passo.tipo === 'lista_de_email') return fraseDaListaDeEmail(passo, t);
+  if (passo.tipo === 'prospeccao') return fraseDaProspeccao(passo, t);
+  if (passo.tipo === 'para_cada') return fraseDoParaCada(passo, t);
   if (passo.tipo === 'retorno')
     return fraseDoRetorno(passo, t, {
-      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      // G69: o "daqui" do retorno conta também em meses.
+      quando: quandoDoRetorno(
+        passo,
+        t,
+        fraseDaDuracao(
+          passo.daqui,
+          catalogo && {
+            unidades: catalogo.unidades_do_retorno || catalogo.unidades,
+          },
+          t
+        )
+      ),
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
+  if (passo.tipo === EM_OUTRO_REGISTRO) {
+    // G49: no `criado_no_passo`, o nome do registro criado (`criado.<passo>`).
+    const campo =
+      passo.registro?.campo?.$valor ||
+      (passo.registro?.passo && `criado.${passo.registro.passo}`);
+    return fraseDoOutroRegistro(
+      passo,
+      t,
+      campo && fraseDoValor(campo, catalogo, t)
+    );
+  }
+  if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
   if (passo.tipo !== 'acao') return t(entrada.frase);
-  if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
+  if (ETIQUETAS_DE[entrada.nome])
+    return fraseDasEtiquetas(passo, entrada, catalogo, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
 

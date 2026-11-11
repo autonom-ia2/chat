@@ -2,7 +2,7 @@
 // primeira visita de quem pode buscar, percorre modo, jogada, local, decisor,
 // filtros e Buscar, e fecha sozinho com os resultados na tela. O tour só
 // pré-preenche: nenhuma chamada paga sai sem o clique da pessoa.
-import { flushPromises } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import {
   bakerySearch,
@@ -32,6 +32,11 @@ vi.mock('dashboard/api/autonomiaProspecting', async () =>
 vi.mock('dashboard/api/crmKanban', async () =>
   (await import('./support/searchPageMocks')).crmKanbanApiMock()
 );
+
+// O cartão do tour procura o bloco do passo num setInterval de até 3 s, e o
+// wrapper não está no document: sem desmontar, o intervalo sobrevive ao teste e
+// dispara depois que o jsdom foi desmontado ("document is not defined").
+enableAutoUnmount(afterEach);
 
 const TOUR_KEY = 'prospecting_search_tour_seen_at';
 const AUTO_FINISH_WAIT_MS = 3600;

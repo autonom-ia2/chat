@@ -1,4 +1,8 @@
 class Whatsapp::OneoffCampaignService
+  # Fork: o público "todos os contatos" de uma campanha de automação é a conta inteira; anda em lotes, nunca a lista
+  # inteira na memória.
+  CONTACT_BATCH_SIZE = 1000
+
   pattr_initialize [:campaign!]
 
   def perform
@@ -39,14 +43,21 @@ class Whatsapp::OneoffCampaignService
     validate_feature_flag!
   end
 
-  # chat#737: o público é lido uma vez, no disparo; a recusa é relida do banco antes de cada mensagem,
-  # para quem recusou durante o disparo não receber. Usado também pelo overlay enterprise.
-  def contact_opted_out_now?(contact)
-    Contact.opted_out.exists?(id: contact.id)
+  # chat#737, chat#2733: o público é lido uma vez, no disparo; a recusa e o bloqueio são relidos do banco antes de cada
+  # mensagem, para quem recusou ou foi bloqueado durante o disparo não receber. Usado também pelo overlay enterprise.
+  # Devolve o motivo ('opted_out' ou 'blocked') ou nil.
+  def campaign_refusal_now(contact)
+    Contact.campaign_refusal_now(contact.id)
   end
 
-  def log_opted_out_skip(contact)
-    Rails.logger.info "Skipping campaign recipient contact_id=#{contact.id}: opted_out"
+  def log_refusal_skip(contact, refusal)
+    Rails.logger.info "Skipping campaign recipient contact_id=#{contact.id}: #{refusal}"
+  end
+
+  # Fork (#2681): the contacts of a label audience, in one place, so Autonomia::Automacao::CampanhaSemEtiquetas can
+  # leave out the excluded labels of an automation's campaign.
+  def label_audience_contacts(audience_labels)
+    campaign.account.contacts.tagged_with(audience_labels, any: true)
   end
 
   def extract_audience_labels
@@ -56,7 +67,8 @@ class Whatsapp::OneoffCampaignService
 
   def process_contact(contact)
     Rails.logger.info "Processing contact: #{contact.name} (#{contact.phone_number})"
-    return log_opted_out_skip(contact) if contact_opted_out_now?(contact)
+    refusal = campaign_refusal_now(contact)
+    return log_refusal_skip(contact, refusal) if refusal
 
     recipient, recipient_error = campaign_destination(contact)
     if recipient.blank?
@@ -76,10 +88,10 @@ class Whatsapp::OneoffCampaignService
   end
 
   def process_audience(audience_labels)
-    contacts = campaign.account.contacts.tagged_with(audience_labels, any: true)
+    contacts = label_audience_contacts(audience_labels)
     Rails.logger.info "Processing #{contacts.count} contacts for campaign #{campaign.id}"
 
-    contacts.each { |contact| process_contact(contact) }
+    contacts.find_each(batch_size: CONTACT_BATCH_SIZE) { |contact| process_contact(contact) }
 
     Rails.logger.info "Campaign #{campaign.id} processing completed"
   end

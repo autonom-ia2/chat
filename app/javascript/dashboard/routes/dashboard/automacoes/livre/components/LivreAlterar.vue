@@ -5,26 +5,47 @@ import { useMapGetter } from 'dashboard/composables/store';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 import LivreCampo from './LivreCampo.vue';
 import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
+import LivrePrazo from './LivrePrazo.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreCampanha from './LivreCampanha.vue';
+import LivreProspeccao from './LivreProspeccao.vue';
+import LivreParaCada from './LivreParaCada.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
+import LivreRegistro from './LivreRegistro.vue';
+import LivreRetornoQuando from './LivreRetornoQuando.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreWebhookCorpo from './LivreWebhookCorpo.vue';
+import LivreWebhookResposta from './LivreWebhookResposta.vue';
+import LivreWebhookSegredo from './LivreWebhookSegredo.vue';
+import LivreDecidirDeNovo from './LivreDecidirDeNovo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
-import { caminhosProntos } from '../ia';
-import { campanhaPronta } from '../campanha';
-import { envioPronto, paraPronto } from '../retorno';
+import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
+import { campanhaPronta, publicoDaExecucaoNoCatalogo } from '../campanha';
+import { prospeccaoPronta } from '../prospeccao';
+import { paraCadaPronto } from '../paraCada';
+import { envioPronto, paraPronto, quandoPronto } from '../retorno';
+import { registroPronto } from '../outroRegistro';
+import {
+  corpoPronto,
+  descricaoPronta,
+  enderecoPronto,
+  gravarPronto,
+} from '../webhook';
+import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
-import { copiar, filtrosDoGatilho } from '../receita';
+import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
+import { custoPorMensagem } from '../custoDaIa';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -38,16 +59,21 @@ const props = defineProps({
   // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
   // custo de cada passo ({ com_valores, custos }).
   receitaDoTeste: { type: Function, default: null },
+  // A automação já salva, para o "Testar este passo" (#2780) e o segredo do
+  // "webhook" (G13, #2670).
+  automacaoId: { type: Number, default: null },
   custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
   gatilhos: { type: Array, default: null },
   escolhasDoGatilho: { type: Object, default: () => ({}) },
+  // G18: os cards do contato só para quem pode mexer no funil.
+  podeLerCards: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const painel = ref(null);
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
@@ -61,10 +87,18 @@ const entrada = computed(() =>
 );
 const avancada = computed(() => alvo.value?.tipo === 'passo' && !entrada.value);
 
-// Os galhos ("então", "senão") ficam na própria lista do Confira, não aqui.
+// Os galhos ("então", "senão") ficam na própria lista do Confira, não aqui. O
+// `daqui` do retorno vai dentro da peça do "Quando" (G57), que cuida dos dois.
+const temQuando = computed(() =>
+  entrada.value?.campos?.some(campo => campo.peca === 'quando_do_retorno')
+);
 const camposNativos = computed(() =>
   entrada.value && entrada.value.tipo !== 'acao'
-    ? entrada.value.campos.filter(campo => campo.peca !== 'passos')
+    ? entrada.value.campos.filter(
+        campo =>
+          campo.peca !== 'passos' &&
+          !(temQuando.value && campo.nome === 'daqui')
+      )
     : []
 );
 const ehDeIa = computed(() => entrada.value?.grupo === 'IA');
@@ -110,19 +144,29 @@ const frase = computed(() => {
       rascunho.value,
       props.catalogo,
       t,
-      props.escolhasDoGatilho.nomes
+      props.escolhasDoGatilho.nomes,
+      locale.value
     );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
-// G32: "quem atende a reunião" só nos gatilhos de reunião — os mesmos em que o
-// catálogo oferece os valores da reunião.
-const deReuniao = computed(() =>
-  Boolean(
-    props.catalogo.valores
-      ?.find(item => item.so_nos_gatilhos)
-      ?.so_nos_gatilhos.includes(props.catalogo.gatilho)
-  )
+// G9 (#2707): "quem cuida do card" só nos gatilhos de card.
+const alvoDoGatilho = computed(
+  () =>
+    props.catalogo.gatilhos?.find(item => item.tipo === props.catalogo.gatilho)
+      ?.alvo
+);
+const doCard = computed(() => alvoDoGatilho.value === 'Crm::Card');
+// G70 (decisão 20): o "extrair" preenche campo do card onde o passo roda num
+// card ou numa conversa (o card dela), só para quem pode ler cards (a chave de
+// funis). Dentro do "em outro registro", vale o registro do ramo
+// (`catalogo.alvo`, doAlvoDoGatilho), não o do gatilho.
+const extrairNoCard = computed(
+  () =>
+    props.podeLerCards &&
+    ['Crm::Card', 'Conversation'].includes(
+      props.catalogo.alvo || alvoDoGatilho.value
+    )
 );
 const gatilhosDoSeletor = computed(
   () => props.gatilhos || props.catalogo.gatilhos
@@ -141,6 +185,14 @@ const trocaDoGatilho = computed(() => {
 
 // Campo opcional que volta vazio (o modelo da F4b) sai da receita: o esquema
 // não aceita null.
+// G49: o contato em que o "criar card" nasce: o do alvo (padrão) ou o que um
+// passo anterior desta execução criou.
+const opcoesDoContatoCriado = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.CONTATO_DO_ALVO') },
+  ...(props.catalogo.valores || [])
+    .filter(item => item.criado === 'Contact')
+    .map(item => ({ value: item.caminho, label: item.rotulo })),
+]);
 const mudarNativo = (nome, novo) => {
   if (novo === null) {
     const { [nome]: _tirado, ...resto } = rascunho.value;
@@ -214,6 +266,11 @@ const rotuloDoDado = campo =>
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
+  // #2750: sem prazo, o "se o prazo acabar" precisa estar vazio.
+  if (campo.peca === 'prazo')
+    return valor === SEM_PRAZO
+      ? !rascunho.value.se_vencer?.length
+      : Number.isInteger(valor?.valor);
   if (campo.peca === 'condicao') return condicaoPronta(valor);
   // O texto pede algo além de espaço; o aviso, alguém para chamar.
   if (TEXTOS.includes(campo.peca))
@@ -232,12 +289,25 @@ const nativoPronto = campo => {
   // G14: a peça da campanha mostra e confere o passo inteiro.
   if (campo.peca === 'campanha')
     return campanhaPronta(rascunho.value, caixasDaConta.value);
+  // G21: a peça da prospecção também.
+  if (campo.peca === 'prospeccao') return prospeccaoPronta(rascunho.value);
+  // G24: a peça do "para cada item" também.
+  if (campo.peca === 'para_cada') return paraCadaPronto(rascunho.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
+  if (campo.peca === 'registro_ligado') return registroPronto(valor);
+  if (campo.peca === 'quando_do_retorno') return quandoPronto(rascunho.value);
+  // G13: a frase do histórico, o endereço https, cada linha do corpo com nome e
+  // dado, e cada resposta com onde guardar.
+  if (campo.peca === 'descricao') return descricaoPronta(valor);
+  if (campo.peca === 'endereco_do_webhook') return enderecoPronto(valor);
+  if (campo.peca === 'corpo_do_webhook') return corpoPronto(valor);
+  if (campo.peca === 'resposta_do_webhook') return gravarPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel ||
         valor?.da_reuniao ||
+        valor?.responsavel_do_card ||
         valor?.times?.length ||
         valor?.pessoas?.length
     );
@@ -249,6 +319,8 @@ const nativoPronto = campo => {
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
   if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
+  // G31: decidir de novo, se ligado, com caminho marcado sem passos e prazo.
+  if (campo.peca === 'de_novo') return deNovoPronto(rascunho.value);
   if (campo.peca === 'campos_extrair')
     return (
       (valor || []).length >= 1 &&
@@ -273,9 +345,11 @@ const acaoPronta = () =>
       campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
     );
 
-// O que o gatilho pede e é obrigatório (a etapa) precisa vir antes do "Salvar".
+// O que o gatilho pede e é obrigatório (a etapa; no recorrente, o dia ou a data
+// da frequência escolhida) precisa vir antes do "Salvar".
 const gatilhoPronto = gatilho =>
   Boolean(gatilho.tipo) &&
+  !faltaDaFrequencia(gatilho) &&
   (
     props.catalogo.gatilhos.find(item => item.tipo === gatilho.tipo)
       ?.parametros || []
@@ -296,10 +370,24 @@ const podeSalvar = computed(() => {
 
 const fechar = () => painel.value?.close();
 
+const CAIXA =
+  'w-full px-3 py-2 text-[0.9375rem] border rounded-xl min-h-11 border-n-weak bg-n-solid-1 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
+
 const receitaParaTestar = computed(() =>
   ehDeIa.value && props.receitaDoTeste && rascunho.value
     ? props.receitaDoTeste({ ...alvo.value, valor: rascunho.value })
     : null
+);
+
+// G46: os "esperar até" de antes do "decidir" para onde o caminho pode voltar,
+// com a frase de cada um, lidos do rascunho inteiro.
+const esperasDoDecidir = computed(() =>
+  esperasAnteriores(receitaParaTestar.value, rascunho.value?.id).map(
+    espera => ({
+      value: espera.id,
+      label: fraseDoPasso(espera, props.catalogo, t),
+    })
+  )
 );
 
 defineExpose({ abrir, fechar });
@@ -384,6 +472,16 @@ defineExpose({ abrir, fechar });
           :unidades="catalogo.unidades"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <LivrePrazo
+          v-else-if="campo.peca === 'prazo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :unidades="catalogo.unidades"
+          :conferir-as="rascunho.conferir_as ?? null"
+          :tem-se-vencer="Boolean(rascunho.se_vencer?.length)"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          @update:conferir-as="novo => mudarNativo('conferir_as', novo)"
+        />
         <LivreCondicao
           v-else-if="campo.peca === 'condicao'"
           :rotulo="$t(campo.rotulo)"
@@ -434,15 +532,48 @@ defineExpose({ abrir, fechar });
         <LivreDestinatarios
           v-else-if="campo.peca === 'destinatarios'"
           :rotulo="$t(campo.rotulo)"
+          :do-card="doCard"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
-          :de-reuniao="deReuniao"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreCampanha
           v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
           :model-value="rascunho"
           :etiquetas="opcoes.etiqueta"
+          :com-publico-da-execucao="publicoDaExecucaoNoCatalogo(catalogo)"
+          @update:model-value="novo => (rascunho = novo)"
+        />
+        <div
+          v-else-if="campo.peca === 'contato_criado'"
+          class="flex flex-col gap-1.5"
+          data-peca="contato_criado"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            :model-value="rascunho[campo.nome]?.$valor ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :options="opcoesDoContatoCriado"
+            @update:model-value="
+              novo => mudarNativo(campo.nome, novo ? { $valor: novo } : null)
+            "
+          />
+        </div>
+        <LivreProspeccao
+          v-else-if="campo.peca === 'prospeccao' && campo.nome === 'faz'"
+          :model-value="rascunho"
+          :etiquetas="opcoes.etiqueta"
+          :etapas="escolhasDoGatilho.etapas || []"
+          @update:model-value="novo => (rascunho = novo)"
+        />
+        <LivreParaCada
+          v-else-if="campo.peca === 'para_cada' && campo.nome === 'campos'"
+          :model-value="rascunho"
+          :etapas="escolhasDoGatilho.etapas || []"
+          :opcoes="opcoes"
+          :atributos-do="atributosDo"
           @update:model-value="novo => (rascunho = novo)"
         />
         <LivreEtapa
@@ -528,6 +659,29 @@ defineExpose({ abrir, fechar });
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <LivreRegistro
+          v-else-if="campo.peca === 'registro_ligado'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          :escolhas="escolhasDoGatilho"
+          :pode-ler-cards="podeLerCards"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRetornoQuando
+          v-else-if="campo.peca === 'quando_do_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :daqui="rascunho.daqui"
+          :quando="rascunho.quando"
+          :unidades="catalogo.unidades_do_retorno || catalogo.unidades"
+          @update="
+            novo => {
+              mudarNativo('daqui', novo.daqui);
+              mudarNativo('quando', novo.quando);
+            }
+          "
+        />
         <LivreRetornoEnvio
           v-else-if="campo.peca === 'envio_do_retorno'"
           :rotulo="$t(campo.rotulo)"
@@ -536,12 +690,104 @@ defineExpose({ abrir, fechar });
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <label
+          v-else-if="campo.peca === 'descricao'"
+          class="flex flex-col gap-1.5"
+          data-peca="descricao"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.DESCRICAO_DICA') }}
+          </span>
+          <input
+            maxlength="200"
+            :class="CAIXA"
+            :value="rascunho[campo.nome] || ''"
+            @input="evento => mudarNativo(campo.nome, evento.target.value)"
+          />
+        </label>
+        <label
+          v-else-if="campo.peca === 'endereco_do_webhook'"
+          class="flex flex-col gap-1.5"
+          data-peca="endereco_do_webhook"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.URL_DICA') }}
+          </span>
+          <input
+            type="url"
+            inputmode="url"
+            maxlength="2000"
+            :placeholder="$t('AUTOMACAO_LIVRE.WEBHOOK.URL_EXEMPLO')"
+            :class="CAIXA"
+            :value="rascunho[campo.nome] || ''"
+            @input="
+              evento => mudarNativo(campo.nome, evento.target.value.trim())
+            "
+          />
+          <span
+            v-if="rascunho[campo.nome] && !enderecoPronto(rascunho[campo.nome])"
+            class="text-sm text-n-ruby-11"
+            data-endereco-invalido
+          >
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.URL_INVALIDA') }}
+          </span>
+        </label>
+        <LivreWebhookCorpo
+          v-else-if="campo.peca === 'corpo_do_webhook'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreWebhookResposta
+          v-else-if="campo.peca === 'resposta_do_webhook'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreDecidirDeNovo
+          v-else-if="campo.peca === 'de_novo'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :passo="rascunho"
+          :unidades="catalogo.unidades"
+          :esperas="esperasDoDecidir"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <!-- Decisão 18: o sim/não de um passo fora da IA ("Cobrir a pessoa
+        enquanto ela não responde", no "Passar para a agente de IA"). Desligado
+        tira a chave da receita. -->
+        <label
+          v-else-if="campo.peca === 'sim_nao' && !ehDeIa"
+          class="flex items-center justify-between gap-3 cursor-pointer min-h-11"
+          :data-peca="campo.nome"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <Switch
+            class="mx-1.5 scale-[1.4]"
+            :model-value="Boolean(rascunho[campo.nome])"
+            :aria-label="$t(campo.rotulo)"
+            @update:model-value="novo => mudarNativo(campo.nome, novo || null)"
+          />
+        </label>
         <LivreIaCampo
-          v-else-if="ehDeIa"
+          v-else-if="ehDeIa && campo.peca !== 'para_cada'"
           :campo="campo"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           :atributos-do="atributosDo"
+          :com-card="extrairNoCard"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
       </template>
@@ -577,13 +823,20 @@ defineExpose({ abrir, fechar });
         @update:model-value="novo => mudarCampo(campo.nome, novo)"
       />
 
+      <LivreWebhookSegredo
+        v-if="entrada?.tipo === 'webhook'"
+        :automacao-id="automacaoId"
+      />
+
       <LivreIaTestar
         v-if="ehDeIa"
         :passo="rascunho"
         :receita="receitaParaTestar"
         :custo="custos.custos[rascunho.id]"
         :mostra-custo="custos.com_valores"
+        :por-mensagem="custoPorMensagem(receitaParaTestar, rascunho.id)"
         :pronto="podeSalvar"
+        :automacao-id="automacaoId"
       />
     </div>
 

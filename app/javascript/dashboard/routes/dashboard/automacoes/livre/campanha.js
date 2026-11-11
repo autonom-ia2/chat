@@ -3,16 +3,12 @@
 // servidor (Autonomia::Automacao::PassoDeCampanha): caixa do WhatsApp oficial
 // na Cloud API, modelo aprovado de utilidade ou de propaganda, com o corpo
 // pedindo {{1}}..{{n}} e nada além do corpo para preencher.
-import {
-  corpoDoModelo,
-  numeradas,
-  pedeMais,
-  variaveisDoCorpo,
-} from './modeloWhatsapp';
+import { serve } from './modeloWhatsapp';
 
-// Utilidade e propaganda (decisão do Rodrigo, 06/11), a mesma constante do
-// servidor. O modelo de propaganda mostra o aviso de custo (ehPropaganda).
-export const CATEGORIAS_DA_CAMPANHA = ['UTILITY', 'MARKETING'];
+// O modelo serve na campanha pela mesma régua do passo mensagem (utilidade e
+// propaganda, lote 5 #2681). O de propaganda mostra o aviso de custo.
+export { ehPropaganda } from './modeloWhatsapp';
+
 const CANAL = 'Channel::Whatsapp';
 const PROVEDOR = 'whatsapp_cloud';
 
@@ -21,23 +17,52 @@ export const caixasDaCampanha = caixas =>
     caixa => caixa.channel_type === CANAL && caixa.provider === PROVEDOR
   );
 
-export const serveNaCampanha = modelo =>
-  String(modelo.status).toLowerCase() === 'approved' &&
-  CATEGORIAS_DA_CAMPANHA.includes(String(modelo.category).toUpperCase()) &&
-  numeradas(variaveisDoCorpo(corpoDoModelo(modelo))) &&
-  !(modelo.components || []).some(pedeMais);
+export const serveNaCampanha = serve;
 
 export const modelosDaCaixa = caixa =>
   (caixa?.message_templates || []).filter(serveNaCampanha);
 
-export const ehPropaganda = modelo =>
-  String(modelo?.category).toUpperCase() === 'MARKETING';
+// G58 (#2779): quem recebe. "desta_execucao" manda só a quem os passos
+// anteriores desta vez criaram, sem etiquetas nem etiquetas excluídas (o
+// servidor recusa juntas).
+export const PUBLICO_DESTA_EXECUCAO = 'desta_execucao';
+export const publicoDaExecucao = passo =>
+  passo?.publico === PUBLICO_DESTA_EXECUCAO;
+
+// A escolha só aparece quando o catálogo tem um passo que cria contato num
+// gatilho da conta (`cria_contatos`, da lista do servidor:
+// Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM). Antes da G21
+// (#2706), nenhum passo vem marcado, e a receita com esse público não salva.
+export const publicoDaExecucaoNoCatalogo = catalogo =>
+  (catalogo?.passos || []).some(item => item.cria_contatos);
+
+// Quem recebe (exemplo 7, passo 2): quem tem as etiquetas ou todos os contatos
+// da conta. "Todos" não leva etiqueta de público; o "menos quem tem" continua.
+export const PARA_TODOS = 'todos';
+
+export const paraTodos = passo => passo?.publico === PARA_TODOS;
+
+const sem = (passo, ...chaves) =>
+  Object.fromEntries(
+    Object.entries(passo).filter(([nome]) => !chaves.includes(nome))
+  );
 
 // Só o que cada escolha precisa: o "não receber" não leva os campos do disparo.
-export const comFaz = (passo, faz) =>
-  faz === 'disparar'
-    ? { ...passo, faz, etiquetas: passo.etiquetas || [] }
-    : { id: passo.id, tipo: passo.tipo, faz };
+export const comFaz = (passo, faz) => {
+  if (faz !== 'disparar') return { id: passo.id, tipo: passo.tipo, faz };
+  if (publicoDaExecucao(passo)) return { ...sem(passo, 'etiquetas'), faz };
+  return { ...passo, faz, etiquetas: passo.etiquetas || [] };
+};
+
+// Trocar quem recebe: com as etiquetas, a lista volta (vazia se não havia);
+// desta execução, as etiquetas e as excluídas saem; todos, só as do público.
+export const comPublico = (passo, publico) => {
+  if (publico === PUBLICO_DESTA_EXECUCAO)
+    return comFaz({ ...sem(passo, 'sem_etiquetas'), publico }, 'disparar');
+  if (publico === PARA_TODOS)
+    return { ...sem(passo, 'etiquetas'), publico: PARA_TODOS };
+  return comFaz(sem(passo, 'publico'), 'disparar');
+};
 
 const escrito = texto => typeof texto === 'string' && texto.trim() !== '';
 
@@ -64,7 +89,9 @@ export const campanhaPronta = (passo, caixas) => {
     (passo.modelo.variaveis || []).every(partes =>
       (partes || []).some(escrito)
     ) &&
-    (passo.etiquetas || []).length > 0
+    (publicoDaExecucao(passo) ||
+      paraTodos(passo) ||
+      (passo.etiquetas || []).length > 0)
   );
 };
 

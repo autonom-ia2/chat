@@ -4,6 +4,7 @@
 import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import { todosOsPassos } from './receita';
+import { novoParaCada, valoresDoParaCada } from './paraCada';
 
 const catalogo = ref(null);
 let carregando = null;
@@ -68,7 +69,7 @@ export const gravarCampo = (passo, entrada, nome, valor) => ({
   corpo: gravar(passo.corpo, caminhoNoCorpo(entrada, nome), valor),
 });
 
-const DURACAO_PADRAO = { valor: 1, unidade: 'dias' };
+export const DURACAO_PADRAO = { valor: 1, unidade: 'dias' };
 
 // Um passo novo, a partir da entrada do catálogo. A descrição é a frase do
 // passo (o esquema pede uma); o parâmetro do caminho que vem do alvo e o padrão
@@ -93,12 +94,29 @@ export const novoPasso = (entrada, id, t) => {
   // G14: nasce no "não receber", que vale em qualquer gatilho.
   if (entrada.tipo === 'campanha')
     return { id, tipo: 'campanha', faz: 'nao_receber' };
+  // G21: nasce no "recusar", que vale em qualquer gatilho.
+  if (entrada.tipo === 'prospeccao')
+    return { id, tipo: 'prospeccao', faz: 'recusar' };
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G18: o "em outro registro" nasce sem ligação e sem passo dentro; a pessoa
+  // escolhe onde no painel e põe os passos pelo próprio Confira.
+  if (entrada.tipo === 'em_outro_registro')
+    return { id, tipo: 'em_outro_registro', registro: {}, passos: [] };
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
+  // G13: o endereço, a frase, o que mandar e o que guardar, a preencher no painel.
+  if (entrada.tipo === 'webhook')
+    return {
+      id,
+      tipo: 'webhook',
+      descricao: '',
+      url: '',
+      corpo: {},
+      gravar: [],
+    };
   // G4: a etapa do card a escolher no painel.
   if (entrada.tipo === 'card') return { id, tipo: 'card', etapa_id: null };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
@@ -129,12 +147,17 @@ export const novoPasso = (entrada, id, t) => {
     return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
   if (entrada.tipo === 'resumir')
     return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
+  // G24: o "para cada item" nasce com o campo "nome" e a etapa a escolher.
+  if (entrada.tipo === 'para_cada') return novoParaCada(id);
   // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
   if (entrada.tipo === 'ia_assumir')
     return { id, tipo: 'ia_assumir', agente_id: null };
   // G52: a lista nasce sem escolha; o "Salvar" do painel espera escolher.
   if (entrada.tipo === 'lista_de_email')
     return { id, tipo: 'lista_de_email', lista_id: null };
+  // G66: sem escolha; a conversa vai para quem cuida do card na hora.
+  if (entrada.tipo === 'conversa_ao_responsavel')
+    return { id, tipo: 'conversa_ao_responsavel' };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
@@ -177,33 +200,90 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G25: o mesmo vale para a ação que lê o alvo no caminho (`card.id` no fechar
+// o card): no gatilho de conversa, o seletor nem a oferece. O card da conversa
+// (#2716) é só para ler: para ação, ele não conta como base do alvo.
+const basesDaAcao = (alvo, bases) =>
+  alvo === 'Conversation' ? bases.filter(base => base !== 'card') : bases;
+
+const caminhoNoAlvo = (passo, bases) =>
+  Object.values(passo.caminho || {}).every(
+    origem => !origem.$valor || bases.includes(origem.$valor.split('.')[0])
+  );
+
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião. G32: o tipo
 // do gatilho segue junto, para o "avisar" oferecer quem atende a reunião.
 // #2680: com a caixa da conversa nova, o contato alcança a conversa que ela
 // abre; e "o cliente respondeu" sai do contato, então vale onde há contato.
+// #2716: o card da conversa (gatilho de conversa) só para quem tem a chave de
+// funis (`podeLerCard`), a mesma pergunta que o salvar faz.
+// G18 (#2671): dentro do "em outro registro", vale o registro em que o ramo roda
+// (`alvoDoRamo`), não o alvo do gatilho; lá não há a reunião do gatilho nem a
+// conversa nova. `alvo` volta junto, para a peça que precisa saber de onde lê
+// (o campo do contato).
 const RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu';
+// G65 (#2842): dentro do ramo, também os valores do registro de origem (o alvo
+// do gatilho), com o prefixo `origem.`. O servidor marca quais (`na_origem`); a
+// permissão (`sem_permissao`) segue a do valor sem o prefixo. Decisão 19: o
+// card de uma origem que é conversa só para ler, e só com a chave de funis
+// (`semCard`), como fora do ramo.
+export const ORIGEM = 'origem.';
+const daOrigem = (valores, bases, semCard) =>
+  valores
+    .filter(
+      item =>
+        item.na_origem &&
+        bases.includes(item.base) &&
+        !(semCard && item.base === 'card')
+    )
+    .map(item => ({
+      ...item,
+      caminho: `${ORIGEM}${item.caminho}`,
+      base: null,
+      origem: true,
+    }));
 export const doAlvoDoGatilho = (
   dados,
   tipoDoGatilho,
-  comConversaNova = false
+  comConversaNova = false,
+  podeLerCard = false,
+  alvoDoRamo = null
 ) => {
-  const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
+  const doGatilho = dados?.gatilhos?.find(
+    item => item.tipo === tipoDoGatilho
+  )?.alvo;
+  const alvo = alvoDoRamo || doGatilho;
   const doAlvo = alvo && dados.alvos?.[alvo];
   if (!doAlvo) return dados;
-  const bases = comConversaNova
-    ? [...new Set([...doAlvo, 'conversa'])]
-    : doAlvo;
+  const bases =
+    comConversaNova && !alvoDoRamo
+      ? [...new Set([...doAlvo, 'conversa'])]
+      : doAlvo;
+  const semCard = alvo === 'Conversation' && !podeLerCard;
   const alcanca = item =>
-    !item.base ||
-    bases.includes(item.base) ||
-    (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato'));
+    !(semCard && item.base === 'card') &&
+    (!item.base ||
+      bases.includes(item.base) ||
+      (item.caminho === RESPOSTA_DO_CONTATO && bases.includes('contato')));
+  const daReuniao = item =>
+    !item.so_nos_gatilhos ||
+    (!alvoDoRamo && item.so_nos_gatilhos.includes(tipoDoGatilho));
   return {
     ...dados,
-    gatilho: tipoDoGatilho,
-    valores: dados.valores.filter(
-      item =>
-        alcanca(item) &&
-        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
+    alvo,
+    gatilho: alvoDoRamo ? null : tipoDoGatilho,
+    valores: [
+      ...dados.valores.filter(item => alcanca(item) && daReuniao(item)),
+      ...(alvoDoRamo && dados.alvos?.[doGatilho]
+        ? daOrigem(
+            dados.valores,
+            dados.alvos[doGatilho],
+            doGatilho === 'Conversation' && !podeLerCard
+          )
+        : []),
+    ],
+    passos: (dados.passos || []).filter(passo =>
+      caminhoNoAlvo(passo, basesDaAcao(alvo, bases))
     ),
   };
 };
@@ -211,7 +291,8 @@ export const doAlvoDoGatilho = (
 // #2679 — o texto que um "escrever" ou "resumir" da receita produz vira um dado
 // que os passos seguintes leem (`ia.<id>`). O rótulo diz qual: a instrução do
 // "escrever", ou "Resumo da IA"; dois iguais levam o id junto (comChaveSeRepetido).
-// Antes de o passo rodar, o dado está vazio e o passo que o lê pula.
+// Antes de o passo rodar, o dado está vazio e o passo que o lê pula. O "para cada
+// item" (G24) deixa dois: quantos itens e os nomes (`ia.<id>.quantos`, `.nomes`).
 const CABE_NO_ROTULO = 40;
 const rotuloDoTexto = (passo, t) => {
   if (passo.tipo === 'resumir')
@@ -226,14 +307,73 @@ const rotuloDoTexto = (passo, t) => {
     : t('AUTOMACAO_LIVRE.IA.TEXTO_DA_IA.ESCREVER_SEM_INSTRUCAO');
 };
 
-export const comTextosDaIa = (dados, passos, t) => {
-  if (!dados?.valores) return dados;
-  const textos = todosOsPassos(passos)
-    .filter(passo => ['escrever', 'resumir'].includes(passo.tipo))
-    .map(passo => ({
-      caminho: `ia.${passo.id}`,
-      chave: passo.id,
-      rotulo: rotuloDoTexto(passo, t),
+// G44 (#2756) — o link da agenda de uma página escolhida (`agenda.<id>`), um
+// dado por página da conta (useAgendasDaConta), com o rótulo pronto. A escolha
+// (`soAsQueMarcam`) só oferece a página que recebe reserva (a regra de
+// Crm::BookingV2::InvitePages::SERVES); a frase dos passos mostra o nome de
+// qualquer uma. O salvar confere a página e a permissão de novo.
+const PAGINA_QUE_MARCA = ['ativa', 'agenda_pausada'];
+export const comAgendas = (
+  dados,
+  paginas,
+  t,
+  { soAsQueMarcam = false } = {}
+) => {
+  if (!dados?.valores || !paginas?.length) return dados;
+  const agendas = paginas
+    .filter(
+      pagina => !soAsQueMarcam || PAGINA_QUE_MARCA.includes(pagina.ai_status)
+    )
+    .map(pagina => ({
+      caminho: `agenda.${pagina.id}`,
+      chave: String(pagina.id),
+      rotulo: t('AUTOMACAO_LIVRE.VALORES.AGENDA_DA_PAGINA', {
+        titulo: pagina.title,
+      }),
     }));
-  return { ...dados, valores: [...dados.valores, ...textos] };
+  return { ...dados, valores: [...dados.valores, ...agendas] };
+};
+
+// G49 — o registro que um passo cria (o card do "criar card", o contato de uma
+// ação que cria contato) vira um dado dos passos seguintes: `criado.<id>`, o id
+// dele. `criado` diz o tipo, para a peça que só aceita contato. A mesma lista
+// fechada do servidor (RegistroCriado).
+const ACOES_QUE_CRIAM = {
+  'POST contacts': 'Contact',
+  'POST crm/cards/:card_id/contact': 'Contact',
+};
+export const tipoCriado = passo => {
+  if (passo?.tipo === 'card') return 'Crm::Card';
+  return (passo?.tipo === 'acao' && ACOES_QUE_CRIAM[passo.acao]) || null;
+};
+const ROTULO_DO_CRIADO = { Contact: 'CONTATO', 'Crm::Card': 'CARD' };
+
+// `achatar`: como a lista vira os passos de onde vêm os textos; o "Alterar"
+// passa a lista já pronta da execução do passo (passosDaExecucao, G18). Junto
+// com os textos da IA vêm os registros criados (G49): os dois ficam na execução.
+export const comTextosDaIa = (dados, passos, t, achatar = todosOsPassos) => {
+  if (!dados?.valores) return dados;
+  const lista = achatar(passos);
+  const textos = lista.flatMap(passo => {
+    if (passo.tipo === 'para_cada') return valoresDoParaCada(passo, t);
+    if (!['escrever', 'resumir'].includes(passo.tipo)) return [];
+    return [
+      {
+        caminho: `ia.${passo.id}`,
+        chave: passo.id,
+        rotulo: rotuloDoTexto(passo, t),
+      },
+    ];
+  });
+  const criados = lista
+    .filter(passo => tipoCriado(passo))
+    .map(passo => ({
+      caminho: `criado.${passo.id}`,
+      chave: passo.id,
+      criado: tipoCriado(passo),
+      rotulo: t(
+        `AUTOMACAO_LIVRE.CRIADO.${ROTULO_DO_CRIADO[tipoCriado(passo)]}`
+      ),
+    }));
+  return { ...dados, valores: [...dados.valores, ...textos, ...criados] };
 };

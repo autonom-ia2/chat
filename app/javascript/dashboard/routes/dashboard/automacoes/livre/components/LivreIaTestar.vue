@@ -19,8 +19,13 @@ const props = defineProps({
   // { media, vezes } dos últimos 30 dias; ausente quando ainda não rodou.
   custo: { type: Object, default: null },
   mostraCusto: { type: Boolean, default: false },
+  // G63: o passo está no galho "a cada mensagem do cliente": vai à IA uma vez
+  // por mensagem. O aviso vale para todos, não só para quem vê o custo.
+  porMensagem: { type: Boolean, default: false },
   // O passo está completo (o mesmo que libera o "Salvar").
   pronto: { type: Boolean, default: false },
+  // A automação já salva (nil na nova): o servidor confere quem a ligou.
+  automacaoId: { type: Number, default: null },
 });
 
 const { t, locale } = useI18n();
@@ -60,6 +65,7 @@ const pedir = conversaId =>
     receita: props.receita,
     passoId: props.passo.id,
     conversaId,
+    automacaoId: props.automacaoId,
   });
 
 // A mesma conversa nunca aparece duas vezes, mesmo se o servidor repetir.
@@ -144,6 +150,13 @@ const nomeDaConversa = conversa =>
     data-ia-testar
     class="flex flex-col gap-3 p-4 border rounded-xl border-n-weak bg-n-alpha-1"
   >
+    <p
+      v-if="porMensagem"
+      data-ia-por-mensagem
+      class="mb-0 text-sm text-n-amber-11"
+    >
+      {{ $t(`${I}.CUSTO.POR_MENSAGEM`) }}
+    </p>
     <p v-if="mostraCusto" data-ia-custo class="mb-0 text-sm text-n-slate-11">
       <span class="i-lucide-coins size-4 align-[-2px]" aria-hidden="true" />
       {{

@@ -1,10 +1,11 @@
 # Quem a reunião de um card acorda (G32, #2710): as execuções paradas num "esperar até" no próprio card, nos outros
 # cards do mesmo contato, no contato e nas conversas dele. A página de agendamento põe a reunião no card aberto do funil
 # e, sem ele (o card já ganho), cria outro; quem espera no card ganho lê `contato.tem_reuniao_marcada` e precisa
-# acordar com a reunião do card novo. Só acorda o "esperar até" cuja condição lê um dos valores de reunião: a espera
+# acordar com a reunião do card novo. O resultado da reunião (G56) acorda quem espera `contato.reuniao_atendida` (G59)
+# pelo mesmo caminho. Só acorda o "esperar até" cuja condição lê um dos valores de reunião: a espera
 # pela resposta do cliente não é reservada à toa a cada reunião do contato.
 module Autonomia::Automacao::EsperaDaReuniao
-  VALORES = %w[card.tem_reuniao_marcada contato.tem_reuniao_marcada].freeze
+  VALORES = %w[card.tem_reuniao_marcada contato.tem_reuniao_marcada contato.reuniao_atendida].freeze
 
   module_function
 

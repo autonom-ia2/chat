@@ -27,9 +27,11 @@ module Autonomia::Automacao::Gatilhos
   CONTATO = 'Contact'.freeze
   CONTA = 'Account'.freeze
   DA_DATA = %w[campo dias quando hora repete].freeze
-  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
-  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
+  DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes data hora selecao].freeze
+  DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
+  # O card atualizado (G27, #2661): a `mudanca` é o campo e a condição (Autonomia::Automacao::MudancaDoCard).
+  ATUALIZADO = 'card.atualizado'.freeze
 
   LISTA = [
     Entrada.new(tipo: 'conversa.criada', alvo: 'Conversation', origem: :evento, parametros: []),
@@ -42,9 +44,15 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.ganho', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.perdido', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: ATUALIZADO, alvo: CARD, origem: :evento, parametros: %w[mudanca]),
     Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
+    # G9 (#2707): mudou quem cuida do card, o dono ou o time (Autonomia::Automacao::TrocaNoCard).
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNoCard::TIME, alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    # G56: o primeiro "Aconteceu" da reunião na Agenda (ReuniaoDaAtividade.atendida_agora?).
+    Entrada.new(tipo: 'card.reuniao_atendida', alvo: CARD, origem: :evento, parametros: %w[funil_id pagina_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA),
@@ -56,24 +64,37 @@ module Autonomia::Automacao::Gatilhos
   ].index_by(&:tipo).freeze
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
-  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação.
+  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação. O "atualizado" (G27) não vem
+  # do emissor: nasce do próprio card (Autonomia::Automacao::CardAtualizado), na criação e em toda edição. A troca de
+  # quem cuida (G9) também: o evento é o próprio tipo (TrocaNoCard).
   DO_EVENTO_DO_CARD = {
     Events::Types::CRM_CARD_CREATED => %w[card.criado card.entrou_na_etapa],
+    Events::Types::CRM_CARD_UPDATED => [ATUALIZADO],
     Events::Types::CRM_CARD_MOVED => %w[card.saiu_da_etapa card.entrou_na_etapa],
     Events::Types::CRM_CARD_WON => %w[card.ganho],
     Events::Types::CRM_CARD_LOST => %w[card.perdido],
     Events::Types::CRM_MEETING_SCHEDULED => %w[card.reuniao_marcada],
     Events::Types::CRM_MEETING_RESCHEDULED => %w[card.reuniao_remarcada],
-    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada]
+    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada],
+    ::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL => [::Autonomia::Automacao::TrocaNoCard::RESPONSAVEL],
+    ::Autonomia::Automacao::TrocaNoCard::TIME => [::Autonomia::Automacao::TrocaNoCard::TIME],
+    Events::Types::CRM_MEETING_OUTCOME_RECORDED => %w[card.reuniao_atendida]
   }.freeze
 
   # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou (no lembrete,
-  # #2709, a reunião da marca).
-  DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada card.antes_da_reuniao].freeze
+  # #2709, a reunião da marca). A atendida (G56) está aqui: o resultado da reunião também acorda quem espera nela
+  # (Escuta#acordar_o_card, EsperaDaReuniao.no_card?), e a espera relê a condição.
+  DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada card.reuniao_atendida card.antes_da_reuniao].freeze
+  ATENDIDA = 'card.reuniao_atendida'.freeze
   LEMBRETE = 'card.antes_da_reuniao'.freeze
 
   # O pedaço da marca entre o tipo e o id da atividade (marca_da_atividade).
   ATIVIDADE = 'atividade'.freeze
+
+  # G50: o que fazer quando o gatilho acontece de novo com uma execução da mesma automação ainda aberta no alvo
+  # (`se_repetir` no esquema). Sem a escolha, vale "ignora" (uma aberta só, como sempre foi); "comeca_outra" abre outra
+  # execução, paralela.
+  COMECA_OUTRA = 'comeca_outra'.freeze
 
   module_function
 
@@ -116,8 +137,10 @@ module Autonomia::Automacao::Gatilhos
   end
 
   # Cada parâmetro escolhido no gatilho (`gatilho` da receita) bate com o que o evento traz (`dados`)? O que a pessoa
-  # deixou em branco vale para qualquer valor.
+  # deixou em branco vale para qualquer valor. No card atualizado, a mudança escolhida aconteceu (`dados['mudancas']`).
   def casa?(gatilho, dados)
+    return ::Autonomia::Automacao::MudancaDoCard.casa?(gatilho['mudanca'].to_h, dados['mudancas']) if gatilho['tipo'] == ATUALIZADO
+
     entrada(gatilho['tipo'])&.parametros.to_a.all? do |nome|
       gatilho[nome].nil? || gatilho[nome].to_i == dados[nome].to_i
     end
@@ -129,6 +152,13 @@ module Autonomia::Automacao::Gatilhos
   end
 
   def de_reuniao?(tipo) = DE_REUNIAO.include?(tipo.to_s)
+
+  # G50: o gatilho aceita "começa outra vez"? Só os de evento, menos a mensagem nova: a mensagem numa conversa com a
+  # execução aberta é o caso comum, e uma execução por mensagem seria laço. Os da varredura já têm o fato na marca.
+  def pode_repetir?(tipo) = entrada(tipo)&.origem == :evento && tipo.to_s != 'mensagem.criada'
+
+  # A receita pede outra execução quando o gatilho se repete (`se_repetir`, G50)?
+  def comeca_outra?(gatilho) = gatilho.to_h['se_repetir'] == COMECA_OUTRA
 
   # O mesmo movimento dispara "saiu" e "entrou": o tipo entra na marca para cada um ter a sua.
   def marca_da_atividade(tipo, activity_id) = "#{tipo}:#{ATIVIDADE}:#{activity_id}"
@@ -155,9 +185,22 @@ module Autonomia::Automacao::Gatilhos
   end
 
   # O recorrente: uma vez por ocorrência e alvo; o da conta, uma vez por ocorrência. A ocorrência em UTC: a hora local
-  # ambígua do horário de verão não repete nem pula.
-  def marca_do_recorrente(tipo, alvo_id, ocorrencia)
-    marca = "recorrente:#{ocorrencia.utc.iso8601}:#{tipo}"
+  # ambígua do horário de verão não repete nem pula. A do uma_vez (#2681) é a data, sem a hora: mudar só a hora depois
+  # do disparo não manda de novo; mudar a data é outra ocorrência.
+  def marca_do_recorrente(tipo, alvo_id, ocorrencia, data: nil)
+    marca = marca_da_vez(tipo, ocorrencia, data: data)
     da_conta?(tipo) ? marca : "#{marca}:#{alvo_id}"
+  end
+
+  # A vez de um recorrente de card ou contato (G55): a marca do recorrente sem o alvo. No uma_vez, a data (#2681), como
+  # no marca_do_recorrente: mudar só a hora reaproveita a vez.
+  def marca_da_vez(tipo, ocorrencia, data: nil) = "recorrente:#{data || ocorrencia.utc.iso8601}:#{tipo}"
+
+  # A ocorrência de uma marca de marca_do_recorrente de card ou contato: a marca sem o alvo, a mesma para todos os
+  # alvos daquela vez (G55: a campanha da vez é uma só). nil em marca de outro formato.
+  def ocorrencia_da_marca(marca, alvo_id)
+    fim = ":#{alvo_id}"
+    texto = marca.to_s
+    texto.delete_suffix(fim) if texto.start_with?('recorrente:') && texto.end_with?(fim)
   end
 end

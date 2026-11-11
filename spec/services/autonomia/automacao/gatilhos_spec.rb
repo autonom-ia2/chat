@@ -21,4 +21,17 @@ RSpec.describe Autonomia::Automacao::Gatilhos do
     expect(described_class.marca_do_despacho('conversa.aberta', conversa, Time.zone.parse('2026-11-03 10:00:00.123457 -03:00')))
       .not_to eq(described_class.marca_do_despacho('conversa.aberta', conversa, instante))
   end
+
+  # G55: a vez do recorrente de card ou contato é a marca sem o alvo, a mesma para todos os cards daquela vez.
+  it 'tira a vez da marca do recorrente de card ou contato; outra marca não tem vez' do
+    instante = Time.zone.parse('2026-11-01 12:00:00 UTC')
+    marca = described_class.marca_do_recorrente('card.recorrente', 12, instante)
+
+    expect(described_class.ocorrencia_da_marca(marca, 12)).to eq('recorrente:2026-11-01T12:00:00Z:card.recorrente')
+    expect(described_class.ocorrencia_da_marca(described_class.marca_do_recorrente('card.recorrente', 34, instante), 34))
+      .to eq(described_class.ocorrencia_da_marca(marca, 12))
+    expect(described_class.ocorrencia_da_marca(marca, 2)).to be_nil
+    expect(described_class.ocorrencia_da_marca('card.ganho:atividade:12', 12)).to be_nil
+    expect(described_class.ocorrencia_da_marca(nil, 12)).to be_nil
+  end
 end

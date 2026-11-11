@@ -729,6 +729,24 @@
     },
     "TUNE": {
       "GREETING_PLACEHOLDER": "Hi! How are you? How can I help with your health plan?"
+    },
+    "VITRINE": {
+      "DESTAQUE": {
+        "RAMO": "Most used by people who work with health plans"
+      },
+      "FERRAMENTAS": {
+        "FIPE": {
+          "USE_QUANDO": "Use when the customer wants to know how much a car, motorcycle or truck is worth.",
+          "CLIENTE": "How much is my 2020 Onix worth?",
+          "AGENTE": "The 2020 Onix LT 1.0 is worth R$ 60,822 in this month's table."
+        },
+        "CEP": {
+          "USE_QUANDO": "Use when the customer gives a ZIP code or the plan holder's address needs completing."
+        },
+        "CPF": {
+          "USE_QUANDO": "Use when the customer gives the CPF of the plan holder or a dependent, to check the number is right."
+        }
+      }
     }
   },
   "RELATIONSHIPS": {
@@ -1326,6 +1344,22 @@
     },
     "GATILHO_COM": {
       "CARD_GANHO": "When a plan in {funil} is implemented"
+    },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "With the plan implemented"
+      }
+    },
+    "PASSOS": {
+      "CARD_FECHAR": "Mark whether the plan was implemented"
+    },
+    "CAMPOS": {
+      "RESULT": "Was the plan implemented?"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Implemented"
+      }
     },
     "SELECAO": {
       "SITUACOES": {

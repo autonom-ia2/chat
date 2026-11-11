@@ -6,6 +6,14 @@
 # - Equipe: a mesma régua da IA que responde (Autonomia::Agents::Operate::PessoaDaEquipe): pessoa da equipe escrevendo
 #   ao cliente, ou o eco do que ela mandou pelo app do celular. Não contam a nota, o robô, o envio automático em nome
 #   de alguém (follow-up, campanha, regra), a mensagem da própria automação nem a que falhou: o cliente não a recebeu.
+# - Responsável (lote 4, #2682): a mesma régua, só da pessoa atribuída à conversa na hora da conferência ("espera a
+#   Fernanda", depois de passar a conversa para ela). O eco do celular não conta: ele não diz quem mandou.
+# - Gatilho repetiu (lote 4): o gatilho da execução aconteceu de novo durante a espera (a 2ª falta dentro dos 30 dias).
+#   A Partida grava a hora em `repetiu_em` (Despertador.gatilho_repetiu, só na receita que lê a repetição); lida do
+#   banco, porque a execução em memória é de antes da repetição.
+# - Documento (G46, exemplo 14): mensagem recebida com foto ou PDF (FotoOuPdf, a régua do `mensagem.tem_anexo`), só na
+#   conversa da execução, a mesma que o `le: anexos` lê, e só se quem ligou a vê. Texto e áudio ("já mando") não contam.
+# - Reunião atendida (G59): o primeiro "Aconteceu" de uma reunião do contato durante a espera (ValoresDaReuniao).
 #
 # O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
 # reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
@@ -19,25 +27,89 @@
 # não conta agora. A espera segue; no prazo, a varredura confere de novo a janela inteira, com o id já gravado: o eco
 # da bolha é descartado, e o de uma pessoa conta (atrasado, no prazo).
 module Autonomia::Automacao::Resposta
+  # O marco do G31 guarda também as mensagens do cliente gravadas nestes últimos segundos antes da leitura: a que já
+  # tinha o id reservado e só ficou visível depois (commit atrasado) cai nesta margem e conta, sem recontar a que a IA leu.
+  MARGEM_DO_MARCO = 10.seconds
+
   module_function
 
   # Os valores que a condição do "esperar até" lê (Valores::RESPOSTA). Cada um recebe o Contexto da execução, a janela
   # da espera e quem ligou, e trata o vazio (sem contato, sem conversa) como "não respondeu".
   VALORES = {
     'conversa.cliente_respondeu' => ->(contexto, espera, quem) { cliente?(contexto.contato, espera, quem) },
-    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) }
+    'conversa.equipe_respondeu' => ->(contexto, espera, _quem) { equipe_na?(contexto.conversa, espera) },
+    'conversa.responsavel_respondeu' => ->(contexto, espera, _quem) { responsavel?(contexto.conversa, espera) },
+    'gatilho.repetiu' => ->(contexto, espera, _quem) { repetiu?(contexto.execucao, espera) },
+    'conversa.cliente_mandou_documento' => ->(contexto, espera, quem) { documento?(contexto.conversa, espera, quem) },
+    'contato.reuniao_atendida' => lambda do |contexto, espera, quem|
+      ::Autonomia::Automacao::ValoresDaReuniao.atendida_no_contato?(contexto.contato, espera, quem)
+    end
   }.freeze
 
   # Em qualquer conversa do contato na conta que `quem` (quem ligou) vê, pelo filtro da lista de conversas (#2680): o
   # e-mail da automação abre uma conversa nova, e a resposta chega nela. A resposta numa caixa que quem ligou não abre
   # não decide o ramo (parecer da Funções). Sem contato, ou sem quem ligou, nunca respondeu.
   def cliente?(contato, espera, quem)
-    return false if contato.nil? || quem.nil?
+    recebidas = do_cliente(contato, quem)
+    !recebidas.nil? && na_janela(recebidas, espera).exists?
+  end
+
+  # O "decidir" que decide de novo (G31): a resposta depois do `marco` (Resposta.marco) e até `ate` (sem fim na
+  # primeira conferência). Nova é a de id maior que o último lido (gravada depois da leitura, mesmo com `created_at` de
+  # antes) ou a gravada na margem antes da leitura que não estava visível nela (id reservado antes, commit depois).
+  def cliente_depois?(contato, marco, ate, quem)
+    recebidas = do_cliente(contato, quem)
+    return false if recebidas.nil?
+
+    novas = novas_desde(recebidas, marco)
+    (ate ? novas.where('messages.created_at <= ?', ate) : novas).exists?
+  end
+
+  # As mensagens de `escopo` que o `marco` não viu: id maior que o último lido, ou gravadas na margem antes dele sem
+  # estar entre as vistas. A régua do G31 e dos anexos novos do G46 (AnexosDaConversa), numa consulta só.
+  def novas_desde(escopo, marco)
+    na_margem = escopo.where('messages.created_at > ?', inicio_da_margem(marco)).where.not(id: marco.fetch('lidas_na_margem'))
+    escopo.where('messages.id > ?', marco.fetch('lido_ate')).or(na_margem)
+  end
+
+  # O marco da leitura do G31, como fica gravado no registro: o id da última mensagem do cliente visível agora (0 sem
+  # nenhuma), o instante e os ids das visíveis gravadas na margem antes dele (poucas: a margem é de segundos). Os dois
+  # saem da mesma consulta (o mesmo retrato do banco): a mensagem que comita no meio não fica entre um e outro.
+  def marco(contato, quem, agora = Time.current)
+    ultimo, lidas = do_cliente(contato, quem)&.reorder(nil)&.pick(Arel.sql('MAX(messages.id)'), margem_agregada(agora))
+    { 'lido_ate' => ultimo.to_i, 'lido_em' => agora.iso8601(6), 'lidas_na_margem' => Array(lidas) }
+  end
+
+  def margem_agregada(agora)
+    filtro = ['ARRAY_AGG(messages.id ORDER BY messages.id) FILTER (WHERE messages.created_at > ?)', agora - MARGEM_DO_MARCO]
+    Arel.sql(::Message.sanitize_sql_array(filtro))
+  end
+
+  def inicio_da_margem(marco) = Time.zone.parse(marco.fetch('lido_em')) - MARGEM_DO_MARCO
+
+  # As mensagens recebidas do contato nas conversas que quem ligou vê; nil sem contato ou sem quem ligou.
+  def do_cliente(contato, quem)
+    return if contato.nil? || quem.nil?
 
     conta = contato.account
     do_contato = ::Conversation.where(account_id: conta.id, contact_id: contato.id)
-    conversas = ::Conversations::PermissionFilterService.new(do_contato, quem, conta, for_reading: true).perform.select(:id)
-    na_janela(::Message.incoming.where(account_id: conta.id, conversation_id: conversas), espera).exists?
+    conversas = conversas_que_ve(do_contato, quem, conta).select(:id)
+    ::Message.incoming.where(account_id: conta.id, conversation_id: conversas)
+  end
+
+  # As conversas de `escopo` que `quem` vê, pelo filtro da lista de conversas (#2680). É a régua do "cliente
+  # respondeu" e do "cliente mandou documento" (G46).
+  def conversas_que_ve(escopo, quem, conta)
+    ::Conversations::PermissionFilterService.new(escopo, quem, conta, for_reading: true).perform
+  end
+
+  # Sem conversa (o card sem conversa principal) ou sem quem ligou, nenhum documento chegou.
+  def documento?(conversa, espera, quem)
+    return false if conversa.nil? || quem.nil?
+    return false unless conversas_que_ve(::Conversation.where(id: conversa.id), quem, conversa.account).exists?
+
+    recebidas = ::Message.incoming.where(account_id: conversa.account_id, conversation_id: conversa.id)
+    na_janela(::Autonomia::Automacao::FotoOuPdf.escopo(recebidas), espera).exists?
   end
 
   # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.
@@ -50,6 +122,20 @@ module Autonomia::Automacao::Resposta
     na_janela(candidatas, espera).find_each.any? do |mensagem|
       equipe.da_pessoa?(mensagem) || (equipe.eco_do_celular?(mensagem) && eco_de_pessoa?(mensagem))
     end
+  end
+
+  def responsavel?(conversa, espera)
+    return false if conversa.nil? || conversa.assignee_id.nil?
+
+    candidatas = conversa.messages.chat.outgoing.where(sender_type: 'User', sender_id: conversa.assignee_id).where.not(status: :failed)
+    na_janela(candidatas, espera).find_each.any? { |mensagem| ::Autonomia::Agents::Operate::PessoaDaEquipe.da_pessoa?(mensagem) }
+  end
+
+  def repetiu?(execucao, espera)
+    return false if execucao.nil?
+
+    em = ::Autonomia::Automacao::Execucao.where(id: execucao.id).where('repetiu_em > ?', espera.begin)
+    (espera.end ? em.where('repetiu_em <= ?', espera.end) : em).exists?
   end
 
   def eco_de_pessoa?(eco) = !eco_do_que_saiu_daqui?(eco) && !saida_nossa_sem_id_antes?(eco)

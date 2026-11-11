@@ -30,6 +30,9 @@ module TextoAoCliente
       { tipo: :outro, motivo: 'o mapa ou o cartão de contato da página que o modelo pediu pela ferramenta (#1479 F3): ' \
                               'conteúdo vazio com o formato, ou só a versão em texto do cartão (nome, endereço, link do ' \
                               'mapa; nome e telefone), feita do dado da página, sem frase nossa' },
+    'app/services/autonomia/agents/operate/interacao_depois_do_audio.rb::Autonomia::Agents::Operate::InteracaoDepoisDoAudio#construir!' =>
+      { tipo: :fala_do_modelo, motivo: 'a interação da resposta em voz (as opções, o link ou o pedido de localização que o ' \
+                                       'modelo escreveu), postada depois que o áudio saiu (#1479)' },
     'app/services/autonomia/agents/operate/nao_suportada.rb::Autonomia::Agents::Operate::NaoSuportada#nota' =>
       { tipo: :nota_privada, motivo: 'a mensagem "não suportada" que o WhatsApp API não recuperou, para a equipe (#1489)' },
     'app/services/autonomia/agents/operate/reaction_materializer.rb::Autonomia::Agents::Operate::ReactionMaterializer#call' =>
@@ -52,10 +55,11 @@ module TextoAoCliente
     'app/services/autonomia/automacao/passo_de_email.rb::Autonomia::Automacao::PassoDeEmail#mandar' =>
       { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "email" da automação (#2414 G2), ao contato ' \
                               'pela caixa de e-mail da conta: nunca texto nosso; a receita de ramo não o usa' },
-    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar' =>
+    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar_aqui' =>
       { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "mensagem" da automação (#2414 F4), ou o que ' \
-                              'o modelo escreveu no passo "escrever" (#2500 F7): nunca texto nosso; a receita de ramo não ' \
-                              'usa nenhum dos dois' },
+                              'o modelo escreveu no passo "escrever" (#2500 F7), na conversa do alvo, na nova (#2680) ou ' \
+                              'na do número novo do contato (G43): nunca texto nosso; a receita de ramo não usa nenhum ' \
+                              'dos dois' },
     'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar_modelo' =>
       { tipo: :outro, motivo: 'o modelo aprovado na Meta que o dono da conta escolheu no passo "mensagem", com os valores ' \
                               'que ele pôs em cada variável (#2468): nunca texto nosso' },

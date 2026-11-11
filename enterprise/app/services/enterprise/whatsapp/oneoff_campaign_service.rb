@@ -1,6 +1,5 @@
 module Enterprise::Whatsapp::OneoffCampaignService
-  # Motivo gravado no destinatário pulado porque o contato recusou mensagens ativas (chat#737).
-  OPTED_OUT_REASON = 'opted_out'.freeze
+  RECIPIENT_BATCH_SIZE = 1000
 
   def perform
     validate_campaign!
@@ -14,7 +13,9 @@ module Enterprise::Whatsapp::OneoffCampaignService
   def process_recipient(recipient)
     contact = recipient.contact
     Rails.logger.info "Processing contact: #{contact.name} (#{contact.phone_number})"
-    return recipient.mark_skipped!(OPTED_OUT_REASON) if contact_opted_out_now?(contact)
+    # Pulado com o motivo: 'opted_out' (recusou mensagens ativas, chat#737) ou 'blocked' (bloqueado, chat#2733).
+    refusal = campaign_refusal_now(contact)
+    return recipient.mark_skipped!(refusal) if refusal
 
     destination, destination_error = campaign_destination(contact)
     if destination.blank?
@@ -43,16 +44,26 @@ module Enterprise::Whatsapp::OneoffCampaignService
     processed_template_params
   end
 
+  # Fork (#2686): one insert per batch of contacts, not one find_or_create_by! per contact (the "all contacts" audience
+  # of an automation campaign is the whole account). Idempotent by the (campaign_id, contact_id) unique index: a contact
+  # that already has a recipient keeps it. Returns the recipients walked in batches, never the whole list in memory.
   def create_recipients(audience_labels)
-    contacts = campaign.account.contacts.tagged_with(audience_labels, any: true)
+    contacts = label_audience_contacts(audience_labels)
     Rails.logger.info "Processing #{contacts.count} contacts for campaign #{campaign.id}"
 
-    contacts.find_each.map do |contact|
-      campaign.campaign_recipients.find_or_create_by!(contact: contact) do |recipient|
-        recipient.account = campaign.account
-        recipient.inbox = campaign.inbox
-      end
+    contacts.in_batches(of: RECIPIENT_BATCH_SIZE) { |batch| insert_label_recipients(batch.order(:id).pluck(:id)) }
+    campaign.campaign_recipients.where(contact_id: contacts.reselect(:id)).includes(:contact).find_each(batch_size: RECIPIENT_BATCH_SIZE)
+  end
+
+  def insert_label_recipients(contact_ids)
+    return if contact_ids.empty?
+
+    now = Time.current
+    rows = contact_ids.map do |contact_id|
+      { account_id: campaign.account_id, campaign_id: campaign.id, contact_id: contact_id, inbox_id: campaign.inbox_id,
+        created_at: now, updated_at: now }
     end
+    CampaignRecipient.insert_all(rows, unique_by: %i[campaign_id contact_id]) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def process_recipients(recipients)

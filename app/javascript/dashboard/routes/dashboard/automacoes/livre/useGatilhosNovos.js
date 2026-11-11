@@ -16,7 +16,10 @@ import { useEscolhasDosGatilhos } from './useEscolhasDosGatilhos';
 // O que cada leitura traz, pelas peças que a pedem, e o aviso se ela falhar.
 const LEITURAS = [
   { pecas: ['etapa', 'funil', 'selecao'], erro: 'GATILHO_DO_CARD.ERRO_FUNIS' },
-  { pecas: ['campo'], erro: 'GATILHO_DE_TEMPO.ERRO_CAMPOS' },
+  // G22: a seleção do recorrente pede também os campos de marcar do card.
+  { pecas: ['campo', 'selecao'], erro: 'GATILHO_DE_TEMPO.ERRO_CAMPOS' },
+  // G27: o "card atualizado" (mudanca) escolhe entre os campos do card.
+  { pecas: ['mudanca'], erro: 'MUDANCA.ERRO_CAMPOS' },
   { pecas: ['pagina'], erro: 'GATILHO_DE_REUNIAO.ERRO_PAGINAS' },
 ];
 
@@ -55,13 +58,15 @@ export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {
       ? catalogo.value.gatilhos.filter(liberado).map(semPaginaSeNaoLe)
       : null
   );
-  // As peças que os gatilhos oferecidos pedem (etapa, funil, campo...).
+  // As peças que os gatilhos oferecidos pedem (etapa, funil, campo...). G60:
+  // as páginas também para a página de agenda de reserva, para quem as lê.
   const pecasPedidas = computed(() => [
-    ...new Set(
-      (gatilhos.value || []).flatMap(item =>
+    ...new Set([
+      ...(gatilhos.value || []).flatMap(item =>
         (item.parametros || []).map(parametro => parametro.peca)
-      )
-    ),
+      ),
+      ...(lePaginas.value ? ['pagina'] : []),
+    ]),
   ]);
 
   // Cada leitura uma vez, quando alguma peça passa a pedi-la (a flag e a

@@ -10,6 +10,8 @@
 # automação levam descrição (F3.10).
 # `fixos`: campo que a receita manda sempre com este valor (o atributo da conversa sem `merge` apagaria os outros).
 # `proibe`: campo que a receita não pode mandar; o ponto entra no campo de dentro (`objeto.campo`).
+# `um_de`: campo que a receita tem de mandar, com um destes valores, mesmo quando a plataforma aceita mais (fechar o
+# card: só ganho ou perdido; reabrir desfaz um desfecho sem ninguém olhando).
 #
 # Liberar uma ação vale pelo que ela faz quando uma pessoa clica: resolver a conversa dispara a pesquisa de satisfação
 # da caixa e as regras da conta; mover o card dispara as automações da etapa. É a cascata da D6, contada na cadeia
@@ -85,12 +87,15 @@ passo:
       POST conversations/:conversation_id/assignments: { proibe: [assignee_type] }
   crm/cards:
     motivo: >-
-      Alterar o card, movê-lo de etapa, ligar e desligar o contato e a conversa dele, e restaurar o arquivado (#2660
-      lote B). O `force` do restaurar fica fora: ele restaura mesmo com outro card aberto do cliente e duplica.
+      Alterar o card, movê-lo de etapa, fechá-lo como ganho ou perdido (G25, #2650) pela mesma porta da tela
+      (Crm::Cards::Closer), ligar e desligar o contato e a conversa dele, e restaurar o arquivado (#2660 lote B).
+      Reabrir fica fora. O `force` do fechar e do restaurar também: no restaurar, ele restaura mesmo com outro card
+      aberto do cliente e duplica.
     acoes:
       PATCH crm/cards/:id: {}
       PUT crm/cards/:id: {}
       POST crm/cards/:id/move: {}
+      POST crm/cards/:id/close: { um_de: { result: [won, lost] }, proibe: [force] }
       POST crm/cards/:id/link_contact: {}
       POST crm/cards/:id/unlink_contact: {}
       POST crm/cards/:id/link_conversation: {}
@@ -194,6 +199,7 @@ fora:
       - autonomia/agents/playground
       - autonomia/agents/sources
       - autonomia/agents/tools
+      - autonomia/ferramentas_prontas
       - autonomia/quem_atende
       - autonomia/conversation_copilot
       - autonomia/text_copilot
@@ -260,6 +266,7 @@ fora:
       - crm/meta_ads_whatsapp_reports
       - crm/meta_ads_ad_management
       - crm/meta_ads_creation
+      - crm/meta_ads_ad_care
       - crm/meta_ads_cuidado
       - crm/meta_ads_lead_forms
       - crm/meta_ads_site_pages
@@ -286,6 +293,7 @@ fora:
       - automation_rules
       - autonomia/automacoes
       - autonomia/automacoes_ia
+      - autonomia/automacoes_webhook
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias
@@ -349,6 +357,7 @@ fora:
       - conversations/passar_para
       - conversa_canal/pastas_do_email
       - autonomia/avisos
+      - autonomia/prospecting/audiences
       - autonomia/prospecting/lead_audiences
       - autonomia/prospecting/lead_batches
       - autonomia/prospecting/lead_consent_refusals

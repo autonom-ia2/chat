@@ -18,6 +18,8 @@ export const KNOWLEDGE_BASE_VIEW_PERMISSION = 'knowledge_base_view';
 export const AUTONOMIA_PERMISSIONS = ['autonomia_view', 'autonomia_manage'];
 // #2251 — painel de desempenho do agente (e a exportação dele): só ver, chave própria, independente de agentes.
 export const DESEMPENHO_VIEW_PERMISSION = 'desempenho_view';
+// #1430 — ferramentas dos agentes: chave protegida, separada de Agentes (quem a tem escolhe para onde vão dados das conversas).
+export const AUTONOMIA_TOOLS_MANAGE_PERMISSION = 'autonomia_tools_manage';
 export const CONTACT_EXPORT_PERMISSION = 'contact_export';
 export const CAMPAIGN_PERMISSIONS = ['campaign_view', 'campaign_manage'];
 export const INBOX_PERMISSIONS = ['inbox_view', 'inbox_manage'];

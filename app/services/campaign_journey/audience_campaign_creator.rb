@@ -22,11 +22,14 @@ class CampaignJourney::AudienceCampaignCreator
   # A schedule a little in the past (clock skew, slow form) still counts as "now".
   SCHEDULE_TOLERANCE = 5.minutes
 
-  def initialize(account:, campaign_import:, channel:, attributes:)
+  # `sender`: who the campaign speaks as (Campaign#sender; each sent message carries it). Optional: the campaigns
+  # screen does not set it; the automation (G58) passes who turned it on.
+  def initialize(account:, campaign_import:, channel:, attributes:, sender: nil)
     @account = account
     @campaign_import = campaign_import
     @channel = channel.to_s
     @attributes = attributes.to_h.with_indifferent_access
+    @sender = sender
   end
 
   def perform
@@ -62,7 +65,7 @@ class CampaignJourney::AudienceCampaignCreator
   def validate_feature!; end
 
   def create_campaign_and_link!
-    campaign = @account.campaigns.create!(campaign_attributes)
+    campaign = @account.campaigns.create!(campaign_attributes.merge({ sender: @sender }.compact))
     CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import, **link_attributes)
     campaign
   end

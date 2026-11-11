@@ -20,7 +20,9 @@
       "LINK": "Link",
       "DATE": "Date",
       "LIST": "List",
-      "CHECKBOX": "Checkbox"
+      "CHECKBOX": "Checkbox",
+      "PESSOA": "Team member",
+      "CONTATO": "Contact"
     },
     "ADD": {
       "TITLE": "Add Custom Attribute",

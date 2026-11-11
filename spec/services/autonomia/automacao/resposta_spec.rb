@@ -410,4 +410,24 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
     expect(valores.new(alvo: conversa, quem: nil).ler('conversa.cliente_respondeu')).to be(false)
     expect(valores.new(alvo: sem_conversa, quem: nil, espera: (1.hour.ago..)).ler('conversa.equipe_respondeu')).to be(false)
   end
+
+  # G31 (#2800): o marco do "decidir" que decide de novo. O último id e os da margem saem da mesma leitura.
+  describe '.marco' do
+    it 'o último id e os ids da margem saem de uma consulta só às mensagens', :aggregate_failures do
+      antiga = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, created_at: 1.hour.ago)
+      recente = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming)
+      consultas = []
+      contar = ->(*, dados) { consultas << dados[:sql] if dados[:sql].include?('FROM "messages"') }
+
+      marco = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { described_class.marco(conversa.contact, admin) }
+
+      expect(consultas.size).to eq(1)
+      expect(marco).to include('lido_ate' => recente.id, 'lidas_na_margem' => [recente.id])
+      expect(marco['lidas_na_margem']).not_to include(antiga.id)
+    end
+
+    it 'sem mensagem do cliente, o marco é zero e a margem vazia' do
+      expect(described_class.marco(conversa.contact, admin)).to include('lido_ate' => 0, 'lidas_na_margem' => [])
+    end
+  end
 end

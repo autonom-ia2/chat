@@ -1,0 +1,36 @@
+{
+  "pasta": "docs/2778-duplicar-trocar/prints",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "1-duplicar",
+      "etapas": [
+        { "nome": "1-detalhe-cuidar", "url": "/app/accounts/{conta}/campaigns/meta-ads?anuncio=120000000000216101&demo=troca", "esperar": "[data-ad-care]", "pausa": 5000, "pagina_inteira": true },
+        { "nome": "2-confirmar-copia", "passos": [{ "clicar": "[data-ad-care-duplicate]" }, { "esperar": "[data-ad-care-duplicate-confirm]" }], "pausa": 1500 },
+        { "nome": "3-copia-pausada", "passos": [{ "clicar": "[data-ad-care-duplicate-confirm]" }, { "esperar": "[data-ad-care-copy]" }], "pausa": 1500 },
+        { "nome": "4-ativar-copia", "passos": [{ "clicar": "[data-ad-care-copy] [data-ad-status-toggle]" }, { "esperar": "[data-ad-status-confirm]" }], "pausa": 1500 }
+      ]
+    },
+    {
+      "nome": "2-trocar-foto-ou-texto",
+      "etapas": [
+        { "nome": "1-detalhe", "url": "/app/accounts/{conta}/campaigns/meta-ads?anuncio=120000000000216101&demo=troca&foto=1", "esperar": "[data-ad-care]", "pausa": 5000 },
+        { "nome": "2-foto-e-texto", "passos": [{ "clicar": "[data-ad-care-change]" }, { "esperar": "[data-ad-care-text]" }], "pausa": 2000 },
+        { "nome": "3-aviso-analise", "passos": [{ "clicar": "[data-ad-care-change-save]" }, { "esperar": "[data-ad-care-change-review]" }], "pausa": 1500 },
+        { "nome": "4-em-analise", "passos": [{ "clicar": "[data-ad-care-change-save]" }, { "esperar": "[data-ad-status-reviewing]" }], "pausa": 2500, "pagina_inteira": true }
+      ]
+    },
+    {
+      "nome": "3-trocar-cria-copia",
+      "etapas": [
+        { "nome": "1-detalhe-so-copia", "url": "/app/accounts/{conta}/campaigns/meta-ads?anuncio=120000000000216101&demo=so-copia&foto=1", "esperar": "[data-ad-care]", "pausa": 5000, "pagina_inteira": true },
+        { "nome": "2-foto-nova", "passos": [{ "clicar": "[data-ad-care-change]" }, { "esperar": "[data-ad-care-text]" }], "pausa": 2000 },
+        { "nome": "3-confirmar-copia", "passos": [{ "clicar": "[data-ad-care-change-save]" }, { "esperar": "[data-ad-care-change-review]" }], "pausa": 1500 },
+        { "nome": "4-copia-com-foto-nova", "passos": [{ "clicar": "[data-ad-care-change-save]" }, { "esperar": "[data-ad-care-copy-image]" }], "pausa": 1500 },
+        { "nome": "5-ativar-lembra-pausar", "passos": [{ "clicar": "[data-ad-care-copy] [data-ad-status-toggle]" }, { "esperar": "[data-ad-status-confirm]" }], "pausa": 1500 }
+      ]
+    }
+  ]
+}

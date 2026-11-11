@@ -120,6 +120,17 @@ RSpec.describe Autonomia::Automacao::ConversaNova, :automacao_motor do
       expect(Conversation.where(contact: contato)).to be_empty
     end
 
+    # Decisão 5 do Rodrigo: o contato bloqueado não recebe nada da automação (ConversaNova.recusa_do_contato).
+    it 'contato bloqueado: pula com o motivo próprio, sem abrir conversa', :aggregate_failures do
+      contato.update!(blocked: true)
+
+      execucao = rodar([oi], card)
+
+      expect(registros(execucao)).to eq([%w[oi pulado contato_bloqueado]])
+      expect(I18n.t('autonomia.automacao.motivos.contato_bloqueado', default: nil)).to be_present
+      expect(Conversation.where(contact: contato)).to be_empty
+    end
+
     it 'quem ligou não pode começar conversa na caixa: pausa a automação, sem abrir conversa', :aggregate_failures do
       definicao = automacao_ligada(account, admin, [oi], gatilho: gatilho)
       allow(Autonomia::Automacao::Acesso).to receive(:comeca_conversa?).and_return(false)

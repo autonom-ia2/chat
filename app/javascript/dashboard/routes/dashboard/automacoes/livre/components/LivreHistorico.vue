@@ -55,6 +55,8 @@ const RAMO = {
   senao: 'SENAO',
   se_vencer: 'SE_VENCER',
   nenhum: 'NENHUM',
+  // G13 (#2670): o outro sistema recusou.
+  se_recusar: 'SE_RECUSAR',
 };
 
 const hora = iso =>
@@ -62,6 +64,19 @@ const hora = iso =>
     dateStyle: 'short',
     timeStyle: 'short',
   });
+
+// #2750: a espera sem prazo não tem hora para mostrar.
+const estadoDe = execucao => {
+  if (execucao.esperando_sem_prazo)
+    return t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_SEM_PRAZO');
+  if (execucao.esperando_ate)
+    return t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_ATE', {
+      quando: hora(execucao.esperando_ate),
+    });
+  return t(
+    `AUTOMACAO_LIVRE.HISTORICO.ESTADOS.${execucao.estado.toUpperCase()}`
+  );
+};
 
 const custoDaIa = valor =>
   t(
@@ -97,11 +112,18 @@ const ramoDe = (execucao, passo) => {
   return nomeDoCaminho(execucao, passo) || ramo;
 };
 
-const linkDa = (execucao, mensagemId) => {
+// G63: a volta do galho "a cada mensagem" à espera não vira linha: cada volta
+// já tem a sua, a da mensagem do cliente, com a vez.
+const passosDe = execucao =>
+  execucao.passos.filter(passo => passo.dados.volta === undefined);
+
+// A mensagem que saiu numa conversa aberta pelo passo (o número novo, G43) mora
+// nela, não na conversa do alvo.
+const linkDa = (execucao, mensagemId, conversaAberta) => {
   const url = frontendURL(
     conversationUrl({
       accountId: props.accountId,
-      id: execucao.alvo.conversa_id,
+      id: conversaAberta || execucao.alvo.conversa_id,
     })
   );
   return mensagemId ? `${url}?messageId=${mensagemId}` : url;
@@ -239,15 +261,7 @@ onMounted(() => carregar());
               class="px-2.5 py-0.5 text-xs font-semibold rounded-full"
               :class="ESTADO[execucao.estado]"
             >
-              {{
-                execucao.esperando_ate
-                  ? $t('AUTOMACAO_LIVRE.HISTORICO.ESPERANDO_ATE', {
-                      quando: hora(execucao.esperando_ate),
-                    })
-                  : $t(
-                      `AUTOMACAO_LIVRE.HISTORICO.ESTADOS.${execucao.estado.toUpperCase()}`
-                    )
-              }}
+              {{ estadoDe(execucao) }}
             </span>
           </button>
           <div
@@ -256,7 +270,7 @@ onMounted(() => carregar());
           >
             <ol class="flex flex-col gap-2 p-0 m-0 list-none">
               <li
-                v-for="(passo, indice) in execucao.passos"
+                v-for="(passo, indice) in passosDe(execucao)"
                 :key="indice"
                 data-passo
                 class="flex items-start gap-2.5"
@@ -284,6 +298,35 @@ onMounted(() => carregar());
                       })
                     }}
                   </span>
+                  <span
+                    v-if="passo.dados.sem_prazo"
+                    data-sem-prazo
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.ESPERA_SEM_PRAZO') }}
+                  </span>
+                  <span
+                    v-if="passo.dados.conferir_as !== undefined"
+                    data-conferir-as
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('AUTOMACAO_LIVRE.HISTORICO.CONFERE_AS', {
+                        hora: passo.dados.conferir_as,
+                      })
+                    }}
+                  </span>
+                  <span
+                    v-if="passo.dados.vez"
+                    data-vez
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('AUTOMACAO_LIVRE.HISTORICO.VEZ', {
+                        n: passo.dados.vez,
+                      })
+                    }}
+                  </span>
                   <span v-if="passo.dados.ate" class="text-sm text-n-slate-11">
                     {{
                       $t('AUTOMACAO_LIVRE.HISTORICO.ESPERA_ATE', {
@@ -307,6 +350,13 @@ onMounted(() => carregar());
                         n: passo.dados.tentativa,
                       })
                     }}
+                  </span>
+                  <span
+                    v-if="passo.dados.numero_novo"
+                    data-numero-novo
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.NUMERO_NOVO') }}
                   </span>
                   <span
                     v-if="passo.dados.conversas_fora"
@@ -344,7 +394,8 @@ onMounted(() => carregar());
                     :href="
                       linkDa(
                         execucao,
-                        passo.dados.mensagem_id || passo.dados.nota_id
+                        passo.dados.mensagem_id || passo.dados.nota_id,
+                        passo.dados.conversa_aberta
                       )
                     "
                     class="text-sm font-medium text-n-blue-11 hover:underline"

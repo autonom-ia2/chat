@@ -49,9 +49,14 @@ class Crm::Entrega::ParaIa
   # `origem`: quem estava com a conversa. `pedida_por`: quem pediu; obrigatório com por: :pessoa e proibido com :crm
   # (o serviço levanta ArgumentError), então só vai quando existe. O card o serviço acha sozinho.
   def self.passar!(conversation:, agent:, por:, motivo:, origem: nil, pedida_por: nil) # rubocop:disable Metrics/ParameterLists -- o contrato do PassarParaIa
+    resultado!(conversation: conversation, agent: agent, por: por, motivo: motivo, origem: origem, pedida_por: pedida_por).codigo.to_s
+  end
+
+  # O Resultado inteiro do PassarParaIa: o passo da automação (decisão 18) lê dele a pessoa que a troca tirou, lida sob
+  # a trava.
+  def self.resultado!(conversation:, agent:, por:, motivo:, origem: nil, pedida_por: nil) # rubocop:disable Metrics/ParameterLists -- o contrato do PassarParaIa
     quem = { origem: origem, pedida_por: pedida_por }.compact
-    ::Autonomia::Agents::PassarParaIa.call(conversation: conversation, agent: agent, por: por, motivo: motivo,
-                                           transfer_id: nil, **quem).codigo.to_s
+    ::Autonomia::Agents::PassarParaIa.call(conversation: conversation, agent: agent, por: por, motivo: motivo, transfer_id: nil, **quem)
   end
 
   # A Atribuição passando ao agente (Crm::Entrega#concluir_para_ia!). Erro no serviço dos Agentes não deixa a conversa

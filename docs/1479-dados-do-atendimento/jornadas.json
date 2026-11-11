@@ -1,0 +1,144 @@
+{
+  "pasta": "docs/1479-dados-do-atendimento/prints-b",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "manual",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [
+            {
+              "esperar": "[data-alterar=\"atendimento\"]"
+            },
+            {
+              "clicar": "[data-atendimento-vazio]"
+            }
+          ],
+          "pausa": 4000
+        },
+        {
+          "nome": "gaveta-vazia",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"atendimento\"]"
+            },
+            {
+              "esperar": "[data-dados-do-atendimento]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-incompleto",
+          "passos": [
+            {
+              "preencher": [
+                "input[data-campo-endereco]",
+                "Rua das Flores, 120, Centro, Campinas"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "1998765"
+              ]
+            },
+            {
+              "clicar": "[data-salvar]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-completo",
+          "passos": [
+            {
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "19987654321"
+              ]
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "salvo-bloco-preenchido",
+          "passos": [
+            {
+              "clicar": "[data-salvar]"
+            },
+            {
+              "esperar": "[data-resumo-telefone]"
+            },
+            {
+              "clicar": "[data-resumo-telefone]"
+            }
+          ],
+          "pausa": 800
+        }
+      ]
+    },
+    {
+      "nome": "conversando",
+      "etapas": [
+        {
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/2",
+          "esperar": "[data-alterar=\"atendimento\"]",
+          "passos": [
+            {
+              "clicar": "[data-atendimento-vazio]"
+            }
+          ],
+          "pausa": 4000
+        },
+        {
+          "nome": "salvo-bloco-preenchido",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"atendimento\"]"
+            },
+            {
+              "esperar": "[data-dados-do-atendimento]"
+            },
+            {
+              "preencher": [
+                "input[data-campo-endereco]",
+                "Avenida Brasil, 500, Sala 3, Curitiba"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "41998887777"
+              ]
+            },
+            {
+              "clicar": "[data-salvar]"
+            },
+            {
+              "esperar": "[data-resumo-telefone]"
+            },
+            {
+              "clicar": "[data-resumo-telefone]"
+            }
+          ],
+          "pausa": 800
+        }
+      ]
+    }
+  ]
+}

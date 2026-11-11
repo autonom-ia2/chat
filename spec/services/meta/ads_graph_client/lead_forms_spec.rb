@@ -34,4 +34,17 @@ RSpec.describe Meta::AdsGraphClient::LeadForms do
 
     expect(truncated).to be(false)
   end
+
+  # Item 5 da #2740 (#2804): a Meta guarda o created_time em segundos. Lead do mesmo segundo do marco (marco às
+  # 10:00:00,700, lead às 10:00:00) tem time_created igual ao marco, e o GREATER_THAN no segundo do marco o deixaria
+  # de fora. O filtro começa um segundo antes; o Importer não duplica quem já entrou.
+  it 'pede à Meta desde um segundo antes do marco' do
+    stub_leads(next_page: false)
+    since = Time.zone.parse('2026-11-09T10:00:00.700Z')
+
+    client.each_form_lead('9001', since: since) { |_batch| nil }
+
+    filtering = [{ field: 'time_created', operator: 'GREATER_THAN', value: since.to_i - 1 }].to_json
+    expect(a_request(:get, meta_graph_url('9001/leads')).with(query: hash_including('filtering' => filtering))).to have_been_made.once
+  end
 end

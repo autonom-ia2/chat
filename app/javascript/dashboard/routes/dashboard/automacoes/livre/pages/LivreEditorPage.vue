@@ -2,7 +2,11 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -19,6 +23,7 @@ import LivrePortas from '../components/LivrePortas.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import {
   carregarCatalogo,
+  comAgendas,
   comPermissoes,
   comTextosDaIa,
   doAlvoDoGatilho,
@@ -34,10 +39,17 @@ import {
   tirarPasso,
   trocarPasso,
 } from '../receita';
+import {
+  TIPO as EM_OUTRO_REGISTRO,
+  alvoDaLista,
+  listaDoPasso,
+  passosDaExecucao,
+} from '../outroRegistro';
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { usePodeLerValor } from '../usePodeLerValor';
+import { useAgendasDaConta } from '../useAgendasDaConta';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -47,10 +59,17 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
+// G13 (#2670): o passo que manda dados para fora pede a chave de integrações.
+const podeIntegrar = usePermissionGranted('integration_manage');
+const temChave = chave =>
+  chave === 'integration_manage' ? podeIntegrar.value : false;
 const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+// G18: os cards do contato, no "em outro registro", só para quem mexe no funil;
+// #2716: o card da conversa, só com a mesma chave.
+const { canManagePipelines } = useCrmPermissions();
 // #2499: os gatilhos que esta pessoa pode escolher, e os funis e as etapas.
 const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(
   isCloudFeatureEnabled,
@@ -80,33 +99,80 @@ const avisoDeLigada = computed(() => {
 });
 
 // A frase dos passos (Confira, Ensaio, Histórico) mostra o texto da IA pelo
-// rótulo dele, como o "Alterar" (#2679).
+// rótulo dele, como o "Alterar" (#2679), e o link da agenda pelo nome da
+// página (G44).
+const { paginas: agendas, carregarAgendas } = useAgendasDaConta();
 const catalogoComTextos = computed(() =>
-  comTextosDaIa(catalogo.value, receita.value.passos, t)
+  comAgendas(
+    comTextosDaIa(catalogo.value, receita.value.passos, t),
+    agendas.value,
+    t
+  )
 );
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
-// a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
+// a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679)
+// e o link de cada página de agendamento que marca (G44).
+// O card da conversa, só com a chave de funis (#2716; canManagePipelines).
+// G18: dentro do "em outro registro", o do registro em que o ramo roda; a
+// lista é a do passo aberto (ou a do novo).
 const podeLerValor = usePodeLerValor();
+// O passo escolhido no seletor ainda não está na receita: espera o "Salvar".
+const passoNovo = ref(null);
+const listaDoPainel = () => {
+  const chave = String(route.query.alterar || '');
+  if (chave === 'novo') return passoNovo.value?.listaId;
+  return listaDoPasso(receita.value.passos, chave);
+};
 const catalogoDoAlvo = computed(() =>
-  comTextosDaIa(
-    doAlvoDoGatilho(
-      comPermissoes(catalogo.value, podeLerValor.value),
-      receita.value.gatilho?.tipo,
-      Boolean(receita.value.gatilho?.conversa_nova)
+  comAgendas(
+    comTextosDaIa(
+      doAlvoDoGatilho(
+        comPermissoes(catalogo.value, podeLerValor.value),
+        receita.value.gatilho?.tipo,
+        Boolean(receita.value.gatilho?.conversa_nova),
+        canManagePipelines.value,
+        alvoDaLista(receita.value.passos, listaDoPainel())
+      ),
+      passosDaExecucao(receita.value.passos, listaDoPainel()),
+      t,
+      lista => lista
     ),
-    receita.value.passos,
-    t
+    agendas.value,
+    t,
+    { soAsQueMarcam: true }
   )
 );
 
 const seletor = ref(null);
 const alterar = ref(null);
 const guarda = ref(null);
-// O passo escolhido no seletor ainda não está na receita: espera o "Salvar".
-const passoNovo = ref(null);
 
 const tudo = computed(() => route.query.tudo === '1');
+
+// G18: dentro do "em outro registro" não cabe outro (a filha nunca abre netas).
+// G25: só as ações que o alvo da lista alcança (o card da conversa é só para
+// ler, #2716), como no "Alterar".
+const catalogoDoSeletor = computed(() => {
+  if (!catalogo.value) return catalogo.value;
+  const dentro = alvoDaLista(
+    receita.value.passos,
+    String(route.query.seletor || '').split('@')[0]
+  );
+  const { passos } = doAlvoDoGatilho(
+    comPermissoes(catalogo.value, podeLerValor.value),
+    receita.value.gatilho?.tipo,
+    Boolean(receita.value.gatilho?.conversa_nova),
+    canManagePipelines.value,
+    dentro
+  );
+  return {
+    ...catalogo.value,
+    passos: dentro
+      ? passos.filter(passo => passo.tipo !== EM_OUTRO_REGISTRO)
+      : passos,
+  };
+});
 
 const mudarUrl = query =>
   router.replace({ query: { ...(tudo.value ? { tudo: '1' } : {}), ...query } });
@@ -335,6 +401,7 @@ const carregarTudo = async () => {
 
 onMounted(() => {
   carregarOpcoes();
+  carregarAgendas();
   carregarTudo();
 });
 </script>
@@ -583,8 +650,9 @@ onMounted(() => {
           <template v-if="catalogo && podeMudar">
             <LivreSeletorPasso
               ref="seletor"
-              :catalogo="catalogo"
+              :catalogo="catalogoDoSeletor"
               :liberado="isCloudFeatureEnabled"
+              :tem-chave="temChave"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"
             />
@@ -595,12 +663,14 @@ onMounted(() => {
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
               :receita-do-teste="receitaDoSalvar"
+              :automacao-id="automacao?.id ?? null"
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="{
                 ...escolhasDoGatilho,
                 caixas: opcoes.caixaDaConversa,
               }"
+              :pode-ler-cards="canManagePipelines"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"

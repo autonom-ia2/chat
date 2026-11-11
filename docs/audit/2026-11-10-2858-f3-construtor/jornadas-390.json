@@ -1,0 +1,78 @@
+{
+  "pasta": "docs/audit/2026-11-10-2858-f3-construtor/prints-v2/390",
+  "conta": 1,
+  "usuario": "john@acme.inc",
+  "larguras": [
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "j2-ja-vem-com",
+      "etapas": [
+        {
+          "nome": "confira-ja-vem",
+          "url": "/app/accounts/{conta}/agents/new?agente=3&etapa=confira",
+          "esperar": "[data-ja-vem]",
+          "pausa": 3500,
+          "passos": [
+            {
+              "clicar": "[data-ja-vem]"
+            }
+          ]
+        },
+        {
+          "nome": "tirou-o-cpf",
+          "passos": [
+            {
+              "clicar": "[data-ja-vem-item=\"cpf\"] [data-ja-vem-tirar]"
+            },
+            {
+              "clicar": "[data-ja-vem]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "comecar",
+          "passos": [
+            {
+              "clicar": "[data-comecar] button"
+            },
+            {
+              "esperar": "[role=\"dialog\"]"
+            }
+          ],
+          "pausa": 3000
+        }
+      ]
+    },
+    {
+      "nome": "j3-pode-usar",
+      "etapas": [
+        {
+          "nome": "cartao-na-pagina",
+          "url": "/app/accounts/{conta}/agents/2",
+          "esperar": "[data-vitrine-sugestao]",
+          "pausa": 3500,
+          "passos": [
+            {
+              "clicar": "[data-vitrine-sugestao]"
+            }
+          ]
+        },
+        {
+          "nome": "agora-nao",
+          "passos": [
+            {
+              "clicar": "[data-vitrine-sugestao-dispensar]"
+            }
+          ],
+          "pausa": 2000
+        }
+      ]
+    }
+  ]
+}

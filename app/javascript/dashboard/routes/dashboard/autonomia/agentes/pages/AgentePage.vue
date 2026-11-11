@@ -11,6 +11,7 @@ import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
 import AgenteSilencios from '../components/pagina/AgenteSilencios.vue';
+import VitrineSugestaoDoAgente from '../vitrine/components/VitrineSugestaoDoAgente.vue';
 import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
 import GavetaOQueSabe from '../components/pagina/GavetaOQueSabe.vue';
@@ -20,6 +21,7 @@ import GavetaConversas from '../components/pagina/GavetaConversas.vue';
 import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
+import GavetaAtendimento from '../components/pagina/GavetaAtendimento.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
@@ -40,6 +42,8 @@ import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudaDoAgente } from '../composables/useAjudaDoAgente';
 import { useFase2 } from '../composables/useFase2';
 import { usePainelDesempenho } from '../composables/usePainelDesempenho';
+import { useFerramentasDelegadas } from '../composables/useFerramentasDelegadas';
+import { useVitrineLigada } from '../vitrine/useVitrineLigada';
 import { precisaDeVoce } from '../utils/estadoDoMaterial';
 import { useConferenciasDoMaterial } from '../composables/useConferenciasDoMaterial';
 import {
@@ -99,6 +103,11 @@ const caixas = useMapGetter('inboxes/getInboxes');
 const fontes = useMapGetter('autonomiaSources/getKnowledgeSources');
 const flagsFontes = useMapGetter('autonomiaSources/getUIFlags');
 const agendaNova = useAgendaNovaNaConta();
+const ferramentasDelegadas = useFerramentasDelegadas();
+// #2858 F2 — com a vitrine de ferramentas prontas, quem cuida das ferramentas também abre a gaveta (as prontas).
+const { ligada: vitrineLigada } = useVitrineLigada();
+// "Criar a minha (avançado)" da vitrine chega com `?ferramenta=nova`: a gaveta abre no cadastro novo.
+const ferramentaNova = ref(false);
 const usuario = useMapGetter('getCurrentUser');
 
 const aberta = ref(null);
@@ -151,6 +160,8 @@ const tambemRecebeEm = computed(() =>
 const salvarEquipe = useSalvarEquipe();
 const EQUIPE = 'equipe';
 const AJUDA = 'ajuda';
+// #1479 (opção B): gaveta do bloco "Endereço e telefone" (só com a flag; o bloco só aparece com ela).
+const ATENDIMENTO = 'atendimento';
 const ajudante = computed(() => ehAjudante(agente.value));
 const ajudaDoAgente = useAjudaDoAgente();
 // Tema 14: ligar e parar o ajudante falam de ajudar outros agentes, nunca de atender nem de passar conversas
@@ -192,8 +203,19 @@ const permitidas = computed(() =>
   gavetasPermitidas(agente.value, podeGerenciar.value, {
     agendaNova: agendaNova.value,
     superAdmin: superAdmin.value,
+    ferramentas: ferramentasDelegadas.value || vitrineLigada.value,
   })
 );
+// O cadastro manual (#1430): com a flag e a chave, ou o SuperAdmin que gerencia. Sem ele, a gaveta mostra só as prontas.
+const cadastroManual = computed(
+  () => ferramentasDelegadas.value || (superAdmin.value && podeGerenciar.value)
+);
+const verVitrine = () =>
+  router.push({
+    name: 'autonomia_agents_vitrine',
+    params: { accountId: route.params.accountId },
+    query: { agente: agente.value.id },
+  });
 
 // Onde responde: nome da caixa pela L2 (ou pelos canais do agente); sem a leitura, só a contagem.
 const TEXTO_DO_QUANDO = {
@@ -306,16 +328,7 @@ const itensMais = computed(() => {
     texto: t('AGENTS.JORNADA.PAGINA.VERSOES.TITULO'),
     icone: 'i-lucide-history',
   };
-  if (!podeGerenciar.value) return cotacao.value ? [] : [versoes];
-  const soNome = usaFotoDoCanal(agente.value);
-  const fotoENome = {
-    chave: GAVETA.FOTO,
-    texto: soNome
-      ? t('AGENTS.JORNADA.PAGINA.FOTO.TITULO_NOME')
-      : t('AGENTS.JORNADA.PAGINA.FOTO.TITULO'),
-    icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
-  };
-  // Ferramentas: só o SuperAdmin que gerencia (gavetasPermitidas), como a aba do painel antigo.
+  // Ferramentas: o SuperAdmin que gerencia e, com a flag da conta, quem tem a chave (#1430) — regra em gavetasPermitidas.
   const ferramentas = permitidas.value.includes(GAVETA.FERRAMENTAS)
     ? [
         {
@@ -325,6 +338,16 @@ const itensMais = computed(() => {
         },
       ]
     : [];
+  if (!podeGerenciar.value)
+    return cotacao.value ? [] : [versoes, ...ferramentas];
+  const soNome = usaFotoDoCanal(agente.value);
+  const fotoENome = {
+    chave: GAVETA.FOTO,
+    texto: soNome
+      ? t('AGENTS.JORNADA.PAGINA.FOTO.TITULO_NOME')
+      : t('AGENTS.JORNADA.PAGINA.FOTO.TITULO'),
+    icone: soNome ? 'i-lucide-user-pen' : 'i-lucide-image',
+  };
   if (cotacao.value) return [fotoENome, ...ferramentas];
   return [
     fotoENome,
@@ -383,6 +406,7 @@ const limparAbaDaUrl = () => {
 
 const fechar = () => {
   aberta.value = null;
+  ferramentaNova.value = false;
   nomeSugerido.value = '';
   limparAbaDaUrl();
   // #1429 F3 — outra gaveta (Versões, comportamento) pode ter mudado o agente: a linha da base é relida.
@@ -393,7 +417,7 @@ const fechar = () => {
 // assim que a gaveta abre, e um F5 não a reabre.
 const tirarGavetaDaConsulta = () => {
   if (!route.query?.gaveta) return;
-  const { gaveta, ...resto } = route.query;
+  const { gaveta, ferramenta, ...resto } = route.query;
   router.replace({ query: resto });
 };
 
@@ -411,6 +435,8 @@ const abrirDaUrl = () => {
     return;
   }
   gavetaDaUrlAberta = props.gaveta;
+  ferramentaNova.value =
+    props.gaveta === GAVETA.FERRAMENTAS && route.query?.ferramenta === 'nova';
   abrir(props.gaveta === GAVETA.ONDE ? gavetaDoCanal() : props.gaveta);
   tirarGavetaDaConsulta();
 };
@@ -557,6 +583,10 @@ const escrever = () => {
 };
 
 const escolherCanal = () => abrir(gavetaDoCanal());
+
+const alterarAtendimento = () => {
+  if (podeGerenciar.value) aberta.value = ATENDIMENTO;
+};
 
 // #1433: "Mudar" de "Onde {nome} trabalha" do agente da equipe.
 const mudarEquipe = () => {
@@ -883,7 +913,11 @@ const tirarPergunta = id => {
             class="i-lucide-lock size-5 shrink-0 text-n-blue-11"
             aria-hidden="true"
           />
-          {{ t('AGENTS.JORNADA.PAGINA.SO_VER') }}
+          {{
+            permitidas.includes(GAVETA.FERRAMENTAS)
+              ? t('AGENTS.JORNADA.PAGINA.SO_VER_COM_FERRAMENTAS')
+              : t('AGENTS.JORNADA.PAGINA.SO_VER')
+          }}
         </p>
         <AgenteSemana
           :numeros="semana.numerosDe(agente.id)"
@@ -898,6 +932,11 @@ const tirarPergunta = id => {
           :nome="nome"
           :numeros="semana.numerosDe(agente.id)"
           :fala-com-cliente="mostraSilencios"
+        />
+        <VitrineSugestaoDoAgente
+          v-if="!cotacao && permitidas.includes(GAVETA.FERRAMENTAS)"
+          :agente-id="agente.id"
+          :nome="nome"
         />
         <PaginaBlocos
           :agente="agente"
@@ -923,6 +962,7 @@ const tirarPergunta = id => {
           @escolher-canal="escolherCanal"
           @mudar-equipe="mudarEquipe"
           @mudar-ajuda="mudarAjuda"
+          @alterar-atendimento="alterarAtendimento"
         >
           <template #base>
             <BaseDoAgenteLinha
@@ -1102,6 +1142,12 @@ const tirarPergunta = id => {
         :nome="nome"
         @fechar="fechar"
       />
+      <GavetaAtendimento
+        v-else-if="aberta === ATENDIMENTO"
+        :agente="agente"
+        :nome="nome"
+        @fechar="fechar"
+      />
       <GavetaAgenda
         v-else-if="aberta === GAVETA.AGENDA"
         :agente="agente"
@@ -1114,6 +1160,10 @@ const tirarPergunta = id => {
         v-else-if="aberta === GAVETA.FERRAMENTAS"
         :agente="agente"
         :nome="nome"
+        :cadastro-manual="cadastroManual"
+        :vitrine="vitrineLigada && !cotacao"
+        :comecar-nova="ferramentaNova"
+        @ver-vitrine="verVitrine"
         @fechar="fechar"
       />
     </template>

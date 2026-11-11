@@ -7,9 +7,19 @@ import LivreAlterar from '../components/LivreAlterar.vue';
 // avançada abre só para ver.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
+    locale: { value: 'pt_BR' },
     t: (chave, valores) =>
       valores ? `${chave}(${Object.values(valores).join(',')})` : chave,
   }),
+}));
+
+vi.mock('dashboard/composables/useAdmin', () => ({
+  useAdmin: () => ({ isAdmin: { value: true } }),
+}));
+// O segredo do webhook (G13) pede token_manage: aqui quem edita tem.
+vi.mock('dashboard/composables/useCanManage', () => ({
+  useCanManage: () => ({ value: true }),
+  usePermissionGranted: () => ({ value: true }),
 }));
 
 const PainelFalso = defineComponent({
@@ -148,6 +158,55 @@ describe('LivreAlterar', () => {
     wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
     await flushPromises();
     expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  // Decisão 18 — "Cobrir a pessoa enquanto ela não responde": um sim/não do design
+  // system (sem <select>), desligado por padrão; desligar tira a chave.
+  it('liga e desliga a opção "cobrir a pessoa"', async () => {
+    const COM_OPCAO = {
+      ...CATALOGO,
+      passos: [
+        ...CATALOGO.passos,
+        {
+          ...IA_ASSUMIR,
+          campos: [
+            ...IA_ASSUMIR.campos,
+            {
+              nome: 'cobrir_pessoa',
+              peca: 'sim_nao',
+              obrigatorio: false,
+              rotulo: 'COBRIR_PESSOA',
+            },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(COM_OPCAO, {
+      agenteDeIa: [{ value: 3, label: 'Área Suporte' }],
+    });
+    wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
+    await flushPromises();
+
+    const opcao = wrapper.find('[data-peca="cobrir_pessoa"]');
+    expect(opcao.exists()).toBe(true);
+    expect(wrapper.find('select').exists()).toBe(false);
+    const chave = opcao.findComponent({ name: 'Switch' });
+    expect(chave.props('modelValue')).toBe(false);
+
+    await chave.vm.$emit('update:modelValue', true);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[0][0].valor).toEqual({
+      ...PASSO_IA,
+      agente_id: 3,
+      cobrir_pessoa: true,
+    });
+
+    await chave.vm.$emit('update:modelValue', false);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[1][0].valor).toEqual({
+      ...PASSO_IA,
+      agente_id: 3,
+    });
   });
 
   it('sem agente de IA na conta, diz isso e não salva', async () => {
@@ -516,6 +575,83 @@ describe('LivreAlterar', () => {
     expect(salvarDesligado(wrapper)).toBe(false);
   });
 
+  // G13 (#2670): o webhook só salva com a frase, endereço https e cada linha do
+  // corpo e da resposta completa; o segredo aparece no painel.
+  it('o webhook só salva com endereço https e linhas completas', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      valores: [
+        ...CATALOGO.valores,
+        {
+          caminho: 'card.atributos',
+          frase: 'CARD',
+          atributos: 'card_attribute',
+        },
+      ],
+      passos: [
+        {
+          tipo: 'webhook',
+          frase: 'WEBHOOK',
+          campos: [
+            {
+              nome: 'descricao',
+              peca: 'descricao',
+              rotulo: 'D',
+              obrigatorio: true,
+            },
+            {
+              nome: 'url',
+              peca: 'endereco_do_webhook',
+              rotulo: 'U',
+              obrigatorio: true,
+            },
+            { nome: 'corpo', peca: 'corpo_do_webhook', rotulo: 'C' },
+            { nome: 'gravar', peca: 'resposta_do_webhook', rotulo: 'G' },
+            { nome: 'se_recusar', peca: 'passos', rotulo: 'S' },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(catalogo);
+    const abrir = async extra => {
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: {
+          id: 'w1',
+          tipo: 'webhook',
+          descricao: 'Cobrança',
+          url: 'https://cobranca.exemplo.com/api',
+          corpo: { nome: { $valor: 'conversa.status' } },
+          gravar: [],
+          ...extra,
+        },
+      });
+      await flushPromises();
+    };
+
+    await abrir({});
+    [
+      'descricao',
+      'endereco_do_webhook',
+      'corpo_do_webhook',
+      'resposta_do_webhook',
+      'segredo_do_webhook',
+    ].forEach(peca =>
+      expect(wrapper.find(`[data-peca="${peca}"]`).exists()).toBe(true)
+    );
+    expect(salvarDesligado(wrapper)).toBe(false);
+
+    await abrir({ url: 'http://cobranca.exemplo.com/api' });
+    expect(salvarDesligado(wrapper)).toBe(true);
+    expect(wrapper.find('[data-endereco-invalido]').exists()).toBe(true);
+
+    await abrir({ descricao: ' ' });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ gravar: [{ chave: 'numero', destino: '' }] });
+    expect(salvarDesligado(wrapper)).toBe(true);
+  });
+
   it('não salva condição sem o que olhar', async () => {
     const wrapper = montar();
     wrapper.vm.abrir({
@@ -706,5 +842,76 @@ describe('LivreAlterar', () => {
       expect(wrapper.find('[data-sem-caixa-de-email]').exists()).toBe(true);
       expect(salvarDesligado(wrapper)).toBe(true);
     });
+  });
+});
+
+// G70 (#2880): o destino no card vale onde o passo roda num card ou numa
+// conversa. Dentro do "em outro registro", o alvo é o do ramo (`catalogo.alvo`),
+// não o do gatilho.
+describe('LivreAlterar, extrair no card', () => {
+  const EXTRAIR = {
+    tipo: 'extrair',
+    grupo: 'IA',
+    frase: 'EXTRAIR',
+    campos: [{ nome: 'campos', peca: 'campos_extrair', rotulo: 'CAMPOS' }],
+  };
+  const NO_CONTATO = {
+    ...CATALOGO,
+    gatilho: 'contato.criado',
+    gatilhos: [{ tipo: 'contato.criado', alvo: 'Contact' }],
+    passos: [EXTRAIR],
+  };
+
+  const comCard = async (catalogo, podeLerCards = true) => {
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo,
+        opcoes: {},
+        atributosDaPeca: () => [],
+        atributosDo: () => [],
+        podeLerCards,
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'e1',
+        tipo: 'extrair',
+        le: ['mensagens_recentes'],
+        campos: [],
+      },
+    });
+    await flushPromises();
+    return wrapper.findComponent({ name: 'LivreIaCampo' }).props('comCard');
+  };
+
+  it('no gatilho de contato, sem card', async () => {
+    expect(await comCard(NO_CONTATO)).toBe(false);
+  });
+
+  it('no ramo que roda num card, com card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' })).toBe(true);
+  });
+
+  // O registro do ramo vale mais que o do gatilho: um ramo de contato dentro de
+  // um gatilho de card não grava no card.
+  it('no ramo que roda num contato, dentro de um gatilho de card, sem card', async () => {
+    const noCard = {
+      ...NO_CONTATO,
+      gatilho: 'card.ganho',
+      gatilhos: [{ tipo: 'card.ganho', alvo: 'Crm::Card' }],
+    };
+    expect(await comCard(noCard)).toBe(true);
+    expect(await comCard({ ...noCard, alvo: 'Contact' })).toBe(false);
+  });
+
+  it('sem poder ler cards, sem card mesmo num card', async () => {
+    expect(await comCard({ ...NO_CONTATO, alvo: 'Crm::Card' }, false)).toBe(
+      false
+    );
   });
 });

@@ -34,6 +34,35 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
   def conversas_de_email = Conversation.where(inbox: caixa)
 
+  # #2780: o assunto lê pelos valores da execução (NaConversa#valores), com quem ligou e o gatilho da receita.
+  describe 'o assunto' do
+    it 'com um valor comum, sai com o valor' do
+      rodar(conversa, [email_passo('p1', assunto: ['Pedido de ', { '$valor' => 'contato.nome' }])])
+
+      expect(conversas_de_email.sole.additional_attributes['mail_subject']).to eq('Pedido de Carla')
+    end
+
+    # #2780, decisão 9: o assunto escrito pela pessoa leva o valor da venda, com a chave de quem ligou.
+    it 'com o valor da venda numa automação de conversa, quem ligou com a chave: o assunto sai com o valor', :aggregate_failures do
+      with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+        funil, etapa = create_crm_pipeline(account: account, user: admin)
+        account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Pedido', currency: 'BRL', value_cents: 250_000, status: :open,
+                                  primary_conversation: conversa, contact: contato, inbox: whatsapp)
+        definicao = create(:autonomia_automacao, account: account, ligada_por: admin)
+        receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' },
+                    'passos' => [email_passo('p1', assunto: ['Valor ', { '$valor' => 'card.valor' }])] }
+        versao = definicao.versoes.new(account: account, numero: 1, autor: admin, digest: SecureRandom.hex(32), receita: receita)
+        versao.save!(validate: false)
+        definicao.update!(versao_ativa: versao, ativa: true)
+
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
+
+        expect(registros(Autonomia::Automacao::Execucao.where(automacao: definicao).last)).to eq([['p1', 'ok', nil]])
+        expect(conversas_de_email.sole.additional_attributes['mail_subject']).to include('2500')
+      end
+    end
+  end
+
   describe 'envio' do
     it 'abre conversa nova na caixa de e-mail com o assunto e manda o texto com os valores, sem remetente e com a marca',
        :aggregate_failures do
@@ -64,6 +93,13 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
       expect(mailer).to have_received(:email_reply).with(mensagem)
       expect(mensagem.reload).to have_attributes(status: 'sent', source_id: 'mid-1')
+    end
+
+    # O assunto lê os mesmos valores do texto, com a execução (NaConversa#valores): aqui o `envio.texto` do passo antes.
+    it 'o assunto lê os valores da execução, como o texto' do
+      rodar(conversa, [mensagem_passo('oi', 'Seu pedido saiu'), email_passo('p1', assunto: ['Sobre: ', { '$valor' => 'envio.texto' }])])
+
+      expect(conversas_de_email.sole.additional_attributes['mail_subject']).to eq('Sobre: Seu pedido saiu')
     end
 
     it 'cada envio abre conversa nova; a caixa que trava numa conversa só reaproveita a dela' do
@@ -126,6 +162,12 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
     it 'contato que pediu para não receber' do
       contato.opt_out!(source: 'manual')
       expect(registros(rodar(conversa))).to eq([%w[p1 pulado contato_nao_recebe]])
+      expect(conversas_de_email).to be_empty
+    end
+
+    it 'contato bloqueado não recebe e-mail (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(registros(rodar(conversa))).to eq([%w[p1 pulado contato_bloqueado]])
       expect(conversas_de_email).to be_empty
     end
 
@@ -328,12 +370,40 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'caixa_de_email_indisponivel')
     end
 
+    it 'diz que não sairia ao contato bloqueado (decisão 5)' do
+      contato.update!(blocked: true)
+      expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole).to include(faria: 'contato_bloqueado')
+    end
+
     it 'a conversa de e-mail cuja última mensagem é resposta automática não entraria' do
       de_email = create(:conversation, account: account, contact: contato, inbox: caixa)
       create(:message, conversation: de_email, account: account, inbox: caixa, message_type: :incoming, sender: contato,
                        content: 'Estou de férias.', content_attributes: { email: { auto_reply: true } })
 
       expect(ensaio({ 'tipo' => 'mensagem.criada' }, de_email)).to include(entraria: false, motivo: 'resposta_automatica')
+    end
+  end
+
+  # G65 (#2842): o e-mail dentro do "em outro registro" lê o registro de origem (o alvo da mãe) no assunto e no texto,
+  # como a mensagem: os valores saem do Contexto com a execução, não do registro cru.
+  describe 'na filha do "em outro registro"' do
+    let(:joao) { create(:contact, account: account, name: 'João') }
+    let(:versao) { create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: account, ligada_por: admin)) }
+    let(:mae) { create(:autonomia_automacao_execucao, versao: versao, alvo: create(:conversation, account: account, contact: joao)) }
+    let(:filha) do
+      create(:autonomia_automacao_execucao, versao: versao, alvo: contato, evento: "em:#{mae.id}:contato:#{contato.id}:outro")
+    end
+
+    it 'o assunto e o texto leem origem.*', :aggregate_failures do
+      passo = email_passo('p1', assunto: ['O ', { '$valor' => 'origem.contato.nome' }, ' virou cliente'],
+                                texto: ['Oi ', { '$valor' => 'contato.nome' }, ', obrigada por indicar o ', { '$valor' => 'origem.contato.nome' }])
+
+      resultado = described_class.new(execucao: filha, passo: passo, alvo: contato).executar
+
+      expect(resultado.tipo).to eq(:ok)
+      nova = conversas_de_email.sole
+      expect(nova.additional_attributes['mail_subject']).to eq('O João virou cliente')
+      expect(nova.messages.outgoing.sole.content).to eq('Oi Carla, obrigada por indicar o João')
     end
   end
 end

@@ -16,10 +16,24 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
-  def self.executar(passo:, **)
-    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
-    classe.new(passo: passo, **).executar
+  # Os tipos de passo que o Executor entrega aqui (#2414 F3, G3, G18, G66, G21, G13).
+  TIPOS = %w[acao retorno em_outro_registro conversa_ao_responsavel prospeccao webhook].freeze
+
+  # O "criar retorno" (G3, #2629), o "em outro registro" (G18, #2671) e o "passar a conversa para o responsável do card"
+  # (G66, #2843) têm objeto próprio, com o mesmo resultado; o retorno chega à mesma porta (AcoesDoRetorno). A
+  # "prospecção" (G21, #2706) também, e usa a espera e a nova tentativa da ação. O "webhook" (G13, #2670) também: manda
+  # para fora e grava a resposta por esta porta.
+  # `alvo`: o alvo relido pelo executor; só o G66 o usa (o dono do card que um passo anterior trocou).
+  def self.executar(passo:, alvo: nil, **)
+    case passo['tipo']
+    when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno.new(passo: passo, **).executar
+    when 'em_outro_registro' then ::Autonomia::Automacao::PassoEmOutroRegistro.new(passo: passo, **).executar
+    when 'prospeccao' then ::Autonomia::Automacao::PassoDeProspeccao.new(passo: passo, **).executar
+    when 'webhook' then ::Autonomia::Automacao::PassoDeWebhook.new(passo: passo, **).executar
+    when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO
+      ::Autonomia::Automacao::PassoDeConversaAoResponsavel.new(passo: passo, alvo: alvo, **).executar
+    else new(passo: passo, **).executar
+    end
   end
 
   # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.
@@ -48,7 +62,13 @@ class Autonomia::Automacao::PassoDeAcao
   def agir(caminho, corpo)
     caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
     resultado = no_caderno(caderno) { motor.executar(@passo['acao'], dados(caminho, corpo)) }
+    cadastrar_etiquetas if resultado.ok
     classificar(resultado, motor.codigo, caderno)
+  end
+
+  def cadastrar_etiquetas
+    ::Autonomia::Automacao::EtiquetasDoDado.cadastrar(@etiquetas_do_dado.to_h, account: @execucao.account,
+                                                                               account_user: @acesso.account_user)
   end
 
   def motor
@@ -75,7 +95,20 @@ class Autonomia::Automacao::PassoDeAcao
     return pulado(montado.motivo) if montado.motivo
 
     fora = fora_do_formato(montado.corpo)
-    fora.any? ? pulado('valor_fora_do_formato', 'problemas' => fora) : montado.corpo
+    return pulado('valor_fora_do_formato', 'problemas' => fora) if fora.any?
+
+    etiquetas_prontas(montado.corpo)
+  end
+
+  # G29 (#2702): a etiqueta com o nome de um dado sai pela regra da tela de etiquetas (EtiquetasDoDado).
+  def etiquetas_prontas(corpo)
+    return corpo unless ::Autonomia::Automacao::EtiquetasDoDado.aplica?(@passo['acao'])
+
+    pronto = ::Autonomia::Automacao::EtiquetasDoDado.preparar(@passo['corpo'], corpo)
+    return pulado(pronto.motivo) if pronto.motivo
+
+    @etiquetas_do_dado = pronto.originais
+    pronto.corpo
   end
 
   # O corpo literal o salvar já conferiu. O calculado só existe agora: confere com o valor de verdade (opção fora da
@@ -92,13 +125,16 @@ class Autonomia::Automacao::PassoDeAcao
 
   def classificar(resultado, codigo, caderno)
     dados = { 'acao' => @passo['acao'], 'codigo' => codigo, 'registro' => resultado.registro, 'caderno_id' => caderno.id }
-    return Resultado.new(tipo: :ok, dados: dados) if resultado.ok
+    # G49: o registro que a ação criou vira valor dos passos seguintes (`criado.<passo>`).
+    return Resultado.new(tipo: :ok, dados: dados.merge({ 'criado' => criado(caderno) }.compact)) if resultado.ok
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: dados) if [401, 403].include?(codigo)
     return Resultado.new(tipo: :permanente, motivo: 'erro_permanente', dados: dados) if permanente?(codigo)
     return Resultado.new(tipo: :permanente, motivo: 'erro_depois_de_gravar', dados: dados) if caderno.mudancas.exists?
 
     Resultado.new(tipo: :passageiro, motivo: 'erro_passageiro', dados: dados)
   end
+
+  def criado(caderno) = ::Autonomia::Automacao::RegistroCriado.do_caderno(@passo['acao'], caderno)
 
   def permanente?(codigo)
     codigo.to_i.between?(400, 499) && PASSAGEIROS.exclude?(codigo)

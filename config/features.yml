@@ -1150,8 +1150,11 @@
 # Fase 2): o agente que tem página de agendamento ganha, sem configuração, `enviar_localizacao` (o mapa de um local
 # presencial da página, quando o endereço já tem coordenada) e `enviar_contato` (o cartão com o telefone de contato da
 # página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
-# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
-# o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
+# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. #1479/#2723: com ela, a
+# página do agente mostra o bloco "Endereço e telefone" (com a Fase 2; fora da cotação, do interno e do ajudante); o
+# agente diz em TEXTO, pela instrução, esse endereço e telefone e o endereço dos locais presenciais da página (sem
+# mapa do endereço do agente); `enviar_contato` leva o telefone do agente antes do da página, e o agente sem página mas
+# com telefone também o ganha. Desligada: nada muda, nem o catálogo, nem a instrução, nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
 # automacao_ia: posição 25 (valor 16777216, 1 << 24), dada pela Orquestração em 04/11. Nasce ligada no piloto (contas
 # 1, 16 e 18).
 - name: agentes_enviar_local_e_contato
@@ -1171,12 +1174,11 @@
   enabled: true
   column: feature_flags_ext_2
 
-# IA cuida dos comentários (#2613, parte do #2212): o privado pelo Messenger no Facebook. A Meta deixa usar a
-# pages_messaging nas Páginas de quem tem papel no app (Standard Access); é o caso das contas internas. Ligada (com
-# meta_ads_comentarios_ia e meta_ads_comentarios_facebook): a tela do cuidado de um post ou anúncio do Facebook deixa
-# ligar o privado, o motor manda o privado pela caixa da Página, e o teste em Agentes mostra o privado. Desligada: como
-# antes, "Em breve", e a pergunta fica com o dono. Rollback: desligar a flag na conta. Sem migration. Bit: posição 27
-# (67108864), dada pela Orquestração. Nasce ligada só nas contas internas: 1, 16 e 18 na hub2you e 24 na autonomia.
+# IA cuida dos comentários (#2613, parte do #2212): o privado pelo Messenger no Facebook. Desde o #2307 o código não
+# lê mais esta flag: o privado sai na Página cujo login tem a pages_messaging concedida pela Meta
+# (Crm::MetaAds::ComentariosIa::Rede::PermissaoDoMessenger). A entrada fica porque o bit é a posição na coluna: tirar
+# daqui mudaria as flags que vêm depois. Bit: posição 27 (67108864). Rollback do #2307: reverter o PR (sem migration);
+# a flag continua ligada nas contas internas, e o código de antes volta a lê-la.
 - name: meta_ads_comentarios_privado_facebook
   display_name: Anúncios › privado no Facebook pela IA
   enabled: true
@@ -1242,5 +1244,84 @@
 # não passaram pelo App Review.
 - name: instagram_login_unico
   display_name: Anúncios › Instagram pelo login único
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: o material do próprio agente vem primeiro (#2801, Refs #1431). Ligada: a regra de resposta dá a ordem das
+# fontes (material do agente > fatos-âncora das instruções > ferramentas > segmento da conta > conhecimento geral) e o
+# bloco do segmento passa a valer só quando o material não traz o assunto. Quando o [CONTEXTO] traz o que foi perguntado,
+# inclusive uma definição, a resposta segue o material e marca a fonte. Fora da Lia e do Guia. Desligada: como antes.
+# Sem migration. Rollback: desligar a flag na conta. Posição 34 (8589934592, 1 << 33), dada pela Orquestração em
+# 09/11. Depois do deploy liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_material_primeiro
+  display_name: Agentes › material do agente primeiro
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: com o fato do negócio no trecho, a resposta usa o dado (#2807, Refs #1431). Ligada: a regra de resposta manda
+# afirmar o fato do negócio que o [CONTEXTO] traz, sem "preciso confirmar" e sem atribuir o dado além do que o trecho
+# diz; o fato que não está no material, nos fatos-âncora nem em ferramenta segue a regra de quando não souber, sem
+# palpite. Só no atendimento ao cliente; fora da Lia, do Guia e do copiloto. Desligada: como antes. Sem migration.
+# Rollback: desligar a flag na conta. Posição 35 (17179869184, 1 << 34), dada pela Orquestração em 09/11: só entra na
+# fila depois do #2801 na main, que traz a 34 (agente_material_primeiro). Depois do NO AR, a Orquestração liga em todas
+# as contas ativas das 2 stacks (regra C de 09/11).
+- name: agente_usa_o_trecho
+  display_name: Agentes › usar o dado do trecho
+  enabled: false
+  column: feature_flags_ext_2
+
+# RAG: busca híbrida (#2810, Refs #1431). Ligada: os candidatos do vetor e os da busca por palavra (texto em português,
+# índice GIN da migration 20261108910000) entram juntos e a ordem sai da fusão por posição (RRF, k = 60), no lugar do
+# bônus por metadado e do reforço lexical. O teto de distância, as seções dos itens, o material reprovado e o isolamento
+# por agente continuam valendo. Desligada: a busca de hoje. Rollback: desligar a flag na conta. Posição 36
+# (34359738368, 1 << 35), dada pela Orquestração em 09/11: entra na fila depois do #2811. Ligar em todas as
+# contas é decisão do Rodrigo (o RESULTADO do #2810 diz por quê), não a regra C automática.
+- name: rag_busca_hibrida
+  display_name: RAG › busca híbrida
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F0 (#2858): a fundação, sem tela. Ligada: a ferramenta pronta do agente (uma fonte do
+# catálogo, nunca um link digitado) entra no turno e consulta a fonte com prazo curto, reserva, cache, contador e limite
+# diário por conta e por fonte. Desligada: as prontas somem do turno e o "Incluir" recusa; o resto fica como antes. A
+# Lia fica de fora. Migration 20261109980000 (aditiva). Rollback: desligar a flag na conta.
+# Posição 37 (68719476736, 1 << 36), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas
+  display_name: Agentes › ferramentas prontas (fundação)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F1 (#2858): as consultas mais usadas além de CEP, CNPJ e FIPE — CPF válido (só o
+# cálculo), feriados e dias úteis, Banco Central (Selic, IPCA, dólar e Focus), cidades e estados (IBGE), DDD,
+# localização vira cidade e bancos. Vale junto com `agente_ferramentas_prontas`: desligada, essas fontes somem do turno
+# e o "Incluir" recusa; CEP, CNPJ e FIPE seguem. Sem migration. Rollback: desligar a flag na conta.
+# Posição 38 (137438953472, 1 << 37), dada pela Orquestração em 10/11. Depois do NO AR, liga em todas as contas ativas
+# das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_consultas
+  display_name: Agentes › ferramentas prontas (consultas mais usadas)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F2 (#2858): a vitrine. Ligada (junto com `agente_ferramentas_prontas`): o menu
+# "Ferramentas prontas" em No automático, a vitrine (grupos, busca, destaque do ramo, detalhe com "Experimente",
+# escolha do agente, frase "Use quando…" e "Pronto!") e, na página do agente, as prontas com liga/desliga e "Tirar".
+# Quem inclui: o administrador e quem tem a chave "Ferramentas dos agentes". Desligada: tudo some da tela e a API da
+# vitrine responde 404; as prontas já incluídas seguem no turno pela flag da fundação. Sem migration.
+# Rollback: desligar a flag na conta. Posição 39 (274877906944, 1 << 38), dada pela Orquestração em 10/11. Depois do
+# NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_vitrine
+  display_name: Agentes › ferramentas prontas (vitrine)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, F3 (#2858): o agente já nasce com as ferramentas. Ligada (junto com a vitrine): no
+# Construtor, o modelo escolhe as prontas que combinam com o agente ("nenhuma combina" também vale) e a Confira mostra
+# "Já vem com estas ferramentas", com "Tirar"; quem pode cuidar das ferramentas as inclui no "Começar". Em agente que já
+# existe, o cartão "pode ganhar" sugere a pronta que combina, e "Agora não" não volta para aquele agente. Desligada:
+# nada disso aparece. Sem migration. Rollback: desligar a flag na conta. Posição 40 (549755813888, 1 << 39), dada pela
+# Orquestração em 09/11 e remapeada em 10/11. Depois do NO AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+- name: agente_ferramentas_prontas_construtor
+  display_name: Agentes › ferramentas prontas (Construtor e sugestões)
   enabled: false
   column: feature_flags_ext_2

@@ -46,12 +46,14 @@ class AutomacoesAPI extends ApiClient {
 
   // "Testar este passo" (#2500 C2): uma conversa por pedido. O 1º escolhe as
   // candidatas (o servidor devolve os ids); os seguintes mandam `conversaId`,
-  // conferido no servidor. Chama a IA e paga.
-  testarPasso({ receita, passoId, conversaId }) {
+  // conferido no servidor. Chama a IA e paga. `automacaoId`: a automação já
+  // salva, para o servidor conferir também quem a ligou (#2780).
+  testarPasso({ receita, passoId, conversaId, automacaoId }) {
     return axios.post(`${this.url}/testar_passo`, {
       receita,
       passo_id: passoId,
       conversa_id: conversaId,
+      automacao_id: automacaoId,
     });
   }
 
@@ -68,6 +70,16 @@ class AutomacoesAPI extends ApiClient {
   // G15: as agentes de IA que podem receber conversa na conta (id e nome).
   agentesDeIa() {
     return axios.get(`${this.url}/agentes_de_ia`);
+  }
+
+  // G13 (#2670): o segredo da assinatura do passo "webhook". Só o
+  // administrador; a resposta traz `secret`.
+  segredoDoWebhook(id) {
+    return axios.get(`${this.url}/${id}/segredo_do_webhook`);
+  }
+
+  trocarSegredoDoWebhook(id) {
+    return axios.post(`${this.url}/${id}/trocar_segredo_do_webhook`);
   }
 }
 

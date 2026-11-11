@@ -71,7 +71,7 @@ Nada muda na Partida, no Executor nem na varredura.
 | `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
 | `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
 | `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
-| `card.responsavel_trocado` | card | evento | atividade `update` com `owner_id` (tipo próprio no `EVENT_MAP`) | — | `atividade:<activity id>` |
+| `card.responsavel_mudou` / `card.time_mudou` (G9, #2707) | card | evento | o próprio card, no gancho único `Crm::CardAvisaAutomacao` (`owner_id` ou `team_id` mudou; `Autonomia::Automacao::TrocaNoCard`): a Lista do CRM grava a atividade `update` só com o dono novo, e a saída da triagem nem grava atividade | `funil_id` (opcional) | `<tipo>:<card>:<anterior ou 0>:<updated_at µs>` |
 | `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
 | `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
@@ -83,8 +83,8 @@ Nada muda na Partida, no Executor nem na varredura.
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
 **Valores do evento**, que só o filtro do gatilho lê:
-- troca de responsável: `evento.responsavel_anterior_id` e `evento.responsavel_novo_id`;
-- troca de time: `evento.time_anterior_id` e `evento.time_novo_id`;
+- troca de dono do card (G9): `gatilho.responsavel_anterior_id`, `gatilho.responsavel_anterior_nome` e `gatilho.responsavel_anterior_ausente`, lidos da marca no filtro e em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
+- troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_trocado`, `conversa.time_trocado`) ainda não: nenhum termo pede;
 - saiu da etapa: `evento.etapa_para_id`;
 - mensagem que falhou: `evento.erro`. É o código do canal, nunca o texto, que pode trazer dado do cliente.
 
@@ -380,3 +380,57 @@ ainda sem mensagem, e "quem começou" não sai do gatilho: sai da primeira mensa
   `VALOR_DA_MENSAGEM`).
 - A Boas-vindas (F5, #2526) passa para `mensagem.criada` com `mensagem.primeira = true` e
   `conversa.iniciada_por = cliente`, num PR da F5 depois deste.
+
+## 15. A conversa lê o card dela, e a mensagem diz se tem anexo (#2716)
+
+Achado na auditoria dos exemplos 14 e 18 (Issue #2716): uma automação de mensagem precisa saber em que etapa está o
+card da conversa e se chegou um documento; sem isso, uma IA no passo roda (e cobra) em toda mensagem da conta. O 18 só
+começa com o currículo, em PDF ou foto. Esta é a capacidade (G45). Ela não fecha o ex.14: à risca, o ex.14 é UMA
+automação, que começa quando o card entra em "Documentação" e faz o laço dos documentos dentro dela. Partir o passo 2
+numa segunda automação de `mensagem.criada` adapta o termo; o laço dentro de uma automação só vira lacuna nova, e o
+ex.14 continua no `pendentes_spec`.
+
+- `card.*` vale no gatilho de conversa (`Valores::BASES_DO_ALVO`). O card é o assunto atual da conversa, a mesma regra
+  do selo da lista (`Crm::Cards::ConversationCardFinder`: o aberto antes do encerrado, depois o foco mais recente).
+  Mora em `Autonomia::Automacao::CardDaConversa`.
+- Só para ler: no filtro do gatilho, no "Só se", na condição da espera, nos textos e copiando um campo dele no corpo
+  de uma ação (o título do card num atributo da conversa). O que apontaria a ação para o card o salvar recusa
+  (`card_da_conversa_so_le`): `card.*` no caminho e `card.id` no corpo. Mexer no card é uma automação que começa no
+  card (o passo "em outro registro", G18, ainda não existe). O `Contexto` não muda: os passos continuam sem card na conversa. O card lido é o da hora do passo: um card
+  criado pelo passo "card" num passo anterior já aparece.
+- Ler o card pede a chave de funis (`crm_manage_pipelines` ou `crm_admin`), como o gatilho de card: o salvar recusa sem
+  ela (`sem_funil`), e a automação pausa (`sem_permissao_funil`) quando quem ligou a perde, em vez de ler vazio e
+  deixar o "Só se" falso em silêncio. A pausa olha a versão ativa e a das execuções em andamento (cada uma segue a
+  versão em que começou). Ao rodar, os cards que quem ligou não vê (o escopo do `Crm::CardPolicy`) saem antes de
+  escolher o assunto atual; sem card visível na conversa, lê vazio.
+- O editor oferece os valores do card no gatilho de conversa só a quem tem a chave de funis (`doAlvoDoGatilho`).
+- **Valor protegido: a IA nunca escreve o valor; o texto que a pessoa escreve pode levar** (decisão 9 do Rodrigo,
+  09/11, PR #2780, que revê a 3). Os valores de `Valores::PROTEGIDOS` (hoje `card.valor`) valem no filtro do gatilho,
+  no "Só se" e nas condições, e também no texto que a pessoa escreve (mensagem, aviso, e-mail, retorno, corpo de
+  ação), em qualquer automação, de conversa ou de card, como na main desde o #2605 (termo F4). Ler pede a permissão
+  (`sales_value_view`) de quem salva e de quem ligou: sem ela, o salvar recusa (`valor_de_venda`) e a execução lê
+  vazio (o passo pula com `faltou_valor`). O editor oferece o valor a quem pode lê-lo.
+  A IA nunca recebe o valor para escrever (`ComIa.leva_o_valor?`, também no "Testar este passo"): em qualquer
+  automação, o `le: card` do escrever, do resumir e do extrair vai sem o valor; o decidir o recebe, com a permissão.
+  Essa brecha existia na main desde o #2679; fechada aqui. No "Testar este passo", o valor só vai (ao decidir) se quem
+  testa e quem ligou a automação já salva (`automacao_id`) podem vê-lo.
+- `mensagem.tem_anexo` (sim ou não, só no filtro de `mensagem.criada`): a mensagem traz foto ou PDF (a régua do
+  ex.14: "a cada foto ou PDF que chega"). Foto é o anexo `image` com arquivo; PDF é o `file` com `application/pdf`.
+  Áudio, vídeo, figurinha e outro arquivo não contam. A figurinha do WhatsApp chega como `image`
+  (`file_content_type` junta image e sticker); a marca dela é `meta.is_sticker`, gravada no recebimento por
+  `ConversaCanal::FigurinhaRecebida` (Cloud, 360dialog e Híbrido, com a flag `conversa_cara_do_canal`) e por
+  `Waha::RichNative::Inbound::Media` (caixa WAHA, com `whatsapp_rich_native`). Sem a flag, a marca não é gravada e a
+  figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`; o valor `conversa.cliente_mandou_documento`
+  do "esperar até" (G46, o laço dos documentos) usa a mesma régua em SQL (`FotoOuPdf.escopo`). Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
+  WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
+  (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
+  arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do
+  e-mail é outro PR, no código do Chatwoot.
+- Cuidado conhecido (parecer da qualidade): uma execução aberta de versão antiga que lê o card pausa a automação
+  inteira quando quem ligou perde a chave, mesmo com a versão ativa sem card. É de propósito: a execução segue a versão
+  em que começou.
+- Decisão da Automação: id fixo de card numa ação de uma automação de conversa continua permitido. Age com os direitos
+  de quem ligou, como a pessoa faria à mão.
+- Provas: `spec/fechamento/automacao/g45_card_da_conversa_spec.rb`,
+  `spec/fechamento/automacao/exemplo_18_curriculo_comeco_spec.rb` e
+  `spec/services/autonomia/automacao/card_da_conversa_spec.rb`.

@@ -402,6 +402,45 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # #2716: ler o card a partir da conversa pede a mesma chave do gatilho de card.
+    it 'automação de conversa que lê o card no "Só se": recusa sem a chave de funis, aceita com ela', :aggregate_failures do
+      filtro = [{ campo: { '$valor' => 'card.etapa_id' }, op: 'igual', valor: 1 }]
+      le_o_card = receita.merge(gatilho: { tipo: 'conversa.criada', filtros: filtro })
+
+      post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage crm_manage_pipelines])
+      post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:created)
+    end
+
+    # Decisão 19 (#2716): a âncora do "em outro registro" e origem.card.* no ramo leem o card da conversa: pedem a chave.
+    it 'automação de conversa cuja âncora ou ramo lê o card: recusa sem a chave de funis', :aggregate_failures do
+      ramo = lambda do |registro, passos|
+        [{ id: 'o1', tipo: 'em_outro_registro', registro: registro, passos: passos }]
+      end
+      ancora = { de: 'contato_do_campo', campo: { '$valor' => 'card.atributos.indicado_por' }, usar: 'contato' }
+      se_aberto = { id: 's1', tipo: 'se', condicao: { campo: { '$valor' => 'origem.card.status' }, op: 'igual', valor: 'open' },
+                    entao: [receita[:passos].first], senao: [] }
+      no_contato = { de: 'contato_do_campo', campo: { '$valor' => 'contato.atributos.x' }, usar: 'contato' }
+      receitas = [ramo.call(ancora, [receita[:passos].first]), ramo.call(no_contato, [se_aberto])]
+                 .map { |passos| { gatilho: { tipo: 'conversa.criada' }, passos: passos } }
+
+      receitas.each do |le_o_card|
+        post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      end
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage crm_manage_pipelines])
+      receitas.each do |le_o_card|
+        post base, params: { nome: 'x', receita: le_o_card }, headers: montador.create_new_auth_token, as: :json
+        expect(response.parsed_body['error']).not_to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      end
+    end
+
     # G4: o passo "criar card" é passo de funil, como a ação de card.
     it 'recusa salvar o passo "criar card" pela API direta' do
       account.enable_features!('automacao_gatilhos')
@@ -409,6 +448,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       criar_card = { id: 'p1', tipo: 'card', etapa_id: etapa.id }
 
       post base, params: { nome: 'x', receita: receita.merge(passos: [criar_card]) }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
+    # Parecer da Funções (#2859): a prospecção cria card, e é passo de funil como o "criar card".
+    it 'recusa salvar o passo "prospecção" sem a chave de funis, mesmo com a chave da Prospecção' do
+      Autonomia::Prospecting::Config.enable_for!(account)
+      montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage prospecting_manage])
+      prospeccao = { id: 'r1', tipo: 'prospeccao', faz: 'recusar' }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [prospeccao]) }, headers: montador.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))

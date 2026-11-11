@@ -16,12 +16,31 @@ module Autonomia::Automacao::ComIa
     ::Autonomia::Automacao::AnexosDaConversa.sem_anexos(passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
   end
 
+  VALOR = 'card.valor'.freeze
+  DECIDE = 'decidir'.freeze
+
+  # O valor do card vai à IA? Só com a chave de quem lê (#2597, Valores.pode_ler?) e só no passo que decide (decisão 9,
+  # #2780): a IA nunca o recebe para escrever (escrever, resumir, extrair), em nenhuma automação.
+  def self.leva_o_valor?(passo, account_user)
+    ::Autonomia::Automacao::Valores.pode_ler?(VALOR, account_user) && passo['tipo'] == DECIDE
+  end
+
   # `usuario` vê o card? A pergunta do resto do CRM (Crm::CardPolicy#show?). Quem saiu da conta não vê.
   def self.ve_o_card?(usuario, card)
     account_user = usuario && card.account.account_users.find_by(user_id: usuario.id)
     return false unless account_user
 
     ::Crm::CardPolicy.new({ user: usuario, account: card.account, account_user: account_user }, card).show?
+  end
+
+  # O que a leitura dos anexos novos (G46) deixa no registro do passo: o marco, de onde a próxima leitura parte, e
+  # quantos ficaram fora e para depois. nil quando o passo não leu anexos novos.
+  def registro_dos_anexos
+    anexos = @leitura&.anexos
+    return unless anexos&.novos?
+
+    { 'marco_dos_anexos' => anexos.marco_lido, 'anexos_fora' => anexos.fora, 'anexos_para_depois' => anexos.para_depois }
+      .reject { |_chave, valor| valor.blank? || valor.try(:zero?) }
   end
 
   def initialize(execucao:, passo:, alvo:, acesso:)
@@ -39,31 +58,50 @@ module Autonomia::Automacao::ComIa
   private
 
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem"). Com `le: anexos` (G20), os
-  # anexos da conversa vão junto (AnexosDaConversa).
+  # anexos da conversa vão junto (AnexosDaConversa); com `anexos_novos` (G46), só os que este passo ainda não leu.
   def leitura(fuso: nil)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
     estado = estado_com(leituras, fuso)
     estado = estado_com(leituras - ['card'], fuso) unless card_visivel?(leituras, estado)
-    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa)
+    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa, novos: anexos_novos)
+  end
+
+  # Do marco da leitura anterior deste passo (ou do começo da execução) até o marco de agora, pela régua do G31.
+  def anexos_novos
+    return unless ::Autonomia::Automacao::AnexosDaConversa.novos?(@passo)
+
+    marco = ::Autonomia::Automacao::Resposta.marco(@conversa.contact, @execucao.automacao.ligada_por)
+    { depois_de: marco_anterior || @execucao.created_at, ate: marco }
+  end
+
+  def marco_anterior
+    registros = ::Autonomia::Automacao::Registro.where(execucao: @execucao, passo: @passo['id'])
+    registros.where("dados ->> 'marco_dos_anexos' IS NOT NULL").order(:id).last&.dados&.fetch('marco_dos_anexos')
   end
 
   # `le: card` (#2679): no gatilho de card, o próprio card; no de conversa, o card dela (o Estado acha).
   def estado_com(leituras, fuso)
     ::Autonomia::Decisores::Estado.new(conversation: @conversa, card: (@alvo if @alvo.is_a?(::Crm::Card)), leituras: leituras, fuso: fuso,
-                                       valor_do_card: ve_o_valor_do_card?, motivo_da_perda: true)
+                                       valor_do_card: ve_o_valor_do_card?, motivo_da_perda: true, **janela)
   end
+
+  # A janela das mensagens além da de sempre (G67: o "resumir" lê o período da execução). Vazia: a de sempre.
+  def janela = {}
 
   # O card vai à IA só se quem ligou a automação o vê (a pergunta do resto do CRM); senão o passo lê o resto.
   def card_visivel?(leituras, estado)
     leituras.exclude?('card') || estado.card.nil? || ::Autonomia::Automacao::ComIa.ve_o_card?(@execucao.automacao.ligada_por, estado.card)
   end
 
-  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
-  # conta não lê. O anúncio de origem (#2558) nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
-  def ve_o_valor_do_card?
+  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores; #2780: só no
+  # "decidir", em qualquer automação (ComIa.leva_o_valor?). Quem saiu da conta não lê. O anúncio de origem (#2558)
+  # nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
+  def ve_o_valor_do_card? = ::Autonomia::Automacao::ComIa.leva_o_valor?(@passo, quem_ligou_na_conta)
+
+  # Quem ligou a automação, na conta da conversa; nil quando saiu dela.
+  def quem_ligou_na_conta
     quem = @execucao.automacao.ligada_por
-    na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
-    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', na_conta)
+    quem && @conversa.account.account_users.find_by(user_id: quem.id)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

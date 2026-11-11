@@ -11,16 +11,20 @@
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
       "CARD_GANHO": "Quando o card é ganho",
       "CARD_PERDIDO": "Quando o card é perdido",
+      "CARD_ATUALIZADO": "Quando o card é atualizado",
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida do card",
+      "CARD_TIME_MUDOU": "Quando muda o time do card",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato",
       "CARD_ANTES_DA_REUNIAO": "Antes de uma reunião",
-      "CARD_RECORRENTE": "Todo dia, semana ou mês, em cards",
-      "CONTATO_RECORRENTE": "Todo dia, semana ou mês, em contatos",
-      "CONTA_RECORRENTE": "Todo dia, semana ou mês, na conta"
+      "CARD_RECORRENTE": "Numa data ou de tempo em tempo, em cards",
+      "CONTATO_RECORRENTE": "Numa data ou de tempo em tempo, em contatos",
+      "CONTA_RECORRENTE": "Numa data ou de tempo em tempo, na conta"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -33,6 +37,18 @@
       "NA_FRASE": "{frase} (sem conversa, abre uma em {caixa})",
       "AJUDA": "Se o card ou o contato ainda não tem conversa, a primeira mensagem abre uma nesta caixa. No WhatsApp oficial, ela só sai com um modelo aprovado."
     },
+    "SE_REPETIR": {
+      "ROTULO": "Se acontecer de novo enquanto ela ainda está esperando",
+      "IGNORA": "Não começa outra vez",
+      "COMECA_OUTRA": "Começa outra vez",
+      "AJUDA": "Com \"Começa outra vez\", cada nova vez roda os passos desde o começo, ao lado da que ainda está esperando.",
+      "NA_FRASE": "{frase} (começa outra vez a cada vez)"
+    },
+    "AGENDA_DE_RESERVA": {
+      "TITULO": "Página de agenda de reserva",
+      "NENHUMA": "Nenhuma (sem ninguém atendendo, o link da agenda fica vazio)",
+      "AJUDA": "Vai no link da agenda quando ninguém atende a conversa, ou o contato ainda não tem conversa. Quem atende sempre manda a própria página."
+    },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
       "ENVIADA": "da equipe para o cliente",
@@ -44,7 +60,12 @@
       "SAIU": "saiu, sem confirmação ainda",
       "ENTREGUE": "entregue",
       "LIDA": "lida",
-      "FALHOU": "falhou"
+      "FALHOU": "falhou",
+      "FORMULARIO_DE_ANUNCIO": "um formulário de anúncio",
+      "CONVERSA": "uma conversa",
+      "AGENDA": "a agenda",
+      "PROSPECCAO": "a prospecção",
+      "OUTRO": "outro lugar"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",
@@ -60,7 +81,9 @@
       "FREQUENCIA": "De quanto em quanto",
       "DIA_DA_SEMANA": "Dia da semana",
       "DIA_DO_MES": "Dia do mês",
+      "DATA": "Data",
       "SELECAO": "Quais",
+      "MUDANCA": "Mudança",
       "REPETE": "Repete",
       "PAGINA_ID": "Página de agendamento",
       "ANTES": "Quanto tempo antes do início"
@@ -80,6 +103,9 @@
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada num card de {funil}",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada num card de {funil}",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
+      "CARD_RESPONSAVEL_MUDOU": "Quando muda quem cuida de um card de {funil}",
+      "CARD_TIME_MUDOU": "Quando muda o time de um card de {funil}",
+      "CARD_REUNIAO_ATENDIDA": "Quando uma reunião acontece num card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",
@@ -122,6 +148,7 @@
       "DIARIA": "Todo dia",
       "SEMANAL": "Toda semana",
       "MENSAL": "Todo mês",
+      "UMA_VEZ": "Uma vez só",
       "DIAS_DA_SEMANA": {
         "0": "domingo",
         "1": "segunda",
@@ -134,13 +161,16 @@
       "DIA_DO_MES": "Dia {dia}",
       "AVISO": "Roda na hora escolhida, no fuso da conta, uma vez em cada card ou contato escolhido. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
       "AVISO_CONTA": "Roda na hora escolhida, no fuso da conta, uma vez só (não em cada card ou contato). Cabem só esperar e disparar campanha. No dia 29, 30 ou 31, os meses mais curtos usam o último dia. Se estiver desligada na hora, aquela vez não roda depois. Enquanto a vez anterior ainda estiver rodando (esperando), a nova não começa.",
+      "AVISO_UMA_VEZ": "Roda uma vez só, no dia e na hora escolhidos, no fuso da conta, em cada card ou contato escolhido. Se estiver desligada na hora, não roda depois. Mudar só a hora depois que rodou não manda de novo.",
+      "AVISO_UMA_VEZ_CONTA": "Roda uma vez só, no dia e na hora escolhidos, no fuso da conta (não em cada card ou contato). Cabem só esperar e disparar campanha. Se estiver desligada na hora, não roda depois. Mudar só a hora depois que rodou não manda de novo.",
       "CARDS": "nos cards escolhidos",
       "CONTATOS": "nos contatos escolhidos",
       "CONTA": "na conta",
       "FRASE": {
         "DIARIA": "Todo dia às {hora}h, {alvo}",
         "SEMANAL": "Toda {dia} às {hora}h, {alvo}",
-        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}"
+        "MENSAL": "Todo mês no dia {dia}, às {hora}h, {alvo}",
+        "UMA_VEZ": "Uma vez, em {dia}, às {hora}h, {alvo}"
       }
     },
     "SELECAO": {
@@ -164,7 +194,35 @@
       "ETIQUETA": "Com a etiqueta",
       "SEM_ETIQUETA": "Sem a etiqueta",
       "ATRIBUTO": "Campo do contato igual a",
-      "VALOR": "Valor"
+      "VALOR": "Valor",
+      "SOLICITANTE": {
+        "FUNIL": "Pediu card no funil",
+        "DICA": "Contatos que pediram um card neste funil e ainda faltam campos marcados. Um contato por empresa.",
+        "ETAPA": "Só os cards na etapa",
+        "FALTANDO": "Falta quando algum destes não está marcado"
+      }
+    },
+    "MUDANCA": {
+      "CAMPO": "Campo",
+      "ESCOLHA_O_CAMPO": "Escolha o campo",
+      "VALOR_DE_VENDA": "Valor de venda",
+      "CONDICAO": "Quando ele",
+      "VALOR": "Valor",
+      "EM_REAIS": "Em reais, ex.: 50000",
+      "CONDICOES": {
+        "MUDOU": "mudar",
+        "IGUAL": "ficar igual a",
+        "MAIOR_QUE": "mudar e ficar acima de",
+        "PASSOU_DE": "passar de"
+      },
+      "FRASE": {
+        "MUDOU": "Quando o campo {campo} do card muda",
+        "IGUAL": "Quando o campo {campo} do card fica igual a {valor}",
+        "MAIOR_QUE": "Quando o campo {campo} do card muda e fica acima de {valor}",
+        "PASSOU_DE": "Quando o campo {campo} do card passa de {valor}"
+      },
+      "AVISO": "O card novo também conta: o card criado com R$ 80 mil \"passa de 50000\". Uma mudança feita por esta própria automação não a dispara de novo.",
+      "ERRO_CAMPOS": "Não consegui carregar os campos do card. Abra o editor de novo para tentar outra vez."
     }
   }
 }

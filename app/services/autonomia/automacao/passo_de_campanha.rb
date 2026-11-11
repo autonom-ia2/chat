@@ -4,10 +4,22 @@
 #   `account.campaigns.create!` da API de campanhas e a põe na fila do disparo (Campaigns::TriggerOneoffCampaignJob, o
 #   mesmo job do agendador). Quem manda é o Whatsapp::OneoffCampaignService (e o overlay do EE): ele lê o público no
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
-#   Só em gatilho da conta (o recorrente da G7, `conta.recorrente`, alvo = a própria Account): num gatilho de
-#   conversa, card ou contato, cada execução criaria uma campanha
-#   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
+#   `sem_etiquetas` (lote 5, #2681) deixa de fora quem tem uma delas, mesmo com etiqueta do público
+#   (Autonomia::Automacao::CampanhaSemEtiquetas). `publico: todos` (exemplo 7, passo 2: "a mesma campanha para todos os
+#   outros contatos") manda para todos os contatos da conta, sem etiqueta de público, menos os de `sem_etiquetas`. A
+#   recusa de cada contato (quem pediu para não receber) continua valendo no envio, como em toda campanha.
+#   Só em gatilho recorrente (G7). No `conta.recorrente` (alvo = a própria Account) a execução é uma por vez e cria a
+#   campanha na hora. No `card.recorrente` e no `contato.recorrente` (G55, exemplo 16) há uma execução por card ou
+#   contato da vez, e a campanha é uma só para a vez inteira (Autonomia::Automacao::CampanhaDaOcorrencia). Num gatilho
+#   de evento (conversa, card ou contato que muda), cada execução criaria uma campanha nova para o mesmo público, o
+#   mesmo envio N vezes, e não há "vez" que as junte. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
 #   com `campanha_so_sem_alvo`. Não é teto de uso, é a regra de não repetir o mesmo envio.
+#   `publico: desta_execucao` (G58, #2779) troca as etiquetas pelos contatos que os passos anteriores desta execução
+#   criaram (Autonomia::Automacao::CampanhaDaExecucao): a campanha da 2ª segunda não volta a quem recebeu na 1ª só por
+#   ter a etiqueta do mês. Só no `conta.recorrente`, em que a execução é a vez inteira: no recorrente de card ou contato
+#   cada execução é um card, e a campanha "desta execução" sairia uma por card, fora da campanha da vez (G55). A Receita
+#   recusa ao salvar (`campanha_desta_execucao_so_na_conta`) e a receita que chegar assim mesmo pula, também ao fechar a
+#   vez (o registro da vez diz por quê).
 # - `nao_receber`: marca o contato do alvo como "não recebe" (a recusa das campanhas e mensagens ativas), como o botão
 #   do contato (Contacts::OptOutsController): origem manual, feita por quem ligou, desfeita pelo mesmo botão.
 #
@@ -20,27 +32,43 @@ class Autonomia::Automacao::PassoDeCampanha
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
   ModeloWhatsapp = ::Autonomia::Automacao::ModeloWhatsapp
   ROTA = ::Crm::BookingV2::Notices::Route
-  # Utilidade e propaganda, aprovados, como a tela de campanhas (decisão do Rodrigo, 06/11: "Sim, com aviso"). O editor
-  # avisa o custo do modelo de propaganda. Vale só aqui: o passo mensagem continua só com utilidade (ModeloWhatsapp).
-  CATEGORIAS = %w[UTILITY MARKETING].freeze
+  # Utilidade e propaganda, aprovados, como a tela de campanhas (decisão do Rodrigo, 06/11: "Sim, com aviso"); as mesmas
+  # do passo mensagem desde o lote 5 (#2681). O editor avisa o custo do modelo de propaganda.
+  CATEGORIAS = ModeloWhatsapp::CATEGORIAS
   CANAL = ModeloWhatsapp::CANAL
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
   ALVO_DA_CONTA = 'Account'.freeze
+  PUBLICO_DESTA_EXECUCAO = 'desta_execucao'.freeze
+  PARA_TODOS = 'todos'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
-  def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
+  # `alvo`: o tipo do registro em que o passo roda (Receita#alvo); o ramo do "em outro registro" nunca roda na conta.
+  def self.problemas_ao_salvar(passo, receita, alvo:, conta:, account_user:)
     id = passo['id']
-    gatilho = receita.dig('gatilho', 'tipo')
     desligado = conta && !::Autonomia::Automacao::Motor.mensagens?(conta) ? [frase(:passo_desligado, passo: id)] : []
     return desligado unless passo['faz'] == 'disparar'
 
-    desligado + problemas_do_disparo(passo, conta, gatilho, account_user)
+    desligado + problemas_do_disparo(passo, receita, conta, alvo, account_user) + problemas_do_publico(passo, receita, alvo)
   end
 
-  def self.problemas_do_disparo(passo, conta, gatilho, account_user)
+  # G58: o público desta execução precisa de um passo antes dele que crie card ou contato; sem ele, sairia sempre vazio.
+  # E só vale no gatilho da conta (a execução é a vez inteira).
+  def self.problemas_do_publico(passo, receita, alvo)
+    return [] unless desta_execucao?(passo)
+    return [frase(:campanha_desta_execucao_so_na_conta, passo: passo['id'])] unless alvo_da_conta?(alvo)
+
+    receita_obj = ::Autonomia::Automacao::Receita.new(receita, conta: nil, account_user: nil)
+    antes = ::Autonomia::Automacao::TextoDaIaNaReceita.new(receita_obj, receita).rodam_antes(passo['id'])
+    criam = ::Autonomia::Automacao::ContatosDaExecucao::TIPOS_QUE_CRIAM
+    Array(antes).any? { |anterior| criam.include?(anterior['tipo']) } ? [] : [frase(:campanha_publico_sem_origem, passo: passo['id'])]
+  end
+
+  def self.desta_execucao?(passo) = passo['publico'] == PUBLICO_DESTA_EXECUCAO
+
+  def self.problemas_do_disparo(passo, receita, conta, alvo, account_user)
     id = passo['id']
-    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_conta?(gatilho)),
+    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless roda_por_vez?(alvo, receita)),
              *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
@@ -55,7 +83,8 @@ class Autonomia::Automacao::PassoDeCampanha
   def self.problemas_da_campanha(passo, conta)
     id = passo['id']
     caixa = caixa_da_campanha(conta, passo['caixa_id'])
-    etiquetas = Array(passo['etiquetas']) - conta.labels.where(id: passo['etiquetas']).pluck(:id)
+    pedidas = Array(passo['etiquetas']) + Array(passo['sem_etiquetas'])
+    etiquetas = pedidas - conta.labels.where(id: pedidas).pluck(:id)
     modelo = caixa && modelo_pronto(caixa, passo['modelo'])
     [*(frase(:campanha_sem_caixa, passo: id) if caixa.nil?),
      *(frase(:campanha_modelo, passo: id, nome: passo.dig('modelo', 'nome')) if modelo.is_a?(String)),
@@ -79,10 +108,14 @@ class Autonomia::Automacao::PassoDeCampanha
     caixa if caixa&.channel.try(:provider) == PROVEDOR
   end
 
-  # O gatilho que roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o
-  # `conta.recorrente` entra em Gatilhos::LISTA com alvo 'Account'.
-  def self.gatilho_da_conta?(tipo)
-    ::Autonomia::Automacao::Gatilhos.alvo(tipo) == ALVO_DA_CONTA
+  # O passo roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o `conta.recorrente`
+  # entra em Gatilhos::LISTA com alvo 'Account'. `alvo`: Receita#alvo.
+  def self.alvo_da_conta?(alvo) = alvo == ALVO_DA_CONTA
+
+  # O passo que roda por vez (G7): na conta e, desde a G55, no recorrente de card ou contato, em que a campanha é uma
+  # só para a vez inteira. O ramo do "em outro registro" não tem gatilho próprio (EmOutroRegistro): fica de fora.
+  def self.roda_por_vez?(alvo, receita)
+    alvo_da_conta?(alvo) || ::Autonomia::Automacao::Gatilhos.recorrente?(receita.to_h.dig('gatilho', 'tipo'))
   end
 
   def self.pode_disparar?(usuario, conta)
@@ -124,10 +157,18 @@ class Autonomia::Automacao::PassoDeCampanha
     @passo['faz'] == 'disparar' ? disparar : nao_receber
   end
 
+  # G55: a campanha da vez que fechou, montada pelo caminho da conta (alvo = a conta) sem pôr na fila do disparo. Quem
+  # chama (CampanhaDaOcorrencia) cria a campanha e fecha a vez na mesma transação e enfileira depois do commit.
+  # [Resultado, a campanha criada ou nil].
+  def montar
+    @so_montar = true
+    [disparar, @campanha]
+  end
+
   private
 
   def disparar
-    return pulado('campanha_so_sem_alvo') unless @alvo.is_a?(::Account)
+    return pulado('campanha_so_sem_alvo') unless da_vez?
     return sem_acesso('quem_ligou_sem_permissao_campanha') unless self.class.pode_disparar?(@quem, @conta)
 
     caixa = self.class.caixa_da_campanha(@conta, @passo['caixa_id'])
@@ -138,22 +179,88 @@ class Autonomia::Automacao::PassoDeCampanha
     template_params = self.class.modelo_pronto(caixa, @passo['modelo'])
     return pulado("campanha_#{template_params}") if template_params.is_a?(String)
 
-    criar_e_disparar(caixa, template_params)
+    publico_escolhido(caixa, template_params)
+  end
+
+  # Quem recebe: quem tem as etiquetas (G14) ou só quem os passos anteriores desta execução criaram (G58).
+  def publico_escolhido(caixa, template_params)
+    return criar_e_disparar(caixa, template_params) unless self.class.desta_execucao?(@passo)
+    # A execução da conta, não a do alvo em que o passo roda: ao fechar a vez (montar), o alvo é a conta, mas a execução
+    # é a de um card.
+    return pulado('campanha_desta_execucao_so_na_conta') unless self.class.alvo_da_conta?(@execucao.alvo_type)
+
+    ::Autonomia::Automacao::CampanhaDaExecucao.new(execucao: @execucao, passo: @passo, caixa: caixa, template_params: template_params).disparar
   end
 
   def criar_e_disparar(caixa, template_params)
-    etiquetas = @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
-    return pulado('campanha_sem_etiqueta') if etiquetas.empty?
+    todos = @passo['publico'] == PARA_TODOS
+    etiquetas = todos ? [] : @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
+    return pulado('campanha_sem_etiqueta') if etiquetas.empty? && !todos
 
-    campanha = @conta.campaigns.create!(
-      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
-      message: self.class.texto_do_modelo(caixa, template_params), audience: etiquetas.map { |id| { 'type' => 'Label', 'id' => id } }
-    )
-    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
-    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, 'etiquetas' => etiquetas })
+    sem = excluidas_existentes
+    return pulado('campanha_exclusao_apagada') if sem.nil?
+
+    publicar(caixa, template_params, todos, etiquetas, sem)
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
+  end
+
+  # Na conta, a campanha sai agora; no card ou contato do recorrente, a execução entra na campanha da vez (G55).
+  def publicar(caixa, template_params, todos, etiquetas, sem)
+    dados = { 'publico' => todos ? PARA_TODOS : 'etiquetas', 'etiquetas' => etiquetas, 'sem_etiquetas' => sem }
+    return campanha_da_vez(dados) unless da_conta?
+
+    campanha_da_conta(caixa, template_params, audiencia(todos, etiquetas, sem), dados)
+  end
+
+  # As etiquetas excluídas, ou nil quando alguma sumiu. Falha fechada (#2686): a que sumiu não pode cair da exclusão,
+  # senão a campanha "para todos menos X" iria também para X.
+  def excluidas_existentes
+    pedidas = Array(@passo['sem_etiquetas']).map(&:to_i).uniq
+    existentes = @conta.labels.where(id: pedidas).pluck(:id)
+    existentes if (pedidas - existentes).empty?
+  end
+
+  def criar_campanha(caixa, template_params, audiencia)
+    @conta.campaigns.create!(
+      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
+      message: self.class.texto_do_modelo(caixa, template_params), audience: audiencia
+    )
+  end
+
+  # O conta.recorrente: uma execução por vez, a campanha sai na hora.
+  def campanha_da_conta(caixa, template_params, audiencia, dados)
+    campanha = @campanha = criar_campanha(caixa, template_params, audiencia)
+    ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha) unless @so_montar
+    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, **dados })
+  end
+
+  def da_conta? = @alvo.is_a?(::Account)
+
+  # Roda por vez: na conta (conta.recorrente) ou num card ou contato do recorrente (G55).
+  def da_vez? = da_conta? || ocorrencia.present?
+
+  # G55: no card.recorrente e no contato.recorrente, a execução chega à campanha da vez e segue. A campanha sai quando a
+  # vez fecha (CampanhaDaOcorrencia, conferida pelo Executor depois de gravar este registro). Na vez já fechada: "já
+  # saiu" só se a campanha saiu de fato; senão, "não saiu".
+  def campanha_da_vez(dados)
+    vez = ::Autonomia::Automacao::CampanhaDaOcorrencia.chegada(@execucao, @passo['id'])
+    marca = { 'campanha_da_vez' => vez.id, **dados }
+    return Resultado.new(tipo: :ok, motivo: 'campanha_da_vez_aguardando', dados: marca) unless vez.fechada_em
+    return Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_fechou_sem_enviar', dados: marca) unless vez.campanha_display_id
+
+    Resultado.new(tipo: :pulado, motivo: 'campanha_da_vez_ja_saiu', dados: marca.merge('campanha_id' => vez.campanha_display_id))
+  end
+
+  # A vez do recorrente de card ou contato desta execução, ou nil fora dele.
+  def ocorrencia = (@ocorrencia ||= ::Autonomia::Automacao::CampanhaDaOcorrencia.vez_da(@execucao))
+
+  # As etiquetas do público (ou todos os contatos) e as excluídas (lote 5, #2681: ExcludeLabel e AllContacts, lidos pelo
+  # CampanhaSemEtiquetas no envio).
+  def audiencia(todos, etiquetas, sem)
+    publico = todos ? ::Autonomia::Automacao::CampanhaSemEtiquetas.todos : etiquetas.map { |id| { 'type' => 'Label', 'id' => id } }
+    publico + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
   end
 
   def nao_receber

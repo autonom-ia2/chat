@@ -20,6 +20,8 @@ import {
   sensitiveExtrasOn,
   modulesWithKeys,
   KEYS_OUTSIDE_MATRIX,
+  levelLabelKey,
+  listedModules,
 } from '../permissionMatrix';
 import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
 import { keyLockReason } from 'dashboard/helper/peopleAccess';
@@ -461,6 +463,157 @@ describe('permissionMatrix', () => {
     });
   });
 
+  // #1430: Ferramentas dos agentes. Linha própria, separada de Agentes; o servidor grava autonomia_view junto.
+  describe('ferramentas dos agentes (#1430)', () => {
+    const tools = moduleByKey('AUTONOMIA_TOOLS');
+    const agents = moduleByKey('AUTONOMIA');
+
+    it('is its own row in the agents group, manage only, behind the account flag', () => {
+      const group = MODULE_GROUPS.find(item => item.key === 'AUTONOMIA');
+      expect(group.modules).toContain(tools);
+      expect(tools.levels).toEqual({ manage: 'autonomia_tools_manage' });
+      expect(tools.sensitive).toBe(true);
+      expect(tools.featureFlag).toEqual([
+        'agente_ferramentas_delegadas',
+        ['agente_ferramentas_prontas', 'agente_ferramentas_prontas_vitrine'],
+      ]);
+      expect(levelOptions(tools)).toEqual([LEVELS.NONE, LEVELS.MANAGE]);
+    });
+
+    it('shows the row with either the free-form tools or the ready-made tools showcase (#2858 F2)', () => {
+      const comFlags =
+        (...ligadas) =>
+        flag =>
+          ligadas.includes(flag);
+      expect(
+        listedModules([tools], comFlags('agente_ferramentas_delegadas'))
+      ).toEqual([tools]);
+      expect(
+        listedModules(
+          [tools],
+          comFlags(
+            'agente_ferramentas_prontas',
+            'agente_ferramentas_prontas_vitrine'
+          )
+        )
+      ).toEqual([tools]);
+      expect(
+        listedModules([tools], comFlags('agente_ferramentas_prontas_vitrine'))
+      ).toEqual([]);
+      expect(listedModules([tools], () => false)).toEqual([]);
+    });
+
+    it('calls the level "Gerenciar" instead of "Editar"', () => {
+      const key = levelLabelKey(tools, LEVELS.MANAGE);
+      expect(key).toBe(
+        'CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.LEVEL_LABEL_MANAGE'
+      );
+      expect(
+        en.CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.LEVEL_LABEL_MANAGE
+      ).toBe('Manage');
+      expect(
+        ptBR.CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS.LEVEL_LABEL_MANAGE
+      ).toBe('Gerenciar');
+      expect(levelLabelKey(agents, LEVELS.MANAGE)).toBe(
+        'CUSTOM_ROLE.MATRIX.LEVELS.MANAGE'
+      );
+      expect(levelLabelKey(moduleByKey('LABELS'), LEVELS.NONE)).toBe(
+        'CUSTOM_ROLE.MATRIX.BASELINE.APPLY'
+      );
+    });
+
+    it('stores autonomia_view with the tools key, like the server', () => {
+      const permissions = setLevel(tools, LEVELS.MANAGE, []);
+
+      expect(permissions.sort()).toEqual(
+        ['autonomia_tools_manage', 'autonomia_view'].sort()
+      );
+      expect(getLevel(tools, permissions)).toBe(LEVELS.MANAGE);
+      expect(getLevel(agents, permissions)).toBe(LEVELS.VIEW);
+    });
+
+    it('adds autonomia_view even next to autonomia_manage, as the server does', () => {
+      const permissions = setLevel(tools, LEVELS.MANAGE, ['autonomia_manage']);
+
+      expect(permissions).toEqual(
+        expect.arrayContaining([
+          'autonomia_manage',
+          'autonomia_tools_manage',
+          'autonomia_view',
+        ])
+      );
+      expect(getLevel(agents, permissions)).toBe(LEVELS.MANAGE);
+    });
+
+    it('keeps the agents view when the tools are turned off', () => {
+      expect(
+        setLevel(tools, LEVELS.NONE, [
+          'autonomia_tools_manage',
+          'autonomia_view',
+        ])
+      ).toEqual(['autonomia_view']);
+    });
+
+    it('keeps autonomia_view when agents go to edit with the tools on', () => {
+      const permissions = setLevel(agents, LEVELS.MANAGE, [
+        'autonomia_tools_manage',
+        'autonomia_view',
+      ]);
+
+      expect(permissions).toEqual(
+        expect.arrayContaining([
+          'autonomia_manage',
+          'autonomia_tools_manage',
+          'autonomia_view',
+        ])
+      );
+    });
+
+    it('turns the tools off with the agents, which they need', () => {
+      expect(
+        setLevel(agents, LEVELS.NONE, [
+          'autonomia_tools_manage',
+          'autonomia_view',
+          'inbox_view',
+        ])
+      ).toEqual(['inbox_view']);
+    });
+
+    it('counts the tools key as sensitive in the summary', () => {
+      expect(
+        sensitiveExtrasOn(['autonomia_view', 'autonomia_tools_manage'])
+      ).toEqual(['autonomia_tools_manage']);
+    });
+
+    it('lists the row only when the account has the flag', () => {
+      const group = MODULE_GROUPS.find(item => item.key === 'AUTONOMIA');
+      const off = listedModules(group.modules, () => false);
+      const on = listedModules(
+        group.modules,
+        flag => flag === 'agente_ferramentas_delegadas'
+      );
+
+      expect(off).not.toContain(tools);
+      expect(off).toContain(agents);
+      expect(on).toContain(tools);
+    });
+
+    it('has every text of the row in en and pt_BR', () => {
+      [en, ptBR].forEach(({ CUSTOM_ROLE }) => {
+        const texts = CUSTOM_ROLE.MATRIX.MODULES.AUTONOMIA_TOOLS;
+        [
+          'NAME',
+          'HINT',
+          'LEVEL_MANAGE',
+          'LEVEL_LABEL_MANAGE',
+          'NOTE',
+          'CONFIRM',
+        ].forEach(field => expect(texts[field]).toBeTruthy());
+        expect(CUSTOM_ROLE.PERMISSIONS.AUTONOMIA_TOOLS_MANAGE).toBeTruthy();
+      });
+    });
+  });
+
   // Espelho de CustomRole::PERMISSIONS (enterprise/app/models/custom_role.rb). Chave nova no servidor entra aqui e
   // numa área da matriz (ou em KEYS_OUTSIDE_MATRIX, #2352); o teste abaixo acusa a diferença (#2115).
   const SERVER_KEYS = [
@@ -488,6 +641,7 @@ describe('permissionMatrix', () => {
     'knowledge_base_view',
     'autonomia_view',
     'autonomia_manage',
+    'autonomia_tools_manage',
     'desempenho_view',
     'campaign_view',
     'campaign_manage',
@@ -530,8 +684,8 @@ describe('permissionMatrix', () => {
     ...(module.type === 'conversations' ? ['conversation_manage'] : []),
   ]);
 
-  it('covers exactly the 59 server keys between the matrix and the keys outside it', () => {
-    expect(SERVER_KEYS).toHaveLength(59);
+  it('covers exactly the 60 server keys between the matrix and the keys outside it', () => {
+    expect(SERVER_KEYS).toHaveLength(60);
     expect(known.filter(key => KEYS_OUTSIDE_MATRIX.includes(key))).toEqual([]);
     expect([...new Set([...known, ...KEYS_OUTSIDE_MATRIX])].sort()).toEqual(
       [...SERVER_KEYS].sort()

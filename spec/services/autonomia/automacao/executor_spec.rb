@@ -161,7 +161,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   describe 'desligar no meio (F3.4)' do
     let(:definicao) { automacao_ligada(account, admin, [esperar_passo('p1'), prioridade_passo('p2')]) }
 
-    it 'desligada entre duas ações da mesma rodada, a segunda não roda', :aggregate_failures do
+    it 'desligada entre duas ações da mesma rodada, a segunda não roda e fica o porquê', :aggregate_failures do
       duas = automacao_ligada(account, admin, [prioridade_passo('a1', 'high'), prioridade_passo('a2', 'urgent')])
       allow(Autonomia::Automacao::PassoDeAcao).to receive(:new).and_wrap_original do |original, **argumentos|
         original.call(**argumentos).tap do |passo|
@@ -172,7 +172,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       execucao = comecar_e_rodar(duas)
 
       expect(conversa.reload.priority).to eq('high')
-      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[a1 ok] + [nil]]])
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[a1 ok] + [nil], %w[a2 pulado desligada]]])
     end
 
     it 'fechada pela varredura no meio da rodada, a próxima ação não roda e nada é gravado por cima', :aggregate_failures do

@@ -154,9 +154,7 @@ class Crm::BookingV2::Booker
 
     ensure_slot_available!(include_provider: false)
     contact = find_or_create_contact!
-    # Card aberto do contato no funil da página recebe a reunião (o Kanban não mostra a pessoa duas vezes).
-    card = @card || account.crm_cards.active.where(contact_id: contact.id, pipeline_id: pipeline_id).order(updated_at: :desc).first ||
-           create_card!(contact)
+    card, @card_created = booking_card(contact).perform
     meeting = create_meeting!(card)
     Result.new(meeting: meeting, contact: contact, card: card, existing: false)
   end
@@ -177,17 +175,10 @@ class Crm::BookingV2::Booker
     email if email.present? && account.contacts.from_email(email).blank?
   end
 
-  def create_card!(contact)
-    @card_created = true
-    Crm::Cards::Creator.new(
-      account: account, user: nil,
-      params: {
-        pipeline_id: pipeline_id, stage_id: stage_id, contact_id: contact.id, owner_id: host.id,
-        conversation_id: conversation&.id, inbox_id: conversation&.inbox_id,
-        title: "#{contact.name.presence || name} - #{profile.title.presence || 'Agendamento'}".first(255),
-        currency: 'BRL', source: @source
-      }
-    ).perform
+  # O card da reunião: o do convite, o aberto do contato no funil da página ou um novo (Crm::BookingV2::BookingCard).
+  def booking_card(contact)
+    Crm::BookingV2::BookingCard.new(profile: profile, contact: contact, target: { pipeline_id: pipeline_id, stage_id: stage_id },
+                                    host: host, source: @source, fallback_name: name, card: @card, conversation: conversation)
   end
 
   def conversation

@@ -28,7 +28,7 @@ class Crm::Meetings::RecordOutcomeService
 
     first_held = save_outcome!
 
-    log_activity
+    log_activity(first_held)
     offer_post_meeting if first_held
     @meeting
   end
@@ -69,7 +69,9 @@ class Crm::Meetings::RecordOutcomeService
                           .strip.truncate(MAX_NOTES_LENGTH)
   end
 
-  def log_activity
+  # `first_held`: o primeiro "Aconteceu" da reunião (G56). O gatilho "reunião atendida" da Automação livre dispara só
+  # nele; salvar as anotações de novo, ou trocar para "Não compareceu" e voltar, grava a atividade sem disparar.
+  def log_activity(first_held)
     Crm::ActivityLogger.new(
       card: @meeting.card,
       actor: @meeting.created_by,
@@ -78,6 +80,7 @@ class Crm::Meetings::RecordOutcomeService
       payload: {
         meeting_id: @meeting.id,
         outcome: @meeting.outcome,
+        first_held: first_held,
         title: @meeting.title
       }
     ).perform

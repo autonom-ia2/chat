@@ -1,0 +1,21 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PROSPECCAO": {
+      "BUSCAR": "Search for companies in Prospecting",
+      "RECUSAR": "Mark as do not contact",
+      "RECUSAR_DICA": "The contact's company is marked in Prospecting as “does not want to be contacted”. Its number is left out of future searches and campaigns. You can undo it on the lead.",
+      "SO_RECORRENTE": "Searching for companies only works in an automation that runs on its own, on a schedule. With a conversation or card trigger, each run would run a paid search, so it can't be saved.",
+      "BUSCA_DICA": "The search runs again with what you asked for back then: what, where and the filters. Only companies with WhatsApp become cards.",
+      "BUSCA_DICA_OPCAO": "{onde} · {data}",
+      "SEM_LOCAL": "no place",
+      "BUSCA_SUMIU": "The chosen search is no longer in your Prospecting history. Choose another one.",
+      "ERRO_BUSCAS": "Could not load your Prospecting searches. Close and open this panel again.",
+      "QUANTAS_DICA": "From 1 to {maximo}.",
+      "QUANTAS_FORA": "Choose a whole number from 1 to {maximo}.",
+      "ETIQUETAS_ROTULO": "Labels on the contact of each new card",
+      "ETIQUETAS_DICA": "These labels go on the contact of each new card. Use them as the audience of a campaign.",
+      "FRASE_BUSCAR": "Search for {quantas} companies and create the cards",
+      "FRASE_RECUSAR": "Mark that the company does not want to be contacted"
+    }
+  }
+}

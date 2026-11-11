@@ -7,6 +7,10 @@
 # funil (#2084) não vira card. Nunca move card: mover é a ação `POST crm/cards/:id/move`. O card novo não vira o assunto
 # atual da conversa nem desliga o card que ela já tem ("Convive" do termo): o card do pedido continua o principal.
 #
+# G49: com `contato` (um valor, `{"$valor": "criado.<passo>"}`), o card nasce nesse contato, sem conversa: o card do
+# João, que o passo anterior criou (exemplo 11). Valor vazio pula com `faltou_valor`; o contato que quem ligou não
+# alcança (ContactPolicy#update?, como o alvo contato) pausa a automação.
+#
 # Age como quem ligou (D1), conferido a cada execução, com as perguntas da API de cards: criar card (CardPolicy#create?,
 # no EE `crm_manage_cards`) e o funil da etapa nas caixas dele (CardGuard#create_allowed?). Por ser passo de funil, pede
 # também a chave de funis, a mesma das ações de funil (RegraDoFunil.chave?, #2633: `crm_manage_pipelines` ou `crm_admin`;
@@ -35,15 +39,14 @@ class Autonomia::Automacao::PassoDeCard
     ::Crm::CardPolicy.new(contexto, ::Crm::Card).create?
   end
 
-  def initialize(execucao:, passo:, alvo:, acesso:)
+  # `valores`: para ler o `contato` (G49).
+  def initialize(execucao:, passo:, alvo:, acesso:, valores: nil)
     @execucao = execucao
     @passo = passo
     @acesso = acesso
     @conta = execucao.account
-    contexto = ::Autonomia::Automacao::Contexto.de(alvo)
-    @conversa = contexto.conversa
-    # O contato em que o card nasce: o da conversa, quando há (CardNovo grava esse), senão o do alvo.
-    @contato = @conversa&.contact || contexto.contato
+    @valores = valores
+    no_alvo(alvo) unless @passo['contato']
   end
 
   def executar
@@ -51,6 +54,7 @@ class Autonomia::Automacao::PassoDeCard
     return pulado('etapa_sumiu') if etapa.nil?
     return sem_acesso('sem_chave_de_funis') unless ::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
     return sem_acesso('quem_ligou_sem_permissao_card') unless pode_criar?(etapa)
+    return do_valor(etapa) if @passo['contato']
     return pulado('sem_contato') if @contato.nil?
     return pulado('fora_do_funil') if Crm::Relacao.fora_do_funil?(@contato)
 
@@ -59,13 +63,33 @@ class Autonomia::Automacao::PassoDeCard
 
   private
 
+  # O contato em que o card nasce: o da conversa, quando há (CardNovo grava esse), senão o do alvo.
+  def no_alvo(alvo)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo)
+    @conversa = contexto.conversa
+    @contato = @conversa&.contact || contexto.contato
+  end
+
+  # G49: o card no contato do valor, sempre da conta. O id lido que não é número inteiro (ou de outra conta) não acha
+  # contato e pula como o valor vazio.
+  def do_valor(etapa)
+    id = Integer(@valores.ler(@passo.dig('contato', '$valor')).to_s, 10, exception: false)
+    @contato = id && @conta.contacts.find_by(id: id)
+    return pulado('faltou_valor') if @contato.nil?
+    return sem_acesso('quem_ligou_sem_acesso') unless @acesso.alcanca?(@contato)
+    return pulado('fora_do_funil') if Crm::Relacao.fora_do_funil?(@contato)
+
+    criar(etapa)
+  end
+
   def criar(etapa)
     card = ::Autonomia::Automacao::CardNovo.new(stage: etapa, conversation: @conversa, contact: @contato, actor: @acesso.usuario,
                                                 automacao: { origem: ORIGEM, id: @execucao.automacao_id }, foco: false)
                                            .criar { aberto(etapa).exists? }
     return pulado('card_ja_existe', 'card_id' => aberto(etapa).pick(:id)) if card.nil?
 
-    Resultado.new(tipo: :ok, dados: { 'card_id' => card.id, 'etapa_id' => etapa.id })
+    criado = { 'tipo' => ::Autonomia::Automacao::RegistroCriado::CARD, 'id' => card.id }
+    Resultado.new(tipo: :ok, dados: { 'card_id' => card.id, 'etapa_id' => etapa.id, 'criado' => criado })
   end
 
   # O card aberto do funil da etapa nesta conversa (pela regra do ConversationCardFinder) ou, sem conversa, do contato.

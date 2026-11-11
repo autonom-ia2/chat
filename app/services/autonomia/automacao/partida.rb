@@ -10,7 +10,8 @@
 #
 # Passou: grava a execução reservada (estado "andando", com a marca `travada_em` e o `due_at` preenchido, que quer
 # dizer "ainda não começou": ver Executor) e enfileira a primeira rodada, na mesma raiz do evento que a disparou. Já
-# existe uma aberta para a mesma automação, alvo e gatilho? Não abre outra (índice único, F2.5).
+# existe uma aberta para a mesma automação, alvo e gatilho? Não abre outra (índice único, F2.5), salvo quando a
+# receita escolheu `se_repetir: comeca_outra` (G50): aí abre outra, paralela, pela mesma cadeia, Acesso e filtros.
 class Autonomia::Automacao::Partida
   Cadeia = ::Autonomia::Automacao::Cadeia
 
@@ -34,7 +35,7 @@ class Autonomia::Automacao::Partida
     return pausar(acesso.motivo) if acesso.motivo
     return pular('fora_do_alcance') unless acesso.alcanca?(@alvo)
     return pular('fora_do_filtro') unless no_filtro?
-    return ja_aberta if aberta?
+    return ja_aberta if ja_aberta?
 
     comecar
   end
@@ -47,6 +48,10 @@ class Autonomia::Automacao::Partida
   end
 
   def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
+
+  # G50: a receita pediu outra execução quando o gatilho se repete (a 2ª falta do aluno com a 1ª ainda esperando). O
+  # esquema e o salvar só deixam isso nos gatilhos de evento que aceitam (Gatilhos.pode_repetir?).
+  def paralela? = ::Autonomia::Automacao::Gatilhos.comeca_outra?(gatilho)
 
   # O mesmo fato já abriu uma execução (o evento repetido, ou a varredura de tempo achando o mesmo card de novo a cada
   # rodada): não passa pela cadeia nem tenta o INSERT. Pelo índice único (automacao_id, evento); o índice segue sendo a
@@ -61,6 +66,9 @@ class Autonomia::Automacao::Partida
     execucao_aberta.present?
   end
 
+  # A paralela (G50) não pergunta pela aberta: começa ao lado dela.
+  def ja_aberta? = !paralela? && aberta?
+
   def execucao_aberta
     @execucao_aberta ||= ::Autonomia::Automacao::Execucao.abertas.find_by(automacao_id: @definicao.id, alvo: @alvo,
                                                                           chave_gatilho: @chave_gatilho)
@@ -68,9 +76,11 @@ class Autonomia::Automacao::Partida
 
   # O gatilho aconteceu de novo com a execução ainda rodando (esperando, por exemplo): não abre outra, e o histórico da
   # que está aberta diz isso ao dono. Uma linha por execução: a mensagem nova numa conversa com a execução aberta é o
-  # caso comum, e não pode encher o histórico.
+  # caso comum, e não pode encher o histórico. Só a receita que espera a repetição (`gatilho.repetiu`, lote 4) guarda a
+  # hora dela e acorda a espera (Despertador.gatilho_repetiu).
   def ja_aberta
     execucao = execucao_aberta
+    ::Autonomia::Automacao::Despertador.gatilho_repetiu(execucao)
     return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
 
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',
@@ -79,7 +89,8 @@ class Autonomia::Automacao::Partida
   end
 
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
+    alvo = ::Autonomia::Automacao::Contexto.de(@alvo, evento: @evento)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: alvo, mensagem: @mensagem, quem: @definicao.ligada_por)
     Array(gatilho['filtros']).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end
@@ -95,11 +106,11 @@ class Autonomia::Automacao::Partida
 
   # O índice único da execução aberta barra a segunda partida enquanto a primeira anda; o do evento barra o mesmo evento
   # entregue de novo depois que ela fechou (o EventDispatcherJob repete). Os dois caem no RecordNotUnique, antes de
-  # qualquer passo.
+  # qualquer passo. A paralela (G50) não conta no da execução aberta; o do evento continua valendo para ela.
   def abrir
     marca = Time.current.floor(6)
     execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size,
-                     evento: @evento)
+                     evento: @evento, paralela: paralela?)
     ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6), Cadeia.raiz)
     execucao
   rescue ActiveRecord::RecordNotUnique

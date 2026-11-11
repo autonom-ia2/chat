@@ -1,0 +1,80 @@
+# Os passos que se conferem sozinhos ao salvar, cada um na própria classe (saiu da Receita quando ela passou do tamanho,
+# no G18): o "Passar para a agente de IA" (G15), o "criar card" (G4), que confere também a pessoa, a campanha (G14), que
+# confere o gatilho, a pessoa e a campanha da tela, o "criar retorno" (G3), o "em outro registro" (G18), o "passar a
+# conversa para o responsável do card" (G66), que confere o gatilho, a prospecção (G21, #2706), que confere o gatilho,
+# a pessoa, a busca, a etapa e as etiquetas, e o "para cada item" (G24, #2771), que confere as flags, os campos, a etapa
+# e a pessoa, o "webhook" (G13, #2670), que confere a permissão de integração, o endereço e onde grava a resposta, e a
+# lista de e-mail (G52, #2760), que confere a lista e a pessoa. Os
+# caminhos que o retorno, o "em outro registro", o webhook e o contato do "criar card" (G49) leem passam pela régua da
+# Receita (o bloco `caminho`).
+class Autonomia::Automacao::PassosProprios
+  TIPOS = %w[ia_assumir card campanha retorno em_outro_registro conversa_ao_responsavel prospeccao para_cada webhook lista_de_email].freeze
+
+  def self.do_tipo?(passo) = TIPOS.include?(passo['tipo'])
+
+  # `alvo`: o tipo do registro em que os passos rodam (Receita#alvo): no ramo de um "em outro registro", o do ramo; fora
+  # dele, o do gatilho. As regras de "só no card" e "só na conta" leem ele, nunca o gatilho. `dentro`: a receita é o ramo
+  # de um "em outro registro" (Receita com `alvo`). `caminho`: (id do passo, caminho) → problemas, a régua da Receita.
+  def initialize(conta:, account_user:, receita:, alvo:, dentro:, &caminho)
+    @conta = conta
+    @account_user = account_user
+    @receita = receita
+    @alvo = alvo
+    @dentro = dentro
+    @caminho = caminho
+  end
+
+  def problemas(passo)
+    case passo['tipo']
+    when 'card' then card(passo)
+    when 'retorno' then retorno(passo)
+    when 'em_outro_registro' then outro_registro(passo)
+    when 'webhook' then webhook(passo)
+    else sem_caminho(passo)
+    end
+  end
+
+  private
+
+  # Os passos que se conferem sem ler caminho pela régua da Receita.
+  def sem_caminho(passo)
+    case passo['tipo']
+    when 'campanha'
+      ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, alvo: @alvo, conta: @conta, account_user: @account_user)
+    when 'para_cada' then ::Autonomia::Automacao::PassoParaCada.problemas_ao_salvar(@conta, passo, @account_user)
+    when 'prospeccao'
+      ::Autonomia::Automacao::PassoDeProspeccao.problemas_ao_salvar(passo, @alvo, conta: @conta, account_user: @account_user)
+    when 'conversa_ao_responsavel' then ::Autonomia::Automacao::PassoDeConversaAoResponsavel.problemas_ao_salvar(passo, @alvo)
+    when 'lista_de_email' then ::Autonomia::Automacao::PassoDeListaDeEmail.problemas_ao_salvar(@conta, passo, @account_user)
+    else ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
+    end
+  end
+
+  # G49: o contato em que o card nasce (`contato`) é lido como qualquer valor, e o registro criado tem de ser um contato.
+  def card(passo)
+    contato = passo.dig('contato', '$valor')
+    lido = contato ? @caminho.call(passo['id'], contato, tipo: ::Autonomia::Automacao::RegistroCriado::CONTATO) : []
+    ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user) + lido
+  end
+
+  def retorno(passo)
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @alvo, @account_user) do |c|
+      @caminho.call(passo['id'], c, onde: :texto)
+    end
+  end
+
+  # G13 (#2670): o corpo é lido como texto; o destino do "gravar", como caminho (é onde a ação grava, e o card da conversa
+  # é só para ler, #2716).
+  def webhook(passo)
+    ::Autonomia::Automacao::PassoDeWebhook.problemas_ao_salvar(@conta, passo, @account_user) do |c, onde = :texto|
+      @caminho.call(passo['id'], c, onde: onde)
+    end
+  end
+
+  def outro_registro(passo)
+    contexto = { conta: @conta, account_user: @account_user, dentro: @dentro, receita: @receita }
+    ::Autonomia::Automacao::EmOutroRegistro.problemas_ao_salvar(passo, **contexto) do |c, **opcoes|
+      @caminho.call(passo['id'], c, **opcoes)
+    end
+  end
+end

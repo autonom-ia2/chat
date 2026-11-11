@@ -44,6 +44,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['conversas'].pluck('conversa_id')).to eq([conversa.display_id])
   end
 
+  # G53: o gatilho "mensagem que falhou" ensaia na última mensagem recusada da conversa.
+  it 'ensaia o gatilho "mensagem que falhou"', :aggregate_failures do
+    create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, status: :failed, content: 'Oi')
+
+    ensaiar('ensaio', receita: receita.merge(gatilho: { tipo: 'mensagem.falhou' }))
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['conversas'].first).to include('conversa_id' => conversa.display_id, 'entraria' => true)
+  end
+
   it 'receita com problema volta 422 com a frase', :aggregate_failures do
     ensaiar('ensaio', receita: receita.merge(passos: [{ id: 'p1', tipo: 'acao', acao: 'DELETE agents/:id', descricao: 'x' }]))
 
@@ -67,6 +77,20 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.ensaio.gatilho_de_card'))
+  end
+
+  # G27 (#2661): o card atualizado também não ensaia, e a recusa não traz nada do card nem do valor de antes.
+  it 'card atualizado no valor de venda: recusa em frase, sem dado de card', :aggregate_failures, :automacao_motor do
+    with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+      ligar_motor(account)
+      account.enable_features!('automacao_gatilhos')
+      gatilho = { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'passou_de', valor: '50000' } }
+
+      ensaiar('ensaio', receita: receita.merge(gatilho: gatilho))
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => I18n.t('autonomia.automacao.ensaio.gatilho_de_card'), 'problemas' => [])
+    end
   end
 
   # #2635 (G7): o recorrente não ensaia passos; mostra quantos a seleção pegaria agora, só entre os que quem pede vê.

@@ -97,7 +97,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
-                                                     'card', 'lista_de_email')
+                                                     'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada',
+                                                     'webhook', 'lista_de_email')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
@@ -139,7 +140,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(declarados).to match_array(valores::MENSAGEM.keys)
     expect(declarado['valores_so_guia'].values).to all(be_present)
     expect(da_mensagem.pluck('caminho')).to match_array(valores::MENSAGEM.keys)
-    da_mensagem.each do |valor|
+    # O nome da campanha (#2681) é escrito, sem opções: vai ao editor como texto.
+    escritos, fechados = da_mensagem.partition { |valor| valor['caminho'] == 'mensagem.campanha' }
+    expect(escritos.first).not_to include('opcoes', 'operadores')
+    fechados.each do |valor|
       expect(valor['opcoes'].pluck('valor')).to eq(valores.fechado(valor['caminho'])['opcoes'])
       expect(valor['operadores'].pluck('op')).to eq(valores.fechado(valor['caminho'])['operadores'])
     end
@@ -158,13 +162,19 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   end
 
   # G11: a resposta durante a espera vai ao catálogo como valor do alvo, sim/não, marcada para o editor só a oferecer
-  # na condição do "esperar até"; nunca como valor da mensagem do gatilho.
+  # na condição do "esperar até"; nunca como valor da mensagem do gatilho. G50: a nova entrada na etapa também, e só no
+  # gatilho de etapa.
   it 'leva a resposta durante a espera como valor do alvo, só para o "esperar até"', :aggregate_failures do
-    respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
+    na_espera = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
+    entrada, respostas = na_espera.partition { |item| item['base'] == 'card' }
 
-    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu])
-    expect(respostas).to all(include('base' => 'conversa'))
-    expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
+    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu conversa.responsavel_respondeu
+                                                gatilho.repetiu conversa.cliente_mandou_documento contato.reuniao_atendida])
+    expect(respostas.pluck('base')).to eq(%w[conversa conversa conversa gatilho conversa contato])
+    expect(catalogo.gerado['alvos'].values).to all(include('gatilho'))
+    expect(entrada).to contain_exactly(include('caminho' => 'card.entrou_de_novo', 'base' => 'card',
+                                               'so_nos_gatilhos' => ['card.entrou_na_etapa']))
+    expect(na_espera).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
   end
 
   # A condição que o editor já põe ao escolher o gatilho tem que salvar.

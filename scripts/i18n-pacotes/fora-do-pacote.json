@@ -9,6 +9,7 @@
     "NOVA_CONVERSA.ERRO.PADRAO": "Avisa que nada do que foi escrito se perdeu; não é resultado de venda.",
     "CRM_CARD.SAIR.TEXTO": "Sair do card sem salvar perde a edição; não é resultado de venda.",
     "CONTACTS_LAYOUT.DETAILS.CUSTOMER.UNDO_DIALOG.DESCRIPTION": "O contato perde a data de cliente ao voltar a lead; não é resultado de venda.",
+    "AGENTS.VITRINE.SUGESTAO.TEXTO": "\"Pode ganhar\" uma ferramenta pronta: o agente recebe uma consulta nova (#2858); não é resultado de venda.",
     "AUTOMACOES.MODELOS.ORCAMENTO.TEXTO": "\"Ganha etiqueta\" e \"não se perde na fila\": receber etiqueta e não ser esquecido.",
     "CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE.CRM_NOTE": "\"Ganha a marca\": o card recebe a etiqueta da campanha.",
     "CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW.CRM": "\"Ganha a marca\": o card recebe a etiqueta da campanha.",

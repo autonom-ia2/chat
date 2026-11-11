@@ -35,6 +35,20 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos).to eq([{ id: 'p1', tipo: 'mensagem', faria: 'mensagem', dados: { texto: 'Oi Maria, obrigado.' } }])
   end
 
+  # Lote 5 (#2681): o modelo de propaganda sai fora da janela, e a tela avisa que custa mais.
+  it 'diz o modelo que sai com a janela fechada e marca o de propaganda' do
+    canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+    modelo = { 'name' => 'pre_black', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'MARKETING',
+               'components' => [{ 'type' => 'BODY', 'text' => 'Oi! A Black começa na quinta.' }] }
+    canal.update!(message_templates: [modelo])
+    conversa.update!(inbox: canal.inbox)
+    passo = mensagem_passo('p1', 'Oi.').merge('modelo' => { 'nome' => 'pre_black', 'idioma' => 'pt_BR', 'variaveis' => [] })
+
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black', propaganda: true)
+    canal.update!(message_templates: [modelo.merge('category' => 'UTILITY')])
+    expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black')
+  end
+
   it 'sem a mensagem automática, diz que não sairia' do
     account.disable_features!('automacao_mensagens')
 
@@ -64,6 +78,14 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
 
     expect(no[:faria]).to eq('esperar_ate')
     expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]], ['se_vencer', %w[v1 r1]]])
+  end
+
+  it 'o "esperar até" sem prazo que ainda não vale só abre o caminho de quando chegar (#2750)' do
+    espera = { 'id' => 'a1', 'tipo' => 'esperar_ate', 'condicao' => aberta, 'prazo' => 'sem_prazo' }
+
+    no = passos_de(receita(espera, esperar_passo('r1'))).first
+
+    expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['chegou', %w[r1]]])
   end
 
   it 'o "esperar até" que já vale segue na hora' do
@@ -179,6 +201,49 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     resultado = ensaio(receita(esperar_passo('e1'), gatilho: { 'tipo' => 'mensagem.criada' }))
 
     expect(resultado[:conversas].first).to include(entraria: false, motivo: 'sem_mensagem')
+  end
+
+  # G53: no gatilho "mensagem que falhou" o ensaio usa a última mensagem recusada da conversa, e o passo mostra o texto
+  # real dela (o ex. 19, passo 2: "manda por e-mail o mesmo conteúdo").
+  describe 'no gatilho "mensagem que falhou"' do
+    let(:caixa_de_email) { create(:channel_email, account: account).inbox }
+    let(:pergunta) { ' Você trocou de WhatsApp? Me responde com o número novo.' }
+    let(:email) do
+      { 'id' => 'email', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Você trocou de WhatsApp?'],
+        'texto' => [{ '$valor' => 'falhou.texto' }, pergunta] }
+    end
+    let(:falhou) { receita(email, gatilho: { 'tipo' => 'mensagem.falhou' }) }
+
+    def mensagem(**atributos)
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, **atributos)
+    end
+
+    before { contato.update!(email: 'maria@exemplo.com.br') }
+
+    it 'o e-mail mostra o texto da última mensagem recusada, não da última da conversa', :aggregate_failures do
+      mensagem(content: 'Primeira recusa.', status: :failed)
+      mensagem(content: 'Seu boleto vence amanhã.', status: :failed)
+      mensagem(content: 'Esta chegou.', status: :delivered)
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, content: 'Oi')
+
+      no = passos_de(falhou).first
+
+      expect(no[:faria]).to eq('email')
+      expect(no[:dados]).to include(texto: "Seu boleto vence amanhã.#{pergunta}", assunto: 'Você trocou de WhatsApp?')
+    end
+
+    it 'sem mensagem recusada que saiu para o cliente, não entraria; a nota recusada não conta' do
+      mensagem(content: 'Chegou.', status: :delivered)
+      mensagem(content: 'Nota.', status: :failed, private: true)
+
+      expect(ensaio(falhou)[:conversas].first).to include(entraria: false, motivo: 'sem_mensagem_que_falhou', passos: [])
+    end
+
+    it 'a recusada só com anexo pularia, como no motor' do
+      mensagem(content: nil, status: :failed)
+
+      expect(passos_de(falhou).first[:faria]).to eq('faltou_valor')
+    end
   end
 
   describe 'quais conversas' do

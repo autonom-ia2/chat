@@ -86,7 +86,7 @@ class Crm::PipelineStages::Destroyer
 
   def move_activity(card_id, target, now)
     {
-      account_id: @stage.account_id, card_id: card_id, actor_type: @actor ? @actor.class.name.underscore : 'system',
+      account_id: @stage.account_id, card_id: card_id, actor_type: Crm::Activity.actor_type_for(@actor),
       actor_id: @actor&.id, event_type: 'move', created_at: now,
       payload: { from_pipeline_id: @stage.pipeline_id, to_pipeline_id: target.pipeline_id, from_stage_id: @stage.id,
                  to_stage_id: target.id, from_stage_name: @stage.name, to_stage_name: target.name, motivo: 'etapa_apagada' }

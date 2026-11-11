@@ -3,10 +3,30 @@
 # tamanho, com a janela do "esperar até" que depende dela.
 module Autonomia::Automacao::Duracao
   UNIDADES = { 'minutos' => :minutes, 'horas' => :hours, 'dias' => :days }.freeze
+  # O prazo do "esperar até" que a pessoa escolheu não ter (#2750, definição `prazo_da_espera` do esquema): a espera só
+  # termina pela condição. Ver EsperaNoExecutor.
+  SEM_PRAZO = 'sem_prazo'.freeze
+  # G69: só o "daqui" do retorno conta em meses, no calendário (definição `daqui_do_retorno` do esquema).
+  MESES = 'meses'.freeze
 
   module_function
 
+  def sem_prazo?(prazo) = prazo == SEM_PRAZO
+
+  # Os ids dos "esperar até" sem prazo com passos em "se vencer": esse caminho nunca rodaria. A Receita recusa ao salvar.
+  def sem_prazo_que_vence(passos)
+    passos.select { |passo| passo['tipo'] == 'esperar_ate' && sem_prazo?(passo['prazo']) && Array(passo['se_vencer']).any? }.pluck('id')
+  end
+
   def de(duracao) = duracao['valor'].to_i.public_send(UNIDADES.fetch(duracao['unidade']))
+
+  # O vencimento do "daqui" do retorno (G69): minutos, horas e dias pela duração; meses no calendário, no `fuso` da conta
+  # (11 meses a partir de 15/01 = 15/12; o dia que o mês não tem vira o último dia dele: 31/01 mais 1 mês = 28/02).
+  def vencimento(daqui, fuso, agora: Time.current)
+    return agora + de(daqui) unless daqui['unidade'] == MESES
+
+    agora.in_time_zone(fuso).advance(months: daqui['valor'].to_i)
+  end
 
   # A janela do "esperar até" (G11): sem prazo gravado (a primeira conferência), de agora em diante; com ele (ao
   # retomar), do começo da espera (o prazo menos a duração dele) até o prazo.

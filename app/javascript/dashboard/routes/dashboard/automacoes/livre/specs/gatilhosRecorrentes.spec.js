@@ -23,6 +23,7 @@ const DO_RECORRENTE = [
   'frequencia',
   'dia_da_semana',
   'dia_do_mes',
+  'data',
   'hora',
   'selecao',
 ].map(parametro);
@@ -133,6 +134,87 @@ describe('gatilho recorrente', () => {
     });
   });
 
+  // #2681: "uma vez só" pede a data (AAAA-MM-DD); trocar a frequência tira a
+  // data, e voltar para "uma vez" espera a pessoa escolher outra.
+  it('uma vez só: pede a data; trocar a frequência tira a data', async () => {
+    const base = { tipo: 'conta.recorrente', hora: 9 };
+    const wrapper = montar({ ...base, frequencia: 'uma_vez' });
+    const nomes = wrapper
+      .findAll('[data-parametro]')
+      .map(item => item.attributes('data-parametro'));
+    expect(nomes).toEqual(['frequencia', 'data', 'hora']);
+
+    await wrapper.find('input[data-gatilho-data]').setValue('2026-11-26');
+    expect(ultimo(wrapper)).toEqual({
+      ...base,
+      frequencia: 'uma_vez',
+      data: '2026-11-26',
+    });
+
+    const comData = montar({
+      ...base,
+      frequencia: 'uma_vez',
+      data: '2026-11-26',
+    });
+    seletorDe(comData, 'frequencia').vm.$emit('update:modelValue', 'diaria');
+    expect(ultimo(comData)).toEqual({ ...base, frequencia: 'diaria' });
+  });
+
+  // G39: o aviso do "uma vez só" não fala do dia 29 a 31 nem da vez anterior.
+  it('uma vez só tem o aviso dele, na conta e na seleção', () => {
+    const conta = montar({
+      tipo: 'conta.recorrente',
+      frequencia: 'uma_vez',
+      hora: 9,
+    });
+    expect(conta.text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA'
+    );
+    const contatos = montar({
+      tipo: 'contato.recorrente',
+      frequencia: 'uma_vez',
+      hora: 9,
+      selecao: {},
+    });
+    expect(contatos.text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ'
+    );
+    expect(contatos.text()).not.toContain(
+      'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_UMA_VEZ_CONTA'
+    );
+  });
+
+  it('a frase da data única mostra o dia no idioma do painel', () => {
+    const t = (chave, valores) =>
+      valores ? `${chave} ${Object.values(valores).join(' ')}` : chave;
+    const naData = idioma =>
+      fraseDoGatilho(
+        {
+          tipo: 'conta.recorrente',
+          frequencia: 'uma_vez',
+          data: '2026-11-26',
+          hora: 9,
+        },
+        CATALOGO,
+        t,
+        {},
+        idioma
+      );
+    const frase = dia =>
+      `AUTOMACAO_LIVRE.GATILHO_RECORRENTE.FRASE.UMA_VEZ ${dia} 9 AUTOMACAO_LIVRE.GATILHO_RECORRENTE.CONTA`;
+
+    expect(naData('pt_BR')).toBe(frase('26/11/2026'));
+    expect(naData('en')).toBe(frase('11/26/2026'));
+    expect(naData('de')).toBe(frase('26.11.2026'));
+    expect(
+      fraseDoGatilho(
+        { tipo: 'conta.recorrente', frequencia: 'uma_vez', hora: 9 },
+        CATALOGO,
+        t
+      )
+    ).toBe('AUTOMACAO_LIVRE.GATILHOS.CONTA_RECORRENTE');
+  });
+
   it('a frase diz quando e em quem', () => {
     const t = (chave, valores) =>
       valores ? `${chave} ${Object.values(valores).join(' ')}` : chave;
@@ -219,12 +301,111 @@ describe('seleção do recorrente', () => {
   it('contato: só as condições do contato; o campo vai com o valor', () => {
     const wrapper = montarSelecao('Contact');
     expect(condicao(wrapper, 'funil_id').exists()).toBe(false);
+    // G22: sem passo que grave quem pediu o card (G24), o "pediu card" some.
+    expect(condicao(wrapper, 'solicitante_de').exists()).toBe(false);
 
     condicao(wrapper, 'atributo')
       .findComponent({ name: 'ChoiceSelect' })
       .vm.$emit('update:modelValue', 'plano');
     expect(ultimoDa(wrapper)).toEqual({
       atributo: { chave: 'plano', valor: '' },
+    });
+  });
+
+  // G22 (exemplo 8, passo 9): o RH que pediu card no funil e ainda tem campo
+  // de marcar em branco. Sem o funil, não há condição; trocar o funil tira a
+  // etapa; os campos são só os de marcar do card.
+  describe('contato: pediu card no funil', () => {
+    const montarPedido = (modelValue = {}) =>
+      mount(LivreSelecao, {
+        props: {
+          modelValue,
+          alvo: 'Contact',
+          escolhas: {
+            funis: [
+              { value: 3, label: 'Inclusão de vidas' },
+              { value: 4, label: 'Vendas' },
+            ],
+            etapas: [],
+            // Como ficará com a G24 gravando quem pediu o card.
+            solicitanteLigado: true,
+            etapasPorFunil: { 3: [{ value: 31, label: 'Documentos' }] },
+            camposDeMarcar: [
+              { value: 'rg', label: 'RG' },
+              { value: 'cpf', label: 'CPF' },
+            ],
+          },
+          opcoes: {},
+        },
+        global: { mocks: { $t: chave => chave } },
+      });
+    const pedido = wrapper => condicao(wrapper, 'solicitante_de');
+    const marcar = (wrapper, chave, sim) =>
+      pedido(wrapper)
+        .find(`[data-campo="${chave}"]`)
+        .findComponent({ name: 'Checkbox' })
+        .vm.$emit('update:modelValue', sim);
+
+    it('o funil abre a condição, sem campos ainda', () => {
+      const wrapper = montarPedido();
+      expect(pedido(wrapper).find('[data-solicitante]').exists()).toBe(false);
+
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', 3);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: [] },
+      });
+    });
+
+    it('marca e desmarca os campos que contam como documento', async () => {
+      const wrapper = montarPedido({
+        solicitante_de: { funil_id: 3, faltando: ['rg'] },
+      });
+      expect(pedido(wrapper).find('[data-campo="rg"]').text()).toContain('RG');
+
+      marcar(wrapper, 'cpf', true);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: ['rg', 'cpf'] },
+      });
+
+      await wrapper.setProps({ modelValue: ultimoDa(wrapper) });
+      marcar(wrapper, 'rg', false);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, faltando: ['cpf'] },
+      });
+    });
+
+    it('a etapa é do funil escolhido; trocar o funil a tira; sem funil, sai tudo', async () => {
+      const wrapper = montarPedido({
+        solicitante_de: { funil_id: 3, faltando: ['rg'] },
+      });
+      const etapa = () =>
+        pedido(wrapper)
+          .find('[data-solicitante="etapa"]')
+          .findComponent({ name: 'ChoiceSelect' });
+      expect(etapa().props('options')).toEqual([
+        { value: '', label: 'AUTOMACAO_LIVRE.SELECAO.QUALQUER' },
+        { value: 31, label: 'Documentos' },
+      ]);
+
+      etapa().vm.$emit('update:modelValue', 31);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 3, etapa_id: 31, faltando: ['rg'] },
+      });
+
+      await wrapper.setProps({ modelValue: ultimoDa(wrapper) });
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', 4);
+      expect(ultimoDa(wrapper)).toEqual({
+        solicitante_de: { funil_id: 4, faltando: ['rg'] },
+      });
+
+      pedido(wrapper)
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', '');
+      expect(ultimoDa(wrapper)).toEqual({});
     });
   });
 });

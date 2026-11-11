@@ -366,4 +366,20 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
   it 'está na lista do despacho assíncrono' do
     expect(AsyncDispatcher.new.listeners).to include(described_class.instance)
   end
+
+  # Decisão 18 (exemplo 17): a pessoa que a agente de IA cobria escreve, e a mensagem criada devolve a conversa a ela.
+  it 'a pessoa coberta escreve: o message_created devolve a conversa e registra a volta', :aggregate_failures do
+    renata = create(:user, account: account, role: :agent)
+    create(:inbox_member, user: renata, inbox: conversa.inbox)
+    conversa.update!(ai_assignee: create(:agent_bot, account: account))
+    versao = create(:autonomia_automacao_versao, automacao: create(:autonomia_automacao, account: account))
+    execucao = create(:autonomia_automacao_execucao, versao: versao, alvo: conversa, estado: 'esperando')
+    Autonomia::Automacao::Cobertura.comecar!(execucao, 'p1', conversa, renata.id, 1)
+    mensagem = create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :outgoing, sender: renata)
+
+    listener.message_created(evento('message.created', message: mensagem))
+
+    expect(conversa.reload.assignee_id).to eq(renata.id)
+    expect(Autonomia::Automacao::Registro.where(execucao: execucao, motivo: Autonomia::Automacao::Cobertura::VOLTOU).count).to eq(1)
+  end
 end

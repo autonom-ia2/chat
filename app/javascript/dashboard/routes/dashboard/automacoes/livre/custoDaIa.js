@@ -1,6 +1,13 @@
+import { noGalhoACada } from './receita';
+
 // #2500 F7 — o custo da IA em dólar. Fica na casa de US$ 0,0001: dois
 // algarismos significativos, e abaixo do mínimo "menos de", nunca "US$ 0".
 export const MENOR_CUSTO = 0.0001;
+
+// G63: o passo de IA dentro do galho "a cada mensagem do cliente" vai à IA uma
+// vez por mensagem; a tela avisa antes de salvar.
+export const custoPorMensagem = (receita, id) =>
+  Boolean(receita?.passos && id && noGalhoACada(receita.passos, id));
 
 // O vue-i18n usa pt_BR; o Intl só aceita a etiqueta BCP 47 (pt-BR).
 export const dolares = (valor, locale) =>

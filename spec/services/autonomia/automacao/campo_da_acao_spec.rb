@@ -18,4 +18,15 @@ RSpec.describe Autonomia::Automacao::CampoDaAcao do
   it 'dentro de um campo JSON qualquer valor cabe, como na tela' do
     expect(card.cabe?(%w[card custom_attributes revisao], 'qualquer coisa')).to be(true)
   end
+
+  # G25: o resultado do fechar vindo de um valor calculado é conferido de novo com o valor de verdade; "open" (reabrir)
+  # nunca chega ao Closer.
+  it 'na execução, fechar o card só como ganho ou perdido', :aggregate_failures do
+    original = { 'result' => { '$valor' => 'conversa.status' } }
+    conta = create(:account)
+
+    expect(described_class.problemas('POST crm/cards/:id/close', original, { 'result' => 'open' }, conta: conta))
+      .to include('result: fora da regra da automação (um_de)')
+    expect(described_class.problemas('POST crm/cards/:id/close', original, { 'result' => 'won' }, conta: conta)).to be_empty
+  end
 end

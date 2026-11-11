@@ -3,24 +3,41 @@ en:
   autonomia:
     automacao:
       motivos:
-        campanha_so_sem_alvo: 'This automation runs on each conversation, card or contact, so it would send the same campaign again every time. Sending a campaign only works in a recurring automation. Nothing was sent.'
+        campanha_so_sem_alvo: 'This automation runs every time a conversation, card or contact changes, so it would send the same campaign again every time. Sending a campaign only works in a recurring (scheduled) automation. Nothing was sent.'
+        campanha_da_vez_ja_saiu: 'This round''s campaign had already gone out when this card or contact got here. It did not receive this campaign.'
+        campanha_da_vez_aguardando: 'Joined this round''s campaign. It goes out once no card or contact in this round is still on its way to this step.'
+        campanha_da_vez_saiu: 'This round''s campaign went out to everyone with the labels. %{chegaram} reached this step and %{sairam} ended another way.'
+        campanha_da_vez_saiu_pela_rede: 'This round''s campaign went out with those who arrived, because part of the round was stuck for more than %{horas} hours. %{chegaram} reached this step, %{sairam} ended another way, %{fora} were left out because they were stuck, %{esperaram} were left out because they were still waiting after %{dias} days and %{lotes_fora} batches of cards did not run.'
+        campanha_da_vez_saiu_sem_contar_lotes: 'This round''s campaign went out with those who arrived after %{horas} hours, because the search for this round''s cards did not record how many batches it had (it started during a platform update or stopped midway). %{chegaram} reached this step, %{sairam} ended another way and %{fora} were left out because they were stuck.'
+        campanha_da_vez_nao_saiu: 'This round''s campaign did not go out. %{por}'
+        campanha_da_vez_fechou_sem_enviar: 'The round had already closed without sending the campaign (see the round''s record). This card or contact did not receive it.'
+        campanha_da_vez_falhou: 'This round''s campaign did not go out because of an error. The platform will try again in a few minutes.'
+        campanha_da_vez_desistiu: 'This round''s campaign did not go out: it failed %{tentativas} times in a row, and the platform stopped trying. Nothing was sent this round.'
+        sem_chegada: 'No card or contact in this round reached the campaign step.'
         quem_ligou_sem_permissao_campanha: 'The person who turned on the automation can no longer send campaigns. Take over and turn it back on.'
         campanha_sem_caixa: 'The chosen inbox no longer exists or is not an official WhatsApp inbox. The campaign was not created.'
         campanha_desligada: 'WhatsApp campaigns are off for this account. The campaign was not created.'
         campanha_sem_etiqueta: 'None of the chosen labels exist anymore. The campaign was not created.'
+        campanha_exclusao_apagada: 'A label this campaign leaves out no longer exists. Nothing was sent, so none of those people got it. Edit the automation and choose the labels again.'
         campanha_recusada: 'The platform refused the campaign as it was set up. Nothing was sent.'
         campanha_modelo_fora_da_caixa: "The chosen inbox doesn't have the chosen template. The campaign was not created."
         campanha_modelo_nao_aprovado: "The chosen template isn't approved by Meta in this inbox. The campaign was not created."
         campanha_modelo_de_categoria_fora: 'The chosen template is not a utility or marketing template. The campaign was not created.'
         campanha_modelo_mudou: "The template asks for different variables than the step's. Choose the template again. The campaign was not created."
         campanha_variavel_vazia: "A template variable has no text. Write the fixed text of each variable. The campaign was not created."
+        campanha_desta_execucao_so_na_conta: 'This audience (only who this automation created) only works in an automation that runs once for the whole account. Here each card or contact has its own run, and the campaign would go out once per card. Nothing was sent.'
+        campanha_execucao_sem_contatos: 'The previous steps did not create any company or contact that can receive this time. The campaign was not created.'
         sem_contato: 'There is no contact here to mark.'
         contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
       receita:
-        campanha_so_sem_alvo: 'Step %{passo}: sending a campaign only works in a recurring automation. In a conversation, card or contact trigger, each run would send the same campaign again.'
+        campanha_so_sem_alvo: 'Step %{passo}: sending a campaign only works in a recurring (scheduled) automation. With a trigger on a conversation, card or contact that changes, each run would send the same campaign again.'
         campanha_variavel_fixa: 'Step %{passo}: the campaign goes to many people at once, so each template variable must be fixed text.'
         campanha_sem_permissao: 'Step %{passo}: you need permission to send campaigns to use this step.'
         campanha_desligada: 'Step %{passo}: WhatsApp campaigns are off for this account.'
         campanha_sem_caixa: 'Step %{passo}: choose an official WhatsApp inbox of this account.'
         campanha_modelo: 'Step %{passo}: the chosen inbox does not have the template %{nome} approved and ready.'
         campanha_etiqueta_de_fora: 'Step %{passo}: the label %{id} is not from this account.'
+        campanha_publico_sem_origem: 'Step %{passo}: to send only to who this automation created, add a step that creates a card or contact before it.'
+        campanha_desta_execucao_so_na_conta: 'Step %{passo}: "only who this automation created" only works in a recurring automation for the whole account. In a recurring card or contact automation, the campaign would go out once per card; use labels.'
+      # G58: the date in the name of the run's audience ("<campaign> · <date>").
+      data_do_publico: '%m/%d/%Y'

@@ -10,13 +10,17 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
   queue_as :scheduled_jobs
   sidekiq_options retry: false
 
-  def perform(automacao_id, ids, ocorrencia)
+  # `indice`: o lugar do lote na varredura (G55: a campanha da vez espera todos rodarem); nil no lote enfileirado antes dele.
+  def perform(automacao_id, ids, ocorrencia, indice = nil)
     definicao = ligada_com_recorrente(automacao_id)
     return unless definicao
 
     tipo = definicao.versao_ativa.receita.dig('gatilho', 'tipo')
     instante = Time.zone.parse(ocorrencia)
+    return if outra_ocorrencia?(definicao, instante)
+
     erro = alvos(definicao, instante, ids).filter_map { |alvo| comecar(definicao, alvo, tipo, instante) }.first
+    ::Autonomia::Automacao::CampanhaDaOcorrencia.lote_feito(definicao, tipo, instante, indice)
     raise erro if erro
   end
 
@@ -29,6 +33,16 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
     definicao if ::Autonomia::Automacao::Gatilhos.recorrente?(definicao.versao_ativa.receita.dig('gatilho', 'tipo'))
   end
 
+  # A data única (G39) trocada entre a varredura e o lote: a ocorrência enfileirada é da data (ou da hora) antiga e não
+  # dispara; a nova roda no dia e na hora dela, com a marca dela. Compara o instante inteiro, no fuso da conta.
+  def outra_ocorrencia?(definicao, instante)
+    gatilho = definicao.versao_ativa.receita['gatilho']
+    return false if gatilho['data'].blank?
+
+    dia = Date.iso8601(gatilho['data'])
+    ::Autonomia::Automacao::Tempo.fuso(definicao.account).local(dia.year, dia.month, dia.day, gatilho['hora'].to_i) != instante
+  end
+
   def alvos(definicao, instante, ids)
     gatilho = definicao.versao_ativa.receita['gatilho']
     return [definicao.account] if ::Autonomia::Automacao::Gatilhos.da_conta?(gatilho['tipo']) && ids == [definicao.account_id]
@@ -39,7 +53,8 @@ class Autonomia::Automacao::RecorrenteLoteJob < ApplicationJob
 
   # O erro do alvo, ou nil.
   def comecar(definicao, alvo, tipo, instante)
-    marca = ::Autonomia::Automacao::Gatilhos.marca_do_recorrente(tipo, alvo.id, instante)
+    data = definicao.versao_ativa.receita.dig('gatilho', 'data')
+    marca = ::Autonomia::Automacao::Gatilhos.marca_do_recorrente(tipo, alvo.id, instante, data: data)
     ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, evento: marca).call
     nil
   rescue StandardError => e

@@ -121,6 +121,18 @@
       "file": "emailLists.json"
     },
     {
+      "file": "automacaoLivreOutroRegistro.json"
+    },
+    {
+      "file": "automacaoLivreProspeccao.json"
+    },
+    {
+      "file": "automacaoLivreParaCada.json"
+    },
+    {
+      "file": "automacaoLivreWebhook.json"
+    },
+    {
       "file": "ausencia.json"
     },
     {
