@@ -15,9 +15,10 @@
 # na janela do turno menos a folga (`ConsultaNoTurno::ESPERA_DO_TURNO` 8 s - `Consulta::FOLGA_DO_TURNO` 1 s). O prazo
 # vale POR ETAPA, não como relógio único (`ClienteHttp`, `SafeFetch::Deadline`): o DNS fica fora; a conexão e o TLS têm
 # o `open_timeout` (até 2 s); a espera pelos cabeçalhos tem o `read_timeout`, que só começa a contar depois da conexão
-# e do TLS. Uma chamada pode passar do seu prazo pelo tempo da conexão, e a consulta inteira também; a folga de 1 s
-# cobre a fila do job E esse excesso. Medido em 11/11/2026 (#2906), as execuções com as duas chamadas estourando
-# levaram de 7,03 s a 7,14 s, dentro da janela de 8 s. Sem a repetição do Net::HTTP (`ClienteHttp`, `max_retries: 0`):
+# e do TLS. Uma chamada pode passar do seu prazo pelo tempo da conexão, e a consulta inteira também. A folga de 1 s
+# cobre a fila do job e o excesso de conexão MEDIDO, sem garantia no pior caso: medido em 11/11/2026 (#2906), as
+# execuções com as duas chamadas estourando levaram de 7,03 s a 7,14 s, dentro da janela de 8 s; o pior caso teórico,
+# sem DNS, é 8 s (4 + 2 de conexão na 1ª chamada, 1 + 1 na 2ª), igual à janela. Sem a repetição do Net::HTTP (`ClienteHttp`, `max_retries: 0`):
 #   - PNCP A FRIO (cidade e modalidade que ninguém pediu há pouco): o período de 7 dias levou de 2,8 s a 17,2 s
 #     (Belém 2,8; Cuiabá 7,5; Manaus 9,6; Goiânia 10,8; Fortaleza 11,2; Porto Alegre 17,2), e só o último dia de 1,2 s a
 #     7,8 s. A frio, o PNCP quase nunca cabe na janela, seja qual for o prazo dentro dela. Pela execução inteira, 8

@@ -15,9 +15,12 @@ class Autonomia::FerramentasProntas::Consulta
   # contados do pré-disparo da rodada; o prazo da consulta (`prazo_total`) só começa depois, no job. E o prazo vale POR
   # ETAPA, não como relógio único: o DNS fica fora; a conexão e o TLS têm o `open_timeout` (até 2 s); o `read_timeout`
   # só conta depois da conexão e do TLS. Então a consulta pode passar do `prazo_total` pelo tempo das conexões. A folga
-  # cobre as duas coisas: a fila `agent_tools` (com a carga da execução e da ferramenta) E esse excesso da conexão. A
-  # consulta que tem de responder no mesmo turno usa `prazo_total <= ESPERA_DO_TURNO - FOLGA_DO_TURNO`. Medido em
-  # 11/11/2026 no PNCP (prazo total 7 s), as execuções com as duas chamadas estourando levaram de 7,03 s a 7,14 s.
+  # é para a fila `agent_tools` (com a carga da execução e da ferramenta) e para o excesso de conexão MEDIDO, não para o
+  # pior caso: cada chamada pode somar até `ClienteHttp::ABERTURA` (2 s) de conexão, e isso não tem teto garantido
+  # dentro da folga. Medido em 11/11/2026 no PNCP (prazo total 7 s): as execuções com as duas chamadas estourando
+  # levaram de 7,03 s a 7,14 s (a conexão real leva décimos). Pior caso teórico, sem DNS: 8 s (4 + 2 na 1ª chamada,
+  # 1 + 1 na 2ª), igual à janela. A consulta que tem de responder no mesmo turno usa
+  # `prazo_total <= ESPERA_DO_TURNO - FOLGA_DO_TURNO`.
   # A fila não foi medida em produção: parada ou cheia, ela come mais que a folga, e aí o turno lê "em andamento" e o
   # resultado chega no turno seguinte (#2749).
   FOLGA_DO_TURNO = 1

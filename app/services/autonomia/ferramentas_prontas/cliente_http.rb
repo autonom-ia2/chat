@@ -9,8 +9,10 @@
 #   - teto de tamanho da resposta (`MAX_BYTES`), conferido no anúncio e na leitura;
 #   - prazo TOTAL monotônico por chamada (`total_timeout`) e o prazo final da consulta: a chamada recebe o menor entre o
 #     prazo dela e o que sobra da consulta inteira, somada a reserva. Ressalva do `SafeFetch::Deadline`: o prazo total
-#     cobre conexão e corpo; DNS e cabeçalhos que gotejam abaixo do teto por leitura escapam dele (só uma fonte do
-#     catálogo comprometida faria isso). Sem repetição do `Net::HTTP` (`max_retries: 0`): ele repetia uma vez o GET
+#     é relógio único só no CORPO; a conexão (com o TLS) tem o `open_timeout` (até `ABERTURA`) e a espera pelos
+#     cabeçalhos tem o `read_timeout`, cada um como teto POR OPERAÇÃO; o DNS fica fora. Então uma chamada pode levar
+#     até o prazo dela mais a abertura (pior caso, sem DNS). Cabeçalhos que gotejam abaixo do teto por leitura também
+#     escapam (só uma fonte do catálogo comprometida faria isso). Sem repetição do `Net::HTTP` (`max_retries: 0`): ele repetia uma vez o GET
 #     que estourou esperando os cabeçalhos, com conexão nova e o prazo inteiro de novo, e a chamada levava o dobro do
 #     prazo (#2906: PNCP a frio, prazo de 5 s, 9,8 s medidos). Quem tenta de novo é a consulta (reserva, último dia);
 #   - só JSON (ou CSV, onde a fonte oficial só publica CSV: `get_csv`);
