@@ -78,6 +78,16 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(executar_pronta(ferramenta, 'nome' => 'saude exemplo')['dados']).to include('total' => 3)
     end
 
+    it 'o CNPJ que não confere (dígito verificador errado) sai como veio, sem a máscara' do
+      geracao = bases::Estado.find_by!(base: 'planos_de_saude').geracao_ativa
+      numero = 7
+      torto = format('%014d', numero)
+      bases::Operadora.create!(geracao: geracao, registro_ans: '399999', cnpj: torto, razao_social: 'OPERADORA TORTA',
+                               nome_busca: 'operadora torta', ativa: true)
+
+      expect(executar_pronta(ferramenta, 'registro_ans' => '399999')['dados']['operadoras'].sole['cnpj']).to eq('00000000000007')
+    end
+
     it 'pelo registro na ANS; sem nenhum dos três, nada é consultado' do
       expect(executar_pronta(ferramenta, 'registro_ans' => '300002')['dados']['operadoras'].sole['registro_ans']).to eq('300002')
       expect(executar_pronta(ferramenta, {})).to include('situacao' => 'pedido_invalido', 'campo' => 'nome')
