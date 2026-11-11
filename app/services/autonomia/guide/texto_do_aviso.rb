@@ -46,16 +46,6 @@ class Autonomia::Guide::TextoDoAviso
     I18n.with_locale(@locale) { t("whatsapp_proxy.#{codigo}", **detalhes) }
   end
 
-  # Base das ferramentas prontas que não atualizou (#2858, F5): só a base, o motivo curto e a data da cópia que vale.
-  def base_das_prontas(base, motivo, atualizado_em)
-    I18n.with_locale(@locale) do
-      nome = t("base_das_prontas.bases.#{base}", default: base)
-      next t('base_das_prontas.sem_copia', base: nome, motivo: motivo) if atualizado_em.nil?
-
-      t('base_das_prontas.texto', base: nome, motivo: motivo, desde: atualizado_em.to_date.strftime('%d/%m/%Y'))
-    end
-  end
-
   private
 
   def linha(sinal)

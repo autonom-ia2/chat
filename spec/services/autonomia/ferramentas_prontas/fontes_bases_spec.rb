@@ -211,6 +211,22 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     it 'sem cidade nem localização: pedido inválido' do
       expect(executar_pronta(ferramenta, 'dias' => 2)).to include('situacao' => 'pedido_invalido', 'campo' => 'cidade')
     end
+
+    it 'nenhum foco no lugar: total zero, com a data da base (o agente diz "nenhum foco até tal dia")' do
+      saida = executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'SP')
+
+      expect(saida['situacao']).to eq('encontrado')
+      expect(saida['dados']).to include('onde' => 'Campinas (SP)', 'total' => 0, 'atualizado_em' => '2026-11-11', 'mais_recentes' => [])
+    end
+
+    it 'base de focos com mais de 1 dia: "não consegui", nunca "nenhum foco"' do
+      travel 2.days
+
+      saida = executar_pronta(ferramenta, 'cidade' => 'Campinas', 'uf' => 'SP')
+
+      expect(nao_consegui?(saida)).to be(true)
+      expect(Autonomia::FerramentasProntas::Uso.last.motivos).to eq('inpe.base_desatualizada' => 1)
+    end
   end
 
   describe 'a busca responde em até 1 s com a base no tamanho real' do
@@ -265,11 +281,65 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
     it 'a busca usa o índice (não varre a tabela)' do
       plano = ActiveRecord::Base.connection.select_values(
-        "EXPLAIN #{bases::Transportador.vigente.where(rntrc: '000543210').to_sql}"
+        "EXPLAIN #{bases::Transportador.where(geracao: 1, rntrc: '000543210').to_sql}"
       ).join("\n")
 
       expect(plano).to include('idx_prontas_transportadores_rntrc')
       expect(plano).not_to include('Seq Scan on autonomia_prontas_transportadores')
+    end
+  end
+
+  describe 'a troca da geração no meio da busca (entre um comando e outro)' do
+    # Na primeira consulta SQL que tem `trecho` (ou todos os trechos da lista), a importação troca a geração e apaga a
+    # antiga, como na vida real.
+    def trocar_no(trecho, base:, modelo:, &)
+      trocou = false
+      troca = lambda do |*, payload|
+        next if trocou || !Array(trecho).all? { |parte| payload[:sql].to_s.include?(parte) }
+
+        trocou = true
+        bases::Estado.find_by!(base: base).update!(geracao_ativa: 2)
+        modelo.where(geracao: 1).delete_all
+      end
+      saida = ActiveSupport::Notifications.subscribed(troca, 'sql.active_record', &)
+      [saida, trocou]
+    end
+
+    it 'placas solares: a soma, o tipo e a classe vêm todos da mesma geração' do
+      bases::Estado.create!(base: 'geracao_solar', geracao_ativa: 1, atualizado_em: Time.current, linhas: 1)
+      gd = bases::GeracaoDistribuida
+      local = { cep: '78890000', codigo_municipio: '5107925', uf: 'MT' }
+      gd.create!(local.merge(geracao: 1, tipo: 'solar', classe: 'Residencial', quantidade: 2, potencia_kw: 10))
+      gd.create!(local.merge(geracao: 2, tipo: 'solar', classe: 'Residencial', quantidade: 5, potencia_kw: 50))
+      gd.create!(local.merge(geracao: 2, tipo: 'eólica', classe: 'Comercial', quantidade: 4, potencia_kw: 40))
+      ferramenta = incluir_pronta('geracao_solar', conta: account, agente: agent)
+
+      saida, trocou = trocar_no('SUM(', base: 'geracao_solar', modelo: gd) do
+        executar_pronta(ferramenta, 'consulta' => 'cep', 'cep' => '78890000')
+      end
+
+      expect(trocou).to be(true)
+      expect(saida['dados']).to include('sistemas' => 9, 'potencia_kw' => 90.0, 'por_tipo' => { 'solar' => 5, 'eólica' => 4 },
+                                        'por_classe' => { 'Residencial' => 5, 'Comercial' => 4 })
+    end
+
+    it 'planos de saúde: a lista e a contagem (quando passa de 10) vêm da mesma geração' do
+      bases::Estado.create!(base: 'planos_de_saude', geracao_ativa: 1, atualizado_em: Time.current, linhas: 1)
+      { 1 => ['UM', 12], 2 => ['DOIS', 15] }.each do |geracao, (nome, quantas)|
+        (1..quantas).each do |n|
+          bases::Operadora.create!(geracao: geracao, registro_ans: format('%<g>d%<n>05d', g: geracao, n: n), razao_social: "#{nome} #{n}",
+                                   nome_busca: "saude #{nome.downcase} #{n}", ativa: true)
+        end
+      end
+      ferramenta = incluir_pronta('planos_de_saude', conta: account, agente: agent)
+
+      saida, trocou = trocar_no(%w[autonomia_prontas_operadoras_ans LIMIT], base: 'planos_de_saude', modelo: bases::Operadora) do
+        executar_pronta(ferramenta, 'nome' => 'saude')
+      end
+
+      expect(trocou).to be(true)
+      expect(saida['dados']).to include('total' => 15, 'mostrando' => 10)
+      expect(saida['dados']['operadoras'].pluck('razao_social')).to all(start_with('DOIS'))
     end
   end
 end

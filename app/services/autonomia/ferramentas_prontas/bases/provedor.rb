@@ -1,15 +1,57 @@
 # O PROVEDOR DE UMA BASE BAIXADA (#2858, F5): local (`HOST = nil`), sem rede, sem teto e sem cache. A busca é no banco,
-# na geração que vale (`Vigente`), e a resposta leva `atualizado_em` (o dia em que a cópia entrou), para o agente dizer
-# de quando é o dado. Base que nunca foi baixada (ou o banco fora): falha da fonte (`base_vazia`), e o agente ouve "não
-# consegui consultar". Cada subclasse define `NOME` e `BASE` (a chave do `Estado`).
+# na geração que vale, e a resposta leva `atualizado_em` (o dia em que a cópia entrou), para o agente dizer de quando é
+# o dado. Base que nunca foi baixada (ou o banco fora): falha da fonte (`base_vazia`), e o agente ouve "não consegui
+# consultar". Cada subclasse define `NOME`, `BASE` (a chave do `Estado`) e `buscar(consulta, params)`.
+#
+# UMA GERAÇÃO POR CONSULTA: a busca faz mais de um comando (a soma e as contagens, a lista e o total). A geração que
+# vale e o `atualizado_em` são lidos UMA vez, juntos, e todo comando filtra por ela (`da_base`). No fim, a geração é
+# conferida: se a importação trocou (e começou a apagar a antiga) no meio, a busca refaz na nova, uma vez. Assim a
+# resposta nunca mistura duas gerações nem sai vazia por causa da troca.
 class Autonomia::FerramentasProntas::Bases::Provedor < Autonomia::FerramentasProntas::Provedor
   HOST = nil
+  TENTATIVAS = 2
+
+  def consultar(consulta, params)
+    TENTATIVAS.times do
+      @vigente = nil
+      exigir_base!
+      resposta = nao_encontrado_como_resposta { buscar(consulta, params) }
+      next unless mesma_geracao?
+      raise resposta if resposta.is_a?(NaoEncontrado)
+
+      return resposta
+    end
+    raise Falha, 'base_em_troca'
+  end
 
   private
 
+  def nao_encontrado_como_resposta
+    yield
+  rescue NaoEncontrado => e
+    e
+  end
+
+  # [geração que vale, atualizado_em], lidos juntos, uma vez por tentativa.
+  def vigente
+    @vigente ||= estados.where.not(geracao_ativa: nil).pick(:geracao_ativa, :atualizado_em)
+  end
+
+  def estados
+    Autonomia::FerramentasProntas::Bases::Estado.where(base: self.class::BASE)
+  end
+
+  def mesma_geracao?
+    estados.pick(:geracao_ativa) == vigente.first
+  end
+
   def atualizado_em
-    estados = Autonomia::FerramentasProntas::Bases::Estado
-    @atualizado_em ||= estados.where(base: self.class::BASE).where.not(geracao_ativa: nil).pick(:atualizado_em)
+    vigente&.last
+  end
+
+  # A tabela da base, só na geração lida no começo da consulta.
+  def da_base(modelo)
+    modelo.where(geracao: vigente.first)
   end
 
   # Confere que a base existe antes de buscar: sem ela, "não tem" seria mentira.

@@ -1,28 +1,31 @@
 # Os focos do INPE na base baixada (#2858, F5). Na cidade sem raio: os do código IBGE do município. Com raio, ou com a
 # coordenada: um quadrado em volta do ponto pelo índice da latitude, e depois a distância de verdade (haversine). O
 # "desde" é o começo do dia, `dias` atrás, no fuso da conta (a `Execucao` roda nele); o dia de cada foco também.
+# Nenhum foco: total zero, com `atualizado_em` (o agente diz "nenhum foco até tal dia"). Base com mais de 1 dia (a
+# rodada diária falhou): falha `base_desatualizada`, e o agente ouve "não consegui", nunca "nenhum foco".
 class Autonomia::FerramentasProntas::Fontes::Queimadas::Inpe < Autonomia::FerramentasProntas::Bases::Provedor
   NOME = 'inpe'.freeze
   BASE = 'queimadas'.freeze
   MAXIMO = 10
   KM_POR_GRAU = 111.0
+  # 1 dia, com folga para a rodada diária terminar (as bases vão uma por vez).
+  IDADE_MAXIMA = 26.hours
   Queimadas = Autonomia::FerramentasProntas::Fontes::Queimadas
 
-  def consultar(_consulta, params)
-    exigir_base!
+  def buscar(_consulta, params)
+    raise Falha, 'base_desatualizada' if atualizado_em < IDADE_MAXIMA.ago
+
     latitude, longitude, rotulo, municipio = Queimadas.ponto(params)
     desde = (Time.zone.today - params.fetch('dias', 1)).beginning_of_day
     raio = params['raio_km'] || (municipio ? nil : Queimadas::RAIO_PADRAO)
     focos = raio ? no_raio(desde, latitude, longitude, raio) : no_municipio(desde, municipio)
-    raise NaoEncontrado if focos.empty?
-
     com_data(resumo(focos, rotulo, raio, desde))
   end
 
   private
 
   def escopo(desde)
-    Autonomia::FerramentasProntas::Bases::FocoDeQueimada.vigente.where(detectado_em: desde..)
+    da_base(Autonomia::FerramentasProntas::Bases::FocoDeQueimada).where(detectado_em: desde..)
   end
 
   def no_municipio(desde, municipio)

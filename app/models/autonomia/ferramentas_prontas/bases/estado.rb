@@ -17,4 +17,9 @@ class Autonomia::FerramentasProntas::Bases::Estado < ApplicationRecord
   def self.atualizacoes
     where.not(geracao_ativa: nil).pluck(:base, :atualizado_em).to_h
   end
+
+  # As bases que nunca entraram e cuja primeira importação já falhou (o cartão diz "em preparação", não "chega em 1 dia").
+  def self.em_preparacao
+    where(geracao_ativa: nil).where.not(falhou_em: nil).pluck(:base)
+  end
 end

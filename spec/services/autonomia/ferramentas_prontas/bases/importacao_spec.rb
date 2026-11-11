@@ -3,13 +3,11 @@ require 'rails_helper'
 # #2858 (F5): a importação das bases baixadas. O aceite da fase, base a base:
 #   - a primeira importação fica completa (todas as linhas, sem pessoa física);
 #   - a segunda rodada atualiza sem duplicar (geração nova, a antiga apagada);
-#   - numa falha simulada (fonte fora, formato mudado, arquivo cortado), os dados ficam e o alerta chega.
+#   - numa falha simulada (fonte fora, formato mudado, arquivo cortado), os dados ficam e o alerta chega (log e Sentry).
 # Os arquivos são fictícios e vêm do WebMock (`FerramentasProntasBasesHelper`); nenhum pedido sai para a rede.
 RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
   let(:bases) { Autonomia::FerramentasProntas::Bases }
   let(:estado) { ->(chave) { bases::Estado.find_by(base: chave) } }
-  let(:plataforma) { create(:account, locale: 'pt_BR') }
-  let!(:admin) { create(:user, :administrator, account: plataforma) }
 
   before do
     resolver_hosts_das_prontas
@@ -18,12 +16,8 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
 
   around do |example|
     travel_to(Time.zone.parse('2026-11-11 10:47 UTC')) do
-      with_modified_env(AUTONOMIA_PRONTAS_ALERTA_CONTA_ID: plataforma.id.to_s) { example.run }
+      example.run
     end
-  end
-
-  def avisos
-    Autonomia::Guide::Aviso.where(account: plataforma, user: admin)
   end
 
   describe 'Planos de saúde (ANS)' do
@@ -64,20 +58,23 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(estado.call('planos_de_saude')).to have_attributes(geracao_ativa: 2, linhas: 6)
     end
 
-    it 'fonte fora do ar: a cópia anterior continua valendo e a equipe recebe o alerta (log e Guia)' do
+    it 'fonte fora do ar: a cópia anterior continua valendo e o alerta vai ao Sentry e ao log, nunca ao Guia' do
       importar('planos_de_saude')
       stub_request(:get, canceladas).to_return(status: 503, body: 'fora')
       allow(Rails.logger).to receive(:warn).and_call_original
+      sentry = stub_const('Sentry', Class.new { def self.capture_message(*, **) = nil })
+      allow(sentry).to receive(:capture_message)
 
       travel 1.day
-      expect(importar('planos_de_saude')).to eq(:falhou)
+      resultado = with_modified_env(SENTRY_DSN: 'https://chave@sentry.exemplo.test/1') { importar('planos_de_saude') }
 
+      expect(resultado).to eq(:falhou)
       expect(operadoras.count).to eq(4)
       expect(bases::Operadora.distinct.pluck(:geracao)).to eq([1])
       expect(estado.call('planos_de_saude')).to have_attributes(geracao_ativa: 1, motivo_da_falha: 'erro_da_fonte', atualizado_em: 1.day.ago)
-      expect(Rails.logger).to have_received(:warn).with(include('ALERTA base=planos_de_saude motivo=erro_da_fonte'))
-      expect(avisos.sole).to have_attributes(gravidade: Autonomia::Guide::Aviso::URGENTE)
-      expect(avisos.sole.texto).to include('Planos de saúde (ANS)', 'erro_da_fonte')
+      expect(sentry).to have_received(:capture_message).with(include('planos_de_saude: erro_da_fonte'), hash_including(level: :warning))
+      expect(Rails.logger).to have_received(:warn).with(include('ALERTA base=planos_de_saude motivo=erro_da_fonte vale_a_copia_de=2026-11-11'))
+      expect(Autonomia::Guide::Aviso.count).to eq(0)
     end
 
     it 'o formato mudou (coluna sumiu): nada troca e o alerta diz formato_mudou' do
@@ -103,23 +100,76 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(estado.call('planos_de_saude').motivo_da_falha).to eq('base_encolheu')
     end
 
-    it 'um alerta por base por dia, mesmo com duas falhas no mesmo dia' do
+    it 'sem Sentry configurado, o alerta fica só no log, sem quebrar' do
       stub_request(:get, ativas).to_timeout
+      allow(Rails.logger).to receive(:warn).and_call_original
+      sentry = stub_const('Sentry', Class.new { def self.capture_message(*, **) = nil })
+      allow(sentry).to receive(:capture_message)
 
-      2.times { importar('planos_de_saude') }
+      expect(with_modified_env(SENTRY_DSN: nil) { importar('planos_de_saude') }).to eq(:falhou)
 
-      expect(avisos.count).to eq(1)
-      expect(avisos.sole.texto).to include('ainda não foi baixada')
+      expect(sentry).not_to have_received(:capture_message)
+      expect(Rails.logger).to have_received(:warn).with(include('ALERTA base=planos_de_saude motivo=falha_de_rede vale_a_copia_de=nunca'))
     end
 
-    it 'sem conta da plataforma configurada, o alerta fica no log, sem quebrar' do
-      stub_request(:get, ativas).to_return(status: 500)
+    it 'o defeito nosso vai ao rastreador de erros antes do alerta, e a cópia que vale fica' do
+      importar('planos_de_saude')
+      allow(bases::PlanosDeSaude).to receive(:linhas).and_raise(NoMethodError, 'defeito')
+      ordem = []
+      allow(ChatwootExceptionTracker).to(receive(:new).and_wrap_original do |original, *args|
+        ordem << :rastreador
+        original.call(*args)
+      end)
+      allow(bases::Alerta).to(receive(:falhou!).and_wrap_original do |original, *args|
+        ordem << :alerta
+        original.call(*args)
+      end)
 
-      with_modified_env(AUTONOMIA_PRONTAS_ALERTA_CONTA_ID: nil, WHATSAPP_PROXY_ALERT_ACCOUNT_ID: nil) do
-        expect(importar('planos_de_saude')).to eq(:falhou)
+      travel 1.day
+      expect(importar('planos_de_saude')).to eq(:falhou)
+
+      expect(ordem).to eq(%i[rastreador alerta])
+      expect(estado.call('planos_de_saude')).to have_attributes(geracao_ativa: 1, motivo_da_falha: 'defeito')
+      expect(operadoras.count).to eq(4)
+    end
+
+    it 'a falha DEPOIS da troca (apagar a antiga) não apaga a geração nova: ela vale, e a próxima rodada termina a limpeza' do
+      importar('planos_de_saude')
+      arquivo_responde(ativas, ans_ativas(5))
+      allow(bases::Alerta).to receive(:falhou!)
+      allow_any_instance_of(described_class).to receive(:apagar_antigas).and_raise(ActiveRecord::StatementInvalid, 'caiu') # rubocop:disable RSpec/AnyInstance
+
+      travel 1.day
+      expect(importar('planos_de_saude')).to eq(:atualizada)
+
+      expect(estado.call('planos_de_saude')).to have_attributes(geracao_ativa: 2, linhas: 6, atualizado_em: Time.current,
+                                                                motivo_da_falha: 'limpeza_pendente')
+      expect(bases::Operadora.group(:geracao).count).to eq(1 => 4, 2 => 6)
+      expect(bases::Alerta).to have_received(:falhou!).with('planos_de_saude', 'limpeza_pendente', anything)
+
+      allow_any_instance_of(described_class).to receive(:apagar_antigas).and_call_original # rubocop:disable RSpec/AnyInstance
+      travel 1.day
+      expect(importar('planos_de_saude')).to eq(:atualizada)
+      expect(bases::Operadora.distinct.pluck(:geracao)).to eq([3])
+      expect(estado.call('planos_de_saude').motivo_da_falha).to be_nil
+    end
+
+    it 'o COPY de uma base grande não cai no statement_timeout do banco (o teto da busca não vale para ele)' do
+      ActiveRecord::Base.connection.execute("SET statement_timeout = '300ms'")
+      lento = Enumerator.new do |saida|
+        4.times do |n|
+          sleep 0.15
+          saida << [format('9%05d', n), nil, "LENTA #{n}", nil, 'lenta', nil, nil, nil, nil, true, nil, nil]
+        end
       end
+      allow(bases::PlanosDeSaude).to receive(:linhas).and_return(lento)
 
-      expect(avisos).to be_empty
+      expect(importar('planos_de_saude')).to eq(:atualizada)
+
+      expect(operadoras.count).to eq(4)
+      expect(ActiveRecord::Base.connection.select_value('SHOW statement_timeout')).to eq('300ms')
+    ensure
+      ActiveRecord::Base.connection.execute('SET statement_timeout = 0')
     end
 
     it 'outra rodada da mesma base em andamento: não faz nada' do
@@ -129,6 +179,25 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(a_request(:get, ativas)).not_to have_been_made
     ensure
       Redis::Alfred.delete('autonomia:prontas:base:planos_de_saude')
+    end
+
+    it 'outra máquina já importa a base (trava no banco, além da do Redis): não faz nada' do
+      config = ActiveRecord::Base.connection_db_config.configuration_hash
+      outra = PG.connect(host: config[:host], port: config[:port], dbname: config[:database], user: config[:username], password: config[:password])
+      outra.exec("SELECT pg_advisory_lock(#{described_class.trava_no_banco('planos_de_saude')})")
+
+      expect(importar('planos_de_saude')).to eq(:ocupada)
+      expect(a_request(:get, ativas)).not_to have_been_made
+      expect(Redis::Alfred.get('autonomia:prontas:base:planos_de_saude')).to be_nil
+    ensure
+      outra&.close
+    end
+
+    it 'um campo gigante no CSV (mais de 64 KB) é formato mudado, sem ler o resto' do
+      arquivo_responde(ativas, ans_ativas.sub('SAÚDE EXEMPLO 1 LTDA', 'X' * 70_000))
+
+      expect(importar('planos_de_saude')).to eq(:falhou)
+      expect(estado.call('planos_de_saude').motivo_da_falha).to eq('formato_mudou')
     end
 
     it 'a sobra de uma rodada que morreu no meio é apagada antes da próxima' do
@@ -164,6 +233,32 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(cancelada).to include('situacao' => 'cancelada', 'cancelada_em' => '2010-02-01', 'motivo_do_cancelamento' => 'PERECIMENTO')
       gravado = bases::Aeronave.pluck(:dados).to_json
       expect(gravado).not_to include('FULANO', FerramentasProntasBasesHelper::CPF_PESSOA, 'MT')
+    end
+
+    it 'o nome da empresa sai sem o CPF que o MEI leva no nome; documento que é CPF não grava nome' do
+      mei = [{ 'NOME' => "TAXI AEREO FULANO #{FerramentasProntasBasesHelper::CPF_MEI}", 'DOCUMENTO' => FerramentasProntasBasesHelper::CNPJ_MEI,
+               'UF' => 'GO' },
+             { 'NOME' => 'CICLANO 987.654.321-00 ME', 'DOCUMENTO' => FerramentasProntasBasesHelper::CNPJ_OUTRA, 'UF' => 'GO' }]
+      corpo = "#{rab}\r\n#{rab_linha('PRMEI', proprietarios: mei)}"
+      arquivo_responde(url, corpo)
+
+      importar('aeronaves')
+
+      donos = bases::Aeronave.vigente.find_by(matricula: 'PRMEI').dados['proprietarios_empresas']
+      expect(donos).to eq([{ 'nome' => 'TAXI AEREO FULANO', 'cnpj' => FerramentasProntasBasesHelper::CNPJ_MEI, 'uf' => 'GO' },
+                           { 'nome' => 'CICLANO ME', 'cnpj' => FerramentasProntasBasesHelper::CNPJ_OUTRA, 'uf' => 'GO' }])
+      expect(bases::Aeronave.pluck(:dados).to_json).not_to include(FerramentasProntasBasesHelper::CPF_MEI, '987.654.321-00')
+    end
+
+    it 'o JSON de donos quebrado não vira "0 outros": a contagem some (não se sabe)' do
+      linha = rab_linha('PRQBR', proprietarios: []).sub('"[]"', '"[{quebrado"')
+      arquivo_responde(url, "#{rab}\r\n#{linha}")
+
+      importar('aeronaves')
+
+      dados = bases::Aeronave.vigente.find_by(matricula: 'PRQBR').dados
+      expect(dados.keys).not_to include('outros_proprietarios', 'proprietarios_empresas')
+      expect(dados).to include('outros_operadores' => 0)
     end
 
     it 'a segunda rodada não duplica' do
@@ -212,12 +307,43 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
       expect(estado.call('geracao_solar').motivo_da_falha).to eq('arquivo_grande_demais')
     end
 
-    it 'mensal: só vence 28 dias depois' do
+    it 'o ZIP que mente o tamanho aberto (declara menos do que tem): o que se lê de verdade passa pelo teto' do
+      importar('geracao_solar')
+      stub_const('Autonomia::FerramentasProntas::Bases::GeracaoSolar::MAX_ABERTO', 2_000)
+      linhas = (1..800).map do |n|
+        gd_linha(cep: format('%08d', 20_000_000 + n), municipio: '3509502', classe: 'Residencial', tipo: 'UFV', potencia: '3,00')
+      end
+      csv = "#{CSV.generate_line(FerramentasProntasBasesHelper::GD_COLUNAS, col_sep: ';', force_quotes: true)}#{linhas.join("\r\n")}\r\n"
+      mentiroso = Zip::OutputStream.write_buffer { |zip| zip.put_next_entry('gd.csv') && zip.write(csv) }.string.b
+      local = mentiroso.index("PK\x03\x04".b)
+      central = mentiroso.index("PK\x01\x02".b)
+      mentiroso[local + 22, 4] = [100].pack('V')
+      mentiroso[central + 24, 4] = [100].pack('V')
+      expect(Zip::File.open_buffer(StringIO.new(mentiroso)).entries.first.size).to eq(100)
+      arquivo_responde(url, mentiroso, tipo: 'application/zip')
+
+      travel 29.days
+      expect(importar('geracao_solar')).to eq(:falhou)
+
+      expect(estado.call('geracao_solar').motivo_da_falha).to eq('arquivo_grande_demais')
+      expect(bases::GeracaoDistribuida.vigente.count).to eq(3)
+    end
+
+    it 'chaves demais na soma (o arquivo não é o que parece): formato mudado, sem estourar a memória' do
+      stub_const('Autonomia::FerramentasProntas::Bases::GeracaoSolar::MAX_CHAVES', 2)
+
+      expect(importar('geracao_solar')).to eq(:falhou)
+      expect(estado.call('geracao_solar').motivo_da_falha).to eq('formato_mudou')
+    end
+
+    it 'mensal: vence no 28º dia, pela data (a rodada das 10:47:00 pega a cópia das 10:47:30)' do
+      travel 30.seconds
       importar('geracao_solar')
       importador = Autonomia::FerramentasProntas::Bases::GeracaoSolar
+      copia = estado.call('geracao_solar')
 
-      expect(importador.vencida?(estado.call('geracao_solar'), agora: 27.days.from_now)).to be(false)
-      expect(importador.vencida?(estado.call('geracao_solar'), agora: 28.days.from_now)).to be(true)
+      expect(importador.vencida?(copia, agora: Time.zone.parse('2026-12-08 23:59 UTC'))).to be(false)
+      expect(importador.vencida?(copia, agora: Time.zone.parse('2026-12-09 10:47:00 UTC'))).to be(true)
     end
   end
 
@@ -245,6 +371,23 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
                                   'cadastrado_em' => Date.new(2023, 11, 1), 'situacao_desde' => Date.new(2023, 11, 1), 'equiparado' => false }
                               ])
       expect(bases::Transportador.pluck(:nome).compact).not_to include('FULANO DE TAL')
+    end
+
+    it 'nome só com CNPJ válido: o MEI sai sem o CPF; documento CPF ou categoria desconhecida não guarda nome' do
+      extras = [
+        %("TRANSPORTES FULANO #{FerramentasProntasBasesHelper::CPF_MEI}";"060000001";"01/01/2024";"ATIVO";) +
+          %("#{FerramentasProntasBasesHelper::CNPJ_MEI}";"ETC";"";"GOIANIA";"GO";"Não";"01/01/2024"),
+        %("BELTRANO DE TAL";"060000002";"01/01/2024";"ATIVO";"#{FerramentasProntasBasesHelper::CPF_MEI}";"ETC";"";"GOIANIA";"GO";"Não";"01/01/2024"),
+        %("CICLANO DE TAL";"060000003";"01/01/2024";"ATIVO";"#{FerramentasProntasBasesHelper::CNPJ_OUTRA}";"XYZ";"";"GOIANIA";"GO";"Não";"01/01/2024")
+      ]
+      arquivo_responde(FerramentasProntasBasesHelper::ANTT_CSV, "#{antt.encode('UTF-8')}#{extras.join("\r\n")}\r\n".encode('ISO-8859-1'))
+
+      expect(importar('transportadoras')).to eq(:atualizada)
+
+      registros = bases::Transportador.vigente.where(rntrc: %w[060000001 060000002 060000003]).order(:rntrc).pluck(:rntrc, :nome, :cnpj, :categoria)
+      expect(registros).to eq([['060000001', 'TRANSPORTES FULANO', FerramentasProntasBasesHelper::CNPJ_MEI, 'empresa'],
+                               ['060000002', nil, nil, 'empresa'], ['060000003', nil, nil, 'xyz']])
+      expect(bases::Transportador.pluck(:nome).compact.join).not_to include(FerramentasProntasBasesHelper::CPF_MEI, 'BELTRANO', 'CICLANO')
     end
 
     it 'o catálogo aponta para outro host: nada é baixado de lá' do
@@ -282,6 +425,16 @@ RSpec.describe Autonomia::FerramentasProntas::Bases::Importacao do
 
       expect(importar('queimadas')).to eq(:atualizada)
       expect(bases::FocoDeQueimada.vigente.count).to eq(14)
+    end
+
+    it 'janela com muito menos focos que a anterior não é recusada (queimada varia de verdade)' do
+      importar('queimadas')
+      travel 1.day
+      (0...8).each { |atras| stub_request(:get, inpe_url((Date.new(2026, 11, 12) - atras).iso8601)).to_return(status: 404) }
+      arquivo_responde(inpe_url('2026-11-12'), inpe_dia('2026-11-12', [['01:00:00', '-12.5', '-55.7', '5107925']]))
+
+      expect(importar('queimadas')).to eq(:atualizada)
+      expect(bases::FocoDeQueimada.vigente.count).to eq(1)
     end
 
     it 'a segunda rodada troca a janela inteira, sem duplicar' do

@@ -10,6 +10,8 @@ class Autonomia::FerramentasProntas::Bases::Queimadas < Autonomia::FerramentasPr
   HOSTS = %w[dataserver-coids.inpe.br].freeze
   FREQUENCIA = :diaria
   MINIMO = 100
+  # Queimada varia de verdade (a chuva apaga, a seca acende): a janela nova pode vir bem menor que a anterior.
+  FRACAO_MINIMA = nil
   DIAS = 8
   PASTA = 'https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil'.freeze
   MAX_BYTES = 30.megabytes

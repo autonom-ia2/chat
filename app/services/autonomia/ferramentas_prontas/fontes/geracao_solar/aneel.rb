@@ -4,8 +4,7 @@ class Autonomia::FerramentasProntas::Fontes::GeracaoSolar::Aneel < Autonomia::Fe
   NOME = 'aneel'.freeze
   BASE = 'geracao_solar'.freeze
 
-  def consultar(consulta, params)
-    exigir_base!
+  def buscar(consulta, params)
     onde, escopo = consulta.nome == 'cep' ? no_cep(params) : na_cidade(params)
     total = escopo.sum(:quantidade)
     raise NaoEncontrado if total.zero?
@@ -23,7 +22,7 @@ class Autonomia::FerramentasProntas::Fontes::GeracaoSolar::Aneel < Autonomia::Fe
   end
 
   def modelo
-    Autonomia::FerramentasProntas::Bases::GeracaoDistribuida.vigente
+    da_base(Autonomia::FerramentasProntas::Bases::GeracaoDistribuida)
   end
 
   def no_cep(params)

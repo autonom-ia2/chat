@@ -4,9 +4,8 @@ class Autonomia::FerramentasProntas::Fontes::Aeronaves::Rab < Autonomia::Ferrame
   BASE = 'aeronaves'.freeze
   MAXIMO = 5
 
-  def consultar(_consulta, params)
-    exigir_base!
-    escopo = Autonomia::FerramentasProntas::Bases::Aeronave.vigente.where(matricula: params.fetch('matricula')).order(:id)
+  def buscar(_consulta, params)
+    escopo = da_base(Autonomia::FerramentasProntas::Bases::Aeronave).where(matricula: params.fetch('matricula')).order(:id)
     com_data(listar(escopo, 'aeronaves', MAXIMO) { |item| { 'matricula' => item.matricula }.merge(item.dados) })
   end
 end

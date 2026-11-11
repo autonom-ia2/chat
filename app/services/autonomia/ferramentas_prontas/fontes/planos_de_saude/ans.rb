@@ -5,15 +5,14 @@ class Autonomia::FerramentasProntas::Fontes::PlanosDeSaude::Ans < Autonomia::Fer
   BASE = 'planos_de_saude'.freeze
   MAXIMO = 10
 
-  def consultar(_consulta, params)
-    exigir_base!
+  def buscar(_consulta, params)
     com_data(listar(escopo(params).order(ativa: :desc, razao_social: :asc), 'operadoras', MAXIMO) { |item| operadora(item) })
   end
 
   private
 
   def escopo(params)
-    base = Autonomia::FerramentasProntas::Bases::Operadora.vigente
+    base = da_base(Autonomia::FerramentasProntas::Bases::Operadora)
     return base.where(cnpj: params['cnpj']) if params['cnpj']
     return base.where(registro_ans: params['registro_ans']) if params['registro_ans']
 

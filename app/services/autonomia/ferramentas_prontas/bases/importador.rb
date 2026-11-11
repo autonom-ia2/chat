@@ -1,7 +1,8 @@
 # O IMPORTADOR DE UMA BASE (#2858, F5): o que é próprio de cada base. Cada subclasse define:
 #   - `CHAVE` (a do `Estado` e da fonte do catálogo), `MODELO` (a tabela), `COLUNAS` (as da tabela, sem `geracao`, na
-#     ordem de cada linha), `HOSTS` (os únicos que o download chama), `FREQUENCIA` (`:diaria` ou `:mensal`) e `MINIMO`
-#     (menos linhas que isso é arquivo quebrado, não base menor);
+#     ordem de cada linha), `HOSTS` (os únicos que o download chama), `FREQUENCIA` (`:diaria` ou `:mensal`), `MINIMO`
+#     (menos linhas que isso é arquivo quebrado, não base menor) e, quando difere do padrão, `FRACAO_MINIMA` (nil: a
+#     rodada nova pode vir bem menor que a anterior, como os focos de queimada);
 #   - `baixar(download)`: os arquivos da rodada, já baixados (Tempfile), num Hash por nome;
 #   - `linhas(arquivos)`: um Enumerator com cada linha da tabela (um Array na ordem de `COLUNAS`). Cabeçalho sem a coluna
 #     esperada levanta `Falha('formato_mudou')`. Linha que não serve (sem a chave) vem nil e é pulada.
@@ -11,19 +12,25 @@ class Autonomia::FerramentasProntas::Bases::Importador
 
   # A rodada nova que vier com menos que esta fração das linhas da anterior é recusada (arquivo cortado na fonte).
   FRACAO_MINIMA = 0.5
-  MENSAL = 28.days
+  DIAS_DO_MES = 28
+  # Nenhum campo das fontes passa disso: um campo maior é arquivo que não é o esperado (e não ocupa a memória).
+  MAX_CAMPO = 64.kilobytes
+  DIGITOS_DO_CPF = 11
+  SINAIS_DO_DOCUMENTO = './-'.freeze
 
   class << self
     def chave
       self::CHAVE
     end
 
-    # A base já passou da hora? Diária: não foi atualizada hoje (UTC). Mensal: há mais de 28 dias. Nunca: sim.
+    # A base já passou da hora? Pela DATA (UTC), não pela hora: a rodada das 10:47:00 pega a cópia que entrou às
+    # 10:47:30. Diária: não foi atualizada hoje. Mensal: do 28º dia em diante. Nunca baixada: sim.
     def vencida?(estado, agora: Time.current)
       return true if estado.atualizado_em.nil?
-      return estado.atualizado_em <= agora - MENSAL if self::FREQUENCIA == :mensal
 
-      estado.atualizado_em.utc.to_date < agora.utc.to_date
+      hoje = agora.utc.to_date
+      copia = estado.atualizado_em.utc.to_date
+      self::FREQUENCIA == :mensal ? copia <= hoje - DIAS_DO_MES : copia < hoje
     end
 
     def download
@@ -36,7 +43,7 @@ class Autonomia::FerramentasProntas::Bases::Importador
     def csv(arquivo, colunas:, separador: ';', codificacao: 'bom|utf-8', preambulo: nil)
       io, proprio = abrir(arquivo, codificacao)
       cabecalho = cabecalho!(io, separador, colunas, preambulo)
-      leitor = CSV.new(io, col_sep: separador, headers: cabecalho, liberal_parsing: true)
+      leitor = CSV.new(io, col_sep: separador, headers: cabecalho, liberal_parsing: true, max_field_size: MAX_CAMPO)
       Enumerator.new do |saida|
         leitor.each { |linha| saida << linha }
       rescue CSV::MalformedCSVError, ArgumentError, EncodingError
@@ -66,6 +73,16 @@ class Autonomia::FerramentasProntas::Bases::Importador
 
     def digitos(valor)
       valor.to_s.delete('^0-9').presence
+    end
+
+    # O nome de empresa sem nenhum CPF: o MEI leva o CPF do dono no fim da razão social ("FULANO 12345678909"). Sai cada
+    # pedaço que, sem pontos e traço, tem 11 dígitos e é um CPF válido (dígitos verificadores conferidos).
+    def sem_cpf(nome)
+      texto(nome.to_s.split.reject { |pedaco| cpf?(pedaco.delete(SINAIS_DO_DOCUMENTO)) }.join(' '))
+    end
+
+    def cpf?(pedaco)
+      pedaco.length == DIGITOS_DO_CPF && pedaco.delete('0-9').empty? && Autonomia::FerramentasProntas::Fontes::Cpf.valido?(pedaco)
     end
 
     private

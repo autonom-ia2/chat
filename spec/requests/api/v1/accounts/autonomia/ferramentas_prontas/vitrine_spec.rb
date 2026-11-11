@@ -118,14 +118,18 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
 
     it 'F5: a base baixada leva o dia em que foi atualizada (nil antes de baixar); as outras fontes não levam o campo' do
       account.enable_features!(Autonomia::FerramentasProntas::Bases::FLAG)
-      Autonomia::FerramentasProntas::Bases::Estado.create!(base: 'aeronaves', geracao_ativa: 1, atualizado_em: Time.zone.parse('2026-11-11 10:47'))
+      estado = Autonomia::FerramentasProntas::Bases::Estado
+      estado.create!(base: 'aeronaves', geracao_ativa: 1, atualizado_em: Time.zone.parse('2026-11-11 10:47'), falhou_em: 1.hour.ago)
+      estado.create!(base: 'geracao_solar', falhou_em: 1.hour.ago, motivo_da_falha: 'erro_da_fonte')
 
       get base, headers: admin.create_new_auth_token, as: :json
 
       fontes = response.parsed_body['fontes'].index_by { |fonte| fonte['chave'] }
-      expect(fontes['aeronaves']).to eq('chave' => 'aeronaves', 'atualizado_em' => '2026-11-11')
-      expect(fontes['transportadoras']).to eq('chave' => 'transportadoras', 'atualizado_em' => nil)
+      expect(fontes['aeronaves']).to eq('chave' => 'aeronaves', 'atualizado_em' => '2026-11-11', 'em_preparacao' => false)
+      expect(fontes['transportadoras']).to eq('chave' => 'transportadoras', 'atualizado_em' => nil, 'em_preparacao' => false)
+      expect(fontes['geracao_solar']).to eq('chave' => 'geracao_solar', 'atualizado_em' => nil, 'em_preparacao' => true)
       expect(fontes['cep']).to eq('chave' => 'cep')
+      expect(response.body).not_to include('erro_da_fonte')
     end
 
     it 'não mostra as prontas de outra conta' do

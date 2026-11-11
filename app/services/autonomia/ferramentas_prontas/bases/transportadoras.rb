@@ -4,8 +4,9 @@
 #     conjunto `rntrc`) diz qual é o CSV mais novo, e só um endereço do próprio host da ANTT é aceito;
 #   - um CSV (`transportadores_rntrc_MM_AAAA.csv`, ~160 MB, ~1,2 milhão de registros), separado por ";", em
 #     ISO-8859-1 (convertido para UTF-8 na leitura);
-#   - empresa (ETC) e cooperativa (CTC): RNTRC, nome, CNPJ, situação, município, UF e datas. AUTÔNOMO (TAC) é pessoa
-#     física: fica só o RNTRC, a situação, o município, a UF e as datas, sem nome e sem CPF.
+#   - todos os registros ficam (decisão do Rodrigo, 11/11): o RNTRC, a categoria, a situação, o município, a UF e as datas;
+#   - o NOME e o CNPJ só da empresa (ETC) e da cooperativa (CTC) com CNPJ válido, e o nome sem nenhum CPF (o MEI leva o
+#     do dono no fim). AUTÔNOMO (TAC), documento que é CPF ou categoria desconhecida: sem nome e sem documento.
 class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::FerramentasProntas::Bases::Importador
   CHAVE = 'transportadoras'.freeze
   MODELO = Autonomia::FerramentasProntas::Bases::Transportador
@@ -21,7 +22,7 @@ class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::Ferrame
   CABECALHO = %w[nome_transportador numero_rntrc data_primeiro_cadastro situacao_rntrc cpfcnpjtransportador
                  categoria_transportador municipio uf equiparado data_situacao_rntrc].freeze
   CATEGORIAS = { 'ETC' => 'empresa', 'CTC' => 'cooperativa', 'TAC' => 'autônomo' }.freeze
-  PESSOA_FISICA = 'TAC'.freeze
+  COM_CNPJ = %w[ETC CTC].freeze
   DIGITOS_DO_RNTRC = 9
   ASPAS = "' ".freeze
 
@@ -64,22 +65,18 @@ class Autonomia::FerramentasProntas::Bases::Transportadoras < Autonomia::Ferrame
        equiparado(linha['equiparado'])]
     end
 
-    # [CNPJ, nome] da empresa e da cooperativa; do autônomo (pessoa física), nada.
+    # [CNPJ, nome] da empresa e da cooperativa com CNPJ válido; de qualquer outro, nada.
     def identidade(linha, sigla)
-      return [nil, nil] if sigla == PESSOA_FISICA
+      cnpj = Autonomia::FerramentasProntas::Parametro.cnpj(linha['cpfcnpjtransportador']) if COM_CNPJ.include?(sigla)
+      return [nil, nil] if cnpj.nil?
 
-      [cnpj(linha['cpfcnpjtransportador']), nome(linha['nome_transportador'])]
+      [cnpj, sem_cpf(nome(linha['nome_transportador']))]
     end
 
     # "50085788" e "050085788" -> "050085788".
     def rntrc(valor)
       numero = digitos(valor)
       numero.rjust(DIGITOS_DO_RNTRC, '0') if numero && numero.length <= DIGITOS_DO_RNTRC
-    end
-
-    def cnpj(valor)
-      numero = digitos(valor)
-      numero if numero&.length == 14
     end
 
     # "'' DPS LOGISTICA LTDA ''" -> "DPS LOGISTICA LTDA".

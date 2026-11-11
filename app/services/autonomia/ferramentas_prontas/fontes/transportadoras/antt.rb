@@ -4,9 +4,8 @@ class Autonomia::FerramentasProntas::Fontes::Transportadoras::Antt < Autonomia::
   BASE = 'transportadoras'.freeze
   MAXIMO = 10
 
-  def consultar(_consulta, params)
-    exigir_base!
-    escopo = Autonomia::FerramentasProntas::Bases::Transportador.vigente
+  def buscar(_consulta, params)
+    escopo = da_base(Autonomia::FerramentasProntas::Bases::Transportador)
     escopo = params['rntrc'] ? escopo.where(rntrc: params['rntrc']) : escopo.where(cnpj: params.fetch('cnpj'))
     com_data(listar(escopo.order(:rntrc), 'registros', MAXIMO) { |item| registro(item) })
   end
