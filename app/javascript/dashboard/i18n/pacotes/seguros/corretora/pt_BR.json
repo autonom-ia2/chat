@@ -1233,5 +1233,81 @@
   },
   "CRM_LISTA_ACAO": {
     "NOVO_CLIENTE": "Nova cotação"
+  },
+  "AUTOMACAO_MODELOS": {
+    "ITENS": {
+      "M01": {
+        "TITULO": "Renovação sem esquecer ninguém",
+        "TEXTO": "30 dias antes do fim da vigência, o cliente recebe o aviso de renovação. Se trocou de carro, você é avisado. Se não responder, recebe o link para marcar com você."
+      },
+      "M02": {
+        "TITULO": "Cotação do anúncio respondida em 5 minutos",
+        "TEXTO": "Quem pede cotação pelo anúncio recebe mensagem na hora com os dados que faltam para cotar."
+      },
+      "M03": {
+        "TITULO": "Boas-vindas à apólice",
+        "TEXTO": "Depois de emitir, o cliente recebe a apólice, o telefone da assistência 24 horas e a pergunta se ficou alguma dúvida."
+      },
+      "M04": {
+        "TITULO": "Parcela em atraso",
+        "TEXTO": "Na primeira parcela atrasada, o cliente recebe um lembrete com o boleto. Na segunda, você é avisado do risco de cancelamento."
+      },
+      "M05": {
+        "TITULO": "Revisão do seguro no meio da vigência",
+        "TEXTO": "Seis meses depois de fechar, o cliente é perguntado se mudou de carro, de endereço ou de motorista."
+      },
+      "M06": {
+        "TITULO": "Parabéns com revisão de seguros",
+        "TEXTO": "No aniversário, o cliente recebe um parabéns e o convite para revisar os seguros dele."
+      },
+      "M07": {
+        "TITULO": "Seguro novo primeiro para quem já é cliente",
+        "TEXTO": "Quem já tem seguro com você recebe a oferta de outro ramo (residencial, vida) antes de todo mundo."
+      },
+      "M08": {
+        "TITULO": "Empresa manda a lista do seguro de vida",
+        "TEXTO": "O RH manda a lista de funcionários. Cada um vira um cartão no funil e recebe o pedido de documentos."
+      },
+      "M09": {
+        "TITULO": "Procurar empresas toda semana",
+        "TEXTO": "Toda segunda, o sistema acha empresas novas da sua região, oferece seguro empresarial ou de frota e só traz quem tiver interesse."
+      },
+      "M10": {
+        "TITULO": "Sinistro ou cliente bravo vai direto para você",
+        "TEXTO": "Quando o cliente fala de sinistro ou está muito irritado, a conversa sai do atendimento automático e você recebe um resumo na hora."
+      },
+      "M11": {
+        "TITULO": "Indicação que vira desconto",
+        "TEXTO": "Quem indica um amigo recebe um desconto na renovação quando o amigo fecha."
+      },
+      "M12": {
+        "TITULO": "Cotação enviada decide o próximo passo",
+        "TEXTO": "Depois de mandar a cotação, o cliente é perguntado o que achou. Sem resposta em 2 dias, você recebe um lembrete para ligar."
+      },
+      "M13": {
+        "TITULO": "Do fechamento à vistoria",
+        "TEXTO": "Depois de fechar, o cliente recebe a proposta para assinar e o lembrete da vistoria. No fim, é convidado a avaliar o atendimento."
+      },
+      "M14": {
+        "TITULO": "Documentos completos para emitir",
+        "TEXTO": "Pede a lista do ramo, confere cada foto ou PDF, pede só o que falta e avisa você quando der para emitir."
+      },
+      "M15": {
+        "TITULO": "Frota ou empresa grande com atendimento seu",
+        "TEXTO": "Cotação acima do valor que você escolher vai direto para você, marcada como prioridade."
+      },
+      "M16": {
+        "TITULO": "Reconquistar quem foi para outra seguradora",
+        "TEXTO": "Quem fechou com outra corretora ou achou caro, perto de vencer de novo, recebe uma oferta melhor."
+      },
+      "M17": {
+        "TITULO": "Corretor de férias, cliente bem cuidado",
+        "TEXTO": "Quando alguém sai de férias, quem cobre recebe o resumo de cada cliente. Na volta, os clientes voltam para a pessoa."
+      },
+      "M20": {
+        "TITULO": "Apólice emitida entra no sistema da corretora",
+        "TEXTO": "Ao emitir, o sistema pega os dados que faltam, envia ao seu sistema de gestão e manda as boas-vindas."
+      }
+    }
   }
 }

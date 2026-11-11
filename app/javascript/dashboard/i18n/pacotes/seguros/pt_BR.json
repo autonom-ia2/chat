@@ -323,5 +323,8 @@
       },
       "FECHADO_ENTRE": "Fechou ou não fechou entre"
     }
+  },
+  "AUTOMACAO_MODELOS": {
+    "DESTAQUE_RAMO": "Mais usados por quem trabalha com seguro"
   }
 }

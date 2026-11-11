@@ -14,6 +14,7 @@ import AutomacaoEnsaio from '../components/AutomacaoEnsaio.vue';
 import AutomacaoEtapas from '../components/AutomacaoEtapas.vue';
 import { MODELOS, modeloExiste } from '../modelos';
 import { useNomesDaConta } from '../composables/useNomesDaConta';
+import { usePorta } from '../porta/usePorta';
 import {
   passoCriouAutomacao,
   passoMexeuEmAutomacao,
@@ -229,12 +230,20 @@ const voltar = () =>
     params: { accountId: accountId.value },
   });
 
+// #2889: com a porta ligada, a automação nova no modo manual é montada no editor da Automação livre. A regra antiga
+// já aberta (regraId) segue para a tela de hoje, onde é editada; senão salvar viraria outra automação.
+const { ligada: portaLigada } = usePorta();
 const modoManual = () =>
-  router.push({
-    name: 'automation_list',
-    params: { accountId: accountId.value },
-    query: regraId.value ? { editar: regraId.value } : {},
-  });
+  portaLigada.value && !regraId.value
+    ? router.push({
+        name: 'automacoes_livre_nova',
+        params: { accountId: accountId.value },
+      })
+    : router.push({
+        name: 'automation_list',
+        params: { accountId: accountId.value },
+        query: regraId.value ? { editar: regraId.value } : {},
+      });
 
 const mudarLigada = async ligar => {
   if (!regra.value || ligando.value) return;
