@@ -146,11 +146,11 @@ const tirar = async id => {
 };
 
 // F7 (revisor, 12/11): a consulta do card Premium roda em segundo plano. O servidor responde "consultando" com o id do
-// pedido, e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo (~70 s, mais que a
+// pedido, e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo (~80 s, mais que a
 // consulta mais lenta da BigDataCorp). No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha
 // de rede numa pergunta não para: a próxima tenta de novo.
 const ESPERAS_DO_PEDIDO_MS = [1000, 2000, 3000, 5000, 8000, 10000];
-const PRAZO_DO_PEDIDO_MS = 70000;
+const PRAZO_DO_PEDIDO_MS = 80000;
 const CONSULTANDO = 'consultando';
 const SEM_CONFIRMACAO = 'sem_confirmacao';
 

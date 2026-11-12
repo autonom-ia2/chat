@@ -333,7 +333,7 @@ describe('useVitrine · experimentar e busca', () => {
       expect(vitrine.premiumDe('historico_placa')).toEqual(novo);
     });
 
-    it('after about 70 seconds without a result, says it could not confirm and reads the counter again', async () => {
+    it('after about 80 seconds without a result, says it could not confirm and reads the counter again', async () => {
       api.listar.mockResolvedValue(cardPremium(12));
       const vitrine = await novoEstado();
       await vitrine.carregar();
@@ -343,7 +343,7 @@ describe('useVitrine · experimentar e busca', () => {
       api.listar.mockResolvedValue(cardPremium(11));
 
       const resposta = vitrine.experimentar('historico_placa', 'ABC1D23');
-      await vi.advanceTimersByTimeAsync(68000);
+      await vi.advanceTimersByTimeAsync(78000);
       expect(api.listar).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(2000);
 

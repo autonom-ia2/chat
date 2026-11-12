@@ -74,13 +74,16 @@ RSpec.describe Autonomia::FerramentasProntas::ExperimentePagoJob do
     expect(pago).to have_received(:call).once
   end
 
-  it 'o prazo para começar sai dos prazos: o da tela, menos a ida ao modelo e a consulta mais lenta' do
+  it 'o prazo para começar sai dos prazos: o da tela, menos as duas idas ao modelo, a consulta mais lenta e a gravação' do
     premium = Autonomia::FerramentasProntas::Premium
     consulta_mais_lenta = (premium::Dataset::PRAZO_SOB_DEMANDA + premium::ConsultaPaga::FOLGA).seconds
     modelo = Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO.seconds
 
-    expect(described_class::PRAZO_PARA_COMECAR).to eq(pedido::PRAZO_DA_TELA - modelo - consulta_mais_lenta)
-    expect(described_class::PRAZO_PARA_COMECAR).to be_positive
+    expect(described_class::PRAZO_PARA_COMECAR).to eq(
+      pedido::PRAZO_DA_TELA - (2 * modelo) - consulta_mais_lenta - described_class::FOLGA_DA_GRAVACAO
+    )
+    expect(pedido::PRAZO_DA_TELA).to eq(80.seconds)
+    expect(described_class::PRAZO_PARA_COMECAR).to eq(9.seconds)
   end
 
   it 'o defeito vai também ao log, com conta, fonte e classe do erro, e sem o texto digitado' do

@@ -9,7 +9,7 @@
 module Autonomia::FerramentasProntas::Experimente::Pedido
   TTL = 15.minutes
   # Quanto a tela espera pelo resultado: o mesmo `PRAZO_DO_PEDIDO_MS` do `useVitrine.js`. Depois dele, ela desiste.
-  PRAZO_DA_TELA = 70.seconds
+  PRAZO_DA_TELA = 80.seconds
   CONSULTANDO = 'consultando'.freeze
   PREFIXO = 'ferramentas_prontas:experimente:'.freeze
   # Um id que passa disso não é nosso: nem é procurado.

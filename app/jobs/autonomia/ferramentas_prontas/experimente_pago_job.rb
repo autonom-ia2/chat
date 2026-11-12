@@ -10,8 +10,8 @@
 #
 # Prazo para começar (revisor, 12/11): com a fila cheia, o job pode começar depois de a tela desistir, e a consulta
 # seria feita e cobrada sem ninguém ver. O job que começa depois de `PRAZO_PARA_COMECAR` não consulta: a tela recebe
-# "nao_comecou" (nada foi cobrado). O prazo sai dos outros: o da tela, menos a ida ao modelo antes da consulta e a
-# consulta mais lenta (a sob demanda, com a folga).
+# "nao_comecou" (nada foi cobrado). O prazo sai dos outros: o da tela, menos as duas idas ao modelo (antes e depois da
+# consulta), a consulta mais lenta (a sob demanda, com a folga) e a gravação do resultado.
 class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
   queue_as AgentToolsQueue::FILA.to_sym
   sidekiq_options retry: false
@@ -19,8 +19,12 @@ class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
   Pedido = Autonomia::FerramentasProntas::Experimente::Pedido
   Premium = Autonomia::FerramentasProntas::Premium
   NAO_COMECOU = 'nao_comecou'.freeze
-  PRAZO_PARA_COMECAR = Pedido::PRAZO_DA_TELA - Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO.seconds -
-                       (Premium::Dataset::PRAZO_SOB_DEMANDA + Premium::ConsultaPaga::FOLGA).seconds
+  IDAS_AO_MODELO = 2
+  # Gravar o resultado e a tela perguntar por ele. Folga de desenho, não medida.
+  FOLGA_DA_GRAVACAO = 2.seconds
+  PRAZO_PARA_COMECAR = Pedido::PRAZO_DA_TELA -
+                       (IDAS_AO_MODELO * Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO).seconds -
+                       (Premium::Dataset::PRAZO_SOB_DEMANDA + Premium::ConsultaPaga::FOLGA).seconds - FOLGA_DA_GRAVACAO
 
   def perform(id)
     pedido = Pedido.ler(id)
