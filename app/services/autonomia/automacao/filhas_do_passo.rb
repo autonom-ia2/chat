@@ -21,11 +21,12 @@ class Autonomia::Automacao::FilhasDoPasso
   end
 
   # A conta por resultado ('abertas', 'abertas_antes', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o
-  # motor) não abre nenhuma, e a mãe registra isso. A ligação que não acha registro nenhum também fica no histórico da
-  # mãe, com o motivo (F3.6, F4.3): o passo dela gravou "ok" ao entregar a procura, e sem a linha ninguém saberia por
-  # que nada aconteceu.
+  # motor) não abre nenhuma, e a mãe registra isso; a mãe parada também não abre (mae_parada?). A ligação que não acha
+  # registro nenhum também fica no histórico da mãe, com o motivo (F3.6, F4.3): o passo dela gravou "ok" ao entregar a
+  # procura, e sem a linha ninguém saberia por que nada aconteceu.
   def abrir
     return pular_com('desligada') unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
+    return { 'mae_parada' => 1 } if mae_parada?
 
     contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
     return pular_com(sem_registro) if contagem.empty?
@@ -35,6 +36,14 @@ class Autonomia::Automacao::FilhasDoPasso
   end
 
   private
+
+  # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou em outro registro também
+  # para: a mãe parada não abre filha. A leitura trava a linha da mãe, então espera um parar em curso terminar. Sem linha
+  # no histórico: o da mãe já diz que ela parou. A finalizada_em não serve: a mãe concluída continua abrindo filhas (ela
+  # não espera as filhas).
+  def mae_parada?
+    Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado) } == 'parada'
+  end
 
   def registro = @passo['registro'].to_h
 

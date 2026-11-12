@@ -48,17 +48,17 @@ class Autonomia::Automacao::NoCard
 
   def abertas = Execucao.abertas.where(account_id: @card.account_id, alvo: @card)
 
-  # As execuções desta automação neste card e as filhas delas em outro registro. A filha é achada pela marca do evento
-  # (`em:<id da mãe>:...`, EmOutroRegistro.marca), pelo índice (automacao_id, evento) com text_pattern_ops: LIKE com
-  # diferença de maiúsculas, nunca ILIKE. O ":" depois do id separa a mãe 12 da 123.
+  # As execuções desta automação neste card e as filhas delas em outro registro, numa consulta só, sem trazer as mães
+  # para o Ruby (o card pode ter muitas vezes da automação). A filha é achada pela marca do evento
+  # (`em:<id da mãe>:...`, EmOutroRegistro.marca): o prefixo `em:` usa o índice (automacao_id, evento) com
+  # text_pattern_ops (LIKE com diferença de maiúsculas, nunca ILIKE), e o id da mãe, o segundo pedaço da marca, é
+  # comparado como texto com as execuções do card. Pedaço inteiro: a mãe 12 não leva a filha da 123.
   def do_card_e_filhas(automacao)
     da_automacao = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id)
     no_card = da_automacao.where(alvo: @card)
-    maes = no_card.pluck(:id)
-    return no_card if maes.empty?
-
-    marcas = maes.map { |id| "#{::Autonomia::Automacao::EmOutroRegistro::MARCA}:#{id}:%" }
-    no_card.or(da_automacao.where(Execucao.arel_table[:evento].matches_any(marcas, nil, true)))
+    filhas = da_automacao.where(Execucao.arel_table[:evento].matches("#{::Autonomia::Automacao::EmOutroRegistro::MARCA}:%", nil, true))
+                         .where("split_part(#{Execucao.table_name}.evento, ':', 2) IN (?)", no_card.select(Arel.sql('id::text')))
+    no_card.or(filhas)
   end
 
   def para_tela(execucao, registros)

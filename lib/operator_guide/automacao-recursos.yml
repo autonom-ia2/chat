@@ -302,6 +302,7 @@ fora:
       - autonomia/automacoes_webhook
       - crm/stage_automations
       - crm/stage_automation_steps
+      - crm/cards/automacoes
       - autonomia/vigias
   - motivo: Passo nativo, não ação da lista. Retorno, passo `retorno` (G3); reunião, F8.
     recursos:

@@ -15,7 +15,7 @@
       "FEZ": "{dia}: {frase}",
       "PARAR": "Stop for this card",
       "PARAR_ROTULO": "Stop {nome} for this card",
-      "CONFIRMA": "Stop {nome} on this card? Whatever it started on another contact or card because of this one stops too.",
+      "CONFIRMA": "Stop {nome} on this card? Whatever it started on another contact, conversation or card because of this one stops too.",
       "SIM": "Yes, stop",
       "VOLTAR": "Go back",
       "PAROU": "{nome} stopped on this card. Other cards keep going.",

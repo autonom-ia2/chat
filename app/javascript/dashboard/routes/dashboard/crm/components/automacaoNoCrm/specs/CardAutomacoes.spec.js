@@ -165,7 +165,7 @@ describe('CardAutomacoes', () => {
     const wrapper = await montar();
     await linhas(wrapper)[0].find('[data-parar]').trigger('click');
     expect(wrapper.find('[data-confirma]').text()).toBe(
-      'Parar Lembrete de proposta neste card? O que ela começou em outro contato ou card por causa deste também para.'
+      'Parar Lembrete de proposta neste card? O que ela começou em outro contato, conversa ou card por causa deste também para.'
     );
     await wrapper.find('[data-parar-sim]').trigger('click');
     await flushPromises();

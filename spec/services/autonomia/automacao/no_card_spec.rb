@@ -161,6 +161,33 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
 
       expect(vizinha.reload.estado).to eq('esperando')
     end
+
+    # Revisão do #2958: o job que abre as filhas (EmOutroRegistroJob) pode rodar depois do parar, e o parar não desliga
+    # a automação. A mãe parada não abre filha nenhuma; sem o parar, a mesma procura abre a filha no outro card.
+    describe 'o job das filhas depois do parar' do
+      let(:passo) do
+        { 'id' => 'p_outro', 'tipo' => 'em_outro_registro', 'registro' => { 'de' => 'cards_do_contato' }, 'passos' => [esperar_passo('r1')] }
+      end
+
+      before do
+        card.update!(contact: contato)
+        outro.update!(contact: contato)
+        execucao.update!(estado: 'esperando', cursor: 'p1', travada_em: nil, due_at: 1.hour.from_now)
+      end
+
+      def abrir_filhas = Autonomia::Automacao::FilhasDoPasso.new(execucao.reload, passo, contato.id).abrir
+
+      it 'parar no card antes de o job rodar: nenhuma filha nova', :aggregate_failures do
+        no_card.parar!(definicao)
+
+        expect { abrir_filhas }.not_to change(Autonomia::Automacao::Execucao, :count)
+        expect(execucao.reload.estado).to eq('parada')
+      end
+
+      it 'sem o parar, a mesma procura abre a filha no outro card' do
+        expect { abrir_filhas }.to change { Autonomia::Automacao::Execucao.where(alvo: outro).count }.by(1)
+      end
+    end
   end
 
   it 'a lista do card fechado sai vazia sem ler as execuções' do

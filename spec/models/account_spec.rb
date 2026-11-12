@@ -321,10 +321,8 @@ RSpec.describe Account do
       # #2858 (F5): agente_ferramentas_prontas_bases, 43 (1 << 42 = 4398046511104), depois da automacao_porta (#2890), Orquestração (11/11).
       # #2858 (F7): agente_ferramentas_prontas_premium depois dela, 44 (1 << 43 = 8796093022208), Orquestração (11/11).
       # #2894: relacionamentos_novo depois dela, 45 (1 << 44 = 17592186044416), Orquestração (12/11).
-      # #2414: automacao_passos_novos depois dela. Reservada na 47 (1 << 46), depois da carteira_seguros (46, #2910),
-      # que ainda não está na main: até ela entrar, a ordem do features.yml dá 46 (1 << 45 = 35184372088832).
-      # #2499: automacao_no_crm depois dela, 47 pela ordem (1 << 46 = 70368744177664); com a carteira_seguros, 48. A
-      # Orquestração confirma o bit antes do OK.
+      # #2414: automacao_passos_novos depois dela, 46 pela ordem do features.yml (1 << 45 = 35184372088832).
+      # #2499: automacao_no_crm depois dela, 47 pela ordem (1 << 46 = 70368744177664). Flag nova entra no fim.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
