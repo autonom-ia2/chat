@@ -1364,7 +1364,7 @@
   column: feature_flags_ext_2
 
 # Agentes: ferramentas prontas, F7 (#2858): as consultas Premium, pagas, à BigDataCorp. Ligada (junto com
-# `agente_ferramentas_prontas`): a vitrine ganha o grupo Premium com 7 cards (certidões da empresa, raio-X da empresa,
+# `agente_ferramentas_prontas`): a vitrine ganha 7 cards Premium, cada um no grupo do assunto (#2939), (certidões da empresa, raio-X da empresa,
 # conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas), cada um com o
 # selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
 # plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
@@ -1377,15 +1377,27 @@
   enabled: false
   column: feature_flags_ext_2
 
-# Automação livre: protótipo dos 6 passos novos (#2931–#2936, épico #2414). Só o painel lê esta flag. Ligada (junto com
-# automacao_editor): o "Adicionar passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação,
-# Buscar informação em outro sistema, Marcar reunião pela conversa e Pesquisa de satisfação, com o ensaio e o
-# histórico de exemplo (adaptador falso). O servidor ainda não conhece estes passos: o Salvar tudo, o Guardar e o
-# Ligar ficam desligados enquanto a receita tiver um deles. Desligada: o editor fica o de hoje. Sem migration.
-# Rollback: desligar a flag. Posição 45 (17592186044416, 1 << 44), provisória: a Orquestração confirma o bit na fila.
-# EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção, ligada só na conta de
-# demonstração e no painel local, até o motor dos passos existir. Ligada num cliente, ele monta passos que não salvam.
+# Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
+# empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
+# Sem migration. Rollback: desligar a flag na conta. Posição 45 (17592186044416, 1 << 44), confirmada pela
+# Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
+- name: relacionamentos_novo
+  display_name: Relacionamentos › telas novas
+  enabled: false
+  column: feature_flags_ext_2
+
+# Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
+# passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
+# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. O servidor valida, salva, ensaia e roda os passos que
+# já têm motor (#2932 Para cada, #2933 Usar outra automação, #2934 Buscar em outro sistema); os demais seguem com a
+# trava "ainda está em teste" no salvar até o motor deles entrar. Desligada: o editor fica o de hoje e o motor recusa
+# esses passos. Sem migration nesta frente. Rollback: desligar a flag.
+# Posição 47 (70368744177664, 1 << 46), reservada com a Orquestração, depois da relacionamentos_novo (45) e da
+# carteira_seguros (46). Enquanto a carteira_seguros não estiver na main, esta linha cai na 46: a Orquestração ordena
+# os merges (carteira_seguros antes) para o bit final ser o 47.
+# EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção até o motor dos 6 passos
+# estar completo. Ligada só na conta de demonstração e no painel local.
 - name: automacao_passos_novos
-  display_name: Automação › protótipo dos passos novos (não salva)
+  display_name: Automação › passos novos (em construção)
   enabled: false
   column: feature_flags_ext_2

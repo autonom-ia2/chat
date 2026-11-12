@@ -7,7 +7,6 @@ import AcharEstado from '../components/AcharEstado.vue';
 import AcharProgresso from '../components/AcharProgresso.vue';
 import AcharListaComMapa from '../components/AcharListaComMapa.vue';
 import AcharRodape from '../components/AcharRodape.vue';
-import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharEmpresaGaveta from '../components/AcharEmpresaGaveta.vue';
 import AcharFolhaEnvio from '../components/AcharFolhaEnvio.vue';
 import AcharCanaisDesligados from '../components/AcharCanaisDesligados.vue';
@@ -362,7 +361,7 @@ watch(estado, async (novo, antigo) => {
       <div
         class="flex flex-col w-full max-w-4xl gap-6 px-4 pt-6 mx-auto min-h-full md:px-8 md:pt-10"
         :class="[
-          pronto || (!leitura && elegiveis.length) ? 'pb-0' : 'md:pb-10',
+          pronto || (!leitura && elegiveis.length) ? 'pb-0' : 'pb-6 md:pb-10',
           { 'xl:max-w-6xl': !pronto },
         ]"
       >
@@ -512,7 +511,6 @@ watch(estado, async (novo, antigo) => {
             </template>
           </template>
         </template>
-        <AcharFaixaDoMenu v-if="!pronto && (leitura || !elegiveis.length)" />
       </div>
     </main>
 

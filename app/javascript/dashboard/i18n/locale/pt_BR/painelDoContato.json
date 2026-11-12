@@ -119,6 +119,12 @@
       "ERRO": "Não deu para salvar agora. Tente de novo.",
       "COPIADO": "Copiado."
     },
+    "CAMPOS_DA_CONVERSA": {
+      "TITULO": "Campos da conversa",
+      "SALVO": "Pronto.",
+      "ERRO": "Não deu para salvar agora. Tente de novo.",
+      "COPIADO": "Copiado."
+    },
     "TIME_E_PRIORIDADE": {
       "TITULO": "Time e prioridade",
       "TITULO_SO_PRIORIDADE": "Prioridade",

@@ -342,3 +342,119 @@ describe('useCardHistorico — card arquivado pela IA', () => {
     expect(item.detail).toBe('');
   });
 });
+
+// #2509: o movimento feito por automação aparece como da automação, não da
+// pessoa que a ligou nem do "sistema"; quem ligou fica em texto menor.
+describe('useCardHistorico — movimento feito por automação', () => {
+  const movimento = (payload, extra = {}) =>
+    activity(
+      1,
+      'move',
+      { from_stage_id: 1, to_stage_id: 2, ...payload },
+      { labels: { from_stage_id: 'Novo', to_stage_id: 'Proposta' }, ...extra }
+    );
+
+  it('shows the free automation with its name, who turned it on and a link', () => {
+    const item = describeActivity(
+      movimento(
+        { by: 'automacao', origem: 'livre', automacao_id: 7 },
+        {
+          actor_type: 'user',
+          actor_name: 'Ana',
+          automacao: {
+            origem: 'livre',
+            id: 7,
+            nome: 'Boas-vindas',
+            pode_abrir: true,
+          },
+        }
+      )
+    );
+
+    expect(item.actor).toBe('Automation «Boas-vindas»');
+    expect(item.ligadaPor).toBe('turned on by Ana');
+    expect(item.automacaoLink).toEqual({
+      name: 'automacoes_livre_editar',
+      params: { id: 7 },
+    });
+  });
+
+  it('shows the rule and the stage automation instead of "System"', () => {
+    const regra = describeActivity(
+      movimento(
+        { by: 'automacao', origem: 'regra', automacao_id: 3 },
+        {
+          automacao: {
+            origem: 'regra',
+            id: 3,
+            nome: 'Regra do lead',
+            pode_abrir: false,
+          },
+        }
+      )
+    );
+    const etapa = describeActivity(
+      movimento(
+        { by: 'automacao', origem: 'etapa', automacao_id: 4 },
+        {
+          automacao: {
+            origem: 'etapa',
+            id: 4,
+            nome: 'Entrou na proposta',
+            pode_abrir: false,
+          },
+        }
+      )
+    );
+
+    expect(regra.actor).toBe('Automation «Regra do lead»');
+    expect(regra.automacaoLink).toBeNull();
+    expect(regra.ligadaPor).toBe('');
+    expect(etapa.actor).toBe('Automation «Entrou na proposta»');
+    expect(etapa.automacaoLink).toBeNull();
+  });
+
+  // Na de etapa e na regra, o ator é quem moveu o card ou disparou o evento, e
+  // não quem ligou a automação: a linha não pode dizer que essa pessoa a ligou.
+  it('does not say who turned on a stage automation or a rule', () => {
+    const comPessoa = origem =>
+      describeActivity(
+        movimento(
+          { by: 'automacao', origem, automacao_id: 4 },
+          {
+            actor_type: 'user',
+            actor_name: 'Bruno',
+            automacao: { origem, id: 4, nome: 'Entrou', pode_abrir: false },
+          }
+        )
+      );
+
+    expect(comPessoa('etapa').actor).toBe('Automation «Entrou»');
+    expect(comPessoa('etapa').ligadaPor).toBe('');
+    expect(comPessoa('regra').ligadaPor).toBe('');
+  });
+
+  it('says "An automation" when the automation no longer exists', () => {
+    const item = describeActivity(
+      movimento(
+        { by: 'automacao', origem: 'livre', automacao_id: 9 },
+        {
+          automacao: { origem: 'livre', id: 9, nome: null, pode_abrir: false },
+        }
+      )
+    );
+
+    expect(item.actor).toBe('An automation');
+    expect(item.automacaoLink).toBeNull();
+  });
+
+  it('keeps a move made by a person as before', () => {
+    const item = describeActivity(
+      movimento({}, { actor_type: 'user', actor_name: 'Ana', automacao: null })
+    );
+
+    expect(item.actor).toBe('Ana');
+    expect(item.ligadaPor).toBe('');
+    expect(item.automacaoLink).toBeNull();
+  });
+});

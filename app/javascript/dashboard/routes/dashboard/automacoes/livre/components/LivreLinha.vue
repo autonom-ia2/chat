@@ -18,6 +18,9 @@ const props = defineProps({
   doCard: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
   mudando: { type: Boolean, default: false },
+  // #2572: a frase do motivo com que o motor a pausou (quem ligou perdeu o
+  // acesso). Ligar de novo é assumir: o botão diz isso no lugar do interruptor.
+  pausa: { type: String, default: '' },
 });
 
 const emit = defineEmits(['abrir', 'alternar']);
@@ -43,7 +46,7 @@ const selo = computed(() => {
   <li
     data-linha
     :data-antiga="antiga || undefined"
-    class="flex flex-col gap-4 p-5 transition border shadow-sm sm:flex-row sm:items-center rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-6"
+    class="flex flex-col gap-4 p-5 transition border shadow-sm sm:flex-row sm:flex-wrap sm:items-center rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-6"
   >
     <button
       type="button"
@@ -109,7 +112,33 @@ const selo = computed(() => {
       class="self-start min-h-11 sm:self-center shrink-0"
       @click="emit('abrir')"
     />
+    <div
+      v-if="pausa && !ativa"
+      data-pausa
+      role="status"
+      class="flex flex-col gap-3 p-4 text-[0.9375rem] rounded-xl bg-n-amber-3 text-n-amber-12 sm:order-last sm:basis-full"
+    >
+      <p class="mb-0">
+        <span class="block font-semibold">
+          {{ $t('AUTOMACAO_LIVRE.LIGAR.PAUSADA') }}
+        </span>
+        {{ pausa }}
+      </p>
+      <template v-if="podeMudar">
+        <p class="mb-0">{{ $t('AUTOMACAO_LIVRE.LIGAR.ASSUMIR_AVISO') }}</p>
+        <Button
+          data-assumir
+          :label="$t('AUTOMACAO_LIVRE.LIGAR.ASSUMIR')"
+          icon="i-lucide-power"
+          teal
+          class="self-start min-h-11"
+          :disabled="mudando"
+          @click="emit('alternar')"
+        />
+      </template>
+    </div>
     <label
+      v-else
       class="flex items-center self-start gap-3 px-3 select-none sm:self-center min-h-11 shrink-0"
       :class="
         podeMudar && !mudando

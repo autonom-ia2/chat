@@ -258,6 +258,33 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
       expect(response.parsed_body['custos']).to eq('p1' => { 'media' => 0.003, 'vezes' => 2 })
     end
 
+    it 'o cartão leva a média de tokens do passo quando o registro os tem (#2574)' do
+      # Outra conversa: a do before já tem uma execução aberta desta automação (uma por alvo).
+      execucao = create(:autonomia_automacao_execucao, versao: versao, alvo: create(:conversation, account: account, inbox: inbox))
+      ia = { 'custo_usd' => 0.001, 'tokens_entrada' => 1_000, 'tokens_saida' => 200 }
+      create(:autonomia_automacao_registro, execucao: execucao, passo: 'p3', dados: { 'ia' => ia })
+
+      get "#{base}/#{automacao.id}/custos", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['custos']['p3']).to eq('media' => 0.001, 'vezes' => 1, 'tokens' => 1_200)
+    end
+
+    # #2574: a confirmação do ligar mostra o valor antes da primeira vez, pelo modelo de cada tipo de passo de IA.
+    it 'leva a estimativa de cada tipo de passo de IA, pelo modelo e pela tabela de preço', :aggregate_failures do
+      get "#{base}/#{automacao.id}/custos", headers: admin.create_new_auth_token, as: :json
+
+      estimativa = response.parsed_body['estimativa']
+      expect(estimativa.keys).to match_array(Autonomia::Automacao::IaNoExecutor::IA.keys)
+      decidir = estimativa['decidir']
+      esperado = Crm::Ai::Pricing.cost(model: Autonomia::Automacao::PassoDeDecidir::MODELO,
+                                       input_tokens: Autonomia::Automacao::EstimativaDaIa::ENTRADA, output_tokens: 300)
+      expect(decidir).to include('modelo' => Autonomia::Automacao::PassoDeDecidir::MODELO, 'custo_usd' => esperado.round(6))
+      expect(decidir['tokens']).to eq(Autonomia::Automacao::EstimativaDaIa::ENTRADA + 300)
+
+      get "#{base}/custos", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['estimativa']).to eq(estimativa)
+    end
+
     it 'sem financial_view, volta vazio: é dinheiro da conta (#1969)', :aggregate_failures do
       leitor = com_funcao(%w[automation_view])
 

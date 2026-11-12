@@ -384,6 +384,63 @@ RSpec.describe Crm::Conversations::CardSyncer do
     expect(card.activities.where(event_type: 'conversation_dedup_reuse')).to exist
   end
 
+  # #2770: o card da prospecção nasce sem caixa. A resposta da empresa pela caixa do funil cai nele, que adota a caixa, em
+  # vez de abrir um segundo card, com ou sem o "Outro canal" (crm_outro_canal). Ele guarda a origem (`card.origem` das
+  # automações) e o dono escolhido na prospecção, que não passa a seguir quem atende a conversa.
+  describe 'resposta ao card da prospecção, que nasce sem caixa (#2770)' do
+    let(:conta_e_admin) { create_account_and_user }
+    let(:account) { conta_e_admin.first }
+    let(:admin) { conta_e_admin.last }
+    let(:agent) { create_crm_agent(account: account).first }
+    let(:inbox) { create_crm_inbox(account: account, members: [admin, agent]) }
+    let(:contact) { account.contacts.create!(name: 'Empresa Prospectada', phone_number: '+5511987650009') }
+    let(:pipeline_e_etapa) { create_crm_pipeline(account: account, user: admin) }
+    let!(:prospectado) do
+      pipeline, stage = pipeline_e_etapa
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, owner: admin, title: 'Padaria',
+                                source: 'autonomia_prospecting', last_activity_at: 1.day.ago)
+    end
+    let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
+
+    def responde
+      described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+    end
+
+    it 'reuses the card without inbox, keeping its origin and owner, without crm_outro_canal' do
+      account.disable_features!(Crm::Conversations::OutroCanal::FLAG)
+
+      card = responde
+
+      expect(card.id).to eq(prospectado.id)
+      expect(account.crm_cards.where(contact: contact).count).to eq(1)
+      expect(card.reload).to have_attributes(inbox_id: inbox.id, conversation_id: conversation.id, source: 'autonomia_prospecting',
+                                             owner_id: admin.id)
+      expect(Autonomia::Automacao::OrigemDoCard.de(card.source)).to eq(Autonomia::Automacao::OrigemDoCard::PROSPECCAO)
+      expect(card.metadata).not_to have_key(described_class::AUTO_SYNC_METADATA)
+    end
+
+    it 'keeps the owner chosen in prospecting when someone else takes the conversation afterwards' do
+      account.disable_features!(Crm::Conversations::OutroCanal::FLAG)
+      responde
+
+      conversation.update!(assignee: agent)
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(prospectado.reload).to have_attributes(owner_id: admin.id, source: 'autonomia_prospecting')
+    end
+
+    it 'keeps the origin and the owner with crm_outro_canal' do
+      account.enable_features!(Crm::Conversations::OutroCanal::FLAG)
+
+      card = responde
+
+      expect(card.id).to eq(prospectado.id)
+      expect(account.crm_cards.where(contact: contact).count).to eq(1)
+      expect(card.reload).to have_attributes(inbox_id: inbox.id, source: 'autonomia_prospecting', owner_id: admin.id)
+    end
+  end
+
   it 'does not reuse contact/inbox/pipeline cards outside the configured dedup window' do
     ENV['CRM_AUTO_CREATE_DEDUP_WINDOW_DAYS'] = '1'
     account, admin = create_account_and_user

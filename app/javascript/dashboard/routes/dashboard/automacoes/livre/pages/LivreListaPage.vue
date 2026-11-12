@@ -10,6 +10,7 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { descreverAutomacao } from 'dashboard/helper/automacaoEmPortugues';
 import LivreLinha from '../components/LivreLinha.vue';
+import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 import AutomacaoHeroi from '../../components/AutomacaoHeroi.vue';
 import AutomacaoPorta from '../../porta/components/AutomacaoPorta.vue';
 import { usePorta } from '../../porta/usePorta';
@@ -20,6 +21,7 @@ import { fraseDoGatilho, fraseDoPasso } from '../frases';
 import { useEscolhasDosGatilhos } from '../useEscolhasDosGatilhos';
 import { erroDaApi } from '../erroDaApi';
 import { custoEmTexto } from '../custoDaIa';
+import { oQueLigarFaz } from '../aoLigar';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
 // regras de hoje, que abrem na tela de hoje), cada uma em frase. As automações
@@ -135,6 +137,7 @@ const linhaDaNova = automacao => {
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
+    pausa: automacao.pausa?.frase || '',
     doCard: alvoDoGatilho(automacao) === 'Crm::Card',
     fato: [
       fatoDaSemana(automacao.semana),
@@ -203,8 +206,7 @@ const alternarNova = async automacao => {
   return data.ativa;
 };
 
-const alternar = async linha => {
-  if (!podeMudar.value || mudando.value) return;
+const executarAlternar = async linha => {
   mudando.value = linha.chave;
   try {
     const ligou = linha.antiga
@@ -220,6 +222,42 @@ const alternar = async linha => {
   } finally {
     mudando.value = null;
   }
+};
+
+// #2574 (F5.4): ligar a nova que manda mensagem, avisa a equipe ou usa IA
+// pede confirmação, com o custo de cada passo de IA (a média dos últimos 30
+// dias). Se o custo não carregar, a confirmação segue sem o valor.
+const confirmarLigar = ref(null);
+const aConfirmar = ref({ linha: null, custos: { com_valores: false } });
+const lerCustos = async id => {
+  try {
+    return (await AutomacoesAPI.custosDaAutomacao(id)).data;
+  } catch {
+    return { com_valores: false };
+  }
+};
+
+const pedeConfirmacao = linha =>
+  !linha.antiga &&
+  !linha.ativa &&
+  oQueLigarFaz(linha.automacao.versao?.receita).pede;
+
+const alternar = async linha => {
+  if (!podeMudar.value || mudando.value) return;
+  if (!pedeConfirmacao(linha)) {
+    await executarAlternar(linha);
+    return;
+  }
+  mudando.value = linha.chave;
+  const custosDaLinha = await lerCustos(linha.automacao.id);
+  mudando.value = null;
+  aConfirmar.value = { linha, custos: custosDaLinha };
+  confirmarLigar.value?.abrir();
+};
+
+const ligarConfirmada = () => {
+  const { linha } = aConfirmar.value;
+  if (linha) executarAlternar(linha);
 };
 </script>
 
@@ -378,6 +416,7 @@ const alternar = async linha => {
               :ativa="linha.ativa"
               :antiga="linha.antiga"
               :do-card="linha.doCard"
+              :pausa="linha.pausa || ''"
               :pode-mudar="podeMudar"
               :mudando="mudando === linha.chave"
               @abrir="abrir(linha)"
@@ -424,6 +463,13 @@ const alternar = async linha => {
 
         <!-- #2889: com a porta, os modelos vêm depois das automações da pessoa, para ela achar as dela primeiro. -->
         <AutomacaoPorta v-if="porta" />
+
+        <LivreConfirmarLigar
+          ref="confirmarLigar"
+          :receita="aConfirmar.linha?.automacao.versao?.receita || null"
+          :custos="aConfirmar.custos"
+          @ligar="ligarConfirmada"
+        />
       </div>
     </main>
   </section>

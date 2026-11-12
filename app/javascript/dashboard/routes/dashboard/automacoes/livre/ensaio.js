@@ -24,7 +24,17 @@ const AVISO = {
   contato_bloqueado: 'CONTATO_BLOQUEADO',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
+  // #2609: a mensagem pula, como no motor.
+  canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
+  sem_responsavel: 'SEM_RESPONSAVEL',
+  caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
+};
+
+// #2552: por que o aviso iria para quem atende a caixa.
+const RESERVA = {
+  sem_responsavel: 'IRIA_PARA_CAIXA',
+  responsavel_fora: 'IRIA_PARA_CAIXA_FORA',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -119,6 +129,23 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
     return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // #2604: quem liga a automação não pode escrever nesta conversa ou caixa, ou
+  // não pode mais gerenciar automações (saiu da conta, perdeu a permissão): o
+  // motor pausaria a automação, e o caminho acaba aqui.
+  if (no.faria === 'pausaria') {
+    const chave =
+      no.dados.motivo === 'quem_ligou_sem_acesso'
+        ? 'PAUSARIA'
+        : 'PAUSARIA_QUEM_LIGA';
+    return { ...base, aviso: t(`${E}.${chave}`, { nome: no.dados.quem }) };
+  }
+  // #2609: a janela fechada sem modelo que saia no lugar: a execução pararia
+  // aqui, com o motivo do motor, e o caminho acaba.
+  if (no.faria === 'pararia')
+    return {
+      ...base,
+      aviso: t(`${E}.PARARIA.${no.dados.motivo.toUpperCase()}`),
+    };
   // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
   if (no.tipo === 'ia_assumir')
     return no.faria === 'ia_assumir'
@@ -129,6 +156,17 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
             agente: no.dados?.agente,
           }),
         };
+  // #2502: entre quem seria o rodízio (quem está online só se sabe na hora);
+  // se não passaria, o porquê.
+  if (no.tipo === 'rodizio')
+    return no.faria === 'rodizio'
+      ? {
+          ...base,
+          destaque: no.dados?.time
+            ? t(`${E}.RODIZIO_TIME`, { time: no.dados.time })
+            : t(`${E}.RODIZIO_CAIXA`),
+        }
+      : { ...base, aviso: t(`${E}.NAO_RODARIA.${no.faria.toUpperCase()}`) };
   // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
   // caixa sairia e o texto no balão.
   if (no.faria === 'email')
@@ -140,8 +178,14 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     };
   if (no.dados?.calculados?.length)
     return { ...base, destaque: gravaria(no.dados.calculados, t) };
-  if (FARIA_DA_IA[no.faria])
-    return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
+  // A reserva da caixa (#2552): no avisar e no resumo que sai pelo avisar.
+  const reserva = RESERVA[no.dados?.reserva];
+  const caixa = reserva ? t(`${E}.${reserva}`) : null;
+  if (FARIA_DA_IA[no.faria]) {
+    const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
+    return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };
+  }
+  if (caixa) return { ...base, balao: no.dados.texto, destaque: caixa };
   // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
   // o de propaganda (lote 5, #2681) avisa que custa mais.
   if (no.dados?.texto)
