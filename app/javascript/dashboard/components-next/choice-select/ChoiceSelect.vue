@@ -53,6 +53,10 @@ const props = defineProps({
   // alinha pela direita do botão quando à direita não cabe (#2202: "Recentes ▾"
   // e "Filtrar ▾" no topo estreito da lista de conversas). Sem a prop, nada muda.
   fitSelected: { type: Boolean, default: false },
+  // O texto escolhido quebra linha no botão fechado, em vez de ser cortado com
+  // "…", e a altura cresce com ele (#2754: a condição longa em 390 px). Sem a
+  // prop, nada muda.
+  wrapSelected: { type: Boolean, default: false },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -390,7 +394,10 @@ defineExpose({ abrir });
         // pseudo-elemento leva a área de toque a 44 px nos dois.
         compact
           ? 'h-8 px-3 text-sm before:-inset-y-1.5'
-          : 'h-10 px-3 text-sm before:-inset-y-0.5',
+          : [
+              'px-3 text-sm before:-inset-y-0.5',
+              wrapSelected ? 'min-h-10 py-2' : 'h-10',
+            ],
         invalid
           ? 'outline-n-ruby-9 focus-visible:outline-n-ruby-9'
           : 'outline-n-weak hover:enabled:outline-n-slate-6 focus-visible:outline-n-brand',
@@ -399,7 +406,12 @@ defineExpose({ abrir });
       @keydown="onKeydown"
       @blur="onBlur"
     >
-      <span class="truncate" :class="{ 'text-n-slate-10': selected < 0 }">
+      <span
+        :class="[
+          wrapSelected ? 'break-words' : 'truncate',
+          { 'text-n-slate-10': selected < 0 },
+        ]"
+      >
         {{ selectedLabel }}
       </span>
       <span
