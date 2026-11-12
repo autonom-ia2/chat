@@ -116,6 +116,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::FerramentasProntas::Premium::Registro', :por_conta],
     ['Autonomia::FerramentasProntas::Premium::Saldo', :por_conta],
     ['Autonomia::FerramentasProntas::Acesso', :por_conta],
+    # #2942: o IP próprio da conta nas consultas grátis (o IP volta para a fatia).
+    ['Autonomia::FerramentasProntas::ProxyDaConta', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
