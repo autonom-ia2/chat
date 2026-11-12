@@ -36,6 +36,34 @@ class Autonomia::Automacao::PassoDeAcao
     end
   end
 
+  # O ensaio (Ensaio#acao): [o que faria, dados]. O valor calculado do corpo (G16) com os dados do alvo e o "hoje" de
+  # agora: a data que daria se rodasse agora. Pula como o motor: valor vazio no caminho, valor vazio no corpo, data que
+  # não é data, valor que não cabe no campo. Só descreve; nada é chamado.
+  def self.ensaiar(passo, valores, conta)
+    return ['faltou_valor'] if caminho_vazio?(passo, valores)
+
+    corpo = passo['corpo'].to_h
+    return ['acao'] unless ::Autonomia::Automacao::Corpo.calculado_em?(corpo)
+
+    montado = ::Autonomia::Automacao::Corpo.new(corpo, valores: valores, conta: conta).montar
+    return [montado.motivo] if montado.motivo
+    return ['valor_fora_do_formato'] if ::Autonomia::Automacao::CampoDaAcao.problemas(passo['acao'], corpo, montado.corpo, conta: conta).any?
+
+    ['acao', { calculados: calculados(corpo, montado.corpo) }]
+  end
+
+  def self.caminho_vazio?(passo, valores)
+    passo['caminho'].to_h.values.any? { |valor| valor.is_a?(Hash) && valores.ler(valor['$valor']).blank? }
+  end
+
+  # Cada valor calculado do corpo, com o nome do campo em que cai.
+  def self.calculados(corpo, montado)
+    ::Autonomia::Automacao::Corpo.lugares(corpo).map do |onde, _folha|
+      { campo: onde.reverse.find { |parte| parte.is_a?(String) }, valor: montado.dig(*onde) }
+    end
+  end
+  private_class_method :caminho_vazio?, :calculados
+
   # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.
   def initialize(execucao:, passo:, valores:, acesso:, acoes: ::Autonomia::Automacao::AcoesDoMotor)
     @execucao = execucao

@@ -21,6 +21,24 @@ const AVISO = {
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
+  // #2631: o card sem conversa, e sem a caixa da conversa nova (#2680) para a
+  // mensagem abrir uma: todo passo que age numa conversa pula, como no motor.
+  sem_conversa: 'SEM_CONVERSA',
+  contato_sem_telefone: 'CONTATO_SEM_TELEFONE',
+};
+
+// F4b: com modelo, o que sai se a janela de 24 h estiver fechada; o de
+// propaganda (lote 5, #2681) avisa que custa mais. #2680: a mensagem que abre
+// a conversa diz em qual caixa.
+const destaqueDoTexto = (dados, t) => {
+  const chave = dados.propaganda
+    ? 'MODELO_PROPAGANDA_FORA_DA_JANELA'
+    : 'MODELO_FORA_DA_JANELA';
+  const modelo = dados.modelo && t(`${E}.${chave}`, { modelo: dados.modelo });
+  const abre =
+    dados.conversa_nova &&
+    t(`${E}.ABRIRIA_CONVERSA`, { caixa: dados.conversa_nova });
+  return [abre, modelo].filter(Boolean).join(' ') || undefined;
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -133,20 +151,10 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     return { ...base, destaque: gravaria(no.dados.calculados, t) };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
-  // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
-  // o de propaganda (lote 5, #2681) avisa que custa mais.
-  if (no.dados?.texto)
-    return {
-      ...base,
-      balao: no.dados.texto,
-      ...(no.dados.modelo && {
-        destaque: no.dados.propaganda
-          ? t(`${E}.MODELO_PROPAGANDA_FORA_DA_JANELA`, {
-              modelo: no.dados.modelo,
-            })
-          : t(`${E}.MODELO_FORA_DA_JANELA`, { modelo: no.dados.modelo }),
-      }),
-    };
+  if (no.dados?.texto) {
+    const destaque = destaqueDoTexto(no.dados, t);
+    return { ...base, balao: no.dados.texto, ...(destaque && { destaque }) };
+  }
   return base;
 };
 

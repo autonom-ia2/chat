@@ -191,6 +191,35 @@ describe('linhasDoEnsaio', () => {
     );
   });
 
+  // #2631: o card sem conversa e sem a caixa da conversa nova: a mensagem e a
+  // agente pulam com a mesma frase. Com a caixa, a mensagem diz onde abriria.
+  it('card sem conversa: pula com uma frase só; com a caixa, diz onde abre', () => {
+    const linhas = linhasDoEnsaio(
+      [
+        { id: 'm1', tipo: 'mensagem', faria: 'sem_conversa', dados: {} },
+        { id: 'i1', tipo: 'ia_assumir', faria: 'sem_conversa', dados: {} },
+        {
+          id: 'm2',
+          tipo: 'mensagem',
+          faria: 'mensagem',
+          dados: { texto: 'Oi', conversa_nova: 'WhatsApp' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linhas.map(linha => linha.aviso)).toEqual([
+      'AUTOMACAO_LIVRE.ENSAIO.SEM_CONVERSA',
+      'AUTOMACAO_LIVRE.ENSAIO.SEM_CONVERSA',
+      undefined,
+    ]);
+    expect(linhas[2]).toMatchObject({
+      balao: 'Oi',
+      destaque: 'AUTOMACAO_LIVRE.ENSAIO.ABRIRIA_CONVERSA(WhatsApp)',
+    });
+  });
+
   it('o "esperar até" abre os dois caminhos, cada um um nível adentro', () => {
     const linhas = linhasDoEnsaio(
       [

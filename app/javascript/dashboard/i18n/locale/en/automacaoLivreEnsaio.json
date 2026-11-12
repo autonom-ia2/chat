@@ -72,9 +72,11 @@
         "CONVERSA_RESOLVIDA": "Would not hand over: the conversation is resolved.",
         "PESSOA_ATRIBUIDA": "Would not hand over: a person has the conversation, and they keep it.",
         "SEM_VINCULO_NA_CAIXA": "Would not hand over: {agente} does not work in this conversation’s inbox.",
-        "NAO_ATENDE_CLIENTE": "Would not hand over: {agente} is not answering customers right now.",
-        "SEM_CONVERSA": "Would not hand over: this card has no conversation."
+        "NAO_ATENDE_CLIENTE": "Would not hand over: {agente} is not answering customers right now."
       },
+      "SEM_CONVERSA": "Would be skipped: this card has no conversation yet.",
+      "ABRIRIA_CONVERSA": "Would start a conversation with the contact in {caixa}.",
+      "CONTATO_SEM_TELEFONE": "Would not go out: the contact has no phone number to start the conversation.",
       "EMAIL": "Would go out from {caixa}",
       "CONTATO_SEM_EMAIL": "Would not go out: the contact has no e-mail.",
       "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",

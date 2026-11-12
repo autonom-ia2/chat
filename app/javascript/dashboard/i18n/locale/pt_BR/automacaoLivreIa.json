@@ -96,8 +96,7 @@
         "ANEXO_GRANDE_DEMAIS": "Um anexo desta conversa é grande demais para a IA. A IA não é chamada nesta conversa.",
         "ANEXO_FORA_DO_FORMATO": "Um anexo desta conversa está num formato que a IA não lê. A IA não é chamada nesta conversa.",
         "ANEXO_SEM_LEITURA": "Um anexo desta conversa ainda não pode ser lido (áudio sem transcrição ou arquivo que não chegou). A IA não é chamada nesta conversa.",
-        "MODELO_SEM_IMAGEM": "A IA deste passo não vê foto nem PDF. A IA não é chamada nesta conversa.",
-        "SEM_CONVERSA": "Este card não tem conversa, e não há o que ler. A IA não é chamada."
+        "MODELO_SEM_IMAGEM": "A IA deste passo não vê foto nem PDF. A IA não é chamada nesta conversa."
       }
     }
   }

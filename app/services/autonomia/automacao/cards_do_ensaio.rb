@@ -6,14 +6,21 @@
 # - No funil e na etapa que o gatilho escolheu. Os parâmetros de tempo (dias, data do campo, antes da reunião) não
 #   escolhem: o ensaio mostra o que faria se a hora chegasse agora, como o de conversa mostra o que faria se o evento
 #   acontecesse agora. No "saiu da etapa", os cards que estão nela: os que sairiam.
+# - Na situação que o motor pega: o parado, só o aberto (Tempo::Parado); a data, o lembrete e os outros de reunião,
+#   também o que deu certo (Tempo::Data, Tempo::AntesDaReuniao; a reunião da renovação vem depois da venda); os outros
+#   eventos, só o aberto, porque o card fechado ou arquivado não muda de etapa, não ganha nem perde. O arquivado, o
+#   ganho e o perdido nunca aparecem como "entraria" onde o motor não os pegaria.
 # - Nos gatilhos de reunião (G12), a reunião que o gatilho leria em cada card (`reuniao.*`): a agendada (marcada,
-#   remarcada, lembrete), a cancelada ou a atendida, a mais recente, na página escolhida (G32). Os cards com ela vêm
-#   primeiro; o card sem ela não entraria (`sem_reuniao`).
+#   remarcada), a cancelada ou a atendida, a mais recente; no lembrete, a agendada que ainda vai acontecer, a próxima
+#   (a reunião que já passou o motor não lembra). Sempre na página escolhida (G32). Os cards com ela vêm primeiro; o
+#   card sem ela não entraria (`sem_reuniao`).
 #
-# A mesma interface do ConversasDoEnsaio: o Ensaio não pergunta qual é.
+# A mesma interface do ConversasDoEnsaio: o Ensaio não pergunta qual é. O `conversa_nova` é só do card.
 class Autonomia::Automacao::CardsDoEnsaio
   AGENDADA = { status: :scheduled }.freeze
   REUNIAO = { 'card.reuniao_cancelada' => { status: :canceled }, 'card.reuniao_atendida' => { outcome: :held } }.freeze
+  # Fora os de reunião, o gatilho que também pega o card que deu certo (Tempo::Data).
+  DEPOIS_DA_VENDA = %w[card.data].freeze
 
   def initialize(gatilho:, conta:, usuario:)
     @gatilho = gatilho
@@ -40,19 +47,37 @@ class Autonomia::Automacao::CardsDoEnsaio
   def base(card) = { conversa_id: card.id, nome: card.title, ultima_atividade: card.updated_at }
 
   # Card não tem mensagem do gatilho; o fato é a reunião que o gatilho de reunião leria (nil nos outros, ou sem ela).
-  def gatilho_de(card)
-    [nil, (reunioes.where(card_id: card.id).reorder(starts_at: :desc, id: :desc).first if reuniao?)]
-  end
+  def gatilho_de(card) = [nil, (reuniao_do(card) if reuniao?)]
 
   # G12: no gatilho de reunião, o card sem a reunião que o gatilho leria não entraria.
   def motivo(_card, _mensagem, reuniao) = ('sem_reuniao' if reuniao? && reuniao.nil?)
+
+  # O card sem conversa principal (#2680): com a caixa da conversa nova no gatilho, o motor usa a conversa do contato
+  # nessa caixa (Contexto#conversa_nova) ou, sem ela, o passo "mensagem" abre uma. [a conversa, quando há e quem ensaia
+  # a vê; senão nil] e [a caixa por onde a mensagem abriria, quando não há conversa]. Sem a caixa ou sem contato, [nil, nil].
+  def conversa_nova(contato)
+    caixa = ::Autonomia::Automacao::ConversaNova.caixa(@conta, @gatilho.dig('conversa_nova', 'caixa_id'))
+    return [nil, nil] if caixa.nil? || contato.nil?
+
+    existente = ::Autonomia::Automacao::ConversaNova.existente(caixa, contato)
+    existente && ConversationPolicy.new(contexto, existente).view? ? [existente, nil] : [nil, caixa]
+  end
 
   private
 
   def reuniao? = ::Autonomia::Automacao::Gatilhos.de_reuniao?(@gatilho['tipo'])
 
+  def lembrete? = @gatilho['tipo'] == ::Autonomia::Automacao::Gatilhos::LEMBRETE
+
+  # A mais recente; no lembrete, a próxima.
+  def reuniao_do(card)
+    ordem = lembrete? ? { starts_at: :asc, id: :asc } : { starts_at: :desc, id: :desc }
+    reunioes.where(card_id: card.id).reorder(ordem).first
+  end
+
   def reunioes
     escopo = @conta.crm_meetings.where(REUNIAO.fetch(@gatilho['tipo'], AGENDADA))
+    escopo = escopo.where('crm_meetings.starts_at > ?', Time.current) if lembrete?
     pagina = @gatilho['pagina_id']
     pagina.nil? ? escopo : escopo.where('crm_meetings.metadata ->> ? = ?', ::Autonomia::Automacao::ReuniaoDaAtividade::PAGINA, pagina.to_s)
   end
@@ -60,7 +85,14 @@ class Autonomia::Automacao::CardsDoEnsaio
   def cards
     escopo = Pundit.policy_scope!(contexto, ::Crm::Card).where(account_id: @conta.id)
     escopo = escopo.where(pipeline_id: @gatilho['funil_id']) if @gatilho['funil_id']
-    @gatilho['etapa_id'] ? escopo.where(stage_id: @gatilho['etapa_id']) : escopo
+    na_situacao(@gatilho['etapa_id'] ? escopo.where(stage_id: @gatilho['etapa_id']) : escopo)
+  end
+
+  def na_situacao(escopo)
+    abertos = escopo.where(status: :open)
+    return abertos unless reuniao? || DEPOIS_DA_VENDA.include?(@gatilho['tipo'])
+
+    abertos.or(escopo.com_desfecho(::Autonomia::Automacao::Tempo::Data::DESFECHOS_DO_CARD))
   end
 
   def alcancados(escopo, limite)

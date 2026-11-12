@@ -72,9 +72,11 @@
         "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
         "PESSOA_ATRIBUIDA": "Não passaria: a conversa está com uma pessoa, e ela continua com a conversa.",
         "SEM_VINCULO_NA_CAIXA": "Não passaria: {agente} não trabalha na caixa desta conversa.",
-        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora.",
-        "SEM_CONVERSA": "Não passaria: este card não tem conversa."
+        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora."
       },
+      "SEM_CONVERSA": "Pularia: este card ainda não tem conversa.",
+      "ABRIRIA_CONVERSA": "Abriria uma conversa com o contato em {caixa}.",
+      "CONTATO_SEM_TELEFONE": "Não sairia: o contato não tem telefone para abrir a conversa.",
       "EMAIL": "Sairia por {caixa}",
       "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
       "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
