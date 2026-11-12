@@ -391,10 +391,10 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(card.activities.find_by!(event_type: 'move').payload).to include('motivo' => 'etapa_de_outro_funil')
   end
 
-  it 'o upsert por external_id no funil em que o card já está, com a etapa de outro funil, deixa o card na etapa dele (#2501)' do
+  it 'o upsert por external_id no funil em que o card já está, com a etapa de outro funil, leva o card para essa etapa (#2501)' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
-    _outro_funil, outra_etapa = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
+    outro_funil, outra_etapa = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
     card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-15')
 
     post "/api/v1/accounts/#{account.id}/crm/cards",
@@ -402,7 +402,28 @@ RSpec.describe 'CRM cards API', type: :request do
          headers: auth_headers(user), as: :json
 
     expect(response).to have_http_status(:ok)
-    expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id, title: 'Onix 2024')
+    expect(card.reload).to have_attributes(pipeline_id: outro_funil.id, stage_id: outra_etapa.id, title: 'Onix 2024')
+    expect(card.activities.find_by!(event_type: 'move').payload).to include(
+      'from_pipeline_id' => pipeline.id, 'to_pipeline_id' => outro_funil.id, 'to_stage_id' => outra_etapa.id
+    )
+    expect(card.activities.find_by!(event_type: 'move').payload).not_to have_key('motivo')
+  end
+
+  it 'o upsert por external_id no funil do card, com a etapa de um funil que a pessoa não tem, recusa sem mexer no card (#2501)' do
+    account, admin = create_account_and_user
+    agent, = create_crm_agent(account: account)
+    inbox = create_crm_inbox(account: account, members: [agent])
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    _outro_funil, outra_etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+    acesso = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false, triage: false)
+    acesso.agent_pipelines.create!(account: account, pipeline: pipeline)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, owner: agent, title: 'Onix', external_id: 'erp-16')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: pipeline.id, stage_id: outra_etapa.id, external_id: 'erp-16' } }, headers: auth_headers(agent), as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id)
     expect(card.activities.where(event_type: 'move')).to be_blank
   end
 

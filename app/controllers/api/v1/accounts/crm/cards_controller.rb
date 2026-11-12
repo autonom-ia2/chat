@@ -325,15 +325,24 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   # #2501: funil novo sem uma etapa dele no pedido: o card vai para a etapa de entrada do funil (Crm::Cards::EtapaDeEntrada),
-  # e não para um erro; a resposta devolve o card com a etapa escolhida. No funil em que o card já está, sem etapa dele, o
-  # card fica na etapa em que está. Devolve [etapa de destino, motivo da etapa de entrada].
+  # e não para um erro; a resposta devolve o card com a etapa escolhida. No funil em que o card já está, sem etapa nenhuma,
+  # o card fica na etapa em que está. Devolve [etapa de destino, motivo da etapa de entrada].
   def upsert_destino(attributes)
     entrada = ::Crm::Cards::EtapaDeEntrada.para(account: Current.account, pipeline_id: attributes['pipeline_id'],
                                                 stage_id: attributes['stage_id'])
     return [upsert_target_stage(attributes), nil] if entrada.nil?
-    return [nil, nil] if entrada.stage.pipeline_id == @card.pipeline_id
+    return [entrada.stage, entrada.motivo] unless entrada.stage.pipeline_id == @card.pipeline_id
 
-    [entrada.stage, entrada.motivo]
+    [etapa_pedida_de_outro_funil(attributes), nil]
+  end
+
+  # #2501: o pedido repete o funil em que o card já está e manda uma etapa de outro funil. O funil repetido é eco do card;
+  # a etapa é o que a integração pediu. O card vai para ela, trocando de funil como no #move, com a permissão do funil
+  # da etapa (o ensure_move_allowed! do upsert conferiu só o funil do pedido).
+  def etapa_pedida_de_outro_funil(attributes)
+    stage = upsert_target_stage(attributes)
+    ensure_move_allowed!(@card, stage.pipeline_id) if stage
+    stage
   end
 
   # #2501: mudar a etapa pelo upsert é mover. Passa pelo Mover, como o #move: grava entered_stage_at e a atividade
