@@ -504,8 +504,10 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     end
 
     # #2677: o webhook e o extrair que gravam no card fazem o PATCH crm/cards que o motor confere com a chave de funis
-    # (AcoesDoMotor). Salvar e ligar recusam antes de rodar, com a frase do motivo, e nada sai para fora. O webhook só grava
-    # no card onde há card para agir (gatilho de card); o extrair também no card da conversa (G70, CardDaConversa.le?).
+    # (AcoesDoMotor). Salvar e ligar recusam antes de rodar, com a frase do motivo, e nada sai para fora. Cada caso isola
+    # de onde vem a recusa: o extrair numa conversa pede a chave pelo destino no card (G70, CardDaConversa.le?); o webhook
+    # só grava no card sob gatilho de card, que já pede a chave por si (Gatilhos.do_card?), e numa conversa o destino no
+    # card é recusado para todos (card_da_conversa_so_le, #2716).
     describe 'o webhook e o extrair que gravam no card' do
       let(:webhook) do
         { id: 'w1', tipo: 'webhook', descricao: 'Mandar', url: 'https://hooks.exemplo.com/x',
@@ -514,36 +516,104 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       let(:extrair) do
         { id: 'e1', tipo: 'extrair', campos: [{ chave: 'numero', descricao: 'O número', destino: 'card.atributos.numero' }] }
       end
-      let(:gravam_no_card) do
-        [{ gatilho: { tipo: 'card.ganho' }, passos: [webhook] }, { gatilho: { tipo: 'conversa.resolvida' }, passos: [extrair] }]
-      end
       let(:sem_funil) { I18n.t('autonomia.automacao.editor.sem_funil') }
+      let(:so_le) { I18n.t('autonomia.automacao.receita.card_da_conversa_so_le', passo: 'w1', caminho: 'card.atributos.numero') }
 
-      before do
-        montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage integration_manage])
+      def salvar(com, quem: montador)
+        post base, params: { nome: 'x', receita: com }, headers: quem.create_new_auth_token, as: :json
       end
 
-      it 'recusa salvar sem a chave de funis', :aggregate_failures do
-        gravam_no_card.each do |com|
-          post base, params: { nome: 'x', receita: com }, headers: montador.create_new_auth_token, as: :json
-
-          expect(response).to have_http_status(:unprocessable_entity)
-          expect(response.parsed_body['error']).to eq(sem_funil)
-        end
-        expect(Autonomia::Automacao::Definicao.where(account: account)).to be_empty
-      end
-
-      it 'recusa ligar sem a chave de funis, mesmo com a versão salva por quem tinha', :aggregate_failures do
-        gravam_no_card.each do |com|
-          automacao = create(:autonomia_automacao, account: account)
+      def salva_por_quem_tinha(com)
+        create(:autonomia_automacao, account: account).tap do |automacao|
           versao = create(:autonomia_automacao_versao, automacao: automacao, numero: 1)
           automacao.update_columns(versao_ativa_id: versao.id) # rubocop:disable Rails/SkipsModelValidations
           Autonomia::Automacao::Versao.where(id: versao.id).update_all(receita: com.deep_stringify_keys) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
 
-          ligar(automacao.id, versao.id, quem: montador)
+      def chaves(*permissoes)
+        montador.account_users.find_by(account: account).custom_role.update!(permissions: permissoes)
+      end
+
+      before do
+        create(:custom_attribute_definition, account: account, attribute_model: 'card_attribute', attribute_key: 'numero',
+                                             attribute_display_name: 'numero', attribute_display_type: 'text')
+        chaves('automation_manage', 'integration_manage')
+      end
+
+      describe 'o extrair numa automação de conversa' do
+        let(:no_card) { { gatilho: { tipo: 'conversa.resolvida' }, passos: [extrair] } }
+
+        it 'recusa salvar sem a chave de funis, pelo destino no card', :aggregate_failures do
+          salvar(no_card)
 
           expect(response).to have_http_status(:unprocessable_entity)
           expect(response.parsed_body['error']).to eq(sem_funil)
+          expect(Autonomia::Automacao::Definicao.where(account: account)).to be_empty
+        end
+
+        it 'o mesmo extrair gravando no contato não pede a chave de funis (contraprova)' do
+          no_contato = { gatilho: { tipo: 'conversa.resolvida' },
+                         passos: [extrair.merge(campos: [extrair[:campos].first.merge(destino: 'contato.atributos.numero')])] }
+
+          salvar(no_contato)
+
+          expect(response.parsed_body['error']).not_to eq(sem_funil)
+        end
+
+        it 'recusa ligar sem a chave de funis, mesmo com a versão salva por quem tinha', :aggregate_failures do
+          automacao = salva_por_quem_tinha(no_card)
+
+          ligar(automacao.id, automacao.versao_ativa_id, quem: montador)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(sem_funil)
+          expect(automacao.reload.ativa).to be(false)
+        end
+      end
+
+      describe 'o webhook que grava no card' do
+        let(:de_card) { { gatilho: { tipo: 'card.ganho' }, passos: [webhook] } }
+        let(:de_conversa) { { gatilho: { tipo: 'conversa.resolvida' }, passos: [webhook] } }
+
+        it 'sob gatilho de card, salvar e ligar recusam sem a chave de funis', :aggregate_failures do
+          salvar(de_card)
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(sem_funil)
+
+          automacao = salva_por_quem_tinha(de_card)
+          ligar(automacao.id, automacao.versao_ativa_id, quem: montador)
+          expect(response.parsed_body['error']).to eq(sem_funil)
+          expect(automacao.reload.ativa).to be(false)
+        end
+
+        # Contraprova: sob gatilho de card a recusa vem do gatilho, com ou sem o webhook. É ela que impede o webhook de
+        # mandar os dados para fora e só depois ter a gravação no card recusada.
+        it 'sob gatilho de card, a recusa vem do gatilho: sem o webhook, recusa igual' do
+          salvar(de_card.merge(passos: receita[:passos]))
+
+          expect(response.parsed_body['error']).to eq(sem_funil)
+        end
+
+        it 'numa automação de conversa, salvar recusa o destino no card, sem a chave de funis e com ela', :aggregate_failures do
+          [%w[automation_manage integration_manage], %w[automation_manage integration_manage crm_manage_pipelines]].each do |permissoes|
+            chaves(*permissoes)
+
+            salvar(de_conversa)
+
+            expect(response).to have_http_status(:unprocessable_entity)
+            expect(response.parsed_body['problemas']).to include(so_le)
+          end
+          expect(Autonomia::Automacao::Definicao.where(account: account)).to be_empty
+        end
+
+        it 'numa automação de conversa, ligar recusa o destino no card, mesmo com a versão salva por quem tinha', :aggregate_failures do
+          automacao = salva_por_quem_tinha(de_conversa)
+
+          ligar(automacao.id, automacao.versao_ativa_id, quem: montador)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['problemas']).to include(so_le)
           expect(automacao.reload.ativa).to be(false)
         end
       end
