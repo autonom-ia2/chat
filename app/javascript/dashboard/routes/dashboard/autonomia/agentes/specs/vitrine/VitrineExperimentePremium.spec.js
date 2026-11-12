@@ -69,8 +69,8 @@ describe('VitrineExperimente · Premium', () => {
     expect(experimentar.mock.calls[0][2]).toBe(true);
   });
 
-  // Revisor (ALTO 1, 12/11): a consulta paga roda em segundo plano e pode levar até 1 minuto. Enquanto isso, a tela diz
-  // "Consultando…"; sem resposta no prazo, diz que não deu para confirmar e onde conferir.
+  // Revisor (ALTO 1, 12/11): a consulta paga roda em segundo plano e pode levar até 2 minutos (#2946). Enquanto
+  // isso, a tela diz "Consultando…"; sem resposta no prazo, diz que não deu para confirmar e onde conferir.
   it('while the paid lookup runs, the screen says it is looking up; then shows the result', async () => {
     let terminar;
     experimentar.mockReturnValue(
@@ -87,7 +87,7 @@ describe('VitrineExperimente · Premium', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-experimente-consultando]').text()).toBe(
-      'Consultando… pode levar até 1 minuto.'
+      'Consultando… algumas consultas levam até 2 minutos.'
     );
     expect(botao(wrapper).attributes('aria-disabled')).toBe('true');
     terminar({ situacao: 'nao_encontrado' });

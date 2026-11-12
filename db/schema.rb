@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_10_080000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -656,6 +656,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas_unica", unique: true, where: "((finalizada_em IS NULL) AND (paralela = false))"
+    t.index ["automacao_id", "created_at"], name: "idx_autonomia_automacao_execucoes_historico"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
@@ -3707,6 +3708,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
     t.jsonb "attribute_values", default: []
     t.string "regex_pattern"
     t.string "regex_cue"
+    t.boolean "oculto_na_tela", default: false, null: false
     t.index ["account_id"], name: "index_custom_attribute_definitions_on_account_id"
     t.index ["attribute_key", "attribute_model", "account_id"], name: "attribute_key_model_index", unique: true
   end

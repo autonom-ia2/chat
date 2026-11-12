@@ -8,7 +8,7 @@ const props = defineProps({
   type: {
     type: String,
     default: 'resolution',
-    validator: value => ['pre-chat', 'resolution'].includes(value),
+    validator: value => ['pre-chat', 'resolution', 'oculto'].includes(value),
   },
 });
 
@@ -25,6 +25,13 @@ const attributeConfig = {
     colorClass: 'text-n-teal-11',
     icon: 'i-lucide-circle-check-big',
     labelKey: 'ATTRIBUTES_MGMT.BADGES.RESOLUTION',
+    color: 'slate',
+  },
+  // #2435: "Mostrar na tela" desligado.
+  oculto: {
+    colorClass: 'text-n-slate-11',
+    icon: 'i-lucide-eye-off',
+    labelKey: 'ATTRIBUTES_MGMT.BADGES.OCULTO',
     color: 'slate',
   },
 };

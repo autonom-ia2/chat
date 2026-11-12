@@ -13,6 +13,10 @@
 # o "Incluir", o Experimente e as sugestões não a oferecem; o agente que já a tem continua consultando.
 # `consulta_padrao`: a consulta de quando o modelo não diz qual, na fonte que ganhou uma segunda consulta depois (o CEP
 # ganhou `por_endereco`): a ferramenta que já estava num agente continua respondendo sem o parâmetro `consulta`.
+# `consultas` (#2946): as que a fonte responde HOJE. A consulta Premium de um dataset em `Premium::DESLIGADAS_NA_FONTE`
+# fica fora (`Consulta#desligada?`), lida a cada chamada: a lista decide sozinha o schema, as consultas aceitas, o preço e
+# o Experimente. O card com tudo desligado continua Premium (`premium?` olha todas) e sai do catálogo
+# (`Catalogo.premium`). `so_esta`: no card Premium que ficou com uma consulta só, como o modelo fica sabendo qual é ela.
 class Autonomia::FerramentasProntas::Fonte
   PARAMETRO_DA_CONSULTA = 'consulta'.freeze
   # Regra "QI 70" do Rodrigo (11/11/2026), num texto só: vai em toda ferramenta pronta, no turno real e no Experimente
@@ -22,10 +26,14 @@ class Autonomia::FerramentasProntas::Fonte
             'o resultado e não dá para deduzir. Em pedido_invalido, siga a orientacao e consulte de novo.'.freeze
   FORA_DO_FORMATO = '(fora do formato)'.freeze
 
-  attr_reader :chave, :slug, :nome, :descricao, :consultas, :limite_diario, :termos, :flag
+  SO_ESTA = 'Responde só a:'.freeze
+  NAO_CONSULTA_AGORA = 'Se o cliente pedir, diga com educação que isso não é consultado aqui agora.'.freeze
+
+  attr_reader :chave, :slug, :nome, :descricao, :limite_diario, :termos, :flag
 
   def initialize(chave:, slug:, nome:, descricao:, consultas:, limite_diario:, termos:, flag: nil, consulta_padrao: nil, # rubocop:disable Metrics/ParameterLists
-                 na_vitrine: true)
+                 na_vitrine: true, so_esta: SO_ESTA)
+    @so_esta = so_esta
     @consulta_padrao = consulta_padrao
     @flag = flag
     @na_vitrine = na_vitrine
@@ -33,7 +41,7 @@ class Autonomia::FerramentasProntas::Fonte
     @slug = slug
     @nome = nome
     @descricao = descricao
-    @consultas = consultas
+    @todas = consultas
     @limite_diario = limite_diario
     @termos = termos
     raise ArgumentError, "fonte #{chave}: sem limite diário só no card Premium" if limite_diario.nil? && !premium?
@@ -43,6 +51,15 @@ class Autonomia::FerramentasProntas::Fonte
     @na_vitrine
   end
 
+  def consultas
+    @todas.reject(&:desligada?)
+  end
+
+  # As desligadas na fonte de fora: o modelo fica sabendo que elas existem e não estão disponíveis agora.
+  def desligadas
+    @todas.select(&:desligada?)
+  end
+
   def consulta(nome)
     return consultas.first if consultas.one? && nome.blank?
     return consulta(@consulta_padrao) if @consulta_padrao && nome.blank?
@@ -50,9 +67,10 @@ class Autonomia::FerramentasProntas::Fonte
     consultas.find { |consulta| consulta.nome == nome.to_s }
   end
 
-  # Card Premium (F7): as consultas são pagas, à BigDataCorp.
+  # Card Premium (F7): as consultas são pagas, à BigDataCorp. Olha todas, as desligadas também: o card que ficou sem
+  # nenhuma ligada continua Premium (e não vira uma fonte grátis sem limite diário, que nem nasce).
   def premium?
-    consultas.any?(&:paga?)
+    @todas.any?(&:paga?)
   end
 
   def varias_consultas?
@@ -61,14 +79,15 @@ class Autonomia::FerramentasProntas::Fonte
 
   # O parâmetro `consulta`, só para a orientação da recusa: a consulta sai do sentido da conversa, nunca do cliente.
   def parametro_da_consulta
-    @parametro_da_consulta ||= Autonomia::FerramentasProntas::Parametro.new(
+    Autonomia::FerramentasProntas::Parametro.new(
       nome: PARAMETRO_DA_CONSULTA, descricao: 'Qual consulta fazer.',
       deduza: "escolha pelo sentido da conversa uma destas consultas: #{consultas.map(&:nome).join(', ')}."
     )
   end
 
+  # Todas as consultas, as desligadas também: o provedor é da fonte, não do que está ligado hoje.
   def provedores
-    consultas.flat_map(&:provedores).uniq
+    @todas.flat_map(&:provedores).uniq
   end
 
   def hosts
@@ -94,9 +113,10 @@ class Autonomia::FerramentasProntas::Fonte
   # O schema da função, no formato do `Tool#openai_schema` (`strict: true`: toda propriedade em `required`, e o
   # opcional aceita `null`). `usar_quando`: a frase da conta ("Use quando…"), que diz ao modelo QUANDO usar.
   def openai_schema(slug:, usar_quando:)
+    props = propriedades
     {
       type: 'function', name: slug, description: descricao_para_o_modelo(usar_quando),
-      parameters: { type: 'object', properties: propriedades, required: propriedades.keys, additionalProperties: false },
+      parameters: { type: 'object', properties: props, required: props.keys, additionalProperties: false },
       strict: true
     }
   end
@@ -109,17 +129,29 @@ class Autonomia::FerramentasProntas::Fonte
     parametro.normalizar(bruto) || (parametro.local? ? nil : FORA_DO_FORMATO)
   end
 
+  # O card Premium de uma consulta só também diz qual é ela (#2946), e o que está desligado na fonte de fora vai como
+  # recusa educada: a descrição do card não lista o que ele responde, porque a lista muda com
+  # `Premium::DESLIGADAS_NA_FONTE`. Nas grátis, nada muda.
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]
     partes << "Consultas: #{consultas.map { |consulta| "#{consulta.nome} (#{consulta.descricao})" }.join('; ')}." if varias_consultas?
+    partes.concat(partes_da_premium) if premium?
     partes << DEDUZIR
     partes << "Use quando: #{usar_quando.to_s.strip}" if usar_quando.present?
     partes.join(' ')
   end
 
-  # Um parâmetro é obrigatório no schema só se TODA consulta o exige; o resto aceita `null`.
+  def partes_da_premium
+    partes = []
+    partes << "#{@so_esta} #{consultas.first.descricao}." if consultas.one?
+    partes << "Não consulta agora: #{desligadas.map(&:descricao).join('; ')}. #{NAO_CONSULTA_AGORA}" if desligadas.any?
+    partes
+  end
+
+  # Um parâmetro é obrigatório no schema só se TODA consulta o exige; o resto aceita `null`. Sem memória: as consultas
+  # mudam com `Premium::DESLIGADAS_NA_FONTE`.
   def propriedades
-    @propriedades ||= consultas.flat_map(&:parametros).uniq(&:nome).each_with_object(propriedade_da_consulta) do |parametro, props|
+    consultas.flat_map(&:parametros).uniq(&:nome).each_with_object(propriedade_da_consulta) do |parametro, props|
       props[parametro.nome] = parametro.schema(obrigatorio: obrigatorio_em_todas?(parametro.nome))
     end
   end

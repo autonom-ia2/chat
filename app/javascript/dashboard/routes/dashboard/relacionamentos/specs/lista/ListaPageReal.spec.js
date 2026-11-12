@@ -18,6 +18,7 @@ const pode = vi.hoisted(() => ({
   criarCards: true,
   etiquetar: true,
   apagar: true,
+  trazer: true,
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -47,6 +48,11 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
     podeApagar: {
       get value() {
         return pode.apagar;
+      },
+    },
+    podeTrazer: {
+      get value() {
+        return pode.trazer;
       },
     },
   }),
@@ -156,12 +162,18 @@ beforeEach(() => {
   pode.criarCards = true;
   pode.etiquetar = true;
   pode.apagar = true;
+  pode.trazer = true;
+  window.globalConfig = {
+    CAMPAIGN_JOURNEY_ENABLED: 'true',
+    CAMPAIGN_IMPORT_ENABLED: 'true',
+  };
   servidorResponde();
 });
 
 afterEach(() => {
   aberta?.unmount();
   aberta = null;
+  delete window.globalConfig;
   vi.resetAllMocks();
 });
 
@@ -324,6 +336,40 @@ describe('sem acesso (401 ou 403)', () => {
     expect(useAlert).toHaveBeenCalledWith(
       'Não consegui carregar. Tente de novo.'
     );
+  });
+});
+
+// #2947 — a tela nova de trazer só lê do servidor quando a E3 (#2896) entrar.
+describe('"Trazer minha lista" fora da demonstração', () => {
+  it('leva à importação de contatos que já funciona', async () => {
+    const w = await abrir();
+    await w.get(marca('heroi-trazer')).trigger('click');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'contacts_import_journey',
+    });
+  });
+
+  it('quem não pode importar contatos não vê o botão', async () => {
+    pode.trazer = false;
+    const w = await abrir();
+    expect(w.find(marca('heroi-trazer')).exists()).toBe(false);
+    expect(w.find(marca('heroi-acao')).exists()).toBe(true);
+  });
+
+  it('com a importação desligada na instalação o botão some', async () => {
+    window.globalConfig = { CAMPAIGN_JOURNEY_ENABLED: 'false' };
+    const w = await abrir();
+    expect(w.find(marca('heroi-trazer')).exists()).toBe(false);
+  });
+
+  it('conta sem cliente e sem poder importar: o herói fica sem botão', async () => {
+    pode.trazer = false;
+    RelacionamentosAPI.resumo.mockResolvedValue({
+      data: { ...RESPOSTAS.resumo, clientes: 0, sumiu_1_a_3_meses: 0 },
+    });
+    const w = await abrir();
+    expect(w.find(marca('heroi-acao')).exists()).toBe(false);
+    expect(w.find(marca('heroi-trazer')).exists()).toBe(false);
   });
 });
 

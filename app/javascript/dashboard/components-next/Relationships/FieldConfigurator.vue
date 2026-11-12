@@ -9,6 +9,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import MostrarNaTela from 'dashboard/components-next/CustomAttributes/MostrarNaTela.vue';
+import AttributeBadge from 'dashboard/components-next/CustomAttributes/AttributeBadge.vue';
 import { selectDefinitions, attributeKey } from './presentation';
 
 const props = defineProps({
@@ -181,10 +183,14 @@ const displayToggle = (surfaceName, enabled) => {
   displayOn.value = displayOn.value.filter(value => value !== surfaceName);
   if (enabled) displayOn.value.push(surfaceName);
 };
+// #2435: o campo com "Mostrar na tela" desligado não aparece em área nenhuma,
+// então não conta como marcado aqui, e a chave dele fica desligada e travada.
+const shown = (surfaceName, definition) =>
+  !definition.oculto_na_tela && selected(surfaceName, definition.id);
 const selectionSummary = surfaceName =>
   t('RELATIONSHIPS.SELECTION_SUMMARY', {
     selected: definitions.value.filter(definition =>
-      selected(surfaceName, definition.id)
+      shown(surfaceName, definition)
     ).length,
     total: definitions.value.length,
   });
@@ -212,6 +218,8 @@ const submit = async () => {
     payload.definition = {
       attribute_display_name: value.attribute_display_name,
       attribute_description: value.attribute_description,
+      // #2435: "Mostrar na tela" desligado tira o campo das telas.
+      oculto_na_tela: Boolean(value.oculto_na_tela),
       ...(value.id
         ? { id: value.id, revision: value.revision }
         : {
@@ -432,8 +440,21 @@ defineExpose({ open });
               :max-length="10000"
             />
           </label>
+          <MostrarNaTela
+            :model-value="!draft.oculto_na_tela"
+            :disabled="busy"
+            class="border-t border-n-weak pt-4"
+            @update:model-value="value => (draft.oculto_na_tela = !value)"
+          />
+          <p
+            v-if="surfaces.length && draft.oculto_na_tela"
+            class="flex items-center gap-2 rounded-lg bg-n-slate-3 p-3 text-sm text-n-slate-11"
+          >
+            <Icon icon="i-lucide-eye-off" class="size-4 shrink-0" />
+            {{ t('ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.ESCONDIDO_DE_TODAS') }}
+          </p>
           <section
-            v-if="surfaces.length"
+            v-else-if="surfaces.length"
             class="flex flex-col gap-3 border-t border-n-weak pt-4"
           >
             <h4 class="text-sm font-medium text-n-slate-12">
@@ -530,17 +551,23 @@ defineExpose({ open });
               class="flex items-center gap-3 rounded-lg border border-n-weak bg-n-background p-3"
             >
               <Switch
-                :model-value="selected(surfaceName, definition.id)"
-                :disabled="busy"
+                :model-value="shown(surfaceName, definition)"
+                :disabled="busy || Boolean(definition.oculto_na_tela)"
                 :aria-label="definition.attribute_display_name"
                 @update:model-value="
                   value => toggle(surfaceName, definition.id, value)
                 "
               />
               <div class="min-w-0 flex-1">
-                <p class="break-words text-sm font-medium text-n-slate-12">
-                  {{ definition.attribute_display_name }}
-                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="break-words text-sm font-medium text-n-slate-12">
+                    {{ definition.attribute_display_name }}
+                  </p>
+                  <AttributeBadge
+                    v-if="definition.oculto_na_tela"
+                    type="oculto"
+                  />
+                </div>
                 <p
                   v-if="definition.attribute_description"
                   class="mt-1 line-clamp-2 text-xs leading-relaxed text-n-slate-11"

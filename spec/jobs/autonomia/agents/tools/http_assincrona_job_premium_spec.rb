@@ -16,7 +16,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
   let(:certidoes) { incluir_pronta('certidoes_empresa', conta: account, agente: agent) }
   let(:chamada) do
     { 'name' => certidoes.slug, 'call_id' => 'c1',
-      'arguments' => { consulta: 'divida_uniao', cnpj: '11.222.333/0001-81' }.to_json }
+      'arguments' => { consulta: 'cnj', cnpj: '11.222.333/0001-81' }.to_json }
   end
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { com_credencial_da_bigdatacorp { example.run } } }
@@ -42,8 +42,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
 
     expect(JSON.parse(run.reload.resultado_da_consulta)['situacao']).to eq('nao_consegui_consultar')
     expect(Autonomia::FerramentasProntas::Premium::Registro.sole).to have_attributes(
-      account_id: account.id, autonomia_agent_id: agent.id, fonte: 'certidoes_empresa', consulta: 'divida_uniao',
-      dataset: 'ondemand_pgfn_company', resultado: 'falha', motivo: 'entrega_incerta', cobranca: 'sem_cobranca',
+      account_id: account.id, autonomia_agent_id: agent.id, fonte: 'certidoes_empresa', consulta: 'cnj',
+      dataset: 'ondemand_cnj_negative_certificate_company', resultado: 'falha', motivo: 'entrega_incerta', cobranca: 'sem_cobranca',
       numero: nil, do_cache: false, custo: BigDecimal('0.10'), preco: 0
     )
     expect(Autonomia::FerramentasProntas::Premium::Saldo.count).to eq(0)
@@ -58,7 +58,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
     before do
       cache_em_memoria
       token_da_bigdatacorp
-      bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }])
+      bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }])
       allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(logs))
       allow(ChatwootExceptionTracker).to receive(:new).and_call_original
     end
@@ -158,5 +158,37 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
     described_class.incerta(run.reload)
 
     expect(Autonomia::FerramentasProntas::Premium::Registro.count).to eq(0)
+  end
+
+  # #2946: os processos do Raio-X e as empresas na região têm 120 s. Na conversa, a consulta roda aqui, em segundo
+  # plano: o turno espera 8 s, avisa o cliente que está consultando, e o resultado chega pelo evento. O que podia cortar
+  # os 120 s é a linha da execução vencer antes; ela vence pelo `timeout_seconds` da ferramenta mais a folga do job.
+  describe 'a consulta lenta (120 s)' do
+    let(:raio_x) { incluir_pronta('raio_x_empresa', conta: account, agente: agent) }
+    let(:premium) { Autonomia::FerramentasProntas::Premium }
+
+    # A folga mínima entre o fim da consulta mais lenta e o vencimento da linha: a gravação do resultado e a conexão.
+    let(:folga_minima) { 15.seconds }
+
+    it 'a ferramenta incluída agora nasce com o prazo novo, e a linha vence depois dos 122 s mesmo na incluída antes (23 s)' do
+      expect(premium.prazo_maximo).to eq(122)
+      expect(raio_x.timeout_seconds).to eq(123)
+      freeze_time do
+        expect(described_class.vence_em(23) - premium.prazo_maximo.seconds.from_now).to be > folga_minima
+        expect(described_class.vence_em(raio_x.timeout_seconds) - premium.prazo_maximo.seconds.from_now).to be > folga_minima
+      end
+    end
+
+    it 'a BigDataCorp é chamada com o teto de 120 s, e não com o tempo gravado na ferramenta' do
+      cache_em_memoria
+      token_da_bigdatacorp
+      bigdatacorp_responde('/empresas', 'processes', 'Lawsuits', { 'TotalLawsuits' => 0 })
+      allow(Timeout).to receive(:timeout).and_call_original
+      raio_x.update!(timeout_seconds: 23)
+
+      executar_premium(raio_x, 'consulta' => 'processos', 'cnpj' => '11.222.333/0001-81')
+
+      expect(Timeout).to have_received(:timeout).with(premium::Dataset::PRAZO_DAS_LENTAS)
+    end
   end
 end
