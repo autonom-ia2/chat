@@ -1460,12 +1460,22 @@
 ### criar_automacoes_por_etapa_do_funil
 - titulo: Criar automacoes por etapa do funil
 - rota: crm_kanban_index
-- intent: "Como automatizo uma etapa do CRM?"; "Como criar follow-up ao mover card?"; "Como atribuir responsavel automaticamente quando entrar numa etapa?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Editar funil > status > Automacoes deste status
-- perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis.
+- intent: "Como automatizo uma etapa do CRM?"; "Como criar follow-up ao mover card?"; "Como atribuir responsavel automaticamente quando entrar numa etapa?"; "Quais automacoes rodam nesta etapa?"
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Editar funil > Etapas > toque na etapa > Automacoes desta etapa
+- perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; com o motor e os gatilhos de card ligados na conta, a lista unica tambem pede `automation_view` para ver e `automation_manage` para ligar, desligar e criar; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis e das automacoes.
 - pre_requisitos: funil salvo; etapa existente; agentes disponiveis quando a acao for atribuir responsavel.
-- passos: 1. Abra Editar funil; 2. Na etapa desejada, abra Automacoes desta etapa; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar retorno, Atribuir responsavel, Mover etapa ou Perguntar ao Decisor (os passos depois dele so rodam se ele responder a chave combinada; veja usar_decisor_na_automacao); 5. Defina atraso e parametros; 6. Salve a regra.
-- gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; retornos criados pela automacao aparecem no card e no calendario.
+- passos: Com o motor e os gatilhos de card ligados, a etapa mostra uma lista so: as regras antigas da etapa, com o selo **Jeito antigo**, e as automacoes novas com gatilho nesta etapa (o card entrou, saiu ou ficou parado aqui), cada uma com a frase, **Alterar** e o interruptor Ligada/Desligada. **Nova automacao para esta etapa** abre o editor da Automacao com o gatilho "o card entrou nesta etapa" ja escolhido. **Alterar** numa regra antiga abre as acoes da etapa (escolha gatilho de entrada ou saida e passos como Criar retorno, Atribuir responsavel, Mover etapa ou Perguntar ao Decisor; veja usar_decisor_na_automacao); numa automacao nova, abre o editor dela. Sem o motor, a etapa mostra so o cartao das acoes da etapa, como antes.
+- gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; retornos criados pela automacao aparecem no card e no calendario; ligar uma automacao nova pela etapa e o mesmo "assumir e religar" da lista de Automacoes: ela passa a agir com os direitos de quem ligou, e a que manda mensagem, avisa a equipe ou usa IA pede confirmacao antes; com o funil mudado e nao salvo, sair para o editor pergunta antes (Sair sem salvar ou Ficar); ainda nao contam como entrar ou sair da etapa: arquivar varios cards de uma vez, apagar a etapa e mover cards pela integracao (o aviso aparece quando ha automacao de entrar ou sair).
+
+### ver_e_parar_automacoes_no_card
+- titulo: Ver e parar as automacoes de um card
+- rota: crm_kanban_index
+- intent: "Que automacao esta rodando neste card?"; "Por que esse cliente vai receber mensagem?"; "Como paro a automacao so neste card?"; "O que a automacao ja fez neste card?"
+- onde_fica: Sidebar > CRM > CRM Kanban > abra o card > Automacoes deste card (logo abaixo dos quatro cartoes do resumo)
+- perfil: ver pede `automation_view` (ou `automation_manage`) e ver o card; parar pede `automation_manage` e poder mexer no card (`crm_manage_cards` e o funil dele); administrador sempre pode.
+- pre_requisitos: motor das automacoes e gatilhos de card ligados na conta; card aberto (ganho, perdido ou arquivado nao tem automacao rodando).
+- passos: Cada automacao que esta cuidando do card aparece numa frase, com ate quando espera (ou agindo agora), o passo em que esta ("Passo 2 de 3: ...") e **O que ja fez**, com o dia em que comecou e cada passo feito. **Parar para este card** pergunta "Parar <nome> so neste card?"; **Sim, parar** encerra so neste card, e os outros cards continuam. Sem nada rodando, o botao **Criar uma automacao para quem entrar em <etapa>** abre o editor com o gatilho da etapa do card.
+- gotchas: parar vale so para o que esta rodando agora: a automacao continua ligada, e se o card sair e entrar de novo na etapa ela comeca outra vez; parar nao tem desfazer; o historico mostra os ultimos 30 dias; o que a automacao faz em outro registro (outro card, a conversa) nao aparece aqui.
 
 ### salvar_e_compartilhar_visoes_da_lista_do_crm
 - titulo: Salvar e compartilhar visoes da lista do CRM

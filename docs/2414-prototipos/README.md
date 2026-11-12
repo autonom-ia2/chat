@@ -1,29 +1,25 @@
 # Protótipos em tela real: automação no CRM (#2499 F6.3/F6.4/F6.5 e #2710)
 
-> **Esta branch é só da demo. Não vai para a main.** Depois do OK do Rodrigo no protótipo, ela é descartada e a
-> implementação final sai em PRs próprios (com flag e bit reservados lá, não aqui).
+> **Jornadas 1 e 2: implementadas de verdade** (F6.3/F6.5 da #2499, branch `feat/2414-f6-card-e-etapa`), sem mudar
+> a jornada aprovada pelo Rodrigo em 12/11. **Jornada 3 (#2710): fora**, até o Rodrigo escolher a variante; o código de
+> exemplo dela (selo "Já é cliente", "abrir a compra", `source` no quadro) saiu desta branch e continua só na
+> `feat/2414-ft-prototipos`.
 
-Três jornadas montadas com os componentes reais do painel, encaixadas nas telas de verdade (o card do funil, a
-etapa aberta no "Editar funil" e o quadro). Não há flag de produto: o protótipo só liga quando as duas coisas valem
-ao mesmo tempo:
-
-1. o painel roda no build de desenvolvimento (`import.meta.env.DEV`; no build de produção vira `false` e o ramo some);
-2. o funil tem a marca que o seed da demo grava no banco da demo: `metadata.demo_prototipo_2414 = { etapa_id }`.
-
-Fora do funil marcado, nada muda, nem na demo.
-
-**Estado: código pronto para a demo, não conferido em tela.** A demo ainda não subiu, o seed não rodou e não houve
-prints em 390 e 1440. Falta o passo "Preparar a demo" abaixo, olhar cada PNG e só então mandar ao Rodrigo.
-
-O que é real e o que é ensaio:
+As partes vêm com o motor e os gatilhos de card, como o resto da F6: `automacao_fundacao` + `automacao_motor` +
+`automacao_gatilhos` (no servidor, `Motor.gatilhos?`). Não há flag nova. Quem não tem `automation_view` (nem
+`automation_manage`) não vê nada; sem o motor, a etapa mostra o cartão das ações de hoje.
 
 | Parte | De onde vem |
 |---|---|
-| Regras antigas da etapa ("Ligar no dia seguinte") | real: `crmKanban/fetchStageAutomations`; o interruptor salva de verdade |
-| Automações novas da etapa e do card (frase, passo atual, histórico, "Parar") | adaptador falso (`automacaoNoCrm/fonteDasAutomacoes.js`), no formato da receita da Automação livre; as frases saem do `frases.js` com o catálogo real |
-| "Nova automação para esta etapa" e "Criar uma automação para quem entrar em…" | real: o editor abre com o gatilho da etapa já escolhido |
-| Reuniões das jornadas do #2710 | reais: `Crm::Meeting` e a atividade `meeting_scheduled`, criadas pelo seed (a Agenda e a linha do tempo mostram o banco) |
-| Selo "Já é cliente desde…" e "abrir a compra" | reais: `source` do card (`public_link`/`invite`), `customer_since` do contato e o card ganho pela API do perfil do contato |
+| Regras antigas da etapa ("Ligar no dia seguinte") | `crmKanban/fetchStageAutomations`; o interruptor salva na regra |
+| Automações novas da etapa | `GET crm/stages/:stage_id/automacoes` (`Autonomia::Automacao::DaEtapa`): gatilho entrou, saiu ou parado nesta etapa, ligadas e desligadas. Ligar e desligar são os da própria automação (`autonomia/automacoes/:id/ligar` e `desligar`, "assumir e religar"), com a confirmação da lista de Automações quando ela manda mensagem, avisa a equipe ou usa IA (#2574) |
+| O que roda no card (passo, espera, "O que já fez") | `GET crm/cards/:card_id/automacoes` (`Autonomia::Automacao::NoCard`): as execuções abertas com o card como alvo e os registros delas; as frases saem do `frases.js` com o catálogo real |
+| "Parar para este card" | `POST crm/cards/:card_id/automacoes/:id/parar`: fecha as execuções abertas daquela automação só neste card (P6: só o que está rodando; sem tabela de exclusão, sem migration) |
+| "Nova automação para esta etapa" e "Criar uma automação para quem entrar em…" | o editor abre com o gatilho da etapa já escolhido (`?gatilho=card.entrou_na_etapa&etapa=<id>`) |
+
+Permissões (parecer de Funções): ver no card pede `automation_view` + `CardPolicy#show?`; parar pede
+`automation_manage` + `CardPolicy#update?`; ver na etapa pede `automation_view` + a chave de funis
+(`crm_manage_pipelines` ou `crm_admin`). Tudo no escopo da conta.
 
 ## Preparar a demo
 
@@ -31,6 +27,8 @@ No M4, de dentro da worktree (kit `bin/demo`, runbook `docs/runbooks/demo-tela-r
 
 ```sh
 bin/demo up 2414-telas
+bin/demo flag 2414-telas automacao_fundacao
+bin/demo flag 2414-telas automacao_motor
 bin/demo flag 2414-telas automacao_editor
 bin/demo flag 2414-telas automacao_gatilhos
 bin/demo seed 2414-telas docs/2414-prototipos/seed_demo.rb
@@ -40,11 +38,11 @@ bin/demo tunnel 2414-telas
 Antes dos prints: copiar na demo as flags da conta 1 do hub (as de reunião/agenda do CRM incluídas, senão a Agenda
 do card não aparece) e conferir pelo túnel que o Vite serve o texto novo (abrir a etapa e ver "Jeito antigo").
 
-O seed cria o funil "Vendas (demo 2414)" com a marca, a regra antiga "Ligar no dia seguinte" em "Proposta enviada",
-o Pedro Lima (card em "Proposta enviada") e as duas variantes do #2710 (Maria Souza e Ana Costa). Salvar o funil
-pelo "Editar funil" pode regravar o `metadata` sem a marca: se o protótipo sumir, rodar o seed de novo.
-
-Estado vazio das automações: acrescentar `?demo=vazio` ao endereço do CRM e recarregar.
+O seed cria o funil "Vendas (demo 2414)", a regra antiga "Ligar no dia seguinte" em "Proposta enviada" e o Pedro
+Lima (card em "Proposta enviada"). As automações novas são de verdade: monte no editor (**Nova automação para esta
+etapa**) as que a jornada usa, por exemplo "Lembrete de proposta" (Esperar 3 dias → Avisar o responsável) e "Mandar a
+proposta de novo" (Mensagem → Esperar 2 dias → Avisar), ligue e mova o card de Pedro para "Proposta enviada" de novo.
+Antes de criar as automações, o card e a etapa mostram o estado vazio.
 
 ## Jornada 1 — "Automações deste card" (F6.3)
 
@@ -58,7 +56,7 @@ Estado vazio das automações: acrescentar `?demo=vazio` ao endereço do CRM e r
 4. Tocar **Parar para este card** na primeira: a linha vira a pergunta "Parar Lembrete de proposta só neste card?"
    com **Sim, parar** e **Voltar**.
 5. **Sim, parar**: a linha some e aparece "Lembrete de proposta parou neste card. Os outros cards continuam."
-6. Vazio (`?demo=vazio`): "Nenhuma automação está cuidando deste card agora." e o botão **Criar uma automação para
+6. Vazio (card sem automação rodando): "Nenhuma automação está cuidando deste card agora." e o botão **Criar uma automação para
    quem entrar em Proposta enviada**.
 
 Só card aberto mostra a parte: card ganho, perdido ou arquivado não tem automação rodando. Quem não tem
@@ -82,13 +80,16 @@ Prints: 1440 e 390 nos passos 3, 4, 5 e 6.
 5. **Nova automação para esta etapa**: o editor abre com o gatilho "card entrou na etapa" de **Proposta enviada**.
 6. Mudar o nome da etapa sem salvar e tocar **Nova automação para esta etapa**: aparece "Sair sem salvar? O que você
    mudou no funil não fica guardado." com **Sair sem salvar** e **Ficar**.
-7. **Alterar** em "Ligar no dia seguinte": abre a tela das ações da etapa (a de hoje). O das automações novas abre a
-   lista de Automações (no ensaio elas não existem no motor).
+7. **Alterar** em "Ligar no dia seguinte": abre a tela das ações da etapa (a de hoje). O das automações novas abre o
+   editor dela.
 8. Outra etapa do funil: "Esta etapa ainda não tem automação." e o botão (sem ajuda nem aviso).
 
 Prints: 1440 e 390 nos passos 3/4, 5, 6 e 8.
 
 ## Jornada 3 — Reunião de quem já comprou (#2710): as duas variantes lado a lado
+
+> **Não implementada nesta branch.** O Rodrigo ainda não escolheu a variante. O código e o seed de exemplo estão só na
+> `feat/2414-ft-prototipos`; o roteiro abaixo descreve aquela demo.
 
 A #2710 pede uma decisão de produto que ainda não foi tomada. A tela mostra as duas saídas que dá para implementar,
 cada uma com uma pessoa, para o Rodrigo escolher (a 3ª opção, deixar como está, é o que acontece hoje):
@@ -119,11 +120,11 @@ Prints: 1440 e 390 nos passos 1, 3 e 4.
 ## Pendências
 
 - **Decisão do #2710** (variante 1 ou 2): registrar na Issue depois que o Rodrigo escolher. O protótipo não decide.
-- **API do motor**: o que roda num card (passo atual e espera), o histórico de execuções por card, parar uma
-  automação só num card, e ligar e desligar pela etapa. Cada endpoint leva o parecer de Funções
-  (`automation_view` + `CardPolicy#show?` para ver; `automation_manage` + `CardPolicy#update?` para parar).
+- **API do motor**: feita na `feat/2414-f6-card-e-etapa` (ver a tabela no topo).
 - **Receitas de etapa** (§8.4 do `docs/automacao/F6-F8-gatilhos.md`): o catálogo ainda não tem receita com gatilho
   de etapa; por isso "Criar uma automação…" abre o editor só com o gatilho, e não pelos modelos.
-- **Flag e bit**: só no PR da implementação final. Avisar a Orquestração que nenhuma flag deste protótipo existe.
-- **Guia**: nenhuma rota nova, então não precisa de `guia:build`, de formatos nem de `porques.md`/`central:check`
-  neste protótipo. Quando a F6.5 virar tela final, revisar o bloco da etapa em `lib/operator_guide/porques.md`.
+- **Flag**: F6.3/F6.5 não têm flag própria (vêm com `automacao_gatilhos`). A `automacao_passos_novos` é só dos passos
+  novos (`passos-novos.md`).
+- **Guia**: sem tela nova no painel; o bloco da etapa em `lib/operator_guide/porques.md` foi revisto e ganhou o do card
+  (`ver_e_parar_automacoes_no_card`). O "parar" entrou em `Acoes::SEM_DESFAZER` (não reabre) e no porteiro da
+  automação (`automation_manage`).

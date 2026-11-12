@@ -8,8 +8,11 @@ disso roda de verdade nem é salvo no servidor.
 
 1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
    `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
-   `config/features.yml`, na posição 45 (1 << 44), **provisória**: a
-   Orquestração confirma o bit na fila.
+   `config/features.yml`, depois da `relacionamentos_novo` (45). A
+   Orquestração reservou a posição 47 (1 << 46) em 12/11, depois da
+   `carteira_seguros` (46, #2910); enquanto a `carteira_seguros` não estiver
+   na main, a ordem do arquivo dá a 46 a esta flag, e quem juntar as duas põe
+   a `carteira_seguros` antes.
    **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
    **desligada em produção**, ligada só na conta de demonstração, até o motor
    dos passos existir. Ligada num cliente, ele monta passos que não salvam.
