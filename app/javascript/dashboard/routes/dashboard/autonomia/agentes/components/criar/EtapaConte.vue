@@ -240,7 +240,7 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
       class="flex flex-col gap-2"
       :class="
         celular
-          ? 'fixed inset-x-0 bottom-0 z-20 p-4 border-t bg-n-solid-1 border-n-weak'
+          ? 'fixed inset-x-0 bottom-0 z-20 py-4 pe-4 ps-20 border-t bg-n-solid-1 border-n-weak'
           : 'p-4 border-t border-n-weak'
       "
     >

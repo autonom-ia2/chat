@@ -137,7 +137,7 @@
       "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Não consegui carregar os campos de data. Feche e abra de novo.",
-      "AVISO_LEMBRETE": "Confere a cada 15 minutos. Se a reunião for remarcada, lembra no horário novo; se for cancelada, não lembra. Reunião marcada com menos tempo do que isso é lembrada logo."
+      "AVISO_LEMBRETE": "Se a reunião for remarcada, lembra no horário novo. Se for cancelada, não lembra. Se for marcada com menos antecedência do que isso, lembra logo."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Qualquer página",

@@ -42,7 +42,7 @@ import {
 } from '../webhook';
 import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
-import { temDataIncompleta } from '../texto';
+import { dadoDoAlvo, temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
 import { custoPorMensagem } from '../custoDaIa';
@@ -259,9 +259,10 @@ const variosTextos = computed(
 );
 const rotuloDoDado = campo =>
   variosTextos.value
-    ? t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM', {
-        campo: t(campo.rotulo),
-      })
+    ? t(
+        `AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.${dadoDoAlvo(props.catalogo)}`,
+        { campo: t(campo.rotulo) }
+      )
     : '';
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];

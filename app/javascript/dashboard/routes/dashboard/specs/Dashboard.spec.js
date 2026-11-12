@@ -1,6 +1,7 @@
 import { computed, h, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { flushPromises, mount } from '@vue/test-utils';
+import { useTelaDeConversa } from 'dashboard/components-next/sidebar/useTelaDeConversa';
 import Dashboard from '../Dashboard.vue';
 
 vi.mock('dashboard/composables/useUISettings', async () => {
@@ -21,6 +22,14 @@ vi.mock('dashboard/composables/useAccount', async () => {
 vi.mock('dashboard/composables/useFusoAutomatico', () => ({
   useFusoAutomatico: vi.fn(),
 }));
+
+// #2477: a tela de conversa não tem o botão flutuante do menu.
+vi.mock('dashboard/components-next/sidebar/useTelaDeConversa', async () => {
+  const { ref: createRef } = await import('vue');
+  const telaDeConversa = createRef(false);
+  return { useTelaDeConversa: () => telaDeConversa };
+});
+const telaDeConversa = useTelaDeConversa();
 
 vi.mock('dashboard/stores/calls', () => ({
   useCallsStore: () => ({ hasActiveCall: false, hasIncomingCall: false }),
@@ -128,6 +137,24 @@ describe('Dashboard', () => {
 
   afterEach(() => {
     wrapper?.unmount();
+    telaDeConversa.value = false;
+  });
+
+  // #2477: abaixo de md, o layout reserva embaixo a faixa do botão flutuante
+  // do menu, para nenhuma tela ficar com botão por baixo dele.
+  describe('mobile menu launcher strip', () => {
+    it('reserves the strip below md outside the conversation screen', async () => {
+      await mountDashboard();
+
+      expect(wrapper.find('main').classes()).toContain('max-md:pb-20');
+    });
+
+    it('does not reserve it on the conversation screen, which has no launcher', async () => {
+      telaDeConversa.value = true;
+      await mountDashboard();
+
+      expect(wrapper.find('main').classes()).not.toContain('max-md:pb-20');
+    });
   });
 
   describe('when the account is not paywalled', () => {

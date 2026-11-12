@@ -143,6 +143,7 @@
     "CAMPOS": {
       "DURACAO": "Quanto tempo",
       "CONDICAO": "Até quando",
+      "CONDICAO_DO_SE": "Se",
       "PRAZO": "Esperar no máximo",
       "SE_VENCER": "Se o prazo acabar",
       "A_CADA_MENSAGEM": "A cada mensagem do cliente enquanto espera",
@@ -429,7 +430,18 @@
       "COMPOSTA": "Esta condição tem várias partes. Só o Guia muda; aqui ela fica como está.",
       "DA_CONVERSA": "Vem da conversa: {valor}",
       "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
-      "POR_VALOR": "Pôr um dado da conversa",
+      "POR_DADO": {
+        "CONVERSA": "Pôr um dado da conversa",
+        "CARD": "Pôr um dado do card",
+        "CONTATO": "Pôr um dado do contato",
+        "OUTRO": "Pôr um dado"
+      },
+      "SEM_ATRIBUTOS": {
+        "ATRIBUTOS_DO_CONTATO": "A conta ainda não tem campo personalizado de contato. Crie um em Atributos personalizados para preencher aqui.",
+        "ATRIBUTOS_DA_EMPRESA": "A conta ainda não tem campo personalizado de empresa. Crie um em Atributos personalizados para preencher aqui.",
+        "ATRIBUTOS_DA_CONVERSA": "A conta ainda não tem campo personalizado de conversa. Crie um em Atributos personalizados para preencher aqui."
+      },
+      "ATRIBUTOS_FALHOU": "Não deu para carregar os campos personalizados. Recarregue a página para tentar de novo.",
       "POR_DADO_NA_ETIQUETA": "Pôr uma etiqueta com o nome de um dado",
       "POR_DADO_AJUDA": "A etiqueta sai com o dado sem espaço nem pontuação (\"Black Friday, 50% off\" vira black_friday_50_off). O texto original fica na descrição da etiqueta.",
       "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",
@@ -485,7 +497,12 @@
       },
       "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
       "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo.",
-      "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
+      "POR_DADO_EM": {
+        "CONVERSA": "Pôr um dado da conversa em “{campo}”",
+        "CARD": "Pôr um dado do card em “{campo}”",
+        "CONTATO": "Pôr um dado do contato em “{campo}”",
+        "OUTRO": "Pôr um dado em “{campo}”"
+      },
       "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo.",
       "CONTATO_DO_ALVO": "O contato desta automação"
     },

@@ -218,10 +218,29 @@ const opcoesDoAtributo = atributo =>
     <fieldset
       v-else-if="peca.startsWith('atributos_')"
       class="flex flex-col gap-3"
+      :aria-busy="!atributos.length && opcoes.atributosEstado === 'carregando'"
     >
       <legend class="mb-1.5 text-sm font-medium text-n-slate-12">
         {{ rotulo }}
       </legend>
+      <!-- #2744: sem nenhum campo do tipo, o título não fica sozinho. "A conta
+      não tem" só com a lista carregada; se ela não veio, diz que não carregou. -->
+      <p
+        v-if="!atributos.length && opcoes.atributosEstado === 'falhou'"
+        data-atributos-falhou
+        class="mb-0 text-sm text-n-ruby-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ATRIBUTOS_FALHOU') }}
+      </p>
+      <p
+        v-else-if="!atributos.length && opcoes.atributosEstado === 'carregou'"
+        data-sem-atributos
+        class="mb-0 text-sm text-n-slate-11"
+      >
+        {{
+          $t(`AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.${peca.toUpperCase()}`)
+        }}
+      </p>
       <template v-for="atributo in atributos" :key="atributo.attribute_key">
         <LivreTexto
           v-if="atributoDeTexto(atributo)"

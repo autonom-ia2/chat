@@ -107,6 +107,13 @@
       "OCULTA_DICA": "In an inbox you can't see",
       "ABRIR_CONVERSA": "Open the conversation",
       "VER_MENSAGEM": "See the message",
+      "CARD_DE": "Card {nome}",
+      "CARD_OCULTO": "A card",
+      "CONTATO_SEM_NOME": "A contact with no name",
+      "CONTATO_OCULTO": "A contact",
+      "CONTA": "The account",
+      "ABRIR_CARD": "Open the card",
+      "ABRIR_CONTATO": "Open the contact",
       "ESTADOS": {
         "ANDANDO": "running",
         "ESPERANDO": "waiting",

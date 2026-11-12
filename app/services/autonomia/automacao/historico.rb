@@ -3,8 +3,8 @@
 # receita da versão em que a execução entrou; o motivo sai daqui, já traduzido.
 #
 # Visibilidade: a execução numa conversa que quem vê não enxerga aparece sem nome, sem link e sem ids de mensagem. O
-# filtro é o da lista de conversas (`Conversations::PermissionFilterService`, só leitura). Alvo que não é conversa
-# (card, contato) fica oculto até o `Autonomia::Automacao::Contexto` da F3 (#2499), que nomeia cada tipo.
+# filtro é o da lista de conversas (`Conversations::PermissionFilterService`, só leitura). O card e o contato (#2731)
+# saem pelo `Autonomia::Automacao::Contexto`: nome e link para quem a política deixa ver; para os outros, só o tipo.
 class Autonomia::Automacao::Historico
   POR_PAGINA = 20
   SEMANA = 7.days
@@ -27,8 +27,10 @@ class Autonomia::Automacao::Historico
   DINHEIRO = %w[custo_usd tokens_entrada tokens_saida].freeze
   # A tela promete "nos últimos 30 dias": é o tempo em que os passos (Registro) ficam.
   JANELA = ::Autonomia::Automacao::Registro::RETENCAO
-  # O tipo do alvo como a tela o chama. Tipo novo, até o Contexto da F3, sai pelo nome da classe.
-  TIPOS = { 'Conversation' => 'conversa' }.freeze
+  # O tipo do alvo como a tela o chama (a base do Contexto). Tipo novo sai pelo nome da classe.
+  TIPOS = { 'Conversation' => 'conversa', 'Crm::Card' => 'card', 'Contact' => 'contato', 'Account' => 'conta' }.freeze
+  # Os alvos que não são conversa e têm nome e link próprios (#2731).
+  OUTROS = { 'Crm::Card' => ::Crm::Card, 'Contact' => ::Contact }.freeze
 
   # As contagens da lista, numa consulta agrupada só: { automacao_id => { rodou:, parou: } } nos últimos 7 dias. Conta
   # todas as execuções, também as de conversas que quem vê não enxerga, porque o número não diz de quem foi.
@@ -54,8 +56,9 @@ class Autonomia::Automacao::Historico
     execucoes = lidas.first(POR_PAGINA)
     registros = registros_de(execucoes)
     visiveis = conversas_visiveis(execucoes)
+    outros = outros_alvos(execucoes)
     {
-      execucoes: execucoes.map { |execucao| para_tela(execucao, registros.fetch(execucao.id, []), visiveis) },
+      execucoes: execucoes.map { |execucao| para_tela(execucao, registros.fetch(execucao.id, []), visiveis, outros) },
       versoes: versoes_de(execucoes),
       pagina: @pagina,
       mais: lidas.size > POR_PAGINA
@@ -86,12 +89,20 @@ class Autonomia::Automacao::Historico
                                           .perform.includes(:contact).index_by(&:id)
   end
 
-  def para_tela(execucao, registros, visiveis)
+  # { [alvo_type, alvo_id] => registro } dos cards e contatos da página, uma consulta por tipo.
+  def outros_alvos(execucoes)
+    OUTROS.flat_map do |tipo, classe|
+      ids = execucoes.select { |execucao| execucao.alvo_type == tipo }.map(&:alvo_id)
+      ids.empty? ? [] : classe.where(account_id: @automacao.account_id, id: ids).map { |registro| [[tipo, registro.id], registro] }
+    end.to_h
+  end
+
+  def para_tela(execucao, registros, visiveis, outros)
     conversa = visiveis[execucao.alvo_id] if execucao.alvo_type == 'Conversation'
     {
       id: execucao.id, estado: execucao.estado, versao_id: execucao.versao_id, criada_em: execucao.created_at,
       finalizada_em: execucao.finalizada_em, **espera(execucao, registros),
-      alvo: alvo(execucao, conversa),
+      alvo: conversa ? alvo_conversa(conversa) : outro_alvo(execucao, outros[[execucao.alvo_type, execucao.alvo_id]]),
       passos: registros.map { |registro| passo(registro, visivel: conversa.present?) }
     }
   end
@@ -105,10 +116,18 @@ class Autonomia::Automacao::Historico
     { esperando_ate: execucao.due_at }
   end
 
-  def alvo(execucao, conversa)
-    return { tipo: TIPOS.fetch(execucao.alvo_type) { execucao.alvo_type.underscore }, visivel: false } if conversa.nil?
-
+  def alvo_conversa(conversa)
     { tipo: 'conversa', visivel: true, conversa_id: conversa.display_id, nome: conversa.contact&.name }
+  end
+
+  # O card e o contato que quem vê enxerga saem com o nome e o link do Contexto. Os outros, a conversa que quem vê não
+  # enxerga e a conta, só com o tipo: a tela diz "Um card", "Uma conversa" ou "A conta", sem nome nem link.
+  def outro_alvo(execucao, registro)
+    tipo = TIPOS.fetch(execucao.alvo_type) { execucao.alvo_type.underscore }
+    contexto = registro && ::Autonomia::Automacao::Contexto.de(registro)
+    return { tipo: tipo, visivel: false } unless contexto&.visivel_para?(@usuario)
+
+    { tipo: tipo, visivel: true, nome: registro.is_a?(::Crm::Card) ? registro.title : registro.name.presence, link: contexto.link }
   end
 
   # `conversas_fora` (G42) sai só como quantidade: os ids são de conversas que quem vê pode não enxergar.

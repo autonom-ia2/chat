@@ -107,6 +107,13 @@
       "OCULTA_DICA": "Numa caixa que você não vê",
       "ABRIR_CONVERSA": "Abrir a conversa",
       "VER_MENSAGEM": "Ver a mensagem",
+      "CARD_DE": "Card {nome}",
+      "CARD_OCULTO": "Um card",
+      "CONTATO_SEM_NOME": "Um contato sem nome",
+      "CONTATO_OCULTO": "Um contato",
+      "CONTA": "A conta",
+      "ABRIR_CARD": "Abrir o card",
+      "ABRIR_CONTATO": "Abrir o contato",
       "ESTADOS": {
         "ANDANDO": "rodando",
         "ESPERANDO": "esperando",

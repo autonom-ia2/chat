@@ -143,6 +143,7 @@
     "CAMPOS": {
       "DURACAO": "How long",
       "CONDICAO": "Until",
+      "CONDICAO_DO_SE": "If",
       "PRAZO": "Wait at most",
       "SE_VENCER": "If time runs out",
       "A_CADA_MENSAGEM": "For each customer message while waiting",
@@ -429,7 +430,18 @@
       "COMPOSTA": "This condition has several parts. Only the Guide changes it; here it stays as is.",
       "DA_CONVERSA": "Comes from the conversation: {valor}",
       "BUSCA_FALHOU": "Could not search right now. Try again.",
-      "POR_VALOR": "Add a conversation detail",
+      "POR_DADO": {
+        "CONVERSA": "Add a conversation detail",
+        "CARD": "Add a card detail",
+        "CONTATO": "Add a contact detail",
+        "OUTRO": "Add a detail"
+      },
+      "SEM_ATRIBUTOS": {
+        "ATRIBUTOS_DO_CONTATO": "The account has no contact custom field yet. Create one in Custom Attributes to fill it here.",
+        "ATRIBUTOS_DA_EMPRESA": "The account has no company custom field yet. Create one in Custom Attributes to fill it here.",
+        "ATRIBUTOS_DA_CONVERSA": "The account has no conversation custom field yet. Create one in Custom Attributes to fill it here."
+      },
+      "ATRIBUTOS_FALHOU": "Could not load the custom fields. Reload the page to try again.",
       "POR_DADO_NA_ETIQUETA": "Add a label named after a data field",
       "POR_DADO_AJUDA": "The label uses the data without spaces or punctuation (\"Black Friday, 50% off\" becomes black_friday_50_off). The original text goes in the label description.",
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
@@ -485,7 +497,12 @@
       },
       "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step.",
       "AGENTES_DE_IA_FALHOU": "Could not load the AI agents. Reload the page to try again.",
-      "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
+      "POR_DADO_EM": {
+        "CONVERSA": "Add a conversation detail to “{campo}”",
+        "CARD": "Add a card detail to “{campo}”",
+        "CONTATO": "Add a contact detail to “{campo}”",
+        "OUTRO": "Add a detail to “{campo}”"
+      },
       "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step.",
       "CONTATO_DO_ALVO": "The contact of this automation"
     },
