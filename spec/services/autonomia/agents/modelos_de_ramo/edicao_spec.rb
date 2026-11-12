@@ -276,6 +276,18 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(lia.reload.config).not_to have_key(chave_da_marca)
     end
 
+    it 'recusa o agente de sistema, mesmo com uma conversa ligada a ele' do
+      de_sistema = Autonomia::Agents::Agent.create!(account: account, name: 'Guia', agent_type: 'custom',
+                                                    config: { chave_da_marca => conversa.state[chave_da_marca], 'system_key' => 'guia' })
+      da_conversa = Autonomia::Agents::BuildThread.create!(account: account, agent: de_sistema,
+                                                           state: { chave_da_marca => conversa.state[chave_da_marca] })
+      antes = de_sistema.config
+
+      expect(recusa({ perguntas: [] }, da_conversa)).to eq(['sem_modelo', nil])
+      expect(de_sistema.reload.config).to eq(antes)
+      expect(Autonomia::Agents::ModelosDeRamo::Rascunho.para_a_criacao(da_conversa)).to be_nil
+    end
+
     it 'só mexe na conversa e no agente que recebeu: a de outra conta fica como estava' do
       outra_conta = create(:account)
       liberar_modelos(outra_conta)

@@ -195,6 +195,7 @@ fora:
       - autonomia/agents/instruction_versions
       - autonomia/agents/material
       - autonomia/agents/message_reports
+      - autonomia/agents/modelo_pronto
       - autonomia/agents/onde_atende
       - autonomia/agents/playground
       - autonomia/agents/sources

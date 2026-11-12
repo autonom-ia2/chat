@@ -13,7 +13,7 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     def do_thread(thread)
       marca = thread.state.to_h[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]
       agente = thread.agent
-      return unless marca.is_a?(Hash) && agente&.agent_type != Autonomia::Agents::ModelosDeRamo::AGENTE_DE_COTACAO
+      return unless marca.is_a?(Hash) && agente_serve?(agente)
 
       montar(marca_que_vale(marca, agente), account: thread.account, agente: agente)
     end
@@ -60,6 +60,14 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     end
 
     private
+
+    # A conversa ainda sem rascunho (a criação) serve. A do Agente de Cotação e a de um agente de sistema, nunca: pela
+    # API ninguém liga uma conversa a um agente de sistema, mas a recusa não depende disso.
+    def agente_serve?(agente)
+      return true if agente.nil?
+
+      agente.agent_type != Autonomia::Agents::ModelosDeRamo::AGENTE_DE_COTACAO && agente.config.to_h['system_key'].blank?
+    end
 
     # Com o rascunho já criado, a marca que vale é a dele: é nela que os dois caminhos de edição gravam (pela conversa e
     # pelo agente), e é dela que o atendimento lê. A da conversa só vale antes de o rascunho existir.

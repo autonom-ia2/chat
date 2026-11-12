@@ -80,8 +80,8 @@ module Autonomia::Agents::Builder::ModeloPronto
       'CONTEXTO INTERNO (não é fala do usuário). PERGUNTAS DA COTAÇÃO E DOCUMENTOS DESTE AGENTE: as duas listas abaixo',
       'são mantidas pela plataforma, fora da instruction, e chegam ao agente em bloco próprio. Você NÃO as muda: não',
       'escreva na instruction regra que inclua, tire ou troque uma pergunta da cotação ou um documento, porque a lista',
-      'continuaria igual e o agente seguiria por ela. Se o dono pedir para incluir, tirar ou editar um item, NÃO diga',
-      "que mudou: #{onde_mudam_as_listas(agente)} O resto do pedido você atende normalmente.",
+      'continuaria igual e o agente seguiria por ela. Se o dono pedir para incluir, tirar ou editar um item,',
+      "NÃO diga que mudou: #{onde_mudam_as_listas(agente)} O resto do pedido você atende normalmente.",
       MOLDURA_DAS_LISTAS,
       bloco
     ].join("\n")
