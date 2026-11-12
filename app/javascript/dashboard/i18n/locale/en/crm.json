@@ -6013,6 +6013,12 @@
     }
   },
   "CRM_CARD": {
+    "JA_CLIENTE": {
+      "SELO": "Customer since {dia}",
+      "SELO_SEM_DATA": "Already a customer",
+      "SELO_ROTULO": "{selo}. Open the purchase",
+      "ABRIR_COMPRA": "Open the purchase"
+    },
     "FECHAR": "Close",
     "VOLTAR": "Back",
     "CANCELAR": "Cancel",
