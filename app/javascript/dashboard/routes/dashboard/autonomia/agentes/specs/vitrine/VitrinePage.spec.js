@@ -9,6 +9,24 @@ import { FERRAMENTAS } from '../../vitrine/catalogo';
 // os grátis vêm antes dos Premium. Cópia real em pt_BR; o servidor (`useVitrine`) é simulado.
 withFullI18n('pt_BR');
 
+// O catálogo de verdade já lista os Premium no fim: com ele, a ordem na tela sairia certa mesmo sem a página ordenar.
+// Aqui os Premium vêm PRIMEIRO no catálogo, para o teste da ordem só passar se a página puser os grátis antes.
+vi.mock('../../vitrine/catalogo', async importOriginal => {
+  const original = await importOriginal();
+  const premiumPrimeiro = [
+    ...original.FERRAMENTAS.filter(item => item.premium),
+    ...original.FERRAMENTAS.filter(item => !item.premium),
+  ];
+  return {
+    ...original,
+    FERRAMENTAS: premiumPrimeiro,
+    liberadas: chaves =>
+      premiumPrimeiro.filter(
+        item => chaves.includes(item.id) && original.oferecida(item.id)
+      ),
+  };
+});
+
 const PREMIUM = FERRAMENTAS.filter(item => item.premium).map(item => item.id);
 const TODAS = FERRAMENTAS.filter(item => item.naVitrine !== false).map(
   item => item.id
@@ -113,8 +131,9 @@ describe('VitrinePage · Premium dentro dos grupos', () => {
     expect(cartoesDe(wrapper).some(id => PREMIUM.includes(id))).toBe(false);
   });
 
-  it('inside each group, the free cards come before the Premium ones', async () => {
+  it('inside each group, the free cards come before the Premium ones, even when the catalog lists the Premium first', async () => {
     const wrapper = await montar(TODAS);
+    expect(FERRAMENTAS[0].premium).toBe(true);
     expect(cartoesDe(wrapper, '[data-vitrine-grupo="PESSOAS"]')).toEqual([
       'cnpj',
       'cpf',
