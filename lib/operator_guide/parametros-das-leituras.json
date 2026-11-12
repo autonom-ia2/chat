@@ -2311,6 +2311,66 @@
       "a rota não tem a action no controller"
     ]
   },
+  "relacionamentos/empresas": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#index",
+    "parametros": [
+      "busca",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/empresas/contagens": {
+    "controller": "api/v1/accounts/relacionamentos/empresas#contagens",
+    "parametros": [
+      "busca",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/funis": {
+    "controller": "api/v1/accounts/relacionamentos/funis#index",
+    "parametros": []
+  },
+  "relacionamentos/opcoes_de_filtro": {
+    "controller": "api/v1/accounts/relacionamentos/opcoes_de_filtro#show",
+    "parametros": []
+  },
+  "relacionamentos/pessoas": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#index",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/pessoas/contagens": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/pessoas/todas": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas#todas",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/resumo": {
+    "controller": "api/v1/accounts/relacionamentos/resumo#show",
+    "parametros": []
+  },
   "relationships/configuration": {
     "controller": "api/v1/accounts/relationships/configurations#show",
     "parametros": []

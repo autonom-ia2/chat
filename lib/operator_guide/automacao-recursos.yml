@@ -705,6 +705,12 @@ fora:
       - brand_kit_imports
       - actions/contact_merges
       - autonomia/tarefas
+  - motivo: >-
+      Ação em grupo da Lista de Relacionamentos (#2894): grava em muitas pessoas de uma vez, e a pessoa confirma antes
+      (Acoes::SEM_DESFAZER). A automação cria card e põe etiqueta uma pessoa por vez, pelos passos dela.
+    recursos:
+      - relacionamentos/cards
+      - relacionamentos/etiqueta
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

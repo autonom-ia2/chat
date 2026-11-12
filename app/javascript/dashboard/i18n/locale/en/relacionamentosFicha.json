@@ -1,0 +1,204 @@
+{
+  "RELACIONAMENTOS_FICHA": {
+    "PESSOA": {
+      "TITULO": "Person profile"
+    },
+    "EMPRESA": {
+      "TITULO": "Company profile",
+      "PESSOAS": "People",
+      "PESSOAS_VAZIO": "Nobody in this company yet.",
+      "INFORMACOES": {
+        "PESSOAS": "People",
+        "CLIENTES": "Customers"
+      },
+      "CONVERSAR": "This opens a conversation with someone at {nome}.",
+      "NOVO_CARD": "This opens a new card for {nome}.",
+      "VER_TODAS": "This opens all conversations with {nome}.",
+      "MANDAR": "Send a message",
+      "ALTERAR": "Change",
+      "ACOES": "Actions for {nome}",
+      "GAVETA_TITULO": "Change company details",
+      "CONVERSAR_COM": "Chat with {nome}",
+      "MENSAGEM": {
+        "AVISO": "I will open the message for these people.",
+        "SEM_PESSOAS": "This company has no people yet.",
+        "ENTENDI": "Got it"
+      }
+    },
+    "VOLTAR": {
+      "PESSOAS": "People",
+      "EMPRESAS": "Companies",
+      "ROTULO_PESSOAS": "Back to People",
+      "ROTULO_EMPRESAS": "Back to Companies"
+    },
+    "ESTADOS": {
+      "NAO_ACHEI_PESSOA": "I could not find this person.",
+      "NAO_ACHEI_EMPRESA": "I could not find this company.",
+      "VOLTAR_PARA_LISTA": "Back to the list",
+      "ERRO": "I could not open this profile."
+    },
+    "CABECALHO": {
+      "CLIENTE_DESDE": "Customer since {data}",
+      "MARCAR_CLIENTE": "Mark as customer",
+      "CLIENTE_MARCADO": "Done. {nome} is now a customer.",
+      "ERRO_MARCAR": "I could not mark as customer. Try again.",
+      "COPIAR": "Copy {item}",
+      "COPIADO": "Copied.",
+      "NAO_COPIOU": "I could not copy. Try again.",
+      "ITEM_TELEFONE": "phone number",
+      "ITEM_CNPJ": "company tax ID",
+      "ETIQUETAS": "Labels",
+      "ACOES": "What to do with {nome}"
+    },
+    "ACOES": {
+      "NOVO_CARD": "New card",
+      "LEMBRETE": "Reminder",
+      "MAIS": "More actions",
+      "ALTERAR_INFORMACOES": "Change details",
+      "JUNTAR": "Merge with another person",
+      "BLOQUEAR": "Block",
+      "APAGAR": "Delete"
+    },
+    "AVISOS": {
+      "CONVERSAR": "This opens the conversation with {nome}.",
+      "NOVO_CARD": "This opens a new card for {nome}.",
+      "LEMBRETE": "This is where you set a reminder about {nome}.",
+      "VER_TODAS": "This opens all conversations with {nome}.",
+      "JUNTAR": "This is where you choose who to merge {nome} with.",
+      "BLOQUEAR": "This is where you confirm blocking {nome}.",
+      "APAGAR": "This is where you confirm deleting {nome}."
+    },
+    "FAIXA": {
+      "TEXTO": "Does not want messages since {data}. {origem}",
+      "TEXTO_SIMPLES": "Does not want messages since {data}.",
+      "LIBERAR": "Allow again",
+      "CONFIRMA_TITULO": "Did {nome} ask to receive messages again?",
+      "CONFIRMA_TEXTO": "Only allow it if the person asked. {nome} goes back into campaigns and automatic messages.",
+      "CONFIRMA_BOTAO": "Yes, allow",
+      "APOIO": "Not included in campaigns and gets no automatic messages. You can still chat with {nome}.",
+      "LIBERADO": "Done. {nome} can receive messages again.",
+      "ERRO": "I could not allow it. Try again.",
+      "ORIGEM": {
+        "manual": "Someone on the team marked it here.",
+        "campaign_reply": "Asked by replying to a campaign.",
+        "follow_up_reply": "Asked by replying to an automatic message.",
+        "email_unsubscribe": "Asked by e-mail.",
+        "prospecting": "Asked during the customer search."
+      }
+    },
+    "CONVERSAS": {
+      "TITULO": "Conversations",
+      "VER_TODAS": "See all",
+      "VAZIO": "They have not talked yet.",
+      "DE": "{pessoa}: {trecho}",
+      "CANAL": {
+        "whatsapp": "WhatsApp",
+        "email": "E-mail",
+        "instagram": "Instagram",
+        "site": "Website"
+      },
+      "SITUACAO": {
+        "aberta": "In progress",
+        "pendente": "Waiting for a reply",
+        "resolvida": "Resolved"
+      }
+    },
+    "CARDS": {
+      "TITULO": "Cards",
+      "VAZIO": "No cards yet.",
+      "ABRIR": "Open the card {titulo}",
+      "FUNIL_ETAPA": "{funil} · {etapa}",
+      "DE": "from {pessoa}",
+      "SITUACAO": {
+        "aberto": "Open",
+        "ganho": "Closed",
+        "perdido": "Not closed"
+      },
+      "GAVETA": {
+        "FUNIL": "Pipeline",
+        "ETAPA": "Stage",
+        "VALOR": "Value",
+        "SITUACAO": "Situation",
+        "ABRIR_NO_CRM": "Open in CRM"
+      }
+    },
+    "NOTAS": {
+      "TITULO": "Notes",
+      "CAMPO": "Write a note",
+      "GUARDAR": "Save",
+      "GUARDADA": "Note saved.",
+      "ERRO": "I could not save the note. Try again.",
+      "VAZIO": "No notes yet.",
+      "POR": "{autor} · {quando}",
+      "ESCREVA_ANTES": "Write the note before saving."
+    },
+    "ARQUIVOS": {
+      "TITULO": "Files",
+      "VAZIO": "Nothing has been shared in the conversations yet.",
+      "TIPO": {
+        "imagem": "Image",
+        "documento": "Document",
+        "audio": "Audio",
+        "video": "Video"
+      }
+    },
+    "INFORMACOES": {
+      "TITULO": "Details",
+      "ALTERAR": "Change",
+      "VAZIO": "There is no more information yet.",
+      "CPF": "Personal tax ID",
+      "CIDADE": "City",
+      "REDES": "Social networks",
+      "CNPJ": "Company tax ID",
+      "SITE": "Website",
+      "PESSOAS": "People",
+      "CLIENTES": "Customers"
+    },
+    "ORIGEM": {
+      "TITULO": "Where they came from",
+      "LISTA": "Came from the list “{nome}”, on {data}",
+      "CANAL": "Arrived through {canal} on {data}",
+      "CANAL_DESCONHECIDO": "Arrived on {data}",
+      "CANAL_NOME": {
+        "whatsapp": "WhatsApp",
+        "email": "e-mail",
+        "instagram": "Instagram",
+        "site": "the website"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Change details",
+      "FECHAR": "Close",
+      "NOME": "Name",
+      "TELEFONE": "Phone",
+      "PAIS": "Phone country",
+      "EMAIL": "E-mail",
+      "CPF": "Personal tax ID",
+      "CIDADE": "City",
+      "EMPRESA": "Company",
+      "REDES": "Social networks",
+      "OUTRAS": "Other details",
+      "SALVAR": "Save",
+      "SALVO": "Details saved.",
+      "ERRO_AO_SALVAR": "I could not save. Try again.",
+      "ERRO": {
+        "NOME": "Write the name.",
+        "EMAIL": "Check the e-mail. Something seems to be missing.",
+        "CPF": "Check the personal tax ID. It has 11 numbers.",
+        "CNPJ": "Check the company tax ID. It has 14 numbers."
+      },
+      "REDE": {
+        "linkedin": "LinkedIn",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "tiktok": "TikTok",
+        "twitter": "X (Twitter)",
+        "github": "GitHub"
+      },
+      "CNPJ": "Company tax ID",
+      "SITE": "Website"
+    }
+  }
+}

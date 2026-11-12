@@ -79,7 +79,9 @@ class Autonomia::Guide::Acoes
     'POST contacts/import',
     'POST data_imports/:id/start',
     'POST campaign_imports/:id/confirm', 'POST contact_imports/:id/confirm',
-    'POST bulk_actions',
+    # #2894 — criar cards e etiquetar as pessoas marcadas na Lista de Relacionamentos também é ação em massa: grava em
+    # muitas pessoas de uma vez, e cada card novo sai nos webhooks e nas automações do funil.
+    'POST bulk_actions', 'POST relacionamentos/cards', 'POST relacionamentos/etiqueta',
     'POST captain/bulk_actions',
     'POST macros/:id/execute',
     'DELETE inboxes/:id',
@@ -114,11 +116,13 @@ class Autonomia::Guide::Acoes
   # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
   # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
   # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
+  # #2894: apagar as pessoas marcadas na Lista de Relacionamentos é excluir contato, em lote: também só na tela
+  # (`Relacionamentos::Apagar::SO_NA_TELA_DO_GUIA`).
   # #2858 F7 (revisor, 12/11): o Experimente da vitrine e a leitura do pedido dele (`FerramentasProntas::SO_NA_TELA_DO_GUIA`).
   SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
                .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
                        'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete'))
-               .merge(::Autonomia::FerramentasProntas::SO_NA_TELA_DO_GUIA).freeze
+               .merge(::Relacionamentos::Apagar::SO_NA_TELA_DO_GUIA).merge(::Autonomia::FerramentasProntas::SO_NA_TELA_DO_GUIA).freeze
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.

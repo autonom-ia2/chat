@@ -1376,3 +1376,12 @@
   display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
   enabled: false
   column: feature_flags_ext_2
+
+# Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
+# empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
+# Sem migration. Rollback: desligar a flag na conta. Posição 45 (17592186044416, 1 << 44), confirmada pela
+# Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
+- name: relacionamentos_novo
+  display_name: Relacionamentos › telas novas
+  enabled: false
+  column: feature_flags_ext_2

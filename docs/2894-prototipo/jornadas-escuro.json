@@ -1,0 +1,78 @@
+{
+  "pasta": "docs/2894-prototipo/prints-escuro",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "dark"
+  ],
+  "jornadas": [
+    {
+      "nome": "escuro",
+      "etapas": [
+        {
+          "nome": "lista-cheia",
+          "url": "/app/accounts/{conta}/relationships?demo=cheio",
+          "esperar": "[data-relacionamentos=\"linha\"]",
+          "pausa": 2500
+        },
+        {
+          "nome": "ficha-nao-quer-mensagens",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/203?demo=cheio",
+          "esperar": "[data-relacionamentos=\"faixa-nao-quer\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "ficha-empresa",
+          "url": "/app/accounts/{conta}/relacionamentos/empresas/2?demo=cheio",
+          "esperar": "[data-relacionamentos=\"ficha-empresa\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "trazer-enviar",
+          "url": "/app/accounts/{conta}/relacionamentos/trazer?demo=cheio",
+          "esperar": "[data-relacionamentos=\"historico\"] [data-lista]",
+          "pausa": 1500
+        },
+        {
+          "nome": "trazer-conferir",
+          "passos": [
+            {
+              "clicar": "[data-relacionamentos=\"usar-exemplo\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"sim_todas\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"continuar\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"resposta\"][data-resposta=\"da_pessoa\"]"
+            },
+            {
+              "clicar": "[data-relacionamentos=\"continuar\"]"
+            },
+            {
+              "esperar": "[data-relacionamentos=\"conferir\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "lista-carregando",
+          "url": "/app/accounts/{conta}/relationships?demo=carregando",
+          "esperar": "[data-relacionamentos=\"carregando\"]",
+          "pausa": 800
+        },
+        {
+          "nome": "lista-conta-vazia",
+          "url": "/app/accounts/{conta}/relationships?demo=vazio",
+          "esperar": "[data-relacionamentos=\"vazio\"]",
+          "pausa": 2000
+        }
+      ]
+    }
+  ]
+}
