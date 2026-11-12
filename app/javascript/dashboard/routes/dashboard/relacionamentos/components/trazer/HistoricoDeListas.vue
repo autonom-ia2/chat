@@ -4,7 +4,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import { SITUACOES_DA_LISTA, formatarDia } from '../../trazer/prazo';
-import { PONTO } from '../comum/ponto';
+import { SEPARADOR } from '../comum/ponto';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
@@ -15,15 +15,22 @@ import { PONTO } from '../comum/ponto';
 // for a situação: a pronta; a que parou no meio depois de pôr gente (aí ao lado
 // do "Tentar de novo": a pessoa escolhe); e a que teve o desfazer travado.
 // A lista que está sendo desfeita diz "Desfazendo…", com o selo de lista em
-// andamento. Na linha, a frase e os botões quebram de linha quando não cabem.
-// Os dois botões da linha têm 44 px de altura (alvo de toque).
-// O desfazer que travou (`desfazendo` com `podeDesfazer`) diz que parou e manda
-// clicar em Desfazer; sem o botão, a frase não aparece.
+// andamento. Os dois botões da linha têm 44 px de altura (alvo de toque).
+// A linha tem dois blocos. O da esquerda ocupa o espaço que sobra e tem até
+// três linhas: o arquivo; "em 12/11 · por Fulano · 2 pessoas", montada aqui no
+// script (no template o espaço depois do ponto se perdia); e, quando há, a
+// frase do problema. O da direita não encolhe o da esquerda e tem só o selo e
+// os botões, que quebram de linha quando não cabem.
+// A frase do problema é uma de duas: a lista que não foi trazida, em vermelho;
+// ou o desfazer que travou (`desfazendo` com `podeDesfazer`), "O desfazer parou
+// no meio.". Nesse caso o selo "Desfazendo…" sai (não há nada acontecendo) e o
+// botão vira "Continuar", em azul, como o "Tentar de novo": é a ação principal
+// da linha. Sem o Desfazer na conta, a lista travada fica só com o selo.
 // O selo é anunciado pelo leitor de tela quando muda ("Desfazendo…" para
 // "Desfeito"), menos o da lista que está entrando: a porcentagem dela muda a
 // cada consulta. E a linha aceita o foco (`tabindex="-1"`): é para ela que a
 // tela leva o foco depois de desfazer, quando o botão clicado some.
-defineProps({
+const props = defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
   carregando: { type: Boolean, default: false },
@@ -44,8 +51,29 @@ const SELOS = {
 const dia = ms => formatarDia(ms, locale.value);
 const anuncio = lista =>
   lista.situacao === SITUACOES_DA_LISTA.TRAZENDO ? 'off' : 'polite';
+const falhou = lista => lista.situacao === SITUACOES_DA_LISTA.FALHOU;
+const podeDesfazer = lista => props.temDesfazer && Boolean(lista.podeDesfazer);
 const desfazerParou = lista =>
-  lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO && lista.podeDesfazer;
+  lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO && podeDesfazer(lista);
+const temSelo = lista => !falhou(lista) && !desfazerParou(lista);
+const podeTentarDeNovo = lista => falhou(lista) && Boolean(lista.podeTentar);
+const temBotao = lista => podeTentarDeNovo(lista) || podeDesfazer(lista);
+
+// "em 12/11 · por Fulano · 2 pessoas"; sem quem trouxe, "em 12/11 · 2 pessoas".
+const quandoQuemQuantas = lista =>
+  [
+    t('RELACIONAMENTOS_TRAZER.HISTORICO.EM', { data: dia(lista.quando) }),
+    lista.quem
+      ? t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
+      : '',
+    t(
+      'RELACIONAMENTOS_TRAZER.HISTORICO.PESSOAS',
+      { count: lista.total },
+      lista.total
+    ),
+  ]
+    .filter(Boolean)
+    .join(SEPARADOR);
 
 const NOMES = {
   [SITUACOES_DA_LISTA.PRONTO]:
@@ -89,44 +117,36 @@ const NOMES = {
         tabindex="-1"
         class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1 sm:flex-row sm:items-center sm:justify-between focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       >
-        <div class="flex flex-col min-w-0 gap-1">
+        <div class="flex flex-col flex-1 min-w-0 gap-1">
           <p class="m-0 text-base font-medium truncate text-n-slate-12">
             {{ lista.arquivo }}
           </p>
-          <p class="m-0 text-sm text-n-slate-11">
-            {{
-              t('RELACIONAMENTOS_TRAZER.HISTORICO.EM', {
-                data: dia(lista.quando),
-              })
-            }}
-            {{ PONTO }}
-            <template v-if="lista.quem">
-              {{
-                t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
-              }}
-              {{ PONTO }}
-            </template>
-            <span class="tabular-nums">
-              {{
-                t(
-                  'RELACIONAMENTOS_TRAZER.HISTORICO.PESSOAS',
-                  { count: lista.total },
-                  lista.total
-                )
-              }}
-            </span>
+          <p class="m-0 text-sm text-n-slate-11 tabular-nums">
+            {{ quandoQuemQuantas(lista) }}
           </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3 sm:justify-end">
           <p
-            v-if="lista.situacao === SITUACOES_DA_LISTA.FALHOU"
+            v-if="falhou(lista)"
             :data-situacao="lista.situacao"
             class="m-0 text-sm font-medium text-n-ruby-11"
           >
             {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.FALHOU') }}
           </p>
+          <p
+            v-else-if="desfazerParou(lista)"
+            data-relacionamentos="desfazer-parou"
+            :data-situacao="lista.situacao"
+            aria-live="polite"
+            class="m-0 text-sm font-medium text-n-amber-11"
+          >
+            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER_PAROU') }}
+          </p>
+        </div>
+        <div
+          v-if="temSelo(lista) || temBotao(lista)"
+          class="flex flex-wrap items-center gap-3 shrink-0 sm:justify-end"
+        >
           <span
-            v-else
+            v-if="temSelo(lista)"
             :data-situacao="lista.situacao"
             :aria-live="anuncio(lista)"
             class="px-3 py-1 text-sm font-medium rounded-full tabular-nums"
@@ -134,18 +154,9 @@ const NOMES = {
           >
             {{ t(NOMES[lista.situacao], { porcentagem: lista.porcentagem }) }}
           </span>
-          <p
-            v-if="temDesfazer && desfazerParou(lista)"
-            data-relacionamentos="desfazer-parou"
-            class="m-0 text-sm text-n-slate-11"
-          >
-            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER_PAROU') }}
-          </p>
           <Button
-            v-if="
-              lista.situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar
-            "
-            slate
+            v-if="podeTentarDeNovo(lista)"
+            blue
             faded
             class="min-h-11"
             data-relacionamentos="tentar-de-novo"
@@ -160,7 +171,21 @@ const NOMES = {
             @click="emit('tentarDeNovo', lista)"
           />
           <Button
-            v-if="temDesfazer && lista.podeDesfazer"
+            v-if="desfazerParou(lista)"
+            blue
+            faded
+            class="min-h-11"
+            data-relacionamentos="desfazer"
+            :label="t('RELACIONAMENTOS_TRAZER.HISTORICO.CONTINUAR')"
+            :aria-label="
+              t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_CONTINUAR', {
+                arquivo: lista.arquivo,
+              })
+            "
+            @click="emit('desfazer', lista)"
+          />
+          <Button
+            v-else-if="podeDesfazer(lista)"
             slate
             faded
             class="min-h-11"

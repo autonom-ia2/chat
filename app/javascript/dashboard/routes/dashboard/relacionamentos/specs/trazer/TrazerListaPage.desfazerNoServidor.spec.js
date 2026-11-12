@@ -29,7 +29,7 @@ const SEGUNDA_PERGUNTA_MS = 2250;
 const PROMESSA = 'Você pode desfazer quando quiser';
 const NAO_PODE =
   'Esta lista ainda está sendo trazida. Quando terminar, você pode desfazer.';
-const PAROU = 'Parou no meio. Clique em Desfazer para continuar.';
+const PAROU = 'O desfazer parou no meio.';
 const SEM_ACESSO =
   'Você não pode trazer listas nesta conta. Peça a quem administra a conta.';
 
@@ -174,12 +174,18 @@ describe('Desfazer uma lista, com o servidor', () => {
   it('a lista pronta tem o botão, e o diálogo mostra antes o que o servidor diz que sai', async () => {
     const w = await comAPrevia();
     expect(servidor.previaDoDesfazer).toHaveBeenCalledWith(700);
-    const texto = marca(w, 'dialogo-desfazer').text();
-    expect(texto).toContain('Isto tira as 162 pessoas');
-    expect(texto).toContain('18 ficam aqui');
-    expect(texto).toContain(
-      'As 15 que já estavam aqui voltam a ser como eram.'
-    );
+    expect(
+      w
+        .findAll('[data-relacionamentos="desfazer-previa"] [data-linha]')
+        .map(item => [
+          item.attributes('data-linha'),
+          item.findAll('p')[0].text(),
+        ])
+    ).toEqual([
+      ['saem', '162 pessoas saem'],
+      ['ficam', '18 pessoas ficam'],
+      ['voltam', '15 pessoas voltam a ser como eram'],
+    ]);
     expect(servidor.desfazer).not.toHaveBeenCalled();
     w.unmount();
   });
@@ -351,16 +357,23 @@ describe('Desfazer uma lista, com o servidor', () => {
     w.unmount();
   });
 
-  // O desfazer travou no servidor: o botão volta na linha "Desfazendo…", e o
-  // clique pede de novo (o servidor põe na fila outra vez).
-  it('a lista cujo desfazer travou tem o botão de novo, e pedir de novo o tira', async () => {
+  // O desfazer travou no servidor: a linha diz que parou, sem o selo
+  // "Desfazendo…", e tem o botão "Continuar"; o clique pede de novo (o servidor
+  // põe na fila outra vez) e a linha volta a "Desfazendo…".
+  it('a lista cujo desfazer travou diz que parou e tem "Continuar", e pedir de novo a leva a "Desfazendo…"', async () => {
     servidor.listas.mockResolvedValue({
       data: [doServidor('desfazendo', { pode_desfazer: true })],
     });
     const w = await abrir();
     await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(1));
-    expect(situacaoDaLinha(w)).toBe('Desfazendo…');
     expect(marca(w, 'desfazer-parou').text()).toBe(PAROU);
+    // Não está acontecendo nada: a linha não diz "Desfazendo…".
+    expect(situacaoDaLinha(w)).toBe(PAROU);
+    expect(w.get('[data-lista]').text()).not.toContain('Desfazendo…');
+    expect(marca(w, 'desfazer').text()).toBe('Continuar');
+    expect(marca(w, 'desfazer').attributes('aria-label')).toBe(
+      'Continuar a desfazer a lista Clientes de setembro.xlsx'
+    );
     // Travado, não adianta ficar perguntando: quem resolve é o clique.
     await vi.advanceTimersByTimeAsync(20000);
     expect(servidor.listas).toHaveBeenCalledTimes(1);

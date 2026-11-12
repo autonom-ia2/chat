@@ -596,6 +596,11 @@ describe('HistoricoDeListas', () => {
     expect(linha.text()).toContain('em 08/11');
     expect(linha.text()).toContain('por Marina Dornelaz');
     expect(linha.text()).toContain('195 pessoas');
+    // A linha de baixo é uma frase só, com espaço dos dois lados de cada ponto.
+    expect(linha.findAll('p')[1].text()).toBe(
+      'em 08/11 · por Marina Dornelaz · 195 pessoas'
+    );
+    expect(linha.findAll('p')[1].classes()).toContain('tabular-nums');
     expect(linha.get('[data-situacao]').text()).toBe('Pronto');
     expect(linha.text()).not.toContain('até');
     expect(marca(w, 'desfazer').text()).toBe('Desfazer');
@@ -610,6 +615,16 @@ describe('HistoricoDeListas', () => {
     expect(texto).toContain('em 08/11');
     expect(texto).toContain('195 pessoas');
     expect(texto).not.toContain('por');
+    expect(w.findAll('[data-lista="a"] p')[1].text()).toBe(
+      'em 08/11 · 195 pessoas'
+    );
+  });
+
+  it('uma pessoa só: a linha de baixo fica no singular', () => {
+    const w = montar({ listas: [lista('a', 'pronto', { total: 1 })] });
+    expect(w.findAll('[data-lista="a"] p')[1].text()).toBe(
+      'em 08/11 · por Marina Dornelaz · 1 pessoa'
+    );
   });
 
   it('Desfazer emite a lista', async () => {
@@ -725,16 +740,59 @@ describe('DialogoDesfazer', () => {
       global: { stubs: { Dialog: DialogFalso } },
     });
 
+  // Os itens da prévia, na ordem em que aparecem: [chave, quantas, porquê].
+  const itens = w =>
+    w
+      .findAll('[data-relacionamentos="desfazer-previa"] [data-linha]')
+      .map(item => [
+        item.attributes('data-linha'),
+        ...item.findAll('p').map(linha => linha.text()),
+      ]);
+
   it('mostra ANTES o que sai, quem fica aqui e o que volta ao que era, nesta ordem', () => {
     const w = montar({
       previa: { tira: 162, ficam: 18, devolve: 15 },
     });
-    const texto = marca(w, 'dialogo-desfazer').text();
-    expect(texto).toContain(
-      'Isto tira as 162 pessoas que vieram nesta lista e de quem ninguém cuidou ainda. 18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista. As 15 que já estavam aqui voltam a ser como eram.'
-    );
-    expect(texto).toContain(
+    expect(itens(w)).toEqual([
+      [
+        'saem',
+        '162 pessoas saem',
+        'Vieram nesta lista e ninguém cuidou delas ainda.',
+      ],
+      [
+        'ficam',
+        '18 pessoas ficam',
+        'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.',
+      ],
+      [
+        'voltam',
+        '15 pessoas voltam a ser como eram',
+        'Já estavam aqui antes desta lista.',
+      ],
+    ]);
+    // A frase de quem não quer receber mensagens vem depois da lista.
+    const previa = marca(w, 'desfazer-previa').element;
+    expect(previa.nextElementSibling.textContent.trim()).toBe(
       'Quem pediu para não receber mensagens continua assim.'
+    );
+    expect(marca(w, 'desfazer-nada').exists()).toBe(false);
+  });
+
+  it('o número fica em destaque e o porquê embaixo, no tom do diálogo', () => {
+    const w = montar({ previa: { tira: 162, ficam: 18, devolve: 15 } });
+    const previa = marca(w, 'desfazer-previa');
+    expect(previa.element.tagName).toBe('UL');
+    const [quantas, porque] = previa.get('[data-linha="saem"]').findAll('p');
+    expect(quantas.classes()).toEqual(
+      expect.arrayContaining([
+        'text-base',
+        'font-medium',
+        'text-n-slate-12',
+        'tabular-nums',
+      ])
+    );
+    expect(porque.classes()).toEqual(
+      expect.arrayContaining(['text-sm', 'text-n-slate-11'])
     );
   });
 
@@ -746,21 +804,49 @@ describe('DialogoDesfazer', () => {
   });
 
   it('singular e casos sem pessoas em cada grupo', () => {
-    const um = montar({ previa: { tira: 1, ficam: 1, devolve: 0 } });
-    const textoUm = marca(um, 'dialogo-desfazer').text();
-    expect(textoUm).toContain(
-      'Isto tira a pessoa que veio nesta lista e de quem ninguém cuidou ainda.'
-    );
-    expect(textoUm).toContain(
-      '1 fica aqui: alguém já cuidou dela (conversa, card, etiqueta ou campanha) ou ela veio também em outra lista.'
-    );
+    const um = montar({ previa: { tira: 1, ficam: 1, devolve: 1 } });
+    expect(itens(um)).toEqual([
+      ['saem', '1 pessoa sai', 'Veio nesta lista e ninguém cuidou dela ainda.'],
+      [
+        'ficam',
+        '1 pessoa fica',
+        'Alguém já cuidou dela (conversa, card, etiqueta ou campanha) ou ela veio também em outra lista.',
+      ],
+      [
+        'voltam',
+        '1 pessoa volta a ser como era',
+        'Já estava aqui antes desta lista.',
+      ],
+    ]);
+    // O item que é zero some; os outros continuam na ordem.
+    const semFicam = montar({ previa: { tira: 1, ficam: 0, devolve: 15 } });
+    expect(itens(semFicam).map(([chave]) => chave)).toEqual(['saem', 'voltam']);
     const so = montar({ previa: { tira: 0, ficam: 0, devolve: 15 } });
+    expect(itens(so)).toEqual([
+      [
+        'voltam',
+        '15 pessoas voltam a ser como eram',
+        'Já estavam aqui antes desta lista.',
+      ],
+    ]);
     const textoSo = marca(so, 'dialogo-desfazer').text();
-    expect(textoSo).toContain(
-      'As 15 que já estavam aqui voltam a ser como eram.'
+    expect(textoSo).not.toContain('saem');
+    expect(textoSo).not.toContain('ficam');
+  });
+
+  // O desfazer que parou quando já não havia quem tirar: nada de lista vazia.
+  it('com as três contagens em zero, diz que falta só terminar, e o Desfazer continua ligado', () => {
+    const w = montar({ previa: { tira: 0, ficam: 0, devolve: 0 } });
+    expect(marca(w, 'desfazer-previa').exists()).toBe(false);
+    expect(marca(w, 'desfazer-nada').text()).toBe(
+      'Ninguém mais sai. Falta só terminar.'
     );
-    expect(textoSo).not.toContain('Isto tira');
-    expect(textoSo).not.toContain('aqui, porque');
+    expect(marca(w, 'dialogo-desfazer').text()).toContain(
+      'Quem pediu para não receber mensagens continua assim.'
+    );
+    expect(
+      marca(w, 'desfazer-confirmar').attributes('disabled')
+    ).toBeUndefined();
   });
 
   it('enquanto não sabe o que sai: esqueleto e Desfazer desabilitado', () => {

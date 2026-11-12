@@ -28,6 +28,11 @@ const ATE_TRAZER_TUDO_MS = DURACAO_DA_TRAZIDA_MS + 5000;
 const ATE_DESFAZER_TUDO_MS = DURACAO_DO_DESFAZER_MS + 5000;
 const situacoes = w =>
   w.findAll('[data-lista] [data-situacao]').map(s => s.text());
+// As duas linhas de um item da prévia do diálogo: quantas e o porquê.
+const itemDaPrevia = (w, chave) =>
+  w.findAll(`[data-linha="${chave}"] p`).map(linha => linha.text());
+const FICAM_PORQUE =
+  'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.';
 
 const estado = vi.hoisted(() => ({ demo: 'cheio' }));
 
@@ -118,13 +123,12 @@ describe('Desfazer a lista recém-trazida, ali mesmo no Pronto', () => {
       .trigger('click');
     await aparece(w, 'dialogo-desfazer');
     await esperarPor(() =>
-      expect(marca(w, 'dialogo-desfazer').text()).toContain(
-        'Isto tira as 162 pessoas'
-      )
+      expect(itemDaPrevia(w, 'saem')[0]).toBe('162 pessoas saem')
     );
-    expect(marca(w, 'dialogo-desfazer').text()).toContain(
-      '18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
-    );
+    expect(itemDaPrevia(w, 'ficam')).toEqual([
+      '18 pessoas ficam',
+      FICAM_PORQUE,
+    ]);
     w.unmount();
   });
 });
@@ -143,18 +147,25 @@ describe('Desfazer', () => {
   it('mostra antes o que sai, quem fica aqui e o que volta', async () => {
     const w = await abrirDialogoDaLista();
     await esperarPor(() =>
-      expect(marca(w, 'dialogo-desfazer').text()).toContain(
-        'Isto tira as 104 pessoas'
-      )
+      expect(itemDaPrevia(w, 'saem')).toEqual([
+        '104 pessoas saem',
+        'Vieram nesta lista e ninguém cuidou delas ainda.',
+      ])
     );
-    const texto = marca(w, 'dialogo-desfazer').text();
-    expect(texto).toContain(
-      'As 12 que já estavam aqui voltam a ser como eram.'
+    expect(itemDaPrevia(w, 'ficam')).toEqual([
+      '16 pessoas ficam',
+      FICAM_PORQUE,
+    ]);
+    expect(itemDaPrevia(w, 'voltam')).toEqual([
+      '12 pessoas voltam a ser como eram',
+      'Já estavam aqui antes desta lista.',
+    ]);
+    expect(
+      w.findAll('[data-linha]').map(item => item.attributes('data-linha'))
+    ).toEqual(['saem', 'ficam', 'voltam']);
+    expect(marca(w, 'dialogo-desfazer').text()).not.toContain(
+      'As conversas que já aconteceram ficam.'
     );
-    expect(texto).toContain(
-      '16 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
-    );
-    expect(texto).not.toContain('As conversas que já aconteceram ficam.');
     expect(
       w.get('[data-dialog] [data-relacionamentos="titulo-do-dialogo"]').text()
     ).toBe('Desfazer “Clientes de setembro.xlsx”?');
@@ -227,9 +238,7 @@ describe('Desfazer', () => {
     await w.get(`${PARADA} [data-relacionamentos="desfazer"]`).trigger('click');
     await aparece(w, 'dialogo-desfazer');
     await esperarPor(() =>
-      expect(marca(w, 'dialogo-desfazer').text()).toContain(
-        'Isto tira as 63 pessoas'
-      )
+      expect(itemDaPrevia(w, 'saem')[0]).toBe('63 pessoas saem')
     );
     expect(
       w.get('[data-dialog] [data-relacionamentos="titulo-do-dialogo"]').text()

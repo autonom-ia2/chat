@@ -1,8 +1,8 @@
 import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import DialogoDesfazer from '../../components/trazer/DialogoDesfazer.vue';
-// #2894 — o diálogo do Desfazer: o título com o nome da lista e a frase de
-// quem fica.
+// #2894 — o diálogo do Desfazer: o título com o nome da lista e o item de
+// quem fica (a prévia é uma lista: quem sai, quem fica e quem volta).
 // #2896 — a lista que o servidor ainda não deixa desfazer (`naoPode`): o
 // diálogo diz por quê, como alerta e com o foco nele, e fica só o botão de sair.
 withFullI18n('pt_BR');
@@ -44,21 +44,45 @@ describe('diálogo Desfazer', () => {
     );
   });
 
-  it('a frase de quem fica aparece só com ficam > 0, e ninguém sai prometendo conversa', () => {
+  it('o item de quem fica aparece só com ficam > 0, entre quem sai e quem volta', () => {
     const com = montar({
       arquivo: 'a.xlsx',
       previa: { tira: 162, ficam: 18, devolve: 15 },
     });
-    const texto = marca(com, 'dialogo-desfazer').text();
-    expect(texto).toContain(
-      '18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
-    );
+    const chaves = w =>
+      w.findAll('[data-linha]').map(item => item.attributes('data-linha'));
+    expect(chaves(com)).toEqual(['saem', 'ficam', 'voltam']);
+    const ficam = com.get('[data-linha="ficam"]').findAll('p');
+    expect(ficam.map(linha => linha.text())).toEqual([
+      '18 pessoas ficam',
+      'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.',
+    ]);
     const sem = montar({
       arquivo: 'a.xlsx',
       previa: { tira: 5, ficam: 0, devolve: 0 },
     });
-    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain('ficam aqui');
-    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain(' fica aqui');
+    expect(chaves(sem)).toEqual(['saem']);
+    expect(sem.get('[data-linha="saem"]').findAll('p')[0].text()).toBe(
+      '5 pessoas saem'
+    );
+    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain('ficam');
+    expect(marca(sem, 'dialogo-desfazer').text()).not.toContain(' fica');
+  });
+
+  it('com as três contagens em zero, a frase de que falta só terminar no lugar da lista', () => {
+    const w = montar({
+      arquivo: 'a.xlsx',
+      previa: { tira: 0, ficam: 0, devolve: 0 },
+    });
+    expect(marca(w, 'desfazer-previa').exists()).toBe(false);
+    expect(w.findAll('[data-linha]')).toHaveLength(0);
+    expect(marca(w, 'desfazer-nada').text()).toBe(
+      'Ninguém mais sai. Falta só terminar.'
+    );
+    expect(w.findAll('button').map(b => b.text())).toEqual([
+      'Cancelar',
+      'Desfazer',
+    ]);
   });
 
   describe('a lista que ainda não dá para desfazer', () => {
@@ -71,7 +95,9 @@ describe('diálogo Desfazer', () => {
       const alerta = marca(w, 'desfazer-nao-pode');
       expect(alerta.text()).toBe(NAO_PODE);
       expect(alerta.attributes('role')).toBe('alert');
-      expect(marca(w, 'dialogo-desfazer').text()).not.toContain('Isto tira');
+      expect(marca(w, 'desfazer-previa').exists()).toBe(false);
+      expect(marca(w, 'desfazer-nada').exists()).toBe(false);
+      expect(w.findAll('[data-linha]')).toHaveLength(0);
       expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
       // Sobra uma ação só: sair. Nenhum botão desligado.
       const botoes = w.findAll('button');
