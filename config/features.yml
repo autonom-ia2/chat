@@ -1342,10 +1342,10 @@
 # os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); o pedido e
 # os modelos levam ao Guia, e "Montar do zero" fica como segunda opção. Só com o Guia na conta e para quem pode montar.
 # Desligada: a lista de hoje (o herói compartilhado ganhou ajustes de celular e acessibilidade nas duas telas). Sem
-# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: nesta branch, sobre a main
-# de 11/11 (41 flags na ext_2), cai na 42 (bit 1 << 41). A Orquestração reservou a 44 (1 << 43) para ela, depois da F5
-# e da F7 da vitrine #2858 (42 e 43), que ainda não entraram; quem entrar antes fica com o número menor. O bit que vale
-# é o que a Orquestração confirmar na hora do OK; o spec/models/account_spec.rb cita o bit e acompanha essa confirmação.
+# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: é a 42 (2199023255552,
+# 1 << 41), a primeira depois das 41 flags da main de 11/11; ela entrou antes da F5 e da F7 da vitrine #2858, que ficam
+# com a 43 (`agente_ferramentas_prontas_bases`) e a 44 (`agente_ferramentas_prontas_premium`). O
+# spec/models/account_spec.rb cita os três bits.
 - name: automacao_porta
   display_name: Automação › porta única e modelos por segmento
   enabled: false

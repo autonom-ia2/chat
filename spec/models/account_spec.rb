@@ -339,7 +339,7 @@ RSpec.describe Account do
         feature_rag_busca_hibrida: 34_359_738_368, feature_agente_ferramentas_prontas: 68_719_476_736,
         feature_agente_ferramentas_prontas_consultas: 137_438_953_472, feature_agente_ferramentas_prontas_vitrine: 274_877_906_944,
         feature_agente_ferramentas_prontas_construtor: 549_755_813_888, feature_agente_ferramentas_prontas_lote2: 1_099_511_627_776,
-        # #2889: automacao_porta no fim, pela ordem do arquivo (42 nesta base); a Orquestração confirma o bit no OK.
+        # #2889: automacao_porta, 42 (1 << 41); depois dela a F5 (43) e a F7 (44) da vitrine #2858.
         feature_automacao_porta: 2_199_023_255_552,
         feature_agente_ferramentas_prontas_bases: 4_398_046_511_104, feature_agente_ferramentas_prontas_premium: 8_796_093_022_208
       )
