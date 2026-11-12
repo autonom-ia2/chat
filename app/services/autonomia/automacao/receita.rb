@@ -104,11 +104,11 @@ class Autonomia::Automacao::Receita
   def agenda_de_reserva = ::Autonomia::Automacao::AgendaDeReserva.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
 
   def filtros_do_gatilho
-    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
+    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| condicoes.problemas('gatilho', condicao, no_gatilho: true) }
   end
 
   def problemas_do_passo(passo)
-    return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
+    return condicoes.problemas(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
@@ -190,32 +190,12 @@ class Autonomia::Automacao::Receita
     ::Autonomia::Automacao::DestinatariosDoAviso.new(@conta, alvo).problemas(passo['id'], passo['para'])
   end
 
-  # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
-  # `opcoes`: no_gatilho e na_espera, as de problemas_do_caminho.
-  def problemas_da_condicao(id, condicao, **opcoes)
-    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, **opcoes) }
-    lidos.presence || fora_do_fechado(id, condicao)
-  end
-
-  # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
-  def fora_do_fechado(id, condicao)
-    filhas = condicao.values_at('todas', 'alguma').compact.flatten
-    return filhas.flat_map { |filha| fora_do_fechado(id, filha) } unless condicao.key?('campo')
-
-    caminho = condicao.dig('campo', '$valor')
-    fechado = ::Autonomia::Automacao::Valores.fechado(caminho)
-    return [] unless fechado
-    return [texto(:operador_fora, passo: id, caminho: caminho, operadores: fechado['operadores'].join(', '))] unless
-      fechado['operadores'].include?(condicao['op'])
-    return [] if fechado['opcoes'].include?(condicao['valor'])
-
-    [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
-  end
-
   # A régua dos valores (Leitura): a ação, os passos próprios e os textos perguntam aqui.
   def problemas_do_caminho(...) = leitura.problemas(...)
 
   def leitura = @leitura ||= ::Autonomia::Automacao::Receita::Leitura.new(self, contexto)
+
+  def condicoes = @condicoes ||= ::Autonomia::Automacao::Receita::Condicoes.new(leitura)
 
   # O que os validadores recebem (Receita::Contexto).
   def contexto
