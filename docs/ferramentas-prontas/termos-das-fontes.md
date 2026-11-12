@@ -38,18 +38,18 @@ datacenter da Webshare (o Premium e o WhatsApp não mudam). O teto muda junto:
   (`autonomia:prontas:saida:recusas:<dia>`, por saída, host e status, inclusive pelo IP do servidor). Três recusas do
   mesmo host no mesmo IP, sem pausa de 10 minutos, põem o IP de molho por 6 horas (no máximo 5 IPs em 24 horas), e a
   conta ganha outro na consulta seguinte. Com a chave configurada, o 429 e o 403 daquele host não contam para isso;
-- **o proxy que cai** (ligação recusada ou sem resposta no prazo de abertura; túnel recusado, que primeiro relê a
-  credencial e tenta uma vez de novo): a chamada repete pelo IP do servidor, no teto dele, e só depois a queda conta.
-  Três quedas no mesmo IP numa janela fixa de 20 minutos (aberta pela 1ª queda), zeradas a cada sucesso, trocam o IP da
-  conta (no máximo uma troca por conta a cada 24 horas, com o IP antigo de molho por 24 horas, e só se houver IP livre).
-  Se o IP novo também cair no mesmo dia, a conta fica pelo servidor até vencer a troca. Sem IP livre para a troca, a
-  contagem zera. Mais de 30% dos IPs das contas com a flag ligada caindo na mesma janela (ao menos 2) é a Webshare fora:
-  ninguém vai de molho, e todas as contas saem pelo servidor por 20 minutos (alerta `webshare_fora`). Túnel com 502 ou
-  504 e demora com o túnel já aberto são do site: não repetem nem contam contra o IP. Sem Redis, nada conta nem troca, e
-  a conta sai pelo servidor;
+- **o proxy que cai** (ligação recusada, sem resposta no prazo de abertura ou ao pedido do túnel; túnel recusado, que
+  primeiro relê a credencial e tenta uma vez de novo): a chamada repete pelo IP do servidor, no teto dele, e só depois a
+  queda conta. Três quedas no mesmo IP numa janela fixa de 20 minutos (aberta pela 1ª queda), zeradas a cada sucesso,
+  trocam o IP da conta (no máximo uma troca por conta a cada 24 horas, com o IP antigo de molho por 24 horas, e só se
+  houver IP livre). Se o IP novo também cair no mesmo dia, a conta fica pelo servidor até vencer a troca. Sem IP livre
+  para a troca, a contagem zera. Mais de 30% dos IPs das contas com a flag ligada caindo na mesma janela (ao menos 2) é
+  a Webshare fora: ninguém vai de molho, e todas as contas saem pelo servidor por 20 minutos (alerta `webshare_fora`).
+  Túnel com 502 ou 504 e demora com o túnel já aberto são do site: não repetem nem contam contra o IP. Sem Redis, nada
+  conta nem troca, e a conta sai pelo servidor;
 - **a ida à Webshare cabe no prazo da consulta**: a lista dos IPs só é buscada se der tempo antes do prazo da consulta;
   sem tempo, serve a lista vencida há menos de 30 minutos ou a consulta sai pelo servidor, e a troca do IP fica para a
-  próxima queda;
+  próxima queda. Com tempo, a consulta espera a lista nova, e a reconciliação nunca usa a vencida;
 - **sem IP próprio** (Webshare fora, fatia vazia, nenhum IP livre, sem tempo para buscar a lista): a consulta sai pelo
   IP do servidor, como antes, e o cliente recebe a resposta; fica o aviso no log, o alerta `sem_ip_proprio` e o contador
   `autonomia:prontas:saida:sem_ip:<dia>` (decisão do Rodrigo, 12/11/2026).

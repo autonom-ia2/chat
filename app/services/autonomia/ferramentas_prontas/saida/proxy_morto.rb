@@ -20,8 +20,8 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
   MINIMO_GERAL = 2
   UMA_TROCA = 24.hours.to_i
   ERROS_DO_REDIS = Autonomia::FerramentasProntas::TetoDoProvedor::ERROS_DO_REDIS
-  # Com proxy, a causa destes erros é a ligação com o PROXY (a com o site vai dentro do túnel). O prazo de leitura não
-  # entra: com o túnel aberto, é o site que demora.
+  # Com proxy, a causa destes erros é a ligação com o PROXY (a com o site vai dentro do túnel). O prazo de leitura só
+  # entra quando venceu esperando a resposta ao CONNECT (`sem_resposta_ao_connect?`): com o túnel aberto, é o site.
   CAUSAS = [Net::OpenTimeout, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::ETIMEDOUT].freeze
   # O túnel respondido com estes: o proxy não chegou ao site (o site está fora).
   SITE_FORA = [502, 504].freeze
@@ -46,7 +46,19 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
 
   # O erro do `SafeFetch` foi a ligação com o proxy? (O prazo total, que é do corpo, não entra.)
   def ligacao_caiu?(erro)
-    erro.instance_of?(SafeFetch::FetchError) && CAUSAS.any? { |classe| erro.cause.is_a?(classe) }
+    return false unless erro.instance_of?(SafeFetch::FetchError)
+
+    CAUSAS.any? { |classe| erro.cause.is_a?(classe) } || sem_resposta_ao_connect?(erro.cause)
+  end
+
+  # O proxy aceitou a ligação e não respondeu ao CONNECT. O Net::HTTP lê essa resposta dentro de `Net::HTTP#connect`,
+  # sob o `read_timeout`, antes de o túnel existir; o `ReadTimeout` do pedido ao site vem de `transport_request`, sem
+  # passar pelo `connect`. O método é privado do net-http (0.9.1): se ele mudar de nome, o caso volta a contar como
+  # do site (nem repete nem conta), e o spec do túnel com o proxy mudo fica vermelho.
+  def sem_resposta_ao_connect?(causa)
+    return false unless causa.is_a?(Net::ReadTimeout)
+
+    Array(causa.backtrace_locations).any? { |linha| linha.base_label == 'connect' && linha.path.to_s.end_with?('/net/http.rb') }
   end
 
   # O túnel recusado (`Net::HTTPExceptions`) foi o site fora?

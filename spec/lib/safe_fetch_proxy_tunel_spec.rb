@@ -34,6 +34,19 @@ RSpec.describe SafeFetch do
     end
   end
 
+  # O proxy aceita, lê o pedido de túnel e não responde: fica mudo até o cliente desistir (ou o prazo do teste).
+  def proxy_mudo
+    Thread.new do
+      next [] unless servidor.wait_readable(prazo_do_proxy)
+
+      conexao = servidor.accept
+      linhas = ler_pedido(conexao)
+      conexao.wait_readable(prazo_do_proxy)
+      conexao.close
+      linhas
+    end
+  end
+
   def ler_pedido(conexao)
     linhas = []
     while conexao.wait_readable(prazo_do_proxy) && (linha = conexao.gets) && linha != "\r\n"
@@ -50,10 +63,10 @@ RSpec.describe SafeFetch do
     terminou.value
   end
 
-  def buscar(ip, por: proxy)
+  def buscar(ip, por: proxy, leitura: 2)
     described_class.fetch('https://brasilapi.com.br/api/cep/v2/01001000', proxy: por, schemes: %w[https], max_retries: 0,
                                                                           resolver: ->(_nome) { [IPAddr.new(ip)] },
-                                                                          open_timeout: 2, read_timeout: 2) { |resultado| resultado }
+                                                                          open_timeout: 2, read_timeout: leitura) { |resultado| resultado }
   end
 
   it 'abre o tunel para o IP conferido (nunca para o nome), com o nome do site no Host e a credencial so para o proxy' do
@@ -76,6 +89,16 @@ RSpec.describe SafeFetch do
   it 'destino privado e recusado antes: nenhuma conexao com o proxy' do
     expect { buscar('10.0.0.5') }.to raise_error(SafeFetch::UnsafeUrlError)
     expect { servidor.accept_nonblock }.to raise_error(IO::WaitReadable)
+  end
+
+  it 'proxy que aceita e nao responde ao CONNECT: ReadTimeout na abertura do tunel, que conta como queda do proxy' do
+    proxy_ouviu = proxy_mudo
+
+    expect { buscar('93.184.216.40', leitura: 0.3) }.to raise_error(SafeFetch::FetchError) { |erro|
+      expect(erro.cause).to be_a(Net::ReadTimeout)
+      expect(Autonomia::FerramentasProntas::Saida::ProxyMorto.ligacao_caiu?(erro)).to be(true)
+    }
+    expect(ouvido(proxy_ouviu).first).to eq('CONNECT 93.184.216.40:443 HTTP/1.1')
   end
 
   it 'proxy fora do ar: FetchError com a causa da ligacao (o ClienteHttp repete pelo servidor)' do

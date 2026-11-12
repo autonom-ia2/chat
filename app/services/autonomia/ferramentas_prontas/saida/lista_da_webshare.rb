@@ -8,9 +8,10 @@
 #   - O PRAZO DA CONSULTA MANDA (`ate:`): a busca só começa se cabe no que resta dela (`orcamento`: PRAZO por pedido à
 #     Webshare, e o 1º de cada cliente também lista os planos). Ressalva: o PRAZO do cliente vale para a abertura e para
 #     a leitura de cada pedido, então o pior caso de um pedido é o dobro; contar o dobro deixaria quase toda consulta
-#     sem buscar, e a Webshare responde bem abaixo do PRAZO. Sem prazo para
-#     buscar, ou com outra busca em andamento, serve a lista vencida (até VENCIDA_SERVE) e, sem ela, espera a busca dos
-#     outros só até o prazo (`esperar_a_busca`). Sem lista e sem prazo, `Saida::SemTempo`: a consulta sai pelo servidor;
+#     sem buscar, e a Webshare responde bem abaixo do PRAZO. A lista vencida (até VENCIDA_SERVE) só serve à consulta
+#     cujo prazo não cabe a busca, e nunca à reconciliação (`fresca`). Com outra busca em andamento, espera por ela só
+#     até o prazo (`esperar_a_busca`). Sem lista e sem prazo, `Saida::SemTempo`: a consulta sai pelo servidor, e a
+#     reconciliação alerta e tenta na rodada seguinte;
 #   - a Webshare fora (ou a rede, `Saida::ERROS_DE_REDE`): o erro é lembrado por ESPERA, para cada consulta não esperar o
 #     prazo de novo; a consulta sai pelo IP do servidor (`Saida#sem_ip_proprio`).
 module Autonomia::FerramentasProntas::Saida::ListaDaWebshare
@@ -29,8 +30,11 @@ module Autonomia::FerramentasProntas::Saida::ListaDaWebshare
       TRAVA.synchronize do
         guardada = da_memoria(fresca)
         return guardada if guardada
-        return vencida || esperar_a_busca(ate) if @buscando
-        return vencida || raise(Autonomia::FerramentasProntas::Saida::SemTempo) unless cabe?(ate)
+
+        reserva = sem_prazo_para_buscar(fresca, ate)
+        return reserva if reserva
+        return esperar_a_busca(ate) if @buscando
+        raise Autonomia::FerramentasProntas::Saida::SemTempo unless cabe?(ate)
 
         @buscando = true
       end
@@ -52,7 +56,10 @@ module Autonomia::FerramentasProntas::Saida::ListaDaWebshare
       @lista if @lista && recente?(@lida_em, VALIDADE)
     end
 
-    def vencida
+    # A lista vencida, só para a consulta cujo prazo não cabe a busca. A reconciliação (`fresca`) nunca a recebe.
+    def sem_prazo_para_buscar(fresca, ate)
+      return if fresca || cabe?(ate)
+
       @lista if @lista && recente?(@lida_em, VENCIDA_SERVE)
     end
 

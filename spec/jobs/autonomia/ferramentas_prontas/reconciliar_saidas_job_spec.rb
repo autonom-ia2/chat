@@ -64,6 +64,37 @@ RSpec.describe Autonomia::FerramentasProntas::ReconciliarSaidasJob do
     expect(Rails.logger).to have_received(:error).with(a_string_including('webshare_indisponivel'))
   end
 
+  it 'outra busca da lista que nao termina na espera (SemTempo): alerta, nao quebra e nao mexe em nada' do
+    stub_const('Autonomia::FerramentasProntas::Saida::ListaDaWebshare::ESPERA_DA_BUSCA', 0.2)
+    registros.create!(account: account, proxy_address: '203.0.113.11', proxy_port: 6000, webshare_proxy_id: '11', assigned_at: 1.day.ago)
+    comecou = Queue.new
+    pode_responder = Queue.new
+    cliente = webshare_datacenter([])
+    allow(cliente).to receive(:proxies) do
+      comecou << true
+      pode_responder.pop
+      lista(12)
+    end
+    busca = Thread.new { Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies }
+    raise 'a busca nao comecou' if comecou.pop(timeout: 5).nil?
+
+    expect { described_class.perform_now }.not_to raise_error
+    pode_responder << :ok
+    raise 'a busca nao terminou no prazo' if busca.join(5).nil?
+
+    expect(registros.sole.proxy_address).to eq('203.0.113.11')
+    expect(Rails.logger).to have_received(:error).with(a_string_including('webshare_indisponivel', 'SemTempo'))
+  end
+
+  it 'erro de rede que o cliente da Webshare nao traduz: alerta e nao quebra' do
+    cliente = webshare_datacenter([])
+    allow(cliente).to receive(:proxies).and_raise(Errno::ECONNRESET)
+    registros.create!(account: account, proxy_address: '203.0.113.11', proxy_port: 6000, webshare_proxy_id: '11', assigned_at: 1.day.ago)
+
+    expect { described_class.perform_now }.not_to raise_error
+    expect(Rails.logger).to have_received(:error).with(a_string_including('webshare_indisponivel', 'Errno::ECONNRESET'))
+  end
+
   it 'stack sem fatia e sem conta com IP: nao pergunta a Webshare' do
     cliente = webshare_datacenter(lista(11))
 

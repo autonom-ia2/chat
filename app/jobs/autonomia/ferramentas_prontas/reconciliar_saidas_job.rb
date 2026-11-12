@@ -4,7 +4,8 @@
 #     livre, fica para a consulta seguinte, que sai pelo IP do servidor);
 #   - alerta o IP da fatia que sumiu do plano, a fatia sem nenhum IP livre (`fatia_vazia`) e com menos de MINIMO_LIVRES
 #     (`fatia_quase_vazia`). A conferência da fatia contra a reservada roda junto (`Fatia#fora_da_reservada`);
-#   - a Webshare fora: alerta e tenta na próxima rodada.
+#   - a Webshare fora, a rede fora, ou outra busca da lista que não terminou na espera (`Saida::SemTempo`): alerta e
+#     tenta na próxima rodada.
 # Sem fatia nesta stack e sem nenhuma conta com IP: não faz nada (a stack não usa o recurso).
 class Autonomia::FerramentasProntas::ReconciliarSaidasJob < ApplicationJob
   queue_as :low
@@ -17,8 +18,8 @@ class Autonomia::FerramentasProntas::ReconciliarSaidasJob < ApplicationJob
     lista = Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies(fresca: true)
     trocar_os_que_nao_servem(lista)
     avisar_da_fatia(lista)
-  rescue Webshare::Client::Error => e
-    alerta.avisar!('webshare_indisponivel', "lista do plano datacenter indisponível (#{e.message})", nivel: :error)
+  rescue Webshare::Client::Error, Autonomia::FerramentasProntas::Saida::SemTempo, *Autonomia::FerramentasProntas::Saida::ERROS_DE_REDE => e
+    alerta.avisar!('webshare_indisponivel', "lista do plano datacenter indisponível (#{e.class}: #{e.message})", nivel: :error)
   end
 
   private
