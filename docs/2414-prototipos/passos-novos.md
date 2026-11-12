@@ -173,11 +173,23 @@ o aviso "em teste" e o Salvar desligado ficam só para os outros três passos.
   de palavras); a reserva é a do Booker, com a trava do horário (o segundo
   cliente segue por "Se pedir outro horário").
 - **Pesquisa**: a nota de 0 a 10, entendida pela IA; não pergunta de novo antes
-  de `intervalo_dias`. A nota fica no contato (`pesquisas.<automação>` e
-  `pesquisa_satisfacao`) e no card, e a lista mostra a média e quantas pessoas
-  responderam.
+  de `intervalo_dias`. A nota e a data ficam no contato (`pesquisas.<automação>`
+  e `pesquisa_satisfacao`) e no card, e a lista mostra a média e quantas pessoas
+  responderam. O comentário do cliente fica só no registro do passo: o
+  histórico o mostra a quem vê a conversa, e no contato ou no card ele sairia
+  para quem não vê.
 - **Janela de 24 h fechada** (decisão de 12/11): como o passo mensagem, o modelo
-  no lugar, ou nada e a automação para nesta conversa.
+  no lugar, ou nada e a automação para nesta conversa. Na reunião e na pesquisa,
+  a pergunta de verdade (os horários, as notas) vai quando o cliente responder
+  ao modelo, e só com a janela daquela conversa aberta: a resposta dele em outra
+  conversa não manda nada, não empurra o prazo e nunca dispara um segundo
+  modelo. Na pesquisa, só a pergunta que saiu conta para o intervalo.
+- **Ensaio**: confere na mesma ordem do motor (na reunião, a pessoa, a página e
+  os horários antes do canal; na pesquisa, a recente antes do canal).
+- **Índices** (migration `20261112091000`, aditiva e `CONCURRENTLY`): um
+  parcial nos registros de espera, para a tela de pedidos não ler os outros
+  registros da conta, e um parcial nos contatos que já responderam pesquisa,
+  para o resumo da lista não varrer todos os contatos.
 
 ## O que fica para a implementação
 

@@ -56,14 +56,32 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
 
   def evento(nome, **dados) = Events::Base.new(nome, Time.zone.now, dados)
 
-  def cliente_escreve(texto)
-    mensagem = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: texto)
+  def cliente_escreve(texto, onde = conversa)
+    mensagem = create(:message, account: account, conversation: onde, inbox: onde.inbox, message_type: :incoming, content: texto)
     perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
   end
 
+  # A janela de 24 h fechada com o modelo aprovado (decisão de 12/11): o WhatsApp oficial, com o modelo na caixa e a
+  # última mensagem do cliente de 30 h atrás. Nada chega à Graph: o envio de verdade (SendReplyJob) não roda aqui.
+  def modelo = { 'nome' => 'retomar', 'idioma' => 'pt_BR', 'variaveis' => [] }
+
+  def texto_do_modelo = 'Podemos falar sobre o seu atendimento?'
+
+  def conversa_no_whatsapp(contato)
+    canal = create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false)
+    canal.update!(message_templates: [{ 'name' => 'retomar', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+                                        'components' => [{ 'type' => 'BODY', 'text' => texto_do_modelo }] }])
+    caixa = create(:contact_inbox, inbox: canal.inbox, contact: contato, source_id: '5511937016094')
+    create(:conversation, account: account, inbox: canal.inbox, contact: contato, contact_inbox: caixa, status: :open).tap do |aberta|
+      create(:message, account: account, conversation: aberta, inbox: aberta.inbox, message_type: :incoming, content: 'oi', created_at: 30.hours.ago)
+    end
+  end
+
+  def mandadas(onde = conversa) = onde.messages.outgoing.where(private: false).order(:id)
+
   def registros(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo)
 
-  def pedido(execucao) = Autonomia::Automacao::Registro.find_by(execucao: execucao, motivo: described_class::ESPERANDO)
+  def pedido(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao, motivo: described_class::ESPERANDO).order(:id).last
 
   describe 'Pedir aprovação (#2931)' do
     it 'pede a quem foi escolhido, avisa no sino e, aprovado, segue pelo galho "aprovado"', :aggregate_failures do
@@ -138,6 +156,63 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
       lida = ana.reload.additional_attributes
       expect(lida['pesquisa_satisfacao']).to include('nota' => 9, 'automacao_id' => execucao.automacao_id)
       expect(lida.dig('pesquisas', execucao.automacao_id.to_s, 'nota')).to eq(9)
+    end
+
+    # O comentário é o que o cliente escreveu: o histórico só o mostra a quem vê a conversa. No contato e no card ele
+    # sairia para quem vê o contato ou o card sem ver a conversa.
+    it 'o comentário fica só no registro do passo, nunca no contato nem no card', :aggregate_failures do
+      ia_responde({ 'nota' => 4, 'comentario' => 'A atendente foi grossa' })
+      execucao = rodar([pesquisa])
+
+      cliente_escreve('nota 4, a atendente foi grossa')
+
+      lida = ana.reload.additional_attributes
+      expect(lida['pesquisa_satisfacao']).to include('nota' => 4)
+      expect(lida['pesquisa_satisfacao']).not_to have_key('comentario')
+      expect(lida.dig('pesquisas', execucao.automacao_id.to_s)).not_to have_key('comentario')
+      expect(lida.to_json).not_to include('grossa')
+      respondida = Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'nota', resultado: 'ok').last
+      expect(respondida.dados).to include('nota' => 4, 'comentario' => 'A atendente foi grossa', 'ramo' => 'nota_baixa')
+    end
+
+    it 'contato que pediu para não receber: pula e segue, sem mandar nem marcar como perguntado', :aggregate_failures do
+      ana.update!(opted_out_at: 1.day.ago)
+
+      execucao = rodar([pesquisa, depois('seguinte')])
+
+      expect(registros(execucao)).to include(%w[nota pulado contato_nao_recebe], ['seguinte', 'ok', nil])
+      expect(mandadas).to be_empty
+      expect(ana.reload.additional_attributes).not_to have_key('pesquisa_perguntada_em')
+    end
+
+    context 'with a janela de 24 h fechada e o modelo aprovado' do
+      let(:conversa) { conversa_no_whatsapp(ana) }
+
+      # Antes de salvar: a Receita confere que o modelo existe numa caixa oficial da conta.
+      before { conversa }
+
+      it 'manda o modelo; a primeira resposta abre a janela e a pergunta sai; só ela conta como pesquisa feita', :aggregate_failures do
+        ia_responde({ 'nota' => 8, 'comentario' => '' })
+        execucao = rodar([pesquisa('modelo' => modelo)])
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo])
+        expect(pedido(execucao).dados).to include('fase' => 'modelo')
+        expect(ana.reload.additional_attributes).not_to have_key('pesquisa_perguntada_em')
+
+        cliente_escreve('claro')
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo, 'De 0 a 10, que nota você dá?'])
+        expect(respostas_da_ia).to be_empty
+        expect(execucao.reload.estado).to eq('esperando')
+        expect(pedido(execucao).dados).not_to have_key('fase')
+        expect(ana.reload.additional_attributes).to have_key('pesquisa_perguntada_em')
+
+        cliente_escreve('8')
+
+        expect(registros(execucao.reload).map(&:first)).to include('media')
+        expect(respostas_da_ia.size).to eq(1)
+        expect(respostas_da_ia.last['input'].to_json).not_to include('claro')
+      end
     end
 
     it 'resposta sem nota clara: espera a próxima, até o prazo; vencido, "se o cliente não responder"', :aggregate_failures do
@@ -248,6 +323,60 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
       execucao = nil
       expect { execucao = rodar([reuniao]) }.not_to change(Message.outgoing, :count)
       expect(registros(execucao)).to include(%w[reuniao pulado sem_horario], ['outro', 'ok', nil])
+    end
+
+    it 'contato que pediu para não receber: pula e segue, sem convite nem reunião', :aggregate_failures do
+      ana.update!(opted_out_at: 1.day.ago)
+
+      execucao = nil
+      expect { execucao = rodar([reuniao, depois('seguinte')]) }.not_to change(Crm::Meeting, :count)
+
+      expect(registros(execucao)).to include(%w[reuniao pulado contato_nao_recebe], ['seguinte', 'ok', nil])
+      expect(mandadas).to be_empty
+    end
+
+    context 'with a janela de 24 h fechada e o modelo aprovado' do
+      let(:conversa) { conversa_no_whatsapp(ana) }
+      let(:com_modelo) { reuniao.merge('modelo' => modelo) }
+
+      it 'manda o modelo; a resposta nesta conversa abre a janela, os horários saem e a espera recomeça', :aggregate_failures do
+        execucao = rodar([com_modelo])
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo])
+        expect(pedido(execucao).dados).to include('fase' => 'modelo')
+        expect(pedido(execucao).dados).not_to have_key('horarios')
+
+        cliente_escreve('pode falar')
+
+        expect(mandadas.size).to eq(2)
+        convite = mandadas.last
+        expect(convite.content).to eq('Posso te ligar em um destes horários?')
+        expect(convite.content_type).to eq('input_select')
+        expect(pedido(execucao).dados['horarios']).to eq(oferecidos.map(&:iso8601))
+        expect(pedido(execucao).dados).not_to have_key('fase')
+        expect(execucao.reload.estado).to eq('esperando')
+        expect(respostas_da_ia).to be_empty
+      end
+
+      # A Escuta acorda a execução com a mensagem do cliente em qualquer conversa dele. A janela desta continua fechada:
+      # nada sai (nem um segundo modelo pago da Meta) e o prazo não anda.
+      it 'a mensagem do cliente em outra conversa não manda outro modelo nem empurra o prazo', :aggregate_failures do
+        execucao = rodar([com_modelo])
+        prazo = execucao.due_at
+        outra = create(:conversation, account: account, contact: ana, status: :open)
+
+        travel(1.hour) { cliente_escreve('oi, sou eu pelo site', outra) }
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo])
+        expect(mandadas(outra)).to be_empty
+        expect(execucao.reload.estado).to eq('esperando')
+        expect(execucao.due_at).to eq(prazo)
+        expect(pedido(execucao).dados).to include('fase' => 'modelo')
+
+        cliente_escreve('pode falar')
+
+        expect(mandadas.last.content).to eq('Posso te ligar em um destes horários?')
+      end
     end
   end
 end

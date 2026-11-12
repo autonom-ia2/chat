@@ -20,23 +20,32 @@ module Autonomia::Automacao::PedidosDeAprovacao
 
   module_function
 
-  def ve_o_alvo?(pessoa, alvo)
-    account_user = membro(pessoa, alvo)
-    return false unless account_user
+  # `account_user`: a pessoa na conta, já lida (a lista confere vários pedidos da mesma pessoa com uma leitura só).
+  def ve_o_alvo?(pessoa, alvo, account_user = membro(pessoa, alvo))
+    politica = politica_de(alvo)
+    return false unless politica && da_mesma_conta?(pessoa, alvo, account_user)
 
-    contexto = { user: pessoa, account: alvo.account, account_user: account_user }
+    politica.new({ user: pessoa, account: alvo.account, account_user: account_user }, alvo).show?
+  end
+
+  def da_mesma_conta?(pessoa, alvo, account_user)
+    pessoa.present? && account_user&.user_id == pessoa.id && alvo.account_id == account_user.account_id
+  end
+
+  def politica_de(alvo)
     case alvo
-    when ::Crm::Card then ::Crm::CardPolicy.new(contexto, alvo).show?
-    when ::Conversation then ConversationPolicy.new(contexto, alvo).show?
-    when ::Contact then ContactPolicy.new(contexto, alvo).show?
-    else false
+    when ::Crm::Card then ::Crm::CardPolicy
+    when ::Conversation then ConversationPolicy
+    when ::Contact then ContactPolicy
     end
   end
 
   # A pessoa na conta do registro (nil fora dela).
   def membro(pessoa, alvo) = (alvo.account.account_users.find_by(user_id: pessoa.id) if pessoa && alvo&.account)
 
-  # Os pedidos de `pessoa` nesta conta, sem filtrar o alcance (quem chama confere com ve_o_alvo?).
+  # Os pedidos de `pessoa` nesta conta, sem filtrar o alcance (quem chama confere com ve_o_alvo?). O índice parcial
+  # idx_autonomia_automacao_registros_esperando (conta e data, só os registros de espera) responde a consulta sem ler os
+  # outros registros da conta.
   def da_pessoa(conta, pessoa)
     ::Autonomia::Automacao::Registro.where(account_id: conta.id, motivo: ESPERANDO)
                                     .where("dados -> 'para' @> ?::jsonb", [pessoa.id].to_json)
@@ -45,9 +54,12 @@ module Autonomia::Automacao::PedidosDeAprovacao
 
   # Os abertos que a pessoa ainda pode responder, do prazo mais perto ao mais longe.
   def abertos(conta, pessoa)
+    account_user = conta.account_users.find_by(user_id: pessoa.id)
+    return [] unless account_user
+
     escopo = da_pessoa(conta, pessoa).where(SEM_DECISAO).where(EXECUCAO_ABERTA)
     escopo.order(created_at: :desc).limit(LIMITE).to_a
-          .select { |pedido| aberto?(pedido) && ve_o_alvo?(pessoa, pedido.execucao.alvo) }
+          .select { |pedido| aberto?(pedido) && ve_o_alvo?(pessoa, pedido.execucao.alvo, account_user) }
           .sort_by { |pedido| pedido.dados['ate'].to_s }
   end
 

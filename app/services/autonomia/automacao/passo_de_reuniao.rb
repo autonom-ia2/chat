@@ -4,7 +4,7 @@
 # - Pergunta: o convite com os horários em botões, ou numerados quando o canal não tem botão (MensagemComOpcoes), com
 #   todas as regras do passo "mensagem": quem não recebe pula; a janela de 24 h fechada manda o modelo aprovado no
 #   lugar, ou nada e a execução para nesta conversa (decisão do Rodrigo, 12/11). Com o modelo, os horários vão quando o
-#   cliente responder a ele: aí a janela está aberta.
+#   cliente responder a ele, e só com a janela desta conversa aberta; nunca sai um segundo modelo (DepoisDoModelo).
 # - Sem página de agendamento para a pessoa, pula com o porquê (o do link da agenda). Sem nenhum horário livre na janela
 #   da página, segue pelo galho "Se pedir outro horário" (`sem_horario`).
 # - Resposta: a IA de decidir lê o que o cliente escreveu (o botão chega como o texto dele) e escolhe o horário 1, 2 ou
@@ -14,6 +14,7 @@
 #   (`horario_ocupado`), que avisa o responsável.
 class Autonomia::Automacao::PassoDeReuniao
   include ::Autonomia::Automacao::NaConversa
+  include ::Autonomia::Automacao::DepoisDoModelo
 
   Falha = ::Autonomia::Automacao::PassoDeIa::Falha
   OUTRO = 'outro_horario'.freeze
@@ -42,7 +43,7 @@ class Autonomia::Automacao::PassoDeReuniao
   def resposta(pedido, marco:, ate:)
     leitor = ::Autonomia::Automacao::RespostaDoCliente.new(conta: conta, contato: contexto.contato, quem: quem_ligou, marco: marco, ate: ate)
     return Resultado.new(tipo: :esperar, dados: {}) unless leitor.novas?
-    return depois_do_modelo(pedido) if pedido.dados['fase'] == 'modelo'
+    return depois_do_modelo(pedido, leitor) if esperando_o_modelo?(pedido)
 
     entender(pedido, leitor)
   rescue Falha => e
@@ -61,6 +62,7 @@ class Autonomia::Automacao::PassoDeReuniao
 
   def quem_ligou = @execucao.automacao.ligada_por
 
+  # Depois do modelo, o convite sai sem o modelo da receita: o segundo modelo nunca sai.
   def oferecer(pessoa, depois_do_modelo: false)
     agenda = ::Autonomia::Automacao::AgendaDaReuniao.new(conta, pessoa, @passo['duracao'])
     return Resultado.new(tipo: :pulado, motivo: 'reuniao_sem_pagina', dados: { 'por' => agenda.por }) unless agenda.pagina
@@ -70,7 +72,7 @@ class Autonomia::Automacao::PassoDeReuniao
 
     rotulos = horarios.map { |inicio| agenda.rotulo(inicio) }
     mandado = ::Autonomia::Automacao::MensagemComOpcoes.new(
-      execucao: @execucao, passo: @passo, alvo: @alvo, texto: @passo['convite'], opcoes: rotulos
+      execucao: @execucao, passo: depois_do_modelo ? passo_sem_modelo : @passo, alvo: @alvo, texto: @passo['convite'], opcoes: rotulos
     ).executar
     return mandado unless mandado.tipo == :ok
 
@@ -81,16 +83,21 @@ class Autonomia::Automacao::PassoDeReuniao
   # depois, e são lidos de novo naquela hora.
   def oferta(mandado, horarios, rotulos, pessoa)
     marco = { 'marco' => ::Autonomia::Automacao::Resposta.marco(contexto.contato, quem_ligou), 'pessoa' => pessoa.id }
-    return mandado.dados.merge(marco, 'fase' => 'modelo') if mandado.dados['modelo']
+    return mandado.dados.merge(marco, fase(mandado)) if mandado.dados['modelo']
 
     mandado.dados.merge(marco, 'horarios' => horarios.map(&:iso8601), 'opcoes' => rotulos)
   end
 
-  def depois_do_modelo(pedido)
+  # A resposta ao modelo. A mensagem do cliente em outra conversa dele não abre a janela desta: nada sai, e a espera
+  # continua com o mesmo prazo, a partir de um marco novo. Aberta, os horários vão agora, e a espera recomeça (:de_novo).
+  def depois_do_modelo(pedido, leitor)
+    return esperar_a_janela(leitor) if janela_ainda_fechada?
+
     pessoa = conta.users.find_by(id: pedido.dados['pessoa'])
     return Resultado.new(tipo: :pulado, motivo: 'reuniao_sem_responsavel', dados: { 'ramo' => NAO_RESPONDEU }) unless pessoa
 
     feito = oferecer(pessoa, depois_do_modelo: true)
+    return esperar_a_janela(leitor) if janela_fechou?(feito)
     return feito if %i[de_novo laco sem_acesso].include?(feito.tipo)
 
     Resultado.new(tipo: :pulado, motivo: feito.motivo, dados: feito.dados.merge('ramo' => feito.dados['ramo'] || NAO_RESPONDEU))

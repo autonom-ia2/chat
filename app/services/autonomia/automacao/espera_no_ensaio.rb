@@ -4,9 +4,11 @@
 #
 # - Aprovação: a quem o pedido iria agora (as pessoas que alcançam o registro), ou que ninguém pode aprovar e o caminho
 #   "Se ninguém responder a tempo" rodaria na hora.
-# - Reunião: o canal como a mensagem (a janela de 24 h fechada sem modelo para a execução), a página da pessoa e os 3
-#   horários livres que ofereceria agora, como o cliente leria.
-# - Pesquisa: o canal como a mensagem, e a pesquisa recente que pularia.
+# - Reunião: a pessoa, a página dela e os 3 horários livres que ofereceria agora, como o cliente leria; só depois o canal
+#   como a mensagem (a janela de 24 h fechada sem modelo para a execução).
+# - Pesquisa: a pesquisa recente que pularia; só depois o canal como a mensagem.
+# A ordem é a do motor (PassoDeReuniao, PassoDePesquisa): o que ele confere antes de mandar, o ensaio confere antes do
+# canal. Sem horário e com a janela fechada, por exemplo, os dois seguem por "Se pedir outro horário".
 # Cada um abre os caminhos dele, sem escolher (como o "decidir"): a reunião marcada segue para o resto da receita.
 class Autonomia::Automacao::EsperaNoEnsaio
   Esperam = ::Autonomia::Automacao::PassosQueEsperam
@@ -28,8 +30,8 @@ class Autonomia::Automacao::EsperaNoEnsaio
 
     case passo['tipo']
     when Esperam::APROVACAO then aprovacao(passo)
-    when Esperam::REUNIAO then do_canal(passo, valores) || reuniao(passo)
-    else do_canal(passo, valores) || pesquisa(passo)
+    when Esperam::REUNIAO then reuniao(passo, valores)
+    else pesquisa(passo, valores)
     end
   end
 
@@ -42,7 +44,7 @@ class Autonomia::Automacao::EsperaNoEnsaio
     [no(passo, passo['tipo'], { para: para.map(&:name) }, ramos(passo)), nil]
   end
 
-  def reuniao(passo)
+  def reuniao(passo, valores)
     pessoa = responsavel(passo)
     return seguir(passo, no(passo, 'reuniao_sem_responsavel')) unless pessoa
 
@@ -52,6 +54,10 @@ class Autonomia::Automacao::EsperaNoEnsaio
     horarios = agenda.horarios.map { |inicio| agenda.rotulo(inicio) }
     return [no(passo, 'sem_horario', {}, [ramo(passo, 'outro_horario')]), nil] if horarios.empty?
 
+    do_canal(passo, valores) || oferta(passo, pessoa, horarios)
+  end
+
+  def oferta(passo, pessoa, horarios)
     dados = { quem: pessoa.name, horarios: horarios, convite: passo['convite'], **de_mensagem(passo, horarios.size) }
     [no(passo, passo['tipo'], dados, ramos_da_reuniao(passo)), nil]
   end
@@ -59,9 +65,13 @@ class Autonomia::Automacao::EsperaNoEnsaio
   # A pessoa com quem a reunião seria marcada, pela mesma escolha do motor (QuemDoPasso).
   def responsavel(passo) = ::Autonomia::Automacao::QuemDoPasso.pessoas(@conta, passo['com'], ::Autonomia::Automacao::Contexto.de(@conversa)).first
 
-  def pesquisa(passo)
+  def pesquisa(passo, valores)
     return seguir(passo, no(passo, 'pesquisa_recente')) if ::Autonomia::Automacao::PassoDePesquisa.recente?(@conversa.contact, passo)
 
+    do_canal(passo, valores) || pergunta(passo)
+  end
+
+  def pergunta(passo)
     dados = { pergunta: passo['pergunta'], espera: passo['espera'], **de_mensagem(passo, ::Autonomia::Automacao::PassoDePesquisa::NOTAS.size) }
     [no(passo, passo['tipo'], dados, ramos(passo)), nil]
   end

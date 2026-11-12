@@ -58,6 +58,6 @@ class Autonomia::Automacao::PedidoParaTela
 
   def conversa_id
     conversa = @contexto.conversa
-    conversa.display_id if conversa && ::Autonomia::Automacao::PedidosDeAprovacao.ve_o_alvo?(@account_user.user, conversa)
+    conversa.display_id if conversa && ::Autonomia::Automacao::PedidosDeAprovacao.ve_o_alvo?(@account_user.user, conversa, @account_user)
   end
 end

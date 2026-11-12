@@ -54,6 +54,32 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Aprovacoes', :automacao_motor, typ
     expect(response).to have_http_status(:not_found)
   end
 
+  # A mesma pessoa nas duas contas, e no `para` do pedido da outra: pela URL desta conta, o pedido de lá não existe.
+  it 'o pedido de outra conta não aparece, não abre e não é respondido por esta (404)', :aggregate_failures do
+    outra_conta = create(:account, locale: 'pt_BR')
+    ligar_motor(outra_conta)
+    outra_conta.enable_features!('automacao_passos_novos')
+    create(:account_user, account: outra_conta, user: atendente, role: :agent)
+    caixa_de_la = create(:inbox, account: outra_conta)
+    create(:inbox_member, user: atendente, inbox: caixa_de_la)
+    conversa_de_la = create(:conversation, account: outra_conta, inbox: caixa_de_la, contact: create(:contact, account: outra_conta), status: :open)
+    dono_de_la = create(:user, account: outra_conta, role: :administrator)
+    definicao = automacao_ligada(outra_conta, dono_de_la, [passo])
+    execucao = perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa_de_la) }
+    de_la = Autonomia::Automacao::Registro.find_by!(execucao: execucao, motivo: 'esperando_resposta')
+    expect(de_la.dados['para']).to eq([atendente.id])
+
+    get base, headers: atendente.create_new_auth_token, as: :json
+    expect(response.parsed_body['pedidos']).to be_empty
+
+    get "#{base}/#{de_la.id}", headers: atendente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    post "#{base}/#{de_la.id}/responder", params: { aprovado: true }, headers: atendente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    expect(de_la.reload.dados).not_to have_key('decisao')
+  end
+
   it 'quem perdeu o acesso à conversa deixa de ver o pedido' do
     pedido = pedir
     InboxMember.where(user: atendente, inbox: inbox).destroy_all

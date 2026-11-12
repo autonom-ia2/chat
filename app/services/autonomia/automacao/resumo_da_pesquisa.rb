@@ -3,7 +3,8 @@
 # cada pessoa por automação, então cada pessoa conta uma vez. Só números: nenhum nome, nenhum comentário.
 #
 # Uma consulta só para as automações da página que têm o passo, nos contatos da conta que já responderam alguma
-# pesquisa. Sem pesquisa na página, nenhuma consulta.
+# pesquisa: o índice parcial idx_contacts_com_pesquisa guarda só esses, com o mesmo filtro da consulta (o `jsonb_typeof`
+# abaixo; mudou um, mude o outro). Sem pesquisa na página, nenhuma consulta.
 module Autonomia::Automacao::ResumoDaPesquisa
   PESQUISAS = ::Autonomia::Automacao::PassoDePesquisa::POR_AUTOMACAO
   TIPO = ::Autonomia::Automacao::PassosQueEsperam::PESQUISA

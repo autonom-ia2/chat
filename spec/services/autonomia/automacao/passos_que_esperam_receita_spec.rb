@@ -114,5 +114,49 @@ RSpec.describe Autonomia::Automacao::PassosQueEsperam, :automacao_motor do
       lido = passos_do_ensaio(receita(pesquisa, esperar_passo('seguinte')))
       expect(lido.pluck(:id, :faria)).to eq([%w[nota pesquisa_recente], %w[seguinte esperar]])
     end
+
+    # O ensaio responde o mesmo que o motor: o que o motor confere antes de mandar (a pesquisa recente; a pessoa, a página
+    # e os horários da reunião), o ensaio confere antes do canal. A janela fechada: a caixa API com o limite de 24 h do
+    # dono vencido, sem modelo.
+    context 'with a janela da conversa fechada' do
+      let(:fechada) do
+        canal = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '24' })
+        create(:conversation, account: account, inbox: canal.inbox, contact: contato, status: :resolved).tap do |conversa|
+          create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming, content: 'oi',
+                           created_at: 30.hours.ago)
+        end
+      end
+
+      def reuniao
+        { 'id' => 'reuniao', 'tipo' => 'marcar_reuniao', 'com' => { 'de' => 'pessoa', 'id' => gerente.id }, 'duracao' => 30,
+          'convite' => 'Posso te ligar?', 'espera' => { 'valor' => 1, 'unidade' => 'dias' }, 'outro_horario' => [esperar_passo('outro')] }
+      end
+
+      def ensaio_na_fechada(receita)
+        Autonomia::Automacao::Ensaio.new(receita: receita, conta: account, usuario: admin, conversa_id: fechada.display_id)
+                                    .resultado[:conversas].first[:passos]
+      end
+
+      it 'sem pesquisa recente, para pela janela, como a mensagem' do
+        expect(ensaio_na_fechada(receita(pesquisa)).first).to include(id: 'nota', faria: 'pararia')
+      end
+
+      it 'a pesquisa recente pula e segue antes de olhar a janela, como no motor' do
+        contato.update!(additional_attributes: { 'pesquisa_perguntada_em' => 1.day.ago.iso8601 })
+
+        lido = ensaio_na_fechada(receita(pesquisa, esperar_passo('seguinte')))
+        expect(lido.pluck(:id, :faria)).to eq([%w[nota pesquisa_recente], %w[seguinte esperar]])
+      end
+
+      it 'a reunião sem horário livre segue por "Se pedir outro horário" antes de olhar a janela, como no motor', :aggregate_failures do
+        agenda = instance_double(Autonomia::Automacao::AgendaDaReuniao, pagina: true, horarios: [])
+        allow(Autonomia::Automacao::AgendaDaReuniao).to receive(:new).and_return(agenda)
+
+        no = ensaio_na_fechada(receita(reuniao)).first
+        expect(no).to include(id: 'reuniao', faria: 'sem_horario')
+        expect(no[:ramos].pluck(:chave)).to eq(%w[outro_horario])
+        expect(no[:ramos].first[:passos].first).to include(id: 'outro')
+      end
+    end
   end
 end
