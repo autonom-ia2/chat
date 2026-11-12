@@ -222,6 +222,16 @@ const opcoesDoAtributo = atributo =>
       <legend class="mb-1.5 text-sm font-medium text-n-slate-12">
         {{ rotulo }}
       </legend>
+      <!-- #2744: sem nenhum campo do tipo, o título não fica sozinho. -->
+      <p
+        v-if="!atributos.length"
+        data-sem-atributos
+        class="mb-0 text-sm text-n-slate-11"
+      >
+        {{
+          $t(`AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.${peca.toUpperCase()}`)
+        }}
+      </p>
       <template v-for="atributo in atributos" :key="atributo.attribute_key">
         <LivreTexto
           v-if="atributoDeTexto(atributo)"

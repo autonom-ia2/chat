@@ -125,6 +125,37 @@ describe('LivreCampo com valor calculado', () => {
   });
 });
 
+// #2744: sem nenhum campo personalizado do tipo, o título não fica sozinho.
+describe('LivreCampo de campos personalizados', () => {
+  it('sem nenhum campo, diz que a conta não tem e onde se cria', () => {
+    const wrapper = montar(
+      { nome: 'custom_attributes', peca: 'atributos_do_contato' },
+      null,
+      []
+    );
+
+    expect(wrapper.find('[data-sem-atributos]').text()).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.ATRIBUTOS_DO_CONTATO'
+    );
+  });
+
+  it('com campo, não mostra o aviso', () => {
+    const wrapper = montar(
+      { nome: 'custom_attributes', peca: 'atributos_da_empresa' },
+      null,
+      [
+        {
+          attribute_key: 'setor',
+          attribute_display_name: 'Setor',
+          attribute_display_type: 'number',
+        },
+      ]
+    );
+
+    expect(wrapper.find('[data-sem-atributos]').exists()).toBe(false);
+  });
+});
+
 describe('fraseDoCalculado', () => {
   it('diz de onde vem e quanto soma, com o plural da unidade', () => {
     expect(

@@ -791,10 +791,10 @@ describe('LivreAlterar', () => {
       expect(assunto.props('umaLinha')).toBe(true);
       expect(texto.props('umaLinha')).toBe(false);
       expect(assunto.props('rotuloDoDado')).toBe(
-        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(ASSUNTO)'
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.OUTRO(ASSUNTO)'
       );
       expect(texto.props('rotuloDoDado')).toBe(
-        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(TEXTO)'
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.OUTRO(TEXTO)'
       );
     });
 
