@@ -39,18 +39,14 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     o_modelo_consulta_duas_vezes
   end
 
-  def item(codigo, descricao)
-    { codigo: codigo, descricao: descricao, data_inicio: '2022-04-01', data_fim: '9999-12-31' }
-  end
-
+  # As respostas reais da BrasilAPI (#2917): a palavra traz o grupo 0901.2; o grupo é buscado pela posição dele
+  # ("search=0901"), que traz os códigos da nota.
   def a_fonte_responde
-    stub_request(:get, ncm_api).with(query: { 'search' => 'café torrado' })
-                               .to_return(status: 200, body: [item('0901.2', '- Café torrado:')].to_json,
-                                          headers: { 'Content-Type' => 'application/json' })
-    stub_request(:get, ncm_api).with(query: { 'search' => '0901.2' })
-                               .to_return(status: 200, body: [item('0901.21.00', '-- Não descafeinado'),
-                                                              item('0901.22.00', '-- Descafeinado')].to_json,
-                                          headers: { 'Content-Type' => 'application/json' })
+    { 'café torrado' => 'ncm_busca_cafe_torrado.json', '0901' => 'ncm_busca_0901.json' }.each do |busca, arquivo|
+      stub_request(:get, ncm_api).with(query: { 'search' => busca })
+                                 .to_return(status: 200, body: Rails.root.join('spec/fixtures/ferramentas_prontas', arquivo).read,
+                                            headers: { 'Content-Type' => 'application/json' })
+    end
   end
 
   def chamada(call_id, busca)
@@ -82,7 +78,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       expect(result.status).to eq(:replied)
       expect(a_request(:get, ncm_api).with(query: { 'search' => 'café torrado' })).to have_been_made.once
-      expect(a_request(:get, ncm_api).with(query: { 'search' => '0901.2' })).to have_been_made.once
+      expect(a_request(:get, ncm_api).with(query: { 'search' => '0901' })).to have_been_made.once
       expect(corpos.size).to eq(3)
       # As três idas levam a pronta: a terceira ainda podia consultar, e respondeu.
       expect(corpos.map { |corpo| corpo['tools'].to_a.pluck('name').include?('pronta_ncm') }).to eq([true, true, true])
