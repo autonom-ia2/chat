@@ -307,12 +307,32 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       ensure_contact_fields_attachable!(permitted_params[:custom_attributes], @card.custom_attributes)
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
     end
+    target_stage = upsert_target_stage(attributes)
+    attributes = attributes.except('pipeline_id', 'stage_id') if target_stage
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
+    upsert_move!(target_stage) if target_stage
     render :show, status: :ok
+  end
+
+  # #2501: mudar a etapa pelo upsert é mover. Passa pelo Mover, como o #move: grava entered_stage_at e a atividade
+  # `move` e roda as automações de saída e de entrada. A etapa que não é do pipeline_id enviado segue para o update!,
+  # que a recusa como antes; pipeline_id sozinho, sem etapa, também.
+  def upsert_target_stage(attributes)
+    stage = Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])
+    return if stage.nil? || stage.id == @card.stage_id
+    return if attributes['pipeline_id'].present? && attributes['pipeline_id'].to_s != stage.pipeline_id.to_s
+
+    stage
+  end
+
+  def upsert_move!(target_stage)
+    @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage,
+                                    automacao: ::Autonomia::Automacao::Cadeia.automacao_livre).perform
+    broadcast_card(::Events::Types::CRM_CARD_MOVED)
   end
 
   # Valor de venda (#2075): quem não vê o valor deste card não o muda. A gaveta manda value_cents em toda edição; com o

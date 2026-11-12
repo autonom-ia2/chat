@@ -283,6 +283,44 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(card.reload.custom_attributes).to eq('placa' => 'ABC1D23', 'ano' => 2021)
   end
 
+  it 'o upsert por external_id que muda a etapa move o card pelo Mover (#2501)' do
+    account, user = create_account_and_user
+    pipeline, first_stage = create_crm_pipeline(account: account, user: user)
+    second_stage = create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta')
+    card = account.crm_cards.create!(pipeline: pipeline, stage: first_stage, title: 'Onix', external_id: 'erp-9',
+                                     entered_stage_at: 3.days.ago)
+    automacao = account.crm_stage_automations.create!(pipeline: pipeline, stage: second_stage, name: 'Entrou na proposta',
+                                                      trigger_event: :on_enter, created_by: user)
+    automacao.steps.create!(account: account, position: 0, delay_seconds: 0, action_type: :create_follow_up,
+                            action_config: { title: 'Mandar a proposta', automation_mode: 'reminder_only' })
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: pipeline.id, stage_id: second_stage.id, title: 'Onix 2022', external_id: 'erp-9' } },
+         headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:ok)
+    card.reload
+    expect(card).to have_attributes(stage_id: second_stage.id, title: 'Onix 2022')
+    expect(card.entered_stage_at).to be_within(1.minute).of(Time.current)
+    expect(card.activities.find_by!(event_type: 'move').payload).to include('from_stage_id' => first_stage.id, 'to_stage_id' => second_stage.id)
+    expect(card.activities.find_by!(event_type: 'update').payload).to eq('title' => 'Onix 2022')
+    expect(account.crm_follow_ups.where(card: card, title: 'Mandar a proposta')).to exist
+  end
+
+  it 'o upsert por external_id na mesma etapa não grava movimento (#2501)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-10')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: pipeline.id, stage_id: stage.id, title: 'Onix 2023', external_id: 'erp-10' } },
+         headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload.title).to eq('Onix 2023')
+    expect(card.activities.where(event_type: 'move')).to be_blank
+  end
+
   it 'does not move a card through the generic update endpoint' do
     account, user = create_account_and_user
     pipeline, first_stage = create_crm_pipeline(account: account, user: user)
