@@ -2,26 +2,35 @@
 # dependem da conversa e de quem age, sem mandar nada. Cada pergunta devolve [faria, dados] quando o motor não mandaria,
 # ou nil.
 #
-# #2604: quem age (quem ligou a automação, ou quem vai ligar: o controller escolhe) precisa enxergar a conversa
-# (NaConversa#sem_acesso) e, no e-mail, poder começar conversa na caixa (PassoDeEmail, Acesso.pessoa_comeca_conversa?).
-# Sem isso o motor pausa a automação (`sem_acesso`): o ensaio diz "pausaria", com quem, e o caminho acaba ali.
+# #2604: quem age (quem ligou a automação, ou quem vai ligar: o controller escolhe) precisa poder agir na conversa, a
+# pergunta do Executor no começo de cada rodada e antes de cada passo que age (impedida?, Acesso#motivo_no) e dos passos
+# de IA (ComIa#impedido); no e-mail, também começar conversa na caixa (PassoDeEmail, Acesso.pessoa_comeca_conversa?).
+# Sem isso o motor pausa a automação: o ensaio diz "pausaria", com quem e o motivo, e o caminho acaba ali.
 #
 # #2609: o canal da mensagem (PassoDeMensagem#motivo_do_canal, a mesma pergunta). Contato que não recebe e tweet pulam,
 # como no motor. A janela fechada (24 h, ou o limite de horas da caixa API) sem modelo que saia no lugar para a execução
 # (#2573, JanelaFechada): o ensaio diz "pararia", com o motivo, e o caminho acaba ali.
 class Autonomia::Automacao::EnvioNoEnsaio
   PAUSARIA = 'pausaria'.freeze
+  SEM_ACESSO = 'quem_ligou_sem_acesso'.freeze
   PARARIA = 'pararia'.freeze
   # Depois destes o motor não segue: o caminho do ensaio acaba no passo.
   ACABA = [PAUSARIA, PARARIA].freeze
   JANELA = ::Autonomia::Automacao::PassoDeMensagem::MOTIVOS_DE_JANELA
 
-  def initialize(conversa, quem_age)
+  # `acesso`: o de quem ligou, quando quem age é ele; sem ele (quem vai ligar), só o alcance da conversa conta.
+  def initialize(conversa, quem_age, acesso = nil)
     @conversa = conversa
     @quem_age = quem_age
+    @acesso = acesso
   end
 
-  def pausaria_na_conversa = (pausaria unless ::Autonomia::Automacao::Acesso.alcanca?(@quem_age, @conversa))
+  # Com o Acesso de quem ligou, a pergunta inteira do motor (quem ligou na conta, com a permissão, e o alcance). Quem vai
+  # ligar passa pela permissão ao ligar: aqui, só o alcance, a mesma pergunta do Acesso#alcanca? para a conversa.
+  def pausaria_ao_agir
+    motivo = @acesso ? @acesso.motivo_no(@conversa, nil) : motivo_do_alcance
+    pausaria(motivo) if motivo
+  end
 
   # O e-mail, na ordem do passo: quem age começa conversa na caixa, e o e-mail sai para o contato desta conversa.
   def do_email(caixa)
@@ -46,7 +55,9 @@ class Autonomia::Automacao::EnvioNoEnsaio
 
   private
 
-  def pausaria = [PAUSARIA, { motivo: 'quem_ligou_sem_acesso', quem: @quem_age.name }]
+  def motivo_do_alcance = (SEM_ACESSO unless ::Autonomia::Automacao::Acesso.alcanca?(@quem_age, @conversa))
+
+  def pausaria(motivo = SEM_ACESSO) = [PAUSARIA, { motivo: motivo, quem: @quem_age.name }]
 
   def pararia(motivo) = [PARARIA, { motivo: motivo }]
 

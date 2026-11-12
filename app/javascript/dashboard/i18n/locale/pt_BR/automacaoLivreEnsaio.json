@@ -73,6 +73,7 @@
       "CONTATO_BLOQUEADO": "Não sairia: o contato está bloqueado e não recebe nada da automação.",
       "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",
       "PAUSARIA": "Pausaria a automação: {nome}, que liga a automação, não pode escrever nesta conversa ou caixa.",
+      "PAUSARIA_QUEM_LIGA": "Pausaria a automação: {nome}, que ligou a automação, não pode mais gerenciar automações nesta conta. Ligue de novo para assumir.",
       "CANAL_SEM_RESPOSTA": "Não sairia: este canal não aceita resposta (tweet).",
       "PARARIA": {
         "FORA_DA_JANELA": "Pararia aqui: a janela de resposta do canal está fechada, e texto livre não sai. Os passos seguintes não rodariam.",

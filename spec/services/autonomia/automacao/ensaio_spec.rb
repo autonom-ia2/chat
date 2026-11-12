@@ -300,21 +300,35 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
   end
 
-  # #2604: a mensagem, o aviso e o e-mail conferem quem agiria (quem ligou, ou quem vai ligar), como o motor: sem acesso,
-  # a automação pausaria e o caminho acaba ali.
+  # #2604: quem agiria (quem ligou, ou quem vai ligar) precisa poder agir na conversa, a pergunta do Executor no começo
+  # de cada rodada (Acesso#motivo_no): sem isso, a automação pausaria no primeiro passo, e o caminho acaba ali. O e-mail
+  # confere também a caixa dele.
   describe 'quem age' do
     let(:bia) { create(:user, account: account, role: :agent, name: 'Bia') }
     let(:caixa_de_email) { create(:channel_email, account: account).inbox }
     let(:email) { { 'id' => 'em', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Oi'], 'texto' => ['Tudo bem?'] } }
     let(:pausaria) { { motivo: 'quem_ligou_sem_acesso', quem: 'Bia' } }
+    let(:etiqueta) do
+      { 'id' => 'x1', 'tipo' => 'acao', 'acao' => 'POST conversations/:conversation_id/labels', 'descricao' => 'Etiqueta',
+        'corpo' => { 'labels' => ['vip'] } }
+    end
 
+    # Como a versão salva de uma automação que `quem` ligou: o controller passa o Acesso dela.
     def passos_como(quem, *passos)
-      described_class.new(receita: receita(*passos), conta: account, usuario: admin, quem_age: quem).resultado[:conversas].first[:passos]
+      automacao = create(:autonomia_automacao, account: account, ligada_por: quem)
+      acesso = Autonomia::Automacao::Acesso.new(automacao, chave_gatilho: 'conversa.resolvida')
+      described_class.new(receita: receita(*passos), conta: account, usuario: admin, acesso: acesso).resultado[:conversas].first[:passos]
+    end
+
+    def gerencia_automacoes(quem)
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage])
+      account.account_users.find_by(user: quem).update!(custom_role: funcao)
     end
 
     before { contato.update!(email: 'maria@exemplo.com.br') }
 
     it 'a mensagem e o aviso pausariam quando quem age não enxerga a conversa, e o caminho acaba', :aggregate_failures do
+      gerencia_automacoes(bia)
       aviso = avisar_passo('a1', { 'pessoas' => [admin.id] }, 'Olha')
 
       expect(passos_como(bia, mensagem_passo('m1', 'Oi'), esperar_passo('e1')))
@@ -323,7 +337,38 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
       expect(passos_como(admin, mensagem_passo('m1', 'Oi'), esperar_passo('e1')).pluck(:faria)).to eq(%w[mensagem esperar])
     end
 
+    # O motor pausa no começo da rodada, antes de qualquer passo (Executor#rodar): a ação, a IA e até a espera de antes
+    # da mensagem não aparecem como feitas.
+    it 'pausaria já no primeiro passo, seja ele qual for, e não lista os seguintes', :aggregate_failures do
+      gerencia_automacoes(bia)
+      resumir = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => ['mensagens'], 'destino' => { 'avisar' => { 'responsavel' => true } } }
+
+      expect(passos_como(bia, etiqueta, mensagem_passo('m1', 'Oi')))
+        .to eq([{ id: 'x1', tipo: 'acao', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, resumir, mensagem_passo('m1', 'Oi'))).to eq([{ id: 'r1', tipo: 'resumir', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, esperar_passo('e1'), etiqueta)).to eq([{ id: 'e1', tipo: 'esperar', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(admin, etiqueta, mensagem_passo('m1', 'Oi')).pluck(:faria)).to eq(%w[acao mensagem])
+    end
+
+    # A mesma pergunta inteira do motor: quem ligou e perdeu a permissão de gerenciar automações (ou saiu da conta)
+    # pausaria a automação, mesmo vendo a conversa.
+    it 'pausaria com o motivo do motor quando quem ligou não pode mais gerenciar automações' do
+      create(:inbox_member, user: bia, inbox: inbox)
+
+      expect(passos_como(bia, etiqueta, mensagem_passo('m1', 'Oi')))
+        .to eq([{ id: 'x1', tipo: 'acao', faria: 'pausaria', dados: { motivo: 'quem_ligou_sem_permissao', quem: 'Bia' } }])
+    end
+
+    # O rascunho age como quem pede, que só ensaia as conversas que vê: o alcance não pausa.
+    it 'sem o Acesso de quem ligou, age como quem pede' do
+      passos = described_class.new(receita: receita(etiqueta, mensagem_passo('m1', 'Oi')), conta: account, usuario: admin)
+                              .resultado[:conversas].first[:passos]
+
+      expect(passos.pluck(:faria)).to eq(%w[acao mensagem])
+    end
+
     it 'o e-mail pausaria quando quem age vê a conversa mas não começa conversa na caixa de e-mail', :aggregate_failures do
+      gerencia_automacoes(bia)
       create(:inbox_member, user: bia, inbox: inbox)
 
       expect(passos_como(bia, email, esperar_passo('e1'))).to eq([{ id: 'em', tipo: 'email', faria: 'pausaria', dados: pausaria }])
@@ -333,9 +378,23 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
 
     it 'o e-mail pausaria quando quem age não enxerga a conversa, mesmo na caixa de e-mail' do
+      gerencia_automacoes(bia)
       create(:inbox_member, user: bia, inbox: caixa_de_email)
 
       expect(passos_como(bia, email).first).to include(faria: 'pausaria', dados: pausaria)
+    end
+
+    # Na ordem do PassoDeEmail: a caixa e quem age vêm antes do texto. Texto vazio sem acesso à caixa pausaria, não pularia.
+    it 'o e-mail confere a caixa antes do texto, como o motor', :aggregate_failures do
+      gerencia_automacoes(bia)
+      create(:inbox_member, user: bia, inbox: inbox)
+      vazio = email.merge('texto' => [' '])
+
+      expect(passos_como(bia, vazio).first).to include(faria: 'pausaria', dados: pausaria)
+      contato.update!(email: nil)
+      expect(passos_como(admin, vazio).first[:faria]).to eq('contato_sem_email')
+      contato.update!(email: 'maria@exemplo.com.br')
+      expect(passos_como(admin, vazio).first[:faria]).to eq('texto_vazio')
     end
   end
 

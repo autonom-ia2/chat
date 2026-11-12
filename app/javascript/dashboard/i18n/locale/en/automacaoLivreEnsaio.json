@@ -73,6 +73,7 @@
       "CONTATO_BLOQUEADO": "Would not go out: the contact is blocked and receives nothing from the automation.",
       "EMAIL_BLOQUEADO": "Would not go out: the contact's e-mail is blocked in this account (bounce, complaint or unsubscribe).",
       "PAUSARIA": "Would pause the automation: {nome}, who turns it on, can't write in this conversation or inbox.",
+      "PAUSARIA_QUEM_LIGA": "Would pause the automation: {nome}, who turned it on, can no longer manage automations in this account. Turn it on again to take it over.",
       "CANAL_SEM_RESPOSTA": "Would not go out: this channel does not accept replies (tweet).",
       "PARARIA": {
         "FORA_DA_JANELA": "Would stop here: the channel's reply window is closed, and free text can't go out. The next steps wouldn't run.",

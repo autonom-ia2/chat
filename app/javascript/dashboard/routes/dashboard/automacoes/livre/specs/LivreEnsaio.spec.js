@@ -245,6 +245,25 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
+  // #2604: quem ligou não pode mais gerenciar automações: pausaria já no
+  // primeiro passo, seja ele qual for, com a frase de quem liga.
+  it('o passo que pausaria por quem ligou diz que ele não gerencia mais', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'x1',
+          tipo: 'acao',
+          faria: 'pausaria',
+          dados: { motivo: 'quem_ligou_sem_permissao', quem: 'Bia' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.PAUSARIA_QUEM_LIGA(Bia)');
+  });
+
   // #2609: a janela fechada sem modelo que saia: pararia aqui, com o motivo.
   it('o passo que pararia diz o motivo do motor, sem balão', () => {
     const [janela, tweet] = linhasDoEnsaio(
