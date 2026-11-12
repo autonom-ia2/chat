@@ -1176,6 +1176,8 @@ pt_BR:
         agenda_pagina_inexistente: 'Passo %{passo}: a página de agendamento de %{caminho} não existe, não está publicada ou não tem quem atenda.'
         corpo: 'Passo %{passo}: %{problema}'
         forma_nao_cabe: 'Passo %{passo}: o campo %{campo} não aceita texto montado nem data calculada.'
+        data_fora_do_atributo: 'Passo %{passo}: a data calculada só vai em atributo do tipo data, e %{chave} não é.'
+        texto_fora_do_atributo: 'Passo %{passo}: o texto montado só vai em atributo de texto, e %{chave} não é.'
         forma_desconhecida: 'Passo %{passo}: %{chave} não é um valor calculado que a automação conhece ($valor, $texto ou $data).'
         data_sem_data: 'Passo %{passo}: %{caminho} não é um atributo de data. A data calculada parte de "hoje" ou de um atributo de data.'
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'

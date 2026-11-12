@@ -683,6 +683,8 @@ en:
         agenda_pagina_inexistente: 'Step %{passo}: the booking page of %{caminho} does not exist, is not published, or has nobody to attend.'
         corpo: 'Step %{passo}: %{problema}'
         forma_nao_cabe: 'Step %{passo}: the %{campo} field does not take put-together text or a calculated date.'
+        data_fora_do_atributo: 'Step %{passo}: a calculated date only goes into a date attribute, and %{chave} is not one.'
+        texto_fora_do_atributo: 'Step %{passo}: put-together text only goes into a text attribute, and %{chave} is not one.'
         forma_desconhecida: 'Step %{passo}: %{chave} is not a calculated value the automation knows ($valor, $texto or $data).'
         data_sem_data: 'Step %{passo}: %{caminho} is not a date attribute. A calculated date starts from "today" or from a date attribute.'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
