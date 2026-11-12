@@ -49,7 +49,10 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
        'DELETE teams/:team_id/team_members', 'DELETE canned_responses/:id', 'DELETE custom_filters/:id', 'DELETE crm/saved_views/:id',
        'DELETE agent_capacity_policies/:agent_capacity_policy_id/inbox_limits/:id',
        'DELETE agent_capacity_policies/:agent_capacity_policy_id/users/:id', 'DELETE crm/service_schedules/:id',
-       'DELETE conversations/:conversation_id/participants']
+       'DELETE conversations/:conversation_id/participants',
+       # Lote C.
+       'DELETE campaign_journey/drafts/:id', 'DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id',
+       'DELETE autonomia/prospecting/lists/:id/leads/:lead_id', 'DELETE autonomia/prospecting/saved_presets/:id']
     end
     let(:deletes) { permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') } }
 
@@ -209,6 +212,33 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'aprovar sugestão de pergunta frequente fica fora: grava o que o agente diz ao cliente' do
       expect(liberadas('POST autonomia/agents/:agent_id/faq_suggestions/:id/approve', 'POST captain/faq_suggestions/:id/approve'))
         .to all(be(false))
+    end
+  end
+
+  describe '#2660 lote C: rascunho de campanha e prospecção' do
+    it 'monta a campanha em rascunho; disparar, agendar, retomar, pausar e apagar ficam fora', :aggregate_failures do
+      expect(liberadas('POST campaign_journey/drafts', 'POST email_campaigns/campaigns', 'PATCH email_campaigns/campaigns/:id',
+                       'POST email_campaigns/campaigns/:id/duplicate')).to all(be(true))
+      expect(liberadas('POST campaign_journey/campaigns', 'POST email_campaigns/campaigns/:id/send_now',
+                       'POST email_campaigns/campaigns/:id/schedule', 'POST email_campaigns/campaigns/:id/resume',
+                       'POST email_campaigns/campaigns/:id/pause', 'DELETE email_campaigns/campaigns/:id')).to all(be(false))
+    end
+
+    it 'o modelo do WhatsApp é só o local; o oficial da Meta fica fora' do
+      expect(liberadas('POST inboxes/:inbox_id/whatsapp_api_message_templates', 'POST inboxes/:inbox_id/whatsapp_templates'))
+        .to eq([true, false])
+    end
+
+    it 'na prospecção, o lead vira contato ou card; buscar pago, enriquecer e recusar ficam fora', :aggregate_failures do
+      expect(liberadas('POST autonomia/prospecting/leads/:id/contact', 'POST autonomia/prospecting/leads/crm_cards',
+                       'POST autonomia/prospecting/leads/contacts')).to all(be(true))
+      expect(liberadas('POST autonomia/prospecting/searches', 'POST autonomia/prospecting/leads/:id/enrichment',
+                       'PATCH autonomia/prospecting/leads/:id', 'POST autonomia/prospecting/leads/discard')).to all(be(false))
+    end
+
+    it 'a lista não leva as etiquetas do segmento e o ajuste não encurta o cache pago', :aggregate_failures do
+      expect(permitidas.proibidos('POST autonomia/prospecting/lists', { 'metadata' => {} })).to eq(['metadata'])
+      expect(permitidas.proibidos('PATCH autonomia/prospecting/settings', { 'cache_ttl_seconds' => 60 })).to eq(['cache_ttl_seconds'])
     end
   end
 end

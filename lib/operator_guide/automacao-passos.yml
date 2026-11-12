@@ -359,3 +359,33 @@ so_guia:
   PUT captain/faq_suggestions/:id: Faz o mesmo que o PATCH; a sugestão é escolhida pelo id.
   POST captain/faq_suggestions/:id/dismiss: A sugestão é escolhida pelo id, que a tela não oferece.
   POST captain/message_reports: A mensagem é escolhida pelo id, que nenhum valor do alvo traz.
+  # #2660 lote C: rascunho de campanha e prospecção, liberados no motor e fora do editor. Disparar campanha é o passo
+  # "campanha" e buscar é o passo "prospeccao"; o resto é montagem na tela de campanhas ou da Prospecção.
+  POST campaign_journey/drafts: O rascunho é montagem da tela de campanhas; disparar é o passo "campanha".
+  PATCH campaign_journey/drafts/:id: O rascunho é escolhido pelo id, que a tela não oferece.
+  PUT campaign_journey/drafts/:id: Faz o mesmo que o PATCH; o rascunho é escolhido pelo id.
+  DELETE campaign_journey/drafts/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  POST email_campaigns/campaigns: A campanha de e-mail em rascunho é montagem da tela; disparar é o passo "campanha".
+  PATCH email_campaigns/campaigns/:id: A campanha é escolhida pelo id, que a tela não oferece.
+  PUT email_campaigns/campaigns/:id: Faz o mesmo que o PATCH; a campanha é escolhida pelo id.
+  POST email_campaigns/campaigns/:id/duplicate: A campanha é escolhida pelo id, que a tela não oferece.
+  POST email_campaigns/templates: O modelo de e-mail é montagem da tela de campanhas; nenhum dos 20 exemplos usa.
+  POST inboxes/:inbox_id/whatsapp_api_message_templates: O modelo local é montagem da tela de campanhas; nenhum dos 20 exemplos usa.
+  PATCH inboxes/:inbox_id/whatsapp_api_message_templates/:id: O modelo é escolhido pelo id, que a tela não oferece.
+  PUT inboxes/:inbox_id/whatsapp_api_message_templates/:id: Faz o mesmo que o PATCH; o modelo é escolhido pelo id.
+  DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id: Arquivar fica no Guia e no motor; o editor não mostra DELETE.
+  POST autonomia/prospecting/leads/contacts: Os leads são escolhidos pelo id, que nenhum valor do alvo traz.
+  POST autonomia/prospecting/leads/:id/contact: O lead é escolhido pelo id, que nenhum valor do alvo traz.
+  POST autonomia/prospecting/leads/:id/crm_card: O lead é escolhido pelo id; o passo "prospeccao" já põe os leads no funil.
+  POST autonomia/prospecting/leads/crm_cards: Os leads são escolhidos pelo id; o passo "prospeccao" já põe os leads no funil.
+  POST autonomia/prospecting/lists: A lista de leads é montagem da Prospecção; nenhum dos 20 exemplos usa.
+  POST autonomia/prospecting/lists/:id/leads: A lista e o lead são escolhidos pelo id, que a tela não oferece.
+  DELETE autonomia/prospecting/lists/:id/leads/:lead_id: Tirar da lista fica no Guia e no motor; o editor não mostra DELETE.
+  POST autonomia/prospecting/saved_presets: O filtro salvo é montagem da Prospecção; nenhum dos 20 exemplos usa.
+  PATCH autonomia/prospecting/saved_presets/:id: O filtro é escolhido pelo id, que a tela não oferece.
+  PUT autonomia/prospecting/saved_presets/:id: Faz o mesmo que o PATCH; o filtro é escolhido pelo id.
+  DELETE autonomia/prospecting/saved_presets/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  PATCH autonomia/prospecting/searches/:id: A busca é escolhida pelo id, que a tela não oferece.
+  PUT autonomia/prospecting/searches/:id: Faz o mesmo que o PATCH; a busca é escolhida pelo id.
+  PATCH autonomia/prospecting/settings: O ajuste da Prospecção é configuração da conta; nenhum dos 20 exemplos usa.
+  PUT autonomia/prospecting/settings: Faz o mesmo que o PATCH; o ajuste da Prospecção é configuração.

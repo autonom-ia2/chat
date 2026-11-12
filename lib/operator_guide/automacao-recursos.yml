@@ -403,6 +403,85 @@ passo:
     motivo: Relatar "resposta errada" numa mensagem do assistente (#2660 lote E). Só grava o relato.
     acoes:
       POST captain/message_reports: {}
+  # #2660 lote C: rascunho de campanha e prospecção. Disparar, agendar e retomar campanha continuam fora: falar com o
+  # cliente é o passo nativo `campanha` (G14). Cada rota confere a chave da tela (campanhas, Prospecção) de quem ligou.
+  campaign_journey/drafts:
+    motivo: >-
+      Criar, alterar e apagar o rascunho da "Nova campanha" (#2660 lote C; apagar pela D1). Disparar não passa por aqui:
+      é o envio da campanha, que segue fora.
+    acoes:
+      POST campaign_journey/drafts: {}
+      PATCH campaign_journey/drafts/:id: {}
+      PUT campaign_journey/drafts/:id: {}
+      DELETE campaign_journey/drafts/:id: {}
+  email_campaigns/campaigns:
+    motivo: >-
+      Criar, alterar e duplicar campanha de e-mail, sempre em rascunho (#2660 lote C): o alterar só vale em rascunho
+      (a rota recusa as outras) e a cópia nasce rascunho. Enviar, agendar e retomar falam com o cliente; apagar e
+      cancelar usam delete_all e update_all; pausar fica fora pela D8; reavaliar e reconferir são a guarda de reputação.
+    acoes:
+      POST email_campaigns/campaigns: {}
+      PATCH email_campaigns/campaigns/:id: {}
+      PUT email_campaigns/campaigns/:id: {}
+      POST email_campaigns/campaigns/:id/duplicate: {}
+  email_campaigns/templates:
+    motivo: >-
+      Salvar um modelo de e-mail da conta (#2660 lote C). Apagar fica fora: os anexos saem com purge_later, num job.
+    acoes:
+      POST email_campaigns/templates: {}
+  whatsapp_api_message_templates:
+    motivo: >-
+      Criar, alterar e arquivar o modelo local do WhatsApp API, sem a Meta (#2660 lote C; o DELETE só arquiva, pela
+      D1).
+    acoes:
+      POST inboxes/:inbox_id/whatsapp_api_message_templates: {}
+      PATCH inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
+      PUT inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
+      DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
+  autonomia/prospecting/lead_batches:
+    motivo: >-
+      Criar o contato de até 30 leads, cada um na própria transação (#2660 lote C). Descartar fica fora: tira a
+      etiqueta num job, fora da requisição.
+    acoes:
+      POST autonomia/prospecting/leads/contacts: {}
+  autonomia/prospecting/leads:
+    motivo: >-
+      O lead vira contato, vira card (um ou até 30) (#2660 lote C); escolher outro dono para o card pede a chave de
+      funis, como na tela. Mudar o status grava a recusa (sem consentimento) num job; enriquecer e pesquisar gastam IA
+      paga e leem site de fora; conferir o WhatsApp chama o WAHA. Adotar o dono espera o formato completo. Ficam fora.
+    acoes:
+      POST autonomia/prospecting/leads/:id/contact: {}
+      POST autonomia/prospecting/leads/:id/crm_card: {}
+      POST autonomia/prospecting/leads/crm_cards: {}
+  autonomia/prospecting/lists:
+    motivo: >-
+      Criar lista de leads, pôr e tirar lead da lista (#2660 lote C; tirar pela D1). O `metadata` fica fora: guarda as
+      etiquetas do segmento de campanha.
+    acoes:
+      POST autonomia/prospecting/lists: { proibe: [metadata] }
+      POST autonomia/prospecting/lists/:id/leads: {}
+      DELETE autonomia/prospecting/lists/:id/leads/:lead_id: {}
+  autonomia/prospecting/saved_presets:
+    motivo: Criar, alterar e apagar filtro salvo da Prospecção (#2660 lote C; apagar pela D1).
+    acoes:
+      POST autonomia/prospecting/saved_presets: {}
+      PATCH autonomia/prospecting/saved_presets/:id: {}
+      PUT autonomia/prospecting/saved_presets/:id: {}
+      DELETE autonomia/prospecting/saved_presets/:id: {}
+  autonomia/prospecting/searches:
+    motivo: >-
+      Trocar o funil e a etapa de uma busca já feita (#2660 lote C). Buscar é o passo nativo `prospeccao` (G21), com a
+      busca paga no Google; apagar solta os leads com update_all (nullify).
+    acoes:
+      PATCH autonomia/prospecting/searches/:id: {}
+      PUT autonomia/prospecting/searches/:id: {}
+  autonomia/prospecting/settings:
+    motivo: >-
+      Ajustar a Prospecção da conta: funil e etapa padrão, país, nota (#2660 lote C). O tempo do cache fica fora:
+      cache menor é mais chamada paga ao Google.
+    acoes:
+      PATCH autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
+      PUT autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
@@ -507,11 +586,9 @@ fora:
       - campaign_journey/campaigns
       - campaign_journey/conversa_aberta
       - campaign_journey/conversation_audiences
-      - campaign_journey/drafts
       - campaign_journey/recipient_previews
       - email_campaigns/ai
       - email_campaigns/assets
-      - email_campaigns/campaigns
       # G52: criar e mudar a lista é da tela de campanhas; a automação põe o contato na lista pelo passo próprio.
       - email_campaigns/lists
       - email_campaigns/maintenance
@@ -519,7 +596,6 @@ fora:
       - email_campaigns/reputations
       - email_campaigns/sender_identities
       - email_campaigns/template_imports
-      - email_campaigns/templates
       - email_campaigns/test_sends
       - email_campaigns/videos
       - seus_posts_comentarios
@@ -536,7 +612,6 @@ fora:
       - crm/meta_ads_lead_forms
       - crm/meta_ads_site_pages
       - crm/google_conversion_feeds
-      - whatsapp_api_message_templates
       - whatsapp_template_suggestions
       - inboxes/whatsapp_templates
       - inboxes/whatsapp_conversation_assets
@@ -605,12 +680,6 @@ fora:
       - autonomia/avisos
       - autonomia/prospecting/audiences
       - autonomia/prospecting/lead_audiences
-      - autonomia/prospecting/lead_batches
       - autonomia/prospecting/lead_consent_refusals
       - autonomia/prospecting/lead_queue_postponements
-      - autonomia/prospecting/leads
-      - autonomia/prospecting/lists
-      - autonomia/prospecting/saved_presets
       - autonomia/prospecting/search_interpretations
-      - autonomia/prospecting/searches
-      - autonomia/prospecting/settings
