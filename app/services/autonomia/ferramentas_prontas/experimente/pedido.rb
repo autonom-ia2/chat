@@ -1,5 +1,5 @@
 # O PEDIDO DO EXPERIMENTE PREMIUM (#2858, F7, revisor 12/11). A consulta paga não cabe no corte do pedido web (15 s): os
-# prazos da BigDataCorp vão de 20 a 55 s. O clique abre um pedido aqui, o `ExperimentePagoJob` roda a consulta em
+# prazos da BigDataCorp vão de 20 a 120 s (`Premium::Dataset`). O clique abre um pedido aqui, o `ExperimentePagoJob` roda a consulta em
 # segundo plano, e a tela pergunta pelo id (`GET experimentar/:pedido`) até o resultado.
 #
 # O estado fica no Redis, com prazo (`TTL`), numa chave por pedido. O id é aleatório e o pedido é preso à conta: a
@@ -8,8 +8,20 @@
 # (`reivindicar`): o job que o Sidekiq devolve à fila depois de começar não consulta de novo.
 module Autonomia::FerramentasProntas::Experimente::Pedido
   TTL = 15.minutes
-  # Quanto a tela espera pelo resultado. Vai à tela na resposta do clique (`prazo_ms`); depois dele, ela desiste.
-  PRAZO_DA_TELA = 80.seconds
+  # Quanto o job pode demorar a começar depois do clique (a espera na fila `agent_tools`). Folga de desenho, não medida: o
+  # mesmo valor de antes do #2946 (80 - 12 - 57 - 2 = 9 s). O job que começa depois dele não consulta
+  # (`ExperimentePagoJob`): a tela já teria desistido, e a consulta seria feita e cobrada sem ninguém ver.
+  PRAZO_PARA_COMECAR = 9.seconds
+  # As idas ao modelo da conta, antes e depois da consulta (`Experimente::ComModelo`, cada uma no `PRAZO_DO_MODELO`).
+  IDAS_AO_MODELO = 2
+  # Gravar o resultado e a tela perguntar por ele. Folga de desenho, não medida.
+  FOLGA_DA_GRAVACAO = 2.seconds
+  # Quanto a tela espera pelo resultado. Vai à tela na resposta do clique (`prazo_ms`); depois dele, ela desiste. Sai da
+  # soma do caminho inteiro, com a consulta Premium mais lenta do catálogo (`Premium.prazo_maximo`, #2946): começar, as
+  # duas idas ao modelo, a consulta e a gravação. Hoje 9 + 12 + 122 + 2 = 145 s.
+  PRAZO_DA_TELA = PRAZO_PARA_COMECAR +
+                  (IDAS_AO_MODELO * Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO).seconds +
+                  Autonomia::FerramentasProntas::Premium.prazo_maximo.seconds + FOLGA_DA_GRAVACAO
   CONSULTANDO = 'consultando'.freeze
   PREFIXO = 'ferramentas_prontas:experimente:'.freeze
   # Um id que passa disso não é nosso: nem é procurado.

@@ -11,7 +11,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
 
   def registro!(numero)
     cobrada = numero > premium::GRATIS
-    premium::Registro.create!(account: account, fonte: 'certidoes_empresa', consulta: 'divida_uniao', dataset: 'ondemand_pgfn_company',
+    premium::Registro.create!(account: account, fonte: 'certidoes_empresa', consulta: 'cnj', dataset: 'ondemand_cnj_negative_certificate_company',
                               dia: mes + 2.days, resultado: 'encontrado', numero: numero, cobranca: cobrada ? 'cobrada' : 'gratis',
                               custo: BigDecimal('0.10'), preco: cobrada ? BigDecimal('0.15') : 0)
   end
@@ -83,7 +83,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Cobranca do
     ferramenta = incluir_pronta('certidoes_empresa', conta: account, agente: agente)
     registros[2].update!(tool_run_id: 4242)
     run = instance_double(Autonomia::Agents::ToolRun, id: 4242, ferramenta: ferramenta, account: account,
-                                                      arguments: { 'consulta' => 'divida_uniao' })
+                                                      arguments: { 'consulta' => 'cnj' })
     ordem = []
     { saldo: premium::Saldo, registro: premium::Registro }.each do |nome, modelo|
       allow(modelo).to receive(:lock).and_wrap_original do |original, *args|

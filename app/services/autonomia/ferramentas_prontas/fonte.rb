@@ -109,9 +109,12 @@ class Autonomia::FerramentasProntas::Fonte
     parametro.normalizar(bruto) || (parametro.local? ? nil : FORA_DO_FORMATO)
   end
 
+  # O card Premium de uma consulta só também diz qual é ela (#2946): a descrição dele não lista o que responde, porque a
+  # lista muda com `Premium::DESLIGADAS_NA_FONTE` (as Certidões ficaram só com a do CNJ). Nas grátis, nada muda.
   def descricao_para_o_modelo(usar_quando)
     partes = [descricao]
     partes << "Consultas: #{consultas.map { |consulta| "#{consulta.nome} (#{consulta.descricao})" }.join('; ')}." if varias_consultas?
+    partes << "Responde só a: #{consultas.first.descricao}." if premium? && !varias_consultas?
     partes << DEDUZIR
     partes << "Use quando: #{usar_quando.to_s.strip}" if usar_quando.present?
     partes.join(' ')

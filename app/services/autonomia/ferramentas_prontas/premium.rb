@@ -18,8 +18,35 @@
 module Autonomia::FerramentasProntas::Premium
   FLAG = 'agente_ferramentas_prontas_premium'.freeze
   GRATIS = 20
+  # OS DATASETS QUE A BIGDATACORP DESLIGOU (#2946). Teste direto na API em 12/11/2026: cada um respondeu
+  # `-1203 DATASET DISABLED TEMPORARILY` em 0,4 s, sem cobrança. A consulta de um dataset desta lista sai do card
+  # inteiro: da ferramenta do agente (o schema e as consultas aceitas), do "Responde N tipos de pergunta", da faixa de
+  # preço e do Experimente (`ligadas`). O código da consulta fica no arquivo do card (`Fontes::Premium::*::CONSULTAS`):
+  # quando a BigDataCorp religar, a consulta volta tirando a linha dela daqui. Os textos escritos à mão (a descrição do
+  # card na vitrine e o artigo 11.14 da Central) voltam junto, no mesmo PR.
+  DESLIGADAS_NA_FONTE = %w[
+    ondemand_pgfn_company
+    ondemand_cert_labor_debt_absence_company
+    ondemand_fgts_company
+    ondemand_cadin_company
+    ondemand_rf_status_person
+    ondemand_ibama_embargados_company
+    partner_rede_vistorias_address
+  ].freeze
 
   module_function
+
+  # As consultas do card que a BigDataCorp responde hoje: fora as de `DESLIGADAS_NA_FONTE`.
+  def ligadas(consultas)
+    consultas.reject { |consulta| DESLIGADAS_NA_FONTE.include?(consulta.dataset.nome) }.freeze
+  end
+
+  # O maior prazo total entre as consultas Premium do catálogo, em segundos (o do dataset mais lento, com a folga da
+  # `ConsultaPaga`). Os prazos do Experimente Premium e do varredor saem daqui (`Experimente::Pedido`,
+  # `FecharEmAndamentoJob`): um dataset mais lento os estica sozinho.
+  def prazo_maximo
+    Autonomia::FerramentasProntas::Catalogo.premium.map(&:prazo_maximo).max
+  end
 
   def fonte?(fonte)
     fonte.present? && fonte.premium?
@@ -35,14 +62,15 @@ module Autonomia::FerramentasProntas::Premium
     hoje_da_conta(account).beginning_of_month
   end
 
-  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam no mês, os preços depois delas e
-  # se o card confere CPF ou CNPJ (o "Quanto custa" só diz que número errado não conta nesse card).
+  # O que a tela mostra de cada card Premium liberado para a conta: quantas grátis restam no mês, os preços depois delas,
+  # se o card confere CPF ou CNPJ (o "Quanto custa" só diz que número errado não conta nesse card) e quantos tipos de
+  # pergunta ele responde (`consultas`, o selo do cartão: muda sozinho com `DESLIGADAS_NA_FONTE`).
   def para_tela(account, fontes)
     usadas = Saldo.da_conta_por_fonte(account, mes: mes_da_conta(account))
     fontes.select(&:premium?).to_h do |fonte|
       [fonte.chave, { 'gratis' => GRATIS, 'restantes' => [GRATIS - usadas.fetch(fonte.chave, 0), 0].max,
                       'precos' => fonte.consultas.map { |consulta| consulta.dataset.preco.to_s('F') }.uniq.sort_by(&:to_d),
-                      'confere_documento' => confere_documento?(fonte) }]
+                      'confere_documento' => confere_documento?(fonte), 'consultas' => fonte.consultas.size }]
     end
   end
 

@@ -10,6 +10,35 @@ module FerramentasPremiumHelper
   CPF_EXEMPLO = '11144477735'.freeze
   CAR_EXEMPLO = "MT5107065#{'EXEMPLO0' * 4}".freeze
 
+  # Os arquivos dos 7 cards (`Fontes::Premium::*`), na ordem do catálogo. Cada um guarda em `CONSULTAS` todas as consultas,
+  # as desligadas na BigDataCorp também (`Premium::DESLIGADAS_NA_FONTE`, #2946); a `FONTE` leva só as ligadas.
+  CARDS_PREMIUM = %w[Certidoes RaioX Pessoa Placa RiscoEndereco ImovelRural ContatoEmpresa].freeze
+
+  def modulos_premium
+    CARDS_PREMIUM.map { |nome| "Autonomia::FerramentasProntas::Fontes::Premium::#{nome}".constantize }
+  end
+
+  # Todas as consultas do card, as desligadas também.
+  def consultas_do_card(chave)
+    modulos_premium.find { |modulo| modulo::FONTE.chave == chave }::CONSULTAS
+  end
+
+  def todas_as_consultas_premium
+    modulos_premium.flat_map { |modulo| modulo::CONSULTAS }
+  end
+
+  # O card com TODAS as consultas, como ficará quando a BigDataCorp religar as desligadas: o catálogo devolve este no
+  # lugar do real. Prova que a consulta desligada continua certa e volta tirando só a linha dela da lista.
+  def card_com_as_desligadas!(chave)
+    real = Autonomia::FerramentasProntas::Catalogo.buscar(chave)
+    completo = Autonomia::FerramentasProntas::Fonte.new(chave: real.chave, slug: real.slug, nome: real.nome, descricao: real.descricao,
+                                                        consultas: consultas_do_card(chave), limite_diario: nil, flag: real.flag,
+                                                        termos: real.termos)
+    allow(Autonomia::FerramentasProntas::Catalogo).to receive(:buscar).and_call_original
+    allow(Autonomia::FerramentasProntas::Catalogo).to receive(:buscar).with(chave).and_return(completo)
+    completo
+  end
+
   def com_credencial_da_bigdatacorp(&)
     with_modified_env(BIGDATACORP_USER: USUARIO_FALSO, BIGDATACORP_PASSWORD: SENHA_FALSA, &)
   end

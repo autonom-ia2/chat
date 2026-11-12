@@ -74,15 +74,18 @@ RSpec.describe Autonomia::FerramentasProntas::ExperimentePagoJob do
     expect(pago).to have_received(:call).once
   end
 
-  it 'o prazo para começar sai dos prazos: o da tela, menos as duas idas ao modelo, a consulta mais lenta e a gravação' do
+  # #2946: o prazo da tela sai do prazo para começar, das duas idas ao modelo, da consulta Premium mais lenta do catálogo
+  # (os processos e as empresas na região, 120 s, mais a folga) e da gravação. Uma consulta mais lenta estica a tela.
+  it 'o prazo da tela sai dos prazos: começar, as duas idas ao modelo, a consulta mais lenta do catálogo e a gravação' do
     premium = Autonomia::FerramentasProntas::Premium
-    consulta_mais_lenta = (premium::Dataset::PRAZO_SOB_DEMANDA + premium::ConsultaPaga::FOLGA).seconds
+    consulta_mais_lenta = (premium::Dataset::PRAZO_DAS_LENTAS + premium::ConsultaPaga::FOLGA).seconds
     modelo = Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO.seconds
 
-    expect(described_class::PRAZO_PARA_COMECAR).to eq(
-      pedido::PRAZO_DA_TELA - (2 * modelo) - consulta_mais_lenta - described_class::FOLGA_DA_GRAVACAO
+    expect(premium.prazo_maximo.seconds).to eq(consulta_mais_lenta)
+    expect(pedido::PRAZO_DA_TELA).to eq(
+      described_class::PRAZO_PARA_COMECAR + (2 * modelo) + consulta_mais_lenta + described_class::FOLGA_DA_GRAVACAO
     )
-    expect(pedido::PRAZO_DA_TELA).to eq(80.seconds)
+    expect(pedido::PRAZO_DA_TELA).to eq(145.seconds)
     expect(described_class::PRAZO_PARA_COMECAR).to eq(9.seconds)
   end
 
