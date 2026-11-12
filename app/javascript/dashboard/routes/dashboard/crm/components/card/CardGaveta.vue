@@ -102,6 +102,7 @@ const emit = defineEmits([
   'cancelFollowUp',
   'refreshCard',
   'restaurar',
+  'abrirCompra',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -404,6 +405,11 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
+// #2710: no card que a página de agendamento criou para quem já comprou, o selo "Cliente desde…" do topo abre a
+// compra (o card ganho). Trocar de card pergunta antes de descartar rascunho: quem cuida disso é a página.
+const jaCliente = computed(() =>
+  editando.value ? card.value.ja_cliente || null : null
+);
 // A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
 // Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
 const {
@@ -712,10 +718,12 @@ defineExpose({
       <CardHeroi
         v-bind="heroi"
         :contato="tela === 'resumo' ? card.contact : null"
+        :abre-compra="tela === 'resumo' && Boolean(jaCliente)"
         :titulo-id="`${gavetaId}-titulo`"
         :texto-id="`${gavetaId}-texto`"
         @voltar="voltarDoHeroi"
         @fechar="fechar"
+        @compra="emit('abrirCompra', jaCliente)"
       />
       <CardFaixa
         v-if="editando && tela === 'resumo'"

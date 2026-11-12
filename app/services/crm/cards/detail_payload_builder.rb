@@ -17,7 +17,9 @@ class Crm::Cards::DetailPayloadBuilder
     Crm::Cards::PayloadBuilder.new(@card, **payload_options).perform.merge(
       linked_conversations: linked_conversations_payload,
       activities: activities_payload,
-      can_edit: can_edit?
+      can_edit: can_edit?,
+      # #2710: o selo "Cliente desde…" do topo abre a compra (o card ganho do mesmo contato).
+      ja_cliente: Crm::Cards::JaECliente.do_card(@card, user: @user, account_user: @account_user)
     )
   end
 

@@ -6010,6 +6010,12 @@
     }
   },
   "CRM_CARD": {
+    "JA_CLIENTE": {
+      "SELO": "Já é cliente desde {dia}",
+      "SELO_SEM_DATA": "Já é cliente",
+      "SELO_ROTULO": "{selo}. Abrir a compra",
+      "ABRIR_COMPRA": "Abrir a compra"
+    },
     "FECHAR": "Fechar",
     "VOLTAR": "Voltar",
     "CANCELAR": "Cancelar",

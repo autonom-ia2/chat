@@ -53,6 +53,8 @@ class Crm::Cards::Broadcaster
       account_user: account_user_for(user)
     ).perform.tap do |data|
       data[:account_id] = @card.account_id
+      # #2710: o card que a página de agendamento cria chega por aqui; sem o selo, ele apareceria com "Cliente".
+      data[:ja_cliente] = Crm::Cards::JaECliente.do_card(card_with_associations, user: user, account_user: account_user_for(user))
       data[:performer] = Current.user&.push_event_data if Current.user.present?
     end
   end

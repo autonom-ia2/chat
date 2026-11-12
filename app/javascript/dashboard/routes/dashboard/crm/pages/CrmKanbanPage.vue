@@ -1692,6 +1692,9 @@ const openCardFromBoard = card => {
   openCardDrawer(card);
 };
 
+// #2710: o selo "Já é cliente" (no quadro e no topo do card) abre a compra, o card ganho do mesmo contato.
+const abrirCompra = ({ card_id: cardId }) => openCardFromBoard({ id: cardId });
+
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
 // keep the calendar in sync when it's the active view (it reads a separate
 // calendarEvents array, not the drawer's follow-up list).
@@ -3099,6 +3102,7 @@ onUnmounted(() => {
                 :com-valor="quadroComValor"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
+                @abrir-ja-cliente="abrirCompra"
               />
             </div>
           </template>
@@ -3406,6 +3410,7 @@ onUnmounted(() => {
       :restaurando="arquivados.restaurandoCard.value"
       :erro-restaurar="arquivados.erroRestaurarCard.value"
       @restaurar="arquivados.restaurarCardAberto(selectedCard)"
+      @abrir-compra="abrirCompra"
       @save="saveCard"
       @move="moveCardFromDetails"
       @archive="archiveCard"
