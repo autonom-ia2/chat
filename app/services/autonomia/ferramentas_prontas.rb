@@ -18,6 +18,22 @@ module Autonomia::FerramentasProntas
   # com a vitrine: quem inclui é o mesmo endpoint dela.
   FLAG_CONSTRUTOR = 'agente_ferramentas_prontas_construtor'.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
+  # AS RODADAS DE FERRAMENTA POR RESPOSTA (#2918, decisão do Rodrigo em 11/11/2026): as do Experimente da vitrine
+  # (`Experimente::ComModelo::MAX_RODADAS` aponta para cá) e as do agente com pronta no atendimento. Uma constante só, para
+  # o que o dono vê no teste não voltar a ser melhor do que o cliente recebe: com uma rodada, a NCM "café torrado" parava
+  # no grupo 0901.2, e o código da nota só vinha na segunda consulta.
+  RODADAS_POR_RESPOSTA = 3
+  # O PRAZO DAS RODADAS no atendimento: o relógio não corta nenhuma, na mesma conta da Lia
+  # (`QuoteAgent::Builder.rodadas_do_turno`: rodadas × a espera de uma rodada inteira). Uma rodada inteira é uma ida ao
+  # modelo no teto dela (`ResponsesClient::REQUEST_TIMEOUT`) e a janela da consulta no turno
+  # (`ConsultaNoTurno::ESPERA_DO_TURNO`, 8 s). O `ResponsesClient` só confere o relógio antes de abrir as rodadas 2 e 3, e
+  # nenhuma rodada normal chega perto disto; ele só pesa com a OpenAI degradada (as novas tentativas) ou numa fonte lenta
+  # no caminho síncrono (o `prazo_total` dela, até 12 s). O que limita é a rodada (três) e o prazo de cada consulta: um
+  # relógio curto cortaria a segunda consulta quando o modelo demora, e o agente voltaria a responder pela metade, sem
+  # aviso. Não vale o `MAX_SEGUNDOS` do Experimente: ele existe pelo corte de 15 s do pedido web; o atendimento roda no
+  # `ReplyJob`. Constante lida no corpo do módulo: `ConsultaNoTurno` não pode ler constante daqui no corpo da classe dele.
+  PRAZO_DAS_RODADAS = RODADAS_POR_RESPOSTA *
+                      (Crm::Ai::ResponsesClient::REQUEST_TIMEOUT + Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO)
 
   module_function
 
@@ -59,6 +75,16 @@ module Autonomia::FerramentasProntas
     return true unless tool.pronta?
 
     disponivel?(agent.account, tool.fonte_do_catalogo) && agent.agent_type != AGENTE_DE_COTACAO
+  end
+
+  # As rodadas do agente que RECEBE ao menos uma pronta no turno (`no_turno?`: a flag das prontas e a da fonte ligadas na
+  # conta dele, fora da Lia). -> kwargs para o `Answerer`, ou nil (vale o padrão de quem chama). Sem a flag das prontas,
+  # nem consulta o banco: o agente sem pronta segue como antes.
+  def rodadas(agent)
+    return nil if agent.blank? || agent.agent_type == AGENTE_DE_COTACAO || !ligada?(agent.account)
+    return nil unless agent.tools.enabled.where.not(fonte_pronta: nil).any? { |tool| tool.pronta? && no_turno?(tool, agent) }
+
+    { max_rodadas: RODADAS_POR_RESPOSTA, max_segundos: PRAZO_DAS_RODADAS }
   end
 
   # A pronta calculada aqui (o CPF: nenhum host) não vai ao caminho em segundo plano do #2749 (`ConsultaNoTurno.aplica?`):

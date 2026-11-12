@@ -532,10 +532,12 @@ module Autonomia
           ids.empty? ? {} : { 'memoria_fact_ids' => ids }
         end
 
-        # As rodadas do turno: as do principal com ajudante (tema 14, #1434) ou, sem ajudante, as de sempre — seis para a
-        # Lia (`QuoteAgent::Builder`), uma para os demais. A Lia nunca tem ajudante, então segue igual.
+        # As rodadas do turno, nesta ordem: as do principal com ajudante (tema 14, #1434); as da Lia (`QuoteAgent::Builder`,
+        # seis); as do agente com pronta no turno (#2918, as do Experimente); e uma para os demais. A Lia nunca tem
+        # ajudante nem pronta no turno (`FerramentasProntas.rodadas` devolve nil para ela), então segue igual.
         def rodadas_do_turno
-          ::Autonomia::Agents::Ajudantes.rodadas(@agent) || ::Autonomia::Insurance::QuoteAgent::Builder.rodadas_do_turno(@agent)
+          ::Autonomia::Agents::Ajudantes.rodadas(@agent) || ::Autonomia::FerramentasProntas.rodadas(@agent) ||
+            ::Autonomia::Insurance::QuoteAgent::Builder.rodadas_do_turno(@agent)
         end
 
         # QUAL DOS SILÊNCIOS, e por que isto existe. Os três caminhos terminavam no mesmo `silenced`,
