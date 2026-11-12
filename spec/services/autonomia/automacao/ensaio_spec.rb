@@ -49,6 +49,60 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black')
   end
 
+  # #2609: com a janela fechada e sem modelo que saia no lugar, a execução para (#2573): o ensaio diz "pararia", com o
+  # motivo do motor, e não lista os passos seguintes.
+  describe 'janela fechada' do
+    let(:canal) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:aprovado) do
+      { 'name' => 'retorno', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Oi! Podemos falar?' }] }
+    end
+    let(:com_modelo) { mensagem_passo('p1', 'Oi.').merge('modelo' => { 'nome' => 'retorno', 'idioma' => 'pt_BR', 'variaveis' => [] }) }
+
+    before { conversa.update!(inbox: canal.inbox) }
+
+    def pararia(motivo) = [{ id: 'p1', tipo: 'mensagem', faria: 'pararia', dados: { motivo: motivo } }]
+
+    it 'sem modelo, pararia fora da janela e o caminho acaba' do
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1')))).to eq(pararia('fora_da_janela'))
+    end
+
+    it 'com modelo que não sai, pararia com o motivo do modelo', :aggregate_failures do
+      expect(passos_de(receita(com_modelo, esperar_passo('e1')))).to eq(pararia('modelo_fora_da_caixa'))
+
+      canal.update!(message_templates: [aprovado.merge('status' => 'PENDING')])
+      expect(passos_de(receita(com_modelo, esperar_passo('e1')))).to eq(pararia('modelo_nao_aprovado'))
+    end
+
+    it 'com o modelo que sai, mostra o texto e o modelo e segue' do
+      canal.update!(message_templates: [aprovado])
+
+      expect(passos_de(receita(com_modelo, esperar_passo('e1'))).map { |no| [no[:faria], no[:dados]] })
+        .to eq([['mensagem', { texto: 'Oi.', modelo: 'retorno' }], ['esperar', {}]])
+    end
+
+    it 'com a janela aberta, a mensagem sairia e segue' do
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'Oi')
+
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1'))).pluck(:faria)).to eq(%w[mensagem esperar])
+    end
+
+    it 'o limite de horas da caixa API vencido pararia' do
+      api = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '2' })
+      conversa.update!(inbox: api.inbox)
+
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1')))).to eq(pararia('limite_da_caixa'))
+    end
+
+    it 'o "escrever" ao cliente pararia antes da IA; a sugestão segue', :aggregate_failures do
+      escrever = { 'id' => 'i1', 'tipo' => 'escrever', 'le' => ['mensagens'], 'instrucao' => 'Agradeça', 'destino' => 'mensagem' }
+
+      expect(passos_de(receita(escrever, esperar_passo('e1'))))
+        .to eq([{ id: 'i1', tipo: 'escrever', faria: 'pararia', dados: { motivo: 'fora_da_janela' } }])
+      expect(passos_de(receita(escrever.merge('destino' => 'sugestao'), esperar_passo('e1'))).pluck(:faria)).to eq(%w[ia_escrever esperar])
+    end
+  end
+
   it 'sem a mensagem automática, diz que não sairia' do
     account.disable_features!('automacao_mensagens')
 
@@ -243,6 +297,104 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
       mensagem(content: nil, status: :failed)
 
       expect(passos_de(falhou).first[:faria]).to eq('faltou_valor')
+    end
+  end
+
+  # #2604: quem agiria (quem ligou, ou quem vai ligar) precisa poder agir na conversa, a pergunta do Executor no começo
+  # de cada rodada (Acesso#motivo_no): sem isso, a automação pausaria no primeiro passo, e o caminho acaba ali. O e-mail
+  # confere também a caixa dele.
+  describe 'quem age' do
+    let(:bia) { create(:user, account: account, role: :agent, name: 'Bia') }
+    let(:caixa_de_email) { create(:channel_email, account: account).inbox }
+    let(:email) { { 'id' => 'em', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Oi'], 'texto' => ['Tudo bem?'] } }
+    let(:pausaria) { { motivo: 'quem_ligou_sem_acesso', quem: 'Bia' } }
+    let(:etiqueta) do
+      { 'id' => 'x1', 'tipo' => 'acao', 'acao' => 'POST conversations/:conversation_id/labels', 'descricao' => 'Etiqueta',
+        'corpo' => { 'labels' => ['vip'] } }
+    end
+
+    # Como a versão salva de uma automação que `quem` ligou: o controller passa o Acesso dela.
+    def passos_como(quem, *passos)
+      automacao = create(:autonomia_automacao, account: account, ligada_por: quem)
+      acesso = Autonomia::Automacao::Acesso.new(automacao, chave_gatilho: 'conversa.resolvida')
+      described_class.new(receita: receita(*passos), conta: account, usuario: admin, acesso: acesso).resultado[:conversas].first[:passos]
+    end
+
+    def gerencia_automacoes(quem)
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage])
+      account.account_users.find_by(user: quem).update!(custom_role: funcao)
+    end
+
+    before { contato.update!(email: 'maria@exemplo.com.br') }
+
+    it 'a mensagem e o aviso pausariam quando quem age não enxerga a conversa, e o caminho acaba', :aggregate_failures do
+      gerencia_automacoes(bia)
+      aviso = avisar_passo('a1', { 'pessoas' => [admin.id] }, 'Olha')
+
+      expect(passos_como(bia, mensagem_passo('m1', 'Oi'), esperar_passo('e1')))
+        .to eq([{ id: 'm1', tipo: 'mensagem', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, aviso, esperar_passo('e1'))).to eq([{ id: 'a1', tipo: 'avisar', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(admin, mensagem_passo('m1', 'Oi'), esperar_passo('e1')).pluck(:faria)).to eq(%w[mensagem esperar])
+    end
+
+    # O motor pausa no começo da rodada, antes de qualquer passo (Executor#rodar): a ação, a IA e até a espera de antes
+    # da mensagem não aparecem como feitas.
+    it 'pausaria já no primeiro passo, seja ele qual for, e não lista os seguintes', :aggregate_failures do
+      gerencia_automacoes(bia)
+      resumir = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => ['mensagens'], 'destino' => { 'avisar' => { 'responsavel' => true } } }
+
+      expect(passos_como(bia, etiqueta, mensagem_passo('m1', 'Oi')))
+        .to eq([{ id: 'x1', tipo: 'acao', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, resumir, mensagem_passo('m1', 'Oi'))).to eq([{ id: 'r1', tipo: 'resumir', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, esperar_passo('e1'), etiqueta)).to eq([{ id: 'e1', tipo: 'esperar', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(admin, etiqueta, mensagem_passo('m1', 'Oi')).pluck(:faria)).to eq(%w[acao mensagem])
+    end
+
+    # A mesma pergunta inteira do motor: quem ligou e perdeu a permissão de gerenciar automações (ou saiu da conta)
+    # pausaria a automação, mesmo vendo a conversa.
+    it 'pausaria com o motivo do motor quando quem ligou não pode mais gerenciar automações' do
+      create(:inbox_member, user: bia, inbox: inbox)
+
+      expect(passos_como(bia, etiqueta, mensagem_passo('m1', 'Oi')))
+        .to eq([{ id: 'x1', tipo: 'acao', faria: 'pausaria', dados: { motivo: 'quem_ligou_sem_permissao', quem: 'Bia' } }])
+    end
+
+    # O rascunho age como quem pede, que só ensaia as conversas que vê: o alcance não pausa.
+    it 'sem o Acesso de quem ligou, age como quem pede' do
+      passos = described_class.new(receita: receita(etiqueta, mensagem_passo('m1', 'Oi')), conta: account, usuario: admin)
+                              .resultado[:conversas].first[:passos]
+
+      expect(passos.pluck(:faria)).to eq(%w[acao mensagem])
+    end
+
+    it 'o e-mail pausaria quando quem age vê a conversa mas não começa conversa na caixa de e-mail', :aggregate_failures do
+      gerencia_automacoes(bia)
+      create(:inbox_member, user: bia, inbox: inbox)
+
+      expect(passos_como(bia, email, esperar_passo('e1'))).to eq([{ id: 'em', tipo: 'email', faria: 'pausaria', dados: pausaria }])
+
+      create(:inbox_member, user: bia, inbox: caixa_de_email)
+      expect(passos_como(bia, email, esperar_passo('e1')).pluck(:faria)).to eq(%w[email esperar])
+    end
+
+    it 'o e-mail pausaria quando quem age não enxerga a conversa, mesmo na caixa de e-mail' do
+      gerencia_automacoes(bia)
+      create(:inbox_member, user: bia, inbox: caixa_de_email)
+
+      expect(passos_como(bia, email).first).to include(faria: 'pausaria', dados: pausaria)
+    end
+
+    # Na ordem do PassoDeEmail: a caixa e quem age vêm antes do texto. Texto vazio sem acesso à caixa pausaria, não pularia.
+    it 'o e-mail confere a caixa antes do texto, como o motor', :aggregate_failures do
+      gerencia_automacoes(bia)
+      create(:inbox_member, user: bia, inbox: inbox)
+      vazio = email.merge('texto' => [' '])
+
+      expect(passos_como(bia, vazio).first).to include(faria: 'pausaria', dados: pausaria)
+      contato.update!(email: nil)
+      expect(passos_como(admin, vazio).first[:faria]).to eq('contato_sem_email')
+      contato.update!(email: 'maria@exemplo.com.br')
+      expect(passos_como(admin, vazio).first[:faria]).to eq('texto_vazio')
     end
   end
 

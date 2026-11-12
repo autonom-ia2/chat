@@ -226,6 +226,67 @@ describe('linhasDoEnsaio', () => {
     });
   });
 
+  // #2604: quem liga a automação não pode escrever ali: o motor pausaria.
+  it('o passo que pausaria diz quem liga, sem balão', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'm1',
+          tipo: 'mensagem',
+          faria: 'pausaria',
+          dados: { motivo: 'quem_ligou_sem_acesso', quem: 'Bia' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.PAUSARIA(Bia)');
+    expect(linha.balao).toBeUndefined();
+  });
+
+  // #2604: quem ligou não pode mais gerenciar automações: pausaria já no
+  // primeiro passo, seja ele qual for, com a frase de quem liga.
+  it('o passo que pausaria por quem ligou diz que ele não gerencia mais', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'x1',
+          tipo: 'acao',
+          faria: 'pausaria',
+          dados: { motivo: 'quem_ligou_sem_permissao', quem: 'Bia' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.PAUSARIA_QUEM_LIGA(Bia)');
+  });
+
+  // #2609: a janela fechada sem modelo que saia: pararia aqui, com o motivo.
+  it('o passo que pararia diz o motivo do motor, sem balão', () => {
+    const [janela, tweet] = linhasDoEnsaio(
+      [
+        {
+          id: 'm1',
+          tipo: 'mensagem',
+          faria: 'pararia',
+          dados: { motivo: 'modelo_nao_aprovado' },
+        },
+        { id: 'm2', tipo: 'mensagem', faria: 'canal_sem_resposta', dados: {} },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(janela.aviso).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.PARARIA.MODELO_NAO_APROVADO'
+    );
+    expect(janela.balao).toBeUndefined();
+    expect(tweet.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CANAL_SEM_RESPOSTA');
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [

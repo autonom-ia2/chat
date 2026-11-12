@@ -20,6 +20,8 @@ const AVISO = {
   contato_bloqueado: 'CONTATO_BLOQUEADO',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
+  // #2609: a mensagem pula, como no motor.
+  canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
 };
 
@@ -110,6 +112,23 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
     return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // #2604: quem liga a automação não pode escrever nesta conversa ou caixa, ou
+  // não pode mais gerenciar automações (saiu da conta, perdeu a permissão): o
+  // motor pausaria a automação, e o caminho acaba aqui.
+  if (no.faria === 'pausaria') {
+    const chave =
+      no.dados.motivo === 'quem_ligou_sem_acesso'
+        ? 'PAUSARIA'
+        : 'PAUSARIA_QUEM_LIGA';
+    return { ...base, aviso: t(`${E}.${chave}`, { nome: no.dados.quem }) };
+  }
+  // #2609: a janela fechada sem modelo que saia no lugar: a execução pararia
+  // aqui, com o motivo do motor, e o caminho acaba.
+  if (no.faria === 'pararia')
+    return {
+      ...base,
+      aviso: t(`${E}.PARARIA.${no.dados.motivo.toUpperCase()}`),
+    };
   // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
   if (no.tipo === 'ia_assumir')
     return no.faria === 'ia_assumir'
