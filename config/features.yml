@@ -1364,7 +1364,7 @@
   column: feature_flags_ext_2
 
 # Agentes: ferramentas prontas, F7 (#2858): as consultas Premium, pagas, à BigDataCorp. Ligada (junto com
-# `agente_ferramentas_prontas`): a vitrine ganha o grupo Premium com 7 cards (certidões da empresa, raio-X da empresa,
+# `agente_ferramentas_prontas`): a vitrine ganha 7 cards Premium, cada um no grupo do assunto (#2939), (certidões da empresa, raio-X da empresa,
 # conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas), cada um com o
 # selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
 # plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
@@ -1374,5 +1374,14 @@
 # em todas só depois da conferência em produção com OK do Rodrigo (consulta paga).
 - name: agente_ferramentas_prontas_premium
   display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
+# empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
+# Sem migration. Rollback: desligar a flag na conta. Posição 45 (17592186044416, 1 << 44), confirmada pela
+# Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
+- name: relacionamentos_novo
+  display_name: Relacionamentos › telas novas
   enabled: false
   column: feature_flags_ext_2

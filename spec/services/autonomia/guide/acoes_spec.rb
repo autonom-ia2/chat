@@ -67,6 +67,7 @@ RSpec.describe Autonomia::Guide::Acoes do
     # cancela as reuniões futuras, com aviso ao cliente.
     it 'deixa excluir contato só na tela', :aggregate_failures do
       expect(described_class::SO_NA_TELA).to include('DELETE contacts/:id' => 'contact_delete')
+      expect(described_class::SO_NA_TELA).to include('POST relacionamentos/apagar' => 'contact_delete')
       expect(para(admin).catalogo).not_to include('DELETE contacts/:id')
       expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include('DELETE contacts/:id')
       I18n.with_locale(:pt_BR) do

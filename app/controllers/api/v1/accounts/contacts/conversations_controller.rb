@@ -13,21 +13,15 @@ class Api::V1::Accounts::Contacts::ConversationsController < Api::V1::Accounts::
 
   private
 
+  # Só leitura (#1849): quem lê a caixa sem atender também vê as conversas anteriores. A regra mora em
+  # Contacts::ConversasLegiveis, a mesma da ficha de Relacionamentos (#2895).
   def permitted_conversations
-    conversations = Current.account.conversations.includes(
+    ::Contacts::ConversasLegiveis.call(@contact.id, user: Current.user, account: Current.account).includes(
       :assignee, :contact, :taggings, :contact_inbox
     ).preload(
       inbox: :channel,
       ai_assignee: { avatar_attachment: [:blob] }
-    ).where(contact_id: @contact.id)
-
-    # Só leitura (#1849): quem lê a caixa sem atender também vê as conversas anteriores.
-    Conversations::PermissionFilterService.new(
-      conversations,
-      Current.user,
-      Current.account,
-      for_reading: true
-    ).perform
+    )
   end
 
   def conversation_with_neighbours(display_id)
