@@ -7,6 +7,8 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
   let(:formatos) { Autonomia::Guide::Formatos.todos }
   let(:recursos_do_catalogo) { formatos.keys.map { |acao| permitidas.recurso_de(acao) }.uniq }
 
+  def liberadas(*acoes) = acoes.map { |acao| permitidas.permitida?(acao) }
+
   it 'classifica todo recurso do catálogo do Guia, uma vez só' do
     classificados = permitidas.classificados
 
@@ -42,7 +44,12 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
   describe 'a trava do DELETE (D1)' do
     let(:delete_liberados) do
       ['DELETE contacts/:contact_id/notes/:id', 'DELETE contacts/:contact_id/customer', 'DELETE companies/:company_id/contacts/:id',
-       'DELETE crm/follow_ups/:id', 'DELETE crm/booking_invites/:id']
+       'DELETE crm/follow_ups/:id', 'DELETE crm/booking_invites/:id',
+       # Lote D.
+       'DELETE teams/:team_id/team_members', 'DELETE canned_responses/:id', 'DELETE custom_filters/:id', 'DELETE crm/saved_views/:id',
+       'DELETE agent_capacity_policies/:agent_capacity_policy_id/inbox_limits/:id',
+       'DELETE agent_capacity_policies/:agent_capacity_policy_id/users/:id', 'DELETE crm/service_schedules/:id',
+       'DELETE conversations/:conversation_id/participants']
     end
     let(:deletes) { permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') } }
 
@@ -58,7 +65,7 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'a política de distribuição e a caixa do funil ficam fora mesmo assim: param a distribuição e a criação de card' do
       fora = ['DELETE assignment_policies/:id', 'DELETE inboxes/:inbox_id/assignment_policy', 'DELETE crm/pipelines/:pipeline_id/inboxes/:inbox_id']
 
-      expect(fora.map { |acao| permitidas.permitida?(acao) }).to all(be(false))
+      expect(liberadas(*fora)).to all(be(false))
     end
   end
 
@@ -116,8 +123,7 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
 
     it 'na reunião, só registra se aconteceu', :aggregate_failures do
       expect(permitidas.permitida?('POST crm/meetings/:id/record_outcome')).to be(true)
-      expect(['POST crm/meetings', 'PATCH crm/meetings/:id', 'POST crm/meetings/:id/sync'].map { |acao| permitidas.permitida?(acao) })
-        .to all(be(false))
+      expect(liberadas('POST crm/meetings', 'PATCH crm/meetings/:id', 'POST crm/meetings/:id/sync')).to all(be(false))
     end
 
     it 'na página de agendamento, deixa fora o texto ao cliente, passar reuniões e apagar', :aggregate_failures do
@@ -132,6 +138,34 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'gera o link de agendamento sem mandar' do
       expect([permitidas.permitida?('POST crm/booking_invites'), permitidas.permitida?('POST crm/booking_invites/:id/deliver')])
         .to eq([true, false])
+    end
+  end
+
+  describe '#2660 lote D: configuração do atendimento' do
+    it 'cria e altera time, SLA e as políticas, sem apagar', :aggregate_failures do
+      expect(liberadas('POST teams', 'PATCH sla_policies/:id', 'POST assignment_policies', 'PUT agent_capacity_policies/:id')).to all(be(true))
+      expect(liberadas('DELETE teams/:id', 'DELETE sla_policies/:id', 'DELETE agent_capacity_policies/:id')).to all(be(false))
+    end
+
+    it 'põe e tira gente um a um; trocar a lista inteira fica fora' do
+      expect(liberadas('PATCH teams/:team_id/team_members', 'PATCH conversations/:conversation_id/participants',
+                       'PUT conversations/:conversation_id/participants')).to all(be(false))
+    end
+
+    it 'no funil, só restaura e liga caixa: criar e alterar esperam o formato completo', :aggregate_failures do
+      expect(permitidas.permitida?('POST crm/pipelines/:id/restore')).to be(true)
+      expect(liberadas('POST crm/pipelines', 'PATCH crm/pipelines/:id')).to all(be(false))
+      expect(permitidas.permitida?('POST crm/pipelines/:pipeline_id/inboxes')).to be(true)
+    end
+
+    it 'no CRM da caixa, ligar o CRM e a IA de assunto ficam fora; a visão salva não muda de posição', :aggregate_failures do
+      expect(permitidas.proibidos('PATCH crm/inbox_settings/:inbox_id', { 'crm_enabled' => false, 'subject_ai_mode' => 'auto' }))
+        .to eq(%w[crm_enabled subject_ai_mode])
+      expect(permitidas.proibidos('PATCH crm/saved_views/:id', { 'position' => 1 })).to eq(['position'])
+    end
+
+    it 'as metas ficam fora: zerar a meta apaga com delete_all' do
+      expect(permitidas.permitida?('PUT crm/metas')).to be(false)
     end
   end
 end

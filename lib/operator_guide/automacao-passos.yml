@@ -293,3 +293,49 @@ so_guia:
   DELETE companies/:company_id/contacts/:id: Tirar da empresa fica no Guia e no motor; o editor não mostra DELETE.
   DELETE crm/follow_ups/:id: Cancelar o retorno fica no Guia e no motor; o editor não mostra DELETE.
   DELETE crm/booking_invites/:id: Cancelar o link fica no Guia e no motor; o editor não mostra DELETE.
+  # #2660 lote D: configuração do atendimento, liberada no motor e fora do editor. Nenhum dos 20 exemplos usa; é ajuste
+  # de configuração, que o Guia monta com a pessoa olhando.
+  POST teams: Criar time é configuração do atendimento; nenhum dos 20 exemplos usa.
+  PATCH teams/:id: O time é escolhido pelo id, e alterar time é configuração; nenhum dos 20 exemplos usa.
+  PUT teams/:id: Faz o mesmo que o PATCH; alterar time é configuração.
+  POST teams/:team_id/team_members: Pôr gente no time é configuração da equipe; nenhum dos 20 exemplos usa.
+  DELETE teams/:team_id/team_members: Tirar do time fica no Guia e no motor; o editor não mostra DELETE.
+  POST canned_responses: Resposta pronta é configuração do atendimento; nenhum dos 20 exemplos usa.
+  PATCH canned_responses/:id: A resposta pronta é escolhida pelo id, que a tela não oferece.
+  PUT canned_responses/:id: Faz o mesmo que o PATCH; a resposta pronta é escolhida pelo id.
+  DELETE canned_responses/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  POST custom_filters: Filtro salvo é preferência de tela de quem ligou; nenhum dos 20 exemplos usa.
+  PATCH custom_filters/:id: O filtro é escolhido pelo id, que a tela não oferece.
+  PUT custom_filters/:id: Faz o mesmo que o PATCH; o filtro é escolhido pelo id.
+  DELETE custom_filters/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  POST crm/saved_views: Visão salva é preferência de tela do funil; nenhum dos 20 exemplos usa.
+  PATCH crm/saved_views/:id: A visão é escolhida pelo id, que a tela não oferece.
+  PUT crm/saved_views/:id: Faz o mesmo que o PATCH; a visão é escolhida pelo id.
+  DELETE crm/saved_views/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  POST sla_policies: Política de SLA é configuração do atendimento; nenhum dos 20 exemplos usa.
+  PATCH sla_policies/:id: A política é escolhida pelo id, que a tela não oferece.
+  PUT sla_policies/:id: Faz o mesmo que o PATCH; a política é escolhida pelo id.
+  POST assignment_policies: Política de distribuição é configuração do atendimento; nenhum dos 20 exemplos usa.
+  PATCH assignment_policies/:id: A política é escolhida pelo id, que a tela não oferece.
+  PUT assignment_policies/:id: Faz o mesmo que o PATCH; a política é escolhida pelo id.
+  POST inboxes/:inbox_id/assignment_policy: Ligar a política à caixa é configuração; nenhum dos 20 exemplos usa.
+  POST agent_capacity_policies: Política de capacidade é configuração do atendimento; nenhum dos 20 exemplos usa.
+  PATCH agent_capacity_policies/:id: A política é escolhida pelo id, que a tela não oferece.
+  PUT agent_capacity_policies/:id: Faz o mesmo que o PATCH; a política é escolhida pelo id.
+  POST agent_capacity_policies/:agent_capacity_policy_id/inbox_limits: Limite por caixa é configuração; nenhum dos 20 exemplos usa.
+  PATCH agent_capacity_policies/:agent_capacity_policy_id/inbox_limits/:id: O limite é escolhido pelo id, que a tela não oferece.
+  PUT agent_capacity_policies/:agent_capacity_policy_id/inbox_limits/:id: Faz o mesmo que o PATCH; o limite é escolhido pelo id.
+  DELETE agent_capacity_policies/:agent_capacity_policy_id/inbox_limits/:id: Tirar fica no Guia e no motor; o editor não mostra DELETE.
+  POST agent_capacity_policies/:agent_capacity_policy_id/users: Pôr pessoa na política é configuração; nenhum dos 20 exemplos usa.
+  DELETE agent_capacity_policies/:agent_capacity_policy_id/users/:id: Tirar fica no Guia e no motor; o editor não mostra DELETE.
+  POST crm/pipelines/:id/restore: Restaurar funil arquivado é manutenção; nenhum dos 20 exemplos usa.
+  POST crm/pipelines/:pipeline_id/inboxes: Ligar caixa ao funil é estrutura do funil; nenhum dos 20 exemplos usa.
+  PATCH crm/inbox_settings/:inbox_id: O ajuste do CRM da caixa é configuração; nenhum dos 20 exemplos usa.
+  POST crm/service_schedules: Horário de atendimento é configuração; nenhum dos 20 exemplos usa.
+  PATCH crm/service_schedules/:id: O horário é escolhido pelo id, que a tela não oferece.
+  PUT crm/service_schedules/:id: Faz o mesmo que o PATCH; o horário é escolhido pelo id.
+  DELETE crm/service_schedules/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  PATCH nomes_de_etiquetas/:label_id: O nome livre da etiqueta é configuração; o "Alterar etiqueta" já troca o título.
+  PUT nomes_de_etiquetas/:label_id: Faz o mesmo que o PATCH; o nome livre da etiqueta é configuração.
+  POST conversations/:conversation_id/participants: Participante da conversa é ajuste de quem acompanha; nenhum dos 20 exemplos usa.
+  DELETE conversations/:conversation_id/participants: Tirar participante fica no Guia e no motor; o editor não mostra DELETE.
