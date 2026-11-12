@@ -114,7 +114,10 @@ class Autonomia::Guide::Acoes
   # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
   # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
   # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
+  # #2858 F7 (revisor, 12/11): o Experimente da vitrine faz consulta de verdade; no card Premium usa as grátis do mês e,
+  # depois delas, cobra com o clique no preço (`confirmou_preco`). O Guia nunca manda esse clique: o teste é na tela.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete',
+                 'POST autonomia/ferramentas_prontas/experimentar' => 'ready_tool_test' }
                .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
                        'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 

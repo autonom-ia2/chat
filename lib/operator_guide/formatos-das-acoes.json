@@ -11900,28 +11900,6 @@
     ],
     "sem_corpo": false
   },
-  "POST autonomia/ferramentas_prontas/experimentar": {
-    "campos": {
-      "confirmou_preco": {},
-      "fonte": {
-        "obrigatorio": true,
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      },
-      "valor": {}
-    },
-    "completo": false,
-    "controller": "api/v1/accounts/autonomia/ferramentas_prontas#experimentar",
-    "motivos": [
-      "leitura crua sem tipo: confirmou_preco (repassada a VALORES_DE_CONFIRMACAO.include?), valor (repassada a Autonomia::FerramentasProntas::Experimente.new)"
-    ],
-    "origem": [
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:40",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/ferramentas_prontas_controller.rb:42"
-    ],
-    "sem_corpo": false
-  },
   "POST autonomia/ferramentas_prontas/incluir": {
     "campos": {
       "agent_id": {
