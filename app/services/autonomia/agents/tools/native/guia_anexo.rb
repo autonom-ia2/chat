@@ -13,6 +13,9 @@ class Autonomia::Agents::Tools::Native::GuiaAnexo < Autonomia::Agents::Tools::Na
   PARTE = 7_000
 
   class << self
+    # #2918: LÊ (lê um anexo da conversa). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'ler_anexo'
     end

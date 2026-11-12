@@ -1,10 +1,10 @@
 # A FERRAMENTA QUE ESCREVE RODA UMA VEZ POR TURNO (#2918, revisão de segurança). O Rodrigo autorizou o agente com pronta
-# a CONSULTAR até 3 vezes por resposta, não a escrever. Sem esta trava, um texto injetado pelo cliente podia fazer a HTTP
-# que escreve (`Bound#escreve?`) rodar até 3 vezes no turno, cada vez com outra `Idempotency-Key` ("mais um igual",
-# `ChaveDeIdempotencia`). Com ela, a segunda chamada da mesma ferramenta no turno (na mesma rodada ou em outra) não vai ao
-# sistema de fora: o modelo lê `JA_FEITA` e a recusa fica registrada. A leitura (GET, as prontas) segue livre, e quem
-# chama decide quando a trava vale (`Answerer`, `uma_escrita_por_turno`): só nas rodadas das prontas. O ajudante e a Lia
-# seguem como antes.
+# a CONSULTAR até 3 vezes por resposta, não a escrever. Sem esta trava, um texto injetado pelo cliente podia fazer a
+# ferramenta que escreve (`Bound#escreve?`: a HTTP fora do GET, cada vez com outra `Idempotency-Key`; a nativa que
+# declara `escreve?`, como marcar horário) rodar até 3 vezes no turno. Com ela, a segunda chamada da mesma ferramenta no
+# turno (na mesma rodada ou em outra) não vai ao sistema de fora: o modelo lê `JA_FEITA` e a recusa fica registrada. A
+# leitura (GET, as prontas, a nativa que só lê) segue livre, e quem chama decide quando a trava vale (`Answerer`,
+# `uma_escrita_por_turno`): só nas rodadas das prontas. O ajudante e a Lia seguem como antes.
 class Autonomia::Agents::Tools::UmaEscritaPorTurno
   JA_FEITA = 'Esta ação já foi feita neste turno; não repita. Responda ao cliente com o resultado que você já recebeu.'.freeze
 

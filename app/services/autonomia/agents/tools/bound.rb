@@ -65,9 +65,9 @@ class Autonomia::Agents::Tools::Bound
     native? && @native.passa_a_conversa?
   end
 
-  # A HTTP cadastrada que não é leitura (todo método fora do GET) escreve no sistema do dono. A pronta só consulta.
-  # #2918: com as rodadas das prontas, ela roda uma vez por turno (`UmaEscritaPorTurno`).
-  def escreve? = @record.present? && !@record.pronta? && @record.http_method.to_s.upcase != 'GET'
+  # #2918: a nativa declara se escreve (`Native::Base.escreve?`); a HTTP cadastrada escreve fora do GET; a pronta só
+  # consulta. Com as rodadas das prontas, a que escreve roda uma vez por turno (`UmaEscritaPorTurno`).
+  def escreve? = native? ? @native.escreve? : !@record.pronta? && @record.http_method.to_s.upcase != 'GET'
 
   # -> String para o modelo.
   #

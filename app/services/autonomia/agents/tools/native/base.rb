@@ -98,6 +98,14 @@ class Autonomia::Agents::Tools::Native::Base
       false
     end
 
+    # A FERRAMENTA ESCREVE? (#2918) Cada nativa declara o seu (`base_escreve_declarado_spec` cobra de todas do
+    # `Registry`): escreve a que muda algo fora da leitura (marca horário, manda cartão ou arquivo ao cliente, abre
+    # cotação, grava na conta); lê a que só consulta. Nas rodadas das prontas, a que escreve roda uma vez por turno
+    # (`Tools::UmaEscritaPorTurno`). Sem declaração, vale escrita: a trava a mais é o lado seguro.
+    def escreve?
+      true
+    end
+
     # A ferramenta passa a conversa a outro atendente ou abre outro assunto (#1630)? O turno da passagem não a recebe:
     # sem cliente falando, uma passagem não pode gerar outra (vai e volta entre agentes).
     def passa_a_conversa?

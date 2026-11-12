@@ -5,6 +5,9 @@
 # administrador apaga.
 class Autonomia::Agents::Tools::Native::GuiaEsquecer < Autonomia::Agents::Tools::Native::Base
   class << self
+    # #2918: ESCREVE (apaga uma lembrança do Guia). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'apagar_lembranca'
     end

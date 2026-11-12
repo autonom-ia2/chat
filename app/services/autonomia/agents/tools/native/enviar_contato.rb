@@ -10,6 +10,9 @@ class Autonomia::Agents::Tools::Native::EnviarContato < Autonomia::Agents::Tools
                  'precisar falar por telefone, passe para uma pessoa da equipe.'.freeze
 
   class << self
+    # #2918: ESCREVE (manda o cartão de contato ao cliente). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'enviar_contato'
     end
