@@ -6,6 +6,10 @@
 # aparece sem classificação, quando uma ação liberada some ou fica com formato incompleto, quando ela não tem
 # desfazer (Acoes::SEM_DESFAZER) ou é só da tela, e quando é apagar estrutura (F3.11).
 #
+# DELETE (#2660 D1): entra só o de item simples que o desfazer do Guia alcança (apaga ou arquiva o registro dentro da
+# requisição, pelo model), nunca o de estrutura (AcoesPermitidas::ESTRUTURA) nem o que apaga em lote ou num job. O spec
+# guarda a lista dos DELETE liberados: um DELETE novo aqui só passa entrando lá, com a leitura do controller.
+#
 # `exige`: campos que a receita tem de preencher além do que a plataforma pede. Etiqueta e atributo criados pela
 # automação levam descrição (F3.10).
 # `fixos`: campo que a receita manda sempre com este valor (o atributo da conversa sem `merge` apagaria os outros).
@@ -37,11 +41,15 @@ passo:
       PATCH contacts/:contact_id/labels/alterar: {}
   contacts/notes:
     motivo: >-
-      Deixar uma nota no contato, como a pessoa faz na tela de notas (G19, #2636). A nota sai no nome de quem ligou a
-      automação, como as outras ações; qual automação fez fica no registro dela e na auditoria. Mudar e apagar nota
-      fica fora: a automação não reescreve o que alguém anotou.
+      Deixar, mudar e apagar uma nota no contato, como a pessoa faz na tela de notas (G19, #2636; mudar e apagar pela
+      D1 do #2660, escolha do Rodrigo). A nota sai no nome de quem ligou a automação, como as outras ações, e quem muda
+      a nota passa a ser o autor dela, como na tela; qual automação fez fica no registro dela e na auditoria. Apagar
+      tira só a nota, pelo model, e o desfazer a põe de volta.
     acoes:
       POST contacts/:contact_id/notes: {}
+      PATCH contacts/:contact_id/notes/:id: {}
+      PUT contacts/:contact_id/notes/:id: {}
+      DELETE contacts/:contact_id/notes/:id: {}
   custom_attribute_definitions:
     motivo: >-
       Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
@@ -60,9 +68,12 @@ passo:
       PATCH contacts/:id: { proibe: [avatar, avatar_url, blocked] }
       PUT contacts/:id: { proibe: [avatar, avatar_url, blocked] }
   contacts/customers:
-    motivo: Marcar o contato como cliente (#2660 lote B). Voltar a lead é DELETE, que fica para a trava do lote 3.
+    motivo: >-
+      Marcar o contato como cliente (#2660 lote B) e voltar a lead (D1): o DELETE só troca o tipo do contato, sem
+      apagar nada.
     acoes:
       POST contacts/:contact_id/customer: {}
+      DELETE contacts/:contact_id/customer: {}
   companies:
     motivo: >-
       Criar e alterar a empresa e os atributos dela (criar: #2660 lote B). A foto fica de fora (a plataforma buscaria
@@ -72,9 +83,12 @@ passo:
       PATCH companies/:id: { proibe: [avatar] }
       PUT companies/:id: { proibe: [avatar] }
   companies/contacts:
-    motivo: Pôr o contato na empresa (#2660 lote B). Tirar é DELETE, que fica para a trava do lote 3.
+    motivo: >-
+      Pôr o contato na empresa (#2660 lote B) e tirar (D1): o DELETE só desliga o contato da empresa, sem apagar
+      nenhum dos dois.
     acoes:
       POST companies/:company_id/contacts: {}
+      DELETE companies/:company_id/contacts/:id: {}
   conversations:
     motivo: Atributo, prioridade e status da conversa.
     acoes:
@@ -149,6 +163,8 @@ passo:
       POST crm/follow_ups/:id/cancel: {}
       POST crm/follow_ups/:id/reschedule: {}
       POST crm/follow_ups/:id/dismiss_reminder: {}
+      # D1: o DELETE do retorno só cancela (FollowUpsController#destroy chama o cancel); nada é apagado.
+      DELETE crm/follow_ups/:id: {}
   crm/follow_up_series:
     motivo: >-
       Mudar "esta e as próximas", pausar, retomar e encerrar a série de um retorno que repete (#2660 lote A). As vezes
@@ -192,9 +208,10 @@ passo:
   crm/booking_invites:
     motivo: >-
       Gerar o link de agendamento do cliente, sem mandar (#2660 lote A). Mandar na conversa é o passo mensagem com o
-      link da agenda; "copiado" é gesto da tela.
+      link da agenda; "copiado" é gesto da tela. Cancelar o link (D1) grava a data do cancelamento, sem apagar.
     acoes:
       POST crm/booking_invites: {}
+      DELETE crm/booking_invites/:id: {}
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).

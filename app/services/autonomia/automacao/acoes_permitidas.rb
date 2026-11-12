@@ -10,7 +10,11 @@ module Autonomia::Automacao::AcoesPermitidas
 
   # Apagar estrutura fica só no Guia, com confirmação (D13, F3.11): a automação roda sem ninguém olhando, e um erro de
   # montagem que apaga repetidamente é defeito, não uso. O spec do CI cobra que nenhum DELETE destes vire passo.
-  ESTRUTURA = %w[crm/pipelines crm/stages inboxes agents labels custom_attribute_definitions].freeze
+  # #2660 D1: o DELETE de item simples que o desfazer alcança entra; o de estrutura não. Tirar a política de distribuição
+  # da caixa e a caixa do funil contam como estrutura: param a distribuição e a criação de card.
+  ESTRUTURA = %w[crm/pipelines crm/stages inboxes agents labels custom_attribute_definitions teams portals categories
+                 autonomia/agents autonomia/decisores crm/booking_pages crm/pipeline_inboxes assignment_policies
+                 inboxes/assignment_policies agent_capacity_policies sla_policies].freeze
 
   module_function
 

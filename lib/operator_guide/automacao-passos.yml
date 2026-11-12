@@ -285,3 +285,11 @@ so_guia:
   POST crm/booking_pages/:id/pause: A página é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
   PUT crm/my_booking_hours: Os horários pedem uma grade de dias e horas que o editor não tem; nenhum dos 20 exemplos usa.
   POST crm/booking_invites: Gerar o link sem mandar só serve com o passo mensagem, que já leva o link da agenda.
+  # #2660 D1: o DELETE de item simples entra no motor; o editor não mostra DELETE (catalogo_spec).
+  PATCH contacts/:contact_id/notes/:id: A nota é escolhida pelo id, que a tela não oferece; deixar a nota é o "Deixar uma nota".
+  PUT contacts/:contact_id/notes/:id: Faz o mesmo que o PATCH; a nota é escolhida pelo id, que a tela não oferece.
+  DELETE contacts/:contact_id/notes/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  DELETE contacts/:contact_id/customer: Voltar a lead fica no Guia e no motor; o editor não mostra DELETE.
+  DELETE companies/:company_id/contacts/:id: Tirar da empresa fica no Guia e no motor; o editor não mostra DELETE.
+  DELETE crm/follow_ups/:id: Cancelar o retorno fica no Guia e no motor; o editor não mostra DELETE.
+  DELETE crm/booking_invites/:id: Cancelar o link fica no Guia e no motor; o editor não mostra DELETE.

@@ -37,16 +37,38 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(liberadas.select { |acao| Autonomia::Guide::Acoes.fora_do_catalogo?(acao) }).to be_empty
   end
 
-  it 'nenhum DELETE vira passo, de recurso nenhum' do
-    expect(permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') }).to be_empty
+  # #2660 D1: o DELETE de item simples que o desfazer alcança entra, um a um, depois de ler o controller (apaga ou
+  # arquiva o registro pelo model, dentro da requisição). DELETE novo na lista só passa entrando aqui.
+  describe 'a trava do DELETE (D1)' do
+    let(:delete_liberados) do
+      ['DELETE contacts/:contact_id/notes/:id', 'DELETE contacts/:contact_id/customer', 'DELETE companies/:company_id/contacts/:id',
+       'DELETE crm/follow_ups/:id', 'DELETE crm/booking_invites/:id']
+    end
+    let(:deletes) { permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') } }
+
+    it 'só libera o DELETE de item simples que o desfazer alcança, conferido um a um' do
+      expect(deletes).to match_array(delete_liberados)
+    end
+
+    it 'nenhum DELETE de estrutura nem sem desfazer', :aggregate_failures do
+      expect(deletes.map { |acao| permitidas.recurso_de(acao) } & permitidas::ESTRUTURA).to be_empty
+      expect(deletes & Autonomia::Guide::Acoes::SEM_DESFAZER).to be_empty
+    end
+
+    it 'a política de distribuição e a caixa do funil ficam fora mesmo assim: param a distribuição e a criação de card' do
+      fora = ['DELETE assignment_policies/:id', 'DELETE inboxes/:inbox_id/assignment_policy', 'DELETE crm/pipelines/:pipeline_id/inboxes/:inbox_id']
+
+      expect(fora.map { |acao| permitidas.permitida?(acao) }).to all(be(false))
+    end
   end
 
-  it 'nunca libera apagar funil, etapa, caixa, agente, etiqueta ou atributo (F3.11)' do
+  it 'nunca libera apagar funil, etapa, caixa, agente, etiqueta, atributo, time ou portal (F3.11, D1)' do
     apagar_estrutura = formatos.keys.select do |acao|
       acao.start_with?('DELETE ') && permitidas::ESTRUTURA.include?(permitidas.recurso_de(acao))
     end
 
-    expect(apagar_estrutura).to include('DELETE labels/:id', 'DELETE crm/stages/:id', 'DELETE inboxes/:id')
+    expect(apagar_estrutura).to include('DELETE labels/:id', 'DELETE crm/stages/:id', 'DELETE inboxes/:id', 'DELETE teams/:id',
+                                        'DELETE portals/:id', 'DELETE autonomia/agents/:id')
     expect(apagar_estrutura.select { |acao| permitidas.permitida?(acao) }).to be_empty
   end
 
