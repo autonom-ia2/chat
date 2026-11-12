@@ -18,6 +18,12 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
       montar(marca_que_vale(marca, agente), account: thread.account, agente: agente)
     end
 
+    # O que a tela de criação mostra e deixa mudar: o modelo da conversa, só enquanto o agente é rascunho. Depois do
+    # "Começar" a conversa de criação antiga não oferece mais listas para editar (a edição seria recusada).
+    def para_a_criacao(thread)
+      do_thread(thread) unless thread.agent && !thread.agent.draft?
+    end
+
     # O modelo de um agente que nasceu de um modelo, lido da marca dele: é o que a tela mostra quando reabre o rascunho
     # sem a conversa. nil para quem não nasceu de um modelo, para agente de sistema e para a Lia.
     def do_agente(agent)

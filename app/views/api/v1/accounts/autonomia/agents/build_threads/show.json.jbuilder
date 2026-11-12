@@ -1,5 +1,6 @@
-# #2881: o modelo pronto de ramo desta conversa (nil sem modelo: conta sem o pacote `seguros`, flag desligada, a Lia).
-modelo_pronto = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
+# #2881: o modelo pronto de ramo desta conversa (nil sem modelo: conta sem o pacote `seguros`, flag desligada, a Lia, e
+# também depois que o agente começou a atender, quando as listas já não mudam por aqui).
+modelo_pronto = Autonomia::Agents::ModelosDeRamo::Rascunho.para_a_criacao(@thread)
 json.payload do
   json.id @thread.id
   json.agent_id @thread.autonomia_agent_id

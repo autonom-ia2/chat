@@ -248,6 +248,24 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(conversa.reload.state[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
     end
 
+    it 'só deixa mexer nas ferramentas quem tem a chave "Ferramentas dos agentes"; perguntas e documentos, quem cuida dos agentes' do
+      so_agentes = com_funcao(%w[autonomia_manage])
+      antes = conversa.state[chave_da_marca]
+
+      mudar({ perguntas: [{ texto: 'A obra já começou?' }] }, conversa, so_agentes)
+      expect(response).to have_http_status(:ok)
+
+      mudar({ ferramentas: [{ fonte: 'cep' }] }, conversa, so_agentes)
+      expect(response).to have_http_status(:unauthorized)
+      mudar({ documentos: [], ferramentas: [{ fonte: 'cep' }] }, conversa, so_agentes)
+      expect(response).to have_http_status(:unauthorized)
+      expect(conversa.reload.state[chave_da_marca].slice('documentos', 'ferramentas')).to eq(antes.slice('documentos', 'ferramentas'))
+
+      mudar({ ferramentas: [{ fonte: 'cep' }] }, conversa, com_funcao(%w[autonomia_manage autonomia_tools_manage]))
+      expect(response).to have_http_status(:ok)
+      expect(conversa.reload.state[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep])
+    end
+
     it 'recusa com 422 quando o agente já começou a atender' do
       agente = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                 instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
@@ -366,6 +384,30 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
       expect(mudar_pelo_agente({ perguntas: [] }, comum)).to eq('motivo' => 'sem_modelo', 'campo' => nil)
       expect(response).to have_http_status(:not_found)
+    end
+
+    it 'só deixa mexer nas ferramentas quem tem a chave "Ferramentas dos agentes"' do
+      so_agentes = com_funcao(%w[autonomia_manage])
+
+      mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, rascunho, so_agentes)
+      expect(response).to have_http_status(:ok)
+
+      mudar_pelo_agente({ ferramentas: [{ fonte: 'cep' }] }, rascunho, so_agentes)
+      expect(response).to have_http_status(:unauthorized)
+      expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(modelo.ja_vem.map(&:fonte))
+
+      mudar_pelo_agente({ ferramentas: [{ fonte: 'cep' }] }, rascunho, com_funcao(%w[autonomia_manage autonomia_tools_manage]))
+      expect(response).to have_http_status(:ok)
+      expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep])
+    end
+
+    it 'deixa de mandar o modelo, na conversa e no agente, depois que o agente começou a atender' do
+      ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
+                                               instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
+      conversa.update!(agent: ativo)
+
+      expect(ver['modelo_pronto']).to be_nil
+      expect(ver_agente(ativo)).not_to have_key('modelo_pronto')
     end
 
     it 'responde 404 com a flag desligada e para a Lia, sem gravar' do

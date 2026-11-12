@@ -2,6 +2,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # #2881 — o pedido de mudança das listas do modelo pronto (o mesmo do rascunho do agente).
   include ::Autonomia::ListasDoModeloPronto
 
+  before_action :conferir_chave_de_ferramentas!, only: [:modelo_pronto]
   before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer, :modelo_pronto]
   rescue_from ::Autonomia::Agents::DesfazerAjuste::AjusteMudou, with: :render_ajuste_mudou
   rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava

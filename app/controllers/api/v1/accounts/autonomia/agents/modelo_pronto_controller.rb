@@ -4,10 +4,12 @@
 # nasceu de um modelo, só conta com o pacote `seguros` e a flag. Nenhuma chamada de IA.
 #
 # PATCH .../agents/:agent_id/modelo_pronto -> o agente, como no `show`, já com as listas novas.
-# Escrita: pede `autonomia_manage`, como toda escrita da área de Agentes. Agente de outra conta ou de sistema: 404.
+# Escrita: pede `autonomia_manage`, como toda escrita da área de Agentes; a lista de ferramentas pede também
+# `autonomia_tools_manage`. Agente de outra conta ou de sistema: 404.
 class Api::V1::Accounts::Autonomia::Agents::ModeloProntoController < Api::V1::Accounts::Autonomia::BaseController
   include ::Autonomia::ListasDoModeloPronto
 
+  before_action :conferir_chave_de_ferramentas!
   rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   def update

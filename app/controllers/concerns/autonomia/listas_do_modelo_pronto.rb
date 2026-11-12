@@ -2,6 +2,7 @@
 # dois endereços: pela conversa do Construtor (`build_threads/:id/modelo_pronto`) e pelo rascunho do agente
 # (`agents/:agent_id/modelo_pronto`, quando a tela reabre o rascunho sem a conversa). Cada lista que vem substitui a
 # lista inteira; a que não vem (ou vem `null`) fica como está. Nenhuma chamada de IA.
+# Permissão: perguntas e documentos, `autonomia_manage`; a lista de ferramentas, também `autonomia_tools_manage`.
 # Sem modelo (conta sem o pacote `seguros`, flag desligada, a Lia, agente que não nasceu de um modelo): 404
 # `sem_modelo`. Lista fora do formato ou agente que já começou a atender: 422 com o motivo e o campo. Nada é gravado
 # quando algo é recusado.
@@ -22,6 +23,17 @@ module Autonomia::ListasDoModeloPronto
     raise ::Autonomia::Agents::ModelosDeRamo::Edicao::Recusada.new('lista_invalida', campo.to_s) if campo
 
     ::Autonomia::Agents::ModelosDeRamo::Edicao.new(mudancas: mudancas_do_modelo, **alvo).call
+  end
+
+  # Perguntas e documentos pedem a escrita da área de Agentes (`autonomia_manage`, conferida na entrada). A lista de
+  # ferramentas (tirar, incluir, mudar a frase "Use quando", que vira a descrição da ferramenta para o agente) é assunto
+  # da chave "Ferramentas dos agentes", como na vitrine: quem não a tem não mexe em ferramenta por aqui. A equipe da
+  # plataforma sempre. Cada controller chama isto num `before_action` da ação que edita as listas: é conferência de
+  # permissão, antes da ação, e não parte do pedido.
+  def conferir_chave_de_ferramentas!
+    return if params[:ferramentas].nil? || Current.user.is_a?(SuperAdmin)
+
+    check_permission_granted!('autonomia_tools_manage')
   end
 
   # Os tipos de cada campo ficam declarados aqui (é o que o Guia lê): texto em tudo, verdadeiro ou falso em `tirada`.
