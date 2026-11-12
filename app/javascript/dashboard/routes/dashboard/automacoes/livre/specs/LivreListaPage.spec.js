@@ -3,6 +3,7 @@ import AutomationAPI from 'dashboard/api/automation';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import LivreListaPage from '../pages/LivreListaPage.vue';
+import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 
 // #2414 F5 — a lista única: as novas (em frase pelo catálogo) e as do jeito
 // antigo, que abrem na tela de hoje. Ligar leva a versão vista e a linha
@@ -323,6 +324,43 @@ describe('LivreListaPage', () => {
     const linha = wrapper.find('[data-linha]');
     expect(linha.text()).toContain('AUTOMACAO_LIVRE.LIGADA');
     expect(linha.find('[data-frase]').text()).toContain('PARAR');
+  });
+
+  // #2574: ligar pela lista a que manda mensagem também confirma antes.
+  it('ligar a que manda mensagem confirma antes; só o "Ligar" liga', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: {
+        automacoes: [
+          {
+            ...NOVA,
+            versao: {
+              id: 21,
+              receita: {
+                gatilho: { tipo: 'conversa.criada' },
+                passos: [{ id: 'p1', tipo: 'mensagem', texto: ['Oi'] }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    AutomacoesAPI.ligar.mockResolvedValue({
+      data: { ...NOVA, ativa: true, versao: { id: 21, numero: 1 } },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    await wrapper.find('[data-linha] [data-interruptor]').trigger('click');
+    await flushPromises();
+
+    expect(AutomacoesAPI.ligar).not.toHaveBeenCalled();
+    const confirmar = wrapper.findComponent(LivreConfirmarLigar);
+    expect(confirmar.props('receita').passos[0].tipo).toBe('mensagem');
+
+    confirmar.vm.$emit('ligar');
+    await flushPromises();
+
+    expect(AutomacoesAPI.ligar).toHaveBeenCalledWith(3, 21);
   });
 
   it('as automações das etapas ficam no funil: a linha leva até o quadro', async () => {

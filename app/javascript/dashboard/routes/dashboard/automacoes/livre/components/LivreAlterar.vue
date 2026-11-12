@@ -42,7 +42,7 @@ import {
 } from '../webhook';
 import { faltaDaFrequencia } from '../recorrente';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
-import { temDataIncompleta } from '../texto';
+import { dadoDoAlvo, temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { SEM_PRAZO, copiar, filtrosDoGatilho } from '../receita';
 import { custoPorMensagem } from '../custoDaIa';
@@ -102,8 +102,16 @@ const camposNativos = computed(() =>
     : []
 );
 const ehDeIa = computed(() => entrada.value?.grupo === 'IA');
+// #2594: o campo que a pessoa não pode ver só aparece quando já tem valor no
+// passo (travado, para ela poder tirar); vazio, ele não é oferecido.
 const camposDaAcao = computed(() =>
-  entrada.value?.tipo === 'acao' ? entrada.value.campos : []
+  entrada.value?.tipo === 'acao'
+    ? entrada.value.campos.filter(
+        campo =>
+          !campo.sem_permissao ||
+          lerCampo(rascunho.value, entrada.value, campo.nome) != null
+      )
+    : []
 );
 // A mesma etiqueta não vai em "Pôr" e em "Tirar": marcada numa lista, fica
 // bloqueada na outra.
@@ -193,6 +201,11 @@ const opcoesDoContatoCriado = computed(() => [
     .filter(item => item.criado === 'Contact')
     .map(item => ({ value: item.caminho, label: item.rotulo })),
 ]);
+// #2502 — o time do rodízio: "todos da caixa" (sem time) ou um time da conta.
+const opcoesDoTime = computed(() => [
+  { value: null, label: t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TODOS_DA_CAIXA') },
+  ...(props.opcoes.time || []),
+]);
 const mudarNativo = (nome, novo) => {
   if (novo === null) {
     const { [nome]: _tirado, ...resto } = rascunho.value;
@@ -259,9 +272,10 @@ const variosTextos = computed(
 );
 const rotuloDoDado = campo =>
   variosTextos.value
-    ? t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM', {
-        campo: t(campo.rotulo),
-      })
+    ? t(
+        `AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.${dadoDoAlvo(props.catalogo)}`,
+        { campo: t(campo.rotulo) }
+      )
     : '';
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
@@ -651,6 +665,21 @@ defineExpose({ abrir, fechar });
           <p class="mb-0 text-sm text-n-slate-11" data-lista-de-email-dica>
             {{ $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.DICA') }}
           </p>
+        </div>
+        <div
+          v-else-if="campo.peca === 'time'"
+          class="flex flex-col gap-1.5"
+          data-peca="time"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            :model-value="rascunho[campo.nome] ?? null"
+            :aria-label="$t(campo.rotulo)"
+            :options="opcoesDoTime"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
         </div>
         <LivreRetornoPara
           v-else-if="campo.peca === 'quem_recebe_retorno'"

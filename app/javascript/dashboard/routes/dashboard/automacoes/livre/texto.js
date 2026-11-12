@@ -24,6 +24,21 @@ const comChaveSeRepetido = opcoes => {
   );
 };
 
+// #2744: o "Pôr um dado" fala do registro em que o passo roda: o do ramo do
+// "em outro registro" (`catalogo.alvo`, doAlvoDoGatilho) ou o do gatilho. Sem
+// gatilho ainda, ou no da conta, só "Pôr um dado".
+const DADO_DO_ALVO = {
+  Conversation: 'CONVERSA',
+  'Crm::Card': 'CARD',
+  Contact: 'CONTATO',
+};
+export const dadoDoAlvo = catalogo => {
+  const alvo =
+    catalogo.alvo ||
+    catalogo.gatilhos?.find(item => item.tipo === catalogo.gatilho)?.alvo;
+  return DADO_DO_ALVO[alvo] || 'OUTRO';
+};
+
 // O nome do valor no catálogo. O do registro de origem (G65, `origem`) leva a
 // marca, para não confundir com o mesmo valor do registro em que o ramo roda.
 export const nomeDoValor = (item, t) =>

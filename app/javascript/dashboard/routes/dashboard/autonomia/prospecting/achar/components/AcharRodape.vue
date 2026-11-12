@@ -6,9 +6,9 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // Rodada 2:
 // - sempre colado embaixo: `mt-auto` numa página `min-h-full flex-col`;
 // - fundo da página de borda a borda, para nada da lista aparecer pelos lados;
-// - em 390 o botão redondo do menu fica no canto de baixo à esquerda
-//   (MobileSidebarLauncher.vue: fixed bottom-4 left-4 z-40): o conteúdo do
-//   rodapé começa depois dele (ms-[4.5rem]);
+// - em 390 o botão redondo do menu fica na faixa que o layout reserva embaixo
+//   (#2477, Dashboard.vue): a página termina acima dele, e o rodapé usa a
+//   largura inteira;
 // - o motivo de o botão estar desligado vai numa linha acima dele (`dica`),
 //   nunca dentro do botão: o botão diz sempre a ação.
 defineProps({
@@ -28,7 +28,7 @@ const emit = defineEmits(['principal']);
     data-rodape
   >
     <div
-      class="flex flex-col gap-2 ms-[4.5rem] md:ms-0 md:flex-row md:items-center md:justify-end md:gap-4"
+      class="flex flex-col gap-2 md:flex-row md:items-center md:justify-end md:gap-4"
     >
       <div v-if="$slots.default || dica" class="min-w-0 md:flex-1">
         <p

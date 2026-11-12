@@ -10,7 +10,11 @@ import actionQueryGenerator from 'dashboard/helper/actionQueryGenerator.js';
 import { getActionIcon } from 'dashboard/helper/automationHelper';
 import { useMacros } from 'dashboard/composables/useMacros';
 import { useAdmin } from 'dashboard/composables/useAdmin';
-import { useHasCustomRolePermission } from 'dashboard/composables/useCanManage';
+import {
+  useHasCustomRolePermission,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
+import { acoesOferecidas, webhookTravado } from './macroWebhook';
 
 const store = useStore();
 const getters = useStoreGetters();
@@ -28,9 +32,19 @@ const isAdmin = computed(() => isAccountAdmin.value || hasMacroManage.value);
 
 const macro = ref(null);
 const mode = ref('CREATE');
+// #2451: o webhook pede integration_manage. As ações com que a macro chegou: tirar o webhook também é mexer.
+const podeIntegrar = usePermissionGranted('integration_manage');
+const acoesAoAbrir = ref([]);
+const salvarTravado = computed(() =>
+  webhookTravado(podeIntegrar.value, macro.value?.actions, acoesAoAbrir.value)
+);
 
 const macroActionTypes = computed(() => {
-  return MACRO_ACTION_TYPES.map(type => ({
+  return acoesOferecidas(
+    MACRO_ACTION_TYPES,
+    podeIntegrar.value,
+    macro.value?.actions
+  ).map(type => ({
     ...type,
     label: t(`MACROS.ACTIONS.${type.label}`),
     icon: getActionIcon(type.key),
@@ -56,7 +70,7 @@ const formatMacro = macroData => {
   const formattedActions = macroData.actions.map(action => {
     let actionParams = [];
     if (action.action_params.length) {
-      const inputType = macroActionTypes.value.find(
+      const inputType = MACRO_ACTION_TYPES.find(
         item => item.key === action.action_name
       ).inputType;
       if (inputType === 'multi_select' || inputType === 'search_select') {
@@ -82,6 +96,9 @@ const manifestMacro = async () => {
     store.dispatch('macros/getSingleMacro', macroId.value),
   ]);
   const singleMacro = store.getters['macros/getMacro'](macroId.value);
+  acoesAoAbrir.value = singleMacro.actions.map(({ action_name }) => ({
+    action_name,
+  }));
   macro.value = formatMacro(singleMacro);
 };
 
@@ -92,6 +109,7 @@ const fetchMacro = () => {
 
 const initNewMacro = () => {
   mode.value = 'CREATE';
+  acoesAoAbrir.value = [];
   macro.value = {
     name: '',
     actions: [
@@ -118,7 +136,7 @@ watch(
 );
 
 const saveMacro = async macroData => {
-  if (isPublicMacroReadOnly.value) return;
+  if (isPublicMacroReadOnly.value || salvarTravado.value) return;
 
   try {
     const action = mode.value === 'EDIT' ? 'macros/update' : 'macros/create';
@@ -148,6 +166,7 @@ const saveMacro = async macroData => {
       :macro-data="macro"
       :can-manage-public-macros="isAdmin"
       :read-only="isPublicMacroReadOnly"
+      :locked-reason="salvarTravado ? t('MACROS.WEBHOOK_LOCKED') : ''"
       @update:macro-data="macro = $event"
       @submit="saveMacro"
     />
