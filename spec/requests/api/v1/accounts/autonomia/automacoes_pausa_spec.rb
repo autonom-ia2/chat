@@ -3,6 +3,8 @@ require 'rails_helper'
 # #2572 (F3.7): a automação que o motor pausou porque quem ligou perdeu o acesso aparece pausada, com o motivo, no
 # editor e na lista. A desligada à mão, a que voltou a ser ligada e a pausa de antes do último ligar não aparecem.
 RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes pausada', :automacao_motor, type: :request do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:quem_ligou) { create(:user, account: account, role: :administrator) }
@@ -35,6 +37,39 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes pausada', :automacao_mo
 
     get base, headers: admin.create_new_auth_token, as: :json
     expect(da_lista['pausa']).to eq('motivo' => 'quem_ligou_saiu_da_conta', 'frase' => frase)
+  end
+
+  # Revisão do #2572: a pausa do Executor no meio da rodada (a ação negada depois que a Partida deixou começar) aparece
+  # como a da Partida, sem depender de o motivo estar numa lista.
+  it 'mostra a pausa do Executor no meio da rodada', :aggregate_failures do
+    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage])
+    agente = create(:user, account: account, role: :agent)
+    account.account_users.find_by(user: agente).update!(custom_role: funcao)
+    create(:inbox_member, user: agente, inbox: conversa.inbox)
+    criar = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST labels', 'descricao' => 'Criar a etiqueta',
+              'corpo' => { 'title' => 'renovacao', 'description' => 'Cliente em renovação' } }
+    pela_acao = automacao_ligada(account, agente, [criar])
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(pela_acao, conversa) }
+    expect(pela_acao.reload.ativa).to be(false)
+
+    get "#{base}/#{pela_acao.id}", headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['pausa']).to eq('motivo' => 'quem_ligou_sem_acesso',
+                                                'frase' => I18n.t('autonomia.automacao.motivos.quem_ligou_sem_acesso'))
+  end
+
+  it 'mostra a pausa do passo de Prospecção, com a frase dela' do
+    definicao.update!(ativa: false)
+    execucao = Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa,
+                                                      alvo: conversa, chave_gatilho: 'conversa.resolvida', estado: 'parada')
+    Autonomia::Automacao::Registro.create!(account: account, automacao: definicao, execucao: execucao, passo: 'p1', resultado: 'falhou',
+                                           motivo: 'quem_ligou_sem_permissao_prospeccao',
+                                           dados: { Autonomia::Automacao::Registro::PAUSOU => true })
+
+    get "#{base}/#{definicao.id}", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['pausa']).to eq('motivo' => 'quem_ligou_sem_permissao_prospeccao',
+                                                'frase' => I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao_prospeccao'))
   end
 
   it 'não mostra pausa na desligada à mão' do
