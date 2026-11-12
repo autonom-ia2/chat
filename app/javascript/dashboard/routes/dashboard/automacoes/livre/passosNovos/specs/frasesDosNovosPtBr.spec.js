@@ -99,11 +99,11 @@ describe('frases dos passos novos em pt_BR', () => {
   });
 
   it('no ensaio, o galho do passo novo diz o próprio nome', async () => {
-    const aprovacao = novo('pedir_aprovacao', {
+    const comGalho = novo('pedir_aprovacao', {
       aprovado: [{ id: 'p2', tipo: 'parar' }],
     });
     const { data } = await ensaiarComPassosNovos(
-      { passos: [aprovacao] },
+      { passos: [comGalho] },
       () => ''
     );
     const [, caminho] = linhasDoEnsaio(data.conversas[0].passos, () => '', t);

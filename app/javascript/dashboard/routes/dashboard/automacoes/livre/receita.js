@@ -2,10 +2,7 @@
 // no formato de lib/operator_guide/automacao-receita.schema.json). Tudo devolve
 // uma cópia nova: a versão salva é imutável, e o editor só troca a referência.
 // O que o editor não conhece (um passo que só o Guia monta) passa intacto.
-import {
-  RAMOS_DOS_PASSOS_NOVOS,
-  ehPassoNovo,
-} from './passosNovos/passosNovos';
+import { RAMOS_DOS_PASSOS_NOVOS, ehPassoNovo } from './passosNovos/passosNovos';
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
