@@ -307,7 +307,9 @@ const opcoesDoAtributo = atributo =>
         class="mb-0 text-sm text-n-slate-11"
       >
         {{
-          $t(`AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.${peca.toUpperCase()}`)
+          $t(
+            `AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.${peca.toUpperCase()}`
+          )
         }}
       </p>
       <template v-for="atributo in atributos" :key="atributo.attribute_key">

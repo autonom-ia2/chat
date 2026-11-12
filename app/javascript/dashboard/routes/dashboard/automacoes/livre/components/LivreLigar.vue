@@ -80,10 +80,7 @@ const falta = computed(() => {
       :disabled="Boolean(falta) || ocupado || conflito"
       @click="emit('ligar')"
     />
-    <p
-      v-if="falta || !pausa"
-      class="mb-0 text-sm text-center text-n-slate-11"
-    >
+    <p v-if="falta || !pausa" class="mb-0 text-sm text-center text-n-slate-11">
       {{ falta || $t('AUTOMACAO_LIVRE.LIGAR.DESLIGADA') }}
     </p>
     <Button

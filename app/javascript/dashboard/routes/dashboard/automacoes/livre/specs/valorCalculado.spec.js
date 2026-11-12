@@ -128,7 +128,10 @@ describe('LivreCampo com valor calculado', () => {
 // #2744: sem nenhum campo personalizado do tipo, o título não fica sozinho.
 // "A conta não tem" só com a lista carregada.
 describe('LivreCampo de campos personalizados', () => {
-  const DO_CONTATO = { nome: 'custom_attributes', peca: 'atributos_do_contato' };
+  const DO_CONTATO = {
+    nome: 'custom_attributes',
+    peca: 'atributos_do_contato',
+  };
 
   it('lista carregada e vazia: diz que a conta não tem e onde se cria', () => {
     const wrapper = montar(DO_CONTATO, null, [], {

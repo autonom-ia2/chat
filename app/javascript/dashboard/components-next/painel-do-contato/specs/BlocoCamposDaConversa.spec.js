@@ -1,4 +1,5 @@
 import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
+import CustomAttribute from 'dashboard/components/CustomAttribute.vue';
 import BlocoCamposDaConversa from '../BlocoCamposDaConversa.vue';
 import { criarI18n, criarStore } from './apoio';
 
@@ -62,7 +63,7 @@ describe('BlocoCamposDaConversa', () => {
     const { wrapper, acoes } = montar();
 
     wrapper
-      .findAllComponents({ name: 'CustomAttribute' })[1]
+      .findAllComponents(CustomAttribute)[1]
       .vm.$emit('update', 'modelo_do_carro', 'Onix');
     await flushPromises();
 
@@ -78,9 +79,7 @@ describe('BlocoCamposDaConversa', () => {
   it('apagar tira só aquele campo', async () => {
     const { wrapper, acoes } = montar();
 
-    wrapper
-      .findAllComponents({ name: 'CustomAttribute' })[0]
-      .vm.$emit('delete', 'placa');
+    wrapper.findAllComponents(CustomAttribute)[0].vm.$emit('delete', 'placa');
     await flushPromises();
 
     expect(acoes).toContainEqual([
@@ -91,7 +90,7 @@ describe('BlocoCamposDaConversa', () => {
 
   it('quem só lê vê o valor, sem editar', async () => {
     const { wrapper, acoes } = montar({ podeOperar: false });
-    const campos = wrapper.findAllComponents({ name: 'CustomAttribute' });
+    const campos = wrapper.findAllComponents(CustomAttribute);
 
     expect(campos.map(campo => campo.props('showActions'))).toEqual([
       false,
@@ -126,9 +125,7 @@ describe('BlocoCamposDaConversa', () => {
       expect(wrapper.find('fieldset input[type="checkbox"]').exists()).toBe(
         true
       );
-      expect(wrapper.findAll('fieldset')[1].find('button').exists()).toBe(
-        true
-      );
+      expect(wrapper.findAll('fieldset')[1].find('button').exists()).toBe(true);
     });
 
     it('quem opera marca e escolhe', () => {

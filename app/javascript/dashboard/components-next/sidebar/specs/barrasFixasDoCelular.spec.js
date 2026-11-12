@@ -10,7 +10,9 @@ const telas = import.meta.glob('../../../**/*.vue', {
 });
 
 // Barras que cobrem a tela inteira com fundo (diálogo modal): o botão do menu fica por baixo do fundo, sem toque.
-const COBREM_A_TELA = ['routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue'];
+const COBREM_A_TELA = [
+  'routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue',
+];
 
 const BARRAS = [
   { marca: 'fixed inset-x-0 bottom-0', recuos: ['ps-20', 'pl-20'] },
