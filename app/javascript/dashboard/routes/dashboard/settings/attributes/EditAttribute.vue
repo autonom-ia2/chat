@@ -7,12 +7,14 @@ import { tiposDoModelo } from './constants';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import MostrarNaTela from 'dashboard/components-next/CustomAttributes/MostrarNaTela.vue';
 
 export default {
   components: {
     NextButton,
     TagInput,
     ChoiceSelect,
+    MostrarNaTela,
   },
   props: {
     selectedAttribute: {
@@ -40,6 +42,7 @@ export default {
       attributeKey: '',
       values: [],
       tagInputTouched: false,
+      mostrarNaTela: true,
     };
   },
   validations: {
@@ -128,6 +131,7 @@ export default {
       this.regexCue = this.selectedAttribute.regex_cue;
       this.regexEnabled = regexPattern != null;
       this.values = this.setAttributeListValue;
+      this.mostrarNaTela = !this.selectedAttribute.oculto_na_tela;
     },
     async editAttributes() {
       this.v$.$touch();
@@ -146,6 +150,7 @@ export default {
           attribute_values: this.updatedAttributeListValues,
           regex_pattern: normalizeRegexPattern(this.regexPattern),
           regex_cue: this.regexCue,
+          oculto_na_tela: !this.mostrarNaTela,
         });
         this.alertMessage = this.$t('ATTRIBUTES_MGMT.EDIT.API.SUCCESS_MESSAGE');
         this.onClose();
@@ -268,6 +273,7 @@ export default {
           type="text"
           :placeholder="$t('ATTRIBUTES_MGMT.ADD.FORM.REGEX_CUE.PLACEHOLDER')"
         />
+        <MostrarNaTela v-model="mostrarNaTela" />
       </div>
       <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
         <NextButton

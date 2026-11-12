@@ -283,7 +283,8 @@ it('shows a contextual title and save label when the shared dialog changes from 
   expect(wrapper.find('button[type="submit"]').text()).toBe(
     'RELATIONSHIPS.SAVE_ATTRIBUTE'
   );
-  expect(wrapper.findAll('[role="switch"]')).toHaveLength(2);
+  // As duas áreas do contato e o "Mostrar na tela" (#2435).
+  expect(wrapper.findAll('[role="switch"]')).toHaveLength(3);
   wrapper.unmount();
 });
 
@@ -303,9 +304,58 @@ it('lets the central header own its actions without rendering duplicate creation
   expect(wrapper.find('dialog h3').text()).toBe(
     'RELATIONSHIPS.CREATE_COMPANY_ATTRIBUTE'
   );
-  expect(wrapper.findAll('[role="switch"]')).toHaveLength(1);
+  // A área da empresa e o "Mostrar na tela" (#2435), nessa ordem.
+  expect(wrapper.findAll('[role="switch"]')).toHaveLength(2);
   expect(wrapper.find('[role="switch"]').attributes('aria-label')).toBe(
     'RELATIONSHIPS.SURFACES.company_details'
   );
+  wrapper.unmount();
+});
+
+// #2435: o editor de Relacionamentos também liga e desliga "Mostrar na tela".
+it('sends oculto_na_tela when "Mostrar na tela" is turned off', async () => {
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.CREATE');
+  await wrapper.find('input[type="text"]').setValue('Contador');
+  await wrapper.find('textarea').setValue('Usado pela automação');
+  const mostrar = wrapper.findAll('[role="switch"]').at(-1);
+  expect(mostrar.attributes('aria-checked')).toBe('true');
+  await mostrar.trigger('click');
+  axios.patch.mockResolvedValue({
+    data: { configuration: { revision: 5, surfaces: {} }, definition: {} },
+  });
+  await wrapper.find('form').trigger('submit');
+  await flushPromises();
+  expect(
+    axios.patch.mock.calls[0][1].configuration.definition.oculto_na_tela
+  ).toBe(true);
+  wrapper.unmount();
+});
+
+it('opens a hidden attribute with "Mostrar na tela" off', async () => {
+  axios.get.mockResolvedValue({
+    data: {
+      configuration: { version: 1, revision: 4, surfaces: {} },
+      definitions: [
+        {
+          id: 21,
+          attribute_key: 'contador',
+          attribute_model: 'contact_attribute',
+          attribute_display_name: 'Contador',
+          attribute_description: 'Usado pela automação',
+          attribute_display_type: 'number',
+          revision: '2026-11-12T12:00:00.000001Z',
+          attribute_values: [],
+          oculto_na_tela: true,
+        },
+      ],
+      can_manage: true,
+    },
+  });
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.EDIT');
+  expect(
+    wrapper.findAll('[role="switch"]').at(-1).attributes('aria-checked')
+  ).toBe('false');
   wrapper.unmount();
 });

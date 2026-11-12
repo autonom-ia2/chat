@@ -187,6 +187,8 @@ const buildBadges = attribute => {
     });
   }
 
+  if (attribute.oculto_na_tela) badges.push({ type: 'oculto' });
+
   return badges;
 };
 

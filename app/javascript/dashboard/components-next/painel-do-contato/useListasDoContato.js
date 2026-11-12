@@ -11,6 +11,7 @@ import ContactAPI from 'dashboard/api/contacts';
 import ConversationInboxApi from 'dashboard/api/inbox/conversation';
 import types from 'dashboard/store/mutation-types';
 import { NON_FILE_TYPES } from 'dashboard/components-next/message/constants';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 import { ESTADO, useParteDoPainel } from './useParteDoPainel';
 
 const temValor = valor =>
@@ -71,8 +72,9 @@ export function useListasDoContato({ contact, conversationId }) {
 
   const informacoes = computed(() => {
     const valores = unref(contact)?.custom_attributes || {};
-    // O getter já deixa de fora os campos internos da WAHA (#2138).
-    return (definicoes.value('contact_attribute') || []).filter(d =>
+    // O getter já deixa de fora os campos internos da WAHA (#2138); naTela tira
+    // os que estão com "Mostrar na tela" desligado (#2435).
+    return naTela(definicoes.value('contact_attribute')).filter(d =>
       temValor(valores[d.attribute_key])
     );
   });

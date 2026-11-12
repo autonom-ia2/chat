@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useStore } from 'vuex';
+import { chavesOcultas } from 'dashboard/helper/atributosNaTela';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useOrigemLeiga } from './useOrigemLeiga';
 
@@ -21,6 +23,7 @@ const props = defineProps({
 defineEmits(['abrir', 'arquivar']);
 
 const { t } = useI18n();
+const store = useStore();
 const leiga = useOrigemLeiga();
 const R = 'CRM_CARD.RESUMO';
 
@@ -53,12 +56,13 @@ const diaDoCampo = valor => {
   return new Date(ano, mes - 1, dia);
 };
 
-const extras = computed(
-  () =>
-    Object.values(props.card.custom_attributes || {}).filter(
-      valor => valor !== null && valor !== ''
-    ).length
-);
+// #2435: o campo com "Mostrar na tela" desligado não conta como extra.
+const extras = computed(() => {
+  const ocultas = chavesOcultas(store.getters['attributes/getCardAttributes']);
+  return Object.entries(props.card.custom_attributes || {}).filter(
+    ([chave, valor]) => !ocultas.has(chave) && valor !== null && valor !== ''
+  ).length;
+});
 const negocioFrase = computed(() =>
   [
     props.card.score && !props.atender

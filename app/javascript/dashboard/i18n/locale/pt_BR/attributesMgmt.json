@@ -145,7 +145,12 @@
     },
     "BADGES": {
       "PRE_CHAT": "Pré-chat",
-      "RESOLUTION": "Resolução"
+      "RESOLUTION": "Resolução",
+      "OCULTO": "Fora da tela"
+    },
+    "MOSTRAR_NA_TELA": {
+      "TITULO": "Mostrar na tela",
+      "AJUDA": "Desligado, o campo some da tela. Ele continua guardado, e a automação e a IA ainda usam."
     }
   }
 }

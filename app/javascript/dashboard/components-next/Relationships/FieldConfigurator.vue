@@ -9,6 +9,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import MostrarNaTela from 'dashboard/components-next/CustomAttributes/MostrarNaTela.vue';
 import { selectDefinitions, attributeKey } from './presentation';
 
 const props = defineProps({
@@ -212,6 +213,8 @@ const submit = async () => {
     payload.definition = {
       attribute_display_name: value.attribute_display_name,
       attribute_description: value.attribute_description,
+      // #2435: "Mostrar na tela" desligado tira o campo das telas.
+      oculto_na_tela: Boolean(value.oculto_na_tela),
       ...(value.id
         ? { id: value.id, revision: value.revision }
         : {
@@ -465,6 +468,12 @@ defineExpose({ open });
               </div>
             </div>
           </section>
+          <MostrarNaTela
+            :model-value="!draft.oculto_na_tela"
+            :disabled="busy"
+            class="border-t border-n-weak pt-4"
+            @update:model-value="value => (draft.oculto_na_tela = !value)"
+          />
         </template>
         <template v-else>
           <div class="flex flex-col gap-2">

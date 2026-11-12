@@ -145,7 +145,12 @@
     },
     "BADGES": {
       "PRE_CHAT": "Pre-chat",
-      "RESOLUTION": "Resolution"
+      "RESOLUTION": "Resolution",
+      "OCULTO": "Hidden from screen"
+    },
+    "MOSTRAR_NA_TELA": {
+      "TITULO": "Show on screen",
+      "AJUDA": "When off, the field is hidden from the screen. It stays saved, and automation and AI still use it."
     }
   }
 }
