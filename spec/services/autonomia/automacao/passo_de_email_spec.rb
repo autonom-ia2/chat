@@ -4,6 +4,7 @@ require 'rails_helper'
 # sempre da caixa. E o laço com o autoresponder do outro lado, que a Escuta corta na entrada.
 RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
   include ActiveJob::TestHelper
+  include ActionMailbox::TestHelper
 
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -266,6 +267,23 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
 
       ouvir(chegou(conversa_de_email, auto_reply: false))
       expect(Autonomia::Automacao::Execucao.where(automacao: definicao).count).to eq(1)
+    end
+
+    # #2600: o aviso de devolução do servidor (DSN) sem Auto-Submitted, nos dois formatos, pela entrada real do e-mail:
+    # nem a mensagem nem a conversa que ele abriu começam a automação.
+    it 'o aviso de devolução sem Auto-Submitted não começa a automação', :aggregate_failures do
+      definicao = automacao_ligada(account, admin, [passo], gatilho: gatilho)
+      criada = automacao_ligada(account, admin, [email_passo('p2')], gatilho: { 'tipo' => 'conversa.criada' })
+
+      %w[dsn_relatorio_sem_auto_submitted.eml dsn_x_failed_recipients_sem_auto_submitted.eml].each do |fixture|
+        Imap::ImapMailbox.new.process(create_inbound_email_from_fixture(fixture).mail, caixa.channel)
+        devolucao = Message.where(inbox: caixa).incoming.last
+        ouvir(devolucao)
+        Autonomia::Automacao::Escuta.comecar(devolucao.conversation, 'conversa.criada')
+      end
+
+      expect(Message.where(inbox: caixa).incoming.count).to eq(2)
+      expect(Autonomia::Automacao::Execucao.where(automacao: [definicao, criada])).to be_empty
     end
 
     it 'conversa reaberta: decide a última mensagem recebida, não a marca de quando ela nasceu', :aggregate_failures do

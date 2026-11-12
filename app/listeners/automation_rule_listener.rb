@@ -1,4 +1,9 @@
 class AutomationRuleListener < BaseListener
+  # Fork (#2600): a mesma régua da Escuta. A marca `auto_reply` da conversa é de quando ela nasceu; na reaberta, quem
+  # decide é a última mensagem recebida. Assim o aviso de devolução (DSN) que entra pelo In-Reply-To numa conversa
+  # resolvida e a reabre não roda a regra de conversa reaberta, e o cliente que reabre a conversa de um autoresponder roda.
+  GATILHO_DA_ESCUTA = { 'conversation_created' => 'conversa.criada', 'conversation_opened' => 'conversa.aberta' }.freeze
+
   def conversation_updated(event)
     process_conversation_event(event, 'conversation_updated')
   end
@@ -38,9 +43,7 @@ class AutomationRuleListener < BaseListener
 
   def process_conversation_event(event, event_name)
     return if performed_by_automation?(event)
-
-    auto_reply_skip_events = %w[conversation_created conversation_opened]
-    return if auto_reply_skip_events.include?(event_name) && ignore_auto_reply_event?(event)
+    return if ignore_auto_reply_event?(event, event_name)
 
     conversation = event.data[:conversation]
     account = conversation.account
@@ -97,9 +100,10 @@ class AutomationRuleListener < BaseListener
     event.data[:performed_by].present? && event.data[:performed_by].instance_of?(AutomationRule)
   end
 
-  def ignore_auto_reply_event?(event)
-    conversation = event.data[:conversation]
-    conversation.additional_attributes['auto_reply'].present?
+  def ignore_auto_reply_event?(event, event_name)
+    return false unless GATILHO_DA_ESCUTA.key?(event_name)
+
+    ::Autonomia::Automacao::Escuta.resposta_automatica?(event.data[:conversation], GATILHO_DA_ESCUTA[event_name], nil)
   end
 
   def ignore_message_created_event?(event)
