@@ -2,7 +2,9 @@
 // O botão principal de cada etapa (#2308, especificação 4 e 10): 52 px logo depois do conteúdo no computador; no
 // celular, fixo embaixo, com sombra para cima e o esmaecido de 56 px. A página reserva o padding de baixo. "Celular"
 // é abaixo de md (768 px), o mesmo ponto em que a barra lateral vira o botão flutuante do menu
-// (MobileSidebarLauncher, fixo em bottom-4 start-4): o rodapé reserva o espaço dele à esquerda.
+// (MobileSidebarLauncher, fixo em bottom-4 start-4): o rodapé reserva o espaço dele à esquerda. A faixa que o layout
+// reserva para o botão do menu (#2477, Dashboard.vue) não basta aqui: este rodapé é fixo na base da tela, fora do
+// fluxo da página, e ocupa a mesma faixa do botão.
 defineProps({
   label: { type: String, required: true },
   carregando: { type: Boolean, default: false },

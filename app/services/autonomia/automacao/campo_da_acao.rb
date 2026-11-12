@@ -1,6 +1,7 @@
 # O campo de destino de cada valor calculado no corpo de uma ação (G16 do #2414), pelo formato da ação no Guia
 # (formatos-das-acoes.json). Só o campo do primeiro nível (dentro do envelope) tem tipo conhecido; dentro de um campo
-# JSON (custom_attributes) qualquer valor cabe, como na tela. Campo sem tipo no formato também aceita qualquer valor.
+# JSON (custom_attributes) qualquer valor cabe, como na tela. Campo sem tipo no formato também aceita qualquer valor. O
+# atributo personalizado (`atributo` e `modelo`) o salvar confere contra o tipo dele na conta (ProblemasDoCorpo, #2632).
 #
 # - No salvar: o exemplo que a Conferência do formato vê no lugar do valor calculado, e a forma que o campo nunca
 #   aceitaria (texto montado ou data num campo de opções, de número, de sim/não).
@@ -27,6 +28,10 @@ class Autonomia::Automacao::CampoDaAcao
     'json' => ->(valor) { valor.is_a?(Hash) },
     'arquivo' => ->(_valor) { false }
   }.freeze
+  # O modelo do atributo personalizado que a ação grava em `custom_attributes`, pelo recurso dela (#2632).
+  MODELOS = { 'contacts' => 'contact_attribute', 'crm/cards/contacts' => 'contact_attribute', 'conversations' => 'conversation_attribute',
+              'crm/cards' => 'card_attribute', 'companies' => 'company_attribute' }.freeze
+  CUSTOM_ATTRIBUTES = 'custom_attributes'.freeze
 
   # O que impede a ação com o corpo já montado: o formato da ação (opção fora da lista), as regras da lista da
   # automação (G25: o fechar o card só como ganho ou perdido, mesmo com valor calculado) e o tipo de cada campo que
@@ -54,7 +59,8 @@ class Autonomia::Automacao::CampoDaAcao
   end
 
   def initialize(acao)
-    @formato = ::Autonomia::Guide::Formatos.para(acao.to_s) || {}
+    @acao = acao.to_s
+    @formato = ::Autonomia::Guide::Formatos.para(@acao) || {}
   end
 
   def nome(onde) = partes(onde).first.to_s
@@ -65,6 +71,15 @@ class Autonomia::Automacao::CampoDaAcao
     info = lista.one? ? @formato.dig('campos', lista.first) : nil
     info if info.is_a?(Hash)
   end
+
+  # #2632: a chave do atributo personalizado no lugar `onde` (`custom_attributes.<chave>`, dentro do envelope), ou nil.
+  def atributo(onde)
+    lista = partes(onde)
+    lista.last if lista.size == 2 && lista.first == CUSTOM_ATTRIBUTES && lista.last.is_a?(String)
+  end
+
+  # O modelo do atributo personalizado que esta ação grava; nil na ação que não grava atributo.
+  def modelo = MODELOS[::Autonomia::Automacao::AcoesPermitidas.recurso_de(@acao)]
 
   # A forma que o campo nunca aceitaria: texto montado ou data num campo de opções ou de outro tipo.
   def recusa?(onde, folha)

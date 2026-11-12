@@ -7,6 +7,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import {
   comApagados,
   comColchetes,
+  dadoDoAlvo,
   opcoesDosValores,
   textoDaTela,
   textoNaTela,
@@ -37,7 +38,9 @@ const idDado = useId();
 const LIMITE = 5000;
 const LIMITE_DA_LINHA = 150;
 const rotuloPorDado = computed(
-  () => props.rotuloDoDado || t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR')
+  () =>
+    props.rotuloDoDado ||
+    t(`AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO.${dadoDoAlvo(props.catalogo)}`)
 );
 
 // O dado de um campo que a conta apagou fica no texto, marcado; não volta

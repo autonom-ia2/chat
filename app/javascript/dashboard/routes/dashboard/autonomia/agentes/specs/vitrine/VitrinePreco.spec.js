@@ -123,7 +123,7 @@ describe('VitrineQuantoCusta (detalhe)', () => {
 });
 
 describe('VitrineCartao · Premium', () => {
-  it('the Premium card has the badge and the price; the free card has neither', () => {
+  it('the Premium card has the badge and the price; the free card has the "free lookup" footer instead', () => {
     const premium = mount(VitrineCartao, {
       props: {
         ferramenta: ferramentaPorId('historico_placa'),
@@ -140,5 +140,19 @@ describe('VitrineCartao · Premium', () => {
     });
     expect(gratis.find('[data-vitrine-selo-premium]').exists()).toBe(false);
     expect(gratis.find('[data-vitrine-premium]').exists()).toBe(false);
+    expect(premium.find('[data-vitrine-gratis]').exists()).toBe(false);
+    expect(gratis.find('[data-vitrine-gratis]').text()).toContain(
+      'Consulta grátis'
+    );
+  });
+
+  // Sem o `premium` do servidor, o card pago fica sem rodapé: nunca diz "Consulta grátis".
+  it('a paid card without the server data shows neither the price nor the free footer', () => {
+    const semDado = mount(VitrineCartao, {
+      props: { ferramenta: ferramentaPorId('historico_placa') },
+    });
+    expect(semDado.find('[data-vitrine-gratis]').exists()).toBe(false);
+    expect(semDado.find('[data-vitrine-premium]').exists()).toBe(false);
+    expect(semDado.text()).not.toContain('Consulta grátis');
   });
 });

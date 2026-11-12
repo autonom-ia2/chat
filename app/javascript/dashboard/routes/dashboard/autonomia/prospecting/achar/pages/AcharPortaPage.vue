@@ -9,7 +9,6 @@ import AcharFraseCampo from '../components/AcharFraseCampo.vue';
 import AcharLinhaFrase from '../components/AcharLinhaFrase.vue';
 import AcharBuscaCartao from '../components/AcharBuscaCartao.vue';
 import AcharRodape from '../components/AcharRodape.vue';
-import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharEstado from '../components/AcharEstado.vue';
 import AcharComoProcurarPainel from '../components/AcharComoProcurarPainel.vue';
 import AcharMaisAjustesPainel from '../components/AcharMaisAjustesPainel.vue';
@@ -318,7 +317,7 @@ watch(demo, carregar);
     <main class="flex-1 overflow-y-auto">
       <div
         class="flex flex-col w-full max-w-5xl gap-8 px-4 pt-6 mx-auto min-h-full md:px-8 md:pt-10"
-        :class="googlePronto ? 'pb-0' : 'md:pb-10'"
+        :class="googlePronto ? 'pb-0' : 'pb-6 md:pb-10'"
       >
         <AcharEstado
           v-if="emTeste"
@@ -477,7 +476,6 @@ watch(demo, carregar);
           icone="i-lucide-search"
           @principal="achar"
         />
-        <AcharFaixaDoMenu v-if="!googlePronto" />
       </div>
     </main>
     <AcharComoProcurarPainel

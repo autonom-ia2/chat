@@ -18,6 +18,16 @@
         "TITULO": "Agradecer ao encerrar",
         "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
         "NOME": "Agradecer ao encerrar"
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Responder fora do horário",
+        "TEXTO": "Quem escreve fora do horário de atendimento da caixa recebe um aviso de que a equipe responde quando voltar.",
+        "NOME": "Fora do horário"
+      },
+      "DIVIDIR_LEADS": {
+        "TITULO": "Dividir os clientes entre o time",
+        "TEXTO": "Cada conversa nova já chega com alguém responsável, em rodízio entre quem está online na caixa.",
+        "NOME": "Dividir os clientes"
       }
     }
   }

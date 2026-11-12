@@ -9,9 +9,6 @@ module FechamentoAutomacao::Exemplo07
   ETIQUETAS = { JA_COMPROU => 'Já comprou na loja', PERGUNTOU => 'Perguntou na Black', NAO_ENVIAR => 'Não enviar campanha',
                 COMPROU_NA_BLACK => 'Comprou na Black 2026' }.freeze
   PECA = %w[peca cor tamanho].freeze
-  # O tempo que o passo 4 dá à IA de assunto para abrir o card da conversa: ela decide depois de uma espera (15 s,
-  # Crm::Subjects::DEBOUNCE, ou 3 s na ordem do turno), e a automação chega ao extrair antes disso.
-  ESPERA_DO_CARD = { valor: 1, unidade: 'minutos' }.freeze
   MODELOS = { 'pre_black' => 'Oi! A Black começa {{1}}. Quem já comprou com a gente vê antes.',
               'ultimas_horas' => 'Últimas horas da Black! {{1}}' }.freeze
 
@@ -63,13 +60,13 @@ module FechamentoAutomacao::Exemplo07
   end
 
   # Passo 4: o extrair grava peça, cor e tamanho direto nos campos do card da conversa (G70, decisão 20 do Rodrigo, "IA só
-  # anota campos"), o card que a IA de assunto abriu com o pedido. Antes, a espera dá a ela o tempo de abrir o card.
+  # anota campos"), o card que a IA de assunto abriu com o pedido. Sem passo de espera na receita: o próprio extrair
+  # espera a IA de assunto decidir (G71, #2883, Autonomia::Automacao::EsperaDoAssunto).
   def quer_comprar
     campos = [{ chave: 'peca', descricao: 'a peça que o cliente quer', destino: 'card.atributos.peca' },
               { chave: 'cor', descricao: 'a cor da peça', destino: 'card.atributos.cor' },
               { chave: 'tamanho', descricao: 'o tamanho da peça', destino: 'card.atributos.tamanho' }]
-    [{ id: 'espera_o_card', tipo: 'esperar', duracao: ESPERA_DO_CARD },
-     { id: 'peca_cor_tamanho', tipo: 'extrair', le: %w[mensagens_recentes], campos: campos }]
+    [{ id: 'peca_cor_tamanho', tipo: 'extrair', le: %w[mensagens_recentes], campos: campos }]
   end
 
   # Passo 6: confirma, põe a etiqueta e marca o contato como "não recebe" (a recusa de todas as campanhas).

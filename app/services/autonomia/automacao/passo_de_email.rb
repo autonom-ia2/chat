@@ -73,11 +73,8 @@ class Autonomia::Automacao::PassoDeEmail
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => mensagem.id, 'conversa_id' => conversa.display_id })
   end
 
-  def na_caixa?(caixa)
-    usuario = @execucao.automacao.ligada_por
-    account_user = usuario && @execucao.account.account_users.find_by(user_id: usuario.id)
-    account_user.present? && ::Autonomia::Automacao::Acesso.comeca_conversa?(account_user, caixa)
-  end
+  # A mesma pergunta do ensaio (Ensaio#email, #2604).
+  def na_caixa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.automacao.ligada_por, caixa)
 
   # A caixa que trava numa conversa só devolve a dela: o assunto deste envio passa a ser o dela, porque o envio lê o
   # assunto da conversa.

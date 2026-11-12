@@ -11,6 +11,7 @@
     "NO_RESULTS": "Nenhum macro encontrado correspondente à sua busca",
     "ERROR": "Algo deu errado. Por favor, tente novamente",
     "ORDER_INFO": "As macros serão executadas na ordem que você adicionar suas ações. Você pode reorganizá-las arrastando-as pelo identificador ao lado de cada nó.",
+    "WEBHOOK_LOCKED": "Esta macro envia a conversa para fora da plataforma. Para mudar, você precisa da permissão de Integrações.",
     "ADD": {
       "FORM": {
         "NAME": {

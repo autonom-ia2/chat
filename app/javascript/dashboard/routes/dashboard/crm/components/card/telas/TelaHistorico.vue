@@ -147,7 +147,20 @@ const mover = evento => {
                   item.relativeTime
                 }}</span>
               </span>
-              <span class="text-sm text-n-slate-11">{{ item.actor }}</span>
+              <span class="text-sm text-n-slate-11">
+                <router-link
+                  v-if="item.automacaoLink"
+                  :to="item.automacaoLink"
+                  data-automacao-link
+                  class="text-n-blue-11 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-9"
+                >
+                  {{ item.actor }}
+                </router-link>
+                <template v-else>{{ item.actor }}</template>
+              </span>
+              <span v-if="item.ligadaPor" class="text-xs text-n-slate-11">{{
+                item.ligadaPor
+              }}</span>
               <span v-if="item.detail" class="text-sm text-n-slate-12">{{
                 item.detail
               }}</span>
