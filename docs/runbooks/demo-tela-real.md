@@ -22,7 +22,7 @@ O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
   de 1 minuto) abaixo de 20, memória livre (a `available` do MacCluster) acima de 3 GB e swap-out abaixo de 1 MiB/s.
   Os três limites ficam no topo do `bin/demo` (`CARGA_MAX`, `RAM_MIN_GB`, `SWAP_MAX_MIB_S`).
 - **Desempate.** Se `m2` e `m4` servem, ganha a que tem **mais memória livre**: foi memória que faltou em 12/11.
-  Empate exato fica com o `m2`.
+  Empate fica com o `m2` (a comparação usa o número do MacCluster, que vem com uma casa decimal).
 - **Nenhuma serve.** O `up` recusa e mostra o que mediu em cada máquina. Não há opção para passar por cima do limite.
 - **No máximo 1 demo viva, somando as duas máquinas.** Viva é a demo registrada que tem Rails, Vite ou Redis
   escutando. O `up` recusa se já houver outra e diz qual é, onde está e o que dela está ligado. Redis esquecido
@@ -36,7 +36,9 @@ O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
   mostra `MAQUINA=`. Se uma máquina não responde e a demo está na outra, o comando avisa e segue.
 - **Forçar a máquina**: `DEMO_MAQUINA=m2 bin/demo up <slug>` (ou `m4`). As mesmas recusas valem: limite da máquina
   e 1 demo viva. Nos outros comandos, `DEMO_MAQUINA` faz o kit olhar só aquela máquina.
-- **O `sync` não religa demo desligada.** Ele leva os arquivos e avisa; quem liga é o `up`, que mede a máquina.
+- **O `sync` não religa demo desligada.** Ele leva os arquivos, roda `pnpm install` e `db:migrate` se o que mudou
+  pedir (tarefas que terminam) e avisa. Servidor nenhum sobe: quem liga é o `up`, que mede a máquina. Com o painel
+  ligado, o `sync` reinicia Rails e Vite da própria demo, sem nova medição.
 
 O que o kit **não** vê, e por isso a conversa com a Orquestração continua obrigatória: demo feita à mão (fora de
 `/Users/Shared/chat2you-demos`), dois `up` disparados ao mesmo tempo e o que mais está para rodar nas máquinas.
@@ -54,7 +56,7 @@ bin/demo tunnel 2079-instagram      # URL para abrir (e o comando de túnel, se 
 bin/demo sync 2079-instagram        # depois de editar: leva só o que mudou
 bin/demo prints 2079-instagram docs/x/jornadas.json   # PNGs em 1440 e 390 em docs/<pasta>/
 bin/demo down 2079-instagram        # desliga os servidores (banco e snapshot ficam)
-bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (nos dois Macs) e a pasta da demo
+bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (o da demo e o deste Mac) e a pasta da demo
 ```
 
 Outros: `bin/demo status <slug>` (portas, banco, snapshot e a máquina) e `bin/demo psql <slug> "SQL"` (roda um SQL no banco da demo **como a role da demo**, sem superuser e sem `CREATEDB`: ela não cria nem apaga outro banco e não altera role; sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
@@ -70,7 +72,7 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
 |---|---|---|
 | `maquinas` | este Mac e as duas máquinas | Só leitura. Mede `m2` e `m4`, lista as demos vivas e diz para onde um `up` iria (ou por que seria recusado). |
 | `up` | este Mac → a demo | Escolhe a máquina (seção acima) e recusa se houver outra demo viva ou se nenhuma máquina servir. Confere que banco e portas da demo estão livres. Tira o snapshot da worktree neste Mac (`maccluster workspace snapshot --local-only`). Se a demo roda em outro Mac: lá, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Se roda neste Mac: usa o snapshot no lugar, sem cópia, e o `pnpm install` traz as dependências. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
-| `sync` | este Mac → a demo | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. Com a demo desligada, leva os arquivos e não religa nada. |
+| `sync` | este Mac → a demo | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. Com a demo desligada, leva os arquivos (e roda `pnpm install`/`db:migrate`, se for o caso) e não liga servidor nenhum. |
 | `flag` | a demo | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
 | `seed` | a demo | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo na máquina dela (para mídia, por exemplo). |
 | `tunnel` | — | Demo em outro Mac: imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. Demo neste Mac: só a URL, sem túnel. |
@@ -96,7 +98,7 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
   role já existir sem demo registrada.
 - **Portas**: derivadas do slug (`cksum`): Rails `4400–5196`, Vite = Rails + 2, Redis `57400–57599`. Ficam longe das
   de teste (55432, 56379) e das demos feitas à mão (3301–4025, 56xxx). Se dois slugs caírem na mesma porta, o `up`
-  avisa: troque o slug.
+  recusa: troque o slug.
 - **Snapshot**: um por demo, em `/Users/Shared/maccluster-workspaces/chat2you/<id>/src`, com o mesmo caminho no M2 e
   no M4. O `sync` reaproveita; snapshot novo só com outro `up` (outra demo). Cada `maccluster workspace snapshot` cria
   um diretório novo (o id leva data, hora, HEAD, hash do conteúdo e um uuid); o `up` confere no manifesto que o
@@ -196,7 +198,7 @@ entrada → todas as conversas):
 | **Miniatura quebra sem vips** | `representations`/variantes do Active Storage precisam do libvips, que o M2 não tem. | Não use `thumbUrl` como fonte principal da imagem no protótipo; use a URL do arquivo e deixe a miniatura como melhoria. Não instale vips só para a demo. |
 | **Selo do rack-mini-profiler nos prints** | Em development o profiler injeta o selo no canto da tela. | A demo sobe com `DISABLE_MINI_PROFILER=1` (o initializer respeita). O `prints` ainda injeta CSS que esconde `.profiler-results`. |
 | **`?demo=vazio`** | O protótipo usa um adaptador falso de dados; o Rodrigo precisa ver também a tela sem dados. | Convenção do adaptador: `?demo=vazio` na URL devolve a lista vazia. Faça uma etapa para cada estado (`/app/accounts/{conta}/minha-tela` e `...?demo=vazio`). A flag só liga rota e menu. |
-| **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no M4 e monta o do M2 por clone APFS + `rsync` da diferença (em geral poucos MB). |
+| **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no Mac de onde é chamado e monta o do outro por clone APFS + `rsync` da diferença (em geral poucos MB). |
 | **Vite demora na 1a página** | A primeira visita compila o painel. | O `up` espera até 15 min pelo login; o `prints` dá até 5 min por página (`DEMO_TIMEOUT_MS`). |
 | **Gem nova** | O Ruby do MacCluster tem as gems do `Gemfile.lock` da `main`. | O `sync` recusa mudança de `Gemfile`; demo que precisa de gem nova não é caso deste kit. |
 

@@ -71,8 +71,10 @@ maquina_valida() {
 # Roda um comando de shell na máquina $1: por ssh, ou direto quando ela é este Mac. Neste Mac o ambiente vai limpo,
 # como o que o ssh entrega: nenhuma variável da sessão (RAILS_ENV, PG*, DATABASE_URL) entra no kit.
 rodar_em() {
+  local eu
   if [ "$1" = "$AQUI" ]; then
-    /usr/bin/env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+    eu=${USER:-$(/usr/bin/id -un)} || falha "id falhou; não sei quem sou"
+    /usr/bin/env -i HOME="$HOME" USER="$eu" LOGNAME="$eu" PATH=/usr/bin:/bin:/usr/sbin:/sbin \
       TMPDIR="${TMPDIR:-/tmp}" /bin/bash -c "$2"
   else
     ssh -o BatchMode=yes "$1" "$2"
@@ -283,7 +285,12 @@ descartar_snapshot_novo() {
   [ -n "$snapdir" ] && [ "$codigo" -ne 0 ] || return 0
   echo "bin/demo: o up falhou depois do snapshot; descartando $snapdir no $HOST e neste Mac" >&2
   if [ "$HOST" = "$AQUI" ]; then
-    apagar_snapshot_local "$snapdir/src"
+    # Aqui não há clone pendente para conferir: só apaga se a demo não ficou registrada (o demo.env apontaria para ele).
+    if [ "$(registrada_em "$HOST")" = nao ]; then
+      apagar_snapshot_local "$snapdir/src"
+    else
+      echo "bin/demo: a demo ficou registrada, ou não consegui conferir; não apaguei $snapdir" >&2
+    fi
   elif no_m2 descartar-snapshot "$slug" "$snapdir"; then
     apagar_snapshot_local "$snapdir/src"
   else
@@ -448,8 +455,9 @@ cmd_sync() {
   gravar_sincronizados "$base"
   $pnpm && no_m2 pnpm "$slug"
   $migrar && no_m2 migrar "$slug"
+  # pnpm install e db:migrate acima são tarefas que terminam e deixam a demo pronta para o próximo up; servidor, não.
   if { $vite || $migrar || $reiniciar; } && ! painel_ligado; then
-    echo "a demo está desligada no $HOST: arquivos levados, nada religado. Para ligar: bin/demo up $slug"
+    echo "a demo está desligada no $HOST: arquivos levados, nenhum servidor religado. Para ligar: bin/demo up $slug"
     return 0
   fi
   if $vite; then

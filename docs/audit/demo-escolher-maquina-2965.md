@@ -61,3 +61,30 @@ Data: 12/11/2026. Só demo local: nada aqui toca produção.
 
 Nenhum para o PR. Para um `up`: há uma demo viva no M2 (`2198-criar`, só o Redis) e, na hora da medição, as duas
 máquinas estavam fora do limite.
+
+## Revisão independente (12/11/2026)
+
+Revisor leu os arquivos inteiros. Nenhum achado crítico ou alto.
+
+Ajustado neste PR:
+
+- descarte do snapshot de um `up` falho, com a demo neste Mac, só acontece se a demo não ficou registrada;
+- `USER` ausente no ambiente não derruba o comando;
+- runbook: o `sync` com a demo desligada ainda roda `pnpm install` e `db:migrate` (tarefas que terminam), mas não
+  liga servidor; "recusa" no lugar de "avisa" na colisão de porta; de onde o snapshot é tirado; qual snapshot o
+  `down --apagar` apaga.
+
+Conferido: `swapout_rate` é bytes por segundo (`memory_stats.py` do MacCluster).
+
+Já existia antes deste PR e ficou de fora (candidato a Issue própria):
+
+- snapshot do MacCluster sobra se o `up` falha entre a criação e o registro para descarte (`criar_snapshot`);
+- `clonar-base` que falha antes do rsync deixa o `clone-pendente` preso, e o `up` seguinte da mesma demo recusa;
+- o snapshot do Mac que chamou o `up` só é apagado por um `down --apagar` rodado nesse mesmo Mac;
+- `SNAP` do `demo.env` entra entre aspas simples num comando remoto do `sync`.
+
+Limite conhecido, coberto pela regra do OK da Orquestração: dois `up` disparados ao mesmo tempo. A demo só conta
+como viva quando o Redis dela sobe; antes disso (snapshot, cópia) o segundo `up` não a vê.
+
+Mudança de dependência: todo comando passou a chamar `maccluster node` para saber em qual Mac está. Antes, só o
+`up` dependia do MacCluster.
