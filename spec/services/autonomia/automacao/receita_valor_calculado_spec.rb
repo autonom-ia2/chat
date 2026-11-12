@@ -20,6 +20,8 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def atributo(valor) = { 'merge' => true, 'custom_attributes' => { 'revisao' => valor } }
 
+  def texto_em_nivel(partes) = { 'merge' => true, 'custom_attributes' => { 'nivel' => { '$texto' => partes } } }
+
   def problemas(corpo, **) = described_class.new(receita(corpo, **), conta: account, account_user: nil).problemas
 
   def frase(chave, **) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'p1', **)
@@ -45,8 +47,9 @@ RSpec.describe Autonomia::Automacao::Receita do
   it 'confere cada caminho lido como confere os do caminho da ação', :aggregate_failures do
     expect(problemas(atributo({ '$valor' => 'contato.apelido' }))).to eq([frase(:valor_desconhecido, caminho: 'contato.apelido')])
     # #2716: o gatilho de conversa lê o card dela, mas o id do card não entra na ação.
-    expect(problemas(atributo({ '$texto' => ['oi ', { '$valor' => 'card.titulo' }] }))).to eq([])
-    expect(problemas(atributo({ '$texto' => ['card ', { '$valor' => 'card.id' }] })))
+    # O texto montado vai num atributo de texto (#2632): o `nivel`.
+    expect(problemas(texto_em_nivel(['oi ', { '$valor' => 'card.titulo' }]))).to eq([])
+    expect(problemas(texto_em_nivel(['card ', { '$valor' => 'card.id' }])))
       .to eq([frase(:card_da_conversa_so_le, caminho: 'card.id')])
     expect(problemas(atributo(data({ '$valor' => 'conversa.atributos.sumiu' }))))
       .to eq([frase(:atributo_inexistente, caminho: 'conversa.atributos.sumiu')])

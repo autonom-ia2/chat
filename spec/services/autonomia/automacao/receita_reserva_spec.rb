@@ -13,7 +13,7 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def receita(passo) = { 'gatilho' => { 'tipo' => 'conversa.criada' }, 'passos' => [passo] }
 
-  def problemas(passo) = described_class.new(receita(passo), conta: account).problemas
+  def problemas(passo) = described_class.new(receita(passo), conta: account, account_user: nil).problemas
 
   def erro(passo) = I18n.t('autonomia.automacao.receita.reserva_sem_responsavel', passo: passo)
 

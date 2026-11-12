@@ -189,7 +189,7 @@ RSpec.describe Autonomia::Automacao::PassoDeRodizio, :automacao_motor do
       create(:team_member, team: time, user: ana)
 
       expect(described_class.ensaiar(passo, conversa)).to eq(['rodizio', {}])
-      expect(described_class.ensaiar(passo.merge('time_id' => time.id), conversa)).to eq(['rodizio', { time: 'Vendas' }])
+      expect(described_class.ensaiar(passo.merge('time_id' => time.id), conversa)).to eq(['rodizio', { time: time.name }])
     end
 
     it 'diz por que pularia', :aggregate_failures do
