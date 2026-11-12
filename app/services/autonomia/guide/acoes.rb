@@ -121,10 +121,12 @@ class Autonomia::Guide::Acoes
   # #2894: apagar as pessoas marcadas na Lista de Relacionamentos é excluir contato, em lote: também só na tela
   # (`Relacionamentos::Apagar::SO_NA_TELA_DO_GUIA`).
   # #2858 F7 (revisor, 12/11): o Experimente da vitrine e a leitura do pedido dele (`FerramentasProntas::SO_NA_TELA_DO_GUIA`).
+  # #2897: guardar e tirar o PDF de um seguro é envio de arquivo, e o link do PDF é assinado: os três só na tela
+  # (`Carteira::Pdf::SO_NA_TELA_DO_GUIA`). As listas dos módulos se juntam em `SoNaTelaDosModulos`.
   SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
                .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
                        'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete'))
-               .merge(::Relacionamentos::Apagar::SO_NA_TELA_DO_GUIA).merge(::Autonomia::FerramentasProntas::SO_NA_TELA_DO_GUIA).freeze
+               .merge(::Autonomia::Guide::SoNaTelaDosModulos::ACOES).freeze
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.

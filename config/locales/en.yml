@@ -803,6 +803,7 @@ en:
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
         ready_tool_test: 'Testing a ready-made tool is only done on screen: On autopilot › Ready-made tools › open the card › Try it.'
+        seguro_pdf: 'The PDF of an insurance policy is only saved, removed or opened on screen: Relationships › Insurance › open the policy.'
       admin_only: 'Only an account admin can do this.'
       automation_manage_only: 'For this you need the automatic rules permission in your role.'
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'

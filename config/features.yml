@@ -1429,3 +1429,13 @@
   display_name: Automação › no card e na etapa do CRM
   enabled: true
   column: feature_flags_ext_2
+
+# Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
+# Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
+# Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:
+# desligar a flag na conta. É a última entrada do arquivo: a posição dela na feature_flags_ext_2 sai da ordem de entrada
+# na main e é conferida antes do merge.
+- name: carteira_seguros
+  display_name: Relacionamentos › carteira de seguros
+  enabled: false
+  column: feature_flags_ext_2
