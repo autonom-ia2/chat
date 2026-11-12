@@ -1,6 +1,7 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { comFlags } from 'dashboard/helper/comFlags';
+import { soNaDemonstracao } from './lista/rotaDoTrazer';
 
 const FichaDaPessoaPage = () => import('./pages/FichaDaPessoaPage.vue');
 const FichaDaEmpresaPage = () => import('./pages/FichaDaEmpresaPage.vue');
@@ -33,5 +34,9 @@ const rota = (path, name, component) => ({
 export const routes = [
   rota('pessoas/:contactId', 'relacionamentos_pessoa', FichaDaPessoaPage),
   rota('empresas/:companyId', 'relacionamentos_empresa', FichaDaEmpresaPage),
-  rota('trazer', 'relacionamentos_trazer', TrazerListaPage),
+  {
+    ...rota('trazer', 'relacionamentos_trazer', TrazerListaPage),
+    // #2947 — até a E3 (#2896) a tela nova só existe na demonstração.
+    beforeEnter: [comFlags(...FLAGS), soNaDemonstracao],
+  },
 ];

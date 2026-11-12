@@ -31,7 +31,7 @@ import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
-import { rotaDoTrazer } from '../lista/rotaDoTrazer';
+import { rotaDoTrazer, temOndeTrazer } from '../lista/rotaDoTrazer';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
@@ -85,6 +85,11 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// "Trazer minha lista" é de quem pode importar contatos, e só aparece onde há
+// para onde levar (#2947).
+const podeTrazer = computed(
+  () => temOndeTrazer(demo) && (Boolean(demo) || permissoes.podeTrazer.value)
+);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -278,6 +283,7 @@ onMounted(lista.iniciar);
             :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
             :aba="aba"
+            :pode-trazer="podeTrazer"
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />
