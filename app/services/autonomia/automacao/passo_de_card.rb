@@ -13,8 +13,9 @@
 #
 # F6.8 (#2499): a conversa cujo card a IA arquivou como "não é negócio" há menos de 30 dias não ganha card pela
 # automação, como não ganha pela mensagem (Crm::Ai::NaoENegocio.conversa_fora_do_negocio?, #2395): pula com
-# `nao_e_negocio`, e o histórico diz o porquê. Vale para o card ligado a uma conversa; o card só do contato (sem
-# conversa, G49) não tem esse arquivamento a respeitar.
+# `nao_e_negocio`, e o histórico diz o porquê. O card só do contato (alvo contato, sem conversa, e o G49) pergunta o
+# mesmo do contato: o card mais novo dele arquivado assim (Crm::Ai::NaoENegocio.contato_fora_do_negocio?). Só o motivo
+# "fora_do_negocio" trava, como no #2395; o "duplicado" deixa aberto o card que fica.
 #
 # Age como quem ligou (D1), conferido a cada execução, com as perguntas da API de cards: criar card (CardPolicy#create?,
 # no EE `crm_manage_cards`) e o funil da etapa nas caixas dele (CardGuard#create_allowed?). Por ser passo de funil, pede
@@ -70,9 +71,15 @@ class Autonomia::Automacao::PassoDeCard
   def do_alvo(etapa)
     return pulado('sem_contato') if @contato.nil?
     return pulado('fora_do_funil') if Crm::Relacao.fora_do_funil?(@contato)
-    return pulado('nao_e_negocio') if @conversa && Crm::Ai::NaoENegocio.conversa_fora_do_negocio?(@conversa)
+    return pulado('nao_e_negocio') if nao_e_negocio?
 
     criar(etapa)
+  end
+
+  def nao_e_negocio?
+    return Crm::Ai::NaoENegocio.conversa_fora_do_negocio?(@conversa) if @conversa
+
+    Crm::Ai::NaoENegocio.contato_fora_do_negocio?(@contato)
   end
 
   # O contato em que o card nasce: o da conversa, quando há (CardNovo grava esse), senão o do alvo.
@@ -90,6 +97,7 @@ class Autonomia::Automacao::PassoDeCard
     return pulado('faltou_valor') if @contato.nil?
     return sem_acesso('quem_ligou_sem_acesso') unless @acesso.alcanca?(@contato)
     return pulado('fora_do_funil') if Crm::Relacao.fora_do_funil?(@contato)
+    return pulado('nao_e_negocio') if nao_e_negocio?
 
     criar(etapa)
   end

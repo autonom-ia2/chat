@@ -344,4 +344,50 @@ RSpec.describe Crm::Ai::NaoENegocio do
       expect(described_class.conversa_fora_do_negocio?(conversa)).to be(false)
     end
   end
+
+  # F6.8 (#2499): o card que nasce só no contato (o "criar card" da Automação livre sem conversa) pergunta o mesmo do
+  # contato: o card mais novo dele.
+  describe '.contato_fora_do_negocio?' do
+    let(:contato) { conversa.contact }
+
+    def pela_ia(card, motivo: 'fora_do_negocio')
+      Crm::Cards::Archiver.new(card: card, actor: nil, payload: { by: 'ai', motivo: motivo }).perform
+    end
+
+    def card_do_contato = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', contact: contato)
+
+    it 'bloqueia com o card mais novo do contato arquivado pela IA dentro dos 30 dias' do
+      pela_ia(card_do_contato)
+
+      expect(described_class.contato_fora_do_negocio?(contato)).to be(true)
+    end
+
+    it 'libera com o arquivamento de mais de 30 dias' do
+      card = card_do_contato
+      pela_ia(card)
+      Crm::Activity.where(card: card, event_type: 'archive').update_all(created_at: 31.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.contato_fora_do_negocio?(contato)).to be(false)
+    end
+
+    it 'libera com outro motivo da IA (duplicado)' do
+      pela_ia(card_do_contato, motivo: 'duplicado')
+
+      expect(described_class.contato_fora_do_negocio?(contato)).to be(false)
+    end
+
+    it 'libera quando há card mais novo do contato, aberto depois do arquivamento' do
+      pela_ia(card_do_contato)
+      card_do_contato
+
+      expect(described_class.contato_fora_do_negocio?(contato)).to be(false)
+    end
+
+    it 'não olha o card de outro contato' do
+      outro = create(:contact, account: account)
+      pela_ia(account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL', contact: outro))
+
+      expect(described_class.contato_fora_do_negocio?(contato)).to be(false)
+    end
+  end
 end

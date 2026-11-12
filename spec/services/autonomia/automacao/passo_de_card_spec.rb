@@ -155,10 +155,42 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
       expect { rodar }.to change { melhorias.cards.count }.from(0).to(1)
     end
 
+    # Só o "fora_do_negocio" trava, como no #2395 (decisão de 30/10): o "duplicado" deixa aberto o card que fica.
     it 'arquivado como repetido (outro motivo da IA): cria o card' do
       arquivado_pela_ia(motivo: 'duplicado')
 
       expect { rodar }.to change { melhorias.cards.count }.from(0).to(1)
+    end
+
+    it 'no alvo contato, o card do contato arquivado assim também pula', :aggregate_failures do
+      arquivado_pela_ia
+
+      execucao = rodar(contato)
+
+      expect(melhorias.cards).to be_empty
+      expect(registros(execucao)).to eq([%w[p1 pulado nao_e_negocio]])
+    end
+
+    it 'no alvo contato, um card aberto por uma pessoa depois do arquivamento libera' do
+      arquivado_pela_ia
+      card_vendas
+
+      expect { rodar(contato) }.to change { melhorias.cards.count }.from(0).to(1)
+    end
+
+    # G49: o contato vem de um valor (`criado.<passo>`); aqui o valor lido é o id do contato que tem o card arquivado.
+    it 'no contato do valor (G49), o card do contato arquivado assim também pula', :aggregate_failures do
+      arquivado_pela_ia
+      definicao = automacao_ligada(account, admin, [card_passo])
+      passo = card_passo.merge('contato' => { '$valor' => 'criado.p0' })
+      valores = instance_double(Autonomia::Automacao::Valores, ler: contato.id)
+      acesso = Autonomia::Automacao::Acesso.new(definicao)
+
+      resultado = described_class.new(execucao: Autonomia::Automacao::Execucao.new(account: account, automacao: definicao),
+                                      passo: passo, alvo: conversa, acesso: acesso, valores: valores).executar
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'nao_e_negocio'])
+      expect(melhorias.cards).to be_empty
     end
   end
 
