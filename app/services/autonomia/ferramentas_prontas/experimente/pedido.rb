@@ -8,7 +8,7 @@
 # (`reivindicar`): o job que o Sidekiq devolve à fila depois de começar não consulta de novo.
 module Autonomia::FerramentasProntas::Experimente::Pedido
   TTL = 15.minutes
-  # Quanto a tela espera pelo resultado: o mesmo `PRAZO_DO_PEDIDO_MS` do `useVitrine.js`. Depois dele, ela desiste.
+  # Quanto a tela espera pelo resultado. Vai à tela na resposta do clique (`prazo_ms`); depois dele, ela desiste.
   PRAZO_DA_TELA = 80.seconds
   CONSULTANDO = 'consultando'.freeze
   PREFIXO = 'ferramentas_prontas:experimente:'.freeze

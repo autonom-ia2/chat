@@ -333,7 +333,7 @@ describe('useVitrine · experimentar e busca', () => {
       expect(vitrine.premiumDe('historico_placa')).toEqual(novo);
     });
 
-    it('after about 80 seconds without a result, says it could not confirm and reads the counter again', async () => {
+    it('without prazo_ms in the answer, falls back to about 80 seconds, says it could not confirm and reads the counter again', async () => {
       api.listar.mockResolvedValue(cardPremium(12));
       const vitrine = await novoEstado();
       await vitrine.carregar();
@@ -351,6 +351,27 @@ describe('useVitrine · experimentar e busca', () => {
       expect(api.listar).toHaveBeenCalledTimes(2);
       expect(vitrine.premiumDe('historico_placa').restantes).toBe(11);
       expect(api.acompanhar.mock.calls.length).toBeLessThan(15);
+    });
+
+    it('waits as long as the server says (prazo_ms), not a deadline of its own', async () => {
+      api.listar.mockResolvedValue(cardPremium(12));
+      const vitrine = await novoEstado();
+      await vitrine.carregar();
+      vi.useFakeTimers();
+      api.experimentar.mockResolvedValue({
+        data: { ...consultando.data, prazo_ms: 30000 },
+      });
+      api.acompanhar.mockResolvedValue({ data: { situacao: 'consultando' } });
+
+      let fim = null;
+      vitrine.experimentar('historico_placa', 'ABC1D23').then(resposta => {
+        fim = resposta;
+      });
+      await vi.advanceTimersByTimeAsync(29000);
+      expect(fim).toBeNull();
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(fim).toEqual({ situacao: 'sem_confirmacao' });
     });
 
     it('a request that no longer exists (404) stops asking and says it could not confirm', async () => {

@@ -59,13 +59,14 @@ class Autonomia::FerramentasProntas::Experimente
   private
 
   # A consulta paga não cabe no corte do pedido web (15 s): ela roda em segundo plano (`ExperimentePagoJob`), e a
-  # resposta é "consultando", com o id do pedido que a tela acompanha (`Experimente::Pedido`).
+  # resposta é "consultando", com o id do pedido que a tela acompanha (`Experimente::Pedido`) e quanto ela espera
+  # (`prazo_ms`): o prazo da tela mora só no servidor, junto do prazo para o job começar.
   def premium
     return com_contador('situacao' => 'confirmar_preco') if sem_gratis? && !@confirmou_preco
 
     pedido = Pedido.abrir!(account: @account, fonte: @fonte.chave, valor: @valor, confirmou_preco: @confirmou_preco)
     Autonomia::FerramentasProntas::ExperimentePagoJob.perform_later(pedido)
-    com_contador('situacao' => Pedido::CONSULTANDO, 'pedido' => pedido)
+    com_contador('situacao' => Pedido::CONSULTANDO, 'pedido' => pedido, 'prazo_ms' => Pedido::PRAZO_DA_TELA.in_milliseconds.to_i)
   end
 
   def contador

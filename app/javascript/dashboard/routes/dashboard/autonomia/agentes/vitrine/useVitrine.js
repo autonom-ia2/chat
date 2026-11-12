@@ -146,11 +146,12 @@ const tirar = async id => {
 };
 
 // F7 (revisor, 12/11): a consulta do card Premium roda em segundo plano. O servidor responde "consultando" com o id do
-// pedido, e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo (~80 s, mais que a
-// consulta mais lenta da BigDataCorp). No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha
-// de rede numa pergunta não para: a próxima tenta de novo.
+// pedido e o prazo (`prazo_ms`), e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo.
+// O prazo mora no servidor, junto do prazo para o job começar; `PRAZO_DE_RESERVA_MS` só vale se a resposta não o
+// trouxer. No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha de rede numa pergunta não
+// para: a próxima tenta de novo.
 const ESPERAS_DO_PEDIDO_MS = [1000, 2000, 3000, 5000, 8000, 10000];
-const PRAZO_DO_PEDIDO_MS = 80000;
+const PRAZO_DE_RESERVA_MS = 80000;
 const CONSULTANDO = 'consultando';
 const SEM_CONFIRMACAO = 'sem_confirmacao';
 
@@ -170,15 +171,15 @@ const perguntar = async idDoPedido => {
   }
 };
 
-const acompanhar = async (idDoPedido, vez = 0, passado = 0) => {
-  if (passado >= PRAZO_DO_PEDIDO_MS) return { situacao: SEM_CONFIRMACAO };
+const acompanhar = async (idDoPedido, prazo, vez = 0, passado = 0) => {
+  if (passado >= prazo) return { situacao: SEM_CONFIRMACAO };
   const espera = Math.min(
     ESPERAS_DO_PEDIDO_MS[Math.min(vez, ESPERAS_DO_PEDIDO_MS.length - 1)],
-    PRAZO_DO_PEDIDO_MS - passado
+    prazo - passado
   );
   await esperar(espera);
   const resposta = await perguntar(idDoPedido);
-  return resposta || acompanhar(idDoPedido, vez + 1, passado + espera);
+  return resposta || acompanhar(idDoPedido, prazo, vez + 1, passado + espera);
 };
 
 // O "Experimente" responde sempre uma situação: a falha da chamada vira "sem_permissao" ou "nao_consegui_consultar",
@@ -195,7 +196,10 @@ const experimentar = async (fonte, valor, confirmouPreco = false) => {
     );
     const data =
       inicio?.situacao === CONSULTANDO && inicio.pedido
-        ? await acompanhar(inicio.pedido)
+        ? await acompanhar(
+            inicio.pedido,
+            inicio.prazo_ms > 0 ? inicio.prazo_ms : PRAZO_DE_RESERVA_MS
+          )
         : inicio;
     if (data?.premium) {
       premium.value = { ...premium.value, [fonte]: data.premium };
