@@ -19,20 +19,69 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
   module_function
 
   SEM_CLIQUE_NO_PRECO = 'sem_clique_no_preco'.freeze
+  EM_ANDAMENTO = 'em_andamento'.freeze
 
   # `resultado`: encontrado | sem_registro | falha. Roda no fuso da conta (a `Execucao`). -> o `Registro` gravado.
+  # `andamento`: a linha "em andamento" que a execução gravou antes de chamar (`em_andamento!`); ela vira o resultado.
+  # Se o varredor já a fechou como entrega incerta, nada conta nem cobra: a linha fica como está e o caso vai ao log.
   def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil, custo_possivel: false, # rubocop:disable Metrics/ParameterLists
-                 pode_cobrar: true)
+                 pode_cobrar: true, andamento: nil)
     contada = !do_cache && resultado != 'falha'
     hoje = Time.zone.today
     ActiveRecord::Base.transaction(requires_new: true) do
+      next ja_fechada(andamento) if andamento && !aberta?(andamento)
+
       numero = contada ? Premium::Saldo.contar!(account_id: tool.account_id, fonte: fonte.chave, mes: hoje.beginning_of_month) : nil
       linha = origem(tool, fonte, consulta, hoje).merge(
         resultado: resultado, do_cache: do_cache, numero: numero, motivo: motivo, id_na_fonte: id_na_fonte, tool_run_id: tool_run_id,
         **valores(consulta.dataset, resultado, numero, custo_possivel: custo_possivel)
       )
-      Premium::Registro.create!(pode_cobrar || linha[:cobranca] != 'cobrada' ? linha : sem_clique_no_preco(linha))
+      gravar!(andamento, pode_cobrar || linha[:cobranca] != 'cobrada' ? linha : sem_clique_no_preco(linha))
     end
+  end
+
+  def gravar!(andamento, linha)
+    andamento ? andamento.tap { |registro| registro.update!(linha) } : Premium::Registro.create!(linha)
+  end
+
+  # Trava a linha "em andamento" e confere que o varredor não a fechou (`fechar_em_andamento!`).
+  def aberta?(andamento)
+    andamento.lock!
+    andamento.resultado == EM_ANDAMENTO
+  end
+
+  def ja_fechada(andamento)
+    Rails.logger.warn("[autonomia][premium] consulta terminou já fechada como entrega incerta, sem contar conta=#{andamento.account_id} " \
+                      "fonte=#{andamento.fonte} registro=#{andamento.id}")
+    andamento
+  end
+
+  # A LINHA "EM ANDAMENTO" (revisor, 12/11): o Experimente Premium roda num job próprio, fora do `ToolRun` do agente, e
+  # o worker pode morrer no meio da chamada. Antes de chamar a BigDataCorp, a execução grava esta linha (sem custo, sem
+  # contar); ao terminar, `registrar!` a transforma no resultado. A que sobra além do prazo da consulta, o
+  # `FecharEmAndamentoJob` fecha como entrega incerta.
+  def em_andamento!(tool:, fonte:, consulta:)
+    linha = origem(tool, fonte, consulta, Time.zone.today)
+    Premium::Registro.create!(linha.merge(resultado: EM_ANDAMENTO, cobranca: 'sem_cobranca', do_cache: false, custo: 0, preco: 0))
+  end
+
+  # As linhas "em andamento" da conta criadas antes de `antes_de` viram entrega incerta, pela regra do
+  # `entrega_incerta!`: o custo do dataset fica na telemetria (a BigDataCorp pode ter cobrado) e nada conta para o
+  # cliente. Compare-and-set: a execução que termina ao mesmo tempo grava o resultado dela ou acha a linha fechada.
+  def fechar_em_andamento!(account_id, antes_de:)
+    Premium::Registro.where(account_id: account_id, resultado: EM_ANDAMENTO, created_at: ...antes_de).find_each do |linha|
+      fechado = { resultado: 'falha', motivo: 'entrega_incerta', custo: custo_incerto(linha), updated_at: Time.current }
+      fechou = Premium::Registro.where(id: linha.id, resultado: EM_ANDAMENTO).update_all(fechado) # rubocop:disable Rails/SkipsModelValidations
+      next if fechou.zero?
+
+      Rails.logger.warn("[autonomia][premium] consulta em andamento fechada como entrega incerta conta=#{account_id} " \
+                        "fonte=#{linha.fonte} registro=#{linha.id}")
+    end
+  end
+
+  def custo_incerto(linha)
+    consulta = Autonomia::FerramentasProntas::Catalogo.buscar(linha.fonte)&.consulta(linha.consulta)
+    consulta ? consulta.dataset.custo_de('falha', custo_possivel: true) : 0
   end
 
   # A 21ª em diante sem o clique no preço: não vai à fatura. O custo fica (a BigDataCorp cobrou de nós).

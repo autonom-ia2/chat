@@ -15,7 +15,8 @@
 class Autonomia::FerramentasProntas::Premium::Registro < ApplicationRecord
   self.table_name = 'autonomia_ferramentas_premium_consultas'
 
-  RESULTADOS = %w[encontrado sem_registro documento_invalido falha].freeze
+  # `em_andamento`: a consulta do Experimente que ainda não terminou (`Cobranca.em_andamento!`); sem custo e sem contar.
+  RESULTADOS = %w[encontrado sem_registro documento_invalido falha em_andamento].freeze
   COBRANCAS = %w[gratis cobrada sem_cobranca].freeze
 
   belongs_to :account

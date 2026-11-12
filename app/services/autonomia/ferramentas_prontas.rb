@@ -87,14 +87,17 @@ module Autonomia::FerramentasProntas
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
-  # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria.
-  def executor_para(tool, params:, tool_run_id: nil, pode_cobrar: true, **opcoes)
+  # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria. Também só dela:
+  # `pode_cobrar` e `em_andamento`, do Experimente (`Premium::Execucao`).
+  OPCOES_DA_PREMIUM = %i[pode_cobrar em_andamento].freeze
+
+  def executor_para(tool, params:, tool_run_id: nil, **opcoes)
     if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
-      return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, pode_cobrar: pode_cobrar)
+      return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, **opcoes.slice(*OPCOES_DA_PREMIUM))
     end
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
-    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)
+    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes.except(*OPCOES_DA_PREMIUM))
   end
 
   # O fuso da conta, para o "hoje" das prontas e o mês das grátis Premium. Sem ele (defeito ao ler a conta), o da

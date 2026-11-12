@@ -17,10 +17,13 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # `tool_run_id`: a execução em segundo plano (`HttpAssincronaJob`), que vai à telemetria; nil no turno.
   # `pode_cobrar`: a consulta acima das grátis pode ir à fatura? O agente sempre; o Experimente, só com o clique no
   # preço (`Cobranca.registrar!`).
-  def initialize(tool:, params: {}, tool_run_id: nil, pode_cobrar: true)
+  # `em_andamento`: o Experimente, que roda num job próprio sem `ToolRun`. Antes de chamar a BigDataCorp, grava a linha
+  # "em andamento" e agenda o varredor (`FecharEmAndamentoJob`); o resultado atualiza a mesma linha.
+  def initialize(tool:, params: {}, tool_run_id: nil, pode_cobrar: true, em_andamento: false)
     super(tool: tool, params: params)
     @tool_run_id = tool_run_id
     @pode_cobrar = pode_cobrar
+    @em_andamento = em_andamento
   end
 
   # O pedido saiu para a BigDataCorp? (O contrato do `HttpExecutor`, lido pela consulta em segundo plano.)
@@ -53,11 +56,17 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # e o defeito sobe ao rastreador pela `Execucao#call`.
   def consultar(params)
     @provedor = Premium::BigDataCorp::NOME
+    marcar_em_andamento if @em_andamento
     @chamou = true
     leitura = ler(params)
     texto = montar(leitura, params)
     cobrar(leitura.situacao, motivo: leitura.motivo, id_na_fonte: leitura.id_na_fonte, custo_possivel: leitura.custo_possivel?)
     texto
+  end
+
+  def marcar_em_andamento
+    @andamento = Premium::Cobranca.em_andamento!(tool: @tool, fonte: @fonte, consulta: @consulta)
+    Premium::FecharEmAndamentoJob.set(wait: Premium::FecharEmAndamentoJob::ESPERA).perform_later(@tool.account_id)
   end
 
   # A `BigDataCorp#ler` não levanta pelo que a BigDataCorp respondeu; o que levanta é defeito nosso, e pode vir depois
@@ -105,7 +114,7 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # marca; outro erro é defeito nosso e levanta.
   def cobrar(resultado, **)
     Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id,
-                                 pode_cobrar: @pode_cobrar, **)
+                                 pode_cobrar: @pode_cobrar, andamento: @andamento, **)
   rescue ActiveRecord::RecordNotUnique => e
     # A linha desta execução já existe: o varredor a fechou como entrega incerta (`Cobranca.entrega_incerta!`). Não é
     # defeito; a transação desfez a posição no saldo. Duplicidade em outro índice é defeito: levanta.
