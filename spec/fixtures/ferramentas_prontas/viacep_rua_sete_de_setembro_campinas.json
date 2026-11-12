@@ -1,0 +1,47 @@
+[
+  {
+    "cep": "13106-022",
+    "logradouro": "Rua Sete de Setembro",
+    "complemento": "",
+    "unidade": "",
+    "bairro": "Sousas",
+    "localidade": "Campinas",
+    "uf": "SP",
+    "estado": "São Paulo",
+    "regiao": "Sudeste",
+    "ibge": "3509502",
+    "gia": "2446",
+    "ddd": "19",
+    "siafi": "6291"
+  },
+  {
+    "cep": "13035-901",
+    "logradouro": "Rua Sete de Setembro",
+    "complemento": "189",
+    "unidade": "Diário do Povo - Empresa Jornalística Editora Regional Ltda",
+    "bairro": "Vila Industrial",
+    "localidade": "Campinas",
+    "uf": "SP",
+    "estado": "São Paulo",
+    "regiao": "Sudeste",
+    "ibge": "3509502",
+    "gia": "2446",
+    "ddd": "19",
+    "siafi": "6291"
+  },
+  {
+    "cep": "13035-350",
+    "logradouro": "Rua Sete de Setembro",
+    "complemento": "",
+    "unidade": "",
+    "bairro": "Vila Industrial",
+    "localidade": "Campinas",
+    "uf": "SP",
+    "estado": "São Paulo",
+    "regiao": "Sudeste",
+    "ibge": "3509502",
+    "gia": "2446",
+    "ddd": "19",
+    "siafi": "6291"
+  }
+]

@@ -21,6 +21,9 @@ class Autonomia::Agents::Tools::Native::GuiaLeitura < Autonomia::Agents::Tools::
   TETO = 6_000
 
   class << self
+    # #2918: LÊ (lê a conta). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'ler_da_conta'
     end

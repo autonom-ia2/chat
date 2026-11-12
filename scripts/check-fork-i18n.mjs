@@ -9,6 +9,7 @@ import {
   parametros as parameters,
 } from './i18n-pacotes/checar.mjs';
 import { checarCobertura } from './i18n-pacotes/cobertura.mjs';
+import { chavesRepetidas } from './i18n-pacotes/chaves-repetidas.mjs';
 
 const root = 'app/javascript/dashboard/i18n/locale';
 const registry = JSON.parse(readFileSync('config/fork_i18n.json', 'utf8'));
@@ -57,7 +58,15 @@ for (const {
       );
       continue;
     }
-    const translated = new Map(leaves(JSON.parse(readFileSync(path, 'utf8'))));
+    const texto = readFileSync(path, 'utf8');
+    // #2858: chave repetida no mesmo objeto passa no JSON.parse e apaga a primeira em silêncio.
+    const repetidas = chavesRepetidas(texto);
+    assert.equal(
+      repetidas.length,
+      0,
+      `Repeated keys in ${locale}/${file}: ${repetidas.join(', ')}`
+    );
+    const translated = new Map(leaves(JSON.parse(texto)));
     for (const [key, value] of translated) {
       assert(value.trim(), `Empty ${locale}/${file}:${key}`);
       const params = parameters(value, `${locale}/${file}:${key}`);

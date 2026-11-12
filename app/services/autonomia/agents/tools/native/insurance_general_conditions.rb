@@ -15,6 +15,9 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
   DEFAULT_PRODUCT = 'Automóvel'.freeze
 
   class << self
+    # #2918: LÊ (lê as condições gerais). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'consultar_condicoes_gerais'
     end

@@ -91,6 +91,8 @@ const list = useTemplateRef('list');
 const isOpen = ref(false);
 const active = ref(-1);
 const listStyle = ref({});
+// Onde o botão estava quando a lista foi posicionada (ver `triggerMoved`).
+let placedAt = null;
 const typed = { text: '', at: 0, from: -1 };
 
 // Seções da lista: um grupo por <optgroup>, ou uma seção sem rótulo.
@@ -160,6 +162,7 @@ const halfRowHeight = limit => {
 const place = () => {
   const rect = trigger.value?.getBoundingClientRect();
   if (!rect) return;
+  placedAt = { top: rect.top, left: rect.left };
   const below = window.innerHeight - rect.bottom;
   const spaceBelow = below - LIST_GAP - VIEWPORT_MARGIN;
   const spaceAbove = rect.top - LIST_GAP - VIEWPORT_MARGIN;
@@ -321,16 +324,26 @@ watch(
   { flush: 'post' }
 );
 
-// Rolar a página ou uma seção com a lista aberta fecha, como o select nativo
-// (capture pega a rolagem das seções internas); assim a lista nunca fica
-// solta, apontando para um botão que saiu da vista. A rolagem da própria lista
-// não conta. Redimensionar só reposiciona.
+// Rolagem que tira o botão do lugar com a lista aberta fecha, como o select
+// nativo (capture pega a rolagem das seções internas); assim a lista nunca
+// fica solta, apontando para um botão que saiu da vista. A rolagem da própria
+// lista não conta. Redimensionar só reposiciona.
+// O botão precisa ter saído de onde estava quando a lista foi posicionada
+// (#2927): o foco (clique no rótulo, Tab) rola a tela para mostrar o botão e
+// só então a lista abre, mas o navegador entrega o evento dessa rolagem um
+// quadro depois, com a lista já aberta. Fechar em qualquer rolagem fazia a
+// lista abrir e fechar na hora.
+const triggerMoved = () => {
+  const rect = trigger.value?.getBoundingClientRect();
+  return !rect || rect.top !== placedAt?.top || rect.left !== placedAt?.left;
+};
 const openWindow = () => (isOpen.value ? window : null);
 useEventListener(
   openWindow,
   'scroll',
   event => {
-    if (!list.value?.contains(event.target)) close(false);
+    if (list.value?.contains(event.target) || !triggerMoved()) return;
+    close(false);
   },
   { capture: true, passive: true }
 );

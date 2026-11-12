@@ -6,6 +6,8 @@ import AgenteGaveta from '../../components/AgenteGaveta.vue';
 import EscolhaRadio from '../../components/EscolhaRadio.vue';
 import VitrineConversa from './VitrineConversa.vue';
 import VitrineExperimente from './VitrineExperimente.vue';
+import VitrineQuantoCusta from './VitrineQuantoCusta.vue';
+import VitrineSeloPremium from './VitrineSeloPremium.vue';
 import { chaveDoTexto } from '../catalogo';
 import { useVitrine } from '../useVitrine';
 
@@ -76,6 +78,8 @@ const opcoes = computed(() =>
 );
 
 const consultas = computed(() => texto('CONSULTAS'));
+// F7: o card Premium mostra o preço e como funciona, e o "Experimente" usa as grátis do card (decisão A do Rodrigo).
+const premium = computed(() => vitrine.premiumDe(props.ferramenta.id));
 
 const ensinar = async () => {
   if (!agenteEscolhido.value || ensinando.value) return;
@@ -140,11 +144,17 @@ const ensinar = async () => {
       <div class="flex items-start gap-3">
         <span
           aria-hidden="true"
-          class="grid rounded-xl place-items-center size-12 shrink-0 bg-n-blue-3 text-n-blue-11"
+          class="grid rounded-xl place-items-center size-12 shrink-0"
+          :class="
+            premium
+              ? 'bg-n-iris-3 text-n-iris-11'
+              : 'bg-n-blue-3 text-n-blue-11'
+          "
         >
           <span :class="ferramenta.icone" class="size-6" />
         </span>
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col items-start gap-1">
+          <VitrineSeloPremium v-if="premium" class="mb-1" />
           <p class="m-0 text-base text-n-slate-12">{{ texto('FAZ') }}</p>
           <p v-if="texto('APOIO')" class="m-0 text-sm text-n-slate-11">
             {{ texto('APOIO') }}
@@ -166,7 +176,8 @@ const ensinar = async () => {
         </p>
       </section>
 
-      <VitrineExperimente :ferramenta="ferramenta" />
+      <VitrineQuantoCusta v-if="premium" :premium="premium" />
+      <VitrineExperimente :ferramenta="ferramenta" :premium="premium" />
 
       <section class="flex flex-col gap-3">
         <h3 class="m-0 text-base font-semibold text-n-slate-12">

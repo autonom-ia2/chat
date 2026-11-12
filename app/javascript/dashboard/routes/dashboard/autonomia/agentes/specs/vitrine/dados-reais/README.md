@@ -40,6 +40,13 @@ adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de 
 `produtos_seguradoras.json` também, quando a fonte ficou só com seguro garantia e transporte (o ramo de riscos
 cibernéticos saiu) e ganhou o filtro de servidor de teste e de link de exemplo.
 
+`ncm.json` foi gravado de novo em 11/11/2026, à noite, com o caso real do teste em produção ("café torrado", que achava
+só o grupo 0901.2): o grupo abre nos códigos de 8 dígitos dele, com a descrição completa ("Café torrado, não
+descafeinado"). Gravado pelo código do script (`DadosReaisDasProntas.rodar(['ncm'])`) num spec temporário, fora do
+commit, porque o `rails runner` estava vedado naquela tarefa. Gravado de novo no mesmo dia, do mesmo jeito, depois
+da revisão do #2917: a busca por palavra não abre mais o grupo (vem o grupo com a orientação para o modelo buscar pelo
+código dele), e a descrição completa leva a posição, que diz o material.
+
 | Arquivo | Consulta e pedido | Provedor que respondeu |
 |---|---|---|
 | cep.json | endereco: 01001-000; por_endereco: Avenida Paulista, São Paulo (gravado em 11/11/2026, regra QI 70) | ViaCEP; ViaCEP |
@@ -55,7 +62,7 @@ cibernéticos saiu) e ganhou o filtro de servidor de teste e de link de exemplo.
 | hospitais.json | Campinas SP, hospital | CNES (Ministério da Saúde) |
 | procedimentos.json | codigo 10101012; busca "hemograma" | TUSS (tabela no repositório) |
 | doencas.json | codigo J45; busca "asma" | CID-10 (tabela no repositório) |
-| ncm.json | buscar "parafuso"; codigo 7318.15.00 | BrasilAPI |
+| ncm.json | buscar "café torrado"; codigo 0901.21.00 (gravado em 11/11/2026, o caso real do teste em produção) | BrasilAPI |
 | compras_governo.json | Uberlândia MG, últimos 7 dias, pregão eletrônico | PNCP (órgãos públicos) |
 | estacoes.json | Uberlândia MG | INMET |
 | chuva.json | Uberlândia MG, 04 a 10/11/2026 | Open-Meteo |

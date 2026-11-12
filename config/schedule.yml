@@ -454,3 +454,12 @@ autonomia_ferramentas_prontas_atualizar_bases_job:
   cron: '*/5 * * * *'
   class: 'Autonomia::FerramentasProntas::AtualizarBasesJob'
   queue: scheduled_jobs
+
+# Ferramentas prontas F7 (#2858, revisor 12/11): a linha "em andamento" do Experimente Premium que ficou órfã (o job
+# agendado pela própria execução se perdeu). A cada 10 minutos, fecha como entrega incerta a que passou do prazo da
+# consulta mais lenta, em todas as contas, pela mesma regra do varredor da execução. Uma leitura da tabela das consultas
+# Premium (uma linha por consulta paga) e, só quando há órfã, a atualização dela.
+autonomia_ferramentas_prontas_fechar_em_andamento_job:
+  cron: '*/10 * * * *'
+  class: 'Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob'
+  queue: scheduled_jobs

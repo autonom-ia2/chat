@@ -8,6 +8,7 @@
 # - `disponivel?`: o vínculo entra no turno? Fase 2 ligada, ajudante ligado, interno, da mesma conta.
 # - `rodadas`: o principal com ajudante disponível ganha 6 rodadas e 15 minutos (a mesma decisão da Lia); sem ajudante,
 #   nil, e vale o padrão de quem chama. A Lia nunca tem ajudante, então segue com `QuoteAgent::Builder.rodadas_do_turno`.
+#   O ajudante vem antes das prontas (`FerramentasProntas.rodadas`, #2918): com os dois, valem as 6 rodadas daqui.
 # - `recusar_por_limite`: passou do teto de consultas ou do prazo, a consulta não roda e o modelo lê
 #   "limite atingido, responda com o que tem" — o cliente sempre recebe resposta.
 module Autonomia::Agents::Ajudantes

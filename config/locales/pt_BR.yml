@@ -1263,6 +1263,7 @@ pt_BR:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
+        ready_tool_test: 'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o cartão › Experimente.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'

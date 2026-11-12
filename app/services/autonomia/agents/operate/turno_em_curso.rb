@@ -36,11 +36,13 @@ module Autonomia::Agents::Operate::TurnoEmCurso
 
   # O teto real de um turno, das configurações: a maior janela de debounce, a maior espera do assunto, a maior chamada de
   # IA (a Lia: RODADAS_DA_LIA rodadas, cada uma com as rodadas de ferramenta do especialista e mais uma chamada, a mesma
-  # conta do QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta) e a cadeia de pedaços.
+  # conta do QuoteAgent::Builder.rodadas_do_turno; o agente com ajudante: o prazo da resposta; o agente com pronta: o
+  # prazo das rodadas dele, #2918) e a cadeia de pedaços.
   def teto_do_turno
     runner = ::Autonomia::Agents::Specialists::Runner
     lia = ::Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA * (runner::SEGUNDOS_DE_FERRAMENTA + runner::SEGUNDOS_POR_CHAMADA)
-    ia = [lia, ::Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA, ::Crm::Ai::ResponsesClient::REQUEST_TIMEOUT].max
+    ia = [lia, ::Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA, ::Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS,
+          ::Crm::Ai::ResponsesClient::REQUEST_TIMEOUT].max
     cadeia = ::Autonomia::Agents::Config::HUMANIZE[:max_total_delay_ms] / 1000
     ::Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS + ::Autonomia::Agents::Operate::EsperaDoAssunto::TETO + (ia + cadeia).seconds
   end

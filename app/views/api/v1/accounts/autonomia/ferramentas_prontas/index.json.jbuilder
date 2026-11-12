@@ -6,6 +6,7 @@ em_preparacao = Autonomia::FerramentasProntas::Bases::Estado.em_preparacao
 bases = Autonomia::FerramentasProntas::Bases.importadores.map(&:chave)
 json.fontes @fontes do |fonte|
   json.chave fonte.chave
+  json.premium @premium[fonte.chave] if @premium.key?(fonte.chave)
   if bases.include?(fonte.chave)
     json.atualizado_em atualizacoes[fonte.chave]&.to_date&.iso8601
     json.em_preparacao em_preparacao.include?(fonte.chave)
