@@ -12,8 +12,14 @@
 # da conversa no endpoint e o caderno do Guia (desfaz por 5 dias). Sem acesso, a automação pausa.
 #
 # Pula, com o motivo no histórico: sem conversa (card sem conversa principal), conversa resolvida, conversa que já tem
-# responsável ou está com robô ou agente de IA (a atribuição automática também não mexe nelas), ninguém da caixa (ou do
-# time) para o rodízio, ou ninguém dele online agora.
+# responsável ou está com robô ou agente de IA, conversa que o motor de entrega do CRM está segurando ou com um convite
+# no ar (Crm::Entrega::Marca, #1454) (a atribuição automática também não mexe em nenhuma delas:
+# AgentAssignmentService#reassignment_still_needed?), ninguém da caixa (ou do time) para o rodízio, ou ninguém dele
+# online agora.
+#
+# O rodízio não grava sob a trava da conversa, como a atribuição automática: a troca entra pelo pedido do "Atribuir".
+# Por isso confere de novo logo antes do pedido, com a conversa relida: a Entrega ou uma pessoa podem ter chegado
+# enquanto o rodízio escolhia. Sobra a janela entre essa leitura e o pedido.
 class Autonomia::Automacao::PassoDeRodizio
   TIPO = 'rodizio'.freeze
   ACAO = 'POST conversations/:conversation_id/assignments'.freeze
@@ -40,6 +46,7 @@ class Autonomia::Automacao::PassoDeRodizio
   def self.antes_do_rodizio(conversa)
     return 'conversa_resolvida' if conversa.resolved?
     return 'conversa_ja_atribuida' if conversa.assignee_id.present?
+    return 'entrega_cuidando' if conversa.crm_delivery_pending?
 
     'robo_atende' if conversa.assignee_agent_bot_id.present? || conversa.ai_assignee.present?
   end
@@ -74,10 +81,16 @@ class Autonomia::Automacao::PassoDeRodizio
     return pulado('ninguem_no_rodizio') if candidatos.empty?
 
     pessoa = ::AutoAssignment::AgentAssignmentService.new(conversation: conversa, allowed_agent_ids: candidatos).find_assignee
-    pessoa ? passar(conversa, pessoa) : pulado('ninguem_online')
+    pessoa ? conferir_e_passar(conversa, pessoa) : pulado('ninguem_online')
   end
 
   private
+
+  # A Entrega ou uma pessoa podem ter chegado enquanto o rodízio escolhia: a mesma conferência, com a conversa relida.
+  def conferir_e_passar(conversa, pessoa)
+    motivo = self.class.antes_do_rodizio(conversa.reload)
+    motivo ? pulado(motivo) : passar(conversa, pessoa)
+  end
 
   def passar(conversa, pessoa)
     acao = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo_da_acao(conversa, pessoa), valores: @valores,

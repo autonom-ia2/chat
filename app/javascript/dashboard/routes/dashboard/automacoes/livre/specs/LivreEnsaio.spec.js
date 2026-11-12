@@ -243,16 +243,17 @@ describe('linhasDoEnsaio', () => {
     expect(linha).toMatchObject(esperado);
   });
 
-  it('o rodízio que não passaria diz o porquê', () => {
+  it.each([
+    ['conversa_ja_atribuida', 'CONVERSA_JA_ATRIBUIDA'],
+    ['entrega_cuidando', 'ENTREGA_CUIDANDO'],
+  ])('o rodízio que não passaria (%s) diz o porquê', (faria, chave) => {
     const [linha] = linhasDoEnsaio(
-      [{ id: 'r1', tipo: 'rodizio', faria: 'conversa_ja_atribuida' }],
+      [{ id: 'r1', tipo: 'rodizio', faria }],
       fraseDe,
       t
     );
 
-    expect(linha.aviso).toBe(
-      'AUTOMACAO_LIVRE.ENSAIO.NAO_RODARIA.CONVERSA_JA_ATRIBUIDA'
-    );
+    expect(linha.aviso).toBe(`AUTOMACAO_LIVRE.ENSAIO.NAO_RODARIA.${chave}`);
   });
 
   // #2523: o aviso só para o responsável, na conversa sem responsável.

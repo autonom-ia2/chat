@@ -1126,6 +1126,7 @@ pt_BR:
         conversa_resolvida: 'A conversa está resolvida. Ninguém assumiu a conversa.'
         conversa_ja_atribuida: 'A conversa já tem responsável. O rodízio não mexeu nela.'
         robo_atende: 'Um robô ou uma agente de IA está com a conversa. O rodízio não mexeu nela.'
+        entrega_cuidando: 'A Atribuição está segurando a conversa ou esperando a pessoa convidada aceitar. O rodízio não mexeu nela.'
         ninguem_no_rodizio: 'Ninguém da caixa (ou do time escolhido) entra no rodízio. A conversa ficou sem responsável.'
         ninguem_online: 'Ninguém do rodízio estava online. A conversa ficou sem responsável.'
         outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'

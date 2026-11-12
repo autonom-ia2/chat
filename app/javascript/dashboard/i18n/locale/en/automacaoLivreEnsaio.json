@@ -69,6 +69,7 @@
         "CONVERSA_RESOLVIDA": "Wouldn't hand over: the conversation is resolved.",
         "CONVERSA_JA_ATRIBUIDA": "Wouldn't hand over: the conversation already has an assignee.",
         "ROBO_ATENDE": "Wouldn't hand over: a bot or an AI agent has the conversation.",
+        "ENTREGA_CUIDANDO": "Wouldn't hand over: Assignment is holding the conversation or waiting for an invited person.",
         "NINGUEM_NO_RODIZIO": "Wouldn't hand over: nobody in the inbox (or the team) is in the rotation."
       },
       "NAO_PASSARIA": {

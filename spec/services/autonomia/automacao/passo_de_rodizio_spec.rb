@@ -86,6 +86,102 @@ RSpec.describe Autonomia::Automacao::PassoDeRodizio, :automacao_motor do
     expect(conversa.reload.assignee).to eq(ana)
   end
 
+  it 'a conversa resolvida: pula sem chamar o rodízio', :aggregate_failures do
+    conversa.update!(status: :resolved)
+    online(bia)
+    expect(AutoAssignment::AgentAssignmentService).not_to receive(:new)
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[p1 pulado conversa_resolvida]])
+    expect(conversa.reload.assignee).to be_nil
+  end
+
+  # O agente de IA fica na mesma coluna do robô (assignee_agent_bot_id, pelo robô espelho dele).
+  it 'a conversa com robô ou agente de IA: pula sem chamar o rodízio', :aggregate_failures do
+    robo = create(:agent_bot, account: account)
+    conversa.update_columns(assignee_agent_bot_id: robo.id, ai_assignee_type: 'AgentBot') # rubocop:disable Rails/SkipsModelValidations
+    online(bia)
+    expect(AutoAssignment::AgentAssignmentService).not_to receive(:new)
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[p1 pulado robo_atende]])
+    expect(conversa.reload).to have_attributes(assignee_id: nil, assignee_agent_bot_id: robo.id)
+  end
+
+  # Revisão: a marca do motor de entrega do CRM (#1454) diz que a Atribuição está segurando a conversa ou esperando o
+  # convidado. O rodízio nativo pula; o passo também, senão a troca apagaria a marca e o convite morreria sem aviso.
+  it 'a Atribuição segurando a conversa: pula sem chamar o rodízio, e a marca fica', :aggregate_failures do
+    Crm::Entrega::Marca.marcar(conversa, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu', falha: 'ninguem_online')
+    conversa.save!
+    online(bia)
+    expect(AutoAssignment::AgentAssignmentService).not_to receive(:new)
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[p1 pulado entrega_cuidando]])
+    expect(conversa.reload.assignee).to be_nil
+    expect(conversa).to be_crm_delivery_pending
+  end
+
+  it 'a Atribuição convida alguém enquanto o rodízio escolhia: confere de novo e não passa por cima', :aggregate_failures do
+    online(bia)
+    allow(AutoAssignment::AgentAssignmentService).to receive(:new).and_wrap_original do |original, **argumentos|
+      original.call(**argumentos).tap do |servico|
+        allow(servico).to receive(:find_assignee).and_wrap_original do |escolher|
+          convidada = Conversation.find(conversa.id)
+          Crm::Entrega::Marca.marcar(convidada, modo: Crm::Entrega::Marca::CONVITE, motivo: 'ia_crm', ate: 1.hour.from_now, convidado: ana)
+          convidada.save!
+          escolher.call
+        end
+      end
+    end
+
+    execucao = rodar
+
+    expect(registros(execucao)).to eq([%w[p1 pulado entrega_cuidando]])
+    expect(conversa.reload.assignee).to be_nil
+    expect(Crm::Entrega::Marca.dados(conversa)).to include('modo' => Crm::Entrega::Marca::CONVITE, 'convidado_id' => ana.id)
+  end
+
+  # O gatilho de card age na conversa principal do card (Contexto#conversa).
+  describe 'com gatilho de card' do
+    let(:funil_e_etapa) { create_crm_pipeline(account: account, user: admin) }
+
+    around { |exemplo| with_modified_env(CRM_KANBAN_ENABLED: 'true') { exemplo.run } }
+
+    before { account.enable_features!('automacao_gatilhos') }
+
+    def card_com(principal)
+      account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, inbox: inbox, contact: contato,
+                                primary_conversation: principal, title: 'Proposta da Maria')
+    end
+
+    def rodar_no_card(card)
+      definicao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'card.responsavel_mudou' })
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+        Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.responsavel_mudou').call
+      end
+      Autonomia::Automacao::Execucao.find_by!(automacao: definicao)
+    end
+
+    it 'passa a conversa principal do card, sem responsável, para quem está online', :aggregate_failures do
+      online(bia)
+
+      execucao = rodar_no_card(card_com(conversa))
+
+      expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      expect(conversa.reload.assignee).to eq(bia)
+    end
+
+    it 'o card sem conversa principal: pula com sem_conversa' do
+      online(bia)
+
+      expect(registros(rodar_no_card(card_com(nil)))).to eq([%w[p1 pulado sem_conversa]])
+    end
+  end
+
   describe '.ensaiar' do
     it 'diz entre quem seria, sem girar a fila da caixa', :aggregate_failures do
       expect(AutoAssignment::AgentAssignmentService).not_to receive(:new)
@@ -101,6 +197,13 @@ RSpec.describe Autonomia::Automacao::PassoDeRodizio, :automacao_motor do
 
       conversa.update!(assignee: ana)
       expect(described_class.ensaiar(passo, conversa.reload)).to eq(['conversa_ja_atribuida'])
+    end
+
+    it 'diz que a Atribuição está cuidando da conversa' do
+      Crm::Entrega::Marca.marcar(conversa, modo: Crm::Entrega::Marca::SEGURANDO, motivo: 'robo_pediu')
+      conversa.save!
+
+      expect(described_class.ensaiar(passo, conversa.reload)).to eq(['entrega_cuidando'])
     end
 
     it 'no ensaio da automação, o passo mostra o rodízio' do

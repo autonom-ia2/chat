@@ -633,6 +633,7 @@ en:
         conversa_resolvida: 'The conversation is resolved. No one took it over.'
         conversa_ja_atribuida: 'The conversation already has an assignee. The rotation left it alone.'
         robo_atende: 'A bot or an AI agent has the conversation. The rotation left it alone.'
+        entrega_cuidando: 'Assignment is holding the conversation or waiting for an invited person to accept it. The rotation left it alone.'
         ninguem_no_rodizio: 'Nobody in the inbox (or the chosen team) is in the rotation. The conversation stayed unassigned.'
         ninguem_online: 'Nobody in the rotation was online. The conversation stayed unassigned.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
