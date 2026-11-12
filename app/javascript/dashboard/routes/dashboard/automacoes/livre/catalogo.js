@@ -5,6 +5,11 @@ import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import { todosOsPassos } from './receita';
 import { novoParaCada, valoresDoParaCada } from './paraCada';
+import {
+  ehPassoNovo,
+  novoPassoNovo,
+  valoresDaConsulta,
+} from './passosNovos/passosNovos';
 
 const catalogo = ref(null);
 let carregando = null;
@@ -75,6 +80,8 @@ export const DURACAO_PADRAO = { valor: 1, unidade: 'dias' };
 // passo (o esquema pede uma); o parâmetro do caminho que vem do alvo e o padrão
 // de cada campo já entram.
 export const novoPasso = (entrada, id, t) => {
+  // Protótipo #2931–#2936: os passos novos nascem prontos (passosNovos.js).
+  if (ehPassoNovo(entrada)) return novoPassoNovo(entrada.tipo, id, t);
   if (entrada.tipo === 'esperar')
     return { id, tipo: 'esperar', duracao: { ...DURACAO_PADRAO } };
   if (entrada.tipo === 'esperar_ate')
@@ -356,6 +363,7 @@ export const comTextosDaIa = (dados, passos, t, achatar = todosOsPassos) => {
   const lista = achatar(passos);
   const textos = lista.flatMap(passo => {
     if (passo.tipo === 'para_cada') return valoresDoParaCada(passo, t);
+    if (passo.tipo === 'consultar') return valoresDaConsulta(passo);
     if (!['escrever', 'resumir'].includes(passo.tipo)) return [];
     return [
       {

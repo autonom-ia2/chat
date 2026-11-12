@@ -107,6 +107,8 @@ export const FEATURE_FLAGS = {
   AUTOMACAO_PORTA: 'automacao_porta',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',
+  // Protótipo dos 6 passos novos da Automação livre (#2931–#2936, épico #2414).
+  AUTOMACAO_PASSOS_NOVOS: 'automacao_passos_novos',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

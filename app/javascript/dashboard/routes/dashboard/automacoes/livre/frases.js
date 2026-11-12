@@ -14,6 +14,8 @@ import {
   fraseDoOutroRegistro,
 } from './outroRegistro';
 import { fraseDoWebhook } from './webhook';
+import { ehPassoNovo } from './passosNovos/passosNovos';
+import { fraseDoPassoNovo } from './passosNovos/frasesDosNovos';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -536,6 +538,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     );
   }
   if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
+  if (ehPassoNovo(passo))
+    return fraseDoPassoNovo(passo, t, caminho =>
+      fraseDoValor(caminho, catalogo, t)
+    );
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome])
     return fraseDasEtiquetas(passo, entrada, catalogo, t);

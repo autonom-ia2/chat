@@ -33,6 +33,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreProspeccao.json
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreParaCada.json
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreWebhook.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivrePassosNovos.json
       - /app/javascript/dashboard/i18n/locale/en/ausencia.json
       - /app/javascript/dashboard/i18n/locale/en/modelosWhatsapp.json
       - /app/javascript/dashboard/i18n/locale/en/horarioDoCanal.json

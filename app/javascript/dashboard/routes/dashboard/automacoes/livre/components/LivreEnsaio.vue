@@ -8,6 +8,10 @@ import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
 import { acharPasso } from '../receita';
 import { linhasDoEnsaio } from '../ensaio';
+import {
+  ensaiarComPassosNovos,
+  temPassoNovo,
+} from '../passosNovos/adaptadorFalso';
 
 // #2498 — Ensaiar: o que a automação faria nas conversas recentes que a pessoa
 // enxerga, sem fazer nada. A automação salva ensaia a versão dela; com
@@ -46,12 +50,25 @@ const corpo = conversaId => ({
   conversaId,
 });
 
+// Protótipo #2931–#2936: a receita com passo novo ainda não passa no servidor;
+// o ensaio dela vem do adaptador falso, com as duas conversas de exemplo.
+const rotuloDoGalho = ramo => {
+  const [nome, indice] = ramo.split('.');
+  return nome === 'caminhos'
+    ? t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(indice) + 1 })
+    : t(`AUTOMACAO_LIVRE.RAMOS.${nome.toUpperCase()}`);
+};
+const pedirEnsaio = conversaId =>
+  temPassoNovo(props.receita.passos)
+    ? ensaiarComPassosNovos(props.receita, rotuloDoGalho)
+    : AutomacoesAPI.ensaiar(props.automacaoId, corpo(conversaId));
+
 const carregar = async () => {
   estado.value = 'carregando';
   problemas.value = [];
   extra.value = null;
   try {
-    const { data } = await AutomacoesAPI.ensaiar(props.automacaoId, corpo());
+    const { data } = await pedirEnsaio();
     recorrente.value = data.recorrente || null;
     if (recorrente.value) {
       estado.value = 'pronto';
@@ -77,10 +94,7 @@ const ensaiarOutra = async conversaId => {
     return;
   }
   try {
-    const { data } = await AutomacoesAPI.ensaiar(
-      props.automacaoId,
-      corpo(conversaId)
-    );
+    const { data } = await pedirEnsaio(conversaId);
     [extra.value] = data.conversas;
     escolhida.value = conversaId;
   } catch {

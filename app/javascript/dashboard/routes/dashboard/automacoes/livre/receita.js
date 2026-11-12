@@ -2,6 +2,7 @@
 // no formato de lib/operator_guide/automacao-receita.schema.json). Tudo devolve
 // uma cópia nova: a versão salva é imutável, e o editor só troca a referência.
 // O que o editor não conhece (um passo que só o Guia monta) passa intacto.
+import { RAMOS_DOS_PASSOS_NOVOS } from './passosNovos/passosNovos';
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
@@ -15,6 +16,8 @@ export const RAMOS = {
   em_outro_registro: ['passos'],
   // G13 (#2670): o que fazer quando o outro sistema recusa.
   webhook: ['se_recusar'],
+  // Protótipo #2931–#2936: os galhos dos passos novos (aprovado, recusado...).
+  ...RAMOS_DOS_PASSOS_NOVOS,
 };
 
 // G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente

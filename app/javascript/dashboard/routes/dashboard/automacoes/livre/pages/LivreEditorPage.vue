@@ -50,6 +50,10 @@ import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { usePodeLerValor } from '../usePodeLerValor';
 import { useAgendasDaConta } from '../useAgendasDaConta';
+import {
+  FLAG as PASSOS_NOVOS,
+  comPassosNovos,
+} from '../passosNovos/passosNovos';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -63,10 +67,15 @@ const podeMudar = useCanManage('automation_manage');
 const podeIntegrar = usePermissionGranted('integration_manage');
 const temChave = chave =>
   chave === 'integration_manage' ? podeIntegrar.value : false;
-const { catalogo } = useCatalogo();
+const { catalogo: doServidor } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+// Protótipo #2931–#2936: com a flag, o catálogo ganha os 6 passos novos. Sem
+// ela, é o mesmo objeto do servidor.
+const catalogo = computed(() =>
+  comPassosNovos(doServidor.value, isCloudFeatureEnabled(PASSOS_NOVOS))
+);
 // G18: os cards do contato, no "em outro registro", só para quem mexe no funil;
 // #2716: o card da conversa, só com a mesma chave.
 const { canManagePipelines } = useCrmPermissions();

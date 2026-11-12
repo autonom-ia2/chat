@@ -394,7 +394,17 @@
       "NENHUM": "None applies",
       "CAMINHO": "Path {n}",
       "PASSOS": "On each one",
-      "SE_RECUSAR": "If the other system refuses"
+      "SE_RECUSAR": "If the other system refuses",
+      "APROVADO": "If approved",
+      "RECUSADO": "If refused",
+      "NINGUEM_RESPONDEU": "If no one answers in time",
+      "CADA": "For each one in the list",
+      "NAO_CONSULTOU": "If it can't look it up",
+      "OUTRO_HORARIO": "If they ask for another time",
+      "NAO_RESPONDEU": "If the customer doesn't answer",
+      "NOTA_BAIXA": "Low score",
+      "NOTA_MEDIA": "Medium score",
+      "NOTA_ALTA": "High score"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",

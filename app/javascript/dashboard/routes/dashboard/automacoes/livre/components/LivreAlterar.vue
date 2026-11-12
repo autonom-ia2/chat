@@ -16,6 +16,7 @@ import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreCampanha from './LivreCampanha.vue';
 import LivreProspeccao from './LivreProspeccao.vue';
 import LivreParaCada from './LivreParaCada.vue';
+import LivrePassoNovo from '../passosNovos/LivrePassoNovo.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
@@ -32,6 +33,7 @@ import { caminhosProntos, deNovoPronto, esperasAnteriores } from '../ia';
 import { campanhaPronta, publicoDaExecucaoNoCatalogo } from '../campanha';
 import { prospeccaoPronta } from '../prospeccao';
 import { paraCadaPronto } from '../paraCada';
+import { passoNovoPronto } from '../passosNovos/passosNovos';
 import { envioPronto, paraPronto, quandoPronto } from '../retorno';
 import { registroPronto } from '../outroRegistro';
 import {
@@ -293,6 +295,8 @@ const nativoPronto = campo => {
   if (campo.peca === 'prospeccao') return prospeccaoPronta(rascunho.value);
   // G24: a peça do "para cada item" também.
   if (campo.peca === 'para_cada') return paraCadaPronto(rascunho.value);
+  // Protótipo #2931–#2936: a peça do passo novo confere o passo inteiro.
+  if (campo.peca === 'passo_novo') return passoNovoPronto(rascunho.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'registro_ligado') return registroPronto(valor);
@@ -574,6 +578,15 @@ defineExpose({ abrir, fechar });
           :etapas="escolhasDoGatilho.etapas || []"
           :opcoes="opcoes"
           :atributos-do="atributosDo"
+          @update:model-value="novo => (rascunho = novo)"
+        />
+        <LivrePassoNovo
+          v-else-if="campo.peca === 'passo_novo'"
+          :model-value="rascunho"
+          :catalogo="catalogo"
+          :opcoes="opcoes"
+          :atributos-do="atributosDo"
+          :etapas="escolhasDoGatilho.etapas || []"
           @update:model-value="novo => (rascunho = novo)"
         />
         <LivreEtapa
