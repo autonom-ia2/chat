@@ -148,10 +148,10 @@ const tirar = async id => {
 // F7 (revisor, 12/11): a consulta do card Premium roda em segundo plano. O servidor responde "consultando" com o id do
 // pedido e o prazo (`prazo_ms`), e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo.
 // O prazo mora no servidor, junto do prazo para o job começar; `PRAZO_DE_RESERVA_MS` só vale se a resposta não o
-// trouxer. No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha de rede numa pergunta não
+// trouxer, e é o mesmo valor que o servidor manda hoje (`Experimente::Pedido::PRAZO_DA_TELA`, 147 s desde o #2946). No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha de rede numa pergunta não
 // para: a próxima tenta de novo.
 const ESPERAS_DO_PEDIDO_MS = [1000, 2000, 3000, 5000, 8000, 10000];
-const PRAZO_DE_RESERVA_MS = 80000;
+const PRAZO_DE_RESERVA_MS = 147000;
 const CONSULTANDO = 'consultando';
 const SEM_CONFIRMACAO = 'sem_confirmacao';
 

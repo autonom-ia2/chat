@@ -15,7 +15,7 @@
 #   consulta todas as versões de uma vez. A que passa do teto não roda.
 # - Nas grátis, roda dentro do pedido web: cada ida ao modelo tem prazo curto e nenhuma repetição (`PRAZO_DO_MODELO`),
 #   e consulta nova não começa depois de `PRAZO_DAS_CONSULTAS`. Assim o clique responde antes do corte do servidor
-#   (15 s). No Premium, roda em segundo plano (`Experimente::Pago`), porque a consulta paga leva de 20 a 55 s.
+#   (15 s). No Premium, roda em segundo plano (`Experimente::Pago`), porque a consulta paga leva de 20 a 120 s.
 # - Sem saldo no limite do dia da fonte, nem chama o modelo (a IA não é gasta para nada). Texto vazio também não. O
 #   Premium não tem limite do dia.
 # - `uma_consulta` (o card Premium, F7): cada consulta é paga, e o clique vale UMA. A que o pedido recusa antes da fonte

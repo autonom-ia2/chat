@@ -39,6 +39,11 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
     true
   end
 
+  # O dataset está na lista dos que a BigDataCorp desligou (#2946). Lida a cada chamada: tirar a linha religa.
+  def desligada?
+    Autonomia::FerramentasProntas::Premium::DESLIGADAS_NA_FONTE.include?(dataset.nome)
+  end
+
   private
 
   def com_cep(params, conta)

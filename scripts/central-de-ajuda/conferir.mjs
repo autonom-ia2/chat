@@ -211,14 +211,26 @@ export const idDivergenteDoArquivo = artigos =>
     .map(artigo => artigo.arquivo);
 
 // ---------------------------------------------------------------------------
-// Evidências: `caminho:linha | trecho`, conferidas contra o código de hoje.
+// Evidências: `caminho | trecho`, conferidas contra o código de hoje (#2606).
 //
-// O trecho é o que prova que a evidência ainda vale — a linha pode mudar de número
-// (revisão de código alheia à Central) sem que o fato deixe de ser verdade; só quando
-// o TRECHO some do arquivo é que o artigo precisa de revisão (kit do escritor, seção 6).
+// O trecho é a prova e o id estável da evidência: a linha muda de número o tempo todo
+// (revisão de código alheia à Central) sem que o fato deixe de ser verdade. Por isso não
+// há número: com ele, todo PR que muda um arquivo citado renumerava o bloco de evidências,
+// e dois PRs vizinhos sempre conflitavam. O trecho precisa aparecer uma vez só no arquivo;
+// se aparece mais, a evidência é ambígua e quem escreve escolhe uma linha que só exista ali.
+// Só quando o TRECHO some do arquivo é que o artigo precisa de revisão (kit do escritor,
+// seção 6).
+//
+// Formato antigo `caminho:linha | trecho`: aceito na transição, lido ignorando o número,
+// com aviso. Ambíguo no formato antigo também é só aviso, para PR aberto não quebrar.
 
-// Separação sem regex (regra do projeto): indexOf(' | ') acha o fim de "caminho:linha";
-// lastIndexOf(':') dentro dessa parte acha o número, mesmo que o trecho tenha ":" dentro.
+// Separação sem regex (regra do projeto): indexOf(' | ') acha o fim do caminho; no
+// formato antigo, lastIndexOf(':') acha o número, mesmo que o trecho tenha ":" dentro.
+const numeroDaLinha = texto => {
+  const numero = Number(texto);
+  return texto !== '' && Number.isInteger(numero) && numero > 0;
+};
+
 export const analisarEvidencia = linha => {
   const separador = linha.indexOf(' | ');
   if (separador === -1) return null;
@@ -226,36 +238,32 @@ export const analisarEvidencia = linha => {
   const local = linha.slice(0, separador);
   const trecho = linha.slice(separador + 3);
   const doisPontos = local.lastIndexOf(':');
-  if (doisPontos === -1) return null;
+  const formatoAntigo =
+    doisPontos !== -1 && numeroDaLinha(local.slice(doisPontos + 1));
+  const caminho = formatoAntigo ? local.slice(0, doisPontos) : local;
+  if (!caminho || !trecho) return null;
 
-  const caminho = local.slice(0, doisPontos);
-  const numero = Number(local.slice(doisPontos + 1));
-  if (!caminho || !trecho || !Number.isInteger(numero) || numero <= 0) return null;
+  return { caminho, trecho, formatoAntigo };
+};
 
-  return { caminho, numero, trecho };
+const situacaoNoArquivo = (absoluto, trecho) => {
+  if (!fs.existsSync(absoluto)) return 'arquivo_ausente';
+
+  const vezes = fs
+    .readFileSync(absoluto, 'utf8')
+    .split('\n')
+    .filter(linha => linha.trim() === trecho).length;
+  if (vezes === 0) return 'trecho_sumiu';
+  return vezes > 1 ? 'ambigua' : 'ok';
 };
 
 const situacaoDaEvidencia = (evidencia, raiz) => {
   const analisada = analisarEvidencia(evidencia);
   if (!analisada) return { situacao: 'malformada', evidencia };
 
-  const { caminho, numero, trecho } = analisada;
-  const absoluto = r(raiz, caminho);
-  if (!fs.existsSync(absoluto)) {
-    return { situacao: 'arquivo_ausente', caminho, numero, trecho };
-  }
-
-  const linhas = fs.readFileSync(absoluto, 'utf8').split('\n');
-  if ((linhas[numero - 1] || '').trim() === trecho) {
-    return { situacao: 'ok', caminho, numero, trecho };
-  }
-
-  const novaLinha = linhas.findIndex(linha => linha.trim() === trecho);
-  if (novaLinha !== -1) {
-    return { situacao: 'linha_mudou', caminho, numero, trecho, novaLinha: novaLinha + 1 };
-  }
-
-  return { situacao: 'trecho_sumiu', caminho, numero, trecho };
+  const { caminho, trecho, formatoAntigo } = analisada;
+  const situacao = situacaoNoArquivo(r(raiz, caminho), trecho);
+  return { situacao, caminho, trecho, formatoAntigo };
 };
 
 // Uma linha por evidência do artigo, com a situação dela contra o arquivo-fonte.
@@ -280,7 +288,8 @@ export const conferir = ({ artigos, mapa, registro, humanos, raiz = process.cwd(
   const evidenciasParaRevisao = evidencias.filter(
     e => e.situacao === 'arquivo_ausente' || e.situacao === 'trecho_sumiu'
   );
-  const evidenciasComLinhaMudada = evidencias.filter(e => e.situacao === 'linha_mudou');
+  const ambiguas = evidencias.filter(e => e.situacao === 'ambigua');
+  const evidenciasNoFormatoAntigo = evidencias.filter(e => e.formatoAntigo);
 
   const problemas = [
     ...listar(
@@ -303,9 +312,14 @@ export const conferir = ({ artigos, mapa, registro, humanos, raiz = process.cwd(
       idDivergenteDoArquivo(artigos)
     ),
     ...listar(
-      'Evidência mal formada (não separa em "caminho:linha | trecho"):',
+      'Evidência mal formada (não separa em "caminho | trecho"):',
       evidenciasMalformadas,
       e => `${e.artigo}: ${e.evidencia}`
+    ),
+    ...listar(
+      'Evidência ambígua (o trecho aparece mais de uma vez no arquivo; escolha uma linha que só exista ali):',
+      ambiguas.filter(e => !e.formatoAntigo),
+      e => `${e.artigo}: ${e.caminho} | ${e.trecho}`
     ),
   ];
 
@@ -316,12 +330,12 @@ export const conferir = ({ artigos, mapa, registro, humanos, raiz = process.cwd(
     ...listar(
       'Evidência para revisão (o trecho sumiu do arquivo, ou o arquivo foi apagado):',
       evidenciasParaRevisao,
-      e => `${e.artigo}: ${e.caminho}:${e.numero}`
+      e => `${e.artigo}: ${e.caminho} | ${e.trecho}`
     ),
     ...listar(
-      'Evidência mudou de linha no arquivo-fonte (só aviso, o trecho continua valendo):',
-      evidenciasComLinhaMudada,
-      e => `${e.artigo}: ${e.caminho}:${e.numero} → :${e.novaLinha}`
+      'Evidência no formato antigo "caminho:linha | trecho" (tire o :linha; se o trecho se repete no arquivo, escolha uma linha que só exista ali):',
+      evidenciasNoFormatoAntigo,
+      e => `${e.artigo}: ${e.caminho}${e.situacao === 'ambigua' ? ' (ambígua)' : ''}`
     ),
   ];
 

@@ -32,6 +32,7 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
     podeCriarCards: { value: false },
     podeEtiquetar: { value: false },
     podeApagar: { value: false },
+    podeTrazer: { value: false },
   }),
 }));
 // Fora da demonstração a lista lê do servidor; aqui ele recusa todo pedido (a

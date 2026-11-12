@@ -4,6 +4,7 @@ import { useRelationships } from 'dashboard/composables/useRelationships';
 import FieldConfigurator from './FieldConfigurator.vue';
 import FieldEditor from './FieldEditor.vue';
 import { selectDefinitions } from './presentation';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 const props = defineProps({
   readOnly: { type: Boolean, default: false },
   record: { type: Object, required: true },
@@ -12,13 +13,16 @@ const props = defineProps({
 });
 const { attributesEnabled, companiesEnabled, state, accountId } =
   useRelationships();
+// #2435: o campo com "Mostrar na tela" desligado não aparece aqui.
 const fields = computed(() =>
-  selectDefinitions(
-    state.value.definitions.filter(
-      item => item.attribute_model === `${props.entity}_attribute`
-    ),
-    state.value.configuration,
-    props.surface
+  naTela(
+    selectDefinitions(
+      state.value.definitions.filter(
+        item => item.attribute_model === `${props.entity}_attribute`
+      ),
+      state.value.configuration,
+      props.surface
+    )
   )
 );
 </script>

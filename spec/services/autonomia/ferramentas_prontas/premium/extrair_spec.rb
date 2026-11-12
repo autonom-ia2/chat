@@ -4,11 +4,12 @@ require 'rails_helper'
 # documentação pública. Prova que ficam de fora: parentes, sócios pessoa física, partes dos processos, nome do dono do
 # carro, pessoa exposta politicamente, doação eleitoral, link de arquivo e contato pessoal.
 RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
-  let(:catalogo) { Autonomia::FerramentasProntas::Catalogo }
   let(:leitura) { Autonomia::FerramentasProntas::Premium::Leitura }
 
+  # Todas as consultas do card, as desligadas na BigDataCorp também (#2946): a extração delas tem de continuar certa
+  # para a consulta voltar com uma linha.
   def dataset(card, consulta)
-    catalogo.buscar(card).consulta(consulta).dataset
+    consultas_do_card(card).find { |item| item.nome == consulta }.dataset
   end
 
   def ler(card, consulta, dado, **)
