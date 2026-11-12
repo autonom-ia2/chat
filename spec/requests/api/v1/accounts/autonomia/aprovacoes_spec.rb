@@ -105,6 +105,26 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Aprovacoes', :automacao_motor, typ
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.pedido.responder.ja_respondido', locale: account.locale))
   end
 
+  # Sem `aprovado` (ou com outro valor), nada é gravado: a falta do campo não vira recusa definitiva.
+  it 'a resposta sem a decisão é recusada (422) sem gravar, e o pedido continua aberto', :aggregate_failures do
+    pedido = pedir
+
+    [{ motivo: 'sem decisão' }, { aprovado: nil }, { aprovado: 'talvez' }, { aprovado: '' }].each do |corpo|
+      post "#{base}/#{pedido.id}/responder", params: corpo, headers: atendente.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.pedido.responder.sem_decisao', locale: account.locale))
+      expect(response.parsed_body['pedido']).to include('estado' => 'aberto')
+    end
+    expect(pedido.reload.dados).not_to have_key('decisao')
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+      post "#{base}/#{pedido.id}/responder", params: { aprovado: 'false' }, headers: atendente.create_new_auth_token, as: :json
+    end
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('estado' => 'recusado')
+  end
+
   it 'depois do prazo, a resposta é recusada (422)' do
     pedido = pedir
 

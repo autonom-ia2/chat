@@ -11400,10 +11400,11 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/aprovacoes#responder",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:27",
-      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:26",
-      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:45"
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:51"
     ],
     "sem_corpo": false
   },

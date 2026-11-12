@@ -5,13 +5,15 @@
 # - Aprovação: a quem o pedido iria agora (as pessoas que alcançam o registro), ou que ninguém pode aprovar e o caminho
 #   "Se ninguém responder a tempo" rodaria na hora.
 # - Reunião: a pessoa, a página dela e os 3 horários livres que ofereceria agora, como o cliente leria; só depois o canal
-#   como a mensagem (a janela de 24 h fechada sem modelo para a execução).
+#   como a mensagem (a janela de 24 h fechada sem modelo para a execução). Sem com quem marcar ou sem a página dela,
+#   seguiria sem reunião pelo caminho "Se o cliente não responder", com o mesmo motivo do motor.
 # - Pesquisa: a pesquisa recente que pularia; só depois o canal como a mensagem.
 # A ordem é a do motor (PassoDeReuniao, PassoDePesquisa): o que ele confere antes de mandar, o ensaio confere antes do
 # canal. Sem horário e com a janela fechada, por exemplo, os dois seguem por "Se pedir outro horário".
 # Cada um abre os caminhos dele, sem escolher (como o "decidir"): a reunião marcada segue para o resto da receita.
 class Autonomia::Automacao::EsperaNoEnsaio
   Esperam = ::Autonomia::Automacao::PassosQueEsperam
+  Reuniao = ::Autonomia::Automacao::PassoDeReuniao
   MARCOU = 'marcou'.freeze
 
   def initialize(conta:, conversa:, envio:, roteiro:)
@@ -46,16 +48,19 @@ class Autonomia::Automacao::EsperaNoEnsaio
 
   def reuniao(passo, valores)
     pessoa = responsavel(passo)
-    return seguir(passo, no(passo, 'reuniao_sem_responsavel')) unless pessoa
+    return sem_reuniao(passo, Reuniao::SEM_RESPONSAVEL) unless pessoa
 
     agenda = ::Autonomia::Automacao::AgendaDaReuniao.new(@conta, pessoa, passo['duracao'])
-    return seguir(passo, no(passo, 'reuniao_sem_pagina', { por: agenda.por })) unless agenda.pagina
+    return sem_reuniao(passo, Reuniao::SEM_PAGINA, { por: agenda.por }) unless agenda.pagina
 
     horarios = agenda.horarios.map { |inicio| agenda.rotulo(inicio) }
     return [no(passo, 'sem_horario', {}, [ramo(passo, 'outro_horario')]), nil] if horarios.empty?
 
     do_canal(passo, valores) || oferta(passo, pessoa, horarios)
   end
+
+  # Como o motor (PassoDeReuniao#sem_reuniao): seguiria sem reunião, pelo caminho "Se o cliente não responder".
+  def sem_reuniao(passo, motivo, dados = {}) = [no(passo, motivo, dados, [ramo(passo, Reuniao::NAO_RESPONDEU)]), nil]
 
   def oferta(passo, pessoa, horarios)
     dados = { quem: pessoa.name, horarios: horarios, convite: passo['convite'], **de_mensagem(passo, horarios.size) }

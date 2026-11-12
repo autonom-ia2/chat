@@ -171,8 +171,8 @@
         "SEM_BOTOES": "Se o canal não tem botões, vão os números 1, 2 e 3.",
         "ESPERA": "Esperar a resposta por",
         "COMO_FUNCIONA": "A IA entende a resposta do cliente. Se nenhum horário servir, a automação segue pelo caminho “Se pedir outro horário”.",
-        "ENSAIO_SEM_RESPONSAVEL": "Ninguém cuida do card nem da conversa: pularia este passo.",
-        "ENSAIO_SEM_PAGINA": "A pessoa não tem uma página de agendamento só dela: pularia este passo.",
+        "ENSAIO_SEM_RESPONSAVEL": "Sem responsável no card nem na conversa: seguiria sem reunião, pelo caminho “Se o cliente não responder”.",
+        "ENSAIO_SEM_PAGINA": "O responsável não tem uma página de agendamento só dele: seguiria sem reunião, pelo caminho “Se o cliente não responder”.",
         "ENSAIO_SEM_HORARIO": "Não há horário livre agora: seguiria pelo caminho “Se pedir outro horário”."
       },
       "PESQUISA": {

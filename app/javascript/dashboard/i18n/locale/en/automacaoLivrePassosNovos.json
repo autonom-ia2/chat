@@ -171,8 +171,8 @@
         "SEM_BOTOES": "If the channel has no buttons, the numbers 1, 2 and 3 are sent.",
         "ESPERA": "Wait for the answer for",
         "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path.",
-        "ENSAIO_SEM_RESPONSAVEL": "Nobody looks after the card or the conversation: it would skip this step.",
-        "ENSAIO_SEM_PAGINA": "The person has no booking page of their own: it would skip this step.",
+        "ENSAIO_SEM_RESPONSAVEL": "No owner on the card or the conversation: it would move on without a meeting, on the “If the customer doesn't answer” path.",
+        "ENSAIO_SEM_PAGINA": "The owner has no booking page of their own: it would move on without a meeting, on the “If the customer doesn't answer” path.",
         "ENSAIO_SEM_HORARIO": "There is no free time right now: it would follow the “If they ask for another time” path."
       },
       "PESQUISA": {

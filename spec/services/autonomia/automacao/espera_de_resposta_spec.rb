@@ -325,6 +325,30 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
       expect(registros(execucao)).to include(%w[reuniao pulado sem_horario], ['outro', 'ok', nil])
     end
 
+    def do_passo(execucao) = Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'reuniao').order(:id).last
+
+    # Decisão do Rodrigo (12/11): sem com quem marcar, ou sem a página de agendamento dela, segue sem reunião pelo
+    # caminho "Se o cliente não responder", com o porquê no histórico. Não trava; a mesma saída depois do modelo.
+    it 'sem responsável na conversa: não manda o convite e segue por "se o cliente não responder"', :aggregate_failures do
+      execucao = nil
+      expect { execucao = rodar([reuniao.merge('com' => { 'de' => 'responsavel' })]) }.not_to change(Message.outgoing, :count)
+
+      expect(registros(execucao)).to include(%w[reuniao pulado reuniao_sem_responsavel], ['calado', 'ok', nil])
+      expect(do_passo(execucao).dados).to eq('ramo' => 'nao_respondeu')
+      expect(execucao.estado).to eq('esperando')
+      expect(I18n.t('autonomia.automacao.motivos.reuniao_sem_responsavel', locale: :pt_BR)).to include('Se o cliente não responder')
+    end
+
+    it 'a pessoa sem página de agendamento: não manda o convite e segue por "se o cliente não responder"', :aggregate_failures do
+      execucao = nil
+      expect { execucao = rodar([reuniao.merge('com' => { 'de' => 'pessoa', 'id' => admin.id })]) }.not_to change(Message.outgoing, :count)
+
+      expect(registros(execucao)).to include(%w[reuniao pulado reuniao_sem_pagina], ['calado', 'ok', nil])
+      expect(do_passo(execucao).dados).to eq('por' => 'sem_pagina', 'ramo' => 'nao_respondeu')
+      expect(execucao.estado).to eq('esperando')
+      expect(I18n.t('autonomia.automacao.motivos.reuniao_sem_pagina', locale: :pt_BR)).to include('Se o cliente não responder')
+    end
+
     it 'contato que pediu para não receber: pula e segue, sem convite nem reunião', :aggregate_failures do
       ana.update!(opted_out_at: 1.day.ago)
 
@@ -376,6 +400,29 @@ RSpec.describe Autonomia::Automacao::EsperaDeResposta, :automacao_motor do
         cliente_escreve('pode falar')
 
         expect(mandadas.last.content).to eq('Posso te ligar em um destes horários?')
+      end
+
+      # Entre o modelo e a resposta, a pessoa perdeu a página ou saiu da conta: a mesma saída da primeira pergunta.
+      it 'a página da pessoa sumiu antes da resposta ao modelo: segue sem reunião por "se o cliente não responder"', :aggregate_failures do
+        execucao = rodar([com_modelo])
+        account.disable_features!('crm_booking_v2')
+
+        cliente_escreve('pode falar')
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo])
+        expect(registros(execucao.reload)).to include(%w[reuniao pulado reuniao_sem_pagina], ['calado', 'ok', nil])
+        expect(do_passo(execucao).dados).to eq('por' => 'sem_pagina', 'ramo' => 'nao_respondeu')
+      end
+
+      it 'a pessoa saiu da conta antes da resposta ao modelo: segue sem reunião por "se o cliente não responder"', :aggregate_failures do
+        execucao = rodar([com_modelo])
+        AccountUser.find_by!(account: account, user: world.host).destroy!
+
+        cliente_escreve('pode falar')
+
+        expect(mandadas.pluck(:content)).to eq([texto_do_modelo])
+        expect(registros(execucao.reload)).to include(%w[reuniao pulado reuniao_sem_responsavel], ['calado', 'ok', nil])
+        expect(do_passo(execucao).dados).to eq('ramo' => 'nao_respondeu')
       end
     end
   end

@@ -4,9 +4,13 @@
 # Cada pessoa vê só os pedidos dela, e só enquanto ainda alcança o registro do pedido (PedidosDeAprovacao): o pedido de
 # outra pessoa, ou de um registro que ela não vê mais, responde 404, igual a um que não existe. A pergunta sai com os
 # valores lidos pelas permissões de quem olha (PedidoParaTela; o valor de venda só para quem vê valores).
+#
+# A resposta diz a decisão em `aprovado` (true ou false). Sem ele, ou com outro valor, 422 sem gravar: a falta do campo
+# nunca vira recusa definitiva.
 class Api::V1::Accounts::Autonomia::AprovacoesController < Api::V1::Accounts::BaseController
   PEDIDOS = ::Autonomia::Automacao::PedidosDeAprovacao
   RESPOSTAS = { ok: :ok, ja_respondido: :conflict, fora_do_prazo: :unprocessable_entity }.freeze
+  DECISOES = [true, false, 'true', 'false'].freeze
 
   wrap_parameters false
 
@@ -23,6 +27,8 @@ class Api::V1::Accounts::Autonomia::AprovacoesController < Api::V1::Accounts::Ba
   end
 
   def responder
+    return sem_decisao unless DECISOES.include?(params[:aprovado])
+
     resposta = PEDIDOS.responder!(@pedido, Current.user, aprovado: ActiveModel::Type::Boolean.new.cast(params[:aprovado]) == true,
                                                          motivo: params[:motivo])
     return render json: para_tela(@pedido.reload) if resposta == :ok
@@ -44,6 +50,11 @@ class Api::V1::Accounts::Autonomia::AprovacoesController < Api::V1::Accounts::Ba
   def carregar_pedido
     @pedido = PEDIDOS.da_pessoa_por_id(Current.account, Current.user, params[:id])
     head :not_found if @pedido.nil?
+  end
+
+  def sem_decisao
+    render json: { error: I18n.t('autonomia.automacao.pedido.responder.sem_decisao'), pedido: para_tela(@pedido) },
+           status: :unprocessable_entity
   end
 
   def para_tela(pedido) = ::Autonomia::Automacao::PedidoParaTela.new(pedido, Current.account_user).resultado

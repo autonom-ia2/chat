@@ -7,8 +7,8 @@ en:
         esperando_resposta: 'Asked and is waiting for the answer.'
         resposta_ambigua: 'The answer did not make it clear. Waiting for the next one, until the deadline.'
         sem_quem_aprove: 'Nobody who can see the record could approve. Followed the "If nobody answers in time" path.'
-        reuniao_sem_responsavel: 'Nobody looks after the card or the conversation, so there was no calendar to offer.'
-        reuniao_sem_pagina: 'The person has no booking page of their own, so there were no times to offer.'
+        reuniao_sem_responsavel: 'No owner on the card or the conversation (or the chosen person left the account), so there was nobody to book with. Moved on without a meeting, on the "If the customer doesn''t answer" path.'
+        reuniao_sem_pagina: 'The owner has no booking page of their own, so there were no times to offer. Moved on without a meeting, on the "If the customer doesn''t answer" path.'
         sem_horario: 'There was no free time in the booking page. Followed the "If they ask for another time" path.'
         horario_ocupado: 'Someone else booked that time first. Followed the "If they ask for another time" path.'
         reuniao_nao_marcou: 'The meeting could not be booked. Followed the "If they ask for another time" path.'
@@ -31,6 +31,7 @@ en:
         responder:
           ja_respondido: 'This request was already answered or closed.'
           fora_do_prazo: 'The deadline for this request has passed.'
+          sem_decisao: 'Say whether you approve or decline this request.'
   notifications:
     notification_title:
       automacao_aprovacao: 'An automation is waiting for your approval'

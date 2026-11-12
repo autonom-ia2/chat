@@ -5,8 +5,10 @@
 #   todas as regras do passo "mensagem": quem não recebe pula; a janela de 24 h fechada manda o modelo aprovado no
 #   lugar, ou nada e a execução para nesta conversa (decisão do Rodrigo, 12/11). Com o modelo, os horários vão quando o
 #   cliente responder a ele, e só com a janela desta conversa aberta; nunca sai um segundo modelo (DepoisDoModelo).
-# - Sem página de agendamento para a pessoa, pula com o porquê (o do link da agenda). Sem nenhum horário livre na janela
-#   da página, segue pelo galho "Se pedir outro horário" (`sem_horario`).
+# - Sem com quem marcar (o card sem responsável, a pessoa escolhida fora da conta) ou sem página de agendamento para a
+#   pessoa, segue sem reunião pelo galho "Se o cliente não responder" (`nao_respondeu`), e o histórico diz por quê. A
+#   execução não trava (decisão do Rodrigo, 12/11), e a saída é a mesma antes e depois do modelo da janela fechada. Sem
+#   nenhum horário livre na janela da página, segue pelo galho "Se pedir outro horário" (`sem_horario`).
 # - Resposta: a IA de decidir lê o que o cliente escreveu (o botão chega como o texto dele) e escolhe o horário 1, 2 ou
 #   3, "outro horário" ou "não ficou claro" (RespostaDoCliente). Não ficou claro: espera a próxima resposta, até o prazo.
 # - Escolheu: marca pela agenda do CRM (AgendaDaReuniao), na página e com a pessoa da pergunta, e segue para o passo
@@ -20,6 +22,8 @@ class Autonomia::Automacao::PassoDeReuniao
   OUTRO = 'outro_horario'.freeze
   NAO_RESPONDEU = 'nao_respondeu'.freeze
   NENHUM = 'nenhum'.freeze
+  SEM_RESPONSAVEL = 'reuniao_sem_responsavel'.freeze
+  SEM_PAGINA = 'reuniao_sem_pagina'.freeze
   INSTRUCOES = <<~TEXTO.freeze
     O cliente recebeu um convite para uma reunião com horários numerados (em "pergunta") e respondeu (em "respostas_do_cliente"). Responda só com JSON no schema.
     "escolha": o número do horário que ele escolheu; "outro_horario" quando ele recusou todos ou pediu outro dia ou hora; "nenhum" quando a resposta não deixa claro qual horário ele quer ou não fala dos horários. Uma escolha errada é pior que nenhuma.
@@ -34,7 +38,7 @@ class Autonomia::Automacao::PassoDeReuniao
     return sem_conversa if @conversa.nil?
 
     pessoa = ::Autonomia::Automacao::QuemDoPasso.pessoas(conta, @passo['com'], contexto).first
-    return Resultado.new(tipo: :pulado, motivo: 'reuniao_sem_responsavel', dados: {}) unless pessoa
+    return sem_reuniao(SEM_RESPONSAVEL) unless pessoa
 
     oferecer(pessoa)
   end
@@ -62,10 +66,13 @@ class Autonomia::Automacao::PassoDeReuniao
 
   def quem_ligou = @execucao.automacao.ligada_por
 
+  # Sem com quem marcar, ou sem a página dela: segue sem reunião, pelo galho "Se o cliente não responder".
+  def sem_reuniao(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados.merge('ramo' => NAO_RESPONDEU))
+
   # Depois do modelo, o convite sai sem o modelo da receita: o segundo modelo nunca sai.
   def oferecer(pessoa, depois_do_modelo: false)
     agenda = ::Autonomia::Automacao::AgendaDaReuniao.new(conta, pessoa, @passo['duracao'])
-    return Resultado.new(tipo: :pulado, motivo: 'reuniao_sem_pagina', dados: { 'por' => agenda.por }) unless agenda.pagina
+    return sem_reuniao(SEM_PAGINA, 'por' => agenda.por) unless agenda.pagina
 
     horarios = agenda.horarios
     return Resultado.new(tipo: :pulado, motivo: 'sem_horario', dados: { 'ramo' => OUTRO }) if horarios.empty?
@@ -94,7 +101,7 @@ class Autonomia::Automacao::PassoDeReuniao
     return esperar_a_janela(leitor) if janela_ainda_fechada?
 
     pessoa = conta.users.find_by(id: pedido.dados['pessoa'])
-    return Resultado.new(tipo: :pulado, motivo: 'reuniao_sem_responsavel', dados: { 'ramo' => NAO_RESPONDEU }) unless pessoa
+    return sem_reuniao(SEM_RESPONSAVEL) unless pessoa
 
     feito = oferecer(pessoa, depois_do_modelo: true)
     return esperar_a_janela(leitor) if janela_fechou?(feito)

@@ -7,8 +7,8 @@ pt_BR:
         esperando_resposta: 'Perguntou e está esperando a resposta.'
         resposta_ambigua: 'A resposta não deixou claro. Esperando a próxima, até o prazo.'
         sem_quem_aprove: 'Ninguém que vê o registro podia aprovar. Seguiu pelo caminho “Se ninguém responder a tempo”.'
-        reuniao_sem_responsavel: 'Ninguém cuida do card nem da conversa, então não havia agenda para oferecer.'
-        reuniao_sem_pagina: 'A pessoa não tem uma página de agendamento só dela, então não havia horários para oferecer.'
+        reuniao_sem_responsavel: 'Sem responsável no card nem na conversa (ou a pessoa escolhida saiu da conta), então não havia com quem marcar. Seguiu sem reunião, pelo caminho “Se o cliente não responder”.'
+        reuniao_sem_pagina: 'O responsável não tem uma página de agendamento só dele, então não havia horários para oferecer. Seguiu sem reunião, pelo caminho “Se o cliente não responder”.'
         sem_horario: 'Não havia horário livre na página de agendamento. Seguiu pelo caminho “Se pedir outro horário”.'
         horario_ocupado: 'Outra pessoa marcou esse horário antes. Seguiu pelo caminho “Se pedir outro horário”.'
         reuniao_nao_marcou: 'Não deu para marcar a reunião. Seguiu pelo caminho “Se pedir outro horário”.'
@@ -31,6 +31,7 @@ pt_BR:
         responder:
           ja_respondido: 'Este pedido já foi respondido ou encerrado.'
           fora_do_prazo: 'O prazo deste pedido já venceu.'
+          sem_decisao: 'Diga se aprova ou recusa este pedido.'
   notifications:
     notification_title:
       automacao_aprovacao: 'Uma automação espera a sua aprovação'

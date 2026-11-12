@@ -171,7 +171,11 @@ o aviso "em teste" e o Salvar desligado ficam só para os outros três passos.
   (a mesma do link da agenda), em botões no chat do site e no WhatsApp oficial,
   numerados nos outros canais. A IA de decidir entende a resposta (nunca lista
   de palavras); a reserva é a do Booker, com a trava do horário (o segundo
-  cliente segue por "Se pedir outro horário").
+  cliente segue por "Se pedir outro horário"). Sem com quem marcar (card sem
+  responsável, pessoa fora da conta) ou sem página de agendamento da pessoa,
+  segue sem reunião por "Se o cliente não responder", com o porquê no
+  histórico, e não trava (decisão de 12/11). A saída é a mesma na primeira
+  pergunta e depois do modelo da janela fechada, e o ensaio diz o mesmo.
 - **Pesquisa**: a nota de 0 a 10, entendida pela IA; não pergunta de novo antes
   de `intervalo_dias`. A nota e a data ficam no contato (`pesquisas.<automação>`
   e `pesquisa_satisfacao`) e no card, e a lista mostra a média e quantas pessoas

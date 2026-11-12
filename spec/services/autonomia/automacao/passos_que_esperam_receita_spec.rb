@@ -115,6 +115,40 @@ RSpec.describe Autonomia::Automacao::PassosQueEsperam, :automacao_motor do
       expect(lido.pluck(:id, :faria)).to eq([%w[nota pesquisa_recente], %w[seguinte esperar]])
     end
 
+    # Como o motor (decisão do Rodrigo, 12/11): sem com quem marcar, ou sem a página dela, seguiria sem reunião pelo
+    # caminho "Se o cliente não responder", com o mesmo motivo do histórico.
+    describe 'a reunião sem com quem marcar' do
+      around do |example|
+        with_modified_env(CRM_KANBAN_ENABLED: 'true', CRM_CALENDAR_MEETINGS_ENABLED: 'true') { example.run }
+      end
+
+      before { account.enable_features!('crm_booking_v2') }
+
+      def reuniao(com)
+        { 'id' => 'reuniao', 'tipo' => 'marcar_reuniao', 'com' => com, 'duracao' => 30, 'convite' => 'Posso te ligar?',
+          'espera' => { 'valor' => 1, 'unidade' => 'dias' }, 'outro_horario' => [esperar_passo('outro')],
+          'nao_respondeu' => [esperar_passo('calado')] }
+      end
+
+      it 'sem responsável na conversa: seguiria por "Se o cliente não responder", sem mandar nada', :aggregate_failures do
+        no = nil
+        expect { no = passos_do_ensaio(receita(reuniao({ 'de' => 'responsavel' }))).first }.not_to change(Message, :count)
+
+        expect(no).to include(id: 'reuniao', faria: 'reuniao_sem_responsavel', dados: {})
+        expect(no[:ramos].pluck(:chave)).to eq(%w[nao_respondeu])
+        expect(no[:ramos].first[:passos].first).to include(id: 'calado')
+      end
+
+      it 'a pessoa sem página de agendamento: seguiria por "Se o cliente não responder", sem mandar nada', :aggregate_failures do
+        no = nil
+        expect { no = passos_do_ensaio(receita(reuniao({ 'de' => 'pessoa', 'id' => gerente.id }))).first }.not_to change(Message, :count)
+
+        expect(no).to include(id: 'reuniao', faria: 'reuniao_sem_pagina', dados: { por: 'sem_pagina' })
+        expect(no[:ramos].pluck(:chave)).to eq(%w[nao_respondeu])
+        expect(no[:ramos].first[:passos].first).to include(id: 'calado')
+      end
+    end
+
     # O ensaio responde o mesmo que o motor: o que o motor confere antes de mandar (a pesquisa recente; a pessoa, a página
     # e os horários da reunião), o ensaio confere antes do canal. A janela fechada: a caixa API com o limite de 24 h do
     # dono vencido, sem modelo.
