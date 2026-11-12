@@ -35,8 +35,8 @@ RSpec.describe 'Automação livre: etiqueta posta ou tirada e troca de quem aten
     raise 'a fila não esvaziou em 40 jobs'
   end
 
-  def ligada(tipo, conta: account, **parametros)
-    automacao_ligada(conta, admin, [esperar_passo('p1')], gatilho: { 'tipo' => tipo, **parametros.transform_keys(&:to_s) })
+  def ligada(tipo, conta: account, autor: admin, **parametros)
+    automacao_ligada(conta, autor, [esperar_passo('p1')], gatilho: { 'tipo' => tipo, **parametros.transform_keys(&:to_s) })
   end
 
   def fechar_todas = execucoes.update_all(estado: 'concluida', travada_em: nil, due_at: nil, finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
@@ -97,7 +97,8 @@ RSpec.describe 'Automação livre: etiqueta posta ou tirada e troca de quem aten
       outra = create(:account)
       ligar_motor(outra)
       create(:label, account: outra, title: 'vip')
-      de_fora = ligada('conversa.etiqueta_posta', conta: outra, etiqueta: 'vip')
+      # O autor da versão é da conta da automação (Versao valida); o admin desta conta não serve lá.
+      de_fora = ligada('conversa.etiqueta_posta', conta: outra, autor: create(:user, account: outra, role: :administrator), etiqueta: 'vip')
 
       conversa.update_labels(%w[vip])
       drenar

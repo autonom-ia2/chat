@@ -6,17 +6,17 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Ações |
 |---|---|
 | No catálogo | 731 |
-| Sem corpo | 210 |
-| Com corpo | 521 |
-| Com corpo e formato completo | 434 (83,3%) |
-| Com corpo e formato incompleto | 87 |
+| Sem corpo | 209 |
+| Com corpo | 522 |
+| Com corpo e formato completo | 437 (83,7%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 20 de 218 |
-| Leituras cruas tipadas | 223 de 315 |
+| Campos aninhados com vocabulário | 20 de 220 |
+| Leituras cruas tipadas | 224 de 315 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 73 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,7 +35,6 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
-- `PATCH contacts/:id` — leitura crua sem tipo: avatar_url (repassada a ::Avatar::AvatarFromUrlJob.perform_later)
 - `PATCH crm/meta_ads_connection/ads/:ad_id/budget` — leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)
 - `PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id` — leitura crua sem tipo: hidden (repassada a comments.hide!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
@@ -114,7 +113,6 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
-- `PUT contacts/:id` — leitura crua sem tipo: avatar_url (repassada a ::Avatar::AvatarFromUrlJob.perform_later)
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:90)
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
@@ -163,7 +161,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/conference#create` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/conference#destroy` call_sid — o código não converte nem compara o valor
 - `api/v1/accounts/contacts#export` column_names — o código não converte nem compara o valor
-- `api/v1/accounts/contacts#update` avatar_url — repassada a ::Avatar::AvatarFromUrlJob.perform_later
 - `api/v1/accounts/conversa_canal/ditados#create` audio — repassada a ConversaCanal::Ditado.new
 - `api/v1/accounts/conversations#create` message — repassada a Messages::MessageBuilder.new
 - `api/v1/accounts/conversations#toggle_typing_status` typing_status — repassada a Conversations::ChannelTyping::DeliverJob.perform_later
