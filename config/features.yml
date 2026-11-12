@@ -1386,6 +1386,19 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Agentes: ferramentas prontas, IP próprio das consultas grátis (#2942, parte do #2858). Ligada (junto com
+# `agente_ferramentas_prontas`): as consultas grátis da conta (CEP, CNPJ, FIPE e as outras fontes públicas) saem por um IP
+# próprio do plano datacenter da Webshare, dado na 1ª consulta que sai para a rede, e o teto de cada host passa a contar
+# por esse IP (inteiro, sem a fatia de 25%). Precisa de WEBSHARE_API_KEY, WEBSHARE_LOOKUP_PROXY_ADDRESSES (a fatia da
+# stack) e dos mesmos IPs em WEBSHARE_RESERVED_PROXY_ADDRESSES (o WhatsApp nunca os oferece). O Premium e o WhatsApp não
+# mudam. Sem IP próprio (Webshare fora, fatia vazia): sai pelo IP do servidor, com aviso (decisão do Rodrigo, 12/11). Migration
+# aditiva 20261112100000 (duas tabelas). Desligada: tudo sai pelo IP do servidor, como antes. Rollback: desligar a flag.
+# Posição 46 (35184372088832, 1 << 45), dada pela Orquestração em 12/11, logo depois da `relacionamentos_novo` (#2894, 45).
+- name: agente_ferramentas_prontas_ip_proprio
+  display_name: Agentes › ferramentas prontas (IP próprio das consultas grátis)
+  enabled: false
+  column: feature_flags_ext_2
+
 # Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
 # passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
 # sistema, Marcar reunião pela conversa e Pesquisa de satisfação. O servidor valida, salva, ensaia e roda os passos que
@@ -1393,9 +1406,8 @@
 # trava "ainda está em teste" no salvar até o motor deles entrar. Desligada: o editor fica o de hoje e o motor recusa
 # esses passos. Uma migration aditiva (20261112092000: coluna `bloco` em autonomia_automacoes, padrão falso), inerte
 # com a flag desligada. Rollback: desligar a flag.
-# Posição 47 (70368744177664, 1 << 46), reservada com a Orquestração, depois da relacionamentos_novo (45) e da
-# carteira_seguros (46). Enquanto a carteira_seguros não estiver na main, esta linha cai na 46: a Orquestração ordena
-# os merges (carteira_seguros antes) para o bit final ser o 47.
+# Posição 47 (70368744177664, 1 << 46), reservada com a Orquestração, logo depois da
+# agente_ferramentas_prontas_ip_proprio (#2945, 46). Flag nova entra sempre no fim do arquivo.
 # EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção até o motor dos 6 passos
 # estar completo. Ligada só na conta de demonstração e no painel local.
 - name: automacao_passos_novos

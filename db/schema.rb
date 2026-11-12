@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -656,6 +656,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas_unica", unique: true, where: "((finalizada_em IS NULL) AND (paralela = false))"
+    t.index ["automacao_id", "created_at"], name: "idx_autonomia_automacao_execucoes_historico"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
@@ -1183,6 +1184,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
     t.string "motivo_do_cancelamento"
     t.index ["geracao", "cnpj"], name: "idx_prontas_operadoras_cnpj"
     t.index ["geracao", "registro_ans"], name: "idx_prontas_operadoras_registro"
+  end
+
+  create_table "autonomia_prontas_proxies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "proxy_address", null: false
+    t.integer "proxy_port", null: false
+    t.string "webshare_proxy_id"
+    t.datetime "assigned_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_prontas_proxies_on_account_id", unique: true
+    t.index ["proxy_address"], name: "index_autonomia_prontas_proxies_on_proxy_address", unique: true
+  end
+
+  create_table "autonomia_prontas_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_autonomia_prontas_proxy_quarantines_on_proxy_address", unique: true
   end
 
   create_table "autonomia_prontas_transportadores", force: :cascade do |t|
@@ -1883,6 +1905,53 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
     t.index ["assistant_id", "enabled"], name: "index_captain_scenarios_on_assistant_id_and_enabled"
     t.index ["assistant_id"], name: "index_captain_scenarios_on_assistant_id"
     t.index ["enabled"], name: "index_captain_scenarios_on_enabled"
+  end
+
+  create_table "carteira_apolice_eventos", force: :cascade do |t|
+    t.bigint "apolice_id", null: false
+    t.string "tipo", null: false
+    t.datetime "quando", null: false
+    t.bigint "user_id"
+    t.jsonb "valores", default: {}, null: false
+    t.jsonb "mudancas"
+    t.bigint "campaign_import_id"
+    t.datetime "created_at", null: false
+    t.index ["apolice_id", "quando"], name: "index_carteira_apolice_eventos_on_apolice_id_and_quando", order: { quando: :desc }
+    t.index ["campaign_import_id"], name: "index_carteira_apolice_eventos_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_carteira_apolice_eventos_on_user_id", where: "(user_id IS NOT NULL)"
+  end
+
+  create_table "carteira_apolices", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "company_id"
+    t.string "tipo", null: false
+    t.string "ramo_original"
+    t.string "seguradora", null: false
+    t.string "seguradora_chave", null: false
+    t.string "numero"
+    t.string "numero_chave"
+    t.date "inicio_vigencia"
+    t.date "fim_vigencia", null: false
+    t.bigint "valor_centavos"
+    t.string "bem"
+    t.datetime "cancelado_em"
+    t.string "origem", null: false
+    t.bigint "campaign_import_id"
+    t.jsonb "corrigido_a_mao", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fim_vigencia"], name: "index_carteira_apolices_on_account_id_and_fim_vigencia"
+    t.index ["account_id", "seguradora_chave", "numero_chave", "fim_vigencia"], name: "idx_carteira_apolices_seguradora_numero_vigencia", unique: true, where: "(numero_chave IS NOT NULL)"
+    t.index ["campaign_import_id"], name: "index_carteira_apolices_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
+    t.index ["company_id"], name: "index_carteira_apolices_on_company_id", where: "(company_id IS NOT NULL)"
+    t.index ["contact_id"], name: "index_carteira_apolices_on_contact_id"
+    t.check_constraint "(numero IS NULL) = (numero_chave IS NULL)", name: "carteira_apolices_numero"
+    t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
+    t.check_constraint "numero_chave::text <> ''::text AND seguradora_chave::text <> ''::text", name: "carteira_apolices_chaves"
+    t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
+    t.check_constraint "tipo::text = ANY ('{auto,residencial,vida,empresarial,outro}'::text[])", name: "carteira_apolices_tipo"
+    t.check_constraint "valor_centavos IS NULL OR valor_centavos >= 0", name: "carteira_apolices_valor"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -4963,6 +5032,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
   add_foreign_key "autonomia_guide_vigias", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_vigias", "users", column: "criado_por_id", on_delete: :nullify
   add_foreign_key "autonomia_insurance_connections", "accounts"
+  add_foreign_key "autonomia_prontas_proxies", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_searches", column: "prospect_search_id", on_delete: :nullify
@@ -5008,6 +5078,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
+  add_foreign_key "carteira_apolice_eventos", "campaign_imports", on_delete: :nullify
+  add_foreign_key "carteira_apolice_eventos", "carteira_apolices", column: "apolice_id", on_delete: :cascade
+  add_foreign_key "carteira_apolice_eventos", "users", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "accounts"
+  add_foreign_key "carteira_apolices", "campaign_imports", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "companies", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "contacts"
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "conversa_canal_email_lido_caixas", "accounts", on_delete: :cascade
   add_foreign_key "conversa_canal_email_lido_caixas", "inboxes", on_delete: :cascade

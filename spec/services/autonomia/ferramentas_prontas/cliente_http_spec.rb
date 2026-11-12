@@ -117,7 +117,7 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
       allow(SafeFetch).to receive(:fetch).and_call_original
 
       expect(cliente.get_json(seguradora, '/produtos', prazo: 3)).to eq('ok' => true)
-      expect(Autonomia::FerramentasProntas::TetoDoProvedor).to have_received(:reservar!).with(seguradora, conta: conta)
+      expect(Autonomia::FerramentasProntas::TetoDoProvedor).to have_received(:reservar!).with(seguradora, conta: conta, saida: nil)
       expect(SafeFetch).to have_received(:fetch) do |_url, **opcoes|
         expect(opcoes[:resolver].call(seguradora)).to eq([IPAddr.new('200.200.200.10')])
       end

@@ -29,9 +29,9 @@ Sem o aviso "ainda está em teste": salvam e ligam como qualquer passo. Os outro
 três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
 
 - **Flag.** `automacao_passos_novos`, no fim de `config/features.yml`. O bit
-  reservado é o 47 (1 << 46), depois de `relacionamentos_novo` e
-  `carteira_seguros`; enquanto `carteira_seguros` não entra na `main`, ela cai no
-  46 (1 << 45), como `spec/models/account_spec.rb` confere. **Desligada em
+  reservado é o 47 (1 << 46), logo depois de
+  `agente_ferramentas_prontas_ip_proprio` (46, #2945), como
+  `spec/models/account_spec.rb` confere. **Desligada em
   produção** (exceção à regra de 07/11). Desligada depois de ligada: o salvar
   recusa a receita com um dos três e o motor para a execução que chega num deles
   (`passos_novos_desligados`). É o rollback: também não abre as filhas de um
