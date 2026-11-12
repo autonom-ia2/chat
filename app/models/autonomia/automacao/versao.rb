@@ -41,9 +41,9 @@ class Autonomia::Automacao::Versao < ApplicationRecord
   end
 
   # A receita como sai para a tela. O show, o index e o histórico passam todos por aqui: o que precisar ser escondido
-  # de quem só vê (a URL do webhook, #2450) é escondido num lugar só.
-  def receita_para_tela
-    receita
+  # de quem só vê (a URL do webhook, #2450) é escondido num lugar só. `account_user`: quem pede, na conta.
+  def receita_para_tela(account_user)
+    ::Autonomia::Automacao::UrlDoWebhook.receita(receita, account_user)
   end
 
   private
