@@ -33,11 +33,13 @@ class Autonomia::Guide::Consulta
 
   # O que o modelo pode pedir, em linguagem de rota: 'inboxes', 'labels',
   # 'crm/pipelines'. Deriva do roteador, então nasce completo e cresce sozinho.
+  # O que só se faz na tela (`Acoes::SO_NA_TELA`) também fica de fora da leitura.
   def catalogo
     @catalogo ||= Rails.application.routes.routes.filter_map do |rota|
       next unless rota.verb.to_s == 'GET'
 
-      ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
+      recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
+      recurso unless ::Autonomia::Guide::Acoes.fora_do_catalogo?("GET #{recurso}")
     end.uniq.sort
   end
 

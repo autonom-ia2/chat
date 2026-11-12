@@ -654,6 +654,8 @@ Rails.application.routes.draw do
               collection do
                 post :incluir
                 post :experimentar
+                # F7: o Experimente Premium roda em segundo plano; a tela acompanha o pedido.
+                get 'experimentar/:pedido', action: :acompanhar, as: :acompanhar_experimento
                 post :buscas_sem_resultado
                 get :sugestoes
                 post :dispensar

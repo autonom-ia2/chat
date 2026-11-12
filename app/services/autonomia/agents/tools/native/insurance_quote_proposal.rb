@@ -74,6 +74,9 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   MOTIVO_DO_PORTAL = 'o portal respondeu com erro'.freeze
 
   class << self
+    # #2918: ESCREVE (manda ao cliente o PDF da proposta). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'enviar_proposta_da_seguradora'
     end

@@ -12,6 +12,9 @@ class Autonomia::Agents::Tools::Native::GuiaLembrar < Autonomia::Agents::Tools::
   CORRETORA = 'corretora'.freeze
 
   class << self
+    # #2918: ESCREVE (grava uma lembrança do Guia). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'anotar_lembranca'
     end

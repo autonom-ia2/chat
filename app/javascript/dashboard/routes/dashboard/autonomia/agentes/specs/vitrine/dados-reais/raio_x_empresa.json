@@ -1,0 +1,115 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "processos": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-processos-judiciais-e-administrativos",
+    "dados": {
+      "total": 2,
+      "primeiro": "2019-03-12",
+      "ultimo": "2026-06-30",
+      "ultimos_30_dias": 0,
+      "ultimos_365_dias": 1,
+      "processos": [
+        {
+          "numero": "0000001-11.2026.8.26.0100",
+          "tribunal": "TJSP",
+          "tipo": "PROCEDIMENTO COMUM CIVEL",
+          "assunto": "INDENIZACAO POR DANO MORAL",
+          "situacao": "EM ANDAMENTO",
+          "valor_da_causa": 15000.0,
+          "ultima_movimentacao": "2026-10-01"
+        },
+        {
+          "numero": "0000002-22.2019.5.02.0001",
+          "tribunal": "TRT2",
+          "tipo": "RECLAMACAO TRABALHISTA",
+          "assunto": "VERBAS RESCISORIAS",
+          "situacao": "ARQUIVADO",
+          "ultima_movimentacao": "2021-02-10"
+        }
+      ]
+    }
+  },
+  "sancoes": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-kyc-e-compliance",
+    "dados": {
+      "sancionada_hoje": false,
+      "ja_foi_sancionada": true,
+      "ultima_sancao": "2024-03-01",
+      "sancoes_no_ultimo_ano": 0,
+      "sancoes": [
+        {
+          "fonte": "ceis",
+          "tipo": "IMPEDIMENTO DE LICITAR",
+          "inicio": "2024-03-01",
+          "fim": "2025-03-01",
+          "ainda_na_lista": false
+        }
+      ]
+    }
+  },
+  "crescimento": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-evolucao-da-empresa",
+    "dados": {
+      "crescimento_1_ano": "GROW UP",
+      "crescimento_3_anos": "STABLE",
+      "crescimento_5_anos": "GROW UP",
+      "funcionarios": 38,
+      "funcionarios_1_ano_atras": 47,
+      "capital": 1332850,
+      "capital_1_ano_atras": "1480833,4",
+      "filiais": 2
+    }
+  },
+  "grupo_economico": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-relacionamentos-do-grupo-economico",
+    "dados": {
+      "empresas_no_grupo": 2,
+      "pessoas_no_grupo": 1,
+      "empresas": [
+        {
+          "nome": "EMPRESA EXEMPLO PARTICIPACOES LTDA",
+          "cnpj": "11444777000161",
+          "relacao": "SOCIO"
+        },
+        {
+          "nome": "EMPRESA EXEMPLO FILIAL SUL LTDA",
+          "cnpj": "11222333000262",
+          "relacao": "COLIGADA"
+        }
+      ]
+    }
+  },
+  "obras": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-dados-de-obras-civis",
+    "dados": {
+      "total": 2,
+      "ativas": 1,
+      "terminadas": 1,
+      "obras": [
+        {
+          "cno": "900000000001",
+          "cidade": "CAMPINAS",
+          "uf": "SP",
+          "situacao": "ATIVA",
+          "inicio": "2025-02-20",
+          "area": "412",
+          "tipo": "OUTROS"
+        },
+        {
+          "cno": "900000000002",
+          "cidade": "SOROCABA",
+          "uf": "SP",
+          "situacao": "ENCERRADA",
+          "inicio": "2021-06-10",
+          "area": "120",
+          "tipo": "RESIDENCIAL"
+        }
+      ]
+    }
+  }
+}

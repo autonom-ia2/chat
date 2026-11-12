@@ -75,6 +75,32 @@ RSpec.describe Autonomia::Guide::Acoes do
       end
     end
 
+    # #2858 F7 (revisor, 12/11): o Experimente da vitrine faz consulta de verdade, e no card Premium usa as grátis do mês
+    # e, depois delas, cobra com o clique no preço (`confirmou_preco`). O Guia nunca manda esse clique: o teste é só na
+    # tela.
+    it 'deixa o Experimente das ferramentas prontas só na tela', :aggregate_failures do
+      acao = 'POST autonomia/ferramentas_prontas/experimentar'
+      expect(described_class::SO_NA_TELA).to include(acao => 'ready_tool_test')
+      expect(para(admin).catalogo).not_to include(acao)
+      expect(Autonomia::Guide::Formatos::RotasDeEscrita.todas.map(&:acao)).not_to include(acao)
+      I18n.with_locale(:pt_BR) do
+        expect { para(admin).conferir!(acao, { 'fonte' => 'certidoes_empresa', 'valor' => 'x', 'confirmou_preco' => true }) }
+          .to raise_error(described_class::Recusada,
+                          'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o ' \
+                          'cartão › Experimente.')
+      end
+    end
+
+    # Revisor (ALTO 1, 12/11): o acompanhamento do pedido do Experimente Premium também é só da tela. O Guia nem lê.
+    it 'deixa fora do Guia a leitura do pedido do Experimente', :aggregate_failures do
+      leitura = 'autonomia/ferramentas_prontas/experimentar/:pedido'
+      expect(described_class::SO_NA_TELA).to include("GET #{leitura}" => 'ready_tool_test')
+      expect(Autonomia::Guide::Consulta.new(account: conta, user: admin).catalogo).not_to include(leitura)
+      expect(Autonomia::Guide::Formatos::RotasDeLeitura.todas.map(&:acao)).not_to include(leitura)
+      expect(Autonomia::Guide::Consulta.new(account: conta, user: admin).ler(leitura, { 'pedido' => SecureRandom.uuid }))
+        .to eq('Não sei consultar isso.')
+    end
+
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
     it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
       catalogo = para(admin).catalogo.join(' ')

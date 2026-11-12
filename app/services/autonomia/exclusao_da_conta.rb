@@ -112,6 +112,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Agents::Tool', :por_conta],
     # Ferramentas prontas (#2858): a chave da conta em cada fonte e o contador do dia.
     ['Autonomia::FerramentasProntas::Uso', :por_conta],
+    # F7: a telemetria das consultas Premium e o saldo das grátis por card.
+    ['Autonomia::FerramentasProntas::Premium::Registro', :por_conta],
+    ['Autonomia::FerramentasProntas::Premium::Saldo', :por_conta],
     ['Autonomia::FerramentasProntas::Acesso', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
