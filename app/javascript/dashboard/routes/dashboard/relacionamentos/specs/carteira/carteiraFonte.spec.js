@@ -1,5 +1,6 @@
 import { carteiraFonte } from '../../fonte/carteiraFonte';
 import { gruposDeSeguros } from '../../fonte/gruposDeSeguros';
+import { CASOS_DA_DEMO } from '../../fonte/modoCarteira';
 import {
   SELOS,
   diasParaTerminar,
@@ -471,5 +472,31 @@ describe('seguro de outra corretora (Tela 20)', () => {
         .arquivosDaConversa(PESSOA)
         .catch(erro => erro.name)
     ).resolves.toBe('FONTE_REAL_PENDENTE');
+  });
+});
+
+// #2897, banca: a jornada da parcela atrasada precisa do grupo sem ninguém.
+describe('`?caso=parcelas_em_dia`: o grupo "Parcela atrasada" sem ninguém', () => {
+  const GRUPO = 'parcela_atrasada';
+  const emDia = () =>
+    carteiraFonte({ demo: 'cheio', caso: 'parcelas_em_dia', atraso: 0 });
+
+  it('no exemplo de sempre o grupo tem seguros', async () => {
+    expect((await fonte().listar({ grupo: GRUPO })).total).toBeGreaterThan(0);
+  });
+
+  it('com o caso ninguém deve parcela: a lista e a contagem do grupo ficam vazias', async () => {
+    expect(CASOS_DA_DEMO).toContain('parcelas_em_dia');
+
+    expect(await emDia().listar({ grupo: GRUPO })).toEqual({
+      itens: [],
+      total: 0,
+      temMais: false,
+    });
+    expect((await emDia().contagens({}))[GRUPO]).toBe(0);
+  });
+
+  it('os outros seguros continuam na carteira', async () => {
+    expect((await emDia().resumo()).total).toBe(168);
   });
 });

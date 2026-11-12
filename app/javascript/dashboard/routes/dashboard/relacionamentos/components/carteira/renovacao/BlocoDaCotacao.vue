@@ -17,7 +17,9 @@ import RespostasDaCotacao from './RespostasDaCotacao.vue';
 // da vez (cotar, enviar, pôr o telefone, conversar…) não mora aqui: é o único
 // botão azul da gaveta, no rodapé (carteira/passoDaVez.js). Aqui só ficam o
 // link discreto do que já existe ("Ver resumo", "Ver proposta"), a escolha da
-// seguradora quando várias responderam e os dados que faltam para cotar.
+// seguradora quando várias responderam e os dados que faltam para cotar. Com
+// a cotação ainda por pedir, a frase daqui é o próximo passo: o estado já está
+// no título da gaveta ("A renovação começou. Falta cotar.").
 const props = defineProps({
   seguro: { type: Object, required: true },
   // O que a conta cota: { cotaSozinha, tiposQueCota }.
@@ -175,6 +177,7 @@ defineExpose({ cotarComOsDados: () => dados.value?.cotar() });
         estado === COTACAO.FALTOU_PERGUNTADO ? renovacao.perguntou : ''
       "
       :preenchendo="preenchendo"
+      :segurado-empresa="seguro.segurado?.tipo === 'empresa'"
       @preencher="emit('preencher')"
       @cotar="emit('fazer', 'cotarComDados', { dados: $event })"
     />

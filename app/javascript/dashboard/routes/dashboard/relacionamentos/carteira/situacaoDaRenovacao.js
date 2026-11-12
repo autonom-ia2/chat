@@ -2,18 +2,19 @@
 // já foi feito e o que falta (nunca o nome do mecanismo). Função pura: devolve
 // o nome da frase; quem desenha traduz. A etapa só decide quando é uma das que
 // a casa cria; etapa com o nome trocado por quem usa cai em `EM_ETAPA`, que
-// repete o nome que a pessoa deu.
+// repete o nome que a pessoa deu. Renovação que existe já começou: em "A
+// vencer", o que ainda não começou é a cotação (`FALTA_COTAR`).
 export const DESFECHOS = { NAO_RENOVOU: 'nao_renovou' };
 
 const POR_ETAPA = {
-  'A vencer': 'NAO_COMECOU',
+  'A vencer': 'FALTA_COTAR',
   Cotando: 'COTANDO',
   'Opções enviadas': 'OPCOES_ENVIADAS',
   Negociação: 'NEGOCIACAO',
   Renovado: 'RENOVOU',
 };
 // Antes de a proposta sair, quem manda é a cotação e não o nome da etapa.
-const ANTES_DE_ENVIAR = ['NAO_COMECOU', 'COTANDO'];
+const ANTES_DE_ENVIAR = ['FALTA_COTAR', 'COTANDO'];
 
 // A renovação ainda está antes de as opções saírem ("A vencer" ou "Cotando").
 export const antesDeAsOpcoesSairem = renovacao =>

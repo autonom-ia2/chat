@@ -250,7 +250,10 @@ describe('anexar o PDF e ver o que mudou', () => {
     expect(textoDe(w, daCarteira('aviso-vivo'))).toContain(
       'Apólice nova guardada.'
     );
-    expect(w.get(daCarteira('gaveta-acao')).text()).toBe('Ver PDF');
+    // A apólice nova traz o texto em palavras simples: enviar é o passo da
+    // vez, e "Ver PDF" fica ao lado.
+    expect(w.get(daCarteira('gaveta-acao')).text()).toMatch('Enviar a ');
+    expect(w.get(daCarteira('gaveta-acao-secundaria')).text()).toBe('Ver PDF');
     expect(w.find('[data-passo="apolice_nova"]').text()).toContain(
       'A anterior era a nº AU-77031.'
     );

@@ -8,10 +8,16 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import SelosDoSeguro from './SelosDoSeguro.vue';
 
 // #2897 — o topo da gaveta do seguro: o selo e UMA frase que diz como o seguro
-// está agora. O próximo passo (o botão) fica no rodapé da gaveta.
+// está agora. O próximo passo (o botão) fica no rodapé da gaveta. No seguro em
+// renovação, a frase é a mesma do título da gaveta da renovação (por isso
+// `daConta`: o que a conta cota sozinha). Logo abaixo, quando algo que ia sair
+// sozinho não saiu, uma linha diz o que foi e o caminho (`naoSaiu`).
 const props = defineProps({
   seguro: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
+  // { cotaSozinha, tiposQueCota }
+  daConta: { type: Object, default: () => ({}) },
+  naoSaiu: { type: String, default: '' },
 });
 
 const { t } = useI18n();
@@ -33,11 +39,11 @@ const quandoVenceu = dias => {
 };
 
 const frases = computed(() => {
-  const { seguro, agora } = props;
+  const { seguro, agora, daConta } = props;
   const porSituacao = {
     [SITUACOES.EM_RENOVACAO]: () => [
       quandoVence(seguro, agora),
-      textos.renovacao(seguro.renovacao),
+      textos.renovacao(seguro, daConta),
     ],
     [SITUACOES.ATIVO]: () => [
       tf('VALE_ATE', { data: textos.dataInteira(seguro.termina) }),
@@ -77,6 +83,18 @@ const frases = computed(() => {
       class="m-0 text-xl font-semibold leading-snug text-balance text-n-slate-12"
     >
       {{ frases.join(' ') }}
+    </p>
+    <p
+      v-if="naoSaiu"
+      role="status"
+      data-carteira="nao-saiu"
+      class="flex items-start gap-2 m-0 text-base font-medium text-n-slate-12"
+    >
+      <span
+        class="mt-0.5 i-lucide-triangle-alert size-5 shrink-0 text-n-amber-11"
+        aria-hidden="true"
+      />
+      <span class="min-w-0 break-words">{{ naoSaiu }}</span>
     </p>
   </div>
 </template>

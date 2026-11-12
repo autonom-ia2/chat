@@ -10,8 +10,9 @@ import {
   formatarValor,
 } from './formatosDoSeguro';
 import { periodoDoPreco } from './periodoDoPreco';
+import { cotacaoDoCard } from './cotacaoDoCard';
 import { quandoDoSeguro } from './quandoDoSeguro';
-import { situacaoDaRenovacao } from './situacaoDaRenovacao';
+import { tituloDaRenovacao } from './tituloDaRenovacao';
 import { chaveDoTipo } from './tiposDeSeguro';
 
 export const ONDE = { LISTA: 'LISTA', FICHA: 'FICHA', PAINEL: 'PAINEL' };
@@ -51,9 +52,15 @@ export const useTextosDoSeguro = () => {
     campo in FORMATOS ? FORMATOS[campo](conteudo) : String(conteudo ?? '');
 
   // "As opções já foram enviadas. Falta a resposta.": o que já foi feito na
-  // renovação e o que falta.
-  const renovacao = dados => {
-    const { id, etapa } = situacaoDaRenovacao(dados);
+  // renovação do seguro e o que falta. É a frase do título da gaveta da
+  // renovação (carteira/tituloDaRenovacao.js): a gaveta do seguro e a da
+  // renovação dizem sempre a mesma coisa. `daConta`: { cotaSozinha,
+  // tiposQueCota }.
+  const renovacao = (seguro, daConta = {}) => {
+    const { id, etapa } = tituloDaRenovacao(
+      seguro.renovacao,
+      cotacaoDoCard(seguro, daConta)
+    );
     return t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.SITUACAO.${id}`, { etapa });
   };
 

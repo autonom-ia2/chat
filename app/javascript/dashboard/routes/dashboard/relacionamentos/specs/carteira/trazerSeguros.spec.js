@@ -221,7 +221,7 @@ describe('Tela 9: planilha com seguros', () => {
     // "Já estavam aqui" é uma frase de apoio, sem repetir o número do título.
     expect(w.find('[data-contador="JA_ESTAVAM"]').exists()).toBe(false);
     expect(textoDe(w, daCarteira('ja-estavam-aqui'))).toBe(
-      'Essas pessoas já estavam aqui.'
+      'As 120 pessoas já estavam aqui.'
     );
     expect(w.get(daCarteira('efeito-renovacao')).text()).toBe(
       'Amanhã cedo, 22 seguros que vencem em até 60 dias entram em renovação.'
@@ -538,6 +538,9 @@ describe('Tela 9: planilha com seguros', () => {
     expect(azuis.map(botao => botao.attributes('data-carteira'))).toEqual([
       'trazer-seguros',
     ]);
+    // Depois do erro o botão está livre de novo: nem desligado, nem ocupado.
+    expect(azuis[0].attributes('disabled')).toBeUndefined();
+    expect(azuis[0].attributes('aria-busy')).not.toBe('true');
 
     await clicar(w, 'trazer-seguros');
     await assentarBem();

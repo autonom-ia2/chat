@@ -71,8 +71,8 @@ const fonteDemo = ({
           .map(seguro => diasParaTerminar(seguro, agora)),
         aggerLigado,
         cotaSozinha: aggerLigado && !cotacaoDesligada,
-        // A conta cota sem conversar com a pessoa ("Sozinho" em "Quem faz a
-        // cotação?"). `?caso=ajustes_sem_sozinho`: a conta que não cota assim.
+        // A conta cota sem conversar com a pessoa ("Automático" em "Quem faz
+        // a cotação?"). `?caso=ajustes_sem_sozinho`: a conta que não cota assim.
         cotaSemConversa: caso !== 'ajustes_sem_sozinho',
         // `?caso=cotacao_sem_agente`: a conta sem quem atenda sozinho.
         agente:

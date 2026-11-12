@@ -9,8 +9,9 @@ import DialogoDaSenhaNoAgger from '../trazer/DialogoDaSenhaNoAgger.vue';
 // #2897 — o que cada seguradora respondeu à cotação, cada uma no seu grupo:
 // quem já deu preço (com "Pedir a proposta desta") e quem ainda não respondeu;
 // à parte, quem não aceitou (com o motivo) e a que está sem senha no Agger
-// (com "Como resolver", o mesmo caminho do Trazer). Depois do prazo, quem não
-// respondeu aparece como "Não respondeu a tempo". O botão azul é um só: o da
+// (com "Como resolver", o mesmo caminho do Trazer, e "Cotar de novo" para
+// depois de guardar a senha lá). Depois do prazo, quem não respondeu aparece
+// como "Não respondeu a tempo". O botão azul é um só: o da
 // seguradora que o passo da vez escolheu (`escolhida`).
 const props = defineProps({
   respostas: { type: Array, required: true },
@@ -53,10 +54,6 @@ const semSenha = ref('');
 const comoResolver = nome => {
   semSenha.value = nome;
   dialogo.value?.abrir();
-};
-const cotarDeNovo = () => {
-  dialogo.value?.fechar();
-  emit('cotarDeNovo');
 };
 </script>
 
@@ -150,15 +147,22 @@ const cotarDeNovo = () => {
         />
       </li>
     </ul>
+    <div v-if="grupos.semSenha.length">
+      <Button
+        slate
+        faded
+        size="lg"
+        data-carteira="cotar-de-novo-com-a-senha"
+        :is-loading="ocupado === 'cotar'"
+        :label="ca('COTAR_DE_NOVO')"
+        @click="emit('cotarDeNovo')"
+      />
+    </div>
 
     <DialogoDaSenhaNoAgger
       ref="dialogo"
       :seguradora="semSenha"
       :texto="ca('SENHA_COMO_RESOLVER', { seguradora: semSenha })"
-      :rotulo-da-acao="ca('COTAR_DE_NOVO')"
-      marca-da-acao="cotar-de-novo-com-a-senha"
-      :ocupado="ocupado === 'cotar'"
-      @resolver="cotarDeNovo"
     />
   </div>
 </template>

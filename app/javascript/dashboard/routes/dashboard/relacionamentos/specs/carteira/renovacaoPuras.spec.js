@@ -7,7 +7,8 @@ describe('situacaoDaRenovacao: o que já foi feito e o que falta', () => {
   const proposta = { valor: 2980.8, variacao: 8 };
 
   it.each([
-    [{ etapa: 'A vencer' }, 'NAO_COMECOU'],
+    // A renovação que existe já começou: o que falta é cotar.
+    [{ etapa: 'A vencer' }, 'FALTA_COTAR'],
     [{ etapa: 'A vencer', cotando: true }, 'COTANDO'],
     [{ etapa: 'Cotando' }, 'COTANDO'],
     [{ etapa: 'Cotando', proposta }, 'COTACAO_PRONTA'],
@@ -104,17 +105,17 @@ describe('tituloDaRenovacao: a etapa e a cotação dizem a mesma coisa', () => {
     }
   );
 
-  it('o preço que chegou sem o PDF fala mais alto que "a cotação está pronta"', () => {
+  it('o preço que chegou sem o PDF tem o mesmo título da cotação pronta: a diferença fica no bloco de baixo', () => {
     const soOPreco = { ...noComeco, proposta: { valor: 100, semPdf: true } };
 
     expect(situacaoDaRenovacao(soOPreco)).toEqual({ id: 'COTACAO_PRONTA' });
     expect(tituloDaRenovacao(soOPreco, COTACAO.PRECO_SEM_PDF)).toEqual({
-      id: 'PRECO_SEM_PDF',
+      id: 'COTACAO_PRONTA',
     });
   });
 
   it.each([
-    [noComeco, COTACAO.NAO_COMECOU, { id: 'NAO_COMECOU' }],
+    [noComeco, COTACAO.NAO_COMECOU, { id: 'FALTA_COTAR' }],
     [{ ...noComeco, cotando: true }, COTACAO.COTANDO, { id: 'COTANDO' }],
     [
       { ...noComeco, proposta: { valor: 100 } },

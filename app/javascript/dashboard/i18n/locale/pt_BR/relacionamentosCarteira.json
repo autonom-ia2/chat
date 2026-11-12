@@ -208,6 +208,13 @@
         "CANCELADO_EM": "Cancelado em {data}.",
         "VENCE_NA_DATA": "Vence em {data}."
       },
+      "NAO_SAIU": {
+        "AVISO": "O aviso de {dias} dias não saiu.",
+        "ALGO_MUDOU": "A pergunta “Algo mudou?” não saiu.",
+        "PROPOSTA": "A proposta não saiu.",
+        "PALAVRAS": "“Seu seguro em palavras simples” não saiu.",
+        "CAMINHO": "Converse com {nome}."
+      },
       "ACAO": {
         "ABRIR_RENOVACAO": "Abrir a renovação",
         "VER_PDF": "Ver PDF",
@@ -425,7 +432,7 @@
           "DEIXADOS": "ficou de fora | ficaram de fora"
         },
         "JA_ESTAVAM": {
-          "TODAS": "Essa pessoa já estava aqui. | Essas pessoas já estavam aqui.",
+          "TODAS": "A pessoa já estava aqui. | As {count} pessoas já estavam aqui.",
           "PARTE": "{count} dessas pessoas já estava aqui. | {count} dessas pessoas já estavam aqui."
         },
         "EFEITO": "Amanhã cedo, {count} seguro que vence em até {dias} dias entra em renovação. | Amanhã cedo, {count} seguros que vencem em até {dias} dias entram em renovação.",
@@ -610,7 +617,7 @@
     },
     "RENOVACAO": {
       "SITUACAO": {
-        "NAO_COMECOU": "A renovação ainda não começou.",
+        "FALTA_COTAR": "A renovação começou. Falta cotar.",
         "COTANDO": "A cotação está sendo feita.",
         "PRECOS_CHEGANDO": "Os preços estão chegando.",
         "PRECOS_CHEGARAM": "Os preços chegaram.",
@@ -621,7 +628,6 @@
         "PRONTA_FALTA_O_TELEFONE": "A proposta está pronta. Falta o telefone.",
         "PRONTA_ENVIE_NA_CONVERSA": "A proposta está pronta. Envie na conversa.",
         "PRONTA_NAO_SAIU": "A proposta está pronta. Não saiu sozinha.",
-        "PRECO_SEM_PDF": "O preço chegou. Falta enviar.",
         "COTACAO_PRONTA": "A cotação está pronta. Falta enviar.",
         "OPCOES_ENVIADAS": "As opções já foram enviadas. Falta a resposta.",
         "NEGOCIACAO": "A resposta chegou. Falta fechar o valor.",
@@ -655,7 +661,7 @@
       },
       "COTACAO": {
         "TITULO": "Cotação",
-        "NAO_COMECOU": "A cotação ainda não começou.",
+        "NAO_COMECOU": "Aperte “Cotar agora” para pedir os preços às seguradoras.",
         "PRONTA_RESUMO": "Resumo da cotação pronto: {seguradora}, {valor} {periodo}.",
         "PRONTA_PROPOSTA": "Proposta pronta: {seguradora}, {valor} {periodo}.",
         "PRECO": "{valor} {periodo}",
@@ -678,13 +684,49 @@
         },
         "FALTA_DADO": {
           "PLACA": "Escreva a placa do carro.",
-          "NASCIMENTO": "Escreva a data de nascimento.",
-          "ESTADO_CIVIL": "Escreva o estado civil.",
-          "QUEM_DIRIGE": "Escreva quem dirige o carro.",
-          "ONDE_DORME": "Escreva onde o carro dorme.",
-          "QUANTO_RODA": "Escreva quanto o carro roda por mês.",
+          "NASCIMENTO": "Diga a data de nascimento.",
+          "ESTADO_CIVIL": "Escolha o estado civil.",
+          "ONDE_DORME": "Escolha onde o carro dorme.",
+          "QUANTO_RODA": "Escolha quanto o carro roda por mês.",
           "ENDERECO": "Escreva o endereço do imóvel.",
-          "TIPO_DO_IMOVEL": "Escreva o tipo do imóvel."
+          "TIPO_DO_IMOVEL": "Escolha o tipo do imóvel."
+        },
+        "ESCOLHA": "Escolha",
+        "OPCIONAL": "{rotulo} (opcional)",
+        "OPCAO": {
+          "ESTADO_CIVIL": {
+            "SOLTEIRO": "Solteiro(a)",
+            "CASADO": "Casado(a) ou união estável",
+            "SEPARADO": "Separado(a)",
+            "DIVORCIADO": "Divorciado(a)",
+            "VIUVO": "Viúvo(a)"
+          },
+          "QUEM_DIRIGE": {
+            "A_PROPRIA_PESSOA": "A própria pessoa",
+            "MARIDO_OU_ESPOSA": "Marido ou esposa",
+            "FILHO_OU_FILHA": "Filho ou filha",
+            "PAI_OU_MAE": "Pai ou mãe",
+            "IRMAO_OU_IRMA": "Irmão ou irmã",
+            "FUNCIONARIO": "Um funcionário",
+            "OUTRA_PESSOA": "Outra pessoa"
+          },
+          "ONDE_DORME": {
+            "GARAGEM_PORTAO_AUTOMATICO": "Garagem com portão automático",
+            "GARAGEM_PORTAO_MANUAL": "Garagem com portão manual",
+            "SEM_GARAGEM": "Sem garagem"
+          },
+          "QUANTO_RODA": {
+            "ATE_500": "Até 500 km",
+            "ATE_800": "Até 800 km",
+            "ATE_1500": "Até 1.500 km",
+            "MAIS_DE_1500": "Mais de 1.500 km"
+          },
+          "TIPO_DO_IMOVEL": {
+            "CASA": "Casa",
+            "CASA_EM_CONDOMINIO": "Casa em condomínio",
+            "APARTAMENTO": "Apartamento",
+            "OUTRO": "Outro"
+          }
         },
         "JA_PERGUNTOU": "{agente} já perguntou à pessoa.",
         "O_QUE_FALTA": "O que falta:",
@@ -706,7 +748,7 @@
         "SENHA_COMO_RESOLVER": "Entre no seu Agger, guarde a senha da {seguradora} e volte aqui. Depois, cote de novo.",
         "PEDIR_PROPOSTA": "Pedir a proposta desta",
         "PEDIR_PROPOSTA_DE": "Pedir a proposta: {seguradora}",
-        "SEM_PDF_DE_PROPOSTA": "Esta seguradora não tem proposta em PDF. Vai o resumo da cotação, com preço e coberturas.",
+        "SEM_PDF_DE_PROPOSTA": "A proposta em PDF desta seguradora não veio desta vez. Vai o resumo da cotação, com preço e coberturas.",
         "PRECO_SEM_PDF": "O preço chegou: {seguradora}, {valor} {periodo}.",
         "ENVIAR_O_RESUMO": "Enviar o resumo",
         "AGGER_FORA": "Não consegui entrar no Agger. Sem ele não dá para cotar.",
@@ -731,8 +773,9 @@
         "MENSAGEM_PROPOSTA": "Oi, {nome}! Cotei a renovação do seu seguro {tipo}: {seguradora}, {preco} {periodo}. A proposta vai junto, em PDF. Quer renovar com esse preço?",
         "MENSAGEM_MODELO": "Oi, {nome}! A renovação do seu seguro {tipo} está pronta. Posso te mandar a proposta?",
         "FORA_DA_JANELA": "Faz mais de um dia que {nome} não escreve. O WhatsApp só deixa sair esta mensagem.",
-        "ARQUIVO_RESUMO": "Resumo da cotação.pdf",
-        "ARQUIVO_PROPOSTA": "Proposta.pdf",
+        "ARQUIVO_RESUMO": "Resumo da cotação {seguradora}, {doQue}.pdf",
+        "ARQUIVO_PROPOSTA": "Proposta {seguradora}, {doQue}.pdf",
+        "ARQUIVO_PLACA": "placa {placa}",
         "ENVIAR": "Enviar",
         "VOLTAR": "Voltar"
       },
@@ -764,9 +807,11 @@
       "ONDE": {
         "TITULO": "Onde ficam as renovações?",
         "CRIAR": "Criar o funil Renovação",
-        "CRIAR_APOIO": "Já vem com os passos: A vencer, Cotando, Opções enviadas, Negociação, Renovado.",
+        "CRIAR_APOIO": "Já vem com as etapas: A vencer, Cotando, Opções enviadas, Negociação, Renovado.",
         "USAR": "Usar um funil que já tenho",
+        "USAR_APOIO": "Você escolhe o funil e a etapa em que a renovação entra.",
         "FUNIL": "Funil",
+        "ESCOLHA_O_FUNIL": "Escolha o funil",
         "ETAPA": "Em qual etapa a renovação entra?",
         "QUEM_CUIDA": "Quem cuida da renovação é quem já cuida desse funil.",
         "DIAS": "Quantos dias antes do fim a renovação aparece?",
@@ -812,8 +857,8 @@
       },
       "QUEM_COTA": {
         "TITULO": "Quem faz a cotação?",
-        "ROBO": "Sozinho",
-        "ROBO_APOIO": "Cota sem conversar com a pessoa. Se faltar dado, o card mostra e você preenche.",
+        "ROBO": "Automático, sem conversar com a pessoa",
+        "ROBO_APOIO": "Se faltar dado, o card mostra e você preenche.",
         "AGENTE_APOIO": "É o seu agente: conversa com a pessoa, pede o que falta e cota.",
         "NINGUEM": "A equipe",
         "NINGUEM_APOIO": "Alguém da equipe cota e põe a proposta na renovação."

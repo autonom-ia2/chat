@@ -208,6 +208,13 @@
         "CANCELADO_EM": "Cancelled on {data}.",
         "VENCE_NA_DATA": "Ends on {data}."
       },
+      "NAO_SAIU": {
+        "AVISO": "The {dias}-day notice did not go out.",
+        "ALGO_MUDOU": "The question “Has anything changed?” did not go out.",
+        "PROPOSTA": "The proposal did not go out.",
+        "PALAVRAS": "“Your insurance in plain words” did not go out.",
+        "CAMINHO": "Talk to {nome}."
+      },
       "ACAO": {
         "ABRIR_RENOVACAO": "Open the renewal",
         "VER_PDF": "See PDF",
@@ -425,7 +432,7 @@
           "DEIXADOS": "left out | left out"
         },
         "JA_ESTAVAM": {
-          "TODAS": "This person was already here. | These people were already here.",
+          "TODAS": "The person was already here. | The {count} people were already here.",
           "PARTE": "{count} of these people was already here. | {count} of these people were already here."
         },
         "EFEITO": "Tomorrow morning, {count} insurance ending within {dias} days goes into renewal. | Tomorrow morning, {count} insurances ending within {dias} days go into renewal.",
@@ -610,7 +617,7 @@
     },
     "RENOVACAO": {
       "SITUACAO": {
-        "NAO_COMECOU": "The renewal has not started yet.",
+        "FALTA_COTAR": "The renewal has started. The quote is still missing.",
         "COTANDO": "The quote is being prepared.",
         "PRECOS_CHEGANDO": "The prices are coming in.",
         "PRECOS_CHEGARAM": "The prices have arrived.",
@@ -621,7 +628,6 @@
         "PRONTA_FALTA_O_TELEFONE": "The proposal is ready. The phone number is missing.",
         "PRONTA_ENVIE_NA_CONVERSA": "The proposal is ready. Send it in the conversation.",
         "PRONTA_NAO_SAIU": "The proposal is ready. It did not go out on its own.",
-        "PRECO_SEM_PDF": "The price arrived. It still has to be sent.",
         "COTACAO_PRONTA": "The quote is ready. It still has to be sent.",
         "OPCOES_ENVIADAS": "The options have been sent. Waiting for the answer.",
         "NEGOCIACAO": "The answer arrived. The price still has to be agreed.",
@@ -655,7 +661,7 @@
       },
       "COTACAO": {
         "TITULO": "Quote",
-        "NAO_COMECOU": "The quote has not started yet.",
+        "NAO_COMECOU": "Press “Get a quote now” to ask the insurers for prices.",
         "PRONTA_RESUMO": "Quote summary ready: {seguradora}, {valor} {periodo}.",
         "PRONTA_PROPOSTA": "Proposal ready: {seguradora}, {valor} {periodo}.",
         "PRECO": "{valor} {periodo}",
@@ -678,13 +684,49 @@
         },
         "FALTA_DADO": {
           "PLACA": "Write the car plate.",
-          "NASCIMENTO": "Write the date of birth.",
-          "ESTADO_CIVIL": "Write the marital status.",
-          "QUEM_DIRIGE": "Write who drives the car.",
-          "ONDE_DORME": "Write where the car is kept at night.",
-          "QUANTO_RODA": "Write how far the car runs each month.",
+          "NASCIMENTO": "Tell me the date of birth.",
+          "ESTADO_CIVIL": "Choose the marital status.",
+          "ONDE_DORME": "Choose where the car is kept at night.",
+          "QUANTO_RODA": "Choose how far the car runs each month.",
           "ENDERECO": "Write the address of the property.",
-          "TIPO_DO_IMOVEL": "Write the type of property."
+          "TIPO_DO_IMOVEL": "Choose the type of property."
+        },
+        "ESCOLHA": "Choose",
+        "OPCIONAL": "{rotulo} (optional)",
+        "OPCAO": {
+          "ESTADO_CIVIL": {
+            "SOLTEIRO": "Single",
+            "CASADO": "Married or in a stable union",
+            "SEPARADO": "Separated",
+            "DIVORCIADO": "Divorced",
+            "VIUVO": "Widowed"
+          },
+          "QUEM_DIRIGE": {
+            "A_PROPRIA_PESSOA": "The person themselves",
+            "MARIDO_OU_ESPOSA": "Husband or wife",
+            "FILHO_OU_FILHA": "Son or daughter",
+            "PAI_OU_MAE": "Father or mother",
+            "IRMAO_OU_IRMA": "Brother or sister",
+            "FUNCIONARIO": "An employee",
+            "OUTRA_PESSOA": "Someone else"
+          },
+          "ONDE_DORME": {
+            "GARAGEM_PORTAO_AUTOMATICO": "Garage with an automatic gate",
+            "GARAGEM_PORTAO_MANUAL": "Garage with a manual gate",
+            "SEM_GARAGEM": "No garage"
+          },
+          "QUANTO_RODA": {
+            "ATE_500": "Up to 500 km",
+            "ATE_800": "Up to 800 km",
+            "ATE_1500": "Up to 1,500 km",
+            "MAIS_DE_1500": "More than 1,500 km"
+          },
+          "TIPO_DO_IMOVEL": {
+            "CASA": "House",
+            "CASA_EM_CONDOMINIO": "House in a gated community",
+            "APARTAMENTO": "Apartment",
+            "OUTRO": "Other"
+          }
         },
         "JA_PERGUNTOU": "{agente} has already asked the person.",
         "O_QUE_FALTA": "What is missing:",
@@ -706,7 +748,7 @@
         "SENHA_COMO_RESOLVER": "Go to your Agger, save the password for {seguradora} and come back here. Then quote again.",
         "PEDIR_PROPOSTA": "Ask this one for a proposal",
         "PEDIR_PROPOSTA_DE": "Ask for the proposal: {seguradora}",
-        "SEM_PDF_DE_PROPOSTA": "This insurer has no proposal in PDF. The quote summary goes instead, with price and cover.",
+        "SEM_PDF_DE_PROPOSTA": "This insurer's proposal in PDF did not come this time. The quote summary goes instead, with price and cover.",
         "PRECO_SEM_PDF": "The price arrived: {seguradora}, {valor} {periodo}.",
         "ENVIAR_O_RESUMO": "Send the summary",
         "AGGER_FORA": "I could not get into Agger. Without it there is no quoting.",
@@ -731,8 +773,9 @@
         "MENSAGEM_PROPOSTA": "Hi, {nome}! I quoted the renewal of your {tipo} insurance: {seguradora}, {preco} {periodo}. The proposal goes along, in PDF. Would you like to renew at this price?",
         "MENSAGEM_MODELO": "Hi, {nome}! The renewal of your {tipo} insurance is ready. May I send you the proposal?",
         "FORA_DA_JANELA": "{nome} has not written for more than a day. WhatsApp only lets this message go out.",
-        "ARQUIVO_RESUMO": "Quote summary.pdf",
-        "ARQUIVO_PROPOSTA": "Proposal.pdf",
+        "ARQUIVO_RESUMO": "Quote summary {seguradora}, {doQue}.pdf",
+        "ARQUIVO_PROPOSTA": "Proposal {seguradora}, {doQue}.pdf",
+        "ARQUIVO_PLACA": "plate {placa}",
         "ENVIAR": "Send",
         "VOLTAR": "Back"
       },
@@ -764,9 +807,11 @@
       "ONDE": {
         "TITULO": "Where do renewals go?",
         "CRIAR": "Create the Renewal funnel",
-        "CRIAR_APOIO": "It comes with the steps: Due soon, Quoting, Options sent, Negotiation, Renewed.",
+        "CRIAR_APOIO": "It comes with the stages: Due soon, Quoting, Options sent, Negotiation, Renewed.",
         "USAR": "Use a funnel I already have",
+        "USAR_APOIO": "You choose the funnel and the stage the renewal starts in.",
         "FUNIL": "Funnel",
+        "ESCOLHA_O_FUNIL": "Choose the funnel",
         "ETAPA": "Which stage does the renewal start in?",
         "QUEM_CUIDA": "Whoever already looks after this funnel looks after the renewal.",
         "DIAS": "How many days before the end does the renewal show up?",
@@ -812,8 +857,8 @@
       },
       "QUEM_COTA": {
         "TITULO": "Who does the quote?",
-        "ROBO": "On its own",
-        "ROBO_APOIO": "Quotes without talking to the person. If a detail is missing, the card shows it and you fill it in.",
+        "ROBO": "Automatic, without talking to the person",
+        "ROBO_APOIO": "If a detail is missing, the card shows it and you fill it in.",
         "AGENTE_APOIO": "Your agent: talks to the person, asks for what is missing and quotes.",
         "NINGUEM": "The team",
         "NINGUEM_APOIO": "Someone on the team quotes and puts the proposal in the renewal."

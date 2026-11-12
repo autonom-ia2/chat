@@ -1663,6 +1663,30 @@
           "pausa": 800
         },
         {
+          "nome": "escolha-aberta",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quem_dirige\"] [role=\"combobox\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quem_dirige\"] [role=\"option\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "escolha-feita",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quem_dirige\"] [role=\"option\"][data-value=\"filho_ou_filha\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quem_dirige\"] [role=\"combobox\"][aria-expanded=\"false\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
           "nome": "cotar-com-o-dado",
           "passos": [
             {
@@ -1674,32 +1698,26 @@
             {
               "preencher": [
                 "[data-carteira=\"dado-que-faltou\"][data-dado=\"nascimento\"]",
-                "14/08/1987"
+                "1987-08-14"
               ]
             },
             {
-              "preencher": [
-                "[data-carteira=\"dado-que-faltou\"][data-dado=\"estado_civil\"]",
-                "Casada"
-              ]
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"estado_civil\"] [role=\"combobox\"]"
             },
             {
-              "preencher": [
-                "[data-carteira=\"dado-que-faltou\"][data-dado=\"quem_dirige\"]",
-                "Só ela"
-              ]
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"estado_civil\"] [role=\"option\"][data-value=\"casado\"]"
             },
             {
-              "preencher": [
-                "[data-carteira=\"dado-que-faltou\"][data-dado=\"onde_dorme\"]",
-                "Na garagem de casa"
-              ]
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"onde_dorme\"] [role=\"combobox\"]"
             },
             {
-              "preencher": [
-                "[data-carteira=\"dado-que-faltou\"][data-dado=\"quanto_roda\"]",
-                "800 km"
-              ]
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"onde_dorme\"] [role=\"option\"][data-value=\"garagem_portao_manual\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quanto_roda\"] [role=\"combobox\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"quanto_roda\"] [role=\"option\"][data-value=\"ate_800\"]"
             },
             {
               "clicar": "[data-carteira=\"cotar-com-dado\"]"
@@ -1713,7 +1731,7 @@
         {
           "nome": "faltam-dados-da-casa",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_faltam_dados",
-          "esperar": "[data-carteira=\"dado-que-faltou\"][data-dado=\"tipo_do_imovel\"]",
+          "esperar": "[data-carteira=\"escolha-que-faltou\"][data-dado=\"tipo_do_imovel\"]",
           "pausa": 1500
         },
         {
@@ -1754,6 +1772,18 @@
             },
             {
               "esperar": "[data-carteira=\"agger-dialogo-senha\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "parcial-cotar-de-novo-no-card",
+          "passos": [
+            {
+              "clicar": "dialog[open] [data-carteira=\"agger-fechar-dialogo\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"cotar-de-novo-com-a-senha\"]"
             }
           ],
           "pausa": 1000
@@ -1903,6 +1933,24 @@
           "pausa": 1000
         },
         {
+          "nome": "aviso-nao-saiu-no-topo",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&apolice=111&caso=aviso_nao_saiu",
+          "esperar": "[data-carteira=\"gaveta-seguro\"] [data-carteira=\"renovacao-nao-saiu\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "aviso-nao-saiu-mais-acoes",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"mais-do-seguro\"] button"
+            },
+            {
+              "esperar": "[data-carteira=\"corrigir-no-menu\"]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
           "nome": "palavras-nao-sairam-na-historia",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_nao_saiu",
           "passos": [
@@ -1950,6 +1998,12 @@
           "nome": "vazio",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111",
           "esperar": "[data-cotacao=\"NAO_COMECOU\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "gaveta-falta-cotar",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&apolice=111",
+          "esperar": "[data-carteira=\"gaveta-seguro\"] [data-carteira=\"situacao-da-renovacao\"]",
           "pausa": 1500
         },
         {
@@ -2054,7 +2108,17 @@
         {
           "nome": "sem-cotar-sozinho",
           "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&caso=ajustes_sem_sozinho",
-          "esperar": "[data-carteira=\"ajuste-quem-cota\"]",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"ajuste-quem-cota\"]:not(:has([data-carteira=\"cota-automatico\"])) [data-carteira=\"cota-o-agente\"][aria-checked=\"true\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"ajuste-quem-cota\"] h2"
+            },
+            {
+              "esperar": "[data-carteira=\"ajuste-quem-cota\"]:not(:has([data-carteira=\"cota-automatico\"])) [data-carteira=\"cota-o-agente\"][aria-checked=\"true\"]"
+            }
+          ],
           "pausa": 1500
         },
         {
@@ -2256,8 +2320,21 @@
         },
         {
           "nome": "vazio",
-          "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&apolice=2",
-          "esperar": "[data-carteira=\"gaveta-acao\"]",
+          "url": "/app/accounts/{conta}/relationships?aba=seguros&demo=cheio&caso=parcelas_em_dia",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"linha\"]"
+            },
+            {
+              "clicar": "[data-grupo=\"parcela_atrasada\"]"
+            },
+            {
+              "esperar": "[data-grupo=\"parcela_atrasada\"][aria-pressed=\"true\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"vazio\"]"
+            }
+          ],
           "pausa": 1500
         },
         {
@@ -2286,7 +2363,7 @@
         {
           "nome": "palavras-simples",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109",
-          "esperar": "[data-carteira=\"enviar-palavras\"]",
+          "esperar": "[data-carteira=\"gaveta-acao\"][data-acao=\"ENVIAR_PALAVRAS\"]",
           "pausa": 2000
         },
         {
@@ -2338,7 +2415,7 @@
               "clicar": "[data-carteira=\"salvar-palavras\"]"
             },
             {
-              "esperar": "[data-carteira=\"enviar-palavras\"]"
+              "esperar": "[data-carteira=\"gaveta-acao\"][data-acao=\"ENVIAR_PALAVRAS\"]"
             }
           ],
           "pausa": 1200
@@ -2347,7 +2424,7 @@
           "nome": "enviado",
           "passos": [
             {
-              "clicar": "[data-carteira=\"enviar-palavras\"]"
+              "clicar": "[data-carteira=\"gaveta-acao\"][data-acao=\"ENVIAR_PALAVRAS\"]"
             },
             {
               "esperar": "[data-carteira=\"palavras-enviado\"]"
@@ -2370,7 +2447,23 @@
         {
           "nome": "nao-saiu-sozinho",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_nao_saiu",
-          "esperar": "[data-carteira=\"palavras-nao-saiu\"]",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"palavras-nao-saiu\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"palavras-simples\"] h3"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-nao-saiu\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "nao-saiu-no-topo",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_nao_saiu",
+          "esperar": "[data-carteira=\"gaveta-seguro\"] [data-carteira=\"nao-saiu\"]",
           "pausa": 1500
         },
         {
@@ -2382,13 +2475,33 @@
         {
           "nome": "carregando",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_lendo",
-          "esperar": "[data-carteira=\"palavras-lendo\"]",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"palavras-lendo\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"palavras-simples\"] h3"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-lendo\"]"
+            }
+          ],
           "pausa": 1000
         },
         {
           "nome": "erro",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_erro",
-          "esperar": "[data-carteira=\"palavras-erro\"]",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"palavras-erro\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"palavras-simples\"] h3"
+            },
+            {
+              "esperar": "[data-carteira=\"palavras-erro\"]"
+            }
+          ],
           "pausa": 1000
         }
       ]

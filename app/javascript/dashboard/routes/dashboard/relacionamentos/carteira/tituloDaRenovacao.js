@@ -2,7 +2,9 @@
 // o bloco "Cotação" logo abaixo. Função pura (a etapa e o estado da cotação):
 // devolve o nome da frase; quem desenha traduz. Antes de as opções saírem,
 // quando a cotação já andou ou parou, quem fala é ela; no resto vale a situação
-// de sempre (situacaoDaRenovacao.js).
+// de sempre (situacaoDaRenovacao.js). O que espera o envio tem um título só
+// ("A cotação está pronta. Falta enviar."), com ou sem o PDF da proposta: a
+// diferença fica no bloco da cotação.
 import { COTACAO, aguardaRespostas, contarRespostas } from './cotacaoDoCard';
 import {
   antesDeAsOpcoesSairem,
@@ -21,7 +23,6 @@ const PELA_COTACAO = {
   [COTACAO.NAO_QUER]: 'PRONTA_ENVIE_NA_CONVERSA',
   [COTACAO.BLOQUEADO]: 'PRONTA_ENVIE_NA_CONVERSA',
   [COTACAO.NAO_SAIU]: 'PRONTA_NAO_SAIU',
-  [COTACAO.PRECO_SEM_PDF]: 'PRECO_SEM_PDF',
 };
 
 // Um dado só faltando tem a frase dele ("Falta um dado para cotar.").

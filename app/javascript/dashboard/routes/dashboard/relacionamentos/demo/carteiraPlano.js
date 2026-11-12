@@ -135,6 +135,8 @@ const NOMEADOS = [
     numero: 'AT-001288',
     valor: 3410,
     dias: 6,
+    bem: 'Carro SUV branco, placa FIC-2D12',
+    placa: 'FIC-2D12',
     renovacao: {
       etapa: 'Cotando',
       cuida: BIA,

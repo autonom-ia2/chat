@@ -76,6 +76,14 @@ const SEGURO_DA_RENOVACAO_COMPLETA = 1;
 const MINUTOS_ATE_ENVIAR = 25 * 60;
 const PRONTA_HA_DIAS = 1;
 
+// A proposta que ia sair sozinha e não saiu: fica dita até alguém enviar.
+const propostaQueNaoSaiu = seguro => {
+  const { proposta } = seguro.renovacao ?? {};
+  return proposta && !proposta.enviadaEm && proposta.naoSaiuEm
+    ? [passo('proposta_nao_saiu', proposta.naoSaiuEm)]
+    : [];
+};
+
 // A proposta de uma renovação qualquer: quando ficou pronta e, se já saiu, se
 // alguém enviou ou se saiu sozinha. O que a pessoa enviou agora já está nos
 // "feitos" (enviadaPor com papel), e não se repete aqui.
@@ -89,10 +97,8 @@ const daProposta = (seguro, agora) => {
       : diaEHora(agora, PRONTA_HA_DIAS, 9, 40),
     { quem: ROBO, valores: daPropostaEmValores(seguro, proposta) }
   );
-  // Ia sair sozinha e o WhatsApp não deixou: fica dito até alguém enviar.
-  if (!proposta.enviadaEm && proposta.naoSaiuEm) {
-    return [passo('proposta_nao_saiu', proposta.naoSaiuEm), pronta];
-  }
+  const naoSaiu = propostaQueNaoSaiu(seguro);
+  if (naoSaiu.length) return [...naoSaiu, pronta];
   if (!proposta.enviadaEm || proposta.enviadaPor?.papel) return [pronta];
   const envio = proposta.enviadaSozinha
     ? passo('proposta_enviada_sozinha', proposta.enviadaEm)
@@ -130,6 +136,17 @@ const NAO_SAIRAM = {
 };
 const doCaso = (seguro, agora, caso) =>
   [NAO_SAIRAM[caso]?.(seguro, agora)].filter(Boolean);
+
+// O que o seguro traz em `naoSaiu` (carteira/oQueNaoSaiu.js): os mesmos fatos
+// que a história conta, para a gaveta dizer no topo o que não saiu.
+export const naoSaiuNaDemo = (seguro, agora = Date.now(), caso = null) =>
+  [...doCaso(seguro, agora, caso), ...propostaQueNaoSaiu(seguro)].map(
+    ({ tipo, quando, valores }) => ({
+      tipo,
+      em: quando,
+      dias: valores.dias ?? null,
+    })
+  );
 
 const daSituacao = (seguro, agora, feitos) => {
   const jaFeito = tipo => feitos.some(item => item.tipo === tipo);

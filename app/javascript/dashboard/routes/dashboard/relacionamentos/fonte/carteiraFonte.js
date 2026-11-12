@@ -221,8 +221,16 @@ const fonteDemo = ({
     if (peca === 'erro') throw erroDaDemo();
     return (await carregarDemo()).demoDaCarteira;
   };
+  // `?caso=parcelas_em_dia`: ninguém deve parcela, e o grupo "Parcela
+  // atrasada" fica sem ninguém (o estado vazio da jornada da parcela).
+  const comAsParcelas = seguros =>
+    caso === 'parcelas_em_dia'
+      ? seguros.map(seguro => ({ ...seguro, parcelaAbertaEm: null }))
+      : seguros;
   const daCarteira = async agora =>
-    semSeguro ? (await demo(), []) : (await demo()).segurosDaCarteira(agora);
+    semSeguro
+      ? (await demo(), [])
+      : comAsParcelas((await demo()).segurosDaCarteira(agora));
   const comOsDeFora = async agora =>
     semSeguro ? (await demo(), []) : (await demo()).segurosComOsDeFora(agora);
 

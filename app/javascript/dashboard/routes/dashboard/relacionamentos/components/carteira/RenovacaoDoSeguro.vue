@@ -3,14 +3,17 @@ import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { variacaoDaProposta } from '../../carteira/situacaoDoSeguro';
-import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 
 // #2897 — "Renovação" na gaveta do seguro: em que pé ela está (o que já foi
 // feito e o que falta), quem cuida e, quando há proposta, quanto mudou em
-// relação ao ano passado. Sem proposta, numa conta que cota sozinha, o botão
-// discreto "Cotar agora".
+// relação ao ano passado. A frase de em que pé está vem de quem usa e é a
+// mesma do título da gaveta da renovação. Quando cotar é o passo da vez, o
+// botão discreto "Cotar agora". Se um aviso da renovação ia sair sozinho e não
+// saiu, uma linha diz isso (`naoSaiu`).
 const props = defineProps({
   renovacao: { type: Object, required: true },
+  emQuePe: { type: String, required: true },
+  naoSaiu: { type: String, default: '' },
   // O link "Abrir a renovação" só aparece quando não é o botão principal.
   mostraAbrir: { type: Boolean, default: false },
   podeCotar: { type: Boolean, default: false },
@@ -21,7 +24,6 @@ const emit = defineEmits(['abrir', 'cotar']);
 const { t } = useI18n();
 const tr = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.GAVETA.RENOVACAO.${chave}`, valores);
-const textos = useTextosDoSeguro();
 const idDoTitulo = useId();
 
 const variacao = computed(() => {
@@ -47,7 +49,14 @@ const ofereceCotar = computed(
       data-carteira="situacao-da-renovacao"
       class="m-0 text-base break-words text-n-slate-12"
     >
-      {{ textos.renovacao(renovacao) }}
+      {{ emQuePe }}
+    </p>
+    <p
+      v-if="naoSaiu"
+      data-carteira="renovacao-nao-saiu"
+      class="m-0 text-base font-medium break-words text-n-slate-12"
+    >
+      {{ naoSaiu }}
     </p>
     <p
       data-carteira="quem-cuida"

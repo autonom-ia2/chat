@@ -31,9 +31,10 @@ export const AJUSTES_PADRAO = Object.freeze({
   palavras: PALAVRAS.CONFIRO,
 });
 
-// Quem faz a cotação, conforme o que a conta tem: "Sozinho" (ROBO) só existe
-// na conta que cota sem conversar, e o agente só na conta que tem agente. A
-// escolha que a conta não tem cai na seguinte: o agente, o "Sozinho", a equipe.
+// Quem faz a cotação, conforme o que a conta tem: "Automático" (ROBO) só
+// existe na conta que cota sem conversar, e o agente só na conta que tem
+// agente. A escolha que a conta não tem cai na seguinte: o agente, o
+// "Automático", a equipe.
 export const quemCotaNaConta = (
   quemCota,
   { cotaSemConversa = false, agente = null } = {}

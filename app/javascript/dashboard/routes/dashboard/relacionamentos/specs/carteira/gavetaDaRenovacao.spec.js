@@ -15,6 +15,7 @@ import {
   carregarDemonstracao,
   daCarteira,
   doBlocoA,
+  semRolagem,
   textoDe,
 } from './apoio';
 
@@ -86,7 +87,10 @@ const doRodape = w =>
     .findAll('footer button[data-carteira]')
     .map(botao => botao.attributes('data-carteira'));
 
-beforeAll(carregarDemonstracao, 60000);
+beforeAll(async () => {
+  semRolagem();
+  await carregarDemonstracao();
+}, 60000);
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 });
@@ -225,7 +229,9 @@ describe('a cotação, um estado de cada vez', () => {
     expect(textoDe(w, daCarteira('previa-envio'))).toContain(
       'Oi, Paula! Cotei a renovação do seu seguro Auto: Seguradora Atlântica, R$ 3.580,50 por ano. O resumo vai junto, em PDF. Quer renovar com esse preço?'
     );
-    expect(previa.text()).toContain('Resumo da cotação.pdf');
+    expect(previa.text()).toContain(
+      'Resumo da cotação Seguradora Atlântica, placa FIC-2D12.pdf'
+    );
     expect(w.get(daCarteira('enviar')).text()).toBe('Enviar');
 
     await w.get('[data-dialogo-falso]').trigger('submit');
@@ -310,7 +316,8 @@ describe('a cotação, um estado de cada vez', () => {
     // Quem prefere preencher sem esperar a resposta abre os espaços, e o passo
     // da vez vira "Cotar com estes dados".
     await clicar(w, 'preencher-os-dados');
-    expect(w.findAll(daCarteira('dado-que-faltou'))).toHaveLength(6);
+    expect(w.findAll(daCarteira('dado-que-faltou'))).toHaveLength(2);
+    expect(w.findAll(daCarteira('escolha-que-faltou'))).toHaveLength(4);
     expect(azuis(w)).toEqual(['cotar-com-dado']);
   });
 
@@ -323,10 +330,15 @@ describe('a cotação, um estado de cada vez', () => {
     expect(textoDe(w, daCarteira('cotacao'))).toContain(
       'Pergunte e escreva aqui.'
     );
+    // A placa é texto e o nascimento é data; os de resposta fechada são
+    // escolha única.
     const espacos = w.findAll(daCarteira('dado-que-faltou'));
     expect(espacos.map(espaco => espaco.attributes('data-dado'))).toEqual([
       'placa',
       'nascimento',
+    ]);
+    const escolhas = w.findAll(daCarteira('escolha-que-faltou'));
+    expect(escolhas.map(escolha => escolha.attributes('data-dado'))).toEqual([
       'estado_civil',
       'quem_dirige',
       'onde_dorme',
@@ -336,8 +348,13 @@ describe('a cotação, um estado de cada vez', () => {
     expect(botao.text()).toBe('Cotar com estes dados');
     expect(botao.attributes('disabled')).toBeUndefined();
     expect(azuis(w)).toEqual(['cotar-com-dado']);
-    // O botão é um só: não há outro igual dentro do bloco da cotação.
-    expect(cotacao(w).find('button').exists()).toBe(false);
+    // O botão é um só: não há outro igual dentro do bloco da cotação (os da
+    // lista de escolha são os campos).
+    expect(
+      cotacao(w)
+        .findAll('button')
+        .filter(peca => peca.attributes('role') !== 'combobox')
+    ).toHaveLength(0);
 
     // Tudo vazio: aponta o primeiro.
     await clicar(w, 'cotar-com-dado');
@@ -354,16 +371,24 @@ describe('a cotação, um estado de cada vez', () => {
     await clicar(w, 'cotar-com-dado');
     expect(cotacao(w).findAll('[role="alert"]')).toHaveLength(1);
     expect(cotacao(w).get('[role="alert"]').text()).toBe(
-      'Escreva a data de nascimento.'
+      'Diga a data de nascimento.'
     );
     expect(document.activeElement).toBe(espacos[1].element);
     expect(cotacao(w).attributes('data-cotacao')).toBe('FALTOU_SEM_AGENTE');
 
-    await espacos[1].setValue('12/03/1988');
-    await espacos[2].setValue('casada');
-    await espacos[3].setValue('só ela');
-    await espacos[4].setValue('na garagem');
-    await espacos[5].setValue('800 km');
+    await espacos[1].setValue('1988-03-12');
+    // Quem dirige é opcional e fica sem escolha.
+    const escolher = async (indice, rotulo) => {
+      await escolhas[indice].get('button').trigger('click');
+      await escolhas[indice]
+        .findAll('[role="option"]')
+        .find(opcao => opcao.text() === rotulo)
+        .trigger('click');
+      await assentar();
+    };
+    await escolher(0, 'Casado(a) ou união estável');
+    await escolher(2, 'Garagem com portão manual');
+    await escolher(3, 'Até 800 km');
     await clicar(w, 'cotar-com-dado');
     expect(cotacao(w).attributes('data-cotacao')).toBe('COTANDO');
   });
@@ -411,7 +436,7 @@ describe('a cotação, um estado de cada vez', () => {
       'Seguradora AtlânticaR$ 546,00 por ano'
     );
     expect(linhas[2].text()).toContain(
-      'Esta seguradora não tem proposta em PDF. Vai o resumo da cotação, com preço e coberturas.'
+      'A proposta em PDF desta seguradora não veio desta vez. Vai o resumo da cotação, com preço e coberturas.'
     );
     expect(linhas[2].find(daCarteira('pedir-proposta')).exists()).toBe(false);
     // Antes do prazo, quem falta "ainda não respondeu".
@@ -478,18 +503,26 @@ describe('a cotação, um estado de cada vez', () => {
       'Como resolver a senha da Seguradora Monte Claro'
     );
 
-    // O mesmo caminho do Trazer: o que fazer no Agger e um botão para a volta.
+    // O diálogo só explica o que fazer no Agger: "Entendi" fecha. Cotar de
+    // novo fica no card, para depois de guardar a senha.
     await comoResolver.trigger('click');
     const dialogo = w.get(daCarteira('agger-dialogo-senha'));
     expect(dialogo.text()).toContain('Falta a senha da Seguradora Monte Claro');
     expect(dialogo.text()).toContain(
       'Entre no seu Agger, guarde a senha da Seguradora Monte Claro e volte aqui. Depois, cote de novo.'
     );
-    expect(w.get(daCarteira('cotar-de-novo-com-a-senha')).text()).toBe(
-      'Cotar de novo'
+    expect(dialogo.find(daCarteira('cotar-de-novo-com-a-senha')).exists()).toBe(
+      false
     );
     await w.get('[data-dialogo-falso]').trigger('submit');
     await assentar();
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+    expect(cotacao(w).attributes('data-cotacao')).toBe('PARCIAL');
+
+    expect(w.get(daCarteira('cotar-de-novo-com-a-senha')).text()).toBe(
+      'Cotar de novo'
+    );
+    await clicar(w, 'cotar-de-novo-com-a-senha');
     expect(cotacao(w).attributes('data-cotacao')).toBe('COTANDO');
   });
 
@@ -529,13 +562,13 @@ describe('a cotação, um estado de cada vez', () => {
     );
 
     expect(textoDe(w, daCarteira('situacao-da-renovacao'))).toBe(
-      'O preço chegou. Falta enviar.'
+      'A cotação está pronta. Falta enviar.'
     );
     expect(textoDe(w, daCarteira('cotacao'))).toContain(
       'O preço chegou: Seguradora Atlântica, R$ 546,00 por ano.'
     );
     expect(textoDe(w, daCarteira('cotacao'))).toContain(
-      'Esta seguradora não tem proposta em PDF. Vai o resumo da cotação, com preço e coberturas.'
+      'A proposta em PDF desta seguradora não veio desta vez. Vai o resumo da cotação, com preço e coberturas.'
     );
     // "Pedir o PDF de novo" não existe mais.
     expect(w.find(daCarteira('pedir-pdf')).exists()).toBe(false);
@@ -559,7 +592,9 @@ describe('a cotação, um estado de cada vez', () => {
     expect(textoDe(w, daCarteira('previa-de-mensagem'))).toContain(
       `Oi, ${primeiroNome}! Cotei a renovação do seu seguro Residencial: Seguradora Atlântica, R$ 546,00 por ano. O resumo vai junto, em PDF. Quer renovar com esse preço?`
     );
-    expect(previa.text()).toContain('Resumo da cotação.pdf');
+    expect(previa.text()).toContain(
+      'Resumo da cotação Seguradora Atlântica, residencial.pdf'
+    );
 
     await w.get('[data-dialogo-falso]').trigger('submit');
     await assentar();
@@ -625,7 +660,7 @@ describe('a cotação, um estado de cada vez', () => {
 
     const cota = await abrir(AINDA_NAO_COMECOU);
     expect(textoDe(cota, daCarteira('cotacao'))).toContain(
-      'A cotação ainda não começou.'
+      'Aperte “Cotar agora” para pedir os preços às seguradoras.'
     );
     await clicar(cota, 'cotar-agora');
     expect(cotacao(cota).attributes('data-cotacao')).toBe('COTANDO');
@@ -817,7 +852,7 @@ describe('a conta só cota os tipos que ela cota', () => {
 
 describe('o título da gaveta não contradiz a cotação logo abaixo', () => {
   it.each([
-    [AINDA_NAO_COMECOU, {}, 'A renovação ainda não começou.'],
+    [AINDA_NAO_COMECOU, {}, 'A renovação começou. Falta cotar.'],
     [COTANDO, {}, 'A cotação está sendo feita.'],
     [PRONTA, {}, 'A cotação está pronta. Falta enviar.'],
     [
@@ -856,7 +891,7 @@ describe('o título da gaveta não contradiz a cotação logo abaixo', () => {
     [
       AINDA_NAO_COMECOU,
       { caso: 'cotacao_sem_pdf' },
-      'O preço chegou. Falta enviar.',
+      'A cotação está pronta. Falta enviar.',
     ],
   ])('seguro %i com %j: "%s"', async (id, opcoes, titulo) => {
     const w = await abrir(id, fonteDaDemo(opcoes));

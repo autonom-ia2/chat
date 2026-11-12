@@ -23,7 +23,6 @@ import {
   fimDaRenovacao,
 } from '../../../carteira/cotacaoDoCard';
 import { PASSOS, passoDaVez } from '../../../carteira/passoDaVez';
-import { tituloDaRenovacao } from '../../../carteira/tituloDaRenovacao';
 import { useSeguroAberto } from '../../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../../carteira/useTextosDoSeguro';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../../ficha/useEstadoDaFicha';
@@ -98,13 +97,7 @@ const daConta = computed(() => ({
 }));
 const cotacao = computed(() => cotacaoDoCard(seguro.value, daConta.value));
 // O título: a etapa e a cotação dizem a mesma coisa (carteira/tituloDaRenovacao).
-const emQuePe = computed(() => {
-  const { id, etapa } = tituloDaRenovacao(
-    seguro.value.renovacao,
-    cotacao.value
-  );
-  return t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.SITUACAO.${id}`, { etapa });
-});
+const emQuePe = computed(() => textos.renovacao(seguro.value, daConta.value));
 const passo = computed(() =>
   passoDaVez(seguro.value?.renovacao, cotacao.value, {
     preenchendo: preenchendo.value,
@@ -123,7 +116,7 @@ const comoTerminou = computed(() => {
     ? tk('NAO_RENOVOU_MOTIVO', {
         motivo: motivoEscrito || nomeDoMotivo(motivo),
       })
-    : textos.renovacao(seguro.value.renovacao);
+    : emQuePe.value;
 });
 
 const dizer = (texto, desfazer = null) => {
@@ -362,10 +355,13 @@ onMounted(() => {
           @desfazer="aviso.desfazer?.()"
         />
         <template v-if="!fim">
+          <!-- Com o botão do passo são três: o azul ocupa a linha de cima e
+               "Renovou" e "Não renovou" dividem a de baixo, em qualquer
+               largura (nenhum deles fica sozinho numa linha). -->
           <Button
             v-if="botaoDoPasso"
             size="lg"
-            class="basis-full sm:basis-auto"
+            class="basis-full"
             :data-carteira="botaoDoPasso.marca"
             :is-loading="
               Boolean(botaoDoPasso.ocupado) &&
@@ -374,25 +370,29 @@ onMounted(() => {
             :label="botaoDoPasso.rotulo"
             @click="botaoDoPasso.aoClicar"
           />
-          <Button
-            size="lg"
-            class="flex-1 sm:flex-none"
-            :slate="!renovouEAVez"
-            :faded="!renovouEAVez"
-            data-carteira="renovou"
-            :is-loading="aberto.ocupado.value === 'renovou'"
-            :label="tk('RENOVOU')"
-            @click="renovou"
-          />
-          <Button
-            slate
-            faded
-            size="lg"
-            class="flex-1 sm:flex-none"
-            data-carteira="nao-renovou"
-            :label="tk('NAO_RENOVOU')"
-            @click="dialogoDoMotivo?.abrir()"
-          />
+          <div data-carteira="desfechos" class="flex gap-3 basis-full">
+            <Button
+              size="lg"
+              class="flex-1"
+              :class="{ 'sm:flex-none': !botaoDoPasso }"
+              :slate="!renovouEAVez"
+              :faded="!renovouEAVez"
+              data-carteira="renovou"
+              :is-loading="aberto.ocupado.value === 'renovou'"
+              :label="tk('RENOVOU')"
+              @click="renovou"
+            />
+            <Button
+              slate
+              faded
+              size="lg"
+              class="flex-1"
+              :class="{ 'sm:flex-none': !botaoDoPasso }"
+              data-carteira="nao-renovou"
+              :label="tk('NAO_RENOVOU')"
+              @click="dialogoDoMotivo?.abrir()"
+            />
+          </div>
         </template>
         <Button
           v-else-if="fim === FIM.RENOVOU && !chegaSozinha"

@@ -14,6 +14,8 @@ import CampoDeDias from './CampoDeDias.vue';
 
 // #2897 — "Onde ficam as renovações?": criar o funil Renovação ou usar um que a
 // conta já tem (funil e etapa), e quantos dias antes do fim a renovação aparece.
+// O cartão do funil que já existe diz o que vem depois (escolher o funil e a
+// etapa), e o campo do funil, vazio, mostra "Escolha o funil".
 // A linha de efeito muda com o número. A mesma peça serve o passo de trazer
 // seguros e o primeiro cartão de "Como as renovações andam". Quem não pode
 // mexer em funis só lê a escolha de agora.
@@ -50,6 +52,7 @@ const opcoes = computed(() => [
   {
     id: ONDE.USAR,
     rotulo: to('USAR'),
+    descricao: to('USAR_APOIO'),
     atributos: { 'data-carteira': 'usar-funil' },
   },
 ]);
@@ -120,6 +123,7 @@ defineExpose({ focar: falta => ALVOS[falta]?.()?.focus() });
             :model-value="modelValue.funil"
             :options="opcoesDeFunil"
             :aria-label="to('FUNIL')"
+            :placeholder="to('ESCOLHA_O_FUNIL')"
             :invalid="falta === FALTAS.FUNIL"
             :described-by="falta === FALTAS.FUNIL ? idDoAviso : undefined"
             @update:model-value="

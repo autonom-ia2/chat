@@ -14,7 +14,7 @@ import {
   seguroPorId,
 } from './carteira';
 import { comOCaso, propostaDeExemplo, respostasPara } from './carteiraCasos';
-import { historiaDaDemo } from './carteiraHistoria';
+import { historiaDaDemo, naoSaiuNaDemo } from './carteiraHistoria';
 import { DESFECHOS } from '../carteira/situacaoDaRenovacao';
 
 const VOCE = { papel: 'voce' };
@@ -27,6 +27,15 @@ export const historiaComOCaso = (id, caso, agora = Date.now()) => {
   return seguro
     ? historiaDaDemo(seguro, escritaDe(id).feitos, agora, caso)
     : [];
+};
+
+// O seguro como o `?caso=` o mostra, já com o que ia sair sozinho e não saiu
+// (o mesmo que a história conta).
+const seguroComOCaso = (seguro, caso, agora = Date.now()) => {
+  const visto = comOCaso(seguro, caso, agora);
+  return visto
+    ? { ...visto, naoSaiu: naoSaiuNaDemo(visto, agora, caso) }
+    : visto;
 };
 
 // ---- escritas ---------------------------------------------------------------
@@ -154,7 +163,7 @@ export const enviarPalavras = (id, _dados, agora = Date.now()) =>
   nasPalavras(id, agora, { enviadoEm: emSegundos(agora) }, 'palavras_enviadas');
 
 export const demoDaRenovacao = {
-  comOCaso,
+  comOCaso: seguroComOCaso,
   historiaComOCaso,
   enviarProposta,
   renovou,

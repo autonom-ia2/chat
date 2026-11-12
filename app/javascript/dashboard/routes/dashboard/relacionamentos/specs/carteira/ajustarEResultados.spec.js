@@ -104,7 +104,9 @@ describe('Tela 13: como as renovações andam', () => {
       'Mandar sozinho aos 30, 15 e 7 dias'
     );
     expect(escolhido(w, 'ajuste-algo-mudou')).toBe('Perguntar');
-    expect(escolhido(w, 'ajuste-quem-cota')).toContain('Sozinho');
+    expect(escolhido(w, 'ajuste-quem-cota')).toContain(
+      'Automático, sem conversar com a pessoa'
+    );
     expect(escolhido(w, 'ajuste-como-envia')).toBe(
       'Uma pessoa confere e aperta Enviar'
     );
@@ -275,17 +277,23 @@ describe('Tela 13: como as renovações andam', () => {
       .map(cartao => cartao.text().split('\n').join(' '))
       .map(texto => texto.split(' ').filter(Boolean).join(' '));
 
-  it('quem faz a cotação: sozinho, o agente da conta ou a equipe, cada um com o que faz', async () => {
+  it('quem faz a cotação: automático, o agente da conta ou a equipe, cada um com o que faz', async () => {
     const w = await ajustar();
 
     expect(quemCota(w)).toEqual([
-      'Sozinho Cota sem conversar com a pessoa. Se faltar dado, o card mostra e você preenche.',
+      'Automático, sem conversar com a pessoa Se faltar dado, o card mostra e você preenche.',
       'Nina É o seu agente: conversa com a pessoa, pede o que falta e cota.',
       'A equipe Alguém da equipe cota e põe a proposta na renovação.',
     ]);
+    // Cada opção tem a sua marca: é por ela que o print prova quem está lá.
+    expect(
+      w
+        .findAll(`${daCarteira('ajuste-quem-cota')} [role="radio"]`)
+        .map(cartao => cartao.attributes('data-carteira'))
+    ).toEqual(['cota-automatico', 'cota-o-agente', 'cota-a-equipe']);
   });
 
-  it('conta que não cota sem conversar: "Sozinho" não aparece e a escolha cai no agente, sem nada a salvar', async () => {
+  it('conta que não cota sem conversar: "Automático" não aparece e a escolha cai no agente, sem nada a salvar', async () => {
     const w = await ajustar({ caso: 'ajustes_sem_sozinho' });
 
     expect(quemCota(w).map(texto => texto.split(' ')[0])).toEqual([
@@ -293,6 +301,10 @@ describe('Tela 13: como as renovações andam', () => {
       'A',
     ]);
     expect(escolhido(w, 'ajuste-quem-cota')).toContain('Nina');
+    expect(w.find(daCarteira('cota-automatico')).exists()).toBe(false);
+    expect(w.get(daCarteira('cota-o-agente')).attributes('aria-checked')).toBe(
+      'true'
+    );
 
     // A escolha que a conta não tem não conta como mudança de quem usa.
     await clicar(w, daCarteira('salvar-ajustes'));

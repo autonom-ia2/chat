@@ -68,6 +68,8 @@ const escolha = (valor, chave, extras = {}) => ({
   ...extras,
 });
 const com = (chave, valores) => ({ descricao: ta(chave, valores) });
+// A marca de cada opção: é por ela que o robô de print acha o cartão.
+const marca = nome => ({ atributos: { 'data-carteira': nome } });
 
 const opcoes = computed(() => {
   // O nome é o que o corretor deu ao agente de cotação da conta: pode ser
@@ -79,6 +81,7 @@ const opcoes = computed(() => {
           id: QUEM_COTA.AGENTE,
           rotulo: agente,
           ...com('QUEM_COTA.AGENTE_APOIO'),
+          ...marca('cota-o-agente'),
         },
       ]
     : [];
@@ -91,23 +94,21 @@ const opcoes = computed(() => {
       escolha(ALGO_MUDOU.PERGUNTAR, 'ALGO_MUDOU.PERGUNTAR'),
       escolha(ALGO_MUDOU.NAO, 'ALGO_MUDOU.NAO_PERGUNTAR'),
     ],
-    // "Sozinho" só entra na conta que cota sem conversar com a pessoa.
+    // "Automático" só entra na conta que cota sem conversar com a pessoa.
     quemCota: [
       ...(conta.value.cotaSemConversa
         ? [
-            escolha(
-              QUEM_COTA.ROBO,
-              'QUEM_COTA.ROBO',
-              com('QUEM_COTA.ROBO_APOIO')
-            ),
+            escolha(QUEM_COTA.ROBO, 'QUEM_COTA.ROBO', {
+              ...com('QUEM_COTA.ROBO_APOIO'),
+              ...marca('cota-automatico'),
+            }),
           ]
         : []),
       ...doAgente,
-      escolha(
-        QUEM_COTA.NINGUEM,
-        'QUEM_COTA.NINGUEM',
-        com('QUEM_COTA.NINGUEM_APOIO')
-      ),
+      escolha(QUEM_COTA.NINGUEM, 'QUEM_COTA.NINGUEM', {
+        ...com('QUEM_COTA.NINGUEM_APOIO'),
+        ...marca('cota-a-equipe'),
+      }),
     ],
     comoEnvia: [
       escolha(COMO_ENVIA.CONFERE, 'COMO_ENVIA.CONFERE', {

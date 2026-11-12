@@ -86,6 +86,8 @@ export const CASOS_DA_DEMO = [
   'ajustes_nao_salvou',
   'palavras_lendo',
   'palavras_erro',
+  // Banca — ninguém deve parcela: o grupo "Parcela atrasada" sem ninguém.
+  'parcelas_em_dia',
 ];
 
 export const casoPedido = (

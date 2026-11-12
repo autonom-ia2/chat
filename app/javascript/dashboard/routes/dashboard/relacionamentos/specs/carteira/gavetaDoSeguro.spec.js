@@ -488,16 +488,16 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
       'Se acontecer alguma coisa: me chame aqui no WhatsApp. Eu te digo o que fazer.'
     );
     expect(previa).toContain('Vale o que está escrito na sua apólice.');
-    expect(w.get(daCarteira('enviar-palavras')).text()).toBe(
-      `Enviar a ${primeiroNome}`
-    );
+    // Enviar é o passo da vez: o botão azul do rodapé, e só ele.
+    expect(acao(w).text()).toBe(`Enviar a ${primeiroNome}`);
+    expect(w.find(daCarteira('enviar-palavras')).exists()).toBe(false);
 
-    await w.get(daCarteira('enviar-palavras')).trigger('click');
+    await acao(w).trigger('click');
     await assentar();
 
     expect(textoDe(w, daCarteira('aviso-vivo'))).toContain('Texto enviado a ');
     expect(textoDe(w, daCarteira('palavras-enviado'))).toContain('Enviado em ');
-    expect(w.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    expect(acao(w).text()).toBe('Ver PDF');
     // O que foi enviado fica guardado, e abre quando se pede.
     const ver = w.get(daCarteira('ver-palavras-enviadas'));
     expect(ver.text()).toBe('Ver o que foi enviado');
@@ -564,7 +564,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
 
     await w.get(daCarteira('salvar-palavras')).trigger('click');
     await assentar();
-    await w.get(daCarteira('enviar-palavras')).trigger('click');
+    await acao(w).trigger('click');
     await assentar();
     await w.get(daCarteira('ver-palavras-enviadas')).trigger('click');
 
@@ -603,7 +603,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(lendo.get(daCarteira('palavras-lendo')).text()).toBe(
       'Lendo a apólice para escrever…'
     );
-    expect(lendo.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    expect(acao(lendo).text()).toBe('Ver PDF');
     lendo.unmount();
 
     const erro = await abrir(
@@ -618,7 +618,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(aviso.get('button').text()).toBe('Tentar de novo');
   });
 
-  it('o texto que ia sair sozinho e não saiu: o bloco diz por quê e chama para conversar', async () => {
+  it('o texto que ia sair sozinho e não saiu: o bloco diz por quê e o rodapé chama para conversar', async () => {
     const w = await abrir(
       APOLICE_NOVA,
       fonteDaDemo({ caso: 'palavras_nao_saiu' })
@@ -627,8 +627,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(textoDe(w, daCarteira('palavras-nao-saiu'))).toBe(
       'O WhatsApp não deixou sair agora. A equipe foi avisada.'
     );
-    expect(w.find(daCarteira('enviar-palavras')).exists()).toBe(false);
-    const conversar = w.get(daCarteira('conversar-sobre-as-palavras'));
+    const conversar = acao(w);
     expect(conversar.text()).toBe('Conversar');
     await conversar.trigger('click');
     expect(useAlert).toHaveBeenCalledWith(
@@ -652,7 +651,7 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(textoDe(sozinho, daCarteira('palavras-enviado'))).toContain(
       'Enviado sozinho em '
     );
-    expect(sozinho.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    expect(acao(sozinho).text()).toBe('Ver PDF');
     expect(sozinho.find(daCarteira('ver-palavras-enviadas')).exists()).toBe(
       true
     );

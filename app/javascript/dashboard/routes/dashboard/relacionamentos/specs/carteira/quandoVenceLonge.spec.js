@@ -61,12 +61,17 @@ describe('acima de 90 dias a tela mostra só a data', () => {
     });
     const frase = dias =>
       textoDe(
-        montar(FraseDoSeguro, { seguro: emRenovacao(dias) }),
+        montar(FraseDoSeguro, {
+          seguro: emRenovacao(dias),
+          daConta: { cotaSozinha: true },
+        }),
         daCarteira('frase-do-seguro')
       );
 
-    expect(frase(18)).toBe('Vence em 18 dias. A renovação ainda não começou.');
-    expect(frase(1)).toBe('Vence amanhã. A renovação ainda não começou.');
+    expect(frase(18)).toBe(
+      'Vence em 18 dias. A renovação começou. Falta cotar.'
+    );
+    expect(frase(1)).toBe('Vence amanhã. A renovação começou. Falta cotar.');
   });
 });
 

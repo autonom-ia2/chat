@@ -87,10 +87,11 @@ describe('Tela 10: onde ficam as renovações?', () => {
     const criar = w.get(daCarteira('criar-funil'));
     expect(criar.attributes('aria-checked')).toBe('true');
     expect(criar.text()).toContain(
-      'Já vem com os passos: A vencer, Cotando, Opções enviadas, Negociação, Renovado.'
+      'Já vem com as etapas: A vencer, Cotando, Opções enviadas, Negociação, Renovado.'
     );
+    // O outro cartão também diz onde o card vai parar.
     expect(w.get(daCarteira('usar-funil')).text()).toBe(
-      'Usar um funil que já tenho'
+      'Usar um funil que já tenho Você escolhe o funil e a etapa em que a renovação entra.'
     );
     expect(w.find(daCarteira('escolher-funil')).exists()).toBe(false);
     expect(w.get(`${daCarteira('dias-antes')} input`).element.value).toBe('60');

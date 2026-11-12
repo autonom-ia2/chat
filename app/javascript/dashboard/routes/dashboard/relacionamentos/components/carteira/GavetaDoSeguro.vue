@@ -18,12 +18,11 @@ import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../ficha/GavetaLateral.vue';
 import MenuMaisAcoes from '../lista/MenuMaisAcoes.vue';
 import { SELOS, seloDoSeguro } from '../../fonte/selosDoSeguro';
-import { cotaEsteSeguro } from '../../carteira/cotacaoDoCard';
+import { COTACAO, cotacaoDoCard } from '../../carteira/cotacaoDoCard';
 import { cardNasceAmanha } from '../../carteira/formularioDoSeguro';
-import {
-  ACOES_DO_SEGURO,
-  situacaoDoSeguro,
-} from '../../carteira/situacaoDoSeguro';
+import { oQueNaoSaiu } from '../../carteira/oQueNaoSaiu';
+import { DO_RODAPE, rodapeDoSeguro } from '../../carteira/rodapeDoSeguro';
+import { PASSOS_DO_SEGURO, passoDoSeguro } from '../../carteira/passoDoSeguro';
 import { useSeguroAberto } from '../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../ficha/useEstadoDaFicha';
@@ -39,7 +38,11 @@ import DialogoDePrevia from './renovacao/DialogoDePrevia.vue';
 import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 
 // #2897 — a gaveta do seguro: tudo de um seguro e o próximo passo dele (um só
-// por vez, no rodapé: fica à vista também no celular). "Corrigir" troca o
+// por vez, no rodapé: fica à vista também no celular). O passo da vez é o
+// único botão azul (carteira/passoDoSeguro.js): com algo que não saiu ou um
+// envio esperando, ele toma o lugar do passo de sempre, que fica ao lado como
+// secundário; nenhum botão aparece duas vezes. O que ia sair sozinho e não
+// saiu é dito no topo, logo abaixo da frase do seguro. "Corrigir" troca o
 // conteúdo da mesma gaveta. Marcar como cancelado não pede confirmação: o aviso
 // traz "Desfazer", sem prazo. "Abrir a renovação" passa a vez à gaveta da
 // renovação (quem hospeda troca uma pela outra). `apoliceId` nulo = fechada.
@@ -86,7 +89,33 @@ const titulo = computed(() => {
     ? t('RELACIONAMENTOS_CARTEIRA.CORRIGIR.TITULO', { tipo: tipo.value })
     : tg('TITULO', { tipo: tipo.value, seguradora: seguro.value.seguradora });
 });
-const situacao = computed(() => situacaoDoSeguro(seguro.value, props.agora));
+// A pessoa está mudando o texto em palavras simples: enviar espera o Salvar.
+const alterandoPalavras = ref(false);
+const passo = computed(() =>
+  passoDoSeguro(seguro.value, props.agora, {
+    alterandoPalavras: alterandoPalavras.value,
+  })
+);
+// A ação já é um botão do rodapé (azul ou secundário)?
+const noRodape = acao => [passo.value.azul, passo.value.depois].includes(acao);
+const daConta = computed(() => ({
+  cotaSozinha: props.fonte.cotaSozinha,
+  tiposQueCota: props.fonte.tiposQueCota,
+}));
+const cotacao = computed(() => cotacaoDoCard(seguro.value, daConta.value));
+// O que ia sair sozinho e o WhatsApp não deixou: o que foi e, no topo, o
+// caminho ("Converse com <nome>."; o botão "Conversar" é o azul do rodapé).
+const naoSaiu = computed(() => oQueNaoSaiu(seguro.value));
+const oQueNaoSaiuEscrito = computed(() =>
+  naoSaiu.value
+    ? tg(`NAO_SAIU.${naoSaiu.value.id}`, { dias: naoSaiu.value.dias })
+    : ''
+);
+const naoSaiuNoTopo = computed(() =>
+  naoSaiu.value
+    ? `${oQueNaoSaiuEscrito.value} ${tg('NAO_SAIU.CAMINHO', { nome: primeiroNome.value })}`
+    : ''
+);
 const cancelado = computed(
   () => seloDoSeguro(seguro.value, props.agora) === SELOS.CANCELADO
 );
@@ -100,8 +129,8 @@ const dizer = (texto, desfazer = null) => {
 };
 const simular = (chave, valores) => useAlert(tg(`AVISOS.${chave}`, valores));
 // A proposta oficial ou o resumo da cotação que saiu (um passo da história).
-const verOQueSaiu = passo =>
-  passo.acao === 'ver_resumo'
+const verOQueSaiu = daHistoria =>
+  daHistoria.acao === 'ver_resumo'
     ? useAlert(t('RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.ABRINDO_RESUMO'))
     : simular('ABRINDO_PROPOSTA');
 const focarTitulo = async () => {
@@ -188,41 +217,32 @@ const enviarPalavras = () =>
 const conversar = () =>
   simular('ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name });
 
-// O próximo passo do seguro. A conversa e o PDF de verdade são de outras
+// O que cada botão do rodapé faz. A conversa e o PDF de verdade são de outras
 // entregas: por ora, o aviso diz o que vai abrir.
-const PASSOS = {
-  [ACOES_DO_SEGURO.ABRIR_RENOVACAO]: abrirRenovacao,
-  [ACOES_DO_SEGURO.VER_PDF]: () => simular('ABRINDO_PDF', { tipo: tipo.value }),
-  [ACOES_DO_SEGURO.ANEXAR_PDF]: abrirPdf,
-  [ACOES_DO_SEGURO.ANEXAR_APOLICE_NOVA]: abrirPdf,
-  [ACOES_DO_SEGURO.AVISAR]: avisarDaParcela,
-  [ACOES_DO_SEGURO.CONVERSAR_COM]: conversar,
+const ACOES = {
+  [PASSOS_DO_SEGURO.ABRIR_RENOVACAO]: abrirRenovacao,
+  [PASSOS_DO_SEGURO.VER_PDF]: () =>
+    simular('ABRINDO_PDF', { tipo: tipo.value }),
+  [PASSOS_DO_SEGURO.ANEXAR_PDF]: abrirPdf,
+  [PASSOS_DO_SEGURO.ANEXAR_APOLICE_NOVA]: abrirPdf,
+  [PASSOS_DO_SEGURO.AVISAR]: avisarDaParcela,
+  [PASSOS_DO_SEGURO.CONVERSAR_COM]: conversar,
+  [PASSOS_DO_SEGURO.CONVERSAR]: conversar,
+  [PASSOS_DO_SEGURO.ENVIAR_PALAVRAS]: enviarPalavras,
 };
-const proximoPasso = () => PASSOS[situacao.value.acao]();
-
-const itensDoMenu = computed(() => [
-  {
-    id: 'anexar',
-    rotulo: tg('RODAPE.ANEXAR_OUTRO_PDF'),
-    icone: 'i-lucide-paperclip',
-    atributos: { 'data-carteira': 'anexar-outro-pdf' },
-  },
-  cancelado.value
-    ? {
-        id: 'voltar',
-        rotulo: tg('RODAPE.VOLTAR_A_ATIVO'),
-        icone: 'i-lucide-rotate-ccw',
-        atributos: { 'data-carteira': 'voltar-a-ativo' },
-      }
-    : {
-        id: 'cancelar',
-        rotulo: tg('RODAPE.MARCAR_CANCELADO'),
-        icone: 'i-lucide-circle-slash',
-        atributos: { 'data-carteira': 'marcar-cancelado' },
-      },
-]);
-const aoEscolherNoMenu = id =>
-  ({ anexar: abrirPdf, voltar: voltarAAtivo, cancelar: marcarCancelado })[id]();
+const fazer = acao => ACOES[acao]();
+// "Conversar" e "Enviar a <nome>" já têm frase na casa (a da proposta e a do
+// texto em palavras simples): o rodapé diz com as mesmas palavras.
+const ROTULOS = {
+  [PASSOS_DO_SEGURO.CONVERSAR]: () =>
+    t('RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.CONVERSAR'),
+  [PASSOS_DO_SEGURO.ENVIAR_PALAVRAS]: () =>
+    t('RELACIONAMENTOS_CARTEIRA.PALAVRAS.ENVIAR_A', {
+      nome: primeiroNome.value,
+    }),
+};
+const rotuloDe = acao =>
+  ROTULOS[acao]?.() ?? tg(`ACAO.${acao}`, { nome: primeiroNome.value });
 
 const abrirCorrecao = async () => {
   erroAoSalvar.value = false;
@@ -236,6 +256,43 @@ const abrirCorrecao = async () => {
   corrigindo.value = true;
   focarTitulo();
 };
+// O rodapé tem o azul, um secundário e o "⋯"; o resto mora no "⋯"
+// (carteira/rodapeDoSeguro.js).
+const rodape = computed(() =>
+  rodapeDoSeguro(passo.value, { cancelado: cancelado.value })
+);
+const DO_MENU = {
+  [DO_RODAPE.CORRIGIR]: () => ({
+    rotulo: tg('RODAPE.CORRIGIR'),
+    icone: 'i-lucide-pencil',
+    atributos: { 'data-carteira': 'corrigir-no-menu' },
+    aoEscolher: abrirCorrecao,
+  }),
+  [DO_RODAPE.ANEXAR_OUTRO_PDF]: () => ({
+    rotulo: tg('RODAPE.ANEXAR_OUTRO_PDF'),
+    icone: 'i-lucide-paperclip',
+    atributos: { 'data-carteira': 'anexar-outro-pdf' },
+    aoEscolher: abrirPdf,
+  }),
+  [DO_RODAPE.VOLTAR_A_ATIVO]: () => ({
+    rotulo: tg('RODAPE.VOLTAR_A_ATIVO'),
+    icone: 'i-lucide-rotate-ccw',
+    atributos: { 'data-carteira': 'voltar-a-ativo' },
+    aoEscolher: voltarAAtivo,
+  }),
+  [DO_RODAPE.MARCAR_CANCELADO]: () => ({
+    rotulo: tg('RODAPE.MARCAR_CANCELADO'),
+    icone: 'i-lucide-circle-slash',
+    atributos: { 'data-carteira': 'marcar-cancelado' },
+    aoEscolher: marcarCancelado,
+  }),
+};
+const itensDoMenu = computed(() =>
+  rodape.value.menu.map(id => ({ id, ...DO_MENU[id]() }))
+);
+const aoEscolherNoMenu = id =>
+  itensDoMenu.value.find(item => item.id === id)?.aoEscolher();
+
 const sairDaCorrecao = () => {
   corrigindo.value = false;
   focarTitulo();
@@ -255,6 +312,7 @@ watch(
   () => props.apoliceId,
   id => {
     corrigindo.value = false;
+    alterandoPalavras.value = false;
     dizer('');
     if (id) aberto.carregar();
   },
@@ -309,7 +367,12 @@ onMounted(() => {
         @salvar="salvarCorrecao"
       />
       <template v-else>
-        <FraseDoSeguro :seguro="seguro" :agora="agora" />
+        <FraseDoSeguro
+          :seguro="seguro"
+          :agora="agora"
+          :da-conta="daConta"
+          :nao-saiu="naoSaiuNoTopo"
+        />
         <DadosDoSeguro
           :seguro="seguro"
           :agora="agora"
@@ -318,21 +381,24 @@ onMounted(() => {
         <RenovacaoDoSeguro
           v-if="seguro.renovacao"
           :renovacao="seguro.renovacao"
-          :mostra-abrir="situacao.acao !== ACOES_DO_SEGURO.ABRIR_RENOVACAO"
-          :pode-cotar="cotaEsteSeguro(seguro, fonte) && emRenovacao"
+          :em-que-pe="textos.renovacao(seguro, daConta)"
+          :nao-saiu="naoSaiu?.naRenovacao ? oQueNaoSaiuEscrito : ''"
+          :mostra-abrir="!noRodape(PASSOS_DO_SEGURO.ABRIR_RENOVACAO)"
+          :pode-cotar="cotacao === COTACAO.NAO_COMECOU && emRenovacao"
           :pedindo-cotacao="aberto.ocupado.value === 'cotar'"
           @abrir="abrirRenovacao"
           @cotar="cotar"
         />
         <PalavrasSimples
           v-if="seguro.palavras"
+          v-model:alterando="alterandoPalavras"
           :seguro="seguro"
           :ocupado="aberto.ocupado.value"
           :agora="agora"
+          :envia-no-rodape="noRodape(PASSOS_DO_SEGURO.ENVIAR_PALAVRAS)"
           @salvar="salvarPalavras"
           @enviar="enviarPalavras"
           @tentar="aberto.carregar"
-          @conversar="conversar"
         />
         <HistoriaDoSeguro
           :itens="aberto.historia.value"
@@ -395,7 +461,7 @@ onMounted(() => {
           <div
             class="flex basis-full sm:basis-auto"
             :data-carteira="
-              situacao.acao === ACOES_DO_SEGURO.AVISAR
+              passo.azul === PASSOS_DO_SEGURO.AVISAR
                 ? 'avisar-parcela'
                 : undefined
             "
@@ -404,28 +470,51 @@ onMounted(() => {
               size="lg"
               class="flex-1"
               data-carteira="gaveta-acao"
-              :data-acao="situacao.acao"
+              :data-acao="passo.azul"
               :aria-describedby="alerta ? idDoAlerta : undefined"
-              :label="tg(`ACAO.${situacao.acao}`, { nome: primeiroNome })"
-              @click="proximoPasso"
+              :is-loading="
+                passo.azul === PASSOS_DO_SEGURO.ENVIAR_PALAVRAS &&
+                aberto.ocupado.value === 'enviarPalavras'
+              "
+              :label="rotuloDe(passo.azul)"
+              @click="fazer(passo.azul)"
             />
           </div>
-          <Button
-            slate
-            faded
-            size="lg"
-            class="flex-1 sm:flex-none"
-            data-carteira="corrigir"
-            :label="tg('RODAPE.CORRIGIR')"
-            @click="abrirCorrecao"
-          />
-          <div data-carteira="mais-do-seguro">
-            <MenuMaisAcoes
-              tamanho="lg"
-              :rotulo="tg('RODAPE.MAIS')"
-              :itens="itensDoMenu"
-              @escolher="aoEscolherNoMenu"
+          <!-- O secundário e o "⋯" andam juntos: se não couberem ao lado do
+               azul, descem os dois para a linha de baixo. -->
+          <div
+            data-carteira="rodape-secundarios"
+            class="flex flex-1 min-w-0 gap-3 sm:flex-none"
+          >
+            <Button
+              v-if="rodape.secundario === DO_RODAPE.CORRIGIR"
+              slate
+              faded
+              size="lg"
+              class="flex-1 sm:flex-none"
+              data-carteira="corrigir"
+              :label="tg('RODAPE.CORRIGIR')"
+              @click="abrirCorrecao"
             />
+            <Button
+              v-else
+              slate
+              faded
+              size="lg"
+              class="flex-1 sm:flex-none"
+              data-carteira="gaveta-acao-secundaria"
+              :data-acao="rodape.secundario"
+              :label="rotuloDe(rodape.secundario)"
+              @click="fazer(rodape.secundario)"
+            />
+            <div data-carteira="mais-do-seguro">
+              <MenuMaisAcoes
+                tamanho="lg"
+                :rotulo="tg('RODAPE.MAIS')"
+                :itens="itensDoMenu"
+                @escolher="aoEscolherNoMenu"
+              />
+            </div>
           </div>
         </template>
       </div>
