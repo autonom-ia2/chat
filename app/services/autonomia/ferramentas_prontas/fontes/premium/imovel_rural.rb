@@ -24,7 +24,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural
     Extrair.sem_vazio({ 'situacao' => situacao, 'embargos' => lista })
   end
 
-  # Todas as consultas do card; a `FONTE` leva só as que a BigDataCorp responde hoje (`Premium.ligadas`). Desde 12/11
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Desde 12/11
   # (#2946), o embargo do IBAMA está fora (dataset "desligado" na BigDataCorp), e com ele o CNPJ: o card só aceita o
   # código do recibo do CAR.
   CONSULTAS = [
@@ -41,11 +41,11 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural
     )
   ].freeze
 
-  # A descrição não lista as consultas: o modelo as lê na ferramenta, que acompanha `Premium.ligadas`.
+  # A descrição não lista as consultas: o modelo as lê na ferramenta, que acompanha `Premium::DESLIGADAS_NA_FONTE`.
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'imovel_rural', slug: 'pronta_imovel_rural', nome: 'Imóvel rural',
     descricao: 'Consulta paga: confere um imóvel rural, só com as consultas desta ferramenta.',
-    consultas: Premium.ligadas(CONSULTAS),
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). CAR pelo código do recibo; embargo do IBAMA pelo CNPJ.'
   )

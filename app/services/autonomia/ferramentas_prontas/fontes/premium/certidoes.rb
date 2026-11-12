@@ -28,7 +28,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Certidoes
     )
   )
 
-  # Todas as certidões do card; a `FONTE` leva só as que a BigDataCorp responde hoje (`Premium.ligadas`). Desde 12/11
+  # Todas as certidões do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Desde 12/11
   # (#2946), só a do CNJ: as outras quatro respondem "dataset desligado" na BigDataCorp.
   CONSULTAS = [
     certidao('divida_uniao', 'dívida com a União (PGFN)', 'ondemand_pgfn_company', '0.10', '0.15'),
@@ -39,13 +39,13 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Certidoes
   ].freeze
 
   # A descrição não lista as certidões: o modelo as lê nas consultas da ferramenta (`Fonte#descricao_para_o_modelo`), que
-  # acompanham `Premium.ligadas`. A certidão que não está lá não é tirada aqui, e o modelo diz isso ao cliente.
+  # acompanham `Premium::DESLIGADAS_NA_FONTE`. A certidão que não está lá não é tirada aqui, e o modelo diz isso ao cliente.
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'certidoes_empresa', slug: 'pronta_certidoes_empresa', nome: 'Certidões da empresa',
     descricao: 'Consulta paga: tira na hora, na fonte oficial, uma certidão de uma empresa pelo CNPJ e diz a situação. ' \
-               'Use uma consulta por certidão pedida. Certidão que não está nas consultas desta ferramenta não é tirada ' \
-               'aqui: diga isso ao cliente com educação. Só empresa: não consulta pessoa física.',
-    consultas: Premium.ligadas(CONSULTAS),
+               'Use uma consulta por certidão pedida. Outra certidão não é tirada aqui: diga isso ao cliente com ' \
+               'educação. Só empresa: não consulta pessoa física.',
+    consultas: CONSULTAS, so_esta: 'Só tira esta certidão:',
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma, repasse liberado pelo advogado). Certidões sob demanda, por CNPJ.'
   )

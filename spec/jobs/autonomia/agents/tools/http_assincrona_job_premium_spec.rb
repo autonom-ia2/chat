@@ -167,10 +167,15 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob do
     let(:raio_x) { incluir_pronta('raio_x_empresa', conta: account, agente: agent) }
     let(:premium) { Autonomia::FerramentasProntas::Premium }
 
+    # A folga mínima entre o fim da consulta mais lenta e o vencimento da linha: a gravação do resultado e a conexão.
+    let(:folga_minima) { 15.seconds }
+
     it 'a ferramenta incluída agora nasce com o prazo novo, e a linha vence depois dos 122 s mesmo na incluída antes (23 s)' do
-      expect(raio_x.timeout_seconds).to eq(premium.prazo_maximo + 1)
+      expect(premium.prazo_maximo).to eq(122)
+      expect(raio_x.timeout_seconds).to eq(123)
       freeze_time do
-        expect(described_class.vence_em(23)).to be > premium.prazo_maximo.seconds.from_now
+        expect(described_class.vence_em(23) - premium.prazo_maximo.seconds.from_now).to be > folga_minima
+        expect(described_class.vence_em(raio_x.timeout_seconds) - premium.prazo_maximo.seconds.from_now).to be > folga_minima
       end
     end
 

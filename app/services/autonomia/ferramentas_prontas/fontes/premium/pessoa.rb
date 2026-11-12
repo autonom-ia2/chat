@@ -25,7 +25,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Pessoa
     Extrair.sem_vazio(Extrair.campos(dado, registros_ativos: 'TotalActiveMemberships').merge('registros' => lista))
   end
 
-  # Todas as consultas do card; a `FONTE` leva só as que a BigDataCorp responde hoje (`Premium.ligadas`). Desde 12/11
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Desde 12/11
   # (#2946), a situação do CPF na Receita está fora: o dataset responde "desligado" na BigDataCorp.
   CONSULTAS = [
     Premium::ConsultaPaga.new(
@@ -45,13 +45,13 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Pessoa
     )
   ].freeze
 
-  # A descrição não lista o que o card confere: o modelo lê nas consultas da ferramenta, que acompanham `Premium.ligadas`.
+  # A descrição não lista o que o card confere: o modelo lê nas consultas da ferramenta, que acompanham `Premium::DESLIGADAS_NA_FONTE`.
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'conferir_pessoa', slug: 'pronta_conferir_pessoa', nome: 'Conferir a pessoa',
     descricao: 'Consulta paga: confere uma pessoa pelo CPF, só com as consultas desta ferramenta. Não existe consulta de ' \
                'telefone, e-mail, endereço, parentes, crédito ou antecedentes de pessoa física: se pedirem, diga com ' \
                'educação que esse dado não é consultado aqui.',
-    consultas: Premium.ligadas(CONSULTAS),
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Dado pessoal: só conferência, nunca contato nem parentes.'
   )

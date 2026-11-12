@@ -59,8 +59,15 @@ module Autonomia::FerramentasProntas::Catalogo
     ]
   end
 
-  # F7 (flag `agente_ferramentas_prontas_premium`): as consultas pagas à BigDataCorp, um card por tema.
+  # F7 (flag `agente_ferramentas_prontas_premium`): as consultas pagas à BigDataCorp, um card por tema. O card sem nenhuma
+  # consulta ligada (todas em `Premium::DESLIGADAS_NA_FONTE`, #2946) sai do catálogo: da vitrine, do "Incluir" e do
+  # turno (a ferramenta que um agente já tem fica fora do turno, como a de uma fonte que saiu do código).
   def premium
+    premium_no_codigo.select { |fonte| fonte.consultas.any? }
+  end
+
+  # Os 7 cards, com ou sem consulta ligada. As chaves deles seguem válidas no acesso da conta (`chaves`).
+  def premium_no_codigo
     [
       Autonomia::FerramentasProntas::Fontes::Premium::Certidoes::FONTE,
       Autonomia::FerramentasProntas::Fontes::Premium::RaioX::FONTE,
@@ -72,8 +79,10 @@ module Autonomia::FerramentasProntas::Catalogo
     ]
   end
 
+  # Também a do card Premium que saiu por estar todo desligado: o acesso da conta a ele continua válido para quando ele
+  # voltar.
   def chaves
-    todas.map(&:chave)
+    [*fundacao_e_lote1, *lote2, *bases, *premium_no_codigo].map(&:chave)
   end
 
   # As chaves que o Construtor e o cartão "pode ganhar" podem sugerir, iguais para todas as contas (o enum do schema

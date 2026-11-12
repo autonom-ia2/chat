@@ -27,16 +27,10 @@ module FerramentasPremiumHelper
     modulos_premium.flat_map { |modulo| modulo::CONSULTAS }
   end
 
-  # O card com TODAS as consultas, como ficará quando a BigDataCorp religar as desligadas: o catálogo devolve este no
-  # lugar do real. Prova que a consulta desligada continua certa e volta tirando só a linha dela da lista.
-  def card_com_as_desligadas!(chave)
-    real = Autonomia::FerramentasProntas::Catalogo.buscar(chave)
-    completo = Autonomia::FerramentasProntas::Fonte.new(chave: real.chave, slug: real.slug, nome: real.nome, descricao: real.descricao,
-                                                        consultas: consultas_do_card(chave), limite_diario: nil, flag: real.flag,
-                                                        termos: real.termos)
-    allow(Autonomia::FerramentasProntas::Catalogo).to receive(:buscar).and_call_original
-    allow(Autonomia::FerramentasProntas::Catalogo).to receive(:buscar).with(chave).and_return(completo)
-    completo
+  # A lista dos datasets desligados na BigDataCorp, trocada só neste exemplo (`[]`: como ficará quando ela religar tudo).
+  # A `Fonte` lê a lista a cada chamada: prova que a consulta volta tirando só a linha dela.
+  def desligar_na_fonte!(datasets)
+    stub_const('Autonomia::FerramentasProntas::Premium::DESLIGADAS_NA_FONTE', datasets.freeze)
   end
 
   def com_credencial_da_bigdatacorp(&)

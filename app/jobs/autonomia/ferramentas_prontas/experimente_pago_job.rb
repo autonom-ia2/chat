@@ -11,8 +11,8 @@
 # Prazo para começar (revisor, 12/11): com a fila cheia, o job pode começar depois de a tela desistir, e a consulta
 # seria feita e cobrada sem ninguém ver. O job que começa depois de `PRAZO_PARA_COMECAR` não consulta: a tela recebe
 # "nao_comecou" (nada foi cobrado). Desde o #2946 a conta vai no sentido contrário: o prazo para começar é fixo, e o da
-# tela (`Pedido::PRAZO_DA_TELA`) sai dele, das duas idas ao modelo, da consulta Premium mais lenta e da gravação. Uma
-# consulta mais lenta estica a tela, e o prazo para começar não encolhe.
+# tela (`Pedido::PRAZO_DA_TELA`) sai dele, do tempo antes da consulta, da consulta Premium mais lenta, da ida final ao
+# modelo e da gravação. Uma consulta mais lenta estica a tela, e o prazo para começar não encolhe.
 class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
   queue_as AgentToolsQueue::FILA.to_sym
   sidekiq_options retry: false
@@ -20,7 +20,6 @@ class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
   Pedido = Autonomia::FerramentasProntas::Experimente::Pedido
   Premium = Autonomia::FerramentasProntas::Premium
   NAO_COMECOU = 'nao_comecou'.freeze
-  IDAS_AO_MODELO = Pedido::IDAS_AO_MODELO
   FOLGA_DA_GRAVACAO = Pedido::FOLGA_DA_GRAVACAO
   PRAZO_PARA_COMECAR = Pedido::PRAZO_PARA_COMECAR
 

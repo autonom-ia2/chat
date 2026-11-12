@@ -21,9 +21,11 @@ module Autonomia::FerramentasProntas::Premium
   # OS DATASETS QUE A BIGDATACORP DESLIGOU (#2946). Teste direto na API em 12/11/2026: cada um respondeu
   # `-1203 DATASET DISABLED TEMPORARILY` em 0,4 s, sem cobrança. A consulta de um dataset desta lista sai do card
   # inteiro: da ferramenta do agente (o schema e as consultas aceitas), do "Responde N tipos de pergunta", da faixa de
-  # preço e do Experimente (`ligadas`). O código da consulta fica no arquivo do card (`Fontes::Premium::*::CONSULTAS`):
-  # quando a BigDataCorp religar, a consulta volta tirando a linha dela daqui. Os textos escritos à mão (a descrição do
-  # card na vitrine e o artigo 11.14 da Central) voltam junto, no mesmo PR.
+  # preço e do Experimente (`Fonte#consultas`, `ConsultaPaga#desligada?`). O card que fica sem nenhuma sai do catálogo
+  # (`Catalogo.premium`). O código da consulta fica no arquivo do card (`Fontes::Premium::*::CONSULTAS`).
+  # RELIGAR NÃO É SÓ TIRAR A LINHA: o código volta sozinho, mas os textos escritos à mão também têm de voltar no mesmo
+  # PR — a vitrine em en e pt_BR (`AGENTS.VITRINE.FERRAMENTAS.*`) e o artigo 11.14 da Central. O spec
+  # `premium_desligadas_nos_textos_spec.rb` falha enquanto a lista e esses textos não baterem.
   DESLIGADAS_NA_FONTE = %w[
     ondemand_pgfn_company
     ondemand_cert_labor_debt_absence_company
@@ -36,16 +38,12 @@ module Autonomia::FerramentasProntas::Premium
 
   module_function
 
-  # As consultas do card que a BigDataCorp responde hoje: fora as de `DESLIGADAS_NA_FONTE`.
-  def ligadas(consultas)
-    consultas.reject { |consulta| DESLIGADAS_NA_FONTE.include?(consulta.dataset.nome) }.freeze
-  end
-
-  # O maior prazo total entre as consultas Premium do catálogo, em segundos (o do dataset mais lento, com a folga da
-  # `ConsultaPaga`). Os prazos do Experimente Premium e do varredor saem daqui (`Experimente::Pedido`,
-  # `FecharEmAndamentoJob`): um dataset mais lento os estica sozinho.
+  # O maior prazo total entre as consultas Premium ligadas do catálogo, em segundos (o do dataset mais lento, com a folga
+  # da `ConsultaPaga`). Os prazos do Experimente Premium e do varredor saem daqui (`Experimente::Pedido`,
+  # `FecharEmAndamentoJob`): um dataset mais lento os estica sozinho. Com tudo desligado, o prazo da base.
   def prazo_maximo
-    Autonomia::FerramentasProntas::Catalogo.premium.map(&:prazo_maximo).max
+    Autonomia::FerramentasProntas::Catalogo.premium.filter_map(&:prazo_maximo).max ||
+      (Dataset::PRAZO_DA_BASE + ConsultaPaga::FOLGA)
   end
 
   def fonte?(fonte)

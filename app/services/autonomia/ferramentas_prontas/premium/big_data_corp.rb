@@ -2,8 +2,8 @@
 # (`Prospecting::Research::BigDataCorpClient#query_route`): a mesma credencial da plataforma e os mesmos erros com
 # código fechado. Credencial, token e o valor consultado nunca vão a log, erro nem resposta.
 #
-# Prazos (a chamada inteira cabe no prazo da consulta, e este no `timeout_seconds` da ferramenta e na folga do
-# `HttpAssincronaJob`):
+# Prazos (a chamada inteira cabe no prazo da consulta; este cabe no `timeout_seconds` da ferramenta incluída a partir
+# do #2946 e, na incluída antes, só na folga do `HttpAssincronaJob` — ver o fim deste bloco):
 #   - uma tentativa de consulta (`max_provider_attempts: 1`): repetir um 5xx ou um timeout de consulta paga pode cobrar
 #     duas vezes;
 #   - uma tentativa de token, com prazo curto (`PRAZO_DO_TOKEN`);

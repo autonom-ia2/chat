@@ -32,7 +32,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
                                            filiais: 'TotalBranches', idade_media_anos: 'AverageCompanyAge', atividades: 'TotalUniqueCNAES'))
   end
 
-  # Todas as consultas do card; a `FONTE` leva só as que a BigDataCorp responde hoje (`Premium.ligadas`). Empresas na região
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Empresas na região
   # tem o prazo das lentas (`Dataset::PRAZO_DAS_LENTAS`, #2946).
   CONSULTAS = [
     Premium::ConsultaPaga.new(
@@ -63,7 +63,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
     descricao: 'Consulta paga: telefone ou e-mail de uma EMPRESA pelo CNPJ, ou quantas empresas há numa região pelo ' \
                'CEP. Só empresa: não existe consulta de telefone, e-mail ou endereço de pessoa física nem de parentes. ' \
                'Se pedirem, diga com educação que esse dado não é consultado aqui e não chame esta ferramenta.',
-    consultas: Premium.ligadas(CONSULTAS),
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Só empresa; respeita a lista "não perturbe".'
   )

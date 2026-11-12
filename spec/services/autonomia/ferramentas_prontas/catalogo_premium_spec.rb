@@ -96,19 +96,62 @@ RSpec.describe Autonomia::FerramentasProntas::Catalogo, '.premium' do
       expect(catalogo.buscar('risco_endereco').consulta('vistoria')).to be_nil
     end
 
-    it 'as Certidões só com a do CNJ: o schema pede só o CNPJ, e a descrição diz qual certidão é' do
+    it 'as Certidões só com a do CNJ: o schema pede só o CNPJ, a descrição diz qual certidão sai e recusa as outras' do
       schema = catalogo.buscar('certidoes_empresa').openai_schema(slug: 'pronta_certidoes_empresa', usar_quando: nil)
 
       expect(schema[:parameters][:properties].keys).to eq(%w[cnpj])
-      expect(schema[:description]).to include('Responde só a: improbidade administrativa (certidão do CNJ).')
-      expect(schema[:description]).not_to include('PGFN', 'FGTS', 'CADIN', 'TST')
+      expect(schema[:description]).to include('Só tira esta certidão: improbidade administrativa (certidão do CNJ).',
+                                              'Outra certidão não é tirada aqui: diga isso ao cliente',
+                                              'Não consulta agora: dívida com a União (PGFN)', 'diga com educação')
     end
 
-    it 'o imóvel rural só com o CAR deixa de aceitar o CNPJ' do
+    it 'o imóvel rural só com o CAR deixa de aceitar o CNPJ e recusa o embargo do IBAMA com educação' do
       schema = catalogo.buscar('imovel_rural').openai_schema(slug: 'pronta_imovel_rural', usar_quando: nil)
 
       expect(schema[:parameters][:properties].keys).to eq(%w[codigo_car])
-      expect(schema[:description]).not_to include('IBAMA', 'CNPJ')
+      expect(schema[:description]).to include('Responde só a: a situação do imóvel no Cadastro Ambiental Rural',
+                                              'Não consulta agora: se a empresa tem área embargada pelo IBAMA')
+    end
+
+    it 'o risco do endereço recusa a vistoria com educação; o card sem nada desligado não ganha a frase' do
+      risco = catalogo.buscar('risco_endereco').openai_schema(slug: 'pronta_risco_endereco', usar_quando: nil)
+      placa = catalogo.buscar('historico_placa').openai_schema(slug: 'pronta_historico_placa', usar_quando: nil)
+
+      expect(risco[:description]).to include('Não consulta agora: o tipo, a área e as notas da vistoria do imóvel')
+      expect(placa[:description]).not_to include('Não consulta agora')
+    end
+
+    # Revisor (#2949): a lista pode pegar o único dataset de um card (a CNJ, o CAR, a placa). O card sai do catálogo
+    # inteiro (vitrine, "Incluir" e turno), o resto segue, e os prazos derivados não quebram.
+    it 'desligando a única consulta de um card, ele sai da vitrine e do agente, sem quebrar o resto' do
+      conta = create(:account)
+      ligar_premium(conta)
+      agente = Autonomia::Agents::Agent.create!(account: conta, name: 'Bot EXEMPLO', agent_type: 'custom', status: :active,
+                                                enabled: true, instruction: 'Atenda.')
+      ferramenta = incluir_pronta('certidoes_empresa', conta: conta, agente: agente)
+      desligar_na_fonte!([*premium::DESLIGADAS_NA_FONTE, 'ondemand_cnj_negative_certificate_company'])
+
+      expect(catalogo.premium.map(&:chave)).not_to include('certidoes_empresa')
+      expect(catalogo.buscar('certidoes_empresa')).to be_nil
+      expect(Autonomia::FerramentasProntas.disponiveis(conta).map(&:chave)).not_to include('certidoes_empresa')
+      expect(Autonomia::FerramentasProntas.no_turno?(ferramenta, agente)).to be(false)
+      expect(catalogo.chaves).to include('certidoes_empresa')
+      expect(premium.prazo_maximo).to eq(122)
+    end
+
+    it 'com tudo desligado, nenhum card fica, e o prazo derivado cai no da base' do
+      desligar_na_fonte!(todas_as_consultas_premium.map { |consulta| consulta.dataset.nome })
+
+      expect(catalogo.premium).to be_empty
+      expect(premium.prazo_maximo).to eq(premium::Dataset::PRAZO_DA_BASE + premium::ConsultaPaga::FOLGA)
+    end
+
+    it 'religando tudo (lista vazia), os 22 datasets voltam aos cards' do
+      desligar_na_fonte!([])
+
+      expect(catalogo.premium.sum { |card| card.consultas.size }).to eq(22)
+      expect(catalogo.buscar('certidoes_empresa').openai_schema(slug: 'x', usar_quando: nil)[:parameters][:properties]['consulta']['enum'])
+        .to eq(%w[divida_uniao trabalhista fgts cnj cadin])
     end
 
     it 'o card grátis de uma consulta só não ganha a frase das Premium' do

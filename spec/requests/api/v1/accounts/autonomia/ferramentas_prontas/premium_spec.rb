@@ -124,7 +124,7 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
       corpo = experimentar
 
       expect(response).to have_http_status(:accepted)
-      expect(corpo).to include('situacao' => 'consultando', 'pedido' => be_present, 'prazo_ms' => 145_000)
+      expect(corpo).to include('situacao' => 'consultando', 'pedido' => be_present, 'prazo_ms' => 147_000)
       expect(corpo['premium']).to include('restantes' => 20)
       expect(Autonomia::FerramentasProntas::ExperimentePagoJob).to have_been_enqueued.with(corpo['pedido'])
       expect(acompanhar(corpo['pedido'])).to eq('situacao' => 'consultando')

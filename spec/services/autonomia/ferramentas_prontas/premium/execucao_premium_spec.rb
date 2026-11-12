@@ -197,7 +197,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   # A vistoria está desligada na BigDataCorp desde 12/11 (#2946): o card volta a ter a consulta quando ela religar, e a
   # regra dela (o vazio não tem custo) tem de continuar certa.
   it 'a vistoria sem registro conta para o cliente, mas não tem custo da BigDataCorp' do
-    card_com_as_desligadas!('risco_endereco')
+    desligar_na_fonte!([])
     bigdatacorp_responde('/marketplace', 'partner_rede_vistorias_address', 'RedeVistoriasData', nil)
 
     executar_premium(risco, 'consulta' => 'vistoria', 'cep' => '01001-000', 'numero' => '10')
@@ -205,6 +205,17 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(registros_premium.sole).to have_attributes(resultado: 'sem_registro', cobranca: 'gratis', numero: 1, custo: 0)
     expect(a_request(:post, "#{FerramentasPremiumHelper::BDC}/marketplace")
              .with(body: hash_including('q' => 'zipcode{01001000},addressnumber{10}'))).to have_been_made.once
+  end
+
+  # #2946: a consulta desligada na BigDataCorp que o modelo pede pelo nome (um agente com o schema antigo, um modelo que
+  # insiste) é recusada antes da fonte: nada sai, nada conta.
+  it 'a consulta desligada pedida pelo nome é recusada: pedido inválido, sem chamar a BigDataCorp, sem registro nem uso' do
+    resposta = executar_premium(certidoes, 'consulta' => 'divida_uniao', 'cnpj' => '11.222.333/0001-81')
+
+    expect(resposta['situacao']).to eq('pedido_invalido')
+    expect(chamou_a_bigdatacorp?).to be(false)
+    expect(registros_premium.count).to eq(0)
+    expect(usos.sum(:consultas)).to eq(0)
   end
 
   it 'com a flag do Premium desligada, nada é consultado nem registrado' do

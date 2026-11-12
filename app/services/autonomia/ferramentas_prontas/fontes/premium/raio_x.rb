@@ -66,7 +66,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
     )
   end
 
-  # Todas as consultas do card; a `FONTE` leva só as que a BigDataCorp responde hoje (`Premium.ligadas`).
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`).
   CONSULTAS = [
     consulta('processos', 'processos judiciais e administrativos', 'processes', 'Lawsuits', PROCESSOS,
              custo: '0.08', preco: '0.12', prazo: Premium::Dataset::PRAZO_DAS_LENTAS),
@@ -80,7 +80,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
     chave: 'raio_x_empresa', slug: 'pronta_raio_x_empresa', nome: 'Raio-X da empresa',
     descricao: 'Consulta paga: o que uma base de dados empresarial sabe de uma empresa pelo CNPJ. Use só a consulta ' \
                'que responde à pergunta. Não traz dados de sócios pessoa física, de política nem de crédito.',
-    consultas: Premium.ligadas(CONSULTAS),
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Base própria dela, por CNPJ.'
   )
