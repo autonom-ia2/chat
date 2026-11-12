@@ -17,8 +17,9 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   end
 
   # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).
+  # Fora do horário (#2503) lê o horário de atendimento da caixa (partida_fora_do_horario_spec).
   it 'monta só as que o motor de hoje faz sem erro' do
-    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER])
+    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER FORA_DO_HORARIO])
   end
 
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do

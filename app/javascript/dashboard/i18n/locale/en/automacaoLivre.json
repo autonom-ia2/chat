@@ -37,6 +37,7 @@
       "CONVERSA_CAIXA_ID": "Conversation inbox",
       "CONVERSA_RESPONSAVEL_ID": "Conversation assignee",
       "CONVERSA_RESPONSAVEL_AUSENTE": "Conversation assignee is away",
+      "CONVERSA_NO_HORARIO": "The conversation is within the inbox's business hours",
       "CONVERSA_TIME_ID": "Conversation team",
       "CONVERSA_ETIQUETAS": "Conversation labels",
       "CONVERSA_INICIADA_POR": "Who started the conversation",

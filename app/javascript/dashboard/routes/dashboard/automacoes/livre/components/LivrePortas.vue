@@ -19,6 +19,10 @@ const ESTILO = {
     icone: 'i-lucide-heart-handshake',
     tom: 'bg-n-ruby-3 text-n-ruby-11',
   },
+  FORA_DO_HORARIO: {
+    icone: 'i-lucide-moon-star',
+    tom: 'bg-n-slate-3 text-n-slate-11',
+  },
 };
 const PADRAO = {
   icone: 'i-lucide-sparkles',

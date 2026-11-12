@@ -18,6 +18,11 @@
         "TITULO": "Thank them when closing",
         "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
         "NOME": "Thank when closing"
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Reply outside business hours",
+        "TEXTO": "Whoever writes outside the inbox's business hours gets a notice that the team will reply when it's back.",
+        "NOME": "Outside business hours"
       }
     }
   }

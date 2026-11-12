@@ -37,6 +37,7 @@
       "CONVERSA_CAIXA_ID": "Caixa da conversa",
       "CONVERSA_RESPONSAVEL_ID": "Responsável pela conversa",
       "CONVERSA_RESPONSAVEL_AUSENTE": "Responsável pela conversa está ausente",
+      "CONVERSA_NO_HORARIO": "A conversa está no horário de atendimento da caixa",
       "CONVERSA_TIME_ID": "Time da conversa",
       "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
       "CONVERSA_INICIADA_POR": "Quem começou a conversa",

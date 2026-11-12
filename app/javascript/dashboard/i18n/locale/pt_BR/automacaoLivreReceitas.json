@@ -18,6 +18,11 @@
         "TITULO": "Agradecer ao encerrar",
         "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
         "NOME": "Agradecer ao encerrar"
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Responder fora do horário",
+        "TEXTO": "Quem escreve fora do horário de atendimento da caixa recebe um aviso de que a equipe responde quando voltar.",
+        "NOME": "Fora do horário"
       }
     }
   }
