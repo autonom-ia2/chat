@@ -1,6 +1,6 @@
 import {
+  desvioDoTrazer,
   rotaDoTrazer,
-  soNaDemonstracao,
   temOndeTrazer,
 } from '../../lista/rotaDoTrazer';
 import { usarDemo } from '../../fonte/modoDemo';
@@ -56,22 +56,20 @@ describe('temOndeTrazer', () => {
   });
 });
 
-describe('soNaDemonstracao (link direto para a tela nova)', () => {
+describe('desvioDoTrazer (link direto para a tela nova)', () => {
   const destino = { query: {}, params: { accountId: '7' } };
 
   it('fora da demonstração manda para a importação, na mesma conta', () => {
     usarDemo.mockReturnValue(null);
-    expect(soNaDemonstracao(destino)).toEqual({
+    expect(desvioDoTrazer(destino)).toEqual({
       name: 'contacts_import_journey',
       params: { accountId: '7' },
     });
   });
 
-  it('na demonstração deixa passar', () => {
+  it('na demonstração não desvia', () => {
     usarDemo.mockReturnValue('cheio');
-    expect(soNaDemonstracao({ ...destino, query: { demo: 'cheio' } })).toBe(
-      true
-    );
+    expect(desvioDoTrazer({ ...destino, query: { demo: 'cheio' } })).toBeNull();
     expect(usarDemo).toHaveBeenCalledWith({ demo: 'cheio' });
   });
 });

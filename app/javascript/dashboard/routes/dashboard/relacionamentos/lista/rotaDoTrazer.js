@@ -19,6 +19,7 @@ export const temOndeTrazer = demo =>
   Boolean(demo) || isContactImportJourneyEnabled();
 
 // Por link direto: fora da demonstração a tela nova ainda não tem o que mostrar,
-// então a pessoa cai na importação (que, desligada, devolve para Contatos).
-export const soNaDemonstracao = to =>
-  usarDemo(to.query) ? true : { name: CONTACT_IMPORT_ROUTE, params: to.params };
+// então a pessoa cai na importação (que, desligada, devolve para Contatos). Na
+// demonstração não há desvio (`null`).
+export const desvioDoTrazer = to =>
+  usarDemo(to.query) ? null : { name: CONTACT_IMPORT_ROUTE, params: to.params };
