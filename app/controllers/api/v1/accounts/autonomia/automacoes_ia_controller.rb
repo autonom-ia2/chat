@@ -7,6 +7,8 @@
 # - As agentes de IA do passo "Passar para a agente de IA" (G15) pedem `automation_manage`, como montar a automação.
 # - Valor em dinheiro (os custos e o custo do teste) só para administrador ou `financial_view`, como o
 #   Crm::AiUsageController#com_valores? (#1969, #2557). Sem ela, os custos voltam vazios e a tela não mostra a linha.
+#   Com ela, vai junto a estimativa de cada tipo de passo de IA (#2574), para a confirmação do ligar ter o valor antes
+#   da primeira vez.
 class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::BaseController
   DEFINICAO = ::Autonomia::Automacao::Definicao
   CUSTOS = ::Autonomia::Automacao::CustosDaIa
@@ -32,7 +34,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
 
   # `com_valores` diz à tela se ela mostra a linha do custo: vazio sem permissão não é "ainda não custou".
   def custos
-    render json: { com_valores: com_valores?, custos: com_valores? ? CUSTOS.por_automacao(escopo.ids) : {} }
+    render json: valores { CUSTOS.por_automacao(escopo.ids) }
   end
 
   # G15: as agentes de IA que o passo "Passar para a agente de IA" oferece. Só id e nome: nada da configuração delas.
@@ -44,7 +46,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
     automacao = escopo.find_by(id: params[:id])
     return head :not_found if automacao.nil?
 
-    render json: { com_valores: com_valores?, custos: com_valores? ? CUSTOS.por_passo(automacao.id) : {} }
+    render json: valores { CUSTOS.por_passo(automacao.id) }
   end
 
   private
@@ -63,6 +65,12 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
 
   def com_valores?
     Current.account_user&.permission_granted?('financial_view') || false
+  end
+
+  def valores
+    return { com_valores: false, custos: {} } unless com_valores?
+
+    { com_valores: true, custos: yield, estimativa: ::Autonomia::Automacao::EstimativaDaIa.por_tipo }
   end
 
   # A receita é livre de propósito: o esquema e a Receita conferem tudo, com erro em frase.

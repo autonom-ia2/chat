@@ -22,8 +22,8 @@ require 'rails_helper'
 #   (G37). A espera na mesma automação diz "a mesma campanha, depois": as duas saem da mesma receita;
 # - a resposta (passos 3 a 6): a mensagem recebida com o filtro "respondeu à campanha Pré-Black" (G38, o destinatário
 #   real que o disparo gravou). O passo 4 grava peça, cor e tamanho direto nos campos do card da conversa (G70, decisão
-#   20 do Rodrigo, "IA só anota campos": a única escrita no card da conversa), depois de uma espera curta que dá à IA de
-#   assunto o tempo de abrir o card;
+#   20 do Rodrigo, "IA só anota campos": a única escrita no card da conversa). Sem passo de espera na receita: o extrair
+#   espera a IA de assunto abrir o card (G71, #2883);
 # - as Últimas horas (passo 7): o gatilho de data única no domingo às 18h, para "perguntou na Black" menos "comprou na
 #   Black 2026" (G37);
 # - o card ganho (passo 8, G5).
@@ -92,7 +92,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     end
   end
 
-  # A resposta com tudo o que vem depois dela: a IA de assunto aos 20 s e a espera do passo 4 vencida.
+  # A resposta com tudo o que vem depois dela: a IA de assunto aos 20 s (que acorda o extrair do passo 4) e a varredura de
+  # um minuto depois, que já não tem espera nenhuma a vencer.
   def responde_e_segue(hora, chave, texto, decide:, pedido: false)
     responde_as(hora, chave, texto, decide: decide, pedido: pedido)
     inicio = fuso.parse(hora)
@@ -282,10 +283,15 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     responde_as('2026-11-26 10:00', :ana, 'Quero o macacão verde no P, separa pra mim!', decide: 'quer_comprar', pedido: true)
     recebida = conversa_de(:ana).messages.incoming.sole
 
-    # Na resposta, a Ana ainda não tem card: a automação decidiu e espera; a IA de assunto está agendada para depois da
-    # espera dela (DEBOUNCE, ou DEBOUNCE_ORDEM na ordem do turno), a contar da mensagem.
+    # Na resposta, a Ana ainda não tem card: a automação decidiu e o extrair espera a IA de assunto (G71), sem passo de
+    # espera na receita e sem pagar a IA do extrair; ela está agendada para depois da espera dela (DEBOUNCE, ou
+    # DEBOUNCE_ORDEM na ordem do turno), a contar da mensagem. O teto da espera conta da mesma mensagem.
     expect(account.crm_cards.where(contact_id: cliente(:ana).id)).to be_empty
-    expect(historico('Resposta à Pré-Black').map(&:first)).to eq(%w[o_que_quer espera_o_card])
+    expect(historico('Resposta à Pré-Black').map(&:first)).to eq(%w[o_que_quer])
+    esperando = Autonomia::Automacao::Execucao.find_by!(alvo: conversa_de(:ana), estado: 'esperando')
+    expect(esperando.cursor).to eq('peca_cor_tamanho')
+    expect(esperando.due_at).to be_within(1.second).of(recebida.created_at + Autonomia::Automacao::EsperaDoAssunto::TETO)
+    expect(ia_recebeu.none? { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }).to be(true)
     agendado = enqueued_jobs.find { |job| job[:job] == Crm::Subjects::IdentifyJob }
     _conversa, mensagem, ordem = ActiveJob::Arguments.deserialize(agendado[:args])
     espera = ordem ? Crm::Subjects::DEBOUNCE_ORDEM : Crm::Subjects::DEBOUNCE
@@ -299,10 +305,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(decisao).to have_attributes(action: 'create', state: 'applied', card_id: card.id, message_id: recebida.id)
     expect(card.created_at).to be > recebida.created_at
     expect(card).to have_attributes(pipeline_id: vendas.first.id, title: 'Black: macacão')
-    expect(card.custom_attributes.keys & ex::PECA).to be_empty
 
-    varrer_as('2026-11-26 10:01:05')
-
+    # A decisão acordou o extrair na hora, aos 20 s: sem varredura e sem o minuto de espera que a receita tinha antes.
     extrair = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_extrair' }.sole
     expect(mensagens_lidas(extrair).last).to end_with('Quero o macacão verde no P, separa pra mim!')
     expect(card.reload.custom_attributes).to include('peca' => 'macacão', 'cor' => 'verde', 'tamanho' => 'P')
@@ -310,11 +314,11 @@ RSpec.describe 'Fechamento #2414 · exemplo 7: Black Friday para os clientes ant
     expect(conversa_de(:ana).custom_attributes.keys & ex::PECA).to be_empty
     gravou = Autonomia::Automacao::Registro.where(passo: 'peca_cor_tamanho').sole
     expect(gravou.dados['campos']).to include('gravados' => ex::PECA, 'ausentes' => [])
-    # A decisão de assunto (o card) veio antes do extrair que gravou nele.
-    expect(decisao.updated_at).to be < gravou.created_at
-    expect(historico('Resposta à Pré-Black')).to eq(
-      [['o_que_quer', 'ok', nil], ['espera_o_card', 'ok', nil], ['peca_cor_tamanho', 'ok', nil]]
-    )
+    # A decisão de assunto (o card) veio antes do extrair que gravou nele: antes dela o extrair não foi à IA (acima), e ele
+    # rodou no mesmo instante da decisão (o relógio do teste fica parado aos 20 s), bem antes do minuto da receita antiga.
+    expect(decisao.updated_at).to be <= gravou.created_at
+    expect(gravou.created_at).to be < recebida.created_at + 1.minute
+    expect(historico('Resposta à Pré-Black')).to eq([['o_que_quer', 'ok', nil], ['peca_cor_tamanho', 'ok', nil]])
     expect(textos(:ana)).to be_empty
   end
 

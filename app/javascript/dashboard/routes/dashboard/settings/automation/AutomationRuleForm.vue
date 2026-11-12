@@ -3,6 +3,11 @@ import { ref, computed, h, shallowRef, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { SAIDA_EXTERNA, useSaidaExterna } from './saidaExterna';
+import {
+  ACOES_DO_FUNIL,
+  CONDICOES_DO_FUNIL,
+  useRegraDoFunil,
+} from './regraDoFunil';
 import { useOperators } from 'dashboard/components-next/filter/operators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
@@ -84,27 +89,45 @@ const { isAvailableKey, offeredActionTypes } = useOfferedActionTypes();
 // #2448: webhook e transcrição por e-mail só aparecem para quem tem integration_manage (admin sempre); numa regra que
 // já as usa, continuam à vista para a regra se ler inteira, e salvar fica travado com o motivo.
 const { podeIntegrar, travada } = useSaidaExterna();
-// As ações com que a regra chegou: tirar o webhook também é mexer na integração. Guardadas quando chega outra regra
-// (o objeto troca); editar mexe dentro do mesmo objeto.
+// #2473: o mesmo para as ações e condições de funil, que pedem a chave de funis (RegraDoFunil).
+const { podeFunil, travadaNoFunil } = useRegraDoFunil();
+// As ações e condições com que a regra chegou: tirar o webhook ou o passo de funil também é mexer. Guardadas quando
+// chega outra regra (o objeto troca); editar mexe dentro do mesmo objeto.
 const acoesAoAbrir = ref([]);
+const condicoesAoAbrir = ref([]);
 watch(
   () => automation.value,
   regra => {
     acoesAoAbrir.value = (regra?.actions || []).map(({ action_name }) => ({
       action_name,
     }));
+    condicoesAoAbrir.value = (regra?.conditions || []).map(
+      ({ attribute_key }) => ({ attribute_key })
+    );
   },
   { immediate: true }
 );
-const salvarTravado = computed(() =>
+const saidaTravada = computed(() =>
   travada(automation.value?.actions, acoesAoAbrir.value)
 );
+const funilTravado = computed(() =>
+  travadaNoFunil(automation.value, {
+    actions: acoesAoAbrir.value,
+    conditions: condicoesAoAbrir.value,
+  })
+);
+const salvarTravado = computed(() => saidaTravada.value || funilTravado.value);
+const naRegra = (lista, campo, key) =>
+  (lista || []).some(item => item[campo] === key);
+// A regra que já usa uma ação ou condição travada continua mostrando-a, para se ler inteira.
 const isAllowedAction = key =>
-  podeIntegrar.value ||
-  !SAIDA_EXTERNA.includes(key) ||
-  (automation.value?.actions || []).some(
-    ({ action_name }) => action_name === key
-  );
+  ((podeIntegrar.value || !SAIDA_EXTERNA.includes(key)) &&
+    (podeFunil.value || !ACOES_DO_FUNIL.includes(key))) ||
+  naRegra(automation.value?.actions, 'action_name', key);
+const isAllowedCondition = key =>
+  podeFunil.value ||
+  !CONDICOES_DO_FUNIL.includes(key) ||
+  naRegra(automation.value?.conditions, 'attribute_key', key);
 const { operators } = useOperators();
 
 provideDropdownTeleport();
@@ -247,7 +270,7 @@ const filterTypes = computed(() => {
   const attributes = getTranslatedAttributes(
     props.automationTypes,
     event
-  ).filter(attr => isAvailableKey(attr.key));
+  ).filter(attr => isAvailableKey(attr.key) && isAllowedCondition(attr.key));
 
   return attributes.map(attr => {
     if (attr.disabled) {
@@ -441,8 +464,11 @@ defineExpose({ open, close });
       />
     </div>
     <template #footer>
-      <p v-if="salvarTravado" class="w-full mb-3 text-sm text-n-amber-11">
+      <p v-if="saidaTravada" class="w-full mb-3 text-sm text-n-amber-11">
         {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
+      </p>
+      <p v-if="funilTravado" class="w-full mb-3 text-sm text-n-amber-11">
+        {{ $t('AUTOMATION.RULE_FUNNEL_MANAGE_ONLY') }}
       </p>
       <div class="flex flex-row justify-end w-full gap-2">
         <NextButton

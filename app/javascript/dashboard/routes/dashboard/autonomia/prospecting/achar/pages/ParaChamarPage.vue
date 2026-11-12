@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AcharEstado from '../components/AcharEstado.vue';
 import AcharRodape from '../components/AcharRodape.vue';
-import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import AcharLinhaFrase from '../components/AcharLinhaFrase.vue';
 import AcharMotivos from '../components/AcharMotivos.vue';
 import AcharParaOndePainel from '../components/AcharParaOndePainel.vue';
@@ -170,7 +169,7 @@ watch(demo, carregar);
     <main class="flex-1 overflow-y-auto">
       <div
         class="flex flex-col w-full max-w-2xl gap-5 px-4 pt-6 mx-auto min-h-full md:px-8 md:pt-10"
-        :class="temRodape ? 'pb-0' : 'md:pb-10'"
+        :class="temRodape ? 'pb-0' : 'pb-6 md:pb-10'"
       >
         <header class="flex items-center justify-between gap-3">
           <h1
@@ -392,7 +391,6 @@ watch(demo, carregar);
             </div>
           </AcharRodape>
         </template>
-        <AcharFaixaDoMenu v-if="!temRodape" />
       </div>
     </main>
     <AcharEmpresaGaveta

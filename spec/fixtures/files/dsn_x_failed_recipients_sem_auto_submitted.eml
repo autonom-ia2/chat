@@ -1,0 +1,18 @@
+Return-Path: <>
+Date: Mon, 09 Nov 2026 10:20:11 -0300
+From: Mail Delivery Subsystem <mailer-daemon@mx.exemplo-servidor.com>
+To: imap@gmail.com
+Subject: Mail delivery failed: returning message to sender
+Message-ID: <E1vAbCd-0001Xy-Zz@mx.exemplo-servidor.com>
+X-Failed-Recipients: ninguem@exemplo-destino.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+This message was created automatically by mail delivery software.
+
+A message that you sent could not be delivered to one or more of its
+recipients. This is a permanent error. The following address(es) failed:
+
+  ninguem@exemplo-destino.com
+    SMTP error from remote mail server after RCPT TO:<ninguem@exemplo-destino.com>:
+    550 5.1.1 User unknown

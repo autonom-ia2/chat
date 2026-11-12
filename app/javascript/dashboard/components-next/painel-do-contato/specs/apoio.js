@@ -135,6 +135,7 @@ export const criarStore = (estado = {}, maisGetters = {}, modulos = {}) => {
         'contacts/show',
         'contacts/update',
         'contacts/deleteCustomAttributes',
+        'updateCustomAttributes',
       ].map(nome => [nome, registrar(nome)])
     ),
   });

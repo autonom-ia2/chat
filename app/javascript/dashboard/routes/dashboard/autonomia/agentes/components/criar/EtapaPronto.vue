@@ -137,7 +137,7 @@ const conversa = computed(() =>
             class="flex flex-wrap items-center gap-4"
             :class="
               celular
-                ? 'fixed inset-x-0 bottom-0 z-20 flex-col items-stretch p-4 border-t bg-n-solid-1 border-n-weak'
+                ? 'fixed inset-x-0 bottom-0 z-20 flex-col items-stretch py-4 pe-4 ps-20 border-t bg-n-solid-1 border-n-weak'
                 : ''
             "
           >

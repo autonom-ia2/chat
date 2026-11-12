@@ -24,6 +24,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2451: o motivo de salvar estar travado (a macro com webhook, sem integration_manage); vazio = salva.
+    lockedReason: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['submit'],
   setup() {
@@ -137,6 +142,7 @@ export default {
         :macro-visibility="macro.visibility"
         :can-manage-public-macros="canManagePublicMacros"
         :read-only="readOnly"
+        :locked-reason="lockedReason"
         @update:name="updateName"
         @update:visibility="updateVisibility"
         @submit="submit"

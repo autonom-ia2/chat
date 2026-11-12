@@ -433,8 +433,20 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(corpos.first['instructions']).not_to include('Instrução')
     end
 
-    it 'em aviso, ninguém para avisar pula antes de pagar a IA', :aggregate_failures do
+    # Só o responsável pedido, na conversa sem responsável: o motivo diz isso (#2523).
+    it 'em aviso, só o responsável e a conversa sem responsável: pula antes de pagar a IA', :aggregate_failures do
       ligar_mensagens(account)
+      openai_devolve({ 'resumo' => 'x' })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [resumir({ 'avisar' => { 'responsavel' => true } })]))
+
+      expect(registros(execucao)).to eq([%w[p1 pulado sem_responsavel]])
+      expect(corpos).to be_empty
+    end
+
+    it 'em aviso, o responsável que não pode ser avisado: ninguém para avisar, pula antes de pagar a IA', :aggregate_failures do
+      ligar_mensagens(account)
+      conversa.update!(assignee: create(:user, account: account, role: :agent))
       openai_devolve({ 'resumo' => 'x' })
 
       execucao = comecar_e_rodar(automacao_ligada(account, admin, [resumir({ 'avisar' => { 'responsavel' => true } })]))
