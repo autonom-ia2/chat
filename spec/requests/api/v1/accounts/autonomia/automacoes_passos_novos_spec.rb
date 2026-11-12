@@ -109,6 +109,13 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesPassosNovos', :automacao
         expect(response.parsed_body).to include('ok' => false, 'motivo' => 'consulta_pronta_desligada')
       end
     end
+
+    it 'o endereço e o exemplo não vão para o log' do
+      filtro = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+      fonte = { 'de' => 'endereco', 'url' => 'https://api.exemplo.com/x?token=abc', 'exemplos' => { 'placa' => 'ABC1D23' } }
+
+      expect(filtro.filter('fonte' => fonte)).to eq('fonte' => { 'de' => 'endereco', 'url' => '[FILTERED]', 'exemplos' => '[FILTERED]' })
+    end
   end
 
   describe 'GET consultas_prontas' do

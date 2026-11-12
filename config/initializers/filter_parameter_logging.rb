@@ -37,7 +37,12 @@ Rails.application.config.filter_parameters += [
   :cpf, :cnpj, :documento,
   # #2895 — o que a pessoa digita na busca da lista de Relacionamentos (`busca`) costuma ser nome, telefone ou CPF de
   # cliente: não vai para o log. O filtro casa qualquer chave que contenha "busca"; em outro endpoint, só o log perde o texto.
-  :busca
+  :busca,
+  # #2934 — o "Fazer um teste" do "buscar em outro sistema" (POST automacoes_passos_novos/testar_consulta) manda o endereço
+  # (`fonte[url]`, pode trazer chave na query) e o exemplo de cada entrada (`fonte[exemplos]`, CEP, placa, CPF de cliente).
+  # Nenhum dos dois vai para o log. O filtro casa qualquer chave que contenha "url" ou "exemplos": num parâmetro de outro
+  # endpoint (avatar_url, webhook url), só o log perde o endereço.
+  :url, :exemplos
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
