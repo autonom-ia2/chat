@@ -13,10 +13,12 @@ require 'rails_helper'
 #   0901.21.00 café torrado, não descafeinado; 8517.13.00 telefones inteligentes (smartphones); 7318.12.00 outros
 #   parafusos para madeira (de ferro ou aço); 9503.00.31 brinquedos que representem animais, com enchimento; 4011.10.00
 #   pneumáticos novos de automóveis de passageiros; 8450.11.00 máquina de lavar roupa até 10 kg, inteiramente automática.
-# Passa quem diz um dos códigos aceitos, com ou sem pontos, mesmo citando a alternativa ou com uma pergunta a mais
-# (regra QI 70, 11/11/2026: responde o caso comum e cita o outro). Onde não há caso comum (o bicho ou o boneco de
-# pelúcia, a capacidade da máquina, que veículo), perguntar também passa: quem lê se a resposta pergunta é um modelo
-# barato, nunca lista de palavras. "NCM de veículo" só passa perguntando. Conversas inventadas, sem dado de cliente.
+# Passa quem diz um dos códigos aceitos, com ou sem pontos, mesmo citando os outros ou com uma pergunta a mais (regra
+# QI 70, 11/11/2026: responde o caso comum e cita os outros). Nos casos com caso comum (1, 3 e 5), um juiz barato
+# (`PRINCIPAL`) confere também que o código aceito é a resposta principal, sem pergunta que a trave, mesmo citando os
+# outros. Onde não há caso comum (o bicho ou o boneco de pelúcia, a capacidade da máquina, que veículo), perguntar
+# também passa: quem lê se a resposta pergunta é um modelo barato, nunca lista de palavras. "NCM de veículo" só passa
+# perguntando. Conversas inventadas, sem dado de cliente.
 #
 # `AUTONOMIA_EVAL_CASOS=1,7` roda só esses casos. `AUTONOMIA_EVAL_RODADAS=3` troca as rodadas de ferramenta da produção
 # (uma, para o agente sem ajudante) por outra, para medir.
@@ -38,10 +40,10 @@ module AvaliacaoDaNcm
     [8, 'NCM de veículo', %w[], true, nil, false]
   ].freeze
 
-  # Disse um dos códigos aceitos, com ou sem pontos: conta pelos dígitos de cada palavra da resposta (números vizinhos
-  # não se colam).
+  # Disse um dos códigos aceitos, com ou sem pontos: conta pelos dígitos de cada palavra da resposta, separada por
+  # espaço, barra ou vírgula (números vizinhos não se colam).
   def self.disse?(resposta, aceitos)
-    palavras = resposta.to_s.split.map { |parte| parte.delete('^0-9') }
+    palavras = resposta.to_s.tr('/,', '  ').split.map { |parte| parte.delete('^0-9') }
     aceitos.any? { |codigo| palavras.include?(codigo.delete('^0-9')) }
   end
 
@@ -182,6 +184,9 @@ RSpec.describe 'NCM: o modelo do agente acha o código da nota' do # rubocop:dis
     expect(AvaliacaoDaNcm.disse?('O NCM é 7318.15.00.', %w[7318.12.00])).to be(false)
     # Números vizinhos não se colam: "0901" e "2100" não são o 0901.21.00 (revisão do #2920).
     expect(AvaliacaoDaNcm.disse?('Posição 0901 e 2100 unidades', %w[0901.21.00])).to be(false)
+    # Separado por barra ou vírgula, sem espaço, também conta (revisão do #2920).
+    expect(AvaliacaoDaNcm.disse?('NCM 0901.21.00/0901.22.00', %w[0901.22.00])).to be(true)
+    expect(AvaliacaoDaNcm.disse?('NCM 0901.21.00,0901.22.00', %w[0901.21.00])).to be(true)
   end
 
   it 'os 8 casos de conversa chegam ao código da nota (ou perguntam o que falta)', :eval_pago do

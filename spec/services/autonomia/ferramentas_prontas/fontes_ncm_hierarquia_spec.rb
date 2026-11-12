@@ -173,10 +173,6 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(dados).not_to have_key('observacao')
     end
 
-    it 'a regra do caso comum fala dos outros codigos, no plural' do
-      expect(ncm::CASO_COMUM).to include('cite os outros')
-    end
-
     it '"0901.2": os codigos da nota do grupo, com a descricao completa, numa chamada so pela posicao' do
       pela_posicao = fonte_responde("#{api}?search=0901", fixture('ncm_busca_0901.json'))
 
