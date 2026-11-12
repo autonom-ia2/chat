@@ -92,7 +92,8 @@
   <div class="facts">
     <div class="fact"><b>10</b>entregas (E0 a E9)</div>
     <div class="fact"><b>0</b>no ar</div>
-    <div class="fact"><b>11/11/2026</b>plano escrito</div>
+    <div class="fact"><b>3</b>em revisão, com a CI verde (E0, E1, E2)</div>
+    <div class="fact"><b>12/11/2026</b>última atualização</div>
     <div class="fact"><b>Em execução</b>meta dada pelo Rodrigo em 11/11: tudo pronto para merge e deploy, verde</div>
   </div>
 </div></header>
@@ -111,15 +112,15 @@
   <p class="lead">Atualizado a cada entrega. É a primeira coisa a olhar.</p>
   <div class="tbl"><table>
     <tr><th>Entrega</th><th>Estado</th><th>Issue · PR</th><th>SHA no ar</th><th>Banca (nota)</th><th>Tokens gastos</th><th>Atualizado</th></tr>
-    <tr><td>E0 · Preparo e protótipo</td><td><span class="chip s-construcao">Em construção</span></td><td>#2893 · PR #2892 (docs) · protótipo do bloco A na branch <code>feat/2894-relacionamentos-novo</code> (PR #2910, rascunho)</td><td>—</td><td>Bloco A: <b>8,58</b>, aprovado na rodada 2 (Multifunnel 8,8 · Campanhas 8,8 · Orquestração Deploy 8,6 · Frontend geral 8,1). Bloco B: falta</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E1 · Início e lista de pessoas</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2894</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E2 · Ficha da pessoa e da empresa</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2895</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E3 · Trazer minha lista (planilha)</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2896</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E4 · Carteira: seguros na ficha</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2897</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E5 · Renovação no funil</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2898</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E6 · Trazer por PDFs</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2899</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E7 · Trazer pelo Agger</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2900</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
-    <tr><td>E8 · Cotação da renovação</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2901</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
+    <tr><td>E0 · Preparo e protótipo</td><td><span class="chip s-revisao">Em revisão</span></td><td>#2893 · PR #2892 (docs, entrou) · PR #2915 (registro) · protótipo do bloco A dentro do PR #2910 · protótipo do bloco B no <b>PR #2937</b> (rascunho, CI verde)</td><td>—</td><td>Bloco A: <b>8,58</b>, aprovado na rodada 2 (Multifunnel 8,8 · Campanhas 8,8 · Orquestração Deploy 8,6 · Frontend geral 8,1). Bloco B: <b>8,65</b>, aprovado na rodada 2 (Cotação 8,8 · Multifunnel 8,75 · Frontend geral Max 8,55 · Campanhas 8,5)</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E1 · Início e lista de pessoas</td><td><span class="chip s-revisao">Em revisão</span></td><td>#2894 · <b>PR #2910</b> (rascunho, CI verde, <code>eaba3b1fdc</code>). Já tem a main e a flag <code>relacionamentos_novo</code> na posição 45</td><td>—</td><td>Bloco A: 8,58</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E2 · Ficha da pessoa e da empresa</td><td><span class="chip s-revisao">Em revisão</span></td><td>#2895 · <b>PR #2919</b> (rascunho, CI verde, <code>d8a9772f1d</code>), sobre a E1. É a fatia A; a fatia B (CPF/CNPJ) espera decisão do Rodrigo</td><td>—</td><td>Bloco A: 8,58</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E3 · Trazer minha lista (planilha)</td><td><span class="chip s-construcao">Em construção</span></td><td>#2896 · fatias 1 e 2 prontas na branch <code>feat/2896-e3-trazer</code> (servidor <code>552a1c092f</code>, tela <code>4e5048d414</code>); PR em rascunho abre em 12/11. Fatia 3 (Desfazer, #2923) não começou. Dois consertos que a E3 pediu já estão no ar: retomada da importação (#2921 · PR #2922) e lista de escolha que fechava com a rolagem (#2927 · PR #2928)</td><td>Dos dois consertos: <code>70b2bfb01e</code> e <code>c013efe85a</code></td><td>Bloco A: 8,58</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E4 · Carteira: seguros na ficha</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2897 · tela de referência aprovada no protótipo (PR #2937)</td><td>—</td><td>Bloco B: 8,65</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E5 · Renovação no funil</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2898 · tela de referência aprovada no protótipo (PR #2937)</td><td>—</td><td>Bloco B: 8,65</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E6 · Trazer por PDFs</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2899 · tela de referência aprovada no protótipo (PR #2937)</td><td>—</td><td>Bloco B: 8,65</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E7 · Trazer pelo Agger</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2900 · tela de referência aprovada no protótipo (PR #2937)</td><td>—</td><td>Bloco B: 8,65</td><td>—</td><td>12/11</td></tr>
+    <tr><td>E8 · Cotação da renovação</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2901 · tela de referência aprovada no protótipo (PR #2937)</td><td>—</td><td>Bloco B: 8,65</td><td>—</td><td>12/11</td></tr>
     <tr><td>E9 · Fecho do épico</td><td><span class="chip s-nao-comecou">Não começou</span></td><td>#2902</td><td>—</td><td>—</td><td>—</td><td>11/11</td></tr>
   </table></div>
   <p class="muted">Estados: <span class="chip s-nao-comecou">Não começou</span> <span class="chip s-desenho">Em desenho</span> <span class="chip s-construcao">Em construção</span> <span class="chip s-revisao">Em revisão</span> <span class="chip s-no-ar">No ar</span> <span class="chip s-aceito">Aceito</span></p>
@@ -489,7 +490,8 @@
   </div>
 
   <article class="card ent" id="e0">
-    <header><span class="num">E0</span><h3>Preparo e protótipo da jornada inteira</h3><span class="chip s-construcao">Em construção</span></header>
+    <header><span class="num">E0</span><h3>Preparo e protótipo da jornada inteira</h3><span class="chip s-revisao">Em revisão</span></header>
+    <p class="muted"><b>Andamento em 12/11:</b> os dois blocos do protótipo foram aprovados pela banca (A 8,58 · B 8,65). O bloco B está no PR #2937, em rascunho, com a CI verde; as telas de seguros só existem no ambiente de desenvolvimento. Falta: o PR #1321 (entra ou fecha) e derrubar a demo no fim.</p>
     <p>Combinar com os outros chats, reservar o que é compartilhado e construir o protótipo navegável em tela real, que a banca julga antes de qualquer código de produto.</p>
     <div class="cols">
       <div><div class="lbl">Escopo</div><ul>
@@ -510,7 +512,8 @@
   </article>
 
   <article class="card ent" id="e1">
-    <header><span class="num">E1</span><h3>Início e lista de pessoas</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <header><span class="num">E1</span><h3>Início e lista de pessoas</h3><span class="chip s-revisao">Em revisão</span></header>
+    <p class="muted"><b>Andamento em 12/11:</b> lista real pronta no PR #2910 (rascunho, CI verde): lê do servidor, ações em grupo escrevem nele, diz quando a pessoa não tem acesso. Falta: conferência final da Funções, OK geral do Rodrigo, flag ligada e teste no ar.</p>
     <p>Relacionamentos passa a abrir direto na lista, com a frase do dia, os grupos prontos e ações em grupo. Vale para toda conta.</p>
     <div class="cols">
       <div><div class="lbl">Escopo</div><ul>
@@ -535,7 +538,8 @@
   </article>
 
   <article class="card ent" id="e2">
-    <header><span class="num">E2</span><h3>Ficha da pessoa e da empresa</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <header><span class="num">E2</span><h3>Ficha da pessoa e da empresa</h3><span class="chip s-revisao">Em revisão</span></header>
+    <p class="muted"><b>Andamento em 12/11:</b> fatia A pronta no PR #2919 (rascunho, CI verde), sobre a E1. Falta: a fatia B (CPF/CNPJ), que depende de uma decisão do Rodrigo, e o campo “Quem cuida”, também à espera dele.</p>
     <p>A ficha passa a responder “quem é e o que tem comigo” antes de oferecer edição.</p>
     <div class="cols">
       <div><div class="lbl">Escopo</div><ul>
@@ -558,7 +562,8 @@
   </article>
 
   <article class="card ent" id="e3">
-    <header><span class="num">E3</span><h3>Trazer minha lista (planilha)</h3><span class="chip s-nao-comecou">Não começou</span></header>
+    <header><span class="num">E3</span><h3>Trazer minha lista (planilha)</h3><span class="chip s-construcao">Em construção</span></header>
+    <p class="muted"><b>Andamento em 12/11:</b> fatias 1 e 2 prontas (enviar, perguntas, conferir, consertar linha, trazer, sair e voltar): servidor e tela com revisão independente fechada. Testes depois de trazer a main: 5033 de tela e 1430 de servidor, nenhuma falha. PR em rascunho abre em 12/11. A fatia 3 (Desfazer de verdade, com migration, #2923) vai em PR próprio; até ela entrar, o botão Desfazer não aparece na tela real. Falta também abrir o fluxo no navegador e o teste com uma planilha real.</p>
     <p>Um caminho só para trazer pessoas, com conferência e desfazer. É a F1 do PRD, dentro da tela nova.</p>
     <div class="cols">
       <div><div class="lbl">Escopo</div><ul>
@@ -947,6 +952,9 @@
     <tr><td><s>Corretora real para o teste do Agger</s> · dado em 11/11: usar as credenciais da <b>corretora do próprio Rodrigo</b></td><td>E7</td><td>—</td></tr>
     <tr><td><s>Deploy do adapter (Lambda)</s> · OK dado em 11/11. Escrita em banco de produção e os outros deploys seguem pedindo OK</td><td>E7, E8</td><td>—</td></tr>
     <tr><td><s>Orçamento de consultas de cotação para o teste</s> · dado em 11/11: <b>US$ 2</b></td><td>E8</td><td>—</td></tr>
+    <tr><td><b>CPF/CNPJ na ficha</b>: como guardar e mostrar (pergunta feita em 11/11, sem resposta)</td><td>E2, fatia B</td><td>A fatia B não abre; a ficha sobe sem CPF/CNPJ</td></tr>
+    <tr><td><b>Resultados</b>: mostrar o prêmio renovado e o perdido? (pergunta feita, sem resposta)</td><td>E5</td><td>A tela sai só com a contagem de seguros</td></tr>
+    <tr><td><b>“Quem cuida”</b> na ficha: entra? (pergunta feita, sem resposta)</td><td>E2</td><td>A ficha sobe sem o campo</td></tr>
     <tr><td>Fechar o #1240</td><td>E9</td><td>Épico segue aberto</td></tr>
   </table></div>
   <div class="card" style="margin-top:14px">
@@ -957,7 +965,9 @@
       <li><b>#1306.</b> Sem a última atividade certa, os grupos “Sumiu” erram em contas com agenda sincronizada. Entra antes ou junto da E1.</li>
       <li><b>Muitos chats no mesmo repositório.</b> Lista e ficha tocam área do Multifunnel. Contrato antes do código.</li>
       <li><b>Flag liga em todas.</b> Relacionamentos novo aparece para todo cliente no dia em que sobe. Por isso a banca e o teste no ar pesam.</li>
-      <li><b>Máquinas.</b> M2 e M4 estão com memória apertada. Demo e teste amplo dependem de conferir antes.</li>
+      <li><b>Máquinas.</b> M2 e M4 estão com memória apertada. Demo e teste amplo dependem de conferir antes. Em 12/11 o disco do M4 chegou a 14 GB livres (o mínimo é 15); há 22 GB em rascunho de sessões de outro projeto que só o Rodrigo pode mandar apagar.</li>
+      <li><b>Login do Agger.</b> Está falhando desde 07/11. Enquanto não voltar, o teste real da E7 e da E8 não roda.</li>
+      <li><b>E3 sem Desfazer até a fatia 3.</b> Se a E3 subir antes da fatia 3, quem trouxe a lista errada tira as pessoas pela lista (marcar e Apagar).</li>
     </ul>
   </div>
 </section>
@@ -967,6 +977,7 @@
   <h2>Registro de mudanças</h2>
   <div class="tbl"><table>
     <tr><th>Data</th><th>O que mudou</th><th>Quem</th></tr>
+    <tr><td>12/11/2026</td><td>Placar atualizado. <b>No ar:</b> retomada da importação parada (PR #2922, <code>70b2bfb01e</code>) e a lista de escolha que fechava com a rolagem (PR #2928, <code>c013efe85a</code>), as duas com “ok SHA” e limpeza feita. <b>Banca do bloco B</b> aprovou o protótipo da carteira na rodada 2, média 8,65; sobras aplicadas (onda 6) e protótipo no PR #2937. <b>E1 e E2</b> receberam a main e a flag foi para a posição 45; CI verde nos dois. <b>E3</b>: fatias 1 e 2 prontas, com duas revisões independentes no servidor e duas na tela; decisão do dono: o Desfazer só aparece onde funciona, então sai da tela real até a fatia 3; o artigo de ajuda do Trazer virou três, cada um dentro do tamanho da casa. Seguem sem resposta do Rodrigo: CPF/CNPJ, prêmio em Resultados e “Quem cuida”.</td><td>Base de Clientes</td></tr>
     <tr><td>11/11/2026</td><td>Rodrigo liberou o que faltava dele: US$ 2 de IA para a bateria de PDFs (E6); a corretora dele como corretora real do teste do Agger (E7); deploy do Lambda; US$ 2 de consultas de cotação (E8). E mudou o rito do merge: com tudo verde, recebe o pacote inteiro, analisa e dá um OK geral.</td><td>Rodrigo</td></tr>
     <tr><td>11/11/2026</td><td>Banca do bloco A aprovou o protótipo na rodada 2, com média 8,58 (meta: acima de 8,5) e nenhum item de 1 a 4 abaixo de 7: Multifunnel 8,8, Campanhas 8,8, Orquestração Deploy 8,6, Frontend geral 8,1. Versão julgada: commit <code>e6782b0791</code>, 1009 testes, 74 prints claros e 14 em tema escuro. Entrou nesta rodada: nenhum botão desligado por falta de preenchimento; Desfazer mostra quem sai, quem fica e o que volta; Pronto diz quantas chegaram e quantas foram completadas; conta vazia com lista de exemplo apagada; botões, faixa e carregando com os componentes da casa. Recusado com motivo aceito pelos jurados: esconder grupo para não quebrar linha, cortar nome comprido, aumentar a base fictícia. Sugestões para a casa, fora do épico: botão do Banner, tamanho do ChoiceSelect e erro do CampoDeTelefone. Levantamento do que o backend já tem para a E1 em <code>docs/audit/2026-11-11-2894-e1-backend-existente.md</code>.</td><td>Base de Clientes</td></tr>
     <tr><td>11/11/2026</td><td>Rodrigo: soltar o cliente, ser questionador, e o Base de Clientes avalia a banca como dono do épico. Pente de travas no plano e no protótipo: caiu o prazo de 7 dias do Desfazer; trazer lista abre para qualquer atendente (parecer de Funções na E3); botão desligado vira botão que explica. Regra da banca: nota é insumo, contestável com evidência. Rodada 1 da banca: média 7,2, não subiu; rodada 2 em preparo.</td><td>Rodrigo · Base de Clientes</td></tr>
