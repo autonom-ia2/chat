@@ -16,8 +16,11 @@ module Crm
       # Automação livre abre o card de outro funil (Melhorias, retenção) e o card do pedido continua o principal.
       # dono_escolhido (#2694): a pessoa escolheu o dono na hora (Prospecção). Fica na atividade de criação como
       # `owner_chosen: true`, para a Automação saber; sem escolha, a chave não aparece.
+      # etapa_de_entrada (#2501): o pedido da API não trouxe uma etapa do funil e o card nasceu na etapa de entrada dele
+      # (Crm::Cards::EtapaDeEntrada). O `motivo` e o nome do funil ficam na atividade de criação, para o histórico.
       # rubocop:disable Metrics/ParameterLists -- quem escolheu a etapa (a pessoa ou a automação) é dado da criação
-      def initialize(account:, user:, params:, conversation: nil, etapa_escolhida: false, automacao: nil, foco: true, dono_escolhido: false)
+      def initialize(account:, user:, params:, conversation: nil, etapa_escolhida: false, automacao: nil, foco: true, dono_escolhido: false,
+                     etapa_de_entrada: nil)
         @account = account
         @user = user
         @params = params.to_h.with_indifferent_access
@@ -26,6 +29,7 @@ module Crm
         @automacao = automacao
         @foco = foco
         @dono_escolhido = dono_escolhido
+        @etapa_de_entrada = etapa_de_entrada
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -124,6 +128,8 @@ module Crm
           owner_id: card.owner_id,
           etapa_escolhida: (true if @etapa_escolhida),
           owner_chosen: (true if @dono_escolhido),
+          motivo: @etapa_de_entrada,
+          pipeline_name: (card.pipeline.name if @etapa_de_entrada),
           **da_automacao
         }.compact
       end

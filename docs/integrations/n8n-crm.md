@@ -276,6 +276,13 @@ curl -sS -X POST \
 
 - First call → `201 Created` (card inserted).
 - Same `external_id` again → `200 OK` (card updated, no duplicate).
+- `pipeline_id` without a stage of that pipeline (no `stage_id`, or a `stage_id`
+  from another pipeline) → the card goes to the pipeline's entry stage (the
+  first by position), on create and on upsert. On upsert the move goes through
+  the stage automations, like `/move`; if the card is already in that pipeline,
+  it stays in its stage. The card history says why, and the response carries
+  the chosen `stage_id`. Only a pipeline with no stages at all returns `422`
+  `crm.upsert_stage_of_pipeline_required`.
 
 #### Move a card to another stage
 

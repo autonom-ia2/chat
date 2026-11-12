@@ -458,3 +458,76 @@ describe('useCardHistorico — movimento feito por automação', () => {
     expect(item.automacaoLink).toBeNull();
   });
 });
+
+// #2501: o pedido da API sem uma etapa do funil põe o card na etapa de entrada
+// dele, e o histórico diz por quê.
+describe('useCardHistorico — etapa de entrada do funil', () => {
+  const labels = { from_stage_id: 'Novo Lead', to_stage_id: 'Entrada' };
+
+  it('says the card went to the entry stage because the request had no stage', () => {
+    const item = describeActivity(
+      activity(
+        1,
+        'move',
+        {
+          from_stage_id: 1,
+          to_stage_id: 2,
+          motivo: 'etapa_nao_veio',
+          to_pipeline_name: 'Pós-venda',
+        },
+        { labels }
+      )
+    );
+
+    expect(item.detail).toBe(
+      'Moved to Pós-venda › Entrada (the stage was not in the request)'
+    );
+  });
+
+  it('says the stage in the request was from another pipeline', () => {
+    const item = describeActivity(
+      activity(
+        1,
+        'move',
+        {
+          to_stage_id: 2,
+          motivo: 'etapa_de_outro_funil',
+          to_pipeline_name: 'Pós-venda',
+        },
+        { labels }
+      )
+    );
+
+    expect(item.detail).toBe(
+      'Moved to Pós-venda › Entrada (the stage in the request is not from this pipeline)'
+    );
+  });
+
+  it('says where a card created without a stage was placed', () => {
+    const item = describeActivity(
+      activity(
+        1,
+        'create',
+        { stage_id: 2, motivo: 'etapa_nao_veio', pipeline_name: 'Pós-venda' },
+        { labels: { stage_id: 'Entrada' } }
+      )
+    );
+
+    expect(item.detail).toBe(
+      'Created in Pós-venda › Entrada (the stage was not in the request)'
+    );
+  });
+
+  it('keeps the usual move text without the pipeline name', () => {
+    const item = describeActivity(
+      activity(
+        1,
+        'move',
+        { from_stage_id: 1, to_stage_id: 2, motivo: 'etapa_nao_veio' },
+        { labels }
+      )
+    );
+
+    expect(item.detail).toBe('From Novo Lead to Entrada');
+  });
+});

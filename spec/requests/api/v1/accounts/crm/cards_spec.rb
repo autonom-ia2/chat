@@ -355,20 +355,103 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(card.activities.where(event_type: 'move')).to be_blank
   end
 
-  it 'o upsert por external_id com funil novo e sem etapa dele responde 422, sem mexer no card (#2501)' do
+  it 'o upsert por external_id com funil novo e sem etapa dele põe o card na etapa de entrada do funil, pelo Mover (#2501)' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
-    outro_funil, = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
+    outro_funil = account.crm_pipelines.create!(name: 'Pós-venda', created_by: user, status: :active)
+    create_crm_stage(account: account, pipeline: outro_funil, name: 'Depois', position: 5)
+    entrada = create_crm_stage(account: account, pipeline: outro_funil, name: 'Entrada', position: 2)
     card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-13')
 
-    [{ pipeline_id: outro_funil.id }, { pipeline_id: outro_funil.id, stage_id: stage.id }].each do |pedido|
-      post "/api/v1/accounts/#{account.id}/crm/cards",
-           params: { card: pedido.merge(title: 'Onix 2024', external_id: 'erp-13') }, headers: auth_headers(user), as: :json
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: outro_funil.id, title: 'Onix 2024', external_id: 'erp-13' } }, headers: auth_headers(user), as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq('crm.upsert_stage_of_pipeline_required')
-    end
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['payload']).to include('id' => card.id, 'pipeline_id' => outro_funil.id, 'stage_id' => entrada.id)
+    expect(card.reload).to have_attributes(pipeline_id: outro_funil.id, stage_id: entrada.id, title: 'Onix 2024')
+    expect(card.activities.find_by!(event_type: 'move').payload).to include(
+      'from_stage_id' => stage.id, 'to_stage_id' => entrada.id, 'to_pipeline_id' => outro_funil.id,
+      'motivo' => 'etapa_nao_veio', 'to_pipeline_name' => 'Pós-venda'
+    )
+    expect(card.activities.find_by!(event_type: 'update').payload).to eq('title' => 'Onix 2024')
+  end
+
+  it 'o upsert por external_id com funil novo e a etapa de outro funil põe o card na etapa de entrada do funil novo (#2501)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    outro_funil, entrada = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-14')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: outro_funil.id, stage_id: stage.id, external_id: 'erp-14' } }, headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['payload']['stage_id']).to eq(entrada.id)
+    expect(card.reload).to have_attributes(pipeline_id: outro_funil.id, stage_id: entrada.id)
+    expect(card.activities.find_by!(event_type: 'move').payload).to include('motivo' => 'etapa_de_outro_funil')
+  end
+
+  it 'o upsert por external_id no funil em que o card já está, com a etapa de outro funil, deixa o card na etapa dele (#2501)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    _outro_funil, outra_etapa = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-15')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: pipeline.id, stage_id: outra_etapa.id, title: 'Onix 2024', external_id: 'erp-15' } },
+         headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id, title: 'Onix 2024')
+    expect(card.activities.where(event_type: 'move')).to be_blank
+  end
+
+  it 'o upsert por external_id para um funil sem etapa nenhuma responde 422, sem mexer no card (#2501)' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    funil_vazio = account.crm_pipelines.create!(name: 'Vazio', created_by: user, status: :active)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Onix', external_id: 'erp-16')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: funil_vazio.id, title: 'Onix 2024', external_id: 'erp-16' } }, headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.upsert_stage_of_pipeline_required')
     expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id, title: 'Onix')
+    expect(card.activities.where(event_type: %w[update move])).to be_blank
+  end
+
+  it 'cria o card com o funil e sem etapa dele na etapa de entrada do funil, que não conta como etapa escolhida (#2501)' do
+    account, user = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: user)
+    outro_funil, outra_etapa = create_crm_pipeline(account: account, user: user, name: 'Pós-venda')
+    create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1)
+
+    [[{}, 'etapa_nao_veio', 'erp-17'], [{ stage_id: outra_etapa.id }, 'etapa_de_outro_funil', 'erp-18']].each do |etapa, motivo, external_id|
+      post "/api/v1/accounts/#{account.id}/crm/cards",
+           params: { card: etapa.merge(pipeline_id: pipeline.id, title: 'Onix', external_id: external_id) }, headers: auth_headers(user), as: :json
+
+      expect(response).to have_http_status(:created)
+      card = account.crm_cards.find_by!(external_id: external_id)
+      expect(response.parsed_body['payload']['stage_id']).to eq(card.stage_id)
+      expect(card.stage).to eq(pipeline.stages.order(:position, :id).first)
+      payload = card.activities.find_by!(event_type: 'create').payload
+      expect(payload).to include('motivo' => motivo, 'pipeline_name' => 'Funil Comercial', 'stage_id' => card.stage_id)
+      expect(payload).not_to have_key('etapa_escolhida')
+    end
+    expect(outro_funil.cards).to be_blank
+  end
+
+  it 'cria o card num funil sem etapa nenhuma: responde 422 e não cria (#2501)' do
+    account, user = create_account_and_user
+    funil_vazio = account.crm_pipelines.create!(name: 'Vazio', created_by: user, status: :active)
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: funil_vazio.id, title: 'Onix', external_id: 'erp-19' } }, headers: auth_headers(user), as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.upsert_stage_of_pipeline_required')
+    expect(account.crm_cards.where(external_id: 'erp-19')).to be_blank
   end
 
   it 'does not move a card through the generic update endpoint' do
