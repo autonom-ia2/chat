@@ -60,7 +60,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     error_code = nil
     @campaign_import.with_lock do
       @campaign_import.reload
-      unless @campaign_import.ready_to_confirm?
+      unless @campaign_import.ready_to_confirm? || @campaign_import.import_resumable? # #2921: a writing that broke goes on
         error_code = 'campaign_import.not_ready'
         next
       end

@@ -47,7 +47,7 @@ o mesmo objeto de `api-992.md` §4 com `flow: "contacts"`.
 | GET | `/:id` | | acompanhar o status |
 | PATCH | `/:id/columns` | `{ name, phone, email, company }` (índice ou `null`) | mesmas regras de `api-992.md` §5 |
 | PATCH | `/:id/companies` | `{ create_companies: true\|false }` | mesmas regras de `api-992.md` §9 |
-| POST | `/:id/confirm` | | "Importar": `queued` → `importing` → `completed`; `422 campaign_import.not_ready` fora de `ready_to_confirm` |
+| POST | `/:id/confirm` | | "Importar": `queued` → `importing` → `completed`. Vale também como "tentar de novo" numa importação `failed` cuja gravação quebrou no meio (#2921): continua de onde parou, sem duplicar. `422 campaign_import.not_ready` nos outros casos, inclusive o "Parou" da automação e a `failed` cujo arquivo normalizado já foi apagado |
 | GET | `/:id/download` | | CSV das linhas que ficaram de fora (celular e e-mail mascarados) |
 | DELETE | `/:id` | | descarta o rascunho antes de importar |
 
