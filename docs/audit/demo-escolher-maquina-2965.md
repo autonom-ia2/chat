@@ -130,3 +130,20 @@ acha. Mesmo mecanismo conferido com outro lançador que falta: `bundle exec puma
 **Não verificado** (exigiria subir demo): `ruby bin/rails s`, `db:schema:load`, `runner` e `ruby bin/vite dev` de
 verdade, em qualquer das duas máquinas. No M2 nem o `--version` foi rodado: os snapshots de lá são de outras
 frentes e o comando grava cache dentro deles.
+
+**Revisão independente do conserto.** Nenhum achado crítico ou alto. Ajustado: a conferência de ferramentas só
+aceita linha que começa com `/` (aviso do shell da outra máquina não vira "falta ferramenta"); texto de uso e
+runbook dizem que o `up` recusa máquina com falta e que a conferência não vê gem ausente.
+
+Conferido a partir da revisão, no M4, no ambiente da demo: qual Bundler cada caminho carrega (o `Gemfile.lock` pede
+2.5.16; os dois Macs têm 2.5.16 e 2.6.7 instalados).
+
+| Caminho | Bundler | Gems resolvidas |
+|---|---|---|
+| `bundle exec` (antes) | 2.5.16 | — |
+| `ruby bin/rails` (via `config/boot.rb`) | 2.5.16 | — |
+| `ruby bin/vite` (via `bin/bundle` do app, que aceita `~> 2.5`) | 2.6.7 | `vite_ruby` 3.10.2, `railties` 7.2.3.1 |
+
+O Rails fica igual. O Vite passa a carregar o Bundler 2.6.7, com as mesmas gems do lockfile; é o mesmo caminho do
+`Procfile.dev` do projeto (`vite: bin/vite dev`). Não troquei por uma chamada que force o 2.5.16 para não fixar
+versão dentro do kit.

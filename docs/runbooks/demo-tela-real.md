@@ -23,7 +23,9 @@ O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
   Os três limites ficam no topo do `bin/demo` (`CARGA_MAX`, `RAM_MIN_GB`, `SWAP_MAX_MIB_S`).
 - **Ferramentas.** Máquina em que falta alguma ferramenta que o kit executa (Ruby, Node, `pnpm`, cliente do
   Postgres, Redis) não recebe demo, mesmo dentro do limite: o `up` pararia no meio, com banco e snapshot já
-  criados. O `maquinas` e o `up` dizem o caminho que falta. A lista fica em `script/demo/ferramentas.sh`.
+  criados. O `maquinas` e o `up` dizem o caminho que falta. A lista fica em `script/demo/ferramentas.sh`. A
+  conferência só vê se o arquivo existe e pode ser executado. Gem que falte no Ruby compartilhado não aparece
+  aqui: só estoura depois do snapshot, no preparo do banco ou na subida do painel.
 - **Desempate.** Se `m2` e `m4` servem, ganha a que tem **mais memória livre**: foi memória que faltou em 12/11.
   Empate fica com o `m2` (a comparação usa o número do MacCluster, que vem com uma casa decimal).
 - **Nenhuma serve.** O `up` recusa e mostra o que mediu em cada máquina. Não há opção para passar por cima do limite.
@@ -74,7 +76,7 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
 | Comando | Onde | O que faz |
 |---|---|---|
 | `maquinas` | este Mac e as duas máquinas | Só leitura. Mede `m2` e `m4`, confere as ferramentas do kit em cada uma, lista as demos vivas e diz para onde um `up` iria (ou por que seria recusado). |
-| `up` | este Mac → a demo | Escolhe a máquina (seção acima) e recusa se houver outra demo viva ou se nenhuma máquina servir. Confere que banco e portas da demo estão livres. Tira o snapshot da worktree neste Mac (`maccluster workspace snapshot --local-only`). Se a demo roda em outro Mac: lá, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Se roda neste Mac: usa o snapshot no lugar, sem cópia, e o `pnpm install` traz as dependências. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
+| `up` | este Mac → a demo | Escolhe a máquina (seção acima) e recusa se houver outra demo viva, se nenhuma máquina servir ou se na que serve faltar ferramenta do kit. Confere que banco e portas da demo estão livres. Tira o snapshot da worktree neste Mac (`maccluster workspace snapshot --local-only`). Se a demo roda em outro Mac: lá, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Se roda neste Mac: usa o snapshot no lugar, sem cópia, e o `pnpm install` traz as dependências. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
 | `sync` | este Mac → a demo | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. Com a demo desligada, leva os arquivos (e roda `pnpm install`/`db:migrate`, se for o caso) e não liga servidor nenhum. |
 | `flag` | a demo | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
 | `seed` | a demo | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo na máquina dela (para mídia, por exemplo). |

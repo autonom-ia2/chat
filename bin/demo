@@ -2,7 +2,7 @@
 # Kit único de demo em tela real (#2140). Roda de dentro da worktree; o painel sobe no m2 ou no m4 (#2965).
 # Runbook: docs/runbooks/demo-tela-real.md
 #
-#   bin/demo maquinas                        mede m2 e m4, lista as demos vivas e diz onde o up subiria (só leitura)
+#   bin/demo maquinas                        só leitura: carga e ferramentas de m2 e m4, demos vivas, onde o up subiria
 #   bin/demo up <slug>                       escolhe a máquina; snapshot, banco/Redis próprios, seed, Rails + Vite
 #   bin/demo sync <slug>                     leva o que mudou na worktree para o snapshot da demo
 #   bin/demo flag <slug> <flag> [conta]      liga uma feature flag no banco da demo (conta 1 por padrão)
@@ -156,6 +156,7 @@ mostrar_vivas() { printf %s "$1" | /usr/bin/awk '{ printf "  %s no %s (ligado: %
 
 # Ferramentas que o kit executa e que faltam em cada máquina (script/demo/ferramentas.sh, só leitura, pelo stdin).
 # FALTAS: uma linha "<máquina> <caminho>" por ferramenta. COM_FALTA: as máquinas com alguma falta, entre espaços.
+# Só linha que começa com "/" conta: aviso que o shell da outra máquina imprima não vira ferramenta faltando.
 # Máquina com falta não recebe demo: o up pararia no meio, com banco e snapshot já criados.
 listar_faltas() {
   local m saida
@@ -163,7 +164,8 @@ listar_faltas() {
   COM_FALTA=' '
   for m in "${MAQUINAS[@]}"; do
     saida=$({ /bin/cat "$KIT/ferramentas.sh" && echo ferramentas_que_faltam; } | rodar_em "$m" /bin/bash |
-      /usr/bin/awk -v m="$m" 'NF { print m, $0 }') || falha "não consegui conferir as ferramentas do kit no $m"
+      /usr/bin/awk -v m="$m" 'substr($0, 1, 1) == "/" { print m, $0 }') ||
+      falha "não consegui conferir as ferramentas do kit no $m"
     [ -z "$saida" ] || { FALTAS+="$saida"$'\n'; COM_FALTA+="$m "; }
   done
 }
