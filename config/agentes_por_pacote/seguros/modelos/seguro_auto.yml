@@ -1,0 +1,40 @@
+chave: seguro_auto
+tipo: sdr
+nome_padrao: "Assistente de Seguro Auto"
+ramo: "Seguro de automóvel"
+seguradoras_sugeridas: "Porto, Allianz e Tokio Marine"
+perguntas:
+  - "É um seguro novo ou a renovação de um que você já tem?"
+  - "Qual a placa do veículo? Se for zero-quilômetro e ainda não tiver placa, qual a marca, o modelo e o ano?"
+  - "Qual o CEP de onde você mora?"
+  - "Qual o CPF de quem vai ser o titular do seguro? Se o veículo for de empresa, o CNPJ."
+  - "Se for renovação: qual a seguradora de hoje e em que dia o seguro vence?"
+  - "Quem dirige o veículo na maior parte do tempo: você ou outra pessoa?"
+  - "Alguém com até 25 anos dirige o veículo? Se sim, qual a idade e o sexo dessa pessoa?"
+  - "Quem é a melhor pessoa para a equipe falar, e por qual telefone?"
+documentos:
+  - "Documento do veículo (CRLV)."
+  - "Carteira de motorista de quem mais dirige."
+  - "Apólice atual, se for renovação."
+  - "Nota fiscal do veículo, se for zero-quilômetro e ainda não tiver o documento."
+ja_vem:
+  - fonte: fipe
+    usar_quando: "Use quando o cliente disser a marca, o modelo e o ano do veículo, por ser zero-quilômetro ou por não ter a placa em mãos, para achar o modelo certo na tabela FIPE e anotar o valor de referência para a equipe. Esse valor não é o preço do seguro."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP de onde mora ou de onde o veículo passa a noite, para confirmar a rua, o bairro e a cidade sem pedir o endereço inteiro."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF do titular ou de quem dirige, para conferir se o número foi digitado certo antes de passar para a equipe. Se o número não for válido, peça para ele conferir."
+  - fonte: feriados
+    usar_quando: "Use quando for renovação e o cliente disser o dia em que o seguro atual vence, para contar quantos dias úteis faltam e avisar a equipe quando o prazo estiver curto."
+tambem:
+  - fonte: cnpj
+    usar_quando: "Use quando o seguro for de empresa ou de frota e o cliente informar o CNPJ, para conferir o nome e a situação da empresa sem perguntar de novo."
+  - fonte: chuva
+    usar_quando: "Use quando o cliente avisar de um dano por chuva ou alagamento no veículo, para anotar quanto choveu no dia e na cidade e passar junto com o aviso para a equipe. Não use para dizer se o seguro cobre."
+premium:
+  - historico_placa
+  - conferir_pessoa
+teste:
+  - "Quanto custa o seguro do meu carro?"
+  - "Minha placa é ABC1D23 e moro no CEP 01001-000"
+  - "Pode fechar, quero o seguro"

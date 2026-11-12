@@ -717,8 +717,12 @@ Rails.application.routes.draw do
                 post :retry, action: :retry_build
                 # #1428 (parte 3, piloto) — desfaz o último ajuste desta conversa (sem id de versão do cliente).
                 post :desfazer
+                # #2881 — o dono muda as listas do modelo pronto de ramo (perguntas, documentos, ferramentas) antes de começar.
+                patch :modelo_pronto
               end
             end
+            # #2881 — os modelos prontos de ramo que a conta pode usar (pacote `seguros` e a flag agente_modelos_seguro).
+            get 'modelos_de_ramo', to: 'agents/modelos_de_ramo#index'
             # MULTIMODAL (Construtor/Ajustar): upload de imagem do builder (image-only, retorna signed_id;
             # não cria conhecimento). O turno referencia o signed_id; o Builder a lê inline no job.
             post 'builder_images', to: 'agents/builder_images#create'

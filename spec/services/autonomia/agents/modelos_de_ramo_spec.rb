@@ -1,0 +1,177 @@
+require 'rails_helper'
+
+# #2881 — o catálogo dos modelos de agente prontos por ramo de seguro: o conteúdo mora em
+# config/agentes_por_pacote/seguros/modelos (`<chave>.yml` e `<chave>.md`) e é conferido na leitura. Arquivo ausente
+# ou fora do formato não derruba o Construtor: o modelo só deixa de existir. Só conta com o pacote `seguros` E com a
+# flag `agente_modelos_seguro` pode usar.
+RSpec.describe Autonomia::Agents::ModelosDeRamo do
+  include ModelosDeRamoHelper
+
+  let(:piloto) { %w[seguro_auto seguro_garantia transporte_carga] }
+
+  describe 'os modelos do piloto' do
+    it 'carrega os três, cada um com o tipo comercial, o roteiro e as listas' do
+      expect(described_class.chaves).to match_array(piloto)
+
+      piloto.each do |chave|
+        modelo = described_class.buscar(chave)
+        expect(modelo.chave).to eq(chave)
+        expect(modelo.tipo).to eq('sdr')
+        expect(modelo.nome_padrao).to be_present
+        expect(modelo.perguntas).not_to be_empty
+        expect(modelo.ja_vem).not_to be_empty
+        expect(modelo.teste.size).to eq(3)
+      end
+    end
+
+    it 'guarda o roteiro cru em até 8.000 bytes, com cada marcador uma vez e sozinho na linha' do
+      piloto.each do |chave|
+        roteiro = described_class.buscar(chave).roteiro
+        linhas = roteiro.lines.map(&:strip)
+
+        expect(roteiro.bytesize).to be <= Autonomia::Agents::ModelosDeRamo::Formato::ROTEIRO_MAX
+        expect(described_class::MARCADORES.keys.map { |marcador| linhas.count(marcador) }).to eq([1, 1])
+      end
+    end
+
+    it 'só traz ferramenta grátis da vitrine no "Já vem com" e no "Também combina", sem repetir' do
+      sugeriveis = Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis
+
+      piloto.each do |chave|
+        fontes = described_class.buscar(chave).ferramentas.map(&:fonte)
+        expect(fontes - sugeriveis).to be_empty
+        expect(fontes.uniq).to eq(fontes)
+      end
+    end
+
+    it 'só sugere cartão Premium na lista dos pagos' do
+      cartoes = Autonomia::FerramentasProntas::Catalogo.premium_no_codigo.map(&:chave)
+
+      expect(piloto.flat_map { |chave| described_class.buscar(chave).premium } - cartoes).to be_empty
+    end
+
+    it 'devolve nil para chave desconhecida, vazia ou que não é texto' do
+      expect(described_class.buscar('seguro_de_vida')).to be_nil
+      expect(described_class.buscar(nil)).to be_nil
+      expect(described_class.buscar({ 'chave' => 'seguro_auto' })).to be_nil
+    end
+  end
+
+  describe 'a conferência do arquivo' do
+    let(:pasta) { Pathname(Dir.mktmpdir) }
+    let(:original) { described_class::PASTA }
+    let(:dados) { YAML.safe_load(File.read(original.join('seguro_garantia.yml'), encoding: 'UTF-8')) }
+    let(:roteiro) { File.read(original.join('seguro_garantia.md'), encoding: 'UTF-8') }
+
+    after { FileUtils.remove_entry(pasta) }
+
+    def gravar(conteudo, texto = roteiro, chave: 'seguro_garantia')
+      File.write(pasta.join("#{chave}.yml"), conteudo.is_a?(String) ? conteudo : conteudo.to_yaml)
+      File.write(pasta.join("#{chave}.md"), texto) unless texto.nil?
+    end
+
+    def lidos
+      described_class::Leitor.new(pasta).modelos
+    end
+
+    it 'aceita a cópia fiel do arquivo do piloto' do
+      gravar(dados)
+
+      expect(lidos.keys).to eq(['seguro_garantia'])
+    end
+
+    it 'recusa o que não é YAML e segue sem o modelo, sem levantar' do
+      gravar("chave: [sem fechar\n  tipo: sdr")
+
+      expect(lidos).to eq({})
+    end
+
+    it 'recusa campo desconhecido, campo que falta e chave diferente do nome do arquivo' do
+      [dados.merge('preco' => 'R$ 10'), dados.except('perguntas'), dados.merge('chave' => 'outra')].each do |invalido|
+        gravar(invalido)
+        expect(lidos).to eq({})
+      end
+    end
+
+    it 'recusa texto acima do limite e lista longa demais' do
+      longa = dados.merge('perguntas' => Array.new(described_class::ITENS_MAX + 1) { |i| "Pergunta #{i}?" })
+      comprida = dados.merge('documentos' => ['a' * (described_class::ITEM_MAX + 1)])
+      frase = dados.merge('ja_vem' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'a' * 501 }])
+
+      [longa, comprida, frase, dados.merge('teste' => %w[uma duas])].each do |invalido|
+        gravar(invalido)
+        expect(lidos).to eq({})
+      end
+    end
+
+    it 'recusa Premium no "Já vem com" e no "Também combina"' do
+      paga = { 'fonte' => 'raio_x_empresa', 'usar_quando' => 'Use quando o cliente informar o CNPJ.' }
+
+      [dados.merge('ja_vem' => dados['ja_vem'] + [paga]), dados.merge('tambem' => [paga])].each do |invalido|
+        gravar(invalido)
+        expect(lidos).to eq({})
+      end
+    end
+
+    it 'recusa ferramenta fora do catálogo, de uso interno, repetida ou que não é cartão Premium na lista dos pagos' do
+      frase = 'Use quando o cliente pedir.'
+      invalidos = [
+        dados.merge('ja_vem' => [{ 'fonte' => 'nao_existe', 'usar_quando' => frase }]),
+        dados.merge('ja_vem' => [{ 'fonte' => 'produtos_seguradoras', 'usar_quando' => frase }]),
+        dados.merge('tambem' => [{ 'fonte' => dados['ja_vem'].first['fonte'], 'usar_quando' => frase }]),
+        dados.merge('premium' => ['cnpj'])
+      ]
+
+      invalidos.each do |invalido|
+        gravar(invalido)
+        expect(lidos).to eq({})
+      end
+    end
+
+    it 'recusa o roteiro que falta, grande demais ou sem um marcador sozinho na linha' do
+      sem_marcador = roteiro.sub('{{DOCUMENTOS}}', 'os documentos: {{DOCUMENTOS}}')
+
+      gravar(dados, nil)
+      expect(lidos).to eq({})
+
+      ["#{roteiro}\n#{'a' * 8_000}", sem_marcador, "#{roteiro}\n{{DOCUMENTOS}}"].each do |texto|
+        gravar(dados, texto)
+        expect(lidos).to eq({})
+      end
+    end
+
+    it 'deixa de fora só o modelo com defeito' do
+      gravar(dados)
+      gravar(dados.merge('chave' => 'quebrado', 'tipo' => 'insurance_quote'), chave: 'quebrado')
+
+      expect(lidos.keys).to eq(['seguro_garantia'])
+    end
+  end
+
+  describe '.liberado?' do
+    let(:account) { create(:account) }
+
+    around { |example| com_pacotes_ligados { example.run } }
+
+    it 'libera só com o pacote seguros e a flag juntos' do
+      expect(described_class.liberado?(account)).to be(false)
+
+      account.enable_features!(described_class::FLAG)
+      expect(described_class.liberado?(account)).to be(false)
+      expect(described_class.liberados(account)).to eq([])
+
+      conta_de_seguros(account)
+      expect(described_class.liberado?(account)).to be(true)
+      expect(described_class.liberados(account)).to match_array(piloto)
+    end
+
+    it 'não libera conta de seguros sem a flag, nem com o interruptor dos pacotes desligado' do
+      conta_de_seguros(account)
+      expect(described_class.liberado?(account)).to be(false)
+
+      account.enable_features!(described_class::FLAG)
+      with_modified_env(AUTONOMIA_PACOTES_ENABLED: 'false') { expect(described_class.liberado?(account)).to be(false) }
+      expect(described_class.liberado?(nil)).to be(false)
+    end
+  end
+end

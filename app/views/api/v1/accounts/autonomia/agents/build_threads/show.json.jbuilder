@@ -1,3 +1,5 @@
+# #2881: o modelo pronto de ramo desta conversa (nil sem modelo: conta sem o pacote `seguros`, flag desligada, a Lia).
+modelo_pronto = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
 json.payload do
   json.id @thread.id
   json.agent_id @thread.autonomia_agent_id
@@ -23,8 +25,13 @@ json.payload do
     # #2490: o canal que o dono pediu na conversa (whatsapp, instagram… ou nenhum). Leitura do Construtor, não é IP.
     json.canal_pedido @thread.state['canal_pedido'] if @thread.state.key?('canal_pedido')
     # #2858 F3: as ferramentas prontas do agente novo ("já vem com" e "também combina", chaves do catálogo). Não é IP.
-    json.ferramentas_sugeridas Array(@thread.state['ferramentas_sugeridas']) if @thread.state.key?('ferramentas_sugeridas')
-    json.ferramentas_tambem Array(@thread.state['ferramentas_tambem']) if @thread.state.key?('ferramentas_tambem')
+    # #2881: com modelo pronto, as duas saem da marca do modelo (o que o dono tirou ou incluiu vale na hora).
+    if modelo_pronto
+      json.merge! modelo_pronto.chaves_das_prontas
+    else
+      json.ferramentas_sugeridas Array(@thread.state['ferramentas_sugeridas']) if @thread.state.key?('ferramentas_sugeridas')
+      json.ferramentas_tambem Array(@thread.state['ferramentas_tambem']) if @thread.state.key?('ferramentas_tambem')
+    end
     # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
     json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
     # #1428 (entrega C, piloto): as respostas prontas da pergunta aberta (do Construtor, ou os botões fixos do conflito).
@@ -36,6 +43,9 @@ json.payload do
     # escreveu para o dono (`pedido`, `resumo`); nunca o campo, a conferência, a instrução ou o andaime.
     json.resultado Autonomia::Agents::ResultadoDoAjuste.new(@thread).to_h if Autonomia::Agents::ResultadoDoAjuste.mostrar?(@thread)
   end
+  # #2881: o que a tela mostra do modelo pronto (listas com o que o dono mudou, ferramentas liberadas com a frase "Use
+  # quando", cartões pagos sugeridos e perguntas de teste). Nulo sem modelo. O roteiro é dado nosso e não sai daqui.
+  json.modelo_pronto modelo_pronto&.para_tela
   json.created_at @thread.created_at
   json.updated_at @thread.updated_at
 end

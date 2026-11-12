@@ -1398,3 +1398,18 @@
   display_name: Agentes › ferramentas prontas (IP próprio das consultas grátis)
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: modelos prontos por ramo de seguro (#2881). Ligada, e só em conta com o pacote `seguros`: "Criar agente"
+# oferece os agentes prontos de seguro auto, seguro garantia e transporte de carga. O agente nasce como comercial
+# (`sdr`), com o roteiro do ramo, as perguntas da cotação, os documentos, as ferramentas grátis com a frase "Use quando"
+# do ramo e as perguntas de teste; a conversa com o Construtor só pergunta o nome da corretora e as seguradoras. O dono
+# pode mudar as listas antes de começar. O conteúdo fica em config/agentes_por_pacote/seguros/modelos. Sem migration e
+# sem tipo novo de agente. Desligada: a criação de agente fica como antes (a chave do modelo é ignorada). O agente que
+# já nasceu de um modelo continua com as listas dele. Rollback: desligar a flag na conta. Posição RESERVADA pela
+# Orquestração em 12/11: a 50 (562949953421312, 1 << 49). A posição real é a ordem neste arquivo: enquanto as flags das
+# posições 47, 48 e 49 (de outros PRs) não entram na main, esta fica na 47 (1 << 46), e nada pode ser ligado em
+# produção antes de a ordem fechar. A flag fica no FIM do arquivo.
+- name: agente_modelos_seguro
+  display_name: Agentes › modelos prontos por ramo de seguro
+  enabled: false
+  column: feature_flags_ext_2

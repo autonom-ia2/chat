@@ -322,7 +322,12 @@ RSpec.describe Account do
       # #2858 (F7): agente_ferramentas_prontas_premium depois dela, 44 (1 << 43 = 8796093022208), Orquestração (11/11).
       # #2894: relacionamentos_novo depois dela, 45 (1 << 44 = 17592186044416), Orquestração (12/11).
       # #2942: agente_ferramentas_prontas_ip_proprio depois dela, 46 (1 << 45 = 35184372088832), Orquestração (12/11).
-      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
+      # #2881: agente_modelos_seguro fica no FIM do arquivo. A Orquestração reservou a 50 (1 << 49 = 562949953421312), que
+      # só vale quando as flags das posições 47, 48 e 49 (de outros PRs) entrarem; até lá o bit é o da ordem real do
+      # arquivo. Por isso ela é conferida pela posição (a última, com o bit seguinte ao da penúltima), sem número fixo.
+      mapa_ext_2 = described_class.flag_mapping['feature_flags_ext_2']
+      expect(mapa_ext_2.to_a.last).to eq([:feature_agente_modelos_seguro, 1 << (mapa_ext_2.size - 1)])
+      expect(mapa_ext_2.except(:feature_agente_modelos_seguro)).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
         feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256,

@@ -14,6 +14,8 @@ module Autonomia
       include DesfechoDoAjuste
       include PendenciaDoAjuste
       include MateriaisDaFase2
+      # #2881 — o modelo pronto de ramo: roteiro, entrevista curta, nome e ferramentas fixas. Sem modelo, nada muda.
+      include ModeloPronto
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
@@ -647,8 +649,9 @@ module Autonomia
       end
 
       # #2858 F3: as ferramentas prontas liberadas para a conta, só na criação (o ajuste não troca as ferramentas).
+      # #2881: com modelo pronto as ferramentas são as do modelo, e o modelo de IA não recebe a lista para escolher.
       def prontas_context
-        ProntasSugeridas.contexto(@account) if criacao?
+        ProntasSugeridas.contexto(@account) if criacao? && modelo_do_rascunho.nil?
       end
 
       # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Com agente na
@@ -754,6 +757,10 @@ module Autonomia
       # com fala do usuário; o jbuilder nunca o ecoa (IP oculto).
       def skeleton_context
         return '' if adjust_mode?
+
+        # #2881: com modelo pronto, o roteiro é o do modelo (com as listas atuais), no lugar do esqueleto do tipo.
+        modelo = modelo_do_rascunho
+        return roteiro_do_modelo_context(modelo) if modelo
 
         skeleton = if booking_enabled? && builder_agent_type == 'scheduler'
                      SCHEDULER_WITH_BOOKING_SKELETON
@@ -905,8 +912,9 @@ module Autonomia
       # Contamos turnos `user` como proxy do nº de respostas (desde E1 as perguntas do assistant
       # também são persistidas, mas a contagem por RESPOSTA segue mais fiel — a abertura do
       # Construtor não tem turno de usuário, logo cada resposta corresponde a uma pergunta respondida).
+      # #2881: com modelo pronto o teto desce para 2 (`teto_da_entrevista`); sem modelo, MAX_INTERVIEW_QUESTIONS.
       def interview_budget_exhausted?
-        Array(@thread.messages).count { |m| m['role'] == 'user' } >= MAX_INTERVIEW_QUESTIONS
+        Array(@thread.messages).count { |m| m['role'] == 'user' } >= teto_da_entrevista
       end
 
       # Mapeia o JSON estruturado do Builder p/ colunas do Agent. instruction/scaffold ficam aqui
@@ -1271,7 +1279,11 @@ module Autonomia
       end
 
       # #2858 F3: o "já vem com" e o "também combina" da Confira, como o canal (no state e no config do agente).
+      # #2881: com modelo pronto, as do modelo (fixas e já filtradas pelo que a conta tem liberado), não as da IA.
       def prontas_do_turno(parsed)
+        modelo = modelo_do_rascunho
+        return modelo.chaves_das_prontas if modelo
+
         dispensadas = @thread.agent&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS]
         divisao = ProntasSugeridas.dividir(@account, parsed, fora: dispensadas)
         { 'ferramentas_sugeridas' => divisao[:sugeridas], 'ferramentas_tambem' => divisao[:tambem] }
@@ -1313,6 +1325,8 @@ module Autonomia
         if criacao?
           attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido'])
           attrs[:config].merge!(prontas_do_turno(parsed))
+          # #2881: com modelo pronto, o tipo é o do modelo e o agente guarda a marca dele (as listas do dono).
+          attrs = com_modelo_pronto(attrs)
         end
         attrs
       end
@@ -1346,7 +1360,9 @@ module Autonomia
       def config_do_rascunho
         papel = @thread.state.to_h['papel']
         { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
-          'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account) }.compact
+          'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account),
+          # #2881: a marca do modelo pronto (as listas como o dono as deixou); nil sem modelo.
+          Autonomia::Agents::ModelosDeRamo::Marca::CHAVE => modelo_do_rascunho&.marca }.compact
       end
 
       # Garante o Agent vinculado à thread (modo guided). Cria um rascunho mínimo na PRIMEIRA geração
@@ -1397,8 +1413,9 @@ module Autonomia
 
       # GATE/P2 — nome-padrão derivado do tipo do agente para o fallback de fechamento. Usa o mesmo
       # mapeamento canônico de agent_type_for (tipo desconhecido → 'custom' → 'Assistente').
+      # #2881: com modelo pronto, o nome padrão é o do modelo.
       def default_agent_name(parsed)
-        DEFAULT_NAMES[self.class.agent_type_for(parsed['agent_type'])] || 'Assistente'
+        nome_do_modelo || DEFAULT_NAMES[self.class.agent_type_for(parsed['agent_type'])] || 'Assistente'
       end
 
       # CONHECIMENTO REVISADO (Revisor v2): para cada fonte APROVADA pela IA Revisora, o resumo curto
