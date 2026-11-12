@@ -9,7 +9,8 @@ import ListaPage from '../../pages/ListaPage.vue';
 
 // A lista de Relacionamentos fora da demonstração (#2894): lê do servidor pelo
 // cliente de API, esconde Empresas de quem não tem a chave `companies` e mostra
-// o erro com "Tentar de novo" quando o servidor recusa. As ações em grupo
+// o erro com "Tentar de novo" quando o servidor recusa. Quem não pode ver (401
+// ou 403) lê que não tem acesso, sem botão de tentar. As ações em grupo
 // escrevem no servidor, somem para quem não tem a permissão e recarregam a
 // lista depois.
 const flagsLigadas = vi.hoisted(() => new Set());
@@ -242,22 +243,94 @@ describe('erro do servidor', () => {
     expect(w.get(marca('linha')).text()).toContain('Ana Albuquerino');
   });
 
-  it('422 na lista de pessoas mostra o erro no lugar da lista', async () => {
+  it('422 na lista de pessoas mostra o erro, com "Tentar de novo", no lugar da lista', async () => {
     RelacionamentosAPI.pessoas.mockRejectedValue(erroHttp(422));
     const w = await abrir();
     expect(w.get(marca('erro')).text()).toContain(
       'Não consegui mostrar as pessoas.'
     );
+    expect(w.get(`${marca('erro')} button`).text()).toBe('Tentar de novo');
+    expect(w.find(marca('sem-acesso')).exists()).toBe(false);
     expect(w.find(marca('linha')).exists()).toBe(false);
   });
+});
 
-  it('403 em empresas mostra o erro no lugar da lista', async () => {
-    flagsLigadas.add(FEATURE_FLAGS.COMPANIES);
-    RelacionamentosAPI.empresas.mockRejectedValue(erroHttp(403));
-    RelacionamentosAPI.contagensDeEmpresas.mockRejectedValue(erroHttp(403));
-    const w = await abrir({ query: { aba: 'empresas' } });
-    expect(w.get(marca('erro')).attributes('role')).toBe('alert');
+describe('sem acesso (401 ou 403)', () => {
+  const SEM_ACESSO_A_PESSOAS =
+    'Você não tem acesso a estas pessoas. Peça a quem administra a conta.';
+  const SEM_ACESSO_A_EMPRESAS =
+    'Você não tem acesso a estas empresas. Peça a quem administra a conta.';
+  const recusar = (status, metodos) =>
+    metodos.forEach(metodo =>
+      RelacionamentosAPI[metodo].mockRejectedValue(erroHttp(status))
+    );
+  // O estado único: a frase, e nada que ofereça tentar ou buscar no vazio.
+  const soDizQueNaoTemAcesso = (w, frase) => {
+    expect(w.findAll(marca('sem-acesso'))).toHaveLength(1);
+    expect(w.get(marca('sem-acesso')).attributes('role')).toBe('alert');
+    expect(w.get(marca('sem-acesso')).text()).toBe(frase);
+    expect(w.find(`${marca('sem-acesso')} button`).exists()).toBe(false);
+    expect(w.find(marca('erro')).exists()).toBe(false);
+    expect(w.text()).not.toContain('Tentar de novo');
+    expect(w.find(marca('busca')).exists()).toBe(false);
+    expect(w.find(marca('mais-filtros')).exists()).toBe(false);
+    expect(w.find('[data-grupo]').exists()).toBe(false);
     expect(w.find(marca('linha')).exists()).toBe(false);
+  };
+
+  it.each([401, 403])(
+    '%i em todas as leituras de pessoas: a tela só diz que a pessoa não tem acesso',
+    async status => {
+      recusar(status, ['resumo', 'contagensDePessoas', 'pessoas']);
+      const w = await abrir();
+      soDizQueNaoTemAcesso(w, SEM_ACESSO_A_PESSOAS);
+    }
+  );
+
+  it('403 só na lista de pessoas: o mesmo estado, no lugar da busca e da lista', async () => {
+    recusar(403, ['pessoas']);
+    const w = await abrir();
+    soDizQueNaoTemAcesso(w, SEM_ACESSO_A_PESSOAS);
+  });
+
+  it.each(['resumo', 'contagensDePessoas'])(
+    '403 só em %s não vira um segundo erro com botão',
+    async metodo => {
+      recusar(403, [metodo]);
+      const w = await abrir();
+      soDizQueNaoTemAcesso(w, SEM_ACESSO_A_PESSOAS);
+    }
+  );
+
+  it('403 em empresas: a aba Empresas diz a frase dela, e Pessoas continua abrindo', async () => {
+    flagsLigadas.add(FEATURE_FLAGS.COMPANIES);
+    recusar(403, ['empresas', 'contagensDeEmpresas']);
+    const w = await abrir({ query: { aba: 'empresas' } });
+    soDizQueNaoTemAcesso(w, SEM_ACESSO_A_EMPRESAS);
+
+    await w.get(marca('aba-pessoas')).trigger('click');
+    await flushPromises();
+    expect(w.find(marca('sem-acesso')).exists()).toBe(false);
+    expect(w.get(marca('linha')).text()).toContain('Ana Albuquerino');
+  });
+
+  it('403 nas opções de "Mais filtros": o aviso diz que não tem acesso, sem mandar tentar de novo', async () => {
+    RelacionamentosAPI.opcoesDeFiltro.mockRejectedValue(erroHttp(403));
+    const w = await abrir();
+    await w.get(marca('mais-filtros')).trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledTimes(1);
+    expect(useAlert).toHaveBeenCalledWith(SEM_ACESSO_A_PESSOAS);
+  });
+
+  it('500 nas opções de "Mais filtros" continua com o aviso de sempre', async () => {
+    RelacionamentosAPI.opcoesDeFiltro.mockRejectedValue(erroHttp(500));
+    const w = await abrir();
+    await w.get(marca('mais-filtros')).trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não consegui carregar. Tente de novo.'
+    );
   });
 });
 

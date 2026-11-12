@@ -24,11 +24,14 @@ const montar = ({
 
 // Uma fonte em que as leituras de `quais` são recusadas pelo servidor até
 // `voltar()`; as outras respondem como a demonstração.
-const fonteQueFalha = quais => {
-  const recusado = Object.assign(
-    new Error('Request failed with status code 500'),
-    { response: { status: 500 } }
-  );
+const erroDoServidor = () =>
+  Object.assign(new Error('Request failed with status code 500'), {
+    response: { status: 500 },
+  });
+const semAcesso = () =>
+  Object.assign(new Error('Sem acesso.'), { name: 'SEM_ACESSO' });
+
+const fonteQueFalha = (quais, recusado = erroDoServidor()) => {
   const boa = demo();
   let falhando = true;
   const leitura = metodo =>
@@ -188,6 +191,28 @@ describe('useLista', () => {
     expect(lista.erro.value).toBeNull();
     expect(lista.total.value).toBe(120);
   });
+
+  it('erro comum não é falta de acesso', async () => {
+    const servidor = fonteQueFalha(['resumo', 'contagens', 'listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
+    await lista.iniciar();
+    expect(lista.semAcesso.value).toBe(false);
+  });
+
+  // Uma leitura recusada por falta de acesso basta: a tela mostra um estado só.
+  it.each(['resumo', 'contagens', 'listar'])(
+    '%s recusado com SEM_ACESSO liga `semAcesso`, e some quando volta a responder',
+    async leitura => {
+      const servidor = fonteQueFalha([leitura], semAcesso());
+      const { lista } = montar({ fonte: servidor.fonte });
+      await lista.iniciar();
+      expect(lista.semAcesso.value).toBe(true);
+
+      servidor.voltar();
+      await lista.recarregar();
+      expect(lista.semAcesso.value).toBe(false);
+    }
+  );
 
   it('"mostrar mais" atropelado por um pedido da página 1 não deixa carregandoMais preso', async () => {
     const pendentes = [];

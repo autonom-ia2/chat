@@ -139,6 +139,8 @@
       },
       "ESTADOS": {
         "CONTA_VAZIA": "Ainda não tem ninguém aqui.",
+        "SEM_ACESSO": "Você não tem acesso a estas pessoas. Peça a quem administra a conta.",
+        "SEM_ACESSO_EMPRESAS": "Você não tem acesso a estas empresas. Peça a quem administra a conta.",
         "GRUPO_VAZIO": "Ninguém neste grupo agora.",
         "GRUPO_VAZIO_EMPRESAS": "Nenhuma empresa neste grupo agora.",
         "BUSCA_SEM_RESULTADO": "Não achei ninguém com “{busca}”.",
