@@ -246,6 +246,45 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
   end
 
+  # #2604: a mensagem, o aviso e o e-mail conferem quem agiria (quem ligou, ou quem vai ligar), como o motor: sem acesso,
+  # a automação pausaria e o caminho acaba ali.
+  describe 'quem age' do
+    let(:bia) { create(:user, account: account, role: :agent, name: 'Bia') }
+    let(:caixa_de_email) { create(:channel_email, account: account).inbox }
+    let(:email) { { 'id' => 'em', 'tipo' => 'email', 'caixa_id' => caixa_de_email.id, 'assunto' => ['Oi'], 'texto' => ['Tudo bem?'] } }
+    let(:pausaria) { { motivo: 'quem_ligou_sem_acesso', quem: 'Bia' } }
+
+    def passos_como(quem, *passos)
+      described_class.new(receita: receita(*passos), conta: account, usuario: admin, quem_age: quem).resultado[:conversas].first[:passos]
+    end
+
+    before { contato.update!(email: 'maria@exemplo.com.br') }
+
+    it 'a mensagem e o aviso pausariam quando quem age não enxerga a conversa, e o caminho acaba', :aggregate_failures do
+      aviso = avisar_passo('a1', { 'pessoas' => [admin.id] }, 'Olha')
+
+      expect(passos_como(bia, mensagem_passo('m1', 'Oi'), esperar_passo('e1')))
+        .to eq([{ id: 'm1', tipo: 'mensagem', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(bia, aviso, esperar_passo('e1'))).to eq([{ id: 'a1', tipo: 'avisar', faria: 'pausaria', dados: pausaria }])
+      expect(passos_como(admin, mensagem_passo('m1', 'Oi'), esperar_passo('e1')).pluck(:faria)).to eq(%w[mensagem esperar])
+    end
+
+    it 'o e-mail pausaria quando quem age vê a conversa mas não começa conversa na caixa de e-mail', :aggregate_failures do
+      create(:inbox_member, user: bia, inbox: inbox)
+
+      expect(passos_como(bia, email, esperar_passo('e1'))).to eq([{ id: 'em', tipo: 'email', faria: 'pausaria', dados: pausaria }])
+
+      create(:inbox_member, user: bia, inbox: caixa_de_email)
+      expect(passos_como(bia, email, esperar_passo('e1')).pluck(:faria)).to eq(%w[email esperar])
+    end
+
+    it 'o e-mail pausaria quando quem age não enxerga a conversa, mesmo na caixa de e-mail' do
+      create(:inbox_member, user: bia, inbox: caixa_de_email)
+
+      expect(passos_como(bia, email).first).to include(faria: 'pausaria', dados: pausaria)
+    end
+  end
+
   describe 'quais conversas' do
     let(:agente) { create(:user, account: account, role: :agent) }
     let(:outra_caixa) { create(:inbox, account: account) }

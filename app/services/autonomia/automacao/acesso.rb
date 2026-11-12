@@ -87,6 +87,13 @@ class Autonomia::Automacao::Acesso
     ConversationPolicy.new({ user: usuario, account: account_user.account, account_user: account_user }, Conversation).create?
   end
 
+  # A mesma pergunta pela pessoa (quem ligou a automação, ou quem vai ligar no ensaio, #2604): quem saiu da conta não
+  # começa.
+  def self.pessoa_comeca_conversa?(usuario, caixa)
+    account_user = usuario && caixa.account.account_users.find_by(user_id: usuario.id)
+    account_user.present? && comeca_conversa?(account_user, caixa)
+  end
+
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).
   def self.alcanca?(usuario, conversa)
     account_user = conversa.account.account_users.find_by(user_id: usuario.id)

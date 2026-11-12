@@ -226,6 +226,25 @@ describe('linhasDoEnsaio', () => {
     });
   });
 
+  // #2604: quem liga a automação não pode escrever ali: o motor pausaria.
+  it('o passo que pausaria diz quem liga, sem balão', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'm1',
+          tipo: 'mensagem',
+          faria: 'pausaria',
+          dados: { motivo: 'quem_ligou_sem_acesso', quem: 'Bia' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.PAUSARIA(Bia)');
+    expect(linha.balao).toBeUndefined();
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [

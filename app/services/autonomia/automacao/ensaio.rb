@@ -14,6 +14,7 @@
 #   agora, no fuso da conta; pula como o motor pularia.
 # - "extrair", "escrever", "resumir" (#2500 F7) e "para cada item" (G24) só dizem o que a IA faria e para onde iria,
 #   pelo `ensaiar` de cada passo: nenhuma IA é chamada.
+# - a mensagem, o aviso e o e-mail conferem quem age (#2604, EnvioNoEnsaio): sem acesso, "pausaria", e o caminho acaba.
 #
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
@@ -33,12 +34,14 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Só as conversas que `usuario` enxerga, pelo mesmo filtro da lista de conversas. Com `conversa_id` (o número que a
-  # pessoa vê), ensaia só ela; fora do alcance de quem pede, é como se não existisse (RecordNotFound, 404).
-  def initialize(receita:, conta:, usuario:, conversa_id: nil)
+  # pessoa vê), ensaia só ela; fora do alcance de quem pede, é como se não existisse (RecordNotFound, 404). `quem_age`:
+  # como quem o motor agiria (#2604); sem ele, quem pede.
+  def initialize(receita:, conta:, usuario:, conversa_id: nil, quem_age: usuario)
     @receita = receita
     @conta = conta
     @usuario = usuario
     @conversa_id = conversa_id
+    @quem_age = quem_age
     # O laço dos documentos (G46) não roda de novo no ensaio: o caminho que volta para no fim e diz para onde.
     @roteiro = ::Autonomia::Automacao::Roteiro.new(receita, voltar: false)
   end
@@ -72,6 +75,7 @@ class Autonomia::Automacao::Ensaio
 
     @contados = 0
     @conversa = conversa
+    @envio = ::Autonomia::Automacao::EnvioNoEnsaio.new(conversa, @quem_age)
     falhou = (mensagem if ::Autonomia::Automacao::MensagemDoGatilho.falhou?(tipo_do_gatilho))
     contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia, falhou: falhou)
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
@@ -115,14 +119,14 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
-  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
+  EM_LINHA = { 'mensagem' => :na_conversa, 'avisar' => :na_conversa, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
 
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
   # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
   # "catalogo" (só a frase).
   def ensaiar_passo(passo, valores)
     em_linha = EM_LINHA[passo['tipo']]
-    return [send(em_linha, passo, valores), @roteiro.seguinte(passo['id'])] if em_linha
+    return seguir(passo, send(em_linha, passo, valores)) if em_linha
 
     case passo['tipo']
     when 'esperar_ate' then esperar_ate(passo, valores)
@@ -132,6 +136,9 @@ class Autonomia::Automacao::Ensaio
     else [em_frente(passo, valores), @roteiro.seguinte(passo['id'])]
     end
   end
+
+  # O passo depois do qual o motor não segue (EnvioNoEnsaio::ACABA) acaba o caminho.
+  def seguir(passo, feito) = [feito, (@roteiro.seguinte(passo['id']) unless ::Autonomia::Automacao::EnvioNoEnsaio::ACABA.include?(feito[:faria]))]
 
   # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
   def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
@@ -145,6 +152,12 @@ class Autonomia::Automacao::Ensaio
 
   def no(passo, faria, dados = {}, ramos: nil)
     { id: passo['id'], tipo: passo['tipo'], faria: faria, dados: dados, ramos: ramos }.compact
+  end
+
+  # Quem age precisa enxergar a conversa (#2604), antes do texto, como no motor.
+  def na_conversa(passo, valores)
+    pausa = @envio.pausaria_na_conversa
+    pausa ? no(passo, *pausa) : texto(passo, valores)
   end
 
   # O texto montado com os valores desta conversa, para o balão. Valor vazio: o passo pularia, como no motor.
@@ -162,16 +175,16 @@ class Autonomia::Automacao::Ensaio
   end
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
-  # contato dela (as mesmas perguntas do passo). Não abre conversa nem manda.
+  # contato dela (as mesmas perguntas do passo). Não abre conversa nem manda. Quem age começa conversa na caixa (#2604).
   def email(passo, valores)
-    pronto = texto(passo, valores)
+    pronto = na_conversa(passo, valores)
     return pronto unless pronto[:faria] == 'email'
 
     caixa = ::Autonomia::Automacao::PassoDeEmail.caixa(@conta, passo['caixa_id'])
     return no(passo, 'caixa_de_email_indisponivel') if caixa.nil?
 
-    motivo = ::Autonomia::Automacao::PassoDeEmail.motivo_do_contato(@conta, @conversa.contact)
-    return no(passo, motivo) if motivo
+    fora = @envio.do_email(caixa)
+    return no(passo, *fora) if fora
 
     assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
     return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if assunto.nil?

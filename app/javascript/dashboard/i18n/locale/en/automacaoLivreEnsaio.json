@@ -72,6 +72,7 @@
       "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",
       "CONTATO_BLOQUEADO": "Would not go out: the contact is blocked and receives nothing from the automation.",
       "EMAIL_BLOQUEADO": "Would not go out: the contact's e-mail is blocked in this account (bounce, complaint or unsubscribe).",
+      "PAUSARIA": "Would pause the automation: {nome}, who turns it on, can't write in this conversation or inbox.",
       "CAIXA_DE_EMAIL_INDISPONIVEL": "Would not go out: the chosen e-mail inbox no longer exists.",
       "RECORRENTE_CARDS": "Would run on {total} card now | Would run on {total} cards now",
       "RECORRENTE_CONTATOS": "Would run on {total} contact now | Would run on {total} contacts now",

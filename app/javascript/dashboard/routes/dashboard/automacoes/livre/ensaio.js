@@ -110,6 +110,10 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
     return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // #2604: quem liga a automação não pode escrever nesta conversa ou caixa: o
+  // motor pausaria a automação, e o caminho acaba aqui.
+  if (no.faria === 'pausaria')
+    return { ...base, aviso: t(`${E}.PAUSARIA`, { nome: no.dados.quem }) };
   // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
   if (no.tipo === 'ia_assumir')
     return no.faria === 'ia_assumir'

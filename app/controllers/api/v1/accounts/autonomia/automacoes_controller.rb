@@ -194,10 +194,15 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return recusar_ensaio('gatilho_de_card') unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(receita)
 
     render json: ::Autonomia::Automacao::Ensaio.new(receita: receita, conta: Current.account, usuario: Current.user,
-                                                    conversa_id: params[:conversa_id]).resultado
+                                                    conversa_id: params[:conversa_id], quem_age: quem_age(conferir)).resultado
   rescue ActiveRecord::RecordNotFound
     head :not_found
   end
+
+  # #2604: como quem o motor agiria. A versão salva de uma automação ligada age como quem ligou; o rascunho e a nova,
+  # como quem pede: ligar é sempre "assumir e religar", e salvar outra versão desliga a de quem ligou
+  # (Definicao#salvar_versao!).
+  def quem_age(rascunho) = (@automacao.ligada_por if !rascunho && @automacao.ativa?) || Current.user
 
   # O recorrente (#2635, G7): quantos cards ou contatos a seleção pegaria agora, para o dono ver antes de ligar.
   def recorrente_no_ensaio(receita)
