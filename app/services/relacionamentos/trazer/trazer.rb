@@ -14,6 +14,10 @@
 # A conferência vencida (ContactImports::Trazer::Conferencia.vencida?) é recusada com `conferencia_vencida`: os
 # consertos já sumiram, e a lista entraria sem eles. `nada_para_trazer` fica como defesa para o arquivo conferido que
 # sumiu antes da hora.
+#
+# Com uma coluna dizendo quem é cliente e sem a pessoa ter escolhido quais valores dela querem dizer cliente, ou com a
+# escolha apontando um valor que a coluna não tem mais (Relacionamentos::Trazer::Perguntas#falta_valores_cliente?,
+# conferido aqui, sob a trava), a recusa é `falta_valores_cliente`: nunca se traz adivinhando nem com meia escolha.
 class Relacionamentos::Trazer::Trazer
   VENCIDA = ContactImports::Trazer::Conferencia::VENCIDA
   Resultado = Struct.new(:erro, keyword_init: true) do
@@ -23,6 +27,17 @@ class Relacionamentos::Trazer::Trazer
     end
   end
   JA_TRAZIDA = (Relacionamentos::Trazer::Situacao::TRAZENDO + Relacionamentos::Trazer::Situacao::GRAVADA).freeze
+  # O Guia pede confirmação antes de toda escrita da conferência (`Autonomia::Guide::Acoes::SEM_DESFAZER`): o caderno do
+  # desfazer dele só enxerga o que passa por callback de model, e aqui se grava com update_all, anexo e job. Enviar a
+  # planilha e trazer a lista ainda gravam em lote. Os nomes são os do catálogo do Guia (verbo e rota).
+  SEM_DESFAZER_DO_GUIA = [
+    'POST relacionamentos/trazer/leituras', 'POST relacionamentos/trazer/leituras/:id/trazer',
+    'PATCH relacionamentos/trazer/leituras/:id/respostas',
+    'PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice', 'PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice',
+    'PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha', 'PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha',
+    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora',
+    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir'
+  ].freeze
 
   # A importação marcada que este "Trazer" confirma: a leitura pronta ou a lista cujo fechamento desistiu.
   def self.fecha?(importacao)
@@ -40,6 +55,7 @@ class Relacionamentos::Trazer::Trazer
       next Resultado.new if JA_TRAZIDA.include?(@importacao.status)
       next Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
       next Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
+      next Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
       next Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
 
       confirmar

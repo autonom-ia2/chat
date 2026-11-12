@@ -11,6 +11,9 @@
 #   (ContactImports::Trazer::MesmaPessoa); a linha sem nome vira problema de nome;
 # - as linhas com problema ganham um arquivo próprio (ContactImports::Trazer::LinhasComProblema), trocado a cada leitura,
 #   só com as células dos quatro alvos;
+# - a coluna que diz quem é cliente tem os valores dela contados, também num arquivo próprio trocado a cada leitura
+#   (ContactImports::Trazer::ValoresDeCliente). A escolha que a pessoa tinha feito só continua valendo se os valores
+#   escolhidos ainda existem;
 # - o que a pessoa já tinha consertado e deixado de fora continua valendo quando a planilha é lida de novo
 #   (ContactImports::Trazer::ConsertosDaLeitura). O arquivo dos consertos não é apagado pela leitura: a que falha não
 #   perde nada. O arquivo conferido só recebe os consertos na hora de trazer (ContactImports::Trazer::FecharConferencia);
@@ -136,7 +139,8 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super
     summary = attributes[:validation_summary].merge(mesma_pessoa: @juntadas.to_i, ddd_juntado: @ddd_juntado.to_i)
-    attributes.merge(validation_summary: summary, options: @consertos.opcoes_depois_da_leitura(row_results))
+    opcoes = valores_de_cliente.opcoes_depois_da_leitura(@consertos.opcoes_depois_da_leitura(row_results))
+    attributes.merge(validation_summary: summary, options: opcoes)
   end
 
   def mark_ready(row_results)
@@ -160,6 +164,7 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
     DO_RESULTADO.each { |nome| ContactImports::Trazer::ApagarAnexo.call(campaign_import.public_send(nome)) }
     super
     linhas_com_problema.apagar
+    valores_de_cliente.apagar
   end
 
   def persist_rows(row_results)
@@ -168,9 +173,14 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
 
     linhas_com_problema.gravar(row_results.select { |row| row[:errors].present? })
     @consertos.gravar
+    valores_de_cliente.gravar_da_leitura(@reading.extra_columns, row_results)
   end
 
   def linhas_com_problema
     @linhas_com_problema ||= ContactImports::Trazer::LinhasComProblema.new(campaign_import)
+  end
+
+  def valores_de_cliente
+    @valores_de_cliente ||= ContactImports::Trazer::ValoresDeCliente.new(campaign_import)
   end
 end

@@ -35,6 +35,11 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['respostas']).to eq('clientes' => 'algumas', 'coluna_cliente' => 5)
       expect(response.parsed_body['colunas'][5]).to eq('indice' => 5, 'nome' => 'Cliente?', 'destino' => 'cliente')
+      # A coluna só aponta onde olhar: quem é cliente depende dos valores que a pessoa escolher
+      # (relacionamentos_trazer_valores_cliente_spec.rb). Sem a escolha, ninguém.
+      expect(response.parsed_body['exemplos'].pluck('cliente')).to eq([false, false, false])
+      chaves = %w[sim x].map { |valor| ContactImports::Trazer::Cliente.chave(importacao.id, 5, valor) }
+      responder(importacao, valores_cliente: { modo: 'valores', chaves: chaves })
       expect(response.parsed_body['exemplos'].pluck('cliente')).to eq([true, false, true])
 
       responder(importacao, clientes: 'algumas', coluna_cliente: 4)
@@ -64,13 +69,13 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
       trocar(importacao, 5, destino: 'cliente')
       corpo = ler(importacao)
       expect(corpo['respostas']).to eq('clientes' => 'algumas', 'coluna_cliente' => 5, 'telefone' => 'da_pessoa')
-      expect(corpo['exemplos'].pluck('cliente')).to eq([true, false, true])
+      expect(corpo['exemplos'].pluck('cliente')).to eq([false, false, false])
 
-      # Com duas colunas marcadas, a resposta continua na que a pessoa escolheu enquanto ela for "cliente".
+      # Só uma coluna diz quem é cliente: marcar outra devolve a primeira para informação.
       trocar(importacao, 4, destino: 'cliente')
-      expect(response.parsed_body['respostas']).to include('clientes' => 'algumas', 'coluna_cliente' => 5)
-      trocar(importacao, 5, destino: 'nao_guardar')
       expect(response.parsed_body['respostas']).to include('clientes' => 'algumas', 'coluna_cliente' => 4)
+      expect(response.parsed_body['colunas'].pluck('destino').last(3)).to eq(%w[cliente informacao informacao])
+      expect(importacao.reload.options['trazer']['destinos']).to eq('4' => 'cliente')
     end
 
     it 'a coluna marcada "cliente" pela tela das colunas vale como "algumas", menos quando a pessoa disse "sim, todas"' do
@@ -135,7 +140,8 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
       expect(corpo['perguntas'].last).to eq('id' => 'telefone', 'coluna' => 'Celular', 'indice' => 1)
       expect(corpo['respostas']).to eq('telefone' => 'da_empresa')
       # A Carla só tinha o telefone: sem ele, a linha dela fica sem contato.
-      expect(corpo['resumo']).to eq('total' => 3, 'novas' => 2, 'completadas' => 0, 'comProblema' => 1, 'juntadas' => 0, 'entram' => 2)
+      expect(corpo['resumo']).to eq('total' => 3, 'novas' => 2, 'completadas' => 0, 'comProblema' => 1, 'juntadas' => 0, 'entram' => 2,
+                                    'clientes' => 0)
       expect(corpo['problemas'].pluck('linha', 'tipo')).to eq([[4, 'sem_contato']])
 
       expect { responder(importacao, telefone: 'da_pessoa') }.to have_enqueued_job(CampaignImports::ValidateJob).once
@@ -194,7 +200,9 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
       corpo = ler(importacao)
       expect(corpo['colunas'].pluck('destino')).to eq(%w[nome telefone_da_empresa email empresa informacao cliente informacao])
       expect(corpo['respostas']).to eq('clientes' => 'algumas', 'coluna_cliente' => 5, 'telefone' => 'da_empresa')
-      expect(corpo['exemplos'].pluck('cliente')).to eq([true, false])
+      # A leitura nova contou os valores da coluna que diz quem é cliente, das três linhas da planilha.
+      expect(corpo['perguntas'].second).to include('id' => 'valores_cliente', 'indice' => 5, 'preenchidas' => 3)
+      expect(corpo['exemplos'].pluck('cliente')).to eq([false, false])
     end
 
     it 'recusa enquanto a planilha está sendo lida' do
@@ -273,7 +281,7 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
 
       expect(importacao.reload.options['trazer']).to eq(
         'destinos' => { '5' => 'cliente', '6' => 'telefone_da_empresa' },
-        'respostas' => { 'clientes' => 'algumas', 'coluna_cliente' => 5, 'telefone' => 'da_pessoa', 'coluna_telefone' => 1 }
+        'respostas' => { 'clientes' => 'algumas', 'telefone' => 'da_pessoa', 'coluna_telefone' => 1 }
       )
       expect(importacao.options.to_json).not_to include(*valores_da_planilha)
     end

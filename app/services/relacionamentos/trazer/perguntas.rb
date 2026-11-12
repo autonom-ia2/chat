@@ -1,5 +1,6 @@
 # As perguntas que a conferência de "Trazer minha lista" (#2896) faz à pessoa:
 # - "São clientes?", sempre;
+# - "Quais destes querem dizer cliente?", quando uma coluna diz quem é cliente e a resposta não é "sim, todas";
 # - "De quem é esse telefone?", no máximo uma: para a coluna de telefone que o leitor sugeriu sem certeza.
 #
 # A resposta do telefone fica guardada com a coluna a que se referia (`options['trazer']['respostas']`) e só vale
@@ -12,14 +13,20 @@
 # (ContactImports::Trazer::DestinosDaLinha):
 # - "sim, todas" vale sempre: todo mundo entra como cliente, com ou sem coluna marcada;
 # - fora disso, havendo coluna com o destino "cliente", a resposta é "algumas" com essa coluna, mesmo que a pessoa a
-#   tenha marcado pela tela das colunas. Com mais de uma marcada, vale a da resposta enquanto ela for "cliente"; senão,
-#   a primeira da planilha;
+#   tenha marcado pela tela das colunas. Só uma coluna diz quem é cliente (Relacionamentos::Trazer::TrocarDestino);
 # - "algumas" sem nenhuma coluna "cliente" (a pessoa mandou a coluna para outro lugar) deixa de valer: a pergunta volta
 #   sem resposta.
+#
+# "Quais destes querem dizer cliente?" traz os valores da coluna, contados (ContactImports::Trazer::ValoresDeCliente): a
+# tela mostra o texto e devolve as chaves. A escolha guardada vale sempre que existe: quem muda a coluna que diz quem é
+# cliente a apaga (ContactImports::Trazer::Conferencia#gravar), e a leitura da planilha apaga a que aponta um valor que
+# sumiu. Sem a escolha a lista não é trazida, e o "Trazer" ainda confere, sob a trava, que os valores escolhidos
+# continuam entre os da coluna (`falta_valores_cliente?`): nunca se traz com meia escolha.
 class Relacionamentos::Trazer::Perguntas
   SIM_TODAS = 'sim_todas'.freeze
   ALGUMAS = 'algumas'.freeze
-  CLIENTE = 'cliente'.freeze
+  CLIENTE = ContactImports::Trazer::Cliente::DESTINO
+  VALORES_CLIENTE = ContactImports::Trazer::Cliente::RESPOSTA
   # A resposta => o destino em que ela põe a coluna.
   DESTINO_DO_TELEFONE = {
     'da_pessoa' => 'telefone', 'da_empresa' => Relacionamentos::Trazer::Colunas::TELEFONE_DA_EMPRESA,
@@ -31,7 +38,30 @@ class Relacionamentos::Trazer::Perguntas
   end
 
   def call
-    [{ id: 'clientes' }, telefone].compact
+    [{ id: 'clientes' }, valores_cliente, telefone].compact
+  end
+
+  # { id: 'valores_cliente', coluna: 'Já é cliente?', indice: 4, preenchidas: 35, valores: [{ chave:, valor:, linhas: }],
+  #   outros: { valores: 7, linhas: 9 } } ou nil.
+  def valores_cliente
+    indice = coluna_dos_valores
+    return if indice.nil?
+
+    { id: VALORES_CLIENTE, coluna: colunas.titulo(indice), indice: indice }.merge(valores_de_cliente.da_coluna(indice).deep_symbolize_keys)
+  end
+
+  # A coluna a que "Quais destes querem dizer cliente?" se refere, ou nil quando a pergunta não existe.
+  def coluna_dos_valores
+    coluna_cliente unless respostas['clientes'] == SIM_TODAS
+  end
+
+  # Falta a escolha, ou ela aponta um valor que a coluna não tem mais entre os mostrados.
+  def falta_valores_cliente?
+    indice = coluna_dos_valores
+    return false if indice.nil?
+
+    chaves = Array(respostas.dig(VALORES_CLIENTE, 'chaves'))
+    respostas[VALORES_CLIENTE].nil? || (chaves.any? && !valores_de_cliente.tem?(indice, chaves))
   end
 
   # { id: 'telefone', coluna: 'Fone 2', indice: 2 } ou nil.
@@ -42,7 +72,8 @@ class Relacionamentos::Trazer::Perguntas
 
   # O que a pessoa respondeu e ainda vale, como a tela mandou: sem a coluna do telefone, que é assunto do servidor.
   def respostas_da_tela
-    coluna_respondida ? clientes.merge(respostas.slice('telefone')) : clientes
+    da_tela = coluna_respondida ? clientes.merge(respostas.slice('telefone')) : clientes
+    coluna_dos_valores.nil? ? da_tela : da_tela.merge(respostas.slice(VALORES_CLIENTE))
   end
 
   private
@@ -58,8 +89,7 @@ class Relacionamentos::Trazer::Perguntas
   end
 
   def coluna_cliente
-    marcadas = colunas.indices_do_destino(CLIENTE)
-    marcadas.include?(respostas['coluna_cliente']) ? respostas['coluna_cliente'] : marcadas.first
+    colunas.indices_do_destino(CLIENTE).first
   end
 
   # A coluna da resposta guardada, enquanto ela está no destino que a resposta lhe deu.
@@ -79,5 +109,10 @@ class Relacionamentos::Trazer::Perguntas
 
   def colunas
     @colunas ||= Relacionamentos::Trazer::Colunas.new(@importacao)
+  end
+
+  # Um leitor só: o arquivo da contagem é baixado uma vez por objeto.
+  def valores_de_cliente
+    @valores_de_cliente ||= ContactImports::Trazer::ValoresDeCliente.new(@importacao)
   end
 end

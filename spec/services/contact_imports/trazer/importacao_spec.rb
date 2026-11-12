@@ -58,7 +58,7 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
     ler_planilha(importacao)
 
     leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
-    expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 195)
+    expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 195, clientes: 0)
     expect(leitura[:colunas].pluck(:nome)).to eq(%w[Nome Celular E-mail Empresa Cidade Plano Segredo])
     expect(leitura[:problemas].pluck(:linha, :tipo))
       .to eq([[197, 'telefone'], [198, 'email'], [199, 'nome'], [200, 'sem_contato'], [201, 'duplicada']])
@@ -84,7 +84,7 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
 
       leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
       expect(leitura[:colunas][3]).to include(destino: esperado)
-      expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 196)
+      expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 196, clientes: 196)
       expect(leitura[:problemas].pluck(:linha, :estado))
         .to eq([[197, 'guardado'], [198, 'aberto'], [199, 'aberto'], [200, 'deixado'], [201, 'aberto']])
       expect(leitura[:problemas].first).to include(corrigido: '+5511987659197')

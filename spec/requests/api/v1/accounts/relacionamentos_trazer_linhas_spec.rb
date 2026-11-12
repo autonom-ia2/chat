@@ -16,7 +16,7 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
     expect(response.parsed_body).to eq(
       'problema' => { 'linha' => 4, 'tipo' => 'telefone', 'nome' => 'Carla Carvalhedo', 'valor' => '(11) 2345-678', 'estado' => 'guardado',
                       'corrigido' => '+5511987650004' },
-      'entram' => 3
+      'entram' => 3, 'clientes' => 0
     )
     expect(importacao.reload.options['trazer']).to eq({})
     expect(importacao).to have_attributes(status: 'ready_to_confirm', valid_rows: 2, invalid_rows: 5)
@@ -51,7 +51,7 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
       4 => nil, 5 => 'davi.dornelino@exemplo.com.br', 6 => 'Fabio Ferreirinho', 7 => 'elisa@exemplo.com.br', 8 => nil
     )
     expect(response.parsed_body['resumo']).to eq('total' => 7, 'novas' => 2, 'completadas' => 0, 'comProblema' => 5, 'juntadas' => 0,
-                                                 'entram' => 5)
+                                                 'entram' => 5, 'clientes' => 0)
   end
 
   it 'recusa o valor que não vale, com o motivo em código e sem guardar nada' do
@@ -96,7 +96,7 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
     expect(response.parsed_body).to eq(
       'problema' => { 'linha' => 3, 'tipo' => 'nome', 'nome' => '', 'valor' => '', 'contato' => '11987650003', 'estado' => 'aberto',
                       'motivo' => 'blank_name' },
-      'entram' => 1
+      'entram' => 1, 'clientes' => 0
     )
     expect(estados(importacao)).to eq(3 => 'aberto', 4 => 'aberto')
 
@@ -167,9 +167,10 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
     expect(importacao.reload.consertos).not_to be_attached
     deixar_de_fora(importacao, 6)
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body).to eq('problema' => da_empresa.except('motivo').merge('estado' => 'deixado'), 'entram' => 1)
+    deixada = da_empresa.except('motivo').merge('estado' => 'deixado')
+    expect(response.parsed_body).to eq('problema' => deixada, 'entram' => 1, 'clientes' => 0)
     reabrir(importacao, 6)
-    expect(response.parsed_body).to eq('problema' => da_empresa, 'entram' => 1)
+    expect(response.parsed_body).to eq('problema' => da_empresa, 'entram' => 1, 'clientes' => 0)
 
     consertar(importacao, 7, valor: 'Fabio Ferreirinho')
     expect(response).to have_http_status(:unprocessable_entity)
@@ -255,7 +256,8 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
     deixar_de_fora(importacao, 7)
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq(
-      'problema' => { 'linha' => 7, 'tipo' => 'sem_contato', 'nome' => 'Elisa Esteveira', 'valor' => '', 'estado' => 'deixado' }, 'entram' => 2
+      'problema' => { 'linha' => 7, 'tipo' => 'sem_contato', 'nome' => 'Elisa Esteveira', 'valor' => '', 'estado' => 'deixado' }, 'entram' => 2,
+      'clientes' => 0
     )
 
     consertar(importacao, 4, valor: '11987650004')

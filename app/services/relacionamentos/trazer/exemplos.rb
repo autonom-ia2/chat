@@ -1,5 +1,6 @@
 # Os exemplos da conferência de "Trazer minha lista" (#2896): as primeiras pessoas que vão entrar, e se cada uma entra
-# como cliente com o que a pessoa respondeu até agora ("sim, todas", ou a coluna que diz quem é cliente).
+# como cliente com o que a pessoa respondeu até agora ("sim, todas", ou os valores que ela escolheu na coluna que diz
+# quem é cliente: ContactImports::Trazer::Cliente).
 class Relacionamentos::Trazer::Exemplos
   def initialize(importacao)
     @importacao = importacao

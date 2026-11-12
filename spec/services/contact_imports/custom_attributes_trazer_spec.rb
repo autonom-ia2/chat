@@ -19,10 +19,18 @@ RSpec.describe ContactImports::CustomAttributes, :aggregate_failures do
   end
   let(:destinos) { { '3' => 'cidade', '4' => 'cliente', '5' => 'telefone_da_empresa' } }
 
+  # Quem é cliente é a pessoa que diz, escolhendo os valores da coluna: aqui, "Sim", "X" e "CLIENTE". A chave de cada
+  # valor é da importação e da coluna (4, "Cliente?").
+  def escolha(campaign_import)
+    { 'modo' => 'valores', 'chaves' => %w[sim x cliente].map { |valor| ContactImports::Trazer::Cliente.chave(campaign_import.id, 4, valor) } }
+  end
+
   before { account.enable_features!('companies') }
 
+  # trazer: as marcas da conferência, ou um bloco que as monta com a importação já criada.
   def trazida(trazer, texto = planilha)
     campaign_import = create_contact_import(account: account, user: user, content: texto)
+    trazer = trazer.call(campaign_import) if trazer.respond_to?(:call)
     campaign_import.update!(options: campaign_import.options.merge('trazer' => trazer))
     ContactImports::Validator.new(campaign_import).perform
     import_contacts!(campaign_import)
@@ -34,7 +42,7 @@ RSpec.describe ContactImports::CustomAttributes, :aggregate_failures do
 
   it 'leva a cidade, o telefone da empresa e o cliente para o lugar certo, sem criar informação para essas colunas' do
     freeze_time do
-      campaign_import = trazida('destinos' => destinos)
+      campaign_import = trazida(->(importacao) { { 'destinos' => destinos, 'respostas' => { 'valores_cliente' => escolha(importacao) } } })
 
       expect(campaign_import).to be_completed
       expect(account.contacts.order(:name).map { |contato| [contato.name, contato.additional_attributes['city'], contato.customer?] }).to eq(
@@ -109,14 +117,20 @@ RSpec.describe ContactImports::CustomAttributes, :aggregate_failures do
     expect(account.contacts.pluck(:custom_attributes).uniq).to eq([{}])
   end
 
-  describe ContactImports::Trazer::Cliente do
-    it 'marca só os valores que dizem sim, sem diferença de maiúscula nem de acento' do
-      %w[sim Sim SIM s S x X cliente Cliente CLIENTE true 1 yes].each { |valor| expect(described_class.marca?(valor)).to be(true), valor }
-      expect(described_class.marca?('  Sim  ')).to be(true)
-      ['não', 'nao', 'n', '0', 'false', '', nil, 'talvez', 'ex-cliente', 'cliente antigo', 'simone', '2'].each do |valor|
-        expect(described_class.marca?(valor)).to be(false), valor.inspect
-      end
-    end
+  it 'a coluna "cliente" não marca ninguém sem a pessoa escolher os valores: o código não interpreta a célula' do
+    trazida('destinos' => destinos)
+
+    expect(account.contacts.pluck(:contact_type).uniq).to eq(['lead'])
+    expect(account.custom_attribute_definitions.pluck(:attribute_key)).to eq(['plano'])
+  end
+
+  it '"toda linha com algo escrito" marca quem tem a célula preenchida, diga ela o que disser' do
+    trazida({ 'destinos' => destinos, 'respostas' => { 'valores_cliente' => { 'modo' => 'preenchidas' } } },
+            planilha.sub('Davi Dornelino,11987650004,,Recife,CLIENTE,,', 'Davi Dornelino,11987650004,,Recife,,,'))
+
+    expect(account.contacts.order(:name).map { |contato| [contato.name, contato.customer?] }).to eq(
+      [['Ana Albuquerino', true], ['Bruno Brandolim', true], ['Carla Carvalhedo', true], ['Davi Dornelino', false]]
+    )
   end
 
   # Rodada 5: quem aplica os destinos é o importador, depois das informações. "Sim, todas" não depende de a linha ter

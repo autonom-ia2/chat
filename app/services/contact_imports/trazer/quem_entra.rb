@@ -1,5 +1,5 @@
 # "Trazer minha lista" (#2896): quem entra se a pessoa mandar trazer agora. É a ÚNICA conta: a tela a mostra
-# (Relacionamentos::Trazer::Leitura, Relacionamentos::Trazer::MudarLinha), o "Trazer" a usa para saber se há alguém
+# (`contas`, em Relacionamentos::Trazer::Leitura e Relacionamentos::Trazer::MudarLinha), o "Trazer" a usa para saber se há alguém
 # (Relacionamentos::Trazer::Trazer) e o fechamento da conferência grava exatamente estas linhas
 # (ContactImports::Trazer::FecharConferencia).
 #
@@ -30,6 +30,21 @@ class ContactImports::Trazer::QuemEntra
     return 0 unless @importacao.normalized_csv.attached?
 
     @importacao.valid_rows + novas.size - linhas.status_valid.where(row_number: trocadas).count
+  end
+
+  # O que a tela mostra de quem entra: quantas pessoas e quantas delas como cliente, com a resposta de agora
+  # (ContactImports::Trazer::Cliente#quantas). É a mesma conta no resumo da leitura e na resposta de quem mexe numa linha.
+  def contas
+    { entram: quantas, clientes: ContactImports::Trazer::Cliente.new(@importacao).quantas(self) }
+  end
+
+  # { o que a linha tem nesta coluna (pela chave em extra_values; nil na vazia) => quantas das que entram }, numa
+  # consulta só: é com isto que se conta quem entra como cliente (ContactImports::Trazer::Cliente#quantas).
+  def por_valor(chave)
+    return {} unless @importacao.normalized_csv.attached?
+
+    entram = linhas.status_valid.where.not(row_number: trocadas).or(linhas.where(row_number: novas.keys))
+    entram.group(ContactImports::Trazer::ValoresDeCliente.celula(chave)).count
   end
 
   private

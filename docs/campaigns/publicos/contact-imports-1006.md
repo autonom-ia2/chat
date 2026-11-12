@@ -134,8 +134,8 @@ Com a marca:
   coluna além das de contato, então "sim, todas" vale para todo mundo. `ContactImports::CustomAttributes#merge!` não
   muda: só deixa de fora as colunas que têm outro destino): `cidade` vai para a cidade da pessoa
   (`contacts.additional_attributes.city`), `telefone_da_empresa` para a empresa **da linha**
-  (`companies.additional_attributes.phone_number`) e `cliente` (ou a resposta "sim, todas") faz a pessoa virar
-  cliente (`Contact#become_customer!`). Nenhum deles cria atributo. O destino `telefone_da_empresa` só é aceito
+  (`companies.additional_attributes.phone_number`) e `cliente` diz quem vira cliente
+  (`Contact#become_customer!`; a resposta "sim, todas" marca todo mundo). Nenhum deles cria atributo. O destino `telefone_da_empresa` só é aceito
   quando a planilha tem coluna de empresa e a conta tem Empresas (`Relacionamentos::Trazer::Colunas#tem_empresa?`),
   contando as colunas como ficariam depois da troca: a própria coluna de empresa não pode virar telefone da empresa.
   O telefone só é gravado quando a gravação ligou a pessoa à empresa da linha (o vinculador de empresas respondeu
@@ -143,9 +143,37 @@ Com a marca:
   uma pessoa que já era de outra empresa (`kept_other`), o telefone da empresa dessa linha não é guardado em lugar
   nenhum: nunca vai para a empresa que o contato já tinha. Se a coluna de empresa deixa de ser empresa, a coluna que
   era telefone da empresa volta a ser informação. Quem já existia é completado, nunca
-  sobrescrito: cidade e telefone só entram onde estava vazio, e quem já era cliente fica com a data que tinha. A
-  célula da coluna `cliente` vale como "sim" com `sim`, `s`, `x`, `cliente` ou um dos valores verdadeiros de
-  `ContactImports::AttributeValue` (`ContactImports::Trazer::Cliente`).
+  sobrescrito: cidade e telefone só entram onde estava vazio, e quem já era cliente fica com a data que tinha.
+- **Quem é cliente é a pessoa que diz** (`ContactImports::Trazer::Cliente`). O código não interpreta o que está
+  escrito na célula: não há lista de palavras que valem "sim". Com uma coluna no destino `cliente`, a tela pergunta
+  "Quais destes querem dizer cliente?" e a pessoa escolhe: toda linha com algo escrito na coluna (modo `preenchidas`)
+  ou os valores que ela marcar (modo `valores`). Sem a escolha a coluna não marca ninguém, e a lista não é trazida
+  (`422 falta_valores_cliente`). Só uma coluna diz quem é cliente: marcar outra devolve a primeira para informação.
+  - **A contagem** (`ContactImports::Trazer::ValoresDeCliente`): os valores da coluna, agrupados e contados, ficam no
+    anexo `valores_cliente` da importação. Valores iguais depois de arrumar os espaços (`squish`: sem espaço nas
+    pontas e um só entre as palavras; o espaço que não quebra linha, comum no que vem do Excel, é espaço) e ignorar
+    maiúscula caem no mesmo grupo (é formato, não interpretação: acento e qualquer palavra a mais fazem outro valor). Vão os 20 mais
+    frequentes (no empate, a ordem da planilha) e a soma dos outros; a célula vazia não entra em nada. `linhas` conta
+    todas as linhas da planilha, as com problema inclusive. O `valor` mostrado é a forma mais escrita do grupo, já com os espaços arrumados e com no
+    máximo 120 caracteres (`TETO_DO_VALOR`; o cortado termina em "…"): é só para a pessoa ler. O grupo e a chave são
+    do valor inteiro, então dois valores longos que ficam iguais depois do corte continuam sendo dois itens, com chaves
+    diferentes. A leitura da planilha refaz o anexo a cada passada; a
+    troca que põe a coluna em `cliente` sem ler a planilha de novo conta na hora, pelas linhas que a leitura já gravou
+    (`campaign_import_rows.extra_values`), com o mesmo resultado; a coluna que deixa de ser `cliente` leva o anexo
+    junto.
+  - **A chave** de um valor é `HMAC-SHA256` do id da importação, do índice da coluna e do valor agrupado (nessa
+    ordem, separados por um byte nulo), com um segredo derivado do `secret_key_base`
+    (`Rails.application.key_generator`): não dá para voltar dela ao texto nem para refazê-la sem o segredo. Por levar
+    a importação e a coluna, o mesmo texto tem outra chave noutra planilha e noutra coluna: nenhuma conta serve de
+    dicionário para outra, e a chave de uma coluna não vale em outra (`422 resposta_desconhecida`). A tela mostra o
+    texto e devolve só chaves; `options.trazer` guarda só o modo e as chaves.
+  - **A escolha acompanha a coluna.** Trocar a coluna que diz quem é cliente, ou mandá-la para outro destino, apaga
+    a escolha na mesma escrita (`ContactImports::Trazer::Conferencia#gravar`): a pergunta volta sem resposta. A
+    planilha lida de novo mantém a escolha enquanto todos os valores escolhidos ainda estão entre os da coluna; se um
+    deles sumiu (ou deixou de estar entre os 20 mostrados), a escolha inteira é apagada pela leitura e a pessoa
+    responde de novo. A mudança que faz a leitura falhar e é desfeita devolve a coluna de antes com a contagem e a
+    escolha que tinha. O `POST trazer` confere de novo, sob a trava: no modo `valores`, se alguma chave escolhida não
+    sai mais dos valores da coluna, recusa com `falta_valores_cliente` em vez de trazer sem marcar ninguém.
 - **Nome e descrição da informação.** A coluna que vira informação pode receber o nome e o "para que serve" que a
   pessoa escreveu; o atributo é criado (ou reaproveitado) com esse nome e a descrição vai para
   `custom_attribute_definitions.attribute_description`.
@@ -157,6 +185,7 @@ Com a marca:
 | Planilha como veio | anexo `original_file` | 7 dias |
 | Linhas com problema: nome, telefone, e-mail e empresa como vieram | anexo `linhas_com_problema` (`ContactImports::Trazer::LinhasComProblema`) | 7 dias da criação da importação |
 | O que a pessoa consertou, com o valor digitado | anexo `consertos` (`ContactImports::Trazer::Consertos`) | 7 dias da criação da importação |
+| Os valores da coluna que diz quem é cliente, contados (até 20 valores, com o texto) | anexo `valores_cliente` (`ContactImports::Trazer::ValoresDeCliente`) | 7 dias da criação da importação |
 | Linhas que vão entrar, com telefone e e-mail inteiros | anexo `normalized_csv` (arquivo conferido) | 30 dias |
 | Decisões da pessoa na conferência | `options.trazer` (`ContactImports::Trazer::Conferencia`) | com a importação |
 | Contagens da leitura | `validation_summary` | com a importação |
@@ -206,7 +235,7 @@ rotas de escrita respondem `422 leitura_nao_pronta`. Isso vale enquanto o anexo 
 `200 {"id": N, "situacao": "falhou", "erro": "leitura"}` (a tela manda enviar a planilha de novo) e as escritas seguem
 com `422 leitura_nao_pronta`. Nada é gravado na importação por causa disso.
 
-**Prazo dos dois anexos.** Somem junto com a planilha original, contando da criação da **importação** e não do
+**Prazo dos anexos da conferência** (`linhas_com_problema`, `consertos` e `valores_cliente`). Somem junto com a planilha original, contando da criação da **importação** e não do
 anexo (que nasce de novo a cada leitura e a cada conserto): `ContactImports::Trazer::AnexosVencidos`, chamado por
 `CampaignImports::PurgeExpiredFilesJob`. Nada deles vai para o log. A importação que está fechando (`confirmed`:
 a pessoa mandou trazer e o job de fechamento ainda não rodou) fica de fora: a lista mandada trazer no último dia do
@@ -215,14 +244,14 @@ prazo fecha com os consertos, e os anexos somem na passada seguinte ao fechament
 **Nenhuma rota da tela abre a planilha original nem o arquivo conferido inteiro.** A conferência (o GET e as rotas
 de linha) lê só os dois anexos acima; do arquivo conferido só os primeiros 16 KB são lidos, para os exemplos.
 
-**`options.trazer`** só guarda índice de coluna, número de linha, código e o nome que a pessoa deu a uma informação.
-Nunca valor de célula:
+**`options.trazer`** só guarda índice de coluna, número de linha, código, a chave (resumo com segredo) dos valores que
+querem dizer cliente e o nome que a pessoa deu a uma informação. Nunca valor de célula:
 
 | Chave | Conteúdo |
 |---|---|
 | `destinos` | índice da coluna → `nao_guardar`, `cidade`, `telefone_da_empresa` ou `cliente` (informação é o padrão e não é gravada) |
 | `campos` | índice da coluna → `nome` e `para_que_serve` da informação, sem caractere de controle (quebra de linha e tabulação viram espaço; o resto, o byte nulo inclusive, sai) |
-| `respostas` | `clientes`, `coluna_cliente` (índice), `telefone`, `coluna_telefone` (índice da coluna a que a pergunta se referia) |
+| `respostas` | `clientes`, `telefone`, `coluna_telefone` (índice da coluna a que a pergunta se referia), `valores_cliente` (`{"modo": "preenchidas"}` ou `{"modo": "valores", "chaves": [...]}`) |
 | `deixadas` | números das linhas com problema que a pessoa deixou de fora |
 | `anterior` | só enquanto uma leitura pedida pela pessoa não termina: a conferência como estava antes da mudança (as chaves acima) e, das colunas, o índice de cada alvo, se era duvidoso, o método da leitura e a escolha manual que havia |
 | `aviso` | `mudanca_desfeita`, até a próxima mudança que der certo |
@@ -306,7 +335,7 @@ consertadas por inteiro que ainda são problema e que a pessoa não deixou de fo
 repetida que ela manteve. A linha que sai no lugar de uma repetida não entra nem quando ela mesma tinha sido
 consertada, e de um grupo de linhas da mesma pessoa entra uma só: "ficar com esta" deixa de fora as outras repetidas
 do grupo, inclusive a que a pessoa tinha escolhido antes. A tela mostra essa conta (`resumo.entram` e `entram` nas
-respostas de linha), o `POST trazer` a usa para saber se há alguém e o fechamento grava exatamente essas linhas.
+respostas de linha, sempre com `clientes` ao lado: `ContactImports::Trazer::QuemEntra#contas`), o `POST trazer` a usa para saber se há alguém e o fechamento grava exatamente essas linhas.
 
 **O fechamento não fica em laço** (`ContactImports::Trazer::Fechamentos`). Cada tentativa é contada antes de rodar,
 numa transação própria (`options.trazer.fechamentos`, só o número): a que derruba o processo também conta. O erro
@@ -351,16 +380,20 @@ Base: `/api/v1/accounts/:account_id/relacionamentos/trazer`. Todas, leituras inc
 marca: as da Automação, os Públicos, as da tela "Importar contatos" e as de outra conta respondem `404`. A resposta já
 vem no formato da tela.
 
+No Guia da Plataforma, toda escrita destas rotas (as nove de `Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA`,
+somadas a `Autonomia::Guide::Acoes::SEM_DESFAZER`) pede confirmação da pessoa: o caderno do desfazer do Guia só
+enxerga o que passa por callback de model, e a conferência grava com `update_all`, anexo e job.
+
 | Método | Caminho | Corpo | |
 |---|---|---|---|
 | POST | `/leituras` | multipart `arquivo` (.csv/.xlsx) | `201 {"id", "situacao": "lendo"}`; cria a importação com a marca e põe a leitura na fila. `422 {"error"}`: `arquivo_obrigatorio`, `tipo` (inclusive `.xls`) ou `arquivo_grande` |
 | GET | `/leituras/:id?pagina=` | | `vencida` (a conferência passou do prazo; só `id` e `situacao`); `lendo` (não abre arquivo; também enquanto os anexos da leitura ainda não chegaram ao armazenamento); `falhou` com `erro` `vazia`, `sem_contato` ou `leitura`; ou `pronta` (abaixo). Só rascunho com a marca: depois de trazida a leitura responde `404` |
-| PATCH | `/leituras/:id/colunas/:indice` | `{ "destino", "nome", "para_que_serve" }` | Destinos: `nome`, `telefone`, `email`, `empresa`, `informacao`, `nao_guardar`, `cidade`, `telefone_da_empresa`, `cliente`. Entrar ou sair de um dos quatro alvos, e voltar de `nao_guardar`, lê a planilha de novo (`lendo`). Troca entre os outros destinos vale na hora e responde a leitura inteira (`pronta`), igual à do `GET` (a troca pode derrubar uma resposta ou apagar o aviso, e a tela fica sabendo sem outro GET); ir para `nao_guardar` apaga o valor da coluna de todas as linhas. `nome` (até 255 caracteres) e `para_que_serve` (até 1000), opcionais, dão nome e descrição à informação. O `:indice` é lido em base dez. `422 {"error"}`: `leitura_nao_pronta`, `coluna_desconhecida`, `destino_desconhecido`, `sem_contato` (tiraria a última coluna de telefone ou e-mail), `sem_empresa` (`telefone_da_empresa` sem coluna de empresa ou sem Empresas na conta, contando as colunas como ficariam depois da troca: a própria coluna de empresa é recusada) ou `{"error": "valor_invalido", "motivo": "muito_longo"}` |
-| PATCH | `/leituras/:id/respostas` | `{ "clientes", "coluna_cliente", "telefone" }`, só as que a tela tem | `clientes`: `sim_todas`, `ainda_nao` ou `algumas` (com `coluna_cliente`, o índice da coluna que diz quem é). `telefone`: `da_pessoa`, `da_empresa` ou `nao_usar`. Responde a leitura inteira (`pronta`) ou `{"id", "situacao": "lendo"}` quando a resposta pede ler a planilha de novo. Mandar a mesma resposta de novo não muda nada. `422 {"error"}`: `leitura_nao_pronta`, `resposta_desconhecida`, `coluna_desconhecida`, `pergunta_desconhecida` (não há pergunta de telefone), `sem_contato` ou `sem_empresa` (`da_empresa` sem coluna de empresa ou sem Empresas na conta); a recusa desfaz o pedido inteiro |
-| PATCH | `/leituras/:id/linhas/:linha` | `{ "valor" }` ou, na linha repetida, `{ "ficar_com": <número da linha> }` | Conserta a linha. `200 {"problema": {...}, "entram": N}`: a linha como a tela a mostra agora (`guardado` quando o conserto resolveu a linha, ou `aberto` com o `tipo` e o `motivo` do problema que sobrou nela: a linha sem nome que teve o telefone consertado volta como `nome`) e quantas pessoas entram se a pessoa mandar trazer agora. Na repetida, `ficar_com` esta linha deixa de fora as outras repetidas da mesma pessoa. O `valor` perde os caracteres de controle (o byte nulo inclusive) antes de ser conferido e tem até 255 caracteres. `422 {"error"}`: `leitura_nao_pronta`, `linha_desconhecida`, `planilha_apagada` (o anexo das linhas com problema já foi apagado) ou `{"error": "valor_invalido", "motivo"}`, só quando o valor digitado é que não vale (tabela abaixo) |
-| POST | `/leituras/:id/linhas/:linha/deixar_de_fora` | | `200 {"problema", "entram"}` com `estado` `deixado`. `422`: `leitura_nao_pronta`, `linha_desconhecida` |
-| POST | `/leituras/:id/linhas/:linha/reabrir` | | Volta atrás no deixar de fora e em tudo que foi consertado na linha: `200 {"problema", "entram"}` com `estado` `aberto` e o problema original. `422`: os mesmos |
-| POST | `/leituras/:id/trazer` | | Confere, deixa a importação `confirmed` e põe o fechamento da conferência na fila: `200 {"trazidaId"}`. O segundo clique responde o mesmo e não enfileira outro job. Também serve de "Tentar de novo" para a lista cujo fechamento desistiu. `422 {"error"}`: `leitura_nao_pronta` ou `nada_para_trazer` (ninguém para entrar: o arquivo conferido já foi apagado pelo prazo) |
+| PATCH | `/leituras/:id/colunas/:indice` | `{ "destino", "nome", "para_que_serve" }` | Destinos: `nome`, `telefone`, `email`, `empresa`, `informacao`, `nao_guardar`, `cidade`, `telefone_da_empresa`, `cliente`. Entrar ou sair de um dos quatro alvos, e voltar de `nao_guardar`, lê a planilha de novo (`lendo`). Troca entre os outros destinos vale na hora e responde a leitura inteira (`pronta`), igual à do `GET` (a troca pode derrubar uma resposta ou apagar o aviso, e a tela fica sabendo sem outro GET); a coluna que vira `cliente` tira o destino da que era `cliente`, e a resposta já traz a pergunta `valores_cliente` com os valores dela; ir para `nao_guardar` apaga o valor da coluna de todas as linhas. `nome` (até 255 caracteres) e `para_que_serve` (até 1000), opcionais, dão nome e descrição à informação. O `:indice` é lido em base dez. `422 {"error"}`: `leitura_nao_pronta`, `coluna_desconhecida`, `destino_desconhecido`, `sem_contato` (tiraria a última coluna de telefone ou e-mail), `sem_empresa` (`telefone_da_empresa` sem coluna de empresa ou sem Empresas na conta, contando as colunas como ficariam depois da troca: a própria coluna de empresa é recusada) ou `{"error": "valor_invalido", "motivo": "muito_longo"}` |
+| PATCH | `/leituras/:id/respostas` | `{ "clientes", "coluna_cliente", "telefone", "valores_cliente" }`, só as que a tela tem | `clientes`: `sim_todas`, `ainda_nao` ou `algumas` (com `coluna_cliente`, o índice da coluna que diz quem é). `telefone`: `da_pessoa`, `da_empresa` ou `nao_usar`. `valores_cliente`: `{"modo": "preenchidas"}` ou `{"modo": "valores", "chaves": [...]}`, sozinho ou junto de `clientes`/`coluna_cliente` (vale para a coluna como o pedido a deixa). Responde a leitura inteira (`pronta`) ou `{"id", "situacao": "lendo"}` quando a resposta pede ler a planilha de novo. Mandar a mesma resposta de novo não muda nada. `422 {"error"}`: `leitura_nao_pronta`, `resposta_desconhecida` (também o modo que não existe, `chaves` vazio no modo `valores` e a chave que não é de um valor mostrado para essa coluna desta planilha; no pedido que troca a coluna nenhuma chave vale, porque a pessoa ainda não viu os valores da coluna nova), `coluna_desconhecida`, `pergunta_desconhecida` (não há pergunta de telefone; ou `valores_cliente` sem coluna que diga quem é cliente, ou com "sim, todas"), `sem_contato` ou `sem_empresa` (`da_empresa` sem coluna de empresa ou sem Empresas na conta); a recusa desfaz o pedido inteiro |
+| PATCH | `/leituras/:id/linhas/:linha` | `{ "valor" }` ou, na linha repetida, `{ "ficar_com": <número da linha> }` | Conserta a linha. `200 {"problema": {...}, "entram": N, "clientes": N}`: a linha como a tela a mostra agora (`guardado` quando o conserto resolveu a linha, ou `aberto` com o `tipo` e o `motivo` do problema que sobrou nela: a linha sem nome que teve o telefone consertado volta como `nome`) e quantas pessoas entram se a pessoa mandar trazer agora, e quantas delas como cliente (as mesmas contas de `resumo.entram` e `resumo.clientes`). Na repetida, `ficar_com` esta linha deixa de fora as outras repetidas da mesma pessoa. O `valor` perde os caracteres de controle (o byte nulo inclusive) antes de ser conferido e tem até 255 caracteres. `422 {"error"}`: `leitura_nao_pronta`, `linha_desconhecida`, `planilha_apagada` (o anexo das linhas com problema já foi apagado) ou `{"error": "valor_invalido", "motivo"}`, só quando o valor digitado é que não vale (tabela abaixo) |
+| POST | `/leituras/:id/linhas/:linha/deixar_de_fora` | | `200 {"problema", "entram", "clientes"}` com `estado` `deixado`. `422`: `leitura_nao_pronta`, `linha_desconhecida` |
+| POST | `/leituras/:id/linhas/:linha/reabrir` | | Volta atrás no deixar de fora e em tudo que foi consertado na linha: `200 {"problema", "entram", "clientes"}` com `estado` `aberto` e o problema original. `422`: os mesmos |
+| POST | `/leituras/:id/trazer` | | Confere, deixa a importação `confirmed` e põe o fechamento da conferência na fila: `200 {"trazidaId"}`. O segundo clique responde o mesmo e não enfileira outro job. Também serve de "Tentar de novo" para a lista cujo fechamento desistiu. `422 {"error"}`: `leitura_nao_pronta`, `falta_valores_cliente` (uma coluna diz quem é cliente e a pessoa ainda não escolheu quais valores querem dizer cliente, ou escolheu um valor que a coluna não tem mais: nunca se traz adivinhando nem com meia escolha; a rota antiga de confirmar recusa o mesmo caso com `campaign_import.not_ready`) ou `nada_para_trazer` (ninguém para entrar: o arquivo conferido já foi apagado pelo prazo) |
 | GET | `/listas` | | as 100 listas trazidas mais recentes (`Relacionamentos::Trazer::Historico::TETO`), a mais nova primeiro: `id`, `arquivo`, `quando` (ISO 8601), `quem`, `total`, `situacao`, `porcentagem`, `pode_tentar`. Rascunho não entra |
 | GET | `/listas/:id/andamento` | | `porcentagem`, `situacao`, `total`, `novas`, `completadas`, contados pelas linhas |
 
@@ -381,17 +414,24 @@ vem). `pagina` que não existe (texto, zero, negativa, além da
 - `perguntas[]`: sempre `{"id": "clientes"}`; e `{"id": "telefone", "coluna", "indice"}` quando o leitor sugeriu a
   coluna de telefone sem certeza, ou quando a pergunta já foi respondida e a coluna continua onde a resposta a pôs.
   Se a pessoa manda essa coluna para outro lugar (ou escolhe outra coluna para o telefone), a resposta antiga deixa de
-  valer: a pergunta passa a ser sobre o telefone de agora, se ele for duvidoso, ou some.
-- `respostas`: o que a pessoa respondeu e ainda vale (`clientes`, `coluna_cliente` só com `algumas`, `telefone`).
+  valer: a pergunta passa a ser sobre o telefone de agora, se ele for duvidoso, ou some. E, quando uma coluna tem o
+  destino `cliente` e a resposta de "São clientes?" não é `sim_todas`,
+  `{"id": "valores_cliente", "coluna", "indice", "preenchidas", "valores": [{"chave", "valor", "linhas"}], "outros"}`:
+  `valores` tem no máximo 20, do mais frequente ao menos, e cada `valor` no máximo 120 caracteres; `outros` é `{"valores", "linhas"}` do que ficou de fora, ou
+  `null`; `preenchidas` é quantas linhas têm algo escrito na coluna. Nada vem marcado: o servidor não sugere valor.
+- `respostas`: o que a pessoa respondeu e ainda vale (`clientes`, `coluna_cliente` só com `algumas`, `telefone`,
+  `valores_cliente` só enquanto a pergunta dela existe).
   `clientes` e `coluna_cliente` acompanham as colunas (`Relacionamentos::Trazer::Perguntas`), porque são elas que
   dizem quem é cliente na gravação: `sim_todas` vale sempre; fora disso, havendo coluna com o destino `cliente` a
-  resposta é `algumas` com essa coluna, mesmo que a pessoa a tenha marcado pela tela das colunas (com mais de uma
-  marcada, vale a da resposta enquanto ela for `cliente`; senão, a primeira da planilha); `algumas` sem nenhuma coluna
+  resposta é `algumas` com essa coluna, mesmo que a pessoa a tenha marcado pela tela das colunas (só uma coluna tem
+  esse destino); `algumas` sem nenhuma coluna
   `cliente` deixa de valer e a pergunta volta sem resposta. `options.trazer.respostas` guarda o que a pessoa respondeu;
   o que a tela recebe é isto.
-- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `entram`. Os cinco primeiros são os da
-  leitura e não mudam com o que a pessoa conserta. `entram` (inteiro) é quantas pessoas entram se ela mandar trazer
-  agora: a mesma conta do `POST trazer` (`ContactImports::Trazer::QuemEntra`), que muda a cada conserto.
+- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `entram`, `clientes`. Os cinco primeiros são
+  os da leitura e não mudam com o que a pessoa conserta. `entram` (inteiro) é quantas pessoas entram se ela mandar
+  trazer agora: a mesma conta do `POST trazer` (`ContactImports::Trazer::QuemEntra`), que muda a cada conserto.
+  `clientes` (inteiro) é quantas dessas entram como cliente com a resposta de agora: todas com `sim_todas`, as que a
+  escolha de `valores_cliente` marca, e 0 sem resposta. É a mesma regra da gravação, aplicada às linhas que entram.
 - `exemplos[]`: as três primeiras linhas aprovadas, com `cliente` verdadeiro quando a linha vai virar cliente.
 - `problemas[]`: `linha`, `tipo` (`telefone`, `email`, `nome`, `sem_contato`, `duplicada`, `formula`), `nome`, `valor`,
   `estado` (`aberto`, `guardado`, `deixado`). A `duplicada` traz `outraLinha` e `duplicadas` (as duas linhas, com

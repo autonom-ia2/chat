@@ -8286,7 +8286,16 @@
     "campos": {
       "clientes": {},
       "coluna_cliente": {},
-      "telefone": {}
+      "telefone": {},
+      "valores_cliente": {
+        "campos": {
+          "chaves": {
+            "tipo": "lista"
+          },
+          "modo": {}
+        },
+        "tipo": "objeto"
+      }
     },
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/trazer/leituras#respostas",
@@ -20511,8 +20520,8 @@
     "controller": "api/v1/accounts/relacionamentos/trazer/leituras#trazer",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:34",
-      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:35"
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:35",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:36"
     ],
     "sem_corpo": true
   },

@@ -14,15 +14,15 @@
 #   que a pessoa tinha escolhido antes: de um grupo de linhas da mesma pessoa entra uma só.
 # - Deixar de fora e voltar atrás esquecem o que tinha sido consertado na linha.
 #
-# Devolve a linha como a tela a mostra agora (`problema`) e quantas pessoas entram se a pessoa mandar trazer agora
-# (`entram`, a conta de ContactImports::Trazer::QuemEntra).
+# Devolve a linha como a tela a mostra agora (`problema`), quantas pessoas entram se a pessoa mandar trazer agora
+# (`entram`) e quantas delas como cliente (`clientes`): as contas de ContactImports::Trazer::QuemEntra, as do resumo.
 #
 # Cada pedido regrava só o arquivo dos consertos, que tem o tamanho dos consertos, não o da planilha, e lê cada arquivo
 # da conferência uma vez só: os dois leitores são criados aqui e passados adiante. O arquivo conferido só é mexido na
 # hora de trazer (ContactImports::Trazer::FecharConferencia). A linha no banco continua como problema até lá: a tela
 # segue mostrando a linha, agora guardada ou deixada.
 class Relacionamentos::Trazer::MudarLinha
-  Resultado = Struct.new(:erro, :motivo, :problema, :entram, keyword_init: true)
+  Resultado = Struct.new(:erro, :motivo, :problema, :entram, :clientes, keyword_init: true)
   FICAR_COM = ContactImports::Trazer::Conserto::FICAR_COM
   CONTATO = ContactImports::Trazer::Conserto::CONTATO
   CAMPO_DO_TIPO = { 'telefone' => 'telefone', 'email' => 'email', 'nome' => 'nome', 'sem_contato' => CONTATO }.freeze
@@ -66,7 +66,7 @@ class Relacionamentos::Trazer::MudarLinha
       erro = erro_do_pedido
       erro ? Resultado.new(erro: erro) : yield
     end
-    resultado.erro ? resultado : Resultado.new(problema: problema, entram: quantas_entram)
+    resultado.erro ? resultado : Resultado.new(problema: problema, **quem_entra.contas)
   end
 
   def erro_do_pedido
@@ -139,8 +139,8 @@ class Relacionamentos::Trazer::MudarLinha
                                       .da_linha(linha)
   end
 
-  def quantas_entram
-    ContactImports::Trazer::QuemEntra.new(@importacao, consertos).quantas
+  def quem_entra
+    ContactImports::Trazer::QuemEntra.new(@importacao, consertos)
   end
 
   def consertos

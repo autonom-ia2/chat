@@ -7,7 +7,9 @@
 #   (o vinculador respondeu `created` ou `reused`). Na linha com a célula da empresa vazia, ou de uma pessoa que já
 #   era de outra empresa (`kept_other`), o telefone da empresa dessa linha não é guardado em lugar nenhum: nunca vai
 #   para a empresa de outra linha;
-# - coluna "cliente" ou a resposta "sim, todas": a pessoa vira cliente com a data de agora (Contact#become_customer!).
+# - a resposta "sim, todas", ou a coluna "cliente" com um dos valores que a pessoa disse que querem dizer cliente
+#   (ContactImports::Trazer::Cliente): a pessoa vira cliente com a data de agora (Contact#become_customer!). O código
+#   não interpreta a célula: sem a escolha da pessoa, a coluna "cliente" não marca ninguém.
 #
 # Quem já existia é completado, nunca sobrescrito: a cidade e o telefone só entram onde estava vazio, e quem já era
 # cliente fica com a data que tinha. O importador chama `aplicar` dentro da gravação de cada linha, logo depois das
@@ -31,7 +33,7 @@ class ContactImports::Trazer::DestinosDaLinha
     @importacao = importacao
     @colunas = Relacionamentos::Trazer::Colunas.new(importacao)
     @chaves = FORA_DAS_INFORMACOES.index_with { |destino| @colunas.chaves_do_destino(destino) }
-    @todas_clientes = ContactImports::Trazer::Conferencia.new(importacao).respostas['clientes'] == 'sim_todas'
+    @cliente = ContactImports::Trazer::Cliente.new(importacao)
   end
 
   # As colunas (pela chave em extra_values) que não viram informação da pessoa.
@@ -53,7 +55,7 @@ class ContactImports::Trazer::DestinosDaLinha
   end
 
   def cliente?(valores)
-    @todas_clientes || @chaves['cliente'].any? { |chave| ContactImports::Trazer::Cliente.marca?(valores[chave]) }
+    @cliente.marca?(valores)
   end
 
   private

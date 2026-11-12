@@ -60,6 +60,29 @@ RSpec.describe 'Trazer minha lista: arquivos sem dono (Relacionamentos)', :aggre
     expect(consertos(importacao).keys).to eq([4, 5])
   end
 
+  # A contagem dos valores da coluna que diz quem é cliente guarda o texto das células: também não pode ficar sem dono.
+  it 'marcar outra coluna como "cliente", ler de novo e desmarcar não deixa a contagem dos valores sem anexo' do
+    importacao = ler_planilha
+    trocar(importacao, 5, destino: 'cliente')
+    da_primeira = importacao.reload.valores_cliente.blob
+
+    trocar(importacao, 4, destino: 'cliente')
+    expect(sem_dono).to eq(0)
+    expect(da_primeira.service.exist?(da_primeira.key)).to be(false)
+    da_segunda = importacao.reload.valores_cliente.blob
+
+    ContactImports::Validator.new(importacao).perform
+    expect(sem_dono).to eq(0)
+    expect(da_segunda.service.exist?(da_segunda.key)).to be(false)
+    da_leitura = importacao.reload.valores_cliente.blob
+
+    trocar(importacao, 4, destino: 'informacao')
+    expect(response).to have_http_status(:ok)
+    expect(sem_dono).to eq(0)
+    expect(da_leitura.service.exist?(da_leitura.key)).to be(false)
+    expect(importacao.reload.valores_cliente).not_to be_attached
+  end
+
   it 'a leitura que quebra no meio também não deixa arquivo sem anexo, e os consertos ficam' do
     importacao = ler_planilha(com_problemas)
     consertar(importacao, 4, valor: '11987650004')

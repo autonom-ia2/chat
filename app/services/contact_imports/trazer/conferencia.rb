@@ -4,7 +4,9 @@
 #
 #   'destinos'  => { '4' => 'nao_guardar', '5' => 'cidade' }   coluna (índice) que não é "informação" => para onde vai
 #   'campos'    => { '6' => { 'nome' => 'Plano', 'para_que_serve' => '…' } }   nome e descrição da informação
-#   'respostas' => { 'clientes' => 'algumas', 'coluna_cliente' => 5, 'telefone' => 'da_empresa', 'coluna_telefone' => 2 }
+#   'respostas' => { 'clientes' => 'algumas', 'telefone' => 'da_empresa', 'coluna_telefone' => 2,
+#                    'valores_cliente' => { 'modo' => 'valores', 'chaves' => ['9f2c…'] } }   a escolha de quais valores
+#                          querem dizer cliente: o modo e as chaves, nunca o texto (ContactImports::Trazer::Cliente)
 #   'deixadas'  => [171]   linhas com problema que a pessoa deixou de fora
 #   'anterior'  => {...}   a conferência como estava antes da mudança que leu a planilha de novo, enquanto a leitura não
 #                          termina (ContactImports::Trazer::DesfazerMudanca)
@@ -59,7 +61,8 @@ class ContactImports::Trazer::Conferencia
   # mudancas: { 'destinos' => {...}, 'respostas' => {...} }: cada chave troca a parte inteira. O que não mudou não é
   # escrito, e sem mudança nenhuma a importação não é tocada.
   def gravar(mudancas)
-    novas = mudancas.stringify_keys.reject { |parte, valor| estado[parte] == valor || (valor.blank? && !estado.key?(parte)) }
+    mudancas = sem_a_escolha_de_outra_coluna(mudancas.stringify_keys)
+    novas = mudancas.reject { |parte, valor| estado[parte] == valor || (valor.blank? && !estado.key?(parte)) }
     return if novas.empty?
 
     @importacao.update!(options: @importacao.options.to_h.merge(CHAVE => estado.merge(novas)))
@@ -73,6 +76,18 @@ class ContactImports::Trazer::Conferencia
   end
 
   private
+
+  # A escolha de quais valores querem dizer cliente é da coluna que dizia quem é cliente. Quando os destinos novos
+  # mudam essa coluna (outra, ou nenhuma), a escolha sai na mesma escrita: quem grava destinos não precisa lembrar.
+  def sem_a_escolha_de_outra_coluna(mudancas)
+    return mudancas unless mudancas.key?('destinos') && colunas_cliente(mudancas['destinos']) != colunas_cliente(destinos)
+
+    mudancas.merge('respostas' => mudancas.fetch('respostas', respostas).except(ContactImports::Trazer::Cliente::RESPOSTA))
+  end
+
+  def colunas_cliente(destinos)
+    destinos.select { |_indice, destino| destino == ContactImports::Trazer::Cliente::DESTINO }.keys.sort
+  end
 
   def estado
     @importacao.options.to_h[CHAVE].to_h

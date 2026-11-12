@@ -6,6 +6,11 @@
 # - A coluna que não é alvo muda entre informação, cidade, telefone da empresa e cliente: vale na hora, só o destino
 #   muda (`options['trazer']['destinos']`); o valor continua nas linhas e a gravação o leva para o lugar certo
 #   (ContactImports::Trazer::DestinosDaLinha). A informação pode ganhar nome e "para que serve" (`campos`).
+# - Só uma coluna diz quem é cliente: a que vira "cliente" tira o destino da que era, que volta a ser informação. Os
+#   valores da coluna nova são contados na hora, pelas linhas que a leitura já gravou, para a pessoa escolher quais
+#   querem dizer cliente (ContactImports::Trazer::ValoresDeCliente); a coluna que deixa de ser "cliente" leva a
+#   contagem junto. A escolha que a pessoa tinha feito para a coluna antiga sai na mesma escrita
+#   (ContactImports::Trazer::Conferencia#gravar). Na troca que lê a planilha de novo, quem conta é a leitura.
 # - A coluna que não é alvo vira "não guardar": vale na hora, e o valor dela sai de todas as linhas da importação
 #   (`extra_values`), numa atualização só.
 # - A coluna volta de "não guardar" para outro destino: o valor só existe no arquivo, então a planilha é lida de novo,
@@ -35,6 +40,7 @@ class Relacionamentos::Trazer::TrocarDestino
   INFORMACAO = Relacionamentos::Trazer::Colunas::INFORMACAO
   NAO_GUARDAR = Relacionamentos::Trazer::Colunas::NAO_GUARDAR
   TELEFONE_DA_EMPRESA = Relacionamentos::Trazer::Colunas::TELEFONE_DA_EMPRESA
+  CLIENTE = ContactImports::Trazer::Cliente::DESTINO
   EXTRAS = Relacionamentos::Trazer::Colunas::EXTRAS
   # O nome vira o nome do atributo (texto curto); o "para que serve", a descrição dele.
   TETOS = { 'nome' => 255, 'para_que_serve' => 1000 }.freeze
@@ -97,11 +103,18 @@ class Relacionamentos::Trazer::TrocarDestino
   end
 
   def trocar_extra(atual)
-    return deixar_de_guardar if @destino == NAO_GUARDAR && atual != NAO_GUARDAR
     return ler_de_novo(colunas.alvos) if atual == NAO_GUARDAR && @destino != NAO_GUARDAR
 
-    guardar_destino
+    @destino == NAO_GUARDAR && atual != NAO_GUARDAR ? deixar_de_guardar : guardar_destino
+    acompanhar_os_valores_de_cliente(atual)
     Resultado.new(revalida: false)
+  end
+
+  def acompanhar_os_valores_de_cliente(atual)
+    return if (atual == CLIENTE) == (@destino == CLIENTE)
+
+    valores = ContactImports::Trazer::ValoresDeCliente.new(@importacao)
+    @destino == CLIENTE ? valores.contar(@indice) : valores.apagar
   end
 
   def ler_de_novo(alvos)
@@ -120,7 +133,6 @@ class Relacionamentos::Trazer::TrocarDestino
     # rubocop:disable Rails/SkipsModelValidations -- uma chave a menos em cada linha, de uma vez, sem carregar as linhas
     @importacao.campaign_import_rows.where('extra_values -> ? IS NOT NULL', chave).update_all(['extra_values = extra_values - ?::text', chave])
     # rubocop:enable Rails/SkipsModelValidations
-    Resultado.new(revalida: false)
   end
 
   # A coluna deixa o alvo em que estava e, se o destino novo é um alvo, toma o lugar de quem estava nele.
@@ -135,6 +147,7 @@ class Relacionamentos::Trazer::TrocarDestino
     chave = @indice.to_s
     destinos = conferencia.destinos.except(chave)
     destinos = destinos.reject { |_indice, destino| destino == TELEFONE_DA_EMPRESA } unless com_empresa
+    destinos = destinos.reject { |_indice, destino| destino == CLIENTE } if @destino == CLIENTE
     destinos = destinos.merge(chave => @destino) if EXTRAS.include?(@destino) && @destino != INFORMACAO
     conferencia.gravar('destinos' => destinos, 'campos' => campos_com_o_da_coluna(chave))
   end
