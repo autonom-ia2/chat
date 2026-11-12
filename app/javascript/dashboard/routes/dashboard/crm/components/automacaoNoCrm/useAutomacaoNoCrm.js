@@ -1,12 +1,18 @@
 import { computed } from 'vue';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 // #2499 F6.3/F6.5 — quem vê as automações do motor novo no card e na etapa.
 
-// As partes vêm com o motor e os gatilhos de card, como o resto da F6 (Motor.gatilhos? no servidor; o CRM ligado é o
-// próprio funil aberto).
-const FLAGS = ['automacao_fundacao', 'automacao_motor', 'automacao_gatilhos'];
+// As partes têm flag própria, automacao_no_crm (sem ela, as rotas dão 404 e as partes somem), e vêm com o motor e os
+// gatilhos de card, como o resto da F6 (Motor.gatilhos? no servidor; o CRM ligado é o próprio funil aberto).
+const FLAGS = [
+  'automacao_fundacao',
+  'automacao_motor',
+  'automacao_gatilhos',
+  FEATURE_FLAGS.AUTOMACAO_NO_CRM,
+];
 export const useAutomacaoNoCrmLigada = () => {
   const { isCloudFeatureEnabled } = useAccount();
   return computed(() => FLAGS.every(flag => isCloudFeatureEnabled(flag)));

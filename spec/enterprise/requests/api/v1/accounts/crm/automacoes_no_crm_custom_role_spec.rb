@@ -25,7 +25,7 @@ RSpec.describe 'CRM automações no card e na etapa com função personalizada',
 
   before do
     ligar_motor(account)
-    account.enable_features!('automacao_gatilhos')
+    account.enable_features!('automacao_gatilhos', 'automacao_no_crm')
     # A execução nasce depois dos gatilhos de card ligados: a versão com gatilho de etapa não salva sem eles.
     execucao
   end
@@ -66,6 +66,15 @@ RSpec.describe 'CRM automações no card e na etapa com função personalizada',
 
       expect(response).to have_http_status(:ok)
       expect(execucao.reload.estado).to eq('parada')
+    end
+
+    it 'sem a flag da tela (automacao_no_crm), nem quem tem as chaves para', :aggregate_failures do
+      account.disable_features!('automacao_no_crm')
+
+      post caminho, headers: com_funcao('automation_manage', 'crm_view', 'crm_manage_cards'), as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(execucao.reload.estado).to eq('esperando')
     end
 
     it 'quem só vê automações não para', :aggregate_failures do

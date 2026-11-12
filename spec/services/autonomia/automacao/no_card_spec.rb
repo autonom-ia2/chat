@@ -97,6 +97,72 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
     expect(de_outro_card.reload.estado).to eq('andando')
   end
 
+  # Decisão do Rodrigo (12/11): o "Parar para este card" para também o que a automação começou em outro registro
+  # por causa dele (as filhas do passo "em outro registro", achadas pela marca `em:<mãe>:...` do evento).
+  describe 'filhas em outro registro' do
+    let(:contato) { create(:contact, account: account) }
+    let(:outro) { account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, title: 'Outro', currency: 'BRL') }
+
+    def filha(mae, alvo, **atributos)
+      Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: alvo,
+                                             chave_gatilho: 'card.entrou_na_etapa', estado: 'esperando', cursor: 'p1',
+                                             due_at: 1.day.from_now,
+                                             evento: Autonomia::Automacao::EmOutroRegistro.marca(mae, alvo, 'p_outro'), **atributos)
+    end
+
+    def da_execucao(alvo, **atributos)
+      Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: alvo,
+                                             chave_gatilho: 'card.entrou_na_etapa', **atributos)
+    end
+
+    it 'a filha aberta é parada com o mesmo motivo; a de outro card e a já terminada não mudam', :aggregate_failures do
+      aberta = filha(execucao, contato)
+      # Outro contato: só pode haver uma aberta por automação, alvo e gatilho.
+      de_outro_card = filha(da_execucao(outro), create(:contact, account: account))
+      terminada = filha(execucao, create(:contact, account: account), estado: 'concluida', cursor: nil, due_at: nil)
+      terminou_em = terminada.reload.finalizada_em
+
+      expect(no_card.parar!(definicao)).to eq(2)
+
+      expect(execucao.reload.estado).to eq('parada')
+      expect(aberta.reload).to have_attributes(estado: 'parada', finalizada_em: be_present)
+      expect(parada_no_card.find_by(execucao: aberta)).to have_attributes(passo: 'p1', resultado: 'pulado')
+      expect(de_outro_card.reload.estado).to eq('esperando')
+      expect(terminada.reload).to have_attributes(estado: 'concluida', finalizada_em: terminou_em)
+      expect(parada_no_card.where(execucao: [de_outro_card, terminada])).to be_empty
+    end
+
+    it 'a filha da vez que já terminou neste card também para: a mãe não espera as filhas', :aggregate_failures do
+      execucao.update!(estado: 'concluida')
+      aberta = filha(execucao, contato)
+
+      expect(no_card.parar!(definicao)).to eq(1)
+      expect(aberta.reload.estado).to eq('parada')
+    end
+
+    it 'a filha que estava no meio de uma rodada para sozinha e registra que pararam neste card', :aggregate_failures do
+      execucao.update!(estado: 'esperando', cursor: 'p1', travada_em: nil, due_at: 1.hour.from_now)
+      andando = filha(execucao, contato, estado: 'andando', cursor: nil, due_at: nil, travada_em: marca)
+
+      no_card.parar!(definicao)
+      Autonomia::Automacao::Executor.new(andando.reload, marca).rodar
+
+      expect(andando.reload.estado).to eq('parada')
+      expect(parada_no_card.find_by(execucao: andando)).to have_attributes(resultado: 'pulado')
+    end
+
+    it 'a mãe 12 não leva a filha da mãe 123: o ":" depois do id separa as duas' do
+      vizinha = Autonomia::Automacao::Execucao.create!(account: account, automacao: definicao, versao: definicao.versao_ativa,
+                                                       alvo: contato, chave_gatilho: 'card.entrou_na_etapa', estado: 'esperando',
+                                                       cursor: 'p1', due_at: 1.day.from_now,
+                                                       evento: "em:#{execucao.id}0:contato:#{contato.id}:p_outro")
+
+      no_card.parar!(definicao)
+
+      expect(vizinha.reload.estado).to eq('esperando')
+    end
+  end
+
   it 'a lista do card fechado sai vazia sem ler as execuções' do
     execucao
     card.update!(status: :lost)

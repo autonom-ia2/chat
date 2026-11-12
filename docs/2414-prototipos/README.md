@@ -5,16 +5,18 @@
 > exemplo dela (selo "Já é cliente", "abrir a compra", `source` no quadro) saiu desta branch e continua só na
 > `feat/2414-ft-prototipos`.
 
-As partes vêm com o motor e os gatilhos de card, como o resto da F6: `automacao_fundacao` + `automacao_motor` +
-`automacao_gatilhos` (no servidor, `Motor.gatilhos?`). Não há flag nova. Quem não tem `automation_view` (nem
-`automation_manage`) não vê nada; sem o motor, a etapa mostra o cartão das ações de hoje.
+As partes têm flag própria, `automacao_no_crm` (decisão do Rodrigo em 12/11; nasce ligada em todas as contas), e
+vêm com o motor e os gatilhos de card, como o resto da F6: `automacao_fundacao` + `automacao_motor` +
+`automacao_gatilhos` (no servidor, `Motor.gatilhos?`). Sem `automacao_no_crm`, as três rotas dão 404 e as partes
+somem. Quem não tem `automation_view` (nem `automation_manage`) não vê nada; sem o motor, a etapa mostra o cartão das
+ações de hoje.
 
 | Parte | De onde vem |
 |---|---|
 | Regras antigas da etapa ("Ligar no dia seguinte") | `crmKanban/fetchStageAutomations`; o interruptor salva na regra |
 | Automações novas da etapa | `GET crm/stages/:stage_id/automacoes` (`Autonomia::Automacao::DaEtapa`): gatilho entrou, saiu ou parado nesta etapa, ligadas e desligadas. Ligar e desligar são os da própria automação (`autonomia/automacoes/:id/ligar` e `desligar`, "assumir e religar"), com a confirmação da lista de Automações quando ela manda mensagem, avisa a equipe ou usa IA (#2574) |
 | O que roda no card (passo, espera, "O que já fez") | `GET crm/cards/:card_id/automacoes` (`Autonomia::Automacao::NoCard`): as execuções abertas com o card como alvo e os registros delas; as frases saem do `frases.js` com o catálogo real |
-| "Parar para este card" | `POST crm/cards/:card_id/automacoes/:id/parar`: fecha as execuções abertas daquela automação só neste card (P6: só o que está rodando; sem tabela de exclusão, sem migration) |
+| "Parar para este card" | `POST crm/cards/:card_id/automacoes/:id/parar`: fecha as execuções abertas daquela automação neste card e as filhas delas em outro registro (P6: só o que está rodando; decisão de 12/11 para as filhas; sem tabela de exclusão, sem migration) |
 | "Nova automação para esta etapa" e "Criar uma automação para quem entrar em…" | o editor abre com o gatilho da etapa já escolhido (`?gatilho=card.entrou_na_etapa&etapa=<id>`) |
 
 Permissões (parecer de Funções): ver no card pede `automation_view` + `CardPolicy#show?`; parar pede
@@ -31,6 +33,7 @@ bin/demo flag 2414-telas automacao_fundacao
 bin/demo flag 2414-telas automacao_motor
 bin/demo flag 2414-telas automacao_editor
 bin/demo flag 2414-telas automacao_gatilhos
+bin/demo flag 2414-telas automacao_no_crm
 bin/demo seed 2414-telas docs/2414-prototipos/seed_demo.rb
 bin/demo tunnel 2414-telas
 ```
@@ -53,7 +56,7 @@ Antes de criar as automações, o card e a etapa mostram o estado vazio.
    - "Lembrete de proposta — espera até <entrada + 3 dias>", "Passo 1 de 2: Esperar 3 dias";
    - "Mandar a proposta de novo — espera até <entrada + 2 dias>", "Passo 2 de 3: Esperar 2 dias", e em "O que já
      fez" a mensagem que já foi.
-4. Tocar **Parar para este card** na primeira: a linha vira a pergunta "Parar Lembrete de proposta só neste card?"
+4. Tocar **Parar para este card** na primeira: a linha vira a pergunta "Parar Lembrete de proposta neste card? O que ela começou em outro contato ou card por causa deste também para."
    com **Sim, parar** e **Voltar**.
 5. **Sim, parar**: a linha some e aparece "Lembrete de proposta parou neste card. Os outros cards continuam."
 6. Vazio (card sem automação rodando): "Nenhuma automação está cuidando deste card agora." e o botão **Criar uma automação para
@@ -123,8 +126,9 @@ Prints: 1440 e 390 nos passos 1, 3 e 4.
 - **API do motor**: feita na `feat/2414-f6-card-e-etapa` (ver a tabela no topo).
 - **Receitas de etapa** (§8.4 do `docs/automacao/F6-F8-gatilhos.md`): o catálogo ainda não tem receita com gatilho
   de etapa; por isso "Criar uma automação…" abre o editor só com o gatilho, e não pelos modelos.
-- **Flag**: F6.3/F6.5 não têm flag própria (vêm com `automacao_gatilhos`). A `automacao_passos_novos` é só dos passos
-  novos (`passos-novos.md`).
+- **Flag**: F6.3/F6.5 têm a própria, `automacao_no_crm`, no fim do `config/features.yml`; o bit sai da ordem (47
+  hoje, 48 com a `carteira_seguros` do #2910) e a Orquestração confirma antes do OK. As contas que já existem a
+  Orquestração liga depois do deploy. A `automacao_passos_novos` é só dos passos novos (`passos-novos.md`).
 - **Guia**: sem tela nova no painel; o bloco da etapa em `lib/operator_guide/porques.md` foi revisto e ganhou o do card
   (`ver_e_parar_automacoes_no_card`). O "parar" entrou em `Acoes::SEM_DESFAZER` (não reabre) e no porteiro da
   automação (`automation_manage`).

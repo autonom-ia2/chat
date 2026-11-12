@@ -15422,9 +15422,9 @@
     "controller": "api/v1/accounts/crm/cards/automacoes#parar",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:21",
-      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:24",
-      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:25",
+      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:28",
+      "app/controllers/api/v1/accounts/crm/cards/automacoes_controller.rb:45"
     ],
     "sem_corpo": true
   },

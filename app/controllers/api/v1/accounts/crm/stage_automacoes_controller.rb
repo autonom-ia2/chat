@@ -4,10 +4,12 @@
 #
 # Parecer de Funções: ver pede `automation_view` e a chave de funis (crm_manage_pipelines ou crm_admin,
 # DefinicaoPolicy#da_etapa?), como a tela da etapa no "Editar funil". A etapa é da conta. Só com o motor e os gatilhos
-# de card (Motor.gatilhos?).
+# de card (Motor.gatilhos?) e com a flag da tela (`automacao_no_crm`, a mesma das automações do card): sem ela, 404.
 class Api::V1::Accounts::Crm::StageAutomacoesController < Api::V1::Accounts::Crm::BaseController
   DEFINICAO = ::Autonomia::Automacao::Definicao
+  FLAG = 'automacao_no_crm'.freeze
 
+  before_action :exigir_tela
   before_action :exigir_motor
 
   def index
@@ -19,6 +21,10 @@ class Api::V1::Accounts::Crm::StageAutomacoesController < Api::V1::Accounts::Crm
   end
 
   private
+
+  def exigir_tela
+    head :not_found unless Current.account.feature_enabled?(FLAG)
+  end
 
   def exigir_motor
     head :not_found unless ::Autonomia::Automacao::Motor.gatilhos?(Current.account)

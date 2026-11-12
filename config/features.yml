@@ -1390,7 +1390,7 @@
 # automacao_editor): o "Adicionar passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação,
 # Buscar informação em outro sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Desligada: o editor fica o
 # de hoje. Sem migration. Rollback: desligar a flag. "Automações deste card" e "desta etapa" (F6.3/F6.5) NÃO leem esta
-# flag: vêm com automacao_motor + automacao_gatilhos, como o resto da F6.
+# flag: têm a própria, automacao_no_crm (logo abaixo), junto com automacao_motor + automacao_gatilhos.
 # Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11, depois da relacionamentos_novo (45) e da
 # carteira_seguros (46, #2910). Enquanto a carteira_seguros não estiver na main, a ordem deste arquivo dá a 46 (1 << 45)
 # a esta flag: quem juntar as duas põe a carteira_seguros ANTES desta e acerta o spec (spec/models/account_spec.rb).
@@ -1400,4 +1400,21 @@
 - name: automacao_passos_novos
   display_name: Automação › passos novos (desligada até o motor)
   enabled: false
+  column: feature_flags_ext_2
+
+# Automação no CRM (#2499 F6.3/F6.5, épico #2414): "Automações deste card" (o que roda no card, o que já fez e "Parar
+# para este card") e "Automações desta etapa" (a lista única da etapa no "Editar funil"). É o interruptor da tela e das
+# três rotas: GET crm/cards/:card_id/automacoes, POST crm/cards/:card_id/automacoes/:id/parar e
+# GET crm/stages/:stage_id/automacoes. Ligada (junto com automacao_motor e automacao_gatilhos): o card e a etapa mostram
+# as automações do motor novo. Desligada: as três rotas dão 404, as duas partes somem e a etapa volta ao cartão das
+# ações da etapa, como antes. Sem migration. Rollback: desligar a flag na conta.
+# Nasce ligada em todas as contas (regra de 07/11): `enabled: true` faz a conta nova nascer com ela (o ConfigLoader do
+# deploy acrescenta a flag nova ao ACCOUNT_LEVEL_FEATURE_DEFAULTS com este valor); as contas que já existem a
+# Orquestração liga depois do deploy, com backup, como as outras flags novas.
+# Posição pela ordem deste arquivo: 47 (70368744177664, 1 << 46), logo depois da automacao_passos_novos. A ordem final
+# depende da carteira_seguros (#2910), que entra ANTES da automacao_passos_novos: com ela na main, esta vira a 48
+# (1 << 47). A Orquestração confirma o bit antes do OK; quem juntar acerta o spec (spec/models/account_spec.rb).
+- name: automacao_no_crm
+  display_name: Automação › no card e na etapa do CRM
+  enabled: true
   column: feature_flags_ext_2

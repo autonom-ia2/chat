@@ -11,6 +11,11 @@
 # seguem, e a automação continua ligada; o card que entrar de novo na etapa começa outra vez. Sem tabela de exclusão,
 # então sem migration. Fecha como o Definicao#desligar!, só no card (Execucao.parar_por_fora!): a que esperava ganha o
 # registro no passo da espera; a que estava no meio de uma rodada leva o porquê, para sozinha e registra lá.
+#
+# Para também o que a automação começou em outro registro por causa deste card (decisão do Rodrigo, 12/11): as filhas
+# abertas do passo "em outro registro" (EmOutroRegistro) que nasceram de uma execução desta automação neste card, como
+# a mensagem agendada para o contato indicado. Valem as filhas de qualquer vez dela no card, aberta ou já terminada: a
+# mãe não espera as filhas. Tudo numa leitura travada só, com o mesmo motivo. As filhas de outro card não mudam.
 class Autonomia::Automacao::NoCard
   Execucao = ::Autonomia::Automacao::Execucao
   Registro = ::Autonomia::Automacao::Registro
@@ -29,9 +34,9 @@ class Autonomia::Automacao::NoCard
     execucoes.map { |execucao| para_tela(execucao, registros.fetch(execucao.id, [])) }
   end
 
-  # Devolve quantas execuções fechou (0 quando nada rodava desta automação neste card).
+  # Devolve quantas execuções fechou, filhas em outro registro incluídas (0 quando nada rodava desta automação neste card).
   def parar!(automacao)
-    fechadas = Execucao.transaction { Execucao.parar_por_fora!(abertas.where(automacao_id: automacao.id), MOTIVO) }
+    fechadas = Execucao.transaction { Execucao.parar_por_fora!(do_card_e_filhas(automacao), MOTIVO) }
     return 0 if fechadas.empty?
 
     ::Autonomia::Automacao::Cobertura.encerrar(fechadas)
@@ -42,6 +47,19 @@ class Autonomia::Automacao::NoCard
   private
 
   def abertas = Execucao.abertas.where(account_id: @card.account_id, alvo: @card)
+
+  # As execuções desta automação neste card e as filhas delas em outro registro. A filha é achada pela marca do evento
+  # (`em:<id da mãe>:...`, EmOutroRegistro.marca), pelo índice (automacao_id, evento) com text_pattern_ops: LIKE com
+  # diferença de maiúsculas, nunca ILIKE. O ":" depois do id separa a mãe 12 da 123.
+  def do_card_e_filhas(automacao)
+    da_automacao = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id)
+    no_card = da_automacao.where(alvo: @card)
+    maes = no_card.pluck(:id)
+    return no_card if maes.empty?
+
+    marcas = maes.map { |id| "#{::Autonomia::Automacao::EmOutroRegistro::MARCA}:#{id}:%" }
+    no_card.or(da_automacao.where(Execucao.arel_table[:evento].matches_any(marcas, nil, true)))
+  end
 
   def para_tela(execucao, registros)
     {

@@ -24,7 +24,7 @@ RSpec.describe 'Api::V1::Accounts::Crm automações no card e na etapa', :automa
 
   before do
     ligar_motor(account)
-    account.enable_features!('automacao_gatilhos', 'automacao_editor')
+    account.enable_features!('automacao_gatilhos', 'automacao_editor', 'automacao_no_crm')
   end
 
   def abrir(definicao, alvo, estado: 'esperando', cursor: 'p1', due_at: 3.days.from_now)
@@ -97,11 +97,20 @@ RSpec.describe 'Api::V1::Accounts::Crm automações no card e na etapa', :automa
       expect(response).to have_http_status(:not_found)
     end
 
+    it 'sem a flag da tela (automacao_no_crm), a lista não existe, mesmo com o motor e os gatilhos' do
+      abrir(lembrete, card)
+      account.disable_features!('automacao_no_crm')
+
+      get caminho, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+    end
+
     it 'card de outra conta é 404, mesmo para quem administra as duas' do
       outra = create(:account)
       create(:account_user, account: outra, user: admin, role: :administrator)
       ligar_motor(outra)
-      outra.enable_features!('automacao_gatilhos')
+      outra.enable_features!('automacao_gatilhos', 'automacao_no_crm')
 
       get "/api/v1/accounts/#{outra.id}/crm/cards/#{card.id}/automacoes", headers: admin.create_new_auth_token, as: :json
 
@@ -164,6 +173,31 @@ RSpec.describe 'Api::V1::Accounts::Crm automações no card e na etapa', :automa
       expect(response).to have_http_status(:not_found)
     end
 
+    it 'sem a flag da tela (automacao_no_crm), parar não existe e nada para', :aggregate_failures do
+      execucao = abrir(lembrete, card)
+      account.disable_features!('automacao_no_crm')
+
+      post caminho, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(execucao.reload.estado).to eq('esperando')
+    end
+
+    it 'para também o que a automação começou em outro registro por causa deste card', :aggregate_failures do
+      mae = abrir(lembrete, card)
+      contato = create(:contact, account: account)
+      filha = Autonomia::Automacao::Execucao.create!(account: account, automacao: lembrete, versao: lembrete.versao_ativa, alvo: contato,
+                                                     chave_gatilho: 'card.entrou_na_etapa', estado: 'esperando', cursor: 'p1',
+                                                     due_at: 1.day.from_now,
+                                                     evento: Autonomia::Automacao::EmOutroRegistro.marca(mae, contato, 'p_outro'))
+
+      post caminho, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['paradas']).to eq(2)
+      expect(filha.reload.estado).to eq('parada')
+      expect(Autonomia::Automacao::Registro.find_by(execucao: filha)).to have_attributes(motivo: 'parada_no_card')
+    end
+
     it 'parar funciona mesmo com os gatilhos de card desligados (como o desligar)' do
       execucao = abrir(lembrete, card)
       account.disable_features!('automacao_gatilhos')
@@ -200,6 +234,15 @@ RSpec.describe 'Api::V1::Accounts::Crm automações no card e na etapa', :automa
       get caminho, headers: agente.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'sem a flag da tela (automacao_no_crm), a lista da etapa não existe' do
+      lembrete
+      account.disable_features!('automacao_no_crm')
+
+      get caminho, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
     end
 
     it 'etapa de outra conta é 404' do

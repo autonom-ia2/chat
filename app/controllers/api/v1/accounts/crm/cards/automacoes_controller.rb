@@ -4,11 +4,15 @@
 # pede `automation_manage` (DefinicaoPolicy#parar_no_card?) e poder mexer no card (CardPolicy#update?: no EE,
 # crm_manage_cards e o funil do card). Tudo no escopo da conta.
 #
-# A lista pede o motor com os gatilhos de card (automacao_motor + automacao_gatilhos, Motor.gatilhos?). Parar sempre
-# funciona, como o desligar (D7): com a flag desligada, a execução que ainda estiver aberta fecha do mesmo jeito.
+# A tela tem flag própria (`automacao_no_crm`, decisão do Rodrigo em 12/11): sem ela, a lista e o parar dão 404. Com
+# ela, a lista pede também o motor com os gatilhos de card (automacao_motor + automacao_gatilhos, Motor.gatilhos?).
+# Parar não pede o motor, como o desligar (D7): com os gatilhos desligados, a execução que ainda estiver aberta fecha
+# do mesmo jeito. Parar fecha também as filhas em outro registro (Autonomia::Automacao::NoCard).
 class Api::V1::Accounts::Crm::Cards::AutomacoesController < Api::V1::Accounts::Crm::BaseController
   DEFINICAO = ::Autonomia::Automacao::Definicao
+  FLAG = 'automacao_no_crm'.freeze
 
+  before_action :exigir_tela
   before_action :exigir_motor, except: :parar
   before_action :carregar_card
 
@@ -28,6 +32,10 @@ class Api::V1::Accounts::Crm::Cards::AutomacoesController < Api::V1::Accounts::C
   end
 
   private
+
+  def exigir_tela
+    head :not_found unless Current.account.feature_enabled?(FLAG)
+  end
 
   def exigir_motor
     head :not_found unless ::Autonomia::Automacao::Motor.gatilhos?(Current.account)

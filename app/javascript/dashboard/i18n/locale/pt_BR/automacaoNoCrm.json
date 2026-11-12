@@ -15,7 +15,7 @@
       "FEZ": "{dia}: {frase}",
       "PARAR": "Parar para este card",
       "PARAR_ROTULO": "Parar {nome} para este card",
-      "CONFIRMA": "Parar {nome} só neste card?",
+      "CONFIRMA": "Parar {nome} neste card? O que ela começou em outro contato ou card por causa deste também para.",
       "SIM": "Sim, parar",
       "VOLTAR": "Voltar",
       "PAROU": "{nome} parou neste card. Os outros cards continuam.",
