@@ -4,6 +4,9 @@
 #
 # A URL mascarada nunca volta gravada: mudar a regra que tem webhook pede `integration_manage`
 # (AutomationExternalActionGuard), e o passo webhook também (PassoDeWebhook.pode_mandar?).
+#
+# A macro usa a mesma ação (`send_webhook_event`) e a mesma máscara (#2451): mudar a macro com webhook também pede a
+# chave (MacrosController#check_webhook_action).
 module Autonomia::Automacao::UrlDoWebhook
   CHAVE = 'integration_manage'.freeze
   ESCONDIDO = '•••'.freeze
@@ -22,7 +25,7 @@ module Autonomia::Automacao::UrlDoWebhook
     ESCONDIDO
   end
 
-  # As ações da regra automática, com a URL do webhook mascarada para quem não a vê.
+  # As ações da regra automática (e da macro), com a URL do webhook mascarada para quem não a vê.
   def acoes_da_regra(acoes, account_user)
     return acoes if ve?(account_user)
 
