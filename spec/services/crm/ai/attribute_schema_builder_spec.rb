@@ -79,4 +79,13 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
     )
     expect(schema[:conversation]).to contain_exactly({ key: 'motivo_contato', label: 'Motivo do contato', type: 'text' })
   end
+
+  # MOTIVO (#2435): "Mostrar na tela" desligado só tira o campo da tela; a IA do funil continua lendo e preenchendo.
+  it 'keeps a field hidden from the screen in the schema' do
+    create_attribute(key: 'contador', model: 'contact_attribute', type: 'number', label: 'Contador').update!(oculto_na_tela: true)
+
+    schema = described_class.new(account: account, prefix: '').perform
+
+    expect(schema[:contact]).to contain_exactly({ key: 'contador', label: 'Contador', type: 'number' })
+  end
 end
