@@ -1,0 +1,137 @@
+[
+ {
+  "codigo": "73.18",
+  "descricao": "Parafusos, pinos ou pernos, roscados, porcas, tira-fundos, ganchos roscados, rebites, chavetas, contrapinos ou troços, arruelas (anilhas) (incluindo as de pressão) e artigos semelhantes, de ferro fundido, ferro ou aço.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.1",
+  "descricao": "- Artigos roscados:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.11.00",
+  "descricao": "-- Tira-fundos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.12.00",
+  "descricao": "-- Outros parafusos para madeira",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.13.00",
+  "descricao": "-- Ganchos, escápulas e pitões",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.14.00",
+  "descricao": "-- Parafusos autoperfurantes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.15.00",
+  "descricao": "-- Outros parafusos e pinos ou pernos, mesmo com as porcas e arruelas (anilhas)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.16.00",
+  "descricao": "-- Porcas",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.19.00",
+  "descricao": "-- Outros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.2",
+  "descricao": "- Artigos não roscados:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.21.00",
+  "descricao": "-- Arruelas (anilhas) de pressão e outras arruelas (anilhas) de segurança",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.22.00",
+  "descricao": "-- Outras arruelas (anilhas)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.23.00",
+  "descricao": "-- Rebites",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.24.00",
+  "descricao": "-- Chavetas e contrapinos ou troços",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7318.29.00",
+  "descricao": "-- Outros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ }
+]

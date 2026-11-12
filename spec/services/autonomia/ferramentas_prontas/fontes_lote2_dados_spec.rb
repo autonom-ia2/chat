@@ -40,12 +40,14 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   describe 'Codigo de mercadoria (NCM, BrasilAPI)' do
     let(:ferramenta) { incluir_pronta('ncm', conta: account, agente: agent) }
     let(:busca) { 'https://brasilapi.com.br/api/ncm/v1?search=parafuso%20de%20a%C3%A7o' }
-    let(:codigo) { 'https://brasilapi.com.br/api/ncm/v1/73181500' }
     let(:vigente) do
       { codigo: '7318.15.00', descricao: '-- Outros parafusos e pinos ou pernos', data_inicio: '2022-04-01', data_fim: '9999-12-31',
         tipo_ato: 'Res Camex', numero_ato: '000272', ano_ato: '2021' }
     end
     let(:vencido) { vigente.merge(codigo: '7318.15.90', data_fim: '2021-12-31') }
+    # A posição (73.18): a única chamada do código de 8 dígitos. Aqui sem os níveis de cima, para a descrição ficar a do
+    # próprio nível.
+    let(:posicao) { 'https://brasilapi.com.br/api/ncm/v1?search=7318' }
 
     it '"Qual a NCM de parafuso de aco?": os codigos vigentes, com o texto da busca codificado na URL' do
       fonte_responde(busca, [vigente, vencido])
@@ -53,8 +55,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => '  parafuso   de aço ')['dados']
 
       expect(dados).to eq('busca' => 'parafuso de aço', 'total' => 1,
-                          'itens' => [{ 'codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos',
-                                        'vigente_desde' => '2022-04-01' }])
+                          'itens' => [{ 'codigo' => '7318.15.00', 'descricao' => 'Outros parafusos e pinos ou pernos',
+                                        'vigente_desde' => '2022-04-01',
+                                        'observacao' => Autonomia::FerramentasProntas::Fontes::Ncm::CONFIRA }])
     end
 
     # A BrasilAPI devolve na ordem do código: a palavra no meio da descrição de outro capítulo (34.03, lubrificantes
@@ -83,6 +86,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       dados = executar_pronta(ferramenta, 'consulta' => 'buscar', 'busca' => 'parafuso')['dados']
 
       expect(dados['itens'].pluck('codigo')).to eq(%w[7318.14.00 73.18 73 7318.15.00 34.03])
+      # Nenhum grupo abre sozinho (revisão do #2917): quem escolhe é o modelo.
+      expect(a_request(:get, posicao)).not_to have_been_made
     end
 
     it 'as descricoes dizem ao modelo que so o codigo de 8 digitos vai na nota e que pergunte o material' do
@@ -91,23 +96,23 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(textos).to include('8 dígitos', 'nota', 'capítulo', 'posição', 'material')
     end
 
-    it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos' do
-      fonte_responde(codigo, vigente)
+    it '"O que e a NCM 7318.15.00?": a descricao oficial, pelo codigo sem os pontos e sem os tracos do nivel' do
+      fonte_responde(posicao, [vigente])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados'])
-        .to eq('codigo' => '7318.15.00', 'descricao' => '-- Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
+        .to eq('codigo' => '7318.15.00', 'descricao' => 'Outros parafusos e pinos ou pernos', 'vigente_desde' => '2022-04-01')
     end
 
     # Varredura P11: a tabela do Siscomex traz HTML na descrição ("600 g/m<sup>2</sup>", "<i>badminton</i>").
     it 'a descricao vai sem as tags HTML, com o texto delas e as entidades decodificadas' do
-      fonte_responde(codigo, vigente.merge(descricao: 'De peso igual ou superior a 600 g/m<sup>2</sup>, de <i>badminton</i> &amp; outros'))
+      fonte_responde(posicao, [vigente.merge(descricao: 'De peso igual ou superior a 600 g/m<sup>2</sup>, de <i>badminton</i> &amp; outros')])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']['descricao'])
         .to eq('De peso igual ou superior a 600 g/m2, de badminton & outros')
     end
 
-    it 'codigo que nao existe (404) e busca sem resultado: "nao encontrado"' do
-      fonte_fora('https://brasilapi.com.br/api/ncm/v1/99999999', status: 404)
+    it 'codigo que nao existe (fora da posicao dele) e busca sem resultado: "nao encontrado"' do
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=9999', [])
       fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=xyzqwk', [])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '99999999')['situacao']).to eq('nao_encontrado')
@@ -115,7 +120,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
     end
 
     it 'sem reserva: a BrasilAPI lenta ou fora e "nao consegui", com o motivo no contador' do
-      fonte_lenta(codigo)
+      fonte_lenta(posicao)
       expect(nao_consegui?(executar_pronta(ferramenta, 'consulta' => 'codigo', 'codigo' => '73181500'))).to be(true)
 
       fonte_fora(busca, status: 502)

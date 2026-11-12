@@ -66,6 +66,9 @@ const ROTULOS = {
   dias: 'Dias',
   feriados: 'Feriados',
   compras: 'Compras',
+  bancos: 'Bancos',
+  estacoes: 'Estações',
+  distancia_km: 'Distância (km)',
 };
 const dataPt = (ano, mes, dia) =>
   new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR');
@@ -1120,6 +1123,202 @@ describe('linhasDoResultado', () => {
     expect(
       linhasDoResultado({ precos: [{ ano_modelo: 32000 }] }, textos)
     ).toEqual([['Ano', 'Zero quilômetro']]);
+  });
+
+  // Revisão do #2891 (a): na linha de pares, dois campos com o mesmo rótulo (estado e uf, ano e ano_modelo) ou com o
+  // rótulo do identificador viravam duas linhas iguais. Fica o primeiro, só quando o valor também é igual em todos os
+  // itens (revisão do #2917): com valor diferente, os dois aparecem, senão um some.
+  it('the pairs of an identified list never repeat a label with the same values', () => {
+    expect(
+      linhasDoResultado(
+        {
+          expectativas: [
+            { ano: 2026, estado: 'São Paulo', uf: 'SP' },
+            { ano: 2027, estado: 'Rio', uf: 'RJ' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ano', '2026 e 2027'],
+      ['Estado', '2026: São Paulo · 2027: Rio'],
+      ['Estado', '2026: SP · 2027: RJ'],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          precos: [
+            { combustivel: 'Gasolina', ano_modelo: 2020, ano: 2019 },
+            { combustivel: 'Flex', ano_modelo: 2021, ano: 2021 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ano', '2019 e 2021'],
+      ['Combustível', '2019: Gasolina · 2021: Flex'],
+      ['Ano', '2019: 2020 · 2021: 2021'],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          precos: [
+            {
+              combustivel: 'Gasolina',
+              ano_modelo: 2020,
+              ano: 2020,
+              valor: 'R$ 1',
+            },
+            { combustivel: 'Flex', ano_modelo: 2020, ano: 2020, valor: 'R$ 2' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Combustível', 'Gasolina e Flex'],
+      ['Ano', 'Gasolina: 2020 · Flex: 2020'],
+      ['Valor', 'Gasolina: R$ 1 · Flex: R$ 2'],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          expectativas: [
+            { ano: 2026, ano_modelo: 2026, mediana: 1 },
+            { ano: 2027, ano_modelo: 2027, mediana: 2 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Ano', '2026 e 2027'],
+      ['Previsão do mercado (mediana)', '2026: 1 · 2027: 2'],
+    ]);
+  });
+
+  // Revisão do #2891 (b): o par também não repete o nome ("Itaú: Itaú"); o nome completo igual ao nome fica de fora.
+  it('a pair never repeats the name: the full name equal to the name is left out', () => {
+    expect(
+      linhasDoResultado(
+        {
+          bancos: [
+            { nome: 'X', nome_completo: 'X' },
+            { nome: 'Y', nome_completo: 'Y' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Bancos', 'X e Y']]);
+  });
+
+  // Revisão do #2891 (c): o par de número na lista com nome levava o rótulo da lista, e o número ficava sem a
+  // unidade ("Estações: A: 12,3"). Com número, a linha leva o rótulo do campo quando ele diz a unidade (regra B):
+  // "Distância (km)". Sem unidade no rótulo do campo, fica o da lista, que diz o que é (revisão do #2917: a ANEEL
+  // mostrava "Sistemas instalados" no lugar de "Sistemas por tipo de consumidor").
+  it('a pair with a number takes the label of the field only when it carries the unit', () => {
+    expect(
+      linhasDoResultado(
+        {
+          estacoes: [
+            { nome: 'A', distancia_km: 12.3 },
+            { nome: 'B', distancia_km: 40 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Distância (km)', 'A: 12,3 · B: 40']]);
+    expect(
+      linhasDoResultado(
+        {
+          cidades: [
+            { nome: 'A', dias_uteis: 20 },
+            { nome: 'B', dias_uteis: 21 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Cidades', 'A: 20 · B: 21']]);
+    // Parênteses no rótulo não são unidade: "Previsão do mercado (mediana)" (revisão do #2917, D).
+    expect(
+      linhasDoResultado(
+        {
+          cidades: [
+            { nome: 'A', mediana: 5.1 },
+            { nome: 'B', mediana: 4.9 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([['Cidades', 'A: 5,1 · B: 4,9']]);
+    expect(
+      linhasDoResultado(
+        {
+          feriados: [
+            { nome: 'Carnaval', data: '2026-02-16' },
+            { nome: 'Natal', data: '2026-12-25' },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      [
+        'Feriados',
+        `Carnaval: ${dataPt(2026, 2, 16)} · Natal: ${dataPt(2026, 12, 25)}`,
+      ],
+    ]);
+  });
+
+  // Revisão do #2891 (d): o resto da conta de ponto flutuante (0,1 + 0,2 = 0,30000000000000004) contava como 17 casas
+  // e o dinheiro saía com 4 ("R$ 0,3000"). E o número inteiro grande não tem casa nenhuma.
+  it('the leftover of a floating point sum does not count as decimals', () => {
+    expect(
+      linhasDoResultado(
+        { compra: 5.5, venda: 0.1 + 0.2, unidade: 'R$' },
+        textos
+      )
+    ).toEqual([
+      ['Compra', 'R$ 5,50'],
+      ['Venda', 'R$ 0,30'],
+    ]);
+    expect(
+      linhasDoResultado({ compra: 1e21, venda: 5.5, unidade: 'R$' }, textos)
+    ).toEqual([
+      ['Compra', 'R$ 1.000.000.000.000.000.000.000,00'],
+      ['Venda', 'R$ 5,50'],
+    ]);
+  });
+
+  // Revisão do #2891 (e): na linha de pares, o dinheiro do mesmo campo com as mesmas casas ("R$ 5,3512 · R$ 5,40"
+  // virou "R$ 5,3512 · R$ 5,4000"), como no mesmo item (varredura P12).
+  it('money in the same field of a line of pairs has the same number of decimals', () => {
+    expect(
+      linhasDoResultado(
+        {
+          unidades: { mediana: 'R$' },
+          expectativas: [
+            { ano: 2026, mediana: 5.3512 },
+            { ano: 2027, mediana: 5.4 },
+          ],
+        },
+        textos
+      )
+    ).toEqual([
+      ['Previsão do mercado (mediana)', '2026: R$ 5,3512 · 2027: R$ 5,4000'],
+    ]);
+    expect(
+      linhasDoResultado(
+        {
+          unidades: { mediana: 'R$' },
+          expectativas: [
+            { ano: 2026, mediana: 5.3512, data_do_boletim: '2026-11-06' },
+            { ano: 2027, mediana: 5.4, data_do_boletim: '2026-11-06' },
+          ],
+        },
+        textos
+      )[1]
+    ).toEqual([
+      'Previsão do mercado (mediana)',
+      '2026: R$ 5,3512 · 2027: R$ 5,4000',
+    ]);
   });
 
   it('empty values and anything that is not an object give no lines', () => {
