@@ -16,6 +16,12 @@ module Autonomia
         agent.agent_type != 'insurance_quote'
       end
 
+      # #2918: as rodadas do Testar e do Copiloto são as do atendimento (`RodadasDoTurno`): o agente com ajudante ou com
+      # pronta testa com as mesmas da produção. A Lia fica no desvio dela (o TODO acima): uma rodada, como antes.
+      def self.rodadas(agent)
+        como_no_atendimento?(agent) ? RodadasDoTurno.para(agent) : {}
+      end
+
       def initialize(agent:, message:, history: [], images: [])
         @agent = agent
         @message = message
@@ -25,9 +31,9 @@ module Autonomia
 
       # -> Autonomia::Agents::AnswerResult
       def run
-        # Tema 14 (#1434): o principal com ajudante testa com as mesmas rodadas da produção.
+        # Tema 14 (#1434) e #2918: as mesmas rodadas da produção (ajudante, pronta).
         Answerer.new(agent: @agent, query: @message, history: @history, images: @images, feature: USAGE_FEATURE,
-                     trust_instruction: self.class.como_no_atendimento?(@agent), **(Ajudantes.rodadas(@agent) || {})).answer
+                     trust_instruction: self.class.como_no_atendimento?(@agent), **self.class.rodadas(@agent)).answer
       end
     end
   end
