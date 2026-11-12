@@ -58,6 +58,10 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
     true
   end
 
+  # #2933: a automação de quem valem as permissões, o "ligada" e a pausa desta execução: a de cima de todas, quando esta
+  # é a execução de um bloco (Bloco.dona); nas outras, a própria. Quem age nos passos é sempre `dona.ligada_por`.
+  def dona = (@dona ||= ::Autonomia::Automacao::Bloco.dona(self))
+
   private
 
   # Versão e automação de outra conta prenderiam a exclusão daquela conta nesta chave estrangeira; alvo de outra conta

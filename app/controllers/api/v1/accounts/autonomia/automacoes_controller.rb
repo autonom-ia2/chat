@@ -9,9 +9,6 @@
 class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::BaseController
   DEFINICAO = ::Autonomia::Automacao::Definicao
   FLAG = 'automacao_editor'.freeze
-  # Passos nativos de funil: o retorno (G3), que cria pelo crm/follow_ups, o "criar card" (G4), o "para cada item" (G24)
-  # e a prospecção (G21), que cria card ao buscar.
-  PASSOS_DE_FUNIL = %w[retorno card para_cada prospeccao].freeze
 
   wrap_parameters false
 
@@ -61,7 +58,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
 
   def update
     conferir_versao!(base_versao) if params.key?(:receita)
-    return recusar_funil if params.key?(:receita) && sem_funil?(receita)
+    return if recusou_ao_atualizar?
 
     DEFINICAO.transaction do
       @automacao.update!(nome: params[:nome]) if params.key?(:nome)
@@ -91,8 +88,13 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # Custo da IA e tokens (que dão o custo) seguem o Crm::AiUsageController#com_valores? (#1969): administrador ou financial_view.
   def historico
     com_valores = Current.account_user&.permission_granted?('financial_view') || false
-    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, com_valores: com_valores,
-                                                       pagina: params[:pagina]).resultado
+    historico = ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, com_valores: com_valores,
+                                                      pagina: params[:pagina])
+    return render(json: historico.resultado) if params[:dentro].blank?
+
+    # #2933: o que aconteceu dentro de um bloco que ela usou.
+    dentro = historico.dentro(params[:dentro])
+    dentro ? render(json: dentro) : head(:not_found)
   end
 
   # A salva ensaia a versão ativa; com `receita` no corpo (o rascunho da tela), ensaia ela. A coleção (`ensaio_novo`) é
@@ -154,38 +156,14 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     valor.respond_to?(:to_unsafe_h) ? valor.to_unsafe_h : valor
   end
 
-  # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
-  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
-  # card (#2499) também pede a chave, e o retorno (G3), que cria pelo crm/follow_ups, e o "criar card" (G4). Ler o card
-  # a partir de uma conversa (#2716) também: no gatilho de conversa, `card.*` (a âncora do "em outro registro" inclusa) e
-  # `origem.card.*` no ramo (CardDaConversa.le?); em qualquer gatilho, o ramo que roda numa conversa e lê o card dela
-  # (EmOutroRegistro.de_funil?). Decisão 19 do Rodrigo (09/11).
+  # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: ChaveDeFunis (inclusive nos blocos
+  # que a receita usa, #2933).
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil.chave?(Current.account_user)
 
-    de_funil?(receita)
+    ::Autonomia::Automacao::ChaveDeFunis.precisa?(receita, Current.account, Current.account_user)
   end
-
-  def de_funil?(receita)
-    return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
-    return true if de_conversa?(receita) && ::Autonomia::Automacao::CardDaConversa.le?(receita)
-
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
-      passo_de_funil?(passo, receita)
-    end
-  end
-
-  # O passo de funil, o "em outro registro" que lê cards (G18) ou cujo ramo numa conversa lê o card dela (#2716) e a
-  # ação de funil.
-  def passo_de_funil?(passo, receita)
-    em_outro = ::Autonomia::Automacao::EmOutroRegistro
-    PASSOS_DE_FUNIL.include?(passo['tipo']) || em_outro.de_funil?(passo, receita) ||
-      (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao']))
-  end
-
-  # Só a conversa lê o card dela (#2716); no gatilho de contato, `card.*` é o valor_fora_do_alvo da Receita.
-  def de_conversa?(receita) = ::Autonomia::Automacao::Gatilhos.alvo(receita.dig('gatilho', 'tipo')) == 'Conversation'
 
   # O rascunho passa pela mesma conferência do salvar (esquema + Receita); a versão salva já passou por ela, e assim o
   # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Só gatilho de conversa: o de
@@ -232,6 +210,35 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: { error: I18n.t("autonomia.automacao.ensaio.#{chave}"), problemas: problemas }, status: :unprocessable_entity
   end
 
+  # A chave de funis da receita nova e a marca de bloco (#2933): a recusa já respondeu.
+  def recusou_ao_atualizar?
+    if params.key?(:receita) && sem_funil?(receita)
+      recusar_funil
+    elsif params.key?(:bloco) && !marcar_bloco
+      recusar_bloco
+    else
+      return false
+    end
+    true
+  end
+
+  # #2933: "Usar como bloco" (sem gatilho próprio, chamado por outras automações) só com a flag dos passos novos. Tirar a
+  # marca de um bloco que automação ligada usa é recusado com os nomes delas (Definicao#marcar_bloco!).
+  def marcar_bloco
+    @bloco_recusado = nil
+    return false unless ::Autonomia::Automacao::PassosNovos.ligados?(Current.account)
+
+    @bloco_recusado = @automacao.marcar_bloco!(ActiveModel::Type::Boolean.new.cast(params[:bloco]) == true)
+    @bloco_recusado.empty?
+  end
+
+  def recusar_bloco
+    return render(json: { error: I18n.t('autonomia.automacao.editor.bloco_desligado') }, status: :unprocessable_entity) if @bloco_recusado.nil?
+
+    render json: { error: I18n.t('autonomia.automacao.editor.bloco_em_uso', nomes: @bloco_recusado.to_sentence), problemas: @bloco_recusado },
+           status: :unprocessable_entity
+  end
+
   def recusar_funil
     render json: { error: I18n.t('autonomia.automacao.editor.sem_funil') }, status: :unprocessable_entity
   end
@@ -248,7 +255,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def para_tela(automacao, receita: false, pausa: nil)
     versao = automacao.versao_ativa
     {
-      id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem,
+      id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem, bloco: automacao.bloco,
       ligada_por: automacao.ligada_por&.slice(:id, :name), atualizada_em: automacao.updated_at,
       pausa: ::Autonomia::Automacao::Pausa.para_tela(pausa),
       versao: versao && { id: versao.id, numero: versao.numero, autor_id: versao.autor_id, criada_em: versao.created_at,

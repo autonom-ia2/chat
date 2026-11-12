@@ -66,6 +66,18 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # Ligada agora ou alguma vez (alguém assumiu e ligou).
   def ja_ligada? = ativa || ligada_em.present?
 
+  # #2933: marcar como bloco (sem gatilho próprio) desliga a automação: ela passa a rodar só quando outra a usa, como quem
+  # ligou essa outra. Desmarcar é recusado enquanto uma automação ligada ainda a usa: devolve os nomes delas, e nada
+  # muda. Vazio = feito.
+  def marcar_bloco!(sim)
+    usuarias = sim ? [] : ::Autonomia::Automacao::Bloco.usado_por(self)
+    return usuarias if usuarias.any?
+
+    desligar! if sim && ativa
+    update!(bloco: sim)
+    []
+  end
+
   # O desfazer nunca deixa a automação ligada de novo (#2889): ligar é "assumir" (assumir_e_religar!), com a versão que
   # a pessoa viu e a confirmação dela. Nem troca a versão de uma automação ligada: ela rodaria uma versão que quem ligou
   # não viu.
@@ -133,7 +145,9 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     ::Autonomia::Automacao::Registro.insert_all!(linhas) # rubocop:disable Rails/SkipsModelValidations
   end
 
+  # #2933: o bloco não tem gatilho próprio e nunca liga sozinho: roda quando outra automação o usa, como quem a ligou.
   def recusa_para_ligar(usuario)
+    return Recusa.new(motivo: 'bloco_nao_liga', problemas: []) if bloco
     return Recusa.new(motivo: 'sem_versao', problemas: []) unless versao_ativa
 
     problemas = problemas_da_receita(usuario)
@@ -150,7 +164,9 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     receita = versao_ativa.receita
     return [I18n.t('autonomia.automacao.motivos.receita_com_problema')] unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: account.account_users.find_by(user_id: usuario&.id)).problemas
+    quem = account.account_users.find_by(user_id: usuario&.id)
+    ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: quem).problemas +
+      ::Autonomia::Automacao::Bloco.laco_ao_salvar(receita, self)
   end
 
   def versao_ativa_desta_automacao

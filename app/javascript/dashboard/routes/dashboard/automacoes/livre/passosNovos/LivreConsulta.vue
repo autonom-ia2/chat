@@ -5,11 +5,14 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { P, enderecoServe } from './passosNovos';
-import { integracoesDaConta, testarConsulta } from './adaptadorFalso';
+import { testarConsulta } from './dadosDaConta';
 
 // #2934 — Consultar outro sistema: de onde vem a informação (uma integração já
 // conectada ou um endereço próprio), um teste e o toque no dado que a pessoa
-// quer guardar, com o nome que ela der. O dado aparece no "Pôr um dado" dos
+// quer guardar, com o nome que ela der. Integração conectada ainda não existe
+// para este passo: a lista mostra só "Outro endereço" até a primeira existir.
+// O teste busca de verdade (o servidor recusa endereço interno) e sugere o nome
+// do dia a dia de cada dado; a pessoa troca. O dado aparece no "Pôr um dado" dos
 // passos seguintes. O endereço só aparece aqui, para quem tem a chave de
 // integrações; o Confira e o histórico nunca o mostram.
 const props = defineProps({
@@ -24,7 +27,7 @@ const ENDERECO = 'endereco';
 const mudar = mudanca =>
   emit('update:modelValue', { ...props.modelValue, ...mudanca });
 
-const integracoes = computed(() => integracoesDaConta(t));
+const integracoes = computed(() => []);
 const fontes = computed(() => [
   ...integracoes.value,
   { value: ENDERECO, label: t(`${C}.OUTRO_ENDERECO`) },
@@ -58,10 +61,16 @@ const podeTestar = computed(() =>
 );
 
 const testando = ref(false);
+const erroDoTeste = ref('');
 const testar = async () => {
   testando.value = true;
+  erroDoTeste.value = '';
   try {
-    resposta.value = await testarConsulta(fonte.value, t);
+    const achou = await testarConsulta(fonte.value);
+    erroDoTeste.value = achou.ok ? '' : achou.error || t(`${C}.TESTE_FALHOU`);
+    resposta.value = achou.ok
+      ? achou.dados.map(dado => ({ ...dado, nome: dado.rotulo }))
+      : null;
   } finally {
     testando.value = false;
   }
@@ -83,14 +92,11 @@ const renomear = (caminho, nome) =>
     ),
   });
 
-// Começar pronto: a primeira integração conectada já vem escolhida.
+// Começar pronto: a primeira integração conectada já vem escolhida; sem
+// nenhuma, o "Outro endereço".
 onMounted(() => {
-  if (
-    !fonte.value.id &&
-    fonte.value.de !== ENDERECO &&
-    integracoes.value.length
-  )
-    escolherFonte(integracoes.value[0].value);
+  if (fonte.value.id || fonte.value.de === ENDERECO) return;
+  escolherFonte(integracoes.value[0]?.value || ENDERECO);
 });
 </script>
 
@@ -136,6 +142,14 @@ onMounted(() => {
         @click="testar"
       />
       <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${C}.TESTAR_DICA`) }}</p>
+      <p
+        v-if="erroDoTeste"
+        data-consulta-erro
+        role="alert"
+        class="mb-0 text-sm text-n-ruby-11"
+      >
+        {{ erroDoTeste }}
+      </p>
     </div>
 
     <div v-if="resposta" data-consulta-resposta class="flex flex-col gap-2">

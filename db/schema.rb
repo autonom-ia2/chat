@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_12_092000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -703,6 +703,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.datetime "updated_at", null: false
     t.datetime "ligada_em"
     t.integer "segredo_geracao", default: 0, null: false
+    t.boolean "bloco", default: false, null: false
     t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
     t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
     t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"

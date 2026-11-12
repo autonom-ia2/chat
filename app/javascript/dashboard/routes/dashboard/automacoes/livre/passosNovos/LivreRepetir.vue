@@ -1,16 +1,17 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import LivreEtapa from '../components/LivreEtapa.vue';
-import { LISTAS, P, RITMOS, TETO_MAXIMO } from './passosNovos';
-import { contarItens, publicosDaConta } from './adaptadorFalso';
+import { LISTAS, P, RITMOS, TETO_MAXIMO, listaPronta } from './passosNovos';
+import { carregarPublicos, contarLista, publicosDaConta } from './dadosDaConta';
 
 // #2932 — Para cada: a lista em palavras do dia a dia (os cards de uma etapa,
 // os contatos com uma etiqueta ou os de um público), o teto por vez e o ritmo.
-// Antes de ligar, a tela diz quantos entrariam hoje e mostra os 3 primeiros. Os
-// passos de cada um ficam no galho "Em cada um da lista", no Confira.
+// Antes de ligar, a tela diz quantos entrariam hoje e mostra os 3 primeiros,
+// pela régua do motor (o servidor conta só quem você alcança, sem bloqueados).
+// Os passos de cada um ficam no galho "Em cada um da lista", no Confira.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   opcoes: { type: Object, required: true },
@@ -27,8 +28,8 @@ const mudar = mudanca =>
 
 const primeiraEtapa = () => props.etapas[0]?.options?.[0]?.value ?? null;
 const primeiraEtiqueta = () => props.opcoes.etiquetaPorNome?.[0]?.value || '';
-// Os públicos vêm do adaptador falso até o motor existir.
-const publicos = computed(() => publicosDaConta(t));
+// Os públicos salvos da conta (Públicos).
+const publicos = computed(() => publicosDaConta());
 // Começar pronto: a primeira opção de cada lista já vem escolhida.
 const NOVA_LISTA = {
   etapa: () => ({ de: 'etapa', etapa_id: primeiraEtapa() }),
@@ -62,13 +63,42 @@ const mudarTeto = texto => {
   mudar({ teto: texto === '' || Number.isNaN(numero) ? null : numero });
 };
 
-const contagem = computed(() => contarItens(props.modelValue.lista));
+// A contagem de verdade, de novo a cada troca da lista ou do teto. A resposta
+// que chega fora de ordem (a pessoa trocou no meio) não vale.
+const contagem = ref({ total: 0, primeiros: [] });
+const erroDaContagem = ref('');
+let pedido = 0;
+const contar = async () => {
+  const { lista, teto } = props.modelValue;
+  pedido += 1;
+  const meu = pedido;
+  erroDaContagem.value = '';
+  if (!listaPronta(lista) || tetoFora.value) {
+    contagem.value = { total: 0, primeiros: [] };
+    return;
+  }
+  try {
+    const achou = await contarLista(lista, teto);
+    if (meu === pedido) contagem.value = achou;
+  } catch (erro) {
+    if (meu !== pedido) return;
+    contagem.value = { total: 0, primeiros: [] };
+    erroDaContagem.value = erro?.response?.data?.error || '';
+  }
+};
+watch(
+  () => [props.modelValue.lista, props.modelValue.teto],
+  () => contar(),
+  { deep: true }
+);
 
 // Começar pronto: a primeira etapa já vem escolhida.
 onMounted(() => {
+  carregarPublicos();
   const { lista } = props.modelValue;
   if (lista?.de === 'etapa' && lista.etapa_id == null && primeiraEtapa())
     mudar({ lista: listaDe('etapa') });
+  else contar();
 });
 </script>
 
@@ -157,6 +187,14 @@ onMounted(() => {
         </li>
       </ul>
       <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${R}.FICAM_FORA`) }}</p>
+      <p
+        v-if="erroDaContagem"
+        data-repetir-erro
+        role="alert"
+        class="mb-0 text-sm text-n-ruby-11"
+      >
+        {{ erroDaContagem }}
+      </p>
     </div>
 
     <Input

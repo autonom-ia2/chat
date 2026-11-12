@@ -100,7 +100,9 @@
         "RITMO": "Ritmo",
         "RITMO_AOS_POUCOS": "Aos poucos: um por minuto",
         "RITMO_RAPIDO": "Mais rápido: um a cada 10 segundos",
-        "ONDE_POR_PASSOS": "Depois de salvar, ponha os passos de cada um no caminho “Em cada um da lista”."
+        "ONDE_POR_PASSOS": "Depois de salvar, ponha os passos de cada um no caminho “Em cada um da lista”.",
+        "ENSAIO_NINGUEM": "Hoje ninguém entraria.",
+        "ENSAIO_FORA_DO_TETO": "{fora} ficariam para a próxima vez (limite por vez)."
       },
       "BLOCO": {
         "NOME": "Usar outra automação",
@@ -113,7 +115,12 @@
         "VAZIO_BOTAO": "Ver minhas automações",
         "QUAL": "Qual bloco usar",
         "O_QUE_FAZ": "O que este bloco faz",
-        "MUDA_EM_TODAS": "Se você mudar o bloco, muda em todas as automações que usam ele."
+        "MUDA_EM_TODAS": "Se você mudar o bloco, muda em todas as automações que usam ele.",
+        "ENSAIO_DE_VERDADE": "Entraria no bloco “{bloco}” e faria:",
+        "BLOCO_SUMIU": "O bloco não existe mais ou deixou de ser bloco. Pularia este passo.",
+        "BLOCO_DE_OUTRO_ALVO": "O bloco roda em outro tipo de registro. Pularia este passo.",
+        "BLOCO_EM_LACO": "O bloco acaba usando ele mesmo de novo. Pararia aqui.",
+        "BLOCO_FUNDO_DEMAIS": "Bloco dentro de bloco demais. Pararia aqui."
       },
       "CONSULTAR": {
         "NOME": "Buscar informação em outro sistema",
@@ -144,7 +151,8 @@
         "NOME_DO_DADO": "Nome do dado",
         "NOME_DICA": "Com esse nome ele aparece no “Pôr um dado” dos próximos passos.",
         "FALTA_DADO": "Faça um teste e toque em pelo menos um dado.",
-        "SE_FALHAR": "Se o outro sistema falhar ou demorar, a automação segue pelo caminho “Se não conseguir buscar”."
+        "SE_FALHAR": "Se o outro sistema falhar ou demorar, a automação segue pelo caminho “Se não conseguir buscar”.",
+        "TESTE_FALHOU": "Não deu para buscar. Confira o endereço e tente de novo."
       },
       "REUNIAO": {
         "NOME": "Marcar reunião pela conversa",
@@ -197,57 +205,13 @@
         "VER_DENTRO": "Ver o que aconteceu dentro"
       },
       "EXEMPLO": {
-        "BLOCOS": {
-          "BOAS_VINDAS": {
-            "NOME": "Boas-vindas do cliente novo",
-            "FRASE": "Dá as boas-vindas e pergunta se ficou alguma dúvida.",
-            "PASSO_1": "Mandar a mensagem de boas-vindas",
-            "PASSO_2": "Esperar 1 dia",
-            "PASSO_3": "Perguntar se ficou alguma dúvida"
-          },
-          "LEMBRAR": {
-            "NOME": "Lembrar o responsável",
-            "FRASE": "Avisa quem cuida do card e espera ele responder.",
-            "PASSO_1": "Avisar quem cuida do card",
-            "PASSO_2": "Esperar até o card mudar de etapa"
-          },
-          "DOCUMENTO": {
-            "NOME": "Pedir um documento",
-            "FRASE": "Pede um documento ao cliente e lembra uma vez.",
-            "PASSO_1": "Pedir o documento ao cliente",
-            "PASSO_2": "Lembrar depois de 2 dias, se não chegar"
-          }
-        },
-        "INTEGRACOES": {
-          "LOJA": "Loja virtual",
-          "CEP": "Busca de CEP",
-          "BOLETOS": "Boletos"
-        },
-        "DADOS": {
-          "NUMERO_DO_PEDIDO": "Número do pedido",
-          "STATUS_DO_PEDIDO": "Status do pedido",
-          "PREVISAO_DE_ENTREGA": "Previsão de entrega",
-          "NOME_DO_CLIENTE": "Nome do cliente",
-          "RUA": "Rua",
-          "BAIRRO": "Bairro",
-          "CIDADE": "Cidade",
-          "ESTADO": "Estado",
-          "SITUACAO_DO_BOLETO": "Situação do boleto",
-          "VENCIMENTO_DO_BOLETO": "Vencimento do boleto",
-          "VALOR_DO_BOLETO": "Valor do boleto"
-        },
-        "PUBLICOS": {
-          "CLIENTES_ATIVOS": "Clientes ativos",
-          "SEM_COMPRA": "Sem compra há 90 dias"
-        },
-        "STATUS_ENVIADO": "Enviado",
-        "SITUACAO_PAGO": "Pago",
         "HORARIO_1": "Quinta, 10h",
         "HORARIO_2": "Quinta, 15h",
         "HORARIO_3": "Sexta, 9h",
         "CARD_TITULO": "Pedido com desconto de 12%",
         "VALOR_OCULTO": "valor oculto"
-      }
+      },
+      "DESLIGADOS_NO_ENSAIO": "Este passo não está disponível nesta conta. A automação pararia aqui."
     }
   }
 }

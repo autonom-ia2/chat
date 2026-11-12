@@ -72,6 +72,29 @@ class AutomacoesAPI extends ApiClient {
     return axios.get(`${this.url}/agentes_de_ia`);
   }
 
+  // #2933: marcar (ou desmarcar) a automação como bloco: sem gatilho próprio,
+  // chamada por outras. Desmarcar o bloco que uma automação ligada usa volta 422.
+  marcarBloco(id, bloco) {
+    return axios.patch(`${this.url}/${id}`, { bloco });
+  }
+
+  // #2933: o que aconteceu dentro de um bloco que a automação usou.
+  historicoDentro(id, filhaId) {
+    return axios.get(`${this.url}/${id}/historico`, {
+      params: { dentro: filhaId },
+    });
+  }
+
+  // #2932: quantos entrariam hoje no "para cada", até o teto.
+  contarLista({ lista, teto }) {
+    return axios.post(`${this.url}/contar_lista`, { lista, teto });
+  }
+
+  // #2934: o teste do "buscar em outro sistema". Busca de verdade.
+  testarConsulta(fonte) {
+    return axios.post(`${this.url}/testar_consulta`, { fonte });
+  }
+
   // G13 (#2670): o segredo da assinatura do passo "webhook". Só o
   // administrador; a resposta traz `secret`.
   segredoDoWebhook(id) {

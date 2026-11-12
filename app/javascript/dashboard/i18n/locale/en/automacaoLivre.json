@@ -292,7 +292,12 @@
       "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
       "VER_FUNIL": "See in the pipeline",
       "SEM_PASSO": "No step yet",
-      "CUSTO_IA": "AI: {custo} in runs over the last 30 days"
+      "CUSTO_IA": "AI: {custo} in runs over the last 30 days",
+      "USAR_COMO_BLOCO": "Use as a block",
+      "TIRAR_BLOCO": "Stop using as a block",
+      "BLOCO_AVISO": "A block has no trigger of its own: it runs when another automation uses it.",
+      "VIROU_BLOCO": "Now it is a block. Other automations can use it.",
+      "DEIXOU_DE_SER_BLOCO": "It is no longer a block."
     },
     "EDITOR": {
       "NOVA": "New automation",
@@ -416,7 +421,9 @@
       "NAO_RESPONDEU": "If the customer doesn't answer",
       "NOTA_BAIXA": "Low score",
       "NOTA_MEDIA": "Medium score",
-      "NOTA_ALTA": "High score"
+      "NOTA_ALTA": "High score",
+      "DENTRO": "Inside the block",
+      "CONSULTOU": "If it looks it up"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",
@@ -562,6 +569,15 @@
     "CRIADO": {
       "CONTATO": "Contact created by this automation",
       "CARD": "Card created by this automation"
+    },
+    "HISTORICO": {
+      "GUARDOU": "Saved: {dados}.",
+      "VER_DENTRO": "See what happened inside",
+      "FECHAR_DENTRO": "Hide what happened inside",
+      "DENTRO_ERRO": "Could not open what happened inside the block."
+    },
+    "ORIGEM": {
+      "BLOCO": "Block"
     }
   }
 }

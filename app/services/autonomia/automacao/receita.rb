@@ -21,8 +21,9 @@
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
-  # o do "webhook" (G13), quando o outro sistema recusa.
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos].freeze
+  # o do "webhook" (G13), quando o outro sistema recusa. `cada`: o do "para cada um de uma lista" (#2932), que roda numa
+  # execução filha por item. `nao_consultou`: o do "buscar em outro sistema" (#2934), quando a busca não deu.
+  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos cada nao_consultou].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -79,7 +80,11 @@ class Autonomia::Automacao::Receita
   # no registro ligado, e é conferido lá. O texto da IA (#2679) também só passa entre passos da mesma execução.
   def do_alvo(lista = @receita['passos']) = Array(lista).flat_map { |passo| [passo, *ramos_do_alvo(passo).flat_map { |ramo| do_alvo(ramo) }] }
 
-  def ramos_do_alvo(passo) = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) ? [] : self.class.ramos(passo)
+  # O galho do "para cada" (#2932) também roda numa execução filha, no item.
+  def ramos_do_alvo(passo)
+    filha = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) || ::Autonomia::Automacao::RepetirLista.do_tipo?(passo)
+    filha ? [] : self.class.ramos(passo)
+  end
 
   private
 
@@ -89,6 +94,7 @@ class Autonomia::Automacao::Receita
     return condicoes.problemas(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return mensagens.problemas(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return passos_de_ia.problemas(passo) if IA.include?(passo['tipo'])
+    return passos_novos(passo) if ::Autonomia::Automacao::PassosNovos.do_tipo?(passo)
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
     return [] unless passo['tipo'] == 'acao'
 
@@ -101,6 +107,13 @@ class Autonomia::Automacao::Receita
                                                                     alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
                                                                       leitura.problemas(id, c, **opcoes)
                                                                     end
+  end
+
+  # Os passos novos com motor (#2932–#2934, PassosNovos).
+  def passos_novos(passo)
+    conferencia = ::Autonomia::Automacao::PassosNovos::Conferencia.new(conta: @conta, account_user: @account_user, alvo: alvo,
+                                                                       dentro: @alvo.present?)
+    ::Autonomia::Automacao::PassosNovos.problemas_ao_salvar(passo, conferencia)
   end
 
   # A régua dos valores (Leitura): a ação, as condições, os passos próprios e os textos perguntam aqui.

@@ -59,12 +59,15 @@ class Autonomia::Automacao::Receita::Leitura
     Array(leitura).map { |chave| texto(chave, passo: id, caminho: caminho) }
   end
 
-  # O valor que vem de outro passo desta execução: o texto da IA (#2679) ou o registro criado (G49); nil nos outros.
+  # O valor que vem de outro passo desta execução: o texto da IA (#2679), o registro criado (G49) ou o dado buscado
+  # (#2934); nil nos outros.
   def de_outro_passo(id, caminho, no_gatilho, tipo)
     if ::Autonomia::Automacao::Valores.da_ia?(caminho)
       ::Autonomia::Automacao::TextoDaIaNaReceita.new(@travessia, @receita).problemas(id, caminho, no_gatilho: no_gatilho)
     elsif ::Autonomia::Automacao::RegistroCriado.caminho?(caminho)
       ::Autonomia::Automacao::RegistroCriadoNaReceita.new(@travessia, @receita, tipo: tipo).problemas(id, caminho, no_gatilho: no_gatilho)
+    elsif ::Autonomia::Automacao::Valores.da_consulta(caminho)
+      ::Autonomia::Automacao::ConsultaNaReceita.new(@travessia, @receita).problemas(id, caminho, no_gatilho: no_gatilho)
     end
   end
 

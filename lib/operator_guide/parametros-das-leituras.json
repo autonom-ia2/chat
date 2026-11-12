@@ -214,6 +214,7 @@
   "autonomia/automacoes/:id/historico": {
     "controller": "api/v1/accounts/autonomia/automacoes#historico",
     "parametros": [
+      "dentro",
       "pagina"
     ]
   },

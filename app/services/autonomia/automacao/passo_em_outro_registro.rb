@@ -22,7 +22,7 @@ class Autonomia::Automacao::PassoEmOutroRegistro
 
   def executar
     # A filha nunca abre netas: o salvar já recusa "em outro registro" dentro de outro, e a rodada confere de novo.
-    return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::EmOutroRegistro.da(@execucao)
+    return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::RepetirLista.filha?(@execucao)
     return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) if sem_chave?
     return Resultado.new(tipo: :pulado, motivo: 'campo_nao_e_contato', dados: {}) unless campo_de_contato?
 

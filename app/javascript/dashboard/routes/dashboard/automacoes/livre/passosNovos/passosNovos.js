@@ -51,6 +51,12 @@ export const PASSOS_NOVOS = {
 };
 
 export const ehPassoNovo = passo => Boolean(PASSOS_NOVOS[passo?.tipo]);
+
+// #2932–#2934: os que já têm motor salvam, ligam e ensaiam de verdade. Os
+// outros três seguem no protótipo (adaptadorFalso) e não salvam.
+export const COM_MOTOR = ['repetir_lista', 'usar_bloco', 'consultar'];
+export const temMotor = passo => COM_MOTOR.includes(passo?.tipo);
+export const emTeste = passo => ehPassoNovo(passo) && !temMotor(passo);
 export const chaveDoPasso = tipo => `${P}.${PASSOS_NOVOS[tipo].chave}`;
 
 // Os galhos de cada passo, para a travessia da receita (receita.js, RAMOS).

@@ -6,12 +6,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
-import { acharPasso } from '../receita';
+import { acharPasso, todosOsPassos } from '../receita';
 import { linhasDoEnsaio } from '../ensaio';
 import {
   ensaiarComPassosNovos,
   temPassoNovo,
 } from '../passosNovos/adaptadorFalso';
+import { blocoDe, carregarBlocos } from '../passosNovos/dadosDaConta';
 import LivreBuscaNoEnsaio from '../passosNovos/LivreBuscaNoEnsaio.vue';
 
 // #2498 — Ensaiar: o que a automação faria nas conversas recentes que a pessoa
@@ -51,9 +52,10 @@ const corpo = conversaId => ({
   conversaId,
 });
 
-// Protótipo #2931–#2936: a receita com passo novo ainda não passa no servidor;
-// o ensaio dela vem do adaptador falso, com as duas conversas de exemplo. O
-// caminho do "decidir" sem nome vira "Caminho N".
+// Protótipo #2931, #2935, #2936: a receita com um desses passos novos ainda não
+// passa no servidor; o ensaio dela vem do adaptador falso, com as duas
+// conversas de exemplo. Os três com motor (#2932–#2934) ensaiam no servidor.
+// O caminho do "decidir" sem nome vira "Caminho N".
 const rotuloDoGalho = ramo =>
   t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(ramo.split('.')[1]) + 1 });
 // O ensaio de exemplo avisa no topo: as conversas são inventadas.
@@ -112,12 +114,22 @@ const atual = computed(() =>
   todas.value.find(item => item.conversa_id === escolhida.value)
 );
 
-const fraseDe = id => {
-  const passo = acharPasso(props.receita.passos || [], id);
+// O passo de dentro de um bloco (#2933) vem com `bloco`: o id é da receita do
+// bloco, não desta.
+const passoDe = no => {
+  const passos = no?.bloco
+    ? blocoDe(no.bloco)?.passos || []
+    : props.receita.passos || [];
+  return acharPasso(passos, no?.id);
+};
+const fraseDe = (id, no) => {
+  const passo = passoDe(no || { id });
   return passo ? fraseDoPasso(passo, props.catalogo, t) : '';
 };
 const linhas = computed(() =>
-  atual.value?.entraria ? linhasDoEnsaio(atual.value.passos, fraseDe, t) : []
+  atual.value?.entraria
+    ? linhasDoEnsaio(atual.value.passos, fraseDe, t, 0, passoDe)
+    : []
 );
 
 const nomeDe = item =>
@@ -150,6 +162,13 @@ watch(escolhida, () => {
 
 onMounted(() => {
   raiz.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Os passos de dentro dos blocos (#2933) saem em frase pela receita deles.
+  if (
+    todosOsPassos(props.receita.passos || []).some(
+      passo => passo.tipo === 'usar_bloco'
+    )
+  )
+    carregarBlocos();
   carregar();
 });
 

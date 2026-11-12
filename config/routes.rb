@@ -759,6 +759,9 @@ Rails.application.routes.draw do
               get :custos, on: :collection, to: 'automacoes_ia#custos'
               # G15: as agentes de IA do passo "Passar para a agente de IA".
               get :agentes_de_ia, on: :collection, to: 'automacoes_ia#agentes_de_ia'
+              # #2932/#2934: quantos entrariam no "para cada" e o teste do "buscar em outro sistema".
+              post :contar_lista, on: :collection, to: 'automacoes_passos_novos#contar_lista'
+              post :testar_consulta, on: :collection, to: 'automacoes_passos_novos#testar_consulta'
               member do
                 post :ligar
                 post :desligar

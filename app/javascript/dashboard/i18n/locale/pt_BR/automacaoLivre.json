@@ -292,7 +292,12 @@
       "DO_FUNIL": "As automações das etapas do funil ficam em Configurar › Editar funil.",
       "VER_FUNIL": "Ver no funil",
       "SEM_PASSO": "Ainda sem passo",
-      "CUSTO_IA": "IA: {custo} nas execuções dos últimos 30 dias"
+      "CUSTO_IA": "IA: {custo} nas execuções dos últimos 30 dias",
+      "USAR_COMO_BLOCO": "Usar como bloco",
+      "TIRAR_BLOCO": "Deixar de ser bloco",
+      "BLOCO_AVISO": "Bloco não tem gatilho próprio: roda quando outra automação usa ele.",
+      "VIROU_BLOCO": "Agora é um bloco. Outras automações podem usar.",
+      "DEIXOU_DE_SER_BLOCO": "Deixou de ser bloco."
     },
     "EDITOR": {
       "NOVA": "Nova automação",
@@ -416,7 +421,9 @@
       "NAO_RESPONDEU": "Se o cliente não responder",
       "NOTA_BAIXA": "Nota baixa",
       "NOTA_MEDIA": "Nota média",
-      "NOTA_ALTA": "Nota alta"
+      "NOTA_ALTA": "Nota alta",
+      "DENTRO": "Dentro do bloco",
+      "CONSULTOU": "Se conseguir buscar"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",
@@ -562,6 +569,15 @@
     "CRIADO": {
       "CONTATO": "Contato criado por esta automação",
       "CARD": "Card criado por esta automação"
+    },
+    "HISTORICO": {
+      "GUARDOU": "Guardou: {dados}.",
+      "VER_DENTRO": "Ver o que aconteceu dentro",
+      "FECHAR_DENTRO": "Esconder o que aconteceu dentro",
+      "DENTRO_ERRO": "Não deu para abrir o que aconteceu dentro do bloco."
+    },
+    "ORIGEM": {
+      "BLOCO": "Bloco"
     }
   }
 }

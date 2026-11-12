@@ -1,0 +1,61 @@
+# Automação livre, passos novos com motor (#2414: #2932 "for each one in a list", #2933 "use another automation", #2934
+# "fetch information from another system"). Own file so it does not compete for en.yml with the other fronts.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        passos_novos_desligados: 'This step is not available on this account right now. The automation stopped here.'
+        bloco_nao_liga: 'This automation is a block: it has no trigger of its own and only runs when another automation uses it.'
+        bloco_chamado: 'Started the block. This automation continues when the block finishes.'
+        bloco_terminou: 'The block finished. This automation continued.'
+        bloco_de: 'Started by another automation that uses this block.'
+        bloco_sumiu: 'The block this step uses no longer exists, or is no longer a block.'
+        bloco_de_outro_alvo: 'The block this step uses now runs on another kind of record. Nothing was done.'
+        bloco_em_laco: 'The block ends up using itself again. It was stopped to avoid an endless loop.'
+        bloco_fundo_demais: 'Too many blocks inside blocks. It was stopped here.'
+        bloco_falhou: 'The block failed, so this automation stopped too.'
+        bloco_parou: 'The block stopped before the end, so this automation stopped too.'
+        repetir_lista: 'Started for one item of a list in another run of this automation.'
+        lista_rodou: 'Started for %{abertas} item(s) of the list (limit %{teto} per run). %{passou_do_teto} left for next time; %{bloqueados} blocked or unsubscribed; %{fora_do_alcance} out of reach of whoever turned it on; %{ja_aberta} already in this automation.'
+        consulta_so_https: 'The address must start with https://.'
+        consulta_sem_senha_no_endereco: 'The address cannot carry a user or password.'
+        consulta_endereco_interno: 'This address points to an internal network and cannot be used.'
+        consulta_sem_resposta: 'The other system did not answer in time.'
+        consulta_recusada: 'The other system answered with an error.'
+        consulta_resposta_grande: 'The answer from the other system is too large.'
+        consulta_resposta_sem_dados: 'The other system answered, but not with data the automation can read.'
+        consulta_sem_permissao: 'Whoever turned this automation on can no longer fetch data from other systems. Take over and turn it on again.'
+      receita:
+        passos_novos_desligados: 'Step %{passo}: this step is not available on this account.'
+        consulta_no_gatilho: 'Step %{passo}: %{caminho} is data fetched by a step, and no step has run yet in the trigger.'
+        consulta_sem_passo: 'Step %{passo}: %{caminho} must point to data saved by a "Fetch from another system" step of this automation.'
+        consulta_depois: 'Step %{passo}: %{caminho} comes from a "Fetch from another system" step that never runs before this one.'
+        lista:
+          aninhado: 'Step %{passo}: "For each one in a list" cannot go inside another step that runs on other records.'
+          sem_chave_de_funis: 'Step %{passo}: the list is made of pipeline cards, and you cannot manage pipelines.'
+          etapa_de_fora: 'Step %{passo}: choose a pipeline stage of this account.'
+          etiqueta_de_fora: 'Step %{passo}: choose a label of this account.'
+          publico_de_fora: 'Step %{passo}: choose a saved audience of this account.'
+          publico_sem_permissao: 'Step %{passo}: you cannot see this audience.'
+        bloco:
+          laco_volta: 'This automation is used by the block "%{bloco}", which it also uses. That would never end.'
+          de_fora: 'Step %{passo}: choose an automation of this account marked as a block.'
+          vazio: 'Step %{passo}: the block "%{bloco}" has no saved version yet.'
+          outro_alvo: 'Step %{passo}: the block "%{bloco}" runs on another kind of record.'
+          laco: 'Step %{passo}: the block "%{bloco}" ends up using this automation again. That would never end.'
+          fundo: 'Step %{passo}: the block "%{bloco}" goes more than %{maximo} blocks deep.'
+          com_problema: 'Step %{passo}: the block "%{bloco}" has a problem: %{problema}'
+        consulta:
+          sem_permissao: 'Step %{passo}: only an administrator, or a role allowed to manage integrations, can fetch data from other systems.'
+          integracao_desconhecida: 'Step %{passo}: choose "Another address". Connected integrations are not available for this step yet.'
+          consulta_so_https: 'Step %{passo}: the address must start with https://.'
+          consulta_sem_senha_no_endereco: 'Step %{passo}: the address cannot carry a user or password.'
+          consulta_endereco_interno: 'Step %{passo}: this address points to an internal network and cannot be used.'
+          nome_sem_letra: 'Step %{passo}: the name "%{nome}" needs at least one letter or number.'
+          nome_repetido: 'Step %{passo}: two saved items have the same name (%{chave}). Give each one its own name.'
+          caminho_invalido: 'Step %{passo}: the place "%{caminho}" in the answer is not valid.'
+      editor:
+        bloco_em_uso: 'This block is used by automations that are on: %{nomes}. Change them first.'
+        bloco_desligado: 'Blocks are not available on this account.'
+      ensaio:
+        dado_buscado: '[%{nome}, fetched from the other system]'

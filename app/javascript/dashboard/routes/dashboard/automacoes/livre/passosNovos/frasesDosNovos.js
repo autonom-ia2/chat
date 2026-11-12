@@ -1,18 +1,17 @@
 // #2414 — os passos novos (#2931–#2936) em frase: a linha do Confira, a linha
 // do ensaio ("o que aconteceria") e a linha do histórico ("o que aconteceu").
-// No protótipo o ensaio e o histórico vêm do adaptador falso; a frase do Confira
-// é a de verdade.
+// Os três com motor (#2932–#2934) leem o que veio do servidor (dadosDaConta):
+// a prévia mostra a última contagem e o último teste da tela; o ensaio e o
+// histórico de verdade saem do servidor (linhaDoEnsaioComMotor, Historico). Os
+// outros três seguem com o adaptador falso do protótipo.
 import { P, chaveDoPasso } from './passosNovos';
+import { NOMES_DE_EXEMPLO, horariosLivres } from './adaptadorFalso';
 import {
-  NOMES_DE_EXEMPLO,
   blocoDe,
-  contarItens,
-  horariosLivres,
-  nomeDaIntegracao,
+  contagemDaTela,
   nomeDoPublico,
-  rodadaDaLista,
-  valorDeTeste,
-} from './adaptadorFalso';
+  valorDoTeste,
+} from './dadosDaConta';
 import { nomeDaConta } from './nomesDaConta';
 
 const CABE_NA_LINHA = 60;
@@ -67,10 +66,12 @@ export const duracaoEmFrase = (duracao, t) => {
   });
 };
 
+// Integração conectada ainda não existe para este passo: só o endereço próprio
+// tem nome. O endereço em si nunca aparece na frase.
 export const fonteEmFrase = (fonte, t) =>
   fonte?.de === 'endereco'
     ? t(`${P}.CONSULTAR.ENDERECO_PROPRIO`)
-    : nomeDaIntegracao(fonte?.id, t) || t(`${P}.CONSULTAR.SEM_FONTE`);
+    : t(`${P}.CONSULTAR.SEM_FONTE`);
 
 // A lista em palavras do dia a dia, com o nome: "cada card da etapa Proposta".
 // Sem o nome ainda, "a etapa escolhida".
@@ -83,9 +84,9 @@ const LISTA_EM_FRASE = {
     chave: 'DA_ETIQUETA',
     valores: { etiqueta: lista.etiqueta },
   }),
-  publico: (lista, t) => ({
+  publico: lista => ({
     chave: 'DO_PUBLICO',
-    valores: { publico: nomeDoPublico(lista.publico_id, t) },
+    valores: { publico: nomeDoPublico(lista.publico_id) },
   }),
 };
 const listaEmFrase = (lista, t) => {
@@ -125,7 +126,7 @@ const FRASE = {
       teto: passo.teto ?? '',
     }),
   usar_bloco: (passo, t) => {
-    const bloco = blocoDe(passo.bloco_id, t);
+    const bloco = blocoDe(passo.bloco_id);
     return bloco
       ? t(`${P}.BLOCO.FRASE`, { bloco: bloco.nome })
       : t(`${P}.BLOCO.FRASE_SEM_BLOCO`);
@@ -160,7 +161,7 @@ const ENSAIO = {
     }),
   }),
   repetir_lista: (passo, t) => {
-    const { total, primeiros } = contarItens(passo.lista);
+    const { total, primeiros } = contagemDaTela();
     return {
       destaque: total
         ? t(`${P}.REPETIR.ENSAIO`, { total, nomes: emLista(primeiros, t) })
@@ -168,10 +169,10 @@ const ENSAIO = {
     };
   },
   usar_bloco: (passo, t) => {
-    const bloco = blocoDe(passo.bloco_id, t);
+    const bloco = blocoDe(passo.bloco_id);
     return {
       destaque: bloco
-        ? t(`${P}.BLOCO.ENSAIO`, { passos: bloco.passos.join('; ') })
+        ? t(`${P}.BLOCO.ENSAIO`, { passos: bloco.frases.join('; ') })
         : t(`${P}.BLOCO.FRASE_SEM_BLOCO`),
     };
   },
@@ -210,7 +211,7 @@ const HISTORICO = {
     detalhe: t(`${P}.APROVACAO.HISTORICO_MOTIVO`),
   }),
   repetir_lista: (passo, t) => {
-    const { total, primeiros } = rodadaDaLista();
+    const { total, primeiros } = contagemDaTela();
     return {
       texto: t(`${P}.REPETIR.HISTORICO`, { feitos: total, total }),
       detalhe: t(`${P}.REPETIR.HISTORICO_NOMES`, {
@@ -220,12 +221,12 @@ const HISTORICO = {
     };
   },
   usar_bloco: (passo, t) => {
-    const bloco = blocoDe(passo.bloco_id, t);
+    const bloco = blocoDe(passo.bloco_id);
     return {
       texto: bloco
         ? t(`${P}.BLOCO.HISTORICO`, { bloco: bloco.nome })
         : t(`${P}.BLOCO.FRASE_SEM_BLOCO`),
-      dentro: bloco?.passos || [],
+      dentro: bloco?.frases || [],
     };
   },
   consultar: (passo, t) => {
@@ -235,7 +236,7 @@ const HISTORICO = {
         ? t(`${P}.CONSULTAR.HISTORICO`, {
             fonte: fonteEmFrase(passo.fonte, t),
             dado: dado.nome,
-            valor: valorDeTeste(passo.fonte, dado.caminho, t) || '',
+            valor: valorDoTeste(dado.caminho),
           })
         : t(`${P}.CONSULTAR.HISTORICO_SEM_DADO`, {
             fonte: fonteEmFrase(passo.fonte, t),
@@ -257,3 +258,43 @@ export const linhaDoHistoricoNovo = (passo, t) =>
   HISTORICO[passo.tipo](passo, t);
 
 export const nomeDoPassoNovo = (tipo, t) => t(`${chaveDoPasso(tipo)}.NOME`);
+
+// #2932–#2934 — o ensaio de verdade dos três com motor, a partir do nó do
+// servidor ({ faria, dados, ramos }). Nada sai no ensaio: a busca só com o OK de
+// quem ensaia (`consulta`, LivreBuscaNoEnsaio), e nunca com o endereço na tela.
+const AVISO_DO_BLOCO = {
+  bloco_sumiu: 'BLOCO_SUMIU',
+  bloco_de_outro_alvo: 'BLOCO_DE_OUTRO_ALVO',
+  bloco_em_laco: 'BLOCO_EM_LACO',
+  bloco_fundo_demais: 'BLOCO_FUNDO_DEMAIS',
+};
+const ENSAIO_COM_MOTOR = {
+  repetir_lista: (no, t) => {
+    const { total = 0, primeiros = [], fora_do_teto: fora = 0 } = no.dados;
+    const entram = total
+      ? t(`${P}.REPETIR.ENSAIO`, { total, nomes: emLista(primeiros, t) })
+      : t(`${P}.REPETIR.ENSAIO_NINGUEM`);
+    return {
+      destaque: fora
+        ? `${entram} ${t(`${P}.REPETIR.ENSAIO_FORA_DO_TETO`, { fora })}`
+        : entram,
+    };
+  },
+  usar_bloco: (no, t) => ({
+    destaque: t(`${P}.BLOCO.ENSAIO_DE_VERDADE`, { bloco: no.dados.nome }),
+  }),
+  consultar: (no, t, passo) => ({
+    destaque: t(`${P}.CONSULTAR.ENSAIO`, {
+      fonte: fonteEmFrase(passo?.fonte, t),
+    }),
+    consulta: (passo?.guardar || []).length ? passo : null,
+  }),
+};
+
+export const linhaDoEnsaioComMotor = (no, t, passo) => {
+  if (no.faria === 'passos_novos_desligados')
+    return { aviso: t(`${P}.DESLIGADOS_NO_ENSAIO`) };
+  if (AVISO_DO_BLOCO[no.faria])
+    return { aviso: t(`${P}.BLOCO.${AVISO_DO_BLOCO[no.faria]}`) };
+  return ENSAIO_COM_MOTOR[no.tipo]?.(no, t, passo) || {};
+};

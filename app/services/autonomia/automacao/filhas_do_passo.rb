@@ -17,7 +17,8 @@ class Autonomia::Automacao::FilhasDoPasso
     @passo = passo
     @ancora_id = ancora_id
     @account = mae.account
-    @acesso = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
+    # #2933: a mãe pode ser a execução de um bloco; quem age é a dona de cima (Execucao#dona).
+    @acesso = ::Autonomia::Automacao::Acesso.new(mae.dona, chave_gatilho: mae.chave_gatilho)
   end
 
   # A conta por resultado ('abertas', 'abertas_antes', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o
@@ -25,7 +26,7 @@ class Autonomia::Automacao::FilhasDoPasso
   # mãe, com o motivo (F3.6, F4.3): o passo dela gravou "ok" ao entregar a procura, e sem a linha ninguém saberia por
   # que nada aconteceu.
   def abrir
-    return pular_com('desligada') unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
+    return pular_com('desligada') unless @mae.dona.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
 
     contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
     return pular_com(sem_registro) if contagem.empty?

@@ -4,9 +4,11 @@
 // dele um nível adentro. A frase de cada passo é a do editor (`fraseDe`).
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 import {
+  linhaDoEnsaioComMotor,
   linhaDoEnsaioNovo,
   rotuloDoGalhoFixo,
 } from './passosNovos/frasesDosNovos';
+import { temMotor } from './passosNovos/passosNovos';
 
 const E = 'AUTOMACAO_LIVRE.ENSAIO';
 
@@ -106,16 +108,22 @@ const rotuloDoCaminho = (no, ramo, t) => {
   // G31: o caminho que decide de novo espera a próxima resposta.
   const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
   if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
-  // Protótipo #2931–#2936: o galho fixo do passo novo diz o próprio nome.
-  if (ramo.fixo) return rotuloDoGalhoFixo(ramo.chave, t);
+  // Protótipo #2931–#2936: o galho fixo do passo novo diz o próprio nome; os
+  // galhos dos três com motor (#2932–#2934) também.
+  if (ramo.fixo || temMotor(no)) return rotuloDoGalhoFixo(ramo.chave, t);
   return t(`${E}.SE_CAMINHO${deNovo}`, { nome: ramo.nome || ramo.chave });
 };
 
-const linhaDoNo = (no, fraseDe, t, nivel) => {
-  const base = { nivel, tipo: no.tipo, texto: fraseDe(no.id) };
+// `fraseDe(id, no)`: o nó vai junto para o passo de dentro de um bloco (#2933,
+// `no.bloco`), cujo id é da receita do bloco. `passoDe(no)`: o passo do nó,
+// para a busca do ensaio (#2934).
+const linhaDoNo = (no, fraseDe, t, nivel, passoDe) => {
+  const base = { nivel, tipo: no.tipo, texto: fraseDe(no.id, no) };
   // Protótipo #2931–#2936: o passo novo diz o que faria (adaptadorFalso).
   if (no.faria === 'passo_novo')
     return { ...base, ...linhaDoEnsaioNovo(no.dados.passo, t) };
+  if (temMotor(no))
+    return { ...base, ...linhaDoEnsaioComMotor(no, t, passoDe(no)) };
   if (no.faria === 'corte') return { nivel, texto: t(`${E}.CORTE`) };
   if (no.faria === 'se')
     return {
@@ -203,12 +211,18 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   return base;
 };
 
-export const linhasDoEnsaio = (nos, fraseDe, t, nivel = 0) =>
+export const linhasDoEnsaio = (
+  nos,
+  fraseDe,
+  t,
+  nivel = 0,
+  passoDe = () => null
+) =>
   (nos || []).flatMap(no => [
-    comAnexos(linhaDoNo(no, fraseDe, t, nivel), no, t),
+    comAnexos(linhaDoNo(no, fraseDe, t, nivel, passoDe), no, t),
     ...(no.ramos || []).flatMap(ramo => [
       { nivel: nivel + 1, caminho: true, texto: rotuloDoCaminho(no, ramo, t) },
-      ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2),
+      ...linhasDoEnsaio(ramo.passos, fraseDe, t, nivel + 2, passoDe),
       // G46: o caminho que volta a um "esperar até" acaba dizendo para onde.
       ...(ramo.volta
         ? [

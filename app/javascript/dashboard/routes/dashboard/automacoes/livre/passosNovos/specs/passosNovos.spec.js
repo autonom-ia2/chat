@@ -9,17 +9,19 @@ import {
   passoNovoPronto,
   valoresDaConsulta,
 } from '../passosNovos';
-import {
-  ensaiarComPassosNovos,
-  temPassoNovo,
-  testarConsulta,
-} from '../adaptadorFalso';
+import { ensaiarComPassosNovos, temPassoNovo } from '../adaptadorFalso';
+import { carregarBlocos, guardarFrasesDoBloco } from '../dadosDaConta';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import { linhaDoEnsaioNovo, linhaDoHistoricoNovo } from '../frasesDosNovos';
 import { comTextosDaIa, entradaDoPasso, novoPasso } from '../../catalogo';
 import { fraseDoPasso } from '../../frases';
 import { linhasDoEnsaio } from '../../ensaio';
 import { falta, galhosDe, inserirPasso, idDaLista } from '../../receita';
 import catalogoGerado from '../../../../../../../../../lib/operator_guide/automacao-passos.json';
+
+vi.mock('dashboard/api/autonomia/automacoes', () => ({
+  default: { get: vi.fn() },
+}));
 
 // Protótipo #2931–#2936 — os 6 passos novos da Automação livre: só com a flag
 // no catálogo, nascem prontos, o "Salvar" espera o que falta, os galhos entram
@@ -241,13 +243,24 @@ describe('em frase', () => {
     );
   });
 
-  it('o histórico do bloco traz os passos de dentro', () => {
+  it('o histórico do bloco traz os passos de dentro, pelo bloco da conta', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: {
+        automacoes: [
+          { id: 1, nome: 'Boas-vindas', bloco: true, versao: { receita: {} } },
+          { id: 2, nome: 'Comum', bloco: false },
+        ],
+      },
+    });
+    await carregarBlocos();
+    guardarFrasesDoBloco(1, ['Mandar oi', 'Pôr etiqueta', 'Avisar o time']);
     const linha = linhaDoHistoricoNovo(
       { ...novo('usar_bloco'), bloco_id: 1 },
       t
     );
 
     expect(linha.texto).toContain('BLOCO.HISTORICO');
+    expect(linha.texto).toContain('Boas-vindas');
     expect(linha.dentro).toHaveLength(3);
   });
 
@@ -260,11 +273,18 @@ describe('em frase', () => {
 });
 
 describe('ensaio pelo adaptador falso', () => {
-  it('acha o passo novo em qualquer galho', () => {
-    const se = { id: 'p1', tipo: 'se', entao: [novo('usar_bloco')] };
+  it('acha o passo novo sem motor em qualquer galho', () => {
+    const se = { id: 'p1', tipo: 'se', entao: [novo('pedir_aprovacao')] };
 
     expect(temPassoNovo([se])).toBe(true);
     expect(temPassoNovo([{ id: 'p1', tipo: 'parar' }])).toBe(false);
+  });
+
+  it('os passos com motor (#2932–#2934) não passam pelo ensaio de exemplo', () => {
+    ['repetir_lista', 'usar_bloco', 'consultar'].forEach(tipo => {
+      const se = { id: 'p1', tipo: 'se', entao: [novo(tipo)] };
+      expect(temPassoNovo([se])).toBe(false);
+    });
   });
 
   it('responde no formato da API e a linha sai pela frase do passo novo', async () => {
@@ -301,16 +321,6 @@ describe('ensaio pelo adaptador falso', () => {
 
     expect(linhas[1].texto).toContain('SE_CAMINHO');
     expect(linhas[1].texto).toContain('Quer comprar');
-  });
-
-  it('o teste da busca devolve os dados para tocar', async () => {
-    const dados = await testarConsulta({ de: 'integracao', id: 'loja' }, t);
-
-    expect(dados.map(dado => dado.caminho)).toContain('pedido.status');
-    // O nome é o do dia a dia, não a chave do JSON.
-    expect(dados.find(d => d.caminho === 'cliente.nome').nome).toBe(
-      'AUTOMACAO_LIVRE.PASSOS_NOVOS.EXEMPLO.DADOS.NOME_DO_CLIENTE'
-    );
   });
 });
 

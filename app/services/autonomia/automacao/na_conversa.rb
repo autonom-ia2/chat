@@ -20,7 +20,7 @@ module Autonomia::Automacao::NaConversa
   # Quem ligou precisa enxergar a conversa em que o passo age, e não só o alvo: no card, a pergunta vai à conversa
   # principal. Sem acesso, a automação pausa, como na ação (D1).
   def sem_acesso
-    return if ::Autonomia::Automacao::Acesso.alcanca?(@execucao.automacao.ligada_por, @conversa)
+    return if ::Autonomia::Automacao::Acesso.alcanca?(@execucao.dona.ligada_por, @conversa)
 
     Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {})
   end
@@ -30,7 +30,7 @@ module Autonomia::Automacao::NaConversa
   # Com as permissões de quem ligou (#2597) e a execução: a reunião do gatilho (G12) sai da marca dela.
   def valores
     @valores ||= ::Autonomia::Automacao::Valores.new(alvo: ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao),
-                                                     quem: @execucao.automacao.ligada_por)
+                                                     quem: @execucao.dona.ligada_por)
   end
 
   # O texto ficou sem um valor: o link da agenda vazio diz por quê (G12); o resto é o faltou_valor de sempre.

@@ -13,7 +13,7 @@ vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t, locale: { value: 'pt_BR' } }),
 }));
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
-  default: { ensaiar: vi.fn() },
+  default: { ensaiar: vi.fn(), get: vi.fn(), testarConsulta: vi.fn() },
 }));
 
 const CATALOGO = comPassosNovos(
@@ -60,7 +60,7 @@ describe('LivreEnsaio com passo novo', () => {
   it('avisa no topo que o ensaio é de exemplo', async () => {
     const tela = montar({
       gatilho: { tipo: 'conversa.resolvida' },
-      passos: [novoPassoNovo('usar_bloco', 'p1', t)],
+      passos: [novoPassoNovo('marcar_reuniao', 'p1', t)],
     });
     await flushPromises();
 
@@ -87,26 +87,140 @@ describe('LivreEnsaio com passo novo', () => {
     expect(caminho).not.toContain('SE_CAMINHO');
   });
 
-  it('a busca do "Buscar em outro sistema" espera o OK de quem ensaia', async () => {
+  // #2932–#2934: os três com motor ensaiam no servidor, sem a faixa de exemplo.
+  const conversaCom = passos => ({
+    data: {
+      conversas: [{ conversa_id: 1, nome: 'Ana', entraria: true, passos }],
+      outras: [],
+    },
+  });
+
+  it('os passos com motor ensaiam no servidor, com o galho pelo nome', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce(
+      conversaCom([
+        {
+          id: 'p1',
+          tipo: 'repetir_lista',
+          faria: 'repetir_lista',
+          dados: { total: 2, primeiros: ['Ana', 'Bruno'], fora_do_teto: 3 },
+          ramos: [
+            {
+              chave: 'cada',
+              passos: [
+                { id: 'c1', tipo: 'parar', faria: 'catalogo', dados: {} },
+              ],
+            },
+          ],
+        },
+      ])
+    );
+    const lista = {
+      ...novoPassoNovo('repetir_lista', 'p1', t),
+      cada: [{ id: 'c1', tipo: 'parar' }],
+    };
+    const tela = montar({
+      gatilho: { tipo: 'conversa.resolvida' },
+      passos: [lista],
+    });
+    await flushPromises();
+
+    expect(AutomacoesAPI.ensaiar).toHaveBeenCalledTimes(1);
+    expect(tela.find('[data-ensaio-de-exemplo]').exists()).toBe(false);
+    const passos = tela.find('[data-ensaio-passos]').text();
+    expect(passos).toContain('REPETIR.ENSAIO(2,');
+    expect(passos).toContain('REPETIR.ENSAIO_FORA_DO_TETO(3)');
+    expect(tela.find('[data-caminho]').text()).toBe(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.CAMINHO_NO_ENSAIO(AUTOMACAO_LIVRE.RAMOS.CADA)'
+    );
+  });
+
+  it('a busca do "Buscar em outro sistema" só sai com o OK de quem ensaia', async () => {
     const consulta = {
       ...novoPassoNovo('consultar', 'p1', t),
-      fonte: { de: 'integracao', id: 'loja' },
+      fonte: { de: 'endereco', url: 'https://loja.exemplo.com/pedido' },
       guardar: [{ nome: 'Status do pedido', caminho: 'pedido.status' }],
     };
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce(
+      conversaCom([
+        {
+          id: 'p1',
+          tipo: 'consultar',
+          faria: 'consultar',
+          dados: { guardaria: ['Status do pedido'] },
+        },
+      ])
+    );
+    AutomacoesAPI.testarConsulta.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        dados: [
+          { caminho: 'pedido.status', valor: 'enviado', rotulo: 'Status' },
+        ],
+      },
+    });
     const tela = montar({
       gatilho: { tipo: 'conversa.resolvida' },
       passos: [consulta],
     });
     await flushPromises();
 
-    expect(tela.find('[data-busca-resultado]').exists()).toBe(false);
+    expect(AutomacoesAPI.testarConsulta).not.toHaveBeenCalled();
     await tela.find('[data-busca-pedir]').trigger('click');
     await tela.find('[data-busca-sim]').trigger('click');
     await flushPromises();
 
-    expect(tela.find('[data-busca-resultado]').text()).toContain(
-      'Status do pedido'
+    expect(AutomacoesAPI.testarConsulta).toHaveBeenCalledWith(consulta.fonte);
+    expect(tela.find('[data-busca-resultado]').text()).toContain('enviado');
+  });
+
+  it('o passo de dentro do bloco sai em frase pela receita do bloco', async () => {
+    AutomacoesAPI.get.mockResolvedValueOnce({
+      data: {
+        automacoes: [
+          {
+            id: 9,
+            nome: 'Boas-vindas',
+            bloco: true,
+            versao: { receita: { passos: [{ id: 'p1', tipo: 'parar' }] } },
+          },
+        ],
+      },
+    });
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce(
+      conversaCom([
+        {
+          id: 'p1',
+          tipo: 'usar_bloco',
+          faria: 'usar_bloco',
+          dados: { nome: 'Boas-vindas' },
+          ramos: [
+            {
+              chave: 'dentro',
+              passos: [
+                {
+                  bloco: 9,
+                  id: 'p1',
+                  tipo: 'parar',
+                  faria: 'parar',
+                  dados: {},
+                },
+              ],
+            },
+          ],
+        },
+      ])
     );
+    const tela = montar({
+      gatilho: { tipo: 'conversa.resolvida' },
+      passos: [{ ...novoPassoNovo('usar_bloco', 'p1', t), bloco_id: 9 }],
+    });
+    await flushPromises();
+
+    const itens = tela
+      .findAll('[data-ensaio-passos] li')
+      .map(item => item.text());
+    expect(itens.join(' ')).toContain('BLOCO.ENSAIO_DE_VERDADE(Boas-vindas)');
+    expect(itens.join(' ')).toContain('PARAR');
   });
 
   it('sem passo novo, ensaia pelo servidor', async () => {

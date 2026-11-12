@@ -1,15 +1,15 @@
 # Protótipo: os 6 passos novos da Automação livre
 
 Issues #2931 a #2936 (épico #2414). Protótipo em tela real, para o Rodrigo
-aprovar antes de alguém escrever o motor. Só a tela e um adaptador falso: nada
-disso roda de verdade nem é salvo no servidor.
+aprovar antes de alguém escrever o motor. Aprovado em 12/11. Três deles já têm
+motor de verdade (#2932, #2933 e #2934, seção "Motor" abaixo); os outros três
+(#2931, #2935 e #2936) seguem só na tela, com o adaptador falso, e não salvam.
 
 ## Como ligar
 
 1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
    `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
-   `config/features.yml`, na posição 45 (1 << 44), **provisória**: a
-   Orquestração confirma o bit na fila.
+   `config/features.yml`; o bit está na seção "Motor" abaixo.
    **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
    **desligada em produção**, ligada só na conta de demonstração, até o motor
    dos passos existir. Ligada num cliente, ele monta passos que não salvam.
@@ -21,17 +21,58 @@ disso roda de verdade nem é salvo no servidor.
 Sem a flag, o editor fica idêntico ao de hoje: o catálogo volta o mesmo objeto
 do servidor.
 
-## O que é de verdade e o que é falso
+## Os três com motor (#2932, #2933, #2934 — 12/11)
+
+"Fazer para cada um de uma lista", "Usar outra automação" e "Buscar informação
+em outro sistema" já são de verdade: esquema, salvar, motor, ensaio e histórico.
+Sem o aviso "ainda está em teste": salvam e ligam como qualquer passo. Os outros
+três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
+
+- **Flag.** `automacao_passos_novos`, no fim de `config/features.yml`. O bit
+  reservado é o 47 (1 << 46), depois de `relacionamentos_novo` e
+  `carteira_seguros`; enquanto `carteira_seguros` não entra na `main`, ela cai no
+  46 (1 << 45), como `spec/models/account_spec.rb` confere. **Desligada em
+  produção** (exceção à regra de 07/11). Desligada depois de ligada: o salvar
+  recusa a receita com um dos três e o motor para a execução que chega num deles
+  (`passos_novos_desligados`). É o rollback.
+- **Para cada** (`repetir_lista`): cards de uma etapa, contatos de uma etiqueta
+  ou de um público salvo. Cada item ganha uma execução própria (a "filha da
+  lista") que roda o galho `cada` com o item como alvo, até o teto por vez
+  (1 a 200) e no ritmo escolhido (um por minuto, ou todos de uma vez). Bloqueado
+  ou descadastrado fica de fora, e só entra quem quem ligou alcança. O item que
+  já está no meio desta automação não entra de novo (sem laço). A tela conta
+  "entrariam hoje" no servidor, pela mesma régua (`contar_lista`).
+- **Bloco** (`usar_bloco`): "Usar como bloco" na lista marca a automação (coluna
+  `autonomia_automacoes.bloco`, migration `20261112092000`). O bloco não liga
+  sozinho. O passo abre uma execução do bloco no mesmo alvo e espera ela acabar;
+  o bloco age como quem ligou a automação de cima. Laço (A usa B, que usa A) e
+  bloco dentro de bloco além de 3 níveis são recusados ao salvar e de novo ao
+  rodar. O histórico mostra "Ver o que aconteceu dentro".
+- **Buscar em outro sistema** (`consultar`): só "Outro endereço", só https, só
+  com `integration_manage`. Endereço interno é recusado depois de resolver o nome
+  (o IP resolvido é o que se usa: sem DNS rebinding). Prazo curto, sem seguir
+  redirecionamento, resposta até 64 KB. Os dados guardados têm o nome que a
+  pessoa deu (o teste sugere um nome do dia a dia, pela IA da conta ou pelo
+  caminho) e viram `consulta.<passo>.<chave>` nos passos seguintes. Galho "Se não
+  conseguir buscar". O endereço não aparece no Confira para quem não tem a chave,
+  nem no histórico; o histórico guarda só os nomes dos dados. No ensaio, só busca
+  com "Buscar agora".
+- **Integrações prontas** (Loja virtual, CEP, Boletos) do protótipo não existem
+  como fonte na plataforma: ficaram de fora até a primeira existir. O salvar
+  recusa `integracao` com a frase.
+
+## O que é de verdade e o que é falso (os três ainda no protótipo)
 
 | Parte                                                                               | Situação                                                                                             |
 | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Lista "Adicionar passo", nome e frase                                               | De verdade (catálogo do editor, com `requer` da flag)                                                |
 | Formulário de cada passo, começar pronto, "Salvar" do painel                        | De verdade, no rascunho da tela                                                                      |
 | Galhos no Confira (aprovado, recusado...)                                           | De verdade (`receita.js`, `RAMOS`)                                                                   |
-| Linha do ensaio (botão **Ensaiar**)                                                 | Adaptador falso: duas conversas de exemplo, com a faixa "Ensaio de exemplo" no topo                  |
-| Linha do histórico                                                                  | Exemplo na prévia do painel ("Veja como fica"), até o motor existir                                  |
-| Blocos, integrações, públicos, resposta do teste, horários livres, contagem         | Adaptador falso (`passosNovos/adaptadorFalso.js`)                                                    |
-| **Salvar tudo / Guardar / Ligar**                                                   | Desligados com passo novo na receita, com a frase "ainda está em teste"; a tela não chama a API      |
+| Linha do ensaio (botão **Ensaiar**)                                                 | #2932–#2934: servidor. Os outros três: adaptador falso, com a faixa "Ensaio de exemplo" no topo      |
+| Linha do histórico                                                                  | #2932–#2934: servidor. Os outros três: exemplo na prévia do painel ("Veja como fica")                |
+| Blocos, públicos, contagem da lista, teste da busca                                 | Servidor (`passosNovos/dadosDaConta.js`)                                                             |
+| Horários livres, card do pedido de aprovação                                        | Adaptador falso (`passosNovos/adaptadorFalso.js`)                                                    |
+| **Salvar tudo / Guardar / Ligar**                                                   | #2932–#2934 salvam. Os outros três: desligados, com a frase "ainda está em teste"                    |
 
 ## Roteiro de cada jornada
 
@@ -147,20 +188,17 @@ computador. Todos os botões e escolhas têm 44 px de altura; as escolhas usam o
 
 ## O que fica para a implementação
 
-- Confirmar o bit da flag em `config/features.yml` (Orquestração); a 45 é
-  provisória.
+- O bit final da flag depende da ordem dos merges (ver "Motor").
 - O comportamento do motor com a janela de 24 h fechada na reunião e na
   pesquisa: o protótipo segue o passo mensagem (modelo escolhido ou nada); o
   Rodrigo decide na aprovação da tela.
-- O esquema da receita, o salvar, o motor e o ensaio de verdade de cada passo,
-  com as regras das Issues: alcance de quem ligou, bloqueados e descadastrados,
+- O esquema da receita, o salvar, o motor e o ensaio de verdade dos três passos
+  sem motor (#2931, #2935, #2936), com as regras das Issues: alcance de quem ligou, bloqueados e descadastrados,
   janela de 24 h, trava de horário, proteção contra endereço interno, laço e
   profundidade dos blocos, parecer das funções personalizadas.
 - Onde o pedido de aprovação chega de verdade (notificação e painel). Tela nova
   no painel precisa de `porques.md` + `central:check` e `guia:build`.
-- Marcar uma automação como bloco (sem gatilho próprio) na lista.
-- A linha do histórico de verdade em `LivreHistorico.vue` e o resumo da pesquisa
-  na lista.
+- O resumo da pesquisa na lista.
 
 ## Arquivos
 

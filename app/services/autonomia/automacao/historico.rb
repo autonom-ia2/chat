@@ -17,7 +17,11 @@ class Autonomia::Automacao::Historico
   # conferência dele. `vez` e `volta` (G63): a vez do galho "a cada mensagem" e a volta dele à espera. O marco das
   # mensagens não sai: são ids de mensagem.
   # `numero_novo` (G43, #2700): a mensagem saiu no número novo do contato, em outra conversa da mesma caixa.
-  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo].freeze
+  # Os passos novos (#2932–#2934): a lista do "para cada" (de onde vem e o teto); a execução do bloco (`filha_id`, para o
+  # "Ver o que aconteceu dentro"); os nomes que a pessoa deu aos dados buscados (`guardados`, `ausentes`), nunca o
+  # endereço nem o valor.
+  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo
+              lista teto filha_id guardados ausentes].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
   CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
@@ -63,6 +67,18 @@ class Autonomia::Automacao::Historico
       pagina: @pagina,
       mais: lidas.size > POR_PAGINA
     }
+  end
+
+  # #2933: "Ver o que aconteceu dentro" de um bloco que esta automação usou: a execução do bloco, com os passos dela e a
+  # receita da versão do bloco, pela mesma régua de visibilidade. Só a execução de bloco que esta automação abriu (direto
+  # ou por um bloco dentro de outro); outra qualquer é como se não existisse (nil).
+  def dentro(filha_id)
+    filha = ::Autonomia::Automacao::Execucao.find_by(id: filha_id, account_id: @automacao.account_id)
+    return unless filha && ::Autonomia::Automacao::Bloco.da(filha)
+    return unless ::Autonomia::Automacao::Bloco.acima(filha).any? { |acima| acima.automacao_id == @automacao.id }
+
+    { execucoes: [para_tela(filha, registros_de([filha]).fetch(filha.id, []), conversas_visiveis([filha]), outros_alvos([filha]))],
+      versoes: versoes_de([filha]), pagina: 1, mais: false }
   end
 
   private

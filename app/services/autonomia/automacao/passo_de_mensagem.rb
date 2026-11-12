@@ -159,7 +159,7 @@ class Autonomia::Automacao::PassoDeMensagem
     dados.merge('conversa_principal_do_card' => @alvo.id)
   end
 
-  def comeca_conversa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.automacao.ligada_por, caixa)
+  def comeca_conversa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.dona.ligada_por, caixa)
 
   # O modelo que não sai para a execução, como a janela fechada (#2573). Sem o link da agenda (G12), o motivo próprio
   # e o porquê.

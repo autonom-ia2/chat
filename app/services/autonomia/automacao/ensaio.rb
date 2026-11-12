@@ -23,6 +23,9 @@
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
 class Autonomia::Automacao::Ensaio
+  # Os passos novos com motor (#2932–#2934): PassosNovosNoEnsaio.
+  include ::Autonomia::Automacao::PassosNovosNoEnsaio
+
   RECENTES = 10
   # As seguintes, para "Ensaiar em outra conversa": só o nome, sem ensaiar.
   OUTRAS = 40
@@ -148,6 +151,7 @@ class Autonomia::Automacao::Ensaio
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
+    when *::Autonomia::Automacao::PassosNovos::TIPOS then passo_novo(passo, valores)
     else seguir(passo, em_frente(passo, valores))
     end
   end
