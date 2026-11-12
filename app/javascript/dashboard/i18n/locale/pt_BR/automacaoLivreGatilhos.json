@@ -113,7 +113,7 @@
     },
     "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
     "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",
-    "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez, quando a etapa é apagada ou quando outro sistema muda a etapa.",
+    "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez ou quando a etapa é apagada.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "Todos os funis",
       "ERRO_FUNIS": "Não consegui carregar os funis e as etapas. Feche e abra de novo."
