@@ -33,6 +33,16 @@ export function useOpcoesDaConta() {
   const caixas = useMapGetter('inboxes/getInboxes');
   const etiquetas = useMapGetter('labels/getLabels');
   const atributosDo = useMapGetter('attributes/getAttributesByModel');
+  // #2744: "a conta não tem campo personalizado" só vale com a lista carregada.
+  // Enquanto carrega, o campo fica calado; se a lista não veio, diz que não
+  // carregou (como as agentes de IA, G15).
+  const atributosFlags = useMapGetter('attributes/getUIFlags');
+  const atributosPedidos = ref(false);
+  const atributosEstado = computed(() => {
+    if (!atributosPedidos.value || atributosFlags.value.isFetching)
+      return 'carregando';
+    return atributosFlags.value.fetchFailed ? 'falhou' : 'carregou';
+  });
   // G15: as agentes de IA vêm da própria Automação (só id e nome), não da
   // tela de Agentes, que pede outra permissão. `null` enquanto carrega; se a
   // lista não vem, o painel diz que não carregou (nunca "a conta não tem").
@@ -68,6 +78,7 @@ export function useOpcoesDaConta() {
   };
 
   const carregarOpcoes = () => {
+    atributosPedidos.value = true;
     [
       'agents/get',
       'teams/get',
@@ -87,6 +98,7 @@ export function useOpcoesDaConta() {
     agenteDeIaFalhou: agentesDeIaFalhou.value,
     listaDeEmail: listasDeEmail.value && comNome(listasDeEmail.value),
     listaDeEmailErro: listasDeEmailErro.value,
+    atributosEstado: atributosEstado.value,
     // #2680: as caixas que começam conversa pelo telefone (ou pela API), por
     // onde a mensagem abre a conversa de quem ainda não tem uma.
     caixaDaConversa: comNome(

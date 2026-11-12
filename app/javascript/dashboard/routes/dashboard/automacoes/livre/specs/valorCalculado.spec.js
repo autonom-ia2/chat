@@ -19,13 +19,13 @@ const CATALOGO = {
   ],
 };
 
-const montar = (campo, modelValue, atributos = []) =>
+const montar = (campo, modelValue, atributos = [], opcoes = {}) =>
   mount(LivreCampo, {
     props: {
       campo: { nome: campo.nome, rotulo: 'ROTULO', ...campo },
       modelValue,
       catalogo: CATALOGO,
-      opcoes: {},
+      opcoes,
       atributos,
       atributosDo: () => [],
     },
@@ -126,17 +126,38 @@ describe('LivreCampo com valor calculado', () => {
 });
 
 // #2744: sem nenhum campo personalizado do tipo, o título não fica sozinho.
+// "A conta não tem" só com a lista carregada.
 describe('LivreCampo de campos personalizados', () => {
-  it('sem nenhum campo, diz que a conta não tem e onde se cria', () => {
-    const wrapper = montar(
-      { nome: 'custom_attributes', peca: 'atributos_do_contato' },
-      null,
-      []
-    );
+  const DO_CONTATO = { nome: 'custom_attributes', peca: 'atributos_do_contato' };
+
+  it('lista carregada e vazia: diz que a conta não tem e onde se cria', () => {
+    const wrapper = montar(DO_CONTATO, null, [], {
+      atributosEstado: 'carregou',
+    });
 
     expect(wrapper.find('[data-sem-atributos]').text()).toBe(
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_ATRIBUTOS.ATRIBUTOS_DO_CONTATO'
     );
+    expect(wrapper.find('[data-atributos-falhou]').exists()).toBe(false);
+  });
+
+  it('enquanto carrega, não afirma nada sobre a conta', () => {
+    const wrapper = montar(DO_CONTATO, null, [], {
+      atributosEstado: 'carregando',
+    });
+
+    expect(wrapper.find('[data-sem-atributos]').exists()).toBe(false);
+    expect(wrapper.find('[data-atributos-falhou]').exists()).toBe(false);
+    expect(wrapper.find('fieldset').attributes('aria-busy')).toBe('true');
+  });
+
+  it('se a lista não veio, diz que não carregou, não que a conta não tem', () => {
+    const wrapper = montar(DO_CONTATO, null, [], { atributosEstado: 'falhou' });
+
+    expect(wrapper.find('[data-atributos-falhou]').text()).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.ATRIBUTOS_FALHOU'
+    );
+    expect(wrapper.find('[data-sem-atributos]').exists()).toBe(false);
   });
 
   it('com campo, não mostra o aviso', () => {

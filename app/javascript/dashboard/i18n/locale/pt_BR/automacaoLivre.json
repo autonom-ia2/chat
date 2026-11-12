@@ -441,6 +441,7 @@
         "ATRIBUTOS_DA_EMPRESA": "A conta ainda não tem campo personalizado de empresa. Crie um em Atributos personalizados para preencher aqui.",
         "ATRIBUTOS_DA_CONVERSA": "A conta ainda não tem campo personalizado de conversa. Crie um em Atributos personalizados para preencher aqui."
       },
+      "ATRIBUTOS_FALHOU": "Não deu para carregar os campos personalizados. Recarregue a página para tentar de novo.",
       "POR_DADO_NA_ETIQUETA": "Pôr uma etiqueta com o nome de um dado",
       "POR_DADO_AJUDA": "A etiqueta sai com o dado sem espaço nem pontuação (\"Black Friday, 50% off\" vira black_friday_50_off). O texto original fica na descrição da etiqueta.",
       "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",

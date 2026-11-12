@@ -441,6 +441,7 @@
         "ATRIBUTOS_DA_EMPRESA": "The account has no company custom field yet. Create one in Custom Attributes to fill it here.",
         "ATRIBUTOS_DA_CONVERSA": "The account has no conversation custom field yet. Create one in Custom Attributes to fill it here."
       },
+      "ATRIBUTOS_FALHOU": "Could not load the custom fields. Reload the page to try again.",
       "POR_DADO_NA_ETIQUETA": "Add a label named after a data field",
       "POR_DADO_AJUDA": "The label uses the data without spaces or punctuation (\"Black Friday, 50% off\" becomes black_friday_50_off). The original text goes in the label description.",
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
