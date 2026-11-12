@@ -103,7 +103,51 @@ RSpec.describe Autonomia::Automacao::Versao do
       expect(erros(receita(criar))).to include('muda position')
       expect(erros(receita(alterar('PATCH crm/stages/:id', { 'position' => 2 })))).to include('muda position')
       expect(erros(receita(alterar('PUT crm/stages/:id', { 'stage' => { 'position' => 2 } })))).to include('muda position')
-      expect(versao(receita(alterar('PATCH crm/stages/:id', { 'name' => 'Proposta enviada' })))).to be_valid
+      _funil, etapa = create_crm_pipeline(account: automacao.account, user: create(:user, account: automacao.account))
+      renomear = alterar('PATCH crm/stages/:id', { 'name' => 'Proposta enviada' }).merge('caminho' => { 'id' => etapa.id })
+      expect(versao(receita(renomear))).to be_valid
+    end
+  end
+
+  # #2471: o id escrito direto no caminho é de um registro desta conta; o `$valor` segue a régua de sempre.
+  describe 'o id do caminho' do
+    let(:outra_conta) { create(:account) }
+
+    def mudar(acao, id, corpo) = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => acao, 'caminho' => id, 'descricao' => 'Mudar', 'corpo' => corpo }
+
+    def de_fora(recurso, id)
+      I18n.t('autonomia.automacao.receita.id_de_fora', passo: 'p1', recurso: I18n.t("autonomia.automacao.receita.recurso.#{recurso}"), id: id)
+    end
+
+    it 'recusa etiqueta, atributo, funil e etapa de outra conta, e aceita os desta', :aggregate_failures do
+      dono = create(:user, account: outra_conta)
+      alheios = { labels: create(:label, account: outra_conta),
+                  custom_attribute_definitions: create(:custom_attribute_definition, account: outra_conta),
+                  crm_pipelines: create_crm_pipeline(account: outra_conta, user: dono).first,
+                  crm_pipeline_stages: create_crm_pipeline(account: outra_conta, user: dono, name: 'Outro').last }
+      passos = {
+        labels: ->(id) { mudar('PATCH labels/:id', { 'id' => id }, { 'description' => 'Revisada' }) },
+        custom_attribute_definitions: ->(id) { mudar('PATCH custom_attribute_definitions/:id', { 'id' => id }, { 'attribute_description' => 'x' }) },
+        crm_pipelines: ->(id) { mudar('POST crm/pipelines/:pipeline_id/stages', { 'pipeline_id' => id }, { 'name' => 'Nova' }) },
+        crm_pipeline_stages: ->(id) { mudar('PATCH crm/stages/:id', { 'id' => id }, { 'name' => 'Nova' }) }
+      }
+
+      passos.each do |recurso, passo|
+        expect(erros(receita(passo.call(alheios[recurso].id)))).to include(de_fora(recurso, alheios[recurso].id)), recurso.to_s
+      end
+      etiqueta = create(:label, account: automacao.account)
+      expect(erros(receita(passos[:labels].call(etiqueta.id)))).not_to include(de_fora(:labels, etiqueta.id))
+    end
+
+    it 'não confere o id que vem de um valor nem o recurso fora da lista', :aggregate_failures do
+      expect(versao(receita(por_etiqueta))).to be_valid
+      contato = mudar('PATCH contacts/:id', { 'id' => 999_999 }, { 'name' => 'Ana Souza' })
+      expect(versao(receita(contato))).to be_valid
+    end
+
+    it 'sabe o recurso de cada parâmetro pela rota' do
+      expect(Autonomia::Automacao::IdsDoCaminho.recursos('POST crm/pipelines/:pipeline_id/stages')).to eq('pipeline_id' => :crm_pipelines)
+      expect(Autonomia::Automacao::IdsDoCaminho.recursos('POST crm/memoria/cards/:card_id/fatos/:id/aceitar')).to eq({})
     end
   end
 

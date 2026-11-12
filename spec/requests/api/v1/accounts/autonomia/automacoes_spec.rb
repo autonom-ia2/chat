@@ -349,14 +349,17 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     expect(response.parsed_body.dig('versao', 'receita', 'passos')).to eq([avancado])
   end
 
-  it 'não devolve nome de coisa de outra conta que a receita cite' do
+  # #2471: o id de outra conta no caminho é recusado ao salvar, em frase com o id e sem o nome do registro alheio.
+  it 'recusa id de outra conta no caminho, sem devolver o nome dela', :aggregate_failures do
     alheia = create(:label, title: 'etiqueta_de_outra_conta')
     passo = { id: 'p1', tipo: 'acao', acao: 'PATCH labels/:id', descricao: 'x', caminho: { id: alheia.id }, corpo: { show_on_sidebar: true } }
-    criar(com: receita.merge(passos: [passo]))
-    expect(response).to have_http_status(:created)
 
-    get "#{base}/#{response.parsed_body['id']}", headers: admin.create_new_auth_token, as: :json
+    expect { criar(com: receita.merge(passos: [passo])) }.not_to change(Autonomia::Automacao::Definicao, :count)
 
+    expect(response).to have_http_status(:unprocessable_entity)
+    recurso = I18n.t('autonomia.automacao.receita.recurso.labels')
+    frase = I18n.t('autonomia.automacao.receita.id_de_fora', passo: 'p1', recurso: recurso, id: alheia.id)
+    expect(response.parsed_body['problemas']).to include(frase)
     expect(response.body).not_to include('etiqueta_de_outra_conta')
   end
 
