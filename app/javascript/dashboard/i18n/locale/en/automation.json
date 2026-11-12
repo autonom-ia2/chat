@@ -1,7 +1,7 @@
 {
   "AUTOMATION": {
     "EXTERNAL_ACTIONS_LOCKED": "This rule sends the conversation outside the platform. To change, turn on, turn off or copy it, you need the Integrations permission.",
-    "RULE_FUNNEL_MANAGE_ONLY": "This rule changes the CRM pipeline. To change it, you also need Manage CRM pipelines & automations in your role.",
+    "RULE_FUNNEL_MANAGE_ONLY": "This rule changes the CRM pipeline. To change, turn on, turn off or copy it, you also need Manage CRM pipelines & automations in your role.",
     "HEADER": "Automation",
     "DESCRIPTION": "Automation can replace and streamline existing processes that require manual effort, such as adding labels and assigning conversations to the most suitable agent. This allows the team to focus on their strengths while reducing time spent on routine tasks.",
     "LEARN_MORE": "Learn more about automation",
