@@ -15,12 +15,9 @@ defineProps({
   voltar: { type: String, default: '' },
   // No resumo: o contato, para o selo "Cliente desde…" de quem já comprou.
   contato: { type: Object, default: null },
-  // #2710, variante 2 (protótipo só da demo): o selo "Cliente desde…" vira botão que abre a compra (o card ganho).
-  abreCompra: { type: Boolean, default: false },
-  abrindoCompra: { type: Boolean, default: false },
 });
 
-defineEmits(['voltar', 'fechar', 'compra']);
+defineEmits(['voltar', 'fechar']);
 </script>
 
 <template>
@@ -79,26 +76,8 @@ defineEmits(['voltar', 'fechar', 'compra']);
         >
           <span class="size-4 shrink-0" :class="icone" aria-hidden="true" />
           {{ rotulo }}
-          <button
-            v-if="contato && abreCompra"
-            type="button"
-            data-heroi-compra
-            class="-my-3 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-white/80 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-wait"
-            :aria-busy="abrindoCompra"
-            :disabled="abrindoCompra"
-            @click="$emit('compra')"
-          >
-            <CustomerBadge :contact="contato" show-since data-heroi-cliente />
-            <span class="sr-only">
-              {{ $t('AUTOMACAO_NO_CRM.CLIENTE.ABRIR_COMPRA') }}
-            </span>
-            <span
-              class="i-lucide-chevron-right size-3.5 shrink-0 rtl:rotate-180"
-              aria-hidden="true"
-            />
-          </button>
           <CustomerBadge
-            v-else-if="contato"
+            v-if="contato"
             :contact="contato"
             show-since
             data-heroi-cliente

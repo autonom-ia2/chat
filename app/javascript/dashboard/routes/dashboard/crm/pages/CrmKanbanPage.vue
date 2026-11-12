@@ -48,9 +48,6 @@ import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
 import { diaDoVencimento } from '../helpers/closeDate';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CardGaveta from '../components/card/CardGaveta.vue';
-import { useCardGanho } from '../components/automacaoNoCrm/useAutomacaoNoCrm';
-import { marcaDaDemo } from '../components/automacaoNoCrm/fonteDasAutomacoes';
-import { clienteQueAgendou } from '../components/automacaoNoCrm/clienteQueAgendou';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
 import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
@@ -1695,17 +1692,6 @@ const openCardFromBoard = card => {
   openCardDrawer(card);
 };
 
-// #2710, variante 2 (protótipo só da demo: build de desenvolvimento e funil marcado pelo seed): o selo "Já é
-// cliente" no card que a página de agendamento criou para quem já comprou abre o card ganho.
-const demoNoQuadro = computed(() => marcaDaDemo(selectedPipeline.value));
-const cardGanhoNoQuadro = useCardGanho();
-const jaClienteDoCard = card =>
-  demoNoQuadro.value ? clienteQueAgendou(card) : null;
-const abrirCardGanho = async cliente => {
-  const id = await cardGanhoNoQuadro.achar(cliente);
-  if (id) openCardFromBoard({ id });
-};
-
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
 // keep the calendar in sync when it's the active view (it reads a separate
 // calendarEvents array, not the drawer's follow-up list).
@@ -3111,11 +3097,8 @@ onUnmounted(() => {
                 :card="element"
                 :stage-color="stage.color"
                 :com-valor="quadroComValor"
-                :ja-cliente="jaClienteDoCard(element)"
-                :abrindo-ja-cliente="cardGanhoNoQuadro.abrindo.value"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
-                @abrir-ja-cliente="abrirCardGanho"
               />
             </div>
           </template>
@@ -3422,7 +3405,6 @@ onUnmounted(() => {
       :erro-arquivar="arquivados.erroArquivarCard.value"
       :restaurando="arquivados.restaurandoCard.value"
       :erro-restaurar="arquivados.erroRestaurarCard.value"
-      @abrir-card="openCardFromBoard"
       @restaurar="arquivados.restaurarCardAberto(selectedCard)"
       @save="saveCard"
       @move="moveCardFromDetails"
