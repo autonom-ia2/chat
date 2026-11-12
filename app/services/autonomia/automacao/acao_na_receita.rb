@@ -1,7 +1,7 @@
 # O passo "ação" ao salvar (Autonomia::Automacao::Receita, que inclui este módulo): a ação está na lista permitida, o
-# caminho tem todos os parâmetros e lê valores que a automação sabe ler, e o corpo fica no formato da ação e nas regras
-# da lista (AcoesPermitidas). Saiu da Receita para ela caber no tamanho; usa os métodos dela (problemas_do_caminho,
-# texto) e a conta (@conta).
+# caminho tem todos os parâmetros, lê valores que a automação sabe ler e aponta para registros da conta (#2471), e o
+# corpo fica no formato da ação e nas regras da lista (AcoesPermitidas). Saiu da Receita para ela caber no tamanho; usa
+# os métodos dela (problemas_do_caminho, texto) e a conta (@conta).
 module Autonomia::Automacao::AcaoNaReceita
   private
 
@@ -17,7 +17,14 @@ module Autonomia::Automacao::AcaoNaReceita
     faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
                                         .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
     lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, onde: :caminho) }
+    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, onde: :caminho) } + ids_de_fora(passo)
+  end
+
+  # #2471: o id escrito direto no caminho é de um registro desta conta (IdsDoCaminho).
+  def ids_de_fora(passo)
+    ::Autonomia::Automacao::IdsDoCaminho.de_fora(passo['acao'], passo['caminho'], @conta).map do |lista, id|
+      texto(:id_de_fora, passo: passo['id'], recurso: I18n.t("autonomia.automacao.receita.recurso.#{lista}"), id: id)
+    end
   end
 
   # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e

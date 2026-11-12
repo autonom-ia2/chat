@@ -1093,8 +1093,8 @@
     "controller": "api/v1/accounts/macros#destroy",
     "modelo": "Macro",
     "origem": [
-      "app/controllers/api/v1/accounts/macros_controller.rb:45",
-      "app/controllers/api/v1/accounts/macros_controller.rb:70"
+      "app/controllers/api/v1/accounts/macros_controller.rb:50",
+      "app/controllers/api/v1/accounts/macros_controller.rb:75"
     ],
     "sem_corpo": true
   },
@@ -7944,11 +7944,12 @@
     "controller": "api/v1/accounts/macros#update",
     "modelo": "Macro",
     "origem": [
-      "app/controllers/api/v1/accounts/macros_controller.rb:29",
-      "app/controllers/api/v1/accounts/macros_controller.rb:59",
-      "app/controllers/api/v1/accounts/macros_controller.rb:36",
-      "app/controllers/api/v1/accounts/macros_controller.rb:30",
-      "app/controllers/api/v1/accounts/macros_controller.rb:70"
+      "app/controllers/api/v1/accounts/macros_controller.rb:34",
+      "app/controllers/api/v1/accounts/macros_controller.rb:64",
+      "app/controllers/api/v1/accounts/macros_controller.rb:41",
+      "app/controllers/api/v1/accounts/macros_controller.rb:35",
+      "app/controllers/api/v1/accounts/macros_controller.rb:75",
+      "app/controllers/api/v1/accounts/macros_controller.rb:86"
     ],
     "sem_corpo": false
   },
@@ -20008,9 +20009,10 @@
     "controller": "api/v1/accounts/macros#create",
     "modelo": "Macro",
     "origem": [
-      "app/controllers/api/v1/accounts/macros_controller.rb:15",
-      "app/controllers/api/v1/accounts/macros_controller.rb:59",
-      "app/controllers/api/v1/accounts/macros_controller.rb:16"
+      "app/controllers/api/v1/accounts/macros_controller.rb:20",
+      "app/controllers/api/v1/accounts/macros_controller.rb:64",
+      "app/controllers/api/v1/accounts/macros_controller.rb:21",
+      "app/controllers/api/v1/accounts/macros_controller.rb:86"
     ],
     "sem_corpo": false
   },
@@ -20025,9 +20027,9 @@
     "controller": "api/v1/accounts/macros#execute",
     "modelo": "Macro",
     "origem": [
-      "app/controllers/api/v1/accounts/macros_controller.rb:50",
-      "app/controllers/api/v1/accounts/macros_controller.rb:51",
-      "app/controllers/api/v1/accounts/macros_controller.rb:70"
+      "app/controllers/api/v1/accounts/macros_controller.rb:55",
+      "app/controllers/api/v1/accounts/macros_controller.rb:56",
+      "app/controllers/api/v1/accounts/macros_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -27869,11 +27871,12 @@
     "controller": "api/v1/accounts/macros#update",
     "modelo": "Macro",
     "origem": [
-      "app/controllers/api/v1/accounts/macros_controller.rb:29",
-      "app/controllers/api/v1/accounts/macros_controller.rb:59",
-      "app/controllers/api/v1/accounts/macros_controller.rb:36",
-      "app/controllers/api/v1/accounts/macros_controller.rb:30",
-      "app/controllers/api/v1/accounts/macros_controller.rb:70"
+      "app/controllers/api/v1/accounts/macros_controller.rb:34",
+      "app/controllers/api/v1/accounts/macros_controller.rb:64",
+      "app/controllers/api/v1/accounts/macros_controller.rb:41",
+      "app/controllers/api/v1/accounts/macros_controller.rb:35",
+      "app/controllers/api/v1/accounts/macros_controller.rb:75",
+      "app/controllers/api/v1/accounts/macros_controller.rb:86"
     ],
     "sem_corpo": false
   },

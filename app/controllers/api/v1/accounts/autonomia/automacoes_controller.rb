@@ -237,7 +237,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
       id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem,
       ligada_por: automacao.ligada_por&.slice(:id, :name), atualizada_em: automacao.updated_at,
       versao: versao && { id: versao.id, numero: versao.numero, autor_id: versao.autor_id, criada_em: versao.created_at,
-                          receita: (versao.receita_para_tela if receita) }.compact
+                          receita: (versao.receita_para_tela(Current.account_user) if receita) }.compact
     }
   end
 end

@@ -68,10 +68,12 @@ class Autonomia::Automacao::Historico
     ::Autonomia::Automacao::Registro.where(execucao_id: execucoes.map(&:id)).order(:created_at, :id).group_by(&:execucao_id)
   end
 
-  # As receitas da página de uma vez, por versão única (várias execuções costumam estar na mesma versão).
+  # As receitas da página de uma vez, por versão única (várias execuções costumam estar na mesma versão), com o que quem
+  # vê não pode ver escondido (#2450).
   def versoes_de(execucoes)
+    quem = @automacao.account.account_users.find_by(user_id: @usuario&.id)
     ::Autonomia::Automacao::Versao.where(id: execucoes.map(&:versao_id).uniq)
-                                  .to_h { |versao| [versao.id, { numero: versao.numero, receita: versao.receita_para_tela }] }
+                                  .to_h { |versao| [versao.id, { numero: versao.numero, receita: versao.receita_para_tela(quem) }] }
   end
 
   # { conversation_id => conversa } das que quem vê enxerga, com o contato, numa consulta só.

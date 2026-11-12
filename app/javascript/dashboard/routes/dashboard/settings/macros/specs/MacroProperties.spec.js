@@ -29,6 +29,8 @@ const mountComponent = props =>
     },
   });
 
+const saveButton = wrapper => wrapper.findComponent({ name: 'NextButton' });
+
 describe('MacroProperties.vue', () => {
   it('allows administrators to select public visibility', async () => {
     const wrapper = mountComponent({ canManagePublicMacros: true });
@@ -60,6 +62,20 @@ describe('MacroProperties.vue', () => {
     });
 
     expect(wrapper.findComponent({ name: 'Icon' }).exists()).toBe(true);
+  });
+
+  // #2451: a macro com webhook, sem integration_manage, não salva e a tela diz por quê.
+  it('locks saving and shows the reason when given one', () => {
+    const wrapper = mountComponent({ lockedReason: 'Precisa de Integrações' });
+
+    expect(wrapper.text()).toContain('Precisa de Integrações');
+    expect(saveButton(wrapper).vm.$attrs.disabled).toBe(true);
+  });
+
+  it('saves normally without a lock reason', () => {
+    const wrapper = mountComponent();
+
+    expect(saveButton(wrapper).vm.$attrs.disabled).toBe(false);
   });
 
   it('shows existing public macros as read-only for agents', async () => {
