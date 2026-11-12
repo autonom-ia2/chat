@@ -81,6 +81,8 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// #2896 — "Trazer minha lista" só aparece para quem pode importar contato.
+const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -259,6 +261,7 @@ onMounted(lista.iniciar);
             :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
             :aba="aba"
+            :pode-trazer="podeTrazer"
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
-import { partesDaFrase } from '../../trazer/contagem';
+import { partesDaFrase, planilhaApagada } from '../../trazer/contagem';
 import FichaDeExemplo from './FichaDeExemplo.vue';
 import OQueVouGuardar from './OQueVouGuardar.vue';
 import PrecisamDeVoce from './PrecisamDeVoce.vue';
@@ -153,6 +153,7 @@ const irParaPrecisam = () => {
       v-if="leitura.problemas.length"
       :problemas="leitura.problemas"
       :ocupado="ocupado"
+      :sem-conserto="planilhaApagada(leitura)"
       @guardar="(linha, valor) => emit('guardar', linha, valor)"
       @deixar-de-fora="linha => emit('deixarDeFora', linha)"
       @reabrir="linha => emit('reabrir', linha)"

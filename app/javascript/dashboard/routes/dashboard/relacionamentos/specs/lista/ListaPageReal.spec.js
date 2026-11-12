@@ -17,6 +17,7 @@ const pode = vi.hoisted(() => ({
   criarCards: true,
   etiquetar: true,
   apagar: true,
+  trazer: true,
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -46,6 +47,11 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
     podeApagar: {
       get value() {
         return pode.apagar;
+      },
+    },
+    podeTrazer: {
+      get value() {
+        return pode.trazer;
       },
     },
   }),
@@ -155,6 +161,7 @@ beforeEach(() => {
   pode.criarCards = true;
   pode.etiquetar = true;
   pode.apagar = true;
+  pode.trazer = true;
   servidorResponde();
 });
 
@@ -435,5 +442,38 @@ describe('ações em grupo: escrevem no servidor e a lista recarrega', () => {
     await flushPromises();
     expect(leituras()).toEqual(antes.map(vezes => vezes + 1));
     expect(w.get(`${marca('barra')} p`).text()).toBe('10 marcadas');
+  });
+});
+
+// #2896 — "Trazer minha lista" é de quem pode importar contato.
+describe('Trazer minha lista: quem vê', () => {
+  it('quem pode vê o atalho no herói, e ele leva à tela de trazer', async () => {
+    const w = await abrir();
+    await w.get(marca('heroi-trazer')).trigger('click');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'relacionamentos_trazer',
+    });
+  });
+
+  it('quem não pode não vê o atalho', async () => {
+    pode.trazer = false;
+    const w = await abrir();
+    expect(w.find(marca('heroi-trazer')).exists()).toBe(false);
+    expect(
+      w.findAll('button').filter(b => b.text() === 'Trazer minha lista')
+    ).toHaveLength(0);
+    expect(w.get(marca('linha')).text()).toContain('Ana Albuquerino');
+  });
+
+  it('quem não pode, na conta vazia, não vê o botão principal de trazer', async () => {
+    pode.trazer = false;
+    RelacionamentosAPI.resumo.mockResolvedValue({
+      data: { ...RESPOSTAS.resumo, total: 0, clientes: 0 },
+    });
+    const w = await abrir();
+    expect(w.find(marca('heroi-acao')).exists()).toBe(false);
+    expect(
+      w.findAll('button').filter(b => b.text() === 'Trazer minha lista')
+    ).toHaveLength(0);
   });
 });

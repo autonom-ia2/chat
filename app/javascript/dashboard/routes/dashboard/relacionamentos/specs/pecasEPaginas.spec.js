@@ -310,3 +310,27 @@ describe('rotas de Relacionamentos', () => {
     }
   );
 });
+
+// #2896 — "Trazer minha lista" é de quem pode importar contato (a mesma regra da
+// importação de contatos de hoje e do servidor, ContactPolicy#import?). As fichas
+// continuam com as permissões da lista.
+describe('permissões das rotas de Relacionamentos', () => {
+  const permissoesDe = nome =>
+    routes.find(rota => rota.name === nome).meta.permissions;
+
+  it('trazer: só administrador e a chave contact_manage', () => {
+    expect(permissoesDe('relacionamentos_trazer')).toEqual([
+      'administrator',
+      'contact_manage',
+    ]);
+  });
+
+  it.each(['relacionamentos_pessoa', 'relacionamentos_empresa'])(
+    '%s continua aberta ao agente e a quem só vê contato',
+    nome => {
+      expect(permissoesDe(nome)).toEqual(
+        expect.arrayContaining(['administrator', 'agent', 'contact_view'])
+      );
+    }
+  );
+});

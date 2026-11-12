@@ -14,6 +14,10 @@ export const DESTINOS = {
 
 export const LISTA_DE_DESTINOS = Object.values(DESTINOS);
 
+// #2896 — o que identifica a coluna: no servidor, o índice dela na planilha (o
+// nome pode repetir ou vir vazio); na demonstração, o nome.
+export const chaveDaColuna = coluna => coluna.indice ?? coluna.nome;
+
 // Coluna que o sistema não conhecia: vira "informação da pessoa" com o nome dela.
 export const ehInformacaoNova = coluna =>
   coluna.destino === DESTINOS.INFORMACAO;

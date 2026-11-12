@@ -9,6 +9,13 @@ export const SITUACAO_DO_PROBLEMA = {
 
 const ZERO = 0;
 
+// #2896 — a planilha enviada fica guardada por poucos dias. Depois disso o
+// servidor manda os valores mascarados: dá para ver cada problema e deixar a
+// linha de fora, mas não para consertar.
+const VALORES_MASCARADOS = 'mascarados';
+export const planilhaApagada = leitura =>
+  leitura?.valores === VALORES_MASCARADOS;
+
 const quantosEm = (problemas, situacao) =>
   problemas.filter(problema => problema.estado === situacao).length;
 

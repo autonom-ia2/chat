@@ -9,9 +9,12 @@ import ProblemaDaLinha from './ProblemaDaLinha.vue';
 // Ao resolver (ou reabrir) uma linha, o formulário some ou volta: o foco vai
 // para o próximo problema aberto (ou para o título) e a mudança é anunciada
 // numa região viva que fica sempre no DOM, fora dos formulários.
+// #2896 — `semConserto`: a planilha já foi apagada do servidor. Uma frase diz
+// isso no topo e as linhas ficam sem o conserto (só "Deixar de fora").
 const props = defineProps({
   problemas: { type: Array, required: true },
   ocupado: { type: Boolean, default: false },
+  semConserto: { type: Boolean, default: false },
 });
 const emit = defineEmits(['guardar', 'deixarDeFora', 'reabrir']);
 
@@ -95,6 +98,17 @@ watch(
     <p class="m-0 -mt-2 text-base text-n-slate-11">
       {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.APOIO') }}
     </p>
+    <p
+      v-if="semConserto"
+      data-relacionamentos="planilha-apagada"
+      class="flex items-start gap-2 p-4 m-0 text-base rounded-xl bg-n-alpha-2 text-n-slate-12"
+    >
+      <span
+        class="mt-0.5 i-lucide-info size-5 shrink-0 text-n-slate-11"
+        aria-hidden="true"
+      />
+      {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.PLANILHA_APAGADA') }}
+    </p>
     <p data-relacionamentos="anuncio-precisam" role="status" class="sr-only">
       {{ anuncio }}
     </p>
@@ -104,6 +118,7 @@ watch(
         :key="problema.linha"
         :problema="problema"
         :ocupado="ocupado"
+        :sem-conserto="semConserto"
         @guardar="(linha, valor) => emit('guardar', linha, valor)"
         @deixar-de-fora="linha => emit('deixarDeFora', linha)"
         @reabrir="linha => emit('reabrir', linha)"

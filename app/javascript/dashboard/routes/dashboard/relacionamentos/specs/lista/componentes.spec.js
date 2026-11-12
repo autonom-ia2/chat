@@ -184,6 +184,34 @@ describe('HeroiDaLista', () => {
     expect(w.find('[data-relacionamentos="heroi-trazer"]').exists()).toBe(true);
   });
 
+  // #2896 — quem não pode importar contato não vê o atalho nem o botão.
+  it('quem não pode trazer lista não vê o "Trazer minha lista" discreto', () => {
+    const w = mount(HeroiDaLista, {
+      props: {
+        resumo: { total: 280, clientes: 120, sumiu_1_a_3_meses: 42 },
+        podeTrazer: false,
+      },
+    });
+    expect(w.find('[data-relacionamentos="heroi-trazer"]').exists()).toBe(
+      false
+    );
+    expect(w.get('[data-relacionamentos="heroi-acao"]').text()).toBe(
+      'Ver quem sumiu'
+    );
+  });
+
+  it('quem não pode trazer lista, na conta vazia, lê a frase sem botão nenhum', () => {
+    const w = mount(HeroiDaLista, {
+      props: {
+        resumo: { total: 0, clientes: 0, sumiu_1_a_3_meses: 0 },
+        podeTrazer: false,
+      },
+    });
+    expect(frase(w)).toBe('Traga as pessoas com quem você já fala.');
+    expect(w.find('button').exists()).toBe(false);
+    expect(w.find('[data-heroi-acao]').exists()).toBe(false);
+  });
+
   it('"Trazer minha lista" discreto fica ao lado da ação principal, não num canto', () => {
     const w = montar({ total: 280, clientes: 120, sumiu_1_a_3_meses: 42 });
     const acoes = w.get('[data-heroi-acao]');

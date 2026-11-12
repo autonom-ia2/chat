@@ -125,12 +125,15 @@ describe('campos de conserto', () => {
 });
 
 describe('ehPlanilha', () => {
-  it.each(['lista.xlsx', 'LISTA.XLS', 'contatos.csv', ' clientes 2025.CSV '])(
+  it.each(['lista.xlsx', 'LISTA.XLSX', 'contatos.csv', ' clientes 2025.CSV '])(
     'aceita %s',
     nome => expect(ehPlanilha(nome)).toBe(true)
   );
 
+  // O Excel antigo (.xls) saiu (#2896): o servidor só lê .xlsx e .csv.
   it.each([
+    'lista.xls',
+    'LISTA.XLS',
     'foto.png',
     'documento.pdf',
     'csv',

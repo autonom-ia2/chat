@@ -1,4 +1,5 @@
 import { computed, onScopeDispose, ref } from 'vue';
+import { SEM_ACESSO } from '../ficha/falhas';
 import { ehPlanilha } from './arquivo';
 import { resumoAoVivo, totalDaLeitura } from './contagem';
 import { EVENTOS, estadoInicial, etapaDoTopo, proximo } from './etapas';
@@ -7,12 +8,16 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // #2894 — o estado de "Trazer minha lista": a etapa, a leitura da planilha, as
 // respostas e o andamento. Fala só com a fonte (fonte/trazerFonte.js); quem
 // desenha é a página.
+// #2896 — quem o servidor recusa por falta de acesso liga `semAcesso` (a tela
+// diz isso em vez de oferecer "tentar de novo"). A lista que para no meio não é
+// "Pronto": a tela avisa e chama `aoFalhar`.
 export const INTERVALO_DO_ANDAMENTO_MS = 1500;
 
 // O que deu errado, para a tela escolher a frase.
 export const ERROS = {
   NENHUM: '',
   TIPO: 'tipo',
+  GRANDE: 'grande',
   LEITURA: 'leitura',
   VAZIA: 'vazia',
   SEM_CONTATO: 'sem_contato',
@@ -20,12 +25,16 @@ export const ERROS = {
   ANDAMENTO: 'andamento',
 };
 
-const ERROS_DA_LEITURA = {
-  PLANILHA_VAZIA: ERROS.VAZIA,
-  PLANILHA_SEM_CONTATO: ERROS.SEM_CONTATO,
-};
+// O nome que a fonte dá ao que o servidor recusou (fonte/trazerTraducao.js).
+const ERROS_DA_LEITURA = new Map([
+  ['PLANILHA_TIPO', ERROS.TIPO],
+  ['PLANILHA_GRANDE', ERROS.GRANDE],
+  ['PLANILHA_VAZIA', ERROS.VAZIA],
+  ['PLANILHA_SEM_CONTATO', ERROS.SEM_CONTATO],
+]);
 
 const AVISO_ERRO_GUARDAR = 'RELACIONAMENTOS_TRAZER.ERROS.GUARDAR';
+const AVISO_ERRO_TRAZER = 'RELACIONAMENTOS_TRAZER.ERROS.TRAZER';
 const PERGUNTA_CLIENTES = 'clientes';
 const RESPOSTA_ALGUMAS = 'algumas';
 
@@ -49,6 +58,7 @@ const perguntaRespondida = (pergunta, respostas) => {
 export const useTrazerLista = ({
   fonte,
   avisar = () => {},
+  aoFalhar = () => {},
   intervalo = INTERVALO_DO_ANDAMENTO_MS,
 }) => {
   const estado = ref(estadoInicial());
@@ -57,6 +67,7 @@ export const useTrazerLista = ({
   const lendo = ref(false);
   const ocupado = ref(false);
   const erro = ref(ERROS.NENHUM);
+  const semAcesso = ref(false);
   const porcentagem = ref(0);
   const totalTrazido = ref(0);
   const novasTrazidas = ref(0);
@@ -84,6 +95,13 @@ export const useTrazerLista = ({
     estado.value = proximo(estado.value, { tipo });
   };
 
+  // Devolve true quando a falha é a recusa por falta de acesso (e a registra).
+  const recusado = falha => {
+    if (falha?.name !== SEM_ACESSO) return false;
+    semAcesso.value = true;
+    return true;
+  };
+
   const ler = async arquivo => {
     ultimaEntrada = { arquivo };
     lendo.value = true;
@@ -97,7 +115,9 @@ export const useTrazerLista = ({
         perguntas: lida.perguntas.length,
       });
     } catch (falha) {
-      erro.value = ERROS_DA_LEITURA[falha?.name] ?? ERROS.LEITURA;
+      if (!recusado(falha)) {
+        erro.value = ERROS_DA_LEITURA.get(falha?.name) ?? ERROS.LEITURA;
+      }
     } finally {
       lendo.value = false;
     }
@@ -131,8 +151,8 @@ export const useTrazerLista = ({
     try {
       leitura.value = await gravar();
       return true;
-    } catch {
-      avisar(AVISO_ERRO_GUARDAR);
+    } catch (falha) {
+      if (!recusado(falha)) avisar(AVISO_ERRO_GUARDAR);
       return false;
     } finally {
       ocupado.value = false;
@@ -178,13 +198,18 @@ export const useTrazerLista = ({
       totalTrazido.value = andamento.total;
       novasTrazidas.value = andamento.novas;
       completadasTrazidas.value = andamento.completadas;
+      if (andamento.situacao === SITUACOES_DA_LISTA.FALHOU) {
+        avisar(AVISO_ERRO_TRAZER);
+        aoFalhar();
+        return;
+      }
       if (andamento.situacao !== SITUACOES_DA_LISTA.TRAZENDO) {
         ir(EVENTOS.TERMINOU);
         return;
       }
       relogio = setTimeout(consultar, intervalo);
-    } catch {
-      if (valeAinda()) erro.value = ERROS.ANDAMENTO;
+    } catch (falha) {
+      if (valeAinda() && !recusado(falha)) erro.value = ERROS.ANDAMENTO;
     }
   };
 
@@ -196,8 +221,10 @@ export const useTrazerLista = ({
       const { trazidaId: id } = await fonte.trazer(leitura.value.id);
       if (encerrado || minha !== geracao) return;
       trazidaId = id;
-    } catch {
-      if (!encerrado && minha === geracao) erro.value = ERROS.TRAZER;
+    } catch (falha) {
+      if (!encerrado && minha === geracao && !recusado(falha)) {
+        erro.value = ERROS.TRAZER;
+      }
       return;
     } finally {
       ocupado.value = false;
@@ -232,6 +259,8 @@ export const useTrazerLista = ({
   onScopeDispose(() => {
     encerrado = true;
     parar();
+    // A fonte real pode estar esperando a leitura da planilha: para de perguntar.
+    fonte.encerrar?.();
   });
 
   return {
@@ -243,6 +272,7 @@ export const useTrazerLista = ({
     lendo,
     ocupado,
     erro,
+    semAcesso,
     porcentagem,
     totalTrazido,
     novasTrazidas,

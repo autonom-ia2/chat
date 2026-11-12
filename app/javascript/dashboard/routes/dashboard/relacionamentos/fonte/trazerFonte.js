@@ -1,11 +1,33 @@
+import TrazerAPI from 'dashboard/api/relacionamentosTrazer';
 import { ATRASO_DA_DEMO_MS, erroFonteRealPendente } from './listaFonte';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
+import {
+  SITUACAO_DA_LEITURA,
+  andamentoDaTela,
+  colunaPeloIndice,
+  corpoDoDestino,
+  erroDaLeitura,
+  erroDoEnvio,
+  erroNomeado,
+  leituraComColunas,
+  leituraDaTela,
+  listaDaTela,
+  paginasDeProblemas,
+} from './trazerTraducao';
+import { SEM_ACESSO } from '../ficha/falhas';
 import { resumoAoVivo, totalDaLeitura } from '../trazer/contagem';
+import { DESTINOS } from '../trazer/destinos';
 import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 // #2894 — de onde "Trazer minha lista" lê e para onde escreve (molde:
 // fonte/listaFonte.js). A tela recebe sempre o mesmo formato, venha de onde vier:
-//   1. fonte real: ainda não existe; todo método diz `FONTE_REAL_PENDENTE`;
+//   1. fonte real (#2896, Fatia 1): lê a planilha no servidor, troca o destino
+//      de uma coluna, traz, acompanha o andamento, lista o que já foi trazido e
+//      continua a lista que parou no meio (dashboard/api/relacionamentosTrazer.js;
+//      a tradução está em trazerTraducao.js). O que é das próximas fatias ainda
+//      diz `FONTE_REAL_PENDENTE`: responder às perguntas, consertar, deixar de
+//      fora, voltar atrás e desfazer. Quem o servidor recusa por falta de acesso
+//      (401, 403) recebe a falha de nome `SEM_ACESSO`; o resto sobe como veio;
 //   2. demonstração: com `?demo=<estado>` e só no desenvolvimento. O protótipo
 //      NÃO lê o arquivo no navegador: qualquer planilha devolve a leitura
 //      fictícia de demo/trazer.js. As escritas só ficam na memória do módulo
@@ -16,6 +38,12 @@ const CARREGAR_DEMO = import.meta.env.DEV
   : null;
 
 export const ATRASO_DA_LEITURA_MS = 1200;
+
+// Fonte real: de quanto em quanto tempo pergunta se a leitura da planilha
+// terminou, e até quando insiste. Passado o teto, a tela mostra o erro de
+// leitura (com "tentar de novo") em vez de ficar em "Lendo…" para sempre.
+export const INTERVALO_DA_CONSULTA_MS = 1500;
+export const TETO_DA_CONSULTA_MS = 3 * 60 * 1000;
 
 // `?planilha=` (só em demonstração): faz a leitura cair num estado que a
 // planilha de exemplo não mostra, sem precisar de arquivo de verdade.
@@ -37,9 +65,6 @@ const esperar = ms =>
   });
 
 const copia = valor => JSON.parse(JSON.stringify(valor));
-
-const erroNomeado = (nome, mensagem) =>
-  Object.assign(new Error(mensagem), { name: nome });
 
 // ---- memória do módulo -----------------------------------------------------
 
@@ -244,28 +269,169 @@ const fonteDemo = ({
   };
 };
 
-// ---- fonte real (pendente) -------------------------------------------------
+// ---- fonte real ------------------------------------------------------------
 
-const fonteReal = () => {
+const STATUS_SEM_ACESSO = [401, 403];
+const STATUS_NAO_ACHEI = 404;
+const PRIMEIRA_PAGINA = 1;
+// Destinos que o servidor só conhece na Fatia 2.
+const DESTINOS_DA_FATIA_2 = [
+  DESTINOS.CIDADE,
+  DESTINOS.TELEFONE_DA_EMPRESA,
+  DESTINOS.CLIENTE,
+];
+
+const comNome = falha =>
+  STATUS_SEM_ACESSO.includes(falha?.response?.status)
+    ? erroNomeado(SEM_ACESSO, 'Sem acesso a Trazer minha lista.', falha)
+    : falha;
+
+// `pedido()` é uma ida ao servidor: devolve o corpo da resposta. A recusa por
+// falta de acesso ganha nome; qualquer outro erro sobe como veio.
+const noServidor = async pedido => {
+  try {
+    return (await pedido()).data;
+  } catch (falha) {
+    throw comNome(falha);
+  }
+};
+
+// A leitura que o servidor não acha (já foi trazida, ou não nasceu nesta tela)
+// ganha nome: a tela mostra o erro de leitura e não pergunta de novo.
+const leituraNoServidor = async (id, pagina) => {
+  try {
+    return await noServidor(() => TrazerAPI.leitura(id, pagina));
+  } catch (falha) {
+    if (falha?.response?.status !== STATUS_NAO_ACHEI) throw falha;
+    throw erroNomeado(
+      'LEITURA_NAO_ENCONTRADA',
+      'O servidor não achou essa leitura.',
+      falha
+    );
+  }
+};
+
+const fonteReal = ({ espera, intervalo, teto, agora }) => {
+  // As leituras que esta tela já leu, pelo id e já no formato da tela: é nelas
+  // que a coluna é conferida e que entra o que o servidor devolve.
+  const leituras = new Map();
+  let encerrada = false;
+
   const pendente = async () => {
     throw erroFonteRealPendente();
   };
+  const seguir = () => {
+    if (encerrada) {
+      throw erroNomeado('LEITURA_INTERROMPIDA', 'A tela saiu.');
+    }
+  };
+
+  // Pergunta de novo até a leitura sair de `lendo`: uma consulta por vez, com a
+  // espera entre elas, até o teto de tempo ou até a tela sair.
+  const ateSairDeLendo = async (id, pagina, limite = agora() + teto) => {
+    const resposta = await leituraNoServidor(id, pagina);
+    seguir();
+    if (resposta.situacao !== SITUACAO_DA_LEITURA.LENDO) return resposta;
+    if (agora() >= limite) {
+      throw erroNomeado('LEITURA_DEMOROU', 'A leitura demorou demais.');
+    }
+    await espera(intervalo);
+    seguir();
+    return ateSairDeLendo(id, pagina, limite);
+  };
+
+  const paginaPronta = async (id, pagina) => {
+    const resposta = await ateSairDeLendo(id, pagina);
+    if (resposta.situacao !== SITUACAO_DA_LEITURA.PRONTA) {
+      throw erroDaLeitura(resposta);
+    }
+    return resposta;
+  };
+
+  // A leitura pronta, com os problemas de todas as páginas; fica guardada. Uma
+  // página por vez: a cada pedido o servidor relê a planilha.
+  const leituraPronta = async id => {
+    const primeira = await paginaPronta(id, PRIMEIRA_PAGINA);
+    const problemas = [...(primeira.problemas ?? [])];
+    const paginas = paginasDeProblemas(primeira);
+    for (let pagina = PRIMEIRA_PAGINA + 1; pagina <= paginas; pagina += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const seguinte = await paginaPronta(id, pagina);
+      problemas.push(...(seguinte.problemas ?? []));
+    }
+    const leitura = leituraDaTela(primeira, problemas);
+    leituras.set(id, leitura);
+    return copia(leitura);
+  };
+
+  const leituraGuardada = id => {
+    const leitura = leituras.get(id);
+    if (!leitura) {
+      throw erroNomeado('LEITURA_NAO_ENCONTRADA', 'Essa leitura não existe.');
+    }
+    return leitura;
+  };
+
+  const confirmar = async id => {
+    await noServidor(() => TrazerAPI.confirmar(id));
+    return { trazidaId: id };
+  };
+
   return {
     usaDemo: false,
-    ler: pendente,
+    // A tela saiu: quem estiver esperando a leitura para de perguntar.
+    encerrar() {
+      encerrada = true;
+    },
+    async ler(arquivo) {
+      let enviada;
+      try {
+        enviada = await noServidor(() => TrazerAPI.enviar(arquivo));
+      } catch (falha) {
+        throw erroDoEnvio(falha);
+      }
+      return leituraPronta(enviada.id);
+    },
+    // Coluna de nome, telefone, e-mail ou empresa: o servidor confere a planilha
+    // de novo (`lendo`). As outras ele troca na hora e devolve só as colunas.
+    // A coluna é a do índice (o nome pode repetir ou vir vazio).
+    async trocarDestino(leituraId, coluna, destino) {
+      if (DESTINOS_DA_FATIA_2.includes(destino)) throw erroFonteRealPendente();
+      const leitura = leituraGuardada(leituraId);
+      const { indice } = colunaPeloIndice(leitura, coluna);
+      const resposta = await noServidor(() =>
+        TrazerAPI.trocarColuna(leituraId, indice, corpoDoDestino(destino))
+      );
+      if (resposta.situacao === SITUACAO_DA_LEITURA.LENDO) {
+        return leituraPronta(leituraId);
+      }
+      const nova = leituraComColunas(leitura, resposta.colunas);
+      leituras.set(leituraId, nova);
+      return copia(nova);
+    },
+    trazer: confirmar,
+    // A lista que parou no meio continua de onde parou.
+    tentarDeNovo: confirmar,
+    async andamento(trazidaId) {
+      return andamentoDaTela(
+        await noServidor(() => TrazerAPI.andamento(trazidaId))
+      );
+    },
+    async historico() {
+      const listas = await noServidor(() => TrazerAPI.listas());
+      return listas.map(listaDaTela);
+    },
     responder: pendente,
     consertar: pendente,
     deixarDeFora: pendente,
     reabrir: pendente,
-    trocarDestino: pendente,
-    trazer: pendente,
-    andamento: pendente,
-    historico: pendente,
     previaDoDesfazer: pendente,
     desfazer: pendente,
   };
 };
 
+// `espera`, `intervaloDaConsulta` e `tetoDaConsulta` são da fonte real: quem
+// testa troca a espera para não dormir de verdade.
 export const trazerFonte = ({
   demo = null,
   planilha = null,
@@ -273,6 +439,9 @@ export const trazerFonte = ({
   atraso = ATRASO_DA_DEMO_MS,
   atrasoDaLeitura = ATRASO_DA_LEITURA_MS,
   agora = Date.now,
+  espera = esperar,
+  intervaloDaConsulta = INTERVALO_DA_CONSULTA_MS,
+  tetoDaConsulta = TETO_DA_CONSULTA_MS,
 } = {}) =>
   demo && carregarDemo
     ? fonteDemo({
@@ -283,4 +452,9 @@ export const trazerFonte = ({
         atrasoDaLeitura,
         agora,
       })
-    : fonteReal();
+    : fonteReal({
+        espera,
+        intervalo: intervaloDaConsulta,
+        teto: tetoDaConsulta,
+        agora,
+      });

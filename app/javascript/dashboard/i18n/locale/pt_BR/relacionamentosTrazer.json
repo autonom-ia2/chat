@@ -2,6 +2,7 @@
   "RELACIONAMENTOS_TRAZER": {
     "TITULO": "Traga sua lista. A gente organiza.",
     "PESSOAS": "Pessoas",
+    "SEM_ACESSO": "Você não pode trazer listas nesta conta. Peça a quem administra a conta.",
     "ETAPAS": {
       "LISTA": "Etapas",
       "ENVIAR": "Enviar",
@@ -14,6 +15,7 @@
       "SOLTAR": "Arraste a planilha aqui ou clique para escolher",
       "APOIO": "Excel ou CSV. Precisa ter nome e telefone ou e-mail.",
       "ERRO_TIPO": "Este arquivo não é uma planilha. Use Excel ou CSV.",
+      "ERRO_GRANDE": "Esta planilha é grande demais. Envie em partes menores.",
       "ERRO_LEITURA": "Não consegui ler esta planilha.",
       "ERRO_VAZIA": "Esta planilha está vazia.",
       "ERRO_SEM_CONTATO": "Não achei nome e telefone ou e-mail nesta planilha.",
@@ -57,6 +59,7 @@
     "PRECISAM": {
       "TITULO": "Precisam de você ({count})",
       "APOIO": "Quem ficar sem resolver fica de fora.",
+      "PLANILHA_APAGADA": "A planilha já foi apagada daqui. Para corrigir uma linha, envie a planilha de novo.",
       "LINHA_DA_PLANILHA": "Linha {linha} da planilha",
       "LINHAS_DA_PLANILHA": "Linhas {outraLinha} e {linha} da planilha",
       "QUEM_SEM_NOME": "Linha {linha}",
@@ -84,6 +87,7 @@
         "EMAIL": "{quem}: o e-mail está sem “{'@'}”",
         "NOME": "{quem}: falta o nome",
         "DUPLICADA": "{quem} aparece duas vezes. Qual fica?",
+        "DUPLICADA_SEM_ESCOLHA": "{quem} aparece duas vezes.",
         "SEM_CONTATO": "{quem}: não tem telefone nem e-mail"
       },
       "CAMPO": {
@@ -99,6 +103,7 @@
       "FICA_COMO": "“{coluna}” fica como {destino}.",
       "FICA_COMO_INFORMACAO": "“{coluna}” fica como informação nova.",
       "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
+      "COLUNA_SEM_NOME": "Coluna {numero}",
       "TROCAR": "Mudar",
       "ROTULO_TROCAR": "Para onde vai a coluna “{coluna}”",
       "ROTULO_MUDAR": "Mudar para onde vai a coluna {coluna}",
@@ -141,7 +146,9 @@
         "DESFEITO": "Desfeito"
       },
       "DESFAZER": "Desfazer",
-      "ROTULO_DESFAZER": "Desfazer a lista {arquivo}"
+      "ROTULO_DESFAZER": "Desfazer a lista {arquivo}",
+      "FALHOU": "Não consegui trazer esta lista.",
+      "ROTULO_TENTAR": "Tentar trazer de novo a lista {arquivo}"
     },
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",

@@ -8,12 +8,16 @@ import { PONTO } from '../comum/ponto';
 
 // #2894 — "O que eu já trouxe": arquivo, quando, quem, quantas pessoas, a
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
+// #2896 — a lista que parou no meio diz que não foi trazida e, quando dá para
+// continuar (`podeTentar`), oferece "Tentar de novo"; sem isso, só a frase.
 defineProps({
   listas: { type: Array, required: true },
   carregando: { type: Boolean, default: false },
   comErro: { type: Boolean, default: false },
+  // O id da lista que está tentando de novo agora (o botão dela fica ocupado).
+  tentando: { type: [String, Number], default: null },
 });
-const emit = defineEmits(['desfazer', 'tentar']);
+const emit = defineEmits(['desfazer', 'tentar', 'tentarDeNovo']);
 
 const { t, locale } = useI18n();
 
@@ -74,10 +78,12 @@ const NOMES = {
               })
             }}
             {{ PONTO }}
-            {{
-              t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
-            }}
-            {{ PONTO }}
+            <template v-if="lista.quem">
+              {{
+                t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem })
+              }}
+              {{ PONTO }}
+            </template>
             <span class="tabular-nums">
               {{
                 t(
@@ -90,13 +96,38 @@ const NOMES = {
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3 sm:justify-end">
+          <p
+            v-if="lista.situacao === SITUACOES_DA_LISTA.FALHOU"
+            :data-situacao="lista.situacao"
+            class="m-0 text-sm font-medium text-n-ruby-11"
+          >
+            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.FALHOU') }}
+          </p>
           <span
+            v-else
             :data-situacao="lista.situacao"
             class="px-3 py-1 text-sm font-medium rounded-full tabular-nums"
             :class="SELOS[lista.situacao]"
           >
             {{ t(NOMES[lista.situacao], { porcentagem: lista.porcentagem }) }}
           </span>
+          <Button
+            v-if="
+              lista.situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar
+            "
+            slate
+            faded
+            data-relacionamentos="tentar-de-novo"
+            :label="t('RELACIONAMENTOS.COMUM.TENTAR_DE_NOVO')"
+            :aria-label="
+              t('RELACIONAMENTOS_TRAZER.HISTORICO.ROTULO_TENTAR', {
+                arquivo: lista.arquivo,
+              })
+            "
+            :is-loading="tentando === lista.id"
+            :disabled="tentando === lista.id"
+            @click="emit('tentarDeNovo', lista)"
+          />
           <Button
             v-if="lista.situacao === SITUACOES_DA_LISTA.PRONTO"
             slate

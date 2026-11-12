@@ -1,7 +1,8 @@
 import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
 import { DURACAO_DA_TRAZIDA_MS } from '../../demo/trazer';
 
-// A fonte de "Trazer minha lista" (#2894): demonstração e fonte real pendente.
+// A fonte de "Trazer minha lista" (#2894): a demonstração. A fonte real (#2896)
+// está em trazerFonteReal.spec.js; aqui só o que ela ainda não faz.
 const DIA = 24 * 60 * 60 * 1000;
 const AGORA = Date.UTC(2026, 10, 11, 15);
 const carregarDemo = () => import('../../demo/trazer.js');
@@ -22,17 +23,12 @@ const fonteComRelogio = (estado = 'cheio') => {
 
 beforeEach(() => esquecerMemoriaDaDemo());
 
-describe('fonte real (pendente)', () => {
+describe('fonte real (o que fica para as próximas fatias)', () => {
   it.each([
-    'ler',
     'responder',
     'consertar',
     'deixarDeFora',
     'reabrir',
-    'trocarDestino',
-    'trazer',
-    'andamento',
-    'historico',
     'previaDoDesfazer',
     'desfazer',
   ])('%s diz FONTE_REAL_PENDENTE', async metodo => {
@@ -46,7 +42,7 @@ describe('fonte real (pendente)', () => {
   it('sem módulo de demonstração (produção) volta à fonte real', async () => {
     const fonte = trazerFonte({ demo: 'cheio', carregarDemo: null });
     expect(fonte.usaDemo).toBe(false);
-    await expect(fonte.ler()).rejects.toMatchObject({
+    await expect(fonte.desfazer('x')).rejects.toMatchObject({
       name: 'FONTE_REAL_PENDENTE',
     });
   });

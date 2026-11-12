@@ -12,9 +12,14 @@ import { SITUACAO_DO_PROBLEMA, nomeValido } from '../../trazer/contagem';
 // #2894 — uma linha da planilha que precisa da pessoa: o problema em palavras
 // simples e o conserto ali mesmo (telefone, e-mail, nome, qual duplicada fica).
 // Consertou: vira "Pronto ✓". Guardar e Deixar de fora saem como evento.
+// #2896 — `semConserto` (a planilha já foi apagada do servidor): a linha diz o
+// problema e só oferece "Deixar de fora"; o conserto não existe ali. E a linha
+// repetida pode vir sem a outra linha (`outraLinha` vazio): aí não há o que
+// comparar nem escolher.
 const props = defineProps({
   problema: { type: Object, required: true },
   ocupado: { type: Boolean, default: false },
+  semConserto: { type: Boolean, default: false },
 });
 const emit = defineEmits(['guardar', 'deixarDeFora', 'reabrir']);
 
@@ -71,7 +76,7 @@ watch(valor, () => {
 // Salvar fica sempre ligado: campo sem o que falta não salva, diz o que falta
 // e leva o foco ao campo.
 const guardar = () => {
-  if (props.ocupado) return;
+  if (props.ocupado || props.semConserto) return;
   if (!preenchido.value) {
     erro.value = t('RELACIONAMENTOS_TRAZER.PRECISAM.ERRO_PREENCHER', {
       campo: t(QUE_FALTA[campo.value]),
@@ -93,11 +98,20 @@ const quem = computed(
       linha: props.problema.linha,
     })
 );
+// A linha repetida só pergunta "Qual fica?" quando há as duas para escolher.
+const repetida = computed(() => props.problema.tipo === 'duplicada');
+const temAsDuas = computed(
+  () => repetida.value && Boolean(props.problema.outraLinha)
+);
 const textoDoProblema = computed(() =>
-  t(TEXTO_DO_TIPO[props.problema.tipo], { quem: quem.value })
+  repetida.value && (props.semConserto || !temAsDuas.value)
+    ? t('RELACIONAMENTOS_TRAZER.PRECISAM.PROBLEMA.DUPLICADA_SEM_ESCOLHA', {
+        quem: quem.value,
+      })
+    : t(TEXTO_DO_TIPO[props.problema.tipo], { quem: quem.value })
 );
 const apoioDaLinha = computed(() =>
-  props.problema.tipo === 'duplicada'
+  temAsDuas.value
     ? t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHAS_DA_PLANILHA', {
         linha: props.problema.linha,
         outraLinha: props.problema.outraLinha,
@@ -164,94 +178,96 @@ const doTexto = computed(
             {{ naPlanilha }}
           </p>
         </div>
-        <CampoDeTelefone
-          v-if="campo === 'telefone'"
-          v-model="valor"
-          :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.TELEFONE')"
-          :rotulo-do-pais="t('RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.PAIS')"
-        />
-        <Input
-          v-else-if="doTexto"
-          v-model="valor"
-          :aria-invalid="erro ? 'true' : undefined"
-          :aria-describedby="erro ? idDoErro : undefined"
-          :label="
-            t(
-              campo === 'email'
-                ? 'RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.EMAIL'
-                : 'RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.NOME'
-            )
-          "
-        />
-        <div v-else class="grid gap-3 sm:grid-cols-2">
-          <button
-            v-for="linha in [problema.outraLinha, problema.linha]"
-            :key="linha"
-            type="button"
-            :data-opcao="linha"
-            :aria-label="
-              t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha })
+        <template v-if="!semConserto">
+          <CampoDeTelefone
+            v-if="campo === 'telefone'"
+            v-model="valor"
+            :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.TELEFONE')"
+            :rotulo-do-pais="t('RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.PAIS')"
+          />
+          <Input
+            v-else-if="doTexto"
+            v-model="valor"
+            :aria-invalid="erro ? 'true' : undefined"
+            :aria-describedby="erro ? idDoErro : undefined"
+            :label="
+              t(
+                campo === 'email'
+                  ? 'RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.EMAIL'
+                  : 'RELACIONAMENTOS_TRAZER.PRECISAM.CAMPO.NOME'
+              )
             "
-            class="flex flex-col items-start w-full gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-alpha-1 hover:enabled:bg-n-alpha-2 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
-            :disabled="ocupado"
-            @click="emit('guardar', problema.linha, linha)"
-          >
-            <template v-if="detalheDaLinha(linha)">
-              <span
-                data-relacionamentos="titulo-do-cartao"
-                class="text-base font-medium break-words text-n-slate-12 tabular-nums"
-              >
-                <template v-if="detalheDaLinha(linha).titulo">
-                  {{ detalheDaLinha(linha).titulo }}
-                </template>
-                <template v-else>
+          />
+          <div v-else-if="temAsDuas" class="grid gap-3 sm:grid-cols-2">
+            <button
+              v-for="linha in [problema.outraLinha, problema.linha]"
+              :key="linha"
+              type="button"
+              :data-opcao="linha"
+              :aria-label="
+                t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha })
+              "
+              class="flex flex-col items-start w-full gap-1 p-4 border min-h-11 text-start rounded-xl border-n-weak bg-n-alpha-1 hover:enabled:bg-n-alpha-2 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
+              :disabled="ocupado"
+              @click="emit('guardar', problema.linha, linha)"
+            >
+              <template v-if="detalheDaLinha(linha)">
+                <span
+                  data-relacionamentos="titulo-do-cartao"
+                  class="text-base font-medium break-words text-n-slate-12 tabular-nums"
+                >
+                  <template v-if="detalheDaLinha(linha).titulo">
+                    {{ detalheDaLinha(linha).titulo }}
+                  </template>
+                  <template v-else>
+                    <template
+                      v-for="(parte, posicao) in detalheDaLinha(linha)
+                        .emailNoTitulo"
+                      :key="posicao"
+                    >
+                      <wbr v-if="posicao" />{{ parte }}
+                    </template>
+                  </template>
+                </span>
+                <span
+                  v-if="detalheDaLinha(linha).email.length"
+                  class="text-sm break-words text-n-slate-11"
+                >
                   <template
-                    v-for="(parte, posicao) in detalheDaLinha(linha)
-                      .emailNoTitulo"
+                    v-for="(parte, posicao) in detalheDaLinha(linha).email"
                     :key="posicao"
                   >
                     <wbr v-if="posicao" />{{ parte }}
                   </template>
-                </template>
-              </span>
+                </span>
+              </template>
               <span
-                v-if="detalheDaLinha(linha).email.length"
-                class="text-sm break-words text-n-slate-11"
+                v-else
+                data-relacionamentos="titulo-do-cartao"
+                class="text-base font-medium text-n-slate-12"
               >
-                <template
-                  v-for="(parte, posicao) in detalheDaLinha(linha).email"
-                  :key="posicao"
-                >
-                  <wbr v-if="posicao" />{{ parte }}
-                </template>
+                {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
               </span>
-            </template>
-            <span
-              v-else
-              data-relacionamentos="titulo-do-cartao"
-              class="text-base font-medium text-n-slate-12"
-            >
-              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM', { linha }) }}
-            </span>
-            <span class="text-xs text-n-slate-11">
-              {{
-                t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHA_DA_PLANILHA', {
-                  linha,
-                })
-              }}
-            </span>
-            <span
-              data-relacionamentos="ficar-com-esta"
-              class="flex items-center gap-1 mt-1 text-sm font-medium text-n-blue-11"
-            >
-              {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM_ESTA') }}
+              <span class="text-xs text-n-slate-11">
+                {{
+                  t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHA_DA_PLANILHA', {
+                    linha,
+                  })
+                }}
+              </span>
               <span
-                class="i-lucide-arrow-right size-4 rtl:rotate-180"
-                aria-hidden="true"
-              />
-            </span>
-          </button>
-        </div>
+                data-relacionamentos="ficar-com-esta"
+                class="flex items-center gap-1 mt-1 text-sm font-medium text-n-blue-11"
+              >
+                {{ t('RELACIONAMENTOS_TRAZER.PRECISAM.FICAR_COM_ESTA') }}
+                <span
+                  class="i-lucide-arrow-right size-4 rtl:rotate-180"
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+          </div>
+        </template>
         <p
           v-if="erro"
           :id="idDoErro"
@@ -263,7 +279,7 @@ const doTexto = computed(
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <Button
-            v-if="campo"
+            v-if="campo && !semConserto"
             type="submit"
             size="lg"
             :label="t('RELACIONAMENTOS_TRAZER.PRECISAM.GUARDAR')"

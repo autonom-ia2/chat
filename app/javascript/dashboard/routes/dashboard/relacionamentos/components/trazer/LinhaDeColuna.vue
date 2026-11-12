@@ -3,11 +3,17 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import { DESTINOS, LISTA_DE_DESTINOS } from '../../trazer/destinos';
+import {
+  DESTINOS,
+  LISTA_DE_DESTINOS,
+  chaveDaColuna,
+} from '../../trazer/destinos';
 
 // #2894 — uma coluna da planilha e para onde ela vai (“Cel” fica como
 // Telefone), com Trocar. Coluna que o sistema não conhecia vira "informação da pessoa" e
 // ganha também Não guardar.
+// #2896 — a troca sai com a chave da coluna (o índice, quando vem do servidor).
+// Coluna sem título na planilha aparece pela posição: "Coluna 5".
 const props = defineProps({
   coluna: { type: Object, required: true },
   ocupado: { type: Boolean, default: false },
@@ -33,6 +39,14 @@ const escolha = ref(null);
 const caixaDaEscolha = ref(null);
 
 const nomeDoDestino = destino => t(CHAVES_DOS_DESTINOS[destino]);
+
+const nome = computed(
+  () =>
+    props.coluna.nome ||
+    t('RELACIONAMENTOS_TRAZER.GUARDAR.COLUNA_SEM_NOME', {
+      numero: (props.coluna.indice ?? 0) + 1,
+    })
+);
 
 const opcoes = computed(() =>
   LISTA_DE_DESTINOS.map(destino => ({
@@ -64,7 +78,7 @@ const sairDaTroca = () => {
 const escolher = destino => {
   sairDaTroca();
   if (destino !== props.coluna.destino)
-    emit('trocar', props.coluna.nome, destino);
+    emit('trocar', chaveDaColuna(props.coluna), destino);
 };
 
 // Ao abrir a troca, a lista já vem aberta e com o foco no gatilho.
@@ -103,28 +117,28 @@ onBeforeUnmount(() => observador?.disconnect());
 <template>
   <li
     ref="raiz"
-    :data-coluna="coluna.nome"
+    :data-coluna="nome"
     class="flex flex-wrap items-center justify-between gap-3 py-3"
   >
     <p class="flex flex-wrap items-center gap-2 m-0 text-base text-n-slate-12">
       <template v-if="naoGuarda">
         {{
           t('RELACIONAMENTOS_TRAZER.GUARDAR.NAO_VOU_GUARDAR', {
-            coluna: coluna.nome,
+            coluna: nome,
           })
         }}
       </template>
       <template v-else-if="virouInformacao">
         {{
           t('RELACIONAMENTOS_TRAZER.GUARDAR.FICA_COMO_INFORMACAO', {
-            coluna: coluna.nome,
+            coluna: nome,
           })
         }}
       </template>
       <template v-else>
         {{
           t('RELACIONAMENTOS_TRAZER.GUARDAR.FICA_COMO', {
-            coluna: coluna.nome,
+            coluna: nome,
             destino: nomeDoDestino(coluna.destino),
           })
         }}
@@ -138,7 +152,7 @@ onBeforeUnmount(() => observador?.disconnect());
           :options="opcoes"
           :aria-label="
             t('RELACIONAMENTOS_TRAZER.GUARDAR.ROTULO_TROCAR', {
-              coluna: coluna.nome,
+              coluna: nome,
             })
           "
           @update:model-value="escolher"
@@ -152,7 +166,7 @@ onBeforeUnmount(() => observador?.disconnect());
         :label="t('RELACIONAMENTOS_TRAZER.GUARDAR.TROCAR')"
         :aria-label="
           t('RELACIONAMENTOS_TRAZER.GUARDAR.ROTULO_MUDAR', {
-            coluna: coluna.nome,
+            coluna: nome,
           })
         "
         :disabled="ocupado"

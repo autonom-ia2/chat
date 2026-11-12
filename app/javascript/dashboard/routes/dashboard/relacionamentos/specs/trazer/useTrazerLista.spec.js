@@ -14,12 +14,16 @@ const planilha = nome => ({ name: nome });
 const montar = (opcoes = {}) => {
   const escopo = effectScope();
   const avisar = vi.fn();
+  const aoFalhar = vi.fn();
   const fonte =
     opcoes.fonte ||
     trazerFonte({ demo: 'cheio', carregarDemo, atraso: 0, atrasoDaLeitura: 0 });
-  const tela = escopo.run(() => useTrazerLista({ fonte, avisar }));
-  return { tela, avisar, fonte, parar: () => escopo.stop() };
+  const tela = escopo.run(() => useTrazerLista({ fonte, avisar, aoFalhar }));
+  return { tela, avisar, aoFalhar, fonte, parar: () => escopo.stop() };
 };
+
+const erroDeNome = nome => Object.assign(new Error(nome), { name: nome });
+const LIDA = { id: 'l1', arquivo: 'a.csv', perguntas: [], problemas: [] };
 
 const lerExemplo = async tela => {
   await tela.usarExemplo();
@@ -96,10 +100,87 @@ describe('Enviar', () => {
     expect(tela.etapa.value).toBe(ETAPAS.CONFERIR);
   });
 
-  it('fora da demonstração a fonte real pendente vira o erro de leitura', async () => {
-    const { tela } = montar({ fonte: trazerFonte({ demo: null }) });
-    await tela.usarExemplo();
-    expect(tela.erro.value).toBe(ERROS.LEITURA);
+  // #2896 — o Excel antigo saiu: a tela recusa antes de mandar ao servidor.
+  it('.xls dá o erro de tipo e não lê', async () => {
+    const ler = vi.fn();
+    const { tela } = montar({ fonte: { ler } });
+    await tela.escolherArquivo(planilha('lista.xls'));
+    expect(tela.erro.value).toBe(ERROS.TIPO);
+    expect(ler).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['PLANILHA_TIPO', ERROS.TIPO],
+    ['PLANILHA_GRANDE', ERROS.GRANDE],
+    ['PLANILHA_VAZIA', ERROS.VAZIA],
+    ['PLANILHA_SEM_CONTATO', ERROS.SEM_CONTATO],
+    ['LEITURA_DEMOROU', ERROS.LEITURA],
+    ['LEITURA_FALHOU', ERROS.LEITURA],
+  ])('a recusa %s do servidor vira o erro "%s"', async (nome, erro) => {
+    const ler = vi.fn().mockRejectedValue(erroDeNome(nome));
+    const { tela } = montar({ fonte: { ler } });
+    await tela.escolherArquivo(planilha('a.csv'));
+    expect(tela.erro.value).toBe(erro);
+    expect(tela.semAcesso.value).toBe(false);
+  });
+});
+
+// #2896 — quem não pode trazer lista: o servidor recusa (401 ou 403), a fonte dá
+// o nome SEM_ACESSO e a tela para de oferecer "tentar de novo".
+describe('sem acesso', () => {
+  const SEM_ACESSO = erroDeNome('SEM_ACESSO');
+
+  it('na leitura: liga `semAcesso` e não mostra erro de leitura', async () => {
+    const { tela } = montar({
+      fonte: { ler: vi.fn().mockRejectedValue(SEM_ACESSO) },
+    });
+    expect(tela.semAcesso.value).toBe(false);
+    await tela.escolherArquivo(planilha('a.csv'));
+    expect(tela.semAcesso.value).toBe(true);
+    expect(tela.erro.value).toBe(ERROS.NENHUM);
+    expect(tela.lendo.value).toBe(false);
+  });
+
+  it('numa escrita: liga `semAcesso` sem o aviso de "tente de novo"', async () => {
+    const { tela, avisar } = montar({
+      fonte: {
+        ler: async () => LIDA,
+        trocarDestino: vi.fn().mockRejectedValue(SEM_ACESSO),
+      },
+    });
+    await tela.escolherArquivo(planilha('a.csv'));
+    await tela.trocarDestino('Cel', 'nao_guardar');
+    expect(tela.semAcesso.value).toBe(true);
+    expect(avisar).not.toHaveBeenCalled();
+    expect(tela.ocupado.value).toBe(false);
+  });
+
+  it('ao trazer: liga `semAcesso` e não mostra o erro de trazer', async () => {
+    const { tela } = montar({
+      fonte: {
+        ler: async () => LIDA,
+        trazer: vi.fn().mockRejectedValue(SEM_ACESSO),
+      },
+    });
+    await tela.escolherArquivo(planilha('a.csv'));
+    await tela.trazer();
+    expect(tela.semAcesso.value).toBe(true);
+    expect(tela.erro.value).toBe(ERROS.NENHUM);
+    expect(tela.etapa.value).toBe(ETAPAS.CONFERIR);
+  });
+
+  it('no andamento: liga `semAcesso` e não mostra o erro do andamento', async () => {
+    const { tela } = montar({
+      fonte: {
+        ler: async () => LIDA,
+        trazer: async () => ({ trazidaId: 't1' }),
+        andamento: vi.fn().mockRejectedValue(SEM_ACESSO),
+      },
+    });
+    await tela.escolherArquivo(planilha('a.csv'));
+    await tela.trazer();
+    expect(tela.semAcesso.value).toBe(true);
+    expect(tela.erro.value).toBe(ERROS.NENHUM);
   });
 });
 
@@ -304,6 +385,33 @@ describe('Trazendo e Pronto', () => {
     expect(tela.erro.value).toBe(ERROS.ANDAMENTO);
     await tela.tentarDeNovo();
     expect(tela.etapa.value).toBe(ETAPAS.PRONTO);
+  });
+
+  // #2896 — a lista que parou no meio não é "Pronto": a tela avisa e chama
+  // `aoFalhar` (a página volta ao começo, onde o histórico tem o "Tentar de novo").
+  it('lista que falhou no meio avisa, chama `aoFalhar` e não vai para Pronto', async () => {
+    const fonte = andamentoFalso([
+      { porcentagem: 10, situacao: 'trazendo', total: 3 },
+      { porcentagem: 40, situacao: 'falhou', total: 3 },
+    ]);
+    const { tela, avisar, aoFalhar } = montar({ fonte });
+    await tela.usarExemplo();
+    await tela.trazer();
+    expect(aoFalhar).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_ANDAMENTO_MS);
+    expect(aoFalhar).toHaveBeenCalledTimes(1);
+    expect(avisar).toHaveBeenCalledWith('RELACIONAMENTOS_TRAZER.ERROS.TRAZER');
+    expect(tela.etapa.value).not.toBe(ETAPAS.PRONTO);
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_ANDAMENTO_MS * 3);
+    expect(fonte.andamento).toHaveBeenCalledTimes(2);
+  });
+
+  it('ao sair, avisa a fonte para parar o que estiver esperando', async () => {
+    const fonte = { ...andamentoFalso([]), encerrar: vi.fn() };
+    const { parar } = montar({ fonte });
+    expect(fonte.encerrar).not.toHaveBeenCalled();
+    parar();
+    expect(fonte.encerrar).toHaveBeenCalledTimes(1);
   });
 
   it('"Trazer outra lista" recomeça limpo', async () => {

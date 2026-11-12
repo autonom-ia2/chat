@@ -30,6 +30,7 @@ const montar = fonteParcial => {
       ficam: 18,
     })),
     desfazer: vi.fn(async () => ({})),
+    tentarDeNovo: vi.fn(async () => ({})),
     ...fonteParcial,
   };
   const historico = escopo.run(() => useHistoricoDeListas({ fonte, avisar }));
@@ -56,6 +57,20 @@ describe('carregar', () => {
     });
     await historico.carregar();
     expect(historico.erro.value).toBe(true);
+    expect(historico.carregando.value).toBe(false);
+  });
+
+  // #2896 — quem não pode trazer lista não recebe "tentar de novo".
+  it('recusa por falta de acesso liga `semAcesso`, não o erro', async () => {
+    const { historico } = montar({
+      historico: vi.fn(async () => {
+        throw Object.assign(new Error('403'), { name: 'SEM_ACESSO' });
+      }),
+    });
+    expect(historico.semAcesso.value).toBe(false);
+    await historico.carregar();
+    expect(historico.semAcesso.value).toBe(true);
+    expect(historico.erro.value).toBe(false);
     expect(historico.carregando.value).toBe(false);
   });
 
@@ -163,5 +178,69 @@ describe('desfazer', () => {
     historico.fecharDesfazer();
     expect(historico.alvo.value).toBeNull();
     expect(historico.previa.value).toBeNull();
+  });
+});
+
+// #2896 — a lista que parou no meio: "Tentar de novo" continua de onde parou.
+describe('tentar de novo', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const falhou = lista('a', 'falhou', { podeTentar: true, porcentagem: 40 });
+
+  it('pede à fonte, recarrega e volta a perguntar enquanto a lista é trazida', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce([falhou])
+      .mockResolvedValueOnce([lista('a', 'trazendo', { porcentagem: 40 })])
+      .mockResolvedValue([lista('a', 'pronto')]);
+    const { historico, fonte } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    expect(await historico.tentarDeNovo(falhou)).toBe(true);
+    expect(fonte.tentarDeNovo).toHaveBeenCalledWith('a');
+    expect(historico.listas.value[0].situacao).toBe('trazendo');
+    expect(historico.carregando.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+    expect(historico.listas.value[0].situacao).toBe('pronto');
+  });
+
+  it('enquanto tenta, diz qual lista e ignora o segundo clique', async () => {
+    let terminar;
+    const tentarDeNovo = vi.fn(
+      () =>
+        new Promise(resolve => {
+          terminar = resolve;
+        })
+    );
+    const { historico } = montar({ tentarDeNovo });
+    const primeira = historico.tentarDeNovo(falhou);
+    expect(historico.tentando.value).toBe('a');
+    expect(await historico.tentarDeNovo(falhou)).toBe(false);
+    terminar({});
+    await primeira;
+    expect(tentarDeNovo).toHaveBeenCalledTimes(1);
+    expect(historico.tentando.value).toBeNull();
+  });
+
+  it('erro ao tentar avisa e devolve false', async () => {
+    const { historico, avisar } = montar({
+      tentarDeNovo: vi.fn(async () => {
+        throw new Error('falhou');
+      }),
+    });
+    expect(await historico.tentarDeNovo(falhou)).toBe(false);
+    expect(avisar).toHaveBeenCalledWith('RELACIONAMENTOS_TRAZER.ERROS.TRAZER');
+    expect(historico.tentando.value).toBeNull();
+  });
+
+  it('recusa por falta de acesso liga `semAcesso`, sem aviso', async () => {
+    const { historico, avisar } = montar({
+      tentarDeNovo: vi.fn(async () => {
+        throw Object.assign(new Error('403'), { name: 'SEM_ACESSO' });
+      }),
+    });
+    expect(await historico.tentarDeNovo(falhou)).toBe(false);
+    expect(historico.semAcesso.value).toBe(true);
+    expect(avisar).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@
 import { ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LinhaDeColuna from './LinhaDeColuna.vue';
+import { chaveDaColuna } from '../../trazer/destinos';
 
 // #2894 — "O que vou guardar": cada coluna da planilha e para onde ela vai.
 // Recolhido por padrão; abre com um clique.
@@ -48,10 +49,10 @@ const aberto = ref(false);
     >
       <LinhaDeColuna
         v-for="coluna in colunas"
-        :key="coluna.nome"
+        :key="chaveDaColuna(coluna)"
         :coluna="coluna"
         :ocupado="ocupado"
-        @trocar="(nome, destino) => emit('trocar', nome, destino)"
+        @trocar="(chave, destino) => emit('trocar', chave, destino)"
       />
     </ul>
   </section>

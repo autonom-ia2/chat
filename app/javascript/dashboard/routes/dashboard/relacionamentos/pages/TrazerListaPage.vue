@@ -29,8 +29,22 @@ const planilha = demo && import.meta.env.DEV ? route.query.planilha : undefined;
 const fonte = trazerFonte({ demo, planilha });
 const avisar = chave => useAlert(t(chave));
 
-const tela = useTrazerLista({ fonte, avisar });
 const historico = useHistoricoDeListas({ fonte, avisar });
+// #2896 — a lista que falha no meio volta ao começo, onde o histórico diz que
+// ela não foi trazida e oferece o "Tentar de novo".
+const tela = useTrazerLista({
+  fonte,
+  avisar,
+  aoFalhar: () => {
+    tela.recomecar();
+    historico.carregar();
+  },
+});
+// O servidor recusou (401 ou 403): a pessoa não pode trazer listas nesta conta.
+// Não é erro de tentar de novo; fica só a frase.
+const semAcesso = computed(
+  () => tela.semAcesso.value || historico.semAcesso.value
+);
 
 const raiz = ref(null);
 const dialogo = ref(null);
@@ -108,75 +122,89 @@ const confirmarDesfazer = async () => {
           />
         </div>
 
-        <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
-          <TelaEnviar
-            :lendo="tela.lendo.value"
-            :erro="tela.erro.value"
-            :mostrar-exemplo="Boolean(demo)"
-            @arquivo="tela.escolherArquivo"
-            @exemplo="tela.usarExemplo"
+        <p
+          v-if="semAcesso"
+          data-relacionamentos="sem-acesso"
+          role="alert"
+          class="p-5 m-0 text-base border rounded-2xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
+          {{ t('RELACIONAMENTOS_TRAZER.SEM_ACESSO') }}
+        </p>
+        <template v-else>
+          <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
+            <TelaEnviar
+              :lendo="tela.lendo.value"
+              :erro="tela.erro.value"
+              :mostrar-exemplo="Boolean(demo)"
+              @arquivo="tela.escolherArquivo"
+              @exemplo="tela.usarExemplo"
+              @tentar="tela.tentarDeNovo"
+            />
+            <HistoricoDeListas
+              :listas="historico.listas.value"
+              :carregando="historico.carregando.value"
+              :com-erro="historico.erro.value"
+              :tentando="historico.tentando.value"
+              @desfazer="abrirDesfazer"
+              @tentar="historico.carregar"
+              @tentar-de-novo="historico.tentarDeNovo"
+            />
+          </template>
+
+          <PerguntaDaVez
+            v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
+            :key="tela.estado.value.pergunta"
+            :pergunta="tela.perguntaAtual.value"
+            :respostas="tela.respostas.value"
+            :colunas="tela.leitura.value.colunas"
+            :pode-continuar="tela.podeContinuar.value"
+            :ocupado="tela.ocupado.value"
+            @responder="tela.responder"
+            @escolher-coluna="tela.escolherColunaDeCliente"
+            @continuar="tela.continuar"
+            @voltar="tela.voltar"
+          />
+
+          <TelaConferir
+            v-else-if="tela.etapa.value === ETAPAS.CONFERIR"
+            :leitura="tela.leitura.value"
+            :resumo="tela.resumo.value"
+            :total="tela.totalAtrazer.value"
+            :ocupado="tela.ocupado.value"
+            :com-erro="tela.erro.value === ERROS.TRAZER"
+            @guardar="tela.guardar"
+            @deixar-de-fora="tela.deixarDeFora"
+            @reabrir="tela.reabrir"
+            @trocar="tela.trocarDestino"
+            @trazer="tela.trazer"
+            @escolher-outra="trazerOutra"
+            @voltar="tela.voltar"
             @tentar="tela.tentarDeNovo"
           />
+
+          <TelaPronto
+            v-else-if="noFim"
+            :trazendo="trazendo"
+            :porcentagem="tela.porcentagem.value"
+            :novas="tela.novasTrazidas.value"
+            :completadas="tela.completadasTrazidas.value"
+            :com-erro="tela.erro.value === ERROS.ANDAMENTO"
+            @ver="verAsPessoas"
+            @outra="trazerOutra"
+            @tentar="tela.tentarDeNovo"
+          />
+
           <HistoricoDeListas
+            v-if="chegou"
             :listas="historico.listas.value"
             :carregando="historico.carregando.value"
             :com-erro="historico.erro.value"
+            :tentando="historico.tentando.value"
             @desfazer="abrirDesfazer"
             @tentar="historico.carregar"
+            @tentar-de-novo="historico.tentarDeNovo"
           />
         </template>
-
-        <PerguntaDaVez
-          v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
-          :key="tela.estado.value.pergunta"
-          :pergunta="tela.perguntaAtual.value"
-          :respostas="tela.respostas.value"
-          :colunas="tela.leitura.value.colunas"
-          :pode-continuar="tela.podeContinuar.value"
-          :ocupado="tela.ocupado.value"
-          @responder="tela.responder"
-          @escolher-coluna="tela.escolherColunaDeCliente"
-          @continuar="tela.continuar"
-          @voltar="tela.voltar"
-        />
-
-        <TelaConferir
-          v-else-if="tela.etapa.value === ETAPAS.CONFERIR"
-          :leitura="tela.leitura.value"
-          :resumo="tela.resumo.value"
-          :total="tela.totalAtrazer.value"
-          :ocupado="tela.ocupado.value"
-          :com-erro="tela.erro.value === ERROS.TRAZER"
-          @guardar="tela.guardar"
-          @deixar-de-fora="tela.deixarDeFora"
-          @reabrir="tela.reabrir"
-          @trocar="tela.trocarDestino"
-          @trazer="tela.trazer"
-          @escolher-outra="trazerOutra"
-          @voltar="tela.voltar"
-          @tentar="tela.tentarDeNovo"
-        />
-
-        <TelaPronto
-          v-else-if="noFim"
-          :trazendo="trazendo"
-          :porcentagem="tela.porcentagem.value"
-          :novas="tela.novasTrazidas.value"
-          :completadas="tela.completadasTrazidas.value"
-          :com-erro="tela.erro.value === ERROS.ANDAMENTO"
-          @ver="verAsPessoas"
-          @outra="trazerOutra"
-          @tentar="tela.tentarDeNovo"
-        />
-
-        <HistoricoDeListas
-          v-if="chegou"
-          :listas="historico.listas.value"
-          :carregando="historico.carregando.value"
-          :com-erro="historico.erro.value"
-          @desfazer="abrirDesfazer"
-          @tentar="historico.carregar"
-        />
       </div>
     </main>
 

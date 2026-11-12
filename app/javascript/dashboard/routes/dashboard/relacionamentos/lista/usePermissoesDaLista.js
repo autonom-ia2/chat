@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { QUEM_TRAZ_LISTA } from '../trazer/quemTraz';
 
 // As mesmas regras da barra de ações da lista de contatos de hoje
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
@@ -20,6 +21,8 @@ const QUEM_APAGA_CONTATO = ['administrator', 'contact_delete'];
 //    novo" que nunca funciona;
 //  - Etiqueta: quem pode editar contato;
 //  - Apagar: quem pode apagar contato.
+// #2896 — e quem vê "Trazer minha lista" no herói: quem pode importar contato
+// (a mesma regra da rota `relacionamentos_trazer` e do servidor).
 export const usePermissoesDaLista = () => {
   const globalConfig = useMapGetter('globalConfig/get');
   const { canViewCrm, canManageCards } = useCrmPermissions();
@@ -34,5 +37,6 @@ export const usePermissoesDaLista = () => {
     ),
     podeEtiquetar: computed(() => checkPermissions(QUEM_EDITA_CONTATO)),
     podeApagar: computed(() => checkPermissions(QUEM_APAGA_CONTATO)),
+    podeTrazer: computed(() => checkPermissions(QUEM_TRAZ_LISTA)),
   };
 };
