@@ -21,6 +21,14 @@ const AVISO = {
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
+  sem_responsavel: 'SEM_RESPONSAVEL',
+  caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
+};
+
+// #2552: por que o aviso iria para quem atende a caixa.
+const RESERVA = {
+  sem_responsavel: 'IRIA_PARA_CAIXA',
+  responsavel_fora: 'IRIA_PARA_CAIXA_FORA',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -131,8 +139,14 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     };
   if (no.dados?.calculados?.length)
     return { ...base, destaque: gravaria(no.dados.calculados, t) };
-  if (FARIA_DA_IA[no.faria])
-    return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
+  // A reserva da caixa (#2552): no avisar e no resumo que sai pelo avisar.
+  const reserva = RESERVA[no.dados?.reserva];
+  const caixa = reserva ? t(`${E}.${reserva}`) : null;
+  if (FARIA_DA_IA[no.faria]) {
+    const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
+    return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };
+  }
+  if (caixa) return { ...base, balao: no.dados.texto, destaque: caixa };
   // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
   // o de propaganda (lote 5, #2681) avisa que custa mais.
   if (no.dados?.texto)

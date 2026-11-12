@@ -94,6 +94,55 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos_de(receita(espera, esperar_passo('r1'))).map { |no| [no[:id], no[:faria]] }).to eq([%w[a1 esperar_ate_ja_vale], %w[r1 esperar]])
   end
 
+  # #2523: o aviso só para o responsável, na conversa sem responsável, não sairia para ninguém.
+  it 'o aviso só para o responsável diz que ninguém seria avisado na conversa sem responsável', :aggregate_failures do
+    aviso = avisar_passo('a1', { 'responsavel' => true }, 'Chegou reclamação')
+
+    expect(passos_de(receita(aviso)).first).to eq(id: 'a1', tipo: 'avisar', faria: 'sem_responsavel', dados: {})
+
+    conversa.update!(assignee: admin)
+    expect(passos_de(receita(aviso)).first).to include(faria: 'avisar', dados: { texto: 'Chegou reclamação' })
+  end
+
+  # #2552: com a reserva da caixa, o ensaio faz a mesma conta do motor (só lê): diz por que iria para a caixa, ou que
+  # ninguém da caixa seria avisado.
+  describe 'o aviso com a reserva da caixa' do
+    let(:aviso) { avisar_passo('a1', { 'responsavel' => true, 'se_nao_houver' => 'caixa' }, 'Chegou reclamação') }
+
+    def no_do_aviso = passos_de(receita(aviso)).first
+
+    before { create(:inbox_member, user: admin, inbox: inbox) }
+
+    it 'sem responsável, mostra o texto e diz que iria para a caixa' do
+      expect(no_do_aviso).to eq(id: 'a1', tipo: 'avisar', faria: 'avisar', dados: { texto: 'Chegou reclamação', reserva: 'sem_responsavel' })
+    end
+
+    it 'com responsável que não poderia ser avisado, diz que iria para a caixa por isso' do
+      conversa.update!(assignee: create(:user, account: account, role: :agent))
+
+      expect(no_do_aviso).to include(faria: 'avisar', dados: { texto: 'Chegou reclamação', reserva: 'responsavel_fora' })
+    end
+
+    it 'com responsável que poderia ser avisado, só o texto' do
+      conversa.update!(assignee: admin)
+
+      expect(no_do_aviso).to include(faria: 'avisar', dados: { texto: 'Chegou reclamação' })
+    end
+
+    it 'sem ninguém da caixa que pudesse ser avisado, diz que ninguém seria avisado' do
+      InboxMember.where(inbox: inbox).delete_all
+
+      expect(no_do_aviso).to eq(id: 'a1', tipo: 'avisar', faria: 'caixa_sem_ninguem', dados: {})
+    end
+
+    # O ensaio não tem execução: quem atende a reunião fica fora da conta, sem quebrar o ensaio.
+    it 'com quem atende a reunião na lista, faz a conta da caixa do mesmo jeito' do
+      com_reuniao = avisar_passo('a1', { 'responsavel' => true, 'se_nao_houver' => 'caixa', 'da_reuniao' => true }, 'Oi')
+
+      expect(passos_de(receita(com_reuniao)).first).to include(faria: 'avisar', dados: { texto: 'Oi', reserva: 'sem_responsavel' })
+    end
+  end
+
   it 'o "decidir" mostra todos os caminhos e o "nenhum", sem chamar IA' do
     decidir = { 'id' => 'd1', 'tipo' => 'decidir', 'pergunta' => 'Sobre o quê?', 'nenhum' => [],
                 'caminhos' => [{ 'chave' => 'cotacao', 'nome' => 'Cotação', 'passos' => [esperar_passo('c1')] }] }
@@ -117,6 +166,7 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
 
     it 'dizem o que a IA faria e para onde iria, seguem para o próximo passo e não chamam IA', :aggregate_failures do
+      conversa.update!(assignee: admin)
       passos = passos_de(receita(extrair, escrever, resumir, esperar_passo('r1')))
 
       expect(passos).to eq([
@@ -139,6 +189,18 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
 
       expect(passos.map { |no| [no[:id], no[:faria]] })
         .to eq([%w[i2 mensagens_desligadas], %w[i3 mensagens_desligadas], %w[i4 ia_escrever], %w[i5 ia_resumir]])
+    end
+
+    # #2552: o resumo que sai pelo "avisar" mostra o mesmo que o avisar, sem e com a reserva da caixa.
+    it 'o resumo para o responsável, na conversa sem responsável, diz o mesmo que o avisar', :aggregate_failures do
+      com_reserva = resumir.merge('id' => 'i6', 'destino' => { 'avisar' => { 'responsavel' => true, 'se_nao_houver' => 'caixa' } })
+      create(:inbox_member, user: admin, inbox: inbox)
+
+      expect(passos_de(receita(resumir)).first).to eq(id: 'i3', tipo: 'resumir', faria: 'sem_responsavel', dados: {})
+      expect(passos_de(receita(com_reserva)).first)
+        .to eq(id: 'i6', tipo: 'resumir', faria: 'ia_resumir', dados: { destino: 'avisar', reserva: 'sem_responsavel' })
+      InboxMember.where(inbox: inbox).delete_all
+      expect(passos_de(receita(com_reserva)).first).to eq(id: 'i6', tipo: 'resumir', faria: 'caixa_sem_ninguem', dados: {})
     end
   end
 

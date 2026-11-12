@@ -155,10 +155,29 @@ class Autonomia::Automacao::Ensaio
     return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
+    ninguem, reserva = previsto_do_aviso(passo)
+    return no(passo, ninguem) if ninguem
+
     # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada; o de propaganda
     # (lote 5, #2681) leva o aviso de custo.
     propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(@conversa&.inbox, passo['modelo'])
-    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda }.compact)
+    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda, reserva: reserva }.compact)
+  end
+
+  # O "avisar", e o "resumir" que sai por ele, pela mesma conta do motor, que só lê (#2523, #2552): [por que ninguém
+  # seria avisado, por que iria para quem atende a caixa]. Os outros passos não avisam ninguém.
+  def previsto_do_aviso(passo)
+    para = para_do_aviso(passo)
+    return [] if para.nil?
+
+    ::Autonomia::Automacao::PassoDeAviso.new(execucao: nil, passo: { 'id' => passo['id'], 'para' => para }, alvo: @conversa).previsto
+  end
+
+  # Como o motor monta o aviso do resumir (PassoDeResumir#passo_do_aviso).
+  def para_do_aviso(passo)
+    return passo['para'].to_h if passo['tipo'] == 'avisar'
+
+    passo.dig('destino', 'avisar').to_h if passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash)
   end
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
@@ -243,12 +262,15 @@ class Autonomia::Automacao::Ensaio
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
-  # automática ligada na conta não sairia, como no motor.
+  # automática ligada na conta não sairia, como no motor. O resumo que sai pelo "avisar" segue as regras dele (#2552).
   def ia(passo)
     classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
     return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
 
-    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe)))
+    ninguem, reserva = previsto_do_aviso(passo)
+    return no(passo, ninguem) if ninguem
+
+    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe), { reserva: reserva }.compact))
   end
 
   # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor. Não

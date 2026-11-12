@@ -595,7 +595,10 @@ en:
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
         numero_de_outro_contato: "The contact's new number already belongs to another contact in this inbox. Nothing was sent, and the other contact was not changed."
-        sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
+        sem_responsavel: "Nobody was alerted: the conversation has no assignee (or, with the AI agent handling it, its card has no owner or there is no card)."
+        caixa_sem_responsavel: "The conversation has no assignee: whoever handles the inbox was alerted."
+        caixa_responsavel_fora: "The assignee could not be alerted in this conversation: whoever handles the inbox was alerted."
+        caixa_sem_ninguem: "Nobody was alerted: the conversation has no assignee, or they could not be alerted, and nobody in the inbox can see this conversation."
         card_sem_responsavel: "The card has no owner. The conversation stayed with whoever had it."
         responsavel_nao_ve_a_conversa: "The card owner cannot see this conversation (they are not in its inbox). The conversation stayed with whoever had it."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
@@ -702,6 +705,7 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
+        reserva_sem_responsavel: 'Step %{passo}: "alert whoever handles the inbox" only works together with the assignee.'
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'

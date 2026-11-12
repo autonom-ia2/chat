@@ -472,7 +472,11 @@
         "responsavel_do_card": { "type": "boolean", "description": "Só nos gatilhos de card (G9): quem cuida do card na hora do passo, que nem sempre atende a conversa." },
         "times": { "$ref": "#/definitions/ids" },
         "pessoas": { "$ref": "#/definitions/ids" },
-        "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho." }
+        "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho." },
+        "se_nao_houver": {
+          "description": "Reserva (#2552): se o responsável não existe ou não pode ser avisado, avisa também quem atende a caixa da conversa. Só junto de responsavel.",
+          "enum": ["caixa"]
+        }
       }
     },
     "condicao": {
@@ -619,7 +623,8 @@
                 "responsavel_do_card": { "type": "boolean", "description": "Só nos gatilhos de card (G9): quem cuida do card na hora do passo, que nem sempre atende a conversa." },
                 "times": { "$ref": "#/definitions/ids" },
                 "pessoas": { "$ref": "#/definitions/ids" },
-                "da_reuniao": { "type": "boolean", "description": "Quem atende a reunião (a pessoa da página de agendamento, ou quem marcou na tela). Nos gatilhos de reunião (G32), a reunião do gatilho; nos outros (G61), a próxima reunião marcada do contato, em card que quem ligou vê. Sem reunião, ninguém." }
+                "da_reuniao": { "type": "boolean", "description": "Quem atende a reunião (a pessoa da página de agendamento, ou quem marcou na tela). Nos gatilhos de reunião (G32), a reunião do gatilho; nos outros (G61), a próxima reunião marcada do contato, em card que quem ligou vê. Sem reunião, ninguém." },
+                "se_nao_houver": { "enum": ["caixa"] }
               }
             }
           }
