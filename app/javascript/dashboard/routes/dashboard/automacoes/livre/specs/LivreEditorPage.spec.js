@@ -467,6 +467,38 @@ describe('LivreEditorPage', () => {
     expect(AutomacoesAPI.ligar).toHaveBeenCalledWith(5, 12);
   });
 
+  // #2574: ligar a que manda mensagem pede confirmação; só o "Ligar" dela liga.
+  it('Ligar a que manda mensagem confirma antes, com o que ela faz', async () => {
+    AutomacoesAPI.show.mockResolvedValue({
+      data: salva({
+        versao: {
+          id: 11,
+          numero: 2,
+          receita: {
+            gatilho: { tipo: 'conversa.criada' },
+            passos: [{ id: 'p1', tipo: 'mensagem', texto: ['Oi'] }],
+          },
+        },
+      }),
+    });
+    AutomacoesAPI.ligar.mockResolvedValue({
+      data: { ativa: true, versao: { id: 11 } },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    await wrapper.find('[data-ligar]').trigger('click');
+    await flushPromises();
+
+    expect(dialogo.abrir).toHaveBeenCalled();
+    expect(AutomacoesAPI.ligar).not.toHaveBeenCalled();
+
+    wrapper.findAllComponents(DialogoFalso).at(-1).vm.$emit('acao');
+    await flushPromises();
+
+    expect(AutomacoesAPI.ligar).toHaveBeenCalledWith(5, 11);
+  });
+
   it('pergunta antes de sair com rascunho não salvo', async () => {
     const wrapper = montar();
     await flushPromises();

@@ -20,9 +20,10 @@ module Api::V1::Accounts::Concerns::AutomationExternalActionGuard
     check_integration_for(Current.account.automation_rules.find_by(id: params[:automation_rule_id])&.actions)
   end
 
-  def check_integration_for(actions)
+  # `external`: as ações que saem da plataforma neste recurso (a macro só tem o webhook nesta regra, #2451).
+  def check_integration_for(actions, external = EXTERNAL_ACTIONS)
     names = action_list(actions).filter_map { |action| (action[:action_name] || action['action_name'])&.to_s }
-    check_permission_granted!('integration_manage') if names.intersect?(EXTERNAL_ACTIONS)
+    check_permission_granted!('integration_manage') if names.intersect?(external)
   end
 
   # Lista de ações, venha em JSON (array) ou em formulário (hash indexado: actions[0][action_name]).

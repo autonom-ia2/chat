@@ -1,7 +1,8 @@
 # G29 (#2702): de onde o card veio, como escolha fechada da receita (`card.origem`). O `crm_cards.source` é gravado por
 # quem cria o card e mistura formatos: o card que nasce de uma conversa grava o tipo do canal (`Channel::Whatsapp`,
 # Crm::Cards::Creator#hydrate_from_conversation); os outros gravam um nome próprio. Aqui cada um vira um grupo que a
-# pessoa reconhece. O que não tem grupo (card do quadro, da API, de uma regra) é "outro".
+# pessoa reconhece. O que não tem grupo (card do quadro, da API, de uma regra, criado em grupo
+# na lista de Relacionamentos) é "outro".
 #
 # Quem cria card está em QUEM_CRIA_CARD; o spec derruba a CI quando surge um lugar novo, para o source dele ganhar grupo.
 module Autonomia::Automacao::OrigemDoCard
@@ -36,6 +37,7 @@ module Autonomia::Automacao::OrigemDoCard
     app/services/crm/meta_ads/lead_forms/importer.rb
     app/services/crm/subjects/acoes.rb
     app/services/crm/subjects/suggestion_responder.rb
+    app/services/relacionamentos/criar_cards.rb
   ].freeze
 
   module_function

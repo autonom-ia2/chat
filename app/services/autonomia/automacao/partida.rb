@@ -123,7 +123,7 @@ class Autonomia::Automacao::Partida
     @definicao.update!(ativa: false)
     execucao = criar(estado: 'parada')
     ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',
-                                             resultado: 'pulado', motivo: motivo)
+                                             resultado: 'pulado', motivo: motivo, dados: { ::Autonomia::Automacao::Registro::PAUSOU => true })
     nil
   end
 

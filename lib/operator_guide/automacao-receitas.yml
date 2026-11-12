@@ -7,11 +7,20 @@
 # O texto da mensagem fica em português: vira o texto da automação da pessoa, que ela muda no editor. Sem valor do
 # contato: contato sem nome faria o passo pular, e no WhatsApp o nome às vezes é o número. Quem quiser o nome põe depois.
 #
-# Quais entram (D-R1, Rodrigo 03/11): só as que o motor de hoje monta. Rodízio espera a #2502, Fora do horário a #2503,
-# Reclamação e Orçamento o passo de IA de verdade (#2523).
+# Quais entram (D-R1, Rodrigo 03/11): só as que o motor de hoje monta. Reclamação e Orçamento esperam o passo de IA de
+# verdade (#2523).
 # Boas-vindas (#2526) começa na mensagem, não no conversa.criada: a conversa que a equipe abre (Nova conversa, modelo,
 # campanha, agendamento, follow-up, comentário) também é criada, e o cliente receberia "já vamos te responder" sem ter
 # escrito. Ela só segue na primeira mensagem da conversa, vinda do cliente, numa conversa que o cliente começou.
+#
+# Fora do horário (#2503) lê `conversa.no_horario`, o horário de atendimento da caixa no fuso da conta (a caixa sem
+# horário ligado está sempre no horário, e a receita não manda nada). Depois de responder, espera 12 horas: a execução
+# aberta faz as outras mensagens da mesma noite não começarem de novo, e o cliente recebe um aviso por noite, não um
+# por mensagem.
+#
+# Dividir os clientes (#2502) passa cada conversa nova para a próxima pessoa online da caixa, pelo rodízio da caixa (o
+# passo `rodizio`). Não manda mensagem: não pede a mensagem automática. A conversa que já chega com alguém (a equipe
+# abriu, a atribuição automática da caixa ou um robô pegou) fica como está.
 #
 # O ícone e a cor da porta ficam no LivrePortas.vue (o Tailwind só enxerga as classes escritas nos .vue). A flag que a
 # receita pede sai dos passos (`requer` em automacao-passos.yml).
@@ -36,3 +45,25 @@ AGRADECER:
       - id: p1
         tipo: mensagem
         texto: ['Obrigado pelo contato! Se precisar, é só chamar.']
+
+FORA_DO_HORARIO:
+  receita:
+    gatilho:
+      tipo: mensagem.criada
+      filtros:
+        - { campo: { $valor: mensagem.tipo }, op: igual, valor: recebida }
+        - { campo: { $valor: conversa.no_horario }, op: igual, valor: false }
+    passos:
+      - id: p1
+        tipo: mensagem
+        texto: ['Olá! Recebemos sua mensagem fora do nosso horário de atendimento. Assim que voltarmos, a equipe te responde.']
+      - id: p2
+        tipo: esperar
+        duracao: { valor: 12, unidade: horas }
+
+DIVIDIR_LEADS:
+  receita:
+    gatilho: { tipo: conversa.criada }
+    passos:
+      - id: p1
+        tipo: rodizio

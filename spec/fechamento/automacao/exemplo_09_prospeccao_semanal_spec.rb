@@ -32,8 +32,7 @@ require 'rails_helper'
 #
 # O mundo: a conta tem o "Outro canal" do CRM ligado (`crm_outro_canal`, ligado em todas as contas em 07/11). É ele que
 # liga a conversa da resposta ao card que a prospecção criou, e é nessa conversa que vão o link e o resumo. Sem ele, a
-# deduplicação da caixa só reaproveita card da mesma caixa (Crm::Conversations::AutoCreateDeduplicator), o card da
-# prospecção nasce sem caixa, e a resposta abriria um segundo card para a mesma empresa.
+# deduplicação da caixa (Crm::Conversations::AutoCreateDeduplicator) também cai nesse card, que nasce sem caixa (#2770).
 #
 # Passo 4 à risca (G58, #2784, decisão da Automação em 09/11): a campanha usa o público desta execução
 # (`publico: desta_execucao`), não a etiqueta do mês. Vai só às empresas cujo card a busca da G21 criou nesta segunda:

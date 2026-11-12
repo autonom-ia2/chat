@@ -158,6 +158,8 @@ export const novoPasso = (entrada, id, t) => {
   // G66: sem escolha; a conversa vai para quem cuida do card na hora.
   if (entrada.tipo === 'conversa_ao_responsavel')
     return { id, tipo: 'conversa_ao_responsavel' };
+  // #2502: nasce entre todos da caixa; o time é escolha opcional.
+  if (entrada.tipo === 'rodizio') return { id, tipo: 'rodizio' };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
@@ -188,6 +190,24 @@ export const novoPasso = (entrada, id, t) => {
 // pede `sales_value_view`) fica marcado `sem_permissao` para quem não pode
 // lê-lo. A escolha não o oferece; o texto e a condição que já o usam continuam
 // mostrando o nome dele, e o salvar recusa até a pessoa tirar.
+// #2594: o campo de ação que pede permissão (o valor de venda do card) fica
+// marcado `sem_permissao` para quem não pode vê-lo. O "Alterar" não oferece pôr
+// um valor nele; o que outra pessoa já pôs aparece travado, sem o valor, com
+// "Tirar", porque o salvar recusa (campo_protegido) até ele sair.
+const semCamposProtegidos = (passos, podeLer) =>
+  passos.map(passo =>
+    passo.tipo === 'acao' && passo.campos.some(campo => campo.permissao)
+      ? {
+          ...passo,
+          campos: passo.campos.map(campo =>
+            campo.permissao && !podeLer(campo.permissao)
+              ? { ...campo, sem_permissao: true }
+              : campo
+          ),
+        }
+      : passo
+  );
+
 export const comPermissoes = (dados, podeLer) => {
   if (!dados?.valores) return dados;
   return {
@@ -197,6 +217,9 @@ export const comPermissoes = (dados, podeLer) => {
         ? { ...item, sem_permissao: true }
         : item
     ),
+    ...(dados.passos
+      ? { passos: semCamposProtegidos(dados.passos, podeLer) }
+      : {}),
   };
 };
 

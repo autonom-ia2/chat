@@ -921,6 +921,32 @@
       "na_origem": true
     },
     {
+      "caminho": "conversa.no_horario",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_NO_HORARIO",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "na_origem": true
+    },
+    {
       "caminho": "contato.tem_reuniao_marcada",
       "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TEM_REUNIAO_MARCADA",
@@ -1542,7 +1568,7 @@
           "nome": "condicao",
           "peca": "condicao",
           "obrigatorio": true,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO_DO_SE"
         },
         {
           "nome": "entao",
@@ -1757,6 +1783,19 @@
       "funil": true,
       "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_AO_RESPONSAVEL",
       "campos": []
+    },
+    {
+      "tipo": "rodizio",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.RODIZIO",
+      "campos": [
+        {
+          "nome": "time_id",
+          "peca": "time",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TIME_ID"
+        }
+      ]
     },
     {
       "tipo": "decidir",
@@ -2553,8 +2592,7 @@
           "nome": "color",
           "peca": "cor",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COLOR",
-          "obrigatorio": false,
-          "padrao": "#1f93ff"
+          "obrigatorio": false
         },
         {
           "nome": "show_on_sidebar",
@@ -2758,6 +2796,79 @@
           "obrigatorio": false
         }
       ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "card_alterar",
+      "acao": "PATCH crm/cards/:id",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_ALTERAR",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "caminho": {
+        "id": {
+          "$valor": "card.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "title",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO_DO_CARD",
+          "obrigatorio": false
+        },
+        {
+          "nome": "value_cents",
+          "peca": "dinheiro",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.VALUE_CENTS",
+          "obrigatorio": false,
+          "permissao": "sales_value_view",
+          "min": 0
+        },
+        {
+          "nome": "priority",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRIORITY",
+          "obrigatorio": false,
+          "opcoes": [
+            {
+              "valor": "low",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.LOW"
+            },
+            {
+              "valor": "medium",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.MEDIUM"
+            },
+            {
+              "valor": "high",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.HIGH"
+            },
+            {
+              "valor": "urgent",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.URGENT"
+            }
+          ]
+        },
+        {
+          "nome": "expected_close_at",
+          "peca": "data",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EXPECTED_CLOSE_AT",
+          "obrigatorio": false
+        },
+        {
+          "nome": "owner_id",
+          "peca": "pessoa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.OWNER_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_card",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
     }
   ],
   "receitas": [
@@ -2822,6 +2933,67 @@
             "texto": [
               "Obrigado pelo contato! Se precisar, é só chamar."
             ]
+          }
+        ]
+      }
+    },
+    {
+      "chave": "FORA_DO_HORARIO",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.FORA_DO_HORARIO.TITULO",
+      "requer": [
+        "automacao_mensagens"
+      ],
+      "receita": {
+        "gatilho": {
+          "tipo": "mensagem.criada",
+          "filtros": [
+            {
+              "campo": {
+                "$valor": "mensagem.tipo"
+              },
+              "op": "igual",
+              "valor": "recebida"
+            },
+            {
+              "campo": {
+                "$valor": "conversa.no_horario"
+              },
+              "op": "igual",
+              "valor": false
+            }
+          ]
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "mensagem",
+            "texto": [
+              "Olá! Recebemos sua mensagem fora do nosso horário de atendimento. Assim que voltarmos, a equipe te responde."
+            ]
+          },
+          {
+            "id": "p2",
+            "tipo": "esperar",
+            "duracao": {
+              "valor": 12,
+              "unidade": "horas"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "chave": "DIVIDIR_LEADS",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.DIVIDIR_LEADS.TITULO",
+      "requer": [],
+      "receita": {
+        "gatilho": {
+          "tipo": "conversa.criada"
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "rodizio"
           }
         ]
       }

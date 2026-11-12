@@ -3052,7 +3052,11 @@
         "JA_SABE": "{nome} já sabe",
         "ATUALIZADO_EM": "Atualizado em {data}",
         "PREPARANDO": "Os dados chegam em até 1 dia",
-        "EM_PREPARACAO": "Em preparação"
+        "EM_PREPARACAO": "Em preparação",
+        "GRATIS": {
+          "TITULO": "Consulta grátis",
+          "TEXTO": "Não entra na fatura"
+        }
       },
       "BUSCA": {
         "NADA": "Nada com “{termo}” por aqui ainda.",
@@ -3081,11 +3085,11 @@
         },
         "LUGAR": {
           "NOME": "Endereço e lugar",
-          "TEXTO": "Achar endereço, cidade e região."
+          "TEXTO": "Endereço, cidade, região, imóvel e fazenda."
         },
         "VEICULOS": {
           "NOME": "Veículos",
-          "TEXTO": "Valor de carro, moto e caminhão."
+          "TEXTO": "Valor e histórico de carro, moto e caminhão."
         },
         "SAUDE": {
           "NOME": "Saúde",
@@ -3110,10 +3114,6 @@
         "OUTROS": {
           "NOME": "Outros",
           "TEXTO": "Mercadorias."
-        },
-        "PREMIUM": {
-          "NOME": "Premium",
-          "TEXTO": "Consultas mais completas. Cada uma tem 20 grátis por mês."
         }
       },
       "DETALHE": {
@@ -3779,6 +3779,7 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
+        "LEGENDA": "Consulta mais completa. Cada uma tem {gratis} grátis por mês.",
         "DEPOIS": "Depois, {preco} cada",
         "AGORA": "Agora, {preco} cada",
         "FAIXA": "de {min} a {max}",

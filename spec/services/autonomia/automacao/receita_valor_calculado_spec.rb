@@ -20,6 +20,8 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def atributo(valor) = { 'merge' => true, 'custom_attributes' => { 'revisao' => valor } }
 
+  def texto_em_nivel(partes) = { 'merge' => true, 'custom_attributes' => { 'nivel' => { '$texto' => partes } } }
+
   def problemas(corpo, **) = described_class.new(receita(corpo, **), conta: account, account_user: nil).problemas
 
   def frase(chave, **) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'p1', **)
@@ -45,8 +47,9 @@ RSpec.describe Autonomia::Automacao::Receita do
   it 'confere cada caminho lido como confere os do caminho da ação', :aggregate_failures do
     expect(problemas(atributo({ '$valor' => 'contato.apelido' }))).to eq([frase(:valor_desconhecido, caminho: 'contato.apelido')])
     # #2716: o gatilho de conversa lê o card dela, mas o id do card não entra na ação.
-    expect(problemas(atributo({ '$texto' => ['oi ', { '$valor' => 'card.titulo' }] }))).to eq([])
-    expect(problemas(atributo({ '$texto' => ['card ', { '$valor' => 'card.id' }] })))
+    # O texto montado vai num atributo de texto (#2632): o `nivel`.
+    expect(problemas(texto_em_nivel(['oi ', { '$valor' => 'card.titulo' }]))).to eq([])
+    expect(problemas(texto_em_nivel(['card ', { '$valor' => 'card.id' }])))
       .to eq([frase(:card_da_conversa_so_le, caminho: 'card.id')])
     expect(problemas(atributo(data({ '$valor' => 'conversa.atributos.sumiu' }))))
       .to eq([frase(:atributo_inexistente, caminho: 'conversa.atributos.sumiu')])
@@ -65,6 +68,48 @@ RSpec.describe Autonomia::Automacao::Receita do
     expect(problemas({ 'priority' => texto }, acao: 'POST conversations/:id/toggle_priority'))
       .to eq([frase(:forma_nao_cabe, campo: 'priority')])
     expect(problemas({ 'merge' => data('hoje'), 'custom_attributes' => {} })).to include(frase(:forma_nao_cabe, campo: 'merge'))
+  end
+
+  # #2632: a forma tem de caber no tipo do atributo da conta; a chave que a conta não tem segue aceita ('nota' acima).
+  describe 'no atributo personalizado de outro tipo' do
+    before do
+      create(:custom_attribute_definition, account: account, attribute_model: :conversation_attribute, attribute_key: 'pontos',
+                                           attribute_display_type: :number)
+      create(:custom_attribute_definition, account: account, attribute_model: :conversation_attribute, attribute_key: 'site',
+                                           attribute_display_type: :link)
+    end
+
+    def no(chave, valor) = { 'merge' => true, 'custom_attributes' => { chave => valor } }
+
+    let(:montado) { { '$texto' => ['indicado por ', { '$valor' => 'contato.nome' }] } }
+
+    it 'recusa a data calculada fora do atributo de data', :aggregate_failures do
+      expect(problemas(no('pontos', data('hoje')))).to eq([frase(:data_fora_do_atributo, chave: 'pontos')])
+      expect(problemas(no('nivel', data('hoje')))).to eq([frase(:data_fora_do_atributo, chave: 'nivel')])
+    end
+
+    it 'recusa o texto montado fora do atributo de texto', :aggregate_failures do
+      expect(problemas(no('pontos', montado))).to eq([frase(:texto_fora_do_atributo, chave: 'pontos')])
+      expect(problemas(no('revisao', montado))).to eq([frase(:texto_fora_do_atributo, chave: 'revisao')])
+    end
+
+    it 'aceita cada forma no tipo dela, e o $valor em qualquer um', :aggregate_failures do
+      expect(problemas(no('revisao', data('hoje')))).to eq([])
+      expect(problemas(no('nivel', montado))).to eq([])
+      expect(problemas(no('site', montado))).to eq([])
+      expect(problemas(no('pontos', { '$valor' => 'contato.nome' }))).to eq([])
+    end
+
+    it 'olha o atributo do modelo que a ação grava: o do card no card, não o da conversa de mesma chave' do
+      create(:custom_attribute_definition, account: account, attribute_model: :card_attribute, attribute_key: 'nivel',
+                                           attribute_display_type: :list, attribute_values: %w[a b])
+      corpo = { 'card' => { 'custom_attributes' => { 'nivel' => montado } } }
+      passo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'PATCH crm/cards/:id', 'descricao' => 'Gravar',
+                'caminho' => { 'id' => { '$valor' => 'card.id' } }, 'corpo' => corpo }
+      receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo] }
+
+      expect(described_class.new(receita, conta: account, account_user: nil).problemas).to include(frase(:texto_fora_do_atributo, chave: 'nivel'))
+    end
   end
 
   it 'a data parte de um atributo de data do contato também' do

@@ -128,7 +128,10 @@ const mudar = (chave, novo) => {
         <label :for="idCampo" class="text-sm text-n-slate-11">
           {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.CAMPO') }}
         </label>
+        <!-- #2754: o que olhar costuma ser longo; em 390 px quebra linha. -->
         <ChoiceSelect
+          data-campo-condicao
+          wrap-selected
           :model-value="atual.campo"
           :trigger-id="idCampo"
           :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.CAMPO')"
