@@ -4,14 +4,16 @@ import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../AgenteBotao.vue';
 import AgenteErro from '../../AgenteErro.vue';
 import FerramentaInterruptor from './FerramentaInterruptor.vue';
+import ProntaQuando from './ProntaQuando.vue';
 
 // #1301 (protótipo F01) — lista das ferramentas do agente: frase do que cada uma faz, o
 // interruptor Ligada/Desligada. Sem limite de quantidade (#1430). A linha inteira abre a ferramenta.
 // Ligar sempre passa pelo teste e desligar pede confirmação: quem decide é a gaveta.
 // #2858 F2 — com a vitrine (`vitrine`), as prontas que o agente já tem vêm em cima das feitas à mão, com o
 // interruptor e "Tirar"; a ação principal passa a ser escolher uma pronta, e o cadastro manual vira "Criar a minha
-// (avançado)", só para quem pode usá-lo (`cadastroManual`). `prontas`: [{ id, nome, frase, icone, ligada }], já com
-// os textos (a gaveta resolve).
+// (avançado)", só para quem pode usá-lo (`cadastroManual`). `prontas`: [{ id, nome, frase, quando, icone, ligada }],
+// já com os textos (a gaveta resolve).
+// #2881 — cada pronta tem "Alterar quando usar" (ProntaQuando). `mudarQuando(item, frase)` é da gaveta e diz se gravou.
 const props = defineProps({
   nome: { type: String, required: true },
   ferramentas: { type: Array, required: true },
@@ -21,6 +23,7 @@ const props = defineProps({
   vitrine: { type: Boolean, default: false },
   prontas: { type: Array, default: () => [] },
   cadastroManual: { type: Boolean, default: true },
+  mudarQuando: { type: Function, default: null },
 });
 
 const emit = defineEmits([
@@ -130,28 +133,32 @@ const iconeDoMetodo = ferramenta =>
             >
               <span :class="item.icone" class="size-5" />
             </span>
-            <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+            <div class="flex flex-col flex-1 min-w-0 gap-0.5">
               <span class="text-sm font-semibold break-words text-n-slate-12">
                 {{ item.nome }}
               </span>
-              <span class="text-sm text-n-slate-11 line-clamp-2">
-                {{ item.frase }}
-              </span>
-              <button
-                type="button"
-                data-tirar
-                :aria-label="
-                  t(`${NS_VITRINE}.TIRAR_SR`, {
-                    ferramenta: item.nome,
-                    agente: nome,
-                  })
-                "
-                class="self-start px-2 -ms-2 text-sm font-medium rounded-lg min-h-11 text-n-ruby-11 hover:bg-n-ruby-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-                @click="emit('tirarPronta', item)"
+              <ProntaQuando
+                :frase="item.frase"
+                :quando="item.quando"
+                :ferramenta="item.nome"
+                :salvar="frase => mudarQuando(item, frase)"
               >
-                {{ t(`${NS_VITRINE}.TIRAR`) }}
-              </button>
-            </span>
+                <button
+                  type="button"
+                  data-tirar
+                  :aria-label="
+                    t(`${NS_VITRINE}.TIRAR_SR`, {
+                      ferramenta: item.nome,
+                      agente: nome,
+                    })
+                  "
+                  class="px-2 text-sm font-medium rounded-lg min-h-11 text-n-ruby-11 hover:bg-n-ruby-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+                  @click="emit('tirarPronta', item)"
+                >
+                  {{ t(`${NS_VITRINE}.TIRAR`) }}
+                </button>
+              </ProntaQuando>
+            </div>
             <FerramentaInterruptor
               :id="`pronta-interruptor-${item.id}`"
               class="mt-1"
