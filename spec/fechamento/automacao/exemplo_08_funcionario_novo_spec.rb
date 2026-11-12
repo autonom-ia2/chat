@@ -393,7 +393,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 8: funcionário novo no plano da emp
     manda_documento('Ana Prado', 'documentos-ana.pdf')
 
     expect(funil.cards.pluck(:solicitante_contact_id).uniq).to eq([rh.id])
-    sexta = Time.current.in_time_zone(fuso).next_occurring(:friday).change(hour: 9, min: 5)
+    # A sexta é a de pelo menos um dia depois de hoje: a conversa do RH já passou das 24 h e o aviso sai pelo modelo.
+    # Contar a partir de hoje dava, numa quinta depois das 9h05, a sexta seguinte com a janela ainda aberta (texto livre).
+    sexta = 1.day.from_now.in_time_zone(fuso).next_occurring(:friday).change(hour: 9, min: 5)
     varre(sexta)
 
     aviso = para(rh.phone_number).find { |corpo| corpo.dig('template', 'name') == 'documentos_pendentes' }
