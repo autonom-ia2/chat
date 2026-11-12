@@ -469,7 +469,7 @@ module Autonomia
       end
 
       # Uma chamada do modelo -> a saída. #2918: a travada pela `UmaEscritaPorTurno` não roda e conta como recusa (o portão
-      # do Testar e do Copiloto a vê); a que rodou só trava a próxima escrita quando deu certo, sem recusa nem erro.
+      # do Copiloto e de quem chama sem `trust_instruction` a vê); a que rodou só trava a próxima escrita sem recusa.
       def executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
         tool = tools_by_slug[call['name'].to_s]
         return repetidas[call].tap { |saida| anotar_leitura(tool, saida, recusou: true) } if repetidas.key?(call)
@@ -478,7 +478,7 @@ module Autonomia
         output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
         recusou = Tools::Recusa.registradas > recusas_antes
         anotar_leitura(tool, output, recusou: recusou)
-        @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, output: output, recusou: recusou)
+        @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, recusou: recusou)
         output
       end
 

@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# #2918, revisão (BAIXO): a chamada travada pela `UmaEscritaPorTurno` é recusa. No Testar e no Copiloto, o portão de
-# confiança não pode tomar o turno por "leu dado de sistema" quando uma das escritas foi travada (#1361): conta como
-# recusa no `anotar_leitura`, como qualquer outra.
+# #2918, revisão (BAIXO): a chamada travada pela `UmaEscritaPorTurno` é recusa. No Copiloto (e em quem chama sem
+# `trust_instruction`), o portão de confiança não pode tomar o turno por "leu dado de sistema" quando uma das escritas
+# foi travada (#1361): conta como recusa no `anotar_leitura`, como qualquer outra.
 RSpec.describe Autonomia::Agents::Answerer do
   let(:account) { create(:account) }
   let(:agent) do

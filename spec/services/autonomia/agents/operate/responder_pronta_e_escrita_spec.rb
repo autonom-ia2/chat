@@ -118,6 +118,20 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(saida_de(corpos[2], 'c2')).to eq('{"status":"registrado"}')
   end
 
+  # Revisão (BAIXO): o 2xx do sistema de fora é feito, mesmo com `{"error"}` no corpo. A chave de idempotência já avançou
+  # com o 2xx (`ChaveDeIdempotencia.concluir`): liberar outra tentativa podia duplicar a escrita. Não feito é só a recusa
+  # nossa ou o 4xx/5xx.
+  it 'o 2xx com "error" no corpo conta como feito: a segunda chamada não roda', :aggregate_failures do
+    executor = instance_double(Autonomia::Agents::Tools::HttpExecutor, call: '{"error":"pedido_duplicado"}')
+    allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_return(executor)
+    o_modelo_responde({ output: [chamada('c1')] }, { output: [chamada('c2')] }, { output_text: resposta_final })
+
+    responder
+
+    expect(executor).to have_received(:call).once
+    expect(saida_de(corpos[2], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::NAO_FEITA)
+  end
+
   it 'o texto da trava diz a verdade: este pedido não foi feito' do
     expect(Autonomia::Agents::Tools::UmaEscritaPorTurno::NAO_FEITA).to include('NÃO foi feito')
   end

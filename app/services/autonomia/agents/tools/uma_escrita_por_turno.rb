@@ -4,9 +4,11 @@
 # declara `escreve?`, como marcar horário) rodar até 3 vezes no turno.
 #
 # - Numa rodada, só a primeira chamada de cada ferramenta que escreve roda; as outras não vão ao sistema de fora.
-# - A ferramenta só conta como FEITA depois de rodar sem recusa e sem erro (`concluir`). A escrita que falhou (a
-#   conferência recusou, o horário era inválido, o sistema devolveu 4xx, a consulta não disparou) não trava: o modelo
-#   corrige o dado e tenta de novo, e o agente não confirma ao cliente o que não aconteceu.
+# - A ferramenta só conta como FEITA quando rodou sem recusa registrada (`concluir`). A escrita que falhou (a
+#   conferência recusou, o horário era inválido, o sistema devolveu 4xx ou 5xx, a consulta não disparou: todas passam
+#   pelo registro de recusa) não trava: o modelo corrige o dado e tenta de novo, e o agente não confirma ao cliente o
+#   que não aconteceu. O 2xx do sistema de fora é feito, mesmo com `{"error"}` no corpo: a chave de idempotência já
+#   avançou com ele (`ChaveDeIdempotencia.concluir`), e outra tentativa podia duplicar a escrita.
 # - A chamada travada não roda: o modelo lê `NAO_FEITA` (o pedido não foi feito, e pode ter outros argumentos), e a
 #   recusa fica registrada.
 #
@@ -35,10 +37,10 @@ class Autonomia::Agents::Tools::UmaEscritaPorTurno
     end
   end
 
-  # A chamada rodou: a escrita conta como feita só sem recusa registrada e sem a saída de erro (`{"error": ...}`).
-  def concluir(call, tools_by_slug, specialists_by_function, output:, recusou:)
+  # A chamada rodou: a escrita conta como feita só sem recusa registrada (a nossa, ou o 4xx/5xx do sistema de fora).
+  def concluir(call, tools_by_slug, specialists_by_function, recusou:)
     nome = call['name'].to_s
-    return if recusou || erro?(output) || !escrita?(nome, tools_by_slug, specialists_by_function)
+    return if recusou || !escrita?(nome, tools_by_slug, specialists_by_function)
 
     @feitas << nome
   end
@@ -47,13 +49,6 @@ class Autonomia::Agents::Tools::UmaEscritaPorTurno
 
   def escrita?(nome, tools_by_slug, specialists_by_function)
     !specialists_by_function.key?(nome) && tools_by_slug[nome]&.escreve? == true
-  end
-
-  def erro?(output)
-    dado = JSON.parse(output.to_s)
-    dado.is_a?(Hash) && dado.key?('error')
-  rescue JSON::ParserError
-    false
   end
 
   def recusa_registrada(slug)
