@@ -117,12 +117,22 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
           listas,
         });
 
+  // Um pedido de cada vez no modelo inteiro: cada resposta traz o modelo todo, e duas respostas fora de ordem
+  // deixariam na tela uma lista velha (a mudança seguinte nela apagaria a que o dono acabou de fazer). A mudança de
+  // outra lista espera a vez.
+  let fila = Promise.resolve();
+  const naVez = tarefa => {
+    const vez = fila.then(tarefa);
+    fila = vez.catch(() => {});
+    return vez;
+  };
+
   // `campo`: perguntas, documentos ou ferramentas. `itens`: a lista inteira nova.
   const mudar = async (campo, itens) => {
     if (gravando.value[campo] || !modelo.value) return;
     marcar(campo, true);
     try {
-      await gravar({ [campo]: itens });
+      await naVez(() => gravar({ [campo]: itens }));
     } catch (erro) {
       useAlert(avisoDoErro(erro));
     } finally {

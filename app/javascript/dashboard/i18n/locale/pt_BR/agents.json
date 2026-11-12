@@ -671,7 +671,7 @@
       },
       "RAMOS": {
         "TITULO": "Prontos para o seu ramo",
-        "TEXTO": "Já sabem explicar o seguro, tirar dúvidas e pedir os dados da cotação. Quando o cliente aceita, passam para a sua equipe.",
+        "TEXTO": "Já sabem explicar o seguro, tirar dúvidas e pedir os dados da cotação. Com os dados em mãos, passam para a sua equipe cotar.",
         "TEXTO_DA_PAGINA": "Escolha o seguro que você vende. O agente já vem pronto, e você decide quando ele começa a atender.",
         "OUTROS_TITULO": "Ou escolha pelo tipo de trabalho",
         "ITENS": {
@@ -704,7 +704,7 @@
             "TITULO": "O agente de {ramo} já vem sabendo",
             "EXPLICA": "Explicar o seguro e tirar as dúvidas mais comuns.",
             "PERGUNTA": "Pedir os dados da cotação, uma pergunta por vez.",
-            "PASSA": "Passar para a sua equipe quando o cliente aceitar."
+            "PASSA": "Passar para a sua equipe cotar, com os dados em mãos."
           }
         },
         "CONFIRA": {
@@ -726,8 +726,8 @@
           "EDITAR": "Editar",
           "EDITAR_SR": "Editar: {item}",
           "TIRAR_SR": "Tirar: {item}",
-          "VOLTAR": "Voltar",
-          "VOLTAR_SR": "Voltar: {item}",
+          "VOLTAR": "Pôr de volta",
+          "VOLTAR_SR": "Pôr de volta: {item}",
           "SALVAR": "Salvar",
           "CANCELAR": "Cancelar",
           "INCLUIR": "Incluir",

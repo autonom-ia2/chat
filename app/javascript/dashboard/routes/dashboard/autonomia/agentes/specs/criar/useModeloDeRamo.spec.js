@@ -198,7 +198,7 @@ describe('useModeloDeRamo', () => {
     expect(alerta).not.toHaveBeenCalled();
   });
 
-  it('while a list is being saved, another request for the same list is not accepted; another list is', async () => {
+  it('while a list is being saved, another request for the same list is not accepted; another list waits its turn', async () => {
     const { ramo } = usar();
     comConversa();
     let responder;
@@ -212,13 +212,21 @@ describe('useModeloDeRamo', () => {
     const primeira = ramo.mudar('perguntas', [MODELO.perguntas[0]]);
     expect(ramo.gravando.value.perguntas).toBe(true);
     await ramo.mudar('perguntas', []);
-    await ramo.mudar('documentos', []);
+    const segunda = ramo.mudar('documentos', []);
+    await flushPromises();
 
-    expect(store.dispatch).toHaveBeenCalledTimes(2);
-    expect(store.dispatch.mock.calls[1][1].listas).toEqual({ documentos: [] });
+    // One request at a time for the whole model: the answers can never arrive out of order.
+    expect(store.dispatch).toHaveBeenCalledTimes(1);
+    expect(ramo.gravando.value.documentos).toBe(true);
     responder();
     await primeira;
-    expect(ramo.gravando.value.perguntas).toBe(false);
+    await segunda;
+    expect(store.dispatch).toHaveBeenCalledTimes(2);
+    expect(store.dispatch.mock.calls[1][1].listas).toEqual({ documentos: [] });
+    expect(ramo.gravando.value).toEqual({
+      perguntas: false,
+      documentos: false,
+    });
   });
 
   it('a refused change warns in one short sentence and the list stays as the server has it', async () => {

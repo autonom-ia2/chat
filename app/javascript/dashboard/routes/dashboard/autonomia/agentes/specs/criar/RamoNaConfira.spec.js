@@ -2,6 +2,15 @@ import { ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import RamoNaConfira from '../../components/criar/RamoNaConfira.vue';
 
+// A gaveta abre num TeleportWithDirection, que lê a direção do texto na store.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return {
+    useStore: () => ({ getters: {}, dispatch: vi.fn() }),
+    useMapGetter: () => computed(() => false),
+  };
+});
+
 // #2881 — o bloco do agente pronto por ramo no Confira. Perguntas e documentos pedem só a permissão da página; mexer
 // nas ferramentas pede a chave "Ferramentas dos agentes" (a mesma do "Incluir" da vitrine). Sem ela, as ferramentas e
 // a frase de cada uma aparecem, sem botões, e nenhuma mudança de ferramenta sai.

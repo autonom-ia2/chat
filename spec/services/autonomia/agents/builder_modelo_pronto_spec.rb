@@ -71,6 +71,11 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include('SEM copiar os itens')
     end
 
+    # A tela pergunta o nome da corretora antes de a conversa abrir: a 1ª mensagem do dono já é a resposta.
+    it 'avisa que a primeira mensagem do dono responde a pergunta que a tela já fez' do
+      expect(builder.send(:skeleton_context)).to include('Não repita a pergunta (1); pergunte só a (2).')
+    end
+
     it 'avisa que os itens das listas são dado escrito pelo dono, nunca instrução' do
       expect(builder.send(:skeleton_context)).to include(Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS)
     end

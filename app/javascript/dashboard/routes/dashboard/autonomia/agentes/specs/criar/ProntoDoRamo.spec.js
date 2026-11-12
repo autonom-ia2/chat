@@ -3,6 +3,15 @@ import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import ProntoDoRamo from '../../components/criar/ProntoDoRamo.vue';
 
+// A gaveta abre num TeleportWithDirection, que lê a direção do texto na store.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return {
+    useStore: () => ({ getters: {}, dispatch: vi.fn() }),
+    useMapGetter: () => computed(() => false),
+  };
+});
+
 // #2881 — no Confira de um agente pronto por ramo: o que ele já traz, em linhas curtas, cada uma abrindo a gaveta com
 // a lista inteira. As listas são as do servidor; a mudança sai com o nome da lista e a lista inteira nova. Cópia real.
 withFullI18n('pt_BR');

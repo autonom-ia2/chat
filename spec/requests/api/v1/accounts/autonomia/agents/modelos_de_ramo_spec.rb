@@ -397,6 +397,9 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
 
       conversa.update!(agent: manual)
       expect(ver['modelo_pronto']).to be_nil
+      mudar(perguntas: [])
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(conversa.reload.state[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
     end
 
     it 'só deixa mexer nas ferramentas quem tem a chave "Ferramentas dos agentes"' do

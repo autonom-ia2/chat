@@ -202,7 +202,7 @@ watch(
       :href="linkDaVitrine"
       target="_blank"
       rel="noopener noreferrer"
-      class="inline-flex items-center gap-2 text-sm font-semibold w-fit min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+      class="relative inline-flex items-center gap-2 text-sm font-semibold w-fit min-h-11 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
     >
       <span class="i-lucide-plus size-4" aria-hidden="true" />
       {{ t(`${NS}.INCLUIR_FERRAMENTA`) }}
@@ -224,7 +224,7 @@ watch(
           :href="linkDaVitrine"
           target="_blank"
           rel="noopener noreferrer"
-          class="font-semibold underline text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+          class="relative font-semibold underline text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
         >
           {{ t(`${NS}.VER_PAGAS`) }}
           <span class="sr-only">

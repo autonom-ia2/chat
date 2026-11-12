@@ -671,7 +671,7 @@
       },
       "RAMOS": {
         "TITULO": "Ready for your line of business",
-        "TEXTO": "They already know how to explain the insurance, answer questions and ask for the quote details. When the customer agrees, they hand over to your team.",
+        "TEXTO": "They already know how to explain the insurance, answer questions and ask for the quote details. With the details in hand, they hand over to your team to quote.",
         "TEXTO_DA_PAGINA": "Pick the insurance you sell. The agent comes ready, and you decide when it starts serving.",
         "OUTROS_TITULO": "Or pick by kind of work",
         "ITENS": {
@@ -704,7 +704,7 @@
             "TITULO": "The agent for {ramo} already knows how to",
             "EXPLICA": "Explain the insurance and answer the most common questions.",
             "PERGUNTA": "Ask for the quote details, one question at a time.",
-            "PASSA": "Hand over to your team when the customer agrees."
+            "PASSA": "Hand over to your team to quote, with the details in hand."
           }
         },
         "CONFIRA": {
