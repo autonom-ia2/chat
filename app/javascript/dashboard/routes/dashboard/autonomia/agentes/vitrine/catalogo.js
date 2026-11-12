@@ -18,8 +18,6 @@ export const GRUPOS = [
   { id: 'CLIENTES', icone: 'i-lucide-search-check', tom: 'violeta' },
   { id: 'SEGUROS', icone: 'i-lucide-shield-check', tom: 'azul' },
   { id: 'OUTROS', icone: 'i-lucide-shapes', tom: 'cinza' },
-  // F7: as consultas pagas (selo "Premium", 20 grátis por card e depois o preço que o servidor manda).
-  { id: 'PREMIUM', icone: 'i-lucide-gem', tom: 'violeta' },
 ];
 
 // A data de exemplo da contagem de dias úteis: daqui a 20 dias (sempre no futuro, dentro do limite de dois anos).
@@ -30,8 +28,9 @@ const DIAS_DO_EXEMPLO = 20;
 // `semCampo`: o "Experimente" não pede valor (o servidor responde o dólar do dia).
 // `exemplo`: o valor de exemplo que muda com o tempo (a data final da contagem de dias úteis); sem ele, o do i18n.
 // `base`: a fonte é uma base que a plataforma baixa (F5); o cartão diz de quando é a cópia.
-// `premium`: consulta paga (F7). Não entra no destaque; o preço e as grátis que restam vêm do servidor (`premium` de
-// cada fonte em `listar`). O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
+// `premium`: consulta paga (F7). Fica no grupo do assunto, depois das grátis do grupo (`premiumPorUltimo`), com o selo
+// "Premium". Não entra no destaque; o preço e as grátis que restam vêm do servidor (`premium` de cada fonte em
+// `listar`). O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
 export const FERRAMENTAS = [
   { id: 'cnpj', grupo: 'PESSOAS', icone: 'i-lucide-building-2' },
   {
@@ -137,48 +136,48 @@ export const FERRAMENTAS = [
   // F7 (flag `agente_ferramentas_prontas_premium`)
   {
     id: 'certidoes_empresa',
-    grupo: 'PREMIUM',
+    grupo: 'PESSOAS',
     icone: 'i-lucide-file-check-2',
     consultas: 5,
     premium: true,
   },
   {
     id: 'raio_x_empresa',
-    grupo: 'PREMIUM',
+    grupo: 'PESSOAS',
     icone: 'i-lucide-scan-search',
     consultas: 5,
     premium: true,
   },
   {
     id: 'conferir_pessoa',
-    grupo: 'PREMIUM',
+    grupo: 'PESSOAS',
     icone: 'i-lucide-user-check',
     consultas: 3,
     premium: true,
   },
   {
     id: 'historico_placa',
-    grupo: 'PREMIUM',
+    grupo: 'VEICULOS',
     icone: 'i-lucide-car-front',
     premium: true,
   },
   {
     id: 'risco_endereco',
-    grupo: 'PREMIUM',
+    grupo: 'LUGAR',
     icone: 'i-lucide-house',
     consultas: 3,
     premium: true,
   },
   {
     id: 'imovel_rural',
-    grupo: 'PREMIUM',
+    grupo: 'LUGAR',
     icone: 'i-lucide-tractor',
     consultas: 2,
     premium: true,
   },
   {
     id: 'contato_empresa',
-    grupo: 'PREMIUM',
+    grupo: 'CLIENTES',
     icone: 'i-lucide-contact',
     consultas: 3,
     premium: true,
@@ -202,6 +201,12 @@ export const oferecida = id => {
 // As do catálogo que o servidor liberou para a conta, na ordem da vitrine, fora as de uso interno.
 export const liberadas = chaves =>
   FERRAMENTAS.filter(item => chaves.includes(item.id) && oferecida(item.id));
+
+// Dentro de um grupo, as grátis primeiro e as Premium depois (a ordem entre elas é a do catálogo).
+export const premiumPorUltimo = ferramentas => [
+  ...ferramentas.filter(item => !item.premium),
+  ...ferramentas.filter(item => item.premium),
+];
 
 // Destaque pelo ramo da conta (camadas do pacote, #1550): a conta de corretora vê o que vale para "seguros".
 export const emDestaque = (ferramentas, camadas) => {

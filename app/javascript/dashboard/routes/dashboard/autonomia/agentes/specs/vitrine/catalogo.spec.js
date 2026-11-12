@@ -7,6 +7,7 @@ import {
   ferramentaPorId,
   liberadas,
   oferecida,
+  premiumPorUltimo,
 } from '../../vitrine/catalogo';
 
 // #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5 + F7), com as chaves dele, os textos no i18n e o
@@ -141,7 +142,7 @@ describe('catálogo da vitrine', () => {
     );
   });
 
-  it('the 7 Premium cards are in the Premium group, with the group and price texts in both languages, and never highlighted', () => {
+  it('the 7 Premium cards sit in the group of their subject, after the free ones, with the price texts in both languages, and never highlighted', () => {
     const premium = FERRAMENTAS.filter(item => item.premium);
     expect(premium.map(item => item.id)).toEqual([
       'certidoes_empresa',
@@ -152,11 +153,32 @@ describe('catálogo da vitrine', () => {
       'imovel_rural',
       'contato_empresa',
     ]);
-    premium.forEach(item => expect(item.grupo).toBe('PREMIUM'));
-    expect(GRUPOS.map(grupo => grupo.id)).toContain('PREMIUM');
+    expect(
+      Object.fromEntries(premium.map(item => [item.id, item.grupo]))
+    ).toEqual({
+      certidoes_empresa: 'PESSOAS',
+      raio_x_empresa: 'PESSOAS',
+      conferir_pessoa: 'PESSOAS',
+      historico_placa: 'VEICULOS',
+      risco_endereco: 'LUGAR',
+      imovel_rural: 'LUGAR',
+      contato_empresa: 'CLIENTES',
+    });
+    expect(GRUPOS.map(grupo => grupo.id)).not.toContain('PREMIUM');
+    const pessoas = premiumPorUltimo(
+      liberadas(CHAVES_DO_SERVIDOR).filter(item => item.grupo === 'PESSOAS')
+    );
+    expect(pessoas.map(item => item.id)).toEqual([
+      'cnpj',
+      'cpf',
+      'certidoes_empresa',
+      'raio_x_empresa',
+      'conferir_pessoa',
+    ]);
     ['pt_BR', 'en'].forEach(locale => {
       [
         'SELO',
+        'LEGENDA',
         'DEPOIS',
         'AGORA',
         'FAIXA',
@@ -178,7 +200,7 @@ describe('catálogo da vitrine', () => {
       ].forEach(campo =>
         expect(te(`AGENTS.VITRINE.PREMIUM.${campo}`, locale)).toBe(true)
       );
-      expect(te('AGENTS.VITRINE.GRUPOS.PREMIUM.NOME', locale)).toBe(true);
+      expect(te('AGENTS.VITRINE.GRUPOS.PREMIUM.NOME', locale)).toBe(false);
     });
     const todas = liberadas(CHAVES_DO_SERVIDOR);
     expect(emDestaque(todas, ['seguros']).some(item => item.premium)).toBe(
