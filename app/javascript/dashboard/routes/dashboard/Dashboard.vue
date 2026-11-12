@@ -40,6 +40,7 @@ import GuideHighlight from 'dashboard/components/autonomia/guide/GuideHighlight.
 import { versaoDaConta } from 'dashboard/components/autonomia/guide/contaMudou';
 
 import MobileSidebarLauncher from 'dashboard/components-next/sidebar/MobileSidebarLauncher.vue';
+import { useTelaDeConversa } from 'dashboard/components-next/sidebar/useTelaDeConversa';
 import { useCallsStore } from 'dashboard/stores/calls';
 
 export default {
@@ -66,6 +67,11 @@ export default {
     const { width: windowWidth } = useWindowSize();
     const callsStore = useCallsStore();
     useFusoAutomatico();
+    // #2477: fora da conversa, abaixo de md, o botão flutuante do menu
+    // (MobileSidebarLauncher, fixo em bottom-4 start-4, 56 px de altura) fica
+    // por cima de toda tela. O layout reserva a faixa dele embaixo de uma vez:
+    // o conteúdo de qualquer página termina acima do botão, sem classe por tela.
+    const telaDeConversa = useTelaDeConversa();
 
     return {
       uiSettings,
@@ -75,6 +81,7 @@ export default {
       windowWidth,
       hasActiveCall: computed(() => callsStore.hasActiveCall),
       hasIncomingCall: computed(() => callsStore.hasIncomingCall),
+      telaDeConversa,
       // Remonta a página quando o Guia muda a conta (#894).
       versaoDaConta,
     };
@@ -164,6 +171,7 @@ export default {
 
     <main
       class="flex flex-1 h-full w-full min-h-0 px-0 overflow-hidden bg-n-surface-1"
+      :class="{ 'max-md:pb-20': !telaDeConversa }"
     >
       <UpgradePage
         v-show="showUpgradePage"
