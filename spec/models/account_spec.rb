@@ -343,7 +343,9 @@ RSpec.describe Account do
         # #2889: automacao_porta, 42 (1 << 41); depois dela a F5 (43) e a F7 (44) da vitrine #2858.
         feature_automacao_porta: 2_199_023_255_552,
         feature_agente_ferramentas_prontas_bases: 4_398_046_511_104, feature_agente_ferramentas_prontas_premium: 8_796_093_022_208,
-        feature_relacionamentos_novo: 17_592_186_044_416
+        feature_relacionamentos_novo: 17_592_186_044_416,
+        # #2897: carteira_seguros. posição provisória: conferir contra a main antes do merge
+        feature_carteira_seguros: 70_368_744_177_664
       )
     end
 

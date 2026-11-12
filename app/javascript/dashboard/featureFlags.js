@@ -103,6 +103,8 @@ export const FEATURE_FLAGS = {
   AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
   // #2894 — Relacionamentos: lista, ficha e "Trazer minha lista" novas.
   RELACIONAMENTOS_NOVO: 'relacionamentos_novo',
+  // #2897 — carteira de seguros: aba Seguros, bloco na ficha e painel da conversa.
+  CARTEIRA_SEGUROS: 'carteira_seguros',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',

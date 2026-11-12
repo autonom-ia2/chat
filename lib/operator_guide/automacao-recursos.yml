@@ -294,6 +294,12 @@ fora:
     recursos:
       - relacionamentos/cards
       - relacionamentos/etiqueta
+  - motivo: >-
+      Carteira de seguros (#2897): corrigir um seguro, marcar como cancelado e voltar a ativo mudam o dado de um cliente
+      que a corretora confere com a apólice na mão; nesta entrega é ação de pessoa, na gaveta do seguro, não passo de
+      automação. Guardar e tirar o PDF nem chegam ao catálogo: só se fazem na tela (Acoes::SO_NA_TELA).
+    recursos:
+      - relacionamentos/seguros
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

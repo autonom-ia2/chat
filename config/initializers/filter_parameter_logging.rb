@@ -37,7 +37,12 @@ Rails.application.config.filter_parameters += [
   :cpf, :cnpj, :documento,
   # #2895 — o que a pessoa digita na busca da lista de Relacionamentos (`busca`) costuma ser nome, telefone ou CPF de
   # cliente: não vai para o log. O filtro casa qualquer chave que contenha "busca"; em outro endpoint, só o log perde o texto.
-  :busca
+  :busca,
+  # #2897 — carteira de seguros: o que a pessoa corrige num seguro (PATCH relacionamentos/seguros/:id) e o PDF que ela
+  # guarda são dados do cliente. O número da apólice, a seguradora e o bem (que costuma trazer a placa) não vão para o log,
+  # nem o `arquivo` enviado (o log mostraria o nome do arquivo); `valor` e `busca` já saem filtrados acima. O filtro casa
+  # qualquer chave que contenha "numero", "seguradora", "bem" ou "arquivo": em outro endpoint, só o log perde o valor.
+  :numero, :seguradora, :bem, :arquivo
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
