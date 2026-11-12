@@ -19,6 +19,31 @@ O teto global (`TetoDoProvedor`) é:
 - **janela fixa no Redis**: passou do teto, aquele provedor é pulado com o motivo `teto_do_provedor` e a reserva tenta;
 - **sem Redis, o pedido segue**: o teto protege a cota, não o dado. Fica um aviso no log.
 
+### IP próprio da conta (#2942)
+
+Com a flag `agente_ferramentas_prontas_ip_proprio`, as consultas grátis de cada conta saem por um IP próprio do plano
+datacenter da Webshare (o Premium e o WhatsApp não mudam). O teto muda junto:
+
+- **o pedido conta só no teto daquele IP**, e esse teto é o **global inteiro** do host (a tabela abaixo). A cota da fonte
+  é por IP e o IP é de uma conta só, então a fatia de 25% (que reparte o IP do servidor entre todas as contas) não se
+  aplica;
+- **não gasta a cota do IP do servidor**: o teto global e a fatia continuam valendo para quem sai por ele (flag
+  desligada, ou sem IP próprio, abaixo);
+- **o contador é do IP**: o IP que volta da quarentena para outra conta chega com o que já gastou na janela;
+- **os IPs da Webshare são compartilhados com outros clientes dela**: o limite real de cada IP só se conhece medindo.
+  Toda resposta 429 ou 403 vai ao log (`[autonomia][pronta][saida] recusa`) e ao contador do dia no Redis
+  (`autonomia:prontas:saida:recusas:<dia>`, por saída, host e status, inclusive pelo IP do servidor). Três recusas do
+  mesmo host no mesmo IP, sem pausa de 10 minutos, põem o IP de molho por 6 horas (no máximo 5 IPs em 24 horas), e a
+  conta ganha outro na consulta seguinte;
+- **sem IP próprio** (Webshare fora, fatia vazia, nenhum IP livre): a consulta sai pelo IP do servidor, como antes, e o
+  cliente recebe a resposta; fica o aviso no log, o alerta `sem_ip_proprio` e o contador
+  `autonomia:prontas:saida:sem_ip:<dia>` (decisão do Rodrigo, 12/11/2026).
+
+Configuração por stack (só os nomes): `WEBSHARE_API_KEY` (a mesma do WhatsApp Híbrido), `WEBSHARE_LOOKUP_PROXY_ADDRESSES`
+(os IPs desta stack para as consultas, separados por vírgula, sem repetir os de outra stack) e os mesmos IPs também em
+`WEBSHARE_RESERVED_PROXY_ADDRESSES` (o WhatsApp nunca os oferece). O código confere: IP da fatia fora da reservada fica de
+fora, com alerta. `WEBSHARE_DATACENTER_PLAN_ID` é opcional (sem ela, vale o plano datacenter ativo).
+
 **Desligar um provedor sem deploy:** ponha o host na configuração `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS`, uma lista
 separada por vírgula. Vale tanto como configuração da instalação (Super Admin) quanto como variável de ambiente.
 Desligado, o provedor é pulado com o motivo `provedor_desligado`.

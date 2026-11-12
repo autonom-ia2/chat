@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1182,6 +1182,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.string "motivo_do_cancelamento"
     t.index ["geracao", "cnpj"], name: "idx_prontas_operadoras_cnpj"
     t.index ["geracao", "registro_ans"], name: "idx_prontas_operadoras_registro"
+  end
+
+  create_table "autonomia_prontas_proxies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "proxy_address", null: false
+    t.integer "proxy_port", null: false
+    t.string "webshare_proxy_id"
+    t.datetime "assigned_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_autonomia_prontas_proxies_on_account_id", unique: true
+    t.index ["proxy_address"], name: "index_autonomia_prontas_proxies_on_proxy_address", unique: true
+  end
+
+  create_table "autonomia_prontas_proxy_quarantines", force: :cascade do |t|
+    t.string "proxy_address", null: false
+    t.datetime "quarantined_until", null: false
+    t.string "reason", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["proxy_address"], name: "index_autonomia_prontas_proxy_quarantines_on_proxy_address", unique: true
   end
 
   create_table "autonomia_prontas_transportadores", force: :cascade do |t|
@@ -4961,6 +4982,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   add_foreign_key "autonomia_guide_vigias", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_vigias", "users", column: "criado_por_id", on_delete: :nullify
   add_foreign_key "autonomia_insurance_connections", "accounts"
+  add_foreign_key "autonomia_prontas_proxies", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_searches", column: "prospect_search_id", on_delete: :nullify

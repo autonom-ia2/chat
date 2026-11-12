@@ -7,6 +7,11 @@
 #   - o GLOBAL, da plataforma inteira (`TETOS`);
 #   - a FATIA de cada conta (`FATIA` do global, ao menos 1): uma conta, ou um contato insistente numa conta, não gasta o
 #     teto de todas.
+# COM IP PRÓPRIO (#2942, `Saida`): a conta que sai pelo IP dela na Webshare não gasta a cota do IP do servidor. O pedido
+# conta só no teto DAQUELE IP (`saida:`), que vale o teto global inteiro do host: a cota da fonte é por IP, e o IP é só da
+# conta (índice único), então a fatia, que existe para repartir um IP entre todas as contas, não se aplica. O contador
+# é do IP, não da conta: o IP que volta da quarentena para outra conta chega com o que já gastou na janela. Sem IP
+# próprio (flag desligada, ou Webshare fora e sem IP livre), vale o global e a fatia, como sempre.
 # Conta só o que sai para a rede: o que vem do cache não gasta. Passou de qualquer um: o provedor é pulado com o motivo
 # `teto_do_provedor`, e a reserva tenta. Os números e de onde vêm estão em `docs/ferramentas-prontas/termos-das-fontes.md`;
 # mudou o termo de uma fonte, muda aqui e lá. Vale também para CEP, CNPJ e FIPE (F0), de propósito: a cota é a mesma.
@@ -63,11 +68,22 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
   end
 
   # -> true quando o pedido cabe (e já foi contado); false quando o host passou de algum teto, global ou da conta.
-  def reservar!(host, conta: nil, agora: Time.now.to_i)
+  # `saida`: o IP próprio por onde o pedido sai (#2942); nil é o IP do servidor.
+  def reservar!(host, conta: nil, saida: nil, agora: Time.now.to_i)
+    return reservar_no_ip!(host, saida, agora) if saida
+
     tetos(host).all? do |pedidos, janela|
       (conta.nil? || contar(chave(host, janela, agora, conta), janela) <= fatia(pedidos)) &&
         contar(chave(host, janela, agora), janela) <= pedidos
     end
+  rescue *ERROS_DO_REDIS => e
+    Rails.logger.warn("[autonomia][pronta] teto do provedor sem Redis host=#{host} #{e.class}")
+    true
+  end
+
+  # O teto do host inteiro, contado só no IP próprio.
+  def reservar_no_ip!(host, saida, agora)
+    tetos(host).all? { |pedidos, janela| contar(chave_do_ip(host, janela, agora, saida), janela) <= pedidos }
   rescue *ERROS_DO_REDIS => e
     Rails.logger.warn("[autonomia][pronta] teto do provedor sem Redis host=#{host} #{e.class}")
     true
@@ -88,6 +104,10 @@ module Autonomia::FerramentasProntas::TetoDoProvedor
 
   def chave(host, janela, agora, conta = nil)
     [CHAVE, host.to_s.downcase, conta && "conta-#{conta.to_i}", janela, agora / janela].compact.join(':')
+  end
+
+  def chave_do_ip(host, janela, agora, saida)
+    [CHAVE, host.to_s.downcase, "ip-#{saida}", janela, agora / janela].join(':')
   end
 
   def contar(chave, janela)

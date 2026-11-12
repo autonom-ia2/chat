@@ -17,7 +17,12 @@
 #     prazo (#2906: PNCP a frio, prazo de 5 s, 9,8 s medidos). Quem tenta de novo é a consulta (reserva, último dia);
 #   - só JSON (ou CSV, onde a fonte oficial só publica CSV: `get_csv`);
 #   - teto global por host (`TetoDoProvedor`), contado só no pedido que sai, e o host desligado pela configuração
-#     (`TetoDoProvedor.desligado?`): nenhum dos dois chega à rede.
+#     (`TetoDoProvedor.desligado?`): nenhum dos dois chega à rede;
+#   - a saída (#2942): com a flag `agente_ferramentas_prontas_ip_proprio`, o pedido sai pelo IP próprio da conta na
+#     Webshare (`Saida.para`, lida uma vez por cliente, na 1ª chamada que sai para a rede), e o teto conta por esse IP.
+#     As mesmas proteções valem: o túnel do proxy vai para o IP já conferido, e o TLS até o site. 429 e 403 vão à
+#     telemetria por IP e host (`Saida::Recusas`), que põe o IP de molho quando repetem. O proxy que recusa o túnel
+#     falha com `falha_do_proxy` (a lista da Webshare é relida: a credencial pode ter mudado).
 #
 # Erro vira `Provedor::Falha` com um motivo curto do código (`tempo_esgotado`, `erro_da_fonte`…): a mensagem de fora
 # (que pode trazer o endereço, com o CEP ou o CNPJ) nunca vai a log nem ao modelo.
@@ -60,7 +65,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
   attr_reader :chamadas
 
   # `hosts`: os do catálogo para esta fonte. `prazo_final`: o instante (relógio monotônico) em que a consulta acaba.
-  # `conta`: para a fatia de cada conta no teto global (`TetoDoProvedor`).
+  # `conta`: o id, para a fatia de cada conta no teto global (`TetoDoProvedor`) e o IP próprio dela (`Saida`).
   def initialize(hosts:, prazo_final:, conta: nil)
     @conta = conta
     @hosts = hosts.map(&:downcase)
@@ -126,11 +131,43 @@ class Autonomia::FerramentasProntas::ClienteHttp
     fixos = resolucao(host)
     liberar!(host)
     @chamadas += 1
-    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita), **fixos) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
+    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita), **fixos, **pela_saida) do |resultado|
+      return abrir(resultado.tempfile.read, max_bytes)
+    end
   rescue SafeFetch::Error => e
+    recusou(host, e)
     raise traduzir(e)
+  rescue Net::HTTPExceptions
+    raise falha_do_proxy
   rescue *TRANSPORTE
     raise Falha, 'falha_de_rede'
+  end
+
+  # A saída da conta: o `SafeFetch::Proxy` do IP próprio, ou nil (o IP do servidor). Lida uma vez por cliente.
+  def saida
+    return @saida if defined?(@saida)
+
+    @saida = Autonomia::FerramentasProntas::Saida.para(@conta)
+  end
+
+  def pela_saida
+    saida ? { proxy: saida } : {}
+  end
+
+  def recusou(host, erro)
+    return unless erro.is_a?(SafeFetch::HttpError) && Autonomia::FerramentasProntas::Saida::Recusas.recusa?(erro.status)
+
+    Autonomia::FerramentasProntas::Saida::Recusas.registrar!(host: host, status: erro.status.to_i, saida: saida, conta: @conta)
+  end
+
+  # Só o túnel do proxy levanta `Net::HTTPExceptions` aqui (o `CONNECT` respondido com erro: credencial trocada, IP
+  # fora). Sem proxy, segue como falha de rede.
+  def falha_do_proxy
+    return Falha.new('falha_de_rede') if saida.nil?
+
+    Autonomia::FerramentasProntas::Saida::ListaDaWebshare.esquecer!
+    Rails.logger.warn("[autonomia][pronta][saida] o proxy recusou o túnel conta=#{@conta}")
+    Falha.new('falha_do_proxy')
   end
 
   # O corpo em gzip (pelos dois primeiros bytes, não pelo cabeçalho, que a fonte pode omitir) é aberto até `max_bytes`.
@@ -163,7 +200,9 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   def liberar!(host)
     raise Falha, 'provedor_desligado' if Autonomia::FerramentasProntas::TetoDoProvedor.desligado?(host)
-    raise Falha, 'teto_do_provedor' unless Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host, conta: @conta)
+
+    cabe = Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host, conta: @conta, saida: saida&.address)
+    raise Falha, 'teto_do_provedor' unless cabe
   end
 
   def endereco(host, caminho)
