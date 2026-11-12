@@ -12,7 +12,10 @@ import ApiClient from '../ApiClient';
 //   experimentar  -> { situacao: 'encontrado' | 'nao_encontrado' | 'nao_consegui_consultar' | 'pedido_invalido' |
 //                    'desligada' | 'documento_invalido' | 'confirmar_preco', dados?, premium? } (F7: no card Premium,
 //                    `premium` é o contador novo; `confirmar_preco`, as grátis acabaram e faltou o clique no preço,
-//                    que vai em `confirmou_preco`)
+//                    que vai em `confirmou_preco`). No card Premium com consulta, 202 { situacao: 'consultando',
+//                    pedido, premium }: a consulta paga roda em segundo plano
+//   acompanhar    -> o pedido do Experimente Premium: { situacao: 'consultando' } ou o resultado, como no
+//                    `experimentar` | 404 (pedido vencido ou de outra conta)
 //   buscaSemResultado -> 204
 //   sugestoes     -> { ferramentas: [chave] } (F3: o cartão "pode ganhar"; sem a flag do Construtor, 404)
 //   dispensar     -> 204 ("Agora não": aquela sugestão não volta para o agente)
@@ -47,6 +50,10 @@ class AutonomiaFerramentasProntasAPI extends ApiClient {
       valor,
       confirmou_preco: confirmouPreco,
     });
+  }
+
+  acompanhar(pedido) {
+    return axios.get(`${this.url}/experimentar/${pedido}`);
   }
 
   buscaSemResultado(termo) {

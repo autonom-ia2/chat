@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   mudarLigada: vi.fn(),
   tirar: vi.fn(),
   experimentar: vi.fn(),
+  acompanhar: vi.fn(),
   buscaSemResultado: vi.fn(),
 }));
 vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({ default: api }));
@@ -273,6 +274,115 @@ describe('useVitrine · experimentar e busca', () => {
     api.experimentar.mockRejectedValueOnce(falha(503));
     await vitrine.experimentar('cep', '1');
     expect(api.listar).toHaveBeenCalledTimes(2);
+  });
+
+  // Revisor (ALTO 1, 12/11): o card Premium responde "consultando" com o id do pedido; a composable pergunta pelo id,
+  // com intervalo crescente, até o resultado (e o contador novo do card).
+  describe('o Experimente Premium em segundo plano', () => {
+    const cardPremium = restantes => ({
+      data: {
+        ...LISTA,
+        fontes: [
+          ...LISTA.fontes,
+          {
+            chave: 'historico_placa',
+            premium: { gratis: 20, restantes, precos: ['0.09'] },
+          },
+        ],
+      },
+    });
+    const consultando = {
+      data: {
+        situacao: 'consultando',
+        pedido: 'pedido-1',
+        premium: { gratis: 20, restantes: 12, precos: ['0.09'] },
+      },
+    };
+
+    // O relógio falso só depois de carregar: o `import()` do estado novo não anda com ele.
+    afterEach(() => vi.useRealTimers());
+
+    it('asks for the request with growing intervals until the result, and updates the card counter', async () => {
+      api.listar.mockResolvedValue(cardPremium(12));
+      const vitrine = await novoEstado();
+      await vitrine.carregar();
+      vi.useFakeTimers();
+      api.experimentar.mockResolvedValue(consultando);
+      const novo = { gratis: 20, restantes: 11, precos: ['0.09'] };
+      api.acompanhar
+        .mockResolvedValueOnce({ data: { situacao: 'consultando' } })
+        .mockResolvedValueOnce({
+          data: { situacao: 'encontrado', dados: { a: 1 }, premium: novo },
+        });
+
+      const resposta = vitrine.experimentar('historico_placa', 'ABC1D23');
+      await vi.advanceTimersByTimeAsync(999);
+      expect(api.acompanhar).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(api.acompanhar).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(api.acompanhar).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(await resposta).toEqual({
+        situacao: 'encontrado',
+        dados: { a: 1 },
+        premium: novo,
+      });
+      expect(api.acompanhar).toHaveBeenCalledWith('pedido-1');
+      expect(vitrine.premiumDe('historico_placa')).toEqual(novo);
+    });
+
+    it('after about 70 seconds without a result, says it could not confirm and reads the counter again', async () => {
+      api.listar.mockResolvedValue(cardPremium(12));
+      const vitrine = await novoEstado();
+      await vitrine.carregar();
+      vi.useFakeTimers();
+      api.experimentar.mockResolvedValue(consultando);
+      api.acompanhar.mockResolvedValue({ data: { situacao: 'consultando' } });
+      api.listar.mockResolvedValue(cardPremium(11));
+
+      const resposta = vitrine.experimentar('historico_placa', 'ABC1D23');
+      await vi.advanceTimersByTimeAsync(68000);
+      expect(api.listar).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(await resposta).toEqual({ situacao: 'sem_confirmacao' });
+      expect(api.listar).toHaveBeenCalledTimes(2);
+      expect(vitrine.premiumDe('historico_placa').restantes).toBe(11);
+      expect(api.acompanhar.mock.calls.length).toBeLessThan(15);
+    });
+
+    it('a request that no longer exists (404) stops asking and says it could not confirm', async () => {
+      api.listar.mockResolvedValue(cardPremium(12));
+      const vitrine = await novoEstado();
+      await vitrine.carregar();
+      vi.useFakeTimers();
+      api.experimentar.mockResolvedValue(consultando);
+      api.acompanhar.mockRejectedValue(falha(404));
+
+      const resposta = vitrine.experimentar('historico_placa', 'ABC1D23');
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(await resposta).toEqual({ situacao: 'sem_confirmacao' });
+      expect(api.acompanhar).toHaveBeenCalledTimes(1);
+    });
+
+    it('a network failure while asking keeps asking until the deadline', async () => {
+      api.listar.mockResolvedValue(cardPremium(12));
+      const vitrine = await novoEstado();
+      await vitrine.carregar();
+      vi.useFakeTimers();
+      api.experimentar.mockResolvedValue(consultando);
+      api.acompanhar
+        .mockRejectedValueOnce(new Error('Network Error'))
+        .mockResolvedValueOnce({ data: { situacao: 'nao_encontrado' } });
+
+      const resposta = vitrine.experimentar('historico_placa', 'ABC1D23');
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(await resposta).toEqual({ situacao: 'nao_encontrado' });
+    });
   });
 
   it('a failed call becomes one situation the screen can say', async () => {

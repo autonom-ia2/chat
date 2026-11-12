@@ -69,6 +69,45 @@ describe('VitrineExperimente · Premium', () => {
     expect(experimentar.mock.calls[0][2]).toBe(true);
   });
 
+  // Revisor (ALTO 1, 12/11): a consulta paga roda em segundo plano e pode levar até 1 minuto. Enquanto isso, a tela diz
+  // "Consultando…"; sem resposta no prazo, diz que não deu para confirmar e onde conferir.
+  it('while the paid lookup runs, the screen says it is looking up; then shows the result', async () => {
+    let terminar;
+    experimentar.mockReturnValue(
+      new Promise(resolve => {
+        terminar = resolve;
+      })
+    );
+    const wrapper = montar('historico_placa', {
+      gratis: 20,
+      restantes: 12,
+      precos: ['0.09'],
+    });
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.find('[data-experimente-consultando]').text()).toBe(
+      'Consultando… pode levar até 1 minuto.'
+    );
+    expect(botao(wrapper).attributes('aria-disabled')).toBe('true');
+    terminar({ situacao: 'nao_encontrado' });
+    await flushPromises();
+    expect(wrapper.find('[data-experimente-consultando]').exists()).toBe(false);
+  });
+
+  it('without an answer in time, says it could not confirm and that the counter shows it', async () => {
+    experimentar.mockResolvedValue({ situacao: 'sem_confirmacao' });
+    const wrapper = montar('historico_placa', {
+      gratis: 20,
+      restantes: 12,
+      precos: ['0.09'],
+    });
+    await rodar(wrapper);
+    expect(wrapper.find('[data-experimente-aviso]').text()).toBe(
+      'Não deu para confirmar agora; se a consulta foi feita, ela aparece no contador.'
+    );
+  });
+
   it('on a price range, the button shows "up to" the highest price', () => {
     const wrapper = montar('certidoes_empresa', {
       gratis: 20,

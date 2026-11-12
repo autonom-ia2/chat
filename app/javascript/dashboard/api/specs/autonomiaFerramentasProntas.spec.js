@@ -72,6 +72,9 @@ describe('#AutonomiaFerramentasProntasAPI', () => {
       valor: 'CPF 111.444.777-35',
       confirmou_preco: true,
     });
+    // F7: o Experimente Premium roda em segundo plano; a tela acompanha o pedido pelo id.
+    ferramentasProntas.acompanhar('pedido-1');
+    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/experimentar/pedido-1`);
     ferramentasProntas.buscaSemResultado('passagem de avião');
     expect(axiosMock.post).toHaveBeenCalledWith(
       `${BASE}/buscas_sem_resultado`,

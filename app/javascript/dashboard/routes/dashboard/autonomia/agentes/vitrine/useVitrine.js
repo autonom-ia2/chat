@@ -145,6 +145,42 @@ const tirar = async id => {
   incluidas.value = incluidas.value.filter(item => item.id !== id);
 };
 
+// F7 (revisor, 12/11): a consulta do card Premium roda em segundo plano. O servidor responde "consultando" com o id do
+// pedido, e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo (~70 s, mais que a
+// consulta mais lenta da BigDataCorp). No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha
+// de rede numa pergunta não para: a próxima tenta de novo.
+const ESPERAS_DO_PEDIDO_MS = [1000, 2000, 3000, 5000, 8000, 10000];
+const PRAZO_DO_PEDIDO_MS = 70000;
+const CONSULTANDO = 'consultando';
+const SEM_CONFIRMACAO = 'sem_confirmacao';
+
+const esperar = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+const perguntar = async idDoPedido => {
+  try {
+    const { data } = await FerramentasProntasAPI.acompanhar(idDoPedido);
+    return data?.situacao && data.situacao !== CONSULTANDO ? data : null;
+  } catch (falha) {
+    return falha?.response?.status === STATUS_DESLIGADA
+      ? { situacao: SEM_CONFIRMACAO }
+      : null;
+  }
+};
+
+const acompanhar = async (idDoPedido, vez = 0, passado = 0) => {
+  if (passado >= PRAZO_DO_PEDIDO_MS) return { situacao: SEM_CONFIRMACAO };
+  const espera = Math.min(
+    ESPERAS_DO_PEDIDO_MS[Math.min(vez, ESPERAS_DO_PEDIDO_MS.length - 1)],
+    PRAZO_DO_PEDIDO_MS - passado
+  );
+  await esperar(espera);
+  const resposta = await perguntar(idDoPedido);
+  return resposta || acompanhar(idDoPedido, vez + 1, passado + espera);
+};
+
 // O "Experimente" responde sempre uma situação: a falha da chamada vira "sem_permissao" ou "nao_consegui_consultar",
 // para a tela dizer uma frase só.
 // `confirmouPreco` (F7): o clique no botão com o preço, quando as grátis do card Premium acabaram. A resposta do
@@ -152,14 +188,19 @@ const tirar = async id => {
 // lista de novo: a consulta pode ter saído e contado antes de a chamada falhar.
 const experimentar = async (fonte, valor, confirmouPreco = false) => {
   try {
-    const { data } = await FerramentasProntasAPI.experimentar(
+    const { data: inicio } = await FerramentasProntasAPI.experimentar(
       fonte,
       valor,
       confirmouPreco
     );
+    const data =
+      inicio?.situacao === CONSULTANDO && inicio.pedido
+        ? await acompanhar(inicio.pedido)
+        : inicio;
     if (data?.premium) {
       premium.value = { ...premium.value, [fonte]: data.premium };
     }
+    if (data?.situacao === SEM_CONFIRMACAO) await carregar();
     return data?.situacao ? data : { situacao: 'nao_consegui_consultar' };
   } catch (falha) {
     if (premium.value[fonte]) await carregar();

@@ -3164,7 +3164,8 @@
         "MAIS_PROVAVEL": "Havia mais de uma opção, e mostrei a mais provável. Na conversa, o agente pergunta ao cliente quando tiver dúvida.",
         "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui.",
         "CONFIRMAR_PRECO": "As grátis do mês acabaram. Para testar, clique no botão com o preço.",
-        "DOCUMENTO_INVALIDO": "A consulta foi feita, mas esse número não existe. Confira e tente de novo."
+        "DOCUMENTO_INVALIDO": "A consulta foi feita, mas esse número não existe. Confira e tente de novo.",
+        "SEM_CONFIRMACAO": "Não deu para confirmar agora; se a consulta foi feita, ela aparece no contador."
       },
       "UNIDADES": {
         "PERCENTUAL_AO_ANO": "% ao ano"
@@ -3784,6 +3785,7 @@
         "RESTA_UMA": "Resta 1 de {gratis} grátis no mês",
         "ACABARAM": "As grátis do mês acabaram",
         "TESTE_GRATIS": "O teste usa 1 das grátis do mês.",
+        "CONSULTANDO": "Consultando… pode levar até 1 minuto.",
         "TESTAR_POR": "Testar por {preco}",
         "TESTAR_POR_ATE": "Testar por até {preco}",
         "TITULO": "Quanto custa",
