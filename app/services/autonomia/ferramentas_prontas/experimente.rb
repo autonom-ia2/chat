@@ -18,8 +18,9 @@
 # normal, pelo caminho do agente (`FerramentasProntas.executor_para`, a `Premium::Execucao`), e usa as 20 grátis do mês
 # do card, a mesma telemetria, a mesma cobrança e o mesmo cache do dia. Um clique é uma consulta que vale, no máximo
 # (`ComModelo` com `uma_consulta`). Acabadas as grátis, só consulta quando a pessoa clica no botão com o preço
-# (`confirmou_preco`); sem ele, a resposta é `confirmar_preco` e nada sai. A resposta do Premium leva o `premium` do card
-# (o mesmo da lista), para o contador da tela se atualizar.
+# (`confirmou_preco`); sem ele, a resposta é `confirmar_preco` e nada sai. A conferência roda fora da trava do saldo:
+# na corrida (outro clique levou a última grátis), a consulta sem o clique nunca vai à fatura (`pode_cobrar`). A
+# resposta do Premium leva o `premium` do card (o mesmo da lista), para o contador da tela se atualizar.
 class Autonomia::FerramentasProntas::Experimente
   EXEMPLOS = {
     'cep' => { 'consulta' => 'endereco', 'campo' => 'cep' },
@@ -59,7 +60,7 @@ class Autonomia::FerramentasProntas::Experimente
     return com_contador('situacao' => 'confirmar_preco') if sem_gratis? && !@confirmou_preco
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
-    com_contador(ComModelo.new(account: @account, fonte: @fonte, valor: @valor, uma_consulta: true).call)
+    com_contador(ComModelo.new(account: @account, fonte: @fonte, valor: @valor, uma_consulta: true, pode_cobrar: @confirmou_preco).call)
   end
 
   def contador

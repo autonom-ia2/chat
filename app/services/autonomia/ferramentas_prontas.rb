@@ -88,8 +88,10 @@ module Autonomia::FerramentasProntas
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
   # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria.
-  def executor_para(tool, params:, tool_run_id: nil, **opcoes)
-    return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id) if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
+  def executor_para(tool, params:, tool_run_id: nil, pode_cobrar: true, **opcoes)
+    if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
+      return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, pode_cobrar: pode_cobrar)
+    end
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
     ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)

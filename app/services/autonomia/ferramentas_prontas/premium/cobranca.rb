@@ -6,7 +6,11 @@
 #     (`custo_possivel`) leva o custo do dataset, sem contar nem cobrar: a telemetria bate com o painel da BigDataCorp;
 #   - a contada recebe a posição no card da conta no mês (`Saldo.contar!`): até 20, grátis; da 21ª do mês em diante,
 #     cobrada pelo preço do dataset. As 20 grátis renovam todo mês (decisão do Rodrigo, 11/11). Um card não mexe no
-#     contador do outro.
+#     contador do outro;
+#   - `pode_cobrar`: a cobrada precisa dele. O agente sempre pode; o "Experimente" da vitrine, só com o clique no botão
+#     com o preço. A conferência das grátis do Experimente roda fora da trava do saldo: dois cliques com 1 grátis
+#     restante passam os dois, e o segundo vira a 21ª. Sem o clique, ela fica `sem_cobranca` (motivo
+#     `sem_clique_no_preco`): o custo fica conosco e o caso vai ao log. A posição no mês continua contada.
 # O contador e a linha da telemetria andam juntos (uma transação): se a linha não grava, a posição volta atrás. Na
 # execução em segundo plano a linha leva o `tool_run_id`, único: uma linha por execução.
 module Autonomia::FerramentasProntas::Premium::Cobranca
@@ -14,18 +18,28 @@ module Autonomia::FerramentasProntas::Premium::Cobranca
 
   module_function
 
+  SEM_CLIQUE_NO_PRECO = 'sem_clique_no_preco'.freeze
+
   # `resultado`: encontrado | sem_registro | falha. Roda no fuso da conta (a `Execucao`). -> o `Registro` gravado.
-  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil, custo_possivel: false) # rubocop:disable Metrics/ParameterLists
+  def registrar!(tool:, fonte:, consulta:, resultado:, do_cache: false, motivo: nil, id_na_fonte: nil, tool_run_id: nil, custo_possivel: false, # rubocop:disable Metrics/ParameterLists
+                 pode_cobrar: true)
     contada = !do_cache && resultado != 'falha'
     hoje = Time.zone.today
     ActiveRecord::Base.transaction(requires_new: true) do
       numero = contada ? Premium::Saldo.contar!(account_id: tool.account_id, fonte: fonte.chave, mes: hoje.beginning_of_month) : nil
-      Premium::Registro.create!(
-        **origem(tool, fonte, consulta, hoje), resultado: resultado, do_cache: do_cache, numero: numero, motivo: motivo,
-                                               id_na_fonte: id_na_fonte, tool_run_id: tool_run_id,
-                                               **valores(consulta.dataset, resultado, numero, custo_possivel: custo_possivel)
+      linha = origem(tool, fonte, consulta, hoje).merge(
+        resultado: resultado, do_cache: do_cache, numero: numero, motivo: motivo, id_na_fonte: id_na_fonte, tool_run_id: tool_run_id,
+        **valores(consulta.dataset, resultado, numero, custo_possivel: custo_possivel)
       )
+      Premium::Registro.create!(pode_cobrar || linha[:cobranca] != 'cobrada' ? linha : sem_clique_no_preco(linha))
     end
+  end
+
+  # A 21ª em diante sem o clique no preço: não vai à fatura. O custo fica (a BigDataCorp cobrou de nós).
+  def sem_clique_no_preco(linha)
+    Rails.logger.warn("[autonomia][premium] consulta acima das grátis sem o clique no preço, sem cobrança conta=#{linha[:account_id]} " \
+                      "fonte=#{linha[:fonte]} numero=#{linha[:numero]}")
+    linha.merge(cobranca: 'sem_cobranca', preco: 0, motivo: SEM_CLIQUE_NO_PRECO)
   end
 
   # A consulta em segundo plano que morreu depois de a chamada sair (`HttpAssincronaJob.leitura_perdida`, com o

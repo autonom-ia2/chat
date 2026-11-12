@@ -51,11 +51,13 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
   # O pedido recusado antes da fonte, ou com a fonte desligada: não gasta o clique do Premium.
   NAO_VALEU = %w[pronta_recusadas pronta_desligada].freeze
 
-  def initialize(account:, fonte:, valor:, uma_consulta: false)
+  # `pode_cobrar` (Premium): a consulta acima das grátis só vai à fatura com o clique no preço (`Cobranca.registrar!`).
+  def initialize(account:, fonte:, valor:, uma_consulta: false, pode_cobrar: true)
     @account = account
     @fonte = fonte
     @valor = valor
     @uma_consulta = uma_consulta
+    @pode_cobrar = pode_cobrar
     @valeu = false
     @saidas = []
     @consultas = 0
@@ -104,7 +106,7 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
   def consultar(argumentos)
     params = JSON.parse(argumentos.presence || '{}')
     params = {} unless params.is_a?(Hash)
-    execucao = Autonomia::FerramentasProntas.executor_para(ferramenta, params: params)
+    execucao = Autonomia::FerramentasProntas.executor_para(ferramenta, params: params, pode_cobrar: @pode_cobrar)
     saida = execucao.call
     @valeu = @uma_consulta && NAO_VALEU.exclude?(execucao.codigo)
     # A etapa é a consulta PEDIDA (a resposta de falha não diz qual era): o preço achado não some atrás de uma recusa.

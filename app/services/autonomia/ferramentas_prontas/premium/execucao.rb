@@ -15,9 +15,12 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   TELEMETRIA_FALHOU = 'premium.telemetria_falhou'.freeze
 
   # `tool_run_id`: a execução em segundo plano (`HttpAssincronaJob`), que vai à telemetria; nil no turno.
-  def initialize(tool:, params: {}, tool_run_id: nil)
+  # `pode_cobrar`: a consulta acima das grátis pode ir à fatura? O agente sempre; o Experimente, só com o clique no
+  # preço (`Cobranca.registrar!`).
+  def initialize(tool:, params: {}, tool_run_id: nil, pode_cobrar: true)
     super(tool: tool, params: params)
     @tool_run_id = tool_run_id
+    @pode_cobrar = pode_cobrar
   end
 
   # O pedido saiu para a BigDataCorp? (O contrato do `HttpExecutor`, lido pela consulta em segundo plano.)
@@ -91,7 +94,8 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   # Com o banco inteiro fora, a marca também não grava: aí sobram o log e o rastreador. Só o erro do banco é engolido na
   # marca; outro erro é defeito nosso e levanta.
   def cobrar(resultado, **)
-    Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id, **)
+    Premium::Cobranca.registrar!(tool: @tool, fonte: @fonte, consulta: @consulta, resultado: resultado, tool_run_id: @tool_run_id,
+                                 pode_cobrar: @pode_cobrar, **)
   rescue ActiveRecord::RecordNotUnique => e
     # A linha desta execução já existe: o varredor a fechou como entrega incerta (`Cobranca.entrega_incerta!`). Não é
     # defeito; a transação desfez a posição no saldo. Duplicidade em outro índice é defeito: levanta.

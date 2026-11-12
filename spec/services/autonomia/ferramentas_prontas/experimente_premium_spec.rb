@@ -161,6 +161,29 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
+  # Revisor (ALTO 2): a conferência das grátis roda fora da trava do saldo. Dois cliques com 1 grátis restante passam
+  # os dois por ela, e o segundo vira a 21ª do mês sem o clique no preço. Aqui o outro clique levou a última grátis
+  # entre a conferência (que ainda leu 1 restante) e a consulta: a 21ª nunca é gravada como cobrada, o custo fica
+  # conosco e o caso vai ao log.
+  it 'corrida nas grátis: a 21ª sem o clique no preço não é cobrada; o custo fica conosco e vai ao log' do
+    saldo_premium!(account, 'certidoes_empresa', 20)
+    lida_antes = { 'gratis' => 20, 'restantes' => 1, 'precos' => %w[0.06 0.15], 'confere_documento' => true }
+    leituras = 0
+    allow(Autonomia::FerramentasProntas::Premium).to receive(:para_tela).and_wrap_original do |original, *args|
+      (leituras += 1) == 1 ? { 'certidoes_empresa' => lida_antes } : original.call(*args)
+    end
+    allow(Rails.logger).to receive(:warn)
+    pgfn_responde
+    modelo_faz([chamada(pgfn)])
+
+    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+
+    expect(resultado['situacao']).to eq('encontrado')
+    expect(registros_premium.sole).to have_attributes(numero: 21, cobranca: 'sem_cobranca', preco: 0, custo: BigDecimal('0.10'),
+                                                      motivo: 'sem_clique_no_preco')
+    expect(Rails.logger).to have_received(:warn).with(a_string_including('sem o clique no preço'))
+  end
+
   it 'sem a flag do Premium, nada roda' do
     account.disable_features!(Autonomia::FerramentasProntas::Premium::FLAG)
 
