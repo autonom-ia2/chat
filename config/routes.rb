@@ -654,6 +654,8 @@ Rails.application.routes.draw do
               collection do
                 post :incluir
                 post :experimentar
+                # F7: o Experimente Premium roda em segundo plano; a tela acompanha o pedido.
+                get 'experimentar/:pedido', action: :acompanhar, as: :acompanhar_experimento
                 post :buscas_sem_resultado
                 get :sugestoes
                 post :dispensar
@@ -1100,6 +1102,27 @@ Rails.application.routes.draw do
           namespace :relationships do
             resource :configuration, only: [:show, :update], controller: 'configurations'
             patch ':entity/:id/values', to: 'values#update'
+          end
+          # #2894 — leituras da Lista nova de Relacionamentos (chave relacionamentos_novo). Empresa é do Enterprise.
+          namespace :relacionamentos do
+            resources :pessoas, only: [:index] do
+              collection do
+                get :contagens
+                get :todas
+              end
+            end
+            if ChatwootApp.enterprise?
+              resources :empresas, only: [:index] do
+                get :contagens, on: :collection
+              end
+            end
+            get :resumo, to: 'resumo#show'
+            get :opcoes_de_filtro, to: 'opcoes_de_filtro#show'
+            # As ações em grupo da lista: os funis com as etapas, criar cards, etiquetar e apagar as pessoas marcadas.
+            get :funis, to: 'funis#index'
+            post :cards, to: 'cards#create'
+            post :etiqueta, to: 'etiqueta#create'
+            post :apagar, to: 'apagar#create'
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

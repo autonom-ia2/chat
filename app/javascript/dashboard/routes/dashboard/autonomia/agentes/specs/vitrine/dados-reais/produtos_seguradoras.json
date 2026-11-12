@@ -1,0 +1,67 @@
+{
+  "seguradoras": {
+    "provedor": "openinsurance",
+    "dados": {
+      "total": 1,
+      "seguradoras": [
+        {
+          "nome": "ALLIANZ SEGUROS",
+          "ramos": ["Transportes"]
+        }
+      ]
+    }
+  },
+  "produtos": {
+    "provedor": "openinsurance",
+    "dados": {
+      "ramo": "Transportes",
+      "seguradoras": [
+        {
+          "seguradora": "ALLIANZ SEGUROS",
+          "total": 6,
+          "produtos": [
+            {
+              "nome": "RCTR-C",
+              "coberturas": [
+                "Cobertura para colisão e/ou capotagem e/ou abalroamento e/ou tombamento do veiculo transportador e incêndio ou explosão no veículo transportador."
+              ],
+              "condicoes": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+            },
+            {
+              "nome": "RCF-DC",
+              "coberturas": [
+                "Cobertura para desaparecimento total da carga, com concomitantemente com o do veículo, durante o transporte, em decorrência de apropriação indébita e/ou estelio…"
+              ],
+              "condicoes": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+            },
+            {
+              "nome": "RCTR-VI",
+              "coberturas": [
+                "Cobertura para colisão e/ou capotagem e/ou abalroamento e/ou tombamento do veiculo transportador e incêndio ou explosão no veículo transportador em viagem inter…"
+              ],
+              "condicoes": "https://www.allianz.com.br/seguros/veja-outros-seguros/transportes/responsabilidade-civil-transporte/documentos.html"
+            },
+            {
+              "nome": "Transporte Nacional",
+              "coberturas": [
+                "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos nacionais."
+              ]
+            },
+            {
+              "nome": "Transporte Internacional Exportação",
+              "coberturas": [
+                "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos internacionais."
+              ]
+            },
+            {
+              "nome": "Transporte Internacional Importação",
+              "coberturas": [
+                "Cobertura para mercadorias próprias transportadas em viagens terrestres, aereas ou aquaviárias, apenas nos percursos internacionais."
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

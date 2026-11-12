@@ -24,6 +24,19 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
   default: (await import('./apoio')).TeleportFalso,
 }));
+// A conta dos testes não tem a chave `companies` e a pessoa não pode criar
+// card, etiquetar nem apagar: a demonstração inventa as empresas e mostra as
+// três ações mesmo assim.
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
+vi.mock('../../lista/usePermissoesDaLista', () => ({
+  usePermissoesDaLista: () => ({
+    podeCriarCards: { value: false },
+    podeEtiquetar: { value: false },
+    podeApagar: { value: false },
+  }),
+}));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, name: 'relationships_home' });

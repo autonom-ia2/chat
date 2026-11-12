@@ -15,6 +15,14 @@ RSpec.describe Autonomia::Agents::Operate::TurnoEmCurso do
     expect(described_class.teto_do_turno).to be > Autonomia::Agents::Config::OPERATE_DEBOUNCE_MAX_SECONDS
   end
 
+  # #2918: a composição, não só o valor de hoje (o termo da Lia é maior e esconderia a falta do termo das prontas).
+  it 'o teto do turno cobre o prazo das rodadas do agente com pronta, sem depender da Lia nem do ajudante' do
+    stub_const('Autonomia::Insurance::QuoteAgent::Builder::RODADAS_DA_LIA', 0)
+    stub_const('Autonomia::Agents::Ajudantes::PRAZO_DA_RESPOSTA', 0)
+
+    expect(described_class.teto_do_turno).to be > Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS.seconds
+  end
+
   it 'abre com o teto do turno; a mensagem mais nova toma a marca', :aggregate_failures do
     described_class.abrir(conversa, 1)
     expect(Redis::Alfred.ttl(chave)).to be_within(5).of(described_class.teto_do_turno.to_i)

@@ -7,10 +7,22 @@
 # incluiu fica gravado no primeiro "Incluir".
 #
 # `EXEMPLOS`: a consulta de cada fonte e em qual parâmetro entra o valor digitado. Fonte sem campo (o Banco Central)
-# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só.
+# responde a cotação do dólar. A localização recebe "latitude, longitude" num campo só. `senao`: a consulta de quando o
+# valor não serve no campo (o banco: "341" vai pelo código, "Itaú" pelo nome). Quem decide é o formato do parâmetro
+# (`Parametro#normalizar`), não uma lista de palavras.
 #
 # `COM_TEXTO_LIVRE`: a fonte em que a pessoa escreve como falaria ("Onix 2020", "Ribeirão Preto", "dias úteis até
 # 30/11"). Quem entende o texto é o modelo, pela IA da conta (`Experimente::ComModelo`), como o agente faria.
+#
+# O card Premium (F7, decisão A do Rodrigo, 11/11) também tem o "Experimente", com texto livre: o teste é uma consulta
+# normal, pelo caminho do agente (`FerramentasProntas.executor_para`, a `Premium::Execucao`), e usa as 20 grátis do mês
+# do card, a mesma telemetria, a mesma cobrança e o mesmo cache do dia. Um clique é uma consulta que vale, no máximo
+# (`ComModelo` com `uma_consulta`). Acabadas as grátis, só consulta quando a pessoa clica no botão com o preço
+# (`confirmou_preco`); sem ele, a resposta é `confirmar_preco` e nada sai. A consulta roda em segundo plano
+# (`ExperimentePagoJob`, `Experimente::Pago`; revisor 12/11): o clique responde "consultando" com o id do pedido, e a
+# tela acompanha. A conferência roda fora da trava do saldo: na corrida (outro clique levou a última grátis), a consulta
+# sem o clique nunca vai à fatura (`pode_cobrar`). A resposta do Premium leva o `premium` do card (o mesmo da lista),
+# para o contador da tela se atualizar.
 class Autonomia::FerramentasProntas::Experimente
   EXEMPLOS = {
     'cep' => { 'consulta' => 'endereco', 'campo' => 'cep' },
@@ -19,21 +31,23 @@ class Autonomia::FerramentasProntas::Experimente
     'banco_central' => { 'consulta' => 'dolar' },
     'ddd' => { 'consulta' => 'ddd', 'campo' => 'ddd' },
     'localizacao' => { 'consulta' => 'cidade', 'campos' => %w[latitude longitude] },
-    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo' }
+    'bancos' => { 'consulta' => 'banco', 'campo' => 'codigo', 'senao' => { 'consulta' => 'por_nome', 'campo' => 'nome' } }
   }.freeze
-  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva produtos_seguradoras
-                       corretor_susep].freeze
+  COM_TEXTO_LIVRE = %w[fipe cidades feriados hospitais procedimentos doencas ncm compras_governo estacoes chuva corretor_susep
+                       planos_de_saude aeronaves geracao_solar transportadoras queimadas].freeze
   MAX_VALOR = 100
 
-  def initialize(account:, fonte:, valor:)
+  def initialize(account:, fonte:, valor:, confirmou_preco: false)
     @account = account
     @fonte = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
     @valor = valor.to_s.strip.first(MAX_VALOR)
+    @confirmou_preco = confirmou_preco == true
   end
 
   # -> o que o agente receberia, sem os textos de orientação ao modelo: { 'situacao', 'dados'? }.
   def call
-    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.disponivel?(@account, @fonte)
+    return { 'situacao' => 'desligada' } unless Autonomia::FerramentasProntas.na_vitrine?(@account, @fonte)
+    return premium if @fonte.premium?
 
     Autonomia::FerramentasProntas::Acesso.create_or_find_by!(account_id: @account.id, fonte: @fonte.chave)
     return ComModelo.new(account: @account, fonte: @fonte, valor: @valor).call if COM_TEXTO_LIVRE.include?(@fonte.chave)
@@ -44,12 +58,40 @@ class Autonomia::FerramentasProntas::Experimente
 
   private
 
+  # A consulta paga não cabe no corte do pedido web (15 s): ela roda em segundo plano (`ExperimentePagoJob`), e a
+  # resposta é "consultando", com o id do pedido que a tela acompanha (`Experimente::Pedido`) e quanto ela espera
+  # (`prazo_ms`): o prazo da tela mora só no servidor, junto do prazo para o job começar.
+  def premium
+    return com_contador('situacao' => 'confirmar_preco') if sem_gratis? && !@confirmou_preco
+
+    pedido = Pedido.abrir!(account: @account, fonte: @fonte.chave, valor: @valor, confirmou_preco: @confirmou_preco)
+    Autonomia::FerramentasProntas::ExperimentePagoJob.perform_later(pedido)
+    com_contador('situacao' => Pedido::CONSULTANDO, 'pedido' => pedido, 'prazo_ms' => Pedido::PRAZO_DA_TELA.in_milliseconds.to_i)
+  end
+
+  def contador
+    Pago.contador(@account, @fonte)
+  end
+
+  def com_contador(resultado)
+    resultado.merge('premium' => contador)
+  end
+
+  def sem_gratis?
+    contador['restantes'].zero?
+  end
+
   def ferramenta
     Autonomia::Agents::Tool.new(account: @account, fonte_pronta: @fonte.chave)
   end
 
+  def serve?(exemplo)
+    @fonte.consulta(exemplo['consulta']).parametro(exemplo['campo']).normalizar(@valor).present?
+  end
+
   def argumentos
     exemplo = EXEMPLOS.fetch(@fonte.chave, {})
+    exemplo = exemplo['senao'] if exemplo['senao'] && !serve?(exemplo)
     base = { 'consulta' => exemplo['consulta'] }.merge(exemplo.fetch('fixos', {}))
     return base.merge(exemplo['campo'] => @valor) if exemplo['campo']
     return base unless exemplo['campos']

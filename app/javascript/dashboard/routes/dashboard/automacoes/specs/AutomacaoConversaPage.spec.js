@@ -7,12 +7,15 @@ import AutomacaoConversaPage from '../pages/AutomacaoConversaPage.vue';
 
 // #859 — a tela nova/editar: conversa do Guia embutida, resumo, teste, Ligar e
 // modo manual. Estados: carregando, erro, Guia desligado, só leitura.
-const { rota, routerPush, routerReplace, guiaLigado } = vi.hoisted(() => ({
-  rota: { name: 'automacoes_nova', params: { accountId: 1 }, query: {} },
-  routerPush: vi.fn(),
-  routerReplace: vi.fn(),
-  guiaLigado: { value: true },
-}));
+const { rota, routerPush, routerReplace, guiaLigado, flags } = vi.hoisted(
+  () => ({
+    rota: { name: 'automacoes_nova', params: { accountId: 1 }, query: {} },
+    routerPush: vi.fn(),
+    routerReplace: vi.fn(),
+    guiaLigado: { value: true },
+    flags: { value: {} },
+  })
+);
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('vue-router', () => ({
@@ -32,7 +35,10 @@ vi.mock('dashboard/composables/store', () => ({
     if (getter === 'getCurrentAccountId') return ref(1);
     if (getter === 'globalConfig/get') return ref({});
     if (getter === 'accounts/getAccount') {
-      return ref(() => ({ autonomia_guide_available: guiaLigado.value }));
+      return ref(() => ({
+        autonomia_guide_available: guiaLigado.value,
+        features: flags.value,
+      }));
     }
     return ref([]);
   },
@@ -94,6 +100,50 @@ describe('AutomacaoConversaPage', () => {
     rota.query = {};
     podeMudar.value = true;
     guiaLigado.value = true;
+    flags.value = {};
+  });
+
+  // #2889: com a porta (e o editor) ligados, a automação nova no modo manual vai ao editor da Automação livre; a
+  // regra antiga já aberta segue para a tela de hoje, onde é editada, e não vira outra automação.
+  describe('com a porta ligada', () => {
+    beforeEach(() => {
+      flags.value = { automacao_porta: true, automacao_editor: true };
+    });
+
+    it('nova: o modo manual abre o editor da Automação livre', async () => {
+      const wrapper = montar();
+      await flushPromises();
+      await wrapper.find('[data-modo-manual]').trigger('click');
+      expect(routerPush).toHaveBeenCalledWith({
+        name: 'automacoes_livre_nova',
+        params: { accountId: 1 },
+      });
+    });
+
+    it('editar: a regra antiga aberta segue para a tela de hoje', async () => {
+      abrirRegra(42);
+      AutomationAPI.show.mockResolvedValue({ data: { payload: regra() } });
+      const wrapper = montar();
+      await flushPromises();
+      await wrapper.find('[data-modo-manual]').trigger('click');
+      expect(routerPush).toHaveBeenCalledWith({
+        name: 'automation_list',
+        params: { accountId: 1 },
+        query: { editar: 42 },
+      });
+    });
+
+    it('sem o editor, a porta não vale e o modo manual segue o de hoje', async () => {
+      flags.value = { automacao_porta: true };
+      const wrapper = montar();
+      await flushPromises();
+      await wrapper.find('[data-modo-manual]').trigger('click');
+      expect(routerPush).toHaveBeenCalledWith({
+        name: 'automation_list',
+        params: { accountId: 1 },
+        query: {},
+      });
+    });
   });
 
   it('nova: conversa embutida com os modelos e o resumo esperando o Guia', async () => {

@@ -1,15 +1,21 @@
 import { computed, ref, watch } from 'vue';
 import { GRUPO_PADRAO } from '../fonte/grupos';
 import { ORDENS } from '../fonte/listaFonte';
+import { ehSemAcesso } from './falhas';
 import { FILTROS_VAZIOS, contarFiltros } from './filtros';
 
 const PRIMEIRA_PAGINA = 1;
+const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 
 // #2894 — o estado da lista de Relacionamentos: o que a pessoa escolheu (grupo,
 // busca, ordem, filtros), a página que está à vista e o que a fonte respondeu.
 // Trocar grupo, aba, busca, ordem ou filtro volta para a página 1 e chama
 // `aoMudarConsulta` (a tela usa para desmarcar quem estava marcado). Resposta
-// de pedido antigo nunca sobrescreve a de um pedido mais novo.
+// de pedido antigo nunca sobrescreve a de um pedido mais novo. Resumo, contagens
+// e lista são leituras separadas: cada uma guarda o próprio erro, e a que
+// respondeu não apaga o erro da que falhou. Basta uma delas ser recusada por
+// falta de acesso para `semAcesso` ligar: a tela mostra um estado só, sem
+// "tentar de novo".
 // #2897 — a aba Seguros usa o mesmo estado, com o grupo, a ordem e os filtros
 // dela (`grupoPadrao`, `ordemPadrao`, `filtrosVazios`, `contar`).
 export const useLista = ({
@@ -33,7 +39,16 @@ export const useLista = ({
   const resumo = ref(null);
   const carregando = ref(false);
   const carregandoMais = ref(false);
-  const erro = ref(null);
+  const erros = ref(SEM_ERRO);
+  const erro = computed(
+    () => erros.value.resumo || erros.value.contagens || erros.value.lista
+  );
+  const semAcesso = computed(() =>
+    Object.values(erros.value).some(ehSemAcesso)
+  );
+  const guardarErro = (leitura, falha) => {
+    erros.value = { ...erros.value, [leitura]: falha };
+  };
   let pedidoAtual = 0;
 
   const consulta = () => ({
@@ -68,9 +83,9 @@ export const useLista = ({
       total.value = resposta.total;
       temMais.value = resposta.temMais;
       pagina.value = numero;
-      erro.value = null;
+      guardarErro('lista', null);
     } catch (falha) {
-      if (meu === pedidoAtual) erro.value = falha;
+      if (meu === pedidoAtual) guardarErro('lista', falha);
     } finally {
       terminar(meu, aMais);
     }
@@ -87,22 +102,25 @@ export const useLista = ({
         busca: busca.value,
         filtros: filtros.value,
       });
-      if (meu === pedidoDeContagens) contagens.value = resposta;
+      if (meu !== pedidoDeContagens) return;
+      contagens.value = resposta;
+      guardarErro('contagens', null);
     } catch (falha) {
-      if (meu === pedidoDeContagens) erro.value = falha;
+      if (meu === pedidoDeContagens) guardarErro('contagens', falha);
     }
   };
 
   const carregarResumo = async () => {
     try {
       resumo.value = await fonte.resumo();
+      guardarErro('resumo', null);
     } catch (falha) {
-      erro.value = falha;
+      guardarErro('resumo', falha);
     }
   };
 
   const recarregar = async () => {
-    erro.value = null;
+    erros.value = SEM_ERRO;
     await Promise.all([
       carregarResumo(),
       carregarContagens(),
@@ -147,6 +165,7 @@ export const useLista = ({
     carregando,
     carregandoMais,
     erro,
+    semAcesso,
     filtrosAtivos,
     iniciar: recarregar,
     recarregar,

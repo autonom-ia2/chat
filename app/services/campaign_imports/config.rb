@@ -46,6 +46,12 @@ module CampaignImports
       def generated_file_retention
         30.days
       end
+
+      # #2921: an import still `importing` with no row written for this long lost its worker
+      # (CampaignImports::StalledImportsJob puts it back in the queue).
+      def stalled_import_after
+        15.minutes
+      end
     end
   end
 end

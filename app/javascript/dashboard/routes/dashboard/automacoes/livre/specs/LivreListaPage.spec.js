@@ -7,10 +7,11 @@ import LivreListaPage from '../pages/LivreListaPage.vue';
 // #2414 F5 — a lista única: as novas (em frase pelo catálogo) e as do jeito
 // antigo, que abrem na tela de hoje. Ligar leva a versão vista e a linha
 // continua com a frase (a resposta de ligar não traz a receita).
-const { routerPush, config, caixas } = vi.hoisted(() => ({
+const { routerPush, config, caixas, porta } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   config: { crmKanbanEnabled: false },
   caixas: [{ id: 5, name: 'WhatsApp Vendas' }],
+  porta: {},
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -29,8 +30,8 @@ vi.mock('vue-router', () => ({
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref } = await import('vue');
-  const podeMudar = ref(true);
-  return { useCanManage: () => podeMudar };
+  porta.podeMudar = ref(true);
+  return { useCanManage: () => porta.podeMudar };
 });
 vi.mock('dashboard/composables/store', async () => {
   const { ref } = await import('vue');
@@ -65,6 +66,12 @@ vi.mock('dashboard/api/crmKanban', () => ({
     ),
   },
 }));
+// #2889: a porta (pergunta + modelos) entra só com a flag; o componente dela tem spec próprio.
+vi.mock('../../porta/usePorta', async () => {
+  const { ref } = await import('vue');
+  porta.ligada = ref(false);
+  return { usePorta: () => ({ ligada: porta.ligada, camadas: ref([]) }) };
+});
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
   default: { get: vi.fn(), passos: vi.fn(), ligar: vi.fn(), desligar: vi.fn() },
 }));
@@ -107,7 +114,15 @@ const ANTIGA = {
 };
 
 const montar = () =>
-  mount(LivreListaPage, { global: { mocks: { $t: chave => chave } } });
+  mount(LivreListaPage, {
+    global: {
+      mocks: { $t: chave => chave },
+      stubs: {
+        AutomacaoPorta: { template: '<div data-porta-stub />' },
+        AutomacaoHeroi: { template: '<div data-heroi-stub />' },
+      },
+    },
+  });
 
 describe('LivreListaPage', () => {
   beforeEach(() => {
@@ -115,6 +130,69 @@ describe('LivreListaPage', () => {
     AutomacoesAPI.passos.mockResolvedValue({ data: CATALOGO });
     AutomacoesAPI.get.mockResolvedValue({ data: { automacoes: [NOVA] } });
     AutomationAPI.get.mockResolvedValue({ data: { payload: [ANTIGA] } });
+    porta.ligada.value = false;
+    porta.podeMudar.value = true;
+  });
+
+  it('sem a porta: título de sempre, botão Nova e vazio com convite', async () => {
+    AutomacoesAPI.get.mockResolvedValue({ data: { automacoes: [] } });
+    AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-porta-stub]').exists()).toBe(false);
+    expect(wrapper.find('[data-vazio]').exists()).toBe(true);
+    expect(wrapper.find('[data-suas]').exists()).toBe(false);
+  });
+
+  it('com a porta e nada criado: pergunta, Montar do zero e modelos, sem o vazio de antes', async () => {
+    porta.ligada.value = true;
+    AutomacoesAPI.get.mockResolvedValue({ data: { automacoes: [] } });
+    AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-heroi-stub]').exists()).toBe(true);
+    expect(wrapper.find('[data-porta-stub]').exists()).toBe(true);
+    expect(wrapper.find('[data-vazio]').exists()).toBe(false);
+    expect(wrapper.find('[data-nova]').exists()).toBe(false);
+    await wrapper.find('[data-do-zero-vazio] [data-do-zero]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'automacoes_livre_nova' })
+    );
+  });
+
+  it('com a porta, as automações da pessoa vêm antes dos modelos', async () => {
+    porta.ligada.value = true;
+    const wrapper = montar();
+    await flushPromises();
+    const html = wrapper.html();
+    expect(html.indexOf('data-heroi-stub')).toBeLessThan(
+      html.indexOf('data-linha')
+    );
+    expect(html.indexOf('data-linha')).toBeLessThan(
+      html.indexOf('data-porta-stub')
+    );
+  });
+
+  it('quem só vê fica com a lista, sem a porta', async () => {
+    porta.ligada.value = true;
+    porta.podeMudar.value = false;
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-heroi-stub]').exists()).toBe(false);
+    expect(wrapper.find('[data-porta-stub]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-linha]')).toHaveLength(2);
+  });
+
+  it('com a porta e automações: "Suas automações" e Montar do zero no editor', async () => {
+    porta.ligada.value = true;
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.findAll('[data-linha]')).toHaveLength(2);
+    expect(wrapper.find('[data-suas]').exists()).toBe(true);
+    await wrapper.find('[data-do-zero]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'automacoes_livre_nova' })
+    );
   });
 
   it('mostra as novas e as antigas, cada uma em frase', async () => {

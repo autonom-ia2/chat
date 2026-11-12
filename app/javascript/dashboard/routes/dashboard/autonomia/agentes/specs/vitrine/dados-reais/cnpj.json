@@ -1,0 +1,21 @@
+{
+  "empresa": {
+    "provedor": "brasilapi",
+    "dados": {
+      "cnpj": "11.222.333/0001-81",
+      "razao_social": "EMPRESA EXEMPLO LTDA",
+      "nome_fantasia": "EXEMPLO",
+      "situacao": "ATIVA",
+      "data_da_situacao": "2005-11-03",
+      "abertura": "1966-09-28",
+      "natureza_juridica": "Sociedade de Economia Mista",
+      "porte": "DEMAIS",
+      "cidade": "RIO DE JANEIRO",
+      "uf": "RJ",
+      "atividade_principal": {
+        "codigo": "0600001",
+        "descricao": "Extração de petróleo e gás natural"
+      }
+    }
+  }
+}

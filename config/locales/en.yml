@@ -770,11 +770,18 @@ en:
         whatsapp_template_consent: 'This is only done on screen: Templates › Permission.'
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
+        ready_tool_test: 'Testing a ready-made tool is only done on screen: On autopilot › Ready-made tools › open the card › Try it.'
       admin_only: 'Only an account admin can do this.'
       automation_manage_only: 'For this you need the automatic rules permission in your role.'
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'
       rule_funnel_manage_only: 'A rule that changes the pipeline also needs the pipeline settings permission in your role.'
       automation_view_only: 'For this you need permission to see the automatic rules in your role.'
+      automacao_sem_porta: 'In this account, automations made with the Guide are still the old kind. Ask the account admin to turn on the new Automations.'
+      automacao_ligada_vale_na_hora: 'This automation is on: the change starts working as soon as you confirm.'
+      automacao_ligada_ajuste_pausa: 'This automation was turned on by someone else: when you confirm, the change is saved and it pauses until someone turns it on again.'
+      automacao_desligar_sem_desfazer: 'This cannot be undone here. The automation stops working now. To bring it back, ask to turn it on again.'
+      automacao_ligar_vale_agora: 'The automation starts working now, on your behalf. To stop it, ask to turn it off or tap Turn off in its screen.'
+      automacao_versao_de_outra_pessoa: 'This version was saved by %{nome} on %{quando}.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'
@@ -827,6 +834,13 @@ en:
       undo:
         already_undone: 'This was already undone.'
         expired: 'The 5 days to undo this have passed.'
+        conflitos:
+          ficou_desligada: 'The automation stayed off. To bring it back, ask to turn it on again.'
+          automacao_ja_ligada: 'The automation was already turned on, so it stayed as it is.'
+          automacao_ja_executada: 'The automation already ran, so it stayed as it is.'
+          versao_ja_executada: 'This version of the automation already ran, so it stayed.'
+          versao_mais_nova: 'Someone saved a newer version after this, so it stayed.'
+          mudou_depois: 'Someone changed the automation after this, so it stayed as it is.'
       records:
         automation_rule: 'Automation'
       fields:

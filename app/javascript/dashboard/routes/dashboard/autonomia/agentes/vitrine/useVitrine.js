@@ -16,6 +16,8 @@ const STATUS_SEM_PERMISSAO = [401, 403];
 const STATUS_DESLIGADA = 404;
 const MOTIVOS_DO_INCLUIR = {
   desligada: 'DESLIGADA',
+  // A fonte que saiu da vitrine (Produtos das seguradoras): para quem está na tela, é o mesmo que desligada.
+  fora_da_vitrine: 'DESLIGADA',
   agente_de_cotacao: 'COTACAO',
   nome_em_uso: 'NOME_EM_USO',
 };
@@ -38,6 +40,11 @@ const comMotivo = erro =>
   });
 
 const fontes = ref([]);
+// #2858 F5: chave da base baixada -> o dia em que a cópia que vale entrou ("2026-11-11"), ou null antes de baixar.
+const atualizacoes = ref({});
+const emPreparacao = ref([]);
+// F7: { chave: { gratis, restantes, precos } } dos cards Premium liberados para a conta.
+const premium = ref({});
 const incluidas = ref([]);
 const carregando = ref(false);
 const carregada = ref(false);
@@ -60,6 +67,19 @@ const carregar = () => {
       velha = versaoDoPedido !== versao;
       if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
+      atualizacoes.value = Object.fromEntries(
+        (data?.fontes || [])
+          .filter(item => 'atualizado_em' in item)
+          .map(item => [item.chave, item.atualizado_em || null])
+      );
+      emPreparacao.value = (data?.fontes || [])
+        .filter(item => item.em_preparacao)
+        .map(item => item.chave);
+      premium.value = Object.fromEntries(
+        (data?.fontes || [])
+          .filter(item => item.premium)
+          .map(item => [item.chave, item.premium])
+      );
       incluidas.value = data?.incluidas || [];
       carregada.value = true;
     })
@@ -73,6 +93,9 @@ const carregar = () => {
     .then(() => (velha ? carregar() : undefined));
   return pedido;
 };
+
+// O preço e as grátis que restam de um card Premium; null nos grátis.
+const premiumDe = fonte => premium.value[fonte] || null;
 
 const doAgente = agenteId =>
   incluidas.value.filter(item => item.agente_id === Number(agenteId));
@@ -122,13 +145,69 @@ const tirar = async id => {
   incluidas.value = incluidas.value.filter(item => item.id !== id);
 };
 
+// F7 (revisor, 12/11): a consulta do card Premium roda em segundo plano. O servidor responde "consultando" com o id do
+// pedido e o prazo (`prazo_ms`), e aqui se pergunta pelo id, com intervalo crescente, até o resultado ou até o prazo.
+// O prazo mora no servidor, junto do prazo para o job começar; `PRAZO_DE_RESERVA_MS` só vale se a resposta não o
+// trouxer. No prazo, ou com o pedido sumido (404), a situação é "sem_confirmacao". A falha de rede numa pergunta não
+// para: a próxima tenta de novo.
+const ESPERAS_DO_PEDIDO_MS = [1000, 2000, 3000, 5000, 8000, 10000];
+const PRAZO_DE_RESERVA_MS = 80000;
+const CONSULTANDO = 'consultando';
+const SEM_CONFIRMACAO = 'sem_confirmacao';
+
+const esperar = ms =>
+  new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+
+const perguntar = async idDoPedido => {
+  try {
+    const { data } = await FerramentasProntasAPI.acompanhar(idDoPedido);
+    return data?.situacao && data.situacao !== CONSULTANDO ? data : null;
+  } catch (falha) {
+    return falha?.response?.status === STATUS_DESLIGADA
+      ? { situacao: SEM_CONFIRMACAO }
+      : null;
+  }
+};
+
+const acompanhar = async (idDoPedido, prazo, vez = 0, passado = 0) => {
+  if (passado >= prazo) return { situacao: SEM_CONFIRMACAO };
+  const espera = Math.min(
+    ESPERAS_DO_PEDIDO_MS[Math.min(vez, ESPERAS_DO_PEDIDO_MS.length - 1)],
+    prazo - passado
+  );
+  await esperar(espera);
+  const resposta = await perguntar(idDoPedido);
+  return resposta || acompanhar(idDoPedido, prazo, vez + 1, passado + espera);
+};
+
 // O "Experimente" responde sempre uma situação: a falha da chamada vira "sem_permissao" ou "nao_consegui_consultar",
 // para a tela dizer uma frase só.
-const experimentar = async (fonte, valor) => {
+// `confirmouPreco` (F7): o clique no botão com o preço, quando as grátis do card Premium acabaram. A resposta do
+// Premium traz o contador novo do card, que a tela mostra sem recarregar a lista. Sem resposta, o card Premium lê a
+// lista de novo: a consulta pode ter saído e contado antes de a chamada falhar.
+const experimentar = async (fonte, valor, confirmouPreco = false) => {
   try {
-    const { data } = await FerramentasProntasAPI.experimentar(fonte, valor);
+    const { data: inicio } = await FerramentasProntasAPI.experimentar(
+      fonte,
+      valor,
+      confirmouPreco
+    );
+    const data =
+      inicio?.situacao === CONSULTANDO && inicio.pedido
+        ? await acompanhar(
+            inicio.pedido,
+            inicio.prazo_ms > 0 ? inicio.prazo_ms : PRAZO_DE_RESERVA_MS
+          )
+        : inicio;
+    if (data?.premium) {
+      premium.value = { ...premium.value, [fonte]: data.premium };
+    }
+    if (data?.situacao === SEM_CONFIRMACAO) await carregar();
     return data?.situacao ? data : { situacao: 'nao_consegui_consultar' };
   } catch (falha) {
+    if (premium.value[fonte]) await carregar();
     const motivo = motivoDoErro(falha);
     if (motivo === 'SEM_PERMISSAO') return { situacao: 'sem_permissao' };
     if (motivo === 'DESLIGADA') return { situacao: 'desligada' };
@@ -146,13 +225,20 @@ const registrarBuscaSemResultado = async termo => {
   }
 };
 
+// O dia da cópia de uma base baixada; null antes de baixar; undefined para quem não é base.
+const atualizadoEm = fonte => atualizacoes.value[fonte];
+const estaEmPreparacao = fonte => emPreparacao.value.includes(fonte);
+
 export const useVitrine = () => ({
   carregar,
   fontes: computed(() => fontes.value),
+  atualizadoEm,
+  estaEmPreparacao,
   incluidas: computed(() => incluidas.value),
   carregando: computed(() => carregando.value),
   carregada: computed(() => carregada.value),
   erro: computed(() => erro.value),
+  premiumDe,
   doAgente,
   tem,
   incluir,

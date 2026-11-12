@@ -12,11 +12,16 @@ import { descreverAutomacao } from 'dashboard/helper/automacaoEmPortugues';
 import AutomacaoResumo from '../components/AutomacaoResumo.vue';
 import AutomacaoEnsaio from '../components/AutomacaoEnsaio.vue';
 import AutomacaoEtapas from '../components/AutomacaoEtapas.vue';
+import AutomacaoDoMotor from '../components/AutomacaoDoMotor.vue';
+import { useAutomacaoDoMotor } from '../composables/useAutomacaoDoMotor';
 import { MODELOS, modeloExiste } from '../modelos';
 import { useNomesDaConta } from '../composables/useNomesDaConta';
+import { usePorta } from '../porta/usePorta';
 import {
   passoCriouAutomacao,
+  passoCriouNoMotor,
   passoMexeuEmAutomacao,
+  passoMexeuNoMotor,
 } from '../composables/useCriadasPeloGuia';
 
 // #859/#982 — nova automação ou uma já existente, montada conversando com o
@@ -35,10 +40,22 @@ const currentAccount = useMapGetter('accounts/getAccount');
 const podeMudar = useCanManage('automation_manage');
 const { nomes, carregarNomes } = useNomesDaConta();
 
-const regraId = computed(() => {
+// #2889: a tela da automação do motor novo (automacoes_guia_editar) tem o id
+// dela, que não é id de regra antiga.
+const TELA_DO_MOTOR = 'automacoes_guia_editar';
+const naTelaDoMotor = computed(() => route.name === TELA_DO_MOTOR);
+const idDaRota = computed(() => {
   const id = Number(route.params.id);
   return Number.isInteger(id) && id > 0 ? id : null;
 });
+const regraId = computed(() => (naTelaDoMotor.value ? null : idDaRota.value));
+const motorId = computed(() => (naTelaDoMotor.value ? idDaRota.value : null));
+const motor = useAutomacaoDoMotor(motorId);
+const { ligada: portaLigada } = usePorta();
+const motorRef = ref(null);
+const { automacao: automacaoDoMotor, ocupado: ocupadoNoMotor } = motor;
+// Há uma automação aberta, de qualquer dos dois jeitos.
+const temAutomacao = computed(() => Boolean(regraId.value || motorId.value));
 
 // Com id na rota, a tela já nasce carregando: sem piscar o resumo vazio antes.
 const estado = ref(regraId.value ? 'carregando' : 'pronto');
@@ -74,6 +91,7 @@ const carregar = async () => {
 onMounted(() => {
   carregarNomes();
   carregar();
+  if (motorId.value) motor.carregar();
 });
 watch(regraId, carregar);
 
@@ -84,6 +102,10 @@ const descricao = computed(() =>
 );
 
 const titulo = computed(() => {
+  if (motorId.value)
+    return (
+      motor.automacao.value?.nome || t('AUTOMACOES.CONVERSA.TITULO_EDITAR')
+    );
   if (!regraId.value) return t('AUTOMACOES.CONVERSA.TITULO_NOVA');
   return regra.value?.name || t('AUTOMACOES.CONVERSA.TITULO_EDITAR');
 });
@@ -92,7 +114,7 @@ const titulo = computed(() => {
 // mudar nela — modelo de automação nova ali só confundia.
 const EDITAR = ['QUANDO', 'FAZ', 'EXPLICAR'];
 const sugestoes = computed(() => {
-  if (regraId.value) {
+  if (temAutomacao.value) {
     return EDITAR.map(chave => ({
       rotulo: t(`AUTOMACOES.CONVERSA.EDITAR.${chave}.TITULO`),
       pergunta: t(`AUTOMACOES.CONVERSA.EDITAR.${chave}.PEDIDO`),
@@ -105,7 +127,7 @@ const sugestoes = computed(() => {
 });
 const introducaoDoGuia = computed(() =>
   t(
-    regraId.value
+    temAutomacao.value
       ? 'AUTOMACOES.CONVERSA.INTRO_GUIA_EDITAR'
       : 'AUTOMACOES.CONVERSA.INTRO_GUIA'
   )
@@ -136,7 +158,7 @@ const anexosIniciais = ref(
 );
 
 const pedidoInicial = computed(() => {
-  if (regraId.value) return '';
+  if (temAutomacao.value) return '';
   const modelo = String(route.query.modelo || '');
   if (modeloExiste(modelo)) return t(`AUTOMACOES.MODELOS.${modelo}.PEDIDO`);
   return pedidoEscrito.value;
@@ -171,6 +193,25 @@ const aoExecutar = execucao => {
     return;
   }
   if (passos.some(passoMexeuEmAutomacao)) carregar();
+  // #2889: com a porta, o Guia monta no motor novo. Criou → a tela passa a ser
+  // a dela; mexeu → o resumo é lido de novo.
+  const noMotor = passos.find(passoCriouNoMotor);
+  if (noMotor && portaLigada.value && !temAutomacao.value) {
+    router.replace({
+      name: TELA_DO_MOTOR,
+      params: { accountId: accountId.value, id: noMotor.registro },
+    });
+    return;
+  }
+  if (motorId.value && passos.some(passoMexeuNoMotor)) motor.carregar();
+};
+
+// #2889: ligar, desligar ou ajustar a ligada passam pelo cartão; confirmado,
+// o resumo e o botão Ligar/Desligar são lidos de novo.
+const aoConfirmarAcao = nome => {
+  if (motorId.value && passoMexeuNoMotor({ ok: true, acao: nome })) {
+    motor.carregar();
+  }
 };
 
 // Respostas de um toque depois da fala do Guia, enquanto a automação está
@@ -179,13 +220,25 @@ const ligarRef = ref(null);
 const temMensagem = computed(() =>
   (regra.value?.actions || []).some(acao => acao.action_name === 'send_message')
 );
+// #2889: no motor novo, a automação aberta é a dele, e a mensagem é o passo
+// "mensagem" do primeiro nível.
+const desligadaNaTela = computed(() => {
+  if (motorId.value)
+    return Boolean(motor.automacao.value && !motor.automacao.value.ativa);
+  return Boolean(regra.value && !regra.value.active);
+});
+const temMensagemNaTela = computed(() => {
+  if (!motorId.value) return temMensagem.value;
+  const passos = motor.automacao.value?.versao?.receita?.passos || [];
+  return passos.some(passo => passo.tipo === 'mensagem');
+});
 const respostasRapidas = computed(() => {
-  if (!regra.value || regra.value.active) return [];
+  if (!desligadaNaTela.value) return [];
   const otima = {
     chave: 'OTIMA',
     rotulo: t('AUTOMACOES.RESPOSTAS.OTIMA'),
   };
-  if (!temMensagem.value) {
+  if (!temMensagemNaTela.value) {
     return [
       otima,
       {
@@ -212,13 +265,25 @@ const respostasRapidas = computed(() => {
 
 const aoResponderRapido = chave => {
   if (chave !== 'OTIMA') return;
+  if (motorId.value) {
+    motorRef.value?.focarLigar();
+    return;
+  }
   const botao = ligarRef.value?.$el;
   botao?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   botao?.focus?.();
 };
 
 // Conte (sem automação) → Confira (montada, desligada) → Ligue (ligada).
+const estadoDaTela = computed(() =>
+  motorId.value ? motor.estado.value : estado.value
+);
+
 const etapa = computed(() => {
+  if (motorId.value) {
+    if (!motor.automacao.value) return 1;
+    return motor.automacao.value.ativa ? 3 : 2;
+  }
   if (!regra.value) return 1;
   return regra.value.active ? 3 : 2;
 });
@@ -229,12 +294,31 @@ const voltar = () =>
     params: { accountId: accountId.value },
   });
 
-const modoManual = () =>
-  router.push({
-    name: 'automation_list',
-    params: { accountId: accountId.value },
-    query: regraId.value ? { editar: regraId.value } : {},
-  });
+// #2889: com a porta ligada, a automação nova no modo manual é montada no editor da Automação livre. A regra antiga
+// já aberta (regraId) segue para a tela de hoje, onde é editada; senão salvar viraria outra automação.
+const modoManualDeHoje = () =>
+  portaLigada.value && !regraId.value
+    ? router.push({
+        name: 'automacoes_livre_nova',
+        params: { accountId: accountId.value },
+      })
+    : router.push({
+        name: 'automation_list',
+        params: { accountId: accountId.value },
+        query: regraId.value ? { editar: regraId.value } : {},
+      });
+
+// #2889: a automação do motor novo aberta vai ao editor da Automação livre DELA.
+const modoManual = () => {
+  if (motorId.value) {
+    router.push({
+      name: 'automacoes_livre_editar',
+      params: { accountId: accountId.value, id: motorId.value },
+    });
+    return;
+  }
+  modoManualDeHoje();
+};
 
 const mudarLigada = async ligar => {
   if (!regra.value || ligando.value) return;
@@ -278,10 +362,7 @@ const mudarLigada = async ligar => {
             >
               {{ titulo }}
             </h1>
-            <AutomacaoEtapas
-              :atual="etapa"
-              :concluida="Boolean(regra && regra.active)"
-            />
+            <AutomacaoEtapas :atual="etapa" :concluida="etapa === 3" />
           </div>
         </header>
 
@@ -317,13 +398,15 @@ const mudarLigada = async ligar => {
                   sem-telas
                   :sugestoes="sugestoes"
                   :introducao="introducaoDoGuia"
-                  :automacao-id="regraId"
+                  :automacao-id="regraId || motorId"
+                  :automacao-do-motor="Boolean(motorId)"
                   :pedido-inicial="pedidoInicial"
                   :respostas-rapidas="respostasRapidas"
                   :comecar-por-voz="comecarPorVoz"
                   :anexos-iniciais="anexosIniciais"
                   @resposta-rapida="aoResponderRapido"
                   @execucao="aoExecutar"
+                  @acao-confirmada="aoConfirmarAcao"
                   @pedido-inicial-enviado="gastarModelo"
                 />
               </div>
@@ -350,7 +433,7 @@ const mudarLigada = async ligar => {
 
           <aside class="flex flex-col min-w-0 gap-5">
             <div
-              v-if="estado === 'carregando'"
+              v-if="estadoDaTela === 'carregando'"
               data-carregando
               aria-busy="true"
               class="flex flex-col gap-4"
@@ -363,7 +446,7 @@ const mudarLigada = async ligar => {
             </div>
 
             <div
-              v-else-if="estado === 'erro'"
+              v-else-if="estadoDaTela === 'erro'"
               data-erro
               role="alert"
               class="flex flex-col items-start gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
@@ -380,6 +463,16 @@ const mudarLigada = async ligar => {
               />
             </div>
 
+            <AutomacaoDoMotor
+              v-else-if="motorId && automacaoDoMotor"
+              ref="motorRef"
+              :automacao="automacaoDoMotor"
+              :pode-mudar="podeMudar"
+              :ocupado="ocupadoNoMotor"
+              @ligar="motor.ligar"
+              @desligar="motor.desligar"
+              @modo-manual="modoManual"
+            />
             <template v-else>
               <AutomacaoResumo :descricao="descricao" :regra="regra" />
 

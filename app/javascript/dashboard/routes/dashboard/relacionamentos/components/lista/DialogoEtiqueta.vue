@@ -5,11 +5,19 @@ import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
-import { useEnvio } from '../../lista/useEnvio';
+import ResultadoDaAcao from './ResultadoDaAcao.vue';
+import {
+  resumoDoQueFoiFeito,
+  rotuloDeCancelar,
+  rotuloDeConfirmar,
+  useEnvioEmFatias,
+} from '../../lista/useEnvioEmFatias';
 
 // #2894 — diálogo pequeno: escolher uma etiqueta e colocar nas pessoas
 // marcadas. Nada vem escolhido, e o botão está sempre ligado: sem escolha, o clique não
-// fecha, diz o que falta e leva o foco ao campo.
+// fecha, diz o que falta e leva o foco ao campo. Enquanto coloca: "50 de 120".
+// Deu tudo certo: avisa e fecha. Se alguém ficou de fora ou parou no meio, o
+// diálogo fica aberto e diz quem, por quê e quantas ainda não foram.
 const props = defineProps({
   pessoas: { type: Array, required: true },
   acoes: { type: Object, required: true },
@@ -28,15 +36,38 @@ const faltaEscolher = ref(false);
 watch(escolhida, () => {
   faltaEscolher.value = false;
 });
-const { enviando, enviar } = useEnvio(() =>
-  t('RELACIONAMENTOS.LISTA.ETIQUETA.ERRO')
-);
+const colocada = count =>
+  t(
+    'RELACIONAMENTOS.LISTA.ETIQUETA.APLICADA',
+    { count, etiqueta: escolhida.value },
+    count
+  );
+const {
+  enviando,
+  andamento,
+  resultado,
+  terminou,
+  enviarOQueFalta,
+  fechar,
+  recomecar,
+} = useEnvioEmFatias({
+  contagem: 'aplicadas',
+  mensagemDeErro: () => t('RELACIONAMENTOS.LISTA.ETIQUETA.ERRO'),
+  aoConcluir: faltam => emit('concluido', faltam),
+  resumo: resumoDoQueFoiFeito(t, colocada),
+});
 
 const opcoes = computed(() =>
   etiquetas.value.map(nome => ({ value: nome, label: nome }))
 );
 
 const abrir = async () => {
+  // Abriu de novo com o envio ainda rodando: só mostra o andamento; a escolha
+  // fica como estava.
+  if (!recomecar()) {
+    dialogo.value?.open();
+    return;
+  }
   escolhida.value = '';
   faltaEscolher.value = false;
   try {
@@ -48,24 +79,22 @@ const abrir = async () => {
   dialogo.value?.open();
 };
 
+const colocar = lote =>
+  props.acoes.aplicarEtiqueta({ ...lote, etiqueta: escolhida.value });
+
 const aplicar = async () => {
-  const etiqueta = escolhida.value;
-  if (!etiqueta) {
+  if (!escolhida.value) {
     faltaEscolher.value = true;
     campo.value?.querySelector('button')?.focus();
     return;
   }
-  const feito = await enviar(() =>
-    props.acoes.aplicarEtiqueta({ pessoas: props.pessoas, etiqueta })
-  );
-  if (!feito) return;
-  const count = feito.aplicadas;
-  useAlert(
-    t('RELACIONAMENTOS.LISTA.ETIQUETA.APLICADA', { count, etiqueta }, count)
-  );
+  const feito = await enviarOQueFalta(props.pessoas, colocar);
+  if (!feito || feito.erro || feito.deFora.length) return;
+  useAlert(colocada(feito.feitas));
   dialogo.value?.close();
-  emit('concluido');
 };
+
+const aoConfirmar = () => (terminou.value ? dialogo.value?.close() : aplicar());
 
 defineExpose({ abrir });
 </script>
@@ -75,41 +104,52 @@ defineExpose({ abrir });
     ref="dialogo"
     type="edit"
     width="sm"
-    :confirm-button-label="t('RELACIONAMENTOS.LISTA.ETIQUETA.APLICAR')"
-    :cancel-button-label="t('RELACIONAMENTOS.COMUM.CANCELAR')"
+    :confirm-button-label="
+      rotuloDeConfirmar(
+        t,
+        resultado,
+        t('RELACIONAMENTOS.LISTA.ETIQUETA.APLICAR')
+      )
+    "
+    :cancel-button-label="rotuloDeCancelar(t, resultado)"
+    :show-cancel-button="!terminou"
     :is-loading="enviando"
-    @confirm="aplicar"
+    @confirm="aoConfirmar"
+    @close="fechar"
   >
     <TituloDoDialogo :titulo="t('RELACIONAMENTOS.LISTA.ETIQUETA.TITULO')" />
-    <div
-      ref="campo"
-      data-relacionamentos="dialogo-etiqueta"
-      class="flex flex-col gap-2"
-    >
-      <label :for="idDoCampo" class="text-sm font-medium text-n-slate-12">
-        {{ t('RELACIONAMENTOS.LISTA.ETIQUETA.PERGUNTA') }}
-      </label>
-      <ChoiceSelect
-        v-model="escolhida"
-        :options="opcoes"
-        :trigger-id="idDoCampo"
-        :placeholder="t('RELACIONAMENTOS.LISTA.ETIQUETA.ESCOLHA')"
-        :aria-label="t('RELACIONAMENTOS.LISTA.ETIQUETA.PERGUNTA')"
-        :invalid="faltaEscolher"
-        :described-by="idDoAviso"
+    <div data-relacionamentos="dialogo-etiqueta">
+      <ResultadoDaAcao
+        :andamento="andamento"
+        :resultado="resultado"
+        :frase="colocada"
       />
-      <p
-        :id="idDoAviso"
-        role="alert"
-        data-relacionamentos="etiqueta-falta"
-        class="m-0 text-sm text-n-ruby-11"
-      >
-        {{
-          faltaEscolher
-            ? t('RELACIONAMENTOS.LISTA.ETIQUETA.FALTA_ESCOLHER')
-            : ''
-        }}
-      </p>
+      <div v-if="!resultado" ref="campo" class="flex flex-col gap-2">
+        <label :for="idDoCampo" class="text-sm font-medium text-n-slate-12">
+          {{ t('RELACIONAMENTOS.LISTA.ETIQUETA.PERGUNTA') }}
+        </label>
+        <ChoiceSelect
+          v-model="escolhida"
+          :options="opcoes"
+          :trigger-id="idDoCampo"
+          :placeholder="t('RELACIONAMENTOS.LISTA.ETIQUETA.ESCOLHA')"
+          :aria-label="t('RELACIONAMENTOS.LISTA.ETIQUETA.PERGUNTA')"
+          :invalid="faltaEscolher"
+          :described-by="idDoAviso"
+        />
+        <p
+          :id="idDoAviso"
+          role="alert"
+          data-relacionamentos="etiqueta-falta"
+          class="m-0 text-sm text-n-ruby-11"
+        >
+          {{
+            faltaEscolher
+              ? t('RELACIONAMENTOS.LISTA.ETIQUETA.FALTA_ESCOLHER')
+              : ''
+          }}
+        </p>
+      </div>
     </div>
   </Dialog>
 </template>

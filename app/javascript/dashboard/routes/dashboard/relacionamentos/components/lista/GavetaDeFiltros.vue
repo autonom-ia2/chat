@@ -9,7 +9,8 @@ import { FILTROS_VAZIOS, PERIODOS_DE_CHEGADA } from '../../lista/filtros';
 
 // #2894 — "Mais filtros": gaveta à direita com foco preso (useFocoPreso, a
 // mesma da gaveta de Nova conversa), Esc fecha e o foco volta ao botão que
-// abriu. "Ver resultado" aplica; "Limpar" tira todos e fecha.
+// abriu. "Ver resultado" aplica; "Limpar" tira todos e fecha. Campo que só
+// teria "Todas" (Empresa numa conta sem empresas) não aparece.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_VAZIOS }) },
@@ -59,20 +60,28 @@ const periodos = computed(() => [
   },
 ]);
 
-const campos = computed(() => [
-  {
-    chave: 'empresa',
-    rotulo: 'EMPRESA',
-    opcoes: comTodas(props.opcoes.empresas),
-  },
-  {
-    chave: 'etiqueta',
-    rotulo: 'ETIQUETA',
-    opcoes: comTodas(props.opcoes.etiquetas),
-  },
-  { chave: 'cidade', rotulo: 'CIDADE', opcoes: comTodas(props.opcoes.cidades) },
-  { chave: 'chegouEm', rotulo: 'CHEGOU_EM', opcoes: periodos.value },
-]);
+const temOQueEscolher = campo => campo.opcoes.length > 1;
+
+const campos = computed(() =>
+  [
+    {
+      chave: 'empresa',
+      rotulo: 'EMPRESA',
+      opcoes: comTodas(props.opcoes.empresas),
+    },
+    {
+      chave: 'etiqueta',
+      rotulo: 'ETIQUETA',
+      opcoes: comTodas(props.opcoes.etiquetas),
+    },
+    {
+      chave: 'cidade',
+      rotulo: 'CIDADE',
+      opcoes: comTodas(props.opcoes.cidades),
+    },
+    { chave: 'chegouEm', rotulo: 'CHEGOU_EM', opcoes: periodos.value },
+  ].filter(temOQueEscolher)
+);
 
 const escolher = (chave, valor) => {
   rascunho.value = { ...rascunho.value, [chave]: valor };

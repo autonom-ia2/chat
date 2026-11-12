@@ -15,10 +15,10 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   before_action :ensure_construtor, :fetch_agente, only: %i[sugestoes dispensar]
 
   def index
-    @fontes = Autonomia::FerramentasProntas::Catalogo.todas.select do |fonte|
-      Autonomia::FerramentasProntas.disponivel?(Current.account, fonte)
-    end
+    @fontes = Autonomia::FerramentasProntas.da_vitrine(Current.account)
     @incluidas = prontas_scope.order(:id)
+    # F7: nos cards Premium, quantas grátis restam à conta e os preços depois delas.
+    @premium = Autonomia::FerramentasProntas::Premium.para_tela(Current.account, @fontes)
   end
 
   def incluir
@@ -33,10 +33,27 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
     render json: { motivo: e.motivo }, status: :unprocessable_entity
   end
 
+  # `confirmou_preco` (F7): o clique no botão com o preço, quando as grátis do card Premium acabaram. Só `true` (ou
+  # "true") paga; qualquer outro valor ("sim", lista, objeto) é "não confirmou".
+  VALORES_DE_CONFIRMACAO = [true, 'true'].freeze
+
+  # O card Premium responde 202 ("consultando", com o id do pedido): a consulta paga roda em segundo plano.
   def experimentar
-    render json: Autonomia::FerramentasProntas::Experimente.new(
-      account: Current.account, fonte: params.require(:fonte).to_s, valor: params[:valor]
+    resultado = Autonomia::FerramentasProntas::Experimente.new(
+      account: Current.account, fonte: params.require(:fonte).to_s, valor: params[:valor],
+      confirmou_preco: VALORES_DE_CONFIRMACAO.include?(params[:confirmou_preco])
     ).call
+    consultando = resultado['situacao'] == Autonomia::FerramentasProntas::Experimente::Pedido::CONSULTANDO
+    render json: resultado, status: consultando ? :accepted : :ok
+  end
+
+  # F7 (revisor, 12/11): o estado de um pedido do Experimente Premium ("consultando" ou o resultado). Preso à conta: o
+  # pedido de outra conta, ou o que já venceu, é 404. A mesma porta do `experimentar`.
+  def acompanhar
+    pedido = Autonomia::FerramentasProntas::Experimente::Pedido.para_tela(params[:pedido], account: Current.account)
+    return head :not_found if pedido.nil?
+
+    render json: pedido
   end
 
   # Só verdadeiro ou falso (`true`/`false`, também como texto, que é como o Guia manda): qualquer outro valor (lista,

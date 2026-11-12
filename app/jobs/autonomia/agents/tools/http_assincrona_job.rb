@@ -94,6 +94,8 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     texto = ::Autonomia::FerramentasProntas::Resposta.nao_consegui
     return false unless run.fechar_leitura_perdida!(texto, vencida_antes_de: vencida_antes_de)
 
+    # #2858 (F7): a pronta Premium pode ter sido cobrada pela BigDataCorp; a telemetria ganha a falha `entrega_incerta`.
+    ::Autonomia::FerramentasProntas::Premium::Cobranca.entrega_incerta!(run)
     fechar(run.reload)
   end
 
@@ -239,7 +241,7 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   # #2858: a ferramenta pronta executa pela fonte do catálogo (`FerramentasProntas::Execucao`), com o prazo dela.
   def executor(run, tool, chave)
     ::Autonomia::FerramentasProntas.executor_para(tool, params: run.arguments, chave: chave, higienizar: true,
-                                                        segundos: self.class.tempo(run))
+                                                        segundos: self.class.tempo(run), tool_run_id: run.id)
   end
 
   # A linha deixou de ser desta passada enquanto ela chamava: trocada por um pedido mais novo, ou fechada pelo varredor.

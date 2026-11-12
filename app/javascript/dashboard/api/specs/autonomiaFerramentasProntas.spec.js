@@ -59,7 +59,22 @@ describe('#AutonomiaFerramentasProntasAPI', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/experimentar`, {
       fonte: 'cep',
       valor: '01001-000',
+      confirmou_preco: false,
     });
+    // F7: no card Premium sem grátis, o clique no botão com o preço manda a confirmação.
+    ferramentasProntas.experimentar(
+      'conferir_pessoa',
+      'CPF 111.444.777-35',
+      true
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/experimentar`, {
+      fonte: 'conferir_pessoa',
+      valor: 'CPF 111.444.777-35',
+      confirmou_preco: true,
+    });
+    // F7: o Experimente Premium roda em segundo plano; a tela acompanha o pedido pelo id.
+    ferramentasProntas.acompanhar('pedido-1');
+    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/experimentar/pedido-1`);
     ferramentasProntas.buscaSemResultado('passagem de avião');
     expect(axiosMock.post).toHaveBeenCalledWith(
       `${BASE}/buscas_sem_resultado`,

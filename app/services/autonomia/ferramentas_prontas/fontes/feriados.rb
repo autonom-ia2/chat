@@ -69,9 +69,14 @@ module Autonomia::FerramentasProntas::Fontes::Feriados
   end
 
   ANO = Parametro.new(nome: 'ano', tipo: 'integer', descricao: 'O ano (ex.: 2026). Sem ano: o ano atual.',
-                      padrao: -> { Time.zone.today.year }) { |valor| Parametro.inteiro(valor, ANOS) }
-  DE = Parametro.new(nome: 'de', descricao: 'A data inicial, AAAA-MM-DD. Sem data: hoje.', padrao: -> { hoje }) { |valor| data(valor) }
-  ATE = Parametro.new(nome: 'ate', descricao: 'A data final, AAAA-MM-DD (até dois anos depois da inicial).') { |valor| data(valor) }
+                      deduza: 'mande o ano com 4 dígitos, ou deixe vazio para o ano atual.', padrao: -> { Time.zone.today.year }) do |valor|
+    Parametro.inteiro(valor, ANOS)
+  end
+  DE = Parametro.new(nome: 'de', descricao: 'A data inicial, AAAA-MM-DD. Sem data: hoje.', padrao: -> { hoje },
+                     deduza: 'converta o dia que o cliente disse para AAAA-MM-DD, ou deixe vazio para hoje.') { |valor| data(valor) }
+  ATE = Parametro.new(nome: 'ate', descricao: 'A data final, AAAA-MM-DD (até dois anos depois da inicial).',
+                      deduza: 'converta o prazo que o cliente disse ("dia 30", "fim do mês") para AAAA-MM-DD, até dois anos ' \
+                              'depois da inicial.') { |valor| data(valor) }
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'feriados', slug: 'pronta_feriados', nome: 'Feriados e dias úteis', flag: Autonomia::FerramentasProntas::FLAG_CONSULTAS,

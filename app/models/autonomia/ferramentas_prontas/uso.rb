@@ -24,24 +24,34 @@ class Autonomia::FerramentasProntas::Uso < ApplicationRecord
     end
 
     # Conta uma consulta, só se o dia ainda está abaixo do limite. -> true quando contou; false quando o limite já foi
-    # atingido (nada muda). Uma instrução só: o INSERT do primeiro uso do dia ou o UPDATE condicional.
+    # atingido (nada muda). Uma instrução só: o INSERT do primeiro uso do dia ou o UPDATE condicional. `limite` nil é
+    # sem limite (as Premium, #2858 F7): conta sempre.
     # Fora do cache de consultas do ActiveRecord (`uncached`): ligado em todo job e request, ele devolveria o RETURNING da
     # primeira chamada às seguintes do mesmo job, sem executar o INSERT, e o limite deixaria de contar.
     def reservar!(account_id:, fonte:, limite:)
-      return false if limite.to_i <= 0
+      return false if !limite.nil? && limite.to_i <= 0
 
       sql = <<~SQL.squish
         INSERT INTO #{table_name} (account_id, fonte, dia, consultas, created_at, updated_at)
         VALUES (:conta, :fonte, :dia, 1, NOW(), NOW())
         ON CONFLICT (account_id, fonte, dia) DO UPDATE
           SET consultas = #{table_name}.consultas + 1, updated_at = NOW()
-          WHERE #{table_name}.consultas < :limite
+          WHERE :sem_limite OR #{table_name}.consultas < :limite
         RETURNING consultas
       SQL
-      comando = sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje, limite: limite.to_i }])
+      comando = sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje, sem_limite: limite.nil?, limite: limite.to_i }])
       contou = uncached { connection.select_value(comando) }.present?
       connection.clear_query_cache # a escrita não passou pelo caminho que suja o cache: leitura seguinte relê a linha
       contou
+    end
+
+    # Desfaz uma reserva (`reservar!`) do dia: a consulta que o resolver recusou (regra "QI 70": candidatos, marca que
+    # não existe) não gasta o limite, como o pedido inválido de antes do limite.
+    def devolver!(account_id:, fonte:)
+      sql = "UPDATE #{table_name} SET consultas = GREATEST(consultas - 1, 0), updated_at = NOW() " \
+            'WHERE account_id = :conta AND fonte = :fonte AND dia = :dia'
+      connection.exec_update(sanitize_sql_array([sql, { conta: account_id, fonte: fonte, dia: hoje }]))
+      connection.clear_query_cache
     end
 
     # Soma 1 no desfecho (`DESFECHOS`) e em cada motivo. Desfecho fora da lista é defeito nosso: levanta.

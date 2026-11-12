@@ -129,7 +129,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       fonte_responde(sgs.call(432), [{ data: '10/11/2026', valor: '13.75' }])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'selic')['dados'])
-        .to eq('indicador' => 'Selic (meta do Copom)', 'valor' => 13.75, 'unidade' => '% ao ano')
+        .to eq('indicador' => 'Selic (meta do Copom)', 'valor' => 13.75, 'unidade' => 'percentual_ao_ano')
     end
 
     it 'Selic com o SGS fora: a BrasilAPI responde' do
@@ -168,10 +168,24 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       dados = executar_pronta(ferramenta, 'consulta' => 'focus', 'indicador' => 'ipca')['dados']
       expect(dados['expectativas']).to eq([{ 'ano' => 2026, 'mediana' => 5.2195, 'data_do_boletim' => '2026-11-06' },
                                            { 'ano' => 2027, 'mediana' => 4.9, 'data_do_boletim' => '2026-11-06' }])
+      # A unidade da mediana vai junto (a tela e o modelo não adivinham): % no IPCA e no PIB, % ao ano na Selic, R$ no câmbio.
+      expect(dados['unidades']).to eq('mediana' => '%')
       expect(a_request(:get, focus).with { |pedido| CGI.unescape(pedido.uri.query).include?("Indicador eq 'IPCA'") }).to have_been_made
 
       stub_request(:get, focus).to_return(status: 500)
       expect(nao_consegui?(executar_pronta(ferramenta, 'consulta' => 'focus', 'indicador' => 'cambio'))).to be(true)
+    end
+
+    it 'Focus: a unidade da mediana segue o indicador' do
+      focus = %r{\Ahttps://olinda\.bcb\.gov\.br/olinda/servico/Expectativas/}
+      { 'selic' => 'percentual_ao_ano', 'cambio' => 'R$', 'pib' => '%' }.each do |indicador, unidade|
+        stub_request(:get, focus).to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                                            body: { value: [{ Data: '2026-11-06', DataReferencia: '2026', Mediana: 5.5 }] }.to_json)
+
+        dados = executar_pronta(ferramenta, 'consulta' => 'focus', 'indicador' => indicador)['dados']
+
+        expect(dados['unidades']).to eq('mediana' => unidade)
+      end
     end
 
     it 'IPCA: o mes e os 12 meses' do
@@ -179,7 +193,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       fonte_responde(sgs.call(13_522), [{ data: '01/09/2026', valor: '4.58' }])
 
       expect(executar_pronta(ferramenta, 'consulta' => 'ipca')['dados'])
-        .to include('mes_de_referencia' => '09/2026', 'variacao_no_mes' => 0.82, 'acumulado_12_meses' => 4.58)
+        .to include('mes_de_referencia' => '2026-09', 'variacao_no_mes' => 0.82, 'acumulado_12_meses' => 4.58)
     end
   end
 

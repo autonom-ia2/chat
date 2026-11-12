@@ -98,16 +98,28 @@
         "NINGUEM_PODE": "No one here can receive it: {motivos}.",
         "ABRINDO_CAMPANHA": "Opening the campaign with {count} person. | Opening the campaign with {count} people."
       },
+      "ACAO": {
+        "ANDAMENTO": "{feitas} of {total}",
+        "FICARAM_DE_FORA": "Left out:",
+        "SEM_NOME": "Unnamed person",
+        "MOTIVO_JA_TEM_CARD": "Already has an open card in this funnel",
+        "MOTIVO_NAO_APAGADA": "Couldn't be deleted",
+        "MOTIVO_NAO_EXISTE_MAIS": "No longer exists",
+        "MOTIVO_DADOS_INVALIDOS": "Name and contact details are missing",
+        "MOTIVO_ERRO": "Something went wrong, try again",
+        "AINDA_NAO": "{count} not done yet. Something went wrong along the way.",
+        "TENTAR_COM_AS_QUE_FALTAM": "Try again with the ones left",
+        "PRONTO": "Done"
+      },
       "CARDS": {
         "TITULO": "Create cards",
         "FUNIL": "Which funnel?",
         "ETAPA": "Which stage?",
         "CRIAR": "Create {count} card | Create {count} cards",
         "CRIADOS": "{count} card created. | {count} cards created.",
-        "FICARAM_DE_FORA": "Left out:",
-        "MOTIVO_JA_TEM_CARD": "Already has a card in this funnel",
-        "PRONTO": "Done",
-        "ERRO": "I couldn't create the cards. Try again."
+        "ERRO": "I couldn't create the cards. Try again.",
+        "SEM_FUNIL": "You don't have a funnel to receive the cards yet.",
+        "ABRIR_CRM": "Open the CRM"
       },
       "ETIQUETA": {
         "TITULO": "Add a label",
@@ -127,6 +139,8 @@
       },
       "ESTADOS": {
         "CONTA_VAZIA": "No one is here yet.",
+        "SEM_ACESSO": "You don't have access to these people. Ask the account admin.",
+        "SEM_ACESSO_EMPRESAS": "You don't have access to these companies. Ask the account admin.",
         "GRUPO_VAZIO": "No one in this group right now.",
         "GRUPO_VAZIO_EMPRESAS": "No company in this group right now.",
         "BUSCA_SEM_RESULTADO": "I couldn't find anyone matching “{busca}”.",
@@ -143,6 +157,7 @@
       "CARREGANDO": "Loading",
       "VOLTAR": "Back",
       "CANCELAR": "Cancel",
+      "FECHAR": "Close",
       "CONTINUAR": "Continue",
       "SELO_CLIENTE": "Customer",
       "SELO_NAO_QUER_MENSAGENS": "Doesn't want messages",

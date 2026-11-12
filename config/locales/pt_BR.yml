@@ -1263,11 +1263,18 @@ pt_BR:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
+        ready_tool_test: 'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o cartão › Experimente.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'
       rule_funnel_manage_only: 'Regra que mexe no funil também precisa da permissão de configurar funis na sua função.'
       automation_view_only: 'Para isso você precisa da permissão de ver as regras automáticas na sua função.'
+      automacao_sem_porta: 'Nesta conta, as automações montadas com o Guia ainda são as do jeito antigo. Peça a quem administra a conta para ligar as Automações novas.'
+      automacao_ligada_vale_na_hora: 'Esta automação está ligada: a mudança vale assim que você confirmar.'
+      automacao_ligada_ajuste_pausa: 'Esta automação foi ligada por outra pessoa: ao confirmar, a mudança é salva e ela pausa até alguém ligar de novo.'
+      automacao_desligar_sem_desfazer: 'Isto não tem desfazer aqui. A automação para de funcionar agora. Para ela voltar, peça para ligar de novo.'
+      automacao_ligar_vale_agora: 'A automação começa a funcionar agora, em seu nome. Para parar, peça para desligar ou toque em Desligar na tela dela.'
+      automacao_versao_de_outra_pessoa: 'Esta versão foi salva por %{nome} em %{quando}.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
@@ -1320,6 +1327,13 @@ pt_BR:
       undo:
         already_undone: 'Isto já foi desfeito.'
         expired: 'Os 5 dias para desfazer isto já passaram.'
+        conflitos:
+          ficou_desligada: 'A automação ficou desligada. Para ela voltar, peça para ligar de novo.'
+          automacao_ja_ligada: 'A automação já tinha sido ligada, então ficou como está.'
+          automacao_ja_executada: 'A automação já rodou, então ficou como está.'
+          versao_ja_executada: 'Esta versão da automação já rodou, então ficou.'
+          versao_mais_nova: 'Alguém salvou uma versão mais nova depois, então esta ficou.'
+          mudou_depois: 'Alguém mexeu na automação depois, então ela ficou como está.'
       records:
         automation_rule: 'Automação'
       fields:

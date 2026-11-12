@@ -22,6 +22,37 @@ const montar = ({
   return { aba, lista, parar: () => escopo.stop() };
 };
 
+// Uma fonte em que as leituras de `quais` são recusadas pelo servidor até
+// `voltar()`; as outras respondem como a demonstração.
+const erroDoServidor = () =>
+  Object.assign(new Error('Request failed with status code 500'), {
+    response: { status: 500 },
+  });
+const semAcesso = () =>
+  Object.assign(new Error('Sem acesso.'), { name: 'SEM_ACESSO' });
+
+const fonteQueFalha = (quais, recusado = erroDoServidor()) => {
+  const boa = demo();
+  let falhando = true;
+  const leitura = metodo =>
+    quais.includes(metodo)
+      ? (...args) =>
+          falhando ? Promise.reject(recusado) : boa[metodo](...args)
+      : boa[metodo];
+  return {
+    recusado,
+    voltar: () => {
+      falhando = false;
+    },
+    fonte: {
+      ...boa,
+      resumo: leitura('resumo'),
+      contagens: leitura('contagens'),
+      listar: leitura('listar'),
+    },
+  };
+};
+
 // A fonte de demonstração espera num setTimeout (atraso 0): em vez de dormir,
 // cada teste espera pela condição que lhe interessa.
 const ate = verificacao => vi.waitFor(verificacao, { timeout: 5000 });
@@ -116,14 +147,72 @@ describe('useLista', () => {
   });
 
   it('guarda o erro da fonte e limpa quando recarrega com sucesso', async () => {
-    const falha = Object.assign(new Error('x'), {
-      name: 'FONTE_REAL_PENDENTE',
-    });
-    const { lista } = montar({ fonte: listaFonte({ demo: null }) });
+    const servidor = fonteQueFalha(['resumo', 'contagens', 'listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
     await lista.iniciar();
-    expect(lista.erro.value).toMatchObject({ name: falha.name });
+    expect(lista.erro.value).toBe(servidor.recusado);
     expect(lista.resumo.value).toBeNull();
+
+    servidor.voltar();
+    await lista.recarregar();
+    expect(lista.erro.value).toBeNull();
+    expect(lista.resumo.value.total).toBe(280);
+    expect(lista.itens.value).toHaveLength(25);
   });
+
+  // Fora da demonstração as três leituras são pedidos separados: uma pode
+  // falhar e as outras responderem. O erro de uma não some com o sucesso da outra.
+  it.each(['resumo', 'contagens'])(
+    'o erro de %s continua de pé quando a lista responde',
+    async leitura => {
+      const servidor = fonteQueFalha([leitura]);
+      const { lista } = montar({ fonte: servidor.fonte });
+      await lista.iniciar();
+      expect(lista.itens.value).toHaveLength(25);
+      expect(lista.erro.value).toBe(servidor.recusado);
+
+      await lista.escolherGrupo('clientes');
+      expect(lista.erro.value).toBe(servidor.recusado);
+
+      servidor.voltar();
+      await lista.recarregar();
+      expect(lista.erro.value).toBeNull();
+    }
+  );
+
+  it('o erro da lista some quando o pedido seguinte da lista responde', async () => {
+    const servidor = fonteQueFalha(['listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
+    await lista.iniciar();
+    expect(lista.erro.value).toBe(servidor.recusado);
+
+    servidor.voltar();
+    await lista.escolherGrupo('clientes');
+    expect(lista.erro.value).toBeNull();
+    expect(lista.total.value).toBe(120);
+  });
+
+  it('erro comum não é falta de acesso', async () => {
+    const servidor = fonteQueFalha(['resumo', 'contagens', 'listar']);
+    const { lista } = montar({ fonte: servidor.fonte });
+    await lista.iniciar();
+    expect(lista.semAcesso.value).toBe(false);
+  });
+
+  // Uma leitura recusada por falta de acesso basta: a tela mostra um estado só.
+  it.each(['resumo', 'contagens', 'listar'])(
+    '%s recusado com SEM_ACESSO liga `semAcesso`, e some quando volta a responder',
+    async leitura => {
+      const servidor = fonteQueFalha([leitura], semAcesso());
+      const { lista } = montar({ fonte: servidor.fonte });
+      await lista.iniciar();
+      expect(lista.semAcesso.value).toBe(true);
+
+      servidor.voltar();
+      await lista.recarregar();
+      expect(lista.semAcesso.value).toBe(false);
+    }
+  );
 
   it('"mostrar mais" atropelado por um pedido da página 1 não deixa carregandoMais preso', async () => {
     const pendentes = [];
@@ -251,24 +340,55 @@ describe('acoesDaListaFonte', () => {
     ]);
   });
 
-  it('simula etiqueta e apagar: só conta, não grava', async () => {
+  it('as três escritas devolvem o mesmo formato da fonte real', async () => {
+    const semNinguemDeFora = { deFora: [], faltam: [], erro: null };
     expect(
       await acoes().aplicarEtiqueta({
         pessoas: pessoas([1, 2]),
         etiqueta: 'feira',
       })
-    ).toEqual({ aplicadas: 2 });
+    ).toEqual({ aplicadas: 2, ...semNinguemDeFora });
     expect(await acoes().apagar({ pessoas: pessoas([1]) })).toEqual({
       apagadas: 1,
+      ...semNinguemDeFora,
+    });
+    expect(
+      await acoes().criarCards({
+        pessoas: pessoas([1, 2]),
+        funilId: 'vendas',
+        etapaId: 'primeira-conversa',
+      })
+    ).toEqual({ criados: 2, ...semNinguemDeFora });
+  });
+
+  it('simula o andamento em fatias de 50, como a fonte real', async () => {
+    const aoAndar = vi.fn();
+    const muitas = pessoas(Array.from({ length: 120 }, (_, i) => i + 1));
+    await acoes().apagar({ pessoas: muitas, aoAndar });
+    expect(aoAndar.mock.calls.map(([passo]) => passo)).toEqual([
+      { feitas: 50, total: 120 },
+      { feitas: 100, total: 120 },
+      { feitas: 120, total: 120 },
+    ]);
+  });
+
+  it('para antes da próxima fatia quando pedem para parar', async () => {
+    const muitas = pessoas(Array.from({ length: 120 }, (_, i) => i + 1));
+    const aoAndar = vi.fn();
+    const resultado = await acoes().apagar({
+      pessoas: muitas,
+      aoAndar,
+      deveParar: () => aoAndar.mock.calls.length >= 1,
+    });
+    expect(resultado).toEqual({
+      apagadas: 50,
+      deFora: [],
+      faltam: muitas.slice(50),
+      erro: null,
     });
   });
 
-  it.each(['funis', 'etiquetas', 'criarCards', 'aplicarEtiqueta', 'apagar'])(
-    '%s diz que a fonte real ainda não existe',
-    async metodo => {
-      await expect(
-        acoesDaListaFonte({ demo: null })[metodo]({})
-      ).rejects.toMatchObject({ name: 'FONTE_REAL_PENDENTE' });
-    }
-  );
+  it('sem `?demo=` é a fonte real', () => {
+    expect(acoesDaListaFonte({ demo: null }).usaDemo).toBe(false);
+  });
 });

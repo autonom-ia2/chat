@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import FerramentasProntasAPI from 'dashboard/api/autonomia/ferramentasProntas';
 import VitrineSugestao from './VitrineSugestao.vue';
-import { chaveDoTexto, ferramentaPorId } from '../catalogo';
+import { chaveDoTexto, oferecida } from '../catalogo';
 import { useVitrine } from '../useVitrine';
 import { useVitrineLigada } from '../useVitrineLigada';
 
@@ -27,7 +27,7 @@ const incluindo = ref(false);
 const primeira = computed(
   () =>
     sugeridas.value.find(
-      id => ferramentaPorId(id) && !vitrine.tem(props.agenteId, id)
+      id => oferecida(id) && !vitrine.tem(props.agenteId, id)
     ) || null
 );
 

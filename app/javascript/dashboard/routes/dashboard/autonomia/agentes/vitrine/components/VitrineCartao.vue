@@ -2,6 +2,9 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { chaveDoTexto } from '../catalogo';
+import { useVitrine } from '../useVitrine';
+import VitrinePreco from './VitrinePreco.vue';
+import VitrineSeloPremium from './VitrineSeloPremium.vue';
 
 // #2858 F2 — o cartão de uma ferramenta pronta: o que ela faz em uma frase, o apoio ("tabela FIPE") só como detalhe, e
 // um selo: o agente escolhido já sabe, ou quantas perguntas ela responde. O cartão inteiro é o botão que abre o
@@ -12,12 +15,32 @@ const props = defineProps({
   // Nome do agente escolhido que já tem esta ferramenta; vazio quando não tem.
   jaSabe: { type: String, default: '' },
   destaque: { type: Boolean, default: false },
+  // F7: o preço e as grátis que restam do card Premium; null nos grátis (que não ganham selo).
+  premium: { type: Object, default: null },
 });
 
 const emit = defineEmits(['abrir']);
 
 const NS = 'AGENTS.VITRINE';
-const { t, te } = useI18n();
+const { t, te, locale } = useI18n();
+const { atualizadoEm, estaEmPreparacao } = useVitrine();
+
+// #2858 F5 — a base que a plataforma baixa diz de quando é a cópia ("Atualizado em 11/11/2026"); antes da primeira
+// cópia, que os dados chegam logo; se a primeira cópia já falhou, "em preparação" (sem prometer prazo). O dia vem do
+// servidor ("2026-11-11") e é mostrado no formato do idioma da tela.
+const atualizacao = computed(() => {
+  if (!props.ferramenta.base) return '';
+  const dia = atualizadoEm(props.ferramenta.id);
+  if (!dia && estaEmPreparacao(props.ferramenta.id)) {
+    return t(`${NS}.CARTAO.EM_PREPARACAO`);
+  }
+  if (!dia) return t(`${NS}.CARTAO.PREPARANDO`);
+  const [ano, mes, diaDoMes] = dia.split('-').map(Number);
+  const texto = new Date(ano, mes - 1, diaDoMes).toLocaleDateString(
+    String(locale.value).replace('_', '-')
+  );
+  return t(`${NS}.CARTAO.ATUALIZADO_EM`, { data: texto });
+});
 
 const textos = computed(() => {
   const base = `${NS}.FERRAMENTAS.${chaveDoTexto(props.ferramenta.id)}`;
@@ -73,7 +96,7 @@ const selo = computed(() => {
       >
         <span :class="ferramenta.icone" class="size-6" />
       </span>
-      <span class="flex flex-col min-w-0 gap-0.5">
+      <span class="flex flex-col flex-1 min-w-0 gap-0.5">
         <span class="text-base font-semibold leading-snug text-n-slate-12">
           {{ textos.nome }}
         </span>
@@ -81,9 +104,18 @@ const selo = computed(() => {
           {{ textos.apoio }}
         </span>
       </span>
+      <VitrineSeloPremium v-if="premium" class="mt-0.5" />
     </span>
     <span class="flex-1 text-sm leading-relaxed text-n-slate-11">
       {{ textos.faz }}
+    </span>
+    <span
+      v-if="atualizacao"
+      data-vitrine-atualizado
+      class="inline-flex items-center gap-1.5 text-xs text-n-slate-11"
+    >
+      <span class="i-lucide-refresh-cw size-3.5" aria-hidden="true" />
+      {{ atualizacao }}
     </span>
     <span
       v-if="selo"
@@ -93,5 +125,6 @@ const selo = computed(() => {
       <span :class="selo.icone" class="size-3.5" aria-hidden="true" />
       {{ selo.texto }}
     </span>
+    <VitrinePreco v-if="premium" :premium="premium" />
   </button>
 </template>

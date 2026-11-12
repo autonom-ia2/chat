@@ -14,6 +14,9 @@
 # você" com o Confirmar logo abaixo). Agora quem propõe é quem escreve.
 class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Native::Base
   class << self
+    # #2918: ESCREVE (propõe uma mudança na conta (o cartão com o Confirmar)). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'propor_acao'
     end

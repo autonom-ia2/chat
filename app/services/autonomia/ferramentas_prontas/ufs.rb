@@ -10,6 +10,15 @@ module Autonomia::FerramentasProntas::Ufs
     'SE' => 'Sergipe', 'TO' => 'Tocantins'
   }.freeze
   SIGLAS = NOMES.keys.freeze
+  # A capital de cada estado: desempata a cidade sem UF com o mesmo nome em mais de um estado, quando uma delas é a
+  # capital (Rio Branco é a do Acre, não a de Mato Grosso; varredura F39).
+  CAPITAIS = {
+    'AC' => 'Rio Branco', 'AL' => 'Maceió', 'AP' => 'Macapá', 'AM' => 'Manaus', 'BA' => 'Salvador', 'CE' => 'Fortaleza',
+    'DF' => 'Brasília', 'ES' => 'Vitória', 'GO' => 'Goiânia', 'MA' => 'São Luís', 'MT' => 'Cuiabá', 'MS' => 'Campo Grande',
+    'MG' => 'Belo Horizonte', 'PA' => 'Belém', 'PB' => 'João Pessoa', 'PR' => 'Curitiba', 'PE' => 'Recife',
+    'PI' => 'Teresina', 'RJ' => 'Rio de Janeiro', 'RN' => 'Natal', 'RS' => 'Porto Alegre', 'RO' => 'Porto Velho',
+    'RR' => 'Boa Vista', 'SC' => 'Florianópolis', 'SP' => 'São Paulo', 'SE' => 'Aracaju', 'TO' => 'Palmas'
+  }.freeze
 
   module_function
 
@@ -22,6 +31,10 @@ module Autonomia::FerramentasProntas::Ufs
   def sigla_pelo_nome(nome)
     alvo = Autonomia::FerramentasProntas::Lista.comparavel(nome)
     NOMES.find { |_sigla, oficial| Autonomia::FerramentasProntas::Lista.comparavel(oficial) == alvo }&.first
+  end
+
+  def capital?(sigla, nome)
+    Autonomia::FerramentasProntas::Lista.comparavel(CAPITAIS[sigla.to_s.upcase]) == Autonomia::FerramentasProntas::Lista.comparavel(nome)
   end
 
   # "AC" -> { 'uf' => 'AC', 'estado' => 'Acre' }

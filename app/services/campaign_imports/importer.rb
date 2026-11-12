@@ -1,6 +1,3 @@
-require 'csv'
-require 'stringio'
-
 module CampaignImports
   class Importer
     include SuppressedContactEvents
@@ -15,7 +12,8 @@ module CampaignImports
 
     # Rows are written in blocks, each in its own transaction, and every row in its own
     # savepoint: one bad row is marked as failed and the rest of the base still imports.
-    # Rows already imported are skipped, so a retried job does not duplicate work.
+    # Rows already imported are skipped, so a retried job does not duplicate work: an import that broke midway
+    # (`failed`, CampaignImport#import_resumable?) goes on from where it stopped when it runs again (#2921).
     def perform
       return unless transition_to_importing!
       return refuse_without_permission! unless contact_row.allowed?
@@ -51,18 +49,24 @@ module CampaignImports
         campaign_import.reload
         next if campaign_import.importing? || campaign_import.completed? || campaign_import.completed_with_failures?
 
-        raise Error, 'campaign_import_not_ready' unless campaign_import.queued? || campaign_import.ready_to_confirm?
+        raise Error, 'campaign_import_not_ready' unless startable?
 
-        campaign_import.update!(status: :importing, import_started_at: Time.current)
+        # What an earlier failure left (#2921) is no longer true once the writing starts again.
+        campaign_import.update!(
+          status: :importing, import_started_at: Time.current, import_finished_at: nil,
+          validation_summary: campaign_import.validation_summary.to_h.except('import_error')
+        )
         should_import = true
       end
       should_import
     end
 
+    def startable? = campaign_import.queued? || campaign_import.ready_to_confirm? || campaign_import.import_resumable?
+
     def import_block(block, label_records)
-      import_rows = campaign_import.campaign_import_rows.where(row_number: block.pluck(:row_number)).index_by(&:row_number)
       import_companies&.prepare(block)
       ActiveRecord::Base.transaction do
+        import_rows = locked_rows(block)
         imported = block.filter_map do |row|
           import_row = import_rows.fetch(row[:row_number])
           next if import_row.status_imported?
@@ -72,6 +76,16 @@ module CampaignImports
         end
         BulkContactLabeler.new(imported).perform if label_records
       end
+      # Still alive (#2921): the sweep (StalledImportsJob) reads the import's `updated_at`. After the last block
+      # this is also the mark right before finish_import!.
+      campaign_import.touch # rubocop:disable Rails/SkipsModelValidations -- only the timestamp moves
+    end
+
+    # The block's rows stay locked until it commits (#2921). If the same import ever runs twice at once (the sweep
+    # put it back in the queue while a slow worker was still alive), the second run waits here and then finds the
+    # rows already imported. Contacts have no unique index on the phone, so this is what keeps them from doubling.
+    def locked_rows(block)
+      campaign_import.campaign_import_rows.where(row_number: block.pluck(:row_number)).order(:row_number).lock.index_by(&:row_number)
     end
 
     def import_one(row, import_row, label_records)
@@ -87,7 +101,7 @@ module CampaignImports
       import_row.restore_attributes(%i[company_id company_result]) # the company rolled back with the row
       import_row.update!(
         status: :import_failed,
-        error_messages: Array(import_row.error_messages) + ["import_failed:#{e.class.name}"]
+        error_messages: Array(import_row.error_messages) | ["import_failed:#{e.class.name}"] # once, however many passes
       )
       nil
     end
@@ -155,6 +169,7 @@ module CampaignImports
         was_existing_contact: was_existing,
         labels_applied: row_label_titles(row, label_records),
         batch_index: row[:batch_index],
+        error_messages: [], # a row that failed in an earlier pass (#2921) and now went in
         status: :imported
       )
     end
@@ -167,7 +182,7 @@ module CampaignImports
 
       ActiveRecord::Base.transaction do
         update_label_counts!
-        attach_report_csv(imported_count, existing_count, failed_count)
+        ImportReport.new(campaign_import).attach(imported_count: imported_count, existing_count: existing_count, failed_count: failed_count)
         campaign_import.update!(
           status: failed_count.zero? ? :completed : :completed_with_failures,
           imported_contacts_count: imported_count,
@@ -191,29 +206,6 @@ module CampaignImports
                 end
         import_label.update!(applied_count: count)
       end
-    end
-
-    def attach_report_csv(imported_count, existing_count, failed_count)
-      rows = [
-        { 'metric' => 'status', 'value' => failed_count.zero? ? 'completed' : 'completed_with_failures' },
-        { 'metric' => 'imported_contacts_count', 'value' => imported_count },
-        { 'metric' => 'existing_contacts_count', 'value' => existing_count },
-        { 'metric' => 'created_contacts_count', 'value' => imported_count - existing_count },
-        { 'metric' => 'failed_contacts_count', 'value' => failed_count },
-        { 'metric' => 'base_label', 'value' => campaign_import.base_label },
-        { 'metric' => 'batch_count', 'value' => campaign_import.batch_count }
-      ]
-
-      campaign_import.report_csv.attach(
-        io: StringIO.new(CsvSanitizer.generate(%w[metric value], rows)),
-        filename: report_filename,
-        content_type: 'text/csv'
-      )
-    end
-
-    def report_filename
-      basename = campaign_import.source_filename.to_s.sub(/\.[^.]*\z/, '').presence || "campaign_import_#{campaign_import.id}"
-      "#{basename}_report.csv"
     end
   end
 end

@@ -14,7 +14,7 @@ module Autonomia::FerramentasProntas::Catalogo
   module_function
 
   def todas
-    [*fundacao_e_lote1, *lote2]
+    [*fundacao_e_lote1, *lote2, *bases, *premium]
   end
 
   def fundacao_e_lote1
@@ -48,8 +48,39 @@ module Autonomia::FerramentasProntas::Catalogo
     ]
   end
 
+  # F5 (flag `agente_ferramentas_prontas_bases`): as bases que a plataforma baixa e mantém atualizadas (`Bases`).
+  def bases
+    [
+      Autonomia::FerramentasProntas::Fontes::PlanosDeSaude::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Aeronaves::FONTE,
+      Autonomia::FerramentasProntas::Fontes::GeracaoSolar::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Transportadoras::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Queimadas::FONTE
+    ]
+  end
+
+  # F7 (flag `agente_ferramentas_prontas_premium`): as consultas pagas à BigDataCorp, um card por tema.
+  def premium
+    [
+      Autonomia::FerramentasProntas::Fontes::Premium::Certidoes::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::RaioX::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::Pessoa::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::Placa::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::ImovelRural::FONTE,
+      Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa::FONTE
+    ]
+  end
+
   def chaves
     todas.map(&:chave)
+  end
+
+  # As chaves que o Construtor e o cartão "pode ganhar" podem sugerir, iguais para todas as contas (o enum do schema
+  # estrito do Construtor fica no prefixo em cache): os dois filtros de `FerramentasProntas.sugeriveis` já na entrada,
+  # fora as de uso interno (`Fonte#na_vitrine?` falso, #2909) e as Premium (F7). O modelo nem as vê.
+  def chaves_sugeriveis
+    todas.select(&:na_vitrine?).reject(&:premium?).map(&:chave)
   end
 
   def buscar(chave)

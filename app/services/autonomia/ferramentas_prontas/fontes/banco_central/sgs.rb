@@ -23,7 +23,7 @@ class Autonomia::FerramentasProntas::Fontes::BancoCentral::Sgs < Autonomia::Ferr
 
   def ipca(banco)
     data, no_mes = ultimo(IPCA_NO_MES)
-    banco.ipca(mes: data[3, 7], no_mes: no_mes, em_12_meses: ultimo(IPCA_EM_12_MESES).last)
+    banco.ipca(mes: banco.mes_iso(data[3, 7]), no_mes: no_mes, em_12_meses: ultimo(IPCA_EM_12_MESES).last)
   end
 
   def dolar(banco)

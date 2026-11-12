@@ -1,0 +1,48 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "telefone": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-telefones",
+    "dados": {
+      "telefones": [
+        {
+          "telefone": "19 30000000",
+          "tipo": "WORK",
+          "principal": true
+        },
+        {
+          "telefone": "19 990000000",
+          "tipo": "MOBILE",
+          "principal": false
+        }
+      ]
+    }
+  },
+  "email": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/empresas-e-mails",
+    "dados": {
+      "emails": [
+        {
+          "email": "contato@empresa-exemplo.test",
+          "principal": true
+        }
+      ]
+    }
+  },
+  "empresas_na_regiao": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/enderecos-estatisticas-de-empresas",
+    "dados": {
+      "empresas": 1250,
+      "ativas": 980,
+      "inativas": 270,
+      "meis": 410,
+      "no_simples": 520,
+      "matrizes": 1100,
+      "filiais": 150,
+      "idade_media_anos": 9.4,
+      "atividades": 312
+    }
+  }
+}

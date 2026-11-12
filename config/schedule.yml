@@ -20,6 +20,12 @@ campaign_journey_stalled_campaigns_job:
   class: 'CampaignJourney::StalledCampaignsJob'
   queue: scheduled_jobs
 
+# #2921: puts back in the queue a contact, audience or campaign base import whose worker died midway (fork job)
+campaign_imports_stalled_imports_job:
+  cron: '*/5 * * * *'
+  class: 'CampaignImports::StalledImportsJob'
+  queue: scheduled_jobs
+
 # executed hourly for scheduled jobs that do not need minute-level cadence
 trigger_hourly_scheduled_items_job:
   cron: '0 * * * *'
@@ -437,4 +443,23 @@ whatsapp_hybrid_foto_do_contato_backfill_job:
 autonomia_desempenho_leitura_automatica_job:
   cron: '0 7 * * *'
   class: 'Autonomia::Desempenho::LeituraAutomaticaJob'
+  queue: scheduled_jobs
+
+# Ferramentas prontas F5 (#2858): as bases que a plataforma baixa (planos de saúde da ANS, aeronaves da ANAC, placas
+# solares da ANEEL, transportadoras da ANTT e focos de queimada do INPE). A cada 5 minutos, mas só age depois do
+# horário da stack (AUTONOMIA_PRONTAS_BASES_HORARIO_UTC; sem ele, um horário entre 10:00 e 11:55 UTC tirado do
+# FRONTEND_URL, diferente em cada stack): enfileira UMA base vencida que não tentou hoje, e a próxima entra quando ela
+# termina. Sem nenhuma conta com a flag agente_ferramentas_prontas_bases, não baixa nada.
+autonomia_ferramentas_prontas_atualizar_bases_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::FerramentasProntas::AtualizarBasesJob'
+  queue: scheduled_jobs
+
+# Ferramentas prontas F7 (#2858, revisor 12/11): a linha "em andamento" do Experimente Premium que ficou órfã (o job
+# agendado pela própria execução se perdeu). A cada 10 minutos, fecha como entrega incerta a que passou do prazo da
+# consulta mais lenta, em todas as contas, pela mesma regra do varredor da execução. Uma leitura da tabela das consultas
+# Premium (uma linha por consulta paga) e, só quando há órfã, a atualização dela.
+autonomia_ferramentas_prontas_fechar_em_andamento_job:
+  cron: '*/10 * * * *'
+  class: 'Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob'
   queue: scheduled_jobs

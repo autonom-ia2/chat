@@ -11,6 +11,25 @@
 #     não com o endereço que vem do sistema de origem.
 # Fonte única: o PNCP é o portal oficial; não há reserva. Termos: dado aberto por lei (art. 174 da Lei 14.133), sem
 # chave e sem limite publicado. Cache de 1 hora.
+# Prazo: 4 s por chamada e 7 s no total, para o período inteiro e a tentativa do último dia (`Pncp#consultar`) caberem
+# na janela do turno menos a folga (`ConsultaNoTurno::ESPERA_DO_TURNO` 8 s - `Consulta::FOLGA_DO_TURNO` 1 s). O prazo
+# vale POR ETAPA, não como relógio único (`ClienteHttp`, `SafeFetch::Deadline`): o DNS fica fora; a conexão e o TLS têm
+# o `open_timeout` (até 2 s); a espera pelos cabeçalhos tem o `read_timeout`, que só começa a contar depois da conexão
+# e do TLS. Uma chamada pode passar do seu prazo pelo tempo da conexão, e a consulta inteira também. A folga de 1 s
+# cobre a fila do job e o excesso de conexão MEDIDO, sem garantia no pior caso: medido em 11/11/2026 (#2906), as
+# execuções com as duas chamadas estourando levaram de 7,03 s a 7,14 s, dentro da janela de 8 s; o pior caso teórico,
+# sem DNS, é 8 s (4 + 2 de conexão na 1ª chamada, 1 + 1 na 2ª), igual à janela. Sem a repetição do Net::HTTP (`ClienteHttp`, `max_retries: 0`):
+#   - PNCP A FRIO (cidade e modalidade que ninguém pediu há pouco): o período de 7 dias levou de 2,8 s a 17,2 s
+#     (Belém 2,8; Cuiabá 7,5; Manaus 9,6; Goiânia 10,8; Fortaleza 11,2; Porto Alegre 17,2), e só o último dia de 1,2 s a
+#     7,8 s. A frio, o PNCP quase nunca cabe na janela, seja qual for o prazo dentro dela. Pela execução inteira, 8
+#     cidades a frio: 3 responderam no período (2,5 s a 3,9 s) e 5 ficaram sem resposta em até 7,1 s, com a tentativa
+#     do último dia também estourando;
+#   - O QUE ACONTECE EM CADA CASO: o período responde -> a resposta, com cache de 1 hora; o período estoura e o último
+#     dia responde -> a resposta parcial, sem cache (`PARCIAL`/`PARCIAL_SEM_COMPRAS`); os dois estouram -> "não
+#     consegui" no mesmo turno, em pouco mais de 7 s. Se a fila do job atrasar além da folga, o turno lê "em andamento" e o
+#     resultado chega no turno seguinte (#2749, termo de aceite 7);
+#   - O PNCP TERMINA A CONSULTA DEPOIS QUE DESISTIMOS e a guarda: a mesma consulta 15 s depois voltou em 0,1 s (4 de
+#     4), e as 5 cidades sem resposta, pedidas de novo, responderam em 0,1 s a 3,9 s. A segunda pergunta do cliente acha.
 module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
   Parametro = Autonomia::FerramentasProntas::Parametro
   Municipios = Autonomia::FerramentasProntas::Municipios
@@ -21,8 +40,14 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
   POR_PAGINA = 50
   MAX_COMPRAS = 10
   MAX_OBJETO = 600
-  SO_A_PRIMEIRA_PAGINA = 'O período tem %<total>d compras; olhei as %<pagina>d primeiras publicadas. Para ver as outras, ' \
-                         'encurte o período.'.freeze
+  SO_A_PRIMEIRA_PAGINA = 'O período tem %<total>d compras; aqui estão as %<pagina>d primeiras publicadas. Para ver as ' \
+                         'outras, encurte o período.'.freeze
+  PARCIAL = 'Parcial: o portal demorou, e só deu para ler as compras do último dia do período. Para o resto, consulte de ' \
+            'novo com um período menor.'.freeze
+  # A resposta parcial em que nada serve (o último dia sem compra, ou nenhuma com a palavra): o resto do período ficou sem
+  # resposta, então não é "não há compra no período".
+  PARCIAL_SEM_COMPRAS = 'Parcial: o portal demorou, e só deu para ler o último dia do período, sem compra que sirva. ' \
+                        'Para o resto, consulte de novo com um período menor.'.freeze
   LINK = 'https://pncp.gov.br/app/editais/%<cnpj>s/%<ano>d/%<sequencial>d'.freeze
   # A modalidade que o modelo escolhe -> o código e o nome no PNCP (`/api/pncp/v1/modalidades`).
   MODALIDADES = {
@@ -37,17 +62,16 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
 
   module_function
 
-  # O município do pedido (pelo código ou pelo nome e a UF), ou nil.
+  # O município do pedido (pelo código, ou pelo nome: a UF sai dele), ou nil.
   def municipio(params)
     return Municipios.por_codigo(params['codigo_ibge']) if params['codigo_ibge']
 
-    Municipios.buscar(params['uf'], params['cidade']) if params['cidade'] && params['uf']
+    Municipios.buscar(params['uf'], params['cidade']) if params['cidade']
   end
 
-  # A cidade e o período. -> o nome do parâmetro que não serve, ou nil.
+  # A cidade e o período. -> o nome do parâmetro que não serve (ou a `Falta` da homônima), ou nil.
   def regra(params)
-    return 'uf' if params['codigo_ibge'].nil? && params['cidade'] && params['uf'].nil?
-    return 'cidade' if municipio(params).nil?
+    return Municipios.falta(params['uf'], params['cidade']) if municipio(params).nil?
 
     de = Date.iso8601(params['de'])
     ate = Date.iso8601(params['ate'])
@@ -81,8 +105,11 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
     valor.to_s.squish.presence
   end
 
+  # O PNCP manda 0 quando o valor estimado é sigiloso ou não foi informado: zero não é o valor da compra, e o campo sai.
+  # A consulta de contratações não traz o indicador de sigilo (conferido em 11/11/2026 na resposta real de Uberlândia:
+  # nenhum campo `orcamentoSigiloso*`); ele só existe por item, em outra chamada, e não é pedido aqui.
   def valor(numero)
-    numero.to_f.round(2) if numero.is_a?(Numeric)
+    numero.to_f.round(2) if numero.is_a?(Numeric) && numero.positive?
   end
 
   # Só com o CNPJ de 14 dígitos e números inteiros: o resto não entra no endereço.
@@ -95,27 +122,33 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
 
   def refinar(dados, params)
     achadas = Autonomia::FerramentasProntas::Lista.filtrar(Array(dados['compras']), params['busca']) { |item| item['objeto'] }
+    return dados.except('compras', 'parcial').merge('observacao' => PARCIAL_SEM_COMPRAS) if achadas.empty? && dados['parcial']
     return if achadas.empty?
 
-    resposta = dados.except('compras').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'compras', MAX_COMPRAS))
+    resposta = dados.except('compras', 'parcial').merge(Autonomia::FerramentasProntas::Lista.cortar(achadas, 'compras', MAX_COMPRAS))
+    return resposta.merge('observacao' => PARCIAL) if dados['parcial']
     return resposta if dados['total_no_periodo'].to_i <= POR_PAGINA
 
     resposta.merge('observacao' => format(SO_A_PRIMEIRA_PAGINA, total: dados['total_no_periodo'], pagina: POR_PAGINA))
   end
 
-  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade, 7 dígitos. Sem ele: cidade e uf.') do |valor|
+  CODIGO_IBGE = Parametro.new(nome: 'codigo_ibge', descricao: 'O código IBGE da cidade, 7 dígitos. Sem ele: a cidade.',
+                              deduza: 'deixe o código vazio e mande o nome da cidade.') do |valor|
     codigo = Parametro.digitos(valor, 7)
     codigo if codigo && Municipios.por_codigo(codigo)
   end
-  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade (com uf), quando não há o código IBGE.') do |valor|
+  CIDADE = Parametro.new(nome: 'cidade', descricao: 'O nome da cidade, quando não há o código IBGE.', pergunte: 'a cidade') do |valor|
     Parametro.texto_curto(valor)
   end
-  UF = Parametro.new(nome: 'uf', descricao: 'A sigla do estado da cidade.', opcoes: Autonomia::FerramentasProntas::Ufs::SIGLAS.map(&:downcase))
+  UF = Municipios.parametro_uf
   DE = Parametro.new(nome: 'de', descricao: "A data inicial, AAAA-MM-DD. Sem data: #{DIAS_PADRAO} dias atrás.",
+                     deduza: 'converta o dia que o cliente disse para AAAA-MM-DD, ou deixe vazio.',
                      padrao: -> { (hoje - (DIAS_PADRAO - 1)).iso8601 }) { |valor| data(valor) }
   ATE = Parametro.new(nome: 'ate', descricao: "A data final, AAAA-MM-DD (até #{MAX_DIAS} dias depois da inicial). Sem data: hoje.",
+                      deduza: "mande a data final até #{MAX_DIAS} dias depois da inicial; período maior, consulte em partes.",
                       padrao: -> { hoje.iso8601 }) { |valor| data(valor) }
   MODALIDADE = Parametro.new(nome: 'modalidade', descricao: 'O tipo de compra. Sem ele: pregão eletrônico, o mais comum.',
+                             deduza: 'escolha da lista, ou deixe vazio para o pregão eletrônico.',
                              opcoes: MODALIDADES.keys, padrao: -> { 'pregao_eletronico' })
   BUSCA = Parametro.new(nome: 'busca', local: true, descricao: 'Uma palavra do que o órgão vai comprar (ex.: limpeza). Opcional.') do |valor|
     Parametro.texto_curto(valor)
@@ -129,7 +162,7 @@ module Autonomia::FerramentasProntas::Fontes::ComprasGoverno
       Autonomia::FerramentasProntas::Consulta.new(
         nome: 'compras', descricao: 'as compras publicadas numa cidade e num período',
         opcionais: [CODIGO_IBGE, CIDADE, UF, DE, ATE, MODALIDADE, BUSCA], provedores: [Pncp], validade: 1.hour,
-        prazo_por_fonte: 8, prazo_total: 8, regra: method(:regra), refinar: method(:refinar)
+        prazo_por_fonte: 4, prazo_total: 7, regra: method(:regra), refinar: method(:refinar)
       )
     ],
     limite_diario: 500,

@@ -4,7 +4,9 @@
 // guardado.
 //
 // Estados: `cheio`, `vazio`, `carregando` (a fonte nunca responde: esqueleto) e,
-// sem `?demo=` válido ou com `?demo=desligado`, a fonte real (hoje: erro).
+// sem `?demo=` válido ou com `?demo=desligado`, a fonte real (a lista lê do
+// servidor e as ações em grupo escrevem nele; ficha e trazer ainda respondem
+// erro).
 // #2897 — a carteira soma dois: `sem-seguros` (as pessoas, nenhum seguro) e
 // `fora-do-segmento` (as pessoas, conta de outro segmento: nada de seguro
 // aparece). Para o bloco A os dois são a conta cheia.

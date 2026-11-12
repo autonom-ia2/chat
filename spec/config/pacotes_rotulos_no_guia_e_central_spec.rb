@@ -33,7 +33,14 @@ RSpec.describe 'rótulos trocados pelo pacote no Guia e na Central' do
     ['saude_beneficios', 'Plano', 'guia: Mover card, marcar como implantado ou que não fechou, resolver, cancelar ou reabrir'] =>
       'cartão Plano do card (o plano de saúde), não o resumo da assinatura',
     ['corretora', 'Novo card', 'guia: Criar um card pela ficha do contato'] =>
-      'botão Novo card da ficha do contato, que não é CRM_KANBAN.ACTIONS.NEW_CARD'
+      'botão Novo card da ficha do contato, que não é CRM_KANBAN.ACTIONS.NEW_CARD',
+    # #2894: a ficha nova de Relacionamentos tem textos próprios (RELACIONAMENTOS_FICHA) e o pacote ainda não os
+    # troca; o artigo e o Guia citam o que a tela mostra. O rótulo por segmento da ficha nova é decisão da E2 (#2895).
+    ['corretora', 'Novo card', 'guia: Abrir a ficha da pessoa (Relacionamentos novo)'] =>
+      'botão Novo card da ficha nova da pessoa (RELACIONAMENTOS_FICHA), que o pacote não troca',
+    ['corretora', 'Novo card', '09.15'] => 'botão Novo card da ficha nova da pessoa (RELACIONAMENTOS_FICHA), que o pacote não troca',
+    %w[corretora Cards 09.15] => 'seção Cards da ficha nova da pessoa (RELACIONAMENTOS_FICHA), que o pacote não troca',
+    %w[corretora Cards 09.16] => 'seção Cards da ficha nova da empresa (RELACIONAMENTOS_FICHA), que o pacote não troca'
   }
 
   folhas = lambda do |no, caminho = nil, saida = {}|

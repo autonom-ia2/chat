@@ -46,6 +46,18 @@ export const routes = [
     component: LivreEditorPage,
     meta: { featureFlag: EDITOR, permissions: VER },
   },
+  // #2889 — a automação do motor novo que o Guia montou, ao lado da conversa.
+  // Rota própria: os ids da Automação livre e das regras antigas se repetem.
+  {
+    path: frontendURL('accounts/:accountId/automacoes/guia/:id'),
+    name: 'automacoes_guia_editar',
+    component: AutomacaoConversaPage,
+    meta: {
+      featureFlag: FEATURE_FLAGS.AUTOMACAO_PORTA,
+      permissions: VER,
+      guiaEmbutido: true,
+    },
+  },
   {
     path: frontendURL('accounts/:accountId/automacoes/:id'),
     name: 'automacoes_editar',

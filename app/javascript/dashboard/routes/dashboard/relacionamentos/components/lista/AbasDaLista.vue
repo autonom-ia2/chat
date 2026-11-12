@@ -8,9 +8,11 @@ import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 // #2894 — Pessoas · Empresas. Abas de verdade (role="tablist"): setas, Home e
 // End trocam de aba e levam o foco junto; só a aba escolhida entra na ordem do
 // Tab. A escolha mora na URL (quem usa liga o v-model à rota).
-// #2897 — com `comSeguros` (conta de seguros), a terceira aba: Seguros.
+// #2897 — com `comSeguros` (conta de seguros), a terceira aba: Seguros. Conta
+// sem Empresas (`comEmpresas` falso) fica com Pessoas · Seguros.
 const props = defineProps({
   modelValue: { type: String, required: true },
+  comEmpresas: { type: Boolean, default: true },
   comSeguros: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue']);
@@ -19,7 +21,7 @@ const { t } = useI18n();
 
 const abasNaOrdem = computed(() => [
   ABAS.PESSOAS,
-  ABAS.EMPRESAS,
+  ...(props.comEmpresas ? [ABAS.EMPRESAS] : []),
   ...(props.comSeguros ? [ABA_SEGUROS] : []),
 ]);
 const NOMES = {

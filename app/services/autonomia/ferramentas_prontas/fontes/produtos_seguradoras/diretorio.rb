@@ -2,13 +2,14 @@
 # nome, a empresa e o endereço de cada ramo de produtos atendido aqui. Do que o diretório lista, só entra:
 #   - a família ativa de "products-services" que é um dos `RAMOS` (o modelo escolhe pela lista);
 #   - o endereço HTTPS na porta 443, sem usuário e sem marcador a preencher (`{fipeCode}`: o auto e o residencial);
-#   - de várias versões da mesma família, a maior.
+#   - fora de servidor de teste (`Sujeira`): o diretório de produção aponta parte dos endereços para homologação e sandbox;
+#   - de várias versões da mesma família, a maior entre as que sobraram (a de teste perde para a de produção).
 # O índice vale `VALIDADE` no cache (o diretório tem 2 MB e muda pouco). Diretório fora do formato (não é lista, ou nenhuma
-# marca sobrou): falha, e nada é guardado.
+# marca sobrou): falha, e nada é guardado. A chave muda quando muda o que o resumo guarda (v2: só os três ramos, sem teste).
 module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Diretorio
   Falha = Autonomia::FerramentasProntas::Provedor::Falha
 
-  CHAVE = 'autonomia:prontas:v1:produtos_seguradoras:diretorio'.freeze
+  CHAVE = 'autonomia:prontas:v2:produtos_seguradoras:diretorio'.freeze
   VALIDADE = 6.hours
   CAMINHO = '/participants'.freeze
   MAX_BYTES = 6.megabytes
@@ -80,7 +81,8 @@ module Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Diretorio
     return false if url.to_s.include?(MARCADOR)
 
     destino = URI.parse(url.to_s)
-    destino.is_a?(URI::HTTPS) && destino.host.present? && destino.port == 443 && destino.userinfo.nil?
+    destino.is_a?(URI::HTTPS) && destino.host.present? && destino.port == 443 && destino.userinfo.nil? &&
+      !Autonomia::FerramentasProntas::Fontes::ProdutosSeguradoras::Sujeira.servidor_de_teste?(destino.host)
   rescue URI::InvalidURIError
     false
   end

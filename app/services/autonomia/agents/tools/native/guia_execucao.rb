@@ -16,6 +16,9 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
   TETO = 2_000
 
   class << self
+    # #2918: ESCREVE (faz a mudança na conta). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'executar_acao'
     end

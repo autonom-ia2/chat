@@ -99,8 +99,10 @@ RSpec.describe Autonomia::FerramentasProntas::Incluir do
 
       expect(schema).to include(name: 'pronta_cep', strict: true)
       expect(schema[:description]).to end_with('Use quando: o cliente informar o CEP')
-      expect(schema[:parameters]).to match(type: 'object', properties: { 'cep' => { 'type' => 'string', 'description' => a_kind_of(String) } },
-                                           required: ['cep'], additionalProperties: false)
+      expect(schema[:parameters]).to include(type: 'object', additionalProperties: false)
+      expect(schema[:parameters][:properties]['consulta']).to include('enum' => %w[endereco por_endereco])
+      expect(schema[:parameters][:properties]['cep']).to include('type' => %w[string null])
+      expect(schema[:parameters][:required]).to match_array(%w[consulta cep logradouro cidade uf])
     end
 
     it 'a fonte com varias consultas e uma ferramenta so, e o modelo escolhe a consulta' do

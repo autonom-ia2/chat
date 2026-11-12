@@ -1,0 +1,98 @@
+{
+  "codigo": {
+    "provedor": "cid10",
+    "dados": {
+      "codigo": "J45",
+      "nome": "Asma"
+    }
+  },
+  "busca": {
+    "provedor": "cid10",
+    "dados": {
+      "total": 36,
+      "mostrando": 20,
+      "itens": [
+        {
+          "codigo": "J45",
+          "nome": "Asma"
+        },
+        {
+          "codigo": "J45.0",
+          "nome": "Asma predominantemente alérgica"
+        },
+        {
+          "codigo": "J45.1",
+          "nome": "Asma não-alérgica"
+        },
+        {
+          "codigo": "J45.8",
+          "nome": "Asma mista"
+        },
+        {
+          "codigo": "J45.9",
+          "nome": "Asma não especificada"
+        },
+        {
+          "codigo": "J46",
+          "nome": "Estado de mal asmático"
+        },
+        {
+          "codigo": "Z82.5",
+          "nome": "História familiar de asma e outras doenças respiratórias inferiores crônicas"
+        },
+        {
+          "codigo": "A49.3",
+          "nome": "Infecção por Mycoplasma de localização não especificada"
+        },
+        {
+          "codigo": "B39.0",
+          "nome": "Histoplasmose pulmonar aguda por Histoplasma capsulatum"
+        },
+        {
+          "codigo": "B39.1",
+          "nome": "Histoplasmose pulmonar crônica por Histoplasma capsulatum"
+        },
+        {
+          "codigo": "B39.2",
+          "nome": "Histoplasmose pulmonar não especificada por Histoplasma capsulatum"
+        },
+        {
+          "codigo": "B39.3",
+          "nome": "Histoplasmose disseminada por Histoplasma capsulatum"
+        },
+        {
+          "codigo": "B39.4",
+          "nome": "Histoplasmose não especificada por Histoplasma capsulatum"
+        },
+        {
+          "codigo": "B39.5",
+          "nome": "Histoplasmose por Histoplasma duboisii"
+        },
+        {
+          "codigo": "B58.0",
+          "nome": "Oculopatia por Toxoplasma"
+        },
+        {
+          "codigo": "B58.1",
+          "nome": "Hepatite por Toxoplasma"
+        },
+        {
+          "codigo": "B58.2",
+          "nome": "Meningoencefalite por Toxoplasma"
+        },
+        {
+          "codigo": "B96.0",
+          "nome": "Mycoplasma pneumoniae [M. pneumoniae], como causa de doenças classificadas em outros capítulos"
+        },
+        {
+          "codigo": "E42",
+          "nome": "Kwashiorkor marasmático"
+        },
+        {
+          "codigo": "E88.0",
+          "nome": "Distúrbios do metabolismo das proteínas plasmáticas não classificados em outra parte"
+        }
+      ]
+    }
+  }
+}

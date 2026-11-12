@@ -10,7 +10,7 @@
 # - A tela recebe só as chaves que ainda servem: liberadas, que o agente ainda não tem e que a pessoa não dispensou.
 # - "Agora não" grava a fonte em `agent.config['prontas_dispensadas']` (sem repetir, até `MAX_DISPENSADAS`): aquela
 #   sugestão não volta para aquele agente.
-# - A Lia (`insurance_quote`) nunca recebe sugestão.
+# - A Lia (`insurance_quote`) nunca recebe sugestão, e a fonte de uso interno (`Fonte#na_vitrine?` falso) nunca é sugerida.
 class Autonomia::FerramentasProntas::SugestaoParaAgente
   FEATURE = 'agente_ferramenta_sugestao'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
@@ -37,7 +37,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
 
     # Muda quando uma fonte nova é liberada para a conta ou quando o agente muda (nome, tipo, instrução).
     def assinatura(agent)
-      partes = [Autonomia::FerramentasProntas.disponiveis(agent.account).map(&:chave).join(','), agent.name, agent.agent_type,
+      partes = [Autonomia::FerramentasProntas.sugeriveis(agent.account).map(&:chave).join(','), agent.name, agent.agent_type,
                 agent.instruction]
       Digest::SHA256.hexdigest(partes.map(&:to_s).join("\u0000"))[0, 16]
     end
@@ -53,7 +53,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       return unless ligada?(agent)
 
       config = agent.config.to_h
-      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves
+      escolha = (Array(config[CONSTRUTOR]) + Array(config[TAMBEM])).map(&:to_s) & Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis
       gravar(agent) { { SUGESTAO => { 'chaves' => escolha, 'assinatura' => assinatura(agent), 'em' => Time.current.iso8601 } } }
     end
 
@@ -64,7 +64,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
       guardada = agent.config.to_h[SUGESTAO]
       sugeridas = guardada.is_a?(Hash) ? Array(guardada['chaves']) : []
       fora = Array(agent.config.to_h[DISPENSADAS]) + agent.tools.where.not(fonte_pronta: nil).pluck(:fonte_pronta)
-      Autonomia::FerramentasProntas.disponiveis(agent.account).map(&:chave) & (sugeridas - fora)
+      Autonomia::FerramentasProntas.sugeriveis(agent.account).map(&:chave) & (sugeridas - fora)
     end
 
     # Também sai da escolha do Construtor (`ferramentas_sugeridas` e `ferramentas_tambem`): a Confira de um rascunho reaberto não oferece de
@@ -95,7 +95,7 @@ class Autonomia::FerramentasProntas::SugestaoParaAgente
   def call
     return unless self.class.ligada?(@agent)
 
-    fontes = Autonomia::FerramentasProntas.disponiveis(@account)
+    fontes = Autonomia::FerramentasProntas.sugeriveis(@account)
     return if fontes.empty? || @agent.instruction.blank?
 
     credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve

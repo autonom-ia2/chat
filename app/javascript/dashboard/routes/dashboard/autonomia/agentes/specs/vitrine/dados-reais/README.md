@@ -1,0 +1,119 @@
+# Dados reais das ferramentas prontas (#2858)
+
+O `dados` que o agente recebe de cada fonte grátis no ar (F1 a F4), usado por `../resultadoDasFontes.spec.js`.
+
+Como foi feito, em 11/11/2026: uma chamada real por consulta, pelo próprio adaptador do servidor (os provedores de
+`app/services/autonomia/ferramentas_prontas/fontes`, depois o `refinar` da consulta e o `Resposta.enxugar`), sem cache.
+Cada arquivo guarda, por consulta, o provedor que respondeu e o `dados`. Sem IA e sem fonte paga.
+
+O script está versionado: `script/ferramentas_prontas/gravar_dados_reais.rb`, que roda `dados_reais.rb` ao lado (os
+pedidos ficam no `CASOS`, a anonimização no `ANONIMIZACAO`). Ele desliga o cache (`Rails.cache` vira NullStore), não usa
+conta nem contador e só roda no ambiente de teste. Cada fonte está no `ANONIMIZACAO`, como `:sem_pessoa_fisica` (com o
+motivo) ou com o anonimizador dela; fonte fora da lista aborta antes de qualquer chamada. Para gravar de novo:
+
+```sh
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb            # todas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb ncm chuva  # só essas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais.rb banco_central.focus  # uma consulta
+pnpm exec prettier --write app/javascript/dashboard/routes/dashboard/autonomia/agentes/specs/vitrine/dados-reais/*.json
+```
+
+Fonte nova: ponha os pedidos dela no `CASOS` e a decisão dela no `ANONIMIZACAO`, rode só ela, confira o arquivo e ponha
+no spec uma asserção do essencial. O spec falha enquanto uma fonte do
+catálogo da vitrine não tiver arquivo aqui.
+
+Fonte paga (a BigDataCorp, na F7): não se chama a fonte para gravar a fixture. O arquivo é feito à mão a partir da
+resposta documentada pelo fornecedor, passado pelo adaptador do servidor num spec, com dados fictícios, e leva no topo
+a marca `"_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real"`.
+
+`cep.json`, `hospitais.json` e `cnpj.json` foram gravados de novo pelo script em 11/11/2026, à tarde (#2906), depois de
+três mudanças no adaptador: o CEP da rua (faixa de número) antes do CEP especial (sufixo 900 a 999, de prédio ou órgão),
+com o ViaCEP como principal do endereço; o CEP dos hospitais com traço, e o total da fonte com quantos vieram
+(`mostrando`); e o código da atividade do CNPJ com os 7 dígitos da CNAE ("0600001").
+
+Depois da varredura real (#2906), dois arquivos foram ajustados à mão ao formato novo do adaptador, sobre o mesmo dado
+gravado e sem chamada nova: `fipe.json` (preco) tem o valor em número, o mês em AAAA-MM e a moeda em `unidades`;
+`banco_central.json` tem a unidade da Selic em código (`percentual_ao_ano`) e o mês do IPCA em AAAA-MM.
+
+`ncm.json` e `compras_governo.json` foram gravados de novo no mesmo dia, pelo script, depois de duas mudanças no
+adaptador: a ordem da NCM (o código de 8 dígitos antes do de 4) e a compra de valor sigiloso sem o campo de valor.
+`produtos_seguradoras.json` também, quando a fonte ficou só com seguro garantia e transporte (o ramo de riscos
+cibernéticos saiu) e ganhou o filtro de servidor de teste e de link de exemplo.
+
+`ncm.json` foi gravado de novo em 11/11/2026, à noite, com o caso real do teste em produção ("café torrado", que achava
+só o grupo 0901.2): o grupo abre nos códigos de 8 dígitos dele, com a descrição completa ("Café torrado, não
+descafeinado"). Gravado pelo código do script (`DadosReaisDasProntas.rodar(['ncm'])`) num spec temporário, fora do
+commit, porque o `rails runner` estava vedado naquela tarefa. Gravado de novo no mesmo dia, do mesmo jeito, depois
+da revisão do #2917: a busca por palavra não abre mais o grupo (vem o grupo com a orientação para o modelo buscar pelo
+código dele), e a descrição completa leva a posição, que diz o material.
+
+| Arquivo | Consulta e pedido | Provedor que respondeu |
+|---|---|---|
+| cep.json | endereco: 01001-000; por_endereco: Avenida Paulista, São Paulo (gravado em 11/11/2026, regra QI 70) | ViaCEP; ViaCEP |
+| cnpj.json | empresa: consultado com o CNPJ da Petrobras, gravado anonimizado | BrasilAPI |
+| cpf.json | conferir: 111.444.777-35 (número de exemplo; conta local, sem rede) | cálculo local |
+| fipe.json | marcas e modelos (carros, GM, "onix"); preco 004517-9 2020 | BrasilAPI; Parallelum (a BrasilAPI deu erro no preço) |
+| feriados.json | feriados de 2026; dias úteis até 30/11/2026 | BrasilAPI |
+| banco_central.json | selic, ipca, dolar, focus (ipca) | SGS, PTAX e Focus do Banco Central |
+| cidades.json | estados; cidades do AC | IBGE |
+| ddd.json | ddd 34 | BrasilAPI |
+| localizacao.json | cidade de -18.9186, -48.2772 | sedes (tabela local; o Photon não conferiu o município) |
+| bancos.json | banco 341; por_nome "Itaú" (11/11/2026, regra QI 70) | BrasilAPI |
+| hospitais.json | Campinas SP, hospital | CNES (Ministério da Saúde) |
+| procedimentos.json | codigo 10101012; busca "hemograma" | TUSS (tabela no repositório) |
+| doencas.json | codigo J45; busca "asma" | CID-10 (tabela no repositório) |
+| ncm.json | buscar "café torrado"; codigo 0901.21.00 (gravado em 11/11/2026, o caso real do teste em produção) | BrasilAPI |
+| compras_governo.json | Uberlândia MG, últimos 7 dias, pregão eletrônico | PNCP (órgãos públicos) |
+| estacoes.json | Uberlândia MG | INMET |
+| chuva.json | Uberlândia MG, 04 a 10/11/2026 | Open-Meteo |
+| produtos_seguradoras.json | seguradoras "Allianz"; produtos Allianz, transporte | Open Insurance Brasil |
+| corretor_susep.json | por_nome "corretora de seguros", pessoa jurídica | SUSEP |
+
+Anonimizado pelo script:
+- `corretor_susep.json`: o nome e o registro de cada corretor viram "CORRETORA EXEMPLO N LTDA" e um número fictício
+  (situação e ramos são os reais);
+- `cnpj.json`: número, razão social e nome fantasia de exemplo (11.222.333/0001-81, "EMPRESA EXEMPLO LTDA"). O CNPJ do
+  MEI traz o nome da pessoa na razão social, e a fonte não diz de antemão se é MEI: todo CNPJ gravado sai assim.
+
+O resto é dado público de órgão, empresa pública, seguradora ou tabela oficial; nenhum CPF real e nenhum nome de pessoa
+física.
+
+`banco_central.json` (focus) foi gravado de novo em 11/11/2026, pelo script, depois que a mediana do Focus passou a vir
+com a unidade em `unidades`.
+
+`chuva.json` foi gravado de novo em 11/11/2026, pelo script, com 7 dias (04 a 10/11/2026): a lista de itens sem nome,
+identificados pela data, passa pelo spec de cobertura.
+
+## F5: as bases que a plataforma baixa
+
+As cinco bases da F5 não são chamadas a cada pergunta: a plataforma baixa o arquivo oficial e guarda no banco. O
+`dados` delas foi gravado em 11/11/2026 por `script/ferramentas_prontas/gravar_dados_reais_das_bases.rb`, que importa
+o arquivo oficial real no banco de TESTE (a mesma `Bases::Importacao` da rodada diária), passa cada consulta pelo
+adaptador do servidor e limpa as tabelas no fim. Baixa ~300 MB e leva uns 10 minutos. Só roda no ambiente de teste:
+
+```sh
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais_das_bases.rb            # todas
+RAILS_ENV=test bundle exec rails runner script/ferramentas_prontas/gravar_dados_reais_das_bases.rb queimadas  # só uma
+```
+
+| Arquivo | Consulta e pedido | Base oficial |
+|---|---|---|
+| planos_de_saude.json | operadora "unimed campinas"; operadora_cancelada: a cancelada mais recente | ANS (operadoras ativas e canceladas) |
+| aeronaves.json | aeronave: a 1a matrícula com empresa proprietária, empresa operadora e gravame | ANAC (Registro Aeronáutico Brasileiro) |
+| geracao_solar.json | cep: o CEP com mais sistemas; cidade: Campinas SP | ANEEL (geração distribuída) |
+| transportadoras.json | registro: a 1a empresa equiparada; registro_pelo_nome "transportes rapido" | ANTT (RNTRC) |
+| queimadas.json | focos: a cidade com mais focos desde ontem | INPE (focos de queimada) |
+
+Anonimizado pelo script: o nome, o CNPJ e o RNTRC das empresas de aeronave e das transportadoras viram exemplos
+("AVIACAO EXEMPLO N LTDA", "TRANSPORTADORA EXEMPLO N LTDA"), porque podem ser MEI. A matrícula e o número de série
+da aeronave também (PP-QZZ, que o RAB não registra, e "EXEMPLO-0001"): as reais levam ao dono pelo RAB público.
+Situação, datas e lugar são os reais. Planos de saúde, placas solares e focos não têm pessoa física.
+
+`geracao_solar.json` foi gravado de novo em 11/11/2026, pelo script, depois que o total passou a ter nome de total
+(`total_de_sistemas`, `potencia_total_kw`) e o detalhe por tipo de geração passou a vir só com mais de um tipo.
+
+`queimadas.json` foi gravado de novo em 11/11/2026, pelo script, depois que a lista dos últimos focos (coordenada e
+bioma) deu lugar a `ultimo_foco_em` e `distancia_do_foco_mais_perto_km`.
+
+`planos_de_saude.json`, `aeronaves.json` e `transportadoras.json` foram gravados de novo em 11/11/2026, pelo script,
+depois que o CNPJ passou a sair com a máscara (00.000.000/0000-00), como no card Dados da empresa.

@@ -62,6 +62,20 @@ beforeEach(() => {
 });
 
 describe('useProntasDoConstrutor', () => {
+  it('never shows nor includes an internal-use source from an old draft', async () => {
+    const prontas = usar(
+      ['fipe', 'produtos_seguradoras'],
+      ['produtos_seguradoras', 'cep']
+    );
+
+    expect(prontas.visiveis.value).toEqual(['fipe']);
+    expect(prontas.combinaTambem.value).toEqual(['cep']);
+    await prontas.incluirTodas();
+    expect(vitrine.incluir).not.toHaveBeenCalledWith(
+      expect.objectContaining({ fonte: 'produtos_seguradoras' })
+    );
+  });
+
   it('includes what stayed, with the "Use when" sentence of each tool', async () => {
     const prontas = usar();
     prontas.tirar('cep');

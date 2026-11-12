@@ -863,6 +863,40 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
   end
 
+  create_table "autonomia_ferramentas_premium_consultas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "autonomia_agent_id"
+    t.string "fonte", null: false
+    t.string "consulta", null: false
+    t.string "dataset", null: false
+    t.date "dia", null: false
+    t.string "resultado", null: false
+    t.string "cobranca", null: false
+    t.boolean "do_cache", default: false, null: false
+    t.integer "numero"
+    t.decimal "custo", precision: 10, scale: 4, default: "0.0", null: false
+    t.decimal "preco", precision: 10, scale: 4, default: "0.0", null: false
+    t.string "motivo"
+    t.string "id_na_fonte"
+    t.bigint "tool_run_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_premium_consultas_em_andamento", where: "((resultado)::text = 'em_andamento'::text)"
+    t.index ["account_id", "fonte", "dia"], name: "idx_premium_consultas_conta_fonte_dia"
+    t.index ["dia"], name: "idx_premium_consultas_dia"
+    t.index ["tool_run_id"], name: "idx_premium_consultas_tool_run", unique: true
+  end
+
+  create_table "autonomia_ferramentas_premium_saldos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "fonte", null: false
+    t.date "mes", null: false
+    t.integer "contadas", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fonte", "mes"], name: "idx_premium_saldos_conta_fonte_mes", unique: true
+  end
+
   create_table "autonomia_ferramentas_prontas_acessos", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "fonte", null: false
@@ -1085,6 +1119,87 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.datetime "updated_at", null: false
     t.text "session_payload"
     t.index ["account_id", "provider"], name: "idx_autonomia_insurance_connections_account_provider", unique: true
+  end
+
+  create_table "autonomia_prontas_aeronaves", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "matricula", null: false
+    t.jsonb "dados", default: {}, null: false
+    t.index ["geracao", "matricula"], name: "idx_prontas_aeronaves_matricula"
+  end
+
+  create_table "autonomia_prontas_bases", force: :cascade do |t|
+    t.string "base", null: false
+    t.integer "geracao_ativa"
+    t.datetime "atualizado_em"
+    t.integer "linhas", default: 0, null: false
+    t.datetime "tentado_em"
+    t.datetime "falhou_em"
+    t.string "motivo_da_falha"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["base"], name: "idx_prontas_bases_base", unique: true
+  end
+
+  create_table "autonomia_prontas_focos_queimada", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.datetime "detectado_em", null: false
+    t.decimal "latitude", precision: 9, scale: 5, null: false
+    t.decimal "longitude", precision: 9, scale: 5, null: false
+    t.string "codigo_municipio"
+    t.string "bioma"
+    t.string "satelite"
+    t.index ["geracao", "codigo_municipio", "detectado_em"], name: "idx_prontas_focos_municipio"
+    t.index ["geracao", "latitude"], name: "idx_prontas_focos_latitude"
+  end
+
+  create_table "autonomia_prontas_geracao_distribuida", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "cep"
+    t.string "codigo_municipio"
+    t.string "uf"
+    t.string "tipo", null: false
+    t.string "classe"
+    t.integer "quantidade", default: 0, null: false
+    t.decimal "potencia_kw", precision: 14, scale: 2, default: "0.0", null: false
+    t.index ["geracao", "cep"], name: "idx_prontas_gd_cep"
+    t.index ["geracao", "codigo_municipio"], name: "idx_prontas_gd_municipio"
+  end
+
+  create_table "autonomia_prontas_operadoras_ans", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "registro_ans", null: false
+    t.string "cnpj"
+    t.string "razao_social"
+    t.string "nome_fantasia"
+    t.string "nome_busca"
+    t.string "modalidade"
+    t.string "cidade"
+    t.string "uf"
+    t.date "registrada_em"
+    t.boolean "ativa", default: true, null: false
+    t.date "cancelada_em"
+    t.string "motivo_do_cancelamento"
+    t.index ["geracao", "cnpj"], name: "idx_prontas_operadoras_cnpj"
+    t.index ["geracao", "registro_ans"], name: "idx_prontas_operadoras_registro"
+  end
+
+  create_table "autonomia_prontas_transportadores", force: :cascade do |t|
+    t.integer "geracao", null: false
+    t.string "rntrc", null: false
+    t.string "cnpj"
+    t.string "nome"
+    t.string "nome_busca"
+    t.string "categoria", null: false
+    t.string "situacao", null: false
+    t.string "municipio"
+    t.string "uf"
+    t.date "cadastrado_em"
+    t.date "situacao_desde"
+    t.boolean "equiparado"
+    t.index ["geracao", "cnpj"], name: "idx_prontas_transportadores_cnpj", where: "(cnpj IS NOT NULL)"
+    t.index ["geracao", "rntrc"], name: "idx_prontas_transportadores_rntrc"
+    t.index ["nome_busca"], name: "idx_prontas_transportadores_nome", opclass: :gin_trgm_ops, where: "(nome_busca IS NOT NULL)", using: :gin
   end
 
   create_table "autonomia_prospecting_company_profiles", force: :cascade do |t|
@@ -4820,6 +4935,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_premium_consultas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_ferramentas_premium_saldos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_ferramentas_prontas_acessos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_ferramentas_prontas_usos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade

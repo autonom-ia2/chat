@@ -8,7 +8,7 @@ class Autonomia::FerramentasProntas::Fontes::Localizacao::Photon < Autonomia::Fe
   def consultar(_consulta, params)
     dado = objeto!(get("/reverse?lat=#{params.fetch('latitude')}&lon=#{params.fetch('longitude')}&lang=default&limit=1"))
     lugar = lista!(dado['features']).first
-    raise Falha, 'sem_lugar' if lugar.nil?
+    sem_lugar!(params) if lugar.nil?
 
     propriedades = objeto!(objeto!(lugar)['properties'])
     pais = exigir!(texto(propriedades['countrycode']))
@@ -19,6 +19,16 @@ class Autonomia::FerramentasProntas::Fontes::Localizacao::Photon < Autonomia::Fe
   end
 
   private
+
+  # Nenhum lugar no ponto: longe de toda sede de município (o mar, 0,0), não há cidade ali e a fonte respondeu "não tem"
+  # (varredura F16); perto de uma, falha, e a sede mais próxima responde.
+  def sem_lugar!(params)
+    sedes = Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes
+    _sede, km = sedes.mais_proxima(params.fetch('latitude'), params.fetch('longitude'))
+    raise NaoEncontrado if km > sedes::MAX_KM
+
+    raise Falha, 'sem_lugar'
+  end
 
   def municipio(uf_sigla, propriedades)
     sedes = Autonomia::FerramentasProntas::Fontes::Localizacao::Sedes

@@ -3,6 +3,7 @@ import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../components/AgenteBotao.vue';
 import { chaveDoTexto } from '../catalogo';
+import { faixaDePreco } from '../premium';
 import { linhasDoResultado } from '../resultado';
 import { idiomaDoNavegador } from '../../utils/pagina';
 import { useVitrine } from '../useVitrine';
@@ -12,8 +13,14 @@ import { useVitrine } from '../useVitrine';
 // da conta. Fonte sem campo (Banco Central) só tem o botão. Cada situação sem resultado tem uma frase só.
 // Na FIPE, nas cidades e nos feriados a pessoa escreve como falaria ("Onix 2020"): quem entende é a IA da conta, e
 // quando havia mais de uma opção (`mais_provavel`) a tela avisa que mostrou a mais provável.
+// F7 (decisão A do Rodrigo, 11/11): no card Premium (`premium`, o contador do servidor), o teste usa uma das grátis do
+// mês, e a tela diz isso. Acabadas as grátis, o próprio botão mostra o preço ("Testar por R$ 0,09"; na faixa, "Testar
+// por até R$ 0,15") e é a confirmação: só esse clique paga (`confirmouPreco`), sem janela de confirmação.
+// A consulta paga roda em segundo plano e pode levar até 1 minuto (revisor, 12/11): enquanto isso, a tela diz
+// "Consultando…"; sem resposta no prazo, "não deu para confirmar", e o contador do card vem de novo do servidor.
 const props = defineProps({
   ferramenta: { type: Object, required: true },
+  premium: { type: Object, default: null },
 });
 
 const NS = 'AGENTS.VITRINE';
@@ -27,7 +34,9 @@ const base = computed(
 const rotulo = computed(() => t(`${base.value}.ROTULO`));
 const exemplo = () =>
   props.ferramenta.exemplo
-    ? t(`${base.value}.EXEMPLO`, { data: props.ferramenta.exemplo(new Date()) })
+    ? t(`${base.value}.EXEMPLO`, {
+        data: props.ferramenta.exemplo(new Date(), locale.value),
+      })
     : t(`${base.value}.EXEMPLO`);
 
 const valor = ref(props.ferramenta.semCampo ? '' : exemplo());
@@ -41,6 +50,19 @@ watch(exemploAtual, (novo, velho) => {
 });
 const consultando = ref(false);
 const resposta = ref(null);
+
+const semGratis = computed(
+  () => Boolean(props.premium) && Number(props.premium.restantes) <= 0
+);
+const rotuloDoBotao = computed(() => {
+  if (consultando.value) return t(`${NS}.DETALHE.EXPERIMENTANDO`);
+  if (!semGratis.value) return t(`${NS}.DETALHE.EXPERIMENTAR`);
+  const faixa = faixaDePreco(props.premium.precos, locale.value);
+  if (!faixa) return t(`${NS}.DETALHE.EXPERIMENTAR`);
+  return faixa.unico
+    ? t(`${NS}.PREMIUM.TESTAR_POR`, { preco: faixa.unico })
+    : t(`${NS}.PREMIUM.TESTAR_POR_ATE`, { preco: faixa.max });
+});
 
 watch(
   () => props.ferramenta.id,
@@ -58,6 +80,10 @@ const SITUACOES = {
   sem_permissao: 'SEM_PERMISSAO',
   sem_ia: 'SEM_IA',
   nao_entendi: 'NAO_ENTENDI',
+  documento_invalido: 'DOCUMENTO_INVALIDO',
+  confirmar_preco: 'CONFIRMAR_PRECO',
+  sem_confirmacao: 'SEM_CONFIRMACAO',
+  nao_comecou: 'NAO_COMECOU',
 };
 
 const textosDoResultado = computed(() => ({
@@ -69,6 +95,15 @@ const textosDoResultado = computed(() => ({
   sim: t(`${NS}.RESULTADO.SIM`),
   nao: t(`${NS}.RESULTADO.NAO`),
   zeroKm: t(`${NS}.RESULTADO.ZERO_KM`),
+  nenhumValor: t(`${NS}.RESULTADO.NENHUM_VALOR`),
+  // Só o código ("percentual_ao_ano") tem tradução; o símbolo ("%", "R$") vai como veio.
+  unidade: codigo => {
+    const ehCodigo = [...codigo].every(
+      letra => (letra >= 'a' && letra <= 'z') || letra === '_'
+    );
+    const caminho = `${NS}.UNIDADES.${chaveDoTexto(codigo)}`;
+    return ehCodigo && te(caminho) ? t(caminho) : codigo;
+  },
   idioma: idiomaDoNavegador(locale.value),
 }));
 
@@ -81,6 +116,17 @@ const linhas = computed(() =>
     ? linhasDoResultado(resposta.value.dados, textosDoResultado.value)
     : []
 );
+// "Deu certo" sem nenhuma linha com rótulo: a tela diz isso em vez de uma caixa vazia (e avisa no console em dev).
+const semLinhas = computed(() => encontrado.value && !linhas.value.length);
+watch(semLinhas, vazio => {
+  if (!vazio || !import.meta.env.DEV) return;
+  // eslint-disable-next-line no-console
+  console.warn(
+    'Experimente: resposta sem campo com rótulo',
+    props.ferramenta.id,
+    Object.keys(resposta.value?.dados || {})
+  );
+});
 const aviso = computed(() => {
   if (!resposta.value || encontrado.value) return '';
   const chave = SITUACOES[resposta.value.situacao] || 'NAO_CONSEGUI';
@@ -92,7 +138,11 @@ const rodar = async () => {
   if (consultando.value || (!props.ferramenta.semCampo && !texto)) return;
   consultando.value = true;
   resposta.value = null;
-  resposta.value = await experimentar(props.ferramenta.id, texto);
+  resposta.value = await experimentar(
+    props.ferramenta.id,
+    texto,
+    semGratis.value
+  );
   consultando.value = false;
 };
 </script>
@@ -129,16 +179,26 @@ const rodar = async () => {
         class="sm:self-end"
         :carregando="consultando"
       >
-        {{
-          consultando
-            ? t(`${NS}.DETALHE.EXPERIMENTANDO`)
-            : t(`${NS}.DETALHE.EXPERIMENTAR`)
-        }}
+        {{ rotuloDoBotao }}
       </AgenteBotao>
     </form>
+    <p
+      v-if="premium && !semGratis"
+      data-experimente-gratis
+      class="m-0 text-sm text-n-slate-11"
+    >
+      {{ t(`${NS}.PREMIUM.TESTE_GRATIS`) }}
+    </p>
     <div aria-live="polite">
+      <p
+        v-if="premium && consultando"
+        data-experimente-consultando
+        class="m-0 text-sm text-n-slate-11"
+      >
+        {{ t(`${NS}.PREMIUM.CONSULTANDO`) }}
+      </p>
       <div
-        v-if="encontrado"
+        v-else-if="encontrado"
         data-experimente-resultado
         class="flex flex-col gap-2 p-4 rounded-2xl bg-n-teal-2 ring-1 ring-inset ring-n-teal-6"
       >
@@ -159,6 +219,13 @@ const rodar = async () => {
             </dd>
           </template>
         </dl>
+        <p
+          v-else
+          data-experimente-sem-linhas
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ t(`${NS}.RESULTADO.SEM_LINHAS`) }}
+        </p>
         <p
           v-if="maisProvavel"
           data-experimente-mais-provavel

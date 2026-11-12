@@ -10,10 +10,25 @@ module Autonomia::FerramentasProntas::Resposta
           'com o que veio aqui; o que não veio, não invente.'.freeze
   NAO_ENCONTRADO = 'A fonte oficial respondeu e não tem registro para o que foi pedido. Diga isso ao cliente e ' \
                    'confira o dado com ele. Não invente.'.freeze
+  # A consulta paga (F7) sem registro: conta para o cliente, e o agente diz que não havia registro.
+  NAO_HAVIA_REGISTRO = 'A consulta foi feita e não havia registro para o que foi pedido. Diga ao cliente que não havia ' \
+                       'registro e confira o dado com ele. Não invente.'.freeze
+  # O documento que a BigDataCorp recusou (F7): conta para o cliente, e o agente confere o documento antes de repetir.
+  DOCUMENTO_INVALIDO = 'A fonte recusou o documento como inválido, e a consulta foi contada. Não repita com o mesmo ' \
+                       'documento: confira com o cliente o número completo e só então consulte de novo. Não invente.'.freeze
   NAO_CONSEGUI = 'Não consegui consultar agora. Diga ao cliente que não deu para consultar neste momento e siga a ' \
                  'conversa sem esse dado. Não invente o dado e não tente de novo nesta resposta.'.freeze
+  # O padrão, para o parâmetro sem orientação própria (`Parametro#orientacao`).
   PEDIDO_INVALIDO = 'Faltou "%<campo>s" ou o valor não está no formato certo, e nada foi consultado. Confira com o ' \
                     'cliente antes de consultar de novo. Não invente.'.freeze
+  # Regra "QI 70" do Rodrigo (11/11/2026): o dado técnico que dá para deduzir do que o cliente disse, o agente deduz.
+  DEDUZA = 'Faltou "%<campo>s" ou o valor não serve, e nada foi consultado. Não pergunte ao cliente: %<como>s ' \
+           'Depois consulte de novo.'.freeze
+  # E pergunta só o que muda o resultado e não dá para deduzir.
+  PERGUNTE = 'Faltou "%<campo>s" ou o valor não serve, e nada foi consultado. Isso não dá para deduzir: pergunte ao ' \
+             'cliente %<o_que>s. Não invente.'.freeze
+  # Com `candidatos`: o que a plataforma achou para o dado ambíguo.
+  CANDIDATOS = 'As opções estão em "candidatos".'.freeze
 
   # Cada texto que vem da fonte vai com teto: um nome fantasia ou uma razão social é escolha de quem registrou a empresa,
   # e um texto enorme ali seria instrução disfarçada de dado. O aviso vai ANTES dos dados: se o corte do turno
@@ -38,11 +53,31 @@ module Autonomia::FerramentasProntas::Resposta
 
   def nao_encontrado(fonte, consulta)
     { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'nao_encontrado',
-      'orientacao' => NAO_ENCONTRADO }.to_json
+      'orientacao' => consulta.nao_encontrado || (fonte.premium? ? NAO_HAVIA_REGISTRO : NAO_ENCONTRADO) }.to_json
   end
 
-  def pedido_invalido(campo)
-    { 'situacao' => 'pedido_invalido', 'campo' => campo, 'orientacao' => format(PEDIDO_INVALIDO, campo: campo) }.to_json
+  def documento_invalido(fonte, consulta)
+    { 'ferramenta' => fonte.nome, 'consulta' => consulta.nome, 'situacao' => 'documento_invalido',
+      'orientacao' => DOCUMENTO_INVALIDO }.to_json
+  end
+
+  # `falta`: o nome do campo ou a `Falta` (com candidatos e a orientação da regra). `parametro`: o do campo, de onde vem
+  # a orientação própria; sem ela, o texto genérico.
+  def pedido_invalido(falta, parametro = nil)
+    falta = Autonomia::FerramentasProntas::Falta.de(falta)
+    orientacao = falta.orientacao || parametro&.orientacao || format(PEDIDO_INVALIDO, campo: falta.campo)
+    resposta = { 'situacao' => 'pedido_invalido', 'campo' => falta.campo, 'orientacao' => orientacao }
+    return resposta.to_json if falta.candidatos.blank?
+
+    resposta.merge('orientacao' => "#{orientacao} #{CANDIDATOS}", 'candidatos' => enxugar(falta.candidatos)).to_json
+  end
+
+  def deduza(campo, como)
+    format(DEDUZA, campo: campo, como: como)
+  end
+
+  def pergunte(campo, o_que)
+    format(PERGUNTE, campo: campo, o_que: o_que)
   end
 
   def nao_consegui

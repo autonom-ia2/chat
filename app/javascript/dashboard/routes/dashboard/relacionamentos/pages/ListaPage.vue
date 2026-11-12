@@ -3,6 +3,8 @@ import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
@@ -13,6 +15,7 @@ import DialogoApagar from '../components/lista/DialogoApagar.vue';
 import DialogoCriarCards from '../components/lista/DialogoCriarCards.vue';
 import DialogoEtiqueta from '../components/lista/DialogoEtiqueta.vue';
 import DialogoMandarMensagem from '../components/lista/DialogoMandarMensagem.vue';
+import EstadoSemAcesso from '../components/lista/EstadoSemAcesso.vue';
 import EstadoSemResultado from '../components/lista/EstadoSemResultado.vue';
 import LinhasDeExemplo from '../components/lista/LinhasDeExemplo.vue';
 import GavetaDeFiltros from '../components/lista/GavetaDeFiltros.vue';
@@ -31,18 +34,22 @@ import { listaFonte } from '../fonte/listaFonte';
 import { abaDeSegurosPermitida, contaDeSeguros } from '../fonte/modoCarteira';
 import { usarDemo } from '../fonte/modoDemo';
 import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
+import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
+import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
 
 // #2894 — a lista de Relacionamentos: herói com a frase do dia, abas
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
-// filtros", a lista com ações em grupo e os estados (vazio, carregando, erro).
+// filtros", a lista com ações em grupo e os estados (vazio, carregando, erro,
+// sem acesso).
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
-// e as escritas só simulam.
+// e as escritas só simulam. Fora da demonstração a lista lê do servidor e as
+// ações em grupo escrevem nele.
 // #2897 — em conta de seguros: a aba Seguros (`?aba=seguros`, outra peça), o
 // selo do seguro mais urgente na linha, o grupo "Só tem um seguro" e a busca
 // por placa e número da apólice. Fora dela, nada muda.
@@ -52,13 +59,25 @@ const router = useRouter();
 const demo = usarDemo(route.query);
 const acoes = acoesDaListaFonte({ demo });
 
+// Empresas é de quem tem a chave `companies` na conta (sem ela o servidor
+// responde 403): a aba some e `?aba=empresas` abre Pessoas. A demonstração
+// inventa as empresas e mostra sempre.
+const { isCloudFeatureEnabled } = useAccount();
+const temEmpresas = computed(
+  () => Boolean(demo) || isCloudFeatureEnabled(FEATURE_FLAGS.COMPANIES)
+);
+
 // A aba vem da URL, mas só enquanto a rota ainda é a da lista: ao sair para uma
 // ficha a query perde o `aba` e, sem isto, a lista dispararia uma carga à toa.
 const ROTA_DA_LISTA = 'relationships_home';
-let abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+const abaPedida = () =>
+  temEmpresas.value && route.query.aba === ABAS.EMPRESAS
+    ? ABAS.EMPRESAS
+    : ABAS.PESSOAS;
+let abaDaUrl = abaPedida();
 const aba = computed(() => {
   if (route.name && route.name !== ROTA_DA_LISTA) return abaDaUrl;
-  abaDaUrl = route.query.aba === ABAS.EMPRESAS ? ABAS.EMPRESAS : ABAS.PESSOAS;
+  abaDaUrl = abaPedida();
   return abaDaUrl;
 });
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
@@ -68,6 +87,19 @@ const naAbaDeSeguros = computed(
   () => route.query.aba === ABA_SEGUROS && abaDeSegurosPermitida()
 );
 const carteira = useCarteiraNaLista({ demo, ligada: comSeguros });
+// As abas aparecem quando há mais de uma: Empresas (conta com Empresas) ou
+// Seguros (conta de seguros).
+const temAbas = computed(() => temEmpresas.value || comSeguros);
+// "Criar cards", "Etiqueta" e "Apagar" são de quem pode (usePermissoesDaLista);
+// a demonstração só simula e mostra as três sempre.
+const permissoes = usePermissoesDaLista();
+const podeCriarCards = computed(
+  () => Boolean(demo) || permissoes.podeCriarCards.value
+);
+const podeEtiquetar = computed(
+  () => Boolean(demo) || permissoes.podeEtiquetar.value
+);
+const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -149,6 +181,13 @@ const semResultado = computed(() => {
   }
   return { frase: t(`${estados}.GRUPO_VAZIO${sufixo}`), botao: '', acao: null };
 });
+// Quem não pode ver lê só isto, sem "tentar de novo" e sem busca, grupos ou
+// filtros agindo sobre nada.
+const fraseSemAcesso = computed(() =>
+  ehEmpresas.value
+    ? t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO_EMPRESAS')
+    : t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO')
+);
 // Região viva única e permanente: o leitor de tela só anuncia o que muda dentro
 // de uma região que já estava na página, não a que nasce junto com o texto.
 const avisoDaLista = computed(() =>
@@ -158,6 +197,8 @@ const avisoDaLista = computed(() =>
 );
 
 const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+// O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
+const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
   router.push({ name: 'relacionamentos_pessoa', params: { contactId: id } });
 const abrirEmpresa = ({ id }) =>
@@ -192,8 +233,12 @@ const abrirFiltros = async () => {
   gavetaAberta.value = true;
   try {
     opcoesDeFiltro.value = await listaFonte({ demo }).opcoesDeFiltro();
-  } catch {
-    useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'));
+  } catch (falha) {
+    useAlert(
+      ehSemAcesso(falha)
+        ? fraseSemAcesso.value
+        : t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')
+    );
   }
 };
 const aplicarFiltros = novos => {
@@ -248,8 +293,12 @@ watch(naAbaDeSeguros, estaNela => {
           {{ avisoDaLista }}
         </p>
 
+        <EstadoSemAcesso
+          v-if="lista.semAcesso.value && !lista.resumo.value"
+          :frase="fraseSemAcesso"
+        />
         <ErroComTentarDeNovo
-          v-if="lista.erro.value && !lista.resumo.value"
+          v-else-if="lista.erro.value && !lista.resumo.value"
           :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
           data-relacionamentos="erro"
           @tentar="lista.recarregar"
@@ -270,17 +319,19 @@ watch(naAbaDeSeguros, estaNela => {
           <LinhasDeExemplo v-if="contaVazia" />
           <template v-else>
             <AbasDaLista
+              v-if="temAbas"
+              :com-empresas="temEmpresas"
               :com-seguros="comSeguros"
               :model-value="aba"
               @update:model-value="trocarAba"
             />
             <div
               :id="PAINEL_DAS_ABAS"
-              role="tabpanel"
-              :aria-labelledby="idDaAba(aba)"
+              :role="temAbas ? 'tabpanel' : undefined"
+              :aria-labelledby="temAbas ? idDaAba(aba) : undefined"
               class="flex flex-col min-w-0 gap-5"
             >
-              <div class="flex flex-col">
+              <div v-if="!lista.semAcesso.value" class="flex flex-col">
                 <PilulasDeGrupo
                   :grupos="grupos"
                   :model-value="lista.grupo.value"
@@ -296,6 +347,7 @@ watch(naAbaDeSeguros, estaNela => {
                 </p>
               </div>
               <BarraDeControles
+                v-if="!lista.semAcesso.value"
                 :busca="lista.busca.value"
                 :ordem="lista.ordem.value"
                 :filtros-ativos="lista.filtrosAtivos.value"
@@ -306,8 +358,12 @@ watch(naAbaDeSeguros, estaNela => {
                 @update:ordem="lista.mudarOrdem"
                 @abrir-filtros="abrirFiltros"
               />
+              <EstadoSemAcesso
+                v-if="lista.semAcesso.value"
+                :frase="fraseSemAcesso"
+              />
               <ErroComTentarDeNovo
-                v-if="lista.erro.value"
+                v-else-if="lista.erro.value"
                 :mensagem="t('RELACIONAMENTOS.LISTA.ERRO_DA_TELA')"
                 data-relacionamentos="erro"
                 @tentar="lista.recarregar"
@@ -386,6 +442,9 @@ watch(naAbaDeSeguros, estaNela => {
             class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
             :conta="contaDeMarcados"
+            :pode-criar-cards="podeCriarCards"
+            :pode-etiquetar="podeEtiquetar"
+            :pode-apagar="podeApagar"
             @mandar-mensagem="dialogoDeMensagem.abrir()"
             @criar-cards="dialogoDeCards.abrir()"
             @etiqueta="dialogoDeEtiqueta.abrir()"
@@ -414,6 +473,7 @@ watch(naAbaDeSeguros, estaNela => {
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
       @concluido="acoesEmGrupo.depoisDeAgir"
+      @abrir-crm="abrirCrm"
     />
     <DialogoEtiqueta
       ref="dialogoDeEtiqueta"

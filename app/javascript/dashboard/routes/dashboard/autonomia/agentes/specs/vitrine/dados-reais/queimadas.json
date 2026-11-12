@@ -1,0 +1,23 @@
+{
+  "focos": {
+    "provedor": "inpe",
+    "dados": {
+      "onde": "Almeirim (PA)",
+      "desde": "2026-11-10",
+      "focos_no_periodo": 1258,
+      "por_dia": [
+        {
+          "data": "2026-11-11",
+          "focos": 385
+        },
+        {
+          "data": "2026-11-10",
+          "focos": 873
+        }
+      ],
+      "ultimo_foco_em": "2026-11-11 11:10",
+      "distancia_do_foco_mais_perto_km": 6.4,
+      "atualizado_em": "2026-11-11"
+    }
+  }
+}
