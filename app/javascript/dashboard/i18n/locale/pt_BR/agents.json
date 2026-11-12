@@ -3671,16 +3671,16 @@
           "EXEMPLO": "Sorriso, MT, desde ontem"
         },
         "CERTIDOES_EMPRESA": {
-          "ROTULO": "Certidão e CNPJ da empresa",
-          "EXEMPLO": "certidão trabalhista da 11.222.333/0001-81",
+          "ROTULO": "CNPJ da empresa",
+          "EXEMPLO": "certidão de improbidade da 11.222.333/0001-81",
           "NOME": "Certidões da empresa",
           "APOIO": "pelo CNPJ",
-          "FAZ": "Tira na hora as certidões de uma empresa: dívida com a União, trabalhista, FGTS, improbidade e cadastro de quem deve ao governo.",
-          "CONSEGUE": "tirar as certidões de uma empresa",
-          "CLIENTE": "A empresa 11.222.333/0001-81 tem dívida com a União?",
-          "AGENTE": "Consultei agora: a certidão de dívida com a União saiu negativa, sem dívida.",
-          "USE_QUANDO": "Use quando o cliente pedir para conferir se uma empresa tem dívida ou certidão em dia.",
-          "CONSULTAS": "dívida com a União, débito trabalhista, FGTS, improbidade (CNJ) e cadastro de quem deve ao governo (CADIN)"
+          "FAZ": "Tira na hora a certidão de improbidade administrativa (CNJ) de uma empresa.",
+          "CONSEGUE": "tirar a certidão de improbidade de uma empresa",
+          "CLIENTE": "A empresa 11.222.333/0001-81 tem condenação por improbidade?",
+          "AGENTE": "Consultei agora: a certidão do CNJ saiu negativa, sem condenação por improbidade.",
+          "USE_QUANDO": "Use quando o cliente pedir para conferir se uma empresa tem condenação por improbidade administrativa.",
+          "CONSULTAS": "improbidade administrativa (CNJ)"
         },
         "RAIO_X_EMPRESA": {
           "ROTULO": "O que ver e o CNPJ da empresa",
@@ -3696,15 +3696,15 @@
         },
         "CONFERIR_PESSOA": {
           "ROTULO": "O que conferir e o CPF",
-          "EXEMPLO": "situação do CPF 111.444.777-35",
+          "EXEMPLO": "nome e nascimento do CPF 111.444.777-35",
           "NOME": "Conferir a pessoa",
           "APOIO": "pelo CPF",
-          "FAZ": "Confere a situação do CPF na Receita, o nome e a data de nascimento, e o registro no conselho da profissão.",
+          "FAZ": "Confere o nome e a data de nascimento pelo CPF, e o registro no conselho da profissão.",
           "CONSEGUE": "conferir quem é a pessoa",
           "CLIENTE": "Meu CPF é 111.444.777-35. Pode conferir meu cadastro?",
-          "AGENTE": "Conferi: o CPF está regular na Receita e o nascimento bate com o que você me passou.",
+          "AGENTE": "Conferi: o nome e a data de nascimento batem com o que você me passou.",
           "USE_QUANDO": "Use quando precisar confirmar os dados que o próprio cliente informou.",
-          "CONSULTAS": "situação do CPF na Receita, nome e nascimento, e registro no conselho da profissão"
+          "CONSULTAS": "nome e nascimento, e registro no conselho da profissão"
         },
         "HISTORICO_PLACA": {
           "ROTULO": "Placa do veículo",
@@ -3722,24 +3722,24 @@
           "EXEMPLO": "área de risco da Rua Augusta, 1500, São Paulo",
           "NOME": "Risco do endereço",
           "APOIO": "pelo endereço ou pelo CEP",
-          "FAZ": "Mostra se o endereço fica em área de risco, os crimes na cidade e a vistoria do imóvel.",
+          "FAZ": "Mostra se o endereço fica em área de risco e os crimes na cidade.",
           "CONSEGUE": "ver o risco de um endereço",
           "CLIENTE": "Minha casa fica no CEP 01001-000, número 10. É área de risco?",
           "AGENTE": "Consultei: o endereço fica fora de área de risco.",
           "USE_QUANDO": "Use quando o cliente quiser segurar um imóvel e passar o endereço.",
-          "CONSULTAS": "área de risco, crimes na cidade (só SP, RJ e MG) e vistoria do imóvel"
+          "CONSULTAS": "área de risco e crimes na cidade (só SP, RJ e MG)"
         },
         "IMOVEL_RURAL": {
-          "ROTULO": "Recibo do CAR ou CNPJ da empresa",
-          "EXEMPLO": "embargo do IBAMA da 11.222.333/0001-81",
+          "ROTULO": "Código do recibo do CAR",
+          "EXEMPLO": "situação do CAR MT-5107065-0A1B2C3D4E5F60718293A4B5C6D7E8F9",
           "NOME": "Imóvel rural",
-          "APOIO": "pelo recibo do cadastro rural ou pelo CNPJ",
-          "FAZ": "Mostra a situação da fazenda no Cadastro Ambiental Rural e se a empresa dona tem área embargada pelo IBAMA.",
+          "APOIO": "pelo recibo do cadastro rural",
+          "FAZ": "Mostra a situação da fazenda no Cadastro Ambiental Rural.",
           "CONSEGUE": "conferir um imóvel rural",
           "CLIENTE": "A minha fazenda está regular no Cadastro Ambiental Rural?",
           "AGENTE": "Consultei pelo recibo: o cadastro está ativo, com 120 hectares em Mato Grosso.",
-          "USE_QUANDO": "Use quando o cliente passar o recibo do Cadastro Ambiental Rural ou o CNPJ da empresa dona da fazenda.",
-          "CONSULTAS": "situação no Cadastro Ambiental Rural e embargo do IBAMA"
+          "USE_QUANDO": "Use quando o cliente passar o recibo do Cadastro Ambiental Rural da fazenda.",
+          "CONSULTAS": "situação no Cadastro Ambiental Rural"
         },
         "CONTATO_EMPRESA": {
           "ROTULO": "O que buscar e o CNPJ da empresa",
@@ -3787,7 +3787,7 @@
         "RESTA_UMA": "Resta 1 de {gratis} grátis no mês",
         "ACABARAM": "As grátis do mês acabaram",
         "TESTE_GRATIS": "O teste usa 1 das grátis do mês.",
-        "CONSULTANDO": "Consultando… pode levar até 1 minuto.",
+        "CONSULTANDO": "Consultando… algumas consultas levam até 2 minutos.",
         "TESTAR_POR": "Testar por {preco}",
         "TESTAR_POR_ATE": "Testar por até {preco}",
         "TITULO": "Quanto custa",

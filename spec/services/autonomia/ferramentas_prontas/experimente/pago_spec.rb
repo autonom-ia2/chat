@@ -13,10 +13,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   let(:credencial) { { api_key: 'chave-de-teste', api_base: 'https://api.openai.com', source: :system } }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
   let(:cnpj) { FerramentasPremiumHelper::CNPJ_EXEMPLO }
-  let(:pgfn) { { consulta: 'divida_uniao', cnpj: '11.222.333/0001-81' } }
+  let(:cnj) { { consulta: 'cnj', cnpj: '11.222.333/0001-81' } }
   let(:saidas_ao_modelo) { [] }
   let(:certidao_negativa) do
-    [{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA', 'AdditionalOutputData' => { 'EmissionDate' => '2026-11-10 10:00:00Z' } }]
+    [{ 'Origin' => 'CNJ', 'BaseStatus' => 'NEGATIVA', 'AdditionalOutputData' => { 'EmissionDate' => '2026-11-10 10:00:00Z' } }]
   end
 
   def experimentar(fonte, valor, confirmou_preco: false)
@@ -40,8 +40,8 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
     end
   end
 
-  def pgfn_responde(dado = certidao_negativa, **)
-    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', dado, **)
+  def cnj_responde(dado = certidao_negativa, **)
+    bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates', dado, **)
   end
 
   def a_bigdatacorp
@@ -60,25 +60,26 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'consulta de verdade, usa uma das 20 grátis do card, vai à telemetria e devolve o contador novo' do
-    pgfn_responde
-    modelo_faz([chamada(pgfn)])
+    cnj_responde
+    modelo_faz([chamada(cnj)])
 
-    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+    resultado = experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')
 
     expect(resultado).to include('situacao' => 'encontrado')
     expect(resultado['dados']).to include('situacao' => 'NEGATIVA')
-    expect(resultado['premium']).to eq('gratis' => 20, 'restantes' => 19, 'precos' => %w[0.06 0.15], 'confere_documento' => true)
+    expect(resultado['premium']).to eq('gratis' => 20, 'restantes' => 19, 'precos' => %w[0.15], 'confere_documento' => true,
+                                       'consultas' => 1)
     expect(registros_premium.sole).to have_attributes(account_id: account.id, autonomia_agent_id: nil, fonte: 'certidoes_empresa',
-                                                      consulta: 'divida_uniao', resultado: 'encontrado', cobranca: 'gratis',
+                                                      consulta: 'cnj', resultado: 'encontrado', cobranca: 'gratis',
                                                       numero: 1, do_cache: false)
     expect(a_bigdatacorp).to have_been_made.once
   end
 
   it 'instrui o modelo a copiar o CPF e o CNPJ exatamente como foram digitados, sem corrigir' do
-    pgfn_responde
-    modelo_faz([chamada(pgfn)])
+    cnj_responde
+    modelo_faz([chamada(cnj)])
 
-    experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+    experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')
 
     expect(cliente).to have_received(:create_with_tool_executor) do |**kwargs|
       expect(kwargs[:instructions]).to include(
@@ -88,13 +89,13 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'lê o mesmo cache do dia que o agente: a consulta que o agente já fez não sai de novo nem custa' do
-    pgfn_responde
+    cnj_responde
     agente = Autonomia::Agents::Agent.create!(account: account, name: 'Bot EXEMPLO', agent_type: 'custom', status: :active,
                                               enabled: true, instruction: 'Atenda.')
-    executar_premium(incluir_pronta('certidoes_empresa', conta: account, agente: agente), pgfn.stringify_keys)
-    modelo_faz([chamada(pgfn)])
+    executar_premium(incluir_pronta('certidoes_empresa', conta: account, agente: agente), cnj.stringify_keys)
+    modelo_faz([chamada(cnj)])
 
-    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+    resultado = experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')
 
     expect(resultado['situacao']).to eq('encontrado')
     expect(registros_premium.last).to have_attributes(do_cache: true, autonomia_agent_id: nil)
@@ -102,9 +103,9 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'CPF com dígito errado é recusado sem chamar a BigDataCorp e sem contar' do
-    modelo_faz([chamada({ consulta: 'situacao_cpf', cpf: '111.444.777-36' }, nome: 'pronta_conferir_pessoa')])
+    modelo_faz([chamada({ consulta: 'nome_e_nascimento', cpf: '111.444.777-36' }, nome: 'pronta_conferir_pessoa')])
 
-    resultado = experimentar('conferir_pessoa', 'situação do CPF 111.444.777-36')
+    resultado = experimentar('conferir_pessoa', 'nome do CPF 111.444.777-36')
 
     expect(resultado['situacao']).to eq('pedido_invalido')
     expect(resultado['premium']['restantes']).to eq(20)
@@ -113,10 +114,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'o documento que a BigDataCorp recusa (-114) conta, como no agente' do
-    pgfn_responde([], code: -114, message: 'INVALID DOC PARAMETER')
-    modelo_faz([chamada(pgfn)])
+    cnj_responde([], code: -114, message: 'INVALID DOC PARAMETER')
+    modelo_faz([chamada(cnj)])
 
-    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+    resultado = experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')
 
     expect(resultado['situacao']).to eq('documento_invalido')
     expect(resultado['premium']['restantes']).to eq(19)
@@ -124,12 +125,12 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'a fonte lenta (-1201) e o 504 não contam' do
-    pgfn_responde(nil, code: -1201, message: 'DATASET IS TOO SLOW. PLEASE TRY AGAIN IN A FEW MINUTES')
-    modelo_faz([chamada(pgfn)])
-    expect(experimentar('certidoes_empresa', 'dívida com a União')).to include('situacao' => 'nao_consegui_consultar')
+    cnj_responde(nil, code: -1201, message: 'DATASET IS TOO SLOW. PLEASE TRY AGAIN IN A FEW MINUTES')
+    modelo_faz([chamada(cnj)])
+    expect(experimentar('certidoes_empresa', 'certidão de improbidade')).to include('situacao' => 'nao_consegui_consultar')
 
     stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return(status: 504, body: '')
-    resultado = experimentar('certidoes_empresa', 'dívida com a União')
+    resultado = experimentar('certidoes_empresa', 'certidão de improbidade')
 
     expect(resultado).to include('situacao' => 'nao_consegui_consultar')
     expect(resultado['premium']['restantes']).to eq(20)
@@ -137,8 +138,8 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'um clique é uma consulta que vale: a segunda que o modelo pede não sai' do
-    pgfn_responde
-    modelo_faz([chamada(pgfn), chamada({ consulta: 'trabalhista', cnpj: cnpj }, id: 'c2')])
+    cnj_responde
+    modelo_faz([chamada(cnj), chamada({ cnpj: cnpj }, id: 'c2')])
 
     experimentar('certidoes_empresa', 'certidões da 11.222.333/0001-81')
 
@@ -150,10 +151,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   # Revisor (MÉDIO, com_modelo.rb:36): o CPF ou o CNPJ com dígito errado encerra o clique e mostra a recusa. O modelo
   # não pode "corrigir" o dígito sozinho e consultar outro documento, pago, que a pessoa não pediu.
   it 'o CNPJ com dígito errado encerra o clique: a recusa aparece e nenhum outro documento é consultado' do
-    pgfn_responde
-    modelo_faz([chamada({ consulta: 'divida_uniao', cnpj: '11.222.333/0001-80' })], [chamada(pgfn, id: 'c2')])
+    cnj_responde
+    modelo_faz([chamada({ consulta: 'cnj', cnpj: '11.222.333/0001-80' })], [chamada(cnj, id: 'c2')])
 
-    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-80')
+    resultado = experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-80')
 
     expect(resultado['situacao']).to eq('pedido_invalido')
     expect(JSON.parse(saidas_ao_modelo.last[:output])).to eq('situacao' => 'limite_do_experimente')
@@ -162,10 +163,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   end
 
   it 'a recusa que não é do documento (a consulta que não existe) não gasta o clique: o modelo corrige e a consulta sai' do
-    pgfn_responde
-    modelo_faz([chamada({ consulta: 'nao_existe', cnpj: cnpj })], [chamada(pgfn, id: 'c2')])
+    cnj_responde
+    modelo_faz([chamada({ consulta: 'nao_existe', cnpj: cnpj })], [chamada(cnj, id: 'c2')])
 
-    expect(experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')['situacao']).to eq('encontrado')
+    expect(experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')['situacao']).to eq('encontrado')
     expect(a_bigdatacorp).to have_been_made.once
   end
 
@@ -173,12 +174,13 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
     before { saldo_premium!(account, 'certidoes_empresa', 20) }
 
     it 'sem o clique no preço, nada é consultado nem enfileirado: a resposta pede a confirmação e traz o contador' do
-      modelo_faz([chamada(pgfn)])
+      modelo_faz([chamada(cnj)])
 
-      resultado = clicar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+      resultado = clicar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81')
 
       expect(resultado).to eq('situacao' => 'confirmar_preco',
-                              'premium' => { 'gratis' => 20, 'restantes' => 0, 'precos' => %w[0.06 0.15], 'confere_documento' => true })
+                              'premium' => { 'gratis' => 20, 'restantes' => 0, 'precos' => %w[0.15], 'confere_documento' => true,
+                                             'consultas' => 1 })
       expect(cliente).not_to have_received(:create_with_tool_executor)
       expect(chamou_a_bigdatacorp?).to be(false)
       expect(registros_premium).to be_empty
@@ -186,10 +188,10 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
     end
 
     it 'com o clique no preço, consulta e cobra como a consulta do agente' do
-      pgfn_responde
-      modelo_faz([chamada(pgfn)])
+      cnj_responde
+      modelo_faz([chamada(cnj)])
 
-      resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81', confirmou_preco: true)
+      resultado = experimentar('certidoes_empresa', 'certidão de improbidade da 11.222.333/0001-81', confirmou_preco: true)
 
       expect(resultado['situacao']).to eq('encontrado')
       expect(registros_premium.sole).to have_attributes(cobranca: 'cobrada', numero: 21, preco: BigDecimal('0.15'))
@@ -202,9 +204,9 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   it 'corrida nas grátis: dois cliques com 1 restante; a 21ª sem o clique no preço não é cobrada e vai ao log' do
     saldo_premium!(account, 'certidoes_empresa', 19)
     allow(Rails.logger).to receive(:warn)
-    pgfn_responde
-    modelo_faz([chamada(pgfn)])
-    texto = 'dívida com a União da 11.222.333/0001-81'
+    cnj_responde
+    modelo_faz([chamada(cnj)])
+    texto = 'certidão de improbidade da 11.222.333/0001-81'
     # Os dois ao mesmo tempo: o segundo não acha no cache do dia o que o primeiro ainda não gravou.
     allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::NullStore.new)
 
@@ -220,8 +222,8 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   it 'sem a flag do Premium, nada roda: nem o clique nem o job (a flag desligada entre os dois)' do
     account.disable_features!(Autonomia::FerramentasProntas::Premium::FLAG)
 
-    expect(clicar('certidoes_empresa', 'dívida com a União')).to eq('situacao' => 'desligada')
-    expect(experimentar('certidoes_empresa', 'dívida com a União')).to eq('situacao' => 'desligada')
+    expect(clicar('certidoes_empresa', 'certidão de improbidade')).to eq('situacao' => 'desligada')
+    expect(experimentar('certidoes_empresa', 'certidão de improbidade')).to eq('situacao' => 'desligada')
     expect(chamou_a_bigdatacorp?).to be(false)
   end
 end

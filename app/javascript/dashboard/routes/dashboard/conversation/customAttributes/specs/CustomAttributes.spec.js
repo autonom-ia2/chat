@@ -46,7 +46,7 @@ const VALORES = {
   cpf: '000',
 };
 
-const montar = attributeFrom => {
+const montar = (attributeFrom, definicoes = DEFINICOES) => {
   const store = createStore({
     getters: {
       getSelectedChat: () => ({ id: 42, meta: { sender: { id: 9 } } }),
@@ -55,7 +55,7 @@ const montar = attributeFrom => {
         custom_attributes: VALORES,
       }),
       'attributes/getAttributesByModel': () =>
-        gettersDosCampos.getAttributesByModel({ records: DEFINICOES }),
+        gettersDosCampos.getAttributesByModel({ records: definicoes }),
       canOperateConversation: () => () => true,
       getCurrentRole: () => 'agent',
       getCurrentCustomRoleId: () => null,
@@ -93,5 +93,33 @@ describe('CustomAttributes — campos internos do WhatsApp', () => {
     relacionamentos.ligado = false;
     const wrapper = montar('contact_panel');
     expect(campos(wrapper)).toEqual(['melhor_horario', 'cpf']);
+  });
+});
+
+// #2435 — o atributo com "Mostrar na tela" desligado some do painel, pelo store
+// e pelo Relacionamentos; o valor continua no contato.
+describe('CustomAttributes — atributo fora da tela', () => {
+  const comOculto = DEFINICOES.map(definicao =>
+    definicao.attribute_key === 'cpf'
+      ? { ...definicao, oculto_na_tela: true }
+      : definicao
+  );
+
+  it('pelo store, o atributo fora da tela não aparece', () => {
+    relacionamentos.ligado = false;
+    expect(campos(montar('contact_panel', comOculto))).toEqual([
+      'melhor_horario',
+    ]);
+  });
+
+  it('pelo Relacionamentos, o atributo fora da tela também não aparece', () => {
+    relacionamentos.ligado = true;
+    relacionamentos.definicoes = comOculto.filter(
+      definicao => !definicao.attribute_key.startsWith('waha_')
+    );
+    const wrapper = montar('conversation_contact_panel', comOculto);
+    expect(campos(wrapper)).toEqual(['melhor_horario']);
+    relacionamentos.ligado = false;
+    relacionamentos.definicoes = [];
   });
 });

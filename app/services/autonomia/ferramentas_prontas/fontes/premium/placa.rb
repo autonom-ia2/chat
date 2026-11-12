@@ -15,17 +15,20 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Placa
     Extrair.sem_vazio(veiculo.merge(resumo).merge('historico' => historico))
   end
 
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`).
+  CONSULTAS = [
+    Premium::ConsultaPaga.new(
+      nome: 'placa', descricao: 'o histórico do veículo', obrigatorios: [Premium::Parametros::PLACA],
+      dataset: Premium::Dataset.new(nome: 'license_plates', rota: '/veiculos', resposta: 'LicensePlateData', custo: '0.06',
+                                    preco: '0.09', busca: ->(params) { "licenseplate{#{params['placa']}}" }, extrair: HISTORICO)
+    )
+  ].freeze
+
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'historico_placa', slug: 'pronta_historico_placa', nome: 'Histórico da placa',
     descricao: 'Consulta paga: pela placa, a marca, o modelo, o ano, se tem restrição e quantos donos o veículo já ' \
                'teve. Não traz o nome do dono. A base vai até 2021: carro mais novo pode não ter registro.',
-    consultas: [
-      Premium::ConsultaPaga.new(
-        nome: 'placa', descricao: 'o histórico do veículo', obrigatorios: [Premium::Parametros::PLACA],
-        dataset: Premium::Dataset.new(nome: 'license_plates', rota: '/veiculos', resposta: 'LicensePlateData', custo: '0.06',
-                                      preco: '0.09', busca: ->(params) { "licenseplate{#{params['placa']}}" }, extrair: HISTORICO)
-      )
-    ],
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Base histórica até 07/2021.'
   )
