@@ -46,7 +46,7 @@ class Waha::ContactChatId
     end
 
     # Os atributos do contato sem o chat id, o jid e o lid; os demais ficam. Quem chama grava junto com a troca do
-    # telefone, no mesmo save (Waha::TrocaDeTelefoneNaMao).
+    # telefone, no mesmo save (Waha::TelefoneNovo).
     def without(custom_attributes)
       custom_attributes.except(*KEYS)
     end

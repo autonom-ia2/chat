@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #2711 (Waha::TrocaDeTelefoneNaMao): a pessoa troca o telefone do contato e o chat id da WAHA sai no mesmo save, para a
-# próxima mensagem pela caixa WAHA ir ao número novo. Importação, junção e sincronização não passam por aqui.
+# #2711 (Waha::TrocaDeTelefoneNaMao, Waha::TelefoneNovo): a pessoa troca o telefone do contato e o chat id da WAHA sai
+# no mesmo save, para a próxima mensagem pela caixa WAHA ir ao número novo. Importação, junção e sincronização não passam
+# por aqui. A regra de automação que grava o telefone: spec/services/autonomia/decisores/aplicador_trocar_spec.rb.
 RSpec.describe 'Troca do telefone do contato na caixa WAHA', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -13,9 +14,9 @@ RSpec.describe 'Troca do telefone do contato na caixa WAHA', type: :request do
   end
   let(:url) { "/api/v1/accounts/#{account.id}/contacts/#{contact.id}" }
 
+  # A factory do canal já cria a caixa dele: usar essa, sem uma segunda caixa no mesmo canal.
   def caixa_waha(conta = account)
-    channel = create(:channel_api, account: conta, additional_attributes: { 'provider' => 'waha', 'session' => "s-#{conta.id}" })
-    create(:inbox, account: conta, channel: channel)
+    create(:channel_api, account: conta, additional_attributes: { 'provider' => 'waha', 'session' => "s-#{conta.id}" }).inbox
   end
 
   def patch_contact(params)
@@ -52,18 +53,45 @@ RSpec.describe 'Troca do telefone do contato na caixa WAHA', type: :request do
       expect(contact.reload.custom_attributes).to eq(chat_id.merge('origem' => 'site'))
     end
 
-    it 'keeps the chat id when the phone is cleared' do
+    it 'removes the chat id when the phone is cleared' do
       patch_contact(phone_number: '')
 
-      expect(contact.reload.custom_attributes).to eq(chat_id.merge('origem' => 'site'))
+      expect(contact.reload.custom_attributes).to eq('origem' => 'site')
     end
 
-    it 'keeps the chat id when the contact had no phone before' do
-      contact.update!(phone_number: nil)
-
+    it 'does not keep the old chat id when the phone is cleared and a new one is saved later' do
+      patch_contact(phone_number: '')
       patch_contact(phone_number: '+5511922220000')
 
-      expect(contact.reload.custom_attributes).to eq(chat_id.merge('origem' => 'site'))
+      contact.reload
+      expect(contact.phone_number).to eq('+5511922220000')
+      expect(contact.custom_attributes).to eq('origem' => 'site')
+    end
+
+    context 'when the contact had no phone before' do
+      it 'removes a @c.us chat id of another number' do
+        contact.update!(phone_number: nil)
+
+        patch_contact(phone_number: '+5511922220000')
+
+        expect(contact.reload.custom_attributes).to eq('origem' => 'site')
+      end
+
+      it 'keeps a @c.us chat id of the same number' do
+        contact.update!(phone_number: nil)
+
+        patch_contact(phone_number: '+5511911110000')
+
+        expect(contact.reload.custom_attributes).to eq(chat_id.merge('origem' => 'site'))
+      end
+
+      it 'keeps a chat id that is only the @lid of the person' do
+        contact.update!(phone_number: nil, custom_attributes: { 'waha_whatsapp_chat_id' => '77@lid', 'waha_whatsapp_lid' => '77@lid' })
+
+        patch_contact(phone_number: '+5511922220000')
+
+        expect(contact.reload.custom_attributes).to eq('waha_whatsapp_chat_id' => '77@lid', 'waha_whatsapp_lid' => '77@lid')
+      end
     end
 
     it 'keeps the phone and the chat id when the new phone is invalid' do
@@ -76,7 +104,7 @@ RSpec.describe 'Troca do telefone do contato na caixa WAHA', type: :request do
   end
 
   it 'keeps the chat id in an account without a WAHA inbox' do
-    create(:inbox, account: account, channel: create(:channel_api, account: account))
+    create(:channel_api, account: account)
     caixa_waha(create(:account))
 
     patch_contact(phone_number: '+5511922220000')

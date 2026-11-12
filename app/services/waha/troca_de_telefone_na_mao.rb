@@ -1,30 +1,15 @@
-# #2711 (decisão do Rodrigo, 12/11: "Número novo, troca manual") — prepend em Api::V1::Accounts::ContactsController.
+# #2711 — prepend em Api::V1::Accounts::ContactsController.
 #
-# Na caixa WAHA a mensagem sai pelo chat id guardado no contato (Waha::ContactChatId), não pelo telefone; a WAHA só
-# pergunta pelo telefone quando o chat id não existe. Então, quando uma pessoa troca o telefone do contato no painel ou
-# pela API de contatos (PATCH contacts/:id), o chat id, o jid e o lid saem no mesmo save, e a próxima mensagem pela
-# caixa WAHA vai ao número novo. A próxima mensagem recebida grava o chat id de novo (`store!`).
-#
-# Só a troca: o contato tinha telefone e passa a ter outro. Pôr o primeiro telefone ou apagar o telefone não mexe no
-# chat id. Só na conta com caixa WAHA. Importação, junção de contatos, sincronização da WAHA (API pública da caixa) e
-# automação não passam por aqui.
+# Quando a pessoa muda o telefone do contato no painel ou pela API de contatos (PATCH contacts/:id), o chat id da WAHA
+# sai no mesmo save, mesmo que o pedido o mande de volta, e a próxima mensagem pela caixa WAHA vai ao número novo. A
+# regra de quando sai fica em Waha::TelefoneNovo. Pedido sem `phone_number` não mexe no chat id.
 module Waha::TrocaDeTelefoneNaMao
   private
 
   def contact_update_params
     attributes = super
-    return attributes unless troca_de_telefone?(attributes[:phone_number])
+    return attributes unless attributes.key?(:phone_number)
 
-    attributes.merge(custom_attributes: Waha::ContactChatId.without(contact_custom_attributes))
-  end
-
-  def troca_de_telefone?(novo)
-    anterior = @contact.phone_number
-    anterior.present? && novo.present? && novo != anterior && conta_com_waha?
-  end
-
-  def conta_com_waha?
-    Channel::Api.joins(:inbox).where(account_id: Current.account.id)
-                .exists?(["channel_api.additional_attributes ->> 'provider' = ?", 'waha'])
+    attributes.merge(custom_attributes: Waha::TelefoneNovo.custom_attributes(@contact, attributes[:phone_number], contact_custom_attributes))
   end
 end
