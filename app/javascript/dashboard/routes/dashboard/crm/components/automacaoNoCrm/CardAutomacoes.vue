@@ -159,13 +159,17 @@ const criar = () =>
         <Button
           v-if="podeMontar && card.stage_id && etapa"
           data-criar-automacao
-          :label="t(`${C}.CRIAR`, { etapa })"
           icon="i-lucide-plus"
           blue
           faded
-          class="!min-h-11"
+          class="!h-auto !min-h-11 max-w-full py-2"
           @click="criar"
-        />
+        >
+          <!-- O nome da etapa deixa o texto longo: no celular ele quebra a linha em vez de sair do card. -->
+          <span class="min-w-0 whitespace-normal text-start">
+            {{ t(`${C}.CRIAR`, { etapa }) }}
+          </span>
+        </Button>
       </div>
       <ul v-else class="m-0 flex list-none flex-col divide-y divide-n-weak p-0">
         <li
