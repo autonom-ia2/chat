@@ -916,6 +916,9 @@
             },
             {
               "esperar": "[data-problema=\"foto_escura\"]"
+            },
+            {
+              "clicar": "[data-problema=\"foto_escura\"] p"
             }
           ],
           "pausa": 1500
@@ -2467,7 +2470,7 @@
           "pausa": 1500
         },
         {
-          "nome": "vazio",
+          "nome": "sem-palavras-o-bloco-nao-aparece",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/23?demo=cheio&apolice=1",
           "esperar": "[data-carteira=\"gaveta-acao\"]",
           "pausa": 1500
