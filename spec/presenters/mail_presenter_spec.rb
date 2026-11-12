@@ -177,6 +177,16 @@ RSpec.describe MailPresenter do
         expect(decorated_auto_reply_mail.serialized_data[:auto_reply]).to be true
         expect(decorated_mail.serialized_data[:auto_reply]).to be_falsey
       end
+
+      # #2600: o DSN sem Auto-Submitted, pela estrutura do protocolo (multipart/report, RFC 3464) ou pelo X-Failed-Recipients.
+      it 'returns true for a bounce without Auto-Submitted, in both formats', :aggregate_failures do
+        %w[dsn_relatorio_sem_auto_submitted.eml dsn_x_failed_recipients_sem_auto_submitted.eml].each do |fixture|
+          mail = create_inbound_email_from_fixture(fixture).mail
+          expect(mail['Auto-Submitted']).to be_nil
+          expect(described_class.new(mail).auto_reply?).to be(true), fixture
+          expect(described_class.new(mail).serialized_data[:auto_reply]).to be(true), fixture
+        end
+      end
     end
 
     describe 'malformed sender headers' do

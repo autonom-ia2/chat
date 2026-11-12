@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 describe AutomationRuleListener do
+  include ActionMailbox::TestHelper
+
   let(:listener) { described_class.instance }
   let!(:account) { create(:account) }
   let(:conversation) { create(:conversation, account: account) }
@@ -217,6 +219,18 @@ describe AutomationRuleListener do
         allow(condition_match).to receive(:present?).and_return(true)
 
         listener.message_created(email_event)
+        expect(AutomationRules::ActionService).not_to have_received(:new)
+      end
+
+      # #2600: o aviso de devolução que chega sem Auto-Submitted, nos dois formatos, pelo caminho real da caixa de e-mail.
+      it 'does not call AutomationRules::ActionService for a bounce without Auto-Submitted' do
+        email_channel = create(:channel_email, account: account)
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        %w[dsn_relatorio_sem_auto_submitted.eml dsn_x_failed_recipients_sem_auto_submitted.eml].each do |fixture|
+          Imap::ImapMailbox.new.process(create_inbound_email_from_fixture(fixture).mail, email_channel)
+          listener.message_created(Events::Base.new('message_created', Time.zone.now, { message: Message.last }))
+        end
         expect(AutomationRules::ActionService).not_to have_received(:new)
       end
 
