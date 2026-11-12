@@ -2394,6 +2394,48 @@
      ],
      "revisar": false,
      "nota": "Issue #2894."
+    },
+    {
+     "id": "09.20",
+     "titulo": "Ver os seguros da sua carteira e quem vence primeiro",
+     "para_que_serve": "Usar a aba Seguros de Relacionamentos: a frase do topo, os grupos por vencimento, a busca, a ordem e os filtros, e ver os seguros na ficha da pessoa e da empresa.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ver a aba Seguros e quem vence primeiro (carteira de seguros)",
+      "porques: Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2897 (E4 do épico #1240). Não há rota nova: a aba é ?aba=seguros na rota da lista. A numeração pula de 09.17 para 09.20 de propósito. O portão é Carteira::Acesso (a chave carteira_seguros, as telas novas e a conta ser corretora de seguros). A aba não marca seguros, não manda mensagem e não traz seguros."
+    },
+    {
+     "id": "09.21",
+     "titulo": "Abrir um seguro: corrigir, marcar como cancelado e guardar o PDF",
+     "para_que_serve": "Abrir a gaveta de um seguro, ler os dados e o histórico, corrigir o que veio errado, marcar como cancelado ou desfazer o cancelamento, e guardar, ver, trocar ou apagar o PDF da apólice.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Corrigir os dados de um seguro ou marcar como cancelado (carteira de seguros)",
+      "porques: Guardar, ver, trocar ou apagar o PDF de um seguro (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2897. A gaveta abre com ?apolice=<id> na lista e nas fichas, por isso o botão leva à lista. Corrigir e mudar o PDF pedem poder alterar a pessoa; quem só pode ver lê os dados e abre o PDF."
     }
    ]
   },

@@ -1,0 +1,271 @@
+{
+  "RELACIONAMENTOS_CARTEIRA": {
+    "TITULO": "Seguros",
+    "ABA": "Seguros",
+    "NUMERO_DA_APOLICE": "nº {numero}",
+    "TIPOS": {
+      "AUTO": "Auto",
+      "RESIDENCIAL": "Residencial",
+      "VIDA": "Vida",
+      "EMPRESARIAL": "Empresarial",
+      "OUTRO": "Outro"
+    },
+    "SELOS": {
+      "ATIVO": "Ativo",
+      "VENCIDO": "Vencido",
+      "CANCELADO": "Cancelado"
+    },
+    "CAMPOS": {
+      "TIPO": "Tipo de seguro",
+      "SEGURADORA": "Seguradora",
+      "NUMERO": "Número da apólice",
+      "COMECA": "Começa",
+      "TERMINA": "Termina",
+      "VALOR": "Valor que o cliente paga",
+      "BEM": "O que está segurado"
+    },
+    "GRUPOS": {
+      "TODOS": {
+        "NOME": "Todos"
+      },
+      "VENCE_7_DIAS": {
+        "NOME": "Vence em até 7 dias",
+        "EXPLICACAO": "Seguros que terminam nos próximos 7 dias."
+      },
+      "VENCE_30_DIAS": {
+        "NOME": "Vence em até 30 dias",
+        "EXPLICACAO": "Seguros que terminam nos próximos 30 dias."
+      },
+      "VENCE_90_DIAS": {
+        "NOME": "Vence em até 90 dias",
+        "EXPLICACAO": "Seguros que terminam nos próximos três meses."
+      },
+      "VENCIDO": {
+        "NOME": "Vencido",
+        "EXPLICACAO": "Seguros que já terminaram."
+      },
+      "SEM_TELEFONE": {
+        "NOME": "Sem telefone",
+        "EXPLICACAO": "A pessoa está sem telefone, então não dá para mandar mensagem. Abra o seguro, clique no nome dela e escreva o telefone na ficha."
+      }
+    },
+    "HEROI": {
+      "SEM_SEGURO": "Ainda não há seguros aqui.",
+      "SEM_SEGURO_APOIO": "Os seguros da sua carteira aparecem aqui e na ficha de cada pessoa.",
+      "VENCE_7": "{count} seguro vence nos próximos 7 dias. | {count} seguros vencem nos próximos 7 dias.",
+      "VENCIDOS": "{count} seguro já venceu. | {count} seguros já venceram.",
+      "RESUMO": "Você tem {count} seguro. Ele não vence nos próximos 7 dias. | Você tem {count} seguros. Nenhum vence nos próximos 7 dias.",
+      "VER_QUAIS": "Ver quais",
+      "VER_VENCIDOS": "Ver vencidos",
+      "VER_TODOS": "Ver todos"
+    },
+    "LISTA": {
+      "BUSCA": "Buscar por nome ou número da apólice",
+      "BUSCA_CURTA": "Buscar seguro",
+      "ORDENAR": {
+        "ROTULO": "Ordenar",
+        "VENCE_PRIMEIRO": "Vence primeiro",
+        "NOME": "Nome",
+        "MAIS_NOVOS": "Mais novos"
+      },
+      "FILTROS": {
+        "BOTAO": "Mais filtros",
+        "BOTAO_COM_CONTAGEM": "Mais filtros · {count}",
+        "TITULO": "Mais filtros",
+        "TIPO": "Tipo de seguro",
+        "SEGURADORA": "Seguradora",
+        "TODOS": "Todos",
+        "TODAS": "Todas",
+        "VER_RESULTADO": "Ver resultado",
+        "LIMPAR": "Limpar",
+        "SEM_RESULTADO": "Nenhum seguro com esses filtros.",
+        "LIMPAR_FILTROS": "Limpar filtros"
+      },
+      "ABRIR": "Abrir o seguro {tipo} de {nome}",
+      "SEM_TELEFONE": "Sem telefone",
+      "GRUPO_VAZIO": "Nenhum seguro neste grupo agora.",
+      "BUSCA_SEM_RESULTADO": "Não achei nenhum seguro com “{busca}”.",
+      "LIMPAR_BUSCA": "Limpar busca",
+      "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
+      "SEM_ACESSO": "Você não tem acesso aos seguros desta conta.",
+      "EXEMPLO_LEGENDA": "Sua lista de seguros vai ficar assim:"
+    },
+    "FICHA": {
+      "TITULO": "Seguros",
+      "TITULO_COM_QUANTOS": "Seguros ({count})",
+      "TITULO_DA_EMPRESA": "Seguros da empresa",
+      "TITULO_COM_QUANTOS_DA_EMPRESA": "Seguros da empresa ({count})",
+      "VAZIO": "Nenhum seguro ainda.",
+      "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
+      "SEGURADORA_E_NUMERO": "{seguradora} · {numero}",
+      "VER_PDF": "Ver PDF",
+      "VER_PDF_DE": "Ver o PDF do seguro {tipo}",
+      "GUARDAR_PDF": "Guardar PDF",
+      "GUARDAR_PDF_DE": "Guardar o PDF do seguro {tipo}",
+      "ABRIR": "Abrir o seguro {tipo}"
+    },
+    "QUANDO": {
+      "LISTA": {
+        "VENCE_EM": "vence em {count} dias ({data})",
+        "VENCE_AMANHA": "vence amanhã ({data})",
+        "VENCE_HOJE": "vence hoje",
+        "VENCE_NA_DATA": "vence em {data}",
+        "VENCEU_HA": "venceu há {count} dias",
+        "VENCEU_ONTEM": "venceu ontem",
+        "CANCELADO_EM": "cancelado em {data}"
+      },
+      "FICHA": {
+        "VENCE_EM": "Vence em {count} dias · {data}",
+        "VENCE_AMANHA": "Vence amanhã · {data}",
+        "VENCE_HOJE": "Vence hoje",
+        "VENCE_NA_DATA": "Vence em {data}",
+        "VENCEU_HA": "Venceu há {count} dias",
+        "VENCEU_ONTEM": "Venceu ontem",
+        "CANCELADO_EM": "Cancelado em {data}"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "{tipo} · {seguradora}",
+      "CARREGANDO": "Abrindo o seguro",
+      "ERRO": "Não consegui abrir este seguro. Tente de novo.",
+      "NAO_ESTA_MAIS": "Este seguro não está mais aqui.",
+      "SEM_ACESSO": "Você não tem acesso a este seguro.",
+      "FECHAR": "Fechar",
+      "DE_QUEM": "Seguro de {nome}",
+      "ABRIR_FICHA": "Abrir a ficha",
+      "FRASE": {
+        "VENCE_EM": "Vence em {count} dias, em {data}.",
+        "VENCE_AMANHA": "Vence amanhã.",
+        "VENCE_HOJE": "Vence hoje.",
+        "VENCE_NA_DATA": "Vale até {data}.",
+        "VENCEU_HA": "Venceu há {count} dias.",
+        "VENCEU_ONTEM": "Venceu ontem.",
+        "CANCELADO_EM": "Cancelado em {data}.",
+        "SEM_PDF": "Ainda não tem o PDF guardado."
+      },
+      "AVISOS": {
+        "CANCELADO": "Seguro marcado como cancelado.",
+        "CANCELAMENTO_DESFEITO": "Cancelamento desfeito.",
+        "PDF_GUARDADO": "PDF guardado.",
+        "PDF_TROCADO": "PDF trocado.",
+        "PDF_APAGADO": "PDF apagado.",
+        "DESFEITO": "Desfeito.",
+        "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
+        "DESFAZER": "Desfazer"
+      },
+      "DADOS": {
+        "TITULO": "Dados do seguro",
+        "TIPO": "Tipo de seguro",
+        "RAMO": "Na planilha estava como",
+        "SEGURADORA": "Seguradora",
+        "NUMERO": "Número da apólice",
+        "COMECA": "Começa",
+        "TERMINA": "Termina",
+        "VALOR": "Valor que o cliente paga",
+        "BEM": "O que está segurado",
+        "ORIGEM": "Como chegou",
+        "POR_PLANILHA": "Chegou por planilha, em {data}",
+        "CHEGOU_EM": "Chegou em {data}",
+        "NAO_INFORMADO": "Não informado"
+      },
+      "RODAPE": {
+        "VER_PDF": "Ver PDF",
+        "GUARDAR_PDF": "Guardar o PDF",
+        "GUARDAR_OUTRO_PDF": "Guardar outro PDF",
+        "APAGAR_PDF": "Apagar o PDF",
+        "CORRIGIR": "Corrigir",
+        "MARCAR_CANCELADO": "Marcar como cancelado",
+        "DESFAZER_CANCELAMENTO": "Desfazer o cancelamento",
+        "MAIS": "Mais opções deste seguro"
+      }
+    },
+    "CORRIGIR": {
+      "TITULO": "Corrigir o seguro {tipo}",
+      "TIPO": "Tipo de seguro",
+      "SEGURADORA": "Seguradora",
+      "OUTRA": "Outra",
+      "OUTRA_SEGURADORA": "Nome da seguradora",
+      "NUMERO": "Número da apólice",
+      "COMECA": "Começa",
+      "TERMINA": "Termina",
+      "VALOR": "Valor que o cliente paga (R$)",
+      "BEM": "O que está segurado",
+      "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo em outra planilha.",
+      "SALVAR": "Salvar",
+      "VOLTAR": "Voltar",
+      "SALVO": "Salvo.",
+      "ERRO_AO_SALVAR": "Não consegui salvar. Tente de novo.",
+      "FALTA": {
+        "NADA_MUDOU": "Você ainda não mudou nada. Mude o que está errado e salve.",
+        "NUMERO": "Escreva o número da apólice.",
+        "COMECA": "Essa data não existe. Escolha no calendário quando o seguro começa.",
+        "TERMINA": "Escolha quando o seguro termina.",
+        "TERMINA_ANTES": "O seguro não pode terminar antes de começar. Confira as duas datas.",
+        "VALOR": "Escreva o valor que o cliente paga em reais, como 1.250,00. Se não souber, deixe em branco.",
+        "OUTRA_SEGURADORA": "Escreva o nome da seguradora."
+      },
+      "SAIR": {
+        "TITULO": "Sair sem salvar?",
+        "AVISO": "O que você mudou não fica guardado.",
+        "CONFIRMAR": "Sair sem salvar",
+        "VOLTAR": "Continuar corrigindo"
+      }
+    },
+    "HISTORIA": {
+      "TITULO": "Histórico",
+      "ERRO": "Não consegui mostrar o histórico. Tente de novo.",
+      "MUDOU_DE_PARA": "{item}: era {antes}, ficou {depois}",
+      "NAO_INFORMADO": "não informado",
+      "TIPOS": {
+        "CHEGOU_PLANILHA": "Chegou por planilha.",
+        "CHEGOU_DE_NOVO": "Chegou de novo por planilha.",
+        "CORRIGIDO": "Seguro corrigido à mão.",
+        "CANCELADO": "Seguro marcado como cancelado.",
+        "VOLTOU_A_ATIVO": "Cancelamento desfeito.",
+        "PDF_ANEXADO": "PDF guardado.",
+        "PDF_TIRADO": "PDF apagado."
+      }
+    },
+    "PDF": {
+      "TITULO": "Guardar o PDF do seguro {tipo}",
+      "TITULO_OUTRO": "Guardar outro PDF do seguro {tipo}",
+      "SOLTAR": "Arraste o PDF aqui ou clique para escolher",
+      "APOIO": "Assim que você escolher, o PDF fica guardado neste seguro.",
+      "APOIO_OUTRO": "Depois de escolher, você confirma a troca.",
+      "GUARDANDO": "Guardando o PDF…",
+      "USAR_EXEMPLO": "Usar um PDF de exemplo",
+      "NAO_GUARDOU": "Não consegui guardar o PDF. Tente de novo.",
+      "NAO_ABRIU": "Não consegui abrir o PDF. Tente de novo.",
+      "FECHAR": "Fechar",
+      "APAGAR": {
+        "TITULO": "Apagar o PDF deste seguro?",
+        "AVISO": "O arquivo sai daqui e não volta. Se precisar dele depois, guarde o PDF de novo.",
+        "CONFIRMAR": "Apagar o PDF",
+        "VOLTAR": "Voltar"
+      },
+      "TROCAR": {
+        "TITULO": "Trocar o PDF deste seguro?",
+        "AVISO": "O PDF que está guardado sai e não volta. O novo entra no lugar.",
+        "CONFIRMAR": "Trocar o PDF",
+        "VOLTAR": "Voltar"
+      }
+    },
+    "RECUSAS": {
+      "FALTA_NUMERO": "Falta o número da apólice. Escreva o número e salve de novo.",
+      "FALTA_SEGURADORA": "Falta a seguradora. Escolha a seguradora e salve de novo.",
+      "FALTA_TERMINA": "Falta a data em que o seguro termina. Escolha a data e salve de novo.",
+      "TERMINA_ANTES": "O seguro não pode terminar antes de começar. Confira as duas datas.",
+      "DATA_INVALIDA": "Uma das datas não existe. Escolha a data no calendário e salve de novo.",
+      "VALOR_INVALIDO": "Não entendi o valor que o cliente paga. Escreva só o número em reais, como 1.250,00.",
+      "TIPO_DESCONHECIDO": "Não conheço esse tipo de seguro. Escolha um tipo da lista.",
+      "APOLICE_REPETIDA": "Já existe um seguro com essa seguradora, esse número e essa data de término. Confira o número da apólice.",
+      "JA_CANCELADO": "Este seguro já estava marcado como cancelado. Atualizei a tela.",
+      "NAO_CANCELADO": "Este seguro já não estava cancelado. Atualizei a tela.",
+      "ARQUIVO_OBRIGATORIO": "O arquivo não chegou. Escolha o PDF de novo.",
+      "TIPO": "Este arquivo não é um PDF. Escolha o PDF da apólice.",
+      "ARQUIVO_GRANDE": "Este PDF é grande demais para guardar aqui. Peça à seguradora o PDF da apólice, não a cópia escaneada, e guarde esse.",
+      "SEM_PDF": "Este seguro não tem mais PDF guardado. Atualizei a tela.",
+      "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo."
+    }
+  }
+}

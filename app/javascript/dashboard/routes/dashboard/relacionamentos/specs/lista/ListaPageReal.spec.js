@@ -22,6 +22,11 @@ const pode = vi.hoisted(() => ({
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
+// têm teste próprio (specs/carteira).
+vi.mock('../../carteira/useContaDeSeguros', () => ({
+  useContaDeSeguros: () => ({ value: false }),
+}));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));

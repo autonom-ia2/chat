@@ -32,6 +32,11 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: contexto.empurrar }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
+// têm teste próprio (specs/carteira).
+vi.mock('../../carteira/useContaDeSeguros', () => ({
+  useContaDeSeguros: () => ({ value: false }),
+}));
 vi.mock('../../fonte/modoDemo', async importOriginal => ({
   ...(await importOriginal()),
   usarDemo: () => contexto.demo,

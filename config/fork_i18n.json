@@ -155,6 +155,9 @@
     },
     {
       "file": "relacionamentosTrazer.json"
+    },
+    {
+      "file": "relacionamentosCarteira.json"
     }
   ],
   "pacotes": {
