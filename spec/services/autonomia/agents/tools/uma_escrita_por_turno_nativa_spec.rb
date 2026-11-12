@@ -61,13 +61,31 @@ RSpec.describe Autonomia::Agents::Tools::UmaEscritaPorTurno do
                                     **Autonomia::Agents::RodadasDoTurno.para(agent)).answer
   end
 
-  it 'marcar horário duas vezes no turno: a segunda não roda e o modelo lê que já foi feita', :aggregate_failures do
+  it 'marcar horário duas vezes no turno: a segunda não roda e o modelo lê que o pedido não foi feito', :aggregate_failures do
     o_modelo_chama_duas_vezes('agendar_reuniao')
 
     responder
 
     expect(execucoes['agendar_reuniao']).to eq(1)
-    expect(saidas.pluck(:output)).to eq(['{"ok":true,"reuniao":"marcada"}', described_class::JA_FEITA])
+    expect(saidas.pluck(:output)).to eq(['{"ok":true,"reuniao":"marcada"}', described_class::NAO_FEITA])
+  end
+
+  # Revisão (ALTO): o horário inválido é recusado pela própria ferramenta (registro de recusa); o modelo corrige o horário
+  # e a segunda tentativa roda.
+  it 'marcar horário com horário inválido não trava: a segunda tentativa, corrigida, roda', :aggregate_failures do
+    respostas = [-> { Autonomia::Agents::Tools::Recusa.para_modelo('agenda_parametro_invalido', slug: 'agendar_reuniao') },
+                 -> { '{"ok":true,"reuniao":"marcada"}' }]
+    allow(nativas::AgendarReuniao).to receive(:new) do |**_kwargs|
+      instance_double(nativas::AgendarReuniao).tap do |ferramenta|
+        allow(ferramenta).to receive(:call) { (execucoes['agendar_reuniao'] += 1) && respostas.shift.call }
+      end
+    end
+    o_modelo_chama_duas_vezes('agendar_reuniao')
+
+    responder
+
+    expect(execucoes['agendar_reuniao']).to eq(2)
+    expect(saidas.pluck(:output).last).to eq('{"ok":true,"reuniao":"marcada"}')
   end
 
   it 'consultar horários duas vezes no turno: as duas rodam', :aggregate_failures do

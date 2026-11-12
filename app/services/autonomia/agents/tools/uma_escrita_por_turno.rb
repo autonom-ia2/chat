@@ -1,12 +1,20 @@
 # A FERRAMENTA QUE ESCREVE RODA UMA VEZ POR TURNO (#2918, revisão de segurança). O Rodrigo autorizou o agente com pronta
 # a CONSULTAR até 3 vezes por resposta, não a escrever. Sem esta trava, um texto injetado pelo cliente podia fazer a
 # ferramenta que escreve (`Bound#escreve?`: a HTTP fora do GET, cada vez com outra `Idempotency-Key`; a nativa que
-# declara `escreve?`, como marcar horário) rodar até 3 vezes no turno. Com ela, a segunda chamada da mesma ferramenta no
-# turno (na mesma rodada ou em outra) não vai ao sistema de fora: o modelo lê `JA_FEITA` e a recusa fica registrada. A
-# leitura (GET, as prontas, a nativa que só lê) segue livre, e quem chama decide quando a trava vale (`Answerer`,
+# declara `escreve?`, como marcar horário) rodar até 3 vezes no turno.
+#
+# - Numa rodada, só a primeira chamada de cada ferramenta que escreve roda; as outras não vão ao sistema de fora.
+# - A ferramenta só conta como FEITA depois de rodar sem recusa e sem erro (`concluir`). A escrita que falhou (a
+#   conferência recusou, o horário era inválido, o sistema devolveu 4xx, a consulta não disparou) não trava: o modelo
+#   corrige o dado e tenta de novo, e o agente não confirma ao cliente o que não aconteceu.
+# - A chamada travada não roda: o modelo lê `NAO_FEITA` (o pedido não foi feito, e pode ter outros argumentos), e a
+#   recusa fica registrada.
+#
+# A leitura (GET, as prontas, a nativa que só lê) segue livre, e quem chama decide quando a trava vale (`Answerer`,
 # `uma_escrita_por_turno`): só nas rodadas das prontas. O ajudante e a Lia seguem como antes.
 class Autonomia::Agents::Tools::UmaEscritaPorTurno
-  JA_FEITA = 'Esta ação já foi feita neste turno; não repita. Responda ao cliente com o resultado que você já recebeu.'.freeze
+  NAO_FEITA = 'Esta ferramenta só roda uma vez por resposta; este pedido NÃO foi feito. Diga ao cliente que faz na ' \
+              'próxima mensagem.'.freeze
 
   def initialize(agente:, delivery:)
     @agente = agente
@@ -14,23 +22,43 @@ class Autonomia::Agents::Tools::UmaEscritaPorTurno
     @feitas = Set.new
   end
 
-  # -> { chamada => saída para o modelo } das que não rodam: da segunda em diante de uma mesma ferramenta que escreve. A
-  # chamada a um especialista ou ajudante (que tem a precedência no despacho) fica fora.
+  # -> { chamada => saída para o modelo } das que não rodam: a ferramenta que escreve já feita neste turno, ou a segunda
+  # chamada dela nesta rodada. A chamada a um especialista ou ajudante (a precedência do despacho) fica fora.
   def repetidas(calls, tools_by_slug, specialists_by_function)
+    nesta_rodada = Set.new
     Array(calls).each_with_object({}.compare_by_identity) do |call, repetidas|
       nome = call['name'].to_s
-      next if specialists_by_function.key?(nome) || !tools_by_slug[nome]&.escreve?
-      next if @feitas.add?(nome)
+      next unless escrita?(nome, tools_by_slug, specialists_by_function)
+      next if @feitas.exclude?(nome) && nesta_rodada.add?(nome)
 
       repetidas[call] = recusa_registrada(nome)
     end
   end
 
+  # A chamada rodou: a escrita conta como feita só sem recusa registrada e sem a saída de erro (`{"error": ...}`).
+  def concluir(call, tools_by_slug, specialists_by_function, output:, recusou:)
+    nome = call['name'].to_s
+    return if recusou || erro?(output) || !escrita?(nome, tools_by_slug, specialists_by_function)
+
+    @feitas << nome
+  end
+
   private
+
+  def escrita?(nome, tools_by_slug, specialists_by_function)
+    !specialists_by_function.key?(nome) && tools_by_slug[nome]&.escreve? == true
+  end
+
+  def erro?(output)
+    dado = JSON.parse(output.to_s)
+    dado.is_a?(Hash) && dado.key?('error')
+  rescue JSON::ParserError
+    false
+  end
 
   def recusa_registrada(slug)
     ::Autonomia::Agents::Tools::Recusa.registrar('acao_ja_feita_neste_turno', slug: slug, agente: @agente,
                                                                               conversa: ::Autonomia::Agents::Tools::Recusa.conversa_de(@delivery))
-    JA_FEITA
+    NAO_FEITA
   end
 end

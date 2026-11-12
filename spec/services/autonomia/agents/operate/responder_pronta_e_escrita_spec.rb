@@ -81,7 +81,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(corpos.last['tools'].to_a.pluck('name')).to include('registrar_pedido')
   end
 
-  it 'pedida de novo em outra rodada, não roda: o modelo lê que a ação já foi feita', :aggregate_failures do
+  it 'pedida de novo em outra rodada, não roda: o modelo lê que o pedido não foi feito', :aggregate_failures do
     o_modelo_responde({ output: [chamada('c1')] }, { output: [chamada('c2')] }, { output_text: resposta_final })
 
     result = responder
@@ -90,7 +90,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(chaves.size).to eq(1)
     expect(corpos.size).to eq(3)
     expect(saida_de(corpos[1], 'c1')).to eq('{"status":"registrado"}')
-    expect(saida_de(corpos[2], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::JA_FEITA)
+    expect(saida_de(corpos[2], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::NAO_FEITA)
   end
 
   it 'duas chamadas na mesma rodada: só a primeira roda', :aggregate_failures do
@@ -99,7 +99,27 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     responder
 
     expect(chaves.size).to eq(1)
-    expect(saida_de(corpos[1], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::JA_FEITA)
+    expect(saida_de(corpos[1], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::NAO_FEITA)
+  end
+
+  # Revisão (ALTO): a ferramenta só conta como feita depois de rodar sem recusa nem erro. A primeira escrita que volta 4xx
+  # não trava a segunda: o modelo corrige o dado e tenta de novo, e o agente não confirma ao cliente o que não aconteceu.
+  it 'a escrita que falhou (4xx) não trava: o modelo corrige e a segunda roda', :aggregate_failures do
+    executor = instance_double(Autonomia::Agents::Tools::HttpExecutor)
+    respostas = [-> { raise Autonomia::Agents::Tools::HttpExecutor::Error.new('tool_http_error: 422', status: 422) },
+                 -> { '{"status":"registrado"}' }]
+    allow(executor).to receive(:call) { respostas.shift.call }
+    allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new).and_return(executor)
+    o_modelo_responde({ output: [chamada('c1')] }, { output: [chamada('c2')] }, { output_text: resposta_final })
+
+    responder
+
+    expect(executor).to have_received(:call).twice
+    expect(saida_de(corpos[2], 'c2')).to eq('{"status":"registrado"}')
+  end
+
+  it 'o texto da trava diz a verdade: este pedido não foi feito' do
+    expect(Autonomia::Agents::Tools::UmaEscritaPorTurno::NAO_FEITA).to include('NÃO foi feito')
   end
 
   it 'a leitura (GET) segue livre nas 3 rodadas', :aggregate_failures do

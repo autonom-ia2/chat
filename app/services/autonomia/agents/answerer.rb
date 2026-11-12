@@ -458,9 +458,7 @@ module Autonomia
         disparar_consultas(Array(calls).reject { |call| repetidas.key?(call) }, tools_by_slug, specialists_by_function)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          recusas_antes = Tools::Recusa.registradas
-          output = repetidas[call] || dispatch_tool_call(call, tools_by_slug, specialists_by_function)
-          anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
+          output = executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
           registrar_chamada(call, output, inicio)
           saida = output.to_s.truncate(8_000)
           # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
@@ -468,6 +466,20 @@ module Autonomia
           (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
           { type: 'function_call_output', call_id: call['call_id'], output: saida }
         end
+      end
+
+      # Uma chamada do modelo -> a saída. #2918: a travada pela `UmaEscritaPorTurno` não roda e conta como recusa (o portão
+      # do Testar e do Copiloto a vê); a que rodou só trava a próxima escrita quando deu certo, sem recusa nem erro.
+      def executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
+        tool = tools_by_slug[call['name'].to_s]
+        return repetidas[call].tap { |saida| anotar_leitura(tool, saida, recusou: true) } if repetidas.key?(call)
+
+        recusas_antes = Tools::Recusa.registradas
+        output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+        recusou = Tools::Recusa.registradas > recusas_antes
+        anotar_leitura(tool, output, recusou: recusou)
+        @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, output: output, recusou: recusou)
+        output
       end
 
       # A chamada foi a uma ferramenta do agente, e não a um especialista ou ajudante (que tem a precedência no despacho).
