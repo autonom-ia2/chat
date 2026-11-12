@@ -20,6 +20,7 @@ import SecaoPessoasDaEmpresa from '../components/ficha/SecaoPessoasDaEmpresa.vue
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ABAS } from '../fonte/grupos';
+import { FALHA_DA_PARTE } from '../ficha/falhas';
 import { linhasDaEmpresa } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -28,16 +29,22 @@ import {
   idValido,
 } from '../ficha/useEstadoDaFicha';
 import { useFichaDaEmpresa } from '../ficha/useFichaDaEmpresa';
+import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 
 // #2894 — a ficha da empresa: o mesmo desenho da pessoa, mais simples. Cabeçalho,
 // as pessoas dela, as conversas, os cards e as informações. A ação principal é
 // "Mandar mensagem" (sempre abre o diálogo que diz quem recebe e quem fica de
-// fora); "Alterar" abre a
-// gaveta. No protótipo, continuar e salvar só simulam.
+// fora; continuar ainda só avisa); "Alterar" abre a gaveta. Fora da demonstração
+// lê e grava no servidor (#2895), e quem só pode ver não tem "Alterar". A parte
+// que quem está olhando não pode ver some; a que não carregou fica, com "Tentar
+// de novo".
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
+const permissoes = usePermissoesDaFicha();
 const fonte = fichaFonte({ demo: usarDemo(route.query) });
+// Na demonstração tudo aparece, como na lista: é o desenho inteiro da tela.
+const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
 const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id);
 const agora = Date.now();
@@ -76,9 +83,15 @@ const salvar = async dados => {
   );
 };
 
+const podeVer = parte =>
+  ficha.falhas.value[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
+const falhou = parte => ficha.falhas.value[parte] === FALHA_DA_PARTE.ERRO;
+
+// Na demonstração os cards são inventados: lá abre só o quadro do CRM.
 const abrirNoCrm = () => {
+  const cardId = fonte.usaDemo ? undefined : cardAberto.value?.id;
   cardAberto.value = null;
-  acoes.abrirNoCrm();
+  acoes.abrirNoCrm(cardId);
 };
 
 onMounted(ficha.carregar);
@@ -136,12 +149,24 @@ watch(
         </div>
 
         <div
+          v-else-if="ficha.estado.value === ESTADOS.SEM_ACESSO"
+          data-relacionamentos="sem-acesso"
+        >
+          <VazioComUmBotao
+            :frase="t('RELACIONAMENTOS_FICHA.ESTADOS.SEM_ACESSO')"
+            :botao="t('RELACIONAMENTOS_FICHA.ESTADOS.VOLTAR_PARA_LISTA')"
+            @acao="acoes.voltarParaLista()"
+          />
+        </div>
+
+        <div
           v-else
           data-relacionamentos="ficha-empresa"
           class="flex flex-col min-w-0 gap-6"
         >
           <CabecalhoDaEmpresa
             :empresa="ficha.empresa.value"
+            :pode-editar="podeEditar"
             @mandar-mensagem="dialogoDaMensagem?.open()"
             @alterar="gavetaAberta = true"
           />
@@ -150,7 +175,11 @@ watch(
           >
             <div class="flex flex-col min-w-0 gap-6 lg:col-span-2">
               <SecaoPessoasDaEmpresa
+                v-if="podeVer('pessoas')"
                 :pessoas="ficha.pessoas.value"
+                :total="ficha.empresa.value.contacts_count ?? 0"
+                :falhou="falhou('pessoas')"
+                @tentar="ficha.relerParte('pessoas')"
                 @abrir="acoes.abrirPessoa"
                 @conversar="
                   pessoa =>
@@ -161,12 +190,18 @@ watch(
                 "
               />
               <SecaoConversas
+                v-if="podeVer('conversas')"
                 :conversas="ficha.conversas.value"
                 :agora="agora"
+                :falhou="falhou('conversas')"
+                @tentar="ficha.relerParte('conversas')"
                 @ver-todas="avisar('VER_TODAS')"
               />
               <SecaoCards
+                v-if="podeVer('cards')"
                 :cards="ficha.cards.value"
+                :falhou="falhou('cards')"
+                @tentar="ficha.relerParte('cards')"
                 @abrir="card => (cardAberto = card)"
               />
             </div>

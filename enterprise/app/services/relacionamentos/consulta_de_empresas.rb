@@ -15,6 +15,11 @@ class Relacionamentos::ConsultaDeEmpresas < Relacionamentos::Consulta
   TEXTOS = %w[companies.name companies.domain].freeze
   NUMEROS = ["companies.additional_attributes->>'cnpj'"].freeze
 
+  # As empresas com o número de clientes de cada uma, que a linha da lista e a ficha da empresa (#2895) leem.
+  def self.com_clientes_contados(empresas)
+    empresas.select("companies.*, (SELECT COUNT(*) #{CLIENTES}) AS customers_count")
+  end
+
   private
 
   def tabela
@@ -30,6 +35,6 @@ class Relacionamentos::ConsultaDeEmpresas < Relacionamentos::Consulta
   end
 
   def com_o_que_a_linha_usa(empresas)
-    empresas.select("companies.*, (SELECT COUNT(*) #{CLIENTES}) AS customers_count")
+    self.class.com_clientes_contados(empresas)
   end
 end

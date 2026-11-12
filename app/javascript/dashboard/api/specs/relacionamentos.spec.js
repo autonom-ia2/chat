@@ -1,7 +1,8 @@
 import relacionamentos from '../relacionamentos';
 import ApiClient from '../ApiClient';
 
-// As leituras e as ações em grupo da Lista nova de Relacionamentos (#2894).
+// As leituras e as ações em grupo da Lista nova de Relacionamentos (#2894) e as
+// leituras da ficha (#2895).
 describe('#RelacionamentosAPI', () => {
   const originalAxios = window.axios;
   const axiosMock = {
@@ -45,6 +46,23 @@ describe('#RelacionamentosAPI', () => {
     ['funis', 'funis'],
   ])('%s lê %s sem params', (metodo, caminho) => {
     relacionamentos[metodo]();
+    expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/${caminho}`);
+  });
+
+  // As leituras da ficha (#2895): tudo pelo id da pessoa ou da empresa.
+  it.each([
+    ['pessoa', 'pessoas/7'],
+    ['conversasDaPessoa', 'pessoas/7/conversas'],
+    ['cardsDaPessoa', 'pessoas/7/cards'],
+    ['notasDaPessoa', 'pessoas/7/notas'],
+    ['arquivosDaPessoa', 'pessoas/7/arquivos'],
+    ['origemDaPessoa', 'pessoas/7/origem'],
+    ['empresa', 'empresas/7'],
+    ['pessoasDaEmpresa', 'empresas/7/pessoas'],
+    ['conversasDaEmpresa', 'empresas/7/conversas'],
+    ['cardsDaEmpresa', 'empresas/7/cards'],
+  ])('%s lê %s pelo id', (metodo, caminho) => {
+    relacionamentos[metodo](7);
     expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/${caminho}`);
   });
 

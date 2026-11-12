@@ -820,7 +820,7 @@
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:22",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -6609,6 +6609,7 @@
           "attribute_values": {
             "tipo": "lista"
           },
+          "oculto_na_tela": {},
           "regex_cue": {},
           "regex_pattern": {}
         },
@@ -6623,7 +6624,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:53"
     ],
     "sem_corpo": false
   },
@@ -17698,6 +17699,10 @@
       "attribute_values": {
         "tipo": "lista"
       },
+      "oculto_na_tela": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "regex_cue": {
         "tipo": "string"
       },
@@ -26575,6 +26580,7 @@
           "attribute_values": {
             "tipo": "lista"
           },
+          "oculto_na_tela": {},
           "regex_cue": {},
           "regex_pattern": {}
         },
@@ -26589,7 +26595,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:17",
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39",
-      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:52"
+      "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:53"
     ],
     "sem_corpo": false
   },

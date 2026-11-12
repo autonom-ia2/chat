@@ -3,7 +3,10 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatarDiaMes } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
-import { chaveDaOrigem, podeLiberar } from '../../ficha/origemDaRecusa';
+import {
+  chaveDaOrigem,
+  podeLiberar as origemLiberavel,
+} from '../../ficha/origemDaRecusa';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import DialogoDaFicha from './DialogoDaFicha.vue';
@@ -14,11 +17,13 @@ import DialogoDaFicha from './DialogoDaFicha.vue';
 // significa (responder a quem escreve segue normal). É aviso fixo, não região
 // viva: o resultado de Liberar é anunciado pela região viva da página. Usa o
 // `Banner` da casa (âmbar). O botão de ação do Banner tem uns 28 px de altura,
-// pouco para o dedo: "Liberar" é o `Button` da casa, dentro da faixa.
+// pouco para o dedo: "Liberar" é o `Button` da casa, dentro da faixa. Quem só
+// pode ver o contato (`podeLiberar` falso) lê a faixa e não tem o botão.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   liberando: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
+  podeLiberar: { type: Boolean, default: true },
 });
 const emit = defineEmits(['liberar']);
 
@@ -48,7 +53,9 @@ const primeiroNome = computed(
       .trim()
       .split(' ')[0]
 );
-const liberavel = computed(() => podeLiberar(props.pessoa.opt_out_source));
+const liberavel = computed(
+  () => props.podeLiberar && origemLiberavel(props.pessoa.opt_out_source)
+);
 </script>
 
 <template>

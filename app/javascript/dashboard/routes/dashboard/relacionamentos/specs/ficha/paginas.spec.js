@@ -37,6 +37,33 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
   usarDemo: () => contexto.demo,
   demoCarregando: () => contexto.demo === 'carregando',
 }));
+// Aqui todo mundo pode tudo: quem só pode ver está em paginasReal.spec.js.
+vi.mock('../../ficha/usePermissoesDaFicha', () => ({
+  usePermissoesDaFicha: () => ({
+    podeEditar: { value: true },
+    podeCriarCards: { value: true },
+  }),
+}));
+// Fora da demonstração (`demo` nulo) a ficha lê do servidor: aqui ele não
+// responde, para os testes do estado de erro.
+vi.mock('dashboard/api/relacionamentos', () => {
+  const semServidor = () => Promise.reject(new Error('sem servidor'));
+  const leituras = [
+    'pessoa',
+    'conversasDaPessoa',
+    'cardsDaPessoa',
+    'notasDaPessoa',
+    'arquivosDaPessoa',
+    'origemDaPessoa',
+    'empresa',
+    'pessoasDaEmpresa',
+    'conversasDaEmpresa',
+    'cardsDaEmpresa',
+  ];
+  return {
+    default: Object.fromEntries(leituras.map(nome => [nome, semServidor])),
+  };
+});
 vi.mock('../../fonte/fichaFonte', async importOriginal => {
   const original = await importOriginal();
   return {
@@ -348,7 +375,7 @@ describe('FichaDaPessoaPage', () => {
   it('"Alterar informações" do ⋯ também abre a gaveta; as outras só avisam', async () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
     await marca(w, 'mais-acoes').trigger('click');
-    await w.findAll('.n-dropdown-item button')[1].trigger('click');
+    await w.findAll('.n-dropdown-item button')[2].trigger('click');
     expect(useAlert).toHaveBeenCalledWith(
       expect.stringContaining('AVISOS.JUNTAR')
     );
@@ -356,6 +383,23 @@ describe('FichaDaPessoaPage', () => {
     await marca(w, 'mais-acoes').trigger('click');
     await w.findAll('.n-dropdown-item button')[0].trigger('click');
     expect(marca(w, 'gaveta-informacoes').exists()).toBe(true);
+  });
+
+  it('"Não é mais cliente" do ⋯ tira o selo na hora, e "Marcar como cliente" devolve', async () => {
+    const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
+    await marca(w, 'mais-acoes').trigger('click');
+    await w.findAll('.n-dropdown-item button')[1].trigger('click');
+    await esperarPor(() =>
+      expect(useAlert).toHaveBeenCalledWith(
+        expect.stringContaining('CABECALHO.CLIENTE_DESMARCADO')
+      )
+    );
+    expect(w.find('[data-selo="cliente"]').exists()).toBe(false);
+    await marca(w, 'marcar-cliente').trigger('click');
+    await esperarPor(() =>
+      expect(w.find('[data-selo="cliente"]').exists()).toBe(true)
+    );
   });
 
   it('Conversar e Novo card avisam o que vai acontecer', async () => {

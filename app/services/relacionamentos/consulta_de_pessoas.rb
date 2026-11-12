@@ -20,6 +20,8 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
             WHERE taggings.taggable_type = 'Contact' AND taggings.taggable_id = contacts.id
               AND taggings.context = 'labels' AND taggings.tagger_id IS NULL AND tags.name = ?)
   SQL
+  # O que a linha de uma pessoa lê além da própria pessoa (_pessoa.json.jbuilder): as etiquetas e a foto.
+  O_QUE_A_LINHA_USA = { label_taggings: :tag, avatar_attachment: :blob }.freeze
 
   # Quem aparece na lista de contatos de hoje (ContactsController#resolved_contacts).
   def self.base(account)
@@ -50,7 +52,7 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
 
   # Etiquetas e foto vêm juntas: sem isso, cada pessoa da página faria as suas consultas.
   def com_o_que_a_linha_usa(pessoas)
-    pessoas.preload(label_taggings: :tag, avatar_attachment: :blob)
+    pessoas.preload(O_QUE_A_LINHA_USA)
   end
 
   # Filtro vazio quer dizer "qualquer".

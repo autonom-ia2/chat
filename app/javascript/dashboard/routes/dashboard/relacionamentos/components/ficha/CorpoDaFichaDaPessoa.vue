@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { FALHA_DA_PARTE } from '../../ficha/falhas';
 import CartaoDaSecao from './CartaoDaSecao.vue';
 import DeOndeVeio from './DeOndeVeio.vue';
 import ListaDeInformacoes from './ListaDeInformacoes.vue';
@@ -15,8 +16,11 @@ import SecaoNotas from './SecaoNotas.vue';
 // Cada cartão tem o tamanho do próprio conteúdo: não há linha compartilhada entre
 // as colunas, então nenhum vão nasce da altura do vizinho. No celular uma coluna
 // vem depois da outra, na mesma ordem do documento: o que se vê é o que o Tab e o
-// leitor de tela percorrem.
-defineProps({
+// leitor de tela percorrem. A parte que quem está olhando não pode ver some; a
+// que não carregou fica, com "Tentar de novo" (`falhas`, ficha/falhas.js). Quem
+// só pode ver o contato (`podeEditar` falso) não tem "Alterar" nem a caixa de
+// nota.
+const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
   notas: { type: Array, required: true },
@@ -26,8 +30,19 @@ defineProps({
   redes: { type: Array, required: true },
   agora: { type: Number, required: true },
   guardandoNota: { type: Boolean, default: false },
+  falhas: { type: Object, default: () => ({}) },
+  podeEditar: { type: Boolean, default: true },
 });
-const emit = defineEmits(['verTodas', 'abrirCard', 'guardarNota', 'alterar']);
+const emit = defineEmits([
+  'verTodas',
+  'abrirCard',
+  'guardarNota',
+  'alterar',
+  'tentar',
+]);
+
+const podeVer = parte => props.falhas[parte] !== FALHA_DA_PARTE.SEM_ACESSO;
+const falhou = parte => props.falhas[parte] === FALHA_DA_PARTE.ERRO;
 
 const { t } = useI18n();
 const caixaDeNotas = ref(null);
@@ -45,26 +60,45 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       class="flex flex-col min-w-0 gap-6 lg:col-span-2"
     >
       <SecaoConversas
+        v-if="podeVer('conversas')"
         :conversas="conversas"
         :agora="agora"
+        :falhou="falhou('conversas')"
         @ver-todas="emit('verTodas')"
+        @tentar="emit('tentar', 'conversas')"
       />
-      <SecaoCards :cards="cards" @abrir="card => emit('abrirCard', card)" />
+      <SecaoCards
+        v-if="podeVer('cards')"
+        :cards="cards"
+        :falhou="falhou('cards')"
+        @abrir="card => emit('abrirCard', card)"
+        @tentar="emit('tentar', 'cards')"
+      />
       <SecaoNotas
+        v-if="podeVer('notas')"
         ref="caixaDeNotas"
         :notas="notas"
         :guardando="guardandoNota"
         :agora="agora"
+        :pode-escrever="podeEditar"
+        :falhou="falhou('notas')"
         @guardar="texto => emit('guardarNota', texto)"
+        @tentar="emit('tentar', 'notas')"
       />
-      <SecaoArquivos :arquivos="arquivos" :agora="agora" />
+      <SecaoArquivos
+        v-if="podeVer('arquivos')"
+        :arquivos="arquivos"
+        :agora="agora"
+        :falhou="falhou('arquivos')"
+        @tentar="emit('tentar', 'arquivos')"
+      />
     </div>
     <div data-relacionamentos="coluna-lado" class="flex flex-col min-w-0 gap-6">
       <CartaoDaSecao
         :titulo="t('RELACIONAMENTOS_FICHA.INFORMACOES.TITULO')"
         data-relacionamentos="informacoes"
       >
-        <template #acao>
+        <template v-if="podeEditar" #acao>
           <Button
             data-relacionamentos="alterar"
             slate
@@ -75,7 +109,13 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
         </template>
         <ListaDeInformacoes :linhas="linhas" :redes="redes" />
       </CartaoDaSecao>
-      <DeOndeVeio :origem="origem" :agora="agora" />
+      <DeOndeVeio
+        v-if="podeVer('origem')"
+        :origem="origem"
+        :agora="agora"
+        :falhou="falhou('origem')"
+        @tentar="emit('tentar', 'origem')"
+      />
     </div>
   </div>
 </template>

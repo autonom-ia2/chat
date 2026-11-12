@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   DropdownBody,
@@ -7,10 +7,17 @@ import {
   DropdownItem,
 } from 'dashboard/components-next/dropdown-menu/base';
 
-// #2894 — o "⋯" da ficha: Alterar informações, Juntar com outra pessoa, Bloquear
-// e Apagar. É o menu suspenso da casa; os itens são botões, então Tab e Enter
-// funcionam, e Esc fecha e devolve o foco ao "⋯". Emite `acao` com o nome da
-// escolha: alterar, juntar, bloquear ou apagar.
+// #2894 — o "⋯" da ficha: Alterar informações, Não é mais cliente, Juntar com
+// outra pessoa, Bloquear e Apagar. É o menu suspenso da casa; os itens são
+// botões, então Tab e Enter funcionam, e Esc fecha e devolve o foco ao "⋯".
+// Emite `acao` com o nome da escolha: alterar, desmarcar, juntar, bloquear ou
+// apagar. "Não é mais cliente" só aparece para quem é cliente (`ehCliente`).
+// Quem só pode ver o contato (`podeAlterar` falso) não tem "Alterar
+// informações" nem "Não é mais cliente".
+const props = defineProps({
+  podeAlterar: { type: Boolean, default: true },
+  ehCliente: { type: Boolean, default: false },
+});
 const emit = defineEmits(['acao']);
 
 const { t } = useI18n();
@@ -18,10 +25,23 @@ const raizDoMenu = ref(null);
 
 const ITENS = [
   { evento: 'alterar', chave: 'ALTERAR_INFORMACOES', icone: 'i-lucide-pencil' },
+  {
+    evento: 'desmarcar',
+    chave: 'DESMARCAR_CLIENTE',
+    icone: 'i-lucide-user-minus',
+  },
   { evento: 'juntar', chave: 'JUNTAR', icone: 'i-lucide-git-merge' },
   { evento: 'bloquear', chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
   { evento: 'apagar', chave: 'APAGAR', icone: 'i-lucide-trash-2' },
 ];
+// Quando cada item aparece; os que não estão aqui aparecem sempre.
+const APARECE = {
+  alterar: () => props.podeAlterar,
+  desmarcar: () => props.podeAlterar && props.ehCliente,
+};
+const itensDoMenu = computed(() =>
+  ITENS.filter(item => APARECE[item.evento]?.() ?? true)
+);
 
 const botaoDoMenu = () =>
   raizDoMenu.value?.querySelector('[data-relacionamentos="mais-acoes"]');
@@ -92,7 +112,7 @@ const aoTeclar = evento => {
       </template>
       <DropdownBody class="top-12 ltr:right-0 rtl:left-0 min-w-64 z-50">
         <DropdownItem
-          v-for="item in ITENS"
+          v-for="item in itensDoMenu"
           :key="item.evento"
           :icon="item.icone"
           :label="t(`RELACIONAMENTOS_FICHA.ACOES.${item.chave}`)"

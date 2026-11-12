@@ -10,6 +10,10 @@ import ApiClient from './ApiClient';
 // As ações em grupo (funis, criar cards, etiquetar, apagar) vão com o corpo
 // que fonte/acoesDaListaFonte.js monta: `pessoa_ids` e o que a ação pede. Chave
 // que o servidor não conhece responde 422.
+//
+// #2895 — as leituras da ficha, pelo id da pessoa ou da empresa. A resposta já
+// vem no formato que a tela mostra; 404 é quem não existe e 401/403, quem não
+// pode ver (fonte/fichaFonte.js dá nome a esses erros).
 class RelacionamentosAPI extends ApiClient {
   constructor() {
     super('relacionamentos', { accountScoped: true });
@@ -57,6 +61,46 @@ class RelacionamentosAPI extends ApiClient {
 
   apagar(corpo) {
     return axios.post(`${this.url}/apagar`, corpo);
+  }
+
+  pessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}`);
+  }
+
+  conversasDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/conversas`);
+  }
+
+  cardsDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/cards`);
+  }
+
+  notasDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/notas`);
+  }
+
+  arquivosDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/arquivos`);
+  }
+
+  origemDaPessoa(id) {
+    return axios.get(`${this.url}/pessoas/${id}/origem`);
+  }
+
+  empresa(id) {
+    return axios.get(`${this.url}/empresas/${id}`);
+  }
+
+  pessoasDaEmpresa(id) {
+    return axios.get(`${this.url}/empresas/${id}/pessoas`);
+  }
+
+  conversasDaEmpresa(id) {
+    return axios.get(`${this.url}/empresas/${id}/conversas`);
+  }
+
+  cardsDaEmpresa(id) {
+    return axios.get(`${this.url}/empresas/${id}/cards`);
   }
 }
 

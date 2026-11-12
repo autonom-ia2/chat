@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { chaveDoTexto } from '../catalogo';
 import { useVitrine } from '../useVitrine';
 import VitrinePreco from './VitrinePreco.vue';
+import VitrineRodapeGratis from './VitrineRodapeGratis.vue';
 import VitrineSeloPremium from './VitrineSeloPremium.vue';
 
 // #2858 F2 — o cartão de uma ferramenta pronta: o que ela faz em uma frase, o apoio ("tabela FIPE") só como detalhe, e
 // um selo: o agente escolhido já sabe, ou quantas perguntas ela responde. O cartão inteiro é o botão que abre o
-// detalhe.
+// detalhe. No pé, o rodapé do mesmo tamanho nos dois tipos: o preço do Premium ou o "Consulta grátis" (`mt-auto`
+// prende no fundo, e o selo de perguntas fica logo acima, alinhado entre os cartões da linha).
 const props = defineProps({
   ferramenta: { type: Object, required: true },
   tom: { type: String, default: 'azul' },
@@ -61,6 +63,12 @@ const TONS = {
   cinza: 'bg-n-slate-3 text-n-slate-11',
 };
 
+// Quantas perguntas a ferramenta responde: no card Premium, a conta do servidor (`premium.consultas`), que acompanha as
+// consultas que a BigDataCorp responde hoje (#2946); nas grátis, a do catálogo da tela. Com uma só, sem selo.
+const tiposDePergunta = computed(
+  () => props.premium?.consultas ?? props.ferramenta.consultas ?? 0
+);
+
 const selo = computed(() => {
   if (props.jaSabe) {
     return {
@@ -69,9 +77,9 @@ const selo = computed(() => {
       classe: 'bg-n-teal-3 text-n-teal-11',
     };
   }
-  if (props.ferramenta.consultas) {
+  if (tiposDePergunta.value > 1) {
     return {
-      texto: t(`${NS}.CARTAO.CONSULTAS`, { n: props.ferramenta.consultas }),
+      texto: t(`${NS}.CARTAO.CONSULTAS`, { n: tiposDePergunta.value }),
       icone: 'i-lucide-messages-square',
       classe: 'bg-n-alpha-2 text-n-slate-11',
     };
@@ -125,6 +133,8 @@ const selo = computed(() => {
       <span :class="selo.icone" class="size-3.5" aria-hidden="true" />
       {{ selo.texto }}
     </span>
-    <VitrinePreco v-if="premium" :premium="premium" />
+    <VitrinePreco v-if="premium" :premium="premium" class="mt-auto" />
+    <!-- Card pago sem o dado do servidor não ganha rodapé: não pode dizer "Consulta grátis". -->
+    <VitrineRodapeGratis v-else-if="!ferramenta.premium" class="mt-auto" />
   </button>
 </template>

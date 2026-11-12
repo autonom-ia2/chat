@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 
 import CompanyCustomAttributeItem from 'dashboard/components-next/Companies/CompanyDetail/CompanyCustomAttributeItem.vue';
 
@@ -17,7 +18,9 @@ const { t } = useI18n();
 const store = useStore();
 
 const searchQuery = ref('');
-const companyAttributes = useMapGetter('attributes/getCompanyAttributes');
+const todosOsAtributos = useMapGetter('attributes/getCompanyAttributes');
+// #2435: o atributo com "Mostrar na tela" desligado não aparece na empresa.
+const companyAttributes = computed(() => naTela(todosOsAtributos.value));
 
 const customAttributes = computed(() => props.company?.customAttributes || {});
 const hasCompanyAttributes = computed(

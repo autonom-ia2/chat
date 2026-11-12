@@ -7,6 +7,7 @@ import CompanyAPI from 'dashboard/api/companies';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 import AttributeDraftFields from 'dashboard/components-next/Relationships/AttributeDraftFields.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -42,13 +43,16 @@ const companyMatches = ref([]);
 const contactRequest = useAbortableRequest();
 const companyRequest = useAbortableRequest();
 const reuseRequest = useAbortableRequest();
+// #2435: o campo com "Mostrar na tela" desligado não aparece no cadastro.
 const definitions = entity =>
-  selectDefinitions(
-    state.value.definitions.filter(
-      item => item.attribute_model === `${entity}_attribute`
-    ),
-    state.value.configuration,
-    `${entity}_details`
+  naTela(
+    selectDefinitions(
+      state.value.definitions.filter(
+        item => item.attribute_model === `${entity}_attribute`
+      ),
+      state.value.configuration,
+      `${entity}_details`
+    )
   );
 const nativeTextDetail = key => {
   const definition = state.value.definitions.find(

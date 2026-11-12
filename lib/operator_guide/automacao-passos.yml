@@ -217,6 +217,7 @@ acoes:
       attribute_display_type: escolha
       attribute_description: texto
       attribute_values: lista_de_textos
+      oculto_na_tela: sim_nao
     # Conferência do valor por padrão de texto: é configuração de quem programa, não de quem monta a automação.
     escondidos: [regex_cue, regex_pattern]
   atributo_alterar:
@@ -227,6 +228,7 @@ acoes:
       custom_attribute_definition.attribute_display_name: texto
       custom_attribute_definition.attribute_description: texto
       custom_attribute_definition.attribute_values: lista_de_textos
+      custom_attribute_definition.oculto_na_tela: sim_nao
     # attribute_model e filter_type de fora do envelope só filtram a resposta; regex é como no criar. Trocar o tipo de
     # um atributo que já tem valores gravados confunde esses valores; o Guia alcança, com a pessoa olhando.
     escondidos:

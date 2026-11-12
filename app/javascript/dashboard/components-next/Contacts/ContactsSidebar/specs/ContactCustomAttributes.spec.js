@@ -79,3 +79,19 @@ describe('ContactCustomAttributes — campos internos da WAHA', () => {
     );
   });
 });
+
+// #2435 — o atributo com "Mostrar na tela" desligado some do contato, com ou
+// sem valor; o valor continua no contato.
+describe('ContactCustomAttributes — atributo fora da tela', () => {
+  beforeEach(() => {
+    state.contactAttributes = [
+      definicao(1, 'melhor_horario'),
+      { ...definicao(6, 'contador'), oculto_na_tela: true },
+    ];
+  });
+
+  it('com valor ou sem valor, o atributo fora da tela não aparece', () => {
+    expect(campos(montar({ contador: 3 }))).toEqual(['melhor_horario']);
+    expect(campos(montar({}))).toEqual(['melhor_horario']);
+  });
+});

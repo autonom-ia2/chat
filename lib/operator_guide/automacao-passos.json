@@ -2784,6 +2784,13 @@
           "peca": "lista_de_textos",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
           "obrigatorio": false
+        },
+        {
+          "nome": "oculto_na_tela",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.OCULTO_NA_TELA",
+          "obrigatorio": false,
+          "padrao": false
         }
       ]
     },
@@ -2817,6 +2824,12 @@
           "nome": "custom_attribute_definition.attribute_values",
           "peca": "lista_de_textos",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attribute_definition.oculto_na_tela",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.OCULTO_NA_TELA",
           "obrigatorio": false
         }
       ]

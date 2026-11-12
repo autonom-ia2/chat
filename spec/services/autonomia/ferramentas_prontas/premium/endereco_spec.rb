@@ -140,7 +140,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
     end
   end
 
-  describe 'área de risco e vistoria pelo endereço' do
+  # A vistoria aceita o mesmo endereço; ela está desligada na BigDataCorp desde 12/11 (#2946).
+  describe 'área de risco pelo endereço' do
     it 'acha o CEP pela rua e a cidade e consulta com o número' do
       allow(described_class).to receive(:cep).and_return('cep' => '01001000')
       bigdatacorp_responde('/enderecos', 'address_risk', 'AddressRiskData', { 'Point' => 3 })
@@ -158,7 +159,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
       candidatos = [{ 'cep' => '01001-000', 'bairro' => 'Sé' }, { 'cep' => '01002-000', 'bairro' => 'Centro' }]
       allow(described_class).to receive(:cep).and_return('candidatos' => candidatos)
 
-      resposta = executar_premium(risco, 'consulta' => 'vistoria', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'cidade' => 'São Paulo',
+      resposta = executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'cidade' => 'São Paulo',
                                          'uf' => 'sp')
 
       expect(resposta).to include('situacao' => 'pedido_invalido', 'campo' => 'bairro', 'candidatos' => candidatos)
@@ -168,9 +169,9 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Endereco do
 
     it 'com o bairro, o bairro vai junto na procura' do
       allow(described_class).to receive(:cep).and_return('cep' => '01001000')
-      bigdatacorp_responde('/marketplace', 'partner_rede_vistorias_address', 'RedeVistoriasData', { 'Tipology' => 'CASA' })
+      bigdatacorp_responde('/enderecos', 'address_risk', 'AddressRiskData', { 'Point' => 3 })
 
-      executar_premium(risco, 'consulta' => 'vistoria', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'bairro' => 'Sé', 'cidade' => 'São Paulo',
+      executar_premium(risco, 'consulta' => 'area_de_risco', 'rua' => 'Rua EXEMPLO', 'numero' => '10', 'bairro' => 'Sé', 'cidade' => 'São Paulo',
                               'uf' => 'sp')
 
       expect(described_class).to have_received(:cep).with(cidade: 'São Paulo', uf: 'SP', rua: 'Rua EXEMPLO', bairro: 'Sé', numero: '10',

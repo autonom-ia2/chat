@@ -10,9 +10,10 @@ class Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob < Application
   queue_as :low
 
   Premium = Autonomia::FerramentasProntas::Premium
-  # O prazo da consulta mais lenta (a sob demanda, com a folga do prazo total) mais a folga do varredor: a espera na
-  # fila e a gravação do resultado. Folga de desenho, não medida.
-  LIMITE = (Premium::Dataset::PRAZO_SOB_DEMANDA + Premium::ConsultaPaga::FOLGA).seconds + 2.minutes
+  # O prazo da consulta Premium mais lenta do catálogo (com a folga do prazo total, `Premium.prazo_maximo`; hoje 122 s,
+  # #2946) mais a folga do varredor: a espera na fila e a gravação do resultado. Folga de desenho, não medida. A linha
+  # nasce logo antes da chamada: dentro deste limite, a consulta ainda pode estar no ar e não fecha como entrega incerta.
+  LIMITE = Premium.prazo_maximo.seconds + 2.minutes
   # Quando a execução agenda o varredor: um pouco depois do limite, para a linha já estar vencida.
   ESPERA = LIMITE + 30.seconds
 

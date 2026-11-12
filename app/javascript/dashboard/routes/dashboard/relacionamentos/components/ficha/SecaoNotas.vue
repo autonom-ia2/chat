@@ -5,16 +5,21 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import FalhaDaParte from './FalhaDaParte.vue';
 
 // #2894 — as notas: a caixa "Escreva uma nota" e a lista (quem e quando). Guardar
 // só emite o texto; a caixa limpa quando a nota entra (`guardando` volta a falso
 // sem erro). A nota nova aparece no topo porque a fonte a devolve primeiro.
+// Quem só pode ver (`podeEscrever` falso) lê as notas e não tem a caixa.
+// `falhou`: a leitura das notas não veio.
 const props = defineProps({
   notas: { type: Array, required: true },
   guardando: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
+  podeEscrever: { type: Boolean, default: true },
+  falhou: { type: Boolean, default: false },
 });
-const emit = defineEmits(['guardar']);
+const emit = defineEmits(['guardar', 'tentar']);
 
 const { t } = useI18n();
 const idioma = useIdioma();
@@ -48,11 +53,21 @@ defineExpose({ limpar });
 
 const ra = (chave, valores) =>
   t(`RELACIONAMENTOS_FICHA.NOTAS.${chave}`, valores);
+
+// Nota de quem já saiu da plataforma vem sem autor: só quando foi escrita.
+const assinatura = nota => {
+  const quando = quandoRelativo(nota.quando, props.agora, idioma.value);
+  return nota.autor ? ra('POR', { autor: nota.autor, quando }) : quando;
+};
 </script>
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="notas">
-    <form class="flex flex-col gap-3 mb-5" @submit.prevent="guardar">
+    <form
+      v-if="podeEscrever"
+      class="flex flex-col gap-3 mb-5"
+      @submit.prevent="guardar"
+    >
       <textarea
         ref="caixa"
         v-model="texto"
@@ -85,7 +100,8 @@ const ra = (chave, valores) =>
         :label="ra('GUARDAR')"
       />
     </form>
-    <p v-if="!notas.length" class="m-0 text-base text-n-slate-11">
+    <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
+    <p v-else-if="!notas.length" class="m-0 text-base text-n-slate-11">
       {{ ra('VAZIO') }}
     </p>
     <ul v-else class="flex flex-col gap-4 p-0 m-0 list-none">
@@ -97,12 +113,7 @@ const ra = (chave, valores) =>
       >
         <p class="m-0 text-base text-n-slate-12">{{ nota.texto }}</p>
         <p class="m-0 mt-1 text-sm text-n-slate-11">
-          {{
-            ra('POR', {
-              autor: nota.autor,
-              quando: quandoRelativo(nota.quando, agora, idioma),
-            })
-          }}
+          {{ assinatura(nota) }}
         </p>
       </li>
     </ul>

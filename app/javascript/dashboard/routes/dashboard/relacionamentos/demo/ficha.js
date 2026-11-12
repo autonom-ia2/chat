@@ -153,12 +153,23 @@ const comExtras = pessoa => ({
   },
 });
 
+// `memoria.clientes` guarda desde quando a pessoa é cliente, ou `null` para quem
+// deixou de ser (inclusive quem já era cliente nos dados de base). Quem não
+// está lá fica como veio da base.
+const marcaDeCliente = id => {
+  if (!memoria.clientes.has(id)) return {};
+  const desde = memoria.clientes.get(id);
+  return desde
+    ? { contact_type: 'customer', customer_since: desde }
+    : { contact_type: 'lead', customer_since: null };
+};
+
 const comEscritas = pessoa => {
-  const editada = { ...pessoa, ...memoria.edicoes.get(pessoa.id) };
-  const cliente = memoria.clientes.get(pessoa.id);
-  const comCliente = cliente
-    ? { ...editada, contact_type: 'customer', customer_since: cliente }
-    : editada;
+  const comCliente = {
+    ...pessoa,
+    ...memoria.edicoes.get(pessoa.id),
+    ...marcaDeCliente(pessoa.id),
+  };
   return memoria.liberadas.has(pessoa.id)
     ? { ...comCliente, opted_out_at: null, opt_out_source: null }
     : comCliente;
@@ -315,6 +326,12 @@ export const marcarCliente = id => {
   return pessoa(id);
 };
 
+export const desmarcarCliente = id => {
+  exigir(id);
+  memoria.clientes.set(id, null);
+  return pessoa(id);
+};
+
 export const guardarNota = (id, texto) => {
   exigir(id);
   const nota = {
@@ -385,6 +402,7 @@ export const demoDaFicha = {
   salvar,
   salvarEmpresa,
   marcarCliente,
+  desmarcarCliente,
   guardarNota,
   liberarMensagens,
   empresa,
