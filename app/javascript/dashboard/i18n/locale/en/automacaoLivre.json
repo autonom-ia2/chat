@@ -506,6 +506,16 @@
       "PAUSADA": "It paused on its own",
       "ASSUMIR": "Take over and turn back on",
       "ASSUMIR_AVISO": "When you take over, it goes back to work in your name, with your permissions.",
+      "CONFIRMAR": {
+        "TITULO": "Turn on this automation?",
+        "CLIENTES": "This automation sends messages to your customers.",
+        "META": "On WhatsApp, outside the 24-hour window the message goes out with an approved template, which Meta charges per message.",
+        "EQUIPE": "This automation notifies people on your team.",
+        "IA": "This automation uses AI, paid with your account AI key.",
+        "IA_CUSTO": "About {custo} per run, from the average of the last 30 days.",
+        "CANCELAR": "Not now",
+        "LIGAR": "Turn on"
+      },
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
     },
     "CRIADO": {

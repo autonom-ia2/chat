@@ -506,6 +506,16 @@
       "PAUSADA": "Ela pausou sozinha",
       "ASSUMIR": "Assumir e religar",
       "ASSUMIR_AVISO": "Ao assumir, ela volta a trabalhar em seu nome, com as suas permissões.",
+      "CONFIRMAR": {
+        "TITULO": "Ligar esta automação?",
+        "CLIENTES": "Esta automação manda mensagem aos seus clientes.",
+        "META": "No WhatsApp, fora da janela de 24 horas, a mensagem sai com modelo aprovado, que a Meta cobra por mensagem.",
+        "EQUIPE": "Esta automação avisa pessoas da sua equipe.",
+        "IA": "Esta automação usa IA, paga na chave de IA da sua conta.",
+        "IA_CUSTO": "Cerca de {custo} por execução, pela média dos últimos 30 dias.",
+        "CANCELAR": "Agora não",
+        "LIGAR": "Ligar"
+      },
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
     },
     "CRIADO": {

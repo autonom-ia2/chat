@@ -17,6 +17,7 @@ import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
 import LivreLigar from '../components/LivreLigar.vue';
+import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
 import LivreEnsaio from '../components/LivreEnsaio.vue';
 import LivrePortas from '../components/LivrePortas.vue';
@@ -46,6 +47,7 @@ import {
   passosDaExecucao,
 } from '../outroRegistro';
 import { useEditorLivre } from '../useEditorLivre';
+import { oQueLigarFaz } from '../aoLigar';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { usePodeLerValor } from '../usePodeLerValor';
@@ -375,14 +377,25 @@ watch(() => [route.query.alterar, route.query.seletor], abrirDaUrl);
 
 // #2500 C2: o custo de cada passo de IA nos últimos 30 dias, para o cartão do
 // "Alterar". É só informação: se não carregar, o cartão fica sem a linha.
+// #2574: a nova ainda não tem custo, mas a confirmação do ligar precisa saber
+// se quem vê pode ver os custos da conta (`com_valores`).
 const custos = ref({ com_valores: false, custos: {} });
 const carregarCustos = async id => {
-  if (!id) return;
   try {
-    custos.value = (await AutomacoesAPI.custosDaAutomacao(id)).data;
+    custos.value = id
+      ? (await AutomacoesAPI.custosDaAutomacao(id)).data
+      : { com_valores: (await AutomacoesAPI.custos()).data.com_valores };
   } catch {
     custos.value = { com_valores: false, custos: {} };
   }
+};
+
+// #2574 (F5.4): ligar a que manda mensagem, avisa a equipe ou usa IA pede
+// confirmação, com o custo; a que não faz nada disso liga direto.
+const confirmarLigar = ref(null);
+const pedirLigar = () => {
+  if (oQueLigarFaz(receita.value).pede) confirmarLigar.value?.abrir();
+  else editor.ligar();
 };
 
 // Sem o catálogo a tela não sabe desenhar os passos: falha vira o aviso com
@@ -615,7 +628,7 @@ onMounted(() => {
                 :ocupado="ocupado"
                 :conflito="conflito"
                 :pausa="automacao?.pausa || null"
-                @ligar="editor.ligar"
+                @ligar="pedirLigar"
                 @guardar="editor.guardar"
                 @desligar="editor.desligar"
               />
@@ -687,6 +700,12 @@ onMounted(() => {
             :acao="$t('AUTOMACAO_LIVRE.EDITOR.SAIR.SAIR')"
             @seguro="responder(false)"
             @acao="responder(true)"
+          />
+          <LivreConfirmarLigar
+            ref="confirmarLigar"
+            :receita="receita"
+            :custos="custos"
+            @ligar="editor.ligar"
           />
         </template>
       </div>
