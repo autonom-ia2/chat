@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1882,6 +1882,50 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.index ["assistant_id", "enabled"], name: "index_captain_scenarios_on_assistant_id_and_enabled"
     t.index ["assistant_id"], name: "index_captain_scenarios_on_assistant_id"
     t.index ["enabled"], name: "index_captain_scenarios_on_enabled"
+  end
+
+  create_table "carteira_apolice_eventos", force: :cascade do |t|
+    t.bigint "apolice_id", null: false
+    t.string "tipo", null: false
+    t.datetime "quando", null: false
+    t.bigint "user_id"
+    t.jsonb "valores", default: {}, null: false
+    t.jsonb "mudancas"
+    t.bigint "campaign_import_id"
+    t.datetime "created_at", null: false
+    t.index ["apolice_id", "quando"], name: "index_carteira_apolice_eventos_on_apolice_id_and_quando", order: { quando: :desc }
+    t.index ["campaign_import_id"], name: "index_carteira_apolice_eventos_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
+  end
+
+  create_table "carteira_apolices", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "company_id"
+    t.string "tipo", null: false
+    t.string "ramo_original"
+    t.string "seguradora", null: false
+    t.string "seguradora_chave", null: false
+    t.string "numero"
+    t.string "numero_chave"
+    t.date "inicio_vigencia"
+    t.date "fim_vigencia", null: false
+    t.bigint "valor_centavos"
+    t.string "bem"
+    t.datetime "cancelado_em"
+    t.string "origem", null: false
+    t.bigint "campaign_import_id"
+    t.jsonb "corrigido_a_mao", default: [], null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "fim_vigencia"], name: "index_carteira_apolices_on_account_id_and_fim_vigencia"
+    t.index ["account_id", "seguradora_chave", "numero_chave", "fim_vigencia"], name: "idx_carteira_apolices_seguradora_numero_vigencia", unique: true, where: "(numero_chave IS NOT NULL)"
+    t.index ["campaign_import_id"], name: "index_carteira_apolices_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
+    t.index ["company_id"], name: "index_carteira_apolices_on_company_id", where: "(company_id IS NOT NULL)"
+    t.index ["contact_id"], name: "index_carteira_apolices_on_contact_id"
+    t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
+    t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
+    t.check_constraint "tipo::text = ANY ('{auto,residencial,vida,empresarial,outro}'::text[])", name: "carteira_apolices_tipo"
+    t.check_constraint "valor_centavos IS NULL OR valor_centavos >= 0", name: "carteira_apolices_valor"
   end
 
   create_table "categories", force: :cascade do |t|
@@ -5006,6 +5050,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
   add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
+  add_foreign_key "carteira_apolice_eventos", "campaign_imports", on_delete: :nullify
+  add_foreign_key "carteira_apolice_eventos", "carteira_apolices", column: "apolice_id", on_delete: :cascade
+  add_foreign_key "carteira_apolice_eventos", "users", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "accounts"
+  add_foreign_key "carteira_apolices", "campaign_imports", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "companies", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "contacts"
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "conversa_canal_email_lido_caixas", "accounts", on_delete: :cascade
   add_foreign_key "conversa_canal_email_lido_caixas", "inboxes", on_delete: :cascade

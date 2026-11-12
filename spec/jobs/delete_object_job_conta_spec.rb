@@ -82,8 +82,14 @@ RSpec.describe DeleteObjectJob do
     modelo = create_whatsapp_api_template(account: account, inbox: create_crm_whatsapp_api_inbox(account: account), user: user)
     linha!('whatsapp_api_campaigns', account_id: account.id, created_by_id: user.id, title: 'Aviso',
                                      whatsapp_api_message_template_id: modelo.id)
-    # Linhas sem account_id: achadas pela campanha e pelo dono do token. O usuário técnico do MCP sai pelo revoke!.
-    { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id }
+    # Carteira (#2897): a apólice aponta para o contato sem cascata (sai antes do pré-apagar) e leva a história dela.
+    apolice = linha!('carteira_apolices', account_id: account.id, contact_id: contact.id, tipo: 'auto', seguradora: 'Seguradora Exemplo',
+                                          seguradora_chave: 'seguradoraexemplo', numero: 'EX-001234', numero_chave: 'EX001234',
+                                          fim_vigencia: 1.year.from_now.to_date, origem: 'planilha')
+    historia = linha!('carteira_apolice_eventos', apolice_id: apolice, tipo: 'chegou_planilha', quando: Time.current)
+    # Linhas sem account_id: achadas pela campanha, pelo dono do token e pela apólice. O usuário técnico do MCP sai pelo revoke!.
+    { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id,
+      'carteira_apolice_eventos' => historia }
   end
   # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 

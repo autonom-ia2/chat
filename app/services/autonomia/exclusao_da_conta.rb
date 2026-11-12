@@ -9,11 +9,11 @@
 # O job começa por `parar_a_conta` (suspende e cancela campanhas agendadas). Depois chama `antes_do_pre_apagar` antes
 # do pré-apagar do upstream (conversas, contatos, caixas): ali saem só as
 # tabelas com chave sem cascata para o que o pré-apagar apaga (whatsapp_api_campaign_recipients.message_id faria o job
-# das mensagens desistir). O resto sai em `perform`, depois do pré-apagar e logo antes do `destroy!`, para os callbacks
-# das caixas (vínculo do agente, conexão do Híbrido) rodarem como antes. Linha criada entre o `perform` e o `destroy!`
-# ainda pode barrar o DELETE; o job falha e a próxima tentativa a apaga. O `exclusao_da_conta_spec` lê as chaves e as
-# colunas do banco e falha quando aparece tabela nova que barraria a exclusão, que ficaria sem quem a apague ou que
-# levaria anexo pela cascata.
+# das mensagens desistir; carteira_apolices.contact_id barraria o DELETE do contato). O resto sai em `perform`, depois
+# do pré-apagar e logo antes do `destroy!`, para os callbacks das caixas (vínculo do agente, conexão do Híbrido)
+# rodarem como antes. Linha criada entre o `perform` e o `destroy!` ainda pode barrar o DELETE; o job falha e a
+# próxima tentativa a apaga. O `exclusao_da_conta_spec` lê as chaves e as colunas do banco e falha quando aparece
+# tabela nova que barraria a exclusão, que ficaria sem quem a apague ou que levaria anexo pela cascata.
 #
 # `delete_all` não roda callbacks. Dos efeitos deles, ficam os que importam:
 # - anexos (Active Storage): as linhas saem junto do lote e o arquivo vai para o PurgeJob quando nenhum outro anexo
@@ -125,6 +125,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
+    # Carteira de seguros (E4, #2897): a história de cada apólice (eventos) sai na cascata dela. A apólice aponta para o
+    # contato sem cascata e tem PDF, então também sai antes do pré-apagar (ANTES_DO_PRE_APAGAR).
+    ['Carteira::Apolice', :por_conta],
     # Automação livre (#2414): conversão do antigo (F9), registro, execução, versão e automação. A conversão aponta
     # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
@@ -182,8 +185,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['IdempotencyKey', :por_conta]
   ].freeze
 
-  # Das ETAPAS, as que têm chave sem cascata para o que o pré-apagar do upstream apaga.
-  ANTES_DO_PRE_APAGAR = ['WhatsappApiCampaignRecipient'].freeze
+  # Das ETAPAS, as que têm chave sem cascata para o que o pré-apagar do upstream apaga: a mensagem (destinatário de
+  # campanha) e o contato (apólice).
+  ANTES_DO_PRE_APAGAR = ['WhatsappApiCampaignRecipient', 'Carteira::Apolice'].freeze
 
   # Ficam para a cascata do DELETE da conta, com o motivo.
   SAEM_COM_A_CONTA = {
