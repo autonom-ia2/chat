@@ -329,10 +329,13 @@ module Crm
       end
 
       def api_base
-        base = (@credential[:api_base].presence || 'https://api.openai.com').to_s.strip.chomp('/')
+        base = base_configurada
         validate_api_base!(base)
         base
       end
+
+      # O endereço como veio na credencial, sem a conferência do ApiBaseGuard (que consulta o DNS).
+      def base_configurada = (@credential[:api_base].presence || 'https://api.openai.com').to_s.strip.chomp('/')
 
       # Delega ao guard SSRF compartilhado (fonte única; usado também pelo EmbeddingService).
       # Preserva o contrato externo: levanta Crm::Ai::ResponsesClient::Error 'invalid_api_base'.
@@ -488,8 +491,10 @@ module Crm
         nil
       end
 
+      # Só para o log: lê o endereço configurado sem consultar o DNS de novo. Com o `api_base`, o log de uma tentativa
+      # que estourou pelo DNS lento repetia a consulta fora do prazo (#2579).
       def api_host
-        URI.parse(api_base).host
+        URI.parse(base_configurada).host
       rescue StandardError
         nil
       end
