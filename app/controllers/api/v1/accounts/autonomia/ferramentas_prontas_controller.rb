@@ -37,11 +37,23 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   # "true") paga; qualquer outro valor ("sim", lista, objeto) é "não confirmou".
   VALORES_DE_CONFIRMACAO = [true, 'true'].freeze
 
+  # O card Premium responde 202 ("consultando", com o id do pedido): a consulta paga roda em segundo plano.
   def experimentar
-    render json: Autonomia::FerramentasProntas::Experimente.new(
+    resultado = Autonomia::FerramentasProntas::Experimente.new(
       account: Current.account, fonte: params.require(:fonte).to_s, valor: params[:valor],
       confirmou_preco: VALORES_DE_CONFIRMACAO.include?(params[:confirmou_preco])
     ).call
+    consultando = resultado['situacao'] == Autonomia::FerramentasProntas::Experimente::Pedido::CONSULTANDO
+    render json: resultado, status: consultando ? :accepted : :ok
+  end
+
+  # F7 (revisor, 12/11): o estado de um pedido do Experimente Premium ("consultando" ou o resultado). Preso à conta: o
+  # pedido de outra conta, ou o que já venceu, é 404. A mesma porta do `experimentar`.
+  def acompanhar
+    pedido = Autonomia::FerramentasProntas::Experimente::Pedido.para_tela(params[:pedido], account: Current.account)
+    return head :not_found if pedido.nil?
+
+    render json: pedido
   end
 
   # Só verdadeiro ou falso (`true`/`false`, também como texto, que é como o Guia manda): qualquer outro valor (lista,

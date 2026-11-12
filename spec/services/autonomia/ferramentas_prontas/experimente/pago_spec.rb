@@ -6,7 +6,9 @@ require 'rails_helper'
 # errado é recusado sem contar, o -114/-155 conta, e o 504/-1201 não conta. Acabadas as grátis, só consulta quando a
 # pessoa clica no botão com o preço (`confirmou_preco`). Um clique é uma consulta que vale, no máximo. O modelo da
 # conta é dublado e a BigDataCorp vem do WebMock: nenhuma chamada real.
-RSpec.describe Autonomia::FerramentasProntas::Experimente do
+# Revisor (ALTO 1, 12/11): a consulta roda em segundo plano (`ExperimentePagoJob`), pela `Experimente::Pago`, que é
+# quem estes exemplos chamam. O `Experimente` só confere as grátis, abre o pedido e responde "consultando".
+RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
   let(:account) { create(:account) }
   let(:credencial) { { api_key: 'chave-de-teste', api_base: 'https://api.openai.com', source: :system } }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
@@ -19,6 +21,11 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
 
   def experimentar(fonte, valor, confirmou_preco: false)
     described_class.new(account: account, fonte: fonte, valor: valor, confirmou_preco: confirmou_preco).call
+  end
+
+  # O clique na tela: confere as grátis e abre o pedido (`Experimente`), que o job roda depois.
+  def clicar(fonte, valor, confirmou_preco: false)
+    Autonomia::FerramentasProntas::Experimente.new(account: account, fonte: fonte, valor: valor, confirmou_preco: confirmou_preco).call
   end
 
   def chamada(argumentos, nome: 'pronta_certidoes_empresa', id: 'c1')
@@ -152,16 +159,17 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
   context 'with as 20 grátis do mês usadas' do
     before { saldo_premium!(account, 'certidoes_empresa', 20) }
 
-    it 'sem o clique no preço, nada é consultado: a resposta pede a confirmação e traz o contador' do
+    it 'sem o clique no preço, nada é consultado nem enfileirado: a resposta pede a confirmação e traz o contador' do
       modelo_faz([chamada(pgfn)])
 
-      resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+      resultado = clicar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
 
       expect(resultado).to eq('situacao' => 'confirmar_preco',
                               'premium' => { 'gratis' => 20, 'restantes' => 0, 'precos' => %w[0.06 0.15], 'confere_documento' => true })
       expect(cliente).not_to have_received(:create_with_tool_executor)
       expect(chamou_a_bigdatacorp?).to be(false)
       expect(registros_premium).to be_empty
+      expect(Autonomia::FerramentasProntas::ExperimentePagoJob).not_to have_been_enqueued
     end
 
     it 'com o clique no preço, consulta e cobra como a consulta do agente' do
@@ -175,32 +183,31 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
-  # Revisor (ALTO 2): a conferência das grátis roda fora da trava do saldo. Dois cliques com 1 grátis restante passam
-  # os dois por ela, e o segundo vira a 21ª do mês sem o clique no preço. Aqui o outro clique levou a última grátis
-  # entre a conferência (que ainda leu 1 restante) e a consulta: a 21ª nunca é gravada como cobrada, o custo fica
-  # conosco e o caso vai ao log.
-  it 'corrida nas grátis: a 21ª sem o clique no preço não é cobrada; o custo fica conosco e vai ao log' do
-    saldo_premium!(account, 'certidoes_empresa', 20)
-    lida_antes = { 'gratis' => 20, 'restantes' => 1, 'precos' => %w[0.06 0.15], 'confere_documento' => true }
-    leituras = 0
-    allow(Autonomia::FerramentasProntas::Premium).to receive(:para_tela).and_wrap_original do |original, *args|
-      (leituras += 1) == 1 ? { 'certidoes_empresa' => lida_antes } : original.call(*args)
-    end
+  # Revisor (ALTO 2): a conferência das grátis roda fora da trava do saldo, e a consulta roda depois, no job. Dois
+  # cliques com 1 grátis restante passam os dois pela conferência; o segundo vira a 21ª do mês sem o clique no preço,
+  # e ela nunca é gravada como cobrada: o custo fica conosco e o caso vai ao log.
+  it 'corrida nas grátis: dois cliques com 1 restante; a 21ª sem o clique no preço não é cobrada e vai ao log' do
+    saldo_premium!(account, 'certidoes_empresa', 19)
     allow(Rails.logger).to receive(:warn)
     pgfn_responde
     modelo_faz([chamada(pgfn)])
+    texto = 'dívida com a União da 11.222.333/0001-81'
+    # Os dois ao mesmo tempo: o segundo não acha no cache do dia o que o primeiro ainda não gravou.
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::NullStore.new)
 
-    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+    pedidos = [clicar('certidoes_empresa', texto), clicar('certidoes_empresa', texto)]
+    expect(pedidos.pluck('situacao')).to eq(%w[consultando consultando])
+    pedidos.each { |pedido| Autonomia::FerramentasProntas::ExperimentePagoJob.perform_now(pedido['pedido']) }
 
-    expect(resultado['situacao']).to eq('encontrado')
-    expect(registros_premium.sole).to have_attributes(numero: 21, cobranca: 'sem_cobranca', preco: 0, custo: BigDecimal('0.10'),
-                                                      motivo: 'sem_clique_no_preco')
+    expect(registros_premium.pluck(:numero, :cobranca)).to eq([[20, 'gratis'], [21, 'sem_cobranca']])
+    expect(registros_premium.last).to have_attributes(preco: 0, custo: BigDecimal('0.10'), motivo: 'sem_clique_no_preco')
     expect(Rails.logger).to have_received(:warn).with(a_string_including('sem o clique no preço'))
   end
 
-  it 'sem a flag do Premium, nada roda' do
+  it 'sem a flag do Premium, nada roda: nem o clique nem o job (a flag desligada entre os dois)' do
     account.disable_features!(Autonomia::FerramentasProntas::Premium::FLAG)
 
+    expect(clicar('certidoes_empresa', 'dívida com a União')).to eq('situacao' => 'desligada')
     expect(experimentar('certidoes_empresa', 'dívida com a União')).to eq('situacao' => 'desligada')
     expect(chamou_a_bigdatacorp?).to be(false)
   end

@@ -1,0 +1,37 @@
+# O EXPERIMENTE PREMIUM EM SEGUNDO PLANO (#2858, F7, revisor 12/11): roda a consulta de um pedido
+# (`Experimente::Pedido`) pela `Experimente::Pago` e grava o resultado no lugar dele, para a tela ler.
+#
+# Na fila das ferramentas (`AgentToolsQueue`), feita para esperar sistema de fora sem ocupar as outras. Sem retry: uma
+# tentativa automática consultaria de novo, e a consulta é paga. O job recebe só o id: o texto digitado fica no estado
+# do pedido, com prazo, e nunca nos argumentos do Sidekiq. Uma passada por pedido (`Pedido.reivindicar`): o job que o
+# Sidekiq devolve à fila depois de começar para aqui, e a tela fica com "não deu para confirmar"; a linha da telemetria
+# que sobrar, o `Premium::FecharEmAndamentoJob` fecha. O defeito vai ao rastreador e a tela recebe "não consegui
+# consultar".
+class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
+  queue_as AgentToolsQueue::FILA.to_sym
+  sidekiq_options retry: false
+
+  Pedido = Autonomia::FerramentasProntas::Experimente::Pedido
+
+  def perform(id)
+    pedido = Pedido.ler(id)
+    return if pedido.nil? || pedido['situacao'] != Pedido::CONSULTANDO || !Pedido.reivindicar(id)
+
+    account = Account.find_by(id: pedido['conta'])
+    return if account.nil?
+
+    consultar(id, pedido, account)
+  end
+
+  private
+
+  def consultar(id, pedido, account)
+    resultado = Autonomia::FerramentasProntas::Experimente::Pago.new(
+      account: account, fonte: pedido['fonte'], valor: pedido['valor'], confirmou_preco: pedido['confirmou_preco']
+    ).call
+    Pedido.concluir!(id, account.id, resultado)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
+    Pedido.concluir!(id, account.id, 'situacao' => 'nao_consegui_consultar')
+  end
+end

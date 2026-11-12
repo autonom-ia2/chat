@@ -91,6 +91,16 @@ RSpec.describe Autonomia::Guide::Acoes do
       end
     end
 
+    # Revisor (ALTO 1, 12/11): o acompanhamento do pedido do Experimente Premium também é só da tela. O Guia nem lê.
+    it 'deixa fora do Guia a leitura do pedido do Experimente', :aggregate_failures do
+      leitura = 'autonomia/ferramentas_prontas/experimentar/:pedido'
+      expect(described_class::SO_NA_TELA).to include("GET #{leitura}" => 'ready_tool_test')
+      expect(Autonomia::Guide::Consulta.new(account: conta, user: admin).catalogo).not_to include(leitura)
+      expect(Autonomia::Guide::Formatos::RotasDeLeitura.todas.map(&:acao)).not_to include(leitura)
+      expect(Autonomia::Guide::Consulta.new(account: conta, user: admin).ler(leitura, { 'pedido' => SecureRandom.uuid }))
+        .to eq('Não sei consultar isso.')
+    end
+
     # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
     it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
       catalogo = para(admin).catalogo.join(' ')

@@ -91,6 +91,12 @@ module Autonomia::FerramentasProntas
   # `pode_cobrar` e `em_andamento`, do Experimente (`Premium::Execucao`).
   OPCOES_DA_PREMIUM = %i[pode_cobrar em_andamento].freeze
 
+  # O que o Guia não faz por ninguém (`Guide::Acoes::SO_NA_TELA`; revisor, 12/11): o Experimente faz consulta de
+  # verdade, e no card Premium usa as grátis do mês e, depois delas, cobra com o clique no preço (`confirmou_preco`). O
+  # Guia nunca manda esse clique, nem lê o pedido do Experimente Premium: o teste é só na tela.
+  SO_NA_TELA_DO_GUIA = ['POST autonomia/ferramentas_prontas/experimentar', 'GET autonomia/ferramentas_prontas/experimentar/:pedido']
+                       .index_with('ready_tool_test').freeze
+
   def executor_para(tool, params:, tool_run_id: nil, **opcoes)
     if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
       return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, **opcoes.slice(*OPCOES_DA_PREMIUM))

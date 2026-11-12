@@ -13,8 +13,9 @@
 #   não repete o id de volta.)
 # - Até `MAX_CONSULTAS` consultas por clique: cada uma conta no limite do dia da conta, e o modelo barato às vezes
 #   consulta todas as versões de uma vez. A que passa do teto não roda.
-# - Roda dentro do pedido web: cada ida ao modelo tem prazo curto e nenhuma repetição (`PRAZO_DO_MODELO`), e consulta
-#   nova não começa depois de `PRAZO_DAS_CONSULTAS`. Assim o clique responde antes do corte do servidor (15 s).
+# - Nas grátis, roda dentro do pedido web: cada ida ao modelo tem prazo curto e nenhuma repetição (`PRAZO_DO_MODELO`),
+#   e consulta nova não começa depois de `PRAZO_DAS_CONSULTAS`. Assim o clique responde antes do corte do servidor
+#   (15 s). No Premium, roda em segundo plano (`Experimente::Pago`), porque a consulta paga leva de 20 a 55 s.
 # - Sem saldo no limite do dia da fonte, nem chama o modelo (a IA não é gasta para nada). Texto vazio também não. O
 #   Premium não tem limite do dia.
 # - `uma_consulta` (o card Premium, F7): cada consulta é paga, e o clique vale UMA. A que o pedido recusa antes da fonte
@@ -56,12 +57,14 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
   DOCUMENTOS = [Autonomia::FerramentasProntas::Premium::Parametros::CPF, Autonomia::FerramentasProntas::Premium::Parametros::CNPJ].freeze
 
   # `pode_cobrar` (Premium): a consulta acima das grátis só vai à fatura com o clique no preço (`Cobranca.registrar!`).
-  def initialize(account:, fonte:, valor:, uma_consulta: false, pode_cobrar: true)
+  # `em_andamento` (Premium, em segundo plano): a telemetria nasce antes da chamada (`Premium::Execucao`).
+  def initialize(account:, fonte:, valor:, uma_consulta: false, pode_cobrar: true, em_andamento: false) # rubocop:disable Metrics/ParameterLists
     @account = account
     @fonte = fonte
     @valor = valor
     @uma_consulta = uma_consulta
     @pode_cobrar = pode_cobrar
+    @em_andamento = em_andamento
     @valeu = false
     @saidas = []
     @consultas = 0
@@ -82,7 +85,8 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
     resultado(resposta)
   rescue Crm::Ai::ResponsesClient::Error => e
     Rails.logger.warn("[autonomia][prontas][experimente] ia indisponivel account=#{@account.id} fonte=#{@fonte.chave} #{e.class}")
-    { 'situacao' => 'nao_consegui_consultar' }
+    # A IA caiu DEPOIS de uma consulta: a tela mostra o que ela trouxe (no Premium, já contada), não um erro.
+    @saidas.any? ? resultado({}) : { 'situacao' => 'nao_consegui_consultar' }
   end
 
   private
@@ -110,7 +114,7 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
   def consultar(argumentos)
     params = JSON.parse(argumentos.presence || '{}')
     params = {} unless params.is_a?(Hash)
-    execucao = Autonomia::FerramentasProntas.executor_para(ferramenta, params: params, pode_cobrar: @pode_cobrar)
+    execucao = Autonomia::FerramentasProntas.executor_para(ferramenta, params: params, pode_cobrar: @pode_cobrar, em_andamento: @em_andamento)
     saida = execucao.call
     @valeu = @uma_consulta && (NAO_VALEU.exclude?(execucao.codigo) || DOCUMENTOS.include?(execucao.try(:parametro_recusado)))
     # A etapa é a consulta PEDIDA (a resposta de falha não diz qual era): o preço achado não some atrás de uma recusa.

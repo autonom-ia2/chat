@@ -109,23 +109,68 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
       response.parsed_body
     end
 
-    it 'consulta, usa uma das grátis e devolve o contador novo para a tela' do
+    def acompanhar(pedido, quem: admin, conta: account)
+      get "/api/v1/accounts/#{conta.id}/autonomia/ferramentas_prontas/experimentar/#{pedido}", headers: quem.create_new_auth_token, as: :json
+      response.body.present? ? response.parsed_body : nil
+    end
+
+    # Revisor (ALTO 1, 12/11): a consulta paga não cabe no corte de 15 s do pedido web. O POST responde 202 com o id do
+    # pedido; a consulta roda em segundo plano (`ExperimentePagoJob`); a tela pergunta pelo id até o resultado.
+    it 'o caminho completo: 202 com o pedido, "consultando" e depois o resultado com o contador novo', :aggregate_failures do
       corpo = experimentar
 
+      expect(response).to have_http_status(:accepted)
+      expect(corpo).to include('situacao' => 'consultando', 'pedido' => be_present)
+      expect(corpo['premium']).to include('restantes' => 20)
+      expect(Autonomia::FerramentasProntas::ExperimentePagoJob).to have_been_enqueued.with(corpo['pedido'])
+      expect(acompanhar(corpo['pedido'])).to eq('situacao' => 'consultando')
+      expect(chamou_a_bigdatacorp?).to be(false)
+
+      perform_enqueued_jobs(only: Autonomia::FerramentasProntas::ExperimentePagoJob)
+      resultado = acompanhar(corpo['pedido'])
+
       expect(response).to have_http_status(:ok)
-      expect(corpo['situacao']).to eq('encontrado')
-      expect(corpo['premium']).to include('gratis' => 20, 'restantes' => 19)
-      expect(registros_premium.sole).to have_attributes(cobranca: 'gratis', autonomia_agent_id: nil)
-      expect(response.body).not_to include('bigdatacorp', 'custo', 'ondemand')
+      expect(resultado['situacao']).to eq('encontrado')
+      expect(resultado['premium']).to include('gratis' => 20, 'restantes' => 19)
+      expect(resultado.keys).not_to include('valor', 'conta', 'confirmou_preco')
+      expect(registros_premium.sole).to have_attributes(resultado: 'encontrado', cobranca: 'gratis', autonomia_agent_id: nil)
+      expect(response.body).not_to include('bigdatacorp', 'custo', 'ondemand', '11.222.333')
+    end
+
+    it 'o pedido é preso à conta: o id de outra conta, ou um id que não existe, dá 404' do
+      pedido = experimentar['pedido']
+      outra_conta.enable_features!(Autonomia::FerramentasProntas::FLAG_VITRINE)
+      ligar_premium(outra_conta)
+      outro_admin = create(:user, :administrator, account: outra_conta)
+
+      acompanhar(pedido, quem: outro_admin, conta: outra_conta)
+      expect(response).to have_http_status(:not_found)
+      acompanhar(SecureRandom.uuid)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'o acompanhamento tem a mesma porta do POST: sem a chave das ferramentas, 401; sem a vitrine, 404' do
+      pedido = experimentar['pedido']
+      agente_comum = create(:user, account: account, role: :agent)
+
+      acompanhar(pedido, quem: agente_comum)
+      expect(response).to have_http_status(:unauthorized)
+      account.disable_features!(Autonomia::FerramentasProntas::FLAG_VITRINE)
+      acompanhar(pedido)
+      expect(response).to have_http_status(:not_found)
     end
 
     it 'acabadas as grátis, só consulta com o clique no preço' do
       saldo_premium!(account, 'certidoes_empresa', 20)
 
       expect(experimentar).to include('situacao' => 'confirmar_preco')
-      expect(chamou_a_bigdatacorp?).to be(false)
+      expect(response).to have_http_status(:ok)
+      expect(Autonomia::FerramentasProntas::ExperimentePagoJob).not_to have_been_enqueued
 
-      expect(experimentar(confirmou_preco: true)['situacao']).to eq('encontrado')
+      pedido = experimentar(confirmou_preco: true)['pedido']
+      perform_enqueued_jobs(only: Autonomia::FerramentasProntas::ExperimentePagoJob)
+
+      expect(acompanhar(pedido)['situacao']).to eq('encontrado')
       expect(registros_premium.sole).to have_attributes(cobranca: 'cobrada', numero: 21)
     end
 
