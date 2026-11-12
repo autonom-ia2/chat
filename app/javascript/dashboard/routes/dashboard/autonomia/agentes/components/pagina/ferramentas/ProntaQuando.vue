@@ -7,6 +7,9 @@ import AgenteBotao from '../../AgenteBotao.vue';
 // o agente lê para decidir a hora de usar a ferramenta: antes ela só era gravada no "Incluir" da vitrine, e mudar
 // pedia tirar e incluir de novo. O campo é o mesmo do "Incluir" (VitrineDetalhe): até 500 letras, e vazio não salva.
 // `salvar(frase)` é de quem chama e diz se gravou: a edição só fecha quando gravou, para o texto não se perder.
+// Salvar sem ter mudado o texto só fecha: a frase padrão que abre a edição de uma ferramenta sem frase própria está no
+// idioma da tela, e não pode virar a frase da conta sem a pessoa querer.
+// Esc fecha só a edição: sem isso a tecla chegaria à gaveta, que fecharia inteira e perderia o que foi escrito.
 // O slot fica ao lado do botão: as outras ações da linha (o "Tirar").
 const props = defineProps({
   // O que a linha mostra (a frase da conta ou, sem ela, o que a ferramenta faz).
@@ -48,15 +51,29 @@ const confirmar = async () => {
     return;
   }
   if (salvando.value) return;
+  if (frase === props.quando.trim()) {
+    fechar();
+    return;
+  }
   salvando.value = true;
-  const gravou = await props.salvar(frase);
-  salvando.value = false;
-  if (gravou) fechar();
+  try {
+    if (await props.salvar(frase)) fechar();
+  } finally {
+    salvando.value = false;
+  }
+};
+const cancelar = () => {
+  if (!salvando.value) fechar();
 };
 </script>
 
 <template>
-  <div v-if="editando" data-pronta-quando class="flex flex-col gap-2 pt-1">
+  <div
+    v-if="editando"
+    data-pronta-quando
+    class="flex flex-col gap-2 pt-1"
+    @keydown.esc.stop.prevent="cancelar"
+  >
     <label :for="campoId" class="text-sm font-semibold text-n-slate-12">
       {{ t(`${NS}.DETALHE.QUANDO`) }}
     </label>
@@ -84,7 +101,7 @@ const confirmar = async () => {
         data-cancelar-quando
         variante="fantasma"
         :desabilitado="salvando"
-        @click="fechar"
+        @click="cancelar"
       >
         {{ t(`${NS}.PRONTAS.QUANDO_CANCELAR`) }}
       </AgenteBotao>

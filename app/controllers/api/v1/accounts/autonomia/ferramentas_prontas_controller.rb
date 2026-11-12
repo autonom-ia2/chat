@@ -62,8 +62,9 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   VALORES_DE_LIGADA = [true, false, 'true', 'false'].freeze
 
   # Muda o liga/desliga, a frase "Use quando" (#2881), ou os dois. `ligada` só pode faltar quando a frase vem: sem
-  # nenhum dos dois, o pedido é recusado como antes. A frase segue a regra do "Incluir" (`Incluir.frase`): vazia, a
-  # ferramenta volta à frase padrão dela.
+  # nenhum dos dois, o pedido é recusado como antes. A frase passa pela limpeza do "Incluir" (`Incluir.frase`). Frase
+  # vazia ("") tira a frase: o agente passa a receber só a descrição da ferramenta. `null` conta como "não veio", para
+  # um pedido sem a frase nunca apagar a que existe.
   def update
     return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless ligada_valida?
     return render json: { motivo: 'usar_quando_invalido' }, status: :unprocessable_entity unless usar_quando_valido?
@@ -102,7 +103,7 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   private
 
   def muda_a_frase?
-    params.key?(:usar_quando)
+    !params[:usar_quando].nil?
   end
 
   def ligada_valida?
@@ -111,9 +112,9 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
     VALORES_DE_LIGADA.include?(params[:ligada])
   end
 
-  # A frase é texto, ou nada: lista e objeto são recusados e nunca viram frase.
+  # A frase é texto: lista, objeto, número e verdadeiro/falso são recusados e nunca viram frase.
   def usar_quando_valido?
-    !muda_a_frase? || params[:usar_quando].nil? || params[:usar_quando].is_a?(String)
+    !muda_a_frase? || params[:usar_quando].is_a?(String)
   end
 
   # O `to_s` da frase também diz ao Guia que o campo é texto (os formatos das ações são lidos do código).

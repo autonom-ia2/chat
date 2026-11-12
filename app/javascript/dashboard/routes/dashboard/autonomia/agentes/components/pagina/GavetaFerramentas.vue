@@ -56,7 +56,8 @@ const prontas = computed(() =>
           frase:
             item.usar_quando ||
             t(`${NS_VITRINE}.FERRAMENTAS.${chaveDoTexto(item.fonte)}.FAZ`),
-          // #2881: o texto que abre o "Alterar quando usar". Sem frase da conta, a frase padrão da ferramenta.
+          // #2881: o texto que abre o "Alterar quando usar". Sem frase da conta, a frase sugerida da ferramenta, no
+          // idioma da tela (a mesma que o "Incluir" propõe). Ela só é gravada se a pessoa mudar o texto.
           quando:
             item.usar_quando ||
             t(
@@ -194,8 +195,11 @@ const alternarPronta = async (item, ligar) => {
     prontasOcupadas.delete(item.id);
   }
 };
-// #2881: a frase "Use quando" da pronta. Diz se gravou: a linha só fecha a edição quando gravou.
+// #2881: a frase "Use quando" da pronta. Diz se gravou: a linha só fecha a edição quando gravou. Divide a vez com o
+// liga/desliga (um pedido por pronta de cada vez): duas respostas fora de ordem deixariam a tela com o item antigo.
 const mudarQuandoDaPronta = async (item, frase) => {
+  if (prontasOcupadas.has(item.id)) return false;
+  prontasOcupadas.add(item.id);
   try {
     await estadoDaVitrine.mudarQuando(item.id, frase);
     useAlert(
@@ -208,6 +212,8 @@ const mudarQuandoDaPronta = async (item, frase) => {
   } catch (falha) {
     useAlert(t(`${NS_VITRINE}.MOTIVOS.${falha.motivo || 'GERAL'}`));
     return false;
+  } finally {
+    prontasOcupadas.delete(item.id);
   }
 };
 const pedirTirar = async item => {

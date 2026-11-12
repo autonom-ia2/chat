@@ -201,6 +201,7 @@ describe('GavetaFerramentas · prontas sem o cadastro manual', () => {
     expect(no('[data-pronta="cep"] textarea').value).toBe(
       'Use quando o cliente informar um CEP.'
     );
+    expect(document.activeElement).toBe(no('[data-pronta="cep"] textarea'));
     expect(no('[data-pronta="cep"] textarea').getAttribute('maxlength')).toBe(
       '500'
     );
@@ -217,16 +218,54 @@ describe('GavetaFerramentas · prontas sem o cadastro manual', () => {
     expect(no('[data-pronta="cep"] [data-frase]').textContent.trim()).toBe(
       'Use quando pedirem o CEP da obra.'
     );
+    expect(document.activeElement).toBe(
+      no('[data-pronta="cep"] [data-alterar-quando]')
+    );
     expect(alerta).toHaveBeenCalledWith(
       'Pronto. Bia já segue a frase nova de Endereço pelo CEP.'
     );
   });
 
-  it('without a sentence of its own, the editing opens with the standard one of the tool', async () => {
+  it('two clicks on Save send the sentence only once', async () => {
+    await montar();
+    no('[data-pronta="cep"] [data-alterar-quando]').click();
+    await flushPromises();
+    prontasApi.mudarQuando.mockResolvedValue({
+      data: { ...CEP, usar_quando: 'Use quando pedirem o CEP da obra.' },
+    });
+    await escrever('Use quando pedirem o CEP da obra.');
+    const salvar = no('[data-pronta="cep"] [data-salvar-quando]');
+    salvar.click();
+    salvar.click();
+    await flushPromises();
+    expect(prontasApi.mudarQuando).toHaveBeenCalledTimes(1);
+  });
+
+  it('without a sentence of its own, the editing opens with the suggested one and saving it untouched sends nothing', async () => {
     await montar({ incluidas: [{ ...CEP, usar_quando: null }] });
     no('[data-pronta="cep"] [data-alterar-quando]').click();
     await flushPromises();
     expect(no('[data-pronta="cep"] textarea').value).toContain('Use quando');
+    await clicarNoTexto('Salvar', no('[data-pronta="cep"]'));
+    expect(prontasApi.mudarQuando).not.toHaveBeenCalled();
+    expect(no('[data-pronta="cep"] textarea')).toBeNull();
+  });
+
+  it('Escape closes only the editing, not the drawer', async () => {
+    const wrapper = await montar();
+    no('[data-pronta="cep"] [data-alterar-quando]').click();
+    await flushPromises();
+    await escrever('Use quando pedirem o CEP da obra.');
+    no('[data-pronta="cep"] textarea').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
+    await flushPromises();
+    expect(no('[data-pronta="cep"] textarea')).toBeNull();
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(prontasApi.mudarQuando).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(
+      no('[data-pronta="cep"] [data-alterar-quando]')
+    );
   });
 
   it('an empty sentence is not saved, and cancelling changes nothing', async () => {
