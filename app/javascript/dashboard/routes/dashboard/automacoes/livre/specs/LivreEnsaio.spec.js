@@ -77,6 +77,31 @@ describe('LivreEnsaio', () => {
     expect(wrapper.find('[data-balao]').text()).toBe('Oi');
   });
 
+  // Gatilho de etiqueta sem etiqueta escolhida: o motor só entra quando uma
+  // etiqueta é posta; a lista vira exemplos, sem contagem e sem "entraria".
+  it('na etiqueta sem etiqueta escolhida, diz que a lista é de exemplos', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        conversas: [conversa(1)],
+        outras: [],
+        qualquer_etiqueta: 'posta',
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-qualquer-etiqueta]').text()).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.QUALQUER_ETIQUETA.POSTA'
+    );
+    expect(wrapper.find('[data-casaram]').exists()).toBe(false);
+    expect(wrapper.find('[data-ensaio-item]').text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.PODERIA_ENTRAR'
+    );
+    expect(wrapper.find('[data-ensaio-item]').text()).not.toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.ENTRARIA'
+    );
+  });
+
   it('com rascunho, e na nova, manda a receita da tela', async () => {
     AutomacoesAPI.ensaiar.mockResolvedValue({
       data: { conversas: [], outras: [] },
@@ -362,6 +387,43 @@ describe('linhasDoEnsaio', () => {
     );
     expect(janela.balao).toBeUndefined();
     expect(tweet.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CANAL_SEM_RESPOSTA');
+  });
+
+  // G60: a página de reserva do gatilho fora do ar; G43: o número novo já é
+  // de outro contato. Nos dois o passo pula, como no motor, e o caminho segue.
+  it.each([
+    ['agenda_de_reserva_indisponivel', 'AGENDA_DE_RESERVA_INDISPONIVEL'],
+    ['numero_de_outro_contato', 'NUMERO_DE_OUTRO_CONTATO'],
+  ])('a mensagem que pularia (%s) diz o porquê, sem balão', (faria, chave) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'm1', tipo: 'mensagem', faria, dados: {} }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe(`AUTOMACAO_LIVRE.ENSAIO.${chave}`);
+    expect(linha.balao).toBeUndefined();
+  });
+
+  // Com a janela fechada, o modelo sai no lugar do texto, que nem é lido.
+  it('o texto vazio com o modelo que sai mostra só o modelo, sem balão', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'm1',
+          tipo: 'mensagem',
+          faria: 'mensagem',
+          dados: { modelo: 'retorno' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.balao).toBeUndefined();
+    expect(linha.destaque).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.MODELO_FORA_DA_JANELA(retorno)'
+    );
   });
 
   // #2502: o rodízio diz entre quem seria; se não passaria, o porquê.

@@ -12,6 +12,11 @@
       "QUANTAS": "das {total} conversas mais recentes entrariam nesta automação",
       "ENTRARIA": "entraria",
       "NAO_ENTRARIA": "não entraria",
+      "PODERIA_ENTRAR": "poderia entrar",
+      "QUALQUER_ETIQUETA": {
+        "POSTA": "Vale para qualquer etiqueta posta: a automação só entra quando alguém põe uma etiqueta. A lista mostra exemplos de onde isso poderia acontecer.",
+        "TIRADA": "Vale para qualquer etiqueta tirada: a automação só entra quando alguém tira uma etiqueta. A lista mostra exemplos de onde isso poderia acontecer."
+      },
       "OUTRA": "Ensaiar em outra conversa",
       "ESCOLHA": "Escolha a conversa",
       "CONVERSA_N": "Conversa {n}",
@@ -55,6 +60,7 @@
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "FALTOU_LINK_DA_AGENDA": "Não sairia: o link da agenda ficaria vazio (página fora do ar, ou sem o link de quem cuida).",
       "SEM_ACESSO_AGENDA": "Não sairia: você não vê as páginas de agendamento.",
+      "AGENDA_DE_RESERVA_INDISPONIVEL": "Não sairia: ninguém atende, e a página de agendamento de reserva do gatilho está fora do ar (ou quem liga não vê as páginas de agendamento).",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
       "RETORNO_SEM_RESPONSAVEL": "Não criaria o retorno: esta conversa não tem responsável.",
       "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
@@ -104,6 +110,7 @@
       "PAUSARIA": "Pausaria a automação: {nome}, que liga a automação, não pode escrever nesta conversa ou caixa.",
       "PAUSARIA_QUEM_LIGA": "Pausaria a automação: {nome}, que ligou a automação, não pode mais gerenciar automações nesta conta. Ligue de novo para assumir.",
       "CANAL_SEM_RESPOSTA": "Não sairia: este canal não aceita resposta (tweet).",
+      "NUMERO_DE_OUTRO_CONTATO": "Não sairia: o número novo do contato já é de outro contato nesta caixa.",
       "PARARIA": {
         "FORA_DA_JANELA": "Pararia aqui: a janela de resposta do canal está fechada, e texto livre não sai. Os passos seguintes não rodariam.",
         "LIMITE_DA_CAIXA": "Pararia aqui: o cliente não escreveu dentro do limite de horas para responder desta caixa. Os passos seguintes não rodariam.",

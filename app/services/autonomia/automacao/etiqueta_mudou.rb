@@ -35,4 +35,15 @@ module Autonomia::Automacao::EtiquetaMudou
     marca = "#{tipo}:#{registro.id}:#{etiqueta}:#{instante.utc.iso8601(6)}"
     ::Autonomia::Automacao::Escuta.comecar(registro, tipo, evento: marca, dados: { 'etiqueta' => etiqueta })
   end
+
+  # O gatilho de etiqueta sem etiqueta escolhida vale para qualquer uma: 'posta' ou 'tirada'. Com a etiqueta escolhida,
+  # ou noutro gatilho, nil. O ensaio diz isso à tela (Ensaio#resultado).
+  def qualquer(gatilho)
+    return if gatilho.to_h['etiqueta'].present?
+
+    tipo = gatilho.to_h['tipo']
+    return 'posta' if POSTA.value?(tipo)
+
+    'tirada' if TIRADA.value?(tipo)
+  end
 end

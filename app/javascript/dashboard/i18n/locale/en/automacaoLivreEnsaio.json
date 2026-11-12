@@ -12,6 +12,11 @@
       "QUANTAS": "of the {total} most recent conversations would enter this automation",
       "ENTRARIA": "would enter",
       "NAO_ENTRARIA": "wouldn't enter",
+      "PODERIA_ENTRAR": "could enter",
+      "QUALQUER_ETIQUETA": {
+        "POSTA": "Works for any label added: the automation only runs when someone adds a label. The list shows examples of where that could happen.",
+        "TIRADA": "Works for any label removed: the automation only runs when someone removes a label. The list shows examples of where that could happen."
+      },
       "OUTRA": "Test on another conversation",
       "ESCOLHA": "Choose the conversation",
       "CONVERSA_N": "Conversation {n}",
@@ -55,6 +60,7 @@
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "FALTOU_LINK_DA_AGENDA": "Wouldn't send: the booking link would be empty (page offline, or no link from the person in charge).",
       "SEM_ACESSO_AGENDA": "Wouldn't send: you can't see the booking pages.",
+      "AGENDA_DE_RESERVA_INDISPONIVEL": "Wouldn't go out: nobody attends, and the trigger's backup booking page is offline (or who turns the automation on can't see the booking pages).",
       "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
       "CORTE": "The test stopped here: the automation has too many paths to show.",
@@ -104,6 +110,7 @@
       "PAUSARIA": "Would pause the automation: {nome}, who turns it on, can't write in this conversation or inbox.",
       "PAUSARIA_QUEM_LIGA": "Would pause the automation: {nome}, who turned it on, can no longer manage automations in this account. Turn it on again to take it over.",
       "CANAL_SEM_RESPOSTA": "Would not go out: this channel does not accept replies (tweet).",
+      "NUMERO_DE_OUTRO_CONTATO": "Wouldn't go out: the contact's new number already belongs to another contact in this inbox.",
       "PARARIA": {
         "FORA_DA_JANELA": "Would stop here: the channel's reply window is closed, and free text can't go out. The next steps wouldn't run.",
         "LIMITE_DA_CAIXA": "Would stop here: the customer hasn't written within the inbox's reply time limit. The next steps wouldn't run.",

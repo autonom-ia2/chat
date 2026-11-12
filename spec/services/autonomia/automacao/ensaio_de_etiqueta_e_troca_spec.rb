@@ -59,6 +59,19 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(ensaio(receita(ola, gatilho: { 'tipo' => 'conversa.etiqueta_posta' }))[:conversas].size).to eq(2)
   end
 
+  # O motor só entra quando uma etiqueta é de fato posta ou tirada: sem etiqueta escolhida, a lista é de exemplos, e o
+  # resultado diz isso à tela (`qualquer_etiqueta`). Com a etiqueta escolhida, e nos outros gatilhos, não vem.
+  it 'etiqueta sem etiqueta escolhida: a lista é de exemplos, e o resultado diz posta ou tirada', :aggregate_failures do
+    { 'conversa.etiqueta_posta' => 'posta', 'conversa.etiqueta_tirada' => 'tirada', 'contato.etiqueta_posta' => 'posta',
+      'contato.etiqueta_tirada' => 'tirada' }.each do |tipo, direcao|
+      expect(ensaio(receita(ola, gatilho: { 'tipo' => tipo, 'etiqueta' => '' }))[:qualquer_etiqueta]).to eq(direcao)
+    end
+    expect(ensaio(receita(ola, gatilho: { 'tipo' => 'conversa.etiqueta_posta' }), conversa_id: sem_vip.display_id))
+      .to include(qualquer_etiqueta: 'posta')
+    expect(ensaio(receita(ola, gatilho: { 'tipo' => 'conversa.etiqueta_posta', 'etiqueta' => 'vip' }))).not_to have_key(:qualquer_etiqueta)
+    expect(ensaio(receita(ola, gatilho: { 'tipo' => 'conversa.responsavel_mudou' }))).not_to have_key(:qualquer_etiqueta)
+  end
+
   it 'a conversa escolhida sem a etiqueta é como se não existisse' do
     expect { ensaio(receita(ola, gatilho: { 'tipo' => 'conversa.etiqueta_posta', 'etiqueta' => 'vip' }), conversa_id: sem_vip.display_id) }
       .to raise_error(ActiveRecord::RecordNotFound)

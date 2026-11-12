@@ -12,6 +12,10 @@ const AVISO = {
   // G12/G44: o link da agenda vazio, e quem pede sem ver o agendamento.
   faltou_link_da_agenda: 'FALTOU_LINK_DA_AGENDA',
   sem_acesso_agenda: 'SEM_ACESSO_AGENDA',
+  // G60: ninguém atende, e a página de reserva do gatilho não dá o link. O
+  // passo pula e o caminho segue (com a janela fechada, o modelo para:
+  // `pararia`, com a frase própria em PARARIA).
+  agenda_de_reserva_indisponivel: 'AGENDA_DE_RESERVA_INDISPONIVEL',
   texto_vazio: 'TEXTO_VAZIO',
   // G2: o e-mail que não sairia para o contato desta conversa.
   contato_sem_email: 'CONTATO_SEM_EMAIL',
@@ -22,6 +26,8 @@ const AVISO = {
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   // #2609: a mensagem pula, como no motor.
   canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
+  // G43: o número novo do contato já é de outro contato na caixa.
+  numero_de_outro_contato: 'NUMERO_DE_OUTRO_CONTATO',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
   sem_responsavel: 'SEM_RESPONSAVEL',
   caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
@@ -195,9 +201,15 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
     return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };
   }
-  if (no.dados?.texto) {
+  // Com a janela fechada, o modelo sai no lugar do texto, que nem é lido: o
+  // texto vazio vem só com o modelo, sem balão.
+  if (no.dados?.texto || no.dados?.modelo) {
     const destaque = destaqueDoTexto(no.dados, t, caixa);
-    return { ...base, balao: no.dados.texto, ...(destaque && { destaque }) };
+    return {
+      ...base,
+      ...(no.dados.texto && { balao: no.dados.texto }),
+      ...(destaque && { destaque }),
+    };
   }
   return base;
 };

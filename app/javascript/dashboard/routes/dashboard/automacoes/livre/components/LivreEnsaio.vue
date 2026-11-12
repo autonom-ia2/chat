@@ -42,6 +42,10 @@ const chaveDoRecorrente = alvo =>
 // título no lugar do número da conversa e do nome do contato. G10: no de
 // etiqueta no contato, de contatos (`alvo: 'contato'`), com o id e o nome.
 const alvoDoEnsaio = ref('conversa');
+// O gatilho de etiqueta sem etiqueta escolhida ('posta' ou 'tirada'): o motor
+// só entra quando alguém põe ou tira uma etiqueta, então a lista é de
+// exemplos, sem a contagem e sem o "entraria" como se fosse certo.
+const qualquerEtiqueta = ref(null);
 const ROTULOS_DO_ALVO = {
   card: {
     SEM_CONVERSAS: 'SEM_CARDS',
@@ -85,6 +89,7 @@ const carregar = async () => {
       return;
     }
     alvoDoEnsaio.value = data.alvo || 'conversa';
+    qualquerEtiqueta.value = data.qualquer_etiqueta || null;
     conversas.value = data.conversas;
     outras.value = data.outras || [];
     escolhida.value =
@@ -271,7 +276,19 @@ const ICONE = {
     </p>
 
     <template v-else>
-      <p role="status" class="flex flex-wrap items-baseline m-0 gap-x-3">
+      <p
+        v-if="qualquerEtiqueta"
+        role="status"
+        data-qualquer-etiqueta
+        class="mb-0 text-base text-n-slate-11"
+      >
+        {{
+          $t(
+            `AUTOMACAO_LIVRE.ENSAIO.QUALQUER_ETIQUETA.${qualquerEtiqueta.toUpperCase()}`
+          )
+        }}
+      </p>
+      <p v-else role="status" class="flex flex-wrap items-baseline m-0 gap-x-3">
         <span
           data-casaram
           class="text-4xl font-bold tracking-tight tabular-nums text-n-teal-11"
@@ -321,7 +338,9 @@ const ICONE = {
                 >
                   {{
                     item.entraria
-                      ? $t('AUTOMACAO_LIVRE.ENSAIO.ENTRARIA')
+                      ? $t(
+                          `AUTOMACAO_LIVRE.ENSAIO.${qualquerEtiqueta ? 'PODERIA_ENTRAR' : 'ENTRARIA'}`
+                        )
                       : $t('AUTOMACAO_LIVRE.ENSAIO.NAO_ENTRARIA')
                   }}
                 </span>

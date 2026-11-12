@@ -81,12 +81,15 @@ class Autonomia::Automacao::Ensaio
   end
 
   # `alvo` diz à tela se a lista é de conversas, de cards ou de contatos; o formato de cada item é o mesmo.
+  # `qualquer_etiqueta` ('posta' ou 'tirada'): o gatilho de etiqueta sem etiqueta escolhida. O motor só entra quando uma
+  # etiqueta é de fato posta ou tirada; a tela diz isso, e a lista vira exemplos de onde poderia acontecer.
   def resultado
-    return { alvo: @alvo, conversas: [ensaiar(amostra.um(@conversa_id))], outras: [] } if @conversa_id.present?
+    base = { alvo: @alvo, qualquer_etiqueta: ::Autonomia::Automacao::EtiquetaMudou.qualquer(@receita['gatilho']) }.compact
+    return base.merge(conversas: [ensaiar(amostra.um(@conversa_id))], outras: []) if @conversa_id.present?
 
     recentes = amostra.recentes(RECENTES + OUTRAS)
-    { alvo: @alvo, conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
-      outras: recentes.drop(RECENTES).map { |item| amostra.base(item).except(:ultima_atividade) } }
+    base.merge(conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
+               outras: recentes.drop(RECENTES).map { |item| amostra.base(item).except(:ultima_atividade) })
   end
 
   # As conversas recentes de quem pede em que a automação entraria agora, na ordem do ensaio. O "Testar este passo"
@@ -191,8 +194,8 @@ class Autonomia::Automacao::Ensaio
     end
   end
 
-  # O passo depois do qual o motor não segue (EnvioNoEnsaio::ACABA) acaba o caminho.
-  def seguir(passo, feito) = [feito, (@roteiro.seguinte(passo['id']) unless ::Autonomia::Automacao::EnvioNoEnsaio::ACABA.include?(feito[:faria]))]
+  # O passo depois do qual o motor não segue (EnvioNoEnsaio.acaba?) acaba o caminho.
+  def seguir(passo, feito) = [feito, (@roteiro.seguinte(passo['id']) unless ::Autonomia::Automacao::EnvioNoEnsaio.acaba?(passo, feito[:faria]))]
 
   # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes. O card sem conversa pula,
   # como no motor; na que o "mensagem" abriria, as mesmas perguntas valem para ela.
@@ -229,9 +232,12 @@ class Autonomia::Automacao::Ensaio
   def na_conversa? = @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
 
   # Depois do texto, o canal (#2609, EnvioNoEnsaio#do_canal). O texto vazio também pergunta: no motor, a janela vem antes.
+  # Com a janela fechada e o modelo que sai no lugar, o texto nem é lido: o vazio não impede o modelo
+  # (PassoDeMensagem#mandar_aqui).
   def no_canal(passo, valores, conversa = @conversa)
     pronto = texto(passo, valores, conversa&.inbox)
     canal = envio(conversa).do_canal(passo, valores) if %w[mensagem texto_vazio].include?(pronto[:faria])
+    canal = ::Autonomia::Automacao::EnvioNoEnsaio.com_o_modelo(canal, passo, pronto, conversa&.inbox)
     canal ? no(passo, *canal) : pronto
   end
 
@@ -261,10 +267,7 @@ class Autonomia::Automacao::Ensaio
     ninguem, reserva = previsto_do_aviso(passo)
     return no(passo, ninguem) if ninguem
 
-    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada; o de propaganda
-    # (lote 5, #2681) leva o aviso de custo.
-    propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(caixa, passo['modelo'])
-    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda, reserva: reserva }.compact)
+    no(passo, passo['tipo'], { texto: pronto, **::Autonomia::Automacao::EnvioNoEnsaio.modelo(passo, caixa), reserva: reserva }.compact)
   end
 
   # O "avisar", e o "resumir" que sai por ele (#2523, #2552): [por que ninguém seria avisado, por que iria para a caixa].
