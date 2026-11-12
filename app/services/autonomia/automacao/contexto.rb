@@ -236,10 +236,12 @@ class Autonomia::Automacao::Contexto
     @mae_com_alvo = (mae if mae&.alvo)
   end
 
+  # Quem ligou é o da dona da mãe (#2933): no "em outro registro" dentro de um bloco, a mãe é a execução do bloco, que
+  # age como quem ligou a automação de cima.
   def origem_ao_alcance?(mae)
     return @origem_ao_alcance if defined?(@origem_ao_alcance)
 
-    @origem_ao_alcance = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho).alcanca?(mae.alvo, mae)
+    @origem_ao_alcance = ::Autonomia::Automacao::Acesso.new(mae.dona, chave_gatilho: mae.chave_gatilho).alcanca?(mae.alvo, mae)
   end
 
   def buscar_mensagem_que_falhou

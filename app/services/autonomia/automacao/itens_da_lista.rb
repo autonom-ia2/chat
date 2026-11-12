@@ -2,12 +2,13 @@
 # uma etiqueta ou os contatos de um público (os Públicos das campanhas, #1005: as linhas importadas que viraram contato).
 # Em ordem de criação, para a rodada que para no meio retomar na mesma ordem.
 #
-# Quem abre as execuções (FilhasDaLista) confere o alcance de quem ligou e relê do banco se o contato recusa mensagens
-# ativas ou está bloqueado (Contact.campaign_refusal_now, a régua das campanhas): o item que não recebe nada não entra.
-# `contar` diz quantos entrariam agora e os primeiros nomes, sem abrir nada: a tela antes de ligar e o ensaio.
+# Quem abre as execuções (FilhasDaLista) confere o alcance de quem ligou e relê do banco, por lote, se o contato recusa
+# mensagens ativas ou está bloqueado (Contact.campaign_unreachable, a régua das campanhas): o item que não recebe nada não
+# entra. `contar` diz quantos entrariam agora e os primeiros nomes, sem abrir nada: a tela antes de ligar e o ensaio.
 class Autonomia::Automacao::ItensDaLista
-  # Quantos itens a contagem lê, no máximo, para dizer "entrariam hoje": ela confere o alcance de cada um, e a tela espera.
-  LEITURA_DA_CONTAGEM = 1000
+  # Quantos itens além do teto a contagem lê, no máximo, para dizer quantos ficariam para a próxima vez. O alcance é uma
+  # pergunta às políticas por item: a tela espera, e a rodada do motor (FilhasDaLista) usa a mesma conta para parar.
+  ALEM_DO_TETO = 300
   PRIMEIROS = 3
   # O público salvo (a importação terminou), como a escolha de público da campanha (CampaignImportsController).
   PUBLICOS_SALVOS = %w[completed completed_with_failures].freeze
@@ -32,13 +33,17 @@ class Autonomia::Automacao::ItensDaLista
   # O contato do item: o próprio contato, ou o do card.
   def self.contato_de(item) = item.is_a?(::Contact) ? item : item.contact
 
-  # O item que não recebe nada da automação: o contato recusou mensagens ativas ou está bloqueado. `relido`: lido do banco
-  # agora (logo antes de abrir a execução); sem ele, o contato já carregado (a contagem).
-  def self.recusado?(item, relido: true)
+  # O item que não recebe nada da automação: o contato recusou mensagens ativas ou está bloqueado (o já carregado).
+  def self.recusado?(item)
     contato = contato_de(item)
-    return false if contato.nil?
+    contato.present? && contato.campaign_refusal.present?
+  end
 
-    (relido ? ::Contact.campaign_refusal_now(contato.id) : contato.campaign_refusal).present?
+  # Os ids dos contatos de `itens` que não recebem nada, relidos do banco agora numa consulta (logo antes de abrir as
+  # execuções do lote).
+  def self.recusados(itens)
+    ids = itens.filter_map { |item| contato_de(item)&.id }
+    ::Contact.where(id: ids).campaign_unreachable.pluck(:id).to_set
   end
 
   def self.nome_de(item) = item.is_a?(::Contact) ? item.name : item.title
@@ -49,12 +54,13 @@ class Autonomia::Automacao::ItensDaLista
     importacao if importacao&.audience?
   end
 
-  # Quantos entrariam agora (até o `teto`) para quem `acesso` alcança, e os primeiros nomes (só dos que entram).
+  # Quantos entrariam agora (até o `teto`) para quem `acesso` alcança, e os primeiros nomes (só dos que entram). Lê até
+  # `teto + ALEM_DO_TETO` itens.
   def contar(acesso, teto)
     entram = []
     total = 0
-    escopo.limit(LEITURA_DA_CONTAGEM).each do |item|
-      next if self.class.recusado?(item, relido: false) || !acesso.alcanca?(item)
+    escopo.limit(teto + ALEM_DO_TETO).each do |item|
+      next if self.class.recusado?(item) || !acesso.alcanca?(item)
 
       total += 1
       entram << self.class.nome_de(item) if entram.size < [PRIMEIROS, teto].min

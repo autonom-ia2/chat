@@ -143,8 +143,9 @@ class Autonomia::Automacao::Executor
   def impedimento
     return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
     return %w[parada desligada] unless @definicao.ativa
-    # #2499: a flag dos gatilhos de card desligada é o rollback da F6; a execução aberta de gatilho de card fecha.
-    return %w[parada gatilho_desligado] unless ::Autonomia::Automacao::Gatilhos.disponivel?(@execucao.chave_gatilho, @account)
+
+    flag = flag_desligada
+    return ['parada', flag] if flag
     return %w[interrompida alvo_sumiu] unless alvo_da_conta?
     return %w[parada spam] if contexto.no_spam?
 

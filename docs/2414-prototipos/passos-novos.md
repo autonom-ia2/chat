@@ -34,20 +34,38 @@ três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
   46 (1 << 45), como `spec/models/account_spec.rb` confere. **Desligada em
   produção** (exceção à regra de 07/11). Desligada depois de ligada: o salvar
   recusa a receita com um dos três e o motor para a execução que chega num deles
-  (`passos_novos_desligados`). É o rollback.
+  (`passos_novos_desligados`). É o rollback: também não abre as filhas de um
+  "para cada" cujo job já estava na fila, e a filha da lista ou a execução do
+  bloco que já estavam abertas param na próxima reconferência.
 - **Para cada** (`repetir_lista`): cards de uma etapa, contatos de uma etiqueta
   ou de um público salvo. Cada item ganha uma execução própria (a "filha da
   lista") que roda o galho `cada` com o item como alvo, até o teto por vez
   (1 a 200) e no ritmo escolhido (um por minuto, ou todos de uma vez). Bloqueado
   ou descadastrado fica de fora, e só entra quem quem ligou alcança. O item que
   já está no meio desta automação não entra de novo (sem laço). A tela conta
-  "entrariam hoje" no servidor, pela mesma régua (`contar_lista`).
+  "entrariam hoje" no servidor, pela mesma régua (`contar_lista`), quando a
+  pessoa para de digitar o teto. O alcance é uma pergunta às políticas por item:
+  a contagem e a rodada leem no máximo o teto mais 300 itens alcançáveis; o
+  resto entra na próxima vez.
 - **Bloco** (`usar_bloco`): "Usar como bloco" na lista marca a automação (coluna
   `autonomia_automacoes.bloco`, migration `20261112092000`). O bloco não liga
   sozinho. O passo abre uma execução do bloco no mesmo alvo e espera ela acabar;
   o bloco age como quem ligou a automação de cima. Laço (A usa B, que usa A) e
   bloco dentro de bloco além de 3 níveis são recusados ao salvar e de novo ao
   rodar. O histórico mostra "Ver o que aconteceu dentro".
+  - Mudar o bloco **pausa** as automações ligadas que chegam nele (direto ou por
+    outro bloco), menos as que a própria pessoa ligou: a mesma regra de quem
+    salva uma automação ligada por outra pessoa. Sem isso, quem tem menos
+    permissões poria passos no bloco que rodariam com as de quem ligou. A tela
+    do bloco avisa antes quais pausam. Alguém assume e religa, e o religar
+    confere o bloco com essa pessoa. **Decisão do Rodrigo pendente** (ver
+    "Desvios aguardando OK").
+  - Marcar como bloco tira quem tinha ligado (`ligada_por`): o bloco nunca age
+    por ela.
+  - Dentro do galho de um "para cada" (ou de um "em outro registro") o bloco
+    usado também não pode ter "para cada" nem "em outro registro", nem pelos
+    blocos que ele usa: o salvar recusa e a rodada confere de novo. Sem isso, um
+    "para cada" abriria outro pelo bloco e as execuções se multiplicariam.
 - **Buscar em outro sistema** (`consultar`): só "Outro endereço", só https, só
   com `integration_manage`. Endereço interno é recusado depois de resolver o nome
   (o IP resolvido é o que se usa: sem DNS rebinding). Prazo curto, sem seguir
@@ -60,6 +78,22 @@ três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
 - **Integrações prontas** (Loja virtual, CEP, Boletos) do protótipo não existem
   como fonte na plataforma: ficaram de fora até a primeira existir. O salvar
   recusa `integracao` com a frase.
+
+### Desvios aguardando OK do Rodrigo (revisão independente, 12/11)
+
+O OK de 12/11 foi para o protótipo. A implementação foge dele nestes pontos, e
+cada um precisa de um OK explícito antes do PR (ou de virar Issue):
+
+1. **Onde buscar** perdeu Loja virtual, Busca de CEP e Boletos: só "Outro
+   endereço" (as integrações não existem como fonte).
+2. **Histórico da busca** mostra os nomes dos dados guardados, sem o valor (o
+   valor pode ser dado de cliente, e o histórico fica guardado).
+3. **Ensaio do bloco** mostra os passos reais do bloco, não um exemplo.
+4. **"Entrariam hoje"** lista os nomes só de quem cabe no teto.
+5. **Mudar um bloco pausa as automações de outras pessoas que o usam** (acima).
+   Alternativas: (a) fixar a versão do bloco quando a automação de cima liga e
+   pedir religar para pegar a nova; (c) só deixar mudar o bloco em uso quem
+   passaria na conferência de todos que ligaram.
 
 ## O que é de verdade e o que é falso (os três ainda no protótipo)
 

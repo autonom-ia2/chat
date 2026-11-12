@@ -2,6 +2,8 @@ require 'rails_helper'
 
 # #2932–#2934: o que a tela dos passos novos pergunta ao servidor (contar a lista, testar a busca) e a marca de bloco.
 RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesPassosNovos', :automacao_motor, type: :request do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:base) { "/api/v1/accounts/#{account.id}/autonomia/automacoes" }
@@ -110,6 +112,76 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesPassosNovos', :automacao
       marcar(bloco, true)
 
       expect(bloco.reload.bloco).to be(false)
+    end
+
+    it 'marcar tira quem tinha ligado: o bloco nunca age por essa pessoa' do
+      bloco.update!(ativa: true, ligada_por: admin)
+      marcar(bloco, true)
+
+      expect(bloco.reload.ligada_por).to be_nil
+    end
+
+    it 'o show do bloco diz quais automações ligadas por outra pessoa pausam quando quem pede salvar', :aggregate_failures do
+      bloco.marcar_bloco!(true)
+      usa = automacao_ligada(account, admin, [{ 'id' => 'usar', 'tipo' => 'usar_bloco', 'bloco_id' => bloco.id }])
+
+      get "#{base}/#{bloco.id}", headers: com_funcao('automation_manage').create_new_auth_token, as: :json
+      expect(response.parsed_body['bloco_pausaria']).to eq([usa.nome])
+
+      get "#{base}/#{bloco.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['bloco_pausaria']).to eq([])
+    end
+  end
+
+  describe 'GET historico com dentro=' do
+    let(:inbox) { create_crm_whatsapp_api_inbox(account: account, members: [admin]) }
+    let(:conversa) { create_crm_conversation(account: account, inbox: inbox, contact: account.contacts.create!(name: 'Ana')) }
+    let(:bloco) do
+      create(:autonomia_automacao, account: account, bloco: true).tap do |definicao|
+        definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [{ 'id' => 'b1', 'tipo' => 'parar' }] },
+                                 autor: admin)
+      end
+    end
+    let(:usa) { automacao_ligada(account, admin, [{ 'id' => 'usar', 'tipo' => 'usar_bloco', 'bloco_id' => bloco.id }]) }
+
+    def dentro(automacao, filha_id) = get("#{base}/#{automacao.id}/historico", params: { dentro: filha_id }, headers: admin.create_new_auth_token)
+
+    it 'abre a execução do bloco só para a automação que o usou, e só na conta', :aggregate_failures do
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(usa, conversa) }
+      filha = Autonomia::Automacao::Execucao.find_by!(automacao: bloco)
+      outra_conta = create(:autonomia_automacao_execucao, evento: "bloco:#{filha.id}:1:usar")
+
+      dentro(usa, filha.id)
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['execucoes'].first['passos'].pluck('passo')).to include('b1')
+
+      dentro(automacao_ligada(account, admin, [{ 'id' => 'p', 'tipo' => 'parar' }]), filha.id)
+      expect(response).to have_http_status(:not_found)
+
+      dentro(usa, outra_conta.id)
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
+  describe 'GET show: o endereço do "buscar em outro sistema"' do
+    def consulta(id)
+      { 'id' => id, 'tipo' => 'consultar', 'fonte' => { 'de' => 'endereco', 'url' => url },
+        'guardar' => [{ 'nome' => 'Status', 'caminho' => 'status' }] }
+    end
+
+    it 'sai mascarado para quem não tem a chave de integrações, também nos galhos', :aggregate_failures do
+      account.labels.create!(title: 'vip')
+      lista = { 'id' => 'lista', 'tipo' => 'repetir_lista', 'lista' => { 'de' => 'etiqueta', 'etiqueta' => 'vip' }, 'teto' => 5,
+                'ritmo' => 'rapido', 'cada' => [consulta('na_lista')] }
+      definicao = automacao_ligada(account, admin, [consulta('fora').merge('nao_consultou' => [consulta('no_galho')]), lista])
+
+      get "#{base}/#{definicao.id}", headers: com_funcao('automation_view').create_new_auth_token, as: :json
+      receita = response.parsed_body.dig('versao', 'receita').to_json
+      expect(receita).not_to include('token=abc')
+      expect(receita.scan('https://loja.exemplo.com/•••').size).to eq(3)
+
+      get "#{base}/#{definicao.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('versao', 'receita').to_json.scan('token=abc').size).to eq(3)
     end
   end
 end

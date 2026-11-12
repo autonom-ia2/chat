@@ -8,7 +8,9 @@
 # - é `paralela`: o mesmo bloco pode rodar ao mesmo tempo no mesmo alvo para duas automações diferentes;
 # - herda a cadeia e a profundidade da mãe (D6), e roda na versão do bloco em que entrou (D10);
 # - age como quem ligou a automação de cima (a dona, Execucao#dona): a chave de automações, o alcance, o "ligada" e a
-#   pausa são dela. O bloco nunca é ligado sozinho, então quem o montou não empresta as permissões a ninguém;
+#   pausa são dela. O bloco nunca é ligado sozinho, então quem o montou não empresta as permissões a ninguém. E quem
+#   muda o bloco não ganha as de quem ligou: a versão nova pausa as automações ligadas que chegam nele, menos as que a
+#   própria pessoa ligou (Definicao#salvar_versao!), a mesma regra de quem salva uma automação ligada por outra pessoa;
 # - acorda a mãe quando termina (`acordar_mae`): a mãe confere de novo também uma vez por dia (CONFERENCIA), contra
 #   defeito.
 #
@@ -86,6 +88,21 @@ module Autonomia::Automacao::Bloco
       problema, = conferir_cadeia(bloco, automacao.account, salvando: automacao.id)
       I18n.t('autonomia.automacao.receita.bloco.laco_volta', bloco: bloco.nome) if problema == :laco
     end
+  end
+
+  # As automações ligadas da conta que chegam a `bloco` pela versão ativa: direto, ou por outro bloco que usa ele.
+  def ligadas_que_usam(bloco)
+    conta = bloco.account
+    ::Autonomia::Automacao::Definicao.where(account_id: conta.id, ativa: true).includes(:versao_ativa).select do |automacao|
+      usados = ::Autonomia::Automacao::Definicao.where(account_id: conta.id, bloco: true, id: usados(automacao.versao_ativa&.receita))
+      usados.any? { |usado| conferir_cadeia(usado, conta).last.include?(bloco) }
+    end
+  end
+
+  # As que pausam quando `pessoa` salva uma versão nova do bloco (Definicao#salvar_versao!): as ligadas que chegam nele e
+  # que outra pessoa ligou.
+  def ligadas_por_outras(bloco, pessoa)
+    ligadas_que_usam(bloco).reject { |automacao| pessoa.present? && automacao.ligada_por_id == pessoa.id }
   end
 
   # Os nomes das automações ligadas da conta que usam `bloco` na versão ativa.

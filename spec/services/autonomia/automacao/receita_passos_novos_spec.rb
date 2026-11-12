@@ -128,6 +128,21 @@ RSpec.describe Autonomia::Automacao::Receita, :automacao_motor do
         .to eq([I18n.t("#{frase}.bloco.fundo", passo: 'usar', bloco: fundo.nome, maximo: Autonomia::Automacao::Bloco::PROFUNDIDADE)])
     end
 
+    # Revisão: o "para cada" que usa um bloco com outro "para cada" (ou "em outro registro") dentro multiplicaria as
+    # execuções sem teto. A regra "dentro do galho não cabe outro" vale pelo bloco, e pelo bloco que o bloco usa.
+    it 'no galho de um "para cada", o bloco usado não pode abrir outras execuções', :aggregate_failures do
+      da_etapa = { 'de' => 'etapa', 'etapa_id' => etapa.id }
+      com_lista = bloco([para_cada(da_etapa, id: 'de_dentro')], gatilho_do_bloco: { 'tipo' => 'card.ganho' })
+      por_cima = bloco([usar(com_lista, 'usa_lista')], gatilho_do_bloco: { 'tipo' => 'card.ganho' })
+      aninhado = I18n.t("#{frase}.lista.aninhado", passo: 'de_dentro')
+      no_bloco = I18n.t("#{frase}.bloco.com_problema", passo: 'usa_lista', bloco: com_lista.nome, problema: aninhado)
+
+      expect(problemas(para_cada(da_etapa, [usar(com_lista)])))
+        .to include(I18n.t("#{frase}.bloco.com_problema", passo: 'usar', bloco: com_lista.nome, problema: aninhado))
+      expect(problemas(para_cada(da_etapa, [usar(por_cima)])))
+        .to include(I18n.t("#{frase}.bloco.com_problema", passo: 'usar', bloco: por_cima.nome, problema: no_bloco))
+    end
+
     it 'o bloco não liga sozinho' do
       definicao = bloco
 

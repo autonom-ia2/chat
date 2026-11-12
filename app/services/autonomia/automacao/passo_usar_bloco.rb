@@ -15,7 +15,9 @@ class Autonomia::Automacao::PassoUsarBloco
 
   # `conferencia`: PassosNovos::Conferencia. O laço que volta à própria automação que está sendo salva é conferido pela
   # Versao, que sabe qual é ela (Bloco.laco_ao_salvar). Cada bloco alcançado é conferido como uma receita (com quem
-  # salva): o bloco que ele usa passa por aqui de novo, e a cadeia acaba no laço ou no fundo antes de repetir.
+  # salva): o bloco que ele usa passa por aqui de novo, e a cadeia acaba no laço ou no fundo antes de repetir. O passo no
+  # galho de uma filha (`conferencia.dentro`) leva isso ao bloco: lá dentro também não cabe "para cada" nem "em outro
+  # registro", senão um "para cada" abriria outro pelo bloco e as execuções se multiplicariam sem teto.
   def self.problemas_ao_salvar(passo, conferencia)
     id = passo['id']
     bloco = ::Autonomia::Automacao::Definicao.find_by(account_id: conferencia.conta.id, id: passo['bloco_id'], bloco: true)
@@ -31,9 +33,13 @@ class Autonomia::Automacao::PassoUsarBloco
     problema, = Bloco.conferir_cadeia(bloco, conferencia.conta)
     return [texto(problema, passo: id, bloco: bloco.nome, maximo: Bloco::PROFUNDIDADE)] if problema
 
-    receita = bloco.versao_ativa.receita
-    dentro = ::Autonomia::Automacao::Receita.new(receita, conta: conferencia.conta, account_user: conferencia.account_user).problemas
-    dentro.any? ? [texto(:com_problema, passo: id, bloco: bloco.nome, problema: dentro.first)] : []
+    # No galho de uma filha, o bloco é conferido como o galho: no tipo do registro dele (`alvo:`), o que faz o "para cada"
+    # e o "em outro registro" de dentro recusarem como aninhados.
+    alvo = Bloco.alvo(bloco) if conferencia.dentro
+    problemas = ::Autonomia::Automacao::Receita.new(
+      bloco.versao_ativa.receita, conta: conferencia.conta, account_user: conferencia.account_user, alvo: alvo
+    ).problemas
+    problemas.any? ? [texto(:com_problema, passo: id, bloco: bloco.nome, problema: problemas.first)] : []
   end
 
   def self.texto(chave, **valores) = I18n.t("autonomia.automacao.receita.bloco.#{chave}", **valores)

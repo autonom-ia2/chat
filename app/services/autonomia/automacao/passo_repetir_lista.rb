@@ -4,7 +4,8 @@
 #
 # O resultado de `executar` segue o do PassoDeAcao:
 # - :ok com a lista nos dados (as filhas ficam com o job, que deixa a conta delas no histórico da mãe);
-# - :pulado `receita_com_problema` numa filha (o salvar já recusa "para cada" dentro de outro galho de filha);
+# - :pulado `receita_com_problema` numa filha, ou num bloco chamado por uma filha (o salvar já recusa "para cada" dentro
+#   de outro galho de filha, também pelo bloco; a rodada confere de novo, porque o bloco muda depois);
 # - :sem_acesso `sem_chave_de_funis` na lista de cards, quando quem ligou perdeu a chave de funis: pausa.
 class Autonomia::Automacao::PassoRepetirLista
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
@@ -60,7 +61,7 @@ class Autonomia::Automacao::PassoRepetirLista
   end
 
   def executar
-    return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::RepetirLista.filha?(@execucao)
+    return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::RepetirLista.dentro_de_filha?(@execucao)
     return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) if sem_chave?
 
     ::Autonomia::Automacao::RepetirListaJob.perform_later(@execucao.account_id, @execucao.id, @passo['id'])

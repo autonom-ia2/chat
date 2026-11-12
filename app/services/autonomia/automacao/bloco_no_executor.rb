@@ -1,7 +1,8 @@
 # Os passos novos com motor (#2932–#2934) no Executor, e o "usar outra automação" (#2933), que espera o bloco.
 #
-# Sem a flag `automacao_passos_novos` (rollback), a execução que chega num deles para ali, com o motivo: nada dos passos
-# novos roda pela metade. O "para cada" e o "buscar em outro sistema" seguem pela porta da ação (PassoDeAcao); o "usar
+# Sem a flag `automacao_passos_novos` (rollback), a execução que chega num deles para ali, com o motivo, e a filha da
+# lista ou a execução do bloco já abertas param na reconferência (Executor#impedimento, `flag_desligada`): nada dos
+# passos novos roda pela metade. O "para cada" e o "buscar em outro sistema" seguem pela porta da ação (PassoDeAcao); o "usar
 # outra automação" fica aqui, porque espera.
 #
 # O "usar outra automação" (ver Bloco):
@@ -15,6 +16,25 @@ module Autonomia::Automacao::BlocoNoExecutor
              'parada' => %w[parada bloco_parou pulado] }.freeze
 
   private
+
+  # A flag que é o rollback do que esta execução faz, desligada: o motivo, ou nil.
+  # - #2499: a dos gatilhos de card é o rollback da F6; a execução aberta de gatilho de card fecha.
+  # - #2932–#2934: a dos passos novos; a filha da lista e a execução do bloco já abertas também param: os passos delas
+  #   são comuns, e só o passo novo em si pararia.
+  def flag_desligada
+    return 'gatilho_desligado' unless ::Autonomia::Automacao::Gatilhos.disponivel?(@execucao.chave_gatilho, @account)
+
+    'passos_novos_desligados' if de_passo_novo_sem_flag?
+  end
+
+  # Ela, ou uma execução acima dela, nasceu de um passo novo ("para cada" ou bloco), e a flag está desligada.
+  def de_passo_novo_sem_flag?
+    return false if ::Autonomia::Automacao::PassosNovos.ligados?(@account)
+
+    [@execucao, *::Autonomia::Automacao::Bloco.acima(@execucao)].any? do |uma|
+      ::Autonomia::Automacao::RepetirLista.da(uma) || ::Autonomia::Automacao::Bloco.da(uma)
+    end
+  end
 
   def passo_novo(passo)
     return encerrar(passo['id'], 'parada', 'passos_novos_desligados') unless ::Autonomia::Automacao::PassosNovos.ligados?(@account)

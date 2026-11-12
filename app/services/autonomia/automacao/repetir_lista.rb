@@ -31,4 +31,8 @@ module Autonomia::Automacao::RepetirLista
 
   # A execução roda no galho de um passo da mãe ("em outro registro" ou "para cada")? Ela nunca abre netas.
   def filha?(execucao) = (::Autonomia::Automacao::EmOutroRegistro.da(execucao) || da(execucao)).present?
+
+  # Ela ou uma execução acima dela (a do bloco que uma filha chamou, #2933) é filha? Então não abre netas: o bloco não
+  # fura a regra. O bloco pode mudar depois de a mãe salvar, e o salvar não alcança essa mudança.
+  def dentro_de_filha?(execucao) = filha?(execucao) || ::Autonomia::Automacao::Bloco.acima(execucao).any? { |uma| filha?(uma) }
 end

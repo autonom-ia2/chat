@@ -314,6 +314,7 @@
       "NAO_SALVA": "Complete o passo que falta para poder salvar.",
       "LIGADA_AVISO": "Esta automação está ligada. Suas mudanças só valem quando você tocar em Salvar tudo.",
       "LIGADA_POR_OUTRA": "Esta automação foi ligada por outra pessoa. Quando você tocar em Salvar tudo, ela pausa até ser ligada de novo.",
+      "BLOCO_PAUSA_OUTRAS": "Este bloco é usado por automações que outras pessoas ligaram: {nomes}. Quando você tocar em Salvar tudo, elas pausam até serem ligadas de novo.",
       "SAIR": {
         "TITULO": "Sair sem salvar?",
         "TEXTO": "Suas mudanças ainda não foram salvas. Se sair agora, elas somem.",

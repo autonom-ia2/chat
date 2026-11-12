@@ -310,6 +310,39 @@ describe('LivreRepetir', () => {
     expect(contagem.findAll('li')).toHaveLength(3);
   });
 
+  // O servidor pergunta o alcance item a item: digitar o teto conta uma vez
+  // só, quando a pessoa para.
+  it('quem digita o teto conta uma vez só, depois de parar', async () => {
+    vi.useFakeTimers();
+    try {
+      const modelValue = {
+        ...novo('repetir_lista'),
+        lista: { de: 'etapa', etapa_id: 12 },
+      };
+      const tela = montar(LivreRepetir, {
+        modelValue,
+        opcoes: OPCOES,
+        etapas: ETAPAS,
+      });
+      await flushPromises();
+      servidor.contarLista.mockClear();
+
+      await tela.setProps({ modelValue: { ...modelValue, teto: 1 } });
+      await tela.setProps({ modelValue: { ...modelValue, teto: 12 } });
+      await tela.setProps({ modelValue: { ...modelValue, teto: 120 } });
+      expect(servidor.contarLista).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(400);
+      expect(servidor.contarLista).toHaveBeenCalledTimes(1);
+      expect(servidor.contarLista).toHaveBeenCalledWith(
+        { de: 'etapa', etapa_id: 12 },
+        120
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('teto fora de 1 a 200 avisa', () => {
     const tela = montar(LivreRepetir, {
       modelValue: {

@@ -314,6 +314,7 @@
       "NAO_SALVA": "Complete the missing step to be able to save.",
       "LIGADA_AVISO": "This automation is on. Your changes only take effect when you tap Save all.",
       "LIGADA_POR_OUTRA": "Someone else turned this automation on. When you tap Save all, it pauses until it is turned on again.",
+      "BLOCO_PAUSA_OUTRAS": "This block is used by automations other people turned on: {nomes}. When you tap Save all, they pause until they are turned on again.",
       "SAIR": {
         "TITULO": "Leave without saving?",
         "TEXTO": "Your changes are not saved yet. If you leave now, they go away.",

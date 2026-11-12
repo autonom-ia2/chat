@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -64,7 +65,9 @@ const mudarTeto = texto => {
 };
 
 // A contagem de verdade, de novo a cada troca da lista ou do teto. A resposta
-// que chega fora de ordem (a pessoa trocou no meio) não vale.
+// que chega fora de ordem (a pessoa trocou no meio) não vale. O servidor
+// pergunta o alcance item a item: quem digita o teto conta uma vez só, quando
+// para de digitar.
 const contagem = ref({ total: 0, primeiros: [] });
 const erroDaContagem = ref('');
 let pedido = 0;
@@ -86,9 +89,11 @@ const contar = async () => {
     erroDaContagem.value = erro?.response?.data?.error || '';
   }
 };
+const ESPERA_DA_DIGITACAO = 400;
+const contarDepois = useDebounceFn(contar, ESPERA_DA_DIGITACAO);
 watch(
   () => [props.modelValue.lista, props.modelValue.teto],
-  () => contar(),
+  () => contarDepois(),
   { deep: true }
 );
 

@@ -300,6 +300,7 @@ fora:
       - autonomia/automacoes
       - autonomia/automacoes_ia
       - autonomia/automacoes_webhook
+      - autonomia/automacoes_passos_novos
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias

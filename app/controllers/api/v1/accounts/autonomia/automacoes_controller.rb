@@ -39,8 +39,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     end }
   end
 
+  # #2933: no bloco, os nomes das automações ligadas por outra pessoa que pausam quando quem pede salvar
+  # (Definicao#salvar_versao!), para a tela avisar antes. Só no show: na lista, seria uma conta por bloco.
   def show
-    render json: para_tela(@automacao, receita: true, pausa: pausa_de(@automacao))
+    pausaria = ::Autonomia::Automacao::Bloco.ligadas_por_outras(@automacao, Current.user).map(&:nome) if @automacao.bloco
+    render json: para_tela(@automacao, receita: true, pausa: pausa_de(@automacao)).merge({ bloco_pausaria: pausaria }.compact)
   end
 
   def create
