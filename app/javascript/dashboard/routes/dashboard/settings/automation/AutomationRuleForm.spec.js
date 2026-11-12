@@ -5,6 +5,7 @@ import AutomationRuleForm from './AutomationRuleForm.vue';
 import AutomationRunTypeSelector from './components/AutomationRunTypeSelector.vue';
 import AutomationWaitCondition from './components/AutomationWaitCondition.vue';
 import AutomationActions from './components/AutomationActions.vue';
+import AutomationInstantTrigger from './components/AutomationInstantTrigger.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 vi.mock('vue-i18n', () => ({
@@ -15,11 +16,20 @@ vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ isCloudFeatureEnabled: () => true }),
 }));
 
-// #2414: webhook e transcrição por e-mail só para quem tem integration_manage.
+// #2414: webhook e transcrição por e-mail só para quem tem integration_manage. #2473: ação e condição de funil só
+// para quem tem a chave de funis (crm_manage_pipelines ou crm_admin).
 let podeIntegrar = true;
+let chavesDeFunil = ['crm_manage_pipelines'];
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { usePermissionGranted: () => computed(() => podeIntegrar) };
+  return {
+    usePermissionGranted: key =>
+      computed(() =>
+        key === 'integration_manage'
+          ? podeIntegrar
+          : chavesDeFunil.includes(key)
+      ),
+  };
 });
 
 vi.mock('dashboard/components-next/filter/operators', () => ({
@@ -27,14 +37,17 @@ vi.mock('dashboard/components-next/filter/operators', () => ({
 }));
 
 // The fork gates CRM automation keys on globalConfig (466a1da717). This spec mounts
-// the form without a Vuex store, so only that getter is stubbed (CRM off).
+// the form without a Vuex store, so only that getter is stubbed (CRM off unless a test turns it on).
+let crmLigado = false;
 vi.mock('dashboard/composables/store', async importOriginal => {
   const { ref } = await import('vue');
   const original = await importOriginal();
   return {
     ...original,
     useMapGetter: key =>
-      key === 'globalConfig/get' ? ref({}) : original.useMapGetter(key),
+      key === 'globalConfig/get'
+        ? ref({ crmKanbanEnabled: crmLigado })
+        : original.useMapGetter(key),
   };
 });
 
@@ -49,6 +62,7 @@ const automationTypes = Object.fromEntries(
 );
 
 const triggerStub = {
+  props: ['filterTypes'],
   template: '<div />',
   methods: {
     resetValidation: vi.fn(),
@@ -111,12 +125,12 @@ const buildAutomation = ({ delayed = false } = {}) => ({
 
 const panelOpen = vi.fn();
 
-const mountComponent = ({ mode, automation }) =>
+const mountComponent = ({ mode, automation, types = automationTypes }) =>
   shallowMount(AutomationRuleForm, {
     props: {
       mode,
       automation,
-      automationTypes,
+      automationTypes: types,
       getConditionDropdownValues: vi.fn(() => []),
       getActionDropdownValues: vi.fn(() => []),
       appendNewCondition: vi.fn(),
@@ -153,6 +167,8 @@ describe('AutomationRuleForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     podeIntegrar = true;
+    chavesDeFunil = ['crm_manage_pipelines'];
+    crmLigado = false;
   });
 
   const actionKeys = wrapper =>
@@ -244,6 +260,119 @@ describe('AutomationRuleForm', () => {
 
     expect(actionKeys(wrapper)).toContain('send_webhook_event');
     expect(actionKeys(wrapper)).not.toContain('send_email_transcript');
+  });
+
+  describe('regra que mexe no funil (#2473)', () => {
+    const comCondicoesDeCrm = Object.fromEntries(
+      Object.keys(automationTypes).map(event => [
+        event,
+        {
+          conditions: [
+            { key: 'status', name: 'STATUS', inputType: 'multi_select' },
+            {
+              key: 'crm_stage_id',
+              name: 'CRM_STAGE',
+              inputType: 'multi_select',
+            },
+          ],
+        },
+      ])
+    );
+    const conditionKeys = wrapper =>
+      wrapper
+        .findComponent(AutomationInstantTrigger)
+        .props('filterTypes')
+        .map(({ value }) => value);
+    const comCrm = () =>
+      mountComponent({
+        mode: 'create',
+        automation: buildAutomation(),
+        types: comCondicoesDeCrm,
+      });
+
+    beforeEach(() => {
+      crmLigado = true;
+    });
+
+    it('com a chave de funis, oferece a ação e a condição de funil', () => {
+      const wrapper = comCrm();
+
+      expect(actionKeys(wrapper)).toContain('crm_move_card_stage');
+      expect(conditionKeys(wrapper)).toContain('crm_stage_id');
+    });
+
+    it('com crm_admin no lugar de crm_manage_pipelines, também oferece', () => {
+      chavesDeFunil = ['crm_admin'];
+      const wrapper = comCrm();
+
+      expect(actionKeys(wrapper)).toContain('crm_create_card');
+      expect(conditionKeys(wrapper)).toContain('crm_stage_id');
+    });
+
+    it('sem a chave de funis, esconde a ação e a condição de funil, e o resto do CRM continua', () => {
+      chavesDeFunil = [];
+      const wrapper = comCrm();
+
+      expect(actionKeys(wrapper)).not.toContain('crm_move_card_stage');
+      expect(actionKeys(wrapper)).not.toContain('crm_create_card');
+      expect(actionKeys(wrapper)).toContain('disable_crm_ai_followup');
+      expect(conditionKeys(wrapper)).not.toContain('crm_stage_id');
+      expect(conditionKeys(wrapper)).toContain('status');
+      expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(false);
+      expect(avisoTravada(wrapper).exists()).toBe(false);
+    });
+
+    it('sem a chave de funis, a regra que já move card mostra a ação, não salva e diz por quê', () => {
+      chavesDeFunil = [];
+      const automation = buildAutomation();
+      automation.actions = [
+        { action_name: 'crm_move_card_stage', action_params: [7] },
+      ];
+      const wrapper = mountComponent({ mode: 'edit', automation });
+
+      expect(actionKeys(wrapper)).toContain('crm_move_card_stage');
+      expect(actionKeys(wrapper)).not.toContain('crm_create_card');
+      expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(true);
+      expect(avisoTravada(wrapper).text()).toBe(
+        'AUTOMATION.RULE_FUNNEL_MANAGE_ONLY'
+      );
+    });
+
+    it('sem a chave de funis, tirar a condição de funil da regra também não salva', async () => {
+      chavesDeFunil = [];
+      const automation = buildAutomation();
+      automation.conditions = [
+        {
+          attribute_key: 'crm_stage_id',
+          filter_operator: 'equal_to',
+          values: [3],
+          query_operator: null,
+          custom_attribute_type: '',
+        },
+      ];
+      const wrapper = mountComponent({
+        mode: 'edit',
+        automation,
+        types: comCondicoesDeCrm,
+      });
+
+      expect(conditionKeys(wrapper)).toContain('crm_stage_id');
+      automation.conditions = structuredClone(instantConditions);
+      await nextTick();
+
+      expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(true);
+    });
+
+    it('com a chave de funis, a regra que move card salva', () => {
+      const automation = buildAutomation();
+      automation.actions = [
+        { action_name: 'crm_move_card_stage', action_params: [7] },
+      ];
+      const wrapper = mountComponent({ mode: 'edit', automation });
+
+      expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(false);
+      expect(avisoTravada(wrapper).exists()).toBe(false);
+    });
   });
 
   it('opens a rule whose conditions hold reactive dropdown options', async () => {

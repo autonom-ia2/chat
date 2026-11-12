@@ -347,6 +347,23 @@ describe('ChoiceSelect', () => {
     expect(trigger.classes()).not.toContain('h-10');
   });
 
+  // #2754: a escolha longa quebra linha no botão fechado em vez de virar "…".
+  it('wrapSelected deixa o texto escolhido quebrar linha e a altura crescer', () => {
+    wrapper = mountSelect('pt_BR', { wrapSelected: true });
+    const trigger = wrapper.get('[role="combobox"]');
+    expect(trigger.classes()).toContain('min-h-10');
+    expect(trigger.classes()).not.toContain('h-10');
+    expect(trigger.find('.break-words').exists()).toBe(true);
+    expect(trigger.find('.truncate').exists()).toBe(false);
+  });
+
+  it('sem wrapSelected, o texto escolhido continua cortado numa linha', () => {
+    wrapper = mountSelect();
+    expect(wrapper.get('[role="combobox"]').find('.truncate').exists()).toBe(
+      true
+    );
+  });
+
   it('expõe o valor de cada opção em data-value (motor de vídeo da Central)', async () => {
     wrapper = mountSelect('pt_BR', {
       options: [

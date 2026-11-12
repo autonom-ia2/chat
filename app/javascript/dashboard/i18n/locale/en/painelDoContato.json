@@ -119,6 +119,12 @@
       "ERRO": "Could not save it now. Try again.",
       "COPIADO": "Copied."
     },
+    "CAMPOS_DA_CONVERSA": {
+      "TITULO": "Conversation fields",
+      "SALVO": "Done.",
+      "ERRO": "Could not save it now. Try again.",
+      "COPIADO": "Copied."
+    },
     "TIME_E_PRIORIDADE": {
       "TITULO": "Team and priority",
       "TITULO_SO_PRIORIDADE": "Priority",

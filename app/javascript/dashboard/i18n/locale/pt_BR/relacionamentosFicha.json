@@ -1,0 +1,217 @@
+{
+  "RELACIONAMENTOS_FICHA": {
+    "PESSOA": {
+      "TITULO": "Ficha da pessoa"
+    },
+    "EMPRESA": {
+      "TITULO": "Ficha da empresa",
+      "PESSOAS": "Pessoas",
+      "PESSOAS_VAZIO": "Ninguém nesta empresa ainda.",
+      "MOSTRANDO_PARTE": "Mostrando {mostradas} de {total} pessoas.",
+      "INFORMACOES": {
+        "PESSOAS": "Pessoas",
+        "CLIENTES": "Clientes"
+      },
+      "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
+      "NOVO_CARD": "Aqui abre um card novo para {nome}.",
+      "VER_TODAS": "Aqui abrem todas as conversas de {nome}.",
+      "MANDAR": "Mandar mensagem",
+      "ALTERAR": "Alterar",
+      "ACOES": "Ações de {nome}",
+      "GAVETA_TITULO": "Alterar informações da empresa",
+      "CONVERSAR_COM": "Conversar com {nome}",
+      "MENSAGEM": {
+        "AVISO": "Vou abrir a mensagem para essas pessoas.",
+        "SEM_PESSOAS": "Esta empresa ainda não tem pessoas.",
+        "ENTENDI": "Entendi"
+      }
+    },
+    "VOLTAR": {
+      "PESSOAS": "Pessoas",
+      "EMPRESAS": "Empresas",
+      "ROTULO_PESSOAS": "Voltar para Pessoas",
+      "ROTULO_EMPRESAS": "Voltar para Empresas"
+    },
+    "ESTADOS": {
+      "NAO_ACHEI_PESSOA": "Não achei esta pessoa.",
+      "NAO_ACHEI_EMPRESA": "Não achei esta empresa.",
+      "VOLTAR_PARA_LISTA": "Voltar para a lista",
+      "ERRO": "Não consegui abrir esta ficha.",
+      "SEM_ACESSO": "Você não tem acesso a esta ficha.",
+      "ERRO_DA_PARTE": "Não consegui mostrar esta parte."
+    },
+    "CABECALHO": {
+      "CLIENTE_DESDE": "Cliente desde {data}",
+      "MARCAR_CLIENTE": "Marcar como cliente",
+      "CLIENTE_MARCADO": "Pronto. {nome} agora é cliente.",
+      "ERRO_MARCAR": "Não consegui marcar como cliente. Tente de novo.",
+      "CLIENTE_DESMARCADO": "{nome} não é mais cliente.",
+      "ERRO_DESMARCAR": "Não consegui mudar. Tente de novo.",
+      "COPIAR": "Copiar {item}",
+      "COPIADO": "Copiado.",
+      "NAO_COPIOU": "Não consegui copiar. Tente de novo.",
+      "ITEM_TELEFONE": "telefone",
+      "ITEM_CNPJ": "CNPJ",
+      "ETIQUETAS": "Etiquetas",
+      "ACOES": "O que fazer com {nome}"
+    },
+    "ACOES": {
+      "NOVO_CARD": "Novo card",
+      "LEMBRETE": "Lembrete",
+      "MAIS": "Mais ações",
+      "ALTERAR_INFORMACOES": "Alterar informações",
+      "DESMARCAR_CLIENTE": "Não é mais cliente",
+      "JUNTAR": "Juntar com outra pessoa",
+      "BLOQUEAR": "Bloquear",
+      "APAGAR": "Apagar"
+    },
+    "AVISOS": {
+      "CONVERSAR": "Aqui abre a conversa com {nome}.",
+      "NOVO_CARD": "Aqui abre um card novo para {nome}.",
+      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}.",
+      "VER_TODAS": "Aqui abrem todas as conversas com {nome}.",
+      "JUNTAR": "Aqui você escolhe com quem juntar {nome}.",
+      "BLOQUEAR": "Aqui você confirma que quer bloquear {nome}.",
+      "APAGAR": "Aqui você confirma que quer apagar {nome}."
+    },
+    "FAIXA": {
+      "TEXTO": "Não quer receber mensagens desde {data}. {origem}",
+      "TEXTO_SIMPLES": "Não quer receber mensagens desde {data}.",
+      "LIBERAR": "Liberar",
+      "CONFIRMA_TITULO": "{nome} pediu para voltar a receber?",
+      "CONFIRMA_TEXTO": "Só libere se a própria pessoa pediu. {nome} volta a entrar em campanhas e mensagens automáticas.",
+      "CONFIRMA_BOTAO": "Sim, liberar",
+      "APOIO": "Não entra em campanha nem recebe mensagem automática. Você ainda pode conversar com {nome}.",
+      "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
+      "ERRO": "Não consegui liberar. Tente de novo.",
+      "ORIGEM": {
+        "manual": "Alguém da equipe marcou aqui.",
+        "campaign_reply": "Pediu ao responder uma campanha.",
+        "follow_up_reply": "Pediu ao responder uma mensagem automática.",
+        "email_unsubscribe": "Pediu por e-mail.",
+        "prospecting": "Pediu durante a busca de clientes."
+      }
+    },
+    "CONVERSAS": {
+      "TITULO": "Conversas",
+      "VER_TODAS": "Ver todas",
+      "VAZIO": "Ainda não conversaram.",
+      "DE": "{pessoa}: {trecho}",
+      "SEM_TRECHO": "Conversa sem texto",
+      "CANAL": {
+        "whatsapp": "WhatsApp",
+        "email": "E-mail",
+        "instagram": "Instagram",
+        "site": "Site",
+        "outro": "Outro canal"
+      },
+      "SITUACAO": {
+        "aberta": "Em andamento",
+        "pendente": "Esperando resposta",
+        "resolvida": "Resolvida",
+        "adiada": "Adiada",
+        "outra": "Outra situação"
+      }
+    },
+    "CARDS": {
+      "TITULO": "Cards",
+      "VAZIO": "Nenhum card ainda.",
+      "ABRIR": "Abrir o card {titulo}",
+      "FUNIL_ETAPA": "{funil} · {etapa}",
+      "DE": "de {pessoa}",
+      "SITUACAO": {
+        "aberto": "Em aberto",
+        "ganho": "Fechou",
+        "perdido": "Não fechou",
+        "resolvido": "Resolvido",
+        "cancelado": "Cancelado",
+        "outra": "Outra situação"
+      },
+      "GAVETA": {
+        "FUNIL": "Funil",
+        "ETAPA": "Etapa",
+        "VALOR": "Valor",
+        "SITUACAO": "Situação",
+        "ABRIR_NO_CRM": "Abrir no CRM"
+      }
+    },
+    "NOTAS": {
+      "TITULO": "Notas",
+      "CAMPO": "Escreva uma nota",
+      "GUARDAR": "Salvar",
+      "GUARDADA": "Nota salva.",
+      "ERRO": "Não consegui salvar a nota. Tente de novo.",
+      "VAZIO": "Nenhuma nota ainda.",
+      "POR": "{autor} · {quando}",
+      "ESCREVA_ANTES": "Escreva a nota antes de salvar."
+    },
+    "ARQUIVOS": {
+      "TITULO": "Arquivos",
+      "VAZIO": "Nada foi trocado nas conversas ainda.",
+      "TIPO": {
+        "imagem": "Imagem",
+        "documento": "Documento",
+        "audio": "Áudio",
+        "video": "Vídeo"
+      }
+    },
+    "INFORMACOES": {
+      "TITULO": "Informações",
+      "ALTERAR": "Alterar",
+      "VAZIO": "Ainda não há mais informações.",
+      "CPF": "CPF",
+      "CIDADE": "Cidade",
+      "REDES": "Redes sociais",
+      "CNPJ": "CNPJ",
+      "SITE": "Site",
+      "PESSOAS": "Pessoas",
+      "CLIENTES": "Clientes"
+    },
+    "ORIGEM": {
+      "TITULO": "De onde veio",
+      "LISTA": "Veio da lista “{nome}”, em {data}",
+      "CANAL": "Chegou pelo {canal} em {data}",
+      "CANAL_DESCONHECIDO": "Chegou em {data}",
+      "CANAL_NOME": {
+        "whatsapp": "WhatsApp",
+        "email": "e-mail",
+        "instagram": "Instagram",
+        "site": "site"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Alterar informações",
+      "FECHAR": "Fechar",
+      "NOME": "Nome",
+      "TELEFONE": "Telefone",
+      "PAIS": "País do telefone",
+      "EMAIL": "E-mail",
+      "CPF": "CPF",
+      "CIDADE": "Cidade",
+      "EMPRESA": "Empresa",
+      "REDES": "Redes sociais",
+      "OUTRAS": "Outras informações",
+      "SALVAR": "Salvar",
+      "SALVO": "Informações salvas.",
+      "ERRO_AO_SALVAR": "Não consegui salvar. Tente de novo.",
+      "ERRO": {
+        "NOME": "Escreva o nome.",
+        "EMAIL": "Confira o e-mail. Parece que falta algo.",
+        "CPF": "Confira o CPF. São 11 números.",
+        "CNPJ": "Confira o CNPJ. São 14 números."
+      },
+      "REDE": {
+        "linkedin": "LinkedIn",
+        "facebook": "Facebook",
+        "instagram": "Instagram",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "tiktok": "TikTok",
+        "twitter": "X (Twitter)",
+        "github": "GitHub"
+      },
+      "CNPJ": "CNPJ",
+      "SITE": "Site"
+    }
+  }
+}

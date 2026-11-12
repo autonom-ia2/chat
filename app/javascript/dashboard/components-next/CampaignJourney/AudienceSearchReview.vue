@@ -177,10 +177,9 @@ const nobodyText = computed(() =>
     </section>
 
     <!-- Barra de salvar: sempre à vista, diz o que vai na lista -->
-    <!-- ms-[4.5rem]: no celular, o botão do menu fica no canto de baixo; a barra começa depois dele -->
     <footer
       v-if="canDecide"
-      class="sticky bottom-3 z-10 ms-[4.5rem] flex flex-col gap-1 rounded-2xl border border-n-weak bg-n-solid-1 p-2 shadow-lg md:ms-0 md:flex-row md:items-center md:justify-between md:gap-3 md:py-3 md:pe-3 md:ps-5"
+      class="sticky bottom-3 z-10 flex flex-col gap-1 rounded-2xl border border-n-weak bg-n-solid-1 p-2 shadow-lg md:flex-row md:items-center md:justify-between md:gap-3 md:py-3 md:pe-3 md:ps-5"
       data-test="save-bar"
     >
       <p

@@ -1,8 +1,13 @@
 class Api::V1::Accounts::MacrosController < Api::V1::Accounts::BaseController
   include AttachmentConcern
+  include Api::V1::Accounts::Concerns::AutomationExternalActionGuard
+
+  # #2451: a macro com webhook manda a conversa para fora, como a regra automática (#2448).
+  WEBHOOK_ACTIONS = %w[send_webhook_event].freeze
 
   before_action :fetch_macro, only: [:show, :update, :destroy, :execute]
   before_action :check_authorization, only: [:show, :update, :destroy, :execute]
+  before_action :check_webhook_action, only: [:create, :update]
 
   def index
     @macros = Macro.with_visibility(current_user, params)
@@ -72,5 +77,12 @@ class Api::V1::Accounts::MacrosController < Api::V1::Accounts::BaseController
 
   def check_authorization
     authorize(@macro) if @macro.present?
+  end
+
+  # Criar ou mudar uma macro que tem ou vai ter webhook pede integration_manage, no critério das regras: as ações de
+  # hoje e as do pedido (tirar o webhook também é mexer). Sem ações no pedido, o update mantém as de hoje. O
+  # administrador sempre pode; apagar e executar seguem como estão.
+  def check_webhook_action
+    check_integration_for(Array(@macro&.actions) + action_list(params[:actions]), WEBHOOK_ACTIONS)
   end
 end

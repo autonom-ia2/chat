@@ -153,6 +153,18 @@ RSpec.describe Imap::ImapMailbox do
       end
     end
 
+    # #2600: o DSN que chega sem Auto-Submitted também fica marcado como resposta automática.
+    context 'when the email is a bounce without Auto-Submitted' do
+      %w[dsn_relatorio_sem_auto_submitted.eml dsn_x_failed_recipients_sem_auto_submitted.eml].each do |fixture|
+        it "marks the message and the conversation as auto reply (#{fixture})", :aggregate_failures do
+          class_instance.process(create_inbound_email_from_fixture(fixture).mail, channel)
+
+          expect(Message.last.auto_reply_email?).to be true
+          expect(Conversation.last.additional_attributes['auto_reply']).to be true
+        end
+      end
+    end
+
     context 'when a reply for existing email conversation' do
       let(:prev_conversation) { create(:conversation, account: account, inbox: channel.inbox, assignee: agent) }
       let(:reply_mail) do

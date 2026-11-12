@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="w-full h-full overflow-y-auto bg-n-background">
     <div
-      class="relative flex flex-col w-full gap-6 px-4 py-6 pb-28 mx-auto md:px-6 md:pb-6"
+      class="relative flex flex-col w-full gap-6 px-4 py-6 pb-8 mx-auto md:px-6 md:pb-6"
       :class="vazia ? 'max-w-5xl' : 'max-w-6xl'"
     >
       <!-- T01 · nenhum agente ainda -->
@@ -634,7 +634,7 @@ onBeforeUnmount(() => {
 
         <div
           v-if="podeGerenciar && !carregando"
-          class="fixed inset-x-0 bottom-0 z-20 p-4 border-t md:hidden bg-n-solid-1 border-n-weak"
+          class="fixed inset-x-0 bottom-0 z-20 py-4 pe-4 ps-20 border-t md:hidden bg-n-solid-1 border-n-weak"
         >
           <AgenteBotao
             data-criar-celular

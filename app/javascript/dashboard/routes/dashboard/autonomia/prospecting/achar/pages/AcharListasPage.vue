@@ -7,7 +7,6 @@ import AcharAbasDasBuscas from '../components/AcharAbasDasBuscas.vue';
 import AcharListaCartao from '../components/AcharListaCartao.vue';
 import AcharEstado from '../components/AcharEstado.vue';
 import AcharRodape from '../components/AcharRodape.vue';
-import AcharFaixaDoMenu from '../components/AcharFaixaDoMenu.vue';
 import { useAcharTela } from '../composables/useAcharTela';
 import { ROTAS } from '../utils/acharRotas';
 
@@ -91,7 +90,7 @@ watch(demo, carregar);
     <main class="flex-1 overflow-y-auto">
       <div
         class="flex flex-col w-full max-w-4xl gap-6 px-4 pt-6 mx-auto min-h-full md:px-8 md:pt-10"
-        :class="temRodape ? 'pb-0' : 'md:pb-10'"
+        :class="temRodape ? 'pb-0' : 'pb-6 md:pb-10'"
       >
         <h1
           class="m-0 text-2xl font-bold tracking-tight md:text-[2rem] text-n-slate-12"
@@ -156,7 +155,6 @@ watch(demo, carregar);
           icone="i-lucide-search"
           @principal="acharEmpresas"
         />
-        <AcharFaixaDoMenu v-if="!temRodape" />
       </div>
     </main>
   </section>
