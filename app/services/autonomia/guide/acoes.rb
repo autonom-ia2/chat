@@ -73,7 +73,9 @@ class Autonomia::Guide::Acoes
     # #2889 — desfazer o desligar religaria a automação sem "assumir e religar". Ligar é "assumir": ela passa a agir
     # com os direitos de quem ligou, na versão que a pessoa viu (versao_id); por isso o Guia só liga com o cartão.
     'POST autonomia/automacoes/:id/trocar_segredo_do_webhook', 'POST autonomia/automacoes/:id/desligar',
-    'POST autonomia/automacoes/:id/ligar',
+    # #2499 F6.3 — parar só neste card fecha as execuções abertas, que não reabrem: o card só volta a ter a automação
+    # quando entrar de novo na etapa.
+    'POST autonomia/automacoes/:id/ligar', 'POST crm/cards/:card_id/automacoes/:id/parar',
     'POST inboxes/:id/rotate_hmac_token',
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',

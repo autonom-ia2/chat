@@ -324,3 +324,65 @@ describe('CrmKanbanCard caixa do card (#2255)', () => {
     ).toEqual({ channel_type: 'Channel::Api', waha_provider: false });
   });
 });
+
+describe('CrmKanbanCard selo "Já é cliente" (#2710)', () => {
+  const cliente = {
+    id: 10,
+    name: 'Ana Costa',
+    contact_type: 'customer',
+    customer_since: 1762171200,
+  };
+  const daPagina = {
+    ...NO_CONVERSATION_CARD,
+    source: 'public_link',
+    contact: cliente,
+    ja_cliente: { card_id: 41, desde: 1762171200 },
+  };
+
+  it('fica no lugar do selo "Cliente" e mostra desde quando', () => {
+    const wrapper = mountCard(daPagina);
+    const selo = wrapper.find('[data-selo-ja-cliente]');
+
+    expect(selo.exists()).toBe(true);
+    expect(selo.text()).toContain('CRM_CARD.JA_CLIENTE.SELO');
+    expect(selo.text()).toContain('November 3, 2025');
+    expect(wrapper.find('[data-customer-badge]').exists()).toBe(false);
+  });
+
+  it('abre a compra sem abrir o card de baixo', async () => {
+    const wrapper = mountCard(daPagina);
+
+    await wrapper.find('[data-selo-ja-cliente]').trigger('click');
+
+    expect(wrapper.emitted('abrirJaCliente')).toEqual([
+      [{ card_id: 41, desde: 1762171200 }],
+    ]);
+    expect(wrapper.emitted('open')).toBeUndefined();
+  });
+
+  it('espera enquanto a página busca a compra', () => {
+    const wrapper = mountCard(daPagina, { abrindoJaCliente: true });
+    const selo = wrapper.find('[data-selo-ja-cliente]');
+
+    expect(selo.attributes('disabled')).toBeDefined();
+    expect(selo.attributes('aria-busy')).toBe('true');
+  });
+
+  it('sem o selo do servidor, o cliente segue com o selo "Cliente"', () => {
+    const wrapper = mountCard({ ...daPagina, ja_cliente: undefined });
+
+    expect(wrapper.find('[data-selo-ja-cliente]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-customer-badge]')).toHaveLength(1);
+  });
+
+  it('sem data, diz só que já é cliente', () => {
+    const wrapper = mountCard({
+      ...daPagina,
+      ja_cliente: { card_id: 41, desde: null },
+    });
+
+    expect(wrapper.find('[data-selo-ja-cliente]').text()).toContain(
+      'CRM_CARD.JA_CLIENTE.SELO_SEM_DATA'
+    );
+  });
+});

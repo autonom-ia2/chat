@@ -138,7 +138,7 @@ class Autonomia::Decisores::Aplicador
     dono = Contact.where(account_id: @account.id, phone_number: numero).where.not(id: contato.id).pick(:id)
     return telefone_de_outro(numero, dono) if dono
 
-    contato.update!(phone_number: numero)
+    contato.update!(phone_number: numero, custom_attributes: Waha::TelefoneNovo.custom_attributes(contato, numero))
     :gravado
   end
 

@@ -1399,6 +1399,37 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Só o painel lê esta flag. Ligada (junto com
+# automacao_editor): o "Adicionar passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação,
+# Buscar informação em outro sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Desligada: o editor fica o
+# de hoje. Sem migration. Rollback: desligar a flag. "Automações deste card" e "desta etapa" (F6.3/F6.5) NÃO leem esta
+# flag: têm a própria, automacao_no_crm (logo abaixo), junto com automacao_motor + automacao_gatilhos.
+# Posição pela ordem deste arquivo: 47 (70368744177664, 1 << 46), logo depois da agente_ferramentas_prontas_ip_proprio (46). Flag nova
+# entra sempre no fim do arquivo, nunca antes de uma existente: mudar a posição muda o bit gravado nas contas.
+# EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção, ligada só na conta de
+# demonstração e no painel local, até o motor dos passos estar completo. Ligada num cliente, ele monta passos que não
+# salvam (docs/2414-prototipos/passos-novos.md).
+- name: automacao_passos_novos
+  display_name: Automação › passos novos (desligada até o motor)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Automação no CRM (#2499 F6.3/F6.5, épico #2414): "Automações deste card" (o que roda no card, o que já fez e "Parar
+# para este card") e "Automações desta etapa" (a lista única da etapa no "Editar funil"). É o interruptor da tela e das
+# três rotas: GET crm/cards/:card_id/automacoes, POST crm/cards/:card_id/automacoes/:id/parar e
+# GET crm/stages/:stage_id/automacoes. Ligada (junto com automacao_motor e automacao_gatilhos): o card e a etapa mostram
+# as automações do motor novo. Desligada: as três rotas dão 404, as duas partes somem e a etapa volta ao cartão das
+# ações da etapa, como antes. Sem migration. Rollback: desligar a flag na conta.
+# Nasce ligada em todas as contas (regra de 07/11): `enabled: true` faz a conta nova nascer com ela (o ConfigLoader do
+# deploy acrescenta a flag nova ao ACCOUNT_LEVEL_FEATURE_DEFAULTS com este valor); as contas que já existem a
+# Orquestração liga depois do deploy, com backup, como as outras flags novas.
+# Posição pela ordem deste arquivo: 48 (140737488355328, 1 << 47), logo depois da automacao_passos_novos (47). As flags
+# que vierem depois entram abaixo desta, no fim do arquivo (spec/models/account_spec.rb confere o bit).
+- name: automacao_no_crm
+  display_name: Automação › no card e na etapa do CRM
+  enabled: true
+  column: feature_flags_ext_2
+
 # Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
 # Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
 # Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:

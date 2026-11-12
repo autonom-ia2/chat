@@ -60,11 +60,12 @@ RSpec.describe Autonomia::Automacao::Execucao do
       expect(execucao.reload.textos).to eq('p1' => 'Oi Ana')
     end
 
+    # A que andava fica só com o porquê de quem a parou (PORQUE), para a rodada registrá-lo; nada da IA.
     it 'quem fechou enquanto a IA respondia vence: o texto não volta para a execução terminada', :aggregate_failures do
       execucao.automacao.desligar!
 
       expect(execucao.guardar_texto!('p2', 'Tarde demais')).to be(false)
-      expect(execucao.reload.textos).to eq({})
+      expect(execucao.reload.textos).to eq(described_class::PORQUE => 'desligada')
     end
 
     it 'junta no banco, sem regravar o que outro passo guardou' do
@@ -74,10 +75,16 @@ RSpec.describe Autonomia::Automacao::Execucao do
       expect(execucao.reload.textos).to eq('p1' => 'Oi Ana', 'p2' => 'Resumo', 'p3' => 'Outro')
     end
 
-    it 'somem quando a automação é desligada' do
+    it 'somem quando a automação é desligada', :aggregate_failures do
       execucao.automacao.desligar!
 
-      expect(execucao.reload).to have_attributes(estado: 'parada', textos: {})
+      expect(execucao.reload).to have_attributes(estado: 'parada', textos: { described_class::PORQUE => 'desligada' })
+
+      esperando = create(:autonomia_automacao_execucao, estado: 'esperando', cursor: 'p1')
+      esperando.guardar_texto!('p1', 'Oi Ana')
+      esperando.automacao.desligar!
+
+      expect(esperando.reload).to have_attributes(estado: 'parada', textos: {})
     end
   end
 

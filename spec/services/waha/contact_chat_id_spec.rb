@@ -136,4 +136,10 @@ RSpec.describe Waha::ContactChatId do
       )
     end
   end
+
+  describe '.without' do
+    it 'drops the chat id, the jid and the lid, keeping the other attributes' do
+      expect(described_class.without(all_three.merge('origem' => 'site'))).to eq('origem' => 'site')
+    end
+  end
 end

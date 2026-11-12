@@ -112,6 +112,11 @@ export const FEATURE_FLAGS = {
   AUTOMACAO_PORTA: 'automacao_porta',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',
+  // Protótipo dos 6 passos novos da Automação livre (#2931–#2936, épico #2414).
+  // Desligada em produção até o motor existir (config/features.yml).
+  AUTOMACAO_PASSOS_NOVOS: 'automacao_passos_novos',
+  // "Automações deste card" e "desta etapa" no CRM (#2499 F6.3/F6.5): a tela e as três rotas dela.
+  AUTOMACAO_NO_CRM: 'automacao_no_crm',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

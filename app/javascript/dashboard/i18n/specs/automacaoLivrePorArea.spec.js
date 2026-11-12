@@ -76,6 +76,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreListaDeEmail.json': ['LISTA_DE_EMAIL'],
   'automacaoLivreOutroRegistro.json': ['OUTRO_REGISTRO'],
   'automacaoLivreWebhook.json': ['WEBHOOK'],
+  'automacaoLivrePassosNovos.json': ['PASSOS_NOVOS'],
 };
 
 const doIdioma = idioma =>

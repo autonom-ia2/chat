@@ -1,0 +1,253 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PASSOS_NOVOS": {
+      "MONTAR": "Set up the step",
+      "EM_TESTE": "This step is still being tested. You can set it up and run a test, but you can't save it yet.",
+      "ENSAIO_DE_EXEMPLO": "Sample test run: this automation has a step that is still being tested. The conversations below are made up and nothing was really checked.",
+      "CAMINHO_NO_ENSAIO": "{caminho}:",
+      "SEM_MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, nothing is sent and the automation stops in this conversation.",
+      "LISTA": "{inicio} and {ultimo}",
+      "QUEM": {
+        "RESPONSAVEL": "Whoever handles the card",
+        "PESSOA": "A team member",
+        "TIME": "A team",
+        "QUAL_PESSOA": "Which person",
+        "QUAL_TIME": "Which team",
+        "NINGUEM": "There is no one to choose here yet."
+      },
+      "QUEM_EM_FRASE": {
+        "A": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        },
+        "DE": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        },
+        "NOME": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        }
+      },
+      "APROVACAO": {
+        "NOME": "Ask for approval",
+        "DICA": "Stops and waits for someone to approve or refuse before going on.",
+        "PERGUNTA_PADRAO": "Can I go ahead with this request?",
+        "FRASE": "Ask {quem} for approval: {pergunta}",
+        "ENSAIO": "Would ask {quem} for approval. In a test run, no one gets the request.",
+        "HISTORICO": "{quem} approved today at 2:20 PM.",
+        "HISTORICO_MOTIVO": "Reason: long-time customer, go ahead.",
+        "QUEM": "Who approves",
+        "PERGUNTA": "What to ask",
+        "PRAZO": "Time to answer",
+        "QUEM_PODE": "Only people who can see the card get the request. If no one answers in time, the automation takes the “If no one answers in time” path.",
+        "VER_PEDIDO": "See it as the approver"
+      },
+      "PEDIDO": {
+        "TITULO": "Approval request",
+        "SUBTITULO": "This is how the request reaches the approver.",
+        "PERGUNTA_DE": "The automation asks:",
+        "SEM_PERGUNTA": "Write what to ask.",
+        "PRAZO": "Answer within {prazo}. Who gets it: {quem}.",
+        "APROVADO": "You approved. The automation went on.",
+        "RECUSADO": "You refused. The automation took the refusal path.",
+        "MOTIVO_DITO": "Reason: {motivo}",
+        "MOTIVO": "Want to say why? It's optional.",
+        "MOTIVO_EXEMPLO": "For example: the discount is above what we agreed.",
+        "CONFIRMAR_RECUSA": "Refuse",
+        "VOLTAR": "Back",
+        "APROVAR": "Approve",
+        "RECUSAR": "Refuse",
+        "CARD": "The request's card",
+        "FECHAR": "Close"
+      },
+      "REPETIR": {
+        "NOME": "Do it for each one in a list",
+        "DICA": "Repeats the steps for each card in a stage, each contact with a label or each contact in an audience.",
+        "DA_ETAPA": "each card in the {etapa} stage",
+        "DA_ETAPA_SEM_NOME": "each card in the chosen stage",
+        "DA_ETIQUETA": "each contact with the label {etiqueta}",
+        "DA_ETIQUETA_SEM_NOME": "each contact with the chosen label",
+        "DO_PUBLICO": "each contact in the {publico} audience",
+        "DO_PUBLICO_SEM_NOME": "each contact in the chosen audience",
+        "FRASE": "For {lista}, up to {teto} at a time",
+        "ENSAIO": "Today {total} would go in. The first ones: {nomes}.",
+        "ENSAIO_VAZIO": "Choose the list to see how many would go in.",
+        "HISTORICO": "Done for {feitos} of {total}. No one was left out.",
+        "HISTORICO_NOMES": "{nomes} and {mais} more.",
+        "LISTA": "Where the list comes from",
+        "DE_ETAPA": "The cards in a stage",
+        "DE_ETIQUETA": "The contacts with a label",
+        "DE_PUBLICO": "The contacts in an audience",
+        "QUAL_ETAPA": "Which stage",
+        "QUAL_ETIQUETA": "Which label",
+        "QUAL_PUBLICO": "Which audience",
+        "ENTRARIAM_HOJE": "would go in today | would go in today",
+        "PRIMEIROS": "The first ones in the list",
+        "FICAM_FORA": "Only people you can see go in. Blocked contacts and those who asked not to receive messages are left out.",
+        "TETO": "Most at a time",
+        "TETO_DICA": "From 1 to {maximo}. Anyone above that waits for the next time.",
+        "TETO_FORA": "Choose a number from 1 to {maximo}.",
+        "RITMO": "Pace",
+        "RITMO_AOS_POUCOS": "Slowly: one per minute",
+        "RITMO_RAPIDO": "Faster: one every 10 seconds",
+        "ONDE_POR_PASSOS": "After saving, put the steps for each one in the “For each one in the list” path."
+      },
+      "BLOCO": {
+        "NOME": "Use another automation",
+        "DICA": "Uses a ready block and, when it ends, goes on from here.",
+        "FRASE": "Use the block “{bloco}”",
+        "FRASE_SEM_BLOCO": "Use a block",
+        "ENSAIO": "Would go into the block and: {passos}.",
+        "HISTORICO": "Used the block “{bloco}”.",
+        "VAZIO": "You don't have any blocks yet.",
+        "VAZIO_BOTAO": "See my automations",
+        "QUAL": "Which block to use",
+        "O_QUE_FAZ": "What this block does",
+        "MUDA_EM_TODAS": "If you change the block, it changes in every automation that uses it."
+      },
+      "CONSULTAR": {
+        "NOME": "Look up information in another system",
+        "DICA": "Looks up data outside, like an order status, and uses it in the next steps.",
+        "ENDERECO_PROPRIO": "your own address",
+        "SEM_FONTE": "another system",
+        "FRASE": "Look up in {fonte}: {dados}",
+        "FRASE_SEM_DADO": "Look up in {fonte}",
+        "ENSAIO": "Would look up in {fonte}. In a test run, it only looks up if you ask.",
+        "BUSCAR_DE_VERDADE": "Really look up in this test run",
+        "CONFIRMAR_BUSCA": "It will look up in {fonte} once, now. The result only shows here: nothing is saved and no one gets anything.",
+        "BUSCAR_AGORA": "Look up now",
+        "BUSCOU_NO_ENSAIO": "Looked up in {fonte}:",
+        "DADO_E_VALOR": "{dado}: {valor}",
+        "HISTORICO": "Looked up in {fonte}: {dado} is {valor}.",
+        "HISTORICO_SEM_DADO": "Looked up in {fonte}.",
+        "OUTRO_ENDERECO": "Another address",
+        "FONTE": "Where to look",
+        "ENDERECO": "Address",
+        "ENDERECO_EXEMPLO": "https://yourstore.com/orders",
+        "ENDERECO_DICA": "Start with https://. Company internal addresses are not accepted.",
+        "ENDERECO_RUIM": "The address must start with https://.",
+        "TESTAR": "Run a test",
+        "TESTAR_DICA": "The test looks up once, only when you tap the button.",
+        "TOQUE_NO_DADO": "Tap the data you want to keep",
+        "RESPOSTA_VAZIA": "The test didn't bring any data.",
+        "GUARDADOS": "Kept data",
+        "NOME_DO_DADO": "Data name",
+        "NOME_DICA": "It shows up with this name in “Add data” in the next steps.",
+        "FALTA_DADO": "Run a test and tap at least one piece of data.",
+        "SE_FALHAR": "If the other system fails or takes too long, the automation takes the “If it can't look it up” path."
+      },
+      "REUNIAO": {
+        "NOME": "Book a meeting in the chat",
+        "DICA": "Offers 3 free times, the customer picks one and the meeting is booked.",
+        "CONVITE_PADRAO": "Hi! Can I call you at one of these times?",
+        "FRASE": "Offer 3 times in the calendar of {quem} and book the meeting",
+        "ENSAIO": "Would offer {horarios}. In a test run, nothing is sent.",
+        "HISTORICO": "The customer picked {horario}. The meeting was booked on the card.",
+        "MINUTOS": "{n} minutes",
+        "COM": "Whose calendar",
+        "DURACAO": "How long it lasts",
+        "CONVITE": "What to say before the times",
+        "COMO_O_CLIENTE_VE": "What the customer sees",
+        "SEM_BOTOES": "If the channel has no buttons, the numbers 1, 2 and 3 are sent.",
+        "ESPERA": "Wait for the answer for",
+        "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path."
+      },
+      "PESQUISA": {
+        "NOME": "Satisfaction survey",
+        "DICA": "Asks for a score from 0 to 10 and takes a path for each score.",
+        "PERGUNTA_PADRAO": "From 0 to 10, what score would you give our service?",
+        "FRASE": "Ask for the score: {pergunta}",
+        "ENSAIO": "Would ask for the score and wait for the answer for {espera}. In a test run, nothing is sent.",
+        "HISTORICO": "Score 9: “Loved it, it just took a bit long”.",
+        "HISTORICO_CAMINHO": "Took the “{caminho}” path.",
+        "DIAS": "{n} days",
+        "PERGUNTA": "Question",
+        "COMO_O_CLIENTE_VE": "What the customer sees",
+        "BOTOES": "Buttons from 0 to 10",
+        "FAIXAS": "Paths by score",
+        "BAIXA": "Low score",
+        "DE_ZERO_ATE": "from 0 to",
+        "BAIXA_ATE": "The low score goes up to",
+        "MEDIA": "Medium score",
+        "DE_ATE": "from {de} to {ate}",
+        "ALTA": "High score",
+        "DE": "from",
+        "ALTA_DESDE": "The high score starts at",
+        "ATE_DEZ": "to 10",
+        "FAIXAS_RUINS": "Leave at least one score for the medium score.",
+        "INTERVALO": "Ask the same person again only after",
+        "ESPERA": "Wait for the answer for",
+        "RESUMO_EXEMPLO": "In the list, the automation shows the average and how many people answered. Example: average 8.6 from 37 answers.",
+        "REGRAS": "Blocked contacts and those who asked not to receive messages are left out. The score is kept on the contact and on the card."
+      },
+      "PREVIA": {
+        "TITULO": "See how it looks",
+        "NO_ENSAIO": "In a test run",
+        "NO_HISTORICO": "In the history (example)",
+        "VER_DENTRO": "See what happened inside"
+      },
+      "EXEMPLO": {
+        "BLOCOS": {
+          "BOAS_VINDAS": {
+            "NOME": "Welcome new customer",
+            "FRASE": "Welcomes the customer and asks if they have any questions.",
+            "PASSO_1": "Send the welcome message",
+            "PASSO_2": "Wait 1 day",
+            "PASSO_3": "Ask if they have any questions"
+          },
+          "LEMBRAR": {
+            "NOME": "Remind the owner",
+            "FRASE": "Tells whoever handles the card and waits for them.",
+            "PASSO_1": "Tell whoever handles the card",
+            "PASSO_2": "Wait until the card changes stage"
+          },
+          "DOCUMENTO": {
+            "NOME": "Ask for a document",
+            "FRASE": "Asks the customer for a document and reminds them once.",
+            "PASSO_1": "Ask the customer for the document",
+            "PASSO_2": "Remind after 2 days, if it doesn't arrive"
+          }
+        },
+        "INTEGRACOES": {
+          "LOJA": "Online store",
+          "CEP": "Postal code lookup",
+          "BOLETOS": "Payment slips"
+        },
+        "DADOS": {
+          "NUMERO_DO_PEDIDO": "Order number",
+          "STATUS_DO_PEDIDO": "Order status",
+          "PREVISAO_DE_ENTREGA": "Expected delivery",
+          "NOME_DO_CLIENTE": "Customer name",
+          "RUA": "Street",
+          "BAIRRO": "Neighborhood",
+          "CIDADE": "City",
+          "ESTADO": "State",
+          "SITUACAO_DO_BOLETO": "Bank slip status",
+          "VENCIMENTO_DO_BOLETO": "Bank slip due date",
+          "VALOR_DO_BOLETO": "Bank slip amount"
+        },
+        "PUBLICOS": {
+          "CLIENTES_ATIVOS": "Active customers",
+          "SEM_COMPRA": "No purchase in 90 days"
+        },
+        "STATUS_ENVIADO": "Shipped",
+        "SITUACAO_PAGO": "Paid",
+        "HORARIO_1": "Thursday, 10 AM",
+        "HORARIO_2": "Thursday, 3 PM",
+        "HORARIO_3": "Friday, 9 AM",
+        "CARD_TITULO": "Order with a 12% discount",
+        "VALOR_OCULTO": "hidden value"
+      }
+    }
+  }
+}
