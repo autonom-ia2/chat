@@ -94,9 +94,13 @@ class Autonomia::Automacao::EsperaNoEnsaio
   end
 
   # O canal, como a mensagem (EnvioNoEnsaio#do_canal): quem não recebe pula e segue; a janela fechada sem modelo para.
+  # Com o modelo no lugar (MODELO), o passo pergunta assim mesmo, como o motor: o modelo sai e a pergunta de verdade vai
+  # quando o cliente responder (o `modelo` já vem em de_mensagem).
   def do_canal(passo, valores)
     faria, dados = @envio.do_canal(passo, valores)
-    seguir(passo, no(passo, faria, dados.to_h)) if faria
+    return if faria.nil? || faria == ::Autonomia::Automacao::EnvioNoEnsaio::MODELO
+
+    seguir(passo, no(passo, faria, dados.to_h))
   end
 
   # Como o motor (PassoDeReuniao, PassoDePesquisa): sem conversa, pula e segue.

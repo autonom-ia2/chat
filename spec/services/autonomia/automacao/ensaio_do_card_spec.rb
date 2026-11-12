@@ -209,7 +209,7 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
 
     # #2931/#2936 com o #2631: como o motor, a aprovação vai a quem alcança o card; a pesquisa pula sem conversa e segue.
     it 'a aprovação vai a quem alcança o card; a pesquisa pula e segue', :aggregate_failures do
-      account.enable_features!('automacao_passos_novos')
+      account.enable_features!('automacao_passos_novos', 'automacao_ia')
       aprovacao = { 'id' => 'ap', 'tipo' => 'pedir_aprovacao', 'quem' => { 'de' => 'pessoa', 'id' => admin.id }, 'pergunta' => ['Pode?'],
                     'prazo' => { 'valor' => 1, 'unidade' => 'dias' } }
       pesquisa = { 'id' => 'nota', 'tipo' => 'pesquisa_nota', 'pergunta' => 'De 0 a 10?', 'baixa_ate' => 6, 'alta_desde' => 9,

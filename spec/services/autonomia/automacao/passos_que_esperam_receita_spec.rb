@@ -175,6 +175,18 @@ RSpec.describe Autonomia::Automacao::PassosQueEsperam, :automacao_motor do
         expect(ensaio_na_fechada(receita(pesquisa)).first).to include(id: 'nota', faria: 'pararia')
       end
 
+      # Como o motor (espera_de_resposta_spec): com o modelo no lugar, o passo pergunta e espera; não segue em frente.
+      it 'com o modelo no lugar, a pesquisa pergunta e abre os caminhos, com o modelo', :aggregate_failures do
+        envio = instance_double(Autonomia::Automacao::EnvioNoEnsaio, pausaria_ao_agir: nil,
+                                                                     do_canal: [Autonomia::Automacao::EnvioNoEnsaio::MODELO])
+        allow(Autonomia::Automacao::EnvioNoEnsaio).to receive(:new).and_return(envio)
+
+        no = ensaio_na_fechada(receita(pesquisa('modelo' => { 'nome' => 'retomar' }), esperar_passo('seguinte'))).first
+        expect(no).to include(id: 'nota', faria: 'pesquisa_nota')
+        expect(no[:dados]).to include(pergunta: 'De 0 a 10?', modelo: 'retomar')
+        expect(no[:ramos]).to be_present
+      end
+
       it 'a pesquisa recente pula e segue antes de olhar a janela, como no motor' do
         contato.update!(additional_attributes: { 'pesquisa_perguntada_em' => 1.day.ago.iso8601 })
 
