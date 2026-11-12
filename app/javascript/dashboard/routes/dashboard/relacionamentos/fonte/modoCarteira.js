@@ -27,6 +27,10 @@ export const abaDeSegurosPermitida = (
 export const aggerLigadoNaDemo = estado =>
   estado !== null && estado !== DEMO_SEM_SEGUROS && estado !== 'vazio';
 
+// Os tipos de seguro que a conta fictícia cota sozinha. Os outros (vida,
+// empresarial) a equipe cota por fora e anexa a proposta.
+export const TIPOS_QUE_A_DEMO_COTA = ['auto', 'residencial'];
+
 // O painel da conversa, na demonstração, mostra os seguros desta pessoa (a
 // mesma das jornadas da ficha): a conversa é real e o contato dela não está na
 // base inventada.
@@ -64,6 +68,20 @@ export const CASOS_DA_DEMO = [
   'cotacao_demorou',
   'cotacao_falhou',
   'cotacao_sem_agente',
+  // Onda 5 — o que falta para cotar (lista), as seguradoras depois do prazo, o
+  // preço por mês, quem não recebe e o envio que não saiu.
+  'cotacao_faltam_dados',
+  'cotacao_falta_um_dado',
+  'cotacao_parcial_prazo',
+  'cotacao_por_mes',
+  'cobertura_diferente',
+  'pessoa_bloqueada',
+  'fora_da_janela',
+  'proposta_nao_saiu',
+  'aviso_nao_saiu',
+  'algo_mudou_nao_saiu',
+  'palavras_nao_saiu',
+  'ajustes_sem_sozinho',
   'sem_permissao_de_funil',
   'ajustes_nao_salvou',
   'palavras_lendo',

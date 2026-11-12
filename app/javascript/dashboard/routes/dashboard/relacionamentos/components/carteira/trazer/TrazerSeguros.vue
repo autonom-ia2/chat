@@ -245,7 +245,6 @@ defineExpose({
       @trocar="tela.trocarDestino"
       @trazer="tela.trazer"
       @voltar="tela.voltar"
-      @tentar="tela.tentarDeNovo"
     />
 
     <TelaPronto

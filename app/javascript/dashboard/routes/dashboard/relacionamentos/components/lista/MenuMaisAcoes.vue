@@ -9,12 +9,22 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // itens vêm de quem usa: { id, rotulo, icone, destrutivo?, soNoCelular?,
 // atributos? } (`atributos` vai no botão do item: a marca do robô de print).
 // `rotulo` troca o nome acessível do "⋯"; `paraBaixo` abre a lista para baixo.
+// `tamanho` é o do botão: 'md' (44 px, o menor alvo de toque) ou 'lg' (48 px,
+// ao lado de botões grandes).
 const props = defineProps({
   itens: { type: Array, required: true },
   rotulo: { type: String, default: '' },
   paraBaixo: { type: Boolean, default: false },
+  tamanho: {
+    type: String,
+    default: 'md',
+    validator: tamanho => ['md', 'lg'].includes(tamanho),
+  },
 });
 const emit = defineEmits(['escolher']);
+
+// O 'md' da casa tem 40 px: aqui sobe para 44.
+const CLASSE_DO_TAMANHO = { md: 'size-11', lg: '' };
 
 const { t } = useI18n();
 const idDoMenu = useId();
@@ -86,7 +96,8 @@ onClickOutside(raiz, () => {
     <Button
       slate
       faded
-      class="size-11"
+      :size="tamanho"
+      :class="CLASSE_DO_TAMANHO[tamanho]"
       icon="i-lucide-ellipsis"
       data-relacionamentos="mais-acoes"
       aria-haspopup="menu"

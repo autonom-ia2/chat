@@ -24,7 +24,7 @@ const emit = defineEmits(['abrir', 'alternar', 'conversar']);
 
 const { t } = useI18n();
 const textos = useTextosDoSeguro();
-const tc = (chave, valores) =>
+const ca = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores);
 
 const tipo = computed(() => textos.tipo(props.seguro));
@@ -33,7 +33,7 @@ const partes = computed(() => [
   tipo.value,
   props.seguro.seguradora,
   props.dizSemTelefone
-    ? tc('SEM_TELEFONE')
+    ? ca('SEM_TELEFONE')
     : textos.quando(props.seguro, props.agora),
 ]);
 </script>
@@ -48,7 +48,7 @@ const partes = computed(() => [
     <label
       class="relative z-10 flex items-center justify-center cursor-pointer size-11 shrink-0"
     >
-      <span class="sr-only">{{ tc('MARCAR', { tipo, nome }) }}</span>
+      <span class="sr-only">{{ ca('MARCAR', { tipo, nome }) }}</span>
       <Checkbox
         data-carteira="marcar"
         class="[&_input:checked:hover]:bg-n-brand"
@@ -65,7 +65,7 @@ const partes = computed(() => [
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <button
           type="button"
-          :aria-label="tc('ABRIR', { tipo, nome })"
+          :aria-label="ca('ABRIR', { tipo, nome })"
           class="min-w-0 max-w-full p-0 text-base font-semibold break-words bg-transparent border-0 text-start text-n-slate-12 after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-n-brand focus-visible:after:rounded-2xl"
           @click="emit('abrir', seguro)"
         >
@@ -79,7 +79,7 @@ const partes = computed(() => [
       slate
       faded
       class="relative z-10 hidden sm:inline-flex"
-      :label="tc('CONVERSAR')"
+      :label="ca('CONVERSAR')"
       @click="emit('conversar', seguro)"
     />
     <Button
@@ -87,7 +87,7 @@ const partes = computed(() => [
       faded
       class="relative z-10 size-11 sm:hidden"
       icon="i-lucide-message-circle"
-      :aria-label="tc('CONVERSAR_COM', { nome: seguro.pessoa.name })"
+      :aria-label="ca('CONVERSAR_COM', { nome: seguro.pessoa.name })"
       @click="emit('conversar', seguro)"
     />
   </li>

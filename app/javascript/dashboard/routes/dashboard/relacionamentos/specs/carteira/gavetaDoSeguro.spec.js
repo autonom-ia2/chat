@@ -97,6 +97,20 @@ describe('gaveta do seguro: uma frase e um próximo passo por situação', () =>
     expect(textoDe(w, daCarteira('renovacao'))).not.toContain('Funil');
     expect(acao(w).text()).toBe('Abrir a renovação');
     expect(w.findAll(daCarteira('gaveta-acao'))).toHaveLength(1);
+    // No rodapé, o "⋯" tem a altura dos vizinhos.
+    ['gaveta-acao', 'corrigir', 'mais-do-seguro'].forEach(marca => {
+      const botao = w.get(daCarteira(marca));
+      const gatilho = botao.element.matches('button')
+        ? botao
+        : botao.get('button');
+      expect(gatilho.classes()).toContain('h-12');
+    });
+    // O número da apólice não quebra no hífen.
+    const numero = w.get(
+      `[data-dado="numero"] ${daCarteira('numero-da-apolice')}`
+    );
+    expect(numero.text()).toBe('AT-000451');
+    expect(numero.classes()).toContain('whitespace-nowrap');
 
     // "Abrir a renovação" passa a vez à gaveta da renovação deste seguro.
     await acao(w).trigger('click');
@@ -309,18 +323,20 @@ describe('gaveta do seguro: a história', () => {
       'chegou_agger',
     ]);
     expect(textoDe(w, '[data-passo="proposta_pronta"]')).toContain(
-      'Proposta pronta: Seguradora Atlântica, R$ 2.980,80. · Subiu 8%. · Robô de renovação'
+      'Proposta pronta: Seguradora Atlântica, R$ 2.980,80 por ano. · Subiu 8%. · Robô de renovação'
     );
     expect(textoDe(w, '[data-passo="proposta_enviada"]')).toContain(
       'Proposta enviada · Bia Lunardelli'
     );
   });
 
-  it('"Ver proposta" e "Exportar" funcionam e dizem o que fizeram', async () => {
+  it('"Ver resumo" (o que saiu foi o resumo) e "Exportar" funcionam e dizem o que fizeram', async () => {
     const w = await abrir(EM_RENOVACAO);
 
+    // O que saiu não foi a proposta oficial: o link diz "Ver resumo".
+    expect(w.get(daCarteira('ver-proposta')).text()).toBe('Ver resumo');
     await w.get(daCarteira('ver-proposta')).trigger('click');
-    expect(useAlert).toHaveBeenCalledWith('Abrindo a proposta');
+    expect(useAlert).toHaveBeenCalledWith('Abrindo o resumo da cotação');
 
     await w.get(daCarteira('exportar')).trigger('click');
     const [nome, conteudo] = baixarArquivo.mock.calls[0];
@@ -388,6 +404,62 @@ describe('gaveta do seguro: carregando, erro e seguro que sumiu', () => {
   it('sem seguro pedido, a gaveta não existe', async () => {
     const w = await abrir(null);
     expect(w.find('[role="dialog"]').exists()).toBe(false);
+  });
+});
+
+describe('gaveta do seguro: o que ia sair sozinho e não saiu fica na história', () => {
+  const NAO_SAIU = 'O WhatsApp não deixou sair agora. A equipe foi avisada.';
+  const SEM_PROPOSTA = 111;
+  const linha = (w, tipo) => textoDe(w, `[data-passo="${tipo}"]`);
+
+  it.each([
+    [
+      'aviso_nao_saiu',
+      SEM_PROPOSTA,
+      'aviso_nao_saiu',
+      `O aviso de 7 dias não saiu. ${NAO_SAIU}`,
+    ],
+    [
+      'algo_mudou_nao_saiu',
+      SEM_PROPOSTA,
+      'algo_mudou_nao_saiu',
+      `A pergunta “Algo mudou?” não saiu. ${NAO_SAIU}`,
+    ],
+    [
+      'palavras_nao_saiu',
+      APOLICE_NOVA,
+      'palavras_nao_saiu',
+      `“Seu seguro em palavras simples” não saiu. ${NAO_SAIU}`,
+    ],
+    [
+      'proposta_nao_saiu',
+      112,
+      'proposta_nao_saiu',
+      `A proposta não saiu. ${NAO_SAIU}`,
+    ],
+  ])(
+    '%s: a linha diz o que não saiu e por quê',
+    async (caso, id, tipo, frase) => {
+      const w = await abrir(id, fonteDaDemo({ caso }));
+
+      expect(linha(w, tipo)).toContain(frase);
+      // Sem o caso, a linha não existe.
+      aberta.unmount();
+      const semCaso = await abrir(id);
+      expect(semCaso.find(`[data-passo="${tipo}"]`).exists()).toBe(false);
+    }
+  );
+
+  it('o aviso que não saiu é o mais recente que já devia ter saído (30, 15 ou 7 dias)', async () => {
+    // O seguro 1 vence em 18 dias: o aviso que já devia ter saído é o de 30.
+    const w = await abrir(
+      EM_RENOVACAO,
+      fonteDaDemo({ caso: 'aviso_nao_saiu' })
+    );
+
+    expect(linha(w, 'aviso_nao_saiu')).toContain(
+      'O aviso de 30 dias não saiu.'
+    );
   });
 });
 
@@ -472,6 +544,35 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
     expect(previa).not.toContain('O que ele cobre');
   });
 
+  it('o texto que se altera e o texto mostrado como enviado são o mesmo', async () => {
+    const w = await abrir(APOLICE_NOVA);
+
+    await w.get(daCarteira('alterar-palavras')).trigger('click');
+    await assentar();
+    const campo = w.get(`${daCarteira('texto-das-palavras')} textarea`);
+    const oQueSeAltera = campo.element.value;
+
+    // Apagar e desistir ("Voltar") não muda o texto: ao alterar de novo, ele
+    // está lá como antes.
+    await campo.setValue('   ');
+    await w.get(daCarteira('voltar-das-palavras')).trigger('click');
+    await w.get(daCarteira('alterar-palavras')).trigger('click');
+    await assentar();
+    expect(
+      w.get(`${daCarteira('texto-das-palavras')} textarea`).element.value
+    ).toBe(oQueSeAltera);
+
+    await w.get(daCarteira('salvar-palavras')).trigger('click');
+    await assentar();
+    await w.get(daCarteira('enviar-palavras')).trigger('click');
+    await assentar();
+    await w.get(daCarteira('ver-palavras-enviadas')).trigger('click');
+
+    expect(w.get(`${daCarteira('previa-de-mensagem')} p`).text()).toBe(
+      `${oQueSeAltera}\nVale o que está escrito na sua apólice.`
+    );
+  });
+
   it('alterar o texto: o campo abre do tamanho do texto e cresce ao digitar, sem rolagem interna', async () => {
     // O jsdom não mede altura: o teste diz quanto o texto ocupa.
     let alturaDoTexto = 240;
@@ -515,6 +616,34 @@ describe('gaveta do seguro: seu seguro em palavras simples', () => {
       'Não consegui escrever o texto. Tente de novo.'
     );
     expect(aviso.get('button').text()).toBe('Tentar de novo');
+  });
+
+  it('o texto que ia sair sozinho e não saiu: o bloco diz por quê e chama para conversar', async () => {
+    const w = await abrir(
+      APOLICE_NOVA,
+      fonteDaDemo({ caso: 'palavras_nao_saiu' })
+    );
+
+    expect(textoDe(w, daCarteira('palavras-nao-saiu'))).toBe(
+      'O WhatsApp não deixou sair agora. A equipe foi avisada.'
+    );
+    expect(w.find(daCarteira('enviar-palavras')).exists()).toBe(false);
+    const conversar = w.get(daCarteira('conversar-sobre-as-palavras'));
+    expect(conversar.text()).toBe('Conversar');
+    await conversar.trigger('click');
+    expect(useAlert).toHaveBeenCalledWith(
+      expect.stringContaining(pessoaPorId(PESSOA_DA_APOLICE_NOVA).name)
+    );
+    aberta.unmount();
+
+    // O que já foi enviado continua dito como enviado.
+    salvarAjustesNaDemo({ palavras: 'sozinho' });
+    const enviado = await abrir(
+      APOLICE_NOVA,
+      fonteDaDemo({ caso: 'palavras_nao_saiu' })
+    );
+    expect(enviado.find(daCarteira('palavras-nao-saiu')).exists()).toBe(false);
+    expect(enviado.find(daCarteira('palavras-enviado')).exists()).toBe(true);
   });
 
   it('quem escolheu que sai sozinho só vê que já foi; quem escolheu não mandar não vê nada', async () => {

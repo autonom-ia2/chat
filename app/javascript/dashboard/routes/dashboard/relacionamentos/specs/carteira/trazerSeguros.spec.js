@@ -218,7 +218,11 @@ describe('Tela 9: planilha com seguros', () => {
     expect(w.get('h1').text()).toBe('Achei 168 seguros de 120 pessoas.');
     expect(contador(w, 'PRONTOS')).toBe('164 prontos');
     expect(contador(w, 'PRECISAM')).toBe('4 precisam de você');
-    expect(contador(w, 'JA_ESTAVAM')).toBe('120 pessoas já estavam aqui');
+    // "Já estavam aqui" é uma frase de apoio, sem repetir o número do título.
+    expect(w.find('[data-contador="JA_ESTAVAM"]').exists()).toBe(false);
+    expect(textoDe(w, daCarteira('ja-estavam-aqui'))).toBe(
+      'Essas pessoas já estavam aqui.'
+    );
     expect(w.get(daCarteira('efeito-renovacao')).text()).toBe(
       'Amanhã cedo, 22 seguros que vencem em até 60 dias entram em renovação.'
     );
@@ -291,6 +295,20 @@ describe('Tela 9: planilha com seguros', () => {
     expect(fichas[2].text()).toContain('Tiago Bragantino');
     expect(fichas[2].get(daCarteira('exemplo-sem-telefone')).text()).toBe(
       'Sem telefone'
+    );
+  });
+
+  it('o único botão azul da conferência é "Trazer N seguros": o Salvar de cada problema é secundário', async () => {
+    const w = await irAteConferir();
+    const azuis = w
+      .findAll('button')
+      .filter(botao => botao.classes().includes('bg-n-blue-11'));
+
+    expect(w.findAll(daCarteira('salvar-problema')).length).toBeGreaterThan(1);
+    expect(azuis).toHaveLength(1);
+    expect(azuis[0].text()).toMatch('Trazer ');
+    expect(w.get(daCarteira('ficar-com-este')).classes()).not.toContain(
+      'bg-n-blue-3'
     );
   });
 
@@ -441,7 +459,7 @@ describe('Tela 9: planilha com seguros', () => {
 
     await problema(w, 71).get(daCarteira('mudar')).trigger('click');
     await assentarBem();
-    expect(problema(w, 71).text()).toContain('não conheço a seguradora “Atl.”');
+    expect(problema(w, 71).text()).toContain('qual é a seguradora “Atl.”?');
     expect(w.find('[data-contador="DEIXADOS"]').exists()).toBe(false);
   });
 
@@ -498,15 +516,30 @@ describe('Tela 9: planilha com seguros', () => {
     );
   });
 
-  it('se trazer falha, a tela diz e Tentar de novo resolve', async () => {
+  it('se trazer falha, a barra diz numa linha e "Trazer N seguros" tenta de novo', async () => {
     const w = await irAteConferir({ caso: 'trazer_falhou' });
 
     await clicar(w, 'trazer-seguros');
-    expect(w.get(daCarteira('erro')).text()).toContain(
-      'Não consegui trazer os seguros. Tente de novo.'
-    );
+    // O aviso fica na barra sempre à vista, na linha de cima do botão: quem
+    // clicou lá embaixo vê o que deu errado sem rolar a página.
+    const barra = w.get(daCarteira('barra-de-trazer'));
+    const erro = barra.get(daCarteira('erro'));
+    expect(erro.text()).toBe('Não consegui trazer agora. Tente de novo.');
+    expect(erro.attributes('role')).toBe('alert');
+    expect(erro.classes()).toContain('basis-full');
+    expect(barra.element.firstElementChild).toBe(erro.element);
+    // Uma linha de texto, sem botão próprio: o único azul continua sendo o de
+    // trazer, e clicar nele de novo é o tentar de novo.
+    expect(erro.element.matches('p')).toBe(true);
+    expect(erro.find('button').exists()).toBe(false);
+    const azuis = w
+      .findAll('button')
+      .filter(botao => botao.classes().includes('bg-n-blue-11'));
+    expect(azuis.map(botao => botao.attributes('data-carteira'))).toEqual([
+      'trazer-seguros',
+    ]);
 
-    await w.get(`${daCarteira('erro')} button`).trigger('click');
+    await clicar(w, 'trazer-seguros');
     await assentarBem();
     expect(w.find(doBlocoA('andamento')).exists()).toBe(true);
   });

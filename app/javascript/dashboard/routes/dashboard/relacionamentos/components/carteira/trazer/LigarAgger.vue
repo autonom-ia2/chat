@@ -8,6 +8,8 @@ import { ERROS_DO_LOGIN } from '../../../carteira/useBuscaNoAgger';
 // #2897 — "Ligar o Agger". Conta já ligada: uma frase e um botão. Conta ainda
 // não ligada: o usuário e a senha que a pessoa já usa lá e UM botão, sempre
 // ligado: sem um dos dois, o clique diz o que falta e leva o foco ao campo.
+// Quando o login não confere, os dois campos ficam marcados, apontam para o
+// aviso e o foco volta ao usuário; ao escrever de novo, a marca sai.
 // Nada do que é digitado aqui fica guardado no protótipo.
 const props = defineProps({
   ligado: { type: Boolean, default: false },
@@ -23,6 +25,7 @@ const ids = {
   usuario: `${id}-usuario`,
   senha: `${id}-senha`,
   senhaSegura: `${id}-senha-segura`,
+  erro: `${id}-erro`,
 };
 
 const usuario = ref('');
@@ -33,6 +36,15 @@ const falta = ref({ usuario: '', senha: '' });
 const semApolices = computed(() => props.erro === ERROS_DO_LOGIN.SEM_APOLICES);
 const erroDoLogin = computed(() =>
   props.erro && !semApolices.value ? ta(props.erro) : ''
+);
+// Depois do aviso, a pessoa já voltou a escrever no usuário ou na senha.
+const corrigindo = ref(false);
+const naoConferiu = computed(
+  () => Boolean(erroDoLogin.value) && !corrigindo.value
+);
+const descricaoDoUsuario = computed(() => (naoConferiu.value ? ids.erro : ''));
+const descricaoDaSenha = computed(() =>
+  [descricaoDoUsuario.value, ids.senhaSegura].filter(Boolean).join(' ')
 );
 
 const entrar = async () => {
@@ -52,9 +64,17 @@ const entrar = async () => {
 
 watch(usuario, () => {
   falta.value = { ...falta.value, usuario: '' };
+  corrigindo.value = true;
 });
 watch(senha, () => {
   falta.value = { ...falta.value, senha: '' };
+  corrigindo.value = true;
+});
+watch(erroDoLogin, async erro => {
+  if (!erro) return;
+  corrigindo.value = false;
+  await nextTick();
+  document.getElementById(ids.usuario)?.focus();
 });
 </script>
 
@@ -138,6 +158,8 @@ watch(senha, () => {
         data-carteira="agger-usuario"
         :rotulo="ta('USUARIO')"
         :falta="falta.usuario"
+        :invalido="naoConferiu"
+        :descrito-por="descricaoDoUsuario"
       />
       <div data-carteira="agger-campo-senha" class="flex flex-col gap-1.5">
         <CampoDoSeguro
@@ -148,18 +170,20 @@ watch(senha, () => {
           data-carteira="agger-senha"
           :rotulo="ta('SENHA')"
           :falta="falta.senha"
-          :descrito-por="ids.senhaSegura"
+          :invalido="naoConferiu"
+          :descrito-por="descricaoDaSenha"
         >
           <template #dentro>
             <!-- O nome do botão não muda: quem diz se a senha está à mostra é o
-                 aria-pressed. -->
+                 aria-pressed. O campo tem 40 px; o botão mantém os 44 px de
+                 toque, centrado nele. -->
             <button
               type="button"
               data-carteira="agger-mostrar-senha"
               :aria-label="ta('MOSTRAR_SENHA')"
               :title="ta('MOSTRAR_SENHA')"
               :aria-pressed="senhaVisivel ? 'true' : 'false'"
-              class="absolute inset-y-0 inline-flex items-center justify-center p-0 bg-transparent border-0 rounded-lg end-0 size-12 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              class="absolute inline-flex items-center justify-center p-0 -translate-y-1/2 bg-transparent border-0 rounded-lg top-1/2 end-0 size-11 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
               @click="senhaVisivel = !senhaVisivel"
             >
               <span
@@ -186,6 +210,7 @@ watch(senha, () => {
     </div>
     <p
       v-if="erroDoLogin"
+      :id="ids.erro"
       role="alert"
       data-carteira="agger-erro"
       class="m-0 text-base font-medium text-n-ruby-11"
@@ -197,6 +222,7 @@ watch(senha, () => {
         type="submit"
         data-carteira="agger-entrar"
         size="lg"
+        class="w-full sm:w-auto"
         :label="ta('ENTRAR')"
         :is-loading="entrando"
         :disabled="entrando"

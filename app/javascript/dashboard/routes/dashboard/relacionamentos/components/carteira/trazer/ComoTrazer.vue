@@ -15,14 +15,14 @@ const props = defineProps({
 const emit = defineEmits(['continuar', 'tentar']);
 
 const { t } = useI18n();
-const tc = chave => t(`RELACIONAMENTOS_CARTEIRA.TRAZER.COMO.${chave}`);
+const ca = chave => t(`RELACIONAMENTOS_CARTEIRA.TRAZER.COMO.${chave}`);
 const id = useId();
 
 const cartao = (como, icone, rotulo, descricao) => ({
   id: como,
   icone,
-  rotulo: tc(rotulo),
-  descricao: tc(descricao),
+  rotulo: ca(rotulo),
+  descricao: ca(descricao),
 });
 const opcoes = computed(() => [
   cartao(
@@ -49,11 +49,11 @@ const opcoes = computed(() => [
       tabindex="-1"
       class="m-0 text-3xl font-bold tracking-tight outline-none md:text-4xl text-n-slate-12"
     >
-      {{ tc('TITULO') }}
+      {{ ca('TITULO') }}
     </h1>
 
     <div v-if="estado === COMECO.ERRO" data-carteira="erro">
-      <ErroComTentarDeNovo :mensagem="tc('ERRO')" @tentar="emit('tentar')" />
+      <ErroComTentarDeNovo :mensagem="ca('ERRO')" @tentar="emit('tentar')" />
     </div>
     <div
       v-else-if="estado === COMECO.CARREGANDO"

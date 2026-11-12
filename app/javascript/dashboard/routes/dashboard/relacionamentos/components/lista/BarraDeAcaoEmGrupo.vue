@@ -119,6 +119,7 @@ const itensDoMenu = computed(() => [
     />
     <MenuMaisAcoes
       class="order-2 sm:order-5"
+      tamanho="lg"
       :itens="itensDoMenu"
       @escolher="aoEscolherNoMenu"
     />

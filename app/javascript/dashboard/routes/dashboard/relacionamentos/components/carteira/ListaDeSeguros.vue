@@ -50,7 +50,7 @@ const props = defineProps({
 const emit = defineEmits(['trocarAba']);
 
 const { t } = useI18n();
-const tc = (chave, valores, plural) =>
+const ca = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores, plural);
 const route = useRoute();
 const router = useRouter();
@@ -83,7 +83,7 @@ const acoesEmGrupo = useAcoesEmGrupo({
   aoFalhar: () => useAlert(t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')),
 });
 
-const simular = (chave, valores) => useAlert(tc(chave, valores));
+const simular = (chave, valores) => useAlert(ca(chave, valores));
 const trazer = () => router.push({ name: 'relacionamentos_trazer' });
 const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
 const ajustar = () => router.push({ name: 'relacionamentos_renovacoes' });
@@ -165,7 +165,7 @@ onMounted(lista.iniciar);
         >
           <div v-if="!lista.resumo.value" data-carteira="erro">
             <ErroComTentarDeNovo
-              :mensagem="tc('ERRO')"
+              :mensagem="ca('ERRO')"
               @tentar="lista.recarregar"
             />
           </div>
@@ -198,7 +198,7 @@ onMounted(lista.iniciar);
             />
             <div v-if="lista.erro.value" data-carteira="erro">
               <ErroComTentarDeNovo
-                :mensagem="tc('ERRO')"
+                :mensagem="ca('ERRO')"
                 @tentar="lista.recarregar"
               />
             </div>
@@ -219,7 +219,7 @@ onMounted(lista.iniciar);
                   link
                   data-carteira="marcar-todos"
                   :is-loading="acoesEmGrupo.marcandoTodas.value"
-                  :label="tc('MARCAR_TODOS', { count: lista.total.value })"
+                  :label="ca('MARCAR_TODOS', { count: lista.total.value })"
                   @click="acoesEmGrupo.marcarTodas"
                 />
               </div>

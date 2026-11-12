@@ -31,6 +31,24 @@ export const AJUSTES_PADRAO = Object.freeze({
   palavras: PALAVRAS.CONFIRO,
 });
 
+// Quem faz a cotação, conforme o que a conta tem: "Sozinho" (ROBO) só existe
+// na conta que cota sem conversar, e o agente só na conta que tem agente. A
+// escolha que a conta não tem cai na seguinte: o agente, o "Sozinho", a equipe.
+export const quemCotaNaConta = (
+  quemCota,
+  { cotaSemConversa = false, agente = null } = {}
+) => {
+  const tem = {
+    [QUEM_COTA.ROBO]: cotaSemConversa,
+    [QUEM_COTA.AGENTE]: Boolean(agente),
+    [QUEM_COTA.NINGUEM]: true,
+  };
+  if (tem[quemCota]) return quemCota;
+  return [QUEM_COTA.AGENTE, QUEM_COTA.ROBO, QUEM_COTA.NINGUEM].find(
+    opcao => tem[opcao]
+  );
+};
+
 // O número de dias que a pessoa escreveu: inteiro a partir de 1, ou null.
 export const diasDigitados = texto => {
   const numero = Number(String(texto ?? '').trim());

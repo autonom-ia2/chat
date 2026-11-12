@@ -14,7 +14,6 @@ import {
   FIM,
   contarRespostas,
   cotacaoDoCard,
-  esperaEnvio,
   fimDaRenovacao,
 } from '../../carteira/cotacaoDoCard';
 import {
@@ -41,12 +40,12 @@ describe('cotacaoDoCard: um estado de cada vez', () => {
     [{ etapa: 'A vencer' }, false, COTACAO.NAO_COTA],
     [{ etapa: 'Cotando', cotando: true }, true, COTACAO.COTANDO],
     [
-      { etapa: 'A vencer', faltou: 'nascimento', perguntou: 'Nina' },
+      { etapa: 'A vencer', faltou: ['nascimento'], perguntou: 'Nina' },
       true,
       COTACAO.FALTOU_PERGUNTADO,
     ],
     [
-      { etapa: 'A vencer', faltou: 'nascimento', perguntou: null },
+      { etapa: 'A vencer', faltou: ['nascimento'], perguntou: null },
       true,
       COTACAO.FALTOU_SEM_AGENTE,
     ],
@@ -115,14 +114,11 @@ describe('cotacaoDoCard: um estado de cada vez', () => {
       COTACAO.SEM_TELEFONE
     );
     expect(cotacaoDoCard(seguro(pronta, naoQuer))).toBe(COTACAO.NAO_QUER);
-    expect(esperaEnvio(seguro(pronta, semTelefone))).toBe(false);
-    expect(esperaEnvio(seguro(pronta))).toBe(true);
-    // Só o preço, sem o PDF: dá para enviar o preço.
+    // Só o preço, sem proposta em PDF: também é algo a enviar.
     const soOPreco = { ...pronta, proposta: { ...proposta, semPdf: true } };
-    expect(esperaEnvio(seguro(soOPreco))).toBe(true);
-    expect(esperaEnvio(seguro(soOPreco, semTelefone))).toBe(false);
-    expect(esperaEnvio(seguro({ etapa: 'Cotando', cotando: true }))).toBe(
-      false
+    expect(cotacaoDoCard(seguro(soOPreco))).toBe(COTACAO.PRECO_SEM_PDF);
+    expect(cotacaoDoCard(seguro(soOPreco, semTelefone))).toBe(
+      COTACAO.SEM_TELEFONE
     );
     // O que já saiu continua dito como saiu.
     expect(cotacaoDoCard(seguro(enviada, semTelefone))).toBe(

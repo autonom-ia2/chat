@@ -11,7 +11,7 @@ defineProps({
 const emit = defineEmits(['mandarMensagem', 'fechar']);
 
 const { t } = useI18n();
-const tc = (chave, valores, plural) =>
+const ca = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores, plural);
 </script>
 
@@ -19,14 +19,14 @@ const tc = (chave, valores, plural) =>
   <div
     data-carteira="barra"
     role="region"
-    :aria-label="tc('BARRA')"
+    :aria-label="ca('BARRA')"
     class="flex flex-wrap items-center gap-2 p-3 shadow-xl rounded-2xl bg-n-solid-1 ring-1 ring-n-weak sm:gap-3 sm:px-4"
   >
     <p
       aria-live="polite"
       class="flex-1 m-0 text-sm font-semibold tabular-nums text-n-slate-12 sm:flex-none sm:me-1"
     >
-      {{ tc('MARCADOS', { count: quantos }, quantos) }}
+      {{ ca('MARCADOS', { count: quantos }, quantos) }}
     </p>
     <Button
       ghost
@@ -34,7 +34,7 @@ const tc = (chave, valores, plural) =>
       size="lg"
       class="sm:order-3 sm:ms-auto"
       icon="i-lucide-x"
-      :aria-label="tc('DESMARCAR')"
+      :aria-label="ca('DESMARCAR')"
       @click="emit('fechar')"
     />
     <Button
@@ -42,7 +42,7 @@ const tc = (chave, valores, plural) =>
       class="w-full whitespace-nowrap sm:order-2 sm:w-auto"
       icon="i-lucide-send"
       data-carteira="mandar-mensagem"
-      :label="tc('MANDAR_MENSAGEM')"
+      :label="ca('MANDAR_MENSAGEM')"
       @click="emit('mandarMensagem')"
     />
   </div>

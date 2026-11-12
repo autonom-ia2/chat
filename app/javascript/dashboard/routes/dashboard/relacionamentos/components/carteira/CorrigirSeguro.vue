@@ -25,7 +25,7 @@ const props = defineProps({
 const emit = defineEmits(['salvar']);
 
 const { t } = useI18n();
-const tc = chave => t(`RELACIONAMENTOS_CARTEIRA.CORRIGIR.${chave}`);
+const ca = chave => t(`RELACIONAMENTOS_CARTEIRA.CORRIGIR.${chave}`);
 const base = useId();
 const idDe = campo => `${base}-${campo}`;
 const idDoNadaMudou = `${base}-nada-mudou`;
@@ -46,14 +46,14 @@ const faltas = computed(() =>
   tentou.value ? faltasDoFormulario(formulario.value) : {}
 );
 const falta = campo =>
-  faltas.value[campo] ? tc(`FALTA.${faltas.value[campo]}`) : '';
+  faltas.value[campo] ? ca(`FALTA.${faltas.value[campo]}`) : '';
 
 const opcoesDeTipo = computed(() =>
   TIPOS_DE_SEGURO.map(tipo => ({ value: tipo, label: t(chaveDoTipo(tipo)) }))
 );
 const opcoesDeSeguradora = computed(() => [
   ...props.seguradoras.map(nome => ({ value: nome, label: nome })),
-  { value: OUTRA_SEGURADORA, label: tc('OUTRA') },
+  { value: OUTRA_SEGURADORA, label: ca('OUTRA') },
 ]);
 const outraEscolhida = computed(
   () => formulario.value.seguradora === OUTRA_SEGURADORA
@@ -101,17 +101,17 @@ const TEXTOS = [
       data-carteira="nada-mudou"
       class="p-3 m-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-11"
     >
-      {{ tc('FALTA.NADA_MUDOU') }}
+      {{ ca('FALTA.NADA_MUDOU') }}
     </p>
     <div class="flex flex-col gap-1.5">
       <label :for="idDe('tipo')" class="text-sm font-medium text-n-slate-12">
-        {{ tc('TIPO') }}
+        {{ ca('TIPO') }}
       </label>
       <ChoiceSelect
         :model-value="formulario.tipo"
         :options="opcoesDeTipo"
         :trigger-id="idDe('tipo')"
-        :aria-label="tc('TIPO')"
+        :aria-label="ca('TIPO')"
         :described-by="nadaMudou ? idDoNadaMudou : undefined"
         @update:model-value="mudar('tipo', $event)"
       />
@@ -121,13 +121,13 @@ const TEXTOS = [
         :for="idDe('seguradora')"
         class="text-sm font-medium text-n-slate-12"
       >
-        {{ tc('SEGURADORA') }}
+        {{ ca('SEGURADORA') }}
       </label>
       <ChoiceSelect
         :model-value="formulario.seguradora"
         :options="opcoesDeSeguradora"
         :trigger-id="idDe('seguradora')"
-        :aria-label="tc('SEGURADORA')"
+        :aria-label="ca('SEGURADORA')"
         @update:model-value="mudar('seguradora', $event)"
       />
     </div>
@@ -135,7 +135,7 @@ const TEXTOS = [
       v-if="outraEscolhida"
       :id="idDe('outraSeguradora')"
       data-campo="outraSeguradora"
-      :rotulo="tc('OUTRA_SEGURADORA')"
+      :rotulo="ca('OUTRA_SEGURADORA')"
       :falta="falta('outraSeguradora')"
       :model-value="formulario.outraSeguradora"
       @update:model-value="mudar('outraSeguradora', $event)"
@@ -147,11 +147,11 @@ const TEXTOS = [
       :data-campo="item.campo"
       :type="item.tipo || 'text'"
       :inputmode="item.modo"
-      :rotulo="tc(item.rotulo)"
+      :rotulo="ca(item.rotulo)"
       :falta="falta(item.campo)"
       :model-value="formulario[item.campo]"
       @update:model-value="mudar(item.campo, $event)"
     />
-    <p class="m-0 text-sm text-n-slate-11">{{ tc('APOIO') }}</p>
+    <p class="m-0 text-sm text-n-slate-11">{{ ca('APOIO') }}</p>
   </form>
 </template>

@@ -251,15 +251,18 @@ describe('situacaoDoSeguro: um próximo passo por vez', () => {
   });
 
   it('diz se a proposta subiu, baixou ou ficou igual', () => {
-    expect(variacaoDaProposta({ variacao: 8 })).toEqual({
+    const mesmaCobertura = true;
+    expect(variacaoDaProposta({ variacao: 8, mesmaCobertura })).toEqual({
       id: 'SUBIU',
       count: 8,
     });
-    expect(variacaoDaProposta({ variacao: -3 })).toEqual({
+    expect(variacaoDaProposta({ variacao: -3, mesmaCobertura })).toEqual({
       id: 'BAIXOU',
       count: 3,
     });
-    expect(variacaoDaProposta({ variacao: 0 })).toEqual({ id: 'IGUAL' });
+    expect(variacaoDaProposta({ variacao: 0, mesmaCobertura })).toEqual({
+      id: 'IGUAL',
+    });
     expect(variacaoDaProposta(null)).toBeNull();
   });
 });

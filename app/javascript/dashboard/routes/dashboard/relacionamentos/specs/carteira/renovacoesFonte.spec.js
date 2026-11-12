@@ -27,6 +27,7 @@ describe('os ajustes', () => {
     expect(dados).toMatchObject({
       aggerLigado: true,
       cotaSozinha: true,
+      cotaSemConversa: true,
       agente: 'Nina',
       semPermissao: false,
     });
@@ -52,6 +53,11 @@ describe('os ajustes', () => {
     expect(
       (await fonte('cheio', { caso: 'cotacao_sem_agente' }).ajustes()).agente
     ).toBeNull();
+    // A conta que não cota sem conversar com a pessoa.
+    expect(
+      (await fonte('cheio', { caso: 'ajustes_sem_sozinho' }).ajustes())
+        .cotaSemConversa
+    ).toBe(false);
   });
 
   it('salvar guarda o que mudou; `ajustes_nao_salvou` falha uma vez e depois passa', async () => {

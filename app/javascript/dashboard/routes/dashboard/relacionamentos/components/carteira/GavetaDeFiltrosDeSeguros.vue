@@ -21,7 +21,7 @@ const props = defineProps({
 const emit = defineEmits(['fechar', 'aplicar', 'limpar']);
 
 const { t } = useI18n();
-const tc = chave => t(`RELACIONAMENTOS_CARTEIRA.LISTA.FILTROS.${chave}`);
+const ca = chave => t(`RELACIONAMENTOS_CARTEIRA.LISTA.FILTROS.${chave}`);
 const idBase = useId();
 
 const rascunho = ref({ ...FILTROS_DE_SEGUROS_VAZIOS });
@@ -36,7 +36,7 @@ watch(
 );
 
 const comQualquer = (chave, lista) => [
-  { value: '', label: tc(chave) },
+  { value: '', label: ca(chave) },
   ...lista,
 ];
 const iguais = lista => lista.map(valor => ({ value: valor, label: valor }));
@@ -44,7 +44,7 @@ const iguais = lista => lista.map(valor => ({ value: valor, label: valor }));
 const campos = computed(() => [
   {
     chave: 'tipo',
-    rotulo: tc('TIPO'),
+    rotulo: ca('TIPO'),
     opcoes: comQualquer(
       'TODOS',
       props.opcoes.tipos.map(tipo => ({
@@ -55,12 +55,12 @@ const campos = computed(() => [
   },
   {
     chave: 'seguradora',
-    rotulo: tc('SEGURADORA'),
+    rotulo: ca('SEGURADORA'),
     opcoes: comQualquer('TODAS', iguais(props.opcoes.seguradoras)),
   },
   {
     chave: 'cuida',
-    rotulo: tc('CUIDA'),
+    rotulo: ca('CUIDA'),
     opcoes: comQualquer('QUALQUER_PESSOA', iguais(props.opcoes.cuida)),
   },
 ]);
@@ -74,7 +74,7 @@ const escolher = (chave, valor) => {
   <GavetaLateral
     marca="gaveta-filtros"
     :aberta="aberta"
-    :titulo="tc('TITULO')"
+    :titulo="ca('TITULO')"
     @fechar="emit('fechar')"
   >
     <div data-carteira="filtros" class="flex flex-col gap-5">
@@ -102,14 +102,14 @@ const escolher = (chave, valor) => {
       <Button
         size="lg"
         data-carteira="ver-resultado"
-        :label="tc('VER_RESULTADO')"
+        :label="ca('VER_RESULTADO')"
         @click="emit('aplicar', { ...rascunho })"
       />
       <Button
         slate
         faded
         size="lg"
-        :label="tc('LIMPAR')"
+        :label="ca('LIMPAR')"
         @click="emit('limpar')"
       />
     </template>

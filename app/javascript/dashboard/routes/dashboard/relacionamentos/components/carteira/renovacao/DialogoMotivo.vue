@@ -11,7 +11,7 @@ import TituloDoDialogo from '../../comum/TituloDoDialogo.vue';
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
-const tm = chave => t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.MOTIVO.${chave}`);
+const mo = chave => t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.MOTIVO.${chave}`);
 const id = useId();
 const dialogo = ref(null);
 const escrevendo = ref(false);
@@ -59,7 +59,7 @@ defineExpose({
 <template>
   <Dialog ref="dialogo" width="sm" @confirm="salvar">
     <div data-carteira="motivo" class="flex flex-col gap-4">
-      <TituloDoDialogo :titulo="tm('TITULO')" />
+      <TituloDoDialogo :titulo="mo('TITULO')" />
       <ul class="flex flex-col gap-2 p-0 m-0 list-none">
         <li v-for="motivo in MOTIVOS" :key="motivo.id">
           <button
@@ -68,13 +68,13 @@ defineExpose({
             class="w-full px-4 text-base font-semibold rounded-xl min-h-11 text-start bg-n-solid-1 text-n-slate-12 ring-1 ring-inset ring-n-weak hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             @click="escolher({ motivo: motivo.id })"
           >
-            {{ tm(`NOME.${motivo.chave}`) }}
+            {{ mo(`NOME.${motivo.chave}`) }}
           </button>
         </li>
       </ul>
       <div v-if="escrevendo" class="flex flex-col gap-2">
         <label :for="`${id}-texto`" class="text-base text-n-slate-12">
-          {{ tm('QUAL') }}
+          {{ mo('QUAL') }}
         </label>
         <input
           :id="`${id}-texto`"
@@ -92,7 +92,7 @@ defineExpose({
           role="alert"
           class="m-0 text-base font-medium text-n-ruby-11"
         >
-          {{ tm('FALTA') }}
+          {{ mo('FALTA') }}
         </p>
       </div>
       <div v-else>
@@ -101,7 +101,7 @@ defineExpose({
           size="lg"
           type="button"
           data-carteira="motivo-outro"
-          :label="tm('OUTRO')"
+          :label="mo('OUTRO')"
           @click="escrever"
         />
       </div>
@@ -113,7 +113,7 @@ defineExpose({
           color="slate"
           class="w-full"
           type="button"
-          :label="tm('FECHAR')"
+          :label="mo('FECHAR')"
           @click="dialogo?.close()"
         />
         <Button
@@ -121,7 +121,7 @@ defineExpose({
           data-carteira="salvar-motivo"
           class="w-full"
           type="submit"
-          :label="tm('SALVAR')"
+          :label="mo('SALVAR')"
         />
       </div>
     </template>

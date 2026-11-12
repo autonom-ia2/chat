@@ -1,6 +1,7 @@
 import {
   contadoresDaLeitura,
   pessoasDosSeguros,
+  quemJaEstava,
   totalDeSeguros,
 } from '../../carteira/contagemDeSeguros';
 import { ehApolice, soApolices } from '../../carteira/arquivosDeApolice';
@@ -55,11 +56,10 @@ describe('quantos seguros vão chegar', () => {
 });
 
 describe('os contadores da conferência', () => {
-  it('planilha: prontos, precisam de você e pessoas que já estavam aqui', () => {
+  it('planilha: prontos e precisam de você; quem já estava aqui não é contador', () => {
     expect(contadoresDaLeitura(planilha(Array(4).fill('aberto')))).toEqual([
       { chave: 'PRONTOS', count: 164 },
       { chave: 'PRECISAM', count: 4 },
-      { chave: 'JA_ESTAVAM', count: 120 },
     ]);
   });
 
@@ -69,7 +69,6 @@ describe('os contadores da conferência', () => {
     ).toEqual([
       { chave: 'PRONTOS', count: 165 },
       { chave: 'PRECISAM', count: 2 },
-      { chave: 'JA_ESTAVAM', count: 120 },
       { chave: 'DEIXADOS', count: 1 },
     ]);
   });
@@ -91,8 +90,27 @@ describe('os contadores da conferência', () => {
     ).toEqual([
       { chave: 'PRONTOS', count: 153 },
       { chave: 'SEM_TELEFONE', count: 3 },
-      { chave: 'JA_ESTAVAM', count: 112 },
     ]);
+  });
+});
+
+describe('quem, das pessoas achadas, já estava aqui', () => {
+  it('todas: a frase não repete o número do título', () => {
+    expect(quemJaEstava(planilha([]))).toEqual({ chave: 'TODAS', count: 120 });
+  });
+
+  it('só uma parte: diz quantas', () => {
+    expect(
+      quemJaEstava({ achei: { seguros: 40, pessoas: 31 }, jaEstavam: 12 })
+    ).toEqual({ chave: 'PARTE', count: 12 });
+  });
+
+  it('ninguém (ou leitura sem a conta): não há o que dizer', () => {
+    expect(
+      quemJaEstava({ achei: { seguros: 39, pessoas: 31 }, jaEstavam: 0 })
+    ).toBeNull();
+    expect(quemJaEstava({ achei: { seguros: 39, pessoas: 31 } })).toBeNull();
+    expect(quemJaEstava(null)).toBeNull();
   });
 });
 

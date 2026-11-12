@@ -32,7 +32,11 @@ describe('situacaoDaRenovacao: o que já foi feito e o que falta', () => {
 });
 
 describe('tituloDaRenovacao: a etapa e a cotação dizem a mesma coisa', () => {
-  const noComeco = { etapa: 'A vencer' };
+  // Uma seguradora ainda não respondeu: os preços "estão chegando".
+  const respostas = [
+    { nome: 'B', valor: null, recusou: null, faltaSenha: false },
+  ];
+  const noComeco = { etapa: 'A vencer', respostas };
 
   it.each([
     [COTACAO.PARCIAL, 'PRECOS_CHEGANDO'],
@@ -48,6 +52,45 @@ describe('tituloDaRenovacao: a etapa e a cotação dizem a mesma coisa', () => {
     expect(tituloDaRenovacao(noComeco, cotacao)).toEqual({ id: esperado });
   });
 
+  describe('os preços: chegando enquanto alguma seguradora ainda pode responder', () => {
+    const deu = { nome: 'A', valor: 100, recusou: null, faltaSenha: false };
+    const calada = { nome: 'B', valor: null, recusou: null, faltaSenha: false };
+    const recusou = { ...calada, nome: 'C', recusou: 'nao_aceita_este_carro' };
+    const semSenha = { ...calada, nome: 'D', faltaSenha: true };
+    const titulo = renovacao =>
+      tituloDaRenovacao({ etapa: 'A vencer', ...renovacao }, COTACAO.PARCIAL)
+        .id;
+
+    it('antes do prazo, com alguma sem responder: "estão chegando"', () => {
+      expect(titulo({ respostas: [deu, calada] })).toBe('PRECOS_CHEGANDO');
+      expect(titulo({ respostas: [deu, calada, recusou, semSenha] })).toBe(
+        'PRECOS_CHEGANDO'
+      );
+    });
+
+    it('ninguém mais para responder: "chegaram"', () => {
+      // Todas responderam.
+      expect(titulo({ respostas: [deu, { ...deu, nome: 'E' }] })).toBe(
+        'PRECOS_CHEGARAM'
+      );
+      // As que faltavam recusaram ou estão sem senha.
+      expect(titulo({ respostas: [deu, recusou, semSenha] })).toBe(
+        'PRECOS_CHEGARAM'
+      );
+      // Passou o prazo: quem não respondeu não responde mais.
+      expect(titulo({ respostas: [deu, calada], passouOPrazo: true })).toBe(
+        'PRECOS_CHEGARAM'
+      );
+    });
+
+    it('ninguém mais para responder e nenhum preço: a cotação parou', () => {
+      expect(titulo({ respostas: [recusou, semSenha] })).toBe('COTACAO_PAROU');
+      expect(titulo({ respostas: [calada], passouOPrazo: true })).toBe(
+        'COTACAO_PAROU'
+      );
+    });
+  });
+
   it.each([
     [COTACAO.FALHOU, 'COTACAO_PAROU'],
     [COTACAO.PARCIAL, 'PRECOS_CHEGANDO'],
@@ -55,9 +98,9 @@ describe('tituloDaRenovacao: a etapa e a cotação dizem a mesma coisa', () => {
   ])(
     'na etapa "Cotando" a cotação também fala: %s -> %s',
     (cotacao, esperado) => {
-      expect(tituloDaRenovacao({ etapa: 'Cotando' }, cotacao)).toEqual({
-        id: esperado,
-      });
+      expect(
+        tituloDaRenovacao({ etapa: 'Cotando', respostas }, cotacao)
+      ).toEqual({ id: esperado });
     }
   );
 

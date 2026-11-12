@@ -104,7 +104,7 @@ describe('Tela 13: como as renovações andam', () => {
       'Mandar sozinho aos 30, 15 e 7 dias'
     );
     expect(escolhido(w, 'ajuste-algo-mudou')).toBe('Perguntar');
-    expect(escolhido(w, 'ajuste-quem-cota')).toContain('O sistema');
+    expect(escolhido(w, 'ajuste-quem-cota')).toContain('Sozinho');
     expect(escolhido(w, 'ajuste-como-envia')).toBe(
       'Uma pessoa confere e aperta Enviar'
     );
@@ -269,19 +269,36 @@ describe('Tela 13: como as renovações andam', () => {
     expect(ajustesDaDemo().palavras).toBe('sozinho');
   });
 
-  it('quem faz a cotação: o sistema, quem atende sozinho ou a equipe, cada um com o que faz', async () => {
+  const quemCota = w =>
+    w
+      .findAll(`${daCarteira('ajuste-quem-cota')} [role="radio"]`)
+      .map(cartao => cartao.text().split('\n').join(' '))
+      .map(texto => texto.split(' ').filter(Boolean).join(' '));
+
+  it('quem faz a cotação: sozinho, o agente da conta ou a equipe, cada um com o que faz', async () => {
     const w = await ajustar();
 
-    expect(
-      w
-        .findAll(`${daCarteira('ajuste-quem-cota')} [role="radio"]`)
-        .map(cartao => cartao.text().split('\n').join(' '))
-        .map(texto => texto.split(' ').filter(Boolean).join(' '))
-    ).toEqual([
-      'O sistema Cota no Agger com os dados que já tem e deixa a proposta pronta.',
-      'Nina É o seu agente: conversa com a pessoa sozinho, pede o que faltar e cota.',
+    expect(quemCota(w)).toEqual([
+      'Sozinho Cota sem conversar com a pessoa. Se faltar dado, o card mostra e você preenche.',
+      'Nina É o seu agente: conversa com a pessoa, pede o que falta e cota.',
       'A equipe Alguém da equipe cota e põe a proposta na renovação.',
     ]);
+  });
+
+  it('conta que não cota sem conversar: "Sozinho" não aparece e a escolha cai no agente, sem nada a salvar', async () => {
+    const w = await ajustar({ caso: 'ajustes_sem_sozinho' });
+
+    expect(quemCota(w).map(texto => texto.split(' ')[0])).toEqual([
+      'Nina',
+      'A',
+    ]);
+    expect(escolhido(w, 'ajuste-quem-cota')).toContain('Nina');
+
+    // A escolha que a conta não tem não conta como mudança de quem usa.
+    await clicar(w, daCarteira('salvar-ajustes'));
+    expect(w.get(daCarteira('alerta-dos-ajustes')).text()).toBe(
+      'Você ainda não mudou nada. Mude o que quiser e salve.'
+    );
   });
 
   it('quem responde depois: o agente da conta ou a equipe, cada um com o que faz', async () => {

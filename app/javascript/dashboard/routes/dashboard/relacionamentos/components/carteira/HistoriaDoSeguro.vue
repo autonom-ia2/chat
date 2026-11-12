@@ -1,9 +1,10 @@
 <script setup>
 import { computed, useId } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { I18nT, useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
+import { PONTO, SEPARADOR } from '../comum/ponto';
 import {
   baixarArquivo,
   csvDaHistoria,
@@ -16,7 +17,10 @@ import OQueMudou from './OQueMudou.vue';
 
 // #2897 — a história do seguro: tudo o que aconteceu, do mais novo para o mais
 // velho. Cada passo diz quando, o que foi e quem fez. "Exportar" baixa o mesmo
-// conteúdo num arquivo. É leitura: nenhuma ação principal mora aqui.
+// conteúdo num arquivo. É leitura: nenhuma ação principal mora aqui. O link do
+// que saiu diz o que é: "Ver proposta" (a oficial) ou "Ver resumo". O número da
+// apólice anterior ("Apólice nova guardada…") entra por slot do <I18nT>, num
+// pedaço que não quebra no hífen.
 const props = defineProps({
   itens: { type: Array, required: true },
   estado: { type: String, default: ESTADOS_DA_HISTORIA.PRONTO },
@@ -31,9 +35,13 @@ const th = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.HISTORIA.${chave}`, valores);
 const idDoTitulo = useId();
 
-const valoresEscritos = ({ valor, motivo, ...resto }) => ({
+const APOLICE_NOVA = 'apolice_nova';
+
+const valoresEscritos = ({ valor, motivo, periodo, anterior, ...resto }) => ({
   ...resto,
+  ...(anterior ? { anterior: textos.numero({ numero: anterior }) } : {}),
   ...(valor === undefined ? {} : { valor: textos.valor(valor) }),
+  ...(periodo ? { periodo: textos.periodo({ periodo }) } : {}),
   ...(motivo
     ? {
         motivo: t(`RELACIONAMENTOS_CARTEIRA.MOTIVOS.${motivo.toUpperCase()}`),
@@ -74,7 +82,11 @@ const passos = computed(() =>
     texto: oQueAconteceu(item),
     quemFez: quemFez(item),
     // O que a tela escreve: o que aconteceu e, no fim, quem fez.
-    linha: [...oQueAconteceu(item), quemFez(item)].filter(Boolean).join(' · '),
+    pedacos: [...oQueAconteceu(item), quemFez(item)].filter(Boolean),
+    numeroAnterior:
+      item.tipo === APOLICE_NOVA && item.valores.anterior
+        ? textos.numero({ numero: item.valores.anterior })
+        : '',
     tabela: (item.mudancas ?? []).map(({ campo, antes, depois }) => ({
       campo,
       antes,
@@ -90,7 +102,7 @@ const exportar = () => {
   const linhas = passos.value.map(passo => [
     passo.dia,
     passo.hora,
-    passo.texto.join(' · '),
+    passo.texto.join(SEPARADOR),
     passo.quemFez,
   ]);
   baixarArquivo(
@@ -142,10 +154,28 @@ const exportar = () => {
         class="flex flex-col min-w-0 gap-1 border-s-2 border-n-weak ps-4"
       >
         <span class="text-sm tabular-nums text-n-slate-11">
-          {{ passo.dia }} · {{ passo.hora }}
+          {{ passo.dia }} {{ PONTO }} {{ passo.hora }}
         </span>
         <span class="text-base break-words text-n-slate-12">
-          {{ passo.linha }}
+          <template v-for="(pedaco, indice) in passo.pedacos" :key="indice">
+            <template v-if="indice > 0">{{ SEPARADOR }}</template>
+            <I18nT
+              v-if="indice === 0 && passo.numeroAnterior"
+              keypath="RELACIONAMENTOS_CARTEIRA.HISTORIA.TIPOS.APOLICE_NOVA"
+              tag="span"
+              scope="global"
+            >
+              <template #anterior>
+                <span
+                  data-carteira="numero-da-apolice"
+                  class="whitespace-nowrap"
+                >
+                  {{ passo.numeroAnterior }}
+                </span>
+              </template>
+            </I18nT>
+            <template v-else>{{ pedaco }}</template>
+          </template>
         </span>
         <details v-if="passo.tabela.length" class="text-sm">
           <summary
@@ -155,12 +185,12 @@ const exportar = () => {
           </summary>
           <OQueMudou marca="mudanca-da-historia" :linhas="passo.tabela" />
         </details>
-        <div v-if="passo.acao === 'ver_proposta'">
+        <div v-if="passo.acao">
           <Button
             link
             size="lg"
             data-carteira="ver-proposta"
-            :label="th('VER_PROPOSTA')"
+            :label="th(passo.acao.toUpperCase())"
             @click="emit('verProposta', passo)"
           />
         </div>

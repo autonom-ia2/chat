@@ -9,6 +9,7 @@ import {
   formatarHora,
   formatarValor,
 } from './formatosDoSeguro';
+import { periodoDoPreco } from './periodoDoPreco';
 import { quandoDoSeguro } from './quandoDoSeguro';
 import { situacaoDaRenovacao } from './situacaoDaRenovacao';
 import { chaveDoTipo } from './tiposDeSeguro';
@@ -56,14 +57,25 @@ export const useTextosDoSeguro = () => {
     return t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.SITUACAO.${id}`, { etapa });
   };
 
+  // "por ano" ou "por mês", conforme o preço (um seguro ou uma proposta).
+  const periodo = preco =>
+    t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.PERIODO.${periodoDoPreco(preco)}`);
+
+  // "nº AT-000903". Quem mostra põe num pedaço que não quebra a linha
+  // (`whitespace-nowrap`): sem isso o número parte no hífen.
+  const numero = seguro =>
+    t('RELACIONAMENTOS_CARTEIRA.NUMERO_DA_APOLICE', { numero: seguro.numero });
+
   return {
     tipo,
     quando,
     renovacao,
+    periodo,
+    numero,
     doCampo,
     diaMes,
     dataInteira,
     hora: segundos => formatarHora(segundos, idioma.value),
-    valor: numero => formatarValor(numero, idioma.value),
+    valor: quanto => formatarValor(quanto, idioma.value),
   };
 };

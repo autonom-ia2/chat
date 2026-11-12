@@ -16,6 +16,7 @@ import {
   SEGURADORA_DA_PLANILHA,
   planoDaCarteira,
 } from './carteiraPlano';
+import { PERIODOS } from '../carteira/periodoDoPreco';
 import { DIA_EM_MS } from '../fonte/grupos';
 import { soDigitos } from '../fonte/texto';
 
@@ -78,6 +79,8 @@ const renovacaoDe = (item, agora) => {
       ? {
           valor: proposta.valor,
           variacao: proposta.variacao,
+          periodo: proposta.periodo ?? item.periodo ?? PERIODOS.ANO,
+          mesmaCobertura: proposta.mesmaCobertura ?? true,
           enviadaPor: proposta.enviadaPor ?? null,
           enviadaSozinha: Boolean(proposta.enviadaSozinha),
           enviadaEm: ha(agora, proposta.haDias),
@@ -100,6 +103,8 @@ const montar = (item, { gente, firmas }, agora) => {
     seguradora: item.seguradora,
     numero: item.numero,
     valor: item.valor,
+    // De quanto em quanto tempo o valor é cobrado: por ano, ou por mês.
+    periodo: item.periodo ?? PERIODOS.ANO,
     bem: item.bem ?? '',
     placa: item.placa ?? null,
     comeca: termina - (item.anos ?? 1) * DIAS_DO_ANO * SEGUNDOS_POR_DIA,
@@ -115,6 +120,9 @@ const montar = (item, { gente, firmas }, agora) => {
       ? { ...item.endosso, em: ha(agora, item.endosso.haDias) }
       : null,
     apoliceNova: Boolean(item.apoliceNova),
+    // A pessoa não escreve há mais de um dia: o WhatsApp só deixa sair o
+    // texto aprovado (a prévia da proposta mostra esse texto).
+    foraDaJanela: Boolean(item.foraDaJanela),
     deFora: Boolean(item.deFora),
     corretora: item.corretora ?? '',
     lembreteEm: item.deFora

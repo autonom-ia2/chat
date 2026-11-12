@@ -2,8 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
-import TituloDoDialogo from '../../comum/TituloDoDialogo.vue';
+import DialogoDaSenhaNoAgger from './DialogoDaSenhaNoAgger.vue';
 
 // #2897 — a busca no Agger, seguradora por seguradora: quantos seguros
 // chegaram de cada uma, qual ainda está sendo buscada e qual ficou sem vir
@@ -46,11 +45,11 @@ const linhas = computed(() =>
 
 const comoResolver = nome => {
   semSenha.value = nome;
-  dialogo.value?.open();
+  dialogo.value?.abrir();
 };
 
 const buscarDeNovo = () => {
-  dialogo.value?.close();
+  dialogo.value?.fechar();
   emit('buscarDeNovo');
 };
 </script>
@@ -152,41 +151,13 @@ const buscarDeNovo = () => {
       />
     </div>
 
-    <Dialog ref="dialogo" width="md" @confirm="buscarDeNovo">
-      <div
-        data-carteira="agger-dialogo-senha"
-        class="flex flex-col gap-3 text-sm text-n-slate-11"
-      >
-        <TituloDoDialogo
-          :titulo="ta('COMO_RESOLVER_TITULO', { seguradora: semSenha })"
-        />
-        <p class="m-0 text-base text-n-slate-12">
-          {{ ta('COMO_RESOLVER_TEXTO', { seguradora: semSenha }) }}
-        </p>
-      </div>
-      <template #footer>
-        <div class="flex items-center justify-between w-full gap-3">
-          <Button
-            variant="faded"
-            color="slate"
-            size="lg"
-            class="w-full"
-            type="button"
-            data-carteira="agger-fechar-dialogo"
-            :label="t('RELACIONAMENTOS.COMUM.ENTENDI')"
-            @click="dialogo?.close()"
-          />
-          <Button
-            size="lg"
-            class="w-full"
-            type="submit"
-            data-carteira="agger-buscar-de-novo"
-            :label="ta('BUSCAR_DE_NOVO')"
-            :is-loading="buscandoDeNovo"
-            :disabled="buscandoDeNovo"
-          />
-        </div>
-      </template>
-    </Dialog>
+    <DialogoDaSenhaNoAgger
+      ref="dialogo"
+      :seguradora="semSenha"
+      :texto="ta('COMO_RESOLVER_TEXTO', { seguradora: semSenha })"
+      :rotulo-da-acao="ta('BUSCAR_DE_NOVO')"
+      :ocupado="buscandoDeNovo"
+      @resolver="buscarDeNovo"
+    />
   </section>
 </template>

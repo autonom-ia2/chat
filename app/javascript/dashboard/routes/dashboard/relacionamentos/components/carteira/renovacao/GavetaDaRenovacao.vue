@@ -17,11 +17,12 @@ import EsqueletoDeLista from '../../comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../../ficha/GavetaLateral.vue';
 import {
+  COTACAO,
   FIM,
   cotacaoDoCard,
-  esperaEnvio,
   fimDaRenovacao,
 } from '../../../carteira/cotacaoDoCard';
+import { PASSOS, passoDaVez } from '../../../carteira/passoDaVez';
 import { tituloDaRenovacao } from '../../../carteira/tituloDaRenovacao';
 import { useSeguroAberto } from '../../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../../carteira/useTextosDoSeguro';
@@ -35,11 +36,12 @@ import PreviaDaProposta from './PreviaDaProposta.vue';
 
 // #2897 — a renovação de um seguro, do começo ao fim, numa gaveta
 // (`?renovacao=<id do seguro>`): em que pé está, o seguro, a cotação e como
-// terminou. Uma ação principal por vez, no rodapé: enviar a proposta (ou só o
-// preço, se o PDF não veio) que espera alguém; senão, "Renovou". "Renovou" e
-// "Não renovou" não pedem confirmação: o aviso traz "Desfazer", sem prazo. Com
-// a proposta saindo sozinha, nada aqui pede clique: a gaveta só mostra o que
-// já saiu. `seguroId` nulo = fechada.
+// terminou. Um botão azul por vez, no rodapé: o do passo da vez
+// (carteira/passoDaVez.js: cotar, enviar, pôr o telefone, conversar…); depois
+// de as opções saírem, o azul é "Renovou". "Renovou" e "Não renovou" estão
+// sempre no rodapé e não pedem confirmação: o aviso traz "Desfazer", sem prazo.
+// Com a proposta saindo sozinha, nada aqui pede clique: a gaveta só mostra o
+// que já saiu. `seguroId` nulo = fechada.
 const props = defineProps({
   seguroId: { type: Number, default: null },
   fonte: { type: Object, required: true },
@@ -53,6 +55,8 @@ const tk = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.CARD.${chave}`, valores);
 const tg = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.GAVETA.${chave}`, valores);
+const ca = (chave, valores) =>
+  t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.${chave}`, valores);
 const textos = useTextosDoSeguro();
 const aberto = useSeguroAberto(props.fonte, toRef(props, 'seguroId'));
 const { seguro } = aberto;
@@ -60,6 +64,10 @@ const { seguro } = aberto;
 const aviso = ref({ texto: '', desfazer: null });
 const corpo = useTemplateRef('corpo');
 const previa = useTemplateRef('previa');
+const blocoDaCotacao = useTemplateRef('blocoDaCotacao');
+// A pessoa resolveu escrever os dados que faltam sem esperar a resposta que o
+// agente pediu.
+const preenchendo = ref(false);
 const dialogoDoMotivo = useTemplateRef('dialogoDoMotivo');
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
 
@@ -84,16 +92,24 @@ const titulo = computed(() => {
     : t('RELACIONAMENTOS_CARTEIRA.GAVETA.RENOVACAO.TITULO');
 });
 const fim = computed(() => fimDaRenovacao(seguro.value?.renovacao));
-const daConta = computed(() => ({ cotaSozinha: props.fonte.cotaSozinha }));
-const esperando = computed(() => esperaEnvio(seguro.value, daConta.value));
+const daConta = computed(() => ({
+  cotaSozinha: props.fonte.cotaSozinha,
+  tiposQueCota: props.fonte.tiposQueCota,
+}));
+const cotacao = computed(() => cotacaoDoCard(seguro.value, daConta.value));
 // O título: a etapa e a cotação dizem a mesma coisa (carteira/tituloDaRenovacao).
 const emQuePe = computed(() => {
   const { id, etapa } = tituloDaRenovacao(
     seguro.value.renovacao,
-    cotacaoDoCard(seguro.value, daConta.value)
+    cotacao.value
   );
   return t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.SITUACAO.${id}`, { etapa });
 });
+const passo = computed(() =>
+  passoDaVez(seguro.value?.renovacao, cotacao.value, {
+    preenchendo: preenchendo.value,
+  })
+);
 // A apólice nova chega sozinha quando o seguro veio do Agger.
 const chegaSozinha = computed(() => seguro.value?.origem.tipo === 'agger');
 const nomeDoMotivo = motivo =>
@@ -172,15 +188,79 @@ const abrirPessoa = () =>
   emit('abrirSegurado', { tipo: 'pessoa', id: seguro.value.pessoa.id });
 const entrarNoAgger = () =>
   router.push({ name: 'relacionamentos_trazer', query: { como: 'agger' } });
+const conversar = () =>
+  simular(tg('AVISOS.ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name }));
+
+// O botão azul de cada passo. "Renovou" já está no rodapé (fica azul quando é a
+// vez dele) e "Pedir a proposta desta" fica ao lado da seguradora escolhida.
+const BOTOES = {
+  [PASSOS.COTAR_AGORA]: () => ({
+    marca: 'cotar-agora',
+    rotulo: tg('RENOVACAO.COTAR_AGORA'),
+    ocupado: 'cotar',
+    aoClicar: () => agir('cotar'),
+  }),
+  [PASSOS.COTAR_DE_NOVO]: () => ({
+    marca: 'cotar-de-novo',
+    rotulo: ca('COTAR_DE_NOVO'),
+    ocupado: 'cotar',
+    aoClicar: () => agir('cotar'),
+  }),
+  [PASSOS.COTAR_COM_DADOS]: () => ({
+    marca: 'cotar-com-dado',
+    rotulo: ca('COTAR_COM_DADOS'),
+    ocupado: 'cotarComDados',
+    aoClicar: () => blocoDaCotacao.value?.cotarComOsDados(),
+  }),
+  [PASSOS.ENTRAR_NO_AGGER]: () => ({
+    marca: 'entrar-no-agger',
+    rotulo: ca('ENTRAR_NO_AGGER'),
+    aoClicar: entrarNoAgger,
+  }),
+  [PASSOS.ANEXAR_PROPOSTA]: () => ({
+    marca: 'anexar-proposta',
+    rotulo: ca('ANEXAR_PROPOSTA'),
+    ocupado: 'anexarProposta',
+    aoClicar: () => agir('anexarProposta'),
+  }),
+  [PASSOS.ENVIAR]: () => ({
+    marca: 'enviar-ao-cliente',
+    rotulo: ca('ENVIAR_A', { nome: primeiroNome.value }),
+    aoClicar: () => previa.value?.abrir(),
+  }),
+  [PASSOS.ENVIAR_RESUMO]: () => ({
+    marca: 'enviar-ao-cliente',
+    rotulo: ca('ENVIAR_O_RESUMO'),
+    aoClicar: () => previa.value?.abrir(),
+  }),
+  [PASSOS.POR_TELEFONE]: () => ({
+    marca: 'por-o-telefone',
+    rotulo: ca('POR_O_TELEFONE'),
+    aoClicar: abrirPessoa,
+  }),
+  [PASSOS.CONVERSAR]: () => ({
+    marca: 'conversar-sobre-a-proposta',
+    rotulo: ca('CONVERSAR'),
+    aoClicar: conversar,
+  }),
+};
+const botaoDoPasso = computed(() => BOTOES[passo.value?.id]?.() ?? null);
+const renovouEAVez = computed(() => passo.value?.id === PASSOS.RENOVOU);
 
 watch(
   () => props.seguroId,
   id => {
     dizer('');
+    preenchendo.value = false;
     if (id) aberto.carregar();
   },
   { immediate: true }
 );
+// Saiu de "o agente já perguntou" (cotou, chegou a resposta): a escolha de
+// preencher não vale para a próxima vez.
+watch(cotacao, estado => {
+  if (estado !== COTACAO.FALTOU_PERGUNTADO) preenchendo.value = false;
+});
 // A gaveta que já nasce aberta (o endereço trouxe `?renovacao=`) não passa pelo
 // "abrir": o foco vai ao título por aqui.
 onMounted(() => {
@@ -248,17 +328,16 @@ onMounted(() => {
           @ver-apolice="simular(tg('AVISOS.ABRINDO_PDF', { tipo }))"
         />
         <BlocoDaCotacao
+          ref="blocoDaCotacao"
           :seguro="seguro"
-          :cota-sozinha="fonte.cotaSozinha"
+          :da-conta="daConta"
+          :escolhida="passo?.seguradora ?? ''"
+          :preenchendo="preenchendo"
           :ocupado="aberto.ocupado.value"
           :agora="agora"
           @fazer="agir"
           @ver-proposta="verProposta"
-          @conversar="
-            simular(tg('AVISOS.ABRINDO_CONVERSA', { nome: seguro.pessoa.name }))
-          "
-          @por-telefone="abrirPessoa"
-          @entrar-no-agger="entrarNoAgger"
+          @preencher="preenchendo = true"
         />
         <div>
           <Button
@@ -284,22 +363,22 @@ onMounted(() => {
         />
         <template v-if="!fim">
           <Button
-            v-if="esperando"
+            v-if="botaoDoPasso"
             size="lg"
             class="basis-full sm:basis-auto"
-            data-carteira="enviar-ao-cliente"
-            :label="
-              t('RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.ENVIAR_A', {
-                nome: primeiroNome,
-              })
+            :data-carteira="botaoDoPasso.marca"
+            :is-loading="
+              Boolean(botaoDoPasso.ocupado) &&
+              aberto.ocupado.value === botaoDoPasso.ocupado
             "
-            @click="previa?.abrir()"
+            :label="botaoDoPasso.rotulo"
+            @click="botaoDoPasso.aoClicar"
           />
           <Button
             size="lg"
             class="flex-1 sm:flex-none"
-            :slate="esperando"
-            :faded="esperando"
+            :slate="!renovouEAVez"
+            :faded="!renovouEAVez"
             data-carteira="renovou"
             :is-loading="aberto.ocupado.value === 'renovou'"
             :label="tk('RENOVOU')"

@@ -26,7 +26,7 @@ vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));
 vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
-  default: (await import('./dialogoFalso')).TeleportFalso,
+  default: (await import('./teleportFalso')).TeleportFalso,
 }));
 
 withFullI18n('pt_BR');
@@ -732,6 +732,10 @@ describe('BarraDeAcaoEmGrupo', () => {
     expect([...menu.classList]).toEqual(
       expect.arrayContaining(['order-2', 'sm:order-5'])
     );
+    // Do tamanho dos vizinhos (h-12).
+    expect(w.get('[data-relacionamentos="mais-acoes"]').classes()).toContain(
+      'h-12'
+    );
     w.unmount();
   });
 
@@ -756,6 +760,20 @@ describe('BarraDeAcaoEmGrupo', () => {
       { id: 'etiqueta', rotulo: 'Etiqueta', icone: 'i-lucide-tag' },
       { id: 'apagar', rotulo: 'Apagar', icone: 'i-lucide-trash' },
     ];
+
+    it('o "⋯" tem 44 px; ao lado de botões grandes fica do tamanho deles', () => {
+      const gatilhoDe = props =>
+        mount(MenuMaisAcoes, { props: { itens, ...props } }).get(
+          '[data-relacionamentos="mais-acoes"]'
+        );
+
+      expect(gatilhoDe({}).classes()).toContain('size-11');
+      const grande = gatilhoDe({ tamanho: 'lg' });
+      expect(grande.classes()).toEqual(
+        expect.arrayContaining(['h-12', 'w-12'])
+      );
+      expect(grande.classes()).not.toContain('size-11');
+    });
 
     it('ao escolher, o foco volta ao "⋯" antes de avisar', async () => {
       let focoAoAvisar = null;

@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import { PONTO } from '../comum/ponto';
 
 // #2894 — as 3 últimas conversas: canal, trecho, "há 3 dias" e a situação em
 // palavra simples. Na ficha da empresa cada linha diz de quem é (`pessoa`).
@@ -70,7 +71,7 @@ const trechoDa = conversa =>
           <p class="m-0 text-sm text-n-slate-11">
             {{ quandoRelativo(conversa.quando, agora, idioma) }}
             <span class="md:hidden">
-              · {{ ra(`SITUACAO.${conversa.situacao}`) }}
+              {{ PONTO }} {{ ra(`SITUACAO.${conversa.situacao}`) }}
             </span>
           </p>
         </div>

@@ -12,7 +12,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const tc = (chave, valores) =>
+const ca = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.TRAZER.CONFERIR.${chave}`, valores);
 const textos = useTextosDoSeguro();
 
@@ -21,7 +21,7 @@ const fichas = computed(() =>
     pessoa: { ...exemplo, telefone: formatarTelefone(exemplo.telefone) },
     semTelefone: !exemplo.telefone,
     seguros: exemplo.seguros.map(seguro =>
-      tc('SEGURO_DO_EXEMPLO', {
+      ca('SEGURO_DO_EXEMPLO', {
         tipo: textos.tipo(seguro),
         seguradora: seguro.seguradora,
         data: textos.dataInteira(seguro.termina),
@@ -34,7 +34,7 @@ const fichas = computed(() =>
 <template>
   <section data-carteira="exemplos" class="flex flex-col gap-4">
     <h2 class="m-0 text-2xl font-semibold tracking-tight text-n-slate-12">
-      {{ tc('EXEMPLOS') }}
+      {{ ca('EXEMPLOS') }}
     </h2>
     <div class="grid gap-3 md:grid-cols-3">
       <FichaDeExemplo
@@ -48,10 +48,10 @@ const fichas = computed(() =>
           class="flex items-center gap-2 m-0 text-sm text-n-amber-11"
         >
           <span class="i-lucide-phone-off size-4 shrink-0" aria-hidden="true" />
-          {{ tc('SEM_TELEFONE') }}
+          {{ ca('SEM_TELEFONE') }}
         </p>
         <ul
-          :aria-label="tc('SEGUROS_DE', { nome: ficha.pessoa.nome })"
+          :aria-label="ca('SEGUROS_DE', { nome: ficha.pessoa.nome })"
           class="flex flex-col gap-2 p-0 pt-3 m-0 text-sm list-none border-t border-n-weak text-n-slate-12"
         >
           <li

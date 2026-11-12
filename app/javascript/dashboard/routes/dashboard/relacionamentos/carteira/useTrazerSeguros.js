@@ -211,8 +211,6 @@ export const useTrazerSeguros = ({
   const tentarDeNovo = async () => {
     if (erro.value === ERROS.LEITURA && ultimaPlanilha) {
       await lerPlanilha(ultimaPlanilha.arquivo);
-    } else if (erro.value === ERROS.TRAZER) {
-      await trazer();
     } else if (erro.value === ERROS.ANDAMENTO) {
       erro.value = ERROS.NENHUM;
       acompanharATrazida();

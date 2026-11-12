@@ -54,8 +54,10 @@ export const situacaoDoSeguro = (seguro, agora = Date.now()) => {
 };
 
 // A proposta em relação ao ano passado: SUBIU, BAIXOU ou IGUAL, com o número.
+// Só compara quando a cobertura é a mesma do ano passado: com cobertura
+// diferente, "baixou 3%" engana.
 export const variacaoDaProposta = proposta => {
-  if (!proposta) return null;
+  if (!proposta?.mesmaCobertura) return null;
   const { variacao = 0 } = proposta;
   if (variacao > 0) return { id: 'SUBIU', count: variacao };
   return variacao < 0 ? { id: 'BAIXOU', count: -variacao } : { id: 'IGUAL' };

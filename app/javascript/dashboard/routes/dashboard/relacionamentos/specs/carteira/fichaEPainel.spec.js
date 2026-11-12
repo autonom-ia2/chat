@@ -116,6 +116,12 @@ describe('ficha da pessoa: o bloco Seguros', () => {
     expect(primeiro).toContain('Auto');
     expect(primeiro).toContain('Em renovação');
     expect(primeiro).toContain('Seguradora Atlântica · nº AT-000451');
+    // O número da apólice não quebra no hífen.
+    const numero = w.get(
+      `${daCarteira('seguro')} ${daCarteira('numero-da-apolice')}`
+    );
+    expect(numero.text()).toBe('nº AT-000451');
+    expect(numero.classes()).toContain('whitespace-nowrap');
     expect(primeiro).toContain('Vence em 18 dias · ');
   });
 

@@ -18,6 +18,7 @@ import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../ficha/GavetaLateral.vue';
 import MenuMaisAcoes from '../lista/MenuMaisAcoes.vue';
 import { SELOS, seloDoSeguro } from '../../fonte/selosDoSeguro';
+import { cotaEsteSeguro } from '../../carteira/cotacaoDoCard';
 import { cardNasceAmanha } from '../../carteira/formularioDoSeguro';
 import {
   ACOES_DO_SEGURO,
@@ -98,6 +99,11 @@ const dizer = (texto, desfazer = null) => {
   alerta.value = '';
 };
 const simular = (chave, valores) => useAlert(tg(`AVISOS.${chave}`, valores));
+// A proposta oficial ou o resumo da cotação que saiu (um passo da história).
+const verOQueSaiu = passo =>
+  passo.acao === 'ver_resumo'
+    ? useAlert(t('RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.ABRINDO_RESUMO'))
+    : simular('ABRINDO_PROPOSTA');
 const focarTitulo = async () => {
   await nextTick();
   corpo.value
@@ -179,6 +185,9 @@ const enviarPalavras = () =>
     })
   );
 
+const conversar = () =>
+  simular('ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name });
+
 // O próximo passo do seguro. A conversa e o PDF de verdade são de outras
 // entregas: por ora, o aviso diz o que vai abrir.
 const PASSOS = {
@@ -187,8 +196,7 @@ const PASSOS = {
   [ACOES_DO_SEGURO.ANEXAR_PDF]: abrirPdf,
   [ACOES_DO_SEGURO.ANEXAR_APOLICE_NOVA]: abrirPdf,
   [ACOES_DO_SEGURO.AVISAR]: avisarDaParcela,
-  [ACOES_DO_SEGURO.CONVERSAR_COM]: () =>
-    simular('ABRINDO_CONVERSA', { nome: seguro.value.pessoa.name }),
+  [ACOES_DO_SEGURO.CONVERSAR_COM]: conversar,
 };
 const proximoPasso = () => PASSOS[situacao.value.acao]();
 
@@ -311,7 +319,7 @@ onMounted(() => {
           v-if="seguro.renovacao"
           :renovacao="seguro.renovacao"
           :mostra-abrir="situacao.acao !== ACOES_DO_SEGURO.ABRIR_RENOVACAO"
-          :pode-cotar="fonte.cotaSozinha && emRenovacao"
+          :pode-cotar="cotaEsteSeguro(seguro, fonte) && emRenovacao"
           :pedindo-cotacao="aberto.ocupado.value === 'cotar'"
           @abrir="abrirRenovacao"
           @cotar="cotar"
@@ -324,6 +332,7 @@ onMounted(() => {
           @salvar="salvarPalavras"
           @enviar="enviarPalavras"
           @tentar="aberto.carregar"
+          @conversar="conversar"
         />
         <HistoriaDoSeguro
           :itens="aberto.historia.value"
@@ -332,7 +341,7 @@ onMounted(() => {
           :agora="agora"
           @tentar="aberto.carregarHistoria"
           @exportado="dizer(t('RELACIONAMENTOS_CARTEIRA.HISTORIA.BAIXADO'))"
-          @ver-proposta="simular('ABRINDO_PROPOSTA')"
+          @ver-proposta="verOQueSaiu"
         />
       </template>
     </div>
@@ -412,6 +421,7 @@ onMounted(() => {
           />
           <div data-carteira="mais-do-seguro">
             <MenuMaisAcoes
+              tamanho="lg"
               :rotulo="tg('RODAPE.MAIS')"
               :itens="itensDoMenu"
               @escolher="aoEscolherNoMenu"

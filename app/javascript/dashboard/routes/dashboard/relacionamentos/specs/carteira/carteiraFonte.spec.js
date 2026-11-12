@@ -72,9 +72,9 @@ describe('a carteira cheia', () => {
   it('tipos e seguradoras batem com a tabela', async () => {
     const lista = await todos();
     expect(porCampo(lista, 'tipo')).toEqual({
-      auto: 74,
+      auto: 75,
       residencial: 46,
-      vida: 30,
+      vida: 29,
       empresarial: 18,
     });
     expect(porCampo(lista, 'seguradora')).toEqual({
@@ -117,7 +117,7 @@ describe('os seguros com nome', () => {
     [2, 23, 'residencial', 'HZ-002318', 640, SELOS.ATIVO, 214],
     [3, 23, 'vida', 'SA-118802', 1150, SELOS.ATIVO, 331],
     [107, 4, 'auto', 'HZ-004410', 1980, SELOS.EM_RENOVACAO, 3],
-    [110, 117, 'vida', 'SA-120077', 890, SELOS.EM_RENOVACAO, 2],
+    [110, 117, 'auto', 'SA-120077', 1890, SELOS.EM_RENOVACAO, 2],
     [111, 29, 'residencial', 'AT-000903', 520, SELOS.EM_RENOVACAO, 5],
     [112, 24, 'auto', 'AT-001288', 3410, SELOS.EM_RENOVACAO, 6],
     [113, 105, 'auto', 'HZ-005160', 2150, SELOS.EM_RENOVACAO, 7],

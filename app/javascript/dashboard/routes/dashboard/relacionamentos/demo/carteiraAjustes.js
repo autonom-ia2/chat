@@ -7,6 +7,7 @@ import {
   COMO_ENVIA,
   PALAVRAS,
 } from '../carteira/ajustesDaRenovacao';
+import { motivoDeFora } from '../lista/quemFicaDeFora';
 
 // Funis e etapas inventados, de uma conta qualquer.
 export const FUNIS_DA_DEMO = [
@@ -35,18 +36,16 @@ export const salvarAjustesNaDemo = (novos, agora = Date.now()) => {
   return guardados.ajustes;
 };
 
-const podeReceber = pessoa =>
-  Boolean(pessoa.phone_number) && !pessoa.opted_out_at;
-
 // "Sai sozinha": a proposta que estava pronta, esperando alguém enviar, já foi.
-// Quem está sem telefone ou pediu para não receber mensagens fica de fora.
+// Quem está sem telefone, pediu para não receber mensagens ou foi bloqueado
+// fica de fora (a regra de envio da casa, lista/quemFicaDeFora.js).
 const comOEnvioSozinho = seguro => {
   const { renovacao } = seguro;
   const esperando = renovacao?.proposta && !renovacao.proposta.enviadaEm;
   if (
     !esperando ||
     ajustesDaDemo().comoEnvia !== COMO_ENVIA.SOZINHA ||
-    !podeReceber(seguro.pessoa)
+    motivoDeFora(seguro.pessoa) !== null
   ) {
     return seguro;
   }

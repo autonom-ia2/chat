@@ -7,7 +7,11 @@ import DialogoDePrevia from './DialogoDePrevia.vue';
 // #2897 — a conferência antes de a proposta sair: a mensagem como vai chegar
 // no WhatsApp, com o PDF que vai junto, e os botões Enviar e Voltar. Só existe
 // para quem escolheu conferir; com "sai sozinha" a proposta nem passa por aqui.
-// Quando o preço chegou e o PDF não veio, vai só o preço: sem arquivo.
+// O que vai junto é a proposta oficial ou, quando ela não existe (a seguradora
+// não tem proposta em PDF, ou ninguém a pediu ainda), o resumo da cotação, com
+// preço e coberturas; o título diz qual dos dois. Se a pessoa não escreve há
+// mais de um dia, o WhatsApp só deixa sair o texto aprovado: a prévia mostra
+// esse texto (que fala em proposta) e diz por quê.
 const props = defineProps({
   seguro: { type: Object, default: null },
   enviando: { type: Boolean, default: false },
@@ -20,25 +24,35 @@ const tp = (chave, valores) =>
 const textos = useTextosDoSeguro();
 const dialogo = ref(null);
 
-// O PDF que vai junto: a proposta, o resumo ou nenhum ('').
-const pdfDa = proposta => {
-  if (proposta.semPdf) return '';
-  return proposta.oficial ? 'PROPOSTA' : 'RESUMO';
-};
+// O PDF que vai junto: a proposta oficial ou o resumo da cotação.
+const pdfDa = proposta =>
+  proposta.oficial && !proposta.semPdf ? 'PROPOSTA' : 'RESUMO';
 
 const previa = computed(() => {
   const { seguro } = props;
   const proposta = seguro?.renovacao?.proposta;
   if (!proposta) return null;
+  const nome = seguro.pessoa.name.split(' ')[0];
+  const tipo = textos.tipo(seguro);
+  if (seguro.foraDaJanela) {
+    return {
+      titulo: tp('TITULO_PROPOSTA', { nome: seguro.pessoa.name }),
+      arquivo: '',
+      nota: tp('FORA_DA_JANELA', { nome }),
+      texto: tp('MENSAGEM_MODELO', { nome, tipo }),
+    };
+  }
   const pdf = pdfDa(proposta);
   return {
-    titulo: tp('TITULO', { nome: seguro.pessoa.name }),
-    arquivo: pdf ? tp(`ARQUIVO_${pdf}`) : '',
-    texto: tp(`MENSAGEM_${pdf || 'SEM_PDF'}`, {
-      nome: seguro.pessoa.name.split(' ')[0],
-      tipo: textos.tipo(seguro),
+    titulo: tp(`TITULO_${pdf}`, { nome: seguro.pessoa.name }),
+    arquivo: tp(`ARQUIVO_${pdf}`),
+    nota: '',
+    texto: tp(`MENSAGEM_${pdf}`, {
+      nome,
+      tipo,
       seguradora: proposta.seguradora ?? seguro.seguradora,
-      valor: textos.valor(proposta.valor),
+      preco: textos.valor(proposta.valor),
+      periodo: textos.periodo(proposta),
     }),
   };
 });
@@ -55,6 +69,7 @@ defineExpose({
     :titulo="previa?.titulo"
     :texto="previa?.texto"
     :arquivo="previa?.arquivo"
+    :nota="previa?.nota"
     :enviando="enviando"
     @enviar="emit('enviar')"
   />

@@ -157,7 +157,7 @@ describe('aba Seguros: cheia', () => {
     await assentar();
 
     expect(rota.query.apolice).toBe('110');
-    expect(textoDe(w, '[data-view-title]')).toBe('Vida · Serra Azul Seguros');
+    expect(textoDe(w, '[data-view-title]')).toBe('Auto · Serra Azul Seguros');
   });
 
   it('a busca acha pela placa e pelo número da apólice', async () => {

@@ -5,6 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import DetalheDaLista from '../../trazer/DetalheDaLista.vue';
 import HistoricoDeListas from '../../trazer/HistoricoDeListas.vue';
+import { PONTO } from '../../comum/ponto';
 import { formatarHora } from '../../../carteira/formatosDoSeguro';
 import { COMO } from '../../../carteira/passosDeTrazerSeguros';
 import { useIdioma } from '../../../ficha/idioma';
@@ -96,9 +97,9 @@ const buscarTodoDia = async (lista, ligado) => {
         {{
           t('RELACIONAMENTOS_TRAZER.HISTORICO.EM', { data: dia(lista.quando) })
         }}
-        ·
+        {{ PONTO }}
         {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.POR', { nome: lista.quem }) }}
-        ·
+        {{ PONTO }}
         <span data-carteira="historico-seguros" class="tabular-nums">
           {{ th('SEGUROS', { count: lista.seguros }, lista.seguros) }}
         </span>

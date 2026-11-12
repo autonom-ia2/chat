@@ -21,7 +21,7 @@ import {
   esperar,
 } from './listaFonte';
 import { DEMO_CARREGANDO, esperarParaSempre } from './modoDemo';
-import { aggerLigadoNaDemo } from './modoCarteira';
+import { TIPOS_QUE_A_DEMO_COTA, aggerLigadoNaDemo } from './modoCarteira';
 import {
   SELOS,
   diasParaTerminar,
@@ -162,8 +162,7 @@ const ESCRITAS = [
   'renovou',
   'naoRenovou',
   'desfazerDesfecho',
-  'cotarComDado',
-  'pedirPdf',
+  'cotarComDados',
   'pedirProposta',
   'anexarProposta',
   'salvarPalavras',
@@ -173,6 +172,9 @@ const ESCRITAS = [
 const ESTADO_DAS_PALAVRAS = {
   palavras_lendo: 'lendo',
   palavras_erro: 'erro',
+  // Ia sair sozinho e o WhatsApp não deixou (o que já foi enviado continua
+  // dito como enviado: quem desenha olha isso antes).
+  palavras_nao_saiu: 'nao_saiu',
 };
 
 // O seguro que a pessoa tem em outra corretora (Tela 20): os arquivos que
@@ -252,6 +254,8 @@ const fonteDemo = ({
     // Cota sozinha quem tem o Agger ligado e a chave da cotação de renovação.
     aggerLigado,
     cotaSozinha: aggerLigado && !cotacaoDesligada,
+    // Os tipos de seguro que a conta cota; os outros a equipe cota e anexa.
+    tiposQueCota: TIPOS_QUE_A_DEMO_COTA,
     async resumo() {
       const agora = Date.now();
       const seguros = await daCarteira(agora);
@@ -320,7 +324,9 @@ const fonteDemo = ({
     },
     async historia(id) {
       const dados = await demo();
-      return semSeguro ? [] : dados.historiaDoSeguro(id);
+      if (semSeguro) return [];
+      // `?caso=`: o envio que não saiu entra como mais uma linha.
+      return dados.historiaComOCaso?.(id, caso) ?? dados.historiaDoSeguro(id);
     },
     async resumoPorPessoa() {
       const agora = Date.now();
@@ -374,6 +380,7 @@ const fonteReal = () => {
     usaDemo: false,
     aggerLigado: false,
     cotaSozinha: false,
+    tiposQueCota: [],
     ...Object.fromEntries(
       [...LEITURAS, ...ESCRITAS, ...DE_FORA].map(nome => [nome, pendente])
     ),

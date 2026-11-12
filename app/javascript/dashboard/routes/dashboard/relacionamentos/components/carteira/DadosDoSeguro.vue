@@ -38,13 +38,16 @@ const linhas = computed(() => {
   return [
     { chave: 'tipo', valor: textos.tipo(seguro) },
     { chave: 'seguradora', valor: seguro.seguradora },
-    { chave: 'numero', valor: seguro.numero, copiar: true },
+    { chave: 'numero', valor: seguro.numero, copiar: true, inteiro: true },
     { chave: 'comeca', valor: textos.dataInteira(seguro.comeca) },
     { chave: 'termina', valor: textos.dataInteira(seguro.termina) },
     {
       chave: 'valor',
       valor: seguro.valor
-        ? td('VALOR_POR_ANO', { valor: textos.valor(seguro.valor) })
+        ? td('VALOR_POR_PERIODO', {
+            valor: textos.valor(seguro.valor),
+            periodo: textos.periodo(seguro),
+          })
         : '',
     },
     { chave: 'segurado', valor: seguro.segurado.nome, ficha: true },
@@ -96,6 +99,13 @@ const linhas = computed(() => {
             >
               {{ linha.valor }}
             </button>
+            <span
+              v-else-if="linha.inteiro && linha.valor"
+              data-carteira="numero-da-apolice"
+              class="whitespace-nowrap"
+            >
+              {{ linha.valor }}
+            </span>
             <template v-else>
               {{ linha.valor || td('NAO_INFORMADO') }}
             </template>

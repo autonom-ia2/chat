@@ -19,7 +19,8 @@ export const pessoasDosSeguros = leitura => {
 };
 
 // Cada contador vira uma chave do catálogo (TRAZER.CONFERIR.CONTADOR.<chave>);
-// contador zerado some.
+// contador zerado some. Quem já estava aqui não é contador: é a frase de apoio
+// de `quemJaEstava`, para o número de pessoas não aparecer duas vezes.
 export const contadoresDaLeitura = leitura => {
   if (!leitura) return [];
   const { abertos, guardados, deixados } = contarProblemas(leitura.problemas);
@@ -27,8 +28,16 @@ export const contadoresDaLeitura = leitura => {
     { chave: 'PRONTOS', count: (leitura.prontos ?? ZERO) + guardados },
     { chave: 'PRECISAM', count: abertos },
     { chave: 'SEM_TELEFONE', count: leitura.semTelefone ?? ZERO },
-    { chave: 'JA_ESTAVAM', count: leitura.jaEstavam ?? ZERO },
     { chave: 'NAO_E_APOLICE', count: leitura.naoEApolice?.length ?? ZERO },
     { chave: 'DEIXADOS', count: deixados },
   ].filter(({ count }) => count > ZERO);
+};
+
+// Das pessoas achadas, quem já estava na conta: todas, uma parte ou ninguém
+// (`null`). A chave é do catálogo (TRAZER.CONFERIR.JA_ESTAVAM.<chave>).
+export const quemJaEstava = leitura => {
+  const jaEstavam = leitura?.jaEstavam ?? ZERO;
+  if (jaEstavam <= ZERO) return null;
+  const todas = jaEstavam >= (leitura.achei?.pessoas ?? ZERO);
+  return { chave: todas ? 'TODAS' : 'PARTE', count: jaEstavam };
 };

@@ -254,6 +254,12 @@ describe('anexar o PDF e ver o que mudou', () => {
     expect(w.find('[data-passo="apolice_nova"]').text()).toContain(
       'A anterior era a nº AU-77031.'
     );
+    // O número da apólice anterior não quebra no hífen.
+    const anterior = w.get(
+      `[data-passo="apolice_nova"] ${daCarteira('numero-da-apolice')}`
+    );
+    expect(anterior.text()).toBe('nº AU-77031');
+    expect(anterior.classes()).toContain('whitespace-nowrap');
 
     await w.get(daCarteira('desfazer')).trigger('click');
     await assentar();

@@ -293,7 +293,7 @@ describe('Tela 17: trazer pelo Agger', () => {
 
     const sossego = w.get(daCarteira('agger-senha-segura'));
     expect(sossego.text()).toBe(
-      'Sua senha fica guardada com segurança. Ela só serve para buscar os seus seguros.'
+      'Sua senha fica guardada com segurança. Ela serve para buscar os seus seguros e cotar as renovações.'
     );
     expect(
       w.get(daCarteira('agger-senha')).attributes('aria-describedby')
@@ -313,10 +313,51 @@ describe('Tela 17: trazer pelo Agger', () => {
 
     await entrarNoAgger(w, { senha: 'errada' });
 
-    expect(w.get(daCarteira('agger-erro')).text()).toBe(
+    const erro = w.get(daCarteira('agger-erro'));
+    expect(erro.text()).toBe(
       'Usuário ou senha não conferem. Confira e tente de novo.'
     );
     expect(w.find(daCarteira('agger-buscando')).exists()).toBe(false);
+
+    // Os dois campos ficam marcados, apontam para o aviso, e o foco volta ao
+    // usuário: é por ele que a pessoa recomeça.
+    const usuario = w.get(daCarteira('agger-usuario'));
+    const senha = w.get(daCarteira('agger-senha'));
+    [usuario, senha].forEach(campo => {
+      expect(campo.attributes('aria-invalid')).toBe('true');
+      expect(campo.attributes('aria-describedby').split(' ')).toContain(
+        erro.attributes('id')
+      );
+    });
+    expect(emFoco()).toBe(usuario.element);
+
+    // Ao escrever de novo, os campos deixam de estar marcados.
+    await usuario.setValue('corretora2');
+    [usuario, senha].forEach(campo => {
+      expect(campo.attributes('aria-invalid')).toBeUndefined();
+      expect(campo.attributes('aria-describedby') ?? '').not.toContain(
+        erro.attributes('id')
+      );
+    });
+  });
+
+  it('"Entrar e trazer" ocupa a linha inteira no celular, como os demais', async () => {
+    const w = await abrir({ como: 'agger' });
+
+    expect(w.get(daCarteira('agger-entrar')).classes()).toEqual(
+      expect.arrayContaining(['w-full', 'sm:w-auto'])
+    );
+  });
+
+  it('o campo tem a altura dos campos da casa, e "Mostrar a senha" continua com 44 px', async () => {
+    const w = await abrir({ como: 'agger' });
+
+    expect(w.get(daCarteira('agger-usuario')).classes()).toEqual(
+      expect.arrayContaining(['h-10', 'text-sm'])
+    );
+    expect(w.get(daCarteira('agger-mostrar-senha')).classes()).toContain(
+      'size-11'
+    );
   });
 
   it('busca seguradora por seguradora e só segue quando a pessoa toca em Continuar', async () => {

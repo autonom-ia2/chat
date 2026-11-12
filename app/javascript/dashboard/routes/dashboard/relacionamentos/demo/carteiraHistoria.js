@@ -1,6 +1,7 @@
 // #2897 — a história fictícia de cada seguro: o que aconteceu, quando e quem
 // fez, do mais novo para o mais velho. O texto de cada passo é do catálogo
 // (pelo `tipo`); aqui ficam só os fatos. O que a pessoa "disse" é inventado.
+import { DIAS_DAS_MENSAGENS } from '../carteira/ajustesDaRenovacao';
 import { DIA_EM_MS } from '../fonte/grupos';
 
 const ROBO = { papel: 'robo' };
@@ -26,6 +27,19 @@ const passo = (tipo, quando, extras = {}) => ({
 
 const primeiroNome = seguro => seguro.pessoa.name.split(' ')[0];
 
+// O que a história diz da proposta: de quem é, quanto, por ano ou por mês, e
+// (só com a mesma cobertura) quanto mudou.
+const daPropostaEmValores = (seguro, proposta) => ({
+  seguradora: proposta.seguradora ?? seguro.seguradora,
+  valor: proposta.valor,
+  periodo: proposta.periodo,
+  variacao: proposta.variacao,
+  mesmaCobertura: proposta.mesmaCobertura,
+});
+// O link do que saiu: a proposta oficial ou o resumo da cotação.
+const verOQueSaiu = proposta =>
+  proposta.oficial ? 'ver_proposta' : 'ver_resumo';
+
 const chegada = seguro =>
   seguro.origem.tipo === 'planilha'
     ? passo('chegou_planilha', seguro.origem.em, {
@@ -43,15 +57,11 @@ const daRenovacaoCompleta = (seguro, agora) => {
     }),
     passo('proposta_enviada', diaEHora(agora, 5, 10, 5), {
       quem: { nome: cuida },
-      acao: 'ver_proposta',
+      acao: verOQueSaiu(proposta),
     }),
     passo('proposta_pronta', diaEHora(agora, 6, 9, 40), {
       quem: ROBO,
-      valores: {
-        seguradora: seguro.seguradora,
-        valor: proposta.valor,
-        variacao: proposta.variacao,
-      },
+      valores: daPropostaEmValores(seguro, proposta),
     }),
     passo('respondeu_algo_mudou', diaEHora(agora, 6, 9, 2), {
       valores: { nome },
@@ -77,24 +87,49 @@ const daProposta = (seguro, agora) => {
     proposta.enviadaEm
       ? proposta.enviadaEm - MINUTOS_ATE_ENVIAR
       : diaEHora(agora, PRONTA_HA_DIAS, 9, 40),
-    {
-      quem: ROBO,
-      valores: {
-        seguradora: proposta.seguradora ?? seguro.seguradora,
-        valor: proposta.valor,
-        variacao: proposta.variacao,
-      },
-    }
+    { quem: ROBO, valores: daPropostaEmValores(seguro, proposta) }
   );
+  // Ia sair sozinha e o WhatsApp não deixou: fica dito até alguém enviar.
+  if (!proposta.enviadaEm && proposta.naoSaiuEm) {
+    return [passo('proposta_nao_saiu', proposta.naoSaiuEm), pronta];
+  }
   if (!proposta.enviadaEm || proposta.enviadaPor?.papel) return [pronta];
   const envio = proposta.enviadaSozinha
     ? passo('proposta_enviada_sozinha', proposta.enviadaEm)
     : passo('proposta_enviada', proposta.enviadaEm, {
         quem: { nome: proposta.enviadaPor },
-        acao: 'ver_proposta',
+        acao: verOQueSaiu(proposta),
       });
   return [envio, pronta];
 };
+
+// ---- o que ia sair sozinho e não saiu (`?caso=`) ------------------------------
+
+const NAO_SAIU_HA_DIAS = 1;
+// O aviso mais recente que já devia ter saído: aos 30, 15 ou 7 dias do fim.
+const diasDoAviso = (seguro, agora) => {
+  const faltam = (seguro.termina * 1000 - agora) / DIA_EM_MS;
+  const jaDeviam = DIAS_DAS_MENSAGENS.filter(dias => dias >= faltam);
+  return jaDeviam.length ? Math.min(...jaDeviam) : DIAS_DAS_MENSAGENS[0];
+};
+const NAO_SAIRAM = {
+  aviso_nao_saiu: (seguro, agora) =>
+    seguro.renovacao
+      ? passo('aviso_nao_saiu', diaEHora(agora, NAO_SAIU_HA_DIAS, 9, 0), {
+          valores: { dias: diasDoAviso(seguro, agora) },
+        })
+      : null,
+  algo_mudou_nao_saiu: (seguro, agora) =>
+    seguro.renovacao
+      ? passo('algo_mudou_nao_saiu', diaEHora(agora, NAO_SAIU_HA_DIAS, 9, 2))
+      : null,
+  palavras_nao_saiu: (seguro, agora) =>
+    seguro.palavras && !seguro.palavras.enviadoEm
+      ? passo('palavras_nao_saiu', diaEHora(agora, NAO_SAIU_HA_DIAS, 10, 30))
+      : null,
+};
+const doCaso = (seguro, agora, caso) =>
+  [NAO_SAIRAM[caso]?.(seguro, agora)].filter(Boolean);
 
 const daSituacao = (seguro, agora, feitos) => {
   const jaFeito = tipo => feitos.some(item => item.tipo === tipo);
@@ -140,9 +175,15 @@ const doQueFoiFeito = feitos =>
   );
 
 // Na ordem da tela: o mais novo primeiro; no empate, o que foi feito por último.
-export const historiaDaDemo = (seguro, feitos = [], agora = Date.now()) =>
+export const historiaDaDemo = (
+  seguro,
+  feitos = [],
+  agora = Date.now(),
+  caso = null
+) =>
   [
     ...doQueFoiFeito(feitos).reverse(),
+    ...doCaso(seguro, agora, caso),
     ...daSituacao(seguro, agora, feitos),
     chegada(seguro),
   ]

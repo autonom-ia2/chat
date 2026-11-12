@@ -3,7 +3,7 @@
 // (fonte/renovacoesFonte.js); quem desenha é a página.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
-import { ajustesMudaram } from './ajustesDaRenovacao';
+import { ajustesMudaram, quemCotaNaConta } from './ajustesDaRenovacao';
 
 export const useAjustesDaRenovacao = fonte => {
   const { estado, carregar } = useEstadoDaFicha();
@@ -17,8 +17,12 @@ export const useAjustesDaRenovacao = fonte => {
     const { ajustes, ...resto } = await fonte.ajustes();
     if (!aindaVale()) return false;
     conta.value = resto;
-    salvos.value = ajustes;
-    rascunho.value = { ...ajustes };
+    // Quem cota só pode ser uma opção que a conta tem.
+    salvos.value = {
+      ...ajustes,
+      quemCota: quemCotaNaConta(ajustes.quemCota, resto),
+    };
+    rascunho.value = { ...salvos.value };
     return true;
   };
 

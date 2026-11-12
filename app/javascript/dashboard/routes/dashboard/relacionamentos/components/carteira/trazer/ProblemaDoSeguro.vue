@@ -225,7 +225,7 @@ const trocarOArquivo = evento => {
           </span>
           <span
             data-carteira="ficar-com-este"
-            class="inline-flex items-center justify-center w-full px-4 mt-2 text-base font-medium rounded-lg min-h-11 bg-n-blue-3 text-n-blue-11"
+            class="inline-flex items-center justify-center w-full px-4 mt-2 text-base font-medium rounded-lg min-h-11 bg-n-alpha-2 text-n-slate-12"
           >
             {{ tp('FICAR_COM_ESTE') }}
           </span>
@@ -235,6 +235,8 @@ const trocarOArquivo = evento => {
       <div class="flex flex-wrap items-center gap-3">
         <Button
           v-if="campo"
+          slate
+          faded
           type="submit"
           size="lg"
           data-carteira="salvar-problema"
@@ -243,6 +245,8 @@ const trocarOArquivo = evento => {
         />
         <template v-if="problema.tipo === 'foto_escura'">
           <Button
+            slate
+            faded
             type="button"
             size="lg"
             data-carteira="trocar-o-arquivo"

@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { formatarReais } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import { PONTO } from '../comum/ponto';
 
 // #2894 — os cards da pessoa: título, funil e etapa, valor e situação. Clicar
 // abre a gaveta do card. Na ficha da empresa cada card diz de quem é (`pessoa`).
@@ -49,7 +50,7 @@ const ra = (chave, valores) =>
             <span class="block text-sm text-n-slate-11">
               {{ ra('FUNIL_ETAPA', { funil: card.funil, etapa: card.etapa }) }}
               <template v-if="card.pessoa">
-                · {{ ra('DE', { pessoa: card.pessoa }) }}
+                {{ PONTO }} {{ ra('DE', { pessoa: card.pessoa }) }}
               </template>
             </span>
           </span>

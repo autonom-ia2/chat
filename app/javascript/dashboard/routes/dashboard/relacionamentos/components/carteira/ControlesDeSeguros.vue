@@ -27,23 +27,23 @@ const emit = defineEmits([
 ]);
 
 const { t } = useI18n();
-const tc = (chave, valores) =>
+const ca = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores);
 const idDaOrdem = useId();
 
 const opcoesDeOrdem = computed(() => [
   {
     value: ORDENS_DE_SEGUROS.VENCE_PRIMEIRO,
-    label: tc('ORDENAR.VENCE_PRIMEIRO'),
+    label: ca('ORDENAR.VENCE_PRIMEIRO'),
   },
-  { value: ORDENS_DE_SEGUROS.NOME, label: tc('ORDENAR.NOME') },
-  { value: ORDENS_DE_SEGUROS.MAIS_NOVOS, label: tc('ORDENAR.MAIS_NOVOS') },
+  { value: ORDENS_DE_SEGUROS.NOME, label: ca('ORDENAR.NOME') },
+  { value: ORDENS_DE_SEGUROS.MAIS_NOVOS, label: ca('ORDENAR.MAIS_NOVOS') },
 ]);
 
 const rotuloDosFiltros = computed(() =>
   props.filtrosAtivos
-    ? tc('FILTROS.BOTAO_COM_CONTAGEM', { count: props.filtrosAtivos })
-    : tc('FILTROS.BOTAO')
+    ? ca('FILTROS.BOTAO_COM_CONTAGEM', { count: props.filtrosAtivos })
+    : ca('FILTROS.BOTAO')
 );
 
 const ATALHOS = [
@@ -56,7 +56,7 @@ const AVISAR = {
   ajustar: () => emit('ajustar'),
 };
 const itensDoMenu = computed(() =>
-  ATALHOS.map(({ id, chave, icone }) => ({ id, icone, rotulo: tc(chave) }))
+  ATALHOS.map(({ id, chave, icone }) => ({ id, icone, rotulo: ca(chave) }))
 );
 </script>
 
@@ -68,8 +68,8 @@ const itensDoMenu = computed(() =>
     >
       <CampoDeBusca
         :model-value="busca"
-        :placeholder="tc('BUSCA')"
-        :placeholder-curto="tc('BUSCA_CURTA')"
+        :placeholder="ca('BUSCA')"
+        :placeholder-curto="ca('BUSCA_CURTA')"
         @update:model-value="emit('update:busca', $event)"
       />
     </div>
@@ -79,13 +79,13 @@ const itensDoMenu = computed(() =>
           :for="idDaOrdem"
           class="text-sm sr-only text-n-slate-11 sm:not-sr-only"
         >
-          {{ tc('ORDENAR.ROTULO') }}
+          {{ ca('ORDENAR.ROTULO') }}
         </label>
         <ChoiceSelect
           :model-value="ordem"
           :options="opcoesDeOrdem"
           :trigger-id="idDaOrdem"
-          :aria-label="tc('ORDENAR.ROTULO')"
+          :aria-label="ca('ORDENAR.ROTULO')"
           class="flex-1 min-w-0 md:flex-none"
           @update:model-value="emit('update:ordem', $event)"
         />
@@ -103,7 +103,7 @@ const itensDoMenu = computed(() =>
       <MenuMaisAcoes
         class="sm:hidden"
         para-baixo
-        :rotulo="tc('MAIS')"
+        :rotulo="ca('MAIS')"
         :itens="itensDoMenu"
         @escolher="AVISAR[$event]?.()"
       />
@@ -117,7 +117,7 @@ const itensDoMenu = computed(() =>
         class="shrink-0 whitespace-nowrap"
         :icon="atalho.icone"
         :data-carteira="atalho.id"
-        :label="tc(atalho.chave)"
+        :label="ca(atalho.chave)"
         @click="AVISAR[atalho.id]()"
       />
     </div>

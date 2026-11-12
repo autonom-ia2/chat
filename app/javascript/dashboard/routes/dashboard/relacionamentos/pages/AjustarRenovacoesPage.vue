@@ -91,8 +91,17 @@ const opcoes = computed(() => {
       escolha(ALGO_MUDOU.PERGUNTAR, 'ALGO_MUDOU.PERGUNTAR'),
       escolha(ALGO_MUDOU.NAO, 'ALGO_MUDOU.NAO_PERGUNTAR'),
     ],
+    // "Sozinho" só entra na conta que cota sem conversar com a pessoa.
     quemCota: [
-      escolha(QUEM_COTA.ROBO, 'QUEM_COTA.ROBO', com('QUEM_COTA.ROBO_APOIO')),
+      ...(conta.value.cotaSemConversa
+        ? [
+            escolha(
+              QUEM_COTA.ROBO,
+              'QUEM_COTA.ROBO',
+              com('QUEM_COTA.ROBO_APOIO')
+            ),
+          ]
+        : []),
       ...doAgente,
       escolha(
         QUEM_COTA.NINGUEM,

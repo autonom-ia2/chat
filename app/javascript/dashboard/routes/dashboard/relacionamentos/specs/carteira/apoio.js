@@ -61,7 +61,7 @@ export const DialogoFalso = defineComponent({
 });
 
 // A gaveta e o diálogo vão para o <body>; nos testes ficam no lugar.
-export { TeleportFalso } from '../lista/dialogoFalso';
+export { TeleportFalso } from '../lista/teleportFalso';
 
 export const daCarteira = nome => `[data-carteira="${nome}"]`;
 export const doBlocoA = nome => `[data-relacionamentos="${nome}"]`;

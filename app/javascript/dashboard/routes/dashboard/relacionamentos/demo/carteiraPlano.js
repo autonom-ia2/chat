@@ -9,7 +9,9 @@
 // Totais: 98 ativos · 22 em renovação · 4 renovados · 41 vencidos · 3
 // cancelados. Vencem em até 7 dias: 5; 30: 17; 60: 22; 90: 31.
 import { pessoas } from './base';
+import { AGENTE_DA_DEMO } from './carteiraAjustes';
 import { embaralhadoFixo, sorteioFixo } from './sorteioFixo';
+import { TIPOS_QUE_A_DEMO_COTA } from '../fonte/modoCarteira';
 
 export const SEGURADORAS = [
   'Seguradora Atlântica',
@@ -31,6 +33,19 @@ export const MOTIVOS = [
   'vendeu_o_bem',
   'nao_respondeu',
 ];
+
+// O que a seguradora pede para cotar e a apólice antiga não traz, por tipo.
+export const DADOS_PARA_COTAR = {
+  auto: [
+    'placa',
+    'nascimento',
+    'estado_civil',
+    'quem_dirige',
+    'onde_dorme',
+    'quanto_roda',
+  ],
+  residencial: ['endereco', 'tipo_do_imovel'],
+};
 
 const EMPRESA_SEGURADA = 23;
 const SEMENTES = { donos: 131, situacoes: 149, tipos: 163, seguradoras: 181 };
@@ -88,17 +103,18 @@ const NOMEADOS = [
   {
     id: 110,
     pessoaId: 117,
-    tipo: 'vida',
+    tipo: 'auto',
     seguradora: SERRA_AZUL,
     numero: 'SA-120077',
-    valor: 890,
+    valor: 1890,
     dias: 2,
-    // Faltou um dado para cotar; quem atende sozinho já perguntou.
+    bem: 'Carro sedã preto',
+    // Faltam dados para cotar; o agente da conta já perguntou à pessoa.
     renovacao: {
       etapa: 'A vencer',
       cuida: BIA,
-      faltou: 'nascimento',
-      perguntou: 'Nina',
+      faltou: DADOS_PARA_COTAR.auto,
+      perguntou: AGENTE_DA_DEMO,
     },
   },
   {
@@ -289,6 +305,13 @@ const emRenovacao = (dias, i) => {
   const etapa = ETAPAS_ABERTAS[i % ETAPAS_ABERTAS.length];
   return { dias, renovacao: { etapa, cuida: EQUIPE[i % EQUIPE.length] } };
 };
+
+// Tipo que a conta não cota (vida, empresarial) nunca aparece "Cotando": a
+// renovação dele espera a equipe anexar a proposta.
+const semCotarOQueNaoCota = (renovacao, tipo) =>
+  renovacao?.etapa === 'Cotando' && !TIPOS_QUE_A_DEMO_COTA.includes(tipo)
+    ? { ...renovacao, etapa: 'A vencer' }
+    : renovacao;
 
 // Os cinco primeiros "vence depois" ficam para os donos especiais (sem telefone
 // e parcela atrasada); o resto é embaralhado.
@@ -513,7 +536,11 @@ const gerados = (clientes, marcados) => {
       valor,
       bem: bemGerado(tipo, id, cidadeDe.get(pessoaId)),
       placa: tipo === 'auto' ? placaGerada(id) : null,
-      renovacao: comProposta(situacao.renovacao ?? null, valor, ordem),
+      renovacao: comProposta(
+        semCotarOQueNaoCota(situacao.renovacao ?? null, tipo),
+        valor,
+        ordem
+      ),
       ...(parcela >= 0 ? { parcelaHaDias: PARCELAS_HA_DIAS[parcela] } : {}),
     };
   });

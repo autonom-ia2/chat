@@ -3,9 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 // #2897 — os contadores do topo da conferência de seguros ("164 prontos · 4
-// precisam de você · 120 pessoas já estavam aqui"). O de "precisam de você" é
-// um botão que leva ao bloco dos problemas. Região viva: os números mudam a
-// cada problema resolvido.
+// precisam de você"). O de "precisam de você" é um botão que leva ao bloco dos
+// problemas. Região viva: os números mudam a cada problema resolvido.
 const props = defineProps({
   // [{ chave, count }], já sem os zerados (carteira/contagemDeSeguros.js).
   contadores: { type: Array, required: true },
@@ -13,14 +12,14 @@ const props = defineProps({
 const emit = defineEmits(['precisam']);
 
 const { t } = useI18n();
-const tc = (chave, ...resto) =>
+const ca = (chave, ...resto) =>
   t(`RELACIONAMENTOS_CARTEIRA.TRAZER.CONFERIR.${chave}`, ...resto);
 
 const PRECISAM = 'PRECISAM';
 
 const itens = computed(() =>
   props.contadores.map(({ chave, count }) => {
-    const rotulo = tc(`CONTADOR.${chave}`, count);
+    const rotulo = ca(`CONTADOR.${chave}`, count);
     return {
       chave,
       count,
@@ -36,7 +35,7 @@ const itens = computed(() =>
   <ul
     data-carteira="contadores"
     aria-live="polite"
-    :aria-label="tc('CONTADORES')"
+    :aria-label="ca('CONTADORES')"
     class="grid grid-cols-2 p-0 m-0 list-none gap-x-6 gap-y-4 md:flex md:flex-wrap md:gap-x-10"
   >
     <li v-for="item in itens" :key="item.chave" :data-contador="item.chave">

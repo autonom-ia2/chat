@@ -2,19 +2,20 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import ErroComTentarDeNovo from '../../comum/ErroComTentarDeNovo.vue';
 import OQueVouGuardar from '../../trazer/OQueVouGuardar.vue';
 import ContadoresDosSeguros from './ContadoresDosSeguros.vue';
 import ExemplosComSeguros from './ExemplosComSeguros.vue';
 import PrecisamDosSeguros from './PrecisamDosSeguros.vue';
 import { CHAVES_DOS_DESTINOS_DE_SEGURO } from '../../../carteira/destinosDeSeguro';
+import { quemJaEstava } from '../../../carteira/contagemDeSeguros';
 import { COMO } from '../../../carteira/passosDeTrazerSeguros';
 
 // #2897 — "Conferir" dos seguros, igual para a planilha, os PDFs e o Agger: a
-// frase do que achei, os contadores, o que acontece amanhã cedo, o que precisa
-// da pessoa, as fichas de exemplo, o que não é apólice e o que vou guardar. O
-// botão único de trazer (que sobe a cada problema resolvido), o Voltar e a
-// frase do desfazer ficam numa barra sempre à vista, no fim da área de conteúdo.
+// frase do que achei, os contadores, quem já estava aqui, o que acontece amanhã
+// cedo, o que precisa da pessoa, as fichas de exemplo, o que não é apólice e o
+// que vou guardar. O botão único de trazer (que sobe a cada problema
+// resolvido), o Voltar e a frase do desfazer ficam numa barra sempre à vista,
+// no fim da área de conteúdo.
 const props = defineProps({
   leitura: { type: Object, required: true },
   contadores: { type: Array, required: true },
@@ -29,11 +30,10 @@ const emit = defineEmits([
   'trocar',
   'trazer',
   'voltar',
-  'tentar',
 ]);
 
 const { t } = useI18n();
-const tc = (chave, ...resto) =>
+const ca = (chave, ...resto) =>
   t(`RELACIONAMENTOS_CARTEIRA.TRAZER.CONFERIR.${chave}`, ...resto);
 const raiz = ref(null);
 
@@ -53,17 +53,25 @@ const marcas = computed(() => MARCAS[props.leitura.origem]);
 const frase = computed(() => {
   const { pdfs, seguros, pessoas } = props.leitura.achei;
   return [
-    pdfs ? tc('LI_PDFS', { count: pdfs }, pdfs) : '',
-    tc('ACHEI_SEGUROS', { count: seguros }, seguros),
-    tc('DE_PESSOAS', { count: pessoas }, pessoas),
+    pdfs ? ca('LI_PDFS', { count: pdfs }, pdfs) : '',
+    ca('ACHEI_SEGUROS', { count: seguros }, seguros),
+    ca('DE_PESSOAS', { count: pessoas }, pessoas),
   ]
     .filter(Boolean)
     .join(' ');
 });
 
+// "Essas pessoas já estavam aqui." (ou quantas delas), uma vez só.
+const jaEstavam = computed(() => {
+  const quem = quemJaEstava(props.leitura);
+  return quem
+    ? ca(`JA_ESTAVAM.${quem.chave}`, { count: quem.count }, quem.count)
+    : '';
+});
+
 const efeito = computed(() => {
   const { dias, seguros } = props.leitura.efeito;
-  return seguros > 0 ? tc('EFEITO', { count: seguros, dias }, seguros) : '';
+  return seguros > 0 ? ca('EFEITO', { count: seguros, dias }, seguros) : '';
 });
 
 const destinosDeSeguro = computed(() =>
@@ -111,11 +119,18 @@ const irParaPrecisam = () => {
         @precisam="irParaPrecisam"
       />
       <p
+        v-if="jaEstavam"
+        data-carteira="ja-estavam-aqui"
+        class="m-0 text-base text-n-slate-11"
+      >
+        {{ jaEstavam }}
+      </p>
+      <p
         v-if="leitura.semTelefone"
         data-carteira="sem-telefone-apoio"
         class="m-0 text-base text-n-slate-11"
       >
-        {{ tc('SEM_TELEFONE_APOIO') }}
+        {{ ca('SEM_TELEFONE_APOIO') }}
       </p>
       <p
         v-if="efeito"
@@ -152,7 +167,7 @@ const irParaPrecisam = () => {
       class="flex flex-col gap-3"
     >
       <h2 class="m-0 text-2xl font-semibold tracking-tight text-n-slate-12">
-        {{ tc('NAO_E_APOLICE_TITULO', { count: leitura.naoEApolice.length }) }}
+        {{ ca('NAO_E_APOLICE_TITULO', { count: leitura.naoEApolice.length }) }}
       </h2>
       <ul class="flex flex-col gap-2 p-0 m-0 list-none">
         <li
@@ -160,7 +175,7 @@ const irParaPrecisam = () => {
           :key="arquivo"
           class="text-base break-words text-n-slate-11"
         >
-          {{ tc('NAO_E_APOLICE', { arquivo }) }}
+          {{ ca('NAO_E_APOLICE', { arquivo }) }}
         </li>
       </ul>
     </section>
@@ -173,27 +188,30 @@ const irParaPrecisam = () => {
       @trocar="(coluna, destino) => emit('trocar', coluna, destino)"
     />
 
-    <div v-if="comErro" data-carteira="erro">
-      <ErroComTentarDeNovo
-        :mensagem="tc('ERRO_TRAZER')"
-        @tentar="emit('tentar')"
-      />
-    </div>
-
     <!-- A ação principal fica sempre à vista: a barra gruda no fim da área de
          conteúdo. Ela ocupa lugar na página (não flutua por cima), então o
          último bloco nunca fica coberto. Abaixo de `md` o conteúdo começa
          depois do canto do botão ☰ do app (`ps-20`, como o rodapé dos
-         ajustes e a barra de ação da lista). -->
+         ajustes e a barra de ação da lista). Se trazer falha, o aviso entra
+         aqui, numa linha de texto acima do botão: é onde a pessoa acabou de
+         clicar, e clicar de novo em "Trazer N seguros" é o tentar de novo. -->
     <div
       data-carteira="barra-de-trazer"
       class="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-3 ps-20 pe-5 pt-4 -mx-5 border-t md:-mx-8 md:ps-8 md:pe-8 border-n-weak bg-n-surface-1 pb-[calc(1rem+env(safe-area-inset-bottom))]"
     >
+      <p
+        v-if="comErro"
+        role="alert"
+        data-carteira="erro"
+        class="m-0 text-base font-medium basis-full text-n-ruby-11"
+      >
+        {{ ca('ERRO_TRAZER') }}
+      </p>
       <Button
         :data-carteira="marcas.botao"
         size="lg"
         class="flex-1 sm:flex-none"
-        :label="tc('TRAZER', { count: total }, total)"
+        :label="ca('TRAZER', { count: total }, total)"
         :disabled="ocupado"
         @click="emit('trazer')"
       />
@@ -210,7 +228,7 @@ const irParaPrecisam = () => {
         class="flex items-center gap-2 m-0 text-sm basis-full sm:basis-auto text-n-slate-11"
       >
         <span class="i-lucide-undo-2 size-4 shrink-0" aria-hidden="true" />
-        {{ tc('SOSSEGO') }}
+        {{ ca('SOSSEGO') }}
       </p>
     </div>
   </section>

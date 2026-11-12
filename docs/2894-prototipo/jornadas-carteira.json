@@ -704,7 +704,7 @@
               "clicar": "[data-carteira=\"trazer-seguros\"]"
             },
             {
-              "esperar": "[data-carteira=\"planilha-conferir\"] [data-carteira=\"erro\"]"
+              "esperar": "[data-carteira=\"barra-de-trazer\"] p[data-carteira=\"erro\"]"
             }
           ],
           "pausa": 1000
@@ -1629,8 +1629,20 @@
         {
           "nome": "faltou-dado",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/117?demo=cheio&renovacao=110",
-          "esperar": "[data-cotacao=\"FALTOU_PERGUNTADO\"]",
+          "esperar": "[data-carteira=\"dados-que-faltam\"]",
           "pausa": 1500
+        },
+        {
+          "nome": "faltou-dado-preencher-voce-mesmo",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"preencher-os-dados\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"dados-para-preencher\"]"
+            }
+          ],
+          "pausa": 800
         },
         {
           "nome": "faltou-dado-sem-agente",
@@ -1655,8 +1667,38 @@
           "passos": [
             {
               "preencher": [
-                "[data-carteira=\"dado-que-faltou\"]",
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"placa\"]",
+                "BRA2E19"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"nascimento\"]",
                 "14/08/1987"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"estado_civil\"]",
+                "Casada"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"quem_dirige\"]",
+                "Só ela"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"onde_dorme\"]",
+                "Na garagem de casa"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-carteira=\"dado-que-faltou\"][data-dado=\"quanto_roda\"]",
+                "800 km"
               ]
             },
             {
@@ -1667,6 +1709,18 @@
             }
           ],
           "pausa": 1200
+        },
+        {
+          "nome": "faltam-dados-da-casa",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_faltam_dados",
+          "esperar": "[data-carteira=\"dado-que-faltou\"][data-dado=\"tipo_do_imovel\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "falta-um-dado",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_falta_um_dado",
+          "esperar": "[data-carteira=\"dado-que-faltou\"][data-dado=\"nascimento\"]",
+          "pausa": 1500
         },
         {
           "nome": "parcial",
@@ -1687,6 +1741,24 @@
           "pausa": 1500
         },
         {
+          "nome": "parcial-depois-do-prazo",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_parcial_prazo",
+          "esperar": "[data-carteira=\"seguradoras-sem-senha\"]",
+          "pausa": 2000
+        },
+        {
+          "nome": "parcial-falta-a-senha",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"agger-como-resolver\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"agger-dialogo-senha\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
           "nome": "preco-sem-pdf",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_sem_pdf",
           "esperar": "[data-cotacao=\"PRECO_SEM_PDF\"]",
@@ -1694,6 +1766,24 @@
         },
         {
           "nome": "preco-sem-pdf-previa",
+          "passos": [
+            {
+              "clicar": "[data-carteira=\"enviar-ao-cliente\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"previa-envio\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "preco-por-mes",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&renovacao=111&caso=cotacao_por_mes",
+          "esperar": "[data-cotacao=\"PRONTA\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "preco-por-mes-previa",
           "passos": [
             {
               "clicar": "[data-carteira=\"enviar-ao-cliente\"]"
@@ -1753,8 +1843,106 @@
           "pausa": 1500
         },
         {
+          "nome": "pessoa-bloqueou",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/24?demo=cheio&renovacao=112&caso=pessoa_bloqueada",
+          "esperar": "[data-cotacao=\"BLOQUEADO\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "proposta-nao-saiu",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/24?demo=cheio&renovacao=112&caso=proposta_nao_saiu",
+          "esperar": "[data-cotacao=\"NAO_SAIU\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "proposta-nao-saiu-na-historia",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/24?demo=cheio&apolice=112&caso=proposta_nao_saiu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"historia\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"historia\"] h3"
+            },
+            {
+              "esperar": "[data-passo=\"proposta_nao_saiu\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "aviso-nao-saiu-na-historia",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&apolice=111&caso=aviso_nao_saiu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"historia\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"historia\"] h3"
+            },
+            {
+              "esperar": "[data-passo=\"aviso_nao_saiu\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "algo-mudou-nao-saiu-na-historia",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/29?demo=cheio&apolice=111&caso=algo_mudou_nao_saiu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"historia\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"historia\"] h3"
+            },
+            {
+              "esperar": "[data-passo=\"algo_mudou_nao_saiu\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "palavras-nao-sairam-na-historia",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_nao_saiu",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"historia\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"historia\"] h3"
+            },
+            {
+              "esperar": "[data-passo=\"palavras_nao_saiu\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
+          "nome": "fora-das-24-horas",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/24?demo=cheio&renovacao=112&caso=fora_da_janela",
+          "passos": [
+            {
+              "esperar": "[data-carteira=\"enviar-ao-cliente\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"enviar-ao-cliente\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"nota-da-previa\"]"
+            }
+          ],
+          "pausa": 1000
+        },
+        {
           "nome": "enviada-sozinha",
           "url": "/app/accounts/{conta}/relacionamentos/pessoas/105?demo=cheio&renovacao=113",
+          "esperar": "[data-cotacao=\"ENVIADA_SOZINHA\"]",
+          "pausa": 1500
+        },
+        {
+          "nome": "enviada-cobertura-diferente",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/105?demo=cheio&renovacao=113&caso=cobertura_diferente",
           "esperar": "[data-cotacao=\"ENVIADA_SOZINHA\"]",
           "pausa": 1500
         },
@@ -1861,6 +2049,12 @@
               "tecla": "End"
             }
           ],
+          "pausa": 1500
+        },
+        {
+          "nome": "sem-cotar-sozinho",
+          "url": "/app/accounts/{conta}/relacionamentos/seguros/renovacoes?demo=cheio&caso=ajustes_sem_sozinho",
+          "esperar": "[data-carteira=\"ajuste-quem-cota\"]",
           "pausa": 1500
         },
         {
@@ -2129,10 +2323,16 @@
           "nome": "texto-salvo",
           "passos": [
             {
-              "preencher": [
-                "[data-carteira=\"texto-das-palavras\"] textarea",
-                "Seu carro está coberto contra batida, roubo e furto. Qualquer coisa, me chame aqui."
-              ]
+              "clicar": "[data-carteira=\"voltar-das-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"alterar-palavras\"]"
+            },
+            {
+              "clicar": "[data-carteira=\"alterar-palavras\"]"
+            },
+            {
+              "esperar": "[data-carteira=\"texto-das-palavras\"] textarea"
             },
             {
               "clicar": "[data-carteira=\"salvar-palavras\"]"
@@ -2166,6 +2366,12 @@
             }
           ],
           "pausa": 800
+        },
+        {
+          "nome": "nao-saiu-sozinho",
+          "url": "/app/accounts/{conta}/relacionamentos/pessoas/48?demo=cheio&apolice=109&caso=palavras_nao_saiu",
+          "esperar": "[data-carteira=\"palavras-nao-saiu\"]",
+          "pausa": 1500
         },
         {
           "nome": "vazio",

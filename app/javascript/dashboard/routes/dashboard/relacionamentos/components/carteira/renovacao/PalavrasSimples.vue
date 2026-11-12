@@ -9,7 +9,8 @@ import PreviaDeMensagem from './PreviaDeMensagem.vue';
 // #2897 — "Seu seguro em palavras simples", na gaveta do seguro de apólice
 // nova: o que o seguro cobre e o que fazer se precisar, do jeito que a pessoa
 // vai ler. Quem escolheu conferir antes vê o texto, pode alterar e envia; quem
-// escolheu "sai sozinho" só vê que já foi. A última frase ("Vale o que está
+// escolheu "sai sozinho" só vê que já foi ou, se o WhatsApp não deixou sair, a
+// mesma frase da proposta que não saiu e "Conversar". A última frase ("Vale o que está
 // escrito na sua apólice.") vai sempre e não entra no que se altera. Ao alterar,
 // o campo abre do tamanho do texto e cresce com ele: nada fica atrás de uma
 // rolagem dentro do campo.
@@ -19,11 +20,14 @@ const props = defineProps({
   ocupado: { type: String, default: '' },
   agora: { type: Number, default: () => Date.now() },
 });
-const emit = defineEmits(['salvar', 'enviar', 'tentar']);
+const emit = defineEmits(['salvar', 'enviar', 'tentar', 'conversar']);
 
 const { t } = useI18n();
 const tp = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.PALAVRAS.${chave}`, valores);
+// As frases do envio sozinho que não saiu são as mesmas da proposta.
+const daCotacao = chave =>
+  t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.COTACAO.${chave}`);
 const textos = useTextosDoSeguro();
 const id = useId();
 
@@ -134,6 +138,24 @@ const salvar = () => {
       </div>
     </template>
 
+    <template v-else-if="palavras.estado === 'nao_saiu'">
+      <p
+        data-carteira="palavras-nao-saiu"
+        class="m-0 text-base text-n-slate-12"
+      >
+        {{ daCotacao('NAO_SAIU') }}
+      </p>
+      <div>
+        <Button
+          faded
+          size="lg"
+          data-carteira="conversar-sobre-as-palavras"
+          :label="daCotacao('CONVERSAR')"
+          @click="emit('conversar')"
+        />
+      </div>
+    </template>
+
     <template v-else-if="alterando">
       <label :for="`${id}-texto`" class="text-base text-n-slate-12">
         {{ tp('TEXTO') }}
@@ -171,6 +193,7 @@ const salvar = () => {
           slate
           faded
           size="lg"
+          data-carteira="voltar-das-palavras"
           :label="tp('VOLTAR')"
           @click="alterando = false"
         />

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { I18nT, useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { SELOS, seloDoSeguro } from '../../fonte/selosDoSeguro';
 import { iconeDoTipo } from '../../carteira/tiposDeSeguro';
@@ -33,6 +33,12 @@ const selo = computed(() => seloDoSeguro(props.seguro, props.agora));
 const deFora = computed(() => selo.value === SELOS.EM_OUTRA_CORRETORA);
 const cancelado = computed(() => selo.value === SELOS.CANCELADO);
 const marca = nome => (props.compacta ? `painel-${nome}` : `seguro-${nome}`);
+const corDasLinhas = computed(() =>
+  cancelado.value ? 'text-n-slate-10' : 'text-n-slate-11'
+);
+// A linha "seguradora · nº da apólice" é do seguro da casa, na ficha. O número
+// entra por slot do <I18nT>, num pedaço que não quebra no hífen.
+const comNumero = computed(() => !props.compacta && !deFora.value);
 
 const linhas = computed(() => {
   const { seguro, agora, compacta } = props;
@@ -54,13 +60,7 @@ const linhas = computed(() => {
       }),
     ];
   }
-  return [
-    tf('SEGURADORA_E_NUMERO', {
-      seguradora: seguro.seguradora,
-      numero: seguro.numero,
-    }),
-    textos.quando(seguro, agora, ONDE.FICHA),
-  ];
+  return [textos.quando(seguro, agora, ONDE.FICHA)];
 });
 </script>
 
@@ -104,11 +104,26 @@ const linhas = computed(() => {
         </button>
         <SelosDoSeguro :seguro="seguro" :agora="agora" />
       </div>
+      <I18nT
+        v-if="comNumero"
+        keypath="RELACIONAMENTOS_CARTEIRA.FICHA.SEGURADORA_E_NUMERO"
+        tag="p"
+        scope="global"
+        class="m-0 text-sm break-words"
+        :class="corDasLinhas"
+      >
+        <template #seguradora>{{ seguro.seguradora }}</template>
+        <template #numero>
+          <span data-carteira="numero-da-apolice" class="whitespace-nowrap">
+            {{ textos.numero(seguro) }}
+          </span>
+        </template>
+      </I18nT>
       <p
         v-for="(linha, indice) in linhas"
         :key="indice"
         class="m-0 text-sm break-words"
-        :class="cancelado ? 'text-n-slate-10' : 'text-n-slate-11'"
+        :class="corDasLinhas"
       >
         {{ linha }}
       </p>

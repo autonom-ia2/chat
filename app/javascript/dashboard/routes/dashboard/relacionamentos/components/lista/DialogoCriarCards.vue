@@ -5,6 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
+import { PONTO } from '../comum/ponto';
 import { useEnvio } from '../../lista/useEnvio';
 
 // #2894 — "Em qual funil?" e "Em qual etapa?" (o primeiro de cada já vem
@@ -119,7 +120,7 @@ defineExpose({ abrir });
               class="flex flex-col gap-1 p-0 m-0 text-sm list-none text-n-slate-12"
             >
               <li v-for="item in resultado.deFora" :key="item.id">
-                {{ item.nome }} · {{ motivoEmPalavras(item.motivo) }}
+                {{ item.nome }} {{ PONTO }} {{ motivoEmPalavras(item.motivo) }}
               </li>
             </ul>
           </template>
