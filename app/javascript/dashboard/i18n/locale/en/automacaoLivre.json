@@ -503,6 +503,9 @@
       "LIGADA_AVISO": "It is working by itself.",
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
+      "PAUSADA": "It paused on its own",
+      "ASSUMIR": "Take over and turn back on",
+      "ASSUMIR_AVISO": "When you take over, it goes back to work in your name, with your permissions.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
     },
     "CRIADO": {

@@ -503,6 +503,9 @@
       "LIGADA_AVISO": "Ela está trabalhando sozinha.",
       "DESLIGAR": "Desligar",
       "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
+      "PAUSADA": "Ela pausou sozinha",
+      "ASSUMIR": "Assumir e religar",
+      "ASSUMIR_AVISO": "Ao assumir, ela volta a trabalhar em seu nome, com as suas permissões.",
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
     },
     "CRIADO": {

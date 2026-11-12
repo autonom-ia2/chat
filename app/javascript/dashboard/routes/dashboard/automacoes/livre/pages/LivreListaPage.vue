@@ -135,6 +135,7 @@ const linhaDaNova = automacao => {
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
+    pausa: automacao.pausa?.frase || '',
     doCard: alvoDoGatilho(automacao) === 'Crm::Card',
     fato: [
       fatoDaSemana(automacao.semana),
@@ -378,6 +379,7 @@ const alternar = async linha => {
               :ativa="linha.ativa"
               :antiga="linha.antiga"
               :do-card="linha.doCard"
+              :pausa="linha.pausa || ''"
               :pode-mudar="podeMudar"
               :mudando="mudando === linha.chave"
               @abrir="abrir(linha)"

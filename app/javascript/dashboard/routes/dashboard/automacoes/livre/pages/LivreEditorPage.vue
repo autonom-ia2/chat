@@ -614,6 +614,7 @@ onMounted(() => {
                 :pode-mudar="podeMudar"
                 :ocupado="ocupado"
                 :conflito="conflito"
+                :pausa="automacao?.pausa || null"
                 @ligar="editor.ligar"
                 @guardar="editor.guardar"
                 @desligar="editor.desligar"
