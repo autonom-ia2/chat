@@ -29,14 +29,16 @@ class Relacionamentos::Trazer::Trazer
   JA_TRAZIDA = (Relacionamentos::Trazer::Situacao::TRAZENDO + Relacionamentos::Trazer::Situacao::GRAVADA).freeze
   # O Guia pede confirmação antes de toda escrita da conferência (`Autonomia::Guide::Acoes::SEM_DESFAZER`): o caderno do
   # desfazer dele só enxerga o que passa por callback de model, e aqui se grava com update_all, anexo e job. Enviar a
-  # planilha e trazer a lista ainda gravam em lote. Os nomes são os do catálogo do Guia (verbo e rota).
+  # planilha e trazer a lista ainda gravam em lote. O "Desfazer" de uma lista (fatia 3) também: apaga pessoas e esvazia
+  # campos em lote, num job, e não tem desfazer do desfazer. Os nomes são os do catálogo do Guia (verbo e rota).
   SEM_DESFAZER_DO_GUIA = [
     'POST relacionamentos/trazer/leituras', 'POST relacionamentos/trazer/leituras/:id/trazer',
     'PATCH relacionamentos/trazer/leituras/:id/respostas',
     'PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice', 'PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice',
     'PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha', 'PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha',
     'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora',
-    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir'
+    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir',
+    'POST relacionamentos/trazer/listas/:id/desfazer'
   ].freeze
 
   # A importação marcada que este "Trazer" confirma: a leitura pronta ou a lista cujo fechamento desistiu.

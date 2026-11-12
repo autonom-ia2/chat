@@ -1137,7 +1137,8 @@ Rails.application.routes.draw do
             post :etiqueta, to: 'etiqueta#create'
             post :apagar, to: 'apagar#create'
             # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
-            # consertar ou deixar de fora uma linha, trazer, as listas já trazidas e o andamento de uma.
+            # consertar ou deixar de fora uma linha, trazer, as listas já trazidas, o andamento de uma e o desfazer de
+            # uma lista gravada, com a prévia do que ele faria.
             namespace :trazer do
               resources :leituras, only: [:create, :show] do
                 patch :respostas, on: :member
@@ -1150,6 +1151,8 @@ Rails.application.routes.draw do
               end
               resources :listas, only: [:index] do
                 get :andamento, on: :member
+                get :previa_do_desfazer, on: :member
+                post :desfazer, on: :member
               end
             end
           end

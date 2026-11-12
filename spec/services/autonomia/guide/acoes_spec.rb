@@ -41,7 +41,8 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
 
     # #2896: o caderno do desfazer só enxerga o que passa por callback de model, e a conferência de "Trazer minha
-    # lista" grava com update_all, anexo e job. Toda escrita dela pede confirmação.
+    # lista" grava com update_all, anexo e job. Toda escrita dela pede confirmação. O "Desfazer" de uma lista também:
+    # apaga pessoas e esvazia campos em lote, num job, e não tem desfazer do desfazer.
     it 'toda escrita de "Trazer minha lista" pede confirmação', :aggregate_failures do
       do_trazer = [
         'POST relacionamentos/trazer/leituras', 'POST relacionamentos/trazer/leituras/:id/trazer',
@@ -49,12 +50,13 @@ RSpec.describe Autonomia::Guide::Acoes do
         'PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice', 'PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice',
         'PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha', 'PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha',
         'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora',
-        'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir'
+        'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir',
+        'POST relacionamentos/trazer/listas/:id/desfazer'
       ]
 
       expect(Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA).to match_array(do_trazer)
       expect(described_class::SEM_DESFAZER).to include(*do_trazer)
-      expect(do_trazer.map { |acao| para(admin).desfazivel?(acao) }).to eq([false] * 9)
+      expect(do_trazer.map { |acao| para(admin).desfazivel?(acao) }).to eq([false] * 10)
       # Não sobra escrita do Trazer no catálogo sem confirmação.
       expect(para(admin).catalogo.select { |acao| acao.include?(' relacionamentos/trazer/') }).to match_array(do_trazer)
     end

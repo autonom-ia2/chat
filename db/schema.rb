@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_10_030000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -4451,6 +4451,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "relacionamentos_campos_preenchidos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "campaign_import_row_id", null: false
+    t.bigint "contact_id"
+    t.string "campo", null: false
+    t.string "valor_posto_hash", null: false
+    t.integer "tipo_anterior", limit: 2
+    t.datetime "devolvido_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_relacionamentos_campos_preenchidos_on_account_id"
+    t.index ["campaign_import_row_id", "campo"], name: "idx_rel_campos_preenchidos_linha_campo", unique: true
+    t.index ["contact_id"], name: "index_relacionamentos_campos_preenchidos_on_contact_id"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -5214,6 +5229,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
   add_foreign_key "mcp_integration_tokens", "accounts"
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "relacionamentos_campos_preenchidos", "campaign_import_rows", on_delete: :cascade
   add_foreign_key "user_sessions", "users"
   add_foreign_key "whatsapp_api_campaign_recipients", "accounts"
   add_foreign_key "whatsapp_api_campaign_recipients", "contacts", on_delete: :cascade

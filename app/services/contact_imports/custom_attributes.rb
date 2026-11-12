@@ -30,13 +30,16 @@ class ContactImports::CustomAttributes
   #
   # The contact is locked and read again first: two writers on the same contact (two automation runs, #2771) would
   # otherwise each write the whole hash they read before, and the last one would drop the keys the other just wrote.
+  #
+  # Returns what it added ({ 'plano' => 'Ouro' }, by attribute key), or {} when it added nothing.
   def merge!(contact, extra_values)
-    return if extra_values.blank?
+    return {} if extra_values.blank?
 
     contact.with_lock do
       current = contact.custom_attributes.to_h
       additions = additions(current, extra_values)
       contact.update!(custom_attributes: current.merge(additions)) if additions.any?
+      additions
     end
   end
 

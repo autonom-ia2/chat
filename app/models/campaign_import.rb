@@ -156,11 +156,11 @@ class CampaignImport < ApplicationRecord
     report_csv.attached?
   end
 
-  # Old campaign bases only before contacts exist; audiences also after saving (only the list goes).
+  # Old campaign bases and contact imports only before contacts exist; audiences also after saving (only the list goes).
+  # #2923: a contact import that broke midway (`failed`) already wrote contacts. Its rows say which ones, and
+  # "Desfazer" (#2896) needs them, so it is no longer a draft that can be dropped.
   def deletable?
     return AUDIENCE_DELETE_BLOCKED_STATUSES.exclude?(status) if audience?
-    # A contact import is only a draft until it is saved; after that the contacts are the result.
-    return DELETABLE_BEFORE_IMPORT_STATUSES.include?(status) if contact_import?
 
     deletable_before_import?
   end

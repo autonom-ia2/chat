@@ -92,8 +92,8 @@ module CampaignImports
       ActiveRecord::Base.transaction(requires_new: true) do
         written = contact_row.write(row)
         contact = written.contact
-        contact_attributes&.merge!(contact, import_row.extra_values)
-        destinos&.aplicar(contact, import_row.extra_values, empresa: written.company)
+        added = contact_attributes&.merge!(contact, import_row.extra_values)
+        destinos&.gravar(import_row, written, added)
         import_row.assign_attributes(import_companies.row_attributes(written.company)) if import_companies
         mark_row_imported!(import_row, row, contact, written.existing, label_records)
         contact
@@ -141,7 +141,8 @@ module CampaignImports
     # Importar contatos (#1006): extra columns become contact custom attributes.
     def contact_attributes = @contact_attributes ||= (ContactImports::CustomAttributes.new(campaign_import) if campaign_import.contact_import?)
 
-    # Trazer minha lista (#2896): where the columns sent out of the attributes go (city, company phone, customer). nil without the mark.
+    # Trazer minha lista (#2896): where the columns sent out of the attributes go (city, company phone, customer), and
+    # the note of what the row filled, for "Desfazer". nil without the mark.
     def destinos = @destinos ||= ContactImports::Trazer::DestinosDaLinha.da(campaign_import)
 
     def company_counters = import_companies&.counters || {}
