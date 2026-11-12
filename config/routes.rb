@@ -350,6 +350,10 @@ Rails.application.routes.draw do
             resources :stage_automations, only: [:show, :update, :destroy] do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
+            # #2499 F6.5/F6.3: as automações do motor novo na etapa e no card (o que roda, o que já fez, parar só no card).
+            get 'stages/:stage_id/automacoes', to: 'stage_automacoes#index'
+            get 'cards/:card_id/automacoes', to: 'cards/automacoes#index'
+            post 'cards/:card_id/automacoes/:id/parar', to: 'cards/automacoes#parar'
             post 'cards/bulk', to: 'cards/bulk#create'
             # Excluir de vez cards arquivados (#2096), um ou vários, só administrador.
             post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'

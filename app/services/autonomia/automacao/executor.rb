@@ -125,11 +125,12 @@ class Autonomia::Automacao::Executor
 
   # Desligada no meio da rodada: o desligar não registra a execução que está andando (o cursor dela não diz o passo,
   # Definicao#desligar!), então o porquê fica aqui, no passo em que a rodada ia (#2750, revisão). A varredura que a
-  # fechou como travada já deixou o registro dela.
+  # fechou como travada já deixou o registro dela. Parada com a automação ainda ligada é o "Parar para este card"
+  # (#2499 F6.3, NoCard), que também não registra a que está andando.
   def parou_por_fora(passo_id)
     @parou = true
-    desligada = Execucao.exists?(id: @execucao.id, estado: 'parada') && !@definicao.class.exists?(id: @definicao.id, ativa: true)
-    registrar(passo_id, 'pulado', 'desligada') if desligada
+    motivo = @definicao.class.exists?(id: @definicao.id, ativa: true) ? ::Autonomia::Automacao::NoCard::MOTIVO : 'desligada'
+    registrar(passo_id, 'pulado', motivo) if Execucao.exists?(id: @execucao.id, estado: 'parada')
     true
   end
 
