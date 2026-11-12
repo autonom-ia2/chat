@@ -81,6 +81,8 @@ Nada muda na Partida, no Executor nem na varredura.
 | `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora`, `repete` (opcional: `todo_ano`) | `data:<alvo>:<campo>:<data>` |
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
+Nos dois de etiqueta, renomear a etiqueta da conta não dispara e leva o nome novo ao gatilho, numa versão nova, com a automação como estava; apagar a etiqueta desliga a automação ligada, e religar diz que a etiqueta não existe (`Autonomia::Automacao::EtiquetaDoGatilho`).
+
 **Valores do evento**, que só o filtro do gatilho lê:
 - troca de dono do card (G9): `gatilho.responsavel_anterior_id`, `gatilho.responsavel_anterior_nome` e `gatilho.responsavel_anterior_ausente`, lidos da marca no filtro e em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
 - troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_mudou`, `conversa.time_mudou`) ainda não: nenhum termo pede (a marca já leva o anterior);

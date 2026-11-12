@@ -139,6 +139,67 @@ RSpec.describe 'Automação livre: etiqueta posta ou tirada e troca de quem aten
     end
   end
 
+  # Autonomia::Automacao::EtiquetaDoGatilho: o gatilho guarda o nome; mexer na etiqueta da conta não o deixa calado.
+  describe 'etiqueta da conta renomeada ou apagada' do
+    let(:vip) { account.labels.find_by!(title: 'vip') }
+
+    def renomear(etiqueta, para)
+      perform_enqueued_jobs(only: Labels::UpdateJob) { etiqueta.update!(title: para) }
+      drenar
+    end
+
+    it 'renomear a etiqueta da conta não começa posta nem tirada, na conversa e no contato' do
+      definicoes = %w[conversa.etiqueta_posta conversa.etiqueta_tirada contato.etiqueta_posta contato.etiqueta_tirada]
+                   .map { |tipo| ligada(tipo, etiqueta: 'vip') }
+      conversa.update_labels(%w[vip])
+      contato.update_labels(%w[vip])
+      drenar
+
+      expect { renomear(vip, 'cliente-vip') }.not_to(change { execucoes.where(automacao: definicoes).count })
+    end
+
+    it 'renomear leva o nome novo ao gatilho, numa versão nova, e a automação segue ligada por quem ligou', :aggregate_failures do
+      definicao = ligada('conversa.etiqueta_posta', etiqueta: 'vip')
+      outra = ligada('conversa.etiqueta_posta', etiqueta: 'boleto')
+      versao_da_outra = outra.versao_ativa_id
+
+      renomear(vip, 'cliente-vip')
+
+      expect(definicao.reload.versao_ativa.receita['gatilho']).to include('etiqueta' => 'cliente-vip')
+      expect(definicao.versao_ativa).to have_attributes(numero: 2, autor_id: nil)
+      expect(definicao).to have_attributes(ativa: true, ligada_por_id: admin.id)
+      expect(outra.reload.versao_ativa_id).to eq(versao_da_outra)
+
+      conversa.update_labels(%w[cliente-vip])
+      drenar
+
+      expect(execucoes.where(automacao: definicao).sole.alvo).to eq(conversa)
+    end
+
+    it 'apagar a etiqueta desliga a automação ligada, e religar diz que a etiqueta não existe', :aggregate_failures do
+      definicao = ligada('contato.etiqueta_tirada', etiqueta: 'vip')
+      outra = ligada('conversa.etiqueta_posta', etiqueta: 'boleto')
+
+      vip.destroy!
+      Labels::RemoveAssociationsJob.perform_now(label_title: 'vip', account_id: account.id, label_deleted_at: Time.current)
+
+      expect([definicao.reload.ativa, outra.reload.ativa]).to eq([false, true])
+      recusa = definicao.assumir_e_religar!(admin, versao_id: definicao.versao_ativa_id)
+      expect(recusa.problemas).to include(I18n.t('autonomia.automacao.receita.etiqueta_de_fora', etiqueta: 'vip'))
+    end
+
+    it 'a etiqueta recriada com o mesmo nome antes do job não desliga nada' do
+      definicao = ligada('conversa.etiqueta_posta', etiqueta: 'vip')
+      apagada_em = Time.current
+      vip.destroy!
+      create(:label, account: account, title: 'vip')
+
+      Labels::RemoveAssociationsJob.perform_now(label_title: 'vip', account_id: account.id, label_deleted_at: apagada_em)
+
+      expect(definicao.reload.ativa).to be(true)
+    end
+  end
+
   describe 'troca de quem atende a conversa' do
     it 'trocar a pessoa começa a troca de responsável, com a anterior na marca; o time não', :aggregate_failures do
       responsavel = ligada('conversa.responsavel_mudou')

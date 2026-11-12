@@ -9,7 +9,9 @@
 # Não dispara (só a escrita que passa pelo modelo despacha o evento): a importação da base de campanha
 # (CampaignImports::BulkContactLabeler grava as etiquetas em lote, sob Current.suppress_contact_events), apagar ou
 # renomear a etiqueta da conta (Labels::DestroyService e Labels::UpdateService, em lote) e o registro que nasce com
-# etiqueta (é o conversation.created ou o contact.created).
+# etiqueta (é o conversation.created ou o contact.created). O renomear também não chega aqui como pôr e tirar: o spec
+# "renomear a etiqueta da conta" prova. Renomear leva o nome novo ao gatilho, e apagar desliga a automação ligada
+# (Autonomia::Automacao::EtiquetaDoGatilho).
 #
 # A marca: `<tipo>:<id do registro>:<etiqueta>:<instante do despacho em µs>`. O EventDispatcherJob repete o mesmo
 # instante, então o evento entregue duas vezes abre uma execução só; pôr, tirar e pôr de novo são três fatos.
