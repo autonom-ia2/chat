@@ -63,6 +63,12 @@ const TONS = {
   cinza: 'bg-n-slate-3 text-n-slate-11',
 };
 
+// Quantas perguntas a ferramenta responde: no card Premium, a conta do servidor (`premium.consultas`), que acompanha as
+// consultas que a BigDataCorp responde hoje (#2946); nas grátis, a do catálogo da tela. Com uma só, sem selo.
+const tiposDePergunta = computed(
+  () => props.premium?.consultas ?? props.ferramenta.consultas ?? 0
+);
+
 const selo = computed(() => {
   if (props.jaSabe) {
     return {
@@ -71,9 +77,9 @@ const selo = computed(() => {
       classe: 'bg-n-teal-3 text-n-teal-11',
     };
   }
-  if (props.ferramenta.consultas) {
+  if (tiposDePergunta.value > 1) {
     return {
-      texto: t(`${NS}.CARTAO.CONSULTAS`, { n: props.ferramenta.consultas }),
+      texto: t(`${NS}.CARTAO.CONSULTAS`, { n: tiposDePergunta.value }),
       icone: 'i-lucide-messages-square',
       classe: 'bg-n-alpha-2 text-n-slate-11',
     };

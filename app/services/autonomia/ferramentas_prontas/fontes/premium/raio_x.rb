@@ -56,26 +56,31 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RaioX
     Extrair.sem_vazio(resumo.merge('obras' => lista))
   end
 
-  # Custo e preço da 1ª faixa: R$ 0,06 -> R$ 0,09, salvo os processos (R$ 0,08 -> R$ 0,12).
-  def self.consulta(nome, descricao, dataset, resposta, extrair, custo: '0.06', preco: '0.09') # rubocop:disable Metrics/ParameterLists
+  # Custo e preço da 1ª faixa: R$ 0,06 -> R$ 0,09, salvo os processos (R$ 0,08 -> R$ 0,12). `prazo`: o dos processos
+  # (`Dataset::PRAZO_DAS_LENTAS`, #2946); as outras, o da base.
+  def self.consulta(nome, descricao, dataset, resposta, extrair, custo: '0.06', preco: '0.09', prazo: nil) # rubocop:disable Metrics/ParameterLists
     Premium::ConsultaPaga.new(
       nome: nome, descricao: descricao, obrigatorios: [Premium::Parametros::CNPJ],
       dataset: Premium::Dataset.new(nome: dataset, rota: ROTA, resposta: resposta, custo: custo, preco: preco, busca: POR_CNPJ,
-                                    extrair: extrair)
+                                    extrair: extrair, prazo: prazo)
     )
   end
+
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`).
+  CONSULTAS = [
+    consulta('processos', 'processos judiciais e administrativos', 'processes', 'Lawsuits', PROCESSOS,
+             custo: '0.08', preco: '0.12', prazo: Premium::Dataset::PRAZO_DAS_LENTAS),
+    consulta('sancoes', 'sanções e listas restritivas', 'kyc', 'KycData', SANCOES),
+    consulta('crescimento', 'como a empresa cresceu (funcionários e capital)', 'company_evolution', 'CompanyEvolutionData', CRESCIMENTO),
+    consulta('grupo_economico', 'as empresas do mesmo grupo', 'economic_group_relationships', 'EconomicGroupRelationship', GRUPO),
+    consulta('obras', 'obras de construção civil registradas', 'civil_construction_data', 'CivilConstructionData', OBRAS)
+  ].freeze
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'raio_x_empresa', slug: 'pronta_raio_x_empresa', nome: 'Raio-X da empresa',
     descricao: 'Consulta paga: o que uma base de dados empresarial sabe de uma empresa pelo CNPJ. Use só a consulta ' \
                'que responde à pergunta. Não traz dados de sócios pessoa física, de política nem de crédito.',
-    consultas: [
-      consulta('processos', 'processos judiciais e administrativos', 'processes', 'Lawsuits', PROCESSOS, custo: '0.08', preco: '0.12'),
-      consulta('sancoes', 'sanções e listas restritivas', 'kyc', 'KycData', SANCOES),
-      consulta('crescimento', 'como a empresa cresceu (funcionários e capital)', 'company_evolution', 'CompanyEvolutionData', CRESCIMENTO),
-      consulta('grupo_economico', 'as empresas do mesmo grupo', 'economic_group_relationships', 'EconomicGroupRelationship', GRUPO),
-      consulta('obras', 'obras de construção civil registradas', 'civil_construction_data', 'CivilConstructionData', OBRAS)
-    ],
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Base própria dela, por CNPJ.'
   )

@@ -10,6 +10,29 @@ module FerramentasPremiumHelper
   CPF_EXEMPLO = '11144477735'.freeze
   CAR_EXEMPLO = "MT5107065#{'EXEMPLO0' * 4}".freeze
 
+  # Os arquivos dos 7 cards (`Fontes::Premium::*`), na ordem do catálogo. Cada um guarda em `CONSULTAS` todas as consultas,
+  # as desligadas na BigDataCorp também (`Premium::DESLIGADAS_NA_FONTE`, #2946); a `FONTE` leva só as ligadas.
+  CARDS_PREMIUM = %w[Certidoes RaioX Pessoa Placa RiscoEndereco ImovelRural ContatoEmpresa].freeze
+
+  def modulos_premium
+    CARDS_PREMIUM.map { |nome| "Autonomia::FerramentasProntas::Fontes::Premium::#{nome}".constantize }
+  end
+
+  # Todas as consultas do card, as desligadas também.
+  def consultas_do_card(chave)
+    modulos_premium.find { |modulo| modulo::FONTE.chave == chave }::CONSULTAS
+  end
+
+  def todas_as_consultas_premium
+    modulos_premium.flat_map { |modulo| modulo::CONSULTAS }
+  end
+
+  # A lista dos datasets desligados na BigDataCorp, trocada só neste exemplo (`[]`: como ficará quando ela religar tudo).
+  # A `Fonte` lê a lista a cada chamada: prova que a consulta volta tirando só a linha dela.
+  def desligar_na_fonte!(datasets)
+    stub_const('Autonomia::FerramentasProntas::Premium::DESLIGADAS_NA_FONTE', datasets.freeze)
+  end
+
   def com_credencial_da_bigdatacorp(&)
     with_modified_env(BIGDATACORP_USER: USUARIO_FALSO, BIGDATACORP_PASSWORD: SENHA_FALSA, &)
   end

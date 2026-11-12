@@ -67,3 +67,39 @@ describe('VitrineCartao · atualizado em', () => {
     expect(wrapper.find('[data-vitrine-atualizado]').exists()).toBe(false);
   });
 });
+
+// #2946 — quantas perguntas o card Premium responde vem do servidor (`premium.consultas`): a conta muda quando a
+// BigDataCorp desliga uma consulta, e a tela acompanha sem número próprio. Com uma só, o cartão não ganha o selo.
+describe('VitrineCartao · tipos de pergunta do Premium', () => {
+  const premium = consultas => ({
+    gratis: 20,
+    restantes: 20,
+    precos: ['0.09', '0.12'],
+    confere_documento: true,
+    consultas,
+  });
+
+  const montarPremium = async (id, dados) => {
+    const wrapper = await montar(id, [{ chave: id, premium: dados }]);
+    await wrapper.setProps({ premium: dados });
+    return wrapper;
+  };
+
+  it('shows the count the server sends', async () => {
+    const wrapper = await montarPremium('conferir_pessoa', premium(2));
+
+    expect(wrapper.text()).toContain('Responde 2 tipos de pergunta');
+  });
+
+  it('shows no count when the card answers a single question', async () => {
+    const wrapper = await montarPremium('certidoes_empresa', premium(1));
+
+    expect(wrapper.text()).not.toContain('tipos de pergunta');
+  });
+
+  it('keeps the catalog count on a free card', async () => {
+    const wrapper = await montar('fipe', [{ chave: 'fipe' }]);
+
+    expect(wrapper.text()).toContain('Responde 3 tipos de pergunta');
+  });
+});
