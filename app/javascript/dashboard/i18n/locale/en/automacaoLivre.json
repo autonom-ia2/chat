@@ -143,6 +143,7 @@
     "CAMPOS": {
       "DURACAO": "How long",
       "CONDICAO": "Until",
+      "CONDICAO_DO_SE": "If",
       "PRAZO": "Wait at most",
       "SE_VENCER": "If time runs out",
       "A_CADA_MENSAGEM": "For each customer message while waiting",

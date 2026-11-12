@@ -1542,7 +1542,7 @@
           "nome": "condicao",
           "peca": "condicao",
           "obrigatorio": true,
-          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO"
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO_DO_SE"
         },
         {
           "nome": "entao",

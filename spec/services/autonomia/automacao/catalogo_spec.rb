@@ -111,6 +111,13 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(rotulo.call('escrever')).to eq('AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO')
   end
 
+  # #2746: a condição do "se" diz "Se"; o "Até quando" fica com o "esperar até".
+  it 'dá à condição do se um rótulo próprio, separado do esperar até' do
+    rotulo = ->(tipo) { passos.find { |passo| passo['tipo'] == tipo }['campos'].find { |campo| campo['nome'] == 'condicao' }['rotulo'] }
+
+    expect([rotulo.call('se'), rotulo.call('esperar_ate')]).to eq(%w[AUTOMACAO_LIVRE.CAMPOS.CONDICAO_DO_SE AUTOMACAO_LIVRE.CAMPOS.CONDICAO])
+  end
+
   # A tela esconde o passo sem a flag; a flag tem que existir, senão o passo some de todas as contas sem aviso.
   it 'só pede flag que existe, e mensagem, avisar e email pedem a da F4' do
     flags = YAML.load_file(Rails.root.join('config/features.yml')).pluck('name')

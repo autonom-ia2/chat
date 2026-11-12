@@ -143,6 +143,7 @@
     "CAMPOS": {
       "DURACAO": "Quanto tempo",
       "CONDICAO": "Até quando",
+      "CONDICAO_DO_SE": "Se",
       "PRAZO": "Esperar no máximo",
       "SE_VENCER": "Se o prazo acabar",
       "A_CADA_MENSAGEM": "A cada mensagem do cliente enquanto espera",

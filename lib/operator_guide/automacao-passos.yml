@@ -22,7 +22,8 @@ grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, OUT
 nativos:
   esperar: { grupo: CONTROLE }
   esperar_ate: { grupo: CONTROLE }
-  se: { grupo: CONTROLE }
+  # #2746: a condição do "se" tem rótulo próprio (o "Até quando" é do "esperar até").
+  se: { grupo: CONTROLE, rotulos: { condicao: condicao_do_se } }
   parar: { grupo: CONTROLE }
   # `requer`: a flag da conta sem a qual o seletor não oferece o passo. Quem recusa de verdade é a Receita, ao salvar
   # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
