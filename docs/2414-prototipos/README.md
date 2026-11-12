@@ -126,8 +126,8 @@ Prints: 1440 e 390 nos passos 1, 3 e 4.
 - **API do motor**: feita na `feat/2414-f6-card-e-etapa` (ver a tabela no topo).
 - **Receitas de etapa** (§8.4 do `docs/automacao/F6-F8-gatilhos.md`): o catálogo ainda não tem receita com gatilho
   de etapa; por isso "Criar uma automação…" abre o editor só com o gatilho, e não pelos modelos.
-- **Flag**: F6.3/F6.5 têm a própria, `automacao_no_crm`, no fim do `config/features.yml`; o bit sai da ordem (47
-  hoje, 48 com a `carteira_seguros` do #2910) e a Orquestração confirma antes do OK. As contas que já existem a
+- **Flag**: F6.3/F6.5 têm a própria, `automacao_no_crm`, no fim do `config/features.yml`; o bit sai da ordem (48
+  hoje, 1 << 47, depois da `automacao_passos_novos`) e a Orquestração confirma antes do OK. As contas que já existem a
   Orquestração liga depois do deploy. A `automacao_passos_novos` é só dos passos novos (`passos-novos.md`).
 - **Guia**: sem tela nova no painel; o bloco da etapa em `lib/operator_guide/porques.md` foi revisto e ganhou o do card
   (`ver_e_parar_automacoes_no_card`). O "parar" entrou em `Acoes::SEM_DESFAZER` (não reabre) e no porteiro da
