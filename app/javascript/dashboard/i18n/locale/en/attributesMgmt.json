@@ -150,7 +150,8 @@
     },
     "MOSTRAR_NA_TELA": {
       "TITULO": "Show on screen",
-      "AJUDA": "When off, the field is hidden from the screen. It stays saved, and automation and AI still use it."
+      "AJUDA": "When off, the field is hidden from the screens. It stays saved, and automation and AI still use it. Agents can still see the value in other ways. To show it again: Settings > Custom Attributes.",
+      "ESCONDIDO_DE_TODAS": "Hidden from all screens."
     }
   }
 }

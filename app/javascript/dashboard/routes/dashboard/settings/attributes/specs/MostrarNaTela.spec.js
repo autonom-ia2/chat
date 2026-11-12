@@ -57,6 +57,8 @@ describe('Mostrar na tela — editar atributo', () => {
       { ...atributo, oculto_na_tela: true },
       dispatch
     );
+    // O valor guardado entra no `mounted`; a tela mostra no próximo ciclo.
+    await flushPromises();
     expect(chave(wrapper).attributes('aria-checked')).toBe('false');
 
     await chave(wrapper).trigger('click');

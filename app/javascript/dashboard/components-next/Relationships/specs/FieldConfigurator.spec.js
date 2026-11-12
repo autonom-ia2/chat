@@ -50,6 +50,13 @@ const mountEditor = async () => {
   await flushPromises();
   return wrapper;
 };
+// #2435: a chave de uma área pelo nome dela; "Mostrar na tela" é a que tem título.
+const areaSwitch = (wrapper, surface) =>
+  wrapper.find(
+    `[role="switch"][aria-label="RELATIONSHIPS.SURFACES.${surface}"]`
+  );
+const mostrarNaTela = wrapper =>
+  wrapper.find('[role="switch"][aria-labelledby$="-titulo"]');
 const click = async (wrapper, text) => {
   await wrapper
     .findAll('button')
@@ -67,7 +74,7 @@ it('uses the real shared dialog, requires description, and saves definition and 
     wrapper.find('button[type="submit"]').attributes('disabled')
   ).toBeDefined();
   await wrapper.find('textarea').setValue('Função na empresa');
-  await wrapper.find('[role="switch"]').trigger('click');
+  await areaSwitch(wrapper, 'contact_sidebar').trigger('click');
   axios.patch.mockResolvedValue({
     data: {
       configuration: { version: 1, revision: 5, surfaces: {} },
@@ -304,11 +311,9 @@ it('lets the central header own its actions without rendering duplicate creation
   expect(wrapper.find('dialog h3').text()).toBe(
     'RELATIONSHIPS.CREATE_COMPANY_ATTRIBUTE'
   );
-  // A área da empresa e o "Mostrar na tela" (#2435), nessa ordem.
+  // A área da empresa e o "Mostrar na tela" (#2435).
   expect(wrapper.findAll('[role="switch"]')).toHaveLength(2);
-  expect(wrapper.find('[role="switch"]').attributes('aria-label')).toBe(
-    'RELATIONSHIPS.SURFACES.company_details'
-  );
+  expect(areaSwitch(wrapper, 'company_details').exists()).toBe(true);
   wrapper.unmount();
 });
 
@@ -318,7 +323,7 @@ it('sends oculto_na_tela when "Mostrar na tela" is turned off', async () => {
   await click(wrapper, 'RELATIONSHIPS.CREATE');
   await wrapper.find('input[type="text"]').setValue('Contador');
   await wrapper.find('textarea').setValue('Usado pela automação');
-  const mostrar = wrapper.findAll('[role="switch"]').at(-1);
+  const mostrar = mostrarNaTela(wrapper);
   expect(mostrar.attributes('aria-checked')).toBe('true');
   await mostrar.trigger('click');
   axios.patch.mockResolvedValue({
@@ -354,8 +359,67 @@ it('opens a hidden attribute with "Mostrar na tela" off', async () => {
   });
   const wrapper = await mountEditor();
   await click(wrapper, 'RELATIONSHIPS.EDIT');
-  expect(
-    wrapper.findAll('[role="switch"]').at(-1).attributes('aria-checked')
-  ).toBe('false');
+  expect(mostrarNaTela(wrapper).attributes('aria-checked')).toBe('false');
+  wrapper.unmount();
+});
+
+// #2435: uma regra só na tela. Com "Mostrar na tela" desligado, as áreas somem
+// e uma frase diz que o campo está fora de todas; ligado de novo, elas voltam.
+it('hides the per-area switches while "Mostrar na tela" is off', async () => {
+  const wrapper = await mountEditor();
+  await click(wrapper, 'RELATIONSHIPS.CREATE');
+  expect(areaSwitch(wrapper, 'contact_sidebar').exists()).toBe(true);
+  await mostrarNaTela(wrapper).trigger('click');
+  expect(areaSwitch(wrapper, 'contact_sidebar').exists()).toBe(false);
+  expect(wrapper.text()).toContain(
+    'ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.ESCONDIDO_DE_TODAS'
+  );
+  await mostrarNaTela(wrapper).trigger('click');
+  expect(areaSwitch(wrapper, 'contact_sidebar').exists()).toBe(true);
+  expect(wrapper.text()).not.toContain(
+    'ATTRIBUTES_MGMT.MOSTRAR_NA_TELA.ESCONDIDO_DE_TODAS'
+  );
+  wrapper.unmount();
+});
+
+// #2435: na lista do Configurar, o campo fora da tela leva o selo e fica com a
+// chave desligada e travada, mesmo marcado na área (a conta "X de Y" usa a
+// mesma regra, `shown`).
+it('marks a hidden attribute in the configure list and leaves it out of the count', async () => {
+  const definicao = (id, nome, extra = {}) => ({
+    id,
+    attribute_key: nome.toLowerCase(),
+    attribute_model: 'contact_attribute',
+    attribute_display_name: nome,
+    attribute_description: '',
+    attribute_display_type: 'text',
+    revision: '2026-11-12T12:00:00.000001Z',
+    attribute_values: [],
+    ...extra,
+  });
+  axios.get.mockResolvedValue({
+    data: {
+      configuration: {
+        version: 1,
+        revision: 4,
+        surfaces: { contact_sidebar: { mode: 'custom', ids: [31, 32] } },
+      },
+      definitions: [
+        definicao(31, 'Plano'),
+        definicao(32, 'Contador', { oculto_na_tela: true }),
+      ],
+      can_manage: true,
+    },
+  });
+  const wrapper = await mountEditor();
+  const linhas = wrapper.findAll('section .rounded-lg.border');
+  const contador = linhas.find(linha => linha.text().includes('Contador'));
+  const plano = linhas.find(linha => linha.text().includes('Plano'));
+  expect(contador.text()).toContain('ATTRIBUTES_MGMT.BADGES.OCULTO');
+  expect(plano.text()).not.toContain('ATTRIBUTES_MGMT.BADGES.OCULTO');
+  const chave = contador.find('[role="switch"]');
+  expect(chave.attributes('aria-checked')).toBe('false');
+  expect(chave.attributes('disabled')).toBeDefined();
+  expect(plano.find('[role="switch"]').attributes('aria-checked')).toBe('true');
   wrapper.unmount();
 });
