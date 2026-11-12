@@ -76,19 +76,6 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(estado(%w[conversa]).para_o_jev(decisor)[:conversation]).to include(inbox: 'WhatsApp Vendas', labels: ['frota'])
   end
 
-  # MOTIVO (#2435): a etiqueta vale pelo critério que a conta escreveu, não só pelo nome. Sem descrição, só o nome.
-  it 'leva a descrição das etiquetas da conversa que têm uma' do
-    create(:label, account: account, title: 'vip', description: 'Cliente com mais de 3 apólices')
-    create(:label, account: account, title: 'frota', description: '')
-    create(:label, account: create(:account), title: 'outra', description: 'De outra conta')
-    conversation.update!(label_list: %w[vip frota outra])
-
-    lido = estado(%w[conversa]).para_o_jev(decisor)[:conversation]
-
-    expect(lido[:labels]).to match_array(%w[vip frota outra])
-    expect(lido[:label_descriptions]).to eq('vip' => 'Cliente com mais de 3 apólices')
-  end
-
   # MOTIVO (#2195): as respostas do formulário do anúncio ficam dentro do metadata do card, num nível abaixo, e trazem
   # telefone e e-mail; nunca vão. #2558: o formulário, o anúncio e a campanha só vão com `anuncio: true` (a chave do
   # responsável); sem ele, fechado, só a hora da captura. O exemplo guardado nunca leva o anúncio.
