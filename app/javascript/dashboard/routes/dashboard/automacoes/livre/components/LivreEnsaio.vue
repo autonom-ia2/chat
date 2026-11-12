@@ -38,6 +38,22 @@ const CHAVES_DO_RECORRENTE = {
 const chaveDoRecorrente = alvo =>
   CHAVES_DO_RECORRENTE[alvo] || 'AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_CARDS';
 
+// #2631: no gatilho de card a lista é de cards (`alvo: 'card'`), com o id e o
+// título no lugar do número da conversa e do nome do contato.
+const alvoDoEnsaio = ref('conversa');
+const DO_CARD = {
+  SEM_CONVERSAS: 'SEM_CARDS',
+  QUANTAS: 'QUANTOS_CARDS',
+  OUTRA: 'OUTRO_CARD',
+  ESCOLHA: 'ESCOLHA_CARD',
+  CONVERSA_N: 'CARD_N',
+  NA_CONVERSA: 'NO_CARD',
+};
+const rotulo = (chave, valores) => {
+  const nome = alvoDoEnsaio.value === 'card' ? DO_CARD[chave] : chave;
+  return t(`AUTOMACAO_LIVRE.ENSAIO.${nome}`, valores);
+};
+
 const raiz = ref(null);
 const passosRef = ref(null);
 
@@ -57,6 +73,7 @@ const carregar = async () => {
       estado.value = 'pronto';
       return;
     }
+    alvoDoEnsaio.value = data.alvo || 'conversa';
     conversas.value = data.conversas;
     outras.value = data.outras || [];
     escolhida.value =
@@ -107,7 +124,7 @@ const linhas = computed(() =>
 );
 
 const nomeDe = item =>
-  item.nome || t('AUTOMACAO_LIVRE.ENSAIO.CONVERSA_N', { n: item.conversa_id });
+  item.nome || rotulo('CONVERSA_N', { n: item.conversa_id });
 const opcoes = computed(() =>
   [...conversas.value, ...outras.value].map(item => ({
     value: item.conversa_id,
@@ -239,7 +256,7 @@ const ICONE = {
       data-vazio
       class="mb-0 text-[0.9375rem] text-n-slate-11"
     >
-      {{ $t('AUTOMACAO_LIVRE.ENSAIO.SEM_CONVERSAS') }}
+      {{ rotulo('SEM_CONVERSAS') }}
     </p>
 
     <template v-else>
@@ -251,9 +268,7 @@ const ICONE = {
           {{ casaram }}
         </span>
         <span class="text-base text-n-slate-11">
-          {{
-            $t('AUTOMACAO_LIVRE.ENSAIO.QUANTAS', { total: conversas.length })
-          }}
+          {{ rotulo('QUANTAS', { total: conversas.length }) }}
         </span>
       </p>
 
@@ -304,13 +319,13 @@ const ICONE = {
           </ul>
           <div class="flex flex-col gap-1.5">
             <span class="text-sm font-medium text-n-slate-11">
-              {{ $t('AUTOMACAO_LIVRE.ENSAIO.OUTRA') }}
+              {{ rotulo('OUTRA') }}
             </span>
             <ChoiceSelect
               data-outra
               :model-value="escolhida"
-              :aria-label="$t('AUTOMACAO_LIVRE.ENSAIO.OUTRA')"
-              :placeholder="$t('AUTOMACAO_LIVRE.ENSAIO.ESCOLHA')"
+              :aria-label="rotulo('OUTRA')"
+              :placeholder="rotulo('ESCOLHA')"
               :options="opcoes"
               @update:model-value="ensaiarOutra"
             />
@@ -324,9 +339,7 @@ const ICONE = {
           class="flex flex-col gap-4 p-5 rounded-2xl bg-n-alpha-1"
         >
           <p class="mb-0 text-[0.9375rem] font-semibold text-n-slate-12">
-            {{
-              $t('AUTOMACAO_LIVRE.ENSAIO.NA_CONVERSA', { nome: nomeDe(atual) })
-            }}
+            {{ rotulo('NA_CONVERSA', { nome: nomeDe(atual) }) }}
           </p>
           <p
             v-if="!atual.entraria"

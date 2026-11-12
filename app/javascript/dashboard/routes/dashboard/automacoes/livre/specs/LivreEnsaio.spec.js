@@ -106,6 +106,36 @@ describe('LivreEnsaio', () => {
     );
   });
 
+  // #2631: no gatilho de card a lista é de cards, e o card sem a reunião do
+  // gatilho diz que não há reunião.
+  it('no gatilho de card, fala de cards e diz quando falta a reunião', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        alvo: 'card',
+        conversas: [
+          conversa(7, {
+            nome: 'Renovação',
+            entraria: false,
+            motivo: 'sem_reuniao',
+          }),
+        ],
+        outras: [],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.QUANTOS_CARDS(1)'
+    );
+    expect(wrapper.find('[data-ensaio-passos]').text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.NO_CARD(Renovação)'
+    );
+    expect(wrapper.find('[data-nao-entra]').text()).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.FORA.SEM_REUNIAO'
+    );
+  });
+
   it('receita com problema mostra as frases da API', async () => {
     AutomacoesAPI.ensaiar.mockRejectedValueOnce({
       response: { data: { error: 'Corrija', problemas: ['Passo m1: x'] } },

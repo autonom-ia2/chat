@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # Ensaiar (#2498): a salva ensaia a versão ativa, o rascunho e a nova mandam a receita no corpo. Pede automation_view;
-# receita com problema e gatilho de card voltam em frase; conversa fora do alcance de quem pede é 404.
+# receita com problema e gatilho que o ensaio não conhece voltam em frase; conversa fora do alcance de quem pede é 404.
+# O gatilho de card (#2631) ensaia nos cards e pede a chave de funis.
 RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -69,7 +70,7 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['problemas']).to eq([I18n.t('autonomia.automacao.ensaio.sem_receita')])
   end
 
-  it 'gatilho de card ainda não ensaia: recusa em frase' do
+  it 'gatilho que o ensaio não conhece: recusa em frase' do
     allow(Autonomia::Automacao::Receita).to receive(:esquema_valido?).and_return(true)
     allow(Autonomia::Automacao::Receita).to receive(:new).and_return(instance_double(Autonomia::Automacao::Receita, problemas: []))
 
@@ -79,17 +80,37 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.ensaio.gatilho_de_card'))
   end
 
-  # G27 (#2661): o card atualizado também não ensaia, e a recusa não traz nada do card nem do valor de antes.
-  it 'card atualizado no valor de venda: recusa em frase, sem dado de card', :aggregate_failures, :automacao_motor do
-    with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+  # #2631: o gatilho de card ensaia nos cards de quem pede; a lista diz que é de cards (`alvo`).
+  describe 'gatilho de card', :automacao_motor do
+    around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+    let(:gatilho) { { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'passou_de', valor: '50000' } } }
+
+    before do
       ligar_motor(account)
       account.enable_features!('automacao_gatilhos')
-      gatilho = { tipo: 'card.atualizado', mudanca: { campo: 'valor', condicao: 'passou_de', valor: '50000' } }
+    end
+
+    it 'ensaia nos cards, com o id do card no lugar da conversa', :aggregate_failures do
+      funil, etapa = create_crm_pipeline(account: account, user: admin)
+      card = account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Renovação', currency: 'BRL')
 
       ensaiar('ensaio', receita: receita.merge(gatilho: gatilho))
 
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['alvo']).to eq('card')
+      expect(response.parsed_body['conversas'].first).to include('conversa_id' => card.id, 'nome' => 'Renovação', 'entraria' => true)
+    end
+
+    # A mesma chave de funis do salvar (D2): sem ela, quem ensaia não lê os cards da conta.
+    it 'sem a chave de funis, recusa em frase' do
+      funcao = create(:custom_role, account: account, permissions: %w[automation_view conversation_view])
+      agente.account_users.find_by(account: account).update!(custom_role: funcao)
+
+      ensaiar('ensaio', quem: agente, receita: receita.merge(gatilho: { tipo: 'card.criado' }))
+
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body).to eq('error' => I18n.t('autonomia.automacao.ensaio.gatilho_de_card'), 'problemas' => [])
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
   end
 

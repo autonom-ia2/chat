@@ -16,12 +16,19 @@
       "ESCOLHA": "Escolha a conversa",
       "CONVERSA_N": "Conversa {n}",
       "NA_CONVERSA": "Na conversa de {nome}, a automação faria:",
+      "SEM_CARDS": "Você ainda não tem cards para ensaiar este gatilho.",
+      "QUANTOS_CARDS": "dos {total} cards mais recentes entrariam nesta automação",
+      "OUTRO_CARD": "Ensaiar em outro card",
+      "ESCOLHA_CARD": "Escolha o card",
+      "CARD_N": "Card {n}",
+      "NO_CARD": "No card {nome}, a automação faria:",
       "FORA": {
         "SPAM": "Nada: a conversa está no Spam.",
         "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
         "SEM_MENSAGEM_QUE_FALHOU": "Nada: nenhuma mensagem desta conversa deixou de chegar ao cliente.",
         "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho.",
-        "RESPOSTA_AUTOMATICA": "Nada: a última mensagem é uma resposta automática de e-mail (fora do escritório, aviso do servidor)."
+        "RESPOSTA_AUTOMATICA": "Nada: a última mensagem é uma resposta automática de e-mail (fora do escritório, aviso do servidor).",
+        "SEM_REUNIAO": "Nada: este card não tem reunião para este gatilho."
       },
       "HOJE_SIM": "Hoje, sim: seguiria por \"Então\".",
       "HOJE_NAO": "Hoje, não: seguiria por \"Senão\".",
@@ -65,7 +72,8 @@
         "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
         "PESSOA_ATRIBUIDA": "Não passaria: a conversa está com uma pessoa, e ela continua com a conversa.",
         "SEM_VINCULO_NA_CAIXA": "Não passaria: {agente} não trabalha na caixa desta conversa.",
-        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora."
+        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora.",
+        "SEM_CONVERSA": "Não passaria: este card não tem conversa."
       },
       "EMAIL": "Sairia por {caixa}",
       "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",

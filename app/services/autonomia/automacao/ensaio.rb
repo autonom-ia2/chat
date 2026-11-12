@@ -15,6 +15,9 @@
 # - "extrair", "escrever", "resumir" (#2500 F7) e "para cada item" (G24) só dizem o que a IA faria e para onde iria,
 #   pelo `ensaiar` de cada passo: nenhuma IA é chamada.
 #
+# No gatilho de card (#2631), o mesmo nos cards que quem pede alcança (CardsDoEnsaio): cada um como se o fato
+# acontecesse agora. No de reunião, com a reunião que o gatilho leria (`reuniao.*`); o card sem ela não entraria.
+#
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
 class Autonomia::Automacao::Ensaio
@@ -28,52 +31,62 @@ class Autonomia::Automacao::Ensaio
   # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
   IA_SO_DIZ = %w[extrair escrever resumir para_cada].freeze
 
-  def self.gatilho_suportado?(receita)
-    GATILHOS.include?(receita.dig('gatilho', 'tipo'))
+  def self.gatilho_suportado?(receita) = de_conversa?(receita) || de_card?(receita)
+
+  def self.de_conversa?(receita) = GATILHOS.include?(receita.dig('gatilho', 'tipo'))
+
+  # #2631: o gatilho de card, de evento ou de tempo. O recorrente só conta quantos pegaria (o controller).
+  def self.de_card?(receita)
+    tipo = receita.dig('gatilho', 'tipo')
+    ::Autonomia::Automacao::Gatilhos.do_card?(tipo) && !::Autonomia::Automacao::Gatilhos.recorrente?(tipo)
   end
 
-  # Só as conversas que `usuario` enxerga, pelo mesmo filtro da lista de conversas. Com `conversa_id` (o número que a
-  # pessoa vê), ensaia só ela; fora do alcance de quem pede, é como se não existisse (RecordNotFound, 404).
+  # Só as conversas (ConversasDoEnsaio) ou os cards (CardsDoEnsaio) que `usuario` alcança. Com `conversa_id` (o número
+  # da conversa; no gatilho de card, o id do card), ensaia só ele; fora do alcance de quem pede, é como se não
+  # existisse (RecordNotFound, 404).
   def initialize(receita:, conta:, usuario:, conversa_id: nil)
     @receita = receita
     @conta = conta
     @usuario = usuario
     @conversa_id = conversa_id
+    @card = self.class.de_card?(receita)
     # O laço dos documentos (G46) não roda de novo no ensaio: o caminho que volta para no fim e diz para onde.
     @roteiro = ::Autonomia::Automacao::Roteiro.new(receita, voltar: false)
   end
 
+  # `alvo` diz à tela se a lista é de conversas ou de cards; o formato de cada item é o mesmo.
   def resultado
-    return { conversas: [ensaiar(visiveis.find_by!(display_id: @conversa_id))], outras: [] } if @conversa_id.present?
+    alvo = @card ? 'card' : 'conversa'
+    return { alvo: alvo, conversas: [ensaiar(amostra.um(@conversa_id))], outras: [] } if @conversa_id.present?
 
-    recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS).to_a
-    { conversas: recentes.first(RECENTES).map { |conversa| ensaiar(conversa) },
-      outras: recentes.drop(RECENTES).map { |conversa| { conversa_id: conversa.display_id, nome: conversa.contact&.name } } }
+    recentes = amostra.recentes(RECENTES + OUTRAS)
+    { alvo: alvo, conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
+      outras: recentes.drop(RECENTES).map { |item| amostra.base(item).except(:ultima_atividade) } }
   end
 
   # As conversas recentes de quem pede em que a automação entraria agora, na ordem do ensaio. O "Testar este passo"
   # (#2500 C2) roda nelas.
   def entrariam(limite)
-    recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS)
-    recentes.select { |conversa| fora(conversa, mensagem_do_gatilho(conversa)).nil? }.first(limite)
+    amostra.recentes(RECENTES + OUTRAS).select { |conversa| fora(conversa, *amostra.gatilho_de(conversa)).nil? }.first(limite)
   end
 
   private
 
-  def visiveis
-    ::Conversations::PermissionFilterService.new(@conta.conversations, @usuario, @conta, for_reading: true).perform
+  def amostra
+    @amostra ||= (@card ? ::Autonomia::Automacao::CardsDoEnsaio : ::Autonomia::Automacao::ConversasDoEnsaio)
+                 .new(gatilho: @receita['gatilho'].to_h, conta: @conta, usuario: @usuario)
   end
 
-  def ensaiar(conversa)
-    mensagem = mensagem_do_gatilho(conversa)
-    base = { conversa_id: conversa.display_id, nome: conversa.contact&.name, ultima_atividade: conversa.last_activity_at }
-    motivo = fora(conversa, mensagem)
+  def ensaiar(alvo)
+    mensagem, fato = amostra.gatilho_de(alvo)
+    base = amostra.base(alvo)
+    motivo = fora(alvo, mensagem, fato)
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
-    @conversa = conversa
-    falhou = (mensagem if ::Autonomia::Automacao::MensagemDoGatilho.falhou?(tipo_do_gatilho))
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia, falhou: falhou)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo, textos: textos_da_ia, fato: fato)
+    @conversa = contexto.conversa
+    @contato = contexto.contato
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -83,17 +96,14 @@ class Autonomia::Automacao::Ensaio
     @textos_da_ia ||= ::Autonomia::Automacao::Contexto.marcas_da_ia(@receita, @conta)
   end
 
-  def tipo_do_gatilho = @receita.dig('gatilho', 'tipo')
-
-  def mensagem_do_gatilho(conversa) = ::Autonomia::Automacao::MensagemDoGatilho.de(conversa, tipo_do_gatilho)
-
-  # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo.
-  def fora(conversa, mensagem)
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa)
-    faltando = ::Autonomia::Automacao::MensagemDoGatilho.faltando(tipo_do_gatilho, mensagem)
+  # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo. Depois, o que falta ao alvo para o gatilho
+  # (a mensagem, a reunião) e o "Só se", que lê o fato (a reunião do gatilho de reunião, G12).
+  def fora(alvo, mensagem, fato)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo, fato: fato)
     return 'spam' if contexto.no_spam?
-    return faltando if faltando
-    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, tipo_do_gatilho, mensagem)
+
+    motivo = amostra.motivo(alvo, mensagem, fato)
+    return motivo if motivo
 
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
@@ -133,8 +143,13 @@ class Autonomia::Automacao::Ensaio
     end
   end
 
-  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
-  def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
+  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes. O card sem conversa pula,
+  # como no motor.
+  def ia_assumir(passo, _valores)
+    return no(passo, 'sem_conversa') if @conversa.nil?
+
+    no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
+  end
 
   def em_frente(passo, valores)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
@@ -170,7 +185,7 @@ class Autonomia::Automacao::Ensaio
     caixa = ::Autonomia::Automacao::PassoDeEmail.caixa(@conta, passo['caixa_id'])
     return no(passo, 'caixa_de_email_indisponivel') if caixa.nil?
 
-    motivo = ::Autonomia::Automacao::PassoDeEmail.motivo_do_contato(@conta, @conversa.contact)
+    motivo = ::Autonomia::Automacao::PassoDeEmail.motivo_do_contato(@conta, @contato)
     return no(passo, motivo) if motivo
 
     assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
@@ -251,10 +266,11 @@ class Autonomia::Automacao::Ensaio
     no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe)))
   end
 
-  # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor. Não
-  # baixa nada nem chama a IA.
+  # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor (o card
+  # sem conversa pula, ComIa#impedido). Não baixa nada nem chama a IA.
   def anexos(passo, classe)
     return {} unless ::Autonomia::Automacao::AnexosDaConversa.le?(passo)
+    return { anexos_motivo: 'sem_conversa' } if @conversa.nil?
 
     lidos = ::Autonomia::Automacao::AnexosDaConversa.new(@conversa)
     motivo = lidos.motivo(modelo: classe::MODELO)

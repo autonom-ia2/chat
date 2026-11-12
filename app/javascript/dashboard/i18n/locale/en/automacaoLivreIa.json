@@ -96,7 +96,8 @@
         "ANEXO_GRANDE_DEMAIS": "An attachment in this conversation is too large for the AI. The AI is not called in this conversation.",
         "ANEXO_FORA_DO_FORMATO": "An attachment in this conversation is in a format the AI cannot read. The AI is not called in this conversation.",
         "ANEXO_SEM_LEITURA": "An attachment in this conversation cannot be read yet (a voice note without transcription or a file that did not arrive). The AI is not called in this conversation.",
-        "MODELO_SEM_IMAGEM": "The AI of this step cannot see photos or PDFs. The AI is not called in this conversation."
+        "MODELO_SEM_IMAGEM": "The AI of this step cannot see photos or PDFs. The AI is not called in this conversation.",
+        "SEM_CONVERSA": "This card has no conversation, so there is nothing to read. The AI is not called."
       }
     }
   }
