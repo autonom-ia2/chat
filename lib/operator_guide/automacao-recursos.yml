@@ -134,6 +134,67 @@ passo:
     motivo: Pôr agente na caixa (D13). O PATCH troca a lista inteira e pode tirar gente; fica fora.
     acoes:
       POST inbox_members: {}
+  # #2660 lote A: retorno e agenda. As rotas de crm/ pedem também a chave de funis (AcoesPermitidas.de_funil?), além
+  # da chave de cada tela, que o endpoint confere com a função de quem ligou.
+  crm/follow_ups:
+    motivo: >-
+      Alterar, concluir, cancelar, remarcar e dispensar o lembrete de um retorno que já existe (#2660 lote A). Criar é o
+      passo nativo `retorno` (G3, D2), que confere o envio automático; a rota crua fica fora. Pelo mesmo motivo, o
+      modo (`automation_mode`) e o `metadata`, onde mora o texto e o modelo do envio automático, ficam fora: pela rota
+      crua, trocariam a mensagem ao cliente por fora da regra do passo (só modelo UTILITY).
+    acoes:
+      PATCH crm/follow_ups/:id: { proibe: [automation_mode, metadata] }
+      PUT crm/follow_ups/:id: { proibe: [automation_mode, metadata] }
+      POST crm/follow_ups/:id/complete: {}
+      POST crm/follow_ups/:id/cancel: {}
+      POST crm/follow_ups/:id/reschedule: {}
+      POST crm/follow_ups/:id/dismiss_reminder: {}
+  crm/follow_up_series:
+    motivo: >-
+      Mudar "esta e as próximas", pausar, retomar e encerrar a série de um retorno que repete (#2660 lote A). As vezes
+      da série nascem só como lembrete para a equipe (Crm::FollowUps::SeriesMaterializer), sem mensagem ao cliente.
+    acoes:
+      PATCH crm/follow_up_series/:id: {}
+      PUT crm/follow_up_series/:id: {}
+      POST crm/follow_up_series/:id/pause: {}
+      POST crm/follow_up_series/:id/resume: {}
+      POST crm/follow_up_series/:id/end: {}
+  crm/meetings:
+    motivo: >-
+      Registrar se a reunião aconteceu, como o "Aconteceu" e o "Não compareceu" da tela (#2660 lote A). O primeiro
+      "Aconteceu" pode mover o card pela regra da página e dispara o gatilho "reunião atendida": cascata da D6. Criar,
+      alterar e apagar a reunião mexem na agenda do Google ou da Microsoft e avisam o cliente; sincronizar, resumir,
+      convidar e sugerir horário chamam fora ou gastam IA paga. Ficam fora.
+    acoes:
+      POST crm/meetings/:id/record_outcome: {}
+  crm/booking_pages:
+    motivo: >-
+      Criar a página de agendamento (nasce desligada), alterar, publicar e pausar (#2660 lote A), com a chave
+      `agendamento_manage` de quem ligou. Os textos que vão ao cliente sozinhos (convite e avisos de reunião marcada,
+      véspera e uma hora antes) ficam fora, como o layout de e-mail (D5): mudam o que todo cliente recebe. A caixa da
+      agenda e a dos avisos o formato recusa (o pedido não as declara). Passar reuniões fica fora: troca a pessoa do
+      lembrete com update_columns, que o desfazer não alcança. Apagar é estrutura (D1); logo, foto, identidade e
+      convite de teste são arquivo, credencial ou mensagem.
+    acoes:
+      POST crm/booking_pages: {}
+      PATCH crm/booking_pages/:id:
+        proibe: [invite_text, notice_templates, notice_texts, booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts]
+      PUT crm/booking_pages/:id:
+        proibe: [invite_text, notice_templates, notice_texts, booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts]
+      POST crm/booking_pages/:id/publish: {}
+      POST crm/booking_pages/:id/pause: {}
+  crm/my_booking_hours:
+    motivo: >-
+      Ajustar os dias e horas em que quem ligou aceita reuniões, ou pausar a agenda dele (#2660 lote A). A rota só mexe
+      na agenda de quem chama: não há parâmetro de pessoa.
+    acoes:
+      PUT crm/my_booking_hours: {}
+  crm/booking_invites:
+    motivo: >-
+      Gerar o link de agendamento do cliente, sem mandar (#2660 lote A). Mandar na conversa é o passo mensagem com o
+      link da agenda; "copiado" é gesto da tela.
+    acoes:
+      POST crm/booking_invites: {}
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
@@ -256,7 +317,6 @@ fora:
       - email_campaigns/templates
       - email_campaigns/test_sends
       - email_campaigns/videos
-      - crm/booking_invites
       - seus_posts_comentarios
       - seus_posts_cuidado
       - agentes_do_post
@@ -297,17 +357,14 @@ fora:
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias
-  - motivo: Passo nativo, não ação da lista. Retorno, passo `retorno` (G3); reunião, F8.
+  - motivo: >-
+      Agenda que fala com o cliente ou sai da plataforma. Lembrar e mandar o link de novo é o passo mensagem; marcar pela
+      página põe a reunião na agenda de fora e avisa o cliente; a gaveta antiga mexe no canal de e-mail (#2660 lote A).
     recursos:
-      - crm/follow_ups
-      - crm/follow_up_series
-      - crm/meetings
       - crm/meeting_actions
-      - crm/booking_pages
       - crm/booking_page_meetings
       - crm/booking_profiles
       - crm/booking_stats
-      - crm/my_booking_hours
   - motivo: >-
       Troca a lista inteira de etiquetas e apaga a que outra pessoa pôs no meio-tempo. O passo usa a rota de pôr e
       tirar uma a uma: conversations/alterar_etiquetas (#2202) e contacts/alterar_etiquetas (#2461).

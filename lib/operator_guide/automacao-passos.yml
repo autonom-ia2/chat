@@ -264,3 +264,24 @@ so_guia:
   POST crm/memoria/cards/:card_id/fatos/:id/aceitar: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
   POST crm/memoria/cards/:card_id/fatos/:id/destravar: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
   POST crm/memoria/cards/:card_id/fatos/:id/nao_vale_mais: O fato da memória é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  # #2660 lote A: retorno e agenda, liberados no motor e fora do editor. O retorno, a série, a reunião e a página são
+  # escolhidos pelo id, que nenhum valor do alvo traz e a tela não oferece; nenhum dos 20 exemplos usa.
+  PATCH crm/follow_ups/:id: O retorno é escolhido pelo id, que a tela não oferece; criar é o passo "retorno".
+  PUT crm/follow_ups/:id: Faz o mesmo que o PATCH; o retorno é escolhido pelo id, que a tela não oferece.
+  POST crm/follow_ups/:id/complete: O retorno é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/follow_ups/:id/cancel: O retorno é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/follow_ups/:id/reschedule: O retorno é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/follow_ups/:id/dismiss_reminder: O retorno é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  PATCH crm/follow_up_series/:id: A série é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  PUT crm/follow_up_series/:id: Faz o mesmo que o PATCH; a série é escolhida pelo id, que a tela não oferece.
+  POST crm/follow_up_series/:id/pause: A série é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/follow_up_series/:id/resume: A série é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/follow_up_series/:id/end: A série é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/meetings/:id/record_outcome: A reunião é escolhida pelo id, que nenhum valor do alvo traz; nenhum dos 20 exemplos usa.
+  POST crm/booking_pages: Criar página de agendamento é configuração da agenda; nenhum dos 20 exemplos usa.
+  PATCH crm/booking_pages/:id: A página é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  PUT crm/booking_pages/:id: Faz o mesmo que o PATCH; a página é escolhida pelo id, que a tela não oferece.
+  POST crm/booking_pages/:id/publish: A página é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/booking_pages/:id/pause: A página é escolhida pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  PUT crm/my_booking_hours: Os horários pedem uma grade de dias e horas que o editor não tem; nenhum dos 20 exemplos usa.
+  POST crm/booking_invites: Gerar o link sem mandar só serve com o passo mensagem, que já leva o link da agenda.

@@ -76,4 +76,40 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(permitidas.de_funil?('POST conversations/:id/toggle_priority')).to be(false)
     expect(permitidas.de_funil?('DELETE crm/pipelines/:id')).to be(false)
   end
+
+  describe '#2660 lote A: retorno e agenda' do
+    it 'mexe no retorno que já existe; criar continua só pelo passo nativo (D2)', :aggregate_failures do
+      expect(%w[complete cancel reschedule dismiss_reminder].map { |gesto| permitidas.permitida?("POST crm/follow_ups/:id/#{gesto}") })
+        .to all(be(true))
+      expect(permitidas.permitida?('POST crm/follow_ups')).to be(false)
+      expect(permitidas.de_funil?('POST crm/follow_ups/:id/complete')).to be(true)
+    end
+
+    it 'não troca o modo nem o texto do envio automático pela rota crua', :aggregate_failures do
+      expect(permitidas.proibidos('PATCH crm/follow_ups/:id', { 'automation_mode' => 'auto_send_message' })).to eq(['automation_mode'])
+      expect(permitidas.proibidos('PUT crm/follow_ups/:id', { 'metadata' => { 'message_body' => 'Oi' } })).to eq(['metadata'])
+      expect(permitidas.proibidos('PATCH crm/follow_ups/:id', { 'title' => 'Ligar de novo', 'due_at' => '2026-12-01T10:00:00Z' }))
+        .to be_empty
+    end
+
+    it 'na reunião, só registra se aconteceu', :aggregate_failures do
+      expect(permitidas.permitida?('POST crm/meetings/:id/record_outcome')).to be(true)
+      expect(['POST crm/meetings', 'PATCH crm/meetings/:id', 'POST crm/meetings/:id/sync'].map { |acao| permitidas.permitida?(acao) })
+        .to all(be(false))
+    end
+
+    it 'na página de agendamento, deixa fora o texto ao cliente, passar reuniões e apagar', :aggregate_failures do
+      expect(permitidas.proibidos('PATCH crm/booking_pages/:id', { 'booking_page' => { 'notice_texts' => {} } }))
+        .to eq(['booking_page.notice_texts'])
+      expect(permitidas.proibidos('PUT crm/booking_pages/:id', { 'invite_text' => 'Agende aqui' })).to eq(['invite_text'])
+      expect(permitidas.permitida?('POST crm/booking_pages/:id/publish')).to be(true)
+      expect(permitidas.permitida?('POST crm/booking_pages/reassign')).to be(false)
+      expect(permitidas.permitida?('DELETE crm/booking_pages/:id')).to be(false)
+    end
+
+    it 'gera o link de agendamento sem mandar' do
+      expect([permitidas.permitida?('POST crm/booking_invites'), permitidas.permitida?('POST crm/booking_invites/:id/deliver')])
+        .to eq([true, false])
+    end
+  end
 end
