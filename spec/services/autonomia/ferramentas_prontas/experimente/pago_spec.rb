@@ -74,6 +74,19 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente::Pago do
     expect(a_bigdatacorp).to have_been_made.once
   end
 
+  it 'instrui o modelo a copiar o CPF e o CNPJ exatamente como foram digitados, sem corrigir' do
+    pgfn_responde
+    modelo_faz([chamada(pgfn)])
+
+    experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')
+
+    expect(cliente).to have_received(:create_with_tool_executor) do |**kwargs|
+      expect(kwargs[:instructions]).to include(
+        'CPF e CNPJ: copie EXATAMENTE como a pessoa digitou, dígito por dígito. Nunca corrija, complete nem invente um número.'
+      )
+    end
+  end
+
   it 'lê o mesmo cache do dia que o agente: a consulta que o agente já fez não sai de novo nem custa' do
     pgfn_responde
     agente = Autonomia::Agents::Agent.create!(account: account, name: 'Bot EXEMPLO', agent_type: 'custom', status: :active,

@@ -78,6 +78,17 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
+  it 'nas grátis, as instruções não trazem a regra do CPF e do CNPJ do Premium' do
+    fonte_devolve('cidades' => { situacao: 'encontrado', dados: { cidades: ['Ribeirão Preto'] } })
+    modelo_faz([chamada({ consulta: 'cidades', uf: 'sp', busca: 'ribeirão preto' }, nome: 'pronta_cidades')])
+
+    experimentar('cidades', 'Ribeirão Preto')
+
+    expect(cliente).to have_received(:create_with_tool_executor) do |**kwargs|
+      expect(kwargs[:instructions]).to eq(Autonomia::FerramentasProntas::Experimente::ComModelo::INSTRUCOES)
+    end
+  end
+
   it 'sem IA configurada na conta: diz isso e não consulta' do
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
     fonte_devolve({})
