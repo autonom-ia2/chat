@@ -4,7 +4,11 @@ import { todosOsPassos } from './receita';
 // mandar mensagem aos clientes, avisar a equipe ou usar IA (paga na chave da
 // conta). Sem nada disso, ela liga direto, como antes. Olha todos os passos,
 // também os de dentro dos galhos.
-const AOS_CLIENTES = ['mensagem', 'email'];
+// "Passar para a agente de IA" (ia_assumir): a agente fala com o cliente. Conta
+// como mensagem aos clientes e tem frase própria; não entra na soma do custo,
+// que é o dos passos que vão à IA uma vez por execução.
+const AGENTE = 'ia_assumir';
+const AOS_CLIENTES = ['mensagem', 'email', AGENTE];
 const DA_IA = ['decidir', 'extrair', 'escrever', 'resumir', 'para_cada'];
 
 const mandaAosClientes = passo =>
@@ -22,25 +26,48 @@ export const oQueLigarFaz = receita => {
   const passos = todosOsPassos(receita?.passos || []);
   const manda = passos.some(mandaAosClientes);
   const avisa = passos.some(passo => passo.tipo === 'avisar');
+  const agente = passos.some(passo => passo.tipo === AGENTE);
   const ia = passos
     .filter(passo => DA_IA.includes(passo.tipo))
-    .map(passo => passo.id);
+    .map(({ id, tipo }) => ({ id, tipo }));
   return {
     manda,
     avisa,
+    agente,
     ia,
     modeloDaMeta: passos.some(usaModeloDaMeta),
-    pede: manda || avisa || ia.length > 0,
+    pede: manda || avisa || agente || ia.length > 0,
   };
 };
 
-// O custo da IA por execução, pela média de cada passo nos últimos 30 dias
-// (CustosDaIa.por_passo): nunca chama a IA para estimar. Passo de IA que ainda
-// não rodou deixa a soma incompleta: null, e a tela diz que o custo aparece
-// depois da primeira vez.
-export const custoPorExecucao = (idsDaIa, custosDosPassos) => {
-  if (!idsDaIa.length) return null;
-  const medias = idsDaIa.map(id => custosDosPassos?.[id]?.media);
-  if (medias.some(media => typeof media !== 'number')) return null;
-  return medias.reduce((soma, media) => soma + media, 0);
+// O custo de um passo de IA: a média real dele nos últimos 30 dias
+// (CustosDaIa.por_passo) ou, se ainda não rodou, a estimativa do tipo dele
+// (EstimativaDaIa: o modelo e uma ordem de tokens, sem chamar a IA).
+const custoDoPasso = ({ id, tipo }, custos, estimativa) => {
+  const real = custos?.[id];
+  if (typeof real?.media === 'number') {
+    return { valor: real.media, tokens: real.tokens, estimado: false };
+  }
+  const previsto = estimativa?.[tipo];
+  if (typeof previsto?.custo_usd !== 'number') return null;
+  return { valor: previsto.custo_usd, tokens: previsto.tokens, estimado: true };
+};
+
+// { valor, tokens, estimado } de uma execução, somando os passos de IA; null
+// sem passo de IA ou sem como medir algum deles. `tokens` fica null quando um
+// passo não os tem; `estimado` diz que entrou ao menos uma estimativa.
+export const custoPorExecucao = (passosDaIa, { custos, estimativa } = {}) => {
+  if (!passosDaIa.length) return null;
+  const partes = passosDaIa.map(passo =>
+    custoDoPasso(passo, custos, estimativa)
+  );
+  if (partes.some(parte => !parte)) return null;
+  const comTokens = partes.every(parte => typeof parte.tokens === 'number');
+  return {
+    valor: partes.reduce((soma, parte) => soma + parte.valor, 0),
+    tokens: comTokens
+      ? partes.reduce((soma, parte) => soma + parte.tokens, 0)
+      : null,
+    estimado: partes.some(parte => parte.estimado),
+  };
 };

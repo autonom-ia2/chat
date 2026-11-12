@@ -513,6 +513,9 @@
         "EQUIPE": "Esta automação avisa pessoas da sua equipe.",
         "IA": "Esta automação usa IA, paga na chave de IA da sua conta.",
         "IA_CUSTO": "Cerca de {custo} por execução, pela média dos últimos 30 dias.",
+        "IA_CUSTO_ESTIMADO": "Cerca de {custo} por execução, estimado pelo modelo de cada passo. Depois da primeira vez, vale a média real.",
+        "TOKENS": "Cerca de {tokens} tokens de IA por execução.",
+        "AGENTE": "Esta automação passa conversas para uma agente de IA, que responde aos seus clientes.",
         "CANCELAR": "Agora não",
         "LIGAR": "Ligar"
       },

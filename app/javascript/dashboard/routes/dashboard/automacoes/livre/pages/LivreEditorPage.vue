@@ -378,13 +378,19 @@ watch(() => [route.query.alterar, route.query.seletor], abrirDaUrl);
 // #2500 C2: o custo de cada passo de IA nos últimos 30 dias, para o cartão do
 // "Alterar". É só informação: se não carregar, o cartão fica sem a linha.
 // #2574: a nova ainda não tem custo, mas a confirmação do ligar precisa saber
-// se quem vê pode ver os custos da conta (`com_valores`).
+// se quem vê pode ver os custos da conta (`com_valores`) e a estimativa de cada
+// tipo de passo de IA.
 const custos = ref({ com_valores: false, custos: {} });
+const daConta = ({ com_valores: comValores, estimativa }) => ({
+  com_valores: comValores,
+  custos: {},
+  estimativa,
+});
 const carregarCustos = async id => {
   try {
     custos.value = id
       ? (await AutomacoesAPI.custosDaAutomacao(id)).data
-      : { com_valores: (await AutomacoesAPI.custos()).data.com_valores };
+      : daConta((await AutomacoesAPI.custos()).data);
   } catch {
     custos.value = { com_valores: false, custos: {} };
   }

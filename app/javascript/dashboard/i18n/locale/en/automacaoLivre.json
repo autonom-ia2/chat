@@ -513,6 +513,9 @@
         "EQUIPE": "This automation notifies people on your team.",
         "IA": "This automation uses AI, paid with your account AI key.",
         "IA_CUSTO": "About {custo} per run, from the average of the last 30 days.",
+        "IA_CUSTO_ESTIMADO": "About {custo} per run, estimated from the model of each step. After the first run, the real average applies.",
+        "TOKENS": "About {tokens} AI tokens per run.",
+        "AGENTE": "This automation hands conversations to an AI agent, who replies to your customers.",
         "CANCELAR": "Not now",
         "LIGAR": "Turn on"
       },

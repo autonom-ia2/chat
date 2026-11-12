@@ -4,7 +4,8 @@ import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 
 // #2574 (F5.4) — ligar a automação que manda mensagem, avisa a equipe ou usa
 // IA pede confirmação, dizendo isso e o custo. O valor da IA vem da média dos
-// últimos 30 dias, nunca de uma ida à IA, e só para quem vê os custos.
+// últimos 30 dias ou, antes da primeira vez, da estimativa pelo modelo do passo,
+// nunca de uma ida à IA, e só para quem vê os custos.
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     locale: { value: 'pt_BR' },
@@ -39,7 +40,7 @@ describe('oQueLigarFaz', () => {
     expect(faz).toMatchObject({
       manda: true,
       avisa: true,
-      ia: ['p4'],
+      ia: [{ id: 'p4', tipo: 'decidir' }],
       modeloDaMeta: false,
       pede: true,
     });
@@ -50,12 +51,24 @@ describe('oQueLigarFaz', () => {
       oQueLigarFaz(
         receita([{ id: 'p1', tipo: 'escrever', destino: 'sugestao' }])
       )
-    ).toMatchObject({ manda: false, ia: ['p1'], pede: true });
+    ).toMatchObject({
+      manda: false,
+      ia: [{ id: 'p1', tipo: 'escrever' }],
+      pede: true,
+    });
     expect(
       oQueLigarFaz(
         receita([{ id: 'p1', tipo: 'escrever', destino: 'mensagem' }])
       ).manda
     ).toBe(true);
+  });
+
+  // Revisão do #2574: a agente de IA fala com o cliente; liga com confirmação,
+  // mas fica fora da soma do custo dos passos de IA.
+  it('passar para a agente de IA pede confirmação e conta como mensagem', () => {
+    expect(
+      oQueLigarFaz(receita([{ id: 'p1', tipo: 'ia_assumir', agente_id: 3 }]))
+    ).toMatchObject({ manda: true, agente: true, ia: [], pede: true });
   });
 
   it('o modelo da Meta: a mensagem com modelo e a campanha que dispara', () => {
@@ -76,12 +89,40 @@ describe('oQueLigarFaz', () => {
 });
 
 describe('custoPorExecucao', () => {
-  it('soma a média de cada passo de IA; passo que nunca rodou deixa null', () => {
-    const custos = { p1: { media: 0.002, vezes: 4 }, p2: { media: 0.001 } };
+  const p1 = { id: 'p1', tipo: 'decidir' };
+  const p2 = { id: 'p2', tipo: 'resumir' };
+  const p3 = { id: 'p3', tipo: 'extrair' };
+  const custos = {
+    p1: { media: 0.002, vezes: 4, tokens: 1500 },
+    p2: { media: 0.001, tokens: 900 },
+  };
+  const estimativa = {
+    extrair: { modelo: 'gpt-6-luna', tokens: 3000, custo_usd: 0.0005 },
+  };
 
-    expect(custoPorExecucao(['p1', 'p2'], custos)).toBeCloseTo(0.003);
-    expect(custoPorExecucao(['p1', 'p3'], custos)).toBeNull();
-    expect(custoPorExecucao([], custos)).toBeNull();
+  it('soma a média e os tokens de cada passo que já rodou', () => {
+    const custo = custoPorExecucao([p1, p2], { custos });
+
+    expect(custo.valor).toBeCloseTo(0.003);
+    expect(custo).toMatchObject({ tokens: 2400, estimado: false });
+  });
+
+  it('o passo que ainda não rodou entra pela estimativa do tipo dele', () => {
+    const custo = custoPorExecucao([p1, p3], { custos, estimativa });
+
+    expect(custo.valor).toBeCloseTo(0.0025);
+    expect(custo).toMatchObject({ tokens: 4500, estimado: true });
+  });
+
+  it('sem média nem estimativa, ou sem passo de IA, é null', () => {
+    expect(custoPorExecucao([p1, p3], { custos })).toBeNull();
+    expect(custoPorExecucao([], { custos, estimativa })).toBeNull();
+  });
+
+  it('sem tokens num passo, o valor vale e os tokens ficam null', () => {
+    const custo = custoPorExecucao([p1], { custos: { p1: { media: 0.002 } } });
+
+    expect(custo).toMatchObject({ valor: 0.002, tokens: null });
   });
 });
 
@@ -117,11 +158,30 @@ describe('LivreConfirmarLigar', () => {
 
     expect(linhas(wrapper)).toEqual(['clientes', 'ia', 'custo']);
     expect(wrapper.find('[data-confirmar="custo"]').text()).toContain(
-      `${C}.IA_CUSTO`
+      `${C}.IA_CUSTO(`
     );
   });
 
-  it('sem custo ainda, diz que ele aparece depois da primeira vez', () => {
+  it('no primeiro ligar, mostra o valor e os tokens estimados', () => {
+    const wrapper = montar({
+      receita: COM_IA,
+      custos: {
+        com_valores: true,
+        custos: {},
+        estimativa: { resumir: { tokens: 3300, custo_usd: 0.0007 } },
+      },
+    });
+
+    expect(linhas(wrapper)).toEqual(['clientes', 'ia', 'custo', 'tokens']);
+    expect(wrapper.find('[data-confirmar="custo"]').text()).toContain(
+      `${C}.IA_CUSTO_ESTIMADO`
+    );
+    expect(wrapper.find('[data-confirmar="tokens"]').text()).toBe(
+      `${C}.TOKENS(3.300)`
+    );
+  });
+
+  it('sem média nem estimativa, diz que o custo aparece depois', () => {
     const wrapper = montar({
       receita: COM_IA,
       custos: { com_valores: true, custos: {} },
@@ -130,6 +190,15 @@ describe('LivreConfirmarLigar', () => {
     expect(wrapper.find('[data-confirmar="custo"]').text()).toBe(
       'AUTOMACAO_LIVRE.IA.CUSTO.PRIMEIRA'
     );
+  });
+
+  it('a agente de IA tem frase própria, sem valor', () => {
+    const wrapper = montar({
+      receita: receita([{ id: 'p1', tipo: 'ia_assumir', agente_id: 3 }]),
+      custos: { com_valores: true, custos: {}, estimativa: {} },
+    });
+
+    expect(linhas(wrapper)).toEqual(['clientes', 'agente']);
   });
 
   it('quem não vê os custos não vê o valor', () => {
