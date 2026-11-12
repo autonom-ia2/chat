@@ -290,13 +290,15 @@ describe('ChoiceSelect', () => {
       const lugar = { topo: 100 };
       botaoEm(trigger, lugar);
       await trigger.trigger('click');
+      // O botão já saiu do lugar: só a origem da rolagem (a própria lista)
+      // segura a lista aberta.
+      lugar.topo = 60;
       wrapper
         .get('[role="listbox"]')
         .element.dispatchEvent(new Event('scroll'));
       await wrapper.vm.$nextTick();
       expect(trigger.attributes('aria-expanded')).toBe('true');
 
-      lugar.topo = 60;
       document.dispatchEvent(new Event('scroll'));
       await wrapper.vm.$nextTick();
       expect(trigger.attributes('aria-expanded')).toBe('false');

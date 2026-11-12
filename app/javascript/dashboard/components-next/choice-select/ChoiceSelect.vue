@@ -324,14 +324,15 @@ watch(
   { flush: 'post' }
 );
 
-// Rolar a página ou uma seção com a lista aberta fecha, como o select nativo
-// (capture pega a rolagem das seções internas); assim a lista nunca fica
-// solta, apontando para um botão que saiu da vista. A rolagem da própria lista
-// não conta. Redimensionar só reposiciona.
-// Só fecha se o botão saiu de onde estava quando a lista foi posicionada
+// Rolagem que tira o botão do lugar com a lista aberta fecha, como o select
+// nativo (capture pega a rolagem das seções internas); assim a lista nunca
+// fica solta, apontando para um botão que saiu da vista. A rolagem da própria
+// lista não conta. Redimensionar só reposiciona.
+// O botão precisa ter saído de onde estava quando a lista foi posicionada
 // (#2927): o foco (clique no rótulo, Tab) rola a tela para mostrar o botão e
 // só então a lista abre, mas o navegador entrega o evento dessa rolagem um
-// quadro depois, com a lista já aberta. Sem a conferência ela abria e fechava.
+// quadro depois, com a lista já aberta. Fechar em qualquer rolagem fazia a
+// lista abrir e fechar na hora.
 const triggerMoved = () => {
   const rect = trigger.value?.getBoundingClientRect();
   return !rect || rect.top !== placedAt?.top || rect.left !== placedAt?.left;
