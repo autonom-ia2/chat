@@ -7,6 +7,10 @@
 class Relacionamentos::Apagar < Relacionamentos::AcaoEmGrupo
   NAO_APAGADA = 'nao_apagada'.freeze
 
+  # O Guia não apaga as pessoas marcadas por ninguém (`Guide::Acoes::SO_NA_TELA`): é excluir contato, em lote, e isso
+  # só se faz na tela (#2096). A resposta do Guia é a mesma de excluir um contato.
+  SO_NA_TELA_DO_GUIA = { 'POST relacionamentos/apagar' => 'contact_delete' }.freeze
+
   private
 
   def contagem
