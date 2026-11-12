@@ -9,8 +9,8 @@
 #
 # Parar (P6, decidido pelo Rodrigo em 03/11): para só o que está rodando neste card, desta automação. Os outros cards
 # seguem, e a automação continua ligada; o card que entrar de novo na etapa começa outra vez. Sem tabela de exclusão,
-# então sem migration. Fecha como o Definicao#desligar!, só no card: a que esperava ganha o registro no passo da espera;
-# a que estava no meio de uma rodada para sozinha e registra lá (Executor#parou_por_fora).
+# então sem migration. Fecha como o Definicao#desligar!, só no card (Execucao.parar_por_fora!): a que esperava ganha o
+# registro no passo da espera; a que estava no meio de uma rodada leva o porquê, para sozinha e registra lá.
 class Autonomia::Automacao::NoCard
   Execucao = ::Autonomia::Automacao::Execucao
   Registro = ::Autonomia::Automacao::Registro
@@ -31,7 +31,7 @@ class Autonomia::Automacao::NoCard
 
   # Devolve quantas execuções fechou (0 quando nada rodava desta automação neste card).
   def parar!(automacao)
-    fechadas = Execucao.transaction { fechar(abertas.where(automacao_id: automacao.id), automacao) }
+    fechadas = Execucao.transaction { Execucao.parar_por_fora!(abertas.where(automacao_id: automacao.id), MOTIVO) }
     return 0 if fechadas.empty?
 
     ::Autonomia::Automacao::Cobertura.encerrar(fechadas)
@@ -42,29 +42,6 @@ class Autonomia::Automacao::NoCard
   private
 
   def abertas = Execucao.abertas.where(account_id: @card.account_id, alvo: @card)
-
-  # Sem callback, como o desligar: a execução órfã não passa no `belongs_to`, e parar não pode falhar por ela.
-  def fechar(escopo, automacao)
-    esperando = escopo.where(estado: 'esperando').pluck(:id, :cursor)
-    ids = escopo.pluck(:id)
-    return [] if ids.empty?
-
-    agora = Time.current
-    Execucao.abertas.where(id: ids).update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora, # rubocop:disable Rails/SkipsModelValidations
-                                               **Execucao::AO_TERMINAR)
-    registrar(automacao, esperando, agora)
-    ids
-  end
-
-  def registrar(automacao, esperando, agora)
-    return if esperando.empty?
-
-    linhas = esperando.map do |execucao_id, cursor|
-      { account_id: @card.account_id, automacao_id: automacao.id, execucao_id: execucao_id, passo: cursor || 'inicio',
-        resultado: 'pulado', motivo: MOTIVO, dados: {}, created_at: agora }
-    end
-    Registro.insert_all!(linhas) # rubocop:disable Rails/SkipsModelValidations
-  end
 
   def para_tela(execucao, registros)
     {
