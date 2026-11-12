@@ -25,6 +25,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2451: por que salvar está travado; vazio = salva.
+    lockedReason: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['update:name', 'update:visibility', 'submit'],
   computed: {
@@ -150,12 +155,15 @@ export default {
       </div>
     </div>
     <div class="mt-4 w-full">
+      <p v-if="lockedReason" class="mb-3 text-sm text-n-amber-11">
+        {{ lockedReason }}
+      </p>
       <NextButton
         blue
         solid
         :label="$t('MACROS.HEADER_BTN_TXT_SAVE')"
         class="w-full"
-        :disabled="readOnly"
+        :disabled="readOnly || Boolean(lockedReason)"
         @click="$emit('submit')"
       />
     </div>

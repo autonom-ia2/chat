@@ -19,6 +19,9 @@ class Autonomia::Agents::Tools::Native::InsuranceCapabilities < Autonomia::Agent
   PARAMETRO_DO_RAMO = 'ramo_pedido'.freeze
 
   class << self
+    # #2918: LÊ (lê os ramos que a corretora cota). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'consultar_produtos_cotacao'
     end

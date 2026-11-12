@@ -53,6 +53,10 @@ const props = defineProps({
   // alinha pela direita do botão quando à direita não cabe (#2202: "Recentes ▾"
   // e "Filtrar ▾" no topo estreito da lista de conversas). Sem a prop, nada muda.
   fitSelected: { type: Boolean, default: false },
+  // O texto escolhido quebra linha no botão fechado, em vez de ser cortado com
+  // "…", e a altura cresce com ele (#2754: a condição longa em 390 px). Sem a
+  // prop, nada muda.
+  wrapSelected: { type: Boolean, default: false },
 });
 
 // Como o @change do select nativo: só quando a escolha muda, já com o
@@ -91,6 +95,8 @@ const list = useTemplateRef('list');
 const isOpen = ref(false);
 const active = ref(-1);
 const listStyle = ref({});
+// Onde o botão estava quando a lista foi posicionada (ver `triggerMoved`).
+let placedAt = null;
 const typed = { text: '', at: 0, from: -1 };
 
 // Seções da lista: um grupo por <optgroup>, ou uma seção sem rótulo.
@@ -160,6 +166,7 @@ const halfRowHeight = limit => {
 const place = () => {
   const rect = trigger.value?.getBoundingClientRect();
   if (!rect) return;
+  placedAt = { top: rect.top, left: rect.left };
   const below = window.innerHeight - rect.bottom;
   const spaceBelow = below - LIST_GAP - VIEWPORT_MARGIN;
   const spaceAbove = rect.top - LIST_GAP - VIEWPORT_MARGIN;
@@ -321,16 +328,26 @@ watch(
   { flush: 'post' }
 );
 
-// Rolar a página ou uma seção com a lista aberta fecha, como o select nativo
-// (capture pega a rolagem das seções internas); assim a lista nunca fica
-// solta, apontando para um botão que saiu da vista. A rolagem da própria lista
-// não conta. Redimensionar só reposiciona.
+// Rolagem que tira o botão do lugar com a lista aberta fecha, como o select
+// nativo (capture pega a rolagem das seções internas); assim a lista nunca
+// fica solta, apontando para um botão que saiu da vista. A rolagem da própria
+// lista não conta. Redimensionar só reposiciona.
+// O botão precisa ter saído de onde estava quando a lista foi posicionada
+// (#2927): o foco (clique no rótulo, Tab) rola a tela para mostrar o botão e
+// só então a lista abre, mas o navegador entrega o evento dessa rolagem um
+// quadro depois, com a lista já aberta. Fechar em qualquer rolagem fazia a
+// lista abrir e fechar na hora.
+const triggerMoved = () => {
+  const rect = trigger.value?.getBoundingClientRect();
+  return !rect || rect.top !== placedAt?.top || rect.left !== placedAt?.left;
+};
 const openWindow = () => (isOpen.value ? window : null);
 useEventListener(
   openWindow,
   'scroll',
   event => {
-    if (!list.value?.contains(event.target)) close(false);
+    if (list.value?.contains(event.target) || !triggerMoved()) return;
+    close(false);
   },
   { capture: true, passive: true }
 );
@@ -390,7 +407,10 @@ defineExpose({ abrir });
         // pseudo-elemento leva a área de toque a 44 px nos dois.
         compact
           ? 'h-8 px-3 text-sm before:-inset-y-1.5'
-          : 'h-10 px-3 text-sm before:-inset-y-0.5',
+          : [
+              'px-3 text-sm before:-inset-y-0.5',
+              wrapSelected ? 'min-h-10 py-2' : 'h-10',
+            ],
         invalid
           ? 'outline-n-ruby-9 focus-visible:outline-n-ruby-9'
           : 'outline-n-weak hover:enabled:outline-n-slate-6 focus-visible:outline-n-brand',
@@ -399,7 +419,12 @@ defineExpose({ abrir });
       @keydown="onKeydown"
       @blur="onBlur"
     >
-      <span class="truncate" :class="{ 'text-n-slate-10': selected < 0 }">
+      <span
+        :class="[
+          wrapSelected ? 'break-words' : 'truncate',
+          { 'text-n-slate-10': selected < 0 },
+        ]"
+      >
         {{ selectedLabel }}
       </span>
       <span

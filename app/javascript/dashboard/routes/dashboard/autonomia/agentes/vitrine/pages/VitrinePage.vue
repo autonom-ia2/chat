@@ -10,6 +10,7 @@ import AgenteErro from '../../components/AgenteErro.vue';
 import VitrineCartao from '../components/VitrineCartao.vue';
 import VitrineDetalhe from '../components/VitrineDetalhe.vue';
 import VitrineEscolherAgente from '../components/VitrineEscolherAgente.vue';
+import VitrineSeloPremium from '../components/VitrineSeloPremium.vue';
 import { ehCotacao } from '../../utils/pagina';
 import { useCadastroManual } from '../../composables/useFerramentasDelegadas';
 import {
@@ -17,7 +18,9 @@ import {
   chaveDoTexto,
   emDestaque,
   ferramentaPorId,
+  larguraDoCartao,
   liberadas,
+  premiumPorUltimo,
 } from '../catalogo';
 import { criarRegistroDeBusca, filtrarFerramentas } from '../busca';
 import { useVitrine } from '../useVitrine';
@@ -28,7 +31,8 @@ import { useVitrineLigada } from '../useVitrineLigada';
 // vê chave, link, formato nem método: a plataforma resolve. Só aparecem as fontes que o servidor liberou para a conta,
 // com as do ramo da conta em destaque (pacote #1550). A Lia (cotação) fica fora da escolha de agente.
 // `?agente=<id>` chega da página do agente (Adicionar ferramenta) e já deixa o agente escolhido; `?ferramenta=<id>`
-// abre o detalhe.
+// abre o detalhe. Os cards Premium ficam no grupo do assunto, depois dos grátis, e uma legenda acima dos grupos explica
+// o selo (as grátis do mês de cada um).
 const NS = 'AGENTS.VITRINE';
 const { t, te } = useI18n();
 const route = useRoute();
@@ -76,6 +80,8 @@ const textoDe = ferramenta => {
     te(`${base}.APOIO`) ? t(`${base}.APOIO`) : '',
     t(`${base}.FAZ`),
     t(`${NS}.GRUPOS.${ferramenta.grupo}.NOME`),
+    // Sem o grupo Premium, quem busca "premium" ainda acha os cards com o selo.
+    ferramenta.premium ? t(`${NS}.PREMIUM.SELO`) : '',
   ].join(' ');
 };
 
@@ -96,10 +102,22 @@ const gruposVisiveis = computed(() =>
     .filter(item => grupo.value === 'TODAS' || item.id === grupo.value)
     .map(item => ({
       ...item,
-      ferramentas: achadas.value.filter(f => f.grupo === item.id),
+      ferramentas: premiumPorUltimo(
+        achadas.value.filter(f => f.grupo === item.id)
+      ),
     }))
     .filter(item => item.ferramentas.length)
 );
+
+// A legenda do selo Premium aparece quando algum card Premium está na tela; as grátis do mês vêm do servidor.
+const gratisDoPremium = computed(() => {
+  const premium = gruposVisiveis.value
+    .flatMap(item => item.ferramentas)
+    .filter(ferramenta => ferramenta.premium)
+    .map(ferramenta => vitrine.premiumDe(ferramenta.id))
+    .find(Boolean);
+  return premium ? Number(premium.gratis) || 0 : 0;
+});
 
 const destaque = computed(() =>
   termo.value || grupo.value !== 'TODAS'
@@ -340,13 +358,18 @@ onMounted(async () => {
             {{ tituloDoDestaque }}
           </h2>
           <ul
-            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
+            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-6"
           >
-            <li v-for="ferramenta in destaque" :key="ferramenta.id">
+            <li
+              v-for="(ferramenta, indice) in destaque"
+              :key="ferramenta.id"
+              :class="larguraDoCartao(indice, destaque.length)"
+            >
               <VitrineCartao
                 :ferramenta="ferramenta"
                 :tom="tomDe(ferramenta)"
                 :ja-sabe="jaSabe(ferramenta)"
+                :premium="vitrine.premiumDe(ferramenta.id)"
                 destaque
                 @abrir="aberta = $event"
               />
@@ -376,6 +399,17 @@ onMounted(async () => {
           </AgenteBotao>
         </div>
 
+        <p
+          v-if="gratisDoPremium"
+          data-vitrine-legenda-premium
+          class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
+        >
+          <VitrineSeloPremium />
+          <span class="flex-1 min-w-0 pt-0.5">
+            {{ t(`${NS}.PREMIUM.LEGENDA`, { gratis: gratisDoPremium }) }}
+          </span>
+        </p>
+
         <section
           v-for="item in gruposVisiveis"
           :key="item.id"
@@ -403,13 +437,18 @@ onMounted(async () => {
             </div>
           </div>
           <ul
-            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-3"
+            class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2 lg:grid-cols-6"
           >
-            <li v-for="ferramenta in item.ferramentas" :key="ferramenta.id">
+            <li
+              v-for="(ferramenta, indice) in item.ferramentas"
+              :key="ferramenta.id"
+              :class="larguraDoCartao(indice, item.ferramentas.length)"
+            >
               <VitrineCartao
                 :ferramenta="ferramenta"
                 :tom="item.tom"
                 :ja-sabe="jaSabe(ferramenta)"
+                :premium="vitrine.premiumDe(ferramenta.id)"
                 @abrir="aberta = $event"
               />
             </li>

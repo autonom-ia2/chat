@@ -65,6 +65,10 @@ class Autonomia::Agents::Tools::Bound
     native? && @native.passa_a_conversa?
   end
 
+  # #2918: a nativa declara se escreve (`Native::Base.escreve?`); a HTTP cadastrada escreve fora do GET; a pronta só
+  # consulta. Com as rodadas das prontas, a que escreve roda uma vez por turno (`UmaEscritaPorTurno`).
+  def escreve? = native? ? @native.escreve? : !@record.pronta? && @record.http_method.to_s.upcase != 'GET'
+
   # -> String para o modelo.
   #
   # `delivery` é o contexto do turno de atendimento (conversa + vínculo do agente). Vem por CHAMADA

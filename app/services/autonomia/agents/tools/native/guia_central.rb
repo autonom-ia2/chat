@@ -18,6 +18,9 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
   AVISO_DE_CORTE = ' […cortado por tamanho: o artigo continua na tela — use o botão que abre o artigo completo.]'.freeze
 
   class << self
+    # #2918: LÊ (lê a Central de Ajuda). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'ler_da_central'
     end

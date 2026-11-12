@@ -7,6 +7,7 @@ import ToggleSwitch from 'dashboard/components-next/switch/Switch.vue';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useSaidaExterna } from './saidaExterna';
+import { useRegraDoFunil } from './regraDoFunil';
 
 const props = defineProps({
   automation: {
@@ -25,6 +26,10 @@ const canManage = useCanManage('automation_manage');
 // #2448: sem integration_manage, a regra com webhook ou transcrição por e-mail não liga, não desliga e não é copiada.
 const { travada } = useSaidaExterna();
 const saidaTravada = computed(() => travada(props.automation.actions));
+// #2473: sem a chave de funis, a regra que mexe no funil também não liga, não desliga e não é copiada (o servidor dá 403).
+const { travadaNoFunil } = useRegraDoFunil();
+const funilTravado = computed(() => travadaNoFunil(props.automation));
+const linhaTravada = computed(() => saidaTravada.value || funilTravado.value);
 
 const readableDate = date => messageStamp(new Date(date), 'LLL d, yyyy');
 const readableDateWithTime = date =>
@@ -72,12 +77,18 @@ const automationActive = computed({
         >
           {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
         </p>
+        <p
+          v-if="canManage && funilTravado"
+          class="mt-1 text-sm text-n-amber-11"
+        >
+          {{ $t('AUTOMATION.RULE_FUNNEL_MANAGE_ONLY') }}
+        </p>
       </BaseTableCell>
 
       <BaseTableCell>
         <ToggleSwitch
           v-model="automationActive"
-          :disabled="!canManage || saidaTravada"
+          :disabled="!canManage || linhaTravada"
         />
       </BaseTableCell>
 
@@ -102,7 +113,7 @@ const automationActive = computed({
             icon="i-woot-clone"
             sm
             slate
-            :disabled="saidaTravada"
+            :disabled="linhaTravada"
             :is-loading="loading"
             @click="$emit('clone', automation)"
           />

@@ -78,6 +78,17 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     end
   end
 
+  it 'nas grátis, as instruções não trazem a regra do CPF e do CNPJ do Premium' do
+    fonte_devolve('cidades' => { situacao: 'encontrado', dados: { cidades: ['Ribeirão Preto'] } })
+    modelo_faz([chamada({ consulta: 'cidades', uf: 'sp', busca: 'ribeirão preto' }, nome: 'pronta_cidades')])
+
+    experimentar('cidades', 'Ribeirão Preto')
+
+    expect(cliente).to have_received(:create_with_tool_executor) do |**kwargs|
+      expect(kwargs[:instructions]).to eq(Autonomia::FerramentasProntas::Experimente::ComModelo::INSTRUCOES)
+    end
+  end
+
   it 'sem IA configurada na conta: diz isso e não consulta' do
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
     fonte_devolve({})
@@ -105,6 +116,16 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
       expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     end
+  end
+
+  it 'o dia do contador é o do fuso da conta: 01h UTC de 10/11 ainda é 09/11 em São Paulo, e o 09 esgotado recusa' do
+    account.update!(custom_attributes: { 'timezone' => 'America/Sao_Paulo' })
+    travel_to(Time.find_zone('UTC').parse('2026-11-10 01:00 UTC'))
+    Autonomia::FerramentasProntas::Acesso.create!(account_id: account.id, fonte: 'fipe', limite_diario: 2)
+    Autonomia::FerramentasProntas::Uso.create!(account_id: account.id, fonte: 'fipe', dia: Date.new(2026, 11, 9), consultas: 2)
+
+    expect(experimentar('fipe', 'Onix 2020')).to eq('situacao' => 'nao_consegui_consultar')
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
   end
 
   it 'o preço achado não some quando a última versão do lote é recusada (formato real da recusa)' do

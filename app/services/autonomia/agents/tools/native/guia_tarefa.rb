@@ -5,6 +5,9 @@
 # clique da pessoa solta o primeiro lote (`comecar` está em `Acoes::SEM_DESFAZER`).
 class Autonomia::Agents::Tools::Native::GuiaTarefa < Autonomia::Agents::Tools::Native::Base
   class << self
+    # #2918: ESCREVE (monta e grava a tarefa grande). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'planejar_tarefa'
     end

@@ -5,11 +5,13 @@ import {
   chaveDoTexto,
   emDestaque,
   ferramentaPorId,
+  larguraDoCartao,
   liberadas,
   oferecida,
+  premiumPorUltimo,
 } from '../../vitrine/catalogo';
 
-// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5), com as chaves dele, os textos no i18n e o
+// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5 + F7), com as chaves dele, os textos no i18n e o
 // destaque pelo ramo da conta.
 const i18n = withFullI18n('pt_BR');
 const { te } = i18n.global;
@@ -34,11 +36,20 @@ const CHAVES_DO_SERVIDOR = [
   'chuva',
   'produtos_seguradoras',
   'corretor_susep',
+  // F5 (bases baixadas)
   'planos_de_saude',
   'aeronaves',
   'geracao_solar',
   'transportadoras',
   'queimadas',
+  // F7 (Premium)
+  'certidoes_empresa',
+  'raio_x_empresa',
+  'conferir_pessoa',
+  'historico_placa',
+  'risco_endereco',
+  'imovel_rural',
+  'contato_empresa',
 ];
 
 describe('catálogo da vitrine', () => {
@@ -55,6 +66,7 @@ describe('catálogo da vitrine', () => {
         ['NOME', 'FAZ', 'CONSEGUE', 'CLIENTE', 'AGENTE', 'USE_QUANDO'].forEach(
           campo => expect(te(`${base}.${campo}`, locale)).toBe(true)
         );
+        // Todo card tem "Experimente", o Premium também (F7, decisão A do Rodrigo, 11/11).
         expect(te(`${base}.ROTULO`, locale)).toBe(true);
         if (!item.semCampo) expect(te(`${base}.EXEMPLO`, locale)).toBe(true);
         expect(GRUPOS.some(grupo => grupo.id === item.grupo)).toBe(true);
@@ -129,5 +141,122 @@ describe('catálogo da vitrine', () => {
     expect(feriados.exemplo(new Date(2026, 10, 10), 'pt_BR')).toBe(
       '30/11/2026'
     );
+  });
+
+  it('the 7 Premium cards sit in the group of their subject, after the free ones, with the price texts in both languages, and never highlighted', () => {
+    const premium = FERRAMENTAS.filter(item => item.premium);
+    expect(premium.map(item => item.id)).toEqual([
+      'certidoes_empresa',
+      'raio_x_empresa',
+      'conferir_pessoa',
+      'historico_placa',
+      'risco_endereco',
+      'imovel_rural',
+      'contato_empresa',
+    ]);
+    expect(
+      Object.fromEntries(premium.map(item => [item.id, item.grupo]))
+    ).toEqual({
+      certidoes_empresa: 'PESSOAS',
+      raio_x_empresa: 'PESSOAS',
+      conferir_pessoa: 'PESSOAS',
+      historico_placa: 'VEICULOS',
+      risco_endereco: 'LUGAR',
+      imovel_rural: 'LUGAR',
+      contato_empresa: 'CLIENTES',
+    });
+    expect(GRUPOS.map(grupo => grupo.id)).not.toContain('PREMIUM');
+    const pessoas = premiumPorUltimo(
+      liberadas(CHAVES_DO_SERVIDOR).filter(item => item.grupo === 'PESSOAS')
+    );
+    expect(pessoas.map(item => item.id)).toEqual([
+      'cnpj',
+      'cpf',
+      'certidoes_empresa',
+      'raio_x_empresa',
+      'conferir_pessoa',
+    ]);
+    // A Premium que vem antes de uma grátis vai para o fim; a ordem entre as de cada tipo fica.
+    const misturadas = [
+      'certidoes_empresa',
+      'cnpj',
+      'conferir_pessoa',
+      'cpf',
+    ].map(ferramentaPorId);
+    expect(premiumPorUltimo(misturadas).map(item => item.id)).toEqual([
+      'cnpj',
+      'cpf',
+      'certidoes_empresa',
+      'conferir_pessoa',
+    ]);
+    expect(misturadas.map(item => item.id)).toEqual([
+      'certidoes_empresa',
+      'cnpj',
+      'conferir_pessoa',
+      'cpf',
+    ]);
+    ['pt_BR', 'en'].forEach(locale => {
+      [
+        'SELO',
+        'LEGENDA',
+        'DEPOIS',
+        'AGORA',
+        'FAIXA',
+        'RESTAM',
+        'RESTA_UMA',
+        'ACABARAM',
+        'TITULO',
+        'CONTADOR.RESTAM',
+        'CONTADOR.RESTA_UMA',
+        'VOLTAM',
+        'PRECO_DEPOIS',
+        'PRECO_AGORA',
+        'POR_CONSULTA',
+        'REGRAS.SEM_RESULTADO',
+        'REGRAS.NUMERO_ERRADO',
+        'REGRAS.MESMO_DIA',
+        'REGRAS.FAIXA',
+        'REGRAS.FATURA',
+      ].forEach(campo =>
+        expect(te(`AGENTS.VITRINE.PREMIUM.${campo}`, locale)).toBe(true)
+      );
+      expect(te('AGENTS.VITRINE.GRUPOS.PREMIUM.NOME', locale)).toBe(false);
+    });
+    const todas = liberadas(CHAVES_DO_SERVIDOR);
+    expect(emDestaque(todas, ['seguros']).some(item => item.premium)).toBe(
+      false
+    );
+    expect(emDestaque(todas, []).some(item => item.premium)).toBe(false);
+    expect(ferramentaPorId('historico_placa').premium).toBe(true);
+  });
+});
+
+// Nenhum cartão sozinho na última linha da grade de 3 no computador: com sobra de 1, os 4 últimos ficam 2 a 2.
+describe('larguraDoCartao', () => {
+  const larguras = total =>
+    Array.from({ length: total }, (_, indice) =>
+      larguraDoCartao(indice, total)
+    );
+  const UM_TERCO = 'lg:col-span-2';
+  const METADE = 'lg:col-span-3';
+
+  it('a group with one card keeps the normal width', () => {
+    expect(larguras(1)).toEqual([UM_TERCO]);
+  });
+
+  it('two or five cards keep the normal width (no card left alone)', () => {
+    expect(larguras(2)).toEqual([UM_TERCO, UM_TERCO]);
+    expect(larguras(5)).toEqual(Array(5).fill(UM_TERCO));
+  });
+
+  it('four cards become two rows of two', () => {
+    expect(larguras(4)).toEqual(Array(4).fill(METADE));
+  });
+
+  it('seven cards: one row of three, then two rows of two', () => {
+    expect(larguras(7)).toEqual([
+      ...Array(3).fill(UM_TERCO),
+      ...Array(4).fill(METADE),
+    ]);
   });
 });

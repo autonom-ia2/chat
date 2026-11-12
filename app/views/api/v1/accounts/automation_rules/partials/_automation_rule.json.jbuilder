@@ -4,7 +4,8 @@ json.name automation_rule.name
 json.description automation_rule.description
 json.event_name automation_rule.event_name
 json.conditions automation_rule.conditions
-json.actions automation_rule.actions
+# #2450: a URL do webhook sai mascarada para quem não é administrador nem tem integration_manage.
+json.actions Autonomia::Automacao::UrlDoWebhook.acoes_da_regra(automation_rule.actions, Current.account_user)
 json.created_on automation_rule.created_at.to_i
 json.active automation_rule.active?
 json.execution_delay automation_rule.execution_delay

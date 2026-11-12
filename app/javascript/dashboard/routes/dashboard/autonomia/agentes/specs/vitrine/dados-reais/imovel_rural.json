@@ -1,0 +1,32 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "car": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/enderecos-dados-de-propriedades-rurais-sicar",
+    "dados": {
+      "codigo": "MT5107065EXEMPLO0EXEMPLO0EXEMPLO0EXEMPLO0",
+      "situacao": "ATIVO",
+      "condicao": "Aguardando analise",
+      "cidade": "Querencia",
+      "uf": "MT",
+      "area_ha": "3329,8694",
+      "modulos_fiscais": "41,62",
+      "reserva_legal_ha": "1565,0004"
+    }
+  },
+  "embargo_ibama": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-embargos-ibama",
+    "dados": {
+      "situacao": "EXISTE PENDÊNCIA DE EMBARGO",
+      "embargos": [
+        {
+          "numero": "000001",
+          "cidade": "QUERENCIA",
+          "uf": "MT",
+          "desde": "2024-08-15"
+        }
+      ]
+    }
+  }
+}

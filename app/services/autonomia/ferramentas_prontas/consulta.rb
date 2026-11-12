@@ -49,9 +49,17 @@ class Autonomia::FerramentasProntas::Consulta
     obrigatorios + opcionais
   end
 
+  # A consulta paga (F7, `Premium::ConsultaPaga`) responde verdadeiro.
+  def paga?
+    false
+  end
+
   # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, a `Falta` do parâmetro que não serve].
   # O obrigatório que falta e o opcional informado fora do formato são o mesmo erro: nada é consultado.
-  def conferir(argumentos)
+  # `_conta`: o id da conta, que só a consulta paga usa (F7, a procura do CEP); as grátis o ignoram. Posicional de
+  # propósito: com `**`, a chamada `conferir('cidade' => ...)` (sem chaves, como a da `Fontes::Cep::Referencia`) virava
+  # palavra-chave, e o `argumentos` faltava (ArgumentError).
+  def conferir(argumentos, _conta = nil)
     normalizados = {}
     parametros.each do |parametro|
       valor = parametro.normalizar(argumentos[parametro.nome])

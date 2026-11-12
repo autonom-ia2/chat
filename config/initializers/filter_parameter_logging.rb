@@ -30,7 +30,14 @@ Rails.application.config.filter_parameters += [
   :telefone, :endereco,
   # #2858 F2 — o valor digitado no "Experimente" da vitrine de ferramentas prontas (CPF, CNPJ, CEP) não vai para o log.
   # O filtro casa qualquer chave que contenha "valor": num parâmetro de outro endpoint, só o log perde o número.
-  :valor
+  :valor,
+  # #2895 — o CPF da pessoa (`custom_attributes[cpf]`) e o CNPJ da empresa (`additional_attributes[cnpj]`) chegam no PATCH
+  # do contato e da empresa; `documento` é o nome do campo próprio que os dois ganham na fatia seguinte. O filtro casa
+  # qualquer chave que contenha "cpf", "cnpj" ou "documento": num parâmetro de outro endpoint, só o log perde o valor.
+  :cpf, :cnpj, :documento,
+  # #2895 — o que a pessoa digita na busca da lista de Relacionamentos (`busca`) costuma ser nome, telefone ou CPF de
+  # cliente: não vai para o log. O filtro casa qualquer chave que contenha "busca"; em outro endpoint, só o log perde o texto.
+  :busca
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

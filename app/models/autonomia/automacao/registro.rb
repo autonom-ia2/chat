@@ -6,6 +6,9 @@ class Autonomia::Automacao::Registro < ApplicationRecord
 
   RESULTADOS = %w[ok pulado falhou].freeze
   RETENCAO = 30.days
+  # Marca, em `dados`, o registro em que o motor pausou a automação (F3.7): Executor#pausar e Partida#pausar. A tela
+  # acha a pausa por ela (Automacao::Pausa), sem uma lista de motivos que sai do dia a cada motivo novo (#2572).
+  PAUSOU = 'pausou'.freeze
 
   belongs_to :account
   belongs_to :automacao, class_name: 'Autonomia::Automacao::Definicao'
@@ -14,6 +17,8 @@ class Autonomia::Automacao::Registro < ApplicationRecord
   validates :passo, presence: true
   validates :resultado, inclusion: { in: RESULTADOS }
   validate :da_mesma_execucao
+
+  scope :de_pausa, -> { where('dados @> ?', { PAUSOU => true }.to_json) }
 
   private
 

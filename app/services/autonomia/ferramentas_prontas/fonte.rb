@@ -5,7 +5,8 @@
 # `chave`: o que fica gravado em `autonomia_agent_tools.fonte_pronta` e no acesso da conta; nunca muda.
 # `slug`: o nome da função que o modelo vê. Começa com `pronta_` para não colidir com as nativas (`Registry`).
 # `limite_diario`: o padrão por conta nesta fonte (o acesso da conta pode ter o seu). Decisão do Rodrigo (10/11): 500
-# por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte.
+# por conta e por fonte, salvo motivo técnico do provedor, documentado na fonte. nil é sem limite: só as Premium (F7,
+# decisão do Rodrigo, 11/11), que o cache do dia e a telemetria seguram. Fonte grátis com nil nem nasce (ArgumentError).
 # `termos`: o que a fonte pede de quem usa (limite, cache), para a revisão de cada lote. Não vai ao modelo.
 # `flag`: a flag da fase que trouxe a fonte (a F1 tem a sua), conferida junto com a das prontas; nil nas da F0.
 # `na_vitrine`: falso na fonte que fica no catálogo para uso interno (os agentes de um ramo), sem card avulso: a vitrine,
@@ -35,6 +36,7 @@ class Autonomia::FerramentasProntas::Fonte
     @consultas = consultas
     @limite_diario = limite_diario
     @termos = termos
+    raise ArgumentError, "fonte #{chave}: sem limite diário só no card Premium" if limite_diario.nil? && !premium?
   end
 
   def na_vitrine?
@@ -46,6 +48,11 @@ class Autonomia::FerramentasProntas::Fonte
     return consulta(@consulta_padrao) if @consulta_padrao && nome.blank?
 
     consultas.find { |consulta| consulta.nome == nome.to_s }
+  end
+
+  # Card Premium (F7): as consultas são pagas, à BigDataCorp.
+  def premium?
+    consultas.any?(&:paga?)
   end
 
   def varias_consultas?

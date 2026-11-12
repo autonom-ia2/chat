@@ -1,6 +1,7 @@
 require 'net/http'
 
-# Cliente da BigDataCorp só para a consulta de empresas (porte de lib/services/bigdatacorp/client.ts do Orth, #679).
+# Cliente da BigDataCorp para a consulta de empresas (porte de lib/services/bigdatacorp/client.ts do Orth, #679). A F7 do
+# #2858 (ferramentas Premium) usa o mesmo cliente em outras rotas (`query_route`), sem mudar a consulta de empresas.
 #
 # Fluxo: POST /tokens/gerar com BIGDATACORP_USER e BIGDATACORP_PASSWORD (só ENV, por Setting.platform_config) e depois
 # POST /empresas com AccessToken e TokenId. O token fica em memória desta instância por TOKEN_TTL.
@@ -12,9 +13,18 @@ require 'net/http'
 #
 # Credencial e token nunca saem daqui: não vão para mensagem de erro, log nem inspect. O erro leva só código fechado,
 # fase, status HTTP e número de tentativas.
+#
+# Opções da F7 do #2858 (as ferramentas Premium), todas desligadas no padrão (a Prospecção segue igual):
+#   - `token_timeout`: o prazo do pedido de token; nil usa o `timeout`;
+#   - `token_cache`: onde guardar o token entre instâncias (`read`, `write` e `forget(token)`, que só apaga se o
+#     guardado ainda for aquele); nil guarda só nesta instância;
+#   - `resend_after_unauthorized`: depois de um 401, um reenvio com token novo mesmo na última tentativa (a BigDataCorp
+#     não cobra o 401). Desligado, o 401 da última tentativa levanta, como antes.
+# Todo 401 apaga o token recusado (desta instância e do `token_cache`): a consulta seguinte gera outro.
 class Autonomia::Prospecting::Research::BigDataCorpClient
   BASE_URI = URI('https://plataforma.bigdatacorp.com.br').freeze
   COMPANIES_PATH = '/empresas'.freeze
+  ROUTES = [COMPANIES_PATH, '/pessoas', '/veiculos', '/enderecos', '/ondemand', '/marketplace'].freeze
   USER_ENV = 'BIGDATACORP_USER'.freeze
   PASSWORD_ENV = 'BIGDATACORP_PASSWORD'.freeze
   RETRY_BASE_DELAY_SECONDS = 0.25
@@ -27,7 +37,10 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     token_ttl: 10.minutes.to_i,
     timeout: 20,
     max_provider_attempts: 3,
-    max_token_attempts: 3
+    max_token_attempts: 3,
+    token_timeout: nil,
+    token_cache: nil,
+    resend_after_unauthorized: false
   }.freeze
 
   # Segredo que não aparece em inspect, to_s nem pretty print.
@@ -79,19 +92,41 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   # Devolve Response(payload: Hash, metadata: { provider_attempts:, token_generations:, provider_request_id: }).
   # Levanta Error com código fechado.
   def search_companies(query:, limit: 3, datasets: 'basic_data')
+    query_route(COMPANIES_PATH, query: query, datasets: datasets, limit: limit)
+  end
+
+  # #2858 F7: a mesma consulta paga em outra rota da plataforma (as ferramentas Premium da vitrine). Só as rotas de
+  # `ROUTES`; o resto (token, retentativa, erros, segredo fora de log) é o mesmo da consulta de empresas.
+  def query_route(path, query:, datasets:, limit: 1)
+    raise ArgumentError, 'rota da BigDataCorp fora da lista' unless ROUTES.include?(path)
+
     @token_generations = 0
-    dispatch_with_retries({ Datasets: datasets, q: query, Limit: limit }.to_json)
+    @query_dispatched = false
+    dispatch_with_retries(path, { Datasets: datasets, q: query, Limit: limit }.to_json)
+  end
+
+  # O último `query_route` passou do token e chegou a enviar a consulta? Para quem corta a chamada por fora (o teto das
+  # prontas Premium, #2858): cortada ainda no token, a consulta não saiu e não pode ter sido cobrada.
+  def query_dispatched?
+    @query_dispatched == true
   end
 
   # Transporte, usado também pelo BigDataCorpTokenIssuer.
   def post(path, body, headers)
     http = Net::HTTP.new(BASE_URI.host, BASE_URI.port)
     http.use_ssl = true
-    %i[open_timeout= read_timeout= write_timeout= ssl_timeout=].each { |setter| http.public_send(setter, @options[:timeout]) }
+    timeout = timeout_for(path)
+    %i[open_timeout= read_timeout= write_timeout= ssl_timeout=].each { |setter| http.public_send(setter, timeout) }
     http.max_retries = 0
     request = Net::HTTP::Post.new(path, { 'Content-Type' => 'application/json', 'Accept' => 'application/json' }.merge(headers))
     request.body = body
     http.request(request)
+  end
+
+  def timeout_for(path)
+    return @options[:timeout] unless path == Autonomia::Prospecting::Research::BigDataCorpTokenIssuer::PATH
+
+    @options[:token_timeout] || @options[:timeout]
   end
 
   def retryable?(status)
@@ -119,12 +154,13 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
 
   private
 
-  def dispatch_with_retries(body)
-    state = { attempts: 0, refreshed: false, force_refresh: false }
-    while state[:attempts] < @options[:max_provider_attempts]
+  def dispatch_with_retries(path, body)
+    state = { attempts: 0, refreshed: false, force_refresh: false, extra: 0 }
+    while state[:attempts] < @options[:max_provider_attempts] + state[:extra]
       credential = provider_credential(state)
+      @query_dispatched = true
       state[:attempts] += 1
-      outcome = classify(post_companies(body, credential, state[:attempts]), state)
+      outcome = classify(post_query(path, body, credential, state[:attempts]), state)
       return outcome if outcome
     end
     raise Error.new('BIGDATACORP_PROVIDER_UNAVAILABLE', phase: :provider, provider_attempts: state[:attempts])
@@ -145,7 +181,7 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   def classify(response, state)
     status = response.code.to_i
     attempts = state[:attempts]
-    return refresh_after_unauthorized(state) if status == 401 && !state[:refreshed]
+    return unauthorized(state) if status == 401
     return wait_and_retry(status, attempts) if retryable?(status) && attempts < @options[:max_provider_attempts]
     raise failure('BIGDATACORP_HTTP_ERROR', status, attempts) unless status.between?(200, 299)
 
@@ -155,13 +191,33 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     Response.new(payload: payload, metadata: metadata(payload, attempts))
   end
 
-  def refresh_after_unauthorized(state)
-    raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) if state[:attempts] >= @options[:max_provider_attempts]
+  # O primeiro 401 gera token novo e tenta de novo; o segundo levanta. Os dois apagam o token recusado.
+  def unauthorized(state)
+    return refresh_after_unauthorized(state) unless state[:refreshed]
 
-    @token = nil
+    forget_token
+    raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts])
+  end
+
+  # A consulta recusada com 401 não foi cobrada: até o reenvio sair com o token novo, nada foi enviado de verdade (o corte
+  # por fora, ainda no token, não tem custo possível; #2858 F7, revisor).
+  def refresh_after_unauthorized(state)
+    @query_dispatched = false
+    forget_token
+    if state[:attempts] >= @options[:max_provider_attempts]
+      raise failure('BIGDATACORP_HTTP_ERROR', 401, state[:attempts]) unless @options[:resend_after_unauthorized]
+
+      state[:extra] = 1
+    end
     state[:refreshed] = true
     state[:force_refresh] = true
     nil
+  end
+
+  def forget_token
+    recusado = @token
+    @token = nil
+    @options[:token_cache]&.forget(recusado)
   end
 
   def wait_and_retry(status, attempts)
@@ -175,8 +231,8 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
     Error.new(code, phase: :provider, status: status, provider_attempts: attempts)
   end
 
-  def post_companies(body, token, attempts)
-    post(COMPANIES_PATH, body, { 'AccessToken' => token.access_token, 'TokenId' => token.token_id })
+  def post_query(path, body, token, attempts)
+    post(path, body, { 'AccessToken' => token.access_token, 'TokenId' => token.token_id })
   rescue Timeout::Error
     raise failure('BIGDATACORP_TIMEOUT', nil, attempts)
   rescue *NETWORK_ERRORS
@@ -184,12 +240,18 @@ class Autonomia::Prospecting::Research::BigDataCorpClient
   end
 
   def current_token(force_refresh: false)
-    @token = nil if force_refresh
+    @token = force_refresh ? nil : @token || @options[:token_cache]&.read
     return @token if @token && @token.expires_at > now
 
+    issue_token
+  end
+
+  def issue_token
     credentials = resolved_credentials
     @token_generations += 1
     @token = @issuer.issue(credentials)
+    @options[:token_cache]&.write(@token)
+    @token
   end
 
   def resolved_credentials

@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 730 |
+| No catálogo | 731 |
 | Sem corpo | 209 |
-| Com corpo | 521 |
-| Com corpo e formato completo | 435 (83,5%) |
-| Com corpo e formato incompleto | 86 |
+| Com corpo | 522 |
+| Com corpo e formato completo | 437 (83,7%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 20 de 220 |
-| Leituras cruas tipadas | 225 de 317 |
+| Leituras cruas tipadas | 224 de 315 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 72 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -55,7 +55,6 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: message
 - `POST autonomia/ferramentas_prontas/buscas_sem_resultado` — leitura crua sem tipo: termo (repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar)
-- `POST autonomia/ferramentas_prontas/experimentar` — leitura crua sem tipo: valor (repassada a Autonomia::FerramentasProntas::Experimente.new)
 - `POST autonomia/ferramentas_prontas/incluir` — leitura crua sem tipo: usar_quando (repassada a Autonomia::FerramentasProntas::Incluir.new)
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.broker_name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.business_hours (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new), quote_agent.name (repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new)
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name (repassada a ::Autonomia::Prospecting::OwnerAdoption.new)
@@ -140,7 +139,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/conversation_copilot#create` task — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` tone — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/ferramentas_prontas#buscas_sem_resultado` termo — repassada a Autonomia::FerramentasProntas::BuscasSemResultado.registrar
-- `api/v1/accounts/autonomia/ferramentas_prontas#experimentar` valor — repassada a Autonomia::FerramentasProntas::Experimente.new
 - `api/v1/accounts/autonomia/ferramentas_prontas#incluir` usar_quando — repassada a Autonomia::FerramentasProntas::Incluir.new
 - `api/v1/accounts/autonomia/insurance/quote_agent#create` quote_agent.behavior — repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new
 - `api/v1/accounts/autonomia/insurance/quote_agent#create` quote_agent.broker_name — repassada a ::Autonomia::Insurance::QuoteAgent::Builder.new
@@ -221,8 +219,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 446 |
-| Com parâmetros conhecidos | 395 |
+| No catálogo | 464 |
+| Com parâmetros conhecidos | 413 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

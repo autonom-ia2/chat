@@ -1088,7 +1088,10 @@ pt_BR:
         sem_conversa: "Não há conversa onde agir: o card não tem conversa principal, ou o contato não tem conversa, e a automação não escolheu caixa para abrir uma. Nada foi mandado."
         contato_sem_telefone: "O contato não tem telefone, e a conversa não foi aberta. Nada foi mandado."
         numero_de_outro_contato: "O número novo do contato já é de outro contato nesta caixa. Nada foi mandado, e o outro contato não foi mexido."
-        sem_responsavel: "A agente de IA atende esta conversa, e o card dela não tem responsável (ou não há card). Ninguém foi avisado."
+        sem_responsavel: "Ninguém foi avisado: a conversa não tem responsável (ou, com a agente de IA atendendo, o card dela não tem responsável ou não há card)."
+        caixa_sem_responsavel: "A conversa não tem responsável: quem atende a caixa foi avisado."
+        caixa_responsavel_fora: "O responsável não pode ser avisado nesta conversa: quem atende a caixa foi avisado."
+        caixa_sem_ninguem: "Ninguém foi avisado: a conversa não tem responsável, ou ele não pôde ser avisado, e ninguém da caixa enxerga esta conversa."
         card_sem_responsavel: "O card não tem responsável. A conversa ficou com quem já estava."
         responsavel_nao_ve_a_conversa: "O responsável do card não enxerga esta conversa (não está na caixa dela). A conversa ficou com quem já estava."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
@@ -1121,6 +1124,11 @@ pt_BR:
         sem_vinculo_na_caixa: 'A agente de IA não trabalha na caixa desta conversa. A conversa ficou como estava.'
         nao_atende_cliente: 'A agente de IA não está atendendo clientes agora. A conversa ficou como estava.'
         conversa_resolvida: 'A conversa está resolvida. Ninguém assumiu a conversa.'
+        conversa_ja_atribuida: 'A conversa já tem responsável. O rodízio não mexeu nela.'
+        robo_atende: 'Um robô ou uma agente de IA está com a conversa. O rodízio não mexeu nela.'
+        entrega_cuidando: 'A Atribuição está segurando a conversa ou esperando a pessoa convidada aceitar. O rodízio não mexeu nela.'
+        ninguem_no_rodizio: 'Ninguém da caixa (ou do time escolhido) entra no rodízio. A conversa ficou sem responsável.'
+        ninguem_online: 'Ninguém do rodízio estava online. A conversa ficou sem responsável.'
         outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'
         campo_proibido: 'A ação manda um campo que a automação não muda.'
       alvo:
@@ -1152,6 +1160,12 @@ pt_BR:
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
+        id_de_fora: 'Passo %{passo}: a ação aponta para %{recurso} %{id}, que não existe nesta conta.'
+        recurso:
+          labels: 'a etiqueta'
+          custom_attribute_definitions: 'o atributo personalizado'
+          crm_pipelines: 'o funil'
+          crm_pipeline_stages: 'a etapa do funil'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
         origem_fora_do_ramo: 'Passo %{passo}: %{caminho} lê o registro de origem, e só existe dentro do passo "Fazer no contato ou nos cards ligados". Use esse dado num passo de dentro dele.'
         texto_da_ia_no_gatilho: 'Passo %{passo}: %{caminho} é o texto de um passo de IA, e no "Só se" do gatilho nenhum passo rodou ainda. Use esse dado num passo depois dele.'
@@ -1161,12 +1175,15 @@ pt_BR:
         criado_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo desta execução que crie o registro que cabe aqui ("Criar card", ou uma ação que cria contato).'
         criado_depois: 'Passo %{passo}: %{caminho} aponta um passo que nunca roda antes deste. Ponha o passo que cria o registro acima dele.'
         valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
+        campo_protegido: 'Passo %{passo}: só quem vê os valores de venda pode mudar o valor do card (%{campo}). Peça a permissão ou tire esse campo.'
         agenda_so_na_instalacao: 'Passo %{passo}: a página de agendamento (%{caminho}) se escolhe ao montar a automação na conta.'
         agenda_sem_permissao: 'Passo %{passo}: só quem vê as páginas de agendamento pode usar o link de uma página (%{caminho}).'
         agenda_desligada: 'Passo %{passo}: o agendamento está desligado nesta conta, e %{caminho} fica sem link.'
         agenda_pagina_inexistente: 'Passo %{passo}: a página de agendamento de %{caminho} não existe, não está publicada ou não tem quem atenda.'
         corpo: 'Passo %{passo}: %{problema}'
         forma_nao_cabe: 'Passo %{passo}: o campo %{campo} não aceita texto montado nem data calculada.'
+        data_fora_do_atributo: 'Passo %{passo}: a data calculada só vai em atributo do tipo data, e %{chave} não é.'
+        texto_fora_do_atributo: 'Passo %{passo}: o texto montado só vai em atributo de texto, e %{chave} não é.'
         forma_desconhecida: 'Passo %{passo}: %{chave} não é um valor calculado que a automação conhece ($valor, $texto ou $data).'
         data_sem_data: 'Passo %{passo}: %{caminho} não é um atributo de data. A data calculada parte de "hoje" ou de um atributo de data.'
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
@@ -1190,11 +1207,13 @@ pt_BR:
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
+        rodizio_sem_conversa: "Passo %{passo}: o rodízio passa uma conversa, e este gatilho não tem conversa. Use um gatilho de conversa ou de card."
         sem_criar_retorno: 'Passo %{passo}: você não pode criar retorno no CRM, e o passo "Criar retorno" pede isso.'
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade ou de propaganda, e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         responsavel_do_card_sem_card: 'Passo %{passo}: "quem cuida do card" só vale quando o gatilho é de card.'
+        reserva_sem_responsavel: 'Passo %{passo}: "avisar quem atende a caixa" só vale junto com o responsável.'
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'
@@ -1250,6 +1269,7 @@ pt_BR:
         gravar: 'Gravar o que a IA achou na conversa'
       descricoes:
         conversa_ao_responsavel: 'Passar a conversa para o responsável do card'
+        rodizio: 'Passar a conversa para alguém online, em rodízio'
       webhook:
         gravar: 'Gravar o que o outro sistema respondeu'
     automacoes:
@@ -1263,6 +1283,7 @@ pt_BR:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
+        ready_tool_test: 'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o cartão › Experimente.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'

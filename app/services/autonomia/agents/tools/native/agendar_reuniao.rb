@@ -63,6 +63,9 @@ class Autonomia::Agents::Tools::Native::AgendarReuniao < Autonomia::Agents::Tool
   ERROS_DE_PARAMETRO = %w[invalid_starts_at invalid_duration invalid_location].freeze
 
   class << self
+    # #2918: ESCREVE (marca o horário (cria a reunião)). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'agendar_reuniao'
     end

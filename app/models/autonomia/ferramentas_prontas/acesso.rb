@@ -4,7 +4,8 @@
 # plataforma: nenhuma fonte desta fase pede chave, e a chave da plataforma numa fonte que pedir (F4 em diante) fica em
 # variável de ambiente, nunca aqui. Mesmo assim não vai a log: o registro cita a conta e a fonte.
 #
-# `limite_diario` vazio é o do catálogo (`Fonte#limite_diario`); preenchido, vale só para esta conta nesta fonte.
+# `limite_diario` vazio é o do catálogo (`Fonte#limite_diario`); preenchido, vale só para esta conta nesta fonte. A
+# fonte do catálogo sem limite (as Premium, #2858 F7) dá nil: sem limite do dia.
 # `cortada_em` é o corte individual: a fonte para só nesta conta, e as outras seguem.
 class Autonomia::FerramentasProntas::Acesso < ApplicationRecord
   self.table_name = 'autonomia_ferramentas_prontas_acessos'
@@ -40,7 +41,10 @@ class Autonomia::FerramentasProntas::Acesso < ApplicationRecord
   end
 
   def limite_do_dia
-    limite_diario || Autonomia::FerramentasProntas::Catalogo.buscar(fonte)&.limite_diario || 0
+    return limite_diario if limite_diario
+
+    do_catalogo = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
+    do_catalogo ? do_catalogo.limite_diario : 0
   end
 
   private

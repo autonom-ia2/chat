@@ -13,6 +13,9 @@ class Autonomia::Agents::Tools::Native::GuiaPagina < Autonomia::Agents::Tools::N
   Fonte = Struct.new(:external_link, :reference)
 
   class << self
+    # #2918: LÊ (lê uma página da internet). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'ler_pagina'
     end

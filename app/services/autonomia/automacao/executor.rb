@@ -234,8 +234,10 @@ class Autonomia::Automacao::Executor
     nil
   end
 
-  # Fecha a execução. Com `resultado`, deixa antes o registro do passo em que ela parou.
+  # Fecha a execução. Com `resultado`, deixa antes o registro do passo em que ela parou; depois de `pausar`, marcado
+  # como pausa para a tela (Registro::PAUSOU).
   def encerrar(passo_id, estado, motivo, resultado = 'pulado', dados = {})
+    dados = dados.merge(::Autonomia::Automacao::Registro::PAUSOU => true) if @pausou
     registrar(passo_id, resultado, motivo, dados) if resultado
     finalizar(estado)
     nil
@@ -256,10 +258,12 @@ class Autonomia::Automacao::Executor
     gravou
   end
 
-  # Quem ligou não pode mais agir: a automação desliga até alguém assumir e religar (F3.7). Devolve o motivo.
+  # Quem ligou não pode mais agir: a automação desliga até alguém assumir e religar (F3.7). Devolve o motivo; o
+  # `encerrar` que sempre vem logo depois marca o registro como pausa.
   def pausar(motivo)
     Rails.logger.info("[automacao][motor] pausada automacao=#{@definicao.id} conta=#{@account.id} motivo=#{motivo}")
     @definicao.update!(ativa: false)
+    @pausou = true
     motivo
   end
 

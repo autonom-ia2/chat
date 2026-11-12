@@ -8,6 +8,9 @@
 #   (CardDaConversa.ler). Só campo personalizado, nunca o valor protegido (decisão 9) nem o que guarda gente: o tipo é
 #   conferido de novo aqui, porque muda depois de salvo (Receita::CAMPOS_DE_GENTE). Sem card, ou com o campo que virou
 #   gente, o campo não tem onde gravar e conta como ausente. A gravação é o PATCH do card, como quem ligou.
+# - G71 (#2883): o card da conversa pode ainda nascer da IA de assunto, que decide segundos depois da mensagem. Antes
+#   de pagar a IA, o campo que grava no card da conversa espera a decisão de assunto, com teto (EsperaDoAssunto). Sem
+#   a IA de assunto ligada na caixa, ou com o card desta execução ou do alvo, não espera.
 #
 # - A resposta tem um campo por chave, do tipo do atributo da conta: número para número, moeda e porcentagem, sim/não
 #   para caixa de seleção, uma das opções para lista, data no formato AAAA-MM-DD. Nulo quando o dado não está escrito.
@@ -45,8 +48,8 @@ class Autonomia::Automacao::PassoDeExtrair
   end
 
   def executar
-    negado = impedido
-    return negado if negado
+    parada = impedido || esperar_o_assunto
+    return parada if parada
 
     fuso = fuso_da_conta
     estado = leitura_da_execucao(fuso)
@@ -124,12 +127,19 @@ class Autonomia::Automacao::PassoDeExtrair
     ['PATCH crm/cards/:id', card.id, { 'card' => { 'custom_attributes' => atributos } }, chaves(valores.keys)]
   end
 
+  # G71: só o campo que grava no card da conversa espera a IA de assunto (EsperaDoAssunto).
+  def esperar_o_assunto
+    ::Autonomia::Automacao::EsperaDoAssunto.resultado(@conversa) if campos.any? { |campo| lugar(campo) == :card } && card_proprio.nil?
+  end
+
+  # O card que não depende da IA de assunto: o que esta execução criou, senão o alvo.
+  def card_proprio = card_criado || (@alvo if @alvo.is_a?(::Crm::Card))
+
   # G70: o card que esta execução criou, senão o alvo, senão o da conversa que quem ligou vê; nil sem card.
   def card
     return @card if defined?(@card)
 
-    @card = card_criado || (@alvo if @alvo.is_a?(::Crm::Card)) ||
-            ::Autonomia::Automacao::CardDaConversa.editavel(@conversa, quem_ligou_na_conta)
+    @card = card_proprio || ::Autonomia::Automacao::CardDaConversa.editavel(@conversa, quem_ligou_na_conta)
   end
 
   # Nenhum campo tem onde gravar (conversa sem card, contato sem empresa): pula sem pagar a IA.

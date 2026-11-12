@@ -1,0 +1,46 @@
+{
+  "_origem": "feito à mão a partir da documentação do fornecedor, sem chamada real",
+  "divida_uniao": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-pgfn",
+    "dados": {
+      "situacao": "NEGATIVA",
+      "emitida_em": "2026-11-10",
+      "validade": "2027-05-09"
+    }
+  },
+  "trabalhista": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-debitos-trabalhistas-negativa",
+    "dados": {
+      "situacao": "NAO CONSTA como inadimplente",
+      "vence_em": "09/05/2027",
+      "em_debito": false
+    }
+  },
+  "fgts": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-fgts",
+    "dados": {
+      "situacao": "REGULAR",
+      "periodo": "01/11/2026 - 30/11/2026",
+      "situacao_do_fgts": "REGULAR"
+    }
+  },
+  "cnj": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-cnj-negativa",
+    "dados": {
+      "situacao": "NÃO CONSTA",
+      "emitida": "10/11/2026"
+    }
+  },
+  "cadin": {
+    "provedor": "bigdatacorp",
+    "documentacao": "https://docs.bigdatacorp.com.br/plataforma/reference/ondemand-cadin-debitos-empresa",
+    "dados": {
+      "resultado": "Nada consta no CADIN para o CNPJ informado.",
+      "uf": "SP"
+    }
+  }
+}

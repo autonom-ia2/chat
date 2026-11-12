@@ -595,7 +595,10 @@ en:
         sem_conversa: "There is no conversation to act on: the card has no main conversation, or the contact has none, and the automation has no inbox chosen to open one. Nothing was sent."
         contato_sem_telefone: "The contact has no phone number, so the conversation was not opened. Nothing was sent."
         numero_de_outro_contato: "The contact's new number already belongs to another contact in this inbox. Nothing was sent, and the other contact was not changed."
-        sem_responsavel: "The AI agent is handling this conversation, and its card has no owner (or there is no card). No one was alerted."
+        sem_responsavel: "Nobody was alerted: the conversation has no assignee (or, with the AI agent handling it, its card has no owner or there is no card)."
+        caixa_sem_responsavel: "The conversation has no assignee: whoever handles the inbox was alerted."
+        caixa_responsavel_fora: "The assignee could not be alerted in this conversation: whoever handles the inbox was alerted."
+        caixa_sem_ninguem: "Nobody was alerted: the conversation has no assignee, or they could not be alerted, and nobody in the inbox can see this conversation."
         card_sem_responsavel: "The card has no owner. The conversation stayed with whoever had it."
         responsavel_nao_ve_a_conversa: "The card owner cannot see this conversation (they are not in its inbox). The conversation stayed with whoever had it."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
@@ -628,6 +631,11 @@ en:
         sem_vinculo_na_caixa: 'The AI agent does not work in this conversation''s inbox. The conversation stayed as it was.'
         nao_atende_cliente: 'The AI agent is not answering customers right now. The conversation stayed as it was.'
         conversa_resolvida: 'The conversation is resolved. No one took it over.'
+        conversa_ja_atribuida: 'The conversation already has an assignee. The rotation left it alone.'
+        robo_atende: 'A bot or an AI agent has the conversation. The rotation left it alone.'
+        entrega_cuidando: 'Assignment is holding the conversation or waiting for an invited person to accept it. The rotation left it alone.'
+        ninguem_no_rodizio: 'Nobody in the inbox (or the chosen team) is in the rotation. The conversation stayed unassigned.'
+        ninguem_online: 'Nobody in the rotation was online. The conversation stayed unassigned.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
         campo_proibido: 'The action sends a field the automation does not change.'
       alvo:
@@ -659,6 +667,12 @@ en:
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
+        id_de_fora: 'Step %{passo}: the action points to %{recurso} %{id}, which does not exist in this account.'
+        recurso:
+          labels: 'label'
+          custom_attribute_definitions: 'custom attribute'
+          crm_pipelines: 'pipeline'
+          crm_pipeline_stages: 'pipeline stage'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
         origem_fora_do_ramo: 'Step %{passo}: %{caminho} reads the original record, and only exists inside the step "Do it on the linked contact or cards". Use it in a step inside it.'
         texto_da_ia_no_gatilho: 'Step %{passo}: %{caminho} is the text of an AI step, and no step has run yet in the trigger "Only if". Use it in a step after that one.'
@@ -668,12 +682,15 @@ en:
         criado_sem_passo: 'Step %{passo}: %{caminho} must point to a step of this run that creates the record that fits here ("Create card", or an action that creates a contact).'
         criado_depois: 'Step %{passo}: %{caminho} points to a step that never runs before this one. Move the step that creates the record above it.'
         valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
+        campo_protegido: 'Step %{passo}: only people who see sales values can change the card value (%{campo}). Ask for the permission or remove this field.'
         agenda_so_na_instalacao: 'Step %{passo}: the booking page (%{caminho}) is chosen when the automation is set up in the account.'
         agenda_sem_permissao: 'Step %{passo}: only people who see the booking pages can use the link of a page (%{caminho}).'
         agenda_desligada: 'Step %{passo}: booking is off in this account, so %{caminho} has no link.'
         agenda_pagina_inexistente: 'Step %{passo}: the booking page of %{caminho} does not exist, is not published, or has nobody to attend.'
         corpo: 'Step %{passo}: %{problema}'
         forma_nao_cabe: 'Step %{passo}: the %{campo} field does not take put-together text or a calculated date.'
+        data_fora_do_atributo: 'Step %{passo}: a calculated date only goes into a date attribute, and %{chave} is not one.'
+        texto_fora_do_atributo: 'Step %{passo}: put-together text only goes into a text attribute, and %{chave} is not one.'
         forma_desconhecida: 'Step %{passo}: %{chave} is not a calculated value the automation knows ($valor, $texto or $data).'
         data_sem_data: 'Step %{passo}: %{caminho} is not a date attribute. A calculated date starts from "today" or from a date attribute.'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
@@ -697,11 +714,13 @@ en:
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
+        rodizio_sem_conversa: "Step %{passo}: the rotation hands over a conversation, and this trigger has none. Use a conversation or card trigger."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility or marketing, and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
+        reserva_sem_responsavel: 'Step %{passo}: "alert whoever handles the inbox" only works together with the assignee.'
         gatilho_desligado: 'Card and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
@@ -757,6 +776,7 @@ en:
         gravar: 'Save what the AI found in the conversation'
       descricoes:
         conversa_ao_responsavel: 'Hand the conversation to the card owner'
+        rodizio: 'Hand the conversation to someone online, in rotation'
       webhook:
         gravar: 'Save what the other system answered'
     automacoes:
@@ -770,6 +790,7 @@ en:
         whatsapp_template_consent: 'This is only done on screen: Templates › Permission.'
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
+        ready_tool_test: 'Testing a ready-made tool is only done on screen: On autopilot › Ready-made tools › open the card › Try it.'
       admin_only: 'Only an account admin can do this.'
       automation_manage_only: 'For this you need the automatic rules permission in your role.'
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'

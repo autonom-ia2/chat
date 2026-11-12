@@ -284,6 +284,17 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered).to eq('fonte' => 'cpf', 'valor' => '[FILTERED]', 'termo' => '[FILTERED]', 'hidden' => true)
   end
 
+  # #2895 — o CPF e o CNPJ que vão no salvar do contato e da empresa, e o texto da busca de Relacionamentos.
+  it 'filters cpf, cnpj, documento and the relationships search text (busca) from a JSON body' do
+    data = { body: JSON.generate(name: 'Ana', custom_attributes: { cpf: '11144477735' }, additional_attributes: { cnpj: '11222333000181' },
+                                 documento: '11144477735', busca: '111.444.777-35') }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('name' => 'Ana', 'custom_attributes' => { 'cpf' => '[FILTERED]' },
+                           'additional_attributes' => { 'cnpj' => '[FILTERED]' }, 'documento' => '[FILTERED]', 'busca' => '[FILTERED]')
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }
