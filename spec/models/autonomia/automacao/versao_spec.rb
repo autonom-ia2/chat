@@ -149,6 +149,20 @@ RSpec.describe Autonomia::Automacao::Versao do
       expect(Autonomia::Automacao::IdsDoCaminho.recursos('POST crm/pipelines/:pipeline_id/stages')).to eq('pipeline_id' => :crm_pipelines)
       expect(Autonomia::Automacao::IdsDoCaminho.recursos('POST crm/memoria/cards/:card_id/fatos/:id/aceitar')).to eq({})
     end
+
+    # A estrutura da conta (etiqueta, atributo, funil, etapa, caixa, agente) que aparecer no caminho de uma ação permitida
+    # tem de ser conferida; hoje caixa, time e agente só vão no corpo.
+    it 'confere todo id de estrutura que aparece no caminho de uma ação permitida', :aggregate_failures do
+      Autonomia::Automacao::AcoesPermitidas.acoes.each_key do |acao|
+        segmentos = acao.split(' ', 2).last.split('/')
+        segmentos.each_with_index do |segmento, indice|
+          recurso = segmentos[indice - 1] if segmento.start_with?(':') && indice.positive?
+          next unless Autonomia::Automacao::AcoesPermitidas::ESTRUTURA.any? { |estrutura| estrutura.split('/').last == recurso }
+
+          expect(Autonomia::Automacao::IdsDoCaminho.recursos(acao)).to have_key(segmento.delete_prefix(':')), acao
+        end
+      end
+    end
   end
 
   describe 'a mensagem do gatilho' do

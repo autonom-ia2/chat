@@ -5,16 +5,16 @@
 #
 # O recurso do parâmetro é o segmento antes dele, com o `crm/` da rota (`crm/pipelines/:pipeline_id/stages` →
 # crm/pipelines). Só os recursos da lista são conferidos; o resto do caminho segue a régua de sempre.
+#
+# Caixa de entrada, time e agente não estão na lista: nenhuma ação permitida (AcoesPermitidas) os tem no caminho, só no
+# corpo (a atribuição leva `team_id` e `assignee_id`). O spec cobra que a estrutura que entrar num caminho entre aqui.
 module Autonomia::Automacao::IdsDoCaminho
   # O recurso na rota → a lista da conta onde o id tem de estar (e a chave do nome em autonomia.automacao.receita.recurso).
   RECURSOS = {
     'labels' => :labels,
     'custom_attribute_definitions' => :custom_attribute_definitions,
     'crm/pipelines' => :crm_pipelines,
-    'crm/stages' => :crm_pipeline_stages,
-    'inboxes' => :inboxes,
-    'teams' => :teams,
-    'agents' => :users
+    'crm/stages' => :crm_pipeline_stages
   }.freeze
   CRM = 'crm'.freeze
 
