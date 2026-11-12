@@ -62,7 +62,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*(@alvo ? [] : ids_repetidos), *gatilho_novo, *conversa_nova, *agenda_de_reserva, *filtros_do_gatilho,
+    [*(@alvo ? [] : ids_repetidos), *gatilho.problemas,
      *do_alvo.flat_map { |passo| problemas_do_passo(passo) },
      *::Autonomia::Automacao::Duracao.sem_prazo_que_vence(do_alvo).map { |id| texto(:sem_prazo_com_se_vencer, passo: id) },
      *::Autonomia::Automacao::EnquantoEspera.problemas_ao_salvar(@receita, do_alvo, alvo)]
@@ -82,26 +82,6 @@ class Autonomia::Automacao::Receita
   private
 
   def ids_repetidos = passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
-
-  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta; no da conta (G7),
-  # os passos que ele aceita.
-  def gatilho_novo
-    ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta, passos: passos, account_user: @account_user).problemas
-  end
-
-  # A caixa por onde abrir a conversa de quem não tem (#2680): da conta, e quem salva pode começar conversa nela. O ramo
-  # do "em outro registro" no card ou contato que um passo criou também não tem conversa (G49).
-  def conversa_nova
-    ramos = ::Autonomia::Automacao::EmOutroRegistro.alvos_dos_criados(passos, @receita)
-    ::Autonomia::Automacao::ConversaNova.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user, ramos: ramos)
-  end
-
-  # G60: a página de agenda de reserva é da conta, e quem salva lê as páginas.
-  def agenda_de_reserva = ::Autonomia::Automacao::AgendaDeReserva.problemas_ao_salvar(@conta, @receita['gatilho'].to_h, @account_user)
-
-  def filtros_do_gatilho
-    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| condicoes.problemas('gatilho', condicao, no_gatilho: true) }
-  end
 
   def problemas_do_passo(passo)
     return condicoes.problemas(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
@@ -131,6 +111,8 @@ class Autonomia::Automacao::Receita
   def mensagens = @mensagens ||= ::Autonomia::Automacao::Receita::Mensagens.new(contexto, leitura)
 
   def passos_de_ia = @passos_de_ia ||= ::Autonomia::Automacao::Receita::PassosDeIa.new(contexto)
+
+  def gatilho = ::Autonomia::Automacao::Receita::Gatilho.new(self, contexto, condicoes)
 
   # O que os validadores recebem (Receita::Contexto).
   def contexto
