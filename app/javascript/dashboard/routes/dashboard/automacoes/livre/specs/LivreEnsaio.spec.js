@@ -125,14 +125,32 @@ describe('LivreEnsaio', () => {
     const wrapper = montar();
     await flushPromises();
 
-    expect(wrapper.text()).toContain(
-      'AUTOMACAO_LIVRE.ENSAIO.QUANTOS_CARDS(1)'
-    );
+    expect(wrapper.text()).toContain('AUTOMACAO_LIVRE.ENSAIO.QUANTOS_CARDS(1)');
     expect(wrapper.find('[data-ensaio-passos]').text()).toContain(
       'AUTOMACAO_LIVRE.ENSAIO.NO_CARD(Renovação)'
     );
     expect(wrapper.find('[data-nao-entra]').text()).toBe(
       'AUTOMACAO_LIVRE.ENSAIO.FORA.SEM_REUNIAO'
+    );
+  });
+
+  // G10: no gatilho de etiqueta no contato a lista é de contatos.
+  it('no gatilho de contato, fala de contatos', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        alvo: 'contato',
+        conversas: [conversa(9, { nome: 'Maria' })],
+        outras: [],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.QUANTOS_CONTATOS(1)'
+    );
+    expect(wrapper.find('[data-ensaio-passos]').text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.NO_CONTATO(Maria)'
     );
   });
 

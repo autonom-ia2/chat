@@ -1,8 +1,11 @@
 # As conversas em que o Ensaio roda um gatilho de conversa (#2498): as recentes que quem ensaia enxerga, pelo mesmo
 # filtro da lista de conversas. Só lê. O par do gatilho de card é o CardsDoEnsaio (#2631), com a mesma interface.
+# Nos gatilhos de etiqueta (G10), com a etiqueta escolhida, só as que a têm: no "posta", como se ela acabasse de entrar;
+# no "tirada", as que a perderiam (como o "saiu da etapa" do card).
 class Autonomia::Automacao::ConversasDoEnsaio
   def initialize(gatilho:, conta:, usuario:)
     @tipo = gatilho['tipo']
+    @etiqueta = gatilho['etiqueta']
     @conta = conta
     @usuario = usuario
   end
@@ -32,6 +35,7 @@ class Autonomia::Automacao::ConversasDoEnsaio
   private
 
   def visiveis
-    ::Conversations::PermissionFilterService.new(@conta.conversations, @usuario, @conta, for_reading: true).perform
+    escopo = @etiqueta.present? ? @conta.conversations.tagged_with(@etiqueta, on: :labels) : @conta.conversations
+    ::Conversations::PermissionFilterService.new(escopo, @usuario, @conta, for_reading: true).perform
   end
 end

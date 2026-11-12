@@ -39,18 +39,29 @@ const chaveDoRecorrente = alvo =>
   CHAVES_DO_RECORRENTE[alvo] || 'AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_CARDS';
 
 // #2631: no gatilho de card a lista é de cards (`alvo: 'card'`), com o id e o
-// título no lugar do número da conversa e do nome do contato.
+// título no lugar do número da conversa e do nome do contato. G10: no de
+// etiqueta no contato, de contatos (`alvo: 'contato'`), com o id e o nome.
 const alvoDoEnsaio = ref('conversa');
-const DO_CARD = {
-  SEM_CONVERSAS: 'SEM_CARDS',
-  QUANTAS: 'QUANTOS_CARDS',
-  OUTRA: 'OUTRO_CARD',
-  ESCOLHA: 'ESCOLHA_CARD',
-  CONVERSA_N: 'CARD_N',
-  NA_CONVERSA: 'NO_CARD',
+const ROTULOS_DO_ALVO = {
+  card: {
+    SEM_CONVERSAS: 'SEM_CARDS',
+    QUANTAS: 'QUANTOS_CARDS',
+    OUTRA: 'OUTRO_CARD',
+    ESCOLHA: 'ESCOLHA_CARD',
+    CONVERSA_N: 'CARD_N',
+    NA_CONVERSA: 'NO_CARD',
+  },
+  contato: {
+    SEM_CONVERSAS: 'SEM_CONTATOS',
+    QUANTAS: 'QUANTOS_CONTATOS',
+    OUTRA: 'OUTRO_CONTATO',
+    ESCOLHA: 'ESCOLHA_CONTATO',
+    CONVERSA_N: 'CONTATO_N',
+    NA_CONVERSA: 'NO_CONTATO',
+  },
 };
 const rotulo = (chave, valores) => {
-  const nome = alvoDoEnsaio.value === 'card' ? DO_CARD[chave] : chave;
+  const nome = ROTULOS_DO_ALVO[alvoDoEnsaio.value]?.[chave] || chave;
   return t(`AUTOMACAO_LIVRE.ENSAIO.${nome}`, valores);
 };
 

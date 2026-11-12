@@ -22,6 +22,12 @@
       "ESCOLHA_CARD": "Choose the card",
       "CARD_N": "Card {n}",
       "NO_CARD": "In the card {nome}, the automation would:",
+      "SEM_CONTATOS": "You don't have contacts to test this trigger on yet.",
+      "QUANTOS_CONTATOS": "of the {total} most recent contacts would enter this automation",
+      "OUTRO_CONTATO": "Test on another contact",
+      "ESCOLHA_CONTATO": "Choose the contact",
+      "CONTATO_N": "Contact {n}",
+      "NO_CONTATO": "For the contact {nome}, the automation would:",
       "FORA": {
         "SPAM": "Nothing: the conversation is in Spam.",
         "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
@@ -87,7 +93,7 @@
         "SEM_VINCULO_NA_CAIXA": "Would not hand over: {agente} does not work in this conversation’s inbox.",
         "NAO_ATENDE_CLIENTE": "Would not hand over: {agente} is not answering customers right now."
       },
-      "SEM_CONVERSA": "Would be skipped: this card has no conversation yet.",
+      "SEM_CONVERSA": "Would be skipped: there is no conversation with the contact yet.",
       "ABRIRIA_CONVERSA": "Would start a conversation with the contact in {caixa}.",
       "CONTATO_SEM_TELEFONE": "Would not go out: the contact has no phone number to start the conversation.",
       "EMAIL": "Would go out from {caixa}",

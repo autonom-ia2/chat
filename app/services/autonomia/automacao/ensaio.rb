@@ -26,6 +26,10 @@
 # age numa conversa (mensagem, avisar, os de IA, ia_assumir) pula com `sem_conversa`; com ela, o "mensagem" a abriria
 # (ou usa a do contato que já há nessa caixa), e os passos depois dele, no mesmo caminho, agem nela.
 #
+# Nos gatilhos de etiqueta (G10) e de troca de quem atende (F8.3), o mesmo: na conversa ou no contato (ContatosDoEnsaio)
+# como se a etiqueta fosse posta ou tirada, ou a pessoa ou o time trocasse, agora. Com a etiqueta escolhida, só os que
+# a têm (no "tirada", os que a perderiam). O contato não tem conversa própria: segue a regra do card sem conversa.
+#
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
 class Autonomia::Automacao::Ensaio
@@ -34,12 +38,17 @@ class Autonomia::Automacao::Ensaio
   OUTRAS = 40
   # Contra defeito, não contra uso: cada "esperar até" ou "decidir" multiplica os caminhos.
   MAXIMO_DE_PASSOS = 500
-  GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada mensagem.falhou].freeze
+  GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada mensagem.falhou conversa.responsavel_mudou
+                conversa.time_mudou conversa.etiqueta_posta conversa.etiqueta_tirada].freeze
+  # G10: o gatilho de contato que o ensaio roda; os de tempo e o recorrente do contato, ainda não.
+  DO_CONTATO = %w[contato.etiqueta_posta contato.etiqueta_tirada].freeze
+  AMOSTRAS = { 'conversa' => ::Autonomia::Automacao::ConversasDoEnsaio, 'card' => ::Autonomia::Automacao::CardsDoEnsaio,
+               'contato' => ::Autonomia::Automacao::ContatosDoEnsaio }.freeze
   SO_MOSTRA = %w[esperar].freeze
   # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
   IA_SO_DIZ = %w[extrair escrever resumir para_cada].freeze
 
-  def self.gatilho_suportado?(receita) = de_conversa?(receita) || de_card?(receita)
+  def self.gatilho_suportado?(receita) = de_conversa?(receita) || de_card?(receita) || de_contato?(receita)
 
   def self.de_conversa?(receita) = GATILHOS.include?(receita.dig('gatilho', 'tipo'))
 
@@ -49,10 +58,16 @@ class Autonomia::Automacao::Ensaio
     ::Autonomia::Automacao::Gatilhos.do_card?(tipo) && !::Autonomia::Automacao::Gatilhos.recorrente?(tipo)
   end
 
-  # Só as conversas (ConversasDoEnsaio) ou os cards (CardsDoEnsaio) que `usuario` alcança. Com `conversa_id` (o número
-  # da conversa; no gatilho de card, o id do card), ensaia só ele; fora do alcance de quem pede, é como se não
-  # existisse (RecordNotFound, 404). Quem age é quem o motor agiria (#2604): com `acesso` (o de quem ligou, na versão
-  # salva de uma automação ligada), quem ligou, com a mesma pergunta do motor (Acesso#motivo_no); sem ele, quem pede.
+  def self.de_contato?(receita) = DO_CONTATO.include?(receita.dig('gatilho', 'tipo'))
+
+  # Em quem o ensaio roda: 'conversa', 'card' ou 'contato'.
+  def self.alvo(receita) = (de_card?(receita) && 'card') || (de_contato?(receita) && 'contato') || 'conversa'
+
+  # Só as conversas (ConversasDoEnsaio), os cards (CardsDoEnsaio) ou os contatos (ContatosDoEnsaio) que `usuario`
+  # alcança. Com `conversa_id` (o número da conversa; no gatilho de card ou de contato, o id dele), ensaia só ele; fora
+  # do alcance de quem pede, é como se não existisse (RecordNotFound, 404). Quem age é quem o motor agiria (#2604):
+  # com `acesso` (o de quem ligou, na versão salva de uma automação ligada), quem ligou, com a mesma pergunta do motor
+  # (Acesso#motivo_no); sem ele, quem pede.
   def initialize(receita:, conta:, usuario:, conversa_id: nil, acesso: nil)
     @receita = receita
     @conta = conta
@@ -60,18 +75,17 @@ class Autonomia::Automacao::Ensaio
     @conversa_id = conversa_id
     @acesso = acesso
     @quem_age = acesso&.usuario || usuario
-    @card = self.class.de_card?(receita)
+    @alvo = self.class.alvo(receita)
     # O laço dos documentos (G46) não roda de novo no ensaio: o caminho que volta para no fim e diz para onde.
     @roteiro = ::Autonomia::Automacao::Roteiro.new(receita, voltar: false)
   end
 
-  # `alvo` diz à tela se a lista é de conversas ou de cards; o formato de cada item é o mesmo.
+  # `alvo` diz à tela se a lista é de conversas, de cards ou de contatos; o formato de cada item é o mesmo.
   def resultado
-    alvo = @card ? 'card' : 'conversa'
-    return { alvo: alvo, conversas: [ensaiar(amostra.um(@conversa_id))], outras: [] } if @conversa_id.present?
+    return { alvo: @alvo, conversas: [ensaiar(amostra.um(@conversa_id))], outras: [] } if @conversa_id.present?
 
     recentes = amostra.recentes(RECENTES + OUTRAS)
-    { alvo: alvo, conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
+    { alvo: @alvo, conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
       outras: recentes.drop(RECENTES).map { |item| amostra.base(item).except(:ultima_atividade) } }
   end
 
@@ -84,8 +98,7 @@ class Autonomia::Automacao::Ensaio
   private
 
   def amostra
-    @amostra ||= (@card ? ::Autonomia::Automacao::CardsDoEnsaio : ::Autonomia::Automacao::ConversasDoEnsaio)
-                 .new(gatilho: @receita['gatilho'].to_h, conta: @conta, usuario: @usuario)
+    @amostra ||= AMOSTRAS.fetch(@alvo).new(gatilho: @receita['gatilho'].to_h, conta: @conta, usuario: @usuario)
   end
 
   def ensaiar(alvo)
@@ -133,9 +146,10 @@ class Autonomia::Automacao::Ensaio
     'fora_do_filtro' unless filtros.all? { |condicao| ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira? }
   end
 
-  # A conversa em que os passos agiriam e, no card sem nenhuma, a caixa por onde o "mensagem" abriria uma (#2680).
+  # A conversa em que os passos agiriam e, no card sem nenhuma e no contato, a caixa por onde o "mensagem" abriria uma
+  # (#2680).
   def conversa_do_ensaio(contexto)
-    return [contexto.conversa, nil] if contexto.conversa || !@card
+    return [contexto.conversa, nil] if contexto.conversa || @alvo == 'conversa'
 
     amostra.conversa_nova(@contato)
   end
@@ -203,18 +217,16 @@ class Autonomia::Automacao::Ensaio
 
   # A mensagem e o aviso agem numa conversa. No card sem ela, a mensagem abre a da caixa da conversa nova, quando o
   # gatilho escolhe uma (PassoDeMensagem#abrir_e_mandar); sem a caixa, e no aviso, pulam com `sem_conversa`.
-  def avisar(passo, valores)
-    return texto(passo, valores) if @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
-
-    no(passo, 'sem_conversa')
-  end
+  def avisar(passo, valores) = na_conversa? ? texto(passo, valores) : no(passo, 'sem_conversa')
 
   def mensagem(passo, valores)
-    return no_canal(passo, valores) if @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
-    return no(passo, 'sem_conversa') unless @caixa_nova
+    return no_canal(passo, valores) if na_conversa?
 
-    abrir_conversa(passo, valores)
+    @caixa_nova ? abrir_conversa(passo, valores) : no(passo, 'sem_conversa')
   end
+
+  # Há conversa, ou a flag das mensagens desligada responde antes (Executor#passo_nativo).
+  def na_conversa? = @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
 
   # Depois do texto, o canal (#2609, EnvioNoEnsaio#do_canal). O texto vazio também pergunta: no motor, a janela vem antes.
   def no_canal(passo, valores, conversa = @conversa)

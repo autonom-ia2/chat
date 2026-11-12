@@ -15,8 +15,11 @@
 #   (a reunião que já passou o motor não lembra). Sempre na página escolhida (G32). Os cards com ela vêm primeiro; o
 #   card sem ela não entraria (`sem_reuniao`).
 #
-# A mesma interface do ConversasDoEnsaio: o Ensaio não pergunta qual é. O `conversa_nova` é só do card.
+# A mesma interface do ConversasDoEnsaio: o Ensaio não pergunta qual é. O `conversa_nova` (ConversaNovaNoEnsaio) é do
+# card e do contato.
 class Autonomia::Automacao::CardsDoEnsaio
+  include ::Autonomia::Automacao::ConversaNovaNoEnsaio
+
   AGENDADA = { status: :scheduled }.freeze
   REUNIAO = { 'card.reuniao_cancelada' => { status: :canceled }, 'card.reuniao_atendida' => { outcome: :held } }.freeze
   # Fora os de reunião, o gatilho que também pega o card que deu certo (Tempo::Data).
@@ -51,17 +54,6 @@ class Autonomia::Automacao::CardsDoEnsaio
 
   # G12: no gatilho de reunião, o card sem a reunião que o gatilho leria não entraria.
   def motivo(_card, _mensagem, reuniao) = ('sem_reuniao' if reuniao? && reuniao.nil?)
-
-  # O card sem conversa principal (#2680): com a caixa da conversa nova no gatilho, o motor usa a conversa do contato
-  # nessa caixa (Contexto#conversa_nova) ou, sem ela, o passo "mensagem" abre uma. [a conversa, quando há e quem ensaia
-  # a vê; senão nil] e [a caixa por onde a mensagem abriria, quando não há conversa]. Sem a caixa ou sem contato, [nil, nil].
-  def conversa_nova(contato)
-    caixa = ::Autonomia::Automacao::ConversaNova.caixa(@conta, @gatilho.dig('conversa_nova', 'caixa_id'))
-    return [nil, nil] if caixa.nil? || contato.nil?
-
-    existente = ::Autonomia::Automacao::ConversaNova.existente(caixa, contato)
-    existente && ConversationPolicy.new(contexto, existente).view? ? [existente, nil] : [nil, caixa]
-  end
 
   private
 
