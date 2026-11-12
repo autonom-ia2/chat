@@ -41,7 +41,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
   def call
     @thread.with_lock do
       rascunho = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
-      recusar('sem_modelo') if rascunho.nil?
+      negar('sem_modelo') if rascunho.nil?
 
       novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
       gravar!(novo)
@@ -51,7 +51,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
 
   private
 
-  def recusar(motivo, campo = nil)
+  def negar(motivo, campo = nil)
     raise Recusada.new(motivo, campo)
   end
 
@@ -61,7 +61,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
 
   def listas(marca)
     LISTAS.select { |campo| @mudancas.key?(campo) }.index_with do |campo|
-      recusar('lista_invalida', campo) unless lista_valida?(@mudancas[campo])
+      negar('lista_invalida', campo) unless lista_valida?(@mudancas[campo])
 
       atuais = Autonomia::Agents::ModelosDeRamo::Marca.itens(marca, campo).pluck('id')
       @mudancas[campo].reduce([]) { |prontos, bruto| prontos + [item(campo, bruto, atuais, prontos.pluck('id'))] }
@@ -70,8 +70,8 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
 
   def item(campo, bruto, atuais, usados)
     texto = bruto['texto'].is_a?(String) ? bruto['texto'].squish : ''
-    recusar('texto_invalido', campo) if texto.empty? || texto.length > Autonomia::Agents::ModelosDeRamo::ITEM_MAX
-    recusar('tirada_invalida', campo) unless VALORES_DE_TIRADA.include?(bruto['tirada'])
+    negar('texto_invalido', campo) if texto.empty? || texto.length > Autonomia::Agents::ModelosDeRamo::ITEM_MAX
+    negar('tirada_invalida', campo) unless VALORES_DE_TIRADA.include?(bruto['tirada'])
 
     { 'id' => id_do_item(campo, bruto['id'], atuais, usados), 'texto' => texto,
       'tirada' => ActiveModel::Type::Boolean.new.cast(bruto['tirada']) == true }
@@ -81,7 +81,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
   def id_do_item(campo, id, atuais, usados)
     return Autonomia::Agents::ModelosDeRamo::Marca.proximo_id(campo, atuais + usados) unless atuais.include?(id)
 
-    recusar('id_repetido', campo) if usados.include?(id)
+    negar('id_repetido', campo) if usados.include?(id)
     id
   end
 
@@ -89,10 +89,10 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     return {} unless @mudancas.key?(FERRAMENTAS)
 
     brutas = @mudancas[FERRAMENTAS]
-    recusar('lista_invalida', FERRAMENTAS) unless lista_valida?(brutas)
+    negar('lista_invalida', FERRAMENTAS) unless lista_valida?(brutas)
 
     frases = modelo.ferramentas.to_h { |ferramenta| [ferramenta.fonte, ferramenta.usar_quando] }
-    recusar('fonte_invalida', FERRAMENTAS) unless fontes_do_modelo?(brutas.pluck('fonte'), frases)
+    negar('fonte_invalida', FERRAMENTAS) unless fontes_do_modelo?(brutas.pluck('fonte'), frases)
 
     { FERRAMENTAS => brutas.map { |bruta| { 'fonte' => bruta['fonte'], 'usar_quando' => frase(bruta['usar_quando'], frases[bruta['fonte']]) } } }
   end
@@ -106,7 +106,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     return do_ramo if usar_quando.nil?
 
     limpa = usar_quando.is_a?(String) ? usar_quando.squish : nil
-    recusar('usar_quando_invalido', FERRAMENTAS) if limpa.nil? || limpa.length > Autonomia::FerramentasProntas::Incluir::MAX_USAR_QUANDO
+    negar('usar_quando_invalido', FERRAMENTAS) if limpa.nil? || limpa.length > Autonomia::FerramentasProntas::Incluir::MAX_USAR_QUANDO
     limpa.presence || do_ramo
   end
 
@@ -117,7 +117,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     chaves = rascunho.para_guardar
     agente = @thread.agent
     agente&.with_lock do
-      recusar('agente_ja_comecou') unless agente.draft?
+      negar('agente_ja_comecou') unless agente.draft?
       agente.update!(config: agente.config.to_h.merge(chaves))
     end
     @thread.juntar_ao_estado!(chaves)

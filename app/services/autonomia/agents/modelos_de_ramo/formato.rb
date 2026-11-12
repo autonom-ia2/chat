@@ -28,28 +28,28 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   def modelo
     conferir_campos!
     modelo = Autonomia::Agents::ModelosDeRamo::Modelo.new(chave: @chave, tipo: tipo, roteiro: roteiro, **textos, **listas, **prontas)
-    recusar('ferramenta repetida em ja_vem e tambem') if modelo.ferramentas.map(&:fonte).uniq.size != modelo.ferramentas.size
+    negar('ferramenta repetida em ja_vem e tambem') if modelo.ferramentas.map(&:fonte).uniq.size != modelo.ferramentas.size
     modelo
   end
 
   private
 
-  def recusar(motivo)
+  def negar(motivo)
     raise Invalido, motivo
   end
 
   def conferir_campos!
-    recusar('o arquivo não é uma lista de campos') unless @dados.is_a?(Hash)
+    negar('o arquivo não é uma lista de campos') unless @dados.is_a?(Hash)
 
     nomes = @dados.keys.map(&:to_s)
-    recusar("campo desconhecido: #{(nomes - OBRIGATORIOS - OPCIONAIS).join(', ')}") if (nomes - OBRIGATORIOS - OPCIONAIS).any?
-    recusar("falta o campo: #{(OBRIGATORIOS - nomes).join(', ')}") if (OBRIGATORIOS - nomes).any?
-    recusar('chave diferente do nome do arquivo') unless @dados['chave'] == @chave
+    negar("campo desconhecido: #{(nomes - OBRIGATORIOS - OPCIONAIS).join(', ')}") if (nomes - OBRIGATORIOS - OPCIONAIS).any?
+    negar("falta o campo: #{(OBRIGATORIOS - nomes).join(', ')}") if (OBRIGATORIOS - nomes).any?
+    negar('chave diferente do nome do arquivo') unless @dados['chave'] == @chave
   end
 
   def tipo
     tipos = Autonomia::Agents::Agent::AGENT_TYPES - SEM_ROTEIRO_GERAL
-    recusar('tipo sem roteiro geral') unless tipos.include?(@dados['tipo'])
+    negar('tipo sem roteiro geral') unless tipos.include?(@dados['tipo'])
 
     @dados['tipo']
   end
@@ -67,7 +67,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
 
   def listas
     teste = lista('teste')
-    recusar("teste: são #{TESTES} perguntas") unless teste.size == TESTES
+    negar("teste: são #{TESTES} perguntas") unless teste.size == TESTES
 
     { perguntas: lista('perguntas'), documentos: lista('documentos'), teste: teste }
   end
@@ -77,19 +77,19 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   end
 
   def texto(valor, campo, maximo)
-    recusar("#{campo}: não é texto") unless valor.is_a?(String)
+    negar("#{campo}: não é texto") unless valor.is_a?(String)
 
     limpo = valor.strip
-    recusar("#{campo}: vazio") if limpo.empty?
-    recusar("#{campo}: passa de #{maximo} letras") if limpo.length > maximo
+    negar("#{campo}: vazio") if limpo.empty?
+    negar("#{campo}: passa de #{maximo} letras") if limpo.length > maximo
     limpo.freeze
   end
 
   # A lista do campo (nil no opcional que não veio = lista vazia), já conferida como lista dentro do limite.
   def itens(campo)
     valor = @dados[campo].nil? && OPCIONAIS.include?(campo) ? [] : @dados[campo]
-    recusar("#{campo}: não é lista") unless valor.is_a?(Array)
-    recusar("#{campo}: passa de #{Autonomia::Agents::ModelosDeRamo::ITENS_MAX} itens") if valor.size > Autonomia::Agents::ModelosDeRamo::ITENS_MAX
+    negar("#{campo}: não é lista") unless valor.is_a?(Array)
+    negar("#{campo}: passa de #{Autonomia::Agents::ModelosDeRamo::ITENS_MAX} itens") if valor.size > Autonomia::Agents::ModelosDeRamo::ITENS_MAX
     valor
   end
 
@@ -102,7 +102,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   end
 
   def ferramenta(item, campo)
-    recusar("#{campo}: cada ferramenta leva fonte e usar_quando") unless item.is_a?(Hash) && item.keys.map(&:to_s).sort == CAMPOS_DA_FERRAMENTA
+    negar("#{campo}: cada ferramenta leva fonte e usar_quando") unless item.is_a?(Hash) && item.keys.map(&:to_s).sort == CAMPOS_DA_FERRAMENTA
 
     fonte = item['fonte'].to_s
     conferir_fonte_gratis!(fonte, campo)
@@ -111,16 +111,16 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   end
 
   def conferir_fonte_gratis!(chave, campo)
-    recusar("#{campo}: ferramenta Premium (#{chave})") if cartoes_premium.include?(chave)
+    negar("#{campo}: ferramenta Premium (#{chave})") if cartoes_premium.include?(chave)
 
     fonte = Autonomia::FerramentasProntas::Catalogo.buscar(chave)
-    recusar("#{campo}: ferramenta fora do catálogo (#{chave})") if fonte.nil?
-    recusar("#{campo}: ferramenta fora da vitrine (#{chave})") unless fonte.na_vitrine?
+    negar("#{campo}: ferramenta fora do catálogo (#{chave})") if fonte.nil?
+    negar("#{campo}: ferramenta fora da vitrine (#{chave})") unless fonte.na_vitrine?
   end
 
   def premium
     chaves = itens('premium').map(&:to_s)
-    recusar("premium: não é cartão Premium (#{(chaves - cartoes_premium).join(', ')})") if (chaves - cartoes_premium).any?
+    negar("premium: não é cartão Premium (#{(chaves - cartoes_premium).join(', ')})") if (chaves - cartoes_premium).any?
 
     chaves.uniq.map(&:freeze).freeze
   end
@@ -131,9 +131,9 @@ class Autonomia::Agents::ModelosDeRamo::Formato
   end
 
   def roteiro
-    recusar('roteiro: não é texto UTF-8') unless @roteiro.is_a?(String) && @roteiro.valid_encoding?
-    recusar('roteiro: vazio') if @roteiro.strip.empty?
-    recusar("roteiro: passa de #{ROTEIRO_MAX} bytes") if @roteiro.bytesize > ROTEIRO_MAX
+    negar('roteiro: não é texto UTF-8') unless @roteiro.is_a?(String) && @roteiro.valid_encoding?
+    negar('roteiro: vazio') if @roteiro.strip.empty?
+    negar("roteiro: passa de #{ROTEIRO_MAX} bytes") if @roteiro.bytesize > ROTEIRO_MAX
 
     conferir_marcadores!
     @roteiro.strip.freeze
@@ -144,7 +144,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
     linhas = @roteiro.lines.map(&:strip)
     Autonomia::Agents::ModelosDeRamo::MARCADORES.each_key do |marcador|
       sozinho = linhas.count(marcador) == 1 && @roteiro.scan(marcador).size == 1
-      recusar("roteiro: marcador #{marcador} uma vez, sozinho na linha") unless sozinho
+      negar("roteiro: marcador #{marcador} uma vez, sozinho na linha") unless sozinho
     end
   end
 end

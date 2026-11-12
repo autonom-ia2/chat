@@ -200,6 +200,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(mudar({ perguntas: [] }, comum)).to eq('motivo' => 'sem_modelo', 'campo' => nil)
       expect(response).to have_http_status(:not_found)
 
+      conversa # nasce com o modelo, antes de a flag ser desligada
       account.disable_features!(Autonomia::Agents::ModelosDeRamo::FLAG)
       mudar(perguntas: [])
       expect(response).to have_http_status(:not_found)

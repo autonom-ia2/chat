@@ -138,6 +138,11 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
 
     before { conversa.update!(agent: agente) }
 
+    # O agente já atendendo, direto no banco: o caminho de verdade ("Começar") exige um canal, que não é o assunto aqui.
+    def comecar!(alvo)
+      alvo.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
+    end
+
     it 'leva a mudança para a marca do rascunho, sem tocar na instrução nem no resto do config' do
       editar(documentos: [{ texto: 'Contrato social.' }], ferramentas: [{ fonte: 'cnpj' }])
       config = agente.reload.config
@@ -158,7 +163,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
     end
 
     it 'recusa quando o agente já começou a atender' do
-      agente.update!(status: :active, enabled: true)
+      comecar!(agente)
       antes = agente.reload.config
 
       expect(recusa(documentos: [])).to eq(['agente_ja_comecou', nil])
@@ -168,7 +173,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
     it 'confere com o agente travado, não pela cópia que a conversa tinha, e a recusa não grava nada na conversa' do
       antes = marca
       expect(conversa.agent).to be_draft
-      Autonomia::Agents::Agent.find(agente.id).update!(status: :active, enabled: true)
+      comecar!(Autonomia::Agents::Agent.find(agente.id))
 
       expect(recusa(documentos: [])).to eq(['agente_ja_comecou', nil])
       expect(marca).to eq(antes)
