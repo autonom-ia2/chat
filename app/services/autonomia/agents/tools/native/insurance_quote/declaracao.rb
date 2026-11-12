@@ -103,6 +103,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # `module ClassMethods` em vez de `class_methods do`: mesmo efeito no concern, e um módulo não
   # tem o teto de linhas de bloco — o catálogo de textos cresce a cada ramo.
   module ClassMethods
+    # #2918: ESCREVE (abre a cotação na seguradora). Nas rodadas das prontas, roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'cotar_seguro'
     end

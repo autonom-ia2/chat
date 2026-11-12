@@ -61,9 +61,10 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteResult < Autonomia::Agents
                'recusa, de risco, de aceitação, de prazo nem de instabilidade.'.freeze
 
   class << self
-    def slug
-      'ver_resultado_da_cotacao'
-    end
+    # #2918: LÊ (lê o resultado da cotação). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
+    def slug = 'ver_resultado_da_cotacao'
 
     def tool_name
       'Ver resultado da cotação'

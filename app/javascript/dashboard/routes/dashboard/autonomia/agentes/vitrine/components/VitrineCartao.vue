@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { chaveDoTexto } from '../catalogo';
 import { useVitrine } from '../useVitrine';
+import VitrinePreco from './VitrinePreco.vue';
+import VitrineSeloPremium from './VitrineSeloPremium.vue';
 
 // #2858 F2 — o cartão de uma ferramenta pronta: o que ela faz em uma frase, o apoio ("tabela FIPE") só como detalhe, e
 // um selo: o agente escolhido já sabe, ou quantas perguntas ela responde. O cartão inteiro é o botão que abre o
@@ -13,6 +15,8 @@ const props = defineProps({
   // Nome do agente escolhido que já tem esta ferramenta; vazio quando não tem.
   jaSabe: { type: String, default: '' },
   destaque: { type: Boolean, default: false },
+  // F7: o preço e as grátis que restam do card Premium; null nos grátis (que não ganham selo).
+  premium: { type: Object, default: null },
 });
 
 const emit = defineEmits(['abrir']);
@@ -92,7 +96,7 @@ const selo = computed(() => {
       >
         <span :class="ferramenta.icone" class="size-6" />
       </span>
-      <span class="flex flex-col min-w-0 gap-0.5">
+      <span class="flex flex-col flex-1 min-w-0 gap-0.5">
         <span class="text-base font-semibold leading-snug text-n-slate-12">
           {{ textos.nome }}
         </span>
@@ -100,6 +104,7 @@ const selo = computed(() => {
           {{ textos.apoio }}
         </span>
       </span>
+      <VitrineSeloPremium v-if="premium" class="mt-0.5" />
     </span>
     <span class="flex-1 text-sm leading-relaxed text-n-slate-11">
       {{ textos.faz }}
@@ -120,5 +125,6 @@ const selo = computed(() => {
       <span :class="selo.icone" class="size-3.5" aria-hidden="true" />
       {{ selo.texto }}
     </span>
+    <VitrinePreco v-if="premium" :premium="premium" />
   </button>
 </template>

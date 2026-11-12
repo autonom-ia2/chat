@@ -61,7 +61,7 @@ describe('VitrineExperimente', () => {
     });
     const wrapper = montar('fipe');
     await rodar(wrapper);
-    expect(experimentar).toHaveBeenCalledWith('fipe', 'Onix 2020');
+    expect(experimentar).toHaveBeenCalledWith('fipe', 'Onix 2020', false);
     expect(wrapper.find('[data-experimente-resultado]').text()).toContain(
       'R$ 60.822,00'
     );

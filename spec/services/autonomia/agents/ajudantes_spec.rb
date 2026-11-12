@@ -163,10 +163,12 @@ RSpec.describe Autonomia::Agents::Ajudantes do
       expect(kwargs.slice(:max_rodadas, :max_segundos)).to eq(max_rodadas: 6, max_segundos: 900)
     end
 
+    # #2918: o Testar pede pela função do atendimento (`RodadasDoTurno`), que diz as rodadas de sempre por extenso: uma,
+    # sem relógio próprio, o mesmo padrão do `Answerer`.
     it 'o Testar de quem não tem ajudante segue igual' do
       kwargs = kwargs_do_answerer { Autonomia::Agents::Playground.new(agent: clara, message: 'oi').run }
 
-      expect(kwargs).not_to have_key(:max_rodadas)
+      expect(kwargs.slice(:max_rodadas, :max_segundos)).to eq(max_rodadas: 1, max_segundos: nil)
     end
   end
 

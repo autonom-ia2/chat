@@ -20,9 +20,9 @@ module Autonomia
         # isso NÃO usamos :attendant aqui (geraria meta-texto "sugestão ao atendente" no campo do cliente).
         # A regra anti-"material" universal do v2 já vale p/ :customer, então o copiloto interno também
         # não cita "material" (decisão do PO). :attendant fica reservado p/ um copiloto analítico futuro.
-        # Tema 14 (#1434): o principal com ajudante sugere com as mesmas rodadas da produção.
+        # Tema 14 (#1434) e #2918: as mesmas rodadas da produção (ajudante, pronta), pela régua do Testar.
         Answerer.new(agent: @agent, query: @message, history: @history, audience: :customer,
-                     retrieval_query: @retrieval_query, **(Ajudantes.rodadas(@agent) || {})).answer
+                     retrieval_query: @retrieval_query, **Playground.rodadas(@agent)).answer
       end
     end
   end

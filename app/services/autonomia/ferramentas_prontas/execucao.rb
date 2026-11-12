@@ -51,6 +51,10 @@ class Autonomia::FerramentasProntas::Execucao
   # quando a fonte respondeu (encontrado ou não encontrado).
   attr_reader :codigo
 
+  # O parâmetro que o pedido recusou antes da fonte (o CPF com dígito errado), ou nil. O Experimente Premium encerra o
+  # clique quando é o documento (`Experimente::ComModelo`).
+  attr_reader :parametro_recusado
+
   # O pedido saiu para alguma fonte? (O contrato do `HttpExecutor`, que o job da consulta em segundo plano lê.)
   def enviada?
     @cliente.present? && @cliente.chamadas.positive?
@@ -58,12 +62,9 @@ class Autonomia::FerramentasProntas::Execucao
 
   private
 
-  # O fuso da conta; sem ele (defeito ao ler a conta), o da plataforma: a execução nunca levanta.
+  # O fuso da conta (`FerramentasProntas.fuso_da_conta`); sem ele, o da plataforma: a execução nunca levanta.
   def fuso
-    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: @tool.account).name_or_default.to_s] || Time.zone
-  rescue StandardError => e
-    Rails.logger.warn("#{PREFIXO} fuso da conta indisponível conta=#{@tool.account_id} #{e.class}")
-    Time.zone
+    Autonomia::FerramentasProntas.fuso_da_conta(@tool.account)
   end
 
   def executar
@@ -82,7 +83,7 @@ class Autonomia::FerramentasProntas::Execucao
     @consulta = @fonte.consulta(@argumentos[Autonomia::FerramentasProntas::Fonte::PARAMETRO_DA_CONSULTA])
     return recusar('pedido_invalido', Resposta.pedido_invalido('consulta', @fonte.parametro_da_consulta)) if @consulta.nil?
 
-    params, falta = @consulta.conferir(@argumentos)
+    params, falta = @consulta.conferir(@argumentos, @tool.account_id)
     return recusar_pedido(falta) if params.nil?
     return recusar('limite_diario') unless Uso.reservar!(account_id: @tool.account_id, fonte: @fonte.chave, limite: acesso.limite_do_dia)
 
@@ -94,7 +95,7 @@ class Autonomia::FerramentasProntas::Execucao
     params, falta = resolver(params)
     return devolver_e_recusar(falta) if falta
 
-    @cache = Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
+    @cache = novo_cache(params)
     do_cache(params) || consultar(params)
   rescue Autonomia::FerramentasProntas::Apoio::SemResposta => e
     terminar(Resposta.nao_consegui, desfecho: 'sem_resposta', motivos: e.motivos)
@@ -107,7 +108,8 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def recusar_pedido(falta)
-    recusar('pedido_invalido', Resposta.pedido_invalido(falta, @consulta.parametro(falta.campo)))
+    @parametro_recusado = @consulta.parametro(falta.campo)
+    recusar('pedido_invalido', Resposta.pedido_invalido(falta, @parametro_recusado))
   end
 
   def resolver(params)
@@ -118,6 +120,11 @@ class Autonomia::FerramentasProntas::Execucao
 
   def cliente
     @cliente ||= ClienteHttp.new(hosts: @fonte.hosts, prazo_final: @inicio + @consulta.prazo_total, conta: @tool.account_id)
+  end
+
+  # O cache das grátis é da fonte; o da consulta paga (F7, `Premium::Execucao`) é da conta.
+  def novo_cache(params)
+    Autonomia::FerramentasProntas::Cache.new(@fonte, @consulta, params)
   end
 
   def do_cache(params)

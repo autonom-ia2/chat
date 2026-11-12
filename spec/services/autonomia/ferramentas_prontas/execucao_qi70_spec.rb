@@ -112,7 +112,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
     let(:item) { { codigo: '7318.15.00', descricao: '-- Outros parafusos', data_inicio: '2022-04-01', data_fim: '9999-12-31' } }
 
     it 'codigo de 8 digitos: so a descricao, sem mandar perguntar o material' do
-      fonte_responde('https://brasilapi.com.br/api/ncm/v1/73181500', item)
+      fonte_responde('https://brasilapi.com.br/api/ncm/v1?search=7318', [item])
 
       dados = executar_pronta(pronta('ncm'), 'consulta' => 'codigo', 'codigo' => '7318.15.00')['dados']
 
@@ -120,12 +120,14 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
       expect(ncm::FONTE.consulta('codigo').descricao).not_to include('pergunte')
     end
 
-    it 'capitulo ou posicao (2 ou 4 digitos): diz que nao serve na nota e manda perguntar o material' do
+    # Revisão do #2920: a orientação manda buscar, sem lista de material e sem pergunta (regra do caso comum).
+    it 'capitulo ou posicao (2 ou 4 digitos): diz que nao serve na nota e manda buscar' do
       fonte_responde('https://brasilapi.com.br/api/ncm/v1/7318', item.merge(codigo: '73.18', descricao: 'Parafusos'))
 
       dados = executar_pronta(pronta('ncm'), 'consulta' => 'codigo', 'codigo' => '7318')['dados']
 
-      expect(dados['observacao']).to include('8 dígitos', 'material')
+      expect(dados['observacao']).to include('8 dígitos', 'consulta buscar')
+      expect(dados['observacao']).not_to include('material', 'Pergunte')
     end
   end
 

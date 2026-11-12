@@ -23,6 +23,9 @@ class Autonomia::Agents::Tools::Native::VehicleLookup < Autonomia::Agents::Tools
                  'cotação consulta de novo antes de enviar.'.freeze
 
   class << self
+    # #2918: LÊ (consulta a placa). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'consultar_placa'
     end

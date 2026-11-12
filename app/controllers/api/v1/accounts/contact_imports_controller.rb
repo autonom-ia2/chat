@@ -60,12 +60,12 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
     render_import
   end
 
-  # POST /contact_imports/:id/confirm — "Importar": contacts, companies and attributes are written.
+  # POST /contact_imports/:id/confirm — "Importar": contacts, companies and attributes are written; a writing that broke goes on (#2921).
   def confirm
     queued = false
     @campaign_import.with_lock do
       @campaign_import.reload
-      next unless @campaign_import.ready_to_confirm?
+      next unless @campaign_import.ready_to_confirm? || @campaign_import.import_resumable?
 
       @campaign_import.update!(status: :queued, confirmed_at: Time.current, queued_at: Time.current)
       queued = true

@@ -1,0 +1,128 @@
+[
+ {
+  "codigo": "21.02",
+  "descricao": "Leveduras (vivas ou mortas); outros microrganismos monocelulares mortos (exceto as vacinas da posição 30.02); pós para levedar, preparados.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "2102.20.00",
+  "descricao": "- Leveduras mortas; outros microrganismos monocelulares mortos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "3002.51.00",
+  "descricao": "-- Produtos de terapia celular",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "44.18",
+  "descricao": "Obras de marcenaria e peças de carpintaria para construções, incluindo os painéis celulares, os painéis montados para revestimento de pisos (pavimentos) e as fasquias para telhados (<i>shingles</i> e <i>shakes</i>), de madeira.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4418.92.00",
+  "descricao": "-- Painéis celulares de madeira",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "70.16",
+  "descricao": "Blocos, placas, tijolos, ladrilhos, telhas e outros artigos, de vidro prensado ou moldado, mesmo armado, para construção; cubos, pastilhas e outros artigos semelhantes, de vidro, mesmo com suporte, para mosaicos ou decorações semelhantes; vitrais de vidro; vidro denominado \"multicelular\" ou \"espuma\" de vidro, em blocos, painéis, chapas e conchas ou formas semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "85.17",
+  "descricao": "Aparelhos telefônicos, incluindo os telefones inteligentes (<i>smartphones</i>) e outros telefones para redes celulares ou para outras redes sem fio; outros aparelhos para a transmissão ou recepção de voz, imagens ou outros dados, incluindo os aparelhos para comunicação em redes por fio ou redes sem fio (tal como uma rede local (LAN) ou uma rede de área estendida (longa distância) (WAN)), exceto os aparelhos das posições 84.43, 85.25, 85.27 ou 85.28.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.1",
+  "descricao": "- Aparelhos telefônicos, incluindo os telefones inteligentes (<i>smartphones</i>) e outros telefones para redes celulares ou para outras redes sem fio:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.14",
+  "descricao": "-- Outros telefones para redes celulares ou para outras redes sem fio",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.14.3",
+  "descricao": "De redes celulares, exceto por satélite",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.61.30",
+  "descricao": "De telefonia celular",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.62.6",
+  "descricao": "Aparelhos emissores com receptor incorporado de tecnologia celular ou por satélite",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.62.62",
+  "descricao": "De tecnologia celular",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8517.71.10",
+  "descricao": "Antenas próprias para telefones celulares portáteis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ }
+]

@@ -1342,10 +1342,10 @@
 # os do segmento da conta em destaque (pacote #1550: geral, seguros/corretora, seguros/saude_beneficios); o pedido e
 # os modelos levam ao Guia, e "Montar do zero" fica como segunda opção. Só com o Guia na conta e para quem pode montar.
 # Desligada: a lista de hoje (o herói compartilhado ganhou ajustes de celular e acessibilidade nas duas telas). Sem
-# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: nesta branch, sobre a main
-# de 11/11 (41 flags na ext_2), cai na 42 (bit 1 << 41). A Orquestração reservou a 44 (1 << 43) para ela, depois da F5
-# e da F7 da vitrine #2858 (42 e 43), que ainda não entraram; quem entrar antes fica com o número menor. O bit que vale
-# é o que a Orquestração confirmar na hora do OK; o spec/models/account_spec.rb cita o bit e acompanha essa confirmação.
+# migration. Rollback: desligar a flag na conta. A posição vale pela ordem neste arquivo: é a 42 (2199023255552,
+# 1 << 41), a primeira depois das 41 flags da main de 11/11; ela entrou antes da F5 e da F7 da vitrine #2858, que ficam
+# com a 43 (`agente_ferramentas_prontas_bases`) e a 44 (`agente_ferramentas_prontas_premium`). O
+# spec/models/account_spec.rb cita os três bits.
 - name: automacao_porta
   display_name: Automação › porta única e modelos por segmento
   enabled: false
@@ -1356,18 +1356,31 @@
 # solares (geração distribuída da ANEEL), transportadoras (RNTRC da ANTT) e focos de queimada (INPE), com o "atualizado
 # em…" no cartão. O job diário só baixa quando ao menos uma conta tem a flag. Migration aditiva 20261109990000 (seis
 # tabelas). Desligada: as cinco somem da vitrine e do turno. Rollback: desligar a flag na conta. Posição 43
-# (4398046511104, 1 << 42), confirmada pela Orquestração em 11/11, depois da automacao_porta (#2890). Depois do NO
-# AR, liga em todas as contas ativas das 2 stacks (regra de 07/11).
+# (4398046511104, 1 << 42), confirmada pela Orquestração em 11/11, depois da automacao_porta (#2890). Ligada em todas
+# as contas (11/11, decisão do Rodrigo); a primeira carga roda depois do horário da stack, uma base por vez.
 - name: agente_ferramentas_prontas_bases
   display_name: Agentes › ferramentas prontas (bases baixadas)
   enabled: false
   column: feature_flags_ext_2
 
+# Agentes: ferramentas prontas, F7 (#2858): as consultas Premium, pagas, à BigDataCorp. Ligada (junto com
+# `agente_ferramentas_prontas`): a vitrine ganha o grupo Premium com 7 cards (certidões da empresa, raio-X da empresa,
+# conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas), cada um com o
+# selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
+# plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
+# da vitrine, do turno e do "Incluir" de uma vez; a Cotação e a Prospecção não leem esta flag. Migration 20261110000000
+# (telemetria e saldo das grátis). Rollback: desligar a flag. Posição 44 (8796093022208, 1 << 43), confirmada pela
+# Orquestração em 11/11, depois da `automacao_porta` do #2890 (42) e da F5 (43, `agente_ferramentas_prontas_bases`). Ligar
+# em todas só depois da conferência em produção com OK do Rodrigo (consulta paga).
+- name: agente_ferramentas_prontas_premium
+  display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
+  enabled: false
+  column: feature_flags_ext_2
+
 # Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
 # empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
-# Sem migration. Rollback: desligar a flag na conta. A posição vale pela ordem de chegada à main e a Orquestração
-# confirma antes do OK: nesta base é a 44 (1 << 43 = 8796093022208), depois da agente_ferramentas_prontas_bases
-# (#2904), que chegou antes.
+# Sem migration. Rollback: desligar a flag na conta. Posição 45 (17592186044416, 1 << 44), confirmada pela
+# Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
 - name: relacionamentos_novo
   display_name: Relacionamentos › telas novas
   enabled: false

@@ -271,17 +271,53 @@ describe('ChoiceSelect', () => {
     expect(trigger.classes()).not.toContain('text-xs');
   });
 
-  it('rolagem fora da lista fecha, como o select nativo; a da lista não', async () => {
-    wrapper = mountSelect();
-    const trigger = wrapper.get('[role="combobox"]');
-    await trigger.trigger('click');
-    wrapper.get('[role="listbox"]').element.dispatchEvent(new Event('scroll'));
-    await wrapper.vm.$nextTick();
-    expect(trigger.attributes('aria-expanded')).toBe('true');
+  describe('rolagem com a lista aberta', () => {
+    // O botão no lugar `topo` da tela; a rolagem de verdade muda esse lugar.
+    const botaoEm = (trigger, lugar) => {
+      trigger.element.getBoundingClientRect = () => ({
+        top: lugar.topo,
+        bottom: lugar.topo + 40,
+        left: 30,
+        right: 230,
+        width: 200,
+        height: 40,
+      });
+    };
 
-    document.dispatchEvent(new Event('scroll'));
-    await wrapper.vm.$nextTick();
-    expect(trigger.attributes('aria-expanded')).toBe('false');
+    it('rolagem que tira o botão do lugar fecha, como o select nativo; a da lista não', async () => {
+      wrapper = mountSelect();
+      const trigger = wrapper.get('[role="combobox"]');
+      const lugar = { topo: 100 };
+      botaoEm(trigger, lugar);
+      await trigger.trigger('click');
+      // O botão já saiu do lugar: só a origem da rolagem (a própria lista)
+      // segura a lista aberta.
+      lugar.topo = 60;
+      wrapper
+        .get('[role="listbox"]')
+        .element.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+
+      document.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+      expect(trigger.attributes('aria-expanded')).toBe('false');
+    });
+
+    // #2927: o foco (clique no rótulo, Tab) rola a tela para mostrar o botão e
+    // só então a lista abre. O navegador entrega o evento dessa rolagem um
+    // quadro depois, com a lista já aberta e o botão no mesmo lugar em que ela
+    // foi posicionada: não é motivo para fechar.
+    it('o evento de uma rolagem anterior à abertura não fecha a lista', async () => {
+      wrapper = mountSelect();
+      const trigger = wrapper.get('[role="combobox"]');
+      botaoEm(trigger, { topo: 100 });
+      await trigger.trigger('click');
+
+      document.dispatchEvent(new Event('scroll'));
+      await wrapper.vm.$nextTick();
+      expect(trigger.attributes('aria-expanded')).toBe('true');
+    });
   });
 
   it('clique no vazio da lista não tira o foco do campo', async () => {

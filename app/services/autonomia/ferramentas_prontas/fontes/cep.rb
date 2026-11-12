@@ -44,9 +44,14 @@ module Autonomia::FerramentasProntas::Fontes::Cep
   # Os CEPs da rua -> a resposta, com o mais parecido com a rua procurada primeiro e, na mesma rua, o CEP da rua (a
   # faixa de número) antes do especial (`especial?`): o ViaCEP manda os de prédio primeiro (a Paulista tem 50).
   def self.lista(municipio, logradouro, ceps)
-    lista = Autonomia::FerramentasProntas::Lista
-    ordem = lista.em_ordem(ceps, logradouro, desempate: ->(item) { especial?(item['cep']) ? 1 : 0 }) { |item| item['logradouro'] }
-    { 'cidade' => municipio.nome, 'uf' => municipio.uf }.merge(lista.cortar(ordem.map { |item| com_nome(item) }, 'ceps', MAX_CEPS))
+    ordem = em_ordem(ceps, logradouro).map { |item| com_nome(item) }
+    { 'cidade' => municipio.nome, 'uf' => municipio.uf }.merge(Autonomia::FerramentasProntas::Lista.cortar(ordem, 'ceps', MAX_CEPS))
+  end
+
+  def self.em_ordem(ceps, logradouro)
+    Autonomia::FerramentasProntas::Lista.em_ordem(ceps, logradouro, desempate: ->(item) { especial?(item['cep']) ? 1 : 0 }) do |item|
+      item['logradouro']
+    end
   end
 
   # Na estrutura do CEP dos Correios, o sufixo de 900 a 999 é CEP especial (grande usuário: um prédio, um órgão; caixa

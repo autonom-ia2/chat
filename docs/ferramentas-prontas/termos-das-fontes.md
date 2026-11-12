@@ -28,7 +28,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | Host | Fontes | O que o termo pede | Teto global | Cache |
 |---|---|---|---|---|
 | `brasilapi.com.br` | CEP (última reserva do endereço, só quando nenhuma anterior disse "não tem"), CNPJ, FIPE, feriados, Banco Central (reserva), cidades (reserva), DDD, bancos, código de mercadoria (NCM, F4) | Volume com "natureza de uma pessoa real"; proíbe varredura automatizada (README do projeto, "Termos de Uso"). Não publica número. | 300 por minuto | por consulta; CEP sem cache |
-| `viacep.com.br` | CEP (principal do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade, `Cep::Referencia`, uma chamada por cidade a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
+| `viacep.com.br` | CEP (principal do endereço; única do CEP pela rua, `por_endereco`, e do CEP de referência da cidade e do CEP pela rua do Premium, `Cep::Referencia`, uma chamada por cidade, e uma por rua, a cada 30 dias) | Uso moderado; bloqueia uso abusivo. Não publica número. | 60 por minuto | 30 dias |
 | `cep.awesomeapi.com.br` | CEP (1ª reserva do endereço; não busca o CEP pela rua) | Sem chave: **limite não publicado**. Com a chave gratuita (cabeçalho `x-api-key`): **100 mil pedidos por mês** ([docs.awesomeapi.com.br/instrucoes-api-key.md](https://docs.awesomeapi.com.br/instrucoes-api-key.md), consultado em 11/11/2026). | Sem chave: 30 por minuto e 1.000 por dia (conservador). Com chave: 120 por minuto e 3.000 por dia (~90% de 100 mil ÷ 30) | 30 dias |
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
 | `api.opencnpj.org` | CNPJ (2ª reserva) | Não achamos número publicado na página de documentação. | 120 por minuto (padrão) | 1 dia |
@@ -45,6 +45,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | `archive-api.open-meteo.com` | Quanto choveu (F4) | **Plano gratuito só para uso não comercial**: menos de 10.000 por dia, 5.000 por hora e 600 por minuto. Uso comercial pede plano pago (chave, `customer-api.open-meteo.com`). Dados CC BY 4.0, com atribuição. **Sobe com o plano gratuito por decisão do Rodrigo (10/11/2026), risco aceito.** | 540 por minuto, 4.500 por hora, 9.000 por dia | 6 horas |
 | `data.directory.opinbrasil.com.br` e o host de cada seguradora | Produtos das seguradoras (Open Insurance, F4; fora da vitrine desde 11/11/2026, só para os agentes de garantia e de transporte, #2881) | Dados abertos da fase 1 do Open Insurance Brasil, sem chave e sem número publicado. Só seguro garantia (público e privado) e transporte. O endereço de cada seguradora sai sempre do diretório, nunca fixo no código, e o de servidor de teste é descartado; no máximo 2 seguradoras por consulta, com prazo curto. | 30 por minuto (diretório); 120 por minuto (padrão) em cada seguradora | 6 horas (diretório), 3 horas (produtos) |
 | `www2.susep.gov.br` | Corretor na SUSEP (F4) | Consulta pública de corretores. **Endpoint sem documentação**, sem chave, sem termo nem limite publicado: o formato é conferido a cada resposta e, se mudar, a fonte responde "não consegui" e deixa `ALERTA corretor_susep` no log. Só nome, situação, registro e ramos vão ao modelo. | 30 por minuto | 12 horas |
+| `plataforma.bigdatacorp.com.br` | Os 7 cards Premium (F7): certidões da empresa, raio-X da empresa, conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas | **Paga, por contrato** (o mesmo da Cotação e da Prospecção, credencial `BIGDATACORP_USER`/`BIGDATACORP_PASSWORD`, só no ambiente). O repasse ao cliente foi liberado pelo advogado (plano aprovado). Cobra por dataset, inclusive a consulta sem registro (a vistoria da Rede Vistorias vazia não é cobrada). Preços da 1ª faixa da documentação pública (até 10 mil consultas por mês), lidos em 11/11/2026. Ficam fora, por desenho: score e restrição de crédito, contato e endereço de pessoa física, parentes, antecedentes, política, apostas, SUS e TSE. | Sem teto por host e sem limite diário por conta e card; sem alerta de orçamento (decisões do Rodrigo, 11/11). O freio é o cache do dia e a telemetria (`Premium::Registro`). 20 grátis por card e por conta a cada mês. Uma tentativa por consulta e uma de token, com teto da chamada inteira no prazo do dataset (nada de repetir consulta paga). | Por conta, até o fim do dia |
 | (sem rede) | Exames e procedimentos (TUSS, F4); nome de doenças (CID-10, F4) | Tabelas oficiais no repositório (`lib/ferramentas_prontas/`, origem e termos ao lado): a TUSS 22 da ANS (dados abertos, PDA-049; **licença do conjunto não confirmada**, parte das publicações da ANS é CC BY-NC-SA; uso autorizado pelo Rodrigo em 10/11/2026) e a CID-10 do DATASUS. Um robô diário no GitHub (`ferramentas-prontas-tabelas.yml`) baixa as duas e abre PR quando mudam; nada é baixado em produção. | — | sem cache |
 | (sem rede) | CPF válido; feriados (última reserva); DDD (reserva, só o estado); localização (reserva: a sede mais próxima) | Calculado na plataforma. A tabela das sedes vem da base "municipios-brasileiros" (licença MIT, sobre os códigos e nomes do IBGE). | — | CPF, DDD só com o estado e sede aproximada: sem cache |
 
@@ -97,6 +98,59 @@ sede de município mais próxima, calculada aqui, sem rede.
 
 Calculado aqui: nenhum pedido sai, a resposta não traz o número, e a consulta não vai ao cache nem à linha da consulta
 em segundo plano (responde na hora).
+
+## Premium (BigDataCorp): o que fica guardado e o que conta
+
+Decisões do Rodrigo de 11/11/2026, registradas aqui porque o comportamento é aceito, não um defeito:
+
+- **O documento consultado fica na linha da consulta em segundo plano.** Quando a consulta Premium sai do turno
+  (`agente_ferramenta_em_segundo_plano`), os argumentos já normalizados ficam em `autonomia_agent_tool_runs.arguments`,
+  como em qualquer ferramenta em segundo plano: o CPF de "Conferir a pessoa", o CNPJ, a placa. A telemetria
+  (`autonomia_ferramentas_premium_consultas`) nunca guarda o valor consultado. A linha da consulta segue a retenção e a
+  exclusão da conta.
+- **A vistoria sem registro conta para o cliente, com custo zero.** A Rede Vistorias não cobra a consulta vazia, mas a
+  regra do cliente é uma só: a consulta respondida conta, mesmo sem registro. Da 21ª do mês em diante, ela entra na
+  fatura pelo preço da vistoria, e a telemetria registra custo 0 para nós.
+- **Conferir a pessoa devolve nome e data de nascimento**, e o resultado fica no cache da conta até o fim do dia.
+- **Telefone de MEI e de empresário individual sai sempre.** O CNPJ é de empresa, mesmo quando o telefone é o da pessoa
+  dona. O telefone na lista "não perturbe" continua de fora.
+- **A resposta que se perde depois de a chamada sair** (o worker morreu) não conta para o cliente, e a execução fica com
+  uma linha só na telemetria (`tool_run_id` único). Se a execução já tinha gravado a linha dela, a linha vira
+  `sem_cobranca` com motivo `entrega_incerta`: a grátis volta ao saldo do mês e o preço zera; o custo nosso fica. Se não
+  tinha, entra uma linha de falha `entrega_incerta` com o custo do dataset, porque a BigDataCorp pode ter cobrado.
+- **Documento inválido: depende de quem recusa** (Rodrigo, 11/11, "A, não conta"). O CPF ou o CNPJ com dígito errado é
+  recusado por nós antes de chamar a BigDataCorp e não conta como consulta. O documento que a BigDataCorp recusa depois
+  de receber o pedido (-114 "INVALID DOC PARAMETER", -155 "INVALID CAR NUMBER PARAMETER") conta e é cobrado como o sem
+  registro (grátis até 20, cobrado da 21ª em diante), e o mesmo documento no mesmo dia vem do cache. A telemetria
+  registra o custo cheio do dataset.
+- **A falha com o pedido já no ar leva o custo na telemetria, sem contar para o cliente**: a resposta 200 que não lemos,
+  o tempo esgotado esperando a resposta e a entrega incerta. A BigDataCorp pode ter cobrado, e a telemetria precisa bater
+  com o painel dela. DATASET IS TOO SLOW, o 504, a conexão que nem abriu (o nome que não resolveu, a conexão recusada,
+  a rede ou o host fora de alcance, o SSL que não fechou o aperto de mão), o teto da chamada que estoura ainda no token
+  e o erro de token seguem sem custo. A resposta que levanta ao ser montada (defeito nosso) também vira falha com o
+  nosso custo, sem contar para o cliente.
+- **De onde vêm essas regras de custo:** a página "Regras de contabilização de consulta" da BigDataCorp
+  (<https://docs.bigdatacorp.com.br/plataforma/docs/regras-de-contabilização-de-consulta-plataforma-de-dados>,
+  atualizada em 07/07/2026, consultada em 09/11/2026 e de novo em 11/11/2026), ligada de "Como funciona a cobrança".
+  Ela diz "1 consulta = 1 cobrança" e traz a tabela: documento inválido **cobra** ("o retorno é acompanhado do código
+  `-114 — INVALID DOC PARAMETER`, que representa uma resposta válida da plataforma"); timeout inferior a 5 minutos
+  **cobra** (a consulta segue em processamento); a consulta sem retorno de dados **cobra**, exceto nos datasets de
+  contato com documento válido; DATASET IS TOO SLOW **não cobra**; o 504 **não cobra** (a requisição não chega à
+  plataforma); o -130 TOO MANY RESULTS sem `Limit` **não cobra**. A página cita só o -114; o -155 (o número do CAR
+  recusado) segue a mesma regra por ser o documento inválido do imóvel rural, e isso fica para conferir no painel da
+  BigDataCorp (BDC Center) na primeira consulta real.
+- **A grátis devolvida acima de 20 não se perde**: quando a entrega incerta desfaz uma grátis num mês que já passou das
+  20, a cobrada mais antiga do mês no mesmo card vira grátis. Por isso a fatura lê a coluna `cobranca` (`cobrada`, com o
+  `preco`), nunca o `numero`: depois da conversão o número se repete e a grátis convertida fica com número acima de 20.
+- **A telemetria que falha no banco deixa marca** no contador do dia: o motivo `premium.telemetria_falhou` em
+  `autonomia_ferramentas_prontas_usos.motivos` (por conta, card e dia). A conferência do dia lê ali (consulta no
+  comentário de `Premium::Execucao#cobrar`), porque o log some e o rastreador está desligado em produção.
+- **Duas consultas iguais da mesma conta no mesmo instante** chamam a BigDataCorp duas vezes e contam as duas. Não há
+  trava: ver o comentário de `Premium::Cache`.
+- **O 401 da BigDataCorp** apaga o token guardado e permite um reenvio com token novo (o 401 não é cobrado). A
+  Prospecção não ganha o reenvio extra; só passa a apagar o token recusado.
+- **Preço em centavos inteiros:** custo × 1,5, arredondado para cima ao centavo (o embargo do IBAMA, R$ 0,225, é
+  R$ 0,23).
 
 ## Reserva de cada fonte da F1
 

@@ -20,6 +20,9 @@ class Autonomia::Agents::Tools::Native::HorariosDisponiveis < Autonomia::Agents:
               'marcar, use o inicio exatamente como está aqui e o pessoa_id do mesmo horário.'.freeze
 
   class << self
+    # #2918: LÊ (consulta os horários livres). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'horarios_disponiveis'
     end

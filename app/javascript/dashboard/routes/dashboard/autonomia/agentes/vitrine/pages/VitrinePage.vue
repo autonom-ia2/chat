@@ -347,6 +347,7 @@ onMounted(async () => {
                 :ferramenta="ferramenta"
                 :tom="tomDe(ferramenta)"
                 :ja-sabe="jaSabe(ferramenta)"
+                :premium="vitrine.premiumDe(ferramenta.id)"
                 destaque
                 @abrir="aberta = $event"
               />
@@ -410,6 +411,7 @@ onMounted(async () => {
                 :ferramenta="ferramenta"
                 :tom="item.tom"
                 :ja-sabe="jaSabe(ferramenta)"
+                :premium="vitrine.premiumDe(ferramenta.id)"
                 @abrir="aberta = $event"
               />
             </li>

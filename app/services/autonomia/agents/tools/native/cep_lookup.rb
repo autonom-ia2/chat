@@ -33,6 +33,9 @@ class Autonomia::Agents::Tools::Native::CepLookup < Autonomia::Agents::Tools::Na
   PERGUNTA_PADRAO = 'Confirme o CEP do imóvel com o cliente.'.freeze
 
   class << self
+    # #2918: LÊ (consulta o CEP). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'consultar_cep'
     end

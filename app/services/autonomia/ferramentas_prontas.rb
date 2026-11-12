@@ -18,6 +18,22 @@ module Autonomia::FerramentasProntas
   # com a vitrine: quem inclui é o mesmo endpoint dela.
   FLAG_CONSTRUTOR = 'agente_ferramentas_prontas_construtor'.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
+  # AS RODADAS DE FERRAMENTA POR RESPOSTA (#2918, decisão do Rodrigo em 11/11/2026): as do Experimente da vitrine
+  # (`Experimente::ComModelo::MAX_RODADAS` aponta para cá) e as do agente com pronta no atendimento. Uma constante só, para
+  # o que o dono vê no teste não voltar a ser melhor do que o cliente recebe: com uma rodada, a NCM "café torrado" parava
+  # no grupo 0901.2, e o código da nota só vinha na segunda consulta.
+  RODADAS_POR_RESPOSTA = 3
+  # O PRAZO DAS RODADAS no atendimento: o relógio não corta nenhuma, na mesma conta da Lia
+  # (`QuoteAgent::Builder.rodadas_do_turno`: rodadas × a espera de uma rodada inteira). Uma rodada inteira é uma ida ao
+  # modelo no teto dela (`ResponsesClient::REQUEST_TIMEOUT`) e a janela da consulta no turno
+  # (`ConsultaNoTurno::ESPERA_DO_TURNO`, 8 s). O `ResponsesClient` só confere o relógio antes de abrir as rodadas 2 e 3, e
+  # nenhuma rodada normal chega perto disto; ele só pesa com a OpenAI degradada (as novas tentativas) ou numa fonte lenta
+  # no caminho síncrono (o `prazo_total` dela, até 12 s). O que limita é a rodada (três) e o prazo de cada consulta: um
+  # relógio curto cortaria a segunda consulta quando o modelo demora, e o agente voltaria a responder pela metade, sem
+  # aviso. Não vale o `MAX_SEGUNDOS` do Experimente: ele existe pelo corte de 15 s do pedido web; o atendimento roda no
+  # `ReplyJob`. Constante lida no corpo do módulo: `ConsultaNoTurno` não pode ler constante daqui no corpo da classe dele.
+  PRAZO_DAS_RODADAS = RODADAS_POR_RESPOSTA *
+                      (Crm::Ai::ResponsesClient::REQUEST_TIMEOUT + Autonomia::Agents::Tools::ConsultaNoTurno::ESPERA_DO_TURNO)
 
   module_function
 
@@ -36,6 +52,13 @@ module Autonomia::FerramentasProntas
   # As fontes do catálogo liberadas para a conta, na ordem do catálogo.
   def disponiveis(account)
     Catalogo.todas.select { |fonte| disponivel?(account, fonte) }
+  end
+
+  # As que o Construtor e o cartão "pode ganhar" (F3) podem sugerir. Os dois filtros valem juntos: só as da vitrine
+  # (`da_vitrine`: fora as de uso interno, #2909) e, delas, nenhuma Premium (F7): consulta paga só entra no agente pela
+  # escolha de uma pessoa, na vitrine.
+  def sugeriveis(account)
+    da_vitrine(account).reject(&:premium?)
   end
 
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.
@@ -61,6 +84,17 @@ module Autonomia::FerramentasProntas
     disponivel?(agent.account, tool.fonte_do_catalogo) && agent.agent_type != AGENTE_DE_COTACAO
   end
 
+  # As rodadas do agente que RECEBE ao menos uma pronta no turno (`no_turno?`: a flag das prontas e a da fonte ligadas na
+  # conta dele, fora da Lia). -> kwargs para o `Answerer`, ou nil (vale o padrão de quem chama). Sem a flag das prontas,
+  # nem consulta o banco. O Rodrigo autorizou CONSULTAR até 3 vezes, não escrever: a ferramenta que escreve roda uma vez
+  # por turno (`uma_escrita_por_turno`, `Tools::UmaEscritaPorTurno`); a leitura segue livre.
+  def rodadas(agent)
+    return nil if agent.blank? || agent.agent_type == AGENTE_DE_COTACAO || !ligada?(agent.account)
+    return nil unless agent.tools.enabled.where.not(fonte_pronta: nil).any? { |tool| tool.pronta? && no_turno?(tool, agent) }
+
+    { max_rodadas: RODADAS_POR_RESPOSTA, max_segundos: PRAZO_DAS_RODADAS, uma_escrita_por_turno: true }
+  end
+
   # A pronta calculada aqui (o CPF: nenhum host) não vai ao caminho em segundo plano do #2749 (`ConsultaNoTurno.aplica?`):
   # responde na hora e não abre a linha da consulta, que guardaria o argumento.
   def calculada_aqui?(tool)
@@ -80,9 +114,31 @@ module Autonomia::FerramentasProntas
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
-  def executor_para(tool, params:, **opcoes)
+  # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria. Também só dela:
+  # `pode_cobrar` e `em_andamento`, do Experimente (`Premium::Execucao`).
+  OPCOES_DA_PREMIUM = %i[pode_cobrar em_andamento].freeze
+
+  # O que o Guia não faz por ninguém (`Guide::Acoes::SO_NA_TELA`; revisor, 12/11): o Experimente faz consulta de
+  # verdade, e no card Premium usa as grátis do mês e, depois delas, cobra com o clique no preço (`confirmou_preco`). O
+  # Guia nunca manda esse clique, nem lê o pedido do Experimente Premium: o teste é só na tela.
+  SO_NA_TELA_DO_GUIA = ['POST autonomia/ferramentas_prontas/experimentar', 'GET autonomia/ferramentas_prontas/experimentar/:pedido']
+                       .index_with('ready_tool_test').freeze
+
+  def executor_para(tool, params:, tool_run_id: nil, **opcoes)
+    if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
+      return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, **opcoes.slice(*OPCOES_DA_PREMIUM))
+    end
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
-    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)
+    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes.except(*OPCOES_DA_PREMIUM))
+  end
+
+  # O fuso da conta, para o "hoje" das prontas e o mês das grátis Premium. Sem ele (defeito ao ler a conta), o da
+  # plataforma: quem pergunta nunca levanta.
+  def fuso_da_conta(account)
+    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][pronta] fuso da conta indisponível conta=#{account&.id} #{e.class}")
+    Time.zone
   end
 end

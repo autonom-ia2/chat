@@ -9,6 +9,9 @@
 # nada sozinha: a pessoa clica, e a guarda da rota aplica a permissão dela.
 class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Native::Base
   class << self
+    # #2918: LÊ (monta o botão para a tela, sem gravar nada). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'mostrar_tela'
     end
