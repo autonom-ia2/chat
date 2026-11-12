@@ -115,6 +115,22 @@ describe('CrmCardCustomFields', () => {
     expect(store.dispatch).toHaveBeenCalledWith('attributes/get');
   });
 
+  // #2435: o campo com "Mostrar na tela" desligado some do card; o valor fica.
+  it('hides a card field marked as hidden from the screen', () => {
+    setGetters({
+      defs: definitions.map(definition =>
+        definition.attributeKey === 'seats'
+          ? { ...definition, ocultoNaTela: true }
+          : definition
+      ),
+    });
+    const wrapper = mountFields();
+
+    expect(
+      wrapper.findAll('[data-field]').map(row => row.attributes('data-field'))
+    ).toEqual(['plan', 'signed']);
+  });
+
   it('saves only the edited key through crmKanban/updateCard', async () => {
     const wrapper = mountFields();
 

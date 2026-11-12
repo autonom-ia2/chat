@@ -145,7 +145,13 @@
     },
     "BADGES": {
       "PRE_CHAT": "Pré-chat",
-      "RESOLUTION": "Resolução"
+      "RESOLUTION": "Resolução",
+      "OCULTO": "Fora da tela"
+    },
+    "MOSTRAR_NA_TELA": {
+      "TITULO": "Mostrar na tela",
+      "AJUDA": "Desligado, o campo some das telas. Ele continua guardado, e a automação e a IA ainda usam. Quem atende ainda pode ver o valor por outros caminhos. Para mostrar de novo: Configurações > Atributos Personalizados.",
+      "ESCONDIDO_DE_TODAS": "Escondido de todas as telas."
     }
   }
 }
