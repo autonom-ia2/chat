@@ -62,6 +62,7 @@ const copiar = async valor => {
 };
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <BlocoDoPainel
     v-if="definicoes.length"

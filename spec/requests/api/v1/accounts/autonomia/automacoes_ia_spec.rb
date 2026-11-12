@@ -259,7 +259,8 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
     end
 
     it 'o cartão leva a média de tokens do passo quando o registro os tem (#2574)' do
-      execucao = create(:autonomia_automacao_execucao, versao: versao, alvo: conversa)
+      # Outra conversa: a do before já tem uma execução aberta desta automação (uma por alvo).
+      execucao = create(:autonomia_automacao_execucao, versao: versao, alvo: create(:conversation, account: account, inbox: inbox))
       ia = { 'custo_usd' => 0.001, 'tokens_entrada' => 1_000, 'tokens_saida' => 200 }
       create(:autonomia_automacao_registro, execucao: execucao, passo: 'p3', dados: { 'ia' => ia })
 
