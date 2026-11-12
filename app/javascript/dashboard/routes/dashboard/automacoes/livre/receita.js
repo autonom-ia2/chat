@@ -2,6 +2,7 @@
 // no formato de lib/operator_guide/automacao-receita.schema.json). Tudo devolve
 // uma cópia nova: a versão salva é imutável, e o editor só troca a referência.
 // O que o editor não conhece (um passo que só o Guia monta) passa intacto.
+import { RAMOS_DOS_PASSOS_NOVOS, ehPassoNovo } from './passosNovos/passosNovos';
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
@@ -15,6 +16,8 @@ export const RAMOS = {
   em_outro_registro: ['passos'],
   // G13 (#2670): o que fazer quando o outro sistema recusa.
   webhook: ['se_recusar'],
+  // Protótipo #2931–#2936: os galhos dos passos novos (aprovado, recusado...).
+  ...RAMOS_DOS_PASSOS_NOVOS,
 };
 
 // G63 (#2830): o galho do "esperar até" que roda a cada mensagem do cliente
@@ -164,10 +167,13 @@ const incompleto = passo => {
 };
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
-// e "Esperar até" completos.
+// e "Esperar até" completos. Protótipo #2931–#2936: o servidor ainda não
+// conhece os passos novos, então a receita com um deles não vai à API (o
+// Salvar tudo e o Ligar ficam desligados e dizem que o passo está em teste).
 export const falta = receita => {
   if (!receita?.gatilho?.tipo) return 'GATILHO';
   if (!receita.passos?.length) return 'PASSO';
+  if (todosOsPassos(receita.passos).some(ehPassoNovo)) return 'EM_TESTE';
   if (todosOsPassos(receita.passos).some(incompleto)) return 'COMPLETAR';
   return null;
 };

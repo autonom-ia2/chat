@@ -27,22 +27,14 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # Desligar sempre funciona (D7, F3.4): quem está no meio para agora, e a próxima rodada de quem já estava na fila
   # também para (o executor confere `ativa`).
   #
-  # Sem callback de propósito: a execução órfã (alvo apagado) não passa no `belongs_to`, e desligar não pode falhar por
-  # ela. Leva a finalizada_em junto, como o CHECK pede, e apaga os textos da IA (Execucao::AO_TERMINAR). A que esperava
-  # fecha com o registro do porquê, no passo da espera (#2750): com ou sem prazo, não some calada do histórico. A que
-  # está no meio de uma rodada não ganha registro aqui: o cursor dela não diz em que passo a rodada está, e a rodada
-  # para sozinha (Executor#gravar).
+  # Sem callback de propósito, e com os textos da IA apagados (Execucao.parar_por_fora!). A que esperava fecha com o
+  # registro do porquê, no passo da espera (#2750). A que está no meio de uma rodada não ganha registro aqui: o cursor
+  # dela não diz em que passo a rodada está; leva o porquê e a rodada para sozinha e o registra (Executor#parou_por_fora).
   # Depois do commit, a cobertura da agente de IA que ainda valia devolve a conversa à pessoa (decisão 18).
   def desligar!
     fechadas = transaction do
       update!(ativa: false)
-      agora = Time.current
-      esperando = execucoes.abertas.where(estado: 'esperando').pluck(:id, :cursor)
-      ids = execucoes.abertas.pluck(:id)
-      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora, # rubocop:disable Rails/SkipsModelValidations
-                                   **::Autonomia::Automacao::Execucao::AO_TERMINAR)
-      registrar_desligada(esperando, agora)
-      ids
+      ::Autonomia::Automacao::Execucao.parar_por_fora!(execucoes, 'desligada')
     end
     ::Autonomia::Automacao::Cobertura.encerrar(fechadas) if fechadas.any?
     # G55: as execuções fecharam em lote; a campanha da vez confere de novo (desligada, nada sai).
@@ -137,17 +129,6 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   end
 
   private
-
-  # Uma linha por espera fechada no desligar, numa gravação só.
-  def registrar_desligada(abertas, agora)
-    return if abertas.empty?
-
-    linhas = abertas.map do |execucao_id, cursor|
-      { account_id: account_id, automacao_id: id, execucao_id: execucao_id, passo: cursor || 'inicio', resultado: 'pulado',
-        motivo: 'desligada', dados: {}, created_at: agora }
-    end
-    ::Autonomia::Automacao::Registro.insert_all!(linhas) # rubocop:disable Rails/SkipsModelValidations
-  end
 
   def recusa_para_ligar(usuario)
     return Recusa.new(motivo: 'sem_versao', problemas: []) unless versao_ativa

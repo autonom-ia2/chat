@@ -55,6 +55,8 @@ import { useFormato } from './useFormato';
 import { useFocoPreso } from './useFocoPreso';
 import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
 import CardArquivado from '../arquivados/CardArquivado.vue';
+import CardAutomacoes from '../automacaoNoCrm/CardAutomacoes.vue';
+import { usePodeVerAutomacoes } from '../automacaoNoCrm/useAutomacaoNoCrm';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -425,6 +427,15 @@ const confirmarArquivar = () => {
 // #2095: com a flag, a janela nova fica aberta até a página responder (erro aparece nela; o sucesso fecha o card).
 const arquivado = computed(
   () => props.arquivadosLigado && status.value === 'archived'
+);
+// #2499 F6.3: "Automações deste card" só em card aberto e para quem pode ver automações (com o motor e os gatilhos).
+const podeVerAutomacoes = usePodeVerAutomacoes();
+const mostraAutomacoes = computed(
+  () =>
+    editando.value &&
+    podeVerAutomacoes.value &&
+    status.value === 'open' &&
+    !arquivado.value
 );
 const dialogoArquivarNovo = ref(null);
 const arquivarNovo = () =>
@@ -817,7 +828,15 @@ defineExpose({
                 @arquivar="arquivadosLigado ? arquivarNovo() : arquivar()"
                 @conversa="abrirConversa()"
                 @cliente="cliente.pedir"
-              />
+              >
+                <template v-if="mostraAutomacoes" #antes-dos-detalhes>
+                  <CardAutomacoes
+                    :card="card"
+                    :etapa="etapaDoCard"
+                    :pode-gerenciar="podeGerenciar"
+                  />
+                </template>
+              </CardResumo>
             </template>
 
             <TelaEtapa

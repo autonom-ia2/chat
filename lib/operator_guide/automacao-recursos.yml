@@ -719,6 +719,7 @@ fora:
       - autonomia/automacoes_webhook
       - crm/stage_automations
       - crm/stage_automation_steps
+      - crm/cards/automacoes
       - autonomia/vigias
   - motivo: >-
       Agenda que fala com o cliente ou sai da plataforma. Lembrar e mandar o link de novo é o passo mensagem; marcar pela

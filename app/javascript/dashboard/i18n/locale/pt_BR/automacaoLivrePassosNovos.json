@@ -1,0 +1,253 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "PASSOS_NOVOS": {
+      "MONTAR": "Montar o passo",
+      "EM_TESTE": "Este passo ainda está em teste. Dá para montar e ensaiar, mas ainda não dá para salvar.",
+      "ENSAIO_DE_EXEMPLO": "Ensaio de exemplo: esta automação tem um passo que ainda está em teste. As conversas abaixo são inventadas e nada foi conferido de verdade.",
+      "CAMINHO_NO_ENSAIO": "{caminho}:",
+      "SEM_MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, não manda nada e a automação para nesta conversa.",
+      "LISTA": "{inicio} e {ultimo}",
+      "QUEM": {
+        "RESPONSAVEL": "Quem cuida do card",
+        "PESSOA": "Uma pessoa da equipe",
+        "TIME": "Um time",
+        "QUAL_PESSOA": "Qual pessoa",
+        "QUAL_TIME": "Qual time",
+        "NINGUEM": "Ainda não há ninguém para escolher aqui."
+      },
+      "QUEM_EM_FRASE": {
+        "A": {
+          "RESPONSAVEL": "a quem cuida do card",
+          "PESSOA": "a {nome}",
+          "TIME": "ao time {nome}",
+          "PESSOA_SEM_NOME": "a uma pessoa da equipe",
+          "TIME_SEM_NOME": "a um time"
+        },
+        "DE": {
+          "RESPONSAVEL": "de quem cuida do card",
+          "PESSOA": "de {nome}",
+          "TIME": "do time {nome}",
+          "PESSOA_SEM_NOME": "de uma pessoa da equipe",
+          "TIME_SEM_NOME": "de um time"
+        },
+        "NOME": {
+          "RESPONSAVEL": "quem cuida do card",
+          "PESSOA": "{nome}",
+          "TIME": "o time {nome}",
+          "PESSOA_SEM_NOME": "uma pessoa da equipe",
+          "TIME_SEM_NOME": "um time"
+        }
+      },
+      "APROVACAO": {
+        "NOME": "Pedir aprovação",
+        "DICA": "Para e espera alguém aprovar ou recusar antes de seguir.",
+        "PERGUNTA_PADRAO": "Posso seguir com este pedido?",
+        "FRASE": "Pedir aprovação {quem}: {pergunta}",
+        "ENSAIO": "Pediria aprovação {quem}. No ensaio, ninguém recebe o pedido.",
+        "HISTORICO": "{quem} aprovou hoje às 14h20.",
+        "HISTORICO_MOTIVO": "Motivo: cliente antigo, pode seguir.",
+        "QUEM": "Quem aprova",
+        "PERGUNTA": "O que perguntar",
+        "PRAZO": "Prazo para responder",
+        "QUEM_PODE": "Só quem pode ver o card recebe o pedido. Se ninguém responder no prazo, a automação segue pelo caminho “Se ninguém responder a tempo”.",
+        "VER_PEDIDO": "Ver como quem aprova"
+      },
+      "PEDIDO": {
+        "TITULO": "Pedido de aprovação",
+        "SUBTITULO": "É assim que o pedido chega para quem aprova.",
+        "PERGUNTA_DE": "A automação pergunta:",
+        "SEM_PERGUNTA": "Escreva o que perguntar.",
+        "PRAZO": "Responda em até {prazo}. Quem recebe: {quem}.",
+        "APROVADO": "Você aprovou. A automação seguiu.",
+        "RECUSADO": "Você recusou. A automação seguiu pelo caminho da recusa.",
+        "MOTIVO_DITO": "Motivo: {motivo}",
+        "MOTIVO": "Quer dizer o motivo? Não é obrigatório.",
+        "MOTIVO_EXEMPLO": "Por exemplo: o desconto passou do combinado.",
+        "CONFIRMAR_RECUSA": "Recusar",
+        "VOLTAR": "Voltar",
+        "APROVAR": "Aprovar",
+        "RECUSAR": "Recusar",
+        "CARD": "O card do pedido",
+        "FECHAR": "Fechar"
+      },
+      "REPETIR": {
+        "NOME": "Fazer para cada um de uma lista",
+        "DICA": "Repete os passos para cada card de uma etapa, cada contato com uma etiqueta ou cada contato de um público.",
+        "DA_ETAPA": "cada card da etapa {etapa}",
+        "DA_ETAPA_SEM_NOME": "cada card da etapa escolhida",
+        "DA_ETIQUETA": "cada contato com a etiqueta {etiqueta}",
+        "DA_ETIQUETA_SEM_NOME": "cada contato com a etiqueta escolhida",
+        "DO_PUBLICO": "cada contato do público {publico}",
+        "DO_PUBLICO_SEM_NOME": "cada contato do público escolhido",
+        "FRASE": "Para {lista}, até {teto} por vez",
+        "ENSAIO": "Hoje entrariam {total}. Os primeiros: {nomes}.",
+        "ENSAIO_VAZIO": "Escolha a lista para ver quantos entrariam.",
+        "HISTORICO": "Fez para {feitos} de {total}. Ninguém ficou de fora.",
+        "HISTORICO_NOMES": "{nomes} e mais {mais}.",
+        "LISTA": "De onde vem a lista",
+        "DE_ETAPA": "Os cards de uma etapa",
+        "DE_ETIQUETA": "Os contatos com uma etiqueta",
+        "DE_PUBLICO": "Os contatos de um público",
+        "QUAL_ETAPA": "Qual etapa",
+        "QUAL_ETIQUETA": "Qual etiqueta",
+        "QUAL_PUBLICO": "Qual público",
+        "ENTRARIAM_HOJE": "entraria hoje | entrariam hoje",
+        "PRIMEIROS": "Os primeiros da lista",
+        "FICAM_FORA": "Só entra quem você pode ver. Contatos bloqueados ou que pediram para não receber ficam de fora.",
+        "TETO": "No máximo por vez",
+        "TETO_DICA": "De 1 a {maximo}. Quem passar disso fica para a próxima vez.",
+        "TETO_FORA": "Escolha um número de 1 a {maximo}.",
+        "RITMO": "Ritmo",
+        "RITMO_AOS_POUCOS": "Aos poucos: um por minuto",
+        "RITMO_RAPIDO": "Mais rápido: um a cada 10 segundos",
+        "ONDE_POR_PASSOS": "Depois de salvar, ponha os passos de cada um no caminho “Em cada um da lista”."
+      },
+      "BLOCO": {
+        "NOME": "Usar outra automação",
+        "DICA": "Usa um bloco pronto e, quando ele termina, segue daqui.",
+        "FRASE": "Usar o bloco “{bloco}”",
+        "FRASE_SEM_BLOCO": "Usar um bloco",
+        "ENSAIO": "Entraria no bloco e faria: {passos}.",
+        "HISTORICO": "Usou o bloco “{bloco}”.",
+        "VAZIO": "Você ainda não tem blocos.",
+        "VAZIO_BOTAO": "Ver minhas automações",
+        "QUAL": "Qual bloco usar",
+        "O_QUE_FAZ": "O que este bloco faz",
+        "MUDA_EM_TODAS": "Se você mudar o bloco, muda em todas as automações que usam ele."
+      },
+      "CONSULTAR": {
+        "NOME": "Buscar informação em outro sistema",
+        "DICA": "Busca um dado fora daqui, como o status de um pedido, e usa nos próximos passos.",
+        "ENDERECO_PROPRIO": "um endereço próprio",
+        "SEM_FONTE": "outro sistema",
+        "FRASE": "Buscar em {fonte}: {dados}",
+        "FRASE_SEM_DADO": "Buscar em {fonte}",
+        "ENSAIO": "Buscaria em {fonte}. No ensaio, só busca se você pedir.",
+        "BUSCAR_DE_VERDADE": "Buscar de verdade neste ensaio",
+        "CONFIRMAR_BUSCA": "Vai buscar uma vez em {fonte}, agora. O resultado só aparece aqui: nada é guardado e ninguém recebe nada.",
+        "BUSCAR_AGORA": "Buscar agora",
+        "BUSCOU_NO_ENSAIO": "Buscou em {fonte}:",
+        "DADO_E_VALOR": "{dado}: {valor}",
+        "HISTORICO": "Buscou em {fonte}: {dado} é {valor}.",
+        "HISTORICO_SEM_DADO": "Buscou em {fonte}.",
+        "OUTRO_ENDERECO": "Outro endereço",
+        "FONTE": "Onde buscar",
+        "ENDERECO": "Endereço",
+        "ENDERECO_EXEMPLO": "https://sualoja.com/pedidos",
+        "ENDERECO_DICA": "Comece com https://. Endereço interno da empresa não é aceito.",
+        "ENDERECO_RUIM": "O endereço precisa começar com https://.",
+        "TESTAR": "Fazer um teste",
+        "TESTAR_DICA": "O teste busca uma vez, só quando você toca no botão.",
+        "TOQUE_NO_DADO": "Toque no dado que você quer guardar",
+        "RESPOSTA_VAZIA": "O teste não trouxe nenhum dado.",
+        "GUARDADOS": "Dados guardados",
+        "NOME_DO_DADO": "Nome do dado",
+        "NOME_DICA": "Com esse nome ele aparece no “Pôr um dado” dos próximos passos.",
+        "FALTA_DADO": "Faça um teste e toque em pelo menos um dado.",
+        "SE_FALHAR": "Se o outro sistema falhar ou demorar, a automação segue pelo caminho “Se não conseguir buscar”."
+      },
+      "REUNIAO": {
+        "NOME": "Marcar reunião pela conversa",
+        "DICA": "Oferece 3 horários livres, o cliente escolhe e a reunião fica marcada.",
+        "CONVITE_PADRAO": "Oi! Posso te ligar em um destes horários?",
+        "FRASE": "Oferecer 3 horários na agenda {quem} e marcar a reunião",
+        "ENSAIO": "Ofereceria {horarios}. No ensaio, nada é enviado.",
+        "HISTORICO": "O cliente escolheu {horario}. A reunião foi marcada no card.",
+        "MINUTOS": "{n} minutos",
+        "COM": "Na agenda de quem",
+        "DURACAO": "Quanto tempo dura",
+        "CONVITE": "O que dizer antes dos horários",
+        "COMO_O_CLIENTE_VE": "Como o cliente vê",
+        "SEM_BOTOES": "Se o canal não tem botões, vão os números 1, 2 e 3.",
+        "ESPERA": "Esperar a resposta por",
+        "COMO_FUNCIONA": "A IA entende a resposta do cliente. Se nenhum horário servir, a automação segue pelo caminho “Se pedir outro horário”."
+      },
+      "PESQUISA": {
+        "NOME": "Pesquisa de satisfação",
+        "DICA": "Pergunta uma nota de 0 a 10 e segue por um caminho para cada nota.",
+        "PERGUNTA_PADRAO": "De 0 a 10, que nota você dá para o nosso atendimento?",
+        "FRASE": "Perguntar a nota: {pergunta}",
+        "ENSAIO": "Perguntaria a nota e esperaria a resposta por {espera}. No ensaio, nada é enviado.",
+        "HISTORICO": "Nota 9: “Gostei muito, só demorou um pouco”.",
+        "HISTORICO_CAMINHO": "Seguiu pelo caminho “{caminho}”.",
+        "DIAS": "{n} dias",
+        "PERGUNTA": "Pergunta",
+        "COMO_O_CLIENTE_VE": "Como o cliente vê",
+        "BOTOES": "Botões de 0 a 10",
+        "FAIXAS": "Caminhos pela nota",
+        "BAIXA": "Nota baixa",
+        "DE_ZERO_ATE": "de 0 até",
+        "BAIXA_ATE": "A nota baixa vai até",
+        "MEDIA": "Nota média",
+        "DE_ATE": "de {de} até {ate}",
+        "ALTA": "Nota alta",
+        "DE": "de",
+        "ALTA_DESDE": "A nota alta começa em",
+        "ATE_DEZ": "até 10",
+        "FAIXAS_RUINS": "Deixe pelo menos uma nota para a nota média.",
+        "INTERVALO": "Perguntar de novo à mesma pessoa só depois de",
+        "ESPERA": "Esperar a resposta por",
+        "RESUMO_EXEMPLO": "Na lista, a automação mostra a média e quantas pessoas responderam. Exemplo: média 8,6 com 37 respostas.",
+        "REGRAS": "Contatos bloqueados ou que pediram para não receber ficam de fora. A nota fica no contato e no card."
+      },
+      "PREVIA": {
+        "TITULO": "Veja como fica",
+        "NO_ENSAIO": "No ensaio",
+        "NO_HISTORICO": "No histórico (exemplo)",
+        "VER_DENTRO": "Ver o que aconteceu dentro"
+      },
+      "EXEMPLO": {
+        "BLOCOS": {
+          "BOAS_VINDAS": {
+            "NOME": "Boas-vindas do cliente novo",
+            "FRASE": "Dá as boas-vindas e pergunta se ficou alguma dúvida.",
+            "PASSO_1": "Mandar a mensagem de boas-vindas",
+            "PASSO_2": "Esperar 1 dia",
+            "PASSO_3": "Perguntar se ficou alguma dúvida"
+          },
+          "LEMBRAR": {
+            "NOME": "Lembrar o responsável",
+            "FRASE": "Avisa quem cuida do card e espera ele responder.",
+            "PASSO_1": "Avisar quem cuida do card",
+            "PASSO_2": "Esperar até o card mudar de etapa"
+          },
+          "DOCUMENTO": {
+            "NOME": "Pedir um documento",
+            "FRASE": "Pede um documento ao cliente e lembra uma vez.",
+            "PASSO_1": "Pedir o documento ao cliente",
+            "PASSO_2": "Lembrar depois de 2 dias, se não chegar"
+          }
+        },
+        "INTEGRACOES": {
+          "LOJA": "Loja virtual",
+          "CEP": "Busca de CEP",
+          "BOLETOS": "Boletos"
+        },
+        "DADOS": {
+          "NUMERO_DO_PEDIDO": "Número do pedido",
+          "STATUS_DO_PEDIDO": "Status do pedido",
+          "PREVISAO_DE_ENTREGA": "Previsão de entrega",
+          "NOME_DO_CLIENTE": "Nome do cliente",
+          "RUA": "Rua",
+          "BAIRRO": "Bairro",
+          "CIDADE": "Cidade",
+          "ESTADO": "Estado",
+          "SITUACAO_DO_BOLETO": "Situação do boleto",
+          "VENCIMENTO_DO_BOLETO": "Vencimento do boleto",
+          "VALOR_DO_BOLETO": "Valor do boleto"
+        },
+        "PUBLICOS": {
+          "CLIENTES_ATIVOS": "Clientes ativos",
+          "SEM_COMPRA": "Sem compra há 90 dias"
+        },
+        "STATUS_ENVIADO": "Enviado",
+        "SITUACAO_PAGO": "Pago",
+        "HORARIO_1": "Quinta, 10h",
+        "HORARIO_2": "Quinta, 15h",
+        "HORARIO_3": "Sexta, 9h",
+        "CARD_TITULO": "Pedido com desconto de 12%",
+        "VALOR_OCULTO": "valor oculto"
+      }
+    }
+  }
+}
