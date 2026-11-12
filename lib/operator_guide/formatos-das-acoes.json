@@ -20547,6 +20547,16 @@
     ],
     "sem_corpo": true
   },
+  "POST relacionamentos/trazer/listas/:id/desfazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/listas#desfazer",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/listas_controller.rb:28",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/listas_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
   "POST saml_settings": {
     "campos": {
       "certificate": {

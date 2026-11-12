@@ -22,11 +22,14 @@ RSpec.shared_context 'with lista trazida' do
   let(:ana) { create(:contact, account: account, name: 'Ana A.', phone_number: '+5511987650001') }
   let(:bruno) { create(:contact, account: account, name: '', email: 'bruno.brandolim@exemplo.com.br') }
 
-  # As duas pessoas existem antes de a lista entrar, mesmo no exemplo que não fala delas.
+  # As duas pessoas existem antes de a lista entrar, mesmo no exemplo que não fala delas. Elas nascem ANTES de a conta
+  # ligar Empresas: com o recurso ligado, o Enterprise cria uma empresa pelo domínio do e-mail de quem nasce com e-mail
+  # de empresa (o Bruno), e o CompanyLinker liga a essa empresa quem chega com o mesmo domínio, no lugar da empresa
+  # escrita na planilha. Aqui a conta começa sem empresa nenhuma.
   before do
-    account.enable_features!('companies')
     ana
     bruno
+    account.enable_features!('companies')
   end
 
   # A lista já gravada. trazer: as marcas da conferência.
