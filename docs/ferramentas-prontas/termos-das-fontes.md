@@ -19,6 +19,46 @@ O teto global (`TetoDoProvedor`) é:
 - **janela fixa no Redis**: passou do teto, aquele provedor é pulado com o motivo `teto_do_provedor` e a reserva tenta;
 - **sem Redis, o pedido segue**: o teto protege a cota, não o dado. Fica um aviso no log.
 
+### IP próprio da conta (#2942)
+
+Com a flag `agente_ferramentas_prontas_ip_proprio`, as consultas grátis de cada conta saem por um IP próprio do plano
+datacenter da Webshare (o Premium e o WhatsApp não mudam). O teto muda junto:
+
+- **o pedido conta só no teto daquele IP**, e esse teto é o **global inteiro** do host (a tabela abaixo). A cota da fonte
+  é por IP e o IP é de uma conta só, então a fatia de 25% (que reparte o IP do servidor entre todas as contas) não se
+  aplica;
+- **não gasta a cota do IP do servidor**: o teto global e a fatia continuam valendo para quem sai por ele (flag
+  desligada, ou sem IP próprio, abaixo);
+- **o contador é do IP**: o IP que volta da quarentena para outra conta chega com o que já gastou na janela;
+- **exceção, a cota da chave**: se alguém configurar a chave gratuita da parallelum ou da AwesomeAPI, a fonte passa a
+  limitar pela chave (que vai no cabeçalho também pelo proxy), e o pedido volta a contar no teto global e na fatia,
+  saia por onde sair. Hoje as duas ficam sem chave (decisão do Rodrigo, 12/11/2026);
+- **os IPs da Webshare são compartilhados com outros clientes dela**: o limite real de cada IP só se conhece medindo.
+  Toda resposta 429 ou 403 vai ao log (`[autonomia][pronta][saida] recusa`) e ao contador do dia no Redis
+  (`autonomia:prontas:saida:recusas:<dia>`, por saída, host e status, inclusive pelo IP do servidor). Três recusas do
+  mesmo host no mesmo IP, sem pausa de 10 minutos, põem o IP de molho por 6 horas (no máximo 5 IPs em 24 horas), e a
+  conta ganha outro na consulta seguinte. Com a chave configurada, o 429 e o 403 daquele host não contam para isso;
+- **o proxy que cai** (ligação recusada, sem resposta no prazo de abertura ou ao pedido do túnel; túnel recusado, que
+  primeiro relê a credencial e tenta uma vez de novo): a chamada repete pelo IP do servidor, no teto dele, e só depois a
+  queda conta. Três quedas no mesmo IP numa janela fixa de 20 minutos (aberta pela 1ª queda), zeradas a cada sucesso,
+  trocam o IP da conta (no máximo uma troca por conta a cada 24 horas, com o IP antigo de molho por 24 horas, e só se
+  houver IP livre). Se o IP novo também cair no mesmo dia, a conta fica pelo servidor até vencer a troca. Sem IP livre
+  para a troca, a contagem zera. Mais de 30% dos IPs das contas com a flag ligada caindo na mesma janela (ao menos 2) é
+  a Webshare fora: ninguém vai de molho, e todas as contas saem pelo servidor por 20 minutos (alerta `webshare_fora`).
+  Túnel com 502 ou 504 e demora com o túnel já aberto são do site: não repetem nem contam contra o IP. Sem Redis, nada
+  conta nem troca, e a conta sai pelo servidor;
+- **a ida à Webshare cabe no prazo da consulta**: a lista dos IPs só é buscada se der tempo antes do prazo da consulta;
+  sem tempo, serve a lista vencida há menos de 30 minutos ou a consulta sai pelo servidor, e a troca do IP fica para a
+  próxima queda. Com tempo, a consulta espera a lista nova, e a reconciliação nunca usa a vencida;
+- **sem IP próprio** (Webshare fora, fatia vazia, nenhum IP livre, sem tempo para buscar a lista): a consulta sai pelo
+  IP do servidor, como antes, e o cliente recebe a resposta; fica o aviso no log, o alerta `sem_ip_proprio` e o contador
+  `autonomia:prontas:saida:sem_ip:<dia>` (decisão do Rodrigo, 12/11/2026).
+
+Configuração por stack (só os nomes): `WEBSHARE_API_KEY` (a mesma do WhatsApp Híbrido), `WEBSHARE_LOOKUP_PROXY_ADDRESSES`
+(os IPs desta stack para as consultas, separados por vírgula, sem repetir os de outra stack) e os mesmos IPs também em
+`WEBSHARE_RESERVED_PROXY_ADDRESSES` (o WhatsApp nunca os oferece). O código confere: IP da fatia fora da reservada fica de
+fora, com alerta. `WEBSHARE_DATACENTER_PLAN_ID` é opcional (sem ela, vale o plano datacenter ativo).
+
 **Desligar um provedor sem deploy:** ponha o host na configuração `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS`, uma lista
 separada por vírgula. Vale tanto como configuração da instalação (Super Admin) quanto como variável de ambiente.
 Desligado, o provedor é pulado com o motivo `provedor_desligado`.
