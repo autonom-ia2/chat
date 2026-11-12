@@ -4,15 +4,18 @@ import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import LivreDuracao from '../components/LivreDuracao.vue';
+import LivreModelo from '../components/LivreModelo.vue';
 import { INTERVALOS, P, faixasProntas } from './passosNovos';
 
 // #2936 — Pesquisa de satisfação: a pergunta (já vem pronta), as três faixas da
 // nota, de quanto em quanto tempo a mesma pessoa pode ser perguntada de novo e
 // quanto esperar a resposta. A prévia mostra a pergunta com os botões de 0 a
-// 10. Resposta escrita ("nota 8, mas demorou") a IA entende.
+// 10. Resposta escrita ("nota 8, mas demorou") a IA entende. Com a janela de
+// 24 h fechada, vai o modelo aprovado escolhido, ou nada.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
+  atributosDo: { type: Function, required: true },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -85,6 +88,14 @@ const TOM = {
         </ol>
       </div>
     </figure>
+
+    <LivreModelo
+      :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.MODELO')"
+      :model-value="modelValue.modelo || null"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      @update:model-value="modelo => mudar({ modelo })"
+    />
 
     <fieldset class="flex flex-col gap-3" data-pesquisa-faixas>
       <legend class="mb-1.5 text-sm font-medium text-n-slate-12">

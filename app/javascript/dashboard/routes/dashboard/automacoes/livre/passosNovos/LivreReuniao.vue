@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import LivreDuracao from '../components/LivreDuracao.vue';
+import LivreModelo from '../components/LivreModelo.vue';
 import LivreQuem from './LivreQuem.vue';
 import { DURACOES, P } from './passosNovos';
 import { horariosLivres } from './adaptadorFalso';
@@ -11,11 +12,13 @@ import { horariosLivres } from './adaptadorFalso';
 // #2935 — Marcar reunião pela conversa: na agenda de quem, quanto tempo, o que
 // dizer antes dos horários e quanto esperar a resposta. A prévia mostra a
 // mensagem com os 3 próximos horários livres, como o cliente vai ver. A IA de
-// decidir entende a resposta; nada de lista de palavras.
+// decidir entende a resposta; nada de lista de palavras. Com a janela de 24 h
+// fechada, vai o modelo aprovado escolhido, ou nada (como no passo mensagem).
 const props = defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
   opcoes: { type: Object, required: true },
+  atributosDo: { type: Function, required: true },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -88,6 +91,14 @@ const horarios = computed(() => horariosLivres(t));
       </div>
       <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${R}.SEM_BOTOES`) }}</p>
     </figure>
+
+    <LivreModelo
+      :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.MODELO')"
+      :model-value="modelValue.modelo || null"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      @update:model-value="modelo => mudar({ modelo })"
+    />
 
     <LivreDuracao
       :rotulo="$t(`${R}.ESPERA`)"

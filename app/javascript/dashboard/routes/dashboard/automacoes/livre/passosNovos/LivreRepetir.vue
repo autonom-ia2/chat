@@ -4,13 +4,13 @@ import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import LivreEtapa from '../components/LivreEtapa.vue';
-import { P, RITMOS, TETO_MAXIMO } from './passosNovos';
-import { contarItens } from './adaptadorFalso';
+import { LISTAS, P, RITMOS, TETO_MAXIMO } from './passosNovos';
+import { contarItens, publicosDaConta } from './adaptadorFalso';
 
 // #2932 — Para cada: a lista em palavras do dia a dia (os cards de uma etapa,
-// os contatos com uma etiqueta), o teto por vez e o ritmo. Antes de ligar, a
-// tela diz quantos entrariam hoje e mostra os 3 primeiros. Os passos de cada um
-// ficam no galho "Em cada um da lista", no Confira.
+// os contatos com uma etiqueta ou os de um público), o teto por vez e o ritmo.
+// Antes de ligar, a tela diz quantos entrariam hoje e mostra os 3 primeiros. Os
+// passos de cada um ficam no galho "Em cada um da lista", no Confira.
 const props = defineProps({
   modelValue: { type: Object, required: true },
   opcoes: { type: Object, required: true },
@@ -27,13 +27,21 @@ const mudar = mudanca =>
 
 const primeiraEtapa = () => props.etapas[0]?.options?.[0]?.value ?? null;
 const primeiraEtiqueta = () => props.opcoes.etiquetaPorNome?.[0]?.value || '';
-const listaDe = de =>
-  de === 'etapa'
-    ? { de, etapa_id: primeiraEtapa() }
-    : { de, etiqueta: primeiraEtiqueta() };
+// Os públicos vêm do adaptador falso até o motor existir.
+const publicos = computed(() => publicosDaConta(t));
+// Começar pronto: a primeira opção de cada lista já vem escolhida.
+const NOVA_LISTA = {
+  etapa: () => ({ de: 'etapa', etapa_id: primeiraEtapa() }),
+  etiqueta: () => ({ de: 'etiqueta', etiqueta: primeiraEtiqueta() }),
+  publico: () => ({
+    de: 'publico',
+    publico_id: publicos.value[0]?.value ?? null,
+  }),
+};
+const listaDe = de => NOVA_LISTA[de]();
 
 const fontes = computed(() =>
-  ['etapa', 'etiqueta'].map(de => ({
+  LISTAS.map(de => ({
     value: de,
     label: t(`${R}.DE_${de.toUpperCase()}`),
   }))
@@ -88,7 +96,10 @@ onMounted(() => {
         id => mudar({ lista: { de: 'etapa', etapa_id: id } })
       "
     />
-    <div v-else class="flex flex-col gap-1.5">
+    <div
+      v-else-if="modelValue.lista?.de === 'etiqueta'"
+      class="flex flex-col gap-1.5"
+    >
       <span class="text-sm font-medium text-n-slate-12">
         {{ $t(`${R}.QUAL_ETIQUETA`) }}
       </span>
@@ -100,6 +111,21 @@ onMounted(() => {
         :options="opcoes.etiquetaPorNome || []"
         @update:model-value="
           etiqueta => mudar({ lista: { de: 'etiqueta', etiqueta } })
+        "
+      />
+    </div>
+    <div v-else class="flex flex-col gap-1.5">
+      <span class="text-sm font-medium text-n-slate-12">
+        {{ $t(`${R}.QUAL_PUBLICO`) }}
+      </span>
+      <ChoiceSelect
+        data-repetir-publico
+        :model-value="modelValue.lista?.publico_id ?? ''"
+        :aria-label="$t(`${R}.QUAL_PUBLICO`)"
+        :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+        :options="publicos"
+        @update:model-value="
+          id => mudar({ lista: { de: 'publico', publico_id: id } })
         "
       />
     </div>

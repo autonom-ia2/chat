@@ -9,7 +9,7 @@ import { fraseDoValor } from '../frases';
 import { usePodeLerValor } from '../usePodeLerValor';
 import { P, PRAZO_PADRAO } from './passosNovos';
 import { cardDoPedido, valorDeExemplo } from './adaptadorFalso';
-import { quemEmFrase } from './frasesDosNovos';
+import { duracaoEmFrase, quemEmFrase } from './frasesDosNovos';
 
 // #2931 — o lado de quem aprova: o pedido no painel, com o card ao lado e dois
 // botões grandes. Recusar pede um motivo, que é opcional. No protótipo a
@@ -43,13 +43,8 @@ const pergunta = computed(() =>
     .join('')
     .trim()
 );
-const prazo = computed(() => props.passo.prazo || PRAZO_PADRAO);
-const unidade = computed(() =>
-  t(
-    `AUTOMACAO_LIVRE.UNIDADES.${prazo.value.unidade.toUpperCase()}`,
-    {},
-    prazo.value.valor
-  )
+const prazo = computed(() =>
+  duracaoEmFrase(props.passo.prazo || PRAZO_PADRAO, t)
 );
 
 const abrir = () => {
@@ -90,8 +85,7 @@ defineExpose({ abrir });
           <p class="mb-0 text-sm text-n-slate-11">
             {{
               $t(`${P}.PEDIDO.PRAZO`, {
-                valor: prazo.valor,
-                unidade,
+                prazo,
                 quem: quemEmFrase(passo.quem, t),
               })
             }}

@@ -9,9 +9,11 @@ import {
   contarItens,
   horariosLivres,
   nomeDaIntegracao,
+  nomeDoPublico,
   rodadaDaLista,
   valorDeTeste,
 } from './adaptadorFalso';
+import { nomeDaConta } from './nomesDaConta';
 
 const CABE_NA_LINHA = 60;
 const curto = texto => {
@@ -37,24 +39,84 @@ const emLista = (nomes, t) =>
       })
     : nomes[0] || '';
 
-export const quemEmFrase = (quem, t) =>
-  t(`${P}.QUEM.${(quem?.de || 'responsavel').toUpperCase()}`);
+// Quem aprova ou atende, no meio da frase e já com a preposição (`forma`): A
+// ("a quem cuida do card", "ao time Vendas"), DE ("de Maria") ou NOME
+// ("quem cuida do card"). A pessoa e o time saem pelo nome; sem o nome ainda,
+// "uma pessoa da equipe" ou "um time".
+export const quemEmFrase = (quem, t, forma = 'NOME') => {
+  const de = quem?.de || 'responsavel';
+  const chave = `${P}.QUEM_EM_FRASE.${forma}`;
+  if (de === 'responsavel') return t(`${chave}.RESPONSAVEL`);
+  const nome = nomeDaConta(de, quem.id);
+  return nome
+    ? t(`${chave}.${de.toUpperCase()}`, { nome })
+    : t(`${chave}.${de.toUpperCase()}_SEM_NOME`);
+};
 
-const fonteEmFrase = (fonte, t) =>
+// "1 dia", "5 horas": o número e a unidade, que concorda com ele.
+export const duracaoEmFrase = (duracao, t) => {
+  const valor = duracao?.valor;
+  const unidade = (duracao?.unidade || 'dias').toUpperCase();
+  return t('AUTOMACAO_LIVRE.FRASES.DURACAO', {
+    valor: valor ?? '',
+    unidade: t(
+      `AUTOMACAO_LIVRE.UNIDADES.${unidade}`,
+      {},
+      Number.isInteger(valor) ? valor : 2
+    ),
+  });
+};
+
+export const fonteEmFrase = (fonte, t) =>
   fonte?.de === 'endereco'
     ? t(`${P}.CONSULTAR.ENDERECO_PROPRIO`)
     : nomeDaIntegracao(fonte?.id, t) || t(`${P}.CONSULTAR.SEM_FONTE`);
 
-const listaEmFrase = (lista, t) =>
-  lista?.de === 'etiqueta' && lista.etiqueta
-    ? t(`${P}.REPETIR.DA_ETIQUETA`, { etiqueta: lista.etiqueta })
-    : t(`${P}.REPETIR.DA_ETAPA`);
+// A lista em palavras do dia a dia, com o nome: "cada card da etapa Proposta".
+// Sem o nome ainda, "a etapa escolhida".
+const LISTA_EM_FRASE = {
+  etapa: lista => ({
+    chave: 'DA_ETAPA',
+    valores: { etapa: nomeDaConta('etapa', lista.etapa_id) },
+  }),
+  etiqueta: lista => ({
+    chave: 'DA_ETIQUETA',
+    valores: { etiqueta: lista.etiqueta },
+  }),
+  publico: (lista, t) => ({
+    chave: 'DO_PUBLICO',
+    valores: { publico: nomeDoPublico(lista.publico_id, t) },
+  }),
+};
+const listaEmFrase = (lista, t) => {
+  const emFrase = LISTA_EM_FRASE[lista?.de] || LISTA_EM_FRASE.etapa;
+  const { chave, valores } = emFrase(lista || {}, t);
+  return Object.values(valores).every(Boolean)
+    ? t(`${P}.REPETIR.${chave}`, valores)
+    : t(`${P}.REPETIR.${chave}_SEM_NOME`);
+};
+
+// #2935/#2936: o que sai se a janela de 24 h do WhatsApp oficial estiver
+// fechada: o modelo escolhido, ou nada (a automação para nesta conversa).
+const foraDaJanela = (passo, t) =>
+  passo.modelo
+    ? t('AUTOMACAO_LIVRE.ENSAIO.MODELO_FORA_DA_JANELA', {
+        modelo: passo.modelo.nome,
+      })
+    : t(`${P}.SEM_MODELO_FORA_DA_JANELA`);
+
+// O caminho fixo do passo novo no ensaio ("Se aprovar:"): o nome do galho,
+// sem "Se a IA escolher", porque ali não decide IA nenhuma.
+export const rotuloDoGalhoFixo = (chave, t) =>
+  t(`${P}.CAMINHO_NO_ENSAIO`, {
+    caminho: t(`AUTOMACAO_LIVRE.RAMOS.${chave.toUpperCase()}`),
+  });
 
 // A linha do Confira. `nomeDoDado` dá o nome de um dado do texto (fraseDoValor).
 const FRASE = {
   pedir_aprovacao: (passo, t, nomeDoDado) =>
     t(`${P}.APROVACAO.FRASE`, {
-      quem: quemEmFrase(passo.quem, t),
+      quem: quemEmFrase(passo.quem, t, 'A'),
       pergunta: curto(textoEmLinha(passo.pergunta, nomeDoDado)),
     }),
   repetir_lista: (passo, t) =>
@@ -80,7 +142,7 @@ const FRASE = {
         });
   },
   marcar_reuniao: (passo, t) =>
-    t(`${P}.REUNIAO.FRASE`, { quem: quemEmFrase(passo.com, t) }),
+    t(`${P}.REUNIAO.FRASE`, { quem: quemEmFrase(passo.com, t, 'DE') }),
   pesquisa_nota: (passo, t) =>
     t(`${P}.PESQUISA.FRASE`, { pergunta: curto(passo.pergunta) }),
 };
@@ -88,11 +150,14 @@ const FRASE = {
 export const fraseDoPassoNovo = (passo, t, nomeDoDado = caminho => caminho) =>
   FRASE[passo.tipo](passo, t, nomeDoDado);
 
-// A linha do ensaio: o destaque (o que faria) e, quando sai mensagem, o balão.
-// Nada sai e nada é consultado no ensaio.
+// A linha do ensaio: o destaque (o que faria) e, quando sai mensagem, o balão
+// e o que sai com a janela de 24 h fechada (aviso). Nada sai no ensaio; a busca
+// só com o OK de quem ensaia (`consulta`, LivreBuscaNoEnsaio).
 const ENSAIO = {
   pedir_aprovacao: (passo, t) => ({
-    destaque: t(`${P}.APROVACAO.ENSAIO`, { quem: quemEmFrase(passo.quem, t) }),
+    destaque: t(`${P}.APROVACAO.ENSAIO`, {
+      quem: quemEmFrase(passo.quem, t, 'A'),
+    }),
   }),
   repetir_lista: (passo, t) => {
     const { total, primeiros } = contarItens(passo.lista);
@@ -114,6 +179,7 @@ const ENSAIO = {
     destaque: t(`${P}.CONSULTAR.ENSAIO`, {
       fonte: fonteEmFrase(passo.fonte, t),
     }),
+    consulta: (passo.guardar || []).length ? passo : null,
   }),
   marcar_reuniao: (passo, t) => {
     const horarios = horariosLivres(t);
@@ -122,11 +188,15 @@ const ENSAIO = {
       balao: [passo.convite, ...horarios.map((h, i) => `${i + 1}. ${h}`)].join(
         '\n'
       ),
+      aviso: foraDaJanela(passo, t),
     };
   },
   pesquisa_nota: (passo, t) => ({
-    destaque: t(`${P}.PESQUISA.ENSAIO`, { dias: passo.espera?.valor ?? '' }),
+    destaque: t(`${P}.PESQUISA.ENSAIO`, {
+      espera: duracaoEmFrase(passo.espera, t),
+    }),
     balao: passo.pergunta,
+    aviso: foraDaJanela(passo, t),
   }),
 };
 

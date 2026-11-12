@@ -3,7 +3,10 @@
 // ainda não vale e o "decidir" da IA) põe um rótulo por caminho e os passos
 // dele um nível adentro. A frase de cada passo é a do editor (`fraseDe`).
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
-import { linhaDoEnsaioNovo } from './passosNovos/frasesDosNovos';
+import {
+  linhaDoEnsaioNovo,
+  rotuloDoGalhoFixo,
+} from './passosNovos/frasesDosNovos';
 
 const E = 'AUTOMACAO_LIVRE.ENSAIO';
 
@@ -93,6 +96,8 @@ const rotuloDoCaminho = (no, ramo, t) => {
   // G31: o caminho que decide de novo espera a próxima resposta.
   const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
   if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
+  // Protótipo #2931–#2936: o galho fixo do passo novo diz o próprio nome.
+  if (ramo.fixo) return rotuloDoGalhoFixo(ramo.chave, t);
   return t(`${E}.SE_CAMINHO${deNovo}`, { nome: ramo.nome || ramo.chave });
 };
 

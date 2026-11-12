@@ -3,6 +3,9 @@
     "PASSOS_NOVOS": {
       "MONTAR": "Set up the step",
       "EM_TESTE": "This step is still being tested. You can set it up and run a test, but you can't save it yet.",
+      "ENSAIO_DE_EXEMPLO": "Sample test run: this automation has a step that is still being tested. The conversations below are made up and nothing was really checked.",
+      "CAMINHO_NO_ENSAIO": "{caminho}:",
+      "SEM_MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, nothing is sent and the automation stops in this conversation.",
       "LISTA": "{inicio} and {ultimo}",
       "QUEM": {
         "RESPONSAVEL": "Whoever handles the card",
@@ -11,6 +14,29 @@
         "QUAL_PESSOA": "Which person",
         "QUAL_TIME": "Which team",
         "NINGUEM": "There is no one to choose here yet."
+      },
+      "QUEM_EM_FRASE": {
+        "A": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        },
+        "DE": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        },
+        "NOME": {
+          "RESPONSAVEL": "whoever handles the card",
+          "PESSOA": "{nome}",
+          "TIME": "the {nome} team",
+          "PESSOA_SEM_NOME": "a team member",
+          "TIME_SEM_NOME": "a team"
+        }
       },
       "APROVACAO": {
         "NOME": "Ask for approval",
@@ -31,7 +57,7 @@
         "SUBTITULO": "This is how the request reaches the approver.",
         "PERGUNTA_DE": "The automation asks:",
         "SEM_PERGUNTA": "Write what to ask.",
-        "PRAZO": "Answer within {valor} {unidade}. Who gets it: {quem}.",
+        "PRAZO": "Answer within {prazo}. Who gets it: {quem}.",
         "APROVADO": "You approved. The automation went on.",
         "RECUSADO": "You refused. The automation took the refusal path.",
         "MOTIVO_DITO": "Reason: {motivo}",
@@ -46,9 +72,13 @@
       },
       "REPETIR": {
         "NOME": "Do it for each one in a list",
-        "DICA": "Repeats the steps for each card in a stage or each contact with a label.",
-        "DA_ETAPA": "each card in the chosen stage",
+        "DICA": "Repeats the steps for each card in a stage, each contact with a label or each contact in an audience.",
+        "DA_ETAPA": "each card in the {etapa} stage",
+        "DA_ETAPA_SEM_NOME": "each card in the chosen stage",
         "DA_ETIQUETA": "each contact with the label {etiqueta}",
+        "DA_ETIQUETA_SEM_NOME": "each contact with the chosen label",
+        "DO_PUBLICO": "each contact in the {publico} audience",
+        "DO_PUBLICO_SEM_NOME": "each contact in the chosen audience",
         "FRASE": "For {lista}, up to {teto} at a time",
         "ENSAIO": "Today {total} would go in. The first ones: {nomes}.",
         "ENSAIO_VAZIO": "Choose the list to see how many would go in.",
@@ -57,8 +87,10 @@
         "LISTA": "Where the list comes from",
         "DE_ETAPA": "The cards in a stage",
         "DE_ETIQUETA": "The contacts with a label",
+        "DE_PUBLICO": "The contacts in an audience",
         "QUAL_ETAPA": "Which stage",
         "QUAL_ETIQUETA": "Which label",
+        "QUAL_PUBLICO": "Which audience",
         "ENTRARIAM_HOJE": "would go in today | would go in today",
         "PRIMEIROS": "The first ones in the list",
         "FICAM_FORA": "Only people you can see go in. Blocked contacts and those who asked not to receive messages are left out.",
@@ -90,7 +122,12 @@
         "SEM_FONTE": "another system",
         "FRASE": "Look up in {fonte}: {dados}",
         "FRASE_SEM_DADO": "Look up in {fonte}",
-        "ENSAIO": "Would look up in {fonte}. In a test run, nothing is looked up.",
+        "ENSAIO": "Would look up in {fonte}. In a test run, it only looks up if you ask.",
+        "BUSCAR_DE_VERDADE": "Really look up in this test run",
+        "CONFIRMAR_BUSCA": "It will look up in {fonte} once, now. The result only shows here: nothing is saved and no one gets anything.",
+        "BUSCAR_AGORA": "Look up now",
+        "BUSCOU_NO_ENSAIO": "Looked up in {fonte}:",
+        "DADO_E_VALOR": "{dado}: {valor}",
         "HISTORICO": "Looked up in {fonte}: {dado} is {valor}.",
         "HISTORICO_SEM_DADO": "Looked up in {fonte}.",
         "OUTRO_ENDERECO": "Another address",
@@ -113,7 +150,7 @@
         "NOME": "Book a meeting in the chat",
         "DICA": "Offers 3 free times, the customer picks one and the meeting is booked.",
         "CONVITE_PADRAO": "Hi! Can I call you at one of these times?",
-        "FRASE": "Offer 3 times in {quem}'s calendar and book the meeting",
+        "FRASE": "Offer 3 times in the calendar of {quem} and book the meeting",
         "ENSAIO": "Would offer {horarios}. In a test run, nothing is sent.",
         "HISTORICO": "The customer picked {horario}. The meeting was booked on the card.",
         "MINUTOS": "{n} minutes",
@@ -130,7 +167,7 @@
         "DICA": "Asks for a score from 0 to 10 and takes a path for each score.",
         "PERGUNTA_PADRAO": "From 0 to 10, what score would you give our service?",
         "FRASE": "Ask for the score: {pergunta}",
-        "ENSAIO": "Would ask for the score and wait {dias} days. In a test run, nothing is sent.",
+        "ENSAIO": "Would ask for the score and wait for the answer for {espera}. In a test run, nothing is sent.",
         "HISTORICO": "Score 9: “Loved it, it just took a bit long”.",
         "HISTORICO_CAMINHO": "Took the “{caminho}” path.",
         "DIAS": "{n} days",
@@ -185,6 +222,23 @@
           "LOJA": "Online store",
           "CEP": "Postal code lookup",
           "BOLETOS": "Payment slips"
+        },
+        "DADOS": {
+          "NUMERO_DO_PEDIDO": "Order number",
+          "STATUS_DO_PEDIDO": "Order status",
+          "PREVISAO_DE_ENTREGA": "Expected delivery",
+          "NOME_DO_CLIENTE": "Customer name",
+          "RUA": "Street",
+          "BAIRRO": "Neighborhood",
+          "CIDADE": "City",
+          "ESTADO": "State",
+          "SITUACAO_DO_BOLETO": "Bank slip status",
+          "VENCIMENTO_DO_BOLETO": "Bank slip due date",
+          "VALOR_DO_BOLETO": "Bank slip amount"
+        },
+        "PUBLICOS": {
+          "CLIENTES_ATIVOS": "Active customers",
+          "SEM_COMPRA": "No purchase in 90 days"
         },
         "STATUS_ENVIADO": "Shipped",
         "SITUACAO_PAGO": "Paid",

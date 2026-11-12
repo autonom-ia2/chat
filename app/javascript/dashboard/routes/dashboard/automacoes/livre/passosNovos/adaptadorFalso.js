@@ -4,7 +4,7 @@
 // aprovação e o ensaio. Tudo de exemplo, com nomes inventados e sem chamar
 // nada fora da tela. A implementação troca cada função pela rota de verdade.
 import { galhosDe, todosOsPassos } from '../receita';
-import { P, ehPassoNovo } from './passosNovos';
+import { P, ehPassoNovo, listaPronta } from './passosNovos';
 
 const E = `${P}.EXEMPLO`;
 
@@ -64,6 +64,22 @@ const INTEGRACOES = [
   },
 ];
 const CODIGOS = { STATUS: 'STATUS_ENVIADO', SITUACAO: 'SITUACAO_PAGO' };
+// O nome de cada dado em palavras do dia a dia ("Status do pedido"), que vira o
+// nome inicial do dado guardado. A implementação precisa do mesmo: um rótulo
+// legível, sugerido pela integração ou pela IA, nunca a chave crua do JSON.
+const ROTULOS = {
+  'pedido.numero': 'NUMERO_DO_PEDIDO',
+  'pedido.status': 'STATUS_DO_PEDIDO',
+  'pedido.previsao': 'PREVISAO_DE_ENTREGA',
+  'cliente.nome': 'NOME_DO_CLIENTE',
+  'endereco.rua': 'RUA',
+  'endereco.bairro': 'BAIRRO',
+  'endereco.cidade': 'CIDADE',
+  'endereco.estado': 'ESTADO',
+  'boleto.situacao': 'SITUACAO_DO_BOLETO',
+  'boleto.vencimento': 'VENCIMENTO_DO_BOLETO',
+  'boleto.valor': 'VALOR_DO_BOLETO',
+};
 const traduzir = (valor, t) =>
   CODIGOS[valor] ? t(`${E}.${CODIGOS[valor]}`) : valor;
 export const integracoesDaConta = t =>
@@ -75,14 +91,13 @@ export const nomeDaIntegracao = (id, t) =>
   integracoesDaConta(t).find(item => item.value === id)?.label || '';
 
 // A resposta vira a lista de dados que a pessoa toca: o caminho (para guardar),
-// o nome em palavras ("pedido.status" vira "pedido status") e o valor. Sem
-// expressão regular: Object.entries e split.
-const emPalavras = caminho => caminho.split('.').join(' ').split('_').join(' ');
+// o nome em palavras ("pedido.status" vira "Status do pedido") e o valor.
 const achatar = (objeto, t, antes = '') =>
   Object.entries(objeto).flatMap(([chave, valor]) => {
     const caminho = antes ? `${antes}.${chave}` : chave;
     if (valor && typeof valor === 'object') return achatar(valor, t, caminho);
-    return [{ caminho, nome: emPalavras(caminho), valor: traduzir(valor, t) }];
+    const nome = t(`${E}.DADOS.${ROTULOS[caminho]}`);
+    return [{ caminho, nome, valor: traduzir(valor, t) }];
   });
 
 // O endereço próprio responde como a loja: é só a forma da tela.
@@ -95,9 +110,31 @@ export const testarConsulta = (fonte, t) =>
   Promise.resolve(dadosDoTeste(fonte, t));
 export const valorDeTeste = (fonte, caminho, t) =>
   dadosDoTeste(fonte, t).find(dado => dado.caminho === caminho)?.valor || '';
+// #2934: a busca do ensaio, só depois do OK de quem ensaia: cada dado guardado
+// com o valor (aqui, o do teste).
+export const buscarNoEnsaio = (passo, t) =>
+  Promise.resolve(
+    (passo.guardar || []).map(dado => ({
+      nome: dado.nome,
+      valor: valorDeTeste(passo.fonte, dado.caminho, t),
+    }))
+  );
 
 // #2935: os 3 próximos horários livres de quem atende.
 export const horariosLivres = t => [1, 2, 3].map(n => t(`${E}.HORARIO_${n}`));
+
+// #2932: os públicos de exemplo da conta, para a lista.
+const PUBLICOS = [
+  { id: 1, chave: 'CLIENTES_ATIVOS' },
+  { id: 2, chave: 'SEM_COMPRA' },
+];
+export const publicosDaConta = t =>
+  PUBLICOS.map(publico => ({
+    value: publico.id,
+    label: t(`${E}.PUBLICOS.${publico.chave}`),
+  }));
+export const nomeDoPublico = (id, t) =>
+  publicosDaConta(t).find(publico => publico.value === id)?.label || '';
 
 // #2932: o que uma rodada já feita encontrou (o histórico de exemplo).
 export const rodadaDaLista = () => ({
@@ -106,12 +143,8 @@ export const rodadaDaLista = () => ({
 });
 // Quantos entrariam hoje e os 3 primeiros. A lista de verdade respeita o
 // alcance de quem ligou, o teto, bloqueados e descadastrados.
-const listaEscolhida = lista =>
-  lista?.de === 'etapa'
-    ? Number.isInteger(lista.etapa_id)
-    : Boolean(lista?.etiqueta);
 export const contarItens = lista =>
-  listaEscolhida(lista) ? rodadaDaLista() : { total: 0, primeiros: [] };
+  listaPronta(lista) ? rodadaDaLista() : { total: 0, primeiros: [] };
 
 // #2931: o card do pedido de aprovação, no formato do CrmKanbanCard.
 export const cardDoPedido = t => ({
@@ -132,8 +165,14 @@ export const valorDeExemplo = (caminho, podeVerValor, t) => {
 };
 
 // #2498 no protótipo — o ensaio com a receita da tela, no formato da API: duas
-// conversas de exemplo que entrariam, um nó por passo, os galhos com o nome. O
+// conversas de exemplo que entrariam, um nó por passo. O galho fixo (aprovado,
+// então, em cada um...) vai com a marca `fixo` e sem nome: o ensaio diz o nome
+// do galho, não "Se a IA escolher". Só o caminho do "decidir" leva o nome. O
 // passo novo leva `faria: 'passo_novo'`; os de hoje, só a frase.
+const ramoDe = (galho, rotuloDoGalho) =>
+  galho.ramo.startsWith('caminhos.')
+    ? { nome: galho.nome || rotuloDoGalho(galho.ramo) }
+    : { fixo: true };
 const no = (passo, rotuloDoGalho) => ({
   id: passo.id,
   tipo: passo.tipo,
@@ -143,7 +182,7 @@ const no = (passo, rotuloDoGalho) => ({
     .filter(galho => (galho.passos || []).length)
     .map(galho => ({
       chave: galho.ramo,
-      nome: galho.nome || rotuloDoGalho(galho.ramo),
+      ...ramoDe(galho, rotuloDoGalho),
       passos: galho.passos.map(dentro => no(dentro, rotuloDoGalho)),
     })),
 });

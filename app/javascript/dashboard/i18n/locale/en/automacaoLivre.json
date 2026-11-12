@@ -504,6 +504,7 @@
       "DESLIGADA": "It is off. Nothing happens until you turn it on.",
       "FALTA_GATILHO": "Still missing when it starts.",
       "FALTA_PASSO": "Still missing at least one step.",
+      "FALTA_EM_TESTE": "A step is still being tested: you can set it up and test it, but you can't save or turn it on yet.",
       "GUARDAR": "Save without turning on",
       "LIGADA_AVISO": "It is working by itself.",
       "DESLIGAR": "Turn off",

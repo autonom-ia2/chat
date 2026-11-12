@@ -155,15 +155,23 @@ export const faixasProntas = ({ baixa_ate: baixa, alta_desde: alta }) =>
   alta <= 10 &&
   baixa + 1 < alta;
 
+// #2932: de onde vem a lista (os cards de uma etapa, os contatos com uma
+// etiqueta ou os de um público) e o que cada uma pede escolhido.
+export const LISTAS = ['etapa', 'etiqueta', 'publico'];
+const LISTA_PRONTA = {
+  etapa: lista => Number.isInteger(lista.etapa_id),
+  etiqueta: lista => escrito(lista.etiqueta),
+  publico: lista => Number.isInteger(lista.publico_id),
+};
+export const listaPronta = lista => Boolean(LISTA_PRONTA[lista?.de]?.(lista));
+
 const PRONTO = {
   pedir_aprovacao: passo =>
     quemPronto(passo.quem) &&
     textoEscrito(passo.pergunta) &&
     prazoPronto(passo.prazo),
   repetir_lista: ({ lista, teto }) =>
-    (lista?.de === 'etapa'
-      ? Number.isInteger(lista.etapa_id)
-      : escrito(lista?.etiqueta)) &&
+    listaPronta(lista) &&
     Number.isInteger(teto) &&
     teto >= 1 &&
     teto <= TETO_MAXIMO,

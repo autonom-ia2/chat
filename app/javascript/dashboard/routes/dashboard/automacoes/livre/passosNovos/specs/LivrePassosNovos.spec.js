@@ -55,6 +55,12 @@ const stubs = {
   },
   LivreTexto: { name: 'LivreTexto', template: '<div data-texto />' },
   LivreDuracao: { name: 'LivreDuracao', template: '<div data-duracao />' },
+  LivreModelo: {
+    name: 'LivreModelo',
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<div data-modelo />',
+  },
 };
 const OPCOES = {
   pessoa: [{ value: 7, label: 'Maria' }],
@@ -91,6 +97,50 @@ describe('LivrePassoNovo', () => {
       expect(tela.find('[data-previa-historico]').text()).not.toBe('');
     }
   );
+});
+
+describe('Veja como fica', () => {
+  it('reunião e pesquisa dizem o que sai com a janela de 24 h fechada', () => {
+    ['marcar_reuniao', 'pesquisa_nota'].forEach(tipo => {
+      const tela = montar(LivrePassoNovo, {
+        modelValue: novo(tipo),
+        catalogo: CATALOGO,
+        opcoes: OPCOES,
+        atributosDo: () => [],
+        etapas: ETAPAS,
+      });
+
+      expect(tela.find('[data-previa-aviso]').text()).toContain(
+        'SEM_MODELO_FORA_DA_JANELA'
+      );
+    });
+  });
+
+  it('a busca do ensaio só acontece depois do OK de quem ensaia', async () => {
+    const tela = montar(LivrePassoNovo, {
+      modelValue: {
+        ...novo('consultar'),
+        fonte: { de: 'integracao', id: 'loja' },
+        guardar: [{ nome: 'Status do pedido', caminho: 'pedido.status' }],
+      },
+      catalogo: CATALOGO,
+      opcoes: OPCOES,
+      atributosDo: () => [],
+      etapas: ETAPAS,
+    });
+
+    expect(tela.find('[data-busca-resultado]').exists()).toBe(false);
+    await tela.find('[data-busca-pedir]').trigger('click');
+    expect(tela.find('[data-busca-confirmar]').text()).toContain(
+      'CONSULTAR.CONFIRMAR_BUSCA'
+    );
+    await tela.find('[data-busca-sim]').trigger('click');
+    await flushPromises();
+
+    const resultado = tela.find('[data-busca-resultado]').text();
+    expect(resultado).toContain('Status do pedido');
+    expect(resultado).toContain('EXEMPLO.STATUS_ENVIADO');
+  });
 });
 
 describe('LivreSeletorPasso com os passos novos', () => {
@@ -145,6 +195,29 @@ describe('LivreRepetir', () => {
     );
 
     expect(ultimo(tela).lista).toEqual({ de: 'etiqueta', etiqueta: 'vip' });
+  });
+
+  it('a lista pode vir de um público, que já vem escolhido', async () => {
+    const tela = montar(LivreRepetir, {
+      modelValue: {
+        ...novo('repetir_lista'),
+        lista: { de: 'etapa', etapa_id: 12 },
+      },
+      opcoes: OPCOES,
+      etapas: ETAPAS,
+    });
+
+    expect(
+      escolha(tela, '[data-repetir-de]')
+        .props('options')
+        .map(o => o.value)
+    ).toEqual(['etapa', 'etiqueta', 'publico']);
+    await escolha(tela, '[data-repetir-de]').vm.$emit(
+      'update:modelValue',
+      'publico'
+    );
+
+    expect(ultimo(tela).lista).toEqual({ de: 'publico', publico_id: 1 });
   });
 
   it('diz quantos entrariam hoje e mostra os 3 primeiros', () => {
@@ -218,7 +291,10 @@ describe('LivreConsulta', () => {
     await tela.find('[data-consulta-dado="pedido.status"]').trigger('click');
 
     expect(ultimo(tela).guardar).toEqual([
-      { nome: 'pedido status', caminho: 'pedido.status' },
+      {
+        nome: 'AUTOMACAO_LIVRE.PASSOS_NOVOS.EXEMPLO.DADOS.STATUS_DO_PEDIDO',
+        caminho: 'pedido.status',
+      },
     ]);
   });
 
@@ -243,6 +319,7 @@ describe('LivreReuniao', () => {
       modelValue: novo('marcar_reuniao'),
       catalogo: CATALOGO,
       opcoes: OPCOES,
+      atributosDo: () => [],
     });
 
     expect(tela.findAll('[data-reuniao-previa] li')).toHaveLength(3);
@@ -252,23 +329,42 @@ describe('LivreReuniao', () => {
         .map(o => o.value)
     ).toEqual(['responsavel', 'pessoa']);
   });
+
+  it('escolhe o que sai com a janela de 24 h fechada', async () => {
+    const tela = montar(LivreReuniao, {
+      modelValue: novo('marcar_reuniao'),
+      catalogo: CATALOGO,
+      opcoes: OPCOES,
+      atributosDo: () => [],
+    });
+    const modelo = { nome: 'lembrete', idioma: 'pt_BR', variaveis: [] };
+
+    await tela
+      .findComponent({ name: 'LivreModelo' })
+      .vm.$emit('update:modelValue', modelo);
+
+    expect(ultimo(tela).modelo).toEqual(modelo);
+  });
 });
 
 describe('LivrePesquisa', () => {
-  it('a prévia tem os botões de 0 a 10', () => {
+  it('a prévia tem os botões de 0 a 10 e a escolha da janela de 24 h', () => {
     const tela = montar(LivrePesquisa, {
       modelValue: novo('pesquisa_nota'),
       catalogo: CATALOGO,
+      atributosDo: () => [],
     });
 
     expect(tela.findAll('[data-pesquisa-previa] li')).toHaveLength(11);
     expect(tela.find('[data-pesquisa-media]').text()).toContain('7,8');
+    expect(tela.find('[data-modelo]').exists()).toBe(true);
   });
 
   it('faixa do meio vazia avisa', () => {
     const tela = montar(LivrePesquisa, {
       modelValue: { ...novo('pesquisa_nota'), baixa_ate: 7, alta_desde: 8 },
       catalogo: CATALOGO,
+      atributosDo: () => [],
     });
 
     expect(tela.find('[data-pesquisa-faixas-ruins]').exists()).toBe(true);

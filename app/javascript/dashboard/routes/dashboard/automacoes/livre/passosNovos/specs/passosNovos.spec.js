@@ -5,6 +5,7 @@ import {
   comPassosNovos,
   enderecoServe,
   faixasProntas,
+  listaPronta,
   passoNovoPronto,
   valoresDaConsulta,
 } from '../passosNovos';
@@ -17,7 +18,7 @@ import { linhaDoEnsaioNovo, linhaDoHistoricoNovo } from '../frasesDosNovos';
 import { comTextosDaIa, entradaDoPasso, novoPasso } from '../../catalogo';
 import { fraseDoPasso } from '../../frases';
 import { linhasDoEnsaio } from '../../ensaio';
-import { galhosDe, inserirPasso, idDaLista } from '../../receita';
+import { falta, galhosDe, inserirPasso, idDaLista } from '../../receita';
 import catalogoGerado from '../../../../../../../../../lib/operator_guide/automacao-passos.json';
 
 // Protótipo #2931–#2936 — os 6 passos novos da Automação livre: só com a flag
@@ -165,6 +166,28 @@ describe('o que segura o "Salvar"', () => {
   });
 });
 
+describe('a lista do "para cada um"', () => {
+  it('etapa, etiqueta ou público, cada uma com a sua escolha', () => {
+    expect(listaPronta({ de: 'etapa', etapa_id: 12 })).toBe(true);
+    expect(listaPronta({ de: 'etiqueta', etiqueta: 'vip' })).toBe(true);
+    expect(listaPronta({ de: 'publico', publico_id: 1 })).toBe(true);
+    expect(listaPronta({ de: 'publico', publico_id: null })).toBe(false);
+    expect(listaPronta({ de: 'outra' })).toBe(false);
+  });
+});
+
+describe('o Salvar tudo com passo novo', () => {
+  it('a receita com passo novo não vai à API: o passo está em teste', () => {
+    const gatilho = { tipo: 'conversa.resolvida' };
+    const se = { id: 'p1', tipo: 'se', entao: [novo('pesquisa_nota')] };
+
+    expect(falta({ gatilho, passos: [se] })).toBe('EM_TESTE');
+    expect(falta({ gatilho, passos: [{ id: 'p2', tipo: 'parar' }] })).toBe(
+      null
+    );
+  });
+});
+
 describe('os galhos entram na receita', () => {
   it('o pedir aprovação tem aprovado, recusado e ninguém respondeu', () => {
     expect(galhosDe(novo('pedir_aprovacao')).map(g => g.ramo)).toEqual([
@@ -258,15 +281,35 @@ describe('ensaio pelo adaptador falso', () => {
     const linhas = linhasDoEnsaio(data.conversas[0].passos, () => 'F', t);
     expect(linhas[0].destaque).toContain('APROVACAO.ENSAIO');
     expect(linhas[1]).toMatchObject({ caminho: true });
-    expect(linhas[1].texto).toContain('RAMO.aprovado');
+    // O galho fixo diz o próprio nome, sem "Se a IA escolher".
+    expect(linhas[1].texto).toContain('PASSOS_NOVOS.CAMINHO_NO_ENSAIO');
+    expect(linhas[1].texto).toContain('AUTOMACAO_LIVRE.RAMOS.APROVADO');
+    expect(linhas[1].texto).not.toContain('SE_CAMINHO');
+  });
+
+  it('o caminho do "decidir" continua com o nome que a IA escolhe', async () => {
+    const decidir = {
+      id: 'p1',
+      tipo: 'decidir',
+      caminhos: [{ nome: 'Quer comprar', passos: [novo('usar_bloco')] }],
+    };
+    const { data } = await ensaiarComPassosNovos(
+      { passos: [decidir] },
+      ramo => `RAMO.${ramo}`
+    );
+    const linhas = linhasDoEnsaio(data.conversas[0].passos, () => 'F', t);
+
+    expect(linhas[1].texto).toContain('SE_CAMINHO');
+    expect(linhas[1].texto).toContain('Quer comprar');
   });
 
   it('o teste da busca devolve os dados para tocar', async () => {
     const dados = await testarConsulta({ de: 'integracao', id: 'loja' }, t);
 
     expect(dados.map(dado => dado.caminho)).toContain('pedido.status');
+    // O nome é o do dia a dia, não a chave do JSON.
     expect(dados.find(d => d.caminho === 'cliente.nome').nome).toBe(
-      'cliente nome'
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.EXEMPLO.DADOS.NOME_DO_CLIENTE'
     );
   });
 });

@@ -63,12 +63,14 @@ const mudar = novo => emit('update:modelValue', novo);
       :model-value="modelValue"
       :catalogo="catalogo"
       :opcoes="opcoes"
+      :atributos-do="atributosDo"
       @update:model-value="mudar"
     />
     <LivrePesquisa
       v-else-if="modelValue.tipo === 'pesquisa_nota'"
       :model-value="modelValue"
       :catalogo="catalogo"
+      :atributos-do="atributosDo"
       @update:model-value="mudar"
     />
 

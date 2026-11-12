@@ -504,6 +504,7 @@
       "DESLIGADA": "Está desligada. Nada acontece até você ligar.",
       "FALTA_GATILHO": "Falta escolher quando ela começa.",
       "FALTA_PASSO": "Falta pôr pelo menos um passo.",
+      "FALTA_EM_TESTE": "Um passo ainda está em teste: dá para montar e ensaiar, mas ainda não dá para guardar nem ligar.",
       "GUARDAR": "Guardar sem ligar",
       "LIGADA_AVISO": "Ela está trabalhando sozinha.",
       "DESLIGAR": "Desligar",

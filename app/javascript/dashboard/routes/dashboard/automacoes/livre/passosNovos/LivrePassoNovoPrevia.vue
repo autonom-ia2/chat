@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { P } from './passosNovos';
 import { linhaDoEnsaioNovo, linhaDoHistoricoNovo } from './frasesDosNovos';
+import LivreBuscaNoEnsaio from './LivreBuscaNoEnsaio.vue';
 
 // Protótipo #2931–#2936 — mostrar antes de fazer: como o passo aparece no
 // ensaio ("o que aconteceria") e no histórico ("o que aconteceu"). O ensaio é o
@@ -48,6 +49,14 @@ const dentroAberto = ref(false);
         >
           {{ ensaio.balao }}
         </div>
+        <p
+          v-if="ensaio.aviso"
+          data-previa-aviso
+          class="mb-0 text-sm text-n-amber-11"
+        >
+          {{ ensaio.aviso }}
+        </p>
+        <LivreBuscaNoEnsaio v-if="ensaio.consulta" :passo="ensaio.consulta" />
       </div>
     </div>
 
