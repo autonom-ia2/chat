@@ -405,7 +405,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 18: seleção de candidatos sem plan
   end
 
   it 'passo 8: 1 dia antes da entrevista, a candidata recebe pelo modelo aprovado o endereço', :aggregate_failures do
-    ligada('Lembrete da entrevista', receita_do_lembrete)
+    # Ligada no começo do roteiro, como as outras (before): ligar no relógio de verdade deixava o lembrete de 12/11 9h05
+    # "antes de ligar" a partir dessa hora, e o motor não age no passado (Tempo.ligada_desde).
+    as('2026-11-10 09:00') { ligada('Lembrete da entrevista', receita_do_lembrete) }
     candidata_manda_o_curriculo
     entrevista = fuso.parse('2026-11-13 09:00')
     as('2026-11-10 11:00') do
