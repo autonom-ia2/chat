@@ -8,12 +8,19 @@ vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
 enableAutoUnmount(afterEach);
 
-const definicao = (id, chave, nome, modelo = 'conversation_attribute') => ({
+const definicao = (
+  id,
+  chave,
+  nome,
+  modelo = 'conversation_attribute',
+  extra = {}
+) => ({
   id,
   attribute_key: chave,
   attribute_display_name: nome,
   attribute_display_type: 'text',
   attribute_model: modelo,
+  ...extra,
 });
 const DEFINICOES = [
   definicao(1, 'placa', 'Placa'),
@@ -95,5 +102,39 @@ describe('BlocoCamposDaConversa', () => {
     campos[1].vm.$emit('update', 'modelo_do_carro', 'Onix');
     await flushPromises();
     expect(acoes).toEqual([]);
+  });
+
+  // A caixa de marcar e a lista não respeitam o show-actions do CustomAttribute:
+  // para quem só lê, ficam dentro de um fieldset desabilitado.
+  describe('caixa de marcar e lista', () => {
+    const DE_ESCOLHA = [
+      definicao(4, 'tem_seguro', 'Tem seguro', 'conversation_attribute', {
+        attribute_display_type: 'checkbox',
+      }),
+      definicao(5, 'cor', 'Cor', 'conversation_attribute', {
+        attribute_display_type: 'list',
+        attribute_values: ['Prata', 'Preto'],
+      }),
+    ];
+    const travados = wrapper =>
+      wrapper.findAll('fieldset').map(campo => campo.element.disabled);
+
+    it('quem só lê não consegue marcar nem escolher', () => {
+      const { wrapper } = montar({ podeOperar: false, definicoes: DE_ESCOLHA });
+
+      expect(travados(wrapper)).toEqual([true, true]);
+      expect(wrapper.find('fieldset input[type="checkbox"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.findAll('fieldset')[1].find('button').exists()).toBe(
+        true
+      );
+    });
+
+    it('quem opera marca e escolhe', () => {
+      const { wrapper } = montar({ definicoes: DE_ESCOLHA });
+
+      expect(travados(wrapper)).toEqual([false, false]);
+    });
   });
 });

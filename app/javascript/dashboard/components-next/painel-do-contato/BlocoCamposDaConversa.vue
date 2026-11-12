@@ -5,6 +5,10 @@
 // ou outra pessoa preencheu. Edita com a mesma permissão de antes: quem opera a
 // conversa (#1800); quem só lê vê o valor, sem os botões de editar. Grava pelo
 // updateCustomAttributes, como o CustomAttributes do painel antigo.
+// O CustomAttribute só esconde os botões dos campos de texto: a caixa de marcar
+// e a lista seguem mexíveis com qualquer show-actions. Para quem só lê, o
+// fieldset desabilitado trava os dois (como o FieldEditor dos Relacionamentos),
+// em vez de a tela mostrar um valor mudado que ninguém gravou.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useStoreGetters } from 'dashboard/composables/store';
@@ -66,20 +70,22 @@ const copiar = async valor => {
   >
     <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
       <li v-for="definicao in definicoes" :key="definicao.id">
-        <CustomAttribute
-          :attribute-key="definicao.attribute_key"
-          :attribute-type="definicao.attribute_display_type"
-          :values="definicao.attribute_values"
-          :label="definicao.attribute_display_name"
-          :description="definicao.attribute_description"
-          :value="valorDe(definicao.attribute_key)"
-          :attribute-regex="definicao.regex_pattern"
-          :regex-cue="definicao.regex_cue"
-          :show-actions="podeOperar"
-          @update="atualizar"
-          @delete="apagar"
-          @copy="copiar"
-        />
+        <fieldset :disabled="!podeOperar" class="border-0 p-0 m-0 min-w-0">
+          <CustomAttribute
+            :attribute-key="definicao.attribute_key"
+            :attribute-type="definicao.attribute_display_type"
+            :values="definicao.attribute_values"
+            :label="definicao.attribute_display_name"
+            :description="definicao.attribute_description"
+            :value="valorDe(definicao.attribute_key)"
+            :attribute-regex="definicao.regex_pattern"
+            :regex-cue="definicao.regex_cue"
+            :show-actions="podeOperar"
+            @update="atualizar"
+            @delete="apagar"
+            @copy="copiar"
+          />
+        </fieldset>
       </li>
     </ul>
   </BlocoDoPainel>
