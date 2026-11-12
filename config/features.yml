@@ -1364,7 +1364,7 @@
   column: feature_flags_ext_2
 
 # Agentes: ferramentas prontas, F7 (#2858): as consultas Premium, pagas, à BigDataCorp. Ligada (junto com
-# `agente_ferramentas_prontas`): a vitrine ganha o grupo Premium com 7 cards (certidões da empresa, raio-X da empresa,
+# `agente_ferramentas_prontas`): a vitrine ganha 7 cards Premium, cada um no grupo do assunto (#2939), (certidões da empresa, raio-X da empresa,
 # conferir a pessoa, histórico da placa, risco do endereço, imóvel rural, contato e mercado de empresas), cada um com o
 # selo "Premium", "20 grátis, depois R$ X" e as grátis que restam; o turno consulta a BigDataCorp com a credencial da
 # plataforma e grava a telemetria de cada consulta para a fatura (sem cobrança automática). Desligada: os 7 cards somem
