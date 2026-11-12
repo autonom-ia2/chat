@@ -18,6 +18,13 @@ import {
 withFullI18n('pt_BR');
 vi.setConfig({ testTimeout: 30000 });
 
+// A leitura que volta de responder traz a resposta que o servidor gravou (a
+// pergunta que voltasse sem resposta seria feita de novo).
+const GRAVADA = lida({
+  perguntas: [PERGUNTAS[0]],
+  respostas: { clientes: 'sim_todas' },
+});
+
 describe('Voltar com uma escrita em voo', () => {
   it('no Conferir: não sai da tela enquanto a escrita não volta', async () => {
     const escrita = emVoo();
@@ -46,7 +53,7 @@ describe('Voltar com uma escrita em voo', () => {
     const continuando = tela.continuar();
     tela.voltar();
     expect(tela.etapa.value).toBe(ETAPAS.PERGUNTAS);
-    escrita.resolver(lida({ perguntas: [PERGUNTAS[0]] }));
+    escrita.resolver(GRAVADA);
     await continuando;
     expect(tela.etapa.value).toBe(ETAPAS.CONFERIR);
   });
@@ -62,7 +69,7 @@ describe('Voltar com uma escrita em voo', () => {
     tela.responder('clientes', 'sim_todas');
     const primeiro = tela.continuar();
     const segundo = tela.continuar();
-    escrita.resolver(lida({ perguntas: [PERGUNTAS[0]] }));
+    escrita.resolver(GRAVADA);
     await Promise.all([primeiro, segundo]);
     expect(fonte.responder).toHaveBeenCalledTimes(1);
     expect(tela.etapa.value).toBe(ETAPAS.CONFERIR);

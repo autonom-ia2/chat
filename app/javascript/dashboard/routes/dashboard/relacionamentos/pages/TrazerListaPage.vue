@@ -104,9 +104,15 @@ watch(
   }
 );
 
+// A pergunta da vez: a posição e qual é (depois de uma escrita, a mesma posição
+// pode passar a ser de outra pergunta).
+const chaveDaPergunta = computed(
+  () => `${tela.estado.value.pergunta}:${tela.perguntaAtual.value?.id ?? ''}`
+);
+
 // A cada tela nova o foco vai para o título dela (leitor de tela e teclado).
 watch(
-  () => [tela.etapa.value, tela.estado.value.pergunta],
+  () => [tela.etapa.value, chaveDaPergunta.value],
   async () => {
     await nextTick();
     raiz.value?.querySelector('[data-titulo-da-tela]')?.focus();
@@ -211,7 +217,7 @@ const confirmarDesfazer = async () => {
             />
             <PerguntaDaVez
               v-if="tela.etapa.value === ETAPAS.PERGUNTAS"
-              :key="tela.estado.value.pergunta"
+              :key="chaveDaPergunta"
               :pergunta="tela.perguntaAtual.value"
               :respostas="tela.respostas.value"
               :colunas="tela.leitura.value.colunas"

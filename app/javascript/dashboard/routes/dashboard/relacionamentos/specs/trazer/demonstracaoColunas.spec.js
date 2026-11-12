@@ -22,6 +22,7 @@ const COLUNA = {
   CIDADE: 4,
   SITUACAO: 5,
   ANIVERSARIO: 6,
+  JA_E_CLIENTE: 7,
 };
 const SEM_PARA_QUE = '';
 
@@ -58,12 +59,14 @@ describe('as colunas da planilha de exemplo', () => {
       { indice: COLUNA.CEL, nome: 'Cel', destino: 'telefone', duvidosa: true },
       { indice: COLUNA.EMAIL, nome: 'E-mail', destino: 'email' },
       { indice: COLUNA.EMPRESA, nome: 'Empresa', destino: 'empresa' },
-      ...['Cidade', 'Situação', 'Aniversário'].map((nome, posicao) => ({
-        indice: COLUNA.CIDADE + posicao,
-        nome,
-        destino: 'informacao',
-        campo: { nome, para_que_serve: SEM_PARA_QUE },
-      })),
+      ...['Cidade', 'Situação', 'Aniversário', 'Já é cliente?'].map(
+        (nome, posicao) => ({
+          indice: COLUNA.CIDADE + posicao,
+          nome,
+          destino: 'informacao',
+          campo: { nome, para_que_serve: SEM_PARA_QUE },
+        })
+      ),
     ]);
     expect(leitura.temEmpresa).toBe(true);
     expect(leitura.perguntas).toEqual([
@@ -287,6 +290,8 @@ describe('responder às perguntas', () => {
     expect(await fonte.responder(id, respostas)).toEqual(primeira);
   });
 
+  // E3 — ninguém vira cliente antes de a pessoa marcar os valores da coluna
+  // (demonstracaoValoresDeCliente.spec.js).
   it('"algumas": a coluna escolhida diz quem é cliente; outra resposta devolve a coluna para informação', async () => {
     const { fonte, id } = await lida();
     const algumas = await fonte.responder(id, {
@@ -304,7 +309,7 @@ describe('responder às perguntas', () => {
       colunaCliente: COLUNA.SITUACAO,
       telefone: 'da_pessoa',
     });
-    expect(algumas.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
+    expect(algumas.exemplos.some(e => e.cliente)).toBe(false);
 
     const todas = await fonte.responder(id, {
       clientes: 'sim_todas',
@@ -490,7 +495,13 @@ describe('as perguntas e as respostas acompanham as colunas', () => {
       colunaCliente: COLUNA.SITUACAO,
       telefone: 'da_pessoa',
     });
-    expect(marcada.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
+    // Marcar a coluna não marca ninguém: falta dizer quais valores (E3).
+    expect(marcada.exemplos.some(e => e.cliente)).toBe(false);
+    expect(marcada.perguntas.map(pergunta => pergunta.id)).toEqual([
+      'clientes',
+      'valores_cliente',
+      'telefone',
+    ]);
 
     esquecerMemoriaDaDemo();
     const todas = await respondida({
@@ -506,6 +517,11 @@ describe('as perguntas e as respostas acompanham as colunas', () => {
       clientes: 'sim_todas',
       telefone: 'da_pessoa',
     });
+    // Com "sim, todas" a pergunta dos valores não existe.
+    expect(comColuna.perguntas.map(pergunta => pergunta.id)).toEqual([
+      'clientes',
+      'telefone',
+    ]);
   });
 });
 

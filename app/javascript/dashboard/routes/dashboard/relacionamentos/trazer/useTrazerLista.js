@@ -19,7 +19,10 @@ import {
   useEnvioDaPlanilha,
   useReleitura,
 } from './useLeituraDaPlanilha';
-import { usePerguntasDaLista } from './usePerguntasDaLista';
+import {
+  usePedidoDosValores,
+  usePerguntasDaLista,
+} from './usePerguntasDaLista';
 import {
   useAndamentoDaTela,
   useTentarDeNovo,
@@ -38,7 +41,8 @@ import {
 //   - a linha: `recusaDoConserto` (`{ linha, motivo }`), dita no cartão dela;
 //   - a coluna: `recusaDaColuna` (`{ coluna, chave }`), dita na linha da coluna;
 //   - a pergunta: `recusaDaPergunta` (`{ chave }`), dita na pergunta;
-//   - o trazer: `erro`.
+//   - o trazer: `erro` (e, quando falta dizer quais valores da coluna querem
+//     dizer cliente, a própria pergunta: `recusaDaPergunta`).
 // Quando a escrita faz o servidor ler a planilha de novo, a mudança já está
 // salva: a tela fica `relendo` até a leitura voltar e, se a espera falha, fica
 // em `releituraParada` (o "tentar de novo" só pergunta de novo, nunca repete a
@@ -72,6 +76,7 @@ const PARTES = [
   useColunasDaLeitura,
   useMaisProblemas,
   usePerguntasDaLista,
+  usePedidoDosValores,
   useTrazerAgora,
   useTentarDeNovo,
 ];

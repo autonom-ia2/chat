@@ -9,7 +9,8 @@ import { LENDO, PLANILHA, montarFonteReal, responder } from './apoioDoServidor';
 // relacionamentos_trazer_spec.rb, relacionamentos_trazer_linhas_spec.rb e
 // relacionamentos_trazer_respostas_spec.rb) e a demonstração lê a planilha de
 // exemplo. O que se compara é a forma: as chaves de cada parte e o tipo de cada
-// valor. O que cada uma faz está em demonstracaoLinhas.spec.js e
+// valor (E3: também a pergunta "Quais destes querem dizer cliente?", a resposta
+// dela, `resumo.clientes` e as recusas novas). O que cada uma faz está em demonstracaoLinhas.spec.js e
 // demonstracaoColunas.spec.js.
 vi.mock('dashboard/api/relacionamentosTrazer', async () => ({
   default: (await import('./apiDeMentira')).apiDeMentira(),
@@ -165,6 +166,7 @@ const corpo = (extra = {}) => ({
     comProblema: 6,
     juntadas: 0,
     entram: 2,
+    clientes: 0,
   },
   exemplos: [
     {
@@ -189,8 +191,38 @@ const corpo = (extra = {}) => ({
   ...extra,
 });
 
+// E3 — a pergunta "Quais destes querem dizer cliente?", como o servidor a
+// manda quando há coluna de cliente (o contrato está no brief do E3).
+const DOS_VALORES = {
+  id: 'valores_cliente',
+  coluna: 'Situação',
+  indice: 4,
+  preenchidas: 5,
+  valores: [
+    { chave: '9f2c1d', valor: 'Cliente', linhas: 3 },
+    { chave: 'a01b77', valor: 'Interessado', linhas: 2 },
+  ],
+  outros: null,
+};
+const MAIS_DE_VINTE = { ...DOS_VALORES, outros: { valores: 7, linhas: 9 } };
+const COM_COLUNA_DE_CLIENTE = {
+  perguntas: [
+    { id: 'clientes' },
+    DOS_VALORES,
+    { id: 'telefone', coluna: 'Celular', indice: 1 },
+  ],
+  respostas: { clientes: 'algumas', coluna_cliente: 4 },
+};
+
 const RESPONDIDA = {
-  respostas: { clientes: 'algumas', coluna_cliente: 4, telefone: 'da_pessoa' },
+  perguntas: COM_COLUNA_DE_CLIENTE.perguntas,
+  respostas: {
+    clientes: 'algumas',
+    coluna_cliente: 4,
+    valores_cliente: { modo: 'valores', chaves: ['9f2c1d'] },
+    telefone: 'da_pessoa',
+  },
+  resumo: { ...corpo().resumo, clientes: 1 },
   colunas: corpo().colunas.map(coluna => {
     if (coluna.indice === 1) {
       return { indice: 1, nome: 'Celular', destino: 'telefone' };
@@ -277,17 +309,46 @@ describe('a leitura inteira tem a mesma forma nas duas fontes', () => {
     const real = await realComLeitura(corpo(RESPONDIDA));
     const { fonte, leitura } = await demoComLeitura();
     const situacao = leitura.colunas.find(coluna => coluna.nome === 'Situação');
-    const demo = await fonte.responder(leitura.id, {
+    const respostas = {
       clientes: 'algumas',
       colunaCliente: situacao.indice,
       telefone: 'da_pessoa',
+    };
+    // Marcar a coluna já devolve a leitura pronta, com a pergunta dos valores.
+    const { chave } = (await fonte.responder(leitura.id, respostas)).perguntas
+      .find(pergunta => pergunta.id === 'valores_cliente')
+      .valores.find(valor => valor.valor === 'Cliente');
+    const demo = await fonte.responder(leitura.id, {
+      ...respostas,
+      valores_cliente: { modo: 'valores', chaves: [chave] },
     });
     expect(forma(demo)).toEqual(forma(real.leitura));
     expect(forma(demo.respostas)).toEqual({
       clientes: 'string',
       colunaCliente: 'number',
       telefone: 'string',
+      valores_cliente: { chaves: ['"string"'], modo: 'string' },
     });
+  });
+
+  it('"toda linha com algo escrito" volta só com o modo, nas duas', async () => {
+    const preenchidas = { modo: 'preenchidas' };
+    const real = await realComLeitura(
+      corpo({
+        ...RESPONDIDA,
+        respostas: { ...RESPONDIDA.respostas, valores_cliente: preenchidas },
+      })
+    );
+    const { fonte, leitura } = await demoComLeitura();
+    const situacao = leitura.colunas.find(coluna => coluna.nome === 'Situação');
+    const respostas = { clientes: 'algumas', colunaCliente: situacao.indice };
+    await fonte.responder(leitura.id, respostas);
+    const demo = await fonte.responder(leitura.id, {
+      ...respostas,
+      valores_cliente: preenchidas,
+    });
+    expect(demo.respostas.valores_cliente).toEqual(preenchidas);
+    expect(real.leitura.respostas.valores_cliente).toEqual(preenchidas);
   });
 
   it('o aviso de mudança desfeita vem na mesma chave', async () => {
@@ -332,6 +393,31 @@ describe('as colunas, as perguntas e os exemplos têm a mesma forma', () => {
     const { real, demo } = await partes();
     const pergunta = leitura => leitura.perguntas.find(item => item.id === id);
     expect(forma(pergunta(demo))).toEqual(forma(pergunta(real)));
+  });
+
+  // E3 — a pergunta dos valores só existe com coluna de cliente: nas duas
+  // fontes ela tem as mesmas partes, com `outros` nulo ou com os dois números.
+  it.each([
+    ['com todos os valores na lista', DOS_VALORES, 'Situação'],
+    ['com mais de 20 valores', MAIS_DE_VINTE, 'Aniversário'],
+  ])('a pergunta "valores_cliente", %s', async (_nome, enviada, coluna) => {
+    const real = await realComLeitura(
+      corpo({
+        ...COM_COLUNA_DE_CLIENTE,
+        perguntas: [{ id: 'clientes' }, enviada],
+      })
+    );
+    const { fonte, leitura } = await demoComLeitura();
+    const { indice } = leitura.colunas.find(item => item.nome === coluna);
+    await fonte.responder(leitura.id, {
+      clientes: 'algumas',
+      colunaCliente: indice,
+    });
+    const demo = await fonte.retomar(leitura.id);
+    const pergunta = lida =>
+      lida.perguntas.find(item => item.id === 'valores_cliente');
+    expect(pergunta(demo)).toMatchObject({ coluna, indice });
+    expect(forma(pergunta(demo))).toEqual(forma(pergunta(real.leitura)));
   });
 
   it('a pergunta do telefone aponta a coluna duvidosa pelo índice', async () => {
@@ -479,6 +565,55 @@ describe('cada escrita devolve a mesma forma nas duas fontes', () => {
       name: daReal.name,
       motivo: daReal.motivo,
     });
+  });
+});
+
+// ---- as recusas da pergunta dos valores (E3) ------------------------------------
+
+describe('as recusas da pergunta dos valores têm o mesmo nome nas duas fontes', () => {
+  const recusa422 = error =>
+    Object.assign(new Error('422'), {
+      response: { status: 422, data: { error } },
+    });
+  const comAColuna = async () => {
+    const real = await realComLeitura(corpo(COM_COLUNA_DE_CLIENTE));
+    const demo = await demoComLeitura();
+    const situacao = demo.leitura.colunas.find(c => c.nome === 'Situação');
+    const algumas = { clientes: 'algumas', colunaCliente: situacao.indice };
+    await demo.fonte.responder(demo.leitura.id, algumas);
+    return { real, demo, algumas };
+  };
+
+  it('o valor marcado que não é da coluna: tela desatualizada', async () => {
+    const { real, demo, algumas } = await comAColuna();
+    const deOutraColuna = { modo: 'valores', chaves: ['nao-existe'] };
+    TrazerAPI.responder.mockRejectedValueOnce(
+      recusa422('resposta_desconhecida')
+    );
+    const daReal = await real.fonte
+      .responder(812, { valores_cliente: deOutraColuna })
+      .catch(falha => falha);
+    const daDemo = await demo.fonte
+      .responder(demo.leitura.id, {
+        ...algumas,
+        valores_cliente: deOutraColuna,
+      })
+      .catch(falha => falha);
+    expect(daDemo).toBeInstanceOf(Error);
+    expect(daDemo.name).toBe(daReal.name);
+    expect(daDemo.name).toBe('TELA_DESATUALIZADA');
+  });
+
+  it('trazer sem ter dito quem é cliente: FALTA_VALORES_CLIENTE', async () => {
+    const { real, demo } = await comAColuna();
+    TrazerAPI.trazer.mockRejectedValueOnce(recusa422('falta_valores_cliente'));
+    const daReal = await real.fonte.trazer(812).catch(falha => falha);
+    const daDemo = await demo.fonte
+      .trazer(demo.leitura.id)
+      .catch(falha => falha);
+    expect(daDemo).toBeInstanceOf(Error);
+    expect(daDemo.name).toBe(daReal.name);
+    expect(daDemo.name).toBe('FALTA_VALORES_CLIENTE');
   });
 });
 

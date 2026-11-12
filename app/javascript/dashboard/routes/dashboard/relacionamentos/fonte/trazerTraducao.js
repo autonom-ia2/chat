@@ -25,10 +25,16 @@
 //   - (Fatia 2) quantas pessoas entram quem diz é o servidor (`resumo.entram`,
 //     e `entram` na resposta de cada escrita numa linha): a tela não refaz a
 //     conta;
-//   - (Fatia 2) `aviso` vem quando o servidor desfez a última mudança.
+//   - (Fatia 2) `aviso` vem quando o servidor desfez a última mudança;
+//   - (E3) a pergunta "Quais destes querem dizer cliente?" (`valores_cliente`)
+//     chega como o servidor manda (a coluna, a contagem de cada valor e a chave
+//     dele). A resposta vai e volta com o mesmo nome, só com `modo` e `chaves`:
+//     o texto da célula nunca volta ao servidor. O trazer que ele recusa por
+//     faltar essa resposta ganha o nome `FALTA_VALORES_CLIENTE`.
 import { formatarTelefone } from '../lista/telefone';
 import { DESTINOS, aparado } from '../trazer/destinos';
-import { RESPOSTA_ALGUMAS } from '../trazer/respostas';
+import { PERGUNTA_VALORES, RESPOSTA_ALGUMAS } from '../trazer/respostas';
+import { corpoDosValores } from '../trazer/valoresDeCliente';
 import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 export const SITUACAO_DA_LEITURA = {
@@ -82,19 +88,28 @@ export const respostasDaTela = (respostas = {}) =>
   soRespondidas({
     clientes: respostas?.clientes,
     colunaCliente: respostas?.coluna_cliente,
+    [PERGUNTA_VALORES]: respostas?.[PERGUNTA_VALORES],
     telefone: respostas?.telefone,
   });
 
-// A coluna que diz quem é cliente só vai quando a resposta é "algumas".
-export const corpoDasRespostas = (respostas = {}) =>
-  soRespondidas({
+// A coluna que diz quem é cliente e os valores marcados nela só vão quando a
+// resposta não é outra ("sim, todas" ou "ainda não"). Os valores podem ir
+// sozinhos: a coluna já está marcada no servidor.
+export const corpoDasRespostas = (respostas = {}) => {
+  const outraResposta =
+    respondido(respostas.clientes) && respostas.clientes !== RESPOSTA_ALGUMAS;
+  return soRespondidas({
     clientes: respostas.clientes,
     coluna_cliente:
       respostas.clientes === RESPOSTA_ALGUMAS
         ? respostas.colunaCliente
         : undefined,
+    [PERGUNTA_VALORES]: outraResposta
+      ? undefined
+      : corpoDosValores(respostas[PERGUNTA_VALORES]),
     telefone: respostas.telefone,
   });
+};
 
 // O telefone da empresa só existe quando a planilha tem coluna de empresa e a
 // conta tem Empresas: a leitura diz (`tem_empresa`), e a tela não oferece o que
@@ -202,16 +217,21 @@ export const corpoDoDestino = (destino, campo) =>
 //   - `planilha_apagada`: o conserto de uma linha depois que a planilha saiu do
 //     servidor;
 //   - `nada_para_trazer`: trazer sem nenhuma linha aprovada nem consertada;
+//   - `falta_valores_cliente`: trazer sem ter dito quais valores da coluna
+//     querem dizer cliente (o servidor não traz adivinhando);
 //   - `conferencia_vencida`: a planilha foi enviada há mais de 7 dias e já foi
 //     apagada (toda escrita e o trazer);
 //   - os outros: a tela pediu algo que o servidor já não tem (a leitura não
 //     está pronta ou já foi trazida, a linha, a coluna, a pergunta ou a resposta
-//     não existe). A tela só oferece o que existe, então isso é tela
+//     não existe; entre elas, o valor marcado que já não é da coluna e os
+//     valores mandados sem haver coluna de cliente). A tela só oferece o que
+//     existe, então isso é tela
 //     desatualizada, não erro de quem está usando: ela lê a leitura de novo.
 //     Vale o mesmo para o 404 (a leitura já foi trazida) e para a linha
 //     repetida que o servidor não conhece (`valor_invalido` com o motivo
 //     `linha_desconhecida`).
-// O que não está aqui sobe como veio.
+// O código vem em `error`; o contrato do E3 escreve o de `falta_valores_cliente`
+// em `erro`, e a tradução entende os dois. O que não está aqui sobe como veio.
 const RECUSA_DO_VALOR = 'valor_invalido';
 const MOTIVO_LINHA_DESCONHECIDA = 'linha_desconhecida';
 const TELA_DESATUALIZADA = 'TELA_DESATUALIZADA';
@@ -220,6 +240,7 @@ const NOME_DA_RECUSA = new Map([
   ['sem_empresa', 'SEM_EMPRESA'],
   ['planilha_apagada', 'PLANILHA_APAGADA'],
   ['nada_para_trazer', 'NADA_PARA_TRAZER'],
+  ['falta_valores_cliente', 'FALTA_VALORES_CLIENTE'],
   ['conferencia_vencida', CONFERENCIA_VENCIDA],
   ['leitura_nao_pronta', TELA_DESATUALIZADA],
   ['linha_desconhecida', TELA_DESATUALIZADA],
@@ -236,7 +257,8 @@ const telaDesatualizada = falha =>
     falha
   );
 
-const ehValorRecusado = dados => dados?.error === RECUSA_DO_VALOR;
+const codigoDaRecusa = dados => dados?.error ?? dados?.erro;
+const ehValorRecusado = dados => codigoDaRecusa(dados) === RECUSA_DO_VALOR;
 
 export const erroDaEscrita = falha => {
   const dados = falha?.response?.data;
@@ -251,7 +273,7 @@ export const erroDaEscrita = falha => {
       { motivo: dados.motivo ?? '' }
     );
   }
-  const nome = NOME_DA_RECUSA.get(dados?.error);
+  const nome = NOME_DA_RECUSA.get(codigoDaRecusa(dados));
   if (nome === TELA_DESATUALIZADA) return telaDesatualizada(falha);
   return nome
     ? erroNomeado(nome, 'O servidor recusou a escrita.', falha)
@@ -290,10 +312,16 @@ const semOAviso = leitura =>
 // (`ficar_com`); a que volta aberta ou deixada de fora, não. E quando o valor
 // vale mas a linha ainda tem outro problema, volta esse outro problema (outro
 // `tipo`, `estado` aberto): o cartão da linha passa a ser o dele. `entram` é
-// quantas pessoas entram agora, na conta do servidor.
-export const leituraComProblema = (leitura, recebido, entram) => ({
+// quantas pessoas entram agora, na conta do servidor; `clientes`, quantas
+// delas entram como cliente (quando ele não manda, fica o número que a leitura
+// tinha).
+export const leituraComProblema = (leitura, recebido, entram, clientes) => ({
   ...semOAviso(leitura),
-  resumo: { ...leitura.resumo, entram },
+  resumo: {
+    ...leitura.resumo,
+    entram,
+    ...(Number.isInteger(clientes) ? { clientes } : {}),
+  },
   problemas: leitura.problemas.map(problema =>
     problema.linha === recebido.linha ? copia(recebido) : problema
   ),

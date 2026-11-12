@@ -30,6 +30,13 @@ const aoFalharOTrazer = async (tela, falha) => {
     await tela.reler({ porqueMudou: true });
     return;
   }
+  // E3 — falta dizer quem é cliente: a tela vai à pergunta, que diz por quê.
+  if (
+    falha?.name === NOMES.FALTA_VALORES_CLIENTE &&
+    (await tela.pedirOsValoresDeCliente())
+  ) {
+    return;
+  }
   tela.erro.value =
     falha?.name === NOMES.NADA_PARA_TRAZER
       ? ERROS.NADA_PARA_TRAZER

@@ -45,6 +45,8 @@ describe('a planilha de exemplo', () => {
       comProblema: 8,
       juntadas: 3,
       entram: ENTRAM,
+      // Ninguém é cliente até a pessoa dizer quem é (E3).
+      clientes: 0,
     });
     expect(leitura.problemas.map(p => [p.linha, p.tipo, p.motivo])).toEqual([
       [LINHA.TELEFONE, 'telefone', 'invalid_brazilian_mobile_number'],

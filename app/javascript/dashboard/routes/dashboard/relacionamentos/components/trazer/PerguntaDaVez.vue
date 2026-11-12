@@ -4,8 +4,13 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CartoesDeEscolha from './CartoesDeEscolha.vue';
+import ValoresDeCliente from './ValoresDeCliente.vue';
 import { chaveDaColuna, podeDizerQuemEhCliente } from '../../trazer/destinos';
-import { PERGUNTA_CLIENTES, RESPOSTA_ALGUMAS } from '../../trazer/respostas';
+import {
+  PERGUNTA_CLIENTES,
+  PERGUNTA_VALORES,
+  RESPOSTA_ALGUMAS,
+} from '../../trazer/respostas';
 
 // #2894 — UMA pergunta por tela, só quando a leitura pede. Cada pergunta tem
 // Continuar (sempre ligado: sem resposta, o clique diz o que falta) e Voltar.
@@ -19,6 +24,10 @@ import { PERGUNTA_CLIENTES, RESPOSTA_ALGUMAS } from '../../trazer/respostas';
 // resposta que o servidor não aceitou (ou que falhou) fica dita aqui, como
 // alerta, com o foco de volta nas respostas. `relendo`: a planilha está sendo
 // lida de novo. Com a resposta sendo gravada, o Voltar fica desligado.
+// E3 — "Quais destes querem dizer cliente?" (`valores_cliente`): em vez dos
+// cartões de escolha única, a pessoa marca os valores da coluna
+// (ValoresDeCliente.vue). A pergunta diz de que coluna é e, sem nada marcado, o
+// Continuar diz "Marque pelo menos um." e leva o foco à primeira opção.
 const props = defineProps({
   pergunta: { type: Object, required: true },
   respostas: { type: Object, required: true },
@@ -64,17 +73,35 @@ const opcoesDa = {
 };
 
 const ehDeClientes = computed(() => props.pergunta.id === PERGUNTA_CLIENTES);
+const ehDeValores = computed(() => props.pergunta.id === PERGUNTA_VALORES);
+const colunaDaPergunta = computed(() =>
+  nomeDaColuna(props.pergunta.coluna, props.pergunta.indice)
+);
+// As duas perguntas de cliente voltam pelo mesmo motivo: a coluna mudou.
 const porQueDeNovo = computed(() =>
-  ehDeClientes.value
+  ehDeClientes.value || ehDeValores.value
     ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.DE_NOVO')
     : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.DE_NOVO')
 );
-const titulo = computed(() =>
-  ehDeClientes.value
-    ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.TITULO')
-    : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.TITULO', {
-        coluna: nomeDaColuna(props.pergunta.coluna, props.pergunta.indice),
-      })
+const titulo = computed(() => {
+  if (ehDeClientes.value) {
+    return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.TITULO');
+  }
+  if (ehDeValores.value) {
+    return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.TITULO');
+  }
+  return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.TITULO', {
+    coluna: colunaDaPergunta.value,
+  });
+});
+// O que o título tem de apoio: de que coluna é e por que voltou.
+const apoiosDoTitulo = computed(() =>
+  [
+    ehDeValores.value ? `${id}-coluna-da-pergunta` : '',
+    props.deNovo ? `${id}-de-novo` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 );
 const opcoesDeColuna = computed(() =>
   props.colunas.filter(podeDizerQuemEhCliente).map(coluna => ({
@@ -89,11 +116,14 @@ const cabe = opcaoId => {
   return true;
 };
 const opcoes = computed(() =>
-  opcoesDa[props.pergunta.id]
+  (opcoesDa[props.pergunta.id] ?? [])
     .filter(([opcaoId]) => cabe(opcaoId))
     .map(([opcaoId, chave]) => ({ id: opcaoId, rotulo: t(chave) }))
 );
 const respostaAtual = computed(() => props.respostas[props.pergunta.id] || '');
+const valoresMarcados = computed(
+  () => props.respostas[PERGUNTA_VALORES] ?? null
+);
 const pedeColuna = computed(
   () => ehDeClientes.value && respostaAtual.value === RESPOSTA_ALGUMAS
 );
@@ -106,8 +136,10 @@ const tentarContinuar = () => {
     emit('continuar');
     return;
   }
-  if (!respostaAtual.value) {
-    erro.value = t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_ESCOLHA');
+  if (ehDeValores.value || !respostaAtual.value) {
+    erro.value = ehDeValores.value
+      ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.ERRO_MARQUE')
+      : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_ESCOLHA');
     raiz.value?.querySelector('[data-relacionamentos="resposta"]')?.focus();
     return;
   }
@@ -155,11 +187,23 @@ watch(
       :id="`${id}-titulo`"
       data-titulo-da-tela
       tabindex="-1"
-      :aria-describedby="deNovo ? `${id}-de-novo` : undefined"
+      :aria-describedby="apoiosDoTitulo || undefined"
       class="m-0 text-3xl font-bold tracking-tight outline-none md:text-4xl text-n-slate-12"
     >
       {{ titulo }}
     </h1>
+    <p
+      v-if="ehDeValores"
+      :id="`${id}-coluna-da-pergunta`"
+      data-relacionamentos="coluna-da-pergunta"
+      class="m-0 -mt-4 text-lg text-n-slate-11"
+    >
+      {{
+        t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.COLUNA', {
+          coluna: colunaDaPergunta,
+        })
+      }}
+    </p>
     <p
       v-if="deNovo"
       :id="`${id}-de-novo`"
@@ -168,7 +212,17 @@ watch(
     >
       {{ porQueDeNovo }}
     </p>
+    <ValoresDeCliente
+      v-if="ehDeValores"
+      :pergunta="pergunta"
+      :model-value="valoresMarcados"
+      :rotulo-id="`${id}-titulo`"
+      :invalido="Boolean(erro)"
+      :descrito-por="mensagem ? `${id}-erro` : undefined"
+      @update:model-value="emit('responder', pergunta.id, $event)"
+    />
     <CartoesDeEscolha
+      v-else
       :opcoes="opcoes"
       :model-value="respostaAtual"
       :rotulo-id="`${id}-titulo`"

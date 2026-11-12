@@ -37,6 +37,7 @@ describe('resumoDaTela e partesDaFrase', () => {
       deixadas: 0,
       juntadas: 0,
       entram: 195,
+      clientes: 0,
     });
   });
 

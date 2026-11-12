@@ -4,7 +4,9 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../comum/ErroComTentarDeNovo.vue';
 import { partesDaFrase, planilhaApagada } from '../../trazer/contagem';
+import { PERGUNTA_VALORES } from '../../trazer/respostas';
 import { ERROS } from '../../trazer/useTrazerLista';
+import { valoresRespondidos } from '../../trazer/valoresDeCliente';
 import FichaDeExemplo from './FichaDeExemplo.vue';
 import OQueVouGuardar from './OQueVouGuardar.vue';
 import PrecisamDeVoce from './PrecisamDeVoce.vue';
@@ -12,7 +14,11 @@ import PrecisamDeVoce from './PrecisamDeVoce.vue';
 // #2894 — "Conferir": a frase do que achei, três fichas de exemplo, o que
 // precisa da pessoa, o que vai ser guardado e o botão único de trazer.
 // #2896, Fatia 2 — junto do resumo, uma linha diz quantas linhas da planilha
-// eram a mesma pessoa de outra e já foram juntadas (`resumo.juntadas`). E o
+// eram a mesma pessoa de outra e já foram juntadas (`resumo.juntadas`).
+// E3: outra linha diz quantas das que entram vão entrar como cliente
+// (`resumo.clientes`, conta do servidor); com zero, ela não aparece, a não ser
+// que a pessoa tenha respondido quais valores querem dizer cliente: aí a linha
+// diz que ninguém entra como cliente (a escolha não pegou ninguém). E o
 // trazer que o servidor recusa por não haver ninguém para entrar
 // (`recusaDoTrazer`) é dito como alerta, com o botão de trazer ligado.
 // `total` é quantas pessoas entram, na conta do servidor. Com uma escrita em
@@ -64,6 +70,17 @@ const ROTULOS_DO_CONTADOR = {
 const semNinguemParaTrazer = computed(
   () => props.recusaDoTrazer === ERROS.NADA_PARA_TRAZER
 );
+
+// A pessoa disse quais valores querem dizer cliente e nenhuma das que entram
+// tem um deles.
+const escolhaSemClientes = computed(() => {
+  const { perguntas = [], respostas = {} } = props.leitura;
+  return (
+    props.resumo.clientes === 0 &&
+    perguntas.some(pergunta => pergunta.id === PERGUNTA_VALORES) &&
+    valoresRespondidos(respostas[PERGUNTA_VALORES])
+  );
+});
 
 // O Trazer que a pessoa clicou fica carregando até a escrita voltar.
 const pediuParaTrazer = ref(false);
@@ -187,6 +204,26 @@ const irParaPrecisam = () => {
             resumo.juntadas
           )
         }}
+      </p>
+      <p
+        v-if="resumo.clientes > 0"
+        data-relacionamentos="entram-como-clientes"
+        class="m-0 text-base text-n-slate-11"
+      >
+        {{
+          t(
+            'RELACIONAMENTOS_TRAZER.CONFERIR.CLIENTES',
+            { count: resumo.clientes },
+            resumo.clientes
+          )
+        }}
+      </p>
+      <p
+        v-else-if="escolhaSemClientes"
+        data-relacionamentos="entram-como-clientes"
+        class="m-0 text-base text-n-slate-11"
+      >
+        {{ t('RELACIONAMENTOS_TRAZER.CONFERIR.SEM_CLIENTES') }}
       </p>
     </div>
 

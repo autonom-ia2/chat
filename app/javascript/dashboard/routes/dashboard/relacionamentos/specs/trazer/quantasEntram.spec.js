@@ -181,6 +181,7 @@ describe('os contadores do topo não refazem a conta do servidor', () => {
       deixadas: 0,
       juntadas: 0,
       entram: 0,
+      clientes: 0,
     });
   });
 });

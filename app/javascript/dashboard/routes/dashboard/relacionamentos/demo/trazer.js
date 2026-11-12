@@ -10,7 +10,9 @@
 //     entram, em demo/trazerLinhas.js (o valor é conferido em
 //     demo/trazerConserto.js);
 //   - a troca de destino de uma coluna, as perguntas e as respostas, em
-//     demo/trazerColunas.js.
+//     demo/trazerColunas.js;
+//   - a pergunta "Quais destes querem dizer cliente?", a resposta dela e o
+//     trazer que não adivinha, em demo/trazerValores.js.
 // Cada escrita é uma função pura: recebe a leitura e devolve uma leitura nova,
 // no formato que a fonte real entrega (fonte/trazerTraducao.js), ou lança a
 // mesma recusa com nome. Aqui ficam a leitura de exemplo, as listas que a conta
@@ -40,6 +42,7 @@ export {
   aplicarDeixarDeFora,
   aplicarReabrir,
 } from './trazerLinhas';
+export { conferirAntesDeTrazer } from './trazerValores';
 
 // Quanto a lista leva para entrar. A tela pergunta pelo andamento com a espera
 // crescendo (trazer/consultaComRecuo.js: aos 0 s, 1,5 s, 3,75 s, 7,1 s, 12,1 s

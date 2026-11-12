@@ -64,6 +64,8 @@ describe('ler', () => {
       juntadas: 3,
       // A conta de quantas entram, que na demonstração a própria demo faz.
       entram: 195,
+      // Ninguém é cliente até a pessoa dizer quem é (E3).
+      clientes: 0,
     });
     expect(leitura.problemasTotal).toBe(8);
     expect(leitura.problemas).toHaveLength(8);
@@ -119,18 +121,29 @@ describe('escritas na leitura', () => {
     expect(nova.exemplos.every(e => e.cliente)).toBe(true);
   });
 
-  it('"Algumas" deixa o selo só em quem a coluna diz que é cliente', async () => {
+  // E3 — a coluna não diz sozinha quem é cliente: marcar a coluna faz a
+  // planilha ser lida de novo, e o selo só aparece em quem tem um valor que a
+  // pessoa marcou.
+  it('"Algumas" deixa o selo só em quem tem o valor que a pessoa marcou', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
-    const nova = await fonte.responder(id, {
+    const respostas = {
       clientes: 'algumas',
       colunaCliente: COLUNA.SITUACAO,
       telefone: 'da_pessoa',
-    });
-    expect(nova.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
-    expect(nova.colunas.find(c => c.nome === 'Situação').destino).toBe(
+    };
+    const lida = await fonte.responder(id, respostas);
+    expect(lida.colunas.find(c => c.nome === 'Situação').destino).toBe(
       'cliente'
     );
+    expect(lida.exemplos.some(e => e.cliente)).toBe(false);
+    const dosValores = lida.perguntas.find(p => p.id === 'valores_cliente');
+    const { chave } = dosValores.valores.find(v => v.valor === 'Cliente');
+    const nova = await fonte.responder(id, {
+      ...respostas,
+      valores_cliente: { modo: 'valores', chaves: [chave] },
+    });
+    expect(nova.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
   });
 
   it('"Ainda não" não marca ninguém', async () => {

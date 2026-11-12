@@ -14,8 +14,8 @@ import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 // O protótipo NÃO lê o arquivo no navegador: qualquer planilha devolve a
 // leitura fictícia de demo/trazer.js, que também faz o papel do servidor nas
 // escritas (confere o valor de cada conserto, recusa com o mesmo erro com
-// nome, diz quantas entram, acerta as perguntas e as respostas quando uma
-// coluna muda). As escritas só ficam na memória do módulo (a lista trazida
+// nome, diz quantas entram e quantas entram como cliente, acerta as perguntas
+// e as respostas quando uma coluna muda, e não traz sem saber quem é cliente). As escritas só ficam na memória do módulo (a lista trazida
 // continua lá quando a pessoa sai e volta) e cada método devolve cópias novas.
 // Como na fonte real, responder e trocar a coluna devolvem a leitura inteira
 // ou, quando o servidor leria a planilha de novo, só o marcador
@@ -239,6 +239,8 @@ const trazidasDaDemo = ({ dados, atraso, agora }) => ({
     await esperar(atraso);
     const dadosDaDemo = await dados();
     const leitura = leituraDe(dadosDaDemo, leituraId);
+    // Como o servidor: sem saber quem é cliente, não traz adivinhando.
+    dadosDaDemo.demo.conferirAntesDeTrazer(leitura);
     const id = `trazida-${proximoNumero(dadosDaDemo.memoria)}`;
     const trazida = {
       id,

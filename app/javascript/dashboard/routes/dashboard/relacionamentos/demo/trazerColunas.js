@@ -15,6 +15,13 @@
 //   - A resposta de "São clientes?" acompanha as colunas: sem coluna "cliente",
 //     "algumas" deixa de valer; com uma, a resposta é "algumas" com ela, menos
 //     quando a pessoa disse "sim, todas".
+//   - (E3) Só uma coluna diz quem é cliente: a que vira "cliente" devolve a
+//     que era para informação. Com coluna "cliente" e sem "sim, todas", a
+//     leitura traz a pergunta "Quais destes querem dizer cliente?"
+//     (demo/trazerValores.js), já na resposta da troca: o servidor conta os
+//     valores pelas linhas que leu, sem ler a planilha de novo. A resposta
+//     dela vale para aquela coluna: trocar a coluna apaga a escolha. Ninguém é
+//     cliente por causa do texto da célula: só pelo que a pessoa marcou.
 // `trocaRele` e `respostaRele` dizem quando o servidor leria a planilha de
 // novo (a coluna entra num alvo, sai de um, ou volta de "não guardar"): aí a
 // fonte devolve o marcador `lendo` (fonte/trazerFonteDemo.js). A demonstração
@@ -25,11 +32,18 @@ import { LIMITES } from '../trazer/limites';
 import {
   PERGUNTA_CLIENTES,
   PERGUNTA_TELEFONE,
+  PERGUNTA_VALORES,
   RESPOSTA_ALGUMAS,
 } from '../trazer/respostas';
-import { semAviso } from './trazerLinhas';
-import { COLUNA_QUE_DIZ_QUEM_E_CLIENTE, EXEMPLOS } from './trazerPlanilha';
+import { comAsContas, semAviso } from './trazerLinhas';
+import { EXEMPLOS } from './trazerPlanilha';
 import { recusa, valorInvalido } from './trazerRecusa';
+import {
+  comOsValores,
+  exemploEhCliente,
+  indiceDaColunaDeCliente,
+  perguntaDosValores,
+} from './trazerValores';
 
 const ALVOS = [
   DESTINOS.NOME,
@@ -100,15 +114,19 @@ const conferirATroca = (leitura, indice, destino, campo) => {
   return coluna;
 };
 
+// Cada alvo é de uma coluna só, e só uma coluna diz quem é cliente.
+const ehDeUmaColunaSo = destino =>
+  alvoDe(destino) !== null || destino === DESTINOS.CLIENTE;
+
 // A coluna pedida vai para o destino (a informação que já tinha campo fica com
-// ele, se nenhum veio); a que estava no alvo sai dele; e, sem coluna de
-// empresa, a que era telefone da empresa volta a ser informação.
+// ele, se nenhum veio); a que estava no alvo (ou era "cliente") sai dele; e,
+// sem coluna de empresa, a que era telefone da empresa volta a ser informação.
 const colunasDepois = (colunas, indice, destino, campo) => {
   const trocadas = colunas.map(coluna => {
     if (coluna.indice === indice) {
       return colunaCom(coluna, destino, campo ?? coluna.campo);
     }
-    return alvoDe(destino) && coluna.destino === destino
+    return ehDeUmaColunaSo(destino) && coluna.destino === destino
       ? colunaCom(coluna, DESTINOS.INFORMACAO)
       : coluna;
   });
@@ -160,10 +178,17 @@ const telefoneDuvidoso = leitura => {
   return coluna.destino === DESTINOS.TELEFONE && coluna.duvidosa === true;
 };
 
-const perguntasDe = leitura =>
-  telefoneRespondido(leitura) || telefoneDuvidoso(leitura)
-    ? [{ id: PERGUNTA_CLIENTES }, perguntaDoTelefone(leitura)]
-    : [{ id: PERGUNTA_CLIENTES }];
+// Na ordem: "São clientes?", quais valores querem dizer cliente (quando há
+// coluna de cliente) e o telefone (enquanto a pergunta dele existe).
+// `respostas` são as que valem agora; o telefone é conferido como estava.
+const perguntasDe = (leitura, respostas) => {
+  const temTelefone = telefoneRespondido(leitura) || telefoneDuvidoso(leitura);
+  return [
+    { id: PERGUNTA_CLIENTES },
+    perguntaDosValores({ colunas: leitura.colunas, respostas }),
+    temTelefone ? perguntaDoTelefone(leitura) : null,
+  ].filter(Boolean);
+};
 
 const respostaDeClientes = ({ colunas, respostas }) => {
   if (respostas.clientes === SIM_TODAS) return { clientes: SIM_TODAS };
@@ -182,37 +207,47 @@ const respostaDeClientes = ({ colunas, respostas }) => {
   return vale ? { clientes: respostas.clientes } : {};
 };
 
-const respostasDe = leitura =>
-  telefoneRespondido(leitura)
-    ? { ...respostaDeClientes(leitura), telefone: leitura.respostas.telefone }
-    : respostaDeClientes(leitura);
-
-// Cada exemplo entra como cliente com "sim, todas" ou quando a coluna que diz
-// quem é cliente ("Situação") está marcada e diz que ele é.
-export const exemplosDe = (colunas, respostas) => {
-  const aColunaDiz = colunas.some(
-    coluna =>
-      coluna.destino === DESTINOS.CLIENTE &&
-      coluna.indice === COLUNA_QUE_DIZ_QUEM_E_CLIENTE
-  );
-  return EXEMPLOS.map(({ clienteNaPlanilha, ...exemplo }) => ({
-    ...exemplo,
-    cliente:
-      respostas.clientes === SIM_TODAS || (aColunaDiz && clienteNaPlanilha),
-  }));
+// Os valores marcados valem enquanto a coluna que diz quem é cliente é a mesma
+// para a qual foram marcados.
+const valoresQueValem = (leitura, deClientes) => {
+  const marcados = leitura.respostas[PERGUNTA_VALORES];
+  const mesmaColuna =
+    deClientes.colunaCliente !== undefined &&
+    deClientes.colunaCliente === leitura.respostas.colunaCliente;
+  return mesmaColuna && marcados ? { [PERGUNTA_VALORES]: marcados } : {};
 };
 
+const respostasDe = leitura => {
+  const deClientes = respostaDeClientes(leitura);
+  return {
+    ...deClientes,
+    ...valoresQueValem(leitura, deClientes),
+    ...(telefoneRespondido(leitura)
+      ? { telefone: leitura.respostas.telefone }
+      : {}),
+  };
+};
+
+// Cada exemplo entra como cliente com "sim, todas" ou quando a pessoa marcou,
+// na coluna que diz quem é cliente, o que a planilha tem escrito para ele.
+export const exemplosDe = (colunas, respostas) =>
+  EXEMPLOS.map(({ celulas, ...exemplo }) => ({
+    ...exemplo,
+    cliente: exemploEhCliente({ colunas, respostas }, celulas),
+  }));
+
 // A escrita deu certo: o aviso de uma mudança desfeita some, e o resto da
-// leitura acompanha as colunas.
+// leitura (as perguntas, as respostas, os exemplos e as contas) acompanha as
+// colunas.
 const acertada = leitura => {
   const respostas = respostasDe(leitura);
-  return {
+  return comAsContas({
     ...semAviso(leitura),
     temEmpresa: temDestino(leitura.colunas, DESTINOS.EMPRESA),
-    perguntas: perguntasDe(leitura),
+    perguntas: perguntasDe(leitura, respostas),
     respostas,
     exemplos: exemplosDe(leitura.colunas, respostas),
-  };
+  });
 };
 
 // `campo` só vem com a informação nova: `{ nome, para_que_serve }`.
@@ -263,8 +298,14 @@ const comOTelefone = (leitura, resposta) => {
   };
 };
 
+const semOsValores = respostas =>
+  Object.fromEntries(
+    Object.entries(respostas).filter(([chave]) => chave !== PERGUNTA_VALORES)
+  );
+
 // A coluna que era "cliente" volta a ser informação; com "algumas", a escolhida
-// vira "cliente".
+// vira "cliente". Os valores marcados eram os da coluna de antes: com outra
+// coluna (ou sem nenhuma), a escolha é apagada.
 const comOsClientes = (leitura, { clientes, colunaCliente }) => {
   const escolhida = clientes === RESPOSTA_ALGUMAS ? colunaCliente : null;
   const colunas = leitura.colunas.map(coluna => {
@@ -273,7 +314,8 @@ const comOsClientes = (leitura, { clientes, colunaCliente }) => {
       ? colunaCom(coluna, DESTINOS.INFORMACAO)
       : coluna;
   });
-  const { colunaCliente: deAntes, ...outras } = leitura.respostas;
+  const { colunaCliente: deAntes, ...todas } = leitura.respostas;
+  const outras = escolhida === (deAntes ?? null) ? todas : semOsValores(todas);
   const respostas =
     escolhida === null
       ? { ...outras, clientes }
@@ -281,15 +323,24 @@ const comOsClientes = (leitura, { clientes, colunaCliente }) => {
   return { ...leitura, colunas, respostas };
 };
 
-// `respostas` é o que a tela tem: `{ clientes, colunaCliente, telefone }`. A
-// recusa não deixa nada do pedido guardado.
+// `respostas` é o que a tela tem: `{ clientes, colunaCliente, valores_cliente,
+// telefone }`. Os valores valem para a coluna como o pedido a deixa, mas as
+// chaves só são conhecidas para a coluna que já dizia quem é cliente antes
+// dele. A recusa não deixa nada do pedido guardado.
 export const aplicarRespostas = (leitura, respostas) => {
   conferirAsRespostas(leitura, respostas);
   const comTelefone = respostas.telefone
     ? comOTelefone(leitura, respostas.telefone)
     : leitura;
+  const comClientes = respostas.clientes
+    ? comOsClientes(comTelefone, respostas)
+    : comTelefone;
   return acertada(
-    respostas.clientes ? comOsClientes(comTelefone, respostas) : comTelefone
+    comOsValores(
+      comClientes,
+      respostas[PERGUNTA_VALORES],
+      indiceDaColunaDeCliente(leitura.colunas)
+    )
   );
 };
 

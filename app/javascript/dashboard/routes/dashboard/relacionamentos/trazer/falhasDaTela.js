@@ -35,6 +35,9 @@ export const NOMES = {
   LEITURA_INTERROMPIDA: 'LEITURA_INTERROMPIDA',
   TELA_DESATUALIZADA: 'TELA_DESATUALIZADA',
   NADA_PARA_TRAZER: 'NADA_PARA_TRAZER',
+  // E3 — o servidor não trouxe porque falta dizer quais valores da coluna
+  // querem dizer cliente.
+  FALTA_VALORES_CLIENTE: 'FALTA_VALORES_CLIENTE',
   CONFERENCIA_VENCIDA: 'CONFERENCIA_VENCIDA',
 };
 
@@ -62,6 +65,9 @@ export const erroDaRetomada = falha =>
 // novo" do histórico que falhou).
 export const AVISO_ERRO_TRAZER = 'RELACIONAMENTOS_TRAZER.ERROS.TRAZER';
 const AVISO_ERRO_GUARDAR = 'RELACIONAMENTOS_TRAZER.ERROS.GUARDAR';
+// O que a pergunta dos valores diz a quem tentou trazer sem respondê-la.
+export const FRASE_FALTA_VALORES =
+  'RELACIONAMENTOS_TRAZER.ERROS.FALTA_VALORES_CLIENTE';
 const AVISO_SEM_COLUNA_DE_CONTATO =
   'RELACIONAMENTOS_TRAZER.ERROS.SEM_COLUNA_DE_CONTATO';
 // A escrita que a fonte recusa com nome e que tem frase própria: a que tira a

@@ -43,6 +43,17 @@
         "DA_EMPRESA": "The company's",
         "DE_NOVO": "You changed the phone column. Answer again.",
         "NAO_USAR": "Don't use it"
+      },
+      "VALORES": {
+        "TITULO": "Which of these mean customer?",
+        "COLUNA": "Column “{coluna}”",
+        "PREENCHIDAS": "Every row with something written in this column",
+        "LINHAS": "{count} row | {count} rows",
+        "OUTROS": "Plus {valores}, {linhas}. To check them all, choose the first option.",
+        "OUTROS_VALORES": "{count} other value | {count} other values",
+        "OUTROS_LINHAS": "in {count} row | in {count} rows",
+        "ERRO_MARQUE": "Check at least one.",
+        "COLUNA_VAZIA": "This column is empty in this spreadsheet. Go back and choose another column, or answer “Not yet”."
       }
     },
     "CONFERIR": {
@@ -61,6 +72,8 @@
       "NINGUEM": "There is no one left to bring in.",
       "ESCOLHER_OUTRA": "Choose another spreadsheet",
       "JUNTADAS": "I merged {count} row from a person who appeared more than once. | I merged {count} rows from people who appeared more than once.",
+      "CLIENTES": "{count} comes in as a customer. | {count} come in as customers.",
+      "SEM_CLIENTES": "No one comes in as a customer.",
       "MUDOU": "This list changed while you were checking it. I'm showing how it is now.",
       "MUDANCA_DESFEITA": "I didn't make that change: with it there would be no one left with a phone or e-mail. I left it as it was.",
       "RELENDO": "Reading your spreadsheet again…",
@@ -212,6 +225,7 @@
       "ANDAMENTO": "I couldn't check how it's going.",
       "HISTORICO": "I couldn't show what you already brought in.",
       "NADA_PARA_TRAZER": "There is no one left to bring in. Send the spreadsheet again.",
+      "FALTA_VALORES_CLIENTE": "Before bringing in the list, say who is a customer.",
       "SEM_EMPRESA": "To keep the company phone, the spreadsheet needs a column with the company name.",
       "MUITO_LONGO": "This text is too long. Shorten it and try again.",
       "SEM_COLUNA_DE_CONTATO": "I didn't change this column: the list needs at least one phone or e-mail column."

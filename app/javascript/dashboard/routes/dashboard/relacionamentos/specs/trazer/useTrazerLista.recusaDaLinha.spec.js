@@ -182,7 +182,11 @@ describe('useTrazerLista: a recusa da linha, a troca de coluna e as respostas', 
     });
 
     it('a primeira coluna da planilha (índice 0) vale como coluna escolhida', async () => {
-      const responder = vi.fn(async () => COM_PERGUNTAS);
+      // O servidor devolve a leitura com a resposta que gravou.
+      const responder = vi.fn(async () => ({
+        ...COM_PERGUNTAS,
+        respostas: { clientes: 'algumas', colunaCliente: 0 },
+      }));
       const { tela } = await lida({ responder }, COM_PERGUNTAS);
       tela.responder('clientes', 'algumas');
       expect(tela.podeContinuar.value).toBe(false);

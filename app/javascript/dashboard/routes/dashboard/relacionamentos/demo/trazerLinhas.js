@@ -15,6 +15,8 @@
 // (app/services/contact_imports/trazer/quem_entra.rb): as aprovadas na leitura
 // mais as consertadas por inteiro. A repetida que a pessoa manteve toma o lugar
 // da linha aprovada da mesma pessoa: é uma troca, não uma pessoa a mais.
+// Quantas delas entram como cliente (`resumo.clientes`, E3) também é conta
+// daqui: demo/trazerValores.js.
 import {
   copia,
   ehLinhaRepetida,
@@ -26,6 +28,7 @@ import { TIPO_FORMULA } from '../trazer/textoDoProblema';
 import { conferirValor } from './trazerConserto';
 import { O_QUE_SOBRA, PROBLEMAS } from './trazerPlanilha';
 import { valorInvalido } from './trazerRecusa';
+import { clientesQueEntram } from './trazerValores';
 
 const { ABERTO, GUARDADO, DEIXADO } = SITUACAO_DO_PROBLEMA;
 const CHAVE_DO_AVISO = 'aviso';
@@ -41,14 +44,18 @@ export const consertadas = leitura =>
     problema => problema.estado === GUARDADO && !ficouComEsta(problema)
   ).length;
 
-export const comAsContas = leitura => ({
-  ...leitura,
-  resumo: {
-    ...leitura.resumo,
-    entram:
-      leitura.resumo.novas + leitura.resumo.completadas + consertadas(leitura),
-  },
-});
+export const comAsContas = leitura => {
+  const entram =
+    leitura.resumo.novas + leitura.resumo.completadas + consertadas(leitura);
+  return {
+    ...leitura,
+    resumo: {
+      ...leitura.resumo,
+      entram,
+      clientes: clientesQueEntram(leitura, entram),
+    },
+  };
+};
 
 // O aviso de uma mudança desfeita vale até a escrita seguinte que dá certo.
 export const semAviso = leitura =>

@@ -43,6 +43,17 @@
         "DA_EMPRESA": "Da empresa",
         "DE_NOVO": "Você mudou a coluna do telefone. Responda de novo.",
         "NAO_USAR": "Não usar"
+      },
+      "VALORES": {
+        "TITULO": "Quais destes querem dizer cliente?",
+        "COLUNA": "Coluna “{coluna}”",
+        "PREENCHIDAS": "Toda linha com algo escrito nesta coluna",
+        "LINHAS": "{count} linha | {count} linhas",
+        "OUTROS": "E mais {valores}, {linhas}. Para marcar todos, escolha a primeira opção.",
+        "OUTROS_VALORES": "{count} valor diferente | {count} valores diferentes",
+        "OUTROS_LINHAS": "em {count} linha | em {count} linhas",
+        "ERRO_MARQUE": "Marque pelo menos um.",
+        "COLUNA_VAZIA": "Esta coluna está vazia nesta planilha. Volte e escolha outra coluna, ou responda “Ainda não”."
       }
     },
     "CONFERIR": {
@@ -61,6 +72,8 @@
       "NINGUEM": "Não sobrou ninguém para trazer.",
       "ESCOLHER_OUTRA": "Escolher outra planilha",
       "JUNTADAS": "Juntei {count} linha de uma pessoa que aparecia mais de uma vez. | Juntei {count} linhas de pessoas que apareciam mais de uma vez.",
+      "CLIENTES": "{count} entra como cliente. | {count} entram como clientes.",
+      "SEM_CLIENTES": "Ninguém entra como cliente.",
       "MUDOU": "Esta lista mudou enquanto você conferia. Mostrei como está agora.",
       "MUDANCA_DESFEITA": "Não fiz essa mudança: com ela não sobraria ninguém com telefone ou e-mail. Deixei como estava.",
       "RELENDO": "Lendo sua planilha de novo…",
@@ -212,6 +225,7 @@
       "ANDAMENTO": "Não consegui ver como está indo.",
       "HISTORICO": "Não consegui mostrar o que você já trouxe.",
       "NADA_PARA_TRAZER": "Não sobrou ninguém para trazer. Envie a planilha de novo.",
+      "FALTA_VALORES_CLIENTE": "Antes de trazer, diga quem é cliente.",
       "SEM_EMPRESA": "Para guardar o telefone da empresa, a planilha precisa de uma coluna com o nome da empresa.",
       "MUITO_LONGO": "Este texto é longo demais. Encurte e tente de novo.",
       "SEM_COLUNA_DE_CONTATO": "Não mudei esta coluna: a lista precisa de pelo menos uma coluna de telefone ou de e-mail."

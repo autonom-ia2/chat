@@ -42,7 +42,9 @@ import { SEM_ACESSO } from '../lista/falhas';
 //      conserto depois que a planilha foi apagada é `PLANILHA_APAGADA`; tirar a
 //      última coluna de contato é `TROCA_SEM_CONTATO`; telefone da empresa sem
 //      empresa é `SEM_EMPRESA`; trazer sem ninguém para entrar é
-//      `NADA_PARA_TRAZER`; a planilha enviada há mais de 7 dias, que já foi
+//      `NADA_PARA_TRAZER`; trazer sem ter dito quais valores da coluna querem
+//      dizer cliente é `FALTA_VALORES_CLIENTE` (E3: o servidor não traz
+//      adivinhando); a planilha enviada há mais de 7 dias, que já foi
 //      apagada, é `CONFERENCIA_VENCIDA` (na escrita e em quem pergunta pela
 //      leitura); e o pedido que o servidor já não conhece (a leitura
 //      não está pronta ou já foi trazida, a linha, a coluna, a pergunta ou a
@@ -234,7 +236,8 @@ const escritasDaLeitura = guardadas => {
       }
       return guardadas.guardarMaisUmaPagina(leituraId, pagina, resposta);
     },
-    // As respostas das perguntas ("São clientes?" e de quem é o telefone).
+    // As respostas das perguntas ("São clientes?", quais valores querem dizer
+    // cliente e de quem é o telefone).
     async responder(leituraId, respostas) {
       leituraGuardada(leituraId);
       const corpo = corpoDasRespostas(respostas);
@@ -283,12 +286,19 @@ const escritasDeLinha = guardadas => {
   // guardado, mas a linha ainda tem o que resolver.
   const escreverNaLinha = async (id, linha, pedido) => {
     const problema = problemaDaLeitura(leituraGuardada(id), linha);
-    const { problema: recebido, entram } = await escritaNaLeitura(
-      pedido(problema)
-    );
+    const {
+      problema: recebido,
+      entram,
+      clientes,
+    } = await escritaNaLeitura(pedido(problema));
     return guardadas.guardar(
       id,
-      leituraComProblema(leituraGuardada(id), { ...recebido, linha }, entram)
+      leituraComProblema(
+        leituraGuardada(id),
+        { ...recebido, linha },
+        entram,
+        clientes
+      )
     );
   };
 
