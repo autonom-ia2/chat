@@ -3671,16 +3671,16 @@
           "EXEMPLO": "Sorriso, MT, since yesterday"
         },
         "CERTIDOES_EMPRESA": {
-          "ROTULO": "Certificate and company CNPJ",
-          "EXEMPLO": "labor certificate of 11.222.333/0001-81",
+          "ROTULO": "Company CNPJ",
+          "EXEMPLO": "misconduct certificate of 11.222.333/0001-81",
           "NOME": "Company certificates",
           "APOIO": "by CNPJ",
-          "FAZ": "Gets a company's certificates right away: federal debt, labor, FGTS, misconduct and the list of government debtors.",
-          "CONSEGUE": "get a company's certificates",
-          "CLIENTE": "Does the company 11.222.333/0001-81 owe federal taxes?",
-          "AGENTE": "I just checked: the federal debt certificate came out clear, no debt.",
-          "USE_QUANDO": "Use when the customer asks to check whether a company has debts or up-to-date certificates.",
-          "CONSULTAS": "federal debt, labor debt, FGTS, misconduct (CNJ) and the list of government debtors (CADIN)"
+          "FAZ": "Gets a company's administrative misconduct certificate (CNJ) right away.",
+          "CONSEGUE": "get a company's misconduct certificate",
+          "CLIENTE": "Has the company 11.222.333/0001-81 been convicted of misconduct?",
+          "AGENTE": "I just checked: the CNJ certificate came out clear, no misconduct conviction.",
+          "USE_QUANDO": "Use when the customer asks to check whether a company has an administrative misconduct conviction.",
+          "CONSULTAS": "administrative misconduct (CNJ)"
         },
         "RAIO_X_EMPRESA": {
           "ROTULO": "What to see and the company CNPJ",
@@ -3696,15 +3696,15 @@
         },
         "CONFERIR_PESSOA": {
           "ROTULO": "What to check and the CPF",
-          "EXEMPLO": "CPF status 111.444.777-35",
+          "EXEMPLO": "name and birth date of CPF 111.444.777-35",
           "NOME": "Check the person",
           "APOIO": "by CPF",
-          "FAZ": "Checks the CPF status with the Federal Revenue, the name and birth date, and the professional council registration.",
+          "FAZ": "Checks the name and birth date by CPF, and the professional council registration.",
           "CONSEGUE": "check who the person is",
           "CLIENTE": "My CPF is 111.444.777-35. Can you check my details?",
-          "AGENTE": "Checked: the CPF is regular with the Federal Revenue and the birth date matches what you told me.",
+          "AGENTE": "Checked: the name and birth date match what you told me.",
           "USE_QUANDO": "Use when you need to confirm the details the customer gave you.",
-          "CONSULTAS": "CPF status with the Federal Revenue, name and birth date, and professional council registration"
+          "CONSULTAS": "name and birth date, and professional council registration"
         },
         "HISTORICO_PLACA": {
           "ROTULO": "Vehicle plate",
@@ -3722,24 +3722,24 @@
           "EXEMPLO": "risk area of Rua Augusta, 1500, São Paulo",
           "NOME": "Address risk",
           "APOIO": "by address or ZIP code",
-          "FAZ": "Shows whether the address is in a risk area, the crimes in the city and the property's inspection.",
+          "FAZ": "Shows whether the address is in a risk area and the crimes in the city.",
           "CONSEGUE": "see the risk of an address",
           "CLIENTE": "My house is at ZIP code 01001-000, number 10. Is it a risk area?",
           "AGENTE": "Checked: the address is outside a risk area.",
           "USE_QUANDO": "Use when the customer wants to insure a property and gives the address.",
-          "CONSULTAS": "risk area, crimes in the city (SP, RJ and MG only) and property inspection"
+          "CONSULTAS": "risk area and crimes in the city (SP, RJ and MG only)"
         },
         "IMOVEL_RURAL": {
-          "ROTULO": "Rural registry receipt or company CNPJ",
-          "EXEMPLO": "IBAMA embargo of 11.222.333/0001-81",
+          "ROTULO": "Rural registry receipt code",
+          "EXEMPLO": "registry status of MT-5107065-0A1B2C3D4E5F60718293A4B5C6D7E8F9",
           "NOME": "Rural property",
-          "APOIO": "by the rural registry receipt or CNPJ",
-          "FAZ": "Shows the farm's status in the Rural Environmental Registry and whether the owner company has an IBAMA embargo.",
+          "APOIO": "by the rural registry receipt",
+          "FAZ": "Shows the farm's status in the Rural Environmental Registry.",
           "CONSEGUE": "check a rural property",
           "CLIENTE": "Is my farm regular in the Rural Environmental Registry?",
           "AGENTE": "I checked by the receipt: the registry is active, with 120 hectares in Mato Grosso.",
-          "USE_QUANDO": "Use when the customer gives the Rural Environmental Registry receipt or the CNPJ of the farm's owner company.",
-          "CONSULTAS": "Rural Environmental Registry status and IBAMA embargo"
+          "USE_QUANDO": "Use when the customer gives the farm's Rural Environmental Registry receipt.",
+          "CONSULTAS": "Rural Environmental Registry status"
         },
         "CONTATO_EMPRESA": {
           "ROTULO": "What to find and the company CNPJ",
@@ -3787,7 +3787,7 @@
         "RESTA_UMA": "1 of {gratis} free left this month",
         "ACABARAM": "No free lookups left this month",
         "TESTE_GRATIS": "The test uses 1 of this month's free lookups.",
-        "CONSULTANDO": "Looking up… it can take up to 1 minute.",
+        "CONSULTANDO": "Looking up… some lookups take up to 2 minutes.",
         "TESTAR_POR": "Test for {preco}",
         "TESTAR_POR_ATE": "Test for up to {preco}",
         "TITULO": "How much it costs",

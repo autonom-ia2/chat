@@ -5,7 +5,7 @@ class Relationships::Configuration
 
   SURFACES = { 'contact_sidebar' => 'contact_attribute', 'contact_details' => 'contact_attribute',
                'company_details' => 'company_attribute' }.freeze
-  EDITABLE = %w[attribute_display_name attribute_description attribute_values].freeze
+  EDITABLE = %w[attribute_display_name attribute_description attribute_values oculto_na_tela].freeze
   CREATION = %w[attribute_key attribute_model attribute_display_type].freeze
   TYPES = %w[text number link date list checkbox].freeze
 

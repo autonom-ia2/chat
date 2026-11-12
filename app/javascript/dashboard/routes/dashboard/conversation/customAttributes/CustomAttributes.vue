@@ -14,6 +14,7 @@ import { useRelationshipPermissions } from 'dashboard/composables/useRelationshi
 import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
 import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
@@ -72,17 +73,22 @@ const readOnlyContact = computed(
     (props.attributeType === 'conversation_attribute' &&
       !getters.canOperateConversation.value(currentChat.value))
 );
+// #2435: o atributo com "Mostrar na tela" desligado não entra no painel.
 const attributes = computed(() => {
   if (relationshipSidebar.value) {
-    return selectDefinitions(
-      relationshipState.value.definitions.filter(
-        item => item.attribute_model === 'contact_attribute'
-      ),
-      relationshipState.value.configuration,
-      'contact_sidebar'
+    return naTela(
+      selectDefinitions(
+        relationshipState.value.definitions.filter(
+          item => item.attribute_model === 'contact_attribute'
+        ),
+        relationshipState.value.configuration,
+        'contact_sidebar'
+      )
     );
   }
-  return getters['attributes/getAttributesByModel'].value(props.attributeType);
+  return naTela(
+    getters['attributes/getAttributesByModel'].value(props.attributeType)
+  );
 });
 
 const contactIdentifier = computed(
