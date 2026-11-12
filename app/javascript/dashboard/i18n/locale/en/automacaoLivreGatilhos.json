@@ -24,7 +24,13 @@
       "CARD_ANTES_DA_REUNIAO": "Before a meeting",
       "CARD_RECORRENTE": "On a date or on a schedule, on cards",
       "CONTATO_RECORRENTE": "On a date or on a schedule, on contacts",
-      "CONTA_RECORRENTE": "On a date or on a schedule, on the account"
+      "CONTA_RECORRENTE": "On a date or on a schedule, on the account",
+      "CONVERSA_RESPONSAVEL_MUDOU": "When the conversation assignee changes",
+      "CONVERSA_TIME_MUDOU": "When the conversation team changes",
+      "CONVERSA_ETIQUETA_POSTA": "When a label is added to the conversation",
+      "CONVERSA_ETIQUETA_TIRADA": "When a label is removed from the conversation",
+      "CONTATO_ETIQUETA_POSTA": "When a label is added to the contact",
+      "CONTATO_ETIQUETA_TIRADA": "When a label is removed from the contact"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -86,13 +92,15 @@
       "MUDANCA": "Change",
       "REPETE": "Repeats",
       "PAGINA_ID": "Booking page",
-      "ANTES": "How long before it starts"
+      "ANTES": "How long before it starts",
+      "ETIQUETA": "Label"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
       "CARD": "Pipeline card",
       "REUNIAO": "Meeting",
-      "TEMPO": "Time"
+      "TEMPO": "Time",
+      "CONTATO": "Contact"
     },
     "GATILHO_COM": {
       "CARD_CRIADO": "When a card is created in {funil}",
@@ -109,7 +117,11 @@
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h",
-      "CARD_ANTES_DA_REUNIAO": "{antes} before a meeting"
+      "CARD_ANTES_DA_REUNIAO": "{antes} before a meeting",
+      "CONVERSA_ETIQUETA_POSTA": "When the label {etiqueta} is added to the conversation",
+      "CONVERSA_ETIQUETA_TIRADA": "When the label {etiqueta} is removed from the conversation",
+      "CONTATO_ETIQUETA_POSTA": "When the label {etiqueta} is added to the contact",
+      "CONTATO_ETIQUETA_TIRADA": "When the label {etiqueta} is removed from the contact"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",

@@ -93,11 +93,14 @@ RSpec.describe 'CRM opportunity creation from shared relationships', type: :requ
     expect(response).to have_http_status(:not_found)
   end
 
-  it 'does not accept a stage from a different pipeline' do
+  # #2501: a etapa de outro funil não vira erro: o card nasce na etapa de entrada do funil pedido (Crm::Cards::EtapaDeEntrada).
+  it 'places a stage from a different pipeline at the entry stage of the requested pipeline' do
     other_pipeline = create_crm_pipeline(account: account, user: admin)
     payload[:card][:stage_id] = other_pipeline.last.id
-    expect { post url, params: payload, headers: headers, as: :json }.not_to change(Crm::Card, :count)
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect { post url, params: payload, headers: headers, as: :json }.to change(Crm::Card, :count).by(1)
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body.fetch('payload')).to include('pipeline_id' => pipeline_and_stage.first.id,
+                                                             'stage_id' => pipeline_and_stage.last.id)
   end
 
   it 'preserves external upsert behavior with independent request keys' do

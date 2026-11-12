@@ -297,7 +297,8 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       expect([resultado.motivo, resultado.dados]).to eq(['faltou_valor', {}])
     end
 
-    it 'no modelo do WhatsApp (janela fechada) sem o link: o mesmo motivo próprio e o por, e a execução para' do
+    # O modelo devolve o motivo real da variável vazia (`modelo_faltou_valor`, ModeloWhatsapp#preparar); o ensaio diz o mesmo.
+    it 'no modelo do WhatsApp (janela fechada) sem o link: o mesmo motivo próprio e o por, e a execução para', :aggregate_failures do
       ligar_mensagens(account)
       conversa = create(:conversation, account: account, contact: world.contact)
       card.update!(primary_conversation: conversa, owner: nil)
@@ -308,13 +309,17 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       allow(Conversations::MessageWindowService).to receive(:new).and_return(instance_double(Conversations::MessageWindowService, can_reply?: false))
       allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:aplica?).and_return(true)
       allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:new) do |_modelo, _conversa, valores|
-        instance_double(Autonomia::Automacao::ModeloWhatsapp, preparar: valores.ler('card.link_da_agenda') || 'faltou_valor')
+        instance_double(Autonomia::Automacao::ModeloWhatsapp, preparar: valores.ler('card.link_da_agenda') || 'modelo_faltou_valor')
       end
 
       resultado = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: card).executar
 
       expect([resultado.tipo, resultado.motivo, resultado.dados])
         .to eq([:pulado, 'faltou_link_da_agenda', { 'por' => 'sem_responsavel', 'janela' => 'fechada' }])
+      receita = { 'gatilho' => { 'tipo' => 'card.ganho' }, 'passos' => [passo, esperar_passo('p2')] }
+      ensaio = Autonomia::Automacao::Ensaio.new(receita: receita, conta: account, usuario: admin, conversa_id: card.id).resultado
+      expect(ensaio[:conversas].first[:passos])
+        .to eq([{ id: 'm1', tipo: 'mensagem', faria: 'pararia', dados: { motivo: 'faltou_link_da_agenda' } }])
     end
   end
 end

@@ -22,6 +22,8 @@ import { mostraNaFrequencia } from '../recorrente';
 // G60: a página de agenda de reserva, para o link da agenda quando ninguém atende.
 // G50: no gatilho que aceita (`se_repetir` no catálogo), o que fazer quando ele
 // acontece de novo com a automação ainda esperando no mesmo card ou conversa.
+// G10 (F8.7): a etiqueta posta ou tirada pede a etiqueta, pelo nome (é assim
+// que a conversa e o contato a guardam).
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -52,7 +54,9 @@ const grupos = computed(() => {
     options: props.gatilhos.filter(item => item.grupo === grupo).map(opcao),
   }));
 });
-const opcoes = computed(() => props.gatilhos.map(opcao));
+// Não se chama `opcoes`: o nome esconderia, no template, a prop das escolhas da
+// conta (pessoas, etiquetas) que a seleção e a etiqueta leem.
+const tiposDeGatilho = computed(() => props.gatilhos.map(opcao));
 
 const entradaDo = tipo => props.gatilhos.find(item => item.tipo === tipo);
 const pedePeca = (item, peca) =>
@@ -283,7 +287,7 @@ const mudar = (nome, valor) => {
         :trigger-id="idTipo"
         :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO')"
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
-        :options="opcoes"
+        :options="tiposDeGatilho"
         :groups="grupos || []"
         @update:model-value="trocarTipo"
       />
@@ -416,6 +420,15 @@ const mudar = (nome, valor) => {
           {{ $t('AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.SEM_CAMPO') }}
         </p>
       </template>
+      <ChoiceSelect
+        v-else-if="parametro.peca === 'etiqueta'"
+        data-etiqueta
+        :model-value="modelValue?.[parametro.nome] ?? ''"
+        :aria-label="$t(parametro.frase)"
+        :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+        :options="opcoes.etiquetaPorNome || []"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
       <ChoiceSelect
         v-else-if="parametro.peca === 'pagina'"
         data-pagina
