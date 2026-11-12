@@ -9,7 +9,7 @@ import {
   oferecida,
 } from '../../vitrine/catalogo';
 
-// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5), com as chaves dele, os textos no i18n e o
+// #2858 F2 — o catálogo da tela: só as fontes que o servidor tem (F0 + F1 + F4 + F5 + F7), com as chaves dele, os textos no i18n e o
 // destaque pelo ramo da conta.
 const i18n = withFullI18n('pt_BR');
 const { te } = i18n.global;
@@ -34,11 +34,20 @@ const CHAVES_DO_SERVIDOR = [
   'chuva',
   'produtos_seguradoras',
   'corretor_susep',
+  // F5 (bases baixadas)
   'planos_de_saude',
   'aeronaves',
   'geracao_solar',
   'transportadoras',
   'queimadas',
+  // F7 (Premium)
+  'certidoes_empresa',
+  'raio_x_empresa',
+  'conferir_pessoa',
+  'historico_placa',
+  'risco_endereco',
+  'imovel_rural',
+  'contato_empresa',
 ];
 
 describe('catálogo da vitrine', () => {
@@ -55,6 +64,7 @@ describe('catálogo da vitrine', () => {
         ['NOME', 'FAZ', 'CONSEGUE', 'CLIENTE', 'AGENTE', 'USE_QUANDO'].forEach(
           campo => expect(te(`${base}.${campo}`, locale)).toBe(true)
         );
+        // Todo card tem "Experimente", o Premium também (F7, decisão A do Rodrigo, 11/11).
         expect(te(`${base}.ROTULO`, locale)).toBe(true);
         if (!item.semCampo) expect(te(`${base}.EXEMPLO`, locale)).toBe(true);
         expect(GRUPOS.some(grupo => grupo.id === item.grupo)).toBe(true);
@@ -129,5 +139,52 @@ describe('catálogo da vitrine', () => {
     expect(feriados.exemplo(new Date(2026, 10, 10), 'pt_BR')).toBe(
       '30/11/2026'
     );
+  });
+
+  it('the 7 Premium cards are in the Premium group, with the group and price texts in both languages, and never highlighted', () => {
+    const premium = FERRAMENTAS.filter(item => item.premium);
+    expect(premium.map(item => item.id)).toEqual([
+      'certidoes_empresa',
+      'raio_x_empresa',
+      'conferir_pessoa',
+      'historico_placa',
+      'risco_endereco',
+      'imovel_rural',
+      'contato_empresa',
+    ]);
+    premium.forEach(item => expect(item.grupo).toBe('PREMIUM'));
+    expect(GRUPOS.map(grupo => grupo.id)).toContain('PREMIUM');
+    ['pt_BR', 'en'].forEach(locale => {
+      [
+        'SELO',
+        'DEPOIS',
+        'AGORA',
+        'FAIXA',
+        'RESTAM',
+        'RESTA_UMA',
+        'ACABARAM',
+        'TITULO',
+        'CONTADOR.RESTAM',
+        'CONTADOR.RESTA_UMA',
+        'VOLTAM',
+        'PRECO_DEPOIS',
+        'PRECO_AGORA',
+        'POR_CONSULTA',
+        'REGRAS.SEM_RESULTADO',
+        'REGRAS.NUMERO_ERRADO',
+        'REGRAS.MESMO_DIA',
+        'REGRAS.FAIXA',
+        'REGRAS.FATURA',
+      ].forEach(campo =>
+        expect(te(`AGENTS.VITRINE.PREMIUM.${campo}`, locale)).toBe(true)
+      );
+      expect(te('AGENTS.VITRINE.GRUPOS.PREMIUM.NOME', locale)).toBe(true);
+    });
+    const todas = liberadas(CHAVES_DO_SERVIDOR);
+    expect(emDestaque(todas, ['seguros']).some(item => item.premium)).toBe(
+      false
+    );
+    expect(emDestaque(todas, []).some(item => item.premium)).toBe(false);
+    expect(ferramentaPorId('historico_placa').premium).toBe(true);
   });
 });

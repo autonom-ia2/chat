@@ -54,6 +54,13 @@ module Autonomia::FerramentasProntas
     Catalogo.todas.select { |fonte| disponivel?(account, fonte) }
   end
 
+  # As que o Construtor e o cartão "pode ganhar" (F3) podem sugerir. Os dois filtros valem juntos: só as da vitrine
+  # (`da_vitrine`: fora as de uso interno, #2909) e, delas, nenhuma Premium (F7): consulta paga só entra no agente pela
+  # escolha de uma pessoa, na vitrine.
+  def sugeriveis(account)
+    da_vitrine(account).reject(&:premium?)
+  end
+
   # A fonte está liberada para a conta: a flag das prontas e, na fonte de uma fase posterior, a flag dela.
   def disponivel?(account, fonte)
     fonte.present? && ligada?(account) && (fonte.flag.nil? || account.feature_enabled?(fonte.flag))
@@ -107,9 +114,31 @@ module Autonomia::FerramentasProntas
   # Quem executa a chamada: a `Execucao` para a pronta, o `HttpExecutor` para a cadastrada. As opções do `HttpExecutor`
   # (`turno`, `segundos`, `chave`, `higienizar`) não valem para a pronta: ela não manda cabeçalho nem chave a ninguém, e
   # o prazo dela é o do catálogo.
-  def executor_para(tool, params:, **opcoes)
+  # `tool_run_id` (a execução em segundo plano) só vale para a Premium, que o leva à telemetria. Também só dela:
+  # `pode_cobrar` e `em_andamento`, do Experimente (`Premium::Execucao`).
+  OPCOES_DA_PREMIUM = %i[pode_cobrar em_andamento].freeze
+
+  # O que o Guia não faz por ninguém (`Guide::Acoes::SO_NA_TELA`; revisor, 12/11): o Experimente faz consulta de
+  # verdade, e no card Premium usa as grátis do mês e, depois delas, cobra com o clique no preço (`confirmou_preco`). O
+  # Guia nunca manda esse clique, nem lê o pedido do Experimente Premium: o teste é só na tela.
+  SO_NA_TELA_DO_GUIA = ['POST autonomia/ferramentas_prontas/experimentar', 'GET autonomia/ferramentas_prontas/experimentar/:pedido']
+                       .index_with('ready_tool_test').freeze
+
+  def executor_para(tool, params:, tool_run_id: nil, **opcoes)
+    if tool.pronta? && Premium.fonte?(tool.fonte_do_catalogo)
+      return Premium::Execucao.new(tool: tool, params: params, tool_run_id: tool_run_id, **opcoes.slice(*OPCOES_DA_PREMIUM))
+    end
     return Execucao.new(tool: tool, params: params) if tool.pronta?
 
-    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes)
+    ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: params, **opcoes.except(*OPCOES_DA_PREMIUM))
+  end
+
+  # O fuso da conta, para o "hoje" das prontas e o mês das grátis Premium. Sem ele (defeito ao ler a conta), o da
+  # plataforma: quem pergunta nunca levanta.
+  def fuso_da_conta(account)
+    ActiveSupport::TimeZone[Crm::Timezone::Resolver.new(account: account).name_or_default.to_s] || Time.zone
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][pronta] fuso da conta indisponível conta=#{account&.id} #{e.class}")
+    Time.zone
   end
 end

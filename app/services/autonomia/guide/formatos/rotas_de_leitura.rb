@@ -1,6 +1,7 @@
 # As leituras do catálogo do Guia (`ler_da_conta`), cada uma com o controller e a action que a
-# atendem (#942). O critério é o MESMO de `Consulta#catalogo` — GET e `Rotas.recurso` —, para os
-# parâmetros nunca falarem de uma leitura que o Guia não vê, nem deixarem de fora uma que ele vê.
+# atendem (#942). O critério é o MESMO de `Consulta#catalogo` — GET, `Rotas.recurso` e fora do que só se faz na tela
+# (`Acoes::SO_NA_TELA`) —, para os parâmetros nunca falarem de uma leitura que o Guia não vê, nem deixarem de fora uma
+# que ele vê.
 module Autonomia::Guide::Formatos::RotasDeLeitura
   Rota = ::Autonomia::Guide::Formatos::RotasDeEscrita::Rota
 
@@ -14,7 +15,7 @@ module Autonomia::Guide::Formatos::RotasDeLeitura
     return unless rota.verb.to_s == 'GET'
 
     recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
-    return unless recurso
+    return if recurso.nil? || ::Autonomia::Guide::Acoes.fora_do_catalogo?("GET #{recurso}")
 
     Rota.new(acao: recurso, controller: rota.defaults[:controller].to_s, action: rota.defaults[:action].to_s,
              partes: rota.required_parts.map(&:to_s))
