@@ -301,20 +301,32 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize @card, :update?
     attributes = permitted_params.slice(*(UPSERT_ATTRIBUTES.map(&:to_s) - hidden_value_attributes)).compact
     attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
-    ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
-    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
+    destino = upsert_destino_permitido!(attributes)
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       ensure_contact_fields_attachable!(permitted_params[:custom_attributes], @card.custom_attributes)
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
     end
-    apply_upsert!(attributes)
+    apply_upsert!(attributes, *destino)
     render :show, status: :ok
   end
 
+  # #2501: o funil de destino é resolvido uma vez, antes de qualquer gravação. Primeiro o funil do pedido; depois o da
+  # etapa que vai vencer (upsert_destino), que é de outro funil quando o pedido repete o funil do card e manda a etapa
+  # de outro. O Mover e o dono são conferidos contra esse destino. Devolve [etapa de destino, motivo da etapa de entrada].
+  def upsert_destino_permitido!(attributes)
+    pedido = upsert_pipeline_id(attributes)
+    muda_etapa = attributes.key?('pipeline_id') || attributes.key?('stage_id')
+    ensure_move_allowed!(@card, pedido) if muda_etapa
+    destino = upsert_destino(attributes)
+    funil = destino.first&.pipeline_id || pedido
+    ensure_move_allowed!(@card, funil) if muda_etapa && funil.to_s != pedido.to_s
+    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: funil || @card.pipeline_id) if attributes.key?('owner_id')
+    destino
+  end
+
   # Com funil no pedido, funil e etapa só mudam pelo Mover (upsert_destino); o update! fica com os outros campos.
-  def apply_upsert!(attributes)
-    target_stage, etapa_de_entrada = upsert_destino(attributes)
+  def apply_upsert!(attributes, target_stage, etapa_de_entrada)
     attributes = attributes.except('pipeline_id', 'stage_id') if target_stage || attributes.key?('pipeline_id')
     if attributes.present?
       @card.update!(attributes)
@@ -333,21 +345,15 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return [upsert_target_stage(attributes), nil] if entrada.nil?
     return [entrada.stage, entrada.motivo] unless entrada.stage.pipeline_id == @card.pipeline_id
 
-    [etapa_pedida_de_outro_funil(attributes), nil]
-  end
-
-  # #2501: o pedido repete o funil em que o card já está e manda uma etapa de outro funil. O funil repetido é eco do card;
-  # a etapa é o que a integração pediu. O card vai para ela, trocando de funil como no #move, com a permissão do funil
-  # da etapa (o ensure_move_allowed! do upsert conferiu só o funil do pedido).
-  def etapa_pedida_de_outro_funil(attributes)
-    stage = upsert_target_stage(attributes)
-    ensure_move_allowed!(@card, stage.pipeline_id) if stage
-    stage
+    # O pedido repete o funil em que o card já está e manda uma etapa de outro funil. O funil repetido é eco do card;
+    # a etapa é o que a integração pediu. O card vai para ela, trocando de funil como no #move, com a permissão do
+    # funil da etapa, conferida em upsert_destino_permitido! junto com a do dono.
+    [upsert_target_stage(attributes), nil]
   end
 
   # #2501: mudar a etapa pelo upsert é mover. Passa pelo Mover, como o #move: grava entered_stage_at e a atividade
   # `move` e roda as automações de saída e de entrada. A etapa de outro funil, mesmo sem pipeline_id, troca o card de
-  # funil, como o #move, com a permissão do funil da etapa (ensure_move_allowed!, acima).
+  # funil, como o #move, com a permissão do funil da etapa (upsert_destino_permitido!).
   def upsert_target_stage(attributes)
     stage = Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])
     stage unless stage.nil? || stage.id == @card.stage_id

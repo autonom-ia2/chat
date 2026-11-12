@@ -427,6 +427,29 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(card.activities.where(event_type: 'move')).to be_blank
   end
 
+  it 'o upsert por external_id no funil do card, com a etapa de outro funil, recusa o dono sem o funil da etapa (#2501)' do
+    account, admin = create_account_and_user
+    agent, = create_crm_agent(account: account)
+    dono, = create_crm_agent(account: account, name: 'Vendas 2')
+    inbox = create_crm_inbox(account: account, members: [agent, dono])
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    outro_funil, outra_etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+    acesso = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: agent, all_pipelines: false, triage: false)
+    [pipeline, outro_funil].each { |funil| acesso.agent_pipelines.create!(account: account, pipeline: funil) }
+    acesso_do_dono = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: dono, all_pipelines: false, triage: false)
+    acesso_do_dono.agent_pipelines.create!(account: account, pipeline: pipeline)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, inbox: inbox, owner: agent, title: 'Onix', external_id: 'erp-20')
+
+    post "/api/v1/accounts/#{account.id}/crm/cards",
+         params: { card: { pipeline_id: pipeline.id, stage_id: outra_etapa.id, owner_id: dono.id, title: 'Onix 2024', external_id: 'erp-20' } },
+         headers: auth_headers(agent), as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.owner_without_funnel')
+    expect(card.reload).to have_attributes(pipeline_id: pipeline.id, stage_id: stage.id, owner_id: agent.id, title: 'Onix')
+    expect(card.activities.where(event_type: %w[update move])).to be_blank
+  end
+
   it 'o upsert por external_id para um funil sem etapa nenhuma responde 422, sem mexer no card (#2501)' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
