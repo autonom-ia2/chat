@@ -22,10 +22,7 @@ const props = defineProps({
   erro: { type: Boolean, default: false },
   nomesFaltando: { type: Boolean, default: false },
   editando: { type: Boolean, default: false },
-  // #2414 F6.5 (protótipo só da demo): a marca do seed no funil; com ela, no lugar do cartão das ações, a lista
-  // única das automações da etapa (para quem pode ver automações).
-  demo: { type: Object, default: null },
-  // A gaveta tem mudança não salva: sair dela para o editor pergunta antes.
+  // #2499 F6.5: a gaveta tem mudança não salva; sair dela para o editor da Automação pergunta antes.
   temMudanca: { type: Boolean, default: false },
 });
 
@@ -227,11 +224,11 @@ const mostraCampo = computed(() => temFrase.value || escrevendo.value);
       </div>
     </div>
 
+    <!-- #2499 F6.5: com o motor e os gatilhos, quem vê automações tem a lista única da etapa no lugar do cartão das ações. -->
     <EtapaAutomacoes
-      v-if="editando && etapa.id && demo && podeVerAutomacoes"
+      v-if="editando && etapa.id && podeVerAutomacoes"
       :etapa-id="etapa.id"
       :etapa-nome="etapa.name"
-      :marca="demo"
       :tem-mudanca="temMudanca"
       @antigas="emit('acoes')"
     />

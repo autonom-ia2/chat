@@ -7,7 +7,7 @@
       "CRIAR": "Create an automation for cards entering {etapa}",
       "ITEM": "{nome} — {situacao}",
       "ESPERA_ATE": "waits until {dia}",
-      "ESPERA_RESPOSTA": "waits for the customer to reply",
+      "ESPERA_CONDICAO": "waits for what the step asks",
       "AGINDO": "working now",
       "PASSO": "Step {n} of {total}: {frase}",
       "HISTORICO": "What it has done",
@@ -42,22 +42,6 @@
       "ERRO_LIGAR": "It couldn't change right now. Try again.",
       "ERRO_LISTA": "Couldn't show the automations right now.",
       "TENTAR": "Try again"
-    },
-    "CLIENTE": {
-      "SELO": "Customer since {dia}",
-      "SELO_SEM_DATA": "Already a customer",
-      "SELO_ROTULO": "{selo}. Open the purchase",
-      "ABRIR_COMPRA": "Open the purchase",
-      "SEM_COMPRA": "We couldn't find this customer's purchase."
-    },
-    "DEMO": {
-      "LEMBRETE": "Proposal reminder",
-      "LEMBRETE_TEXTO": "Remind the customer about the proposal",
-      "DE_NOVO": "Send the proposal again",
-      "DE_NOVO_TEXTO": "Hi! Did you get a chance to see the proposal?",
-      "DE_NOVO_AVISO": "The customer hasn't replied to the proposal yet",
-      "SUMIU": "Tell me if the customer goes quiet",
-      "SUMIU_TEXTO": "The customer went quiet: worth a call"
     }
   }
 }
