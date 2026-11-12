@@ -7,13 +7,17 @@
 # o payload não conta que existe uma compra num funil que ela não alcança. Quem não vê a base de contatos também não recebe
 # (o card dela sai sem o selo "Cliente", #1849).
 #
-# `para(cards)` responde todos os cards de uma vez: uma consulta só para a página inteira do quadro.
+# `para(cards)` responde o quadro de uma pessoa: uma consulta só, uma linha por contato. O card aberto e o tempo real (um
+# card, várias pessoas) passam por Crm::Cards::JaEClienteDoCard, que busca as compras uma vez e usa `entre` por pessoa.
 class Crm::Cards::JaECliente
   # O que a página grava no card que ela cria (Crm::BookingV2::PublicBooking): link público e convite.
   ORIGENS_DO_AGENDAMENTO = %w[public_link invite].freeze
+  # A compra mais recente primeiro; o ganho antigo sem data fica por último.
+  MAIS_RECENTE = [Crm::Card.arel_table[:closed_at].desc.nulls_last, Crm::Card.arel_table[:id].desc].freeze
 
-  def self.do_card(card, user:, account_user:)
-    new(user: user, account: card.account, account_user: account_user).para([card])[card.id]
+  # O selo fica no lugar do "Cliente": só no card aberto que a página criou, com o contato marcado como cliente.
+  def self.candidato?(card)
+    card.open? && ORIGENS_DO_AGENDAMENTO.include?(card.source) && card.contact&.customer?
   end
 
   def initialize(user:, account:, account_user:)
@@ -22,7 +26,7 @@ class Crm::Cards::JaECliente
 
   # { id do card => { card_id: id do card ganho, desde: epoch em segundos } }, só dos cards que levam o selo.
   def para(cards)
-    candidatos = cards.select { |card| candidato?(card) }
+    candidatos = cards.select { |card| self.class.candidato?(card) }
     return {} if candidatos.empty? || !pode_ler?
 
     ganhos = ganho_mais_recente_por_contato(candidatos.map(&:contact_id).uniq)
@@ -31,16 +35,19 @@ class Crm::Cards::JaECliente
     end
   end
 
-  private
+  # O selo de um card candidato, escolhendo entre compras já achadas (`ganho_ids`) só as que esta pessoa vê.
+  def entre(card, ganho_ids)
+    return if ganho_ids.empty? || !pode_ler?
 
-  # "Desde" é quando o contato virou cliente; sem essa data, quando a compra fechou.
-  def selo(card, ganho_id, fechado_em)
-    { card_id: ganho_id, desde: (card.contact.customer_since || fechado_em)&.to_i }
+    ganho_id, fechado_em = visiveis.where(id: ganho_ids).order(*MAIS_RECENTE).pick(:id, :closed_at)
+    selo(card, ganho_id, fechado_em) if ganho_id
   end
 
-  # O selo fica no lugar do "Cliente": só no card aberto que a página criou, com o contato marcado como cliente.
-  def candidato?(card)
-    card.open? && ORIGENS_DO_AGENDAMENTO.include?(card.source) && card.contact&.customer?
+  private
+
+  # "Desde" é quando o contato virou cliente; sem essa data, quando a compra fechou. O topo do card usa a mesma.
+  def selo(card, ganho_id, fechado_em)
+    { card_id: ganho_id, desde: (card.contact.customer_since || fechado_em)&.to_i }
   end
 
   def pode_ler?
@@ -48,11 +55,16 @@ class Crm::Cards::JaECliente
       Crm::Cards::ContactReading.full?(user: @contexto[:user], account_user: @contexto[:account_user])
   end
 
-  # A compra mais recente de cada contato entre os cards que a pessoa vê.
+  def visiveis
+    Pundit.policy_scope!(@contexto, Crm::Card)
+  end
+
+  # A compra mais recente de cada contato entre os cards que a pessoa vê: uma linha por contato (DISTINCT ON).
   def ganho_mais_recente_por_contato(contact_ids)
-    Pundit.policy_scope!(@contexto, Crm::Card).won.where(contact_id: contact_ids)
-          .order(Crm::Card.arel_table[:closed_at].desc.nulls_last, id: :desc)
-          .pluck(:contact_id, :id, :closed_at)
-          .each_with_object({}) { |(contact_id, id, fechado_em), ganhos| ganhos[contact_id] ||= [id, fechado_em] }
+    contato = Crm::Card.arel_table[:contact_id]
+    visiveis.won.where(contact_id: contact_ids)
+            .reorder(contato, *MAIS_RECENTE)
+            .pluck(Arel.sql('DISTINCT ON (crm_cards.contact_id) crm_cards.contact_id'), :id, :closed_at)
+            .to_h { |contact_id, id, fechado_em| [contact_id, [id, fechado_em]] }
   end
 end

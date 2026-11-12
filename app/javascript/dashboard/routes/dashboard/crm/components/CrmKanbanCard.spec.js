@@ -360,6 +360,14 @@ describe('CrmKanbanCard selo "Já é cliente" (#2710)', () => {
     expect(wrapper.emitted('open')).toBeUndefined();
   });
 
+  it('espera enquanto a página busca a compra', () => {
+    const wrapper = mountCard(daPagina, { abrindoJaCliente: true });
+    const selo = wrapper.find('[data-selo-ja-cliente]');
+
+    expect(selo.attributes('disabled')).toBeDefined();
+    expect(selo.attributes('aria-busy')).toBe('true');
+  });
+
   it('sem o selo do servidor, o cliente segue com o selo "Cliente"', () => {
     const wrapper = mountCard({ ...daPagina, ja_cliente: undefined });
 

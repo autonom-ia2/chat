@@ -38,6 +38,11 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // #2710: a página está buscando a compra que o selo "Já é cliente" abre.
+  abrindoJaCliente: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['open', 'openConversation', 'abrirJaCliente']);
@@ -437,6 +442,7 @@ const canOpenConversation = computed(
         <div v-if="jaCliente" class="ps-5">
           <SeloJaCliente
             :desde="jaCliente.desde"
+            :ocupado="abrindoJaCliente"
             @abrir="$emit('abrirJaCliente', jaCliente)"
           />
         </div>

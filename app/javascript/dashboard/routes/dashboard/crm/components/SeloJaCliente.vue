@@ -9,6 +9,8 @@ import { useFormato } from './card/useFormato';
 const props = defineProps({
   // Em segundos, como as outras datas do quadro; pode faltar.
   desde: { type: Number, default: null },
+  // A página está buscando a compra: o botão espera, sem segundo clique.
+  ocupado: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['abrir']);
@@ -31,8 +33,10 @@ const rotulo = computed(() =>
   <button
     type="button"
     data-selo-ja-cliente
-    class="group/selo inline-flex min-h-11 w-fit max-w-full items-center rounded-full text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+    class="group/selo inline-flex min-h-11 w-fit max-w-full items-center rounded-full text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-wait"
     :aria-label="rotulo"
+    :aria-busy="ocupado"
+    :disabled="ocupado"
     @click.stop="emit('abrir')"
   >
     <span

@@ -89,6 +89,8 @@ const props = defineProps({
   erroArquivar: { type: String, default: '' },
   restaurando: { type: Boolean, default: false },
   erroRestaurar: { type: String, default: '' },
+  // #2710: a página está buscando a compra que o selo "Cliente desde…" abre.
+  abrindoCompra: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -718,7 +720,8 @@ defineExpose({
       <CardHeroi
         v-bind="heroi"
         :contato="tela === 'resumo' ? card.contact : null"
-        :abre-compra="tela === 'resumo' && Boolean(jaCliente)"
+        :compra="tela === 'resumo' ? jaCliente : null"
+        :abrindo-compra="abrindoCompra"
         :titulo-id="`${gavetaId}-titulo`"
         :texto-id="`${gavetaId}-texto`"
         @voltar="voltarDoHeroi"

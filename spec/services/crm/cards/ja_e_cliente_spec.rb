@@ -85,6 +85,18 @@ RSpec.describe Crm::Cards::JaECliente do
       expect(selos([agenda], user: agent)).to eq({})
     end
 
+    it 'não manda o selo a quem não vê o card ganho numa caixa "Só as suas"' do
+      account.crm_inbox_settings.create!(inbox: inbox, visibility_mode: :assigned_only)
+      outra_caixa = create_crm_inbox(account: account, name: 'Caixa aberta', members: [agent])
+      ganho = card(pos_venda, status: :won, source: nil)
+      agenda = card(vendas, card_inbox: outra_caixa)
+
+      expect(selos([agenda], user: agent)).to eq({})
+
+      ganho.update_columns(owner_id: agent.id) # rubocop:disable Rails/SkipsModelValidations
+      expect(selos([agenda], user: agent)).to eq(agenda.id => { card_id: ganho.id, desde: customer_since.to_i })
+    end
+
     it 'manda o selo a quem vê o card ganho' do
       ganho = card(pos_venda, status: :won, source: nil)
       agenda = card(vendas)
@@ -94,18 +106,25 @@ RSpec.describe Crm::Cards::JaECliente do
     end
   end
 
-  it 'responde a página inteira com uma consulta só aos cards ganhos' do
+  it 'responde a página inteira com uma consulta só, uma linha por contato' do
     contatos = Array.new(3) { new_contact(customer: true) }
-    contatos.each { |dono| card(pos_venda, contact: dono, status: :won, source: nil) }
+    contatos.each do |dono|
+      card(pos_venda, contact: dono, status: :won, source: nil).update_columns(closed_at: 1.year.ago) # rubocop:disable Rails/SkipsModelValidations
+      card(pos_venda, contact: dono, status: :won, source: nil)
+    end
     agendas = Crm::Card.where(id: contatos.map { |dono| card(vendas, contact: dono).id }).includes(:contact).to_a
-    servico = described_class.new(user: admin, account: account, account_user: admin.account_users.find_by(account: account))
+    account_user = admin.account_users.includes(:account).find_by(account: account)
+    servico = described_class.new(user: admin, account: account, account_user: account_user)
 
     consultas = []
-    contar = ->(*, payload) { consultas << payload[:sql] if payload[:sql].include?('"crm_cards"') }
+    contar = lambda do |*, payload|
+      consultas << payload[:sql] unless payload[:name] == 'SCHEMA' || payload[:name] == 'CACHE' || payload[:cached]
+    end
     resultado = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { servico.para(agendas) }
 
     expect(resultado.keys).to match_array(agendas.map(&:id))
     expect(consultas.size).to eq(1)
+    expect(consultas.first).to include('DISTINCT ON (crm_cards.contact_id)')
   end
 
   describe 'onde o selo sai' do
@@ -142,12 +161,15 @@ RSpec.describe Crm::Cards::JaECliente do
       ganho.update_columns(inbox_id: create_crm_inbox(account: account, name: 'Outra caixa').id) # rubocop:disable Rails/SkipsModelValidations
       chamadas = []
       allow(ActionCableBroadcastJob).to receive(:perform_later) { |tokens, _evento, payload| chamadas << [tokens.first, payload] }
+      allow(Crm::Card).to receive(:won).and_call_original
 
       Crm::Cards::Broadcaster.broadcast(agenda, Events::Types::CRM_CARD_CREATED)
       por_pessoa = chamadas.to_h
 
       expect(por_pessoa[admin.pubsub_token][:ja_cliente]).to eq(selo)
       expect(por_pessoa[agent.pubsub_token][:ja_cliente]).to be_nil
+      # As compras do contato saem uma vez por evento, não uma vez por destinatário.
+      expect(Crm::Card).to have_received(:won).once
     end
   end
 end

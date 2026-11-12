@@ -19,7 +19,7 @@ class Crm::Cards::DetailPayloadBuilder
       activities: activities_payload,
       can_edit: can_edit?,
       # #2710: o selo "Cliente desde…" do topo abre a compra (o card ganho do mesmo contato).
-      ja_cliente: Crm::Cards::JaECliente.do_card(@card, user: @user, account_user: @account_user)
+      ja_cliente: Crm::Cards::JaEClienteDoCard.new(@card).para(user: @user, account_user: @account_user)
     )
   end
 
