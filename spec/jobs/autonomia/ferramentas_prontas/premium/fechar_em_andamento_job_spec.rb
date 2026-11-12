@@ -94,9 +94,10 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
   end
 
   it 'a execução com `em_andamento` agenda o varredor da conta para depois do prazo' do
+    freeze_time
     bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
 
-    expect { consultar }.to have_enqueued_job(described_class).with(account.id)
+    expect { consultar }.to have_enqueued_job(described_class).with(account.id).at(described_class::ESPERA.from_now)
   end
 
   it 'a execução sem `em_andamento` (o agente) não agenda o varredor' do
