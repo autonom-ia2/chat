@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # G19 do fechamento do #2414 (#2636): a automação deixa uma nota no contato, pela mesma porta da tela de notas. Passo do
 # exemplo 5 ("anotar a próxima revisão no contato") e do exemplo 19 ("anotar que o número parou de receber"). A nota sai
-# no nome de quem ligou; mudar e apagar nota ficam fora da lista.
+# no nome de quem ligou. Mudar e apagar nota entram pela D1 do #2660 (escolha do Rodrigo).
 RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -50,32 +50,33 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     expect(contato.notes.count).to eq(0)
   end
 
-  it 'mudar e apagar nota não viram passo: a receita recusa ao salvar' do
-    acoes = ['PATCH contacts/:contact_id/notes/:id', 'PUT contacts/:contact_id/notes/:id', 'DELETE contacts/:contact_id/notes/:id']
-    passos = acoes.map.with_index do |acao, indice|
+  # #2660 D1: mudar e apagar nota entram, pela mesma porta da tela; o desfazer do Guia alcança os dois.
+  it 'mudar e apagar nota viram passo: a receita aceita ao salvar' do
+    pedidos = [['PATCH contacts/:contact_id/notes/:id', { 'content' => 'outra' }], ['PUT contacts/:contact_id/notes/:id', { 'content' => 'outra' }],
+               ['DELETE contacts/:contact_id/notes/:id', nil]]
+    passos = pedidos.map.with_index do |(acao, corpo), indice|
       { 'id' => "x#{indice}", 'tipo' => 'acao', 'acao' => acao, 'descricao' => 'Mexer na nota',
-        'caminho' => { 'contact_id' => { '$valor' => 'contato.id' }, 'id' => 1 }, 'corpo' => { 'content' => 'outra' } }
+        'caminho' => { 'contact_id' => { '$valor' => 'contato.id' }, 'id' => 1 }, 'corpo' => corpo }.compact
     end
     receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }
 
     problemas = Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas
 
-    esperados = acoes.map.with_index { |acao, indice| I18n.t('autonomia.automacao.receita.acao_fora', passo: "x#{indice}", acao: acao) }
-    expect(problemas).to include(*esperados)
+    recusas = passos.map { |passo| I18n.t('autonomia.automacao.receita.acao_fora', passo: passo['id'], acao: passo['acao']) }
+    expect(problemas & recusas).to be_empty
   end
 
-  it 'versão salva fora do editor com "mudar nota": o motor recusa ao rodar e a nota fica como estava', :aggregate_failures do
-    nota = contato.notes.create!(content: 'Original', user: admin)
-    automacao = automacao_ligada(account, admin, [nota_passo('Nova')])
-    antiga = automacao.versao_ativa.receita.deep_dup
-    antiga['passos'][0].merge!('acao' => 'PATCH contacts/:contact_id/notes/:id',
-                               'caminho' => { 'contact_id' => { '$valor' => 'contato.id' }, 'id' => nota.id })
-    # Montada fora do editor: a validação de hoje não a deixaria salvar, e a versão é só leitura.
-    Autonomia::Automacao::Versao.where(id: automacao.versao_ativa_id).update_all(receita: antiga) # rubocop:disable Rails/SkipsModelValidations
+  it 'muda a nota, que passa a ser de quem ligou, e depois apaga', :aggregate_failures do
+    nota = contato.notes.create!(content: 'Original', user: create(:user, account: account))
+    caminho = { 'contact_id' => { '$valor' => 'contato.id' }, 'id' => nota.id }
+    mudar = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'PATCH contacts/:contact_id/notes/:id', 'descricao' => 'Corrigir a nota',
+              'caminho' => caminho, 'corpo' => { 'content' => 'Corrigida' } }
+    apagar = { 'id' => 'p2', 'tipo' => 'acao', 'acao' => 'DELETE contacts/:contact_id/notes/:id', 'descricao' => 'Apagar a nota',
+               'caminho' => caminho }
 
-    execucao = perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(automacao, conversa) }
-
-    expect(registros(execucao)).to eq([%w[p1 falhou acao_recusada]])
-    expect(nota.reload.content).to eq('Original')
+    expect(registros(rodar(mudar))).to eq([['p1', 'ok', nil]])
+    expect([nota.reload.content, nota.user_id]).to eq(['Corrigida', admin.id])
+    expect(registros(rodar(apagar))).to eq([['p2', 'ok', nil]])
+    expect(contato.notes.exists?(nota.id)).to be(false)
   end
 end

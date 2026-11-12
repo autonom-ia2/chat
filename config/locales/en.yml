@@ -639,6 +639,7 @@ en:
         ninguem_online: 'Nobody in the rotation was online. The conversation stayed unassigned.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
         campo_proibido: 'The action sends a field the automation does not change.'
+        agente_em_rascunho: 'The AI agent is still a draft. The automation only turns on and off an agent that is already published.'
       alvo:
         conversa: 'Conversation #%{id}'
         card: 'Card #%{id} · %{titulo}'

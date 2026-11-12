@@ -1132,6 +1132,7 @@ pt_BR:
         ninguem_online: 'Ninguém do rodízio estava online. A conversa ficou sem responsável.'
         outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'
         campo_proibido: 'A ação manda um campo que a automação não muda.'
+        agente_em_rascunho: 'A agente de IA ainda é rascunho. A automação só liga e desliga agente já publicada.'
       alvo:
         conversa: 'Conversa #%{id}'
         card: 'Card #%{id} · %{titulo}'
