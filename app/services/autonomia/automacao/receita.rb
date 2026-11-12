@@ -109,7 +109,7 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return condicoes.problemas(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
-    return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
+    return mensagens.problemas(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
     return [] unless passo['tipo'] == 'acao'
@@ -123,19 +123,6 @@ class Autonomia::Automacao::Receita
                                                                     alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
                                                                       problemas_do_caminho(id, c, **opcoes)
                                                                     end
-  end
-
-  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
-  # variável do modelo da Meta, F4b) lidos da lista fechada, os times e as pessoas do aviso da própria conta, o modelo
-  # pronto na conta e a caixa do e-mail uma caixa de e-mail da conta.
-  def problemas_da_mensagem(passo)
-    id = passo['id']
-    desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
-    lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map(&no_texto(id))
-    caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
-    modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
-    desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -197,6 +184,8 @@ class Autonomia::Automacao::Receita
 
   def condicoes = @condicoes ||= ::Autonomia::Automacao::Receita::Condicoes.new(leitura)
 
+  def mensagens = @mensagens ||= ::Autonomia::Automacao::Receita::Mensagens.new(contexto, leitura)
+
   # O que os validadores recebem (Receita::Contexto).
   def contexto
     @contexto ||= ::Autonomia::Automacao::Receita::Contexto.new(receita: @receita, conta: @conta, account_user: @account_user,
@@ -205,7 +194,4 @@ class Autonomia::Automacao::Receita
 
   # O tipo do registro em que a receita roda: o do ramo do "em outro registro" (G18), ou o do gatilho.
   def alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
-
-  # A conferência do caminho que vai para um texto (mensagem, aviso, e-mail, retorno).
-  def no_texto(id) = ->(caminho) { problemas_do_caminho(id, caminho, onde: :texto) }
 end
