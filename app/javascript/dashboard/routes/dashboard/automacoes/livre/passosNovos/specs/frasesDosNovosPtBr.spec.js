@@ -8,12 +8,12 @@ import {
 } from '../frasesDosNovos';
 import { guardarNomesDosPassosNovos } from '../nomesDaConta';
 import { carregarPublicos } from '../dadosDaConta';
-import AudiencesAPI from 'dashboard/api/campaignJourneyAudiences';
+import { audiencesAPI as AudiencesAPI } from 'dashboard/api/campaignJourneyAudiences';
 import { ensaiarComPassosNovos } from '../adaptadorFalso';
 import { linhasDoEnsaio } from '../../ensaio';
 
 vi.mock('dashboard/api/campaignJourneyAudiences', () => ({
-  default: { list: vi.fn() },
+  audiencesAPI: { list: vi.fn() },
 }));
 
 // Protótipo #2931–#2936 — as frases dos passos novos com o catálogo pt_BR de

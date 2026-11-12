@@ -58,42 +58,85 @@ três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
     salva uma automação ligada por outra pessoa. Sem isso, quem tem menos
     permissões poria passos no bloco que rodariam com as de quem ligou. A tela
     do bloco avisa antes quais pausam. Alguém assume e religa, e o religar
-    confere o bloco com essa pessoa. **Decisão do Rodrigo pendente** (ver
-    "Desvios aguardando OK").
+    confere o bloco com essa pessoa. Aprovado pelo Rodrigo em 12/11.
   - Marcar como bloco tira quem tinha ligado (`ligada_por`): o bloco nunca age
     por ela.
   - Dentro do galho de um "para cada" (ou de um "em outro registro") o bloco
     usado também não pode ter "para cada" nem "em outro registro", nem pelos
     blocos que ele usa: o salvar recusa e a rodada confere de novo. Sem isso, um
     "para cada" abriria outro pelo bloco e as execuções se multiplicariam.
-- **Buscar em outro sistema** (`consultar`): só "Outro endereço", só https, só
-  com `integration_manage`. Endereço interno é recusado depois de resolver o nome
+- **Buscar em outro sistema** (`consultar`): uma consulta pronta (veja
+  "Consultas prontas" abaixo) ou "Outro endereço". O endereço: só https, só com
+  `integration_manage`. Endereço interno é recusado depois de resolver o nome
   (o IP resolvido é o que se usa: sem DNS rebinding). Prazo curto, sem seguir
   redirecionamento, resposta até 64 KB. Os dados guardados têm o nome que a
   pessoa deu (o teste sugere um nome do dia a dia, pela IA da conta ou pelo
-  caminho) e viram `consulta.<passo>.<chave>` nos passos seguintes. Galho "Se não
-  conseguir buscar". O endereço não aparece no Confira para quem não tem a chave,
-  nem no histórico; o histórico guarda só os nomes dos dados. No ensaio, só busca
-  com "Buscar agora".
-- **Integrações prontas** (Loja virtual, CEP, Boletos) do protótipo não existem
-  como fonte na plataforma: ficaram de fora até a primeira existir. O salvar
-  recusa `integracao` com a frase.
+  caminho). Nos dois casos, cada dado vira `consulta.<passo>.<chave>` nos passos
+  seguintes. Galho "Se não conseguir buscar". O endereço não aparece no Confira
+  para quem não tem a chave, nem no histórico; o histórico guarda só os nomes
+  dos dados. No ensaio, só busca com "Buscar agora".
+- **Loja virtual e Boletos** do protótipo não existem como integração na
+  plataforma: ficaram de fora, sem item falso.
 
-### Desvios aguardando OK do Rodrigo (revisão independente, 12/11)
+### Decisões do Rodrigo (12/11, "resolve!!! foco na jornada e experiência do usuário")
 
-O OK de 12/11 foi para o protótipo. A implementação foge dele nestes pontos, e
-cada um precisa de um OK explícito antes do PR (ou de virar Issue):
+A revisão independente de 12/11 listou cinco pontos em que a implementação fugia
+do protótipo. O Rodrigo decidiu:
 
-1. **Onde buscar** perdeu Loja virtual, Busca de CEP e Boletos: só "Outro
-   endereço" (as integrações não existem como fonte).
-2. **Histórico da busca** mostra os nomes dos dados guardados, sem o valor (o
-   valor pode ser dado de cliente, e o histórico fica guardado).
-3. **Ensaio do bloco** mostra os passos reais do bloco, não um exemplo.
-4. **"Entrariam hoje"** lista os nomes só de quem cabe no teto.
-5. **Mudar um bloco pausa as automações de outras pessoas que o usam** (acima).
-   Alternativas: (a) fixar a versão do bloco quando a automação de cima liga e
-   pedir religar para pegar a nova; (c) só deixar mudar o bloco em uso quem
-   passaria na conferência de todos que ligaram.
+1. **Onde buscar volta a ser uma lista de consultas prontas.** Cada uma tem um
+   nome do dia a dia, diz o que a pessoa informa ("O CEP", com "Pôr um dado") e
+   já devolve os dados com rótulo pronto (Rua, Bairro, Cidade…), sem IA e sem
+   chave de JSON. Elas reaproveitam as Ferramentas prontas dos agentes (veja
+   "Consultas prontas" abaixo). **Outro endereço** fica por último, como
+   avançado, só para quem tem `integration_manage`, com tudo o que já valia.
+   Loja virtual e Boletos não entraram: não existe integração deles na
+   plataforma.
+2. **Histórico da busca** continua mostrando só os nomes dos dados, sem o valor
+   (privacidade).
+3. **Ensaio do bloco** continua mostrando os passos reais do bloco.
+4. **"Entrariam hoje"** mostra o total de verdade e os primeiros nomes. Passou
+   do teto por vez, diz numa frase quantos ficam para depois: "Hoje entram 50 de
+   120. Os outros 70 entram nas próximas vezes." Quando a contagem para no
+   limite de leitura (teto + 300), diz "mais de".
+5. **Mudar um bloco pausa as automações de outras pessoas** que o usam, e a tela
+   avisa antes de salvar. Aprovado.
+
+### Consultas prontas (#2934)
+
+`Autonomia::Automacao::ConsultasProntas` lista as consultas; a busca roda por
+`ConsultaPronta`, que usa a mesma `FerramentasProntas::Execucao` do agente, numa
+ferramenta não salva (como o "Experimente" da vitrine). Vale tudo o que vale
+para o agente: provedores com reserva, cache, o **limite do dia da conta naquela
+fonte (500, o mesmo que os agentes gastam)**, o corte individual e o log sem o
+valor consultado.
+
+| Consulta | Ferramenta pronta | A pessoa informa | Volta |
+| --- | --- | --- | --- |
+| Busca de CEP | `cep` / `endereco` | o CEP | Rua, Bairro, Cidade, Estado, CEP |
+| Consulta de CNPJ | `cnpj` / `empresa` | o CNPJ | Nome da empresa, Nome fantasia, Situação na Receita, Data de abertura, O que a empresa faz, Porte, Cidade e Estado da empresa |
+| Valor do carro (tabela FIPE) | `fipe` / `preco` (tipo carro) | a marca, o modelo e o ano | Valor do carro (em reais), Versão, Ano, Combustível, Mês da tabela |
+| Conferir CPF | `cpf` / `conferir` | o CPF | CPF válido (Sim/Não), Estados onde foi emitido |
+
+- **Regras de cada ferramenta.** A consulta aparece só se a conta tem a flag das
+  prontas (`agente_ferramentas_prontas`) e, no CPF, a da fase
+  (`agente_ferramentas_prontas_consultas`). Sem ela, ou com a fonte cortada pela
+  equipe, a consulta continua na lista, travada, com o que falta em linguagem
+  leiga. O salvar recusa e o motor segue pelo galho "Se não conseguir buscar".
+- **Premium (pagas) não entram nesta fatia.** Uma busca que roda em lote (o
+  "para cada" faz até 200 de uma vez) gastaria as grátis do mês e cobraria na
+  fatura sem ninguém clicar: precisa de decisão do Rodrigo sobre cobrança antes.
+- **Quem monta.** Consulta pronta pede só `automation_manage` (dado público e
+  grátis). "Outro endereço" segue pedindo `integration_manage`, ao salvar e ao
+  rodar.
+- **Receita.** `fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [texto
+  com $valor] } }`; `guardar` traz os dados da consulta com o rótulo pronto. As
+  entradas passam pela régua de valores de sempre (`Receita::Leitura`).
+- **Teste e ensaio.** "Fazer um teste" busca com um exemplo já preenchido e
+  avisa que gasta uma das buscas do dia. No ensaio, o servidor diz o que a
+  consulta usaria daquela conversa; com o dado vazio, a tela diz o que falta e
+  que seguiria por "Se não conseguir buscar". "Buscar agora" só com o OK.
+- **Outro endereço.** O teste avisa antes que a IA da conta sugere os nomes dos
+  dados e que esse uso entra no custo da IA da conta.
 
 ## O que é de verdade e o que é falso (os três ainda no protótipo)
 
@@ -139,7 +182,9 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
 
 1. **+** › grupo **Tempo e condições** › **Fazer para cada um de uma lista**.
 2. Já vem com **Os cards de uma etapa** e a primeira etapa escolhida.
-3. O quadro mostra **12 entrariam hoje** e os 3 primeiros nomes.
+3. O quadro mostra **12 entram hoje** e os 3 primeiros nomes. Com mais itens
+   que o teto, diz embaixo: "Hoje entram 50 de 120. Os outros 70 entram nas
+   próximas vezes."
 4. Troque para **Os contatos com uma etiqueta** (a primeira etiqueta já vem) e
    para **Os contatos de um público** (o primeiro público de exemplo já vem).
    O Confira diz a lista com o nome: "Para cada card da etapa Proposta, até 50
@@ -148,7 +193,9 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
    no máximo para ver o aviso.
 6. **Salvar**. No Confira aparece o caminho **Em cada um da lista**; os passos de
    cada um entram pelo **+** dele.
-7. **Ensaiar**: "Hoje entrariam 12. Os primeiros: …".
+7. **Ensaiar**: "Hoje entrariam 12. Os primeiros: …" (passou do teto: "Hoje
+   entrariam 50 de 120. Os outros 70 entrariam nas próximas vezes. Os
+   primeiros: …").
 
 ### 3. Usar outra automação (#2933)
 
@@ -161,23 +208,33 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
 
 ### 4. Buscar informação em outro sistema (#2934)
 
-Só aparece para quem tem a chave de integrações (`integration_manage`).
+Aparece para quem monta automações. "Outro endereço" só para quem tem a chave
+de integrações (`integration_manage`).
 
 1. **+** › grupo **Outro sistema** › **Buscar informação em outro sistema**.
-2. **Onde buscar** já vem com **Loja virtual**. Também há **Busca de CEP**,
-   **Boletos** e **Outro endereço** (só https; endereço sem https mostra o aviso
-   e trava o teste).
-3. Toque em **Fazer um teste**. Aparece a resposta, dado por dado.
-4. Toque em **Status do pedido**. Ele vai para **Dados guardados** com esse
-   nome, que dá para trocar. No protótipo, cada dado de exemplo tem um nome do
-   dia a dia; a implementação precisa do mesmo (rótulo sugerido pela integração
-   ou pela IA), nunca a chave crua do JSON.
-5. **Salvar**. Em outro passo (uma mensagem, por exemplo), **Pôr um dado** já
-   oferece "Status do pedido". No Confira aparece o caminho **Se não conseguir
-   buscar**. O endereço nunca aparece no Confira nem no histórico.
-6. **Ensaiar**: "Buscaria em Loja virtual. No ensaio, só busca se você pedir."
-   Toque em **Buscar de verdade neste ensaio**: a tela diz o que vai acontecer
-   e pede **Buscar agora**. Só então aparece "Status do pedido: Enviado".
+2. **Onde buscar** é uma lista de cartões: **Busca de CEP** (já escolhida),
+   **Consulta de CNPJ**, **Valor do carro (tabela FIPE)** e **Conferir CPF**,
+   cada uma com o selo **Grátis** e uma frase do que faz. A que a conta não pode
+   usar fica travada, com o que falta. Por último, **Outro endereço**
+   (**Avançado**).
+3. Em **O que a busca precisa**, diga de onde vem o CEP: **Pôr um dado em “O
+   CEP”** e escolha o dado do contato ou do card.
+4. **O que volta da busca** mostra Rua, Bairro, Cidade, Estado e CEP: eles
+   aparecem no **Pôr um dado** dos próximos passos.
+5. **Fazer um teste**: o exemplo já vem preenchido (01310-100). A tela avisa
+   que o teste gasta uma das buscas do dia. Aparece cada dado pelo nome, com o
+   valor.
+6. **Salvar**. Em outro passo (uma mensagem, por exemplo), **Pôr um dado** já
+   oferece "Rua". No Confira: "Buscar na consulta “Busca de CEP”: Rua, Bairro…"
+   e o caminho **Se não conseguir buscar**.
+7. **Ensaiar**: "Buscaria na consulta “Busca de CEP”." Com o CEP preenchido na
+   conversa, **Buscar de verdade neste ensaio** › **Buscar agora** mostra os
+   dados. Com o CEP vazio, a tela diz o que falta e que seguiria por "Se não
+   conseguir buscar".
+8. **Outro endereço** (com a chave): o endereço https, o aviso de que a IA da
+   conta sugere os nomes no teste (custo da conta), **Fazer um teste**, o toque
+   no dado e o nome dele em **Dados guardados**. O endereço nunca aparece no
+   Confira nem no histórico.
 
 ### 5. Marcar reunião pela conversa (#2935)
 

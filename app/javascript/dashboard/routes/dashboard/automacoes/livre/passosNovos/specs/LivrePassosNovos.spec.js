@@ -53,7 +53,40 @@ vi.mock('../dadosDaConta', async () => ({
   contarLista: vi.fn(),
   testarConsulta: vi.fn(),
   buscarNoEnsaio: vi.fn(),
+  carregarConsultasProntas: vi.fn(),
+  consultasProntasDaConta: vi.fn(),
 }));
+// #2934: as consultas prontas do servidor; a do CNPJ a conta não pode usar.
+const CONSULTAS = vi.hoisted(() => [
+  {
+    id: 'cep',
+    nome: 'Busca de CEP',
+    faz: 'Acha a rua de um CEP.',
+    limite_do_dia: 500,
+    entradas: [{ nome: 'cep', rotulo: 'O CEP', exemplo: '01310-100' }],
+    dados: [
+      { caminho: 'logradouro', rotulo: 'Rua' },
+      { caminho: 'cidade', rotulo: 'Cidade' },
+    ],
+    disponivel: true,
+    falta: null,
+  },
+  {
+    id: 'cnpj',
+    nome: 'Consulta de CNPJ',
+    faz: 'Mostra a empresa.',
+    limite_do_dia: 500,
+    entradas: [{ nome: 'cnpj', rotulo: 'O CNPJ', exemplo: '' }],
+    dados: [{ caminho: 'razao_social', rotulo: 'Nome da empresa' }],
+    disponivel: false,
+    falta: 'Ainda não está liberada nesta conta.',
+  },
+]);
+const integra = vi.hoisted(() => ({ sim: true }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => integra.sim) };
+});
 beforeEach(() => {
   servidor.carregarPublicos.mockResolvedValue([]);
   servidor.publicosDaConta.mockReturnValue([
@@ -76,6 +109,9 @@ beforeEach(() => {
       },
     ],
   });
+  servidor.carregarConsultasProntas.mockResolvedValue(CONSULTAS);
+  servidor.consultasProntasDaConta.mockReturnValue(CONSULTAS);
+  integra.sim = true;
   servidor.buscarNoEnsaio.mockResolvedValue({
     ok: true,
     dados: [{ nome: 'Status do pedido', valor: 'enviado' }],
@@ -310,6 +346,28 @@ describe('LivreRepetir', () => {
     expect(contagem.findAll('li')).toHaveLength(3);
   });
 
+  it('passou do teto: diz o total de verdade e quantos ficam para depois', async () => {
+    servidor.contarLista.mockResolvedValue({
+      total: 50,
+      primeiros: ['Ana', 'Bruno', 'Carla'],
+      fora_do_teto: 70,
+      mais_alem: false,
+    });
+    const tela = montar(LivreRepetir, {
+      modelValue: {
+        ...novo('repetir_lista'),
+        lista: { de: 'etapa', etapa_id: 12 },
+      },
+      opcoes: OPCOES,
+      etapas: ETAPAS,
+    });
+    await flushPromises();
+
+    expect(tela.find('[data-repetir-para-depois]').text()).toBe(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.REPETIR.PARA_DEPOIS(50,120,70)'
+    );
+  });
+
   // O servidor pergunta o alcance item a item: digitar o teto conta uma vez
   // só, quando a pessoa para.
   it('quem digita o teto conta uma vez só, depois de parar', async () => {
@@ -385,20 +443,100 @@ describe('LivreBloco', () => {
 });
 
 describe('LivreConsulta', () => {
-  it('sem integração conectada, começa no "Outro endereço"', () => {
-    const tela = montar(LivreConsulta, { modelValue: novo('consultar') });
-
-    expect(ultimo(tela).fonte).toEqual({ de: 'endereco', url: '' });
-  });
-
-  it('o teste mostra os dados e o toque guarda o escolhido', async () => {
-    const tela = montar(LivreConsulta, {
-      modelValue: {
-        ...novo('consultar'),
-        fonte: { de: 'endereco', url: 'https://loja.exemplo.com/pedido' },
-      },
+  const consulta = modelValue =>
+    montar(LivreConsulta, {
+      modelValue,
+      catalogo: CATALOGO,
+      atributosDo: () => [],
     });
 
+  it('começa na primeira consulta pronta que a conta pode usar, com os dados de nome pronto', async () => {
+    const tela = consulta(novo('consultar'));
+    await flushPromises();
+
+    expect(ultimo(tela).fonte).toEqual({
+      de: 'pronta',
+      consulta: 'cep',
+      entradas: { cep: [] },
+    });
+    expect(ultimo(tela).guardar).toEqual([
+      { nome: 'Rua', caminho: 'logradouro' },
+      { nome: 'Cidade', caminho: 'cidade' },
+    ]);
+  });
+
+  it('a consulta que a conta não pode usar aparece com o que falta e não se escolhe', async () => {
+    const tela = consulta(novo('consultar'));
+    await flushPromises();
+    const cnpj = tela.find('[data-consulta-opcao="cnpj"]');
+
+    expect(cnpj.text()).toContain('Consulta de CNPJ');
+    expect(cnpj.find('[data-consulta-falta]').text()).toContain(
+      'não está liberada'
+    );
+    expect(cnpj.find('input').attributes('disabled')).toBeDefined();
+  });
+
+  it('"Outro endereço" fica por último e só para quem cuida das integrações', async () => {
+    let tela = consulta(novo('consultar'));
+    await flushPromises();
+    const opcoes = tela
+      .findAll('[data-consulta-opcao]')
+      .map(opcao => opcao.attributes('data-consulta-opcao'));
+    expect(opcoes).toEqual(['cep', 'cnpj', 'endereco']);
+
+    integra.sim = false;
+    tela = consulta(novo('consultar'));
+    await flushPromises();
+    expect(tela.find('[data-consulta-opcao="endereco"]').exists()).toBe(false);
+  });
+
+  it('a consulta pronta pede o dado com "Pôr um dado" e mostra o que volta', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [] } },
+    });
+    await flushPromises();
+
+    expect(tela.findAll('[data-consulta-pronta] [data-texto]')).toHaveLength(1);
+    expect(tela.find('[data-consulta-volta]').text()).toContain('Rua');
+    expect(tela.find('[data-consulta-volta]').text()).toContain('Cidade');
+  });
+
+  it('o teste da consulta pronta busca com o exemplo e mostra cada dado pelo nome', async () => {
+    servidor.testarConsulta.mockResolvedValueOnce({
+      ok: true,
+      dados: [
+        { caminho: 'logradouro', valor: 'Avenida Paulista', rotulo: 'Rua' },
+      ],
+    });
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [] } },
+    });
+    await flushPromises();
+
+    await tela.find('[data-consulta-testar]').trigger('click');
+    await flushPromises();
+
+    expect(servidor.testarConsulta).toHaveBeenCalledWith({
+      de: 'pronta',
+      consulta: 'cep',
+      exemplos: { cep: '01310-100' },
+    });
+    const resposta = tela.find('[data-consulta-resposta]').text();
+    expect(resposta).toContain('Rua');
+    expect(resposta).toContain('Avenida Paulista');
+  });
+
+  it('outro endereço: o teste mostra os dados e o toque guarda o escolhido', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'https://loja.exemplo.com/pedido' },
+    });
+    await flushPromises();
+
+    expect(tela.find('[data-consulta-custo-ia]').exists()).toBe(true);
     await tela.find('[data-consulta-testar]').trigger('click');
     await flushPromises();
     await tela.find('[data-consulta-dado="pedido.status"]').trigger('click');
@@ -417,12 +555,11 @@ describe('LivreConsulta', () => {
       ok: false,
       error: 'Este endereço aponta para uma rede interna.',
     });
-    const tela = montar(LivreConsulta, {
-      modelValue: {
-        ...novo('consultar'),
-        fonte: { de: 'endereco', url: 'https://interno.exemplo.com/x' },
-      },
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'https://interno.exemplo.com/x' },
     });
+    await flushPromises();
 
     await tela.find('[data-consulta-testar]').trigger('click');
     await flushPromises();
@@ -431,13 +568,12 @@ describe('LivreConsulta', () => {
     expect(tela.find('[data-consulta-resposta]').exists()).toBe(false);
   });
 
-  it('endereço sem https avisa e não deixa testar', () => {
-    const tela = montar(LivreConsulta, {
-      modelValue: {
-        ...novo('consultar'),
-        fonte: { de: 'endereco', url: 'http://x' },
-      },
+  it('endereço sem https avisa e não deixa testar', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'http://x' },
     });
+    await flushPromises();
 
     expect(tela.text()).toContain('CONSULTAR.ENDERECO_RUIM');
     expect(

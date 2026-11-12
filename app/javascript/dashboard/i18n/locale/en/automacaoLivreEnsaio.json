@@ -156,7 +156,11 @@
         "NADA": "Has not run this week",
         "RODOU": "Ran once this week | Ran {n} times this week",
         "PAROU": "1 stopped | {n} stopped"
-      }
+      },
+      "GUARDOU": "Saved: {dados}.",
+      "VER_DENTRO": "See what happened inside",
+      "FECHAR_DENTRO": "Hide what happened inside",
+      "DENTRO_ERRO": "Could not open what happened inside the block."
     }
   }
 }

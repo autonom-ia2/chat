@@ -1,11 +1,12 @@
 // #2932–#2934 — o que os passos novos com motor leem do servidor: os públicos
 // salvos (Públicos), os blocos da conta (automações marcadas "Usar como bloco"),
-// quantos entrariam hoje no "para cada" e o teste do "buscar em outro sistema".
-// Os públicos e os blocos ficam guardados aqui depois da 1ª leitura, para a
-// frase do passo (frasesDosNovos) dizer o nome sem pedir de novo.
+// quantos entrariam hoje no "para cada", as consultas prontas e o teste do
+// "buscar em outro sistema". Os públicos, os blocos e as consultas ficam
+// guardados aqui depois da 1ª leitura, para a frase do passo (frasesDosNovos)
+// dizer o nome sem pedir de novo.
 import { ref } from 'vue';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
-import AudiencesAPI from 'dashboard/api/campaignJourneyAudiences';
+import { audiencesAPI as AudiencesAPI } from 'dashboard/api/campaignJourneyAudiences';
 
 export { COM_MOTOR, temMotor } from './passosNovos';
 
@@ -78,7 +79,29 @@ export const esquecerBlocos = () => {
   blocosLidos = null;
 };
 
-// { total, primeiros, fora_do_teto, teto }, pela régua do motor.
+// #2934: as consultas prontas (Busca de CEP, Consulta de CNPJ…): [{ id, nome,
+// faz, entradas: [{ nome, rotulo, exemplo }], dados: [{ caminho, rotulo }],
+// disponivel, falta, limite_do_dia }]. A que a conta não pode usar vem com o
+// que falta (`falta`), nunca some.
+const consultasProntas = ref([]);
+let consultasLidas = null;
+export const consultasProntasDaConta = () => consultasProntas.value;
+export const consultaPronta = id =>
+  consultasProntas.value.find(consulta => consulta.id === id) || null;
+export const carregarConsultasProntas = () => {
+  consultasLidas ||= AutomacoesAPI.consultasProntas()
+    .then(({ data }) => {
+      consultasProntas.value = data?.consultas || [];
+      return consultasProntas.value;
+    })
+    .catch(() => {
+      consultasLidas = null;
+      return [];
+    });
+  return consultasLidas;
+};
+
+// { total, primeiros, fora_do_teto, mais_alem, teto }, pela régua do motor.
 export const contarLista = (lista, teto) =>
   AutomacoesAPI.contarLista({ lista, teto }).then(({ data }) => {
     ultimaContagem.value = data;
@@ -95,9 +118,18 @@ export const testarConsulta = fonte =>
     })
     .catch(erro => ({ ok: false, error: erro?.response?.data?.error || '' }));
 
-// O "Buscar agora" do ensaio: cada dado guardado com o valor de agora.
+// O "Buscar agora" do ensaio: cada dado guardado com o valor de agora. Na
+// consulta pronta, com o que ela usaria da conversa do ensaio (`entradas`).
+const fonteDoEnsaio = passo =>
+  passo.fonte?.de === 'pronta'
+    ? {
+        de: 'pronta',
+        consulta: passo.fonte.consulta,
+        exemplos: passo.entradasDoEnsaio || {},
+      }
+    : passo.fonte;
 export const buscarNoEnsaio = passo =>
-  testarConsulta(passo.fonte).then(resposta => ({
+  testarConsulta(fonteDoEnsaio(passo)).then(resposta => ({
     ...resposta,
     dados: (passo.guardar || []).map(dado => ({
       nome: dado.nome,

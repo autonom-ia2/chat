@@ -226,6 +226,10 @@
     "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
     "parametros": []
   },
+  "autonomia/automacoes/consultas_prontas": {
+    "controller": "api/v1/accounts/autonomia/automacoes_passos_novos#consultas_prontas",
+    "parametros": []
+  },
   "autonomia/automacoes/custos": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#custos",
     "parametros": []

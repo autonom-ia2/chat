@@ -56,13 +56,12 @@ describe('catálogo dos passos novos', () => {
     });
   });
 
-  it('montar o "Buscar em outro sistema" pede a chave de integrações', () => {
-    const consultar = catalogo.passos.find(item => item.tipo === 'consultar');
-
-    expect(consultar.chave).toBe('integration_manage');
+  // #2934: as consultas prontas servem a quem monta automações; só o "Outro
+  // endereço", dentro da peça, pede a chave de integrações.
+  it('nenhum passo novo pede chave além de montar automações', () => {
     expect(
       catalogo.passos.filter(item => PASSOS_NOVOS[item.tipo] && item.chave)
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
 
   it('o passo da receita acha a entrada dele', () => {
@@ -137,7 +136,7 @@ describe('o que segura o "Salvar"', () => {
   it('busca com a fonte e pelo menos um dado com nome', () => {
     const passo = {
       ...novo('consultar'),
-      fonte: { de: 'integracao', id: 'loja' },
+      fonte: { de: 'endereco', url: 'https://loja.exemplo/pedido' },
       guardar: [{ nome: 'Status do pedido', caminho: 'pedido.status' }],
     };
 
@@ -151,6 +150,29 @@ describe('o que segura o "Salvar"', () => {
     ).toBe(false);
     expect(
       passoNovoPronto({ ...passo, fonte: { de: 'endereco', url: 'http://a' } })
+    ).toBe(false);
+  });
+
+  it('consulta pronta: escolhida e com tudo o que ela pede dito', () => {
+    const passo = {
+      ...novo('consultar'),
+      fonte: {
+        de: 'pronta',
+        consulta: 'cep',
+        entradas: { cep: [{ $valor: 'contato.atributos.cep' }] },
+      },
+      guardar: [{ nome: 'Rua', caminho: 'logradouro' }],
+    };
+
+    expect(passoNovoPronto(passo)).toBe(true);
+    expect(
+      passoNovoPronto({
+        ...passo,
+        fonte: { ...passo.fonte, entradas: { cep: [] } },
+      })
+    ).toBe(false);
+    expect(
+      passoNovoPronto({ ...passo, fonte: { ...passo.fonte, consulta: null } })
     ).toBe(false);
   });
 

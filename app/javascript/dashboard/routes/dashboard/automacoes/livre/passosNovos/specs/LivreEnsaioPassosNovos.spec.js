@@ -127,8 +127,8 @@ describe('LivreEnsaio com passo novo', () => {
     expect(AutomacoesAPI.ensaiar).toHaveBeenCalledTimes(1);
     expect(tela.find('[data-ensaio-de-exemplo]').exists()).toBe(false);
     const passos = tela.find('[data-ensaio-passos]').text();
-    expect(passos).toContain('REPETIR.ENSAIO(2,');
-    expect(passos).toContain('REPETIR.ENSAIO_FORA_DO_TETO(3)');
+    // Passou do teto: o total de verdade (2 de 5) e os 3 que ficam para depois.
+    expect(passos).toContain('REPETIR.ENSAIO_COM_TETO(2,5,3,');
     expect(tela.find('[data-caminho]').text()).toBe(
       'AUTOMACAO_LIVRE.PASSOS_NOVOS.CAMINHO_NO_ENSAIO(AUTOMACAO_LIVRE.RAMOS.CADA)'
     );
@@ -171,6 +171,71 @@ describe('LivreEnsaio com passo novo', () => {
 
     expect(AutomacoesAPI.testarConsulta).toHaveBeenCalledWith(consulta.fonte);
     expect(tela.find('[data-busca-resultado]').text()).toContain('enviado');
+  });
+
+  const consultaPronta = {
+    ...novoPassoNovo('consultar', 'p1', t),
+    fonte: {
+      de: 'pronta',
+      consulta: 'cep',
+      entradas: { cep: [{ $valor: 'contato.atributos.cep' }] },
+    },
+    guardar: [{ nome: 'Rua', caminho: 'logradouro' }],
+  };
+  const ensaioDaPronta = entradas =>
+    conversaCom([
+      {
+        id: 'p1',
+        tipo: 'consultar',
+        faria: 'consultar',
+        dados: { guardaria: ['Rua'], entradas },
+      },
+    ]);
+
+  it('a consulta pronta busca no ensaio com o dado desta conversa, só com o OK', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce(
+      ensaioDaPronta({ cep: '01310-100' })
+    );
+    AutomacoesAPI.testarConsulta.mockResolvedValueOnce({
+      data: {
+        ok: true,
+        dados: [
+          { caminho: 'logradouro', valor: 'Avenida Paulista', rotulo: 'Rua' },
+        ],
+      },
+    });
+    const tela = montar({
+      gatilho: { tipo: 'conversa.resolvida' },
+      passos: [consultaPronta],
+    });
+    await flushPromises();
+
+    await tela.find('[data-busca-pedir]').trigger('click');
+    await tela.find('[data-busca-sim]').trigger('click');
+    await flushPromises();
+
+    expect(AutomacoesAPI.testarConsulta).toHaveBeenCalledWith({
+      de: 'pronta',
+      consulta: 'cep',
+      exemplos: { cep: '01310-100' },
+    });
+    expect(tela.find('[data-busca-resultado]').text()).toContain(
+      'Avenida Paulista'
+    );
+  });
+
+  it('a consulta pronta com o dado vazio nesta conversa diz o caminho que seguiria', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce(ensaioDaPronta({ cep: null }));
+    const tela = montar({
+      gatilho: { tipo: 'conversa.resolvida' },
+      passos: [consultaPronta],
+    });
+    await flushPromises();
+
+    expect(tela.find('[data-busca-pedir]').exists()).toBe(false);
+    expect(tela.find('[data-ensaio-passos]').text()).toContain(
+      'CONSULTAR.ENSAIO_SEM_ENTRADA(cep)'
+    );
   });
 
   it('o passo de dentro do bloco sai em frase pela receita do bloco', async () => {

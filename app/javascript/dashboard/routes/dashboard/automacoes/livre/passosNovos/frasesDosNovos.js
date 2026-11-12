@@ -8,6 +8,7 @@ import { P, chaveDoPasso } from './passosNovos';
 import { NOMES_DE_EXEMPLO, horariosLivres } from './adaptadorFalso';
 import {
   blocoDe,
+  consultaPronta,
   contagemDaTela,
   nomeDoPublico,
   valorDoTeste,
@@ -66,12 +67,15 @@ export const duracaoEmFrase = (duracao, t) => {
   });
 };
 
-// Integração conectada ainda não existe para este passo: só o endereço próprio
-// tem nome. O endereço em si nunca aparece na frase.
-export const fonteEmFrase = (fonte, t) =>
-  fonte?.de === 'endereco'
-    ? t(`${P}.CONSULTAR.ENDERECO_PROPRIO`)
+// Onde busca, já com a preposição: "na consulta “Busca de CEP”" ou "num
+// endereço próprio". O endereço em si nunca aparece na frase.
+export const fonteEmFrase = (fonte, t) => {
+  if (fonte?.de === 'endereco') return t(`${P}.CONSULTAR.ENDERECO_PROPRIO`);
+  const consulta = fonte?.de === 'pronta' && consultaPronta(fonte.consulta);
+  return consulta
+    ? t(`${P}.CONSULTAR.NA_CONSULTA`, { consulta: consulta.nome })
     : t(`${P}.CONSULTAR.SEM_FONTE`);
+};
 
 // A lista em palavras do dia a dia, com o nome: "cada card da etapa Proposta".
 // Sem o nome ainda, "a etapa escolhida".
@@ -176,11 +180,16 @@ const ENSAIO = {
         : t(`${P}.BLOCO.FRASE_SEM_BLOCO`),
     };
   },
+  // A consulta pronta busca com um dado da conversa: a prévia não tem conversa,
+  // então só o ensaio de verdade oferece "Buscar agora" (ENSAIO_COM_MOTOR).
   consultar: (passo, t) => ({
     destaque: t(`${P}.CONSULTAR.ENSAIO`, {
       fonte: fonteEmFrase(passo.fonte, t),
     }),
-    consulta: (passo.guardar || []).length ? passo : null,
+    consulta:
+      passo.fonte?.de !== 'pronta' && (passo.guardar || []).length
+        ? passo
+        : null,
   }),
   marcar_reuniao: (passo, t) => {
     const horarios = horariosLivres(t);
@@ -269,26 +278,58 @@ const AVISO_DO_BLOCO = {
   bloco_fundo_demais: 'BLOCO_FUNDO_DEMAIS',
 };
 const ENSAIO_COM_MOTOR = {
+  // Passou do teto: o total de verdade e quantos ficam para as próximas vezes.
   repetir_lista: (no, t) => {
-    const { total = 0, primeiros = [], fora_do_teto: fora = 0 } = no.dados;
-    const entram = total
-      ? t(`${P}.REPETIR.ENSAIO`, { total, nomes: emLista(primeiros, t) })
-      : t(`${P}.REPETIR.ENSAIO_NINGUEM`);
+    const {
+      total = 0,
+      primeiros = [],
+      fora_do_teto: fora = 0,
+      mais_alem: maisAlem = false,
+    } = no.dados;
+    if (!total) return { destaque: t(`${P}.REPETIR.ENSAIO_NINGUEM`) };
+    const nomes = emLista(primeiros, t);
+    if (!fora) return { destaque: t(`${P}.REPETIR.ENSAIO`, { total, nomes }) };
+    const chave = maisAlem ? 'ENSAIO_COM_TETO_MAIS' : 'ENSAIO_COM_TETO';
     return {
-      destaque: fora
-        ? `${entram} ${t(`${P}.REPETIR.ENSAIO_FORA_DO_TETO`, { fora })}`
-        : entram,
+      destaque: t(`${P}.REPETIR.${chave}`, {
+        total,
+        todos: total + fora,
+        fora,
+        nomes,
+      }),
     };
   },
   usar_bloco: (no, t) => ({
     destaque: t(`${P}.BLOCO.ENSAIO_DE_VERDADE`, { bloco: no.dados.nome }),
   }),
-  consultar: (no, t, passo) => ({
-    destaque: t(`${P}.CONSULTAR.ENSAIO`, {
+  // Na consulta pronta, o servidor diz o que ela usaria desta conversa
+  // (`entradas`): com tudo preenchido, "Buscar agora" busca com isso; com algo
+  // vazio, a tela diz o que falta e por qual caminho seguiria.
+  consultar: (no, t, passo) => {
+    const destaque = t(`${P}.CONSULTAR.ENSAIO`, {
       fonte: fonteEmFrase(passo?.fonte, t),
-    }),
-    consulta: (passo?.guardar || []).length ? passo : null,
-  }),
+    });
+    const entradas = no.dados?.entradas;
+    if (!entradas)
+      return {
+        destaque,
+        consulta: (passo?.guardar || []).length ? passo : null,
+      };
+    const vazias = Object.keys(entradas).filter(nome => !entradas[nome]);
+    if (!vazias.length)
+      return { destaque, consulta: { ...passo, entradasDoEnsaio: entradas } };
+    const rotulos = consultaPronta(passo?.fonte?.consulta)?.entradas || [];
+    const nomes = vazias.map(nome => {
+      const rotulo = rotulos.find(entrada => entrada.nome === nome)?.rotulo;
+      return rotulo ? rotulo.charAt(0).toLowerCase() + rotulo.slice(1) : nome;
+    });
+    return {
+      destaque,
+      aviso: t(`${P}.CONSULTAR.ENSAIO_SEM_ENTRADA`, {
+        entradas: emLista(nomes, t),
+      }),
+    };
+  },
 };
 
 export const linhaDoEnsaioComMotor = (no, t, passo) => {

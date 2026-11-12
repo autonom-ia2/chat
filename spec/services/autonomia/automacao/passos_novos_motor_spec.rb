@@ -309,5 +309,44 @@ RSpec.describe 'Passos novos da Automação livre no motor', :automacao_motor do
 
       expect(historico(rodar(definicao))).to eq([%w[busca ok consulta_recusada], ['nao', 'ok', nil]])
     end
+
+    describe 'consulta pronta (decisão do Rodrigo, 12/11)' do
+      include FerramentasProntasHelper
+
+      let(:pronta) do
+        { 'id' => 'busca', 'tipo' => 'consultar', 'nao_consultou' => [parar('nao')],
+          'fonte' => { 'de' => 'pronta', 'consulta' => 'cep', 'entradas' => { 'cep' => ['01310-100'] } },
+          'guardar' => [{ 'nome' => 'Rua', 'caminho' => 'logradouro' }, { 'nome' => 'Cidade', 'caminho' => 'cidade' }] }
+      end
+      let(:se_paulista) do
+        { 'id' => 'tem', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'consulta.busca.rua' }, 'op' => 'igual',
+                                                         'valor' => 'Avenida Paulista' }, 'entao' => [parar('sim')] }
+      end
+
+      before do
+        resolver_hosts_das_prontas
+        ligar_prontas(account)
+      end
+
+      it 'busca pela Execucao das prontas, guarda com o rótulo pronto e o histórico não leva o CEP', :aggregate_failures do
+        fonte_responde('https://viacep.com.br/ws/01310100/json/',
+                       { cep: '01310-100', logradouro: 'Avenida Paulista', bairro: 'Bela Vista', localidade: 'São Paulo', uf: 'SP' })
+        definicao = automacao_ligada(account, admin, [pronta, se_paulista])
+        allow(Autonomia::Automacao::PassoDeWebhook).to receive(:pode_mandar?).and_return(false)
+
+        mae = rodar(definicao)
+
+        expect(historico(mae)).to eq([['busca', 'ok', nil], ['tem', 'ok', nil], ['sim', 'ok', nil]])
+        expect(Autonomia::Automacao::Registro.where(execucao: mae).pluck(:dados).to_json).not_to include('01310')
+      end
+
+      it 'a consulta que não acha segue pelo galho "se não conseguir buscar"' do
+        fonte_responde('https://viacep.com.br/ws/01310100/json/', { erro: true })
+        stub_request(:get, %r{awesomeapi.com.br/json/01310100}).to_return(status: 404, body: '{}')
+        definicao = automacao_ligada(account, admin, [pronta, se_paulista])
+
+        expect(historico(rodar(definicao))).to eq([%w[busca ok consulta_pronta_nao_achou], ['nao', 'ok', nil]])
+      end
+    end
   end
 end

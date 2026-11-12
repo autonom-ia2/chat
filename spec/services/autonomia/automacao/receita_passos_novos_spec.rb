@@ -160,11 +160,9 @@ RSpec.describe Autonomia::Automacao::Receita, :automacao_motor do
         .to eq([I18n.t("#{frase}.consulta.sem_permissao", passo: 'busca')])
     end
 
-    it 'recusa endereço sem https, interno, integração que não existe, nome sem letra, nome repetido e caminho vazio', :aggregate_failures do
+    it 'recusa endereço sem https, interno, nome sem letra, nome repetido e caminho vazio', :aggregate_failures do
       expect(problemas(consulta(url: 'http://loja.exemplo.com/x'))).to eq([I18n.t("#{frase}.consulta.consulta_so_https", passo: 'busca')])
       expect(problemas(consulta(url: 'https://127.0.0.1/x'))).to eq([I18n.t("#{frase}.consulta.consulta_endereco_interno", passo: 'busca')])
-      integracao = consulta.merge('fonte' => { 'de' => 'integracao', 'id' => 'loja' })
-      expect(problemas(integracao)).to eq([I18n.t("#{frase}.consulta.integracao_desconhecida", passo: 'busca')])
       repetidos = [{ 'nome' => 'Status', 'caminho' => 'a' }, { 'nome' => 'status!', 'caminho' => 'b' }]
       expect(problemas(consulta(guardar: repetidos))).to eq([I18n.t("#{frase}.consulta.nome_repetido", passo: 'busca', chave: 'status')])
       expect(problemas(consulta(guardar: [{ 'nome' => '!!', 'caminho' => 'a..b' }])))
@@ -178,6 +176,39 @@ RSpec.describe Autonomia::Automacao::Receita, :automacao_motor do
         .to eq([I18n.t("#{frase}.consulta_depois", passo: 'antes', caminho: 'consulta.busca.status_do_pedido')])
       expect(problemas(consulta, se_valor('outra', 'consulta.busca.outra_coisa')))
         .to eq([I18n.t("#{frase}.consulta_sem_passo", passo: 'outra', caminho: 'consulta.busca.outra_coisa')])
+    end
+
+    describe 'consulta pronta (decisão do Rodrigo, 12/11)' do
+      def pronta(consulta: 'cep', entradas: { 'cep' => [{ '$valor' => 'contato.nome' }] },
+                 guardar: [{ 'nome' => 'Rua', 'caminho' => 'logradouro' }])
+        { 'id' => 'busca', 'tipo' => 'consultar', 'fonte' => { 'de' => 'pronta', 'consulta' => consulta, 'entradas' => entradas },
+          'guardar' => guardar }
+      end
+
+      before { account.enable_features!(Autonomia::FerramentasProntas::FLAG) }
+
+      it 'serve a quem monta automações, sem a chave de integrações, e o dado buscado vale depois' do
+        expect(problemas(pronta, se_valor('depois', 'consulta.busca.rua'), account_user: com_funcao('automation_manage'))).to be_empty
+      end
+
+      it 'recusa consulta que não existe, entrada sem dado, dado que ela não devolve e valor que a automação não lê', :aggregate_failures do
+        expect(problemas(pronta(consulta: 'loja'))).to eq([I18n.t("#{frase}.consulta.pronta_desconhecida", passo: 'busca')])
+        nome = Autonomia::Automacao::ConsultasProntas.nome(Autonomia::Automacao::ConsultasProntas.buscar('cep'))
+        rotulo = Autonomia::Automacao::ConsultasProntas.rotulo_da_entrada(Autonomia::Automacao::ConsultasProntas.buscar('cep'), 'cep')
+        expect(problemas(pronta(entradas: {})))
+          .to eq([I18n.t("#{frase}.consulta.pronta_sem_entrada", passo: 'busca', consulta: nome, entrada: rotulo)])
+        expect(problemas(pronta(guardar: [{ 'nome' => 'Senha', 'caminho' => 'senha' }])))
+          .to eq([I18n.t("#{frase}.consulta.pronta_dado_desconhecido", passo: 'busca', consulta: nome, nome: 'Senha')])
+        expect(problemas(pronta(entradas: { 'cep' => [{ '$valor' => 'contato.nada' }] })))
+          .to eq([I18n.t("#{frase}.valor_desconhecido", passo: 'busca', caminho: 'contato.nada')])
+      end
+
+      it 'a consulta que a conta não tem ligada não salva, com a frase' do
+        account.disable_features!(Autonomia::FerramentasProntas::FLAG)
+        nome = Autonomia::Automacao::ConsultasProntas.nome(Autonomia::Automacao::ConsultasProntas.buscar('cep'))
+
+        expect(problemas(pronta)).to eq([I18n.t("#{frase}.consulta.pronta_desligada", passo: 'busca', consulta: nome)])
+      end
     end
 
     it 'a chave do nome: minúsculas, sem acento, o resto vira "_"' do

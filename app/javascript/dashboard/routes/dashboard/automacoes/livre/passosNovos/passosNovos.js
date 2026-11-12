@@ -28,13 +28,13 @@ export const PASSOS_NOVOS = {
     ramos: [],
     icone: 'i-lucide-boxes',
   },
-  // #2934: montar pede a chave de integrações (como o webhook, G13).
+  // #2934: as consultas prontas servem a quem monta automações; só o "Outro
+  // endereço" pede a chave de integrações (como o webhook, G13), na peça.
   consultar: {
     chave: 'CONSULTAR',
     grupo: 'OUTRO_SISTEMA',
     ramos: ['nao_consultou'],
     icone: 'i-lucide-search',
-    permissao: 'integration_manage',
   },
   marcar_reuniao: {
     chave: 'REUNIAO',
@@ -110,7 +110,10 @@ const NOVOS = {
     ritmo: 'aos_poucos',
   }),
   usar_bloco: () => ({ bloco_id: null }),
-  consultar: () => ({ fonte: { de: 'integracao', id: null }, guardar: [] }),
+  consultar: () => ({
+    fonte: { de: 'pronta', consulta: null, entradas: {} },
+    guardar: [],
+  }),
   marcar_reuniao: t => ({
     com: { de: 'responsavel' },
     duracao: 30,
@@ -142,6 +145,19 @@ export const QUEM = ['responsavel', 'pessoa', 'time'];
 export const quemPronto = quem =>
   quem?.de === 'responsavel' ||
   (['pessoa', 'time'].includes(quem?.de) && Number.isInteger(quem.id));
+
+// #2934: a consulta pronta escolhida e o que ela pede, cada um dito (a peça
+// põe uma entrada para cada coisa que a consulta pede, ao escolher).
+export const PRONTA = 'pronta';
+export const ENDERECO = 'endereco';
+const prontaPronta = fonte => {
+  const entradas = Object.values(fonte.entradas || {});
+  return (
+    Boolean(fonte.consulta) &&
+    entradas.length > 0 &&
+    entradas.every(textoEscrito)
+  );
+};
 
 // O endereço próprio do "Consultar": só https. Endereço interno ou privado o
 // servidor recusa (SSRF, #2934); a tela não decide isso.
@@ -183,9 +199,9 @@ const PRONTO = {
     teto <= TETO_MAXIMO,
   usar_bloco: passo => passo.bloco_id != null,
   consultar: ({ fonte, guardar }) =>
-    (fonte?.de === 'endereco'
+    (fonte?.de === ENDERECO
       ? enderecoServe(fonte.url)
-      : Boolean(fonte?.id)) &&
+      : fonte?.de === PRONTA && prontaPronta(fonte)) &&
     (guardar || []).length > 0 &&
     guardar.every(dado => escrito(dado.nome) && escrito(dado.caminho)),
   marcar_reuniao: passo =>

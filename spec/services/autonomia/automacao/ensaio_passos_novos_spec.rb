@@ -44,6 +44,19 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(busca.to_json).not_to include('loja.exemplo.com')
   end
 
+  it 'a consulta pronta diz o que usaria desta conversa, sem buscar; o dado vazio volta vazio', :aggregate_failures do
+    pronta = lambda do |partes|
+      { 'id' => 'busca', 'tipo' => 'consultar', 'guardar' => [{ 'nome' => 'Rua', 'caminho' => 'logradouro' }],
+        'fonte' => { 'de' => 'pronta', 'consulta' => 'cep', 'entradas' => { 'cep' => partes } } }
+    end
+
+    busca, = nos(pronta.call([{ '$valor' => 'contato.nome' }]), parar('fim'))
+    expect(busca[:dados]).to eq(guardaria: ['Rua'], entradas: { 'cep' => 'Mercado Bom Preço' })
+
+    vazia, = nos(pronta.call([{ '$valor' => 'contato.email' }]), parar('fim'))
+    expect(vazia[:dados][:entradas]).to eq('cep' => nil)
+  end
+
   it 'o bloco entra com os passos dele, cada um marcado com o bloco; o que sumiu diz por que pularia', :aggregate_failures do
     bloco = create(:autonomia_automacao, account: account, bloco: true)
     bloco.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [parar('b1')] }, autor: admin)

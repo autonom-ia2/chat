@@ -58,6 +58,8 @@ const mudar = novo => emit('update:modelValue', novo);
     <LivreConsulta
       v-else-if="modelValue.tipo === 'consultar'"
       :model-value="modelValue"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
       @update:model-value="mudar"
     />
     <LivreReuniao

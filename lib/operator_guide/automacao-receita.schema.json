@@ -916,7 +916,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "fonte", "guardar"],
-          "description": "Buscar informação em outro sistema (#2934): um GET a outro endereço (só https, nunca rede interna), com prazo curto e resposta pequena. guardar leva dados da resposta (caminho no JSON, com ponto para entrar no objeto) com um nome do dia a dia, que os passos seguintes leem como consulta.<id do passo>.<nome sem acento, com _>. Sem resposta, segue pelo nao_consultou.",
+          "description": "Buscar informação em outro sistema (#2934). fonte: uma consulta pronta (de pronta: Busca de CEP, Consulta de CNPJ, Valor do carro FIPE, Conferir CPF; entradas com o que ela pede, que pode vir de um dado; guardar com os dados dela e o rótulo pronto) ou outro endereço (de endereco: um GET, só https, nunca rede interna, prazo curto e resposta pequena; pede a chave de integrações; guardar leva o caminho no JSON, com ponto para entrar no objeto). Os passos seguintes leem cada dado guardado como consulta.<id do passo>.<nome sem acento, com _>. Sem resposta, segue pelo nao_consultou.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "consultar" },
@@ -931,8 +931,12 @@
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["de", "id"],
-                  "properties": { "de": { "const": "integracao" }, "id": { "type": "string", "minLength": 1, "maxLength": 40 } }
+                  "required": ["de", "consulta", "entradas"],
+                  "properties": {
+                    "de": { "const": "pronta" },
+                    "consulta": { "type": "string", "minLength": 1, "maxLength": 40 },
+                    "entradas": { "type": "object", "maxProperties": 5, "additionalProperties": { "$ref": "#/definitions/linha" } }
+                  }
                 }
               ]
             },

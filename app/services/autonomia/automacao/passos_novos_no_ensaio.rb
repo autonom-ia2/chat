@@ -6,8 +6,9 @@
 #   motor contra laço e fundo (Bloco::PROFUNDIDADE). Bloco que sumiu, que não é bloco ou de outro tipo de registro, diz
 #   por que pularia.
 # - "buscar em outro sistema": nunca busca. Diz os dados que guardaria (os nomes, nunca o endereço) e mostra os dois
-#   caminhos: o de quando a busca dá certo (segue) e o galho `nao_consultou`. A busca de verdade só pelo botão "Buscar
-#   agora" da tela, que chama o teste do passo (AutomacoesPassosNovosController#consulta_teste).
+#   caminhos: o de quando a busca dá certo (segue) e o galho `nao_consultou`. Na consulta pronta, diz também o que ela
+#   usaria desta conversa (`entradas`). A busca de verdade só pelo botão "Buscar agora" da tela, que chama o teste do
+#   passo (AutomacoesPassosNovosController#testar_consulta).
 module Autonomia::Automacao::PassosNovosNoEnsaio
   private
 
@@ -63,7 +64,15 @@ module Autonomia::Automacao::PassosNovosNoEnsaio
     ramos = [{ chave: 'consultou', passos: caminho(@roteiro.seguinte(passo['id']), valores) },
              { chave: ::Autonomia::Automacao::PassoConsultar::RAMO,
                passos: caminho(@roteiro.entrar(passo, ::Autonomia::Automacao::PassoConsultar::RAMO), valores) }]
-    [no(passo, 'consultar', { guardaria: nomes }, ramos: ramos), nil]
+    [no(passo, 'consultar', { guardaria: nomes, **entradas_do_ensaio(passo, valores) }, ramos: ramos), nil]
+  end
+
+  # Na consulta pronta, o que ela usaria desta conversa (o CEP do contato), para o "Buscar agora" e para dizer quando o
+  # dado está vazio. A tela mostra a quem ensaia a própria conversa; nada vai para o registro.
+  def entradas_do_ensaio(passo, valores)
+    return {} unless passo.dig('fonte', 'de') == ::Autonomia::Automacao::PassoConsultar::PRONTA
+
+    { entradas: ::Autonomia::Automacao::ConsultasProntas.entradas_montadas(passo['fonte'], valores) }
   end
 
   # O nó que já tem `bloco` (o de um bloco dentro deste) fica com o dele.

@@ -1,227 +1,221 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import Button from 'dashboard/components-next/button/Button.vue';
-import Input from 'dashboard/components-next/input/Input.vue';
-import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import { P, enderecoServe } from './passosNovos';
-import { testarConsulta } from './dadosDaConta';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import LivreConsultaPronta from './LivreConsultaPronta.vue';
+import LivreConsultaEndereco from './LivreConsultaEndereco.vue';
+import { ENDERECO, P, PRONTA } from './passosNovos';
+import {
+  carregarConsultasProntas,
+  consultasProntasDaConta,
+} from './dadosDaConta';
 
-// #2934 — Consultar outro sistema: de onde vem a informação (uma integração já
-// conectada ou um endereço próprio), um teste e o toque no dado que a pessoa
-// quer guardar, com o nome que ela der. Integração conectada ainda não existe
-// para este passo: a lista mostra só "Outro endereço" até a primeira existir.
-// O teste busca de verdade (o servidor recusa endereço interno) e sugere o nome
-// do dia a dia de cada dado; a pessoa troca. O dado aparece no "Pôr um dado" dos
-// passos seguintes. O endereço só aparece aqui, para quem tem a chave de
-// integrações; o Confira e o histórico nunca o mostram.
+// #2934 — Buscar informação em outro sistema (decisão do Rodrigo, 12/11: "foco
+// na jornada"). "Onde buscar" é uma lista de consultas prontas do dia a dia
+// (Busca de CEP, Consulta de CNPJ…): a pessoa toca numa, diz de onde vem o que
+// ela pede ("Pôr um dado") e já sabe o que volta, com o nome pronto. A
+// consulta que a conta não pode usar aparece com o que falta, nunca some.
+// "Outro endereço" fica por último, como avançado, só para quem cuida das
+// integrações (como o webhook). Sem <select>: cada opção é um cartão com rádio.
 const props = defineProps({
   modelValue: { type: Object, required: true },
+  catalogo: { type: Object, required: true },
+  atributosDo: { type: Function, required: true },
 });
 
 const emit = defineEmits(['update:modelValue']);
-const { t } = useI18n();
 const C = `${P}.CONSULTAR`;
-const ENDERECO = 'endereco';
-
 const mudar = mudanca =>
   emit('update:modelValue', { ...props.modelValue, ...mudanca });
 
-const integracoes = computed(() => []);
-const fontes = computed(() => [
-  ...integracoes.value,
-  { value: ENDERECO, label: t(`${C}.OUTRO_ENDERECO`) },
-]);
+const podeIntegrar = usePermissionGranted('integration_manage');
+const carregando = ref(true);
+const consultas = computed(() => consultasProntasDaConta());
 const fonte = computed(() => props.modelValue.fonte || {});
-const valorDaFonte = computed(() =>
-  fonte.value.de === ENDERECO ? ENDERECO : fonte.value.id || ''
+const escolhida = computed(() =>
+  fonte.value.de === PRONTA
+    ? consultas.value.find(consulta => consulta.id === fonte.value.consulta)
+    : null
 );
-// Trocar de onde vem a informação limpa o teste e os dados guardados.
-const resposta = ref(null);
-const escolherFonte = valor => {
-  resposta.value = null;
-  mudar({
-    fonte:
-      valor === ENDERECO
-        ? { de: ENDERECO, url: '' }
-        : { de: 'integracao', id: valor },
-    guardar: [],
-  });
-};
-const enderecoRuim = computed(
-  () =>
-    fonte.value.de === ENDERECO &&
-    fonte.value.url &&
-    !enderecoServe(fonte.value.url)
-);
-const podeTestar = computed(() =>
-  fonte.value.de === ENDERECO
-    ? enderecoServe(fonte.value.url)
-    : Boolean(fonte.value.id)
+const ehEndereco = computed(() => fonte.value.de === ENDERECO);
+// O "Outro endereço" de quem não tem a chave: aparece só se o passo já usa,
+// para dizer por que não dá para mudar.
+const mostraEndereco = computed(() => podeIntegrar.value || ehEndereco.value);
+const valorEscolhido = computed(() =>
+  ehEndereco.value ? ENDERECO : fonte.value.consulta || ''
 );
 
-const testando = ref(false);
-const erroDoTeste = ref('');
-const testar = async () => {
-  testando.value = true;
-  erroDoTeste.value = '';
-  try {
-    const achou = await testarConsulta(fonte.value);
-    erroDoTeste.value = achou.ok ? '' : achou.error || t(`${C}.TESTE_FALHOU`);
-    resposta.value = achou.ok
-      ? achou.dados.map(dado => ({ ...dado, nome: dado.rotulo }))
-      : null;
-  } finally {
-    testando.value = false;
+// Escolher uma consulta já põe uma entrada para cada coisa que ela pede (o que
+// já estava escrito fica) e guarda todos os dados que ela devolve, com o nome
+// pronto. Trocar de consulta limpa o resto.
+const escolherConsulta = consulta => {
+  const antes = fonte.value.de === PRONTA ? fonte.value.entradas || {} : {};
+  const mesma = fonte.value.consulta === consulta.id;
+  mudar({
+    fonte: {
+      de: PRONTA,
+      consulta: consulta.id,
+      entradas: Object.fromEntries(
+        consulta.entradas.map(({ nome }) => [
+          nome,
+          mesma ? antes[nome] || [] : [],
+        ])
+      ),
+    },
+    guardar: consulta.dados.map(({ caminho, rotulo }) => ({
+      nome: rotulo,
+      caminho,
+    })),
+  });
+};
+const escolherEndereco = () =>
+  mudar({ fonte: { de: ENDERECO, url: '' }, guardar: [] });
+const escolher = valor => {
+  if (valor === ENDERECO) {
+    escolherEndereco();
+    return;
   }
+  const consulta = consultas.value.find(item => item.id === valor);
+  if (consulta?.disponivel) escolherConsulta(consulta);
 };
 
-const guardados = computed(() => props.modelValue.guardar || []);
-const guardado = caminho =>
-  guardados.value.some(dado => dado.caminho === caminho);
-const alternar = dado =>
-  mudar({
-    guardar: guardado(dado.caminho)
-      ? guardados.value.filter(item => item.caminho !== dado.caminho)
-      : [...guardados.value, { nome: dado.nome, caminho: dado.caminho }],
-  });
-const renomear = (caminho, nome) =>
-  mudar({
-    guardar: guardados.value.map(item =>
-      item.caminho === caminho ? { ...item, nome } : item
-    ),
-  });
-
-// Começar pronto: a primeira integração conectada já vem escolhida; sem
-// nenhuma, o "Outro endereço".
-onMounted(() => {
-  if (fonte.value.id || fonte.value.de === ENDERECO) return;
-  escolherFonte(integracoes.value[0]?.value || ENDERECO);
+// Começar pronto: a primeira consulta que a conta pode usar já vem escolhida.
+onMounted(async () => {
+  await carregarConsultasProntas();
+  carregando.value = false;
+  if (ehEndereco.value || escolhida.value) return;
+  const primeira = consultas.value.find(consulta => consulta.disponivel);
+  if (primeira) escolherConsulta(primeira);
 });
 </script>
 
 <template>
-  <div class="flex flex-col gap-5" data-passo-novo="consultar">
-    <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-n-slate-12">
+  <div class="flex flex-col gap-6" data-passo-novo="consultar">
+    <fieldset class="flex flex-col gap-2 p-0 m-0 border-0 min-w-0">
+      <legend class="mb-2 text-sm font-medium text-n-slate-12">
         {{ $t(`${C}.FONTE`) }}
-      </span>
-      <ChoiceSelect
-        data-consulta-fonte
-        :model-value="valorDaFonte"
-        :aria-label="$t(`${C}.FONTE`)"
-        :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
-        :options="fontes"
-        @update:model-value="escolherFonte"
-      />
-    </div>
-
-    <Input
-      v-if="fonte.de === ENDERECO"
-      data-consulta-endereco
-      type="url"
-      :model-value="fonte.url || ''"
-      :label="$t(`${C}.ENDERECO`)"
-      :placeholder="$t(`${C}.ENDERECO_EXEMPLO`)"
-      :message="$t(enderecoRuim ? `${C}.ENDERECO_RUIM` : `${C}.ENDERECO_DICA`)"
-      :message-type="enderecoRuim ? 'error' : 'info'"
-      @update:model-value="
-        url => mudar({ fonte: { de: ENDERECO, url: url.trim() } })
-      "
-    />
-
-    <div class="flex flex-col gap-2">
-      <Button
-        data-consulta-testar
-        :label="$t(`${C}.TESTAR`)"
-        icon="i-lucide-play"
-        faded
-        class="self-start min-h-11"
-        :is-loading="testando"
-        :disabled="!podeTestar || testando"
-        @click="testar"
-      />
-      <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${C}.TESTAR_DICA`) }}</p>
+      </legend>
       <p
-        v-if="erroDoTeste"
-        data-consulta-erro
-        role="alert"
-        class="mb-0 text-sm text-n-ruby-11"
-      >
-        {{ erroDoTeste }}
-      </p>
-    </div>
-
-    <div v-if="resposta" data-consulta-resposta class="flex flex-col gap-2">
-      <p class="mb-0 text-sm font-medium text-n-slate-12">
-        {{ $t(`${C}.TOQUE_NO_DADO`) }}
-      </p>
-      <p
-        v-if="!resposta.length"
+        v-if="carregando"
         class="mb-0 text-sm text-n-slate-11"
-        data-consulta-sem-dado
+        data-consulta-carregando
       >
-        {{ $t(`${C}.RESPOSTA_VAZIA`) }}
+        {{ $t(`${C}.CARREGANDO`) }}
       </p>
-      <ul v-else class="flex flex-col gap-1.5 p-0 m-0 list-none">
-        <li v-for="dado in resposta" :key="dado.caminho">
-          <button
-            type="button"
-            :data-consulta-dado="dado.caminho"
-            :aria-pressed="guardado(dado.caminho)"
-            class="flex items-center w-full gap-3 px-4 py-2 border text-start rounded-xl min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            :class="
-              guardado(dado.caminho)
-                ? 'border-n-teal-8 bg-n-teal-2'
-                : 'border-n-weak bg-n-solid-1 hover:border-n-blue-7'
-            "
-            @click="alternar(dado)"
-          >
+      <label
+        v-for="consulta in consultas"
+        :key="consulta.id"
+        :data-consulta-opcao="consulta.id"
+        class="flex items-start gap-3 px-4 py-3 border rounded-xl min-h-11 transition-colors"
+        :class="[
+          !consulta.disponivel
+            ? 'border-n-weak bg-n-alpha-1 cursor-not-allowed'
+            : valorEscolhido === consulta.id
+              ? 'border-n-teal-8 bg-n-teal-2 cursor-pointer'
+              : 'border-n-weak bg-n-solid-1 hover:border-n-blue-7 cursor-pointer',
+        ]"
+      >
+        <input
+          type="radio"
+          name="consulta-fonte"
+          class="mt-1 size-4 shrink-0 accent-n-teal-9"
+          :value="consulta.id"
+          :checked="valorEscolhido === consulta.id"
+          :disabled="!consulta.disponivel"
+          @change="escolher(consulta.id)"
+        />
+        <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+          <span class="flex flex-wrap items-center gap-2">
             <span
-              class="size-4 shrink-0"
+              class="text-[0.9375rem] font-medium"
               :class="
-                guardado(dado.caminho)
-                  ? 'i-lucide-check text-n-teal-11'
-                  : 'i-lucide-plus text-n-slate-10'
+                consulta.disponivel ? 'text-n-slate-12' : 'text-n-slate-11'
               "
-              aria-hidden="true"
-            />
-            <span
-              class="flex-1 min-w-0 text-sm text-n-slate-11 first-letter:uppercase"
             >
-              {{ dado.nome }}
+              {{ consulta.nome }}
             </span>
             <span
-              class="text-[0.9375rem] font-medium text-n-slate-12 break-words"
+              v-if="consulta.disponivel"
+              class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-teal-3 text-n-teal-11"
             >
-              {{ dado.valor }}
+              {{ $t(`${C}.GRATIS`) }}
             </span>
-          </button>
-        </li>
-      </ul>
-    </div>
-
-    <div
-      v-if="guardados.length"
-      data-consulta-guardados
-      class="flex flex-col gap-3"
-    >
-      <p class="mb-0 text-sm font-medium text-n-slate-12">
-        {{ $t(`${C}.GUARDADOS`) }}
+          </span>
+          <span class="text-sm text-n-slate-11">{{ consulta.faz }}</span>
+          <span
+            v-if="!consulta.disponivel"
+            data-consulta-falta
+            class="text-sm text-n-amber-11"
+          >
+            {{ consulta.falta }}
+          </span>
+        </span>
+      </label>
+      <label
+        v-if="mostraEndereco"
+        data-consulta-opcao="endereco"
+        class="flex items-start gap-3 px-4 py-3 border rounded-xl min-h-11 transition-colors"
+        :class="[
+          !podeIntegrar
+            ? 'border-n-weak bg-n-alpha-1 cursor-not-allowed'
+            : ehEndereco
+              ? 'border-n-teal-8 bg-n-teal-2 cursor-pointer'
+              : 'border-n-weak bg-n-solid-1 hover:border-n-blue-7 cursor-pointer',
+        ]"
+      >
+        <input
+          type="radio"
+          name="consulta-fonte"
+          class="mt-1 size-4 shrink-0 accent-n-teal-9"
+          :value="ENDERECO"
+          :checked="ehEndereco"
+          :disabled="!podeIntegrar"
+          @change="escolher(ENDERECO)"
+        />
+        <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+          <span class="flex flex-wrap items-center gap-2">
+            <span class="text-[0.9375rem] font-medium text-n-slate-12">
+              {{ $t(`${C}.OUTRO_ENDERECO`) }}
+            </span>
+            <span
+              class="px-2 py-0.5 text-xs font-medium rounded-full bg-n-alpha-2 text-n-slate-11"
+            >
+              {{ $t(`${C}.AVANCADO`) }}
+            </span>
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t(`${C}.OUTRO_ENDERECO_FAZ`) }}
+          </span>
+          <span v-if="!podeIntegrar" class="text-sm text-n-amber-11">
+            {{ $t(`${C}.ENDERECO_SEM_CHAVE`) }}
+          </span>
+        </span>
+      </label>
+      <p
+        v-if="
+          !carregando &&
+          !consultas.some(item => item.disponivel) &&
+          !podeIntegrar
+        "
+        data-consulta-nenhuma
+        class="mb-0 text-sm text-n-slate-11"
+      >
+        {{ $t(`${C}.NENHUMA`) }}
       </p>
-      <Input
-        v-for="dado in guardados"
-        :key="dado.caminho"
-        :data-consulta-nome="dado.caminho"
-        :model-value="dado.nome"
-        :label="$t(`${C}.NOME_DO_DADO`)"
-        :message="$t(`${C}.NOME_DICA`)"
-        @update:model-value="nome => renomear(dado.caminho, nome)"
-      />
-    </div>
-    <p v-else class="mb-0 text-sm text-n-slate-11" data-consulta-falta-dado>
-      {{ $t(`${C}.FALTA_DADO`) }}
-    </p>
+    </fieldset>
+
+    <LivreConsultaPronta
+      v-if="escolhida"
+      :model-value="modelValue"
+      :consulta="escolhida"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      @update:model-value="novo => emit('update:modelValue', novo)"
+    />
+    <LivreConsultaEndereco
+      v-else-if="ehEndereco && podeIntegrar"
+      :model-value="modelValue"
+      @update:model-value="novo => emit('update:modelValue', novo)"
+    />
 
     <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${C}.SE_FALHAR`) }}</p>
   </div>

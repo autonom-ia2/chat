@@ -571,15 +571,6 @@
     "CRIADO": {
       "CONTATO": "Contact created by this automation",
       "CARD": "Card created by this automation"
-    },
-    "HISTORICO": {
-      "GUARDOU": "Saved: {dados}.",
-      "VER_DENTRO": "See what happened inside",
-      "FECHAR_DENTRO": "Hide what happened inside",
-      "DENTRO_ERRO": "Could not open what happened inside the block."
-    },
-    "ORIGEM": {
-      "BLOCO": "Block"
     }
   }
 }

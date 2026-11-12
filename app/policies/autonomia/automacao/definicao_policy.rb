@@ -18,6 +18,7 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   # #2932/#2934: o que a tela dos passos novos pergunta enquanto monta (a chave de integrações o controller confere).
   def contar_lista? = gerenciar?
   def testar_consulta? = gerenciar?
+  def consultas_prontas? = gerenciar?
   def custos? = ver?
   def custos_da_automacao? = ver?
 

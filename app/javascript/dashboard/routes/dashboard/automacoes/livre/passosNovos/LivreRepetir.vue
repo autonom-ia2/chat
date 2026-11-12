@@ -69,6 +69,19 @@ const mudarTeto = texto => {
 // pergunta o alcance item a item: quem digita o teto conta uma vez só, quando
 // para de digitar.
 const contagem = ref({ total: 0, primeiros: [] });
+// Passou do teto: o total de verdade e quantos ficam para as próximas vezes,
+// numa frase só ("Hoje entram 50 de 120. Os outros 70 entram nas próximas
+// vezes."). A leitura que parou no limite diz "mais de".
+const paraDepois = computed(() => {
+  const {
+    total = 0,
+    fora_do_teto: fora = 0,
+    mais_alem: maisAlem = false,
+  } = contagem.value;
+  if (!fora) return '';
+  const chave = maisAlem ? 'PARA_DEPOIS_MAIS' : 'PARA_DEPOIS';
+  return t(`${R}.${chave}`, { total, todos: total + fora, fora });
+});
 const erroDaContagem = ref('');
 let pedido = 0;
 const contar = async () => {
@@ -175,8 +188,15 @@ onMounted(() => {
           {{ contagem.total }}
         </span>
         <span class="text-[0.9375rem] text-n-slate-12">
-          {{ $t(`${R}.ENTRARIAM_HOJE`, {}, contagem.total) }}
+          {{ $t(`${R}.ENTRAM_HOJE`, {}, contagem.total) }}
         </span>
+      </p>
+      <p
+        v-if="paraDepois"
+        data-repetir-para-depois
+        class="mb-0 text-[0.9375rem] font-medium text-n-slate-12"
+      >
+        {{ paraDepois }}
       </p>
       <ul
         v-if="contagem.primeiros.length"

@@ -25,6 +25,12 @@ en:
         consulta_resposta_grande: 'The answer from the other system is too large.'
         consulta_resposta_sem_dados: 'The other system answered, but not with data the automation can read.'
         consulta_sem_permissao: 'Whoever turned this automation on can no longer fetch data from other systems. Take over and turn it on again.'
+        consulta_pronta_desligada: 'This lookup is not enabled on this account. Nothing was looked up.'
+        consulta_pronta_pausada: 'The platform team paused this lookup on this account. Nothing was looked up.'
+        consulta_pronta_sem_dado: 'The information the lookup uses was empty. Nothing was looked up.'
+        consulta_pronta_nao_achou: 'The lookup found nothing for this information. Check it.'
+        consulta_pronta_dado_invalido: 'The information used in the lookup is not in the right format. Check the number.'
+        consulta_pronta_sem_resposta: 'The lookup did not answer now (or the lookups for today ran out). Try again later.'
       receita:
         passos_novos_desligados: 'Step %{passo}: this step is not available on this account.'
         consulta_no_gatilho: 'Step %{passo}: %{caminho} is data fetched by a step, and no step has run yet in the trigger.'
@@ -47,7 +53,12 @@ en:
           com_problema: 'Step %{passo}: the block "%{bloco}" has a problem: %{problema}'
         consulta:
           sem_permissao: 'Step %{passo}: only an administrator, or a role allowed to manage integrations, can fetch data from other systems.'
-          integracao_desconhecida: 'Step %{passo}: choose "Another address". Connected integrations are not available for this step yet.'
+          fonte_desconhecida: 'Step %{passo}: choose where to look it up.'
+          pronta_desconhecida: 'Step %{passo}: this lookup no longer exists. Choose another one.'
+          pronta_desligada: 'Step %{passo}: the lookup "%{consulta}" is not enabled on this account.'
+          pronta_pausada: 'Step %{passo}: the platform team paused the lookup "%{consulta}" on this account.'
+          pronta_sem_entrada: 'Step %{passo}: say where %{entrada} comes from for the lookup "%{consulta}".'
+          pronta_dado_desconhecido: 'Step %{passo}: the lookup "%{consulta}" does not return "%{nome}".'
           consulta_so_https: 'Step %{passo}: the address must start with https://.'
           consulta_sem_senha_no_endereco: 'Step %{passo}: the address cannot carry a user or password.'
           consulta_endereco_interno: 'Step %{passo}: this address points to an internal network and cannot be used.'
@@ -58,4 +69,64 @@ en:
         bloco_em_uso: 'This block is used by automations that are on: %{nomes}. Change them first.'
         bloco_desligado: 'Blocks are not available on this account.'
       ensaio:
-        dado_buscado: '[%{nome}, fetched from the other system]'
+        dado_buscado: '[%{nome}, from the lookup]'
+      consultas_prontas:
+        sim: 'Yes'
+        nao: 'No'
+        falta:
+          desligada: 'Not enabled on this account yet. To use it, ask the platform support to turn on ready-made lookups.'
+          pausada: 'The platform team paused this lookup on your account. Talk to support to use it again.'
+        cep:
+          nome: 'ZIP code lookup'
+          faz: 'Finds the street, neighborhood and city of a Brazilian ZIP code (CEP).'
+          entradas:
+            cep: 'The ZIP code'
+          exemplos:
+            cep: '01310-100'
+          dados:
+            logradouro: 'Street'
+            bairro: 'Neighborhood'
+            cidade: 'City'
+            uf: 'State'
+            cep: 'ZIP code'
+        cnpj:
+          nome: 'Company lookup (CNPJ)'
+          faz: 'Shows the company name, whether it is active and what it does.'
+          entradas:
+            cnpj: 'The CNPJ'
+          exemplos:
+            cnpj: '00.000.000/0001-91'
+          dados:
+            razao_social: 'Company name'
+            nome_fantasia: 'Trade name'
+            situacao: 'Status at the tax office'
+            abertura: 'Opening date'
+            atividade_principal_descricao: 'What the company does'
+            porte: 'Company size'
+            cidade: 'Company city'
+            uf: 'Company state'
+        fipe:
+          nome: 'Car value (FIPE table)'
+          faz: 'Says how much a car is worth in this month''s FIPE table.'
+          entradas:
+            marca: 'The car brand'
+            modelo: 'The car model'
+            ano: 'The car year'
+          exemplos:
+            marca: 'Volkswagen'
+            modelo: 'Gol'
+            ano: '2020'
+          dados:
+            precos_0_valor: 'Car value'
+            precos_0_modelo: 'Car version'
+            precos_0_ano_modelo: 'Car year'
+            precos_0_combustivel: 'Fuel'
+            precos_0_mes_de_referencia: 'Table month'
+        cpf:
+          nome: 'Check CPF'
+          faz: 'Checks whether a CPF number is valid. It does not show the name or the tax status.'
+          entradas:
+            cpf: 'The CPF'
+          dados:
+            valido: 'Valid CPF'
+            estados: 'States where it was issued'

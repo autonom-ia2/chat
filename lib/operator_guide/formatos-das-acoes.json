@@ -11491,10 +11491,10 @@
       "leitura crua sem tipo: lista"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:22",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:27",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:24",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:23"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:27"
     ],
     "sem_corpo": false
   },
@@ -11528,8 +11528,8 @@
       "leitura crua sem tipo: fonte"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:32",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:35"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:41"
     ],
     "sem_corpo": false
   },

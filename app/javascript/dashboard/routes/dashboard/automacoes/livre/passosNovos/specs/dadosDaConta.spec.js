@@ -7,6 +7,7 @@ const { AutomacoesAPI, AudiencesAPI } = vi.hoisted(() => ({
     get: vi.fn(),
     contarLista: vi.fn(),
     testarConsulta: vi.fn(),
+    consultasProntas: vi.fn(),
   },
   AudiencesAPI: { list: vi.fn() },
 }));
@@ -14,7 +15,7 @@ vi.mock('dashboard/api/autonomia/automacoes', () => ({
   default: AutomacoesAPI,
 }));
 vi.mock('dashboard/api/campaignJourneyAudiences', () => ({
-  default: AudiencesAPI,
+  audiencesAPI: AudiencesAPI,
 }));
 
 const carregar = async () => {
@@ -142,5 +143,41 @@ describe('dadosDaConta', () => {
       { nome: 'Status', valor: 'pago' },
       { nome: 'Prazo', valor: '' },
     ]);
+  });
+
+  it('as consultas prontas vêm do servidor uma vez, e acham pelo id', async () => {
+    const cep = { id: 'cep', nome: 'Busca de CEP', disponivel: true };
+    AutomacoesAPI.consultasProntas.mockResolvedValue({
+      data: { consultas: [cep] },
+    });
+    const dados = await carregar();
+
+    await dados.carregarConsultasProntas();
+    await dados.carregarConsultasProntas();
+
+    expect(AutomacoesAPI.consultasProntas).toHaveBeenCalledTimes(1);
+    expect(dados.consultaPronta('cep')).toEqual(cep);
+    expect(dados.consultaPronta('loja')).toBeNull();
+  });
+
+  it('o "Buscar agora" da consulta pronta usa o dado desta conversa', async () => {
+    AutomacoesAPI.testarConsulta.mockResolvedValue({
+      data: { ok: true, dados: [{ caminho: 'logradouro', valor: 'Rua A' }] },
+    });
+    const dados = await carregar();
+    const passo = {
+      fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [] } },
+      guardar: [{ nome: 'Rua', caminho: 'logradouro' }],
+      entradasDoEnsaio: { cep: '01310-100' },
+    };
+
+    const resposta = await dados.buscarNoEnsaio(passo);
+
+    expect(AutomacoesAPI.testarConsulta).toHaveBeenCalledWith({
+      de: 'pronta',
+      consulta: 'cep',
+      exemplos: { cep: '01310-100' },
+    });
+    expect(resposta.dados).toEqual([{ nome: 'Rua', valor: 'Rua A' }]);
   });
 });

@@ -38,7 +38,7 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesPassosNovos', :automacao
       postar('contar_lista', { lista: { de: 'etiqueta', etiqueta: 'vip' }, teto: 1 })
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to include('total' => 1, 'fora_do_teto' => 1, 'teto' => 1)
+      expect(response.parsed_body).to include('total' => 1, 'fora_do_teto' => 1, 'mais_alem' => false, 'teto' => 1)
       expect(response.parsed_body['primeiros'].size).to eq(1)
     end
 
@@ -82,6 +82,53 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesPassosNovos', :automacao
       postar('testar_consulta', { fonte: { de: 'endereco', url: url } }, com_funcao('automation_manage'))
 
       expect(response).to have_http_status(:forbidden)
+    end
+
+    describe 'consulta pronta' do
+      include FerramentasProntasHelper
+
+      before do
+        resolver_hosts_das_prontas
+        ligar_prontas(account)
+      end
+
+      it 'busca com o exemplo, sem a chave de integrações, e volta cada dado com o rótulo pronto', :aggregate_failures do
+        fonte_responde('https://viacep.com.br/ws/01310100/json/',
+                       { cep: '01310-100', logradouro: 'Avenida Paulista', bairro: 'Bela Vista', localidade: 'São Paulo', uf: 'SP' })
+
+        postar('testar_consulta', { fonte: { de: 'pronta', consulta: 'cep', exemplos: { cep: '01310-100' } } }, com_funcao('automation_manage'))
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body['dados'].first).to eq('caminho' => 'logradouro', 'valor' => 'Avenida Paulista',
+                                                          'rotulo' => I18n.t('autonomia.automacao.consultas_prontas.cep.dados.logradouro'))
+      end
+
+      it 'a consulta que não existe é recusada com a frase' do
+        postar('testar_consulta', { fonte: { de: 'pronta', consulta: 'loja', exemplos: {} } })
+
+        expect(response.parsed_body).to include('ok' => false, 'motivo' => 'consulta_pronta_desligada')
+      end
+    end
+  end
+
+  describe 'GET consultas_prontas' do
+    it 'lista as consultas, com o que falta na que a conta não pode usar', :aggregate_failures do
+      account.enable_features!(Autonomia::FerramentasProntas::FLAG)
+
+      get "#{base}/consultas_prontas", headers: com_funcao('automation_manage').create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      consultas = response.parsed_body['consultas']
+      expect(consultas.pluck('id')).to eq(%w[cep cnpj fipe cpf])
+      expect(consultas.first).to include('disponivel' => true, 'falta' => nil)
+      expect(consultas.last['disponivel']).to be(false)
+      expect(consultas.last['falta']).to be_present
+    end
+
+    it 'pede a chave de montar automações' do
+      get "#{base}/consultas_prontas", headers: com_funcao('automation_view').create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 

@@ -571,15 +571,6 @@
     "CRIADO": {
       "CONTATO": "Contato criado por esta automação",
       "CARD": "Card criado por esta automação"
-    },
-    "HISTORICO": {
-      "GUARDOU": "Guardou: {dados}.",
-      "VER_DENTRO": "Ver o que aconteceu dentro",
-      "FECHAR_DENTRO": "Esconder o que aconteceu dentro",
-      "DENTRO_ERRO": "Não deu para abrir o que aconteceu dentro do bloco."
-    },
-    "ORIGEM": {
-      "BLOCO": "Bloco"
     }
   }
 }

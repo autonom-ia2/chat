@@ -95,6 +95,12 @@ class AutomacoesAPI extends ApiClient {
     return axios.post(`${this.url}/testar_consulta`, { fonte });
   }
 
+  // #2934: as consultas prontas do "buscar em outro sistema" (Busca de CEP…),
+  // com o que cada uma pede, os dados que devolve e o que falta na conta.
+  consultasProntas() {
+    return axios.get(`${this.url}/consultas_prontas`);
+  }
+
   // G13 (#2670): o segredo da assinatura do passo "webhook". Só o
   // administrador; a resposta traz `secret`.
   segredoDoWebhook(id) {

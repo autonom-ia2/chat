@@ -3,10 +3,14 @@
 #   (ItensDaLista#contar: bloqueados fora, só quem a pessoa alcança), até o teto. A lista passa antes pela conferência do
 #   salvar (PassoRepetirLista.da_lista): a etapa, a etiqueta ou o público precisam ser da conta e a pessoa precisa poder
 #   lê-los.
-# - `testar_consulta`: o "Fazer um teste" do "buscar em outro sistema", e o "Buscar agora" do ensaio. Busca de verdade,
-#   pela mesma ConsultaDeFora do motor (só https, endereço interno recusado depois de resolver o nome, prazo curto), e
-#   volta os dados simples da resposta com um rótulo do dia a dia para cada um (RotulosDaConsulta). Pede a chave de
-#   integrações, como montar o passo. Nada é gravado; o endereço não vai para log.
+# - `consultas_prontas`: as consultas prontas do "buscar em outro sistema" (ConsultasProntas), com o que cada uma pede,
+#   os dados que devolve com o rótulo pronto e, na que a conta não pode usar, o que falta.
+# - `testar_consulta`: o "Fazer um teste" do "buscar em outro sistema", e o "Buscar agora" do ensaio. Busca de verdade.
+#   Na consulta pronta, pela mesma Execucao dos agentes (ConsultaPronta), com o exemplo que a pessoa escreveu: gasta o
+#   limite do dia da conta naquela consulta, como o "Experimente" da vitrine. Em outro endereço, pela mesma ConsultaDeFora
+#   do motor (só https, endereço interno recusado depois de resolver o nome, prazo curto), e volta os dados simples da
+#   resposta com um rótulo do dia a dia para cada um (RotulosDaConsulta, pela IA da conta). Outro endereço pede a chave
+#   de integrações, como montar o passo. Nada é gravado; o endereço e o exemplo não vão para log.
 #
 # Montar pede `automation_manage` (DefinicaoPolicy). Só com as duas flags: a do editor e a dos passos novos.
 class Api::V1::Accounts::Autonomia::AutomacoesPassosNovosController < Api::V1::Accounts::BaseController
@@ -29,20 +33,45 @@ class Api::V1::Accounts::Autonomia::AutomacoesPassosNovosController < Api::V1::A
     render json: contagem.to_h.merge(teto: teto)
   end
 
+  def consultas_prontas
+    render json: { consultas: ::Autonomia::Automacao::ConsultasProntas.para_tela(Current.account) }
+  end
+
   def testar_consulta
+    fonte = valor_livre(params[:fonte]).to_h
+    return testar_pronta(fonte) if fonte['de'] == ::Autonomia::Automacao::PassoConsultar::PRONTA
     return head(:forbidden) unless Current.account_user.permission_granted?(CHAVE_DE_INTEGRACOES)
 
-    url = valor_livre(params[:fonte]).to_h['url'].to_s
+    testar_endereco(fonte['url'].to_s)
+  end
+
+  private
+
+  # O endereço próprio (avançado, só com a chave de integrações): busca de verdade e sugere o nome de cada dado.
+  def testar_endereco(url)
     motivo = ::Autonomia::Automacao::ConsultaDeFora.problema_do_endereco(url)
-    return render(json: { ok: false, motivo: motivo, error: frase(motivo) }, status: :unprocessable_entity) if motivo
+    return render(json: falhou(motivo), status: :unprocessable_entity) if motivo
 
     resposta = ::Autonomia::Automacao::ConsultaDeFora.new(url).buscar
-    return render(json: { ok: false, motivo: resposta.motivo, error: frase(resposta.motivo), codigo: resposta.codigo }) unless resposta.ok?
+    return render(json: falhou(resposta.motivo).merge(codigo: resposta.codigo)) unless resposta.ok?
 
     render json: { ok: true, ms: resposta.ms, dados: dados_para_tela(resposta.dados) }
   end
 
-  private
+  # A consulta pronta com o exemplo de cada entrada. Volta cada dado com o rótulo pronto e o valor de agora.
+  def testar_pronta(fonte)
+    pronta = ::Autonomia::Automacao::ConsultasProntas.buscar(fonte['consulta'])
+    return render(json: falhou('consulta_pronta_desligada'), status: :unprocessable_entity) unless pronta
+
+    exemplos = fonte['exemplos'].to_h.transform_values { |valor| valor.to_s.first(VALOR_MAXIMO) }
+    resposta = ::Autonomia::Automacao::ConsultaPronta.new(Current.account, pronta, exemplos).buscar
+    return render(json: falhou(resposta.motivo)) unless resposta.ok?
+
+    dados = resposta.dados.map do |caminho, valor|
+      { caminho: caminho, valor: valor, rotulo: ::Autonomia::Automacao::ConsultasProntas.rotulo_do_dado(pronta, caminho) }
+    end
+    render json: { ok: true, ms: resposta.ms, dados: dados }
+  end
 
   def exigir_flags
     conta = Current.account
@@ -75,4 +104,6 @@ class Api::V1::Accounts::Autonomia::AutomacoesPassosNovosController < Api::V1::A
   end
 
   def frase(motivo) = I18n.t("autonomia.automacao.motivos.#{motivo}")
+
+  def falhou(motivo) = { ok: false, motivo: motivo, error: frase(motivo) }
 end

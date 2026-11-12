@@ -12,7 +12,9 @@ class Autonomia::Automacao::ItensDaLista
   PRIMEIROS = 3
   # O público salvo (a importação terminou), como a escolha de público da campanha (CampaignImportsController).
   PUBLICOS_SALVOS = %w[completed completed_with_failures].freeze
-  Contagem = Struct.new(:total, :primeiros, :fora_do_teto, keyword_init: true)
+  # `total`: os que entram agora (até o teto). `fora_do_teto`: os que ficam para as próximas vezes. `mais_alem`: a leitura
+  # parou no teto mais ALEM_DO_TETO e pode haver ainda mais (a tela diz "mais de").
+  Contagem = Struct.new(:total, :primeiros, :fora_do_teto, :mais_alem, keyword_init: true)
 
   def self.alvo(lista) = lista.to_h['de'] == 'etapa' ? 'Crm::Card' : 'Contact'
 
@@ -54,18 +56,20 @@ class Autonomia::Automacao::ItensDaLista
     importacao if importacao&.audience?
   end
 
-  # Quantos entrariam agora (até o `teto`) para quem `acesso` alcança, e os primeiros nomes (só dos que entram). Lê até
-  # `teto + ALEM_DO_TETO` itens.
+  # Quantos entrariam agora (até o `teto`) para quem `acesso` alcança, os primeiros nomes (só dos que entram) e quantos
+  # ficam para as próximas vezes. Lê até `teto + ALEM_DO_TETO` itens.
   def contar(acesso, teto)
     entram = []
     total = 0
+    lidos = 0
     escopo.limit(teto + ALEM_DO_TETO).each do |item|
+      lidos += 1
       next if self.class.recusado?(item) || !acesso.alcanca?(item)
 
       total += 1
       entram << self.class.nome_de(item) if entram.size < [PRIMEIROS, teto].min
     end
-    Contagem.new(total: [total, teto].min, primeiros: entram, fora_do_teto: [total - teto, 0].max)
+    Contagem.new(total: [total, teto].min, primeiros: entram, fora_do_teto: [total - teto, 0].max, mais_alem: lidos >= teto + ALEM_DO_TETO)
   end
 
   private
