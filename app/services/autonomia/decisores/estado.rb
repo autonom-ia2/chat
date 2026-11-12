@@ -173,7 +173,18 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
     return {} if conversation.nil?
 
     { conversation: { channel: canal, inbox: conversation.inbox&.name, labels: conversation.label_list,
-                      attributes: curto(conversation.custom_attributes), status: conversation.status }.compact_blank }
+                      label_descriptions: descricoes_das_etiquetas, attributes: curto(conversation.custom_attributes),
+                      status: conversation.status }.compact_blank }
+  end
+
+  # #2435: a descrição que a conta escreveu para cada etiqueta da conversa ("vip" => "cliente com mais de 3 apólices"),
+  # para a IA ler pelo critério e não só pelo nome. Etiqueta sem descrição fica só no `labels`.
+  def descricoes_das_etiquetas
+    etiquetas = conversation.label_list
+    return {} if etiquetas.empty?
+
+    conversation.account.labels.where(title: etiquetas).where.not(description: [nil, '']).pluck(:title, :description)
+                .to_h.transform_values { |descricao| descricao.strip.first(MAX_VALOR) }.compact_blank
   end
 
   # As notas internas da conversa (#2679, a IA da Automação): as mais recentes com texto, na mesma janela e no mesmo corte
