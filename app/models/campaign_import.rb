@@ -133,8 +133,10 @@ class CampaignImport < ApplicationRecord
   # #2921: the Importer began writing this import's file and it ended `failed`. Confirming it again goes on from
   # where it stopped, while the normalized file is still there (it goes away after
   # CampaignImports::Config.generated_file_retention). The "Parou" of an automation step is not this: it has no file.
+  # Not once someone asked to undo it ("Desfazer", #2896): writing the missing rows while the undo removes the written
+  # ones, or after it removed them, would bring back half of what was undone. An undo that failed is asked again.
   def import_resumable?
-    failed? && import_started_at.present? && !from_automation? && normalized_csv.attached?
+    failed? && import_started_at.present? && undo_status_pending? && !from_automation? && normalized_csv.attached?
   end
 
   # Públicos and Importar contatos read name, phone, email, company and extra columns through
