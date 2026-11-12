@@ -9,7 +9,6 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:inbox) { create(:inbox, account: account) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, assignee: nil) }
   let(:agent_bot) { create(:agent_bot, account: account) }
-  let(:prontas) { Autonomia::FerramentasProntas }
 
   def criar_agente
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom', status: :active, enabled: true,
@@ -123,8 +122,18 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(pedido[:max_rodadas]).to eq(6)
   end
 
-  # Hoje o termo da Lia domina o teto; o spec guarda o caso de as contas mudarem.
-  it 'o teto do turno em curso cobre o prazo das rodadas das prontas' do
-    expect(Autonomia::Agents::Operate::TurnoEmCurso.teto_do_turno).to be > prontas::PRAZO_DAS_RODADAS.seconds
+  # O turno de um evento (`ResponderAoEvento`) e o da passagem (`ResponderAPassagem`) são o mesmo turno do atendimento
+  # e herdam as rodadas: o agente com pronta tem as 3 neles também (o teto do `TurnoEmCurso` mora no spec dele).
+  it 'o turno do evento e o da passagem herdam as rodadas do agente com pronta', :aggregate_failures do
+    agente = criar_agente
+    incluir_pronta('ncm', conta: account, agente: agente)
+    agent_inbox = caixa_com_mensagem(agente)
+    operate = Autonomia::Agents::Operate
+
+    evento = operate::ResponderAoEvento.new(conversation: conversation, agent_inbox: agent_inbox, evento: nil)
+    passagem = operate::ResponderAPassagem.new(conversation: conversation, agent_inbox: agent_inbox, passagem: nil)
+
+    expect(evento.send(:rodadas_do_turno)).to include(max_rodadas: 3)
+    expect(passagem.send(:rodadas_do_turno)).to include(max_rodadas: 3)
   end
 end

@@ -1,10 +1,10 @@
 require 'rails_helper'
 
-# #2918, decisão do coordenador (11/11): as 3 rodadas valem para todas as ferramentas do agente com pronta, inclusive a
-# HTTP que escreve (o agente com ajudante já tem 6 com as mesmas ferramentas). O que este spec guarda: a rodada a mais
-# não faz o nosso lado repetir nada. A ferramenta POST roda uma vez por pedido do modelo; chamada uma vez, não roda de
-# novo. Pedida de novo, roda de novo, como "mais um igual", com outra `Idempotency-Key` (`ChaveDeIdempotencia`), o mesmo
-# que já acontecia com duas chamadas na mesma rodada. Pelo HTTP de verdade do `ResponsesClient` (WebMock na OpenAI).
+# #2918, revisão de segurança: o Rodrigo autorizou CONSULTAR até 3 vezes, não escrever. Quando as rodadas a mais vêm das
+# prontas, a ferramenta HTTP que escreve (POST) roda no máximo uma vez por turno: na segunda chamada, o modelo lê
+# "esta ação já foi feita neste turno" e o sistema de fora não é chamado. Sem isso, um texto injetado pelo cliente fazia
+# o POST rodar até 3 vezes, cada vez com outra `Idempotency-Key`. A leitura (GET e as prontas) segue livre nas 3 rodadas,
+# e o agente com ajudante segue como antes. Pelo HTTP de verdade do `ResponsesClient` (WebMock na OpenAI).
 RSpec.describe Autonomia::Agents::Operate::Responder do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -31,11 +31,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     ligar_consultas(account)
     account.enable_features!(Autonomia::FerramentasProntas::Fontes::Ncm::FLAG)
     incluir_pronta('ncm', conta: account, agente: agent)
-    Autonomia::Agents::Tool.create!(
-      account: account, agent: agent, name: 'Registrar pedido', slug: 'registrar_pedido', http_method: 'POST',
-      endpoint_url: 'https://erp.exemplo.test/pedidos', timeout_seconds: 10,
-      param_schema: [{ name: 'numero', type: 'integer', description: 'Número do pedido', required: true }]
-    )
+    ferramenta('registrar_pedido', 'POST')
     allow(Crm::Ai::CredentialResolver).to receive(:new)
       .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste' }))
     conversation.update!(assignee_agent_bot_id: agent_bot.id)
@@ -44,8 +40,16 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     sistema_responde('{"status":"registrado"}', chaves: chaves)
   end
 
-  def registrar(call_id)
-    { output: [{ type: 'function_call', name: 'registrar_pedido', call_id: call_id, arguments: { numero: 42 }.to_json }] }
+  def ferramenta(slug, metodo)
+    Autonomia::Agents::Tool.create!(
+      account: account, agent: agent, name: slug.humanize, slug: slug, http_method: metodo,
+      endpoint_url: "https://erp.exemplo.test/#{slug}", timeout_seconds: 10,
+      param_schema: [{ name: 'numero', type: 'integer', description: 'Número do pedido', required: true }]
+    )
+  end
+
+  def chamada(call_id, slug = 'registrar_pedido')
+    { type: 'function_call', name: slug, call_id: call_id, arguments: { numero: 42 }.to_json }
   end
 
   def o_modelo_responde(*respostas)
@@ -55,13 +59,18 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
+  def saida_de(corpo, call_id)
+    corpo['input'].find { |item| item['type'] == 'function_call_output' && item['call_id'] == call_id }&.dig('output')
+  end
+
   def responder
     described_class.new(conversation: conversation, agent_inbox: agent_inbox,
                         reply_to_message_id: conversation.messages.incoming.last.id).perform
   end
 
+  # Registro do comportamento (não teve vermelho): a rodada a mais não faz o nosso lado repetir nada sozinho.
   it 'chamada uma vez, a ferramenta que escreve roda uma vez, embora o modelo ainda pudesse chamar', :aggregate_failures do
-    o_modelo_responde(registrar('c1'), { output_text: resposta_final })
+    o_modelo_responde({ output: [chamada('c1')] }, { output_text: resposta_final })
 
     result = responder
 
@@ -72,14 +81,47 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(corpos.last['tools'].to_a.pluck('name')).to include('registrar_pedido')
   end
 
-  it 'pedida de novo pelo modelo, roda de novo, como outro pedido (outra Idempotency-Key)', :aggregate_failures do
-    o_modelo_responde(registrar('c1'), registrar('c2'), { output_text: resposta_final })
+  it 'pedida de novo em outra rodada, não roda: o modelo lê que a ação já foi feita', :aggregate_failures do
+    o_modelo_responde({ output: [chamada('c1')] }, { output: [chamada('c2')] }, { output_text: resposta_final })
 
     result = responder
 
     expect(result.status).to eq(:replied)
+    expect(chaves.size).to eq(1)
+    expect(corpos.size).to eq(3)
+    expect(saida_de(corpos[1], 'c1')).to eq('{"status":"registrado"}')
+    expect(saida_de(corpos[2], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::JA_FEITA)
+  end
+
+  it 'duas chamadas na mesma rodada: só a primeira roda', :aggregate_failures do
+    o_modelo_responde({ output: [chamada('c1'), chamada('c2')] }, { output_text: resposta_final })
+
+    responder
+
+    expect(chaves.size).to eq(1)
+    expect(saida_de(corpos[1], 'c2')).to eq(Autonomia::Agents::Tools::UmaEscritaPorTurno::JA_FEITA)
+  end
+
+  it 'a leitura (GET) segue livre nas 3 rodadas', :aggregate_failures do
+    ferramenta('consultar_pedido', 'GET')
+    o_modelo_responde({ output: [chamada('c1', 'consultar_pedido')] }, { output: [chamada('c2', 'consultar_pedido')] },
+                      { output_text: resposta_final })
+
+    responder
+
+    expect(chaves.size).to eq(2)
+    expect(saida_de(corpos[2], 'c2')).to eq('{"status":"registrado"}')
+  end
+
+  it 'o agente com ajudante (que também tem pronta) segue como antes: pedida de novo, a escrita roda de novo', :aggregate_failures do
+    account.update!(internal_attributes: account.internal_attributes.merge('autonomia_agents_fase2' => true))
+    vincular(agent, criar_ajudante(account))
+    o_modelo_responde({ output: [chamada('c1')] }, { output: [chamada('c2')] }, { output_text: resposta_final })
+
+    responder
+
     expect(chaves.size).to eq(2)
     expect(chaves.uniq.size).to eq(2)
-    expect(corpos.size).to eq(3)
+    expect(saida_de(corpos[2], 'c2')).to eq('{"status":"registrado"}')
   end
 end

@@ -79,12 +79,13 @@ module Autonomia::FerramentasProntas
 
   # As rodadas do agente que RECEBE ao menos uma pronta no turno (`no_turno?`: a flag das prontas e a da fonte ligadas na
   # conta dele, fora da Lia). -> kwargs para o `Answerer`, ou nil (vale o padrão de quem chama). Sem a flag das prontas,
-  # nem consulta o banco: o agente sem pronta segue como antes.
+  # nem consulta o banco. O Rodrigo autorizou CONSULTAR até 3 vezes, não escrever: a ferramenta que escreve roda uma vez
+  # por turno (`uma_escrita_por_turno`, `Tools::UmaEscritaPorTurno`); a leitura segue livre.
   def rodadas(agent)
     return nil if agent.blank? || agent.agent_type == AGENTE_DE_COTACAO || !ligada?(agent.account)
     return nil unless agent.tools.enabled.where.not(fonte_pronta: nil).any? { |tool| tool.pronta? && no_turno?(tool, agent) }
 
-    { max_rodadas: RODADAS_POR_RESPOSTA, max_segundos: PRAZO_DAS_RODADAS }
+    { max_rodadas: RODADAS_POR_RESPOSTA, max_segundos: PRAZO_DAS_RODADAS, uma_escrita_por_turno: true }
   end
 
   # A pronta calculada aqui (o CPF: nenhum host) não vai ao caminho em segundo plano do #2749 (`ConsultaNoTurno.aplica?`):

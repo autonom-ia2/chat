@@ -17,7 +17,7 @@ RSpec.describe Autonomia::Agents::Playground do
     ligar_consultas(account)
     account.enable_features!(Autonomia::FerramentasProntas::Fontes::Ncm::FLAG)
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
-      pedidos << kwargs.slice(:max_rodadas, :max_segundos)
+      pedidos << kwargs.slice(:max_rodadas, :max_segundos, :uma_escrita_por_turno)
       answerer
     end
   end
@@ -42,9 +42,10 @@ RSpec.describe Autonomia::Agents::Playground do
     efetivas(pedidos.last)
   end
 
+  # As rodadas das prontas, com a escrita uma vez por turno (a revisão de segurança do #2918).
   def tres_rodadas
     { max_rodadas: Autonomia::FerramentasProntas::RODADAS_POR_RESPOSTA,
-      max_segundos: Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS }
+      max_segundos: Autonomia::FerramentasProntas::PRAZO_DAS_RODADAS, uma_escrita_por_turno: true }
   end
 
   it 'o agente com pronta tem no atendimento as rodadas do Experimente' do

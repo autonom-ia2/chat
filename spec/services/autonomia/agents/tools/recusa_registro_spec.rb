@@ -115,7 +115,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
     client = instance_double(Crm::Ai::ResponsesClient)
     allow(client).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
-      executor&.call([function_call])
+      executor&.call(Array.wrap(function_call))
       { text: resposta.to_json }
     end
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
@@ -126,6 +126,20 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     modelo_que_chama(function_call, reply: 'ok', confidence: 0.9, should_handoff: false, handoff_reason: nil,
                                     used_snippet_ids: [], answered_from_knowledge: false)
     Autonomia::Agents::Answerer.new(agent: agent, query: 'quero cotar', trust_instruction: true, delivery: delivery).answer
+  end
+
+  # #2918: o modelo pede a mesma ferramenta que escreve duas vezes no turno de um agente com as rodadas das prontas.
+  def escrever_duas_vezes
+    escrita = Autonomia::Agents::Tool.create!(
+      account: account, agent: agent, name: 'Registrar pedido', slug: 'registrar_pedido', http_method: 'POST',
+      endpoint_url: 'https://erp.exemplo.test/pedidos', param_schema: [{ name: 'numero', type: 'integer', description: 'Número', required: true }]
+    )
+    sistema_responde('{"status":"registrado"}')
+    chamadas = %w[c1 c2].map { |id| { 'name' => escrita.slug, 'call_id' => id, 'arguments' => '{"numero":42}' } }
+    modelo_que_chama(chamadas, reply: 'ok', confidence: 0.9, should_handoff: false, handoff_reason: nil, used_snippet_ids: [],
+                               answered_from_knowledge: false)
+    Autonomia::Agents::Answerer.new(agent: agent, query: 'registra', trust_instruction: true, delivery: delivery,
+                                    uma_escrita_por_turno: true).answer
   end
 
   # O ESPECIALISTA chama uma ferramenta que não tem (foi assim que a Lia ficou muda em 08/09/2026).
@@ -286,6 +300,11 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           allow(Autonomia::Agents::Ajudantes::Orcamento).to receive(:agora).and_return(0, 10_000)
           rodar_principal('name' => vinculo.function_name, 'call_id' => 'c1', 'arguments' => { pedido: 'x' }.to_json)
         }
+      },
+      # #2918: com as rodadas das prontas, a ferramenta que escreve roda uma vez por turno; a segunda chamada não roda.
+      'uma_escrita_por_turno.rb#recusa_registrada#1' => {
+        espera: { motivo: 'acao_ja_feita_neste_turno', slug: 'registrar_pedido' },
+        dispara: -> { escrever_duas_vezes }
       },
       'runner.rb#sem_ferramenta#1' => {
         espera: { motivo: 'tool_not_available', slug: 'cotar_seguro' },
