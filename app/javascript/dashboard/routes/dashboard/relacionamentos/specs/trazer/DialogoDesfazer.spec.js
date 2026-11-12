@@ -51,7 +51,7 @@ describe('diálogo Desfazer', () => {
     });
     const texto = marca(com, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      '18 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.'
+      '18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
     );
     const sem = montar({
       arquivo: 'a.xlsx',

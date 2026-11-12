@@ -15,7 +15,10 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // liga `naoPodeDesfazer`: o diálogo diz por quê, em vez de "tente de novo".
 // #2896 — a lista que parou no meio tem "Tentar de novo"; e quem o servidor
 // recusa por falta de acesso liga `semAcesso` (a tela diz isso, sem oferecer
-// tentar).
+// tentar), seja ao tentar de novo, ao pedir a prévia ou ao desfazer.
+// O desfazer que travou no servidor (a lista segue `desfazendo`, mas volta com
+// `podeDesfazer`) não é acompanhado: perguntar de novo não muda nada, quem
+// resolve é a pessoa clicar em Desfazer.
 export const INTERVALO_DO_HISTORICO_MS = INTERVALO_INICIAL_MS;
 
 const AVISO_ERRO_DESFAZER = 'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER';
@@ -24,7 +27,8 @@ const NAO_PODE_DESFAZER = 'NAO_PODE_DESFAZER';
 
 const sendoDesfeita = lista => lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO;
 const emAndamento = lista =>
-  lista.situacao === SITUACOES_DA_LISTA.TRAZENDO || sendoDesfeita(lista);
+  lista.situacao === SITUACOES_DA_LISTA.TRAZENDO ||
+  (sendoDesfeita(lista) && !lista.podeDesfazer);
 
 // O desfazer que segue seu caminho: a lista continua sendo desfeita ou já foi.
 const DESFAZER_ANDANDO = [
@@ -92,13 +96,17 @@ const useCargaDoHistorico = ({ fonte, avisar, intervalo }) => {
 };
 
 // O desfazer de uma lista: a prévia do que sai e a confirmação.
-const useDesfazerDaLista = ({ fonte, avisar, carregar }) => {
+const useDesfazerDaLista = ({ fonte, avisar, carga }) => {
+  const { listas, semAcesso, carregar } = carga;
   const alvo = ref(null);
   const previa = ref(null);
   const previaComErro = ref(false);
   // O pedido de desfazer está indo ao servidor (o botão fica ocupado).
   const desfazendo = ref(false);
   const naoPodeDesfazer = ref(false);
+  // Número da última prévia pedida: a resposta de uma prévia mais velha (a
+  // pessoa fechou o diálogo, ou abriu o de outra lista) é descartada.
+  let ultimaPrevia = 0;
 
   // O servidor ainda não deixa desfazer esta lista: o diálogo diz por quê, e o
   // histórico é lido de novo para a linha mostrar como ela está de verdade.
@@ -107,38 +115,60 @@ const useDesfazerDaLista = ({ fonte, avisar, carregar }) => {
     return carregar({ silencioso: true });
   };
 
-  const abrirDesfazer = async lista => {
-    alvo.value = lista;
+  const limpar = () => {
+    ultimaPrevia += 1;
     previa.value = null;
     previaComErro.value = false;
     naoPodeDesfazer.value = false;
+  };
+
+  const abrirDesfazer = async lista => {
+    limpar();
+    alvo.value = lista;
+    const minha = ultimaPrevia;
+    const vale = () => minha === ultimaPrevia;
     try {
       const preview = await fonte.previaDoDesfazer(lista.id);
-      if (alvo.value?.id === lista.id) previa.value = preview;
+      if (vale()) previa.value = preview;
     } catch (falha) {
+      if (!vale()) return;
       if (falha?.name === NAO_PODE_DESFAZER) await recusar();
+      else if (ehSemAcesso(falha)) semAcesso.value = true;
       else previaComErro.value = true;
     }
   };
 
   const fecharDesfazer = () => {
+    limpar();
     alvo.value = null;
-    previa.value = null;
-    previaComErro.value = false;
-    naoPodeDesfazer.value = false;
+  };
+
+  // A linha fica como o servidor respondeu ao pedido, sem botão nenhum, antes
+  // de o histórico ser lido de novo. Se o desfazer quebrar antes dessa leitura,
+  // ela já traz a lista de volta ao que era, e é por esta marca que a tela
+  // percebe e avisa.
+  const marcarComo = (id, situacao) => {
+    listas.value = listas.value.map(lista =>
+      lista.id === id
+        ? { ...lista, situacao, podeTentar: false, podeDesfazer: false }
+        : lista
+    );
   };
 
   // Devolve true quando o servidor aceitou desfazer (a tela fecha o diálogo); a
-  // carga seguinte já mostra a lista sendo desfeita e volta a perguntar por ela.
+  // carga seguinte volta a perguntar pela lista até ela ser desfeita.
   const confirmarDesfazer = async () => {
     if (!alvo.value || naoPodeDesfazer.value) return false;
+    const { id } = alvo.value;
     desfazendo.value = true;
     try {
-      await fonte.desfazer(alvo.value.id);
+      const { situacao } = await fonte.desfazer(id);
+      marcarComo(id, situacao);
       await carregar({ silencioso: true });
       return true;
     } catch (falha) {
       if (falha?.name === NAO_PODE_DESFAZER) await recusar();
+      else if (ehSemAcesso(falha)) semAcesso.value = true;
       else avisar(AVISO_ERRO_DESFAZER);
       return false;
     } finally {
@@ -190,6 +220,6 @@ export const useHistoricoDeListas = ({
     ...carga,
     tentando,
     tentarDeNovo,
-    ...useDesfazerDaLista({ fonte, avisar, carregar }),
+    ...useDesfazerDaLista({ fonte, avisar, carga }),
   };
 };

@@ -17,6 +17,12 @@ import { PONTO } from '../comum/ponto';
 // A lista que está sendo desfeita diz "Desfazendo…", com o selo de lista em
 // andamento. Na linha, a frase e os botões quebram de linha quando não cabem.
 // Os dois botões da linha têm 44 px de altura (alvo de toque).
+// O desfazer que travou (`desfazendo` com `podeDesfazer`) diz que parou e manda
+// clicar em Desfazer; sem o botão, a frase não aparece.
+// O selo é anunciado pelo leitor de tela quando muda ("Desfazendo…" para
+// "Desfeito"), menos o da lista que está entrando: a porcentagem dela muda a
+// cada consulta. E a linha aceita o foco (`tabindex="-1"`): é para ela que a
+// tela leva o foco depois de desfazer, quando o botão clicado some.
 defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
@@ -36,6 +42,10 @@ const SELOS = {
   [SITUACOES_DA_LISTA.DESFEITO]: 'bg-n-alpha-2 text-n-slate-11',
 };
 const dia = ms => formatarDia(ms, locale.value);
+const anuncio = lista =>
+  lista.situacao === SITUACOES_DA_LISTA.TRAZENDO ? 'off' : 'polite';
+const desfazerParou = lista =>
+  lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO && lista.podeDesfazer;
 
 const NOMES = {
   [SITUACOES_DA_LISTA.PRONTO]:
@@ -76,7 +86,8 @@ const NOMES = {
         v-for="lista in listas"
         :key="lista.id"
         :data-lista="lista.id"
-        class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1 sm:flex-row sm:items-center sm:justify-between"
+        tabindex="-1"
+        class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1 sm:flex-row sm:items-center sm:justify-between focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       >
         <div class="flex flex-col min-w-0 gap-1">
           <p class="m-0 text-base font-medium truncate text-n-slate-12">
@@ -117,11 +128,19 @@ const NOMES = {
           <span
             v-else
             :data-situacao="lista.situacao"
+            :aria-live="anuncio(lista)"
             class="px-3 py-1 text-sm font-medium rounded-full tabular-nums"
             :class="SELOS[lista.situacao]"
           >
             {{ t(NOMES[lista.situacao], { porcentagem: lista.porcentagem }) }}
           </span>
+          <p
+            v-if="temDesfazer && desfazerParou(lista)"
+            data-relacionamentos="desfazer-parou"
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER_PAROU') }}
+          </p>
           <Button
             v-if="
               lista.situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar

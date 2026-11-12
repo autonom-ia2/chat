@@ -123,7 +123,7 @@ describe('Desfazer a lista recém-trazida, ali mesmo no Pronto', () => {
       )
     );
     expect(marca(w, 'dialogo-desfazer').text()).toContain(
-      '18 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.'
+      '18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
     );
     w.unmount();
   });
@@ -152,7 +152,7 @@ describe('Desfazer', () => {
       'As 12 que já estavam aqui voltam a ser como eram.'
     );
     expect(texto).toContain(
-      '16 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.'
+      '16 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.'
     );
     expect(texto).not.toContain('As conversas que já aconteceram ficam.');
     expect(

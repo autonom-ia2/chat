@@ -29,6 +29,9 @@ const SEGUNDA_PERGUNTA_MS = 2250;
 const PROMESSA = 'Você pode desfazer quando quiser';
 const NAO_PODE =
   'Esta lista ainda está sendo trazida. Quando terminar, você pode desfazer.';
+const PAROU = 'Parou no meio. Clique em Desfazer para continuar.';
+const SEM_ACESSO =
+  'Você não pode trazer listas nesta conta. Peça a quem administra a conta.';
 
 const estado = vi.hoisted(() => ({ demo: null, semDesfazer: false }));
 
@@ -196,6 +199,10 @@ describe('Desfazer uma lista, com o servidor', () => {
     expect(servidor.desfazer).toHaveBeenCalledWith(700);
     await esperarPor(() => expect(situacaoDaLinha(w)).toBe('Desfazendo…'));
     expect(marca(w, 'desfazer').exists()).toBe(false);
+    // O botão que a pessoa clicou sumiu: o foco vai para a linha da lista, em
+    // vez de cair no começo da página.
+    const linha = w.get('[data-lista="700"]').element;
+    await esperarPor(() => expect(document.activeElement).toBe(linha));
     // A tela pergunta de novo sozinha, sem piscar o esqueleto.
     await vi.advanceTimersByTimeAsync(PRIMEIRA_PERGUNTA_MS);
     expect(situacaoDaLinha(w)).toBe('Desfazendo…');
@@ -211,14 +218,22 @@ describe('Desfazer uma lista, com o servidor', () => {
     w.unmount();
   });
 
-  it('a lista que ainda está sendo trazida (422): o diálogo diz isso num alerta, com o foco nele', async () => {
+  // O servidor só recusa a lista que está entrando. A tela chega aí quando a
+  // lista que parou no meio volta a ser trazida por outra aba antes do clique.
+  const PARADA = { pode_tentar: true, pode_desfazer: true };
+  const TRAZENDO_DE_NOVO = { porcentagem: 40 };
+
+  it('a lista que voltou a ser trazida (422): o diálogo diz isso num alerta, com o foco nele, e a linha mostra como ela está', async () => {
+    servidor.listas.mockResolvedValue({
+      data: [doServidor('falhou', PARADA)],
+    });
     const w = await comAPrevia();
     servidor.desfazer.mockRejectedValue(
       erroHttp(422, { error: 'nao_pode_desfazer' })
     );
     servidor.listas
       .mockReset()
-      .mockResolvedValue({ data: [doServidor('pronto')] });
+      .mockResolvedValue({ data: [doServidor('trazendo', TRAZENDO_DE_NOVO)] });
     await w.get('[data-dialog]').trigger('submit');
     await aparece(w, 'desfazer-nao-pode');
     const alerta = marca(w, 'desfazer-nao-pode');
@@ -230,18 +245,72 @@ describe('Desfazer uma lista, com o servidor', () => {
     expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
     await botao(w, 'Cancelar').trigger('click');
     await some(w, 'dialogo-desfazer');
+    expect(situacaoDaLinha(w)).toBe('Trazendo 40%');
+    expect(w.findAll('[data-lista] button')).toHaveLength(0);
     w.unmount();
   });
 
   it('a recusa (422) que vem já na prévia: o mesmo alerta, sem "tentar de novo"', async () => {
+    servidor.listas
+      .mockResolvedValueOnce({ data: [doServidor('falhou', PARADA)] })
+      .mockResolvedValue({ data: [doServidor('trazendo', TRAZENDO_DE_NOVO)] });
     servidor.previaDoDesfazer.mockRejectedValue(
       erroHttp(422, { error: 'nao_pode_desfazer' })
     );
     const w = await abrirDialogoDaLista();
     await aparece(w, 'desfazer-nao-pode');
     expect(marca(w, 'desfazer-nao-pode').text()).toBe(NAO_PODE);
-    expect(botao(w, 'Tentar de novo')).toBeUndefined();
+    expect(marca(w, 'dialogo-desfazer').text()).not.toContain(
+      'Não consegui ver o que sai.'
+    );
     expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
+    w.unmount();
+  });
+
+  // Quem perdeu a permissão com a tela aberta: "tentar de novo" não resolve.
+  it.each([
+    ['na prévia', 'previaDoDesfazer', abrirDialogoDaLista],
+    [
+      'ao desfazer',
+      'desfazer',
+      async () => {
+        const w = await comAPrevia();
+        await w.get('[data-dialog]').trigger('submit');
+        return w;
+      },
+    ],
+  ])(
+    'sem acesso (401) %s: o diálogo fecha e fica só a frase de sem acesso',
+    async (_, pedido, chegarLa) => {
+      servidor[pedido].mockRejectedValue(erroHttp(401));
+      const w = await chegarLa();
+      await aparece(w, 'sem-acesso');
+      expect(marca(w, 'sem-acesso').text()).toBe(SEM_ACESSO);
+      expect(marca(w, 'sem-acesso').attributes('role')).toBe('alert');
+      await some(w, 'dialogo-desfazer');
+      expect(marca(w, 'historico').exists()).toBe(false);
+      expect(botao(w, 'Tentar de novo')).toBeUndefined();
+      expect(alertar).not.toHaveBeenCalled();
+      w.unmount();
+    }
+  );
+
+  // O job do desfazer quebrou antes de a tela ler o histórico de novo: a
+  // linha volta a "Pronto", mas a tela diz que não deu.
+  it('o desfazer que quebra logo depois do pedido: a linha volta a "Pronto" e a tela avisa', async () => {
+    const w = await comAPrevia();
+    servidor.desfazer.mockResolvedValue({
+      data: { id: 700, situacao: 'desfazendo' },
+    });
+    await w.get('[data-dialog]').trigger('submit');
+    await some(w, 'dialogo-desfazer');
+    await esperarPor(() =>
+      expect(alertar).toHaveBeenCalledWith(
+        'Não consegui desfazer. Tente de novo.'
+      )
+    );
+    expect(situacaoDaLinha(w)).toBe('Pronto');
+    expect(marca(w, 'desfazer').exists()).toBe(true);
     w.unmount();
   });
 
@@ -291,6 +360,10 @@ describe('Desfazer uma lista, com o servidor', () => {
     const w = await abrir();
     await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(1));
     expect(situacaoDaLinha(w)).toBe('Desfazendo…');
+    expect(marca(w, 'desfazer-parou').text()).toBe(PAROU);
+    // Travado, não adianta ficar perguntando: quem resolve é o clique.
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(servidor.listas).toHaveBeenCalledTimes(1);
     await marca(w, 'desfazer').trigger('click');
     await aparece(w, 'dialogo-desfazer');
     await esperarPor(() =>
@@ -309,6 +382,11 @@ describe('Desfazer uma lista, com o servidor', () => {
     expect(servidor.desfazer).toHaveBeenCalledWith(700);
     await esperarPor(() => expect(marca(w, 'desfazer').exists()).toBe(false));
     expect(situacaoDaLinha(w)).toBe('Desfazendo…');
+    expect(marca(w, 'desfazer-parou').exists()).toBe(false);
+    // De volta à fila, a tela volta a acompanhar.
+    const perguntas = servidor.listas.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(PRIMEIRA_PERGUNTA_MS);
+    expect(servidor.listas.mock.calls.length).toBeGreaterThan(perguntas);
     expect(alertar).not.toHaveBeenCalled();
     w.unmount();
   });

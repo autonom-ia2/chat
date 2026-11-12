@@ -206,6 +206,7 @@
       },
       "DESFAZER": "Undo",
       "ROTULO_DESFAZER": "Undo the list {arquivo}",
+      "DESFAZER_PAROU": "It stopped halfway. Click Undo to continue.",
       "FALHOU": "I couldn't bring in this list.",
       "ROTULO_TENTAR": "Try bringing in the list {arquivo} again"
     },
@@ -213,7 +214,7 @@
       "TITULO": "Undo this list?",
       "TITULO_ARQUIVO": "Undo “{arquivo}”?",
       "TIRA": "This removes the person who came with this list and nobody has worked with yet. | This removes the {count} people who came with this list and nobody has worked with yet.",
-      "FICAM": "{count} stays here, because someone already worked with them: they have a conversation, a card, a label or a campaign. | {count} stay here, because someone already worked with them: they have a conversation, a card, a label or a campaign.",
+      "FICAM": "{count} stays here: someone already worked with them (conversation, card, label or campaign) or they also came in another list. | {count} stay here: someone already worked with them (conversation, card, label or campaign) or they also came in another list.",
       "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
       "NAO_RECEBER": "People who asked not to get messages stay that way.",
       "CONFIRMAR": "Undo",

@@ -8,7 +8,8 @@
 # - tem convite de agendamento, é convidada de uma reunião ou a IA já guardou memória dela;
 # - veio também da prospecção ou de um formulário de anúncio (o lead perderia a pessoa);
 # - recebeu, ou está na fila de, uma campanha (WhatsApp ou SMS, e-mail, WhatsApp Oficial);
-# - está em outra importação: outra lista trazida, um Público ou uma base de campanha;
+# - está em outra importação: outra lista trazida, um Público ou uma base de campanha. A lista que já foi desfeita não
+#   segura ninguém: quem trouxe a mesma planilha duas vezes e desfez uma consegue desfazer a outra;
 # - entrou num Público montado pelas conversas;
 # - recusou mensagens (opted_out_at), recusou avisos de agendamento ou está bloqueada. Apagar a pessoa apagaria a
 #   recusa junto, e a próxima pessoa criada com o mesmo telefone voltaria a receber.
@@ -74,9 +75,14 @@ class Relacionamentos::Trazer::QuemFica
     [
       [CampaignRecipient.where(da_conta), :contact_id], [EmailCampaignRecipient.all, :contact_id],
       [WhatsappApiCampaignRecipient.where(da_conta), :contact_id],
-      [CampaignImportRow.where.not(campaign_import_id: @importacao.id), :contact_id],
+      [CampaignImportRow.where.not(campaign_import_id: que_nao_seguram), :contact_id],
       [ConversationAudiencePerson.all, :contact_id]
     ]
+  end
+
+  # As importações que não seguram ninguém: esta e as que a conta já desfez.
+  def que_nao_seguram
+    [@importacao.id] + @conta.campaign_imports.undo_status_completed.ids
   end
 
   def agenda_memoria_e_leads

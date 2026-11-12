@@ -36,6 +36,7 @@ describe('Desfazer sem prazo', () => {
     ...extra,
   });
   const PODE = { podeDesfazer: true };
+  const PAROU = 'Parou no meio. Clique em Desfazer para continuar.';
   const temBotao = (w, id, nome = 'desfazer') =>
     w.find(`[data-lista="${id}"] [data-relacionamentos="${nome}"]`).exists();
 
@@ -102,9 +103,9 @@ describe('Desfazer sem prazo', () => {
     expect(w.findAll('button')).toHaveLength(0);
   });
 
-  // O desfazer travou no servidor: o selo não muda e o botão volta, para a
-  // pessoa pedir de novo. Sem frase de erro: o botão já é a saída.
-  it('a lista cujo desfazer travou continua "Desfazendo…" e tem o botão, que emite a lista', async () => {
+  // O desfazer travou no servidor: o selo não muda, a linha diz que parou e o
+  // botão volta, para a pessoa pedir de novo.
+  it('a lista cujo desfazer travou continua "Desfazendo…", diz que parou e tem o botão, que emite a lista', async () => {
     const travada = lista('a', 'desfazendo', PODE);
     const w = mount(HistoricoDeListas, {
       props: { temDesfazer: true, listas: [travada] },
@@ -112,10 +113,79 @@ describe('Desfazer sem prazo', () => {
     expect(w.get('[data-lista="a"] [data-situacao]').text()).toBe(
       'Desfazendo…'
     );
+    expect(w.get('[data-relacionamentos="desfazer-parou"]').text()).toBe(PAROU);
     expect(w.findAll('button').map(b => b.text())).toEqual(['Desfazer']);
     expect(w.find('[role="alert"]').exists()).toBe(false);
     await w.get('[data-relacionamentos="desfazer"]').trigger('click');
     expect(w.emitted('desfazer')).toEqual([[travada]]);
+  });
+
+  it('a frase de que o desfazer parou só aparece nesse estado', () => {
+    const w = mount(HistoricoDeListas, {
+      props: {
+        temDesfazer: true,
+        listas: [
+          lista('andando', 'desfazendo'),
+          lista('pronta', 'pronto', PODE),
+          lista('parada', 'falhou', { podeTentar: true, ...PODE }),
+          lista('desfeita', 'desfeito'),
+          lista('entrando', 'trazendo'),
+        ],
+      },
+    });
+    expect(w.find('[data-relacionamentos="desfazer-parou"]').exists()).toBe(
+      false
+    );
+    expect(w.text()).not.toContain(PAROU);
+  });
+
+  // A frase manda clicar no Desfazer: sem o botão, ela não aparece.
+  it('sem o Desfazer na conta, a lista travada não diz para clicar no botão que não existe', () => {
+    const w = mount(HistoricoDeListas, {
+      props: { listas: [lista('a', 'desfazendo', PODE)] },
+    });
+    expect(w.find('[data-relacionamentos="desfazer-parou"]').exists()).toBe(
+      false
+    );
+    expect(w.findAll('button')).toHaveLength(0);
+  });
+
+  // Leitor de tela: a troca "Desfazendo…" → "Desfeito" é anunciada. A lista
+  // que está entrando muda de porcentagem a cada consulta: essa não anuncia.
+  it.each([
+    ['pronto', 'polite'],
+    ['desfazendo', 'polite'],
+    ['desfeito', 'polite'],
+    ['trazendo', 'off'],
+  ])('o selo da lista "%s" tem aria-live "%s"', (situacao, anuncio) => {
+    const w = mount(HistoricoDeListas, {
+      props: { temDesfazer: true, listas: [lista('a', situacao)] },
+    });
+    expect(w.get('[data-situacao]').attributes('aria-live')).toBe(anuncio);
+  });
+
+  it('a troca de "Desfazendo…" para "Desfeito" acontece no mesmo selo (é o que o leitor de tela anuncia)', async () => {
+    const w = mount(HistoricoDeListas, {
+      props: { temDesfazer: true, listas: [lista('a', 'desfazendo')] },
+    });
+    const selo = w.get('[data-situacao]').element;
+    await w.setProps({ listas: [lista('a', 'desfeito')] });
+    expect(w.get('[data-situacao]').element).toBe(selo);
+    expect(selo.textContent.trim()).toBe('Desfeito');
+    expect(selo.getAttribute('aria-live')).toBe('polite');
+  });
+
+  // Depois de desfazer, o botão da linha some: a tela leva o foco à linha.
+  it('a linha da lista pode receber o foco, sem entrar na ordem do Tab', () => {
+    const w = mount(HistoricoDeListas, {
+      props: { temDesfazer: true, listas: [lista('a', 'desfazendo')] },
+      attachTo: document.body,
+    });
+    const linha = w.get('[data-lista="a"]');
+    expect(linha.attributes('tabindex')).toBe('-1');
+    linha.element.focus();
+    expect(document.activeElement).toBe(linha.element);
+    w.unmount();
   });
 
   // A lista que parou no meio depois de pôr gente: a pessoa escolhe continuar

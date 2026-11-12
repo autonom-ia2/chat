@@ -206,6 +206,7 @@
       },
       "DESFAZER": "Desfazer",
       "ROTULO_DESFAZER": "Desfazer a lista {arquivo}",
+      "DESFAZER_PAROU": "Parou no meio. Clique em Desfazer para continuar.",
       "FALHOU": "Não consegui trazer esta lista.",
       "ROTULO_TENTAR": "Tentar trazer de novo a lista {arquivo}"
     },
@@ -213,7 +214,7 @@
       "TITULO": "Desfazer esta lista?",
       "TITULO_ARQUIVO": "Desfazer “{arquivo}”?",
       "TIRA": "Isto tira a pessoa que veio nesta lista e de quem ninguém cuidou ainda. | Isto tira as {count} pessoas que vieram nesta lista e de quem ninguém cuidou ainda.",
-      "FICAM": "{count} fica aqui, porque alguém já cuidou dela: tem conversa, card, etiqueta ou campanha. | {count} ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.",
+      "FICAM": "{count} fica aqui: alguém já cuidou dela (conversa, card, etiqueta ou campanha) ou ela veio também em outra lista. | {count} ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.",
       "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
       "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
       "CONFIRMAR": "Desfazer",

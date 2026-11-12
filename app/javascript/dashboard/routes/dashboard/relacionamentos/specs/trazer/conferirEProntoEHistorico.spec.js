@@ -731,7 +731,7 @@ describe('DialogoDesfazer', () => {
     });
     const texto = marca(w, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      'Isto tira as 162 pessoas que vieram nesta lista e de quem ninguém cuidou ainda. 18 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha. As 15 que já estavam aqui voltam a ser como eram.'
+      'Isto tira as 162 pessoas que vieram nesta lista e de quem ninguém cuidou ainda. 18 ficam aqui: alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista. As 15 que já estavam aqui voltam a ser como eram.'
     );
     expect(texto).toContain(
       'Quem pediu para não receber mensagens continua assim.'
@@ -752,7 +752,7 @@ describe('DialogoDesfazer', () => {
       'Isto tira a pessoa que veio nesta lista e de quem ninguém cuidou ainda.'
     );
     expect(textoUm).toContain(
-      '1 fica aqui, porque alguém já cuidou dela: tem conversa, card, etiqueta ou campanha.'
+      '1 fica aqui: alguém já cuidou dela (conversa, card, etiqueta ou campanha) ou ela veio também em outra lista.'
     );
     const so = montar({ previa: { tira: 0, ficam: 0, devolve: 15 } });
     const textoSo = marca(so, 'dialogo-desfazer').text();

@@ -121,6 +121,15 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     expect(ficam(em_outra, so_nesta)).to contain_exactly(em_outra.id)
   end
 
+  it 'a lista que já foi desfeita não segura ninguém' do
+    em_lista_desfeita = criada('Pessoa Lista Desfeita')
+    desfeita = lista
+    desfeita.update!(undo_status: :completed)
+    desfeita.campaign_import_rows.create!(row_number: 2, status: :imported, contact_id: em_lista_desfeita.id, was_existing_contact: true)
+
+    expect(ficam(em_lista_desfeita)).to be_empty
+  end
+
   it 'fica quem entrou num Público montado pelas conversas' do
     no_publico = criada('Pessoa Público')
     sem = criada('Pessoa Sem')
