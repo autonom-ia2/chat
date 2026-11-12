@@ -2,12 +2,19 @@
 # (`Prospecting::Research::BigDataCorpClient#query_route`): a mesma credencial da plataforma e os mesmos erros com
 # código fechado. Credencial, token e o valor consultado nunca vão a log, erro nem resposta.
 #
-# Prazos (a chamada inteira cabe no prazo da consulta, e este no `timeout_seconds` da ferramenta e na folga do
-# `HttpAssincronaJob`):
+# Prazos (a chamada inteira cabe no prazo da consulta; este cabe no `timeout_seconds` da ferramenta incluída a partir
+# do #2946 e, na incluída antes, só na folga do `HttpAssincronaJob` — ver o fim deste bloco):
 #   - uma tentativa de consulta (`max_provider_attempts: 1`): repetir um 5xx ou um timeout de consulta paga pode cobrar
 #     duas vezes;
 #   - uma tentativa de token, com prazo curto (`PRAZO_DO_TOKEN`);
-#   - um teto da chamada inteira, token e consulta somados: o prazo do dataset (`Timeout.timeout`).
+#   - um teto da chamada inteira, token e consulta somados: o prazo do dataset (`Timeout.timeout`), até 120 s nas lentas
+#     (`Dataset::PRAZO_DAS_LENTAS`, #2946). O token sai do mesmo teto: com o token guardado (o normal), a consulta tem o
+#     prazo inteiro; sem ele, o pedido do token come até `PRAZO_DO_TOKEN` por operação, e o que passar disso vira
+#     `tempo_esgotado` (custo possível só se a consulta já tinha saído, `query_dispatched?`).
+# A ferramenta incluída antes do #2946 guarda o `timeout_seconds` do prazo antigo (23 s no Raio-X e no Contato). A
+# execução Premium não lê esse número (o prazo é o do catálogo); ele só marca quando a linha da execução em segundo
+# plano vence (`HttpAssincronaJob.vence_em`: o número mais 2 minutos de folga, contados de quando o job começa), e 23 s
+# mais 2 minutos passa dos 122 s da consulta. A incluída depois já nasce com 123 s (`Incluir`).
 # O token vale para o processo enquanto não vence (`TOKENS`): a consulta seguinte não gera outro. O 401 apaga o token
 # guardado e permite um reenvio com token novo (a BigDataCorp não cobra o 401). A Prospecção segue com o token por
 # instância do cliente e sem o reenvio extra (ela não passa `token_cache` nem `resend_after_unauthorized`).

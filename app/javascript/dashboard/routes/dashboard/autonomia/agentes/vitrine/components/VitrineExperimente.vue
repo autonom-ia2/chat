@@ -16,7 +16,7 @@ import { useVitrine } from '../useVitrine';
 // F7 (decisão A do Rodrigo, 11/11): no card Premium (`premium`, o contador do servidor), o teste usa uma das grátis do
 // mês, e a tela diz isso. Acabadas as grátis, o próprio botão mostra o preço ("Testar por R$ 0,09"; na faixa, "Testar
 // por até R$ 0,15") e é a confirmação: só esse clique paga (`confirmouPreco`), sem janela de confirmação.
-// A consulta paga roda em segundo plano e pode levar até 1 minuto (revisor, 12/11): enquanto isso, a tela diz
+// A consulta paga roda em segundo plano e pode levar até 2 minutos (revisor, 12/11; #2946): enquanto isso, a tela diz
 // "Consultando…"; sem resposta no prazo, "não deu para confirmar", e o contador do card vem de novo do servidor.
 const props = defineProps({
   ferramenta: { type: Object, required: true },

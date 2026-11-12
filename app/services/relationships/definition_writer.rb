@@ -4,6 +4,7 @@ class Relationships::DefinitionWriter
   EDITABLE = Relationships::Configuration::EDITABLE
   CREATION = Relationships::Configuration::CREATION
   TYPES = Relationships::Configuration::TYPES
+  OCULTO = 'oculto_na_tela'.freeze
 
   def initialize(account)
     @account = account
@@ -28,9 +29,16 @@ class Relationships::DefinitionWriter
     raise Invalid, 'Invalid definition object' unless data.is_a?(Hash) && (data.keys - allowed).empty?
 
     data.slice(*EDITABLE).each do |key, value|
-      valid = key == 'attribute_values' ? valid_options?(value) : value.nil? || value.is_a?(String)
-      raise Invalid, 'Invalid definition field' unless valid
+      raise Invalid, 'Invalid definition field' unless valid_field?(key, value)
     end
+  end
+
+  # #2435: "Mostrar na tela" chega como verdadeiro ou falso; o resto é texto, e as opções da lista, uma lista de textos.
+  def valid_field?(key, value)
+    return valid_options?(value) if key == 'attribute_values'
+    return [true, false].include?(value) if key == OCULTO
+
+    value.nil? || value.is_a?(String)
   end
 
   def valid_options?(value)

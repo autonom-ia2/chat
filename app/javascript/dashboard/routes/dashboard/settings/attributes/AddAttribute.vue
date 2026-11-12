@@ -10,12 +10,14 @@ import { ATTRIBUTE_MODELS, tiposDoModelo } from './constants';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import TagInput from 'dashboard/components-next/taginput/TagInput.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import MostrarNaTela from 'dashboard/components-next/CustomAttributes/MostrarNaTela.vue';
 
 export default {
   components: {
     NextButton,
     TagInput,
     ChoiceSelect,
+    MostrarNaTela,
   },
   props: {
     onClose: {
@@ -52,6 +54,8 @@ export default {
       values: [],
       show: true,
       tagInputTouched: false,
+      // #2435: o atributo novo nasce na tela.
+      mostrarNaTela: true,
     };
   },
 
@@ -167,6 +171,7 @@ export default {
           attribute_values: this.attributeListValues,
           regex_pattern: normalizeRegexPattern(this.regexPattern),
           regex_cue: this.regexCue,
+          oculto_na_tela: !this.mostrarNaTela,
         });
         this.alertMessage = this.$t('ATTRIBUTES_MGMT.ADD.API.SUCCESS_MESSAGE');
         this.onClose();
@@ -301,6 +306,7 @@ export default {
             type="text"
             :placeholder="$t('ATTRIBUTES_MGMT.ADD.FORM.REGEX_CUE.PLACEHOLDER')"
           />
+          <MostrarNaTela v-model="mostrarNaTela" class="mb-2" />
           <div class="flex flex-row justify-end w-full gap-2 px-0 py-2">
             <NextButton
               faded

@@ -32,33 +32,38 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
                                            filiais: 'TotalBranches', idade_media_anos: 'AverageCompanyAge', atividades: 'TotalUniqueCNAES'))
   end
 
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Empresas na região
+  # tem o prazo das lentas (`Dataset::PRAZO_DAS_LENTAS`, #2946).
+  CONSULTAS = [
+    Premium::ConsultaPaga.new(
+      nome: 'telefone', descricao: 'os telefones da empresa', obrigatorios: [Premium::Parametros::CNPJ],
+      dataset: Premium::Dataset.new(nome: 'phones_extended', rota: '/empresas', resposta: 'ExtendedPhones', custo: '0.06',
+                                    preco: '0.09', busca: POR_CNPJ, extrair: TELEFONES)
+    ),
+    Premium::ConsultaPaga.new(
+      nome: 'email', descricao: 'os e-mails da empresa', obrigatorios: [Premium::Parametros::CNPJ],
+      dataset: Premium::Dataset.new(nome: 'emails_extended', rota: '/empresas', resposta: 'ExtendedEmails', custo: '0.06',
+                                    preco: '0.09', busca: POR_CNPJ, extrair: EMAILS)
+    ),
+    Premium::ConsultaPaga.new(
+      nome: 'empresas_na_regiao',
+      descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira. ' \
+                 'O cliente não precisa saber o CEP: sem ele, mande a rua e a cidade (o bairro e o número ajudam a ' \
+                 'escolher o CEP da rua); o CEP geral da cidade não serve',
+      obrigatorios: [], opcionais: [Premium::Parametros::NUMERO_LOCAL, *Premium::Parametros::PELO_ENDERECO], pelo_endereco: true,
+      exige_rua: true,
+      dataset: Premium::Dataset.new(nome: 'companies_statistics', rota: '/enderecos', resposta: 'CompaniesStatistics', custo: '0.06',
+                                    preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO,
+                                    prazo: Premium::Dataset::PRAZO_DAS_LENTAS)
+    )
+  ].freeze
+
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'contato_empresa', slug: 'pronta_contato_empresa', nome: 'Contato e mercado de empresas',
     descricao: 'Consulta paga: telefone ou e-mail de uma EMPRESA pelo CNPJ, ou quantas empresas há numa região pelo ' \
                'CEP. Só empresa: não existe consulta de telefone, e-mail ou endereço de pessoa física nem de parentes. ' \
                'Se pedirem, diga com educação que esse dado não é consultado aqui e não chame esta ferramenta.',
-    consultas: [
-      Premium::ConsultaPaga.new(
-        nome: 'telefone', descricao: 'os telefones da empresa', obrigatorios: [Premium::Parametros::CNPJ],
-        dataset: Premium::Dataset.new(nome: 'phones_extended', rota: '/empresas', resposta: 'ExtendedPhones', custo: '0.06',
-                                      preco: '0.09', busca: POR_CNPJ, extrair: TELEFONES)
-      ),
-      Premium::ConsultaPaga.new(
-        nome: 'email', descricao: 'os e-mails da empresa', obrigatorios: [Premium::Parametros::CNPJ],
-        dataset: Premium::Dataset.new(nome: 'emails_extended', rota: '/empresas', resposta: 'ExtendedEmails', custo: '0.06',
-                                      preco: '0.09', busca: POR_CNPJ, extrair: EMAILS)
-      ),
-      Premium::ConsultaPaga.new(
-        nome: 'empresas_na_regiao',
-        descricao: 'quantas empresas há na região do CEP (só números). O número é da região do CEP, não da cidade inteira. ' \
-                   'O cliente não precisa saber o CEP: sem ele, mande a rua e a cidade (o bairro e o número ajudam a ' \
-                   'escolher o CEP da rua); o CEP geral da cidade não serve',
-        obrigatorios: [], opcionais: [Premium::Parametros::NUMERO_LOCAL, *Premium::Parametros::PELO_ENDERECO], pelo_endereco: true,
-        exige_rua: true,
-        dataset: Premium::Dataset.new(nome: 'companies_statistics', rota: '/enderecos', resposta: 'CompaniesStatistics', custo: '0.06',
-                                      preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: REGIAO)
-      )
-    ],
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma). Só empresa; respeita a lista "não perturbe".'
   )
