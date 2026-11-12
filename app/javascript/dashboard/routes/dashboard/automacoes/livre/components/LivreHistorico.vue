@@ -12,7 +12,8 @@ import { abaixoDoMinimo, dolares } from '../custoDaIa';
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
 // que a execução entrou; o motivo já vem traduzido da API. Conversa numa caixa
-// que a pessoa não vê aparece sem nome e sem link.
+// que a pessoa não vê aparece sem nome e sem link; card e contato (#2731), pelo
+// nome e com link para quem os vê, e só pelo tipo para quem não vê.
 const props = defineProps({
   automacaoId: { type: Number, required: true },
   catalogo: { type: Object, required: true },
@@ -129,12 +130,32 @@ const linkDa = (execucao, mensagemId, conversaAberta) => {
   return mensagemId ? `${url}?messageId=${mensagemId}` : url;
 };
 
+// O rótulo neutro de cada tipo, sem nome nem link. "Uma conversa" é só da
+// conversa numa caixa que a pessoa não vê.
+const SEM_NOME = {
+  conversa: 'OCULTA',
+  card: 'CARD_OCULTO',
+  contato: 'CONTATO_OCULTO',
+  conta: 'CONTA',
+};
+
+const conversaVisivel = ({ alvo }) => alvo.tipo === 'conversa' && alvo.visivel;
+
 const nomeDa = ({ alvo }) => {
-  if (!alvo.visivel) return t('AUTOMACAO_LIVRE.HISTORICO.OCULTA');
+  if (!alvo.visivel)
+    return t(`AUTOMACAO_LIVRE.HISTORICO.${SEM_NOME[alvo.tipo]}`);
+  if (alvo.tipo === 'card')
+    return t('AUTOMACAO_LIVRE.HISTORICO.CARD_DE', { nome: alvo.nome });
+  if (alvo.tipo === 'contato')
+    return alvo.nome || t('AUTOMACAO_LIVRE.HISTORICO.CONTATO_SEM_NOME');
   return alvo.nome
     ? t('AUTOMACAO_LIVRE.HISTORICO.CONVERSA_DE', { nome: alvo.nome })
     : t('AUTOMACAO_LIVRE.HISTORICO.CONVERSA_N', { n: alvo.conversa_id });
 };
+
+// O card e o contato que a pessoa vê abrem pelo link que a API manda.
+const ABRIR = { card: 'ABRIR_CARD', contato: 'ABRIR_CONTATO' };
+const abrirOutro = ({ alvo }) => alvo.visivel && ABRIR[alvo.tipo];
 
 const carregar = async (proxima = 1) => {
   if (proxima === 1) estado.value = 'carregando';
@@ -240,11 +261,12 @@ onMounted(() => carregar());
               aria-hidden="true"
             />
             <span
+              data-alvo
               :data-oculta="!execucao.alvo.visivel || undefined"
               :title="
-                execucao.alvo.visivel
-                  ? undefined
-                  : $t('AUTOMACAO_LIVRE.HISTORICO.OCULTA_DICA')
+                execucao.alvo.tipo === 'conversa' && !execucao.alvo.visivel
+                  ? $t('AUTOMACAO_LIVRE.HISTORICO.OCULTA_DICA')
+                  : undefined
               "
               class="text-[0.9375rem] font-medium"
               :class="
@@ -387,7 +409,7 @@ onMounted(() => carregar());
                   </span>
                   <a
                     v-if="
-                      execucao.alvo.visivel &&
+                      conversaVisivel(execucao) &&
                       (passo.dados.mensagem_id || passo.dados.nota_id)
                     "
                     data-ver-mensagem
@@ -406,12 +428,20 @@ onMounted(() => carregar());
               </li>
             </ol>
             <a
-              v-if="execucao.alvo.visivel"
+              v-if="conversaVisivel(execucao)"
               data-abrir-conversa
               :href="linkDa(execucao)"
               class="self-start text-sm font-medium text-n-blue-11 hover:underline"
             >
               {{ $t('AUTOMACAO_LIVRE.HISTORICO.ABRIR_CONVERSA') }}
+            </a>
+            <a
+              v-else-if="abrirOutro(execucao)"
+              data-abrir-alvo
+              :href="frontendURL(execucao.alvo.link)"
+              class="self-start text-sm font-medium text-n-blue-11 hover:underline"
+            >
+              {{ $t(`AUTOMACAO_LIVRE.HISTORICO.${abrirOutro(execucao)}`) }}
             </a>
           </div>
         </li>
