@@ -41,8 +41,16 @@ const calculado = valor =>
 const comoTexto = computed(
   () => peca.value === 'texto' && !props.modelValue?.$data
 );
+// #2594: a data do card (data prevista de fechamento) é a peça do G16b: o dia
+// certo ou a data calculada; o `{ $valor }` que o Guia pôs continua em frase.
+const comoData = computed(
+  () =>
+    peca.value === 'data' &&
+    !props.modelValue?.$valor &&
+    !props.modelValue?.$texto
+);
 const soMostra = computed(
-  () => calculado(props.modelValue) && !comoTexto.value
+  () => calculado(props.modelValue) && !comoTexto.value && !comoData.value
 );
 const mudar = novo => emit('update:modelValue', novo);
 // #2702 G29 — o "Pôr" etiqueta aceita um dado: a etiqueta com o nome do anúncio.
@@ -82,6 +90,24 @@ const dataHora = computed({
   },
   set: texto =>
     mudar(texto ? Math.floor(new Date(texto).getTime() / SEGUNDO) : null),
+});
+
+// #2594: o valor de venda é digitado em reais e vai em centavos, como o card
+// guarda.
+const CENTAVOS = 100;
+const reais = computed({
+  get: () =>
+    Number.isInteger(props.modelValue)
+      ? String(props.modelValue / CENTAVOS)
+      : '',
+  set: texto => {
+    const numero = Number(texto);
+    mudar(
+      String(texto).trim() === '' || Number.isNaN(numero)
+        ? null
+        : Math.round(numero * CENTAVOS)
+    );
+  },
 });
 
 const linhas = computed({
@@ -132,6 +158,25 @@ const opcoesDoAtributo = atributo =>
         {{ fraseDoCalculado(modelValue, catalogo, t) }}
       </p>
     </template>
+
+    <LivreData
+      v-else-if="comoData"
+      :rotulo="rotulo"
+      :model-value="modelValue ?? null"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      @update:model-value="mudar"
+    />
+
+    <Input
+      v-else-if="peca === 'dinheiro'"
+      v-model="reais"
+      type="number"
+      min="0"
+      step="0.01"
+      inputmode="decimal"
+      :label="rotulo"
+    />
 
     <LivreTexto
       v-else-if="comoTexto"

@@ -668,6 +668,7 @@ en:
         criado_sem_passo: 'Step %{passo}: %{caminho} must point to a step of this run that creates the record that fits here ("Create card", or an action that creates a contact).'
         criado_depois: 'Step %{passo}: %{caminho} points to a step that never runs before this one. Move the step that creates the record above it.'
         valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
+        campo_protegido: 'Step %{passo}: only people who see sales values can change the card value (%{campo}). Ask for the permission or remove this field.'
         agenda_so_na_instalacao: 'Step %{passo}: the booking page (%{caminho}) is chosen when the automation is set up in the account.'
         agenda_sem_permissao: 'Step %{passo}: only people who see the booking pages can use the link of a page (%{caminho}).'
         agenda_desligada: 'Step %{passo}: booking is off in this account, so %{caminho} has no link.'

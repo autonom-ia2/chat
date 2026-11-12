@@ -1161,6 +1161,7 @@ pt_BR:
         criado_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo desta execução que crie o registro que cabe aqui ("Criar card", ou uma ação que cria contato).'
         criado_depois: 'Passo %{passo}: %{caminho} aponta um passo que nunca roda antes deste. Ponha o passo que cria o registro acima dele.'
         valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
+        campo_protegido: 'Passo %{passo}: só quem vê os valores de venda pode mudar o valor do card (%{campo}). Peça a permissão ou tire esse campo.'
         agenda_so_na_instalacao: 'Passo %{passo}: a página de agendamento (%{caminho}) se escolhe ao montar a automação na conta.'
         agenda_sem_permissao: 'Passo %{passo}: só quem vê as páginas de agendamento pode usar o link de uma página (%{caminho}).'
         agenda_desligada: 'Passo %{passo}: o agendamento está desligado nesta conta, e %{caminho} fica sem link.'

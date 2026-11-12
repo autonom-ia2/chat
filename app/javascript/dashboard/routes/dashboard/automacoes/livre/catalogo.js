@@ -188,6 +188,21 @@ export const novoPasso = (entrada, id, t) => {
 // pede `sales_value_view`) fica marcado `sem_permissao` para quem não pode
 // lê-lo. A escolha não o oferece; o texto e a condição que já o usam continuam
 // mostrando o nome dele, e o salvar recusa até a pessoa tirar.
+// #2594: o campo de ação que pede permissão (o valor de venda do card) some
+// do "Alterar" de quem não pode vê-lo. O valor que já está no passo fica na
+// receita (cada campo grava só o dele), e o salvar recusa (campo_protegido).
+const semCamposProtegidos = (passos, podeLer) =>
+  passos.map(passo =>
+    passo.tipo === 'acao' && passo.campos.some(campo => campo.permissao)
+      ? {
+          ...passo,
+          campos: passo.campos.filter(
+            campo => !campo.permissao || podeLer(campo.permissao)
+          ),
+        }
+      : passo
+  );
+
 export const comPermissoes = (dados, podeLer) => {
   if (!dados?.valores) return dados;
   return {
@@ -197,6 +212,9 @@ export const comPermissoes = (dados, podeLer) => {
         ? { ...item, sem_permissao: true }
         : item
     ),
+    ...(dados.passos
+      ? { passos: semCamposProtegidos(dados.passos, podeLer) }
+      : {}),
   };
 };
 
