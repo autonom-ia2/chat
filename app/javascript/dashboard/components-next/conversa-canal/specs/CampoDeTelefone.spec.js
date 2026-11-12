@@ -2,12 +2,13 @@ import { mount } from '@vue/test-utils';
 import CampoDeTelefone from '../mais/CampoDeTelefone.vue';
 
 let wrapper;
-const montar = (modelValue = '') => {
+const montar = (modelValue = '', extra = {}) => {
   wrapper = mount(CampoDeTelefone, {
     props: {
       modelValue,
       label: 'Telefone',
       rotuloDoPais: 'País do telefone',
+      ...extra,
       'onUpdate:modelValue': valor => wrapper.setProps({ modelValue: valor }),
     },
     attachTo: document.body,
@@ -96,5 +97,60 @@ describe('CampoDeTelefone (#1702)', () => {
     const mensagem = wrapper.get(`#${campo.attributes('aria-describedby')}`);
     expect(mensagem.text()).toBe('Digite um telefone');
     expect(campo.attributes('aria-invalid')).toBe('true');
+  });
+});
+
+// #2896 — o que a tela de quem usa pode pedir a mais. Sem pedir, nada muda.
+describe('CampoDeTelefone: opções de quem usa (#2896)', () => {
+  it('sem pedir nada: 40 px de altura, sem marca de erro', () => {
+    montar();
+    expect(numero().classes()).toContain('h-10');
+    expect(numero().classes()).not.toContain('!h-11');
+    expect(numero().attributes('aria-invalid')).toBeUndefined();
+    expect(numero().attributes('aria-describedby')).toBeUndefined();
+    expect(pais().attributes('aria-invalid')).toBeUndefined();
+  });
+
+  it('erroDescritoPor: o campo fica inválido e aponta para a frase de quem usa, sem repeti-la', async () => {
+    montar('', { erroDescritoPor: 'frase-de-fora' });
+    expect(numero().attributes('aria-invalid')).toBe('true');
+    expect(numero().attributes('aria-describedby')).toBe('frase-de-fora');
+    expect(numero().classes()).toContain('error');
+    expect(wrapper.findAll('p')).toHaveLength(0);
+    await wrapper.setProps({ erroDescritoPor: '' });
+    expect(numero().attributes('aria-invalid')).toBeUndefined();
+    expect(numero().attributes('aria-describedby')).toBeUndefined();
+  });
+
+  it('alto: o número e o país ficam com 44 px', () => {
+    montar('', { alto: true });
+    expect(numero().classes()).toContain('!h-11');
+    expect(pais().element.parentElement.parentElement.className).toContain(
+      '[&_[role=combobox]]:h-11'
+    );
+  });
+
+  it('comoEscrito: o número que ainda não vale sai com o código do país e os dígitos', async () => {
+    montar('', { comoEscrito: true });
+    await numero().setValue('1198');
+    expect(wrapper.props('modelValue')).toBe('+551198');
+    await numero().setValue('11987654321');
+    expect(wrapper.props('modelValue')).toBe('+5511987654321');
+    await numero().setValue('');
+    expect(wrapper.props('modelValue')).toBe('');
+  });
+
+  it('comoEscrito: o + sem país claro sai como a pessoa escreveu', async () => {
+    montar('', { comoEscrito: true });
+    await numero().setValue('+800 1234');
+    expect(numero().element.value).toBe('+800 1234');
+    expect(wrapper.props('modelValue')).toBe('+800 1234');
+  });
+
+  it('comoEscrito: o número que chega sem + fica no Brasil e não é reescrito sozinho', () => {
+    montar('(31) 2345-678', { comoEscrito: true });
+    expect(pais().text()).toBe('🇧🇷 +55');
+    expect(numero().element.value).toBe('(31) 2345-678');
+    expect(wrapper.props('modelValue')).toBe('(31) 2345-678');
   });
 });

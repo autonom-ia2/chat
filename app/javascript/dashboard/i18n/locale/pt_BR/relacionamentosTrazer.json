@@ -19,6 +19,10 @@
       "ERRO_LEITURA": "Não consegui ler esta planilha.",
       "ERRO_VAZIA": "Esta planilha está vazia.",
       "ERRO_SEM_CONTATO": "Não achei nome e telefone ou e-mail nesta planilha.",
+      "ERRO_DEMOROU": "Ainda não terminei de ler sua planilha.",
+      "ERRO_SEM_NINGUEM": "Com essa mudança não sobrou ninguém com telefone ou e-mail. Envie a planilha de novo.",
+      "ERRO_VENCIDA": "Esta planilha foi enviada há mais de 7 dias e já foi apagada daqui. Envie a planilha de novo.",
+      "JA_TRAZIDA": "Esta lista já foi trazida. Veja abaixo.",
       "LENDO": "Lendo sua planilha…",
       "USAR_EXEMPLO": "Usar uma planilha de exemplo"
     },
@@ -30,12 +34,14 @@
         "SIM_TODAS": "Sim, todas",
         "AINDA_NAO": "Ainda não",
         "ALGUMAS": "Algumas",
+        "DE_NOVO": "Você mudou a coluna que dizia quem é cliente. Responda de novo.",
         "QUAL_COLUNA": "Qual coluna diz quem é cliente?"
       },
       "TELEFONE": {
         "TITULO": "A coluna “{coluna}” é telefone de quem?",
         "DA_PESSOA": "Da pessoa",
         "DA_EMPRESA": "Da empresa",
+        "DE_NOVO": "Você mudou a coluna do telefone. Responda de novo.",
         "NAO_USAR": "Não usar"
       }
     },
@@ -54,6 +60,11 @@
       "SOSSEGO": "Você pode desfazer quando quiser.",
       "NINGUEM": "Não sobrou ninguém para trazer.",
       "ESCOLHER_OUTRA": "Escolher outra planilha",
+      "JUNTADAS": "Juntei {count} linha de uma pessoa que aparecia mais de uma vez. | Juntei {count} linhas de pessoas que apareciam mais de uma vez.",
+      "MUDOU": "Esta lista mudou enquanto você conferia. Mostrei como está agora.",
+      "MUDANCA_DESFEITA": "Não fiz essa mudança: com ela não sobraria ninguém com telefone ou e-mail. Deixei como estava.",
+      "RELENDO": "Lendo sua planilha de novo…",
+      "RELEITURA_PAROU": "Ainda não terminei de ler sua planilha de novo. O que você mudou já está salvo.",
       "TRAZER": "Trazer {count} pessoa | Trazer {count} pessoas"
     },
     "PRECISAM": {
@@ -64,11 +75,12 @@
       "LINHAS_DA_PLANILHA": "Linhas {outraLinha} e {linha} da planilha",
       "QUEM_SEM_NOME": "Linha {linha}",
       "SEM_TELEFONE": "sem telefone",
-      "SEM_EMAIL": "sem e-mail",
       "ERRO_PREENCHER": "Escreva o {campo} para salvar.",
+      "ERRO_TELEFONE_IGUAL": "Corrija o telefone para salvar.",
       "QUE_FALTA": { "NOME": "nome", "TELEFONE": "telefone", "EMAIL": "e-mail" },
       "RESOLVIDO": "Tudo resolvido",
       "PRONTO": "Pronto",
+      "RESOLVIDA": "{quem}: {valor}",
       "DEIXADA": "Deixada de fora",
       "GUARDAR": "Salvar",
       "DEIXAR_DE_FORA": "Deixar de fora",
@@ -77,24 +89,49 @@
       "FICAR_COM_ESTA": "Ficar com esta",
       "VOLTAR_ATRAS": "Voltar atrás",
       "VOLTAR_ATRAS_LINHA": "Voltar atrás na linha {linha}",
+      "MOSTRAR_MAIS": "Mostrar mais",
+      "ERRO_MOSTRAR_MAIS": "Não consegui mostrar mais. Tente de novo.",
       "ANUNCIO": {
         "PRONTO": "Linha {linha}: pronto",
         "DEIXADA": "Linha {linha}: deixada de fora",
-        "REABERTA": "Linha {linha}: voltou para você conferir"
+        "REABERTA": "Linha {linha}: voltou para você conferir",
+        "OUTRO_PROBLEMA": "Linha {linha}: salvei. Ainda falta resolver outra coisa nesta linha."
       },
       "PROBLEMA": {
-        "TELEFONE": "{quem}: falta um número no telefone",
-        "EMAIL": "{quem}: o e-mail está sem “{'@'}”",
+        "TELEFONE": "{quem}: este telefone não parece um celular. Confira o DDD e os dígitos.",
+        "EMAIL": "{quem}: este e-mail não parece certo.",
         "NOME": "{quem}: falta o nome",
         "DUPLICADA": "{quem} aparece duas vezes. Qual fica?",
         "DUPLICADA_SEM_ESCOLHA": "{quem} aparece duas vezes.",
-        "SEM_CONTATO": "{quem}: não tem telefone nem e-mail"
+        "SEM_CONTATO": "{quem}: não tem telefone nem e-mail",
+        "TELEFONE_VAZIO": "{quem}: falta o telefone",
+        "EMAIL_VAZIO": "{quem}: falta o e-mail",
+        "TELEFONE_FORMULA": "{quem}: o telefone começa com um sinal (=, +, - ou {'@'}). Escreva sem o sinal.",
+        "EMAIL_FORMULA": "{quem}: o e-mail começa com um sinal (=, +, - ou {'@'}). Escreva sem o sinal.",
+        "NOME_FORMULA": "{quem}: o nome começa com um sinal (=, +, - ou {'@'}). Escreva sem o sinal.",
+        "FORMULA": "Nesta linha, “{campo}” começa com um sinal (=, +, - ou {'@'}). Corrija na planilha e envie de novo, ou deixe esta linha de fora.",
+        "FORMULA_SEM_CAMPO": "Nesta linha, uma informação começa com um sinal (=, +, - ou {'@'}). Corrija na planilha e envie de novo, ou deixe esta linha de fora.",
+        "FORMULA_RESUMO": "{quem}: uma informação começa com um sinal (=, +, - ou {'@'})"
       },
       "CAMPO": {
         "TELEFONE": "Telefone certo",
         "PAIS": "País do telefone",
         "EMAIL": "E-mail certo",
+        "CONTATO": "Telefone ou e-mail",
         "NOME": "Nome"
+      },
+      "RECUSA": {
+        "TELEFONE": "Este telefone não parece um celular do Brasil. Confira o DDD e os dígitos.",
+        "EMAIL": "Este e-mail não parece certo.",
+        "NOME": "Escreva o nome.",
+        "CONTATO": "Escreva um telefone ou um e-mail.",
+        "FORMULA": "Este texto começa com um sinal (=, +, - ou {'@'}). Escreva sem o sinal.",
+        "CAMPO": {
+          "TELEFONE": "Confira este telefone e tente de novo.",
+          "EMAIL": "Confira este e-mail e tente de novo.",
+          "NOME": "Confira este nome e tente de novo.",
+          "LINHA": "Não consegui salvar esta linha. Tente de novo."
+        }
       }
     },
     "GUARDAR": {
@@ -102,12 +139,20 @@
       "APOIO": "Cada coluna da sua planilha e para onde ela vai.",
       "FICA_COMO": "“{coluna}” fica como {destino}.",
       "FICA_COMO_INFORMACAO": "“{coluna}” fica como informação nova.",
+      "DIZ_QUEM_E_CLIENTE": "“{coluna}” diz quem é cliente.",
+      "DUVIDOSA": "Confira esta coluna.",
       "NAO_VOU_GUARDAR": "Não vou guardar “{coluna}”",
       "COLUNA_SEM_NOME": "Coluna {numero}",
       "TROCAR": "Mudar",
       "ROTULO_TROCAR": "Para onde vai a coluna “{coluna}”",
       "ROTULO_MUDAR": "Mudar para onde vai a coluna {coluna}",
-      "NAO_GUARDAR": "Não guardar"
+      "NAO_GUARDAR": "Não guardar",
+      "CAMPO_NOME": "Nome desta informação",
+      "CAMPO_PARA_QUE_SERVE": "Para que serve?",
+      "AJUDA_PARA_QUE_SERVE": "Uma frase curta. Ex.: mês em que o seguro vence.",
+      "SALVAR_CAMPO": "Salvar",
+      "SALVO": "Salvo",
+      "ERRO_NOME_DO_CAMPO": "Escreva um nome para esta informação."
     },
     "DESTINOS": {
       "NOME": "Nome",
@@ -122,7 +167,7 @@
     },
     "ANDAMENTO": {
       "TITULO": "Trazendo… {porcentagem}%.",
-      "APOIO": "Pode fechar esta tela; eu aviso quando terminar.",
+      "APOIO": "Pode sair desta tela. A lista aparece aqui embaixo quando terminar.",
       "ROTULO": "Andamento"
     },
     "PRONTO": {
@@ -165,7 +210,11 @@
       "DESFAZER": "Não consegui desfazer. Tente de novo.",
       "TRAZER": "Não consegui trazer a lista.",
       "ANDAMENTO": "Não consegui ver como está indo.",
-      "HISTORICO": "Não consegui mostrar o que você já trouxe."
+      "HISTORICO": "Não consegui mostrar o que você já trouxe.",
+      "NADA_PARA_TRAZER": "Não sobrou ninguém para trazer. Envie a planilha de novo.",
+      "SEM_EMPRESA": "Para guardar o telefone da empresa, a planilha precisa de uma coluna com o nome da empresa.",
+      "MUITO_LONGO": "Este texto é longo demais. Encurte e tente de novo.",
+      "SEM_COLUNA_DE_CONTATO": "Não mudei esta coluna: a lista precisa de pelo menos uma coluna de telefone ou de e-mail."
     }
   }
 }

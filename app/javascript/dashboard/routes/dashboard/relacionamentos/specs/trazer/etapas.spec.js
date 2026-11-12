@@ -5,10 +5,12 @@ import {
   etapaDoTopo,
   proximo,
 } from '../../trazer/etapas';
-
 // A máquina de etapas de "Trazer minha lista" (#2894): funções puras.
+// #2896 — as perguntas da leitura podem mudar depois de uma troca de coluna, e
+// a que fica sem resposta é feita de novo.
 const passa = (estado, ...tipos) =>
   tipos.reduce((atual, tipo) => proximo(atual, { tipo }), estado);
+
 const leu = (estado, perguntas) =>
   proximo(estado, { tipo: EVENTOS.LEU, perguntas });
 
@@ -122,4 +124,94 @@ describe('etapaDoTopo', () => {
       ETAPAS.PRONTO
     );
   });
+});
+
+describe('etapas: as perguntas da leitura mudaram', () => {
+  const mudaram = (estado, perguntas) =>
+    proximo(estado, { tipo: EVENTOS.PERGUNTAS_MUDARAM, perguntas });
+  const nasPerguntas = (total, pergunta) => ({
+    etapa: ETAPAS.PERGUNTAS,
+    pergunta,
+    totalDePerguntas: total,
+  });
+  const noConferir = total => ({
+    etapa: ETAPAS.CONFERIR,
+    pergunta: total - 1,
+    totalDePerguntas: total,
+  });
+
+  it('no conferir: a conta acompanha e o Voltar leva à última pergunta que existe', () => {
+    const estado = mudaram(noConferir(2), 1);
+    expect(estado).toMatchObject({
+      etapa: ETAPAS.CONFERIR,
+      totalDePerguntas: 1,
+    });
+    expect(proximo(estado, { tipo: EVENTOS.VOLTAR })).toMatchObject({
+      etapa: ETAPAS.PERGUNTAS,
+      pergunta: 0,
+    });
+  });
+
+  it('no conferir, sem pergunta nenhuma: o Voltar leva ao envio', () => {
+    const estado = mudaram(noConferir(2), 0);
+    expect(proximo(estado, { tipo: EVENTOS.VOLTAR }).etapa).toBe(ETAPAS.ENVIAR);
+  });
+
+  it('numa pergunta que continua existindo: fica nela', () => {
+    expect(mudaram(nasPerguntas(2, 0), 1)).toEqual(nasPerguntas(1, 0));
+    expect(mudaram(nasPerguntas(1, 0), 2)).toEqual(nasPerguntas(2, 0));
+  });
+
+  it('numa pergunta que saiu: fica na última que sobrou', () => {
+    expect(mudaram(nasPerguntas(2, 1), 1)).toEqual(nasPerguntas(1, 0));
+  });
+
+  it('nas perguntas e não sobrou nenhuma: vai conferir', () => {
+    expect(mudaram(nasPerguntas(1, 0), 0)).toEqual({
+      etapa: ETAPAS.CONFERIR,
+      pergunta: 0,
+      totalDePerguntas: 0,
+    });
+  });
+
+  it.each([ETAPAS.ENVIAR, ETAPAS.TRAZENDO, ETAPAS.PRONTO])(
+    'fora das perguntas e do conferir (%s) não muda nada',
+    etapa => {
+      const estado = { ...estadoInicial(), etapa, totalDePerguntas: 2 };
+      expect(mudaram(estado, 1)).toEqual(estado);
+    }
+  );
+});
+
+describe('etapas: perguntar de novo o que ficou sem resposta', () => {
+  const perguntar = (estado, pergunta) =>
+    proximo(estado, { tipo: EVENTOS.PERGUNTAR, pergunta });
+  const noConferir = {
+    etapa: ETAPAS.CONFERIR,
+    pergunta: 1,
+    totalDePerguntas: 2,
+  };
+
+  it.each([0, 1])('do conferir vai para a pergunta %i', pergunta => {
+    expect(perguntar(noConferir, pergunta)).toEqual({
+      etapa: ETAPAS.PERGUNTAS,
+      pergunta,
+      totalDePerguntas: 2,
+    });
+  });
+
+  it.each([-1, 2, undefined])(
+    'pergunta que não existe (%s) não muda nada',
+    pergunta => {
+      expect(perguntar(noConferir, pergunta)).toEqual(noConferir);
+    }
+  );
+
+  it.each([ETAPAS.ENVIAR, ETAPAS.PERGUNTAS, ETAPAS.TRAZENDO, ETAPAS.PRONTO])(
+    'fora do conferir (%s) não muda nada',
+    etapa => {
+      const estado = { ...noConferir, etapa };
+      expect(perguntar(estado, 0)).toEqual(estado);
+    }
+  );
 });

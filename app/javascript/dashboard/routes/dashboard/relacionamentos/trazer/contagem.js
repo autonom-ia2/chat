@@ -1,6 +1,6 @@
-// #2894 — as contas da conferência, em funções puras: quantas pessoas vão
-// chegar, a frase do topo e a checagem do nome. O e-mail é conferido por
-// ficha/validacao.js (uma regra só).
+// #2894 — os números da conferência, em funções puras: os contadores do topo e
+// a frase deles. O cartão de cada linha só trava o campo vazio: o formato do
+// e-mail, do telefone e do nome quem confere é o servidor.
 export const SITUACAO_DO_PROBLEMA = {
   ABERTO: 'aberto',
   GUARDADO: 'guardado',
@@ -19,47 +19,41 @@ export const planilhaApagada = leitura =>
 const quantosEm = (problemas, situacao) =>
   problemas.filter(problema => problema.estado === situacao).length;
 
-// novas + completadas + consertadas − deixadas de fora. "Consertadas" são as
-// linhas de que a pessoa já cuidou (guardou ou deixou de fora); as que ela
-// deixou de fora saem da conta em seguida.
-export const totalATrazer = ({
-  novas = ZERO,
-  completadas = ZERO,
-  consertadas = ZERO,
-  deixadasDeFora = ZERO,
-}) => Math.max(ZERO, novas + completadas + consertadas - deixadasDeFora);
-
 export const contarProblemas = (problemas = []) => ({
   abertos: quantosEm(problemas, SITUACAO_DO_PROBLEMA.ABERTO),
   guardados: quantosEm(problemas, SITUACAO_DO_PROBLEMA.GUARDADO),
   deixados: quantosEm(problemas, SITUACAO_DO_PROBLEMA.DEIXADO),
 });
 
-export const totalDaLeitura = leitura => {
-  const { guardados, deixados } = contarProblemas(leitura?.problemas);
-  return totalATrazer({
-    novas: leitura?.resumo?.novas ?? ZERO,
-    completadas: leitura?.resumo?.completadas ?? ZERO,
-    consertadas: guardados + deixados,
-    deixadasDeFora: deixados,
-  });
-};
+// As linhas com problema que ainda não vieram do servidor ("Mostrar mais").
+export const problemasPorCarregar = leitura =>
+  Math.max(
+    ZERO,
+    (leitura?.problemasTotal ?? ZERO) - (leitura?.problemas?.length ?? ZERO)
+  );
 
-// Os números da frase "Achei 200 pessoas…": quem foi consertado vira "nova" e
-// quem ficou de fora ganha a sua parte.
-export const resumoAoVivo = leitura => {
-  const { abertos, guardados, deixados } = contarProblemas(leitura?.problemas);
+// Os números do topo do Conferir. Quantas pessoas entram (`entram`), quantas
+// são novas e quantas já estavam na conta quem diz é o servidor: a tela não
+// refaz a conta nem chama de "nova" a linha consertada (não sabe se a pessoa já
+// existe). Da tela saem só as linhas que precisam da pessoa (as abertas que já
+// vieram mais as que ainda não vieram, que contam como abertas) e as que ela
+// deixou de fora entre as que vieram. `juntadas` são as linhas que eram a mesma
+// pessoa de outra e que a leitura já juntou (não entram no total).
+export const resumoDaTela = leitura => {
+  const { abertos, deixados } = contarProblemas(leitura?.problemas);
   const resumo = leitura?.resumo ?? {};
   return {
     total: resumo.total ?? ZERO,
-    novas: (resumo.novas ?? ZERO) + guardados,
+    novas: resumo.novas ?? ZERO,
     completadas: resumo.completadas ?? ZERO,
-    precisamDeVoce: abertos,
+    precisamDeVoce: abertos + problemasPorCarregar(leitura),
     deixadas: deixados,
+    juntadas: resumo.juntadas ?? ZERO,
+    entram: resumo.entram ?? ZERO,
   };
 };
 
-export const PARTES_DA_FRASE = [
+const PARTES_DA_FRASE = [
   { chave: 'NOVAS', campo: 'novas' },
   { chave: 'COMPLETADAS', campo: 'completadas' },
   { chave: 'PRECISAM', campo: 'precisamDeVoce' },
@@ -71,5 +65,3 @@ export const partesDaFrase = resumo =>
   PARTES_DA_FRASE.filter(({ campo }) => resumo[campo] > ZERO).map(
     ({ chave, campo }) => ({ chave, count: resumo[campo] })
   );
-
-export const nomeValido = valor => String(valor ?? '').trim().length > ZERO;

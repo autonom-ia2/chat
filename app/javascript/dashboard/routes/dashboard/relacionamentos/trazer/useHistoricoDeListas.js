@@ -1,81 +1,74 @@
 import { onScopeDispose, ref } from 'vue';
-import { SEM_ACESSO } from '../ficha/falhas';
+import { ehSemAcesso } from '../lista/falhas';
+import { INTERVALO_INICIAL_MS, agendaComRecuo } from './consultaComRecuo';
+import { AVISO_ERRO_TRAZER } from './falhasDaTela';
 import { SITUACOES_DA_LISTA } from './prazo';
 
 // #2894 — "O que eu já trouxe": a lista de listas, a prévia do que sai e o
 // desfazer. Enquanto alguma lista ainda está sendo trazida, a tela pergunta de
-// novo a cada `intervalo` (sem piscar o esqueleto).
+// novo sozinha (sem piscar o esqueleto), com a espera crescendo a cada pergunta
+// e sem perguntar com a aba escondida (trazer/consultaComRecuo.js).
 // #2896 — a lista que parou no meio tem "Tentar de novo"; e quem o servidor
 // recusa por falta de acesso liga `semAcesso` (a tela diz isso, sem oferecer
 // tentar).
-export const INTERVALO_DO_HISTORICO_MS = 1500;
+export const INTERVALO_DO_HISTORICO_MS = INTERVALO_INICIAL_MS;
 
 const AVISO_ERRO_DESFAZER = 'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER';
-const AVISO_ERRO_TRAZER = 'RELACIONAMENTOS_TRAZER.ERROS.TRAZER';
 
-export const useHistoricoDeListas = ({
-  fonte,
-  avisar = () => {},
-  intervalo = INTERVALO_DO_HISTORICO_MS,
-}) => {
+const emAndamento = lista => lista.situacao === SITUACOES_DA_LISTA.TRAZENDO;
+
+// As listas que a conta já trouxe e a carga delas.
+const useCargaDoHistorico = ({ fonte, intervalo }) => {
   const listas = ref([]);
   const carregando = ref(false);
   const erro = ref(false);
   const semAcesso = ref(false);
-  // O id da lista que está tentando de novo (uma por vez).
-  const tentando = ref(null);
-  const alvo = ref(null);
-  const previa = ref(null);
-  const previaComErro = ref(false);
-  const desfazendo = ref(false);
-  let relogio = null;
+  const agenda = agendaComRecuo({ inicial: intervalo });
   let encerrado = false;
   // Número da última carga pedida: resposta de carga mais velha é descartada.
   let ultimaCarga = 0;
 
-  const emAndamento = lista => lista.situacao === SITUACOES_DA_LISTA.TRAZENDO;
-
-  const carregar = async ({ silencioso = false } = {}) => {
+  const carregar = async ({ silencioso = false, daAgenda = false } = {}) => {
     if (encerrado) return;
     ultimaCarga += 1;
     const minha = ultimaCarga;
+    const vale = () => !encerrado && minha === ultimaCarga;
     if (!silencioso) carregando.value = true;
     erro.value = false;
-    clearTimeout(relogio);
+    // A carga que alguém pediu recomeça a espera; a que a agenda disparou segue
+    // o recuo.
+    if (daAgenda) agenda.cancelar();
+    else agenda.recomecar();
     try {
       const recebidas = await fonte.historico();
-      if (encerrado || minha !== ultimaCarga) return;
+      if (!vale()) return;
       listas.value = recebidas;
       if (recebidas.some(emAndamento)) {
-        clearTimeout(relogio);
-        relogio = setTimeout(() => carregar({ silencioso: true }), intervalo);
+        agenda.agendar(() => carregar({ silencioso: true, daAgenda: true }));
       }
     } catch (falha) {
-      if (encerrado || minha !== ultimaCarga) return;
-      if (falha?.name === SEM_ACESSO) semAcesso.value = true;
+      if (!vale()) return;
+      if (ehSemAcesso(falha)) semAcesso.value = true;
       else erro.value = true;
     } finally {
       if (minha === ultimaCarga) carregando.value = false;
     }
   };
 
-  // Devolve true quando o servidor aceitou continuar a lista; a carga seguinte
-  // já a mostra sendo trazida (e volta a perguntar pelo andamento).
-  const tentarDeNovo = async lista => {
-    if (tentando.value !== null) return false;
-    tentando.value = lista.id;
-    try {
-      await fonte.tentarDeNovo(lista.id);
-      await carregar({ silencioso: true });
-      return true;
-    } catch (falha) {
-      if (falha?.name === SEM_ACESSO) semAcesso.value = true;
-      else avisar(AVISO_ERRO_TRAZER);
-      return false;
-    } finally {
-      tentando.value = null;
-    }
-  };
+  onScopeDispose(() => {
+    encerrado = true;
+    agenda.cancelar();
+  });
+
+  return { listas, carregando, erro, semAcesso, carregar };
+};
+
+// O desfazer de uma lista: a prévia do que sai e a confirmação.
+const useDesfazerDaLista = ({ fonte, avisar, carregar }) => {
+  const alvo = ref(null);
+  const previa = ref(null);
+  const previaComErro = ref(false);
+  const desfazendo = ref(false);
 
   const abrirDesfazer = async lista => {
     alvo.value = lista;
@@ -111,25 +104,49 @@ export const useHistoricoDeListas = ({
     }
   };
 
-  onScopeDispose(() => {
-    encerrado = true;
-    clearTimeout(relogio);
-  });
-
   return {
-    listas,
-    carregando,
-    erro,
-    semAcesso,
-    tentando,
     alvo,
     previa,
     previaComErro,
     desfazendo,
-    carregar,
-    tentarDeNovo,
     abrirDesfazer,
     fecharDesfazer,
     confirmarDesfazer,
+  };
+};
+
+export const useHistoricoDeListas = ({
+  fonte,
+  avisar = () => {},
+  intervalo = INTERVALO_DO_HISTORICO_MS,
+}) => {
+  const carga = useCargaDoHistorico({ fonte, intervalo });
+  const { semAcesso, carregar } = carga;
+  // O id da lista que está tentando de novo (uma por vez).
+  const tentando = ref(null);
+
+  // Devolve true quando o servidor aceitou continuar a lista; a carga seguinte
+  // já a mostra sendo trazida (e volta a perguntar pelo andamento).
+  const tentarDeNovo = async lista => {
+    if (tentando.value !== null) return false;
+    tentando.value = lista.id;
+    try {
+      await fonte.tentarDeNovo(lista.id);
+      await carregar({ silencioso: true });
+      return true;
+    } catch (falha) {
+      if (ehSemAcesso(falha)) semAcesso.value = true;
+      else avisar(AVISO_ERRO_TRAZER);
+      return false;
+    } finally {
+      tentando.value = null;
+    }
+  };
+
+  return {
+    ...carga,
+    tentando,
+    tentarDeNovo,
+    ...useDesfazerDaLista({ fonte, avisar, carregar }),
   };
 };

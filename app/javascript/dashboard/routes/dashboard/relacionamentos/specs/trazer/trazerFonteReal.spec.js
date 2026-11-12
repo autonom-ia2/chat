@@ -1,16 +1,27 @@
 import TrazerAPI from 'dashboard/api/relacionamentosTrazer';
 import { trazerFonte } from '../../fonte/trazerFonte';
 
-// A fonte real de "Trazer minha lista" (#2896), Fatia 1: ler a planilha, trocar
-// o destino de uma coluna, trazer, o andamento, o histórico e o tentar de novo.
-// Fala com o servidor pelo cliente de API (aqui simulado) e devolve o mesmo
-// formato da demonstração. O contrato do servidor está em
+// A fonte real de "Trazer minha lista" (#2896). Fatia 1: ler a planilha, trocar
+// o destino de uma coluna, o andamento, o histórico e o tentar de novo. Fatia 2:
+// responder às perguntas, consertar a linha, deixar de fora, voltar atrás,
+// trazer pela leitura e os destinos que faltavam (com o campo da informação
+// nova). Fala com o servidor pelo cliente de API (aqui simulado) e devolve o
+// mesmo formato da demonstração. O contrato do servidor está em
 // spec/requests/api/v1/accounts/relacionamentos_trazer_spec.rb.
+// Responder e trocar a coluna devolvem a leitura inteira ou, quando o servidor
+// vai ler a planilha de novo, o marcador `{ situacao: 'lendo', id }`: quem
+// espera é a tela, com `retomar` (retomada.spec.js e releitura.spec.js).
+const MARCADOR = { situacao: 'lendo', id: 812 };
 vi.mock('dashboard/api/relacionamentosTrazer', () => ({
   default: {
     enviar: vi.fn(),
     leitura: vi.fn(),
+    responder: vi.fn(),
+    consertar: vi.fn(),
+    deixarDeFora: vi.fn(),
+    reabrir: vi.fn(),
     trocarColuna: vi.fn(),
+    trazer: vi.fn(),
     listas: vi.fn(),
     andamento: vi.fn(),
     confirmar: vi.fn(),
@@ -51,9 +62,9 @@ const pronta = (extra = {}) => ({
   ...extra,
 });
 
-const erroHttp = (status, error) =>
+const erroHttp = (status, error, extra = {}) =>
   Object.assign(new Error(`Request failed with status code ${status}`), {
-    response: { status, data: { error } },
+    response: { status, data: { error, ...extra } },
   });
 const responde = (metodo, ...respostas) =>
   respostas.reduce(
@@ -96,21 +107,40 @@ describe('fonte real', () => {
     expect(montar().fonte.usaDemo).toBe(false);
   });
 
-  it.each([
-    'responder',
-    'consertar',
-    'deixarDeFora',
-    'reabrir',
-    'previaDoDesfazer',
-    'desfazer',
-  ])('%s fica para as próximas fatias: FONTE_REAL_PENDENTE', async metodo => {
-    await expect(montar().fonte[metodo](812)).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
-    Object.values(TrazerAPI).forEach(daApi =>
-      expect(daApi).not.toHaveBeenCalled()
-    );
+  // Só o desfazer fica para a Fatia 3: a fonte diz que não tem, e a tela não
+  // o mostra.
+  it('diz que ainda não tem o desfazer', () => {
+    expect(montar().fonte.temDesfazer).toBe(false);
   });
+
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    '%s fica para a Fatia 3: FONTE_REAL_PENDENTE',
+    async metodo => {
+      await expect(montar().fonte[metodo](812)).rejects.toMatchObject({
+        name: 'FONTE_REAL_PENDENTE',
+      });
+      Object.values(TrazerAPI).forEach(daApi =>
+        expect(daApi).not.toHaveBeenCalled()
+      );
+    }
+  );
+
+  it.each([
+    ['responder', [{ clientes: 'sim_todas' }]],
+    ['consertar', [14, 'x']],
+    ['deixarDeFora', [14]],
+    ['reabrir', [14]],
+  ])(
+    '%s numa leitura que a fonte não leu dá erro nomeado e não escreve',
+    async (metodo, argumentos) => {
+      await expect(
+        montar().fonte[metodo](999, ...argumentos)
+      ).rejects.toMatchObject({ name: 'LEITURA_NAO_ENCONTRADA' });
+      Object.values(TrazerAPI).forEach(daApi =>
+        expect(daApi).not.toHaveBeenCalled()
+      );
+    }
+  );
 });
 
 describe('ler', () => {
@@ -127,37 +157,33 @@ describe('ler', () => {
       id: 812,
       arquivo: 'Clientes 2025.xlsx',
       valores: 'inteiros',
+      temEmpresa: true,
       colunas: COLUNAS,
       perguntas: [],
+      respostas: {},
       resumo: { total: 200, novas: 180, completadas: 15, comProblema: 1 },
       exemplos: [],
       problemas: [problema(14)],
+      problemasTotal: 1,
     });
   });
 
-  it('busca todas as páginas dos problemas', async () => {
+  // As outras páginas vêm a pedido ("Mostrar mais": paginasDeProblemas.spec.js).
+  it('traz só a primeira página dos problemas e diz quantos há ao todo', async () => {
     const { fonte } = montar();
-    const pagina = (numero, linhas) =>
-      pronta({
-        problemas: linhas.map(problema),
-        problemas_total: 5,
-        pagina: numero,
-        por_pagina: 2,
-      });
     responde('enviar', LENDO);
     responde(
       'leitura',
-      pagina(1, [14, 37]),
-      pagina(2, [62, 143]),
-      pagina(3, [171])
+      pronta({
+        problemas: [14, 37].map(problema),
+        problemas_total: 5,
+        por_pagina: 2,
+      })
     );
     const leitura = await fonte.ler(PLANILHA);
-    expect(TrazerAPI.leitura.mock.calls).toEqual([
-      [812, 1],
-      [812, 2],
-      [812, 3],
-    ]);
-    expect(leitura.problemas.map(p => p.linha)).toEqual([14, 37, 62, 143, 171]);
+    expect(TrazerAPI.leitura.mock.calls).toEqual([[812, 1]]);
+    expect(leitura.problemas.map(p => p.linha)).toEqual([14, 37]);
+    expect(leitura.problemasTotal).toBe(5);
   });
 
   it.each([
@@ -181,13 +207,17 @@ describe('ler', () => {
     expect(TrazerAPI.leitura).not.toHaveBeenCalled();
   });
 
-  it('para de perguntar no teto de tempo e vira erro de leitura', async () => {
+  // A planilha continua no servidor: o erro leva o id, para a tela perguntar
+  // por ela depois sem enviar o arquivo de novo.
+  it('para de perguntar no teto de tempo e diz que a leitura ficou pendente', async () => {
     const { fonte, relogio } = montar();
     responde('enviar', LENDO);
     TrazerAPI.leitura.mockResolvedValue({ data: LENDO });
     await expect(fonte.ler(PLANILHA)).rejects.toMatchObject({
-      name: 'LEITURA_DEMOROU',
+      name: 'LEITURA_PENDENTE',
+      leituraId: 812,
     });
+    expect(TrazerAPI.enviar).toHaveBeenCalledTimes(1);
     expect(relogio.agora).toBe(TETO);
     expect(TrazerAPI.leitura).toHaveBeenCalledTimes(TETO / INTERVALO + 1);
   });
@@ -256,12 +286,9 @@ describe('trocarDestino', () => {
     coluna.nome === 'Situação' ? { ...coluna, destino: 'nao_guardar' } : coluna
   );
 
-  it('troca a coluna do índice pedido e encaixa as colunas que voltam', async () => {
+  it('troca a coluna do índice pedido e usa a leitura inteira que volta', async () => {
     const { fonte, leitura } = await comLeitura();
-    responde('trocarColuna', {
-      situacao: 'pronta',
-      colunas: COM_SITUACAO_FORA,
-    });
+    responde('trocarColuna', pronta({ colunas: COM_SITUACAO_FORA }));
     const nova = await fonte.trocarDestino(812, 6, 'nao_guardar');
     expect(TrazerAPI.trocarColuna).toHaveBeenCalledWith(812, 6, {
       destino: 'nao_guardar',
@@ -270,18 +297,20 @@ describe('trocarDestino', () => {
     expect(nova).toEqual({ ...leitura, colunas: COM_SITUACAO_FORA });
   });
 
-  it('quando o servidor confere de novo, pergunta até sair de "lendo"', async () => {
+  it('quando o servidor confere de novo, devolve o marcador sem esperar; quem retoma pergunta até sair de "lendo"', async () => {
     const { fonte, espera } = await comLeitura();
     const conferida = pronta({
       colunas: COM_SITUACAO_FORA,
       resumo: { total: 200, novas: 170, completadas: 15, comProblema: 15 },
     });
     responde('trocarColuna', LENDO);
-    responde('leitura', LENDO, conferida);
-    const nova = await fonte.trocarDestino(812, 1, 'nao_guardar');
+    expect(await fonte.trocarDestino(812, 1, 'nao_guardar')).toEqual(MARCADOR);
     expect(TrazerAPI.trocarColuna).toHaveBeenCalledWith(812, 1, {
       destino: 'nao_guardar',
     });
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+    responde('leitura', LENDO, conferida);
+    const nova = await fonte.retomar(812);
     // Igual ao `ler`: pergunta na hora e só espera entre uma pergunta e outra.
     expect(TrazerAPI.leitura).toHaveBeenCalledTimes(2);
     expect(espera.mock.calls).toEqual([[INTERVALO]]);
@@ -289,21 +318,19 @@ describe('trocarDestino', () => {
     expect(nova.colunas).toEqual(COM_SITUACAO_FORA);
   });
 
-  it('a troca seguinte parte da leitura que a anterior deixou', async () => {
+  it('a leitura devolvida é cópia: mexer nela não muda a que a escrita seguinte usa', async () => {
     const { fonte } = await comLeitura();
-    responde('trocarColuna', {
-      situacao: 'pronta',
-      colunas: COM_SITUACAO_FORA,
-    });
+    responde('trocarColuna', pronta({ colunas: COM_SITUACAO_FORA }));
     const primeira = await fonte.trocarDestino(812, 6, 'nao_guardar');
-    primeira.problemas[0].estado = 'deixado';
-    const semCel = COM_SITUACAO_FORA.map(coluna =>
-      coluna.nome === 'Cel' ? { ...coluna, destino: 'nao_guardar' } : coluna
-    );
-    responde('trocarColuna', { situacao: 'pronta', colunas: semCel });
-    const segunda = await fonte.trocarDestino(812, 1, 'nao_guardar');
-    expect(segunda.colunas).toEqual(semCel);
-    expect(segunda.problemas[0].estado).toBe('aberto');
+    primeira.problemas[0].nome = 'outro nome';
+    primeira.colunas[2].destino = 'cidade';
+    responde('deixarDeFora', {
+      problema: { ...problema(14), estado: 'deixado' },
+      entram: 195,
+    });
+    const segunda = await fonte.deixarDeFora(812, 14);
+    expect(segunda.colunas).toEqual(COM_SITUACAO_FORA);
+    expect(segunda.problemas).toEqual([{ ...problema(14), estado: 'deixado' }]);
   });
 
   it('nome de coluna repetido: a troca vai para o índice pedido', async () => {
@@ -334,23 +361,15 @@ describe('trocarDestino', () => {
     expect(TrazerAPI.trocarColuna).not.toHaveBeenCalled();
   });
 
-  // Estes três destinos o servidor só conhece na Fatia 2.
-  it.each(['cidade', 'telefone_da_empresa', 'cliente'])(
-    'destino %s fica para a Fatia 2: FONTE_REAL_PENDENTE, sem falar com o servidor',
-    async destino => {
-      const { fonte } = await comLeitura();
-      await expect(fonte.trocarDestino(812, 1, destino)).rejects.toMatchObject({
-        name: 'FONTE_REAL_PENDENTE',
-      });
-      expect(TrazerAPI.trocarColuna).not.toHaveBeenCalled();
-    }
-  );
-
+  // Cidade, telefone da empresa e "se é cliente" entraram na Fatia 2.
   it.each([
     'nome',
     'telefone',
     'email',
     'empresa',
+    'cidade',
+    'telefone_da_empresa',
+    'cliente',
     'informacao',
     'nao_guardar',
   ])('destino %s vai para o servidor', async destino => {
@@ -360,15 +379,30 @@ describe('trocarDestino', () => {
     expect(TrazerAPI.trocarColuna).toHaveBeenCalledWith(812, 6, { destino });
   });
 
-  it('leitura que some no meio da conferência (404) vira erro nomeado, sem perguntar de novo', async () => {
-    const { fonte, espera } = await comLeitura();
-    responde('trocarColuna', LENDO);
-    TrazerAPI.leitura.mockRejectedValue(erroHttp(404));
+  it('informação nova leva o nome do campo e o para que serve, e a coluna volta com eles', async () => {
+    const { fonte } = await comLeitura();
+    const campo = {
+      nome: 'Vencimento',
+      para_que_serve: 'mês em que o seguro vence',
+    };
+    const comCampo = COLUNAS.map(coluna =>
+      coluna.indice === 6 ? { ...coluna, campo } : coluna
+    );
+    responde('trocarColuna', { situacao: 'pronta', colunas: comCampo });
+    const nova = await fonte.trocarDestino(812, 6, 'informacao', campo);
+    expect(TrazerAPI.trocarColuna).toHaveBeenCalledWith(812, 6, {
+      destino: 'informacao',
+      ...campo,
+    });
+    expect(nova.colunas[2].campo).toEqual(campo);
+  });
+
+  it('tirar a última coluna de contato (422 `sem_contato`) ganha nome', async () => {
+    const { fonte } = await comLeitura();
+    TrazerAPI.trocarColuna.mockRejectedValueOnce(erroHttp(422, 'sem_contato'));
     await expect(
       fonte.trocarDestino(812, 1, 'nao_guardar')
-    ).rejects.toMatchObject({ name: 'LEITURA_NAO_ENCONTRADA' });
-    expect(TrazerAPI.leitura).toHaveBeenCalledTimes(1);
-    expect(espera).not.toHaveBeenCalled();
+    ).rejects.toMatchObject({ name: 'TROCA_SEM_CONTATO' });
   });
 
   it('leitura que a fonte não leu dá erro nomeado e não escreve', async () => {
@@ -379,36 +413,322 @@ describe('trocarDestino', () => {
     expect(TrazerAPI.trocarColuna).not.toHaveBeenCalled();
   });
 
-  it('recusa do servidor sobe como veio; sem acesso ganha nome', async () => {
+  it('o que o servidor não nomeia sobe como veio; sem acesso ganha nome', async () => {
     const { fonte } = await comLeitura();
-    const recusado = erroHttp(422, 'sem_contato');
-    TrazerAPI.trocarColuna.mockRejectedValueOnce(recusado);
-    await expect(fonte.trocarDestino(812, 1, 'nao_guardar')).rejects.toBe(
-      recusado
-    );
-    TrazerAPI.trocarColuna.mockRejectedValueOnce(erroHttp(403));
+    const caiu = erroHttp(500);
+    TrazerAPI.trocarColuna.mockRejectedValueOnce(caiu);
+    await expect(fonte.trocarDestino(812, 1, 'nao_guardar')).rejects.toBe(caiu);
+    TrazerAPI.trocarColuna.mockRejectedValueOnce(erroHttp(401));
     await expect(
       fonte.trocarDestino(812, 1, 'nao_guardar')
     ).rejects.toMatchObject({ name: 'SEM_ACESSO' });
   });
 });
 
-describe('trazer e tentar de novo', () => {
-  it.each(['trazer', 'tentarDeNovo'])(
-    '%s confirma a importação e devolve o id da lista',
-    async metodo => {
-      const { fonte } = montar();
-      responde('confirmar', { id: 812, status: 'confirmed' });
-      expect(await fonte[metodo](812)).toEqual({ trazidaId: 812 });
-      expect(TrazerAPI.confirmar).toHaveBeenCalledWith(812);
+describe('responder', () => {
+  const PERGUNTAS = [{ id: 'clientes' }, { id: 'telefone', coluna: 'Cel' }];
+  const comPerguntas = (extra = {}) =>
+    pronta({ perguntas: PERGUNTAS, ...extra });
+  const COM_CLIENTE = COLUNAS.map(coluna =>
+    coluna.indice === 6 ? { ...coluna, destino: 'cliente' } : coluna
+  );
+
+  it('manda as respostas com os nomes do servidor e usa a leitura que volta', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    responde(
+      'responder',
+      comPerguntas({
+        colunas: COM_CLIENTE,
+        respostas: {
+          clientes: 'algumas',
+          coluna_cliente: 6,
+          telefone: 'da_pessoa',
+        },
+      })
+    );
+    const nova = await fonte.responder(812, {
+      clientes: 'algumas',
+      colunaCliente: 6,
+      telefone: 'da_pessoa',
+    });
+    expect(TrazerAPI.responder).toHaveBeenCalledWith(812, {
+      clientes: 'algumas',
+      coluna_cliente: 6,
+      telefone: 'da_pessoa',
+    });
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+    expect(nova.colunas).toEqual(COM_CLIENTE);
+    expect(nova.respostas).toEqual({
+      clientes: 'algumas',
+      colunaCliente: 6,
+      telefone: 'da_pessoa',
+    });
+    expect(nova.perguntas).toEqual(PERGUNTAS);
+  });
+
+  it('quando o servidor confere de novo, devolve o marcador sem esperar; quem retoma pergunta até sair de "lendo"', async () => {
+    const { fonte, espera } = await comLeitura(comPerguntas());
+    responde('responder', LENDO);
+    expect(
+      await fonte.responder(812, {
+        clientes: 'ainda_nao',
+        telefone: 'nao_usar',
+      })
+    ).toEqual(MARCADOR);
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+    responde(
+      'leitura',
+      LENDO,
+      comPerguntas({
+        respostas: { clientes: 'ainda_nao', telefone: 'nao_usar' },
+        resumo: { total: 200, novas: 170, completadas: 15, comProblema: 15 },
+      })
+    );
+    const nova = await fonte.retomar(812);
+    expect(TrazerAPI.leitura).toHaveBeenCalledTimes(2);
+    expect(espera.mock.calls).toEqual([[INTERVALO]]);
+    expect(nova.resumo.novas).toBe(170);
+    expect(nova.respostas).toEqual({
+      clientes: 'ainda_nao',
+      telefone: 'nao_usar',
+    });
+  });
+
+  // Quem volta do Conferir às perguntas e responde de novo não perde o que já
+  // consertou: o servidor devolve a leitura inteira, com o estado de cada linha.
+  it('não perde o conserto já feito quando o servidor devolve os problemas', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    const guardado = {
+      ...problema(14),
+      estado: 'guardado',
+      corrigido: '+55 11 97380-0014',
+    };
+    responde('consertar', { problema: guardado });
+    await fonte.consertar(812, 14, '+5511973800014');
+    responde(
+      'responder',
+      comPerguntas({
+        respostas: { clientes: 'sim_todas' },
+        problemas: [{ ...problema(14), ...guardado }],
+      })
+    );
+    const nova = await fonte.responder(812, { clientes: 'sim_todas' });
+    expect(nova.problemas).toEqual([{ ...problema(14), ...guardado }]);
+  });
+
+  it('a escrita seguinte parte da leitura que as respostas devolveram', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    responde('deixarDeFora', {
+      problema: { ...problema(14), estado: 'deixado' },
+    });
+    await fonte.deixarDeFora(812, 14);
+    responde(
+      'responder',
+      comPerguntas({
+        colunas: COM_CLIENTE,
+        respostas: { clientes: 'sim_todas' },
+        problemas: [{ ...problema(14), estado: 'deixado' }],
+      })
+    );
+    const nova = await fonte.responder(812, { clientes: 'sim_todas' });
+    expect(nova.problemas).toEqual([{ ...problema(14), estado: 'deixado' }]);
+    expect(nova.colunas).toEqual(COM_CLIENTE);
+    expect(nova.resumo.total).toBe(200);
+    // E a escrita seguinte parte dessa leitura.
+    responde('reabrir', { problema: problema(14) });
+    const reaberta = await fonte.reabrir(812, 14);
+    expect(reaberta.problemas).toEqual([problema(14)]);
+    expect(reaberta.colunas).toEqual(COM_CLIENTE);
+  });
+
+  it('a resposta traz a primeira página dos problemas; as outras vêm a pedido', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    const pagina = (numero, linhas) =>
+      comPerguntas({
+        problemas: linhas.map(problema),
+        problemas_total: 3,
+        pagina: numero,
+        por_pagina: 2,
+      });
+    responde('responder', pagina(1, [14, 37]));
+    const nova = await fonte.responder(812, { clientes: 'sim_todas' });
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+    expect(nova.problemas.map(p => p.linha)).toEqual([14, 37]);
+    expect(nova.problemasTotal).toBe(3);
+    responde('leitura', pagina(2, [62]));
+    const comMais = await fonte.maisProblemas(812);
+    expect(TrazerAPI.leitura.mock.calls).toEqual([[812, 2]]);
+    expect(comMais.problemas.map(p => p.linha)).toEqual([14, 37, 62]);
+  });
+
+  it('"não usar" no único telefone da planilha (422 `sem_contato`) ganha nome', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    TrazerAPI.responder.mockRejectedValueOnce(erroHttp(422, 'sem_contato'));
+    await expect(
+      fonte.responder(812, { telefone: 'nao_usar' })
+    ).rejects.toMatchObject({ name: 'TROCA_SEM_CONTATO' });
+  });
+
+  it('sem acesso ganha nome; outro erro sobe como veio', async () => {
+    const { fonte } = await comLeitura(comPerguntas());
+    TrazerAPI.responder.mockRejectedValueOnce(erroHttp(401));
+    await expect(
+      fonte.responder(812, { clientes: 'sim_todas' })
+    ).rejects.toMatchObject({ name: 'SEM_ACESSO' });
+    const caiu = erroHttp(500);
+    TrazerAPI.responder.mockRejectedValueOnce(caiu);
+    await expect(fonte.responder(812, { clientes: 'sim_todas' })).rejects.toBe(
+      caiu
+    );
+  });
+});
+
+describe('consertar, deixar de fora e voltar atrás', () => {
+  const REPETIDA = {
+    linha: 143,
+    tipo: 'duplicada',
+    nome: 'Paulo Hortêncio',
+    valor: 'Paulo Hortêncio',
+    outraLinha: 88,
+    estado: 'aberto',
+  };
+  const comDois = () =>
+    comLeitura(pronta({ problemas: [problema(14), REPETIDA] }));
+
+  // O servidor devolve a linha inteira, como a tela a mostra agora.
+  it('consertar manda o valor e encaixa a linha que volta, sem reler a planilha', async () => {
+    const { fonte } = await comDois();
+    responde('consertar', {
+      problema: {
+        ...problema(14),
+        estado: 'guardado',
+        corrigido: '+55 11 97380-0014',
+      },
+    });
+    const nova = await fonte.consertar(812, 14, '+5511973800014');
+    expect(TrazerAPI.consertar).toHaveBeenCalledWith(812, 14, {
+      valor: '+5511973800014',
+    });
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+    expect(nova.problemas).toEqual([
+      { ...problema(14), estado: 'guardado', corrigido: '+55 11 97380-0014' },
+      REPETIDA,
+    ]);
+  });
+
+  it('linha repetida: manda com qual das duas linhas fica', async () => {
+    const { fonte } = await comDois();
+    // Ficar com a outra linha deixa esta de fora.
+    responde('consertar', { problema: { ...REPETIDA, estado: 'deixado' } });
+    const nova = await fonte.consertar(812, 143, 88);
+    expect(TrazerAPI.consertar).toHaveBeenCalledWith(812, 143, {
+      ficar_com: 88,
+    });
+    expect(nova.problemas[1]).toEqual({ ...REPETIDA, estado: 'deixado' });
+  });
+
+  it('o servidor recusa o valor (422 `valor_invalido`): erro nomeado com o motivo, e nada muda', async () => {
+    const { fonte } = await comDois();
+    TrazerAPI.consertar.mockRejectedValueOnce(
+      erroHttp(422, 'valor_invalido', {
+        motivo: 'invalid_brazilian_mobile_number',
+      })
+    );
+    await expect(fonte.consertar(812, 14, '+551199')).rejects.toMatchObject({
+      name: 'VALOR_INVALIDO',
+      motivo: 'invalid_brazilian_mobile_number',
+    });
+    // A escrita seguinte parte da leitura como estava: a linha 14 ainda aberta.
+    responde('deixarDeFora', { problema: { ...REPETIDA, estado: 'deixado' } });
+    const nova = await fonte.deixarDeFora(812, 143);
+    expect(nova.problemas[0]).toEqual(problema(14));
+  });
+
+  it('deixar de fora e voltar atrás escrevem na linha e encaixam o que volta', async () => {
+    const { fonte } = await comDois();
+    responde('deixarDeFora', {
+      problema: { ...problema(14), estado: 'deixado' },
+    });
+    const deixada = await fonte.deixarDeFora(812, 14);
+    expect(TrazerAPI.deixarDeFora).toHaveBeenCalledWith(812, 14);
+    expect(deixada.problemas[0].estado).toBe('deixado');
+    responde('reabrir', { problema: { ...problema(14), estado: 'aberto' } });
+    const reaberta = await fonte.reabrir(812, 14);
+    expect(TrazerAPI.reabrir).toHaveBeenCalledWith(812, 14);
+    expect(reaberta.problemas).toEqual([problema(14), REPETIDA]);
+    expect(TrazerAPI.leitura).not.toHaveBeenCalled();
+  });
+
+  it('voltar atrás numa linha consertada tira o valor corrigido', async () => {
+    const { fonte } = await comDois();
+    responde('consertar', {
+      problema: {
+        ...problema(14),
+        estado: 'guardado',
+        corrigido: '+55 11 97380-0014',
+      },
+    });
+    await fonte.consertar(812, 14, '+5511973800014');
+    responde('reabrir', { problema: problema(14) });
+    const reaberta = await fonte.reabrir(812, 14);
+    expect(reaberta.problemas[0]).toEqual(problema(14));
+  });
+
+  it.each([
+    ['consertar', ['x']],
+    ['deixarDeFora', []],
+    ['reabrir', []],
+  ])(
+    '%s numa linha que a leitura não tem dá erro nomeado e não escreve',
+    async (metodo, argumentos) => {
+      const { fonte } = await comDois();
+      await expect(
+        fonte[metodo](812, 999, ...argumentos)
+      ).rejects.toMatchObject({ name: 'LINHA_NAO_ENCONTRADA' });
+      expect(TrazerAPI[metodo]).not.toHaveBeenCalled();
     }
   );
 
-  it.each(['trazer', 'tentarDeNovo'])(
-    '%s recusado por falta de acesso vira SEM_ACESSO',
+  it.each(['consertar', 'deixarDeFora', 'reabrir'])(
+    '%s: sem acesso ganha nome; outro erro sobe como veio',
     async metodo => {
+      const { fonte } = await comDois();
+      TrazerAPI[metodo].mockRejectedValueOnce(erroHttp(401));
+      await expect(fonte[metodo](812, 14, 'x')).rejects.toMatchObject({
+        name: 'SEM_ACESSO',
+      });
+      const caiu = erroHttp(500);
+      TrazerAPI[metodo].mockRejectedValueOnce(caiu);
+      await expect(fonte[metodo](812, 14, 'x')).rejects.toBe(caiu);
+    }
+  );
+});
+
+describe('trazer e tentar de novo', () => {
+  it('trazer fecha a conferência pela rota da leitura, e a lista é a que o servidor diz (não a leitura que a tela mandou)', async () => {
+    const { fonte } = montar();
+    responde('trazer', { trazidaId: 813 });
+    expect(await fonte.trazer(812)).toEqual({ trazidaId: 813 });
+    expect(TrazerAPI.trazer).toHaveBeenCalledWith(812);
+    expect(TrazerAPI.confirmar).not.toHaveBeenCalled();
+  });
+
+  it('tentar de novo continua pelo confirmar da importação, que já existia', async () => {
+    const { fonte } = montar();
+    responde('confirmar', { id: 812, status: 'queued' });
+    expect(await fonte.tentarDeNovo(812)).toEqual({ trazidaId: 812 });
+    expect(TrazerAPI.confirmar).toHaveBeenCalledWith(812);
+    expect(TrazerAPI.trazer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['trazer', 'trazer'],
+    ['tentarDeNovo', 'confirmar'],
+  ])(
+    '%s recusado por falta de acesso vira SEM_ACESSO',
+    async (metodo, daApi) => {
       const { fonte } = montar();
-      TrazerAPI.confirmar.mockRejectedValue(erroHttp(401));
+      TrazerAPI[daApi].mockRejectedValue(erroHttp(401));
       await expect(fonte[metodo](812)).rejects.toMatchObject({
         name: 'SEM_ACESSO',
       });
@@ -417,17 +737,24 @@ describe('trazer e tentar de novo', () => {
 });
 
 describe('andamento', () => {
-  it('devolve a porcentagem, a situação e os números da lista', async () => {
+  it('entrega só o que a tela usa, e a lista que está sendo desfeita já conta como desfeita', async () => {
     const { fonte } = montar();
-    const andamento = {
+    responde('andamento', {
+      id: 812,
       porcentagem: 42,
-      situacao: 'trazendo',
+      situacao: 'desfazendo',
       total: 195,
       novas: 70,
       completadas: 12,
-    };
-    responde('andamento', andamento);
-    expect(await fonte.andamento(812)).toEqual(andamento);
+      pode_tentar: false,
+    });
+    expect(await fonte.andamento(812)).toEqual({
+      porcentagem: 42,
+      situacao: 'desfeito',
+      total: 195,
+      novas: 70,
+      completadas: 12,
+    });
     expect(TrazerAPI.andamento).toHaveBeenCalledWith(812);
   });
 });
@@ -461,7 +788,7 @@ describe('historico', () => {
 
   it('sem acesso ganha nome; outro erro sobe como veio', async () => {
     const { fonte } = montar();
-    TrazerAPI.listas.mockRejectedValueOnce(erroHttp(403));
+    TrazerAPI.listas.mockRejectedValueOnce(erroHttp(401));
     await expect(fonte.historico()).rejects.toMatchObject({
       name: 'SEM_ACESSO',
     });

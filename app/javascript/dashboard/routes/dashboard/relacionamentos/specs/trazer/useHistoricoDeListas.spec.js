@@ -86,7 +86,8 @@ describe('lista sendo trazida', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('pergunta de novo a cada 1,5 s até ficar pronta, sem piscar o esqueleto', async () => {
+  // A espera cresce a cada pergunta (1,5 s, depois 2,25 s…): consultaComRecuo.spec.js.
+  it('pergunta de novo sozinha, com a espera crescendo, até ficar pronta, sem piscar o esqueleto', async () => {
     const historicoDaFonte = vi
       .fn()
       .mockResolvedValueOnce([lista('a', 'trazendo', { porcentagem: 40 })])
@@ -99,6 +100,8 @@ describe('lista sendo trazida', () => {
     expect(historico.listas.value[0].porcentagem).toBe(80);
     expect(historico.carregando.value).toBe(false);
     await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+    expect(historico.listas.value[0].situacao).toBe('trazendo');
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS / 2);
     expect(historico.listas.value[0].situacao).toBe('pronto');
     await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 3);
     expect(historicoDaFonte).toHaveBeenCalledTimes(3);

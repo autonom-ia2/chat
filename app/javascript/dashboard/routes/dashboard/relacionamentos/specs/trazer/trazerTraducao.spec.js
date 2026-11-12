@@ -1,18 +1,28 @@
 import {
   andamentoDaTela,
   colunaPeloIndice,
+  corpoDasRespostas,
+  corpoDoConserto,
   corpoDoDestino,
+  erroDaEscrita,
   erroDaLeitura,
   erroDoEnvio,
-  leituraComColunas,
+  leituraComMaisProblemas,
+  leituraComProblema,
   leituraDaTela,
   listaDaTela,
-  paginasDeProblemas,
+  problemaDaLeitura,
+  respostasDaTela,
 } from '../../fonte/trazerTraducao';
 
 // A tradução entre o servidor e a tela de "Trazer minha lista" (#2896): funções
 // puras. O contrato do servidor está em
 // spec/requests/api/v1/accounts/relacionamentos_trazer_spec.rb.
+const erroHttp = (status, error, extra = {}) =>
+  Object.assign(new Error(`Request failed with status code ${status}`), {
+    response: { status, data: { error, ...extra } },
+  });
+
 const PRONTA = {
   id: 812,
   situacao: 'pronta',
@@ -61,29 +71,21 @@ describe('leituraDaTela', () => {
       id: 812,
       arquivo: 'Clientes 2025.xlsx',
       valores: 'inteiros',
+      temEmpresa: true,
       colunas: PRONTA.colunas,
       perguntas: PRONTA.perguntas,
+      respostas: {},
       resumo: PRONTA.resumo,
       exemplos: PRONTA.exemplos,
       problemas: PRONTA.problemas,
+      // Quantas linhas precisam da pessoa ao todo (a tela mostra a 1ª página).
+      problemasTotal: 5,
     });
   });
 
-  it('usa os problemas de todas as páginas, na ordem em que vieram', () => {
-    const outraPagina = [
-      {
-        linha: 37,
-        tipo: 'email',
-        nome: 'Rita',
-        valor: 'rita',
-        estado: 'aberto',
-      },
-    ];
-    const leitura = leituraDaTela(PRONTA, [
-      ...PRONTA.problemas,
-      ...outraPagina,
-    ]);
-    expect(leitura.problemas.map(problema => problema.linha)).toEqual([14, 37]);
+  it('sem o total do servidor, valem os problemas que vieram', () => {
+    const { problemas_total: _, ...semTotal } = PRONTA;
+    expect(leituraDaTela(semTotal).problemasTotal).toBe(1);
   });
 
   it('devolve cópias: mexer na leitura não mexe na resposta', () => {
@@ -126,22 +128,50 @@ describe('leituraDaTela', () => {
   });
 });
 
-describe('paginasDeProblemas', () => {
-  it.each([
-    [5, 200, 1],
-    [200, 200, 1],
-    [201, 200, 2],
-    [1000, 200, 5],
-    [0, 200, 1],
-  ])('%s problemas de %s em %s: %s página(s)', (total, porPagina, paginas) => {
-    expect(
-      paginasDeProblemas({ problemas_total: total, por_pagina: porPagina })
-    ).toBe(paginas);
+// "Mostrar mais": a página seguinte entra depois do que a leitura já tem
+// (paginasDeProblemas.spec.js tem a fonte e a tela).
+describe('leituraComMaisProblemas', () => {
+  const RITA = {
+    linha: 37,
+    tipo: 'email',
+    nome: 'Rita',
+    valor: 'rita',
+    estado: 'aberto',
+  };
+
+  it('soma os problemas da página seguinte, na ordem em que vieram', () => {
+    const antes = leituraDaTela(PRONTA);
+    const depois = leituraComMaisProblemas(antes, {
+      ...PRONTA,
+      problemas: [RITA],
+      pagina: 2,
+    });
+    expect(depois.problemas.map(problema => problema.linha)).toEqual([14, 37]);
+    expect(depois.problemasTotal).toBe(5);
+    expect(antes.problemas).toHaveLength(1);
   });
 
-  it('sem os números da paginação é uma página só', () => {
-    expect(paginasDeProblemas({})).toBe(1);
-    expect(paginasDeProblemas({ problemas_total: 9, por_pagina: 0 })).toBe(1);
+  it('a linha que a leitura já tem não entra duas vezes, e fica como a tela a tem', () => {
+    const antes = leituraComProblema(
+      leituraDaTela(PRONTA),
+      { ...PRONTA.problemas[0], estado: 'deixado' },
+      195
+    );
+    const depois = leituraComMaisProblemas(antes, {
+      ...PRONTA,
+      problemas: [PRONTA.problemas[0], RITA],
+    });
+    expect(depois.problemas.map(problema => problema.linha)).toEqual([14, 37]);
+    expect(depois.problemas[0].estado).toBe('deixado');
+  });
+
+  it('o total passa a ser o que a página nova diz', () => {
+    const depois = leituraComMaisProblemas(leituraDaTela(PRONTA), {
+      ...PRONTA,
+      problemas: [RITA],
+      problemas_total: 2,
+    });
+    expect(depois.problemasTotal).toBe(2);
   });
 });
 
@@ -213,18 +243,237 @@ describe('colunaPeloIndice', () => {
 
 describe('corpoDoDestino', () => {
   it('manda só o destino', () => {
-    expect(corpoDoDestino('nao_guardar')).toEqual({ destino: 'nao_guardar' });
+    expect(corpoDoDestino('nao_guardar')).toStrictEqual({
+      destino: 'nao_guardar',
+    });
+    expect(corpoDoDestino('informacao')).toStrictEqual({
+      destino: 'informacao',
+    });
+  });
+
+  // Fatia 2 — a informação nova leva o nome do campo e o "para que serve".
+  it('informação nova leva o nome do campo e o para que serve, sem espaço sobrando', () => {
+    expect(
+      corpoDoDestino('informacao', {
+        nome: ' Vencimento ',
+        para_que_serve: ' mês em que o seguro vence ',
+      })
+    ).toStrictEqual({
+      destino: 'informacao',
+      nome: 'Vencimento',
+      para_que_serve: 'mês em que o seguro vence',
+    });
+  });
+
+  it('o para que serve é opcional: sem ele vai vazio', () => {
+    expect(corpoDoDestino('informacao', { nome: 'Vencimento' })).toStrictEqual({
+      destino: 'informacao',
+      nome: 'Vencimento',
+      para_que_serve: '',
+    });
+  });
+
+  it('os outros destinos não levam campo nenhum', () => {
+    expect(corpoDoDestino('cidade', { nome: 'Cidade' })).toStrictEqual({
+      destino: 'cidade',
+    });
   });
 });
 
-describe('leituraComColunas', () => {
-  it('troca só as colunas e não mexe na leitura de antes', () => {
-    const antes = leituraDaTela(PRONTA);
-    const colunas = [{ indice: 0, nome: 'Nome', destino: 'nao_guardar' }];
-    const depois = leituraComColunas(antes, colunas);
-    expect(depois.colunas).toEqual(colunas);
-    expect(depois.problemas).toEqual(antes.problemas);
-    expect(antes.colunas).toHaveLength(3);
+describe('respostas das perguntas', () => {
+  it('do servidor para a tela: `coluna_cliente` vira `colunaCliente`', () => {
+    expect(
+      respostasDaTela({
+        clientes: 'algumas',
+        coluna_cliente: 6,
+        telefone: 'da_pessoa',
+      })
+    ).toStrictEqual({
+      clientes: 'algumas',
+      colunaCliente: 6,
+      telefone: 'da_pessoa',
+    });
+  });
+
+  it('sem resposta nenhuma (ou sem o campo) é um objeto vazio', () => {
+    expect(respostasDaTela({})).toStrictEqual({});
+    expect(respostasDaTela(undefined)).toStrictEqual({});
+    expect(
+      respostasDaTela({ clientes: null, coluna_cliente: null })
+    ).toStrictEqual({});
+  });
+
+  it('a primeira coluna da planilha (índice 0) não some', () => {
+    expect(
+      respostasDaTela({ clientes: 'algumas', coluna_cliente: 0 })
+    ).toStrictEqual({ clientes: 'algumas', colunaCliente: 0 });
+    expect(
+      corpoDasRespostas({ clientes: 'algumas', colunaCliente: 0 })
+    ).toStrictEqual({ clientes: 'algumas', coluna_cliente: 0 });
+  });
+
+  it('da tela para o servidor: só o que foi respondido', () => {
+    expect(
+      corpoDasRespostas({ clientes: 'ainda_nao', telefone: 'nao_usar' })
+    ).toStrictEqual({ clientes: 'ainda_nao', telefone: 'nao_usar' });
+    expect(corpoDasRespostas({ clientes: 'sim_todas' })).toStrictEqual({
+      clientes: 'sim_todas',
+    });
+    expect(corpoDasRespostas({})).toStrictEqual({});
+  });
+
+  it('a coluna de cliente só vai quando a resposta é "algumas"', () => {
+    expect(
+      corpoDasRespostas({ clientes: 'sim_todas', colunaCliente: 6 })
+    ).toStrictEqual({ clientes: 'sim_todas' });
+  });
+
+  it('a leitura entrega as respostas que o servidor guardou', () => {
+    const leitura = leituraDaTela({
+      ...PRONTA,
+      respostas: { clientes: 'algumas', coluna_cliente: 6 },
+    });
+    expect(leitura.respostas).toStrictEqual({
+      clientes: 'algumas',
+      colunaCliente: 6,
+    });
+  });
+});
+
+describe('o conserto de uma linha', () => {
+  const REPETIDA = {
+    linha: 143,
+    tipo: 'duplicada',
+    nome: 'Paulo Hortêncio',
+    valor: 'Paulo Hortêncio',
+    outraLinha: 88,
+    estado: 'aberto',
+  };
+  const comRepetida = () =>
+    leituraDaTela({ ...PRONTA, problemas: [...PRONTA.problemas, REPETIDA] });
+
+  it('problemaDaLeitura acha o problema pela linha', () => {
+    expect(problemaDaLeitura(comRepetida(), 143).tipo).toBe('duplicada');
+  });
+
+  it('linha que a leitura não tem dá erro nomeado', () => {
+    expect(() => problemaDaLeitura(comRepetida(), 999)).toThrow(
+      expect.objectContaining({ name: 'LINHA_NAO_ENCONTRADA' })
+    );
+  });
+
+  it('telefone, e-mail e nome mandam o valor', () => {
+    expect(
+      corpoDoConserto(PRONTA.problemas[0], '+5511973800014')
+    ).toStrictEqual({ valor: '+5511973800014' });
+  });
+
+  it('linha repetida manda com qual linha fica', () => {
+    expect(corpoDoConserto(REPETIDA, 88)).toStrictEqual({ ficar_com: 88 });
+  });
+
+  // O servidor devolve a linha inteira (trazerTraducao.linhas.spec.js tem os
+  // corpos).
+  it('a linha que volta toma o lugar da que a leitura tinha', () => {
+    const antes = comRepetida();
+    const depois = leituraComProblema(antes, {
+      ...PRONTA.problemas[0],
+      estado: 'guardado',
+      corrigido: '+55 11 97380-0014',
+    });
+    expect(depois.problemas[0]).toStrictEqual({
+      ...PRONTA.problemas[0],
+      estado: 'guardado',
+      corrigido: '+55 11 97380-0014',
+    });
+    // A outra linha e o resto da leitura ficam como estavam.
+    expect(depois.problemas[1]).toStrictEqual(REPETIDA);
+    expect(depois.colunas).toStrictEqual(antes.colunas);
+    expect(antes.problemas[0].estado).toBe('aberto');
+  });
+
+  it('linha que volta a ficar aberta (ou vai para fora) perde o valor corrigido', () => {
+    const guardada = leituraComProblema(comRepetida(), {
+      ...PRONTA.problemas[0],
+      estado: 'guardado',
+      corrigido: '+55 11 97380-0014',
+    });
+    const reaberta = leituraComProblema(guardada, PRONTA.problemas[0]);
+    expect(reaberta.problemas[0]).toStrictEqual(PRONTA.problemas[0]);
+    const deixada = leituraComProblema(guardada, {
+      ...PRONTA.problemas[0],
+      estado: 'deixado',
+    });
+    expect(deixada.problemas[0]).toStrictEqual({
+      ...PRONTA.problemas[0],
+      estado: 'deixado',
+    });
+  });
+
+  it('o 422 `valor_invalido` vira erro nomeado, com o motivo', () => {
+    const falha = erroHttp(422, 'valor_invalido', {
+      motivo: 'invalid_brazilian_mobile_number',
+    });
+    const erro = erroDaEscrita(falha);
+    expect(erro).toMatchObject({
+      name: 'VALOR_INVALIDO',
+      motivo: 'invalid_brazilian_mobile_number',
+    });
+    expect(erro.cause).toBe(falha);
+  });
+
+  it('sem motivo, o erro nomeado vem com o motivo vazio', () => {
+    expect(erroDaEscrita(erroHttp(422, 'valor_invalido')).motivo).toBe('');
+  });
+
+  // As recusas que o servidor nomeia estão em trazerTraducao.linhas.spec.js.
+  it('o que o servidor não nomeia sobe como veio', () => {
+    const outro = erroHttp(422, 'codigo_que_nao_existe');
+    expect(erroDaEscrita(outro)).toBe(outro);
+    const caiu = erroHttp(500);
+    expect(erroDaEscrita(caiu)).toBe(caiu);
+  });
+});
+
+describe('erroDaEscrita', () => {
+  it('tirar a última coluna de contato (422 `sem_contato`) ganha nome', () => {
+    const falha = erroHttp(422, 'sem_contato');
+    const erro = erroDaEscrita(falha);
+    expect(erro.name).toBe('TROCA_SEM_CONTATO');
+    expect(erro.cause).toBe(falha);
+  });
+
+  it('o que o servidor não nomeia sobe como veio', () => {
+    const outra = erroHttp(422, 'codigo_que_nao_existe');
+    expect(erroDaEscrita(outra)).toBe(outra);
+  });
+});
+
+// Responder e trocar a coluna devolvem a leitura inteira (como o GET): ela toma
+// o lugar da que a tela tinha, com o que o servidor guardou de cada linha.
+describe('a leitura inteira que volta de uma escrita', () => {
+  it('vale o que o servidor devolve: colunas, respostas, exemplos e o estado de cada linha', () => {
+    const depois = leituraDaTela({
+      ...PRONTA,
+      colunas: [{ indice: 0, nome: 'Nome', destino: 'nome' }],
+      respostas: { clientes: 'sim_todas' },
+      exemplos: [{ ...PRONTA.exemplos[0], cliente: true }],
+      problemas: [
+        {
+          ...PRONTA.problemas[0],
+          estado: 'guardado',
+          corrigido: '+55 11 97380-0014',
+        },
+      ],
+    });
+    expect(depois.colunas).toHaveLength(1);
+    expect(depois.respostas).toStrictEqual({ clientes: 'sim_todas' });
+    expect(depois.exemplos[0].cliente).toBe(true);
+    expect(depois.problemas[0]).toMatchObject({
+      estado: 'guardado',
+      corrigido: '+55 11 97380-0014',
+    });
+    expect(depois.arquivo).toBe('Clientes 2025.xlsx');
   });
 });
 

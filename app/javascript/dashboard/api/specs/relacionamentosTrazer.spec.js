@@ -1,8 +1,9 @@
 import trazer from '../relacionamentosTrazer';
 import ApiClient from '../ApiClient';
 
-// As rotas de "Trazer minha lista" (#2896): ler a planilha, trocar o destino de
-// uma coluna, o histórico, o andamento e o confirmar que a importação já tinha.
+// As rotas de "Trazer minha lista" (#2896): ler a planilha, responder às
+// perguntas, consertar as linhas, trocar o destino de uma coluna, trazer, o
+// histórico, o andamento e o confirmar que a importação já tinha.
 describe('#RelacionamentosTrazerAPI', () => {
   const originalAxios = window.axios;
   const axiosMock = {
@@ -71,6 +72,38 @@ describe('#RelacionamentosTrazerAPI', () => {
   it('andamento lê o andamento da lista pelo id', () => {
     trazer.andamento(812);
     expect(axiosMock.get).toHaveBeenCalledWith(`${BASE}/listas/812/andamento`);
+  });
+
+  // Fatia 2: responder às perguntas, consertar a linha, deixar de fora, voltar
+  // atrás e trazer.
+  it('responder escreve as respostas das perguntas, com o corpo como veio', () => {
+    trazer.responder(812, { clientes: 'algumas', coluna_cliente: 6 });
+    expect(axiosMock.patch).toHaveBeenCalledWith(
+      `${BASE}/leituras/812/respostas`,
+      { clientes: 'algumas', coluna_cliente: 6 }
+    );
+  });
+
+  it('consertar escreve na linha da planilha, com o corpo como veio', () => {
+    trazer.consertar(812, 14, { valor: '+5511973800014' });
+    expect(axiosMock.patch).toHaveBeenCalledWith(
+      `${BASE}/leituras/812/linhas/14`,
+      { valor: '+5511973800014' }
+    );
+  });
+
+  it('deixarDeFora e reabrir são ações da linha, sem corpo', () => {
+    trazer.deixarDeFora(812, 14);
+    trazer.reabrir(812, 14);
+    expect(axiosMock.post.mock.calls).toEqual([
+      [`${BASE}/leituras/812/linhas/14/deixar_de_fora`],
+      [`${BASE}/leituras/812/linhas/14/reabrir`],
+    ]);
+  });
+
+  it('trazer fecha a conferência da leitura', () => {
+    trazer.trazer(812);
+    expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/leituras/812/trazer`);
   });
 
   it('confirmar usa o confirmar da importação de contatos, que já existe', () => {
