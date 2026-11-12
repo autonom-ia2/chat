@@ -148,7 +148,8 @@ const tirar = async id => {
 // O "Experimente" responde sempre uma situação: a falha da chamada vira "sem_permissao" ou "nao_consegui_consultar",
 // para a tela dizer uma frase só.
 // `confirmouPreco` (F7): o clique no botão com o preço, quando as grátis do card Premium acabaram. A resposta do
-// Premium traz o contador novo do card, que a tela mostra sem recarregar a lista.
+// Premium traz o contador novo do card, que a tela mostra sem recarregar a lista. Sem resposta, o card Premium lê a
+// lista de novo: a consulta pode ter saído e contado antes de a chamada falhar.
 const experimentar = async (fonte, valor, confirmouPreco = false) => {
   try {
     const { data } = await FerramentasProntasAPI.experimentar(
@@ -161,6 +162,7 @@ const experimentar = async (fonte, valor, confirmouPreco = false) => {
     }
     return data?.situacao ? data : { situacao: 'nao_consegui_consultar' };
   } catch (falha) {
+    if (premium.value[fonte]) await carregar();
     const motivo = motivoDoErro(falha);
     if (motivo === 'SEM_PERMISSAO') return { situacao: 'sem_permissao' };
     if (motivo === 'DESLIGADA') return { situacao: 'desligada' };

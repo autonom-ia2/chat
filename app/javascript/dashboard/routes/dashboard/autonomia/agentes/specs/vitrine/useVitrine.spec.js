@@ -239,6 +239,42 @@ describe('useVitrine · experimentar e busca', () => {
     expect(vitrine.premiumDe('historico_placa')).toEqual(novo);
   });
 
+  // Revisor (useVitrine.js:163): a chamada que falha pode ter consultado e contado (o corte do servidor depois de a
+  // consulta sair). O contador do card Premium é lido de novo do servidor; o card grátis não pede a lista de novo.
+  it('a failed Premium test reads the card counter again; a free card does not', async () => {
+    const premiumDoServidor = premiumRestantes => ({
+      data: {
+        ...LISTA,
+        fontes: [
+          ...LISTA.fontes,
+          {
+            chave: 'historico_placa',
+            premium: {
+              gratis: 20,
+              restantes: premiumRestantes,
+              precos: ['0.09'],
+            },
+          },
+        ],
+      },
+    });
+    api.listar.mockResolvedValueOnce(premiumDoServidor(1));
+    const vitrine = await novoEstado();
+    await vitrine.carregar();
+    api.listar.mockResolvedValueOnce(premiumDoServidor(0));
+    api.experimentar.mockRejectedValueOnce(falha(503));
+
+    expect(await vitrine.experimentar('historico_placa', 'ABC1D23')).toEqual({
+      situacao: 'nao_consegui_consultar',
+    });
+    expect(api.listar).toHaveBeenCalledTimes(2);
+    expect(vitrine.premiumDe('historico_placa').restantes).toBe(0);
+
+    api.experimentar.mockRejectedValueOnce(falha(503));
+    await vitrine.experimentar('cep', '1');
+    expect(api.listar).toHaveBeenCalledTimes(2);
+  });
+
   it('a failed call becomes one situation the screen can say', async () => {
     const vitrine = await novoEstado();
     api.experimentar.mockRejectedValueOnce(falha(401));
