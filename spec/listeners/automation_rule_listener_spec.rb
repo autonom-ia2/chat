@@ -129,6 +129,32 @@ describe AutomationRuleListener do
         listener.conversation_opened(event)
         expect(AutomationRules::ActionService).not_to have_received(:new).with(automation_rule, account, conversation)
       end
+
+      # #2600: o aviso de devolução da resposta do agente entra pelo In-Reply-To na conversa resolvida e a reabre.
+      it 'does not call AutomationRules::ActionService when a bounce reopens a resolved email conversation' do
+        email_channel = create(:channel_email, account: account)
+        resolvida = create(:conversation, inbox: email_channel.inbox, account: account, status: :resolved)
+        create(:message, conversation: resolvida, account: account, message_type: :outgoing,
+                         source_id: 'conversation/dsn-2600/messages/1@gmail.com')
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        bounce = create_inbound_email_from_fixture('dsn_resposta_do_agente_com_in_reply_to.eml').mail
+        Imap::ImapMailbox.new.process(bounce, email_channel)
+        expect(resolvida.reload).to be_open
+        expect(resolvida.messages.incoming.last).to be_auto_reply_email
+
+        listener.conversation_opened(Events::Base.new('conversation_opened', Time.zone.now, { conversation: resolvida }))
+        expect(AutomationRules::ActionService).not_to have_received(:new)
+      end
+
+      it 'calls AutomationRules::ActionService when the contact reopens a conversation an auto reply started' do
+        conversation.update!(additional_attributes: { 'auto_reply' => true })
+        create(:message, conversation: conversation, account: account, message_type: :incoming)
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        listener.conversation_opened(event)
+        expect(AutomationRules::ActionService).to have_received(:new).with(automation_rule, account, conversation)
+      end
     end
   end
 
