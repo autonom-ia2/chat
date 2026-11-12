@@ -93,6 +93,48 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
     expect(Rails.logger).to have_received(:warn).with(a_string_including('já fechada como entrega incerta'))
   end
 
+  it 'a execução com `em_andamento` agenda o varredor da conta para depois do prazo' do
+    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
+
+    expect { consultar }.to have_enqueued_job(described_class).with(account.id)
+  end
+
+  it 'a execução sem `em_andamento` (o agente) não agenda o varredor' do
+    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
+
+    expect { consultar(em_andamento: false) }.not_to have_enqueued_job(described_class)
+  end
+
+  context 'without a conta: a varredura periódica do config/schedule.yml' do
+    def em_andamento_de(conta, criada_em)
+      premium::Registro.create!(account: conta, fonte: 'certidoes_empresa', consulta: 'divida_uniao', dataset: 'ondemand_pgfn_company',
+                                dia: Time.zone.today, resultado: 'em_andamento', cobranca: 'sem_cobranca', created_at: criada_em)
+    end
+
+    it 'fecha a linha órfã de todas as contas, pela mesma regra, e deixa a que ainda está no prazo' do
+      outra = create(:account)
+      orfa = em_andamento!(10.minutes.ago)
+      orfa_de_outra = em_andamento_de(outra, 10.minutes.ago)
+      nova = em_andamento_de(outra, 10.seconds.ago)
+
+      described_class.perform_now
+
+      expect(orfa.reload).to have_attributes(resultado: 'falha', motivo: 'entrega_incerta', custo: BigDecimal('0.10'))
+      expect(orfa_de_outra.reload).to have_attributes(resultado: 'falha', motivo: 'entrega_incerta', custo: BigDecimal('0.10'))
+      expect(nova.reload.resultado).to eq('em_andamento')
+      expect(premium::Saldo.count).to eq(0)
+    end
+
+    it 'está agendada no config/schedule.yml, sem conta nos argumentos' do
+      schedule = YAML.load_file(Rails.root.join('config/schedule.yml'))
+      entrada = schedule.values.find { |item| item['class'] == described_class.name }
+
+      expect(entrada).to include('queue' => 'scheduled_jobs')
+      expect(entrada['cron']).to be_present
+      expect(entrada['args']).to be_nil
+    end
+  end
+
   it 'o prazo do varredor cobre a consulta mais lenta (sob demanda) com folga' do
     expect(described_class::LIMITE).to be > (premium::Dataset::PRAZO_SOB_DEMANDA + premium::ConsultaPaga::FOLGA).seconds
   end
