@@ -8,6 +8,11 @@ import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
 import { acharPasso } from '../receita';
 import { linhasDoEnsaio } from '../ensaio';
+import {
+  ensaiarComPassosNovos,
+  temPassoNovo,
+} from '../passosNovos/adaptadorFalso';
+import LivreBuscaNoEnsaio from '../passosNovos/LivreBuscaNoEnsaio.vue';
 
 // #2498 — Ensaiar: o que a automação faria nas conversas recentes que a pessoa
 // enxerga, sem fazer nada. A automação salva ensaia a versão dela; com
@@ -46,12 +51,24 @@ const corpo = conversaId => ({
   conversaId,
 });
 
+// Protótipo #2931–#2936: a receita com passo novo ainda não passa no servidor;
+// o ensaio dela vem do adaptador falso, com as duas conversas de exemplo. O
+// caminho do "decidir" sem nome vira "Caminho N".
+const rotuloDoGalho = ramo =>
+  t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(ramo.split('.')[1]) + 1 });
+// O ensaio de exemplo avisa no topo: as conversas são inventadas.
+const deExemplo = computed(() => temPassoNovo(props.receita.passos));
+const pedirEnsaio = conversaId =>
+  deExemplo.value
+    ? ensaiarComPassosNovos(props.receita, rotuloDoGalho)
+    : AutomacoesAPI.ensaiar(props.automacaoId, corpo(conversaId));
+
 const carregar = async () => {
   estado.value = 'carregando';
   problemas.value = [];
   extra.value = null;
   try {
-    const { data } = await AutomacoesAPI.ensaiar(props.automacaoId, corpo());
+    const { data } = await pedirEnsaio();
     recorrente.value = data.recorrente || null;
     if (recorrente.value) {
       estado.value = 'pronto';
@@ -77,10 +94,7 @@ const ensaiarOutra = async conversaId => {
     return;
   }
   try {
-    const { data } = await AutomacoesAPI.ensaiar(
-      props.automacaoId,
-      corpo(conversaId)
-    );
+    const { data } = await pedirEnsaio(conversaId);
     [extra.value] = data.conversas;
     escolhida.value = conversaId;
   } catch {
@@ -182,6 +196,15 @@ const ICONE = {
         @click="emit('fechar')"
       />
     </div>
+
+    <p
+      v-if="deExemplo"
+      data-ensaio-de-exemplo
+      role="note"
+      class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-12"
+    >
+      {{ $t('AUTOMACAO_LIVRE.PASSOS_NOVOS.ENSAIO_DE_EXEMPLO') }}
+    </p>
 
     <div
       v-if="estado === 'carregando'"
@@ -381,6 +404,11 @@ const ICONE = {
                 >
                   {{ linha.balao }}
                 </div>
+                <LivreBuscaNoEnsaio
+                  v-if="linha.consulta"
+                  :passo="linha.consulta"
+                  class="ms-9"
+                />
               </template>
             </li>
           </ol>
