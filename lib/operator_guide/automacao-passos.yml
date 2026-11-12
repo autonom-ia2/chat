@@ -14,6 +14,7 @@
 #
 # `caminho`: o parâmetro vem de um valor do alvo (`conversa.id`, ver Valores) ou de uma escolha na tela (`escolher:`).
 # `campos`: nome do campo (o ponto entra no campo de dentro) => peça da tela. As peças estão em Catalogo::PECAS.
+# `rotulos`: o rótulo próprio de um campo nesta ação (CAMPOS.<rótulo> em vez de CAMPOS.<nome do campo>).
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
@@ -242,14 +243,33 @@ acoes:
     campos: { result: escolha, lost_reason: texto }
     # O ganho fica com o valor do card: o Closer só troca o valor (e a moeda) quando eles vêm.
     escondidos: [value_cents, currency]
+  # #2594: mudar os campos do card (ex. 5, "revisão daqui a 6 meses" num campo de data). Como o fechar: só com os gatilhos
+  # de card, que dão o card ao passo (no gatilho de conversa, o card dela é só para ler, decisão 19), e só para quem pode
+  # mexer no funil. O valor de venda só para quem vê os valores (CampoProtegido, `permissao` no catálogo).
+  card_alterar:
+    acao: PATCH crm/cards/:id
+    grupo: FUNIL
+    requer: automacao_gatilhos
+    funil: true
+    caminho: { id: card.id }
+    rotulos: { title: titulo_do_card }
+    campos:
+      title: texto
+      value_cents: dinheiro
+      priority: escolha
+      expected_close_at: data
+      owner_id: pessoa
+      custom_attributes: atributos_do_card
+    # A moeda acompanha o valor (BRL). Descrição, origem, pontuação, motivo da perda, id externo, promessa de pagamento e
+    # os metadados são dados de cadastro e da IA, fora dos 20 exemplos; o Guia continua alcançando.
+    escondidos: [currency, description, source, score, lost_reason, external_id, payment_promise_at, metadata]
 
 so_guia:
   PUT labels/:id: Faz o mesmo que o PATCH, que o editor já mostra.
   PUT custom_attribute_definitions/:id: Faz o mesmo que o PATCH, que o editor já mostra.
   PUT contacts/:id: Faz o mesmo que o PATCH, que o editor já mostra.
   PUT companies/:id: Faz o mesmo que o PATCH, que o editor já mostra.
-  PATCH crm/cards/:id: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
-  PUT crm/cards/:id: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
+  PUT crm/cards/:id: Faz o mesmo que o PATCH, que o editor já mostra.
   POST crm/cards/:id/move: O card só vira alvo com os gatilhos de card (F6); na F5 os gatilhos são de conversa.
   POST crm/pipelines/:pipeline_id/stages: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.
   PATCH crm/stages/:id: Etapa é estrutura do funil; entra no editor com os passos de funil (F6), quando a tela filtrar por crm_manage_pipelines.

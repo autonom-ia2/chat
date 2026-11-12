@@ -12,6 +12,8 @@ const MODELO_DA_PECA = {
   atributos_da_conversa: 'conversation_attribute',
   atributos_do_contato: 'contact_attribute',
   atributos_da_empresa: 'company_attribute',
+  // #2594: os campos do card, no "Mudar campos do card".
+  atributos_do_card: 'card_attribute',
 };
 export const modeloDaPeca = peca => MODELO_DA_PECA[peca] || null;
 

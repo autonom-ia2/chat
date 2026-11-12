@@ -16,6 +16,9 @@ const props = defineProps({
   // Outra pessoa salvou no meio: ligar e guardar esperam "Ver a versão nova";
   // desligar sempre funciona.
   conflito: { type: Boolean, default: false },
+  // #2572: o motor a desligou porque quem ligou perdeu o acesso ({ motivo,
+  // frase }). Ligar de novo é assumir: ela passa a agir em nome de quem clica.
+  pausa: { type: Object, default: null },
 });
 
 const emit = defineEmits(['ligar', 'desligar', 'guardar']);
@@ -29,18 +32,46 @@ const falta = computed(() => {
 </script>
 
 <template>
-  <div
-    v-if="!podeMudar"
-    data-so-leitura
-    class="p-4 text-[0.9375rem] rounded-2xl bg-n-alpha-1 text-n-slate-11"
-  >
-    {{ $t('AUTOMACAO_LIVRE.LIGAR.SO_LEITURA') }}
+  <div v-if="!podeMudar" class="flex flex-col gap-2.5">
+    <p
+      v-if="pausa && !ativa"
+      data-pausa
+      role="status"
+      class="p-4 mb-0 text-[0.9375rem] rounded-2xl bg-n-amber-3 text-n-amber-12"
+    >
+      <span class="block font-semibold">
+        {{ $t('AUTOMACAO_LIVRE.LIGAR.PAUSADA') }}
+      </span>
+      {{ pausa.frase }}
+    </p>
+    <div
+      data-so-leitura
+      class="p-4 text-[0.9375rem] rounded-2xl bg-n-alpha-1 text-n-slate-11"
+    >
+      {{ $t('AUTOMACAO_LIVRE.LIGAR.SO_LEITURA') }}
+    </div>
   </div>
 
   <div v-else-if="!ativa" data-desligada class="flex flex-col gap-2.5">
+    <div
+      v-if="pausa"
+      data-pausa
+      role="status"
+      class="flex flex-col gap-1 p-4 text-[0.9375rem] rounded-2xl bg-n-amber-3 text-n-amber-12"
+    >
+      <p class="mb-0 font-semibold">
+        {{ $t('AUTOMACAO_LIVRE.LIGAR.PAUSADA') }}
+      </p>
+      <p class="mb-0">{{ pausa.frase }}</p>
+      <p class="mb-0">{{ $t('AUTOMACAO_LIVRE.LIGAR.ASSUMIR_AVISO') }}</p>
+    </div>
     <Button
       data-ligar
-      :label="$t('AUTOMACAO_LIVRE.LIGAR.BOTAO')"
+      :label="
+        pausa
+          ? $t('AUTOMACAO_LIVRE.LIGAR.ASSUMIR')
+          : $t('AUTOMACAO_LIVRE.LIGAR.BOTAO')
+      "
       icon="i-lucide-power"
       teal
       size="lg"
@@ -49,7 +80,10 @@ const falta = computed(() => {
       :disabled="Boolean(falta) || ocupado || conflito"
       @click="emit('ligar')"
     />
-    <p class="mb-0 text-sm text-center text-n-slate-11">
+    <p
+      v-if="falta || !pausa"
+      class="mb-0 text-sm text-center text-n-slate-11"
+    >
       {{ falta || $t('AUTOMACAO_LIVRE.LIGAR.DESLIGADA') }}
     </p>
     <Button

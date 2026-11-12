@@ -2553,8 +2553,7 @@
           "nome": "color",
           "peca": "cor",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COLOR",
-          "obrigatorio": false,
-          "padrao": "#1f93ff"
+          "obrigatorio": false
         },
         {
           "nome": "show_on_sidebar",
@@ -2742,6 +2741,79 @@
           "nome": "lost_reason",
           "peca": "texto",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LOST_REASON",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "card_alterar",
+      "acao": "PATCH crm/cards/:id",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_ALTERAR",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "caminho": {
+        "id": {
+          "$valor": "card.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "title",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO_DO_CARD",
+          "obrigatorio": false
+        },
+        {
+          "nome": "value_cents",
+          "peca": "dinheiro",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.VALUE_CENTS",
+          "obrigatorio": false,
+          "permissao": "sales_value_view",
+          "min": 0
+        },
+        {
+          "nome": "priority",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRIORITY",
+          "obrigatorio": false,
+          "opcoes": [
+            {
+              "valor": "low",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.LOW"
+            },
+            {
+              "valor": "medium",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.MEDIUM"
+            },
+            {
+              "valor": "high",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.HIGH"
+            },
+            {
+              "valor": "urgent",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.URGENT"
+            }
+          ]
+        },
+        {
+          "nome": "expected_close_at",
+          "peca": "data",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EXPECTED_CLOSE_AT",
+          "obrigatorio": false
+        },
+        {
+          "nome": "owner_id",
+          "peca": "pessoa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.OWNER_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_card",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
           "obrigatorio": false
         }
       ]

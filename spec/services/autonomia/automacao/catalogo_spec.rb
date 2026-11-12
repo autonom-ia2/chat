@@ -118,6 +118,22 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect([rotulo.call('se'), rotulo.call('esperar_ate')]).to eq(%w[AUTOMACAO_LIVRE.CAMPOS.CONDICAO_DO_SE AUTOMACAO_LIVRE.CAMPOS.CONDICAO])
   end
 
+  # #2594: o "Mudar campos do card" lê o card no caminho (o editor só o oferece no gatilho de card), dá rótulo próprio ao
+  # título, manda a chave do valor de venda e não pré-preenche nada: no alterar, o padrão do registro novo gravaria a
+  # prioridade "média" e o valor 0 por cima do card.
+  it 'monta o "Mudar campos do card" sem padrão, com a chave do valor e o rótulo do título', :aggregate_failures do
+    passo = acoes.find { |acao| acao['nome'] == 'card_alterar' }
+    campo = ->(nome) { passo['campos'].find { |item| item['nome'] == nome } }
+
+    expect(passo).to include('acao' => 'PATCH crm/cards/:id', 'funil' => true, 'caminho' => { 'id' => { '$valor' => 'card.id' } })
+    expect(passo['campos'].pluck('nome')).to eq(%w[title value_cents priority expected_close_at owner_id custom_attributes])
+    expect(campo.call('title')['rotulo']).to eq('AUTOMACAO_LIVRE.CAMPOS.TITULO_DO_CARD')
+    expect(campo.call('value_cents')['permissao']).to eq('sales_value_view')
+    expect(campo.call('expected_close_at')['peca']).to eq('data')
+    expect(acoes.select { |acao| acao['acao'].start_with?('PATCH ', 'PUT ') }.flat_map { |acao| acao['campos'] })
+      .to all(satisfy { |item| !item.key?('padrao') })
+  end
+
   # A tela esconde o passo sem a flag; a flag tem que existir, senão o passo some de todas as contas sem aviso.
   it 'só pede flag que existe, e mensagem, avisar e email pedem a da F4' do
     flags = YAML.load_file(Rails.root.join('config/features.yml')).pluck('name')

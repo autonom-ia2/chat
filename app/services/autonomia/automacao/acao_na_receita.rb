@@ -36,7 +36,15 @@ module Autonomia::Automacao::AcaoNaReceita
     calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| problemas_do_caminho(passo['id'], lido, onde: :corpo) }
     calculo.problemas +
       conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
-      regras_da_lista(passo['id'], passo['acao'], conferencia.valores)
+      regras_da_lista(passo['id'], passo['acao'], conferencia.valores) + campos_protegidos(passo, corpo)
+  end
+
+  # #2594: o valor de venda só entra no corpo de quem pode vê-lo (CampoProtegido); sem pessoa (o catálogo), não confere.
+  def campos_protegidos(passo, corpo)
+    return [] unless @account_user
+
+    campos = ::Autonomia::Automacao::CampoProtegido.sem_permissao(passo['acao'], corpo, @account_user)
+    campos.map { |campo| texto(:campo_protegido, passo: passo['id'], campo: campo) }
   end
 
   def regras_da_lista(id, acao, valores)

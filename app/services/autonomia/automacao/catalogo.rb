@@ -29,8 +29,17 @@ module Autonomia::Automacao::Catalogo
     'etiquetas' => %w[lista],
     'atributos_da_conversa' => %w[objeto_livre],
     'atributos_do_contato' => %w[objeto_livre],
-    'atributos_da_empresa' => %w[objeto_livre]
+    'atributos_da_empresa' => %w[objeto_livre],
+    # #2594: os campos do card. A data é a peça do G16b (dia certo ou calculada); o valor é digitado em reais e vai em
+    # centavos.
+    'atributos_do_card' => %w[objeto_livre],
+    'data' => %w[data_hora],
+    'dinheiro' => %w[inteiro]
   }.freeze
+
+  # O padrão do formato é o do registro novo. No alterar, já preenchido, ele gravaria por cima do que o registro tem
+  # (#2594: a prioridade "média" e o valor 0 do card).
+  VERBOS_DE_ALTERAR = %w[PATCH PUT].freeze
 
   # Obrigatório sempre. "condicional" (só em certos casos) não marca o campo na tela: a Receita confere ao salvar.
   OBRIGATORIO = [true, 'pelo_modelo'].freeze
@@ -156,7 +165,7 @@ module Autonomia::Automacao::Catalogo
         'caminho' => passo['caminho'].to_h.transform_values { |origem| origem_do_parametro(origem) },
         'envelope' => (formato['envelope'] unless formato['corpo_plano']),
         'fixos' => ::Autonomia::Automacao::AcoesPermitidas.fixos(passo['acao']),
-        'campos' => passo['campos'].map { |campo, peca| campo_da_acao(passo['acao'], formato, campo, peca) } }.compact
+        'campos' => passo['campos'].map { |campo, peca| campo_da_acao(passo['acao'], formato, campo, peca, passo['rotulos']) } }.compact
     end
   end
 
@@ -176,17 +185,29 @@ module Autonomia::Automacao::Catalogo
   end
 
   # A lista (`um_de` de automacao-recursos.yml) estreita as opções da plataforma e torna o campo obrigatório.
-  def campo_da_acao(acao, formato, campo, peca)
+  # `rotulos` (#2594): o rótulo próprio de um campo nesta ação (o "title" do card não é o nome da etiqueta). `permissao`:
+  # a chave sem a qual o editor não oferece o campo (CampoProtegido); quem recusa de verdade é a Receita, ao salvar.
+  def campo_da_acao(acao, formato, campo, peca, rotulos = nil)
     regra = formato_do_campo(formato, campo)
     permitidas = ::Autonomia::Automacao::AcoesPermitidas
     opcoes = permitidas.um_de(acao)[campo] || regra['um_de']
     {
-      'nome' => campo, 'peca' => peca, 'rotulo' => chave('CAMPOS', campo.split('.').last),
-      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || permitidas.exige(acao).include?(campo) ||
-        permitidas.um_de(acao).key?(campo),
+      'nome' => campo, 'peca' => peca, 'rotulo' => chave('CAMPOS', rotulos.to_h[campo] || campo.split('.').last),
+      'obrigatorio' => obrigatorio?(acao, regra, campo),
       'opcoes' => opcoes&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
-      **regra.slice('padrao', 'min', 'max', 'max_caracteres')
+      'permissao' => ::Autonomia::Automacao::CampoProtegido.regra(acao, campo)&.const_get(:CHAVE),
+      **regra.slice(*limites_do_campo(acao))
     }.compact
+  end
+
+  def obrigatorio?(acao, regra, campo)
+    permitidas = ::Autonomia::Automacao::AcoesPermitidas
+    OBRIGATORIO.include?(regra['obrigatorio']) || permitidas.exige(acao).include?(campo) || permitidas.um_de(acao).key?(campo)
+  end
+
+  def limites_do_campo(acao)
+    limites = %w[min max max_caracteres]
+    VERBOS_DE_ALTERAR.include?(acao.split.first) ? limites : ['padrao', *limites]
   end
 
   # "custom_attribute_definition.attribute_values" lê o campo de dentro.

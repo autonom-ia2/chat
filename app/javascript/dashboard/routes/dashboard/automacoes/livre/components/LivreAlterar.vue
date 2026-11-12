@@ -102,8 +102,16 @@ const camposNativos = computed(() =>
     : []
 );
 const ehDeIa = computed(() => entrada.value?.grupo === 'IA');
+// #2594: o campo que a pessoa não pode ver só aparece quando já tem valor no
+// passo (travado, para ela poder tirar); vazio, ele não é oferecido.
 const camposDaAcao = computed(() =>
-  entrada.value?.tipo === 'acao' ? entrada.value.campos : []
+  entrada.value?.tipo === 'acao'
+    ? entrada.value.campos.filter(
+        campo =>
+          !campo.sem_permissao ||
+          lerCampo(rascunho.value, entrada.value, campo.nome) != null
+      )
+    : []
 );
 // A mesma etiqueta não vai em "Pôr" e em "Tirar": marcada numa lista, fica
 // bloqueada na outra.
