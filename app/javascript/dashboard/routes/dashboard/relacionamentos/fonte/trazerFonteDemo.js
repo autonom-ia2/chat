@@ -89,6 +89,10 @@ const proximoNumero = dados => {
 const porcentagemDaLista = (lista, agora, demo) =>
   demo.porcentagemDaTrazida(lista.retomadaEm ?? lista.quando, agora);
 
+// Como o servidor: o Desfazer aparece na lista pronta e na que parou no meio
+// (na demonstração, a que parou sempre chegou a pôr gente na base).
+const COM_DESFAZER = [SITUACOES_DA_LISTA.PRONTO, SITUACOES_DA_LISTA.FALHOU];
+
 // O desfazer também leva um tempo: a lista fica `desfazendo` desde o pedido
 // (`desfazendoDesde`) e depois aparece `desfeito`.
 const situacaoDaLista = (lista, agora, demo) => {
@@ -115,7 +119,9 @@ const vistaDaLista = (lista, agora, demo) => {
       situacao === SITUACOES_DA_LISTA.TRAZENDO
         ? porcentagemDaLista(lista, agora, demo)
         : 100,
-    podeTentar: lista.podeTentar === true,
+    podeTentar:
+      situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar === true,
+    podeDesfazer: COM_DESFAZER.includes(situacao),
   };
 };
 
@@ -292,19 +298,14 @@ const trazidasDaDemo = ({ dados, atraso, agora }) => ({
   },
 });
 
-// Como o servidor: só a lista que já foi gravada (pronta, sendo desfeita ou
-// desfeita) tem prévia e desfazer. A que ainda está sendo trazida e a que
-// parou no meio são recusadas. Devolve a lista e a situação dela agora.
-const JA_GRAVADA = [
-  SITUACOES_DA_LISTA.PRONTO,
-  SITUACOES_DA_LISTA.DESFAZENDO,
-  SITUACOES_DA_LISTA.DESFEITO,
-];
-
-const listaGravada = (dadosDaDemo, trazidaId, agora) => {
+// Como o servidor: só a lista que ainda está entrando não tem prévia nem
+// desfazer. A que parou no meio tem: as pessoas que ela chegou a pôr não ficam
+// presas numa lista que não dá para apagar. Devolve a lista e a situação dela
+// agora.
+const listaQueJaEntrou = (dadosDaDemo, trazidaId, agora) => {
   const lista = listaDe(dadosDaDemo, trazidaId);
   const { situacao } = vistaDaLista(lista, agora, dadosDaDemo.demo);
-  if (!JA_GRAVADA.includes(situacao)) {
+  if (situacao === SITUACOES_DA_LISTA.TRAZENDO) {
     throw erroNomeado(
       'NAO_PODE_DESFAZER',
       'Essa lista ainda não pode ser desfeita.'
@@ -327,7 +328,7 @@ const historicoDaDemo = ({ dados, atraso, agora }) => ({
   },
   async previaDoDesfazer(trazidaId) {
     await esperar(atraso);
-    const { lista } = listaGravada(await dados(), trazidaId, agora());
+    const { lista } = listaQueJaEntrou(await dados(), trazidaId, agora());
     return {
       tira: lista.novas - lista.ficam,
       ficam: lista.ficam,
@@ -338,10 +339,11 @@ const historicoDaDemo = ({ dados, atraso, agora }) => ({
     await esperar(atraso);
     const dadosDaDemo = await dados();
     const momento = agora();
-    const { situacao } = listaGravada(dadosDaDemo, trazidaId, momento);
-    // Pronta desfaz sempre, sem data limite. O pedido repetido não muda nada:
-    // responde a situação de agora (`desfazendo` ou `desfeito`).
-    if (situacao !== SITUACOES_DA_LISTA.PRONTO) {
+    const { situacao } = listaQueJaEntrou(dadosDaDemo, trazidaId, momento);
+    // A pronta e a que parou no meio desfazem sempre, sem data limite. O
+    // pedido repetido não muda nada: responde a situação de agora
+    // (`desfazendo` ou `desfeito`).
+    if (!COM_DESFAZER.includes(situacao)) {
       return { id: trazidaId, situacao };
     }
     trocarALista(dadosDaDemo, trazidaId, item => ({

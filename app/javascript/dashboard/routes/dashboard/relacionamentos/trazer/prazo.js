@@ -1,7 +1,10 @@
 // #2894 — as situações de uma lista trazida. Lista pronta tem Desfazer sempre,
 // sem data limite; trazendo ainda não dá para desfazer; desfeita já foi.
 // #2896 — `desfazendo`: a pessoa pediu para desfazer e o servidor ainda está
-// tirando o que a lista pôs. A tela acompanha até virar `desfeito`.
+// tirando o que a lista pôs. A tela acompanha até virar `desfeito`. Quais
+// listas têm o Desfazer quem diz é o servidor, em cada uma (`podeDesfazer`):
+// a pronta, a que parou no meio depois de pôr gente e a que teve o desfazer
+// travado.
 // #2896 — `falhou`: a lista parou no meio. Quando o servidor diz que dá para
 // continuar (`podeTentar`), o histórico oferece "Tentar de novo".
 export const SITUACOES_DA_LISTA = {

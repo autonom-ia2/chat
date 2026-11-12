@@ -669,6 +669,7 @@ describe('o desfazer tem a mesma forma e as mesmas recusas nas duas fontes', () 
         situacao: 'desfazendo',
         porcentagem: 100,
         pode_tentar: false,
+        pode_desfazer: false,
       },
     ]);
     responde('andamento', {
@@ -683,17 +684,54 @@ describe('o desfazer tem a mesma forma e as mesmas recusas nas duas fontes', () 
     const daDemo = (await demo.historico()).find(l => l.id === PRONTA_NA_DEMO);
     // O id da demonstração é um texto; o do servidor, um número.
     expect(Object.keys(daDemo).sort()).toEqual(Object.keys(daReal).sort());
-    expect([daDemo.situacao, daDemo.porcentagem]).toEqual([
+    expect([
+      daDemo.situacao,
+      daDemo.porcentagem,
+      daDemo.podeTentar,
+      daDemo.podeDesfazer,
+    ]).toEqual([
       daReal.situacao,
       daReal.porcentagem,
+      daReal.podeTentar,
+      daReal.podeDesfazer,
     ]);
     expect((await demo.andamento(PRONTA_NA_DEMO)).situacao).toBe(
       (await real.andamento(812)).situacao
     );
   });
 
+  it('a lista pronta e a que parou no meio dizem, do mesmo jeito, que dá para desfazer', async () => {
+    const { real, demo } = fontes();
+    const listaDoServidor = (id, situacao, podeTentar) => ({
+      id,
+      arquivo: `${id}.xlsx`,
+      quando: '2026-11-08T14:03:00Z',
+      quem: 'Marina Pavanelli',
+      total: 195,
+      situacao,
+      porcentagem: 100,
+      pode_tentar: podeTentar,
+      pode_desfazer: true,
+    });
+    responde('listas', [
+      listaDoServidor(1, 'pronto', false),
+      listaDoServidor(2, 'falhou', true),
+    ]);
+    const resumo = listas =>
+      ['pronto', 'falhou'].map(situacao => {
+        const lista = listas.find(l => l.situacao === situacao);
+        return [lista.situacao, lista.podeTentar, lista.podeDesfazer];
+      });
+    const daReal = resumo(await real.historico());
+    expect(daReal).toEqual([
+      ['pronto', false, true],
+      ['falhou', true, true],
+    ]);
+    expect(resumo(await demo.historico())).toEqual(daReal);
+  });
+
   it.each(['previaDoDesfazer', 'desfazer'])(
-    '%s da lista que ainda não foi trazida até o fim: NAO_PODE_DESFAZER',
+    '%s da lista que ainda está entrando: NAO_PODE_DESFAZER',
     async metodo => {
       const { real, demo } = fontes();
       TrazerAPI[metodo].mockRejectedValueOnce(recusa422());

@@ -87,6 +87,8 @@ vi.mock('../../fonte/trazerFonte', async importOriginal => {
 // de 5 s por teste é de relógio, não de lógica.
 vi.setConfig({ testTimeout: 30000 });
 
+// Como o servidor: dá para desfazer a lista pronta (o resto, quem diz é o
+// teste, em `extra`).
 const doServidor = (situacao, extra = {}) => ({
   id: 700,
   arquivo: 'Clientes de setembro.xlsx',
@@ -96,6 +98,7 @@ const doServidor = (situacao, extra = {}) => ({
   situacao,
   porcentagem: 100,
   pode_tentar: false,
+  pode_desfazer: situacao === 'pronto',
   ...extra,
 });
 const PREVIA = { tira: 162, ficam: 18, devolve: 15 };
@@ -239,6 +242,85 @@ describe('Desfazer uma lista, com o servidor', () => {
     expect(marca(w, 'desfazer-nao-pode').text()).toBe(NAO_PODE);
     expect(botao(w, 'Tentar de novo')).toBeUndefined();
     expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
+    w.unmount();
+  });
+
+  // A lista que parou no meio depois de pôr gente na base: a pessoa escolhe
+  // continuar ou desfazer.
+  it('a lista que parou no meio tem "Tentar de novo" e "Desfazer"; desfazer a leva a "Desfazendo…" e "Desfeito"', async () => {
+    const parada = { pode_tentar: true, pode_desfazer: true };
+    servidor.listas.mockResolvedValue({
+      data: [doServidor('falhou', parada)],
+    });
+    const w = await abrir();
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(1));
+    expect(situacaoDaLinha(w)).toBe('Não consegui trazer esta lista.');
+    expect(marca(w, 'tentar-de-novo').exists()).toBe(true);
+    await marca(w, 'desfazer').trigger('click');
+    await aparece(w, 'dialogo-desfazer');
+    await esperarPor(() =>
+      expect(
+        marca(w, 'desfazer-confirmar').attributes('disabled')
+      ).toBeUndefined()
+    );
+    servidor.desfazer.mockResolvedValue({
+      data: { id: 700, situacao: 'desfazendo' },
+    });
+    servidor.listas
+      .mockReset()
+      .mockResolvedValueOnce({ data: [doServidor('desfazendo')] })
+      .mockResolvedValue({ data: [doServidor('desfeito')] });
+    await w.get('[data-dialog]').trigger('submit');
+    await some(w, 'dialogo-desfazer');
+    expect(servidor.desfazer).toHaveBeenCalledWith(700);
+    expect(servidor.confirmar).not.toHaveBeenCalled();
+    await esperarPor(() => expect(situacaoDaLinha(w)).toBe('Desfazendo…'));
+    expect(w.findAll('[data-lista] button')).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(PRIMEIRA_PERGUNTA_MS);
+    await esperarPor(() => expect(situacaoDaLinha(w)).toBe('Desfeito'));
+    expect(w.findAll('[data-lista] button')).toHaveLength(0);
+    w.unmount();
+  });
+
+  // O desfazer travou no servidor: o botão volta na linha "Desfazendo…", e o
+  // clique pede de novo (o servidor põe na fila outra vez).
+  it('a lista cujo desfazer travou tem o botão de novo, e pedir de novo o tira', async () => {
+    servidor.listas.mockResolvedValue({
+      data: [doServidor('desfazendo', { pode_desfazer: true })],
+    });
+    const w = await abrir();
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(1));
+    expect(situacaoDaLinha(w)).toBe('Desfazendo…');
+    await marca(w, 'desfazer').trigger('click');
+    await aparece(w, 'dialogo-desfazer');
+    await esperarPor(() =>
+      expect(
+        marca(w, 'desfazer-confirmar').attributes('disabled')
+      ).toBeUndefined()
+    );
+    servidor.desfazer.mockResolvedValue({
+      data: { id: 700, situacao: 'desfazendo' },
+    });
+    servidor.listas
+      .mockReset()
+      .mockResolvedValue({ data: [doServidor('desfazendo')] });
+    await w.get('[data-dialog]').trigger('submit');
+    await some(w, 'dialogo-desfazer');
+    expect(servidor.desfazer).toHaveBeenCalledWith(700);
+    await esperarPor(() => expect(marca(w, 'desfazer').exists()).toBe(false));
+    expect(situacaoDaLinha(w)).toBe('Desfazendo…');
+    expect(alertar).not.toHaveBeenCalled();
+    w.unmount();
+  });
+
+  it('a lista pronta que o servidor diz que não dá para desfazer não tem o botão', async () => {
+    servidor.listas.mockResolvedValue({
+      data: [doServidor('pronto', { pode_desfazer: false })],
+    });
+    const w = await abrir();
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(1));
+    expect(situacaoDaLinha(w)).toBe('Pronto');
+    expect(marca(w, 'desfazer').exists()).toBe(false);
     w.unmount();
   });
 

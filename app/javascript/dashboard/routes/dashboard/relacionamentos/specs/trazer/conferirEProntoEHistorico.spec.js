@@ -587,8 +587,10 @@ describe('HistoricoDeListas', () => {
       props: { listas: [], temDesfazer: true, ...props },
     });
 
+  const PODE = { podeDesfazer: true };
+
   it('cheio: arquivo, quando, quem, pessoas, situação e Desfazer, sem data limite', () => {
-    const w = montar({ listas: [lista('Clientes 2025', 'pronto')] });
+    const w = montar({ listas: [lista('Clientes 2025', 'pronto', PODE)] });
     const linha = w.get('[data-lista="Clientes 2025"]');
     expect(linha.text()).toContain('Clientes 2025.xlsx');
     expect(linha.text()).toContain('em 08/11');
@@ -611,7 +613,7 @@ describe('HistoricoDeListas', () => {
   });
 
   it('Desfazer emite a lista', async () => {
-    const pronta = lista('a', 'pronto');
+    const pronta = lista('a', 'pronto', PODE);
     const w = montar({ listas: [pronta] });
     await marca(w, 'desfazer').trigger('click');
     expect(w.emitted('desfazer')).toEqual([[pronta]]);
@@ -631,7 +633,7 @@ describe('HistoricoDeListas', () => {
 
   it('lista pronta antiga tem Desfazer sempre, sem prazo nem data', () => {
     const w = montar({
-      listas: [lista('a', 'pronto', { quando: AGORA - 400 * DIA })],
+      listas: [lista('a', 'pronto', { quando: AGORA - 400 * DIA, ...PODE })],
     });
     expect(marca(w, 'desfazer').exists()).toBe(true);
     expect(w.text()).not.toContain('Prazo');
@@ -729,7 +731,7 @@ describe('DialogoDesfazer', () => {
     });
     const texto = marca(w, 'dialogo-desfazer').text();
     expect(texto).toContain(
-      'Isto tira as 162 pessoas que vieram nesta lista e ainda não conversaram com você. 18 ficam aqui, porque já conversaram com você ou já receberam campanha. As 15 que já estavam aqui voltam a ser como eram.'
+      'Isto tira as 162 pessoas que vieram nesta lista e de quem ninguém cuidou ainda. 18 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha. As 15 que já estavam aqui voltam a ser como eram.'
     );
     expect(texto).toContain(
       'Quem pediu para não receber mensagens continua assim.'
@@ -747,10 +749,10 @@ describe('DialogoDesfazer', () => {
     const um = montar({ previa: { tira: 1, ficam: 1, devolve: 0 } });
     const textoUm = marca(um, 'dialogo-desfazer').text();
     expect(textoUm).toContain(
-      'Isto tira a pessoa que veio nesta lista e ainda não conversou com você.'
+      'Isto tira a pessoa que veio nesta lista e de quem ninguém cuidou ainda.'
     );
     expect(textoUm).toContain(
-      '1 fica aqui, porque já conversou com você ou já recebeu campanha.'
+      '1 fica aqui, porque alguém já cuidou dela: tem conversa, card, etiqueta ou campanha.'
     );
     const so = montar({ previa: { tira: 0, ficam: 0, devolve: 15 } });
     const textoSo = marca(so, 'dialogo-desfazer').text();

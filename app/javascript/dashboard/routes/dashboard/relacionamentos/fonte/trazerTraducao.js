@@ -9,8 +9,9 @@
 //     pessoa lê; o valor de cada problema fica como está na planilha;
 //   - quem identifica a coluna é o índice dela na planilha: o nome pode repetir
 //     ou vir vazio;
-//   - a lista do histórico troca a data por milissegundos e `pode_tentar` por
-//     `podeTentar`; a situação chega como o servidor diz;
+//   - a lista do histórico troca a data por milissegundos, `pode_tentar` por
+//     `podeTentar` e `pode_desfazer` por `podeDesfazer`; a situação chega como
+//     o servidor diz;
 //   - (Fatia 3) o desfazer que o servidor recusa (422 `nao_pode_desfazer`)
 //     ganha o nome `NAO_PODE_DESFAZER`;
 //   - (Fatia 2) as respostas das perguntas trocam `coluna_cliente` por
@@ -338,6 +339,9 @@ export const listaDaTela = lista => ({
   situacao: lista.situacao,
   porcentagem: lista.porcentagem,
   podeTentar: lista.pode_tentar === true,
+  // Quem diz se dá para desfazer é o servidor: a lista pronta, a que parou no
+  // meio depois de pôr gente na base e a que teve o desfazer travado.
+  podeDesfazer: lista.pode_desfazer === true,
 });
 
 export const andamentoDaTela = andamento => ({

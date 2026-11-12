@@ -10,9 +10,12 @@ import { PONTO } from '../comum/ponto';
 // situação e o Desfazer (sem prazo). Vazio é uma frase, sem botão.
 // #2896 — a lista que parou no meio diz que não foi trazida e, quando dá para
 // continuar (`podeTentar`), oferece "Tentar de novo"; sem isso, só a frase.
-// O Desfazer só aparece quando a conta tem (`temDesfazer`, que vem da fonte).
+// O Desfazer só aparece quando a conta tem (`temDesfazer`, que vem da fonte) e
+// o servidor diz que aquela lista pode ser desfeita (`podeDesfazer`), seja qual
+// for a situação: a pronta; a que parou no meio depois de pôr gente (aí ao lado
+// do "Tentar de novo": a pessoa escolhe); e a que teve o desfazer travado.
 // A lista que está sendo desfeita diz "Desfazendo…", com o selo de lista em
-// andamento, e não tem botão: só a pronta tem o Desfazer.
+// andamento. Na linha, a frase e os botões quebram de linha quando não cabem.
 // Os dois botões da linha têm 44 px de altura (alvo de toque).
 defineProps({
   listas: { type: Array, required: true },
@@ -138,7 +141,7 @@ const NOMES = {
             @click="emit('tentarDeNovo', lista)"
           />
           <Button
-            v-if="temDesfazer && lista.situacao === SITUACOES_DA_LISTA.PRONTO"
+            v-if="temDesfazer && lista.podeDesfazer"
             slate
             faded
             class="min-h-11"

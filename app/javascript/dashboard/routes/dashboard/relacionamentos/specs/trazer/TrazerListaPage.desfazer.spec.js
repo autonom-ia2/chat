@@ -123,7 +123,7 @@ describe('Desfazer a lista recém-trazida, ali mesmo no Pronto', () => {
       )
     );
     expect(marca(w, 'dialogo-desfazer').text()).toContain(
-      '18 ficam aqui, porque já conversaram com você ou já receberam campanha.'
+      '18 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.'
     );
     w.unmount();
   });
@@ -152,7 +152,7 @@ describe('Desfazer', () => {
       'As 12 que já estavam aqui voltam a ser como eram.'
     );
     expect(texto).toContain(
-      '16 ficam aqui, porque já conversaram com você ou já receberam campanha.'
+      '16 ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.'
     );
     expect(texto).not.toContain('As conversas que já aconteceram ficam.');
     expect(
@@ -211,6 +211,36 @@ describe('Desfazer', () => {
       ])
     );
     expect(botaoDaPrimeira(w).exists()).toBe(false);
+    expect(alertar).not.toHaveBeenCalled();
+    w.unmount();
+  });
+
+  // A lista que parou no meio (a última do exemplo): continuar ou desfazer.
+  it('a lista que parou no meio tem "Tentar de novo" e "Desfazer", e desfazer a leva a "Desfeito"', async () => {
+    const PARADA = '[data-lista="trazida-antiga-4"]';
+    const w = await abrir();
+    await esperarPor(() => expect(w.findAll('[data-lista]')).toHaveLength(4));
+    expect(w.findAll(`${PARADA} button`).map(b => b.text())).toEqual([
+      'Tentar de novo',
+      'Desfazer',
+    ]);
+    await w.get(`${PARADA} [data-relacionamentos="desfazer"]`).trigger('click');
+    await aparece(w, 'dialogo-desfazer');
+    await esperarPor(() =>
+      expect(marca(w, 'dialogo-desfazer').text()).toContain(
+        'Isto tira as 63 pessoas'
+      )
+    );
+    expect(
+      w.get('[data-dialog] [data-relacionamentos="titulo-do-dialogo"]').text()
+    ).toBe('Desfazer “Indicações de agosto.csv”?');
+    await w.get('[data-dialog]').trigger('submit');
+    await some(w, 'dialogo-desfazer');
+    await esperarPor(() => expect(situacoes(w)[3]).toBe('Desfazendo…'));
+    expect(w.findAll(`${PARADA} button`)).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(ATE_DESFAZER_TUDO_MS);
+    await esperarPor(() => expect(situacoes(w)[3]).toBe('Desfeito'));
+    expect(w.findAll(`${PARADA} button`)).toHaveLength(0);
     expect(alertar).not.toHaveBeenCalled();
     w.unmount();
   });

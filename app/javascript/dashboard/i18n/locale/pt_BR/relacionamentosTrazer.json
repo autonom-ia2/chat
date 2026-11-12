@@ -212,8 +212,8 @@
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",
       "TITULO_ARQUIVO": "Desfazer “{arquivo}”?",
-      "TIRA": "Isto tira a pessoa que veio nesta lista e ainda não conversou com você. | Isto tira as {count} pessoas que vieram nesta lista e ainda não conversaram com você.",
-      "FICAM": "{count} fica aqui, porque já conversou com você ou já recebeu campanha. | {count} ficam aqui, porque já conversaram com você ou já receberam campanha.",
+      "TIRA": "Isto tira a pessoa que veio nesta lista e de quem ninguém cuidou ainda. | Isto tira as {count} pessoas que vieram nesta lista e de quem ninguém cuidou ainda.",
+      "FICAM": "{count} fica aqui, porque alguém já cuidou dela: tem conversa, card, etiqueta ou campanha. | {count} ficam aqui, porque alguém já cuidou delas: têm conversa, card, etiqueta ou campanha.",
       "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
       "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
       "CONFIRMAR": "Desfazer",

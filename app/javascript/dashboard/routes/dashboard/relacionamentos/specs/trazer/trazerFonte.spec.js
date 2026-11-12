@@ -227,6 +227,8 @@ describe('historico', () => {
     ]);
     // Só a que parou no meio tem como continuar.
     expect(listas.map(l => l.podeTentar)).toEqual([false, false, false, true]);
+    // Dá para desfazer a pronta e a que parou no meio (ela chegou a pôr gente).
+    expect(listas.map(l => l.podeDesfazer)).toEqual([true, false, true, true]);
     // Da mais nova para a mais antiga, como o servidor entrega.
     expect(listas.map(l => l.quando)).toEqual(
       [...listas.map(l => l.quando)].sort((a, b) => b - a)
@@ -409,16 +411,39 @@ describe('tentar de novo (lista que parou no meio)', () => {
     });
   });
 
-  it.each(['previaDoDesfazer', 'desfazer'])(
-    'a lista que parou no meio não tem o que desfazer (%s)',
-    async metodo => {
-      const { fonte } = fonteComRelogio();
-      const falhou = await aQueFalhou(fonte);
-      await expect(fonte[metodo](falhou.id)).rejects.toMatchObject({
-        name: 'NAO_PODE_DESFAZER',
-      });
-    }
-  );
+  // Como o servidor: as pessoas que a lista chegou a pôr não ficam presas
+  // numa lista que não dá para apagar. A pessoa escolhe continuar ou desfazer.
+  it('a lista que parou no meio pode ser desfeita: tem prévia, fica "desfazendo" e depois "desfeito"', async () => {
+    const { fonte, relogio } = fonteComRelogio();
+    const falhou = await aQueFalhou(fonte);
+    expect(falhou).toMatchObject({ podeTentar: true, podeDesfazer: true });
+    expect(await fonte.previaDoDesfazer(falhou.id)).toEqual({
+      tira: 63,
+      ficam: 7,
+      devolve: 10,
+    });
+    expect(await fonte.desfazer(falhou.id)).toEqual({
+      id: falhou.id,
+      situacao: 'desfazendo',
+    });
+    const durante = (await fonte.historico()).find(l => l.id === falhou.id);
+    // Sendo desfeita, não há o que continuar nem o que desfazer de novo.
+    expect(durante).toMatchObject({
+      situacao: 'desfazendo',
+      podeTentar: false,
+      podeDesfazer: false,
+    });
+    await expect(fonte.tentarDeNovo(falhou.id)).rejects.toMatchObject({
+      name: 'NAO_PODE_TENTAR',
+    });
+    relogio.agora += DURACAO_DO_DESFAZER_MS;
+    const depois = (await fonte.historico()).find(l => l.id === falhou.id);
+    expect(depois).toMatchObject({
+      situacao: 'desfeito',
+      podeTentar: false,
+      podeDesfazer: false,
+    });
+  });
 });
 
 describe('desfazer', () => {
@@ -433,7 +458,11 @@ describe('desfazer', () => {
       situacao: 'desfazendo',
     });
     const [durante] = await fonte.historico();
-    expect(durante).toMatchObject({ situacao: 'desfazendo', porcentagem: 100 });
+    expect(durante).toMatchObject({
+      situacao: 'desfazendo',
+      porcentagem: 100,
+      podeDesfazer: false,
+    });
     expect((await fonte.andamento(pronta.id)).situacao).toBe('desfazendo');
     relogio.agora += DURACAO_DO_DESFAZER_MS - 1;
     expect(await situacaoDe(fonte, pronta.id)).toBe('desfazendo');
@@ -481,6 +510,8 @@ describe('desfazer', () => {
       const { fonte } = fonteComRelogio();
       const { id } = await fonte.ler(null);
       const { trazidaId } = await fonte.trazer(id);
+      const [trazendo] = await fonte.historico();
+      expect(trazendo).toMatchObject({ id: trazidaId, podeDesfazer: false });
       await expect(fonte[metodo](trazidaId)).rejects.toMatchObject({
         name: 'NAO_PODE_DESFAZER',
       });

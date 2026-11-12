@@ -212,8 +212,8 @@
     "DESFAZER": {
       "TITULO": "Undo this list?",
       "TITULO_ARQUIVO": "Undo “{arquivo}”?",
-      "TIRA": "This removes the person who came with this list and hasn't talked with you yet. | This removes the {count} people who came with this list and haven't talked with you yet.",
-      "FICAM": "{count} stays here, because they already talked with you or already got a campaign. | {count} stay here, because they already talked with you or already got a campaign.",
+      "TIRA": "This removes the person who came with this list and nobody has worked with yet. | This removes the {count} people who came with this list and nobody has worked with yet.",
+      "FICAM": "{count} stays here, because someone already worked with them: they have a conversation, a card, a label or a campaign. | {count} stay here, because someone already worked with them: they have a conversation, a card, a label or a campaign.",
       "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
       "NAO_RECEBER": "People who asked not to get messages stay that way.",
       "CONFIRMAR": "Undo",

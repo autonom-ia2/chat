@@ -750,9 +750,9 @@ describe('andamento', () => {
 });
 
 describe('historico', () => {
-  it('traduz cada lista: data em milissegundos, a situação como o servidor diz e o tentar', async () => {
+  it('traduz cada lista: data em milissegundos, a situação como o servidor diz, o tentar e o desfazer', async () => {
     const { fonte } = montar();
-    const lista = (id, situacao, podeTentar = false) => ({
+    const lista = (id, situacao, podeTentar, podeDesfazer) => ({
       id,
       arquivo: `${id}.xlsx`,
       quando: '2026-11-08T14:03:00Z',
@@ -761,17 +761,20 @@ describe('historico', () => {
       situacao,
       porcentagem: 100,
       pode_tentar: podeTentar,
+      pode_desfazer: podeDesfazer,
     });
     responde('listas', [
-      lista(1, 'pronto'),
-      lista(2, 'desfazendo'),
-      lista(3, 'falhou', true),
+      lista(1, 'pronto', false, true),
+      lista(2, 'desfazendo', false, false),
+      lista(3, 'falhou', true, true),
     ]);
     const listas = await fonte.historico();
-    expect(listas.map(l => [l.id, l.situacao, l.podeTentar])).toEqual([
-      [1, 'pronto', false],
-      [2, 'desfazendo', false],
-      [3, 'falhou', true],
+    expect(
+      listas.map(l => [l.id, l.situacao, l.podeTentar, l.podeDesfazer])
+    ).toEqual([
+      [1, 'pronto', false, true],
+      [2, 'desfazendo', false, false],
+      [3, 'falhou', true, true],
     ]);
     expect(listas[0].quando).toBe(Date.UTC(2026, 10, 8, 14, 3));
   });

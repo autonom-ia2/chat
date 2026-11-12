@@ -489,8 +489,8 @@ describe('listaDaTela', () => {
     pode_tentar: false,
   };
 
-  it('traduz a data para milissegundos e `pode_tentar` para `podeTentar`', () => {
-    expect(listaDaTela(DO_SERVIDOR)).toEqual({
+  it('traduz a data para milissegundos, `pode_tentar` para `podeTentar` e `pode_desfazer` para `podeDesfazer`', () => {
+    expect(listaDaTela({ ...DO_SERVIDOR, pode_desfazer: true })).toEqual({
       id: 812,
       arquivo: 'Clientes 2025.xlsx',
       quando: Date.UTC(2026, 10, 8, 14, 3),
@@ -499,7 +499,31 @@ describe('listaDaTela', () => {
       situacao: 'pronto',
       porcentagem: 100,
       podeTentar: false,
+      podeDesfazer: true,
     });
+  });
+
+  // Quem diz se dá para desfazer é o servidor, não a situação.
+  it.each([
+    ['pronto', true],
+    ['falhou', true],
+    ['desfazendo', true],
+    ['desfazendo', false],
+    ['pronto', false],
+  ])(
+    'lista %s com `pode_desfazer` %s: `podeDesfazer` igual',
+    (situacao, pode) => {
+      const lista = listaDaTela({
+        ...DO_SERVIDOR,
+        situacao,
+        pode_desfazer: pode,
+      });
+      expect(lista.podeDesfazer).toBe(pode);
+    }
+  );
+
+  it('sem `pode_desfazer` não pode desfazer', () => {
+    expect(listaDaTela(DO_SERVIDOR).podeDesfazer).toBe(false);
   });
 
   it.each([
