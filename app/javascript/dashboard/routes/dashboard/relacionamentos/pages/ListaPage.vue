@@ -31,6 +31,7 @@ import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
+import { rotaDoTrazer } from '../lista/rotaDoTrazer';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
@@ -175,7 +176,7 @@ const avisoDaLista = computed(() =>
     : ''
 );
 
-const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+const trazer = () => router.push({ name: rotaDoTrazer(demo) });
 // O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
 const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
