@@ -38,19 +38,6 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Transcricao do
                                     ])
   end
 
-  # MOTIVO (#2435): o leitor recebe o critério da etiqueta descrita numa linha própria, logo abaixo do cabeçalho, que
-  # continua igual; a etiqueta sem descrição não ganha linha.
-  it 'a etiqueta com descrição ganha uma linha abaixo do cabeçalho' do
-    create(:label, account: account, title: 'vip', description: "cliente com mais\nde 3 apólices")
-    create(:label, account: account, title: 'frota')
-    conversa.update!(label_list: %w[vip frota])
-
-    linhas = described_class.new(conversa: conversa, mensagens: [mensagem(:incoming, 0, 'Oi')], remetentes: [], rotulo: 'ANA').texto.split("\n")
-
-    expect(linhas[0]).to end_with('| etiquetas frota,vip | msgs 1').or end_with('| etiquetas vip,frota | msgs 1')
-    expect(linhas[1..]).to eq(['  (etiqueta vip: cliente com mais de 3 apólices)', '[10-20T13:00] CLIENTE: Oi'])
-  end
-
   it 'o robô que não é o agente aparece pelo tipo e pelo id' do
     outro = create(:agent_bot, account: account)
     mensagens = [mensagem(:outgoing, 0, 'Oi', remetente: outro)]

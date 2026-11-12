@@ -8,9 +8,6 @@
 #   [MM-DDTHH:MM] NOTA_INTERNA HUMANO<id>: texto
 #     (MM-DDTHH:MM evento: texto, até 160 caracteres)
 #
-# #2435: a etiqueta com descrição ganha uma linha logo abaixo do cabeçalho, `  (etiqueta <nome>: <descrição>)`, para o
-# leitor entender o critério da conta. Conversa sem etiqueta descrita sai exatamente no formato da prova.
-#
 # - Horários em UTC, como na prova (a chave de leitura converte quando precisa).
 # - Autor: CLIENTE na mensagem que chega; o rótulo do agente para quem fala por ele (`remetentes_do_agente` da ficha);
 #   HUMANO<id> para outra pessoa da equipe; tipo e id do remetente para o resto; SISTEMA quando não há remetente.
@@ -21,7 +18,6 @@ class Autonomia::Desempenho::LeituraAutomatica::Transcricao
   SEM_TEXTO = '[anexo/sem texto]'.freeze
   SEM_REMETENTE = 'SISTEMA'.freeze
   EVENTO_ATE = 160
-  DESCRICAO_ATE = 300
 
   # `mensagens`: as da conversa até o corte, em ordem. `remetentes`: [[tipo, id]] de quem fala pelo agente.
   def initialize(conversa:, mensagens:, remetentes:, rotulo:)
@@ -32,7 +28,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Transcricao
   end
 
   def texto
-    [cabecalho, *etiquetas_descritas, *@mensagens.filter_map { |mensagem| linha(mensagem) }].join("\n")
+    [cabecalho, *@mensagens.filter_map { |mensagem| linha(mensagem) }].join("\n")
   end
 
   # 'MM-DDTHH:MM' em UTC, o horário que a leitura devolve em `inicio` e `fim` (com espaço no lugar do T).
@@ -45,12 +41,6 @@ class Autonomia::Desempenho::LeituraAutomatica::Transcricao
     etiquetas = @conversa.label_list.join(',')
     "=== CONVERSA #{@conversa.display_id} | criada #{criada} | status #{@conversa.status_before_type_cast} | " \
       "etiquetas #{etiquetas} | msgs #{@mensagens.size}"
-  end
-
-  def etiquetas_descritas
-    Autonomia::DescricoesDasEtiquetas.de(@conversa.account, @conversa.label_list).map do |nome, descricao|
-      "  (etiqueta #{nome}: #{descricao.squish[0, DESCRICAO_ATE]})"
-    end
   end
 
   def linha(mensagem)
