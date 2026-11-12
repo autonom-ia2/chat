@@ -412,6 +412,7 @@
       "TIPO_GATILHO": "Quando começa",
       "SALVAR": "Salvar",
       "TIRAR": "Tirar",
+      "CAMPO_PROTEGIDO": "{campo}: definido por quem vê os valores. Você pode tirar, mas não mudar.",
       "ESCOLHA": "Escolha",
       "CAMPO": "O que olhar",
       "OPERADOR": "Como comparar",

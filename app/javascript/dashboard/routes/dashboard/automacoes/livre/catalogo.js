@@ -188,16 +188,19 @@ export const novoPasso = (entrada, id, t) => {
 // pede `sales_value_view`) fica marcado `sem_permissao` para quem não pode
 // lê-lo. A escolha não o oferece; o texto e a condição que já o usam continuam
 // mostrando o nome dele, e o salvar recusa até a pessoa tirar.
-// #2594: o campo de ação que pede permissão (o valor de venda do card) some
-// do "Alterar" de quem não pode vê-lo. O valor que já está no passo fica na
-// receita (cada campo grava só o dele), e o salvar recusa (campo_protegido).
+// #2594: o campo de ação que pede permissão (o valor de venda do card) fica
+// marcado `sem_permissao` para quem não pode vê-lo. O "Alterar" não oferece pôr
+// um valor nele; o que outra pessoa já pôs aparece travado, sem o valor, com
+// "Tirar", porque o salvar recusa (campo_protegido) até ele sair.
 const semCamposProtegidos = (passos, podeLer) =>
   passos.map(passo =>
     passo.tipo === 'acao' && passo.campos.some(campo => campo.permissao)
       ? {
           ...passo,
-          campos: passo.campos.filter(
-            campo => !campo.permissao || podeLer(campo.permissao)
+          campos: passo.campos.map(campo =>
+            campo.permissao && !podeLer(campo.permissao)
+              ? { ...campo, sem_permissao: true }
+              : campo
           ),
         }
       : passo

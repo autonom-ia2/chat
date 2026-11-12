@@ -412,6 +412,7 @@
       "TIPO_GATILHO": "When it starts",
       "SALVAR": "Save",
       "TIRAR": "Remove",
+      "CAMPO_PROTEGIDO": "{campo}: set by someone who can see the values. You can remove it, but not change it.",
       "ESCOLHA": "Choose",
       "CAMPO": "What to look at",
       "OPERADOR": "How to compare",

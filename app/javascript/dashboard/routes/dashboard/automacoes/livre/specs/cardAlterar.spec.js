@@ -36,8 +36,10 @@ const CATALOGO = {
   valores: [],
   passos: [CARD_ALTERAR],
 };
-const nomesDosCampos = dados =>
-  dados.passos[0].campos.map(campo => campo.nome);
+const protegidos = dados =>
+  dados.passos[0].campos
+    .filter(campo => campo.sem_permissao)
+    .map(campo => campo.nome);
 
 const montar = (campo, modelValue) =>
   mount(LivreCampo, {
@@ -54,6 +56,12 @@ const montar = (campo, modelValue) =>
         LivreData: {
           props: ['modelValue'],
           template: '<div data-peca-data />',
+        },
+        Button: {
+          props: ['label'],
+          emits: ['click'],
+          template:
+            '<button data-botao @click="$emit(\'click\')">{{ label }}</button>',
         },
         Input: {
           props: ['modelValue', 'type'],
@@ -73,17 +81,35 @@ describe('Mudar campos do card', () => {
     ).toEqual(['card_alterar']);
   });
 
-  it('esconde o valor de venda de quem não vê os valores e mantém o resto', () => {
-    expect(nomesDosCampos(comPermissoes(CATALOGO, () => false))).toEqual([
-      'title',
-      'custom_attributes',
-    ]);
+  it('marca o valor de venda para quem não vê os valores e mantém o resto', () => {
+    const semVer = comPermissoes(CATALOGO, () => false);
+
+    expect(semVer.passos[0].campos).toHaveLength(3);
+    expect(protegidos(semVer)).toEqual(['value_cents']);
     expect(
-      nomesDosCampos(
-        comPermissoes(CATALOGO, chave => chave === 'sales_value_view')
-      )
-    ).toEqual(['title', 'value_cents', 'custom_attributes']);
-    expect(CATALOGO.passos[0].campos).toHaveLength(3);
+      protegidos(comPermissoes(CATALOGO, chave => chave === 'sales_value_view'))
+    ).toEqual([]);
+    expect(CATALOGO.passos[0].campos[1].sem_permissao).toBeUndefined();
+  });
+
+  // Revisão do #2594: o valor que outra pessoa pôs fica travado, sem o valor,
+  // e "Tirar" o tira do passo; sem isso o salvar recusaria sem saída.
+  it('o valor de venda que já está no passo aparece travado, com Tirar', async () => {
+    const campo = {
+      nome: 'value_cents',
+      peca: 'dinheiro',
+      permissao: 'sales_value_view',
+      sem_permissao: true,
+    };
+    const wrapper = montar(campo, 150000);
+
+    expect(wrapper.find('[data-campo-protegido]').exists()).toBe(true);
+    expect(wrapper.find('[data-input]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('1500');
+
+    await wrapper.find('[data-tirar-protegido]').trigger('click');
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[null]]);
   });
 
   it('os campos personalizados são os do card', () => {

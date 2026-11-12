@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreMarcar from './LivreMarcar.vue';
 import LivreEmpresa from './LivreEmpresa.vue';
@@ -149,7 +150,30 @@ const opcoesDoAtributo = atributo =>
 
 <template>
   <div class="flex flex-col gap-1.5" :data-campo="campo.nome">
-    <template v-if="soMostra">
+    <!-- #2594: o valor que a pessoa não pode ver fica escondido; ela só tira. -->
+    <div
+      v-if="campo.sem_permissao"
+      data-campo-protegido
+      class="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-n-alpha-2"
+    >
+      <p class="mb-0 text-base text-n-slate-12">
+        {{
+          $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.CAMPO_PROTEGIDO', {
+            campo: rotulo,
+          })
+        }}
+      </p>
+      <Button
+        data-tirar-protegido
+        :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIRAR')"
+        slate
+        faded
+        class="min-h-11 shrink-0"
+        @click="mudar(null)"
+      />
+    </div>
+
+    <template v-else-if="soMostra">
       <span class="text-sm font-medium text-n-slate-12">{{ rotulo }}</span>
       <p
         data-calculado
