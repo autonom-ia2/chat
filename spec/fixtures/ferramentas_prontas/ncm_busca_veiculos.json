@@ -1,0 +1,785 @@
+[
+ {
+  "codigo": "3815.12.10",
+  "descricao": "Em colmeia cerâmica ou metálica para conversão catalítica de gases de escape de veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4011.10.00",
+  "descricao": "- Do tipo utilizado em automóveis de passageiros (incluindo os veículos de uso misto (<i>station wagons</i>) e os automóveis de corrida)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4011.30.00",
+  "descricao": "- Do tipo utilizado em veículos aéreos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4011.70",
+  "descricao": "- Do tipo utilizado em veículos e máquinas agrícolas ou florestais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4011.80",
+  "descricao": "- Do tipo utilizado em veículos e máquinas para a construção civil, de mineração e de manutenção industrial",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4012.11.00",
+  "descricao": "-- Do tipo utilizado em automóveis de passageiros (incluindo os veículos de uso misto (<i>station wagons</i>) e os automóveis de corrida)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4012.13.00",
+  "descricao": "-- Do tipo utilizado em veículos aéreos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4013.10",
+  "descricao": "- Do tipo utilizado em automóveis de passageiros (incluindo os veículos de uso misto (<i>station wagons</i>) e os automóveis de corrida), ônibus (autocarros) ou caminhões",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4016.10.10",
+  "descricao": "Partes de veículos automóveis ou tratores e de máquinas ou aparelhos, não domésticos, dos Capítulos 84, 85 ou 90",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "4911.10.10",
+  "descricao": "Que contenham informações relativas ao funcionamento, manutenção, reparo ou utilização de máquinas, aparelhos, veículos e outras mercadorias de origem extrazona",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "6909.19.30",
+  "descricao": "Colmeia de cerâmica à base de alumina (Al<sub>2</sub>O<sub>3</sub>), sílica (SiO<sub>2</sub>) e óxido de magnésio (MgO), de depuradores por conversão catalítica de gases de escape de veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7007.11.00",
+  "descricao": "-- De dimensões e formatos que permitam a sua aplicação em automóveis, veículos aéreos, barcos ou outros veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7007.21.00",
+  "descricao": "-- De dimensões e formatos que permitam a sua aplicação em automóveis, veículos aéreos, barcos ou outros veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7009.10.00",
+  "descricao": "- Espelhos retrovisores para veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "7322.90.10",
+  "descricao": "Geradores de ar quente a combustível líquido, com capacidade igual ou superior a 1.500 kcal/h, mas não superior a 10.400 kcal/h, do tipo utilizado em veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8301.20.00",
+  "descricao": "- Fechaduras do tipo utilizado em veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8302.30.00",
+  "descricao": "- Outras guarnições, ferragens e artigos semelhantes, para veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8407.3",
+  "descricao": "- Motores de pistão alternativo do tipo utilizado para propulsão de veículos do Capítulo 87:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8408.20",
+  "descricao": "- Motores do tipo utilizado para propulsão de veículos do Capítulo 87",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8415.20",
+  "descricao": "- Do tipo utilizado para o conforto dos passageiros nos veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8425.41.00",
+  "descricao": "-- Elevadores fixos de veículos, para garagens (oficinas)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8426.91.00",
+  "descricao": "-- Próprios para serem montados em veículos rodoviários",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "84.27",
+  "descricao": "Empilhadeiras; outros veículos para movimentação de carga e semelhantes, equipados com dispositivos de elevação.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8505.20.10",
+  "descricao": "Freios (travões) que atuam por corrente de Foucault, do tipo utilizado nos veículos das posições 87.01 a 87.05",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8527.2",
+  "descricao": "- Aparelhos receptores de radiodifusão que só funcionem com fonte externa de energia, do tipo utilizado em veículos automóveis:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8544.30.00",
+  "descricao": "- Jogos de fios para velas de ignição e outros jogos de fios do tipo utilizado em quaisquer veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "86",
+  "descricao": "Veículos e material para vias férreas ou semelhantes, e suas partes; aparelhos mecânicos (incluindo os eletromecânicos) de sinalização para vias de comunicação.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8604.00",
+  "descricao": "Veículos para inspeção e manutenção de vias férreas ou semelhantes, mesmo autopropulsados (por exemplo, vagões-oficinas, vagões-guindastes, vagões equipados com batedores de balastro, alinhadores de vias, viaturas para testes e dresinas).",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "86.07",
+  "descricao": "Partes de veículos para vias férreas ou semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87",
+  "descricao": "Veículos automóveis, tratores, ciclos e outros veículos terrestres, suas partes e acessórios.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.02",
+  "descricao": "Veículos automóveis para transporte de dez pessoas ou mais, incluindo o motorista.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.03",
+  "descricao": "Automóveis de passageiros e outros veículos automóveis principalmente concebidos para transporte de pessoas (exceto os da posição 87.02), incluindo os veículos de uso misto (<i>station wagons</i>) e os automóveis de corrida.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.10.00",
+  "descricao": "- Veículos especialmente concebidos para se deslocar sobre a neve; veículos especiais para transporte de pessoas nos campos de golfe e veículos semelhantes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.2",
+  "descricao": "- Outros veículos, unicamente com motor de pistão de ignição por centelha (faísca):",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.3",
+  "descricao": "- Outros veículos, unicamente com motor de pistão de ignição por compressão (diesel ou semidiesel):",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.40.00",
+  "descricao": "- Outros veículos, equipados para propulsão, simultaneamente, com motor de pistão de ignição por centelha (faísca) e motor elétrico, exceto os suscetíveis de serem carregados por conexão a uma fonte externa de energia elétrica",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.50.00",
+  "descricao": "- Outros veículos, equipados para propulsão, simultaneamente, com motor de pistão de ignição por compressão (diesel ou semidiesel) e motor elétrico, exceto os suscetíveis de serem carregados por conexão a uma fonte externa de energia elétrica",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.60.00",
+  "descricao": "- Outros veículos, equipados para propulsão, simultaneamente, com motor de pistão de ignição por centelha (faísca) e motor elétrico, suscetíveis de serem carregados por conexão a uma fonte externa de energia elétrica",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.70.00",
+  "descricao": "- Outros veículos, equipados para propulsão, simultaneamente, com motor de pistão de ignição por compressão (diesel ou semidiesel) e motor elétrico, suscetíveis de serem carregados por conexão a uma fonte externa de energia elétrica",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8703.80.00",
+  "descricao": "- Outros veículos, equipados unicamente com motor elétrico para propulsão",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.04",
+  "descricao": "Veículos automóveis para transporte de mercadorias.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.05",
+  "descricao": "Veículos automóveis para usos especiais (por exemplo, autossocorros, caminhões-guindastes, veículos de combate a incêndio, caminhões-betoneiras, veículos para varrer, veículos para espalhar, veículos-oficinas, veículos radiológicos), exceto os concebidos principalmente para transporte de pessoas ou de mercadorias.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8705.30.00",
+  "descricao": "- Veículos de combate a incêndio",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8706.00",
+  "descricao": "Chassis com motor para os veículos automóveis das posições 87.01 a 87.05.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8706.00.10",
+  "descricao": "Dos veículos da posição 87.02",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8706.00.20",
+  "descricao": "Dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.07",
+  "descricao": "Carroçarias para os veículos automóveis das posições 87.01 a 87.05, incluindo as cabinas.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8707.10.00",
+  "descricao": "- Para os veículos da posição 87.03",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8707.90.10",
+  "descricao": "Dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.08",
+  "descricao": "Partes e acessórios dos veículos automóveis das posições 87.01 a 87.05.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.29.1",
+  "descricao": "Dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.30.11",
+  "descricao": "Dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.40.1",
+  "descricao": "Caixas de marchas dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.50.1",
+  "descricao": "Dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.50.11",
+  "descricao": "Eixos com diferencial com capacidade de suportar cargas superiores ou iguais a 14.000 kg, redutores planetários nos extremos e dispositivo de freio (travão) incorporado, do tipo utilizado em veículos da subposição 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.50.91",
+  "descricao": "De eixos não motores, dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.70.10",
+  "descricao": "De eixos propulsores dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8708.94.1",
+  "descricao": "Volantes, colunas e caixas, de direção dos veículos das subposições 8701.10, 8701.30, 8701.91 a 8701.95 ou 8704.10",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.09",
+  "descricao": "Veículos automóveis sem dispositivo de elevação, do tipo utilizado em fábricas, armazéns, portos ou aeroportos, para transporte de mercadorias a curtas distâncias; carros-tratores do tipo utilizado nas estações ferroviárias; suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8709.1",
+  "descricao": "- Veículos:",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8710.00.00",
+  "descricao": "Tanques e outros veículos blindados de combate, armados ou não, e suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.13",
+  "descricao": "Cadeiras de rodas e outros veículos para pessoas com incapacidade, mesmo com motor ou outro mecanismo de propulsão.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.14",
+  "descricao": "Partes e acessórios dos veículos das posições 87.11 a 87.13.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8714.20.00",
+  "descricao": "- De cadeiras de rodas ou de outros veículos para pessoas com incapacidade",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8715.00.00",
+  "descricao": "Carrinhos e veículos semelhantes para transporte de crianças, e suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "87.16",
+  "descricao": "Reboques e semirreboques, para quaisquer veículos; outros veículos não autopropulsados; suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8716.80.00",
+  "descricao": "- Outros veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8801.00.00",
+  "descricao": "Balões e dirigíveis; planadores, asas voadoras e outros veículos aéreos, não concebidos para propulsão a motor.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "88.02",
+  "descricao": "Outros veículos aéreos (por exemplo, helicópteros, aviões), exceto veículos aéreos (aeronaves) não tripulados da posição 88.06; veículos espaciais (incluindo os satélites) e seus veículos de lançamento, e veículos suborbitais.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8802.20",
+  "descricao": "- Aviões e outros veículos aéreos, de peso não superior a 2.000 kg, vazios (sem carga)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8802.30",
+  "descricao": "- Aviões e outros veículos aéreos, de peso superior a 2.000 kg, mas não superior a 15.000 kg, vazios (sem carga)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8802.40",
+  "descricao": "- Aviões e outros veículos aéreos, de peso superior a 15.000 kg, vazios (sem carga)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8802.60.00",
+  "descricao": "- Veículos espaciais (incluindo os satélites) e seus veículos de lançamento, e veículos suborbitais",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "88.05",
+  "descricao": "Aparelhos e dispositivos para lançamento de veículos aéreos; aparelhos e dispositivos para aterrissagem (aterragem) de veículos aéreos em porta-aviões e aparelhos e dispositivos semelhantes; aparelhos de treinamento de voo em terra; suas partes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8805.10.00",
+  "descricao": "- Aparelhos e dispositivos para lançamento de veículos aéreos, e suas partes; aparelhos e dispositivos para aterrissagem (aterragem) de veículos aéreos em porta-aviões e aparelhos e dispositivos semelhantes, e suas partes",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "88.06",
+  "descricao": "Veículos aéreos (aeronaves) não tripulados.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "8807.30.00",
+  "descricao": "- Outras partes de aviões, de helicópteros ou de veículos aéreos (aeronaves) não tripulados",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9030.33.21",
+  "descricao": "Do tipo utilizado em veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9031.49.20",
+  "descricao": "Para medida da espessura de pneumáticos de veículos automóveis, por meio de raios laser",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9031.80.40",
+  "descricao": "Aparelhos digitais, de uso em veículos automóveis, para medida e indicação de múltiplas grandezas tais como: velocidade média, consumos instantâneo e médio e autonomia (computador de bordo)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9032.89.2",
+  "descricao": "Controladores eletrônicos do tipo utilizado em veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9032.89.30",
+  "descricao": "Equipamentos digitais para controle de veículos ferroviários",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9104.00.00",
+  "descricao": "Relógios para painéis de instrumentos e relógios semelhantes, para automóveis, veículos aéreos, embarcações ou para outros veículos.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9401.10",
+  "descricao": "- Assentos do tipo utilizado em veículos aéreos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9401.20.00",
+  "descricao": "- Assentos do tipo utilizado em veículos automóveis",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "96.03",
+  "descricao": "Vassouras e escovas, mesmo que constituam partes de máquinas, de aparelhos ou de veículos, vassouras mecânicas de uso manual não motorizadas, pincéis e espanadores; cabeças preparadas para escovas, pincéis e artigos semelhantes; <i>pads</i> (talochas) e rolos para pintura; rodos de borracha ou de matérias flexíveis semelhantes.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9603.50.00",
+  "descricao": "- Outras escovas que constituam partes de máquinas, de aparelhos ou de veículos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ }
+]

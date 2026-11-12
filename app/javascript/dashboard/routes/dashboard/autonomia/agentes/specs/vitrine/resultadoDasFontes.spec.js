@@ -161,22 +161,28 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('doencas', 'busca', 'Resultados')).toContain('Asma');
   });
 
-  it('F4: NCM com código e descrição, a busca já na ordem de relevância', () => {
-    expect(valor('ncm', 'codigo', 'Código')).toBe('7318.15.00');
-    expect(valor('ncm', 'codigo', 'Descrição')).toContain('parafusos');
-    // Sem os traços da tabela, e o código de 8 dígitos (o da nota) antes da posição de 4.
-    expect(
-      valor('ncm', 'buscar', 'Resultados').startsWith(
-        'Parafusos autoperfurantes, '
-      )
-    ).toBe(true);
-    expect(valor('ncm', 'buscar', 'Primeiro da lista')).toBe(
-      'Parafusos autoperfurantes'
-    );
-    expect(valor('ncm', 'buscar', 'Código')).toBe('7318.14.00');
-    expect(
-      valor('ncm', 'codigo', 'Descrição').startsWith('Outros parafusos')
-    ).toBe(true);
+  // O caso real do teste em produção (11/11/2026): "café torrado" achava só o grupo 0901.2, e a tela mostrava "Café
+  // torrado:" com o código 0901.2. Agora o grupo vem sem traço nem dois-pontos, com a orientação para o modelo buscar
+  // pelo código dele (revisão do #2917: quem escolhe o grupo é o modelo); o código da nota, com a descrição completa.
+  it('F4: NCM com o grupo e a orientação, e o código da nota com a descrição completa', () => {
+    expect(linhas('ncm', 'buscar')).toEqual([
+      ['Busca', 'café torrado'],
+      ['Resultados', 'Café torrado'],
+      ['Código', '0901.2'],
+      ['Em vigor desde', '01/04/2022'],
+      [
+        'Observação',
+        'Código com menos de 8 dígitos é grupo e não vai na nota. Para ver os da nota, faça a consulta buscar com o código do grupo (ex.: 0901.2).',
+      ],
+    ]);
+    expect(linhas('ncm', 'codigo')).toEqual([
+      ['Código', '0901.21.00'],
+      [
+        'Descrição',
+        'Café, mesmo torrado ou descafeinado; cascas e películas de café; sucedâneos do café que contenham café em qualquer proporção, café torrado, não descafeinado',
+      ],
+      ['Em vigor desde', '01/04/2022'],
+    ]);
   });
 
   it('F4: compras, estações e chuva com os valores', () => {

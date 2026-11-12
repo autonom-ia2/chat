@@ -1,0 +1,173 @@
+[
+ {
+  "codigo": "9503.00",
+  "descricao": "Triciclos, patinetes (trotinetas*), carros de pedais e outros brinquedos semelhantes de rodas; carrinhos para bonecos; bonecos; outros brinquedos; modelos reduzidos e modelos semelhantes para divertimento, mesmo animados; quebra-cabeças (<i>puzzles</i>) de qualquer espécie.",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.10",
+  "descricao": "Triciclos, patinetes, carros de pedais e outros brinquedos semelhantes com rodas; carrinhos para bonecos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.2",
+  "descricao": "Bonecos que representem somente seres humanos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.21",
+  "descricao": "Bonecos, mesmo vestidos, com mecanismo a corda ou elétrico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.22",
+  "descricao": "Outros bonecos, mesmo vestidos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.29",
+  "descricao": "Partes e acessórios",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.3",
+  "descricao": "Brinquedos que representem animais ou seres não humanos",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.31",
+  "descricao": "Com enchimento",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.39",
+  "descricao": "Outros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.40",
+  "descricao": "Trens elétricos, incluindo os trilhos, sinais e outros acessórios",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.50",
+  "descricao": "Modelos reduzidos, mesmo animados, em conjuntos para montagem, exceto os do item 9503.00.40",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.60",
+  "descricao": "Outros conjuntos e brinquedos, para construção",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.70",
+  "descricao": "Quebra-cabeças (<i>puzzles</i>)",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.80",
+  "descricao": "Outros brinquedos, apresentados em sortidos ou em panóplias",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.9",
+  "descricao": "Outros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.91",
+  "descricao": "Instrumentos e aparelhos musicais, de brinquedo",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.97",
+  "descricao": "Outros brinquedos, com motor elétrico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.98",
+  "descricao": "Outros brinquedos, com motor não elétrico",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ },
+ {
+  "codigo": "9503.00.99",
+  "descricao": "Outros",
+  "data_inicio": "2022-04-01",
+  "data_fim": "9999-12-31",
+  "tipo_ato": "Res Camex",
+  "numero_ato": "000272",
+  "ano_ato": "2021"
+ }
+]
