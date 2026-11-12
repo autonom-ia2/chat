@@ -15,6 +15,8 @@
 # - "extrair", "escrever", "resumir" (#2500 F7) e "para cada item" (G24) só dizem o que a IA faria e para onde iria,
 #   pelo `ensaiar` de cada passo: nenhuma IA é chamada.
 # - a mensagem, o aviso e o e-mail conferem quem age (#2604, EnvioNoEnsaio): sem acesso, "pausaria", e o caminho acaba.
+#   A mensagem e o "escrever" ao cliente conferem o canal (#2609): com a janela fechada e sem modelo que saia no lugar,
+#   "pararia", com o motivo, e o caminho acaba.
 #
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
@@ -119,7 +121,7 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
-  EM_LINHA = { 'mensagem' => :na_conversa, 'avisar' => :na_conversa, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
+  EM_LINHA = { 'mensagem' => :mensagem, 'avisar' => :na_conversa, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
 
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
   # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
@@ -133,7 +135,7 @@ class Autonomia::Automacao::Ensaio
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
-    else [em_frente(passo, valores), @roteiro.seguinte(passo['id'])]
+    else seguir(passo, em_frente(passo, valores))
     end
   end
 
@@ -144,7 +146,7 @@ class Autonomia::Automacao::Ensaio
   def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
 
   def em_frente(passo, valores)
-    return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
+    return ia(passo, valores) if IA_SO_DIZ.include?(passo['tipo'])
     return retorno(passo, valores) if passo['tipo'] == 'retorno'
 
     no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo')
@@ -158,6 +160,13 @@ class Autonomia::Automacao::Ensaio
   def na_conversa(passo, valores)
     pausa = @envio.pausaria_na_conversa
     pausa ? no(passo, *pausa) : texto(passo, valores)
+  end
+
+  # Depois do texto, o canal (#2609, EnvioNoEnsaio#do_canal). O texto vazio também pergunta: no motor, a janela vem antes.
+  def mensagem(passo, valores)
+    pronto = na_conversa(passo, valores)
+    canal = @envio.do_canal(passo, valores) if %w[mensagem texto_vazio].include?(pronto[:faria])
+    canal ? no(passo, *canal) : pronto
   end
 
   # O texto montado com os valores desta conversa, para o balão. Valor vazio: o passo pularia, como no motor.
@@ -256,10 +265,13 @@ class Autonomia::Automacao::Ensaio
   end
 
   # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
-  # automática ligada na conta não sairia, como no motor.
-  def ia(passo)
+  # automática ligada na conta não sairia, como no motor. O "escrever" ao cliente confere o canal antes da IA (#2609).
+  def ia(passo, valores)
     classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
     return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    canal = @envio.do_canal(passo, valores, modelo: nil) if passo['tipo'] == 'escrever' && classe.fala_com_gente?(passo)
+    return no(passo, *canal) if canal
 
     no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe)))
   end

@@ -20,6 +20,8 @@ const AVISO = {
   contato_bloqueado: 'CONTATO_BLOQUEADO',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
+  // #2609: a mensagem pula, como no motor.
+  canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
 };
 
@@ -114,6 +116,13 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   // motor pausaria a automação, e o caminho acaba aqui.
   if (no.faria === 'pausaria')
     return { ...base, aviso: t(`${E}.PAUSARIA`, { nome: no.dados.quem }) };
+  // #2609: a janela fechada sem modelo que saia no lugar: a execução pararia
+  // aqui, com o motivo do motor, e o caminho acaba.
+  if (no.faria === 'pararia')
+    return {
+      ...base,
+      aviso: t(`${E}.PARARIA.${no.dados.motivo.toUpperCase()}`),
+    };
   // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
   if (no.tipo === 'ia_assumir')
     return no.faria === 'ia_assumir'

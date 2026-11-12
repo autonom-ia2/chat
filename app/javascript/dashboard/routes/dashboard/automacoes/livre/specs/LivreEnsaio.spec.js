@@ -245,6 +245,29 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
+  // #2609: a janela fechada sem modelo que saia: pararia aqui, com o motivo.
+  it('o passo que pararia diz o motivo do motor, sem balão', () => {
+    const [janela, tweet] = linhasDoEnsaio(
+      [
+        {
+          id: 'm1',
+          tipo: 'mensagem',
+          faria: 'pararia',
+          dados: { motivo: 'modelo_nao_aprovado' },
+        },
+        { id: 'm2', tipo: 'mensagem', faria: 'canal_sem_resposta', dados: {} },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(janela.aviso).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.PARARIA.MODELO_NAO_APROVADO'
+    );
+    expect(janela.balao).toBeUndefined();
+    expect(tweet.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CANAL_SEM_RESPOSTA');
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [

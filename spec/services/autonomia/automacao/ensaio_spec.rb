@@ -49,6 +49,60 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos_de(receita(passo)).first[:dados]).to eq(texto: 'Oi.', modelo: 'pre_black')
   end
 
+  # #2609: com a janela fechada e sem modelo que saia no lugar, a execução para (#2573): o ensaio diz "pararia", com o
+  # motivo do motor, e não lista os passos seguintes.
+  describe 'janela fechada' do
+    let(:canal) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:aprovado) do
+      { 'name' => 'retorno', 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
+        'components' => [{ 'type' => 'BODY', 'text' => 'Oi! Podemos falar?' }] }
+    end
+    let(:com_modelo) { mensagem_passo('p1', 'Oi.').merge('modelo' => { 'nome' => 'retorno', 'idioma' => 'pt_BR', 'variaveis' => [] }) }
+
+    before { conversa.update!(inbox: canal.inbox) }
+
+    def pararia(motivo) = [{ id: 'p1', tipo: 'mensagem', faria: 'pararia', dados: { motivo: motivo } }]
+
+    it 'sem modelo, pararia fora da janela e o caminho acaba' do
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1')))).to eq(pararia('fora_da_janela'))
+    end
+
+    it 'com modelo que não sai, pararia com o motivo do modelo', :aggregate_failures do
+      expect(passos_de(receita(com_modelo, esperar_passo('e1')))).to eq(pararia('modelo_fora_da_caixa'))
+
+      canal.update!(message_templates: [aprovado.merge('status' => 'PENDING')])
+      expect(passos_de(receita(com_modelo, esperar_passo('e1')))).to eq(pararia('modelo_nao_aprovado'))
+    end
+
+    it 'com o modelo que sai, mostra o texto e o modelo e segue' do
+      canal.update!(message_templates: [aprovado])
+
+      expect(passos_de(receita(com_modelo, esperar_passo('e1'))).map { |no| [no[:faria], no[:dados]] })
+        .to eq([['mensagem', { texto: 'Oi.', modelo: 'retorno' }], ['esperar', {}]])
+    end
+
+    it 'com a janela aberta, a mensagem sairia e segue' do
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'Oi')
+
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1'))).pluck(:faria)).to eq(%w[mensagem esperar])
+    end
+
+    it 'o limite de horas da caixa API vencido pararia' do
+      api = create(:channel_api, account: account, additional_attributes: { 'agent_reply_time_window' => '2' })
+      conversa.update!(inbox: api.inbox)
+
+      expect(passos_de(receita(mensagem_passo('p1', 'Oi.'), esperar_passo('e1')))).to eq(pararia('limite_da_caixa'))
+    end
+
+    it 'o "escrever" ao cliente pararia antes da IA; a sugestão segue', :aggregate_failures do
+      escrever = { 'id' => 'i1', 'tipo' => 'escrever', 'le' => ['mensagens'], 'instrucao' => 'Agradeça', 'destino' => 'mensagem' }
+
+      expect(passos_de(receita(escrever, esperar_passo('e1'))))
+        .to eq([{ id: 'i1', tipo: 'escrever', faria: 'pararia', dados: { motivo: 'fora_da_janela' } }])
+      expect(passos_de(receita(escrever.merge('destino' => 'sugestao'), esperar_passo('e1'))).pluck(:faria)).to eq(%w[ia_escrever esperar])
+    end
+  end
+
   it 'sem a mensagem automática, diz que não sairia' do
     account.disable_features!('automacao_mensagens')
 
