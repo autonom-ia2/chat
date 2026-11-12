@@ -526,6 +526,82 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.PAGINA_ID"
         }
       ]
+    },
+    {
+      "tipo": "conversa.responsavel_mudou",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESPONSAVEL_MUDOU",
+      "grupo": "conversa",
+      "se_repetir": true
+    },
+    {
+      "tipo": "conversa.time_mudou",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_TIME_MUDOU",
+      "grupo": "conversa",
+      "se_repetir": true
+    },
+    {
+      "tipo": "conversa.etiqueta_posta",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ETIQUETA_POSTA",
+      "grupo": "conversa",
+      "se_repetir": true,
+      "parametros": [
+        {
+          "nome": "etiqueta",
+          "peca": "etiqueta",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETIQUETA"
+        }
+      ]
+    },
+    {
+      "tipo": "conversa.etiqueta_tirada",
+      "alvo": "Conversation",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ETIQUETA_TIRADA",
+      "grupo": "conversa",
+      "se_repetir": true,
+      "parametros": [
+        {
+          "nome": "etiqueta",
+          "peca": "etiqueta",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETIQUETA"
+        }
+      ]
+    },
+    {
+      "tipo": "contato.etiqueta_posta",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_ETIQUETA_POSTA",
+      "grupo": "contato",
+      "requer": "automacao_gatilhos",
+      "se_repetir": true,
+      "parametros": [
+        {
+          "nome": "etiqueta",
+          "peca": "etiqueta",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETIQUETA"
+        }
+      ]
+    },
+    {
+      "tipo": "contato.etiqueta_tirada",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_ETIQUETA_TIRADA",
+      "grupo": "contato",
+      "requer": "automacao_gatilhos",
+      "se_repetir": true,
+      "parametros": [
+        {
+          "nome": "etiqueta",
+          "peca": "etiqueta",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETIQUETA"
+        }
+      ]
     }
   ],
   "operadores": [
