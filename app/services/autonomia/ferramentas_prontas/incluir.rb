@@ -18,11 +18,17 @@ class Autonomia::FerramentasProntas::Incluir
 
   Resultado = Data.define(:ferramenta, :acesso)
 
+  # A frase "Use quando…" como fica gravada: sem espaço sobrando e até o limite. Vazia é nenhuma, e aí vale a frase
+  # padrão da ferramenta. A mesma regra serve ao "Incluir" e a quem altera a frase depois (#2881).
+  def self.frase(usar_quando)
+    usar_quando.to_s.squish.first(MAX_USAR_QUANDO).presence
+  end
+
   def initialize(account:, agent:, fonte:, usar_quando: nil, user: nil)
     @account = account
     @agent = agent
     @fonte = Autonomia::FerramentasProntas::Catalogo.buscar(fonte)
-    @usar_quando = usar_quando.to_s.squish.first(MAX_USAR_QUANDO).presence
+    @usar_quando = self.class.frase(usar_quando)
     @user = user
   end
 

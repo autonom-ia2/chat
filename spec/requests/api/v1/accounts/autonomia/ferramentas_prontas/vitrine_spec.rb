@@ -244,6 +244,65 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(ferramenta.reload.enabled).to be(true)
     end
 
+    # #2881 — a frase "Use quando" de uma pronta já incluída.
+    it 'altera a frase "Use quando" sem mexer no liga/desliga, e o agente passa a ler a frase nova' do
+      ferramenta.update!(enabled: false)
+
+      patch "#{base}/#{ferramenta.id}", params: { usar_quando: '  Use quando o cliente informar   o CEP da obra. ' },
+                                        headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      frase = 'Use quando o cliente informar o CEP da obra.'
+      expect(response.parsed_body).to include('id' => ferramenta.id, 'ligada' => false, 'usar_quando' => frase)
+      expect(ferramenta.reload).to have_attributes(enabled: false, description: frase)
+      expect(ferramenta.openai_schema[:description]).to include("Use quando: #{frase}")
+    end
+
+    it 'muda a frase e o liga/desliga no mesmo pedido' do
+      patch "#{base}/#{ferramenta.id}", params: { ligada: false, usar_quando: 'Use quando pedirem o endereço.' },
+                                        headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(ferramenta.reload).to have_attributes(enabled: false, description: 'Use quando pedirem o endereço.')
+    end
+
+    it 'corta a frase no limite do Incluir e, vazia, volta à frase padrão da ferramenta' do
+      patch "#{base}/#{ferramenta.id}", params: { usar_quando: 'a' * 600 }, headers: admin.create_new_auth_token, as: :json
+      expect(ferramenta.reload.description.length).to eq(Autonomia::FerramentasProntas::Incluir::MAX_USAR_QUANDO)
+
+      ['   ', nil].each do |vazia|
+        ferramenta.update!(description: 'Use quando pedirem o endereço.')
+        patch "#{base}/#{ferramenta.id}", params: { usar_quando: vazia }, headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body['usar_quando']).to be_nil
+        expect(ferramenta.reload.description).to be_nil
+      end
+    end
+
+    it 'recusa frase que não é texto, e ligada inválida mesmo com a frase certa' do
+      ferramenta.update!(description: 'Use quando pedirem o endereço.')
+
+      [['abc'], { x: 1 }].each do |valor|
+        patch "#{base}/#{ferramenta.id}", params: { usar_quando: valor }, headers: admin.create_new_auth_token, as: :json
+        expect(response.status).to be_in([400, 422])
+      end
+      patch "#{base}/#{ferramenta.id}", params: { ligada: 'abc', usar_quando: 'Outra frase.' }, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('motivo' => 'ligada_invalida')
+
+      expect(ferramenta.reload).to have_attributes(enabled: true, description: 'Use quando pedirem o endereço.')
+    end
+
+    it 'sem a chave das ferramentas, a frase não muda' do
+      pessoa = com_funcao(%w[autonomia_view autonomia_manage])
+
+      patch "#{base}/#{ferramenta.id}", params: { usar_quando: 'Outra frase.' }, headers: pessoa.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(ferramenta.reload.description).not_to eq('Outra frase.')
+    end
+
     it 'não mexe na pronta da Lia' do
       da_lia = Autonomia::Agents::Tool.create!(account: account, agent: lia, name: 'CEP', slug: 'pronta_cep', fonte_pronta: 'cep',
                                                http_method: 'GET', endpoint_url: '', timeout_seconds: 5)

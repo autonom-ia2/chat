@@ -1,6 +1,7 @@
 # A VITRINE DE FERRAMENTAS PRONTAS (#2858, F2): o catálogo liberado para a conta, as prontas já incluídas em cada agente,
 # o "Experimente", o "Incluir", liga/desliga, "Tirar" e as buscas sem resultado. Na F3, o cartão "pode ganhar" do agente
-# que já existe (`sugestoes`, `dispensar`), só com a flag do Construtor.
+# que já existe (`sugestoes`, `dispensar`), só com a flag do Construtor. No #2881, a frase "Use quando" de uma pronta
+# já incluída pode ser alterada (`update`).
 #
 # Quem pode, em tudo: a equipe da plataforma, o administrador e quem tem a chave "Ferramentas dos agentes"
 # (`autonomia_tools_manage`). É a condição da Funções: a porta do "Incluir" confere a pessoa antes e passa a pessoa
@@ -60,10 +61,14 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   # objeto, "abc") é recusado e nunca vira "ligada".
   VALORES_DE_LIGADA = [true, false, 'true', 'false'].freeze
 
+  # Muda o liga/desliga, a frase "Use quando" (#2881), ou os dois. `ligada` só pode faltar quando a frase vem: sem
+  # nenhum dos dois, o pedido é recusado como antes. A frase segue a regra do "Incluir" (`Incluir.frase`): vazia, a
+  # ferramenta volta à frase padrão dela.
   def update
-    return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless VALORES_DE_LIGADA.include?(params[:ligada])
+    return render json: { motivo: 'ligada_invalida' }, status: :unprocessable_entity unless ligada_valida?
+    return render json: { motivo: 'usar_quando_invalido' }, status: :unprocessable_entity unless usar_quando_valido?
 
-    @pronta.update!(enabled: ActiveModel::Type::Boolean.new.cast(params[:ligada]))
+    @pronta.update!(mudancas_da_pronta)
     render :pronta
   end
 
@@ -95,6 +100,28 @@ class Api::V1::Accounts::Autonomia::FerramentasProntasController < Api::V1::Acco
   end
 
   private
+
+  def muda_a_frase?
+    params.key?(:usar_quando)
+  end
+
+  def ligada_valida?
+    return true if muda_a_frase? && !params.key?(:ligada)
+
+    VALORES_DE_LIGADA.include?(params[:ligada])
+  end
+
+  # A frase é texto, ou nada: lista e objeto são recusados e nunca viram frase.
+  def usar_quando_valido?
+    !muda_a_frase? || params[:usar_quando].nil? || params[:usar_quando].is_a?(String)
+  end
+
+  # O `to_s` da frase também diz ao Guia que o campo é texto (os formatos das ações são lidos do código).
+  def mudancas_da_pronta
+    ligada = params.key?(:ligada) ? { enabled: ActiveModel::Type::Boolean.new.cast(params[:ligada]) } : {}
+    frase = muda_a_frase? ? { description: Autonomia::FerramentasProntas::Incluir.frase(params[:usar_quando].to_s) } : {}
+    ligada.merge(frase)
+  end
 
   def ensure_vitrine
     # Com o motivo: a tela separa "a vitrine saiu da conta" de "este agente ou esta ferramenta não existe mais".

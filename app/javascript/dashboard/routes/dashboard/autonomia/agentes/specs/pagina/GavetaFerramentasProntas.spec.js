@@ -28,6 +28,7 @@ const prontasApi = vi.hoisted(() => ({
   listar: vi.fn(),
   incluir: vi.fn(),
   mudarLigada: vi.fn(),
+  mudarQuando: vi.fn(),
   tirar: vi.fn(),
   experimentar: vi.fn(),
   buscaSemResultado: vi.fn(),
@@ -176,6 +177,87 @@ describe('GavetaFerramentas · prontas sem o cadastro manual', () => {
     );
     no('[data-pronta="cep"] [role="switch"]').click();
     await flushPromises();
+    expect(alerta).toHaveBeenCalledWith(
+      'Você não tem permissão para cuidar das ferramentas dos agentes. Peça a quem administra a conta.'
+    );
+  });
+
+  // #2881 — "Alterar quando usar" na pronta que o agente já tem.
+  const escrever = async frase => {
+    const campo = no('[data-pronta="cep"] textarea');
+    campo.value = frase;
+    campo.dispatchEvent(new Event('input'));
+    await flushPromises();
+  };
+
+  it('"Alterar quando usar" opens the sentence, saves it and shows the new one', async () => {
+    await montar();
+    const botao = no('[data-pronta="cep"] [data-alterar-quando]');
+    expect(botao.getAttribute('aria-label')).toBe(
+      'Alterar quando usar Endereço pelo CEP'
+    );
+    botao.click();
+    await flushPromises();
+    expect(no('[data-pronta="cep"] textarea').value).toBe(
+      'Use quando o cliente informar um CEP.'
+    );
+    expect(no('[data-pronta="cep"] textarea').getAttribute('maxlength')).toBe(
+      '500'
+    );
+    prontasApi.mudarQuando.mockResolvedValue({
+      data: { ...CEP, usar_quando: 'Use quando pedirem o CEP da obra.' },
+    });
+    await escrever('  Use quando pedirem o CEP da obra. ');
+    await clicarNoTexto('Salvar', no('[data-pronta="cep"]'));
+    expect(prontasApi.mudarQuando).toHaveBeenCalledWith(
+      31,
+      'Use quando pedirem o CEP da obra.'
+    );
+    expect(no('[data-pronta="cep"] textarea')).toBeNull();
+    expect(no('[data-pronta="cep"] [data-frase]').textContent.trim()).toBe(
+      'Use quando pedirem o CEP da obra.'
+    );
+    expect(alerta).toHaveBeenCalledWith(
+      'Pronto. Bia já segue a frase nova de Endereço pelo CEP.'
+    );
+  });
+
+  it('without a sentence of its own, the editing opens with the standard one of the tool', async () => {
+    await montar({ incluidas: [{ ...CEP, usar_quando: null }] });
+    no('[data-pronta="cep"] [data-alterar-quando]').click();
+    await flushPromises();
+    expect(no('[data-pronta="cep"] textarea').value).toContain('Use quando');
+  });
+
+  it('an empty sentence is not saved, and cancelling changes nothing', async () => {
+    await montar();
+    no('[data-pronta="cep"] [data-alterar-quando]').click();
+    await flushPromises();
+    await escrever('   ');
+    await clicarNoTexto('Salvar', no('[data-pronta="cep"]'));
+    expect(prontasApi.mudarQuando).not.toHaveBeenCalled();
+    expect(no('[data-pronta="cep"] [role="alert"]').textContent.trim()).toBe(
+      'Escreva quando o agente deve usar.'
+    );
+    await clicarNoTexto('Cancelar', no('[data-pronta="cep"]'));
+    expect(no('[data-pronta="cep"] textarea')).toBeNull();
+    expect(no('[data-pronta="cep"] [data-frase]').textContent.trim()).toBe(
+      'Use quando o cliente informar um CEP.'
+    );
+  });
+
+  it('a failed save keeps the editing open with what was written, and tells why', async () => {
+    await montar();
+    no('[data-pronta="cep"] [data-alterar-quando]').click();
+    await flushPromises();
+    prontasApi.mudarQuando.mockRejectedValue(
+      Object.assign(new Error('401'), { response: { status: 401 } })
+    );
+    await escrever('Use quando pedirem o CEP da obra.');
+    await clicarNoTexto('Salvar', no('[data-pronta="cep"]'));
+    expect(no('[data-pronta="cep"] textarea').value).toBe(
+      'Use quando pedirem o CEP da obra.'
+    );
     expect(alerta).toHaveBeenCalledWith(
       'Você não tem permissão para cuidar das ferramentas dos agentes. Peça a quem administra a conta.'
     );

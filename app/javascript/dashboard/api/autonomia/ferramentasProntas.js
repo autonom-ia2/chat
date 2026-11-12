@@ -8,6 +8,7 @@ import ApiClient from '../ApiClient';
 //                    `premium` (F7, só nos cards pagos): { gratis, restantes, precos: ['0.06', '0.15'] }
 //   incluir       -> 201 a pronta | 422 { motivo }
 //   mudarLigada   -> a pronta
+//   mudarQuando   -> a pronta, com a frase "Use quando" nova (#2881) | 422 { motivo }
 //   tirar         -> 204
 //   experimentar  -> { situacao: 'encontrado' | 'nao_encontrado' | 'nao_consegui_consultar' | 'pedido_invalido' |
 //                    'desligada' | 'documento_invalido' | 'confirmar_preco', dados?, premium? } (F7: no card Premium,
@@ -38,6 +39,10 @@ class AutonomiaFerramentasProntasAPI extends ApiClient {
 
   mudarLigada(id, ligada) {
     return axios.patch(`${this.url}/${id}`, { ligada });
+  }
+
+  mudarQuando(id, usarQuando) {
+    return axios.patch(`${this.url}/${id}`, { usar_quando: usarQuando });
   }
 
   tirar(id) {

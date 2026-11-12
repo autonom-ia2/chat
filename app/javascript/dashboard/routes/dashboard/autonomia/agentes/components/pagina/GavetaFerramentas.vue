@@ -21,6 +21,7 @@ import { chaveDoTexto, ferramentaPorId } from '../../vitrine/catalogo';
 // Cada vista põe os próprios botões no rodapé (Teleport para o rodapé da gaveta). Ligar sempre
 // passa por uma chamada de teste; desligar e excluir pedem confirmação no diálogo do módulo.
 // O painel antigo (PanelTools) continua para as contas sem a jornada nova.
+// #2881 — cada pronta tem também "Alterar quando usar": a frase que o agente lê para decidir a hora de usar.
 // #2858 F2 — com a vitrine (`vitrine`), as prontas do agente aparecem na lista (liga/desliga e "Tirar") e "Adicionar
 // ferramenta" leva à vitrine já com este agente (`verVitrine`). O cadastro manual só existe para quem pode usá-lo
 // (`cadastroManual`): sem ele, a API das ferramentas feitas à mão nem é chamada (ela responderia 401). `comecarNova`
@@ -55,6 +56,12 @@ const prontas = computed(() =>
           frase:
             item.usar_quando ||
             t(`${NS_VITRINE}.FERRAMENTAS.${chaveDoTexto(item.fonte)}.FAZ`),
+          // #2881: o texto que abre o "Alterar quando usar". Sem frase da conta, a frase padrão da ferramenta.
+          quando:
+            item.usar_quando ||
+            t(
+              `${NS_VITRINE}.FERRAMENTAS.${chaveDoTexto(item.fonte)}.USE_QUANDO`
+            ),
           icone: ferramentaPorId(item.fonte).icone,
         }))
     : []
@@ -187,6 +194,22 @@ const alternarPronta = async (item, ligar) => {
     prontasOcupadas.delete(item.id);
   }
 };
+// #2881: a frase "Use quando" da pronta. Diz se gravou: a linha só fecha a edição quando gravou.
+const mudarQuandoDaPronta = async (item, frase) => {
+  try {
+    await estadoDaVitrine.mudarQuando(item.id, frase);
+    useAlert(
+      t(`${NS_VITRINE}.PRONTAS.QUANDO_SALVO`, {
+        ferramenta: item.nome,
+        agente: nomeDoAgente.value,
+      })
+    );
+    return true;
+  } catch (falha) {
+    useAlert(t(`${NS_VITRINE}.MOTIVOS.${falha.motivo || 'GERAL'}`));
+    return false;
+  }
+};
 const pedirTirar = async item => {
   prontaAlvo.value = item;
   // O título leva o nome: abre depois que ele chegou ao diálogo.
@@ -316,6 +339,7 @@ onMounted(carregar);
         :vitrine="vitrine"
         :prontas="prontas"
         :cadastro-manual="cadastroManual"
+        :mudar-quando="mudarQuandoDaPronta"
         @abrir="abrir"
         @alternar="alternar"
         @adicionar="adicionar"
