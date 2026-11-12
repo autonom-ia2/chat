@@ -23,6 +23,7 @@ import BlocoAssunto from './BlocoAssunto.vue';
 import BlocoOrigem from './BlocoOrigem.vue';
 import BlocoRelacao from './BlocoRelacao.vue';
 import BlocoEtiquetas from './etiquetas/BlocoEtiquetas.vue';
+import BlocoCamposDaConversa from './BlocoCamposDaConversa.vue';
 import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import BlocoDoPainel from './BlocoDoPainel.vue';
 import LinhaQueAbre from './LinhaQueAbre.vue';
@@ -224,6 +225,11 @@ const verPagina = () =>
         <BlocoEtiquetas
           :pode-operar="podeOperar"
           :focar-ao-sumir="focarAoSumir"
+        />
+        <!-- #2538: os campos da conversa, inclusive os vazios, como no painel antigo. -->
+        <BlocoCamposDaConversa
+          :conversation="conversation"
+          :pode-operar="podeOperar"
         />
         <BlocoCombinado v-if="crmLigado" :contact-id="contact.id" />
         <BlocoRelacao

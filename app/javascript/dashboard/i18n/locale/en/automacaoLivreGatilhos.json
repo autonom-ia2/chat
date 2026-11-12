@@ -113,7 +113,7 @@
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
-    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
+    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once or when the stage is deleted.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "All pipelines",
       "ERRO_FUNIS": "Could not load the pipelines and stages. Close and open it again."
