@@ -27,32 +27,36 @@ module Autonomia::FerramentasProntas::Fontes::Premium::RiscoEndereco
                                            endereco_exato: 'IsExactMatch', bairro: 'Neighborhood', cidade: 'City', uf: 'State'))
   end
 
+  # Todas as consultas do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Desde 12/11
+  # (#2946), a vistoria está fora: o dataset da Rede Vistorias responde "desligado" na BigDataCorp.
+  CONSULTAS = [
+    Premium::ConsultaPaga.new(
+      nome: 'area_de_risco', descricao: 'se o endereço fica em área de comunidade. Sem o CEP, mande a rua, o número e a cidade',
+      obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
+      dataset: Premium::Dataset.new(nome: 'address_risk', rota: '/enderecos', resposta: 'AddressRiskData', custo: '0.08',
+                                    preco: '0.12', busca: POR_CEP_E_NUMERO, extrair: AREA)
+    ),
+    Premium::ConsultaPaga.new(
+      nome: 'criminalidade', descricao: 'as ocorrências de crime da cidade (SP, RJ e MG). Basta a cidade; o CEP também serve',
+      obrigatorios: [], opcionais: [Premium::Parametros::CEP, Premium::Parametros::CIDADE, Premium::Parametros::UF], pelo_endereco: true,
+      dataset: Premium::Dataset.new(nome: 'criminal_statistics_data', rota: '/enderecos', resposta: 'CriminalStatisticsData',
+                                    custo: '0.06', preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: CRIMES)
+    ),
+    Premium::ConsultaPaga.new(
+      nome: 'vistoria', descricao: 'o tipo, a área e as notas da vistoria do imóvel. Sem o CEP, mande a rua, o número e a cidade',
+      obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
+      dataset: Premium::Dataset.new(nome: 'partner_rede_vistorias_address', rota: '/marketplace', resposta: 'RedeVistoriasData',
+                                    custo: '0.26', preco: '0.39', busca: POR_CEP_E_NUMERO, extrair: VISTORIA, prazo: 30,
+                                    cobra_sem_registro: false)
+    )
+  ].freeze
+
+  # A descrição não lista as consultas: o modelo as lê na ferramenta, que acompanha `Premium::DESLIGADAS_NA_FONTE`.
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'risco_endereco', slug: 'pronta_risco_endereco', nome: 'Risco do endereço',
-    descricao: 'Consulta paga: o risco de um endereço — se fica em área de comunidade, a criminalidade da cidade (só SP, ' \
-               'RJ e MG) ou a vistoria do imóvel. O cliente não precisa saber o CEP: mande a cidade, ou a rua, o número e a ' \
-               'cidade. Não diz quem mora no endereço.',
-    consultas: [
-      Premium::ConsultaPaga.new(
-        nome: 'area_de_risco', descricao: 'se o endereço fica em área de comunidade. Sem o CEP, mande a rua, o número e a cidade',
-        obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
-        dataset: Premium::Dataset.new(nome: 'address_risk', rota: '/enderecos', resposta: 'AddressRiskData', custo: '0.08',
-                                      preco: '0.12', busca: POR_CEP_E_NUMERO, extrair: AREA)
-      ),
-      Premium::ConsultaPaga.new(
-        nome: 'criminalidade', descricao: 'as ocorrências de crime da cidade (SP, RJ e MG). Basta a cidade; o CEP também serve',
-        obrigatorios: [], opcionais: [Premium::Parametros::CEP, Premium::Parametros::CIDADE, Premium::Parametros::UF], pelo_endereco: true,
-        dataset: Premium::Dataset.new(nome: 'criminal_statistics_data', rota: '/enderecos', resposta: 'CriminalStatisticsData',
-                                      custo: '0.06', preco: '0.09', busca: ->(params) { "zipcode{#{params['cep']}}" }, extrair: CRIMES)
-      ),
-      Premium::ConsultaPaga.new(
-        nome: 'vistoria', descricao: 'o tipo, a área e as notas da vistoria do imóvel. Sem o CEP, mande a rua, o número e a cidade',
-        obrigatorios: [Premium::Parametros::NUMERO], opcionais: Premium::Parametros::PELO_ENDERECO, pelo_endereco: true,
-        dataset: Premium::Dataset.new(nome: 'partner_rede_vistorias_address', rota: '/marketplace', resposta: 'RedeVistoriasData',
-                                      custo: '0.26', preco: '0.39', busca: POR_CEP_E_NUMERO, extrair: VISTORIA, prazo: 30,
-                                      cobra_sem_registro: false)
-      )
-    ],
+    descricao: 'Consulta paga: o risco de um endereço, para quem segura um imóvel. O cliente não precisa saber o CEP: ' \
+               'mande a cidade, ou a rua, o número e a cidade. Não diz quem mora no endereço.',
+    consultas: CONSULTAS,
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma); a vistoria é da parceira Rede Vistorias, pela BigDataCorp.'
   )

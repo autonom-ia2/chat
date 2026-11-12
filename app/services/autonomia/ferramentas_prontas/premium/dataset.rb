@@ -10,7 +10,9 @@
 # `extrair`: o dado da BigDataCorp -> só o que o agente precisa (nada de nome de parente, sócio pessoa física, link de
 #   arquivo nem PDF). Devolve nil quando não sobrou nada: sem registro.
 # `prazo`: o teto da chamada. As consultas sob demanda (`/ondemand`) buscam na fonte oficial na hora, e a documentação
-#   mostra 30 a 40 segundos; as da base, segundos.
+#   mostra 30 a 40 segundos; as da base, segundos. Algumas da base são lentas de verdade (`PRAZO_DAS_LENTAS`): no teste
+#   direto na API (12/11/2026), `processes` levou 36 s e `companies_statistics` 81 s, e o prazo da base (20 s) cortava
+#   as duas. Decisão do Rodrigo (#2946): 120 s para elas, "é processo longo mesmo".
 # `cobra_sem_registro`: a BigDataCorp cobra a consulta que volta vazia? Só a vistoria não cobra (doc da Rede Vistorias).
 # `forma`: o que vem em `Result[0][resposta]`. As consultas sob demanda (`OnlineCertificates`, `OnlineQuery`) mandam uma
 #   lista; as da base, um objeto. A `Leitura` confere a forma antes de extrair: forma errada é a BigDataCorp que mudou.
@@ -18,6 +20,7 @@ class Autonomia::FerramentasProntas::Premium::Dataset
   RESPOSTAS_EM_LISTA = %w[OnlineCertificates OnlineQuery].freeze
   PRAZO_DA_BASE = 20
   PRAZO_SOB_DEMANDA = 55
+  PRAZO_DAS_LENTAS = 120
   ROTA_SOB_DEMANDA = '/ondemand'.freeze
   MARGEM = BigDecimal('1.5')
 

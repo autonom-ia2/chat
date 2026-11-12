@@ -7,6 +7,7 @@ import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue
 import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
 import RelationshipMedia from 'dashboard/components-next/Relationships/RelationshipMedia.vue';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 
 const props = defineProps({
   contact: { type: Object, required: true },
@@ -40,13 +41,16 @@ const record = computed(() =>
 const surface = computed(() =>
   fieldsEntity.value === 'company' ? 'company_details' : 'contact_details'
 );
+// #2435: o campo com "Mostrar na tela" desligado não aparece aqui.
 const fields = computed(() =>
-  selectDefinitions(
-    state.value.definitions.filter(
-      item => item.attribute_model === `${fieldsEntity.value}_attribute`
-    ),
-    state.value.configuration,
-    surface.value
+  naTela(
+    selectDefinitions(
+      state.value.definitions.filter(
+        item => item.attribute_model === `${fieldsEntity.value}_attribute`
+      ),
+      state.value.configuration,
+      surface.value
+    )
   )
 );
 const dirty = computed(() => fieldEditors.value.some(editor => editor.dirty));

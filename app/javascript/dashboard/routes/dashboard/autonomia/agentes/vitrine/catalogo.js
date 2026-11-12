@@ -29,8 +29,9 @@ const DIAS_DO_EXEMPLO = 20;
 // `exemplo`: o valor de exemplo que muda com o tempo (a data final da contagem de dias úteis); sem ele, o do i18n.
 // `base`: a fonte é uma base que a plataforma baixa (F5); o cartão diz de quando é a cópia.
 // `premium`: consulta paga (F7). Fica no grupo do assunto, depois das grátis do grupo (`premiumPorUltimo`), com o selo
-// "Premium". Não entra no destaque; o preço e as grátis que restam vêm do servidor (`premium` de cada fonte em
-// `listar`). O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
+// "Premium". Não entra no destaque; o preço, as grátis que restam e quantas perguntas ele responde vêm do servidor
+// (`premium` de cada fonte em `listar`): a conta muda quando a BigDataCorp desliga uma consulta (#2946), por isso o card
+// Premium não tem `consultas` aqui. O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
 export const FERRAMENTAS = [
   { id: 'cnpj', grupo: 'PESSOAS', icone: 'i-lucide-building-2' },
   {
@@ -138,21 +139,18 @@ export const FERRAMENTAS = [
     id: 'certidoes_empresa',
     grupo: 'PESSOAS',
     icone: 'i-lucide-file-check-2',
-    consultas: 5,
     premium: true,
   },
   {
     id: 'raio_x_empresa',
     grupo: 'PESSOAS',
     icone: 'i-lucide-scan-search',
-    consultas: 5,
     premium: true,
   },
   {
     id: 'conferir_pessoa',
     grupo: 'PESSOAS',
     icone: 'i-lucide-user-check',
-    consultas: 3,
     premium: true,
   },
   {
@@ -165,21 +163,18 @@ export const FERRAMENTAS = [
     id: 'risco_endereco',
     grupo: 'LUGAR',
     icone: 'i-lucide-house',
-    consultas: 3,
     premium: true,
   },
   {
     id: 'imovel_rural',
     grupo: 'LUGAR',
     icone: 'i-lucide-tractor',
-    consultas: 2,
     premium: true,
   },
   {
     id: 'contato_empresa',
     grupo: 'CLIENTES',
     icone: 'i-lucide-contact',
-    consultas: 3,
     premium: true,
   },
 ];

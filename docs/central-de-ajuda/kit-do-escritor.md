@@ -36,18 +36,25 @@ me_leve_ate_la:           # omita se o artigo não tem uma tela
 requer: null              # recurso que a conta precisa ter; vem do mapa, não invente
 assuntos: ["01.2-definir-disponibilidade", "01.3-marcar-offline-automaticamente"]
 conferido_em: "2026-09-22"
-evidencias:                # caminho:linha | trecho de CADA fato do texto (#614)
-  - "app/javascript/dashboard/components-next/sidebar/SidebarProfileMenu.vue:206 | <template v-for=\"item in allowedMenuItems\" :key=\"item.label\">"
+evidencias:                # caminho | trecho de CADA fato do texto (#614, #2606)
+  - "app/javascript/dashboard/components-next/sidebar/SidebarProfileMenu.vue | <template v-for=\"item in allowedMenuItems\" :key=\"item.label\">"
 ---
 ```
 
-Cada evidência é `caminho:linha | trecho`, com o trecho entre aspas (`JSON.stringify` — vira
-YAML válido mesmo com aspas ou `:` dentro do próprio trecho). O trecho é o conteúdo da linha
-apontada, sem espaço nas pontas — é ele, não o número, que prova o fato: código é revisado por
-outros motivos o tempo todo, e a linha desloca. `pnpm central:check` confere se o trecho ainda
-existe no arquivo; se só o número mudou, é aviso; se o trecho sumiu (ou o arquivo foi apagado),
-o artigo entra para revisão. Escreva a evidência à mão, copiando a linha exata do arquivo — não
-invente o trecho.
+Cada evidência é `caminho | trecho`, com o texto entre aspas (`JSON.stringify` — vira YAML
+válido mesmo com aspas ou `:` dentro do próprio trecho). O trecho é o conteúdo de uma linha do
+arquivo, sem espaço nas pontas, e é ele que prova o fato. Não há número de linha (#2606): código
+é revisado por outros motivos o tempo todo, a linha desloca, e renumerar evidências fazia dois
+PRs vizinhos conflitarem sem mudar nenhuma afirmação. `pnpm central:check` confere:
+
+- o trecho aparece **uma vez** no arquivo: ok;
+- aparece mais de uma vez: **ambígua**, e o check falha. Escolha uma linha que só exista ali
+  (a que tem o nome da chave, da rota ou da função, não `{`, `end` ou `<Button`);
+- sumiu, ou o arquivo foi apagado: o artigo entra para revisão.
+
+O formato antigo `caminho:linha | trecho` ainda é lido, ignorando o número, com aviso. Ao mexer
+num artigo, tire o `:linha` das evidências dele. Escreva a evidência à mão, copiando a linha
+exata do arquivo — não invente o trecho.
 
 ## 3. A estrutura, sempre igual
 
@@ -125,7 +132,7 @@ tom:
 
 - **Todo fato é conferido no código de hoje.** O estudo de 08/09 e o `porques.md` são
   ponto de partida, não prova. Para cada fato do texto, abra o arquivo, confirme, e
-  registre `arquivo:linha` em `evidencias`.
+  registre `caminho | trecho` em `evidencias`.
 - A prova é o código **que a tela usa**, não um parecido. Siga o `import` a partir da tela.
   Ex.: o limite de imagem da assinatura é 4 MB (`WootWriter/Editor.vue:127`), não os 40 MB
   do editor da conversa (`FileHelper.js:4`) — o estudo de 08/09 errou por isso.
@@ -176,7 +183,8 @@ sem cor de marca.
 - [ ] Cabeçalho completo; id e capítulo batem com o mapa.
 - [ ] As cinco seções, na ordem, com os títulos exatos.
 - [ ] "Por que importa" diz consequência, não repete "O que é".
-- [ ] Cada fato tem evidência `arquivo:linha` que **ainda confere** no código de hoje.
+- [ ] Cada fato tem evidência `caminho | trecho` que **ainda confere** no código de hoje, com um
+      trecho que só aparece uma vez no arquivo.
 - [ ] Nomes de botão e menu iguais aos do `pt_BR`.
 - [ ] Nenhuma marca, nenhum dado real, nenhum "a verificar" no texto.
 - [ ] `me_leve_ate_la.rota` existe no `guideRouteRegistry.js`; destaque existe ou é null.

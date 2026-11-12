@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 
 import ContactCustomAttributeItem from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributeItem.vue';
 
@@ -20,7 +21,9 @@ const { uiSettings } = useUISettings();
 
 const searchQuery = ref('');
 
-const contactAttributes = useMapGetter('attributes/getContactAttributes') || [];
+const todosOsAtributos = useMapGetter('attributes/getContactAttributes');
+// #2435: o atributo com "Mostrar na tela" desligado não aparece no contato.
+const contactAttributes = computed(() => naTela(todosOsAtributos.value));
 
 const hasContactAttributes = computed(
   () => contactAttributes.value?.length > 0

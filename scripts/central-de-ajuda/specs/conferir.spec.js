@@ -279,35 +279,50 @@ describe('conferir — junta todos os problemas', () => {
   });
 });
 
-describe('analisarEvidencia — separa caminho:linha | trecho sem regex', () => {
-  it("separa com indexOf(' | ') e lastIndexOf(':')", () => {
-    expect(analisarEvidencia('app/models/user.rb:12 | def nome')).toEqual({
+describe('analisarEvidencia — separa caminho | trecho sem regex (#2606)', () => {
+  it("separa com indexOf(' | ')", () => {
+    expect(analisarEvidencia('app/models/user.rb | def nome')).toEqual({
       caminho: 'app/models/user.rb',
-      numero: 12,
       trecho: 'def nome',
+      formatoAntigo: false,
     });
   });
 
-  // O trecho pode ter ":" dentro (ex.: um objeto JS) — lastIndexOf no lado do
-  // caminho:linha, não no texto inteiro, é o que evita cortar errado.
-  it('não se confunde com dois pontos dentro do trecho', () => {
+  // O trecho pode ter ":" e até " | " dentro: o primeiro " | " é o que separa.
+  it('não se confunde com dois pontos nem com " | " dentro do trecho', () => {
+    expect(analisarEvidencia('app/foo.js | const x = { a: 1 } | 0;')).toEqual({
+      caminho: 'app/foo.js',
+      trecho: 'const x = { a: 1 } | 0;',
+      formatoAntigo: false,
+    });
+  });
+
+  it('formato antigo caminho:linha | trecho: lido, o número é ignorado e marcado', () => {
     expect(analisarEvidencia('app/foo.js:8 | const x = { a: 1 };')).toEqual({
       caminho: 'app/foo.js',
-      numero: 8,
       trecho: 'const x = { a: 1 };',
+      formatoAntigo: true,
+    });
+  });
+
+  it('dois pontos sem número depois não é formato antigo: faz parte do caminho', () => {
+    expect(analisarEvidencia('app/foo:bar.js | x')).toEqual({
+      caminho: 'app/foo:bar.js',
+      trecho: 'x',
+      formatoAntigo: false,
     });
   });
 
   it('devolve null quando falta o separador " | "', () => {
-    expect(analisarEvidencia('app/models/user.rb:12')).toBeNull();
-  });
-
-  it('devolve null quando falta o número da linha', () => {
-    expect(analisarEvidencia('app/models/user.rb | def nome')).toBeNull();
+    expect(analisarEvidencia('app/models/user.rb')).toBeNull();
   });
 
   it('devolve null quando o trecho está vazio', () => {
-    expect(analisarEvidencia('app/models/user.rb:12 | ')).toBeNull();
+    expect(analisarEvidencia('app/models/user.rb | ')).toBeNull();
+  });
+
+  it('devolve null quando o caminho está vazio', () => {
+    expect(analisarEvidencia(':12 | def nome')).toBeNull();
   });
 });
 
@@ -319,62 +334,68 @@ describe('evidenciasDoArtigo — cada evidência contra o arquivo-fonte de hoje'
     fs.mkdirSync(path.dirname(fonte), { recursive: true });
     fs.writeFileSync(
       fonte,
-      ['class User', '  def nome', '    @nome', '  end', 'end', ''].join('\n')
+      ['class User', '  def nome', '    @nome', '  end', '  def apelido', '  end', 'end', ''].join('\n')
     );
   });
 
   afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
 
-  it('trecho na mesma linha declarada: ok', () => {
+  const comEvidencias = evidencias => {
     const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nome'];
+    art.cabecalho.evidencias = evidencias;
+    return art;
+  };
+
+  it('trecho que aparece uma vez no arquivo: ok', () => {
+    const art = comEvidencias(['app/models/user.rb | def nome']);
 
     expect(evidenciasDoArtigo(art, raiz)).toEqual([
       {
         artigo: art.arquivo,
         situacao: 'ok',
         caminho: 'app/models/user.rb',
-        numero: 2,
         trecho: 'def nome',
+        formatoAntigo: false,
       },
     ]);
   });
 
-  it('trecho existe mas mudou de linha: aviso, não problema', () => {
-    const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:1 | def nome'];
+  it('trecho que aparece mais de uma vez: ambígua', () => {
+    const art = comEvidencias(['app/models/user.rb | end']);
+
+    expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('ambigua');
+  });
+
+  it('formato antigo com número errado: ok, o número não conta mais', () => {
+    const art = comEvidencias(['app/models/user.rb:1 | def nome']);
 
     expect(evidenciasDoArtigo(art, raiz)).toEqual([
       {
         artigo: art.arquivo,
-        situacao: 'linha_mudou',
+        situacao: 'ok',
         caminho: 'app/models/user.rb',
-        numero: 1,
         trecho: 'def nome',
-        novaLinha: 2,
+        formatoAntigo: true,
       },
     ]);
   });
 
   it('trecho sumiu do arquivo: para revisão', () => {
-    const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nao_existe_mais'];
+    const art = comEvidencias(['app/models/user.rb | def nao_existe_mais']);
 
     expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('trecho_sumiu');
   });
 
   it('arquivo apagado: para revisão', () => {
-    const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/sumiu.rb:2 | def nome'];
+    const art = comEvidencias(['app/models/sumiu.rb | def nome']);
 
     expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('arquivo_ausente');
   });
 
   it('evidência mal formada aparece marcada, sem derrubar o resto', () => {
-    const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:2'];
+    const art = comEvidencias(['app/models/user.rb', 'app/models/user.rb | def nome']);
 
-    expect(evidenciasDoArtigo(art, raiz)[0].situacao).toBe('malformada');
+    expect(evidenciasDoArtigo(art, raiz).map(e => e.situacao)).toEqual(['malformada', 'ok']);
   });
 
   it('artigo sem evidências não quebra', () => {
@@ -384,7 +405,7 @@ describe('evidenciasDoArtigo — cada evidência contra o arquivo-fonte de hoje'
   });
 });
 
-describe('conferir — evidências entram como aviso, exceto malformada', () => {
+describe('conferir — evidências: sumida e formato antigo avisam; mal formada e ambígua falham', () => {
   const raiz = fs.mkdtempSync(
     path.join(os.tmpdir(), 'central-evidencias-conferir-')
   );
@@ -392,44 +413,56 @@ describe('conferir — evidências entram como aviso, exceto malformada', () => 
 
   beforeAll(() => {
     fs.mkdirSync(path.dirname(fonte), { recursive: true });
-    fs.writeFileSync(fonte, ['class User', '  def nome', 'end', ''].join('\n'));
+    fs.writeFileSync(fonte, ['class User', '  def nome', '  end', 'end', ''].join('\n'));
   });
 
   afterAll(() => fs.rmSync(raiz, { recursive: true, force: true }));
 
-  it('evidência que sumiu vira aviso, e ok continua true', () => {
+  const conferirCom = evidencias => {
     const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:2 | def nao_existe_mais'];
-    const mapa = mapaCom([artigoDoMapa({ id: '00.01', rotas: ['tela_a'] })]);
-    const registro = new Set(['tela_a']);
-
-    const resultado = conferir({
+    art.cabecalho.evidencias = evidencias;
+    return conferir({
       artigos: [art],
-      mapa,
-      registro,
+      mapa: mapaCom([artigoDoMapa({ id: '00.01', rotas: ['tela_a'] })]),
+      registro: new Set(['tela_a']),
       humanos: {},
       raiz,
     });
+  };
+
+  it('evidência que sumiu vira aviso, e ok continua true', () => {
+    const resultado = conferirCom(['app/models/user.rb | def nao_existe_mais']);
 
     expect(resultado.ok).toBe(true);
-    expect(resultado.avisos.join('\n')).toContain('user.rb:2');
+    expect(resultado.avisos.join('\n')).toContain('user.rb | def nao_existe_mais');
   });
 
   it('evidência mal formada vira problema e falha o check', () => {
-    const art = artigo({ id: '00.01', rota: 'tela_a' });
-    art.cabecalho.evidencias = ['app/models/user.rb:2'];
-    const mapa = mapaCom([artigoDoMapa({ id: '00.01', rotas: ['tela_a'] })]);
-    const registro = new Set(['tela_a']);
-
-    const resultado = conferir({
-      artigos: [art],
-      mapa,
-      registro,
-      humanos: {},
-      raiz,
-    });
+    const resultado = conferirCom(['app/models/user.rb']);
 
     expect(resultado.ok).toBe(false);
     expect(resultado.problemas.join('\n')).toContain('mal formada');
+  });
+
+  it('evidência ambígua no formato novo vira problema e falha o check', () => {
+    const resultado = conferirCom(['app/models/user.rb | end']);
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.problemas.join('\n')).toContain('ambígua');
+  });
+
+  it('formato antigo avisa e não falha, nem quando é ambíguo (PR aberto não quebra)', () => {
+    const resultado = conferirCom(['app/models/user.rb:2 | def nome', 'app/models/user.rb:3 | end']);
+
+    expect(resultado.ok).toBe(true);
+    expect(resultado.avisos.join('\n')).toContain('formato antigo');
+    expect(resultado.avisos.join('\n')).toContain('user.rb (ambígua)');
+  });
+
+  it('formato novo, único e presente: sem aviso nem problema de evidência', () => {
+    const resultado = conferirCom(['app/models/user.rb | def nome']);
+
+    expect(resultado.ok).toBe(true);
+    expect(resultado.avisos).toEqual([]);
   });
 });

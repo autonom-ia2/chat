@@ -412,12 +412,12 @@ describe('marcarParaRevisao — revisar: true + nota, junta motivos do mesmo art
     const novo = marcarParaRevisao(
       mapa,
       '02.01',
-      'evidência sumiu: app/foo.rb:12'
+      'evidência sumiu: app/foo.rb | def nome'
     );
 
     expect(novo.capitulos[0].artigos[0]).toMatchObject({
       revisar: true,
-      nota: 'evidência sumiu: app/foo.rb:12',
+      nota: 'evidência sumiu: app/foo.rb | def nome',
     });
   });
 
@@ -461,7 +461,7 @@ describe('evidenciasQuebradasNoPush — só a que aponta para arquivo alterado n
   });
 
   it('trecho sumiu, e o arquivo ESTÁ na lista de alterados: entra', () => {
-    const artigos = [artigo(['app/models/user.rb:2 | def nome_antigo'])];
+    const artigos = [artigo(['app/models/user.rb | def nome_antigo'])];
 
     const resultado = evidenciasQuebradasNoPush({
       artigos,
@@ -474,7 +474,7 @@ describe('evidenciasQuebradasNoPush — só a que aponta para arquivo alterado n
   });
 
   it('trecho sumiu, mas o arquivo NÃO está na lista de alterados: não entra', () => {
-    const artigos = [artigo(['app/models/user.rb:2 | def nome_antigo'])];
+    const artigos = [artigo(['app/models/user.rb | def nome_antigo'])];
 
     const resultado = evidenciasQuebradasNoPush({
       artigos,
@@ -669,7 +669,7 @@ describe('corpoDoPr — o corpo do Pull Request do robô', () => {
       removidos: [],
       citacoesNoMeio: [],
       paraRevisaoPorEvidencia: [
-        { id: '02.06', motivo: 'evidência sumiu: app/models/user.rb:12' },
+        { id: '02.06', motivo: 'evidência sumiu: app/models/user.rb | def nome' },
       ],
       paraRevisaoPorI18n: [
         { id: '02.04', motivo: 'texto de tela "Salvar" saiu do i18n' },
@@ -677,7 +677,7 @@ describe('corpoDoPr — o corpo do Pull Request do robô', () => {
     });
 
     expect(corpo).toContain('02.06');
-    expect(corpo).toContain('app/models/user.rb:12');
+    expect(corpo).toContain('app/models/user.rb | def nome');
     expect(corpo).toContain('02.04');
     expect(corpo).toContain('Salvar');
   });
