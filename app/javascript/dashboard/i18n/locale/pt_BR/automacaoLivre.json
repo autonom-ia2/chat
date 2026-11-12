@@ -452,7 +452,8 @@
       "SEM_ATRIBUTOS": {
         "ATRIBUTOS_DO_CONTATO": "A conta ainda não tem campo personalizado de contato. Crie um em Atributos personalizados para preencher aqui.",
         "ATRIBUTOS_DA_EMPRESA": "A conta ainda não tem campo personalizado de empresa. Crie um em Atributos personalizados para preencher aqui.",
-        "ATRIBUTOS_DA_CONVERSA": "A conta ainda não tem campo personalizado de conversa. Crie um em Atributos personalizados para preencher aqui."
+        "ATRIBUTOS_DA_CONVERSA": "A conta ainda não tem campo personalizado de conversa. Crie um em Atributos personalizados para preencher aqui.",
+        "ATRIBUTOS_DO_CARD": "A conta ainda não tem campo personalizado de card. Crie um em Atributos personalizados para preencher aqui."
       },
       "ATRIBUTOS_FALHOU": "Não deu para carregar os campos personalizados. Recarregue a página para tentar de novo.",
       "POR_DADO_NA_ETIQUETA": "Pôr uma etiqueta com o nome de um dado",

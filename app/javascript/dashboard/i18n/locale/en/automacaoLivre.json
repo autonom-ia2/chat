@@ -452,7 +452,8 @@
       "SEM_ATRIBUTOS": {
         "ATRIBUTOS_DO_CONTATO": "The account has no contact custom field yet. Create one in Custom Attributes to fill it here.",
         "ATRIBUTOS_DA_EMPRESA": "The account has no company custom field yet. Create one in Custom Attributes to fill it here.",
-        "ATRIBUTOS_DA_CONVERSA": "The account has no conversation custom field yet. Create one in Custom Attributes to fill it here."
+        "ATRIBUTOS_DA_CONVERSA": "The account has no conversation custom field yet. Create one in Custom Attributes to fill it here.",
+        "ATRIBUTOS_DO_CARD": "The account has no card custom field yet. Create one in Custom Attributes to fill it here."
       },
       "ATRIBUTOS_FALHOU": "Could not load the custom fields. Reload the page to try again.",
       "POR_DADO_NA_ETIQUETA": "Add a label named after a data field",
