@@ -14,6 +14,10 @@
 # - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo);
 # - o que o "esperar até" faz enquanto espera (G63, G64): a hora da conferência só sem prazo, o galho "a cada mensagem"
 #   só com cliente e fora de outro galho (EnquantoEspera).
+#
+# A Receita anda pelos passos e junta as frases, na ordem; cada área confere no seu validador (#2608), em receita/:
+# Gatilho, Acao, Mensagens (F4), PassosDeIa (F7), Condicoes e Leitura (a régua de todo `$valor`). Todos recebem o mesmo
+# Contexto e devolvem frases (Frase).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
@@ -28,8 +32,6 @@ class Autonomia::Automacao::Receita
   CAMPOS_DE_GENTE = %w[pessoa contato].freeze
 
   include ::Autonomia::Automacao::Receita::Frase
-  # O passo "ação" ao salvar (AcaoNaReceita): a ação da lista, o caminho e o corpo.
-  include ::Autonomia::Automacao::AcaoNaReceita
 
   # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
   # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
@@ -90,20 +92,18 @@ class Autonomia::Automacao::Receita
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
     return [] unless passo['tipo'] == 'acao'
 
-    problemas_da_acao(passo)
+    acao.problemas(passo)
   end
 
   # Os passos com conferência própria (PassosProprios); os caminhos que eles leem passam pela régua daqui.
   def passos_proprios
     @passos_proprios ||= ::Autonomia::Automacao::PassosProprios.new(conta: @conta, account_user: @account_user, receita: @receita,
                                                                     alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
-                                                                      problemas_do_caminho(id, c, **opcoes)
+                                                                      leitura.problemas(id, c, **opcoes)
                                                                     end
   end
 
-  # A régua dos valores (Leitura): a ação, os passos próprios e os textos perguntam aqui.
-  def problemas_do_caminho(...) = leitura.problemas(...)
-
+  # A régua dos valores (Leitura): a ação, as condições, os passos próprios e os textos perguntam aqui.
   def leitura = @leitura ||= ::Autonomia::Automacao::Receita::Leitura.new(self, contexto)
 
   def condicoes = @condicoes ||= ::Autonomia::Automacao::Receita::Condicoes.new(leitura)
@@ -111,6 +111,8 @@ class Autonomia::Automacao::Receita
   def mensagens = @mensagens ||= ::Autonomia::Automacao::Receita::Mensagens.new(contexto, leitura)
 
   def passos_de_ia = @passos_de_ia ||= ::Autonomia::Automacao::Receita::PassosDeIa.new(contexto)
+
+  def acao = @acao ||= ::Autonomia::Automacao::Receita::Acao.new(contexto, leitura)
 
   def gatilho = ::Autonomia::Automacao::Receita::Gatilho.new(self, contexto, condicoes)
 
