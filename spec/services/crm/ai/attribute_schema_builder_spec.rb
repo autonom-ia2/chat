@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::AttributeSchemaBuilder do
   let(:account) { create(:account) }
 
-  def create_attribute(key:, model:, type:, label: nil, values: nil, description: nil)
+  def create_attribute(key:, model:, type:, label: nil, **opcoes)
     create(
       :custom_attribute_definition,
       account: account,
@@ -11,8 +11,8 @@ RSpec.describe Crm::Ai::AttributeSchemaBuilder do
       attribute_display_name: label || key.humanize,
       attribute_model: model,
       attribute_display_type: type,
-      attribute_description: description,
-      attribute_values: values
+      attribute_description: opcoes[:description],
+      attribute_values: opcoes[:values]
     )
   end
 

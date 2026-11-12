@@ -187,6 +187,7 @@
       "ATTRIBUTE_DISPLAY_TYPE": "Field type",
       "ATTRIBUTE_DESCRIPTION": "What it is for",
       "ATTRIBUTE_VALUES": "List options",
+      "OCULTO_NA_TELA": "Hide from the screens",
       "TEXTO": "What to say",
       "PARA": "Who to notify",
       "TITULO_DO_RETORNO": "What the team will do",
