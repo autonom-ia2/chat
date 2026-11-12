@@ -11,10 +11,15 @@ import BotaoCopiar from './BotaoCopiar.vue';
 import MenuMais from './MenuMais.vue';
 
 // #2894 — o cabeçalho da ficha da pessoa: quem é, desde quando é cliente, como
-// falar com ela, e as ações. Só "Conversar" é preenchido.
+// falar com ela, e as ações. Só "Conversar" é preenchido. Quem só pode ver o
+// contato (`podeEditar` falso) não tem "Marcar como cliente", "Não é mais
+// cliente" nem "Alterar informações"; quem não pode criar card
+// (`podeCriarCards` falso) não tem "Novo card".
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcandoCliente: { type: Boolean, default: false },
+  podeEditar: { type: Boolean, default: true },
+  podeCriarCards: { type: Boolean, default: true },
 });
 const emit = defineEmits([
   'conversar',
@@ -75,7 +80,7 @@ const empresa = computed(
           {{ clienteDesde }}
         </SeloDeEstado>
         <Button
-          v-else
+          v-else-if="podeEditar"
           data-relacionamentos="marcar-cliente"
           slate
           faded
@@ -175,9 +180,14 @@ const empresa = computed(
       />
       <div
         data-relacionamentos="acoes-secundarias"
-        class="grid grid-cols-[1fr_1fr_auto] items-center gap-3 lg:flex lg:shrink-0"
+        class="grid items-center gap-3 lg:flex lg:shrink-0"
+        :class="
+          podeCriarCards ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-[1fr_auto]'
+        "
       >
         <Button
+          v-if="podeCriarCards"
+          data-relacionamentos="novo-card"
           slate
           faded
           size="lg"
@@ -193,7 +203,11 @@ const empresa = computed(
           :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
           @click="emit('lembrete')"
         />
-        <MenuMais @acao="escolha => emit('maisAcao', escolha)" />
+        <MenuMais
+          :pode-alterar="podeEditar"
+          :eh-cliente="ehCliente"
+          @acao="escolha => emit('maisAcao', escolha)"
+        />
       </div>
     </div>
   </header>

@@ -4,13 +4,17 @@ import { useI18n } from 'vue-i18n';
 import { formatarDiaMes } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import FalhaDaParte from './FalhaDaParte.vue';
 
 // #2894 — "De onde veio": a lista de onde a pessoa foi trazida ou o canal por
-// onde ela chegou, e quando.
+// onde ela chegou, e quando. Sem origem o cartão não existe; `falhou` (a leitura
+// não veio) o mantém, com "Tentar de novo".
 const props = defineProps({
   origem: { type: Object, default: null },
   agora: { type: Number, default: () => Date.now() },
+  falhou: { type: Boolean, default: false },
 });
+const emit = defineEmits(['tentar']);
 
 const { t } = useI18n();
 const idioma = useIdioma();
@@ -40,10 +44,11 @@ const frase = computed(() => {
 <!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <CartaoDaSecao
-    v-if="origem"
+    v-if="origem || falhou"
     data-relacionamentos="de-onde-veio"
     :titulo="t('RELACIONAMENTOS_FICHA.ORIGEM.TITULO')"
   >
-    <p class="m-0 text-base text-n-slate-12">{{ frase }}</p>
+    <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
+    <p v-else class="m-0 text-base text-n-slate-12">{{ frase }}</p>
   </CartaoDaSecao>
 </template>

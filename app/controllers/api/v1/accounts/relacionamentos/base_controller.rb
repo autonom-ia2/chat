@@ -1,5 +1,6 @@
-# Base das leituras da Lista nova de Relacionamentos (#2894): só com a chave da conta ligada (404 sem ela) e com a mesma
-# permissão de ver contatos de hoje. Pedido que a lista não conhece (grupo, ordem, página, filtro) responde 422.
+# Base das leituras da Lista nova de Relacionamentos (#2894) e da ficha (#2895): só com a chave da conta ligada (404 sem
+# ela) e com a mesma permissão de ver contatos de hoje. Pedido que a lista não conhece (grupo, ordem, página, filtro)
+# responde 422; a ficha não aceita parâmetro nenhum.
 class Api::V1::Accounts::Relacionamentos::BaseController < Api::V1::Accounts::BaseController
   CHAVES_DO_PEDIDO = %w[grupo busca ordem pagina filtros].freeze
 
@@ -45,5 +46,26 @@ class Api::V1::Accounts::Relacionamentos::BaseController < Api::V1::Accounts::Ba
 
   def recusar(mensagem)
     raise ::Relacionamentos::PedidoInvalido, mensagem
+  end
+
+  # As leituras da ficha não têm filtro nem página: o que vier na consulta é pedido que a ficha não conhece.
+  def sem_parametros
+    desconhecido = request.query_parameters.keys.first
+    recusar("parâmetro desconhecido: #{desconhecido}") if desconhecido
+  end
+
+  # As conversas destas pessoas que quem pede pode ler: a regra do histórico do contato de hoje.
+  def conversas_legiveis_de(pessoas)
+    ::Contacts::ConversasLegiveis.call(pessoas, user: Current.user, account: Current.account)
+  end
+
+  # Os cards da ficha, para quem vê o CRM, como os funis da lista: com o CRM desligado a lista vem vazia. O bloco recebe
+  # os cards que a pessoa enxerga no CRM e escolhe os da ficha.
+  def responder_cards(com_pessoa: false)
+    authorize ::Crm::Card, :index?
+    return render json: [] unless ::Crm::Config.enabled?
+
+    cards = yield policy_scope(::Crm::Card)
+    render json: ::Relacionamentos::Ficha::Cards.new(cards, Current.account_user, com_pessoa: com_pessoa).call
   end
 end

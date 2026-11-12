@@ -73,6 +73,10 @@ export const formularioDaPessoa = pessoa => {
     cidade: adicionais.city ?? '',
     empresa: adicionais.company_name ?? '',
     redes: Object.fromEntries(REDES.map(rede => [rede, perfis[rede] ?? ''])),
+    // Rede que a gaveta não mostra: vai e volta sem ninguém mexer.
+    outrasRedes: Object.fromEntries(
+      Object.entries(perfis).filter(([rede]) => !REDES.includes(rede))
+    ),
     extras: Object.fromEntries(
       extrasDaConta(pessoa).map(([chave, valor]) => [
         chave,
@@ -84,8 +88,9 @@ export const formularioDaPessoa = pessoa => {
 
 // O que a pessoa preencheu, mais `''` explícito para o que existia no formulário
 // inicial e ela apagou (limpar um campo tem de limpar). O que nunca existiu fica
-// de fora. Contrato com o servidor (merge de `additional_attributes`) fecha na
-// entrega E2 (#2895).
+// de fora. O servidor junta `custom_attributes` e `additional_attributes` com o
+// que o contato já tinha (ContactsController#contact_update_params): chave que
+// não vai fica como estava, e por isso o apagado vai como texto vazio.
 const comVaziosExplicitos = (atual, inicial) =>
   Object.fromEntries(
     Object.entries(atual).flatMap(([chave, valor]) => {
@@ -103,7 +108,12 @@ export const dadosParaSalvar = (formulario, inicial = null) => ({
   additional_attributes: {
     city: formulario.cidade.trim(),
     company_name: formulario.empresa.trim(),
-    social_profiles: comVaziosExplicitos(formulario.redes, inicial?.redes),
+    // O servidor troca `social_profiles` inteiro: o que a gaveta não mostra
+    // tem de ir junto, senão some.
+    social_profiles: {
+      ...formulario.outrasRedes,
+      ...comVaziosExplicitos(formulario.redes, inicial?.redes),
+    },
   },
   custom_attributes: comVaziosExplicitos(
     {

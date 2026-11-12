@@ -15,6 +15,14 @@ import {
   podeLiberar,
 } from '../../ficha/origemDaRecusa';
 import {
+  CANAIS,
+  SITUACOES_DE_CARD,
+  SITUACOES_DE_CONVERSA,
+  canalConhecido,
+  situacaoDeCardConhecida,
+  situacaoDeConversaConhecida,
+} from '../../ficha/rotulos';
+import {
   dadosParaSalvar,
   formularioDaPessoa,
   linhasDaEmpresa,
@@ -232,7 +240,7 @@ describe('informações da pessoa', () => {
       redes: { ...form.redes, instagram: '' },
     });
     expect(dados.additional_attributes.city).toBe('Bauru');
-    expect(dados.additional_attributes.social_profiles).toEqual({});
+    expect(dados.additional_attributes.social_profiles).toEqual({ outra: 'x' });
     expect(dados.custom_attributes).toEqual({
       cpf: CPF_VALIDO,
       melhor_horario: 'Tarde',
@@ -292,6 +300,27 @@ describe('dadosParaSalvar: campos esvaziados', () => {
       Object.keys(dados.additional_attributes.social_profiles)
     ).not.toContain('github');
     expect(JSON.stringify([inicial, formulario])).toBe(antes);
+  });
+
+  // O servidor troca `social_profiles` inteiro. Rede que a tela não mostra
+  // (gravada por outra tela ou por importação) tem de voltar junto.
+  it('devolve as redes que a tela não mostra, sem perder nenhuma', () => {
+    const comOutraRede = {
+      ...pessoaCheia,
+      additional_attributes: {
+        ...pessoaCheia.additional_attributes,
+        social_profiles: { instagram: '@ana', youtube: 'canaldaana' },
+      },
+    };
+    const inicial = formularioDaPessoa(comOutraRede);
+    const dados = dadosParaSalvar(
+      { ...inicial, redes: { ...inicial.redes, instagram: '@ana.nova' } },
+      inicial
+    );
+    expect(dados.additional_attributes.social_profiles).toEqual({
+      youtube: 'canaldaana',
+      instagram: '@ana.nova',
+    });
   });
 });
 
@@ -415,4 +444,66 @@ describe('informações da empresa', () => {
       ['clientes', '1'],
     ]);
   });
+});
+
+// O servidor pode mandar canal e situação que a demonstração não tinha (#2895).
+describe('rótulos do que vem do servidor', () => {
+  it('canal que a tela conhece fica como veio; `outro` e desconhecido viram "outro"', () => {
+    expect(canalConhecido('whatsapp')).toBe('whatsapp');
+    expect(canalConhecido('outro')).toBe('outro');
+    expect(canalConhecido('telegram')).toBe('outro');
+    expect(canalConhecido(null)).toBe('outro');
+  });
+
+  it('conversa adiada tem rótulo próprio; situação desconhecida vira "outra"', () => {
+    expect(situacaoDeConversaConhecida('adiada')).toBe('adiada');
+    expect(situacaoDeConversaConhecida('qualquer')).toBe('outra');
+  });
+
+  it('card tem os estados do CRM; estado desconhecido vira "outra"', () => {
+    ['aberto', 'ganho', 'perdido', 'resolvido', 'cancelado'].forEach(situacao =>
+      expect(situacaoDeCardConhecida(situacao)).toBe(situacao)
+    );
+    expect(situacaoDeCardConhecida('estado_novo')).toBe('outra');
+    expect(situacaoDeCardConhecida(undefined)).toBe('outra');
+  });
+
+  // O que vem depois de cada `=>` no mapa do servidor, da chave à chave.
+  const palavrasDoServidor = (arquivo, constante) =>
+    readFileSync(`app/services/relacionamentos/ficha/${arquivo}`, 'utf8')
+      .split(`${constante} = {`)[1]
+      .split('}')[0]
+      .split("=> '")
+      .slice(1)
+      .map(pedaco => pedaco.split("'")[0]);
+
+  it('as situações batem com as palavras que o servidor manda', () => {
+    expect([...SITUACOES_DE_CARD].sort()).toEqual(
+      palavrasDoServidor('cards.rb', 'SITUACOES').sort()
+    );
+    expect([...SITUACOES_DE_CONVERSA].sort()).toEqual(
+      palavrasDoServidor('conversas.rb', 'SITUACOES').sort()
+    );
+  });
+
+  it.each(['en', 'pt_BR'])(
+    'o catálogo %s tem texto para cada canal e cada situação, e para o neutro',
+    lingua => {
+      const { CONVERSAS, CARDS } = JSON.parse(
+        readFileSync(
+          `app/javascript/dashboard/i18n/locale/${lingua}/relacionamentosFicha.json`,
+          'utf8'
+        )
+      ).RELACIONAMENTOS_FICHA;
+      expect(Object.keys(CONVERSAS.CANAL).sort()).toEqual(
+        [...CANAIS, 'outro'].sort()
+      );
+      expect(Object.keys(CONVERSAS.SITUACAO).sort()).toEqual(
+        [...SITUACOES_DE_CONVERSA, 'outra'].sort()
+      );
+      expect(Object.keys(CARDS.SITUACAO).sort()).toEqual(
+        [...SITUACOES_DE_CARD, 'outra'].sort()
+      );
+    }
+  );
 });

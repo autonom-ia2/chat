@@ -4,16 +4,24 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { quandoRelativo } from '../../ficha/formatos';
 import { useIdioma } from '../../ficha/idioma';
+import {
+  canalConhecido,
+  situacaoDeConversaConhecida,
+} from '../../ficha/rotulos';
 import CartaoDaSecao from './CartaoDaSecao.vue';
+import FalhaDaParte from './FalhaDaParte.vue';
 import { PONTO } from '../comum/ponto';
 
 // #2894 — as 3 últimas conversas: canal, trecho, "há 3 dias" e a situação em
 // palavra simples. Na ficha da empresa cada linha diz de quem é (`pessoa`).
+// Canal ou situação que a tela não conhece ganha o rótulo neutro; conversa sem
+// trecho diz que não tem texto. `falhou`: a leitura não veio.
 const props = defineProps({
   conversas: { type: Array, required: true },
   agora: { type: Number, default: () => Date.now() },
+  falhou: { type: Boolean, default: false },
 });
-const emit = defineEmits(['verTodas']);
+const emit = defineEmits(['verTodas', 'tentar']);
 
 const QUANTAS_MOSTRAR = 3;
 const ICONES = {
@@ -21,22 +29,33 @@ const ICONES = {
   email: 'i-lucide-mail',
   instagram: 'i-lucide-instagram',
   site: 'i-lucide-globe',
+  outro: 'i-lucide-messages-square',
 };
 const TONS = {
   aberta: 'bg-n-teal-3 text-n-teal-11',
   pendente: 'bg-n-amber-3 text-n-amber-11',
   resolvida: 'bg-n-alpha-2 text-n-slate-11',
+  adiada: 'bg-n-blue-3 text-n-blue-11',
+  outra: 'bg-n-alpha-2 text-n-slate-11',
 };
 
 const { t } = useI18n();
 const idioma = useIdioma();
-const ultimas = computed(() => props.conversas.slice(0, QUANTAS_MOSTRAR));
 const ra = (chave, valores) =>
   t(`RELACIONAMENTOS_FICHA.CONVERSAS.${chave}`, valores);
-const trechoDa = conversa =>
-  conversa.pessoa
-    ? ra('DE', { pessoa: conversa.pessoa, trecho: conversa.trecho })
-    : conversa.trecho;
+const ultimas = computed(() =>
+  props.conversas.slice(0, QUANTAS_MOSTRAR).map(conversa => ({
+    ...conversa,
+    canal: canalConhecido(conversa.canal),
+    situacao: situacaoDeConversaConhecida(conversa.situacao),
+  }))
+);
+const trechoDa = conversa => {
+  const trecho = conversa.trecho || ra('SEM_TRECHO');
+  return conversa.pessoa
+    ? ra('DE', { pessoa: conversa.pessoa, trecho })
+    : trecho;
+};
 </script>
 
 <template>
@@ -44,8 +63,9 @@ const trechoDa = conversa =>
     <template v-if="conversas.length" #acao>
       <Button slate ghost :label="ra('VER_TODAS')" @click="emit('verTodas')" />
     </template>
+    <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
     <p
-      v-if="!conversas.length"
+      v-else-if="!conversas.length"
       data-vazio
       data-relacionamentos="vazio"
       class="m-0 text-base text-n-slate-11"
