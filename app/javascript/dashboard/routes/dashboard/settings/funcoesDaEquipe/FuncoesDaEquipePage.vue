@@ -132,7 +132,7 @@ const estadoDasPessoas = computed(() => {
   >
     <div class="flex-1 overflow-y-auto">
       <div
-        class="flex flex-col w-full gap-8 px-4 pt-8 mx-auto pb-28 max-w-6xl sm:px-8 sm:py-10"
+        class="flex flex-col w-full gap-8 px-4 pt-8 mx-auto pb-8 max-w-6xl sm:px-8 sm:py-10"
       >
         <PaywallDasFuncoes v-if="estado === 'paywall'" />
 

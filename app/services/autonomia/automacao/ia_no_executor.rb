@@ -41,7 +41,9 @@ module Autonomia::Automacao::IaNoExecutor
     resultado.class.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.to_h.merge(registro))
   end
 
-  # O "escrever" ao cliente com a janela fechada para antes de pagar a IA, como a mensagem (F4.4, #2573).
+  # O "escrever" ao cliente com a janela fechada para antes de pagar a IA, como a mensagem (F4.4, #2573). O extrair que
+  # espera a IA de assunto abrir o card da conversa (G71, `:esperar`) guarda o passo até o `ate`, sem registro e sem
+  # contar tentativa, como a ação que espera (Executor#acao).
   def depois_da_ia(passo, executor, resultado)
     return parar_na_janela(passo, resultado) if janela_fechada?(resultado)
 
@@ -49,6 +51,7 @@ module Autonomia::Automacao::IaNoExecutor
     when :ok, :pulado then resultado.dados['ramo'] ? seguir_pelo_caminho(passo, executor, resultado) : seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)
     when :sem_acesso, :laco then encerrar(passo['id'], 'parada', motivo_da_parada(resultado), 'falhou', resultado.dados)
+    when :esperar then aguardar(passo, resultado.dados['ate'], registrar: false)
     else tentar_de_novo(passo, resultado)
     end
   end

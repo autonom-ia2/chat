@@ -41,7 +41,7 @@ class Crm::Conversations::CardSyncer
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
       card = existing_card(pipeline_inbox)
       if card.present?
-        event_name = refresh_card(card) ? Events::Types::CRM_CARD_UPDATED : nil
+        event_name = refresh_card(card, auto_sync: !origem_propria?(card)) ? Events::Types::CRM_CARD_UPDATED : nil
         log_dedup_reuse(card)
       else
         card = create_card(pipeline_inbox)
@@ -220,11 +220,20 @@ class Crm::Conversations::CardSyncer
   # R13 do #1150, ou vínculo à mão) não o arrasta para a caixa dela: a caixa do card decide quem o vê no Kanban, e ele
   # pularia de caixa a cada mensagem de um canal ou do outro. Card sem principal adota a caixa de quem o adota.
   # Junto com a R13, atrás da flag `crm_outro_canal` (#1666): sem ela, a caixa do card segue a última conversa sincronizada.
+  # O canal (source) só acompanha a caixa no card de canal: o de origem própria guarda a origem (#2770).
   def caixa_attributes(card)
     da_caixa = card.conversation_id.blank? || own_conversation?(card)
     return {} unless da_caixa || !@account.feature_enabled?(Crm::Conversations::OutroCanal::FLAG)
 
-    { inbox_id: @conversation.inbox_id, source: @conversation.inbox&.channel_type }
+    { inbox_id: @conversation.inbox_id, source: (@conversation.inbox&.channel_type unless origem_propria?(card)) }
+  end
+
+  # Card de origem própria (prospecção, formulário de anúncio, agenda: Autonomia::Automacao::OrigemDoCard) adotado por uma
+  # conversa (#2770): guarda a origem, que as automações filtram (`card.origem`), e não vira card automático. Assim o dono
+  # escolhido na origem fica, em vez de passar a seguir quem atende a conversa, e o card não passa por card da chegada
+  # (Crm::Subjects::CardDaChegada). Card de canal, ou sem origem (o do quadro), segue o canal da conversa, como sempre.
+  def origem_propria?(card)
+    card.source.present? && !card.source.start_with?(Autonomia::Automacao::OrigemDoCard::DO_CANAL)
   end
 
   # Acesso por funil (#1148, decisão a): o atendente só vira dono se tiver o funil do card; senão o dono fica como está.

@@ -101,9 +101,12 @@ export const FEATURE_FLAGS = {
   AGENTE_FERRAMENTAS_PRONTAS_CONSTRUTOR:
     'agente_ferramentas_prontas_construtor',
   AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
+  // #2894 — Relacionamentos: lista, ficha e "Trazer minha lista" novas.
+  RELACIONAMENTOS_NOVO: 'relacionamentos_novo',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
+  AUTOMACAO_FUNDACAO: 'automacao_fundacao',
   AUTOMACAO_PORTA: 'automacao_porta',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',

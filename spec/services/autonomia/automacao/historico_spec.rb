@@ -113,6 +113,52 @@ RSpec.describe Autonomia::Automacao::Historico do
     expect(historico(agente)[:execucoes].first[:alvo]).to include(visivel: true, nome: 'Maria')
   end
 
+  # #2731: o card e o contato saem pelo nome, com link, para quem os vê; para os outros, só o tipo, nunca "Uma conversa".
+  describe 'alvo que não é conversa' do
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+    let(:card) do
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Renovação do Bruno', currency: 'BRL')
+    end
+    let(:agente) { create(:user, account: account, role: :agent) }
+
+    it 'o card sai pelo nome e com o link do card para quem o vê' do
+      execucao('a', alvo: card)
+
+      expect(historico[:execucoes].first[:alvo]).to eq(
+        tipo: 'card', visivel: true, nome: 'Renovação do Bruno',
+        link: "accounts/#{account.id}/crm?pipeline_id=#{card.pipeline_id}&card_id=#{card.id}"
+      )
+    end
+
+    it 'quem não vê o card recebe só o tipo, sem nome nem link, e sem os ids da conversa', :aggregate_failures do
+      create(:autonomia_automacao_registro, execucao: execucao('a', alvo: card), dados: { 'mensagem_id' => 9, 'ramo' => 'entao' })
+
+      linha = historico(agente)[:execucoes].first
+
+      expect(linha[:alvo]).to eq(tipo: 'card', visivel: false)
+      expect(linha[:passos].first[:dados]).to eq('ramo' => 'entao')
+    end
+
+    it 'o contato sai pelo nome e com o link do contato para quem o vê' do
+      execucao('a', alvo: contato)
+
+      expect(historico[:execucoes].first[:alvo]).to eq(tipo: 'contato', visivel: true, nome: 'Maria',
+                                                       link: "accounts/#{account.id}/contacts/#{contato.id}")
+    end
+
+    it 'quem não é da conta não vê o contato' do
+      execucao('a', alvo: contato)
+
+      expect(historico(create(:user))[:execucoes].first[:alvo]).to eq(tipo: 'contato', visivel: false)
+    end
+
+    it 'a conta do gatilho recorrente sai só com o tipo' do
+      execucao('a', alvo: account)
+
+      expect(historico[:execucoes].first[:alvo]).to eq(tipo: 'conta', visivel: false)
+    end
+  end
+
   it 'pagina de 20 em 20 e diz se há mais', :aggregate_failures do
     21.times { |n| execucao("c#{n}", estado: 'concluida') }
 

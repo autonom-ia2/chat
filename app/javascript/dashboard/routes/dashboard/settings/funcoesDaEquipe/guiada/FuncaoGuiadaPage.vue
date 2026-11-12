@@ -146,7 +146,7 @@ onMounted(carregar);
   <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
     <div ref="principal" class="flex-1 overflow-y-auto">
       <div
-        class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-56 sm:px-8 sm:pt-8 md:pb-12"
+        class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-36 sm:px-8 sm:pt-8 md:pb-12"
       >
         <EtapasDaFuncao
           :voltar="

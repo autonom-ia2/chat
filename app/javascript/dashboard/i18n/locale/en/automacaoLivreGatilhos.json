@@ -113,7 +113,7 @@
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NA_PAGINA": "{frase}, from the {pagina} page",
-    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
+    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once or when the stage is deleted.",
     "GATILHO_DO_CARD": {
       "TODOS_OS_FUNIS": "All pipelines",
       "ERRO_FUNIS": "Could not load the pipelines and stages. Close and open it again."
@@ -137,7 +137,7 @@
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",
       "ERRO_CAMPOS": "Could not load the date fields. Close and open it again.",
-      "AVISO_LEMBRETE": "Checked every 15 minutes. If the meeting is rescheduled, it reminds at the new time; if canceled, it does not remind. A meeting booked with less time than this is reminded right away."
+      "AVISO_LEMBRETE": "If the meeting is rescheduled, it reminds at the new time. If it is canceled, it does not remind. If it is booked with less notice than this, it reminds right away."
     },
     "GATILHO_DE_REUNIAO": {
       "QUALQUER_PAGINA": "Any page",

@@ -165,8 +165,11 @@ class MailPresenter < SimpleDelegator
     end
   end
 
+  # O aviso de devolução do servidor (DSN, "MAILER-DAEMON") também é resposta automática, mesmo sem `Auto-Submitted`
+  # (#2600): reconhecido pela estrutura do protocolo (`bounced?`), nunca pelo texto. Marcado aqui, ele não começa as
+  # automações (Escuta, AutomationRuleListener) nem os modelos de mensagem, e a autoria do e-mail o lê como automática.
   def auto_reply?
-    auto_submitted? || x_auto_reply?
+    auto_submitted? || x_auto_reply? || bounced?
   end
 
   def bounced?

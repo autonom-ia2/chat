@@ -32,15 +32,18 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   # A lista mostra cada automação em frase (Quando → primeiro passo), então leva a receita, e o fato da semana
-  # ("Rodou 12 vezes esta semana · 1 parou"), de uma consulta agrupada só.
+  # ("Rodou 12 vezes esta semana · 1 parou"), de uma consulta agrupada só. A pausa (#2572) também sai de uma consulta só.
   def index
     automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id).to_a
     semana = ::Autonomia::Automacao::Historico.semana(automacoes.map(&:id))
-    render json: { automacoes: automacoes.map { |automacao| para_tela(automacao, receita: true).merge(semana: semana[automacao.id]) } }
+    pausas = ::Autonomia::Automacao::Pausa.das(automacoes)
+    render json: { automacoes: automacoes.map do |automacao|
+      para_tela(automacao, receita: true, pausa: pausas[automacao.id]).merge(semana: semana[automacao.id])
+    end }
   end
 
   def show
-    render json: para_tela(@automacao, receita: true)
+    render json: para_tela(@automacao, receita: true, pausa: pausa_de(@automacao))
   end
 
   def create
@@ -64,7 +67,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
       @automacao.update!(nome: params[:nome]) if params.key?(:nome)
       salvar_versao_nova! if params.key?(:receita)
     end
-    render json: para_tela(@automacao.reload, receita: true)
+    render json: para_tela(@automacao.reload, receita: true, pausa: pausa_de(@automacao))
   rescue ActiveRecord::RecordInvalid => e
     recusar(e.record)
   end
@@ -194,9 +197,16 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return recusar_ensaio('gatilho_de_card') unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(receita)
 
     render json: ::Autonomia::Automacao::Ensaio.new(receita: receita, conta: Current.account, usuario: Current.user,
-                                                    conversa_id: params[:conversa_id]).resultado
+                                                    conversa_id: params[:conversa_id], acesso: acesso_de_quem_ligou(conferir)).resultado
   rescue ActiveRecord::RecordNotFound
     head :not_found
+  end
+
+  # #2604: como quem o motor agiria. A versão salva de uma automação ligada age como quem ligou, com a mesma pergunta do
+  # motor (Acesso#motivo_no); o rascunho e a nova, como quem pede: ligar é sempre "assumir e religar", e salvar outra
+  # versão desliga a de quem ligou (Definicao#salvar_versao!).
+  def acesso_de_quem_ligou(rascunho)
+    ::Autonomia::Automacao::Acesso.new(@automacao) if !rascunho && @automacao.ativa? && @automacao.ligada_por
   end
 
   # O recorrente (#2635, G7): quantos cards ou contatos a seleção pegaria agora, para o dono ver antes de ligar.
@@ -231,13 +241,18 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
            status: :unprocessable_entity
   end
 
-  def para_tela(automacao, receita: false)
+  def pausa_de(automacao) = ::Autonomia::Automacao::Pausa.das([automacao])[automacao.id]
+
+  # `pausa` (#2572): o motivo com que o motor a desligou, para a tela mostrar "Assumir e religar". Ligar e desligar
+  # respondem sem ela: ligada não está pausada, e a tela só oferece desligar a que está ligada.
+  def para_tela(automacao, receita: false, pausa: nil)
     versao = automacao.versao_ativa
     {
       id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem,
       ligada_por: automacao.ligada_por&.slice(:id, :name), atualizada_em: automacao.updated_at,
+      pausa: ::Autonomia::Automacao::Pausa.para_tela(pausa),
       versao: versao && { id: versao.id, numero: versao.numero, autor_id: versao.autor_id, criada_em: versao.created_at,
-                          receita: (versao.receita_para_tela if receita) }.compact
+                          receita: (versao.receita_para_tela(Current.account_user) if receita) }.compact
     }
   end
 end

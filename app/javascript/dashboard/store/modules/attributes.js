@@ -13,6 +13,9 @@ export const state = {
   revision: 0,
   uiFlags: {
     isFetching: false,
+    // Fork (#2744): a lista não veio. Quem diz "a conta não tem campo" precisa
+    // distinguir lista vazia de lista que não carregou.
+    fetchFailed: false,
     isCreating: false,
     isUpdating: false,
     isDeleting: false,
@@ -56,14 +59,17 @@ export const getters = {
 
 export const actions = {
   get: async function getAttributesByModel({ commit, state: currentState }) {
-    commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { isFetching: true });
+    commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, {
+      isFetching: true,
+      fetchFailed: false,
+    });
     try {
       const revision = currentState.revision;
       const response = await AttributeAPI.getAttributesByModel();
       if (revision === currentState.revision)
         commit(types.SET_CUSTOM_ATTRIBUTE, response.data);
-    } catch (error) {
-      // Ignore error
+    } catch {
+      commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { fetchFailed: true });
     } finally {
       commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { isFetching: false });
     }

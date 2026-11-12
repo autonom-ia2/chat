@@ -8,7 +8,6 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import IntersectionObserver from 'dashboard/components/IntersectionObserver.vue';
 
 import wootConstants from 'dashboard/constants/globals';
-import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
 
 const props = defineProps({
   conversationList: { type: Array, default: () => [] },
@@ -25,8 +24,6 @@ const props = defineProps({
 const emit = defineEmits(['loadMore']);
 
 const conversationListRef = ref(null);
-// #2211: com a lista nova, o fim da lista no celular não fica embaixo do botão do menu.
-const listaNova = useListaNova();
 const virtualListRef = ref(null);
 const isContextMenuOpen = ref(false);
 
@@ -66,7 +63,6 @@ defineExpose({ conversationListRef });
     class="flex-1 min-h-0 overflow-y-auto conversations-list"
     :class="{
       '!overflow-hidden': isContextMenuOpen,
-      'pb-20 md:pb-0': listaNova,
     }"
   >
     <Virtualizer

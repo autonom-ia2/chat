@@ -275,6 +275,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     title description value_cents currency lost_reason source priority score
     expected_close_at pipeline_id stage_id owner_id team_id contact_id
   ].freeze
+  UPSERT_SEM_ETAPA_DO_FUNIL = 'crm.upsert_stage_of_pipeline_required'.freeze
 
   # O card devolve o contato vinculado (#1849): só vincula quem vê esse contato.
   def attachable_contact!(contact_id)
@@ -301,18 +302,50 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     attributes = permitted_params.slice(*(UPSERT_ATTRIBUTES.map(&:to_s) - hidden_value_attributes)).compact
     attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
     ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
+    return render_unprocessable(UPSERT_SEM_ETAPA_DO_FUNIL) if upsert_sem_etapa_do_funil?(attributes)
+
     ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       ensure_contact_fields_attachable!(permitted_params[:custom_attributes], @card.custom_attributes)
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
     end
+    apply_upsert!(attributes)
+    render :show, status: :ok
+  end
+
+  def apply_upsert!(attributes)
+    target_stage = upsert_target_stage(attributes)
+    attributes = attributes.except('pipeline_id', 'stage_id') if target_stage
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
-    render :show, status: :ok
+    upsert_move!(target_stage) if target_stage
+  end
+
+  # #2501: mudar a etapa pelo upsert é mover. Passa pelo Mover, como o #move: grava entered_stage_at e a atividade
+  # `move` e roda as automações de saída e de entrada. A etapa de outro funil, mesmo sem pipeline_id, troca o card de
+  # funil, como o #move, com a permissão do funil da etapa (ensure_move_allowed!, acima).
+  def upsert_target_stage(attributes)
+    stage = Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])
+    stage unless stage.nil? || stage.id == @card.stage_id
+  end
+
+  # Funil pedido (pipeline_id) sem uma etapa dele: o upsert não escolhe a etapa por conta própria (a criação também exige
+  # uma) e responde 422, em vez de cair na validação do card (500). O mesmo funil do card, sem etapa, segue como sempre.
+  def upsert_sem_etapa_do_funil?(attributes)
+    pipeline_id = attributes['pipeline_id'].presence&.to_s
+    return false if pipeline_id.nil? || (attributes['stage_id'].blank? && pipeline_id == @card.pipeline_id.to_s)
+
+    Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])&.pipeline_id&.to_s != pipeline_id
+  end
+
+  def upsert_move!(target_stage)
+    @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage,
+                                    automacao: ::Autonomia::Automacao::Cadeia.automacao_livre).perform
+    broadcast_card(::Events::Types::CRM_CARD_MOVED)
   end
 
   # Valor de venda (#2075): quem não vê o valor deste card não o muda. A gaveta manda value_cents em toda edição; com o

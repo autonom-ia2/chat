@@ -1103,6 +1103,40 @@ Rails.application.routes.draw do
             resource :configuration, only: [:show, :update], controller: 'configurations'
             patch ':entity/:id/values', to: 'values#update'
           end
+          # #2894 — leituras da Lista nova de Relacionamentos (chave relacionamentos_novo). Empresa é do Enterprise.
+          namespace :relacionamentos do
+            # #2895 — as leituras da ficha (show e as de `member`), cada uma no formato que a tela lê.
+            resources :pessoas, only: [:index, :show] do
+              collection do
+                get :contagens
+                get :todas
+              end
+              member do
+                get :conversas
+                get :cards
+                get :notas
+                get :arquivos
+                get :origem
+              end
+            end
+            if ChatwootApp.enterprise?
+              resources :empresas, only: [:index, :show] do
+                get :contagens, on: :collection
+                member do
+                  get :pessoas
+                  get :conversas
+                  get :cards
+                end
+              end
+            end
+            get :resumo, to: 'resumo#show'
+            get :opcoes_de_filtro, to: 'opcoes_de_filtro#show'
+            # As ações em grupo da lista: os funis com as etapas, criar cards, etiquetar e apagar as pessoas marcadas.
+            get :funis, to: 'funis#index'
+            post :cards, to: 'cards#create'
+            post :etiqueta, to: 'etiqueta#create'
+            post :apagar, to: 'apagar#create'
+          end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resource :branded_email_layout, only: [:show, :update]

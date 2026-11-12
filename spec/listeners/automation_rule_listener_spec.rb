@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 describe AutomationRuleListener do
+  include ActionMailbox::TestHelper
+
   let(:listener) { described_class.instance }
   let!(:account) { create(:account) }
   let(:conversation) { create(:conversation, account: account) }
@@ -127,6 +129,32 @@ describe AutomationRuleListener do
         listener.conversation_opened(event)
         expect(AutomationRules::ActionService).not_to have_received(:new).with(automation_rule, account, conversation)
       end
+
+      # #2600: o aviso de devolução da resposta do agente entra pelo In-Reply-To na conversa resolvida e a reabre.
+      it 'does not call AutomationRules::ActionService when a bounce reopens a resolved email conversation' do
+        email_channel = create(:channel_email, account: account)
+        resolvida = create(:conversation, inbox: email_channel.inbox, account: account, status: :resolved)
+        create(:message, conversation: resolvida, account: account, message_type: :outgoing,
+                         source_id: 'conversation/dsn-2600/messages/1@gmail.com')
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        bounce = create_inbound_email_from_fixture('dsn_resposta_do_agente_com_in_reply_to.eml').mail
+        Imap::ImapMailbox.new.process(bounce, email_channel)
+        expect(resolvida.reload).to be_open
+        expect(resolvida.messages.incoming.last).to be_auto_reply_email
+
+        listener.conversation_opened(Events::Base.new('conversation_opened', Time.zone.now, { conversation: resolvida }))
+        expect(AutomationRules::ActionService).not_to have_received(:new)
+      end
+
+      it 'calls AutomationRules::ActionService when the contact reopens a conversation an auto reply started' do
+        conversation.update!(additional_attributes: { 'auto_reply' => true })
+        create(:message, conversation: conversation, account: account, message_type: :incoming)
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        listener.conversation_opened(event)
+        expect(AutomationRules::ActionService).to have_received(:new).with(automation_rule, account, conversation)
+      end
     end
   end
 
@@ -217,6 +245,18 @@ describe AutomationRuleListener do
         allow(condition_match).to receive(:present?).and_return(true)
 
         listener.message_created(email_event)
+        expect(AutomationRules::ActionService).not_to have_received(:new)
+      end
+
+      # #2600: o aviso de devolução que chega sem Auto-Submitted, nos dois formatos, pelo caminho real da caixa de e-mail.
+      it 'does not call AutomationRules::ActionService for a bounce without Auto-Submitted' do
+        email_channel = create(:channel_email, account: account)
+        allow(condition_match).to receive(:present?).and_return(true)
+
+        %w[dsn_relatorio_sem_auto_submitted.eml dsn_x_failed_recipients_sem_auto_submitted.eml].each do |fixture|
+          Imap::ImapMailbox.new.process(create_inbound_email_from_fixture(fixture).mail, email_channel)
+          listener.message_created(Events::Base.new('message_created', Time.zone.now, { message: Message.last }))
+        end
         expect(AutomationRules::ActionService).not_to have_received(:new)
       end
 
