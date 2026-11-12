@@ -37,13 +37,17 @@ contato = lambda do |nome, email, tipo|
   registro.update!(name: nome, contact_type: tipo, customer_since: tipo == :customer ? comprou_em : nil)
   registro
 end
-maria = contato.call('Maria Souza', 'maria.souza@exemplo.com.br', :customer)
-ana = contato.call('Ana Costa', 'ana.costa@exemplo.com.br', :customer)
-pedro = contato.call('Pedro Lima', 'pedro.lima@exemplo.com.br', :lead)
+# E-mail pessoal (gmail): com domínio de empresa o painel cria a empresa pelo domínio e o card mostra a empresa
+# ("Exemplo") no lugar da pessoa.
+maria = contato.call('Maria Souza', 'maria.souza.demo2414@gmail.com', :customer)
+ana = contato.call('Ana Costa', 'ana.costa.demo2414@gmail.com', :customer)
+pedro = contato.call('Pedro Lima', 'pedro.lima.demo2414@gmail.com', :lead)
 
 antigos = Crm::Card.where(account: account).where('external_id LIKE ?', "#{TAG}-%")
 Crm::Meeting.where(card_id: antigos.select(:id)).destroy_all
 antigos.find_each(&:destroy!)
+# Rodadas antigas do seed usavam @exemplo.com.br (viravam a empresa "Exemplo").
+account.contacts.where(email: %w[maria.souza@exemplo.com.br ana.costa@exemplo.com.br pedro.lima@exemplo.com.br]).destroy_all
 
 regra = account.crm_stage_automations.find_or_initialize_by(stage: etapa['Proposta enviada'], name: 'Ligar no dia seguinte')
 regra.update!(pipeline: pipeline, trigger_event: :on_enter, enabled: true, created_by: user)

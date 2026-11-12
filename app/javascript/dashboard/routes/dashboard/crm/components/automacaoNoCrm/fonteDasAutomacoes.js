@@ -33,6 +33,10 @@ const DIA = 86400000;
 const depoisDe = (inicio, dias) =>
   new Date(new Date(inicio).getTime() + dias * DIA).toISOString();
 
+// O quadro manda as datas em segundos (epoch); o card aberto, em ISO.
+const comoData = valor =>
+  typeof valor === 'number' ? new Date(valor * 1000).toISOString() : valor;
+
 const paraOResponsavel = { responsavel_do_card: true };
 
 const receitasDaEtapa = (t, etapaId) => ({
@@ -105,7 +109,7 @@ export const criarFonteFalsa = ({ t, marca, vazio = false }) => {
   // espera os 2 dias. As datas saem de quando o card entrou na etapa (o seed grava agora).
   const automacoesDoCard = async card => {
     if (card?.status !== 'open' || !daEtapa(card?.stage_id)) return [];
-    const entrou = card.entered_stage_at || card.created_at;
+    const entrou = comoData(card.entered_stage_at || card.created_at);
     if (!entrou) return [];
     const receitas = receitasDaEtapa(t, etapaId);
     return [

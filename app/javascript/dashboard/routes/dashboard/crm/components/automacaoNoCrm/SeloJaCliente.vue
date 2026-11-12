@@ -39,10 +39,10 @@ const rotulo = computed(() =>
     @click.stop="emit('abrir')"
   >
     <span
-      class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-n-teal-3 px-2.5 py-1 text-xs font-medium leading-5 text-n-teal-11 ring-1 ring-inset ring-n-teal-7 transition group-hover/selo:bg-n-teal-4"
+      class="inline-flex max-w-full items-center gap-1.5 rounded-2xl bg-n-teal-3 px-2.5 py-1 text-xs font-medium leading-5 text-n-teal-11 ring-1 ring-inset ring-n-teal-7 transition group-hover/selo:bg-n-teal-4"
     >
       <span class="i-lucide-badge-check size-3.5 shrink-0" aria-hidden="true" />
-      <span class="truncate">{{ texto }}</span>
+      <span class="min-w-0 break-words">{{ texto }}</span>
       <span
         class="i-lucide-chevron-right size-3.5 shrink-0 rtl:rotate-180"
         aria-hidden="true"

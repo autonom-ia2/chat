@@ -55,7 +55,18 @@ const carregar = async () => {
     estado.value = semPermissao(erro) ? 'sem-acesso' : 'erro';
   }
 };
-watch(() => props.card?.id, carregar, { immediate: true });
+// O card chega aos poucos (só o id pelo endereço, depois o do quadro, depois o completo): recarrega quando muda o
+// que decide a lista, não só o id.
+watch(
+  () => [
+    props.card?.id,
+    props.card?.status,
+    props.card?.stage_id,
+    props.card?.entered_stage_at,
+  ],
+  carregar,
+  { immediate: true }
+);
 
 const dia = valor => formato.diaCurto(new Date(valor));
 

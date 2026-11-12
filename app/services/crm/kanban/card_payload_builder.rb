@@ -39,6 +39,8 @@ class Crm::Kanban::CardPayloadBuilder
       score: @card.score,
       score_source: score_source,
       status: @card.status,
+      # #2710 (protótipo só da demo): o selo "Já é cliente" do quadro lê de onde o card veio (página de agendamento).
+      source: @card.source,
       is_standalone: @card.standalone?,
       # Epoch seconds across the board payload so the frontend timeHelper.js
       # (fromUnixTime-based) renders them consistently without Invalid-Date.

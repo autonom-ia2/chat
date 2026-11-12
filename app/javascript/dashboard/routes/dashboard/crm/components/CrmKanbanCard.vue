@@ -440,13 +440,13 @@ const canOpenConversation = computed(
             {{ t('CRM_KANBAN.DRAWER.NO_CONTACT') }}
           </span>
         </button>
-        <SeloJaCliente
-          v-if="jaCliente"
-          class="ms-5"
-          :desde="jaCliente.desde"
-          :ocupado="abrindoJaCliente"
-          @abrir="$emit('abrirJaCliente', jaCliente)"
-        />
+        <div v-if="jaCliente" class="ps-5">
+          <SeloJaCliente
+            :desde="jaCliente.desde"
+            :ocupado="abrindoJaCliente"
+            @abrir="$emit('abrirJaCliente', jaCliente)"
+          />
+        </div>
       </div>
 
       <p
