@@ -1,5 +1,5 @@
 require 'rails_helper'
-require Rails.root.join('db/migrate/20261112100000_add_indice_do_historico_to_autonomia_automacao_execucoes.rb')
+require Rails.root.join('db/migrate/20261110070000_add_indice_do_historico_to_autonomia_automacao_execucoes.rb')
 
 # #2507 — o índice (automacao_id, created_at) do histórico entra concurrently. O CREATE INDEX CONCURRENTLY interrompido
 # deixa o índice inválido, e um IF NOT EXISTS o daria por pronto: a migration refaz o inválido e confere o resultado.
