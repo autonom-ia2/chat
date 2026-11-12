@@ -180,6 +180,26 @@ RSpec.describe Autonomia::Automacao::Valores do
       travel_to(fuso_da_conta.local(2026, 11, 8, 3)) { expect(no_horario).to be(true) }
     end
 
+    # Revisão: a mesma regra da agente de IA (HorarioDaCaixa, #1691). Sem a flag, o calendário de caixa do CRM manda: segunda
+    # 8h30 aberta (no horário da caixa, 20h30 em Tóquio, estaria fechada) e 21h30 fechada (lá, terça 9h30, estaria aberta).
+    describe 'sem a flag horario_unico_caixa, com o calendário de caixa do CRM' do
+      before do
+        account.disable_features!(Autonomia::HorarioUnicoCaixa::FEATURE)
+        create(:crm_service_schedule, account: account, owner: inbox, weekdays: [1], hours: [['08:00', '12:00']])
+      end
+
+      it 'segue o calendário, e não o horário da caixa', :aggregate_failures do
+        travel_to(fuso_da_conta.local(2026, 11, 9, 8, 30)) { expect(no_horario).to be(true) }
+        travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) { expect(no_horario).to be(false) }
+      end
+
+      it 'responde o mesmo que a agente de IA' do
+        travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) do
+          expect(no_horario).to eq(Autonomia::Agents::Operate::HorarioDaCaixa.new(conversation: conversa.reload).aberta_agora)
+        end
+      end
+    end
+
     it 'é valor fechado, sim ou não' do
       expect(described_class.fechado('conversa.no_horario')).to eq('opcoes' => [true, false], 'operadores' => %w[igual diferente])
     end
