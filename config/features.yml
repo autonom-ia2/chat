@@ -1385,3 +1385,16 @@
   display_name: Relacionamentos › telas novas
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas prontas, IP próprio das consultas grátis (#2942, parte do #2858). Ligada (junto com
+# `agente_ferramentas_prontas`): as consultas grátis da conta (CEP, CNPJ, FIPE e as outras fontes públicas) saem por um IP
+# próprio do plano datacenter da Webshare, dado na 1ª consulta que sai para a rede, e o teto de cada host passa a contar
+# por esse IP (inteiro, sem a fatia de 25%). Precisa de WEBSHARE_API_KEY, WEBSHARE_LOOKUP_PROXY_ADDRESSES (a fatia da
+# stack) e dos mesmos IPs em WEBSHARE_RESERVED_PROXY_ADDRESSES (o WhatsApp nunca os oferece). O Premium e o WhatsApp não
+# mudam. Sem IP próprio (Webshare fora, fatia vazia): sai pelo IP do servidor, com aviso (decisão do Rodrigo, 12/11). Migration
+# aditiva 20261112100000 (duas tabelas). Desligada: tudo sai pelo IP do servidor, como antes. Rollback: desligar a flag.
+# Posição 46 (35184372088832, 1 << 45), dada pela Orquestração em 12/11, logo depois da `relacionamentos_novo` (#2894, 45).
+- name: agente_ferramentas_prontas_ip_proprio
+  display_name: Agentes › ferramentas prontas (IP próprio das consultas grátis)
+  enabled: false
+  column: feature_flags_ext_2

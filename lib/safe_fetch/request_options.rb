@@ -29,7 +29,10 @@ class SafeFetch::RequestOptions
     allowed_ports: nil,
     # true: o corpo acima de `max_bytes` é cortado no limite (o tempfile traz só o começo) em vez de recusado com
     # `FileTooLargeError`, e o `Content-Length` anunciado não reprova. Para quem só precisa do começo (o <head>).
-    truncate_at_max_bytes: false
+    truncate_at_max_bytes: false,
+    # O proxy de saída (`SafeFetch::Proxy`, #2942): o pedido sai por ele, com a mesma conferência de endereço em cada
+    # salto. nil: direto, como sempre. Só com `schemes: %w[https]` (ver `SafeFetch::Proxy.checked`).
+    proxy: nil
   }.freeze
 
   attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :error_body_bytes, :headers,
@@ -47,6 +50,7 @@ class SafeFetch::RequestOptions
     @resolver = config[:resolver]
     @http_basic_authentication = config[:http_basic_authentication]
     @schemes = config[:schemes]&.map(&:to_s)
+    @proxy = SafeFetch::Proxy.checked(config[:proxy], schemes: @schemes, uri: @uri)
     apply_limits(config)
     apply_content_type_rules(config)
   end
@@ -114,7 +118,8 @@ class SafeFetch::RequestOptions
 
   def http_options
     timeouts = { open_timeout: bounded_by_total(open_timeout), read_timeout: bounded_by_total(read_timeout) }
-    max_retries.nil? ? timeouts : timeouts.merge(max_retries: max_retries)
+    timeouts = timeouts.merge(max_retries: max_retries) unless max_retries.nil?
+    @proxy ? timeouts.merge(@proxy.http_options) : timeouts
   end
 
   # Caminho relativo sem barra ("outra") não é montado pelo ssrf_filter: recusado aqui, como antes do #1702.
