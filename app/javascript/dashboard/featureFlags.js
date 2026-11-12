@@ -108,6 +108,7 @@ export const FEATURE_FLAGS = {
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',
   // Protótipo dos 6 passos novos da Automação livre (#2931–#2936, épico #2414).
+  // Desligada em produção até o motor existir (config/features.yml).
   AUTOMACAO_PASSOS_NOVOS: 'automacao_passos_novos',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

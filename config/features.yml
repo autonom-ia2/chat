@@ -1376,3 +1376,16 @@
   display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
   enabled: false
   column: feature_flags_ext_2
+
+# Automação livre: protótipo dos 6 passos novos (#2931–#2936, épico #2414). Só o painel lê esta flag. Ligada (junto com
+# automacao_editor): o "Adicionar passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação,
+# Buscar informação em outro sistema, Marcar reunião pela conversa e Pesquisa de satisfação, com o ensaio e o
+# histórico de exemplo (adaptador falso). O servidor ainda não conhece estes passos: o Salvar tudo, o Guardar e o
+# Ligar ficam desligados enquanto a receita tiver um deles. Desligada: o editor fica o de hoje. Sem migration.
+# Rollback: desligar a flag. Posição 45 (17592186044416, 1 << 44), provisória: a Orquestração confirma o bit na fila.
+# EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção, ligada só na conta de
+# demonstração e no painel local, até o motor dos passos existir. Ligada num cliente, ele monta passos que não salvam.
+- name: automacao_passos_novos
+  display_name: Automação › protótipo dos passos novos (não salva)
+  enabled: false
+  column: feature_flags_ext_2
