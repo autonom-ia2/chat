@@ -9,9 +9,7 @@ são de verdade (seção abaixo); os outros três seguem no adaptador falso.
 1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
    `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
    `config/features.yml`. A Orquestração reservou a posição 47 (1 << 46) em
-   12/11, depois da `relacionamentos_novo` (45) e da `carteira_seguros` (46).
-   Como a `carteira_seguros` ainda não está na `main`, a posição real desta é
-   46 (1 << 45) até ela entrar; quando entrar antes desta, a desta passa a 47.
+   12/11, logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
    **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
    **desligada em produção**, ligada só na conta de demonstração, até o motor
    dos seis passos estar completo. Desligar é o rollback: quem espera resposta

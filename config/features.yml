@@ -1386,6 +1386,19 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Agentes: ferramentas prontas, IP próprio das consultas grátis (#2942, parte do #2858). Ligada (junto com
+# `agente_ferramentas_prontas`): as consultas grátis da conta (CEP, CNPJ, FIPE e as outras fontes públicas) saem por um IP
+# próprio do plano datacenter da Webshare, dado na 1ª consulta que sai para a rede, e o teto de cada host passa a contar
+# por esse IP (inteiro, sem a fatia de 25%). Precisa de WEBSHARE_API_KEY, WEBSHARE_LOOKUP_PROXY_ADDRESSES (a fatia da
+# stack) e dos mesmos IPs em WEBSHARE_RESERVED_PROXY_ADDRESSES (o WhatsApp nunca os oferece). O Premium e o WhatsApp não
+# mudam. Sem IP próprio (Webshare fora, fatia vazia): sai pelo IP do servidor, com aviso (decisão do Rodrigo, 12/11). Migration
+# aditiva 20261112100000 (duas tabelas). Desligada: tudo sai pelo IP do servidor, como antes. Rollback: desligar a flag.
+# Posição 46 (35184372088832, 1 << 45), dada pela Orquestração em 12/11, logo depois da `relacionamentos_novo` (#2894, 45).
+- name: agente_ferramentas_prontas_ip_proprio
+  display_name: Agentes › ferramentas prontas (IP próprio das consultas grátis)
+  enabled: false
+  column: feature_flags_ext_2
+
 # Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
 # passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
 # sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Pedir aprovação, Marcar reunião e Pesquisa de
@@ -1393,9 +1406,9 @@
 # seguem no protótipo (o Salvar fica desligado enquanto a receita tiver um deles). Desligada: o editor fica o de hoje e
 # o motor não roda nenhum dos seis. Sem migration. Rollback: desligar a flag (quem espera resposta num destes passos
 # para naquele ponto, sem mandar nada). Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11,
-# depois da relacionamentos_novo (45) e da carteira_seguros (46). A carteira_seguros ainda não está na main: até ela
-# entrar, a posição real desta é 46. EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): fica DESLIGADA em
-# produção, ligada só na conta de demonstração e no painel local, até o motor dos seis passos estar completo.
+# logo depois da agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada
+# em todas): fica DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o motor dos seis
+# passos estar completo.
 - name: automacao_passos_novos
   display_name: Automação › passos novos (aprovação, reunião, pesquisa e os outros)
   enabled: false
