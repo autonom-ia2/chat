@@ -1,23 +1,31 @@
-# O passo "ação" ao salvar (Autonomia::Automacao::Receita, que inclui este módulo): a ação está na lista permitida, o
-# caminho tem todos os parâmetros, lê valores que a automação sabe ler e aponta para registros da conta (#2471), e o
-# corpo fica no formato da ação e nas regras da lista (AcoesPermitidas). Saiu da Receita para ela caber no tamanho; usa
-# os métodos dela (problemas_do_caminho, texto) e a conta (@conta).
-module Autonomia::Automacao::AcaoNaReceita
-  private
+# O passo "ação" ao salvar (#2608, validador da Receita): a ação está na lista permitida, o caminho tem todos os
+# parâmetros, lê valores que a automação sabe ler (Receita::Leitura) e aponta para registros da conta (#2471), e o corpo
+# fica no formato da ação e nas regras da lista (AcoesPermitidas).
+class Autonomia::Automacao::Receita::Acao
+  include ::Autonomia::Automacao::Receita::Frase
 
-  def problemas_da_acao(passo)
+  # `contexto`: Receita::Contexto. `leitura`: a régua dos valores (Receita::Leitura).
+  def initialize(contexto, leitura)
+    @conta = contexto.conta
+    @account_user = contexto.account_user
+    @leitura = leitura
+  end
+
+  def problemas(passo)
     acao = passo['acao']
     return [texto(:acao_fora, passo: passo['id'], acao: acao)] unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
 
     [*caminho_da_acao(passo), *corpo_da_acao(passo)]
   end
 
+  private
+
   def caminho_da_acao(passo)
     valores = passo['caminho'].to_h
     faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
                                         .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
     lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho, onde: :caminho) } + ids_de_fora(passo)
+    faltando + lidos.flat_map { |caminho| @leitura.problemas(passo['id'], caminho, onde: :caminho) } + ids_de_fora(passo)
   end
 
   # #2471: o id escrito direto no caminho é de um registro desta conta (IdsDoCaminho).
@@ -33,7 +41,7 @@ module Autonomia::Automacao::AcaoNaReceita
     corpo = passo['corpo'].to_h
     exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
     conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
-    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| problemas_do_caminho(passo['id'], lido, onde: :corpo) }
+    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |lido| @leitura.problemas(passo['id'], lido, onde: :corpo) }
     calculo.problemas +
       conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
       regras_da_lista(passo['id'], passo['acao'], conferencia.valores) + campos_protegidos(passo, corpo)
