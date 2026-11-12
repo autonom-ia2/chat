@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -9,17 +9,31 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 
 // #2894 — o diálogo de Desfazer: mostra ANTES quem sai, quem fica aqui (já
 // conversou ou recebeu campanha) e o que volta ao que era. Destrutivo: tocar fora não fecha.
+// #2896 — `naoPode`: o servidor recusou porque a lista ainda não foi trazida
+// até o fim. O diálogo diz isso num alerta, com o foco nele, no lugar da
+// prévia; o botão de desfazer sai (não há o que confirmar) e fica só o de sair.
 const props = defineProps({
   // O nome da lista que vai ser desfeita, no título.
   arquivo: { type: String, default: '' },
   previa: { type: Object, default: null },
   comErroNaPrevia: { type: Boolean, default: false },
   desfazendo: { type: Boolean, default: false },
+  naoPode: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirmar', 'fechar', 'tentar']);
 
 const { t } = useI18n();
 const dialogo = ref(null);
+const recusa = ref(null);
+
+// A recusa chegou: o foco vai para ela (leitor de tela e teclado).
+watch(
+  () => props.naoPode,
+  recusou => {
+    if (recusou) recusa.value?.focus();
+  },
+  { flush: 'post' }
+);
 
 const SEM_PESSOAS = 0;
 
@@ -74,7 +88,17 @@ defineExpose({
       aria-live="polite"
     >
       <TituloDoDialogo :titulo="titulo" />
-      <template v-if="previa">
+      <p
+        v-if="naoPode"
+        ref="recusa"
+        data-relacionamentos="desfazer-nao-pode"
+        role="alert"
+        tabindex="-1"
+        class="m-0 text-base font-medium outline-none text-n-slate-12"
+      >
+        {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_PODE') }}
+      </p>
+      <template v-else-if="previa">
         <p class="m-0 text-n-slate-12">{{ fraseDoQueSai }}</p>
         <p class="m-0">
           {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_RECEBER') }}
@@ -99,6 +123,7 @@ defineExpose({
           @click="dialogo?.close()"
         />
         <Button
+          v-if="!naoPode"
           color="ruby"
           size="lg"
           class="w-full"

@@ -117,6 +117,54 @@ describe('lista sendo trazida', () => {
   });
 });
 
+// #2896 — o servidor desfaz depois do pedido: a lista fica `desfazendo` e a
+// tela acompanha do mesmo jeito que acompanha a lista sendo trazida.
+describe('lista sendo desfeita', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it('pergunta de novo sozinha até a lista ficar desfeita, e aí para', async () => {
+    const historicoDaFonte = vi
+      .fn()
+      .mockResolvedValueOnce([lista('a', 'desfazendo')])
+      .mockResolvedValueOnce([lista('a', 'desfazendo')])
+      .mockResolvedValue([lista('a', 'desfeito')]);
+    const { historico, avisar } = montar({ historico: historicoDaFonte });
+    await historico.carregar();
+    expect(historico.listas.value[0].situacao).toBe('desfazendo');
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+    expect(historico.listas.value[0].situacao).toBe('desfazendo');
+    expect(historico.carregando.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 1.5);
+    expect(historico.listas.value[0].situacao).toBe('desfeito');
+    await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS * 3);
+    expect(historicoDaFonte).toHaveBeenCalledTimes(3);
+    expect(avisar).not.toHaveBeenCalled();
+  });
+
+  // O desfazer que quebra no servidor devolve a lista ao que era: a tela diz
+  // que não deu, em vez de a linha só voltar, calada.
+  it.each(['pronto', 'falhou'])(
+    'a lista que volta de "desfazendo" para "%s" não foi desfeita: avisa uma vez',
+    async voltou => {
+      const historicoDaFonte = vi
+        .fn()
+        .mockResolvedValueOnce([lista('a', 'desfazendo'), lista('b', 'pronto')])
+        .mockResolvedValue([lista('a', voltou), lista('b', 'pronto')]);
+      const { historico, avisar } = montar({ historico: historicoDaFonte });
+      await historico.carregar();
+      expect(avisar).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(INTERVALO_DO_HISTORICO_MS);
+      expect(historico.listas.value[0].situacao).toBe(voltou);
+      await historico.carregar({ silencioso: true });
+      expect(avisar).toHaveBeenCalledTimes(1);
+      expect(avisar).toHaveBeenCalledWith(
+        'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER'
+      );
+    }
+  );
+});
+
 describe('desfazer', () => {
   it('abre mostrando antes o que sai', async () => {
     const { historico } = montar();
@@ -153,6 +201,63 @@ describe('desfazer', () => {
     expect(fonte.desfazer).toHaveBeenCalledWith('a');
     expect(historico.listas.value[0].situacao).toBe('desfeito');
     expect(historico.desfazendo.value).toBe(false);
+  });
+
+  // #2896 — a lista que o servidor ainda não deixa desfazer (ela não foi
+  // trazida até o fim): não é erro de "tente de novo"; a tela diz por quê.
+  describe('a lista que ainda não dá para desfazer', () => {
+    const recusa = () =>
+      vi.fn(async () => {
+        throw Object.assign(new Error('422'), { name: 'NAO_PODE_DESFAZER' });
+      });
+
+    it('recusada ao confirmar: liga `naoPodeDesfazer`, sem aviso, e mostra a lista como está agora', async () => {
+      const historicoDaFonte = vi
+        .fn()
+        .mockResolvedValueOnce([lista('a', 'pronto')])
+        .mockResolvedValue([lista('a', 'falhou')]);
+      const { historico, avisar } = montar({
+        historico: historicoDaFonte,
+        desfazer: recusa(),
+      });
+      await historico.carregar();
+      await historico.abrirDesfazer(historico.listas.value[0]);
+      expect(historico.naoPodeDesfazer.value).toBe(false);
+      expect(await historico.confirmarDesfazer()).toBe(false);
+      expect(historico.naoPodeDesfazer.value).toBe(true);
+      expect(avisar).not.toHaveBeenCalled();
+      expect(historico.desfazendo.value).toBe(false);
+      expect(historico.listas.value[0].situacao).toBe('falhou');
+      expect(historico.carregando.value).toBe(false);
+    });
+
+    it('recusada já na prévia: liga `naoPodeDesfazer`, não o erro da prévia', async () => {
+      const { historico } = montar({ previaDoDesfazer: recusa() });
+      await historico.abrirDesfazer(lista('a', 'pronto'));
+      expect(historico.naoPodeDesfazer.value).toBe(true);
+      expect(historico.previaComErro.value).toBe(false);
+      expect(historico.previa.value).toBeNull();
+    });
+
+    it('depois da recusa, confirmar não pede de novo', async () => {
+      const { historico, fonte } = montar({ previaDoDesfazer: recusa() });
+      await historico.abrirDesfazer(lista('a', 'pronto'));
+      expect(await historico.confirmarDesfazer()).toBe(false);
+      expect(fonte.desfazer).not.toHaveBeenCalled();
+    });
+
+    it('fechar, ou abrir outra lista, apaga a recusa', async () => {
+      const previaDoDesfazer = recusa();
+      const { historico } = montar({ previaDoDesfazer });
+      await historico.abrirDesfazer(lista('a', 'pronto'));
+      historico.fecharDesfazer();
+      expect(historico.naoPodeDesfazer.value).toBe(false);
+      await historico.abrirDesfazer(lista('a', 'pronto'));
+      expect(historico.naoPodeDesfazer.value).toBe(true);
+      previaDoDesfazer.mockResolvedValueOnce({ tira: 1, ficam: 0, devolve: 0 });
+      await historico.abrirDesfazer(lista('b', 'pronto'));
+      expect(historico.naoPodeDesfazer.value).toBe(false);
+    });
   });
 
   it('erro ao desfazer avisa e devolve false', async () => {

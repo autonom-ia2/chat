@@ -617,6 +617,97 @@ describe('as recusas da pergunta dos valores têm o mesmo nome nas duas fontes',
   });
 });
 
+// ---- o desfazer (Fatia 3) -------------------------------------------------------
+
+describe('o desfazer tem a mesma forma e as mesmas recusas nas duas fontes', () => {
+  const PRONTA_NA_DEMO = 'trazida-antiga-1';
+  const recusa422 = () =>
+    Object.assign(new Error('422'), {
+      response: { status: 422, data: { error: 'nao_pode_desfazer' } },
+    });
+  const fontes = () => ({
+    real: montarFonteReal().fonte,
+    demo: trazerFonte({
+      demo: 'cheio',
+      carregarDemo: () => import('../../demo/trazer.js'),
+      atraso: 0,
+      atrasoDaLeitura: 0,
+    }),
+  });
+  // A lista da demonstração que ainda está sendo trazida.
+  const trazendoNaDemo = async demo => {
+    const { id } = await demo.ler(null);
+    return (await demo.trazer(id)).trazidaId;
+  };
+
+  it('a prévia: os mesmos três números', async () => {
+    const { real, demo } = fontes();
+    responde('previaDoDesfazer', { tira: 162, ficam: 18, devolve: 15 });
+    const daReal = await real.previaDoDesfazer(812);
+    const daDemo = await demo.previaDoDesfazer(PRONTA_NA_DEMO);
+    expect(forma(daDemo)).toEqual(forma(daReal));
+  });
+
+  it('o pedido: a lista e a situação de agora, que é `desfazendo`', async () => {
+    const { real, demo } = fontes();
+    responde('desfazer', { id: 812, situacao: 'desfazendo' });
+    const daReal = await real.desfazer(812);
+    const daDemo = await demo.desfazer(PRONTA_NA_DEMO);
+    expect(Object.keys(daDemo).sort()).toEqual(Object.keys(daReal).sort());
+    expect(daDemo.situacao).toBe(daReal.situacao);
+  });
+
+  it('a lista sendo desfeita aparece no histórico e no andamento com a mesma situação', async () => {
+    const { real, demo } = fontes();
+    responde('listas', [
+      {
+        id: 812,
+        arquivo: 'Clientes 2025.xlsx',
+        quando: '2026-11-08T14:03:00Z',
+        quem: 'Marina Pavanelli',
+        total: 195,
+        situacao: 'desfazendo',
+        porcentagem: 100,
+        pode_tentar: false,
+      },
+    ]);
+    responde('andamento', {
+      porcentagem: 100,
+      situacao: 'desfazendo',
+      total: 195,
+      novas: 180,
+      completadas: 15,
+    });
+    await demo.desfazer(PRONTA_NA_DEMO);
+    const [daReal] = await real.historico();
+    const daDemo = (await demo.historico()).find(l => l.id === PRONTA_NA_DEMO);
+    // O id da demonstração é um texto; o do servidor, um número.
+    expect(Object.keys(daDemo).sort()).toEqual(Object.keys(daReal).sort());
+    expect([daDemo.situacao, daDemo.porcentagem]).toEqual([
+      daReal.situacao,
+      daReal.porcentagem,
+    ]);
+    expect((await demo.andamento(PRONTA_NA_DEMO)).situacao).toBe(
+      (await real.andamento(812)).situacao
+    );
+  });
+
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    '%s da lista que ainda não foi trazida até o fim: NAO_PODE_DESFAZER',
+    async metodo => {
+      const { real, demo } = fontes();
+      TrazerAPI[metodo].mockRejectedValueOnce(recusa422());
+      const daReal = await real[metodo](812).catch(falha => falha);
+      const daDemo = await demo[metodo](await trazendoNaDemo(demo)).catch(
+        falha => falha
+      );
+      expect(daDemo).toBeInstanceOf(Error);
+      expect(daDemo.name).toBe(daReal.name);
+      expect(daDemo.name).toBe('NAO_PODE_DESFAZER');
+    }
+  );
+});
+
 // ---- os métodos ---------------------------------------------------------------
 
 describe('as duas fontes têm os mesmos métodos', () => {
@@ -635,8 +726,8 @@ describe('as duas fontes têm os mesmos métodos', () => {
     });
     expect(real.usaDemo).toBe(false);
     expect(demo.usaDemo).toBe(true);
-    // O desfazer é a única diferença que a tela enxerga: a real ainda não tem.
-    expect(real.temDesfazer).toBe(false);
+    // As duas têm o desfazer (Fatia 3): a tela não sabe qual está usando.
+    expect(real.temDesfazer).toBe(true);
     expect(demo.temDesfazer).toBe(true);
     expect(metodos(demo)).toEqual([...metodos(real), ...SO_NA_DEMO].sort());
   });

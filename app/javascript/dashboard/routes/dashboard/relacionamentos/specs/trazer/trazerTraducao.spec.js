@@ -507,7 +507,7 @@ describe('listaDaTela', () => {
     ['trazendo', 'trazendo'],
     ['desfeito', 'desfeito'],
     ['falhou', 'falhou'],
-    ['desfazendo', 'desfeito'],
+    ['desfazendo', 'desfazendo'],
   ])('situação %s chega à tela como %s', (doServidor, daTela) => {
     expect(listaDaTela({ ...DO_SERVIDOR, situacao: doServidor }).situacao).toBe(
       daTela
@@ -551,9 +551,9 @@ describe('andamentoDaTela', () => {
     });
   });
 
-  it('`desfazendo` chega como `desfeito`', () => {
+  it('`desfazendo` chega como o servidor diz', () => {
     expect(andamentoDaTela({ situacao: 'desfazendo' }).situacao).toBe(
-      'desfeito'
+      'desfazendo'
     );
   });
 });

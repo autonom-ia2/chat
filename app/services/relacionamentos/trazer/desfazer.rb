@@ -2,15 +2,17 @@
 #
 # 1. A pessoa que a lista criou sai, a menos que já tenha conversa, card, campanha ou recusa
 #    (Relacionamentos::Trazer::QuemFica). Sai pelo serviço de apagar em lote de hoje (Contacts::BulkDeleteService),
-#    com os avisos de sempre: nenhum evento é suprimido.
+#    com os avisos de sempre: nenhum evento é suprimido. Apagar um bloco leva tempo, e nesse tempo chega mensagem: por
+#    isso cada pessoa é conferida de novo logo antes de sair.
 # 2. Na pessoa que a conta já tinha, cada campo que a lista preencheu volta a vazio, se o valor ainda é o que a lista
 #    pôs (Relacionamentos::Trazer::CampoQueVolta). A empresa a que a lista a ligou é desligada, e quem a lista marcou
 #    como cliente volta ao tipo que tinha.
 # 3. A empresa que a lista criou sai quando não sobra nenhuma pessoa nela nem retorno marcado para ela (o retorno sairia
 #    junto, pela cascata do banco, e foi alguém que o marcou).
 #
-# `pedir` é o clique: sob a trava da importação, marca "desfazendo" e diz se o job deve ir para a fila. Só a lista
-# gravada pode ser desfeita. O segundo clique não enfileira de novo, a não ser que o desfazer esteja parado há mais
+# `pedir` é o clique: sob a trava da importação, marca "desfazendo" e diz se o job deve ir para a fila. Pode ser desfeita
+# a lista gravada e a que quebrou no meio da gravação: as pessoas que ela chegou a pôr não podem ficar presas numa lista
+# que não dá para apagar nem para continuar. O segundo clique não enfileira de novo, a não ser que o desfazer esteja parado há mais
 # tempo que CampaignImports::Config.stalled_import_after (o processo morreu no meio): aí o job volta para a fila.
 #
 # `call` é o job, em blocos de QuemFica::BLOCO. Cada bloco move o `updated_at` da importação, que é por onde se vê que o
@@ -27,7 +29,13 @@ class Relacionamentos::Trazer::Desfazer
   Pedido = Struct.new(:erro, :enfileirar, keyword_init: true)
 
   def self.pode?(importacao)
-    GRAVADA.include?(importacao.status)
+    GRAVADA.include?(importacao.status) || (importacao.failed? && importacao.import_started_at.present?)
+  end
+
+  # O desfazer parou: nada mexe na importação há mais tempo que o limite (o processo morreu no meio). A tela volta a
+  # oferecer o Desfazer nessa lista, e o clique o põe na fila de novo.
+  def self.parado?(importacao)
+    importacao.undo_status_processing? && importacao.updated_at < CampaignImports::Config.stalled_import_after.ago
   end
 
   # quem: a pessoa que pediu. Vai para a Auditoria de quem foi apagado.
@@ -65,7 +73,7 @@ class Relacionamentos::Trazer::Desfazer
 
   # O desfazer que parou volta para a fila, e a marca de vida é renovada para o próximo clique não enfileirar outro.
   def retomar
-    return false unless @importacao.updated_at < CampaignImports::Config.stalled_import_after.ago
+    return false unless self.class.parado?(@importacao)
 
     vivo
     true
@@ -76,15 +84,18 @@ class Relacionamentos::Trazer::Desfazer
   end
 
   def apagar_as_pessoas_criadas
-    Relacionamentos::Trazer::QuemFica.new(@importacao).em_blocos do |saem, _ficam|
-      Contacts::BulkDeleteService.new(account: @conta, contact_ids: saem, user: @quem).perform
+    quem_fica = Relacionamentos::Trazer::QuemFica.new(@importacao)
+    quem_fica.em_blocos do |saem, _ficam|
+      saem.each do |id|
+        Contacts::BulkDeleteService.new(account: @conta, contact_ids: [id], user: @quem).perform unless quem_fica.fica?(id)
+      end
       vivo
     end
   end
 
   def devolver_os_campos
     Relacionamentos::Trazer::CamposDaLista.new(@importacao).em_blocos do |campos|
-      campos.each(&:devolver!)
+      campos.group_by(&:alvo).each_value { |do_alvo| Relacionamentos::Trazer::CampoQueVolta.devolver!(do_alvo) }
       vivo
     end
   end

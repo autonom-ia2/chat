@@ -5,8 +5,9 @@ import { trazerFonte } from '../../fonte/trazerFonte';
 // o destino de uma coluna, o andamento, o histórico e o tentar de novo. Fatia 2:
 // responder às perguntas, consertar a linha, deixar de fora, voltar atrás,
 // trazer pela leitura e os destinos que faltavam (com o campo da informação
-// nova). Fala com o servidor pelo cliente de API (aqui simulado) e devolve o
-// mesmo formato da demonstração. O contrato do servidor está em
+// nova). Fatia 3: a prévia do desfazer e o desfazer de uma lista trazida. Fala
+// com o servidor pelo cliente de API (aqui simulado) e devolve o mesmo formato
+// da demonstração. O contrato do servidor está em
 // spec/requests/api/v1/accounts/relacionamentos_trazer_spec.rb.
 // Responder e trocar a coluna devolvem a leitura inteira ou, quando o servidor
 // vai ler a planilha de novo, o marcador `{ situacao: 'lendo', id }`: quem
@@ -25,6 +26,8 @@ vi.mock('dashboard/api/relacionamentosTrazer', () => ({
     listas: vi.fn(),
     andamento: vi.fn(),
     confirmar: vi.fn(),
+    previaDoDesfazer: vi.fn(),
+    desfazer: vi.fn(),
   },
 }));
 
@@ -107,23 +110,10 @@ describe('fonte real', () => {
     expect(montar().fonte.usaDemo).toBe(false);
   });
 
-  // Só o desfazer fica para a Fatia 3: a fonte diz que não tem, e a tela não
-  // o mostra.
-  it('diz que ainda não tem o desfazer', () => {
-    expect(montar().fonte.temDesfazer).toBe(false);
+  // Fatia 3: a fonte diz que tem o desfazer, e a tela o mostra.
+  it('diz que tem o desfazer', () => {
+    expect(montar().fonte.temDesfazer).toBe(true);
   });
-
-  it.each(['previaDoDesfazer', 'desfazer'])(
-    '%s fica para a Fatia 3: FONTE_REAL_PENDENTE',
-    async metodo => {
-      await expect(montar().fonte[metodo](812)).rejects.toMatchObject({
-        name: 'FONTE_REAL_PENDENTE',
-      });
-      Object.values(TrazerAPI).forEach(daApi =>
-        expect(daApi).not.toHaveBeenCalled()
-      );
-    }
-  );
 
   it.each([
     ['responder', [{ clientes: 'sim_todas' }]],
@@ -737,7 +727,7 @@ describe('trazer e tentar de novo', () => {
 });
 
 describe('andamento', () => {
-  it('entrega só o que a tela usa, e a lista que está sendo desfeita já conta como desfeita', async () => {
+  it('entrega só o que a tela usa, e a lista que está sendo desfeita chega como `desfazendo`', async () => {
     const { fonte } = montar();
     responde('andamento', {
       id: 812,
@@ -750,7 +740,7 @@ describe('andamento', () => {
     });
     expect(await fonte.andamento(812)).toEqual({
       porcentagem: 42,
-      situacao: 'desfeito',
+      situacao: 'desfazendo',
       total: 195,
       novas: 70,
       completadas: 12,
@@ -760,7 +750,7 @@ describe('andamento', () => {
 });
 
 describe('historico', () => {
-  it('traduz cada lista: data em milissegundos, "desfazendo" como desfeito e o tentar', async () => {
+  it('traduz cada lista: data em milissegundos, a situação como o servidor diz e o tentar', async () => {
     const { fonte } = montar();
     const lista = (id, situacao, podeTentar = false) => ({
       id,
@@ -780,7 +770,7 @@ describe('historico', () => {
     const listas = await fonte.historico();
     expect(listas.map(l => [l.id, l.situacao, l.podeTentar])).toEqual([
       [1, 'pronto', false],
-      [2, 'desfeito', false],
+      [2, 'desfazendo', false],
       [3, 'falhou', true],
     ]);
     expect(listas[0].quando).toBe(Date.UTC(2026, 10, 8, 14, 3));
@@ -796,4 +786,63 @@ describe('historico', () => {
     TrazerAPI.listas.mockRejectedValueOnce(caiu);
     await expect(fonte.historico()).rejects.toBe(caiu);
   });
+});
+
+// Fatia 3 — o desfazer de uma lista trazida. O servidor só marca a lista como
+// `desfazendo` e responde na hora (202); quem acompanha até `desfeito` é a tela,
+// pelo histórico.
+describe('desfazer', () => {
+  it('a prévia pergunta ao servidor e entrega só os três números', async () => {
+    const { fonte } = montar();
+    responde('previaDoDesfazer', {
+      id: 812,
+      tira: 162,
+      ficam: 18,
+      devolve: 15,
+    });
+    expect(await fonte.previaDoDesfazer(812)).toEqual({
+      tira: 162,
+      ficam: 18,
+      devolve: 15,
+    });
+    expect(TrazerAPI.previaDoDesfazer).toHaveBeenCalledWith(812);
+    expect(TrazerAPI.desfazer).not.toHaveBeenCalled();
+  });
+
+  it.each(['desfazendo', 'desfeito'])(
+    'desfazer pede ao servidor e devolve a lista com a situação de agora (%s)',
+    async situacao => {
+      const { fonte } = montar();
+      responde('desfazer', { id: 812, situacao });
+      expect(await fonte.desfazer(812)).toEqual({ id: 812, situacao });
+      expect(TrazerAPI.desfazer).toHaveBeenCalledWith(812);
+    }
+  );
+
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    '%s: a lista que ainda não foi trazida até o fim (422) vira NAO_PODE_DESFAZER',
+    async metodo => {
+      const { fonte } = montar();
+      const recusa = erroHttp(422, 'nao_pode_desfazer');
+      TrazerAPI[metodo].mockRejectedValueOnce(recusa);
+      const falha = await fonte[metodo](812).catch(erro => erro);
+      expect(falha).toBeInstanceOf(Error);
+      expect(falha.name).toBe('NAO_PODE_DESFAZER');
+      expect(falha.cause).toBe(recusa);
+    }
+  );
+
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    '%s: sem acesso ganha nome; outro erro sobe como veio',
+    async metodo => {
+      const { fonte } = montar();
+      TrazerAPI[metodo].mockRejectedValueOnce(erroHttp(401));
+      await expect(fonte[metodo](812)).rejects.toMatchObject({
+        name: 'SEM_ACESSO',
+      });
+      const caiu = erroHttp(500);
+      TrazerAPI[metodo].mockRejectedValueOnce(caiu);
+      await expect(fonte[metodo](812)).rejects.toBe(caiu);
+    }
+  );
 });

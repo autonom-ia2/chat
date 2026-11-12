@@ -10,7 +10,10 @@ import {
   some,
 } from './apoioDaPagina';
 import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
-import { DURACAO_DA_TRAZIDA_MS } from '../../demo/trazer';
+import {
+  DURACAO_DA_TRAZIDA_MS,
+  DURACAO_DO_DESFAZER_MS,
+} from '../../demo/trazer';
 
 // A página "Trazer minha lista" (#2894) em demonstração: o Desfazer de uma
 // lista, no Pronto e no histórico, com o texto real em pt_BR e relógio falso.
@@ -21,6 +24,10 @@ const AGORA = Date.UTC(2026, 10, 11, 15);
 // A demonstração leva DURACAO_DA_TRAZIDA_MS para trazer a lista; a folga cobre
 // a consulta seguinte ao fim (a espera entre uma e outra chega a 5 s).
 const ATE_TRAZER_TUDO_MS = DURACAO_DA_TRAZIDA_MS + 5000;
+// O mesmo para o desfazer: a demonstração leva DURACAO_DO_DESFAZER_MS.
+const ATE_DESFAZER_TUDO_MS = DURACAO_DO_DESFAZER_MS + 5000;
+const situacoes = w =>
+  w.findAll('[data-lista] [data-situacao]').map(s => s.text());
 
 const estado = vi.hoisted(() => ({ demo: 'cheio' }));
 
@@ -163,9 +170,7 @@ describe('Desfazer', () => {
     );
     await botao(w, 'Cancelar').trigger('click');
     await some(w, 'dialogo-desfazer');
-    expect(
-      w.findAll('[data-lista] [data-situacao]').map(s => s.text())
-    ).toEqual([
+    expect(situacoes(w)).toEqual([
       'Pronto',
       'Desfeito',
       'Pronto',
@@ -174,7 +179,10 @@ describe('Desfazer', () => {
     w.unmount();
   });
 
-  it('Desfazer faz a linha virar "Desfeito" e some o botão', async () => {
+  const botaoDaPrimeira = w =>
+    w.find('[data-lista="trazida-antiga-1"] [data-relacionamentos="desfazer"]');
+
+  it('Desfazer faz a linha virar "Desfazendo…", sem o botão, e depois "Desfeito"', async () => {
     const w = await abrirDialogoDaLista();
     await esperarPor(() =>
       expect(
@@ -184,45 +192,45 @@ describe('Desfazer', () => {
     await w.get('[data-dialog]').trigger('submit');
     await some(w, 'dialogo-desfazer');
     await esperarPor(() =>
-      expect(
-        w.findAll('[data-lista] [data-situacao]').map(s => s.text())
-      ).toEqual([
+      expect(situacoes(w)).toEqual([
+        'Desfazendo…',
+        'Desfeito',
+        'Pronto',
+        'Não consegui trazer esta lista.',
+      ])
+    );
+    expect(botaoDaPrimeira(w).exists()).toBe(false);
+    // A tela acompanha sozinha até o servidor terminar.
+    await vi.advanceTimersByTimeAsync(ATE_DESFAZER_TUDO_MS);
+    await esperarPor(() =>
+      expect(situacoes(w)).toEqual([
         'Desfeito',
         'Desfeito',
         'Pronto',
         'Não consegui trazer esta lista.',
       ])
     );
-    expect(
-      w
-        .find(
-          '[data-lista="trazida-antiga-1"] [data-relacionamentos="desfazer"]'
-        )
-        .exists()
-    ).toBe(false);
+    expect(botaoDaPrimeira(w).exists()).toBe(false);
+    expect(alertar).not.toHaveBeenCalled();
     w.unmount();
   });
 
-  it('erro ao desfazer avisa por toast e o diálogo continua aberto', async () => {
+  it('a lista que outra aba já mandou desfazer: o pedido não é erro, e a linha mostra como ela está', async () => {
     const w = await abrirDialogoDaLista();
     await esperarPor(() =>
       expect(
         marca(w, 'desfazer-confirmar').attributes('disabled')
       ).toBeUndefined()
     );
-    // Outra aba já desfez esta lista: a fonte recusa.
     const outraAba = trazerFonte({ demo: 'cheio' }).desfazer(
       'trazida-antiga-1'
     );
     await vi.advanceTimersByTimeAsync(0);
     await outraAba;
     await w.get('[data-dialog]').trigger('submit');
-    await esperarPor(() =>
-      expect(alertar).toHaveBeenCalledWith(
-        'Não consegui desfazer. Tente de novo.'
-      )
-    );
-    expect(marca(w, 'dialogo-desfazer').exists()).toBe(true);
+    await some(w, 'dialogo-desfazer');
+    await esperarPor(() => expect(situacoes(w)[0]).toBe('Desfazendo…'));
+    expect(alertar).not.toHaveBeenCalled();
     w.unmount();
   });
 });

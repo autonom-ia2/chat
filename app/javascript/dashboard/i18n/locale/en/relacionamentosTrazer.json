@@ -201,6 +201,7 @@
       "SITUACAO": {
         "PRONTO": "Done",
         "TRAZENDO": "Bringing in {porcentagem}%",
+        "DESFAZENDO": "Undoing…",
         "DESFEITO": "Undone"
       },
       "DESFAZER": "Undo",
@@ -216,7 +217,8 @@
       "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
       "NAO_RECEBER": "People who asked not to get messages stay that way.",
       "CONFIRMAR": "Undo",
-      "ERRO_PREVIA": "I couldn't see what will be removed."
+      "ERRO_PREVIA": "I couldn't see what will be removed.",
+      "NAO_PODE": "This list is still being brought in. You can undo it when it's done."
     },
     "ERROS": {
       "GUARDAR": "I couldn't save this. Try again.",

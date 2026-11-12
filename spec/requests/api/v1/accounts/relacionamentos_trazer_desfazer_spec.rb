@@ -57,16 +57,24 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       expect(Relacionamentos::CampoPreenchido.pendentes.count).to eq(Relacionamentos::CampoPreenchido.count)
     end
 
-    it 'recusa a lista que ainda está entrando ou que falhou no meio' do
+    it 'recusa a lista que ainda está entrando' do
       importacao = trazer_lista
-      [{ status: :importing }, { status: :failed, import_started_at: 1.hour.ago }].each do |estado|
-        importacao.update!(estado)
+      importacao.update!(status: :importing)
 
-        pedir_previa(importacao)
+      pedir_previa(importacao)
 
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body).to eq('error' => 'nao_pode_desfazer')
-      end
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'nao_pode_desfazer')
+    end
+
+    it 'conta também a lista que quebrou no meio da gravação' do
+      importacao = trazer_lista
+      importacao.update!(status: :failed, import_started_at: 1.hour.ago)
+
+      pedir_previa(importacao)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('tira' => 1, 'ficam' => 0, 'devolve' => 2)
     end
   end
 
@@ -120,9 +128,9 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       end
     end
 
-    it 'recusa com nao_pode_desfazer a lista que ainda está entrando ou que falhou no meio' do
+    it 'recusa com nao_pode_desfazer a lista que ainda está entrando' do
       importacao = trazer_lista
-      [{ status: :confirmed }, { status: :queued }, { status: :importing }, { status: :failed, import_started_at: 1.hour.ago }].each do |estado|
+      [{ status: :confirmed }, { status: :queued }, { status: :importing }].each do |estado|
         importacao.update!(estado)
 
         expect { pedir_desfazer(importacao) }.not_to have_enqueued_job(job)
@@ -134,12 +142,15 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       expect(account.contacts.count).to eq(3)
     end
 
-    it 'aceita a lista gravada com linhas que falharam' do
-      importacao = trazer_lista
-      importacao.update!(status: :completed_with_failures)
+    it 'aceita a lista gravada com linhas que falharam e a que quebrou no meio da gravação' do
+      [{ status: :completed_with_failures }, { status: :failed, import_started_at: 1.hour.ago }].each do |estado|
+        importacao = trazer_lista
+        importacao.update!(estado)
 
-      expect { pedir_desfazer(importacao) }.to have_enqueued_job(job).once
-      expect(response).to have_http_status(:accepted)
+        expect { pedir_desfazer(importacao) }.to have_enqueued_job(job).once
+        expect(response).to have_http_status(:accepted)
+        expect(response.parsed_body).to eq('id' => importacao.id, 'situacao' => 'desfazendo')
+      end
     end
   end
 

@@ -68,6 +68,27 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     expect(ficam(com_nota, com_retorno, com_serie, sem)).to contain_exactly(com_nota.id, com_retorno.id, com_serie.id)
   end
 
+  it 'fica quem ganhou etiqueta' do
+    com_etiqueta = criada('Pessoa Etiqueta')
+    sem = criada('Pessoa Sem')
+    com_etiqueta.update!(label_list: ['quente'])
+
+    expect(ficam(com_etiqueta, sem)).to contain_exactly(com_etiqueta.id)
+  end
+
+  it 'fica quem recusou os avisos de agendamento e quem veio também da prospecção ou de um anúncio' do
+    sem_aviso = criada('Pessoa Sem Aviso')
+    prospectada = criada('Pessoa Prospectada')
+    do_anuncio = criada('Pessoa Anúncio')
+    sem = criada('Pessoa Sem')
+    linha!('crm_booking_notice_stops', account_id: account.id, contact_id: sem_aviso.id)
+    linha!('autonomia_prospecting_leads', account_id: account.id, contact_id: prospectada.id, name: 'Padaria Exemplo', dedupe_key: 'padaria-exemplo')
+    linha!('crm_meta_ads_leads', account_id: account.id, contact_id: do_anuncio.id, leadgen_id: 'lead-inventado-1', received_at: Time.current)
+
+    expect(ficam(sem_aviso, prospectada, do_anuncio, sem)).to contain_exactly(sem_aviso.id, prospectada.id, do_anuncio.id)
+    expect(described_class.new(importacao).fica?(sem.id)).to be(false)
+  end
+
   it 'fica quem recebeu ou está na fila de uma campanha de WhatsApp Oficial ou de e-mail' do
     do_whatsapp = criada('Pessoa WhatsApp')
     do_email = criada('Pessoa Email')

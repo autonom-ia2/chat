@@ -10,8 +10,9 @@
 //   - quem identifica a coluna é o índice dela na planilha: o nome pode repetir
 //     ou vir vazio;
 //   - a lista do histórico troca a data por milissegundos e `pode_tentar` por
-//     `podeTentar`; `desfazendo` chega como `desfeito` (a tela ainda não tem esse
-//     selo);
+//     `podeTentar`; a situação chega como o servidor diz;
+//   - (Fatia 3) o desfazer que o servidor recusa (422 `nao_pode_desfazer`)
+//     ganha o nome `NAO_PODE_DESFAZER`;
 //   - (Fatia 2) as respostas das perguntas trocam `coluna_cliente` por
 //     `colunaCliente`; o conserto de uma linha vira `{ valor }` ou
 //     `{ ficar_com }`, e a linha que volta (o servidor devolve a linha inteira)
@@ -35,7 +36,6 @@ import { formatarTelefone } from '../lista/telefone';
 import { DESTINOS, aparado } from '../trazer/destinos';
 import { PERGUNTA_VALORES, RESPOSTA_ALGUMAS } from '../trazer/respostas';
 import { corpoDosValores } from '../trazer/valoresDeCliente';
-import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 export const SITUACAO_DA_LEITURA = {
   LENDO: 'lendo',
@@ -45,7 +45,6 @@ export const SITUACAO_DA_LEITURA = {
   VENCIDA: 'vencida',
 };
 
-const DESFAZENDO = 'desfazendo';
 export const STATUS_NAO_ACHEI = 404;
 
 export const erroNomeado = (nome, mensagem, causa) =>
@@ -329,9 +328,6 @@ export const leituraComProblema = (leitura, recebido, entram, clientes) => ({
 
 // ---- as listas que a conta já trouxe ---------------------------------------
 
-const situacaoDaTela = situacao =>
-  situacao === DESFAZENDO ? SITUACOES_DA_LISTA.DESFEITO : situacao;
-
 export const listaDaTela = lista => ({
   id: lista.id,
   arquivo: lista.arquivo,
@@ -339,15 +335,39 @@ export const listaDaTela = lista => ({
   // Quem trouxe pode já ter saído da conta.
   quem: lista.quem ?? '',
   total: lista.total,
-  situacao: situacaoDaTela(lista.situacao),
+  situacao: lista.situacao,
   porcentagem: lista.porcentagem,
   podeTentar: lista.pode_tentar === true,
 });
 
 export const andamentoDaTela = andamento => ({
   porcentagem: andamento.porcentagem,
-  situacao: situacaoDaTela(andamento.situacao),
+  situacao: andamento.situacao,
   total: andamento.total,
   novas: andamento.novas,
   completadas: andamento.completadas,
 });
+
+// ---- o desfazer de uma lista trazida ----------------------------------------
+
+// O que o desfazer faria agora: quantas pessoas saem, quantas ficam (já foram
+// usadas) e quantas voltam a ser como eram.
+export const previaDoDesfazerDaTela = previa => ({
+  tira: previa.tira,
+  ficam: previa.ficam,
+  devolve: previa.devolve,
+});
+
+// O servidor recusa a prévia e o desfazer da lista que ainda não foi gravada
+// (está sendo trazida, ou parou no meio): 422 com `nao_pode_desfazer`. O resto
+// sobe como veio.
+const RECUSA_DO_DESFAZER = 'nao_pode_desfazer';
+
+export const erroDoDesfazer = falha =>
+  falha?.response?.data?.error === RECUSA_DO_DESFAZER
+    ? erroNomeado(
+        'NAO_PODE_DESFAZER',
+        'Essa lista ainda não pode ser desfeita.',
+        falha
+      )
+    : falha;

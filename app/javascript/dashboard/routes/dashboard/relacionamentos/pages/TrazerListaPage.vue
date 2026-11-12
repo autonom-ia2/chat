@@ -294,6 +294,7 @@ const confirmarDesfazer = async () => {
       :previa="historico.previa.value"
       :com-erro-na-previa="historico.previaComErro.value"
       :desfazendo="historico.desfazendo.value"
+      :nao-pode="historico.naoPodeDesfazer.value"
       @confirmar="confirmarDesfazer"
       @fechar="historico.fecharDesfazer"
       @tentar="() => historico.abrirDesfazer(historico.alvo.value)"

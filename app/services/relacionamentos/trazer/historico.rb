@@ -5,6 +5,10 @@
 class Relacionamentos::Trazer::Historico
   PASSARAM = Relacionamentos::Trazer::Andamento::PASSARAM
   TETO = 100
+  FALHOU = 'falhou'.freeze
+  # "Desfazer" aparece na lista pronta e na que quebrou depois de pôr gente na base. Enquanto ela entra ou sai, não; a
+  # não ser que o desfazer tenha parado no meio (Relacionamentos::Trazer::Desfazer.parado?).
+  COM_DESFAZER = ['pronto', FALHOU].freeze
 
   def initialize(importacoes)
     @importacoes = importacoes
@@ -30,8 +34,14 @@ class Relacionamentos::Trazer::Historico
       id: lista.id, arquivo: lista.source_filename, quando: (lista.confirmed_at || lista.created_at).utc.iso8601, quem: lista.user&.name,
       total: lista.valid_rows, situacao: situacao,
       porcentagem: Relacionamentos::Trazer::Situacao.porcentagem(situacao, linhas_que_passaram.fetch(lista.id, 0), lista.valid_rows),
-      pode_tentar: Relacionamentos::Trazer::Situacao.pode_tentar?(lista)
+      pode_tentar: situacao == FALHOU && Relacionamentos::Trazer::Situacao.pode_tentar?(lista),
+      pode_desfazer: pode_desfazer?(lista, situacao)
     }
+  end
+
+  def pode_desfazer?(lista, situacao)
+    desfazer = Relacionamentos::Trazer::Desfazer
+    desfazer.pode?(lista) && (COM_DESFAZER.include?(situacao) || desfazer.parado?(lista))
   end
 
   # { id da importação => linhas gravadas ou que falharam }, só das listas que ainda não acabaram.

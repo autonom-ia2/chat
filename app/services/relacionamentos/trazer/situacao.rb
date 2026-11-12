@@ -1,7 +1,8 @@
 # A situação de uma lista trazida (#2896), nas palavras da tela, tirada do estado da importação de contatos:
 # - confirmada, na fila ou gravando: "trazendo";
 # - gravada (com ou sem linha que falhou): "pronto"; com o desfazer rodando, "desfazendo"; desfeita, "desfeito";
-# - a gravação começou e quebrou: "falhou" (a tela oferece "Tentar de novo" quando a importação ainda pode continuar);
+# - a gravação começou e quebrou: "falhou" (a tela oferece "Tentar de novo" quando a importação ainda pode continuar, e
+#   "Desfazer", para tirar quem ela chegou a pôr); com o desfazer rodando, "desfazendo"; desfeita, "desfeito";
 # - o fechamento da conferência quebrou vezes demais (ContactImports::Trazer::Fechamentos): também "falhou", e
 #   "Tentar de novo" fecha de novo.
 # Rascunho (enviada, lendo, pronta para conferir, leitura que falhou) não é lista trazida: fica fora do histórico.
@@ -9,6 +10,8 @@ module Relacionamentos::Trazer::Situacao
   TRAZENDO = %w[confirmed queued importing].freeze
   GRAVADA = %w[completed completed_with_failures].freeze
   DEPOIS_DE_GRAVADA = { 'pending' => 'pronto', 'failed' => 'pronto', 'processing' => 'desfazendo', 'completed' => 'desfeito' }.freeze
+  # A lista que quebrou no meio também pode ser desfeita (Relacionamentos::Trazer::Desfazer.pode?).
+  DEPOIS_DE_QUEBRAR = DEPOIS_DE_GRAVADA.slice('processing', 'completed').freeze
   ACABOU = DEPOIS_DE_GRAVADA.values.uniq.freeze
   TUDO = 100
 
@@ -18,7 +21,10 @@ module Relacionamentos::Trazer::Situacao
     return 'trazendo' if TRAZENDO.include?(importacao.status)
     return DEPOIS_DE_GRAVADA.fetch(importacao.undo_status) if GRAVADA.include?(importacao.status)
 
-    'falhou' if importacao.failed? && (importacao.import_started_at.present? || ContactImports::Trazer::Fechamentos.desistiu?(importacao))
+    return unless importacao.failed?
+    return DEPOIS_DE_QUEBRAR.fetch(importacao.undo_status, 'falhou') if importacao.import_started_at.present?
+
+    'falhou' if ContactImports::Trazer::Fechamentos.desistiu?(importacao)
   end
 
   # As importações do escopo que têm situação: as que a tela mostra como lista trazida.

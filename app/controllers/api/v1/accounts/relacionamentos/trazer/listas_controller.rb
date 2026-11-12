@@ -3,8 +3,8 @@
 #
 # O Desfazer pede a mesma permissão das outras rotas (importar contatos): ele só tira o que a própria lista pôs e em que
 # ninguém tocou. O clique só marca a lista como "desfazendo" e põe o job na fila; a resposta diz a situação de agora
-# ("desfazendo", ou "desfeito" quando ela já tinha sido desfeita). A lista que ainda não foi gravada (entrando, ou que
-# falhou no meio) é recusada com `nao_pode_desfazer`, na prévia também.
+# ("desfazendo", ou "desfeito" quando ela já tinha sido desfeita). A lista que ainda está entrando é recusada com
+# `nao_pode_desfazer`, na prévia também; a que quebrou no meio da gravação pode ser desfeita.
 class Api::V1::Accounts::Relacionamentos::Trazer::ListasController < Api::V1::Accounts::Relacionamentos::Trazer::BaseController
   NAO_PODE = ::Relacionamentos::Trazer::Desfazer::NAO_PODE
 

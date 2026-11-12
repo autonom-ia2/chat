@@ -41,6 +41,8 @@ class Relacionamentos::CampoPreenchido < ApplicationRecord
 
   # campo => atributo do contato.
   DA_FICHA = { 'nome' => 'name', 'telefone' => 'phone_number', 'email' => 'email' }.freeze
+  # Por onde a conta fala com a pessoa. Depois de usado, o Desfazer não o tira (Relacionamentos::Trazer::CampoQueVolta).
+  DE_CONTATO = %w[telefone email].freeze
   CIDADE = 'cidade'.freeze
   EMPRESA = 'empresa'.freeze
   CLIENTE = 'cliente'.freeze
@@ -88,6 +90,10 @@ class Relacionamentos::CampoPreenchido < ApplicationRecord
   # O campo fica na empresa da linha, não na pessoa.
   def da_empresa?
     campo == TELEFONE_DA_EMPRESA
+  end
+
+  def de_contato?
+    DE_CONTATO.include?(campo)
   end
 
   # O valor de hoje ainda é o que a lista pôs. Campo vazio nunca é: a lista não põe vazio.

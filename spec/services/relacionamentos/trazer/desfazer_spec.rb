@@ -49,6 +49,57 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     expect(campos.pendentes.where(contact_id: [ana.id, bruno.id]).pluck(:campo)).to match_array(%w[email informacao:plano cidade])
   end
 
+  it 'não tira o telefone nem o e-mail de quem a conta já procurou desde a lista; o resto volta' do
+    importacao = trazer_lista
+    create(:conversation, account: account, contact: bruno)
+    create(:conversation, account: account, contact: ana)
+
+    desfazer(importacao)
+
+    # O telefone do Bruno e o e-mail da Ana vieram da lista e já serviram para falar com eles: ficam.
+    expect(bruno.reload).to have_attributes(name: '', phone_number: '+5511987650002', contact_type: 'lead', custom_attributes: {})
+    expect(ana.reload).to have_attributes(email: 'ana.albuquerino@exemplo.com.br', company_id: nil, custom_attributes: {})
+    expect(campos.pendentes.where(contact_id: [ana.id, bruno.id]).pluck(:campo)).to match_array(%w[telefone email])
+  end
+
+  it 'a conversa de antes da lista não segura o telefone que a lista pôs' do
+    create(:conversation, account: account, contact: bruno, created_at: 2.days.ago)
+    importacao = trazer_lista
+
+    desfazer(importacao)
+
+    expect(bruno.reload.phone_number).to be_nil
+  end
+
+  it 'confere a pessoa de novo logo antes de apagar: quem ganhou conversa enquanto o bloco andava fica' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    quem_fica = Relacionamentos::Trazer::QuemFica.new(importacao)
+    allow(Relacionamentos::Trazer::QuemFica).to receive(:new).and_return(quem_fica)
+    allow(quem_fica).to receive(:em_blocos) do |&bloco|
+      # A mensagem chega depois de o bloco já ter decidido que a Carla sai.
+      create(:conversation, account: account, contact: carla)
+      bloco.call([carla.id], [])
+    end
+
+    desfazer(importacao)
+
+    expect(account.contacts.exists?(carla.id)).to be(true)
+  end
+
+  it 'desfaz também a lista que quebrou no meio da gravação' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    importacao.update!(status: :failed, import_started_at: 1.hour.ago)
+    expect(Relacionamentos::Trazer::Situacao.de(importacao)).to eq('falhou')
+
+    desfeita = desfazer(importacao)
+
+    expect(Relacionamentos::Trazer::Situacao.de(desfeita)).to eq('desfeito')
+    expect(account.contacts.exists?(carla.id)).to be(false)
+    expect(ana.reload.email).to be_nil
+  end
+
   it 'não conta na prévia a pessoa em que nenhum campo volta' do
     importacao = trazer_lista("Nome,Celular,Plano\nAna Albuquerino,11987650001,Ouro\n", trazer: {})
     expect(anotados(ana)).to eq(['informacao:plano'])
@@ -212,8 +263,9 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
   describe 'o clique e o job' do
     it 'recusa a lista que ainda não foi gravada' do
       importacao = trazer_lista
-      %i[confirmed queued importing failed].each do |status|
-        importacao.update!(status: status)
+      # A que quebrou antes de a gravação começar não pôs ninguém na base.
+      [{ status: :confirmed }, { status: :queued }, { status: :importing }, { status: :failed, import_started_at: nil }].each do |estado|
+        importacao.update!(estado)
 
         expect(described_class.new(importacao).pedir).to have_attributes(erro: 'nao_pode_desfazer', enfileirar: nil)
       end

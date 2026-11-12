@@ -49,6 +49,9 @@ export { conferirAntesDeTrazer } from './trazerValores';
 // e 17,1 s): em 17 segundos a barra passa por 0, 8, 22, 41 e 71 antes de
 // terminar, em vez de pular de 25 para 62 e acabar.
 export const DURACAO_DA_TRAZIDA_MS = 17000;
+// Quanto o desfazer leva: a linha do histórico passa por "Desfazendo…" (uma
+// pergunta, aos 1,5 s) antes de virar "Desfeito" (na seguinte, aos 3,75 s).
+export const DURACAO_DO_DESFAZER_MS = 3000;
 const PORCENTAGEM_TOTAL = 100;
 const QUEM_TROUXE = 'Marina Pavanelli';
 
@@ -163,3 +166,7 @@ export const porcentagemDaTrazida = (inicio, agora) =>
       Math.floor(((agora - inicio) / DURACAO_DA_TRAZIDA_MS) * PORCENTAGEM_TOTAL)
     )
   );
+
+// O desfazer pedido em `inicio` já terminou?
+export const desfazerTerminou = (inicio, agora) =>
+  agora - inicio >= DURACAO_DO_DESFAZER_MS;

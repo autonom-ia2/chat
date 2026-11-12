@@ -131,7 +131,7 @@ describe('com o servidor', () => {
     expect(primeira.text()).toContain('lista-812.xlsx');
     expect(primeira.text()).toContain('em 08/11');
     expect(primeira.get('[data-situacao]').text()).toBe('Pronto');
-    expect(segunda.get('[data-situacao]').text()).toBe('Desfeito');
+    expect(segunda.get('[data-situacao]').text()).toBe('Desfazendo…');
     w.unmount();
   });
 

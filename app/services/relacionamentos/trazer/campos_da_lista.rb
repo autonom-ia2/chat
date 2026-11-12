@@ -6,8 +6,8 @@
 # segunda a completa). Essa pessoa sai inteira ou fica inteira (Relacionamentos::Trazer::QuemFica); nada dela "volta".
 # O telefone da empresa entra sempre: ele fica na empresa da linha, que pode ser de outras pessoas.
 #
-# Cada bloco custa um número fixo de consultas: as linhas (para achar a empresa), as pessoas, as empresas e quem tem
-# card ganho desde a lista.
+# Cada bloco custa um número fixo de consultas: as linhas (para achar a empresa), as pessoas, as empresas, quem tem
+# card ganho desde a lista e quem já foi procurado desde a lista (Relacionamentos::Trazer::QuemFoiProcurado).
 class Relacionamentos::Trazer::CamposDaLista
   Campo = Relacionamentos::CampoPreenchido
   BLOCO = Relacionamentos::Trazer::QuemFica::BLOCO
@@ -38,9 +38,15 @@ class Relacionamentos::Trazer::CamposDaLista
   def das_pessoas(registros)
     pessoas = @conta.contacts.where(id: registros.map(&:contact_id).uniq).index_by(&:id)
     ganharam = quem_ganhou(registros.select { |registro| registro.campo == Campo::CLIENTE }.map(&:contact_id))
+    procuradas = procurado.entre(registros.select(&:de_contato?).map(&:contact_id))
     registros.map do |registro|
-      campo(registro, pessoas[registro.contact_id], ganhou: ganharam.include?(registro.contact_id))
+      id = registro.contact_id
+      campo(registro, pessoas[id], ganhou: ganharam.include?(id), procurada: procuradas.include?(id))
     end
+  end
+
+  def procurado
+    @procurado ||= Relacionamentos::Trazer::QuemFoiProcurado.new(@conta.id, desde: @importacao.created_at)
   end
 
   # Sem telefone de empresa no bloco, nada é consultado (e Empresas pode nem existir na instalação).
@@ -53,8 +59,8 @@ class Relacionamentos::Trazer::CamposDaLista
     registros.map { |registro| campo(registro, empresas[empresa_da_linha[registro.campaign_import_row_id]]) }
   end
 
-  def campo(registro, alvo, ganhou: false)
-    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, desde: @importacao.created_at, ganhou: ganhou)
+  def campo(registro, alvo, ganhou: false, procurada: false)
+    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, desde: @importacao.created_at, ganhou: ganhou, procurada: procurada)
   end
 
   def quem_ganhou(pessoas)

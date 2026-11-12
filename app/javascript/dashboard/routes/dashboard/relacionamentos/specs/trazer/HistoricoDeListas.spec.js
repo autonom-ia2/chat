@@ -4,7 +4,8 @@ import HistoricoDeListas from '../../components/trazer/HistoricoDeListas.vue';
 // #2894 — "Listas que você já trouxe": o título e o Desfazer, que só a lista
 // pronta tem, por mais antiga que seja.
 // #2896 — o Desfazer só aparece quando a conta tem (`temDesfazer`); e os dois
-// botões da linha têm 44 px de altura (alvo de toque).
+// botões da linha têm 44 px de altura (alvo de toque). A lista que está sendo
+// desfeita diz "Desfazendo…" e não tem botão.
 withFullI18n('pt_BR');
 
 vi.setConfig({ testTimeout: 30000 });
@@ -58,6 +59,20 @@ describe('Desfazer sem prazo', () => {
     expect([tem('a'), tem('b'), tem('c')]).toEqual([true, false, false]);
     expect(w.text()).not.toContain('Prazo');
     expect(w.text()).not.toContain('até');
+  });
+
+  it('a lista sendo desfeita diz "Desfazendo…", como lista em andamento, e não tem botão', () => {
+    const w = mount(HistoricoDeListas, {
+      props: { temDesfazer: true, listas: [lista('a', 'desfazendo')] },
+    });
+    const selo = w.get('[data-lista="a"] [data-situacao="desfazendo"]');
+    expect(selo.text()).toBe('Desfazendo…');
+    // O mesmo selo da lista que está sendo trazida.
+    expect(selo.classes()).toEqual(
+      expect.arrayContaining(['bg-n-blue-3', 'text-n-blue-11'])
+    );
+    expect(w.find('[data-relacionamentos="desfazer"]').exists()).toBe(false);
+    expect(w.findAll('button')).toHaveLength(0);
   });
 
   it.each([

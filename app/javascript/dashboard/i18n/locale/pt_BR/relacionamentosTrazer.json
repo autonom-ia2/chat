@@ -201,6 +201,7 @@
       "SITUACAO": {
         "PRONTO": "Pronto",
         "TRAZENDO": "Trazendo {porcentagem}%",
+        "DESFAZENDO": "Desfazendo…",
         "DESFEITO": "Desfeito"
       },
       "DESFAZER": "Desfazer",
@@ -216,7 +217,8 @@
       "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
       "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
       "CONFIRMAR": "Desfazer",
-      "ERRO_PREVIA": "Não consegui ver o que sai."
+      "ERRO_PREVIA": "Não consegui ver o que sai.",
+      "NAO_PODE": "Esta lista ainda está sendo trazida. Quando terminar, você pode desfazer."
     },
     "ERROS": {
       "GUARDAR": "Não consegui salvar. Tente de novo.",

@@ -11,6 +11,8 @@ import { PONTO } from '../comum/ponto';
 // #2896 — a lista que parou no meio diz que não foi trazida e, quando dá para
 // continuar (`podeTentar`), oferece "Tentar de novo"; sem isso, só a frase.
 // O Desfazer só aparece quando a conta tem (`temDesfazer`, que vem da fonte).
+// A lista que está sendo desfeita diz "Desfazendo…", com o selo de lista em
+// andamento, e não tem botão: só a pronta tem o Desfazer.
 // Os dois botões da linha têm 44 px de altura (alvo de toque).
 defineProps({
   listas: { type: Array, required: true },
@@ -27,6 +29,7 @@ const { t, locale } = useI18n();
 const SELOS = {
   [SITUACOES_DA_LISTA.PRONTO]: 'bg-n-teal-3 text-n-teal-11',
   [SITUACOES_DA_LISTA.TRAZENDO]: 'bg-n-blue-3 text-n-blue-11',
+  [SITUACOES_DA_LISTA.DESFAZENDO]: 'bg-n-blue-3 text-n-blue-11',
   [SITUACOES_DA_LISTA.DESFEITO]: 'bg-n-alpha-2 text-n-slate-11',
 };
 const dia = ms => formatarDia(ms, locale.value);
@@ -36,6 +39,8 @@ const NOMES = {
     'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.PRONTO',
   [SITUACOES_DA_LISTA.TRAZENDO]:
     'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.TRAZENDO',
+  [SITUACOES_DA_LISTA.DESFAZENDO]:
+    'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.DESFAZENDO',
   [SITUACOES_DA_LISTA.DESFEITO]:
     'RELACIONAMENTOS_TRAZER.HISTORICO.SITUACAO.DESFEITO',
 };
