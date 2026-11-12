@@ -1,50 +1,95 @@
 # Demo em tela real (`bin/demo`)
 
 O Rodrigo aprova cada tela vendo o painel de verdade: os componentes Vue do próprio fork, atrás de uma flag e com
-dados de um adaptador falso, rodando no M2. Este kit sobe esse painel a partir da worktree em um comando, tira os
-prints por jornada e limpa tudo no fim. Substitui as cópias de `env.sh`/`sync.sh` que cada sessão montava à mão (#2140).
+dados de um adaptador falso, rodando no `m2` ou no `m4`. Este kit sobe esse painel a partir da worktree em um
+comando, tira os prints por jornada e limpa tudo no fim. Substitui as cópias de `env.sh`/`sync.sh` que cada sessão
+montava à mão (#2140). Desde a #2965 ele escolhe a máquina pela carga, na hora do `up`.
 
 Só demo local. Nada aqui fala com produção, AWS, SSM ou banco de produção. Nenhum segredo fica no kit: as chaves
-da demo (`SECRET_KEY_BASE`, chaves do Active Record Encryption) são geradas na hora, ficam só no M2, dentro da
-pasta da demo, e somem no `down --apagar`. A senha do login vem do `db/seeds.rb` do próprio repositório.
+da demo (`SECRET_KEY_BASE`, chaves do Active Record Encryption) são geradas na hora, ficam só na máquina da demo,
+dentro da pasta da demo, e somem no `down --apagar`. A senha do login vem do `db/seeds.rb` do próprio repositório.
+
+## Antes de subir: OK da Orquestração Deploy e escolha da máquina
+
+**Regra do Rodrigo (12/11/2026): antes de qualquer `bin/demo up`, em qualquer máquina, pergunte à sessão
+"Orquestração Deploy" e espere o OK dela.** Ela cuida da fila e das máquinas. Em 12/11/2026 uma demo subiu no M2 sem
+ninguém ler a carga, e o M2 travou. Leve a ela a saída de `bin/demo maquinas` (só leitura: mede as duas máquinas,
+lista as demos vivas e diz para onde um `up` iria).
+
+O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
+
+- **Qual máquina.** O `up` lê `maccluster status --json` e só sobe numa máquina **dentro do limite**: carga (load
+  de 1 minuto) abaixo de 20, memória livre (a `available` do MacCluster) acima de 3 GB e swap-out abaixo de 1 MiB/s.
+  Os três limites ficam no topo do `bin/demo` (`CARGA_MAX`, `RAM_MIN_GB`, `SWAP_MAX_MIB_S`).
+- **Desempate.** Se `m2` e `m4` servem, ganha a que tem **mais memória livre**: foi memória que faltou em 12/11.
+  Empate fica com o `m2` (a comparação usa o número do MacCluster, que vem com uma casa decimal).
+- **Nenhuma serve.** O `up` recusa e mostra o que mediu em cada máquina. Não há opção para passar por cima do limite.
+- **No máximo 1 demo viva, somando as duas máquinas.** Viva é a demo registrada que tem Rails, Vite ou Redis
+  escutando. O `up` recusa se já houver outra e diz qual é, onde está e o que dela está ligado. Redis esquecido
+  ligado conta: desligue com `bin/demo down <slug>`. Religar a própria demo não esbarra nela mesma, mas passa pelo
+  limite da máquina onde ela mora.
+- **As duas máquinas têm de responder no `up`.** Sem falar com uma delas, o kit não tem como afirmar que não há
+  demo viva, e recusa.
+- **Demo que já existe não muda de máquina.** Banco e pasta moram onde ela nasceu. Para trocar: `down --apagar` e
+  `up` de novo.
+- **Os outros comandos acham a máquina sozinhos**: procuram o `demo.env` da demo nas duas. `bin/demo status <slug>`
+  mostra `MAQUINA=`. Se uma máquina não responde e a demo está na outra, o comando avisa e segue.
+- **Forçar a máquina**: `DEMO_MAQUINA=m2 bin/demo up <slug>` (ou `m4`). As mesmas recusas valem: limite da máquina
+  e 1 demo viva. Nos outros comandos, `DEMO_MAQUINA` faz o kit olhar só aquela máquina.
+- **O `sync` não religa demo desligada.** Ele leva os arquivos, roda `pnpm install` e `db:migrate` se o que mudou
+  pedir (tarefas que terminam) e avisa. Servidor nenhum sobe: quem liga é o `up`, que mede a máquina. Com o painel
+  ligado, o `sync` reinicia Rails e Vite da própria demo, sem nova medição.
+
+O que o kit **não** vê, e por isso a conversa com a Orquestração continua obrigatória: demo feita à mão (fora de
+`/Users/Shared/chat2you-demos`), dois `up` disparados ao mesmo tempo e o que mais está para rodar nas máquinas.
 
 ## Resumo
 
-Rode no **M4**, de dentro da worktree da entrega:
+Rode de dentro da worktree da entrega (hoje as sessões ficam no M4):
 
 ```sh
-bin/demo up 2079-instagram          # snapshot, banco, seed, Rails + Vite no M2 (1a vez: ~3 a 5 min)
+bin/demo maquinas                   # só leitura: carga das duas máquinas, demos vivas, para onde o up iria
+bin/demo up 2079-instagram          # depois do OK: escolhe m2 ou m4; snapshot, banco, seed, Rails + Vite
 bin/demo flag 2079-instagram crm      # liga a flag na conta 1 (ou: ... <flag> <conta>)
 bin/demo seed 2079-instagram docs/x/seed_demo.rb   # dados do caso (rails runner no banco da demo)
-bin/demo tunnel 2079-instagram      # comando de túnel e URL para abrir no M4
+bin/demo tunnel 2079-instagram      # URL para abrir (e o comando de túnel, se a demo está no outro Mac)
 bin/demo sync 2079-instagram        # depois de editar: leva só o que mudou
 bin/demo prints 2079-instagram docs/x/jornadas.json   # PNGs em 1440 e 390 em docs/<pasta>/
 bin/demo down 2079-instagram        # desliga os servidores (banco e snapshot ficam)
-bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (M2 e M4) e a pasta da demo
+bin/demo down 2079-instagram --apagar   # apaga banco, snapshot (o da demo e o deste Mac) e a pasta da demo
 ```
 
-Outros: `bin/demo status <slug>` (portas, banco, snapshot) e `bin/demo psql <slug> "SQL"` (roda um SQL no banco da demo **como a role da demo**, sem superuser e sem `CREATEDB`: ela não cria nem apaga outro banco e não altera role; sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
+Outros: `bin/demo status <slug>` (portas, banco, snapshot e a máquina) e `bin/demo psql <slug> "SQL"` (roda um SQL no banco da demo **como a role da demo**, sem superuser e sem `CREATEDB`: ela não cria nem apaga outro banco e não altera role; sem `psqlrc`; meta-comando como `\c` ou `\!` é recusado).
 
 O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o número da Issue e um nome curto.
 
 ## O que cada comando faz
 
+"Este Mac" é o Mac de onde o `bin/demo` é chamado; "a demo" é a máquina onde ela roda (`m2` ou `m4`). As duas
+podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da demo, qualquer que seja.
+
 | Comando | Onde | O que faz |
 |---|---|---|
-| `up` | M4 → M2 | Confere que banco e portas da demo estão livres. Tira o snapshot da worktree no M4 (`maccluster workspace snapshot --local-only`). No M2, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
-| `sync` | M4 → M2 | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. |
-| `flag` | M2 | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
-| `seed` | M2 | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo no M2 (para mídia, por exemplo). |
-| `tunnel` | — | Imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. |
-| `prints` | M2 → M4 | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome do M2, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica no M2, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado, que passe por link simbólico (ela ou qualquer ancestral até a worktree) ou cujo caminho real saia da worktree. |
-| `down` | M2 (e M4) | Desliga Rails, Vite e Redis da demo **pela identidade**: cada servidor sobe num grupo de processos próprio; o PGID fica em `pids/<nome>.pgid` e o instante em que o líder nasceu (`ps -o lstart`) em `pids/<nome>.inicio`. O grupo só recebe sinal se o líder ainda existe, nasceu nesse instante e o comando dele é exatamente `/bin/bash <kit>/no_m2.sh _<nome> <slug>` (PGID reaproveitado depois de reboot ou morte não confere: ninguém recebe sinal). Registro que não confere nunca dá OK sozinho: sem mandar sinal, o kit conta os processos vivos do PGID gravado; com zero, apaga o registro e a porta decide; com algum, falha e pede conferência à mão. O `ps` do início roda com `LC_ALL=C TZ=UTC`, ao gravar e ao conferir. Quem escuta na porta fora desse grupo faz o comando falhar sem mexer. Derruba o grupo inteiro e confere, com 30 s de prazo, que a porta parou de escutar e que nenhum processo do grupo sobrou; se não, falha. Com `--apagar`: confere o snapshot do M4 sem apagar; no M2 (a) desce de forma verificada, (b) roda a checagem de uso no snapshot **sem exceção nenhuma** e, se algo ainda o segura, para com "demo parada, nada apagado" (reversível: `up` de novo); (c) só então faz `dropdb` e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Com o marcador, todo comando que não seja `down --apagar` ou `status` responde "demo em remoção: rode down --apagar"; repetir `down --apagar` termina. |
+| `maquinas` | este Mac e as duas máquinas | Só leitura. Mede `m2` e `m4`, lista as demos vivas e diz para onde um `up` iria (ou por que seria recusado). |
+| `up` | este Mac → a demo | Escolhe a máquina (seção acima) e recusa se houver outra demo viva ou se nenhuma máquina servir. Confere que banco e portas da demo estão livres. Tira o snapshot da worktree neste Mac (`maccluster workspace snapshot --local-only`). Se a demo roda em outro Mac: lá, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Se roda neste Mac: usa o snapshot no lugar, sem cópia, e o `pnpm install` traz as dependências. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
+| `sync` | este Mac → a demo | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. Com a demo desligada, leva os arquivos (e roda `pnpm install`/`db:migrate`, se for o caso) e não liga servidor nenhum. |
+| `flag` | a demo | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
+| `seed` | a demo | Copia o `.rb` para a pasta da demo e roda com `rails runner`. `ENV['DEMO_PASTA']` aponta a pasta da demo na máquina dela (para mídia, por exemplo). |
+| `tunnel` | — | Demo em outro Mac: imprime o `ssh -L` das duas portas (Rails e Vite) e a URL. Demo neste Mac: só a URL, sem túnel. |
+| `prints` | a demo → este Mac | Roda `script/demo/prints.cjs` com o Playwright do snapshot e o Chrome da máquina da demo, contra o painel local. Traz só os PNGs para `docs/<pasta>/` da worktree; o `relato.json` (URLs locais e erros) fica na máquina da demo, na pasta da demo. Recusa `pasta` que já tenha arquivo versionado, que passe por link simbólico (ela ou qualquer ancestral até a worktree) ou cujo caminho real saia da worktree. |
+| `down` | a demo (e este Mac) | Desliga Rails, Vite e Redis da demo **pela identidade**: cada servidor sobe num grupo de processos próprio; o PGID fica em `pids/<nome>.pgid` e o instante em que o líder nasceu (`ps -o lstart`) em `pids/<nome>.inicio`. O grupo só recebe sinal se o líder ainda existe, nasceu nesse instante e o comando dele é exatamente `/bin/bash <kit>/no_m2.sh _<nome> <slug>` (PGID reaproveitado depois de reboot ou morte não confere: ninguém recebe sinal). Registro que não confere nunca dá OK sozinho: sem mandar sinal, o kit conta os processos vivos do PGID gravado; com zero, apaga o registro e a porta decide; com algum, falha e pede conferência à mão. O `ps` do início roda com `LC_ALL=C TZ=UTC`, ao gravar e ao conferir. Quem escuta na porta fora desse grupo faz o comando falhar sem mexer. Derruba o grupo inteiro e confere, com 30 s de prazo, que a porta parou de escutar e que nenhum processo do grupo sobrou; se não, falha. Com `--apagar`: confere o snapshot do M4 sem apagar; no M2 (a) desce de forma verificada, (b) roda a checagem de uso no snapshot **sem exceção nenhuma** e, se algo ainda o segura, para com "demo parada, nada apagado" (reversível: `up` de novo); (c) só então faz `dropdb` e apaga o snapshot, deixando o marcador `apagado-no-m2` e o `demo.env`. Depois apaga o snapshot do M4 e, por último, a pasta da demo no M2. Com o marcador, todo comando que não seja `down --apagar` ou `status` responde "demo em remoção: rode down --apagar"; repetir `down --apagar` termina. |
 
 ## Isolamento: o que é de cada demo
 
-- **Pasta**: `/Users/Shared/chat2you-demos/<slug>/` no M2 (`demo.env`, chaves, logs, Redis, `storageState`, prints).
-- **Banco**: `chatwoot_kitdemo_<slug>` (hífen vira `_`) no Postgres de teste do M2 (`127.0.0.1:55432`). O `up` recusa
-  se o banco já existir sem demo registrada: nunca reaproveita banco de outra demo. Os scripts Ruby do kit recusam
-  qualquer banco fora do prefixo `chatwoot_kitdemo_`.
+- **Pasta**: `/Users/Shared/chat2you-demos/<slug>/` na máquina da demo (`demo.env`, chaves, logs, Redis,
+  `storageState`, prints). É o `demo.env` dessa pasta que diz em qual máquina a demo está.
+- **Banco**: `chatwoot_kitdemo_<slug>` (hífen vira `_`) no Postgres de teste da máquina da demo (`127.0.0.1:55432`).
+  O `up` recusa se o banco já existir sem demo registrada: nunca reaproveita banco de outra demo. Os scripts Ruby do
+  kit recusam qualquer banco fora do prefixo `chatwoot_kitdemo_`.
+- **Bancos dos outros (M2 e M4)**: o mesmo Postgres guarda o `chatwoot_test` de uso comum e os bancos isolados de
+  outras frentes (`chatwoot_test_<algo>`, `chat2you_test_<algo>`, `chatwoot_ag_<algo>`). O kit não lê, não usa e não
+  apaga nenhum deles: só cria e apaga o banco `chatwoot_kitdemo_<slug>` e a role `kitdemo_<slug>` da própria demo,
+  pelo nome exato. O Redis de teste (`127.0.0.1:56379`) também fica de fora: cada demo sobe o seu, em porta própria.
 - **Role**: `kitdemo_<slug>` (hífen vira `_`), `LOGIN` sem `SUPERUSER`, `CREATEDB` nem `CREATEROLE`, dona do banco da
   demo. O Rails, os `rails runner` e o `bin/demo psql` entram com ela. Só o kit usa o `postgres`: cria a role, o banco
   (`createdb -O`) e as extensões do `db/schema.rb` (algumas exigem superuser; o `schema:load` depois só acha "já
@@ -53,7 +98,7 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
   role já existir sem demo registrada.
 - **Portas**: derivadas do slug (`cksum`): Rails `4400–5196`, Vite = Rails + 2, Redis `57400–57599`. Ficam longe das
   de teste (55432, 56379) e das demos feitas à mão (3301–4025, 56xxx). Se dois slugs caírem na mesma porta, o `up`
-  avisa: troque o slug.
+  recusa: troque o slug.
 - **Snapshot**: um por demo, em `/Users/Shared/maccluster-workspaces/chat2you/<id>/src`, com o mesmo caminho no M2 e
   no M4. O `sync` reaproveita; snapshot novo só com outro `up` (outra demo). Cada `maccluster workspace snapshot` cria
   um diretório novo (o id leva data, hora, HEAD, hash do conteúdo e um uuid); o `up` confere no manifesto que o
@@ -67,8 +112,14 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
   `DISABLE_MINI_PROFILER=1`. Nada sai para fora: `WHATSAPP_CLOUD_BASE_URL` e o SMTP (`SMTP_ADDRESS=127.0.0.1`,
   `SMTP_PORT=9`) apontam para uma porta morta. Sem `SMTP_ADDRESS` o Rails usaria `sendmail`, que entrega de verdade.
   O Sidekiq não roda na demo: job enfileirado não executa.
-- **Postgres**: o `127.0.0.1:55432` do M2 é o cluster de teste do MacCluster
-  (`/Users/Shared/maccluster-test-services/postgres-chat2you`, com `fsync=off`). Só tem bancos de teste e de demo.
+- **Postgres**: o `127.0.0.1:55432` de cada Mac é o cluster de teste do MacCluster
+  (`/Users/Shared/maccluster-test-services/postgres-chat2you`, servidor 16.15, com `fsync=off`). Só tem bancos de
+  teste e de demo. O cliente (`psql`, `createdb`, `dropdb`) é o 17.11 no M2 e o 16.15 no M4, que não tem o 17.11
+  (medido em 12/11/2026); o kit usa o que achar, nessa ordem.
+- **Demo no mesmo Mac do `bin/demo`** (hoje, o M4): não há cópia nem túnel. A demo roda em cima do snapshot que o
+  MacCluster acabou de tirar, e o `down --apagar` apaga esse snapshot uma vez só. Em 12/11/2026 este caminho foi
+  conferido **só por leitura** (ferramentas, gems com `bundle check`, `pnpm` do corepack, Postgres e portas do M4):
+  o primeiro `up` de verdade no M4 é o teste que falta, e deve ser combinado com a Orquestração Deploy.
 - **`demo.env`**: lido como dado (chave=valor, só chaves conhecidas), nunca executado com `source`. Portas têm de
   ser numéricas e `SNAP` tem de ser `/Users/Shared/maccluster-workspaces/chat2you/<id>/src`; senão todo comando para.
 - **Chaves**: `SECRET_KEY_BASE` e as três do Active Record Encryption ficam em `chaves/` (0600) e nunca passam pelo
@@ -87,17 +138,19 @@ O **slug** usa minúsculas, dígitos e hífen (até 30 caracteres). Use o númer
 - **Prints**: chegam do M2 num temporário; só arquivo comum e pasta passam (link, socket etc. param o comando), e
   só são copiados para `docs/<pasta>` se não houver link simbólico nela, nos ancestrais nem dentro dela.
 
-## Abrir no M4 (túnel)
+## Abrir o painel (túnel)
 
 ```sh
 bin/demo tunnel <slug>
-# imprime algo como:
+# demo no outro Mac: imprime algo como
 ssh -f -N -L 5028:127.0.0.1:5028 -L '5030:[::1]:5030' m2
 # abrir http://localhost:5028/app/login   (john@acme.inc, senha em db/seeds.rb)
 ```
 
 As duas portas precisam do túnel: o Rails serve a página e o Vite serve os módulos e o recarregamento. O Vite
-escuta em `[::1]` (IPv6), o Rails em `127.0.0.1`.
+escuta em `[::1]` (IPv6), o Rails em `127.0.0.1`. Com a demo no mesmo Mac, o comando imprime só a URL: não há túnel.
+Túnel antigo esquecido aberto ocupa a porta neste Mac; se a demo nova cair na mesma porta, o `up` avisa "porta
+ocupada". Feche o túnel (`pkill -f 'ssh -f -N -L <porta>:'`) e repita.
 
 ## Prints por jornada
 
@@ -145,7 +198,7 @@ entrada → todas as conversas):
 | **Miniatura quebra sem vips** | `representations`/variantes do Active Storage precisam do libvips, que o M2 não tem. | Não use `thumbUrl` como fonte principal da imagem no protótipo; use a URL do arquivo e deixe a miniatura como melhoria. Não instale vips só para a demo. |
 | **Selo do rack-mini-profiler nos prints** | Em development o profiler injeta o selo no canto da tela. | A demo sobe com `DISABLE_MINI_PROFILER=1` (o initializer respeita). O `prints` ainda injeta CSS que esconde `.profiler-results`. |
 | **`?demo=vazio`** | O protótipo usa um adaptador falso de dados; o Rodrigo precisa ver também a tela sem dados. | Convenção do adaptador: `?demo=vazio` na URL devolve a lista vazia. Faça uma etapa para cada estado (`/app/accounts/{conta}/minha-tela` e `...?demo=vazio`). A flag só liga rota e menu. |
-| **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no M4 e monta o do M2 por clone APFS + `rsync` da diferença (em geral poucos MB). |
+| **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no Mac de onde é chamado e monta o do outro por clone APFS + `rsync` da diferença (em geral poucos MB). |
 | **Vite demora na 1a página** | A primeira visita compila o painel. | O `up` espera até 15 min pelo login; o `prints` dá até 5 min por página (`DEMO_TIMEOUT_MS`). |
 | **Gem nova** | O Ruby do MacCluster tem as gems do `Gemfile.lock` da `main`. | O `sync` recusa mudança de `Gemfile`; demo que precisa de gem nova não é caso deste kit. |
 
@@ -219,8 +272,10 @@ Apaga só o que é da demo, pelo nome exato: o banco `chatwoot_kitdemo_<slug>`, 
 
 ## Arquivos
 
-- `bin/demo` — comando (M4).
-- `script/demo/no_m2.sh` — lado M2; o `bin/demo` copia `script/demo/` para a pasta da demo a cada comando.
+- `bin/demo` — comando (roda neste Mac, de dentro da worktree).
+- `script/demo/no_m2.sh` — lado da máquina da demo (`m2` ou `m4`; o nome é de quando só havia o M2); o `bin/demo`
+  copia `script/demo/` para a pasta da demo a cada comando.
+- `script/demo/vivas.sh` — lista as demos vivas de uma máquina (só leitura); vai pelo stdin, sem deixar pasta nela.
 - `script/demo/comum.sh` — `em_uso` (checagem com `lsof +D`), carregado pelos dois lados.
 - `script/demo/preparar_conta.rb`, `ligar_flag.rb` — `rails runner` no banco da demo.
 - `script/demo/senha_do_seed.rb` — lê a senha do John no `db/seeds.rb` (parser Prism) para o login dos prints.
