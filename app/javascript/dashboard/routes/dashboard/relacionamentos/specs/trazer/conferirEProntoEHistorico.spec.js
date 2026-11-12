@@ -665,7 +665,7 @@ describe('HistoricoDeListas', () => {
     const tentar = marca(w, 'tentar-de-novo');
     expect(tentar.text()).toBe('Tentar de novo');
     expect(tentar.attributes('aria-label')).toBe(
-      'Tentar trazer de novo a lista a.xlsx'
+      'Tentar de novo: trazer a lista a.xlsx'
     );
     expect(tentar.attributes('disabled')).toBeUndefined();
     expect(marca(w, 'desfazer').exists()).toBe(false);
@@ -858,6 +858,8 @@ describe('DialogoDesfazer', () => {
   it('erro na prévia: frase e botão que emite "tentar"', async () => {
     const w = montar({ previa: null, comErroNaPrevia: true });
     expect(w.text()).toContain('Não consegui ver o que sai.');
+    // Sem prévia não há o que confirmar: o Desfazer sai, em vez de ficar apagado.
+    expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
     await marca(w, 'dialogo-desfazer').get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });

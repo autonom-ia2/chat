@@ -210,7 +210,7 @@
       "CONTINUAR": "Continue",
       "ROTULO_CONTINUAR": "Continue undoing the list {arquivo}",
       "FALHOU": "I couldn't bring in this list.",
-      "ROTULO_TENTAR": "Try bringing in the list {arquivo} again"
+      "ROTULO_TENTAR": "Try again: bring in the list {arquivo}"
     },
     "DESFAZER": {
       "TITULO": "Undo this list?",

@@ -210,7 +210,7 @@
       "CONTINUAR": "Continuar",
       "ROTULO_CONTINUAR": "Continuar a desfazer a lista {arquivo}",
       "FALHOU": "Não consegui trazer esta lista.",
-      "ROTULO_TENTAR": "Tentar trazer de novo a lista {arquivo}"
+      "ROTULO_TENTAR": "Tentar de novo: trazer a lista {arquivo}"
     },
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",

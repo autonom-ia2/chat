@@ -30,6 +30,8 @@ import { SEPARADOR } from '../comum/ponto';
 // "Desfeito"), menos o da lista que está entrando: a porcentagem dela muda a
 // cada consulta. E a linha aceita o foco (`tabindex="-1"`): é para ela que a
 // tela leva o foco depois de desfazer, quando o botão clicado some.
+// A frase do problema nasce depois da linha; quem a anuncia é o bloco da
+// esquerda (`aria-live`), que já está na tela quando ela chega.
 const props = defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
@@ -117,7 +119,7 @@ const NOMES = {
         tabindex="-1"
         class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1 sm:flex-row sm:items-center sm:justify-between focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       >
-        <div class="flex flex-col flex-1 min-w-0 gap-1">
+        <div class="flex flex-col flex-1 min-w-0 gap-1" aria-live="polite">
           <p class="m-0 text-base font-medium truncate text-n-slate-12">
             {{ lista.arquivo }}
           </p>
@@ -135,7 +137,6 @@ const NOMES = {
             v-else-if="desfazerParou(lista)"
             data-relacionamentos="desfazer-parou"
             :data-situacao="lista.situacao"
-            aria-live="polite"
             class="m-0 text-sm font-medium text-n-amber-11"
           >
             {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER_PAROU') }}

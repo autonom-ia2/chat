@@ -120,7 +120,11 @@ describe('Desfazer sem prazo', () => {
     const frase = w.get('[data-relacionamentos="desfazer-parou"]');
     expect(frase.text()).toBe(PAROU);
     expect(frase.attributes('data-situacao')).toBe('desfazendo');
-    expect(frase.attributes('aria-live')).toBe('polite');
+    // Quem anuncia a frase é o bloco que já estava na tela quando ela chega.
+    expect(frase.attributes('aria-live')).toBeUndefined();
+    expect(frase.element.parentElement.getAttribute('aria-live')).toBe(
+      'polite'
+    );
     expect(frase.classes()).toEqual(
       expect.arrayContaining(['text-sm', 'font-medium', 'text-n-amber-11'])
     );
