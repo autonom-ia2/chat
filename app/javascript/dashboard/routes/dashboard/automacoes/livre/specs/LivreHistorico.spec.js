@@ -198,9 +198,82 @@ describe('LivreHistorico', () => {
     expect(wrapper.find('[data-oculta]').text()).toBe(
       'AUTOMACAO_LIVRE.HISTORICO.OCULTA'
     );
+    expect(wrapper.find('[data-oculta]').attributes('title')).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.OCULTA_DICA'
+    );
     expect(wrapper.find('[data-abrir-conversa]').exists()).toBe(false);
     expect(wrapper.find('[data-ver-mensagem]').exists()).toBe(false);
   });
+
+  // #2731 — o card e o contato pelo nome, com link, para quem os vê; para
+  // quem não vê, o rótulo neutro do tipo. "Uma conversa" e a dica da caixa
+  // ficam só para a conversa.
+  it('o card que a pessoa vê sai pelo nome, com o link do card', async () => {
+    responder([
+      execucao(1, {
+        alvo: {
+          tipo: 'card',
+          visivel: true,
+          nome: 'Renovação do Bruno',
+          link: 'accounts/1/crm?pipeline_id=3&card_id=8',
+        },
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    const nome = wrapper.find('[data-alvo]');
+    expect(nome.text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.CARD_DE(Renovação do Bruno)'
+    );
+    expect(nome.attributes('title')).toBeUndefined();
+    const abrir = wrapper.find('[data-abrir-alvo]');
+    expect(abrir.attributes('href')).toBe(
+      '/app/accounts/1/crm?pipeline_id=3&card_id=8'
+    );
+    expect(abrir.text()).toBe('AUTOMACAO_LIVRE.HISTORICO.ABRIR_CARD');
+    expect(wrapper.find('[data-abrir-conversa]').exists()).toBe(false);
+    expect(wrapper.find('[data-ver-mensagem]').exists()).toBe(false);
+  });
+
+  it('o contato que a pessoa vê sai pelo nome, com o link do contato', async () => {
+    responder([
+      execucao(1, {
+        alvo: {
+          tipo: 'contato',
+          visivel: true,
+          nome: 'Bruno',
+          link: 'accounts/1/contacts/12',
+        },
+      }),
+    ]);
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-alvo]').text()).toBe('Bruno');
+    expect(wrapper.find('[data-abrir-alvo]').attributes('href')).toBe(
+      '/app/accounts/1/contacts/12'
+    );
+  });
+
+  it.each([
+    ['card', 'AUTOMACAO_LIVRE.HISTORICO.CARD_OCULTO'],
+    ['contato', 'AUTOMACAO_LIVRE.HISTORICO.CONTATO_OCULTO'],
+    ['conta', 'AUTOMACAO_LIVRE.HISTORICO.CONTA'],
+  ])(
+    '%s que a pessoa não vê sai com o rótulo neutro, sem link nem dica',
+    async (tipo, rotulo) => {
+      responder([execucao(1, { alvo: { tipo, visivel: false } })]);
+      const wrapper = montar();
+      await flushPromises();
+
+      const oculta = wrapper.find('[data-oculta]');
+      expect(oculta.text()).toBe(rotulo);
+      expect(oculta.attributes('title')).toBeUndefined();
+      expect(wrapper.find('[data-abrir-alvo]').exists()).toBe(false);
+      expect(wrapper.find('[data-abrir-conversa]').exists()).toBe(false);
+    }
+  );
 
   // #2500 — o custo do passo fica na casa de US$ 0,0001: dois algarismos
   // significativos, e abaixo do mínimo "menos de", nunca "US$ 0".

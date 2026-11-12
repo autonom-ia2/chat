@@ -422,10 +422,10 @@ ex.14 continua no `pendentes_spec`.
   `Waha::RichNative::Inbound::Media` (caixa WAHA, com `whatsapp_rich_native`). Sem a flag, a marca não é gravada e a
   figurinha conta como foto. Mora em `Autonomia::Automacao::FotoOuPdf`; o valor `conversa.cliente_mandou_documento`
   do "esperar até" (G46, o laço dos documentos) usa a mesma régua em SQL (`FotoOuPdf.escopo`). Lê o anexo no instante do evento `mensagem.criada`. Valem os canais que gravam o anexo junto com a mensagem:
-  WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido e a API e o widget
-  (`messages#create` → `Messages::MessageBuilder`). **Limite conhecido:** o e-mail cria a mensagem e só depois anexa os
-  arquivos (`MailboxHelper`, `messages.create!` e depois `save!`), então ali o filtro lê `false`. Mudar a ordem do
-  e-mail é outro PR, no código do Chatwoot.
+  WhatsApp Cloud (`Whatsapp::IncomingMessageBaseService`), o conector WAHA/Híbrido, a API e o widget
+  (`messages#create` → `Messages::MessageBuilder`) e o e-mail: a caixa cria a mensagem e grava os anexos na mesma
+  transação (`Imap::ImapMailbox#process` e `ReplyMailbox#process`, com o `MailboxHelper`), e o `message.created` sai
+  no commit (`after_create_commit`), com os anexos já gravados (#2729, prova em `imap_mailbox_automacao_spec.rb`).
 - Cuidado conhecido (parecer da qualidade): uma execução aberta de versão antiga que lê o card pausa a automação
   inteira quando quem ligou perde a chave, mesmo com a versão ativa sem card. É de propósito: a execução segue a versão
   em que começou.

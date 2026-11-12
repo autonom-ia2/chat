@@ -1488,6 +1488,9 @@ const menuItems = computed(() => {
       to: accountScopedRoute('relationships_home'),
       activeOn: [
         'relationships_home',
+        'relacionamentos_pessoa',
+        'relacionamentos_empresa',
+        'relacionamentos_trazer',
         'relationships_company_media',
         'attributes_list',
         'companies_dashboard_index',

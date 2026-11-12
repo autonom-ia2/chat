@@ -11,6 +11,7 @@
     "NO_RESULTS": "No macros found matching your search",
     "ERROR": "Something went wrong. Please try again",
     "ORDER_INFO": "Macros will run in the order you add your actions. You can rearrange them by dragging them by the handle beside each node.",
+    "WEBHOOK_LOCKED": "This macro sends the conversation outside the platform. To change it, you need the Integrations permission.",
     "ADD": {
       "FORM": {
         "NAME": {

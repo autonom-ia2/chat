@@ -19,6 +19,7 @@ class Crm::Cards::ActivityPayloadBuilder
     activities = visible_activities
     actor_names = actor_names_for(activities)
     @label_cache = build_label_cache(activities)
+    @automacoes = Crm::Cards::AutomacaoDaAtividade.new(account: @account, account_user: @account_user, activities: activities)
 
     activities.map { |activity| activity_payload(activity, actor_names) }
   end
@@ -35,6 +36,8 @@ class Crm::Cards::ActivityPayloadBuilder
       conversation_id: activity.conversation_id,
       payload: sanitized_activity_payload(activity.payload),
       labels: labels_for(activity),
+      # #2509: a automação que fez a atividade (nome e se a pessoa pode abri-la), ou nil.
+      automacao: @automacoes.para(activity),
       created_at: activity.created_at.iso8601
     }
   end
@@ -70,10 +73,10 @@ class Crm::Cards::ActivityPayloadBuilder
   def build_label_cache(activities)
     ids = collect_label_ids(activities)
     {
-      stages: stage_names(ids[:stages]),
-      users: user_names(ids[:users]),
-      contacts: contact_names(ids[:contacts]),
-      teams: team_names(ids[:teams])
+      stages: names_in(@account.crm_pipeline_stages, ids[:stages]),
+      users: names_in(@account.users, ids[:users]),
+      contacts: names_in(@account.contacts, ids[:contacts]),
+      teams: names_in(@account.teams, ids[:teams])
     }
   end
 
@@ -95,28 +98,10 @@ class Crm::Cards::ActivityPayloadBuilder
     ids.transform_values { |list| list.uniq.reject(&:zero?) }
   end
 
-  def stage_names(ids)
+  def names_in(scope, ids)
     return {} if ids.blank?
 
-    @account.crm_pipeline_stages.where(id: ids).pluck(:id, :name).to_h
-  end
-
-  def user_names(ids)
-    return {} if ids.blank?
-
-    @account.users.where(id: ids).pluck(:id, :name).to_h
-  end
-
-  def contact_names(ids)
-    return {} if ids.blank?
-
-    @account.contacts.where(id: ids).pluck(:id, :name).to_h
-  end
-
-  def team_names(ids)
-    return {} if ids.blank?
-
-    @account.teams.where(id: ids).pluck(:id, :name).to_h
+    scope.where(id: ids).pluck(:id, :name).to_h
   end
 
   def visible_activities

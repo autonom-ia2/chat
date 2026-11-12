@@ -286,6 +286,34 @@ describe('LivreAlterar', () => {
     );
   });
 
+  // #2502 — o rodízio nasce entre todos da caixa e salva sem escolher; o time é
+  // escolha opcional, pelo ChoiceSelect (nunca <select>), com "todos" primeiro.
+  const RODIZIO = {
+    tipo: 'rodizio',
+    grupo: 'EQUIPE',
+    frase: 'RODIZIO',
+    campos: [
+      { nome: 'time_id', peca: 'time', obrigatorio: false, rotulo: 'TIME_ID' },
+    ],
+  };
+
+  it('o rodízio salva sem time e oferece "todos da caixa" e os times', async () => {
+    const wrapper = montar(
+      { ...CATALOGO, passos: [...CATALOGO.passos, RODIZIO] },
+      { time: [{ value: 3, label: 'Vendas' }] }
+    );
+    wrapper.vm.abrir({ tipo: 'passo', valor: { id: 'r1', tipo: 'rodizio' } });
+    await flushPromises();
+
+    const peca = wrapper.find('[data-peca="time"]');
+    expect(peca.exists()).toBe(true);
+    expect(peca.find('select').exists()).toBe(false);
+    expect(peca.text()).toContain(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.TODOS_DA_CAIXA'
+    );
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
   it('espera o alvo e o campo obrigatório antes de salvar', async () => {
     const wrapper = montar();
     const passo = {
@@ -791,10 +819,10 @@ describe('LivreAlterar', () => {
       expect(assunto.props('umaLinha')).toBe(true);
       expect(texto.props('umaLinha')).toBe(false);
       expect(assunto.props('rotuloDoDado')).toBe(
-        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(ASSUNTO)'
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.OUTRO(ASSUNTO)'
       );
       expect(texto.props('rotuloDoDado')).toBe(
-        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(TEXTO)'
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO_EM.OUTRO(TEXTO)'
       );
     });
 

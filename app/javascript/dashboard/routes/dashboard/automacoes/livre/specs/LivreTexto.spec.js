@@ -76,6 +76,28 @@ describe('LivreTexto', () => {
     expect(wrapper.find('label').text()).toBe('Pôr um dado em Assunto');
   });
 
+  // #2744: no gatilho de card, o "Pôr um dado" fala do card, não da conversa;
+  // no de contato, do contato; sem gatilho, só "Pôr um dado".
+  it.each([
+    [{ alvo: 'Crm::Card' }, 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO.CARD'],
+    [
+      {
+        gatilho: 'contato.criado',
+        gatilhos: [{ tipo: 'contato.criado', alvo: 'Contact' }],
+      },
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO.CONTATO',
+    ],
+    [
+      { alvo: 'Conversation' },
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO.CONVERSA',
+    ],
+    [{}, 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_DADO.OUTRO'],
+  ])('o "Pôr um dado" acompanha o alvo %o', (doAlvo, rotulo) => {
+    const wrapper = montar([], { catalogo: { ...CATALOGO, ...doAlvo } });
+
+    expect(wrapper.find('label').text()).toBe(rotulo);
+  });
+
   it('sem dado apagado, sem aviso', () => {
     const wrapper = montar(['Oi ', { $valor: 'contato.nome' }]);
 

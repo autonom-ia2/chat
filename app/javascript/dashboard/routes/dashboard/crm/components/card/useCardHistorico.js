@@ -334,7 +334,41 @@ export const useCardHistorico = ({
   // payload.by === 'ai' (o mesmo evento de quem arquiva à mão).
   const isAiEvent = activity =>
     activity.event_type?.startsWith('ai_') || activity.payload?.by === 'ai';
+  // #2509: o que uma automação fez (Mover/Closer gravam by: 'automacao', a
+  // origem e o id; o backend manda `automacao` com o nome) aparece como dela, e
+  // não da pessoa que a ligou nem do "sistema".
+  const isAutomacaoEvent = activity => activity.payload?.by === 'automacao';
+  const automacaoActor = activity => {
+    const nome = activity.automacao?.nome;
+    return nome
+      ? t('CRM_KANBAN.DRAWER.AUTOMACAO_ACTOR', { name: nome })
+      : t('CRM_KANBAN.DRAWER.AUTOMACAO_ACTOR_SEM_NOME');
+  };
+  // Para auditoria: quem ligou a automação. Só na Automação livre, onde o passo
+  // age como essa pessoa. Na de etapa o ator é quem moveu o card para a etapa
+  // (pessoa ou integração), e na regra é quem disparou o evento: dizer que essa
+  // pessoa ligou a automação seria falso.
+  const automacaoLigadaPor = activity =>
+    isAutomacaoEvent(activity) &&
+    activity.payload?.origem === 'livre' &&
+    activity.actor_type === 'user' &&
+    activity.actor_name
+      ? t('CRM_KANBAN.DRAWER.AUTOMACAO_LIGADA_POR', {
+          name: activity.actor_name,
+        })
+      : '';
+  // A tela da automação, só quando a pessoa pode abri-la (o backend confere).
+  const AUTOMACAO_ROTA = {
+    livre: 'automacoes_livre_editar',
+    regra: 'automacoes_editar',
+  };
+  const automacaoLink = activity => {
+    const automacao = activity.automacao;
+    const rota = automacao?.pode_abrir && AUTOMACAO_ROTA[automacao.origem];
+    return rota ? { name: rota, params: { id: automacao.id } } : null;
+  };
   const activityActor = activity => {
+    if (isAutomacaoEvent(activity)) return automacaoActor(activity);
     if (isClientBookingEvent(activity)) {
       return t('CRM_KANBAN.DRAWER.CLIENT_ACTOR');
     }
@@ -568,6 +602,8 @@ export const useCardHistorico = ({
       toneClass:
         ACTIVITY_TONE_CLASSES[meta.tone] || ACTIVITY_TONE_CLASSES.neutral,
       actor: activityActor(activity),
+      ligadaPor: automacaoLigadaPor(activity),
+      automacaoLink: automacaoLink(activity),
       detail: activityDetail(activity),
       relativeTime: relativeTimeFromISO(activity.created_at, locale.value),
     };

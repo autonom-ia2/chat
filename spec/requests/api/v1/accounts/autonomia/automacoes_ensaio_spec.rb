@@ -126,6 +126,29 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes ensaio', type: :request
     end
   end
 
+  # #2604: a versão salva de uma automação ligada ensaia como quem ligou, com a pergunta do motor (Acesso#motivo_no); o
+  # rascunho, como quem pede (que vai religar). Quem ligou gerencia automações, mas não vê a conversa.
+  it 'a salva e ligada ensaia como quem ligou; o rascunho, como quem pede', :aggregate_failures, :automacao_motor do
+    ligar_motor(account)
+    ligar_mensagens(account)
+    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage])
+    agente.account_users.find_by(account: account).update!(custom_role: funcao)
+    com_mensagem = receita.merge(passos: [{ id: 'm1', tipo: 'mensagem', texto: ['Oi'] }])
+    automacao.salvar_versao!(receita: com_mensagem.deep_stringify_keys, autor: admin)
+    automacao.update!(ligada_por: agente, ativa: true)
+
+    ensaiar("#{automacao.id}/ensaio")
+    expect(response.parsed_body['conversas'].first['passos'].first)
+      .to include('faria' => 'pausaria', 'dados' => { 'motivo' => 'quem_ligou_sem_acesso', 'quem' => agente.name })
+
+    ensaiar("#{automacao.id}/ensaio", receita: com_mensagem)
+    expect(response.parsed_body['conversas'].first['passos'].first).to include('faria' => 'mensagem')
+
+    automacao.update!(ativa: false)
+    ensaiar("#{automacao.id}/ensaio")
+    expect(response.parsed_body['conversas'].first['passos'].first).to include('faria' => 'mensagem')
+  end
+
   it 'pede automation_view' do
     ensaiar('ensaio', quem: agente, receita: receita)
 

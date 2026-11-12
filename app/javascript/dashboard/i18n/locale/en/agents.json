@@ -3052,7 +3052,11 @@
         "JA_SABE": "{nome} already knows",
         "ATUALIZADO_EM": "Updated on {data}",
         "PREPARANDO": "Data arrives within 1 day",
-        "EM_PREPARACAO": "In preparation"
+        "EM_PREPARACAO": "In preparation",
+        "GRATIS": {
+          "TITULO": "Free lookup",
+          "TEXTO": "Not added to your bill"
+        }
       },
       "BUSCA": {
         "NADA": "Nothing with “{termo}” here yet.",
@@ -3081,11 +3085,11 @@
         },
         "LUGAR": {
           "NOME": "Address and place",
-          "TEXTO": "Find addresses, cities and regions."
+          "TEXTO": "Addresses, cities, regions, properties and farms."
         },
         "VEICULOS": {
           "NOME": "Vehicles",
-          "TEXTO": "Car, motorcycle and truck values."
+          "TEXTO": "Car, motorcycle and truck values and history."
         },
         "SAUDE": {
           "NOME": "Health",
@@ -3110,10 +3114,6 @@
         "OUTROS": {
           "NOME": "Other",
           "TEXTO": "Goods."
-        },
-        "PREMIUM": {
-          "NOME": "Premium",
-          "TEXTO": "More complete lookups. Each one has 20 free per month."
         }
       },
       "DETALHE": {
@@ -3779,6 +3779,7 @@
       },
       "PREMIUM": {
         "SELO": "Premium",
+        "LEGENDA": "More complete lookup. Each one has {gratis} free per month.",
         "DEPOIS": "Then {preco} each",
         "AGORA": "Now {preco} each",
         "FAIXA": "from {min} to {max}",

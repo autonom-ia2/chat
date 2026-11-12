@@ -379,7 +379,8 @@ const fraseDoTexto = (partes, catalogo, t) => {
 // ficam no "Alterar", como os das outras escolhas da conta.
 const quemAvisar = (para, t) => {
   const quem = [
-    para?.responsavel && t(`${P}.RESPONSAVEL`),
+    para?.responsavel &&
+      t(`${P}.${para.se_nao_houver ? 'RESPONSAVEL_OU_CAIXA' : 'RESPONSAVEL'}`),
     para?.responsavel_do_card && t(`${P}.RESPONSAVEL_DO_CARD`),
     para?.times?.length &&
       t(`${P}.TIMES`, { n: para.times.length }, para.times.length),
@@ -538,6 +539,9 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     );
   }
   if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
+  // #2502: entre quem atende a caixa, ou só entre quem é do time escolhido.
+  if (passo.tipo === 'rodizio')
+    return t(`${P}.${passo.time_id ? 'RODIZIO_TIME' : 'RODIZIO_CAIXA'}`);
   if (ehPassoNovo(passo))
     return fraseDoPassoNovo(passo, t, caminho =>
       fraseDoValor(caminho, catalogo, t)

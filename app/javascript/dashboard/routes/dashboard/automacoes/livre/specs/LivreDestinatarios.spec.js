@@ -93,3 +93,39 @@ describe('o que era antes da troca, no catálogo', () => {
     expect(caminhos('card.ganho')).toContain('card.responsavel_nome');
   });
 });
+
+// #2552 — a reserva da caixa é um Switch (nunca um <select>) que só aparece
+// com o responsável ligado; desligar o responsável tira a reserva também.
+describe('LivreDestinatarios, a reserva da caixa', () => {
+  it('sem o responsável, não oferece a reserva; nada de <select>', () => {
+    const wrapper = montar({ times: [3] });
+
+    expect(wrapper.find('[data-reserva-caixa]').exists()).toBe(false);
+    expect(wrapper.find('select').exists()).toBe(false);
+  });
+
+  it('com o responsável, liga a reserva da caixa', async () => {
+    const wrapper = montar({ responsavel: true });
+
+    await wrapper.find('[data-reserva-caixa]').trigger('click');
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      responsavel: true,
+      se_nao_houver: 'caixa',
+    });
+  });
+
+  it('desligar o responsável tira a reserva e guarda o resto', async () => {
+    const wrapper = montar({
+      responsavel: true,
+      se_nao_houver: 'caixa',
+      pessoas: [7],
+    });
+
+    await wrapper.find('[data-responsavel]').trigger('click');
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      pessoas: [7],
+    });
+  });
+});
