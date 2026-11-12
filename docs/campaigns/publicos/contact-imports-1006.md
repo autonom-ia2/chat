@@ -96,11 +96,13 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
 - **Não é público:** não cria etiqueta, não aparece em Públicos nem no histórico de bases
   (`CampaignImport.campaign_flows`), e `campaign_journey/campaigns` recusa usá-la (`404`/`not_an_audience`).
 
-## Trazer minha lista (#2896, Fatia 1)
+## Trazer minha lista (#2896, Fatias 1 e 2)
 
 A tela nova de Relacionamentos ("Trazer minha lista") usa esta mesma importação de contatos, com uma marca:
 `options.trazer` (um objeto, vazio quando nasce). Só as importações com a marca mudam de comportamento; a tela
-"Importar contatos" e o passo "Para cada item" da Automação seguem como descrito acima.
+"Importar contatos" e o passo "Para cada item" da Automação seguem como descrito acima. A leitura com a marca é feita
+por `ContactImports::Trazer::Validador` (uma subclasse do leitor de contatos, escolhida por
+`ContactImports::Validator#perform`).
 
 Com a marca:
 
@@ -108,44 +110,333 @@ Com a marca:
   `ready_to_confirm`. `schema_resolution` fica com `needs_confirmation: false` e mantém `uncertain_targets` e
   `targets[*].confident`: a tela mostra a coluna sugerida sem certeza como `duvidosa`, e a pessoa troca ali.
   Planilha sem coluna de telefone nem de e-mail → `validation_failed` com `missing_contact_column`.
-- **`options.trazer.destinos`** guarda, pelo índice da coluna, o destino que a pessoa escolheu para uma coluna que
-  não é nome, telefone, e-mail nem empresa. Nesta fatia só `nao_guardar` é gravado (o padrão é virar informação da
-  pessoa).
+- **DDD em coluna separada é juntado ao telefone** antes da leitura (`ContactImports::Trazer::JuntarDdd`): a coluna
+  com título de DDD ao lado de uma coluna de telefone, ou a coluna sem título colada à esquerda do telefone que só tem
+  DDDs que existem. A coluna do DDD some da planilha lida (não vira informação) e `validation_summary.ddd_juntado`
+  conta as linhas juntadas. DDD que não existe ou telefone sem 8 ou 9 dígitos: a linha fica como veio. Célula que
+  parece fórmula (no DDD ou no número) nunca é juntada: segue como veio e a leitura acusa a fórmula.
+- **A mesma pessoa em várias linhas vira uma só** (`ContactImports::Trazer::MesmaPessoa`): mesmo telefone (com ou sem
+  o nono dígito) ou mesmo e-mail. Sem conflito, a primeira linha é completada com o que só a outra tinha (os campos
+  da linha e as células que a conferência usa: se ela virar problema, o conserto leva o e-mail e a empresa que vieram
+  da outra) e a outra sai da contagem (`validation_summary.mesma_pessoa`, `resumo.juntadas` na tela). Com conflito (nome, telefone,
+  e-mail ou empresa preenchidos e diferentes nas duas) a segunda vira problema `duplicada` e a pessoa escolhe com
+  qual fica. Nome igual não junta ninguém.
+- **Linha sem nome é problema** (`blank_name`) quando a planilha tem coluna de nome: a pessoa escreve o nome ou deixa
+  a linha de fora.
 - **Coluna `nao_guardar` não deixa valor em lugar nenhum.** A leitura não põe o valor dela em
   `campaign_import_rows.extra_values` nem a conta em `validation_summary` (`contact_attributes`,
   `attribute_problems`); a gravação não escreve o valor no contato nem cria o atributo. Quando a pessoa marca a coluna
   depois da leitura, a chave é apagada de `extra_values` de todas as linhas da importação na mesma hora (o
   `validation_summary` só se acerta na próxima leitura). A regra é uma só:
   `Relacionamentos::Trazer::Colunas.chaves_que_nao_guardam`.
-- Em `options` e em `validation_summary` só entram índice de coluna e código: nunca valor de célula.
+- **Destinos que não são informação** (`ContactImports::Trazer::DestinosDaLinha`, que o importador chama na gravação
+  de cada linha, logo depois das informações da pessoa e dentro do mesmo savepoint; não depende de a linha ter alguma
+  coluna além das de contato, então "sim, todas" vale para todo mundo. `ContactImports::CustomAttributes#merge!` não
+  muda: só deixa de fora as colunas que têm outro destino): `cidade` vai para a cidade da pessoa
+  (`contacts.additional_attributes.city`), `telefone_da_empresa` para a empresa **da linha**
+  (`companies.additional_attributes.phone_number`) e `cliente` (ou a resposta "sim, todas") faz a pessoa virar
+  cliente (`Contact#become_customer!`). Nenhum deles cria atributo. O destino `telefone_da_empresa` só é aceito
+  quando a planilha tem coluna de empresa e a conta tem Empresas (`Relacionamentos::Trazer::Colunas#tem_empresa?`),
+  contando as colunas como ficariam depois da troca: a própria coluna de empresa não pode virar telefone da empresa.
+  O telefone só é gravado quando a gravação ligou a pessoa à empresa da linha (o vinculador de empresas respondeu
+  `created` ou `reused`; o importador passa essa resposta a `DestinosDaLinha#aplicar`). Na linha com a célula da empresa vazia, ou de
+  uma pessoa que já era de outra empresa (`kept_other`), o telefone da empresa dessa linha não é guardado em lugar
+  nenhum: nunca vai para a empresa que o contato já tinha. Se a coluna de empresa deixa de ser empresa, a coluna que
+  era telefone da empresa volta a ser informação. Quem já existia é completado, nunca
+  sobrescrito: cidade e telefone só entram onde estava vazio, e quem já era cliente fica com a data que tinha. A
+  célula da coluna `cliente` vale como "sim" com `sim`, `s`, `x`, `cliente` ou um dos valores verdadeiros de
+  `ContactImports::AttributeValue` (`ContactImports::Trazer::Cliente`).
+- **Nome e descrição da informação.** A coluna que vira informação pode receber o nome e o "para que serve" que a
+  pessoa escreveu; o atributo é criado (ou reaproveitado) com esse nome e a descrição vai para
+  `custom_attribute_definitions.attribute_description`.
+
+### Onde fica cada dado
+
+| Dado | Onde | Prazo |
+|---|---|---|
+| Planilha como veio | anexo `original_file` | 7 dias |
+| Linhas com problema: nome, telefone, e-mail e empresa como vieram | anexo `linhas_com_problema` (`ContactImports::Trazer::LinhasComProblema`) | 7 dias da criação da importação |
+| O que a pessoa consertou, com o valor digitado | anexo `consertos` (`ContactImports::Trazer::Consertos`) | 7 dias da criação da importação |
+| Linhas que vão entrar, com telefone e e-mail inteiros | anexo `normalized_csv` (arquivo conferido) | 30 dias |
+| Decisões da pessoa na conferência | `options.trazer` (`ContactImports::Trazer::Conferencia`) | com a importação |
+| Contagens da leitura | `validation_summary` | com a importação |
+| Nome, máscaras e hashes de cada linha | `campaign_import_rows` | com a importação |
+
+**O anexo das linhas com problema** é um arquivo de texto com uma linha da planilha por linha, em JSON, na ordem
+dos números: `{"linha": 143, "celulas": {"name", "phone", "email", "company"}, "outra": {"linha": 88, "celulas": {...}}}`
+(`outra` só na linha repetida: é a linha da mesma pessoa que ficou aprovada). Só as células dos quatro alvos entram
+(o telefone já com o DDD juntado): nenhuma outra coluna, nem a marcada "não guardar". É regravado inteiro a cada
+leitura e apagado quando a leitura recomeça.
+
+**O anexo dos consertos** tem uma linha por linha consertada: o último campo consertado (`campo`), o que a pessoa
+digitou por alvo (`valores`), a coluna (índice) de cada alvo consertado na leitura em que o conserto foi feito
+(`colunas`), a outra linha de uma repetida que ela escolheu manter (`outra`) e, quando o conserto resolveu a linha
+inteira, a linha como vai entrar (`conferida`, com as colunas do arquivo conferido); quando não resolveu, o motivo que
+sobrou (`sobrou`). É o único lugar onde o valor digitado existe. Cada conserto regrava só este arquivo, que tem o
+tamanho dos consertos e não o da planilha. A leitura da planilha não o apaga: a leitura que falha não perde nada (nem
+a que quebra depois de conferir as linhas), e a que dá certo confere cada conserto de novo e mantém os que ainda valem
+(`ContactImports::Trazer::ConsertosDaLeitura`). O conserto vale para a coluna em que foi feito: se a leitura nova põe
+outra coluna naquele alvo, ele é esquecido e a linha volta como a leitura nova a vê.
+
+**Tamanho e leitura dos dois anexos.** Cada pedido lê cada anexo no máximo uma vez: os leitores
+(`LinhasComProblema`, `Consertos`) guardam o que leram e são passados adiante dentro do pedido. O anexo das linhas
+com problema é baixado para um arquivo temporário e lido linha a linha, parando quando acha as linhas pedidas; só
+"ficar com esta" numa linha repetida o lê inteiro, para achar as outras linhas da mesma pessoa. O dos consertos é
+lido inteiro na memória. Pior caso, com o teto de 50 mil linhas e todas com problema: cerca de 10 MB no anexo das
+linhas com problema (umas 200 bytes por linha) e cerca de 25 MB no dos consertos se a pessoa consertasse as 50 mil
+(umas 500 bytes por linha, e ele é regravado a cada conserto). Na prática o dos consertos tem o tamanho do que a
+pessoa consertou à mão. O anexo com um trecho que não dá para ler levanta `ContactImports::Trazer::ArquivoIlegivel`,
+só com o nome do arquivo: o erro do leitor de JSON, que cita o trecho, não vai junto.
+
+**Apagar um anexo** (`ContactImports::Trazer::ApagarAnexo`): o anexo sai na hora, dentro da transação, e o arquivo
+só é mandado apagar depois que todas as transações abertas terminam (`ActiveRecord.after_all_transactions_commit`).
+Nada usa o `purge_later` do anexo, que põe o job na fila na hora: o job roda noutra conexão, e antes do commit ainda
+veria o anexo, desistiria em silêncio e deixaria o arquivo no armazenamento sem dono, com telefone, e-mail e nome
+inteiros e fora do alcance do prazo. A transação que volta atrás traz o anexo de volta e não apaga nada. Trocar um
+anexo por outro (`attach` em cima do que existe) é do Rails: ele destrói o anexo antigo e manda apagar o arquivo dele
+depois do commit. A leitura também tira por esse caminho os arquivos do resultado anterior (conferido, erros,
+relatório), em vez de apagá-los do armazenamento dentro da transação. A leitura que quebra com um erro lê a
+importação de novo do banco antes de registrar a falha, para não agir sobre anexos que a transação desfeita nunca
+gravou.
+
+**O arquivo que ainda não chegou.** Entre o commit e o envio dos anexos novos ao armazenamento o anexo existe no banco
+e o arquivo ainda não (`ActiveStorage::FileNotFoundError`, tratado na base das rotas): o `GET` responde `lendo` e as
+rotas de escrita respondem `422 leitura_nao_pronta`. Isso vale enquanto o anexo mais novo da importação tem menos de
+2 minutos. Depois disso o envio falhou e o arquivo não vem mais: o `GET` responde
+`200 {"id": N, "situacao": "falhou", "erro": "leitura"}` (a tela manda enviar a planilha de novo) e as escritas seguem
+com `422 leitura_nao_pronta`. Nada é gravado na importação por causa disso.
+
+**Prazo dos dois anexos.** Somem junto com a planilha original, contando da criação da **importação** e não do
+anexo (que nasce de novo a cada leitura e a cada conserto): `ContactImports::Trazer::AnexosVencidos`, chamado por
+`CampaignImports::PurgeExpiredFilesJob`. Nada deles vai para o log. A importação que está fechando (`confirmed`:
+a pessoa mandou trazer e o job de fechamento ainda não rodou) fica de fora: a lista mandada trazer no último dia do
+prazo fecha com os consertos, e os anexos somem na passada seguinte ao fechamento.
+
+**Nenhuma rota da tela abre a planilha original nem o arquivo conferido inteiro.** A conferência (o GET e as rotas
+de linha) lê só os dois anexos acima; do arquivo conferido só os primeiros 16 KB são lidos, para os exemplos.
+
+**`options.trazer`** só guarda índice de coluna, número de linha, código e o nome que a pessoa deu a uma informação.
+Nunca valor de célula:
+
+| Chave | Conteúdo |
+|---|---|
+| `destinos` | índice da coluna → `nao_guardar`, `cidade`, `telefone_da_empresa` ou `cliente` (informação é o padrão e não é gravada) |
+| `campos` | índice da coluna → `nome` e `para_que_serve` da informação, sem caractere de controle (quebra de linha e tabulação viram espaço; o resto, o byte nulo inclusive, sai) |
+| `respostas` | `clientes`, `coluna_cliente` (índice), `telefone`, `coluna_telefone` (índice da coluna a que a pergunta se referia) |
+| `deixadas` | números das linhas com problema que a pessoa deixou de fora |
+| `anterior` | só enquanto uma leitura pedida pela pessoa não termina: a conferência como estava antes da mudança (as chaves acima) e, das colunas, o índice de cada alvo, se era duvidoso, o método da leitura e a escolha manual que havia |
+| `aviso` | `mudanca_desfeita`, até a próxima mudança que der certo |
+| `fechamentos` | quantas vezes o fechamento da conferência começou (some quando ele termina) |
+| `leitura` | o número (UUID) da leitura que está rodando; some quando ela termina |
+| `leitura_em` | quando essa leitura começou (só o instante, ISO 8601); some junto com o número |
+| `releituras` | quantas vezes a varredura pôs a leitura parada de volta na fila; some quando uma leitura termina |
+
+**A trava da leitura** (`ContactImports::Trazer::Validador`, só para a importação com a marca). A leitura de planilhas
+não aguenta duas execuções da mesma importação, nem juntas nem em sequência: a que termina por último apagaria as
+linhas e regravaria o estado, até no meio da gravação. Com a marca:
+
+- **Na entrada**, sob a trava da importação, a leitura só começa a partir de `uploaded`, `validating`,
+  `needs_column_choice`, `ready_to_confirm` ou `validation_failed`. A partir de `confirmed`, `queued`, `importing`,
+  `completed`, `completed_with_failures` ou `failed` ela sai sem tocar em nada. Ao começar, deixa a importação
+  `validating` e grava o número dela em `options.trazer.leitura` e o instante em `options.trazer.leitura_em`.
+- **No fim**, dentro da transação que grava o resultado (a leitura que deu certo e a que falhou) e antes de apagar
+  qualquer coisa, a importação é travada e conferida: se o número não é mais o desta leitura, ou o estado não é mais
+  `validating`, outra leitura (ou a varredura) passou na frente e esta é descartada sem tocar em nada. O número, o
+  instante e `releituras` saem nessa mesma transação. Desfazer uma mudança (abaixo) passa pela mesma conferência.
+- **O que fica fora da trava.** A trava vai do primeiro passo dessa transação até o commit, e toda escrita na
+  importação espera por ela. O tipo de cada coluna (`CampaignImports::ColumnTypes`, uma chamada externa) é perguntado
+  antes de a transação abrir, e os arquivos do resultado anterior são apagados do armazenamento depois do commit.
+  Dentro da trava ficam apagar e gravar as linhas (até 50 mil) e as contas que leem a conta (empresas, atributos,
+  contatos que já existem).
+- **A troca de coluna e a resposta que leem de novo** já deixam a importação `validating` na mesma trava em que gravam
+  a mudança (`CampaignImports::DraftChanges#choose_columns`). Entre o pedido e o começo do job a leitura velha não
+  pode ser trazida: o `POST trazer` e o `confirm` antigo respondem `422`.
+- **A varredura não tira a vez da leitura viva.** Pôr a leitura de volta na fila troca o número, e a que estava
+  rodando se descarta quando termina. Por isso a leitura que começou (`validating` com `leitura_em`) tem 3 prazos
+  (45 minutos, contados de `leitura_em`) para terminar; só então volta para a fila. A que nunca começou (`uploaded`,
+  ou `validating` sem `leitura_em`: a leitura foi pedida e o job se perdeu) volta depois de 1 prazo (15 minutos).
+- **A varredura conta as voltas**: a leitura volta para a fila no máximo 2 vezes; na terceira a importação vira
+  `validation_failed` com `file_could_not_be_processed` (a tela mostra `falhou`).
+
+A importação sem a marca não tem nada disso: é lida como sempre.
+
+**Conferência vencida** (`ContactImports::Trazer::Conferencia.vencida?`). A importação com a marca que ainda não foi
+trazida (`uploaded`, `validating`, `needs_column_choice`, `validation_failed`, `ready_to_confirm`, ou `failed` porque
+o fechamento desistiu) e nasceu há mais de `CampaignImports::Config.original_file_retention` (7 dias, contados da
+criação) está vencida. Nesse prazo os anexos da conferência e a planilha somem, mas o arquivo conferido vive 30 dias:
+sem esta regra a lista ainda poderia ser trazida, sem os consertos e com contagem diferente da que a tela mostrou.
+
+- `GET /leituras/:id` → `200 {"id": N, "situacao": "vencida"}`, em qualquer estado da leitura.
+- Toda escrita (`PATCH respostas`, `PATCH colunas`, as três rotas de linha, `POST trazer` e o
+  `POST /contact_imports/:id/confirm` da importação com a marca) → `422 {"error": "conferencia_vencida"}`, sem mudar
+  nada.
+- No histórico ela não aparece: rascunho nunca entra em `GET /listas`. A lista cujo fechamento desistiu e venceu
+  continua lá como `falhou`, com `pode_tentar: false`.
+- A lista que já foi trazida não vence.
+
+Com isso `nada_para_trazer` por arquivo conferido apagado deixa de ser alcançável pela tela; o código fica como defesa.
+
+**Mudança que faz a leitura falhar é desfeita** (`ContactImports::Trazer::DesfazerMudanca`). Antes de cada troca de
+coluna ou resposta que lê a planilha de novo, a conferência como estava no começo do pedido fica em
+`options.trazer.anterior` (só índices, códigos e o nome que a pessoa deu a uma informação). A leitura que dá certo joga
+a cópia fora. A que falha com a cópia guardada não chega a virar `validation_failed`: a conferência volta ao que era,
+a cópia some, a planilha é lida de novo com as colunas de antes (os consertos continuam valendo, porque são da coluna
+em que foram feitos) e `options.trazer.aviso` passa a `mudanca_desfeita`. Quando essa leitura termina, as colunas
+voltam a dizer o que diziam antes (quais eram duvidosas, o método, a escolha manual). É uma vez só: se a leitura
+refeita também falha, a importação fica `validation_failed` (`falhou`), sem laço. O aviso sai na próxima escrita que
+der certo (troca de coluna, resposta, conserto, deixar de fora, voltar atrás ou trazer).
+
+**O arquivo conferido só muda na hora de trazer.** Até lá a linha consertada continua `invalid` no banco e fora do
+`normalized_csv`. O `POST trazer` só confere e deixa a importação `confirmed`; o job
+`ContactImports::Trazer::FecharConferenciaJob` fecha a conferência sob a trava
+(`ContactImports::Trazer::FecharConferencia`). O arquivo conferido e os consertos são baixados antes da trava, para ela
+não esperar o armazenamento; sob a trava o job confere de novo que a importação está `confirmed` e que os dois
+arquivos são os que baixou (se não são, baixa de novo ali). O arquivo conferido é regravado com as aprovadas mais as
+consertadas;
+a linha consertada passa a `valid` com nome, hashes e máscaras; a linha aprovada que saiu no lugar de uma repetida
+que a pessoa manteve passa a `invalid` com `left_out`; `valid_rows` e `invalid_rows` passam a contar o que entra de
+verdade. Na mesma transação a importação passa a `queued`; a gravação de sempre (`CampaignImports::ImportJob`) vai
+para a fila logo depois que a transação termina, porque o arquivo conferido regravado só é enviado ao armazenamento
+nesse momento (se o processo morrer entre uma coisa e outra, a varredura de importações paradas pega a `queued`). Job
+repetido não faz nada: só a importação `confirmed` é fechada. O importador não começa uma importação
+`confirmed`, então a gravação nunca passa na frente do fechamento.
+
+**Quem entra é uma conta só** (`ContactImports::Trazer::QuemEntra`): as linhas aprovadas na leitura, mais as
+consertadas por inteiro que ainda são problema e que a pessoa não deixou de fora, menos as que saem no lugar de uma
+repetida que ela manteve. A linha que sai no lugar de uma repetida não entra nem quando ela mesma tinha sido
+consertada, e de um grupo de linhas da mesma pessoa entra uma só: "ficar com esta" deixa de fora as outras repetidas
+do grupo, inclusive a que a pessoa tinha escolhido antes. A tela mostra essa conta (`resumo.entram` e `entram` nas
+respostas de linha), o `POST trazer` a usa para saber se há alguém e o fechamento grava exatamente essas linhas.
+
+**O fechamento não fica em laço** (`ContactImports::Trazer::Fechamentos`). Cada tentativa é contada antes de rodar,
+numa transação própria (`options.trazer.fechamentos`, só o número): a que derruba o processo também conta. O erro
+continua subindo para a fila. Na terceira tentativa que não termina a importação vira `failed` com
+`validation_summary.import_error` = `fechamento` (um código, nunca a mensagem do erro) e a tela mostra `falhou` com
+`pode_tentar`. "Tentar de novo" (o `POST /contact_imports/:id/confirm` ou o `POST trazer`) zera a contagem e põe o
+fechamento na fila outra vez. O fechamento roda inteiro numa transação: o que quebrou não deixa nada pela metade.
+Sem de onde ler (o arquivo conferido apagado antes do job, ou o conferido ou os consertos fora do armazenamento) o
+fechamento desiste na primeira tentativa, com o mesmo código: a lista não segue para a gravação nem fica esperando.
+
+**A rota antiga de "Importar" não pula o fechamento.** O `POST /contact_imports/:id/confirm` de uma importação com a
+marca passa sempre por `Relacionamentos::Trazer::Trazer`, com as respostas de sempre (`200` com a importação,
+`422 campaign_import.not_ready`). A rota decide pela marca, que não muda, e não pelo estado lido antes da trava: a
+leitura que termina entre a busca e a trava não vai para a gravação sem fechamento. O estado é conferido pelo
+`Trazer`, sob a trava; a lista que já foi trazida responde `200` sem enfileirar nada. Só a gravação que parou no meio
+(`import_resumable?`) continua pelo caminho antigo, direto para o importador: a conferência dela já foi fechada.
+
+**Importação parada.** Se um job se perde (o worker morreu, o deploy caiu no meio), a varredura de importações paradas
+(`CampaignImports::StalledImportsJob`, a cada 5 minutos) chama `ContactImports::Trazer::ConferenciasParadas`. A
+importação com a marca `options.trazer` parada há mais de `CampaignImports::Config.stalled_import_after` (15 minutos,
+contados do `updated_at`) volta para a fila: em `confirmed`, o job de fechamento; em `uploaded` ou `validating`, a
+leitura da planilha (`CampaignImports::ValidateJob`), no máximo 2 vezes. A leitura que começou e ainda pode estar
+rodando só volta depois de 45 minutos (ver "A trava da leitura"). A importação é
+marcada como mexida agora, então a varredura seguinte não enfileira outra vez; se o job se perder de novo, o prazo
+seguinte a pega. A leitura da conferência vencida não volta para a fila (a tela já a mostra como `vencida`); a lista
+já mandada trazer não vence, e o fechamento dela volta. Uma importação que quebra não
+impede as seguintes, e o log leva só o id e a classe do erro. A importação sem a marca nunca é tocada aqui.
+
+**"Não guardar" apaga dentro do pedido.** Mandar uma coluna para `nao_guardar` apaga a chave dela de `extra_values` de
+todas as linhas da importação numa atualização só, dentro da requisição (até 50 mil linhas). Fica assim por decisão do
+dono: a pessoa vê o valor sumir na hora, e a atualização é uma só, sem carregar as linhas.
+
+**Deixar de fora responde a um problema.** A linha deixada de fora que uma leitura nova (troca de coluna) torna
+válida entra na lista e o resumo conta com ela. O conserto que deixou de valer na leitura nova é esquecido e a linha
+volta como problema aberto.
 
 ### Rotas
 
 Base: `/api/v1/accounts/:account_id/relacionamentos/trazer`. Todas, leituras inclusive, pedem a chave de conta
 `relacionamentos_novo` (`404` sem ela), as duas flags de instalação da tabela "Quando vale" (`404` sem elas) e
-`ContactPolicy#import?` (`401` sem ela). Só enxergam importações de contatos por arquivo da própria conta: as da
-Automação, os Públicos e as de outra conta respondem `404`. A resposta já vem no formato da tela.
+`ContactPolicy#import?` (`401` sem ela). Só enxergam importações de contatos por arquivo da própria conta e com a
+marca: as da Automação, os Públicos, as da tela "Importar contatos" e as de outra conta respondem `404`. A resposta já
+vem no formato da tela.
 
 | Método | Caminho | Corpo | |
 |---|---|---|---|
 | POST | `/leituras` | multipart `arquivo` (.csv/.xlsx) | `201 {"id", "situacao": "lendo"}`; cria a importação com a marca e põe a leitura na fila. `422 {"error"}`: `arquivo_obrigatorio`, `tipo` (inclusive `.xls`) ou `arquivo_grande` |
-| GET | `/leituras/:id?pagina=` | | `lendo` (não abre arquivo); `falhou` com `erro` `vazia`, `sem_contato` ou `leitura`; ou `pronta`: `arquivo`, `valores`, `colunas`, `resumo`, `exemplos`, `problemas` (200 por página), `problemas_total`, `pagina`, `por_pagina`; `perguntas` e `respostas` vazias nesta fatia. `pagina` que não existe (texto, zero, negativa, além da última) vira a primeira ou a última que existe, e a resposta diz qual foi: quem busca todas as páginas para em `problemas_total`, não na página vazia. Só rascunho com a marca: depois de trazida a leitura responde `404` |
-| PATCH | `/leituras/:id/colunas/:indice` | `{ "destino" }` | `nome`, `telefone`, `email` ou `empresa`: a coluna entra no alvo (quem estava nele sai), a planilha é lida de novo e a resposta é `lendo`. Coluna que é alvo e vai para `informacao` ou `nao_guardar`: sai do alvo e a planilha é lida de novo (`lendo`). Coluna que não é alvo e vai para `nao_guardar`: vale na hora, o valor dela é apagado de todas as linhas e a resposta é `pronta` com `colunas`. Coluna que volta de `nao_guardar` para `informacao`: a planilha é lida de novo (`lendo`), porque o valor só existe no arquivo. Coluna que já está no destino pedido: `pronta` com `colunas`, sem mudar nada. O `:indice` é lido em base dez. `422 {"error"}`: `leitura_nao_pronta`, `coluna_desconhecida`, `destino_desconhecido` ou `sem_contato` (tiraria a última coluna de telefone ou e-mail) |
+| GET | `/leituras/:id?pagina=` | | `vencida` (a conferência passou do prazo; só `id` e `situacao`); `lendo` (não abre arquivo; também enquanto os anexos da leitura ainda não chegaram ao armazenamento); `falhou` com `erro` `vazia`, `sem_contato` ou `leitura`; ou `pronta` (abaixo). Só rascunho com a marca: depois de trazida a leitura responde `404` |
+| PATCH | `/leituras/:id/colunas/:indice` | `{ "destino", "nome", "para_que_serve" }` | Destinos: `nome`, `telefone`, `email`, `empresa`, `informacao`, `nao_guardar`, `cidade`, `telefone_da_empresa`, `cliente`. Entrar ou sair de um dos quatro alvos, e voltar de `nao_guardar`, lê a planilha de novo (`lendo`). Troca entre os outros destinos vale na hora e responde a leitura inteira (`pronta`), igual à do `GET` (a troca pode derrubar uma resposta ou apagar o aviso, e a tela fica sabendo sem outro GET); ir para `nao_guardar` apaga o valor da coluna de todas as linhas. `nome` (até 255 caracteres) e `para_que_serve` (até 1000), opcionais, dão nome e descrição à informação. O `:indice` é lido em base dez. `422 {"error"}`: `leitura_nao_pronta`, `coluna_desconhecida`, `destino_desconhecido`, `sem_contato` (tiraria a última coluna de telefone ou e-mail), `sem_empresa` (`telefone_da_empresa` sem coluna de empresa ou sem Empresas na conta, contando as colunas como ficariam depois da troca: a própria coluna de empresa é recusada) ou `{"error": "valor_invalido", "motivo": "muito_longo"}` |
+| PATCH | `/leituras/:id/respostas` | `{ "clientes", "coluna_cliente", "telefone" }`, só as que a tela tem | `clientes`: `sim_todas`, `ainda_nao` ou `algumas` (com `coluna_cliente`, o índice da coluna que diz quem é). `telefone`: `da_pessoa`, `da_empresa` ou `nao_usar`. Responde a leitura inteira (`pronta`) ou `{"id", "situacao": "lendo"}` quando a resposta pede ler a planilha de novo. Mandar a mesma resposta de novo não muda nada. `422 {"error"}`: `leitura_nao_pronta`, `resposta_desconhecida`, `coluna_desconhecida`, `pergunta_desconhecida` (não há pergunta de telefone), `sem_contato` ou `sem_empresa` (`da_empresa` sem coluna de empresa ou sem Empresas na conta); a recusa desfaz o pedido inteiro |
+| PATCH | `/leituras/:id/linhas/:linha` | `{ "valor" }` ou, na linha repetida, `{ "ficar_com": <número da linha> }` | Conserta a linha. `200 {"problema": {...}, "entram": N}`: a linha como a tela a mostra agora (`guardado` quando o conserto resolveu a linha, ou `aberto` com o `tipo` e o `motivo` do problema que sobrou nela: a linha sem nome que teve o telefone consertado volta como `nome`) e quantas pessoas entram se a pessoa mandar trazer agora. Na repetida, `ficar_com` esta linha deixa de fora as outras repetidas da mesma pessoa. O `valor` perde os caracteres de controle (o byte nulo inclusive) antes de ser conferido e tem até 255 caracteres. `422 {"error"}`: `leitura_nao_pronta`, `linha_desconhecida`, `planilha_apagada` (o anexo das linhas com problema já foi apagado) ou `{"error": "valor_invalido", "motivo"}`, só quando o valor digitado é que não vale (tabela abaixo) |
+| POST | `/leituras/:id/linhas/:linha/deixar_de_fora` | | `200 {"problema", "entram"}` com `estado` `deixado`. `422`: `leitura_nao_pronta`, `linha_desconhecida` |
+| POST | `/leituras/:id/linhas/:linha/reabrir` | | Volta atrás no deixar de fora e em tudo que foi consertado na linha: `200 {"problema", "entram"}` com `estado` `aberto` e o problema original. `422`: os mesmos |
+| POST | `/leituras/:id/trazer` | | Confere, deixa a importação `confirmed` e põe o fechamento da conferência na fila: `200 {"trazidaId"}`. O segundo clique responde o mesmo e não enfileira outro job. Também serve de "Tentar de novo" para a lista cujo fechamento desistiu. `422 {"error"}`: `leitura_nao_pronta` ou `nada_para_trazer` (ninguém para entrar: o arquivo conferido já foi apagado pelo prazo) |
 | GET | `/listas` | | as 100 listas trazidas mais recentes (`Relacionamentos::Trazer::Historico::TETO`), a mais nova primeiro: `id`, `arquivo`, `quando` (ISO 8601), `quem`, `total`, `situacao`, `porcentagem`, `pode_tentar`. Rascunho não entra |
 | GET | `/listas/:id/andamento` | | `porcentagem`, `situacao`, `total`, `novas`, `completadas`, contados pelas linhas |
 
-"Trazer" e "Tentar de novo" continuam sendo o `POST /contact_imports/:id/confirm` acima.
+"Tentar de novo" continua sendo o `POST /contact_imports/:id/confirm` acima. Toda rota de escrita responde
+`422 leitura_nao_pronta` enquanto os anexos da leitura ainda não chegaram ao armazenamento, e
+`422 conferencia_vencida` quando a conferência passou do prazo.
+
+**Leitura pronta.** `arquivo`, `valores`, `colunas`, `tem_empresa`, `perguntas`, `respostas`, `resumo`, `exemplos`, `problemas`
+(200 por página), `problemas_total`, `pagina`, `por_pagina` e, só quando há o que avisar, `aviso`
+(`"aviso": "mudanca_desfeita"`: a última mudança fez a leitura falhar e o servidor a desfez; sem aviso a chave não
+vem). `pagina` que não existe (texto, zero, negativa, além da
+última) vira a primeira ou a última que existe, e a resposta diz qual foi: quem busca todas as páginas para em
+`problemas_total`, não na página vazia.
+
+- `colunas[]`: `indice`, `nome`, `destino`, `duvidosa` e, na informação, `campo` (`nome`, `para_que_serve`).
+- `tem_empresa`: `true` quando o destino `telefone_da_empresa` (e a resposta `da_empresa`) pode ser oferecido: a
+  planilha tem coluna de empresa e a conta tem Empresas.
+- `perguntas[]`: sempre `{"id": "clientes"}`; e `{"id": "telefone", "coluna", "indice"}` quando o leitor sugeriu a
+  coluna de telefone sem certeza, ou quando a pergunta já foi respondida e a coluna continua onde a resposta a pôs.
+  Se a pessoa manda essa coluna para outro lugar (ou escolhe outra coluna para o telefone), a resposta antiga deixa de
+  valer: a pergunta passa a ser sobre o telefone de agora, se ele for duvidoso, ou some.
+- `respostas`: o que a pessoa respondeu e ainda vale (`clientes`, `coluna_cliente` só com `algumas`, `telefone`).
+  `clientes` e `coluna_cliente` acompanham as colunas (`Relacionamentos::Trazer::Perguntas`), porque são elas que
+  dizem quem é cliente na gravação: `sim_todas` vale sempre; fora disso, havendo coluna com o destino `cliente` a
+  resposta é `algumas` com essa coluna, mesmo que a pessoa a tenha marcado pela tela das colunas (com mais de uma
+  marcada, vale a da resposta enquanto ela for `cliente`; senão, a primeira da planilha); `algumas` sem nenhuma coluna
+  `cliente` deixa de valer e a pergunta volta sem resposta. `options.trazer.respostas` guarda o que a pessoa respondeu;
+  o que a tela recebe é isto.
+- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `entram`. Os cinco primeiros são os da
+  leitura e não mudam com o que a pessoa conserta. `entram` (inteiro) é quantas pessoas entram se ela mandar trazer
+  agora: a mesma conta do `POST trazer` (`ContactImports::Trazer::QuemEntra`), que muda a cada conserto.
+- `exemplos[]`: as três primeiras linhas aprovadas, com `cliente` verdadeiro quando a linha vai virar cliente.
+- `problemas[]`: `linha`, `tipo` (`telefone`, `email`, `nome`, `sem_contato`, `duplicada`, `formula`), `nome`, `valor`,
+  `estado` (`aberto`, `guardado`, `deixado`). A `duplicada` traz `outraLinha` e `duplicadas` (as duas linhas, com
+  `linha`, `telefone`, `email`); a de tipo `nome` traz `contato` (o telefone ou, sem ele, o e-mail, já com o que foi
+  consertado). A linha `guardado` tem o `tipo` do que foi consertado por último e traz `corrigido` (o valor como vai
+  ser gravado: telefone em E.164, e-mail ou nome) ou, na repetida em que a pessoa ficou com esta linha, `ficar_com`.
+  Na repetida, ficar com a outra linha deixa esta `deixado`. A linha em que o conserto valeu mas sobrou outro
+  problema continua `aberto`, com o `tipo` do que sobrou.
+  - **`motivo`**: toda linha `aberto` diz o que deu errado, com os códigos da tabela abaixo (`blank_phone_number`,
+    `invalid_brazilian_mobile_number`, `formula_phone_number`, `blank_email`, `invalid_email`, `blank_name`,
+    `formula_detected`, `missing_contact`). A célula de nome, telefone ou e-mail que parece fórmula é do tipo do campo
+    dela, com `formula_detected`. Sem motivo conhecido (a `duplicada`) a chave não vem; `guardado` e `deixado` não têm.
+  - **Tipo `formula`**: o erro está num campo que a tela não conserta (hoje, a fórmula na empresa). Vem com
+    `campo` (`empresa`) e sem `valor`: `{"linha", "tipo": "formula", "campo": "empresa", "nome", "estado", "motivo"}`.
+    O `PATCH` com `valor` nessa linha é recusado com `formula_detected`; deixar de fora e voltar atrás funcionam.
+  - **O que a tela não conserta vem primeiro** (`Relacionamentos::Trazer::Pendencia`): a linha com fórmula na empresa
+    aparece direto como `formula`, tenha ou não outro problema (telefone errado, sem nome). Consertar o resto não a
+    faria entrar, então a tela não pede.
+
+**Motivos de `valor_invalido`**, os mesmos códigos da leitura, sempre sobre o valor digitado:
+
+| Tipo da linha | `motivo` |
+|---|---|
+| `telefone` | `blank_phone_number`, `invalid_brazilian_mobile_number`, `formula_phone_number` |
+| `email` | `blank_email`, `invalid_email`, `formula_detected` |
+| `nome` | `blank_name`, `formula_detected` |
+| `sem_contato` (aceita telefone ou e-mail) | `missing_contact` (vazio), `invalid_brazilian_mobile_number`, `formula_phone_number`, `invalid_email`, `formula_detected` |
+| `duplicada` | `linha_desconhecida` (`ficar_com` não é nenhuma das duas linhas) |
+| `formula` | `formula_detected`, sempre: a tela não conserta o campo e a linha só pode ficar de fora |
+| qualquer | `muito_longo` (mais de 255 caracteres) |
 
 **Valores inteiros.** Telefone e e-mail inteiros só existem na resposta, só para quem passou em `import?`, e só
 enquanto o arquivo de onde saem existe. Nada disso é gravado a mais. São dois arquivos, com prazos diferentes:
 
-- **`valores` fala só dos `problemas`.** `problemas[].valor` (e `duplicadas`) traz a célula como está na planilha,
-  lida do arquivo original na hora da resposta; só as linhas da página são lidas dele. Depois que o arquivo original é
-  apagado (7 dias) a resposta vem com `"valores": "mascarados"`: `valor` é a máscara que a linha guarda
-  (`raw_phone_masked`, `email_masked`), `outraLinha` vem `null` e `duplicadas` vem vazia.
-- **`exemplos` não depende de `valores`.** São as três primeiras linhas aprovadas do arquivo conferido (30 dias) e
-  saem inteiros enquanto ele existir, mesmo com `"valores": "mascarados"`. Depois que o arquivo conferido também é
-  apagado, `exemplos` vem vazio: nenhum telefone ou e-mail inteiro sai.
+- **`valores` fala só dos `problemas`.** `problemas[].valor` (e `duplicadas`, `contato`) traz a célula como está na
+  planilha, lida do anexo das linhas com problema; só as linhas da página são lidas dele. `corrigido` vem do anexo
+  dos consertos. Depois que os dois anexos são apagados (7 dias da criação da importação) a resposta vem com
+  `"valores": "mascarados"`: `valor` é a máscara que a linha guarda (`raw_phone_masked`, `email_masked`), `outraLinha`
+  vem `null`, `duplicadas` vem vazia, as linhas consertadas voltam a `aberto` e o conserto responde
+  `planilha_apagada`. Sem o anexo, a fórmula só é localizada no nome e na empresa, que a linha guarda inteiros; a linha
+  que ficou de fora só por fórmula no telefone ou no e-mail aparece como `nome`, sem `motivo`. Leitura sem linha com
+  problema responde `inteiros`.
+- **`exemplos` não depende de `valores`.** Sai do começo do arquivo conferido (30 dias), lido por registro, e vem
+  inteiro enquanto ele existir. Depois que ele também é apagado, `exemplos` vem vazio e o `POST trazer` responde
+  `nada_para_trazer`.
 - **O nome é a exceção.** `problemas[].nome` sai inteiro com ou sem arquivo, para quem passou em `import?`: a leitura
   de planilhas já guarda o nome de cada linha (`campaign_import_rows.raw_name`), como em Públicos e em Importar
   contatos.
@@ -159,6 +450,7 @@ enquanto o arquivo de onde saem existe. Nada disso é gravado a mais. São dois 
 | idem com `undo_status` `processing` | `desfazendo` |
 | idem com `undo_status` `completed` | `desfeito` |
 | `failed` com `import_started_at` | `falhou` (`pode_tentar` = `import_resumable?`) |
+| `failed` com `validation_summary.import_error` = `fechamento` | `falhou` com `pode_tentar` (falso se a conferência venceu): o fechamento da conferência desistiu |
 | o resto (rascunhos, `failed` sem gravação começada) | fora do histórico |
 
 `porcentagem` = linhas `imported` + `import_failed` sobre `valid_rows`; lista que acabou responde 100.

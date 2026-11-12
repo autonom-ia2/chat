@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# #2896 — os valores inteiros de uma planilha de "Trazer minha lista", lidos na hora: só as linhas pedidas da planilha
-# original (7 dias) e os exemplos do arquivo conferido (30 dias). Sem o arquivo, nada inteiro sai daqui.
+# #2896 — os exemplos de uma planilha de "Trazer minha lista", lidos na hora do arquivo conferido (30 dias). Sem o arquivo
+# não há exemplo. As linhas com problema têm arquivo próprio: spec/services/contact_imports/trazer/linhas_com_problema_spec.rb.
 RSpec.describe Relacionamentos::Trazer::LinhasDaPlanilha, :aggregate_failures do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: :administrator) }
@@ -14,76 +14,50 @@ RSpec.describe Relacionamentos::Trazer::LinhasDaPlanilha, :aggregate_failures do
     importacao.reload
   end
 
-  describe '#ler' do
-    it 'devolve só as linhas pedidas, pelo número que elas têm na planilha' do
-      linhas = described_class.new(lida).ler([4, 2])
-
-      expect(linhas).to eq(2 => ['Ana Albuquerino', '11987650001', 'ana@exemplo.com.br'], 4 => ['Carla', '123', ''])
-    end
-
-    it 'deixa o bloco pedir mais linhas da mesma leitura' do
-      planilha_lida = described_class.new(lida)
-
-      linhas = planilha_lida.ler([4]) do |achadas|
-        expect(achadas.keys).to eq([4])
-        [3, 4, nil]
-      end
-
-      expect(linhas.keys).to contain_exactly(3, 4)
-      expect(linhas[3]).to eq(['João Brandolim', '11987650002', ''])
-    end
-
-    it 'para na última linha pedida: o resto da planilha nem é lido' do
-      importacao = lida
-      quebrada = "#{planilha}Davi;\"aspa que nunca fecha;\n"
-      importacao.original_file.attach(io: StringIO.new(quebrada), filename: 'contatos.csv', content_type: 'text/csv')
-
-      expect(described_class.new(importacao).ler([2])).to eq(2 => ['Ana Albuquerino', '11987650001', 'ana@exemplo.com.br'])
-      expect { described_class.new(importacao).ler([5]) }.to raise_error(CSV::MalformedCSVError)
-    end
-
-    it 'lê a planilha que não veio em UTF-8 como a leitura a leu' do
-      importacao = lida(planilha.encode(Encoding::Windows_1252))
-
-      expect(importacao.campaign_import_rows.find_by!(row_number: 3).raw_name).to eq('João Brandolim')
-      expect(described_class.new(importacao).ler([3])).to eq(3 => ['João Brandolim', '11987650002', ''])
-    end
-
-    it 'lê as linhas pedidas de um XLSX' do
-      xlsx = build_xlsx([%w[Nome Celular], ['Ana Albuquerino', '11987650001'], ['João Brandolim', '11987650002'], %w[Carla 123]])
-      importacao = lida(xlsx, filename: 'contatos.xlsx',
-                              content_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-      expect(importacao).to have_attributes(status: 'ready_to_confirm', valid_rows: 2, invalid_rows: 1)
-      expect(described_class.new(importacao).ler([4, 3])).to eq(3 => ['João Brandolim', '11987650002'], 4 => %w[Carla 123])
-    end
-
-    it 'não abre arquivo nenhum quando nenhuma linha é pedida' do
-      importacao = lida
-      allow(importacao.original_file).to receive(:download).and_call_original
-
-      expect(described_class.new(importacao).ler([])).to eq({})
-      expect(importacao.original_file).not_to have_received(:download)
-    end
-
-    it 'não tem o que devolver depois que a planilha original foi apagada' do
-      importacao = lida
-      importacao.original_file.purge
-      planilha_lida = described_class.new(importacao)
-
-      expect(planilha_lida).not_to be_inteira
-      expect(planilha_lida.ler([2, 4])).to eq({})
-    end
-  end
-
   describe '#exemplos' do
     it 'traz as primeiras pessoas aprovadas, com o telefone como vai ser gravado' do
       expect(described_class.new(lida).exemplos).to eq(
         [
-          { nome: 'Ana Albuquerino', telefone: '+5511987650001', email: 'ana@exemplo.com.br', empresa: '', cliente: false },
-          { nome: 'João Brandolim', telefone: '+5511987650002', email: '', empresa: '', cliente: false }
+          { linha: 2, nome: 'Ana Albuquerino', telefone: '+5511987650001', email: 'ana@exemplo.com.br', empresa: '' },
+          { linha: 3, nome: 'João Brandolim', telefone: '+5511987650002', email: '', empresa: '' }
         ]
       )
+    end
+
+    it 'lê por registro: a quebra de linha dentro de uma célula não corta o exemplo' do
+      importacao = lida
+      # O validador grava o nome e a empresa numa linha só; o leitor dos exemplos não depende disso.
+      texto = CSV.generate do |csv|
+        csv << CampaignImports::AudienceValidator::AUDIENCE_NORMALIZED_HEADERS
+        csv << [2, "Ana\nAlbuquerino", "'+5511987650001", 'hash', '', '', "Padaria\nBom Dia", 0]
+        (3..6).each { |numero| csv << [numero, "Pessoa #{numero}", "'+551198765000#{numero}", 'hash', '', '', '', 0] }
+      end
+      importacao.normalized_csv.attach(io: StringIO.new(texto), filename: 'conferido.csv', content_type: 'text/csv')
+
+      exemplos = described_class.new(importacao.reload).exemplos
+
+      expect(exemplos.pluck(:linha)).to eq([2, 3, 4])
+      expect(exemplos.first).to include(nome: "Ana\nAlbuquerino", telefone: '+5511987650001', empresa: "Padaria\nBom Dia")
+    end
+
+    it 'só mostra o registro que veio inteiro no trecho lido do arquivo' do
+      importacao = lida
+      # O trecho acaba no meio do telefone da segunda pessoa.
+      stub_const("#{described_class}::COMECO_DO_ARQUIVO", importacao.normalized_csv.download.index('+5511987650002') + 5)
+
+      expect(described_class.new(importacao).exemplos.pluck(:linha, :telefone)).to eq([[2, '+5511987650001']])
+    end
+
+    # B6: o trecho que não fecha como CSV devolve o que foi lido e deixa rastro no log, sem nada do conteúdo.
+    it 'devolve os registros lidos e registra no log quando o trecho não fecha como CSV' do
+      importacao = lida
+      inteiro = importacao.normalized_csv.download.force_encoding(Encoding::UTF_8).lines.first(2).join
+      importacao.normalized_csv.attach(io: StringIO.new("#{inteiro}3,\"Bruno sem fechar\n"), filename: 'normalized.csv', content_type: 'text/csv')
+      allow(Rails.logger).to receive(:warn)
+
+      expect(described_class.new(importacao.reload).exemplos.pluck(:linha)).to eq([2])
+      aviso = "[Relacionamentos::Trazer::LinhasDaPlanilha] import_id=#{importacao.id} CSV::MalformedCSVError"
+      expect(Rails.logger).to have_received(:warn).with(aviso)
     end
 
     it 'continua trazendo os exemplos depois que só a planilha original foi apagada' do

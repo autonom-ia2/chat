@@ -231,17 +231,22 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
           { 'indice' => 3, 'nome' => 'Empresa', 'destino' => 'empresa', 'duvidosa' => true },
           { 'indice' => 4, 'nome' => 'Situação', 'destino' => 'informacao', 'campo' => { 'nome' => 'Situação', 'para_que_serve' => '' } }
         ],
-        'perguntas' => [], 'respostas' => {},
-        'resumo' => { 'total' => 6, 'novas' => 1, 'completadas' => 1, 'comProblema' => 4 },
+        # A planilha tem coluna de empresa, mas a conta não tem Empresas ligada.
+        'tem_empresa' => false,
+        'perguntas' => [{ 'id' => 'clientes' }, { 'id' => 'telefone', 'coluna' => 'Celular', 'indice' => 1 }], 'respostas' => {},
+        'resumo' => { 'total' => 6, 'novas' => 1, 'completadas' => 1, 'comProblema' => 4, 'juntadas' => 0, 'entram' => 2 },
         'exemplos' => [
           { 'nome' => 'Ana Albuquerino', 'telefone' => '+5511987650001', 'email' => 'ana.albuquerino@exemplo.com.br',
             'empresa' => 'Padaria Bom Dia', 'cliente' => false },
           { 'nome' => 'Bruno Brandolim', 'telefone' => '+5511987650002', 'email' => '', 'empresa' => '', 'cliente' => false }
         ],
         'problemas' => [
-          { 'linha' => 4, 'tipo' => 'telefone', 'nome' => 'Carla Carvalhedo', 'valor' => '(11) 2345-678', 'estado' => 'aberto' },
-          { 'linha' => 5, 'tipo' => 'email', 'nome' => 'Davi Dornelino', 'valor' => 'davi.dornelino.exemplo.com.br', 'estado' => 'aberto' },
-          { 'linha' => 6, 'tipo' => 'sem_contato', 'nome' => 'Elisa Esteveira', 'valor' => '', 'estado' => 'aberto' },
+          { 'linha' => 4, 'tipo' => 'telefone', 'nome' => 'Carla Carvalhedo', 'valor' => '(11) 2345-678', 'estado' => 'aberto',
+            'motivo' => 'invalid_brazilian_mobile_number' },
+          { 'linha' => 5, 'tipo' => 'email', 'nome' => 'Davi Dornelino', 'valor' => 'davi.dornelino.exemplo.com.br', 'estado' => 'aberto',
+            'motivo' => 'invalid_email' },
+          { 'linha' => 6, 'tipo' => 'sem_contato', 'nome' => 'Elisa Esteveira', 'valor' => '', 'estado' => 'aberto', 'motivo' => 'missing_contact' },
+          # A linha repetida não tem motivo em código: a chave não vem.
           { 'linha' => 7, 'tipo' => 'duplicada', 'nome' => 'Ana Repetida', 'valor' => '11987650001', 'estado' => 'aberto', 'outraLinha' => 2,
             'duplicadas' => [{ 'linha' => 2, 'telefone' => '11987650001', 'email' => 'ana.albuquerino@exemplo.com.br' },
                              { 'linha' => 7, 'telefone' => '11987650001', 'email' => '' }] }
@@ -260,9 +265,10 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect(guardado).not_to include('11987650001', '11987650002', 'ana.albuquerino', '2345-678', '112345678', 'davi.dornelino')
     end
 
-    it 'não entrega telefone nem e-mail inteiro quando os dois arquivos já foram apagados; o nome continua' do
+    it 'não entrega telefone nem e-mail inteiro quando os arquivos já foram apagados; o nome continua' do
       importacao = ler_planilha
       importacao.original_file.purge
+      importacao.linhas_com_problema.purge
       importacao.normalized_csv.purge
 
       ler(importacao)
@@ -285,9 +291,37 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       end
     end
 
-    it 'devolve só as máscaras quando a planilha original já foi apagada' do
+    it 'lê os valores inteiros do arquivo das linhas com problema, sem baixar a planilha original' do
+      importacao = ler_planilha
+      original = importacao.original_file.blob.key
+      %i[download download_chunk].each do |leitura|
+        allow(ActiveStorage::Blob.service).to receive(leitura).and_wrap_original do |metodo, chave, *resto, &bloco|
+          raise 'a planilha original foi baixada' if chave == original
+
+          metodo.call(chave, *resto, &bloco)
+        end
+      end
+
+      ler(importacao)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('valores' => 'inteiros', 'problemas_total' => 4)
+      expect(response.parsed_body['problemas'].pluck('valor')).to eq(['(11) 2345-678', 'davi.dornelino.exemplo.com.br', '', '11987650001'])
+    end
+
+    it 'continua com os valores inteiros depois que só a planilha original foi apagada' do
       importacao = ler_planilha
       importacao.original_file.purge
+
+      ler(importacao)
+
+      expect(response.parsed_body).to include('valores' => 'inteiros')
+      expect(response.parsed_body['problemas'].first).to include('linha' => 4, 'valor' => '(11) 2345-678')
+    end
+
+    it 'devolve só as máscaras quando o arquivo das linhas com problema já foi apagado' do
+      importacao = ler_planilha
+      importacao.linhas_com_problema.purge
 
       ler(importacao)
 
@@ -422,7 +456,7 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect { trocar(importacao, 4, 'nao_guardar') }.not_to have_enqueued_job(CampaignImports::ValidateJob)
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.keys).to contain_exactly('id', 'situacao', 'colunas')
+      expect(response.parsed_body.keys).to include('id', 'situacao', 'colunas', 'tem_empresa', 'perguntas', 'respostas', 'resumo', 'problemas')
       expect(response.parsed_body).to include('id' => importacao.id, 'situacao' => 'pronta')
       expect(response.parsed_body['colunas'].last).to eq('indice' => 4, 'nome' => 'Situação', 'destino' => 'nao_guardar')
       expect(importacao.reload).to be_ready_to_confirm
@@ -440,18 +474,21 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq('id' => importacao.id, 'situacao' => 'lendo')
       expect(importacao.reload).to be_validating
-      expect(importacao.options['trazer']).to eq('destinos' => {})
+      # Enquanto a planilha é lida de novo, a conferência de antes fica guardada, para desfazer se a leitura falhar.
+      expect(importacao.options['trazer'].except('anterior')).to eq('destinos' => {})
+      expect(importacao.options['trazer']['anterior']['trazer']).to eq('destinos' => { '4' => 'nao_guardar' })
 
       perform_enqueued_jobs(only: CampaignImports::ValidateJob)
       ler(importacao)
 
       expect(importacao.reload).to be_ready_to_confirm
+      expect(importacao.options['trazer']).to eq('destinos' => {})
       expect(importacao.campaign_import_rows.order(:row_number).first.extra_values).to eq('Situação' => 'ativa')
       expect(response.parsed_body['colunas'].last)
         .to eq('indice' => 4, 'nome' => 'Situação', 'destino' => 'informacao', 'campo' => { 'nome' => 'Situação', 'para_que_serve' => '' })
     end
 
-    it 'recusa a coluna que a planilha não tem e o destino que esta fatia não conhece' do
+    it 'recusa a coluna que a planilha não tem e o destino que não existe' do
       importacao = ler_planilha
 
       %w[5 -1 abc].each do |indice|
@@ -461,7 +498,7 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
         expect(response.parsed_body).to eq('error' => 'coluna_desconhecida')
       end
 
-      ['cidade', 'qualquer', '', nil].each do |destino|
+      ['qualquer', 'cliente_desde', '', nil].each do |destino|
         trocar(importacao, 4, destino)
 
         expect(response).to have_http_status(:unprocessable_entity), destino.inspect

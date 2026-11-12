@@ -1,5 +1,6 @@
-# "Trazer minha lista" (#2896): enviar a planilha e ler o que o sistema achou nela. A planilha é guardada como importação
-# de contatos com a marca options['trazer'] e lida em segundo plano; a tela pergunta de novo até sair de "lendo".
+# "Trazer minha lista" (#2896): enviar a planilha, ler o que o sistema achou nela, responder às perguntas da conferência e
+# trazer. A planilha é guardada como importação de contatos com a marca options['trazer'] e lida em segundo plano; a
+# tela pergunta de novo até sair de "lendo".
 class Api::V1::Accounts::Relacionamentos::Trazer::LeiturasController < Api::V1::Accounts::Relacionamentos::Trazer::BaseController
   # GET leituras/:id?pagina=
   def show
@@ -16,6 +17,26 @@ class Api::V1::Accounts::Relacionamentos::Trazer::LeiturasController < Api::V1::
     importacao = guardar(arquivo)
     ::CampaignImports::ValidateJob.perform_later(importacao)
     render json: { id: importacao.id, situacao: 'lendo' }, status: :created
+  end
+
+  # PATCH leituras/:id/respostas  { clientes:, coluna_cliente:, telefone: }
+  def respostas
+    importacao = leituras.find(params[:id])
+    resposta = ::Relacionamentos::Trazer::Responder.new(importacao, params.permit(:clientes, :coluna_cliente, :telefone).to_h).call
+    return recusar_com(resposta.erro, resposta.motivo) if resposta.erro
+    return render json: ::Relacionamentos::Trazer::Leitura.new(importacao).call unless resposta.revalida
+
+    ::CampaignImports::ValidateJob.perform_later(importacao)
+    render json: { id: importacao.id, situacao: 'lendo' }
+  end
+
+  # POST leituras/:id/trazer — confere e põe o fechamento da conferência na fila. O segundo clique responde o mesmo.
+  def trazer
+    importacao = marcadas.find(params[:id])
+    resultado = ::Relacionamentos::Trazer::Trazer.new(importacao).call
+    return recusar_com(resultado.erro) if resultado.erro
+
+    render json: { trazidaId: importacao.id }
   end
 
   private

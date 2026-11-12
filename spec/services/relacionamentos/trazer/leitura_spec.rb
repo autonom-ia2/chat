@@ -42,8 +42,8 @@ RSpec.describe Relacionamentos::Trazer::Leitura, :aggregate_failures do
 
     expect(problemas.first(2)).to eq(
       [
-        { linha: 6, tipo: 'nome', nome: '=SOMA(A1)', valor: '=SOMA(A1)', estado: 'aberto' },
-        { linha: 7, tipo: 'telefone', nome: 'Fabio Ferreirinho', valor: '=1+1', estado: 'aberto' }
+        { linha: 6, tipo: 'nome', nome: '=SOMA(A1)', valor: '=SOMA(A1)', estado: 'aberto', contato: '11987650005', motivo: 'formula_detected' },
+        { linha: 7, tipo: 'telefone', nome: 'Fabio Ferreirinho', valor: '=1+1', estado: 'aberto', motivo: 'formula_detected' }
       ]
     )
   end
@@ -78,15 +78,14 @@ RSpec.describe Relacionamentos::Trazer::Leitura, :aggregate_failures do
     end
   end
 
-  it 'não abre a planilha original quando nenhuma linha da página tem problema' do
+  it 'diz que os valores estão inteiros, sem arquivo de problemas, quando nenhuma linha tem problema' do
     importacao = lida("Nome;Celular\nAna Albuquerino;11987650001\n")
-    allow(importacao.original_file).to receive(:download).and_call_original
 
     pronta = leitura(importacao)
 
+    expect(importacao.linhas_com_problema).not_to be_attached
     expect(pronta).to include(situacao: 'pronta', valores: 'inteiros', problemas: [], problemas_total: 0, pagina: 1)
-    expect(pronta[:resumo]).to eq(total: 1, novas: 1, completadas: 0, comProblema: 0)
-    expect(importacao.original_file).not_to have_received(:download)
+    expect(pronta[:resumo]).to eq(total: 1, novas: 1, completadas: 0, comProblema: 0, juntadas: 0, entram: 1)
   end
 
   it 'fica sem exemplos, sem quebrar, quando o arquivo conferido já foi apagado' do
@@ -96,12 +95,14 @@ RSpec.describe Relacionamentos::Trazer::Leitura, :aggregate_failures do
     expect(leitura(importacao)).to include(situacao: 'pronta', valores: 'inteiros', exemplos: [])
   end
 
-  it 'abre a planilha original uma vez só quando a página não tem linha repetida' do
+  it 'lê as linhas com problema do arquivo delas, uma vez só por página, e nunca da planilha original' do
     importacao = lida("Nome;Celular\nAna Albuquerino;11987650001\nBruno Brandolim;123\n")
     allow(importacao.original_file).to receive(:download).and_call_original
+    allow(importacao.linhas_com_problema.blob).to receive(:open).and_call_original
 
     expect(leitura(importacao)[:problemas].pluck(:linha, :valor)).to eq([[3, '123']])
-    expect(importacao.original_file).to have_received(:download).once
+    expect(importacao.original_file).not_to have_received(:download)
+    expect(importacao.linhas_com_problema.blob).to have_received(:open).once
   end
 
   it 'diz "leitura" para a planilha que o sistema não conseguiu ler por outro motivo' do

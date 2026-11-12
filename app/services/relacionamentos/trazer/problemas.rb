@@ -1,36 +1,63 @@
-require 'digest'
-
 # As linhas da planilha que precisam da pessoa (#2896), uma página por vez, no formato da tela: a linha, o tipo do
 # problema em palavras da tela, o nome e o valor que está errado.
 #
-# O tipo sai dos motivos que a leitura gravou na linha. O valor inteiro sai da planilha original, na hora, e só as
-# linhas desta página (e a outra linha de cada repetida) são lidas dela; depois que ela é apagada vai a máscara que a
-# linha guarda. O nome é a exceção: a leitura já o guarda inteiro na linha, e ele sai inteiro com ou sem a planilha.
-# Nesta fatia a linha repetida é a que a leitura de hoje recusa (o segundo telefone ou e-mail igual): a outra linha é
-# achada pelo mesmo hash que a leitura gravou na linha que ficou.
+# Tudo sai de dois arquivos pequenos da conferência, lidos uma vez por resposta (quem já os tem na mão passa os dois
+# leitores: `arquivo` e `consertos`); a planilha original e o arquivo conferido nunca são abertos aqui:
+# - o valor inteiro vem do arquivo das linhas com problema (ContactImports::Trazer::LinhasComProblema). Depois que ele
+#   é apagado vai a máscara que a linha guarda. O nome é a exceção: a leitura já o guarda inteiro na linha, e ele sai
+#   inteiro com ou sem o arquivo. A linha repetida traz a outra linha da mesma pessoa, que a leitura guardou junto
+#   dela. A linha sem nome traz o contato dela (`contato`);
+# - o que a pessoa consertou vem do arquivo dos consertos (ContactImports::Trazer::Consertos).
+#
+# O tipo, o motivo e o campo saem de Relacionamentos::Trazer::Pendencia: dos motivos que a leitura gravou na linha e das
+# células dela como estão agora. A linha aberta diz o `motivo` em código; a que tem o erro num campo que a tela não
+# conserta (a fórmula na empresa) é direto do tipo `formula`, com o `campo` e sem `valor`, tenha ou não outro problema.
+# Na linha em que a pessoa já consertou alguma coisa:
+# - o conserto resolveu a linha inteira: `guardado`, com o tipo do que foi consertado por último e o valor como vai ser
+#   gravado (`corrigido`) ou a linha com que a pessoa ficou (`ficar_com`);
+# - ainda sobrou problema: `aberto`, com o tipo e o motivo do que sobrou (a linha sem nome que teve o telefone
+#   consertado).
+# A linha que a pessoa deixou de fora (ContactImports::Trazer::Conferencia) é `deixado`.
 class Relacionamentos::Trazer::Problemas
-  REPETIDA = { 'duplicate_phone_in_file' => 'phone', 'duplicate_email_in_file' => 'email' }.freeze
-  # O tipo de cada motivo, na ordem em que valem: o primeiro que a linha tiver decide.
-  TIPO_DOS_MOTIVOS = {
-    'duplicada' => REPETIDA.keys, 'sem_contato' => %w[missing_contact],
-    'telefone' => %w[blank_phone_number formula_phone_number invalid_brazilian_mobile_number], 'email' => %w[blank_email invalid_email]
-  }.freeze
+  Pendencia = Relacionamentos::Trazer::Pendencia
+  REPETIDA = Pendencia::REPETIDA
+  ALVOS = CampaignImports::SpreadsheetReader::TARGETS
   ALVO_DO_TIPO = { 'telefone' => 'phone', 'email' => 'email', 'nome' => 'name' }.freeze
-  # A linha tem contato que vale e ficou de fora por uma célula que parece fórmula: o tipo é o da célula.
-  TIPO_DA_FORMULA = { 'phone' => 'telefone', 'email' => 'email' }.freeze
-  NOME = 'nome'.freeze
+  NOME = Pendencia::NOME
+  CONTATOS = %w[phone email].freeze
+  FICAR_COM = ContactImports::Trazer::Conserto::FICAR_COM
+  # O que a pessoa consertou por último => o tipo da linha guardada e onde está o valor na linha conferida.
+  TIPO_DO_CAMPO = { 'telefone' => 'telefone', 'email' => 'email', 'nome' => NOME, 'contato' => 'sem_contato', FICAR_COM => 'duplicada' }.freeze
+  CORRIGIDO = { 'telefone' => %w[phone_number], 'email' => %w[email], 'nome' => %w[name], 'contato' => %w[phone_number email] }.freeze
+  GUARDADO = 'guardado'.freeze
+  ABERTO = 'aberto'.freeze
   MASCARAS = { 'phone' => :raw_phone_masked, 'email' => :email_masked, 'name' => :raw_name }.freeze
+  # O que a linha no banco também guarda inteiro: serve quando o arquivo das linhas com problema já foi apagado.
+  NA_LINHA = { 'name' => :raw_name, 'company' => :company_name }.freeze
 
-  def initialize(importacao, planilha, pagina:, por_pagina:)
+  # arquivo: ContactImports::Trazer::LinhasComProblema; consertos: ContactImports::Trazer::Consertos. Quem não passa
+  # ganha um de cada.
+  def initialize(importacao, pagina:, por_pagina:, arquivo: nil, consertos: nil)
     @importacao = importacao
-    @planilha = planilha
     @pagina = pagina
     @por_pagina = por_pagina
+    @arquivo = arquivo || ContactImports::Trazer::LinhasComProblema.new(importacao)
+    @arquivo_dos_consertos = consertos || ContactImports::Trazer::Consertos.new(importacao)
   end
 
   def call
-    abrir_planilha
     linhas.map { |linha| problema(linha) }
+  end
+
+  # Uma linha só, fora da página: a resposta de quem acabou de mexer nela (Relacionamentos::Trazer::MudarLinha).
+  def da_linha(linha)
+    @linhas = [linha]
+    problema(linha)
+  end
+
+  # Sem linha com problema não há valor para mascarar.
+  def inteiros?
+    @importacao.invalid_rows.zero? || arquivo.existe?
   end
 
   private
@@ -40,93 +67,108 @@ class Relacionamentos::Trazer::Problemas
                            .offset((@pagina - 1) * @por_pagina).limit(@por_pagina).to_a
   end
 
-  # As células das linhas da página e, numa leitura só da planilha, as da outra linha de cada repetida.
-  def abrir_planilha
-    @celulas = {}
-    @celulas = @planilha.ler(linhas.map(&:row_number)) do |da_pagina|
-      @celulas = da_pagina
-      primeiras.values
-    end
-  end
-
   def problema(linha)
-    tipo = tipo_de(linha)
-    item = { linha: linha.row_number, tipo: tipo, nome: linha.raw_name.to_s, valor: valor(linha, alvo_do_valor(linha, tipo)), estado: 'aberto' }
-    tipo == 'duplicada' ? item.merge(repetida(linha)) : item
+    feito = consertos[linha.row_number]
+    estado = estado_de(linha.row_number, feito)
+    pendencia = estado == GUARDADO ? Pendencia::Resultado.new(tipo: TIPO_DO_CAMPO.fetch(feito['campo'])) : pendencia_de(linha, feito)
+    item = { linha: linha.row_number, tipo: pendencia.tipo, nome: linha.raw_name.to_s, estado: estado }.merge(do_tipo(linha, pendencia))
+    item = item.merge(motivo: pendencia.motivo) if estado == ABERTO && pendencia.motivo
+    estado == GUARDADO ? item.merge(guardado(linha, feito)) : item
   end
 
-  def tipo_de(linha)
-    motivos = Array(linha.error_messages)
-    tipo, = TIPO_DOS_MOTIVOS.find { |_tipo, codigos| motivos.intersect?(codigos) }
-    tipo || TIPO_DA_FORMULA.find { |alvo, _tipo| formula?(linha, alvo) }&.last || NOME
+  def estado_de(numero, feito)
+    return 'deixado' if deixadas.include?(numero)
+
+    feito && feito['conferida'] ? GUARDADO : ABERTO
   end
 
-  def formula?(linha, alvo)
-    CampaignImports::CsvSanitizer.formula_like?(celula(linha.row_number, alvo), allow_phone_plus: alvo == 'phone')
+  # O que falta na linha: do que sobrou do último conserto ou, sem conserto, dos motivos que a leitura gravou.
+  def pendencia_de(linha, feito)
+    motivos = feito ? [feito['sobrou']].compact : Array(linha.error_messages)
+    Pendencia.new(motivos, celulas_de_agora(linha), com_nome: com_nome?).call
+  end
+
+  # O que cada tipo mostra além do comum: o valor que deu problema ou, no campo que a tela não conserta, o campo.
+  def do_tipo(linha, pendencia)
+    return { campo: pendencia.campo } if pendencia.campo
+
+    tipo = pendencia.tipo
+    item = { valor: valor(linha, alvo_do_valor(linha, tipo)) }
+    item = item.merge(repetida(linha)) if tipo == 'duplicada'
+    tipo == NOME ? item.merge(contato: contato(linha)) : item
+  end
+
+  # O que a pessoa guardou na linha: o valor como vai ser gravado, ou a linha com que ficou.
+  def guardado(linha, feito)
+    return { ficar_com: linha.row_number } if feito['campo'] == FICAR_COM
+
+    { corrigido: CORRIGIDO.fetch(feito['campo']).filter_map { |coluna| feito['conferida'][coluna].presence }.first.to_s }
   end
 
   def alvo_do_valor(linha, tipo)
-    tipo == 'duplicada' ? alvo_repetido(linha) : ALVO_DO_TIPO[tipo]
+    tipo == 'duplicada' ? REPETIDA.values_at(*linha.error_messages).compact.first : ALVO_DO_TIPO[tipo]
   end
 
-  def alvo_repetido(linha)
-    REPETIDA.values_at(*linha.error_messages).compact.first
-  end
-
+  # O valor que deu problema, como veio na planilha; sem o arquivo, a máscara que a linha guarda.
   def valor(linha, alvo)
     return '' unless alvo
-    return celula(linha.row_number, alvo) if @planilha.inteira?
+    return celula(entradas[linha.row_number], alvo) if arquivo.existe?
 
     linha.public_send(MASCARAS.fetch(alvo)).to_s
   end
 
-  def celula(numero_da_linha, alvo)
-    indice = colunas.alvos[alvo]
-    indice ? @celulas[numero_da_linha]&.at(indice).to_s.strip : ''
+  # A linha sem nome mostra por onde a pessoa é achada: o telefone ou, sem ele, o e-mail, já com o que foi consertado.
+  def contato(linha)
+    CONTATOS.filter_map { |alvo| consertos.dig(linha.row_number, 'valores', alvo).presence || valor(linha, alvo).presence }.first.to_s
+  end
+
+  # As células da linha com o que a pessoa já consertou por cima. Sem o arquivo das linhas com problema, só o que a
+  # linha no banco guarda inteiro: o nome e a empresa.
+  def celulas_de_agora(linha)
+    consertadas = consertos.dig(linha.row_number, 'valores').to_h
+    ALVOS.index_with { |alvo| consertadas[alvo] || celula_inteira(linha, alvo) }
+  end
+
+  def celula_inteira(linha, alvo)
+    return celula(entradas[linha.row_number], alvo) if arquivo.existe?
+
+    NA_LINHA.key?(alvo) ? linha.public_send(NA_LINHA.fetch(alvo)).to_s : ''
+  end
+
+  # Sem coluna de nome na planilha, a linha sem nome não é problema.
+  def com_nome?
+    return @com_nome if defined?(@com_nome)
+
+    @com_nome = !Relacionamentos::Trazer::Colunas.new(@importacao).alvos['name'].nil?
+  end
+
+  def celula(entrada, alvo)
+    entrada.to_h.dig('celulas', alvo).to_s.strip
   end
 
   def repetida(linha)
-    outra = primeiras[hash_repetido(linha)]
-    { outraLinha: outra, duplicadas: outra ? [outra, linha.row_number].map { |numero| contatos_da_linha(numero) } : [] }
+    entrada = entradas[linha.row_number]
+    outra = entrada && entrada['outra']
+    { outraLinha: outra && outra['linha'], duplicadas: outra ? [outra, entrada].map { |uma| contatos_da_linha(uma) } : [] }
   end
 
-  def contatos_da_linha(numero)
-    { linha: numero, telefone: celula(numero, 'phone'), email: celula(numero, 'email') }
+  def contatos_da_linha(entrada)
+    { linha: entrada['linha'], telefone: celula(entrada, 'phone'), email: celula(entrada, 'email') }
   end
 
-  # { hash do telefone ou do e-mail => a linha aprovada que o tem }, das repetidas desta página, numa consulta só.
-  def primeiras
-    @primeiras ||= begin
-      hashes = linhas.filter_map { |linha| hash_repetido(linha) }
-      hashes.empty? ? {} : linhas_aprovadas_com(hashes)
-    end
+  # { número da linha => o que o arquivo guarda dela }, das linhas desta página, numa leitura só do arquivo.
+  def entradas
+    @entradas ||= arquivo.ler(linhas.map(&:row_number))
   end
 
-  def linhas_aprovadas_com(hashes)
-    aprovadas = @importacao.campaign_import_rows.status_valid
-    achadas = aprovadas.where(normalized_phone_hash: hashes).or(aprovadas.where(normalized_email_hash: hashes))
-                       .order(:row_number).pluck(:normalized_phone_hash, :normalized_email_hash, :row_number)
-    achadas.each_with_object({}) do |(telefone, email, numero), por_hash|
-      [telefone, email].compact.each { |hash| por_hash[hash] ||= numero }
-    end
+  # { número da linha => o que a pessoa consertou nela }, numa leitura só do arquivo dos consertos.
+  def consertos
+    @arquivo_dos_consertos.ler
   end
 
-  # O hash que a leitura gravou na linha que ficou, refeito do valor da planilha. Sem a planilha não há como refazer.
-  def hash_repetido(linha)
-    alvo = alvo_repetido(linha)
-    texto = alvo && celula(linha.row_number, alvo)
-    return if texto.blank?
-
-    alvo == 'phone' ? leitura_de_contato.phone(texto).hash : Digest::SHA256.hexdigest(leitura_de_contato.email(texto).email)
-  rescue CampaignImports::PhoneNormalizer::Error, EmailCampaigns::EmailNormalizer::Error
-    nil
+  def deixadas
+    @deixadas ||= ContactImports::Trazer::Conferencia.new(@importacao).deixadas
   end
 
-  def leitura_de_contato
-    @leitura_de_contato ||= CampaignImports::ContactReading.for(@importacao.account).with_legacy_mobiles(true)
-  end
-
-  def colunas
-    @colunas ||= Relacionamentos::Trazer::Colunas.new(@importacao)
-  end
+  attr_reader :arquivo
 end

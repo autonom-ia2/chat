@@ -30,7 +30,7 @@ class Relacionamentos::Trazer::Historico
       id: lista.id, arquivo: lista.source_filename, quando: (lista.confirmed_at || lista.created_at).utc.iso8601, quem: lista.user&.name,
       total: lista.valid_rows, situacao: situacao,
       porcentagem: Relacionamentos::Trazer::Situacao.porcentagem(situacao, linhas_que_passaram.fetch(lista.id, 0), lista.valid_rows),
-      pode_tentar: lista.import_resumable?
+      pode_tentar: Relacionamentos::Trazer::Situacao.pode_tentar?(lista)
     }
   end
 

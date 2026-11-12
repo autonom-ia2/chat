@@ -118,4 +118,105 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
         .to eq([{ 'plano' => 'Ouro', 'segredo' => 'abc' }, { 'plano' => 'Prata', 'segredo' => 'def' }])
     end
   end
+
+  describe 'DDD numa coluna separada' do
+    it 'junta o DDD ao número antes de ler, e a coluna do DDD não vira informação' do
+      campaign_import = lida("Nome,DDD,Celular,Idade\nAna,11,98765-0001,21\nBia,(21),987650002,35\nCaio,20,987650003,40\n")
+
+      expect(campaign_import).to have_attributes(status: 'ready_to_confirm', valid_rows: 2, invalid_rows: 1)
+      expect(campaign_import.schema_resolution['columns'].pluck('header')).to eq(%w[Nome Celular Idade])
+      expect(campaign_import.extra_columns).to eq(['Idade'])
+      expect(campaign_import.validation_summary).to include('ddd_juntado' => 2)
+      expect(CampaignImports::NormalizedRows.new(campaign_import).perform.pluck(:phone_number)).to eq(%w[+5511987650001 +5521987650002])
+      # O DDD 20 não existe: a linha segue sem DDD e vira problema de telefone.
+      expect(campaign_import.campaign_import_rows.find_by!(row_number: 4).error_messages).to eq(['invalid_brazilian_mobile_number'])
+    end
+
+    it 'sem a marca, a planilha é lida como sempre: o DDD continua numa coluna à parte' do
+      campaign_import = importacao("Nome,DDD,Celular\nAna,11,98765-0001\n", trazer: nil)
+      validate_contact_import(campaign_import, { 'name' => 0, 'phone' => 2, 'email' => nil, 'company' => nil })
+
+      expect(campaign_import).to be_validation_failed
+      expect(campaign_import.extra_columns).to eq(['DDD'])
+    end
+  end
+
+  describe 'a mesma pessoa em várias linhas' do
+    let(:repetidas) do
+      <<~CSV
+        Nome,Celular,Email,Empresa,Plano
+        Ana Albuquerino,11987650001,,,Ouro
+        ana albuquerino,(11) 98765-0001,ANA@exemplo.com.br,Padaria Bom Dia,Prata
+        Bia Brandolim,11987650002,bia@exemplo.com.br,,
+        Beatriz Outra,11987650009,BIA@exemplo.com.br,,
+        Ana Albuquerino,11987650007,,,
+      CSV
+    end
+
+    it 'junta numa linha só as linhas sem conflito e completa a primeira com o que só a outra tinha' do
+      campaign_import = lida(repetidas)
+
+      expect(campaign_import).to have_attributes(status: 'ready_to_confirm', total_rows: 4, valid_rows: 3, invalid_rows: 1)
+      expect(campaign_import.validation_summary).to include('mesma_pessoa' => 1)
+      expect(campaign_import.campaign_import_rows.order(:row_number).pluck(:row_number, :status, :company_name, :extra_values)).to eq(
+        [[2, 'valid', 'Padaria Bom Dia', { 'Plano' => 'Ouro' }], [4, 'valid', nil, {}], [5, 'invalid', nil, {}], [6, 'valid', nil, {}]]
+      )
+      conferidas = CampaignImports::NormalizedRows.new(campaign_import).perform.map { |linha| linha.slice(:row_number, :name, :phone_number, :email) }
+      expect(conferidas).to eq(
+        [{ row_number: 2, name: 'Ana Albuquerino', phone_number: '+5511987650001', email: 'ana@exemplo.com.br' },
+         { row_number: 4, name: 'Bia Brandolim', phone_number: '+5511987650002', email: 'bia@exemplo.com.br' },
+         # Nome igual não junta ninguém: a Ana de outro telefone é outra pessoa.
+         { row_number: 6, name: 'Ana Albuquerino', phone_number: '+5511987650007', email: nil }]
+      )
+    end
+
+    it 'com dado em conflito, a segunda linha vira problema de linha repetida e guarda as células das duas' do
+      campaign_import = lida(repetidas)
+
+      expect(campaign_import.campaign_import_rows.find_by!(row_number: 5).error_messages).to eq(['duplicate_email_in_file'])
+      gravadas = campaign_import.linhas_com_problema.download.force_encoding(Encoding::UTF_8).lines.map { |linha| JSON.parse(linha) }
+      expect(gravadas).to eq(
+        [{ 'linha' => 5, 'celulas' => { 'name' => 'Beatriz Outra', 'phone' => '11987650009', 'email' => 'BIA@exemplo.com.br', 'company' => '' },
+           'outra' => { 'linha' => 4,
+                        'celulas' => { 'name' => 'Bia Brandolim', 'phone' => '11987650002', 'email' => 'bia@exemplo.com.br', 'company' => '' } } }]
+      )
+    end
+
+    it 'grava uma pessoa só para as linhas juntadas, com os dados das duas' do
+      campaign_import = lida(repetidas)
+
+      import_contacts!(campaign_import)
+
+      expect(account.contacts.where(phone_number: '+5511987650001').sole).to have_attributes(
+        name: 'Ana Albuquerino', email: 'ana@exemplo.com.br', custom_attributes: { 'plano' => 'Ouro' }
+      )
+      expect(account.contacts.count).to eq(3)
+    end
+  end
+
+  describe 'linha sem nome' do
+    it 'vira problema de nome quando a planilha tem coluna de nome, e a linha com o mesmo contato e nome a completa' do
+      campaign_import = lida("Nome,Celular,Email\n,11987650001,\n,11987650002,\nBia Brandolim,11987650002,bia@exemplo.com.br\n")
+
+      expect(campaign_import).to have_attributes(status: 'ready_to_confirm', total_rows: 2, valid_rows: 1, invalid_rows: 1)
+      expect(campaign_import.campaign_import_rows.order(:row_number).pluck(:row_number, :status, :error_messages, :raw_name)).to eq(
+        [[2, 'invalid', ['blank_name'], ''], [3, 'valid', [], 'Bia Brandolim']]
+      )
+      problema = Relacionamentos::Trazer::Leitura.new(campaign_import).call[:problemas].sole
+      expect(problema).to eq(linha: 2, tipo: 'nome', nome: '', valor: '', estado: 'aberto', contato: '11987650001', motivo: 'blank_name')
+    end
+
+    it 'continua entrando sem nome quando a planilha não tem coluna de nome' do
+      campaign_import = lida("Celular,Email\n11987650001,\n")
+
+      expect(campaign_import).to have_attributes(status: 'ready_to_confirm', valid_rows: 1, invalid_rows: 0)
+    end
+
+    it 'sem a marca, a linha sem nome entra como sempre' do
+      campaign_import = importacao("Nome,Celular\n,11987650001\n", trazer: nil)
+      validate_contact_import(campaign_import, { 'name' => 0, 'phone' => 1, 'email' => nil, 'company' => nil })
+
+      expect(campaign_import).to have_attributes(status: 'ready_to_confirm', valid_rows: 1, invalid_rows: 0)
+    end
+  end
 end

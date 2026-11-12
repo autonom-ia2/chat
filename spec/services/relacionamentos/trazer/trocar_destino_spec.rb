@@ -39,7 +39,7 @@ RSpec.describe Relacionamentos::Trazer::TrocarDestino, :aggregate_failures do
     expect(trocar(importacao, '-1', 'telefone')).to have_attributes(erro: 'coluna_desconhecida')
     expect(trocar(importacao, 'abc', 'telefone')).to have_attributes(erro: 'coluna_desconhecida')
     expect(trocar(importacao, nil, 'telefone')).to have_attributes(erro: 'coluna_desconhecida')
-    expect(trocar(importacao, '4', 'cidade')).to have_attributes(erro: 'destino_desconhecido')
+    expect(trocar(importacao, '4', 'cliente_desde')).to have_attributes(erro: 'destino_desconhecido')
     expect(trocar(importacao, '4', nil)).to have_attributes(erro: 'destino_desconhecido')
     expect(importacao.reload).to have_attributes(status: 'ready_to_confirm', options: include('trazer' => {}))
     expect(trocar(importacao, '2', 'telefone')).to have_attributes(erro: nil, revalida: true)
@@ -117,7 +117,9 @@ RSpec.describe Relacionamentos::Trazer::TrocarDestino, :aggregate_failures do
       expect(trocar(importacao, '4', 'informacao')).to have_attributes(erro: nil, revalida: true)
 
       expect(importacao.reload).to be_validating
-      expect(importacao.options['trazer']).to eq('destinos' => {})
+      # A conferência de antes fica guardada até a leitura terminar: só índices e códigos.
+      expect(importacao.options['trazer'].except('anterior')).to eq('destinos' => {})
+      expect(importacao.options['trazer']['anterior']).to include('trazer' => { 'destinos' => { '4' => 'nao_guardar' } })
       expect(importacao.schema_resolution['manual_mapping']).to eq('name' => 0, 'phone' => 1, 'email' => nil, 'company' => nil)
       expect(valores_das_linhas(ler_de_novo(importacao))).to all(include('Segredo'))
     end
