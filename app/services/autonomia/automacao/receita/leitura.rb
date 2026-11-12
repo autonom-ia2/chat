@@ -17,7 +17,11 @@ class Autonomia::Automacao::Receita::Leitura
   # `contexto`: Receita::Contexto.
   def initialize(travessia, contexto)
     @travessia = travessia
-    @receita, @conta, @account_user, @alvo, @origem = contexto.deconstruct
+    @receita = contexto.receita
+    @conta = contexto.conta
+    @account_user = contexto.account_user
+    @alvo = contexto.alvo
+    @origem = contexto.origem
   end
 
   def problemas(id, caminho, no_gatilho: false, na_espera: false, **lugar)

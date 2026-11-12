@@ -31,6 +31,7 @@ import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
+import { rotaDoTrazer, temOndeTrazer } from '../lista/rotaDoTrazer';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
@@ -84,6 +85,11 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// "Trazer minha lista" é de quem pode importar contatos, e só aparece onde há
+// para onde levar (#2947).
+const podeTrazer = computed(
+  () => temOndeTrazer(demo) && (Boolean(demo) || permissoes.podeTrazer.value)
+);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -175,7 +181,7 @@ const avisoDaLista = computed(() =>
     : ''
 );
 
-const trazer = () => router.push({ name: 'relacionamentos_trazer' });
+const trazer = () => router.push({ name: rotaDoTrazer(demo) });
 // O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
 const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
@@ -277,6 +283,7 @@ onMounted(lista.iniciar);
             :data-relacionamentos="contaVazia ? 'vazio' : undefined"
             :resumo="lista.resumo.value"
             :aba="aba"
+            :pode-trazer="podeTrazer"
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />

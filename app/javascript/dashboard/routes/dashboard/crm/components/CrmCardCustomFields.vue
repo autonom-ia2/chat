@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { getUserPermissions } from 'dashboard/helper/permissionsHelper.js';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
+import { naTela } from 'dashboard/helper/atributosNaTela';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import CampoMemoria from './CampoMemoria.vue';
@@ -85,8 +86,9 @@ const canCreateFields = computed(() => {
     'attribute_manage'
   );
 });
-const definitions = computed(
-  () => store.getters['attributes/getCardAttributes'] || []
+// #2435: o campo com "Mostrar na tela" desligado some do card; o valor fica.
+const definitions = computed(() =>
+  naTela(store.getters['attributes/getCardAttributes'])
 );
 const fields = computed(() =>
   definitions.value.map(definition => ({

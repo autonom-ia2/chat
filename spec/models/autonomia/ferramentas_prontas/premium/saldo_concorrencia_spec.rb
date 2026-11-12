@@ -27,7 +27,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Saldo do
   end
 
   def segurar_a_bigdatacorp(chegaram, libera)
-    corpo = corpo_da_bigdatacorp('ondemand_pgfn_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }]).to_json
+    corpo = corpo_da_bigdatacorp('ondemand_cnj_negative_certificate_company', 'OnlineCertificates', [{ 'BaseStatus' => 'NEGATIVA' }]).to_json
     stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return do |_pedido|
       chegaram << 1
       libera.pop
@@ -40,7 +40,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Saldo do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           tool = Autonomia::Agents::Tool.find(ferramenta.id)
-          resultados << executar_premium(tool, 'consulta' => 'divida_uniao', 'cnpj' => cnpj)['situacao']
+          resultados << executar_premium(tool, 'consulta' => 'cnj', 'cnpj' => cnpj)['situacao']
         end
       rescue StandardError => e
         resultados << "erro #{e.class}"

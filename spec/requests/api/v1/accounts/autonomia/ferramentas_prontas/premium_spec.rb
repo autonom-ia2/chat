@@ -34,13 +34,16 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     lista = fontes
 
     expect(lista.keys).to include(*premium)
-    expect(lista['certidoes_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 15, 'precos' => %w[0.06 0.15],
-                                                        'confere_documento' => true)
+    # Sem as consultas desligadas na BigDataCorp (#2946): as Certidões só com a do CNJ, o imóvel rural só com o CAR.
+    expect(lista['certidoes_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 15, 'precos' => %w[0.15],
+                                                        'confere_documento' => true, 'consultas' => 1)
     expect(lista['raio_x_empresa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09 0.12],
-                                                     'confere_documento' => true)
+                                                     'confere_documento' => true, 'consultas' => 5)
     expect(lista['historico_placa']['premium']).to eq('gratis' => 20, 'restantes' => 20, 'precos' => %w[0.09],
-                                                      'confere_documento' => false)
-    expect(lista['imovel_rural']['premium']['precos']).to eq(%w[0.15 0.23])
+                                                      'confere_documento' => false, 'consultas' => 1)
+    expect(%w[imovel_rural conferir_pessoa risco_endereco contato_empresa].map { |chave| lista[chave]['premium'].slice('precos', 'consultas') })
+      .to eq([{ 'precos' => %w[0.15], 'consultas' => 1 }, { 'precos' => %w[0.06 0.09], 'consultas' => 2 },
+              { 'precos' => %w[0.09 0.12], 'consultas' => 2 }, { 'precos' => %w[0.09], 'consultas' => 3 }])
     expect(lista['cep']).not_to have_key('premium')
     expect(response.body).not_to include('ondemand', 'bigdatacorp', 'custo')
   end
@@ -52,7 +55,7 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
 
     confere = premium.index_with { |chave| lista[chave]['premium']['confere_documento'] }
     expect(confere).to eq('certidoes_empresa' => true, 'raio_x_empresa' => true, 'conferir_pessoa' => true,
-                          'historico_placa' => false, 'risco_endereco' => false, 'imovel_rural' => true,
+                          'historico_placa' => false, 'risco_endereco' => false, 'imovel_rural' => false,
                           'contato_empresa' => true)
   end
 
@@ -85,7 +88,7 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
     let(:chamada) do
       { 'name' => 'pronta_certidoes_empresa', 'call_id' => 'c1',
-        'arguments' => { consulta: 'divida_uniao', cnpj: FerramentasPremiumHelper::CNPJ_EXEMPLO }.to_json }
+        'arguments' => { consulta: 'cnj', cnpj: FerramentasPremiumHelper::CNPJ_EXEMPLO }.to_json }
     end
 
     around { |example| com_credencial_da_bigdatacorp { example.run } }
@@ -93,7 +96,8 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     before do
       cache_em_memoria
       token_da_bigdatacorp
-      bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', [{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA' }])
+      bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates',
+                           [{ 'Origin' => 'CNJ', 'BaseStatus' => 'NEGATIVA' }])
       allow(Crm::Ai::CredentialResolver).to receive(:new)
         .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave-de-teste', source: :system }))
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
@@ -104,7 +108,7 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
     end
 
     def experimentar(**extras)
-      post "#{base}/experimentar", params: { fonte: 'certidoes_empresa', valor: 'dívida com a União da 11.222.333/0001-81', **extras },
+      post "#{base}/experimentar", params: { fonte: 'certidoes_empresa', valor: 'certidão de improbidade da 11.222.333/0001-81', **extras },
                                    headers: admin.create_new_auth_token, as: :json
       response.parsed_body
     end
@@ -120,7 +124,7 @@ RSpec.describe 'Vitrine de ferramentas prontas: Premium', type: :request do
       corpo = experimentar
 
       expect(response).to have_http_status(:accepted)
-      expect(corpo).to include('situacao' => 'consultando', 'pedido' => be_present, 'prazo_ms' => 80_000)
+      expect(corpo).to include('situacao' => 'consultando', 'pedido' => be_present, 'prazo_ms' => 147_000)
       expect(corpo['premium']).to include('restantes' => 20)
       expect(Autonomia::FerramentasProntas::ExperimentePagoJob).to have_been_enqueued.with(corpo['pedido'])
       expect(acompanhar(corpo['pedido'])).to eq('situacao' => 'consultando')

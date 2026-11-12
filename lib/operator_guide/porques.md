@@ -1263,12 +1263,12 @@
 ### gerenciar_atributos_customizados
 - titulo: Gerenciar atributos customizados
 - rota: attributes_list
-- intent: Onde crio campo customizado?; Como adiciono atributo de contato?; Como adiciono atributo de conversa?; Como edito lista de opcoes de um atributo?
+- intent: Onde crio campo customizado?; Como adiciono atributo de contato?; Como adiciono atributo de conversa?; Como edito lista de opcoes de um atributo?; Como escondo um atributo da tela?; Como mostro de novo um atributo escondido?
 - onde_fica: Sidebar > Configuracoes > Atributos customizados
 - perfil: somente `administrator`. Se o perfil nao puder, diga que ele pode ver/preencher atributos nas telas onde tiver acesso, mas criar/editar/excluir atributos customizados exige administrador.
 - pre_requisitos: definir se o atributo e de conversa ou contato antes de criar
-- passos: 1. Abra Configuracoes > Atributos customizados; 2. Escolha a aba Conversa ou Contato; 3. Clique para adicionar atributo; 4. Informe nome, chave, descricao e tipo; 5. Para tipo lista, cadastre as opcoes; para texto, use regex se precisar validar; 6. Salve.
-- gotchas: tipos disponiveis: texto, numero, link, data, lista e checkbox; a chave nao pode conter espacos; depois de criado, a chave e o tipo ficam travados para edicao; atributos usados no pre-chat ou como obrigatorios aparecem com badges.
+- passos: 1. Abra Configuracoes > Atributos customizados; 2. Escolha a aba Conversa ou Contato; 3. Clique para adicionar atributo; 4. Informe nome, chave, descricao e tipo; 5. Para tipo lista, cadastre as opcoes; para texto, use regex se precisar validar; 6. Deixe Mostrar na tela ligado, ou desligue se o campo e so para automacao e IA; 7. Salve.
+- gotchas: tipos disponiveis: texto, numero, link, data, lista e checkbox; a chave nao pode conter espacos; depois de criado, a chave e o tipo ficam travados para edicao; atributos usados no pre-chat ou como obrigatorios aparecem com badges; Mostrar na tela desligado tira o campo do card, do contato, da empresa e da conversa, mas o valor continua guardado, nos filtros, na API, na automacao e nas IAs, e a lista mostra o selo Fora da tela; esconder nao protege o valor, porque quem atende ainda ve pela exportacao, pelos filtros e pela API, entao nao serve para dado que a equipe nao pode ver; para mostrar de novo, edite o atributo e ligue Mostrar na tela; pela API e o campo `oculto_na_tela` (true esconde).
 - highlight: `settings-add-attribute`
 
 ### configurar_csat_da_caixa

@@ -47,6 +47,7 @@ const assento = ({
     criarCards: permissoes.podeCriarCards.value,
     etiquetar: permissoes.podeEtiquetar.value,
     apagar: permissoes.podeApagar.value,
+    trazer: permissoes.podeTrazer.value,
   };
 };
 
@@ -111,5 +112,18 @@ describe('Apagar: administrador ou a chave contact_delete', () => {
     const comFuncao = chaves => assento({ funcao: 3, chaves }).apagar;
     expect(comFuncao(['custom_role', 'contact_manage'])).toBe(false);
     expect(comFuncao(['custom_role', 'contact_delete'])).toBe(true);
+  });
+});
+
+describe('Trazer minha lista: quem pode importar contatos', () => {
+  it('administrador vê; agente sem função não', () => {
+    expect(assento({ papel: 'administrator' }).trazer).toBe(true);
+    expect(assento().trazer).toBe(false);
+  });
+
+  it('função personalizada precisa de `contact_manage`', () => {
+    const comFuncao = chaves => assento({ funcao: 3, chaves }).trazer;
+    expect(comFuncao(['contact_manage'])).toBe(true);
+    expect(comFuncao(['contact_view'])).toBe(false);
   });
 });

@@ -28,7 +28,8 @@ module Autonomia::FerramentasProntas
   # modelo no teto dela (`ResponsesClient::REQUEST_TIMEOUT`) e a janela da consulta no turno
   # (`ConsultaNoTurno::ESPERA_DO_TURNO`, 8 s). O `ResponsesClient` só confere o relógio antes de abrir as rodadas 2 e 3, e
   # nenhuma rodada normal chega perto disto; ele só pesa com a OpenAI degradada (as novas tentativas) ou numa fonte lenta
-  # no caminho síncrono (o `prazo_total` dela, até 12 s). O que limita é a rodada (três) e o prazo de cada consulta: um
+  # no caminho síncrono (o `prazo_total` dela: até 12 s nas grátis; até 122 s nas Premium lentas, #2946, que ainda cabem
+  # nos 564 s). O que limita é a rodada (três) e o prazo de cada consulta: um
   # relógio curto cortaria a segunda consulta quando o modelo demora, e o agente voltaria a responder pela metade, sem
   # aviso. Não vale o `MAX_SEGUNDOS` do Experimente: ele existe pelo corte de 15 s do pedido web; o atendimento roda no
   # `ReplyJob`. Constante lida no corpo do módulo: `ConsultaNoTurno` não pode ler constante daqui no corpo da classe dele.
