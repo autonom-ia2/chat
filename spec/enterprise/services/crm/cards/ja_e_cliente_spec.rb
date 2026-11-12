@@ -19,6 +19,16 @@ RSpec.describe Crm::Cards::JaECliente do
     end
   end
 
+  # Sem crm_view de verdade: toda chave de edição do CRM (crm_manage_cards e as outras de CustomRole::CRM_EDITING_KEYS)
+  # grava crm_view junto (#2124). crm_view_reports é do CRM e não implica ver os cards.
+  def sem_crm_view
+    com_funcao(%w[contact_view crm_view_reports]).tap do |account_user|
+      expect(account_user.custom_role.reload.permissions).not_to include('crm_view')
+      contexto = { user: account_user.user, account: account, account_user: account_user }
+      expect(Crm::CardPolicy.new(contexto, Crm::Card).index?).to be(false)
+    end
+  end
+
   def selos(account_user, inbox)
     ganho_e_agenda(inbox)
     agenda = account.crm_cards.find_by!(source: 'public_link')
@@ -35,21 +45,21 @@ RSpec.describe Crm::Cards::JaECliente do
   end
 
   it 'a função sem crm_view não recebe o selo, mesmo vendo a base de contatos e a caixa' do
-    sem_crm = com_funcao(%w[contact_view crm_manage_cards])
+    sem_crm = sem_crm_view
     inbox = create_crm_inbox(account: account, members: [sem_crm.user])
 
     expect(selos(sem_crm, inbox)).to eq({})
   end
 
-  it 'a função com crm_view e contact_view recebe o selo' do
-    com_crm = com_funcao(%w[crm_view contact_view])
+  it 'a função com crm_view e contact_view recebe o selo (o mesmo setup, só com a chave)' do
+    com_crm = com_funcao(%w[crm_view contact_view crm_view_reports])
     inbox = create_crm_inbox(account: account, members: [com_crm.user])
 
     expect(selos(com_crm, inbox).values.first).to include(:card_id, :desde)
   end
 
   it 'no card aberto e no tempo real, a função sem crm_view também não recebe' do
-    sem_crm = com_funcao(%w[contact_view crm_manage_cards])
+    sem_crm = sem_crm_view
     agenda = ganho_e_agenda(create_crm_inbox(account: account, members: [sem_crm.user]))
 
     expect(Crm::Cards::JaEClienteDoCard.new(agenda).para(user: sem_crm.user, account_user: sem_crm)).to be_nil
