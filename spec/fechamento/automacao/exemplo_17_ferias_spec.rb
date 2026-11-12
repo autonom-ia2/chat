@@ -315,7 +315,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 17: vendedora de férias, numa autom
     end
   end
 
-  # O ensaio só roda em gatilho de conversa (Ensaio.gatilho_suportado?): os mesmos passos 4 e 5 numa conversa. O galho
+  # O ensaio do "a cada mensagem" lê a conversa (Ensaio.de_conversa?): os mesmos passos 4 e 5 numa conversa. O galho
   # aparece com os passos dele e a marca de volta, sem rodar o laço.
   it 'no ensaio, o galho mostra os passos e para no fim, com a volta à espera', :aggregate_failures do
     em_conversa = JSON.parse({ gatilho: { tipo: 'conversa.criada' }, passos: [ferias] }.to_json)

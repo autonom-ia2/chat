@@ -4876,53 +4876,21 @@
   },
   "PATCH contacts/:id": {
     "campos": {
-      "additional_attributes": {
-        "tipo": "objeto_livre"
-      },
-      "avatar": {},
       "avatar_url": {},
-      "blocked": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "company_id": {
-        "tipo": "inteiro"
-      },
-      "custom_attributes": {
-        "tipo": "objeto_livre"
-      },
-      "email": {
-        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
-        "tipo": "string",
-        "unico": true
-      },
-      "identifier": {
-        "tipo": "string",
-        "unico": true
-      },
       "include_contact_inboxes": {
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
-      },
-      "name": {
-        "tipo": "string"
-      },
-      "phone_number": {
-        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
-        "tipo": "string",
-        "unico": true
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
+    "motivos": [
+      "leitura crua sem tipo: avatar_url (repassada a ::Avatar::AvatarFromUrlJob.perform_later)"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"
@@ -11431,7 +11399,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:100",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:200",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:202",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:101",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
@@ -11480,7 +11448,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:105",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:200",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:202",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153"
     ],
     "sem_corpo": false
@@ -14316,21 +14284,11 @@
     "sem_corpo": false
   },
   "POST contacts/import": {
-    "campos": {
-      "import_file": {
-        "tipo": "arquivo",
-        "tipo_pela_leitura": "uso"
-      }
-    },
     "completo": true,
     "controller": "api/v1/accounts/contacts#import",
     "modelo": "Contact",
-    "origem": [
-      "app/controllers/api/v1/accounts/contacts_controller.rb:34",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:39",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:35"
-    ],
-    "sem_corpo": false
+    "origem": [],
+    "sem_corpo": true
   },
   "POST conversa_canal/ditados": {
     "campos": {
@@ -24798,53 +24756,21 @@
   },
   "PUT contacts/:id": {
     "campos": {
-      "additional_attributes": {
-        "tipo": "objeto_livre"
-      },
-      "avatar": {},
       "avatar_url": {},
-      "blocked": {
-        "padrao": false,
-        "tipo": "booleano"
-      },
-      "company_id": {
-        "tipo": "inteiro"
-      },
-      "custom_attributes": {
-        "tipo": "objeto_livre"
-      },
-      "email": {
-        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
-        "tipo": "string",
-        "unico": true
-      },
-      "identifier": {
-        "tipo": "string",
-        "unico": true
-      },
       "include_contact_inboxes": {
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
-      },
-      "name": {
-        "tipo": "string"
-      },
-      "phone_number": {
-        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
-        "tipo": "string",
-        "unico": true
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/contacts#update",
     "modelo": "Contact",
+    "motivos": [
+      "leitura crua sem tipo: avatar_url (repassada a ::Avatar::AvatarFromUrlJob.perform_later)"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
       "app/controllers/api/v1/accounts/contacts_controller.rb:222",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:32",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:30",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
       "app/controllers/api/v1/accounts/contacts_controller.rb:218",
       "app/controllers/api/v1/accounts/contacts_controller.rb:209",
       "app/controllers/api/v1/accounts/contacts_controller.rb:208"

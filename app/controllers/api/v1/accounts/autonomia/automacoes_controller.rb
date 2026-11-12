@@ -188,9 +188,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def de_conversa?(receita) = ::Autonomia::Automacao::Gatilhos.alvo(receita.dig('gatilho', 'tipo')) == 'Conversation'
 
   # O rascunho passa pela mesma conferência do salvar (esquema + Receita); a versão salva já passou por ela, e assim o
-  # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Só gatilho de conversa: o de
-  # card espera a F3 (#2499).
+  # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Gatilho de conversa e de card
+  # (#2631); o de card pede antes a chave de funis de quem ensaia, como o salvar (D2), porque lê os cards da conta.
   def ensaiar(receita, conferir:)
+    return recusar_funil if sem_funil?(receita) && ::Autonomia::Automacao::Ensaio.de_card?(receita)
+
     problemas = problemas_do_ensaio(receita, conferir)
     return recusar_ensaio('receita_invalida', problemas) if problemas.any?
     return render(json: recorrente_no_ensaio(receita)) if ::Autonomia::Automacao::Gatilhos.recorrente?(receita.dig('gatilho', 'tipo'))

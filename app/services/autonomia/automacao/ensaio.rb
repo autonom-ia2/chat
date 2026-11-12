@@ -20,6 +20,12 @@
 #   A mensagem e o "escrever" ao cliente conferem o canal (#2609): com a janela fechada e sem modelo que saia no lugar,
 #   "pararia", com o motivo, e o caminho acaba.
 #
+# No gatilho de card (#2631), o mesmo nos cards que quem pede alcança (CardsDoEnsaio): cada um como se o fato
+# acontecesse agora. No de reunião, com a reunião que o gatilho leria (`reuniao.*`); o card sem ela não entraria.
+# O card sem conversa segue uma regra só, a do motor: sem a caixa da conversa nova no gatilho (#2680), todo passo que
+# age numa conversa (mensagem, avisar, os de IA, ia_assumir) pula com `sem_conversa`; com ela, o "mensagem" a abriria
+# (ou usa a do contato que já há nessa caixa), e os passos depois dele, no mesmo caminho, agem nela.
+#
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
 class Autonomia::Automacao::Ensaio
@@ -33,14 +39,20 @@ class Autonomia::Automacao::Ensaio
   # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
   IA_SO_DIZ = %w[extrair escrever resumir para_cada].freeze
 
-  def self.gatilho_suportado?(receita)
-    GATILHOS.include?(receita.dig('gatilho', 'tipo'))
+  def self.gatilho_suportado?(receita) = de_conversa?(receita) || de_card?(receita)
+
+  def self.de_conversa?(receita) = GATILHOS.include?(receita.dig('gatilho', 'tipo'))
+
+  # #2631: o gatilho de card, de evento ou de tempo. O recorrente só conta quantos pegaria (o controller).
+  def self.de_card?(receita)
+    tipo = receita.dig('gatilho', 'tipo')
+    ::Autonomia::Automacao::Gatilhos.do_card?(tipo) && !::Autonomia::Automacao::Gatilhos.recorrente?(tipo)
   end
 
-  # Só as conversas que `usuario` enxerga, pelo mesmo filtro da lista de conversas. Com `conversa_id` (o número que a
-  # pessoa vê), ensaia só ela; fora do alcance de quem pede, é como se não existisse (RecordNotFound, 404). Quem age é
-  # quem o motor agiria (#2604): com `acesso` (o de quem ligou, na versão salva de uma automação ligada), quem ligou, com
-  # a mesma pergunta do motor (Acesso#motivo_no); sem ele, quem pede.
+  # Só as conversas (ConversasDoEnsaio) ou os cards (CardsDoEnsaio) que `usuario` alcança. Com `conversa_id` (o número
+  # da conversa; no gatilho de card, o id do card), ensaia só ele; fora do alcance de quem pede, é como se não
+  # existisse (RecordNotFound, 404). Quem age é quem o motor agiria (#2604): com `acesso` (o de quem ligou, na versão
+  # salva de uma automação ligada), quem ligou, com a mesma pergunta do motor (Acesso#motivo_no); sem ele, quem pede.
   def initialize(receita:, conta:, usuario:, conversa_id: nil, acesso: nil)
     @receita = receita
     @conta = conta
@@ -48,79 +60,90 @@ class Autonomia::Automacao::Ensaio
     @conversa_id = conversa_id
     @acesso = acesso
     @quem_age = acesso&.usuario || usuario
+    @card = self.class.de_card?(receita)
     # O laço dos documentos (G46) não roda de novo no ensaio: o caminho que volta para no fim e diz para onde.
     @roteiro = ::Autonomia::Automacao::Roteiro.new(receita, voltar: false)
   end
 
+  # `alvo` diz à tela se a lista é de conversas ou de cards; o formato de cada item é o mesmo.
   def resultado
-    return { conversas: [ensaiar(visiveis.find_by!(display_id: @conversa_id))], outras: [] } if @conversa_id.present?
+    alvo = @card ? 'card' : 'conversa'
+    return { alvo: alvo, conversas: [ensaiar(amostra.um(@conversa_id))], outras: [] } if @conversa_id.present?
 
-    recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS).to_a
-    { conversas: recentes.first(RECENTES).map { |conversa| ensaiar(conversa) },
-      outras: recentes.drop(RECENTES).map { |conversa| { conversa_id: conversa.display_id, nome: conversa.contact&.name } } }
+    recentes = amostra.recentes(RECENTES + OUTRAS)
+    { alvo: alvo, conversas: recentes.first(RECENTES).map { |item| ensaiar(item) },
+      outras: recentes.drop(RECENTES).map { |item| amostra.base(item).except(:ultima_atividade) } }
   end
 
   # As conversas recentes de quem pede em que a automação entraria agora, na ordem do ensaio. O "Testar este passo"
   # (#2500 C2) roda nelas.
   def entrariam(limite)
-    recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS)
-    recentes.select { |conversa| fora(conversa, mensagem_do_gatilho(conversa)).nil? }.first(limite)
+    amostra.recentes(RECENTES + OUTRAS).select { |conversa| fora(conversa, *amostra.gatilho_de(conversa)).nil? }.first(limite)
   end
 
   private
 
-  def visiveis
-    ::Conversations::PermissionFilterService.new(@conta.conversations, @usuario, @conta, for_reading: true).perform
+  def amostra
+    @amostra ||= (@card ? ::Autonomia::Automacao::CardsDoEnsaio : ::Autonomia::Automacao::ConversasDoEnsaio)
+                 .new(gatilho: @receita['gatilho'].to_h, conta: @conta, usuario: @usuario)
   end
 
-  def ensaiar(conversa)
-    mensagem = mensagem_do_gatilho(conversa)
-    base = { conversa_id: conversa.display_id, nome: conversa.contact&.name, ultima_atividade: conversa.last_activity_at }
-    motivo = fora(conversa, mensagem)
+  def ensaiar(alvo)
+    mensagem, fato = amostra.gatilho_de(alvo)
+    base = amostra.base(alvo)
+    motivo = fora(alvo, mensagem, fato)
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
-    @conversa = conversa
-    @envio = ::Autonomia::Automacao::EnvioNoEnsaio.new(conversa, @quem_age, @acesso)
-    falhou = (mensagem if ::Autonomia::Automacao::MensagemDoGatilho.falhou?(tipo_do_gatilho))
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa, textos: textos_da_ia, falhou: falhou)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo, textos: textos_da_ia, fato: fato)
+    @contato = contexto.contato
+    @conversa, @caixa_nova = conversa_do_ensaio(contexto)
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
-    base.merge(entraria: true, motivo: nil, passos: passos_da_conversa(valores))
+    base.merge(entraria: true, motivo: nil, passos: passos_do_alvo(alvo, valores))
   end
 
   # O Executor confere quem age no começo da rodada, antes de qualquer passo (Executor#rodar, impedida?): sem acesso, a
   # automação pausa ali. O ensaio diz "pausaria" no primeiro passo, seja ele qual for, e não lista os seguintes.
-  def passos_da_conversa(valores)
+  def passos_do_alvo(alvo, valores)
     primeiro = @roteiro.primeiro
-    pausa = @envio.pausaria_ao_agir if primeiro
+    pausa = envio.pausaria_ao_agir(alvo) if primeiro
     pausa ? [no(primeiro, *pausa)] : caminho(primeiro, valores)
   end
+
+  # As perguntas do motor sobre o envio (EnvioNoEnsaio) na conversa em que os passos agem agora: a do alvo ou a que o
+  # "mensagem" abriria no card sem conversa.
+  def envio(conversa = @conversa) = ::Autonomia::Automacao::EnvioNoEnsaio.new(conversa, @quem_age, @acesso)
 
   # #2679: o ensaio não chama a IA. No lugar do texto de cada "escrever" e "resumir", a marca de onde ele entraria.
   def textos_da_ia
     @textos_da_ia ||= ::Autonomia::Automacao::Contexto.marcas_da_ia(@receita, @conta)
   end
 
-  def tipo_do_gatilho = @receita.dig('gatilho', 'tipo')
-
-  def mensagem_do_gatilho(conversa) = ::Autonomia::Automacao::MensagemDoGatilho.de(conversa, tipo_do_gatilho)
-
-  # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo.
-  def fora(conversa, mensagem)
-    contexto = ::Autonomia::Automacao::Contexto.de(conversa)
-    faltando = ::Autonomia::Automacao::MensagemDoGatilho.faltando(tipo_do_gatilho, mensagem)
+  # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo. Depois, o que falta ao alvo para o gatilho
+  # (a mensagem, a reunião) e o "Só se", que lê o fato (a reunião do gatilho de reunião, G12).
+  def fora(alvo, mensagem, fato)
+    contexto = ::Autonomia::Automacao::Contexto.de(alvo, fato: fato)
     return 'spam' if contexto.no_spam?
-    return faltando if faltando
-    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, tipo_do_gatilho, mensagem)
+
+    motivo = amostra.motivo(alvo, mensagem, fato)
+    return motivo if motivo
 
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
     'fora_do_filtro' unless filtros.all? { |condicao| ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira? }
   end
 
+  # A conversa em que os passos agiriam e, no card sem nenhuma, a caixa por onde o "mensagem" abriria uma (#2680).
+  def conversa_do_ensaio(contexto)
+    return [contexto.conversa, nil] if contexto.conversa || !@card
+
+    amostra.conversa_nova(@contato)
+  end
+
   # Os passos a partir de `passo` até o fim (ou até um "parar"), em ordem. Um passo que abre caminhos leva o resto
-  # dentro de cada caminho.
+  # dentro de cada caminho. A conversa que o "mensagem" abriria vale neste caminho e nos de dentro, não nos irmãos.
   def caminho(passo, valores)
+    antes = @conversa
     passos = []
     while passo
       return passos << { faria: 'corte' } if (@contados += 1) > MAXIMO_DE_PASSOS
@@ -130,10 +153,12 @@ class Autonomia::Automacao::Ensaio
       passo = seguinte
     end
     passos
+  ensure
+    @conversa = antes
   end
 
   # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
-  EM_LINHA = { 'mensagem' => :mensagem, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir,
+  EM_LINHA = { 'mensagem' => :mensagem, 'avisar' => :avisar, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir,
                'rodizio' => :rodizio }.freeze
 
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
@@ -146,7 +171,7 @@ class Autonomia::Automacao::Ensaio
     case passo['tipo']
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
-    when 'decidir' then [decidir(passo, valores), nil]
+    when 'decidir' then @conversa ? [decidir(passo, valores), nil] : [no(passo, 'sem_conversa'), @roteiro.seguinte(passo['id'])]
     when 'parar' then [no(passo, 'parar'), nil]
     else seguir(passo, em_frente(passo, valores))
     end
@@ -155,11 +180,15 @@ class Autonomia::Automacao::Ensaio
   # O passo depois do qual o motor não segue (EnvioNoEnsaio::ACABA) acaba o caminho.
   def seguir(passo, feito) = [feito, (@roteiro.seguinte(passo['id']) unless ::Autonomia::Automacao::EnvioNoEnsaio::ACABA.include?(feito[:faria]))]
 
-  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
-  def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
+  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes. O card sem conversa pula,
+  # como no motor; na que o "mensagem" abriria, as mesmas perguntas valem para ela.
+  def ia_assumir(passo, _valores) = sem_conversa(passo) || no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
 
-  # #2502: entre quem seria o rodízio, ou por que pularia; nunca gira a fila da caixa.
-  def rodizio(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeRodizio.ensaiar(passo, @conversa))
+  # #2502: entre quem seria o rodízio, ou por que pularia; nunca gira a fila da caixa. O card sem conversa pula, como no
+  # motor (PassoDeRodizio#executar).
+  def rodizio(passo, _valores) = sem_conversa(passo) || no(passo, *::Autonomia::Automacao::PassoDeRodizio.ensaiar(passo, @conversa))
+
+  def sem_conversa(passo) = (no(passo, 'sem_conversa') if @conversa.nil?)
 
   def em_frente(passo, valores)
     return ia(passo, valores) if IA_SO_DIZ.include?(passo['tipo'])
@@ -172,15 +201,45 @@ class Autonomia::Automacao::Ensaio
     { id: passo['id'], tipo: passo['tipo'], faria: faria, dados: dados, ramos: ramos }.compact
   end
 
-  # Depois do texto, o canal (#2609, EnvioNoEnsaio#do_canal). O texto vazio também pergunta: no motor, a janela vem antes.
+  # A mensagem e o aviso agem numa conversa. No card sem ela, a mensagem abre a da caixa da conversa nova, quando o
+  # gatilho escolhe uma (PassoDeMensagem#abrir_e_mandar); sem a caixa, e no aviso, pulam com `sem_conversa`.
+  def avisar(passo, valores)
+    return texto(passo, valores) if @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    no(passo, 'sem_conversa')
+  end
+
   def mensagem(passo, valores)
-    pronto = texto(passo, valores)
-    canal = @envio.do_canal(passo, valores) if %w[mensagem texto_vazio].include?(pronto[:faria])
+    return no_canal(passo, valores) if @conversa || !::Autonomia::Automacao::Motor.mensagens?(@conta)
+    return no(passo, 'sem_conversa') unless @caixa_nova
+
+    abrir_conversa(passo, valores)
+  end
+
+  # Depois do texto, o canal (#2609, EnvioNoEnsaio#do_canal). O texto vazio também pergunta: no motor, a janela vem antes.
+  def no_canal(passo, valores, conversa = @conversa)
+    pronto = texto(passo, valores, conversa&.inbox)
+    canal = envio(conversa).do_canal(passo, valores) if %w[mensagem texto_vazio].include?(pronto[:faria])
     canal ? no(passo, *canal) : pronto
   end
 
+  # Na ordem do PassoDeMensagem#abrir_e_mandar: quem age começa conversa na caixa (#2604), o contato recebe, o texto e o
+  # canal da conversa que ela seria: nova, aberta, sem ninguém no nome. Só um objeto na memória, nunca gravado. Se a
+  # mensagem sairia, os passos seguintes deste caminho agem nela.
+  def abrir_conversa(passo, valores)
+    fora = envio(nil).abre_conversa(@caixa_nova) || ::Autonomia::Automacao::ConversaNova.motivo_do_contato(@caixa_nova, @contato)
+    return no(passo, *fora) if fora
+
+    nova = ::Conversation.new(account: @conta, inbox: @caixa_nova, contact: @contato, status: :open)
+    pronto = no_canal(passo, valores, nova)
+    return pronto unless pronto[:faria] == 'mensagem'
+
+    @conversa = nova
+    pronto.merge(dados: pronto[:dados].merge(conversa_nova: @caixa_nova.name))
+  end
+
   # O texto montado com os valores desta conversa, para o balão. Valor vazio: o passo pularia, como no motor.
-  def texto(passo, valores)
+  def texto(passo, valores, caixa = @conversa&.inbox)
     return no(passo, 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@conta)
 
     pronto = ::Autonomia::Automacao::Texto.new(passo['texto'], valores).montar
@@ -192,44 +251,20 @@ class Autonomia::Automacao::Ensaio
 
     # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada; o de propaganda
     # (lote 5, #2681) leva o aviso de custo.
-    propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(@conversa&.inbox, passo['modelo'])
+    propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(caixa, passo['modelo'])
     no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda, reserva: reserva }.compact)
   end
 
   # O "avisar", e o "resumir" que sai por ele (#2523, #2552): [por que ninguém seria avisado, por que iria para a caixa].
   def previsto_do_aviso(passo) = ::Autonomia::Automacao::PassoDeAviso.ensaiar(passo, @conversa)
 
-  # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
-  # contato dela. Não abre conversa nem manda. Na ordem do motor (Executor#passo_nativo, PassoDeEmail#executar): a
-  # flag das mensagens, a caixa, quem age começa conversa nela (#2604), o contato e, só então, o assunto e o texto.
-  def email(passo, valores)
-    return no(passo, 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@conta)
-
-    caixa = ::Autonomia::Automacao::PassoDeEmail.caixa(@conta, passo['caixa_id'])
-    return no(passo, 'caixa_de_email_indisponivel') if caixa.nil?
-
-    fora = @envio.do_email(caixa)
-    return no(passo, *fora) if fora
-
-    email_pronto(passo, valores, caixa)
-  end
-
-  # Como PassoDeEmail#mandar: o valor vazio no assunto ou no texto pula com o motivo dele; depois, o em branco.
-  def email_pronto(passo, valores, caixa)
-    assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
-    return no(passo, *::Autonomia::Automacao::AgendaDaPagina.do_vazio(valores.falta_da_agenda)) if assunto.nil?
-
-    pronto = texto(passo, valores)
-    return pronto unless pronto[:faria] == 'email'
-    return no(passo, 'texto_vazio') if assunto.strip.empty?
-
-    pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
-  end
+  # O e-mail (G2) com o assunto, o texto e a caixa por onde sairia, ou por que não sairia (EnvioNoEnsaio#email).
+  def email(passo, valores) = no(passo, *envio.email(passo, valores, conta: @conta, contato: @contato))
 
   # O retorno (G3): o título montado, ou por que pularia, como o motor (PassoDeRetorno.ensaiar). Nada é criado.
   def retorno(passo, valores) = no(passo, *::Autonomia::Automacao::PassoDeRetorno.ensaiar(passo, valores, @conta))
 
-  # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora, ou por que pularia (AcaoNoEnsaio).
+  # O valor calculado do corpo (G16) com os dados do alvo e o "hoje" de agora, ou por que pularia (AcaoNoEnsaio).
   def acao(passo, valores) = no(passo, *::Autonomia::Automacao::AcaoNoEnsaio.ensaiar(passo, valores, @conta))
 
   def se(passo, valores)
@@ -263,34 +298,13 @@ class Autonomia::Automacao::Ensaio
   # (DecidirDeNovo.ramos_do_ensaio).
   def decidir(passo, valores)
     ramos = ::Autonomia::Automacao::DecidirDeNovo.ramos_do_ensaio(passo, @roteiro) { |primeiro| caminho(primeiro, valores) }
-    no(passo, 'decidir', anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)
+    no(passo, 'decidir', ia_do_ensaio.anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)
   end
 
-  # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
-  # automática ligada na conta não sairia, como no motor. O "escrever" ao cliente confere o canal antes da IA (#2609). O
-  # resumo que sai pelo "avisar" segue as regras dele (#2552).
-  def ia(passo, valores)
-    classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
-    return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+  # O que a IA faria, só com o que a receita diz, ou por que pularia (IaNoEnsaio).
+  def ia(passo, valores) = no(passo, *ia_do_ensaio.ensaiar(passo, valores))
 
-    canal = @envio.do_canal(passo, valores, modelo: nil) if passo['tipo'] == 'escrever' && classe.fala_com_gente?(passo)
-    return no(passo, *canal) if canal
-
-    ninguem, reserva = previsto_do_aviso(passo)
-    return no(passo, ninguem) if ninguem
-
-    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(anexos(passo, classe), { reserva: reserva }.compact))
-  end
-
-  # G20: com `le: anexos`, quantos anexos desta conversa a IA leria, ou o motivo de o passo pular, como o motor. Não
-  # baixa nada nem chama a IA.
-  def anexos(passo, classe)
-    return {} unless ::Autonomia::Automacao::AnexosDaConversa.le?(passo)
-
-    lidos = ::Autonomia::Automacao::AnexosDaConversa.new(@conversa)
-    motivo = lidos.motivo(modelo: classe::MODELO)
-    motivo ? { anexos_motivo: motivo } : { anexos: lidos.quantos }
-  end
+  def ia_do_ensaio = ::Autonomia::Automacao::IaNoEnsaio.new(conta: @conta, conversa: @conversa, envio: envio)
 
   def condicao?(condicao, valores)
     ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?

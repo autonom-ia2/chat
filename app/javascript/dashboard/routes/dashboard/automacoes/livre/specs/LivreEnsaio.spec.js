@@ -106,6 +106,36 @@ describe('LivreEnsaio', () => {
     );
   });
 
+  // #2631: no gatilho de card a lista é de cards, e o card sem a reunião do
+  // gatilho diz que não há reunião.
+  it('no gatilho de card, fala de cards e diz quando falta a reunião', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        alvo: 'card',
+        conversas: [
+          conversa(7, {
+            nome: 'Renovação',
+            entraria: false,
+            motivo: 'sem_reuniao',
+          }),
+        ],
+        outras: [],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.QUANTOS_CARDS(1)'
+    );
+    expect(wrapper.find('[data-ensaio-passos]').text()).toContain(
+      'AUTOMACAO_LIVRE.ENSAIO.NO_CARD(Renovação)'
+    );
+    expect(wrapper.find('[data-nao-entra]').text()).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.FORA.SEM_REUNIAO'
+    );
+  });
+
   it('receita com problema mostra as frases da API', async () => {
     AutomacoesAPI.ensaiar.mockRejectedValueOnce({
       response: { data: { error: 'Corrija', problemas: ['Passo m1: x'] } },
@@ -159,6 +189,35 @@ describe('linhasDoEnsaio', () => {
     expect(linhasDoEnsaio([no(true)], fraseDe, t)[0].destaque).toBe(
       'AUTOMACAO_LIVRE.ENSAIO.MODELO_PROPAGANDA_FORA_DA_JANELA(pre_black)'
     );
+  });
+
+  // #2631: o card sem conversa e sem a caixa da conversa nova: a mensagem e a
+  // agente pulam com a mesma frase. Com a caixa, a mensagem diz onde abriria.
+  it('card sem conversa: pula com uma frase só; com a caixa, diz onde abre', () => {
+    const linhas = linhasDoEnsaio(
+      [
+        { id: 'm1', tipo: 'mensagem', faria: 'sem_conversa', dados: {} },
+        { id: 'i1', tipo: 'ia_assumir', faria: 'sem_conversa', dados: {} },
+        {
+          id: 'm2',
+          tipo: 'mensagem',
+          faria: 'mensagem',
+          dados: { texto: 'Oi', conversa_nova: 'WhatsApp' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linhas.map(linha => linha.aviso)).toEqual([
+      'AUTOMACAO_LIVRE.ENSAIO.SEM_CONVERSA',
+      'AUTOMACAO_LIVRE.ENSAIO.SEM_CONVERSA',
+      undefined,
+    ]);
+    expect(linhas[2]).toMatchObject({
+      balao: 'Oi',
+      destaque: 'AUTOMACAO_LIVRE.ENSAIO.ABRIRIA_CONVERSA(WhatsApp)',
+    });
   });
 
   it('o "esperar até" abre os dois caminhos, cada um um nível adentro', () => {
