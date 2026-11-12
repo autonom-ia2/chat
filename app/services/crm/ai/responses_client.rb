@@ -159,7 +159,7 @@ module Crm
       def retrieve(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = with_timeout_guard(operation: 'responses.retrieve', response_id: response_id, started_at: started_at) do
-          tentativa(:get, "#{api_base}/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
+          tentativa(:get, "/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
         end
         payload = parse_raw(response, operation: 'responses.retrieve', response_id: response_id, started_at: started_at)
         {
@@ -175,7 +175,7 @@ module Crm
       def delete(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         with_timeout_guard(operation: 'responses.delete', response_id: response_id, started_at: started_at) do
-          tentativa(:delete, "#{api_base}/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
+          tentativa(:delete, "/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
         end
         true
       rescue Error => e
@@ -253,7 +253,7 @@ module Crm
 
       def post_responses(body, timeout:, operation:, started_at:)
         with_timeout_guard(operation: operation, model: body[:model], started_at: started_at) do
-          tentativa(:post, "#{api_base}/v1/responses", timeout: timeout, body: body.to_json)
+          tentativa(:post, '/v1/responses', timeout: timeout, body: body.to_json)
         end
       rescue Error => e
         log_exception(operation, e, model: body[:model], started_at: started_at) unless e.message.start_with?('network_timeout:')
@@ -264,10 +264,12 @@ module Crm
       # abertura lenta seguida de uma leitura lenta passa de 24 s e do corte de 15 s do Rack::Timeout (#2579). O relógio
       # de parede em volta faz do mesmo número o teto da tentativa inteira, e quem chama continua passando um número só.
       # Classe própria pelo mesmo motivo do TotalTimeout. Estourou, é erro de rede como os outros prazos: entra nas novas
-      # tentativas e sai como tempo esgotado (o pedido pode ter chegado e sido cobrado). Só a ida HTTP fica dentro.
-      def tentativa(metodo, url, timeout:, **opcoes)
+      # tentativas e sai como tempo esgotado (o pedido pode ter chegado e sido cobrado). Só a ida HTTP fica dentro, e
+      # a URL é montada aqui dentro: o `api_base` consulta o DNS (ApiBaseGuard, Resolv em Ruby puro, que com um servidor
+      # de nomes lento leva dezenas de segundos), e essa consulta também conta no prazo.
+      def tentativa(metodo, caminho, timeout:, **opcoes)
         Timeout.timeout(timeout, AttemptTimeout) do
-          HTTParty.public_send(metodo, url, headers: auth_headers, timeout: timeout, max_retries: 0, **opcoes)
+          HTTParty.public_send(metodo, "#{api_base}#{caminho}", headers: auth_headers, timeout: timeout, max_retries: 0, **opcoes)
         end
       end
 

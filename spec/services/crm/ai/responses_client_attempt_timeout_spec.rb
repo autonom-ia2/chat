@@ -34,6 +34,20 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(Crm::Ai::UsageRecorder).not_to have_received(:record)
   end
 
+  it 'consulta de DNS lenta do api_base também conta no prazo da tentativa' do
+    client = described_class.new(credential: { api_key: 'k' }, max_retries: 0)
+    allow(Resolv).to receive(:getaddresses).with('api.openai.com') do
+      sleep 1
+      ['104.18.1.1']
+    end
+    allow(HTTParty).to receive(:post).and_call_original
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    expect { client.create(**params, timeout: 0.3) }.to raise_error(described_class::Error, 'network_timeout: attempt_timeout')
+    expect(segundos_desde(inicio)).to be < 0.6
+    expect(HTTParty).not_to have_received(:post)
+  end
+
   it 'a tentativa que estoura entra nas novas tentativas, como os outros prazos da rede' do
     client = described_class.new(credential: { api_key: 'k' })
     allow(client).to receive(:sleep)
