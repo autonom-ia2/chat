@@ -131,6 +131,37 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
     expect(registros(execucao)).to eq([%w[p1 pulado fora_do_funil]])
   end
 
+  # F6.8 (#2499): a trava de 30 dias do "não é negócio" (#2395) vale também para o card que a automação cria.
+  describe 'conversa com card arquivado pela IA como "não é negócio"' do
+    def arquivado_pela_ia(motivo: 'fora_do_negocio')
+      card = account.crm_cards.create!(pipeline: vendas, stage: novo, title: 'Lixo', primary_conversation: conversa, contact: contato)
+      Crm::Cards::Archiver.new(card: card, actor: nil, payload: { by: 'ai', motivo: motivo }).perform
+      card
+    end
+
+    it 'há menos de 30 dias: pula sem criar, com o motivo no histórico', :aggregate_failures do
+      arquivado_pela_ia
+
+      execucao = rodar
+
+      expect(melhorias.cards).to be_empty
+      expect(registros(execucao)).to eq([%w[p1 pulado nao_e_negocio]])
+    end
+
+    it 'há mais de 30 dias: cria o card' do
+      card = arquivado_pela_ia
+      Crm::Activity.where(card: card, event_type: 'archive').update_all(created_at: 31.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      expect { rodar }.to change { melhorias.cards.count }.from(0).to(1)
+    end
+
+    it 'arquivado como repetido (outro motivo da IA): cria o card' do
+      arquivado_pela_ia(motivo: 'duplicado')
+
+      expect { rodar }.to change { melhorias.cards.count }.from(0).to(1)
+    end
+  end
+
   it 'etapa apagada depois de salvar: pula com o motivo' do
     definicao = automacao_ligada(account, admin, [card_passo])
     entrada.destroy!

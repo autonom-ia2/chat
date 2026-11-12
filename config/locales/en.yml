@@ -556,6 +556,7 @@ en:
         card_ja_existe: 'There was already an open card in this pipeline for this conversation (or contact). No new card was created.'
         etapa_sumiu: 'The stage chosen in this step was deleted. No card was created.'
         fora_do_funil: 'The contact is marked as outside the pipeline. No card was created.'
+        nao_e_negocio: 'The AI archived this conversation''s card as "not a deal" less than 30 days ago. No new card was created.'
         sem_contato: 'There is no conversation or contact to link the card to. No card was created.'
         sem_chave_de_funis: 'The person who turned on the automation can no longer edit the pipeline, and this step changes the pipeline. Take over and turn it back on.'
         gatilho_desligado: 'Card and time triggers are off for this account. The automation did not continue.'

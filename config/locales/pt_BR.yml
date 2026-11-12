@@ -1049,6 +1049,7 @@ pt_BR:
         card_ja_existe: 'Esta conversa (ou contato) já tinha card aberto neste funil. Nenhum card novo foi criado.'
         etapa_sumiu: 'A etapa escolhida neste passo foi apagada. Nenhum card foi criado.'
         fora_do_funil: 'O contato está marcado como fora do funil. Nenhum card foi criado.'
+        nao_e_negocio: 'A IA arquivou o card desta conversa como "não é negócio" há menos de 30 dias. Nenhum card novo foi criado.'
         sem_contato: 'Não há conversa nem contato para ligar o card. Nenhum card foi criado.'
         sem_chave_de_funis: 'Quem ligou a automação não pode mais editar o funil, e este passo mexe no funil. Assuma e religue.'
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta. A automação não seguiu.'
