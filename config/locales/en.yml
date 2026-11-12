@@ -559,7 +559,7 @@ en:
         nao_e_negocio: 'The AI archived this conversation''s card as "not a deal" less than 30 days ago. No new card was created.'
         sem_contato: 'There is no conversation or contact to link the card to. No card was created.'
         sem_chave_de_funis: 'The person who turned on the automation can no longer edit the pipeline, and this step changes the pipeline. Take over and turn it back on.'
-        gatilho_desligado: 'Card and time triggers are off for this account. The automation did not continue.'
+        gatilho_desligado: 'Card, contact and time triggers are off for this account. The automation did not continue.'
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         nao_acordou: 'An error kept the automation from checking this wait early. It keeps waiting until the deadline.'
         filhas_puladas: 'Some linked records did not get these steps: the person who turned on the automation cannot reach them, or the automation was already running there.'
@@ -703,7 +703,7 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         responsavel_do_card_sem_card: 'Step %{passo}: "whoever owns the card" only works when the trigger is a card trigger.'
-        gatilho_desligado: 'Card and time triggers are off for this account.'
+        gatilho_desligado: 'Card, contact and time triggers are off for this account.'
         reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
         parado_sem_dias: 'Trigger: a stuck card needs at least 1 day.'
