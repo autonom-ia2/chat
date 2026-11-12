@@ -93,13 +93,15 @@ module Autonomia
       #
       # `modelo:` (#2881) — a chave de um modelo pronto de ramo (`ModelosDeRamo`). Só vale quando a chave existe e a
       # conta pode usar (pacote `seguros` e a flag): aí a conversa guarda a marca do modelo em `state['modelo_pronto']` e
-      # o tipo passa a ser o do modelo. Chave desconhecida ou conta sem direito: segue como antes, sem erro.
+      # o tipo passa a ser o do modelo. Chave desconhecida ou conta sem direito: segue como antes, sem erro. Com
+      # `papel: 'ajudante'` o modelo é ignorado: o roteiro do ramo é de atendimento ao cliente, não de ajudante interno.
       def persist_start_options!(type:, actuation: nil, with_knowledge: nil, papel: nil, modelo: nil)
         persist_agent_type!(type)
-        merged = (state || {}).merge(inicio_com_modelo_pronto(modelo))
+        ajudante = papel.to_s == PAPEL_AJUDANTE
+        merged = (state || {}).merge(ajudante ? {} : inicio_com_modelo_pronto(modelo))
 
         merged['actuation'] = ACTUATIONS.include?(actuation.to_s) ? actuation.to_s : 'external' unless actuation.nil?
-        merged = merged.merge('papel' => PAPEL_AJUDANTE, 'actuation' => 'internal') if papel.to_s == PAPEL_AJUDANTE
+        merged = merged.merge('papel' => PAPEL_AJUDANTE, 'actuation' => 'internal') if ajudante
 
         # with_knowledge=false NÃO semeia no_materials_declared: aquele flag é o portão de FECHAMENTO
         # ("sem material, feche") e fecharia o build no 1º turno sem coletar o essencial. A orientação de
@@ -271,13 +273,14 @@ module Autonomia
 
       private
 
-      # #2881 — o que a abertura acrescenta ao `state` com um modelo pronto: a marca e o tipo do modelo. {} sem modelo.
+      # #2881 — o que a abertura acrescenta ao `state` com um modelo pronto: a marca, as ferramentas que saem dela (as
+      # chaves que a Confira lê) e o tipo do modelo. {} sem modelo. As ferramentas nascem aqui e depois só a edição do dono
+      # as muda (`ModelosDeRamo::Edicao`): o turno do Construtor não as regrava.
       def inicio_com_modelo_pronto(chave)
-        modelos = ::Autonomia::Agents::ModelosDeRamo
-        marca = modelos::Rascunho.marca_de_inicio(account: account, agent: agent, chave: chave)
-        return {} if marca.nil?
+        rascunho = ::Autonomia::Agents::ModelosDeRamo::Rascunho.de_inicio(account: account, agent: agent, chave: chave)
+        return {} if rascunho.nil?
 
-        { modelos::Marca::CHAVE => marca, 'agent_type' => modelos.buscar(marca['chave']).tipo }
+        rascunho.para_guardar.merge('agent_type' => rascunho.modelo.tipo)
       end
 
       # Só as chaves com conteúdo: o turno sem anexo mantém o shape legado {role, content, at}.

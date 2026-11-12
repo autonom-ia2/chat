@@ -34,6 +34,15 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
       modelo && Autonomia::Agents::ModelosDeRamo::Marca.inicial(modelo)
     end
 
+    # O modelo com que a conversa abre (a marca de `marca_de_inicio`, com as ferramentas liberadas para a conta), ou nil.
+    def de_inicio(account:, agent:, chave:)
+      marca = marca_de_inicio(account: account, agent: agent, chave: chave)
+      return if marca.nil?
+
+      new(modelo: Autonomia::Agents::ModelosDeRamo.buscar(marca['chave']), marca: marca, account: account,
+          fora: agent&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS])
+    end
+
     private
 
     def marca_do_rascunho(agent, chave)

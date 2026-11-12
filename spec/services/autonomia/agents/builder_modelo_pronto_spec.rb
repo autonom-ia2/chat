@@ -175,6 +175,21 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.agent.tools).to be_empty # quem inclui é a Confira, com a pessoa real e a frase do ramo
     end
 
+    it 'não desfaz a ferramenta que o dono tirou com o turno em andamento' do
+      allow(fake_client).to receive(:create) do
+        outra_copia = Autonomia::Agents::BuildThread.find(thread.id)
+        Autonomia::Agents::ModelosDeRamo::Edicao.new(thread: outra_copia, mudancas: { ferramentas: [{ fonte: 'cep' }] }).call
+        { text: payload.to_json, usage: { 'output_tokens' => 100 }, tools_used: [] }
+      end
+
+      run_turn
+
+      expect(thread.state['applied']).to be(true)
+      expect(thread.state['ferramentas_sugeridas']).to eq(%w[cep])
+      expect(thread.agent.config['ferramentas_sugeridas']).to eq(%w[cep])
+      expect(thread.agent.config.dig(chave_da_marca, 'ferramentas').pluck('fonte')).to eq(%w[cep])
+    end
+
     it 'deixa no agente a marca do modelo, de onde o atendimento lê as listas' do
       run_turn
 

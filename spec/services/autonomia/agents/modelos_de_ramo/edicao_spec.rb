@@ -54,6 +54,16 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(marca.slice('chave', 'perguntas', 'ferramentas')).to eq(antes.slice('chave', 'perguntas', 'ferramentas'))
     end
 
+    it 'não perde a edição de outra aba: cada pedido parte do que o anterior gravou, não da cópia que tinha' do
+      outra_aba = Autonomia::Agents::BuildThread.find(conversa.id)
+
+      editar(perguntas: [{ texto: 'A obra já começou?' }])
+      editar({ documentos: [{ texto: 'Contrato social.' }] }, outra_aba)
+
+      expect(marca['perguntas'].pluck('texto')).to eq(['A obra já começou?'])
+      expect(marca['documentos'].pluck('texto')).to eq(['Contrato social.'])
+    end
+
     it 'aceita a lista vazia (o dono tirou tudo) e o id desconhecido como item novo' do
       editar(documentos: [], perguntas: [{ id: 'inventado', texto: 'Qual o CNPJ?' }, { id: 'p9', texto: 'Qual o prazo?' }])
 
@@ -153,6 +163,15 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
 
       expect(recusa(documentos: [])).to eq(['agente_ja_comecou', nil])
       expect(agente.reload.config).to eq(antes)
+    end
+
+    it 'confere com o agente travado, não pela cópia que a conversa tinha, e a recusa não grava nada na conversa' do
+      antes = marca
+      expect(conversa.agent).to be_draft
+      Autonomia::Agents::Agent.find(agente.id).update!(status: :active, enabled: true)
+
+      expect(recusa(documentos: [])).to eq(['agente_ja_comecou', nil])
+      expect(marca).to eq(antes)
     end
   end
 

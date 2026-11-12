@@ -35,15 +35,18 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     @mudancas = mudancas.to_h.deep_stringify_keys
   end
 
-  # -> o Rascunho com as mudanças, já gravadas.
+  # -> o Rascunho com as mudanças, já gravadas. Lê e grava com a conversa travada (a trava relê a conversa): duas edições
+  # ao mesmo tempo (duas abas, ou um pedido só de perguntas e outro só de documentos) entram uma depois da outra, e a
+  # segunda parte do que a primeira gravou. Sem a trava, cada uma regravaria a marca inteira e apagaria a outra.
   def call
-    rascunho = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
-    recusar('sem_modelo') if rascunho.nil?
-    recusar('agente_ja_comecou') if @thread.agent && !@thread.agent.draft?
+    @thread.with_lock do
+      rascunho = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
+      recusar('sem_modelo') if rascunho.nil?
 
-    novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
-    gravar!(novo)
-    novo
+      novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
+      gravar!(novo)
+      novo
+    end
   end
 
   private
@@ -107,11 +110,16 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     limpa.presence || do_ramo
   end
 
-  # Primeiro a conversa (o UPDATE espera a trava de quem estiver criando o rascunho), depois o agente, se já existir.
+  # Com a conversa já travada: primeiro o agente, se já existir, travado e conferido de novo como rascunho (o "Começar"
+  # pode chegar no meio da edição, e a lista não pode entrar num agente que já atende); depois a conversa. A ordem das
+  # travas é a do Construtor: conversa, depois agente. A recusa desfaz tudo.
   def gravar!(rascunho)
     chaves = rascunho.para_guardar
-    @thread.juntar_ao_estado!(chaves)
     agente = @thread.agent
-    agente&.with_lock { agente.update!(config: agente.config.to_h.merge(chaves)) }
+    agente&.with_lock do
+      recusar('agente_ja_comecou') unless agente.draft?
+      agente.update!(config: agente.config.to_h.merge(chaves))
+    end
+    @thread.juntar_ao_estado!(chaves)
   end
 end

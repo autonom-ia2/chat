@@ -1279,10 +1279,11 @@ module Autonomia
       end
 
       # #2858 F3: o "já vem com" e o "também combina" da Confira, como o canal (no state e no config do agente).
-      # #2881: com modelo pronto, as do modelo (fixas e já filtradas pelo que a conta tem liberado), não as da IA.
+      # #2881: com modelo pronto o turno não grava estas chaves. As do modelo (fixas, filtradas pelo que a conta tem
+      # liberado) nascem com a conversa e com o rascunho, e depois só a edição do dono as muda (`ModelosDeRamo::Edicao`).
+      # Gravá-las daqui, da cópia da conversa lida no começo do turno, desfaria uma mudança feita com o turno em andamento.
       def prontas_do_turno(parsed)
-        modelo = modelo_do_rascunho
-        return modelo.chaves_das_prontas if modelo
+        return {} if modelo_do_rascunho
 
         dispensadas = @thread.agent&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS]
         divisao = ProntasSugeridas.dividir(@account, parsed, fora: dispensadas)
@@ -1357,12 +1358,12 @@ module Autonomia
 
       # O config com que o rascunho nasce: a base declarada, quando a abertura foi "Ajuda outros agentes" (tema 14), a
       # marca de origem do ajudante, e com a Fase 2 a marca de base do segmento (#1429). As marcas só nascem aqui.
+      # #2881: com modelo pronto, também a marca do modelo (as listas como o dono as deixou) e as ferramentas dela.
       def config_do_rascunho
         papel = @thread.state.to_h['papel']
-        { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
-          'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account),
-          # #2881: a marca do modelo pronto (as listas como o dono as deixou); nil sem modelo.
-          Autonomia::Agents::ModelosDeRamo::Marca::CHAVE => modelo_do_rascunho&.marca }.compact
+        base = { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
+                 'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account) }.compact
+        base.merge(modelo_pronto_para_o_rascunho)
       end
 
       # Garante o Agent vinculado à thread (modo guided). Cria um rascunho mínimo na PRIMEIRA geração

@@ -34,6 +34,23 @@ RSpec.describe Autonomia::Agents::BuildThread do
       expect(marca['ferramentas']).to eq(modelo.ja_vem.map { |f| { 'fonte' => f.fonte, 'usar_quando' => f.usar_quando } })
     end
 
+    it 'já abre com as ferramentas do modelo que a conta tem liberadas, nas chaves que a Confira lê' do
+      ligar_prontas_do_construtor(account)
+
+      # compras_governo é do lote 2, desligado nesta conta: some sozinha.
+      expect(abrir.state.slice('ferramentas_sugeridas', 'ferramentas_tambem'))
+        .to eq('ferramentas_sugeridas' => %w[cnpj feriados cep], 'ferramentas_tambem' => %w[cidades banco_central])
+    end
+
+    it 'ignora o modelo na abertura de ajudante ("Ajuda outros agentes"): o roteiro do ramo é de atendimento' do
+      conversa = described_class.new(account: account)
+      conversa.persist_start_options!(type: 'support', papel: described_class::PAPEL_AJUDANTE, modelo: 'seguro_garantia')
+
+      expect(conversa.state).not_to have_key(chave_da_marca)
+      expect(conversa.state.slice('agent_type', 'papel'))
+        .to eq('agent_type' => 'support', 'papel' => described_class::PAPEL_AJUDANTE)
+    end
+
     it 'mantém as outras escolhas da abertura' do
       conversa = abrir
 

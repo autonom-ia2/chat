@@ -12,9 +12,19 @@
 module Autonomia::Agents::Builder::ModeloPronto
   private
 
-  # Relido a cada uso (são leituras do `state` e da conta): o dono pode mudar as listas com o turno em andamento.
+  # O modelo desta conversa como o turno o encontrou, lido uma vez (cada leitura consulta a flag e o pacote da conta).
+  # Serve ao que o turno ESCREVE PARA A IA: roteiro, teto da entrevista e nome. O que o turno GRAVA no agente não sai
+  # daqui (`modelo_pronto_para_o_rascunho`): o dono pode mudar as listas com o turno em andamento.
   def modelo_do_rascunho
-    Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
+    return @modelo_do_rascunho if defined?(@modelo_do_rascunho)
+
+    @modelo_do_rascunho = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
+  end
+
+  # A marca e as ferramentas com que o rascunho nasce ({} sem modelo). Lido na hora, e não do que o turno guardou: quem
+  # chama está com a conversa travada e recém-relida (`ensure_agent`), então vale o que o dono já mudou.
+  def modelo_pronto_para_o_rascunho
+    Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)&.para_guardar.to_h
   end
 
   def teto_da_entrevista
@@ -55,14 +65,13 @@ module Autonomia::Agents::Builder::ModeloPronto
     attrs.merge(agent_type: rascunho.modelo.tipo, config: attrs[:config].merge(marca_que_falta_ao_agente(rascunho)))
   end
 
-  # A marca só vai no fechamento quando o agente ainda não tem a deste modelo. O rascunho já nasce com ela
-  # (`config_do_rascunho`) e quem a mantém em dia é a `Edicao`, sob a trava do agente: regravá-la aqui poderia desfazer
-  # uma mudança que o dono fez com o turno em andamento.
+  # A marca (com as ferramentas que saem dela) só vai no fechamento quando o agente ainda não tem a deste modelo. O
+  # rascunho já nasce com ela (`config_do_rascunho`) e quem a mantém em dia é a `Edicao`, sob a trava do agente:
+  # regravá-la aqui poderia desfazer uma mudança que o dono fez com o turno em andamento.
   def marca_que_falta_ao_agente(rascunho)
-    chave = Autonomia::Agents::ModelosDeRamo::Marca::CHAVE
-    atual = @thread.agent&.config.to_h[chave]
+    atual = @thread.agent&.config.to_h[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]
     return {} if atual.is_a?(Hash) && atual['chave'] == rascunho.marca['chave']
 
-    { chave => rascunho.marca }
+    rascunho.para_guardar
   end
 end
