@@ -21,6 +21,9 @@ O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
 - **Qual máquina.** O `up` lê `maccluster status --json` e só sobe numa máquina **dentro do limite**: carga (load
   de 1 minuto) abaixo de 20, memória livre (a `available` do MacCluster) acima de 3 GB e swap-out abaixo de 1 MiB/s.
   Os três limites ficam no topo do `bin/demo` (`CARGA_MAX`, `RAM_MIN_GB`, `SWAP_MAX_MIB_S`).
+- **Ferramentas.** Máquina em que falta alguma ferramenta que o kit executa (Ruby, Node, `pnpm`, cliente do
+  Postgres, Redis) não recebe demo, mesmo dentro do limite: o `up` pararia no meio, com banco e snapshot já
+  criados. O `maquinas` e o `up` dizem o caminho que falta. A lista fica em `script/demo/ferramentas.sh`.
 - **Desempate.** Se `m2` e `m4` servem, ganha a que tem **mais memória livre**: foi memória que faltou em 12/11.
   Empate fica com o `m2` (a comparação usa o número do MacCluster, que vem com uma casa decimal).
 - **Nenhuma serve.** O `up` recusa e mostra o que mediu em cada máquina. Não há opção para passar por cima do limite.
@@ -70,7 +73,7 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
 
 | Comando | Onde | O que faz |
 |---|---|---|
-| `maquinas` | este Mac e as duas máquinas | Só leitura. Mede `m2` e `m4`, lista as demos vivas e diz para onde um `up` iria (ou por que seria recusado). |
+| `maquinas` | este Mac e as duas máquinas | Só leitura. Mede `m2` e `m4`, confere as ferramentas do kit em cada uma, lista as demos vivas e diz para onde um `up` iria (ou por que seria recusado). |
 | `up` | este Mac → a demo | Escolhe a máquina (seção acima) e recusa se houver outra demo viva ou se nenhuma máquina servir. Confere que banco e portas da demo estão livres. Tira o snapshot da worktree neste Mac (`maccluster workspace snapshot --local-only`). Se a demo roda em outro Mac: lá, clona (APFS, custo ~0) o snapshot chat2you mais recente e leva só a diferença com `rsync --checksum --delete`; depois confere que ficou igual. Se roda neste Mac: usa o snapshot no lugar, sem cópia, e o `pnpm install` traz as dependências. Grava `demo.env`, gera as chaves, sobe um Redis próprio, roda `pnpm install`, `db:create db:schema:load db:seed`, o `Seeders::AccountSeeder` na conta 1 e põe conta e John em pt-BR. Sobe Vite e Rails e espera o login responder. Rodar de novo só religa. |
 | `sync` | este Mac → a demo | Copia o que difere do commit do snapshot (alterados, novos, não rastreados) e apaga o que a worktree apagou. Mudou `.rb`, `config/*.yml` ou `lib/`: reinicia só o Rails. Mudou migration: roda `db:migrate` no banco da demo e reinicia. Mudou `pnpm-lock.yaml`: refaz o `pnpm install`. Mudou `Gemfile`: para e pede demo nova. Front puro: o Vite recarrega sozinho. Com a demo desligada, leva os arquivos (e roda `pnpm install`/`db:migrate`, se for o caso) e não liga servidor nenhum. |
 | `flag` | a demo | `Account#enable_features!` na conta (1 por padrão). Flag que não existe falha. |
@@ -117,9 +120,12 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
   teste e de demo. O cliente (`psql`, `createdb`, `dropdb`) é o 17.11 no M2 e o 16.15 no M4, que não tem o 17.11
   (medido em 12/11/2026); o kit usa o que achar, nessa ordem.
 - **Demo no mesmo Mac do `bin/demo`** (hoje, o M4): não há cópia nem túnel. A demo roda em cima do snapshot que o
-  MacCluster acabou de tirar, e o `down --apagar` apaga esse snapshot uma vez só. Em 12/11/2026 este caminho foi
-  conferido **só por leitura** (ferramentas, gems com `bundle check`, `pnpm` do corepack, Postgres e portas do M4):
-  o primeiro `up` de verdade no M4 é o teste que falta, e deve ser combinado com a Orquestração Deploy.
+  MacCluster acabou de tirar, e o `down --apagar` apaga esse snapshot uma vez só. O primeiro `up` de verdade no M4
+  (12/11/2026) passou por snapshot, `pnpm install`, banco e Rails, e parou no Vite: ver "Lançador de gem que falta"
+  nos tropeços. `sync`, prints e `down --apagar` neste caminho ainda não foram exercitados.
+- **Rails e Vite pelos binstubs do app**: o kit sobe os dois com `ruby bin/rails` e `ruby bin/vite`, de dentro do
+  snapshot, e não com `bundle exec rails|vite`. O binstub carrega o Bundler e acha o executável dentro da gem; o
+  `bundle exec` procura o lançador da gem no `bin/` do Ruby compartilhado, que pode não ter todos.
 - **`demo.env`**: lido como dado (chave=valor, só chaves conhecidas), nunca executado com `source`. Portas têm de
   ser numéricas e `SNAP` tem de ser `/Users/Shared/maccluster-workspaces/chat2you/<id>/src`; senão todo comando para.
 - **Chaves**: `SECRET_KEY_BASE` e as três do Active Record Encryption ficam em `chaves/` (0600) e nunca passam pelo
@@ -200,6 +206,7 @@ entrada → todas as conversas):
 | **`?demo=vazio`** | O protótipo usa um adaptador falso de dados; o Rodrigo precisa ver também a tela sem dados. | Convenção do adaptador: `?demo=vazio` na URL devolve a lista vazia. Faça uma etapa para cada estado (`/app/accounts/{conta}/minha-tela` e `...?demo=vazio`). A flag só liga rota e menu. |
 | **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no Mac de onde é chamado e monta o do outro por clone APFS + `rsync` da diferença (em geral poucos MB). |
 | **Vite demora na 1a página** | A primeira visita compila o painel. | O `up` espera até 15 min pelo login; o `prints` dá até 5 min por página (`DEMO_TIMEOUT_MS`). |
+| **Lançador de gem que falta** ("bundler: command not found: vite") | O Ruby compartilhado do MacCluster guarda um lançador por executável de gem em `ruby-3.4.4/bin`. Em 12/11/2026 o do M4 tinha 27 e o do M2, 79: as gems estavam instaladas no M4, mas sem os lançadores (entre eles `vite`, `puma`, `rackup`). O `bundle exec vite` não achou o comando. | O kit não usa mais lançador de gem: chama `ruby bin/rails` e `ruby bin/vite` do próprio app. Os lançadores que faltam no M4 são assunto do instalador do MacCluster, não do kit. |
 | **Gem nova** | O Ruby do MacCluster tem as gems do `Gemfile.lock` da `main`. | O `sync` recusa mudança de `Gemfile`; demo que precisa de gem nova não é caso deste kit. |
 
 ## Checagem de uso (`lsof +D`)
@@ -276,6 +283,8 @@ Apaga só o que é da demo, pelo nome exato: o banco `chatwoot_kitdemo_<slug>`, 
 - `script/demo/no_m2.sh` — lado da máquina da demo (`m2` ou `m4`; o nome é de quando só havia o M2); o `bin/demo`
   copia `script/demo/` para a pasta da demo a cada comando.
 - `script/demo/vivas.sh` — lista as demos vivas de uma máquina (só leitura); vai pelo stdin, sem deixar pasta nela.
+- `script/demo/ferramentas.sh` — onde ficam as ferramentas que o kit executa e a lista das que faltam; o `no_m2.sh`
+  carrega, e o `bin/demo` manda pelo stdin para conferir cada máquina.
 - `script/demo/comum.sh` — `em_uso` (checagem com `lsof +D`), carregado pelos dois lados.
 - `script/demo/preparar_conta.rb`, `ligar_flag.rb` — `rails runner` no banco da demo.
 - `script/demo/senha_do_seed.rb` — lê a senha do John no `db/seeds.rb` (parser Prism) para o login dos prints.
