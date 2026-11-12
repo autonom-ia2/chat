@@ -32,10 +32,12 @@ class Autonomia::Automacao::CardsDoEnsaio
     @account_user = conta.account_users.find_by(user_id: usuario.id)
   end
 
-  # Os `limite` mais recentes; nos gatilhos de reunião, os que têm a reunião primeiro.
+  # Os `limite` mais recentes; nos gatilhos de reunião, os que têm a reunião primeiro, já com ela (numa consulta só).
   def recentes(limite)
     primeiros = reuniao? ? alcancados(cards.where(id: reunioes.select(:card_id)), limite) : []
-    primeiros + alcancados(cards.where.not(id: primeiros.map(&:id)), limite - primeiros.size)
+    todos = primeiros + alcancados(cards.where.not(id: primeiros.map(&:id)), limite - primeiros.size)
+    @reunioes_dos_cards = reunioes_dos(todos.map(&:id)) if reuniao?
+    todos
   end
 
   # O card escolhido em "Ensaiar em outro card"; fora do alcance de quem pede, é como se não existisse (RecordNotFound).
@@ -61,10 +63,17 @@ class Autonomia::Automacao::CardsDoEnsaio
 
   def lembrete? = @gatilho['tipo'] == ::Autonomia::Automacao::Gatilhos::LEMBRETE
 
-  # A mais recente; no lembrete, a próxima.
+  # A mais recente; no lembrete, a próxima. Os cards da lista já vêm com ela (recentes); o escolhido, numa consulta.
   def reuniao_do(card)
+    return @reunioes_dos_cards[card.id] if @reunioes_dos_cards&.key?(card.id)
+
+    reunioes_dos([card.id])[card.id]
+  end
+
+  def reunioes_dos(ids)
     ordem = lembrete? ? { starts_at: :asc, id: :asc } : { starts_at: :desc, id: :desc }
-    reunioes.where(card_id: card.id).reorder(ordem).first
+    primeiras = reunioes.where(card_id: ids).reorder(ordem).group_by(&:card_id).transform_values(&:first)
+    ids.index_with { |id| primeiras[id] }
   end
 
   def reunioes
