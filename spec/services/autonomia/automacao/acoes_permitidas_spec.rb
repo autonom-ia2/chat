@@ -52,7 +52,9 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
        'DELETE conversations/:conversation_id/participants',
        # Lote C.
        'DELETE campaign_journey/drafts/:id', 'DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id',
-       'DELETE autonomia/prospecting/lists/:id/leads/:lead_id', 'DELETE autonomia/prospecting/saved_presets/:id']
+       'DELETE autonomia/prospecting/lists/:id/leads/:lead_id', 'DELETE autonomia/prospecting/saved_presets/:id',
+       # Lote F.
+       'DELETE brand_kits/:id', 'DELETE notifications/:id']
     end
     let(:deletes) { permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') } }
 
@@ -239,6 +241,45 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'a lista não leva as etiquetas do segmento e o ajuste não encurta o cache pago', :aggregate_failures do
       expect(permitidas.proibidos('POST autonomia/prospecting/lists', { 'metadata' => {} })).to eq(['metadata'])
       expect(permitidas.proibidos('PATCH autonomia/prospecting/settings', { 'cache_ttl_seconds' => 60 })).to eq(['cache_ttl_seconds'])
+    end
+  end
+
+  describe '#2660 lote F: conteúdo e painel (D5)' do
+    it 'o artigo sai sempre como rascunho, sem a posição nem o rascunho paralelo', :aggregate_failures do
+      expect(permitidas.fixos('POST portals/:portal_id/articles')).to eq('status' => 'draft')
+      expect(permitidas.fora_da_lista('PATCH portals/:portal_id/articles/:id', { 'status' => 'published' }).map(&:first)).to eq([:fixo])
+      expect(permitidas.proibidos('PUT portals/:portal_id/articles/:id', { 'position' => 1, 'draft_content' => 'x' }))
+        .to eq(%w[position draft_content])
+    end
+
+    it 'em lote, muda a categoria e volta a rascunho; publicar, apagar e traduzir ficam fora', :aggregate_failures do
+      status = 'PATCH portals/:portal_id/articles/bulk_actions/update_status'
+
+      expect(permitidas.fora_da_lista(status, { 'ids' => [1], 'status' => 'published' }).map(&:first)).to eq([:um_de])
+      expect(permitidas.fora_da_lista(status, { 'ids' => [1], 'status' => 'draft' })).to be_empty
+      expect(liberadas('DELETE portals/:portal_id/articles/bulk_actions/delete_articles',
+                       'POST portals/:portal_id/articles/bulk_actions/translate')).to all(be(false))
+    end
+
+    it 'o portal e o layout de e-mail ficam fora (D5); o link rastreado espera o formato completo' do
+      expect(liberadas('POST portals', 'PATCH portals/:id', 'PATCH portals/:id/archive', 'POST ctwa_tracked_links')).to all(be(false))
+      expect(permitidas.lista['passo'].keys).not_to include('branded_email_layouts')
+    end
+
+    it 'a identidade visual não baixa logo de fora; a macro é criada, não executada', :aggregate_failures do
+      expect(permitidas.proibidos('PATCH brand_kits/:id', { 'logo_source_url' => 'https://exemplo.com/logo.png' })).to eq(['logo_source_url'])
+      expect(liberadas('POST macros', 'POST macros/:id/execute', 'DELETE macros/:id')).to eq([true, false, false])
+    end
+
+    it 'no cuidado dos comentários, só corrige a foto; ligar e as prévias pagas ficam fora' do
+      expect(liberadas('PUT seus_posts/posts/:post_id/cuidado/foto', 'PUT seus_posts/posts/:post_id/cuidado',
+                       'POST seus_posts/posts/:post_id/cuidado/previa', 'PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto',
+                       'PUT crm/meta_ads_connection/ads/:ad_id/cuidado')).to eq([true, false, false, true, false])
+    end
+
+    it 'na notificação, uma por vez; ler e apagar todas ficam fora' do
+      expect(liberadas('PATCH notifications/:id', 'POST notifications/read_all', 'POST notifications/destroy_all'))
+        .to eq([true, false, false])
     end
   end
 end

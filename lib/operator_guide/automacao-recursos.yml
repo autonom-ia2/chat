@@ -482,6 +482,89 @@ passo:
     acoes:
       PATCH autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
       PUT autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
+  # #2660 lote F: conteúdo e painel (D5). Cada rota confere a chave da tela de quem ligou (central de ajuda,
+  # identidade visual, macros, anúncios, comentários); notificação, aviso e trilha são de quem ligou.
+  articles:
+    motivo: >-
+      Criar e alterar artigo da central de ajuda, sempre como rascunho (D5, #2660 lote F): o artigo publicado fica
+      público na hora, e alterar pela automação volta o artigo a rascunho até uma pessoa publicar. A posição e o
+      rascunho paralelo (`draft_title`, `draft_content`, gravado com update_columns) ficam fora. Apagar solta as
+      traduções com nullify; reordenar usa update_column.
+    acoes:
+      POST portals/:portal_id/articles: { fixos: { status: draft }, proibe: [position, draft_title, draft_content] }
+      PATCH portals/:portal_id/articles/:id: { fixos: { status: draft }, proibe: [position, draft_title, draft_content] }
+      PUT portals/:portal_id/articles/:id: { fixos: { status: draft }, proibe: [position, draft_title, draft_content] }
+  articles/bulk_actions:
+    motivo: >-
+      Mudar a categoria de vários artigos e voltar vários a rascunho (D5, #2660 lote F), um a um pelo model. Publicar
+      em lote fica fora pelo `um_de`; apagar solta as traduções com update_all; traduzir gasta IA paga num job.
+    acoes:
+      PATCH portals/:portal_id/articles/bulk_actions/update_category: {}
+      PATCH portals/:portal_id/articles/bulk_actions/update_status: { um_de: { status: [draft] } }
+  categories:
+    motivo: >-
+      Criar e alterar categoria da central de ajuda (#2660 lote F). A posição muda a ordem do portal e
+      `related_category_ids` troca a lista inteira: ficam fora. Apagar apaga num job (destroy_async).
+    acoes:
+      POST portals/:portal_id/categories: { proibe: [position, related_category_ids] }
+      PATCH portals/:portal_id/categories/:id: { proibe: [position, related_category_ids] }
+      PUT portals/:portal_id/categories/:id: { proibe: [position, related_category_ids] }
+  brand_kits:
+    motivo: >-
+      Criar, alterar, restaurar e tornar padrão a identidade visual, e arquivar (o DELETE só arquiva, pela D1) (#2660
+      lote F). O logo fica fora: `logo_source_url` baixa uma URL de fora, `logo` é arquivo e `remove_logo` apaga o
+      arquivo num job.
+    acoes:
+      POST brand_kits: { proibe: [logo_source_url, logo, remove_logo] }
+      PATCH brand_kits/:id: { proibe: [logo_source_url, logo, remove_logo] }
+      PUT brand_kits/:id: { proibe: [logo_source_url, logo, remove_logo] }
+      POST brand_kits/:id/restore: {}
+      POST brand_kits/:id/set_default: {}
+      DELETE brand_kits/:id: {}
+  macros:
+    motivo: >-
+      Criar e alterar macro (#2660 lote F): a macro só roda quando uma pessoa clica. Executar está em
+      Acoes::SEM_DESFAZER; apagar tira os anexos com purge_later.
+    acoes:
+      POST macros: {}
+      PATCH macros/:id: {}
+      PUT macros/:id: {}
+  crm/meta_ads_site_pages:
+    motivo: Criar a página de site do anúncio, um link rastreado local, sem a Meta (#2660 lote F), com `meta_ads_manage`.
+    acoes:
+      POST crm/meta_ads_connection/site_pages: {}
+  seus_posts_cuidado:
+    motivo: >-
+      Corrigir o que a IA leu na foto do post, o texto local que ela usa ao responder (#2660 lote F). Ligar o cuidado faz
+      a IA responder em público, mudar todos usa update_all e as prévias gastam IA paga: ficam fora.
+    acoes:
+      PUT seus_posts/posts/:post_id/cuidado/foto: {}
+  crm/meta_ads_cuidado:
+    motivo: >-
+      Corrigir o que a IA leu na foto do anúncio, o texto local que ela usa ao responder (#2660 lote F). Ligar, prévias e
+      ler os antigos ficam fora, como em seus_posts_cuidado.
+    acoes:
+      PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto: {}
+  notifications:
+    motivo: >-
+      Marcar como lida e não lida, adiar e apagar uma notificação de quem ligou (#2660 lote F; apagar pela D1). Ler
+      todas usa update_all e apagar todas roda num job.
+    acoes:
+      PATCH notifications/:id: {}
+      PUT notifications/:id: {}
+      POST notifications/:id/unread: {}
+      POST notifications/:id/snooze: {}
+      DELETE notifications/:id: {}
+  autonomia/avisos:
+    motivo: Marcar um aviso de quem ligou como visto ou novo (#2660 lote F).
+    acoes:
+      PATCH autonomia/avisos/:id: {}
+      PUT autonomia/avisos/:id: {}
+  onboarding_progress:
+    motivo: Pular e retomar um passo da trilha de começo da conta, só administrador (#2660 lote F).
+    acoes:
+      POST onboarding/progress/:id/skip: {}
+      POST onboarding/progress/:id/resume: {}
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
@@ -599,7 +682,6 @@ fora:
       - email_campaigns/test_sends
       - email_campaigns/videos
       - seus_posts_comentarios
-      - seus_posts_cuidado
       - agentes_do_post
       - agentes_do_post_materiais
       - crm/meta_ads_facebook_comments
@@ -608,9 +690,7 @@ fora:
       - crm/meta_ads_ad_management
       - crm/meta_ads_creation
       - crm/meta_ads_ad_care
-      - crm/meta_ads_cuidado
       - crm/meta_ads_lead_forms
-      - crm/meta_ads_site_pages
       - crm/google_conversion_feeds
       - whatsapp_template_suggestions
       - inboxes/whatsapp_templates
@@ -619,8 +699,6 @@ fora:
     recursos:
       - bulk_actions
       - crm/cards/bulk
-      - articles/bulk_actions
-      - macros
       - data_imports
       - contact_imports
       - campaign_imports
@@ -651,7 +729,10 @@ fora:
     recursos:
       - contacts/labels
       - conversations/labels
-  - motivo: Configuração e dados que a F3 não libera. A D13 cobre etiqueta, atributo, etapa, atribuição e agente na caixa; o resto entra quando um caso real pedir.
+  - motivo: >-
+      Configuração e dados que ficam fora depois dos lotes do #2660: trocam a lista inteira, gravam em lote ou num job,
+      falam com o cliente, mexem na preferência pessoal de alguém ou esperam o formato completo (motivo de cada um no
+      inventário da #2660). Entram quando um caso real pedir, com a mesma leitura do controller.
     recursos:
       - assignment_policies/inboxes
       - inbox_csat_templates
@@ -662,22 +743,20 @@ fora:
       - relationships/configurations
       - relationships/values
       - notification_settings
-      - notifications
-      - onboarding_progress
       - onboardings
+      # #2660 lote F: criar e alterar esperam o formato completo, e arquivar quebra (PortalsController#archive grava
+      # `archive`, atributo que o Portal não tem).
       - portals
-      - articles
-      - categories
-      - brand_kits
+      # D5: muda o HTML em volta de todo e-mail ao cliente; fica trancado.
       - branded_email_layouts
       - upload
+      # #2660 lote F: criar e alterar esperam o formato completo; apagar leva os cliques em cascata e quebra o link do anúncio.
       - ctwa_tracked_links
       - contacts/opt_outs
       - contacts/contact_inboxes
       - contact_inboxes
       - conversations/passar_para
       - conversa_canal/pastas_do_email
-      - autonomia/avisos
       - autonomia/prospecting/audiences
       - autonomia/prospecting/lead_audiences
       - autonomia/prospecting/lead_consent_refusals

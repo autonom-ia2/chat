@@ -389,3 +389,34 @@ so_guia:
   PUT autonomia/prospecting/searches/:id: Faz o mesmo que o PATCH; a busca é escolhida pelo id.
   PATCH autonomia/prospecting/settings: O ajuste da Prospecção é configuração da conta; nenhum dos 20 exemplos usa.
   PUT autonomia/prospecting/settings: Faz o mesmo que o PATCH; o ajuste da Prospecção é configuração.
+  # #2660 lote F: conteúdo e painel, liberados no motor e fora do editor. Nenhum dos 20 exemplos usa; o registro é
+  # escolhido pelo id, que nenhum valor do alvo traz e a tela não oferece.
+  POST portals/:portal_id/articles: Escrever artigo da central de ajuda é conteúdo, montado com a pessoa olhando; sai como rascunho.
+  PATCH portals/:portal_id/articles/:id: O artigo é escolhido pelo id, que a tela não oferece; volta a rascunho.
+  PUT portals/:portal_id/articles/:id: Faz o mesmo que o PATCH; o artigo é escolhido pelo id.
+  PATCH portals/:portal_id/articles/bulk_actions/update_category: Os artigos são escolhidos pelo id, que a tela não oferece.
+  PATCH portals/:portal_id/articles/bulk_actions/update_status: Os artigos são escolhidos pelo id, que a tela não oferece.
+  POST portals/:portal_id/categories: Categoria da central de ajuda é conteúdo; nenhum dos 20 exemplos usa.
+  PATCH portals/:portal_id/categories/:id: A categoria é escolhida pelo id, que a tela não oferece.
+  PUT portals/:portal_id/categories/:id: Faz o mesmo que o PATCH; a categoria é escolhida pelo id.
+  POST brand_kits: Identidade visual é configuração da marca; nenhum dos 20 exemplos usa.
+  PATCH brand_kits/:id: A identidade é escolhida pelo id, que a tela não oferece.
+  PUT brand_kits/:id: Faz o mesmo que o PATCH; a identidade é escolhida pelo id.
+  POST brand_kits/:id/restore: A identidade é escolhida pelo id, que a tela não oferece.
+  POST brand_kits/:id/set_default: A identidade é escolhida pelo id, que a tela não oferece.
+  DELETE brand_kits/:id: Arquivar fica no Guia e no motor; o editor não mostra DELETE.
+  POST macros: A macro é montada com as ações dela, que o editor não tem como peça; nenhum dos 20 exemplos usa.
+  PATCH macros/:id: A macro é escolhida pelo id, que a tela não oferece.
+  PUT macros/:id: Faz o mesmo que o PATCH; a macro é escolhida pelo id.
+  POST crm/meta_ads_connection/site_pages: A página de site do anúncio é configuração de anúncios; nenhum dos 20 exemplos usa.
+  PUT seus_posts/posts/:post_id/cuidado/foto: O post é escolhido pelo id, que nenhum valor do alvo traz.
+  PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto: O anúncio é escolhido pelo id, que nenhum valor do alvo traz.
+  PATCH notifications/:id: A notificação é escolhida pelo id, que a tela não oferece.
+  PUT notifications/:id: Faz o mesmo que o PATCH; a notificação é escolhida pelo id.
+  POST notifications/:id/unread: A notificação é escolhida pelo id, que a tela não oferece.
+  POST notifications/:id/snooze: A notificação é escolhida pelo id, que a tela não oferece.
+  DELETE notifications/:id: Apagar fica no Guia e no motor; o editor não mostra DELETE.
+  PATCH autonomia/avisos/:id: O aviso é escolhido pelo id, que a tela não oferece.
+  PUT autonomia/avisos/:id: Faz o mesmo que o PATCH; o aviso é escolhido pelo id.
+  POST onboarding/progress/:id/skip: O passo da trilha é escolhido pelo id, e é configuração do administrador.
+  POST onboarding/progress/:id/resume: O passo da trilha é escolhido pelo id, e é configuração do administrador.
