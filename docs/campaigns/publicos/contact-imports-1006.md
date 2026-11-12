@@ -95,3 +95,70 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
   - Valor que o contato já tem **não é sobrescrito**; célula vazia não apaga nada.
 - **Não é público:** não cria etiqueta, não aparece em Públicos nem no histórico de bases
   (`CampaignImport.campaign_flows`), e `campaign_journey/campaigns` recusa usá-la (`404`/`not_an_audience`).
+
+## Trazer minha lista (#2896, Fatia 1)
+
+A tela nova de Relacionamentos ("Trazer minha lista") usa esta mesma importação de contatos, com uma marca:
+`options.trazer` (um objeto, vazio quando nasce). Só as importações com a marca mudam de comportamento; a tela
+"Importar contatos" e o passo "Para cada item" da Automação seguem como descrito acima.
+
+Com a marca:
+
+- **A leitura não para para perguntar as colunas.** A sugestão do leitor é aceita e a importação segue até
+  `ready_to_confirm`. `schema_resolution` fica com `needs_confirmation: false` e mantém `uncertain_targets` e
+  `targets[*].confident`: a tela mostra a coluna sugerida sem certeza como `duvidosa`, e a pessoa troca ali.
+  Planilha sem coluna de telefone nem de e-mail → `validation_failed` com `missing_contact_column`.
+- **`options.trazer.destinos`** guarda, pelo índice da coluna, o destino que a pessoa escolheu para uma coluna que
+  não é nome, telefone, e-mail nem empresa. Nesta fatia só `nao_guardar` é gravado (o padrão é virar informação da
+  pessoa).
+- **Coluna `nao_guardar` não deixa valor em lugar nenhum.** A leitura não põe o valor dela em
+  `campaign_import_rows.extra_values` nem a conta em `validation_summary` (`contact_attributes`,
+  `attribute_problems`); a gravação não escreve o valor no contato nem cria o atributo. Quando a pessoa marca a coluna
+  depois da leitura, a chave é apagada de `extra_values` de todas as linhas da importação na mesma hora (o
+  `validation_summary` só se acerta na próxima leitura). A regra é uma só:
+  `Relacionamentos::Trazer::Colunas.chaves_que_nao_guardam`.
+- Em `options` e em `validation_summary` só entram índice de coluna e código: nunca valor de célula.
+
+### Rotas
+
+Base: `/api/v1/accounts/:account_id/relacionamentos/trazer`. Todas, leituras inclusive, pedem a chave de conta
+`relacionamentos_novo` (`404` sem ela), as duas flags de instalação da tabela "Quando vale" (`404` sem elas) e
+`ContactPolicy#import?` (`401` sem ela). Só enxergam importações de contatos por arquivo da própria conta: as da
+Automação, os Públicos e as de outra conta respondem `404`. A resposta já vem no formato da tela.
+
+| Método | Caminho | Corpo | |
+|---|---|---|---|
+| POST | `/leituras` | multipart `arquivo` (.csv/.xlsx) | `201 {"id", "situacao": "lendo"}`; cria a importação com a marca e põe a leitura na fila. `422 {"error"}`: `arquivo_obrigatorio`, `tipo` (inclusive `.xls`) ou `arquivo_grande` |
+| GET | `/leituras/:id?pagina=` | | `lendo` (não abre arquivo); `falhou` com `erro` `vazia`, `sem_contato` ou `leitura`; ou `pronta`: `arquivo`, `valores`, `colunas`, `resumo`, `exemplos`, `problemas` (200 por página), `problemas_total`, `pagina`, `por_pagina`; `perguntas` e `respostas` vazias nesta fatia. `pagina` que não existe (texto, zero, negativa, além da última) vira a primeira ou a última que existe, e a resposta diz qual foi: quem busca todas as páginas para em `problemas_total`, não na página vazia. Só rascunho com a marca: depois de trazida a leitura responde `404` |
+| PATCH | `/leituras/:id/colunas/:indice` | `{ "destino" }` | `nome`, `telefone`, `email` ou `empresa`: a coluna entra no alvo (quem estava nele sai), a planilha é lida de novo e a resposta é `lendo`. Coluna que é alvo e vai para `informacao` ou `nao_guardar`: sai do alvo e a planilha é lida de novo (`lendo`). Coluna que não é alvo e vai para `nao_guardar`: vale na hora, o valor dela é apagado de todas as linhas e a resposta é `pronta` com `colunas`. Coluna que volta de `nao_guardar` para `informacao`: a planilha é lida de novo (`lendo`), porque o valor só existe no arquivo. Coluna que já está no destino pedido: `pronta` com `colunas`, sem mudar nada. O `:indice` é lido em base dez. `422 {"error"}`: `leitura_nao_pronta`, `coluna_desconhecida`, `destino_desconhecido` ou `sem_contato` (tiraria a última coluna de telefone ou e-mail) |
+| GET | `/listas` | | as 100 listas trazidas mais recentes (`Relacionamentos::Trazer::Historico::TETO`), a mais nova primeiro: `id`, `arquivo`, `quando` (ISO 8601), `quem`, `total`, `situacao`, `porcentagem`, `pode_tentar`. Rascunho não entra |
+| GET | `/listas/:id/andamento` | | `porcentagem`, `situacao`, `total`, `novas`, `completadas`, contados pelas linhas |
+
+"Trazer" e "Tentar de novo" continuam sendo o `POST /contact_imports/:id/confirm` acima.
+
+**Valores inteiros.** Telefone e e-mail inteiros só existem na resposta, só para quem passou em `import?`, e só
+enquanto o arquivo de onde saem existe. Nada disso é gravado a mais. São dois arquivos, com prazos diferentes:
+
+- **`valores` fala só dos `problemas`.** `problemas[].valor` (e `duplicadas`) traz a célula como está na planilha,
+  lida do arquivo original na hora da resposta; só as linhas da página são lidas dele. Depois que o arquivo original é
+  apagado (7 dias) a resposta vem com `"valores": "mascarados"`: `valor` é a máscara que a linha guarda
+  (`raw_phone_masked`, `email_masked`), `outraLinha` vem `null` e `duplicadas` vem vazia.
+- **`exemplos` não depende de `valores`.** São as três primeiras linhas aprovadas do arquivo conferido (30 dias) e
+  saem inteiros enquanto ele existir, mesmo com `"valores": "mascarados"`. Depois que o arquivo conferido também é
+  apagado, `exemplos` vem vazio: nenhum telefone ou e-mail inteiro sai.
+- **O nome é a exceção.** `problemas[].nome` sai inteiro com ou sem arquivo, para quem passou em `import?`: a leitura
+  de planilhas já guarda o nome de cada linha (`campaign_import_rows.raw_name`), como em Públicos e em Importar
+  contatos.
+
+**Situação da lista** (`Relacionamentos::Trazer::Situacao`):
+
+| Importação | Situação |
+|---|---|
+| `confirmed`, `queued`, `importing` | `trazendo` |
+| `completed`, `completed_with_failures` com `undo_status` `pending` ou `failed` | `pronto` |
+| idem com `undo_status` `processing` | `desfazendo` |
+| idem com `undo_status` `completed` | `desfeito` |
+| `failed` com `import_started_at` | `falhou` (`pode_tentar` = `import_resumable?`) |
+| o resto (rascunhos, `failed` sem gravação começada) | fora do histórico |
+
+`porcentagem` = linhas `imported` + `import_failed` sobre `valid_rows`; lista que acabou responde 100.

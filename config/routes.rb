@@ -1134,6 +1134,16 @@ Rails.application.routes.draw do
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
             post :apagar, to: 'apagar#create'
+            # #2896 — Trazer minha lista: enviar e ler a planilha, trocar o destino de uma coluna, as listas já trazidas e
+            # o andamento de uma. Trazer de fato é o `confirm` de contact_imports.
+            namespace :trazer do
+              resources :leituras, only: [:create, :show] do
+                resources :colunas, only: [:update], param: :indice
+              end
+              resources :listas, only: [:index] do
+                get :andamento, on: :member
+              end
+            end
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

@@ -8282,6 +8282,20 @@
       "related_category_ids"
     ]
   },
+  "PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:5",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:6"
+    ],
+    "sem_corpo": false
+  },
   "PATCH relationships/:entity/:id/values": {
     "campos": {
       "field": {}
@@ -20465,6 +20479,19 @@
     ],
     "sem_corpo": false
   },
+  "POST relacionamentos/trazer/leituras": {
+    "campos": {
+      "arquivo": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#create",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:11",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:12"
+    ],
+    "sem_corpo": false
+  },
   "POST saml_settings": {
     "campos": {
       "certificate": {
@@ -28197,6 +28224,20 @@
     "so_no_envelope": [
       "related_category_ids"
     ]
+  },
+  "PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:5",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:6"
+    ],
+    "sem_corpo": false
   },
   "PUT relationships/configuration": {
     "campos": {

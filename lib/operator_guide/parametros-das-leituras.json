@@ -2411,6 +2411,20 @@
     "controller": "api/v1/accounts/relacionamentos/resumo#show",
     "parametros": []
   },
+  "relacionamentos/trazer/leituras/:id": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#show",
+    "parametros": [
+      "pagina"
+    ]
+  },
+  "relacionamentos/trazer/listas": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/listas#index",
+    "parametros": []
+  },
+  "relacionamentos/trazer/listas/:id/andamento": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/listas#andamento",
+    "parametros": []
+  },
   "relationships/configuration": {
     "controller": "api/v1/accounts/relationships/configurations#show",
     "parametros": []
