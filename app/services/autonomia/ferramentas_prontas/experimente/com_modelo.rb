@@ -18,7 +18,9 @@
 # - Sem saldo no limite do dia da fonte, nem chama o modelo (a IA não é gasta para nada). Texto vazio também não. O
 #   Premium não tem limite do dia.
 # - `uma_consulta` (o card Premium, F7): cada consulta é paga, e o clique vale UMA. A que o pedido recusa antes da fonte
-#   (o dígito errado, o parâmetro fora do formato) não conta e não gasta o clique: o modelo pode corrigir. Depois da
+#   (a consulta que não existe, o parâmetro fora do formato) não conta e não gasta o clique: o modelo pode corrigir.
+#   O CPF ou o CNPJ com dígito errado é diferente: encerra o clique e a tela mostra a recusa. O modelo não pode
+#   "corrigir" o dígito sozinho e consultar, pago, um documento que a pessoa não pediu (revisor, 12/11). Depois da
 #   primeira que chegou à BigDataCorp ou ao cache do dia, as outras não rodam.
 # - A consulta roda por `FerramentasProntas.executor_para`, o mesmo caminho do agente (a `Premium::Execucao` no Premium).
 # - O texto da pessoa entra só como mensagem do usuário, cortado em `Experimente::MAX_VALOR`, e só alcança a
@@ -50,6 +52,8 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
 
   # O pedido recusado antes da fonte, ou com a fonte desligada: não gasta o clique do Premium.
   NAO_VALEU = %w[pronta_recusadas pronta_desligada].freeze
+  # Salvo o documento com dígito errado: encerra o clique.
+  DOCUMENTOS = [Autonomia::FerramentasProntas::Premium::Parametros::CPF, Autonomia::FerramentasProntas::Premium::Parametros::CNPJ].freeze
 
   # `pode_cobrar` (Premium): a consulta acima das grátis só vai à fatura com o clique no preço (`Cobranca.registrar!`).
   def initialize(account:, fonte:, valor:, uma_consulta: false, pode_cobrar: true)
@@ -108,7 +112,7 @@ class Autonomia::FerramentasProntas::Experimente::ComModelo
     params = {} unless params.is_a?(Hash)
     execucao = Autonomia::FerramentasProntas.executor_para(ferramenta, params: params, pode_cobrar: @pode_cobrar)
     saida = execucao.call
-    @valeu = @uma_consulta && NAO_VALEU.exclude?(execucao.codigo)
+    @valeu = @uma_consulta && (NAO_VALEU.exclude?(execucao.codigo) || DOCUMENTOS.include?(execucao.try(:parametro_recusado)))
     # A etapa é a consulta PEDIDA (a resposta de falha não diz qual era): o preço achado não some atrás de uma recusa.
     @saidas << JSON.parse(saida).merge('etapa' => params['consulta'].to_s)
     saida

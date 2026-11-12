@@ -127,9 +127,23 @@ RSpec.describe Autonomia::FerramentasProntas::Experimente do
     expect(JSON.parse(saidas_ao_modelo.last[:output])).to eq('situacao' => 'limite_do_experimente')
   end
 
-  it 'a recusa antes da BigDataCorp não gasta o clique: o modelo corrige e a consulta sai' do
+  # Revisor (MÉDIO, com_modelo.rb:36): o CPF ou o CNPJ com dígito errado encerra o clique e mostra a recusa. O modelo
+  # não pode "corrigir" o dígito sozinho e consultar outro documento, pago, que a pessoa não pediu.
+  it 'o CNPJ com dígito errado encerra o clique: a recusa aparece e nenhum outro documento é consultado' do
     pgfn_responde
     modelo_faz([chamada({ consulta: 'divida_uniao', cnpj: '11.222.333/0001-80' })], [chamada(pgfn, id: 'c2')])
+
+    resultado = experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-80')
+
+    expect(resultado['situacao']).to eq('pedido_invalido')
+    expect(JSON.parse(saidas_ao_modelo.last[:output])).to eq('situacao' => 'limite_do_experimente')
+    expect(chamou_a_bigdatacorp?).to be(false)
+    expect(registros_premium).to be_empty
+  end
+
+  it 'a recusa que não é do documento (a consulta que não existe) não gasta o clique: o modelo corrige e a consulta sai' do
+    pgfn_responde
+    modelo_faz([chamada({ consulta: 'nao_existe', cnpj: cnpj })], [chamada(pgfn, id: 'c2')])
 
     expect(experimentar('certidoes_empresa', 'dívida com a União da 11.222.333/0001-81')['situacao']).to eq('encontrado')
     expect(a_bigdatacorp).to have_been_made.once

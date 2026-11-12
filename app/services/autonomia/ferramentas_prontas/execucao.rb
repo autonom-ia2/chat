@@ -51,6 +51,10 @@ class Autonomia::FerramentasProntas::Execucao
   # quando a fonte respondeu (encontrado ou não encontrado).
   attr_reader :codigo
 
+  # O parâmetro que o pedido recusou antes da fonte (o CPF com dígito errado), ou nil. O Experimente Premium encerra o
+  # clique quando é o documento (`Experimente::ComModelo`).
+  attr_reader :parametro_recusado
+
   # O pedido saiu para alguma fonte? (O contrato do `HttpExecutor`, que o job da consulta em segundo plano lê.)
   def enviada?
     @cliente.present? && @cliente.chamadas.positive?
@@ -104,7 +108,8 @@ class Autonomia::FerramentasProntas::Execucao
   end
 
   def recusar_pedido(falta)
-    recusar('pedido_invalido', Resposta.pedido_invalido(falta, @consulta.parametro(falta.campo)))
+    @parametro_recusado = @consulta.parametro(falta.campo)
+    recusar('pedido_invalido', Resposta.pedido_invalido(falta, @parametro_recusado))
   end
 
   def resolver(params)
