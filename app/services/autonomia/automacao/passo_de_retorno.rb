@@ -16,7 +16,7 @@ class Autonomia::Automacao::PassoDeRetorno
   ACAO = 'POST crm/follow_ups'.freeze
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
 
-  # Ao salvar: os valores do título e da mensagem lidos pelo bloco de quem confere a receita (Receita#problemas_do_caminho),
+  # Ao salvar: os valores do título e da mensagem lidos pelo bloco de quem confere a receita (Receita::Leitura#problemas),
   # a mensagem só com a flag da F4 e só no card (`alvo`, Receita#alvo: o gatilho de card ou o ramo nos cards do contato),
   # as pessoas e o time da própria conta e, com a pessoa, poder criar retorno (FollowUpPolicy#create?, como o "criar
   # card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
