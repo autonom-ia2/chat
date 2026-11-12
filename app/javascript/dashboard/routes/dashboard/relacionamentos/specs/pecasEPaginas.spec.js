@@ -292,6 +292,16 @@ describe('rotas de Relacionamentos', () => {
       ligadas.includes(flag);
   };
 
+  const comAsDuas = () =>
+    comFlags([
+      FEATURE_FLAGS.RELACIONAMENTOS_NOVO,
+      FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
+    ]);
+  const rotaDoTrazer = routes.find(
+    rota => rota.name === 'relacionamentos_trazer'
+  );
+  const fichas = routes.filter(rota => rota !== rotaDoTrazer);
+
   it.each(routes.map(rota => [rota.name, rota]))(
     '%s pede as mesmas flags da lista: relacionamentos_novo e relationships_navigation',
     async (_nome, rota) => {
@@ -299,14 +309,41 @@ describe('rotas de Relacionamentos', () => {
       comFlags([FEATURE_FLAGS.RELACIONAMENTOS_NOVO]);
       await rota.beforeEnter(para, {}, next);
       expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+    }
+  );
 
+  it.each(fichas.map(rota => [rota.name, rota]))(
+    '%s abre com as duas flags',
+    async (_nome, rota) => {
       const liberada = vi.fn();
-      comFlags([
-        FEATURE_FLAGS.RELACIONAMENTOS_NOVO,
-        FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
-      ]);
+      comAsDuas();
       await rota.beforeEnter(para, {}, liberada);
       expect(liberada).toHaveBeenCalledWith();
     }
   );
+
+  // #2947 — a tela nova de trazer só lê do servidor quando a E3 (#2896) entrar.
+  it('relacionamentos_trazer, com as flags e fora da demonstração, cai na importação de contatos', async () => {
+    const next = vi.fn();
+    comAsDuas();
+    await rotaDoTrazer.beforeEnter({ ...para, query: {} }, {}, next);
+    expect(next).toHaveBeenCalledWith({
+      name: 'contacts_import_journey',
+      params: para.params,
+    });
+  });
+
+  it('relacionamentos_trazer abre na demonstração', async () => {
+    const next = vi.fn();
+    comAsDuas();
+    const naDemo = { ...para, query: { demo: 'cheio' } };
+    await rotaDoTrazer.beforeEnter(naDemo, {}, next);
+    expect(next).toHaveBeenCalledWith();
+    // O estado da demonstração gruda: desliga para os testes seguintes.
+    await rotaDoTrazer.beforeEnter(
+      { ...para, query: { demo: 'desligado' } },
+      {},
+      vi.fn()
+    );
+  });
 });

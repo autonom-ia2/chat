@@ -173,7 +173,13 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
     return {} if conversation.nil?
 
     { conversation: { channel: canal, inbox: conversation.inbox&.name, labels: conversation.label_list,
-                      attributes: curto(conversation.custom_attributes), status: conversation.status }.compact_blank }
+                      label_descriptions: descricoes_das_etiquetas, attributes: curto(conversation.custom_attributes),
+                      status: conversation.status }.compact_blank }
+  end
+
+  # #2435: o critério que a conta escreveu em cada etiqueta da conversa; a etiqueta sem descrição não aparece aqui.
+  def descricoes_das_etiquetas
+    curto(Autonomia::DescricoesDasEtiquetas.de(conversation.account, conversation.label_list))
   end
 
   # As notas internas da conversa (#2679, a IA da Automação): as mais recentes com texto, na mesma janela e no mesmo corte

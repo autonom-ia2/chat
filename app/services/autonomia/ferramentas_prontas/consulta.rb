@@ -54,6 +54,12 @@ class Autonomia::FerramentasProntas::Consulta
     false
   end
 
+  # A fonte de fora desligou esta consulta (#2946, `Premium::DESLIGADAS_NA_FONTE`): a `Fonte` não a oferece. As grátis,
+  # nunca.
+  def desligada?
+    false
+  end
+
   # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, a `Falta` do parâmetro que não serve].
   # O obrigatório que falta e o opcional informado fora do formato são o mesmo erro: nada é consultado.
   # `_conta`: o id da conta, que só a consulta paga usa (F7, a procura do CEP); as grátis o ignoram. Posicional de

@@ -2,7 +2,7 @@
 # `origem.<caminho>` (`origem.contato.nome`: o João, cujo card ganho avisa a Maria). Só os campos e os atributos da
 # conversa, do contato e do card, lidos na hora com a permissão de quem ligou (o valor protegido segue a regra dele). O
 # resto é da execução da mãe (a mensagem do gatilho, a resposta, o envio, a agenda, a reunião, o texto da IA) e não
-# passa. O salvar só aceita no ramo, e o caminho tem de valer no alvo do gatilho da mãe (Receita#problemas_da_origem).
+# passa. O salvar só aceita no ramo, e o caminho tem de valer no alvo do gatilho da mãe (Receita::Leitura#problemas_da_origem).
 #
 # Saiu de `Valores` pelo tamanho dele, no padrão de Valores::Atributos; `Valores.da_origem?` segue sendo a porta.
 module Autonomia::Automacao::Valores::Origem

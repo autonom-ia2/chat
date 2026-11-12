@@ -28,17 +28,24 @@ module Autonomia::FerramentasProntas::Fontes::Premium::Certidoes
     )
   )
 
+  # Todas as certidões do card; a `FONTE` oferece só as que a BigDataCorp responde hoje (`Fonte#consultas`). Desde 12/11
+  # (#2946), só a do CNJ: as outras quatro respondem "dataset desligado" na BigDataCorp.
+  CONSULTAS = [
+    certidao('divida_uniao', 'dívida com a União (PGFN)', 'ondemand_pgfn_company', '0.10', '0.15'),
+    certidao('trabalhista', 'débitos trabalhistas (certidão do TST)', 'ondemand_cert_labor_debt_absence_company', '0.10', '0.15'),
+    certidao('fgts', 'regularidade do FGTS (Caixa)', 'ondemand_fgts_company', '0.04', '0.06'),
+    certidao('cnj', 'improbidade administrativa (certidão do CNJ)', 'ondemand_cnj_negative_certificate_company', '0.10', '0.15'),
+    CADIN
+  ].freeze
+
+  # A descrição não lista as certidões: o modelo as lê nas consultas da ferramenta (`Fonte#descricao_para_o_modelo`), que
+  # acompanham `Premium::DESLIGADAS_NA_FONTE`. A certidão que não está lá não é tirada aqui, e o modelo diz isso ao cliente.
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'certidoes_empresa', slug: 'pronta_certidoes_empresa', nome: 'Certidões da empresa',
     descricao: 'Consulta paga: tira na hora, na fonte oficial, uma certidão de uma empresa pelo CNPJ e diz a situação. ' \
-               'Use uma consulta por certidão pedida. Só empresa: não consulta pessoa física.',
-    consultas: [
-      certidao('divida_uniao', 'dívida com a União (PGFN)', 'ondemand_pgfn_company', '0.10', '0.15'),
-      certidao('trabalhista', 'débitos trabalhistas (certidão do TST)', 'ondemand_cert_labor_debt_absence_company', '0.10', '0.15'),
-      certidao('fgts', 'regularidade do FGTS (Caixa)', 'ondemand_fgts_company', '0.04', '0.06'),
-      certidao('cnj', 'improbidade administrativa (certidão do CNJ)', 'ondemand_cnj_negative_certificate_company', '0.10', '0.15'),
-      CADIN
-    ],
+               'Use uma consulta por certidão pedida. Outra certidão não é tirada aqui: diga isso ao cliente com ' \
+               'educação. Só empresa: não consulta pessoa física.',
+    consultas: CONSULTAS, so_esta: 'Só tira esta certidão:',
     limite_diario: nil, flag: Premium::FLAG,
     termos: 'BigDataCorp (contrato da plataforma, repasse liberado pelo advogado). Certidões sob demanda, por CNPJ.'
   )

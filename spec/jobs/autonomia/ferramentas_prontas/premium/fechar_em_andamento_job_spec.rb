@@ -9,19 +9,19 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
   let(:account) { create(:account) }
   let(:premium) { Autonomia::FerramentasProntas::Premium }
   let(:ferramenta) { Autonomia::Agents::Tool.new(account: account, fonte_pronta: 'certidoes_empresa') }
-  let(:pgfn) { { 'consulta' => 'divida_uniao', 'cnpj' => '11.222.333/0001-81' } }
+  let(:cnj) { { 'consulta' => 'cnj', 'cnpj' => '11.222.333/0001-81' } }
   let(:certidao_negativa) do
-    [{ 'Origin' => 'PGFN', 'BaseStatus' => 'NEGATIVA', 'AdditionalOutputData' => { 'EmissionDate' => '2026-11-10 10:00:00Z' } }]
+    [{ 'Origin' => 'CNJ', 'BaseStatus' => 'NEGATIVA', 'AdditionalOutputData' => { 'EmissionDate' => '2026-11-10 10:00:00Z' } }]
   end
 
   def consultar(em_andamento: true)
-    JSON.parse(Autonomia::FerramentasProntas.executor_para(ferramenta, params: pgfn, em_andamento: em_andamento).call)
+    JSON.parse(Autonomia::FerramentasProntas.executor_para(ferramenta, params: cnj, em_andamento: em_andamento).call)
   end
 
   def em_andamento!(criada_em)
     travel_to(criada_em) do
       fonte = Autonomia::FerramentasProntas::Catalogo.buscar('certidoes_empresa')
-      premium::Cobranca.em_andamento!(tool: ferramenta, fonte: fonte, consulta: fonte.consulta('divida_uniao'))
+      premium::Cobranca.em_andamento!(tool: ferramenta, fonte: fonte, consulta: fonte.consulta('cnj'))
     end
   end
 
@@ -39,7 +39,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
     stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return do
       vistas << registros_premium.pluck(:resultado)
       { status: 200, headers: { 'Content-Type' => 'application/json' },
-        body: corpo_da_bigdatacorp('ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa).to_json }
+        body: corpo_da_bigdatacorp('ondemand_cnj_negative_certificate_company', 'OnlineCertificates', certidao_negativa).to_json }
     end
 
     expect(consultar['situacao']).to eq('encontrado')
@@ -48,7 +48,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
   end
 
   it 'sem `em_andamento` (o agente), nada muda: uma linha só, gravada no fim' do
-    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
+    bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates', certidao_negativa)
 
     consultar(em_andamento: false)
 
@@ -68,7 +68,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
   it 'a linha dentro do prazo da consulta não é fechada, nem a de outra conta' do
     nova = em_andamento!(10.seconds.ago)
     outra = create(:account)
-    de_outra = premium::Registro.create!(account: outra, fonte: 'certidoes_empresa', consulta: 'divida_uniao', dataset: 'ondemand_pgfn_company',
+    de_outra = premium::Registro.create!(account: outra, fonte: 'certidoes_empresa', consulta: 'cnj',
+                                         dataset: 'ondemand_cnj_negative_certificate_company',
                                          dia: Time.zone.today, resultado: 'em_andamento', cobranca: 'sem_cobranca',
                                          created_at: 10.minutes.ago)
 
@@ -83,7 +84,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
     stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return do
       travel_to(10.minutes.from_now) { described_class.perform_now(account.id) }
       { status: 200, headers: { 'Content-Type' => 'application/json' },
-        body: corpo_da_bigdatacorp('ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa).to_json }
+        body: corpo_da_bigdatacorp('ondemand_cnj_negative_certificate_company', 'OnlineCertificates', certidao_negativa).to_json }
     end
 
     expect(consultar['situacao']).to eq('encontrado')
@@ -95,20 +96,20 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
 
   it 'a execução com `em_andamento` agenda o varredor da conta para depois do prazo' do
     freeze_time
-    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
+    bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates', certidao_negativa)
 
     expect { consultar }.to have_enqueued_job(described_class).with(account.id).at(described_class::ESPERA.from_now)
   end
 
   it 'a execução sem `em_andamento` (o agente) não agenda o varredor' do
-    bigdatacorp_responde('/ondemand', 'ondemand_pgfn_company', 'OnlineCertificates', certidao_negativa)
+    bigdatacorp_responde('/ondemand', 'ondemand_cnj_negative_certificate_company', 'OnlineCertificates', certidao_negativa)
 
     expect { consultar(em_andamento: false) }.not_to have_enqueued_job(described_class)
   end
 
   context 'without a conta: a varredura periódica do config/schedule.yml' do
     def em_andamento_de(conta, criada_em)
-      premium::Registro.create!(account: conta, fonte: 'certidoes_empresa', consulta: 'divida_uniao', dataset: 'ondemand_pgfn_company',
+      premium::Registro.create!(account: conta, fonte: 'certidoes_empresa', consulta: 'cnj', dataset: 'ondemand_cnj_negative_certificate_company',
                                 dia: Time.zone.today, resultado: 'em_andamento', cobranca: 'sem_cobranca', created_at: criada_em)
     end
 
@@ -136,7 +137,18 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::FecharEmAndamentoJob do
     end
   end
 
-  it 'o prazo do varredor cobre a consulta mais lenta (sob demanda) com folga' do
-    expect(described_class::LIMITE).to be > (premium::Dataset::PRAZO_SOB_DEMANDA + premium::ConsultaPaga::FOLGA).seconds
+  it 'o prazo do varredor cobre a consulta mais lenta do catálogo (120 s, #2946) com folga' do
+    expect(premium.prazo_maximo).to eq(premium::Dataset::PRAZO_DAS_LENTAS + premium::ConsultaPaga::FOLGA)
+    expect(described_class::LIMITE).to eq(premium.prazo_maximo.seconds + 2.minutes)
+  end
+
+  # #2946: com o limite antigo (57 s + 2 min = 177 s), a linha de 3 minutos de uma consulta de 120 s ainda no ar fechava
+  # como entrega incerta.
+  it 'a linha de 3 minutos (uma consulta de 120 s ainda pode estar no ar) não é fechada' do
+    linha = em_andamento!(3.minutes.ago)
+
+    described_class.perform_now(account.id)
+
+    expect(linha.reload.resultado).to eq('em_andamento')
   end
 end
