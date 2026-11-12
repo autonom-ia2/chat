@@ -11,7 +11,7 @@ module ProntasSaidaHelper
   def webshare_datacenter(lista)
     Autonomia::FerramentasProntas::Saida::ListaDaWebshare.esquecer!
     instance_double(Webshare::Client, proxies: lista).tap do |cliente|
-      allow(Webshare::Client).to receive(:new).with(pool: :datacenter).and_return(cliente)
+      allow(Webshare::Client).to receive(:new).with(hash_including(pool: :datacenter)).and_return(cliente)
     end
   end
 
@@ -19,7 +19,7 @@ module ProntasSaidaHelper
     Autonomia::FerramentasProntas::Saida::ListaDaWebshare.esquecer!
     instance_double(Webshare::Client).tap do |cliente|
       allow(cliente).to receive(:proxies).and_raise(Webshare::Client::Error, 'webshare_list_failed status=503')
-      allow(Webshare::Client).to receive(:new).with(pool: :datacenter).and_return(cliente)
+      allow(Webshare::Client).to receive(:new).with(hash_including(pool: :datacenter)).and_return(cliente)
     end
   end
 

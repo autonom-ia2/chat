@@ -34,23 +34,28 @@ module Autonomia::FerramentasProntas::Saida::Fatia
     end
   end
 
-  # O proxy da Webshare que ainda serve a este registro (mesmo IP e porta, válido, na fatia e fora de quarentena), ou nil.
+  # O proxy da Webshare que ainda serve a este registro (mesmo IP e porta, válido, na fatia, fora de quarentena e sem
+  # número de WhatsApp), ou nil. Dividido com um número, a conta troca de IP: o WhatsApp é dono dele.
   def vivo(registro, lista)
     return if registro.nil?
 
     proxy = lista.find { |item| registro.mesmo?(item) }
-    proxy if proxy && serve?(proxy) &&
-             !Autonomia::FerramentasProntas::ProxyEmQuarentena.ativa?(proxy.address)
+    return unless proxy && serve?(proxy, uteis)
+    return if Autonomia::FerramentasProntas::ProxyEmQuarentena.ativa?(proxy.address)
+
+    proxy if no_whatsapp([proxy.address]).empty?
   end
 
   # Os que servem e estão livres: fora de quarentena, sem número de WhatsApp e fora de `usados` (os das outras contas).
   def livres(lista, usados:)
-    candidatos = lista.select { |proxy| serve?(proxy) }
+    na_fatia = uteis
+    candidatos = lista.select { |proxy| serve?(proxy, na_fatia) }
     fora = usados + Autonomia::FerramentasProntas::ProxyEmQuarentena.enderecos + no_whatsapp(candidatos.map(&:address))
     candidatos.reject { |proxy| fora.include?(proxy.address) }
   end
 
-  def serve?(proxy)
+  # `uteis`: calculado uma vez por chamada por quem pergunta (a conferência da reservada alerta, e não por proxy).
+  def serve?(proxy, uteis)
     proxy.valid? && proxy.country_code.casecmp?(PAIS) && uteis.include?(proxy.address)
   end
 

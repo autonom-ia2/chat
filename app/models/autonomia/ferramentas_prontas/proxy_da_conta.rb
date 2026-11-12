@@ -14,9 +14,10 @@ class Autonomia::FerramentasProntas::ProxyDaConta < ApplicationRecord
   validates :proxy_port, numericality: { only_integer: true, greater_than: 0 }
   validates :assigned_at, presence: true
 
-  # Toda escolha de IP roda sob esta trava: duas contas nunca pegam o mesmo IP.
+  # Toda escolha de IP roda sob esta trava: duas contas nunca pegam o mesmo IP. Transação própria (savepoint, se já houver
+  # uma): o erro no meio desfaz só o que foi feito aqui (a quarentena provisória do `Saida::ProxyMorto`).
   def self.exclusivamente(&)
-    transaction do
+    transaction(requires_new: true) do
       connection.execute("SELECT pg_advisory_xact_lock(#{LOCK_KEY})")
       yield
     end

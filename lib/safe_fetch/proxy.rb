@@ -4,6 +4,15 @@
 class SafeFetch::Proxy
   attr_reader :address, :port
 
+  # Pelo https o proxy só abre o túnel (CONNECT) para o IP que o ssrf_filter conferiu. Pelo http ele receberia o NOME do
+  # site e resolveria o DNS por conta própria, e o pedido iria a um endereço que ninguém conferiu (SSRF). Então o proxy
+  # exige https no endereço e em todo salto. -> o proxy (ou nil, sem proxy).
+  def self.checked(proxy, schemes:, uri:)
+    return proxy if proxy.nil? || (schemes == %w[https] && uri.scheme == 'https')
+
+    raise ArgumentError, 'proxy: requires schemes: %w[https] and an https url'
+  end
+
   def initialize(address:, port:, user: nil, password: nil)
     @address = address.to_s
     @port = port.to_i

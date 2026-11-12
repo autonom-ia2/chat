@@ -10,6 +10,8 @@
 #   - o IP da conta que sumiu da Webshare, saiu da fatia ou foi para a quarentena é trocado na consulta seguinte (e pela
 #     `ReconciliarSaidasJob`, a cada 10 minutos);
 #   - a credencial vem da Webshare na hora (`Saida::ListaDaWebshare`, só na memória do processo, poucos minutos);
+#   - o proxy que caiu: `Saida::ProxyMorto` (contagem, troca, falha geral da Webshare). Com o Redis fora, a conta sai pelo
+#     servidor (a contagem e a troca vivem nele);
 #   - sem IP próprio (Webshare fora, fatia vazia, nenhum IP livre): a consulta sai pelo IP do servidor, como antes da
 #     flag, e o cliente recebe a resposta; fica o aviso no log, o alerta e o contador do dia (`CONTADOR`). Decisão do
 #     Rodrigo, 12/11/2026.
@@ -17,6 +19,9 @@ module Autonomia::FerramentasProntas::Saida
   FLAG = 'agente_ferramentas_prontas_ip_proprio'.freeze
   CONTADOR = 'autonomia:prontas:saida:sem_ip'.freeze
   ERROS_DO_REDIS = Autonomia::FerramentasProntas::TetoDoProvedor::ERROS_DO_REDIS
+  # Os erros de rede que o `Webshare::Client` deixa passar sem traduzir (ele traduz o resto em `Webshare::Client::Error`).
+  ERROS_DE_REDE = [Errno::ECONNRESET, Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, EOFError, Net::WriteTimeout,
+                   Net::OpenTimeout, Net::ReadTimeout].freeze
 
   # Não há IP próprio para dar à conta agora. `message` é um motivo curto do código.
   class SemIp < StandardError; end
@@ -27,8 +32,11 @@ module Autonomia::FerramentasProntas::Saida
   def para(conta_id)
     return if conta_id.nil? || !ligada?(conta_id)
 
+    bloqueio = Autonomia::FerramentasProntas::Saida::ProxyMorto.bloqueio(conta_id)
+    raise SemIp, bloqueio if bloqueio
+
     credencial(garantir(conta_id.to_i))
-  rescue Webshare::Client::Error, SemIp => e
+  rescue Webshare::Client::Error, SemIp, *ERROS_DE_REDE, *ERROS_DO_REDIS, ActiveRecord::ActiveRecordError => e
     sem_ip_proprio(conta_id, e)
   end
 
@@ -68,15 +76,26 @@ module Autonomia::FerramentasProntas::Saida
     SafeFetch::Proxy.new(address: proxy.address, port: proxy.port, user: acesso[:username], password: acesso[:password])
   end
 
-  # Sem IP próprio: o IP do servidor (nil). O motivo vem só do código (`SemIp`) ou das mensagens do `Webshare::Client`,
-  # que nunca levam a chave.
+  # Sem IP próprio: o IP do servidor (nil). No log vão o motivo e a classe do erro; a mensagem só do `SemIp` e do
+  # `Webshare::Client`, que são do código e nunca levam a chave.
   def sem_ip_proprio(conta_id, erro)
-    motivo = erro.is_a?(SemIp) ? erro.message : 'webshare_indisponivel'
+    motivo = motivo_de(erro)
+    detalhe = erro.is_a?(SemIp) || erro.is_a?(Webshare::Client::Error) ? erro.message : erro.class.name
     Rails.logger.warn("[autonomia][pronta][saida] sem IP próprio, sai pelo IP do servidor conta=#{conta_id} motivo=#{motivo} " \
-                      "(#{erro.message})")
+                      "(#{detalhe})")
     contar_queda(motivo)
     Autonomia::FerramentasProntas::Saida::Alerta.avisar!('sem_ip_proprio', "consulta pelo IP do servidor (#{motivo})", assunto: motivo)
     nil
+  end
+
+  def motivo_de(erro)
+    case erro
+    when SemIp then erro.message
+    when Webshare::Client::Error then 'webshare_indisponivel'
+    when ActiveRecord::ActiveRecordError then 'banco_indisponivel'
+    when *ERROS_DO_REDIS then 'redis_indisponivel'
+    else 'webshare_sem_rede'
+    end
   end
 
   # Quantas consultas saíram pelo IP do servidor por falta de IP próprio, por motivo e por dia.

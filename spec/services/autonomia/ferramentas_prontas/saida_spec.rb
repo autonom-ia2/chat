@@ -108,4 +108,39 @@ RSpec.describe Autonomia::FerramentasProntas::Saida do
 
     expect(cliente).to have_received(:proxies).once
   end
+
+  it 'erro de rede que o cliente da Webshare nao traduz, ou o banco fora: IP do servidor, cada um com o seu motivo' do
+    cliente = webshare_datacenter([])
+    allow(cliente).to receive(:proxies).and_raise(Errno::ECONNRESET)
+    expect(described_class.para(account.id)).to be_nil
+
+    webshare_datacenter([primeiro])
+    allow(registros).to receive(:find_by).and_raise(ActiveRecord::ConnectionNotEstablished)
+    expect(described_class.para(outra.id)).to be_nil
+
+    expect(queda_do_dia).to eq('webshare_sem_rede' => '1', 'banco_indisponivel' => '1')
+  end
+
+  it 'o IP da conta que passou a ser usado por um numero de WhatsApp e trocado na consulta seguinte' do
+    allow(Rails.logger).to receive(:error).and_call_original
+    webshare_datacenter([primeiro, segundo])
+    described_class.para(account.id)
+    WhatsappProxy::Assignment.create!(account: outra, session_name: 'sessao-teste', pool: 'datacenter', origin: 'assigned',
+                                      proxy_address: '203.0.113.11', proxy_port: 6000, webshare_proxy_id: '11',
+                                      assigned_at: Time.current)
+
+    expect(described_class.para(account.id).address).to eq('203.0.113.12')
+    expect(Rails.logger).to have_received(:error).with(a_string_including('ip_no_whatsapp'))
+  end
+
+  it 'a conferencia da fatia contra a reservada roda uma vez por escolha, nao uma por proxy' do
+    allow(described_class::Alerta).to receive(:avisar!)
+    webshare_datacenter([primeiro, segundo, terceiro, proxy_da_webshare(14, '203.0.113.14')])
+
+    with_modified_env(WEBSHARE_LOOKUP_PROXY_ADDRESSES: '203.0.113.11,203.0.113.12,203.0.113.13,203.0.113.14') do
+      described_class::Fatia.livres(described_class::ListaDaWebshare.proxies, usados: [])
+    end
+
+    expect(described_class::Alerta).to have_received(:avisar!).with('fora_da_reservada', anything, nivel: :error).once
+  end
 end
