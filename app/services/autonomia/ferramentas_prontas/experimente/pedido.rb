@@ -8,19 +8,21 @@
 # (`reivindicar`): o job que o Sidekiq devolve à fila depois de começar não consulta de novo.
 module Autonomia::FerramentasProntas::Experimente::Pedido
   TTL = 15.minutes
+  # Quanto a tela espera pelo resultado: o mesmo `PRAZO_DO_PEDIDO_MS` do `useVitrine.js`. Depois dele, ela desiste.
+  PRAZO_DA_TELA = 70.seconds
   CONSULTANDO = 'consultando'.freeze
   PREFIXO = 'ferramentas_prontas:experimente:'.freeze
   # Um id que passa disso não é nosso: nem é procurado.
   MAX_ID = 64
-  SO_DO_SERVIDOR = %w[conta fonte valor confirmou_preco].freeze
+  SO_DO_SERVIDOR = %w[conta fonte valor confirmou_preco aberto_em].freeze
 
   module_function
 
-  # -> o id do pedido.
+  # -> o id do pedido. `aberto_em` (segundos desde a época): o job confere se ainda cabe no prazo da tela.
   def abrir!(account:, fonte:, valor:, confirmou_preco:)
     id = SecureRandom.uuid
     gravar(id, 'conta' => account.id, 'fonte' => fonte, 'valor' => valor, 'confirmou_preco' => confirmou_preco,
-               'situacao' => CONSULTANDO)
+               'situacao' => CONSULTANDO, 'aberto_em' => Time.current.to_f)
     id
   end
 

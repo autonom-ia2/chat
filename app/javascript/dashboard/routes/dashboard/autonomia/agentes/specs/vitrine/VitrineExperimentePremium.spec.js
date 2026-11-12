@@ -108,6 +108,19 @@ describe('VitrineExperimente · Premium', () => {
     );
   });
 
+  it('when the lookup did not start in time, says nothing was charged and to try again', async () => {
+    experimentar.mockResolvedValue({ situacao: 'nao_comecou' });
+    const wrapper = montar('historico_placa', {
+      gratis: 20,
+      restantes: 12,
+      precos: ['0.09'],
+    });
+    await rodar(wrapper);
+    expect(wrapper.find('[data-experimente-aviso]').text()).toBe(
+      'Não deu para testar agora; nada foi cobrado. Tente de novo.'
+    );
+  });
+
   it('on a price range, the button shows "up to" the highest price', () => {
     const wrapper = montar('certidoes_empresa', {
       gratis: 20,

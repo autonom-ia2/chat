@@ -83,6 +83,7 @@ const SITUACOES = {
   documento_invalido: 'DOCUMENTO_INVALIDO',
   confirmar_preco: 'CONFIRMAR_PRECO',
   sem_confirmacao: 'SEM_CONFIRMACAO',
+  nao_comecou: 'NAO_COMECOU',
 };
 
 const textosDoResultado = computed(() => ({

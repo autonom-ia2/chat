@@ -26,6 +26,13 @@ RSpec.describe Autonomia::FerramentasProntas::ExperimentePagoJob do
     expect(pedido.ler(id)).not_to include('valor')
   end
 
+  it 'a hora em que o pedido abriu fica no servidor e não vai à tela' do
+    id = abrir
+
+    expect(pedido.ler(id)['aberto_em']).to be_a(Float)
+    expect(pedido.para_tela(id, account: account)).to eq('situacao' => 'consultando')
+  end
+
   it 'o job que o Sidekiq devolve à fila depois de começar não consulta de novo' do
     allow(pago).to receive(:call).and_return('situacao' => 'encontrado')
     id = abrir
@@ -46,6 +53,34 @@ RSpec.describe Autonomia::FerramentasProntas::ExperimentePagoJob do
 
     expect(pedido.para_tela(id, account: account)).to eq('situacao' => 'nao_consegui_consultar')
     expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(NoMethodError), account: account)
+  end
+
+  it 'o job que começa depois do que cabe no prazo da tela não consulta: a tela diz que nada foi cobrado' do
+    allow(pago).to receive(:call)
+    id = abrir
+
+    travel_to((described_class::PRAZO_PARA_COMECAR + 1.second).from_now) { described_class.perform_now(id) }
+
+    expect(pago).not_to have_received(:call)
+    expect(pedido.para_tela(id, account: account)).to eq('situacao' => 'nao_comecou')
+  end
+
+  it 'o job que começa dentro do prazo consulta normalmente' do
+    allow(pago).to receive(:call).and_return('situacao' => 'encontrado')
+    id = abrir
+
+    travel_to((described_class::PRAZO_PARA_COMECAR - 1.second).from_now) { described_class.perform_now(id) }
+
+    expect(pago).to have_received(:call).once
+  end
+
+  it 'o prazo para começar sai dos prazos: o da tela, menos a ida ao modelo e a consulta mais lenta' do
+    premium = Autonomia::FerramentasProntas::Premium
+    consulta_mais_lenta = (premium::Dataset::PRAZO_SOB_DEMANDA + premium::ConsultaPaga::FOLGA).seconds
+    modelo = Autonomia::FerramentasProntas::Experimente::ComModelo::PRAZO_DO_MODELO.seconds
+
+    expect(described_class::PRAZO_PARA_COMECAR).to eq(pedido::PRAZO_DA_TELA - modelo - consulta_mais_lenta)
+    expect(described_class::PRAZO_PARA_COMECAR).to be_positive
   end
 
   it 'o pedido abre só com o id nos argumentos do job' do

@@ -3165,7 +3165,8 @@
         "SEM_LINHAS": "The lookup answered, but it can't be shown here.",
         "CONFIRMAR_PRECO": "This month's free lookups ran out. To test, click the button with the price.",
         "DOCUMENTO_INVALIDO": "The lookup was made, but this number does not exist. Check it and try again.",
-        "SEM_CONFIRMACAO": "Could not confirm right now; if the lookup was made, it shows in the counter."
+        "SEM_CONFIRMACAO": "Could not confirm right now; if the lookup was made, it shows in the counter.",
+        "NAO_COMECOU": "Could not test it right now; nothing was charged. Try again."
       },
       "UNIDADES": {
         "PERCENTUAL_AO_ANO": "% per year"

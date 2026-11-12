@@ -3165,7 +3165,8 @@
         "SEM_LINHAS": "A consulta respondeu, mas não consigo mostrar aqui.",
         "CONFIRMAR_PRECO": "As grátis do mês acabaram. Para testar, clique no botão com o preço.",
         "DOCUMENTO_INVALIDO": "A consulta foi feita, mas esse número não existe. Confira e tente de novo.",
-        "SEM_CONFIRMACAO": "Não deu para confirmar agora; se a consulta foi feita, ela aparece no contador."
+        "SEM_CONFIRMACAO": "Não deu para confirmar agora; se a consulta foi feita, ela aparece no contador.",
+        "NAO_COMECOU": "Não deu para testar agora; nada foi cobrado. Tente de novo."
       },
       "UNIDADES": {
         "PERCENTUAL_AO_ANO": "% ao ano"
