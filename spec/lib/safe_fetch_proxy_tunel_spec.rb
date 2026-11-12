@@ -1,5 +1,6 @@
 require 'rails_helper'
 require 'socket'
+require 'io/wait'
 
 # `proxy:` (#2942) com um proxy de verdade: um TCPServer local faz o papel dele. Confere o que chega ao proxy (o túnel
 # para o IP que o ssrf_filter conferiu, nunca para o nome), que destino privado nem abre conexão com o proxy, e as
@@ -8,6 +9,7 @@ require 'socket'
 RSpec.describe SafeFetch do
   let(:servidor) { TCPServer.new('127.0.0.1', 0) }
   let(:porta) { servidor.addr[1] }
+  let(:prazo_do_proxy) { 5 }
   let(:proxy) { SafeFetch::Proxy.new(address: '127.0.0.1', port: porta, user: 'usuario-teste', password: 'senha-teste') }
 
   around do |example|
@@ -18,18 +20,34 @@ RSpec.describe SafeFetch do
     servidor.close unless servidor.closed?
   end
 
-  # O proxy lê o pedido de túnel e responde `status` (sem abrir túnel nenhum). -> as linhas que chegaram.
+  # O proxy lê o pedido de túnel e responde `status` (sem abrir túnel nenhum). -> as linhas que chegaram. Cada espera tem
+  # prazo (`wait_readable`): a CI nunca pendura esperando uma conexão ou uma linha que não vem.
   def proxy_responde(status)
     Thread.new do
+      next [] unless servidor.wait_readable(prazo_do_proxy)
+
       conexao = servidor.accept
-      linhas = []
-      while (linha = conexao.gets) && linha != "\r\n"
-        linhas << linha.chomp
-      end
+      linhas = ler_pedido(conexao)
       conexao.write("HTTP/1.1 #{status}\r\nContent-Length: 0\r\n\r\n")
       conexao.close
       linhas
     end
+  end
+
+  def ler_pedido(conexao)
+    linhas = []
+    while conexao.wait_readable(prazo_do_proxy) && (linha = conexao.gets) && linha != "\r\n"
+      linhas << linha.chomp
+    end
+    linhas
+  end
+
+  # -> as linhas que o proxy ouviu; falha (em vez de pendurar) se a thread não terminar no prazo.
+  def ouvido(proxy_ouviu)
+    terminou = proxy_ouviu.join(prazo_do_proxy)
+    raise 'o proxy de teste não terminou no prazo' if terminou.nil?
+
+    terminou.value
   end
 
   def buscar(ip, por: proxy)
@@ -43,15 +61,16 @@ RSpec.describe SafeFetch do
 
     expect { buscar('93.184.216.40') }.to raise_error(Net::HTTPFatalError) { |erro| expect(erro.response.code).to eq('502') }
 
-    linhas = proxy_ouviu.value
+    linhas = ouvido(proxy_ouviu)
     expect(linhas.first).to eq('CONNECT 93.184.216.40:443 HTTP/1.1')
     expect(linhas).to include('Host: brasilapi.com.br:443', "Proxy-Authorization: Basic #{['usuario-teste:senha-teste'].pack('m0')}")
   end
 
   it 'o tunel recusado pelo proxy (407) chega como Net::HTTPClientException' do
-    proxy_responde('407 Proxy Authentication Required')
+    proxy_ouviu = proxy_responde('407 Proxy Authentication Required')
 
     expect { buscar('93.184.216.40') }.to raise_error(Net::HTTPClientException) { |erro| expect(erro.response.code).to eq('407') }
+    expect(ouvido(proxy_ouviu).first).to eq('CONNECT 93.184.216.40:443 HTTP/1.1')
   end
 
   it 'destino privado e recusado antes: nenhuma conexao com o proxy' do

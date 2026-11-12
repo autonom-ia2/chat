@@ -46,7 +46,7 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ProxyMorto do
     expect(Rails.logger).to have_received(:warn).with(a_string_including('anterior=203.0.113.11 novo=203.0.113.12'))
   end
 
-  it 'sem IP livre a quarentena provisoria se desfaz: a conta segue com o IP, com alerta' do
+  it 'sem IP livre a quarentena provisoria se desfaz e as quedas zeram: a conta segue com o IP, com alerta' do
     webshare_datacenter(lista(11))
     com_ip(account, 11)
 
@@ -55,6 +55,32 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ProxyMorto do
     expect(quarentenas.count).to eq(0)
     expect(registros.sole.proxy_address).to eq('203.0.113.11')
     expect(Rails.logger).to have_received(:warn).with(a_string_including('sem_ip_para_trocar'))
+    expect(Redis::Alfred.get(described_class.chave_das_seguidas('203.0.113.11'))).to be_nil
+  end
+
+  it 'a janela das quedas e fixa: so a 1a queda poe o prazo' do
+    com_ip(account, 11)
+    chave = described_class.chave_das_seguidas('203.0.113.11')
+
+    described_class.caiu!('203.0.113.11', conta: account.id)
+    expect(Redis::Alfred.ttl(chave)).to be_within(5).of(described_class::JANELA)
+    Redis::Alfred.expire(chave, 100)
+    described_class.caiu!('203.0.113.11', conta: account.id)
+
+    expect(Redis::Alfred.ttl(chave)).to be <= 100
+    expect(Redis::Alfred.get(chave)).to eq('2')
+  end
+
+  it 'sem prazo na consulta para ir a Webshare, a troca fica para a proxima queda' do
+    com_ip(account, 11)
+    cliente = webshare_datacenter(lista(11, 12))
+    agora = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    3.times { described_class.caiu!('203.0.113.11', conta: account.id, ate: agora + 0.1) }
+
+    expect(cliente).not_to have_received(:proxies)
+    expect(quarentenas.count).to eq(0)
+    expect(Rails.logger).to have_received(:warn).with(a_string_including('troca do proxy que caiu adiada'))
   end
 
   it 'o IP novo que tambem cai no mesmo dia deixa a conta pelo servidor, com um alerta por dia' do
@@ -73,7 +99,7 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ProxyMorto do
 
   it 'falha geral (mais de 30% dos IPs com conta, ao menos 2): ninguem de molho e todos pelo servidor, com webshare_fora' do
     webshare_datacenter(lista(11, 12, 13, 14))
-    outras = create_list(:account, 2)
+    outras = create_list(:account, 2).each { |conta| ligar_ip_proprio(conta) }
     com_ip(account, 11)
     outras.each_with_index { |conta, vez| com_ip(conta, 12 + vez) }
 
@@ -82,7 +108,6 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ProxyMorto do
 
     expect(quarentenas.count).to eq(0)
     expect(Rails.logger).to have_received(:error).with(a_string_including('webshare_fora'))
-    ligar_ip_proprio(outras.last)
     expect(Autonomia::FerramentasProntas::Saida.para(outras.last.id)).to be_nil
     expect(queda_do_dia).to include('webshare_fora' => '1')
   end
@@ -90,12 +115,30 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ProxyMorto do
   it 'um IP so caindo entre varios nao e falha geral' do
     webshare_datacenter(lista(11, 12, 13, 14))
     com_ip(account, 11)
-    create_list(:account, 2).each_with_index { |conta, vez| com_ip(conta, 12 + vez) }
+    create_list(:account, 2).each_with_index do |conta, vez|
+      ligar_ip_proprio(conta)
+      com_ip(conta, 12 + vez)
+    end
 
     3.times { described_class.caiu!('203.0.113.11', conta: account.id) }
 
     expect(quarentenas.sole.proxy_address).to eq('203.0.113.11')
     expect(Rails.logger).not_to have_received(:error).with(a_string_including('webshare_fora'))
+  end
+
+  it 'a falha geral so olha as contas com a flag: o IP de conta desligada nao conta' do
+    webshare_datacenter(lista(11, 12, 13, 14))
+    desligada, ligada = create_list(:account, 2)
+    ligar_ip_proprio(ligada)
+    com_ip(account, 11)
+    com_ip(desligada, 12)
+    com_ip(ligada, 13)
+
+    described_class.caiu!('203.0.113.11', conta: account.id)
+    described_class.caiu!('203.0.113.12', conta: desligada.id)
+
+    expect(Rails.logger).not_to have_received(:error).with(a_string_including('webshare_fora'))
+    expect(Autonomia::FerramentasProntas::Saida.para(ligada.id).address).to eq('203.0.113.13')
   end
 
   it 'Redis fora: nao conta nem troca, avisa; e a conta sai pelo servidor' do

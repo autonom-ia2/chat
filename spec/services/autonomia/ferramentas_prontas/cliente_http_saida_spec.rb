@@ -134,6 +134,20 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
       expect(recusas_do_dia).to eq('203.0.113.11|proxy|morto' => '1')
     end
 
+    it 'a queda so conta (e pode trocar o IP) depois de a chamada ja ter repetido pelo servidor' do
+      proxy_falha { ligacao_caiu(Errno::ECONNREFUSED.new) }
+      chamadas_quando_contou = nil
+      allow(Autonomia::FerramentasProntas::Saida::ProxyMorto).to receive(:caiu!).and_wrap_original do |original, *args, **opcoes|
+        chamadas_quando_contou = saiu_por.size
+        original.call(*args, **opcoes)
+      end
+
+      expect(consultar).to eq('city' => 'São Paulo')
+      expect(chamadas_quando_contou).to eq(2)
+      expect(Autonomia::FerramentasProntas::Saida::ProxyMorto).to have_received(:caiu!)
+        .with('203.0.113.11', conta: account.id, ate: kind_of(Float))
+    end
+
     it 'prazo de abertura com o proxy: responde pelo servidor' do
       proxy_falha { ligacao_caiu(Net::OpenTimeout.new) }
 

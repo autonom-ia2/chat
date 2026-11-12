@@ -1,13 +1,16 @@
 # O PROXY QUE CAIU nas consultas grátis (#2942). Segue os padrões do WhatsApp Híbrido (#1516), sem usar as classes dele:
-#   - contagem: SEGUIDAS quedas (`proxy_morto`) no mesmo IP dentro de JANELA, zeradas a cada sucesso por ele (`vivo!`);
-#   - falha geral: quando mais de FALHA_GERAL dos IPs com conta caem na mesma janela (ao menos MINIMO_GERAL), o problema
+#   - contagem: SEGUIDAS quedas (`proxy_morto`) no mesmo IP numa janela fixa de JANELA (o prazo nasce na 1ª queda),
+#     zeradas a cada sucesso por ele (`vivo!`) e quando não há IP livre para a troca;
+#   - falha geral: quando mais de FALHA_GERAL dos IPs de contas com a flag caem na mesma janela (ao menos MINIMO_GERAL), o problema
 #     é a Webshare, não o IP. Ninguém vai para a quarentena, e todas as contas saem pelo servidor por JANELA, com o alerta
 #     `webshare_fora`;
 #   - troca: no máximo uma por conta a cada UMA_TROCA, com o IP de molho por 24 h (a quarentena de 429/403 é de 6 h). A
 #     quarentena é provisória: entra na mesma transação da escolha do IP novo e, sem IP livre, as duas se desfazem. O
 #     IP anterior fica só no log; o novo se confirma no primeiro sucesso. Se o IP novo também cair antes de vencer a
 #     troca, a conta fica pelo servidor até lá (`no_servidor`), com um alerta por dia;
-#   - Redis fora: não conta nem troca. A consulta já saiu pelo servidor (`ClienteHttp`), e fica o aviso.
+#   - Redis fora: não conta nem troca. A consulta já saiu pelo servidor (`ClienteHttp`), e fica o aviso;
+#   - a troca respeita o prazo da consulta (`ate:`): sem prazo para ir à Webshare, fica para a próxima queda.
+# O `ClienteHttp` chama `caiu!` depois de já ter repetido pelo servidor.
 module Autonomia::FerramentasProntas::Saida::ProxyMorto
   CHAVE = 'autonomia:prontas:saida:proxy'.freeze
   MOTIVO = 'proxy_morto'.freeze
@@ -25,14 +28,16 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
 
   module_function
 
-  # O proxy não abriu o túnel; a chamada já repetiu pelo IP do servidor.
-  def caiu!(ip, conta:)
+  # O proxy não abriu o túnel; a chamada já repetiu pelo IP do servidor. `ate`: o prazo da consulta (relógio monotônico).
+  def caiu!(ip, conta:, ate: nil)
     Rails.logger.warn("[autonomia][pronta][saida] proxy caiu saida=#{ip} conta=#{conta}: repete pelo IP do servidor")
     Autonomia::FerramentasProntas::Saida::Recusas.contar_no_dia(ip, 'proxy', 'morto')
     Autonomia::FerramentasProntas::Saida.contar_queda(MOTIVO)
     return webshare_fora! if falha_geral?(ip)
 
-    trocar!(ip) if seguidas(ip) >= SEGUIDAS
+    trocar!(ip, ate) if seguidas(ip) >= SEGUIDAS
+  rescue Autonomia::FerramentasProntas::Saida::SemTempo
+    Rails.logger.warn("[autonomia][pronta][saida] troca do proxy que caiu adiada (sem prazo na consulta) saida=#{ip}")
   rescue *ERROS_DO_REDIS => e
     Rails.logger.warn("[autonomia][pronta][saida] queda do proxy sem Redis (não conta nem troca) #{e.class}")
   rescue ActiveRecord::ActiveRecordError, Webshare::Client::Error, *Autonomia::FerramentasProntas::Saida::ERROS_DE_REDE => e
@@ -65,18 +70,16 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
     'ip_caiu_de_novo' if no_servidor
   end
 
+  # Janela fixa, como a do Híbrido: o prazo só é posto na 1ª queda.
   def seguidas(ip)
     chave = chave_das_seguidas(ip)
-    Redis::Alfred.with do |conn|
-      conn.multi do |transacao|
-        transacao.incr(chave)
-        transacao.expire(chave, JANELA)
-      end
-    end.first.to_i
+    quedas = Redis::Alfred.incr(chave).to_i
+    Redis::Alfred.expire(chave, JANELA) if quedas == 1
+    quedas
   end
 
-  # Este IP entra no conjunto dos que caíram nesta janela. -> dos IPs que hoje têm conta, os que caíram passam do limite?
-  # (O IP que já foi trocado não conta: senão a conta cujo IP novo também cai pareceria uma falha geral.)
+  # Este IP entra no conjunto dos que caíram nesta janela. -> dos IPs das contas com a flag, os que caíram passam do
+  # limite? (O IP que já foi trocado não conta: senão a conta cujo IP novo também cai pareceria uma falha geral.)
   def falha_geral?(ip)
     chave = "#{CHAVE}:caidos:#{Time.now.to_i / JANELA}"
     membros = Redis::Alfred.with do |conn|
@@ -86,8 +89,16 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
         transacao.expire(chave, JANELA)
       end
     end[1]
-    caidos = Autonomia::FerramentasProntas::ProxyDaConta.where(proxy_address: membros).count
-    caidos >= MINIMO_GERAL && caidos > Autonomia::FerramentasProntas::ProxyDaConta.count * FALHA_GERAL
+    ligados = em_contas_ligadas
+    caidos = (ligados & membros).size
+    caidos >= MINIMO_GERAL && caidos > ligados.size * FALHA_GERAL
+  end
+
+  # Os IPs das contas com a flag ligada (o denominador da falha geral).
+  def em_contas_ligadas
+    Autonomia::FerramentasProntas::ProxyDaConta.includes(:account).select do |registro|
+      registro.account&.feature_enabled?(Autonomia::FerramentasProntas::Saida::FLAG)
+    end.map(&:proxy_address)
   end
 
   def webshare_fora!
@@ -98,22 +109,23 @@ module Autonomia::FerramentasProntas::Saida::ProxyMorto
     )
   end
 
-  def trocar!(ip)
+  def trocar!(ip, ate = nil)
     registro = Autonomia::FerramentasProntas::ProxyDaConta.find_by(proxy_address: ip)
     return if registro.nil?
     return ficar_no_servidor!(registro.account_id) if Redis::Alfred.exists?(chave_da_troca(registro.account_id))
     return Autonomia::FerramentasProntas::Saida::Recusas.avisar_teto unless Autonomia::FerramentasProntas::ProxyEmQuarentena.cabe?
 
-    novo = trocar_com_quarentena!(registro.account_id, ip)
+    novo = trocar_com_quarentena!(registro.account_id, ip, ate)
     depois_da_troca(registro.account_id, ip, novo)
   rescue Autonomia::FerramentasProntas::Saida::SemIp
+    Redis::Alfred.delete(chave_das_seguidas(ip))
     Autonomia::FerramentasProntas::Saida::Alerta.avisar!('sem_ip_para_trocar', "o IP #{mascarar(ip)} caiu e não há IP livre: " \
                                                                                'segue na conta, sem quarentena', assunto: ip)
   end
 
   # A quarentena e a escolha numa transação só: sem IP livre (`SemIp`), as duas se desfazem.
-  def trocar_com_quarentena!(conta_id, ip)
-    lista = Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies
+  def trocar_com_quarentena!(conta_id, ip, ate)
+    lista = Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies(ate: ate)
     quarentena = Autonomia::FerramentasProntas::ProxyEmQuarentena
     Autonomia::FerramentasProntas::ProxyDaConta.exclusivamente do
       quarentena.por!(ip, MOTIVO, duracao: quarentena::DURACAO_PROXY_MORTO)

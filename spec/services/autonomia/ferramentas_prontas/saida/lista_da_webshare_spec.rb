@@ -55,4 +55,44 @@ RSpec.describe Autonomia::FerramentasProntas::Saida::ListaDaWebshare do
 
     expect(cliente).to have_received(:proxies).once
   end
+
+  describe 'o prazo da consulta manda' do
+    let(:agora) { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+
+    it 'sem lista e sem prazo para a busca caber: nem vai a Webshare (a consulta sai pelo servidor)' do
+      cliente = webshare_datacenter(lista)
+
+      expect { described_class.proxies(ate: agora + 0.5) }.to raise_error(Autonomia::FerramentasProntas::Saida::SemTempo)
+      expect(cliente).not_to have_received(:proxies)
+    end
+
+    it 'com a lista vencida e sem prazo: serve a vencida em vez de esperar a Webshare' do
+      cliente = webshare_datacenter(lista)
+      described_class.proxies
+      depois = agora + described_class::VALIDADE + 1
+      allow(described_class).to receive(:agora).and_return(depois)
+
+      expect(described_class.proxies(ate: depois + 0.5)).to eq(lista)
+      expect(cliente).to have_received(:proxies).once
+    end
+
+    it 'com outra busca em andamento e sem lista: espera so ate o prazo da consulta' do
+      comecou = Queue.new
+      pode_responder = Queue.new
+      cliente = webshare_datacenter([])
+      allow(cliente).to receive(:proxies) do
+        comecou << true
+        pode_responder.pop
+        lista
+      end
+      primeira = Thread.new { described_class.proxies }
+      comecou.pop
+
+      inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      expect { described_class.proxies(ate: inicio + 0.3) }.to raise_error(Autonomia::FerramentasProntas::Saida::SemTempo)
+      expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 1
+      pode_responder << :ok
+      expect(primeira.value).to eq(lista)
+    end
+  end
 end

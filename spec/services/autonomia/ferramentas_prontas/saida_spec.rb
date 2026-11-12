@@ -143,4 +143,15 @@ RSpec.describe Autonomia::FerramentasProntas::Saida do
 
     expect(described_class::Alerta).to have_received(:avisar!).with('fora_da_reservada', anything, nivel: :error).once
   end
+
+  it 'outro erro de sistema na ida a Webshare, ou o prazo curto da consulta: IP do servidor, com o motivo' do
+    cliente = webshare_datacenter([])
+    allow(cliente).to receive(:proxies).and_raise(Errno::EADDRNOTAVAIL)
+    expect(described_class.para(account.id)).to be_nil
+
+    webshare_datacenter([primeiro])
+    expect(described_class.para(outra.id, ate: Process.clock_gettime(Process::CLOCK_MONOTONIC) + 0.2)).to be_nil
+
+    expect(queda_do_dia).to eq('webshare_sem_rede' => '1', 'webshare_sem_prazo' => '1')
+  end
 end

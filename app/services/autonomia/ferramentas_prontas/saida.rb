@@ -20,23 +20,28 @@ module Autonomia::FerramentasProntas::Saida
   CONTADOR = 'autonomia:prontas:saida:sem_ip'.freeze
   ERROS_DO_REDIS = Autonomia::FerramentasProntas::TetoDoProvedor::ERROS_DO_REDIS
   # Os erros de rede que o `Webshare::Client` deixa passar sem traduzir (ele traduz o resto em `Webshare::Client::Error`).
-  ERROS_DE_REDE = [Errno::ECONNRESET, Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, EOFError, Net::WriteTimeout,
-                   Net::OpenTimeout, Net::ReadTimeout].freeze
+  # `SystemCallError` cobre todo `Errno::*`, e `IOError` cobre o `EOFError`.
+  ERROS_DE_REDE = [SystemCallError, IOError, Errno::ECONNRESET, Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::EPIPE, EOFError,
+                   Net::WriteTimeout, Net::OpenTimeout, Net::ReadTimeout].freeze
 
   # Não há IP próprio para dar à conta agora. `message` é um motivo curto do código.
   class SemIp < StandardError; end
 
+  # Não sobra prazo na consulta para ir à Webshare (ou esperar quem foi): a consulta sai pelo servidor.
+  class SemTempo < StandardError; end
+
   module_function
 
-  # -> o `SafeFetch::Proxy` da conta (com a credencial, só em memória), ou nil para sair pelo IP do servidor.
-  def para(conta_id)
+  # -> o `SafeFetch::Proxy` da conta (com a credencial, só em memória), ou nil para sair pelo IP do servidor. `ate`: o
+  # instante (relógio monotônico) até o qual a ida à Webshare pode durar; nil, sem limite.
+  def para(conta_id, ate: nil)
     return if conta_id.nil? || !ligada?(conta_id)
 
     bloqueio = Autonomia::FerramentasProntas::Saida::ProxyMorto.bloqueio(conta_id)
     raise SemIp, bloqueio if bloqueio
 
-    credencial(garantir(conta_id.to_i))
-  rescue Webshare::Client::Error, SemIp, *ERROS_DE_REDE, *ERROS_DO_REDIS, ActiveRecord::ActiveRecordError => e
+    credencial(garantir(conta_id.to_i, ate: ate))
+  rescue Webshare::Client::Error, SemIp, SemTempo, *ERROS_DE_REDE, *ERROS_DO_REDIS, ActiveRecord::ActiveRecordError => e
     sem_ip_proprio(conta_id, e)
   end
 
@@ -45,8 +50,8 @@ module Autonomia::FerramentasProntas::Saida
   end
 
   # -> o `Webshare::Proxy` da conta: o que ela já tem, se ainda serve; senão um novo, sob a trava.
-  def garantir(conta_id)
-    lista = Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies
+  def garantir(conta_id, ate: nil)
+    lista = Autonomia::FerramentasProntas::Saida::ListaDaWebshare.proxies(ate: ate)
     atual = Autonomia::FerramentasProntas::ProxyDaConta.find_by(account_id: conta_id)
     Autonomia::FerramentasProntas::Saida::Fatia.vivo(atual, lista) || trocar!(conta_id, lista)
   end
@@ -91,6 +96,7 @@ module Autonomia::FerramentasProntas::Saida
   def motivo_de(erro)
     case erro
     when SemIp then erro.message
+    when SemTempo then 'webshare_sem_prazo'
     when Webshare::Client::Error then 'webshare_indisponivel'
     when ActiveRecord::ActiveRecordError then 'banco_indisponivel'
     when *ERROS_DO_REDIS then 'redis_indisponivel'

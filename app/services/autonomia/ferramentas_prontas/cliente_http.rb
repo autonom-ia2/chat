@@ -44,10 +44,6 @@ class Autonomia::FerramentasProntas::ClienteHttp
   ABERTURA = 2
   # Menos que isto de prazo não dá para uma chamada: a consulta para por prazo, sem chamar.
   MINIMO = 0.3
-  # A chamada repete (`buscar`): pelo mesmo IP com a credencial relida, ou pelo IP do servidor. Nunca sai do cliente.
-  class Repetir < StandardError; end
-  private_constant :Repetir
-
   # Sem compressão pedida: o teto de tamanho vale sobre o que chega. Fonte que comprime mesmo assim (o IBGE manda gzip
   # com `identity`): o corpo é aberto aqui com o mesmo teto sobre o tamanho aberto (`abrir`), contra bomba de gzip.
   CABECALHOS = { 'Accept' => 'application/json', 'Accept-Encoding' => 'identity',
@@ -84,6 +80,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
     @de_fora = []
     @prazo_final = prazo_final
     @chamadas = 0
+    @saida = Autonomia::FerramentasProntas::Saida::DoCliente.new(conta: conta, ate: prazo_final - MINIMO)
   end
 
   # O host que só se conhece na hora (o endereço de cada seguradora, lido do diretório do Open Insurance, que já confere
@@ -142,54 +139,30 @@ class Autonomia::FerramentasProntas::ClienteHttp
     pedido = { prazo: prazo, max_bytes: max_bytes, aceita: aceita.merge(fixos: resolucao(host)) }
     begin
       pedir(host, url, **pedido)
-    rescue Repetir
-      retry # no máximo duas vezes: a credencial é relida uma vez só, e depois de largado o proxy não volta
+    rescue Autonomia::FerramentasProntas::Saida::DoCliente::Repetir
+      retry # até 3 tentativas: o proxy, o proxy com a credencial relida (só no 1º túnel recusado) e o servidor
     end
+  ensure
+    @saida.contar_queda
   end
 
+  # `@saida`: o proxy da conta e as quedas dele (`Saida::DoCliente`), que mandam repetir quando o proxy cai.
   def pedir(host, url, prazo:, max_bytes:, aceita:)
-    proxy = saida
+    proxy = @saida.proxy
     segundos = prazo_da_chamada(prazo)
     liberar!(host, proxy)
     @chamadas += 1
     corpo = SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita, proxy)) { |resultado| abrir(resultado.tempfile.read, max_bytes) }
-    Autonomia::FerramentasProntas::Saida::ProxyMorto.vivo!(proxy.address) if proxy
+    @saida.deu_certo(proxy)
     corpo
   rescue SafeFetch::Error => e
-    largar!(proxy) if proxy && Autonomia::FerramentasProntas::Saida::ProxyMorto.ligacao_caiu?(e)
+    @saida.falhou!(e, proxy)
     recusou(host, e, proxy)
     raise traduzir(e)
   rescue Net::HTTPExceptions => e
-    tunel_recusado!(e, proxy)
+    @saida.tunel_recusado!(e, proxy)
   rescue *TRANSPORTE
     raise Falha, 'falha_de_rede'
-  end
-
-  # A saída da conta: o `SafeFetch::Proxy` do IP próprio, ou nil (o IP do servidor). Lida uma vez por cliente.
-  def saida
-    return @saida if defined?(@saida)
-
-    @saida = Autonomia::FerramentasProntas::Saida.para(@conta)
-  end
-
-  # Só o túnel do proxy levanta `Net::HTTPExceptions` aqui (o `CONNECT` respondido com erro). A 1ª recusa relê a lista
-  # da Webshare (a credencial pode ter mudado) e tenta de novo; a recusa com a lista nova é o proxy que caiu.
-  def tunel_recusado!(erro, proxy)
-    raise Falha, 'falha_de_rede' if proxy.nil?
-    raise Falha, 'erro_da_fonte' if Autonomia::FerramentasProntas::Saida::ProxyMorto.site_fora?(erro)
-    return largar!(proxy) if @credencial_relida
-
-    @credencial_relida = true
-    Autonomia::FerramentasProntas::Saida::ListaDaWebshare.esquecer!
-    remove_instance_variable(:@saida)
-    raise Repetir
-  end
-
-  # Larga o proxy (o resto deste cliente sai pelo servidor), conta a queda e manda repetir.
-  def largar!(proxy)
-    @saida = nil
-    Autonomia::FerramentasProntas::Saida::ProxyMorto.caiu!(proxy.address, conta: @conta)
-    raise Repetir
   end
 
   def recusou(host, erro, proxy)
