@@ -2306,6 +2306,94 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "09.14",
+     "titulo": "Ver suas pessoas e empresas e achar quem parou de falar com você",
+     "para_que_serve": "Usar a lista nova de Relacionamentos: a frase do topo, as abas Pessoas e Empresas, os grupos prontos, a busca, os filtros e as ações com várias pessoas de uma vez.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "relationships_home"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Ver a lista de pessoas e empresas (Relacionamentos novo)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; a flag relacionamentos_novo escolhe a lista nova. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md."
+    },
+    {
+     "id": "09.15",
+     "titulo": "A ficha da pessoa: conversas, cards, notas e dados em um lugar",
+     "para_que_serve": "Abrir a ficha de uma pessoa, ver conversas, cards, notas e arquivos, marcar como cliente, alterar os dados e liberar quem pediu para não receber mensagens.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_pessoa"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir a ficha da pessoa (Relacionamentos novo)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2894. A rota da ficha pede o id da pessoa, então o botão leva à lista, de onde se abre a ficha. Conversar, Novo card, Lembrete, Ver todas, Juntar, Bloquear e Apagar ainda só mostram aviso nesta entrega: rever quando forem ligados."
+    },
+    {
+     "id": "09.16",
+     "titulo": "A ficha da empresa: as pessoas, as conversas e os cards dela",
+     "para_que_serve": "Abrir a ficha de uma empresa, ver as pessoas, as conversas e os cards dela, mandar mensagem para o grupo e alterar nome, CNPJ e site.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_empresa"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Abrir a ficha da empresa (Relacionamentos novo)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2894. A rota da ficha pede o id da empresa, então o botão leva à lista. O Continuar de Mandar mensagem e o Ver todas ainda só mostram aviso nesta entrega: rever quando forem ligados."
+    },
+    {
+     "id": "09.17",
+     "titulo": "Trazer minha lista: enviar uma planilha de pessoas e desfazer se precisar",
+     "para_que_serve": "Enviar uma planilha Excel ou CSV, responder às perguntas, conferir e consertar linhas, trazer as pessoas, acompanhar o andamento e desfazer uma lista.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_trazer"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer minha lista de pessoas (planilha)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2894."
     }
    ]
   },
