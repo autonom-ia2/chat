@@ -147,6 +147,7 @@ class Autonomia::Automacao::Ensaio
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
+    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then espera(passo, valores)
     when 'parar' then [no(passo, 'parar'), nil]
     else seguir(passo, em_frente(passo, valores))
     end
@@ -256,6 +257,12 @@ class Autonomia::Automacao::Ensaio
   def galho_do_ensaio(passo, valores, chave = ::Autonomia::Automacao::EnquantoEspera::A_CADA)
     { chave: chave, volta: @roteiro.volta(passo, chave), passos: caminho(@roteiro.entrar(passo, chave), valores) }
   end
+
+  # #2931/#2935/#2936: a aprovação, a reunião e a pesquisa dizem o que fariam e abrem os caminhos (EsperaNoEnsaio).
+  def espera(passo, valores) = esperas.ensaiar(passo, valores) { |primeiro| caminho(primeiro, valores) }
+
+  # Uma por conversa ensaiada: a conversa e o envio mudam a cada uma.
+  def esperas = ::Autonomia::Automacao::EsperaNoEnsaio.new(conta: @conta, conversa: @conversa, envio: @envio, roteiro: @roteiro)
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.
   # G31: o caminho que decide de novo espera a próxima resposta e não roda passo nenhum; vencido o prazo, a execução

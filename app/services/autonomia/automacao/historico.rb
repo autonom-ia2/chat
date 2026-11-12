@@ -17,9 +17,13 @@ class Autonomia::Automacao::Historico
   # conferência dele. `vez` e `volta` (G63): a vez do galho "a cada mensagem" e a volta dele à espera. O marco das
   # mensagens não sai: são ids de mensagem.
   # `numero_novo` (G43, #2700): a mensagem saiu no número novo do contato, em outra conversa da mesma caixa.
-  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo].freeze
-  # Estas apontam para dentro da conversa: só saem para quem a enxerga.
-  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
+  # #2931/#2935/#2936: quem respondeu o pedido de aprovação e o motivo da recusa (texto da equipe, não da conversa), o
+  # horário e o id da reunião marcada, e a nota da pesquisa.
+  CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo
+              por_nome motivo_da_recusa horario reuniao_id nota].freeze
+  # Estas apontam para dentro da conversa: só saem para quem a enxerga. O comentário da pesquisa (#2936) é o que o cliente
+  # escreveu, resumido pela IA.
+  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta comentario].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
   IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
   # O valor em dinheiro é custo da conta: só sai com `com_valores` (administrador ou financial_view, #1969, #2557). Os

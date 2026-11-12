@@ -60,9 +60,12 @@ class Autonomia::Automacao::PassoDeMensagem
     anti_laco = ::Autonomia::Automacao::AntiLaco.new(@execucao.automacao, @conversa)
     return parar_por_robo(anti_laco) if anti_laco.robo_do_outro_lado?
 
-    mensagem = ::Messages::MessageBuilder.new(nil, @conversa, content: texto, private: false, content_attributes: marca).perform
+    mensagem = ::Messages::MessageBuilder.new(nil, @conversa, parametros_da_mensagem(texto)).perform
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => mensagem.id })
   end
+
+  # O que vai ao MessageBuilder. A pergunta com opções (MensagemComOpcoes, #2935/#2936) põe os botões aqui.
+  def parametros_da_mensagem(texto) = { content: texto, private: false, content_attributes: marca }
 
   # Janela fechada com modelo na receita. O contato que não recebe e o canal sem resposta já pularam antes; o anti-laço
   # vale igual. O corpo é o do modelo aprovado, com os valores que o dono da conta escolheu.

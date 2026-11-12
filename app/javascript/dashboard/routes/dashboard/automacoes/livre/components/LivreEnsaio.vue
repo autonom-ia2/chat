@@ -51,7 +51,7 @@ const corpo = conversaId => ({
   conversaId,
 });
 
-// Protótipo #2931–#2936: a receita com passo novo ainda não passa no servidor;
+// Protótipo #2932–#2934: a receita com passo novo que ainda não salva não passa no servidor;
 // o ensaio dela vem do adaptador falso, com as duas conversas de exemplo. O
 // caminho do "decidir" sem nome vira "Caminho N".
 const rotuloDoGalho = ramo =>

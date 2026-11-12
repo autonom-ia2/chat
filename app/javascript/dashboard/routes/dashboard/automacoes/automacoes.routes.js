@@ -1,9 +1,14 @@
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { frontendURL } from '../../../helper/URLHelper';
+import {
+  ROLES,
+  CONVERSATION_PERMISSIONS,
+} from '../../../constants/permissions';
 
 const AutomacoesInicio = () => import('./pages/AutomacoesInicio.vue');
 const LivreEditorPage = () => import('./livre/pages/LivreEditorPage.vue');
 const AutomacaoConversaPage = () => import('./pages/AutomacaoConversaPage.vue');
+const AprovacoesPage = () => import('./pages/AprovacoesPage.vue');
 
 // #859 — Automações no menu principal. As mesmas permissões do modo manual
 // (settings/automation): quem vê a lista lá, vê aqui. Criar exige `_manage`.
@@ -45,6 +50,18 @@ export const routes = [
     name: 'automacoes_livre_editar',
     component: LivreEditorPage,
     meta: { featureFlag: EDITOR, permissions: VER },
+  },
+  // #2931 — os pedidos do passo "Pedir aprovação": quem aprova é a equipe, não
+  // quem monta a automação, então abre para quem atende conversas. A API mostra
+  // a cada pessoa só os pedidos dela. Antes de `automacoes/:id`.
+  {
+    path: frontendURL('accounts/:accountId/automacoes/aprovacoes'),
+    name: 'automacoes_aprovacoes',
+    component: AprovacoesPage,
+    meta: {
+      featureFlag: FEATURE_FLAGS.AUTOMACAO_PASSOS_NOVOS,
+      permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
+    },
   },
   // #2889 — a automação do motor novo que o Guia montou, ao lado da conversa.
   // Rota própria: os ids da Automação livre e das regras antigas se repetem.

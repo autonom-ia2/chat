@@ -514,6 +514,36 @@
         }
       ]
     },
+    "quem_do_passo": {
+      "description": "Quem aprova (#2931): responsavel é quem cuida do card na hora do passo (o dono; card sem dono, as pessoas do time do card; fora do card, quem atende a conversa); pessoa e time levam o id, da conta. Só recebe quem vê o registro.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["de"], "properties": { "de": { "const": "responsavel" } } },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["de", "id"],
+          "properties": { "de": { "enum": ["pessoa", "time"] }, "id": { "type": "integer", "minimum": 1 } }
+        }
+      ]
+    },
+    "quem_da_reuniao": {
+      "description": "Em qual agenda a reunião entra (#2935): a de quem cuida do card na hora do passo, ou a de uma pessoa da conta (id). A reunião é de uma pessoa só: sem time.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["de"], "properties": { "de": { "const": "responsavel" } } },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["de", "id"],
+          "properties": { "de": { "const": "pessoa" }, "id": { "type": "integer", "minimum": 1 } }
+        }
+      ]
+    },
+    "frase_ao_cliente": {
+      "description": "O que a reunião e a pesquisa dizem ao cliente (#2935, #2936): um texto curto, sem valores.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
     "passo": {
       "oneOf": [
         {
@@ -864,6 +894,59 @@
               }
             },
             "se_recusar": { "$ref": "#/definitions/passos_opcionais" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "quem", "pergunta", "prazo"],
+          "description": "Pedir aprovação (#2931): a automação para e pede a quem cuida do card, a uma pessoa ou a um time que aprove ou recuse. O pedido chega no sino e na tela Pedidos de aprovação, com o card ao lado. Só recebe quem vê o registro; o valor de venda na pergunta só aparece para quem vê valores. Segue por aprovado, recusado (com o motivo, se a pessoa disser) ou ninguem_respondeu quando o prazo vence ou ninguém pode aprovar. Pede a flag automacao_passos_novos.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "pedir_aprovacao" },
+            "quem": { "$ref": "#/definitions/quem_do_passo" },
+            "pergunta": { "$ref": "#/definitions/texto" },
+            "prazo": { "$ref": "#/definitions/duracao" },
+            "aprovado": { "$ref": "#/definitions/passos_opcionais" },
+            "recusado": { "$ref": "#/definitions/passos_opcionais" },
+            "ninguem_respondeu": { "$ref": "#/definitions/passos_opcionais" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "com", "duracao", "convite", "espera"],
+          "description": "Marcar reunião pela conversa (#2935): manda o convite com os 3 próximos horários livres da página de agendamento da pessoa (botões onde o canal tem; senão os números 1, 2 e 3). A IA entende a resposta do cliente e a reunião fica marcada no card, com o aviso ao cliente; depois segue para o passo seguinte. Segue por outro_horario quando o cliente pede outro, não há horário livre ou o escolhido acabou de ser tomado; por nao_respondeu quando a espera vence. A janela de 24 h fechada manda o modelo no lugar, ou nada e a automação para nesta conversa. Só em gatilho com conversa (de conversa ou de card). Pede as flags automacao_passos_novos, das mensagens e da IA.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "marcar_reuniao" },
+            "com": { "$ref": "#/definitions/quem_da_reuniao" },
+            "duracao": { "enum": [15, 30, 45, 60], "description": "Minutos da reunião; a página de agendamento da pessoa precisa oferecer essa duração." },
+            "convite": { "$ref": "#/definitions/frase_ao_cliente" },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
+            "espera": { "$ref": "#/definitions/duracao" },
+            "outro_horario": { "$ref": "#/definitions/passos_opcionais" },
+            "nao_respondeu": { "$ref": "#/definitions/passos_opcionais" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "pergunta", "baixa_ate", "alta_desde", "intervalo_dias", "espera"],
+          "description": "Pesquisa de satisfação (#2936): pergunta a nota de 0 a 10 (botões onde o canal tem). A IA entende a resposta e segue por nota_baixa (até baixa_ate), nota_media ou nota_alta (desde alta_desde); por nao_respondeu quando a espera vence. A nota média precisa de pelo menos uma nota. Não pergunta de novo à mesma pessoa antes de intervalo_dias (pula e segue). A nota fica no contato e no card, e a lista mostra a média e quantas pessoas responderam. A janela de 24 h fechada manda o modelo no lugar, ou nada e a automação para nesta conversa. Só em gatilho com conversa (de conversa ou de card). Pede as flags automacao_passos_novos, das mensagens e da IA.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "pesquisa_nota" },
+            "pergunta": { "$ref": "#/definitions/frase_ao_cliente" },
+            "baixa_ate": { "type": "integer", "minimum": 0, "maximum": 8 },
+            "alta_desde": { "type": "integer", "minimum": 2, "maximum": 10 },
+            "intervalo_dias": { "enum": [7, 15, 30, 60, 90] },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
+            "espera": { "$ref": "#/definitions/duracao" },
+            "nota_baixa": { "$ref": "#/definitions/passos_opcionais" },
+            "nota_media": { "$ref": "#/definitions/passos_opcionais" },
+            "nota_alta": { "$ref": "#/definitions/passos_opcionais" },
+            "nao_respondeu": { "$ref": "#/definitions/passos_opcionais" }
           }
         }
       ]

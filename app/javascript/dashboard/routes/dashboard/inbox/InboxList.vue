@@ -206,7 +206,31 @@ const abrirPublicoPelasConversas = async notificationItem => {
   });
 };
 
+// #2931 — uma automação pede aprovação: abre "Pedidos de aprovação" nesse pedido.
+const abrirPedidoDeAprovacao = async notificationItem => {
+  const { id, primaryActorId, primaryActorType } = notificationItem;
+  try {
+    await store.dispatch('notifications/read', {
+      id,
+      primaryActorId,
+      primaryActorType,
+      unreadCount: meta.value.unreadCount,
+    });
+    store.dispatch('notifications/unReadCount');
+  } catch {
+    // a tela abre mesmo assim; marcar como lido fica para a próxima
+  }
+  router.push({
+    name: 'automacoes_aprovacoes',
+    query: { pedido: String(primaryActorId) },
+  });
+};
+
 const openConversation = async notificationItem => {
+  if (notificationItem.notificationType === 'automacao_aprovacao') {
+    await abrirPedidoDeAprovacao(notificationItem);
+    return;
+  }
   if (notificationItem.notificationType === 'guide_alert') {
     await abrirAvisoDoGuia(notificationItem);
     return;

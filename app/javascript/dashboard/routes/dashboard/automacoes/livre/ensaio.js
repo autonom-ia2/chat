@@ -5,8 +5,10 @@
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 import {
   linhaDoEnsaioNovo,
+  linhaDoEnsaioReal,
   rotuloDoGalhoFixo,
 } from './passosNovos/frasesDosNovos';
+import { PASSOS_QUE_SALVAM } from './passosNovos/passosNovos';
 
 const E = 'AUTOMACAO_LIVRE.ENSAIO';
 
@@ -117,6 +119,9 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.faria === 'passo_novo')
     return { ...base, ...linhaDoEnsaioNovo(no.dados.passo, t) };
   if (no.faria === 'corte') return { nivel, texto: t(`${E}.CORTE`) };
+  // #2931/#2935/#2936: a aprovação, a reunião e a pesquisa de verdade.
+  const real = PASSOS_QUE_SALVAM.includes(no.tipo) && linhaDoEnsaioReal(no, t);
+  if (real) return { ...base, ...real };
   if (no.faria === 'se')
     return {
       ...base,

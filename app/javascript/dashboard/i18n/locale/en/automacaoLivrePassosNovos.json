@@ -50,7 +50,12 @@
         "PERGUNTA": "What to ask",
         "PRAZO": "Time to answer",
         "QUEM_PODE": "Only people who can see the card get the request. If no one answers in time, the automation takes the “If no one answers in time” path.",
-        "VER_PEDIDO": "See it as the approver"
+        "VER_PEDIDO": "See it as the approver",
+        "ENSAIO_PARA": "Would ask {nomes} for approval. In the test, nobody gets the request.",
+        "ENSAIO_SEM_QUEM": "Nobody who can see this conversation could approve. It would follow the “If nobody answers in time” path.",
+        "HISTORICO_APROVOU": "{quem} approved.",
+        "HISTORICO_RECUSOU": "{quem} refused.",
+        "HISTORICO_MOTIVO_DITO": "Reason: {motivo}"
       },
       "PEDIDO": {
         "TITULO": "Approval request",
@@ -68,7 +73,12 @@
         "APROVAR": "Approve",
         "RECUSAR": "Refuse",
         "CARD": "The request's card",
-        "FECHAR": "Close"
+        "FECHAR": "Close",
+        "APROVADO_POR": "{nome} approved. The automation moved on.",
+        "RECUSADO_POR": "{nome} refused. The automation followed the refusal path.",
+        "ENCERRADO": "This request is no longer waiting for an answer: the deadline passed or the automation stopped.",
+        "PRAZO_ATE": "Answer by {quando}. Automation: {automacao}.",
+        "ABRIR_CONVERSA": "Open the conversation"
       },
       "REPETIR": {
         "NOME": "Do it for each one in a list",
@@ -160,7 +170,10 @@
         "COMO_O_CLIENTE_VE": "What the customer sees",
         "SEM_BOTOES": "If the channel has no buttons, the numbers 1, 2 and 3 are sent.",
         "ESPERA": "Wait for the answer for",
-        "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path."
+        "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path.",
+        "ENSAIO_SEM_RESPONSAVEL": "Nobody looks after the card or the conversation: it would skip this step.",
+        "ENSAIO_SEM_PAGINA": "The person has no booking page of their own: it would skip this step.",
+        "ENSAIO_SEM_HORARIO": "There is no free time right now: it would follow the “If they ask for another time” path."
       },
       "PESQUISA": {
         "NOME": "Satisfaction survey",
@@ -188,7 +201,12 @@
         "INTERVALO": "Ask the same person again only after",
         "ESPERA": "Wait for the answer for",
         "RESUMO_EXEMPLO": "In the list, the automation shows the average and how many people answered. Example: average 8.6 from 37 answers.",
-        "REGRAS": "Blocked contacts and those who asked not to receive messages are left out. The score is kept on the contact and on the card."
+        "REGRAS": "Blocked contacts and those who asked not to receive messages are left out. The score is kept on the contact and on the card.",
+        "ENSAIO_RECENTE": "This person answered a survey recently: it would skip the question and move on.",
+        "HISTORICO_NOTA": "Score {nota}.",
+        "HISTORICO_NOTA_COMENTARIO": "Score {nota}: “{comentario}”.",
+        "RESUMO": "Survey: average {media} from {n} answer | Survey: average {media} from {n} answers",
+        "RESUMO_VAZIO": "Survey: no answers yet"
       },
       "PREVIA": {
         "TITULO": "See how it looks",
@@ -247,6 +265,18 @@
         "HORARIO_3": "Friday, 9 AM",
         "CARD_TITULO": "Order with a 12% discount",
         "VALOR_OCULTO": "hidden value"
+      },
+      "ENSAIO_DESLIGADO": "The new steps are off for this account: the automation would stop here.",
+      "ENSAIO_IA_DESLIGADA": "AI steps are off for this account: the automation would stop here.",
+      "APROVACOES": {
+        "TITULO": "Approval requests",
+        "SUBTITULO": "When an automation needs your OK, the request shows up here.",
+        "CARREGANDO": "Loading the requests",
+        "VAZIO": "No request is waiting for you.",
+        "ERRO": "The requests could not be loaded.",
+        "TENTAR_DE_NOVO": "Try again",
+        "NAO_ACHOU": "This request is not with you anymore.",
+        "NAO_RESPONDEU": "The answer did not go through. Try again."
       }
     }
   }

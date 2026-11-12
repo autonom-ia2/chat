@@ -37,8 +37,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id).to_a
     semana = ::Autonomia::Automacao::Historico.semana(automacoes.map(&:id))
     pausas = ::Autonomia::Automacao::Pausa.das(automacoes)
+    # #2936: a média e quantas pessoas responderam, só nas que têm a pesquisa de satisfação.
+    pesquisas = ::Autonomia::Automacao::ResumoDaPesquisa.das(Current.account, automacoes)
     render json: { automacoes: automacoes.map do |automacao|
-      para_tela(automacao, receita: true, pausa: pausas[automacao.id]).merge(semana: semana[automacao.id])
+      para_tela(automacao, receita: true, pausa: pausas[automacao.id])
+        .merge(semana: semana[automacao.id], **{ pesquisa: pesquisas[automacao.id] }.compact)
     end }
   end
 
