@@ -71,9 +71,16 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
 
     novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
     chaves = novo.para_guardar
-    agente&.update!(config: agente.config.to_h.merge(chaves))
+    gravar_no_agente(agente, chaves) if agente
     @thread&.juntar_ao_estado!(chaves)
     novo
+  end
+
+  # Só a coluna `config`, sem tocar no `updated_at` (como a sugestão de prontas, `SugestaoParaAgente.gravar`): o
+  # Desfazer e a correção de um ajuste em andamento conferem o `updated_at` do agente, e mudar uma lista não é mudar o
+  # agente para eles. O agente está travado e recém-relido; as chaves foram conferidas acima.
+  def gravar_no_agente(agente, chaves)
+    agente.update_columns(config: agente.config.to_h.merge(chaves)) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def lista_valida?(valor)

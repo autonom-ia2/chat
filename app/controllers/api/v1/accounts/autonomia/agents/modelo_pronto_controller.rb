@@ -5,16 +5,24 @@
 #
 # PATCH .../agents/:agent_id/modelo_pronto -> o agente, como no `show`, já com as listas novas.
 # Escrita: pede `autonomia_manage`, como toda escrita da área de Agentes; a lista de ferramentas pede também
-# `autonomia_tools_manage`. Agente de outra conta ou de sistema: 404.
+# `autonomia_tools_manage`. Agente de outra conta ou de sistema: 404. Agente em modo manual: 422, como pela conversa
+# (a instrução dele é do dono, e as listas não entram nela).
 class Api::V1::Accounts::Autonomia::Agents::ModeloProntoController < Api::V1::Accounts::Autonomia::BaseController
   include ::Autonomia::ListasDoModeloPronto
 
   before_action :conferir_chave_de_ferramentas!
+  before_action :buscar_agente
   rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   def update
-    @agent = agents_scope.find(params[:agent_id])
     editar_modelo_pronto(agent: @agent)
     render 'api/v1/accounts/autonomia/agents/show'
+  end
+
+  private
+
+  def buscar_agente
+    @agent = agents_scope.find(params[:agent_id])
+    raise ::Autonomia::Agents::Agent::ModoManual if @agent.manual?
   end
 end

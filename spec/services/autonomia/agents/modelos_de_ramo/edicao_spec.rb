@@ -154,6 +154,15 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(agente)).to include("DOCUMENTOS:\n1. Contrato social.")
     end
 
+    it 'não mexe na data de alteração do agente: mudar uma lista não cancela o Desfazer nem um ajuste em andamento' do
+      antes = agente.reload.updated_at
+
+      editar(documentos: [{ texto: 'Contrato social.' }])
+
+      expect(agente.reload.updated_at).to eq(antes)
+      expect(agente.config[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
+    end
+
     it 'não chama o Construtor nem modelo de IA nenhum' do
       allow(Crm::Ai::ResponsesClient).to receive(:new)
 

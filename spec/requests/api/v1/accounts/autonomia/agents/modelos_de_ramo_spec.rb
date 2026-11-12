@@ -386,6 +386,19 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(response).to have_http_status(:not_found)
     end
 
+    it 'recusa com 422 o agente em modo manual, como pela conversa, e não manda o modelo dele para a tela' do
+      manual = Autonomia::Agents::Agent.create!(account: account, name: 'Manual', agent_type: 'sdr', mode: :manual,
+                                                instruction: 'Atenda do meu jeito.', config: { chave_da_marca => conversa.state[chave_da_marca] })
+
+      mudar_pelo_agente({ perguntas: [] }, manual)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(manual.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
+      expect(ver_agente(manual)).not_to have_key('modelo_pronto')
+
+      conversa.update!(agent: manual)
+      expect(ver['modelo_pronto']).to be_nil
+    end
+
     it 'só deixa mexer nas ferramentas quem tem a chave "Ferramentas dos agentes"' do
       so_agentes = com_funcao(%w[autonomia_manage])
 

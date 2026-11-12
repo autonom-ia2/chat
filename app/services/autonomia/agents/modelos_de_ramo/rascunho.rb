@@ -19,9 +19,11 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     end
 
     # O que a tela de criação mostra e deixa mudar: o modelo da conversa, só enquanto o agente é rascunho. Depois do
-    # "Começar" a conversa de criação antiga não oferece mais listas para editar (a edição seria recusada).
+    # "Começar" a conversa de criação antiga não oferece mais listas para editar (a edição seria recusada). O mesmo
+    # para o agente que passou para o modo manual: a instrução dele é do dono, e as listas não entram nela.
     def para_a_criacao(thread)
-      do_thread(thread) unless thread.agent && !thread.agent.draft?
+      agente = thread.agent
+      do_thread(thread) unless agente && (!agente.draft? || agente.manual?)
     end
 
     # O modelo de um agente que nasceu de um modelo, lido da marca dele: é o que a tela mostra quando reabre o rascunho

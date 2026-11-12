@@ -643,7 +643,7 @@ module Autonomia
       # e entre as duas chamadas do turno. nil (Fase 2 desligada ou sem bloco) some no compact_blank.
       def context_blocks
         [segmento_context, actuation_context, knowledge_intent_context, skeleton_context, prontas_context, booking_context, adjust_context,
-         knowledge_context,
+         listas_do_modelo_no_ajuste_context, knowledge_context,
          send_media_context, materials_status_context, opening_context, turn_budget_context,
          pending_request_context].compact_blank
       end

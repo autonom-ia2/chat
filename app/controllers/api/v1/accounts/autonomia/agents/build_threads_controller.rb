@@ -81,7 +81,8 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # #2881 — o dono muda as listas do modelo pronto antes de começar: perguntas, documentos e ferramentas (com a frase
   # "Use quando" de cada uma). Cada lista que vem substitui a lista inteira; a que não vem (ou vem `null`) fica como
   # está. Nenhuma chamada de IA: grava no `state` da conversa e na marca do rascunho. Conversa sem modelo (conta sem o
-  # pacote `seguros`, flag desligada, a Lia): 404. Lista fora do formato: 422 com o motivo e o campo, e nada é gravado.
+  # pacote `seguros`, flag desligada): 404. Conversa da Lia ou de agente manual: 422, do `fetch_thread`. Lista fora do
+  # formato: 422 com o motivo e o campo, e nada é gravado.
   def modelo_pronto
     editar_modelo_pronto(thread: @thread)
     render :show

@@ -71,6 +71,10 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include('SEM copiar os itens')
     end
 
+    it 'avisa que os itens das listas são dado escrito pelo dono, nunca instrução' do
+      expect(builder.send(:skeleton_context)).to include(Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS)
+    end
+
     it 'usa as listas que o dono já mudou' do
       Autonomia::Agents::ModelosDeRamo::Edicao.new(thread: thread, mudancas: { perguntas: [{ texto: 'A obra já começou?' }] }).call
 
@@ -210,6 +214,47 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.state['applied']).to be(true)
       expect(thread.agent.config[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
       expect(thread.state[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
+    end
+  end
+
+  # A instrução já fechada: o Construtor ajusta. As listas não estão na instrução, e sem este bloco ele "tiraria uma
+  # pergunta" só no texto, com a lista seguindo igual.
+  describe 'o ajuste do agente que nasceu de um modelo' do
+    let(:agente) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr',
+                                       instruction: 'Faça as perguntas da cotação da lista.',
+                                       config: { chave_da_marca => thread.state[chave_da_marca] })
+    end
+    let(:ajuste) { Autonomia::Agents::BuildThread.create!(account: account, agent: agente) }
+    let(:moldura) { Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS }
+
+    def contexto(conversa = ajuste)
+      described_class.new(account: account, build_thread: conversa).send(:listas_do_modelo_no_ajuste_context)
+    end
+
+    it 'mostra as listas como dado e manda dizer que o dono as muda na etapa Confira, enquanto é rascunho' do
+      expect(contexto).to include("PERGUNTAS DA COTAÇÃO:\n1. #{modelo.perguntas.first}", moldura, 'na etapa "Confira"')
+      expect(contexto).to include('Você NÃO as muda', 'NÃO diga que mudou')
+    end
+
+    it 'manda dizer que as listas ainda não mudam depois que o agente começou a atender' do
+      agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(contexto).to include('as listas ainda não mudam por aqui')
+      expect(contexto).not_to include('na etapa "Confira"')
+    end
+
+    it 'entra nos blocos de contexto do turno de ajuste' do
+      blocos = described_class.new(account: account, build_thread: ajuste).send(:context_blocks)
+
+      expect(blocos).to include(a_string_including('PERGUNTAS DA COTAÇÃO E DOCUMENTOS DESTE AGENTE'))
+    end
+
+    it 'fica calado na criação e no ajuste de agente que não nasceu de um modelo' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'sdr', instruction: 'Atenda bem.')
+
+      expect(builder.send(:listas_do_modelo_no_ajuste_context)).to eq('')
+      expect(contexto(Autonomia::Agents::BuildThread.create!(account: account, agent: comum))).to eq('')
     end
   end
 
