@@ -54,10 +54,20 @@ class Autonomia::FerramentasProntas::Premium::Execucao < Autonomia::FerramentasP
   def consultar(params)
     @provedor = Premium::BigDataCorp::NOME
     @chamou = true
-    leitura = Premium::BigDataCorp.new(nil, prazo: @consulta.prazo_por_fonte).ler(@consulta.dataset, @consulta.para_a_fonte(params))
+    leitura = ler(params)
     texto = montar(leitura, params)
     cobrar(leitura.situacao, motivo: leitura.motivo, id_na_fonte: leitura.id_na_fonte, custo_possivel: leitura.custo_possivel?)
     texto
+  end
+
+  # A `BigDataCorp#ler` não levanta pelo que a BigDataCorp respondeu; o que levanta é defeito nosso, e pode vir depois
+  # da resposta (ao ler o corpo). A BigDataCorp pode ter cobrado: a linha vira falha por defeito, com o custo do
+  # dataset (sem contar para o cliente), e o defeito sobe ao rastreador pela `Execucao#call` (revisor, 12/11).
+  def ler(params)
+    Premium::BigDataCorp.new(nil, prazo: @consulta.prazo_por_fonte).ler(@consulta.dataset, @consulta.para_a_fonte(params))
+  rescue StandardError
+    cobrar('falha', motivo: 'defeito', custo_possivel: true)
+    raise
   end
 
   def montar(leitura, params)

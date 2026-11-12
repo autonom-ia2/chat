@@ -292,6 +292,20 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     end
   end
 
+  # Revisor (MÉDIO, execucao.rb:54): o defeito nosso ao ler, depois de a BigDataCorp responder, não pode sumir com o
+  # custo dela. A linha vira falha por defeito, com o custo do dataset (sem contar para o cliente), e o defeito sobe.
+  it 'o defeito ao ler a resposta grava o custo como falha por defeito e sobe ao rastreador' do
+    pgfn_responde
+    allow(Autonomia::FerramentasProntas::Premium::Leitura).to receive(:de).and_raise(NoMethodError)
+    allow(ChatwootExceptionTracker).to receive(:new).and_call_original
+
+    expect(executar_premium(certidoes, pgfn)['situacao']).to eq('nao_consegui_consultar')
+    expect(registros_premium.sole).to have_attributes(resultado: 'falha', motivo: 'defeito', cobranca: 'sem_cobranca', numero: nil,
+                                                      custo: BigDecimal('0.10'), preco: 0)
+    expect(saldos.count).to eq(0)
+    expect(ChatwootExceptionTracker).to have_received(:new).with(instance_of(NoMethodError), account: account)
+  end
+
   describe 'o token e o prazo da chamada' do
     it 'o token vale para as consultas seguintes do processo enquanto não vence' do
       pgfn_responde
