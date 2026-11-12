@@ -1251,7 +1251,13 @@ const upsertCardInStages = (stages, card) =>
       };
     }
 
-    if (existingIndex === -1) return { ...stage, cards: [card, ...cards] };
+    // O quadro só mostra card aberto: o fechado que não está nele (a compra que o selo "Já é cliente" abre, #2710,
+    // ou outro card ganho aberto pelo endereço) não entra. O que já está nele segue até o tempo real recarregar.
+    if (existingIndex === -1) {
+      return card.status && card.status !== 'open'
+        ? stage
+        : { ...stage, cards: [card, ...cards] };
+    }
 
     return {
       ...stage,

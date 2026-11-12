@@ -7,7 +7,7 @@
       "CRIAR": "Criar uma automação para quem entrar em {etapa}",
       "ITEM": "{nome} — {situacao}",
       "ESPERA_ATE": "espera até {dia}",
-      "ESPERA_RESPOSTA": "espera o cliente responder",
+      "ESPERA_CONDICAO": "espera acontecer o que o passo pede",
       "AGINDO": "agindo agora",
       "PASSO": "Passo {n} de {total}: {frase}",
       "HISTORICO": "O que já fez",
@@ -15,7 +15,7 @@
       "FEZ": "{dia}: {frase}",
       "PARAR": "Parar para este card",
       "PARAR_ROTULO": "Parar {nome} para este card",
-      "CONFIRMA": "Parar {nome} só neste card?",
+      "CONFIRMA": "Parar {nome} neste card? O que ela começou em outro contato, conversa ou card por causa deste também para.",
       "SIM": "Sim, parar",
       "VOLTAR": "Voltar",
       "PAROU": "{nome} parou neste card. Os outros cards continuam.",
@@ -42,22 +42,6 @@
       "ERRO_LIGAR": "Não deu para mudar agora. Tente de novo.",
       "ERRO_LISTA": "Não deu para ver as automações agora.",
       "TENTAR": "Tentar de novo"
-    },
-    "CLIENTE": {
-      "SELO": "Já é cliente desde {dia}",
-      "SELO_SEM_DATA": "Já é cliente",
-      "SELO_ROTULO": "{selo}. Abrir a compra",
-      "ABRIR_COMPRA": "Abrir a compra",
-      "SEM_COMPRA": "Não achamos a compra deste cliente."
-    },
-    "DEMO": {
-      "LEMBRETE": "Lembrete de proposta",
-      "LEMBRETE_TEXTO": "Lembrar o cliente da proposta",
-      "DE_NOVO": "Mandar a proposta de novo",
-      "DE_NOVO_TEXTO": "Oi! Conseguiu ver a proposta?",
-      "DE_NOVO_AVISO": "O cliente ainda não respondeu à proposta",
-      "SUMIU": "Avisar se o cliente sumir",
-      "SUMIU_TEXTO": "O cliente sumiu: vale ligar"
     }
   }
 }

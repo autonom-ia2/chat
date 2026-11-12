@@ -2,6 +2,9 @@
 # `automation_manage`. Sem função personalizada, só o administrador passa (AccountUser#permission_granted?).
 # Testar um passo de IA (#2500 C2) chama a IA e paga: pede `automation_manage`, como montar. Os custos só se leem com
 # `automation_view`; o valor em dinheiro ainda pede `financial_view`, conferido no controller (#1969).
+# No CRM (#2499 F6.3/F6.5): "Automações deste card" pede `automation_view` e "Parar para este card", `automation_manage`
+# (o controller confere também a CardPolicy); "Automações desta etapa" pede `automation_view` e a chave de funis, como a
+# tela da etapa no "Editar funil".
 class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def passos? = ver?
   def index? = ver?
@@ -17,6 +20,9 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def agentes_de_ia? = gerenciar?
   def custos? = ver?
   def custos_da_automacao? = ver?
+  def do_card? = ver?
+  def parar_no_card? = gerenciar?
+  def da_etapa? = ver? && ::Autonomia::Automacao::RegraDoFunil.chave?(account_user)
 
   private
 

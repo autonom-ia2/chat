@@ -3,6 +3,7 @@ import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { usePodeMontarAutomacao } from 'dashboard/composables/usePodeMontarAutomacao';
 import AutomacaoLinha from 'dashboard/routes/dashboard/automacoes/components/AutomacaoLinha.vue';
@@ -11,18 +12,21 @@ import {
   fraseDoGatilho,
   fraseDoPasso,
 } from 'dashboard/routes/dashboard/automacoes/livre/frases';
-import { semPermissao, useFonteDasAutomacoes } from './useAutomacaoNoCrm';
+import { oQueLigarFaz } from 'dashboard/routes/dashboard/automacoes/livre/aoLigar';
+import { erroDaApi } from 'dashboard/routes/dashboard/automacoes/livre/erroDaApi';
+import LivreConfirmarLigar from 'dashboard/routes/dashboard/automacoes/livre/components/LivreConfirmarLigar.vue';
+import { semPermissao } from './useAutomacaoNoCrm';
+import { automacoesDaEtapa, ligarNaEtapa } from './fonteDasAutomacoes';
 
-// #2414 F6.5 (protótipo só da demo) — "Automações desta etapa", na etapa aberta do funil: as regras antigas da etapa
-// (reais, do store, com o selo "Jeito antigo") e as automações novas com gatilho nesta etapa (entrou, saiu ou
-// parado), numa lista só, na mesma linha da lista de Automações (AutomacaoLinha: frase, "Alterar" e interruptor).
-// A ação principal é "Nova automação para esta etapa", que abre o editor com o gatilho da etapa. O aviso da F6.4
-// aparece quando há automação de entrar ou sair. Sair da gaveta com o funil mudado pergunta antes.
+// #2499 F6.5 — "Automações desta etapa", na etapa aberta do funil: as regras antigas da etapa (do store, com o selo
+// "Jeito antigo") e as automações novas com gatilho nesta etapa (entrou, saiu ou parado), numa lista só, na mesma
+// linha da lista de Automações (AutomacaoLinha: frase, "Alterar" e interruptor). A ação principal é "Nova automação
+// para esta etapa", que abre o editor com o gatilho da etapa. O aviso da F6.4 aparece quando há automação de entrar ou
+// sair. Sair da gaveta com o funil mudado pergunta antes. Ligar uma nova é "assumir e religar", com a mesma
+// confirmação da lista de Automações quando ela manda mensagem, avisa a equipe ou usa IA (#2574).
 const props = defineProps({
   etapaId: { type: [Number, String], required: true },
   etapaNome: { type: String, default: '' },
-  // A marca do seed no funil (marcaDaDemo).
-  marca: { type: Object, required: true },
   // A gaveta "Editar funil" tem mudança ainda não salva.
   temMudanca: { type: Boolean, default: false },
 });
@@ -33,7 +37,6 @@ const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
-const fonte = useFonteDasAutomacoes(props.marca);
 const podeMontar = usePodeMontarAutomacao();
 const tituloId = `etapa-automacoes-${useId()}`;
 
@@ -61,7 +64,7 @@ const carregar = async () => {
   try {
     const [daEtapa, doMotor] = await Promise.all([
       store.dispatch('crmKanban/fetchStageAutomations', props.etapaId),
-      fonte.automacoesDaEtapa(props.etapaId),
+      automacoesDaEtapa(props.etapaId),
     ]);
     catalogo.value = doMotor.length ? await carregarCatalogo() : null;
     antigas.value = daEtapa || [];
@@ -131,7 +134,7 @@ const mostraAviso = computed(
 const trocar = (lista, id, novo) =>
   lista.map(item => (item.id === id ? novo : item));
 
-const alternar = async linha => {
+const executarAlternar = async linha => {
   mudando.value = linha.chave;
   erroLigar.value = '';
   const ligar = !linha.automacao.active;
@@ -147,17 +150,60 @@ const alternar = async linha => {
         salva || { ...linha.original, enabled: ligar }
       );
     } else {
-      const ativa = await fonte.ligarNaEtapa(linha.original, ligar);
+      const ativa = await ligarNaEtapa(linha.original, ligar);
       novas.value = trocar(novas.value, linha.original.id, {
         ...linha.original,
         ativa,
       });
     }
-  } catch {
-    erroLigar.value = t(`${E}.ERRO_LIGAR`);
+  } catch (erro) {
+    // A nova diz por que não ligou (a receita com problema, quem liga sem acesso); a outra pessoa que salvou no meio
+    // (409) pede ler de novo.
+    if (linha.antiga) {
+      erroLigar.value = t(`${E}.ERRO_LIGAR`);
+    } else {
+      const { conflito, mensagem, problemas } = erroDaApi(erro, t);
+      erroLigar.value = [mensagem, ...problemas].join(' ');
+      if (conflito) carregar();
+    }
   } finally {
     mudando.value = null;
   }
+};
+
+// #2574 (F5.4): ligar a nova que manda mensagem, avisa a equipe ou usa IA pede a mesma confirmação da lista de
+// Automações, com o custo de cada passo de IA. Se o custo não carregar, a confirmação segue sem o valor.
+const confirmarLigar = ref(null);
+const aConfirmar = ref({ linha: null, custos: { com_valores: false } });
+const lerCustos = async id => {
+  try {
+    return (await AutomacoesAPI.custosDaAutomacao(id)).data;
+  } catch {
+    return { com_valores: false };
+  }
+};
+
+const pedeConfirmacao = linha =>
+  !linha.antiga &&
+  !linha.automacao.active &&
+  oQueLigarFaz(linha.original.receita).pede;
+
+const alternar = async linha => {
+  if (mudando.value) return;
+  if (!pedeConfirmacao(linha)) {
+    await executarAlternar(linha);
+    return;
+  }
+  mudando.value = linha.chave;
+  const custos = await lerCustos(linha.original.id);
+  mudando.value = null;
+  aConfirmar.value = { linha, custos };
+  confirmarLigar.value?.abrir();
+};
+
+const ligarConfirmada = () => {
+  const { linha } = aConfirmar.value;
+  if (linha) executarAlternar(linha);
 };
 
 const conta = () => ({ accountId: route.params.accountId });
@@ -173,11 +219,14 @@ const sair = async destino => {
   botaoSair.value?.$el?.focus();
 };
 
-// As automações novas do ensaio não existem no motor: "Alterar" abre a lista de Automações.
+// "Alterar" da antiga abre a tela das ações da etapa (a de hoje); o da nova, o editor dela.
 const abrir = linha =>
   linha.antiga
     ? emit('antigas')
-    : sair({ name: 'automacoes_lista', params: conta() });
+    : sair({
+        name: 'automacoes_livre_editar',
+        params: { ...conta(), id: String(linha.original.id) },
+      });
 
 const nova = () =>
   sair({
@@ -312,6 +361,13 @@ const nova = () =>
         <span class="i-lucide-info mt-0.5 size-4 shrink-0" aria-hidden="true" />
         {{ t(`${E}.AVISO`) }}
       </p>
+
+      <LivreConfirmarLigar
+        ref="confirmarLigar"
+        :receita="aConfirmar.linha?.original.receita || null"
+        :custos="aConfirmar.custos"
+        @ligar="ligarConfirmada"
+      />
     </section>
   </div>
 </template>

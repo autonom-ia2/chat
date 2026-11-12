@@ -11,13 +11,17 @@
 # A ordem é a do motor (PassoDeReuniao, PassoDePesquisa): o que ele confere antes de mandar, o ensaio confere antes do
 # canal. Sem horário e com a janela fechada, por exemplo, os dois seguem por "Se pedir outro horário".
 # Cada um abre os caminhos dele, sem escolher (como o "decidir"): a reunião marcada segue para o resto da receita.
+# No card sem conversa (#2631, #2680), como o motor: a aprovação vai a quem alcança o card; a reunião e a pesquisa pulam
+# com `sem_conversa` e seguem para o passo seguinte.
 class Autonomia::Automacao::EsperaNoEnsaio
   Esperam = ::Autonomia::Automacao::PassosQueEsperam
   Reuniao = ::Autonomia::Automacao::PassoDeReuniao
   MARCOU = 'marcou'.freeze
 
-  def initialize(conta:, conversa:, envio:, roteiro:)
+  # `alvo`: o registro do ensaio (a conversa, o card ou o contato); `conversa`: a conversa em que os passos agem agora.
+  def initialize(conta:, alvo:, conversa:, envio:, roteiro:)
     @conta = conta
+    @alvo = alvo
     @conversa = conversa
     @envio = envio
     @roteiro = roteiro
@@ -40,13 +44,15 @@ class Autonomia::Automacao::EsperaNoEnsaio
   private
 
   def aprovacao(passo)
-    para = ::Autonomia::Automacao::PassoDeAprovacao.para(@conta, passo, @conversa)
+    para = ::Autonomia::Automacao::PassoDeAprovacao.para(@conta, passo, @alvo)
     return [no(passo, 'sem_quem_aprove', {}, [ramo(passo, Esperam.sem_resposta(passo))]), nil] if para.empty?
 
     [no(passo, passo['tipo'], { para: para.map(&:name) }, ramos(passo)), nil]
   end
 
   def reuniao(passo, valores)
+    return sem_conversa(passo) if @conversa.nil?
+
     pessoa = responsavel(passo)
     return sem_reuniao(passo, Reuniao::SEM_RESPONSAVEL) unless pessoa
 
@@ -68,9 +74,10 @@ class Autonomia::Automacao::EsperaNoEnsaio
   end
 
   # A pessoa com quem a reunião seria marcada, pela mesma escolha do motor (QuemDoPasso).
-  def responsavel(passo) = ::Autonomia::Automacao::QuemDoPasso.pessoas(@conta, passo['com'], ::Autonomia::Automacao::Contexto.de(@conversa)).first
+  def responsavel(passo) = ::Autonomia::Automacao::QuemDoPasso.pessoas(@conta, passo['com'], ::Autonomia::Automacao::Contexto.de(@alvo)).first
 
   def pesquisa(passo, valores)
+    return sem_conversa(passo) if @conversa.nil?
     return seguir(passo, no(passo, 'pesquisa_recente')) if ::Autonomia::Automacao::PassoDePesquisa.recente?(@conversa.contact, passo)
 
     do_canal(passo, valores) || pergunta(passo)
@@ -91,6 +98,9 @@ class Autonomia::Automacao::EsperaNoEnsaio
     faria, dados = @envio.do_canal(passo, valores)
     seguir(passo, no(passo, faria, dados.to_h)) if faria
   end
+
+  # Como o motor (PassoDeReuniao, PassoDePesquisa): sem conversa, pula e segue.
+  def sem_conversa(passo) = seguir(passo, no(passo, 'sem_conversa'))
 
   def seguir(passo, feito)
     acaba = ::Autonomia::Automacao::EnvioNoEnsaio::ACABA.include?(feito[:faria])

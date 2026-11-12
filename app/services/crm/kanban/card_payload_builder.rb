@@ -1,8 +1,11 @@
 class Crm::Kanban::CardPayloadBuilder
   UNRESOLVED_COMPANY = Object.new.freeze
 
-  def initialize(card:, conversation_visibility:, account_user:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
+  # ja_cliente: o selo "Já é cliente" do card (Crm::Cards::JaECliente), já calculado para o quadro inteiro.
+  def initialize(card:, conversation_visibility:, account_user:, pending_suggestion: nil, company: UNRESOLVED_COMPANY, # rubocop:disable Metrics/ParameterLists
+                 ja_cliente: nil)
     @card = card
+    @ja_cliente = ja_cliente
     @account_user = account_user
     @conversation_visibility = conversation_visibility
     @pending_suggestion = pending_suggestion
@@ -39,8 +42,7 @@ class Crm::Kanban::CardPayloadBuilder
       score: @card.score,
       score_source: score_source,
       status: @card.status,
-      # #2710 (protótipo só da demo): o selo "Já é cliente" do quadro lê de onde o card veio (página de agendamento).
-      source: @card.source,
+      ja_cliente: @ja_cliente,
       is_standalone: @card.standalone?,
       # Epoch seconds across the board payload so the frontend timeHelper.js
       # (fromUnixTime-based) renders them consistently without Invalid-Date.

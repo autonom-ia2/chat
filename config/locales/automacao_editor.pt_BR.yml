@@ -8,7 +8,7 @@ pt_BR:
         texto_da_ia: '[o texto que a IA escreveria no passo %{passo}]'
         receita_invalida: Esta automação tem algo a corrigir antes de ensaiar.
         sem_receita: A automação precisa de gatilho e passos válidos para ensaiar.
-        gatilho_de_card: O ensaio ainda só funciona com gatilhos de conversa.
+        gatilho_de_card: O ensaio ainda só funciona com gatilhos de conversa, de card e de etiqueta no contato.
       testar:
         receita_invalida: Esta automação tem algo a corrigir antes de testar o passo.
         passo_nao_testavel: Só dá para testar os passos de IA que decidem, escrevem ou resumem.

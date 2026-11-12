@@ -56,12 +56,7 @@ import { useFocoPreso } from './useFocoPreso';
 import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
 import CardArquivado from '../arquivados/CardArquivado.vue';
 import CardAutomacoes from '../automacaoNoCrm/CardAutomacoes.vue';
-import { marcaDaDemo } from '../automacaoNoCrm/fonteDasAutomacoes';
-import { clienteQueAgendou } from '../automacaoNoCrm/clienteQueAgendou';
-import {
-  useCardGanho,
-  usePodeVerAutomacoes,
-} from '../automacaoNoCrm/useAutomacaoNoCrm';
+import { usePodeVerAutomacoes } from '../automacaoNoCrm/useAutomacaoNoCrm';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -96,6 +91,8 @@ const props = defineProps({
   erroArquivar: { type: String, default: '' },
   restaurando: { type: Boolean, default: false },
   erroRestaurar: { type: String, default: '' },
+  // #2710: a página está buscando a compra que o selo "Cliente desde…" abre.
+  abrindoCompra: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -109,7 +106,7 @@ const emit = defineEmits([
   'cancelFollowUp',
   'refreshCard',
   'restaurar',
-  'abrirCard',
+  'abrirCompra',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -412,17 +409,11 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
-// #2414 F6.3 e #2710, variante 2 (protótipo só da demo: build de desenvolvimento e funil marcado pelo seed). No card
-// que a página de agendamento criou para quem já comprou, o selo "Cliente desde…" do topo abre o card ganho.
-const demo = computed(() => marcaDaDemo(funil.value));
+// #2710: no card que a página de agendamento criou para quem já comprou, o selo "Cliente desde…" do topo abre a
+// compra (o card ganho). Trocar de card pergunta antes de descartar rascunho: quem cuida disso é a página.
 const jaCliente = computed(() =>
-  demo.value && editando.value ? clienteQueAgendou(card.value) : null
+  editando.value ? card.value.ja_cliente || null : null
 );
-const cardGanho = useCardGanho();
-const abrirCardGanho = async () => {
-  const id = await cardGanho.achar(jaCliente.value);
-  if (id) guardar(() => emit('abrirCard', { id }), { leaving: true });
-};
 // A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
 // Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
 const {
@@ -445,11 +436,10 @@ const confirmarArquivar = () => {
 const arquivado = computed(
   () => props.arquivadosLigado && status.value === 'archived'
 );
-// #2414 F6.3 (protótipo só da demo): "Automações deste card" só em card aberto e para quem pode ver automações.
+// #2499 F6.3: "Automações deste card" só em card aberto e para quem pode ver automações (com o motor e os gatilhos).
 const podeVerAutomacoes = usePodeVerAutomacoes();
 const mostraAutomacoes = computed(
   () =>
-    Boolean(demo.value) &&
     editando.value &&
     podeVerAutomacoes.value &&
     status.value === 'open' &&
@@ -741,13 +731,13 @@ defineExpose({
       <CardHeroi
         v-bind="heroi"
         :contato="tela === 'resumo' ? card.contact : null"
-        :abre-compra="tela === 'resumo' && Boolean(jaCliente)"
-        :abrindo-compra="cardGanho.abrindo.value"
+        :compra="tela === 'resumo' ? jaCliente : null"
+        :abrindo-compra="abrindoCompra"
         :titulo-id="`${gavetaId}-titulo`"
         :texto-id="`${gavetaId}-texto`"
         @voltar="voltarDoHeroi"
         @fechar="fechar"
-        @compra="abrirCardGanho"
+        @compra="emit('abrirCompra', jaCliente)"
       />
       <CardFaixa
         v-if="editando && tela === 'resumo'"
@@ -853,7 +843,6 @@ defineExpose({
                 <template v-if="mostraAutomacoes" #antes-dos-detalhes>
                   <CardAutomacoes
                     :card="card"
-                    :marca="demo"
                     :etapa="etapaDoCard"
                     :pode-gerenciar="podeGerenciar"
                   />

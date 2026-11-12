@@ -47,6 +47,16 @@ class Autonomia::Automacao::Historico
     end
   end
 
+  # Até quando espera. Sem prazo (#2750), o `due_at` é só a próxima conferência do motor, não uma hora para mostrar: sai
+  # `esperando_sem_prazo`. O registro da espera diz qual é (o da execução aberta não sai pela limpeza). As "Automações
+  # deste card" (#2499 F6.3, NoCard) dizem a espera do mesmo jeito.
+  def self.espera(execucao, registros)
+    return { esperando_ate: nil } unless execucao.estado == 'esperando'
+    return { esperando_ate: nil, esperando_sem_prazo: true } if registros.any? { |r| r.passo == execucao.cursor && r.dados['sem_prazo'] }
+
+    { esperando_ate: execucao.due_at }
+  end
+
   def initialize(automacao:, usuario:, com_valores: false, pagina: 1)
     @automacao = automacao
     @usuario = usuario
@@ -105,19 +115,10 @@ class Autonomia::Automacao::Historico
     conversa = visiveis[execucao.alvo_id] if execucao.alvo_type == 'Conversation'
     {
       id: execucao.id, estado: execucao.estado, versao_id: execucao.versao_id, criada_em: execucao.created_at,
-      finalizada_em: execucao.finalizada_em, **espera(execucao, registros),
+      finalizada_em: execucao.finalizada_em, **self.class.espera(execucao, registros),
       alvo: conversa ? alvo_conversa(conversa) : outro_alvo(execucao, outros[[execucao.alvo_type, execucao.alvo_id]]),
       passos: registros.map { |registro| passo(registro, visivel: conversa.present?) }
     }
-  end
-
-  # Até quando espera. Sem prazo (#2750), o `due_at` é só a próxima conferência do motor, não uma hora para mostrar: sai
-  # `esperando_sem_prazo`. O registro da espera diz qual é (o da execução aberta não sai pela limpeza).
-  def espera(execucao, registros)
-    return { esperando_ate: nil } unless execucao.estado == 'esperando'
-    return { esperando_ate: nil, esperando_sem_prazo: true } if registros.any? { |r| r.passo == execucao.cursor && r.dados['sem_prazo'] }
-
-    { esperando_ate: execucao.due_at }
   end
 
   def alvo_conversa(conversa)

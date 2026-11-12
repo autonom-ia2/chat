@@ -54,6 +54,13 @@ describe('#AutonomiaFerramentasProntasAPI', () => {
     expect(axiosMock.delete).toHaveBeenCalledWith(`${BASE}/31`);
   });
 
+  it('changes the "use when" sentence of an included tool', () => {
+    ferramentasProntas.mudarQuando(31, 'Use quando pedirem o endereço.');
+    expect(axiosMock.patch).toHaveBeenCalledWith(`${BASE}/31`, {
+      usar_quando: 'Use quando pedirem o endereço.',
+    });
+  });
+
   it('tries a source and records a search without result', () => {
     ferramentasProntas.experimentar('cep', '01001-000');
     expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/experimentar`, {

@@ -1413,3 +1413,19 @@
   display_name: Automação › passos novos (aprovação, reunião, pesquisa e os outros)
   enabled: false
   column: feature_flags_ext_2
+
+# Automação no CRM (#2499 F6.3/F6.5, épico #2414): "Automações deste card" (o que roda no card, o que já fez e "Parar
+# para este card") e "Automações desta etapa" (a lista única da etapa no "Editar funil"). É o interruptor da tela e das
+# três rotas: GET crm/cards/:card_id/automacoes, POST crm/cards/:card_id/automacoes/:id/parar e
+# GET crm/stages/:stage_id/automacoes. Ligada (junto com automacao_motor e automacao_gatilhos): o card e a etapa mostram
+# as automações do motor novo. Desligada: as três rotas dão 404, as duas partes somem e a etapa volta ao cartão das
+# ações da etapa, como antes. Sem migration. Rollback: desligar a flag na conta.
+# Nasce ligada em todas as contas (regra de 07/11): `enabled: true` faz a conta nova nascer com ela (o ConfigLoader do
+# deploy acrescenta a flag nova ao ACCOUNT_LEVEL_FEATURE_DEFAULTS com este valor); as contas que já existem a
+# Orquestração liga depois do deploy, com backup, como as outras flags novas.
+# Posição pela ordem deste arquivo: 48 (140737488355328, 1 << 47), logo depois da automacao_passos_novos (47). As flags
+# que vierem depois entram abaixo desta, no fim do arquivo (spec/models/account_spec.rb confere o bit).
+- name: automacao_no_crm
+  display_name: Automação › no card e na etapa do CRM
+  enabled: true
+  column: feature_flags_ext_2

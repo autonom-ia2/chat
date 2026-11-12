@@ -8,16 +8,16 @@ import { carregarCatalogo } from 'dashboard/routes/dashboard/automacoes/livre/ca
 import { fraseDoPasso } from 'dashboard/routes/dashboard/automacoes/livre/frases';
 import CardCartao from '../card/CardCartao.vue';
 import { useFormato } from '../card/useFormato';
-import { semPermissao, useFonteDasAutomacoes } from './useAutomacaoNoCrm';
+import { semPermissao } from './useAutomacaoNoCrm';
+import { automacoesDoCard, pararNoCard } from './fonteDasAutomacoes';
 
-// #2414 F6.3 (protótipo só da demo) — "Automações deste card": o que está rodando neste card, uma frase por
-// automação ("Lembrete de proposta — espera até 15 de novembro"), o passo em que ela está e o que já fez, cada uma
-// com "Parar para este card" e a confirmação numa frase, ali mesmo. As frases dos passos saem do frases.js da
-// Automação livre. Vazio: uma frase e o botão que cria uma automação para quem entrar na etapa do card.
+// #2499 F6.3 — "Automações deste card": o que está rodando neste card, uma frase por automação ("Lembrete de
+// proposta — espera até 15 de novembro"), o passo em que ela está e o que já fez, cada uma com "Parar para este card"
+// e a confirmação numa frase, ali mesmo. As frases dos passos saem do frases.js da Automação livre. Vazio: uma frase e
+// o botão que cria uma automação para quem entrar na etapa do card. Parar pede `automation_manage` e poder mexer no
+// card (`podeGerenciar`); o servidor confere os dois.
 const props = defineProps({
   card: { type: Object, required: true },
-  // A marca do seed no funil (marcaDaDemo).
-  marca: { type: Object, required: true },
   // O nome da etapa do card.
   etapa: { type: String, default: '' },
   podeGerenciar: { type: Boolean, default: false },
@@ -26,7 +26,6 @@ const props = defineProps({
 const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const fonte = useFonteDasAutomacoes(props.marca);
 const formato = useFormato({ t, locale });
 const podeMontar = usePodeMontarAutomacao();
 const podeParar = computed(() => props.podeGerenciar && podeMontar.value);
@@ -46,7 +45,7 @@ const carregar = async () => {
   confirmando.value = null;
   aviso.value = '';
   try {
-    const lista = await fonte.automacoesDoCard(props.card);
+    const lista = await automacoesDoCard(props.card);
     catalogo.value = lista.length ? await carregarCatalogo() : null;
     itens.value = lista;
     estado.value = 'pronto';
@@ -56,14 +55,9 @@ const carregar = async () => {
   }
 };
 // O card chega aos poucos (só o id pelo endereço, depois o do quadro, depois o completo): recarrega quando muda o
-// que decide a lista, não só o id.
+// que decide a lista, não só o id. Mudar de etapa começa ou para automações: a lista lê de novo.
 watch(
-  () => [
-    props.card?.id,
-    props.card?.status,
-    props.card?.stage_id,
-    props.card?.entered_stage_at,
-  ],
+  () => [props.card?.id, props.card?.status, props.card?.stage_id],
   carregar,
   { immediate: true }
 );
@@ -73,19 +67,21 @@ const dia = valor => formato.diaCurto(new Date(valor));
 const situacao = item => {
   if (item.situacao?.tipo === 'espera')
     return t(`${C}.ESPERA_ATE`, { dia: dia(item.situacao.ate) });
-  if (item.situacao?.tipo === 'resposta') return t(`${C}.ESPERA_RESPOSTA`);
+  if (item.situacao?.tipo === 'condicao') return t(`${C}.ESPERA_CONDICAO`);
   return t(`${C}.AGINDO`);
 };
 
-const frase = (item, indice) =>
-  fraseDoPasso(item.receita.passos[indice], catalogo.value, t);
+const frase = passo => fraseDoPasso(passo, catalogo.value, t);
 
-const passoAtual = item =>
-  t(`${C}.PASSO`, {
-    n: item.passoAtual + 1,
-    total: item.receita.passos.length,
-    frase: frase(item, item.passoAtual),
+// A execução que acabou de começar ainda não tem passo: está no primeiro.
+const passoAtual = item => {
+  const passos = item.receita?.passos || [];
+  return t(`${C}.PASSO`, {
+    n: Math.max(item.indice, 0) + 1,
+    total: passos.length,
+    frase: frase(item.passo || passos[0]),
   });
+};
 
 const pedirParar = async item => {
   aviso.value = '';
@@ -97,8 +93,11 @@ const pedirParar = async item => {
 const parar = async item => {
   parando.value = true;
   try {
-    await fonte.pararNoCard(props.card, item);
-    itens.value = itens.value.filter(outro => outro.id !== item.id);
+    await pararNoCard(props.card, item);
+    // Parar vale para a automação neste card: some também a outra vez dela que rodava junto.
+    itens.value = itens.value.filter(
+      outro => outro.automacaoId !== item.automacaoId
+    );
     confirmando.value = null;
     aviso.value = t(`${C}.PAROU`, { nome: item.nome });
     await nextTick();
@@ -248,14 +247,14 @@ const criar = () =>
               <ul class="m-0 flex list-none flex-col gap-1 p-0 ps-4">
                 <li>{{ t(`${C}.COMECOU`, { dia: dia(item.comecou) }) }}</li>
                 <li
-                  v-for="feito in item.historico"
-                  :key="`${item.id}-${feito.passo}`"
+                  v-for="(feito, posicao) in item.historico"
+                  :key="`${item.id}-${posicao}`"
                   class="break-words"
                 >
                   {{
                     t(`${C}.FEZ`, {
                       dia: dia(feito.em),
-                      frase: frase(item, feito.passo),
+                      frase: frase(feito.passo),
                     })
                   }}
                 </li>

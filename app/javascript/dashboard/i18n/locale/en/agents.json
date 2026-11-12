@@ -3404,7 +3404,12 @@
         "TIRADA": "{ferramenta} was removed from {agente}.",
         "CRIAR_MINHA": "Create my own (advanced)",
         "VAZIO": "{nome} does not look anything up outside the conversation yet.",
-        "ESCOLHER": "Choose a ready-made tool"
+        "ESCOLHER": "Choose a ready-made tool",
+        "QUANDO_ALTERAR": "Change when to use",
+        "QUANDO_ALTERAR_SR": "Change when to use {ferramenta}",
+        "QUANDO_SALVAR": "Save",
+        "QUANDO_CANCELAR": "Cancel",
+        "QUANDO_SALVO": "Done. {agente} now follows the new sentence for {ferramenta}."
       },
       "FERRAMENTAS": {
         "CNPJ": {

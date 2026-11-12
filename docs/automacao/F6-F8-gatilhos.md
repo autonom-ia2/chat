@@ -68,12 +68,11 @@ Nada muda na Partida, no Executor nem na varredura.
 | `conversa.criada` / `.aberta` / `.resolvida` | conversa | evento | já existe | — | `conversa.<tipo>:<id>:<timestamp do evento>` (novo, fecha o 🟡 da #2459) |
 | `mensagem.criada` | conversa | evento | já existe | — | `mensagem:<id>` (já existe) |
 | `mensagem.falhou` | conversa | evento | `MESSAGE_UPDATED` com `status` mudando para `failed` | — | `falhou:<mensagem id>` |
-| `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
-| `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
+| `conversa.responsavel_mudou` / `conversa.time_mudou` (F8.3) | conversa | evento | `ASSIGNEE_CHANGED` / `TEAM_CHANGED`, só com `assignee_id` (ou `team_id`) mudando no `changed_attributes`; a conversa que nasce atribuída não é troca (`Autonomia::Automacao::TrocaNaConversa`) | — | `<tipo>:<conversa>:<anterior ou 0>:<timestamp µs>` |
 | `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
 | `card.responsavel_mudou` / `card.time_mudou` (G9, #2707) | card | evento | o próprio card, no gancho único `Crm::CardAvisaAutomacao` (`owner_id` ou `team_id` mudou; `Autonomia::Automacao::TrocaNoCard`): a Lista do CRM grava a atividade `update` só com o dono novo, e a saída da triagem nem grava atividade | `funil_id` (opcional) | `<tipo>:<card>:<anterior ou 0>:<updated_at µs>` |
-| `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
-| `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
+| `conversa.etiqueta_posta` / `.etiqueta_tirada` (G10) | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` (`Autonomia::Automacao::EtiquetaMudou`) | `etiqueta` (o nome, obrigatória) | `<tipo>:<conversa>:<etiqueta>:<timestamp µs>` |
+| `contato.etiqueta_posta` / `.etiqueta_tirada` (G10, flag `automacao_gatilhos`) | contato | evento | `CONTACT_UPDATED` com `label_list` em `changed_attributes`; a importação da base de campanha (eventos de contato suprimidos) não dispara | `etiqueta` (o nome, obrigatória) | `<tipo>:<contato>:<etiqueta>:<timestamp µs>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
 | `card.saiu_da_etapa` | card | evento | atividade `move` | `etapa_id` | `atividade:<activity id>` |
 | `card.ganho` / `card.perdido` | card | evento | atividade `won` / `lost` (Closer) | `funil_id` (opcional) | `atividade:<activity id>` |
@@ -82,9 +81,11 @@ Nada muda na Partida, no Executor nem na varredura.
 | `card.data` / `contato.data` | card / contato | tempo | `custom_attributes` (atributo de tipo data) | `campo`, `dias`, `antes`/`depois`, `hora`, `repete` (opcional: `todo_ano`) | `data:<alvo>:<campo>:<data>` |
 | `recorrente` | card ou contato | tempo | relógio no fuso da conta | `frequencia`, `dia`, `hora`, `alvo`, filtros | `recorrente:<ocorrência local>:<alvo>` |
 
+Nos dois de etiqueta, renomear a etiqueta da conta não dispara e leva o nome novo ao gatilho, numa versão nova, com a automação como estava; apagar a etiqueta desliga a automação ligada, e religar diz que a etiqueta não existe (`Autonomia::Automacao::EtiquetaDoGatilho`).
+
 **Valores do evento**, que só o filtro do gatilho lê:
 - troca de dono do card (G9): `gatilho.responsavel_anterior_id`, `gatilho.responsavel_anterior_nome` e `gatilho.responsavel_anterior_ausente`, lidos da marca no filtro e em qualquer passo desse gatilho; quem cuida agora é `card.responsavel_id` e `card.responsavel_nome`;
-- troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_trocado`, `conversa.time_trocado`) ainda não: nenhum termo pede;
+- troca de time do card (G9): `gatilho.time_anterior_id` e `gatilho.time_anterior_nome`; o time de agora é `card.time_id`. Na conversa (`conversa.responsavel_mudou`, `conversa.time_mudou`) ainda não: nenhum termo pede (a marca já leva o anterior);
 - saiu da etapa: `evento.etapa_para_id`;
 - mensagem que falhou: `evento.erro`. É o código do canal, nunca o texto, que pode trazer dado do cliente.
 

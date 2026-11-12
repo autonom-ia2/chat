@@ -3404,7 +3404,12 @@
         "TIRADA": "{ferramenta} saiu de {agente}.",
         "CRIAR_MINHA": "Criar a minha (avançado)",
         "VAZIO": "{nome} ainda não consulta nada fora da conversa.",
-        "ESCOLHER": "Escolher ferramenta pronta"
+        "ESCOLHER": "Escolher ferramenta pronta",
+        "QUANDO_ALTERAR": "Alterar quando usar",
+        "QUANDO_ALTERAR_SR": "Alterar quando usar {ferramenta}",
+        "QUANDO_SALVAR": "Salvar",
+        "QUANDO_CANCELAR": "Cancelar",
+        "QUANDO_SALVO": "Pronto. {agente} já segue a frase nova de {ferramenta}."
       },
       "FERRAMENTAS": {
         "CNPJ": {
