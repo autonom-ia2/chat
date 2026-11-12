@@ -191,7 +191,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.state['applied']).to be(true)
       expect(thread.state['ferramentas_sugeridas']).to eq(%w[cep])
       expect(thread.agent.config['ferramentas_sugeridas']).to eq(%w[cep])
-      expect(thread.agent.config.dig(chave_da_marca, 'ferramentas').pluck('fonte')).to eq(%w[cep])
+      expect(thread.agent.config.dig(chave_da_marca, 'ferramentas').pluck('fonte')).to eq(%w[cep compras_governo])
     end
 
     it 'deixa no agente a marca do modelo, de onde o atendimento lê as listas' do

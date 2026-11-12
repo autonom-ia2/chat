@@ -108,9 +108,25 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
 
       expect(marca['ferramentas']).to eq([{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando o cliente mandar o CNPJ.' },
                                           { 'fonte' => 'cidades', 'usar_quando' => modelo.tambem.first.usar_quando },
-                                          { 'fonte' => 'cep', 'usar_quando' => modelo.ja_vem.last.usar_quando }])
+                                          { 'fonte' => 'cep', 'usar_quando' => modelo.ja_vem.last.usar_quando },
+                                          { 'fonte' => 'compras_governo', 'usar_quando' => modelo.ja_vem.second.usar_quando }])
       expect(resultado.ferramentas.pluck('fonte')).to eq(%w[cnpj cidades cep])
       expect(resultado.tambem.pluck('fonte')).to eq(%w[feriados banco_central])
+    end
+
+    # compras_governo é do modelo, mas de uma fase desligada nesta conta: a tela não a recebe e nunca a manda de volta.
+    it 'mantém na marca a ferramenta que a tela não recebe: ela não some por não vir na lista' do
+      resultado = editar(ferramentas: [{ fonte: 'cep' }])
+
+      expect(marca['ferramentas'].pluck('fonte')).to eq(%w[cep compras_governo])
+      expect(resultado.ferramentas.pluck('fonte')).to eq(%w[cep])
+      expect(resultado.tambem.pluck('fonte')).not_to include('compras_governo')
+    end
+
+    it 'não repete a ferramenta fora da tela quando a lista a traz' do
+      editar(ferramentas: [{ fonte: 'compras_governo' }, { fonte: 'cep' }])
+
+      expect(marca['ferramentas'].pluck('fonte')).to eq(%w[compras_governo cep])
     end
 
     it 'mantém em dia as chaves que a Confira já lê' do

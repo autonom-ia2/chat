@@ -82,6 +82,30 @@ describe('RamoNaConfira', () => {
     expect(gaveta.querySelector('[data-quer-tambem]')).not.toBeNull();
   });
 
+  it('a tools change keeps, in place, the tools of the server list that the screen does not show', async () => {
+    const jaTem = { fonte: 'feriados', usar_quando: 'Use para contar prazo.' };
+    const desconhecida = { fonte: 'fonte_nova', usar_quando: 'Use sempre.' };
+    const doServidor = [FERRAMENTAS[0], desconhecida, FERRAMENTAS[1], jaTem];
+    // `fonte_nova`: this screen's showcase does not know it. `feriados`: the agent already has it.
+    const { wrapper, ramo } = montar(comChave(), {
+      modelo: ref({ ferramentas: doServidor }),
+      ferramentas: ref([FERRAMENTAS[0], FERRAMENTAS[1], jaTem]),
+    });
+    const gaveta = await abrir(wrapper, 'ferramentas');
+
+    expect(gaveta.querySelectorAll('[data-ferramenta]')).toHaveLength(2);
+    gaveta
+      .querySelector('[data-ferramenta="cnpj"] [data-tirar-ferramenta]')
+      .click();
+    gaveta.querySelector('[data-incluir-tambem]').click();
+    await flushPromises();
+
+    expect(ramo.mudar.mock.calls).toEqual([
+      ['ferramentas', [desconhecida, FERRAMENTAS[1], jaTem]],
+      ['ferramentas', [...doServidor, ...TAMBEM]],
+    ]);
+  });
+
   it('without the tools key, shows the tools and each "Use when" sentence, with no button, and sends no tools change', async () => {
     const { wrapper, ramo } = montar(semChave());
     const gaveta = await abrir(wrapper, 'ferramentas');

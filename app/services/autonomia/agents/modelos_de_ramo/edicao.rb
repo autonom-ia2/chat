@@ -69,7 +69,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     negar('sem_modelo') if rascunho.nil?
     negar('agente_ja_comecou') if agente && !agente.draft?
 
-    novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
+    novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho)))
     chaves = novo.para_guardar
     gravar_no_agente(agente, chaves) if agente
     @thread&.juntar_ao_estado!(chaves)
@@ -113,16 +113,24 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     id
   end
 
-  def ferramentas(modelo)
+  def ferramentas(rascunho)
     return {} unless @mudancas.key?(FERRAMENTAS)
 
     brutas = @mudancas[FERRAMENTAS]
     negar('lista_invalida', FERRAMENTAS) unless lista_valida?(brutas)
 
-    frases = modelo.ferramentas.to_h { |ferramenta| [ferramenta.fonte, ferramenta.usar_quando] }
+    frases = rascunho.modelo.ferramentas.to_h { |ferramenta| [ferramenta.fonte, ferramenta.usar_quando] }
     negar('fonte_invalida', FERRAMENTAS) unless fontes_do_modelo?(brutas.pluck('fonte'), frases)
 
-    { FERRAMENTAS => brutas.map { |bruta| { 'fonte' => bruta['fonte'], 'usar_quando' => frase(bruta['usar_quando'], frases[bruta['fonte']]) } } }
+    novas = brutas.map { |bruta| { 'fonte' => bruta['fonte'], 'usar_quando' => frase(bruta['usar_quando'], frases[bruta['fonte']]) } }
+    { FERRAMENTAS => novas + fora_da_tela(rascunho, novas.pluck('fonte')) }
+  end
+
+  # As ferramentas da marca que a tela não recebe (a fase da fonte está desligada na conta, ou a pessoa a dispensou
+  # neste agente): a lista que chega nunca as traz, e não é por isso que elas saem do modelo. Ficam como estavam.
+  def fora_da_tela(rascunho, enviadas)
+    na_tela = (rascunho.ferramentas + rascunho.tambem).pluck('fonte') + enviadas
+    Autonomia::Agents::ModelosDeRamo::Marca.ferramentas(rascunho.marca).reject { |ferramenta| na_tela.include?(ferramenta['fonte']) }
   end
 
   # Só fonte do próprio modelo ("Já vem com" e "Também combina"), cada uma uma vez.

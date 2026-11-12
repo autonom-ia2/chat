@@ -33,7 +33,7 @@ RSpec.describe Autonomia::Agents::MarcaDoModeloPronto do
     config = agente.reload.config
 
     expect(config[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
-    expect(config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cnpj])
+    expect(config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cnpj compras_governo])
     expect(config['ferramentas_sugeridas']).to eq(%w[cnpj])
     expect(config['guardrails']).to eq(['regra nova'])
   end

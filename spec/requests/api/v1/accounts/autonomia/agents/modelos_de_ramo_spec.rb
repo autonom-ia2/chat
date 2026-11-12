@@ -263,7 +263,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
 
       mudar({ ferramentas: [{ fonte: 'cep' }] }, conversa, com_funcao(%w[autonomia_manage autonomia_tools_manage]))
       expect(response).to have_http_status(:ok)
-      expect(conversa.reload.state[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep])
+      expect(conversa.reload.state[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep compras_governo])
     end
 
     it 'recusa com 422 quando o agente já começou a atender' do
@@ -411,7 +411,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
 
       mudar_pelo_agente({ ferramentas: [{ fonte: 'cep' }] }, rascunho, com_funcao(%w[autonomia_manage autonomia_tools_manage]))
       expect(response).to have_http_status(:ok)
-      expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep])
+      expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep compras_governo])
     end
 
     it 'deixa de mandar o modelo, na conversa e no agente, depois que o agente começou a atender' do

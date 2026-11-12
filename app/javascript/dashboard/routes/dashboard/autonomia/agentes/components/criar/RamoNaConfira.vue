@@ -37,6 +37,24 @@ const ferramentas = computed(() =>
 const tambem = computed(() =>
   soAs(props.ramo.tambem.value, props.prontas.combinaTambem.value)
 );
+// A lista que sai do FerramentasDoRamo só tem as ferramentas que ele mostra, e o servidor troca a lista inteira. As
+// que a tela não mostra (o agente já tem, ou esta tela não conhece) continuam na lista, no lugar em que estavam: não
+// é por não aparecerem aqui que saem do agente pronto.
+const mudarFerramentas = nova => {
+  const mostradas = ferramentas.value.map(item => item.fonte);
+  const todas =
+    props.ramo.modelo?.value?.ferramentas || props.ramo.ferramentas.value;
+  const mantidas = todas.flatMap(item => {
+    if (!mostradas.includes(item.fonte)) return [item];
+    const mudada = nova.find(outra => outra.fonte === item.fonte);
+    return mudada ? [mudada] : [];
+  });
+  const jaNaLista = mantidas.map(item => item.fonte);
+  props.ramo.mudar('ferramentas', [
+    ...mantidas,
+    ...nova.filter(item => !jaNaLista.includes(item.fonte)),
+  ]);
+};
 const link = computed(() => (podeIncluir.value ? props.linkDaVitrine : ''));
 const pagas = computed(() => (link.value ? props.ramo.pagas.value : []));
 // Sem nada para mostrar (a conta não tem as ferramentas prontas), a linha das ferramentas nem aparece.
@@ -72,7 +90,7 @@ const quantas = computed(() => {
         :link-da-vitrine="link"
         :pode-mudar="podeMudar && podeIncluir"
         :gravando="ramo.gravando.value.ferramentas === true"
-        @mudar="ramo.mudar('ferramentas', $event)"
+        @mudar="mudarFerramentas"
       />
     </template>
   </ProntoDoRamo>
