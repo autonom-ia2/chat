@@ -48,6 +48,11 @@ import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
 import { diaDoVencimento } from '../helpers/closeDate';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CardGaveta from '../components/card/CardGaveta.vue';
+import {
+  useAutomacaoNoCrmLigada,
+  useCardGanho,
+  useFonteDasAutomacoes,
+} from '../components/automacaoNoCrm/useAutomacaoNoCrm';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
 import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
@@ -1692,6 +1697,18 @@ const openCardFromBoard = card => {
   openCardDrawer(card);
 };
 
+// #2414 F6.3/F6.5 e #2710 (flag automacao_no_crm, protótipo): o selo "Já é cliente" no card novo de quem já
+// comprou abre o card ganho; a gaveta do card e a do funil ganham as automações.
+const automacoesNoCrm = useAutomacaoNoCrmLigada();
+const fonteNoCrm = useFonteDasAutomacoes();
+const cardGanhoNoQuadro = useCardGanho(fonteNoCrm);
+const jaClienteDoCard = card =>
+  automacoesNoCrm.value ? fonteNoCrm.jaCliente(card) : null;
+const abrirCardGanho = async cliente => {
+  const id = await cardGanhoNoQuadro.achar(cliente);
+  if (id) openCardFromBoard({ id });
+};
+
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
 // keep the calendar in sync when it's the active view (it reads a separate
 // calendarEvents array, not the drawer's follow-up list).
@@ -3097,8 +3114,10 @@ onUnmounted(() => {
                 :card="element"
                 :stage-color="stage.color"
                 :com-valor="quadroComValor"
+                :ja-cliente="jaClienteDoCard(element)"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
+                @abrir-ja-cliente="abrirCardGanho"
               />
             </div>
           </template>
@@ -3405,6 +3424,8 @@ onUnmounted(() => {
       :erro-arquivar="arquivados.erroArquivarCard.value"
       :restaurando="arquivados.restaurandoCard.value"
       :erro-restaurar="arquivados.erroRestaurarCard.value"
+      :automacoes-no-crm="automacoesNoCrm"
+      @abrir-card="openCardFromBoard"
       @restaurar="arquivados.restaurarCardAberto(selectedCard)"
       @save="saveCard"
       @move="moveCardFromDetails"
@@ -3429,6 +3450,7 @@ onUnmounted(() => {
       :is-deleting-stage="uiFlags.isDeletingStage"
       :is-loading-pipeline-inboxes="uiFlags.isFetchingPipelineInboxes"
       :agents="agents"
+      :automacoes-no-crm="automacoesNoCrm"
       @save="savePipeline"
       @archive="archivePipeline"
       @delete-stage="deleteStage"

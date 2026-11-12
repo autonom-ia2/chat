@@ -4,6 +4,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import FunilSugestao from './FunilSugestao.vue';
 import FunilEtapaAcoes from './FunilEtapaAcoes.vue';
+import EtapaAutomacoes from '../automacaoNoCrm/EtapaAutomacoes.vue';
 import { CORES } from './funil';
 
 // #1384 — uma etapa aberta: o nome, a frase de quando o cliente está nela e a
@@ -20,6 +21,8 @@ const props = defineProps({
   erro: { type: Boolean, default: false },
   nomesFaltando: { type: Boolean, default: false },
   editando: { type: Boolean, default: false },
+  // #2414 F6.5 (protótipo): no lugar do cartão das ações, a lista única das automações da etapa.
+  automacoesNoCrm: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['melhorar', 'usar', 'manter', 'mudar', 'acoes']);
@@ -219,8 +222,13 @@ const mostraCampo = computed(() => temFrase.value || escrevendo.value);
       </div>
     </div>
 
+    <EtapaAutomacoes
+      v-if="editando && etapa.id && automacoesNoCrm"
+      :etapa-id="etapa.id"
+      @antigas="emit('acoes')"
+    />
     <FunilEtapaAcoes
-      v-if="editando && etapa.id"
+      v-else-if="editando && etapa.id"
       :etapa-id="etapa.id"
       @alterar="emit('acoes')"
     />

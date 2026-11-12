@@ -55,6 +55,14 @@ import { useFormato } from './useFormato';
 import { useFocoPreso } from './useFocoPreso';
 import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
 import CardArquivado from '../arquivados/CardArquivado.vue';
+import CardAutomacoes from '../automacaoNoCrm/CardAutomacoes.vue';
+import CardReuniaoDoCliente from '../automacaoNoCrm/CardReuniaoDoCliente.vue';
+import SeloJaCliente from '../automacaoNoCrm/SeloJaCliente.vue';
+import { juntarAtividades } from '../automacaoNoCrm/fonteDasAutomacoes';
+import {
+  useCardGanho,
+  useFonteDasAutomacoes,
+} from '../automacaoNoCrm/useAutomacaoNoCrm';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -89,6 +97,8 @@ const props = defineProps({
   erroArquivar: { type: String, default: '' },
   restaurando: { type: Boolean, default: false },
   erroRestaurar: { type: String, default: '' },
+  // #2414 F6.3 e #2710 (flag automacao_no_crm, protótipo): automações do card, reunião do cliente e selo "Já é cliente".
+  automacoesNoCrm: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -102,6 +112,7 @@ const emit = defineEmits([
   'cancelFollowUp',
   'refreshCard',
   'restaurar',
+  'abrirCard',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -161,7 +172,16 @@ const { nome, titulo, subtitulo } = useCardNomes({ t, card, venda });
 
 // ——— Partes do card ———
 const negocio = useCardNegocio();
-const atividades = computed(() => card.value.activities || []);
+// #2710 (protótipo): a linha do tempo ganha a reunião que o cliente marcou pelo link do e-mail.
+const fonteNoCrm = useFonteDasAutomacoes();
+const atividades = computed(() =>
+  props.automacoesNoCrm
+    ? juntarAtividades(
+        card.value.activities || [],
+        fonteNoCrm.atividadesDoCard(card.value)
+      )
+    : card.value.activities || []
+);
 const { porDia } = useCardHistorico({
   t,
   te,
@@ -404,6 +424,17 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
+// #2710 (protótipo): o selo "Já é cliente" abre o card ganho da mesma pessoa.
+const jaCliente = computed(() =>
+  props.automacoesNoCrm && editando.value
+    ? fonteNoCrm.jaCliente(card.value)
+    : null
+);
+const cardGanho = useCardGanho(fonteNoCrm);
+const abrirCardGanho = async () => {
+  const id = await cardGanho.achar(jaCliente.value);
+  if (id) guardar(() => emit('abrirCard', { id }), { leaving: true });
+};
 // A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
 // Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
 const {
@@ -756,6 +787,13 @@ defineExpose({
             </template>
 
             <template v-else-if="tela === 'resumo'">
+              <SeloJaCliente
+                v-if="jaCliente"
+                class="self-start"
+                :comprou-em="jaCliente.comprouEm"
+                :ocupado="cardGanho.abrindo.value"
+                @abrir="abrirCardGanho"
+              />
               <CardArquivado
                 v-if="arquivado"
                 :card="card"
@@ -817,7 +855,15 @@ defineExpose({
                 @arquivar="arquivadosLigado ? arquivarNovo() : arquivar()"
                 @conversa="abrirConversa()"
                 @cliente="cliente.pedir"
-              />
+              >
+                <template v-if="automacoesNoCrm" #antes-dos-detalhes>
+                  <CardReuniaoDoCliente :card="card" @abrir="abrir" />
+                  <CardAutomacoes
+                    :card="card"
+                    :pode-gerenciar="podeGerenciar"
+                  />
+                </template>
+              </CardResumo>
             </template>
 
             <TelaEtapa

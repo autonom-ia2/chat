@@ -36,9 +36,11 @@ import {
   falta,
   inserirPasso,
   novoId,
+  receitaVazia,
   tirarPasso,
   trocarPasso,
 } from '../receita';
+import { gatilhoDaUrl } from '../gatilhoDaUrl';
 import {
   TIPO as EM_OUTRO_REGISTRO,
   alvoDaLista,
@@ -395,6 +397,11 @@ const carregarTudo = async () => {
     return;
   }
   if (nova.value && route.query.receita) await usarReceita(route.query.receita);
+  else if (nova.value) {
+    // #2414 F6.5: vindo da etapa do funil, a automação nova já nasce com o gatilho dela.
+    const gatilho = gatilhoDaUrl(route.query, gatilhos.value);
+    if (gatilho) await editor.aplicar({ ...receitaVazia(), gatilho });
+  }
   abrirDaUrl();
   carregarCustos(route.params.id);
 };

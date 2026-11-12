@@ -1,0 +1,59 @@
+{
+  "AUTOMACAO_NO_CRM": {
+    "DATA": {
+      "DIA_HORA": "{dia} at {hora}",
+      "HORA_CHEIA": "{hora}:00"
+    },
+    "CARD": {
+      "TITULO": "Automations on this card",
+      "CARREGANDO": "Looking for automations…",
+      "VAZIO": "No automation is looking after this card right now.",
+      "CRIAR": "Create an automation",
+      "ITEM": "{nome} — {situacao}",
+      "ESPERA_ATE": "waits until {dia}",
+      "ESPERA_RESPOSTA": "waits for the customer to reply",
+      "AGINDO": "working now",
+      "PARAR": "Stop for this card",
+      "PARAR_ROTULO": "Stop {nome} for this card",
+      "CONFIRMA": "Stop {nome} on this card only?",
+      "SIM": "Yes, stop",
+      "VOLTAR": "Go back",
+      "PAROU": "{nome} stopped on this card. Other cards keep going.",
+      "ERRO_PARAR": "It couldn't stop right now. Try again.",
+      "ERRO_LISTA": "Couldn't show the automations right now.",
+      "TENTAR": "Try again"
+    },
+    "ETAPA": {
+      "TITULO": "Automations for this stage",
+      "AJUDA": "What happens on its own when a card comes in or leaves here.",
+      "CARREGANDO": "Looking for automations…",
+      "VAZIO": "This stage has no automation yet.",
+      "NOVA": "New automation for this stage",
+      "QUANDO_ENTRA": "When the card comes in",
+      "QUANDO_SAI": "When the card leaves",
+      "DESLIGADA": "Off",
+      "ALTERAR": "Change",
+      "ALTERAR_ROTULO": "Change {nome}",
+      "SO_VER": "You can look. Only people who look after automations can change them.",
+      "AVISO_ARQUIVAR": "Archiving several cards at once doesn't count as “left the stage”.",
+      "ERRO_LISTA": "Couldn't show the automations right now.",
+      "TENTAR": "Try again"
+    },
+    "CLIENTE": {
+      "SELO": "Already a customer · bought on {dia}",
+      "SELO_ROTULO": "Already a customer, bought on {dia}. Open the purchase",
+      "SEM_COMPRA": "We couldn't find this customer's purchase.",
+      "REUNIAO_TITULO": "Customer meeting",
+      "REUNIAO_FRASE": "{nome} booked {quando} through the email link."
+    },
+    "DEMO": {
+      "CLIENTE": "Maria",
+      "LEMBRETE_PROPOSTA": "Proposal reminder",
+      "CLIENTE_SUMIU": "Tell the team if the customer goes quiet",
+      "LIGAR_NO_DIA_SEGUINTE": "Call the next day",
+      "FAZ_TAREFA": "Creates the task “Call the customer”",
+      "FAZ_LEMBRETE": "Reminds about the proposal 3 days later",
+      "FAZ_AVISO": "Tells the team"
+    }
+  }
+}

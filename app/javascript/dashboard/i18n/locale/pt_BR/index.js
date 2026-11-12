@@ -38,6 +38,7 @@ import automacaoLivreRetorno from './automacaoLivreRetorno.json';
 import automacaoLivreListaDeEmail from './automacaoLivreListaDeEmail.json';
 import emailLists from './emailLists.json';
 import automacaoModelos from './automacaoModelos.json';
+import automacaoNoCrm from './automacaoNoCrm.json';
 import automacaoLivreOutroRegistro from './automacaoLivreOutroRegistro.json';
 import automacaoLivreWebhook from './automacaoLivreWebhook.json';
 import ausencia from './ausencia.json';
@@ -139,6 +140,7 @@ export default {
   },
   ...emailLists,
   ...automacaoModelos,
+  ...automacaoNoCrm,
   ...ausencia,
   ...brandKits,
   ...booking,

@@ -54,6 +54,8 @@ const props = defineProps({
   isDeletingStage: { type: Boolean, default: false },
   isLoadingPipelineInboxes: { type: Boolean, default: false },
   agents: { type: Array, default: () => [] },
+  // #2414 F6.5 (flag automacao_no_crm, protótipo): a etapa aberta mostra as automações dela numa lista só.
+  automacoesNoCrm: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['close', 'save', 'archive', 'deleteStage']);
@@ -614,6 +616,7 @@ useFixedPanelPresence(computed(() => props.show));
               :erro="improvementError"
               :nomes-faltando="hasUnnamedStages"
               :editando="isEditing"
+              :automacoes-no-crm="automacoesNoCrm"
               @mudar="mudarEtapa"
               @melhorar="improveCriteria"
               @usar="applySuggestion"

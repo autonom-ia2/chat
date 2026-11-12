@@ -140,6 +140,9 @@
     },
     {
       "file": "prospectingAchar.json"
+    },
+    {
+      "file": "automacaoNoCrm.json"
     }
   ],
   "pacotes": {

@@ -107,6 +107,8 @@ export const FEATURE_FLAGS = {
   AUTOMACAO_PORTA: 'automacao_porta',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   AUTOMACAO_GATILHOS: 'automacao_gatilhos',
+  // #2414 F6.3/F6.5 e #2710 — protótipo: automações no card e na etapa, e o cliente que já comprou.
+  AUTOMACAO_NO_CRM: 'automacao_no_crm',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

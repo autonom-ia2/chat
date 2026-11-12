@@ -1,0 +1,59 @@
+{
+  "AUTOMACAO_NO_CRM": {
+    "DATA": {
+      "DIA_HORA": "{dia} às {hora}",
+      "HORA_CHEIA": "{hora}h"
+    },
+    "CARD": {
+      "TITULO": "Automações deste card",
+      "CARREGANDO": "Procurando as automações…",
+      "VAZIO": "Nenhuma automação está cuidando deste card agora.",
+      "CRIAR": "Criar uma automação",
+      "ITEM": "{nome} — {situacao}",
+      "ESPERA_ATE": "espera até {dia}",
+      "ESPERA_RESPOSTA": "espera o cliente responder",
+      "AGINDO": "agindo agora",
+      "PARAR": "Parar para este card",
+      "PARAR_ROTULO": "Parar {nome} para este card",
+      "CONFIRMA": "Parar {nome} só neste card?",
+      "SIM": "Sim, parar",
+      "VOLTAR": "Voltar",
+      "PAROU": "{nome} parou neste card. Os outros cards continuam.",
+      "ERRO_PARAR": "Não deu para parar agora. Tente de novo.",
+      "ERRO_LISTA": "Não deu para ver as automações agora.",
+      "TENTAR": "Tentar de novo"
+    },
+    "ETAPA": {
+      "TITULO": "Automações desta etapa",
+      "AJUDA": "O que acontece sozinho quando um card entra ou sai daqui.",
+      "CARREGANDO": "Procurando as automações…",
+      "VAZIO": "Esta etapa ainda não tem automação.",
+      "NOVA": "Nova automação para esta etapa",
+      "QUANDO_ENTRA": "Quando o card entra",
+      "QUANDO_SAI": "Quando o card sai",
+      "DESLIGADA": "Desligada",
+      "ALTERAR": "Alterar",
+      "ALTERAR_ROTULO": "Alterar {nome}",
+      "SO_VER": "Você pode ver. Só quem cuida das automações pode mudar.",
+      "AVISO_ARQUIVAR": "Arquivar vários cards de uma vez não conta como “saiu da etapa”.",
+      "ERRO_LISTA": "Não deu para ver as automações agora.",
+      "TENTAR": "Tentar de novo"
+    },
+    "CLIENTE": {
+      "SELO": "Já é cliente · comprou em {dia}",
+      "SELO_ROTULO": "Já é cliente, comprou em {dia}. Abrir a compra",
+      "SEM_COMPRA": "Não achamos a compra deste cliente.",
+      "REUNIAO_TITULO": "Reunião do cliente",
+      "REUNIAO_FRASE": "{nome} marcou para {quando} pelo link do e-mail."
+    },
+    "DEMO": {
+      "CLIENTE": "Maria",
+      "LEMBRETE_PROPOSTA": "Lembrete de proposta",
+      "CLIENTE_SUMIU": "Avisar a equipe se o cliente sumir",
+      "LIGAR_NO_DIA_SEGUINTE": "Ligar no dia seguinte",
+      "FAZ_TAREFA": "Cria a tarefa “Ligar para o cliente”",
+      "FAZ_LEMBRETE": "Lembra da proposta 3 dias depois",
+      "FAZ_AVISO": "Avisa a equipe"
+    }
+  }
+}

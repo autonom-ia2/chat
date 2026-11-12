@@ -1604,6 +1604,8 @@
       "LEAD_FORM_CAPTURED": "Filled {time}",
       "CLIENT_ACTOR": "Customer",
       "ACTIVITY_BOOKING_CLIENT_CONFIRMED": "Customer confirmed the time",
+      "ACTIVITY_BOOKING_CLIENT_BOOKED_FROM_EMAIL": "Customer booked a time through the email link",
+      "ACTIVITY_BOOKING_CLIENT_BOOKED_FROM_EMAIL_TO": "{name} booked {time} through the email link",
       "ACTIVITY_BOOKING_CLIENT_CANCELED": "Customer cancelled the time",
       "ACTIVITY_BOOKING_CLIENT_RESCHEDULED": "Customer changed the time",
       "ACTIVITY_BOOKING_CLIENT_REBOOKED": "Customer booked another time",

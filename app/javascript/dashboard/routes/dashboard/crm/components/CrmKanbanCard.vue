@@ -12,6 +12,7 @@ import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 import CrmOriginMorePopover from './CrmOriginMorePopover.vue';
+import SeloJaCliente from './automacaoNoCrm/SeloJaCliente.vue';
 import {
   buildCrmCardIdentity,
   crmCardIdentityLabel,
@@ -37,9 +38,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // #2710 (protótipo, flag automacao_no_crm): { comprouEm, contatoId } do card novo de quem já comprou.
+  jaCliente: {
+    type: Object,
+    default: null,
+  },
 });
 
-defineEmits(['open', 'openConversation']);
+defineEmits(['open', 'openConversation', 'abrirJaCliente']);
 
 const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
@@ -394,7 +400,11 @@ const canOpenConversation = computed(
               >
                 {{ identityMain }}
               </span>
-              <CustomerBadge v-if="!identityPerson" :contact="card.contact" />
+              <!-- #2710: com o selo "Já é cliente" (abaixo), o selo "Cliente" não se repete. -->
+              <CustomerBadge
+                v-if="!identityPerson && !jaCliente"
+                :contact="card.contact"
+              />
             </span>
           </span>
           <!-- Com empresa, o selo fica na linha da pessoa (quem é cliente é o contato, #1258); o nome corta com "…". -->
@@ -406,7 +416,7 @@ const canOpenConversation = computed(
             <span class="min-w-0 truncate" :title="identityPerson">
               {{ identityPerson }}
             </span>
-            <CustomerBadge :contact="card.contact" />
+            <CustomerBadge v-if="!jaCliente" :contact="card.contact" />
           </span>
           <!-- Assunto do card num selo próprio (#1143, R18): empresa e nome continuam em destaque. -->
           <span
@@ -426,6 +436,12 @@ const canOpenConversation = computed(
             {{ t('CRM_KANBAN.DRAWER.NO_CONTACT') }}
           </span>
         </button>
+        <SeloJaCliente
+          v-if="jaCliente"
+          class="ms-5"
+          :comprou-em="jaCliente.comprouEm"
+          @abrir="$emit('abrirJaCliente', jaCliente)"
+        />
       </div>
 
       <p
