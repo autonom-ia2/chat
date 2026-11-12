@@ -1,5 +1,6 @@
 #!/bin/bash
-# Lado M2 do kit de demo em tela real (#2140). Quem chama é o bin/demo, por ssh.
+# Lado da máquina da demo do kit de demo em tela real (#2140). Quem chama é o bin/demo: por ssh, ou direto quando a
+# demo roda no mesmo Mac. O nome do arquivo ficou de quando a demo só subia no M2; hoje ela sobe no m2 ou no m4 (#2965).
 # Tudo aqui age só dentro da demo <slug>: pasta /Users/Shared/chat2you-demos/<slug>,
 # banco chatwoot_kitdemo_<slug>, Redis e portas gravados em demo.env. Runbook: docs/runbooks/demo-tela-real.md.
 set -euo pipefail
@@ -14,8 +15,13 @@ KIT=$L/kit
 T=/Users/Shared/maccluster-tools
 R=$T/ruby-3.4.4
 N=$T/node-v24.11.0
+# Cliente do Postgres (psql, createdb, dropdb): o M2 tem o 17.11; o M4 só tem o 16.15, o mesmo do servidor de teste
+# (medido em 12/11/2026). Nos dois Macs o servidor em 127.0.0.1:55432 é o 16.15.
 PGBIN=$T/postgresql-17.11/bin
+[ -x "$PGBIN/psql" ] || PGBIN=$T/deps/postgresql-16.15/bin
 REDISBIN=$T/deps/redis-8.10.2/bin
+# Em qual máquina este script está (o bin/demo manda em DEMO_ONDE). Só para as mensagens.
+ONDE=${DEMO_ONDE:-m2}
 PG_HOST=127.0.0.1
 PG_PORT=55432
 PREFIXO_BANCO=chatwoot_kitdemo_
@@ -33,12 +39,12 @@ case "$slug" in
 esac
 [ ${#slug} -le 30 ] || falha "slug longo demais"
 ROLE=${PREFIXO_ROLE}${slug//-/_}
-# em_uso (mesmo arquivo que o bin/demo usa no M4)
+# em_uso (mesmo arquivo que o bin/demo usa no Mac de onde é chamado)
 # shellcheck source=script/demo/comum.sh
 source "${BASH_SOURCE[0]%/*}/comum.sh" || falha "não carreguei comum.sh"
 
 carregar_estado() {
-  [ -f "$L/demo.env" ] || falha "demo não existe no M2 ($L/demo.env). Rode: bin/demo up $slug"
+  [ -f "$L/demo.env" ] || falha "demo não existe no $ONDE ($L/demo.env). Rode: bin/demo up $slug"
   # Sem `source`: o arquivo é lido como dado (chave=valor), nunca executado.
   local chave valor
   while IFS='=' read -r chave valor; do
@@ -60,7 +66,7 @@ carregar_estado() {
   snapshot_valido "${SNAP%/src}"
   [ "$SLUG" = "$slug" ] || falha "demo.env é de outra demo ($SLUG)"
   [ "$DB" = "${PREFIXO_BANCO}${slug//-/_}" ] || falha "demo.env aponta para outro banco ($DB)"
-  # Demo em remoção (o M2 já apagou banco e snapshot): só deixa terminar.
+  # Demo em remoção (banco e snapshot desta máquina já apagados): só deixa terminar.
   if [ -f "$L/apagado-no-m2" ]; then
     case "$cmd" in
       apagar | fechar | descer | estado) ;;
@@ -285,7 +291,8 @@ sem_segredo() {
   [ -z "$na_raiz$em_config" ] || { printf '%s\n' "$na_raiz" "$em_config"; falha "snapshot com arquivo de segredo; não sobe"; }
 }
 
-# --- clonar-base: cria no M2 o diretório do snapshot novo como clone APFS do snapshot chat2you mais recente ---
+# --- clonar-base: cria aqui o diretório do snapshot novo como clone APFS do snapshot chat2you mais recente ---
+# Só quando a demo roda num Mac diferente do que chamou o bin/demo (no mesmo Mac, a demo usa o snapshot no lugar).
 # O bin/demo completa a cópia com rsync (só a diferença). node_modules vem junto no clone e o pnpm acerta.
 clonar_base() {
   local destino=$1 base='' d
@@ -303,8 +310,8 @@ clonar_base() {
       break
     fi
   done <<< "$candidatos"
-  [ -n "$base" ] || falha "nenhum snapshot chat2you com node_modules no M2 para servir de base"
-  echo "base no M2: $base (clone APFS)"
+  [ -n "$base" ] || falha "nenhum snapshot chat2you com node_modules no $ONDE para servir de base"
+  echo "base no $ONDE: $base (clone APFS)"
   # Registro do clone ainda não registrado: só o descartar-snapshot com este mesmo caminho pode apagá-lo.
   printf '%s\n' "$destino" > "$L/clone-pendente"
   mkdir -m 700 "$destino"
@@ -323,9 +330,11 @@ clonar_base() {
 iniciar() {
   local snap=$1 base=$2 origem=$3 rails=$4 vite=$5 redis=$6
   checar "$rails" "$vite" "$redis" > /dev/null
-  [ -d "$snap" ] || falha "snapshot não chegou ao M2: $snap"
+  [ -d "$snap" ] || falha "snapshot não chegou ao $ONDE: $snap"
   case "$snap" in */src) ;; *) falha "snapshot sem /src: $snap" ;; esac
   snapshot_valido "${snap%/src}"
+  # O clonar-base já cria estas pastas; quando a demo usa o snapshot no lugar (mesmo Mac), elas nascem aqui.
+  mkdir -p "$snap/log" "$snap/tmp/pids"
   mkdir -p "$L/redis"
   # Chaves nascem 0600 numa pasta 0700 (umask antes do openssl, não chmod depois).
   (umask 077 && mkdir -p "$L/chaves") || falha "não criei $L/chaves"
@@ -509,7 +518,7 @@ descartar_snapshot() {
   snapshot_valido "$snapdir"
   local pendente
   if [ ! -e "$snapdir" ]; then
-    # Nada no M2 (o clone nem começou): só limpa o registro, se for deste caminho.
+    # Nada nesta máquina (o clone nem começou): só limpa o registro, se for deste caminho.
     if [ -f "$L/clone-pendente" ]; then
       pendente=$(/bin/cat "$L/clone-pendente") || falha "não li $L/clone-pendente"
       [ "$pendente" != "$snapdir" ] || /bin/rm -f "$L/clone-pendente"
@@ -524,7 +533,7 @@ descartar_snapshot() {
   if em_uso "$snapdir"; then falha "snapshot em uso: $snapdir"; fi
   /bin/rm -rf "$snapdir"
   /bin/rm -f "$L/clone-pendente"
-  echo "snapshot não registrado descartado no M2: $snapdir"
+  echo "snapshot não registrado descartado no $ONDE: $snapdir"
 }
 
 # O snapshot só sai se o marcador do MacCluster disser que ele é este: snapshot_id igual ao nome do diretório.
@@ -621,11 +630,13 @@ psql_cmd() {
 # Ordem: (a) confere caminho e marcador; (b) desce os servidores da demo pelo grupo gravado e confere que portas e
 # processos pararam (senão falha antes de qualquer dropdb ou rm); (c) em_uso no snapshot, sem exceção nenhuma: se
 # algo ainda o segura, recusa com a demo parada (reversível: up de novo). Só então apaga. No fim deixa o marcador
-# `apagado-no-m2` e o demo.env: o bin/demo apaga o snapshot do M4 e só depois chama `fechar`, que apaga a pasta. Se o M4 falhar, repetir `bin/demo down <slug> --apagar` termina.
+# `apagado-no-m2` (nome de quando a demo só subia no M2; vale em qualquer máquina) e o demo.env: o bin/demo apaga o
+# snapshot do Mac de onde foi chamado, se for outro, e só depois chama `fechar`, que apaga a pasta. Se esse passo
+# falhar, repetir `bin/demo down <slug> --apagar` termina.
 apagar() {
   carregar_estado
   if [ -f "$L/apagado-no-m2" ]; then
-    echo "M2 já apagado antes; falta só o M4"
+    echo "banco e snapshot do $ONDE já apagados antes; falta só terminar"
     return 0
   fi
   case "$DB" in "$PREFIXO_BANCO"*) ;; *) falha "banco fora do kit: $DB" ;; esac
@@ -653,7 +664,7 @@ apagar() {
   fi
   if [ -d "$snapdir" ]; then
     /bin/rm -rf "$snapdir"
-    echo "snapshot apagado no M2: $snapdir"
+    echo "snapshot apagado no $ONDE: $snapdir"
   fi
   if role_existe; then
     psql_demo -d postgres -c "DROP ROLE \"$ROLE\"" > /dev/null || falha "não apaguei a role $ROLE (ainda é dona de algo?)"
@@ -666,7 +677,7 @@ fechar() {
   [ -f "$L/apagado-no-m2" ] || falha "fechar só depois do apagar"
   case "$L" in "$RAIZ"/?*) ;; *) falha "pasta suspeita: $L" ;; esac
   /bin/rm -rf "$L"
-  echo "pasta da demo apagada no M2: $L"
+  echo "pasta da demo apagada no $ONDE: $L"
 }
 
 case "$cmd" in

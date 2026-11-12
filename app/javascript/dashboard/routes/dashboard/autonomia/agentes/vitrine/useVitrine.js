@@ -50,8 +50,8 @@ const carregando = ref(false);
 const carregada = ref(false);
 const erro = ref('');
 let pedido = null;
-// Cada mudança (incluir, ligar, tirar) avança a versão: a lista que chega de um `carregar` pedido antes dela é velha.
-// Ela não é usada (apagaria a mudança) e a lista é pedida de novo, já com a mudança.
+// Cada mudança (incluir, ligar, mudar a frase, tirar) avança a versão: a lista que chega de um `carregar` pedido antes
+// dela é velha. Ela não é usada (apagaria a mudança) e a lista é pedida de novo, já com a mudança.
 let versao = 0;
 
 // Lê de novo a cada abertura de tela (a conta pode ter mudado entre uma e outra); duas telas ao mesmo tempo dividem
@@ -135,6 +135,14 @@ const incluir = async ({ fonte, agenteId, usarQuando }) => {
 const mudarLigada = async (id, ligada) => {
   const { data } = await chamar(() =>
     FerramentasProntasAPI.mudarLigada(id, ligada)
+  );
+  return trocar(data);
+};
+
+// #2881: a frase "Use quando" de uma pronta que o agente já tem. Vale a que o servidor devolve (ele limpa e corta).
+const mudarQuando = async (id, usarQuando) => {
+  const { data } = await chamar(() =>
+    FerramentasProntasAPI.mudarQuando(id, usarQuando)
   );
   return trocar(data);
 };
@@ -243,6 +251,7 @@ export const useVitrine = () => ({
   tem,
   incluir,
   mudarLigada,
+  mudarQuando,
   tirar,
   experimentar,
   registrarBuscaSemResultado,
