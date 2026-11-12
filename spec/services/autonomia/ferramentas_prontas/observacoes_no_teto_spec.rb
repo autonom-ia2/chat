@@ -9,6 +9,7 @@ RSpec.describe 'As observações das prontas cabem no teto' do # rubocop:disable
   def da_ncm
     ncm = fontes::Ncm
     { 'ncm.BUSQUE_O_GRUPO' => format(ncm::BUSQUE_O_GRUPO, grupo: '8517.62.6'), 'ncm.CONFIRA' => ncm::CONFIRA,
+      'ncm.CASO_COMUM' => ncm::CASO_COMUM,
       'ncm.NAO_E_O_DA_NOTA (2)' => format(ncm::NAO_E_O_DA_NOTA, digitos: 2),
       'ncm.NAO_E_O_DA_NOTA (4)' => format(ncm::NAO_E_O_DA_NOTA, digitos: 4) }
   end
@@ -38,7 +39,7 @@ RSpec.describe 'As observações das prontas cabem no teto' do # rubocop:disable
     textos = da_ncm.merge(da_fipe, das_compras, das_outras)
     grandes = textos.select { |_nome, texto| texto.length > Autonomia::FerramentasProntas::Resposta::MAX_TEXTO }
 
-    expect(textos.size).to eq(17)
+    expect(textos.size).to eq(18)
     expect(grandes.transform_values(&:length)).to eq({})
   end
 end
