@@ -173,6 +173,30 @@ RSpec.describe Crm::Ai::Evaluator do
       expect(described_class.new(card: novo, trigger: 'message').perform.status).to eq(:auto_moved)
     end
 
+    # #2501: o upsert da API que leva o card a um funil sem dizer a etapa grava o movimento para a etapa de entrada como
+    # de quem chamou. Pega a IA travada por uma etapa que ninguém escolheu (a criação no mesmo caso já deixava a IA livre).
+    def movido_pelo_upsert(etapa_de_entrada:)
+      card = preparar
+      Crm::Activity.where(card: card).delete_all
+      entrada = card.pipeline.stages.order(:position, :id).first
+      travel_to(30.minutes.ago) do
+        Crm::Cards::Mover.new(card: card, actor: card.account.users.first, target_stage: entrada, etapa_de_entrada: etapa_de_entrada).perform
+      end
+      card.reload
+    end
+
+    it 'levado à etapa de entrada pelo upsert da API sem etapa do funil: a IA move' do
+      card = movido_pelo_upsert(etapa_de_entrada: Crm::Cards::EtapaDeEntrada::SEM_ETAPA)
+
+      expect(described_class.new(card: card, trigger: 'message').perform.status).to eq(:auto_moved)
+    end
+
+    it 'movido pelo upsert da API com a etapa no pedido: não move nem sugere' do
+      card = movido_pelo_upsert(etapa_de_entrada: nil)
+
+      expect(sem_mexer(card).stage).to eq(card.pipeline.stages.order(:position, :id).first)
+    end
+
     it 'passada a janela, a etapa escolhida na criação não trava mais' do
       novo = criado_pela_pessoa(preparar, tempo: described_class::RESPEITO_AO_MOVIMENTO + 1.minute, etapa_escolhida: true)
 

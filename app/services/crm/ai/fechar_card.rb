@@ -223,7 +223,7 @@ class Crm::Ai::FecharCard
   end
 
   def pessoa_escolheu?
-    da_pessoa = Crm::Ai::MovimentoDaAutomacao.sem_automacao(
+    da_pessoa = Crm::Ai::MovimentoDaAutomacao.escolhas_da_pessoa(
       Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
                           created_at: Crm::Ai::Evaluator::RESPEITO_AO_MOVIMENTO.ago..)
     )
