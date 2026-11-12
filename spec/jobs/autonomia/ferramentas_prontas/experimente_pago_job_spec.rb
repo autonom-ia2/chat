@@ -83,6 +83,18 @@ RSpec.describe Autonomia::FerramentasProntas::ExperimentePagoJob do
     expect(described_class::PRAZO_PARA_COMECAR).to be_positive
   end
 
+  it 'o defeito vai também ao log, com conta, fonte e classe do erro, e sem o texto digitado' do
+    allow(pago).to receive(:call).and_raise(NoMethodError, 'detalhe interno')
+    allow(Rails.logger).to receive(:error)
+
+    described_class.perform_now(abrir)
+
+    expect(Rails.logger).to have_received(:error).with(
+      a_string_including("account=#{account.id}", 'fonte=certidoes_empresa', 'NoMethodError')
+        .and(satisfy { |linha| linha.exclude?('11.222.333') && linha.exclude?('CNPJ') })
+    )
+  end
+
   it 'o pedido abre só com o id nos argumentos do job' do
     id = abrir
 

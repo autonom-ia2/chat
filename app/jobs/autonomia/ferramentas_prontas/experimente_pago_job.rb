@@ -45,6 +45,8 @@ class Autonomia::FerramentasProntas::ExperimentePagoJob < ApplicationJob
     ).call
     Pedido.concluir!(id, account.id, resultado)
   rescue StandardError => e
+    # Só a classe do erro: a mensagem pode trazer o texto digitado (CPF, CNPJ).
+    Rails.logger.error("[autonomia][prontas][experimente] defeito no job account=#{account.id} fonte=#{pedido['fonte']} #{e.class}")
     ChatwootExceptionTracker.new(e, account: account).capture_exception
     Pedido.concluir!(id, account.id, 'situacao' => 'nao_consegui_consultar')
   end
