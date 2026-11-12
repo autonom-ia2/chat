@@ -71,6 +71,8 @@ export default {
     // (MobileSidebarLauncher, fixo em bottom-4 start-4, 56 px de altura) fica
     // por cima de toda tela. O layout reserva a faixa dele embaixo de uma vez:
     // o conteúdo de qualquer página termina acima do botão, sem classe por tela.
+    // Barra fixa na base da tela fica fora do fluxo e não cabe nesta faixa: ela
+    // começa depois do botão (ps-20), regra cobrada por barrasFixasDoCelular.spec.js.
     const telaDeConversa = useTelaDeConversa();
 
     return {
