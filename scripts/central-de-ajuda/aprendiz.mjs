@@ -702,7 +702,7 @@ const executar = async () => {
     const artigoDoArquivo = artigosRestantes.find(a => a.arquivo === evidencia.artigo);
     if (!artigoDoArquivo) return;
     const id = artigoDoArquivo.cabecalho.id;
-    const motivo = `evidência sumiu: ${evidencia.caminho}:${evidencia.numero}`;
+    const motivo = `evidência sumiu: ${evidencia.caminho} | ${evidencia.trecho}`;
     porArtigoEvidencia.set(id, [...(porArtigoEvidencia.get(id) || []), motivo]);
     mapa = marcarParaRevisao(mapa, id, motivo);
   });
