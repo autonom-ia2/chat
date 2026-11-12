@@ -29,6 +29,9 @@ class Crm::Conversations::AutoCreateDeduplicator
     Crm::Cards::ConversationCardFinder.new(account: @account).all(@conversation).merge(active_cards).first
   end
 
+  # O card sem caixa (o da prospecção, o feito à mão ou pela API) também vale (#2770): ele não é de canal nenhum, e o
+  # contato que responde pela caixa do funil cai nele em vez de abrir um segundo card. Ao ser reaproveitado, ele adota a
+  # caixa da conversa (CardSyncer#caixa_attributes).
   def contact_pipeline_card(active_cards)
     return if @conversation.contact_id.blank?
     return if dedup_window_started_at.blank?
@@ -36,7 +39,7 @@ class Crm::Conversations::AutoCreateDeduplicator
     active_cards
       .where(
         contact_id: @conversation.contact_id,
-        inbox_id: @conversation.inbox_id,
+        inbox_id: [@conversation.inbox_id, nil],
         pipeline_id: @pipeline_inbox.pipeline_id
       )
       .where('COALESCE(crm_cards.last_activity_at, crm_cards.updated_at) >= ?', dedup_window_started_at)

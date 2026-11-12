@@ -384,6 +384,26 @@ RSpec.describe Crm::Conversations::CardSyncer do
     expect(card.activities.where(event_type: 'conversation_dedup_reuse')).to exist
   end
 
+  # #2770: o card da prospecção nasce sem caixa. Sem o "Outro canal" (crm_outro_canal desligada), a resposta da empresa
+  # pela caixa do funil cai nele, que adota a caixa, em vez de abrir um segundo card.
+  it 'reuses the open card without inbox of the same contact and pipeline, without crm_outro_canal' do
+    account, admin = create_account_and_user
+    account.disable_features!(Crm::Conversations::OutroCanal::FLAG)
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Empresa Prospectada', phone_number: '+5511987650009')
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    prospectado = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: contact, owner: admin, title: 'Padaria',
+                                            source: 'autonomia_prospecting', last_activity_at: 1.day.ago)
+    account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact)
+
+    card = described_class.new(conversation: conversation, message: create_crm_message(conversation: conversation, sender: contact)).perform
+
+    expect(card.id).to eq(prospectado.id)
+    expect(account.crm_cards.where(contact: contact).count).to eq(1)
+    expect(card.reload).to have_attributes(inbox_id: inbox.id, conversation_id: conversation.id)
+  end
+
   it 'does not reuse contact/inbox/pipeline cards outside the configured dedup window' do
     ENV['CRM_AUTO_CREATE_DEDUP_WINDOW_DAYS'] = '1'
     account, admin = create_account_and_user
