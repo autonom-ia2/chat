@@ -5,6 +5,7 @@ import {
   chaveDoTexto,
   emDestaque,
   ferramentaPorId,
+  larguraDoCartao,
   liberadas,
   oferecida,
   premiumPorUltimo,
@@ -175,6 +176,25 @@ describe('catálogo da vitrine', () => {
       'raio_x_empresa',
       'conferir_pessoa',
     ]);
+    // A Premium que vem antes de uma grátis vai para o fim; a ordem entre as de cada tipo fica.
+    const misturadas = [
+      'certidoes_empresa',
+      'cnpj',
+      'conferir_pessoa',
+      'cpf',
+    ].map(ferramentaPorId);
+    expect(premiumPorUltimo(misturadas).map(item => item.id)).toEqual([
+      'cnpj',
+      'cpf',
+      'certidoes_empresa',
+      'conferir_pessoa',
+    ]);
+    expect(misturadas.map(item => item.id)).toEqual([
+      'certidoes_empresa',
+      'cnpj',
+      'conferir_pessoa',
+      'cpf',
+    ]);
     ['pt_BR', 'en'].forEach(locale => {
       [
         'SELO',
@@ -208,5 +228,35 @@ describe('catálogo da vitrine', () => {
     );
     expect(emDestaque(todas, []).some(item => item.premium)).toBe(false);
     expect(ferramentaPorId('historico_placa').premium).toBe(true);
+  });
+});
+
+// Nenhum cartão sozinho na última linha da grade de 3 no computador: com sobra de 1, os 4 últimos ficam 2 a 2.
+describe('larguraDoCartao', () => {
+  const larguras = total =>
+    Array.from({ length: total }, (_, indice) =>
+      larguraDoCartao(indice, total)
+    );
+  const UM_TERCO = 'lg:col-span-2';
+  const METADE = 'lg:col-span-3';
+
+  it('a group with one card keeps the normal width', () => {
+    expect(larguras(1)).toEqual([UM_TERCO]);
+  });
+
+  it('two or five cards keep the normal width (no card left alone)', () => {
+    expect(larguras(2)).toEqual([UM_TERCO, UM_TERCO]);
+    expect(larguras(5)).toEqual(Array(5).fill(UM_TERCO));
+  });
+
+  it('four cards become two rows of two', () => {
+    expect(larguras(4)).toEqual(Array(4).fill(METADE));
+  });
+
+  it('seven cards: one row of three, then two rows of two', () => {
+    expect(larguras(7)).toEqual([
+      ...Array(3).fill(UM_TERCO),
+      ...Array(4).fill(METADE),
+    ]);
   });
 });

@@ -208,6 +208,15 @@ export const premiumPorUltimo = ferramentas => [
   ...ferramentas.filter(item => item.premium),
 ];
 
+// No computador, 3 cartões por linha (grade de 6 colunas, 2 por cartão). Quando sobraria 1 sozinho na última linha
+// (4, 7…), os 4 últimos ficam 2 a 2. Devolve a classe do Tailwind da coluna do cartão `indice` num grupo de `total`.
+const POR_LINHA = 3;
+const ULTIMOS_EM_DUPLA = 4;
+export const larguraDoCartao = (indice, total) =>
+  total > 1 && total % POR_LINHA === 1 && indice >= total - ULTIMOS_EM_DUPLA
+    ? 'lg:col-span-3'
+    : 'lg:col-span-2';
+
 // Destaque pelo ramo da conta (camadas do pacote, #1550): a conta de corretora vê o que vale para "seguros".
 export const emDestaque = (ferramentas, camadas) => {
   if (!camadas.length) {

@@ -128,6 +128,7 @@ const selo = computed(() => {
       {{ selo.texto }}
     </span>
     <VitrinePreco v-if="premium" :premium="premium" class="mt-auto" />
-    <VitrineRodapeGratis v-else class="mt-auto" />
+    <!-- Card pago sem o dado do servidor não ganha rodapé: não pode dizer "Consulta grátis". -->
+    <VitrineRodapeGratis v-else-if="!ferramenta.premium" class="mt-auto" />
   </button>
 </template>

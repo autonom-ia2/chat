@@ -18,6 +18,7 @@ import {
   chaveDoTexto,
   emDestaque,
   ferramentaPorId,
+  larguraDoCartao,
   liberadas,
   premiumPorUltimo,
 } from '../catalogo';
@@ -117,15 +118,6 @@ const gratisDoPremium = computed(() => {
     .find(Boolean);
   return premium ? Number(premium.gratis) || 0 : 0;
 });
-
-// No computador, 3 cartões por linha (6 colunas, 2 por cartão). Quando sobraria 1 sozinho na última linha (4, 7…),
-// os 4 últimos ficam 2 a 2.
-const POR_LINHA = 3;
-const ULTIMOS_EM_DUPLA = 4;
-const larguraDoCartao = (indice, total) =>
-  total > 1 && total % POR_LINHA === 1 && indice >= total - ULTIMOS_EM_DUPLA
-    ? 'lg:col-span-3'
-    : 'lg:col-span-2';
 
 const destaque = computed(() =>
   termo.value || grupo.value !== 'TODAS'
