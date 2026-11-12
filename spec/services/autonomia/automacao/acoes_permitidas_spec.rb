@@ -80,9 +80,10 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
   end
 
   it 'deixa fora usuários, funções, conta, integrações, webhooks, tokens e as IAs (ADR-001 2.1)' do
+    # #2660 D3 e D4: o agente de IA (ligar e desligar) e os ajustes da IA do funil saíram do `sempre`.
     expect(permitidas.sempre_fora).to include('agents', 'custom_roles', 'api/v1/accounts', 'webhooks', 'integrations/slack',
-                                              'whatsapp/authorizations', 'crm/integration_tokens', 'crm/ai_settings',
-                                              'crm/ai_suggestions')
+                                              'whatsapp/authorizations', 'crm/integration_tokens', 'crm/ai_suggestions',
+                                              'autonomia/agents/tools', 'autonomia/agents/instruction_versions')
     expect(permitidas.lista['passo'].keys & permitidas.sempre_fora).to be_empty
     expect(permitidas.permitida?('DELETE agents/:id')).to be(false)
   end
@@ -166,6 +167,48 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
 
     it 'as metas ficam fora: zerar a meta apaga com delete_all' do
       expect(permitidas.permitida?('PUT crm/metas')).to be(false)
+    end
+  end
+
+  describe '#2660 lote E: IA do CRM (D3 e D4)' do
+    let(:agente) { 'PATCH autonomia/agents/:id' }
+
+    it 'liga e desliga o agente de IA: o status só ativo ou pausado, o rascunho fica fora', :aggregate_failures do
+      expect(permitidas.fora_da_lista(agente, { 'enabled' => true, 'status' => 'active' })).to be_empty
+      expect(permitidas.fora_da_lista(agente, { 'status' => 'paused' })).to be_empty
+      expect(permitidas.fora_da_lista(agente, { 'status' => 'draft' }).map(&:first)).to eq([:um_de])
+    end
+
+    it 'não configura o agente: tudo além de ligar e desligar é proibido', :aggregate_failures do
+      configurar = %w[name agent_type mode tone greeting fallback_message handoff_rule human_card actuation instruction starter_questions config]
+
+      expect(permitidas.proibidos(agente, configurar.index_with('x'))).to match_array(configurar)
+      expect(permitidas.proibidos('PUT autonomia/agents/:id', { 'instruction' => 'Fale assim' })).to eq(['instruction'])
+      expect(liberadas('POST autonomia/agents', 'DELETE autonomia/agents/:id', 'PATCH autonomia/agents/:id/avatar')).to all(be(false))
+    end
+
+    it 'os ajustes da IA do funil saem do sempre, mas esperam o formato completo (D4)', :aggregate_failures do
+      expect(permitidas.sempre_fora).not_to include('crm/ai_settings')
+      expect(liberadas('PATCH crm/pipelines/:pipeline_id/ai_settings', 'PUT crm/pipelines/:pipeline_id/ai_settings')).to all(be(false))
+    end
+
+    it 'no assunto da conversa, troca e mantém; a sugestão da IA e o repasse ficam fora', :aggregate_failures do
+      expect(liberadas('POST crm/conversations/:conversation_id/focus', 'POST crm/conversations/:conversation_id/repasse/manter'))
+        .to all(be(true))
+      expect(liberadas('POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/accept',
+                       'POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss',
+                       'POST crm/conversations/:conversation_id/repasse')).to all(be(false))
+    end
+
+    it 'no decisor, as respostas e a lista de exemplos não mudam pelo alterar; testar fica fora', :aggregate_failures do
+      expect(permitidas.proibidos('PATCH autonomia/decisores/:id', { 'respostas' => [], 'exemplos' => [] })).to eq(%w[respostas exemplos])
+      expect(permitidas.permitida?('POST autonomia/decisores/:id/exemplos')).to be(true)
+      expect(permitidas.permitida?('POST autonomia/decisores/:id/teste')).to be(false)
+    end
+
+    it 'aprovar sugestão de pergunta frequente fica fora: grava o que o agente diz ao cliente' do
+      expect(liberadas('POST autonomia/agents/:agent_id/faq_suggestions/:id/approve', 'POST captain/faq_suggestions/:id/approve'))
+        .to all(be(false))
     end
   end
 end

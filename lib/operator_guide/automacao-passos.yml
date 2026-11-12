@@ -339,3 +339,23 @@ so_guia:
   PUT nomes_de_etiquetas/:label_id: Faz o mesmo que o PATCH; o nome livre da etiqueta é configuração.
   POST conversations/:conversation_id/participants: Participante da conversa é ajuste de quem acompanha; nenhum dos 20 exemplos usa.
   DELETE conversations/:conversation_id/participants: Tirar participante fica no Guia e no motor; o editor não mostra DELETE.
+  # #2660 lote E: IA do CRM, liberada no motor e fora do editor. O agente, o decisor, a sugestão e a ação do consultor
+  # são escolhidos pelo id, que nenhum valor do alvo traz e a tela não oferece; nenhum dos 20 exemplos usa.
+  PATCH autonomia/agents/:id: O agente de IA é escolhido pelo id, que a tela não oferece; passar a conversa à IA é o ia_assumir.
+  PUT autonomia/agents/:id: Faz o mesmo que o PATCH; o agente de IA é escolhido pelo id.
+  POST autonomia/agents/:agent_id/faq_suggestions/:id/ignore: A sugestão é escolhida pelo id, que a tela não oferece.
+  POST autonomia/agents/message_reports: A mensagem é escolhida pelo id, que nenhum valor do alvo traz.
+  POST autonomia/decisores: Criar decisor é configuração da IA; decidir numa automação é o passo "decidir".
+  PATCH autonomia/decisores/:id: O decisor é escolhido pelo id, que a tela não oferece.
+  PUT autonomia/decisores/:id: Faz o mesmo que o PATCH; o decisor é escolhido pelo id.
+  POST autonomia/decisores/:id/exemplos: O decisor é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/conversations/:conversation_id/focus: O card do assunto é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
+  POST crm/conversations/:conversation_id/repasse/manter: Responde a uma sugestão que aparece na tela de quem atende; nenhum dos 20 exemplos usa.
+  PATCH crm/memoria/chaves/:id: A chave da memória é escolhida pelo id, e é configuração do administrador.
+  POST crm/meta_ads_connection/advisor_actions/:id/open: A ação do consultor é escolhida pelo id, que a tela não oferece.
+  POST crm/meta_ads_connection/advisor_actions/:id/accept: A ação do consultor é escolhida pelo id, que a tela não oferece.
+  POST crm/meta_ads_connection/advisor_actions/:id/dismiss: A ação do consultor é escolhida pelo id, que a tela não oferece.
+  PATCH captain/faq_suggestions/:id: A sugestão é escolhida pelo id, que a tela não oferece.
+  PUT captain/faq_suggestions/:id: Faz o mesmo que o PATCH; a sugestão é escolhida pelo id.
+  POST captain/faq_suggestions/:id/dismiss: A sugestão é escolhida pelo id, que a tela não oferece.
+  POST captain/message_reports: A mensagem é escolhida pelo id, que nenhum valor do alvo traz.

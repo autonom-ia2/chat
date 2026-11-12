@@ -331,6 +331,78 @@ passo:
     acoes:
       POST conversations/:conversation_id/participants: {}
       DELETE conversations/:conversation_id/participants: {}
+  # #2660 lote E: IA do CRM (D3 e D4). Saem do grupo `sempre` só os recursos e as ações abaixo; o resto da IA continua
+  # sempre fora.
+  autonomia/agents:
+    motivo: >-
+      Ligar e desligar o agente de IA (D3, #2660 lote E): só `enabled` e `status`, e o status só ativo ou pausado (o
+      rascunho fica fora pelo `um_de`). Todo o resto do agente é configurar quem fala com o cliente e fica proibido:
+      nome, tipo, modo, tom, saudação, mensagem de falha, regra e cartão de passagem, atuação, instrução, perguntas
+      iniciais e config. Criar, apagar e a foto ficam fora. A chave de agentes de quem ligou vale pelo endpoint.
+    acoes:
+      PATCH autonomia/agents/:id:
+        um_de: { status: [active, paused] }
+        proibe: [name, agent_type, mode, tone, greeting, fallback_message, handoff_rule, human_card, actuation, instruction, starter_questions, config]
+      PUT autonomia/agents/:id:
+        um_de: { status: [active, paused] }
+        proibe: [name, agent_type, mode, tone, greeting, fallback_message, handoff_rule, human_card, actuation, instruction, starter_questions, config]
+  autonomia/agents/faq_suggestions:
+    motivo: >-
+      Ignorar a sugestão de pergunta frequente do agente (#2660 lote E). Aprovar fica fora: grava o que o agente diz
+      ao cliente, sem revisão, e paga o embedding.
+    acoes:
+      POST autonomia/agents/:agent_id/faq_suggestions/:id/ignore: {}
+  autonomia/agents/message_reports:
+    motivo: Relatar "resposta errada" numa mensagem do agente, como o atendente faz (#2660 lote E). Só grava o relato.
+    acoes:
+      POST autonomia/agents/message_reports: {}
+  autonomia/decisores:
+    motivo: >-
+      Criar e alterar o decisor e guardar um exemplo (#2660 lote E). No alterar, `respostas` e `exemplos` ficam fora:
+      trocar as respostas quebra os ramos das regras que usam o decisor, e `exemplos` troca a lista inteira. O exemplo
+      guardado fica com origem "pessoa", como o "Confirmar" do teste: quem monta a automação decide a resposta certa.
+      Testar gasta IA paga e não grava; apagar é estrutura (D1). Mudar a pergunta ou as instruções muda a decisão das
+      regras que já usam o decisor, como na tela.
+    acoes:
+      POST autonomia/decisores: {}
+      PATCH autonomia/decisores/:id: { proibe: [respostas, exemplos] }
+      PUT autonomia/decisores/:id: { proibe: [respostas, exemplos] }
+      POST autonomia/decisores/:id/exemplos: {}
+  crm/conversation_cards:
+    motivo: >-
+      Trocar o assunto atual da conversa e manter o assunto com quem já atende (#2660 lote E). Passar para a equipe do
+      assunto novo solta o atendente e pode passar à IA: atribuir e `ia_assumir` já fazem isso. Aceitar e dispensar a
+      sugestão de assunto da IA ficam fora, como a sugestão de etapa (crm/ai_suggestions): a medição conta a resposta
+      como da equipe, o "dispensada" cala a IA naquela conversa, e aceitar "criar" cria card fora do passo de card e
+      agenda a avaliação paga da IA.
+    acoes:
+      POST crm/conversations/:conversation_id/focus: {}
+      POST crm/conversations/:conversation_id/repasse/manter: {}
+  crm/memoria_chaves:
+    motivo: Ajustar uma chave do catálogo da memória do card, só administrador (#2660 lote E).
+    acoes:
+      PATCH crm/memoria/chaves/:id: {}
+  crm/meta_ads_advisor_actions:
+    motivo: >-
+      Abrir, marcar como feita e dispensar uma ação do consultor de anúncios (#2660 lote E), com `meta_ads_manage`. Só
+      marca o status, não fala com a Meta; a métrica de aceite conta só o painel (o pedido da porta interna vem como
+      `via: api`).
+    acoes:
+      POST crm/meta_ads_connection/advisor_actions/:id/open: {}
+      POST crm/meta_ads_connection/advisor_actions/:id/accept: {}
+      POST crm/meta_ads_connection/advisor_actions/:id/dismiss: {}
+  captain/faq_suggestions:
+    motivo: >-
+      Corrigir e dispensar a sugestão de pergunta frequente do assistente (#2660 lote E). Aprovar paga o embedding num
+      job.
+    acoes:
+      PATCH captain/faq_suggestions/:id: {}
+      PUT captain/faq_suggestions/:id: {}
+      POST captain/faq_suggestions/:id/dismiss: {}
+  captain/message_reports:
+    motivo: Relatar "resposta errada" numa mensagem do assistente (#2660 lote E). Só grava o relato.
+    acoes:
+      POST captain/message_reports: {}
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
@@ -374,24 +446,17 @@ fora:
   - motivo: Rotas de IA, do CRM e dos agentes. Sempre fora (ADR-001 2.1); a IA como passo é nativa, na F7.
     sempre: true
     recursos:
-      - crm/ai_settings
       - crm/ai_suggestions
       - crm/stage_criteria
-      - crm/memoria_chaves
       - crm/meta_ads_ai
-      - crm/meta_ads_advisor_actions
-      - crm/conversation_cards
       - crm/caixas
-      - autonomia/agents
       - autonomia/agents/ajuda
       - autonomia/agents/base_de_seguros
       - autonomia/agents/build_threads
       - autonomia/agents/builder_images
       - autonomia/agents/channels
-      - autonomia/agents/faq_suggestions
       - autonomia/agents/instruction_versions
       - autonomia/agents/material
-      - autonomia/agents/message_reports
       - autonomia/agents/onde_atende
       - autonomia/agents/playground
       - autonomia/agents/sources
@@ -400,7 +465,6 @@ fora:
       - autonomia/quem_atende
       - autonomia/conversation_copilot
       - autonomia/text_copilot
-      - autonomia/decisores
       - autonomia/decisoes
       - autonomia/insurance/quote_agent
       - captain/assistant_responses
@@ -410,12 +474,17 @@ fora:
       - captain/copilot_threads
       - captain/custom_tools
       - captain/documents
-      - captain/faq_suggestions
       - captain/inboxes
-      - captain/message_reports
       - captain/preferences
       - captain/scenarios
       - captain/tasks
+  - motivo: >-
+      Decidido para passo e à espera do formato completo (#2660 lote E). Ajustes da IA do funil (D4): sai do `sempre` e
+      entra com `proibe` em auto_followup, service_reminders, callback_enabled e callback_mode (mandam mensagem ao
+      cliente), mas o PATCH e o PUT ainda leem stage_criteria e stage_handoff com permit!, e o formato fica incompleto.
+      Entra quando o controller declarar os dois e o formato for regerado.
+    recursos:
+      - crm/ai_settings
   - motivo: Fala com o cliente ou sai da plataforma, sem desfazer. Mensagem e aviso são passos nativos (F4); webhook de saída, F8.
     recursos:
       - conversations/messages
