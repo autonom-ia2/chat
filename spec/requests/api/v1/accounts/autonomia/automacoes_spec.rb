@@ -500,6 +500,52 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(automacao.reload.ativa).to be(false)
     end
 
+    # #2677: o webhook e o extrair que gravam no card fazem o PATCH crm/cards que o motor confere com a chave de funis
+    # (AcoesDoMotor). Salvar e ligar recusam antes de rodar, com a frase do motivo, e nada sai para fora. O webhook só grava
+    # no card onde há card para agir (gatilho de card); o extrair também no card da conversa (G70, CardDaConversa.le?).
+    describe 'o webhook e o extrair que gravam no card' do
+      let(:webhook) do
+        { id: 'w1', tipo: 'webhook', descricao: 'Mandar', url: 'https://hooks.exemplo.com/x',
+          gravar: [{ chave: 'numero', destino: 'card.atributos.numero' }] }
+      end
+      let(:extrair) do
+        { id: 'e1', tipo: 'extrair', campos: [{ chave: 'numero', descricao: 'O número', destino: 'card.atributos.numero' }] }
+      end
+      let(:gravam_no_card) do
+        [{ gatilho: { tipo: 'card.ganho' }, passos: [webhook] }, { gatilho: { tipo: 'conversa.resolvida' }, passos: [extrair] }]
+      end
+      let(:sem_funil) { I18n.t('autonomia.automacao.editor.sem_funil') }
+
+      before do
+        montador.account_users.find_by(account: account).custom_role.update!(permissions: %w[automation_manage integration_manage])
+      end
+
+      it 'recusa salvar sem a chave de funis', :aggregate_failures do
+        gravam_no_card.each do |com|
+          post base, params: { nome: 'x', receita: com }, headers: montador.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(sem_funil)
+        end
+        expect(Autonomia::Automacao::Definicao.where(account: account)).to be_empty
+      end
+
+      it 'recusa ligar sem a chave de funis, mesmo com a versão salva por quem tinha', :aggregate_failures do
+        gravam_no_card.each do |com|
+          automacao = create(:autonomia_automacao, account: account)
+          versao = create(:autonomia_automacao_versao, automacao: automacao, numero: 1)
+          automacao.update_columns(versao_ativa_id: versao.id) # rubocop:disable Rails/SkipsModelValidations
+          Autonomia::Automacao::Versao.where(id: versao.id).update_all(receita: com.deep_stringify_keys) # rubocop:disable Rails/SkipsModelValidations
+
+          ligar(automacao.id, versao.id, quem: montador)
+
+          expect(response).to have_http_status(:unprocessable_entity)
+          expect(response.parsed_body['error']).to eq(sem_funil)
+          expect(automacao.reload.ativa).to be(false)
+        end
+      end
+    end
+
     # F7 (#2500): a chave de funis anda pelos caminhos e pelo "nenhum" do decidir, pela travessia única da Receita.
     it 'recusa passo de card dentro de um caminho ou do nenhum do decidir (travessia única)', :aggregate_failures do
       account.enable_features!('automacao_ia')
