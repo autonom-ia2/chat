@@ -8,9 +8,9 @@
 #     ganho "Plano anual" e a reunião marcada pela página nele;
 #   - #2710, variante 2 (card novo, casado pelo contato): Ana Costa, já cliente, com o card ganho "Plano mensal" e o
 #     card novo que a página criou ("source" public_link) com a reunião.
-# As reuniões são Crm::Meeting de verdade, daqui a 3 dias às 10h, com a atividade `meeting_scheduled` na linha do
-# tempo: a Agenda do card e o "O que já aconteceu" mostram o que existe no banco. Repetível: os cards levam
-# external_id "demo-2414-*" e são recriados a cada rodada.
+# As reuniões são Crm::Meeting de verdade, no primeiro dia útil a partir de 3 dias, às 10h de Brasília, com a
+# atividade `meeting_scheduled` na linha do tempo: a Agenda do card e o "O que já aconteceu" mostram o que existe no
+# banco. Repetível: os cards levam external_id "demo-2414-*" e são recriados a cada rodada.
 abort 'seed só roda no banco da demo' unless ActiveRecord::Base.connection.current_database.start_with?('chatwoot_kitdemo_')
 
 account = Account.find(1)
@@ -63,7 +63,10 @@ end
 
 # A reunião que a página de agendamento marcou (source public_link), com a linha na linha do tempo.
 reuniao = lambda do |card, pessoa|
-  inicio = 3.days.from_now.change(hour: 10)
+  # Às 10h de Brasília, no primeiro dia útil a partir de 3 dias (reunião no domingo parece erro).
+  dia = 3.days.from_now.to_date
+  dia += 1 until dia.on_weekday?
+  inicio = Time.find_zone('America/Sao_Paulo').local(dia.year, dia.month, dia.day, 10)
   meeting = Crm::Meeting.create!(account: account, card: card, created_by: user, title: "Reunião com #{pessoa.name}",
                                  starts_at: inicio, ends_at: inicio + 30.minutes, timezone: 'America/Sao_Paulo',
                                  provider: :internal, online_meeting_type: :no_online, status: :scheduled,
