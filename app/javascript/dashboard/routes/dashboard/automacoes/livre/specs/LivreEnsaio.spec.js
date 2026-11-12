@@ -287,6 +287,84 @@ describe('linhasDoEnsaio', () => {
     expect(tweet.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CANAL_SEM_RESPOSTA');
   });
 
+  // #2502: o rodízio diz entre quem seria; se não passaria, o porquê.
+  it.each([
+    [{}, { destaque: 'AUTOMACAO_LIVRE.ENSAIO.RODIZIO_CAIXA' }],
+    [
+      { time: 'Vendas' },
+      { destaque: 'AUTOMACAO_LIVRE.ENSAIO.RODIZIO_TIME(Vendas)' },
+    ],
+  ])('o rodízio com %o diz entre quem passaria', (dados, esperado) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'r1', tipo: 'rodizio', faria: 'rodizio', dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject(esperado);
+  });
+
+  it.each([
+    ['conversa_ja_atribuida', 'CONVERSA_JA_ATRIBUIDA'],
+    ['entrega_cuidando', 'ENTREGA_CUIDANDO'],
+  ])('o rodízio que não passaria (%s) diz o porquê', (faria, chave) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'r1', tipo: 'rodizio', faria }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe(`AUTOMACAO_LIVRE.ENSAIO.NAO_RODARIA.${chave}`);
+  });
+
+  // #2523: o aviso só para o responsável, na conversa sem responsável.
+  it('o aviso sem responsável diz que ninguém seria avisado', () => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'a1', tipo: 'avisar', faria: 'sem_responsavel' }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.SEM_RESPONSAVEL');
+    expect(linha.balao).toBeUndefined();
+  });
+
+  // #2552: com a reserva, o aviso diz por que iria para a caixa.
+  it.each([
+    ['sem_responsavel', 'AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA'],
+    ['responsavel_fora', 'AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA_FORA'],
+  ])(
+    'o aviso com a reserva (%s) mostra o texto e diz que iria para a caixa',
+    (reserva, destaque) => {
+      const [linha] = linhasDoEnsaio(
+        [
+          {
+            id: 'a1',
+            tipo: 'avisar',
+            faria: 'avisar',
+            dados: { texto: 'Chegou reclamação', reserva },
+          },
+        ],
+        fraseDe,
+        t
+      );
+
+      expect(linha.balao).toBe('Chegou reclamação');
+      expect(linha.destaque).toBe(destaque);
+    }
+  );
+
+  it('a caixa sem ninguém que pudesse ser avisado diz que ninguém seria avisado', () => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'a1', tipo: 'avisar', faria: 'caixa_sem_ninguem' }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CAIXA_SEM_NINGUEM');
+    expect(linha.balao).toBeUndefined();
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [
@@ -389,5 +467,26 @@ describe('linhasDoEnsaio', () => {
     );
 
     expect(linha).toMatchObject({ texto: 'frase g1', ...esperado });
+  });
+
+  // #2552: o resumo que sai pelo avisar, com a reserva, diz que iria para a caixa.
+  it('o resumo com a reserva diz que avisaria e que iria para a caixa', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'i1',
+          tipo: 'resumir',
+          faria: 'ia_resumir',
+          dados: { destino: 'avisar', reserva: 'sem_responsavel' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.destaque).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_AVISAR AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA'
+    );
+    expect(linha.balao).toBeUndefined();
   });
 });

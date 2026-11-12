@@ -41,7 +41,7 @@ RSpec.describe Autonomia::Automacao::Valores do
                  gatilho.responsavel_anterior_ausente card.entrou_de_novo]
     expect(described_class::FECHADOS.keys)
       .to match_array(described_class::MENSAGEM.keys - ['mensagem.campanha'] + described_class::RESPOSTA.keys + de_fora +
-                      Autonomia::Automacao::Ausencia::FECHADOS.keys)
+                      Autonomia::Automacao::Ausencia::FECHADOS.keys + Autonomia::Automacao::HorarioDeAtendimento::FECHADOS.keys)
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -141,6 +141,67 @@ RSpec.describe Autonomia::Automacao::Valores do
       conversa.update!(assignee: agente)
 
       expect(described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.responsavel_ausente')).to be(false)
+    end
+  end
+
+  # #2503: dentro do horário de atendimento da caixa, agora, no fuso da conta (horário único da caixa, #1619), nunca
+  # num fuso fixo nem no da coluna da caixa. A caixa nova abre de segunda a sexta, das 9h às 17h.
+  describe 'conversa.no_horario' do
+    let(:account) { create(:account, reporting_timezone: 'America/Sao_Paulo') }
+    let(:inbox) { create(:inbox, account: account, working_hours_enabled: true) }
+    let(:conversa) { create(:conversation, account: account, inbox: inbox, contact: contato) }
+    let(:fuso_da_conta) { Time.find_zone('America/Sao_Paulo') }
+
+    def no_horario = described_class.new(alvo: conversa.reload, quem: nil).ler('conversa.no_horario')
+
+    before do
+      account.enable_features!(Autonomia::HorarioUnicoCaixa::FEATURE)
+      inbox.update_column(:timezone, 'Asia/Tokyo') # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'segunda às 10h no fuso da conta está no horário, mesmo sendo 22h no fuso gravado na caixa' do
+      travel_to(fuso_da_conta.local(2026, 11, 9, 10)) { expect(no_horario).to be(true) }
+    end
+
+    it 'segunda às 21h30 no fuso da conta está fora, mesmo sendo terça 9h30 no fuso gravado na caixa' do
+      travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) { expect(no_horario).to be(false) }
+    end
+
+    it 'no domingo está fora; com outro fuso na conta, a mesma hora muda de lado', :aggregate_failures do
+      travel_to(fuso_da_conta.local(2026, 11, 8, 10)) { expect(no_horario).to be(false) }
+
+      account.update!(reporting_timezone: 'Asia/Tokyo')
+      travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) { expect(no_horario).to be(true) }
+    end
+
+    it 'a caixa sem horário de atendimento ligado está sempre no horário' do
+      inbox.update!(working_hours_enabled: false)
+
+      travel_to(fuso_da_conta.local(2026, 11, 8, 3)) { expect(no_horario).to be(true) }
+    end
+
+    # Revisão: a mesma regra da agente de IA (HorarioDaCaixa, #1691). Sem a flag, o calendário de caixa do CRM manda: segunda
+    # 8h30 aberta (no horário da caixa, 20h30 em Tóquio, estaria fechada) e 21h30 fechada (lá, terça 9h30, estaria aberta).
+    describe 'sem a flag horario_unico_caixa, com o calendário de caixa do CRM' do
+      before do
+        account.disable_features!(Autonomia::HorarioUnicoCaixa::FEATURE)
+        create(:crm_service_schedule, account: account, owner: inbox, weekdays: [1], hours: [['08:00', '12:00']])
+      end
+
+      it 'segue o calendário, e não o horário da caixa', :aggregate_failures do
+        travel_to(fuso_da_conta.local(2026, 11, 9, 8, 30)) { expect(no_horario).to be(true) }
+        travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) { expect(no_horario).to be(false) }
+      end
+
+      it 'responde o mesmo que a agente de IA' do
+        travel_to(fuso_da_conta.local(2026, 11, 9, 21, 30)) do
+          expect(no_horario).to eq(Autonomia::Agents::Operate::HorarioDaCaixa.new(conversation: conversa.reload).aberta_agora)
+        end
+      end
+    end
+
+    it 'é valor fechado, sim ou não' do
+      expect(described_class.fechado('conversa.no_horario')).to eq('opcoes' => [true, false], 'operadores' => %w[igual diferente])
     end
   end
 

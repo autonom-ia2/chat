@@ -69,11 +69,11 @@ module Autonomia::Automacao::Catalogo
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2), a
   # etapa do "card" (G4) e o contato em que ele nasce (G49), e a hora da conferência do "esperar até" sem prazo (G64,
   # mostrada pela peça do prazo). O "Cobrir a pessoa enquanto ela não responde" do "Passar para a agente de IA" (decisão
-  # 18) é um sim/não. G13 (#2670): o endereço, o que vai e o que volta do "webhook".
+  # 18) é um sim/não. G13 (#2670): o endereço, o que vai e o que volta do "webhook". O time do "atribuir em rodízio" (#2502).
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
                           'etapa_id' => 'etapa', 'contato' => 'contato_criado', 'conferir_as' => 'conferir_as',
                           'cobrir_pessoa' => 'sim_nao', 'descricao' => 'descricao', 'url' => 'endereco_do_webhook',
-                          'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook' }.freeze
+                          'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook', 'time_id' => 'time' }.freeze
 
   module_function
 

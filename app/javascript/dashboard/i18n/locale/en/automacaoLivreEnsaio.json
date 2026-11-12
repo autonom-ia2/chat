@@ -35,6 +35,10 @@
       "SE_NENHUM_DE_NOVO": "If none applies: waits for the next reply and decides again. With no reply by the deadline, it ends without sending anything.",
       "VOLTA": "Then goes back to wait: {passo}",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
+      "IRIA_PARA_CAIXA": "The conversation has no assignee: the alert would go to whoever handles the inbox.",
+      "IRIA_PARA_CAIXA_FORA": "The assignee could not be alerted in this conversation: the alert would go to whoever handles the inbox.",
+      "CAIXA_SEM_NINGUEM": "Nobody would be alerted: nobody who handles the inbox can see this conversation.",
+      "SEM_RESPONSAVEL": "Nobody would be alerted: the conversation has no assignee.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "FALTOU_LINK_DA_AGENDA": "Wouldn't send: the booking link would be empty (page offline, or no link from the person in charge).",
       "SEM_ACESSO_AGENDA": "Wouldn't send: you can't see the booking pages.",
@@ -59,6 +63,15 @@
       "MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, the template {modelo} is sent (charged by Meta).",
       "MODELO_PROPAGANDA_FORA_DA_JANELA": "If the 24-hour window is closed, the marketing template {modelo} is sent, which costs more on Meta.",
       "IA_ASSUMIR": "Would hand over to {agente}",
+      "RODIZIO_CAIXA": "Would go to the next person online in the inbox, in rotation.",
+      "RODIZIO_TIME": "Would go to the next person online in team {time}, in rotation.",
+      "NAO_RODARIA": {
+        "CONVERSA_RESOLVIDA": "Wouldn't hand over: the conversation is resolved.",
+        "CONVERSA_JA_ATRIBUIDA": "Wouldn't hand over: the conversation already has an assignee.",
+        "ROBO_ATENDE": "Wouldn't hand over: a bot or an AI agent has the conversation.",
+        "ENTREGA_CUIDANDO": "Wouldn't hand over: Assignment is holding the conversation or waiting for an invited person.",
+        "NINGUEM_NO_RODIZIO": "Wouldn't hand over: nobody in the inbox (or the team) is in the rotation."
+      },
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Would not hand over: the chosen agent no longer exists.",
         "FASE2_DESLIGADA": "Would not hand over: AI agents do not receive conversations in this account.",

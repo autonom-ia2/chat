@@ -69,6 +69,9 @@ nativos:
   # G66 (#2843, decisão 14): passar a conversa para o responsável do card, depois da troca do dono. Só com gatilho de
   # card (a Receita recusa nos outros), que já pede a chave de funis: por isso `funil` e a flag dos gatilhos de card.
   conversa_ao_responsavel: { grupo: EQUIPE, requer: automacao_gatilhos, funil: true }
+  # #2502: passar a conversa para a próxima pessoa online da caixa (ou do time), pelo rodízio da caixa. Sem flag própria:
+  # quem recusa é a Receita (sem conversa no gatilho) e, ao rodar, o pedido do "Atribuir" como quem ligou.
+  rodizio: { grupo: EQUIPE }
   # G21 (#2706): buscar empresas na Prospecção e marcar a recusa do lead. Sem flag própria: quem recusa é a Receita
   # (Prospecção desligada, sem a chave dela). `peca`: o passo inteiro numa peça só (LivreProspeccao.vue).
   prospeccao: { grupo: FUNIL, peca: prospeccao }

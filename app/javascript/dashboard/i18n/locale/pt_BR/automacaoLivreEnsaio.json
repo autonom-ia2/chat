@@ -35,6 +35,10 @@
       "SE_NENHUM_DE_NOVO": "Se nenhum se aplicar: espera a próxima resposta e decide de novo. Sem resposta no prazo, encerra sem mandar nada.",
       "VOLTA": "Depois volta a esperar: {passo}",
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
+      "IRIA_PARA_CAIXA": "A conversa não tem responsável: o aviso iria para quem atende a caixa.",
+      "IRIA_PARA_CAIXA_FORA": "O responsável não poderia ser avisado nesta conversa: o aviso iria para quem atende a caixa.",
+      "CAIXA_SEM_NINGUEM": "Ninguém seria avisado: ninguém que atende a caixa enxerga esta conversa.",
+      "SEM_RESPONSAVEL": "Ninguém seria avisado: a conversa não tem responsável.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "FALTOU_LINK_DA_AGENDA": "Não sairia: o link da agenda ficaria vazio (página fora do ar, ou sem o link de quem cuida).",
       "SEM_ACESSO_AGENDA": "Não sairia: você não vê as páginas de agendamento.",
@@ -59,6 +63,15 @@
       "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta).",
       "MODELO_PROPAGANDA_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo de propaganda {modelo}, que custa mais na Meta.",
       "IA_ASSUMIR": "Passaria para {agente}",
+      "RODIZIO_CAIXA": "Passaria para a próxima pessoa online da caixa, em rodízio.",
+      "RODIZIO_TIME": "Passaria para a próxima pessoa online do time {time}, em rodízio.",
+      "NAO_RODARIA": {
+        "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
+        "CONVERSA_JA_ATRIBUIDA": "Não passaria: a conversa já tem responsável.",
+        "ROBO_ATENDE": "Não passaria: um robô ou uma agente de IA está com a conversa.",
+        "ENTREGA_CUIDANDO": "Não passaria: a Atribuição está segurando a conversa ou esperando a pessoa convidada.",
+        "NINGUEM_NO_RODIZIO": "Não passaria: ninguém da caixa (ou do time) entra no rodízio."
+      },
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Não passaria: a agente escolhida não existe mais.",
         "FASE2_DESLIGADA": "Não passaria: as agentes de IA não recebem conversas nesta conta.",

@@ -472,7 +472,11 @@
         "responsavel_do_card": { "type": "boolean", "description": "Só nos gatilhos de card (G9): quem cuida do card na hora do passo, que nem sempre atende a conversa." },
         "times": { "$ref": "#/definitions/ids" },
         "pessoas": { "$ref": "#/definitions/ids" },
-        "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho." }
+        "da_reuniao": { "type": "boolean", "description": "Só nos gatilhos de reunião (G32): quem atende a reunião do gatilho." },
+        "se_nao_houver": {
+          "description": "Reserva (#2552): se o responsável não existe ou não pode ser avisado, avisa também quem atende a caixa da conversa. Só junto de responsavel.",
+          "enum": ["caixa"]
+        }
       }
     },
     "condicao": {
@@ -619,7 +623,8 @@
                 "responsavel_do_card": { "type": "boolean", "description": "Só nos gatilhos de card (G9): quem cuida do card na hora do passo, que nem sempre atende a conversa." },
                 "times": { "$ref": "#/definitions/ids" },
                 "pessoas": { "$ref": "#/definitions/ids" },
-                "da_reuniao": { "type": "boolean", "description": "Quem atende a reunião (a pessoa da página de agendamento, ou quem marcou na tela). Nos gatilhos de reunião (G32), a reunião do gatilho; nos outros (G61), a próxima reunião marcada do contato, em card que quem ligou vê. Sem reunião, ninguém." }
+                "da_reuniao": { "type": "boolean", "description": "Quem atende a reunião (a pessoa da página de agendamento, ou quem marcou na tela). Nos gatilhos de reunião (G32), a reunião do gatilho; nos outros (G61), a próxima reunião marcada do contato, em card que quem ligou vê. Sem reunião, ninguém." },
+                "se_nao_houver": { "enum": ["caixa"] }
               }
             }
           }
@@ -713,6 +718,16 @@
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "conversa_ao_responsavel", "description": "Passar a conversa para o responsável do card (G66; só com gatilho de card): a conversa principal do card passa para quem cuida do card agora, pelo mesmo pedido do Atribuir da conversa, como quem ligou. A troca do dono do card feita fora da automação não mexe na conversa; ponha este passo depois da troca. Pula sem conversa, com o card sem responsável ou se o responsável não enxerga a conversa; já com ele, segue sem trocar." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "rodizio", "description": "Atribuir em rodízio (#2502): a conversa sem responsável vai para a próxima pessoa online da caixa dela, pelo rodízio da caixa (o mesmo da atribuição automática da plataforma), pelo mesmo pedido do Atribuir da conversa, como quem ligou. Com time_id, só quem é do time e está na caixa. Pula com a conversa resolvida, que já tem responsável ou está com robô ou agente de IA, sem ninguém para o rodízio ou sem ninguém online. Só em gatilho com conversa (de conversa ou de card)." },
+            "time_id": { "type": "integer", "minimum": 1, "description": "O time da conta: o rodízio fica só entre quem é do time e atende a caixa da conversa. Sem ele, entre todos que atendem a caixa." }
           }
         },
         {

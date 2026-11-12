@@ -23,6 +23,14 @@ const AVISO = {
   // #2609: a mensagem pula, como no motor.
   canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
+  sem_responsavel: 'SEM_RESPONSAVEL',
+  caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
+};
+
+// #2552: por que o aviso iria para quem atende a caixa.
+const RESERVA = {
+  sem_responsavel: 'IRIA_PARA_CAIXA',
+  responsavel_fora: 'IRIA_PARA_CAIXA_FORA',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -139,6 +147,17 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
             agente: no.dados?.agente,
           }),
         };
+  // #2502: entre quem seria o rodízio (quem está online só se sabe na hora);
+  // se não passaria, o porquê.
+  if (no.tipo === 'rodizio')
+    return no.faria === 'rodizio'
+      ? {
+          ...base,
+          destaque: no.dados?.time
+            ? t(`${E}.RODIZIO_TIME`, { time: no.dados.time })
+            : t(`${E}.RODIZIO_CAIXA`),
+        }
+      : { ...base, aviso: t(`${E}.NAO_RODARIA.${no.faria.toUpperCase()}`) };
   // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
   // caixa sairia e o texto no balão.
   if (no.faria === 'email')
@@ -150,8 +169,14 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     };
   if (no.dados?.calculados?.length)
     return { ...base, destaque: gravaria(no.dados.calculados, t) };
-  if (FARIA_DA_IA[no.faria])
-    return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
+  // A reserva da caixa (#2552): no avisar e no resumo que sai pelo avisar.
+  const reserva = RESERVA[no.dados?.reserva];
+  const caixa = reserva ? t(`${E}.${reserva}`) : null;
+  if (FARIA_DA_IA[no.faria]) {
+    const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
+    return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };
+  }
+  if (caixa) return { ...base, balao: no.dados.texto, destaque: caixa };
   // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
   // o de propaganda (lote 5, #2681) avisa que custa mais.
   if (no.dados?.texto)

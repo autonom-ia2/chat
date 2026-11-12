@@ -158,6 +158,8 @@ export const novoPasso = (entrada, id, t) => {
   // G66: sem escolha; a conversa vai para quem cuida do card na hora.
   if (entrada.tipo === 'conversa_ao_responsavel')
     return { id, tipo: 'conversa_ao_responsavel' };
+  // #2502: nasce entre todos da caixa; o time é escolha opcional.
+  if (entrada.tipo === 'rodizio') return { id, tipo: 'rodizio' };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
