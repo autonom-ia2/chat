@@ -23,6 +23,11 @@
         "TITULO": "Reply outside business hours",
         "TEXTO": "Whoever writes outside the inbox's business hours gets a notice that the team will reply when it's back.",
         "NOME": "Outside business hours"
+      },
+      "DIVIDIR_LEADS": {
+        "TITULO": "Split customers across the team",
+        "TEXTO": "Every new conversation arrives with someone in charge, in rotation among whoever is online in the inbox.",
+        "NOME": "Split customers"
       }
     }
   }

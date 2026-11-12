@@ -38,6 +38,22 @@ class Autonomia::Automacao::PassoDeAviso
       Array(para['times']).empty? && Array(para['pessoas']).empty? && !para['da_reuniao'] && !para['responsavel_do_card']
   end
 
+  # O ensaio (#2498) do "avisar", e do "resumir" que sai por ele: a mesma conta do motor, que só lê (#previsto). Os
+  # outros passos não avisam ninguém.
+  def self.ensaiar(passo, conversa)
+    para = para_do_aviso(passo)
+    return [] if para.nil?
+
+    new(execucao: nil, passo: { 'id' => passo['id'], 'para' => para }, alvo: conversa).previsto
+  end
+
+  # Como o motor monta o aviso do resumir (PassoDeResumir#passo_do_aviso).
+  def self.para_do_aviso(passo)
+    return passo['para'].to_h if passo['tipo'] == 'avisar'
+
+    passo.dig('destino', 'avisar').to_h if passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash)
+  end
+
   def executar
     return sem_conversa if @conversa.nil?
 

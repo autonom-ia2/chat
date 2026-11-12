@@ -128,6 +128,17 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
             agente: no.dados?.agente,
           }),
         };
+  // #2502: entre quem seria o rodízio (quem está online só se sabe na hora);
+  // se não passaria, o porquê.
+  if (no.tipo === 'rodizio')
+    return no.faria === 'rodizio'
+      ? {
+          ...base,
+          destaque: no.dados?.time
+            ? t(`${E}.RODIZIO_TIME`, { time: no.dados.time })
+            : t(`${E}.RODIZIO_CAIXA`),
+        }
+      : { ...base, aviso: t(`${E}.NAO_RODARIA.${no.faria.toUpperCase()}`) };
   // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
   // caixa sairia e o texto no balão.
   if (no.faria === 'email')

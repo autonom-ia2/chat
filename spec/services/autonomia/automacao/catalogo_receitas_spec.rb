@@ -17,9 +17,10 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   end
 
   # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).
-  # Fora do horário (#2503) lê o horário de atendimento da caixa (partida_fora_do_horario_spec).
+  # Fora do horário (#2503) lê o horário de atendimento da caixa (partida_fora_do_horario_spec). Dividir os clientes
+  # (#2502) passa a conversa pelo rodízio da caixa (passo_de_rodizio_spec).
   it 'monta só as que o motor de hoje faz sem erro' do
-    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER FORA_DO_HORARIO])
+    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER FORA_DO_HORARIO DIVIDIR_LEADS])
   end
 
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do
@@ -43,8 +44,11 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
     expect(textos.flat_map { |partes| Autonomia::Automacao::Texto.caminhos(partes) }).to eq([])
   end
 
-  it 'a receita que manda mensagem pede automacao_mensagens' do
-    expect(receitas.map { |item| item['requer'] }).to all(eq(['automacao_mensagens']))
+  it 'a receita que manda mensagem pede automacao_mensagens; a que só divide as conversas, nada' do
+    requer = receitas.to_h { |item| [item['chave'], item['requer']] }
+
+    expect(requer.except('DIVIDIR_LEADS').values).to all(eq(['automacao_mensagens']))
+    expect(requer['DIVIDIR_LEADS']).to eq([])
   end
 
   it 'tem título, texto e nome em pt_BR e en', :aggregate_failures do

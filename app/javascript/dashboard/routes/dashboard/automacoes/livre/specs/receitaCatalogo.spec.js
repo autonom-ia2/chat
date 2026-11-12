@@ -405,6 +405,26 @@ describe('catálogo do editor livre', () => {
     });
   });
 
+  // #2502: nasce entre todos da caixa; a frase diz se é a caixa ou o time.
+  it('monta o "atribuir em rodízio" sem time e diz entre quem', () => {
+    const catalogo = {
+      ...CATALOGO,
+      passos: [
+        ...CATALOGO.passos,
+        { tipo: 'rodizio', grupo: 'EQUIPE', frase: 'RODIZIO', campos: [] },
+      ],
+    };
+    const passo = novoPasso({ tipo: 'rodizio' }, 'p12', t);
+
+    expect(passo).toEqual({ id: 'p12', tipo: 'rodizio' });
+    expect(fraseDoPasso(passo, catalogo, t)).toBe(
+      'AUTOMACAO_LIVRE.FRASES.RODIZIO_CAIXA'
+    );
+    expect(fraseDoPasso({ ...passo, time_id: 4 }, catalogo, t)).toBe(
+      'AUTOMACAO_LIVRE.FRASES.RODIZIO_TIME'
+    );
+  });
+
   it('mostra status pela opção, não pelo valor gravado', () => {
     const condicao = {
       campo: { $valor: 'conversa.status' },

@@ -63,6 +63,14 @@
       "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta).",
       "MODELO_PROPAGANDA_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo de propaganda {modelo}, que custa mais na Meta.",
       "IA_ASSUMIR": "Passaria para {agente}",
+      "RODIZIO_CAIXA": "Passaria para a próxima pessoa online da caixa, em rodízio.",
+      "RODIZIO_TIME": "Passaria para a próxima pessoa online do time {time}, em rodízio.",
+      "NAO_RODARIA": {
+        "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
+        "CONVERSA_JA_ATRIBUIDA": "Não passaria: a conversa já tem responsável.",
+        "ROBO_ATENDE": "Não passaria: um robô ou uma agente de IA está com a conversa.",
+        "NINGUEM_NO_RODIZIO": "Não passaria: ninguém da caixa (ou do time) entra no rodízio."
+      },
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Não passaria: a agente escolhida não existe mais.",
         "FASE2_DESLIGADA": "Não passaria: as agentes de IA não recebem conversas nesta conta.",

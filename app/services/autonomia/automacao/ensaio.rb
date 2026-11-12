@@ -115,7 +115,8 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
-  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
+  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir,
+               'rodizio' => :rodizio }.freeze
 
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
   # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
@@ -135,6 +136,9 @@ class Autonomia::Automacao::Ensaio
 
   # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
   def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
+
+  # #2502: entre quem seria o rodízio, ou por que pularia; nunca gira a fila da caixa.
+  def rodizio(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeRodizio.ensaiar(passo, @conversa))
 
   def em_frente(passo, valores)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
@@ -164,21 +168,8 @@ class Autonomia::Automacao::Ensaio
     no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome'), propaganda: propaganda, reserva: reserva }.compact)
   end
 
-  # O "avisar", e o "resumir" que sai por ele, pela mesma conta do motor, que só lê (#2523, #2552): [por que ninguém
-  # seria avisado, por que iria para quem atende a caixa]. Os outros passos não avisam ninguém.
-  def previsto_do_aviso(passo)
-    para = para_do_aviso(passo)
-    return [] if para.nil?
-
-    ::Autonomia::Automacao::PassoDeAviso.new(execucao: nil, passo: { 'id' => passo['id'], 'para' => para }, alvo: @conversa).previsto
-  end
-
-  # Como o motor monta o aviso do resumir (PassoDeResumir#passo_do_aviso).
-  def para_do_aviso(passo)
-    return passo['para'].to_h if passo['tipo'] == 'avisar'
-
-    passo.dig('destino', 'avisar').to_h if passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash)
-  end
+  # O "avisar", e o "resumir" que sai por ele (#2523, #2552): [por que ninguém seria avisado, por que iria para a caixa].
+  def previsto_do_aviso(passo) = ::Autonomia::Automacao::PassoDeAviso.ensaiar(passo, @conversa)
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
   # contato dela (as mesmas perguntas do passo). Não abre conversa nem manda.

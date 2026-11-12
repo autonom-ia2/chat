@@ -63,6 +63,14 @@
       "MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, the template {modelo} is sent (charged by Meta).",
       "MODELO_PROPAGANDA_FORA_DA_JANELA": "If the 24-hour window is closed, the marketing template {modelo} is sent, which costs more on Meta.",
       "IA_ASSUMIR": "Would hand over to {agente}",
+      "RODIZIO_CAIXA": "Would go to the next person online in the inbox, in rotation.",
+      "RODIZIO_TIME": "Would go to the next person online in team {time}, in rotation.",
+      "NAO_RODARIA": {
+        "CONVERSA_RESOLVIDA": "Wouldn't hand over: the conversation is resolved.",
+        "CONVERSA_JA_ATRIBUIDA": "Wouldn't hand over: the conversation already has an assignee.",
+        "ROBO_ATENDE": "Wouldn't hand over: a bot or an AI agent has the conversation.",
+        "NINGUEM_NO_RODIZIO": "Wouldn't hand over: nobody in the inbox (or the team) is in the rotation."
+      },
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Would not hand over: the chosen agent no longer exists.",
         "FASE2_DESLIGADA": "Would not hand over: AI agents do not receive conversations in this account.",

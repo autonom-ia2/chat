@@ -226,6 +226,35 @@ describe('linhasDoEnsaio', () => {
     });
   });
 
+  // #2502: o rodízio diz entre quem seria; se não passaria, o porquê.
+  it.each([
+    [{}, { destaque: 'AUTOMACAO_LIVRE.ENSAIO.RODIZIO_CAIXA' }],
+    [
+      { time: 'Vendas' },
+      { destaque: 'AUTOMACAO_LIVRE.ENSAIO.RODIZIO_TIME(Vendas)' },
+    ],
+  ])('o rodízio com %o diz entre quem passaria', (dados, esperado) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'r1', tipo: 'rodizio', faria: 'rodizio', dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject(esperado);
+  });
+
+  it('o rodízio que não passaria diz o porquê', () => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'r1', tipo: 'rodizio', faria: 'conversa_ja_atribuida' }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.NAO_RODARIA.CONVERSA_JA_ATRIBUIDA'
+    );
+  });
+
   // #2523: o aviso só para o responsável, na conversa sem responsável.
   it('o aviso sem responsável diz que ninguém seria avisado', () => {
     const [linha] = linhasDoEnsaio(

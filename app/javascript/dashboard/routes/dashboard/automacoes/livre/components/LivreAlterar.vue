@@ -193,6 +193,11 @@ const opcoesDoContatoCriado = computed(() => [
     .filter(item => item.criado === 'Contact')
     .map(item => ({ value: item.caminho, label: item.rotulo })),
 ]);
+// #2502 — o time do rodízio: "todos da caixa" (sem time) ou um time da conta.
+const opcoesDoTime = computed(() => [
+  { value: null, label: t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TODOS_DA_CAIXA') },
+  ...(props.opcoes.time || []),
+]);
 const mudarNativo = (nome, novo) => {
   if (novo === null) {
     const { [nome]: _tirado, ...resto } = rascunho.value;
@@ -651,6 +656,21 @@ defineExpose({ abrir, fechar });
           <p class="mb-0 text-sm text-n-slate-11" data-lista-de-email-dica>
             {{ $t('AUTOMACAO_LIVRE.LISTA_DE_EMAIL.DICA') }}
           </p>
+        </div>
+        <div
+          v-else-if="campo.peca === 'time'"
+          class="flex flex-col gap-1.5"
+          data-peca="time"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            :model-value="rascunho[campo.nome] ?? null"
+            :aria-label="$t(campo.rotulo)"
+            :options="opcoesDoTime"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
         </div>
         <LivreRetornoPara
           v-else-if="campo.peca === 'quem_recebe_retorno'"

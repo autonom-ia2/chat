@@ -631,6 +631,10 @@ en:
         sem_vinculo_na_caixa: 'The AI agent does not work in this conversation''s inbox. The conversation stayed as it was.'
         nao_atende_cliente: 'The AI agent is not answering customers right now. The conversation stayed as it was.'
         conversa_resolvida: 'The conversation is resolved. No one took it over.'
+        conversa_ja_atribuida: 'The conversation already has an assignee. The rotation left it alone.'
+        robo_atende: 'A bot or an AI agent has the conversation. The rotation left it alone.'
+        ninguem_no_rodizio: 'Nobody in the inbox (or the chosen team) is in the rotation. The conversation stayed unassigned.'
+        ninguem_online: 'Nobody in the rotation was online. The conversation stayed unassigned.'
         outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
         campo_proibido: 'The action sends a field the automation does not change.'
       alvo:
@@ -700,6 +704,7 @@ en:
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         responsavel_so_com_card: "Step %{passo}: handing the conversation to the card owner only works with a card trigger."
+        rodizio_sem_conversa: "Step %{passo}: the rotation hands over a conversation, and this trigger has none. Use a conversation or card trigger."
         sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility or marketing, and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
@@ -761,6 +766,7 @@ en:
         gravar: 'Save what the AI found in the conversation'
       descricoes:
         conversa_ao_responsavel: 'Hand the conversation to the card owner'
+        rodizio: 'Hand the conversation to someone online, in rotation'
       webhook:
         gravar: 'Save what the other system answered'
     automacoes:

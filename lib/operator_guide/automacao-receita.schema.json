@@ -723,6 +723,16 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "rodizio", "description": "Atribuir em rodízio (#2502): a conversa sem responsável vai para a próxima pessoa online da caixa dela, pelo rodízio da caixa (o mesmo da atribuição automática da plataforma), pelo mesmo pedido do Atribuir da conversa, como quem ligou. Com time_id, só quem é do time e está na caixa. Pula com a conversa resolvida, que já tem responsável ou está com robô ou agente de IA, sem ninguém para o rodízio ou sem ninguém online. Só em gatilho com conversa (de conversa ou de card)." },
+            "time_id": { "type": "integer", "minimum": 1, "description": "O time da conta: o rodízio fica só entre quem é do time e atende a caixa da conversa. Sem ele, entre todos que atendem a caixa." }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["id", "tipo", "pergunta", "caminhos"],
           "properties": {
             "id": { "$ref": "#/definitions/id" },

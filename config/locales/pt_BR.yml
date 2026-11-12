@@ -1124,6 +1124,10 @@ pt_BR:
         sem_vinculo_na_caixa: 'A agente de IA não trabalha na caixa desta conversa. A conversa ficou como estava.'
         nao_atende_cliente: 'A agente de IA não está atendendo clientes agora. A conversa ficou como estava.'
         conversa_resolvida: 'A conversa está resolvida. Ninguém assumiu a conversa.'
+        conversa_ja_atribuida: 'A conversa já tem responsável. O rodízio não mexeu nela.'
+        robo_atende: 'Um robô ou uma agente de IA está com a conversa. O rodízio não mexeu nela.'
+        ninguem_no_rodizio: 'Ninguém da caixa (ou do time escolhido) entra no rodízio. A conversa ficou sem responsável.'
+        ninguem_online: 'Ninguém do rodízio estava online. A conversa ficou sem responsável.'
         outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'
         campo_proibido: 'A ação manda um campo que a automação não muda.'
       alvo:
@@ -1193,6 +1197,7 @@ pt_BR:
         agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         retorno_mensagem_sem_card: "Passo %{passo}: a mensagem do retorno só sai com gatilho de card. Use um gatilho de card ou desligue a mensagem."
         responsavel_so_com_card: "Passo %{passo}: passar a conversa para o responsável do card só vale com gatilho de card."
+        rodizio_sem_conversa: "Passo %{passo}: o rodízio passa uma conversa, e este gatilho não tem conversa. Use um gatilho de conversa ou de card."
         sem_criar_retorno: 'Passo %{passo}: você não pode criar retorno no CRM, e o passo "Criar retorno" pede isso.'
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade ou de propaganda, e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
@@ -1254,6 +1259,7 @@ pt_BR:
         gravar: 'Gravar o que a IA achou na conversa'
       descricoes:
         conversa_ao_responsavel: 'Passar a conversa para o responsável do card'
+        rodizio: 'Passar a conversa para alguém online, em rodízio'
       webhook:
         gravar: 'Gravar o que o outro sistema respondeu'
     automacoes:

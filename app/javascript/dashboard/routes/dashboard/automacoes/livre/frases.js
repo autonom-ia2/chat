@@ -537,6 +537,9 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     );
   }
   if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
+  // #2502: entre quem atende a caixa, ou só entre quem é do time escolhido.
+  if (passo.tipo === 'rodizio')
+    return t(`${P}.${passo.time_id ? 'RODIZIO_TIME' : 'RODIZIO_CAIXA'}`);
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome])
     return fraseDasEtiquetas(passo, entrada, catalogo, t);
