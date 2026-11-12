@@ -1895,6 +1895,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
     t.datetime "created_at", null: false
     t.index ["apolice_id", "quando"], name: "index_carteira_apolice_eventos_on_apolice_id_and_quando", order: { quando: :desc }
     t.index ["campaign_import_id"], name: "index_carteira_apolice_eventos_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_carteira_apolice_eventos_on_user_id", where: "(user_id IS NOT NULL)"
   end
 
   create_table "carteira_apolices", force: :cascade do |t|
@@ -1922,7 +1923,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_040000) do
     t.index ["campaign_import_id"], name: "index_carteira_apolices_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
     t.index ["company_id"], name: "index_carteira_apolices_on_company_id", where: "(company_id IS NOT NULL)"
     t.index ["contact_id"], name: "index_carteira_apolices_on_contact_id"
+    t.check_constraint "(numero IS NULL) = (numero_chave IS NULL)", name: "carteira_apolices_numero"
     t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
+    t.check_constraint "numero_chave::text <> ''::text AND seguradora_chave::text <> ''::text", name: "carteira_apolices_chaves"
     t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
     t.check_constraint "tipo::text = ANY ('{auto,residencial,vida,empresarial,outro}'::text[])", name: "carteira_apolices_tipo"
     t.check_constraint "valor_centavos IS NULL OR valor_centavos >= 0", name: "carteira_apolices_valor"

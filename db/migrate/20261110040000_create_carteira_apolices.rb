@@ -1,7 +1,9 @@
 # E4 (#2897), fatia 1: a carteira de seguros da corretora. Duas tabelas novas; nada lê nem grava nelas ainda (a API e a
 # flag `carteira_seguros` vêm nas fatias seguintes).
 # - `carteira_apolices`: um seguro de uma pessoa da ficha. `seguradora_chave` e `numero_chave` são a forma de comparação
-#   de `seguradora` e `numero`, calculada por quem grava. `numero` aceita nulo para o seguro que chega sem número.
+#   de `seguradora` e `numero`, calculada por quem grava. `numero` aceita nulo para o seguro que chega sem número; o
+#   número e a chave dele andam juntos (os dois nulos ou os dois preenchidos) e nenhuma chave é texto vazio: sem isso, um
+#   número sem chave furaria o índice único em silêncio e dois seguros "sem número" colidiriam na chave vazia.
 # - `carteira_apolice_eventos`: a história de cada apólice (chegou pela planilha, foi corrigida, cancelada). Sem
 #   account_id: o evento é da apólice e sai com ela.
 #
@@ -16,8 +18,9 @@
 # Índices: `contact_id` inteiro (não parcial) serve à ficha e ao gatilho da chave quando o contato é apagado. O único
 # [account_id, seguradora_chave, numero_chave, fim_vigencia] é "a mesma apólice": por conta, e com o fim da vigência
 # para a renovação que mantém o número caber ao lado da anterior. Só vale com número. [account_id, fim_vigencia] também
-# atende a chave da conta (começa por ela), então account_id não ganha índice próprio. eventos.user_id fica sem índice:
-# nenhuma tela procura por ele; apagar um usuário (raro) varre a história uma vez para anular a coluna.
+# atende a chave da conta (começa por ela), então account_id não ganha índice próprio. eventos.user_id tem índice parcial:
+# nenhuma tela procura por ele, mas cada DELETE em users (a exclusão da conta apaga o usuário técnico do MCP) anula a
+# coluna, e sem índice varreria a história de todas as contas dentro do statement_timeout.
 #
 # Tipo e origem são texto com CHECK, o padrão do fork (não enum do Rails nem do Postgres). O tipo do evento não tem
 # CHECK: cresce a cada etapa e é validado no model.
@@ -36,6 +39,8 @@ class CreateCarteiraApolices < ActiveRecord::Migration[7.2]
   ORIGENS = "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])".freeze
   VIGENCIA = 'inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia'.freeze
   VALOR = 'valor_centavos IS NULL OR valor_centavos >= 0'.freeze
+  NUMERO = '(numero IS NULL) = (numero_chave IS NULL)'.freeze
+  CHAVES = "numero_chave::text <> ''::text AND seguradora_chave::text <> ''::text".freeze
 
   def up
     criar_apolices
@@ -85,6 +90,8 @@ class CreateCarteiraApolices < ActiveRecord::Migration[7.2]
     tabela.check_constraint ORIGENS, name: 'carteira_apolices_origem'
     tabela.check_constraint VIGENCIA, name: 'carteira_apolices_vigencia'
     tabela.check_constraint VALOR, name: 'carteira_apolices_valor'
+    tabela.check_constraint NUMERO, name: 'carteira_apolices_numero'
+    tabela.check_constraint CHAVES, name: 'carteira_apolices_chaves'
   end
 
   def criar_eventos
@@ -92,7 +99,7 @@ class CreateCarteiraApolices < ActiveRecord::Migration[7.2]
       t.references :apolice, null: false, foreign_key: { to_table: :carteira_apolices, on_delete: :cascade }, index: false
       t.string :tipo, null: false
       t.datetime :quando, null: false
-      t.references :user, foreign_key: { on_delete: :nullify }, index: false
+      t.references :user, foreign_key: { on_delete: :nullify }, index: { where: 'user_id IS NOT NULL' }
       t.jsonb :valores, null: false, default: {}
       t.jsonb :mudancas
       t.references :campaign_import, foreign_key: { on_delete: :nullify }, index: { where: 'campaign_import_id IS NOT NULL' }

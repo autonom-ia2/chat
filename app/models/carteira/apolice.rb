@@ -27,4 +27,12 @@ class Carteira::Apolice < ApplicationRecord
   validates :seguradora, :seguradora_chave, :fim_vigencia, presence: true
   validates :fim_vigencia, comparison: { greater_than_or_equal_to: :inicio_vigencia }, if: -> { inicio_vigencia && fim_vigencia }
   validates :valor_centavos, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
+  validate :numero_e_chave_juntos
+
+  private
+
+  # O número e a chave dele andam juntos, e a chave nunca é texto vazio (CHECKs `_numero` e `_chaves`).
+  def numero_e_chave_juntos
+    errors.add(:numero_chave, :invalid) if numero.nil? != numero_chave.nil? || numero_chave == ''
+  end
 end

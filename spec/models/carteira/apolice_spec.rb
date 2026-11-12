@@ -48,7 +48,9 @@ RSpec.describe Carteira::Apolice do
       'carteira_apolices_tipo' => { tipo: 'moto' },
       'carteira_apolices_origem' => { origem: 'email' },
       'carteira_apolices_vigencia' => { inicio_vigencia: fim + 1.day },
-      'carteira_apolices_valor' => { valor_centavos: -1 }
+      'carteira_apolices_valor' => { valor_centavos: -1 },
+      'carteira_apolices_numero' => { numero_chave: nil },
+      'carteira_apolices_chaves' => { numero_chave: '' }
     }
 
     fora.each do |check, campos|
@@ -61,7 +63,7 @@ RSpec.describe Carteira::Apolice do
 
   it 'o model recusa antes do banco o que os checks recusam, e o banco aceita cada tipo e origem que o model lista' do
     invalidas = [{ tipo: 'moto' }, { origem: 'email' }, { inicio_vigencia: fim + 1.day, fim_vigencia: fim }, { valor_centavos: -1 },
-                 { seguradora_chave: nil }, { fim_vigencia: nil }]
+                 { seguradora_chave: nil }, { fim_vigencia: nil }, { numero_chave: nil }, { numero: nil }, { numero_chave: '' }]
 
     expect(invalidas.map { |campos| build(:carteira_apolice, account: account, contact: contact, **campos).valid? }).to all(be(false))
     described_class::TIPOS.each { |tipo| expect(apolice(tipo: tipo)).to be_persisted }
