@@ -43,6 +43,9 @@ class CreateFerramentasPremium < ActiveRecord::Migration[7.2]
     add_index :autonomia_ferramentas_premium_consultas, %i[account_id fonte dia], name: 'idx_premium_consultas_conta_fonte_dia'
     add_index :autonomia_ferramentas_premium_consultas, :dia, name: 'idx_premium_consultas_dia'
     add_index :autonomia_ferramentas_premium_consultas, :tool_run_id, unique: true, name: 'idx_premium_consultas_tool_run'
+    # A linha "em andamento" que o varredor fecha (`Premium::FecharEmAndamentoJob`): por conta e pela idade.
+    add_index :autonomia_ferramentas_premium_consultas, %i[account_id created_at],
+              where: "resultado = 'em_andamento'", name: 'idx_premium_consultas_em_andamento'
   end
 
   def criar_saldos

@@ -881,6 +881,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_010000) do
     t.bigint "tool_run_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_premium_consultas_em_andamento", where: "((resultado)::text = 'em_andamento'::text)"
     t.index ["account_id", "fonte", "dia"], name: "idx_premium_consultas_conta_fonte_dia"
     t.index ["dia"], name: "idx_premium_consultas_dia"
     t.index ["tool_run_id"], name: "idx_premium_consultas_tool_run", unique: true
