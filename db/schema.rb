@@ -656,6 +656,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_10_080000) do
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas_unica", unique: true, where: "((finalizada_em IS NULL) AND (paralela = false))"
+    t.index ["automacao_id", "created_at"], name: "idx_autonomia_automacao_execucoes_historico"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
     t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_vez", opclass: { evento: :text_pattern_ops }, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
