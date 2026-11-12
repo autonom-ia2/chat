@@ -19,6 +19,8 @@ import { useFase2 } from './useFase2';
 //   resposta e dá o agentId).
 // - Tema 14 (#1434): `papel` (função, lida ao abrir) devolve 'ajudante' para "Ajuda outros agentes": a
 //   abertura vai com `papel: 'ajudante'` e atuação interna (o agente nasce interno e com a marca de origem).
+// - #2881: `ramo` (a chave de um agente pronto por ramo de seguro) vai na abertura como `modelo`. Nesse caso quem
+//   fala primeiro é a tela (`comecarComFala`, o texto é fixo) e a conversa só abre no servidor com a primeira resposta.
 // - Continuar um rascunho: com instrução, já está pronto para testar (sem abrir conversa até a
 //   pessoa escrever); sem instrução, abre a conversa ligada ao agente (o backend retoma a pergunta).
 // - A conversa fecha quando o Construtor gera o agente (fase `reviewing` com `agent_id` na thread;
@@ -95,6 +97,7 @@ export function useConversaDeCriacao({
   modelo,
   atuacao = ATUACAO.EXTERNA,
   papel = () => null,
+  ramo = null,
 }) {
   const store = useStore();
   const { t } = useI18n();
@@ -218,6 +221,7 @@ export function useConversaDeCriacao({
       type: modelo,
       actuation: ajudante ? ATUACAO.INTERNA : atuacao,
       with_knowledge: true,
+      ...(ramo ? { modelo: ramo } : {}),
       ...(ajudante ? { papel: PAPEL_AJUDANTE_NA_QUERY } : {}),
     };
   };
@@ -231,6 +235,11 @@ export function useConversaDeCriacao({
       .catch(() => null); // a falha fica no erro da store e vira o cartão "Tentar de novo"
 
   const comecar = () => abrir();
+
+  // #2881 — a primeira pergunta é da tela: nada vai ao servidor até a pessoa responder (mandarTurno abre a conversa).
+  const comecarComFala = texto => {
+    abertura.value = [texto];
+  };
 
   const novoMaterial = (dados, extra) => {
     proximoMaterial += 1;
@@ -756,6 +765,7 @@ export function useConversaDeCriacao({
     encerrando,
     limpar,
     comecar,
+    comecarComFala,
     continuar,
     enviar,
     tentarDeNovo,
