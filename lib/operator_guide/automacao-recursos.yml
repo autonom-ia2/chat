@@ -16,6 +16,8 @@
 # `proibe`: campo que a receita não pode mandar; o ponto entra no campo de dentro (`objeto.campo`).
 # `um_de`: campo que a receita tem de mandar, com um destes valores, mesmo quando a plataforma aceita mais (fechar o
 # card: só ganho ou perdido; reabrir desfaz um desfecho sem ninguém olhando).
+# `funil: true`: a ação de fora de crm/ que escreve no funil pede também a chave de funis, como as de crm/
+# (AcoesPermitidas.de_funil?).
 #
 # Liberar uma ação vale pelo que ela faz quando uma pessoa clica: resolver a conversa dispara a pesquisa de satisfação
 # da caixa e as regras da conta; mover o card dispara as automações da etapa. É a cascata da D6, contada na cadeia
@@ -155,13 +157,16 @@ passo:
       Alterar, concluir, cancelar, remarcar e dispensar o lembrete de um retorno que já existe (#2660 lote A). Criar é o
       passo nativo `retorno` (G3, D2), que confere o envio automático; a rota crua fica fora. Pelo mesmo motivo, o
       modo (`automation_mode`) e o `metadata`, onde mora o texto e o modelo do envio automático, ficam fora: pela rota
-      crua, trocariam a mensagem ao cliente por fora da regra do passo (só modelo UTILITY).
+      crua, trocariam a mensagem ao cliente por fora da regra do passo (só modelo UTILITY). Remarcar vai sempre com
+      `reminders_only`: sem ele, o Rescheduler devolve o envio automático do retorno que caiu para a equipe e põe de
+      volta em espera o atrasado, e a automação voltaria a mandar ao cliente; com ele, a rota recusa o retorno com envio
+      ao cliente e só move lembrete.
     acoes:
       PATCH crm/follow_ups/:id: { proibe: [automation_mode, metadata] }
       PUT crm/follow_ups/:id: { proibe: [automation_mode, metadata] }
       POST crm/follow_ups/:id/complete: {}
       POST crm/follow_ups/:id/cancel: {}
-      POST crm/follow_ups/:id/reschedule: {}
+      POST crm/follow_ups/:id/reschedule: { fixos: { reminders_only: true } }
       POST crm/follow_ups/:id/dismiss_reminder: {}
       # D1: o DELETE do retorno só cancela (FollowUpsController#destroy chama o cancel); nada é apagado.
       DELETE crm/follow_ups/:id: {}
@@ -190,13 +195,22 @@ passo:
       véspera e uma hora antes) ficam fora, como o layout de e-mail (D5): mudam o que todo cliente recebe. A caixa da
       agenda e a dos avisos o formato recusa (o pedido não as declara). Passar reuniões fica fora: troca a pessoa do
       lembrete com update_columns, que o desfazer não alcança. Apagar é estrutura (D1); logo, foto, identidade e
-      convite de teste são arquivo, credencial ou mensagem.
+      convite de teste são arquivo, credencial ou mensagem. Pelo mesmo motivo, quantos avisos cada cliente recebe
+      (`notice_preset`: só o de marcada, ou também véspera e uma hora antes) fica fora. O que a página pública mostra na
+      hora para o cliente (local e link da reunião, telefone, descrição e chamada) também fica fora, como o artigo, que
+      a automação só grava em rascunho: trocaria o link e o telefone que o cliente vê sem ninguém olhando.
     acoes:
       POST crm/booking_pages: {}
       PATCH crm/booking_pages/:id:
-        proibe: [invite_text, notice_templates, notice_texts, booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts]
+        proibe:
+          [invite_text, notice_templates, notice_texts, notice_preset, locations, contact_phone, description, brand.headline,
+           booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts, booking_page.notice_preset,
+           booking_page.locations, booking_page.contact_phone, booking_page.description, booking_page.brand.headline]
       PUT crm/booking_pages/:id:
-        proibe: [invite_text, notice_templates, notice_texts, booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts]
+        proibe:
+          [invite_text, notice_templates, notice_texts, notice_preset, locations, contact_phone, description, brand.headline,
+           booking_page.invite_text, booking_page.notice_templates, booking_page.notice_texts, booking_page.notice_preset,
+           booking_page.locations, booking_page.contact_phone, booking_page.description, booking_page.brand.headline]
       POST crm/booking_pages/:id/publish: {}
       POST crm/booking_pages/:id/pause: {}
   crm/my_booking_hours:
@@ -222,10 +236,11 @@ passo:
       PUT teams/:id: {}
   team_members:
     motivo: >-
-      Pôr e tirar pessoas do time, só as enviadas (#2660 lote D, D1). O PATCH troca a lista inteira e tiraria quem outra
-      pessoa pôs no meio-tempo: fica fora.
+      Tirar pessoas do time, só as enviadas (#2660 lote D, D1). Pôr no time fica fora: dá acesso a toda conversa do time,
+      inclusive de caixa de que a pessoa não é membro (ConversationPolicy#team_access?), e conceder acesso sem ninguém
+      olhando pede decisão do Rodrigo. O PATCH troca a lista inteira e tiraria quem outra pessoa pôs no meio-tempo:
+      fica fora.
     acoes:
-      POST teams/:team_id/team_members: {}
       DELETE teams/:team_id/team_members: {}
   canned_responses:
     motivo: Criar, alterar e apagar resposta pronta (#2660 lote D; apagar pela D1).
@@ -306,10 +321,12 @@ passo:
       POST crm/pipelines/:pipeline_id/inboxes: {}
   crm/inbox_settings:
     motivo: >-
-      Ajustar o CRM da caixa: criar card sozinho, funil e etapa padrão, quem vê (#2660 lote D). Ligar e desligar o CRM
-      expira as sugestões de assunto com update_all, e o modo da IA de assunto liga IA paga: os dois ficam fora.
+      Ajustar o CRM da caixa: criar card sozinho, funil e etapa padrão (#2660 lote D). Ligar e desligar o CRM expira as
+      sugestões de assunto com update_all, e o modo da IA de assunto liga IA paga: os dois ficam fora. Quem vê os cards
+      (`visibility_mode`) também: trocar "só os atribuídos" por "todos da caixa" abre os cards a toda a equipe, e
+      conceder acesso sem ninguém olhando pede decisão do Rodrigo.
     acoes:
-      PATCH crm/inbox_settings/:inbox_id: { proibe: [crm_enabled, subject_ai_mode] }
+      PATCH crm/inbox_settings/:inbox_id: { proibe: [crm_enabled, subject_ai_mode, visibility_mode] }
   crm/service_schedules:
     motivo: Criar, alterar e apagar horário de atendimento da caixa ou da pessoa (#2660 lote D; apagar pela D1).
     acoes:
@@ -338,7 +355,9 @@ passo:
       Ligar e desligar o agente de IA (D3, #2660 lote E): só `enabled` e `status`, e o status só ativo ou pausado (o
       rascunho fica fora pelo `um_de`). Todo o resto do agente é configurar quem fala com o cliente e fica proibido:
       nome, tipo, modo, tom, saudação, mensagem de falha, regra e cartão de passagem, atuação, instrução, perguntas
-      iniciais e config. Criar, apagar e a foto ficam fora. A chave de agentes de quem ligou vale pelo endpoint.
+      iniciais e config. Criar, apagar e a foto ficam fora. A chave de agentes de quem ligou vale pelo endpoint. Agente
+      em rascunho a automação não mexe (AcoesDoMotor::SO_AGENTE_PUBLICADO): ninguém o terminou nem revisou, e ligar
+      seria publicar.
     acoes:
       PATCH autonomia/agents/:id:
         um_de: { status: [active, paused] }
@@ -370,13 +389,13 @@ passo:
       POST autonomia/decisores/:id/exemplos: {}
   crm/conversation_cards:
     motivo: >-
-      Trocar o assunto atual da conversa e manter o assunto com quem já atende (#2660 lote E). Passar para a equipe do
-      assunto novo solta o atendente e pode passar à IA: atribuir e `ia_assumir` já fazem isso. Aceitar e dispensar a
-      sugestão de assunto da IA ficam fora, como a sugestão de etapa (crm/ai_suggestions): a medição conta a resposta
-      como da equipe, o "dispensada" cala a IA naquela conversa, e aceitar "criar" cria card fora do passo de card e
-      agenda a avaliação paga da IA.
+      Manter o assunto com quem já atende (#2660 lote E). Trocar o assunto atual fica fora: Crm::Cards::Focus agenda a
+      avaliação paga da IA (Crm::Ai::Observer), e a automação que troca o assunto a cada conversa viraria gasto de IA sem
+      orçamento. Passar para a equipe do assunto novo solta o atendente e pode passar à IA: atribuir e `ia_assumir` já
+      fazem isso. Aceitar e dispensar a sugestão de assunto da IA ficam fora, como a sugestão de etapa
+      (crm/ai_suggestions): a medição conta a resposta como da equipe, o "dispensada" cala a IA naquela conversa, e
+      aceitar "criar" cria card fora do passo de card e agenda a mesma avaliação paga.
     acoes:
-      POST crm/conversations/:conversation_id/focus: {}
       POST crm/conversations/:conversation_id/repasse/manter: {}
   crm/memoria_chaves:
     motivo: Ajustar uma chave do catálogo da memória do card, só administrador (#2660 lote E).
@@ -431,13 +450,13 @@ passo:
       POST email_campaigns/templates: {}
   whatsapp_api_message_templates:
     motivo: >-
-      Criar, alterar e arquivar o modelo local do WhatsApp API, sem a Meta (#2660 lote C; o DELETE só arquiva, pela
-      D1).
+      Criar o modelo local do WhatsApp API, sem a Meta (#2660 lote C): o modelo novo ninguém usa ainda. Alterar e
+      arquivar ficam fora. O texto do modelo é lido na hora de mandar pelo retorno automático
+      (Crm::FollowUps::MessageSender) e pelos avisos da página de agendamento (Crm::BookingV2::Notices), escolhido pelo
+      id: alterar trocaria a mensagem que vai ao cliente sem ninguém olhando, o que o lote A deixa fora; arquivar o
+      modelo em uso cala o aviso e derruba o retorno, e o desfazer não devolve a mensagem que deixou de sair.
     acoes:
       POST inboxes/:inbox_id/whatsapp_api_message_templates: {}
-      PATCH inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
-      PUT inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
-      DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id: {}
   autonomia/prospecting/lead_batches:
     motivo: >-
       Criar o contato de até 30 leads, cada um na própria transação (#2660 lote C). Descartar fica fora: tira a
@@ -447,12 +466,14 @@ passo:
   autonomia/prospecting/leads:
     motivo: >-
       O lead vira contato, vira card (um ou até 30) (#2660 lote C); escolher outro dono para o card pede a chave de
-      funis, como na tela. Mudar o status grava a recusa (sem consentimento) num job; enriquecer e pesquisar gastam IA
-      paga e leem site de fora; conferir o WhatsApp chama o WAHA. Adotar o dono espera o formato completo. Ficam fora.
+      funis, como na tela. Virar card escreve no funil e na etapa que vierem no corpo, e a rota não confere o funil:
+      essas duas pedem a chave de funis da automação (`funil`), ao salvar e a cada execução. Mudar o status grava a
+      recusa (sem consentimento) num job; enriquecer e pesquisar gastam IA paga e leem site de fora; conferir o WhatsApp
+      chama o WAHA. Adotar o dono espera o formato completo. Ficam fora.
     acoes:
       POST autonomia/prospecting/leads/:id/contact: {}
-      POST autonomia/prospecting/leads/:id/crm_card: {}
-      POST autonomia/prospecting/leads/crm_cards: {}
+      POST autonomia/prospecting/leads/:id/crm_card: { funil: true }
+      POST autonomia/prospecting/leads/crm_cards: { funil: true }
   autonomia/prospecting/lists:
     motivo: >-
       Criar lista de leads, pôr e tirar lead da lista (#2660 lote C; tirar pela D1). O `metadata` fica fora: guarda as
@@ -482,8 +503,8 @@ passo:
     acoes:
       PATCH autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
       PUT autonomia/prospecting/settings: { proibe: [cache_ttl_seconds] }
-  # #2660 lote F: conteúdo e painel (D5). Cada rota confere a chave da tela de quem ligou (central de ajuda,
-  # identidade visual, macros, anúncios, comentários); notificação, aviso e trilha são de quem ligou.
+  # #2660 lote F: conteúdo e painel (D5). Cada rota confere a chave da tela de quem ligou (central de ajuda, anúncios);
+  # notificação, aviso e trilha são de quem ligou.
   articles:
     motivo: >-
       Criar e alterar artigo da central de ajuda, sempre como rascunho (D5, #2660 lote F): o artigo publicado fica
@@ -509,42 +530,10 @@ passo:
       POST portals/:portal_id/categories: { proibe: [position, related_category_ids] }
       PATCH portals/:portal_id/categories/:id: { proibe: [position, related_category_ids] }
       PUT portals/:portal_id/categories/:id: { proibe: [position, related_category_ids] }
-  brand_kits:
-    motivo: >-
-      Criar, alterar, restaurar e tornar padrão a identidade visual, e arquivar (o DELETE só arquiva, pela D1) (#2660
-      lote F). O logo fica fora: `logo_source_url` baixa uma URL de fora, `logo` é arquivo e `remove_logo` apaga o
-      arquivo num job.
-    acoes:
-      POST brand_kits: { proibe: [logo_source_url, logo, remove_logo] }
-      PATCH brand_kits/:id: { proibe: [logo_source_url, logo, remove_logo] }
-      PUT brand_kits/:id: { proibe: [logo_source_url, logo, remove_logo] }
-      POST brand_kits/:id/restore: {}
-      POST brand_kits/:id/set_default: {}
-      DELETE brand_kits/:id: {}
-  macros:
-    motivo: >-
-      Criar e alterar macro (#2660 lote F): a macro só roda quando uma pessoa clica. Executar está em
-      Acoes::SEM_DESFAZER; apagar tira os anexos com purge_later.
-    acoes:
-      POST macros: {}
-      PATCH macros/:id: {}
-      PUT macros/:id: {}
   crm/meta_ads_site_pages:
     motivo: Criar a página de site do anúncio, um link rastreado local, sem a Meta (#2660 lote F), com `meta_ads_manage`.
     acoes:
       POST crm/meta_ads_connection/site_pages: {}
-  seus_posts_cuidado:
-    motivo: >-
-      Corrigir o que a IA leu na foto do post, o texto local que ela usa ao responder (#2660 lote F). Ligar o cuidado faz
-      a IA responder em público, mudar todos usa update_all e as prévias gastam IA paga: ficam fora.
-    acoes:
-      PUT seus_posts/posts/:post_id/cuidado/foto: {}
-  crm/meta_ads_cuidado:
-    motivo: >-
-      Corrigir o que a IA leu na foto do anúncio, o texto local que ela usa ao responder (#2660 lote F). Ligar, prévias e
-      ler os antigos ficam fora, como em seus_posts_cuidado.
-    acoes:
-      PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto: {}
   notifications:
     motivo: >-
       Marcar como lida e não lida, adiar e apagar uma notificação de quem ligou (#2660 lote F; apagar pela D1). Ler
@@ -682,6 +671,16 @@ fora:
       - email_campaigns/test_sends
       - email_campaigns/videos
       - seus_posts_comentarios
+      # #2660 lote F, revisto: a correção da foto vira o texto que a IA usa ao responder em público nos comentários do
+      # post e do anúncio (Crm::MetaAds::ComentariosIa::Foto#corrigir!). Pela automação, até com valor tirado da
+      # conversa, seria instrução escrita na fala pública da marca, por fora das regras da F4.
+      - seus_posts_cuidado
+      - crm/meta_ads_cuidado
+      # #2660 lote F, revisto: a macro aceita qualquer ação do esquema, inclusive mandar a conversa a um webhook ou por
+      # e-mail a qualquer endereço e mandar mensagem. Criada ou alterada pela automação, vira saída de dados no próximo
+      # clique da equipe (webhook de saída é F8 e pede integration_manage). Volta quando a lista tiver regra para item
+      # de lista (as ações da macro), conferida também na hora de rodar.
+      - macros
       - agentes_do_post
       - agentes_do_post_materiais
       - crm/meta_ads_facebook_comments
@@ -749,6 +748,11 @@ fora:
       - portals
       # D5: muda o HTML em volta de todo e-mail ao cliente; fica trancado.
       - branded_email_layouts
+      # #2660 lote F, revisto, pelo mesmo motivo da D5: o kit padrão alimenta os campos minha_empresa.* (nome, telefone,
+      # site do rodapé) que entram nas mensagens automáticas ao cliente (TemplateFields::AccountResolver), e o logo e a
+      # fonte são URLs de fora carregadas no e-mail. Alterar, tornar padrão, arquivar ou restaurar trocaria o que todo
+      # cliente recebe sem ninguém olhando.
+      - brand_kits
       - upload
       # #2660 lote F: criar e alterar esperam o formato completo; apagar leva os cliques em cascata e quebra o link do anúncio.
       - ctwa_tracked_links

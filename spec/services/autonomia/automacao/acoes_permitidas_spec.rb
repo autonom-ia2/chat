@@ -51,10 +51,10 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
        'DELETE agent_capacity_policies/:agent_capacity_policy_id/users/:id', 'DELETE crm/service_schedules/:id',
        'DELETE conversations/:conversation_id/participants',
        # Lote C.
-       'DELETE campaign_journey/drafts/:id', 'DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id',
+       'DELETE campaign_journey/drafts/:id',
        'DELETE autonomia/prospecting/lists/:id/leads/:lead_id', 'DELETE autonomia/prospecting/saved_presets/:id',
        # Lote F.
-       'DELETE brand_kits/:id', 'DELETE notifications/:id']
+       'DELETE notifications/:id']
     end
     let(:deletes) { permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') } }
 
@@ -112,6 +112,13 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(permitidas.de_funil?('DELETE crm/pipelines/:id')).to be(false)
   end
 
+  # #2660 lote C: o lead que vira card escreve no funil do corpo, e a rota da Prospecção não confere o funil.
+  it 'de_funil? também na ação de fora de crm/ marcada `funil`: o lead que vira card', :aggregate_failures do
+    expect(permitidas.de_funil?('POST autonomia/prospecting/leads/crm_cards')).to be(true)
+    expect(permitidas.de_funil?('POST autonomia/prospecting/leads/:id/crm_card')).to be(true)
+    expect(permitidas.de_funil?('POST autonomia/prospecting/leads/:id/contact')).to be(false)
+  end
+
   describe '#2660 lote A: retorno e agenda' do
     it 'mexe no retorno que já existe; criar continua só pelo passo nativo (D2)', :aggregate_failures do
       expect(%w[complete cancel reschedule dismiss_reminder].map { |gesto| permitidas.permitida?("POST crm/follow_ups/:id/#{gesto}") })
@@ -127,6 +134,14 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
         .to be_empty
     end
 
+    it 'remarca só lembrete: o envio automático ao cliente não volta pelo remarcar', :aggregate_failures do
+      remarcar = 'POST crm/follow_ups/:id/reschedule'
+
+      expect(permitidas.fixos(remarcar)).to eq('reminders_only' => true)
+      expect(permitidas.fora_da_lista(remarcar, { 'due_at' => '2026-12-01T10:00:00Z' }).map(&:first)).to eq([:fixo])
+      expect(permitidas.fora_da_lista(remarcar, { 'due_at' => '2026-12-01T10:00:00Z', 'reminders_only' => true })).to be_empty
+    end
+
     it 'na reunião, só registra se aconteceu', :aggregate_failures do
       expect(permitidas.permitida?('POST crm/meetings/:id/record_outcome')).to be(true)
       expect(liberadas('POST crm/meetings', 'PATCH crm/meetings/:id', 'POST crm/meetings/:id/sync')).to all(be(false))
@@ -139,6 +154,17 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
       expect(permitidas.permitida?('POST crm/booking_pages/:id/publish')).to be(true)
       expect(permitidas.permitida?('POST crm/booking_pages/reassign')).to be(false)
       expect(permitidas.permitida?('DELETE crm/booking_pages/:id')).to be(false)
+    end
+
+    it 'na página de agendamento, não muda quantos avisos o cliente recebe nem o que a página pública mostra', :aggregate_failures do
+      publico = { 'notice_preset' => 'standard', 'locations' => {}, 'contact_phone' => '+5511', 'description' => 'x',
+                  'brand' => { 'headline' => 'x' } }
+
+      expect(permitidas.proibidos('PATCH crm/booking_pages/:id', publico))
+        .to eq(%w[notice_preset locations contact_phone description brand.headline])
+      expect(permitidas.proibidos('PUT crm/booking_pages/:id', { 'booking_page' => { 'notice_preset' => 'standard' } }))
+        .to eq(['booking_page.notice_preset'])
+      expect(permitidas.proibidos('PATCH crm/booking_pages/:id', { 'brand' => { 'color' => '#000' }, 'duration_minutes' => 30 })).to be_empty
     end
 
     it 'gera o link de agendamento sem mandar' do
@@ -156,6 +182,11 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'põe e tira gente um a um; trocar a lista inteira fica fora' do
       expect(liberadas('PATCH teams/:team_id/team_members', 'PATCH conversations/:conversation_id/participants',
                        'PUT conversations/:conversation_id/participants')).to all(be(false))
+    end
+
+    it 'não concede acesso: pôr no time e abrir os cards da caixa a todos ficam fora', :aggregate_failures do
+      expect(liberadas('POST teams/:team_id/team_members', 'DELETE teams/:team_id/team_members')).to eq([false, true])
+      expect(permitidas.proibidos('PATCH crm/inbox_settings/:inbox_id', { 'visibility_mode' => 'all_inbox_cards' })).to eq(['visibility_mode'])
     end
 
     it 'no funil, só restaura e liga caixa: criar e alterar esperam o formato completo', :aggregate_failures do
@@ -197,10 +228,10 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
       expect(liberadas('PATCH crm/pipelines/:pipeline_id/ai_settings', 'PUT crm/pipelines/:pipeline_id/ai_settings')).to all(be(false))
     end
 
-    it 'no assunto da conversa, troca e mantém; a sugestão da IA e o repasse ficam fora', :aggregate_failures do
-      expect(liberadas('POST crm/conversations/:conversation_id/focus', 'POST crm/conversations/:conversation_id/repasse/manter'))
-        .to all(be(true))
-      expect(liberadas('POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/accept',
+    it 'no assunto da conversa, só mantém; trocar (avaliação paga da IA), a sugestão da IA e o repasse ficam fora', :aggregate_failures do
+      expect(permitidas.permitida?('POST crm/conversations/:conversation_id/repasse/manter')).to be(true)
+      expect(liberadas('POST crm/conversations/:conversation_id/focus',
+                       'POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/accept',
                        'POST crm/conversations/:conversation_id/subject_suggestions/:suggestion_id/dismiss',
                        'POST crm/conversations/:conversation_id/repasse')).to all(be(false))
     end
@@ -229,6 +260,11 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     it 'o modelo do WhatsApp é só o local; o oficial da Meta fica fora' do
       expect(liberadas('POST inboxes/:inbox_id/whatsapp_api_message_templates', 'POST inboxes/:inbox_id/whatsapp_templates'))
         .to eq([true, false])
+    end
+
+    it 'o modelo local só é criado: alterar e arquivar mudam o texto do retorno automático e dos avisos em uso' do
+      expect(liberadas('PATCH inboxes/:inbox_id/whatsapp_api_message_templates/:id', 'PUT inboxes/:inbox_id/whatsapp_api_message_templates/:id',
+                       'DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id')).to all(be(false))
     end
 
     it 'na prospecção, o lead vira contato ou card; buscar pago, enriquecer e recusar ficam fora', :aggregate_failures do
@@ -266,15 +302,19 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
       expect(permitidas.lista['passo'].keys).not_to include('branded_email_layouts')
     end
 
-    it 'a identidade visual não baixa logo de fora; a macro é criada, não executada', :aggregate_failures do
-      expect(permitidas.proibidos('PATCH brand_kits/:id', { 'logo_source_url' => 'https://exemplo.com/logo.png' })).to eq(['logo_source_url'])
-      expect(liberadas('POST macros', 'POST macros/:id/execute', 'DELETE macros/:id')).to eq([true, false, false])
+    it 'a identidade visual fica fora com o layout de e-mail: o kit padrão entra nas mensagens ao cliente (D5)' do
+      expect(liberadas('POST brand_kits', 'PATCH brand_kits/:id', 'POST brand_kits/:id/set_default', 'DELETE brand_kits/:id'))
+        .to all(be(false))
     end
 
-    it 'no cuidado dos comentários, só corrige a foto; ligar e as prévias pagas ficam fora' do
+    it 'a macro fica fora: aceita mandar a conversa para fora no próximo clique da equipe' do
+      expect(liberadas('POST macros', 'PATCH macros/:id', 'PUT macros/:id', 'POST macros/:id/execute')).to all(be(false))
+    end
+
+    it 'o cuidado dos comentários fica fora: a correção da foto vira o texto da resposta pública da IA' do
       expect(liberadas('PUT seus_posts/posts/:post_id/cuidado/foto', 'PUT seus_posts/posts/:post_id/cuidado',
-                       'POST seus_posts/posts/:post_id/cuidado/previa', 'PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto',
-                       'PUT crm/meta_ads_connection/ads/:ad_id/cuidado')).to eq([true, false, false, true, false])
+                       'PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto', 'PUT crm/meta_ads_connection/ads/:ad_id/cuidado'))
+        .to all(be(false))
     end
 
     it 'na notificação, uma por vez; ler e apagar todas ficam fora' do

@@ -298,7 +298,6 @@ so_guia:
   POST teams: Criar time é configuração do atendimento; nenhum dos 20 exemplos usa.
   PATCH teams/:id: O time é escolhido pelo id, e alterar time é configuração; nenhum dos 20 exemplos usa.
   PUT teams/:id: Faz o mesmo que o PATCH; alterar time é configuração.
-  POST teams/:team_id/team_members: Pôr gente no time é configuração da equipe; nenhum dos 20 exemplos usa.
   DELETE teams/:team_id/team_members: Tirar do time fica no Guia e no motor; o editor não mostra DELETE.
   POST canned_responses: Resposta pronta é configuração do atendimento; nenhum dos 20 exemplos usa.
   PATCH canned_responses/:id: A resposta pronta é escolhida pelo id, que a tela não oferece.
@@ -349,7 +348,6 @@ so_guia:
   PATCH autonomia/decisores/:id: O decisor é escolhido pelo id, que a tela não oferece.
   PUT autonomia/decisores/:id: Faz o mesmo que o PATCH; o decisor é escolhido pelo id.
   POST autonomia/decisores/:id/exemplos: O decisor é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
-  POST crm/conversations/:conversation_id/focus: O card do assunto é escolhido pelo id, que a tela não oferece; nenhum dos 20 exemplos usa.
   POST crm/conversations/:conversation_id/repasse/manter: Responde a uma sugestão que aparece na tela de quem atende; nenhum dos 20 exemplos usa.
   PATCH crm/memoria/chaves/:id: A chave da memória é escolhida pelo id, e é configuração do administrador.
   POST crm/meta_ads_connection/advisor_actions/:id/open: A ação do consultor é escolhida pelo id, que a tela não oferece.
@@ -371,9 +369,6 @@ so_guia:
   POST email_campaigns/campaigns/:id/duplicate: A campanha é escolhida pelo id, que a tela não oferece.
   POST email_campaigns/templates: O modelo de e-mail é montagem da tela de campanhas; nenhum dos 20 exemplos usa.
   POST inboxes/:inbox_id/whatsapp_api_message_templates: O modelo local é montagem da tela de campanhas; nenhum dos 20 exemplos usa.
-  PATCH inboxes/:inbox_id/whatsapp_api_message_templates/:id: O modelo é escolhido pelo id, que a tela não oferece.
-  PUT inboxes/:inbox_id/whatsapp_api_message_templates/:id: Faz o mesmo que o PATCH; o modelo é escolhido pelo id.
-  DELETE inboxes/:inbox_id/whatsapp_api_message_templates/:id: Arquivar fica no Guia e no motor; o editor não mostra DELETE.
   POST autonomia/prospecting/leads/contacts: Os leads são escolhidos pelo id, que nenhum valor do alvo traz.
   POST autonomia/prospecting/leads/:id/contact: O lead é escolhido pelo id, que nenhum valor do alvo traz.
   POST autonomia/prospecting/leads/:id/crm_card: O lead é escolhido pelo id; o passo "prospeccao" já põe os leads no funil.
@@ -399,18 +394,7 @@ so_guia:
   POST portals/:portal_id/categories: Categoria da central de ajuda é conteúdo; nenhum dos 20 exemplos usa.
   PATCH portals/:portal_id/categories/:id: A categoria é escolhida pelo id, que a tela não oferece.
   PUT portals/:portal_id/categories/:id: Faz o mesmo que o PATCH; a categoria é escolhida pelo id.
-  POST brand_kits: Identidade visual é configuração da marca; nenhum dos 20 exemplos usa.
-  PATCH brand_kits/:id: A identidade é escolhida pelo id, que a tela não oferece.
-  PUT brand_kits/:id: Faz o mesmo que o PATCH; a identidade é escolhida pelo id.
-  POST brand_kits/:id/restore: A identidade é escolhida pelo id, que a tela não oferece.
-  POST brand_kits/:id/set_default: A identidade é escolhida pelo id, que a tela não oferece.
-  DELETE brand_kits/:id: Arquivar fica no Guia e no motor; o editor não mostra DELETE.
-  POST macros: A macro é montada com as ações dela, que o editor não tem como peça; nenhum dos 20 exemplos usa.
-  PATCH macros/:id: A macro é escolhida pelo id, que a tela não oferece.
-  PUT macros/:id: Faz o mesmo que o PATCH; a macro é escolhida pelo id.
   POST crm/meta_ads_connection/site_pages: A página de site do anúncio é configuração de anúncios; nenhum dos 20 exemplos usa.
-  PUT seus_posts/posts/:post_id/cuidado/foto: O post é escolhido pelo id, que nenhum valor do alvo traz.
-  PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto: O anúncio é escolhido pelo id, que nenhum valor do alvo traz.
   PATCH notifications/:id: A notificação é escolhida pelo id, que a tela não oferece.
   PUT notifications/:id: Faz o mesmo que o PATCH; a notificação é escolhida pelo id.
   POST notifications/:id/unread: A notificação é escolhida pelo id, que a tela não oferece.

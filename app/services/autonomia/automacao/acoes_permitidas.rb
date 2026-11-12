@@ -23,9 +23,11 @@ module Autonomia::Automacao::AcoesPermitidas
   end
 
   # Ação de funil (crm/) pede também a chave de funis, ao salvar e a cada execução (D2, #2633). O recurso sai da própria
-  # lista, não do catálogo: ação permitida sempre tem recurso, e a pergunta é a mesma no salvar e no motor.
+  # lista, não do catálogo: ação permitida sempre tem recurso, e a pergunta é a mesma no salvar e no motor. Fora de crm/,
+  # a ação que escreve no funil leva `funil: true` na lista (o lead que vira card, #2660 lote C).
   def de_funil?(acao)
-    lista['passo'].any? { |recurso, bloco| recurso.start_with?('crm/') && bloco['acoes'].key?(acao.to_s) }
+    acoes.dig(acao.to_s, 'funil') == true ||
+      lista['passo'].any? { |recurso, bloco| recurso.start_with?('crm/') && bloco['acoes'].key?(acao.to_s) }
   end
 
   # Campos que a receita tem de preencher além do que a plataforma pede (F3.10: descrição).
