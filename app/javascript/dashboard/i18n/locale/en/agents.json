@@ -3052,7 +3052,11 @@
         "JA_SABE": "{nome} already knows",
         "ATUALIZADO_EM": "Updated on {data}",
         "PREPARANDO": "Data arrives within 1 day",
-        "EM_PREPARACAO": "In preparation"
+        "EM_PREPARACAO": "In preparation",
+        "GRATIS": {
+          "TITULO": "Free lookup",
+          "TEXTO": "Not added to your bill"
+        }
       },
       "BUSCA": {
         "NADA": "Nothing with “{termo}” here yet.",

@@ -123,7 +123,7 @@ describe('VitrineQuantoCusta (detalhe)', () => {
 });
 
 describe('VitrineCartao · Premium', () => {
-  it('the Premium card has the badge and the price; the free card has neither', () => {
+  it('the Premium card has the badge and the price; the free card has the "free lookup" footer instead', () => {
     const premium = mount(VitrineCartao, {
       props: {
         ferramenta: ferramentaPorId('historico_placa'),
@@ -140,5 +140,9 @@ describe('VitrineCartao · Premium', () => {
     });
     expect(gratis.find('[data-vitrine-selo-premium]').exists()).toBe(false);
     expect(gratis.find('[data-vitrine-premium]').exists()).toBe(false);
+    expect(premium.find('[data-vitrine-gratis]').exists()).toBe(false);
+    expect(gratis.find('[data-vitrine-gratis]').text()).toContain(
+      'Consulta grátis'
+    );
   });
 });

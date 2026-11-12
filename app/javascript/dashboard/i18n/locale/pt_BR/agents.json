@@ -3052,7 +3052,11 @@
         "JA_SABE": "{nome} já sabe",
         "ATUALIZADO_EM": "Atualizado em {data}",
         "PREPARANDO": "Os dados chegam em até 1 dia",
-        "EM_PREPARACAO": "Em preparação"
+        "EM_PREPARACAO": "Em preparação",
+        "GRATIS": {
+          "TITULO": "Consulta grátis",
+          "TEXTO": "Não entra na fatura"
+        }
       },
       "BUSCA": {
         "NADA": "Nada com “{termo}” por aqui ainda.",
