@@ -9,16 +9,24 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
   attr_reader :modelo, :marca
 
   class << self
+    # Só a conversa que abriu com modelo tem modelo: uma conversa de ajuste num agente que nasceu de um modelo, não.
     def do_thread(thread)
       marca = thread.state.to_h[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]
       agente = thread.agent
       return unless marca.is_a?(Hash) && agente&.agent_type != Autonomia::Agents::ModelosDeRamo::AGENTE_DE_COTACAO
 
-      modelo = Autonomia::Agents::ModelosDeRamo.buscar(marca['chave'])
-      return if modelo.nil? || !Autonomia::Agents::ModelosDeRamo.liberado?(thread.account)
+      montar(marca_que_vale(marca, agente), account: thread.account, agente: agente)
+    end
 
-      dispensadas = agente&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS]
-      new(modelo: modelo, marca: marca, account: thread.account, fora: dispensadas)
+    # O modelo de um agente que nasceu de um modelo, lido da marca dele: é o que a tela mostra quando reabre o rascunho
+    # sem a conversa. nil para quem não nasceu de um modelo, para agente de sistema e para a Lia.
+    def do_agente(agent)
+      config = agent.config.to_h
+      marca = config[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]
+      return unless marca.is_a?(Hash) && config['system_key'].blank?
+      return if agent.agent_type == Autonomia::Agents::ModelosDeRamo::AGENTE_DE_COTACAO
+
+      montar(marca, account: agent.account, agente: agent)
     end
 
     # A marca com que a conversa abre, ou nil (sem modelo: tudo como antes, sem erro).
@@ -44,6 +52,21 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     end
 
     private
+
+    # Com o rascunho já criado, a marca que vale é a dele: é nela que os dois caminhos de edição gravam (pela conversa e
+    # pelo agente), e é dela que o atendimento lê. A da conversa só vale antes de o rascunho existir.
+    def marca_que_vale(da_conversa, agente)
+      do_rascunho = agente&.config.to_h[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]
+      do_rascunho.is_a?(Hash) && do_rascunho['chave'] == da_conversa['chave'] ? do_rascunho : da_conversa
+    end
+
+    def montar(marca, account:, agente:)
+      modelo = Autonomia::Agents::ModelosDeRamo.buscar(marca['chave'])
+      return if modelo.nil? || !Autonomia::Agents::ModelosDeRamo.liberado?(account)
+
+      new(modelo: modelo, marca: marca, account: account,
+          fora: agente&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS])
+    end
 
     def marca_do_rascunho(agent, chave)
       marca = agent.config.to_h[Autonomia::Agents::ModelosDeRamo::Marca::CHAVE]

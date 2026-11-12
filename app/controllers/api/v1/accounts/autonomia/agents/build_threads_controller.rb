@@ -1,10 +1,9 @@
 class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Accounts::Autonomia::BaseController
-  # #2881 — as listas do modelo pronto que o dono pode mudar antes de começar.
-  LISTAS_DO_MODELO = %i[perguntas documentos ferramentas].freeze
+  # #2881 — o pedido de mudança das listas do modelo pronto (o mesmo do rascunho do agente).
+  include ::Autonomia::ListasDoModeloPronto
 
   before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer, :modelo_pronto]
   rescue_from ::Autonomia::Agents::DesfazerAjuste::AjusteMudou, with: :render_ajuste_mudou
-  rescue_from ::Autonomia::Agents::ModelosDeRamo::Edicao::Recusada, with: :render_modelo_recusado
   rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
   def show; end
@@ -83,35 +82,11 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # está. Nenhuma chamada de IA: grava no `state` da conversa e na marca do rascunho. Conversa sem modelo (conta sem o
   # pacote `seguros`, flag desligada, a Lia): 404. Lista fora do formato: 422 com o motivo e o campo, e nada é gravado.
   def modelo_pronto
-    campo = lista_malformada
-    raise ::Autonomia::Agents::ModelosDeRamo::Edicao::Recusada.new('lista_invalida', campo.to_s) if campo
-
-    ::Autonomia::Agents::ModelosDeRamo::Edicao.new(thread: @thread, mudancas: mudancas_do_modelo).call
+    editar_modelo_pronto(thread: @thread)
     render :show
   end
 
   private
-
-  # Os tipos de cada campo ficam declarados aqui (é o que o Guia lê): texto em tudo, verdadeiro ou falso em `tirada`.
-  def mudancas_do_modelo
-    params.permit(perguntas: %i[id texto tirada], documentos: %i[id texto tirada], ferramentas: %i[fonte usar_quando])
-          .to_h.slice(*LISTAS_DO_MODELO.reject { |campo| params[campo].nil? })
-  end
-
-  # A lista que veio e não é uma lista de objetos (texto solto, número, lista de textos): o `permit` a esvaziaria em
-  # silêncio, e uma lista vazia aqui quer dizer "tirar tudo".
-  def lista_malformada
-    LISTAS_DO_MODELO.find do |campo|
-      valor = params[campo]
-      !valor.nil? && !(valor.is_a?(Array) && valor.all?(ActionController::Parameters))
-    end
-  end
-
-  # 404 quando a conversa não tem modelo pronto; 422 com o motivo (e o campo) no que foi recusado.
-  def render_modelo_recusado(erro)
-    status = erro.motivo == 'sem_modelo' ? :not_found : :unprocessable_entity
-    render json: { motivo: erro.motivo, campo: erro.campo }, status: status
-  end
 
   # 409 com código estável: o agente mudou depois do ajuste (ou há conversa mais nova); o caminho é Versões.
   def render_ajuste_mudou

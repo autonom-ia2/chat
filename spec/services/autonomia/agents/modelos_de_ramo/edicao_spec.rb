@@ -34,6 +34,11 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
     conversa.reload.state[chave_da_marca]
   end
 
+  # O agente já atendendo, direto no banco: o caminho de verdade ("Começar") exige um canal, que não é o assunto aqui.
+  def comecar!(alvo)
+    alvo.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
+  end
+
   describe 'perguntas e documentos' do
     it 'edita o texto, tira um item e inclui um novo, com id novo só para o que é novo' do
       editar(perguntas: [{ id: 'p1', texto: '  Para que é a   garantia?  ' },
@@ -138,11 +143,6 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
 
     before { conversa.update!(agent: agente) }
 
-    # O agente já atendendo, direto no banco: o caminho de verdade ("Começar") exige um canal, que não é o assunto aqui.
-    def comecar!(alvo)
-      alvo.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
-    end
-
     it 'leva a mudança para a marca do rascunho, sem tocar na instrução nem no resto do config' do
       editar(documentos: [{ texto: 'Contrato social.' }], ferramentas: [{ fonte: 'cnpj' }])
       config = agente.reload.config
@@ -177,6 +177,48 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
 
       expect(recusa(documentos: [])).to eq(['agente_ja_comecou', nil])
       expect(marca).to eq(antes)
+    end
+  end
+
+  describe 'pelo rascunho do agente, sem a conversa (a tela reaberta)' do
+    let(:agente) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Novo agente', agent_type: 'sdr',
+                                       config: { chave_da_marca => conversa.state[chave_da_marca], 'guardrails' => ['regra'] })
+    end
+
+    def editar_pelo_agente(mudancas, alvo = agente)
+      described_class.new(agent: alvo, mudancas: mudancas).call
+    end
+
+    it 'grava na marca do agente, sem tocar no resto do config nem na conversa' do
+      antes = marca
+
+      editar_pelo_agente(documentos: [{ texto: 'Contrato social.' }], ferramentas: [{ fonte: 'cnpj' }])
+      config = agente.reload.config
+
+      expect(config[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(config['ferramentas_sugeridas']).to eq(%w[cnpj])
+      expect(config['guardrails']).to eq(['regra'])
+      expect(marca).to eq(antes)
+    end
+
+    it 'não perde a edição de outra aba' do
+      outra_aba = Autonomia::Agents::Agent.find(agente.id)
+
+      editar_pelo_agente(perguntas: [{ texto: 'A obra já começou?' }])
+      editar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, outra_aba)
+
+      listas = agente.reload.config[chave_da_marca]
+      expect(listas['perguntas'].pluck('texto')).to eq(['A obra já começou?'])
+      expect(listas['documentos'].pluck('texto')).to eq(['Contrato social.'])
+    end
+
+    it 'recusa o agente que não nasceu de um modelo e o que já começou a atender' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
+      expect { editar_pelo_agente({ perguntas: [] }, comum) }.to raise_error(described_class::Recusada, 'sem_modelo')
+
+      comecar!(agente)
+      expect { editar_pelo_agente(perguntas: []) }.to raise_error(described_class::Recusada, 'agente_ja_comecou')
     end
   end
 

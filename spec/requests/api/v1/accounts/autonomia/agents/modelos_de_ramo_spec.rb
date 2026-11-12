@@ -280,6 +280,125 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     end
   end
 
+  # A tela reabre o rascunho sem a conversa (a página foi recarregada): lê e muda as listas pelo agente.
+  describe 'o rascunho reaberto sem a conversa' do
+    let(:rascunho) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Novo agente', agent_type: 'sdr',
+                                       config: { chave_da_marca => conversa.state[chave_da_marca] })
+    end
+
+    def ver_agente(alvo = rascunho, pessoa = admin)
+      get "#{base}/agents/#{alvo.id}", headers: pessoa.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    def mudar_pelo_agente(params, alvo = rascunho, pessoa = admin)
+      patch "#{base}/agents/#{alvo.id}/modelo_pronto", params: params, headers: pessoa.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    it 'mostra no agente o modelo de que ele nasceu, com as listas e as ferramentas do ramo, sem o roteiro' do
+      pronto = ver_agente['modelo_pronto']
+
+      expect(response).to have_http_status(:ok)
+      expect(pronto.slice('chave', 'nome_padrao')).to eq('chave' => 'seguro_garantia', 'nome_padrao' => modelo.nome_padrao)
+      expect(pronto['perguntas'].pluck('texto')).to eq(modelo.perguntas)
+      expect(pronto['ferramentas'].pluck('fonte')).to eq(%w[cnpj feriados cep])
+      expect(pronto['teste']).to eq(modelo.teste)
+      expect(response.body).not_to include('ROTEIRO POR SITUAÇÃO')
+    end
+
+    it 'não manda o modelo para o agente comum, para a Lia, com a flag desligada, nem na listagem' do
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
+      lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote',
+                                             config: { chave_da_marca => conversa.state[chave_da_marca] })
+      expect(ver_agente(comum)).not_to have_key('modelo_pronto')
+      expect(ver_agente(lia)).not_to have_key('modelo_pronto')
+
+      rascunho
+      get "#{base}/agents", headers: admin.create_new_auth_token, as: :json
+      expect(response.body).not_to include('modelo_pronto')
+
+      account.disable_features!(Autonomia::Agents::ModelosDeRamo::FLAG)
+      expect(ver_agente).not_to have_key('modelo_pronto')
+    end
+
+    it 'muda as listas pelo agente e devolve o agente já com o que mudou' do
+      resposta = mudar_pelo_agente(documentos: [{ texto: 'Contrato social.' }],
+                                   ferramentas: [{ fonte: 'cnpj', usar_quando: 'Use quando o cliente mandar o CNPJ.' }])
+
+      expect(response).to have_http_status(:ok)
+      expect(resposta['id']).to eq(rascunho.id)
+      expect(resposta['modelo_pronto']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(resposta['modelo_pronto']['ferramentas']).to eq([{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando o cliente mandar o CNPJ.' }])
+      expect(rascunho.reload.config['ferramentas_sugeridas']).to eq(%w[cnpj])
+      expect(Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(rascunho)).to include("DOCUMENTOS:\n1. Contrato social.")
+      expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
+    end
+
+    it 'vale para a conversa do mesmo rascunho: com o rascunho criado, a marca dele é a que conta' do
+      conversa.update!(agent: rascunho)
+      mudar_pelo_agente(documentos: [{ texto: 'Contrato social.' }])
+
+      expect(ver['modelo_pronto']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+
+      mudar(perguntas: [{ texto: 'A obra já começou?' }])
+      marca = rascunho.reload.config[chave_da_marca]
+      expect(marca['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(marca['perguntas'].pluck('texto')).to eq(['A obra já começou?'])
+    end
+
+    it 'recusa com 422 a lista fora do formato, dizendo o campo, sem gravar' do
+      antes = rascunho.config[chave_da_marca]
+
+      expect(mudar_pelo_agente(perguntas: 'Qual o CNPJ?')).to eq('motivo' => 'lista_invalida', 'campo' => 'perguntas')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(mudar_pelo_agente(ferramentas: [{ fonte: 'fipe' }])).to eq('motivo' => 'fonte_invalida', 'campo' => 'ferramentas')
+      expect(rascunho.reload.config[chave_da_marca]).to eq(antes)
+    end
+
+    it 'recusa com 422 o agente que já começou a atender e com 404 o que não nasceu de um modelo' do
+      ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
+                                               instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
+      expect(mudar_pelo_agente({ perguntas: [] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => nil)
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
+      expect(mudar_pelo_agente({ perguntas: [] }, comum)).to eq('motivo' => 'sem_modelo', 'campo' => nil)
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'responde 404 com a flag desligada e para a Lia, sem gravar' do
+      lia = Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'insurance_quote',
+                                             config: { chave_da_marca => conversa.state[chave_da_marca] })
+      mudar_pelo_agente({ perguntas: [] }, lia)
+      expect(response).to have_http_status(:not_found)
+      expect(lia.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
+
+      rascunho
+      account.disable_features!(Autonomia::Agents::ModelosDeRamo::FLAG)
+      mudar_pelo_agente(perguntas: [])
+      expect(response).to have_http_status(:not_found)
+      expect(rascunho.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
+    end
+
+    it 'não alcança o agente de outra conta, e recusa quem só pode ver os agentes e o agente comum da equipe' do
+      outra = create(:account, internal_attributes: { 'autonomia_agents_enabled' => true })
+      liberar_modelos(outra)
+      alheio = Autonomia::Agents::Agent.create!(account: outra, name: 'Novo agente', agent_type: 'sdr',
+                                                config: { chave_da_marca => conversa.state[chave_da_marca] })
+      mudar_pelo_agente({ perguntas: [] }, alheio)
+      expect(response).to have_http_status(:not_found)
+
+      mudar_pelo_agente({ perguntas: [] }, rascunho, com_funcao(%w[autonomia_view]))
+      expect(response).to have_http_status(:unauthorized)
+      mudar_pelo_agente({ perguntas: [] }, rascunho, create(:user, account: account, role: :agent))
+      expect(response).to have_http_status(:unauthorized)
+      expect(alheio.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
+      expect(rascunho.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
+    end
+  end
+
   describe 'a frase do ramo no "Incluir" da vitrine' do
     it 'grava na ferramenta a frase que a conversa devolveu (a do modelo, ou a que o dono alterou)' do
       agente = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr',

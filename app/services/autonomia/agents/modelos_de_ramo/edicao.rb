@@ -1,7 +1,8 @@
 # O DONO MUDA O MODELO PRONTO ANTES DE COMEÇAR (#2881, pedido do Rodrigo): tirar, editar e incluir perguntas e
 # documentos; tirar ferramenta, incluir as do "Também combina" e alterar a frase "Use quando" de cada uma. Tudo fica no
 # `state` da conversa (sem migration) e, quando o rascunho do agente já existe, também na marca dele (`config`), que é
-# de onde o agente que atende lê as listas. Nenhuma chamada de IA.
+# de onde o agente que atende lê as listas. Pelo rascunho sem conversa (a tela reaberta), só na marca dele. Nenhuma
+# chamada de IA.
 #
 # Cada lista que vem substitui a lista inteira; a que não vem fica como está.
 #   perguntas / documentos: [{ id, texto, tirada }] — `id` de um item que já existe o mantém; sem `id` (ou com um que
@@ -30,29 +31,49 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     end
   end
 
-  def initialize(thread:, mudancas:)
+  # `thread:` — pela conversa do Construtor (a criação em andamento). `agent:` — pelo rascunho do agente, quando a tela o
+  # reabre sem a conversa. Um dos dois.
+  def initialize(mudancas:, thread: nil, agent: nil)
     @thread = thread
+    @agent = agent
     @mudancas = mudancas.to_h.deep_stringify_keys
   end
 
-  # -> o Rascunho com as mudanças, já gravadas. Lê e grava com a conversa travada (a trava relê a conversa): duas edições
-  # ao mesmo tempo (duas abas, ou um pedido só de perguntas e outro só de documentos) entram uma depois da outra, e a
-  # segunda parte do que a primeira gravou. Sem a trava, cada uma regravaria a marca inteira e apagaria a outra.
+  # -> o Rascunho com as mudanças, já gravadas. Lê e grava com tudo travado, na ordem do Construtor (conversa, depois
+  # agente; cada trava relê o registro): duas edições ao mesmo tempo (duas abas, um pedido só de perguntas e outro só de
+  # documentos, um pela conversa e outro pelo agente) entram uma depois da outra, e a segunda parte do que a primeira
+  # gravou. Sem as travas, cada uma regravaria a marca inteira e apagaria a outra.
   def call
-    @thread.with_lock do
-      rascunho = Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread)
-      negar('sem_modelo') if rascunho.nil?
+    return com_o_agente_travado(@agent) if @thread.nil?
 
-      novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
-      gravar!(novo)
-      novo
-    end
+    @thread.with_lock { com_o_agente_travado(@thread.agent) }
   end
 
   private
 
   def negar(motivo, campo = nil)
     raise Recusada.new(motivo, campo)
+  end
+
+  # A conversa ainda sem rascunho não tem agente para travar.
+  def com_o_agente_travado(agente)
+    return editar(agente) if agente.nil?
+
+    agente.with_lock { editar(agente) }
+  end
+
+  # O "Começar" pode chegar no meio da edição: por isso o rascunho é conferido aqui, com o agente travado, e a lista
+  # nunca entra num agente que já atende. A recusa desfaz tudo.
+  def editar(agente)
+    rascunho = @thread ? Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread) : Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(agente)
+    negar('sem_modelo') if rascunho.nil?
+    negar('agente_ja_comecou') if agente && !agente.draft?
+
+    novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho.modelo)))
+    chaves = novo.para_guardar
+    agente&.update!(config: agente.config.to_h.merge(chaves))
+    @thread&.juntar_ao_estado!(chaves)
+    novo
   end
 
   def lista_valida?(valor)
@@ -108,18 +129,5 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     limpa = usar_quando.is_a?(String) ? usar_quando.squish : nil
     negar('usar_quando_invalido', FERRAMENTAS) if limpa.nil? || limpa.length > Autonomia::FerramentasProntas::Incluir::MAX_USAR_QUANDO
     limpa.presence || do_ramo
-  end
-
-  # Com a conversa já travada: primeiro o agente, se já existir, travado e conferido de novo como rascunho (o "Começar"
-  # pode chegar no meio da edição, e a lista não pode entrar num agente que já atende); depois a conversa. A ordem das
-  # travas é a do Construtor: conversa, depois agente. A recusa desfaz tudo.
-  def gravar!(rascunho)
-    chaves = rascunho.para_guardar
-    agente = @thread.agent
-    agente&.with_lock do
-      negar('agente_ja_comecou') unless agente.draft?
-      agente.update!(config: agente.config.to_h.merge(chaves))
-    end
-    @thread.juntar_ao_estado!(chaves)
   end
 end
