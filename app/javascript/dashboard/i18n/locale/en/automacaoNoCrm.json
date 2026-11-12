@@ -1,0 +1,47 @@
+{
+  "AUTOMACAO_NO_CRM": {
+    "CARD": {
+      "TITULO": "Automations on this card",
+      "CARREGANDO": "Looking for automations…",
+      "VAZIO": "No automation is looking after this card right now.",
+      "CRIAR": "Create an automation for cards entering {etapa}",
+      "ITEM": "{nome} — {situacao}",
+      "ESPERA_ATE": "waits until {dia}",
+      "ESPERA_CONDICAO": "waits for what the step asks",
+      "AGINDO": "working now",
+      "PASSO": "Step {n} of {total}: {frase}",
+      "HISTORICO": "What it has done",
+      "COMECOU": "{dia}: started on this card",
+      "FEZ": "{dia}: {frase}",
+      "PARAR": "Stop for this card",
+      "PARAR_ROTULO": "Stop {nome} for this card",
+      "CONFIRMA": "Stop {nome} on this card? Whatever it started on another contact, conversation or card because of this one stops too.",
+      "SIM": "Yes, stop",
+      "VOLTAR": "Go back",
+      "PAROU": "{nome} stopped on this card. Other cards keep going.",
+      "ERRO_PARAR": "It couldn't stop right now. Try again.",
+      "ERRO_LISTA": "Couldn't show the automations right now.",
+      "TENTAR": "Try again"
+    },
+    "ETAPA": {
+      "TITULO": "Automations for this stage",
+      "AJUDA": "What happens on its own when a card comes in, leaves or sits still here.",
+      "CARREGANDO": "Looking for automations…",
+      "VAZIO": "This stage has no automation yet.",
+      "NOVA": "New automation for this stage",
+      "QUANDO_ENTRA": "When the card comes into this stage",
+      "QUANDO_SAI": "When the card leaves this stage",
+      "JEITO_ANTIGO": "Old way",
+      "PASSO_RETORNO": "Create the follow-up “{titulo}”",
+      "PASSO_OUTRO": "Another action",
+      "SO_VER": "You can look. Only people who look after automations can change them.",
+      "AVISO": "These don't count as entering or leaving this stage yet: archiving several cards at once, deleting the stage and moving cards through the integration.",
+      "SAIR_PERGUNTA": "Leave without saving? Your pipeline changes won't be kept.",
+      "SAIR_SIM": "Leave without saving",
+      "FICAR": "Stay",
+      "ERRO_LIGAR": "It couldn't change right now. Try again.",
+      "ERRO_LISTA": "Couldn't show the automations right now.",
+      "TENTAR": "Try again"
+    }
+  }
+}

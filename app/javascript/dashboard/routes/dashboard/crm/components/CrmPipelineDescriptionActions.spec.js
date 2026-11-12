@@ -13,6 +13,10 @@ vi.mock('../composables/useCrmPermissions', () => ({
 vi.mock('dashboard/composables/useKeyboardEvents', () => ({
   useKeyboardEvents: () => {},
 }));
+// #2499 F6.5: sem o motor e os gatilhos de card, a etapa aberta mostra o cartão das ações da etapa, como antes.
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: {
     improveStageCriteria: vi.fn(),

@@ -15,6 +15,9 @@
 #
 # G50: "começa outra vez" (`se_repetir: comeca_outra`) só nos gatilhos de evento que aceitam (Gatilhos.pode_repetir?).
 # Na mensagem nova seria uma execução por mensagem; nos da varredura, a marca já é o fato.
+#
+# G10 (F8.7): a etiqueta posta ou tirada pede uma etiqueta que existe na conta, em qualquer alvo; a do contato, também
+# a flag da F6, como os outros gatilhos de contato.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
   MudancaDoCard = ::Autonomia::Automacao::MudancaDoCard
@@ -30,7 +33,7 @@ class Autonomia::Automacao::ProblemasDoGatilho
   end
 
   # Frases para a pessoa corrigir; vazio = pode salvar.
-  def problemas = [*repeticao_fora, *do_card_ou_de_tempo]
+  def problemas = [*repeticao_fora, *etiqueta_do_gatilho_de_fora, *do_card_ou_de_tempo]
 
   private
 
@@ -38,8 +41,13 @@ class Autonomia::Automacao::ProblemasDoGatilho
     Gatilhos.comeca_outra?(@gatilho) && !Gatilhos.pode_repetir?(@tipo) ? [texto(:se_repetir_fora)] : []
   end
 
+  def etiqueta_do_gatilho_de_fora
+    etiqueta = @gatilho['etiqueta']
+    etiqueta && !@conta.labels.exists?(title: etiqueta) ? [texto(:etiqueta_de_fora, etiqueta: etiqueta)] : []
+  end
+
   def do_card_ou_de_tempo
-    return [] unless Gatilhos.do_card?(@tipo) || Gatilhos.de_tempo?(@tipo)
+    return [] unless Gatilhos.do_card?(@tipo) || Gatilhos.de_tempo?(@tipo) || Gatilhos.do_contato?(@tipo)
 
     desligado = Gatilhos.desligado(@tipo, @conta)
     return [texto(desligado)] if desligado

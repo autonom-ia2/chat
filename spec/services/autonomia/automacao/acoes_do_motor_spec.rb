@@ -80,4 +80,26 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
     expect([resultado.ok, instancia.codigo]).to eq([false, 401])
     expect(conversa.reload.priority).to be_nil
   end
+
+  # #2660 lote E: o `um_de` limita o status de destino; o agente em rascunho, que ninguém terminou nem revisou, a automação
+  # não liga.
+  describe 'ligar e desligar o agente de IA' do
+    let(:rascunho) { Autonomia::Agents::Agent.create!(account: account, name: 'Sofia', agent_type: 'custom', status: :draft) }
+    let(:pausado) { Autonomia::Agents::Agent.create!(account: account, name: 'Lia', agent_type: 'custom', status: :paused) }
+
+    before { definicao.update!(ligada_por: admin) }
+
+    def ligar(agente_de_ia) = { caminho: { id: agente_de_ia.id }, corpo: { status: 'active' }, descricao: 'Ligar o agente' }
+
+    it 'recusa o agente em rascunho, que continua rascunho', :aggregate_failures do
+      expect { acoes.executar('PATCH autonomia/agents/:id', ligar(rascunho)) }
+        .to raise_error(Autonomia::Guide::Acoes::Recusada, I18n.t('autonomia.automacao.motivos.agente_em_rascunho'))
+      expect { acoes.executar('PUT autonomia/agents/:id', ligar(rascunho)) }.to raise_error(Autonomia::Guide::Acoes::Recusada)
+      expect(rascunho.reload).to be_draft
+    end
+
+    it 'deixa seguir o agente já publicado' do
+      expect { acoes.send(:garantir_permitida!, 'PATCH autonomia/agents/:id', ligar(pausado)) }.not_to raise_error
+    end
+  end
 end

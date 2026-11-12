@@ -322,9 +322,11 @@ RSpec.describe Account do
       # #2858 (F7): agente_ferramentas_prontas_premium depois dela, 44 (1 << 43 = 8796093022208), Orquestração (11/11).
       # #2894: relacionamentos_novo depois dela, 45 (1 << 44 = 17592186044416), Orquestração (12/11).
       # #2942: agente_ferramentas_prontas_ip_proprio depois dela, 46 (1 << 45 = 35184372088832), Orquestração (12/11).
+      # #2414: automacao_passos_novos depois dela, 47 pela ordem do features.yml (1 << 46 = 70368744177664).
+      # #2499: automacao_no_crm depois dela, 48 pela ordem (1 << 47 = 140737488355328). Flag nova entra no fim.
       # #2881: agente_modelos_seguro fica no FIM do arquivo. A Orquestração reservou a 50 (1 << 49 = 562949953421312), que
-      # só vale quando as flags das posições 47, 48 e 49 (de outros PRs) entrarem; até lá o bit é o da ordem real do
-      # arquivo. Por isso ela é conferida pela posição (a última, com o bit seguinte ao da penúltima), sem número fixo.
+      # só vale quando a flag da posição 49 (de outro PR, #2962) entrar; até lá o bit é o da ordem real do arquivo. Por
+      # isso ela é conferida pela posição (a última, com o bit seguinte ao da penúltima), sem número fixo.
       mapa_ext_2 = described_class.flag_mapping['feature_flags_ext_2']
       expect(mapa_ext_2.to_a.last).to eq([:feature_agente_modelos_seguro, 1 << (mapa_ext_2.size - 1)])
       expect(mapa_ext_2.except(:feature_agente_modelos_seguro)).to eq(
@@ -349,7 +351,9 @@ RSpec.describe Account do
         # #2889: automacao_porta, 42 (1 << 41); depois dela a F5 (43) e a F7 (44) da vitrine #2858.
         feature_automacao_porta: 2_199_023_255_552,
         feature_agente_ferramentas_prontas_bases: 4_398_046_511_104, feature_agente_ferramentas_prontas_premium: 8_796_093_022_208,
-        feature_relacionamentos_novo: 17_592_186_044_416, feature_agente_ferramentas_prontas_ip_proprio: 35_184_372_088_832
+        feature_relacionamentos_novo: 17_592_186_044_416, feature_agente_ferramentas_prontas_ip_proprio: 35_184_372_088_832,
+        feature_automacao_passos_novos: 70_368_744_177_664,
+        feature_automacao_no_crm: 140_737_488_355_328
       )
     end
 

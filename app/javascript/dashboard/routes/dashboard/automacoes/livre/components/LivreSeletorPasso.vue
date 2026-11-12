@@ -13,6 +13,8 @@ const props = defineProps({
   // G13 (#2670): o passo com `chave` (permissão) só entra para quem a tem.
   temChave: { type: Function, default: () => true },
 });
+// Protótipo #2931–#2936: o passo com `dica` mostra, embaixo do nome, o que ele
+// faz em uma frase.
 
 const emit = defineEmits(['escolher', 'close']);
 
@@ -68,8 +70,17 @@ defineExpose({ open, close });
               class="flex items-center w-full gap-3 px-3 py-2 border text-start rounded-xl min-h-11 border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
               @click="emit('escolher', passo)"
             >
-              <span class="flex-1 text-[0.9375rem] text-n-slate-12">
-                {{ $t(passo.frase) }}
+              <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+                <span class="text-[0.9375rem] text-n-slate-12">
+                  {{ $t(passo.frase) }}
+                </span>
+                <span
+                  v-if="passo.dica"
+                  data-dica
+                  class="text-sm text-n-slate-11"
+                >
+                  {{ $t(passo.dica) }}
+                </span>
               </span>
             </button>
           </li>

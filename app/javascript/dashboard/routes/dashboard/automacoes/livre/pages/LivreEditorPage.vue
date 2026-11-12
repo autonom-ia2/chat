@@ -37,9 +37,11 @@ import {
   falta,
   inserirPasso,
   novoId,
+  receitaVazia,
   tirarPasso,
   trocarPasso,
 } from '../receita';
+import { gatilhoDaUrl } from '../gatilhoDaUrl';
 import {
   TIPO as EM_OUTRO_REGISTRO,
   alvoDaLista,
@@ -52,6 +54,11 @@ import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { usePodeLerValor } from '../usePodeLerValor';
 import { useAgendasDaConta } from '../useAgendasDaConta';
+import {
+  FLAG as PASSOS_NOVOS,
+  comPassosNovos,
+} from '../passosNovos/passosNovos';
+import { guardarNomesDosPassosNovos } from '../passosNovos/nomesDaConta';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -65,10 +72,15 @@ const podeMudar = useCanManage('automation_manage');
 const podeIntegrar = usePermissionGranted('integration_manage');
 const temChave = chave =>
   chave === 'integration_manage' ? podeIntegrar.value : false;
-const { catalogo } = useCatalogo();
+const { catalogo: doServidor } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+// Protótipo #2931–#2936: com a flag, o catálogo ganha os 6 passos novos. Sem
+// ela, é o mesmo objeto do servidor.
+const catalogo = computed(() =>
+  comPassosNovos(doServidor.value, isCloudFeatureEnabled(PASSOS_NOVOS))
+);
 // G18: os cards do contato, no "em outro registro", só para quem mexe no funil;
 // #2716: o card da conversa, só com a mesma chave.
 const { canManagePipelines } = useCrmPermissions();
@@ -76,6 +88,18 @@ const { canManagePipelines } = useCrmPermissions();
 const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(
   isCloudFeatureEnabled,
   catalogo
+);
+// Protótipo #2931–#2936: a frase do passo novo diz o nome de quem aprova e da
+// etapa da lista, com as escolhas que o editor já carregou.
+watch(
+  () => [opcoes.value, escolhasDoGatilho.value?.etapas],
+  ([daConta, etapas]) =>
+    guardarNomesDosPassosNovos({
+      pessoa: daConta.pessoa,
+      time: daConta.time,
+      etapas,
+    }),
+  { immediate: true }
 );
 const editor = useEditorLivre();
 const {
@@ -334,6 +358,7 @@ const naoSalva = computed(() =>
     : mudou.value
 );
 const faltaCompletar = computed(() => Boolean(falta(receita.value)));
+const emTeste = computed(() => falta(receita.value) === 'EM_TESTE');
 let responderGuarda = null;
 onBeforeRouteLeave(() => {
   if (!podeMudar.value || !naoSalva.value) return true;
@@ -414,6 +439,11 @@ const carregarTudo = async () => {
     return;
   }
   if (nova.value && route.query.receita) await usarReceita(route.query.receita);
+  else if (nova.value) {
+    // #2414 F6.5: vindo da etapa do funil, a automação nova já nasce com o gatilho dela.
+    const gatilho = gatilhoDaUrl(route.query, gatilhos.value);
+    if (gatilho) await editor.aplicar({ ...receitaVazia(), gatilho });
+  }
   abrirDaUrl();
   carregarCustos(route.params.id);
 };
@@ -540,7 +570,11 @@ onMounted(() => {
                 {{ $t('AUTOMACAO_LIVRE.EDITOR.RASCUNHO') }}
               </p>
               <p v-if="faltaCompletar" data-nao-salva class="mb-0 text-sm">
-                {{ $t('AUTOMACAO_LIVRE.EDITOR.NAO_SALVA') }}
+                {{
+                  emTeste
+                    ? $t('AUTOMACAO_LIVRE.PASSOS_NOVOS.EM_TESTE')
+                    : $t('AUTOMACAO_LIVRE.EDITOR.NAO_SALVA')
+                }}
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">

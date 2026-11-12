@@ -12,14 +12,6 @@ shift 2
 RAIZ=/Users/Shared/chat2you-demos
 L=$RAIZ/$slug
 KIT=$L/kit
-T=/Users/Shared/maccluster-tools
-R=$T/ruby-3.4.4
-N=$T/node-v24.11.0
-# Cliente do Postgres (psql, createdb, dropdb): o M2 tem o 17.11; o M4 só tem o 16.15, o mesmo do servidor de teste
-# (medido em 12/11/2026). Nos dois Macs o servidor em 127.0.0.1:55432 é o 16.15.
-PGBIN=$T/postgresql-17.11/bin
-[ -x "$PGBIN/psql" ] || PGBIN=$T/deps/postgresql-16.15/bin
-REDISBIN=$T/deps/redis-8.10.2/bin
 # Em qual máquina este script está (o bin/demo manda em DEMO_ONDE). Só para as mensagens.
 ONDE=${DEMO_ONDE:-m2}
 PG_HOST=127.0.0.1
@@ -42,6 +34,9 @@ ROLE=${PREFIXO_ROLE}${slug//-/_}
 # em_uso (mesmo arquivo que o bin/demo usa no Mac de onde é chamado)
 # shellcheck source=script/demo/comum.sh
 source "${BASH_SOURCE[0]%/*}/comum.sh" || falha "não carreguei comum.sh"
+# T, R, N, PGBIN e REDISBIN: onde ficam as ferramentas (o mesmo arquivo que o bin/demo usa para conferir a máquina)
+# shellcheck source=script/demo/ferramentas.sh
+source "${BASH_SOURCE[0]%/*}/ferramentas.sh" || falha "não carreguei ferramentas.sh"
 
 carregar_estado() {
   [ -f "$L/demo.env" ] || falha "demo não existe no $ONDE ($L/demo.env). Rode: bin/demo up $slug"
@@ -119,6 +114,10 @@ banco_existe() {
 # As chaves (SECRET_KEY_BASE e as do Active Record) nunca passam pelo argv, que qualquer usuário vê no `ps`: o
 # bash abaixo lê cada uma do arquivo 0600 em $L/chaves e exporta no próprio ambiente, que o processo herda.
 # Arquivo ausente ou vazio para tudo. O `env` final aceita VAR=valor antes do comando (DEMO_FLAG=... no flag).
+# Rails e Vite sobem por `ruby bin/rails` e `ruby bin/vite`, os binstubs do próprio app (quem chama já está em
+# $SNAP), e não por `bundle exec rails|vite`: o `bundle exec` procura o lançador da gem no bin/ do Ruby
+# compartilhado, e esse lançador pode não existir (M4, 12/11/2026: "bundler: command not found: vite"). O binstub
+# carrega o Bundler e acha o executável dentro da gem.
 # shellcheck disable=SC2016
 CARREGAR_CHAVES='set -euo pipefail
 ler() { local v; v=$(< "$DEMO_CHAVES/$1") || exit 1; [ -n "$v" ] || { echo "chave vazia: $1" >&2; exit 1; }; printf %s "$v"; }
@@ -147,6 +146,7 @@ demo_env() {
     VITE_RUBY_PORT="$VITE_PORT" VITE_RUBY_HOST=localhost VITE_RUBY_AUTO_BUILD=false \
     VITE_RUBY_DEV_SERVER_CONNECT_TIMEOUT=2 NODE_OPTIONS=--max-old-space-size=4096 \
     WHATSAPP_CLOUD_BASE_URL=http://127.0.0.1:9 CRM_KANBAN_ENABLED=true AUTONOMIA_PACOTES_ENABLED=true \
+    CRM_CALENDAR_MEETINGS_ENABLED=true \
     SMTP_ADDRESS=127.0.0.1 SMTP_PORT=9 SMTP_USERNAME= SMTP_PASSWORD= MAILER_SENDER_EMAIL=demo@demo.invalid \
     /bin/bash -c "$CARREGAR_CHAVES" demo_env "$@"
 }
@@ -383,18 +383,18 @@ preparar() {
   echo "role $ROLE e banco $DB (dono: $ROLE) + extensões..."
   criar_banco_e_role
   echo "banco $DB: schema:load + seed (como $ROLE)..."
-  demo_env bundle exec rails db:schema:load db:seed > "$L/banco.log" 2>&1 ||
+  demo_env ruby bin/rails db:schema:load db:seed > "$L/banco.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/banco.log"; falha "preparo do banco falhou (log: $L/banco.log)"; }
   echo "dados de exemplo da conta + idioma pt-BR..."
-  demo_env bundle exec rails runner "$KIT/preparar_conta.rb" > "$L/conta.log" 2>&1 ||
+  demo_env ruby bin/rails runner "$KIT/preparar_conta.rb" > "$L/conta.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/conta.log"; falha "seed da conta falhou (log: $L/conta.log)"; }
   /usr/bin/tail -1 "$L/conta.log"
   /usr/bin/touch "$L/preparado"
 }
 
 # Processos de longa duração: o subir chama estes por nohup, cada um num grupo de processos próprio.
-_rails() { carregar_estado; cd "$SNAP"; demo_env bundle exec rails s -p "$RAILS_PORT" -b 127.0.0.1; }
-_vite() { carregar_estado; cd "$SNAP"; demo_env bundle exec vite dev; }
+_rails() { carregar_estado; cd "$SNAP"; demo_env ruby bin/rails s -p "$RAILS_PORT" -b 127.0.0.1; }
+_vite() { carregar_estado; cd "$SNAP"; demo_env ruby bin/vite dev; }
 
 # Sobe o servidor num grupo de processos novo (setpgrp + exec): o PID lançado é o PGID, e o descer derruba o
 # grupo inteiro (wrapper, Rails/Vite e filhos como esbuild e fsevent_watch) e confere que todos morreram.
@@ -553,7 +553,7 @@ reiniciar_rails() {
 migrar() {
   carregar_estado
   cd "$SNAP"
-  demo_env bundle exec rails db:migrate > "$L/migrate.log" 2>&1 ||
+  demo_env ruby bin/rails db:migrate > "$L/migrate.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/migrate.log"; falha "db:migrate falhou (log $L/migrate.log)"; }
   echo "db:migrate aplicado no banco $DB"
 }
@@ -569,7 +569,7 @@ pnpm_de_novo() {
 flag() {
   carregar_estado
   cd "$SNAP"
-  demo_env DEMO_FLAG="${1:?flag}" DEMO_CONTA="${2:-1}" bundle exec rails runner "$KIT/ligar_flag.rb" > "$L/flag.log" 2>&1 ||
+  demo_env DEMO_FLAG="${1:?flag}" DEMO_CONTA="${2:-1}" ruby bin/rails runner "$KIT/ligar_flag.rb" > "$L/flag.log" 2>&1 ||
     { /usr/bin/tail -20 "$L/flag.log"; falha "não liguei a flag (log $L/flag.log)"; }
   /usr/bin/tail -1 "$L/flag.log"
 }
@@ -579,7 +579,7 @@ semear() {
   local arquivo=$L/seeds/${1:?arquivo}
   [ -f "$arquivo" ] || falha "seed não chegou: $arquivo"
   cd "$SNAP"
-  demo_env DEMO_PASTA="$L" bundle exec rails runner "$arquivo" > "$L/seed.log" 2>&1 ||
+  demo_env DEMO_PASTA="$L" ruby bin/rails runner "$arquivo" > "$L/seed.log" 2>&1 ||
     { /usr/bin/tail -30 "$L/seed.log"; falha "seed falhou (log $L/seed.log)"; }
   # Só exibição: linha nenhuma depois do filtro não é erro (o erro do seed já parou acima).
   /usr/bin/grep -v 'INFO\|DEBUG' "$L/seed.log" | /usr/bin/tail -15 || :

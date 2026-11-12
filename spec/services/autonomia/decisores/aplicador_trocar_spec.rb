@@ -79,6 +79,40 @@ RSpec.describe Autonomia::Decisores::Aplicador do
     expect(resultado.recusados['whatsapp']).to include("contato ##{outro.id}")
   end
 
+  context 'with a WAHA inbox in the account (#2711)' do
+    let(:chat_id) do
+      { 'waha_whatsapp_chat_id' => '5522911110000@c.us', 'waha_whatsapp_jid' => '5522911110000@c.us', 'waha_whatsapp_lid' => '77@lid' }
+    end
+
+    before do
+      create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 's-1' })
+      contact.update!(phone_number: '+5522911110000', custom_attributes: chat_id.merge('job_title' => 'diretor'))
+    end
+
+    it 'trocar o telefone apaga o chat id da WAHA, para a mensagem ir ao número novo' do
+      aplicar(campos.values_at(3))
+
+      expect(contact.reload.phone_number).to eq('+5522974049400')
+      expect(contact.custom_attributes).to eq('job_title' => 'diretor')
+    end
+
+    it 'sem trocar, o telefone e o chat id ficam' do
+      aplicar(campos.values_at(3).map { |campo| campo.except(:trocar) })
+
+      expect(contact.reload.phone_number).to eq('+5522911110000')
+      expect(contact.custom_attributes).to eq(chat_id.merge('job_title' => 'diretor'))
+    end
+  end
+
+  it 'trocar o telefone numa conta sem caixa WAHA não mexe nos atributos do contato' do
+    contact.update!(phone_number: '+5522911110000', custom_attributes: { 'waha_whatsapp_chat_id' => '5522911110000@c.us' })
+
+    aplicar(campos.values_at(3))
+
+    expect(contact.reload.phone_number).to eq('+5522974049400')
+    expect(contact.custom_attributes).to eq('waha_whatsapp_chat_id' => '5522911110000@c.us')
+  end
+
   it 'telefone sem jeito de número é recusado com o motivo' do
     resultado = aplicar(campos.values_at(3), 'whatsapp' => 'ligar à tarde')
 

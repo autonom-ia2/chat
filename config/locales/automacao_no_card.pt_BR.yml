@@ -1,0 +1,6 @@
+# Automação livre, "Parar para este card" (#2499 F6.3). Arquivo próprio para não disputar o pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        parada_no_card: 'Alguém parou esta automação neste card. Os outros cards continuam.'

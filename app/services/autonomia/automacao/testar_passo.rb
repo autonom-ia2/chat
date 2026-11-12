@@ -75,7 +75,7 @@ class Autonomia::Automacao::TestarPasso
   end
 
   def escolhidas
-    return [recentes, 'gatilho_sem_conversa'] unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(@receita)
+    return [recentes, 'gatilho_sem_conversa'] unless ::Autonomia::Automacao::Ensaio.de_conversa?(@receita)
 
     entrariam = ::Autonomia::Automacao::Ensaio.new(receita: @receita, conta: @conta, usuario: @usuario).entrariam(CONVERSAS)
     entrariam.any? ? [entrariam, nil] : [recentes, 'nenhuma_entraria']

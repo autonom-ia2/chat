@@ -9,7 +9,8 @@
 #
 # Os parâmetros (`etapa_id`, `funil_id`, `pagina_id`) são opcionais ou obrigatórios pelo esquema da receita; o evento traz
 # o valor dele, e o gatilho só casa quando cada parâmetro escolhido bate com o do evento. A página de agendamento (G32)
-# separa "a reunião da renovação" das outras reuniões do mesmo funil.
+# separa "a reunião da renovação" das outras reuniões do mesmo funil. A etiqueta (G10, F8.7) vai pelo nome, como a
+# conversa e o contato a guardam, e casa sem diferença de maiúscula.
 #
 # Os de tempo (#2499, PR3) não vêm de evento: a varredura (TempoJob) acha os alvos da janela pelos parâmetros (`dias`,
 # a data de um campo, a hora) e a marca é o próprio fato ("parado desde tal instante", "a data do campo vale tal dia").
@@ -30,6 +31,8 @@ module Autonomia::Automacao::Gatilhos
   DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes data hora selecao].freeze
   DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes data hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
+  # Os parâmetros que o gatilho compara como texto (sem diferença de maiúscula); os outros são ids.
+  DE_TEXTO = %w[etiqueta].freeze
   # O card atualizado (G27, #2661): a `mudanca` é o campo e a condição (Autonomia::Automacao::MudancaDoCard).
   ATUALIZADO = 'card.atualizado'.freeze
 
@@ -39,6 +42,14 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'conversa.resolvida', alvo: 'Conversation', origem: :evento, parametros: []),
     Entrada.new(tipo: 'mensagem.criada', alvo: 'Conversation', origem: :evento, parametros: []),
     Entrada.new(tipo: 'mensagem.falhou', alvo: 'Conversation', origem: :evento, parametros: []),
+    # F8.3: mudou quem atende a conversa, a pessoa ou o time (Autonomia::Automacao::TrocaNaConversa).
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNaConversa::RESPONSAVEL, alvo: 'Conversation', origem: :evento, parametros: []),
+    Entrada.new(tipo: ::Autonomia::Automacao::TrocaNaConversa::TIME, alvo: 'Conversation', origem: :evento, parametros: []),
+    # G10 (F8.7): a etiqueta posta ou tirada, na conversa ou no contato (Autonomia::Automacao::EtiquetaMudou).
+    Entrada.new(tipo: 'conversa.etiqueta_posta', alvo: 'Conversation', origem: :evento, parametros: %w[etiqueta]),
+    Entrada.new(tipo: 'conversa.etiqueta_tirada', alvo: 'Conversation', origem: :evento, parametros: %w[etiqueta]),
+    Entrada.new(tipo: 'contato.etiqueta_posta', alvo: CONTATO, origem: :evento, parametros: %w[etiqueta]),
+    Entrada.new(tipo: 'contato.etiqueta_tirada', alvo: CONTATO, origem: :evento, parametros: %w[etiqueta]),
     Entrada.new(tipo: 'card.criado', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.entrou_na_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
@@ -107,6 +118,9 @@ module Autonomia::Automacao::Gatilhos
 
   def do_card?(tipo) = alvo(tipo) == CARD
 
+  # Os de contato (a data, o recorrente, a etiqueta): o contato como alvo vem com a flag da F6.
+  def do_contato?(tipo) = alvo(tipo) == CONTATO
+
   # Os da varredura: os de tempo e o recorrente.
   def de_tempo?(tipo) = VARRIDOS.include?(entrada(tipo)&.origem)
 
@@ -119,17 +133,17 @@ module Autonomia::Automacao::Gatilhos
   def de_tempo = LISTA.values.select { |item| VARRIDOS.include?(item.origem) }.map(&:tipo)
 
   # O gatilho vale na conta agora? Os de conversa vêm com o motor; os de card pedem a flag da F6 e o CRM; os de reunião,
-  # também as reuniões da instalação ligadas (sem elas nenhuma reunião nasce).
+  # também as reuniões da instalação ligadas (sem elas nenhuma reunião nasce); os de tempo e os de contato, a flag da F6.
   def disponivel?(tipo, conta)
     return false unless entrada(tipo)
     return ::Autonomia::Automacao::Motor.gatilhos?(conta) && ::Crm::Config.calendar_meetings_enabled? if de_reuniao?(tipo)
     return ::Autonomia::Automacao::Motor.gatilhos?(conta) if do_card?(tipo)
-    return ::Autonomia::Automacao::Motor.gatilhos_sem_crm?(conta) if de_tempo?(tipo)
+    return ::Autonomia::Automacao::Motor.gatilhos_sem_crm?(conta) if de_tempo?(tipo) || do_contato?(tipo)
 
     ::Autonomia::Automacao::Motor.ligado?(conta)
   end
 
-  # Por que o gatilho de card não vale na conta agora (a chave do texto da receita), ou nil quando vale.
+  # Por que o gatilho de card, de tempo ou de contato não vale na conta agora (a chave do texto da receita), ou nil quando vale.
   def desligado(tipo, conta)
     return if disponivel?(tipo, conta)
 
@@ -142,8 +156,12 @@ module Autonomia::Automacao::Gatilhos
     return ::Autonomia::Automacao::MudancaDoCard.casa?(gatilho['mudanca'].to_h, dados['mudancas']) if gatilho['tipo'] == ATUALIZADO
 
     entrada(gatilho['tipo'])&.parametros.to_a.all? do |nome|
-      gatilho[nome].nil? || gatilho[nome].to_i == dados[nome].to_i
+      gatilho[nome].nil? || parametro_casa?(nome, gatilho[nome], dados[nome])
     end
+  end
+
+  def parametro_casa?(nome, escolhido, do_evento)
+    DE_TEXTO.include?(nome) ? escolhido.to_s.casecmp?(do_evento.to_s) : escolhido.to_i == do_evento.to_i
   end
 
   # A marca de um evento do despacho sem id próprio: "conversa.aberta:<id>:<instante em µs, UTC>".

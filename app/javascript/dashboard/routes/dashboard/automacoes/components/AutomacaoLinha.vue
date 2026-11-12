@@ -77,6 +77,8 @@ const outrasAcoes = computed(() => props.descricao.entao.length - 1);
           <span class="i-lucide-sparkles size-3" aria-hidden="true" />
           {{ $t('AUTOMACOES.LISTA.SELO_GUIA') }}
         </span>
+        <!-- #2414 F6.5: outro selo ao lado do nome (na etapa do funil, "Jeito antigo"). -->
+        <slot name="selo" />
       </span>
       <span
         data-frase
