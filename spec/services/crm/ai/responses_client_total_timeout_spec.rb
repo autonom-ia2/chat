@@ -28,12 +28,14 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(Crm::Ai::UsageRecorder).not_to have_received(:record)
   end
 
-  it 'sem total_timeout, nada muda: sem Timeout em volta e o uso é registrado' do
+  # O Timeout que sobra é o teto de cada tentativa (#2579), em volta só do HTTParty.
+  it 'sem total_timeout, nada muda: sem o prazo total em volta e o uso é registrado' do
     stub_request(:post, url).to_return(body: payload, headers: { 'Content-Type' => 'application/json' })
     allow(Timeout).to receive(:timeout).and_call_original
 
     expect(client.create(**params)[:text]).to eq('ok')
-    expect(Timeout).not_to have_received(:timeout)
+    expect(Timeout).not_to have_received(:timeout).with(anything, described_class::TotalTimeout)
+    expect(Timeout).to have_received(:timeout).with(described_class::REQUEST_TIMEOUT, described_class::AttemptTimeout).once
     expect(Crm::Ai::UsageRecorder).to have_received(:record).once
   end
 

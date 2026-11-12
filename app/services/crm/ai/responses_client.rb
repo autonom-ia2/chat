@@ -31,7 +31,9 @@ module Crm
       REQUEST_TIMEOUT = 180
       MAX_RETRIES = 2
       RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504].freeze
-      NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, EOFError,
+      # A tentativa HTTP passou do `timeout:` inteiro, somando as fases (#2579). Ver `tentativa`.
+      class AttemptTimeout < StandardError; end
+      NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, AttemptTimeout, EOFError,
                         Errno::ECONNRESET, Errno::ECONNREFUSED, Errno::ETIMEDOUT, SocketError].freeze
 
       # Teto duro de rodadas COM ferramenta, acima do que qualquer chamador pede.
@@ -81,8 +83,9 @@ module Crm
       # `tool_choice:` (#1367) desliga as ferramentas de UMA chamada ('none') sem tirá-las da lista: a lista faz parte
       # do prefixo em cache, e mudá-la faria a chamada seguinte, com as ferramentas, perder o cache. Ausente, o corpo
       # é exatamente o de antes. `max_output_tokens:` (#2696) é o teto de saída da chamada (raciocínio incluído); nil,
-      # o padrão, não vai no corpo. `total_timeout:` (#2696) é o prazo da chamada HTTP inteira, em segundos (o `timeout:`
-      # vale por operação: abrir, escrever, ler); nil, o padrão, não muda nada. Ver `with_total_timeout`.
+      # o padrão, não vai no corpo. `timeout:` é o teto de cada tentativa HTTP, somando as fases (#2579, ver `tentativa`).
+      # `total_timeout:` (#2696) é o prazo da chamada inteira, novas tentativas e esperas incluídas, em segundos; nil, o
+      # padrão, não muda nada. Ver `with_total_timeout`.
       def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT,
                  tool_choice: nil, max_output_tokens: nil, total_timeout: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
@@ -156,7 +159,7 @@ module Crm
       def retrieve(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = with_timeout_guard(operation: 'responses.retrieve', response_id: response_id, started_at: started_at) do
-          HTTParty.get("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: REQUEST_TIMEOUT, max_retries: 0)
+          tentativa(:get, "#{api_base}/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
         end
         payload = parse_raw(response, operation: 'responses.retrieve', response_id: response_id, started_at: started_at)
         {
@@ -172,7 +175,7 @@ module Crm
       def delete(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         with_timeout_guard(operation: 'responses.delete', response_id: response_id, started_at: started_at) do
-          HTTParty.delete("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: REQUEST_TIMEOUT, max_retries: 0)
+          tentativa(:delete, "#{api_base}/v1/responses/#{response_id}", timeout: REQUEST_TIMEOUT)
         end
         true
       rescue Error => e
@@ -250,11 +253,22 @@ module Crm
 
       def post_responses(body, timeout:, operation:, started_at:)
         with_timeout_guard(operation: operation, model: body[:model], started_at: started_at) do
-          HTTParty.post("#{api_base}/v1/responses", headers: auth_headers, body: body.to_json, timeout: timeout, max_retries: 0)
+          tentativa(:post, "#{api_base}/v1/responses", timeout: timeout, body: body.to_json)
         end
       rescue Error => e
         log_exception(operation, e, model: body[:model], started_at: started_at) unless e.message.start_with?('network_timeout:')
         raise
+      end
+
+      # Uma tentativa HTTP. O `timeout:` do HTTParty vale por fase (abrir, escrever, ler), não para o pedido: com 12, uma
+      # abertura lenta seguida de uma leitura lenta passa de 24 s e do corte de 15 s do Rack::Timeout (#2579). O relógio
+      # de parede em volta faz do mesmo número o teto da tentativa inteira, e quem chama continua passando um número só.
+      # Classe própria pelo mesmo motivo do TotalTimeout. Estourou, é erro de rede como os outros prazos: entra nas novas
+      # tentativas e sai como tempo esgotado (o pedido pode ter chegado e sido cobrado). Só a ida HTTP fica dentro.
+      def tentativa(metodo, url, timeout:, **opcoes)
+        Timeout.timeout(timeout, AttemptTimeout) do
+          HTTParty.public_send(metodo, url, headers: auth_headers, timeout: timeout, max_retries: 0, **opcoes)
+        end
       end
 
       # O prazo total envolve SÓ a ida HTTP, nunca o registro de uso nem outra escrita no banco (o mesmo padrão do
@@ -284,7 +298,8 @@ module Crm
           rescue *NETWORK_ERRORS => e
             if retries >= @max_retries
               log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
-              raise Error.new("network_timeout: #{e.class.name.demodulize.underscore}", rede: true, tempo_esgotado: e.is_a?(Net::ReadTimeout))
+              tempo_esgotado = e.is_a?(Net::ReadTimeout) || e.is_a?(AttemptTimeout)
+              raise Error.new("network_timeout: #{e.class.name.demodulize.underscore}", rede: true, tempo_esgotado: tempo_esgotado)
             end
           end
 
