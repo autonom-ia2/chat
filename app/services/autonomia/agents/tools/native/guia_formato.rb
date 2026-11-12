@@ -7,6 +7,9 @@
 # valores que cada lista aceita. Não chama a plataforma nem muda nada.
 class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::Native::Base
   class << self
+    # #2918: LÊ (lê o formato de uma ação). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'formato_da_acao'
     end

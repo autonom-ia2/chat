@@ -78,8 +78,10 @@ module Autonomia
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
                      fixos: [], contexto_do_turno: nil, memoria: nil, prova: false, formato: FormatoDoComentario::CONVERSA,
-                     care_id: nil)
+                     care_id: nil, uma_escrita_por_turno: false)
         @agent = agent
+        # #2918: com as rodadas das prontas, a ferramenta que escreve roda uma vez por turno (`RodadasDoTurno`).
+        @uma_escrita = Tools::UmaEscritaPorTurno.new(agente: agent, delivery: delivery) if uma_escrita_por_turno
         # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
         # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
         # curto e sem nova tentativa: roda num job, e a tela espera.
@@ -452,12 +454,11 @@ module Autonomia
         @ferramentas_no_turno = @ferramentas_no_turno.to_i + Array(calls).size
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
         specialists_by_function = enabled_specialists.index_by(&:function_name)
-        disparar_consultas(calls, tools_by_slug, specialists_by_function)
+        repetidas = @uma_escrita&.repetidas(calls, tools_by_slug, specialists_by_function) || {}
+        disparar_consultas(Array(calls).reject { |call| repetidas.key?(call) }, tools_by_slug, specialists_by_function)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          recusas_antes = Tools::Recusa.registradas
-          output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
-          anotar_leitura(tools_by_slug[call['name'].to_s], output, recusou: Tools::Recusa.registradas > recusas_antes)
+          output = executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
           registrar_chamada(call, output, inicio)
           saida = output.to_s.truncate(8_000)
           # #1479: só a saída de ferramenta (HTTP, sistema) pode trazer endereço para o botão; a de especialista ou
@@ -465,6 +466,20 @@ module Autonomia
           (@saidas_do_turno ||= []) << saida if @interacao && ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
           { type: 'function_call_output', call_id: call['call_id'], output: saida }
         end
+      end
+
+      # Uma chamada do modelo -> a saída. #2918: a travada pela `UmaEscritaPorTurno` não roda e conta como recusa (o portão
+      # do Copiloto e de quem chama sem `trust_instruction` a vê); a que rodou só trava a próxima escrita sem recusa.
+      def executar_chamada(call, repetidas, tools_by_slug, specialists_by_function)
+        tool = tools_by_slug[call['name'].to_s]
+        return repetidas[call].tap { |saida| anotar_leitura(tool, saida, recusou: true) } if repetidas.key?(call)
+
+        recusas_antes = Tools::Recusa.registradas
+        output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+        recusou = Tools::Recusa.registradas > recusas_antes
+        anotar_leitura(tool, output, recusou: recusou)
+        @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, recusou: recusou)
+        output
       end
 
       # A chamada foi a uma ferramenta do agente, e não a um especialista ou ajudante (que tem a precedência no despacho).

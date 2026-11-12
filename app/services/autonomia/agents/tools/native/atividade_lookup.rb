@@ -32,6 +32,9 @@ class Autonomia::Agents::Tools::Native::AtividadeLookup < Autonomia::Agents::Too
                 'pergunte de novo o que a empresa faz: diga que vai encaminhar para alguém da equipe.'.freeze
 
   class << self
+    # #2918: LÊ (busca a atividade do empresarial). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'buscar_atividade'
     end

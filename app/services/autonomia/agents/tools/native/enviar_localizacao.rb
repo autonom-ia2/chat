@@ -14,6 +14,9 @@ class Autonomia::Agents::Tools::Native::EnviarLocalizacao < Autonomia::Agents::T
               'nas suas instruções; senão, passe para uma pessoa da equipe.'.freeze
 
   class << self
+    # #2918: ESCREVE (manda o cartão do mapa ao cliente). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = true
+
     def slug
       'enviar_localizacao'
     end

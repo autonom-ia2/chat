@@ -21,7 +21,8 @@
 class Autonomia::FerramentasProntas::Experimente::ComModelo
   FEATURE = 'agente_ferramenta_experimente'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
-  MAX_RODADAS = 3
+  # As mesmas do agente com pronta no atendimento (#2918).
+  MAX_RODADAS = Autonomia::FerramentasProntas::RODADAS_POR_RESPOSTA
   MAX_SEGUNDOS = 10
   PRAZO_DO_MODELO = 6
   PRAZO_DAS_CONSULTAS = 8

@@ -21,6 +21,9 @@ class Autonomia::Agents::Tools::Native::GuiaClassificar < Autonomia::Agents::Too
   }.freeze
 
   class << self
+    # #2918: LÊ (classifica com o Jev, sem gravar nada). Nas rodadas das prontas, a que escreve roda uma vez por turno.
+    def escreve? = false
+
     def slug
       'classificar_com_jev'
     end
