@@ -5,6 +5,7 @@ const api = vi.hoisted(() => ({
   listar: vi.fn(),
   incluir: vi.fn(),
   mudarLigada: vi.fn(),
+  mudarQuando: vi.fn(),
   tirar: vi.fn(),
   experimentar: vi.fn(),
   acompanhar: vi.fn(),
@@ -182,6 +183,34 @@ describe('useVitrine · mudanças', () => {
     await vitrine.mudarLigada(31, false);
     expect(api.mudarLigada).toHaveBeenCalledWith(31, false);
     expect(vitrine.doAgente(7)[0].ligada).toBe(false);
+  });
+
+  it('changes the "use when" sentence with the answer from the server', async () => {
+    const vitrine = await novoEstado();
+    await vitrine.carregar();
+    api.mudarQuando.mockResolvedValue({
+      data: { ...LISTA.incluidas[0], usar_quando: 'Use quando pedirem o CEP.' },
+    });
+    await vitrine.mudarQuando(31, '  Use quando pedirem o CEP. ');
+    expect(api.mudarQuando).toHaveBeenCalledWith(
+      31,
+      '  Use quando pedirem o CEP. '
+    );
+    expect(vitrine.doAgente(7)[0].usar_quando).toBe(
+      'Use quando pedirem o CEP.'
+    );
+  });
+
+  it('a failed sentence change keeps the old one and tells why', async () => {
+    const vitrine = await novoEstado();
+    await vitrine.carregar();
+    api.mudarQuando.mockRejectedValueOnce(falha(401));
+    await expect(vitrine.mudarQuando(31, 'Outra.')).rejects.toMatchObject({
+      motivo: 'SEM_PERMISSAO',
+    });
+    expect(vitrine.doAgente(7)[0].usar_quando).toBe(
+      'Use quando o cliente informar um CEP.'
+    );
   });
 
   it('removes a tool only after the server confirms', async () => {
