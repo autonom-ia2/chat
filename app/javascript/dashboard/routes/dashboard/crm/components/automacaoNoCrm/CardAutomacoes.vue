@@ -230,10 +230,15 @@ const criar = () =>
                 @click="pedirParar(item)"
               />
             </div>
-            <details data-historico class="text-sm text-n-slate-11">
+            <details data-historico class="group text-sm text-n-slate-11">
+              <!-- O summary em flex perde o triângulo do navegador: a seta mostra que abre. -->
               <summary
-                class="flex min-h-11 cursor-pointer items-center font-medium text-n-slate-12"
+                class="flex min-h-11 cursor-pointer list-none items-center gap-1.5 font-medium text-n-slate-12"
               >
+                <span
+                  class="i-lucide-chevron-right size-4 shrink-0 transition-transform group-open:rotate-90"
+                  aria-hidden="true"
+                />
                 {{ t(`${C}.HISTORICO`) }}
               </summary>
               <ul class="m-0 flex list-none flex-col gap-1 p-0 ps-4">
