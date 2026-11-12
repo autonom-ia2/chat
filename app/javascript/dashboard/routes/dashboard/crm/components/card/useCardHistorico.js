@@ -344,9 +344,13 @@ export const useCardHistorico = ({
       ? t('CRM_KANBAN.DRAWER.AUTOMACAO_ACTOR', { name: nome })
       : t('CRM_KANBAN.DRAWER.AUTOMACAO_ACTOR_SEM_NOME');
   };
-  // Para auditoria: quem ligou a automação (o passo age como essa pessoa).
+  // Para auditoria: quem ligou a automação. Só na Automação livre, onde o passo
+  // age como essa pessoa. Na de etapa o ator é quem moveu o card para a etapa
+  // (pessoa ou integração), e na regra é quem disparou o evento: dizer que essa
+  // pessoa ligou a automação seria falso.
   const automacaoLigadaPor = activity =>
     isAutomacaoEvent(activity) &&
+    activity.payload?.origem === 'livre' &&
     activity.actor_type === 'user' &&
     activity.actor_name
       ? t('CRM_KANBAN.DRAWER.AUTOMACAO_LIGADA_POR', {

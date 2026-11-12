@@ -414,6 +414,26 @@ describe('useCardHistorico — movimento feito por automação', () => {
     expect(etapa.automacaoLink).toBeNull();
   });
 
+  // Na de etapa e na regra, o ator é quem moveu o card ou disparou o evento, e
+  // não quem ligou a automação: a linha não pode dizer que essa pessoa a ligou.
+  it('does not say who turned on a stage automation or a rule', () => {
+    const comPessoa = origem =>
+      describeActivity(
+        movimento(
+          { by: 'automacao', origem, automacao_id: 4 },
+          {
+            actor_type: 'user',
+            actor_name: 'Bruno',
+            automacao: { origem, id: 4, nome: 'Entrou', pode_abrir: false },
+          }
+        )
+      );
+
+    expect(comPessoa('etapa').actor).toBe('Automation «Entrou»');
+    expect(comPessoa('etapa').ligadaPor).toBe('');
+    expect(comPessoa('regra').ligadaPor).toBe('');
+  });
+
   it('says "An automation" when the automation no longer exists', () => {
     const item = describeActivity(
       movimento(
