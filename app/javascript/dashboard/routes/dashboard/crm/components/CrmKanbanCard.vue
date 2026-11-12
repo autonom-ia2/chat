@@ -38,10 +38,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-  // #2710 (protótipo, flag automacao_no_crm): { comprouEm, contatoId } do card novo de quem já comprou.
+  // #2710 (protótipo só da demo): { contatoId, desde } do card que a página de agendamento criou para quem já comprou.
   jaCliente: {
     type: Object,
     default: null,
+  },
+  abrindoJaCliente: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -439,7 +443,8 @@ const canOpenConversation = computed(
         <SeloJaCliente
           v-if="jaCliente"
           class="ms-5"
-          :comprou-em="jaCliente.comprouEm"
+          :desde="jaCliente.desde"
+          :ocupado="abrindoJaCliente"
           @abrir="$emit('abrirJaCliente', jaCliente)"
         />
       </div>

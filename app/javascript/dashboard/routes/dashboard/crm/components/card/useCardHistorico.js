@@ -5,7 +5,6 @@ import {
   noticeKindKey,
   skipReasonKey,
 } from '../../helpers/meetingNotices';
-import { diaEHora } from '../automacaoNoCrm/datas';
 
 // #1423 — a linha do tempo do card, tirada da gaveta para a nova e a antiga
 // usarem o mesmo texto: ícone, cor, título, quem fez, quando e o detalhe de
@@ -173,15 +172,6 @@ const ACTIVITY_META = {
     key: 'ACTIVITY_BOOKING_REBOOK_LINK_SENT',
     icon: 'i-lucide-calendar-plus',
     tone: 'info',
-  },
-  // #2710: o cliente que já comprou marcou a reunião pelo link do e-mail. O título diz quem e quando, numa frase só
-  // ("Maria marcou para 15/11 às 10h pelo link do e-mail"); `comHorario` põe o dia e a hora de payload.starts_at.
-  booking_client_booked_from_email: {
-    key: 'ACTIVITY_BOOKING_CLIENT_BOOKED_FROM_EMAIL',
-    nameLabel: 'contact_name',
-    comHorario: true,
-    icon: 'i-lucide-calendar-check',
-    tone: 'positive',
   },
   automation_owner_assigned: {
     key: 'ACTIVITY_AUTOMATION_OWNER_ASSIGNED',
@@ -563,14 +553,6 @@ export const useCardHistorico = ({
         proprio('ACTIVITY_GENERIC') || 'CRM_KANBAN.DRAWER.ACTIVITY_GENERIC'
       );
     const name = meta.nameLabel ? activity.labels?.[meta.nameLabel] : null;
-    if (name && meta.comHorario)
-      return t(`CRM_KANBAN.DRAWER.${meta.key}_TO`, {
-        name,
-        time: diaEHora(activity.payload?.starts_at, {
-          t,
-          locale: locale.value,
-        }),
-      });
     if (name) return t(`CRM_KANBAN.DRAWER.${meta.key}_TO`, { name });
     return t(proprio(meta.key) || `CRM_KANBAN.DRAWER.${meta.key}`);
   };

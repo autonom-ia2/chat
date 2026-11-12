@@ -1,18 +1,18 @@
 {
   "AUTOMACAO_NO_CRM": {
-    "DATA": {
-      "DIA_HORA": "{dia} às {hora}",
-      "HORA_CHEIA": "{hora}h"
-    },
     "CARD": {
       "TITULO": "Automações deste card",
       "CARREGANDO": "Procurando as automações…",
       "VAZIO": "Nenhuma automação está cuidando deste card agora.",
-      "CRIAR": "Criar uma automação",
+      "CRIAR": "Criar uma automação para quem entrar em {etapa}",
       "ITEM": "{nome} — {situacao}",
       "ESPERA_ATE": "espera até {dia}",
       "ESPERA_RESPOSTA": "espera o cliente responder",
       "AGINDO": "agindo agora",
+      "PASSO": "Passo {n} de {total}: {frase}",
+      "HISTORICO": "O que já fez",
+      "COMECOU": "{dia}: começou neste card",
+      "FEZ": "{dia}: {frase}",
       "PARAR": "Parar para este card",
       "PARAR_ROTULO": "Parar {nome} para este card",
       "CONFIRMA": "Parar {nome} só neste card?",
@@ -25,35 +25,39 @@
     },
     "ETAPA": {
       "TITULO": "Automações desta etapa",
-      "AJUDA": "O que acontece sozinho quando um card entra ou sai daqui.",
+      "AJUDA": "O que acontece sozinho quando um card entra, sai ou fica parado aqui.",
       "CARREGANDO": "Procurando as automações…",
       "VAZIO": "Esta etapa ainda não tem automação.",
       "NOVA": "Nova automação para esta etapa",
-      "QUANDO_ENTRA": "Quando o card entra",
-      "QUANDO_SAI": "Quando o card sai",
-      "DESLIGADA": "Desligada",
-      "ALTERAR": "Alterar",
-      "ALTERAR_ROTULO": "Alterar {nome}",
+      "QUANDO_ENTRA": "Quando o card entra nesta etapa",
+      "QUANDO_SAI": "Quando o card sai desta etapa",
+      "JEITO_ANTIGO": "Jeito antigo",
+      "PASSO_RETORNO": "Criar o retorno “{titulo}”",
+      "PASSO_OUTRO": "Outra ação",
       "SO_VER": "Você pode ver. Só quem cuida das automações pode mudar.",
-      "AVISO_ARQUIVAR": "Arquivar vários cards de uma vez não conta como “saiu da etapa”.",
+      "AVISO": "Ainda não contam como entrar ou sair desta etapa: arquivar vários cards de uma vez, apagar a etapa e mover cards pela integração.",
+      "SAIR_PERGUNTA": "Sair sem salvar? O que você mudou no funil não fica guardado.",
+      "SAIR_SIM": "Sair sem salvar",
+      "FICAR": "Ficar",
+      "ERRO_LIGAR": "Não deu para mudar agora. Tente de novo.",
       "ERRO_LISTA": "Não deu para ver as automações agora.",
       "TENTAR": "Tentar de novo"
     },
     "CLIENTE": {
-      "SELO": "Já é cliente · comprou em {dia}",
-      "SELO_ROTULO": "Já é cliente, comprou em {dia}. Abrir a compra",
-      "SEM_COMPRA": "Não achamos a compra deste cliente.",
-      "REUNIAO_TITULO": "Reunião do cliente",
-      "REUNIAO_FRASE": "{nome} marcou para {quando} pelo link do e-mail."
+      "SELO": "Já é cliente desde {dia}",
+      "SELO_SEM_DATA": "Já é cliente",
+      "SELO_ROTULO": "{selo}. Abrir a compra",
+      "ABRIR_COMPRA": "Abrir a compra",
+      "SEM_COMPRA": "Não achamos a compra deste cliente."
     },
     "DEMO": {
-      "CLIENTE": "Maria",
-      "LEMBRETE_PROPOSTA": "Lembrete de proposta",
-      "CLIENTE_SUMIU": "Avisar a equipe se o cliente sumir",
-      "LIGAR_NO_DIA_SEGUINTE": "Ligar no dia seguinte",
-      "FAZ_TAREFA": "Cria a tarefa “Ligar para o cliente”",
-      "FAZ_LEMBRETE": "Lembra da proposta 3 dias depois",
-      "FAZ_AVISO": "Avisa a equipe"
+      "LEMBRETE": "Lembrete de proposta",
+      "LEMBRETE_TEXTO": "Lembrar o cliente da proposta",
+      "DE_NOVO": "Mandar a proposta de novo",
+      "DE_NOVO_TEXTO": "Oi! Conseguiu ver a proposta?",
+      "DE_NOVO_AVISO": "O cliente ainda não respondeu à proposta",
+      "SUMIU": "Avisar se o cliente sumir",
+      "SUMIU_TEXTO": "O cliente sumiu: vale ligar"
     }
   }
 }

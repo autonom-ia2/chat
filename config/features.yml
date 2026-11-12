@@ -1376,19 +1376,3 @@
   display_name: Agentes › ferramentas prontas (Premium, BigDataCorp)
   enabled: false
   column: feature_flags_ext_2
-
-# Automação no CRM, protótipo em tela real (#2499 F6.3/F6.4/F6.5 e #2710, épico #2414). Ligada (junto com
-# automacao_editor e automacao_gatilhos): o card do funil ganha "Automações deste card" (o que está agindo nele, com
-# "Parar para este card"); a etapa aberta no funil ganha "Automações desta etapa" (as regras da etapa e as automações
-# novas numa lista só, o "Nova automação para esta etapa" que abre o editor com o gatilho da etapa e o aviso de que
-# arquivar vários cards de uma vez não conta como "saiu da etapa"); o card ganho mostra a reunião que o cliente marcou
-# pelo link do e-mail, com a linha na linha do tempo; e o card novo de quem já comprou ganha o selo "Já é cliente",
-# que abre o card ganho. Por enquanto os dados vêm do adaptador falso do painel (o selo procura o card ganho na API
-# de hoje); `?demo=vazio` mostra os estados vazios. Desligada: nada disso aparece. Sem migration. Rollback: desligar a
-# flag na conta. Posição 45 (17592186044416, 1 << 44), escolhida pela ordem neste arquivo, depois da
-# agente_ferramentas_prontas_premium (44): a Orquestração confirma o bit na fila. Só na conta da demo até o OK do
-# Rodrigo no protótipo.
-- name: automacao_no_crm
-  display_name: Automação › no card e na etapa do funil (protótipo)
-  enabled: false
-  column: feature_flags_ext_2

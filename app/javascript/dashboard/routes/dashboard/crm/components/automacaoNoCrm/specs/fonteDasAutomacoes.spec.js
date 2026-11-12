@@ -1,132 +1,94 @@
-import { withFullI18n } from '../../../../../../../../../vitest.i18n';
-import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import {
-  DATAS_DO_ENSAIO,
-  EVENTO_REUNIAO_PELO_EMAIL,
+  MARCA_DA_DEMO,
   criarFonteFalsa,
-  juntarAtividades,
+  marcaDaDemo,
 } from '../fonteDasAutomacoes';
-import { diaCurto, diaEHora, horaCurta } from '../datas';
 
-// #2414 F6.3/F6.5 e #2710 — a fonte falsa do protótipo devolve o mesmo formato
-// que a API vai devolver, e `?demo=vazio` esvazia tudo.
-vi.mock('dashboard/api/crmKanban', () => ({
-  default: { getContactOpportunities: vi.fn() },
-}));
-
-const { t } = withFullI18n('pt_BR').global;
-const fonte = criarFonteFalsa({ t });
-const vazia = criarFonteFalsa({ t, vazio: true });
-const ganho = { id: 7, status: 'won', contact: { id: 3, name: 'Maria Souza' } };
-const novoDeCliente = {
-  id: 8,
+// #2414 F6.3/F6.5 — a fonte falsa só liga no funil que o seed da demo marcou, só na etapa marcada e só em card
+// aberto; o formato é o da Automação livre (receita com gatilho e passos), sem frase pronta.
+const t = chave => chave;
+const marca = { etapa_id: 12 };
+const funil = { metadata: { [MARCA_DA_DEMO]: marca } };
+const entrou = '2026-11-12T12:00:00.000Z';
+const card = {
+  id: 5,
   status: 'open',
-  contact: { id: 3, name: 'Maria Souza', contact_type: 'customer' },
+  stage_id: 12,
+  entered_stage_at: entrou,
 };
 
-describe('fonte falsa das automações no CRM', () => {
-  it('lista o que age no card, com a espera e a data', async () => {
-    const itens = await fonte.automacoesDoCard({ id: 1 });
-    expect(itens.map(item => item.nome)).toEqual([
-      'Lembrete de proposta',
-      'Avisar a equipe se o cliente sumir',
-      'Ligar no dia seguinte',
-    ]);
-    expect(itens[0]).toMatchObject({
-      estado: 'espera',
-      ate: DATAS_DO_ENSAIO.esperaAte,
-    });
-    expect(await fonte.pararNoCard({ id: 1 }, itens[0])).toBe(true);
-  });
-
-  it('junta as regras da etapa e as automações novas numa lista só', async () => {
-    const itens = await fonte.automacoesDaEtapa(12);
-    expect(itens.map(item => item.origem)).toEqual(['etapa', 'motor', 'motor']);
-    expect(itens.map(item => item.quando)).toEqual(['entra', 'entra', 'sai']);
-    expect(itens[2].ligada).toBe(false);
-    expect(itens[1].rota).toEqual({ name: 'automacoes_lista' });
-  });
-
-  it('a reunião e a linha do tempo só existem no card ganho', async () => {
-    expect(await fonte.reuniaoDoCard(ganho)).toEqual({
-      inicio: DATAS_DO_ENSAIO.reuniao,
-      nome: 'Maria',
-    });
-    expect(await fonte.reuniaoDoCard({ ...ganho, status: 'open' })).toBeNull();
-    const [linha] = fonte.atividadesDoCard(ganho);
-    expect(linha).toMatchObject({
-      event_type: EVENTO_REUNIAO_PELO_EMAIL,
-      payload: { by: 'client', starts_at: DATAS_DO_ENSAIO.reuniao },
-      labels: { contact_name: 'Maria' },
-    });
-    expect(fonte.atividadesDoCard({ ...ganho, status: 'lost' })).toEqual([]);
-  });
-
-  it('o selo só vai no card aberto de quem já é cliente', () => {
-    expect(fonte.jaCliente(novoDeCliente)).toEqual({
-      comprouEm: DATAS_DO_ENSAIO.comprouEm,
-      contatoId: 3,
-    });
-    expect(fonte.jaCliente({ ...novoDeCliente, status: 'won' })).toBeNull();
-    expect(
-      fonte.jaCliente({
-        ...novoDeCliente,
-        contact: { id: 3, contact_type: 'lead' },
-      })
-    ).toBeNull();
-    expect(fonte.jaCliente({ id: 9, status: 'open' })).toBeNull();
-  });
-
-  it('acha o card ganho do contato na API de hoje', async () => {
-    CrmKanbanAPI.getContactOpportunities.mockResolvedValueOnce({
-      data: { payload: [{ id: 55, status: 'won' }] },
-    });
-    expect(await fonte.cardGanho({ contatoId: 3 })).toBe(55);
-    expect(CrmKanbanAPI.getContactOpportunities).toHaveBeenCalledWith('3', {
-      result: 'won',
-    });
-
-    CrmKanbanAPI.getContactOpportunities.mockResolvedValueOnce({
-      data: { payload: [] },
-    });
-    expect(await fonte.cardGanho({ contatoId: 3 })).toBeNull();
-  });
-
-  it('com ?demo=vazio, tudo vem vazio', async () => {
-    expect(await vazia.automacoesDoCard({ id: 1 })).toEqual([]);
-    expect(await vazia.automacoesDaEtapa(12)).toEqual([]);
-    expect(await vazia.reuniaoDoCard(ganho)).toBeNull();
-    expect(vazia.atividadesDoCard(ganho)).toEqual([]);
-    expect(vazia.jaCliente(novoDeCliente)).toBeNull();
-  });
-
-  it('as linhas extras entram na linha do tempo pela data', () => {
-    const doCard = [
-      { id: 2, created_at: '2026-11-12T10:00:00' },
-      { id: 1, created_at: '2026-11-10T10:00:00' },
-    ];
-    const extra = { id: 'x', created_at: '2026-11-11T10:00:00' };
-    expect(juntarAtividades(doCard, [extra]).map(item => item.id)).toEqual([
-      2,
-      'x',
-      1,
-    ]);
-    expect(juntarAtividades(doCard, [])).toBe(doCard);
+describe('marcaDaDemo', () => {
+  it('liga só com a marca do seed (no build de desenvolvimento)', () => {
+    expect(marcaDaDemo(funil)).toEqual(marca);
+    expect(marcaDaDemo({ metadata: {} })).toBeNull();
+    expect(marcaDaDemo({ metadata: { [MARCA_DA_DEMO]: true } })).toBeNull();
+    expect(marcaDaDemo(null)).toBeNull();
   });
 });
 
-describe('datas curtas', () => {
-  it('fala o dia e a hora como as pessoas falam', () => {
-    expect(diaCurto('2026-11-03T15:30:00', 'pt_BR')).toBe('03/11');
-    expect(horaCurta('2026-11-15T10:00:00', { t, locale: 'pt_BR' })).toBe(
-      '10h'
+describe('criarFonteFalsa', () => {
+  it('a etapa marcada tem as automações novas, com gatilho de etapa e passos', async () => {
+    const itens = await criarFonteFalsa({ t, marca }).automacoesDaEtapa(12);
+    expect(itens.map(item => item.receita.gatilho)).toEqual([
+      { tipo: 'card.entrou_na_etapa', etapa_id: 12 },
+      { tipo: 'card.entrou_na_etapa', etapa_id: 12 },
+      { tipo: 'card.parado', etapa_id: 12, dias: 5 },
+    ]);
+    expect(itens.map(item => item.ativa)).toEqual([true, true, false]);
+    itens.forEach(item =>
+      expect(item.receita.passos.length).toBeGreaterThan(0)
     );
-    expect(horaCurta('2026-11-15T10:30:00', { t, locale: 'pt_BR' })).toBe(
-      '10:30'
+    expect(itens.some(item => 'faz' in item || 'quando' in item)).toBe(false);
+  });
+
+  it('outra etapa, sem marca ou ?demo=vazio: nada', async () => {
+    expect(await criarFonteFalsa({ t, marca }).automacoesDaEtapa(13)).toEqual(
+      []
     );
-    expect(diaEHora('2026-11-15T10:00:00', { t, locale: 'pt_BR' })).toBe(
-      '15/11 às 10h'
+    expect(
+      await criarFonteFalsa({ t, marca: null }).automacoesDaEtapa(12)
+    ).toEqual([]);
+    expect(
+      await criarFonteFalsa({ t, marca, vazio: true }).automacoesDaEtapa(12)
+    ).toEqual([]);
+  });
+
+  it('o card aberto da etapa tem o passo atual, a espera e o histórico', async () => {
+    const [lembrete, deNovo] = await criarFonteFalsa({
+      t,
+      marca,
+    }).automacoesDoCard(card);
+    expect(lembrete).toMatchObject({
+      id: 'motor-41',
+      passoAtual: 0,
+      situacao: { tipo: 'espera', ate: '2026-11-15T12:00:00.000Z' },
+      comecou: entrou,
+      historico: [],
+    });
+    expect(deNovo).toMatchObject({
+      id: 'motor-42',
+      passoAtual: 1,
+      situacao: { tipo: 'espera', ate: '2026-11-14T12:00:00.000Z' },
+      historico: [{ em: entrou, passo: 0 }],
+    });
+  });
+
+  it('card ganho, perdido, arquivado ou de outra etapa não tem automação rodando', async () => {
+    const fonte = criarFonteFalsa({ t, marca });
+    await Promise.all(
+      ['won', 'lost', 'archived'].map(async status =>
+        expect(await fonte.automacoesDoCard({ ...card, status })).toEqual([])
+      )
     );
-    expect(diaEHora('', { t, locale: 'pt_BR' })).toBe('');
+    expect(await fonte.automacoesDoCard({ ...card, stage_id: 13 })).toEqual([]);
+  });
+
+  it('desligar na etapa tira a automação do card', async () => {
+    const fonte = criarFonteFalsa({ t, marca });
+    const [, deNovo] = await fonte.automacoesDaEtapa(12);
+    expect(await fonte.ligarNaEtapa(deNovo, false)).toBe(false);
+    const doCard = await fonte.automacoesDoCard(card);
+    expect(doCard.map(item => item.id)).toEqual(['motor-41']);
+    await fonte.ligarNaEtapa(deNovo, true);
   });
 });

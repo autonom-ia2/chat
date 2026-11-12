@@ -5,6 +5,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import FunilSugestao from './FunilSugestao.vue';
 import FunilEtapaAcoes from './FunilEtapaAcoes.vue';
 import EtapaAutomacoes from '../automacaoNoCrm/EtapaAutomacoes.vue';
+import { usePodeVerAutomacoes } from '../automacaoNoCrm/useAutomacaoNoCrm';
 import { CORES } from './funil';
 
 // #1384 — uma etapa aberta: o nome, a frase de quando o cliente está nela e a
@@ -21,11 +22,15 @@ const props = defineProps({
   erro: { type: Boolean, default: false },
   nomesFaltando: { type: Boolean, default: false },
   editando: { type: Boolean, default: false },
-  // #2414 F6.5 (protótipo): no lugar do cartão das ações, a lista única das automações da etapa.
-  automacoesNoCrm: { type: Boolean, default: false },
+  // #2414 F6.5 (protótipo só da demo): a marca do seed no funil; com ela, no lugar do cartão das ações, a lista
+  // única das automações da etapa (para quem pode ver automações).
+  demo: { type: Object, default: null },
+  // A gaveta tem mudança não salva: sair dela para o editor pergunta antes.
+  temMudanca: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['melhorar', 'usar', 'manter', 'mudar', 'acoes']);
+const podeVerAutomacoes = usePodeVerAutomacoes();
 
 // Quem guarda a etapa é a gaveta: aqui só se pede a mudança.
 const campo = chave =>
@@ -223,8 +228,11 @@ const mostraCampo = computed(() => temFrase.value || escrevendo.value);
     </div>
 
     <EtapaAutomacoes
-      v-if="editando && etapa.id && automacoesNoCrm"
+      v-if="editando && etapa.id && demo && podeVerAutomacoes"
       :etapa-id="etapa.id"
+      :etapa-nome="etapa.name"
+      :marca="demo"
+      :tem-mudanca="temMudanca"
       @antigas="emit('acoes')"
     />
     <FunilEtapaAcoes

@@ -1,153 +1,139 @@
-import CrmKanbanAPI from 'dashboard/api/crmKanban';
-
-// #2414 F6.3/F6.5 e #2710 — de onde as telas de automação no CRM tiram os dados.
-// Protótipo: a fonte falsa devolve dados fictícios e realistas no mesmo formato
-// que a API vai devolver; as telas não sabem de onde vem. Trocar pela API é
-// trocar este arquivo (as funções e o formato ficam):
-// - automacoesDoCard(card)   → [{ id, nome, estado: 'espera'|'resposta'|'agora', ate? }]
-// - pararNoCard(card, item)  → true
-// - automacoesDaEtapa(id)    → [{ id, origem: 'etapa'|'motor', nome, quando: 'entra'|'sai', faz, ligada, rota? }]
-//   (as regras antigas da etapa e as automações novas com gatilho nesta etapa, numa lista só)
-// - reuniaoDoCard(card)      → { inicio, nome } | null (só no card ganho)
-// - atividadesDoCard(card)   → linhas extras da linha do tempo, no formato de Crm::Activity
-// - jaCliente(card)          → { comprouEm, contatoId } | null (o card aberto de quem já comprou)
-// - cardGanho(jaCliente)     → id do card ganho | null
+// #2414 F6.3/F6.5 — as automações do motor novo no card e na etapa. Protótipo SÓ DA DEMO: esta branch não vai para
+// a main. A fonte falsa só liga no build de desenvolvimento (`import.meta.env.DEV` vira `false` no build de produção)
+// e só no funil que o seed da demo marcou (`metadata.demo_prototipo_2414 = { etapa_id }`). Fora disso, nada aparece.
+//
+// O formato é o da Automação livre (a receita com `gatilho { tipo, ... }` e `passos`), para as frases saírem do
+// mesmo frases.js do editor, com o catálogo real. Aqui não há texto pronto de frase. Trocar pela API pede endpoints
+// novos (o que roda num card, o histórico de execuções, parar num card) e não é trocar só este arquivo:
+// - automacoesDaEtapa(etapaId) → [{ id, nome, ativa, receita: { gatilho, passos } }]
+//   só as do motor novo com gatilho nesta etapa (entrou, saiu ou parado). As regras antigas da etapa vêm do store
+//   real (crmKanban/fetchStageAutomations).
+// - ligarNaEtapa(item, ativa) → ativa
+// - automacoesDoCard(card) → [{ id, nome, receita, passoAtual, situacao: { tipo: 'espera', ate }, comecou, historico }]
+//   `passoAtual` é o índice em `receita.passos`; `historico` é [{ em, passo }] com o índice de cada passo já feito.
+//   Só card aberto: card ganho, perdido ou arquivado não tem automação rodando.
+// - pararNoCard(card, item) → true
 // `?demo=vazio` deixa tudo vazio, para ver os estados vazios.
 
-// Datas fixas: os prints saem iguais em qualquer dia. Sem "Z": hora local.
-export const DATAS_DO_ENSAIO = {
-  esperaAte: '2026-11-15T12:00:00',
-  ligarEm: '2026-11-13T09:00:00',
-  comprouEm: '2026-11-03T15:30:00',
-  reuniao: '2026-11-15T10:00:00',
-  marcouEm: '2026-11-12T09:14:00',
+export const MARCA_DA_DEMO = 'demo_prototipo_2414';
+
+const SO_NO_DESENVOLVIMENTO = import.meta.env.DEV;
+
+// A marca do seed no funil ({ etapa_id }), ou null fora da demo.
+export const marcaDaDemo = funil => {
+  const marca = funil?.metadata?.[MARCA_DA_DEMO];
+  return SO_NO_DESENVOLVIMENTO && Number.isInteger(marca?.etapa_id)
+    ? marca
+    : null;
 };
 
-export const EVENTO_REUNIAO_PELO_EMAIL = 'booking_client_booked_from_email';
-
 const D = 'AUTOMACAO_NO_CRM.DEMO';
+const DIA = 86400000;
 
-const primeiroNome = (nome, t) =>
-  String(nome || '')
-    .trim()
-    .split(' ')[0] || t(`${D}.CLIENTE`);
+const depoisDe = (inicio, dias) =>
+  new Date(new Date(inicio).getTime() + dias * DIA).toISOString();
 
-const ehGanho = card => card?.status === 'won';
+const paraOResponsavel = { responsavel_do_card: true };
 
-export const criarFonteFalsa = ({ t, vazio = false }) => {
+const receitasDaEtapa = (t, etapaId) => ({
+  lembrete: {
+    gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: etapaId },
+    passos: [
+      { id: 'p1', tipo: 'esperar', duracao: { valor: 3, unidade: 'dias' } },
+      {
+        id: 'p2',
+        tipo: 'avisar',
+        para: paraOResponsavel,
+        texto: [t(`${D}.LEMBRETE_TEXTO`)],
+      },
+    ],
+  },
+  deNovo: {
+    gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: etapaId },
+    passos: [
+      { id: 'p1', tipo: 'mensagem', texto: [t(`${D}.DE_NOVO_TEXTO`)] },
+      { id: 'p2', tipo: 'esperar', duracao: { valor: 2, unidade: 'dias' } },
+      {
+        id: 'p3',
+        tipo: 'avisar',
+        para: paraOResponsavel,
+        texto: [t(`${D}.DE_NOVO_AVISO`)],
+      },
+    ],
+  },
+  sumiu: {
+    gatilho: { tipo: 'card.parado', etapa_id: etapaId, dias: 5 },
+    passos: [
+      {
+        id: 'p1',
+        tipo: 'avisar',
+        para: paraOResponsavel,
+        texto: [t(`${D}.SUMIU_TEXTO`)],
+      },
+    ],
+  },
+});
+
+// Ligada ou desligada vale para a sessão inteira: desligar na etapa tira do card.
+const ligadas = { 'motor-41': true, 'motor-42': true, 'motor-43': false };
+
+export const criarFonteFalsa = ({ t, marca, vazio = false }) => {
+  const etapaId = marca?.etapa_id;
+  const daEtapa = id => !vazio && Boolean(marca) && Number(id) === etapaId;
+
+  const automacoesDaEtapa = async id => {
+    if (!daEtapa(id)) return [];
+    const receitas = receitasDaEtapa(t, etapaId);
+    return [
+      ['motor-41', 'LEMBRETE', receitas.lembrete],
+      ['motor-42', 'DE_NOVO', receitas.deNovo],
+      ['motor-43', 'SUMIU', receitas.sumiu],
+    ].map(([chave, nome, receita]) => ({
+      id: chave,
+      nome: t(`${D}.${nome}`),
+      ativa: ligadas[chave],
+      receita,
+    }));
+  };
+
+  const ligarNaEtapa = async (item, ativa) => {
+    ligadas[item.id] = ativa;
+    return ativa;
+  };
+
+  // O card que entrou na etapa da demo: o lembrete espera os 3 dias; o "mandar de novo" já mandou a mensagem e
+  // espera os 2 dias. As datas saem de quando o card entrou na etapa (o seed grava agora).
   const automacoesDoCard = async card => {
-    if (vazio || !card?.id) return [];
+    if (card?.status !== 'open' || !daEtapa(card?.stage_id)) return [];
+    const entrou = card.entered_stage_at || card.created_at;
+    if (!entrou) return [];
+    const receitas = receitasDaEtapa(t, etapaId);
     return [
       {
         id: 'motor-41',
-        nome: t(`${D}.LEMBRETE_PROPOSTA`),
-        estado: 'espera',
-        ate: DATAS_DO_ENSAIO.esperaAte,
+        nome: t(`${D}.LEMBRETE`),
+        receita: receitas.lembrete,
+        passoAtual: 0,
+        situacao: { tipo: 'espera', ate: depoisDe(entrou, 3) },
+        comecou: entrou,
+        historico: [],
       },
       {
         id: 'motor-42',
-        nome: t(`${D}.CLIENTE_SUMIU`),
-        estado: 'resposta',
+        nome: t(`${D}.DE_NOVO`),
+        receita: receitas.deNovo,
+        passoAtual: 1,
+        situacao: { tipo: 'espera', ate: depoisDe(entrou, 2) },
+        comecou: entrou,
+        historico: [{ em: entrou, passo: 0 }],
       },
-      {
-        id: 'etapa-11',
-        nome: t(`${D}.LIGAR_NO_DIA_SEGUINTE`),
-        estado: 'espera',
-        ate: DATAS_DO_ENSAIO.ligarEm,
-      },
-    ];
-  };
-
-  const automacoesDaEtapa = async etapaId => {
-    if (vazio || !etapaId) return [];
-    // Amanhã: a nova abre no editor (automacoes_livre_editar); no ensaio, na lista.
-    const rota = { name: 'automacoes_lista' };
-    return [
-      {
-        id: 'etapa-11',
-        origem: 'etapa',
-        nome: t(`${D}.LIGAR_NO_DIA_SEGUINTE`),
-        quando: 'entra',
-        faz: t(`${D}.FAZ_TAREFA`),
-        ligada: true,
-      },
-      {
-        id: 'motor-41',
-        origem: 'motor',
-        nome: t(`${D}.LEMBRETE_PROPOSTA`),
-        quando: 'entra',
-        faz: t(`${D}.FAZ_LEMBRETE`),
-        ligada: true,
-        rota,
-      },
-      {
-        id: 'motor-42',
-        origem: 'motor',
-        nome: t(`${D}.CLIENTE_SUMIU`),
-        quando: 'sai',
-        faz: t(`${D}.FAZ_AVISO`),
-        ligada: false,
-        rota,
-      },
-    ];
-  };
-
-  const reuniaoDoCard = async card => {
-    if (vazio || !ehGanho(card)) return null;
-    return {
-      inicio: DATAS_DO_ENSAIO.reuniao,
-      nome: primeiroNome(card.contact?.name, t),
-    };
-  };
-
-  const atividadesDoCard = card => {
-    if (vazio || !ehGanho(card)) return [];
-    return [
-      {
-        id: 'ensaio-2710',
-        event_type: EVENTO_REUNIAO_PELO_EMAIL,
-        actor_type: 'contact',
-        created_at: DATAS_DO_ENSAIO.marcouEm,
-        payload: { by: 'client', starts_at: DATAS_DO_ENSAIO.reuniao },
-        labels: { contact_name: primeiroNome(card.contact?.name, t) },
-      },
-    ];
-  };
-
-  const jaCliente = card => {
-    const contato = card?.contact;
-    if (vazio || card?.status !== 'open' || !contato?.id) return null;
-    if (contato.contact_type !== 'customer') return null;
-    return { comprouEm: DATAS_DO_ENSAIO.comprouEm, contatoId: contato.id };
-  };
-
-  // O selo procura o card ganho na API de hoje (perfil do contato), que já
-  // respeita quem pode ver cada card.
-  const cardGanho = async cliente => {
-    if (!cliente?.contatoId) return null;
-    const { data } = await CrmKanbanAPI.getContactOpportunities(
-      String(cliente.contatoId),
-      { result: 'won' }
-    );
-    return data?.payload?.[0]?.id || null;
+    ].filter(item => ligadas[item.id]);
   };
 
   return {
+    automacoesDaEtapa,
+    ligarNaEtapa,
     automacoesDoCard,
     pararNoCard: async () => true,
-    automacoesDaEtapa,
-    reuniaoDoCard,
-    atividadesDoCard,
-    jaCliente,
-    cardGanho,
   };
 };
-
-// A linha do tempo chega da mais nova para a mais velha; as linhas extras
-// entram no lugar delas pela data.
-export const juntarAtividades = (doCard, extras) =>
-  extras.length
-    ? [...doCard, ...extras].sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      )
-    : doCard;

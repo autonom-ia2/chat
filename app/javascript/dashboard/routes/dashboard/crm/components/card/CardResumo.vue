@@ -575,7 +575,7 @@ const temConversa = computed(() =>
       </CardCartao>
     </div>
 
-    <!-- #2414 F6.3 e #2710: partes que entram antes de "Mais detalhes" (automações do card, reunião do cliente). -->
+    <!-- #2414 F6.3 (protótipo só da demo): parte que entra antes de "Mais detalhes" (automações do card). -->
     <slot name="antes-dos-detalhes" />
 
     <CardMaisDetalhes
