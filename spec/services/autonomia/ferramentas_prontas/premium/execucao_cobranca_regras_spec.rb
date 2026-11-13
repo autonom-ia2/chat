@@ -6,6 +6,9 @@ require 'rails_helper'
 # 11/11).
 RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   let(:account) { create(:account) }
+  # O dia que a `Execucao` grava é o da conta (ela roda no fuso dela), não o do teste em UTC: entre 00h e 03h UTC os dois
+  # são dias diferentes (#2973).
+  let(:hoje_da_conta) { Autonomia::FerramentasProntas::Premium.hoje_da_conta(account) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot EXEMPLO', agent_type: 'custom', status: :active, enabled: true,
                                      instruction: 'Atenda.')
@@ -243,7 +246,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
 
       expect(executar_premium(certidoes, cnj)['situacao']).to eq('encontrado')
       uso = Autonomia::FerramentasProntas::Uso.sole
-      expect(uso).to have_attributes(account_id: account.id, fonte: 'certidoes_empresa', dia: Time.zone.today)
+      expect(uso).to have_attributes(account_id: account.id, fonte: 'certidoes_empresa', dia: hoje_da_conta)
       expect(uso.motivos).to include('premium.telemetria_falhou' => 1)
     end
 
