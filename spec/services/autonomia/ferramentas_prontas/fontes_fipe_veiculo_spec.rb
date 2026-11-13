@@ -256,13 +256,16 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(a_request(:any, /veiculos|passe/)).not_to have_been_made
     end
 
-    it 'o endereco que nao e HTTPS, o corpo vazio ou a variavel que nao e JSON deixam o provedor sem cadastro' do
+    it 'o cadastro que nao vale deixa o provedor sem ele: sem HTTPS, fora da 443, com usuario, sem a barra, sem corpo' do
       ruins = [fonte.merge(passe: 'http://passe.exemplo.test/bilhete').to_json, fonte.merge(corpo: {}).to_json,
-               fonte.except(:chassi).to_json, 'nao e json']
+               fonte.except(:chassi).to_json, 'nao e json',
+               fonte.merge(entrada: 'https://veiculos.exemplo.test:8443/acesso').to_json,
+               fonte.merge(entrada: 'https://alguem:senha@veiculos.exemplo.test/acesso').to_json,
+               fonte.merge(placa: 'https://veiculos.exemplo.test/veiculo/placa').to_json]
 
       configurados = ruins.map { |valor| with_modified_env(PRONTAS_VEICULO_FONTE: valor) { provedor.configurado? } }
 
-      expect(configurados).to eq([false, false, false, false])
+      expect(configurados).to all(be(false))
       expect(with_modified_env(cadastro) { provedor.configurado? }).to be(true)
     end
   end

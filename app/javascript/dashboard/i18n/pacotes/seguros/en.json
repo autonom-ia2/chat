@@ -267,7 +267,7 @@
       },
       "FERRAMENTAS": {
         "FIPE": {
-          "USE_QUANDO": "Use when the customer asks for a car, motorcycle or truck insurance quote, or wants to know the vehicle's value.",
+          "USE_QUANDO": "Use when the customer gives the vehicle plate, asks for a car, motorcycle or truck insurance quote, or wants to know the vehicle's value.",
           "CLIENTE": "I want to quote insurance for my 2020 Onix.",
           "AGENTE": "The 2020 Onix LT 1.0 is worth R$ 60,822 in this month's table. I'll use this value in the quote."
         },

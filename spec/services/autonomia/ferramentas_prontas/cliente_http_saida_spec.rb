@@ -49,6 +49,20 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
     expect(saiu_por).to eq(['203.0.113.11', nil])
   end
 
+  it 'o host em que a plataforma entra com o cadastro dela (#2993) nunca sai pelo IP proprio da conta' do
+    webshare_datacenter([proxy_da_webshare(11, '203.0.113.11')])
+    fonte_responde(cep, { city: 'São Paulo' })
+    fonte_responde('https://fora.exemplo.test/veiculo', { achou: true })
+    com_cadastro = described_class.new(hosts: %w[brasilapi.com.br fora.exemplo.test], prazo_final: described_class.agora + 5,
+                                       conta: account.id)
+    com_cadastro.pelo_servidor!('fora.exemplo.test')
+
+    com_cadastro.get_json('brasilapi.com.br', '/api/cep/v2/01001000', prazo: 3)
+    com_cadastro.get_json('fora.exemplo.test', '/veiculo', prazo: 3)
+
+    expect(saiu_por).to eq(['203.0.113.11', nil])
+  end
+
   it 'a Webshare fora: a consulta sai pelo IP do servidor (decisao do Rodrigo, 12/11) e responde' do
     webshare_datacenter_fora
     fonte_responde(cep, { city: 'São Paulo' })

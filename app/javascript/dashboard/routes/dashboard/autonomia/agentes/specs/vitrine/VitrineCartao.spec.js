@@ -100,6 +100,6 @@ describe('VitrineCartao · tipos de pergunta do Premium', () => {
   it('keeps the catalog count on a free card', async () => {
     const wrapper = await montar('fipe', [{ chave: 'fipe' }]);
 
-    expect(wrapper.text()).toContain('Responde 3 tipos de pergunta');
+    expect(wrapper.text()).toContain('Responde 4 tipos de pergunta');
   });
 });

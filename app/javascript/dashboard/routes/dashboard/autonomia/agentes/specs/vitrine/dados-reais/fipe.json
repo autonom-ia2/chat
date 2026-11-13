@@ -617,5 +617,30 @@
         "valor": "R$"
       }
     }
+  },
+  "_origem_veiculo": "feito à mão no formato do adaptador do servidor, com placa e chassi inventados, sem chamada real",
+  "veiculo": {
+    "provedor": "veiculo_pela_placa",
+    "dados": {
+      "placa": "ABC1D23",
+      "chassi": "9BWZZZ377VT004251",
+      "marca": "Toyota",
+      "modelo": "YARIS Cross XRX 1.5 16V 5p Aut.",
+      "tipo": "carros",
+      "ano_fabricacao": 2025,
+      "ano_modelo": 2026,
+      "versoes": [
+        {
+          "codigo_fipe": "002224-1",
+          "descricao": "YARIS Cross XRX 1.5 16V 5p Aut.",
+          "valor": 163320.0,
+          "combustivel": "Flex",
+          "mes_de_referencia": "2026-11"
+        }
+      ],
+      "unidades": {
+        "valor": "R$"
+      }
+    }
   }
 }

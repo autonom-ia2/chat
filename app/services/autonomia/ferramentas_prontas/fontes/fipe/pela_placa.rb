@@ -35,6 +35,9 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
   NOME = 'veiculo_pela_placa'.freeze
   CADASTRO = 'PRONTAS_VEICULO_FONTE'.freeze
   ENDERECOS = %w[passe entrada placa chassi].freeze
+  # Os endereços em que a placa ou o chassi é colado no fim: sem a barra, o caminho sairia errado e toda placa viraria
+  # "não encontrado", em silêncio.
+  COM_O_DADO_NO_FIM = %w[placa chassi].freeze
   NAO_ACHOU = [400, 450].freeze
   ACESSO_VENCIDO = 401
   VALIDADE_DO_ACESSO = 50.minutes
@@ -64,15 +67,20 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
       return unless dado.is_a?(Hash) && dado['corpo'].is_a?(Hash) && dado['corpo'].present?
 
       enderecos = ENDERECOS.index_with { |nome| endereco(dado[nome]) }
-      enderecos.merge('corpo' => dado['corpo']) if enderecos.values.all?
+      enderecos.merge('corpo' => dado['corpo']) if completos?(enderecos)
     rescue JSON::ParserError
       nil
     end
 
-    # Só HTTPS, com host. Fora disso, o provedor fica sem o cadastro.
+    def completos?(enderecos)
+      enderecos.values.all? && COM_O_DADO_NO_FIM.all? { |nome| enderecos[nome].request_uri.end_with?('/') }
+    end
+
+    # Só HTTPS na 443, com host e sem usuário no endereço (o `ClienteHttp` monta o pedido só com o host). Fora disso, o
+    # provedor fica sem o cadastro.
     def endereco(valor)
       endereco = URI.parse(valor.to_s)
-      endereco if endereco.is_a?(URI::HTTPS) && endereco.host.present?
+      endereco if endereco.is_a?(URI::HTTPS) && endereco.host.present? && endereco.port == ClienteHttp::PORTA && endereco.userinfo.nil?
     rescue URI::InvalidURIError
       nil
     end
@@ -112,7 +120,10 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
     raise NaoEncontrado, 'nao_encontrado' if resumo.nil?
 
     placa = Fipe::PLACA.normalizar(resumo['plate'])
-    placa ? pela_placa(placa) : resumo.merge('chassi' => chassi)
+    return resumo.merge('chassi' => chassi) if placa.nil?
+
+    inteiro = pela_placa(placa)
+    inteiro.merge('chassi' => inteiro['chassi'].presence || chassi)
   end
 
   # `valor`: a placa ou o chassi já normalizados (só letras e dígitos), colados no fim do endereço da consulta.
