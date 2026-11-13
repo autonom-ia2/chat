@@ -58,6 +58,9 @@ class Notification < ApplicationRecord
 
   enum notification_type: NOTIFICATION_TYPES
 
+  # #2898 — what the insurance renewal notification has of its own (title, body, in-app only) lives in its module.
+  prepend Carteira::NotificacaoDaRenovacao
+
   before_create :set_last_activity_at
   after_create_commit :process_notification_delivery, :dispatch_create_event
   after_destroy_commit :dispatch_destroy_event
@@ -110,8 +113,9 @@ class Notification < ApplicationRecord
       'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution'
     }
 
-    fork_title = fork_notification_title
-    return fork_title if fork_title
+    return I18n.t('notifications.notification_title.guide_alert') if guide_alert?
+    return I18n.t('notifications.notification_title.conversation_audience_ready') if conversation_audience_ready?
+    return I18n.t('notifications.notification_title.automacao_aprovacao') if automacao_aprovacao?
 
     i18n_key = notification_title_map[notification_type]
     return '' unless i18n_key
@@ -146,22 +150,12 @@ class Notification < ApplicationRecord
 
   private
 
-  # The fork's own notification types (the guide alert, #2277 the audience, #2931 the automation approval request,
-  # #2898 the insurance renewals of the day): the title is a fixed text, without a conversation.
-  def fork_notification_title
-    return I18n.t('notifications.notification_title.guide_alert') if guide_alert?
-    return I18n.t('notifications.notification_title.conversation_audience_ready') if conversation_audience_ready?
-    return I18n.t('notifications.notification_title.automacao_aprovacao') if automacao_aprovacao?
-
-    I18n.t('notifications.notification_title.carteira_renovacao') if carteira_renovacao?
-  end
-
+  # The fork's own notification types (the guide alert, #2277 the audience, #2931 the automation approval request).
   def fork_message_body
     case notification_type
     when 'guide_alert' then primary_actor.texto.to_s.truncate(200)
     when 'conversation_audience_ready' then conversation_audience_body
     when 'automacao_aprovacao' then primary_actor&.automacao&.nome.to_s
-    when 'carteira_renovacao' then I18n.t('notifications.carteira_renovacao.entraram', count: meta.to_h['quantos'].to_i)
     else ''
     end
   end
@@ -195,8 +189,8 @@ class Notification < ApplicationRecord
 
   def process_notification_delivery
     # #2277: the search-by-conversation bell is in-app only; push and e-mail are made for conversations. The same for the
-    # approval request of an automation (#2931) and the insurance renewals of the day (#2898).
-    return Notification::RemoveDuplicateNotificationJob.perform_later(self) if so_no_painel?
+    # approval request of an automation (#2931).
+    return Notification::RemoveDuplicateNotificationJob.perform_later(self) if conversation_audience_ready? || automacao_aprovacao?
 
     Notification::PushNotificationJob.perform_later(self) if user_subscribed_to_notification?('push')
 
@@ -206,10 +200,6 @@ class Notification < ApplicationRecord
     Notification::EmailNotificationJob.perform_later(self) if user_subscribed_to_notification?('email')
 
     Notification::RemoveDuplicateNotificationJob.perform_later(self)
-  end
-
-  def so_no_painel?
-    conversation_audience_ready? || automacao_aprovacao? || carteira_renovacao?
   end
 
   def user_subscribed_to_notification?(delivery_type)

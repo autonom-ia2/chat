@@ -13,6 +13,7 @@ import InboxListHeader from './components/InboxListHeader.vue';
 import IntersectionObserver from 'dashboard/components/IntersectionObserver.vue';
 import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBarConversationSnooze.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import { abrirAvisoDaCarteira } from '../relacionamentos/carteira/avisoDaRenovacao';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -226,29 +227,9 @@ const abrirPedidoDeAprovacao = async notificationItem => {
   });
 };
 
-// #2898 — seguros entraram em renovação: abre a aba Seguros no grupo "Em renovação".
-const abrirSegurosEmRenovacao = async notificationItem => {
-  const { id, primaryActorId, primaryActorType } = notificationItem;
-  try {
-    await store.dispatch('notifications/read', {
-      id,
-      primaryActorId,
-      primaryActorType,
-      unreadCount: meta.value.unreadCount,
-    });
-    store.dispatch('notifications/unReadCount');
-  } catch {
-    // a tela abre mesmo assim; marcar como lido fica para a próxima
-  }
-  router.push({
-    name: 'relationships_home',
-    query: { aba: 'seguros', grupo: 'em_renovacao' },
-  });
-};
-
 const openConversation = async notificationItem => {
-  if (notificationItem.notificationType === 'carteira_renovacao') {
-    await abrirSegurosEmRenovacao(notificationItem);
+  // #2898 — o aviso da carteira de seguros abre a aba Seguros: quem decide é o módulo dele.
+  if (await abrirAvisoDaCarteira(notificationItem, { store, router, meta })) {
     return;
   }
   if (notificationItem.notificationType === 'automacao_aprovacao') {
