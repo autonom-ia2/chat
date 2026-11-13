@@ -14,7 +14,9 @@ module Carteira::Guardar::Dados
   module_function
 
   def call(dados)
-    dados = dados.to_h.symbolize_keys.slice(*CHAVES)
+    recusar(:dados) unless dados.is_a?(Hash)
+
+    dados = dados.symbolize_keys.slice(*CHAVES)
     TEXTOS.each { |campo| recusar(campo) unless dados[campo].nil? || dados[campo].is_a?(String) }
     recusar(VALOR) unless dados[VALOR].nil? || dados[VALOR].is_a?(Integer)
     dados.merge(DATAS.index_with { |campo| data(campo, dados[campo]) })

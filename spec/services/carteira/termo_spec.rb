@@ -40,18 +40,27 @@ RSpec.describe Carteira::Termo do
       expect(described_class.escolher([], guardada)).to be_nil
     end
 
-    it 'com dois termos guardados, o fim corrigido vai para o termo do mesmo começo, não para o que termina mais perto' do
+    it 'com dois termos guardados e só um que bate (o do mesmo começo), o fim corrigido é dele' do
       expect(described_class.escolher([guardada, renovada], termo('2026-03-10', '2027-12-10'))).to equal(guardada)
     end
 
-    it 'quando um termo tem o mesmo começo e outro o mesmo fim, vale o do começo' do
-      expect(described_class.escolher([guardada, renovada], termo('2026-03-10', '2028-03-10'))).to equal(guardada)
+    it 'quando um termo tem o mesmo começo e outro o mesmo fim, não desempata: é ambíguo' do
+      expect(described_class.escolher([guardada, renovada], termo('2026-03-10', '2028-03-10'))).to eq(described_class::AMBIGUO)
+      expect(described_class.escolher([renovada, guardada], termo('2026-03-10', '2028-03-10'))).to eq(described_class::AMBIGUO)
     end
 
-    it 'o termo igual em tudo vale mesmo com outro de mesmo começo guardado' do
+    it 'a única exceção: com mais de um que bate, o ÚNICO igual em começo e fim é o termo (o reenvio idêntico não é recusado)' do
       de_mesmo_comeco = termo('2026-03-10', '2027-06-10')
+      sem_comeco = termo(nil, '2027-03-10')
 
       expect(described_class.escolher([de_mesmo_comeco, guardada], termo('2026-03-10', '2027-03-10'))).to equal(guardada)
+      expect(described_class.escolher([guardada, sem_comeco], termo(nil, '2027-03-10'))).to equal(sem_comeco)
+    end
+
+    it 'dois termos iguais em começo e fim aos dados: ambíguo' do
+      gemea = termo('2026-03-10', '2027-03-10')
+
+      expect(described_class.escolher([guardada, gemea], termo('2026-03-10', '2027-03-10'))).to eq(described_class::AMBIGUO)
     end
 
     it 'dois termos com o mesmo começo e nenhum igual em tudo: não adivinha' do
