@@ -114,7 +114,7 @@ const abrirSegurado = ({ tipo, id }) =>
   );
 
 const gavetaDeFiltros = ref(false);
-const opcoesDeFiltro = ref({ tipos: [], seguradoras: [] });
+const opcoesDeFiltro = ref({ tipos: [], seguradoras: [], cuida: [] });
 const abrirFiltros = async () => {
   gavetaDeFiltros.value = true;
   try {

@@ -2,6 +2,8 @@ import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import GavetaDeFiltrosDeSeguros from '../../components/carteira/GavetaDeFiltrosDeSeguros.vue';
 import ListaDeSeguros from '../../components/carteira/ListaDeSeguros.vue';
 import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
 import { esquecerEscritasDaCarteira } from '../../demo/carteira';
@@ -301,6 +303,92 @@ describe('o grupo que a tela de resultados pede pelo endereço', () => {
       pagina: 1,
     });
     expect(escolhida(w, 'nao_renovaram_90')).toBe('true');
+  });
+});
+
+// "Quem cuida" filtra pelo dono da renovação. Só existe quando o servidor
+// manda de quem escolher: a lista vem vazia na conta sem renovação e para quem
+// não enxerga os cards no quadro.
+describe('o filtro "Quem cuida" em "Mais filtros"', () => {
+  const OPCOES = { tipos: ['auto'], seguradoras: ['Seguradora Atlântica'] };
+  const filtros = w => w.findComponent(GavetaDeFiltrosDeSeguros);
+  const campos = w =>
+    w.findAll('[data-filtro]').map(campo => campo.attributes('data-filtro'));
+  const abrirFiltros = async cuida => {
+    servidorResponde();
+    SegurosAPI.opcoesDeFiltro.mockResolvedValue({
+      data: cuida === undefined ? OPCOES : { ...OPCOES, cuida },
+    });
+    const w = await abrirNoServidor();
+    await clicar(w, daCarteira('mais-filtros'));
+    return w;
+  };
+
+  it('com quem escolher, aparece depois da seguradora, com o nome de cada pessoa', async () => {
+    const w = await abrirFiltros([
+      { id: 9, nome: 'Bruna Teixeirão' },
+      { id: 12, nome: 'Caio Montenegro' },
+    ]);
+
+    expect(campos(w)).toEqual(['tipo', 'seguradora', 'cuida']);
+    const campo = w.get('[data-filtro="cuida"]');
+    expect(campo.get('label').text()).toBe('Quem cuida da renovação');
+    expect(campo.findComponent(ChoiceSelect).props('options')).toEqual([
+      { value: '', label: 'Qualquer pessoa' },
+      { value: 9, label: 'Bruna Teixeirão' },
+      { value: 12, label: 'Caio Montenegro' },
+    ]);
+    expect(w.findAll('select')).toHaveLength(0);
+  });
+
+  it.each([
+    ['vazia', []],
+    ['ausente', undefined],
+  ])(
+    'com a lista %s, o filtro some: nem rótulo, nem campo desligado',
+    async (_, cuida) => {
+      const w = await abrirFiltros(cuida);
+
+      expect(campos(w)).toEqual(['tipo', 'seguradora']);
+      const gaveta = w.get(daCarteira('filtros'));
+      expect(gaveta.text()).not.toContain('Quem cuida');
+      expect(gaveta.findAll('[disabled]')).toHaveLength(0);
+    }
+  );
+
+  it('aplicar manda o id de quem cuida ao servidor e conta um filtro ligado', async () => {
+    const w = await abrirFiltros([{ id: 9, nome: 'Bruna Teixeirão' }]);
+
+    filtros(w).vm.$emit('aplicar', { tipo: '', seguradora: '', cuida: 9 });
+    await assentar();
+
+    expect(SegurosAPI.lista).toHaveBeenLastCalledWith({
+      grupo: 'todos',
+      ordem: 'vence_primeiro',
+      pagina: 1,
+      'filtros[cuida]': 9,
+    });
+    expect(textoDe(w, daCarteira('mais-filtros'))).toBe('Mais filtros · 1');
+  });
+
+  it('na demonstração, filtra pelos seguros de quem cuida', async () => {
+    const w = await abrir();
+    await clicar(w, daCarteira('mais-filtros'));
+    const [, alguem] = w
+      .get('[data-filtro="cuida"]')
+      .findComponent(ChoiceSelect)
+      .props('options');
+    const antes = linhas(w).length;
+
+    filtros(w).vm.$emit('aplicar', {
+      tipo: '',
+      seguradora: '',
+      cuida: alguem.value,
+    });
+    await assentar();
+
+    expect(linhas(w).length).toBeGreaterThan(0);
+    expect(linhas(w).length).toBeLessThan(antes);
   });
 });
 

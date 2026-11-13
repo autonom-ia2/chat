@@ -43,10 +43,12 @@ export const ORDENS_DE_SEGUROS = {
   MAIS_NOVOS: 'mais_novos',
 };
 
-// O que a gaveta "Mais filtros" da aba Seguros filtra.
+// O que a gaveta "Mais filtros" da aba Seguros filtra. `cuida` (#2898) é o id
+// de quem cuida da renovação do seguro.
 export const FILTROS_DE_SEGUROS_VAZIOS = Object.freeze({
   tipo: '',
   seguradora: '',
+  cuida: '',
 });
 
 export const contarFiltrosDeSeguros = (filtros = {}) =>
@@ -89,9 +91,10 @@ const camposDoSeguro = seguro => ({
   numeros: [seguro.numero],
 });
 
-const passaNosFiltros = (seguro, { tipo, seguradora } = {}) =>
+const passaNosFiltros = (seguro, { tipo, seguradora, cuida } = {}) =>
   (!tipo || seguro.tipo === tipo) &&
-  (!seguradora || seguro.seguradora === seguradora);
+  (!seguradora || seguro.seguradora === seguradora) &&
+  (!cuida || seguro.renovacao?.cuidaId === cuida);
 
 const passaNaConsulta =
   ({ busca = '', filtros = {} } = {}) =>
@@ -100,6 +103,18 @@ const passaNaConsulta =
     passaNosFiltros(seguro, filtros);
 
 const unicos = lista => [...new Set(lista.filter(Boolean))].sort();
+
+// Como no servidor (Carteira::OpcoesDeFiltro): quem cuida de alguma renovação
+// da carteira, uma vez cada, pelo nome.
+const quemCuida = seguros =>
+  [
+    ...new Map(
+      seguros
+        .map(seguro => seguro.renovacao)
+        .filter(renovacao => renovacao?.cuidaId)
+        .map(({ cuidaId, cuida }) => [cuidaId, { id: cuidaId, nome: cuida }])
+    ).values(),
+  ].sort((a, b) => a.nome.localeCompare(b.nome, LOCALE_DA_ORDEM_ALFABETICA));
 
 const empresaSegurada = seguro =>
   seguro.segurado.tipo === 'empresa' ? seguro.segurado.id : null;
@@ -226,6 +241,7 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
       return {
         tipos: unicos(seguros.map(seguro => seguro.tipo)),
         seguradoras: unicos(seguros.map(seguro => seguro.seguradora)),
+        cuida: quemCuida(seguros),
       };
     },
     // Como no servidor: os seguros em que a pessoa é o contato, inclusive

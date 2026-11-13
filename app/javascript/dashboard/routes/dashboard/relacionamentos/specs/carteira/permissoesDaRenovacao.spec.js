@@ -5,8 +5,8 @@ import { usePermissoesDaFicha } from '../../ficha/usePermissoesDaFicha';
 // Quem vê o que é da renovação (#2898). "Exportar" o histórico de um seguro
 // segue a regra de exportar contatos. "Ajustar renovações" e o convite para
 // escolher o funil são de quem o servidor deixa mudar os ajustes: o
-// administrador, ou a função que tem as duas chaves, `contact_manage` e
-// `crm_manage_pipelines` (o agente sem função não).
+// administrador, ou a função que tem `contact_manage` e uma chave de funil,
+// `crm_manage_pipelines` ou `crm_admin` (o agente sem função não).
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 7 } }),
 }));
@@ -59,24 +59,33 @@ describe('Exportar o histórico do seguro: quem exporta contatos', () => {
   });
 });
 
-describe('Ajustar renovações: o administrador ou a função com as duas chaves', () => {
+describe('Ajustar renovações: o administrador ou a função com as chaves', () => {
   it('o administrador muda, e o agente sem função não', () => {
     expect(assento({ papel: 'administrator' }).ajustar).toBe(true);
     expect(assento().ajustar).toBe(false);
   });
 
-  it('função personalizada só com contact_manage e crm_manage_pipelines juntas', () => {
-    expect(comFuncao(['custom_role', 'contact_view']).ajustar).toBe(false);
-    expect(
-      comFuncao(['custom_role', 'contact_manage', 'crm_manage_pipelines'])
-        .ajustar
-    ).toBe(true);
-  });
-
-  it.each(['contact_manage', 'crm_manage_pipelines'])(
-    'só com %s não muda',
-    chave => {
-      expect(comFuncao(['custom_role', chave]).ajustar).toBe(false);
+  it.each(['crm_manage_pipelines', 'crm_admin'])(
+    'função personalizada com contact_manage e %s muda',
+    deFunil => {
+      expect(
+        comFuncao(['custom_role', 'contact_manage', deFunil]).ajustar
+      ).toBe(true);
     }
   );
+
+  it('função personalizada com as duas chaves de funil e sem contact_manage não muda', () => {
+    expect(
+      comFuncao(['custom_role', 'crm_manage_pipelines', 'crm_admin']).ajustar
+    ).toBe(false);
+  });
+
+  it.each([
+    'contact_view',
+    'contact_manage',
+    'crm_manage_pipelines',
+    'crm_admin',
+  ])('só com %s não muda', chave => {
+    expect(comFuncao(['custom_role', chave]).ajustar).toBe(false);
+  });
 });

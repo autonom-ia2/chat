@@ -97,6 +97,8 @@
         "SEGURADORA": "Insurer",
         "TODOS": "All",
         "TODAS": "All",
+        "CUIDA": "In charge of the renewal",
+        "QUALQUER_PESSOA": "Anyone",
         "VER_RESULTADO": "See result",
         "LIMPAR": "Clear",
         "SEM_RESULTADO": "No policy with these filters.",
@@ -120,6 +122,8 @@
       "SELOS": {
         "ATIVO": "Active policy",
         "VENCIDO": "Expired policy",
+        "EM_RENOVACAO": "Policy in renewal",
+        "RENOVADO": "Renewed policy",
         "CANCELADO": "Cancelled policy"
       },
       "SELOS_FALHARAM": "I couldn't show who has insurance right now."
@@ -199,6 +203,7 @@
         "APOLICE_NOVA": "New policy saved. It already shows in the list of policies.",
         "HISTORICO_BAIXADO": "History downloaded.",
         "DESFEITO": "Undone.",
+        "NAO_PODE_FECHAR_A_RENOVACAO": "You do not have permission to change the renewal of this policy. Ask an account administrator or whoever is in charge of renewals.",
         "NAO_DEU": "I could not do that. Try again.",
         "DESFAZER": "Undo"
       },
@@ -290,6 +295,7 @@
         "PDF_ANEXADO": "PDF saved.",
         "PDF_TIRADO": "PDF deleted.",
         "CARD_NASCEU": "The renewal started.",
+        "RENOVACAO_CARD_NASCEU": "The renewal started.",
         "RENOVOU": "Renewed.",
         "NAO_RENOVOU": "Did not renew.",
         "NAO_RENOVOU_OUTRO": "Did not renew.",
@@ -297,6 +303,7 @@
         "DESFEZ_DESFECHO": "Renewal result undone. The policy is in renewal again."
       },
       "TIPOS_COM": {
+        "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
         "NAO_RENOVOU": "Did not renew: {motivo}.",
         "NAO_RENOVOU_OUTRO": "Did not renew. Reason: {texto}",
         "APOLICE_NOVA": "New policy saved. The previous one was {anterior}."
@@ -314,6 +321,7 @@
       "ABRIR_NO_CRM": "Open in the CRM",
       "SITUACAO": {
         "EM_ETAPA": "It is in the {funil} pipeline, at the {etapa} stage.",
+        "EM_ANDAMENTO": "The renewal is in progress.",
         "RENOVOU_FALTA": "Renewed. The new policy still has to be saved.",
         "RENOVOU": "Renewed. The new policy is already saved.",
         "NAO_RENOVOU": "Did not renew. Nobody said why.",
@@ -485,8 +493,8 @@
       "DIAS_INVALIDOS": "That number of days does not work. Type a whole number from 1 to 3650 and save again.",
       "MENSAGENS_INVALIDAS": "I did not understand the choice about messages. Choose \"Send\" or \"Do not send\" and save again.",
       "SEM_RENOVACAO": "This policy is no longer in renewal. I refreshed the screen.",
-      "JA_TEM_DESFECHO": "Someone already said how the renewal of this policy ended. I refreshed the screen: to change it, open \"More options for this policy\" and tap \"Undo the renewal result\".",
-      "SEM_DESFECHO": "There was nothing left to undo in the renewal of this policy. I refreshed the screen.",
+      "JA_TEM_DESFECHO": "The renewal of this policy was already closed by someone else or on the pipeline board. I refreshed the screen: to change it, open \"More options for this policy\" and tap \"Undo the renewal result\".",
+      "SEM_DESFECHO": "The renewal of this policy changed some other way, so I could not do that. I refreshed the screen: check how it is now.",
       "MOTIVO_DESCONHECIDO": "I do not know that reason. Open the reasons again and choose one from the list.",
       "FALTA_TEXTO": "The reason was not typed. Open the reasons again and type what it was, or choose one from the list.",
       "TEXTO_LONGO": "The reason is too long. Open the reasons again and type it in fewer words.",

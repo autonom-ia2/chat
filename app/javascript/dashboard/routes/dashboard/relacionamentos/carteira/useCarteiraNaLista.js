@@ -1,6 +1,7 @@
 // #2897 — o selo de seguro na lista de pessoas, na conta que tem a carteira de
 // seguros: ao lado do nome, o selo do seguro que mais pede atenção (o vencido,
-// depois o ativo que termina antes, o cancelado por último).
+// depois o que está em renovação, o renovado, o ativo que termina antes e o
+// cancelado por último).
 //
 // `comSelos(fonte)` devolve a fonte da lista com um passo a mais: cada página
 // de pessoas que chega dispara um pedido só, com os ids daquela página, e o

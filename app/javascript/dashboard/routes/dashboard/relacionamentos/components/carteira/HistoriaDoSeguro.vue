@@ -19,10 +19,10 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // o próprio sistema). Na correção, embaixo vem o que mudou, uma linha por
 // informação: "Valor que o cliente paga: era R$ 610,00, ficou R$ 640,00". É
 // leitura: nenhuma ação principal mora aqui.
-// #2898 — a renovação conta os passos dela (começou, renovou, não renovou e o
-// motivo, apólice nova) e, para quem pode exportar contatos, "Exportar" baixa o
-// mesmo conteúdo num arquivo que a planilha abre. O arquivo é montado aqui
-// mesmo, com o que já está na tela.
+// #2898 — a renovação conta os passos dela (começou e com quem, renovou, não
+// renovou e o motivo, desfeito, apólice nova) e, para quem pode exportar
+// contatos, "Exportar" baixa o mesmo conteúdo num arquivo que a planilha abre.
+// O arquivo é montado aqui mesmo, com o que já está na tela.
 const props = defineProps({
   itens: { type: Array, required: true },
   estado: { type: String, default: ESTADOS_DA_HISTORIA.PRONTO },
@@ -50,8 +50,10 @@ const mudancaEscrita = ({ campo, antes, depois }) =>
   });
 
 // O detalhe de um passo, do jeito que a frase escreve: o motivo pelo nome
-// dele, o número da apólice anterior como "nº …" e o motivo escrito como veio.
+// dele, o número da apólice anterior como "nº …", e o motivo escrito e o nome
+// de quem cuida como vieram.
 const DETALHE_ESCRITO = {
+  [DETALHES.CUIDA]: nome => nome,
   [DETALHES.MOTIVO]: motivo =>
     t(
       `RELACIONAMENTOS_CARTEIRA.RENOVACAO.MOTIVO.NA_FRASE.${motivo.toUpperCase()}`

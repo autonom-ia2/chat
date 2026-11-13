@@ -108,8 +108,8 @@ const variosSeguros = async pedido =>
 
 // ---- o pedido da lista -----------------------------------------------------
 
-// O que vai na URL: só o que está preenchido. "Quem cuida" não existe nesta
-// entrega (o servidor responde 422 para o filtro): não vai.
+// O que vai na URL: só o que está preenchido. "Quem cuida" (#2898) vai pelo id
+// da pessoa.
 const paramsDoPedido = ({ grupo, busca, ordem, pagina, filtros = {} }) =>
   Object.fromEntries(
     [
@@ -119,6 +119,7 @@ const paramsDoPedido = ({ grupo, busca, ordem, pagina, filtros = {} }) =>
       ['pagina', pagina],
       ['filtros[tipo]', filtros.tipo],
       ['filtros[seguradora]', filtros.seguradora],
+      ['filtros[cuida]', filtros.cuida],
     ].filter(([, valor]) => preenchido(valor))
   );
 

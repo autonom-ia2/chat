@@ -97,6 +97,8 @@
         "SEGURADORA": "Seguradora",
         "TODOS": "Todos",
         "TODAS": "Todas",
+        "CUIDA": "Quem cuida da renovação",
+        "QUALQUER_PESSOA": "Qualquer pessoa",
         "VER_RESULTADO": "Ver resultado",
         "LIMPAR": "Limpar",
         "SEM_RESULTADO": "Nenhum seguro com esses filtros.",
@@ -120,6 +122,8 @@
       "SELOS": {
         "ATIVO": "Seguro ativo",
         "VENCIDO": "Seguro vencido",
+        "EM_RENOVACAO": "Seguro em renovação",
+        "RENOVADO": "Seguro renovado",
         "CANCELADO": "Seguro cancelado"
       },
       "SELOS_FALHARAM": "Não consegui mostrar quem tem seguro agora."
@@ -199,6 +203,7 @@
         "APOLICE_NOVA": "Apólice nova guardada. Ela já aparece na lista de seguros.",
         "HISTORICO_BAIXADO": "Histórico baixado.",
         "DESFEITO": "Desfeito.",
+        "NAO_PODE_FECHAR_A_RENOVACAO": "Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.",
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
         "DESFAZER": "Desfazer"
       },
@@ -290,6 +295,7 @@
         "PDF_ANEXADO": "PDF guardado.",
         "PDF_TIRADO": "PDF apagado.",
         "CARD_NASCEU": "A renovação começou.",
+        "RENOVACAO_CARD_NASCEU": "A renovação começou.",
         "RENOVOU": "Renovou.",
         "NAO_RENOVOU": "Não renovou.",
         "NAO_RENOVOU_OUTRO": "Não renovou.",
@@ -297,6 +303,7 @@
         "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação."
       },
       "TIPOS_COM": {
+        "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
         "NAO_RENOVOU": "Não renovou: {motivo}.",
         "NAO_RENOVOU_OUTRO": "Não renovou. Motivo: {texto}",
         "APOLICE_NOVA": "Apólice nova guardada. A anterior era a {anterior}."
@@ -314,6 +321,7 @@
       "ABRIR_NO_CRM": "Abrir no CRM",
       "SITUACAO": {
         "EM_ETAPA": "Está no funil {funil}, na etapa {etapa}.",
+        "EM_ANDAMENTO": "A renovação está em andamento.",
         "RENOVOU_FALTA": "Renovou. Falta guardar a apólice nova.",
         "RENOVOU": "Renovou. A apólice nova já está guardada.",
         "NAO_RENOVOU": "Não renovou. Ninguém disse o motivo.",
@@ -485,8 +493,8 @@
       "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo.",
       "MENSAGENS_INVALIDAS": "Não entendi a escolha das mensagens. Escolha \"Mandar\" ou \"Não mandar\" e salve de novo.",
       "SEM_RENOVACAO": "Este seguro não está mais em renovação. Atualizei a tela.",
-      "JA_TEM_DESFECHO": "Alguém já disse como a renovação deste seguro terminou. Atualizei a tela: para mudar, abra \"Mais opções deste seguro\" e toque em \"Desfazer o resultado da renovação\".",
-      "SEM_DESFECHO": "Não havia mais o que desfazer na renovação deste seguro. Atualizei a tela.",
+      "JA_TEM_DESFECHO": "A renovação deste seguro já foi fechada por outra pessoa ou no quadro do funil. Atualizei a tela: para mudar, abra \"Mais opções deste seguro\" e toque em \"Desfazer o resultado da renovação\".",
+      "SEM_DESFECHO": "A renovação deste seguro mudou por outro caminho e não deu para fazer isso. Atualizei a tela: confira como ela ficou.",
       "MOTIVO_DESCONHECIDO": "Não conheço esse motivo. Abra os motivos de novo e escolha um da lista.",
       "FALTA_TEXTO": "Faltou escrever o motivo. Abra os motivos de novo e escreva qual foi, ou escolha um da lista.",
       "TEXTO_LONGO": "O motivo ficou comprido demais. Abra os motivos de novo e escreva com menos palavras.",

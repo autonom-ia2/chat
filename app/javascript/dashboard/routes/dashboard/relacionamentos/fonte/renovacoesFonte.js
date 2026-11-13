@@ -3,10 +3,14 @@
 //   1. fonte real: o servidor (fonte/renovacoesFonteReal.js);
 //   2. demonstração: com `?demo=<estado>` e só no ambiente de desenvolvimento.
 //      Tudo é inventado, e o que é salvo fica só na memória.
-// `peca` é o `?demo-carteira=` (carregando, erro) de fonte/modoCarteira.js. O
+// `peca` é o `?demo-carteira=` de fonte/modoCarteira.js: carregando, erro e os
+// dois estados do funil que parou de servir (arquivado, apagado). O
 // `import.meta.env.DEV` vira `false` no build de produção: o ramo some e os
 // dados fictícios nem entram no pacote.
+import { semOFunil } from '../carteira/ajustesDaRenovacao';
+import { funilParou } from '../carteira/funilDasRenovacoes';
 import { esperar } from './listaFonte';
+import { PECA_FUNIL_APAGADO, PECA_FUNIL_ARQUIVADO } from './modoCarteira';
 import {
   DEMO_CARREGANDO,
   DEMO_FORA_DO_SEGMENTO,
@@ -29,6 +33,11 @@ const CARREGAR_DEMO = import.meta.env.DEV
 
 export const ATRASO_DAS_RENOVACOES_MS = 300;
 const ESTADOS_SEM_SEGURO = ['vazio', DEMO_SEM_SEGUROS, DEMO_FORA_DO_SEGMENTO];
+// Como o servidor diz que o funil escolhido parou de servir (`escolha`).
+const ESCOLHA_QUE_PAROU = new Map([
+  [PECA_FUNIL_ARQUIVADO, 'funil_arquivado'],
+  [PECA_FUNIL_APAGADO, 'sumiu'],
+]);
 
 const erroDaDemo = () =>
   Object.assign(new Error('A demonstração pediu o erro desta peça.'), {
@@ -54,18 +63,26 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
     // As escolhas de agora e o que a tela precisa para mostrá-las: os funis da
     // conta e em quantos dias cada seguro termina (a linha "com N dias, X
     // seguros entram"). A conta sem seguro ainda não escolheu onde ficam as
-    // renovações.
+    // renovações. Como no servidor, `escolha` diz como está a escolha do funil,
+    // e o funil que parou de servir não vem em `ajustes`; quem salva outro
+    // funil sai desse estado.
     async ajustes() {
       const dados = await demo();
       const agora = Date.now();
-      return {
-        ajustes: dados.ajustes.ajustesDaDemo(semSeguro),
+      const guardados = dados.ajustes.ajustesDaDemo(semSeguro);
+      const parou = dados.ajustes.salvouNaDemo()
+        ? undefined
+        : ESCOLHA_QUE_PAROU.get(peca);
+      const resposta = {
+        ajustes: parou ? semOFunil(guardados) : guardados,
+        escolha: parou ?? (guardados.funilId ? 'feita' : 'nunca_feita'),
         funis: dados.ajustes.FUNIS_DA_DEMO,
         vencimentos: daCarteira(dados, agora)
           .filter(seguro => estaValendo(seguro, agora))
           .map(seguro => diasParaTerminar(seguro, agora)),
         semPermissao: false,
       };
+      return { ...resposta, funilParou: funilParou(resposta) };
     },
     async salvar(novos) {
       const dados = await demo();

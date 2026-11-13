@@ -188,6 +188,33 @@ describe('na conta com a carteira de seguros', () => {
     expect(seloDaLinha(carla).exists()).toBe(false);
   });
 
+  // #2898 — a renovação soma dois selos ao resumo por pessoa.
+  it('mostra os selos da renovação com texto e cor próprios, nunca a chave crua', async () => {
+    SegurosAPI.resumoPorPessoa.mockResolvedValue({
+      data: {
+        1: { quantos: 1, selo: 'em_renovacao', tipo: 'auto', dias: 12 },
+        2: { quantos: 2, selo: 'renovado', tipo: 'vida', dias: -3 },
+        3: { quantos: 1, selo: 'cancelado', tipo: 'auto', dias: 40 },
+      },
+    });
+
+    const w = await abrir();
+
+    await vi.waitFor(() =>
+      expect(w.findAll(daCarteira('selo'))).toHaveLength(3)
+    );
+    const [ana, bruno, carla] = linhas(w).map(seloDaLinha);
+    expect(ana.text()).toBe('Seguro em renovação');
+    expect(ana.attributes('data-selo')).toBe('azul');
+    expect(bruno.text()).toBe('Seguro renovado');
+    expect(bruno.attributes('data-selo')).toBe('verde');
+    expect(carla.text()).toBe('Seguro cancelado');
+    expect(carla.attributes('data-selo')).toBe('neutro');
+    [ana, bruno, carla].forEach(selo =>
+      expect(selo.text()).not.toContain('RELACIONAMENTOS')
+    );
+  });
+
   it('tem o grupo "Só tem um seguro" depois de "Clientes", com o número que o servidor contou', async () => {
     const w = await abrir();
 

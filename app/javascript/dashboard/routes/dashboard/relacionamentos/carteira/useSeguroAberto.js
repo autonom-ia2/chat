@@ -11,8 +11,12 @@
 // chama confere se ainda está no mesmo seguro antes de avisar.
 // #2898 — a renovação soma três ações (renovou, não renovou e o desfazer) e a
 // apólice nova, que é outro seguro: `guardarApoliceNova` devolve o seguro novo
-// (ou `null`, se não deu) e relê o que está aberto.
+// (ou `null`, se não deu) e relê o que está aberto. `semAcesso` diz que a
+// última ação falhou porque quem pediu não pode fazê-la (401 ou 403): fechar a
+// renovação pede poder mexer no card dela no quadro, e quem não mexe naquele
+// funil merece uma frase que diga isso, não "tente de novo".
 import { ref, watch } from 'vue';
+import { SEM_ACESSO } from '../ficha/falhas';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
 import { codigoDaRecusa } from './recusas';
 
@@ -29,6 +33,7 @@ export const useSeguroAberto = (fonte, id) => {
   const estadoDaHistoria = ref(ESTADOS_DA_HISTORIA.CARREGANDO);
   const ocupado = ref('');
   const recusa = ref('');
+  const semAcesso = ref(false);
   let pedidoDaHistoria = 0;
   let acaoDaVez = 0;
 
@@ -73,11 +78,15 @@ export const useSeguroAberto = (fonte, id) => {
     const minha = acaoDaVez;
     ocupado.value = nome;
     recusa.value = '';
+    semAcesso.value = false;
     try {
       receber(await acao(alvo));
       return true;
     } catch (falha) {
-      if (id.value === alvo) recusa.value = codigoDaRecusa(falha);
+      if (id.value === alvo) {
+        recusa.value = codigoDaRecusa(falha);
+        semAcesso.value = falha?.name === SEM_ACESSO;
+      }
       return false;
     } finally {
       // Só quem ligou desliga: uma ação mais nova (ou outro seguro) pode ter
@@ -91,6 +100,7 @@ export const useSeguroAberto = (fonte, id) => {
     acaoDaVez += 1;
     ocupado.value = '';
     recusa.value = '';
+    semAcesso.value = false;
   });
 
   const acao = nome => dados =>
@@ -112,6 +122,7 @@ export const useSeguroAberto = (fonte, id) => {
     estadoDaHistoria,
     ocupado,
     recusa,
+    semAcesso,
     carregar: () => carregar(buscar),
     carregarHistoria: () => carregarHistoria(),
     receber,

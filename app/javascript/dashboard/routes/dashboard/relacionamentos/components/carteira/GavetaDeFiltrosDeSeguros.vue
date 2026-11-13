@@ -8,14 +8,17 @@ import { FILTROS_DE_SEGUROS_VAZIOS } from '../../fonte/carteiraFonte';
 import { chaveDoTipo } from '../../carteira/tiposDeSeguro';
 
 // #2897 — "Mais filtros" da aba Seguros: tipo de seguro e seguradora. "Ver
-// resultado" aplica; "Limpar" tira os dois e fecha. Só oferece o que existe na
+// resultado" aplica; "Limpar" tira tudo e fecha. Só oferece o que existe na
 // carteira (`opcoes` vem da fonte).
+// #2898 — "Quem cuida" filtra pelo dono da renovação. Só aparece quando há de
+// quem escolher: na conta sem renovação, ou para quem não enxerga os cards no
+// quadro, o servidor manda a lista vazia e o filtro não existe.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   filtros: { type: Object, default: () => ({ ...FILTROS_DE_SEGUROS_VAZIOS }) },
   opcoes: {
     type: Object,
-    default: () => ({ tipos: [], seguradoras: [] }),
+    default: () => ({ tipos: [], seguradoras: [], cuida: [] }),
   },
 });
 const emit = defineEmits(['fechar', 'aplicar', 'limpar']);
@@ -40,6 +43,16 @@ const comQualquer = (chave, lista) => [
   ...lista,
 ];
 
+const quemCuida = computed(() => props.opcoes.cuida ?? []);
+const campoDeQuemCuida = computed(() => ({
+  chave: 'cuida',
+  rotulo: ca('CUIDA'),
+  opcoes: comQualquer(
+    'QUALQUER_PESSOA',
+    quemCuida.value.map(({ id, nome }) => ({ value: id, label: nome }))
+  ),
+}));
+
 const campos = computed(() => [
   {
     chave: 'tipo',
@@ -60,6 +73,7 @@ const campos = computed(() => [
       props.opcoes.seguradoras.map(nome => ({ value: nome, label: nome }))
     ),
   },
+  ...(quemCuida.value.length ? [campoDeQuemCuida.value] : []),
 ]);
 
 const escolher = (chave, valor) => {
@@ -78,6 +92,7 @@ const escolher = (chave, valor) => {
       <div
         v-for="campo in campos"
         :key="campo.chave"
+        :data-filtro="campo.chave"
         class="flex flex-col gap-2"
       >
         <label

@@ -6,8 +6,11 @@
 //
 // O que a tela espera do servidor em `GET seguros/renovacoes`:
 //   ajustes:     { funilId, etapaId, dias, mensagens } (funil e etapa nulos
-//                enquanto a conta não escolheu, ou se o funil foi apagado;
-//                `mensagens` só quando a conta tem as mensagens de renovação);
+//                enquanto a escolha não vale: ninguém escolheu, o funil foi
+//                arquivado, ou o funil ou a etapa foram apagados; `mensagens`
+//                só quando a conta tem as mensagens de renovação);
+//   escolha:     como está a escolha do funil (`feita`, `nunca_feita`,
+//                `funil_arquivado`, `sumiu`);
 //   funis:       [{ id, nome, etapas: [{ id, nome }] }];
 //   vencimentos: em quantos dias termina cada seguro que ainda vale;
 //   semPermissao: quem olha não pode mudar os ajustes.

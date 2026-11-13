@@ -64,6 +64,9 @@ const props = defineProps({
 const emit = defineEmits(['fechar', 'mudou', 'abrirSegurado', 'abrirCard']);
 
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_DEU';
+// Fechar ou reabrir a renovação pede poder mexer no card dela no quadro.
+const NAO_PODE_FECHAR =
+  'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_PODE_FECHAR_A_RENOVACAO';
 const NAO_SALVOU = 'RELACIONAMENTOS_CARTEIRA.CORRIGIR.ERRO_AO_SALVAR';
 
 const { t } = useI18n();
@@ -159,20 +162,23 @@ const noMesmoSeguro = async acao => {
 
 // O que não deu certo, na frase do código que o servidor mandou. Quando a
 // recusa diz que o seguro já mudou por outro caminho (outra pessoa cancelou,
-// apagou o PDF), a gaveta relê o seguro e avisa quem a abriu.
-const dizerRecusa = async padrao => {
+// apagou o PDF), a gaveta relê o seguro e avisa quem a abriu. `semAcesso` é a
+// frase de quando o servidor diz que quem pediu não pode fazer aquilo.
+const dizerRecusa = async (padrao, semAcesso = padrao) => {
   const codigo = aberto.recusa.value;
-  alertar(t(chaveDaRecusa(codigo, padrao)));
+  alertar(
+    t(aberto.semAcesso.value ? semAcesso : chaveDaRecusa(codigo, padrao))
+  );
   if (seguroJaMudou(codigo) && (await aberto.reler())) emit('mudou');
 };
 
 // Cada ação que muda o seguro: avisa quem abriu a gaveta (a lista e a ficha
 // releem) e diz o que aconteceu, com o desfazer quando há.
-const agir = async (acao, texto, desfazer = null) => {
+const agir = async (acao, texto, desfazer = null, semAcesso = NAO_DEU) => {
   const { vale, certo } = await noMesmoSeguro(acao);
   if (!vale) return false;
   if (!certo) {
-    await dizerRecusa(NAO_DEU);
+    await dizerRecusa(NAO_DEU, semAcesso);
     return false;
   }
   emit('mudou');
@@ -188,18 +194,25 @@ const marcarCancelado = () =>
   );
 
 // "Renovou" e "Não renovou" não pedem confirmação: o aviso traz "Desfazer".
+// As três ações da renovação fecham ou reabrem o card dela: quem não mexe
+// naquele funil lê que não pode, em vez de "tente de novo".
+const naRenovacao = (acao, texto, desfazer = null) =>
+  agir(acao, texto, desfazer, NAO_PODE_FECHAR);
 const desfazerRenovacao = () =>
-  agir(aberto.desfazerDesfecho, tg('AVISOS.RENOVACAO_DESFEITA'));
+  naRenovacao(aberto.desfazerDesfecho, tg('AVISOS.RENOVACAO_DESFEITA'));
 const desfazerNoAviso = () =>
-  agir(aberto.desfazerDesfecho, tg('AVISOS.DESFEITO'));
+  naRenovacao(aberto.desfazerDesfecho, tg('AVISOS.DESFEITO'));
 const marcarRenovou = () =>
-  agir(aberto.renovou, tg('AVISOS.RENOVOU'), desfazerNoAviso);
+  naRenovacao(aberto.renovou, tg('AVISOS.RENOVOU'), desfazerNoAviso);
 // O motivo de uma renovação que já estava perdida só completa o que faltava:
 // não há o que desfazer.
 const guardarMotivo = escolha =>
   naoRenovou(seguro.value)
-    ? agir(() => aberto.naoRenovou(escolha), tg('AVISOS.MOTIVO_GUARDADO'))
-    : agir(
+    ? naRenovacao(
+        () => aberto.naoRenovou(escolha),
+        tg('AVISOS.MOTIVO_GUARDADO')
+      )
+    : naRenovacao(
         () => aberto.naoRenovou(escolha),
         tg('AVISOS.NAO_RENOVOU'),
         desfazerNoAviso

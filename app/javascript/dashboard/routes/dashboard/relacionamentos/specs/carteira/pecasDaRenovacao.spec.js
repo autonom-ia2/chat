@@ -188,6 +188,29 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
     expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
   });
 
+  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho.
+  it('só com o desfecho, aberta: diz que está em andamento e mais nada', () => {
+    const w = abrir({ ...seguroCom(), renovacao: { desfecho: null } });
+
+    expect(situacao(w)).toBe('A renovação está em andamento.');
+    expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
+    expect(w.findAll('p')).toHaveLength(1);
+    expect(w.text()).not.toContain('undefined');
+    expect(w.text()).not.toContain('{');
+  });
+
+  it('só com o desfecho, perdida sem motivo: ainda convida a dizer o motivo', () => {
+    const w = abrir({
+      ...seguroCom(),
+      renovacao: { desfecho: 'nao_renovou' },
+    });
+
+    expect(situacao(w)).toBe('Não renovou. Ninguém disse o motivo.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(true);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
+  });
+
   it('renovou: diz se a apólice nova já foi guardada', () => {
     const renovou = seguroCom(
       { desfecho: 'renovou' },
@@ -628,6 +651,31 @@ describe('o histórico com a renovação e o "Exportar"', () => {
       'Apólice nova guardada. A anterior era a nº AT-000451.'
     );
     expect(renovou).toContain('Renovou.');
+  });
+
+  it('a renovação que começou diz quem cuida; sem o nome, só que começou', () => {
+    const w = abrir({
+      itens: [
+        passo('renovacao_card_nasceu', {
+          valores: { funil: 4471, cuida: 'Bruna Teixeirão', cuida_id: 8852 },
+        }),
+        passo('renovacao_card_nasceu'),
+        passo('renovacao_card_nasceu', { valores: { funil: 4471 } }),
+      ],
+    });
+    const [comQuem, semValores, semDono] = frases(w);
+
+    expect(comQuem).toContain(
+      'A renovação começou. Quem cuida: Bruna Teixeirão.'
+    );
+    // Do passo, a tela usa só o nome: o funil e o id de quem cuida não saem.
+    expect(w.text()).not.toContain('4471');
+    expect(w.text()).not.toContain('8852');
+    [semValores, semDono].forEach(frase => {
+      expect(frase).toContain('A renovação começou.');
+      expect(frase).not.toContain('Quem cuida');
+      expect(frase).not.toContain('{');
+    });
   });
 
   it('desfazer o resultado conta o que foi desfeito e quem desfez', () => {

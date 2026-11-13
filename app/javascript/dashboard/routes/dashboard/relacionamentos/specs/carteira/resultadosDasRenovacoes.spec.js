@@ -251,6 +251,54 @@ describe('os números do período', () => {
     expect(larguras(w, 'recorte')).toEqual(['83', '33']);
   });
 
+  // O recorte por quem cuida é relatório: quem não vê os relatórios recebe os
+  // recortes sem a chave `cuida`.
+  it('sem a chave `cuida` na resposta, o recorte de quem cuida não existe', async () => {
+    const semQuemCuida = periodo => {
+      const { cuida: _, ...recortes } = periodo.recortes;
+      return { ...periodo, recortes };
+    };
+    servidorResponde({
+      ...NUMEROS,
+      periodos: NUMEROS.periodos.map(semQuemCuida),
+    });
+
+    const w = await abrir();
+
+    expect(pilulas(w)).toEqual(['tipo', 'seguradora']);
+    expect(w.get(daCarteira('recorte')).text()).not.toContain('Quem cuida');
+    expect(barras(w, 'recorte')).toEqual([
+      ['Auto', '5 de 6 renovaram'],
+      ['Vida', '1 de 3 renovou'],
+    ]);
+    expect(w.findAll('button[disabled]')).toHaveLength(0);
+  });
+
+  it('com quem cuida na resposta, o recorte aparece com o nome de cada pessoa', async () => {
+    const [de30, ...resto] = NUMEROS.periodos;
+    servidorResponde({
+      ...NUMEROS,
+      periodos: [
+        {
+          ...de30,
+          recortes: {
+            ...de30.recortes,
+            cuida: [{ nome: 'Bruna Teixeirão', venceram: 4, renovou: 3 }],
+          },
+        },
+        ...resto,
+      ],
+    });
+    const w = await abrir();
+
+    await clicar(w, `${daCarteira('recorte')} [data-grupo="cuida"]`);
+
+    expect(pilulas(w)).toEqual(['tipo', 'seguradora', 'cuida']);
+    expect(barras(w, 'recorte')).toEqual([
+      ['Bruna Teixeirão', '3 de 4 renovaram'],
+    ]);
+  });
+
   it('trocar o recorte mostra as linhas dele', async () => {
     servidorResponde();
     const w = await abrir();

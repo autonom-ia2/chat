@@ -42,6 +42,9 @@ export const esquecerAjustesDaDemo = () => {
 export const ajustesDaDemo = (semEscolha = false) =>
   guardados ?? (semEscolha ? AJUSTES_PADRAO : ESCOLHA_DA_DEMO);
 
+// Alguém já salvou os ajustes nesta visita: a escolha que vale é a salva.
+export const salvouNaDemo = () => guardados !== null;
+
 export const salvarAjustesNaDemo = novos => {
   guardados = { ...novos };
   return guardados;

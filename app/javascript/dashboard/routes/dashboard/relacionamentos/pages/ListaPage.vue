@@ -154,7 +154,8 @@ const lista = useLista({
   aoMudarConsulta: marcados.limpar,
 });
 // O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
-// texto do selo dela: "Seguro vencido", "Seguro ativo" ou "Seguro cancelado".
+// texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
+// renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
 const seguroDe = ({ id }) => carteira.daPessoa(id);
 const rotuloDoSeguro = ({ selo }) =>
   t(`RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS.${selo.toUpperCase()}`);

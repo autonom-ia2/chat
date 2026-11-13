@@ -1,4 +1,5 @@
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
+import { FUNIL_PAROU } from '../../carteira/funilDasRenovacoes';
 import { RECUSADO } from '../../carteira/recusas';
 import { NAO_ACHEI, SEM_ACESSO } from '../../ficha/falhas';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
@@ -32,6 +33,7 @@ const FUNIS = [
 // O que o servidor manda em `GET seguros/renovacoes`.
 const DO_SERVIDOR = {
   ajustes: ESCOLHAS,
+  escolha: 'feita',
   funis: FUNIS,
   vencimentos: [3, 20, 61],
   semPermissao: false,
@@ -82,8 +84,39 @@ describe('ajustar renovações', () => {
     const lido = await dasRenovacoes().ajustes();
 
     expect(SegurosAPI.renovacoes).toHaveBeenCalledWith();
-    // `funilParou` é da fonte: sem sinal do servidor, o funil serve.
+    // `funilParou` é da fonte: com a escolha feita, o funil serve.
     expect(lido).toEqual({ ...DO_SERVIDOR, funilParou: '' });
+  });
+
+  // O funil que parou de servir não vem em `ajustes`: quem diz por que é
+  // `escolha` (Carteira::RenovacaoConfig#escolha).
+  it.each([
+    ['funil_arquivado', FUNIL_PAROU.ARQUIVADO],
+    ['sumiu', FUNIL_PAROU.APAGADO],
+  ])(
+    'a escolha %s do servidor chega à tela como funil parado',
+    async (escolha, estado) => {
+      responde('renovacoes', {
+        ...DO_SERVIDOR,
+        escolha,
+        ajustes: { funilId: null, etapaId: null, dias: 45 },
+      });
+
+      const lido = await dasRenovacoes().ajustes();
+
+      expect(lido.funilParou).toBe(estado);
+      expect(lido.ajustes).toEqual({ funilId: null, etapaId: null, dias: 45 });
+    }
+  );
+
+  it('a conta que nunca escolheu não é funil parado', async () => {
+    responde('renovacoes', {
+      ...DO_SERVIDOR,
+      escolha: 'nunca_feita',
+      ajustes: { funilId: null, etapaId: null, dias: 60 },
+    });
+
+    expect((await dasRenovacoes().ajustes()).funilParou).toBe('');
   });
 
   it('das escolhas, a tela fica só com as quatro que ela mostra', async () => {

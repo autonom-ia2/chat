@@ -253,10 +253,32 @@ describe('ajustar renovações: o funil e a etapa', () => {
 });
 
 describe('o funil das renovações que parou de servir', () => {
-  it('enquanto o servidor não manda o sinal, o funil serve', () => {
+  it('sem o sinal do servidor, o funil serve', () => {
     expect(funilParou()).toBe('');
+    expect(funilParou(null)).toBe('');
     expect(funilParou({ ajustes: {}, funis: [] })).toBe('');
   });
+
+  it.each([
+    ['funil_arquivado', FUNIL_PAROU.ARQUIVADO],
+    ['sumiu', FUNIL_PAROU.APAGADO],
+  ])('a escolha %s do servidor diz que o funil parou', (escolha, estado) => {
+    expect(funilParou({ escolha, ajustes: { funilId: null } })).toBe(estado);
+  });
+
+  it.each(['feita', 'nunca_feita'])(
+    'a escolha %s não é funil parado',
+    escolha => {
+      expect(funilParou({ escolha })).toBe('');
+    }
+  );
+
+  it.each(['escolha_de_amanha', 'constructor', '', null, 7])(
+    'a escolha que a tela não conhece (%j) não vira aviso',
+    escolha => {
+      expect(funilParou({ escolha })).toBe('');
+    }
+  );
 
   it.each(Object.values(FUNIL_PAROU))(
     'o estado %s tem frase nos dois idiomas, na tela de ajustes e no convite',
@@ -370,6 +392,41 @@ describe('em que pé está a renovação', () => {
       funil: 'Renovação',
       etapa: 'A vencer',
     });
+  });
+
+  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho.
+  it.each([
+    ['só com o desfecho', { desfecho: null }],
+    ['sem a etapa', { desfecho: null, funil: 'Renovação' }],
+    ['sem o funil', { desfecho: null, etapa: 'A vencer' }],
+    ['com os nomes nulos', { desfecho: null, funil: null, etapa: null }],
+  ])(
+    'aberta %s: diz que está em andamento, sem frase com buraco',
+    (_, renovacao) => {
+      expect(situacaoDaRenovacao(terminaEm(20, { renovacao }))).toEqual({
+        id: SITUACOES.EM_ANDAMENTO,
+      });
+      nosDoisIdiomas(daCarteira('RENOVACAO.SITUACAO.EM_ANDAMENTO'));
+    }
+  );
+
+  it('só com o desfecho, o que terminou continua dizendo como terminou', () => {
+    expect(
+      situacaoDaRenovacao(
+        terminaEm(20, {
+          renovacao: { desfecho: 'renovou' },
+          renovadoEm: 1790000000,
+        })
+      )
+    ).toEqual({ id: SITUACOES.RENOVOU_FALTA });
+    expect(
+      situacaoDaRenovacao(
+        terminaEm(-3, {
+          renovacao: { desfecho: 'nao_renovou' },
+          motivo: 'achou_caro',
+        })
+      )
+    ).toEqual({ id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: 'achou_caro' });
   });
 
   it('renovou: falta a apólice nova até ela ser guardada', () => {
@@ -1027,6 +1084,32 @@ describe('os passos da renovação no histórico', () => {
     nosDoisIdiomas(daCarteira('HISTORIA.DESFEZ.NAO_RENOVOU'));
   });
 
+  it('a renovação que começou diz quem cuida, quando o servidor conta', () => {
+    expect(
+      fraseDoPasso({
+        tipo: 'renovacao_card_nasceu',
+        valores: { funil: 3, cuida: 'Bruna Teixeirão', cuida_id: 9 },
+      })
+    ).toEqual({
+      chave: 'TIPOS_COM.RENOVACAO_CARD_NASCEU',
+      detalhe: DETALHES.CUIDA,
+      valor: 'Bruna Teixeirão',
+    });
+  });
+
+  // Quem não enxerga o card recebe o passo sem `valores`; o card sem dono vem
+  // só com o funil.
+  it.each([[{}], [{ funil: 3 }], [undefined], [null], [{ cuida: '' }]])(
+    'a renovação que começou sem quem cuida (%j) fica na frase curta',
+    valores => {
+      expect(fraseDoPasso({ tipo: 'renovacao_card_nasceu', valores })).toEqual({
+        chave: 'TIPOS.RENOVACAO_CARD_NASCEU',
+        detalhe: null,
+        valor: null,
+      });
+    }
+  );
+
   it.each(['proposta_enviada', 'passo_de_amanha', '', undefined, null])(
     'o passo que a tela não conhece (%j) vira a frase neutra, nunca a chave crua',
     tipo => {
@@ -1061,6 +1144,7 @@ describe('os passos da renovação no histórico', () => {
   it('cada passo da renovação tem a frase curta e, quando há detalhe, a frase com ele', () => {
     [
       'CARD_NASCEU',
+      'RENOVACAO_CARD_NASCEU',
       'RENOVOU',
       'NAO_RENOVOU',
       'NAO_RENOVOU_OUTRO',
@@ -1069,6 +1153,7 @@ describe('os passos da renovação no histórico', () => {
       nosDoisIdiomas(daCarteira(`HISTORIA.TIPOS.${tipo}`));
     });
     [
+      ['RENOVACAO_CARD_NASCEU', '{cuida}'],
       ['NAO_RENOVOU', '{motivo}'],
       ['NAO_RENOVOU_OUTRO', '{texto}'],
       ['APOLICE_NOVA', '{anterior}'],

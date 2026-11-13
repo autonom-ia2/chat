@@ -102,6 +102,11 @@ const PERDIDO_SEM_MOTIVO = { ...PERDIDO, motivo: null };
 const SEM_RENOVACAO = { ...EM_RENOVACAO, selo: 'ativo', renovacao: null };
 
 const fonteDaDemo = () => carteiraFonte({ demo: 'cheio', atraso: 0 });
+// O 401 do servidor, como a fonte real o entrega às peças.
+const semAcesso = () =>
+  Object.assign(new Error('sem acesso'), { name: 'SEM_ACESSO' });
+const NAO_PODE_FECHAR =
+  'Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.';
 const fonteDeMentira = (seguro, resto = {}) => ({
   usaDemo: false,
   seguro: vi.fn().mockResolvedValue(seguro),
@@ -218,6 +223,32 @@ describe('o que a gaveta mostra de um seguro em renovação', () => {
     expect(w.get('input[data-campo="numero"]').element.value).toBe('AT-000451');
   });
 
+  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho.
+  it('sem o card à vista: diz que está em andamento, sem linha vazia nem "Abrir no CRM"', async () => {
+    const w = await abrirDoServidor({
+      ...EM_RENOVACAO,
+      renovacao: { desfecho: null },
+    });
+
+    expect(selo(w)).toBe('em_renovacao');
+    expect(situacao(w)).toBe('A renovação está em andamento.');
+    expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
+    expect(textoDe(w, daCarteira('renovacao'))).not.toContain('undefined');
+    expect(azul(w).text()).toBe('Renovou');
+  });
+
+  it('card à vista e o dono saiu da conta: sem a linha de quem cuida', async () => {
+    const w = await abrirDoServidor({
+      ...EM_RENOVACAO,
+      renovacao: { ...RENOVACAO, cuida: null, cuidaId: null },
+    });
+
+    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(true);
+  });
+
   it('seguro sem renovação não mostra a parte "Renovação"', async () => {
     const w = await abrirDoServidor(SEM_RENOVACAO);
 
@@ -293,7 +324,7 @@ describe('"Renovou"', () => {
     await clicar(w, daCarteira('gaveta-acao'));
 
     expect(alerta(w)).toBe(
-      'Alguém já disse como a renovação deste seguro terminou. Atualizei a tela: para mudar, abra "Mais opções deste seguro" e toque em "Desfazer o resultado da renovação".'
+      'A renovação deste seguro já foi fechada por outra pessoa ou no quadro do funil. Atualizei a tela: para mudar, abra "Mais opções deste seguro" e toque em "Desfazer o resultado da renovação".'
     );
     expect(situacao(w)).toBe('Não renovou: achou caro.');
     expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
@@ -313,6 +344,33 @@ describe('"Renovou"', () => {
     );
     expect(w.find(daCarteira('renovacao')).exists()).toBe(false);
     expect(azul(w).text()).toBe('Ver PDF');
+  });
+
+  // Fechar a renovação pede poder mexer no card dela no quadro: o servidor
+  // responde 401 a quem não mexe naquele funil (a fonte dá o nome SEM_ACESSO).
+  it('quem não pode fechar o card lê que não tem permissão, e não "tente de novo"', async () => {
+    const renovou = vi.fn().mockRejectedValue(semAcesso());
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(NAO_PODE_FECHAR);
+    expect(azul(w).text()).toBe('Renovou');
+    expect(selo(w)).toBe('em_renovacao');
+    expect(w.emitted('mudou')).toBeUndefined();
+  });
+
+  it('a frase de quem não pode some quando a ação seguinte falha por outro motivo', async () => {
+    const renovou = vi
+      .fn()
+      .mockRejectedValueOnce(semAcesso())
+      .mockRejectedValueOnce(new Error('Network Error'));
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe('Não consegui fazer isso. Tente de novo.');
   });
 
   it('se não der certo, diz o que fazer e o seguro continua em renovação', async () => {
@@ -694,9 +752,25 @@ describe('na carteira fictícia, do começo ao fim', () => {
 
     await clicar(w, daCarteira('desfazer'));
 
+    // Como no servidor, a história não perde o passo: ganha o do desfazer.
     expect(selo(w)).toBe('em_renovacao');
     expect(azul(w).text()).toBe('Renovou');
-    expect(historico(w).join(' ')).not.toContain('Renovou.');
+    expect(historico(w)[0]).toContain(
+      'O "Renovou" foi desfeito. O seguro voltou a estar em renovação.'
+    );
+    expect(historico(w)[1]).toContain('Renovou.');
+  });
+
+  it('cancelar o seguro com a renovação aberta fecha a renovação como não renovada', async () => {
+    const w = await abrirDaDemo(ABERTA_NA_DEMO);
+
+    await escolherNoMenu(w, DO_RODAPE.MARCAR_CANCELADO);
+
+    expect(selo(w)).toBe('cancelado');
+    expect(situacao(w)).toBe('Não renovou: o seguro foi cancelado.');
+    expect(historico(w)[0]).toContain('Não renovou: o seguro foi cancelado.');
+    expect(historico(w)[1]).toContain('Seguro marcado como cancelado.');
+    expect(doMenu(w)).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
   });
 
   it('"Não renovou" com o motivo aparece na situação e no histórico', async () => {

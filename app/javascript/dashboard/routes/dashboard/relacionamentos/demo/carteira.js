@@ -11,7 +11,11 @@
 // deste módulo e devolvem uma cópia nova: nada que chega é alterado.
 // #2898 — alguns seguros gerados têm renovação: aberta no funil (Em renovação),
 // renovada (Renovado) ou perdida, com o motivo. "Renovou", "Não renovou", o
-// desfazer e a apólice nova escrita à mão também só ficam na memória.
+// desfazer e a apólice nova escrita à mão também só ficam na memória. A
+// história segue o servidor: nenhum passo some. Desfazer soma o passo "desfeito",
+// dizer o motivo depois completa o passo "Não renovou" que já existia, e
+// cancelar o seguro com a renovação aberta a fecha como "não renovou", com o
+// motivo "cancelou".
 import { empresas, pessoas } from './base';
 import { RECUSADO } from '../carteira/recusas';
 import { DIA_EM_MS } from '../fonte/grupos';
@@ -34,7 +38,8 @@ const PLANILHA_DE_ORIGEM = 'Carteira 2026.xlsx';
 // Quem "fez" as ações na demonstração: uma pessoa inventada da equipe.
 const QUEM_FEZ = { id: 1, nome: 'Bia Lunardelli' };
 // Quem cuida das renovações na conta fictícia.
-export const EQUIPE = [QUEM_FEZ.nome, 'Caio Montenegro'];
+const QUEM_CUIDA = [QUEM_FEZ, { id: 2, nome: 'Caio Montenegro' }];
+export const EQUIPE = QUEM_CUIDA.map(({ nome }) => nome);
 
 const PESSOA_DAS_JORNADAS = 23;
 const PRIMEIRO_GERADO = 101;
@@ -95,8 +100,9 @@ const PRIMEIRA_APOLICE_NOVA = 9000;
 const RENOVACAO_NASCEU_HA_DIAS = 12;
 const DESFECHO_HA_DIAS = 2;
 const MOTIVO_ESCRITO = 'outro';
-// Os passos da história que contam como a renovação terminou.
-const FINS_NA_HISTORIA = ['renovou', 'nao_renovou', 'nao_renovou_outro'];
+const MOTIVO_DO_CANCELAMENTO = 'cancelou';
+// Os passos da história que contam que a renovação não renovou.
+const PASSOS_DE_NAO_RENOVOU = ['nao_renovou', 'nao_renovou_outro'];
 
 const NOMEADOS = [
   {
@@ -188,7 +194,7 @@ const gerados = todosOsClientes => {
       renovacao: cancelado
         ? null
         : (RENOVACAO_NA_FILA[ordem % DIAS_NA_FILA.length] ?? null),
-      cuida: daFila(EQUIPE, ordem),
+      cuida: daFila(QUEM_CUIDA, ordem),
     };
   });
 };
@@ -223,7 +229,8 @@ const daRenovacao = (item, agora) => {
       funil: FUNIL_DA_RENOVACAO,
       etapa,
       desfecho,
-      cuida: item.cuida,
+      cuida: item.cuida.nome,
+      cuidaId: item.cuida.id,
     },
     renovadoEm: desfecho === 'renovou' ? ha(agora, DESFECHO_HA_DIAS) : null,
     motivo,
@@ -336,11 +343,11 @@ const chegada = (seguro, agora) => {
 };
 
 // O que a renovação com que o seguro nasceu na demonstração conta: quando
-// começou e, se já nasceu terminada, como. Depois que alguém mexe no fim dela
-// (desfaz, diz o motivo), quem conta o fim são os passos guardados.
+// começou (e com quem) e, se já nasceu terminada, como. O que acontece depois
+// (desfazer, fechar de novo) entra pelos passos guardados, sem tirar estes.
 const passosDaRenovacao = (seguro, agora) => {
   const { itens } = desenho(agora);
-  const { renovacao } = itens.find(item => item.id === seguro.id) ?? {};
+  const { renovacao, cuida } = itens.find(item => item.id === seguro.id) ?? {};
   if (!renovacao) return [];
   const terminou = ha(agora, DESFECHO_HA_DIAS);
   const fimDoDesenho = {
@@ -351,10 +358,11 @@ const passosDaRenovacao = (seguro, agora) => {
         valores: { motivo: renovacao.motivo },
       }),
   }[renovacao.desfecho];
-  const mexeram = 'renovacao' in escritaDe(seguro.id).campos;
   return [
-    mexeram ? null : fimDoDesenho?.(),
-    passo('card_nasceu', ha(agora, RENOVACAO_NASCEU_HA_DIAS)),
+    fimDoDesenho?.(),
+    passo('renovacao_card_nasceu', ha(agora, RENOVACAO_NASCEU_HA_DIAS), {
+      valores: { cuida: cuida.nome },
+    }),
   ].filter(Boolean);
 };
 
@@ -390,8 +398,25 @@ export const corrigir = (id, dados, agora = Date.now()) => {
   return seguroPorId(id, agora);
 };
 
+// Cancelar o seguro com a renovação aberta fecha a renovação como "não
+// renovou", com o motivo "cancelou": card de seguro cancelado não fica aberto.
+// Desfazer o cancelamento não reabre a renovação.
 export const cancelar = (id, agora = Date.now()) => {
+  const antes = seguroPorId(id, agora);
   escrever(id, { canceladoEm: emSegundos(agora) }, 'cancelado', agora);
+  if (antes.renovacao && !antes.renovacao.desfecho) {
+    escrever(
+      id,
+      {
+        renovacao: { ...antes.renovacao, desfecho: 'nao_renovou' },
+        motivo: MOTIVO_DO_CANCELAMENTO,
+        motivoEscrito: '',
+      },
+      'nao_renovou',
+      agora,
+      { valores: { motivo: MOTIVO_DO_CANCELAMENTO } }
+    );
+  }
   return seguroPorId(id, agora);
 };
 
@@ -421,7 +446,7 @@ export const tirarPdf = (id, agora = Date.now()) => {
 // ---- a renovação (#2898) -----------------------------------------------------
 
 // "Renovou" e "Não renovou" fecham a renovação do seguro; o desfazer a reabre
-// e tira da história o passo que contava o fim.
+// e conta na história o que foi desfeito.
 
 const comDesfecho = (id, agora, desfecho) => ({
   ...seguroPorId(id, agora).renovacao,
@@ -439,42 +464,54 @@ export const renovou = (id, _dados, agora = Date.now()) => {
   return seguroPorId(id, agora);
 };
 
+// O passo "Não renovou" com o motivo: o escrito à mão leva as palavras de quem
+// escreveu.
+const passoComMotivo = (motivo, texto) =>
+  motivo === MOTIVO_ESCRITO
+    ? { tipo: 'nao_renovou_outro', valores: { texto } }
+    : { tipo: 'nao_renovou', valores: motivo ? { motivo } : {} };
+
+// A renovação já estava perdida (alguém a fechou sem dizer o motivo): o motivo
+// completa o passo "Não renovou" mais novo, sem criar outro.
+const completarOMotivo = (id, campos, doPasso) => {
+  const atual = escritaDe(id);
+  const ultimo = atual.feitos.findLastIndex(feito =>
+    PASSOS_DE_NAO_RENOVOU.includes(feito.tipo)
+  );
+  escritas = new Map(escritas).set(id, {
+    campos: { ...atual.campos, ...campos },
+    feitos: atual.feitos.map((feito, ordem) =>
+      ordem === ultimo ? { ...feito, ...doPasso } : feito
+    ),
+  });
+};
+
 export const naoRenovou = (id, { motivo, texto = '' }, agora = Date.now()) => {
-  const escrito = motivo === MOTIVO_ESCRITO;
+  const antes = seguroPorId(id, agora);
   const campos = {
     renovacao: comDesfecho(id, agora, 'nao_renovou'),
     renovadoEm: null,
-    motivo,
-    motivoEscrito: escrito ? texto : '',
+    motivo: motivo ?? null,
+    motivoEscrito: motivo === MOTIVO_ESCRITO ? texto : '',
   };
-  // Dizer o motivo de uma renovação que já estava perdida troca o passo.
-  const atual = escritaDe(id);
-  escritas = new Map(escritas).set(id, {
-    ...atual,
-    feitos: atual.feitos.filter(
-      feito => !FINS_NA_HISTORIA.includes(feito.tipo)
-    ),
-  });
-  escrever(id, campos, escrito ? 'nao_renovou_outro' : 'nao_renovou', agora, {
-    valores: escrito ? { texto } : { motivo },
-  });
+  const { tipo, valores } = passoComMotivo(motivo, texto);
+  if (antes.renovacao?.desfecho === 'nao_renovou') {
+    completarOMotivo(id, campos, { tipo, valores });
+  } else {
+    escrever(id, campos, tipo, agora, { valores });
+  }
   return seguroPorId(id, agora);
 };
 
 export const desfazerDesfecho = (id, _dados, agora = Date.now()) => {
-  const atual = escritaDe(id);
-  escritas = new Map(escritas).set(id, {
-    campos: {
-      ...atual.campos,
-      renovacao: comDesfecho(id, agora, null),
-      renovadoEm: null,
-      motivo: null,
-      motivoEscrito: '',
-    },
-    feitos: atual.feitos.filter(
-      feito => !FINS_NA_HISTORIA.includes(feito.tipo)
-    ),
-  });
+  const anterior = seguroPorId(id, agora).renovacao?.desfecho;
+  const campos = {
+    renovacao: comDesfecho(id, agora, null),
+    renovadoEm: null,
+    motivo: null,
+    motivoEscrito: '',
+  };
+  escrever(id, campos, 'desfez_desfecho', agora, { valores: { anterior } });
   return seguroPorId(id, agora);
 };
 

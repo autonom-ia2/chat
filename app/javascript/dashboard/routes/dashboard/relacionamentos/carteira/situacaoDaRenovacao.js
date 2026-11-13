@@ -24,6 +24,7 @@ export const motivoTemNome = motivo => MOTIVOS_COM_NOME.includes(motivo);
 
 export const SITUACOES = {
   EM_ETAPA: 'EM_ETAPA',
+  EM_ANDAMENTO: 'EM_ANDAMENTO',
   RENOVOU_FALTA: 'RENOVOU_FALTA',
   RENOVOU: 'RENOVOU',
   NAO_RENOVOU: 'NAO_RENOVOU',
@@ -72,6 +73,10 @@ export const situacaoDaRenovacao = seguro => {
       id: seguro.apoliceNova ? SITUACOES.RENOVOU : SITUACOES.RENOVOU_FALTA,
     };
   }
+  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho,
+  // sem o funil nem a etapa: a frase diz que ela está aberta e mais nada.
   const { funil, etapa } = seguro.renovacao;
-  return { id: SITUACOES.EM_ETAPA, funil, etapa };
+  return funil && etapa
+    ? { id: SITUACOES.EM_ETAPA, funil, etapa }
+    : { id: SITUACOES.EM_ANDAMENTO };
 };
