@@ -135,6 +135,41 @@ RSpec.describe 'Trazer minha lista: trazer e quem pode entrar (Relacionamentos)'
       expect(response.parsed_body).to eq('error' => 'nada_para_trazer')
       expect(esquecida.reload).to be_ready_to_confirm
     end
+
+    it 'recusa com "desfazer_em_curso" enquanto a conta desfaz uma lista, nas duas rotas, e traz quando ele termina' do
+      desfazendo = account.campaign_imports.create!(user: admin, status: :completed, mode: 'single_label', undo_status: :processing,
+                                                    options: { 'flow' => CampaignImport::CONTACTS_FLOW, 'trazer' => {} })
+      importacao = ler_planilha(com_problemas)
+
+      expect { trazer(importacao) }.not_to have_enqueued_job(ContactImports::Trazer::FecharConferenciaJob)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'desfazer_em_curso')
+      # A rota antiga de confirmar diz o mesmo código: é ela que o "Tentar de novo" do histórico chama.
+      post "/api/v1/accounts/#{account.id}/contact_imports/#{importacao.id}/confirm", headers: cabecalhos(admin)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'desfazer_em_curso')
+      expect(importacao.reload).to be_ready_to_confirm
+
+      desfazendo.update!(undo_status: :completed)
+
+      expect { trazer(importacao) }.to have_enqueued_job(ContactImports::Trazer::FecharConferenciaJob).with(importacao).once
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'o desfazer de outra conta, e o que parou no meio, não seguram o trazer' do
+      outra = create(:account)
+      de_fora = outra.campaign_imports.create!(user: create(:user, account: outra, role: :administrator), status: :completed, mode: 'single_label',
+                                               undo_status: :processing, options: { 'flow' => CampaignImport::CONTACTS_FLOW, 'trazer' => {} })
+      parado = account.campaign_imports.create!(user: admin, status: :completed, mode: 'single_label', undo_status: :processing,
+                                                options: { 'flow' => CampaignImport::CONTACTS_FLOW, 'trazer' => {} })
+      parado.update_columns(updated_at: CampaignImports::Config.stalled_import_after.ago - 1.minute) # rubocop:disable Rails/SkipsModelValidations
+      importacao = ler_planilha(com_problemas)
+
+      expect { trazer(importacao) }.to have_enqueued_job(ContactImports::Trazer::FecharConferenciaJob).with(importacao).once
+
+      expect(response).to have_http_status(:ok)
+      expect(de_fora.reload.undo_status).to eq('processing')
+    end
   end
 
   describe 'quem pode entrar' do
