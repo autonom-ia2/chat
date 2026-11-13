@@ -214,6 +214,8 @@ const verPagina = () =>
         :contact="contact"
         :conversation-id="conversation.id"
       />
+      <!-- #2897: o que quem usa o painel põe logo abaixo do contato (os seguros, na conta que tem a carteira). -->
+      <slot name="depois-do-contato" />
       <div class="flex flex-col border-t border-n-weak">
         <BlocoQuemCuida
           ref="quemCuida"
