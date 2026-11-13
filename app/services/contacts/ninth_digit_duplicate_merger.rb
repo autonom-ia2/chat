@@ -17,7 +17,7 @@
 class Contacts::NinthDigitDuplicateMerger
   BRAZIL_PREFIX = '+55'.freeze
   REPOINT_MODELS = %w[CampaignImportRow CampaignRecipient EmailCampaignRecipient WhatsappApiCampaignRecipient
-                      Crm::Card Crm::FollowUp Crm::MeetingGuest CsatSurveyResponse].freeze
+                      Crm::Card Crm::FollowUp Crm::MeetingGuest CsatSurveyResponse Carteira::Apolice].freeze
   # Tables with a unique (campaign, contact) index: both contacts in the same campaign cannot be re-pointed.
   CAMPAIGN_SCOPED = { 'CampaignRecipient' => :campaign_id, 'WhatsappApiCampaignRecipient' => :whatsapp_api_campaign_id }.freeze
   # Characters a name made only of a phone number may have; such a name counts as empty.

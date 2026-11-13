@@ -13,8 +13,12 @@ class Crm::Ai::MovimentoDaAutomacao
 
   # O passo da Automação livre move pela porta da frente, com quem ligou como ator: a atividade é da pessoa no nome,
   # mas a escolha foi da automação. Fora das regras da pessoa (Evaluator, FecharCard), que barram também o fechar.
-  def self.sem_automacao(atividades)
+  # O `move` com `motivo` também não é escolha da pessoa (o critério do Crm::Ai::EscolhaDePessoa): o lote de quem
+  # arquiva o funil ou apaga a etapa, e a etapa de entrada do pedido da API sem etapa do funil (#2501). Só o `move`:
+  # o fechamento aceito da sugestão da IA também grava `motivo` e continua sendo da pessoa.
+  def self.escolhas_da_pessoa(atividades)
     atividades.where.not('payload @> ?', { by: 'automacao' }.to_json)
+              .where("crm_activities.event_type <> 'move' OR crm_activities.payload->>'motivo' IS NULL")
   end
 
   def initialize(card)

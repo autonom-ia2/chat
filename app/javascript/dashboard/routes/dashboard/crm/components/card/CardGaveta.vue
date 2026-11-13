@@ -55,6 +55,8 @@ import { useFormato } from './useFormato';
 import { useFocoPreso } from './useFocoPreso';
 import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
 import CardArquivado from '../arquivados/CardArquivado.vue';
+import CardAutomacoes from '../automacaoNoCrm/CardAutomacoes.vue';
+import { usePodeVerAutomacoes } from '../automacaoNoCrm/useAutomacaoNoCrm';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -89,6 +91,8 @@ const props = defineProps({
   erroArquivar: { type: String, default: '' },
   restaurando: { type: Boolean, default: false },
   erroRestaurar: { type: String, default: '' },
+  // #2710: a página está buscando a compra que o selo "Cliente desde…" abre.
+  abrindoCompra: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -102,6 +106,7 @@ const emit = defineEmits([
   'cancelFollowUp',
   'refreshCard',
   'restaurar',
+  'abrirCompra',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -404,6 +409,11 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
+// #2710: no card que a página de agendamento criou para quem já comprou, o selo "Cliente desde…" do topo abre a
+// compra (o card ganho). Trocar de card pergunta antes de descartar rascunho: quem cuida disso é a página.
+const jaCliente = computed(() =>
+  editando.value ? card.value.ja_cliente || null : null
+);
 // A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
 // Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
 const {
@@ -425,6 +435,15 @@ const confirmarArquivar = () => {
 // #2095: com a flag, a janela nova fica aberta até a página responder (erro aparece nela; o sucesso fecha o card).
 const arquivado = computed(
   () => props.arquivadosLigado && status.value === 'archived'
+);
+// #2499 F6.3: "Automações deste card" só em card aberto e para quem pode ver automações (com o motor e os gatilhos).
+const podeVerAutomacoes = usePodeVerAutomacoes();
+const mostraAutomacoes = computed(
+  () =>
+    editando.value &&
+    podeVerAutomacoes.value &&
+    status.value === 'open' &&
+    !arquivado.value
 );
 const dialogoArquivarNovo = ref(null);
 const arquivarNovo = () =>
@@ -712,10 +731,13 @@ defineExpose({
       <CardHeroi
         v-bind="heroi"
         :contato="tela === 'resumo' ? card.contact : null"
+        :compra="tela === 'resumo' ? jaCliente : null"
+        :abrindo-compra="abrindoCompra"
         :titulo-id="`${gavetaId}-titulo`"
         :texto-id="`${gavetaId}-texto`"
         @voltar="voltarDoHeroi"
         @fechar="fechar"
+        @compra="emit('abrirCompra', jaCliente)"
       />
       <CardFaixa
         v-if="editando && tela === 'resumo'"
@@ -817,7 +839,15 @@ defineExpose({
                 @arquivar="arquivadosLigado ? arquivarNovo() : arquivar()"
                 @conversa="abrirConversa()"
                 @cliente="cliente.pedir"
-              />
+              >
+                <template v-if="mostraAutomacoes" #antes-dos-detalhes>
+                  <CardAutomacoes
+                    :card="card"
+                    :etapa="etapaDoCard"
+                    :pode-gerenciar="podeGerenciar"
+                  />
+                </template>
+              </CardResumo>
             </template>
 
             <TelaEtapa

@@ -14,6 +14,8 @@ import {
   fraseDoOutroRegistro,
 } from './outroRegistro';
 import { fraseDoWebhook } from './webhook';
+import { ehPassoNovo } from './passosNovos/passosNovos';
+import { fraseDoPassoNovo } from './passosNovos/frasesDosNovos';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
@@ -36,6 +38,8 @@ const VALOR_DA_PECA = {
       ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
       : undefined,
   campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+  // G10 (F8.7): a etiqueta já é o nome.
+  etiqueta: valor => valor || undefined,
   // #2709: o lembrete diz quanto tempo antes da reunião ("1 dia").
   antes: (valor, t) =>
     Number.isInteger(valor?.valor) && valor?.unidade
@@ -540,6 +544,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   // #2502: entre quem atende a caixa, ou só entre quem é do time escolhido.
   if (passo.tipo === 'rodizio')
     return t(`${P}.${passo.time_id ? 'RODIZIO_TIME' : 'RODIZIO_CAIXA'}`);
+  if (ehPassoNovo(passo))
+    return fraseDoPassoNovo(passo, t, caminho =>
+      fraseDoValor(caminho, catalogo, t)
+    );
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome])
     return fraseDasEtiquetas(passo, entrada, catalogo, t);

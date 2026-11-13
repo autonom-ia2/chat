@@ -3,6 +3,10 @@
 // ainda não vale e o "decidir" da IA) põe um rótulo por caminho e os passos
 // dele um nível adentro. A frase de cada passo é a do editor (`fraseDe`).
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
+import {
+  linhaDoEnsaioNovo,
+  rotuloDoGalhoFixo,
+} from './passosNovos/frasesDosNovos';
 
 const E = 'AUTOMACAO_LIVRE.ENSAIO';
 
@@ -12,6 +16,10 @@ const AVISO = {
   // G12/G44: o link da agenda vazio, e quem pede sem ver o agendamento.
   faltou_link_da_agenda: 'FALTOU_LINK_DA_AGENDA',
   sem_acesso_agenda: 'SEM_ACESSO_AGENDA',
+  // G60: ninguém atende, e a página de reserva do gatilho não dá o link. O
+  // passo pula e o caminho segue (com a janela fechada, o modelo para:
+  // `pararia`, com a frase própria em PARARIA).
+  agenda_de_reserva_indisponivel: 'AGENDA_DE_RESERVA_INDISPONIVEL',
   texto_vazio: 'TEXTO_VAZIO',
   // G2: o e-mail que não sairia para o contato desta conversa.
   contato_sem_email: 'CONTATO_SEM_EMAIL',
@@ -22,15 +30,36 @@ const AVISO = {
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
   // #2609: a mensagem pula, como no motor.
   canal_sem_resposta: 'CANAL_SEM_RESPOSTA',
+  // G43: o número novo do contato já é de outro contato na caixa.
+  numero_de_outro_contato: 'NUMERO_DE_OUTRO_CONTATO',
   retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
   sem_responsavel: 'SEM_RESPONSAVEL',
   caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
+  // #2631: o card sem conversa, e sem a caixa da conversa nova (#2680) para a
+  // mensagem abrir uma: todo passo que age numa conversa pula, como no motor.
+  sem_conversa: 'SEM_CONVERSA',
+  contato_sem_telefone: 'CONTATO_SEM_TELEFONE',
 };
 
 // #2552: por que o aviso iria para quem atende a caixa.
 const RESERVA = {
   sem_responsavel: 'IRIA_PARA_CAIXA',
   responsavel_fora: 'IRIA_PARA_CAIXA_FORA',
+};
+
+// F4b: com modelo, o que sai se a janela de 24 h estiver fechada; o de
+// propaganda (lote 5, #2681) avisa que custa mais. #2680: a mensagem que abre
+// a conversa diz em qual caixa. #2552: o aviso que iria para quem atende a
+// caixa diz por quê (`caixa`).
+const destaqueDoTexto = (dados, t, caixa) => {
+  const chave = dados.propaganda
+    ? 'MODELO_PROPAGANDA_FORA_DA_JANELA'
+    : 'MODELO_FORA_DA_JANELA';
+  const modelo = dados.modelo && t(`${E}.${chave}`, { modelo: dados.modelo });
+  const abre =
+    dados.conversa_nova &&
+    t(`${E}.ABRIRIA_CONVERSA`, { caixa: dados.conversa_nova });
+  return [abre, modelo, caixa].filter(Boolean).join(' ') || undefined;
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -102,11 +131,16 @@ const rotuloDoCaminho = (no, ramo, t) => {
   // G31: o caminho que decide de novo espera a próxima resposta.
   const deNovo = ramo.de_novo ? '_DE_NOVO' : '';
   if (ramo.chave === 'nenhum') return t(`${E}.SE_NENHUM${deNovo}`);
+  // Protótipo #2931–#2936: o galho fixo do passo novo diz o próprio nome.
+  if (ramo.fixo) return rotuloDoGalhoFixo(ramo.chave, t);
   return t(`${E}.SE_CAMINHO${deNovo}`, { nome: ramo.nome || ramo.chave });
 };
 
 const linhaDoNo = (no, fraseDe, t, nivel) => {
   const base = { nivel, tipo: no.tipo, texto: fraseDe(no.id) };
+  // Protótipo #2931–#2936: o passo novo diz o que faria (adaptadorFalso).
+  if (no.faria === 'passo_novo')
+    return { ...base, ...linhaDoEnsaioNovo(no.dados.passo, t) };
   if (no.faria === 'corte') return { nivel, texto: t(`${E}.CORTE`) };
   if (no.faria === 'se')
     return {
@@ -176,21 +210,16 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
     return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };
   }
-  if (caixa) return { ...base, balao: no.dados.texto, destaque: caixa };
-  // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada;
-  // o de propaganda (lote 5, #2681) avisa que custa mais.
-  if (no.dados?.texto)
+  // Com a janela fechada, o modelo sai no lugar do texto, que nem é lido: o
+  // texto vazio vem só com o modelo, sem balão.
+  if (no.dados?.texto || no.dados?.modelo) {
+    const destaque = destaqueDoTexto(no.dados, t, caixa);
     return {
       ...base,
-      balao: no.dados.texto,
-      ...(no.dados.modelo && {
-        destaque: no.dados.propaganda
-          ? t(`${E}.MODELO_PROPAGANDA_FORA_DA_JANELA`, {
-              modelo: no.dados.modelo,
-            })
-          : t(`${E}.MODELO_FORA_DA_JANELA`, { modelo: no.dados.modelo }),
-      }),
+      ...(no.dados.texto && { balao: no.dados.texto }),
+      ...(destaque && { destaque }),
     };
+  }
   return base;
 };
 

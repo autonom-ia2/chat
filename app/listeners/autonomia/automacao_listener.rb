@@ -11,10 +11,16 @@ class Autonomia::AutomacaoListener < BaseListener
   def conversation_opened(event) = comecar(event, 'conversa.aberta')
   def conversation_resolved(event) = comecar(event, 'conversa.resolvida')
 
+  # G10 (F8.7): a etiqueta posta ou tirada começa o gatilho dela, depois de acordar quem espera.
   def conversation_updated(event)
     conversa = event.data[:conversation]
     escuta.acordar(conversa, [conversa.id])
+    etiqueta.comecar(conversa, event.data[:changed_attributes], event.timestamp)
   end
+
+  # F8.3: mudou quem atende a conversa, a pessoa ou o time.
+  def assignee_changed(event) = troca(event, ::Autonomia::Automacao::TrocaNaConversa::RESPONSAVEL)
+  def team_changed(event) = troca(event, ::Autonomia::Automacao::TrocaNaConversa::TIME)
 
   # A pessoa que a agente de IA cobria escreveu (Cobertura, decisão 18): a conversa volta para ela antes de acordar
   # quem espera, e o "a pessoa respondeu" já a vê no nome.
@@ -33,6 +39,7 @@ class Autonomia::AutomacaoListener < BaseListener
   def contact_updated(event)
     contact = event.data[:contact]
     escuta.acordar(contact, Conversation.where(contact_id: contact.id).select(:id))
+    etiqueta.comecar(contact, event.data[:changed_attributes], event.timestamp)
   end
 
   # Os eventos do card (#2499, F6): o emissor do CRM manda só ids. O listener só enfileira o EventoDoCardJob, que relê
@@ -57,7 +64,12 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.comecar(conversa, tipo, evento: marca)
   end
 
+  def troca(event, tipo)
+    ::Autonomia::Automacao::TrocaNaConversa.comecar(event.data[:conversation], tipo, event.data[:changed_attributes], event.timestamp)
+  end
+
   def escuta = ::Autonomia::Automacao::Escuta
+  def etiqueta = ::Autonomia::Automacao::EtiquetaMudou
   def falhou = ::Autonomia::Automacao::MensagemQueFalhou
   def cobertura = ::Autonomia::Automacao::Cobertura
 end

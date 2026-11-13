@@ -13,6 +13,15 @@ RSpec.describe Autonomia::Automacao::Gatilhos do
     expect(described_class.alvo('nao.existe')).to be_nil
   end
 
+  # G10 (F8.7): a etiqueta vai pelo nome; os parâmetros de id seguem comparando o número.
+  it 'casa a etiqueta pelo nome, sem diferença de maiúscula; o id segue pelo número', :aggregate_failures do
+    etiqueta = { 'tipo' => 'conversa.etiqueta_posta', 'etiqueta' => 'VIP' }
+
+    expect(described_class.casa?(etiqueta, { 'etiqueta' => 'vip' })).to be(true)
+    expect(described_class.casa?(etiqueta, { 'etiqueta' => 'boleto' })).to be(false)
+    expect(described_class.casa?({ 'tipo' => 'card.ganho', 'funil_id' => 3 }, { 'funil_id' => '3' })).to be(true)
+  end
+
   it 'marca o evento do despacho em microssegundos e em UTC: reabrir e resolver no mesmo segundo são dois fatos' do
     conversa = instance_double(Conversation, id: 7)
     instante = Time.zone.parse('2026-11-03 10:00:00.123456 -03:00')

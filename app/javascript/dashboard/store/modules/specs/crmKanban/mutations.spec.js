@@ -49,6 +49,30 @@ describe('#crmKanban mutations', () => {
     expect(state.board.stages).toEqual(snapshot);
   });
 
+  it('does not add a closed card that is not on the board (#2710: the purchase the badge opens)', () => {
+    const state = {
+      board: {
+        pipeline: { id: 1 },
+        stages: [{ id: 1, cards: [{ id: 11, status: 'open' }] }],
+      },
+    };
+
+    mutations[types.UPSERT_CRM_KANBAN_CARD](state, {
+      id: 41,
+      stage_id: 1,
+      status: 'won',
+    });
+    mutations[types.UPSERT_CRM_KANBAN_CARD](state, {
+      id: 11,
+      stage_id: 1,
+      status: 'won',
+    });
+
+    expect(state.board.stages).toEqual([
+      { id: 1, cards: [{ id: 11, stage_id: 1, status: 'won' }] },
+    ]);
+  });
+
   it('updates a card in place and removes it from old stages', () => {
     const state = {
       board: {

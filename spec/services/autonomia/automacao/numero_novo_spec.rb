@@ -180,6 +180,15 @@ RSpec.describe Autonomia::Automacao::NumeroNovo, :automacao_motor do
       expect(Conversation.where(contact: contato).count).to eq(1)
     end
 
+    it 'o ensaio diz o mesmo: o número novo de outro contato pularia, e o caminho segue' do
+      create(:contact_inbox, inbox: caixa, contact: create(:contact, account: account, name: 'Carla'), source_id: '+5511988880000')
+      receita = { 'gatilho' => { 'tipo' => 'conversa.aberta' }, 'passos' => [oi, esperar_passo('e1')] }
+
+      ensaio = Autonomia::Automacao::Ensaio.new(receita: receita, conta: account, usuario: admin, conversa_id: conversa.display_id).resultado
+
+      expect(ensaio[:conversas].first[:passos].pluck(:faria)).to eq(%w[numero_de_outro_contato esperar])
+    end
+
     describe 'no WhatsApp oficial' do
       let(:whatsapp) { whatsapp_com('5511937016094') }
 

@@ -58,6 +58,8 @@ class Contact < ApplicationRecord
   # Antes das associações: com a flag crm_arquivados, os cards perdem o dado pessoal antes de qualquer outra dependência
   # do destroy; o `dependent: :nullify` de crm_cards só acha o que sobrou (sem a flag, todos, como na main).
   include ContactCrmCards
+  # Carteira de seguros (#2897): apagar o contato apaga as apólices dele, com o PDF de cada uma.
+  include ContactCarteira
 
   validates :account_id, presence: true
   validates :email, allow_blank: true, uniqueness: { scope: [:account_id], case_sensitive: false },
@@ -157,7 +159,7 @@ class Contact < ApplicationRecord
       .where('contacts.phone_number IS NULL OR contacts.phone_number = ?', '')
       .where('contacts.identifier IS NULL OR contacts.identifier = ?', '')
       .where('contacts.created_at < ?', time_period)
-      .where.missing(:conversations, :crm_cards)
+      .where.missing(:conversations, :crm_cards, :apolices)
   }
 
   def get_source_id(inbox_id)

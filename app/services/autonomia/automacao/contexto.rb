@@ -22,7 +22,9 @@ class Autonomia::Automacao::Contexto
   # "gatilho repetiu" (lote 4) leem dela.
   # `textos`: no ensaio, que não tem execução, o texto que cada passo de IA produziria (só para mostrar).
   # `evento`: na partida, que ainda não tem execução, a marca do fato que disparou (G9: o filtro lê quem cuidava antes).
-  # `falhou`: no ensaio, a última mensagem recusada da conversa (G53), que o Ensaio acha pela régua do gatilho.
+  # `fato`: no ensaio, que não tem a marca da execução, o registro que o gatilho traria: a última mensagem recusada da
+  # conversa (G53), que o Ensaio acha pela régua do gatilho, ou a reunião do card que o gatilho de reunião leria (#2631,
+  # CardsDoEnsaio).
   def self.de(alvo, **) = new(alvo, **)
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
@@ -39,12 +41,13 @@ class Autonomia::Automacao::Contexto
     ::Autonomia::Automacao::PassoParaCada::VALORES.map { |valor| "#{passo['id']}.#{valor}" }
   end
 
-  def initialize(alvo, execucao: nil, textos: nil, evento: nil, falhou: nil)
+  def initialize(alvo, execucao: nil, textos: nil, evento: nil, fato: nil)
     @alvo = alvo
     @execucao = execucao
     @textos = textos
     @evento = evento
-    @mensagem_que_falhou = falhou if falhou
+    @mensagem_que_falhou = fato if fato.is_a?(::Message)
+    @reuniao = fato if fato.is_a?(::Crm::Meeting)
   end
 
   # A marca do fato que disparou: a da partida ou a da execução. No ensaio, nil.
@@ -123,7 +126,8 @@ class Autonomia::Automacao::Contexto
 
   # A reunião do gatilho de reunião (G12): a da atividade que disparou, achada pela marca da execução e sempre presa ao
   # card e à conta do alvo (parecer do Funções), nunca só pelo id. Num passo que roda dias depois ela é relida: a
-  # reunião remarcada de novo traz o horário novo. Fora do gatilho de reunião, ou sem a atividade, nil.
+  # reunião remarcada de novo traz o horário novo. Fora do gatilho de reunião, ou sem a atividade, nil. No ensaio, a
+  # que chegou em `fato`.
   def reuniao
     return @reuniao if defined?(@reuniao)
 
@@ -145,7 +149,7 @@ class Autonomia::Automacao::Contexto
 
   # G53: a mensagem que disparou o gatilho "mensagem que falhou", achada pela marca da execução (o passo roda depois, sem
   # ela). Sempre presa à conta e à conversa do alvo, e só a que saiu para o cliente, nunca só pelo id (a mesma regra da
-  # reunião). Fora desse gatilho, ou sem a mensagem, nil. No ensaio, a que chegou em `falhou`.
+  # reunião). Fora desse gatilho, ou sem a mensagem, nil. No ensaio, a que chegou em `fato`.
   # A conversa é a do alvo (a do gatilho), nunca `conversa`: depois do envio ao número novo (G43), `conversa` passa a
   # ser a do número novo, e a mensagem que falhou ficou na antiga.
   def mensagem_que_falhou

@@ -63,13 +63,25 @@ class Crm::Ai::NaoENegocio
   def self.conversa_fora_do_negocio?(conversation)
     vinculados = Crm::CardConversation.where(account_id: conversation.account_id, conversation_id: conversation.id).select(:card_id)
     cards = Crm::Card.where(account_id: conversation.account_id)
-    ultimo = cards.where(conversation_id: conversation.id).or(cards.where(id: vinculados)).order(:id).last
-    return false unless ultimo&.archived?
+    arquivado_fora_do_negocio?(cards.where(conversation_id: conversation.id).or(cards.where(id: vinculados)).order(:id).last)
+  end
 
-    ultimo_arquivamento = Crm::Activity.where(account_id: ultimo.account_id, card_id: ultimo.id, event_type: 'archive').order(:id).last
-    recentes = arquivamentos(ultimo.account_id, motivo: 'fora_do_negocio').where(created_at: BLOQUEIO_DA_RECRIACAO.ago..)
+  # F6.8 (#2499): a mesma pergunta para o card que nasce só no contato, sem conversa (o passo "criar card" da Automação
+  # livre no alvo contato e no G49): o card mais novo do contato foi arquivado pela IA como "fora_do_negocio" há menos de
+  # BLOQUEIO_DA_RECRIACAO. O card mais novo, como na conversa: o que uma pessoa abriu depois do arquivamento libera.
+  def self.contato_fora_do_negocio?(contact)
+    arquivado_fora_do_negocio?(Crm::Card.where(account_id: contact.account_id, contact_id: contact.id).order(:id).last)
+  end
+
+  # O último arquivamento do card é o da IA, como "fora_do_negocio", dentro do bloqueio (ninguém reabriu e arquivou depois).
+  def self.arquivado_fora_do_negocio?(card)
+    return false unless card&.archived?
+
+    ultimo_arquivamento = Crm::Activity.where(account_id: card.account_id, card_id: card.id, event_type: 'archive').order(:id).last
+    recentes = arquivamentos(card.account_id, motivo: FORA_DO_NEGOCIO).where(created_at: BLOQUEIO_DA_RECRIACAO.ago..)
     recentes.exists?(id: ultimo_arquivamento&.id)
   end
+  private_class_method :arquivado_fora_do_negocio?
 
   # Os motivos aceitos na conta: com a flag da F3, também o "teste".
   def self.motivos(account)

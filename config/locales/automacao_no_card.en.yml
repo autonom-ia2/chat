@@ -1,0 +1,6 @@
+# Automação livre, "Parar para este card" (#2499 F6.3). Arquivo próprio para não disputar o en.yml com as outras frentes.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        parada_no_card: 'Someone stopped this automation on this card. The other cards continue.'

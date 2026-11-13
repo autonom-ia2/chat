@@ -1548,7 +1548,11 @@ const openCreateDrawer = () => {
   showDrawer.value = true;
 };
 
-const openCardDrawer = async (card, { initialTab = null } = {}) => {
+// `detalhado`: o card já veio completo do servidor (a compra do selo "Já é cliente", #2710); não busca de novo.
+const openCardDrawer = async (
+  card,
+  { initialTab = null, detalhado = false } = {}
+) => {
   cardDrawerStages.value = [];
   drawerInitialTab.value = initialTab;
   selectedCard.value = card;
@@ -1556,7 +1560,7 @@ const openCardDrawer = async (card, { initialTab = null } = {}) => {
   showDrawer.value = true;
   try {
     const [detailedCard] = await Promise.all([
-      store.dispatch('crmKanban/fetchCard', card.id),
+      detalhado ? card : store.dispatch('crmKanban/fetchCard', card.id),
       store.dispatch('crmKanban/fetchFollowUps', { card_id: card.id }),
     ]);
     if (showDrawer.value && selectedCard.value?.id === card.id) {
@@ -1679,17 +1683,33 @@ const openOpportunityForContact = contact => {
   else open();
 };
 
-const openCardFromBoard = card => {
+const openCardFromBoard = (card, opcoes = {}) => {
   const sameCard =
     drawerMode.value === 'edit' && selectedCard.value?.id === card?.id;
   if (showDrawer.value && !sameCard) {
     // Switching cards leaves the open one: its unsaved drafts must be confirmed.
-    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card), {
+    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card, opcoes), {
       leaving: true,
     });
     return;
   }
-  openCardDrawer(card);
+  openCardDrawer(card, opcoes);
+};
+
+// #2710: o selo "Já é cliente" (no quadro e no topo do card) abre a compra, o card ganho do mesmo contato. A gaveta só
+// abre com o card completo: sem título nem contato ela apareceria meio vazia.
+const abrindoCompra = ref(false);
+const abrirCompra = async ({ card_id: cardId }) => {
+  if (abrindoCompra.value) return;
+  abrindoCompra.value = true;
+  try {
+    const compra = await store.dispatch('crmKanban/fetchCard', cardId);
+    openCardFromBoard(compra, { detalhado: true });
+  } catch {
+    useAlert(t('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR'));
+  } finally {
+    abrindoCompra.value = false;
+  }
 };
 
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
@@ -3097,8 +3117,10 @@ onUnmounted(() => {
                 :card="element"
                 :stage-color="stage.color"
                 :com-valor="quadroComValor"
+                :abrindo-ja-cliente="abrindoCompra"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
+                @abrir-ja-cliente="abrirCompra"
               />
             </div>
           </template>
@@ -3405,7 +3427,9 @@ onUnmounted(() => {
       :erro-arquivar="arquivados.erroArquivarCard.value"
       :restaurando="arquivados.restaurandoCard.value"
       :erro-restaurar="arquivados.erroRestaurarCard.value"
+      :abrindo-compra="abrindoCompra"
       @restaurar="arquivados.restaurarCardAberto(selectedCard)"
+      @abrir-compra="abrirCompra"
       @save="saveCard"
       @move="moveCardFromDetails"
       @archive="archiveCard"

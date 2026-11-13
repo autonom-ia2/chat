@@ -290,6 +290,19 @@ const NAO_E_NEGOCIO_DETAIL = {
   duplicado: 'ACTIVITY_DETAIL_DUPLICADO',
 };
 
+// #2501: o pedido da API sem uma etapa do funil: o card entrou na etapa de
+// entrada dele (Crm::Cards::EtapaDeEntrada), e o histórico diz por quê.
+const ETAPA_DE_ENTRADA_DETAIL = {
+  move: {
+    etapa_nao_veio: 'ACTIVITY_DETAIL_ENTRADA_MOVE_SEM_ETAPA',
+    etapa_de_outro_funil: 'ACTIVITY_DETAIL_ENTRADA_MOVE_OUTRO_FUNIL',
+  },
+  create: {
+    etapa_nao_veio: 'ACTIVITY_DETAIL_ENTRADA_CREATE_SEM_ETAPA',
+    etapa_de_outro_funil: 'ACTIVITY_DETAIL_ENTRADA_CREATE_OUTRO_FUNIL',
+  },
+};
+
 const FALLBACK_META = { icon: 'i-lucide-history', tone: 'neutral' };
 
 const ACTIVITY_TONE_CLASSES = {
@@ -422,9 +435,25 @@ export const useCardHistorico = ({
     return details.filter(Boolean).join(' · ');
   };
 
+  // O funil vem gravado na atividade (to_pipeline_name no move, pipeline_name
+  // na criação); sem ele, o detalhe de sempre.
+  const etapaDeEntradaDetail = activity => {
+    const chave =
+      ETAPA_DE_ENTRADA_DETAIL[activity.event_type]?.[activity.payload?.motivo];
+    const funil =
+      activity.payload?.to_pipeline_name || activity.payload?.pipeline_name;
+    const etapa = activityLabelValue(
+      activity,
+      activity.event_type === 'move' ? 'to_stage_id' : 'stage_id'
+    );
+    return chave && funil && etapa ? detalhe(chave, { funil, etapa }) : '';
+  };
+
   // Builds a friendly one-line description for the activity. Returns '' when the
   // event type has no extra detail worth rendering.
   const activityDetail = activity => {
+    const entrada = etapaDeEntradaDetail(activity);
+    if (entrada) return entrada;
     switch (activity.event_type) {
       case 'move':
       case 'ai_auto_moved':

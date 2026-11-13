@@ -1,0 +1,3 @@
+en:
+  contact_imports:
+    legacy_import_closed: "This contact import is closed. Use Contacts > Import contacts, which fills in only empty fields and does not overwrite existing contacts."

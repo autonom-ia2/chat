@@ -162,9 +162,9 @@ class Autonomia::Automacao::PassoDeMensagem
   def comeca_conversa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.automacao.ligada_por, caixa)
 
   # O modelo que não sai para a execução, como a janela fechada (#2573). Sem o link da agenda (G12), o motivo próprio
-  # e o porquê.
+  # e o porquê: a variável vazia do modelo é `modelo_faltou_valor` (ModeloWhatsapp#preparar).
   def modelo_nao_sai(motivo)
-    por = valores.falta_da_agenda if motivo == 'faltou_valor'
+    por = valores.falta_da_agenda if motivo == 'modelo_faltou_valor'
     return pulado(motivo, janela_fechada: true) unless por
 
     Resultado.new(tipo: :pulado, motivo: ::Autonomia::Automacao::LinkDaAgenda.motivo(por), dados: { 'por' => por, 'janela' => 'fechada' })

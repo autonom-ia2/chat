@@ -136,10 +136,16 @@
       "file": "automacaoLivreWebhook.json"
     },
     {
+      "file": "automacaoLivrePassosNovos.json"
+    },
+    {
       "file": "ausencia.json"
     },
     {
       "file": "prospectingAchar.json"
+    },
+    {
+      "file": "automacaoNoCrm.json"
     },
     {
       "file": "relacionamentos.json"

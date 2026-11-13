@@ -55,7 +55,7 @@ RSpec.describe Autonomia::FerramentasProntas::Execucao do
 
     it 'com o ViaCEP no teto, a AwesomeAPI responde e o ViaCEP nao e chamado' do
       allow(Autonomia::FerramentasProntas::TetoDoProvedor).to receive(:reservar!).and_call_original
-      allow(Autonomia::FerramentasProntas::TetoDoProvedor).to receive(:reservar!).with('viacep.com.br', conta: anything).and_return(false)
+      allow(Autonomia::FerramentasProntas::TetoDoProvedor).to receive(:reservar!).with('viacep.com.br', conta: anything, saida: nil).and_return(false)
       fonte_responde(awesomeapi, da_awesomeapi)
 
       expect(executar_pronta(ferramenta, 'cep' => '01001000')['dados']).to eq(esperado)

@@ -14,10 +14,11 @@ class Autonomia::Guide::PorteiroDaAutomacao
   # #2889: as automações do motor novo, pelas mesmas chaves da Autonomia::Automacao::DefinicaoPolicy. Ligar e desligar
   # passam pelo cartão de confirmação (Acoes::SEM_DESFAZER). Não há rota de apagar. O passo de funil (chave de funis)
   # quem confere é o controller, que olha a receita inteira. Testar um passo de IA chama a IA e paga: pede a mesma
-  # chave de montar (DefinicaoPolicy#testar_passo?).
+  # chave de montar (DefinicaoPolicy#testar_passo?). Parar só num card (#2499 F6.3) pede a mesma chave de desligar
+  # (DefinicaoPolicy#parar_no_card?); poder mexer no card, quem confere é o controller (CardPolicy#update?).
   MOTOR_NOVO = ['POST autonomia/automacoes', 'PATCH autonomia/automacoes/:id', 'PUT autonomia/automacoes/:id',
                 'POST autonomia/automacoes/:id/desligar', 'POST autonomia/automacoes/:id/ligar',
-                'POST autonomia/automacoes/testar_passo'].freeze
+                'POST autonomia/automacoes/testar_passo', 'POST crm/cards/:card_id/automacoes/:id/parar'].freeze
   ENSAIO = ['POST automation_rules/:id/ensaio', 'POST autonomia/automacoes/ensaio', 'POST autonomia/automacoes/:id/ensaio'].freeze
 
   ETAPA = [

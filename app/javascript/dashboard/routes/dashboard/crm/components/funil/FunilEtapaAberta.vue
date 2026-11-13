@@ -4,6 +4,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import FunilSugestao from './FunilSugestao.vue';
 import FunilEtapaAcoes from './FunilEtapaAcoes.vue';
+import EtapaAutomacoes from '../automacaoNoCrm/EtapaAutomacoes.vue';
+import { usePodeVerAutomacoes } from '../automacaoNoCrm/useAutomacaoNoCrm';
 import { CORES } from './funil';
 
 // #1384 — uma etapa aberta: o nome, a frase de quando o cliente está nela e a
@@ -20,9 +22,12 @@ const props = defineProps({
   erro: { type: Boolean, default: false },
   nomesFaltando: { type: Boolean, default: false },
   editando: { type: Boolean, default: false },
+  // #2499 F6.5: a gaveta tem mudança não salva; sair dela para o editor da Automação pergunta antes.
+  temMudanca: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['melhorar', 'usar', 'manter', 'mudar', 'acoes']);
+const podeVerAutomacoes = usePodeVerAutomacoes();
 
 // Quem guarda a etapa é a gaveta: aqui só se pede a mudança.
 const campo = chave =>
@@ -219,8 +224,16 @@ const mostraCampo = computed(() => temFrase.value || escrevendo.value);
       </div>
     </div>
 
+    <!-- #2499 F6.5: com o motor e os gatilhos, quem vê automações tem a lista única da etapa no lugar do cartão das ações. -->
+    <EtapaAutomacoes
+      v-if="editando && etapa.id && podeVerAutomacoes"
+      :etapa-id="etapa.id"
+      :etapa-nome="etapa.name"
+      :tem-mudanca="temMudanca"
+      @antigas="emit('acoes')"
+    />
     <FunilEtapaAcoes
-      v-if="editando && etapa.id"
+      v-else-if="editando && etapa.id"
       :etapa-id="etapa.id"
       @alterar="emit('acoes')"
     />

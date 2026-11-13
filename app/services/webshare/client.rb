@@ -22,8 +22,10 @@ class Webshare::Client
 
   attr_reader :pool
 
-  def initialize(pool: :isp, api_key: ENV.fetch('WEBSHARE_API_KEY', ''), plan_id: nil)
+  # `timeout`: o prazo de cada pedido à Webshare (as consultas grátis, #2942, pedem menos que o padrão).
+  def initialize(pool: :isp, api_key: ENV.fetch('WEBSHARE_API_KEY', ''), plan_id: nil, timeout: TIMEOUT)
     @pool = pool.to_sym
+    @timeout = timeout
     raise ArgumentError, "pool desconhecido: #{pool}" unless PLAN_SUBTYPES.key?(@pool)
 
     @api_key = api_key.to_s.strip
@@ -108,7 +110,7 @@ class Webshare::Client
 
   def fetch_page(url)
     ensure_webshare_url!(url)
-    response = HTTParty.get(url, headers: { 'Authorization' => "Token #{@api_key}", 'Accept' => 'application/json' }, timeout: TIMEOUT)
+    response = HTTParty.get(url, headers: { 'Authorization' => "Token #{@api_key}", 'Accept' => 'application/json' }, timeout: @timeout)
     raise Error, "webshare_list_failed status=#{response.code}" unless response.success?
 
     body = response.parsed_response

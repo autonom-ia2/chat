@@ -17,7 +17,20 @@
 #     prazo (#2906: PNCP a frio, prazo de 5 s, 9,8 s medidos). Quem tenta de novo é a consulta (reserva, último dia);
 #   - só JSON (ou CSV, onde a fonte oficial só publica CSV: `get_csv`);
 #   - teto global por host (`TetoDoProvedor`), contado só no pedido que sai, e o host desligado pela configuração
-#     (`TetoDoProvedor.desligado?`): nenhum dos dois chega à rede.
+#     (`TetoDoProvedor.desligado?`): nenhum dos dois chega à rede;
+#   - a saída (#2942): com a flag `agente_ferramentas_prontas_ip_proprio`, o pedido sai pelo IP próprio da conta na
+#     Webshare (`Saida.para`, lida uma vez por cliente, na 1ª chamada que sai para a rede), e o teto conta por esse IP.
+#     As mesmas proteções valem: o túnel do proxy vai para o IP já conferido, e o TLS até o site. 429 e 403 vão à
+#     telemetria por IP e host (`Saida::Recusas`), que põe o IP de molho quando repetem;
+#   - o proxy que caiu (`ProxyMorto.ligacao_caiu?`: a ligação com ele recusada ou sem resposta no prazo de abertura; ou o túnel
+#     recusado, como o 407, que primeiro relê a credencial na Webshare e tenta UMA vez de novo pelo mesmo IP): a chamada
+#     repete pelo IP do servidor, reservando o teto dele, e o cliente larga o proxy (a reserva da mesma fonte não o
+#     reusa). A queda vai ao `Saida::ProxyMorto` (contagem, troca, falha geral). Só GET (este cliente só faz GET).
+#     Decisão do Rodrigo (12/11/2026): sem IP próprio vivo, o cliente recebe a resposta pelo IP do servidor. São do SITE,
+#     sem repetir e sem contar contra o IP: o túnel com 502 ou 504 (o proxy não chegou ao site) e o prazo de leitura com
+#     o túnel aberto. Ressalva: o prazo de abertura (`Net::OpenTimeout`) também cobre o TLS com o site, dentro do túnel;
+#     esse caso conta como do proxy;
+#   - o prazo da chamada é medido depois de achar a saída (que pode ir à Webshare), para não passar do prazo final.
 #
 # Erro vira `Provedor::Falha` com um motivo curto do código (`tempo_esgotado`, `erro_da_fonte`…): a mensagem de fora
 # (que pode trazer o endereço, com o CEP ou o CNPJ) nunca vai a log nem ao modelo.
@@ -60,13 +73,14 @@ class Autonomia::FerramentasProntas::ClienteHttp
   attr_reader :chamadas
 
   # `hosts`: os do catálogo para esta fonte. `prazo_final`: o instante (relógio monotônico) em que a consulta acaba.
-  # `conta`: para a fatia de cada conta no teto global (`TetoDoProvedor`).
+  # `conta`: o id, para a fatia de cada conta no teto global (`TetoDoProvedor`) e o IP próprio dela (`Saida`).
   def initialize(hosts:, prazo_final:, conta: nil)
     @conta = conta
     @hosts = hosts.map(&:downcase)
     @de_fora = []
     @prazo_final = prazo_final
     @chamadas = 0
+    @saida = Autonomia::FerramentasProntas::Saida::DoCliente.new(conta: conta, ate: prazo_final - MINIMO)
   end
 
   # O host que só se conhece na hora (o endereço de cada seguradora, lido do diretório do Open Insurance, que já confere
@@ -119,18 +133,42 @@ class Autonomia::FerramentasProntas::ClienteHttp
     raise traduzir(e)
   end
 
-  # `aceita`: os tipos de resposta aceitos (`tipos`) e os cabeçalhos do provedor (`cabecalhos`).
+  # `aceita`: os tipos de resposta aceitos (`tipos`), os cabeçalhos do provedor (`cabecalhos`) e, aqui, a resolução fixa.
   def buscar(host, caminho, prazo:, max_bytes:, aceita:)
     url = endereco(host, caminho)
+    pedido = { prazo: prazo, max_bytes: max_bytes, aceita: aceita.merge(fixos: resolucao(host)) }
+    begin
+      pedir(host, url, **pedido)
+    rescue Autonomia::FerramentasProntas::Saida::DoCliente::Repetir
+      retry # até 3 tentativas: o proxy, o proxy com a credencial relida (só no 1º túnel recusado) e o servidor
+    end
+  ensure
+    @saida.contar_queda
+  end
+
+  # `@saida`: o proxy da conta e as quedas dele (`Saida::DoCliente`), que mandam repetir quando o proxy cai.
+  def pedir(host, url, prazo:, max_bytes:, aceita:)
+    proxy = @saida.proxy
     segundos = prazo_da_chamada(prazo)
-    fixos = resolucao(host)
-    liberar!(host)
+    liberar!(host, proxy)
     @chamadas += 1
-    SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita), **fixos) { |resultado| return abrir(resultado.tempfile.read, max_bytes) }
+    corpo = SafeFetch.fetch(url, **opcoes(segundos, max_bytes, aceita, proxy)) { |resultado| abrir(resultado.tempfile.read, max_bytes) }
+    @saida.deu_certo(proxy)
+    corpo
   rescue SafeFetch::Error => e
+    @saida.falhou!(e, proxy)
+    recusou(host, e, proxy)
     raise traduzir(e)
+  rescue Net::HTTPExceptions => e
+    @saida.tunel_recusado!(e, proxy)
   rescue *TRANSPORTE
     raise Falha, 'falha_de_rede'
+  end
+
+  def recusou(host, erro, proxy)
+    return unless erro.is_a?(SafeFetch::HttpError) && Autonomia::FerramentasProntas::Saida::Recusas.recusa?(erro.status)
+
+    Autonomia::FerramentasProntas::Saida::Recusas.registrar!(host: host, status: erro.status.to_i, saida: proxy, conta: @conta)
   end
 
   # O corpo em gzip (pelos dois primeiros bytes, não pelo cabeçalho, que a fonte pode omitir) é aberto até `max_bytes`.
@@ -161,9 +199,11 @@ class Autonomia::FerramentasProntas::ClienteHttp
     raise Falha, 'endereco_recusado'
   end
 
-  def liberar!(host)
+  def liberar!(host, proxy)
     raise Falha, 'provedor_desligado' if Autonomia::FerramentasProntas::TetoDoProvedor.desligado?(host)
-    raise Falha, 'teto_do_provedor' unless Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host, conta: @conta)
+
+    cabe = Autonomia::FerramentasProntas::TetoDoProvedor.reservar!(host, conta: @conta, saida: proxy&.address)
+    raise Falha, 'teto_do_provedor' unless cabe
   end
 
   def endereco(host, caminho)
@@ -186,15 +226,17 @@ class Autonomia::FerramentasProntas::ClienteHttp
     [prazo, restante].min
   end
 
-  def opcoes(segundos, max_bytes, aceita)
+  # `proxy`: a saída (nil, o IP do servidor). `aceita[:fixos]`: a resolução fixa do host que veio de fora.
+  def opcoes(segundos, max_bytes, aceita, proxy)
     tipos = aceita.fetch(:tipos)
+    pela_saida = proxy ? { proxy: proxy } : {}
     {
       method: :get, headers: aceita.fetch(:cabecalhos).merge(CABECALHOS, 'Accept' => tipos.first), max_bytes: max_bytes,
       open_timeout: [ABERTURA, segundos].min, read_timeout: segundos, total_timeout: segundos, max_retries: 0,
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
       allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: aceita.fetch(:conferir_tipo, true),
       sensitive_headers: aceita.fetch(:cabecalhos).keys # se um dia o salto para outra origem for aceito, a chave cai antes
-    }
+    }.merge(aceita.fetch(:fixos, {}), pela_saida)
   end
 
   def traduzir(erro)
