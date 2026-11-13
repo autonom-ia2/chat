@@ -90,12 +90,20 @@ RSpec.describe Carteira::Apolice do
     expect(build(:carteira_apolice, account: account, contact: contact, company: create(:company, account: account))).to be_valid
   end
 
-  it 'a história só aceita os tipos de evento que alguém grava' do
+  it 'a história só aceita os tipos de evento da lista' do
     seguro = apolice
     tipos = Carteira::ApoliceEvento::TIPOS + ['inventado']
     validos = tipos.map { |tipo| seguro.eventos.build(tipo: tipo, quando: Time.current).valid? }
 
     expect(validos).to eq(Carteira::ApoliceEvento::TIPOS.map { true } + [false])
+  end
+
+  it 'a lista tem todo passo que o catálogo da tela nomeia, sem repetir nenhum' do
+    catalogo = Rails.root.join('app/javascript/dashboard/i18n/locale/en/relacionamentosCarteira.json').read
+    da_tela = JSON.parse(catalogo).dig('RELACIONAMENTOS_CARTEIRA', 'HISTORIA', 'TIPOS').keys.map(&:downcase)
+
+    expect(da_tela - Carteira::ApoliceEvento::TIPOS).to eq([])
+    expect(Carteira::ApoliceEvento::TIPOS.uniq).to eq(Carteira::ApoliceEvento::TIPOS)
   end
 
   it 'apagar a apólice leva a história dela, pela chave em cascata' do
