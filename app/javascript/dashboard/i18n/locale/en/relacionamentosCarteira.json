@@ -266,6 +266,85 @@
       "ARQUIVO_GRANDE": "This PDF is too large to save here. Ask the insurer for the policy PDF, not the scanned copy, and save that one.",
       "SEM_PDF": "This policy no longer has a saved PDF. I refreshed the screen.",
       "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again."
+    },
+    "TRAZER": {
+      "BOTAO": "Bring policies",
+      "BOTAO_VAZIO": "Bring my policies",
+      "COMO": {
+        "TITULO": "How do you want to bring the people and the policies?",
+        "PLANILHA": "Spreadsheet",
+        "PLANILHA_APOIO": "Excel or CSV, with the policies or only the people."
+      },
+      "PERGUNTA": {
+        "TITULO": "Does this spreadsheet have policies?",
+        "APOIO": "If it does, each policy comes in together with the person who owns it.",
+        "TEM_SEGUROS": "Yes, it has the policies",
+        "SO_PESSOAS": "No, only the people",
+        "JA_RESPONDIDA": "(your earlier answer)"
+      },
+      "DESTINOS": {
+        "NUMERO": "Policy number",
+        "SEGURADORA": "Insurer",
+        "TIPO": "Type of insurance",
+        "TERMINA": "When the policy ends",
+        "COMECA": "When the policy starts",
+        "VALOR": "Price the client pays",
+        "BEM": "What is insured"
+      },
+      "COLUNAS": {
+        "TITULO": "Tell me where the policies are",
+        "APOIO": "To bring the policies, I need to know which column of the spreadsheet holds each of these. Choose in the list below what each column holds.",
+        "LISTA": "What is still missing",
+        "FALTA": "You still need to choose the column for: {lista}.",
+        "TRAZER": "Bring the policies"
+      },
+      "CONFERIR": {
+        "ACHEI": "I found {count} policy | I found {count} policies",
+        "DE_PESSOAS": "from {count} person. | from {count} people.",
+        "CONTADOR": {
+          "LISTA": "What I found in the spreadsheet",
+          "PRECISAM": "row needs you | rows need you",
+          "DEIXADOS": "row left out | rows left out",
+          "PESSOAS_NOVAS": "new person | new people",
+          "JA_ESTAVAM": "person who was already here | people who were already here"
+        },
+        "POR_TIPO_LISTA": "Policies by type",
+        "POR_TIPO": "{tipo}: {count} policy | {tipo}: {count} policies",
+        "REPETIDOS": "{count} repeated row does not come in twice. | {count} repeated rows do not come in twice.",
+        "EXEMPLOS": "See how it will look",
+        "SEGUROS_DE": "Policies of {nome}",
+        "SEGURO": "{tipo} · {seguradora}",
+        "TERMINA_EM": "ends on {data}",
+        "RAMO": "in the spreadsheet: {ramo}",
+        "SEM_SEGUROS": "No policy in this spreadsheet can come in as it is.",
+        "TRAZER": "Bring {count} policy | Bring {count} policies",
+        "TRAZER_DE": "from {count} person | from {count} people"
+      },
+      "PRECISAM": {
+        "QUEM_SEM_NOME": "Row {linha}",
+        "CONSERTO": "For this policy to come in, fix it in the spreadsheet and bring the spreadsheet again. Or leave it out.",
+        "FICAR_COM_ESTE": "Keep this one",
+        "PROBLEMA": {
+          "NUMERO": "{quem}: the policy number is missing.",
+          "NUMERO_ESTRAGADO": "{quem}: the policy number came damaged from the spreadsheet. In Excel, set that column as text before saving.",
+          "NUMERO_COM_PROBLEMA": "{quem}: the policy number needs fixing in the spreadsheet.",
+          "SEGURADORA": "{quem}: the insurer is missing.",
+          "TERMINA": "{quem}: the date the policy ends is missing.",
+          "TERMINA_ILEGIVEL": "{quem}: I did not understand the date the policy ends.",
+          "TERMINA_ANTES": "{quem}: the policy ends before it starts.",
+          "TERMINA_COM_PROBLEMA": "{quem}: the date the policy ends needs fixing in the spreadsheet.",
+          "COMECA": "{quem}: I did not understand the date the policy starts.",
+          "VALOR": "{quem}: I did not understand the price of the policy.",
+          "DUPLICADO": "{quem}: policy {numero} appears in two rows, with different data. Which one do you keep?",
+          "DUPLICADO_ESCOLHIDO": "{quem}: policy {numero} appeared in two rows."
+        }
+      },
+      "PRONTO": {
+        "CHEGARAM": "{count} policy arrived, | {count} policies arrived,",
+        "DE_PESSOAS": "from {count} person. | from {count} people.",
+        "PESSOAS_NOVAS": "{count} person is new here. | {count} people are new here.",
+        "VER": "See the policies"
+      }
     }
   }
 }

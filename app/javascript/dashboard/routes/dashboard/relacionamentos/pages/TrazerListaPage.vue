@@ -1,10 +1,20 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { usarDemo } from '../fonte/modoDemo';
 import { trazerFonte } from '../fonte/trazerFonte';
+import { trazerSegurosFonte } from '../fonte/trazerSegurosFonte';
+import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
+import { useTrazerSeguros } from '../carteira/useTrazerSeguros';
 import { ETAPAS } from '../trazer/etapas';
 import { ERROS, useTrazerLista } from '../trazer/useTrazerLista';
 import { useHistoricoDeListas } from '../trazer/useHistoricoDeListas';
@@ -18,6 +28,12 @@ import TelaConferir from '../components/trazer/TelaConferir.vue';
 import TelaEnviar from '../components/trazer/TelaEnviar.vue';
 import TelaPronto from '../components/trazer/TelaPronto.vue';
 
+// #2897 — as telas da planilha com seguros só são baixadas na conta que tem a
+// carteira, e só quando aparecem.
+const TrazerSeguros = defineAsyncComponent(
+  () => import('../components/carteira/trazer/TrazerSeguros.vue')
+);
+
 // #2894 — "Trazer minha lista": uma entrada só, em três etapas (Enviar →
 // Conferir → Pronto), com o histórico e o Desfazer. A tela não lê o arquivo no
 // navegador: quem lê é a fonte (fonte/trazerFonte.js), no servidor (#2896) ou,
@@ -28,6 +44,12 @@ import TelaPronto from '../components/trazer/TelaPronto.vue';
 // demonstração): quem recarrega a página continua de onde estava, sem enviar a
 // planilha de novo. O parâmetro sai quando a leitura deixa de estar em aberto
 // (a pessoa recomeçou, trouxe a lista, ou a leitura já tinha sido trazida).
+// #2897 — na conta que tem a carteira de seguros a planilha pode trazer
+// seguros: a fonte é a das listas com o que os seguros pedem por cima
+// (fonte/trazerSegurosFonte.js) e, nos momentos em que a tela é a da carteira
+// (`carteira.passo`: como trazer, a pergunta dos seguros, o Conferir com
+// seguros e o fim), quem desenha é TrazerSeguros.vue. Na conta sem carteira
+// nada disso existe: a fonte, as perguntas e as telas são as das listas.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -35,7 +57,11 @@ const router = useRouter();
 const demo = usarDemo(route.query);
 // `?planilha=` só vale em demonstração (e a demonstração só existe no DEV).
 const planilha = demo && import.meta.env.DEV ? route.query.planilha : undefined;
-const fonte = trazerFonte({ demo, planilha });
+const contaDeSeguros = useContaDeSeguros(demo).value;
+const fonteDasListas = trazerFonte({ demo, planilha });
+const fonte = contaDeSeguros
+  ? trazerSegurosFonte({ demo, listas: fonteDasListas })
+  : fonteDasListas;
 const temDesfazer = Boolean(fonte.temDesfazer);
 const avisar = chave => useAlert(t(chave));
 
@@ -55,6 +81,8 @@ const tela = useTrazerLista({
 const semAcesso = computed(
   () => tela.semAcesso.value || historico.semAcesso.value
 );
+
+const carteira = useTrazerSeguros({ tela, fonte, ligado: contaDeSeguros });
 
 const raiz = ref(null);
 const dialogo = ref(null);
@@ -112,7 +140,7 @@ const chaveDaPergunta = computed(
 
 // A cada tela nova o foco vai para o título dela (leitor de tela e teclado).
 watch(
-  () => [tela.etapa.value, chaveDaPergunta.value],
+  () => [tela.etapa.value, chaveDaPergunta.value, carteira.passo.value],
   async () => {
     await nextTick();
     raiz.value?.querySelector('[data-titulo-da-tela]')?.focus();
@@ -125,9 +153,12 @@ watch(chegou, agora => {
 });
 
 const verAsPessoas = () => router.push({ name: 'relationships_home' });
+const verOsSeguros = () =>
+  router.push({ name: 'relationships_home', query: { aba: 'seguros' } });
 
 const trazerOutra = () => {
   tela.recomecar();
+  carteira.recomecar();
   historico.carregar();
 };
 
@@ -180,7 +211,15 @@ const confirmarDesfazer = async () => {
         </p>
         <template v-else>
           <template v-if="tela.etapa.value === ETAPAS.ENVIAR">
+            <TrazerSeguros
+              v-if="carteira.passo.value"
+              :tela="tela"
+              :carteira="carteira"
+              @ver="verOsSeguros"
+              @outra="trazerOutra"
+            />
             <TelaEnviar
+              v-else
               :lendo="tela.lendo.value"
               :erro="tela.erro.value"
               :mostrar-exemplo="Boolean(demo)"
@@ -215,8 +254,15 @@ const confirmarDesfazer = async () => {
               :aviso="tela.leitura.value.aviso"
               :mudou="tela.mudou.value"
             />
+            <TrazerSeguros
+              v-if="carteira.passo.value"
+              :tela="tela"
+              :carteira="carteira"
+              @ver="verOsSeguros"
+              @outra="trazerOutra"
+            />
             <PerguntaDaVez
-              v-if="tela.etapa.value === ETAPAS.PERGUNTAS"
+              v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
               :key="chaveDaPergunta"
               :pergunta="tela.perguntaAtual.value"
               :respostas="tela.respostas.value"
@@ -259,6 +305,13 @@ const confirmarDesfazer = async () => {
             />
           </template>
 
+          <TrazerSeguros
+            v-else-if="noFim && carteira.passo.value"
+            :tela="tela"
+            :carteira="carteira"
+            @ver="verOsSeguros"
+            @outra="trazerOutra"
+          />
           <TelaPronto
             v-else-if="noFim"
             :trazendo="trazendo"

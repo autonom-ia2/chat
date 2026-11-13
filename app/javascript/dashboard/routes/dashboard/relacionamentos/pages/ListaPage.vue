@@ -303,7 +303,9 @@ watch(naAbaDeSeguros, estaNela => {
       v-if="naAbaDeSeguros"
       :demo="demo"
       :com-empresas="temEmpresas"
+      :pode-trazer="podeTrazer"
       @trocar-aba="trocarAba"
+      @trazer="trazer"
     />
     <main v-else class="flex-1 min-w-0 overflow-y-auto">
       <div

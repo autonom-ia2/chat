@@ -266,6 +266,85 @@
       "ARQUIVO_GRANDE": "Este PDF é grande demais para guardar aqui. Peça à seguradora o PDF da apólice, não a cópia escaneada, e guarde esse.",
       "SEM_PDF": "Este seguro não tem mais PDF guardado. Atualizei a tela.",
       "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo."
+    },
+    "TRAZER": {
+      "BOTAO": "Trazer seguros",
+      "BOTAO_VAZIO": "Trazer meus seguros",
+      "COMO": {
+        "TITULO": "Como você quer trazer as pessoas e os seguros?",
+        "PLANILHA": "Planilha",
+        "PLANILHA_APOIO": "Excel ou CSV, com os seguros ou só as pessoas."
+      },
+      "PERGUNTA": {
+        "TITULO": "Esta planilha tem seguros?",
+        "APOIO": "Se tiver, cada seguro entra junto da pessoa que é dona dele.",
+        "TEM_SEGUROS": "Sim, tem os seguros",
+        "SO_PESSOAS": "Não, só as pessoas",
+        "JA_RESPONDIDA": "(sua resposta de antes)"
+      },
+      "DESTINOS": {
+        "NUMERO": "Número da apólice",
+        "SEGURADORA": "Seguradora",
+        "TIPO": "Tipo de seguro",
+        "TERMINA": "Quando o seguro termina",
+        "COMECA": "Quando o seguro começa",
+        "VALOR": "Valor que o cliente paga",
+        "BEM": "O que está segurado"
+      },
+      "COLUNAS": {
+        "TITULO": "Me diga onde estão os seguros",
+        "APOIO": "Para trazer os seguros, preciso saber qual coluna da planilha guarda cada uma destas coisas. Escolha na lista abaixo o que cada coluna guarda.",
+        "LISTA": "O que ainda falta escolher",
+        "FALTA": "Ainda falta escolher a coluna de: {lista}.",
+        "TRAZER": "Trazer os seguros"
+      },
+      "CONFERIR": {
+        "ACHEI": "Achei {count} seguro | Achei {count} seguros",
+        "DE_PESSOAS": "de {count} pessoa. | de {count} pessoas.",
+        "CONTADOR": {
+          "LISTA": "O que achei na planilha",
+          "PRECISAM": "linha precisa de você | linhas precisam de você",
+          "DEIXADOS": "linha deixada de fora | linhas deixadas de fora",
+          "PESSOAS_NOVAS": "pessoa nova | pessoas novas",
+          "JA_ESTAVAM": "pessoa que já estava aqui | pessoas que já estavam aqui"
+        },
+        "POR_TIPO_LISTA": "Seguros por tipo",
+        "POR_TIPO": "{tipo}: {count} seguro | {tipo}: {count} seguros",
+        "REPETIDOS": "{count} linha repetida não entra duas vezes. | {count} linhas repetidas não entram duas vezes.",
+        "EXEMPLOS": "Veja como vai ficar",
+        "SEGUROS_DE": "Seguros de {nome}",
+        "SEGURO": "{tipo} · {seguradora}",
+        "TERMINA_EM": "termina em {data}",
+        "RAMO": "na planilha: {ramo}",
+        "SEM_SEGUROS": "Nenhum seguro desta planilha pode entrar do jeito que está.",
+        "TRAZER": "Trazer {count} seguro | Trazer {count} seguros",
+        "TRAZER_DE": "de {count} pessoa | de {count} pessoas"
+      },
+      "PRECISAM": {
+        "QUEM_SEM_NOME": "Linha {linha}",
+        "CONSERTO": "Para este seguro entrar, conserte na planilha e traga a planilha de novo. Ou deixe de fora.",
+        "FICAR_COM_ESTE": "Ficar com este",
+        "PROBLEMA": {
+          "NUMERO": "{quem}: falta o número da apólice.",
+          "NUMERO_ESTRAGADO": "{quem}: o número da apólice veio estragado da planilha. No Excel, deixe essa coluna como texto antes de salvar.",
+          "NUMERO_COM_PROBLEMA": "{quem}: o número da apólice precisa de conserto na planilha.",
+          "SEGURADORA": "{quem}: falta a seguradora.",
+          "TERMINA": "{quem}: falta a data em que o seguro termina.",
+          "TERMINA_ILEGIVEL": "{quem}: não entendi a data em que o seguro termina.",
+          "TERMINA_ANTES": "{quem}: o seguro termina antes de começar.",
+          "TERMINA_COM_PROBLEMA": "{quem}: a data em que o seguro termina precisa de conserto na planilha.",
+          "COMECA": "{quem}: não entendi a data em que o seguro começa.",
+          "VALOR": "{quem}: não entendi o valor do seguro.",
+          "DUPLICADO": "{quem}: a apólice {numero} aparece em duas linhas, com dados diferentes. Com qual você fica?",
+          "DUPLICADO_ESCOLHIDO": "{quem}: a apólice {numero} aparecia em duas linhas."
+        }
+      },
+      "PRONTO": {
+        "CHEGARAM": "{count} seguro chegou, | {count} seguros chegaram,",
+        "DE_PESSOAS": "de {count} pessoa. | de {count} pessoas.",
+        "PESSOAS_NOVAS": "{count} pessoa é nova aqui. | {count} pessoas são novas aqui.",
+        "VER": "Ver os seguros"
+      }
     }
   }
 }

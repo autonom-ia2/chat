@@ -84,8 +84,11 @@ const soRespondidas = respostas =>
   );
 
 // O índice da coluna pode ser 0 (a primeira da planilha): vale como resposta.
+// #2897 — `seguros` é a resposta de "Esta planilha tem seguros?" (`sim` ou
+// `nao`), que só a conta com a carteira de seguros recebe.
 export const respostasDaTela = (respostas = {}) =>
   soRespondidas({
+    seguros: respostas?.seguros,
     clientes: respostas?.clientes,
     colunaCliente: respostas?.coluna_cliente,
     [PERGUNTA_VALORES]: respostas?.[PERGUNTA_VALORES],
@@ -99,6 +102,7 @@ export const corpoDasRespostas = (respostas = {}) => {
   const outraResposta =
     respondido(respostas.clientes) && respostas.clientes !== RESPOSTA_ALGUMAS;
   return soRespondidas({
+    seguros: respostas.seguros,
     clientes: respostas.clientes,
     coluna_cliente:
       respostas.clientes === RESPOSTA_ALGUMAS
@@ -137,6 +141,9 @@ export const leituraDaTela = resposta => {
     problemas,
     problemasTotal: resposta.problemas_total ?? problemas.length,
     ...(resposta.aviso ? { aviso: resposta.aviso } : {}),
+    // #2897 — só na planilha que tem seguros: os destinos de seguro das
+    // colunas e os que ainda faltam (carteira/segurosDaPlanilha.js).
+    ...(resposta.seguros ? { seguros: copia(resposta.seguros) } : {}),
   };
 };
 
