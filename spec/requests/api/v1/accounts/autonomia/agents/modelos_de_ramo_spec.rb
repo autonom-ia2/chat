@@ -110,7 +110,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     it 'traz o modelo pronto com as listas, as ferramentas liberadas com a frase do ramo e as perguntas de teste' do
       pronto = ver['modelo_pronto']
 
-      expect(pronto.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem premium teste])
+      expect(pronto.keys).to eq(%w[chave ramo perguntas documentos nome_padrao seguradoras_sugeridas ferramentas tambem tiradas premium teste])
       expect(pronto['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
       expect(pronto['documentos'].size).to eq(modelo.documentos.size)
       expect(pronto['ferramentas']).to eq(modelo.ja_vem.reject { |f| f.fonte == 'compras_governo' }
