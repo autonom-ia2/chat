@@ -25,11 +25,12 @@ const conta = vi.hoisted(() => ({ carteira_seguros: true }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ currentAccount: { value: conta } }),
 }));
-// Quem olha pode mudar o que é de contato? (o composable devolve um `computed`)
-const assento = vi.hoisted(() => ({ gerencia: true }));
-vi.mock('dashboard/composables/useCanManage', async () => {
+// Quem olha pode mudar os ajustes? (o composable devolve um `computed`; a
+// regra das duas chaves é conferida em permissoesDaRenovacao.spec.js)
+const assento = vi.hoisted(() => ({ ajusta: true }));
+vi.mock('../../carteira/usePodeAjustarRenovacoes', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => assento.gerencia) };
+  return { usePodeAjustarRenovacoes: () => computed(() => assento.ajusta) };
 });
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
@@ -56,6 +57,9 @@ const FUNIS = [
 ];
 const ESCOLHAS = { funilId: 1, etapaId: 11, dias: 60, mensagens: 'mandar' };
 const SEM_ESCOLHA = { ...ESCOLHAS, funilId: null, etapaId: null };
+// A conta que ainda não tem as mensagens de renovação: o servidor não manda a
+// escolha delas.
+const SEM_MENSAGENS = { funilId: 1, etapaId: 11, dias: 60 };
 // O que o servidor manda em `GET seguros/renovacoes`.
 const doServidor = (mudancas = {}) => ({
   ajustes: ESCOLHAS,
@@ -110,7 +114,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   conta.carteira_seguros = true;
-  assento.gerencia = true;
+  assento.ajusta = true;
   SegurosAPI.renovacoes.mockReset();
   SegurosAPI.salvarRenovacoes.mockReset();
   roteador.push.mockClear();
@@ -380,6 +384,54 @@ describe('as mensagens', () => {
     expect(w.get('[data-resposta="mandar"]').text()).toBe('Mandar');
     expect(w.get('[data-resposta="nao_mandar"]').text()).toBe('Não mandar');
   });
+
+  it('o servidor manda a escolha das mensagens: o cartão aparece', async () => {
+    servidorResponde();
+
+    const w = await abrir();
+
+    expect(w.find(daCarteira('ajuste-mensagens')).exists()).toBe(true);
+    expect(w.findAll('[data-resposta]')).toHaveLength(2);
+  });
+
+  it('o servidor não manda a escolha das mensagens: o cartão não é montado', async () => {
+    servidorResponde({ ajustes: SEM_MENSAGENS });
+
+    const w = await abrir();
+
+    expect(w.find(daCarteira('ajuste-mensagens')).exists()).toBe(false);
+    expect(w.findAll('[data-resposta]')).toHaveLength(0);
+    expect(w.text()).not.toContain('Mensagens antes de vencer');
+    expect(w.findAll('button[disabled]')).toHaveLength(0);
+    expect(w.find(daCarteira('ajuste-onde')).exists()).toBe(true);
+    expect(w.find(daCarteira('ajuste-dias')).exists()).toBe(true);
+  });
+
+  it('sem o cartão, Salvar não manda mensagens, e o cartão não nasce depois', async () => {
+    servidorResponde({ ajustes: SEM_MENSAGENS });
+    // O servidor devolve os ajustes inteiros, com o que a tela não mandou.
+    SegurosAPI.salvarRenovacoes.mockImplementation(async ajustes => ({
+      data: { ...ajustes, mensagens: 'mandar' },
+    }));
+    const w = await abrir();
+    await escreverDias(w, '45');
+
+    await salvar(w);
+
+    expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledWith({
+      ...SEM_MENSAGENS,
+      dias: 45,
+    });
+    expect(salvos(w)).toBe('Ajustes salvos.');
+    expect(w.find(daCarteira('ajuste-mensagens')).exists()).toBe(false);
+  });
+
+  it('na demonstração o cartão das mensagens aparece', async () => {
+    const w = await abrir({ demo: 'cheio' });
+    await assentar();
+
+    expect(w.find(daCarteira('ajuste-mensagens')).exists()).toBe(true);
+  });
 });
 
 describe('salvar', () => {
@@ -485,8 +537,8 @@ describe('quem não pode mudar', () => {
     expect(escolhas(w)).toHaveLength(0);
   });
 
-  it('a função sem a chave de alterar contatos também só lê', async () => {
-    assento.gerencia = false;
+  it('quem não tem as duas permissões também só lê', async () => {
+    assento.ajusta = false;
     servidorResponde();
 
     const w = await abrir();

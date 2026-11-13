@@ -306,6 +306,10 @@ const salvarCorrecao = async dados => {
   );
   if (!vale) return;
   if (!certo) {
+    // O seguro mudou por outro caminho e a apólice nova já não cabe (outra
+    // pessoa a guardou, o seguro foi cancelado): não há o que continuar
+    // preenchendo. A gaveta volta ao seguro, já relido, e diz o que houve.
+    if (daApoliceNova && seguroJaMudou(aberto.recusa.value)) sairDaCorrecao();
     await dizerRecusa(NAO_SALVOU);
     return;
   }

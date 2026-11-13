@@ -235,6 +235,29 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
     expect(w.emitted('dizerMotivo')).toHaveLength(1);
   });
 
+  it('fechada pelo cancelamento do seguro: diz que o seguro foi cancelado', () => {
+    const w = abrir(
+      seguroCom(
+        { desfecho: 'nao_renovou' },
+        { motivo: 'cancelou', canceladoEm: 1790000000 }
+      )
+    );
+
+    expect(situacao(w)).toBe('Não renovou: o seguro foi cancelado.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+  });
+
+  it('motivo que a tela não conhece: só "Não renovou", sem a chave crua e sem convite', () => {
+    const w = abrir(
+      seguroCom({ desfecho: 'nao_renovou' }, { motivo: 'motivo_de_amanha' })
+    );
+
+    expect(situacao(w)).toBe('Não renovou.');
+    expect(w.text()).not.toContain('motivo_de_amanha');
+    expect(w.text()).not.toContain('MOTIVO');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+  });
+
   it('quem só pode ver não é convidado a dizer o motivo', () => {
     const w = abrir(seguroCom({ desfecho: 'nao_renovou' }), false);
 
@@ -564,6 +587,79 @@ describe('o histórico com a renovação e o "Exportar"', () => {
       'Apólice nova guardada. A anterior era a nº AT-000451.'
     );
     expect(renovou).toContain('Renovou.');
+  });
+
+  it('desfazer o resultado conta o que foi desfeito e quem desfez', () => {
+    const w = abrir({
+      itens: [
+        passo('desfez_desfecho', {
+          quem: { nome: 'Bruna Teixeirão' },
+          valores: { anterior: 'renovou' },
+        }),
+        passo('desfez_desfecho', { valores: { anterior: 'nao_renovou' } }),
+        passo('desfez_desfecho'),
+      ],
+    });
+    const [renovou, naoRenovou, semDizer] = frases(w);
+
+    expect(renovou).toContain(
+      'O "Renovou" foi desfeito. O seguro voltou a estar em renovação.'
+    );
+    expect(renovou).toContain('Bruna Teixeirão');
+    expect(naoRenovou).toContain(
+      'O "Não renovou" foi desfeito. O seguro voltou a estar em renovação.'
+    );
+    expect(semDizer).toContain(
+      'Resultado da renovação desfeito. O seguro voltou a estar em renovação.'
+    );
+  });
+
+  it('o seguro cancelado com a renovação aberta conta os dois passos', () => {
+    const [naoRenovou, cancelado] = frases(
+      abrir({
+        itens: [
+          passo('nao_renovou', { valores: { motivo: 'cancelou' } }),
+          passo('cancelado'),
+        ],
+      })
+    );
+
+    expect(naoRenovou).toContain('Não renovou: o seguro foi cancelado.');
+    expect(cancelado).toContain('Seguro marcado como cancelado.');
+  });
+
+  it.each(['proposta_enviada', 'passo_de_amanha'])(
+    'o passo %s, que a tela ainda não conhece, vira uma frase neutra: nunca a chave crua',
+    async tipo => {
+      const w = abrir({
+        podeExportar: true,
+        itens: [passo(tipo, { quem: { nome: 'Bruna Teixeirão' } })],
+      });
+      const [frase] = frases(w);
+
+      expect(frase).toContain('Algo mudou neste seguro.');
+      expect(frase).toContain('Bruna Teixeirão');
+      expect(frase).not.toContain('HISTORIA');
+      expect(frase).not.toContain(tipo.toUpperCase());
+
+      await w.get(daCarteira('exportar-historico')).trigger('click');
+
+      const [, conteudo] = baixarArquivo.mock.calls[0];
+      expect(conteudo).toContain('"Algo mudou neste seguro."');
+      expect(conteudo).not.toContain('HISTORIA');
+    }
+  );
+
+  it('motivo que a tela não conhece: o passo diz só "Não renovou."', () => {
+    const [frase] = frases(
+      abrir({
+        itens: [passo('nao_renovou', { valores: { motivo: 'de_amanha' } })],
+      })
+    );
+
+    expect(frase).toContain('Não renovou.');
+    expect(frase).not.toContain('Não renovou:');
+    expect(frase).not.toContain('DE_AMANHA');
   });
 
   it('passo que chega sem o detalhe usa a frase curta', () => {

@@ -14,11 +14,20 @@ export const MOTIVOS = [
   'nao_respondeu',
 ];
 
+// Quem põe é o servidor, quando o seguro é marcado como cancelado com a
+// renovação aberta: ninguém escolhe este motivo no diálogo.
+export const MOTIVO_DO_CANCELAMENTO = 'cancelou';
+// Os motivos que têm nome no catálogo. O servidor pode ganhar um motivo antes
+// da tela: o que não está aqui nunca aparece como chave crua.
+const MOTIVOS_COM_NOME = [...MOTIVOS, MOTIVO_ESCRITO, MOTIVO_DO_CANCELAMENTO];
+export const motivoTemNome = motivo => MOTIVOS_COM_NOME.includes(motivo);
+
 export const SITUACOES = {
   EM_ETAPA: 'EM_ETAPA',
   RENOVOU_FALTA: 'RENOVOU_FALTA',
   RENOVOU: 'RENOVOU',
   NAO_RENOVOU: 'NAO_RENOVOU',
+  NAO_RENOVOU_SO: 'NAO_RENOVOU_SO',
   NAO_RENOVOU_MOTIVO: 'NAO_RENOVOU_MOTIVO',
   NAO_RENOVOU_ESCRITO: 'NAO_RENOVOU_ESCRITO',
 };
@@ -42,11 +51,16 @@ export const faltaApoliceNova = seguro =>
 // Não renovou e ninguém disse por quê.
 export const faltaMotivo = seguro => naoRenovou(seguro) && !seguro.motivo;
 
+// O motivo que a tela não conhece vira só "Não renovou.": alguém disse o
+// motivo, então a tela não convida a dizer de novo nem escreve o que não sabe.
 const doNaoRenovou = seguro => {
   if (!seguro.motivo) return { id: SITUACOES.NAO_RENOVOU };
-  return seguro.motivo === MOTIVO_ESCRITO && seguro.motivoEscrito
-    ? { id: SITUACOES.NAO_RENOVOU_ESCRITO, texto: seguro.motivoEscrito }
-    : { id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: seguro.motivo };
+  if (seguro.motivo === MOTIVO_ESCRITO && seguro.motivoEscrito) {
+    return { id: SITUACOES.NAO_RENOVOU_ESCRITO, texto: seguro.motivoEscrito };
+  }
+  return motivoTemNome(seguro.motivo)
+    ? { id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: seguro.motivo }
+    : { id: SITUACOES.NAO_RENOVOU_SO };
 };
 
 // `null` quando o seguro não tem renovação.

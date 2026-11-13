@@ -56,7 +56,9 @@ const NUMEROS = {
         { motivo: 'outra_corretora', quantos: 0 },
         { motivo: 'vendeu_o_bem', quantos: 0 },
         { motivo: 'nao_respondeu', quantos: 0 },
+        { motivo: 'cancelou', quantos: 0 },
         { motivo: 'outro', quantos: 1 },
+        { motivo: 'sem_motivo', quantos: 1 },
       ],
       recortes: {
         tipo: [
@@ -203,6 +205,37 @@ describe('os números do período', () => {
       ['Sem motivo', '1'],
     ]);
     expect(larguras(w, 'motivos')).toEqual(['33', '33', '33']);
+  });
+
+  it('o seguro cancelado com a renovação aberta e o motivo que a tela não conhece têm nome', async () => {
+    const [de30, ...resto] = NUMEROS.periodos;
+    servidorResponde({
+      ...NUMEROS,
+      periodos: [
+        {
+          ...de30,
+          venceram: 12,
+          naoRenovou: 6,
+          motivos: [
+            { motivo: 'achou_caro', quantos: 1 },
+            { motivo: 'cancelou', quantos: 2 },
+            { motivo: 'motivo_de_amanha', quantos: 3 },
+            { motivo: 'sem_motivo', quantos: 0 },
+          ],
+        },
+        ...resto,
+      ],
+    });
+
+    const w = await abrir();
+
+    expect(barras(w, 'motivos')).toEqual([
+      ['Outro motivo', '3'],
+      ['O seguro foi cancelado', '2'],
+      ['Achou caro', '1'],
+    ]);
+    expect(w.get(daCarteira('motivos')).text()).not.toContain('MOTIVO');
+    expect(w.get(daCarteira('motivos')).text()).not.toContain('Sem motivo');
   });
 
   it('"Quem renovou mais": só o recorte e a linha que têm número', async () => {

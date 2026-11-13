@@ -284,6 +284,37 @@ describe('"Renovou"', () => {
     expect(w.emitted('mudou')).toHaveLength(2);
   });
 
+  it('alguém já tinha dito que não renovou: diz o que fazer e relê o seguro', async () => {
+    const renovou = vi.fn().mockRejectedValue(recusa('ja_tem_desfecho'));
+    const fonte = fonteDeMentira(EM_RENOVACAO, { renovou });
+    const w = await abrir(EM_RENOVACAO.id, fonte, { agora: AGORA });
+    fonte.seguro.mockResolvedValue(PERDIDO);
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(
+      'Alguém já disse como a renovação deste seguro terminou. Atualizei a tela: para mudar, abra "Mais opções deste seguro" e toque em "Desfazer o resultado da renovação".'
+    );
+    expect(situacao(w)).toBe('Não renovou: achou caro.');
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('a renovação saiu do funil por outro caminho: diz isso e relê o seguro', async () => {
+    const renovou = vi.fn().mockRejectedValue(recusa('sem_renovacao'));
+    const fonte = fonteDeMentira(EM_RENOVACAO, { renovou });
+    const w = await abrir(EM_RENOVACAO.id, fonte, { agora: AGORA });
+    fonte.seguro.mockResolvedValue(SEM_RENOVACAO);
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(
+      'Este seguro não está mais em renovação. Atualizei a tela.'
+    );
+    expect(w.find(daCarteira('renovacao')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Ver PDF');
+  });
+
   it('se não der certo, diz o que fazer e o seguro continua em renovação', async () => {
     const renovou = vi.fn().mockRejectedValue(new Error('Network Error'));
     const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
@@ -378,6 +409,34 @@ describe('"Não renovou" e o motivo em um toque', () => {
     );
     expect(w.find(daCarteira('desfazer')).exists()).toBe(false);
     expect(azul(w).text()).toBe('Renovou');
+  });
+});
+
+describe('seguro cancelado com a renovação aberta', () => {
+  const FECHADA_PELO_CANCELAMENTO = {
+    ...PERDIDO,
+    selo: 'cancelado',
+    canceladoEm: HA_DOIS_DIAS,
+    motivo: 'cancelou',
+  };
+
+  it('diz que não renovou porque foi cancelado, e só oferece desfazer o cancelamento', async () => {
+    const w = await abrirDoServidor(FECHADA_PELO_CANCELAMENTO);
+
+    expect(situacao(w)).toBe('Não renovou: o seguro foi cancelado.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_CANCELAMENTO);
+    expect(doMenu(w)).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  it('de volta a ativo, o "Desfazer" da renovação aparece', async () => {
+    const w = await abrirDoServidor({
+      ...FECHADA_PELO_CANCELAMENTO,
+      selo: 'ativo',
+      canceladoEm: null,
+    });
+
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
   });
 });
 
@@ -491,6 +550,69 @@ describe('guardar a apólice nova', () => {
     expect(w.get('input[data-campo="numero"]').element.value).toBe('AT-000451');
     expect(w.emitted('mudou')).toBeUndefined();
   });
+
+  it('outra pessoa já guardou a apólice nova: sai do formulário, relê o seguro e diz onde ela está', async () => {
+    const apoliceNova = vi
+      .fn()
+      .mockRejectedValue(recusa('ja_tem_apolice_nova'));
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+    fonte.seguro.mockResolvedValue({ ...RENOVADO, apoliceNova: true });
+
+    await salvarFormulario(w);
+
+    expect(alerta(w)).toBe(
+      'A apólice nova deste seguro já está guardada. Atualizei a tela: procure por ela na lista de seguros.'
+    );
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(false);
+    expect(situacao(w)).toBe('Renovou. A apólice nova já está guardada.');
+    expect(fonte.seguro).toHaveBeenCalledTimes(2);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('a data de término antes da do seguro anterior: a frase diz o que conferir e o formulário continua aberto', async () => {
+    const apoliceNova = vi
+      .fn()
+      .mockRejectedValue(recusa('termina_antes_da_anterior'));
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+
+    await salvarFormulario(w);
+
+    expect(alerta(w)).toBe(
+      'A apólice nova precisa terminar depois do seguro que ela renova. Confira a data em que ela termina.'
+    );
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+    expect(fonte.seguro).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      'apolice_de_outra_pessoa',
+      'Essa seguradora e esse número de apólice já estão guardados no seguro de outra pessoa. Confira o número da apólice.',
+    ],
+    [
+      'termo_ambiguo',
+      'Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas.',
+    ],
+  ])(
+    'a recusa %s do gravador tem frase, sem a chave crua',
+    async (codigo, frase) => {
+      const apoliceNova = vi.fn().mockRejectedValue(recusa(codigo));
+      const w = await abrirFormulario(
+        fonteDeMentira(RENOVADO, { apoliceNova })
+      );
+      await escrever(w, 'numero', 'AT-000987');
+
+      await salvarFormulario(w);
+
+      expect(alerta(w)).toBe(frase);
+      expect(alerta(w)).not.toContain('AT-000987');
+      expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+    }
+  );
 
   it('"Voltar" sem escrever nada sai sem perguntar', async () => {
     const { fonte, apoliceNova } = fonteQueGuarda();

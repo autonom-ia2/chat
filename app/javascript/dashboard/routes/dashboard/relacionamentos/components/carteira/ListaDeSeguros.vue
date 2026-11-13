@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -90,6 +90,16 @@ const {
   temporario: grupoTemporario(grupoInicial)?.id ?? '',
 });
 const { apolice, abrir, fechar } = useApoliceNaUrl();
+// O endereço pediu outro grupo com a aba já aberta (o aviso do sino leva a
+// `?aba=seguros&grupo=em_renovacao`): a lista troca de grupo sem recarregar a
+// tela. Só vale o grupo que está na barra.
+watch(
+  () => route.query.grupo,
+  pedido => {
+    const pedidoDaBarra = grupos.value.find(item => item.id === pedido);
+    if (pedidoDaBarra) lista.escolherGrupo(pedidoDaBarra.id);
+  }
+);
 
 const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
 const ajustarRenovacoes = () =>

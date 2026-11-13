@@ -4,17 +4,18 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { useCanManage } from 'dashboard/composables/useCanManage';
 import {
   FALTAS,
   MENSAGENS,
   faltaNosAjustes,
   ondeFicam,
   quantosEntram,
+  temMensagens,
 } from '../carteira/ajustesDaRenovacao';
 import { chaveDaRecusa } from '../carteira/recusas';
 import { useAjustesDaRenovacao } from '../carteira/useAjustesDaRenovacao';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
+import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../ficha/useEstadoDaFicha';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { pecaPedida } from '../fonte/modoCarteira';
@@ -33,8 +34,11 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // cartão por pergunta e uma ação só: Salvar, sempre ligado (sem mudança, ou
 // faltando algo, o clique diz o que é e leva o foco até lá). Dias e mensagens
 // já vêm respondidos; enquanto ninguém escolhe o funil, nenhuma renovação
-// aparece. Quem não pode mudar lê a escolha de hoje e não vê Salvar. Conta sem
-// a carteira de seguros não chama rota nenhuma e volta para a lista.
+// aparece. O cartão das mensagens só existe quando o servidor manda a escolha
+// (a conta que tem as mensagens de renovação): sem ela, nada é mostrado no
+// lugar. Quem não pode mudar (carteira/usePodeAjustarRenovacoes.js) lê a
+// escolha de hoje e não vê Salvar. Conta sem a carteira de seguros não chama
+// rota nenhuma e volta para a lista.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
@@ -44,7 +48,7 @@ const id = useId();
 
 const demo = usarDemo(route.query);
 const temCarteira = useContaDeSeguros(demo);
-const podeGerenciar = useCanManage('contact_manage');
+const podeAjustar = usePodeAjustarRenovacoes();
 const fonte = renovacoesFonte({ demo, peca: pecaPedida(route.query) });
 const tela = useAjustesDaRenovacao(fonte);
 const { conta, rascunho } = tela;
@@ -58,9 +62,11 @@ const falta = ref('');
 const pronto = computed(() => tela.estado.value === ESTADOS.PRONTO);
 // Na demonstração tudo aparece, como na lista e na ficha.
 const podeMudar = computed(
-  () => (fonte.usaDemo || podeGerenciar.value) && !conta.value?.semPermissao
+  () => (fonte.usaDemo || podeAjustar.value) && !conta.value?.semPermissao
 );
 const temFunis = computed(() => Boolean(conta.value?.funis.length));
+// O cartão das mensagens só é montado quando o servidor manda a escolha.
+const comMensagens = computed(() => temMensagens(rascunho.value));
 
 const opcoesDeMensagens = computed(() => [
   { id: MENSAGENS.MANDAR, rotulo: ta('MENSAGENS.MANDAR') },
@@ -241,6 +247,7 @@ onMounted(async () => {
             </CartaoDeAjuste>
 
             <CartaoDeAjuste
+              v-if="comMensagens"
               v-slot="{ rotuloId }"
               marca="ajuste-mensagens"
               :titulo="ta('MENSAGENS.TITULO')"

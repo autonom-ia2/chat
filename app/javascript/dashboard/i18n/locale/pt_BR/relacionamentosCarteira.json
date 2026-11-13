@@ -280,13 +280,19 @@
         "RENOVOU": "Renovou.",
         "NAO_RENOVOU": "Não renovou.",
         "NAO_RENOVOU_OUTRO": "Não renovou.",
-        "APOLICE_NOVA": "Apólice nova guardada."
+        "APOLICE_NOVA": "Apólice nova guardada.",
+        "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação."
       },
       "TIPOS_COM": {
         "NAO_RENOVOU": "Não renovou: {motivo}.",
         "NAO_RENOVOU_OUTRO": "Não renovou. Motivo: {texto}",
         "APOLICE_NOVA": "Apólice nova guardada. A anterior era a {anterior}."
-      }
+      },
+      "DESFEZ": {
+        "RENOVOU": "O \"Renovou\" foi desfeito. O seguro voltou a estar em renovação.",
+        "NAO_RENOVOU": "O \"Não renovou\" foi desfeito. O seguro voltou a estar em renovação."
+      },
+      "PASSO_SEM_NOME": "Algo mudou neste seguro."
     },
     "RENOVACAO": {
       "TITULO": "Renovação",
@@ -299,7 +305,8 @@
         "RENOVOU": "Renovou. A apólice nova já está guardada.",
         "NAO_RENOVOU": "Não renovou. Ninguém disse o motivo.",
         "NAO_RENOVOU_MOTIVO": "Não renovou: {motivo}.",
-        "NAO_RENOVOU_ESCRITO": "Não renovou. Motivo: {texto}"
+        "NAO_RENOVOU_ESCRITO": "Não renovou. Motivo: {texto}",
+        "NAO_RENOVOU_SO": "Não renovou."
       },
       "MOTIVO": {
         "TITULO": "Por que não renovou?",
@@ -308,6 +315,7 @@
           "OUTRA_CORRETORA": "Foi para outra corretora",
           "VENDEU_O_BEM": "Vendeu o bem",
           "NAO_RESPONDEU": "Não respondeu",
+          "CANCELOU": "O seguro foi cancelado",
           "OUTRO": "Outro motivo"
         },
         "NA_FRASE": {
@@ -315,6 +323,7 @@
           "OUTRA_CORRETORA": "foi para outra corretora",
           "VENDEU_O_BEM": "vendeu o bem",
           "NAO_RESPONDEU": "não respondeu",
+          "CANCELOU": "o seguro foi cancelado",
           "OUTRO": "outro motivo"
         },
         "QUAL": "Qual foi o motivo?",
@@ -446,7 +455,21 @@
       "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo.",
       "FUNIL_DESCONHECIDO": "Esse funil não existe mais ou você não pode vê-lo. Atualizei a lista: escolha outro funil e salve de novo.",
       "ETAPA_DE_OUTRO_FUNIL": "Essa etapa não é mais desse funil. Atualizei a lista: escolha a etapa e salve de novo.",
-      "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo."
+      "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo.",
+      "MENSAGENS_INVALIDAS": "Não entendi a escolha das mensagens. Escolha \"Mandar\" ou \"Não mandar\" e salve de novo.",
+      "SEM_RENOVACAO": "Este seguro não está mais em renovação. Atualizei a tela.",
+      "JA_TEM_DESFECHO": "Alguém já disse como a renovação deste seguro terminou. Atualizei a tela: para mudar, abra \"Mais opções deste seguro\" e toque em \"Desfazer o resultado da renovação\".",
+      "SEM_DESFECHO": "Não havia mais o que desfazer na renovação deste seguro. Atualizei a tela.",
+      "MOTIVO_DESCONHECIDO": "Não conheço esse motivo. Abra os motivos de novo e escolha um da lista.",
+      "FALTA_TEXTO": "Faltou escrever o motivo. Abra os motivos de novo e escreva qual foi, ou escolha um da lista.",
+      "TEXTO_LONGO": "O motivo ficou comprido demais. Abra os motivos de novo e escreva com menos palavras.",
+      "ANTERIOR_DESCONHECIDA": "Não achei mais o seguro que esta apólice renova. Atualize a página e tente de novo.",
+      "ANTERIOR_CANCELADA": "Este seguro foi marcado como cancelado. Atualizei a tela: para guardar a apólice nova, desfaça o cancelamento primeiro.",
+      "JA_TEM_APOLICE_NOVA": "A apólice nova deste seguro já está guardada. Atualizei a tela: procure por ela na lista de seguros.",
+      "FALTA_TIPO": "Falta o tipo de seguro. Escolha o tipo e salve de novo.",
+      "TERMINA_ANTES_DA_ANTERIOR": "A apólice nova precisa terminar depois do seguro que ela renova. Confira a data em que ela termina.",
+      "APOLICE_DE_OUTRA_PESSOA": "Essa seguradora e esse número de apólice já estão guardados no seguro de outra pessoa. Confira o número da apólice.",
+      "TERMO_AMBIGUO": "Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas."
     }
   }
 }

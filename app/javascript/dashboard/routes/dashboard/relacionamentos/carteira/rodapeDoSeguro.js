@@ -9,7 +9,9 @@
 // #2898 — a renovação muda o próximo passo. Com a renovação aberta, o azul é
 // "Renovou" e ao lado fica "Não renovou"; o PDF e o "Corrigir" vão para o "⋯".
 // Depois de renovar, o azul é "Guardar a apólice nova", até ela existir. E toda
-// renovação que terminou ganha "Desfazer" no "⋯", sem prazo.
+// renovação que terminou ganha "Desfazer" no "⋯", sem prazo. No seguro
+// cancelado o servidor não desfaz a renovação (o cancelamento a fechou): o
+// "Desfazer" dela só volta depois de desfazer o cancelamento.
 import { estaValendo, renovacaoAberta } from '../fonte/selosDoSeguro';
 import { faltaApoliceNova, terminou } from './situacaoDaRenovacao';
 
@@ -75,7 +77,10 @@ export const rodapeDoSeguro = (
       menu: [...pdfECorrigirNoMenu(seguro), cancelarOuDesfazer],
     };
   }
-  const desfazer = terminou(seguro) ? [DO_RODAPE.DESFAZER_RENOVACAO] : [];
+  const desfazer =
+    terminou(seguro) && !seguro.canceladoEm
+      ? [DO_RODAPE.DESFAZER_RENOVACAO]
+      : [];
   // Renovou e a apólice nova ainda não foi guardada: guardar é o próximo passo.
   const guardaANova = faltaApoliceNova(seguro) && !seguro.canceladoEm;
   const doPdf = guardaANova

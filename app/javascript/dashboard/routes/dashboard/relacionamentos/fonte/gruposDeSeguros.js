@@ -7,7 +7,6 @@
 // renovaram (últimos N dias)", que só aparecem quando a tela de resultados
 // leva até eles (`?grupo=<id>`).
 import { PERIODOS, grupoDosQueNaoRenovaram } from '../carteira/resultados';
-import { naoRenovou } from '../carteira/situacaoDaRenovacao';
 import {
   SELOS,
   diasParaTerminar,
@@ -59,12 +58,12 @@ export const gruposDaBarra = (temporario = '') =>
 const venceEmAte = dias => (seguro, agora) =>
   estaValendo(seguro, agora) && diasParaTerminar(seguro, agora) <= dias;
 
-// Não renovou e terminou nos últimos N dias (o que ainda vale não entra).
-const naoRenovouEmAte = dias => (seguro, agora) => {
-  if (!naoRenovou(seguro)) return false;
-  const terminouHa = -diasParaTerminar(seguro, agora);
-  return terminouHa > 0 && terminouHa <= dias;
-};
+// Terminou nos últimos N dias sem renovar, tenha alguém dito "não renovou" ou
+// não: é a conta do servidor (Carteira::Consulta). O cancelado não chegou ao
+// fim, o renovado renovou e o que ainda vale não terminou: nenhum deles entra.
+const naoRenovouEmAte = dias => (seguro, agora) =>
+  seloDoSeguro(seguro, agora) === SELOS.VENCIDO &&
+  -diasParaTerminar(seguro, agora) <= dias;
 
 const REGRAS = {
   [GRUPO_PADRAO_DE_SEGUROS]: () => true,

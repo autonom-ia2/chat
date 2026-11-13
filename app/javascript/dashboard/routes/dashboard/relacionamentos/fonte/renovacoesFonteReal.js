@@ -6,28 +6,30 @@
 //
 // O que a tela espera do servidor em `GET seguros/renovacoes`:
 //   ajustes:     { funilId, etapaId, dias, mensagens } (funil e etapa nulos
-//                enquanto a conta não escolheu, ou se o funil foi apagado);
+//                enquanto a conta não escolheu, ou se o funil foi apagado;
+//                `mensagens` só quando a conta tem as mensagens de renovação);
 //   funis:       [{ id, nome, etapas: [{ id, nome }] }];
 //   vencimentos: em quantos dias termina cada seguro que ainda vale;
 //   semPermissao: quem olha não pode mudar os ajustes.
 // O que mais vier na resposta (o que é da cotação, de outra entrega) passa
 // direto e a tela não lê.
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
+import { temMensagens } from '../carteira/ajustesDaRenovacao';
 import { noServidor } from './carteiraFonteReal';
 
 // Só as escolhas desta tela: o que o servidor guardar a mais não entra na
-// conta do "mudou".
-const ajustesDaTela = ({
-  funilId = null,
-  etapaId = null,
-  dias,
-  mensagens,
-}) => ({
+// conta do "mudou". A escolha das mensagens só entra quando o servidor a manda:
+// sem ela, a tela não tem o cartão e não manda `mensagens` de volta (o servidor
+// só muda o que veio).
+const ondeEQuando = ({ funilId = null, etapaId = null, dias }) => ({
   funilId,
   etapaId,
   dias,
-  mensagens,
 });
+const ajustesDaTela = ajustes =>
+  temMensagens(ajustes)
+    ? { ...ondeEQuando(ajustes), mensagens: ajustes.mensagens }
+    : ondeEQuando(ajustes);
 
 export const renovacoesFonteReal = () => ({
   usaDemo: false,
@@ -35,11 +37,16 @@ export const renovacoesFonteReal = () => ({
     const dados = await noServidor(() => SegurosAPI.renovacoes());
     return { ...dados, ajustes: ajustesDaTela(dados.ajustes) };
   },
-  salvar: async ajustes =>
-    ajustesDaTela(
-      await noServidor(() =>
-        SegurosAPI.salvarRenovacoes(ajustesDaTela(ajustes))
-      )
-    ),
+  // O que volta é o que ficou guardado, com as mesmas escolhas que foram
+  // mandadas: quem não tinha o cartão de mensagens continua sem ele.
+  async salvar(ajustes) {
+    const mandados = ajustesDaTela(ajustes);
+    const guardados = await noServidor(() =>
+      SegurosAPI.salvarRenovacoes(mandados)
+    );
+    return temMensagens(mandados)
+      ? ajustesDaTela(guardados)
+      : ondeEQuando(guardados);
+  },
   resultados: () => noServidor(() => SegurosAPI.resultados()),
 });

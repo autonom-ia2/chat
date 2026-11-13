@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 
 // As mesmas regras da barra de ações da lista de contatos de hoje
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
@@ -14,10 +15,6 @@ const QUEM_TRAZ_LISTA = ['administrator', 'contact_manage'];
 // Exportar contatos: a regra de ContactPolicy#export? (a mesma do menu da lista
 // de contatos de hoje, Contacts/ContactsHeader/components/ContactMoreActions.vue).
 const QUEM_EXPORTA_CONTATO = ['administrator', 'contact_export'];
-// #2898 — mudar onde ficam as renovações é uma escolha da conta inteira: o
-// servidor pede `permission_granted?('contact_manage')`, que é o administrador
-// ou a função com a chave. O agente sem função não muda.
-const QUEM_AJUSTA_RENOVACOES = ['administrator', 'contact_manage'];
 
 // #2894 — quem vê "Criar cards", "Etiqueta" e "Apagar" na barra de ação em
 // grupo da lista. Nenhuma regra nova: são as que o painel já usa. Esconder é só
@@ -48,8 +45,8 @@ export const usePermissoesDaLista = () => {
     // #2898 — exportar o histórico de um seguro segue a regra de exportar
     // contatos.
     podeExportar: computed(() => checkPermissions(QUEM_EXPORTA_CONTATO)),
-    podeAjustarRenovacoes: computed(() =>
-      checkPermissions(QUEM_AJUSTA_RENOVACOES)
-    ),
+    // #2898 — mudar onde ficam as renovações pede as duas chaves que o
+    // servidor pede (carteira/usePodeAjustarRenovacoes.js).
+    podeAjustarRenovacoes: usePodeAjustarRenovacoes(),
   };
 };

@@ -194,6 +194,59 @@ describe('o grupo "Em renovação"', () => {
   });
 });
 
+// O aviso do sino leva a `?aba=seguros&grupo=em_renovacao`.
+describe('o grupo "Em renovação" pedido pelo endereço', () => {
+  const DO_AVISO = { aba: 'seguros', grupo: 'em_renovacao' };
+
+  it('a aba Seguros já abre no grupo', async () => {
+    const w = await abrir({ query: DO_AVISO });
+
+    expect(escolhida(w, 'em_renovacao')).toBe('true');
+    expect(escolhida(w, 'todos')).toBe('false');
+    expect(linhas(w).length).toBeGreaterThan(0);
+    expect(new Set(selosDasLinhas(w))).toEqual(new Set(['em_renovacao']));
+  });
+
+  it('no servidor, a primeira lista já pede o grupo', async () => {
+    servidorResponde();
+
+    const w = await abrirNoServidor(DO_AVISO);
+
+    expect(SegurosAPI.lista).toHaveBeenCalledWith({
+      grupo: 'em_renovacao',
+      ordem: 'vence_primeiro',
+      pagina: 1,
+    });
+    expect(SegurosAPI.lista).not.toHaveBeenCalledWith(
+      expect.objectContaining({ grupo: 'todos' })
+    );
+    expect(escolhida(w, 'em_renovacao')).toBe('true');
+  });
+
+  it('com a aba já aberta em outro grupo, o aviso troca para "Em renovação"', async () => {
+    const w = await abrir({ query: { aba: 'seguros' } });
+    expect(escolhida(w, 'todos')).toBe('true');
+
+    rota.query = DO_AVISO;
+    await assentar();
+
+    expect(escolhida(w, 'em_renovacao')).toBe('true');
+    expect(new Set(selosDasLinhas(w))).toEqual(new Set(['em_renovacao']));
+  });
+
+  it('abrir e fechar um seguro não mexe no grupo que a pessoa escolheu depois', async () => {
+    const w = await abrir({ query: DO_AVISO });
+    await clicar(w, '[data-grupo="todos"]');
+
+    rota.query = { ...DO_AVISO, apolice: '1' };
+    await assentar();
+    rota.query = DO_AVISO;
+    await assentar();
+
+    expect(escolhida(w, 'todos')).toBe('true');
+  });
+});
+
 describe('o grupo que a tela de resultados pede pelo endereço', () => {
   it('`?grupo=nao_renovaram_30` soma a pílula no fim e já abre nela', async () => {
     const w = await abrir({ query: { grupo: 'nao_renovaram_30' } });

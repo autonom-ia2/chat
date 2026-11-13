@@ -108,6 +108,36 @@ describe('ajustar renovações', () => {
     });
   });
 
+  it('sem a escolha das mensagens na resposta, a tela fica sem ela', async () => {
+    responde('renovacoes', {
+      ...DO_SERVIDOR,
+      ajustes: { funilId: 3, etapaId: 31, dias: 45 },
+    });
+
+    expect((await dasRenovacoes().ajustes()).ajustes).toEqual({
+      funilId: 3,
+      etapaId: 31,
+      dias: 45,
+    });
+  });
+
+  it('quem não tem a escolha das mensagens não a manda nem a recebe de volta', async () => {
+    responde('salvarRenovacoes', { ...ESCOLHAS, dias: 30 });
+
+    const guardados = await dasRenovacoes().salvar({
+      funilId: 3,
+      etapaId: 31,
+      dias: 30,
+    });
+
+    expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledWith({
+      funilId: 3,
+      etapaId: 31,
+      dias: 30,
+    });
+    expect(guardados).toEqual({ funilId: 3, etapaId: 31, dias: 30 });
+  });
+
   it('salvar manda só as quatro escolhas e devolve o que ficou guardado', async () => {
     responde('salvarRenovacoes', { ...ESCOLHAS, dias: 30 });
 

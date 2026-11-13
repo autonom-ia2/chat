@@ -7,6 +7,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import {
   PERIODOS,
   PERIODO_PADRAO,
+  SEM_MOTIVO,
   grupoDosQueNaoRenovaram,
   linhasDoRecorte,
   motivosCitados,
@@ -87,7 +88,7 @@ const motivos = computed(() => {
   );
   const sem = semMotivo(periodo.value);
   return sem
-    ? [...citados, { id: 'sem_motivo', nome: tr('SEM_MOTIVO'), quantos: sem }]
+    ? [...citados, { id: SEM_MOTIVO, nome: tr('SEM_MOTIVO'), quantos: sem }]
     : citados;
 });
 

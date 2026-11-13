@@ -5,6 +5,12 @@
 // funil é a única escolha que a corretora precisa fazer para a renovação andar.
 export const MENSAGENS = { MANDAR: 'mandar', NAO_MANDAR: 'nao_mandar' };
 
+// A escolha das mensagens só existe quando o servidor a manda (a conta que tem
+// as mensagens de renovação prontas). Sem ela, a tela não monta o cartão e não
+// manda `mensagens` de volta.
+export const temMensagens = ajustes =>
+  Object.values(MENSAGENS).includes(ajustes?.mensagens);
+
 export const DIAS_PADRAO = 60;
 const DIAS_MINIMO = 1;
 

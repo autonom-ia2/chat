@@ -28,11 +28,38 @@ export const CODIGOS_DE_RECUSA = [
   'funil_desconhecido',
   'etapa_de_outro_funil',
   'dias_invalidos',
+  'mensagens_invalidas',
+  // #2898 — como a renovação termina ("Renovou", "Não renovou", "Desfazer").
+  'sem_renovacao',
+  'ja_tem_desfecho',
+  'sem_desfecho',
+  'motivo_desconhecido',
+  'falta_texto',
+  'texto_longo',
+  // #2898 — a apólice nova do seguro que renovou.
+  'anterior_desconhecida',
+  'anterior_cancelada',
+  'ja_tem_apolice_nova',
+  'falta_tipo',
+  'termina_antes_da_anterior',
+  'apolice_de_outra_pessoa',
+  'termo_ambiguo',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela
 // mostra já não vale, e ela relê o seguro depois de dizer o que houve.
-const SEGURO_JA_MUDOU = ['ja_cancelado', 'nao_cancelado', 'sem_pdf'];
+const SEGURO_JA_MUDOU = [
+  'ja_cancelado',
+  'nao_cancelado',
+  'sem_pdf',
+  // #2898 — a renovação terminou, foi desfeita ou saiu do funil por outro
+  // caminho; ou o seguro ganhou a apólice nova ou foi cancelado.
+  'sem_renovacao',
+  'ja_tem_desfecho',
+  'sem_desfecho',
+  'ja_tem_apolice_nova',
+  'anterior_cancelada',
+];
 
 export const codigoDaRecusa = falha =>
   falha?.name === RECUSADO && CODIGOS_DE_RECUSA.includes(falha.codigo)

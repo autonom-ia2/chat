@@ -4,8 +4,16 @@
 // carteira (demo/carteira.js), para a tela e o grupo "Não renovaram" mostrarem
 // os mesmos seguros.
 import { EQUIPE, SEGURADORAS } from './carteira';
-import { PERIODOS, grupoDosQueNaoRenovaram } from '../carteira/resultados';
-import { MOTIVOS, MOTIVO_ESCRITO } from '../carteira/situacaoDaRenovacao';
+import {
+  PERIODOS,
+  SEM_MOTIVO,
+  grupoDosQueNaoRenovaram,
+} from '../carteira/resultados';
+import {
+  MOTIVOS,
+  MOTIVO_DO_CANCELAMENTO,
+  MOTIVO_ESCRITO,
+} from '../carteira/situacaoDaRenovacao';
 import { seguroPertenceAoGrupo } from '../fonte/gruposDeSeguros';
 
 const TIPOS = ['auto', 'residencial', 'vida', 'empresarial'];
@@ -89,10 +97,17 @@ const periodo = (dias, carteira, agora) => {
     venceram: renovou + perdidos.length,
     renovou,
     naoRenovou: perdidos.length,
-    motivos: [...MOTIVOS, MOTIVO_ESCRITO].map(motivo => ({
-      motivo,
-      quantos: perdidos.filter(seguro => seguro.motivo === motivo).length,
-    })),
+    // Como o servidor manda: todos os motivos, mais quem ficou sem motivo.
+    motivos: [
+      ...[...MOTIVOS, MOTIVO_DO_CANCELAMENTO, MOTIVO_ESCRITO].map(motivo => ({
+        motivo,
+        quantos: perdidos.filter(seguro => seguro.motivo === motivo).length,
+      })),
+      {
+        motivo: SEM_MOTIVO,
+        quantos: perdidos.filter(seguro => !seguro.motivo).length,
+      },
+    ],
     recortes: {
       tipo: linhas(TIPOS, tipo, 'tipo'),
       seguradora: linhas(SEGURADORAS, seguradora, 'nome'),
