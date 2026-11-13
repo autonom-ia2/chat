@@ -73,6 +73,9 @@ export const defaultFilters = () => ({
 // broadcast a card upsert, so the payload's labels can be stale mid-session.
 // campaignSourceIds is here because, without meta_ads_view, the ad touch comes
 // without source_id (#2271) while the server still matches the card.
+// #2986: numera as buscas do quadro; só a mais nova grava o resultado.
+let boardRequestSeq = 0;
+
 export const SERVER_ONLY_FILTER_KEYS = [
   'companyId',
   'search',
@@ -532,7 +535,15 @@ export const actions = {
       limitPerStage = 30,
       stageIds = [],
     } = payload;
-    commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: !append });
+    // #2986: o carregando ocupa a tela só quando não há quadro deste funil para mostrar (primeira abertura, troca
+    // de funil). Atualizar o funil que já está na tela (tempo real, filtro, depois de mover) troca os cards por
+    // baixo, sem piscar.
+    const showsSpinner =
+      !append && !stringMatches($state.board?.pipeline?.id, pipelineId);
+    // A resposta de uma busca antiga (outro filtro, outro funil) não pisa na da busca mais nova.
+    const request = append ? boardRequestSeq : (boardRequestSeq += 1);
+    if (showsSpinner)
+      commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: true });
     try {
       // The board is strictly open-only; never forward the List-only `result`
       // filter so won/lost/archived selections cannot leak into board fetches.
@@ -555,6 +566,7 @@ export const actions = {
         ...(stageIds.length ? { stage_ids: stageIds } : {}),
       });
       const board = response.data.payload || emptyBoard();
+      if (request !== boardRequestSeq) return $state.board;
       commit(
         append
           ? types.APPEND_CRM_KANBAN_STAGE_CARDS
@@ -563,7 +575,9 @@ export const actions = {
       );
       return board;
     } finally {
-      commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
+      // Quem desliga é a busca mais nova, mesmo sem ter ligado: um carregando aceso por uma busca antiga não fica preso.
+      if (!append && request === boardRequestSeq)
+        commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
     }
   },
 
