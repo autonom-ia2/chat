@@ -65,7 +65,7 @@ class Autonomia::Automacao::NoCard
   def do_escopo(automacao) = Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao))
 
   # As vezes já terminadas desta automação no card (concluída, falhou, interrompida) ganham o porquê nos `textos`: a lista
-  # que ainda vai abrir filhas por uma delas lê a marca e não abre (FilhasDaLista#mae_parada?). A já parada fica como
+  # que ainda vai abrir filhas por uma delas lê a marca e não abre (Execucao.nao_abre_filha?). A já parada fica como
   # está: o estado já basta, e o porquê dela (o desligar, por exemplo) não pode ser trocado. Trava pela ordem do id antes
   # de gravar, como o parar_por_fora!. A terminada não é salva de novo com callback (o AO_TERMINAR apagaria a marca).
   def marcar_terminadas(automacao)

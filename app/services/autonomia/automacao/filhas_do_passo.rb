@@ -29,7 +29,8 @@ class Autonomia::Automacao::FilhasDoPasso
     return pular_com('desligada') unless @mae.dona.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
     return { 'mae_parada' => 1 } if mae_parada?
 
-    contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
+    contagem = contar
+    return { 'mae_parada' => 1 } if @mae_parou
     return pular_com(sem_registro) if contagem.empty?
 
     anotar_pulados(contagem.except('abertas', 'abertas_antes'))
@@ -39,11 +40,18 @@ class Autonomia::Automacao::FilhasDoPasso
   private
 
   # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou em outro registro também
-  # para: a mãe parada não abre filha. A leitura trava a linha da mãe, então espera um parar em curso terminar. Sem linha
-  # no histórico: o da mãe já diz que ela parou. A finalizada_em não serve: a mãe concluída continua abrindo filhas (ela
-  # não espera as filhas).
-  def mae_parada?
-    Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado) } == 'parada'
+  # para (Execucao.nao_abre_filha?, #2978): conferido na entrada e de novo na transação de cada filha, para o parar que
+  # chega no meio da procura. Sem linha no histórico: o da mãe já diz que ela parou.
+  def mae_parada? = Execucao.nao_abre_filha?(@mae.id)
+
+  # Para no primeiro registro em que a mãe já parou: as filhas gravadas antes o parar fecha (NoCard, segunda passada).
+  def contar
+    registros.each_with_object(Hash.new(0)) do |registro, conta|
+      motivo = abrir_para(registro)
+      break conta if @mae_parou
+
+      conta[motivo] += 1
+    end
   end
 
   def registro = @passo['registro'].to_h
@@ -100,10 +108,14 @@ class Autonomia::Automacao::FilhasDoPasso
     return retomar(filha.evento) if Execucao.exists?(account_id: @mae.account_id, automacao_id: @mae.automacao_id, evento: filha.evento)
     return 'fora_do_alcance' unless @acesso.alcanca?(alvo, filha)
 
-    Execucao.transaction do
+    gravou = Execucao.transaction do
+      next false if mae_parada?
+
       filha.save!
       anotar(filha, alvo)
     end
+    return @mae_parou = true unless gravou
+
     ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, marca.iso8601(6))
     'abertas'
   rescue ActiveRecord::RecordNotUnique

@@ -55,15 +55,10 @@ class Autonomia::Automacao::FilhasDaLista
     end
   end
 
-  # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou na lista também para: a
-  # mãe parada não abre filha, como no FilhasDoPasso. A mãe que já tinha concluído (ela não espera as filhas) ganha do
-  # parar o porquê nos `textos`, e vale igual. A leitura trava a linha da mãe: conferida de novo na transação de cada
-  # filha (gravar), a trava fica até a filha estar gravada, e o parar, que trava a mesma linha, vem antes ou depois
-  # inteiro. Sem linha no histórico: o da mãe já diz que ela parou.
-  def mae_parada?
-    estado, textos = Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado, :textos) }
-    estado == 'parada' || textos.to_h.key?(Execucao::PORQUE)
-  end
+  # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou na lista também para
+  # (Execucao.nao_abre_filha?): conferido na entrada e de novo na transação de cada filha (gravar). Sem linha no
+  # histórico: o da mãe já diz que ela parou.
+  def mae_parada? = Execucao.nao_abre_filha?(@mae.id)
 
   # O parar chegou no meio da rodada: as filhas que já estavam gravadas o parar fecha; daqui não abre mais nenhuma.
   def parou_no_meio
