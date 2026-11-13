@@ -5,7 +5,7 @@ import {
   aplicarConserto,
   aplicarDeixarDeFora,
 } from '../../demo/trazer';
-import { resumoAoVivo, totalDaLeitura } from '../../trazer/contagem';
+import { resumoDaTela } from '../../trazer/contagem';
 import CampoDeTelefone from 'dashboard/components-next/conversa-canal/mais/CampoDeTelefone.vue';
 import FichaDeExemplo from '../../components/trazer/FichaDeExemplo.vue';
 import ProblemaDaLinha from '../../components/trazer/ProblemaDaLinha.vue';
@@ -14,6 +14,7 @@ import TelaConferir from '../../components/trazer/TelaConferir.vue';
 import TelaPronto from '../../components/trazer/TelaPronto.vue';
 import HistoricoDeListas from '../../components/trazer/HistoricoDeListas.vue';
 import DialogoDesfazer from '../../components/trazer/DialogoDesfazer.vue';
+import { tudoResolvido } from './apoioDaDemo';
 
 // Conferir, Pronto, histórico e o diálogo de Desfazer (#2894), com o texto real em pt_BR.
 withFullI18n('pt_BR');
@@ -36,8 +37,8 @@ const conferir = (leitura, extra = {}) =>
   mount(TelaConferir, {
     props: {
       leitura,
-      resumo: resumoAoVivo(leitura),
-      total: totalDaLeitura(leitura),
+      resumo: resumoDaTela(leitura),
+      total: resumoDaTela(leitura).entram,
       ...extra,
     },
   });
@@ -78,31 +79,35 @@ describe('ProblemaDaLinha', () => {
     mount(ProblemaDaLinha, { props: { problema: problemaDe(leitura, linha) } });
 
   it.each([
-    [14, 'Tadeu Imbirussu: falta um número no telefone'],
-    [37, 'Rita Carvalhedo: o e-mail está sem “@”'],
-    [62, '+55 11 95412-0062: falta o nome'],
+    [
+      14,
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.',
+    ],
+    [37, 'Rita Carvalhedo: este e-mail não parece certo.'],
+    [62, '(11) 95412-0062: falta o nome'],
     [143, 'Paulo Hortêncio aparece duas vezes. Qual fica?'],
     [171, 'Helena Ourivesco: não tem telefone nem e-mail'],
   ])('a linha %s diz o problema em palavras simples', (linha, frase) => {
     expect(montar(linha).text()).toContain(frase);
   });
 
-  it('e-mail: Salvar só salva com um e-mail de verdade; senão diz o que falta e emite a linha e o valor', async () => {
+  // A tela só trava o campo vazio: o formato quem confere é o servidor.
+  it('e-mail: Salvar só não salva o campo vazio; o que a pessoa escreveu sai com a linha, sem espaço nas pontas', async () => {
     const w = montar(37);
     expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
-    await botao(w, 'Salvar').trigger('click');
+    await w.get('input').setValue('');
     await w.get('form').trigger('submit');
     expect(w.get('[role="alert"]').text()).toBe(
       'Escreva o e-mail para salvar.'
     );
     expect(w.emitted('guardar')).toBeUndefined();
     await w.get('input').setValue('rita@exemplo');
-    await w.get('form').trigger('submit');
-    expect(w.emitted('guardar')).toBeUndefined();
-    await w.get('input').setValue(' rita.carvalhedo@exemplo.com.br ');
     expect(w.find('[role="alert"]').exists()).toBe(false);
     await w.get('form').trigger('submit');
+    await w.get('input').setValue(' rita.carvalhedo@exemplo.com.br ');
+    await w.get('form').trigger('submit');
     expect(w.emitted('guardar')).toEqual([
+      [37, 'rita@exemplo'],
       [37, 'rita.carvalhedo@exemplo.com.br'],
     ]);
   });
@@ -124,14 +129,14 @@ describe('ProblemaDaLinha', () => {
     expect(w.emitted('guardar')[0]).toEqual([62, 'Ana Brandolim']);
   });
 
-  it('telefone: usa o campo de telefone e Salvar, ligado, diz que falta o telefone', async () => {
+  it('telefone: usa o campo de telefone e Salvar, ligado, pede para corrigir o número em que a pessoa não mexeu', async () => {
     const w = montar(14);
     expect(w.text()).toContain('Telefone certo');
     expect(w.findComponent(CampoDeTelefone).exists()).toBe(true);
     expect(botao(w, 'Salvar').attributes('disabled')).toBeUndefined();
     await w.get('form').trigger('submit');
     expect(w.get('[role="alert"]').text()).toBe(
-      'Escreva o telefone para salvar.'
+      'Corrija o telefone para salvar.'
     );
     expect(w.emitted('guardar')).toBeUndefined();
   });
@@ -140,15 +145,42 @@ describe('ProblemaDaLinha', () => {
     const w = montar(143);
     expect(w.find('input').exists()).toBe(false);
     expect(botao(w, 'Salvar')).toBeUndefined();
-    expect(w.get('[data-opcao="88"]').attributes('aria-label')).toBe(
-      'Ficar com a linha 88'
-    );
+    // O nome acessível é o conteúdo do cartão, que diz o que distingue a linha.
+    expect(w.get('[data-opcao="88"]').attributes('aria-label')).toBeUndefined();
+    expect(w.get('[data-opcao="88"]').text()).toContain('Linha 88 da planilha');
     await w.get('[data-opcao="88"]').trigger('click');
     await w.get('[data-opcao="143"]').trigger('click');
     expect(w.emitted('guardar')).toEqual([
       [143, 88],
       [143, 143],
     ]);
+  });
+
+  // #2896 — o servidor pode não saber qual é a outra linha (planilha já
+  // apagada, ou caso raro): a linha diz o problema, sem a comparação.
+  it('duplicada sem a outra linha: diz o problema, sem escolha, e dá para deixar de fora', async () => {
+    const w = mount(ProblemaDaLinha, {
+      props: {
+        problema: {
+          linha: 7,
+          tipo: 'duplicada',
+          nome: 'Ana Repetida',
+          valor: '11987650001',
+          estado: 'aberto',
+          outraLinha: null,
+          duplicadas: [],
+        },
+      },
+    });
+    expect(w.text()).toContain('Ana Repetida aparece duas vezes.');
+    expect(w.text()).not.toContain('Qual fica?');
+    expect(w.text()).toContain('Linha 7 da planilha');
+    expect(w.text()).not.toContain('null');
+    expect(w.find('[data-opcao]').exists()).toBe(false);
+    expect(w.find('input').exists()).toBe(false);
+    expect(botao(w, 'Salvar')).toBeUndefined();
+    await marca(w, 'deixar-de-fora').trigger('click');
+    expect(w.emitted('deixarDeFora')).toEqual([[7]]);
   });
 
   it('Deixar de fora emite a linha, em todo tipo de problema', async () => {
@@ -204,6 +236,35 @@ describe('OQueVouGuardar', () => {
     );
   });
 
+  // #2896 — no servidor quem identifica a coluna é o índice: o nome pode
+  // repetir ou vir vazio.
+  it('coluna com índice emite o índice, e nome repetido não some da lista', async () => {
+    const w = mount(OQueVouGuardar, {
+      props: {
+        colunas: [
+          { indice: 0, nome: 'Telefone', destino: 'telefone' },
+          { indice: 3, nome: 'Telefone', destino: 'informacao' },
+        ],
+      },
+    });
+    const linhas = w.findAll('[data-coluna]');
+    expect(linhas).toHaveLength(2);
+    const naoGuardar = linhas[1]
+      .findAll('button')
+      .find(b => b.text() === 'Não guardar');
+    await naoGuardar.trigger('click');
+    expect(w.emitted('trocar')).toEqual([[3, 'nao_guardar']]);
+  });
+
+  it('coluna sem nome aparece pela posição dela na planilha', () => {
+    const w = mount(OQueVouGuardar, {
+      props: { colunas: [{ indice: 4, nome: '', destino: 'informacao' }] },
+    });
+    expect(w.get('[data-coluna]').text()).toContain(
+      '“Coluna 5” fica como informação nova.'
+    );
+  });
+
   it('coluna desconhecida tem Não guardar, que emite a troca', async () => {
     const w = montar();
     const linha = w.get('[data-coluna="Aniversário"]');
@@ -211,7 +272,8 @@ describe('OQueVouGuardar', () => {
       .findAll('button')
       .find(b => b.text() === 'Não guardar');
     await naoGuardar.trigger('click');
-    expect(w.emitted('trocar')).toEqual([['Aniversário', 'nao_guardar']]);
+    // Quem identifica a coluna é o índice dela na planilha.
+    expect(w.emitted('trocar')).toEqual([[6, 'nao_guardar']]);
   });
 
   it('Trocar abre a escolha de destino em palavras simples (sem select nativo)', async () => {
@@ -230,7 +292,9 @@ describe('OQueVouGuardar', () => {
 
   it('coluna que não vai ser guardada diz isso', () => {
     const w = mount(OQueVouGuardar, {
-      props: { colunas: [{ nome: 'Aniversário', destino: 'nao_guardar' }] },
+      props: {
+        colunas: [{ indice: 5, nome: 'Aniversário', destino: 'nao_guardar' }],
+      },
     });
     expect(w.text()).toContain('Não vou guardar “Aniversário”');
   });
@@ -239,10 +303,10 @@ describe('OQueVouGuardar', () => {
 describe('TelaConferir', () => {
   it('a frase forte tem os números certos, no plural', () => {
     const w = conferir(leituraDeExemplo('l1'));
-    expect(w.get('h1').text()).toBe('Achei 200 pessoas.');
+    expect(w.get('h1').text()).toBe('Achei 203 pessoas.');
     expect(contador(w, 'NOVAS')).toBe('180 novas');
     expect(contador(w, 'COMPLETADAS')).toBe('15 já estavam aqui');
-    expect(contador(w, 'PRECISAM')).toBe('5 precisam de você');
+    expect(contador(w, 'PRECISAM')).toBe('8 precisam de você');
   });
 
   it('a frase usa o singular quando é 1', () => {
@@ -263,7 +327,7 @@ describe('TelaConferir', () => {
     const tres = conferir(um);
     expect(tres.get('h1').text()).toBe('Achei 3 pessoas.');
     expect(contador(tres, 'COMPLETADAS')).toBe('1 já estava aqui');
-    expect(contador(tres, 'PRECISAM')).toBe('5 precisam de você');
+    expect(contador(tres, 'PRECISAM')).toBe('8 precisam de você');
   });
 
   it('a ordem é: frase, três fichas, precisam de você, o que vou guardar, botão', () => {
@@ -282,24 +346,32 @@ describe('TelaConferir', () => {
     expect(posicoes).toEqual([...posicoes].sort((a, b) => a - b));
   });
 
-  it('o botão único diz quantas pessoas vão chegar', () => {
+  it('sem o Desfazer na conta, o Conferir não promete desfazer', () => {
     const w = conferir(leituraDeExemplo('l1'));
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
-    expect(w.text()).toContain('Você pode desfazer quando quiser.');
-    expect(w.text()).toContain('Precisam de você (5)');
+    expect(w.text()).not.toContain('desfazer');
   });
 
-  it('consertou: a frase, o título e o botão mudam na hora e a linha vira Pronto', () => {
+  it('o botão único diz quantas pessoas vão chegar', () => {
+    const w = conferir(leituraDeExemplo('l1'), { temDesfazer: true });
+    expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 195 pessoas');
+    expect(w.text()).toContain('Você pode desfazer quando quiser.');
+    expect(w.text()).toContain('Precisam de você (8)');
+  });
+
+  // "Novas" é do servidor: a tela não chama de nova a linha consertada (não
+  // sabe se a pessoa já existe). O que muda é quem precisa da pessoa e o botão.
+  it('consertou: os que precisam de você, o título e o botão mudam na hora e a linha vira Pronto', () => {
     const leitura = aplicarConserto(
       leituraDeExemplo('l1'),
       62,
       'Ana Brandolim'
     );
     const w = conferir(leitura);
-    expect(contador(w, 'NOVAS')).toBe('181 novas');
-    expect(contador(w, 'PRECISAM')).toBe('4 precisam de você');
+    expect(contador(w, 'NOVAS')).toBe('180 novas');
+    expect(contador(w, 'PRECISAM')).toBe('7 precisam de você');
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 196 pessoas');
-    expect(w.text()).toContain('Precisam de você (4)');
+    expect(w.text()).toContain('Precisam de você (7)');
     expect(w.get('[data-linha="62"]').text()).toContain('Pronto');
   });
 
@@ -311,13 +383,11 @@ describe('TelaConferir', () => {
   });
 
   it('tudo resolvido troca o título da lista de problemas', () => {
-    const base = leituraDeExemplo('l1');
-    const leitura = [14, 37, 62, 143, 171].reduce(
-      (atual, linha) => aplicarConserto(atual, linha, 'x'),
-      base
-    );
-    const w = conferir(leitura);
+    const w = conferir(tudoResolvido(leituraDeExemplo('l1')));
     expect(w.text()).toContain('Tudo resolvido');
+    // A linha repetida (143) é troca: ela fica e a outra, que já estava
+    // contada, sai. Das 8 linhas, 5 somam uma pessoa; a outra repetida e a da
+    // fórmula ficam de fora.
     expect(marca(w, 'trazer-confirmar').text()).toBe('Trazer 200 pessoas');
   });
 
@@ -380,15 +450,71 @@ describe('TelaConferir', () => {
   });
 });
 
+// #2896 — a planilha original fica guardada por poucos dias. Depois disso o
+// servidor manda os valores mascarados: dá para ver o problema e deixar a linha
+// de fora, mas não para consertar.
+describe('Conferir com a planilha já apagada (valores mascarados)', () => {
+  const FRASE =
+    'A planilha já foi apagada daqui. Para corrigir uma linha, envie a planilha de novo.';
+  const apagada = () => ({ ...leituraDeExemplo('l1'), valores: 'mascarados' });
+
+  it('diz uma vez, no topo dos problemas, que a planilha já foi apagada', () => {
+    const w = conferir(apagada());
+    const aviso = w.findAll('[data-relacionamentos="planilha-apagada"]');
+    expect(aviso).toHaveLength(1);
+    expect(aviso[0].text()).toBe(FRASE);
+    // Antes da lista dos problemas: na ordem do documento o aviso vem primeiro.
+    const naOrdem = marca(w, 'precisam-de-voce')
+      .findAll('[data-relacionamentos="planilha-apagada"], ul')
+      .map(peca => peca.element.tagName);
+    expect(naOrdem).toEqual(['P', 'UL']);
+  });
+
+  it('nenhuma linha tem campo, Salvar nem "Ficar com esta": a ação não existe ali', () => {
+    const w = conferir(apagada());
+    const problemas = marca(w, 'precisam-de-voce');
+    expect(problemas.findAll('[data-linha]')).toHaveLength(8);
+    expect(problemas.find('input').exists()).toBe(false);
+    expect(problemas.findComponent(CampoDeTelefone).exists()).toBe(false);
+    expect(problemas.find('[data-opcao]').exists()).toBe(false);
+    expect(
+      problemas.findAll('button').filter(b => b.text() === 'Salvar')
+    ).toHaveLength(0);
+    expect(problemas.find('button[disabled]').exists()).toBe(false);
+  });
+
+  it('"Deixar de fora" continua em todas as linhas e emite a linha', async () => {
+    const w = conferir(apagada());
+    const deixar = w.findAll('[data-relacionamentos="deixar-de-fora"]');
+    expect(deixar).toHaveLength(8);
+    await deixar[0].trigger('click');
+    expect(w.emitted('deixarDeFora')).toEqual([[14]]);
+  });
+
+  it('a linha continua dizendo o problema em palavras simples', () => {
+    const w = conferir(apagada());
+    expect(w.get('[data-linha="14"]').text()).toContain(
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.'
+    );
+  });
+
+  it('com a planilha guardada (valores inteiros) não há a frase e o conserto existe', () => {
+    const w = conferir({ ...leituraDeExemplo('l1'), valores: 'inteiros' });
+    expect(marca(w, 'planilha-apagada').exists()).toBe(false);
+    expect(w.get('[data-linha="37"]').find('input').exists()).toBe(true);
+    expect(botao(w.get('[data-linha="37"]'), 'Salvar')).toBeTruthy();
+  });
+});
+
 describe('TelaPronto', () => {
-  it('andamento: barra com role progressbar, a frase e o aviso de que pode fechar', () => {
+  it('andamento: barra com role progressbar, a frase e onde a lista vai aparecer', () => {
     const w = mount(TelaPronto, {
       props: { trazendo: true, porcentagem: 40 },
     });
     const andamento = marca(w, 'andamento');
     expect(w.get('h1').text()).toBe('Trazendo… 40%.');
     expect(andamento.text()).toContain(
-      'Pode fechar esta tela; eu aviso quando terminar.'
+      'Pode sair desta tela. A lista aparece aqui embaixo quando terminar.'
     );
     const barra = w.get('[role="progressbar"]');
     expect(barra.attributes('aria-valuenow')).toBe('40');
@@ -458,7 +584,7 @@ describe('HistoricoDeListas', () => {
   });
   const montar = props =>
     mount(HistoricoDeListas, {
-      props: { listas: [], ...props },
+      props: { listas: [], temDesfazer: true, ...props },
     });
 
   it('cheio: arquivo, quando, quem, pessoas, situação e Desfazer, sem data limite', () => {
@@ -474,6 +600,14 @@ describe('HistoricoDeListas', () => {
     expect(marca(w, 'desfazer').attributes('aria-label')).toBe(
       'Desfazer a lista Clientes 2025.xlsx'
     );
+  });
+
+  it('sem o nome de quem trouxe, a linha não diz "por"', () => {
+    const w = montar({ listas: [lista('a', 'pronto', { quem: '' })] });
+    const texto = w.get('[data-lista="a"]').text();
+    expect(texto).toContain('em 08/11');
+    expect(texto).toContain('195 pessoas');
+    expect(texto).not.toContain('por');
   });
 
   it('Desfazer emite a lista', async () => {
@@ -502,6 +636,45 @@ describe('HistoricoDeListas', () => {
     expect(marca(w, 'desfazer').exists()).toBe(true);
     expect(w.text()).not.toContain('Prazo');
     expect(w.text()).not.toContain('até');
+  });
+
+  // #2896 — a lista que parou no meio.
+  it('falhou e dá para continuar: a frase e o botão "Tentar de novo", que emite a lista', async () => {
+    const parada = lista('a', 'falhou', { podeTentar: true, porcentagem: 40 });
+    const w = montar({ listas: [parada] });
+    expect(w.get('[data-situacao="falhou"]').text()).toBe(
+      'Não consegui trazer esta lista.'
+    );
+    const tentar = marca(w, 'tentar-de-novo');
+    expect(tentar.text()).toBe('Tentar de novo');
+    expect(tentar.attributes('aria-label')).toBe(
+      'Tentar trazer de novo a lista a.xlsx'
+    );
+    expect(tentar.attributes('disabled')).toBeUndefined();
+    expect(marca(w, 'desfazer').exists()).toBe(false);
+    await tentar.trigger('click');
+    expect(w.emitted('tentarDeNovo')).toEqual([[parada]]);
+  });
+
+  it('falhou e não dá para continuar: só a frase, sem botão', () => {
+    const w = montar({ listas: [lista('a', 'falhou', { podeTentar: false })] });
+    expect(w.get('[data-situacao="falhou"]').text()).toBe(
+      'Não consegui trazer esta lista.'
+    );
+    expect(w.find('button').exists()).toBe(false);
+  });
+
+  it('enquanto tenta de novo, só o botão daquela lista fica ocupado', () => {
+    const w = montar({
+      listas: [
+        lista('a', 'falhou', { podeTentar: true }),
+        lista('b', 'falhou', { podeTentar: true }),
+      ],
+      tentando: 'a',
+    });
+    const botoes = w.findAll('[data-relacionamentos="tentar-de-novo"]');
+    expect(botoes[0].attributes('disabled')).toBeDefined();
+    expect(botoes[1].attributes('disabled')).toBeUndefined();
   });
 
   it('vazio: uma frase curta, sem botão', () => {

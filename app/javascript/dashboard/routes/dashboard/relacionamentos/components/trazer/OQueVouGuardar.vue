@@ -2,12 +2,19 @@
 import { ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import LinhaDeColuna from './LinhaDeColuna.vue';
+import { chaveDaColuna } from '../../trazer/destinos';
 
 // #2894 — "O que vou guardar": cada coluna da planilha e para onde ela vai.
 // Recolhido por padrão; abre com um clique.
+// Fatia 2 — `recusa` (`{ coluna, chave }`): a troca que não deu certo é dita na
+// linha da coluna dela. `relendo`: a planilha está sendo lida de novo.
 defineProps({
   colunas: { type: Array, required: true },
   ocupado: { type: Boolean, default: false },
+  relendo: { type: Boolean, default: false },
+  recusa: { type: Object, default: null },
+  // #2896 — se o telefone da empresa existe nesta leitura.
+  temEmpresa: { type: Boolean, default: true },
 });
 const emit = defineEmits(['trocar']);
 
@@ -48,10 +55,13 @@ const aberto = ref(false);
     >
       <LinhaDeColuna
         v-for="coluna in colunas"
-        :key="coluna.nome"
+        :key="chaveDaColuna(coluna)"
         :coluna="coluna"
         :ocupado="ocupado"
-        @trocar="(nome, destino) => emit('trocar', nome, destino)"
+        :relendo="relendo"
+        :recusa="recusa?.coluna === chaveDaColuna(coluna) ? recusa : null"
+        :tem-empresa="temEmpresa"
+        @trocar="(...troca) => emit('trocar', ...troca)"
       />
     </ul>
   </section>

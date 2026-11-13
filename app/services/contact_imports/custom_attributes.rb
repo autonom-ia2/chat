@@ -58,7 +58,23 @@ class ContactImports::CustomAttributes
   end
 
   def columns
-    @columns ||= ContactImports::AttributeColumns.new(@account, @extra_columns).perform
+    @columns ||= ContactImports::AttributeColumns.new(@account, kept_columns, fields: trazer&.campos || {}).perform
+  end
+
+  # Trazer minha lista (#2896, options['trazer']): a column the person marked "não guardar" on the screen writes no
+  # value and creates no attribute, and neither does one sent to the city, the company phone or the customer mark.
+  # Without the mark every extra column is kept, as before.
+  def kept_columns
+    return @extra_columns unless trazer
+
+    Array(@extra_columns) - Relacionamentos::Trazer::Colunas.new(@campaign_import).chaves_que_nao_guardam - trazer.chaves
+  end
+
+  # nil for every import without the mark and for the automation step (no import record).
+  def trazer
+    return @trazer if defined?(@trazer)
+
+    @trazer = ContactImports::Trazer::DestinosDaLinha.da(@campaign_import)
   end
 
   def columns_by_header
@@ -71,7 +87,8 @@ class ContactImports::CustomAttributes
     scope = @account.custom_attribute_definitions.where(attribute_model: :contact_attribute)
     return false if scope.exists?(attribute_key: column.key)
 
-    scope.create!(attribute_key: column.key, attribute_display_name: column.label, attribute_display_type: :text)
+    scope.create!(attribute_key: column.key, attribute_display_name: column.label, attribute_display_type: :text,
+                  attribute_description: column.description)
     true
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
     raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:attribute_key, :taken)

@@ -82,6 +82,7 @@ class CampaignImport < ApplicationRecord
   has_one_attached :normalized_csv
   has_one_attached :error_csv
   has_one_attached :report_csv
+  include Relacionamentos::Trazer::ArquivoDeProblemas
 
   enum status: {
     uploaded: 0,

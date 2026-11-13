@@ -51,7 +51,7 @@ describe('SoltarArquivo', () => {
       'Excel ou CSV. Precisa ter nome e telefone ou e-mail.'
     );
     const entrada = w.get('input[type="file"]');
-    expect(entrada.attributes('accept')).toBe('.xlsx,.xls,.csv');
+    expect(entrada.attributes('accept')).toBe('.xlsx,.csv');
     const clique = vi.spyOn(entrada.element, 'click');
     await botao.trigger('click');
     expect(clique).toHaveBeenCalledTimes(1);
@@ -125,6 +125,16 @@ describe('TelaEnviar', () => {
     expect(w.get('[role="alert"]').text()).toBe(
       'Este arquivo não é uma planilha. Use Excel ou CSV.'
     );
+  });
+
+  // #2896 — o servidor recusa planilha grande demais: a frase não diz limite e
+  // não oferece "tentar de novo" (o mesmo arquivo seria recusado de novo).
+  it('planilha grande demais: a frase aparece na área de soltar, sem botão de tentar', () => {
+    const w = mount(TelaEnviar, { props: { erro: 'grande' } });
+    expect(w.get('[role="alert"]').text()).toBe(
+      'Esta planilha é grande demais. Envie em partes menores.'
+    );
+    expect(marca(w, 'erro').exists()).toBe(false);
   });
 
   it('repassa o arquivo escolhido', async () => {

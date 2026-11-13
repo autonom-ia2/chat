@@ -7,8 +7,8 @@ import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.v
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useRouter } from 'vue-router';
 import {
-  CONTACT_IMPORTS_LIST_ROUTE,
   isContactImportJourneyEnabled,
+  openContactImportsList,
 } from 'dashboard/routes/dashboard/contacts/import/contactImport.routes';
 
 const props = defineProps({
@@ -106,7 +106,7 @@ const handleContactAction = ({ action }) => {
   } else if (action === 'campaignImportHistory') {
     emit('campaignImportHistory');
   } else if (action === 'importsList') {
-    router.push({ name: CONTACT_IMPORTS_LIST_ROUTE });
+    openContactImportsList(router);
   }
 };
 </script>

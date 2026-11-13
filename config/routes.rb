@@ -1160,6 +1160,22 @@ Rails.application.routes.draw do
             end
             get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
             get 'empresas/:id/seguros', to: 'empresas/seguros#index' if ChatwootApp.enterprise?
+            # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
+            # consertar ou deixar de fora uma linha, trazer, as listas já trazidas e o andamento de uma.
+            namespace :trazer do
+              resources :leituras, only: [:create, :show] do
+                patch :respostas, on: :member
+                post :trazer, on: :member
+                resources :colunas, only: [:update], param: :indice
+                resources :linhas, only: [:update], param: :linha do
+                  post :deixar_de_fora, on: :member
+                  post :reabrir, on: :member
+                end
+              end
+              resources :listas, only: [:index] do
+                get :andamento, on: :member
+              end
+            end
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

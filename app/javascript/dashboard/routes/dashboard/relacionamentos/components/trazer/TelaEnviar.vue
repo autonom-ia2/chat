@@ -7,6 +7,11 @@ import SoltarArquivo from './SoltarArquivo.vue';
 
 // #2894 — "Enviar": o título, a área de soltar a planilha, o link da planilha
 // de exemplo (só em demonstração) e os estados de lendo e erro.
+// #2896, Fatia 2 — a leitura que o servidor ainda não terminou tem "Tentar de
+// novo" (que só pergunta por ela de novo). A leitura que acabou sem ninguém
+// depois de uma mudança, a que já foi trazida e a que venceu (a planilha foi
+// enviada há mais de 7 dias e já foi apagada) são ditas como alerta: aí o
+// caminho é enviar a planilha de novo, ou olhar o histórico logo abaixo.
 const props = defineProps({
   lendo: { type: Boolean, default: false },
   erro: { type: String, default: '' },
@@ -20,12 +25,36 @@ const { t } = useI18n();
 // área de soltar.
 const ERROS_DO_ARQUIVO = {
   [ERROS.TIPO]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_TIPO',
+  [ERROS.GRANDE]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_GRANDE',
   [ERROS.VAZIA]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_VAZIA',
   [ERROS.SEM_CONTATO]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_SEM_CONTATO',
 };
 const erroDoArquivo = computed(() =>
   ERROS_DO_ARQUIVO[props.erro] ? t(ERROS_DO_ARQUIVO[props.erro]) : ''
 );
+
+// O que dá para tentar de novo sem enviar outro arquivo.
+const ERROS_COM_TENTAR = {
+  [ERROS.LEITURA]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_LEITURA',
+  [ERROS.DEMOROU]: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_DEMOROU',
+};
+// Por que a leitura que a pessoa conferia não está mais na tela.
+const FIM_DA_LEITURA = {
+  [ERROS.SEM_NINGUEM]: {
+    nome: 'sem-ninguem',
+    chave: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_SEM_NINGUEM',
+  },
+  [ERROS.JA_TRAZIDA]: {
+    nome: 'ja-trazida',
+    chave: 'RELACIONAMENTOS_TRAZER.ENVIAR.JA_TRAZIDA',
+  },
+  [ERROS.VENCIDA]: {
+    nome: 'vencida',
+    chave: 'RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_VENCIDA',
+  },
+};
+const erroComTentar = computed(() => ERROS_COM_TENTAR[props.erro]);
+const fimDaLeitura = computed(() => FIM_DA_LEITURA[props.erro]);
 </script>
 
 <template>
@@ -60,12 +89,24 @@ const erroDoArquivo = computed(() =>
     </div>
 
     <template v-else>
-      <div v-if="erro === ERROS.LEITURA" data-relacionamentos="erro">
+      <div v-if="erroComTentar" data-relacionamentos="erro">
         <ErroComTentarDeNovo
-          :mensagem="t('RELACIONAMENTOS_TRAZER.ENVIAR.ERRO_LEITURA')"
+          :mensagem="t(erroComTentar)"
           @tentar="emit('tentar')"
         />
       </div>
+      <p
+        v-if="fimDaLeitura"
+        :data-relacionamentos="fimDaLeitura.nome"
+        role="alert"
+        class="flex items-start gap-2 p-4 m-0 text-base rounded-xl bg-n-alpha-2 text-n-slate-12"
+      >
+        <span
+          class="mt-0.5 i-lucide-info size-5 shrink-0 text-n-slate-11"
+          aria-hidden="true"
+        />
+        {{ t(fimDaLeitura.chave) }}
+      </p>
       <SoltarArquivo
         :erro="erroDoArquivo"
         :tipo-de-erro="erro"

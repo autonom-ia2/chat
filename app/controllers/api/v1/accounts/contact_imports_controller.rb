@@ -62,6 +62,8 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
 
   # POST /contact_imports/:id/confirm — "Importar": contacts, companies and attributes are written; a writing that broke goes on (#2921).
   def confirm
+    return confirm_trazer if ContactImports::Trazer::Conferencia.marcada?(@campaign_import) && !@campaign_import.import_resumable?
+
     queued = false
     @campaign_import.with_lock do
       @campaign_import.reload
@@ -109,6 +111,14 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
       source_filename: file.original_filename, source_content_type: file.content_type, source_byte_size: file.size,
       source_format: File.extname(file.original_filename.to_s).delete('.').downcase
     )
+  end
+
+  # Trazer minha lista (#2896): the marked import never skips the closing of its review. Same answers as `confirm`.
+  def confirm_trazer
+    trazer = Relacionamentos::Trazer::Trazer.new(@campaign_import).call
+    return render_unprocessable(trazer.erro_da_rota_antiga) if trazer.erro
+
+    render_import
   end
 
   def render_import(status: :ok)

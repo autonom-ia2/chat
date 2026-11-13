@@ -2,194 +2,105 @@
 // trazidas. Só é carregada no ambiente de desenvolvimento (fonte/trazerFonte.js,
 // `import.meta.env.DEV`); em produção o arquivo nem entra no pacote.
 //
-// Tudo é inventado e sempre igual (nomes com sobrenome que não existe, como em
-// demo/base.js): 200 pessoas (180 novas, 15 que já estavam na
-// conta e 5 linhas que precisam da pessoa). Telefones no bloco fictício
-// +55 11 9XXXX-00NN e e-mails @exemplo.com.br. Aqui ficam também as funções
-// puras que "gravam" na leitura: cada uma devolve uma leitura nova.
+// A demonstração é o que o dono abre para aprovar a tela: ela faz o papel do
+// servidor, com o mesmo formato e o mesmo comportamento da fonte real (#2896).
+// Este arquivo é a porta de entrada dela (é o que a fonte carrega):
+//   - a planilha, como o servidor a teria lido, está em demo/trazerPlanilha.js;
+//   - as escritas nas linhas que precisam da pessoa e a conta de quantas
+//     entram, em demo/trazerLinhas.js (o valor é conferido em
+//     demo/trazerConserto.js);
+//   - a troca de destino de uma coluna, as perguntas e as respostas, em
+//     demo/trazerColunas.js;
+//   - a pergunta "Quais destes querem dizer cliente?", a resposta dela e o
+//     trazer que não adivinha, em demo/trazerValores.js.
+// Cada escrita é uma função pura: recebe a leitura e devolve uma leitura nova,
+// no formato que a fonte real entrega (fonte/trazerTraducao.js), ou lança a
+// mesma recusa com nome. Aqui ficam a leitura de exemplo, as listas que a conta
+// "já trouxe" e o andamento de uma lista sendo trazida.
 import { DIA_EM_MS } from '../fonte/grupos';
-import { DESTINOS } from '../trazer/destinos';
+import { copia } from '../fonte/trazerTraducao';
 import { SITUACAO_DO_PROBLEMA } from '../trazer/contagem';
 import { SITUACOES_DA_LISTA } from '../trazer/prazo';
+import { exemplosDe } from './trazerColunas';
+import { comAsContas, consertadas } from './trazerLinhas';
+import {
+  COLUNAS,
+  NOME_DO_ARQUIVO_DE_EXEMPLO,
+  PERGUNTAS,
+  PROBLEMAS,
+  RESUMO,
+} from './trazerPlanilha';
 
-export const DURACAO_DA_TRAZIDA_MS = 6000;
+export {
+  aplicarDestino,
+  aplicarRespostas,
+  respostaRele,
+  trocaRele,
+} from './trazerColunas';
+export {
+  aplicarConserto,
+  aplicarDeixarDeFora,
+  aplicarReabrir,
+} from './trazerLinhas';
+export { conferirAntesDeTrazer } from './trazerValores';
+
+// Quanto a lista leva para entrar. A tela pergunta pelo andamento com a espera
+// crescendo (trazer/consultaComRecuo.js: aos 0 s, 1,5 s, 3,75 s, 7,1 s, 12,1 s
+// e 17,1 s): em 17 segundos a barra passa por 0, 8, 22, 41 e 71 antes de
+// terminar, em vez de pular de 25 para 62 e acabar.
+export const DURACAO_DA_TRAZIDA_MS = 17000;
 const PORCENTAGEM_TOTAL = 100;
-const NOME_DO_ARQUIVO_DE_EXEMPLO = 'Clientes 2025.xlsx';
 const QUEM_TROUXE = 'Marina Pavanelli';
 
-const RESUMO = { total: 200, novas: 180, completadas: 15, comProblema: 5 };
+// ---- a leitura da planilha de exemplo ----------------------------------------
 
-const COLUNAS = [
-  { nome: 'Nome', destino: DESTINOS.NOME },
-  { nome: 'Cel', destino: DESTINOS.TELEFONE },
-  { nome: 'Fone 2', destino: DESTINOS.TELEFONE, duvidosa: true },
-  { nome: 'E-mail', destino: DESTINOS.EMAIL },
-  { nome: 'Empresa', destino: DESTINOS.EMPRESA },
-  { nome: 'Cidade', destino: DESTINOS.CIDADE },
-  { nome: 'Situação', destino: DESTINOS.INFORMACAO },
-  { nome: 'Aniversário', destino: DESTINOS.INFORMACAO },
-];
+const SEM_RESPOSTAS = {};
 
-const PERGUNTAS = [{ id: 'clientes' }, { id: 'telefone', coluna: 'Fone 2' }];
-
-const EXEMPLOS = [
-  {
-    nome: 'Marina Esteveira',
-    telefone: '+55 11 94271-0003',
-    email: 'marina.esteveira@exemplo.com.br',
-    empresa: 'Casa Aurora',
-    clienteNaPlanilha: true,
-  },
-  {
-    nome: 'Otávio Lourenzatto',
-    telefone: '+55 11 96538-0007',
-    email: 'otavio.lourenzatto@exemplo.com.br',
-    empresa: '',
-    clienteNaPlanilha: false,
-  },
-  {
-    nome: 'Sofia Mendonzela',
-    telefone: '+55 11 93816-0011',
-    email: 'sofia.mendonzela@exemplo.com.br',
-    empresa: 'Estúdio Vila Nova',
-    clienteNaPlanilha: true,
-  },
-];
-
-// Os 5 problemas: telefone com dígito faltando, e-mail sem "@", linha sem nome,
-// a mesma pessoa duas vezes e linha sem telefone nem e-mail.
-const PROBLEMAS = [
-  {
-    linha: 14,
-    tipo: 'telefone',
-    nome: 'Tadeu Imbirussu',
-    valor: '+55 11 9738-0014',
-  },
-  {
-    linha: 37,
-    tipo: 'email',
-    nome: 'Rita Carvalhedo',
-    valor: 'rita.carvalhedo.exemplo.com.br',
-  },
-  {
-    linha: 62,
-    tipo: 'nome',
-    nome: '',
-    valor: '',
-    contato: '+55 11 95412-0062',
-  },
-  {
-    linha: 143,
-    tipo: 'duplicada',
-    nome: 'Paulo Hortêncio',
-    valor: 'Paulo Hortêncio',
-    outraLinha: 88,
-    duplicadas: [
-      {
-        linha: 88,
-        telefone: '+55 11 94410-0088',
-        email: 'paulo.hortencio@exemplo.com.br',
-      },
-      { linha: 143, telefone: '+55 11 94410-0143', email: '' },
-    ],
-  },
-  { linha: 171, tipo: 'sem_contato', nome: 'Helena Ourivesco', valor: '' },
-];
-
-const DESTINO_DO_TELEFONE = {
-  da_pessoa: DESTINOS.TELEFONE,
-  da_empresa: DESTINOS.TELEFONE_DA_EMPRESA,
-  nao_usar: DESTINOS.NAO_GUARDAR,
-};
-
-export const leituraDeExemplo = (id, arquivo = '') => ({
-  id,
-  arquivo: arquivo || NOME_DO_ARQUIVO_DE_EXEMPLO,
-  colunas: COLUNAS.map(coluna => ({ ...coluna })),
-  perguntas: PERGUNTAS.map(pergunta => ({ ...pergunta })),
-  resumo: { ...RESUMO },
-  exemplos: EXEMPLOS.map(exemplo => ({ ...exemplo, cliente: false })),
-  problemas: PROBLEMAS.map(problema => ({
-    ...problema,
-    estado: SITUACAO_DO_PROBLEMA.ABERTO,
-  })),
-});
-
-const clienteDoExemplo = (exemplo, { clientes }) => {
-  if (clientes === 'sim_todas') return true;
-  if (clientes === 'algumas') return exemplo.clienteNaPlanilha;
-  return false;
-};
-
-const colunaComResposta = (coluna, perguntas, respostas) => {
-  const doTelefone = perguntas.find(
-    pergunta => pergunta.id === 'telefone' && pergunta.coluna === coluna.nome
-  );
-  if (doTelefone && DESTINO_DO_TELEFONE[respostas.telefone]) {
-    return {
-      ...coluna,
-      destino: DESTINO_DO_TELEFONE[respostas.telefone],
-      duvidosa: false,
-    };
-  }
-  if (
-    respostas.clientes === 'algumas' &&
-    coluna.nome === respostas.colunaCliente
-  ) {
-    return { ...coluna, destino: DESTINOS.CLIENTE };
-  }
-  return coluna;
-};
-
-export const aplicarRespostas = (leitura, respostas) => ({
-  ...leitura,
-  respostas: { ...respostas },
-  colunas: leitura.colunas.map(coluna =>
-    colunaComResposta(coluna, leitura.perguntas, respostas)
-  ),
-  exemplos: leitura.exemplos.map(exemplo => ({
-    ...exemplo,
-    cliente: clienteDoExemplo(exemplo, respostas),
-  })),
-});
-
-const problemaComSituacao = (leitura, linha, mudanca) => ({
-  ...leitura,
-  problemas: leitura.problemas.map(problema =>
-    problema.linha === linha ? { ...problema, ...mudanca } : problema
-  ),
-});
-
-export const aplicarConserto = (leitura, linha, valor) =>
-  problemaComSituacao(leitura, linha, {
-    estado: SITUACAO_DO_PROBLEMA.GUARDADO,
-    corrigido: valor,
+// A planilha de exemplo tem a coluna "Empresa": o telefone da empresa existe.
+export const leituraDeExemplo = (id, arquivo = '') =>
+  comAsContas({
+    id,
+    arquivo: arquivo || NOME_DO_ARQUIVO_DE_EXEMPLO,
+    valores: 'inteiros',
+    temEmpresa: true,
+    colunas: copia(COLUNAS),
+    perguntas: copia(PERGUNTAS),
+    respostas: { ...SEM_RESPOSTAS },
+    resumo: { ...RESUMO },
+    exemplos: exemplosDe(COLUNAS, SEM_RESPOSTAS),
+    problemas: copia(PROBLEMAS).map(problema => ({
+      ...problema,
+      estado: SITUACAO_DO_PROBLEMA.ABERTO,
+    })),
+    problemasTotal: PROBLEMAS.length,
   });
 
-export const aplicarDeixarDeFora = (leitura, linha) =>
-  problemaComSituacao(leitura, linha, {
-    estado: SITUACAO_DO_PROBLEMA.DEIXADO,
-  });
+// ---- a lista trazida -----------------------------------------------------------
 
-// "Voltar atrás": a linha volta a ser problema aberto, sem o valor que a pessoa
-// tinha posto.
-export const aplicarReabrir = (leitura, linha) => ({
-  ...leitura,
-  problemas: leitura.problemas.map(problema => {
-    if (problema.linha !== linha) return problema;
-    const { corrigido, ...resto } = problema;
-    return { ...resto, estado: SITUACAO_DO_PROBLEMA.ABERTO };
-  }),
-});
+// Na demonstração, 1 de cada 10 pessoas novas já tinha conversado: "Clientes
+// 2025.xlsx" (180 novas) fica com 18 que ficam ao desfazer.
+const UMA_EM_DEZ = 10;
+const ficamNaTrazida = novas => Math.floor(novas / UMA_EM_DEZ);
 
-export const aplicarDestino = (leitura, coluna, destino) => ({
-  ...leitura,
-  colunas: leitura.colunas.map(item =>
-    item.nome === coluna ? { ...item, destino } : item
-  ),
-});
+// Os números da lista que acabou de ser trazida: o que de fato entrou, como o
+// andamento do servidor conta (app/services/relacionamentos/trazer/
+// andamento.rb). No Conferir a linha consertada não é chamada de "nova" (o
+// servidor ainda não sabe se a pessoa já existe na conta): ela só aparece em
+// quantas entram. Depois de trazida, ela entrou; e na demonstração quem foi
+// consertado é sempre pessoa nova. Por isso `novas` aqui é maior que a do
+// Conferir, e a soma fecha com o que o Conferir disse que entrava.
+export const contasDaTrazida = leitura => {
+  const novas = leitura.resumo.novas + consertadas(leitura);
+  return {
+    total: leitura.resumo.entram,
+    novas,
+    completadas: leitura.resumo.completadas,
+    ficam: ficamNaTrazida(novas),
+  };
+};
 
-// As listas que a conta "já trouxe". Em `vazio` não há nenhuma.
+// As listas que a conta "já trouxe". Em `vazio` não há nenhuma. A última parou
+// no meio (#2896): o histórico diz isso e oferece "Tentar de novo".
 export const historicoInicial = (agora, estado = 'cheio') =>
   estado === 'vazio'
     ? []
@@ -227,14 +138,21 @@ export const historicoInicial = (agora, estado = 'cheio') =>
           completadas: 7,
           ficam: 14,
         },
+        {
+          id: 'trazida-antiga-4',
+          arquivo: 'Indicações de agosto.csv',
+          quando: agora - 55 * DIA_EM_MS,
+          quem: QUEM_TROUXE,
+          situacao: SITUACOES_DA_LISTA.FALHOU,
+          podeTentar: true,
+          total: 80,
+          novas: 70,
+          completadas: 10,
+          ficam: 7,
+        },
       ];
 
 export const quemTrouxeNaDemo = () => QUEM_TROUXE;
-
-// Na demonstração, 1 de cada 10 pessoas novas já tinha conversado: "Clientes
-// 2025.xlsx" (180 novas) fica com 18 que ficam ao desfazer.
-const UMA_EM_DEZ = 10;
-export const ficamNaTrazida = novas => Math.floor(novas / UMA_EM_DEZ);
 
 // De 0 a 100 em DURACAO_DA_TRAZIDA_MS, sempre igual para o mesmo relógio.
 export const porcentagemDaTrazida = (inicio, agora) =>

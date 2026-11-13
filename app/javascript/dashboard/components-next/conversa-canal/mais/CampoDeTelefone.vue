@@ -17,6 +17,7 @@ import {
   posicaoDepoisDosDigitos,
   separarTelefone,
   soDigitosDoTelefone,
+  telefoneComoEscrito,
   telefoneCompleto,
 } from './telefoneDoPais';
 
@@ -25,6 +26,16 @@ const props = defineProps({
   rotuloDoPais: { type: String, required: true },
   ajuda: { type: String, default: '' },
   erro: { type: String, default: '' },
+  // #2896 — opções de quem usa. Sem elas, nada muda.
+  // Id de uma frase de erro que quem usa já mostra na tela: o campo fica
+  // marcado como inválido e aponta para ela, sem repetir a frase.
+  erroDescritoPor: { type: String, default: '' },
+  // O número e o país com 44 px de altura (alvo de toque).
+  alto: { type: Boolean, default: false },
+  // Quem confere o número é quem usa (o servidor): o valor sai também enquanto
+  // não é um número válido do país, com o código do país e os dígitos
+  // (+551198), ou como a pessoa escreveu quando o + ainda não diz o país.
+  comoEscrito: { type: Boolean, default: false },
 });
 
 const telefone = defineModel({ type: String, default: '' });
@@ -47,9 +58,23 @@ const formatado = computed(
 );
 const exemplo = computed(() => exemploDoPais(pais.value));
 const idDaMensagem = `${id}-mensagem`;
+const comErro = computed(() => Boolean(props.erro || props.erroDescritoPor));
+const descritoPor = computed(
+  () =>
+    [props.erro || props.ajuda ? idDaMensagem : '', props.erroDescritoPor]
+      .filter(Boolean)
+      .join(' ') || undefined
+);
+
+const valorDeAgora = () => {
+  if (cru.value) return props.comoEscrito ? cru.value : '';
+  const completo = telefoneCompleto(digitos.value, pais.value);
+  if (completo || !props.comoEscrito) return completo;
+  return telefoneComoEscrito(digitos.value, pais.value);
+};
 
 const enviar = () => {
-  ultimoEnviado = cru.value ? '' : telefoneCompleto(digitos.value, pais.value);
+  ultimoEnviado = valorDeAgora();
   telefone.value = ultimoEnviado;
 };
 
@@ -118,12 +143,15 @@ const aoDigitar = evento => {
       {{ props.label }}
     </label>
     <div class="flex items-start gap-2 min-w-0">
-      <div class="w-[7.5rem] flex-shrink-0">
+      <div
+        class="w-[7.5rem] flex-shrink-0"
+        :class="{ '[&_[role=combobox]]:h-11': alto }"
+      >
         <ChoiceSelect
           v-model="pais"
           :options="paises"
           :aria-label="rotuloDoPais"
-          :invalid="Boolean(erro)"
+          :invalid="comErro"
           @change="trocarPais"
         />
       </div>
@@ -134,9 +162,10 @@ const aoDigitar = evento => {
         inputmode="tel"
         autocomplete="tel-national"
         :placeholder="exemplo"
-        :message-type="erro ? 'error' : 'info'"
-        :aria-invalid="Boolean(erro) || undefined"
-        :aria-describedby="erro || ajuda ? idDaMensagem : undefined"
+        :custom-input-class="alto ? '!h-11' : ''"
+        :message-type="comErro ? 'error' : 'info'"
+        :aria-invalid="comErro || undefined"
+        :aria-describedby="descritoPor"
         class="flex-1"
         data-numero-do-telefone
         @input="aoDigitar"

@@ -40,7 +40,6 @@ import { usarDemo } from '../fonte/modoDemo';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
-import { rotaDoTrazer, temOndeTrazer } from '../lista/rotaDoTrazer';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
 import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
@@ -126,11 +125,8 @@ const naDemonstracao = Boolean(demo);
 const podeMarcar = computed(
   () => podeCriarCards.value || podeEtiquetar.value || podeApagar.value
 );
-// "Trazer minha lista" é de quem pode importar contatos, e só aparece onde há
-// para onde levar (#2947).
-const podeTrazer = computed(
-  () => temOndeTrazer(demo) && (Boolean(demo) || permissoes.podeTrazer.value)
-);
+// #2896 — "Trazer minha lista" só aparece para quem pode importar contato.
+const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
 const marcados = useMarcados();
 const lista = useLista({
@@ -224,7 +220,7 @@ const avisoDaLista = computed(() =>
     : ''
 );
 
-const trazer = () => router.push({ name: rotaDoTrazer(demo) });
+const trazer = () => router.push({ name: 'relacionamentos_trazer' });
 // O quadro do CRM, a mesma rota do item do menu (Sidebar.vue).
 const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
 const abrirPessoa = ({ id }) =>
