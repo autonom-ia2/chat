@@ -2,7 +2,8 @@ require 'rails_helper'
 
 # #2896 — "Trazer minha lista": a mesma pessoa em várias linhas. Mesmo telefone (com ou sem o nono dígito) ou mesmo
 # e-mail (sem diferença de maiúscula) sem dado em conflito vira UMA linha completada; com conflito, a segunda vira
-# problema de linha repetida. Nunca por nome igual. As linhas são as do validador (aqui, só os campos que contam).
+# problema de linha repetida. Nunca por nome igual. As outras colunas (cliente, cidade, telefone da empresa, informação)
+# também contam para o conflito. As linhas são as do validador (aqui, só os campos que contam).
 RSpec.describe ContactImports::Trazer::MesmaPessoa, :aggregate_failures do
   # dados: nome:, telefone:, email:, empresa:, extras: e erros:, só os que a linha tem.
   def linha(numero, **dados)
@@ -23,7 +24,7 @@ RSpec.describe ContactImports::Trazer::MesmaPessoa, :aggregate_failures do
     juntadas, linhas = resolver([
                                   linha(2, nome: 'Ana Albuquerino', telefone: '+5511987650001', extras: { 'Plano' => 'Ouro' }),
                                   linha(3, nome: 'ANA  ALBUQUERINO', telefone: '+5511987650001', email: 'ana@exemplo.com.br', empresa: 'Padaria',
-                                           extras: { 'Plano' => 'Prata', 'Cidade' => 'Campinas' })
+                                           extras: { 'Plano' => 'ouro', 'Cidade' => 'Campinas' })
                                 ])
 
     expect(juntadas).to eq(1)
@@ -70,6 +71,33 @@ RSpec.describe ContactImports::Trazer::MesmaPessoa, :aggregate_failures do
       expect(resolvidas.pluck(:row_number, :errors)).to eq([[2, []], [3, ['duplicate_phone_in_file']]]), caso
       expect(resolvidas.last[:outra]).to equal(resolvidas.first), caso
     end
+  end
+
+  it 'outra coluna preenchida nas duas linhas com textos diferentes é conflito: o valor da segunda não some' do
+    casos = {
+      'cliente' => [{ 'Cliente?' => 'Não' }, { 'Cliente?' => 'Sim' }],
+      'cidade' => [{ 'Cidade' => 'Campinas' }, { 'Cidade' => 'Santos' }],
+      'telefone da empresa' => [{ 'Telefone da empresa' => '1133330001' }, { 'Telefone da empresa' => '1133330002' }],
+      'informação' => [{ 'Plano' => 'Ouro', 'Cidade' => 'Campinas' }, { 'Plano' => 'Prata', 'Cidade' => 'Campinas' }]
+    }
+    casos.each do |caso, (da_primeira, da_segunda)|
+      juntadas, linhas = resolver([linha(2, nome: 'Ana', telefone: '+5511987650001', extras: da_primeira),
+                                   linha(3, nome: 'Ana', telefone: '+5511987650001', extras: da_segunda)])
+
+      expect(juntadas).to eq(0), caso
+      expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, ['duplicate_phone_in_file']]]), caso
+      expect(linhas.first[:extra_values]).to eq(da_primeira), caso
+      expect(linhas.last).to include(extra_values: da_segunda, outra: linhas.first), caso
+    end
+  end
+
+  it 'a coluna que só uma das linhas preencheu completa a outra, sem conflito' do
+    juntadas, linhas = resolver([linha(2, nome: 'Ana', telefone: '+5511987650001', extras: { 'Cliente?' => '', 'Cidade' => 'Campinas' }),
+                                 linha(3, nome: 'Ana', telefone: '+5511987650001',
+                                          extras: { 'Cliente?' => 'Sim', 'Cidade' => '', 'Telefone da empresa' => '1133330001' })])
+
+    expect(juntadas).to eq(1)
+    expect(linhas.sole[:extra_values]).to eq('Cliente?' => 'Sim', 'Cidade' => 'Campinas', 'Telefone da empresa' => '1133330001')
   end
 
   it 'pelo mesmo e-mail com telefones diferentes, o problema é do e-mail' do

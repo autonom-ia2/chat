@@ -431,8 +431,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:82",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:87",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": true
   },
@@ -4903,9 +4903,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#columns",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:40",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:42",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:45",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:47",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -4916,9 +4916,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#companies",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:53",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:58",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:59",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -14283,9 +14283,9 @@
     "controller": "api/v1/accounts/contact_imports#create",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:28",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:110",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:29"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:33",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:119",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:34"
     ],
     "sem_corpo": false
   },
@@ -14293,8 +14293,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#confirm",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:64",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:69",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": true
   },

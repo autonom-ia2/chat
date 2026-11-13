@@ -108,6 +108,10 @@ const PRONTA = {
 };
 
 const pronta = (extra = {}) => ({ ...PRONTA, ...extra });
+// A leitura que o servidor devolve depois de a pessoa escolher com qual linha
+// repetida fica: a fonte a pede de novo (as outras linhas do grupo mudam).
+const comARepetida = repetida =>
+  pronta({ problemas: [TELEFONE, SEM_NOME, SEM_CONTATO, repetida] });
 
 // O telefone da linha 4 valeu, mas a linha também não tinha nome: o servidor
 // guarda o telefone e devolve o problema que sobrou.
@@ -140,6 +144,7 @@ describe('fonte real: o que o servidor responde a cada escrita', () => {
   it('ficar com a outra linha manda `ficar_com` e a linha volta deixada de fora', async () => {
     const fonte = await comLeitura();
     responde('consertar', { problema: { ...REPETIDA, estado: 'deixado' } });
+    responde('leitura', comARepetida({ ...REPETIDA, estado: 'deixado' }));
     const nova = await fonte.consertar(812, 8, 2);
     expect(TrazerAPI.consertar).toHaveBeenCalledWith(812, 8, { ficar_com: 2 });
     expect(daLinha(nova, 8)).toEqual({ ...REPETIDA, estado: 'deixado' });
@@ -147,9 +152,9 @@ describe('fonte real: o que o servidor responde a cada escrita', () => {
 
   it('ficar com esta guarda `ficar_com`; voltar atrás tira', async () => {
     const fonte = await comLeitura();
-    responde('consertar', {
-      problema: { ...REPETIDA, estado: 'guardado', ficar_com: 8 },
-    });
+    const ficou = { ...REPETIDA, estado: 'guardado', ficar_com: 8 };
+    responde('consertar', { problema: ficou });
+    responde('leitura', comARepetida(ficou));
     const guardada = await fonte.consertar(812, 8, 8);
     expect(daLinha(guardada, 8).ficar_com).toBe(8);
     responde('reabrir', { problema: REPETIDA });

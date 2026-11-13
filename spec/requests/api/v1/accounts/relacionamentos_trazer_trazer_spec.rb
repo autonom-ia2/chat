@@ -384,6 +384,23 @@ RSpec.describe 'Trazer minha lista: trazer e quem pode entrar (Relacionamentos)'
       expect(importacao.reload).to be_validating
     end
 
+    # A lista marcada só muda de coluna e de "criar empresas" pela tela dela, que lê a planilha de novo com as regras
+    # dela. As duas rotas antigas de "Importar contatos" recusam, com os códigos que elas já têm.
+    it 'as rotas antigas de escolher as colunas e de criar empresas recusam a leitura marcada, sem mudar nada' do
+      importacao = ler_planilha(com_problemas)
+      antes = importacao.reload.attributes.slice('status', 'schema_resolution', 'options')
+      rota_antiga = "/api/v1/accounts/#{account.id}/contact_imports/#{importacao.id}"
+
+      expect { patch "#{rota_antiga}/columns", params: { name: 1, phone: 0 }, headers: cabecalhos(admin), as: :json }.not_to have_enqueued_job
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'campaign_import.column_choice_not_available')
+
+      patch "#{rota_antiga}/companies", params: { create_companies: false }, headers: cabecalhos(admin), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'campaign_import.companies_choice_not_available')
+      expect(importacao.reload.attributes.slice('status', 'schema_resolution', 'options')).to eq(antes)
+    end
+
     # F2: a rota antiga decide pela marca, que não muda, e não pelo estado lido antes da trava.
     it 'a rota antiga não manda gravar sem fechamento a leitura marcada que ficou pronta entre a busca e a trava' do
       importacao = ler_planilha(com_problemas)
@@ -477,6 +494,22 @@ RSpec.describe 'Trazer minha lista: trazer e quem pode entrar (Relacionamentos)'
       importacao.reload.normalized_csv.purge
 
       expect { perform_enqueued_jobs(only: ContactImports::Trazer::FecharConferenciaJob) }.not_to have_enqueued_job(CampaignImports::ImportJob)
+
+      expect(importacao.reload).to be_failed
+      expect(importacao.validation_summary).to include('import_error' => 'fechamento')
+      expect(account.contacts.count).to eq(0)
+      get "#{base}/listas/#{importacao.id}/andamento", headers: cabecalhos(admin)
+      expect(response.parsed_body).to include('situacao' => 'falhou')
+    end
+
+    # A importação de planilhas desligada na instalação entre o clique e o job: nada fecharia nem gravaria a lista.
+    it 'com a importação de planilhas desligada, o job marca "falhou" no fechamento em vez de deixar a lista "trazendo" sem fim' do
+      importacao = ler_planilha(com_problemas)
+      trazer(importacao)
+
+      with_modified_env('CAMPAIGN_IMPORT_ENABLED' => 'false') do
+        expect { perform_enqueued_jobs(only: ContactImports::Trazer::FecharConferenciaJob) }.not_to have_enqueued_job(CampaignImports::ImportJob)
+      end
 
       expect(importacao.reload).to be_failed
       expect(importacao.validation_summary).to include('import_error' => 'fechamento')
