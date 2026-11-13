@@ -64,7 +64,6 @@ RSpec.describe Autonomia::Automacao::TestarPasso, :automacao_motor do
   it 'o gatilho de card testa nas conversas recentes de quem pede, com o aviso' do
     openai_devolve(respostas['resumir'])
     receita = { 'gatilho' => { 'tipo' => 'card.criado' }, 'passos' => [passos['resumir']] }
-    allow(Autonomia::Automacao::Ensaio).to receive(:gatilho_suportado?).and_return(false)
 
     pedido = described_class::Pedido.new(receita: receita, passo_id: 'p1')
     teste = described_class.new(pedido: pedido, conta: account, account_user: admin.account_users.first).resultado(com_valores: false)

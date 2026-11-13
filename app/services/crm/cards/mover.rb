@@ -1,13 +1,19 @@
 class Crm::Cards::Mover
   # #2428: quem moveu foi uma automação (`automacao: { origem: 'regra' | 'etapa' | 'livre', id: }`): a atividade grava
   # `by: 'automacao'`, a origem e o id, e a IA do funil respeita o movimento (Crm::Ai::MovimentoDaAutomacao).
-  def initialize(card:, actor:, target_stage:, automation_context: {}, automacao: nil)
+  # etapa_de_entrada (#2501): o pedido da API não trouxe uma etapa do funil novo e o card entrou na etapa de entrada
+  # dele (Crm::Cards::EtapaDeEntrada). A atividade grava o `motivo` (a pessoa não escolheu a etapa: sai do
+  # Crm::Ai::EscolhaDePessoa, como o movimento em lote) e o nome do funil, para o histórico dizer por quê.
+  # rubocop:disable Metrics/ParameterLists -- o motivo da etapa é dado do movimento, como a automação
+  def initialize(card:, actor:, target_stage:, automation_context: {}, automacao: nil, etapa_de_entrada: nil)
     @card = card
     @actor = actor
     @target_stage = target_stage
     @automation_context = automation_context.to_h.with_indifferent_access
     @automacao = automacao
+    @etapa_de_entrada = etapa_de_entrada
   end
+  # rubocop:enable Metrics/ParameterLists
 
   def perform
     return @card if same_stage?
@@ -68,6 +74,7 @@ class Crm::Cards::Mover
         from_stage_name: @from_stage_name,
         to_stage_name: @target_stage.name,
         **da_automacao,
+        **da_etapa_de_entrada,
         # #1920: a origem do movimento que não foi escolha direta de uma pessoa (Crm::Ai::EscolhaDePessoa).
         source: @automation_context[:source],
         automation_depth: @automation_context[:depth]
@@ -79,6 +86,12 @@ class Crm::Cards::Mover
     return {} if @automacao.blank?
 
     { by: 'automacao', origem: @automacao[:origem], automacao_id: @automacao[:id] }
+  end
+
+  def da_etapa_de_entrada
+    return {} if @etapa_de_entrada.blank?
+
+    { motivo: @etapa_de_entrada, to_pipeline_name: @target_stage.pipeline.name }
   end
 
   def run_stage_automations!(from_stage_id:, exited_at:)

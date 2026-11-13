@@ -407,7 +407,17 @@
       "NENHUM": "Nenhum se aplica",
       "CAMINHO": "Caminho {n}",
       "PASSOS": "Em cada um",
-      "SE_RECUSAR": "Se o outro sistema recusar"
+      "SE_RECUSAR": "Se o outro sistema recusar",
+      "APROVADO": "Se aprovar",
+      "RECUSADO": "Se recusar",
+      "NINGUEM_RESPONDEU": "Se ninguém responder a tempo",
+      "CADA": "Em cada um da lista",
+      "NAO_CONSULTOU": "Se não conseguir buscar",
+      "OUTRO_HORARIO": "Se pedir outro horário",
+      "NAO_RESPONDEU": "Se o cliente não responder",
+      "NOTA_BAIXA": "Nota baixa",
+      "NOTA_MEDIA": "Nota média",
+      "NOTA_ALTA": "Nota alta"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",
@@ -527,6 +537,7 @@
       "DESLIGADA": "Está desligada. Nada acontece até você ligar.",
       "FALTA_GATILHO": "Falta escolher quando ela começa.",
       "FALTA_PASSO": "Falta pôr pelo menos um passo.",
+      "FALTA_EM_TESTE": "Um passo ainda está em teste: dá para montar e ensaiar, mas ainda não dá para guardar nem ligar.",
       "GUARDAR": "Guardar sem ligar",
       "LIGADA_AVISO": "Ela está trabalhando sozinha.",
       "DESLIGAR": "Desligar",

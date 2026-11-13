@@ -10,11 +10,13 @@
 # - `primary(contact, contact_inbox:)`: o primeiro dos candidatos.
 # - `values(contact, *keys, contact_inbox:)`: só as fontes pedidas, entre `:chat_id`, `:jid` e `:source_id`.
 #
-# Escrita: `store!(contact, chat_id)`, como a WAHA faz a cada mensagem recebida.
+# Escrita: `store!(contact, chat_id)`, como a WAHA faz a cada mensagem recebida. O par dele é `without(attributes)`
+# (#2711): quando uma pessoa troca o telefone do contato, os três atributos saem e a WAHA volta a perguntar pelo número.
 class Waha::ContactChatId
   CHAT_ID = 'waha_whatsapp_chat_id'.freeze
   JID = 'waha_whatsapp_jid'.freeze
   LID = 'waha_whatsapp_lid'.freeze
+  KEYS = [CHAT_ID, JID, LID].freeze
   LID_SUFFIX = '@lid'.freeze
   CANDIDATE_SOURCES = %i[chat_id jid source_id].freeze
 
@@ -41,6 +43,12 @@ class Waha::ContactChatId
       return if merged == current
 
       contact.new_record? ? contact.assign_attributes(custom_attributes: merged) : contact.update!(custom_attributes: merged)
+    end
+
+    # Os atributos do contato sem o chat id, o jid e o lid; os demais ficam. Quem chama grava junto com a troca do
+    # telefone, no mesmo save (Waha::TelefoneNovo).
+    def without(custom_attributes)
+      custom_attributes.except(*KEYS)
     end
 
     private

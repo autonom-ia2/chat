@@ -5,7 +5,7 @@ class DeleteObjectJob < ApplicationJob
 
   def perform(object, user = nil, ip = nil)
     # Fork (#2133): a conta é suspensa e as campanhas agendadas param; antes do pré-apagar saem só as tabelas que o
-    # barrariam (chave sem cascata para mensagem); o resto do fork sai depois dele, logo antes do destroy!.
+    # barrariam (chave sem cascata para mensagem ou contato); o resto do fork sai depois dele, logo antes do destroy!.
     # Ver Autonomia::ExclusaoDaConta.
     exclusao_do_fork = Autonomia::ExclusaoDaConta.new(object) if object.is_a?(Account)
     exclusao_do_fork&.parar_a_conta

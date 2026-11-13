@@ -32,6 +32,10 @@ vi.mock('dashboard/composables/useCanManage', () => ({
 vi.mock('dashboard/composables/usePodeMontarAutomacao', () => ({
   usePodeMontarAutomacao: () => ref(true),
 }));
+// #2499 F6.5: sem o motor e os gatilhos de card, a etapa aberta mostra o cartão das ações da etapa, como antes.
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
 vi.mock('dashboard/api/crmGoogleConversionFeed', () => ({
   default: {
     create: vi.fn().mockResolvedValue({ data: { url: 'https://feed/x' } }),

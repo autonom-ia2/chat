@@ -953,6 +953,58 @@ it('loads all authorized stages for card details independently of board filters'
   wrapper.unmount();
 });
 
+it('#2710: o selo "Já é cliente" abre a compra só com o card completo, sem buscar duas vezes', async () => {
+  const wrapper = await mountPage();
+  const compra = {
+    id: 41,
+    title: 'Plano mensal',
+    pipeline_id: 1,
+    status: 'won',
+  };
+  let entregar;
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/fetchCard')
+      return new Promise(resolve => {
+        entregar = resolve;
+      });
+    return [];
+  });
+
+  const abrindo = wrapper.vm.abrirCompra({ card_id: 41, desde: 1790000000 });
+  await flushPromises();
+  expect(wrapper.vm.showDrawer).toBe(false);
+  expect(wrapper.vm.abrindoCompra).toBe(true);
+
+  entregar(compra);
+  await abrindo;
+  await flushPromises();
+
+  expect(wrapper.vm.selectedCard).toMatchObject({
+    id: 41,
+    title: 'Plano mensal',
+  });
+  expect(wrapper.vm.showDrawer).toBe(true);
+  expect(wrapper.vm.abrindoCompra).toBe(false);
+  expect(
+    dispatch.mock.calls.filter(([type]) => type === 'crmKanban/fetchCard')
+  ).toHaveLength(1);
+  wrapper.unmount();
+});
+
+it('#2710: sem conseguir buscar a compra, avisa e não abre a gaveta', async () => {
+  const wrapper = await mountPage();
+  dispatch.mockImplementation(async type => {
+    if (type === 'crmKanban/fetchCard') throw new Error('forbidden');
+    return [];
+  });
+
+  await wrapper.vm.abrirCompra({ card_id: 41, desde: null });
+
+  expect(useAlert).toHaveBeenCalledWith('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR');
+  expect(wrapper.vm.showDrawer).toBe(false);
+  wrapper.unmount();
+});
+
 it('abre o card pedido pelo alerta do agendamento com o quadro já aberto', async () => {
   const wrapper = await mountPage();
   const [, openCard] = useEmitter.mock.calls.findLast(

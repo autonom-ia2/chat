@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { entradaDoPasso } from '../catalogo';
 import { fraseDoPasso } from '../frases';
 import { A_CADA, galhosDe, idDaLista } from '../receita';
+import { PASSOS_NOVOS } from '../passosNovos/passosNovos';
 
 // #2414 F5 — os passos do "Faça", numerados, com "Alterar" em cada um e um "+"
 // entre eles. "Se", "Esperar até" e "Decidir" mostram os galhos: o primeiro nível aberto,
@@ -48,7 +49,8 @@ const ICONES = {
   escrever: 'i-lucide-pen-line',
   resumir: 'i-lucide-text-quote',
 };
-const icone = passo => ICONES[passo.tipo] || 'i-lucide-blocks';
+const icone = passo =>
+  ICONES[passo.tipo] || PASSOS_NOVOS[passo.tipo]?.icone || 'i-lucide-blocks';
 const avancada = passo => !entradaDoPasso(passo, props.catalogo);
 
 // O galho opcional vazio ("Senão" sem passo) só aparece para quem pode mudar.
