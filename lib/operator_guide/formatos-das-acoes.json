@@ -17739,7 +17739,10 @@
       "attribute_values": {
         "tipo": "lista"
       },
-      "oculto_na_tela": {},
+      "oculto_na_tela": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "regex_cue": {
         "tipo": "string"
       },
@@ -17749,17 +17752,14 @@
     },
     "completo": true,
     "controller": "api/v1/accounts/custom_attribute_definitions#create",
-    "corpo_plano": false,
+    "corpo_plano": true,
     "envelope": "custom_attribute_definition",
     "modelo": "CustomAttributeDefinition",
     "origem": [
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:11",
       "app/controllers/api/v1/accounts/custom_attribute_definitions_controller.rb:39"
     ],
-    "sem_corpo": false,
-    "so_no_envelope": [
-      "oculto_na_tela"
-    ]
+    "sem_corpo": false
   },
   "POST custom_filters": {
     "campos": {
