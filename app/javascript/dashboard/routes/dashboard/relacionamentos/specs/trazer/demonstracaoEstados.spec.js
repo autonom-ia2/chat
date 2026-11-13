@@ -105,7 +105,7 @@ describe('estados da planilha em demonstração (?planilha=)', () => {
     [
       'sem_contato',
       ERROS.SEM_CONTATO,
-      'Não achei nome e telefone ou e-mail nesta planilha.',
+      'Não achei nesta planilha telefone nem e-mail que eu consiga usar. O telefone precisa ser celular, com o DDD junto do número, na mesma coluna. Arrume a planilha e envie de novo.',
     ],
   ])('Enviar mostra o erro %s com seletor estável', (tipo, erro, frase) => {
     const w = mount(TelaEnviar, { props: { erro } });
@@ -132,7 +132,10 @@ describe('estados da planilha em demonstração (?planilha=)', () => {
   it.each([
     ['nao_e_planilha', 'Este arquivo não é uma planilha. Use Excel ou CSV.'],
     ['vazia', 'Esta planilha está vazia.'],
-    ['sem_contato', 'Não achei nome e telefone ou e-mail nesta planilha.'],
+    [
+      'sem_contato',
+      'Não achei nesta planilha telefone nem e-mail que eu consiga usar. O telefone precisa ser celular, com o DDD junto do número, na mesma coluna. Arrume a planilha e envie de novo.',
+    ],
   ])(
     'a página com ?planilha=%s já abre no estado, sem clique',
     async (planilha, frase) => {

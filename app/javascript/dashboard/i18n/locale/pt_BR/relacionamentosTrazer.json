@@ -18,7 +18,7 @@
       "ERRO_GRANDE": "Esta planilha é grande demais. Envie em partes menores.",
       "ERRO_LEITURA": "Não consegui ler esta planilha.",
       "ERRO_VAZIA": "Esta planilha está vazia.",
-      "ERRO_SEM_CONTATO": "Não achei nome e telefone ou e-mail nesta planilha.",
+      "ERRO_SEM_CONTATO": "Não achei nesta planilha telefone nem e-mail que eu consiga usar. O telefone precisa ser celular, com o DDD junto do número, na mesma coluna. Arrume a planilha e envie de novo.",
       "ERRO_DEMOROU": "Ainda não terminei de ler sua planilha.",
       "ERRO_SEM_NINGUEM": "Com essa mudança não sobrou ninguém com telefone ou e-mail. Envie a planilha de novo.",
       "ERRO_VENCIDA": "Esta planilha foi enviada há mais de 7 dias e já foi apagada daqui. Envie a planilha de novo.",
@@ -111,7 +111,7 @@
         "OUTRO_PROBLEMA": "Linha {linha}: salvei. Ainda falta resolver outra coisa nesta linha."
       },
       "PROBLEMA": {
-        "TELEFONE": "{quem}: este telefone não parece um celular. Confira o DDD e os dígitos.",
+        "TELEFONE": "{quem}: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.",
         "EMAIL": "{quem}: este e-mail não parece certo.",
         "NOME": "{quem}: falta o nome",
         "DUPLICADA": "{quem} aparece duas vezes. Qual fica?",
