@@ -42,8 +42,8 @@ RSpec.describe 'Renovação da carteira: o desfazer do Guia' do
 
     relatorio = desfazer
 
-    expect(feito).to eq(['won', agora, %w[card_nasceu renovou]])
-    expect([card.reload.status, seguro.reload.renovado_em, passos, relatorio['conflitos']]).to eq(['open', nil, ['card_nasceu'], []])
+    expect(feito).to eq(['won', agora, %w[renovacao_card_nasceu renovou]])
+    expect([card.reload.status, seguro.reload.renovado_em, passos, relatorio['conflitos']]).to eq(['open', nil, ['renovacao_card_nasceu'], []])
   end
 
   it 'desfaz a apólice nova feita à mão: ela some, e o anterior deixa de estar renovado' do

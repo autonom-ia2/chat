@@ -7,12 +7,16 @@
 # apareceria para o administrador. A história do seguro guarda o nome (`valores.cuida`). Se essa pessoa saiu da conta,
 # o card nasce sem dono.
 #
+# O passo da história (`renovacao_card_nasceu`, só deste card) guarda também o funil em que o card nasceu
+# (`valores.funil`, o id): é por ele que a rotina sabe se o seguro ainda pode ganhar outro card nesta vigência
+# (Carteira::Renovacao::EntramHoje).
+#
 # Um card por seguro. O seguro fica travado do começo ao fim e é relido sob a trava: duas passadas da rotina ao mesmo
 # tempo não criam dois cards (o índice único de `crm_card_id` é a segunda barreira). O card, o vínculo e o passo da
 # história entram juntos ou não entram. O título não leva dado da pessoa: só a seguradora.
 class Carteira::Renovacao::CriarCard
   ORIGEM = 'carteira'.freeze
-  NASCEU = 'card_nasceu'.freeze
+  NASCEU = 'renovacao_card_nasceu'.freeze
 
   def initialize(account, config)
     @account = account
@@ -28,7 +32,7 @@ class Carteira::Renovacao::CriarCard
       next false unless Carteira::Renovacao::EntramHoje.entra?(apolice)
 
       apolice.update!(crm_card: criar(apolice))
-      apolice.eventos.create!(tipo: NASCEU, quando: Time.current, **quem_cuida)
+      apolice.eventos.create!(tipo: NASCEU, quando: Time.current, valores: { funil: @config.pipeline_id, cuida: @dono&.name }.compact)
       true
     end
   end
@@ -43,9 +47,5 @@ class Carteira::Renovacao::CriarCard
     { pipeline_id: @config.pipeline_id, stage_id: @config.stage_id, contact_id: apolice.contact_id, owner_id: @dono&.id,
       title: I18n.t('carteira.renovacao.card.titulo', seguradora: apolice.seguradora, locale: @locale),
       expected_close_at: apolice.fim_vigencia.in_time_zone(@fuso).end_of_day }
-  end
-
-  def quem_cuida
-    @dono ? { valores: { cuida: @dono.name } } : {}
   end
 end

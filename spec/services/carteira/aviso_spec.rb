@@ -21,7 +21,7 @@ RSpec.describe Carteira::Aviso do
 
   # Um seguro cujo card de renovação nasceu em `quando`.
   def nasceu(numero, quando: Time.current, pessoa: marina)
-    criar_apolice(pessoa, numero: numero, fim_vigencia: Date.new(2026, 12, 20)).eventos.create!(tipo: 'card_nasceu', quando: quando)
+    criar_apolice(pessoa, numero: numero, fim_vigencia: Date.new(2026, 12, 20)).eventos.create!(tipo: 'renovacao_card_nasceu', quando: quando)
   end
 
   def avisar(conta = account, ajustes = config)

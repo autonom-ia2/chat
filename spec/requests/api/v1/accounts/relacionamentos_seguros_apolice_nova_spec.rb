@@ -88,7 +88,7 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
       expect(response).to have_http_status(:created)
       expect(card.reload.status).to eq('won')
       expect(anterior.reload.renovado_em).to eq(agora)
-      expect(anterior.eventos.order(:id).pluck(:tipo)).to eq(%w[card_nasceu renovou])
+      expect(anterior.eventos.order(:id).pluck(:tipo)).to eq(%w[renovacao_card_nasceu renovou])
     end
 
     it 'o anterior que já estava como "Renovou" só ganha a apólice nova' do

@@ -154,7 +154,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(card.reload.status).to eq('won')
       expect(card.activities.order(:id).last).to have_attributes(event_type: 'won', actor_type: 'user', actor_id: admin.id)
       expect(ler("seguros/#{seguro.id}/historia").pluck('tipo', 'quem'))
-        .to eq([['renovou', { 'id' => admin.id, 'nome' => 'Bia Exemplo' }], ['card_nasceu', nil]])
+        .to eq([['renovou', { 'id' => admin.id, 'nome' => 'Bia Exemplo' }], ['renovacao_card_nasceu', nil]])
     end
 
     it 'pedir de novo não muda nada' do
@@ -163,7 +163,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       acao('renovou')
 
       expect(response).to have_http_status(:ok)
-      expect([response.parsed_body['renovadoEm'], passos]).to eq([agora.to_i, %w[card_nasceu renovou]])
+      expect([response.parsed_body['renovadoEm'], passos]).to eq([agora.to_i, %w[renovacao_card_nasceu renovou]])
     end
 
     it 'dá no seguro o mesmo resultado de fechar o card no quadro' do
@@ -207,7 +207,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(sem_motivo).to include('motivo' => nil, 'renovacao' => include('desfecho' => 'nao_renovou'))
       expect(response.parsed_body).to include('motivo' => 'nao_respondeu')
       expect(seguro.reload.nao_renovou_em).to eq(agora)
-      expect(passos).to eq(%w[card_nasceu nao_renovou])
+      expect(passos).to eq(%w[renovacao_card_nasceu nao_renovou])
       expect(seguro.eventos.order(:id).last.valores).to eq('motivo' => 'nao_respondeu')
     end
 
@@ -240,7 +240,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       end
 
       expect(respostas).to eq(pedidos.values.map { |codigo| [422, { 'error' => codigo }] })
-      expect([card.reload.status, passos]).to eq(['open', ['card_nasceu']])
+      expect([card.reload.status, passos]).to eq(['open', ['renovacao_card_nasceu']])
     end
   end
 
@@ -262,7 +262,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       acao('desfazer_desfecho')
 
       historia = ler("seguros/#{seguro.id}/historia")
-      expect(historia.pluck('tipo')).to eq(%w[desfez_desfecho renovou card_nasceu])
+      expect(historia.pluck('tipo')).to eq(%w[desfez_desfecho renovou renovacao_card_nasceu])
       expect(historia.first).to include('quando' => (agora + 1.hour).to_i, 'quem' => { 'id' => admin.id, 'nome' => 'Bia Exemplo' },
                                         'valores' => { 'anterior' => 'renovou' })
     end
@@ -286,7 +286,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to include('selo' => 'cancelado', 'motivo' => 'cancelou', 'motivoEscrito' => nil, 'renovadoEm' => nil)
       expect(response.parsed_body['renovacao']).to include('desfecho' => 'nao_renovou')
-      expect([card.reload.status, seguro.reload.nao_renovou_em, passos]).to eq(['lost', agora, %w[card_nasceu cancelado nao_renovou]])
+      expect([card.reload.status, seguro.reload.nao_renovou_em, passos]).to eq(['lost', agora, %w[renovacao_card_nasceu cancelado nao_renovou]])
       expect(seguro.eventos.order(:id).last).to have_attributes(user_id: admin.id, valores: { 'motivo' => 'cancelou' })
       expect(card.activities.order(:id).last).to have_attributes(event_type: 'lost', actor_type: 'user', actor_id: admin.id)
     end
@@ -320,8 +320,8 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       acao('cancelar')
       acao('cancelar', id: tirado.id)
 
-      expect([card.reload.status, seguro.reload.renovado_em, passos]).to eq(['won', agora, %w[card_nasceu renovou cancelado]])
-      expect([card_tirado.reload.status, tirado.reload.nao_renovou_em, passos(tirado)]).to eq(['archived', nil, %w[card_nasceu cancelado]])
+      expect([card.reload.status, seguro.reload.renovado_em, passos]).to eq(['won', agora, %w[renovacao_card_nasceu renovou cancelado]])
+      expect([card_tirado.reload.status, tirado.reload.nao_renovou_em, passos(tirado)]).to eq(['archived', nil, %w[renovacao_card_nasceu cancelado]])
     end
   end
 
@@ -399,7 +399,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       end
 
       expect(respostas).to eq([404, 404, 404])
-      expect([card.reload.status, passos]).to eq(['open', ['card_nasceu']])
+      expect([card.reload.status, passos]).to eq(['open', ['renovacao_card_nasceu']])
     end
   end
 end

@@ -42,14 +42,14 @@ RSpec.describe Carteira::RenovacaoListener do
   end
 
   it 'antes de qualquer desfecho o seguro está em renovação' do
-    expect([desfecho, selo, passos]).to eq([{}, 'em_renovacao', ['card_nasceu']])
+    expect([desfecho, selo, passos]).to eq([{}, 'em_renovacao', ['renovacao_card_nasceu']])
   end
 
   it 'card ganho: o seguro renovou, e a história guarda o passo com quem fechou' do
     fechar('won')
 
     expect(card.reload.status).to eq('won')
-    expect([desfecho, selo, passos]).to eq([{ 'renovado_em' => agora }, 'renovado', %w[card_nasceu renovou]])
+    expect([desfecho, selo, passos]).to eq([{ 'renovado_em' => agora }, 'renovado', %w[renovacao_card_nasceu renovou]])
     expect(seguro.eventos.find_by(tipo: 'renovou')).to have_attributes(user_id: admin.id, quando: agora, valores: {})
   end
 
@@ -57,7 +57,7 @@ RSpec.describe Carteira::RenovacaoListener do
     fechar('lost')
 
     expect(card.reload.status).to eq('lost')
-    expect([desfecho, selo, passos]).to eq([{ 'nao_renovou_em' => agora }, 'ativo', %w[card_nasceu nao_renovou]])
+    expect([desfecho, selo, passos]).to eq([{ 'nao_renovou_em' => agora }, 'ativo', %w[renovacao_card_nasceu nao_renovou]])
     expect(seguro.eventos.find_by(tipo: 'nao_renovou')).to have_attributes(user_id: admin.id, valores: {})
   end
 
@@ -71,6 +71,21 @@ RSpec.describe Carteira::RenovacaoListener do
 
     expect([card.reload.status, card_do_outro.reload.status]).to eq(%w[resolved cancelled])
     expect([desfecho, desfecho(outro)]).to eq([{ 'renovado_em' => agora }, { 'nao_renovou_em' => agora }])
+  end
+
+  # O card cancelado não tem motivo de perda (o motivo do quadro é só do perdido): o seguro fica "não renovou" sem
+  # motivo, sem quebrar, e o motivo pode ser dito depois, na gaveta.
+  it 'o card cancelado deixa o seguro como não renovou, sem motivo, e o motivo pode vir depois' do
+    ajustes.pipeline.update!(counts_as_sale: false)
+
+    fechar('lost')
+    sem_motivo = seguro.reload.slice(:motivo_nao_renovou, :motivo_escrito).values
+    passo = seguro.eventos.find_by(tipo: 'nao_renovou')
+    Carteira::Renovacao::Desfecho.new(seguro).dizer_motivo('nao_respondeu', nil)
+
+    expect([card.reload.status, card.lost_reason, sem_motivo, passo.valores]).to eq(['cancelled', nil, [nil, nil], {}])
+    expect(seguro).to be_valid
+    expect([desfecho, selo]).to eq([{ 'nao_renovou_em' => agora, 'motivo_nao_renovou' => 'nao_respondeu' }, 'ativo'])
   end
 
   it 'quem fecha sem ser uma pessoa (a IA, uma automação) deixa o passo sem autor' do
@@ -89,7 +104,7 @@ RSpec.describe Carteira::RenovacaoListener do
 
     expect(com_motivo).to eq('nao_renovou_em' => agora, 'motivo_nao_renovou' => 'achou_caro')
     expect([card.reload.status, desfecho, selo]).to eq(['open', {}, 'em_renovacao'])
-    expect(passos).to eq(%w[card_nasceu nao_renovou desfez_desfecho])
+    expect(passos).to eq(%w[renovacao_card_nasceu nao_renovou desfez_desfecho])
     expect(seguro.eventos.order(:id).last).to have_attributes(user_id: admin.id, quando: agora, valores: { 'anterior' => 'nao_renovou' })
   end
 
@@ -97,7 +112,7 @@ RSpec.describe Carteira::RenovacaoListener do
     fechar('won')
     fechar('reopen')
 
-    expect(passos).to eq(%w[card_nasceu renovou desfez_desfecho])
+    expect(passos).to eq(%w[renovacao_card_nasceu renovou desfez_desfecho])
     expect(seguro.eventos.order(:id).last.valores).to eq('anterior' => 'renovou')
   end
 
@@ -107,7 +122,7 @@ RSpec.describe Carteira::RenovacaoListener do
     fechar('lost')
 
     expect(desfecho).to eq('nao_renovou_em' => agora + 1.hour)
-    expect(passos).to eq(%w[card_nasceu renovou nao_renovou])
+    expect(passos).to eq(%w[renovacao_card_nasceu renovou nao_renovou])
   end
 
   it 'arquivar o card aberto tira a renovação do seguro, e a rotina não cria outro card nesta vigência' do
@@ -123,7 +138,30 @@ RSpec.describe Carteira::RenovacaoListener do
     arquivar
     fechar('reopen')
 
-    expect([card.reload.status, desfecho, selo, passos]).to eq(['open', {}, 'em_renovacao', ['card_nasceu']])
+    expect([card.reload.status, desfecho, selo, passos]).to eq(['open', {}, 'em_renovacao', ['renovacao_card_nasceu']])
+  end
+
+  # Restaurar pela tela dos arquivados (Crm::Cards::Restorer) reabre o card pelo mesmo evento: a marca gravada no
+  # arquivamento sai, o seguro volta a mostrar a renovação em andamento e a rotina não cria um segundo card.
+  it 'restaurar o card arquivado tira a marca do seguro, que volta a estar em renovação com o mesmo card' do
+    arquivar
+    marcado = desfecho
+
+    restaurado = Crm::Cards::Restorer.new(card: card.reload, actor: admin).perform
+    Carteira::Renovacao::DaContaJob.perform_now(account.id)
+
+    expect([marcado, restaurado.restored?]).to eq([{ 'renovacao_card_removido_em' => agora }, true])
+    expect([card.reload.status, desfecho, selo, passos]).to eq(['open', {}, 'em_renovacao', ['renovacao_card_nasceu']])
+    expect([Crm::Card.where(account_id: account.id).count, seguro.reload.crm_card_id]).to eq([1, card.id])
+  end
+
+  it 'restaurar o card arquivado depois de ganho mantém o seguro renovado' do
+    fechar('won')
+    arquivar
+
+    restaurado = Crm::Cards::Restorer.new(card: card.reload, actor: admin).perform
+
+    expect([restaurado.restored?, card.reload.status, desfecho, selo]).to eq([true, 'won', { 'renovado_em' => agora }, 'renovado'])
   end
 
   it 'arquivar o card já ganho não desfaz a renovação' do
@@ -148,7 +186,7 @@ RSpec.describe Carteira::RenovacaoListener do
 
     2.times { Carteira::Renovacao::Desfecho.do_card(card.id, user: admin) }
 
-    expect([desfecho, passos]).to eq([{ 'renovado_em' => agora }, %w[card_nasceu renovou]])
+    expect([desfecho, passos]).to eq([{ 'renovado_em' => agora }, %w[renovacao_card_nasceu renovou]])
   end
 
   it 'o card que não é de seguro nenhum não mexe em nada' do
@@ -156,7 +194,7 @@ RSpec.describe Carteira::RenovacaoListener do
 
     fechar('won', o_card: solto)
 
-    expect([solto.reload.status, desfecho, passos]).to eq(['won', {}, ['card_nasceu']])
+    expect([solto.reload.status, desfecho, passos]).to eq(['won', {}, ['renovacao_card_nasceu']])
   end
 
   it 'a falha ao escrever no seguro não desfaz o fechamento do card: vai para o log, só com ids' do

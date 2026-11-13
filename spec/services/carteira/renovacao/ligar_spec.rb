@@ -165,7 +165,7 @@ RSpec.describe Carteira::Renovacao::Ligar do
 
       expect(card.reload.status).to eq('won')
       expect(antiga.reload.renovado_em).to eq(agora)
-      expect(antiga.eventos.order(:id).pluck(:tipo)).to eq(%w[card_nasceu renovou])
+      expect(antiga.eventos.order(:id).pluck(:tipo)).to eq(%w[renovacao_card_nasceu renovou])
       expect(Carteira::Selo.de(chegou.reload, hoje: hoje)).to eq('ativo')
     end
 
@@ -179,7 +179,7 @@ RSpec.describe Carteira::Renovacao::Ligar do
       ligar(chegou)
 
       expect(antiga.reload.renovado_em).to eq(agora)
-      expect(antiga.eventos.order(:id).pluck(:tipo)).to eq(%w[card_nasceu renovou])
+      expect(antiga.eventos.order(:id).pluck(:tipo)).to eq(%w[renovacao_card_nasceu renovou])
       expect(chegou.reload.apolice_anterior_id).to eq(antiga.id)
     end
 

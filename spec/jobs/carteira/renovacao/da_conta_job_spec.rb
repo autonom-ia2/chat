@@ -39,7 +39,7 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
                                     title: 'Renovação · Seguradora Exemplo')
     expect(card.expected_close_at.in_time_zone('America/Sao_Paulo').to_date).to eq(hoje + 60)
     expect(seguro.reload.crm_card_id).to eq(card.id)
-    expect(seguro.eventos.sole).to have_attributes(tipo: 'card_nasceu', quando: agora, user_id: nil)
+    expect(seguro.eventos.sole).to have_attributes(tipo: 'renovacao_card_nasceu', quando: agora, user_id: nil, valores: { 'funil' => funil.id })
     expect(card.activities.find_by(event_type: 'create').payload).to include('by' => 'automacao', 'origem' => 'carteira')
   end
 
@@ -52,7 +52,8 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     rodar
 
     expect(cards.sole.owner_id).to eq(bia.id)
-    expect(seguro.eventos.sole).to have_attributes(tipo: 'card_nasceu', user_id: nil, valores: { 'cuida' => 'Bia Exemplo' })
+    expect(seguro.eventos.sole).to have_attributes(tipo: 'renovacao_card_nasceu', user_id: nil,
+                                                   valores: { 'funil' => funil.id, 'cuida' => 'Bia Exemplo' })
   end
 
   it 'quem escolheu e já saiu da conta não vira dono: o card nasce sem dono' do
@@ -63,7 +64,7 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
 
     rodar
 
-    expect([cards.sole.owner_id, seguro.eventos.sole.valores.to_h]).to eq([nil, {}])
+    expect([cards.sole.owner_id, seguro.eventos.sole.valores.to_h]).to eq([nil, { 'funil' => funil.id }])
   end
 
   it 'o dia de hoje é o da conta: às 23h30 de São Paulo ainda não entra quem só entraria amanhã' do
@@ -99,7 +100,7 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
 
     expect(cards.count).to eq(3)
     expect(seguros.map { |seguro| seguro.reload.crm_card_id }).to eq(primeiros)
-    expect(Carteira::ApoliceEvento.where(apolice_id: seguros.map(&:id), tipo: 'card_nasceu').count).to eq(3)
+    expect(Carteira::ApoliceEvento.where(apolice_id: seguros.map(&:id), tipo: 'renovacao_card_nasceu').count).to eq(3)
   end
 
   it 'avisa no sino quantos seguros entraram em renovação hoje, e a passada que não cria card não avisa de novo' do
@@ -143,6 +144,13 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
       Crm::Cards::Excluidor.new(account: account, card_ids: [card.id], **opcoes).perform
     end
 
+    # A conta escolhe outro funil para as renovações.
+    def escolher_outro_funil
+      create_crm_pipeline(account: account, user: admin, name: 'Renovação nova').tap do |novo_funil, nova_etapa|
+        Carteira::RenovacaoConfig.find_by(account_id: account.id).update!(pipeline: novo_funil, stage: nova_etapa)
+      end
+    end
+
     it 'apagado no lote do quadro (arquivado) não renasce' do
       feito = Crm::Cards::BulkAction.new(account: account, user: admin, account_user: AccountUser.find_by(account: account, user: admin),
                                          ids: [card.id], action: 'delete').perform
@@ -154,16 +162,57 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
       expect(cards.pluck(:id, :status)).to eq([[card.id, 'archived']])
     end
 
-    # O funil apagado com os cards dentro exclui o card aberto, sem arquivar antes (`somente_arquivados: false`).
-    it 'excluído de vez ainda aberto não renasce: a história do seguro lembra que o card nasceu' do
+    # O banco anula o vínculo e nada marca o seguro: quem impede o card novo é o passo da história, enquanto o funil
+    # em que o card nasceu existir. Escolher outro funil depois não muda isso: excluir o card foi escolha.
+    it 'excluído de vez sozinho não renasce, nem no funil de antes nem em outro que a conta escolha' do
       excluir_de_vez(somente_arquivados: false)
       solto = seguro.reload.slice(:crm_card_id, :renovacao_card_removido_em).values
 
       rodar
+      escolher_outro_funil
       rodar
 
       expect(solto).to eq([nil, nil])
-      expect([cards.count, seguro.reload.crm_card_id, seguro.eventos.pluck(:tipo)]).to eq([0, nil, ['card_nasceu']])
+      expect([cards.count, seguro.reload.crm_card_id, seguro.eventos.pluck(:tipo)]).to eq([0, nil, ['renovacao_card_nasceu']])
+    end
+
+    # O funil arquivado continua existindo e pode ser restaurado: não libera o card novo.
+    it 'excluído de vez, com o funil dele arquivado depois, também não renasce' do
+      excluir_de_vez(somente_arquivados: false)
+      novo_funil, = escolher_outro_funil
+      funil.update!(status: :archived)
+
+      rodar
+
+      expect([novo_funil.reload.status, cards.count, seguro.reload.crm_card_id]).to eq(['active', 0, nil])
+    end
+
+    # Apagar o funil com os cards dentro (Crm::Pipelines::Excluidor) leva o card junto, sem ninguém ter pedido para
+    # tirar aquela renovação: a conta que escolhe outro funil vê a renovação em andamento nascer nele.
+    it 'apagado junto com o funil, nasce de novo no funil que a conta escolher depois' do
+      funil.update!(status: :archived)
+      Crm::Pipelines::Excluidor.new(pipeline: Crm::Pipeline.find(funil.id), actor: admin, modo: 'delete').perform
+
+      rodar
+      sem_funil = cards.count
+      novo_funil, = escolher_outro_funil
+      rodar
+      rodar
+
+      novo_card = cards.sole
+      expect([sem_funil, novo_card.pipeline_id, seguro.reload.crm_card_id]).to eq([0, novo_funil.id, novo_card.id])
+      expect(seguro.eventos.order(:id).pluck(:tipo, :valores))
+        .to eq([['renovacao_card_nasceu', { 'funil' => funil.id }], ['renovacao_card_nasceu', { 'funil' => novo_funil.id }]])
+    end
+
+    # O passo gravado sem o funil (não há como saber onde o card nasceu) impede sempre.
+    it 'o passo da história sem o funil guardado impede o card novo' do
+      excluir_de_vez(somente_arquivados: false)
+      seguro.eventos.sole.update!(valores: {})
+
+      rodar
+
+      expect([cards.count, seguro.reload.crm_card_id]).to eq([0, nil])
     end
 
     it 'arquivado e depois excluído de vez também não renasce' do
