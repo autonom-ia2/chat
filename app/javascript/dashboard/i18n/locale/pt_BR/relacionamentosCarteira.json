@@ -90,6 +90,18 @@
       "SEM_ACESSO": "Você não tem acesso aos seguros desta conta.",
       "EXEMPLO_LEGENDA": "Sua lista de seguros vai ficar assim:"
     },
+    "PESSOAS": {
+      "BUSCA": "Buscar por nome, telefone, documento ou apólice",
+      "SO_UM_SEGURO": {
+        "NOME": "Só tem um seguro",
+        "EXPLICACAO": "Quem tem só um seguro ativo. Boa hora para oferecer outro."
+      },
+      "SELOS": {
+        "ATIVO": "Seguro ativo",
+        "VENCIDO": "Seguro vencido",
+        "CANCELADO": "Seguro cancelado"
+      }
+    },
     "FICHA": {
       "TITULO": "Seguros",
       "TITULO_COM_QUANTOS": "Seguros ({count})",
