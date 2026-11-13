@@ -164,6 +164,17 @@ RSpec.describe Carteira::Apolice do
       expect(seguro).to be_valid
     end
 
+    it 'o banco recusa a apólice que renova a si mesma, mesmo sem passar pelo model' do
+      linha = described_class.where(id: apolice.id)
+      pelo_check = lambda do |erro|
+        expect([erro.cause.class.name, erro.cause.message.include?('carteira_apolices_anterior_nao_e_ela')]).to eq(['PG::CheckViolation', true])
+      end
+
+      expect do
+        described_class.transaction(requires_new: true) { linha.update_all('apolice_anterior_id = id') } # rubocop:disable Rails/SkipsModelValidations
+      end.to raise_error(ActiveRecord::StatementInvalid, &pelo_check)
+    end
+
     it 'o desfecho é um só: renovou ou não renovou' do
       expect(build(:carteira_apolice, account: account, contact: contact, renovado_em: agora, nao_renovou_em: agora)).not_to be_valid
       expect(build(:carteira_apolice, account: account, contact: contact, renovado_em: agora)).to be_valid

@@ -62,6 +62,13 @@ RSpec.describe Carteira::RenovacaoConfig do
     expect(described_class.new(account: account, pipeline: funil, stage: etapa)).to be_valid
   end
 
+  it 'recusa quem escolheu quando a pessoa não é da conta' do
+    de_fora = create(:user, account: create(:account))
+
+    expect(described_class.new(account: account, user: de_fora)).not_to be_valid
+    expect(described_class.new(account: account, user: user)).to be_valid
+  end
+
   it 'apagar a etapa, o funil ou quem escolheu deixa a conta sem escolha, e a linha fica' do
     ajustes = described_class.create!(account: account, pipeline: funil, stage: etapa, user: user)
 

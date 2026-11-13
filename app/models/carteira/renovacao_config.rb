@@ -3,8 +3,8 @@
 # nulos querem dizer "a conta ainda não escolheu" ou "o funil escolhido foi apagado" (a chave anula): nos dois casos nada
 # vira card até alguém escolher.
 #
-# O banco só confere que o funil e a etapa existem, não de quem são: a validação daqui recusa o funil de outra conta e a
-# etapa de outro funil. `user` é quem escolheu por último.
+# O banco só confere que o funil, a etapa e a pessoa existem, não de quem são: a validação daqui recusa o funil de
+# outra conta, a etapa de outro funil e a pessoa que não é da conta. `user` é quem escolheu por último.
 class Carteira::RenovacaoConfig < ApplicationRecord
   self.table_name = 'carteira_renovacao_configs'
 
@@ -22,6 +22,7 @@ class Carteira::RenovacaoConfig < ApplicationRecord
   validates :dias_antes, numericality: { only_integer: true, in: DIAS }
   validates :mensagens, inclusion: { in: MENSAGENS }
   validate :funil_e_etapa_da_conta, if: -> { will_save_change_to_pipeline_id? || will_save_change_to_stage_id? }
+  validate :pessoa_da_conta, if: :will_save_change_to_user_id?
 
   # A conta já disse onde ficam as renovações (e o funil escolhido continua existindo).
   def escolhida?
@@ -33,5 +34,9 @@ class Carteira::RenovacaoConfig < ApplicationRecord
   def funil_e_etapa_da_conta
     errors.add(:pipeline, :invalid) if pipeline && pipeline.account_id != account_id
     errors.add(:stage, :invalid) if stage && stage.pipeline_id != pipeline_id
+  end
+
+  def pessoa_da_conta
+    errors.add(:user, :invalid) if user && !AccountUser.exists?(account_id: account_id, user_id: user.id)
   end
 end
