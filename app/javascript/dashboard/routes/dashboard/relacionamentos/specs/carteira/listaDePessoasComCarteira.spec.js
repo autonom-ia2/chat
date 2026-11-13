@@ -124,6 +124,18 @@ const abrir = async () => {
 };
 const linhas = w => w.findAll(daLista('linha'));
 const seloDaLinha = linha => linha.find(daCarteira('selo'));
+const avisoDosSelos = w => w.find(daCarteira('aviso-dos-selos'));
+// A lista com a carteira falhando, já com o aviso na tela.
+const abrirSemOsSelos = async () => {
+  SegurosAPI.resumoPorPessoa.mockRejectedValueOnce(erroHttp(500));
+  const w = await abrir();
+  await vi.waitFor(() => expect(avisoDosSelos(w).exists()).toBe(true));
+  return w;
+};
+const tentarDeNovo = async w => {
+  await w.get(daCarteira('tentar-os-selos')).trigger('click');
+  await flushPromises();
+};
 const grupos = w =>
   w.findAll('[data-grupo]').map(pilula => pilula.attributes('data-grupo'));
 const paramsDe = metodo =>
@@ -212,7 +224,7 @@ describe('na conta com a carteira de seguros', () => {
   });
 
   it.each([500, 404, 401])(
-    'com a carteira respondendo %i, a lista aparece inteira, sem selo e sem erro na tela, e a falha é registrada',
+    'com a carteira respondendo %i, a lista aparece inteira, sem selo, com o aviso no lugar do erro da tela, e a falha é registrada',
     async status => {
       SegurosAPI.resumoPorPessoa.mockRejectedValue(erroHttp(status));
 
@@ -225,11 +237,78 @@ describe('na conta com a carteira de seguros', () => {
       expect(linhas(w)).toHaveLength(3);
       expect(w.find(daCarteira('selo')).exists()).toBe(false);
       expect(w.find(daLista('erro')).exists()).toBe(false);
+      expect(avisoDosSelos(w).exists()).toBe(true);
       expect(sentry.reportarSemDados.mock.calls).toEqual([
         [expect.any(Error), { tela: 'relacionamentos_lista_selos' }],
       ]);
     }
   );
+
+  it('quando a carteira responde, não há aviso', async () => {
+    const w = await abrir();
+    await vi.waitFor(() =>
+      expect(w.findAll(daCarteira('selo'))).toHaveLength(2)
+    );
+
+    expect(avisoDosSelos(w).exists()).toBe(false);
+  });
+
+  it('sem os selos, avisa acima das linhas, em palavras de gente, com "Tentar de novo"', async () => {
+    const w = await abrirSemOsSelos();
+    const aviso = avisoDosSelos(w);
+
+    expect(aviso.attributes('role')).toBe('alert');
+    expect(aviso.find('span').text()).toBe(
+      'Não consegui mostrar quem tem seguro agora.'
+    );
+    expect(aviso.get(daCarteira('tentar-os-selos')).text()).toBe(
+      'Tentar de novo'
+    );
+    expect(aviso.text()).not.toContain('500');
+    const naTela = w.element.querySelectorAll(
+      `${daCarteira('aviso-dos-selos')}, ${daLista('linha')}`
+    );
+    expect(naTela[0]).toBe(aviso.element);
+    expect(linhas(w)).toHaveLength(3);
+  });
+
+  it('"Tentar de novo" relê só os selos; dando certo, o aviso some e os selos aparecem', async () => {
+    const w = await abrirSemOsSelos();
+
+    await tentarDeNovo(w);
+
+    await vi.waitFor(() =>
+      expect(w.findAll(daCarteira('selo'))).toHaveLength(2)
+    );
+    expect(avisoDosSelos(w).exists()).toBe(false);
+    expect(SegurosAPI.resumoPorPessoa.mock.calls).toEqual([
+      [[1, 2, 3]],
+      [[1, 2, 3]],
+    ]);
+    expect(RelacionamentosAPI.pessoas).toHaveBeenCalledTimes(1);
+  });
+
+  it('se falhar de novo, o aviso continua e ninguém ganha selo', async () => {
+    const w = await abrirSemOsSelos();
+    SegurosAPI.resumoPorPessoa.mockRejectedValueOnce(erroHttp(500));
+
+    await tentarDeNovo(w);
+
+    await vi.waitFor(() =>
+      expect(SegurosAPI.resumoPorPessoa).toHaveBeenCalledTimes(2)
+    );
+    await flushPromises();
+    expect(avisoDosSelos(w).exists()).toBe(true);
+    expect(w.find(daCarteira('selo')).exists()).toBe(false);
+  });
+
+  it('nada tenta sozinho: sem clique, a carteira é lida uma vez só', async () => {
+    const w = await abrirSemOsSelos();
+    await flushPromises();
+
+    expect(avisoDosSelos(w).exists()).toBe(true);
+    expect(SegurosAPI.resumoPorPessoa).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('na conta sem a carteira de seguros', () => {
@@ -247,6 +326,7 @@ describe('na conta sem a carteira de seguros', () => {
     expect(linhas(w)).toHaveLength(3);
     expect(SegurosAPI.resumoPorPessoa).not.toHaveBeenCalled();
     expect(w.find('[data-carteira]').exists()).toBe(false);
+    expect(avisoDosSelos(w).exists()).toBe(false);
     expect(w.find('[data-grupo="so_um_seguro"]').exists()).toBe(false);
     expect(w.getComponent(BarraDeControles).props('placeholder')).toBe(
       'Buscar por nome, telefone ou documento'

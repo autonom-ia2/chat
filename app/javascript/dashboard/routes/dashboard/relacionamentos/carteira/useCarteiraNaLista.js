@@ -7,11 +7,13 @@
 // que volta fica em `daPessoa(id)`. A lista não espera por ele: as pessoas
 // aparecem e o selo entra quando chegar. Reler a lista relê os selos.
 //
-// A carteira fora do ar não derruba a lista: as pessoas aparecem sem o selo, e
-// é a aba Seguros que mostra o erro. A falha não some: vai ao registro de erros
-// do painel, sem dado de pessoa nem de seguro (só o nome do erro e a pilha).
-// Na conta sem a carteira (`ligada` falso) nada disto acontece: nenhum pedido
-// sai e a fonte da carteira nem é baixada.
+// A carteira fora do ar não derruba a lista: as pessoas aparecem sem o selo.
+// Mas pessoa sem selo se lê como "não tem seguro": por isso `falhou` liga, a
+// tela avisa acima das linhas, e `tentarDeNovo` relê só os selos que faltaram
+// (a lista não é relida). Só por clique: nada aqui tenta sozinho. A falha
+// também vai ao registro de erros do painel, sem dado de pessoa nem de seguro
+// (só o nome do erro e a pilha). Na conta sem a carteira (`ligada` falso) nada
+// disto acontece: nenhum pedido sai e a fonte da carteira nem é baixada.
 //
 // Cada leitura da página 1 abre uma consulta nova (outro grupo, outra busca,
 // outro filtro, ou a mesma relida). Selo pedido numa consulta antiga que chega
@@ -21,7 +23,7 @@
 // O grupo "Só tem um seguro" e a busca pelo número da apólice e pelo bem não
 // passam por aqui: vão no próprio pedido da lista (fonte/grupos.js e, no
 // servidor, Carteira::NaListaDePessoas).
-import { shallowRef } from 'vue';
+import { ref, shallowRef } from 'vue';
 import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
 import { ABAS } from '../fonte/grupos';
 
@@ -38,9 +40,15 @@ export const useCarteiraNaLista = ({
   // id da pessoa -> { quantos, selo, tipo, dias }, ou nulo para quem não tem
   // seguro.
   const resumos = shallowRef({});
-  // A consulta que está na tela e os ids das pessoas que ela já mostrou.
+  // Faltou o selo de alguém que está à vista; e a releitura pedida pelo clique
+  // está em andamento.
+  const falhou = ref(false);
+  const tentando = ref(false);
+  // A consulta que está na tela, os ids das pessoas que ela já mostrou e as
+  // páginas dela (os ids de cada uma) cujo selo não chegou.
   let consulta = 0;
   let aVista = [];
+  let semSelo = [];
 
   // Quem não veio na resposta não tem (mais) seguro: o selo antigo sai. De
   // quem não está mais à vista, também.
@@ -61,9 +69,30 @@ export const useCarteiraNaLista = ({
       if (minha === consulta) guardar(ids, chegaram);
     } catch (falha) {
       // De propósito: sem a carteira a lista segue inteira, só sem os selos.
-      // Mas a falha fica registrada.
+      // Mas a falha fica registrada, e a tela avisa.
       reportarSemDados(falha, ONDE_FALHOU);
+      if (minha === consulta) semSelo = [...semSelo, ids];
     }
+  };
+
+  // O aviso acompanha o que falta: some quando o selo de todos à vista chegou.
+  // Durante a releitura pedida pelo clique ele fica, e quem decide é ela.
+  const lerEAvisar = async (ids, minha) => {
+    await lerOsDe(ids, minha);
+    if (minha === consulta && !tentando.value) {
+      falhou.value = semSelo.length > 0;
+    }
+  };
+
+  const tentarDeNovo = async () => {
+    if (tentando.value) return;
+    const paginas = semSelo;
+    const minha = consulta;
+    semSelo = [];
+    tentando.value = true;
+    await Promise.all(paginas.map(ids => lerOsDe(ids, minha)));
+    tentando.value = false;
+    falhou.value = semSelo.length > 0;
   };
 
   const aoChegar = (pedido, resposta, primeira, minha) => {
@@ -71,12 +100,14 @@ export const useCarteiraNaLista = ({
     const ids = pede ? resposta.itens.map(({ id }) => id) : [];
     aVista = [...aVista, ...ids];
     if (ids.length) {
-      lerOsDe(ids, minha);
+      lerEAvisar(ids, minha);
       return;
     }
+    if (!primeira) return;
     // Página 1 sem ninguém para pedir (lista vazia, aba Empresas): nenhum selo
-    // chega para tirar os antigos.
-    if (primeira && Object.keys(resumos.value).length) resumos.value = {};
+    // chega para tirar os antigos, e não há selo faltando para avisar.
+    falhou.value = false;
+    if (Object.keys(resumos.value).length) resumos.value = {};
   };
 
   const comSelos = daLista => ({
@@ -86,6 +117,7 @@ export const useCarteiraNaLista = ({
       if (primeira) {
         consulta += 1;
         aVista = [];
+        semSelo = [];
       }
       const minha = consulta;
       const resposta = await daLista.listar(pedido);
@@ -97,5 +129,8 @@ export const useCarteiraNaLista = ({
   return {
     comSelos,
     daPessoa: id => resumos.value[id] ?? null,
+    falhou,
+    tentando,
+    tentarDeNovo,
   };
 };

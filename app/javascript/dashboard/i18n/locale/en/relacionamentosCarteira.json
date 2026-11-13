@@ -100,7 +100,8 @@
         "ATIVO": "Active policy",
         "VENCIDO": "Expired policy",
         "CANCELADO": "Cancelled policy"
-      }
+      },
+      "SELOS_FALHARAM": "I couldn't show who has insurance right now."
     },
     "FICHA": {
       "TITULO": "Insurance",

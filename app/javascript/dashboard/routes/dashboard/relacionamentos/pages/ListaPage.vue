@@ -12,6 +12,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
@@ -142,7 +144,9 @@ const podeTrazer = computed(
 
 const marcados = useMarcados();
 // Na conta com a carteira, cada página de pessoas que chega pede os selos de
-// seguro daquelas pessoas; nas outras, a fonte passa como é.
+// seguro daquelas pessoas; nas outras, a fonte passa como é. Se os selos não
+// chegam, a tela avisa acima das linhas: pessoa sem selo se lê como "não tem
+// seguro", e aqui isso não se sabe.
 const carteira = useCarteiraNaLista({ demo, ligada: temSeguros });
 const lista = useLista({
   fonte: carteira.comSelos(listaFonte({ demo, comSeguros: temSeguros })),
@@ -431,6 +435,27 @@ watch(naAbaDeSeguros, estaNela => {
                 @acao="semResultado.acao"
               />
               <template v-else>
+                <Banner
+                  v-if="temSeguros && !ehEmpresas && carteira.falhou.value"
+                  color="amber"
+                  role="alert"
+                  data-carteira="aviso-dos-selos"
+                >
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm">
+                      {{ t('RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS_FALHARAM') }}
+                    </span>
+                    <Button
+                      slate
+                      faded
+                      size="lg"
+                      data-carteira="tentar-os-selos"
+                      :is-loading="carteira.tentando.value"
+                      :label="t('RELACIONAMENTOS.COMUM.TENTAR_DE_NOVO')"
+                      @click="carteira.tentarDeNovo"
+                    />
+                  </div>
+                </Banner>
                 <MarcarTodas
                   v-if="!ehEmpresas && faltamMarcar"
                   :total="lista.total.value"

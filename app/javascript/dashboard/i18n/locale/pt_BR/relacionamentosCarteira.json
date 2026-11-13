@@ -100,7 +100,8 @@
         "ATIVO": "Seguro ativo",
         "VENCIDO": "Seguro vencido",
         "CANCELADO": "Seguro cancelado"
-      }
+      },
+      "SELOS_FALHARAM": "Não consegui mostrar quem tem seguro agora."
     },
     "FICHA": {
       "TITULO": "Seguros",

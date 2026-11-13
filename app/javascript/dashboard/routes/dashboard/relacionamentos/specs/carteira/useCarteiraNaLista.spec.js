@@ -253,6 +253,156 @@ describe('quando a consulta muda', () => {
   });
 });
 
+describe('quando os selos não chegam', () => {
+  const falha = () =>
+    Object.assign(new Error('Request failed with status code 500'), {
+      response: { status: 500 },
+    });
+
+  it('liga o aviso; e sem falha ele fica desligado', async () => {
+    const ruim = montar({
+      resumoPorPessoa: vi.fn().mockRejectedValue(falha()),
+    });
+    const boa = montar();
+
+    await ruim.fonte.listar({ aba: 'pessoas' });
+    await boa.fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+
+    expect(ruim.carteira.falhou.value).toBe(true);
+    expect(boa.carteira.falhou.value).toBe(false);
+  });
+
+  it('tentar de novo relê só os selos, sem reler a lista; dando certo, o aviso some e os selos entram', async () => {
+    const resumoPorPessoa = vi
+      .fn()
+      .mockRejectedValueOnce(falha())
+      .mockResolvedValueOnce({ 1: VENCIDO });
+    const { fonte, carteira, daLista } = montar({ resumoPorPessoa });
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+
+    await carteira.tentarDeNovo();
+
+    expect(resumoPorPessoa.mock.calls).toEqual([[[1, 2, 3]], [[1, 2, 3]]]);
+    expect(daLista.listar).toHaveBeenCalledTimes(1);
+    expect(carteira.falhou.value).toBe(false);
+    expect(carteira.tentando.value).toBe(false);
+    expect(carteira.daPessoa(1)).toEqual(VENCIDO);
+  });
+
+  it('falhando de novo, o aviso continua', async () => {
+    const { fonte, carteira } = montar({
+      resumoPorPessoa: vi.fn().mockRejectedValue(falha()),
+    });
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+
+    await carteira.tentarDeNovo();
+
+    expect(carteira.falhou.value).toBe(true);
+    expect(carteira.tentando.value).toBe(false);
+  });
+
+  it('o aviso fica ligado enquanto a releitura não responde', async () => {
+    const lenta = adiada();
+    const resumoPorPessoa = vi
+      .fn()
+      .mockRejectedValueOnce(falha())
+      .mockReturnValueOnce(lenta.promessa);
+    const { fonte, carteira } = montar({ resumoPorPessoa });
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+
+    const relendo = carteira.tentarDeNovo();
+    await flushPromises();
+
+    expect([carteira.falhou.value, carteira.tentando.value]).toEqual([
+      true,
+      true,
+    ]);
+    lenta.soltar({});
+    await relendo;
+    expect(carteira.falhou.value).toBe(false);
+  });
+
+  it('nada tenta sozinho: sem clique, a leitura que falhou não é refeita', async () => {
+    const resumoPorPessoa = vi.fn().mockRejectedValue(falha());
+    const { fonte } = montar({ resumoPorPessoa });
+
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+    await flushPromises();
+
+    expect(resumoPorPessoa).toHaveBeenCalledTimes(1);
+  });
+
+  it('relê só a página que ficou sem selo', async () => {
+    const resumoPorPessoa = vi
+      .fn()
+      .mockResolvedValueOnce({ 1: VENCIDO })
+      .mockRejectedValueOnce(falha())
+      .mockResolvedValueOnce({ 5: ATIVO });
+    const { fonte, carteira } = montar({
+      paginas: { 1: [1, 2, 3], 2: [4, 5] },
+      resumoPorPessoa,
+    });
+    await fonte.listar({ aba: 'pessoas', pagina: 1 });
+    await flushPromises();
+    await fonte.listar({ aba: 'pessoas', pagina: 2 });
+    await flushPromises();
+    expect(carteira.falhou.value).toBe(true);
+
+    await carteira.tentarDeNovo();
+
+    expect(resumoPorPessoa.mock.calls.at(-1)).toEqual([[4, 5]]);
+    expect(carteira.falhou.value).toBe(false);
+    expect([1, 5].map(carteira.daPessoa)).toEqual([VENCIDO, ATIVO]);
+  });
+
+  it('a consulta seguinte que dá certo desliga o aviso', async () => {
+    const resumoPorPessoa = vi
+      .fn()
+      .mockRejectedValueOnce(falha())
+      .mockResolvedValueOnce({ 1: ATIVO });
+    const { fonte, carteira } = montar({ resumoPorPessoa });
+
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+    await fonte.listar({ aba: 'pessoas', busca: 'exemplo' });
+    await flushPromises();
+
+    expect(carteira.falhou.value).toBe(false);
+  });
+
+  it('ir para a aba Empresas desliga o aviso', async () => {
+    const { fonte, carteira } = montar({
+      resumoPorPessoa: vi.fn().mockRejectedValue(falha()),
+    });
+
+    await fonte.listar({ aba: 'pessoas' });
+    await flushPromises();
+    await fonte.listar({ aba: 'empresas' });
+    await flushPromises();
+
+    expect(carteira.falhou.value).toBe(false);
+  });
+
+  it('conta sem a carteira nunca liga o aviso, e tentar de novo não lê nada', async () => {
+    const { fonte, carteira, carregar, resumoPorPessoa } = montar({
+      ligada: false,
+    });
+
+    await fonte.listar({ aba: 'pessoas' });
+    await carteira.tentarDeNovo();
+    await flushPromises();
+
+    expect(carteira.falhou.value).toBe(false);
+    expect(carregar).not.toHaveBeenCalled();
+    expect(resumoPorPessoa).not.toHaveBeenCalled();
+  });
+});
+
 describe('quando não há o que pedir', () => {
   it('conta sem a carteira não chama nada, nem baixa a fonte da carteira', async () => {
     const { fonte, carteira, carregar, resumoPorPessoa } = montar({
