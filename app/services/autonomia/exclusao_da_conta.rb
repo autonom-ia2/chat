@@ -127,6 +127,10 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
+    # Leituras da carteira (E6, #2899): o item guarda o PDF, então sai antes da leitura dele (a cascata do banco
+    # apagaria a linha e deixaria o arquivo). Apólice e contato só anulam a coluna do item.
+    ['Carteira::LeituraItem', :por_conta],
+    ['Carteira::Leitura', :por_conta],
     # Carteira de seguros (E4, #2897): a história de cada apólice (eventos) sai na cascata dela. A apólice aponta para o
     # contato sem cascata e tem PDF, então também sai antes do pré-apagar (ANTES_DO_PRE_APAGAR).
     ['Carteira::Apolice', :por_conta],

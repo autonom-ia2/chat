@@ -33,6 +33,11 @@ class Carteira::Apolice < ApplicationRecord
   belongs_to :apolice_anterior, class_name: 'Carteira::Apolice', optional: true
   has_many :eventos, class_name: 'Carteira::ApoliceEvento', inverse_of: :apolice, dependent: :delete_all
   has_one_attached :pdf
+  # E6 (#2899): `leitura` é o lote de PDFs (ou a busca no conector) que criou esta apólice; apagar o lote só anula a
+  # coluna. `duvidas` são os campos lidos sem certeza. `de_fora`, `corretora_de_fora` e `lembrete_aceito_em` são do
+  # seguro de outra corretora que vira lembrete; `palavras_texto` e `palavras_enviadas_em`, do seguro em palavras simples.
+  belongs_to :leitura, class_name: 'Carteira::Leitura', optional: true, inverse_of: :apolices
+  validate :leitura_da_conta, if: :will_save_change_to_leitura_id?
 
   validates :tipo, inclusion: { in: TIPOS }
   validates :origem, inclusion: { in: ORIGENS }
@@ -76,5 +81,10 @@ class Carteira::Apolice < ApplicationRecord
   # O número e a chave dele andam juntos, e a chave nunca é texto vazio (CHECKs `_numero` e `_chaves`).
   def numero_e_chave_juntos
     errors.add(:numero_chave, :invalid) if numero.nil? != numero_chave.nil? || numero_chave == ''
+  end
+
+  # O banco só confere que a leitura existe, não de quem é.
+  def leitura_da_conta
+    errors.add(:leitura, :invalid) if leitura && leitura.account_id != account_id
   end
 end
