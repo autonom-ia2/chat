@@ -227,6 +227,31 @@ describe('tradução: as recusas do servidor ganham nome', () => {
   );
 });
 
+// #2896 — quem entra sem o telefone que estava escrito na planilha é conta do
+// servidor, sobre quem entra de fato: muda a cada conserto e vem junto com a
+// linha, como `entram` e `clientes`.
+describe('quem entra sem o telefone da planilha, na resposta de quem mexe numa linha', () => {
+  const lida = semTelefone =>
+    leituraDaTela({ ...PRONTA, resumo: { ...PRONTA.resumo, semTelefone } });
+  const NOME_GUARDADO = {
+    ...SEM_NOME,
+    estado: 'guardado',
+    corrigido: 'Fabio Ferreirinho',
+  };
+
+  it('o número que o servidor manda toma o lugar do que a leitura tinha', () => {
+    const guardada = leituraComProblema(lida(0), NOME_GUARDADO, 3, 0, 1);
+    expect(resumoDaTela(guardada)).toMatchObject({ entram: 3, semTelefone: 1 });
+    const reaberta = leituraComProblema(guardada, SEM_NOME, 2, 0, 0);
+    expect(resumoDaTela(reaberta)).toMatchObject({ entram: 2, semTelefone: 0 });
+  });
+
+  it('sem o número na resposta, fica o que a leitura tinha', () => {
+    const guardada = leituraComProblema(lida(4), NOME_GUARDADO, 3);
+    expect(resumoDaTela(guardada).semTelefone).toBe(4);
+  });
+});
+
 describe('as contas com a linha repetida e as linhas juntadas', () => {
   const lida = () => leituraDaTela(PRONTA);
   // Quantas entram quem diz é o servidor, junto com a linha (`entram`).

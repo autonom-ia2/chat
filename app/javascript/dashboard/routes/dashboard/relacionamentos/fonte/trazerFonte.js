@@ -300,6 +300,7 @@ const escritasDeLinha = guardadas => {
       problema: recebido,
       entram,
       clientes,
+      semTelefone,
     } = await escritaNaLeitura(pedido(problema));
     return guardadas.guardar(
       id,
@@ -307,7 +308,8 @@ const escritasDeLinha = guardadas => {
         leituraGuardada(id),
         { ...recebido, linha },
         entram,
-        clientes
+        clientes,
+        semTelefone
       )
     );
   };

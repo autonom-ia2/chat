@@ -11,7 +11,8 @@ require 'stringio'
 # - `campo`: o último campo consertado (telefone, email, nome, contato ou ficar_com);
 # - `outra`: na linha repetida que a pessoa escolheu manter, a linha que sai no lugar dela;
 # - `conferida`: a linha como vai entrar (as colunas do arquivo conferido), quando o conserto resolveu a linha inteira;
-# - `sobrou`: o motivo que ainda falta resolver, quando não resolveu.
+# - `sobrou`: o motivo que ainda falta resolver, quando não resolveu;
+# - `sem_telefone`: só quando a linha `conferida` entra sem o telefone que está escrito nela (a marca, sem o valor).
 #
 # O arquivo é trocado inteiro a cada conserto. A leitura da planilha não o apaga: quando ela termina, os consertos que
 # ainda valem são conferidos de novo e regravados (ContactImports::Trazer::ConsertosDaLeitura). Some no prazo da planilha

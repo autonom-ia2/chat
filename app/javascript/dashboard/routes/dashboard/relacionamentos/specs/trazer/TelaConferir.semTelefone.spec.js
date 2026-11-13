@@ -1,12 +1,13 @@
 import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
-import { leituraDaTela } from '../../fonte/trazerTraducao';
+import { leituraComProblema, leituraDaTela } from '../../fonte/trazerTraducao';
 import { resumoDaTela } from '../../trazer/contagem';
 import TelaConferir from '../../components/trazer/TelaConferir.vue';
 
 // #2896 — o Conferir avisa quantas pessoas vão entrar sem o telefone que
 // estava escrito na planilha (o número não deu para ler e a linha entra pelo
-// e-mail). O aviso diz o que fazer e não trava o trazer.
+// e-mail). O aviso diz o que fazer e não trava o trazer. O número é de quem
+// entra agora: a resposta de cada conserto traz a conta nova.
 withFullI18n('pt_BR');
 
 vi.setConfig({ testTimeout: 30000 });
@@ -96,6 +97,39 @@ describe('TelaConferir: quem entra sem o telefone da planilha', () => {
     expect(aviso(w).element.parentElement).toBe(
       w.get('[data-relacionamentos="contadores"]').element.parentElement
     );
+  });
+
+  // A linha 3 não tinha nome; tem e-mail bom e um celular sem DDD. A pessoa
+  // conserta o nome, a linha passa a entrar só com o e-mail, e o servidor
+  // responde com a conta nova (fonte/trazerFonte.js a põe na leitura).
+  it('acompanha o conserto: a resposta de quem mexe numa linha faz o aviso aparecer e sumir', () => {
+    const semNome = {
+      linha: 3,
+      tipo: 'nome',
+      nome: '',
+      valor: '',
+      contato: 'bruno.brandolim@exemplo.com.br',
+      estado: 'aberto',
+    };
+    const lida = leituraDaTela({
+      ...PRONTA,
+      resumo: { ...PRONTA.resumo, semTelefone: 0 },
+      problemas: [semNome],
+      problemas_total: 1,
+    });
+    expect(aviso(montar(lida)).exists()).toBe(false);
+
+    const guardado = {
+      ...semNome,
+      estado: 'guardado',
+      corrigido: 'Bruno Brandolim',
+    };
+    const consertada = leituraComProblema(lida, guardado, 99, 0, 1);
+    expect(aviso(montar(consertada)).text()).toBe(UMA);
+
+    const deixada = { ...semNome, estado: 'deixado' };
+    const deFora = leituraComProblema(consertada, deixada, 98, 0, 0);
+    expect(aviso(montar(deFora)).exists()).toBe(false);
   });
 
   it('não trava: o botão de trazer continua ligado e manda trazer', async () => {
