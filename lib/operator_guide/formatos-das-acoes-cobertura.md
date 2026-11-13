@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 20 de 226 |
-| Leituras cruas tipadas | 230 de 323 |
+| Leituras cruas tipadas | 229 de 322 |
 
 ## Incompletas por motivo
 

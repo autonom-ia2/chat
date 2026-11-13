@@ -3786,8 +3786,8 @@
         "tipo_pela_leitura": "nome"
       },
       "bloco": {
-        "tipo": "booleano",
-        "tipo_pela_leitura": "uso"
+        "padrao": false,
+        "tipo": "booleano"
       },
       "nome": {
         "nao_pode_ficar_vazio": true,
@@ -23966,8 +23966,8 @@
         "tipo_pela_leitura": "nome"
       },
       "bloco": {
-        "tipo": "booleano",
-        "tipo_pela_leitura": "uso"
+        "padrao": false,
+        "tipo": "booleano"
       },
       "nome": {
         "nao_pode_ficar_vazio": true,
