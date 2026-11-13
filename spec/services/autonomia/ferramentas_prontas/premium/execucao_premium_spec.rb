@@ -6,6 +6,9 @@ require 'rails_helper'
 # recusa do contato de pessoa física sem chamar a fonte, a flag que corta tudo e a credencial que nunca aparece.
 RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   let(:account) { create(:account) }
+  # O dia que a `Execucao` grava é o da conta (ela roda no fuso dela), não o do teste em UTC: entre 00h e 03h UTC os dois
+  # são dias diferentes (#2973).
+  let(:hoje_da_conta) { Autonomia::FerramentasProntas::Premium.hoje_da_conta(account) }
   let(:outra_conta) { create(:account) }
   let(:agent) { criar_agente(account) }
   let(:certidoes) { incluir_pronta('certidoes_empresa', conta: account, agente: agent) }
@@ -56,7 +59,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(registros_premium.sole).to have_attributes(
       account_id: account.id, autonomia_agent_id: agent.id, fonte: 'certidoes_empresa', consulta: 'cnj',
       dataset: 'ondemand_cnj_negative_certificate_company', resultado: 'encontrado', cobranca: 'gratis', numero: 1, do_cache: false,
-      custo: BigDecimal('0.10'), preco: 0, dia: Time.zone.today, id_na_fonte: 'query-exemplo-ondemand_cnj_negative_certificate_company'
+      custo: BigDecimal('0.10'), preco: 0, dia: hoje_da_conta, id_na_fonte: 'query-exemplo-ondemand_cnj_negative_certificate_company'
     )
     expect(a_bigdatacorp.with(body: hash_including('q' => "doc{#{FerramentasPremiumHelper::CNPJ_EXEMPLO}}"))).to have_been_made.once
   end
@@ -179,7 +182,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   it 'o Premium não tem limite diário: o contador do dia passa de qualquer teto sem recusar' do
     cnj_responde
     certidoes
-    usos.create!(account: account, fonte: 'certidoes_empresa', dia: Time.zone.today, consultas: 10_000)
+    usos.create!(account: account, fonte: 'certidoes_empresa', dia: hoje_da_conta, consultas: 10_000)
 
     expect(executar_premium(certidoes, cnj)['situacao']).to eq('encontrado')
     expect(usos.sole).to have_attributes(consultas: 10_001, recusadas: 0)
