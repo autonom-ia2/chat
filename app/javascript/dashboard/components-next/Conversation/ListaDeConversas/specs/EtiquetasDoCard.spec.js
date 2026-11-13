@@ -72,12 +72,18 @@ describe('EtiquetasDoCard', () => {
     expect(nomes(wrapper)).toEqual(['auto', 'cobrança']);
     const mais = wrapper.find('[data-mais-etiquetas]');
     expect(mais.text()).toBe('+1');
-    expect(mais.attributes('aria-label')).toBe('Ver mais 1 etiqueta');
+    expect(mais.attributes('aria-label')).toBe('+1, ver todas as etiquetas');
+    expect(mais.attributes('aria-expanded')).toBe('false');
 
     await mais.trigger('click');
 
     expect(nomes(wrapper)).toEqual(['auto', 'cobrança', 'vip']);
-    expect(wrapper.find('[data-mais-etiquetas]').exists()).toBe(false);
+    const menos = wrapper.find('[data-mais-etiquetas]');
+    expect(menos.text()).toBe('menos');
+    expect(menos.attributes('aria-expanded')).toBe('true');
     expect(onClick).not.toHaveBeenCalled();
+
+    await menos.trigger('click');
+    expect(nomes(wrapper)).toEqual(['auto', 'cobrança']);
   });
 });

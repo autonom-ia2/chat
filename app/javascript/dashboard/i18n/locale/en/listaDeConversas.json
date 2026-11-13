@@ -61,7 +61,8 @@
     "ETIQUETAS": {
       "ARIA": "Labels",
       "MAIS": "+{n}",
-      "VER_TODAS": "Show 1 more label | Show {n} more labels"
+      "MENOS": "less",
+      "VER_TODAS": "+1, show all labels | +{n}, show all labels"
     },
     "ARIA": {
       "SUA_VEZ": "Your turn to pick up this conversation. {n} minutes left",

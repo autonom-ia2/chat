@@ -17,8 +17,9 @@ const etiquetasDaConta = useMapGetter('labels/getLabels');
 const { nomeDe } = useNomeDaEtiqueta();
 const aberta = ref(false);
 
+// Pelo conteúdo, não pela referência: o mesmo chat reemitido não recolhe a lista aberta.
 watch(
-  () => props.titulos,
+  () => props.titulos.join('\n'),
   () => {
     aberta.value = false;
   }
@@ -62,22 +63,28 @@ const escondidas = computed(() =>
       />
       <span class="truncate">{{ etiqueta.nome }}</span>
     </li>
-    <li v-if="escondidas && !aberta">
+    <li v-if="escondidas">
       <button
         type="button"
         class="px-1.5 text-xs font-semibold leading-5 rounded-md cursor-pointer min-h-5 bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :aria-label="
-          $t(
-            'LISTA_DE_CONVERSAS.ETIQUETAS.VER_TODAS',
-            { n: escondidas },
-            escondidas
-          )
+          aberta
+            ? undefined
+            : $t(
+                'LISTA_DE_CONVERSAS.ETIQUETAS.VER_TODAS',
+                { n: escondidas },
+                escondidas
+              )
         "
-        aria-expanded="false"
+        :aria-expanded="aberta ? 'true' : 'false'"
         data-mais-etiquetas
-        @click.stop="aberta = true"
+        @click.stop="aberta = !aberta"
       >
-        {{ $t('LISTA_DE_CONVERSAS.ETIQUETAS.MAIS', { n: escondidas }) }}
+        {{
+          aberta
+            ? $t('LISTA_DE_CONVERSAS.ETIQUETAS.MENOS')
+            : $t('LISTA_DE_CONVERSAS.ETIQUETAS.MAIS', { n: escondidas })
+        }}
       </button>
     </li>
   </ul>

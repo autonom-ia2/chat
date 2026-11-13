@@ -61,7 +61,8 @@
     "ETIQUETAS": {
       "ARIA": "Etiquetas",
       "MAIS": "+{n}",
-      "VER_TODAS": "Ver mais 1 etiqueta | Ver mais {n} etiquetas"
+      "MENOS": "menos",
+      "VER_TODAS": "+1, ver todas as etiquetas | +{n}, ver todas as etiquetas"
     },
     "ARIA": {
       "SUA_VEZ": "Sua vez de pegar esta conversa. Faltam {n} minutos",
