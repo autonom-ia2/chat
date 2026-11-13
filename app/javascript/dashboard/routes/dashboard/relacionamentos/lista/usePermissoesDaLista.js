@@ -11,6 +11,13 @@ export const QUEM_EDITA_CONTATO = ['administrator', 'agent', 'contact_manage'];
 const QUEM_APAGA_CONTATO = ['administrator', 'contact_delete'];
 // Trazer uma lista é importar contatos: a regra de ContactPolicy#import?.
 const QUEM_TRAZ_LISTA = ['administrator', 'contact_manage'];
+// Exportar contatos: a regra de ContactPolicy#export? (a mesma do menu da lista
+// de contatos de hoje, Contacts/ContactsHeader/components/ContactMoreActions.vue).
+const QUEM_EXPORTA_CONTATO = ['administrator', 'contact_export'];
+// #2898 — mudar onde ficam as renovações é uma escolha da conta inteira: o
+// servidor pede `permission_granted?('contact_manage')`, que é o administrador
+// ou a função com a chave. O agente sem função não muda.
+const QUEM_AJUSTA_RENOVACOES = ['administrator', 'contact_manage'];
 
 // #2894 — quem vê "Criar cards", "Etiqueta" e "Apagar" na barra de ação em
 // grupo da lista. Nenhuma regra nova: são as que o painel já usa. Esconder é só
@@ -38,5 +45,11 @@ export const usePermissoesDaLista = () => {
     podeEtiquetar: computed(() => checkPermissions(QUEM_EDITA_CONTATO)),
     podeApagar: computed(() => checkPermissions(QUEM_APAGA_CONTATO)),
     podeTrazer: computed(() => checkPermissions(QUEM_TRAZ_LISTA)),
+    // #2898 — exportar o histórico de um seguro segue a regra de exportar
+    // contatos.
+    podeExportar: computed(() => checkPermissions(QUEM_EXPORTA_CONTATO)),
+    podeAjustarRenovacoes: computed(() =>
+      checkPermissions(QUEM_AJUSTA_RENOVACOES)
+    ),
   };
 };

@@ -14,10 +14,15 @@ import {
 //  - Novo card: a regra de "Criar cards" da lista (vê o CRM e pode criar card).
 export const usePermissoesDaFicha = () => {
   const { checkPermissions } = usePolicy();
-  const { podeCriarCards } = usePermissoesDaLista();
+  const { podeCriarCards, podeExportar, podeAjustarRenovacoes } =
+    usePermissoesDaLista();
 
   return {
     podeEditar: computed(() => checkPermissions(QUEM_EDITA_CONTATO)),
     podeCriarCards,
+    // #2898 — "Exportar" no histórico do seguro: quem pode exportar contatos.
+    podeExportar,
+    // #2898 — "Ajustar renovações" e o convite para escolher o funil.
+    podeAjustarRenovacoes,
   };
 };

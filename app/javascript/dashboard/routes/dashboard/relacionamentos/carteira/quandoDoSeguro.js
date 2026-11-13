@@ -15,6 +15,11 @@ export const quandoDoSeguro = (seguro, agora = Date.now()) => {
   if (selo === SELOS.CANCELADO) {
     return { id: 'CANCELADO_EM', data: seguro.canceladoEm };
   }
+  // #2898 — o renovado diz quando renovou: a data em que ele termina já não é
+  // o que importa.
+  if (selo === SELOS.RENOVADO) {
+    return { id: 'RENOVOU_EM', data: seguro.renovadoEm };
+  }
   if (selo === SELOS.VENCIDO) {
     return dias === -AMANHA
       ? { id: 'VENCEU_ONTEM' }

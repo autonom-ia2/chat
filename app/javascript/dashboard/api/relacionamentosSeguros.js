@@ -77,6 +77,41 @@ class RelacionamentosSegurosAPI extends ApiClient {
   tirarPdf(id) {
     return axios.delete(`${this.url}/seguros/${id}/pdf`);
   }
+
+  // #2898 — a renovação no funil. Os ajustes da conta (em que funil e etapa a
+  // renovação aparece, quantos dias antes, as mensagens) e o que a tela
+  // precisa para mostrá-los.
+  renovacoes() {
+    return axios.get(`${this.url}/seguros/renovacoes`);
+  }
+
+  // `ajustes`: { funilId, etapaId, dias, mensagens }.
+  salvarRenovacoes(ajustes) {
+    return axios.put(`${this.url}/seguros/renovacoes`, ajustes);
+  }
+
+  resultados() {
+    return axios.get(`${this.url}/seguros/resultados`);
+  }
+
+  renovou(id) {
+    return axios.post(`${this.url}/seguros/${id}/renovou`);
+  }
+
+  // `dados`: { motivo, texto } (o texto só vai no motivo "outro").
+  naoRenovou(id, dados) {
+    return axios.post(`${this.url}/seguros/${id}/nao_renovou`, dados);
+  }
+
+  desfazerDesfecho(id) {
+    return axios.post(`${this.url}/seguros/${id}/desfazer_desfecho`);
+  }
+
+  // A apólice nova de um seguro que renovou, escrita à mão. `dados`:
+  // { anteriorId, tipo, seguradora, numero, comeca, termina, valor, bem }.
+  criar(dados) {
+    return axios.post(`${this.url}/seguros`, dados);
+  }
 }
 
 export default new RelacionamentosSegurosAPI();

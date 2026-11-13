@@ -9,6 +9,9 @@
 // seguro ganha a data de hoje ao ser montado. As datas ficam em segundos, ao
 // meio-dia, como a fonte real entrega às peças. As escritas ficam na memória
 // deste módulo e devolvem uma cópia nova: nada que chega é alterado.
+// #2898 — alguns seguros gerados têm renovação: aberta no funil (Em renovação),
+// renovada (Renovado) ou perdida, com o motivo. "Renovou", "Não renovou", o
+// desfazer e a apólice nova escrita à mão também só ficam na memória.
 import { empresas, pessoas } from './base';
 import { RECUSADO } from '../carteira/recusas';
 import { DIA_EM_MS } from '../fonte/grupos';
@@ -20,7 +23,7 @@ const MEIO_DIA = 12;
 const CHEGOU_HA_DIAS = 20;
 const CHEGOU_DE_NOVO_HA_DIAS = 6;
 
-const SEGURADORAS = [
+export const SEGURADORAS = [
   'Seguradora Atlântica',
   'Horizonte Seguros',
   'Serra Azul Seguros',
@@ -30,6 +33,8 @@ const [ATLANTICA, HORIZONTE, SERRA_AZUL] = SEGURADORAS;
 const PLANILHA_DE_ORIGEM = 'Carteira 2026.xlsx';
 // Quem "fez" as ações na demonstração: uma pessoa inventada da equipe.
 const QUEM_FEZ = { id: 1, nome: 'Bia Lunardelli' };
+// Quem cuida das renovações na conta fictícia.
+export const EQUIPE = [QUEM_FEZ.nome, 'Caio Montenegro'];
 
 const PESSOA_DAS_JORNADAS = 23;
 const PRIMEIRO_GERADO = 101;
@@ -69,6 +74,29 @@ const DIAS_NA_FILA = [
 // que têm empresa, um em cada tantos tem o seguro no nome dela.
 const CADA_QUANTOS = { cancelado: 17, comPdf: 3, daEmpresa: 4 };
 const CANCELADO_HA_DIAS = 9;
+
+// A renovação de alguns seguros gerados, pela posição na fila de dias
+// (DIAS_NA_FILA): quem vence em 21 e em 45 dias está com a renovação aberta;
+// quem vence em 27 já renovou; quem venceu ontem e há 40 dias não renovou.
+const FUNIL_DA_RENOVACAO = 'Renovação';
+const RENOVACAO_NA_FILA = {
+  3: { etapa: 'A vencer' },
+  5: { etapa: 'Em conversa' },
+  4: { etapa: 'Proposta enviada', desfecho: 'renovou' },
+  14: { etapa: 'A vencer', desfecho: 'nao_renovou', motivo: 'achou_caro' },
+  17: {
+    etapa: 'Em conversa',
+    desfecho: 'nao_renovou',
+    motivo: 'outra_corretora',
+  },
+};
+const PRIMEIRO_CARD = 5000;
+const PRIMEIRA_APOLICE_NOVA = 9000;
+const RENOVACAO_NASCEU_HA_DIAS = 12;
+const DESFECHO_HA_DIAS = 2;
+const MOTIVO_ESCRITO = 'outro';
+// Os passos da história que contam como a renovação terminou.
+const FINS_NA_HISTORIA = ['renovou', 'nao_renovou', 'nao_renovou_outro'];
 
 const NOMEADOS = [
   {
@@ -142,6 +170,7 @@ const gerados = todosOsClientes => {
     const daEmpresa = daEmpresaDeQuem.has(pessoa.id);
     const tipo = daEmpresa ? 'empresarial' : daFila(TIPOS_NA_FILA, ordem);
     const seguradora = daFila(SEGURADORAS, ordem);
+    const cancelado = aCada(CADA_QUANTOS.cancelado, ordem);
     return {
       id,
       pessoaId: pessoa.id,
@@ -154,9 +183,12 @@ const gerados = todosOsClientes => {
       dias: daFila(DIAS_NA_FILA, ordem),
       bem: BENS[tipo],
       temPdf: aCada(CADA_QUANTOS.comPdf, ordem),
-      canceladoHaDias: aCada(CADA_QUANTOS.cancelado, ordem)
-        ? CANCELADO_HA_DIAS
-        : null,
+      canceladoHaDias: cancelado ? CANCELADO_HA_DIAS : null,
+      // Seguro cancelado não tem renovação.
+      renovacao: cancelado
+        ? null
+        : (RENOVACAO_NA_FILA[ordem % DIAS_NA_FILA.length] ?? null),
+      cuida: daFila(EQUIPE, ordem),
     };
   });
 };
@@ -178,6 +210,27 @@ const seguradoDe = (pessoa, empresa) =>
   empresa
     ? { tipo: 'empresa', id: empresa.id, nome: empresa.name, documento: null }
     : { tipo: 'pessoa', id: pessoa.id, nome: pessoa.name, documento: null };
+
+// O que a renovação soma ao seguro, como o servidor manda: o card do funil
+// (`renovacao`), quando renovou e o motivo de não ter renovado. Seguro sem
+// renovação não ganha nada.
+const daRenovacao = (item, agora) => {
+  if (!item.renovacao) return {};
+  const { etapa, desfecho = null, motivo = null } = item.renovacao;
+  return {
+    renovacao: {
+      cardId: PRIMEIRO_CARD + item.id,
+      funil: FUNIL_DA_RENOVACAO,
+      etapa,
+      desfecho,
+      cuida: item.cuida,
+    },
+    renovadoEm: desfecho === 'renovou' ? ha(agora, DESFECHO_HA_DIAS) : null,
+    motivo,
+    motivoEscrito: '',
+    apoliceNova: false,
+  };
+};
 
 const montar = (item, { gente, firmas }, agora) => {
   const pessoa = gente.get(item.pessoaId);
@@ -203,6 +256,7 @@ const montar = (item, { gente, firmas }, agora) => {
     temPdf: Boolean(item.temPdf),
     canceladoEm: item.canceladoHaDias ? ha(agora, item.canceladoHaDias) : null,
     corrigidoAMao: [],
+    ...daRenovacao(item, agora),
   };
 };
 
@@ -223,9 +277,12 @@ const desenho = agora => {
 // id do seguro -> { campos, feitos }
 let escritas = new Map();
 const SEM_ESCRITA = { campos: {}, feitos: [] };
+// As apólices novas escritas à mão: seguros inteiros, na ordem em que entraram.
+let novas = [];
 
 export const esquecerEscritasDaCarteira = () => {
   escritas = new Map();
+  novas = [];
 };
 
 const escritaDe = id => escritas.get(id) ?? SEM_ESCRITA;
@@ -256,9 +313,10 @@ const escrever = (id, campos, tipo, agora, extras = {}) => {
 
 export const segurosDaCarteira = (agora = Date.now()) => {
   const { itens, base } = desenho(agora);
-  return itens.map(item => ({
-    ...montar(item, base, agora),
-    ...escritaDe(item.id).campos,
+  const doDesenho = itens.map(item => montar(item, base, agora));
+  return [...doDesenho, ...novas].map(seguro => ({
+    ...seguro,
+    ...escritaDe(seguro.id).campos,
   }));
 };
 
@@ -277,11 +335,42 @@ const chegada = (seguro, agora) => {
   ].filter(Boolean);
 };
 
+// O que a renovação com que o seguro nasceu na demonstração conta: quando
+// começou e, se já nasceu terminada, como. Depois que alguém mexe no fim dela
+// (desfaz, diz o motivo), quem conta o fim são os passos guardados.
+const passosDaRenovacao = (seguro, agora) => {
+  const { itens } = desenho(agora);
+  const { renovacao } = itens.find(item => item.id === seguro.id) ?? {};
+  if (!renovacao) return [];
+  const terminou = ha(agora, DESFECHO_HA_DIAS);
+  const fimDoDesenho = {
+    renovou: () => passo('renovou', terminou, { quem: QUEM_FEZ }),
+    nao_renovou: () =>
+      passo('nao_renovou', terminou, {
+        quem: QUEM_FEZ,
+        valores: { motivo: renovacao.motivo },
+      }),
+  }[renovacao.desfecho];
+  const mexeram = 'renovacao' in escritaDe(seguro.id).campos;
+  return [
+    mexeram ? null : fimDoDesenho?.(),
+    passo('card_nasceu', ha(agora, RENOVACAO_NASCEU_HA_DIAS)),
+  ].filter(Boolean);
+};
+
+const maisNovoPrimeiro = (a, b) => b.quando - a.quando;
+
 // Do mais novo para o mais velho, como o servidor manda.
 export const historiaDoSeguro = (id, agora = Date.now()) => {
   const seguro = seguroPorId(id, agora);
   if (!seguro) return [];
-  return [...escritaDe(id).feitos].reverse().concat(chegada(seguro, agora));
+  const deSempre = [...escritaDe(id).feitos]
+    .reverse()
+    .concat(seguro.origem.tipo === 'manual' ? [] : chegada(seguro, agora));
+  const daRenovacaoDele = passosDaRenovacao(seguro, agora);
+  return daRenovacaoDele.length
+    ? [...deSempre, ...daRenovacaoDele].sort(maisNovoPrimeiro)
+    : deSempre;
 };
 
 // ---- ações ------------------------------------------------------------------
@@ -329,6 +418,98 @@ export const tirarPdf = (id, agora = Date.now()) => {
   return seguroPorId(id, agora);
 };
 
+// ---- a renovação (#2898) -----------------------------------------------------
+
+// "Renovou" e "Não renovou" fecham a renovação do seguro; o desfazer a reabre
+// e tira da história o passo que contava o fim.
+
+const comDesfecho = (id, agora, desfecho) => ({
+  ...seguroPorId(id, agora).renovacao,
+  desfecho,
+});
+
+export const renovou = (id, _dados, agora = Date.now()) => {
+  const campos = {
+    renovacao: comDesfecho(id, agora, 'renovou'),
+    renovadoEm: emSegundos(agora),
+    motivo: null,
+    motivoEscrito: '',
+  };
+  escrever(id, campos, 'renovou', agora);
+  return seguroPorId(id, agora);
+};
+
+export const naoRenovou = (id, { motivo, texto = '' }, agora = Date.now()) => {
+  const escrito = motivo === MOTIVO_ESCRITO;
+  const campos = {
+    renovacao: comDesfecho(id, agora, 'nao_renovou'),
+    renovadoEm: null,
+    motivo,
+    motivoEscrito: escrito ? texto : '',
+  };
+  // Dizer o motivo de uma renovação que já estava perdida troca o passo.
+  const atual = escritaDe(id);
+  escritas = new Map(escritas).set(id, {
+    ...atual,
+    feitos: atual.feitos.filter(
+      feito => !FINS_NA_HISTORIA.includes(feito.tipo)
+    ),
+  });
+  escrever(id, campos, escrito ? 'nao_renovou_outro' : 'nao_renovou', agora, {
+    valores: escrito ? { texto } : { motivo },
+  });
+  return seguroPorId(id, agora);
+};
+
+export const desfazerDesfecho = (id, _dados, agora = Date.now()) => {
+  const atual = escritaDe(id);
+  escritas = new Map(escritas).set(id, {
+    campos: {
+      ...atual.campos,
+      renovacao: comDesfecho(id, agora, null),
+      renovadoEm: null,
+      motivo: null,
+      motivoEscrito: '',
+    },
+    feitos: atual.feitos.filter(
+      feito => !FINS_NA_HISTORIA.includes(feito.tipo)
+    ),
+  });
+  return seguroPorId(id, agora);
+};
+
+// A apólice nova do seguro que renovou: um seguro novo, da mesma pessoa, que
+// começa a valer. O anterior passa a dizer que já tem a apólice nova. Devolve o
+// seguro NOVO, como o servidor.
+export const apoliceNova = (id, dados, agora = Date.now()) => {
+  const anterior = seguroPorId(id, agora);
+  const novoId = PRIMEIRA_APOLICE_NOVA + novas.length;
+  const nova = {
+    ...anterior,
+    ...dados,
+    id: novoId,
+    origem: { tipo: 'manual', arquivo: null, em: emSegundos(agora) },
+    temPdf: false,
+    canceladoEm: null,
+    corrigidoAMao: [],
+    renovacao: null,
+    renovadoEm: null,
+    motivo: null,
+    motivoEscrito: '',
+    apoliceNova: false,
+  };
+  novas = [...novas, nova];
+  escrever(novoId, {}, 'apolice_nova', agora, {
+    valores: { anterior: anterior.numero },
+  });
+  const atual = escritaDe(id);
+  escritas = new Map(escritas).set(id, {
+    ...atual,
+    campos: { ...atual.campos, apoliceNova: true },
+  });
+  return seguroPorId(novoId, agora);
+};
+
 export const demoDaCarteira = {
   segurosDaCarteira,
   seguroPorId,
@@ -338,4 +519,8 @@ export const demoDaCarteira = {
   voltarAAtivo,
   guardarPdf,
   tirarPdf,
+  renovou,
+  naoRenovou,
+  desfazerDesfecho,
+  apoliceNova,
 };

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (266 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (267 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -2816,3 +2816,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra o seguro pela aba Seguros ou pela ficha da pessoa; 2. Clique em Guardar o PDF; 3. Arraste o arquivo ou clique para escolher, e ele fica guardado assim que você escolhe; 4. Depois, clique em Ver PDF para abrir o arquivo em outra aba; 5. Para trocar, abra os três pontinhos do rodapé, clique em Guardar outro PDF, escolha o arquivo e confirme em Trocar o PDF; 6. Para apagar, clique em Apagar o PDF nos três pontinhos e confirme.
 - gotchas: cada seguro guarda um PDF só, e trocar pede confirmação porque o PDF que estava guardado sai e não volta; logo depois de guardar o primeiro PDF, o aviso traz Desfazer; Apagar o PDF pede confirmação porque o arquivo não volta; só entra arquivo PDF de verdade; PDF grande demais não é guardado, e a tela pede o PDF da apólice que a seguradora envia, não a cópia escaneada; o PDF só fica guardado: a plataforma não lê o que está escrito nele; o nome original do arquivo não aparece em lugar nenhum; o Histórico registra quando o PDF foi guardado e quando foi apagado; quem só pode ver a pessoa tem Ver PDF, sem guardar, trocar nem apagar; o Guia não guarda, não apaga e não abre o PDF por você, isso se faz na tela.
 - nav_target: `relationships_home`
+
+### Ajustar as renovações: funil, dias antes do fim e mensagens (carteira de seguros)
+- intent: Em que funil aparecem as renovações?; Como escolho o funil das renovações?; Quantos dias antes de vencer o seguro entra em renovação?; Por que nenhum seguro virou card de renovação?; Como paro de mandar mensagem antes de o seguro vencer?
+- onde_fica: Relacionamentos > aba Seguros > botão Ajustar renovações, ao lado de Resultados (no celular, nos três pontinhos ao lado de Mais filtros). Enquanto a conta não escolheu o funil, a aba Seguros mostra também o convite com o botão Escolher o funil.
+- rota: `relacionamentos_renovacoes` - `/app/accounts/:accountId/relacionamentos/seguros/renovacoes`
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: conta de corretora de seguros com a carteira de seguros ligada (carteira_seguros) e as telas novas de Relacionamentos (relacionamentos_novo); ser administrador ou ter uma função que deixa gerenciar contatos; ter pelo menos um funil no CRM
+- passos: 1. Abra Relacionamentos, clique na aba Seguros e depois em Ajustar renovações; 2. Em Onde ficam as renovações?, escolha o Funil e a etapa em que a renovação entra; 3. Em Quantos dias antes do fim?, escreva o número de dias ou use os botões de menos e de mais; 4. Em Mensagens antes de vencer, escolha Mandar ou Não mandar; 5. Clique em Salvar ajustes.
+- gotchas: enquanto ninguém escolhe o funil, nenhuma renovação aparece e nenhum seguro vira card; cada seguro que chega perto do fim vira um card na etapa escolhida; abaixo do número de dias a tela diz quantos seguros já entram em renovação com aquele número; o número de dias começa em 1; conta sem funil lê que precisa criar um funil no CRM e tem o botão Abrir o CRM; se o funil escolhido deixar de existir, a tela avisa, atualiza a lista e pede outro funil; a escolha de Mensagens antes de vencer vale para todos os seguros da conta, e esta tela não mostra nem muda o texto das mensagens; Salvar ajustes sem mudar nada avisa que nada mudou; quem não é administrador nem tem a função de gerenciar contatos não vê o botão Ajustar renovações e, se abrir a tela pelo endereço, lê como está hoje (funil, etapa e quantos dias antes), sem poder mudar.
+- nav_target: `relacionamentos_renovacoes`

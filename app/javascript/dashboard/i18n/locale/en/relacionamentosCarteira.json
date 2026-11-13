@@ -13,6 +13,8 @@
     "SELOS": {
       "ATIVO": "Active",
       "VENCIDO": "Expired",
+      "EM_RENOVACAO": "Renewing",
+      "RENOVADO": "Renewed",
       "CANCELADO": "Cancelled"
     },
     "CAMPOS": {
@@ -40,6 +42,10 @@
         "NOME": "Ends within 90 days",
         "EXPLICACAO": "Policies that end in the next three months."
       },
+      "EM_RENOVACAO": {
+        "NOME": "Renewing",
+        "EXPLICACAO": "Policies with the renewal in progress: they are already in the pipeline and nobody has said yet whether they renewed."
+      },
       "VENCIDO": {
         "NOME": "Expired",
         "EXPLICACAO": "Policies that have already ended."
@@ -47,6 +53,18 @@
       "SEM_TELEFONE": {
         "NOME": "No phone",
         "EXPLICACAO": "The person has no phone, so you cannot send a message. Open the policy, click their name and type the phone on their page."
+      },
+      "NAO_RENOVARAM_30": {
+        "NOME": "Did not renew (last 30 days)",
+        "EXPLICACAO": "Policies that ended in the last 30 days and did not renew."
+      },
+      "NAO_RENOVARAM_90": {
+        "NOME": "Did not renew (last 90 days)",
+        "EXPLICACAO": "Policies that ended in the last 90 days and did not renew."
+      },
+      "NAO_RENOVARAM_365": {
+        "NOME": "Did not renew (last 12 months)",
+        "EXPLICACAO": "Policies that ended in the last 12 months and did not renew."
       }
     },
     "HEROI": {
@@ -62,6 +80,9 @@
     "LISTA": {
       "BUSCA": "Search by name or policy number",
       "BUSCA_CURTA": "Search policy",
+      "RESULTADOS": "Results",
+      "AJUSTAR": "Renewal settings",
+      "MAIS": "More options for the policies",
       "ORDENAR": {
         "ROTULO": "Sort",
         "VENCE_PRIMEIRO": "Ends first",
@@ -112,7 +133,8 @@
         "VENCE_NA_DATA": "ends on {data}",
         "VENCEU_HA": "expired {count} days ago",
         "VENCEU_ONTEM": "expired yesterday",
-        "CANCELADO_EM": "cancelled on {data}"
+        "CANCELADO_EM": "cancelled on {data}",
+        "RENOVOU_EM": "renewed on {data}"
       },
       "FICHA": {
         "VENCE_EM": "Ends in {count} days · {data}",
@@ -121,7 +143,8 @@
         "VENCE_NA_DATA": "Ends on {data}",
         "VENCEU_HA": "Expired {count} days ago",
         "VENCEU_ONTEM": "Expired yesterday",
-        "CANCELADO_EM": "Cancelled on {data}"
+        "CANCELADO_EM": "Cancelled on {data}",
+        "RENOVOU_EM": "Renewed on {data}"
       }
     },
     "GAVETA": {
@@ -141,6 +164,7 @@
         "VENCEU_HA": "Expired {count} days ago.",
         "VENCEU_ONTEM": "Expired yesterday.",
         "CANCELADO_EM": "Cancelled on {data}.",
+        "RENOVOU_EM": "Renewed on {data}.",
         "SEM_PDF": "The PDF has not been saved yet."
       },
       "AVISOS": {
@@ -149,6 +173,12 @@
         "PDF_GUARDADO": "PDF saved.",
         "PDF_TROCADO": "PDF replaced.",
         "PDF_APAGADO": "PDF deleted.",
+        "RENOVOU": "Marked as renewed.",
+        "NAO_RENOVOU": "Marked as not renewed.",
+        "MOTIVO_GUARDADO": "Reason saved.",
+        "RENOVACAO_DESFEITA": "Result undone. The policy is renewing again.",
+        "APOLICE_NOVA": "New policy saved. It already shows in the list of policies.",
+        "HISTORICO_BAIXADO": "History downloaded.",
         "DESFEITO": "Undone.",
         "NAO_DEU": "I could not do that. Try again.",
         "DESFAZER": "Undo"
@@ -176,6 +206,10 @@
         "CORRIGIR": "Fix",
         "MARCAR_CANCELADO": "Mark as cancelled",
         "DESFAZER_CANCELAMENTO": "Undo the cancellation",
+        "RENOVOU": "Renewed",
+        "NAO_RENOVOU": "Did not renew",
+        "GUARDAR_APOLICE_NOVA": "Save the new policy",
+        "DESFAZER_RENOVACAO": "Undo the renewal result",
         "MAIS": "More options for this policy"
       }
     },
@@ -191,6 +225,7 @@
       "VALOR": "Price the client pays (R$)",
       "BEM": "What is insured",
       "APOIO": "What you fix here stays this way, even if this policy arrives again in another spreadsheet.",
+      "APOIO_DA_APOLICE_NOVA": "It already comes with what does not change from one year to the next. Type the new policy number and check the dates and the amount.",
       "SALVAR": "Save",
       "VOLTAR": "Back",
       "SALVO": "Saved.",
@@ -211,11 +246,22 @@
         "VOLTAR": "Keep fixing"
       }
     },
+    "APOLICE_NOVA": {
+      "TITULO": "New policy for the {tipo} insurance",
+      "CONTINUAR": "Keep filling in"
+    },
     "HISTORIA": {
       "TITULO": "History",
       "ERRO": "I could not show the history. Try again.",
       "MUDOU_DE_PARA": "{item}: was {antes}, now {depois}",
       "NAO_INFORMADO": "not informed",
+      "EXPORTAR": "Export",
+      "ARQUIVO": {
+        "DATA": "Date",
+        "HORA": "Time",
+        "O_QUE": "What happened",
+        "QUEM": "Who did it"
+      },
       "TIPOS": {
         "CHEGOU_PLANILHA": "Arrived from a spreadsheet.",
         "CHEGOU_DE_NOVO": "Arrived again from a spreadsheet.",
@@ -223,8 +269,134 @@
         "CANCELADO": "Policy marked as cancelled.",
         "VOLTOU_A_ATIVO": "Cancellation undone.",
         "PDF_ANEXADO": "PDF saved.",
-        "PDF_TIRADO": "PDF deleted."
+        "PDF_TIRADO": "PDF deleted.",
+        "CARD_NASCEU": "The renewal started.",
+        "RENOVOU": "Renewed.",
+        "NAO_RENOVOU": "Did not renew.",
+        "NAO_RENOVOU_OUTRO": "Did not renew.",
+        "APOLICE_NOVA": "New policy saved."
+      },
+      "TIPOS_COM": {
+        "NAO_RENOVOU": "Did not renew: {motivo}.",
+        "NAO_RENOVOU_OUTRO": "Did not renew. Reason: {texto}",
+        "APOLICE_NOVA": "New policy saved. The previous one was {anterior}."
       }
+    },
+    "RENOVACAO": {
+      "TITULO": "Renewal",
+      "QUEM_CUIDA": "In charge: {nome}",
+      "DIZER_O_MOTIVO": "Say why it did not renew",
+      "ABRIR_NO_CRM": "Open in the CRM",
+      "SITUACAO": {
+        "EM_ETAPA": "It is in the {funil} pipeline, at the {etapa} stage.",
+        "RENOVOU_FALTA": "Renewed. The new policy still has to be saved.",
+        "RENOVOU": "Renewed. The new policy is already saved.",
+        "NAO_RENOVOU": "Did not renew. Nobody said why.",
+        "NAO_RENOVOU_MOTIVO": "Did not renew: {motivo}.",
+        "NAO_RENOVOU_ESCRITO": "Did not renew. Reason: {texto}"
+      },
+      "MOTIVO": {
+        "TITULO": "Why did it not renew?",
+        "NOME": {
+          "ACHOU_CARO": "Found it expensive",
+          "OUTRA_CORRETORA": "Went to another broker",
+          "VENDEU_O_BEM": "Sold the asset",
+          "NAO_RESPONDEU": "Did not answer",
+          "OUTRO": "Another reason"
+        },
+        "NA_FRASE": {
+          "ACHOU_CARO": "found it expensive",
+          "OUTRA_CORRETORA": "went to another broker",
+          "VENDEU_O_BEM": "sold the asset",
+          "NAO_RESPONDEU": "did not answer",
+          "OUTRO": "another reason"
+        },
+        "QUAL": "What was the reason?",
+        "SALVAR": "Save the reason",
+        "VOLTAR": "Back",
+        "FALTA": "Type the reason or tap one of the reasons above."
+      },
+      "CONVITE": {
+        "FRASE": "Choose the pipeline where renewals show up.",
+        "APOIO": "While nobody chooses, policies close to the end do not become a renewal card.",
+        "BOTAO": "Choose the pipeline"
+      }
+    },
+    "AJUSTES": {
+      "TITULO": "Renewal settings",
+      "APOIO": "Change what you want and save.",
+      "APOIO_SEM_FUNIL": "Choose the pipeline where renewals stay. Until then, no renewal shows up.",
+      "VOLTAR": "Policies",
+      "VOLTAR_ROTULO": "Back to the policies",
+      "ERRO": "I could not open the settings. Try again.",
+      "SALVAR": "Save settings",
+      "SALVO": "Settings saved.",
+      "ERRO_SALVAR": "I could not save. Try again.",
+      "NADA_MUDOU": "You have not changed anything yet. Change what you want and save.",
+      "HOJE": "Today renewals stay in the {funil} pipeline, at the {etapa} stage, and show up {count} day before the end. | Today renewals stay in the {funil} pipeline, at the {etapa} stage, and show up {count} days before the end.",
+      "HOJE_SEM_FUNIL": "Nobody has chosen the pipeline where renewals stay yet. Until then, no renewal shows up.",
+      "SEM_PERMISSAO": "You can see these settings, but not change them. Ask an account administrator.",
+      "FALTA": {
+        "FUNIL": "Choose the pipeline where renewals stay.",
+        "ETAPA": "Choose the stage where the renewal enters.",
+        "DIAS": "Type how many days before, starting from 1."
+      },
+      "ONDE": {
+        "TITULO": "Where do renewals stay?",
+        "SEM_FUNIL": "Your account has no pipeline yet. Create a pipeline in the CRM and come back here to choose.",
+        "ABRIR_CRM": "Open the CRM",
+        "FUNIL": "Pipeline",
+        "ESCOLHA_O_FUNIL": "Choose the pipeline",
+        "ETAPA": "At which stage does the renewal enter?",
+        "ESCOLHA_A_ETAPA": "Choose the stage",
+        "APOIO": "Each policy that gets close to the end becomes a card at that stage. While nobody chooses, no renewal shows up."
+      },
+      "DIAS": {
+        "TITULO": "How many days before the end?",
+        "ROTULO": "Days before the policy ends",
+        "MENOS": "One day less",
+        "MAIS": "One day more",
+        "COM_DIAS": "With {count} day, | With {count} days,",
+        "ENTRAM": "no policy enters renewal now. | {count} policy already enters renewal. | {count} policies already enter renewal."
+      },
+      "MENSAGENS": {
+        "TITULO": "Messages before it ends",
+        "MANDAR": "Send",
+        "NAO_MANDAR": "Do not send",
+        "APOIO": "This choice applies to every policy in the account."
+      }
+    },
+    "RESULTADOS": {
+      "TITULO": "Renewal results",
+      "HEROI": {
+        "DIAS_30": "In the last 30 days, you renewed {renovou} of {count} policy. | In the last 30 days, you renewed {renovou} of {count} policies.",
+        "DIAS_90": "In the last 90 days, you renewed {renovou} of {count} policy. | In the last 90 days, you renewed {renovou} of {count} policies.",
+        "DIAS_365": "In the last 12 months, you renewed {renovou} of {count} policy. | In the last 12 months, you renewed {renovou} of {count} policies."
+      },
+      "VER_NAO_RENOVARAM": "See the one that did not renew | See the {count} that did not renew",
+      "VOLTAR": "Policies",
+      "VOLTAR_ROTULO": "Back to the policies",
+      "PERIODO": {
+        "ROTULO": "Period",
+        "DIAS_30": "Last 30 days",
+        "DIAS_90": "Last 90 days",
+        "DIAS_365": "Last 12 months"
+      },
+      "MOTIVOS": "Why it did not renew",
+      "SEM_MOTIVO": "No reason",
+      "RECORTE": {
+        "TITULO": "Who renewed the most",
+        "ROTULO": "View by",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "CUIDA": "In charge",
+        "NAO_INFORMADO": "Not informed"
+      },
+      "RENOVARAM": "{count} of {total} renewed | {count} of {total} renewed",
+      "VENCEM_30": "Ending in the next 30 days: {count} policy. | Ending in the next 30 days: {count} policies.",
+      "VER_QUAIS": "See which ones",
+      "VAZIO": "No policy ended in this period.",
+      "ERRO": "I could not show the results. Try again."
     },
     "PDF": {
       "TITULO": "Save the PDF of the {tipo} policy",
@@ -265,7 +437,10 @@
       "TIPO": "This file is not a PDF. Choose the policy PDF.",
       "ARQUIVO_GRANDE": "This PDF is too large to save here. Ask the insurer for the policy PDF, not the scanned copy, and save that one.",
       "SEM_PDF": "This policy no longer has a saved PDF. I refreshed the screen.",
-      "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again."
+      "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again.",
+      "FUNIL_DESCONHECIDO": "That pipeline no longer exists or you cannot see it. I refreshed the list: choose another pipeline and save again.",
+      "ETAPA_DE_OUTRO_FUNIL": "That stage is no longer part of that pipeline. I refreshed the list: choose the stage and save again.",
+      "DIAS_INVALIDOS": "That number of days does not work. Type a whole number from 1 to 3650 and save again."
     }
   }
 }

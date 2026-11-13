@@ -91,8 +91,10 @@ const comNome = falha => {
     : falha;
 };
 
-// `pedido()` é uma ida ao servidor: devolve o corpo da resposta.
-const noServidor = async pedido => {
+// `pedido()` é uma ida ao servidor: devolve o corpo da resposta. A fonte das
+// renovações (fonte/renovacoesFonteReal.js) fala com o servidor por aqui: as
+// recusas dela ganham os mesmos nomes.
+export const noServidor = async pedido => {
   try {
     return (await pedido()).data;
   } catch (falha) {
@@ -149,5 +151,14 @@ export const carteiraFonteReal = () => ({
   guardarPdf: (id, arquivo) =>
     umSeguro(() => SegurosAPI.guardarPdf(id, arquivo)),
   tirarPdf: id => umSeguro(() => SegurosAPI.tirarPdf(id)),
+  // #2898 — como a renovação terminou. As três devolvem o seguro como ficou.
+  renovou: id => umSeguro(() => SegurosAPI.renovou(id)),
+  naoRenovou: (id, dados) => umSeguro(() => SegurosAPI.naoRenovou(id, dados)),
+  desfazerDesfecho: id => umSeguro(() => SegurosAPI.desfazerDesfecho(id)),
+  // A apólice nova do seguro `id`, escrita à mão: devolve o seguro NOVO.
+  apoliceNova: (id, dados) =>
+    umSeguro(() =>
+      SegurosAPI.criar({ anteriorId: id, ...correcaoDoServidor(dados) })
+    ),
   pdf: async id => (await noServidor(() => SegurosAPI.linkDoPdf(id))).url,
 });

@@ -108,6 +108,11 @@ const ESCRITAS = [
   'voltarAAtivo',
   'guardarPdf',
   'tirarPdf',
+  // #2898 — como a renovação terminou e a apólice nova escrita à mão.
+  'renovou',
+  'naoRenovou',
+  'desfazerDesfecho',
+  'apoliceNova',
 ];
 // O "PDF" da demonstração: uma página em branco do navegador.
 const PDF_DA_DEMO = 'about:blank';

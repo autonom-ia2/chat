@@ -1,10 +1,14 @@
 // #2897 — a cor e o nome (chave do catálogo) de cada selo da carteira. O
 // seguro ativo que vence logo continua "Ativo", mas em âmbar: o verde diria
 // que não há nada a fazer.
+// #2898 — Em renovação vai em azul (alguém já está cuidando) e Renovado em
+// verde.
 import { SELOS } from '../fonte/selosDoSeguro';
 
 const TONS = {
   [SELOS.ATIVO]: 'verde',
+  [SELOS.EM_RENOVACAO]: 'azul',
+  [SELOS.RENOVADO]: 'verde',
   [SELOS.VENCIDO]: 'vermelho',
   [SELOS.CANCELADO]: 'neutro',
 };

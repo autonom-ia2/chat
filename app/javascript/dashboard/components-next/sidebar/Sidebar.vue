@@ -1491,6 +1491,7 @@ const menuItems = computed(() => {
         'relacionamentos_pessoa',
         'relacionamentos_empresa',
         'relacionamentos_trazer',
+        'relacionamentos_renovacoes',
         'relationships_company_media',
         'attributes_list',
         'companies_dashboard_index',

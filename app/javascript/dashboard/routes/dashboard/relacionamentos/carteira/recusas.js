@@ -24,6 +24,10 @@ export const CODIGOS_DE_RECUSA = [
   ARQUIVO_GRANDE,
   'sem_pdf',
   'pedido_invalido',
+  // #2898 — os ajustes das renovações.
+  'funil_desconhecido',
+  'etapa_de_outro_funil',
+  'dias_invalidos',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela
