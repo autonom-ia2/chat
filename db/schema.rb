@@ -1957,6 +1957,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
     t.index ["contact_id"], name: "index_carteira_apolices_on_contact_id"
     t.index ["crm_card_id"], name: "idx_carteira_apolices_crm_card", unique: true, where: "(crm_card_id IS NOT NULL)"
     t.check_constraint "(numero IS NULL) = (numero_chave IS NULL)", name: "carteira_apolices_numero"
+    t.check_constraint "apolice_anterior_id <> id", name: "carteira_apolices_anterior_nao_e_ela"
     t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
     t.check_constraint "numero_chave::text <> ''::text AND seguradora_chave::text <> ''::text", name: "carteira_apolices_chaves"
     t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
