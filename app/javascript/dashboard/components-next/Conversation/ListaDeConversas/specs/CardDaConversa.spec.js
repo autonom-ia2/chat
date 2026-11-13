@@ -134,7 +134,7 @@ describe('CardDaConversa (#2202)', () => {
 
   it('etiqueta marcada para a lista: linha própria, fora do botão (#2996)', () => {
     const semEtiqueta = montar();
-    expect(semEtiqueta.find('[data-etiquetas]').isVisible()).toBe(false);
+    expect(semEtiqueta.find('[data-etiquetas]').exists()).toBe(false);
 
     const wrapper = montar({ chat: chat({ labels: ['cobrança'] }) });
     const linha = wrapper.find('[data-etiquetas]');

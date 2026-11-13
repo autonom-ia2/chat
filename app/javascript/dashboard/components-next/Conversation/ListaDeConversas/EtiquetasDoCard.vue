@@ -66,7 +66,7 @@ const escondidas = computed(() =>
     <li v-if="escondidas">
       <button
         type="button"
-        class="px-1.5 text-xs font-semibold leading-5 rounded-md cursor-pointer min-h-5 bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="flex items-center justify-center px-2 text-xs font-semibold rounded-md cursor-pointer min-h-6 min-w-6 bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :aria-label="
           aberta
             ? undefined

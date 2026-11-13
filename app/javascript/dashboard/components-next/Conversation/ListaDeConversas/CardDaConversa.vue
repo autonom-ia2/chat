@@ -447,7 +447,7 @@ const selecionada = computed({
           </span>
         </span>
       </button>
-      <EtiquetasDoCard :titulos="chat.labels || []" />
+      <EtiquetasDoCard v-if="chat.labels?.length" :titulos="chat.labels" />
     </div>
   </div>
 </template>

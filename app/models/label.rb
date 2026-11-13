@@ -33,6 +33,8 @@ class Label < ApplicationRecord
 
   before_validation do
     self.title = title.downcase if attribute_present?('title')
+    # #2996: `null` ou `""` na API querem dizer "não mostrar"; sem isso o NOT NULL da coluna vira erro 500.
+    self.show_on_conversation_list = false if show_on_conversation_list.nil?
   end
 
   def conversations
