@@ -16,10 +16,13 @@ import { PONTO } from '../comum/ponto';
 // palavra simples. Na ficha da empresa cada linha diz de quem é (`pessoa`).
 // Canal ou situação que a tela não conhece ganha o rótulo neutro; conversa sem
 // trecho diz que não tem texto. `falhou`: a leitura não veio.
+// #2970 — o que ainda não é de verdade não aparece: "Ver todas" daqui só
+// avisa, então só existe com `podeVerTodas` (a página liga na demonstração).
 const props = defineProps({
   conversas: { type: Array, required: true },
   agora: { type: Number, default: () => Date.now() },
   falhou: { type: Boolean, default: false },
+  podeVerTodas: { type: Boolean, default: false },
 });
 const emit = defineEmits(['verTodas', 'tentar']);
 
@@ -60,7 +63,7 @@ const trechoDa = conversa => {
 
 <template>
   <CartaoDaSecao :titulo="ra('TITULO')" data-relacionamentos="conversas">
-    <template v-if="conversas.length" #acao>
+    <template v-if="podeVerTodas && conversas.length" #acao>
       <Button slate ghost :label="ra('VER_TODAS')" @click="emit('verTodas')" />
     </template>
     <FalhaDaParte v-if="falhou" @tentar="emit('tentar')" />
