@@ -16,14 +16,14 @@
 #
 # Sem o arquivo conferido não há o que fechar, e repetir não o traz de volta: o anexo que foi apagado antes do job, ou o
 # arquivo (o conferido ou o dos consertos) que não está no armazenamento. A lista vira `failed` com o mesmo código na
-# primeira tentativa, em vez de seguir para a gravação ou ficar esperando.
+# primeira tentativa, em vez de seguir para a gravação ou ficar esperando. O mesmo quando a importação de planilhas está
+# desligada na instalação (CAMPAIGN_IMPORT_ENABLED): sem isso a lista ficaria `confirmed` e a tela, "trazendo" sem fim.
 class ContactImports::Trazer::FecharConferenciaJob < ApplicationJob
   queue_as :low
 
   def perform(importacao)
-    return unless CampaignImports::Config.enabled?
-
     tentativas = ContactImports::Trazer::Fechamentos.new(importacao)
+    return tentativas.desligada unless CampaignImports::Config.enabled?
     return unless tentativas.comecar
 
     fechada = false

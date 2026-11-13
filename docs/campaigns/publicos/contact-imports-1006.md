@@ -119,8 +119,10 @@ Com a marca:
   o nono dígito) ou mesmo e-mail. Sem conflito, a primeira linha é completada com o que só a outra tinha (os campos
   da linha e as células que a conferência usa: se ela virar problema, o conserto leva o e-mail e a empresa que vieram
   da outra) e a outra sai da contagem (`validation_summary.mesma_pessoa`, `resumo.juntadas` na tela). Com conflito (nome, telefone,
-  e-mail ou empresa preenchidos e diferentes nas duas) a segunda vira problema `duplicada` e a pessoa escolhe com
-  qual fica. Nome igual não junta ninguém.
+  e-mail, empresa ou qualquer outra coluna guardada, preenchidos e diferentes nas duas) a segunda vira problema
+  `duplicada` e a pessoa escolhe com qual fica. As outras colunas contam porque juntar ficaria com o valor da
+  primeira e o da outra sumiria sem ninguém ver (o "Sim" de quem é cliente, a cidade, o telefone da empresa, uma
+  informação); a coluna que só uma das linhas preencheu completa a outra, sem conflito. Nome igual não junta ninguém.
 - **Linha sem nome é problema** (`blank_name`) quando a planilha tem coluna de nome: a pessoa escreve o nome ou deixa
   a linha de fora.
 - **Coluna `nao_guardar` não deixa valor em lugar nenhum.** A leitura não põe o valor dela em
@@ -345,6 +347,8 @@ continua subindo para a fila. Na terceira tentativa que não termina a importaç
 fechamento na fila outra vez. O fechamento roda inteiro numa transação: o que quebrou não deixa nada pela metade.
 Sem de onde ler (o arquivo conferido apagado antes do job, ou o conferido ou os consertos fora do armazenamento) o
 fechamento desiste na primeira tentativa, com o mesmo código: a lista não segue para a gravação nem fica esperando.
+O mesmo quando o job roda com a importação de planilhas desligada na instalação (`CAMPAIGN_IMPORT_ENABLED`): a lista
+vira `failed` com o código, em vez de ficar `confirmed` e a tela mostrar "trazendo" sem fim.
 
 **A rota antiga de "Importar" não pula o fechamento.** O `POST /contact_imports/:id/confirm` de uma importação com a
 marca passa sempre por `Relacionamentos::Trazer::Trazer`, com as respostas de sempre (`200` com a importação,
@@ -352,6 +356,11 @@ marca passa sempre por `Relacionamentos::Trazer::Trazer`, com as respostas de se
 leitura que termina entre a busca e a trava não vai para a gravação sem fechamento. O estado é conferido pelo
 `Trazer`, sob a trava; a lista que já foi trazida responde `200` sem enfileirar nada. Só a gravação que parou no meio
 (`import_resumable?`) continua pelo caminho antigo, direto para o importador: a conferência dela já foi fechada.
+
+**As rotas antigas de colunas e de empresas recusam a importação com a marca.** `PATCH /contact_imports/:id/columns`
+e `PATCH /contact_imports/:id/companies` respondem `422` (`campaign_import.column_choice_not_available` e
+`campaign_import.companies_choice_not_available`) sem mudar nada: a lista marcada só muda de coluna pela tela dela
+(`PATCH leituras/:id/colunas/:indice`), que lê a planilha de novo com as regras da conferência.
 
 **Importação parada.** Se um job se perde (o worker morreu, o deploy caiu no meio), a varredura de importações paradas
 (`CampaignImports::StalledImportsJob`, a cada 5 minutos) chama `ContactImports::Trazer::ConferenciasParadas`. A
