@@ -15,7 +15,8 @@
 # quem já está no meio e quem recusa. Só o alcance pergunta item a item (as políticas), e essa pergunta tem teto:
 # `teto + ItensDaLista::ALEM_DO_TETO` por rodada; passou dele, a rodada para de ler (o que ficou entra na próxima vez).
 #
-# Sem a flag dos passos novos (rollback) não abre nada, nem com o job já na fila.
+# Sem a flag dos passos novos (rollback) não abre nada, nem com o job já na fila. A mãe parada (o "Parar para este
+# card") também não abre, e devolve `{ 'mae_parada' => 1 }` sem linha no histórico.
 class Autonomia::Automacao::FilhasDaLista
   Execucao = ::Autonomia::Automacao::Execucao
   ItensDaLista = ::Autonomia::Automacao::ItensDaLista
@@ -34,6 +35,7 @@ class Autonomia::Automacao::FilhasDaLista
   def abrir
     return anotar('passos_novos_desligados', {}) unless ::Autonomia::Automacao::PassosNovos.ligados?(@account)
     return anotar('desligada', {}) unless @mae.dona.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
+    return { 'mae_parada' => 1 } if mae_parada?
 
     @contagem = Hash.new(0)
     @abertas = 0
@@ -46,6 +48,14 @@ class Autonomia::Automacao::FilhasDaLista
   end
 
   private
+
+  # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou na lista também para: a
+  # mãe parada não abre filha, como no FilhasDoPasso. A leitura trava a linha da mãe, então espera um parar em curso
+  # terminar. Sem linha no histórico: o da mãe já diz que ela parou. A finalizada_em não serve: a mãe concluída continua
+  # abrindo filhas (ela não espera as filhas).
+  def mae_parada?
+    Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado) } == 'parada'
+  end
 
   def teto = @passo['teto'].to_i.clamp(1, ::Autonomia::Automacao::RepetirLista::TETO_MAXIMO)
 
