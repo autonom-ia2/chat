@@ -1,6 +1,9 @@
 # A aba Pessoas da Lista nova de Relacionamentos (#2894): a mesma base da lista de contatos de hoje, com a busca (nome,
 # e-mail, empresa, telefone e CPF), os filtros da gaveta (empresa, etiqueta, cidade e quando chegou) e os grupos.
 # "Falou" é o last_activity_at como ele é: só mensagem que a pessoa mandou. Vale para a conta inteira.
+#
+# Na conta que tem a carteira de seguros, a lista ganha o grupo "Só tem um seguro" e a busca pelo número da apólice e
+# pelo bem segurado (Carteira::NaListaDePessoas). Nas outras, nada muda: nem grupo, nem condição, nem consulta a mais.
 class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   GRUPOS = {
     'todos' => 'TRUE',
@@ -42,12 +45,21 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   end
 
   def grupos
-    GRUPOS
+    @grupos ||= GRUPOS.merge(carteira.grupos)
+  end
+
+  def cortes
+    @cortes ||= super.merge(carteira.cortes)
   end
 
   def consultados
-    buscados(self.class.base(@account), textos: TEXTOS, numeros: NUMEROS)
-      .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou)
+    base = self.class.base(@account)
+    carteira.buscados(buscados(base, textos: TEXTOS, numeros: NUMEROS), base, @pedido[:busca])
+            .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou)
+  end
+
+  def carteira
+    @carteira ||= Carteira::NaListaDePessoas.new(@account)
   end
 
   # Etiquetas e foto vêm juntas: sem isso, cada pessoa da página faria as suas consultas.

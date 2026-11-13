@@ -1,3 +1,4 @@
+import { toValue } from 'vue';
 import {
   ABAS,
   GRUPO_PADRAO,
@@ -7,7 +8,11 @@ import {
 } from './grupos';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { normalizado, soDigitos } from './texto';
-import { DEMO_CARREGANDO, esperarParaSempre } from './modoDemo';
+import {
+  DEMO_CARREGANDO,
+  DEMO_SEM_SEGUROS,
+  esperarParaSempre,
+} from './modoDemo';
 import { doServidor } from './doServidor';
 import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
 
@@ -24,6 +29,12 @@ import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
 // base fictícia nem entra no pacote.
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/base.js')
+  : null;
+// #2897 — a carteira fictícia na lista de pessoas da demonstração (o grupo
+// "Só tem um seguro" e a busca pelos seguros). Fora da demonstração quem faz
+// isso é o servidor, na mesma leitura da lista.
+const CARREGAR_CARTEIRA = import.meta.env.DEV
+  ? () => import('../demo/carteiraNaLista.js')
   : null;
 
 export const POR_PAGINA = 25;
@@ -126,14 +137,38 @@ const regrasDaAba = aba => REGRAS_DA_ABA[aba] || REGRAS_DA_ABA[ABAS.PESSOAS];
 
 // O que a busca e os filtros deixam passar, antes de olhar o grupo. A lista e as
 // contagens das pílulas usam esta mesma conta, para os números baterem.
-const passaNaConsulta = (aba, { busca = '', filtros = {} }, agora) => {
-  const regras = regrasDaAba(aba);
-  return item =>
+const passaNaConsulta =
+  (aba, { busca = '', filtros = {} }, agora, regras) =>
+  item =>
     combinaComBusca(busca, regras.campos(item)) &&
     (aba !== ABAS.PESSOAS || pessoaPassaNosFiltros(item, filtros, agora));
-};
 
-const fonteDemo = ({ estado, carregarDemo, atraso }) => {
+// #2897 — as regras da aba Pessoas com o que a carteira de seguros soma: os
+// grupos dela (`extra.grupos`: id -> quem pertence) e mais lugares onde a busca
+// procura (`extra.campos`). Em Empresas nada muda.
+const comACarteira = (regras, aba, extra) =>
+  aba === ABAS.EMPRESAS
+    ? regras
+    : {
+        ...regras,
+        pertence: (item, grupoId, agora) =>
+          grupoId in extra.grupos
+            ? extra.grupos[grupoId](item)
+            : regras.pertence(item, grupoId, agora),
+        campos: item => {
+          const daLista = regras.campos(item);
+          const dosSeguros = extra.campos(item);
+          return {
+            textos: [...daLista.textos, ...dosSeguros.textos],
+            numeros: [...daLista.numeros, ...dosSeguros.numeros],
+          };
+        },
+      };
+
+// `comSeguros()`: a conta tem a carteira de seguros, perguntado a cada leitura.
+// `carteira`: o que a carteira fictícia soma à lista de pessoas (uma função do
+// agora), ou nulo quando a demonstração não tem a carteira fictícia.
+const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
   const baseDaDemo = async () => {
     // `?demo=carregando`: a fonte nunca responde, para o print do esqueleto.
     if (estado === DEMO_CARREGANDO) return esperarParaSempre();
@@ -142,6 +177,10 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
   };
   const contarGrupo = (lista, regras, grupoId, agora) =>
     lista.filter(item => regras.pertence(item, grupoId, agora)).length;
+  const regrasDe = async (aba, agora) =>
+    carteira && comSeguros()
+      ? comACarteira(regrasDaAba(aba), aba, await carteira(agora))
+      : regrasDaAba(aba);
 
   const achar = async ({
     aba = ABAS.PESSOAS,
@@ -151,12 +190,13 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     filtros = {},
   }) => {
     const agora = Date.now();
-    const regras = regrasDaAba(aba);
+    const base = await baseDaDemo();
+    const regras = await regrasDe(aba, agora);
     const ordenador = ORDENADORES[ordem] || ORDENADORES[ORDENS.ULTIMA_CONVERSA];
     return regras
-      .daBase(await baseDaDemo(), agora)
+      .daBase(base, agora)
       .filter(item => regras.pertence(item, grupo || GRUPO_PADRAO[aba], agora))
-      .filter(passaNaConsulta(aba, { busca, filtros }, agora))
+      .filter(passaNaConsulta(aba, { busca, filtros }, agora, regras))
       .sort(ordenador);
   };
 
@@ -193,12 +233,13 @@ const fonteDemo = ({ estado, carregarDemo, atraso }) => {
     // com eles: o número bate com a lista que a pessoa vê.
     async contagens(aba, consulta = {}) {
       const agora = Date.now();
-      const regras = regrasDaAba(aba);
+      const base = await baseDaDemo();
+      const regras = await regrasDe(aba, agora);
       const lista = regras
-        .daBase(await baseDaDemo(), agora)
-        .filter(passaNaConsulta(aba, consulta, agora));
+        .daBase(base, agora)
+        .filter(passaNaConsulta(aba, consulta, agora, regras));
       return Object.fromEntries(
-        gruposDaAba(aba).map(grupo => [
+        gruposDaAba(aba, { comSeguros: comSeguros() }).map(grupo => [
           grupo.id,
           contarGrupo(lista, regras, grupo.id, agora),
         ])
@@ -305,11 +346,27 @@ const fonteReal = () => ({
   },
 });
 
+// `comSeguros`: a conta tem a carteira de seguros (o valor, ou o `computed` de
+// useContaDeSeguros: é lido a cada leitura, porque a conta pode chegar depois
+// de a tela montar). Só a demonstração usa: na fonte real o servidor já sabe,
+// e o grupo e a busca vão no mesmo pedido. `?demo=sem-seguros` é a conta de
+// seguros que ainda não tem nenhum.
 export const listaFonte = ({
   demo = null,
+  comSeguros = false,
   carregarDemo = CARREGAR_DEMO,
+  carregarCarteira = CARREGAR_CARTEIRA,
   atraso = ATRASO_DA_DEMO_MS,
-} = {}) =>
-  demo && carregarDemo
-    ? fonteDemo({ estado: demo, carregarDemo, atraso })
-    : fonteReal();
+} = {}) => {
+  if (!demo || !carregarDemo) return fonteReal();
+  const temCarteiraFicticia = carregarCarteira && demo !== DEMO_SEM_SEGUROS;
+  return fonteDemo({
+    estado: demo,
+    carregarDemo,
+    atraso,
+    comSeguros: () => Boolean(toValue(comSeguros)),
+    carteira: temCarteiraFicticia
+      ? async agora => (await carregarCarteira()).carteiraNaLista(agora)
+      : null,
+  });
+};

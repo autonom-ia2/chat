@@ -17,6 +17,8 @@ import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 // simula, então só existe com `podeConversar` (a página liga na demonstração).
 // E a caixa de marcar só existe com `podeMarcar`: sem nenhuma ação em grupo
 // para fazer, marcar não levaria a nada.
+// #2897 — `selos` é o lugar de mais um selo ao lado do nome: a conta que tem a
+// carteira de seguros põe ali o selo do seguro da pessoa.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
@@ -76,6 +78,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
         <SeloDeEstado v-if="pessoa.opted_out_at" tom="alerta">
           {{ t('RELACIONAMENTOS.COMUM.SELO_NAO_QUER_MENSAGENS') }}
         </SeloDeEstado>
+        <slot name="selos" />
       </div>
       <SegundaLinha :partes="partes" />
     </div>
