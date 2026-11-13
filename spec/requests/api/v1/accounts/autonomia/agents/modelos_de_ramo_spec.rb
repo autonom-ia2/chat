@@ -110,7 +110,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     it 'traz o modelo pronto com as listas, as ferramentas liberadas com a frase do ramo e as perguntas de teste' do
       pronto = ver['modelo_pronto']
 
-      expect(pronto.keys).to eq(%w[chave ramo perguntas documentos nome_padrao seguradoras_sugeridas ferramentas tambem tiradas premium teste])
+      expect(pronto.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem tiradas premium teste])
       expect(pronto['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
       expect(pronto['documentos'].size).to eq(modelo.documentos.size)
       expect(pronto['ferramentas']).to eq(modelo.ja_vem.reject { |f| f.fonte == 'compras_governo' }
@@ -377,7 +377,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     end
 
     # #2976 — depois do "Começar" a página do agente continua mudando perguntas e documentos; as ferramentas, não.
-    it 'muda as listas do agente que já começou a atender e devolve só o ramo e as duas listas' do
+    it 'muda as listas do agente que já começou a atender e devolve só as duas listas' do
       ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
 
@@ -385,12 +385,28 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(resposta).not_to have_key('modelo_pronto')
-      expect(resposta['listas_do_ramo'].keys).to match_array(%w[chave ramo perguntas documentos])
+      expect(resposta['listas_do_ramo'].keys).to eq(%w[perguntas documentos])
       expect(resposta['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
       expect(ver_agente(ativo)['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
 
       expect(mudar_pelo_agente({ ferramentas: [{ fonte: 'cnpj' }] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => 'ferramentas')
       expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # Quem mudou e quando: a mudança vale na hora e não passa pelas versões da instrução.
+    it 'registra quem mudou as listas do agente que já atende, só com metadados, e não registra a do rascunho' do
+      ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
+                                               instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
+      registros = -> { Audited.audit_class.where(auditable_type: ativo.class.name, auditable_id: [ativo.id, rascunho.id]) }
+
+      expect { mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, rascunho) }.not_to(change { registros.call.count })
+      expect { mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, ativo) }.to change { registros.call.count }.by(1)
+
+      registro = registros.call.last
+      expect([registro.auditable_id, registro.user_id, registro.associated_id, registro.action]).to eq([ativo.id, admin.id, account.id, 'update'])
+      expect(registro.audited_changes).to include('event' => 'autonomia.agent.listas_do_ramo_mudadas', 'actor_id' => admin.id,
+                                                  'listas' => { 'documentos' => { 'antes' => modelo.documentos.size, 'depois' => 1 } })
+      expect(registro.audited_changes.to_json).not_to include('Contrato social')
     end
 
     it 'responde 404 para o agente que não nasceu de um modelo' do

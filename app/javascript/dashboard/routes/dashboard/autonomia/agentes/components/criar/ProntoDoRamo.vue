@@ -66,19 +66,25 @@ const linhas = computed(() => [
       ]),
 ]);
 
+// A nota da gaveta; a frase "Você pode tirar, editar e incluir." só para quem pode (#2976: quem só vê não tem botão).
+const notaDe = (chave, nome) =>
+  [t(chave, nome), props.podeMudar ? t(`${NS}.PODE_MUDAR`) : '']
+    .filter(Boolean)
+    .join(' ');
+
 const gaveta = computed(() => {
   const nome = { nome: props.nome };
   const MOLDE = {
     [PERGUNTAS]: {
       titulo: t(`${NS}.PERGUNTAS_TITULO`, nome),
-      nota: t(`${NS}.PERGUNTAS_NOTA`, nome),
+      nota: notaDe(`${NS}.PERGUNTAS_NOTA`, nome),
       incluir: t(`${NS}.INCLUIR_PERGUNTA`),
       exemplo: t(`${NS}.NOVA_PERGUNTA`),
       itens: props.perguntas,
     },
     [DOCUMENTOS]: {
       titulo: t(`${NS}.DOCUMENTOS_TITULO`, nome),
-      nota: t(`${NS}.DOCUMENTOS_NOTA`, nome),
+      nota: notaDe(`${NS}.DOCUMENTOS_NOTA`, nome),
       incluir: t(`${NS}.INCLUIR_DOCUMENTO`),
       exemplo: t(`${NS}.NOVO_DOCUMENTO`),
       itens: props.documentos,

@@ -25,12 +25,7 @@ const PERGUNTAS = [
 const DOCUMENTOS = [{ id: 'd1', texto: 'Edital ou contrato.', tirada: false }];
 const AGENTE = {
   id: 7,
-  listas_do_ramo: {
-    chave: 'seguro_garantia',
-    ramo: 'Seguro garantia',
-    perguntas: PERGUNTAS,
-    documentos: DOCUMENTOS,
-  },
+  listas_do_ramo: { perguntas: PERGUNTAS, documentos: DOCUMENTOS },
 };
 
 const montadas = [];
@@ -169,6 +164,8 @@ describe('RamoNaPagina', () => {
     await linha(wrapper, 'perguntas').get('button').trigger('click');
 
     expect(gaveta().querySelectorAll('[data-item]')).toHaveLength(2);
+    expect(gaveta().textContent).toContain('uma coisa por vez, nesta ordem');
+    expect(gaveta().textContent).not.toContain('Você pode tirar');
     expect(gaveta().querySelector('[data-tirar-item]')).toBeNull();
     expect(gaveta().querySelector('[data-incluir-item]')).toBeNull();
   });

@@ -2,8 +2,8 @@ json.partial! 'api/v1/accounts/autonomia/agents/agent', agent: @agent
 # #2881 — o modelo pronto de ramo de que este agente nasceu, como a tela o mostra (listas do dono, ferramentas com a
 # frase "Use quando", cartões pagos sugeridos, perguntas de teste). Só aqui, não na listagem. Não vem para o agente que
 # não nasceu de um modelo, para a conta sem o pacote `seguros` ou sem a flag, nem para a Lia. O roteiro não sai daqui.
-# Inteiro (`modelo_pronto`) só enquanto o agente é rascunho. Depois do "Começar" (#2976) a página dele recebe só o ramo
-# e as duas listas (`listas_do_ramo`), que continuam mudando por lá. No modo manual, nada.
+# Inteiro (`modelo_pronto`) só enquanto o agente é rascunho. Depois do "Começar" (#2976) a página dele recebe só as
+# duas listas (`listas_do_ramo`), que continuam mudando por lá. No modo manual, nada.
 modelo_pronto = Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(@agent) unless @agent.manual?
 if modelo_pronto
   json.modelo_pronto modelo_pronto.para_tela if @agent.draft?

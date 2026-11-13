@@ -157,7 +157,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Rascunho do
       ligar_prontas_do_construtor(account)
       tela = rascunho.para_tela
 
-      expect(tela.keys).to eq(%w[chave ramo perguntas documentos nome_padrao seguradoras_sugeridas ferramentas tambem tiradas premium teste])
+      expect(tela.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem tiradas premium teste])
       expect(tela.slice('chave', 'ramo', 'nome_padrao')).to eq('chave' => 'seguro_garantia', 'ramo' => modelo.ramo,
                                                                'nome_padrao' => modelo.nome_padrao)
       expect(tela['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
@@ -178,13 +178,13 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Rascunho do
     end
   end
 
-  # #2976 — a página do agente que já atende recebe só o ramo e as duas listas.
+  # #2976 — a página do agente que já atende recebe só as duas listas.
   describe '#para_a_pagina' do
-    it 'entrega o ramo e as duas listas, sem ferramentas, sem perguntas de teste e sem o roteiro' do
+    it 'entrega só as duas listas, sem ferramentas, sem perguntas de teste e sem o roteiro' do
       ligar_prontas_do_construtor(account)
       pagina = rascunho.para_a_pagina
 
-      expect(pagina.keys).to eq(%w[chave ramo perguntas documentos])
+      expect(pagina.keys).to eq(%w[perguntas documentos])
       expect(pagina['documentos'].first).to eq('id' => 'd1', 'texto' => modelo.documentos.first, 'tirada' => false)
       expect(pagina.to_json).not_to include('ROTEIRO POR SITUAÇÃO')
     end

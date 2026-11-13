@@ -19,12 +19,12 @@ module Autonomia::ListasDoModeloPronto
 
   private
 
-  # `alvo`: `thread:` (a conversa) ou `agent:` (o rascunho sem conversa na tela).
+  # `alvo`: `thread:` (a conversa) ou `agent:` (o rascunho sem conversa na tela, ou o agente que já atende).
   def editar_modelo_pronto(**alvo)
     campo = lista_malformada
     raise ::Autonomia::Agents::ModelosDeRamo::Edicao::Recusada.new('lista_invalida', campo.to_s) if campo
 
-    ::Autonomia::Agents::ModelosDeRamo::Edicao.new(mudancas: mudancas_do_modelo, **alvo).call
+    ::Autonomia::Agents::ModelosDeRamo::Edicao.new(mudancas: mudancas_do_modelo, actor: Current.user, **alvo).call
   end
 
   # Perguntas e documentos pedem a escrita da área de Agentes (`autonomia_manage`, conferida na entrada). A lista de

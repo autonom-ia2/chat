@@ -708,6 +708,46 @@ describe('AgentePage', () => {
     });
   });
 
+  // #2976 — as listas do agente pronto por ramo que já atende: o bloco só para o agente que as traz, e quem só vê
+  // abre a gaveta sem botão nenhum.
+  describe('listas do ramo', () => {
+    const doRamo = () =>
+      bia({
+        listas_do_ramo: {
+          perguntas: [{ id: 'p1', texto: 'Qual o CNPJ?', tirada: false }],
+          documentos: [],
+        },
+      });
+
+    it('has no block for an agent that was not born from a ready-made agent', async () => {
+      const wrapper = await montar();
+      expect(no('[data-pronto-do-ramo]')).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('lets who manages change the lists of the agent that brings them', async () => {
+      preparar({ agente: doRamo() });
+      const wrapper = await montar();
+
+      await clicar('[data-pronto-do-ramo] [data-linha="perguntas"] button');
+
+      expect(no('[role="dialog"] [data-tirar-item]')).not.toBeNull();
+      wrapper.unmount();
+    });
+
+    it('opens the lists read-only for who can only see', async () => {
+      estado.podeGerenciar = false;
+      preparar({ agente: doRamo() });
+      const wrapper = await montar();
+
+      await clicar('[data-pronto-do-ramo] [data-linha="perguntas"] button');
+
+      expect(no('[role="dialog"] [data-item="p1"]')).not.toBeNull();
+      expect(no('[role="dialog"] [data-tirar-item]')).toBeNull();
+      wrapper.unmount();
+    });
+  });
+
   describe('só ver', () => {
     beforeEach(() => {
       estado.podeGerenciar = false;

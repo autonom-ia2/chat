@@ -278,14 +278,16 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(agente.reload)).to include("PERGUNTAS DA COTAÇÃO:\n1. A obra já começou?")
     end
 
-    it 'recusa mexer nas ferramentas do agente que já começou a atender, dizendo o campo, sem gravar' do
+    it 'recusa mexer nas ferramentas do agente que já começou a atender, dizendo o campo, sem gravar nem registrar' do
       comecar!(agente)
       antes = agente.reload.config
+      allow(Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca).to receive(:gravar!)
 
       expect { editar_pelo_agente(perguntas: [], ferramentas: [{ fonte: 'cnpj' }]) }.to raise_error(described_class::Recusada) do |erro|
         expect([erro.motivo, erro.campo]).to eq(%w[agente_ja_comecou ferramentas])
       end
       expect(agente.reload.config).to eq(antes)
+      expect(Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca).not_to have_received(:gravar!)
     end
   end
 

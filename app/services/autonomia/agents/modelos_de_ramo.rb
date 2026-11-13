@@ -14,7 +14,7 @@
 #   - `Marca`: o que a conversa (`state['modelo_pronto']`) e o agente (`config['modelo_pronto']`) guardam — a chave do
 #     modelo e as listas como o dono as deixou;
 #   - `Rascunho`: o modelo de uma conversa (roteiro com as listas, ferramentas liberadas, o que a tela recebe);
-#   - `Edicao`: o dono muda as listas antes de começar;
+#   - `Edicao`: o dono muda as listas antes de começar e, só perguntas e documentos, depois (#2976);
 #   - `Instrucao`: as listas atuais nas instruções do agente que atende, montadas pelo servidor.
 module Autonomia::Agents::ModelosDeRamo
   FLAG = 'agente_modelos_seguro'.freeze

@@ -38,10 +38,12 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
   end
 
   # `thread:` — pela conversa do Construtor (a criação em andamento). `agent:` — pelo agente, sem a conversa: o rascunho
-  # que a tela reabriu, ou o agente que já atende (a página dele). Um dos dois.
-  def initialize(mudancas:, thread: nil, agent: nil)
+  # que a tela reabriu, ou o agente que já atende (a página dele). Um dos dois. `actor:` — quem pediu, para o registro
+  # da mudança num agente que já atende (`RegistroDaMudanca`).
+  def initialize(mudancas:, thread: nil, agent: nil, actor: nil)
     @thread = thread
     @agent = agent
+    @actor = actor
     @mudancas = mudancas.to_h.deep_stringify_keys
   end
 
@@ -77,10 +79,24 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     recusar_o_que_nao_muda_mais if ja_atende
 
     novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho)))
-    chaves = ja_atende ? novo.para_guardar.slice(Autonomia::Agents::ModelosDeRamo::Marca::CHAVE) : novo.para_guardar
+    ja_atende ? gravar_no_que_atende(agente, rascunho, novo) : gravar_antes_de_comecar(agente, novo)
+    novo
+  end
+
+  # Antes do "Começar": a marca e as chaves das prontas, no rascunho (quando ele já existe) e na conversa.
+  def gravar_antes_de_comecar(agente, novo)
+    chaves = novo.para_guardar
     gravar_no_agente(agente, chaves) if agente
     @thread&.juntar_ao_estado!(chaves)
-    novo
+  end
+
+  # Depois do "Começar": só a marca (as chaves das prontas são da criação, e regravá-las mexeria no cartão "pode
+  # ganhar") e o registro de quem mudou e quando. Dentro da trava do agente: se o registro falhar, a mudança se desfaz.
+  def gravar_no_que_atende(agente, rascunho, novo)
+    gravar_no_agente(agente, novo.para_guardar.slice(Autonomia::Agents::ModelosDeRamo::Marca::CHAVE))
+    Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca.gravar!(
+      agente: agente, autor: @actor, antes: rascunho.marca, depois: novo.marca, listas: LISTAS.select { |campo| @mudancas.key?(campo) }
+    )
   end
 
   def rascunho_de(agente)
@@ -89,8 +105,7 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(agente)
   end
 
-  # No agente que já atende: pela conversa de criação nada muda, e as ferramentas não mudam por aqui. Só a marca é
-  # gravada nele (`editar`): as chaves das prontas são da criação, e regravá-las mexeria no cartão "pode ganhar".
+  # No agente que já atende: pela conversa de criação nada muda, e as ferramentas não mudam por aqui.
   def recusar_o_que_nao_muda_mais
     negar('agente_ja_comecou') if @thread
     negar('agente_ja_comecou', FERRAMENTAS) if @mudancas.key?(FERRAMENTAS)

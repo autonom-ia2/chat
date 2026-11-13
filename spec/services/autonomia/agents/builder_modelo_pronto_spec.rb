@@ -265,6 +265,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include("PERGUNTAS DA COTAÇÃO:\n1. #{modelo.perguntas.first}", moldura, 'na etapa "Confira"')
       expect(contexto).to include('Você NÃO as muda', 'NÃO diga que mudou')
       expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::CONHECIMENTO_NO_AJUSTE)
+      expect(contexto).to include('você também não o muda e NÃO diz que mudou')
     end
 
     # #2976 — depois do "Começar" o dono muda as listas na página do agente.
