@@ -9,6 +9,9 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // nenhum. A conta que já escolheu não vê nada aqui. Se a leitura dos ajustes
 // falhar, o convite só não aparece: a lista de seguros não depende dele, e a
 // tela "Ajustar renovações" mostra o erro e o "tentar de novo" dela.
+// O convite volta quando o funil escolhido foi arquivado ou apagado
+// (carteira/funilDasRenovacoes.js): as renovações pararam de virar card, e a
+// frase diz por quê.
 const props = defineProps({
   // A fonte das renovações (fonte/renovacoesFonte.js).
   fonte: { type: Object, required: true },
@@ -19,11 +22,14 @@ const { t } = useI18n();
 const doConvite = chave =>
   t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.CONVITE.${chave}`);
 const falta = ref(false);
+// '' = a conta ainda não escolheu; ARQUIVADO ou APAGADO = o funil parou.
+const parou = ref('');
 
 onMounted(async () => {
   try {
-    const { ajustes, semPermissao } = await props.fonte.ajustes();
-    falta.value = !ajustes.funilId && !semPermissao;
+    const { ajustes, semPermissao, funilParou } = await props.fonte.ajustes();
+    parou.value = funilParou || '';
+    falta.value = (!ajustes.funilId || Boolean(parou.value)) && !semPermissao;
   } catch {
     falta.value = false;
   }
@@ -36,19 +42,22 @@ onMounted(async () => {
     <section
       v-if="falta"
       data-carteira="convite-das-renovacoes"
+      :data-estado="parou || undefined"
       class="flex flex-wrap items-center justify-between min-w-0 p-5 border gap-x-6 gap-y-4 rounded-2xl border-n-blue-4 bg-n-blue-2"
     >
       <div class="flex flex-col flex-1 min-w-0 gap-1 basis-64">
         <p class="m-0 text-lg font-semibold text-n-slate-12">
-          {{ doConvite('FRASE') }}
+          {{ parou ? doConvite(`PAROU.${parou}`) : doConvite('FRASE') }}
         </p>
-        <p class="m-0 text-base text-n-slate-11">{{ doConvite('APOIO') }}</p>
+        <p class="m-0 text-base text-n-slate-11">
+          {{ doConvite(parou ? 'APOIO_PAROU' : 'APOIO') }}
+        </p>
       </div>
       <Button
         size="lg"
         class="basis-full sm:basis-auto whitespace-nowrap"
         data-carteira="escolher-funil-das-renovacoes"
-        :label="doConvite('BOTAO')"
+        :label="doConvite(parou ? 'BOTAO_PAROU' : 'BOTAO')"
         @click="emit('escolher')"
       />
     </section>

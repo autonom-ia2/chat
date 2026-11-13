@@ -3,6 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import ListaDeSeguros from '../../components/carteira/ListaDeSeguros.vue';
+import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
 import { esquecerEscritasDaCarteira } from '../../demo/carteira';
 import {
   assentar,
@@ -46,6 +47,12 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
       },
     },
   }),
+}));
+// O sinal de que o funil escolhido parou de servir tem um leitor só
+// (carteira/funilDasRenovacoes.js): cada estado é testado trocando o que ele lê.
+vi.mock('../../carteira/funilDasRenovacoes', async importOriginal => ({
+  ...(await importOriginal()),
+  funilParou: vi.fn(() => ''),
 }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
@@ -152,6 +159,8 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   semRolagem();
   permissoes.ajusta = true;
+  funilParou.mockReset();
+  funilParou.mockReturnValue('');
   roteador.push.mockClear();
   Object.values(SegurosAPI).forEach(rotaDoServidor =>
     rotaDoServidor.mockReset()
@@ -342,6 +351,40 @@ describe('o convite para escolher o funil', () => {
     expect(roteador.push).toHaveBeenCalledWith({
       name: 'relacionamentos_renovacoes',
     });
+  });
+
+  it.each([
+    [FUNIL_PAROU.ARQUIVADO, 'O funil das renovações foi arquivado.'],
+    [FUNIL_PAROU.APAGADO, 'O funil ou a etapa das renovações não existe mais.'],
+  ])(
+    'volta quando o funil escolhido parou (%s), e o botão leva aos ajustes',
+    async (estado, frase) => {
+      funilParou.mockReturnValue(estado);
+      servidorResponde();
+
+      const w = await abrirNoServidor();
+
+      expect(textoDe(w, daCarteira('convite-das-renovacoes'))).toContain(frase);
+      expect(textoDe(w, daCarteira('escolher-funil-das-renovacoes'))).toBe(
+        'Escolher outro funil'
+      );
+
+      await clicar(w, daCarteira('escolher-funil-das-renovacoes'));
+
+      expect(roteador.push).toHaveBeenCalledWith({
+        name: 'relacionamentos_renovacoes',
+      });
+    }
+  );
+
+  it('o funil parou, mas quem olha não pode ajustar: sem convite', async () => {
+    permissoes.ajusta = false;
+    funilParou.mockReturnValue(FUNIL_PAROU.ARQUIVADO);
+    servidorResponde();
+
+    const w = await abrirNoServidor();
+
+    expect(w.find(daCarteira('convite-das-renovacoes')).exists()).toBe(false);
   });
 
   it('some para a conta que já escolheu', async () => {

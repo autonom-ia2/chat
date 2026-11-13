@@ -11,6 +11,7 @@ import {
   faltaNosAjustes,
   ondeFicam,
   quantosEntram,
+  semOFunil,
   umDiaAMais,
   umDiaAMenos,
 } from '../../carteira/ajustesDaRenovacao';
@@ -20,6 +21,7 @@ import {
   formularioDaApoliceNova,
 } from '../../carteira/apoliceNova';
 import { destinoDoCard } from '../../carteira/cardNoCrm';
+import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
 import {
   baixarArquivo,
   csvDoHistorico,
@@ -247,6 +249,40 @@ describe('ajustar renovações: o funil e a etapa', () => {
         nosDoisIdiomas(chaveDaRecusa(codigo, 'PADRAO'));
       }
     );
+  });
+});
+
+describe('o funil das renovações que parou de servir', () => {
+  it('enquanto o servidor não manda o sinal, o funil serve', () => {
+    expect(funilParou()).toBe('');
+    expect(funilParou({ ajustes: {}, funis: [] })).toBe('');
+  });
+
+  it.each(Object.values(FUNIL_PAROU))(
+    'o estado %s tem frase nos dois idiomas, na tela de ajustes e no convite',
+    estado => {
+      nosDoisIdiomas(daCarteira(`AJUSTES.PAROU.${estado}`));
+      nosDoisIdiomas(daCarteira(`AJUSTES.HOJE_PAROU.${estado}`));
+      nosDoisIdiomas(daCarteira(`RENOVACAO.CONVITE.PAROU.${estado}`));
+    }
+  );
+
+  it('o convite do funil que parou tem apoio e botão próprios', () => {
+    nosDoisIdiomas(daCarteira('RENOVACAO.CONVITE.APOIO_PAROU'));
+    nosDoisIdiomas(daCarteira('RENOVACAO.CONVITE.BOTAO_PAROU'));
+  });
+
+  it('o funil que parou sai da escolha, e o resto fica', () => {
+    const salvos = { funilId: 1, etapaId: 11, dias: 45, mensagens: 'mandar' };
+
+    expect(semOFunil(salvos)).toEqual({
+      funilId: null,
+      etapaId: null,
+      dias: 45,
+      mensagens: 'mandar',
+    });
+    expect(salvos.funilId).toBe(1);
+    expect(faltaNosAjustes(semOFunil(salvos))).toBe(FALTAS.FUNIL);
   });
 });
 

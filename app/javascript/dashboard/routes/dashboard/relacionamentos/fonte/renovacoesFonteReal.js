@@ -11,10 +11,13 @@
 //   funis:       [{ id, nome, etapas: [{ id, nome }] }];
 //   vencimentos: em quantos dias termina cada seguro que ainda vale;
 //   semPermissao: quem olha não pode mudar os ajustes.
+// A fonte soma `funilParou` ('' | ARQUIVADO | APAGADO): o funil escolhido
+// deixou de servir. Quem lê o sinal do servidor é carteira/funilDasRenovacoes.js.
 // O que mais vier na resposta (o que é da cotação, de outra entrega) passa
 // direto e a tela não lê.
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import { temMensagens } from '../carteira/ajustesDaRenovacao';
+import { funilParou } from '../carteira/funilDasRenovacoes';
 import { noServidor } from './carteiraFonteReal';
 
 // Só as escolhas desta tela: o que o servidor guardar a mais não entra na
@@ -35,7 +38,11 @@ export const renovacoesFonteReal = () => ({
   usaDemo: false,
   async ajustes() {
     const dados = await noServidor(() => SegurosAPI.renovacoes());
-    return { ...dados, ajustes: ajustesDaTela(dados.ajustes) };
+    return {
+      ...dados,
+      ajustes: ajustesDaTela(dados.ajustes),
+      funilParou: funilParou(dados),
+    };
   },
   // O que volta é o que ficou guardado, com as mesmas escolhas que foram
   // mandadas: quem não tinha o cartão de mensagens continua sem ele.

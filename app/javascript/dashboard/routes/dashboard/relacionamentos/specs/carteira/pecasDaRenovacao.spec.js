@@ -304,6 +304,47 @@ describe('o convite para escolher o funil das renovações', () => {
     expect(convite(w).exists()).toBe(false);
   });
 
+  it.each([
+    ['ARQUIVADO', 'O funil das renovações foi arquivado.'],
+    ['APAGADO', 'O funil ou a etapa das renovações não existe mais.'],
+  ])(
+    'o funil escolhido parou (%s): o convite volta e diz por quê',
+    async (estado, frase) => {
+      const w = await abrir(
+        fonteCom({
+          ajustes: { ...SEM_FUNIL, funilId: 3, etapaId: 31 },
+          semPermissao: false,
+          funilParou: estado,
+        })
+      );
+
+      expect(convite(w).attributes('data-estado')).toBe(estado);
+      expect(convite(w).text()).toContain(frase);
+      expect(convite(w).text()).toContain(
+        'Enquanto ninguém escolhe outro funil, os seguros perto de vencer não viram card de renovação.'
+      );
+      const botao = w.get(daCarteira('escolher-funil-das-renovacoes'));
+      expect(botao.text()).toBe('Escolher outro funil');
+      expect(botao.attributes('disabled')).toBeUndefined();
+
+      await botao.trigger('click');
+
+      expect(w.emitted('escolher')).toHaveLength(1);
+    }
+  );
+
+  it('o funil parou, mas quem olha não pode mudar: sem convite', async () => {
+    const w = await abrir(
+      fonteCom({
+        ajustes: { ...SEM_FUNIL, funilId: 3, etapaId: 31 },
+        semPermissao: true,
+        funilParou: 'ARQUIVADO',
+      })
+    );
+
+    expect(convite(w).exists()).toBe(false);
+  });
+
   it('quem o servidor não deixa mudar não é convidado', async () => {
     const w = await abrir(fonteCom({ ajustes: SEM_FUNIL, semPermissao: true }));
 

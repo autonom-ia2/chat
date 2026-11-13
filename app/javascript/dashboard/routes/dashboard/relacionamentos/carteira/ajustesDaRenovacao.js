@@ -61,6 +61,14 @@ export const faltaNosAjustes = ({ funilId, etapaId, dias } = {}) => {
   return dias ? '' : FALTAS.DIAS;
 };
 
+// O funil que parou de servir (arquivado ou apagado) deixa de ser a escolha: a
+// pessoa escolhe outro, e o Salvar pede o funil enquanto ela não escolhe.
+export const semOFunil = ajustes => ({
+  ...ajustes,
+  funilId: null,
+  etapaId: null,
+});
+
 // Escolher o funil já escolhe a primeira etapa dele.
 export const comOFunil = (ajustes, funis, funilId) => ({
   ...ajustes,

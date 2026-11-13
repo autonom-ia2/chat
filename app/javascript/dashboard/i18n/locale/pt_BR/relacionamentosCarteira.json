@@ -334,6 +334,12 @@
       "CONVITE": {
         "FRASE": "Escolha em que funil as renovações aparecem.",
         "APOIO": "Enquanto ninguém escolhe, os seguros perto de vencer não viram card de renovação.",
+        "PAROU": {
+          "ARQUIVADO": "O funil das renovações foi arquivado.",
+          "APAGADO": "O funil ou a etapa das renovações não existe mais."
+        },
+        "APOIO_PAROU": "Enquanto ninguém escolhe outro funil, os seguros perto de vencer não viram card de renovação.",
+        "BOTAO_PAROU": "Escolher outro funil",
         "BOTAO": "Escolher o funil"
       }
     },
@@ -379,6 +385,14 @@
         "MANDAR": "Mandar",
         "NAO_MANDAR": "Não mandar",
         "APOIO": "Esta escolha vale para todos os seguros da conta."
+      },
+      "PAROU": {
+        "ARQUIVADO": "O funil das renovações foi arquivado. Escolha outro para as renovações voltarem a aparecer.",
+        "APAGADO": "O funil ou a etapa das renovações não existe mais. Escolha outro funil para as renovações voltarem a aparecer."
+      },
+      "HOJE_PAROU": {
+        "ARQUIVADO": "O funil das renovações foi arquivado. Até alguém escolher outro, nenhuma renovação aparece.",
+        "APAGADO": "O funil ou a etapa das renovações não existe mais. Até alguém escolher outro funil, nenhuma renovação aparece."
       }
     },
     "RESULTADOS": {

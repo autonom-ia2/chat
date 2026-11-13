@@ -39,6 +39,9 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // lugar. Quem não pode mudar (carteira/usePodeAjustarRenovacoes.js) lê a
 // escolha de hoje e não vê Salvar. Conta sem a carteira de seguros não chama
 // rota nenhuma e volta para a lista.
+// O funil escolhido que foi arquivado ou apagado (carteira/funilDasRenovacoes.js)
+// para as renovações: o aviso no topo do cartão do funil diz isso e pede outro
+// funil; o Salvar pede o funil enquanto a pessoa não escolhe.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
@@ -65,6 +68,10 @@ const podeMudar = computed(
   () => (fonte.usaDemo || podeAjustar.value) && !conta.value?.semPermissao
 );
 const temFunis = computed(() => Boolean(conta.value?.funis.length));
+// A conta já escolheu, e o funil escolhido ainda serve.
+const temFunilQueServe = computed(
+  () => tela.jaEscolheu.value && !tela.funilParou.value
+);
 // O cartão das mensagens só é montado quando o servidor manda a escolha.
 const comMensagens = computed(() => temMensagens(rascunho.value));
 
@@ -84,8 +91,10 @@ const efeito = computed(() => {
   ].join(' ');
 });
 
-// A escolha de hoje, para quem só lê.
+// A escolha de hoje, para quem só lê. O funil que parou vem antes: a pessoa
+// precisa saber que as renovações não estão aparecendo.
 const escolhaDeHoje = computed(() => {
+  if (tela.funilParou.value) return ta(`HOJE_PAROU.${tela.funilParou.value}`);
   const escolha = ondeFicam(conta.value.funis, rascunho.value);
   const { dias } = rascunho.value;
   return escolha
@@ -179,7 +188,7 @@ onMounted(async () => {
             {{ ta('TITULO') }}
           </h1>
           <p v-if="pronto" class="m-0 text-base text-n-slate-11">
-            {{ ta(tela.jaEscolheu.value ? 'APOIO' : 'APOIO_SEM_FUNIL') }}
+            {{ ta(temFunilQueServe ? 'APOIO' : 'APOIO_SEM_FUNIL') }}
           </p>
         </div>
 
@@ -208,6 +217,15 @@ onMounted(async () => {
         </div>
         <template v-else>
           <CartaoDeAjuste marca="ajuste-onde" :titulo="ta('ONDE.TITULO')">
+            <Banner
+              v-if="tela.funilParou.value"
+              color="amber"
+              role="alert"
+              data-carteira="funil-parou"
+              :data-estado="tela.funilParou.value"
+            >
+              {{ ta(`PAROU.${tela.funilParou.value}`) }}
+            </Banner>
             <OndeFicamAsRenovacoes
               ref="onde"
               :model-value="rascunho"

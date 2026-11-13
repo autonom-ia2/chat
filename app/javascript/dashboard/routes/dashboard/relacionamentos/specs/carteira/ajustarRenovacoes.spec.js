@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AjustarRenovacoesPage from '../../pages/AjustarRenovacoesPage.vue';
+import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
 import { esquecerAjustesDaDemo } from '../../demo/carteiraAjustes';
 import { usarDemo } from '../../fonte/modoDemo';
 import { assentar, carregarDemonstracao, daCarteira, erroHttp } from './apoio';
@@ -32,6 +33,12 @@ vi.mock('../../carteira/usePodeAjustarRenovacoes', async () => {
   const { computed } = await import('vue');
   return { usePodeAjustarRenovacoes: () => computed(() => assento.ajusta) };
 });
+// O sinal de que o funil escolhido parou de servir tem um leitor só
+// (carteira/funilDasRenovacoes.js): cada estado é testado trocando o que ele lê.
+vi.mock('../../carteira/funilDasRenovacoes', async importOriginal => ({
+  ...(await importOriginal()),
+  funilParou: vi.fn(() => ''),
+}));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, params: {} });
@@ -115,6 +122,8 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   conta.carteira_seguros = true;
   assento.ajusta = true;
+  funilParou.mockReset();
+  funilParou.mockReturnValue('');
   SegurosAPI.renovacoes.mockReset();
   SegurosAPI.salvarRenovacoes.mockReset();
   roteador.push.mockClear();
@@ -354,6 +363,117 @@ describe('o funil e a etapa', () => {
     await clicar(w, daCarteira('abrir-crm'));
 
     expect(roteador.push).toHaveBeenCalledWith({ name: 'crm_kanban_index' });
+  });
+});
+
+// O funil que a conta escolheu foi arquivado, ou o funil (ou a etapa) foi
+// apagado: as renovações param de virar card. A tela diz isso no topo do cartão
+// do funil e pede outro.
+describe.each([
+  {
+    estado: FUNIL_PAROU.ARQUIVADO,
+    // O servidor ainda guarda a escolha, e o funil pode até continuar na lista.
+    resposta: { ajustes: ESCOLHAS },
+    aviso:
+      'O funil das renovações foi arquivado. Escolha outro para as renovações voltarem a aparecer.',
+    paraQuemLe:
+      'O funil das renovações foi arquivado. Até alguém escolher outro, nenhuma renovação aparece.',
+  },
+  {
+    estado: FUNIL_PAROU.APAGADO,
+    resposta: { ajustes: SEM_ESCOLHA },
+    aviso:
+      'O funil ou a etapa das renovações não existe mais. Escolha outro funil para as renovações voltarem a aparecer.',
+    paraQuemLe:
+      'O funil ou a etapa das renovações não existe mais. Até alguém escolher outro funil, nenhuma renovação aparece.',
+  },
+])(
+  'o funil das renovações parou de servir: $estado',
+  ({ estado, resposta, aviso, paraQuemLe }) => {
+    const abrirParado = async (mudancas = {}) => {
+      funilParou.mockReturnValue(estado);
+      servidorResponde({ ...resposta, ...mudancas });
+      return abrir();
+    };
+    const avisoDoFunil = w => w.find(daCarteira('funil-parou'));
+
+    it('o aviso fica no topo do cartão do funil, logo abaixo do título', async () => {
+      const w = await abrirParado();
+
+      const cartao = w.get(daCarteira('ajuste-onde'));
+      expect(avisoDoFunil(w).text()).toBe(aviso);
+      expect(avisoDoFunil(w).attributes('role')).toBe('alert');
+      expect(avisoDoFunil(w).attributes('data-estado')).toBe(estado);
+      expect(cartao.element.children[1]).toBe(avisoDoFunil(w).element);
+      expect(w.text()).toContain(
+        'Escolha em que funil as renovações ficam. Até lá, nenhuma renovação aparece.'
+      );
+    });
+
+    it('o leitor recebe a resposta do servidor inteira', async () => {
+      await abrirParado();
+
+      expect(funilParou).toHaveBeenCalledWith(
+        expect.objectContaining({ funis: FUNIS, vencimentos: [3, 20, 61] })
+      );
+    });
+
+    it('o funil volta a ser uma escolha em aberto, sem botão desligado', async () => {
+      const w = await abrirParado();
+
+      expect(escolhas(w)).toHaveLength(1);
+      expect(escolhas(w)[0].props('modelValue')).toBeNull();
+      expect(w.findAll('button[disabled]')).toHaveLength(0);
+      expect(w.find(daCarteira('ajuste-dias')).exists()).toBe(true);
+      expect(w.find(daCarteira('salvar-ajustes')).exists()).toBe(true);
+    });
+
+    it('Salvar sem escolher outro funil pede o funil e não vai ao servidor', async () => {
+      const w = await abrirParado();
+
+      await salvar(w);
+
+      expect(alerta(w)).toBe('Escolha o funil em que as renovações ficam.');
+      expect(escolhas(w)[0].props('invalid')).toBe(true);
+      expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+      expect(avisoDoFunil(w).exists()).toBe(true);
+    });
+
+    it('escolher outro funil e salvar guarda a escolha e tira o aviso', async () => {
+      servidorGuarda();
+      const w = await abrirParado();
+
+      await escolher(escolhas(w)[0], 2);
+      await salvar(w);
+
+      expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledWith({
+        funilId: 2,
+        etapaId: 21,
+        dias: 60,
+        mensagens: 'mandar',
+      });
+      expect(salvos(w)).toBe('Ajustes salvos.');
+      expect(avisoDoFunil(w).exists()).toBe(false);
+    });
+
+    it('quem só lê fica sabendo que as renovações pararam', async () => {
+      const w = await abrirParado({ semPermissao: true });
+
+      expect(w.get(daCarteira('escolha-de-hoje')).text()).toBe(paraQuemLe);
+      expect(w.find(daCarteira('salvar-ajustes')).exists()).toBe(false);
+      expect(w.findAll('button[disabled]')).toHaveLength(0);
+    });
+  }
+);
+
+describe('o funil das renovações que serve', () => {
+  it('sem o sinal do servidor, o cartão do funil não tem aviso', async () => {
+    servidorResponde();
+
+    const w = await abrir();
+
+    expect(w.find(daCarteira('funil-parou')).exists()).toBe(false);
+    expect(escolhas(w)[0].props('modelValue')).toBe(1);
   });
 });
 

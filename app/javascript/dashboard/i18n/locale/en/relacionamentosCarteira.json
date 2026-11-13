@@ -334,6 +334,12 @@
       "CONVITE": {
         "FRASE": "Choose the pipeline where renewals show up.",
         "APOIO": "While nobody chooses, policies close to the end do not become a renewal card.",
+        "PAROU": {
+          "ARQUIVADO": "The renewals pipeline was archived.",
+          "APAGADO": "The renewals pipeline or stage no longer exists."
+        },
+        "APOIO_PAROU": "While nobody chooses another pipeline, policies close to the end do not become a renewal card.",
+        "BOTAO_PAROU": "Choose another pipeline",
         "BOTAO": "Choose the pipeline"
       }
     },
@@ -379,6 +385,14 @@
         "MANDAR": "Send",
         "NAO_MANDAR": "Do not send",
         "APOIO": "This choice applies to every policy in the account."
+      },
+      "PAROU": {
+        "ARQUIVADO": "The renewals pipeline was archived. Choose another one so renewals show up again.",
+        "APAGADO": "The renewals pipeline or stage no longer exists. Choose another pipeline so renewals show up again."
+      },
+      "HOJE_PAROU": {
+        "ARQUIVADO": "The renewals pipeline was archived. Until someone chooses another one, no renewal shows up.",
+        "APAGADO": "The renewals pipeline or stage no longer exists. Until someone chooses another pipeline, no renewal shows up."
       }
     },
     "RESULTADOS": {

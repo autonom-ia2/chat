@@ -3,9 +3,12 @@
 // (fonte/renovacoesFonte.js); quem desenha é a página. `salvar` devolve `true`
 // se guardou; quando o servidor recusa com um código (carteira/recusas.js), ele
 // fica em `recusa`, para a página escolher a frase.
+// `funilParou` ('' | ARQUIVADO | APAGADO, carteira/funilDasRenovacoes.js): o
+// funil guardado deixou de servir. O rascunho começa sem funil, e guardar outro
+// tira o aviso.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
-import { ajustesMudaram } from './ajustesDaRenovacao';
+import { ajustesMudaram, semOFunil } from './ajustesDaRenovacao';
 import { codigoDaRecusa } from './recusas';
 
 export const useAjustesDaRenovacao = fonte => {
@@ -22,7 +25,7 @@ export const useAjustesDaRenovacao = fonte => {
     if (!aindaVale()) return false;
     conta.value = resto;
     salvos.value = ajustes;
-    rascunho.value = { ...ajustes };
+    rascunho.value = resto.funilParou ? semOFunil(ajustes) : { ...ajustes };
     return true;
   };
 
@@ -32,6 +35,8 @@ export const useAjustesDaRenovacao = fonte => {
     try {
       salvos.value = await fonte.salvar(rascunho.value);
       rascunho.value = { ...salvos.value };
+      // Só se guarda com um funil que serve: o que tinha parado ficou para trás.
+      conta.value = { ...conta.value, funilParou: '' };
       return true;
     } catch (falha) {
       recusa.value = codigoDaRecusa(falha);
@@ -49,6 +54,7 @@ export const useAjustesDaRenovacao = fonte => {
     recusa,
     // A conta já tinha escolhido onde ficam as renovações antes de abrir a tela.
     jaEscolheu: computed(() => Boolean(salvos.value?.funilId)),
+    funilParou: computed(() => conta.value?.funilParou || ''),
     mudou: computed(() => ajustesMudaram(salvos.value, rascunho.value)),
     carregar: () => carregar(buscar),
     salvar,

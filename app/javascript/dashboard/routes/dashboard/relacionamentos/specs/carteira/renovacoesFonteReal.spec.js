@@ -82,7 +82,8 @@ describe('ajustar renovações', () => {
     const lido = await dasRenovacoes().ajustes();
 
     expect(SegurosAPI.renovacoes).toHaveBeenCalledWith();
-    expect(lido).toEqual(DO_SERVIDOR);
+    // `funilParou` é da fonte: sem sinal do servidor, o funil serve.
+    expect(lido).toEqual({ ...DO_SERVIDOR, funilParou: '' });
   });
 
   it('das escolhas, a tela fica só com as quatro que ela mostra', async () => {
