@@ -22,11 +22,16 @@ const pode = vi.hoisted(() => ({
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
-// têm teste próprio (specs/carteira).
-vi.mock('../../carteira/useContaDeSeguros', () => ({
-  useContaDeSeguros: () => ({ value: false }),
-}));
+// A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
+// têm teste próprio em specs/carteira). Quem diz isso é a conta que o servidor
+// manda, pelo caminho de verdade: nada aqui troca `useContaDeSeguros`. A peça
+// da carteira só é baixada quando aparece na tela: aqui não pode ser, e o
+// `afterEach` confere.
+const carteira = vi.hoisted(() => ({ pecasBaixadas: [] }));
+vi.mock('../../components/carteira/ListaDeSeguros.vue', () => {
+  carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'ListaDeSeguros'];
+  return { default: { render: () => null } };
+});
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));
@@ -36,6 +41,7 @@ vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     isCloudFeatureEnabled: flag => flagsLigadas.has(flag),
+    currentAccount: { value: { carteira_seguros: false } },
   }),
 }));
 vi.mock('../../lista/usePermissoesDaLista', () => ({
@@ -180,6 +186,7 @@ afterEach(() => {
   aberta = null;
   delete window.globalConfig;
   vi.resetAllMocks();
+  expect(carteira.pecasBaixadas).toEqual([]);
 });
 
 describe('com os dados do servidor', () => {
@@ -233,6 +240,25 @@ describe('aba Empresas e a chave `companies`', () => {
         comFiltros
       )
     ).toBe(false);
+  });
+});
+
+describe('conta sem a carteira de seguros', () => {
+  it('não ganha a aba Seguros', async () => {
+    flagsLigadas.add(FEATURE_FLAGS.COMPANIES);
+    const w = await abrir();
+    expect(w.findAll('[role="tab"]').map(aba => aba.text())).toEqual([
+      'Pessoas',
+      'Empresas',
+    ]);
+    expect(w.find(marca('aba-seguros')).exists()).toBe(false);
+  });
+
+  it('`?aba=seguros` na URL abre Pessoas, sem nada da carteira', async () => {
+    const w = await abrir({ query: { aba: 'seguros' } });
+    expect(w.get(marca('linha')).text()).toContain('Ana Albuquerino');
+    expect(w.find('[data-carteira]').exists()).toBe(false);
+    expect(RelacionamentosAPI.pessoas).toHaveBeenCalledTimes(1);
   });
 });
 

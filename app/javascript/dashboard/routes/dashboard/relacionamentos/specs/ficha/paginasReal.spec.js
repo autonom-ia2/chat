@@ -15,10 +15,20 @@ const contexto = vi.hoisted(() => ({ params: {}, empurrar: vi.fn() }));
 const pode = vi.hoisted(() => ({ editar: true, criarCards: true }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
-// têm teste próprio (specs/carteira).
-vi.mock('../../carteira/useContaDeSeguros', () => ({
-  useContaDeSeguros: () => ({ value: false }),
+// A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
+// têm teste próprio em specs/carteira). Quem diz isso é a conta que o servidor
+// manda, pelo caminho de verdade: nada aqui troca `useContaDeSeguros`. A peça
+// da carteira só é baixada quando aparece na tela: aqui não pode ser, e o
+// `afterEach` confere.
+const carteira = vi.hoisted(() => ({ pecasBaixadas: [] }));
+vi.mock('../../components/carteira/SegurosDaFicha.vue', () => {
+  carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'SegurosDaFicha'];
+  return { default: { render: () => null } };
+});
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    currentAccount: { value: { carteira_seguros: false } },
+  }),
 }));
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('../lista/dialogoFalso')).DialogoFalso,
@@ -192,6 +202,7 @@ afterEach(() => {
   aberta?.unmount();
   aberta = null;
   vi.resetAllMocks();
+  expect(carteira.pecasBaixadas).toEqual([]);
 });
 
 describe('ficha da pessoa com os dados do servidor', () => {

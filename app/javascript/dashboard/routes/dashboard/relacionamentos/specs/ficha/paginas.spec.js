@@ -14,8 +14,12 @@ const ID_EMPRESA_COM_GENTE = 2;
 const ID_EMPRESA_SEM_GENTE = 17;
 const ID_QUE_NAO_EXISTE = 9999;
 
+// A conta cheia destes testes é a de outro segmento (`?demo=fora-do-segmento`):
+// para a ficha é a mesma conta cheia de `?demo=cheio`, sem a carteira de
+// seguros.
+const CHEIA = vi.hoisted(() => 'fora-do-segmento');
 const contexto = vi.hoisted(() => ({
-  demo: 'cheio',
+  demo: CHEIA,
   params: {},
   empurrar: vi.fn(),
 }));
@@ -32,10 +36,20 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: contexto.empurrar }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
-// têm teste próprio (specs/carteira).
-vi.mock('../../carteira/useContaDeSeguros', () => ({
-  useContaDeSeguros: () => ({ value: false }),
+// A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
+// têm teste próprio em specs/carteira). Quem diz isso é a conta, pelo caminho
+// de verdade: o estado da demonstração (`CHEIA`) e, fora dela, o que o servidor
+// manda. Nada aqui troca `useContaDeSeguros`. A peça da carteira só é baixada
+// quando aparece na tela: aqui não pode ser, e o `afterEach` confere.
+const carteira = vi.hoisted(() => ({ pecasBaixadas: [] }));
+vi.mock('../../components/carteira/SegurosDaFicha.vue', () => {
+  carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'SegurosDaFicha'];
+  return { default: { render: () => null } };
+});
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    currentAccount: { value: { carteira_seguros: false } },
+  }),
 }));
 vi.mock('../../fonte/modoDemo', async importOriginal => ({
   ...(await importOriginal()),
@@ -100,7 +114,7 @@ const terminouDeCarregar = async w => {
   await flushPromises();
 };
 
-const abrirPessoa = async (id, demo = 'cheio') => {
+const abrirPessoa = async (id, demo = CHEIA) => {
   contexto.demo = demo;
   contexto.params = { contactId: String(id) };
   const w = mount(FichaDaPessoaPage, {
@@ -110,7 +124,7 @@ const abrirPessoa = async (id, demo = 'cheio') => {
   await terminouDeCarregar(w);
   return w;
 };
-const abrirEmpresa = async (id, demo = 'cheio') => {
+const abrirEmpresa = async (id, demo = CHEIA) => {
   contexto.demo = demo;
   contexto.params = { companyId: String(id) };
   const w = mount(FichaDaEmpresaPage, {
@@ -127,6 +141,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   document.body.innerHTML = '';
+  expect(carteira.pecasBaixadas).toEqual([]);
 });
 
 describe('FichaDaPessoaPage', () => {
@@ -139,7 +154,7 @@ describe('FichaDaPessoaPage', () => {
   });
 
   it('o esqueleto tem contraste, formato da ficha e "Carregando…" visível sem duplicar o anúncio', () => {
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };
     const w = mount(FichaDaPessoaPage, { global: { stubs } });
     const esqueleto = marca(w, 'carregando');
@@ -164,7 +179,7 @@ describe('FichaDaPessoaPage', () => {
   });
 
   it('mostra o esqueleto enquanto carrega', () => {
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     contexto.params = { contactId: String(ID_CLIENTE_COMPLETO) };
     const w = mount(FichaDaPessoaPage, { global: { stubs } });
     expect(marca(w, 'carregando').attributes('aria-busy')).toBe('true');
@@ -248,7 +263,7 @@ describe('FichaDaPessoaPage', () => {
   });
 
   it('sair da ficha (parâmetro some) não dispara carga nem mostra "não achei"', async () => {
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     contexto.params = reactive({ contactId: String(ID_CLIENTE_COMPLETO) });
     const w2 = mount(FichaDaPessoaPage, {
       attachTo: document.body,
@@ -288,7 +303,7 @@ describe('FichaDaPessoaPage', () => {
   });
 
   it('a região viva existe desde o início e recebe o resultado depois', async () => {
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     contexto.params = { contactId: String(ID_RECUSOU_MANUAL) };
     const w = mount(FichaDaPessoaPage, {
       attachTo: document.body,
@@ -456,7 +471,7 @@ describe('FichaDaPessoaPage', () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO, null);
     expect(marca(w, 'erro').exists()).toBe(true);
     expect(marca(w, 'ficha-pessoa').exists()).toBe(false);
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     await marca(w, 'erro').get('button').trigger('click');
     await flushPromises();
     expect(marca(w, 'ficha-pessoa').exists()).toBe(false);
@@ -491,7 +506,7 @@ describe('FichaDaEmpresaPage: largura', () => {
 
 describe('FichaDaEmpresaPage', () => {
   it('mostra o esqueleto enquanto carrega', () => {
-    contexto.demo = 'cheio';
+    contexto.demo = CHEIA;
     contexto.params = { companyId: String(ID_EMPRESA_COM_GENTE) };
     const w = mount(FichaDaEmpresaPage, { global: { stubs } });
     expect(marca(w, 'carregando').exists()).toBe(true);

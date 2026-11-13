@@ -2,18 +2,23 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
-import { usarDemo } from '../../fonte/modoDemo';
+import { DEMO_FORA_DO_SEGMENTO, usarDemo } from '../../fonte/modoDemo';
 import MarcarTodas from '../../components/lista/MarcarTodas.vue';
 import ListaPage from '../../pages/ListaPage.vue';
 
 // A lista de Relacionamentos inteira (#2894), com a base fictícia e o texto de
 // verdade em pt_BR: cheio, vazio, carregando, erro, ações e navegação.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-// A conta destes testes não tem a carteira de seguros: a aba e o bloco Seguros
-// têm teste próprio (specs/carteira).
-vi.mock('../../carteira/useContaDeSeguros', () => ({
-  useContaDeSeguros: () => ({ value: false }),
-}));
+// A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
+// têm teste próprio em specs/carteira). Quem diz isso é a conta, pelo caminho
+// de verdade: o estado da demonstração (`CHEIA`) e, fora dela, o que o servidor
+// manda. Nada aqui troca `useContaDeSeguros`. A peça da carteira só é baixada
+// quando aparece na tela: aqui não pode ser, e o `afterEach` confere.
+const carteira = vi.hoisted(() => ({ pecasBaixadas: [] }));
+vi.mock('../../components/carteira/ListaDeSeguros.vue', () => {
+  carteira.pecasBaixadas = [...carteira.pecasBaixadas, 'ListaDeSeguros'];
+  return { default: { render: () => null } };
+});
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./dialogoFalso')).DialogoFalso,
 }));
@@ -25,9 +30,12 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
   usarDemo: vi.fn(),
 }));
 // A conta dos testes não tem a chave `companies`: a demonstração inventa as
-// empresas e mostra a aba mesmo assim.
+// empresas e mostra a aba mesmo assim. Também não tem a carteira de seguros.
 vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+  useAccount: () => ({
+    isCloudFeatureEnabled: () => false,
+    currentAccount: { value: { carteira_seguros: false } },
+  }),
 }));
 // A pessoa dos testes não pode criar card, etiquetar nem apagar: a demonstração
 // mostra as três ações mesmo assim (as permissões de verdade estão em
@@ -122,7 +130,12 @@ const assentar = async () => {
   await flushPromises();
 };
 
-const abrir = async ({ demo = 'cheio', query = {} } = {}) => {
+// A conta cheia destes testes é a de outro segmento (`?demo=fora-do-segmento`):
+// para a lista é a mesma conta cheia de `?demo=cheio`, sem a carteira de
+// seguros.
+const CHEIA = DEMO_FORA_DO_SEGMENTO;
+
+const abrir = async ({ demo = CHEIA, query = {} } = {}) => {
   usarDemo.mockReturnValue(demo);
   rota.name = 'relationships_home';
   rota.query = query;
@@ -166,6 +179,7 @@ afterEach(() => {
   trocas.listar = null;
   trocas.listarTodos = null;
   vi.clearAllMocks();
+  expect(carteira.pecasBaixadas).toEqual([]);
 });
 
 const NINGUEM = { itens: [], total: 0, temMais: false };
@@ -226,7 +240,7 @@ describe('ListaPage: largura e respiro', () => {
 
 describe('ListaPage: carregando', () => {
   it('mostra o esqueleto enquanto a base não chegou e depois some', async () => {
-    usarDemo.mockReturnValue('cheio');
+    usarDemo.mockReturnValue(CHEIA);
     rota.query = {};
     aberta = mount(ListaPage, COMO_NO_NAVEGADOR);
     expect(aberta.find(marca('carregando')).exists()).toBe(true);
