@@ -9,10 +9,14 @@ import FalhaDaParte from './FalhaDaParte.vue';
 // #2894 — as pessoas da empresa: cada linha leva à ficha da pessoa. Vazio é uma
 // frase. `falhou`: a leitura não veio. `total` é quantas pessoas a empresa tem:
 // a ficha traz as primeiras, e quando há mais a lista diz quantas está mostrando.
+// #2970 — o que ainda não é de verdade não aparece: o ícone de conversar daqui
+// só simula, então só existe com `podeConversar` (a página liga na
+// demonstração). Sem ele a linha não guarda o espaço do ícone no celular.
 defineProps({
   pessoas: { type: Array, required: true },
   falhou: { type: Boolean, default: false },
   total: { type: Number, default: 0 },
+  podeConversar: { type: Boolean, default: false },
 });
 const emit = defineEmits(['abrir', 'conversar', 'tentar']);
 
@@ -45,7 +49,8 @@ const contato = pessoa =>
         <button
           type="button"
           data-relacionamentos="pessoa-da-empresa"
-          class="grid items-center flex-1 min-w-0 grid-cols-[auto_1fr] px-2 py-2 pe-14 md:pe-2 md:grid-cols-[auto_1fr_auto] gap-x-3 gap-y-0.5 text-start rounded-xl min-h-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="grid items-center flex-1 min-w-0 grid-cols-[auto_1fr] px-2 py-2 md:grid-cols-[auto_1fr_auto] gap-x-3 gap-y-0.5 text-start rounded-xl min-h-11 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          :class="{ 'pe-14 md:pe-2': podeConversar }"
           @click="emit('abrir', pessoa.id)"
         >
           <Avatar
@@ -88,6 +93,7 @@ const contato = pessoa =>
           </span>
         </button>
         <button
+          v-if="podeConversar"
           type="button"
           data-relacionamentos="conversar-com-pessoa"
           :aria-label="

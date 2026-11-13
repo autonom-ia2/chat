@@ -2327,7 +2327,7 @@
       "porques: Ver a lista de pessoas e empresas (Relacionamentos novo)"
      ],
      "revisar": false,
-     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; a flag relacionamentos_novo escolhe a lista nova. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md."
+     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; a flag relacionamentos_novo escolhe a lista nova. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md. Desde a #2970, o Conversar da linha e o Mandar mensagem da barra ficam escondidos até serem de verdade."
     },
     {
      "id": "09.15",
@@ -2349,12 +2349,12 @@
       "porques: Abrir a ficha da pessoa (Relacionamentos novo)"
      ],
      "revisar": false,
-     "nota": "Issue #2894. A rota da ficha pede o id da pessoa, então o botão leva à lista, de onde se abre a ficha. Conversar, Novo card, Lembrete, Ver todas, Juntar, Bloquear e Apagar ainda só mostram aviso nesta entrega: rever quando forem ligados."
+     "nota": "Issue #2894. A rota da ficha pede o id da pessoa, então o botão leva à lista, de onde se abre a ficha. Conversar abre a conversa mais recente. Desde a #2970, o que ainda só avisa fica escondido até ser de verdade: Conversar para quem nunca conversou, Lembrete, Ver todas, Juntar, Bloquear e Apagar."
     },
     {
      "id": "09.16",
      "titulo": "A ficha da empresa: as pessoas, as conversas e os cards dela",
-     "para_que_serve": "Abrir a ficha de uma empresa, ver as pessoas, as conversas e os cards dela, mandar mensagem para o grupo e alterar nome, CNPJ e site.",
+     "para_que_serve": "Abrir a ficha de uma empresa, ver as pessoas, as conversas e os cards dela e alterar nome, CNPJ e site.",
      "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [],
@@ -2371,7 +2371,7 @@
       "porques: Abrir a ficha da empresa (Relacionamentos novo)"
      ],
      "revisar": false,
-     "nota": "Issue #2894. A rota da ficha pede o id da empresa, então o botão leva à lista. O Continuar de Mandar mensagem e o Ver todas ainda só mostram aviso nesta entrega: rever quando forem ligados."
+     "nota": "Issue #2894. A rota da ficha pede o id da empresa, então o botão leva à lista. Desde a #2970, o que ainda só avisa fica escondido até ser de verdade: Mandar mensagem, o ícone de conversar de cada pessoa e Ver todas."
     },
     {
      "id": "09.17",
@@ -3386,6 +3386,28 @@
      ],
      "revisar": false,
      "nota": "#2414 F5 — editor da Automação livre, atrás da flag automacao_editor."
+    },
+    {
+     "id": "12.07",
+     "titulo": "Responder um pedido de aprovação de uma automação",
+     "para_que_serve": "Aprovar ou recusar o que uma automação pediu, pelo sino e pela tela Pedidos de aprovação.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "automacoes_aprovacoes"
+     ],
+     "me_leve_ate_la": {
+      "rota": "automacoes_aprovacoes",
+      "destaque": null
+     },
+     "requer": "automacao_passos_novos",
+     "prints": [],
+     "fontes": [
+      "porques: Responder um pedido de aprovacao de uma automacao"
+     ],
+     "revisar": false,
+     "nota": "#2931 — o lado de quem aprova do passo Pedir aprovação, atrás da flag automacao_passos_novos."
     }
    ]
   },
