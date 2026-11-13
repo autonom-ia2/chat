@@ -105,11 +105,18 @@ class ContactImports::Trazer::MesmaPessoa
 
   def completar(primeira, linha)
     copiar(primeira, linha, DO_NOME) if primeira[:normalized_name].blank?
-    copiar(primeira, linha, DO_TELEFONE) if primeira[:normalized_phone].blank?
+    copiar(primeira, linha, DO_TELEFONE) if completa_o_telefone?(primeira, linha)
     copiar(primeira, linha, DO_EMAIL) if primeira[:email].blank?
     primeira[:company_name] = primeira[:company_name].presence || linha[:company_name]
     primeira[:extra_values] = completado(primeira[:extra_values].to_h, linha[:extra_values].to_h)
     completar_celulas(primeira, linha)
+  end
+
+  # O telefone da outra linha completa a primeira que não tem. Sem telefone nas duas, a primeira fica com a máscara do
+  # número que ela tinha escrito, e só ganha a da outra se não tinha nenhum: é pela máscara que se sabe que a pessoa
+  # entra sem o telefone que estava na planilha (ContactImports::Trazer::QuemEntra#sem_telefone).
+  def completa_o_telefone?(primeira, linha)
+    primeira[:normalized_phone].blank? && (linha[:normalized_phone].present? || primeira[:raw_phone_masked].blank?)
   end
 
   # Só a leitura de "Trazer minha lista" traz as células; a célula vazia da primeira ganha a da outra.

@@ -5,12 +5,13 @@
 # - Enquanto a planilha é lida em segundo plano: só `lendo`, sem abrir arquivo nenhum.
 # - A leitura falhou: `falhou` com o motivo em palavras da tela (planilha vazia, sem contato, ou não deu para ler).
 # - Pronta: as colunas e para onde vão, o resumo, os exemplos e as linhas que precisam da pessoa (uma página por vez).
-#   O resumo é o da leitura e não muda com o que a pessoa conserta, menos `entram`: quantas pessoas entram se ela mandar
-#   trazer agora, a mesma conta do "Trazer" (ContactImports::Trazer::QuemEntra), e `clientes`: quantas dessas entram
-#   como cliente com o que ela respondeu até agora (ContactImports::Trazer::Cliente). `juntadas` são as linhas que eram a
-#   mesma pessoa de outra linha e viraram uma só (não entram no total). `semTelefone` são as pessoas que entram sem o
-#   telefone que estava escrito na planilha (o número não deu para ler e a linha entra pelo e-mail): a tela avisa, sem
-#   travar. `perguntas` são as que a tela faz e `respostas`
+#   O resumo é o da leitura e não muda com o que a pessoa conserta, menos as três contas de quem entra, que mudam a
+#   cada conserto (ContactImports::Trazer::QuemEntra): `entram`, quantas pessoas entram se ela mandar trazer agora, a
+#   mesma conta do "Trazer"; `clientes`, quantas dessas entram como cliente com o que ela respondeu até agora
+#   (ContactImports::Trazer::Cliente); e `semTelefone`, quantas dessas entram sem o telefone que estava escrito na
+#   planilha (o número não deu para ler e a linha entra pelo e-mail): a tela avisa, sem travar. `juntadas` são as
+#   linhas que eram a mesma pessoa de outra linha e viraram uma só (não entram no total). `perguntas` são as que a tela
+#   faz e `respostas`
 #   o que a pessoa já respondeu (Relacionamentos::Trazer::Perguntas). `tem_empresa` diz se o destino "telefone da
 #   empresa" pode ser oferecido (Relacionamentos::Trazer::Colunas#tem_empresa?).
 # - `aviso` só existe quando há o que avisar: `mudanca_desfeita` depois que a mudança da pessoa fez a leitura falhar e
@@ -68,10 +69,9 @@ class Relacionamentos::Trazer::Leitura
   end
 
   def resumo(consertos)
-    da_leitura = @importacao.validation_summary.to_h
-    ja_existiam = da_leitura['existing_contacts'].to_i
+    ja_existiam = @importacao.validation_summary.to_h['existing_contacts'].to_i
     { total: @importacao.total_rows, novas: @importacao.valid_rows - ja_existiam, completadas: ja_existiam, comProblema: @importacao.invalid_rows,
-      juntadas: da_leitura['mesma_pessoa'].to_i, semTelefone: da_leitura['sem_telefone'].to_i }
+      juntadas: @importacao.validation_summary.to_h['mesma_pessoa'].to_i }
       .merge(ContactImports::Trazer::QuemEntra.new(@importacao, consertos).contas)
   end
 

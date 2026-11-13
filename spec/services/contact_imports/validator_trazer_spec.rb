@@ -129,7 +129,6 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(campaign_import.schema_resolution['columns'].pluck('header')).to eq(%w[Nome DDD Celular Idade])
       expect(campaign_import.extra_columns).to eq(%w[DDD Idade])
       expect(campaign_import.validation_summary).not_to have_key('ddd_juntado')
-      expect(campaign_import.validation_summary).to include('sem_telefone' => 0)
       expect(CampaignImports::NormalizedRows.new(campaign_import).perform.pluck(:phone_number)).to eq(%w[+5521987650002])
       expect(campaign_import.campaign_import_rows.find_by!(row_number: 2).error_messages).to eq(['invalid_brazilian_mobile_number'])
       expect(Relacionamentos::Trazer::Leitura.new(campaign_import).call[:problemas].sole).to include(linha: 2, tipo: 'telefone', estado: 'aberto')
@@ -143,9 +142,10 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(Relacionamentos::Trazer::Leitura.new(campaign_import).call).to eq(id: campaign_import.id, situacao: 'falhou', erro: 'sem_contato')
     end
 
-    # Com e-mail bom, a linha entra só com o e-mail (regra da leitura de planilhas, que não muda). A leitura conta
-    # quantas pessoas entram assim, para a tela avisar: só quem tinha alguma coisa escrita na coluna do telefone.
-    it 'a linha com e-mail bom e número sem DDD entra só com o e-mail, e a leitura conta quantas são' do
+    # Com e-mail bom, a linha entra só com o e-mail (regra da leitura de planilhas, que não muda). Quem entra assim é
+    # contado para a tela avisar (ContactImports::Trazer::QuemEntra): só quem tinha um número escrito na coluna do
+    # telefone. A conta é feita sobre as linhas gravadas, a cada pedido: a leitura não guarda esse número.
+    it 'a linha com e-mail bom e número sem DDD entra só com o e-mail, e a tela recebe quantas são' do
       campaign_import = lida(<<~CSV)
         Nome,DDD,Celular,Email
         Ana,11,98765-0001,ana@exemplo.com.br
@@ -157,8 +157,9 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(campaign_import).to have_attributes(status: 'ready_to_confirm', valid_rows: 4, invalid_rows: 0)
       expect(CampaignImports::NormalizedRows.new(campaign_import).perform.pluck(:phone_number)).to eq([nil, nil, '+5511987650003', nil])
       # A Ana (sem DDD) e o Davi (telefone fixo). A Bia não tinha telefone na planilha: nada se perde.
-      expect(campaign_import.validation_summary).to include('sem_telefone' => 2)
+      expect(ContactImports::Trazer::QuemEntra.new(campaign_import, {}).sem_telefone).to eq(2)
       expect(Relacionamentos::Trazer::Leitura.new(campaign_import).call[:resumo]).to include(semTelefone: 2, entram: 4, comProblema: 0)
+      expect(campaign_import.validation_summary).not_to have_key('sem_telefone')
       guardado = [campaign_import.options, campaign_import.validation_summary]
       expect(guardado.to_json).not_to include('98765-0001', '3333-0004')
     end
@@ -170,7 +171,7 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(account.contacts.sole).to have_attributes(name: 'Ana', phone_number: nil, email: 'ana@exemplo.com.br')
 
       corrigida = lida("Nome,Celular,Email\nAna,(11) 98765-0001,ana@exemplo.com.br\n")
-      expect(corrigida.validation_summary).to include('sem_telefone' => 0)
+      expect(Relacionamentos::Trazer::Leitura.new(corrigida).call[:resumo]).to include(semTelefone: 0, entram: 1)
       import_contacts!(corrigida)
 
       expect(account.contacts.sole).to have_attributes(name: 'Ana', phone_number: '+5511987650001', email: 'ana@exemplo.com.br')

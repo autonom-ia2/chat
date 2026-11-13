@@ -313,14 +313,22 @@ const semOAviso = leitura =>
 // vale mas a linha ainda tem outro problema, volta esse outro problema (outro
 // `tipo`, `estado` aberto): o cartão da linha passa a ser o dele. `entram` é
 // quantas pessoas entram agora, na conta do servidor; `clientes`, quantas
-// delas entram como cliente (quando ele não manda, fica o número que a leitura
-// tinha).
-export const leituraComProblema = (leitura, recebido, entram, clientes) => ({
+// delas entram como cliente; `semTelefone`, quantas delas entram sem o
+// telefone que estava escrito na planilha (quando ele não manda um dos dois,
+// fica o número que a leitura tinha).
+export const leituraComProblema = (
+  leitura,
+  recebido,
+  entram,
+  clientes,
+  semTelefone
+) => ({
   ...semOAviso(leitura),
   resumo: {
     ...leitura.resumo,
     entram,
     ...(Number.isInteger(clientes) ? { clientes } : {}),
+    ...(Number.isInteger(semTelefone) ? { semTelefone } : {}),
   },
   problemas: leitura.problemas.map(problema =>
     problema.linha === recebido.linha ? copia(recebido) : problema
