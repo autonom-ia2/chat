@@ -1,20 +1,28 @@
 # O que o leitor de apólice devolve (E6, #2899). O leitor não grava nada: quem recebe decide o que fazer (mostrar o que
 # mudou, pôr no Conferir, chamar Carteira::Guardar).
 #
-# - `lido?`: o arquivo é uma apólice e foi lido. `campos` traz TODOS os nomes de CAMPOS, cada um com o valor na forma
-#   do banco (texto, AAAA-MM-DD, centavos, só dígitos no documento e no telefone) ou nil. nil é "não achei": o leitor
-#   nunca chuta. `duvidas` são os nomes dos campos que ficaram sem valor.
-# - `a_confirmar`: dos campos que vieram COM valor, os que não podem ser gravados sem uma pessoa confirmar. Telefone e
-#   e-mail lidos de PDF nunca são dados por certos: a apólice traz o telefone do corretor ao lado do CPF do segurado,
-#   e nenhuma conferência de valor separa um do outro. Quem recebe o resultado (o Conferir, o "o que mudou") mostra
-#   esses campos para a pessoa confirmar antes de gravar na ficha. É separado de `duvidas`: dúvida é campo sem valor.
+# Cada um dos NOMES que o leitor procura sai em UM de três lugares, nunca em dois:
+# - `campos`: o que foi achado e pode ser gravado. Traz todos os nomes de CAMPOS, cada um com o valor na forma do banco
+#   (texto, AAAA-MM-DD, centavos, só dígitos no documento) ou nil;
+# - `valores_a_confirmar`: o que foi achado, mas só vale depois de uma pessoa confirmar. É um objeto à parte, que não
+#   se mistura com `campos` nem com `dados_da_apolice`: quem grava iterando `campos` não o alcança por engano. Quem
+#   recebe (o Conferir, o "o que mudou") mostra cada um para a pessoa confirmar e só então grava. `a_confirmar` são os
+#   nomes deles. Entram aqui:
+#   - `segurado_telefone` (só dígitos) e `segurado_email`, SEMPRE: a apólice traz o telefone do corretor ao lado do CPF
+#     do segurado, e nenhuma conferência de valor separa um do outro. Eles nunca estão em `campos`;
+#   - `valor_centavos`, quando o valor está escrito na página mas sem "R$" antes: pode ser outra medida. Com o "R$"
+#     ele sai em `campos`;
+# - `duvidas`: os nomes que ficaram sem valor nenhum ("não achei"). O leitor nunca chuta.
+#
+# - `lido?`: o arquivo é uma apólice e foi lido.
 # - `recusa`: por que não leu. `leitura_desligada` (a conta não tem a leitura liberada), `nao_e_apolice` (o arquivo não
 #   é uma apólice de seguro) ou `nao_deu_para_ler` (arquivo ilegível, sem texto, conta sem a IA configurada ou falha
 #   do modelo; o detalhe fica em `motivo`, que é para registro, não para a tela).
 # - `paginas_total` e `paginas_enviadas` (os números das páginas que foram ao modelo): só contagem, podem ir para log
 #   e para `totais`.
 #
-# `campos` é dado de cliente: não vai para log, argumento de job nem cache. O `inspect` não o mostra.
+# `campos` e `valores_a_confirmar` são dado de cliente: não vão para log, argumento de job nem cache. O `inspect` não
+# os mostra.
 class Carteira::Leitor::Resultado
   DESLIGADA = 'leitura_desligada'.freeze
   NAO_E_APOLICE = 'nao_e_apolice'.freeze
@@ -22,13 +30,17 @@ class Carteira::Leitor::Resultado
   RECUSAS = [DESLIGADA, NAO_E_APOLICE, NAO_DEU].freeze
   DA_APOLICE = %w[tipo ramo_original seguradora numero inicio_vigencia fim_vigencia valor_centavos bem].freeze
   # `corretora` é a corretora que aparece na apólice (serve ao seguro de outra corretora).
-  CAMPOS = (DA_APOLICE + %w[corretora segurado_nome segurado_documento segurado_telefone segurado_email]).freeze
-  A_CONFIRMAR = %w[segurado_telefone segurado_email].freeze
+  CAMPOS = (DA_APOLICE + %w[corretora segurado_nome segurado_documento]).freeze
+  CONTATO = %w[segurado_telefone segurado_email].freeze
+  # O que pode sair como "a confirmar": o contato, sempre; o valor, quando não vem depois de "R$".
+  A_CONFIRMAR = (CONTATO + %w[valor_centavos]).freeze
+  NOMES = (CAMPOS + CONTATO).freeze
+  SEM_ACHADOS = { campos: {}, a_confirmar: {} }.freeze
 
-  attr_reader :recusa, :motivo, :campos, :paginas_total, :paginas_enviadas
+  attr_reader :recusa, :motivo, :campos, :valores_a_confirmar, :paginas_total, :paginas_enviadas
 
-  def self.lido(campos:, paginas_total:, paginas_enviadas:)
-    new(campos: campos, paginas_total: paginas_total, paginas_enviadas: paginas_enviadas)
+  def self.lido(campos:, paginas_total:, paginas_enviadas:, a_confirmar: {})
+    new(achados: { campos: campos, a_confirmar: a_confirmar }, paginas_total: paginas_total, paginas_enviadas: paginas_enviadas)
   end
 
   def self.recusado(recusa, motivo: nil, paginas_total: nil, paginas_enviadas: [])
@@ -37,10 +49,12 @@ class Carteira::Leitor::Resultado
     new(recusa: recusa, motivo: motivo, paginas_total: paginas_total, paginas_enviadas: paginas_enviadas)
   end
 
-  def initialize(recusa: nil, motivo: nil, campos: {}, paginas_total: nil, paginas_enviadas: [])
+  # Use `lido` ou `recusado`. O que vem em `a_confirmar` nunca fica em `campos`, mesmo que quem chama mande nos dois.
+  def initialize(paginas_total:, paginas_enviadas:, recusa: nil, motivo: nil, achados: SEM_ACHADOS)
     @recusa = recusa
     @motivo = motivo
-    @campos = recusa ? {} : CAMPOS.index_with { |campo| campos[campo] }
+    @valores_a_confirmar = achados[:a_confirmar].slice(*A_CONFIRMAR).compact.freeze
+    @campos = recusa ? {} : CAMPOS.index_with { |campo| achados[:campos][campo] unless @valores_a_confirmar.key?(campo) }
     @paginas_total = paginas_total
     @paginas_enviadas = paginas_enviadas
   end
@@ -49,12 +63,14 @@ class Carteira::Leitor::Resultado
     recusa.nil?
   end
 
-  def duvidas
-    campos.select { |_campo, valor| valor.nil? }.keys
+  def a_confirmar
+    valores_a_confirmar.keys
   end
 
-  def a_confirmar
-    campos.slice(*A_CONFIRMAR).compact.keys
+  def duvidas
+    return [] unless lido?
+
+    NOMES.reject { |nome| campos[nome] || valores_a_confirmar.key?(nome) }
   end
 
   # Os dados da apólice como Carteira::Guardar recebe, com as chaves de comparação.

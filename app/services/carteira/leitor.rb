@@ -4,8 +4,10 @@
 #   resultado = Carteira::Leitor.new(account: account, ocr: true).ler(caminho, documento: '123.456.789-00')
 #   resultado.lido?      # => true
 #   resultado.campos     # => { 'seguradora' => '...', 'numero' => '...', 'fim_vigencia' => '2027-11-12', ... }
+#                        #    só o que pode ser gravado; telefone e e-mail nunca estão aqui
 #   resultado.duvidas    # => ['bem', 'corretora']           (os campos que ficaram em "não achei")
-#   resultado.a_confirmar # => ['segurado_telefone']         (vieram com valor, mas só valem depois de alguém confirmar)
+#   resultado.valores_a_confirmar # => { 'segurado_telefone' => '11999990001' }   (achados que só valem depois de
+#                                 #    alguém confirmar: telefone, e-mail e o valor sem "R$"; `a_confirmar` são os nomes)
 #   resultado.recusa     # => nil | 'leitura_desligada' | 'nao_e_apolice' | 'nao_deu_para_ler'
 #
 # Passos:
@@ -19,7 +21,8 @@
 #    campo, com "não achei" por campo (Carteira::Leitor::Campos). Cada valor é conferido contra o que está escrito,
 #    inteiro, numa das páginas enviadas (Carteira::Leitor::Ancora);
 # 5. telefone e e-mail só da página do CPF/CNPJ do segurado (Carteira::Leitor::ContatoDoSegurado), e sempre "a
-#    confirmar": quem recebe mostra para a pessoa confirmar antes de gravar na ficha.
+#    confirmar": saem em `valores_a_confirmar`, fora de `campos`, e quem recebe mostra para a pessoa confirmar antes de
+#    gravar na ficha. O valor do seguro escrito sem "R$" antes vai pelo mesmo caminho.
 #
 # Nunca levanta por causa do arquivo ou do modelo: arquivo que não existe, grande demais, com senha ou quebrado, PDF
 # sem texto, conta sem a IA configurada e falha do modelo viram `nao_deu_para_ler`, com o `motivo` para registro. Erro
@@ -70,7 +73,8 @@ class Carteira::Leitor
     return Resultado.recusado(Resultado::NAO_E_APOLICE, paginas_total: paginas.total, paginas_enviadas: enviadas) unless lido.e_apolice
 
     contato = ContatoDoSegurado.new(escolhidas, documento: lido.campos['segurado_documento'], numero: lido.campos['numero'])
-    Resultado.lido(campos: lido.campos.merge(contato.call(lido.resposta)), paginas_total: paginas.total, paginas_enviadas: enviadas)
+    Resultado.lido(campos: lido.campos, a_confirmar: lido.a_confirmar.merge(contato.call(lido.resposta)), paginas_total: paginas.total,
+                   paginas_enviadas: enviadas)
   end
 
   def nao_deu(motivo, paginas, enviadas: [])

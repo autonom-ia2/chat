@@ -169,10 +169,19 @@ RSpec.describe Carteira::Leitor::Paginas do
       end
     end
 
-    it 'erro que o leitor de PDF não previu também vira ilegível, só com a classe do erro' do
+    # Segunda revisão: a classe do erro vai para o registro, para um defeito nosso não se esconder atrás de "ilegível".
+    it 'erro que o leitor de PDF não previu também vira ilegível, e o registro leva só a classe do erro' do
       allow(PDF::Reader).to receive(:new).and_raise(NoMethodError, 'undefined method para o texto da apólice')
+      allow(Rails.logger).to receive(:warn)
 
       expect { abrir(longa) }.to raise_error(ilegivel, 'NoMethodError')
+      expect(Rails.logger).to have_received(:warn).once.with('[carteira][leitor] pdf_nao_abriu NoMethodError')
+    end
+
+    it 'o inspect da página não mostra o texto' do
+      pagina = described_class::Pagina.new(numero: 3, texto: 'Marina Exemplo de Souza')
+
+      expect([pagina.inspect, pagina.to_s]).to all(eq('#<Carteira::Leitor::Paginas::Pagina numero=3 caracteres=23>'))
     end
 
     it 'erro ao ler o texto de uma página deixa a página de fora e não levanta' do

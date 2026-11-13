@@ -15,12 +15,9 @@ RSpec.describe Carteira::Leitor::Tokens do
   end
 
   it 'blocos: o que está escrito junto, com a pontuação de dentro e sem a das pontas' do
-    expect(tokens.blocos).to include('ex-2026.001234', '123.456.789-00', '11', '99999-0001', 'e-mail', '1.234,56', '205,76', '80.000', '12/11/2026')
-    expect(tokens.blocos).not_to include('ex-2026.001234.', 'tel.', '(11)', 'r$')
-  end
-
-  it 'códigos: cada bloco só com letra e dígito' do
-    expect(tokens.codigos).to include('ex2026001234', '12345678900', '999990001')
+    expect(tokens.blocos).to include('ex-2026.001234', '123.456.789-00', '11', '99999-0001', 'e-mail', 'r$', '1.234,56', '205,76', '80.000',
+                                     '12/11/2026')
+    expect(tokens.blocos).not_to include('ex-2026.001234.', 'tel.', '(11)', 'r')
   end
 
   it 'números: os dígitos do bloco que só tem número, na ordem dos blocos, e nil no bloco que tem letra ou vírgula' do
@@ -36,6 +33,28 @@ RSpec.describe Carteira::Leitor::Tokens do
 
   it 'centavos: só o valor em dinheiro escrito com os centavos, por inteiro' do
     expect(tokens.centavos).to eq([123_456, 20_576])
+    expect(tokens.centavos_com_cifrao).to eq([123_456, 20_576])
+  end
+
+  # Segunda revisão, alto 2: "7,38%" virava 738 centavos e "1.250,50 kg" saía como valor certo.
+  describe 'o que não é dinheiro, e o que é dinheiro sem "R$"' do
+    subject(:tokens) do
+      described_class.new('IOF de 7,38% sobre R$ 2.100,00. Peso 1.250,50 kg. Total R$2.254,98 ou 2.254,98. Taxa 0,38 % e % 1,00')
+    end
+
+    it 'o bloco encostado em "%", colado ou com espaço, antes ou depois, nunca é dinheiro' do
+      expect(tokens.blocos).to include('7,38%', '%')
+      expect(tokens.centavos & [738, 38, 100]).to eq([])
+    end
+
+    it 'o valor logo depois de "R$", com ou sem espaço, é o único que sai com cifrão; o solto e o de outra medida, não' do
+      expect(tokens.centavos).to eq([210_000, 125_050, 225_498, 225_498])
+      expect(tokens.centavos_com_cifrao).to eq([210_000, 225_498])
+    end
+  end
+
+  it 'o inspect não mostra o texto' do
+    expect(tokens.inspect).to eq("#<Carteira::Leitor::Tokens blocos=#{tokens.blocos.size}>")
   end
 
   it 'blocos emendados: só a quebra de linha junta dois pedaços' do
@@ -56,7 +75,8 @@ RSpec.describe Carteira::Leitor::Tokens do
     [nil, '', " \n ", '- / . ,'].each do |vazio|
       sem_nada = described_class.new(vazio)
 
-      expect([sem_nada.palavras, sem_nada.blocos, sem_nada.codigos, sem_nada.numeros, sem_nada.centavos, sem_nada.blocos_emendados]).to all(eq([]))
+      expect([sem_nada.palavras, sem_nada.blocos, sem_nada.numeros, sem_nada.centavos, sem_nada.centavos_com_cifrao,
+              sem_nada.blocos_emendados]).to all(eq([]))
     end
   end
 end

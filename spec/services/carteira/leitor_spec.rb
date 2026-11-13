@@ -94,12 +94,25 @@ RSpec.describe Carteira::Leitor do
       'tipo' => 'auto', 'ramo_original' => '0531 - Automóvel - Casco', 'seguradora' => 'SEGURADORA EXEMPLO S.A.',
       'numero' => 'EX-2026.001234', 'inicio_vigencia' => '2026-11-12', 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498,
       'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
-      'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '12345678900', 'segurado_telefone' => '11999990001',
-      'segurado_email' => 'marina.exemplo@exemplo.invalid'
+      'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '12345678900'
     )
     expect(resultado).to have_attributes(recusa: nil, duvidas: [], a_confirmar: %w[segurado_telefone segurado_email], paginas_total: 2,
                                          paginas_enviadas: [1, 2])
-    expect(resultado.dados_da_apolice).to include(seguradora_chave: 'seguradoraexemplosa', numero_chave: 'EX2026001234', tipo: 'auto')
+    expect(resultado.dados_da_apolice).to include(seguradora_chave: 'seguradoraexemplosa', numero_chave: 'EX2026001234', tipo: 'auto',
+                                                  valor_centavos: 225_498)
+  end
+
+  # Segunda revisão, alto 3: telefone e e-mail só valem depois de uma pessoa confirmar, então não podem estar onde quem
+  # grava iterando os campos os alcança.
+  it 'o telefone e o e-mail saem só em valores_a_confirmar: nem em campos, nem nos dados da apólice' do
+    modelo_responde(do_auto)
+
+    resultado = ler('apolice_auto.pdf')
+
+    contato = { 'segurado_telefone' => '11999990001', 'segurado_email' => 'marina.exemplo@exemplo.invalid' }
+    expect(resultado.valores_a_confirmar).to eq(contato)
+    expect(resultado.campos.keys & contato.keys).to eq([])
+    expect(resultado.campos.values + resultado.dados_da_apolice.values).not_to include(*contato.values)
   end
 
   describe 'nenhum campo errado calado' do
@@ -110,7 +123,8 @@ RSpec.describe Carteira::Leitor do
 
       expect(resultado.campos.values_at('bem', 'valor_centavos', 'corretora')).to eq([nil, nil, nil])
       expect(resultado.duvidas).to eq(%w[valor_centavos bem corretora])
-      expect(resultado.campos).to include('numero' => 'EX-2026.001234', 'segurado_telefone' => '11999990001')
+      expect(resultado.campos).to include('numero' => 'EX-2026.001234')
+      expect(resultado.valores_a_confirmar).to include('segurado_telefone' => '11999990001')
     end
 
     it 'o valor que o modelo devolve e não está escrito nas páginas vira "não achei", nunca é aceito' do
@@ -158,7 +172,8 @@ RSpec.describe Carteira::Leitor do
     it 'aceita o contato que está escrito na página em que o documento do segurado aparece' do
       modelo_responde(do_auto)
 
-      expect(ler('apolice_auto.pdf').campos).to include('segurado_telefone' => '11999990001', 'segurado_email' => 'marina.exemplo@exemplo.invalid')
+      expect(ler('apolice_auto.pdf').valores_a_confirmar)
+        .to eq('segurado_telefone' => '11999990001', 'segurado_email' => 'marina.exemplo@exemplo.invalid')
     end
 
     it 'recusa o contato de uma página em que o documento do segurado não aparece' do
@@ -167,7 +182,8 @@ RSpec.describe Carteira::Leitor do
 
       resultado = ler('apolice_empresarial.pdf')
 
-      expect(resultado.campos).to include('segurado_documento' => '12345678000100', 'segurado_telefone' => nil, 'segurado_email' => nil)
+      expect(resultado.campos).to include('segurado_documento' => '12345678000100')
+      expect(resultado.valores_a_confirmar).to eq({})
       expect(resultado.duvidas).to include('segurado_telefone', 'segurado_email')
     end
 
@@ -175,14 +191,14 @@ RSpec.describe Carteira::Leitor do
       modelo_responde(da_empresa.merge('segurado_telefone' => '(11) 98888-0005', 'segurado_telefone_pagina' => 1,
                                        'segurado_email' => 'vistoria@exemplo.invalid', 'segurado_email_pagina' => 1))
 
-      expect(ler('apolice_empresarial.pdf').campos).to include('segurado_telefone' => nil, 'segurado_email' => nil)
+      expect(ler('apolice_empresarial.pdf').valores_a_confirmar).to eq({})
     end
 
     it 'sem o documento do segurado conferido não há contato, mesmo que o telefone esteja escrito' do
       [nil, '999.888.777-66'].each do |documento|
         modelo_responde(do_auto.merge('segurado_documento' => documento))
 
-        expect(ler('apolice_auto.pdf').campos).to include('segurado_documento' => nil, 'segurado_telefone' => nil, 'segurado_email' => nil)
+        expect(ler('apolice_auto.pdf')).to have_attributes(valores_a_confirmar: {}, campos: hash_including('segurado_documento' => nil))
       end
     end
 
@@ -195,7 +211,7 @@ RSpec.describe Carteira::Leitor do
       tentativas.each do |campos|
         modelo_responde(do_auto.merge(campos))
 
-        expect(ler('apolice_auto.pdf').campos[campos.keys.first]).to be_nil
+        expect(ler('apolice_auto.pdf').valores_a_confirmar[campos.keys.first]).to be_nil
       end
     end
 
@@ -206,7 +222,7 @@ RSpec.describe Carteira::Leitor do
 
       resultado = ler('apolice_auto.pdf')
 
-      expect(resultado.campos).to include('segurado_telefone' => '1130000002', 'segurado_email' => nil)
+      expect(resultado.valores_a_confirmar).to eq('segurado_telefone' => '1130000002')
       expect(resultado).to have_attributes(a_confirmar: ['segurado_telefone'], duvidas: ['segurado_email'])
     end
 
@@ -217,7 +233,7 @@ RSpec.describe Carteira::Leitor do
       tentativas.each do |campos|
         modelo_responde(do_auto.merge(campos))
 
-        expect(ler('apolice_auto.pdf').campos['segurado_telefone']).to be_nil
+        expect(ler('apolice_auto.pdf').valores_a_confirmar['segurado_telefone']).to be_nil
       end
     end
   end
@@ -254,9 +270,9 @@ RSpec.describe Carteira::Leitor do
 
       expect(resultado.campos).to include('numero' => 'RS-0114.000777', 'inicio_vigencia' => '2027-02-01', 'fim_vigencia' => '2028-02-01',
                                           'valor_centavos' => 89_040, 'bem' => 'Rua do Modelo, 45, apto 12 - Bairro Exemplo',
-                                          'segurado_documento' => '98765432199', 'segurado_telefone' => '31966660008',
-                                          'segurado_email' => 'renata.amostra@exemplo.invalid')
-      expect(resultado).to have_attributes(duvidas: %w[ramo_original corretora], a_confirmar: %w[segurado_telefone segurado_email])
+                                          'segurado_documento' => '98765432199')
+      expect(resultado.valores_a_confirmar).to eq('segurado_telefone' => '31966660008', 'segurado_email' => 'renata.amostra@exemplo.invalid')
+      expect(resultado.duvidas).to eq(%w[ramo_original corretora])
     end
 
     it 'sem o CPF, mas com o nome, vão as páginas em que o nome aparece' do
@@ -297,6 +313,13 @@ RSpec.describe Carteira::Leitor do
         expect(ler('apolice_auto.pdf')).to have_attributes(recusa: 'nao_deu_para_ler', motivo: :modelo_falhou, campos: {},
                                                            paginas_total: 2, paginas_enviadas: [1, 2])
       end
+    end
+
+    # Segunda revisão, alto 4: defeito nosso não vira "o modelo falhou"; sobe.
+    it 'erro de programação dentro da pergunta ao modelo sobe, não vira nao_deu_para_ler' do
+      allow(cliente).to receive(:create).and_raise(NoMethodError)
+
+      expect { ler('apolice_auto.pdf') }.to raise_error(NoMethodError)
     end
 
     it 'o log leva só a conta, o motivo e a contagem de páginas: nada do PDF nem da mensagem do erro' do
@@ -349,11 +372,14 @@ RSpec.describe Carteira::Leitor do
       expect(perguntas).to be_empty
     end
 
-    it 'erro que o leitor de PDF não previu: nao_deu_para_ler, sem levantar' do
+    it 'erro que o leitor de PDF não previu: nao_deu_para_ler, sem levantar, com a classe do erro no registro' do
       modelo_responde(do_auto)
-      allow(PDF::Reader).to receive(:new).and_raise(NoMethodError)
+      allow(PDF::Reader).to receive(:new).and_raise(NoMethodError, 'Marina Exemplo de Souza')
+      allow(Rails.logger).to receive(:warn)
 
       expect(ler('apolice_auto.pdf')).to have_attributes(recusa: 'nao_deu_para_ler', motivo: :pdf_ilegivel)
+      expect(Rails.logger).to have_received(:warn).with('[carteira][leitor] pdf_nao_abriu NoMethodError')
+      expect(Rails.logger).to have_received(:warn).twice
       expect(perguntas).to be_empty
     end
 
@@ -397,9 +423,8 @@ RSpec.describe Carteira::Leitor do
 
       expect(processadores::Rasterizacao).to have_received(:pagina).once.with(pdf('apolice_escaneada.pdf'), 0)
       expect(resultado.campos).to include('tipo' => 'vida', 'numero' => 'VD-0093.004321', 'fim_vigencia' => '2027-03-15',
-                                          'valor_centavos' => 138_000, 'segurado_documento' => '11122233300',
-                                          'segurado_telefone' => '21977770007', 'bem' => nil)
-      expect(resultado).to have_attributes(paginas_enviadas: [1], a_confirmar: ['segurado_telefone'])
+                                          'valor_centavos' => 138_000, 'segurado_documento' => '11122233300', 'bem' => nil)
+      expect(resultado).to have_attributes(paginas_enviadas: [1], valores_a_confirmar: { 'segurado_telefone' => '21977770007' })
     end
   end
 end

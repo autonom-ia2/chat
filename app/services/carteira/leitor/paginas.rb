@@ -26,6 +26,12 @@ class Carteira::Leitor::Paginas
     def tokens
       @tokens ||= Carteira::Leitor::Tokens.new(texto)
     end
+
+    # O texto é dado de cliente: não aparece em log nem em mensagem de erro.
+    def inspect
+      "#<#{self.class.name} numero=#{numero.inspect} caracteres=#{texto.to_s.length}>"
+    end
+    alias_method :to_s, :inspect
   end
   PROCESSADORES = Autonomia::Agents::Knowledge::Processors
   TOKENS = Carteira::Leitor::Tokens
@@ -87,7 +93,9 @@ class Carteira::Leitor::Paginas
   rescue Ilegivel
     raise
   rescue StandardError => e
-    # Só a classe: a mensagem do erro pode trazer o caminho do arquivo ou um pedaço dele.
+    # O registro leva a classe do erro, para um defeito nosso não se esconder atrás de "PDF ilegível". Só a classe: a
+    # mensagem pode trazer o caminho do arquivo ou um pedaço dele.
+    Rails.logger.warn("[carteira][leitor] pdf_nao_abriu #{e.class}")
     raise Ilegivel, e.class.name
   end
 

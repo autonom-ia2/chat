@@ -14,7 +14,15 @@ RSpec.describe Carteira::Leitor::Ancora do
       Importância segurada: R$ 80.000   Produto: Banana Prata Residencial
     TEXTO
   end
-  let(:segunda) { "Endosso da apólice 0531 12 345678.\nSegurada adicional: Lia\nMaria Modelo. Franquia: R$ 3.500,00" }
+  let(:segunda) do
+    <<~TEXTO
+      Endosso da apólice 0531 12 345678.
+      Segurada adicional: Lia
+      Maria Modelo. Franquia: R$ 3.500,00
+      Item 12/34. CEP 01122-028. Protocolo 15032026. Emitida em 05-01-2027, 06.01.2027 e 07/01/27.
+      Juros de 7,38% ao mês. Peso da carga: 1.250,50 kg. Total sem o cifrão: 9.876,54
+    TEXTO
+  end
 
   it 'texto: aceita o que está escrito, sem contar caixa, acento, espaço e pontuação, e devolve sem espaço sobrando' do
     expect(ancora.escrito('  seguradora   exemplo s.a. ')).to eq('seguradora exemplo s.a.')
@@ -41,18 +49,32 @@ RSpec.describe Carteira::Leitor::Ancora do
 
   # Achado A da revisão: "001234" passava por estar dentro de "EX-2026.001234".
   it 'número da apólice: o bloco inteiro como está escrito, nunca um pedaço dele' do
-    expect([ancora.codigo('EX-2026.001234'), ancora.codigo(' ex2026001234 '), ancora.codigo('0531 12 345678')])
-      .to eq(['EX-2026.001234', 'ex2026001234', '0531 12 345678'])
+    expect([' ex-2026.001234 ', '0531 12 345678', '12/34'].map { |valor| ancora.codigo(valor) })
+      .to eq(['ex-2026.001234', '0531 12 345678', '12/34'])
     pedacos = ['001234', '2026.001234', 'EX-2026', 'EX-2026.00123', 'X-2026.001234', '0531 12 3456']
-    outros = ['EX-2026.001235', 'ex 2026 001234', '2026.001234-EX', '', '--', nil, 2026]
+    outros = ['EX-2026.001235', 'ex 2026 001234', '2026.001234-EX', '', '--', '%', nil, 2026]
 
     expect((pedacos + outros).map { |valor| ancora.codigo(valor) }).to all(be_nil)
+  end
+
+  # Segunda revisão: "1234" passava por "12/34", porque a comparação tirava a pontuação de dentro do bloco.
+  it 'número da apólice: a pontuação de dentro conta' do
+    expect(['1234', 'ex2026001234', 'EX 2026.001234', '12-34', '053112345678'].map { |valor| ancora.codigo(valor) }).to all(be_nil)
   end
 
   it 'documento: só CPF ou CNPJ escrito por inteiro nas páginas, devolvido só com os dígitos' do
     expect([ancora.documento('123.456.789-00'), ancora.documento('12345678000100')]).to eq(%w[12345678900 12345678000100])
     # '890.012.345-67' são os últimos dígitos do CPF emendados nos primeiros do CNPJ: não é um documento escrito.
     expect(['123.456.789-01', '123.456.789', '998877', '890.012.345-67', '', nil].map { |valor| ancora.documento(valor) }).to all(be_nil)
+  end
+
+  # Segunda revisão, alto 1: o CEP "01122-028" fazia a data 01/12/2028 passar, e o protocolo 15032026, a 15/03/2026.
+  it 'data: dígitos colados nunca são data, nem com hífen de CEP' do
+    expect(%w[2028-12-01 2026-03-15 0112-20-28].map { |valor| ancora.data(valor) }).to all(be_nil)
+  end
+
+  it 'data: aceita cada forma escrita com separador, com o ano curto só depois de barra' do
+    expect(%w[2027-01-05 2027-01-06 2027-01-07].map { |valor| ancora.data(valor) }).to eq(%w[2027-01-05 2027-01-06 2027-01-07])
   end
 
   it 'data: AAAA-MM-DD escrita por inteiro nas páginas como dia, mês e ano' do
@@ -69,6 +91,13 @@ RSpec.describe Carteira::Leitor::Ancora do
     outros = [225_499, 8_000_000, 80_000, 0, -225_498, 2254.98, '225498', nil]
 
     expect((pedacos + outros).map { |valor| ancora.centavos(valor) }).to all(be_nil)
+  end
+
+  # Segunda revisão, alto 2.
+  it 'valor: porcentagem nunca é dinheiro, e só o que vem logo depois de "R$" tem o cifrão' do
+    expect([ancora.centavos(738), ancora.com_cifrao?(738)]).to eq([nil, false])
+    expect([125_050, 987_654].map { |valor| [ancora.centavos(valor), ancora.com_cifrao?(valor)] }).to eq([[125_050, false], [987_654, false]])
+    expect([225_498, 350_000].map { |valor| ancora.com_cifrao?(valor) }).to eq([true, true])
   end
 
   # O limite que fica: a âncora só diz que o valor está escrito, não que ele é o prêmio total. Quem mede se o modelo

@@ -6,15 +6,18 @@
 # 3. o contato está escrito nessa página por inteiro (Carteira::Leitor::Tokens): o telefone, em blocos de número
 #    seguidos, sem nada no meio ("(11) 99999-0001"); o e-mail, como um bloco só, emendando só a quebra de linha. Um
 #    pedaço de outro número ou de outro e-mail não passa;
-# 4. o telefone é fixo ou celular do Brasil com DDD que existe (a biblioteca de telefone da casa). Ficam de fora o
-#    0800, os números de central (4004, 3003), o telefone sem DDD ou com DDD que não existe, e o "telefone" que é o
-#    próprio CPF/CNPJ ou o número da apólice.
+# 4. o telefone é fixo ou celular do Brasil com DDD que existe, pela biblioteca de telefone da casa
+#    (`TelephoneNumber`, só os tipos fixo e celular). Ficam de fora o 0800, o que a biblioteca não reconhece como
+#    fixo nem celular (sem DDD, com DDD que não existe, o número curto de central escrito sem DDD) e o "telefone" que
+#    é o próprio CPF/CNPJ ou o número da apólice. Não há lista de prefixos: o número de central escrito COM DDD
+#    ("(11) 4004-0010") tem forma de telefone fixo e passa.
 # Falhou qualquer uma: "não achei" (nil). Não há lista de palavras nem regex: quem decide de quem é o telefone é o
 # modelo; aqui só se confere o que está escrito e onde.
 #
-# AINDA ASSIM O CONTATO NÃO É DADO POR CERTO. O telefone do corretor costuma estar na mesma página do CPF do segurado,
-# e nenhuma conferência de valor separa um do outro. Por isso o resultado marca os dois como "a confirmar"
-# (Carteira::Leitor::Resultado#a_confirmar): quem recebe mostra para a pessoa confirmar antes de gravar.
+# AINDA ASSIM O CONTATO NÃO É DADO POR CERTO. O telefone do corretor (ou o de uma central com DDD) costuma estar na
+# mesma página do CPF do segurado, e nenhuma conferência de valor separa um do outro. Por isso o contato nunca entra
+# nos campos graváveis do resultado: sai em Carteira::Leitor::Resultado#valores_a_confirmar, e quem recebe mostra para
+# a pessoa confirmar antes de gravar.
 #
 # O telefone sai só com os dígitos, como está escrito na apólice (com o DDD, sem código do país acrescentado); pôr no
 # formato da ficha é de quem grava a pessoa. O e-mail sai em minúsculas.

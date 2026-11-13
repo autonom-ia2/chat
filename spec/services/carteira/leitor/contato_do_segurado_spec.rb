@@ -10,7 +10,7 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
       exemplo.invalid
       Recado: (20) 96666-0008 ou 97777-0007. Matrícula 5521 95555-0009
       CORRETOR: Corretora Amostra - (11) 3000-0002 - contato@corretora-amostra.invalid.
-      Central de atendimento: 0800 000 0003 ou 4004 0010
+      Central de atendimento: 0800 000 0003 ou 4004 0010. Com DDD: (11) 4004-0011
     TEXTO
   end
   let(:paginas) do
@@ -118,10 +118,15 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
     end
   end
 
-  # O limite que fica, e por isso o Resultado marca o contato como "a confirmar": o telefone e o e-mail do corretor
+  # O limite que fica, e por isso o contato sai do Resultado só como "a confirmar": o telefone e o e-mail do corretor
   # estão escritos por inteiro na página do CPF do segurado. Se o modelo disser que são do segurado, nenhuma
   # conferência de valor os separa. Quem mede se o modelo erra é a bateria com gabarito.
   it 'o contato do corretor na página do CPF passa na conferência de valor' do
     expect([telefone('(11) 3000-0002'), email('contato@corretora-amostra.invalid')]).to eq(['1130000002', 'contato@corretora-amostra.invalid'])
+  end
+
+  # Não há lista de prefixos: o número de central escrito com DDD tem forma de telefone fixo.
+  it 'o número de central escrito com DDD também passa; sem DDD, não' do
+    expect([telefone('(11) 4004-0011'), telefone('4004 0010')]).to eq(['1140040011', nil])
   end
 end

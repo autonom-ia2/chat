@@ -8,20 +8,24 @@
 # - texto (seguradora, ramo, bem, nome): as palavras do valor aparecem inteiras e seguidas, na ordem, sem contar
 #   caixa, acento e pontuação. "Ana" não está em "Banana", e uma frase montada com pedaços de lugares diferentes não
 #   passa;
-# - número da apólice: o bloco inteiro, sem contar a pontuação de dentro. "001234" não está em "EX-001234";
+# - número da apólice: o bloco inteiro, como está escrito, com a pontuação de dentro. "001234" não está em
+#   "EX-001234", e "1234" não está em "12/34";
 # - CPF e CNPJ: os 11 ou 14 dígitos são um bloco inteiro de número;
-# - data: o dia, o mês e o ano são um bloco inteiro (12/11/2026, 2026-11-12 ou 12/11/26). Data escrita por extenso não
-#   se confirma e vira "não achei";
+# - data: escrita com separador, como um bloco inteiro: 12/11/2026, 12-11-2026, 12.11.2026, 2026-11-12 ou 12/11/26.
+#   Dígitos colados nunca são data (o CEP "12112-027" não é 12/11/2027). Data escrita por extenso não se confirma e
+#   vira "não achei";
 # - valor: é um dos valores em dinheiro escritos na página, por inteiro (R$ 2.254,98 é 225498; 2254 não é). Valor
-#   escrito sem os centavos não se confirma.
+#   escrito sem os centavos não se confirma, e o que está encostado em "%" é porcentagem. `centavos` diz que o valor
+#   está escrito; `com_cifrao?` diz que ele vem logo depois de "R$". Sem o "R$" o bloco pode ser outra medida
+#   ("1.250,50 kg"), e quem chama trata o valor como "a confirmar" (Carteira::Leitor::Resultado).
 #
 # O que a âncora NÃO faz: dizer qual dos valores escritos é o certo. A parcela e o IOF também são valores em dinheiro
-# escritos na página; se o modelo trocar o prêmio total por um deles, a âncora deixa passar. Quem mede isso é a
-# bateria com gabarito (lib/tasks/carteira_leitor.rake).
+# escritos na página, com "R$"; se o modelo trocar o prêmio total por um deles, a âncora deixa passar. Quem mede isso
+# é a bateria com gabarito (lib/tasks/carteira_leitor.rake).
 class Carteira::Leitor::Ancora
   TAMANHOS_DE_DOCUMENTO = [11, 14].freeze
   MAXIMO_DO_TEXTO = 200
-  FORMAS_DA_DATA = %w[%d%m%Y %Y%m%d %d%m%y].freeze
+  FORMAS_DA_DATA = %w[%d/%m/%Y %d-%m-%Y %d.%m.%Y %Y-%m-%d %d/%m/%y].freeze
   TOKENS = Carteira::Leitor::Tokens
 
   # paginas: as que foram ao modelo (Carteira::Leitor::Paginas::Pagina).
@@ -43,8 +47,8 @@ class Carteira::Leitor::Ancora
   def codigo(valor)
     return unless valor.is_a?(String)
 
-    codigos = TOKENS.new(valor).codigos
-    valor.squish if @paginas.any? { |pagina| TOKENS.sequencia?(pagina.codigos, codigos) }
+    do_valor = TOKENS.new(valor)
+    valor.squish if do_valor.palavras.any? && @paginas.any? { |pagina| TOKENS.sequencia?(pagina.blocos, do_valor.blocos) }
   end
 
   # Só os dígitos do CPF ou do CNPJ.
@@ -59,12 +63,17 @@ class Carteira::Leitor::Ancora
 
     data = Date.iso8601(valor)
     formas = FORMAS_DA_DATA.map { |forma| data.strftime(forma) }
-    data.iso8601 if @paginas.any? { |pagina| pagina.numeros.intersect?(formas) }
+    data.iso8601 if @paginas.any? { |pagina| pagina.blocos.intersect?(formas) }
   rescue Date::Error
     nil
   end
 
   def centavos(valor)
     valor if valor.is_a?(Integer) && valor.positive? && @paginas.any? { |pagina| pagina.centavos.include?(valor) }
+  end
+
+  # O valor está escrito logo depois de "R$" em alguma página?
+  def com_cifrao?(valor)
+    @paginas.any? { |pagina| pagina.centavos_com_cifrao.include?(valor) }
   end
 end

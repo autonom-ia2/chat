@@ -88,7 +88,28 @@ RSpec.describe Carteira::Leitor::Campos do
     expect(lido.campos).to eq('tipo' => 'auto', 'ramo_original' => nil, 'seguradora' => 'Seguradora Exemplo S.A.', 'numero' => 'EX-2026.001234',
                               'inicio_vigencia' => nil, 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498, 'bem' => nil,
                               'corretora' => nil, 'segurado_nome' => nil, 'segurado_documento' => '12345678900')
+    expect(lido.a_confirmar).to eq({})
     expect(lido.resposta).to include('segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 7)
+  end
+
+  # Segunda revisão, alto 2: sem "R$" antes, o valor pode ser outra medida. Sai como "a confirmar", fora dos campos.
+  it 'o valor escrito sem "R$" antes sai a confirmar, e não nos campos; a porcentagem não sai em lugar nenhum' do
+    sem_cifrao = [pagina.new(numero: 1, texto: 'Prêmio total: 2.254,98. Peso da carga: 1.250,50 kg. IOF de 7,38%. Franquia: R$ 3.500,00')]
+    lidos = [225_498, 125_050, 738, 350_000].map do |valor|
+      responde('e_apolice' => true, 'valor_centavos' => valor)
+      lido = pergunta.ler(sem_cifrao)
+      [lido.campos['valor_centavos'], lido.a_confirmar]
+    end
+
+    expect(lidos).to eq([[nil, { 'valor_centavos' => 225_498 }], [nil, { 'valor_centavos' => 125_050 }], [nil, {}], [350_000, {}]])
+  end
+
+  it 'o inspect do que foi lido não mostra campo nem resposta' do
+    responde('e_apolice' => true, 'numero' => 'EX-2026.001234', 'segurado_telefone' => '(11) 99999-0001')
+
+    lido = pergunta.ler(paginas)
+
+    expect([lido.inspect, lido.to_s]).to all(eq('#<Carteira::Leitor::Campos::Lido e_apolice=true>'))
   end
 
   it 'não é apólice: sem campo nenhum, mesmo que o modelo mande algum' do
@@ -101,6 +122,29 @@ RSpec.describe Carteira::Leitor::Campos do
     allow(cliente).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error.new('Marina Exemplo de Souza 123.456.789-00'))
 
     expect { pergunta.ler(paginas) }.to raise_error(described_class::Falhou, 'Crm::Ai::ResponsesClient::Error')
+  end
+
+  # Segunda revisão, alto 4: defeito nosso não pode virar "o modelo falhou".
+  it 'só falha de rede, de prazo, do cliente de IA e de JSON vira Falhou; erro de programação sobe' do
+    falhas = [Net::ReadTimeout.new, Timeout::Error.new, Errno::ECONNRESET.new, SocketError.new, OpenSSL::SSL::SSLError.new, EOFError.new]
+    falhas.each do |erro|
+      allow(cliente).to receive(:create).and_raise(erro)
+
+      expect { pergunta.ler(paginas) }.to raise_error(described_class::Falhou, erro.class.name)
+    end
+    [NoMethodError.new('texto da apólice'), TypeError.new, ArgumentError.new, KeyError.new].each do |defeito|
+      allow(cliente).to receive(:create).and_raise(defeito)
+
+      expect { pergunta.ler(paginas) }.to raise_error(defeito.class)
+    end
+  end
+
+  it 'resposta sem texto ou que não é JSON vira Falhou' do
+    [{ text: nil, usage: {} }, { text: '', usage: {} }, { text: 'isto não é JSON', usage: {} }].each do |saida|
+      allow(cliente).to receive(:create).and_return(saida)
+
+      expect { pergunta.ler(paginas) }.to raise_error(described_class::Falhou, 'JSON::ParserError')
+    end
   end
 
   it 'a feature do leitor aparece na Gestão IA como Carteira de seguros' do

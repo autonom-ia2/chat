@@ -67,7 +67,9 @@ class CarteiraLeitorBateria
     return { errados: ['recusa'], nao_achou: [] } if resultado.recusa != caso['recusa']
 
     errados = caso.key?('paginas_enviadas') && caso['paginas_enviadas'] != resultado.paginas_enviadas ? ['paginas_enviadas'] : []
-    situacoes = caso.fetch('campos', {}).to_h { |campo, esperado| [campo, situacao(esperado, resultado.campos[campo])] }
+    # O que o leitor achou, certo ou a confirmar: a régua mede o valor, não quem vai confirmá-lo.
+    achados = resultado.campos.merge(resultado.valores_a_confirmar)
+    situacoes = caso.fetch('campos', {}).to_h { |campo, esperado| [campo, situacao(esperado, achados[campo])] }
     { errados: errados + situacoes.select { |_campo, situacao| situacao == :errado }.keys,
       nao_achou: situacoes.select { |_campo, situacao| situacao == :nao_achou }.keys }
   end
@@ -120,7 +122,8 @@ class CarteiraLeitorBateria
     raise ArgumentError, self.class.por_que_nao_roda unless self.class.ligada?
 
     credencial = { api_key: ENV.fetch(CHAVE), api_base: ENV.fetch('OPENAI_API_BASE', nil).presence, source: :bateria }
-    Crm::Ai::ResponsesClient.new(credential: credencial)
+    # Sem nova tentativa: o teto de gasto conta uma chamada por caso.
+    Crm::Ai::ResponsesClient.new(credential: credencial, max_retries: 0)
   end
 
   def rodar_caso(caso, saida)

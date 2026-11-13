@@ -66,9 +66,10 @@ RSpec.describe Rake::Task do
     end
   end
 
+  # O contato vai como o leitor o entrega: a confirmar, fora dos campos.
   def resultado(campos)
-    todos = Carteira::Leitor::Resultado::CAMPOS.index_with { nil }.merge(campos)
-    Carteira::Leitor::Resultado.lido(campos: todos, paginas_total: 2, paginas_enviadas: [1, 2])
+    Carteira::Leitor::Resultado.lido(campos: campos, a_confirmar: campos.slice(*Carteira::Leitor::Resultado::CONTATO), paginas_total: 2,
+                                     paginas_enviadas: [1, 2])
   end
 
   describe 'desligada por padrão' do
@@ -95,6 +96,14 @@ RSpec.describe Rake::Task do
         expect { CarteiraLeitorBateria.new }.to raise_error(ArgumentError)
       end
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
+
+    # Segunda revisão: sem nova tentativa, o teto de gasto conta uma chamada por caso.
+    it 'ligada, o cliente de verdade nasce com a chave do ambiente e sem nova tentativa' do
+      with_modified_env(inteira) { CarteiraLeitorBateria.new }
+
+      credencial = hash_including(api_key: 'chave-de-desenvolvimento', source: :bateria)
+      expect(Crm::Ai::ResponsesClient).to have_received(:new).once.with(credential: credencial, max_retries: 0)
     end
 
     # Achado J da revisão: em produção a chave seria a de produção, e na CI ninguém aprovou o gasto.
@@ -177,6 +186,16 @@ RSpec.describe Rake::Task do
     it '"não achei" onde o gabarito tinha valor não é erro: é contado à parte' do
       expect(CarteiraLeitorBateria.conferir(caso, resultado('numero' => 'EX-2026.001234')))
         .to eq(errados: [], nao_achou: %w[valor_centavos bem seguradora])
+    end
+
+    it 'o valor que o leitor entrega a confirmar também é medido: certo quando bate, errado quando não' do
+      a_confirmar = lambda do |valor|
+        Carteira::Leitor::Resultado.lido(campos: { 'numero' => 'EX-2026.001234' }, a_confirmar: { 'valor_centavos' => valor }, paginas_total: 2,
+                                         paginas_enviadas: [1, 2])
+      end
+
+      expect(CarteiraLeitorBateria.conferir(caso, a_confirmar.call(225_498))).to eq(errados: [], nao_achou: %w[bem seguradora])
+      expect(CarteiraLeitorBateria.conferir(caso, a_confirmar.call(125_050))).to eq(errados: ['valor_centavos'], nao_achou: %w[bem seguradora])
     end
 
     it 'recusa diferente da esperada e páginas diferentes das esperadas são erro' do

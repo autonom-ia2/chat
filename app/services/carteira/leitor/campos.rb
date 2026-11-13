@@ -15,8 +15,9 @@
 # nasce com a conta e a feature. Conta sem a credencial: SemIa. Roda em job: o prazo é longo e há nova tentativa.
 # `cliente:` troca o cliente (a bateria com gabarito e os specs); a trava da conta vale do mesmo jeito.
 #
-# Qualquer quebra da chamada vira Falhou (o leitor responde "não deu para ler"), só com a classe do erro: a mensagem
-# pode trazer o texto da apólice.
+# Quebra da chamada (rede, prazo, HTTP, resposta cortada, fora do esquema ou que não é JSON) vira Falhou (o leitor
+# responde "não deu para ler"), só com a classe do erro: a mensagem pode trazer o texto da apólice. A lista é fechada
+# (FALHAS_DA_CHAMADA): erro de programação nosso sobe, não vira "o modelo falhou".
 #
 # Mudou as instruções ou o esquema? Rode a bateria com gabarito (lib/tasks/carteira_leitor.rake) no mesmo PR, com
 # orçamento aprovado: o comportamento do modelo não tem teste determinístico.
@@ -28,7 +29,21 @@ class Carteira::Leitor::Campos
   # A conta não tem a IA configurada.
   class SemIa < StandardError; end
 
-  Lido = Struct.new(:e_apolice, :campos, :resposta, keyword_init: true)
+  # campos: os conferidos que podem ser gravados. a_confirmar: os conferidos que só valem depois de uma pessoa
+  # confirmar (o valor escrito sem "R$" antes). resposta: o JSON do modelo, para o contato do segurado.
+  Lido = Struct.new(:e_apolice, :campos, :a_confirmar, :resposta, keyword_init: true) do
+    # `campos`, `a_confirmar` e `resposta` são dado de cliente: não aparecem em log nem em mensagem de erro.
+    def inspect
+      "#<#{self.class.name} e_apolice=#{e_apolice.inspect}>"
+    end
+    alias_method :to_s, :inspect
+  end
+  # O que conta como falha da chamada: o erro do cliente de IA (HTTP, e a rede e o prazo que ele já embrulha), os
+  # erros de rede e de prazo crus (para o cliente trocado), o SSL e o JSON quebrado. Qualquer outro erro é defeito
+  # nosso e sobe: não pode se disfarçar de "o modelo falhou".
+  FALHAS_DA_CHAMADA = [Crm::Ai::ResponsesClient::Error, *Crm::Ai::ResponsesClient::NETWORK_ERRORS, Timeout::Error,
+                       OpenSSL::SSL::SSLError, JSON::ParserError].freeze
+  VALOR = 'valor_centavos'.freeze
 
   FEATURE = 'carteira_leitor'.freeze
   MODEL = Crm::Ai::Config::MODEL_CLASSIFY
@@ -99,9 +114,13 @@ class Carteira::Leitor::Campos
 
     @cliente ||= cliente_da_conta
     resposta = perguntar(paginas)
-    return Lido.new(e_apolice: false, campos: {}, resposta: {}) unless resposta['e_apolice'] == true
+    return Lido.new(e_apolice: false, campos: {}, a_confirmar: {}, resposta: {}) unless resposta['e_apolice'] == true
 
-    Lido.new(e_apolice: true, campos: conferidos(resposta, paginas), resposta: resposta)
+    ancora = Carteira::Leitor::Ancora.new(paginas)
+    campos = conferidos(resposta, ancora)
+    # O valor que está escrito, mas não logo depois de "R$", pode ser outra medida: só vale depois de alguém confirmar.
+    sem_cifrao = campos.slice(VALOR).reject { |_campo, valor| valor.nil? || ancora.com_cifrao?(valor) }
+    Lido.new(e_apolice: true, campos: campos.merge(sem_cifrao.transform_values { nil }), a_confirmar: sem_cifrao, resposta: resposta)
   end
 
   private
@@ -119,20 +138,17 @@ class Carteira::Leitor::Campos
                             timeout: TIMEOUT, max_output_tokens: MAX_OUTPUT_TOKENS)
     raise Falhou, 'resposta_cortada' if saida[:incomplete_reason].present?
 
-    resposta = JSON.parse(saida[:text])
+    resposta = JSON.parse(saida[:text].to_s)
     raise Falhou, 'fora_do_esquema' unless resposta.is_a?(Hash) && [true, false].include?(resposta['e_apolice'])
 
     resposta
-  rescue Falhou
-    raise
-  rescue StandardError => e
-    # Rede, HTTP, prazo, JSON quebrado. Só a classe: a mensagem pode trazer o texto da apólice.
+  rescue *FALHAS_DA_CHAMADA => e
+    # Só a classe: a mensagem pode trazer o texto da apólice.
     raise Falhou, e.class.name
   end
 
-  # Cada valor só passa se estiver escrito nas páginas enviadas; senão é "não achei".
-  def conferidos(resposta, paginas)
-    ancora = Carteira::Leitor::Ancora.new(paginas)
+  # Cada valor só passa se estiver escrito, inteiro, numa das páginas enviadas; senão é "não achei".
+  def conferidos(resposta, ancora)
     conferidos = CONFERENCIAS.to_h { |campo, da_resposta, conferencia| [campo, ancora.public_send(conferencia, resposta[da_resposta])] }
     conferidos.merge('tipo' => (resposta['tipo'] if Carteira::Apolice::TIPOS.include?(resposta['tipo'])))
   end
