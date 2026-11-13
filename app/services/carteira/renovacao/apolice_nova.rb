@@ -10,14 +10,17 @@
 #   `ja_tem_apolice_nova` (outra apólice já renovou a anterior);
 # - `falta_tipo`, `falta_seguradora`, `falta_termina`, `termina_antes` (o fim antes do começo) e
 #   `termina_antes_da_anterior` (a apólice nova tem de terminar depois da que ela renova);
-# - `apolice_repetida`: a conta já tem essa apólice (a mesma seguradora, o mesmo número e o mesmo termo). Nada é mudado
-#   nela: a gravação inteira é desfeita.
+# - as do gravador, que sobem como vieram e não mudam nada: `apolice_repetida` (a conta já tem essa apólice: a mesma
+#   seguradora e o mesmo número, com o mesmo começo ou o mesmo fim da vigência; quem a corrige é a gaveta dela),
+#   `apolice_de_outra_pessoa` (essa seguradora e esse número já estão guardados para outro contato) e `termo_ambiguo`
+#   (há mais de uma vigência guardada dessa apólice que pode ser a digitada).
+#
+# A renovação que mantém a seguradora e o número é outro termo da mesma apólice (Carteira::Termo): nasce a linha nova, e é
+# ela que se liga à anterior.
 class Carteira::Renovacao::ApoliceNova
   CAMPOS = (%w[anteriorId] + Carteira::Campos::COLUNAS.keys).freeze
   OBRIGATORIOS = %w[tipo seguradora termina].freeze
   ORIGEM = 'manual'.freeze
-
-  Repetida = Class.new(StandardError)
 
   def initialize(anterior, dados, user:)
     @anterior = anterior
@@ -29,13 +32,9 @@ class Carteira::Renovacao::ApoliceNova
     conferir_anterior
     dados = ler
     Carteira::Apolice.transaction(requires_new: true) do
-      guardada = gravador.call(dados, contato: @anterior.contact, empresa: @anterior.company)
-      raise Repetida unless guardada.situacao == Carteira::Guardar::NOVA
-
-      Carteira::Renovacao::Ligar.new(guardada.apolice, user: @user).com(@anterior, anotar: false)
+      nova = gravador.call(dados, contato: @anterior.contact, empresa: @anterior.company).apolice
+      Carteira::Renovacao::Ligar.new(nova, user: @user).com(@anterior, anotar: false)
     end
-  rescue Repetida, ActiveRecord::RecordNotUnique
-    recusar('apolice_repetida')
   end
 
   private

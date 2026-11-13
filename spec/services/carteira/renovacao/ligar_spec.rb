@@ -2,7 +2,9 @@ require 'rails_helper'
 
 # E5 (#2898) — a apólice nova se liga à anterior pelo segurado, pelo ramo, pelo item e pela vigência, nunca pela
 # seguradora nem pelo número (a renovação pode ir para outra seguradora). A tabela de casos do aceite está aqui, caso a
-# caso: cada linha diz o que muda em relação ao caso base e se liga. Tudo fictício.
+# caso: cada linha diz o que muda em relação ao caso base e se liga. Quando a seguradora mantém o número, a renovação
+# é outro termo da mesma apólice (Carteira::Termo: começo e fim diferentes), guardado como outra linha: é essa linha
+# que se liga. Tudo fictício.
 RSpec.describe Carteira::Renovacao::Ligar do
   # Meio-dia em São Paulo: para a conta, hoje é 12/11/2026.
   let(:agora) { Time.utc(2026, 11, 12, 15) }
@@ -52,6 +54,9 @@ RSpec.describe Carteira::Renovacao::Ligar do
     {
       'outra seguradora e outro número (o caso base)' => [{}, {}, true],
       'a mesma seguradora e o mesmo número, no termo seguinte' => [{}, { seguradora: 'Seguradora Exemplo', numero: 'EX-000001' }, true],
+      'o mesmo número, adiantada (começo e fim diferentes: é outro termo)' => [
+        {}, { seguradora: 'Seguradora Exemplo', numero: 'EX-000001', inicio_vigencia: Date.new(2026, 11, 20) }, true
+      ],
       'o item escrito de outro jeito (caixa, acento, pontuação)' => [{ bem: 'Carro Exemplo 2022' }, { bem: 'CARRO  exemplo-2022' }, true],
       'a nova sem dizer o item' => [{}, { bem: nil }, true],
       'a anterior sem dizer o item' => [{ bem: nil }, {}, true],

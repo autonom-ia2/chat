@@ -117,6 +117,28 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
       expect(response).to have_http_status(:created)
       expect(nova.eventos.sole.user_id).to eq(agente.id)
     end
+
+    # A seguradora manteve o número: é outro termo da mesma apólice (Carteira::Termo), e é a linha nova que se liga.
+    it 'a renovação que mantém a seguradora e o número nasce como outra linha, ligada à anterior, que não é mexida' do
+      comecos = { 'EX-000011' => '2026-12-02', 'EX-000012' => '2026-11-20', 'EX-000013' => nil }
+      anteriores = comecos.keys.map do |numero|
+        criar_apolice(marina, numero: numero, tipo: 'auto', inicio_vigencia: Date.new(2025, 12, 2), fim_vigencia: Date.new(2026, 12, 2))
+      end
+
+      respostas = anteriores.map do |antiga|
+        guardar(da_nova.merge(anteriorId: antiga.id, seguradora: 'Seguradora Exemplo', numero: antiga.numero, comeca: comecos[antiga.numero]))
+        response.status
+      end
+
+      novas = anteriores.map { |antiga| seguros.find_by(apolice_anterior_id: antiga.id) }
+      expect(respostas).to eq([201, 201, 201])
+      expect(novas.map { |novo| [novo.numero, novo.inicio_vigencia&.iso8601, novo.fim_vigencia.iso8601, novo.origem] }).to eq(
+        [%w[EX-000011 2026-12-02 2027-12-02 manual], %w[EX-000012 2026-11-20 2027-12-02 manual], ['EX-000013', nil, '2027-12-02', 'manual']]
+      )
+      expect(anteriores.map { |antiga| antiga.reload.slice(:inicio_vigencia, :fim_vigencia, :renovado_em, :origem).values }).to all(
+        eq([Date.new(2025, 12, 2), Date.new(2026, 12, 2), agora, 'planilha'])
+      )
+    end
   end
 
   describe 'recusas' do
@@ -181,6 +203,41 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
 
       expect(recusa).to eq([422, { 'error' => 'apolice_repetida' }])
       expect([guardada.reload.attributes, guardada.eventos.count, seguros.count]).to eq([antes, 0, 2])
+      expect([anterior.reload.renovado_em, anterior.eventos.count]).to eq([nil, 0])
+    end
+
+    it 'o mesmo número com o mesmo começo da anterior é a própria anterior: recusa como repetida, e ela não é mexida' do
+      antes = anterior.reload.attributes
+
+      guardar(da_nova.merge(seguradora: 'Seguradora Exemplo', numero: 'EX-000001', comeca: '2025-12-02'))
+
+      expect(recusa).to eq([422, { 'error' => 'apolice_repetida' }])
+      expect([anterior.reload.attributes, nada_mudou]).to eq([antes, true])
+    end
+
+    it 'recusa a apólice que já está guardada para outra pessoa, sem mudar o dono nem o anterior' do
+      caio = create(:contact, account: account, name: 'Caio Exemplo', phone_number: '+5511900000024')
+      de_outro = criar_apolice(caio, seguradora: 'Outra Seguradora Exemplo', numero: 'OS-777001', fim_vigencia: Date.new(2027, 12, 2))
+      antes = de_outro.reload.attributes
+
+      guardar
+
+      expect(recusa).to eq([422, { 'error' => 'apolice_de_outra_pessoa' }])
+      expect([de_outro.reload.attributes, de_outro.eventos.count, seguros.count]).to eq([antes, 0, 2])
+      expect([anterior.reload.renovado_em, anterior.eventos.count]).to eq([nil, 0])
+    end
+
+    it 'recusa quando duas vigências guardadas da mesma apólice podem ser a digitada, sem escolher uma' do
+      guardadas = [Date.new(2027, 6, 2), Date.new(2027, 9, 2)].map do |fim|
+        criar_apolice(marina, seguradora: 'Outra Seguradora Exemplo', numero: 'OS-777001', inicio_vigencia: Date.new(2026, 12, 2),
+                              fim_vigencia: fim)
+      end
+      antes = guardadas.map { |guardada| guardada.reload.attributes }
+
+      guardar
+
+      expect(recusa).to eq([422, { 'error' => 'termo_ambiguo' }])
+      expect([guardadas.map { |guardada| guardada.reload.attributes }, seguros.count]).to eq([antes, 3])
       expect([anterior.reload.renovado_em, anterior.eventos.count]).to eq([nil, 0])
     end
   end
