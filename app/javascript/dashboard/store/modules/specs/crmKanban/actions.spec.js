@@ -973,3 +973,131 @@ describe('#crmKanban exportCardsList', () => {
     expect(filename).toBe('crm.xlsx');
   });
 });
+
+// #2986: atualizar o funil que já está na tela não troca o quadro pelo carregando.
+describe('#crmKanban board refresh without blinking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const boardOf = pipelineId => ({
+    pipeline: { id: pipelineId },
+    stages: [],
+  });
+  const spinnerCalls = commit =>
+    commit.mock.calls.filter(
+      ([type, flags]) =>
+        type === types.SET_CRM_KANBAN_UI_FLAG && 'isFetchingBoard' in flags
+    );
+
+  it('keeps the board on screen when refreshing the pipeline already shown', async () => {
+    const commit = vi.fn();
+    CrmKanbanAPI.getBoard.mockResolvedValue({ data: { payload: boardOf(7) } });
+
+    await actions.fetchBoard(
+      { commit, state: { filters: defaultFilters(), board: boardOf(7) } },
+      { pipelineId: 7 }
+    );
+
+    expect(
+      commit.mock.calls.some(
+        ([type, flags]) =>
+          type === types.SET_CRM_KANBAN_UI_FLAG &&
+          flags.isFetchingBoard === true
+      )
+    ).toBe(false);
+    expect(commit).toHaveBeenCalledWith(types.SET_CRM_KANBAN_BOARD, boardOf(7));
+  });
+
+  it('shows the spinner on the first load of a pipeline and turns it off', async () => {
+    const commit = vi.fn();
+    CrmKanbanAPI.getBoard.mockResolvedValue({ data: { payload: boardOf(7) } });
+
+    await actions.fetchBoard(
+      { commit, state: { filters: defaultFilters(), board: boardOf(3) } },
+      { pipelineId: 7 }
+    );
+
+    expect(spinnerCalls(commit).map(([, flags]) => flags)).toEqual([
+      { isFetchingBoard: true },
+      { isFetchingBoard: false },
+    ]);
+  });
+
+  it('drops the answer of an older fetch that arrives after a newer one', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(7) };
+    let answerOld;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          answerOld = resolve;
+        })
+      )
+      .mockResolvedValueOnce({ data: { payload: boardOf(7) } });
+
+    const older = actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    await actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    answerOld({ data: { payload: boardOf(99) } });
+    await older;
+
+    const boards = commit.mock.calls
+      .filter(([type]) => type === types.SET_CRM_KANBAN_BOARD)
+      .map(([, board]) => board.pipeline.id);
+    expect(boards).toEqual([7]);
+  });
+});
+
+// #2986, revisão: o "carregar mais" e o erro de busca superada.
+describe('#crmKanban board refresh races', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const boardOf = pipelineId => ({ pipeline: { id: pipelineId }, stages: [] });
+
+  it('keeps a load-more answer even when a refresh started meanwhile', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(7) };
+    let answerMore;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          answerMore = resolve;
+        })
+      )
+      .mockResolvedValueOnce({ data: { payload: boardOf(7) } });
+
+    const more = actions.fetchBoard(
+      { commit, state },
+      { pipelineId: 7, append: true, cursorByStage: { 1: 'abc' } }
+    );
+    await actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    answerMore({ data: { payload: boardOf(7) } });
+    await more;
+
+    expect(commit).toHaveBeenCalledWith(
+      types.APPEND_CRM_KANBAN_STAGE_CARDS,
+      boardOf(7)
+    );
+  });
+
+  it('does not throw the error of a fetch already replaced by a newer one', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(7) };
+    let failOld;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          failOld = reject;
+        })
+      )
+      .mockResolvedValueOnce({ data: { payload: boardOf(7) } });
+
+    const older = actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    await actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    failOld(new Error('rede'));
+
+    await expect(older).resolves.toEqual(boardOf(7));
+  });
+});
