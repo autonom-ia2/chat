@@ -178,15 +178,15 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
   # que a linha registrada tem de diferente do padrão.
   def gatilhos # rubocop:disable Metrics/MethodLength, Metrics/AbcSize -- a tabela é o ponto: um gatilho por saída
     {
-      'leitura_da_pronta.rb#registrar_recusa_da_leitura#1' => {
+      'answerer.rb#ler_saida_pronta#1' => {
         espera: { motivo: 'consulta_pronta_indisponivel', slug: 'pronta_cep' },
         dispara: lambda {
           ligar_prontas(account)
           pronta = incluir_pronta('cep', conta: account, agente: agent)
           account.disable_features!(Autonomia::FerramentasProntas::FLAG)
           ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: pronta)
-          ligada.execute({ 'arguments' => '{"cep":"01001000"}' }, delivery: delivery)
-          ligada.registrar_recusa_da_leitura
+          allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).with(agent).and_return([ligada])
+          rodar_principal({ 'name' => pronta.slug, 'call_id' => 'c1', 'arguments' => '{"cep":"01001000"}' })
         }
       },
       'bound.rb#execute#1' => {

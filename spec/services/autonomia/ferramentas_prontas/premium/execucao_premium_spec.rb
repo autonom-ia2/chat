@@ -413,32 +413,42 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
   describe 'a leitura no turno (#3006)' do
     let(:chamada_no_turno) { { 'name' => certidoes.slug, 'call_id' => 'premium', 'arguments' => cnj.to_json } }
 
-    it 'a falha não é dado e registra recusa sem trocar o texto do modelo' do
-      ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
+    it 'a falha não é dado e registra recusa sem trocar o texto da ferramenta' do
+      chamadas = [chamada_no_turno]
+      agent.update!(config: { 'with_knowledge' => false }, fallback_message: 'Sem base para responder.')
       stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return(status: 504, body: '')
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential'))
+      client = instance_double(Crm::Ai::ResponsesClient)
+      saidas = []
+      allow(client).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
+        saidas.concat(executor.call(chamadas))
+        { text: { reply: 'O valor é de R$ 89.', confidence: 0.9, should_handoff: false, handoff_reason: nil,
+                  used_snippet_ids: [], answered_from_knowledge: false }.to_json }
+      end
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
       recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
 
-      texto = ligada.execute(chamada_no_turno)
-      ligada.registrar_recusa_da_leitura
+      resultado = Autonomia::Agents::Answerer.new(agent: agent, query: 'consulte a certidão').answer
 
-      expect(texto).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
-      expect(ligada.sem_dado?).to be(true)
+      expect(saidas.sole[:output]).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(resultado.handoff[:should]).to be(true)
+      expect(resultado.reply).to eq(agent.fallback_message)
       expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes + 1)
       expect(registros_premium.sole).to have_attributes(resultado: 'falha', cobranca: 'sem_cobranca')
     end
 
-    it 'o pedido inválido deixa a tentativa corrigida contar como dado, sem recusa no turno' do
+    it 'lê o pedido inválido e a tentativa corrigida pelas respectivas saídas' do
       ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
       cnj_responde
       recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
       invalida = chamada_no_turno.merge('arguments' => cnj.merge('cnpj' => 'invalido').to_json)
 
-      expect(JSON.parse(ligada.execute(invalida))['situacao']).to eq('pedido_invalido')
-      ligada.registrar_recusa_da_leitura
-      expect(ligada.sem_dado?).to be(true)
-      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('encontrado')
-      ligada.registrar_recusa_da_leitura
-      expect(ligada.sem_dado?).to be(false)
+      invalido = ligada.execute(invalida)
+      encontrado = ligada.execute(chamada_no_turno)
+
+      expect(ligada.situacao_da_pronta(encontrado)).to eq('encontrado')
+      expect(ligada.situacao_da_pronta(invalido)).to eq('pedido_invalido')
       expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
       expect(registros_premium.count).to eq(1)
     end
@@ -448,9 +458,7 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       cnj_responde(nil)
       recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
 
-      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('nao_encontrado')
-      ligada.registrar_recusa_da_leitura
-      expect(ligada.sem_dado?).to be(false)
+      expect(ligada.situacao_da_pronta(ligada.execute(chamada_no_turno))).to eq('nao_encontrado')
       expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
       expect(registros_premium.sole).to have_attributes(resultado: 'sem_registro', cobranca: 'gratis', numero: 1)
     end
@@ -460,11 +468,8 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
       cnj_responde(nil, code: -114, message: 'INVALID DOCUMENT')
       recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
 
-      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('documento_invalido')
-      ligada.registrar_recusa_da_leitura
-      expect(ligada.sem_dado?).to be(false)
-      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('documento_invalido')
-      expect(ligada.sem_dado?).to be(false)
+      expect(ligada.situacao_da_pronta(ligada.execute(chamada_no_turno))).to eq('documento_invalido')
+      expect(ligada.situacao_da_pronta(ligada.execute(chamada_no_turno))).to eq('documento_invalido')
       expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
       expect(registros_premium.order(:id).pluck(:resultado, :cobranca))
         .to eq([%w[documento_invalido gratis], %w[documento_invalido sem_cobranca]])

@@ -1,13 +1,21 @@
 # #3006 — consulta pronta que falhou não é dado do turno
 
 - Issue: https://github.com/autonom-ia2/chat/issues/3006
+- PR aberto: https://github.com/autonom-ia2/chat/pull/3008
 - Branch: `fix/3006-consulta-que-falhou-nao-e-dado`.
-- Escopo: o conserto da Issue. Escrito sem rodar os specs na máquina; eles rodam na CI do PR.
+- Segunda rodada, depois da revisão independente do commit `5e1d52f380`: desenho sem estado, no commit seguinte da mesma branch.
+- Specs escritos e ajustados, sem execução nesta máquina. Execução na CI ainda não verificada nesta rodada.
 
 ## Decisão
 
-A ferramenta ligada (`Tools::Bound`) guarda a `situacao` da resposta JSON antes do seu corte de tamanho. O módulo
-`Tools::LeituraDaPronta` declara `sem_dado?`; não interpreta frases nem aplica expressão regular.
+A ferramenta ligada (`Tools::Bound`) não guarda situação nem contexto da leitura entre chamadas. O módulo
+`Tools::LeituraDaPronta` expõe `situacao_da_pronta(output)`: recebe a própria saída devolvida por `execute` e lê
+`situacao` somente quando a ferramenta é pronta e a saída é um objeto JSON. Nos demais casos, devolve `nil`.
+Não interpreta frases nem aplica expressão regular. A leitura ocorre depois do corte de tamanho do Bound.
+
+O Answerer usa esse valor local à chamada, mantendo o contexto em `@delivery` e `@operador`. O Guia (com operador)
+fica fora da classificação. Só uma ferramenta direta do principal, identificada por `ferramenta_do_sistema?`,
+passa por essa leitura; o despacho ao especialista ou ajudante mantém a regra anterior.
 
 | Situação da resposta | Dado | Recusa do turno |
 | --- | --- | --- |
@@ -17,17 +25,28 @@ A ferramenta ligada (`Tools::Bound`) guarda a `situacao` da resposta JSON antes 
 | `pedido_invalido` | não | não; uma tentativa corrigida pode contar |
 | `nao_consegui_consultar` | não | sim; permanece até o fim do turno |
 
-O principal pede o registro após o despacho da ferramenta direta e antes de comparar o contador de recusas. A
-recusa usa `Recusa.registrar`, sem `Recusa.para_modelo` ou `Recusa.saida`: o JSON entregue ao modelo continua igual.
-O motivo novo, `consulta_pronta_indisponivel`, evita afirmar que toda falha foi uma resposta HTTP com erro
-(`tool_http_error`) ou uma exceção (`tool_execution_error`): a mesma saída também cobre flag, acesso e limites.
+`Answerer#ler_saida_pronta` registra somente `nao_consegui_consultar`, depois do despacho e antes da comparação
+do contador. Usa `Recusa.registrar` com o agente e a conversa do `@delivery`, sem `Recusa.para_modelo` ou
+`Recusa.saida`: o texto devolvido pela ferramenta ao modelo não muda. O gatilho da varredura passa a ser
+`answerer.rb#ler_saida_pronta#1`, disparado pelo caminho real do Answerer no spec de registro.
 
-O registro fica restrito às chamadas diretas de ferramenta do principal. As consultas internas do especialista e
-do ajudante não pedem esse registro. O Guia (`operador`) não recebe a nova classificação. HTTP cadastrada e nativa
-não têm a `situacao` interpretada. Nenhum arquivo de cotação foi alterado.
+A consulta interna do especialista e do ajudante não registra a nova recusa. HTTP cadastrada e nativa não têm a
+`situacao` interpretada. Nenhum arquivo de cotação foi alterado. O desenho respeita o contexto por chamada descrito
+em `app/services/autonomia/agents/tools/delivery.rb:8` e `app/services/autonomia/guide/contexto.rb:8`; o primeiro
+arquivo fica em `agents/tools`, não em `agents/delivery.rb`.
 
-O Answerer ganhou duas linhas, sem reordenação ou refatoração. O predicado `Bound#consulta_em_andamento?` foi movido,
-com corpo idêntico, para o módulo de leitura: a inclusão e a anotação excediam o limite de tamanho do Bound.
+## Onde a resposta pode ser barrada
+
+No atendimento ao cliente, `Operate::Responder` passa `trust_instruction: true`
+(`app/services/autonomia/agents/operate/responder.rb:515`). O Answerer retorna antes do portão
+(`app/services/autonomia/agents/answerer.rb:156`). Portanto, este conserto não barra a resposta ao cliente: nesse
+caminho, o efeito é a linha de recusa no log e sua contagem no turno.
+
+O Testar de agente que não é a Lia também usa `trust_instruction: true`
+(`Playground.como_no_atendimento?` e `Playground#run`). O portão que este conserto religa para as prontas é o do
+Copiloto, que chama sem `trust_instruction`. Os exemplos do Answerer que verificam bloqueio usam esse modo
+explicitamente pelo padrão `false` do construtor; não demonstram bloqueio no atendimento nem no Testar real.
+O Testar da Lia mantém seu desvio com portão, mas a Lia não recebe ferramentas prontas.
 
 ## Premium
 
@@ -44,23 +63,40 @@ internas são convertidas pela execução antes de chegar ao Bound:
 
 ## Cobertura escrita, sem execução
 
-- Answerer: fonte indisponível com resposta contendo valor, pedido inválido sozinho, tentativa corrigida no mesmo
-  turno, ausência de registro e falha com dado de outra ferramenta no turno.
-- Bound/prontas: texto original preservado, contador de recusas, pedido corrigido, Guia, consulta interna de
-  especialista/ajudante, HTTP cadastrado com o mesmo JSON e falha recebida na janela do segundo plano.
-- Premium: falha 504, pedido corrigido, ausência de registro e documento inválido na fonte/cache, mantendo a cobrança.
-- Guarda de recusas: gatilho para a nova saída e seu motivo no catálogo.
-- Os dois dublês existentes do Bound no Answerer foram atualizados para os métodos do contrato.
+- `answerer_dado_de_ferramenta_spec.rb`: contador na falha direta, fluxo real principal → Runner do especialista →
+  pronta indisponível, resposta do principal preservada e contador inalterado nesse fluxo interno. O Guia também
+  percorre o Answerer, com resposta e contador preservados. Mantidos os casos de pedido corrigido e dados válidos.
+- `answerer_interacao_spec.rb`: dublê do Bound adaptado a `situacao_da_pronta(output)`.
+- `tools/bound_pronta_spec.rb`: leitura das respectivas saídas fora da ordem de execução, saída sem objeto JSON com
+  a chave, HTTP cadastrado ignorado e falha recebida na janela do segundo plano. Removido o exemplo interno que
+  só executava o Bound e conferia o contador; ele não exercitava o principal nem o especialista.
+- `tools/recusa_registro_spec.rb`: gatilho `answerer.rb#ler_saida_pronta#1` e conferência do registro pelo Answerer,
+  com agente e conversa do turno.
+- `premium/execucao_premium_spec.rb`: falha 504 pelo Answerer, com texto da ferramenta preservado e recusa; pedido
+  corrigido, ausência de registro e documento inválido na fonte/cache pela leitura das respectivas saídas.
 
-## Validação executada
+Nenhum desses specs foi rodado nesta rodada.
 
-Comando final (somente os nove arquivos Ruby alterados):
+## Limites conhecidos
+
+- A saída cortada em 8.000 letras deixa de ser JSON e conta como dado. Isso inclui um `pedido_invalido` maior que
+  o teto. Não há tentativa de inferir a situação pelo prefixo do texto.
+- A consulta em segundo plano que falhou depois de o turno desistir devolve texto, não JSON, ao turno seguinte;
+  esse texto conta como dado. Hoje isso é inerte para o portão: o segundo plano exige conversa e quem tem conversa
+  roda sem portão, com `trust_instruction: true`.
+- `consulta_pronta_indisponivel` cobre também limite do dia, conta sem acesso e flag desligada. A causa real fica
+  somente na linha `[autonomia][pronta] motivos=`; o código da recusa não distingue essas causas.
+- A falha de pronta fica fora de `RecusasRecentes::NA_NOTA` de propósito. Incluí-la criaria uma nota privada nova
+  no atendimento; essa mudança depende de decisão do dono do produto. A lista foi preservada.
+
+## Validação executada nesta revisão
+
+Somente os oito arquivos Ruby tocados nesta rodada:
 
 ```sh
 eval "$(rbenv init -)" && RUBOCOP_CACHE_ROOT=tmp/rubocop_cache bundle exec rubocop --no-server \
   app/services/autonomia/agents/answerer.rb \
   app/services/autonomia/agents/tools/bound.rb \
-  app/services/autonomia/agents/tools/recusa.rb \
   app/services/autonomia/agents/tools/leitura_da_pronta.rb \
   spec/services/autonomia/agents/answerer_dado_de_ferramenta_spec.rb \
   spec/services/autonomia/agents/answerer_interacao_spec.rb \
@@ -69,38 +105,37 @@ eval "$(rbenv init -)" && RUBOCOP_CACHE_ROOT=tmp/rubocop_cache bundle exec ruboc
   spec/services/autonomia/ferramentas_prontas/premium/execucao_premium_spec.rb
 ```
 
-Saída final, retorno 0:
+Saída final completa do RuboCop, retorno 0:
 
 ```text
-Inspecting 9 files
-.........
+Inspecting 8 files
+........
 
-9 files inspected, no offenses detected
+8 files inspected, no offenses detected
+
+Tip: Based on detected gems, the following RuboCop extension libraries might be helpful:
+  * rubocop-rspec_rails (https://rubygems.org/gems/rubocop-rspec_rails)
+
+You can opt out of this message by adding the following to your config (see https://docs.rubocop.org/rubocop/extensions.html#extension-suggestions for more options):
+  AllCops:
+    SuggestExtensions: false
 ```
 
-O RuboCop também exibiu uma sugestão opcional de extensão, sem infração. A primeira tentativa foi bloqueada antes
-da análise ao tentar criar cache fora do worktree (`Errno::EPERM`); as seguintes usaram cache local e `--no-server`.
-As infrações intermediárias de tamanho, complexidade e formatação foram corrigidas sem desativar regras.
+As duas primeiras passagens encontraram cinco infrações de alinhamento cada; foram corrigidas sem desativar
+regras ou alterar limites. A passagem seguinte não encontrou infrações. Na conferência estática final, a pronta
+Premium do spec passou a ser criada antes de o Answerer montar o catálogo; o RuboCop foi repetido após esse ajuste.
 
-`ruby -c` retornou `Syntax OK` para cada um dos nove arquivos. `git diff --check` terminou sem saída.
-Não foram executados RSpec, Vitest, build, servidor, Rails ou consultas a banco.
+`ruby -c` retornou `Syntax OK` para os oito arquivos Ruby tocados. A sintaxe do spec Premium foi conferida de novo
+após o último ajuste. `git diff --check` terminou sem saída.
+Não foram executados RSpec, build, servidor, Rails, consultas a banco ou avaliações com provedores pagos.
 
-## Dúvidas e riscos
+## Riscos e entrega
 
-- Não há prova de execução dos specs: foram escritos e conferidos estaticamente, como solicitado.
-- A busca em `app`, `enterprise` e `lib` encontrou as marcas `@dado_de_sistema` e `@recusa_no_turno` somente no
-  Answerer. `leu_dado_de_sistema?` alimenta os três portões descritos na issue: confiança, especificidades sem base
-  e afirmação do negócio sem âncora. A recusa permanece no turno mesmo se outra consulta posterior tiver sucesso.
-- `UmaEscritaPorTurno#concluir` recebe a mesma comparação de recusas. Prontas são leitura, portanto a nova recusa
-  não muda quais escritas contam como feitas.
-- `Recusa.registrar` também chama `RecusasRecentes.anotar`. A lista `NA_NOTA` não inclui o motivo novo; a falha
-  fica no log/contador, mas não acrescenta uma nota à equipe. A lista foi preservada.
-- O contador continua isolado por fio de execução, como antes. Uma futura execução paralela das ferramentas em
-  outros fios precisaria transportar a recusa; nada dessa concorrência foi alterado aqui.
-- Situação desconhecida conserva a regra anterior. Saída em segundo plano que já chegue como JSON cortado também
-  conserva a regra anterior; não foi criada inferência sobre prefixo de texto. As falhas de consulta atuais são
-  respostas curtas. A classificação local ocorre antes do corte do Bound.
+- A validação é estática; não há prova de execução dos specs nem de produção nesta rodada.
+- A recusa permanece no turno mesmo se outra consulta posterior tiver sucesso. Prontas são leitura: o contador
+  recebido por `UmaEscritaPorTurno#concluir` não muda quais escritas contam como feitas.
+- O contador continua isolado por fio de execução. Paralelizar ferramentas em outros fios exigiria transportar a
+  recusa; o Bound agora não guarda estado da leitura, mas o contador não foi redesenhado.
 - Não foi encontrado override correspondente no Enterprise para os componentes alterados.
-- A entrega está limitada ao working tree por instrução explícita. O fluxo de PR/review/release permanece pendente;
-  nenhum merge ou deploy foi solicitado. Reverter esta alteração local restaura a classificação anterior, sem
-  migração ou alteração de dados.
+- O PR #3008 está aberto, em rascunho. Nenhum merge ou deploy foi feito.
+- Rollback: reverter a alteração de classificação no código, sem migração ou mudança de dados.
