@@ -33,7 +33,7 @@ describe('problemas com o nome da pessoa', () => {
   it('o nome vem na frente e a linha vai como apoio em cinza', () => {
     const w = montar(14);
     expect(w.text()).toContain(
-      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.'
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.'
     );
     expect(w.text()).toContain('Linha 14 da planilha');
     expect(w.get('p').classes()).toContain('font-semibold');

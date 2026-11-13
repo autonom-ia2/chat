@@ -4,7 +4,7 @@ require 'stringio'
 # "Trazer minha lista" (#2896): o arquivo das linhas da planilha que precisam da pessoa.
 #
 # A leitura da planilha (ContactImports::Trazer::Validador) grava aqui, a cada passada, só as linhas que deram problema:
-# o número da linha e as células dos quatro alvos (nome, telefone já com o DDD, e-mail e empresa) como vieram. Nenhuma
+# o número da linha e as células dos quatro alvos (nome, telefone, e-mail e empresa) como vieram. Nenhuma
 # outra coluna entra, nem a que a pessoa marcou "não guardar". A linha repetida leva junto as células da outra linha da
 # mesma pessoa. A tela lê daqui os valores inteiros e não abre a planilha original, que num XLSX grande custa segundos e
 # centenas de MB.

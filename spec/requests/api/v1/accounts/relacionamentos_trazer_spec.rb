@@ -234,7 +234,8 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
         # A planilha tem coluna de empresa, mas a conta não tem Empresas ligada.
         'tem_empresa' => false,
         'perguntas' => [{ 'id' => 'clientes' }, { 'id' => 'telefone', 'coluna' => 'Celular', 'indice' => 1 }], 'respostas' => {},
-        'resumo' => { 'total' => 6, 'novas' => 1, 'completadas' => 1, 'comProblema' => 4, 'juntadas' => 0, 'entram' => 2, 'clientes' => 0 },
+        'resumo' => { 'total' => 6, 'novas' => 1, 'completadas' => 1, 'comProblema' => 4, 'juntadas' => 0, 'semTelefone' => 0, 'entram' => 2,
+                      'clientes' => 0 },
         'exemplos' => [
           { 'nome' => 'Ana Albuquerino', 'telefone' => '+5511987650001', 'email' => 'ana.albuquerino@exemplo.com.br',
             'empresa' => 'Padaria Bom Dia', 'cliente' => false },

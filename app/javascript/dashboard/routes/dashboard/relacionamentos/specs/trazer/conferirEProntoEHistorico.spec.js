@@ -81,7 +81,7 @@ describe('ProblemaDaLinha', () => {
   it.each([
     [
       14,
-      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.',
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.',
     ],
     [37, 'Rita Carvalhedo: este e-mail não parece certo.'],
     [62, '(11) 95412-0062: falta o nome'],
@@ -494,7 +494,7 @@ describe('Conferir com a planilha já apagada (valores mascarados)', () => {
   it('a linha continua dizendo o problema em palavras simples', () => {
     const w = conferir(apagada());
     expect(w.get('[data-linha="14"]').text()).toContain(
-      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.'
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.'
     );
   });
 

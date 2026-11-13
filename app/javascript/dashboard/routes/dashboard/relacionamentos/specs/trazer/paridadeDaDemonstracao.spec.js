@@ -165,6 +165,7 @@ const corpo = (extra = {}) => ({
     completadas: 1,
     comProblema: 6,
     juntadas: 0,
+    semTelefone: 0,
     entram: 2,
     clientes: 0,
   },

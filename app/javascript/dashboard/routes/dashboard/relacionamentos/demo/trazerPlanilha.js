@@ -119,6 +119,7 @@ export const RESUMO = {
   completadas: 15,
   comProblema: 8,
   juntadas: 3,
+  semTelefone: 0,
 };
 
 // `celulas` é o que a planilha tem escrito, para cada pessoa de exemplo, nas

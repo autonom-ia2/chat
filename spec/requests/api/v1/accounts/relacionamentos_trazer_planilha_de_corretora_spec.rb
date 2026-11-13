@@ -146,7 +146,7 @@ RSpec.describe 'Trazer minha lista: a planilha de uma corretora, duas vezes (Rel
        ['Data de Nascimento', 'informacao']]
     )
     expect(leitura['resumo']).to eq('total' => 280, 'novas' => 224, 'completadas' => 20, 'comProblema' => 36, 'juntadas' => 20,
-                                    'entram' => 244, 'clientes' => 0)
+                                    'semTelefone' => 4, 'entram' => 244, 'clientes' => 0)
     expect(leitura['problemas'].pluck('linha', 'tipo')).to eq(
       (262..271).map { |linha| [linha, 'duplicada'] } + (272..281).map { |linha| [linha, 'telefone'] } +
       (282..287).map { |linha| [linha, 'email'] } + (288..293).map { |linha| [linha, 'sem_contato'] } + (294..297).map { |linha| [linha, 'nome'] }
@@ -217,7 +217,7 @@ RSpec.describe 'Trazer minha lista: a planilha de uma corretora, duas vezes (Rel
     # A mesma planilha de novo: todo mundo que entra já é da conta, e ninguém é criado.
     de_novo = ler_e_apontar_o_nome
     expect(ler(de_novo)['resumo']).to eq('total' => 280, 'novas' => 0, 'completadas' => 244, 'comProblema' => 36, 'juntadas' => 20,
-                                         'entram' => 244, 'clientes' => 0)
+                                         'semTelefone' => 4, 'entram' => 244, 'clientes' => 0)
     trazer(de_novo)
     expect(response.parsed_body).to eq('trazidaId' => de_novo.id)
     gravar_a_lista

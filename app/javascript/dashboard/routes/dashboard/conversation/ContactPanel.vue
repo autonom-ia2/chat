@@ -34,6 +34,8 @@ import ContactOriginsPanel from 'dashboard/components-next/CampaignJourney/Conta
 // #2138: o painel novo do contato, com a chave painel_contato_enxuto da conta.
 import PainelDoContato from 'dashboard/components-next/painel-do-contato/PainelDoContato.vue';
 import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
+// #2897: os seguros de quem está na conversa, só na conta que tem a carteira de seguros.
+import { useSegurosNoPainel } from 'dashboard/routes/dashboard/relacionamentos/carteira/segurosNoPainel';
 
 const props = defineProps({
   conversationId: {
@@ -69,6 +71,7 @@ const isShopifyFeatureEnabled = computed(
 
 const { isCloudFeatureEnabled } = useAccount();
 const painelNovo = usePainelNovo();
+const { PainelDeSeguros, comSeguros } = useSegurosNoPainel();
 
 const isLinearFeatureEnabled = computed(() =>
   isCloudFeatureEnabled(FEATURE_FLAGS.LINEAR)
@@ -172,7 +175,11 @@ onMounted(() => {
     :pode-operar="canOperate"
     :conversation-attributes="conversationAdditionalAttributes"
     @fechar="closeContactPanel"
-  />
+  >
+    <template v-if="comSeguros" #depois-do-contato>
+      <PainelDeSeguros :contact-id="contactId" />
+    </template>
+  </PainelDoContato>
   <div v-else class="w-full">
     <SidebarActionsHeader
       :title="$t('CONVERSATION.SIDEBAR.CONTACT')"
@@ -188,6 +195,7 @@ onMounted(() => {
       :contact="contact"
       :conversation-id="conversationId"
     />
+    <PainelDeSeguros v-if="comSeguros" :contact-id="contactId" />
     <ContactOriginsPanel
       :contact-id="contactId"
       :conversation-attributes="conversationAdditionalAttributes"

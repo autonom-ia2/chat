@@ -51,6 +51,7 @@ describe('ler', () => {
       completadas: 15,
       comProblema: 8,
       juntadas: 3,
+      semTelefone: 0,
       // A conta de quantas entram, que na demonstração a própria demo faz.
       entram: 195,
       // Ninguém é cliente até a pessoa dizer quem é (E3).

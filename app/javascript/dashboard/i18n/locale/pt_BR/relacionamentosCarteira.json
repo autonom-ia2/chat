@@ -104,6 +104,12 @@
       "GUARDAR_PDF_DE": "Guardar o PDF do seguro {tipo}",
       "ABRIR": "Abrir o seguro {tipo}"
     },
+    "PAINEL": {
+      "TITULO": "Seguros",
+      "VER_OS_OUTROS": "Ver o outro seguro | Ver os outros {count} seguros",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "VER_NA_FICHA": "Ver na ficha"
+    },
     "QUANDO": {
       "LISTA": {
         "VENCE_EM": "vence em {count} dias ({data})",

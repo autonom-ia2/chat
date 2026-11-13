@@ -608,8 +608,15 @@ describe('consertar, deixar de fora e voltar atrás', () => {
 
   it('linha repetida: manda com qual das duas linhas fica', async () => {
     const { fonte } = await comDois();
-    // Ficar com a outra linha deixa esta de fora.
+    // Ficar com a outra linha deixa esta de fora, e a leitura é pedida de novo.
     responde('consertar', { problema: { ...REPETIDA, estado: 'deixado' } });
+    responde(
+      'leitura',
+      pronta({
+        problemas: [problema(14), { ...REPETIDA, estado: 'deixado' }],
+        problemas_total: 2,
+      })
+    );
     const nova = await fonte.consertar(812, 143, 88);
     expect(TrazerAPI.consertar).toHaveBeenCalledWith(812, 143, {
       ficar_com: 88,
