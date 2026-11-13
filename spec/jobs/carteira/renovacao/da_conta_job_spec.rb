@@ -131,6 +131,64 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     expect([cards.count, seguro.reload.crm_card_id]).to eq([0, nil])
   end
 
+  # O card de renovação que saiu do quadro não volta nesta vigência, pelos dois caminhos do CRM: "apagar" (que arquiva)
+  # e excluir de vez (que apaga a linha; o banco anula o vínculo no seguro sem avisar ninguém).
+  describe 'o card de renovação que saiu do quadro' do
+    let(:seguro) { criar_apolice(marina, numero: 'EX-000090', fim_vigencia: hoje + 30) }
+    let(:card) { por_em_renovacao(seguro, config) }
+
+    before { card }
+
+    def excluir_de_vez(**opcoes)
+      Crm::Cards::Excluidor.new(account: account, card_ids: [card.id], **opcoes).perform
+    end
+
+    it 'apagado no lote do quadro (arquivado) não renasce' do
+      feito = Crm::Cards::BulkAction.new(account: account, user: admin, account_user: AccountUser.find_by(account: account, user: admin),
+                                         ids: [card.id], action: 'delete').perform
+
+      rodar
+
+      expect(feito).to eq(updated: [card.id], failed: [])
+      expect(seguro.reload).to have_attributes(crm_card_id: card.id, renovacao_card_removido_em: agora)
+      expect(cards.pluck(:id, :status)).to eq([[card.id, 'archived']])
+    end
+
+    # O funil apagado com os cards dentro exclui o card aberto, sem arquivar antes (`somente_arquivados: false`).
+    it 'excluído de vez ainda aberto não renasce: a história do seguro lembra que o card nasceu' do
+      excluir_de_vez(somente_arquivados: false)
+      solto = seguro.reload.slice(:crm_card_id, :renovacao_card_removido_em).values
+
+      rodar
+      rodar
+
+      expect(solto).to eq([nil, nil])
+      expect([cards.count, seguro.reload.crm_card_id, seguro.eventos.pluck(:tipo)]).to eq([0, nil, ['card_nasceu']])
+    end
+
+    it 'arquivado e depois excluído de vez também não renasce' do
+      Crm::Cards::Archiver.new(card: card, actor: admin).perform
+      excluir_de_vez
+
+      rodar
+
+      expect([cards.count, seguro.reload.crm_card_id]).to eq([0, nil])
+    end
+
+    # A vigência é a linha: a renovação é outra apólice, e ganha o card dela quando chegar a hora.
+    it 'na vigência seguinte o card nasce' do
+      excluir_de_vez(somente_arquivados: false)
+      seguinte = criar_apolice(marina, numero: 'EX-000090', fim_vigencia: hoje + 395, apolice_anterior: seguro)
+
+      rodar
+      cedo = cards.count
+      travel_to(agora + 365.days)
+      rodar
+
+      expect([cedo, cards.sole.id, seguro.reload.crm_card_id]).to eq([0, seguinte.reload.crm_card_id, nil])
+    end
+  end
+
   it 'não cria nada sem a carteira, sem o CRM, sem escolha ou com o funil arquivado' do
     seguro = criar_apolice(marina, numero: 'EX-000040', fim_vigencia: hoje + 30)
 
@@ -146,6 +204,18 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     described_class.perform_now(0)
 
     expect([cards.count, seguro.reload.crm_card_id]).to eq([0, nil])
+  end
+
+  it 'o funil restaurado volta a receber os cards, sem ninguém escolher de novo' do
+    seguro = criar_apolice(marina, numero: 'EX-000041', fim_vigencia: hoje + 30)
+    funil.update!(status: :archived)
+    rodar
+    com_o_funil_arquivado = cards.count
+    funil.update!(status: :active)
+
+    rodar
+
+    expect([com_o_funil_arquivado, cards.sole.id]).to eq([0, seguro.reload.crm_card_id])
   end
 
   it 'só mexe na conta pedida' do

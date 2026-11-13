@@ -45,7 +45,7 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq(
-        'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60 },
+        'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60 }, 'escolha' => 'nunca_feita',
         'funis' => [{ 'id' => funil.id, 'nome' => 'Renovação', 'etapas' => [{ 'id' => etapa.id, 'nome' => 'Novo Lead' }] }],
         'vencimentos' => [], 'semPermissao' => false,
         'aggerLigado' => false, 'cotaSozinha' => false, 'cotaSemConversa' => false, 'agente' => nil
@@ -63,9 +63,36 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       ler
 
       expect(response.parsed_body).to include(
-        'ajustes' => { 'funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 45 }, 'vencimentos' => [0, 90]
+        'ajustes' => { 'funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 45 }, 'escolha' => 'feita', 'vencimentos' => [0, 90]
       )
       expect(response.parsed_body.keys).not_to include('exemplo')
+    end
+
+    # Arquivar o funil só muda o status dele: a escolha continua guardada, mas não vale, e a tela pede outro funil.
+    it 'com o funil escolhido arquivado, avisa que foi arquivado e não devolve o funil' do
+      create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa, user: admin, dias_antes: 45)
+      funil.update!(status: :archived)
+
+      ler
+
+      expect(response.parsed_body).to include('ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 45 },
+                                              'escolha' => 'funil_arquivado', 'funis' => [])
+      expect(config).to have_attributes(pipeline_id: funil.id, stage_id: etapa.id)
+    end
+
+    # O funil e a etapa apagados somem pela chave do banco, sem aviso. Quem escolheu continua guardado: é por ele que a
+    # tela sabe que havia uma escolha.
+    it 'com o funil ou a etapa escolhidos apagados, avisa que a escolha sumiu' do
+      create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa, user: admin, dias_antes: 45)
+
+      Crm::PipelineStage.where(id: etapa.id).delete_all
+      ler
+      sem_a_etapa = response.parsed_body.slice('ajustes', 'escolha')
+      Crm::Pipeline.where(id: funil.id).delete_all
+      ler
+
+      sumiu = { 'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 45 }, 'escolha' => 'sumiu' }
+      expect([sem_a_etapa, response.parsed_body.slice('ajustes', 'escolha')]).to eq([sumiu, sumiu])
     end
 
     it 'atende quem só vê contatos, avisando que não pode mudar' do
@@ -106,13 +133,35 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       expect(Carteira::RenovacaoConfig.where(account_id: account.id).count).to eq(1)
     end
 
-    it 'funil e etapa nulos tiram a escolha' do
-      create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa)
+    it 'funil e etapa nulos tiram a escolha e quem escolheu: a conta volta a "nunca escolheu"' do
+      create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa, user: admin)
 
       guardar({ funilId: nil, etapaId: nil })
 
       expect(response.parsed_body).to include('funilId' => nil, 'etapaId' => nil)
-      expect(config).not_to be_escolhida
+      expect(config).to have_attributes(pipeline_id: nil, stage_id: nil, user_id: nil, escolha: 'nunca_feita')
+    end
+
+    # Quem cuida dos cards é quem escolheu o funil, não quem mexeu nos dias depois.
+    it 'quem só muda os dias ou as mensagens não vira quem escolheu' do
+      outra_admin = create(:user, account: account, role: :administrator)
+      guardar({ funilId: funil.id, etapaId: etapa.id })
+
+      guardar({ dias: 20, mensagens: 'nao_mandar' }, quem: outra_admin)
+
+      expect(config).to have_attributes(dias_antes: 20, mensagens: 'nao_mandar', pipeline_id: funil.id, user_id: admin.id)
+    end
+
+    it 'escolher outro funil depois que a escolha sumiu volta a valer, com quem escolheu agora' do
+      outra_admin = create(:user, account: account, role: :administrator)
+      create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa, user: admin)
+      Crm::PipelineStage.where(id: etapa.id).delete_all
+      Crm::Pipeline.where(id: funil.id).delete_all
+      novo_funil, nova_etapa = create_crm_pipeline(account: account, user: admin, name: 'Renovação nova')
+
+      guardar({ funilId: novo_funil.id, etapaId: nova_etapa.id }, quem: outra_admin)
+
+      expect(config).to have_attributes(pipeline_id: novo_funil.id, stage_id: nova_etapa.id, user_id: outra_admin.id, escolha: 'feita')
     end
 
     it 'recusa o funil que não existe, o de outra conta, o arquivado e o funil sem a etapa junto' do

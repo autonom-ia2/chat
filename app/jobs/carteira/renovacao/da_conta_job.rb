@@ -1,6 +1,7 @@
 # A renovação de UMA conta (E5, #2898): cria o card de cada seguro que entra em renovação hoje
 # (Carteira::Renovacao::EntramHoje), no funil e na etapa que a conta escolheu. Não faz nada na conta sem a carteira, sem
-# o CRM, sem escolha, ou com o funil arquivado: nada vira card até alguém escolher um funil que existe.
+# o CRM, sem escolha, ou com o funil arquivado (Carteira::RenovacaoConfig#escolhida?): nada vira card até alguém
+# escolher um funil ativo.
 #
 # Rodar de novo é seguro: quem já tem card não entra (e o CriarCard confere sob a trava). Por isso não há nova
 # tentativa: a próxima passada da rotina, em uma hora, é a nova tentativa.
@@ -32,7 +33,7 @@ class Carteira::Renovacao::DaContaJob < ApplicationJob
   end
 
   def pode_criar?(account, config)
-    Crm::Config.enabled? && Carteira::Acesso.liberada?(account) && config.escolhida? && config.pipeline.active?
+    Crm::Config.enabled? && Carteira::Acesso.liberada?(account) && config.escolhida?
   end
 
   # [quantos cards nasceram, o primeiro erro]. A conta do emissor do CRM é lembrada pelo lote inteiro (EmLote).

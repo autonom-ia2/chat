@@ -89,14 +89,14 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect(ajustes.reload).to have_attributes(pipeline_id: outro_funil.id, user_id: monta.id)
     end
 
-    it 'quem tem as duas chaves sem ver o CRM muda os dias, mas não escolhe o funil' do
+    it 'quem tem as duas chaves sem ver o CRM muda os dias, mas não escolhe o funil nem vira quem escolheu' do
       sem_ver = pessoa_com(%w[contact_manage crm_manage_pipelines])
 
       dos_dias = guardar_ajustes(sem_ver, { dias: 45 })
       do_funil = guardar_ajustes(sem_ver, { funilId: ajustes.pipeline_id, etapaId: ajustes.stage_id })
 
       expect([dos_dias.first, do_funil]).to eq([200, [422, { 'error' => 'funil_desconhecido' }]])
-      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: sem_ver.id)
+      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: nil)
     end
 
     it 'sem a chave de contatos não lê nem guarda' do

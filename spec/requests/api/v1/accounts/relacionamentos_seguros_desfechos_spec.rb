@@ -98,6 +98,13 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
                                           'funilEscolhido' => true, 'aggerLigado' => false)
     end
 
+    # Arquivar o funil só muda o status dele: a escolha continua guardada, mas deixa de valer, e a tela convida a escolher.
+    it 'com o funil das renovações arquivado, o resumo deixa de dizer que a conta escolheu o funil' do
+      ajustes.pipeline.update!(status: :archived)
+
+      expect(ler('seguros/resumo')).to include('funilEscolhido' => false)
+    end
+
     it 'o renovado sai dos grupos de vencimento e não vira vencido depois do fim' do
       no_quadro('won')
       travel 10.days
