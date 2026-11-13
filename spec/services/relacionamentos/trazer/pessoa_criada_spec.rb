@@ -64,7 +64,7 @@ RSpec.describe Relacionamentos::Trazer::PessoaCriada, :aggregate_failures do
     expect(texto).to eq(antes)
   end
 
-  it 'duas fichas diferentes nunca têm o mesmo resumo: um conjunto não se confunde com uma lista de pares' do
+  it 'um conjunto de chave e valor e uma lista de pares com o mesmo conteúdo têm resumos diferentes' do
     gravar(custom_attributes: { 'x' => { 'b' => 1 } })
     de_conjunto = texto
 
@@ -81,32 +81,59 @@ RSpec.describe Relacionamentos::Trazer::PessoaCriada, :aggregate_failures do
     expect(texto).to eq(antes)
   end
 
+  # Crm::BaseProcessorService#store_external_id: a integração guarda na ficha o código da pessoa no CRM de fora.
+  it 'o código da pessoa no CRM de fora, guardado pela integração, não muda o resumo' do
+    antes = texto
+
+    gravar(additional_attributes: { 'external' => { 'crm_de_fora_id' => 'codigo-0042' } })
+
+    expect(texto).to eq(antes)
+  end
+
+  # O valor igual ao padrão da coluna não entra no resumo. Isso não esconde a volta ao padrão: o valor que a lista pôs
+  # estava no resumo, e sem ele o resumo é outro.
+  it 'voltar ao padrão da coluna um valor que a lista pôs muda o resumo' do
+    { 'relacao' => 'parceiro', 'contact_type' => 'lead', 'blocked' => true }.each do |coluna, da_lista|
+      gravar(coluna => da_lista)
+      como_a_lista_deixou = texto
+
+      gravar(coluna => Contact.column_defaults.fetch(coluna))
+
+      expect(pessoa.reload[coluna]).not_to eq(da_lista)
+      expect(texto).not_to eq(como_a_lista_deixou), "voltar #{coluna} ao padrão não mudou o resumo da ficha"
+    end
+  end
+
+  # O nome da empresa é um valor como os outros: não se tenta adivinhar se é cópia do nome da empresa ligada.
   describe 'o nome da empresa escrito na ficha' do
-    it 'igual ao nome de hoje da empresa da pessoa é cópia e não conta; diferente, foi alguém que digitou, e conta' do
+    it 'apagado ou trocado em quem tem empresa ligada, muda o resumo; de volta ao que era, o resumo é o mesmo' do
       # Ligar a pessoa à empresa copia o nome dela para a ficha (Enterprise::Concerns::Contact).
       pessoa.update!(company: empresa)
       expect(pessoa.reload.additional_attributes).to include('company_name' => 'Oficina Central')
       com_a_copia = texto
 
       gravar(additional_attributes: {})
-      expect(texto).to eq(com_a_copia)
+      expect(texto).not_to eq(com_a_copia)
 
       gravar(additional_attributes: { 'company_name' => 'Oficina do Bairro' })
       expect(texto).not_to eq(com_a_copia)
+
+      gravar(additional_attributes: { 'company_name' => 'Oficina Central' })
+      expect(texto).to eq(com_a_copia)
     end
 
-    it 'a empresa renomeada, antes de a cópia ser refeita, conta: o nome da ficha já não é o da empresa' do
+    it 'a empresa renomeada muda o resumo das pessoas dela, quando o sistema regrava o nome na ficha' do
       pessoa.update!(company: empresa)
       com_a_copia = texto
 
       empresa.update!(name: 'Oficina Central Dois')
-      expect(texto).not_to eq(com_a_copia)
-
       Companies::SyncContactNamesJob.perform_now(company_id: empresa.id)
-      expect(texto).to eq(com_a_copia)
+
+      expect(pessoa.reload.additional_attributes).to include('company_name' => 'Oficina Central Dois')
+      expect(texto).not_to eq(com_a_copia)
     end
 
-    it 'em quem não tem empresa ligada, conta sempre' do
+    it 'em quem não tem empresa ligada, muda o resumo também' do
       antes = texto
 
       gravar(additional_attributes: { 'company_name' => 'Oficina Central' })

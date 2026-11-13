@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #2896 (fatia 3) — editar a ficha de quem a lista criou segura a pessoa no "Desfazer", por qualquer caminho que a tela
-# tem para editar: a API de contatos (campo a campo), a gaveta da ficha (que manda o nome da empresa digitado) e a
+# tem para editar: a API de contatos (campo a campo), a gaveta da ficha (que manda o nome da empresa como está escrito) e a
 # relação (interessado, parceiro, não é negócio). O resumo "a ficha como a lista deixou"
 # (Relacionamentos::Trazer::PessoaCriada) tem de cobrir todos: o que ficar de fora deixa o Desfazer apagar uma pessoa
 # que alguém editou. As colunas, uma a uma, são cobradas em spec/services/relacionamentos/trazer/pessoa_criada_spec.rb.
@@ -35,11 +35,12 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
     linhas = telefones.each_with_index.map { |telefone, indice| "Pessoa #{nomes.fetch(indice)},#{telefone}" }
     "Nome,Celular\n#{linhas.join("\n")}\n"
   end
-  # Três pessoas que a lista cria na mesma empresa, que também nasce com a lista, e uma sem empresa.
+  # Quatro pessoas que a lista cria na mesma empresa, que também nasce com a lista, e uma sem empresa.
   let(:planilha_da_gaveta) do
     <<~CSV
       Nome,Celular,Empresa
       Pessoa Digitada,11987650201,Mercado Sol
+      Pessoa Apagada,11987650205,Mercado Sol
       Pessoa Salva,11987650202,Mercado Sol
       Pessoa Parceira,11987650203,Mercado Sol
       Pessoa Intocada,11987650204,
@@ -56,11 +57,17 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
       pedidos.concat(filtros)
       original.call(*filtros)
     end
-    Current.account = account
-    devolvidos = controller.send(:permitted_params).keys
+    devolvidos = com_a_conta_em_vigor { controller.send(:permitted_params).keys }
     (pedidos.flat_map { |filtro| filtro.is_a?(Hash) ? filtro.keys : [filtro] }.map(&:to_s) + devolvidos).uniq
+  end
+
+  # O Enterprise lê a conta em `Current.account`. Só ela é mexida, e volta a ser a de antes.
+  def com_a_conta_em_vigor
+    conta_de_antes = Current.account
+    Current.account = account
+    yield
   ensure
-    Current.reset
+    Current.account = conta_de_antes
   end
 
   def da_linha(indice)
@@ -116,26 +123,31 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
       expect(response).to have_http_status(:success)
     end
 
-    it 'o nome da empresa digitado e a relação mudada seguram a pessoa; salvar a gaveta sem mudar nada não segura' do
+    it 'o nome da empresa trocado ou apagado e a relação mudada seguram a pessoa; salvar a gaveta sem mudar nada não segura' do
       account.enable_features!('contato_relacao')
       importacao = trazer_lista(planilha_da_gaveta, trazer: {})
       criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
-      digitada, salva, parceira, intocada = ['Pessoa Digitada', 'Pessoa Salva', 'Pessoa Parceira', 'Pessoa Intocada'].map { |nome| pessoa(nome) }
-      expect(digitada.company.name).to eq('Mercado Sol')
-      expect(previa(importacao)).to eq(tira: 4, ficam: 0, devolve: 0)
+      nomes_da_gaveta = ['Pessoa Digitada', 'Pessoa Apagada', 'Pessoa Salva', 'Pessoa Parceira', 'Pessoa Intocada']
+      digitada, apagada, salva, parceira, intocada = nomes_da_gaveta.map { |nome| pessoa(nome) }
+      todas = [digitada, apagada, salva, parceira, intocada].map(&:id)
+      # A lista ligou a pessoa à empresa, e o nome da empresa ficou escrito na ficha: é o que a gaveta mostra no campo.
+      expect(salva.additional_attributes).to include('company_name' => 'Mercado Sol')
+      expect(previa(importacao)).to eq(tira: 5, ficam: 0, devolve: 0)
 
       salvar_pela_gaveta(digitada, empresa: 'Mercado do Sol Nascente')
+      salvar_pela_gaveta(apagada, empresa: '')
       salvar_pela_gaveta(salva, empresa: 'Mercado Sol')
       marcar_relacao(parceira, 'parceiro')
 
       expect(digitada.reload.additional_attributes).to include('company_name' => 'Mercado do Sol Nascente')
+      expect(apagada.reload.additional_attributes['company_name']).to be_blank
       expect(parceira.reload).to be_relacao_parceiro
-      expect(criada.tocadas([digitada.id, salva.id, parceira.id, intocada.id])).to contain_exactly(digitada.id, parceira.id)
-      expect(previa(importacao)).to eq(tira: 2, ficam: 2, devolve: 0)
+      expect(criada.tocadas(todas)).to contain_exactly(digitada.id, apagada.id, parceira.id)
+      expect(previa(importacao)).to eq(tira: 2, ficam: 3, devolve: 0)
 
       desfazer(importacao)
 
-      expect(account.contacts.where(id: [digitada.id, salva.id, parceira.id, intocada.id]).ids).to contain_exactly(digitada.id, parceira.id)
+      expect(account.contacts.where(id: todas).ids).to contain_exactly(digitada.id, apagada.id, parceira.id)
     end
   end
 end

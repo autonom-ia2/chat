@@ -15,11 +15,15 @@
 # a coluna nova, que nasce vazia ou no padrão em todo mundo, não muda o resumo de quem a lista já anotou.
 #
 # Dos dois conjuntos de chave e valor (`additional_attributes` e `custom_attributes`) entra tudo, sem os vazios, em
-# qualquer nível. Só duas coisas ficam de fora de `additional_attributes`, as duas gravadas sem ninguém editar a ficha:
-# as marcas da busca da foto (`DO_SISTEMA`) e o nome da empresa quando é igual ao nome de hoje da empresa a que a pessoa
-# está ligada (é cópia: Companies::SyncContactNamesJob a regrava quando a empresa muda de nome). O nome da empresa
-# diferente do da empresa, ou escrito em quem não tem empresa ligada, foi alguém que digitou, e entra. A foto não
-# segura ninguém: não é coluna da ficha.
+# qualquer nível. De `additional_attributes` só ficam de fora as chaves que o sistema grava sem ninguém editar a ficha
+# (`DO_SISTEMA`). A foto não segura ninguém: não é coluna da ficha.
+#
+# O nome da empresa escrito na ficha (`company_name`) é um valor como os outros: entra sempre, com o que estiver
+# escrito, tenha a pessoa empresa ligada ou não. Consequência aceita: quando alguém RENOMEIA A EMPRESA, o sistema
+# regrava esse nome na ficha de cada pessoa dela (Companies::SyncContactNamesJob), o resumo delas muda e todas passam a
+# contar como ficha editada: FICAM na base quando a lista é desfeita, mesmo sem ninguém ter mexido nelas. O erro é para
+# o lado de não apagar. Tentar adivinhar se o nome é cópia do da empresa erra para o outro lado: apaga quem teve o nome
+# apagado ou trocado à mão.
 #
 # A pessoa sem anotação (a lista trazida antes de existir a anotação, ou pela tela antiga, que nunca anota) fica: não
 # há com o que comparar, e o Desfazer não apaga quem não dá para provar que ninguém editou. O Desfazer de uma lista sem
@@ -34,13 +38,14 @@ class Relacionamentos::Trazer::PessoaCriada
   #   (Contacts::SyncAttributes).
   DE_FORA = %w[id account_id created_at updated_at last_activity_at location country_code].freeze
   ADICIONAIS = 'additional_attributes'.freeze
-  EMPRESA = 'company_id'.freeze
-  # O que o sistema grava sozinho em `additional_attributes`, sem ninguém editar a ficha: as marcas da busca da foto
-  # (Avatar::AvatarFromUrlJob#update_avatar_sync_attributes). Todo contato salvo com e-mail ganha essa busca uns 30
-  # segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
-  # dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia.
-  DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash].freeze
-  NOME_DA_EMPRESA = 'company_name'.freeze
+  # O que o sistema grava sozinho em `additional_attributes`, sem ninguém editar a ficha:
+  # - last_avatar_sync_at e avatar_url_hash: as marcas da busca da foto
+  #   (Avatar::AvatarFromUrlJob#update_avatar_sync_attributes). Todo contato salvo com e-mail ganha essa busca uns 30
+  #   segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
+  #   dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia;
+  # - external: o código da pessoa no CRM de fora, guardado pela integração quando ela manda o contato para lá
+  #   (Crm::BaseProcessorService#store_external_id).
+  DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash external].freeze
 
   # As colunas que entram no resumo, em ordem de nome.
   def self.colunas
@@ -57,13 +62,10 @@ class Relacionamentos::Trazer::PessoaCriada
     conteudos([id]).fetch(id)
   end
 
-  # { id => conteúdo }, só das pessoas que ainda existem. Uma consulta, e mais uma (os nomes das empresas) quando alguém
-  # entre elas está ligado a uma empresa.
+  # { id => conteúdo }, só das pessoas que ainda existem. Uma consulta.
   def conteudos(ids)
     colunas = self.class.colunas
-    fichas = Contact.where(account_id: @conta_id, id: ids).pluck(:id, *colunas).to_h { |id, *valores| [id, colunas.zip(valores).to_h] }
-    empresas = nomes_das_empresas(fichas.each_value.filter_map { |ficha| ficha[EMPRESA] }.uniq)
-    fichas.transform_values { |ficha| resumivel(ficha, empresas[ficha[EMPRESA]]) }
+    Contact.where(account_id: @conta_id, id: ids).pluck(:id, *colunas).to_h { |id, *valores| [id, resumivel(colunas.zip(valores).to_h)] }
   end
 
   # Uma linha de baixo completou a pessoa que esta lista criou: o resumo passa a ser o de agora. Quem não foi criada por
@@ -76,7 +78,7 @@ class Relacionamentos::Trazer::PessoaCriada
   end
 
   # ids: pessoas da conta. Devolve o conjunto das que não dá para dizer que estão como a lista as deixou: as que alguém
-  # editou depois e as que a lista não anotou. Duas consultas, quantas forem as pessoas (três com empresa entre elas).
+  # editou depois e as que a lista não anotou. Duas consultas, quantas forem as pessoas.
   def tocadas(ids)
     return Set.new if ids.empty?
 
@@ -90,23 +92,11 @@ class Relacionamentos::Trazer::PessoaCriada
     Campo.da_importacao(@importacao).where(campo: Campo::PESSOA_CRIADA, contact_id: ids)
   end
 
-  def nomes_das_empresas(ids)
-    ids.empty? ? {} : Company.where(account_id: @conta_id, id: ids).pluck(:id, :name).to_h
-  end
-
   # coluna => valor, em ordem de coluna, só do que não está vazio nem no padrão da coluna.
-  def resumivel(ficha, nome_da_empresa)
+  def resumivel(ficha)
     padroes = Contact.column_defaults
-    com_adicionais = ficha.merge(ADICIONAIS => adicionais(ficha[ADICIONAIS], nome_da_empresa))
-    com_adicionais.transform_values { |valor| normal(valor) }.reject { |coluna, valor| vazio?(valor) || valor == normal(padroes[coluna]) }
-  end
-
-  # nome_da_empresa: o nome de hoje da empresa a que a pessoa está ligada; nil quando não está ligada a nenhuma. O nome
-  # escrito na ficha igual a ele é cópia e sai; diferente dele, ou sem empresa ligada, fica.
-  def adicionais(atributos, nome_da_empresa)
-    atributos = atributos.to_h.except(*DO_SISTEMA)
-    copia = nome_da_empresa.present? && atributos[NOME_DA_EMPRESA] == nome_da_empresa
-    copia ? atributos.except(NOME_DA_EMPRESA) : atributos
+    sem_o_do_sistema = ficha.merge(ADICIONAIS => ficha[ADICIONAIS].to_h.except(*DO_SISTEMA))
+    sem_o_do_sistema.transform_values { |valor| normal(valor) }.reject { |coluna, valor| vazio?(valor) || valor == normal(padroes[coluna]) }
   end
 
   # O valor na forma que é resumida. No conjunto, vazio e ausente são a mesma coisa, em qualquer nível (a tela de edição

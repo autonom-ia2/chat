@@ -56,22 +56,18 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
   # - a busca da foto, que todo contato salvo com e-mail ganha uns 30 segundos depois
   #   (Avatarable#fetch_avatar_from_gravatar): o job grava as marcas da busca, tenha achado foto ou não. Só a ida à
   #   internet é trocada;
-  # - a cópia do nome da empresa, refeita quando alguém renomeia a empresa (Companies::SyncContactNamesJob);
   # - uma gravação que só move a última atividade, com os ganchos do contato.
   # Se um deles passar a gravar outra coisa na ficha, a pessoa deixa de sair e este exemplo quebra.
   it 'o que o sistema faz sozinho depois da lista não conta como ficha editada: a pessoa sai' do
     de_davi = "Nome,Celular,E-mail,Empresa\nDavi Dornelino,11987650004,davi.dornelino@exemplo.com.br,Oficina do Davi\n"
     importacao = trazer_lista(de_davi, trazer: {})
     davi = pessoa('Davi Dornelino')
-    oficina = davi.company
     allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::HttpError.new('404 Not Found', status: 404))
 
     Avatar::AvatarFromUrlJob.perform_now(davi, 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=404')
-    oficina.update!(name: 'Oficina Dornelino')
-    Companies::SyncContactNamesJob.perform_now(company_id: oficina.id)
     davi.reload.update!(last_activity_at: Time.current)
 
-    expect(davi.reload.additional_attributes).to include('last_avatar_sync_at', 'avatar_url_hash', 'company_name' => 'Oficina Dornelino')
+    expect(davi.reload.additional_attributes).to include('last_avatar_sync_at', 'avatar_url_hash', 'company_name' => 'Oficina do Davi')
     expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([davi.id])).to be_empty
     expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 0)
 
@@ -457,22 +453,26 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     end
 
     # Renomear a empresa regrava o nome dela na ficha de cada pessoa (Companies::SyncContactNamesJob, rodado aqui de
-    # verdade). Isso não é editar a pessoa: quem a lista criou continua saindo.
-    it 'corrigir o nome da empresa não prende na base as pessoas dela' do
+    # verdade). A ficha mudou, e o Desfazer não tem como saber se foi o sistema ou alguém: a pessoa conta como ficha
+    # editada e fica. É a consequência aceita de o nome da empresa ser um valor como os outros
+    # (Relacionamentos::Trazer::PessoaCriada): o erro é para o lado de não apagar.
+    it 'renomear a empresa segura na base as pessoas dela que a lista criou' do
       importacao = trazer_lista
       carla = pessoa('Carla Carvalhedo')
       mercado = account.companies.find_by!(name: 'Mercado Sol')
+      expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 2)
       mercado.update!(name: 'Mercado Sol Nascente')
 
       Companies::SyncContactNamesJob.perform_now(company_id: mercado.id)
 
       expect(carla.reload.additional_attributes).to include('company_name' => 'Mercado Sol Nascente')
-      expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([carla.id])).to be_empty
-      expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 2)
+      expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([carla.id])).to contain_exactly(carla.id)
+      expect(previa(importacao)).to eq(tira: 0, ficam: 1, devolve: 2)
 
       desfazer(importacao)
 
-      expect(account.contacts.exists?(carla.id)).to be(false)
+      expect(account.contacts.exists?(carla.id)).to be(true)
+      expect(account.companies.pluck(:name)).to include('Mercado Sol Nascente')
     end
 
     it 'mantém a empresa criada pela lista que tem seguro em nome dela' do
