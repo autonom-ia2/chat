@@ -14,6 +14,11 @@
 #   A pergunta é sempre sobre a coluna de agora (Relacionamentos::Trazer::Perguntas): a resposta nunca mexe numa coluna
 #   que a pessoa já mandou para outro lugar.
 #
+# - "Esta planilha tem seguros?" (E4, #2897), só na conta com a carteira: `sim` ou `nao`. A resposta que muda a que
+#   estava guardada lê a planilha de novo, porque as linhas passam a ser conferidas de outro jeito (com seguros, as
+#   linhas da mesma pessoa não se juntam). `nao` devolve as colunas de seguro a informação. Em conta sem a carteira a
+#   resposta é recusada (`resposta_desconhecida`).
+#
 # Só os códigos, o índice da coluna e as chaves dos valores ficam guardados (`options['trazer']['respostas']`). Tudo
 # sob a trava da importação, e nada fica pela metade: a recusa desfaz o que o pedido já tinha mudado.
 #
@@ -27,14 +32,16 @@ class Relacionamentos::Trazer::Responder
   DESTINO_DO_TELEFONE = Relacionamentos::Trazer::Perguntas::DESTINO_DO_TELEFONE
 
   VALORES_CLIENTE = Relacionamentos::Trazer::Perguntas::VALORES_CLIENTE
+  Seguros = Carteira::Trazer::ColunasDeSeguro
 
-  # respostas: { 'clientes' =>, 'coluna_cliente' =>, 'telefone' =>, 'valores_cliente' => { 'modo' =>, 'chaves' => } }, só
-  # as chaves que a tela mandou.
+  # respostas: { 'clientes' =>, 'coluna_cliente' =>, 'telefone' =>, 'valores_cliente' => { 'modo' =>, 'chaves' => },
+  # 'seguros' => }, só as chaves que a tela mandou.
   def initialize(importacao, respostas)
     @importacao = importacao
     @clientes = respostas['clientes']&.to_s
     @coluna_cliente = Integer(respostas['coluna_cliente'].to_s, 10, exception: false)
     @telefone = respostas['telefone']&.to_s
+    @seguros = respostas[Seguros::RESPOSTA]&.to_s
     @valores = respostas[VALORES_CLIENTE] && Relacionamentos::Trazer::EscolhaDosValores.new(importacao, respostas[VALORES_CLIENTE])
   end
 
@@ -62,7 +69,27 @@ class Relacionamentos::Trazer::Responder
     return clientes if clientes.erro
 
     guardar_a_escolha_dos_valores
-    Resultado.new(revalida: telefone.revalida || clientes.revalida)
+    responder_seguros(lendo_de_novo: telefone.revalida || clientes.revalida)
+  end
+
+  # Por último: as outras respostas já estão guardadas. Sem resposta, ou com a mesma de antes, nada muda; a que muda
+  # lê a planilha de novo, a não ser que outra resposta deste pedido já tenha pedido.
+  def responder_seguros(lendo_de_novo:)
+    return Resultado.new(revalida: lendo_de_novo) if @seguros.nil? || conferencia.respostas[Seguros::RESPOSTA] == @seguros
+
+    conferencia.gravar('destinos' => Seguros.sem_os_de_seguro(conferencia.destinos)) if @seguros == Seguros::NAO
+    guardar_respostas(Seguros::RESPOSTA => @seguros)
+    lendo_de_novo ? Resultado.new(revalida: true) : ler_de_novo
+  end
+
+  # A planilha é lida de novo com as mesmas colunas de agora, como na coluna que volta de "não guardar"
+  # (Relacionamentos::Trazer::TrocarDestino).
+  def ler_de_novo
+    escolha = CampaignImports::ColumnChoice.new(colunas.alvos, column_count: colunas.total).mapping
+    return Resultado.new(erro: 'leitura_nao_pronta') if CampaignImports::DraftChanges.new(@importacao).choose_columns(escolha)
+
+    conferencia.gravar(ContactImports::Trazer::DesfazerMudanca::CHAVE => @anterior)
+    Resultado.new(revalida: true)
   end
 
   # Por último: a resposta a "São clientes?" que troca a coluna apaga a escolha antiga, e a deste pedido é da nova. A
@@ -82,8 +109,14 @@ class Relacionamentos::Trazer::Responder
 
   def respostas_conhecidas?
     return false unless resposta_conhecida?(@clientes, CLIENTES) && resposta_conhecida?(@telefone, DESTINO_DO_TELEFONE.keys)
+    return false unless seguros_conhecida?
 
     @valores.nil? || @valores.conhecida?
+  end
+
+  # "Esta planilha tem seguros?" só é pergunta na conta que tem a carteira.
+  def seguros_conhecida?
+    @seguros.nil? || (Seguros::RESPOSTAS.include?(@seguros) && Seguros.liberada?(@importacao))
   end
 
   # A coluna que diz quem é cliente como este pedido a deixa: a que ele aponta ou, sem resposta a "São clientes?", a de

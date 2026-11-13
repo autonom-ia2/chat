@@ -9,6 +9,9 @@
 # - Com conflito (nome, telefone, e-mail ou empresa preenchidos e diferentes nas duas), a segunda linha vira problema
 #   de linha repetida e guarda qual é a primeira (`:outra`), para a pessoa escolher com qual ficar.
 #
+# Com `juntar: false` (a planilha que traz seguros, E4 #2897: cada linha é um seguro da pessoa) as linhas sem conflito
+# ficam todas na lista, como estão, e nenhuma é contada como juntada. O conflito continua virando problema.
+#
 # Recebe as linhas do validador e mexe nelas no lugar, como o passo de repetidas dele faz. Só olha linha sem erro.
 class ContactImports::Trazer::MesmaPessoa
   MOTIVOS = { telefone: 'duplicate_phone_in_file', email: 'duplicate_email_in_file' }.freeze
@@ -18,8 +21,9 @@ class ContactImports::Trazer::MesmaPessoa
   PAIS = '+55'.freeze
   COM_O_NONO_DIGITO = 11
 
-  def initialize(linhas)
+  def initialize(linhas, juntar: true)
     @linhas = linhas
+    @juntar = juntar
     @primeiras = { telefone: {}, email: {} }
   end
 
@@ -56,9 +60,9 @@ class ContactImports::Trazer::MesmaPessoa
       return false
     end
 
-    completar(primeira, linha)
+    completar(primeira, linha) if @juntar
     lembrar(primeira, linha)
-    true
+    @juntar
   end
 
   def lembrar(primeira, linha)

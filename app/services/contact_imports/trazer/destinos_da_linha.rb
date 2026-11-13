@@ -9,7 +9,10 @@
 #   para a empresa de outra linha;
 # - a resposta "sim, todas", ou a coluna "cliente" com um dos valores que a pessoa disse que querem dizer cliente
 #   (ContactImports::Trazer::Cliente): a pessoa vira cliente com a data de agora (Contact#become_customer!). O código
-#   não interpreta a célula: sem a escolha da pessoa, a coluna "cliente" não marca ninguém.
+#   não interpreta a célula: sem a escolha da pessoa, a coluna "cliente" não marca ninguém;
+# - na planilha que traz seguros (E4, #2897), as colunas do seguro: a apólice da linha vai para a carteira, ligada à
+#   pessoa (Carteira::Trazer::SeguroDaLinha), e a pessoa vira cliente desde o começo da vigência (a data mais antiga
+#   vence; sem começo, a de agora). Sem seguros na planilha, `@seguro` é nil e nada disso roda.
 #
 # Quem já existia é completado, nunca sobrescrito: a cidade e o telefone só entram onde estava vazio, e quem já era
 # cliente fica com a data que tinha. O importador chama `aplicar` dentro da gravação de cada linha, logo depois das
@@ -34,11 +37,12 @@ class ContactImports::Trazer::DestinosDaLinha
     @colunas = Relacionamentos::Trazer::Colunas.new(importacao)
     @chaves = FORA_DAS_INFORMACOES.index_with { |destino| @colunas.chaves_do_destino(destino) }
     @cliente = ContactImports::Trazer::Cliente.new(importacao)
+    @seguro = Carteira::Trazer::SeguroDaLinha.da(importacao)
   end
 
   # As colunas (pela chave em extra_values) que não viram informação da pessoa.
   def chaves
-    @chaves.values.flatten
+    @chaves.values.flatten + @seguro&.chaves.to_a
   end
 
   # { chave da coluna => { 'nome' => 'Plano', 'para_que_serve' => '…' } } do que a pessoa escreveu na tela.
@@ -51,6 +55,8 @@ class ContactImports::Trazer::DestinosDaLinha
     valores = valores.to_h
     preencher_cidade(contato, primeiro(valores, 'cidade'))
     preencher_telefone_da_empresa(empresa, primeiro(valores, 'telefone_da_empresa'))
+    apolice = @seguro&.gravar(contato, valores, empresa: empresa)
+    contato.become_customer!(since: apolice.inicio_vigencia) if apolice
     contato.become_customer! if cliente?(valores)
   end
 

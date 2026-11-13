@@ -1,6 +1,7 @@
 # Os exemplos da conferência de "Trazer minha lista" (#2896): as primeiras pessoas que vão entrar, e se cada uma entra
 # como cliente com o que a pessoa respondeu até agora ("sim, todas", ou os valores que ela escolheu na coluna que diz
-# quem é cliente: ContactImports::Trazer::Cliente).
+# quem é cliente: ContactImports::Trazer::Cliente). Na planilha que traz seguros (E4, #2897) cada pessoa vem com os
+# seguros dela (Carteira::Trazer::NaConferencia).
 class Relacionamentos::Trazer::Exemplos
   def initialize(importacao)
     @importacao = importacao
@@ -9,7 +10,9 @@ class Relacionamentos::Trazer::Exemplos
   def call
     pessoas = Relacionamentos::Trazer::LinhasDaPlanilha.new(@importacao).exemplos
     valores = valores_das_linhas(pessoas.pluck(:linha))
-    pessoas.map { |pessoa| pessoa.except(:linha).merge(cliente: destinos.cliente?(valores.fetch(pessoa[:linha], {}))) }
+    exemplos = pessoas.map { |pessoa| pessoa.merge(cliente: destinos.cliente?(valores.fetch(pessoa[:linha], {}))) }
+    seguros = Carteira::Trazer::NaConferencia.da(@importacao)
+    (seguros ? seguros.nos_exemplos(exemplos, valores) : exemplos).map { |exemplo| exemplo.except(:linha) }
   end
 
   private

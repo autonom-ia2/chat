@@ -19,10 +19,10 @@ class Api::V1::Accounts::Relacionamentos::Trazer::LeiturasController < Api::V1::
     render json: { id: importacao.id, situacao: 'lendo' }, status: :created
   end
 
-  # PATCH leituras/:id/respostas  { clientes:, coluna_cliente:, telefone:, valores_cliente: { modo:, chaves: [] } }
+  # PATCH leituras/:id/respostas  { clientes:, coluna_cliente:, telefone:, valores_cliente: { modo:, chaves: [] }, seguros: }
   def respostas
     importacao = leituras.find(params[:id])
-    pedido = params.permit(:clientes, :coluna_cliente, :telefone, valores_cliente: [:modo, { chaves: [] }]).to_h
+    pedido = params.permit(:clientes, :coluna_cliente, :telefone, :seguros, valores_cliente: [:modo, { chaves: [] }]).to_h
     resposta = ::Relacionamentos::Trazer::Responder.new(importacao, pedido).call
     return recusar_com(resposta.erro, resposta.motivo) if resposta.erro
     return render json: ::Relacionamentos::Trazer::Leitura.new(importacao).call unless resposta.revalida
@@ -35,7 +35,7 @@ class Api::V1::Accounts::Relacionamentos::Trazer::LeiturasController < Api::V1::
   def trazer
     importacao = marcadas.find(params[:id])
     resultado = ::Relacionamentos::Trazer::Trazer.new(importacao).call
-    return recusar_com(resultado.erro) if resultado.erro
+    return recusar_com(resultado.erro, faltam: resultado.faltam) if resultado.erro
 
     render json: { trazidaId: importacao.id }
   end

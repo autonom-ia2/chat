@@ -19,7 +19,11 @@
 #   perde nada. O arquivo conferido só recebe os consertos na hora de trazer (ContactImports::Trazer::FecharConferencia);
 # - a leitura que falha depois de uma mudança da pessoa (troca de coluna, resposta) desfaz a mudança e lê de novo, uma
 #   vez só (ContactImports::Trazer::DesfazerMudanca). Sem mudança para desfazer, falha como sempre.
-# validation_summary guarda só contagens: `mesma_pessoa` (linhas juntadas a outra) e `ddd_juntado` (linhas com DDD junto).
+# - na planilha que traz seguros (E4, #2897: a resposta "sim" numa conta com a carteira), as linhas da mesma pessoa não
+#   se juntam (cada linha é um seguro dela), o seguro de cada linha é conferido e o tipo de cada ramo é decidido. Tudo
+#   isso mora em Carteira::Trazer::NaLeitura, o único ponto que esta leitura chama; sem seguros, `seguros` é nil.
+# validation_summary guarda só contagens: `mesma_pessoa` (linhas juntadas a outra) e `ddd_juntado` (linhas com DDD junto);
+# com seguros, também `pessoas_distintas`, `pessoas_que_ja_estavam` e `seguros_repetidos`.
 #
 # A trava da leitura. A leitura de planilhas não aguenta duas execuções da mesma importação, nem juntas nem em
 # sequência: a que termina por último apaga as linhas e regrava o estado, até no meio da gravação. Aqui:
@@ -130,7 +134,8 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
   # (ContactImports::Trazer::MesmaPessoa). Depois disso, a linha que vai entrar e não tem nome vira problema de nome:
   # só quando a planilha tem coluna de nome, e só o que sobrou sem nome depois de juntar as linhas da mesma pessoa.
   def add_duplicate_errors(row_results)
-    @juntadas = ContactImports::Trazer::MesmaPessoa.new(row_results).call
+    @juntadas = ContactImports::Trazer::MesmaPessoa.new(row_results, juntar: seguros.nil?).call
+    seguros&.conferir(row_results)
     return if @reading.mapping['name'].nil?
 
     row_results.each { |row| row[:errors] << 'blank_name' if row[:errors].empty? && row[:normalized_name].blank? }
@@ -140,13 +145,23 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
     attributes = super
     summary = attributes[:validation_summary].merge(mesma_pessoa: @juntadas.to_i, ddd_juntado: @ddd_juntado.to_i)
     opcoes = valores_de_cliente.opcoes_depois_da_leitura(@consertos.opcoes_depois_da_leitura(row_results))
-    attributes.merge(validation_summary: summary, options: opcoes)
+    return attributes.merge(validation_summary: summary, options: opcoes) unless seguros
+
+    attributes.merge(validation_summary: summary.merge(seguros.resumo(valid_rows)), options: seguros.opcoes(opcoes))
+  end
+
+  # O que a leitura faz a mais na planilha que traz seguros (Carteira::Trazer::NaLeitura), ou nil.
+  def seguros
+    return @seguros if defined?(@seguros)
+
+    @seguros = Carteira::Trazer::NaLeitura.da(campaign_import, @reading.extra_columns)
   end
 
   def mark_ready(row_results)
     @pronta = true
     @consertos.reaplicar(row_results, ContactImports::Trazer::Conserto.new(alvos: @reading.mapping, contatos: row_contacts))
     @tipos_das_colunas = CampaignImports::ColumnTypes.new(@reading).perform
+    seguros&.resolver_tipos(row_results)
     super
   rescue Superada
     descartar

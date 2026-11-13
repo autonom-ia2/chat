@@ -13,6 +13,9 @@
 #   outra (que estava aprovada) sai na hora de trazer, e as demais repetidas da mesma pessoa ficam de fora, inclusive a
 #   que a pessoa tinha escolhido antes: de um grupo de linhas da mesma pessoa entra uma só.
 # - Deixar de fora e voltar atrás esquecem o que tinha sido consertado na linha.
+# - Na planilha que traz seguros (E4, #2897), a linha com problema no seguro (Carteira::Trazer::ProblemasDeSeguro)
+#   recusa qualquer valor, com `conserto_na_planilha`: ela só pode ficar de fora. A exceção é a mesma apólice em duas
+#   linhas (`duplicado`): a pessoa escolhe com qual fica, com o mesmo `ficar_com` da linha repetida.
 #
 # Devolve a linha como a tela a mostra agora (`problema`), quantas pessoas entram se a pessoa mandar trazer agora
 # (`entram`) e quantas delas como cliente (`clientes`): as contas de ContactImports::Trazer::QuemEntra, as do resumo.
@@ -27,6 +30,9 @@ class Relacionamentos::Trazer::MudarLinha
   CONTATO = ContactImports::Trazer::Conserto::CONTATO
   CAMPO_DO_TIPO = { 'telefone' => 'telefone', 'email' => 'email', 'nome' => 'nome', 'sem_contato' => CONTATO }.freeze
   REPETIDA = 'duplicada'.freeze
+  DoSeguro = Carteira::Trazer::ProblemasDeSeguro
+  # A mesma pessoa em duas linhas e a mesma apólice em duas linhas: nas duas a pessoa escolhe com qual fica.
+  REPETIDAS = [REPETIDA, DoSeguro::TIPO_DUPLICADO].freeze
   TETO_DO_VALOR = 255
   AVISO = ContactImports::Trazer::DesfazerMudanca::AVISO
 
@@ -81,7 +87,7 @@ class Relacionamentos::Trazer::MudarLinha
   end
 
   def conferir_o_pedido(valor, ficar_com)
-    return ficar_com_a_linha(Integer(ficar_com.to_s, 10, exception: false)) if tipo == REPETIDA
+    return ficar_com_a_linha(Integer(ficar_com.to_s, 10, exception: false)) if REPETIDAS.include?(tipo)
 
     conferir(CAMPO_DO_TIPO.fetch(tipo), valor)
   end
@@ -109,6 +115,7 @@ class Relacionamentos::Trazer::MudarLinha
   # O valor que nem chega a ser conferido: longo demais, ou numa linha que a tela não conserta.
   def sem_conserto(valor)
     return invalido('muito_longo') if valor.to_s.length > TETO_DO_VALOR
+    return invalido(DoSeguro::NA_PLANILHA) if DoSeguro.sem_conserto?(tipo)
 
     invalido(ContactImports::Trazer::Conserto::FORMULA) if tipo == Relacionamentos::Trazer::Pendencia::TIPO_SEM_CONSERTO
   end

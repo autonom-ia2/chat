@@ -18,9 +18,12 @@
 # Com uma coluna dizendo quem é cliente e sem a pessoa ter escolhido quais valores dela querem dizer cliente, ou com a
 # escolha apontando um valor que a coluna não tem mais (Relacionamentos::Trazer::Perguntas#falta_valores_cliente?,
 # conferido aqui, sob a trava), a recusa é `falta_valores_cliente`: nunca se traz adivinhando nem com meia escolha.
+#
+# Na planilha que traz seguros (E4, #2897), sem coluna para o número, a seguradora, o ramo ou o fim da vigência não há
+# seguro para gravar: a recusa é `falta_coluna_do_seguro`, com os destinos que faltam (`faltam`).
 class Relacionamentos::Trazer::Trazer
   VENCIDA = ContactImports::Trazer::Conferencia::VENCIDA
-  Resultado = Struct.new(:erro, keyword_init: true) do
+  Resultado = Struct.new(:erro, :faltam, keyword_init: true) do
     # A rota antiga de confirmar só conhece "não está pronta"; a conferência vencida ela diz com o código da tela nova.
     def erro_da_rota_antiga
       erro == VENCIDA ? erro : 'campaign_import.not_ready'
@@ -56,6 +59,7 @@ class Relacionamentos::Trazer::Trazer
       next Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
       next Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
       next Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
+      next Resultado.new(erro: 'falta_coluna_do_seguro', faltam: colunas_que_faltam) if colunas_que_faltam.any?
       next Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
 
       confirmar
@@ -65,6 +69,11 @@ class Relacionamentos::Trazer::Trazer
   end
 
   private
+
+  # Os destinos obrigatórios do seguro que ainda não têm coluna; nenhum na planilha sem seguros.
+  def colunas_que_faltam
+    @colunas_que_faltam ||= Carteira::Trazer::ColunasDeSeguro.da(@importacao)&.faltam.to_a
+  end
 
   def confirmar
     ContactImports::Trazer::Fechamentos.new(@importacao).recomecar
