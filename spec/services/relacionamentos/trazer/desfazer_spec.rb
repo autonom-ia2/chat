@@ -447,6 +447,25 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       expect(account.companies.pluck(:name)).to contain_exactly('Oficina Central', 'Mercado Sol')
     end
 
+    # Renomear a empresa regrava o nome dela na ficha de cada pessoa (Companies::SyncContactNamesJob, rodado aqui de
+    # verdade). Isso não é editar a pessoa: quem a lista criou continua saindo.
+    it 'corrigir o nome da empresa não prende na base as pessoas dela' do
+      importacao = trazer_lista
+      carla = pessoa('Carla Carvalhedo')
+      mercado = account.companies.find_by!(name: 'Mercado Sol')
+      mercado.update!(name: 'Mercado Sol Nascente')
+
+      Companies::SyncContactNamesJob.perform_now(company_id: mercado.id)
+
+      expect(carla.reload.additional_attributes).to include('company_name' => 'Mercado Sol Nascente')
+      expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([carla.id])).to be_empty
+      expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 2)
+
+      desfazer(importacao)
+
+      expect(account.contacts.exists?(carla.id)).to be(false)
+    end
+
     it 'mantém a empresa criada pela lista que tem seguro em nome dela' do
       importacao = trazer_lista
       mercado = account.companies.find_by!(name: 'Mercado Sol')

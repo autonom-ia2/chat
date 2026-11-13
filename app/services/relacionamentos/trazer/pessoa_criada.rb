@@ -13,10 +13,12 @@
 # mais alguém escrever ali, menos o que o sistema grava ali sozinho (`DO_SISTEMA`). Se o sistema passar a gravar outra
 # chave sozinho depois da lista, a pessoa fica: o erro possível é deixar na base quem podia sair, nunca apagar quem
 # alguém editou. A foto não segura ninguém: não é coluna da ficha, e as marcas que a busca dela deixa estão em
-# `DO_SISTEMA`. O bloqueio segura a pessoa por outra regra (Relacionamentos::Trazer::QuemFica). O tipo entra porque quem
-# a lista criou já nasce lead (tem telefone ou e-mail) e daí só muda por decisão de alguém: marcar ou desmarcar cliente.
-# A última atividade e o resto, que mudam sozinhos, ficam de fora. O spec relacionamentos_trazer_ficha_editada_spec.rb
-# percorre o que a API aceita, campo a campo: um campo novo aceito pela API sem cobertura quebra o spec.
+# `DO_SISTEMA`. O nome da empresa escrito na ficha só entra em quem não está ligado a uma empresa: em quem está, ele é
+# cópia do nome da empresa. O bloqueio segura a pessoa por outra regra (Relacionamentos::Trazer::QuemFica). O tipo entra
+# porque quem a lista criou já nasce lead (tem telefone ou e-mail) e daí só muda por decisão de alguém: marcar ou
+# desmarcar cliente. A última atividade e o resto, que mudam sozinhos, ficam de fora. O spec
+# relacionamentos_trazer_ficha_editada_spec.rb percorre o que a API aceita, campo a campo: um campo novo aceito pela API
+# sem cobertura quebra o spec.
 #
 # A pessoa sem anotação (a lista trazida antes de existir a anotação, ou pela tela antiga, que nunca anota) fica: não
 # há com o que comparar, e o Desfazer não apaga quem não dá para provar que ninguém editou. O Desfazer de uma lista sem
@@ -33,6 +35,7 @@ class Relacionamentos::Trazer::PessoaCriada
   # segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
   # dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia.
   DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash].freeze
+  NOME_DA_EMPRESA = 'company_name'.freeze
 
   def initialize(importacao)
     @importacao = importacao
@@ -75,7 +78,14 @@ class Relacionamentos::Trazer::PessoaCriada
 
   def resumivel(ficha)
     TEXTOS.map { |coluna| ficha[coluna].presence } + [ficha[:company_id], ficha[:contact_type]] +
-      CONJUNTOS.map { |coluna| sem_vazios(ficha[coluna].to_h.except(*DO_SISTEMA)) }
+      [sem_vazios(adicionais(ficha)), sem_vazios(ficha[:custom_attributes].to_h)]
+  end
+
+  # Em quem está ligado a uma empresa, o nome dela na ficha é cópia (Companies::SyncContactNamesJob o regrava quando a
+  # empresa muda de nome): corrigir o nome da empresa não é editar a pessoa. Sem empresa, é texto que alguém escreve.
+  def adicionais(ficha)
+    de_fora = ficha[:company_id] ? DO_SISTEMA + [NOME_DA_EMPRESA] : DO_SISTEMA
+    ficha[:additional_attributes].to_h.except(*de_fora)
   end
 
   # Vazio e ausente são a mesma coisa, em qualquer nível (a tela de edição manda as redes sociais em branco), e a ordem
