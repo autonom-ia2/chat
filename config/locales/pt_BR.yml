@@ -1331,6 +1331,7 @@ pt_BR:
         whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
         whatsapp_api_perto_do_limite: 'O WhatsApp avisou que está perto de limitar conversas novas na caixa "%{caixa}" (o ciclo acaba em %{fim}). Já diminuí a velocidade de envio pelo WhatsApp API. Evite puxar conversa com contatos novos por lá por enquanto. Quer ver os números?'
         whatsapp_api_bloqueado: 'O WhatsApp bloqueou conversas novas pelo WhatsApp API na caixa "%{caixa}" até %{fim}. Respostas para quem já conversa com você continuam; para contatos novos, use um modelo aprovado. Quer que eu explique?'
+        whatsapp_oficial_sem_acesso: 'A caixa "%{caixa}" perdeu a conexão com a conta do WhatsApp na Meta e precisa ser reconectada. Enquanto isso, as mensagens por essa caixa podem não chegar nem sair. Quer que eu mostre como reconectar?'
         whatsapp_proxy:
           plano_esgotado: 'Proxy do WhatsApp: o plano %{plano} não tem IP do Brasil livre na fatia desta stack. A caixa %{caixa} (conta %{conta}) está sem proxy. Compre mais IPs na Webshare ou amplie a fatia.'
           fatia_vazia: 'Proxy do WhatsApp: a fatia %{plano} desta stack está vazia, então nenhum número recebe proxy desse plano. Defina a variável da fatia.'
