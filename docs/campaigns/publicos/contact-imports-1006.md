@@ -116,8 +116,12 @@ Com a marca:
   silêncio quando o título é outro (#3010 trata de apontar a coluna do DDD na tela). O que a pessoa vê hoje: o número
   sem DDD vira problema de telefone (`invalid_brazilian_mobile_number`) e pode ser consertado linha a linha; quando
   nenhuma linha tem contato que dê para usar, a leitura falha (`no_valid_rows`, ou `missing_contact_column` sem coluna
-  de telefone nem de e-mail) e a tela pede o DDD junto do número, na mesma coluna. **Limite conhecido:** a linha com
-  e-mail bom e telefone sem DDD entra só com o e-mail, sem virar problema, como já acontece com o telefone fixo.
+  de telefone nem de e-mail) e a tela pede o DDD junto do número, na mesma coluna. A linha com e-mail bom e telefone
+  que não dá para ler (sem DDD, fixo, dígito faltando) entra só com o e-mail, pela regra de leitura que Públicos e
+  Importar contatos já têm (`CampaignImports::AudienceRowContacts`); a leitura conta quantas são
+  (`validation_summary.sem_telefone`, `resumo.semTelefone` na tela, só o número) e a Conferir avisa, sem travar o
+  "Trazer". A planilha corrigida, enviada de novo, acha a pessoa pelo e-mail e completa o telefone
+  (`CampaignImports::ContactRow`, `CampaignImports::ContactBlankFields`).
 - **A mesma pessoa em várias linhas vira uma só** (`ContactImports::Trazer::MesmaPessoa`): mesmo telefone (com ou sem
   o nono dígito) ou mesmo e-mail. Sem conflito, a primeira linha é completada com o que só a outra tinha (os campos
   da linha e as células que a conferência usa: se ela virar problema, o conserto leva o e-mail e a empresa que vieram
@@ -439,7 +443,7 @@ vem). `pagina` que não existe (texto, zero, negativa, além da
   esse destino); `algumas` sem nenhuma coluna
   `cliente` deixa de valer e a pergunta volta sem resposta. `options.trazer.respostas` guarda o que a pessoa respondeu;
   o que a tela recebe é isto.
-- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `entram`, `clientes`. Os cinco primeiros são
+- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `semTelefone`, `entram`, `clientes`. Os seis primeiros são
   os da leitura e não mudam com o que a pessoa conserta. `entram` (inteiro) é quantas pessoas entram se ela mandar
   trazer agora: a mesma conta do `POST trazer` (`ContactImports::Trazer::QuemEntra`), que muda a cada conserto.
   `clientes` (inteiro) é quantas dessas entram como cliente com a resposta de agora: todas com `sim_todas`, as que a

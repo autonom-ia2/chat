@@ -85,7 +85,7 @@ RSpec.describe Relacionamentos::Trazer::Leitura, :aggregate_failures do
 
     expect(importacao.linhas_com_problema).not_to be_attached
     expect(pronta).to include(situacao: 'pronta', valores: 'inteiros', problemas: [], problemas_total: 0, pagina: 1)
-    expect(pronta[:resumo]).to eq(total: 1, novas: 1, completadas: 0, comProblema: 0, juntadas: 0, entram: 1, clientes: 0)
+    expect(pronta[:resumo]).to eq(total: 1, novas: 1, completadas: 0, comProblema: 0, juntadas: 0, semTelefone: 0, entram: 1, clientes: 0)
   end
 
   it 'fica sem exemplos, sem quebrar, quando o arquivo conferido já foi apagado' do

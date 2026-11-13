@@ -51,7 +51,7 @@ RSpec.describe 'Trazer minha lista: as linhas que precisam da pessoa (Relacionam
       4 => nil, 5 => 'davi.dornelino@exemplo.com.br', 6 => 'Fabio Ferreirinho', 7 => 'elisa@exemplo.com.br', 8 => nil
     )
     expect(response.parsed_body['resumo']).to eq('total' => 7, 'novas' => 2, 'completadas' => 0, 'comProblema' => 5, 'juntadas' => 0,
-                                                 'entram' => 5, 'clientes' => 0)
+                                                 'semTelefone' => 0, 'entram' => 5, 'clientes' => 0)
   end
 
   it 'recusa o valor que não vale, com o motivo em código e sem guardar nada' do

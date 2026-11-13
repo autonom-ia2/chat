@@ -197,6 +197,7 @@ describe('os contadores do topo não refazem a conta do servidor', () => {
       precisamDeVoce: 0,
       deixadas: 0,
       juntadas: 0,
+      semTelefone: 0,
       entram: 0,
       clientes: 0,
     });

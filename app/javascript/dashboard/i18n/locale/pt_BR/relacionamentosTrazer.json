@@ -74,6 +74,7 @@
       "JUNTADAS": "Juntei {count} linha de uma pessoa que aparecia mais de uma vez. | Juntei {count} linhas de pessoas que apareciam mais de uma vez.",
       "CLIENTES": "{count} entra como cliente. | {count} entram como clientes.",
       "SEM_CLIENTES": "Ninguém entra como cliente.",
+      "ENTRAM_SEM_TELEFONE": "{count} pessoa vai entrar sem o telefone: o número que está na planilha não parece um celular com DDD. Você pode trazer assim mesmo. Se for um celular, escreva o DDD junto do número, na mesma coluna, e envie a planilha de novo: ela fica com o telefone. | {count} pessoas vão entrar sem o telefone: o número que está na planilha não parece um celular com DDD. Você pode trazer assim mesmo. Se for um celular, escreva o DDD junto do número, na mesma coluna, e envie a planilha de novo: elas ficam com o telefone.",
       "MUDOU": "Esta lista mudou enquanto você conferia. Mostrei como está agora.",
       "MUDANCA_DESFEITA": "Não fiz essa mudança: com ela não sobraria ninguém com telefone ou e-mail. Deixei como estava.",
       "RELENDO": "Lendo sua planilha de novo…",

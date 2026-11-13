@@ -74,6 +74,7 @@
       "JUNTADAS": "I merged {count} row from a person who appeared more than once. | I merged {count} rows from people who appeared more than once.",
       "CLIENTES": "{count} comes in as a customer. | {count} come in as customers.",
       "SEM_CLIENTES": "No one comes in as a customer.",
+      "ENTRAM_SEM_TELEFONE": "{count} person will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: this person gets the phone. | {count} people will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: they get the phone.",
       "MUDOU": "This list changed while you were checking it. I'm showing how it is now.",
       "MUDANCA_DESFEITA": "I didn't make that change: with it there would be no one left with a phone or e-mail. I left it as it was.",
       "RELENDO": "Reading your spreadsheet again…",

@@ -72,7 +72,7 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
     ler_planilha(importacao)
 
     leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
-    expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 195, clientes: 0)
+    expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, semTelefone: 0, entram: 195, clientes: 0)
     expect(leitura[:colunas].pluck(:nome)).to eq(%w[Nome Celular E-mail Empresa Cidade Plano Segredo])
     expect(leitura[:problemas].pluck(:linha, :tipo))
       .to eq([[197, 'telefone'], [198, 'email'], [199, 'nome'], [200, 'sem_contato'], [201, 'duplicada']])
@@ -97,7 +97,7 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
 
       leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
       expect(leitura[:colunas][3]).to include(destino: esperado)
-      expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, entram: 196, clientes: 196)
+      expect(leitura[:resumo]).to eq(total: 200, novas: 180, completadas: 15, comProblema: 5, juntadas: 0, semTelefone: 0, entram: 196, clientes: 196)
       expect(leitura[:problemas].pluck(:linha, :estado))
         .to eq([[197, 'guardado'], [198, 'aberto'], [199, 'aberto'], [200, 'deixado'], [201, 'aberto']])
       expect(leitura[:problemas].first).to include(corrigido: '+5511987659197')
@@ -146,7 +146,8 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
   end
 
   # Das 195 pessoas, as 97 de número par só têm telefone: sem o DDD junto, viram linha para a pessoa conferir. As 98 de
-  # número ímpar têm e-mail e entram só com ele (limite conhecido, #3010): ninguém entra com um telefone errado.
+  # número ímpar têm e-mail e entram só com ele: a leitura conta as 98, para a tela avisar. Ninguém entra com um
+  # telefone errado.
   it 'com o DDD numa coluna à parte, não junta: o número sem DDD vira problema e ninguém entra com telefone' do
     importacao = create_contact_import(account: account, user: user, content: planilha_com_o_ddd_a_parte)
     importacao.update!(options: importacao.options.merge('trazer' => {}))
@@ -154,7 +155,7 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
 
     leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
     expect(leitura[:colunas].pluck(:nome, :destino)).to include(%w[DDD informacao], %w[Celular telefone])
-    expect(leitura[:resumo]).to include(total: 200, comProblema: 102, completadas: 0, entram: 98)
+    expect(leitura[:resumo]).to include(total: 200, comProblema: 102, completadas: 0, semTelefone: 98, entram: 98)
     expect(leitura[:problemas].pluck(:tipo).tally).to eq('telefone' => 100, 'email' => 1, 'sem_contato' => 1)
     expect(importacao.validation_summary).not_to have_key('ddd_juntado')
     expect(CampaignImports::NormalizedRows.new(importacao).perform.pluck(:phone_number).compact).to be_empty

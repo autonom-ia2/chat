@@ -8,7 +8,9 @@
 # - a coluna que a pessoa marcou "não guardar" não deixa valor nas linhas nem entra na prévia das informações;
 # - o telefone é lido como está na coluna dele. O DDD que vem em outra coluna não é juntado ao número: decidir pelo
 #   título qual coluna é o DDD seria adivinhar o que a pessoa escreveu (#3010). O número sem DDD vira problema de
-#   telefone, e a planilha em que nenhuma linha tem contato que dê para usar falha com `no_valid_rows`;
+#   telefone, e a planilha em que nenhuma linha tem contato que dê para usar falha com `no_valid_rows`. A linha que
+#   tem e-mail bom entra só com o e-mail (regra de CampaignImports::AudienceRowContacts, que não muda), e a leitura
+#   conta quantas são para a tela avisar (`sem_telefone`);
 # - a mesma pessoa em várias linhas vira uma linha só, ou problema quando as linhas se contradizem
 #   (ContactImports::Trazer::MesmaPessoa); a linha sem nome vira problema de nome;
 # - as linhas com problema ganham um arquivo próprio (ContactImports::Trazer::LinhasComProblema), trocado a cada leitura,
@@ -21,7 +23,8 @@
 #   perde nada. O arquivo conferido só recebe os consertos na hora de trazer (ContactImports::Trazer::FecharConferencia);
 # - a leitura que falha depois de uma mudança da pessoa (troca de coluna, resposta) desfaz a mudança e lê de novo, uma
 #   vez só (ContactImports::Trazer::DesfazerMudanca). Sem mudança para desfazer, falha como sempre.
-# validation_summary guarda só contagens: `mesma_pessoa` (linhas juntadas a outra).
+# validation_summary guarda só contagens: `mesma_pessoa` (linhas juntadas a outra) e `sem_telefone` (pessoas que
+# entram sem o telefone que estava escrito na planilha).
 #
 # A trava da leitura. A leitura de planilhas não aguenta duas execuções da mesma importação, nem juntas nem em
 # sequência: a que termina por último apaga as linhas e regrava o estado, até no meio da gravação. Aqui:
@@ -138,9 +141,15 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
 
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super
-    summary = attributes[:validation_summary].merge(mesma_pessoa: @juntadas.to_i)
+    summary = attributes[:validation_summary].merge(mesma_pessoa: @juntadas.to_i, sem_telefone: sem_telefone(valid_rows))
     opcoes = valores_de_cliente.opcoes_depois_da_leitura(@consertos.opcoes_depois_da_leitura(row_results))
     attributes.merge(validation_summary: summary, options: opcoes)
+  end
+
+  # Quantas pessoas entram sem o telefone que estava escrito na planilha: a célula do telefone tem alguma coisa, não deu
+  # para ler como celular, e a linha entra pelo e-mail. Só a contagem sai daqui, nunca o que estava na célula.
+  def sem_telefone(valid_rows)
+    valid_rows.count { |row| row[:normalized_phone].blank? && row.dig(:celulas, 'phone').present? }
   end
 
   def mark_ready(row_results)

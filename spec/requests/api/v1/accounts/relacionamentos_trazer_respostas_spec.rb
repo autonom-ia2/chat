@@ -140,8 +140,8 @@ RSpec.describe 'Trazer minha lista: as respostas e as colunas da conferência (R
       expect(corpo['perguntas'].last).to eq('id' => 'telefone', 'coluna' => 'Celular', 'indice' => 1)
       expect(corpo['respostas']).to eq('telefone' => 'da_empresa')
       # A Carla só tinha o telefone: sem ele, a linha dela fica sem contato.
-      expect(corpo['resumo']).to eq('total' => 3, 'novas' => 2, 'completadas' => 0, 'comProblema' => 1, 'juntadas' => 0, 'entram' => 2,
-                                    'clientes' => 0)
+      expect(corpo['resumo']).to eq('total' => 3, 'novas' => 2, 'completadas' => 0, 'comProblema' => 1, 'juntadas' => 0,
+                                    'semTelefone' => 0, 'entram' => 2, 'clientes' => 0)
       expect(corpo['problemas'].pluck('linha', 'tipo')).to eq([[4, 'sem_contato']])
 
       expect { responder(importacao, telefone: 'da_pessoa') }.to have_enqueued_job(CampaignImports::ValidateJob).once

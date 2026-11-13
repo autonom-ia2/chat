@@ -21,6 +21,9 @@ import PrecisamDeVoce from './PrecisamDeVoce.vue';
 // diz que ninguém entra como cliente (a escolha não pegou ninguém). E o
 // trazer que o servidor recusa por não haver ninguém para entrar
 // (`recusaDoTrazer`) é dito como alerta, com o botão de trazer ligado.
+// Quando há pessoas que entram sem o telefone que estava escrito na planilha
+// (`resumo.semTelefone`, conta do servidor), um aviso diz quantas são e o que
+// fazer. Ele não trava nada: o botão de trazer continua como está.
 // `total` é quantas pessoas entram, na conta do servidor. Com uma escrita em
 // voo (`ocupado`) o Trazer e o Voltar ficam desligados, e o Trazer que a pessoa
 // clicou fica carregando. `relendo`: a planilha está sendo lida de novo, dito
@@ -224,6 +227,19 @@ const irParaPrecisam = () => {
         class="m-0 text-base text-n-slate-11"
       >
         {{ t('RELACIONAMENTOS_TRAZER.CONFERIR.SEM_CLIENTES') }}
+      </p>
+      <p
+        v-if="resumo.semTelefone > 0"
+        data-relacionamentos="entram-sem-telefone"
+        class="p-3 m-0 text-base rounded-xl bg-n-amber-3 text-n-amber-11"
+      >
+        {{
+          t(
+            'RELACIONAMENTOS_TRAZER.CONFERIR.ENTRAM_SEM_TELEFONE',
+            { count: resumo.semTelefone },
+            resumo.semTelefone
+          )
+        }}
       </p>
     </div>
 
