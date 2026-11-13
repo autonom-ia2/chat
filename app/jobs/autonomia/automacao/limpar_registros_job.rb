@@ -12,9 +12,12 @@ class Autonomia::Automacao::LimparRegistrosJob < ApplicationJob
   LOTE = 1000
 
   def perform
-    ::Autonomia::Automacao::Registro.where(created_at: ...::Autonomia::Automacao::Registro::RETENCAO.ago)
-                                    .where.not(execucao_id: ::Autonomia::Automacao::Execucao.abertas.select(:id))
-                                    .in_batches(of: LOTE).delete_all
+    velhos = ::Autonomia::Automacao::Registro.where(created_at: ...::Autonomia::Automacao::Registro::RETENCAO.ago)
+                                             .where.not(execucao_id: ::Autonomia::Automacao::Execucao.abertas.select(:id))
+    # #2931: o aviso do pedido de aprovação aponta para o registro; sai antes dele, para o sino não ficar sem o pedido.
+    Notification.where(primary_actor_type: ::Autonomia::Automacao::Registro.name, primary_actor_id: velhos.select(:id))
+                .in_batches(of: LOTE).delete_all
+    velhos.in_batches(of: LOTE).delete_all
     finalizadas_sem_registro.in_batches(of: LOTE).delete_all
     vezes_encerradas.in_batches(of: LOTE).delete_all
   end

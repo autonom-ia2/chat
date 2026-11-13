@@ -43,6 +43,10 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::DecidirDeNovo
   # O passo da filha do "em outro registro" que lê o registro de origem fora do alcance de quem ligou (G65).
   include ::Autonomia::Automacao::OrigemNoExecutor
+  # A aprovação, a reunião e a pesquisa: perguntam e esperam a resposta (#2931, #2935, #2936).
+  include ::Autonomia::Automacao::EsperaDeResposta
+  # O que impede a execução de andar agora (impedida?, impedimento), conferido no começo e antes de cada ação.
+  include ::Autonomia::Automacao::ImpedimentoNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -92,7 +96,7 @@ class Autonomia::Automacao::Executor
 
   # O próximo passo, ou nil quando a rodada parou (espera, fim, erro). Um tipo por linha: a complexidade é a lista.
   # `@anterior`: o passo de antes nesta rodada; o "esperar até" sabe por ele que o galho "a cada mensagem" acabou (G63).
-  def dar(passo) # rubocop:disable Metrics/CyclomaticComplexity
+  def dar(passo) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/AbcSize
     @anterior = @passo_atual
     @passo_atual = passo['id']
     case passo['tipo']
@@ -106,50 +110,13 @@ class Autonomia::Automacao::Executor
     # G52: pôr o contato na lista de e-mail. Não manda mensagem: não depende da flag da F4.
     when 'lista_de_email' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeListaDeEmail, mensagem: false)
     when 'card' then passo_de_card(passo)
+    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then passo_que_espera(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
     else encerrar(passo['id'], 'falhou', 'tipo_desconhecido', 'falhou', 'tipo' => passo['tipo'].to_s)
     end
   end
-
-  # Fecha a execução e devolve true quando ela não pode andar agora. A execução que já não é desta rodada (a varredura a
-  # fechou como travada, alguém a desligou) para sem gravar nada na execução.
-  def impedida?(passo_id)
-    return parou_por_fora(passo_id) unless desta_rodada?
-
-    estado, motivo = impedimento
-    encerrar(passo_id, estado, motivo) if estado
-    estado.present?
-  end
-
-  # Parada no meio da rodada (o desligar, o "Parar para este card" do #2499): quem parou não registra a execução que está
-  # andando (o cursor dela não diz o passo, Execucao.parar_por_fora!) e deixa o porquê nela; o registro fica aqui, no
-  # passo em que a rodada ia (#2750, revisão). Sem porquê deixado, nada: a varredura que a fechou como travada, ou a
-  # outra rodada que a fechou pelo impedimento (o job velho), já deixou o registro dela.
-  def parou_por_fora(passo_id)
-    @parou = true
-    motivo = Execucao.where(id: @execucao.id, estado: 'parada').pick(:textos)&.dig(Execucao::PORQUE)
-    registrar(passo_id, 'pulado', motivo) if motivo
-    true
-  end
-
-  # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
-  def impedimento
-    return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
-    return %w[parada desligada] unless @definicao.ativa
-    # #2499: a flag dos gatilhos de card desligada é o rollback da F6; a execução aberta de gatilho de card fecha.
-    return %w[parada gatilho_desligado] unless ::Autonomia::Automacao::Gatilhos.disponivel?(@execucao.chave_gatilho, @account)
-    return %w[interrompida alvo_sumiu] unless alvo_da_conta?
-    return %w[parada spam] if contexto.no_spam?
-
-    motivo = motivo_de_quem_ligou
-    ['parada', pausar(motivo)] if motivo
-  end
-
-  def alvo_da_conta? = alvo.present? && contexto.conta_id == @account.id
-
-  def desta_rodada? = Execucao.exists?(id: @execucao.id, estado: 'andando', travada_em: @marca)
 
   # A rodada quebrou no meio (erro inesperado): fica o passo e a classe do erro, e a execução continua andando para a
   # varredura fechá-la como travada, sem repetir. A mensagem do erro vai só para o log: pode trazer dado do cliente.

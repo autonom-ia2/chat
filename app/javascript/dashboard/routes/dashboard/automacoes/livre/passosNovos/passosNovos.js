@@ -51,6 +51,20 @@ export const PASSOS_NOVOS = {
 };
 
 export const ehPassoNovo = passo => Boolean(PASSOS_NOVOS[passo?.tipo]);
+
+// #2931, #2935 e #2936: os passos que o servidor já conhece (o motor, o salvar,
+// o ensaio e o histórico de verdade). Os outros três seguem só no protótipo: a
+// receita com um deles não vai à API.
+export const PASSOS_QUE_SALVAM = [
+  'pedir_aprovacao',
+  'marcar_reuniao',
+  'pesquisa_nota',
+];
+export const emTeste = passo =>
+  ehPassoNovo(passo) && !PASSOS_QUE_SALVAM.includes(passo.tipo);
+export const RAMOS_QUE_SALVAM = [
+  ...new Set(PASSOS_QUE_SALVAM.flatMap(tipo => PASSOS_NOVOS[tipo].ramos)),
+];
 export const chaveDoPasso = tipo => `${P}.${PASSOS_NOVOS[tipo].chave}`;
 
 // Os galhos de cada passo, para a travessia da receita (receita.js, RAMOS).
@@ -76,11 +90,13 @@ const entradaDe = ([tipo, passo]) => ({
 });
 
 // Sem a flag, o catálogo volta o mesmo objeto: nada muda para quem não está no
-// protótipo.
+// protótipo. Com ela, a entrada daqui (com a dica e a peça do "Alterar") fica no
+// lugar da que o servidor já manda para os passos que salvam.
 export const comPassosNovos = (catalogo, ligado) => {
   if (!ligado || !catalogo?.passos) return catalogo;
   const novos = Object.entries(PASSOS_NOVOS).map(entradaDe);
-  return { ...catalogo, passos: [...catalogo.passos, ...novos] };
+  const deHoje = catalogo.passos.filter(item => !PASSOS_NOVOS[item.tipo]);
+  return { ...catalogo, passos: [...deHoje, ...novos] };
 };
 
 // Começar pronto: cada passo nasce com o que serve à maioria. O que depende da

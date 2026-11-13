@@ -1,19 +1,19 @@
 # Protótipo: os 6 passos novos da Automação livre
 
-Issues #2931 a #2936 (épico #2414). Protótipo em tela real, para o Rodrigo
-aprovar antes de alguém escrever o motor. Só a tela e um adaptador falso: nada
-disso roda de verdade nem é salvo no servidor.
+Issues #2931 a #2936 (épico #2414). Protótipo em tela real, aprovado pelo
+Rodrigo em 12/11. Pedir aprovação, Marcar reunião e Pesquisa de satisfação já
+são de verdade (seção abaixo); os outros três seguem no adaptador falso.
 
 ## Como ligar
 
 1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
    `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
-   `config/features.yml`, na posição 47 (1 << 46), logo depois da
-   `agente_ferramentas_prontas_ip_proprio` (46, #2945), que a main trouxe em
-   12/11.
+   `config/features.yml`. A Orquestração reservou a posição 47 (1 << 46) em
+   12/11, logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
    **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
    **desligada em produção**, ligada só na conta de demonstração, até o motor
-   dos passos existir. Ligada num cliente, ele monta passos que não salvam.
+   dos seis passos estar completo. Desligar é o rollback: quem espera resposta
+   num destes passos para naquele ponto, sem mandar nada.
 2. Abrir **Automações › Montar do zero** (ou uma automação já salva) com quem tem
    `automation_manage`. Escolher qualquer gatilho.
 3. Tocar no **+** do Confira. Os 6 passos aparecem misturados aos de hoje, cada
@@ -146,22 +146,61 @@ tela no celular; o pedido empilha o card embaixo no celular e põe ao lado no
 computador. Todos os botões e escolhas têm 44 px de altura; as escolhas usam o
 `ChoiceSelect` (teclado e leitor de tela), sem `<select>`.
 
+## Já de verdade: aprovação, reunião e pesquisa (frente B, 12/11)
+
+Pedir aprovação (#2931), Marcar reunião pela conversa (#2935) e Pesquisa de
+satisfação (#2936) saíram do protótipo: estão no esquema da receita, salvam,
+rodam no motor, têm ensaio de verdade e linha no histórico. A tela é a aprovada;
+o aviso "em teste" e o Salvar desligado ficam só para os outros três passos.
+
+- **Uma espera para os três** (`EsperaDeResposta`, no Executor): o passo
+  pergunta, a execução espera até o prazo pelo `due_at` de sempre e segue pelo
+  galho da resposta, ou pelo galho "sem resposta" no prazo. Sem tabela nova: o
+  pedido é o registro do passo (`esperando_resposta`). A mensagem nova do
+  cliente acorda a reunião e a pesquisa (Escuta); a resposta do painel acorda a
+  aprovação.
+- **Aprovação**: só recebe quem a escolha aponta e ainda vê o registro
+  (CardPolicy, ConversationPolicy). O pedido chega no sino (aviso
+  `automacao_aprovacao`, só no painel) e na tela **Pedidos de aprovação**
+  (`automacoes_aprovacoes`, API `autonomia/aprovacoes`). Vale a primeira
+  resposta; no prazo o pedido fecha antes de seguir. O valor de venda na
+  pergunta e no card só para quem vê valores.
+- **Reunião**: os 3 próximos horários livres da página de agendamento da pessoa
+  (a mesma do link da agenda), em botões no chat do site e no WhatsApp oficial,
+  numerados nos outros canais. A IA de decidir entende a resposta (nunca lista
+  de palavras); a reserva é a do Booker, com a trava do horário (o segundo
+  cliente segue por "Se pedir outro horário"). Sem com quem marcar (card sem
+  responsável, pessoa fora da conta) ou sem página de agendamento da pessoa,
+  segue sem reunião por "Se o cliente não responder", com o porquê no
+  histórico, e não trava (decisão de 12/11). A saída é a mesma na primeira
+  pergunta e depois do modelo da janela fechada, e o ensaio diz o mesmo.
+- **Pesquisa**: a nota de 0 a 10, entendida pela IA; não pergunta de novo antes
+  de `intervalo_dias`. A nota e a data ficam no contato (`pesquisas.<automação>`
+  e `pesquisa_satisfacao`) e no card, e a lista mostra a média e quantas pessoas
+  responderam. O comentário do cliente fica só no registro do passo: o
+  histórico o mostra a quem vê a conversa, e no contato ou no card ele sairia
+  para quem não vê.
+- **Janela de 24 h fechada** (decisão de 12/11): como o passo mensagem, o modelo
+  no lugar, ou nada e a automação para nesta conversa. Na reunião e na pesquisa,
+  a pergunta de verdade (os horários, as notas) vai quando o cliente responder
+  ao modelo, e só com a janela daquela conversa aberta: a resposta dele em outra
+  conversa não manda nada, não empurra o prazo e nunca dispara um segundo
+  modelo. Na pesquisa, só a pergunta que saiu conta para o intervalo.
+- **Ensaio**: confere na mesma ordem do motor (na reunião, a pessoa, a página e
+  os horários antes do canal; na pesquisa, a recente antes do canal).
+- **Índices** (migration `20261112091000`, aditiva e `CONCURRENTLY`): um
+  parcial nos registros de espera, para a tela de pedidos não ler os outros
+  registros da conta, e um parcial nos contatos que já responderam pesquisa,
+  para o resumo da lista não varrer todos os contatos.
+
 ## O que fica para a implementação
 
-- Confirmar o bit da flag em `config/features.yml` (Orquestração); hoje é a
-  47 (1 << 46), pela ordem do arquivo.
-- O comportamento do motor com a janela de 24 h fechada na reunião e na
-  pesquisa: o protótipo segue o passo mensagem (modelo escolhido ou nada); o
-  Rodrigo decide na aprovação da tela.
-- O esquema da receita, o salvar, o motor e o ensaio de verdade de cada passo,
-  com as regras das Issues: alcance de quem ligou, bloqueados e descadastrados,
-  janela de 24 h, trava de horário, proteção contra endereço interno, laço e
-  profundidade dos blocos, parecer das funções personalizadas.
-- Onde o pedido de aprovação chega de verdade (notificação e painel). Tela nova
-  no painel precisa de `porques.md` + `central:check` e `guia:build`.
+- O esquema da receita, o salvar, o motor e o ensaio de verdade dos outros três
+  passos (#2932 repetir, #2933 bloco, #2934 consultar), com as regras das
+  Issues: proteção contra endereço interno, laço e profundidade dos blocos,
+  parecer das funções personalizadas.
 - Marcar uma automação como bloco (sem gatilho próprio) na lista.
-- A linha do histórico de verdade em `LivreHistorico.vue` e o resumo da pesquisa
-  na lista.
+- Ligar a flag em produção só quando os seis estiverem completos.
 
 ## Arquivos
 

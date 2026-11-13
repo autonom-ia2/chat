@@ -22,6 +22,7 @@ import { useEscolhasDosGatilhos } from '../useEscolhasDosGatilhos';
 import { erroDaApi } from '../erroDaApi';
 import { custoEmTexto } from '../custoDaIa';
 import { oQueLigarFaz } from '../aoLigar';
+import { resumoDaPesquisa } from '../passosNovos/frasesDosNovos';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
 // regras de hoje, que abrem na tela de hoje), cada uma em frase. As automações
@@ -141,6 +142,8 @@ const linhaDaNova = automacao => {
     doCard: alvoDoGatilho(automacao) === 'Crm::Card',
     fato: [
       fatoDaSemana(automacao.semana),
+      // #2936: a média da pesquisa e quantas pessoas responderam.
+      resumoDaPesquisa(automacao.pesquisa, t, locale.value),
       custos.value[automacao.id] &&
         t('AUTOMACAO_LIVRE.LISTA.CUSTO_IA', {
           custo: custoEmTexto(custos.value[automacao.id], t, locale.value),

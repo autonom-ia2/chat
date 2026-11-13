@@ -1,0 +1,37 @@
+# Free-form automation, the steps that ask and wait for an answer (#2414: #2931 approval, #2935 meeting, #2936 survey).
+# Own file so it does not fight over en.yml with other work.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        esperando_resposta: 'Asked and is waiting for the answer.'
+        resposta_ambigua: 'The answer did not make it clear. Waiting for the next one, until the deadline.'
+        sem_quem_aprove: 'Nobody who can see the record could approve. Followed the "If nobody answers in time" path.'
+        reuniao_sem_responsavel: 'No owner on the card or the conversation (or the chosen person left the account), so there was nobody to book with. Moved on without a meeting, on the "If the customer doesn''t answer" path.'
+        reuniao_sem_pagina: 'The owner has no booking page of their own, so there were no times to offer. Moved on without a meeting, on the "If the customer doesn''t answer" path.'
+        sem_horario: 'There was no free time in the booking page. Followed the "If they ask for another time" path.'
+        horario_ocupado: 'Someone else booked that time first. Followed the "If they ask for another time" path.'
+        reuniao_nao_marcou: 'The meeting could not be booked. Followed the "If they ask for another time" path.'
+        pesquisa_recente: 'This person answered a survey recently. Skipped the question and moved on.'
+        passos_novos_desligados: 'The approval, meeting and survey steps are off for this account.'
+        pedido_sumiu: 'The request of this step was not found (records are kept for 30 days).'
+      receita:
+        passos_novos_desligados: 'Step %{passo}: the approval, meeting and survey steps are off for this account.'
+        quem_sem_responsavel: 'Step %{passo}: "who looks after the card" needs a card or a conversation, and this trigger has none. Choose a person or a team.'
+        espera_resposta_sem_conversa: 'Step %{passo}: this step asks the customer in the conversation, and this trigger has none. Use a conversation or card trigger.'
+        reuniao_sem_agenda: 'Step %{passo}: booking pages are off in this account, so there is no calendar to offer times from.'
+        reuniao_sem_permissao: 'Step %{passo}: only people who see the booking pages can book meetings from an automation.'
+        pesquisa_faixa_media_vazia: 'Step %{passo}: leave at least one score for the middle band.'
+      valores:
+        horario_da_reuniao: '%{dia} %{data}'
+        data_curta: '%m/%d %H:%M'
+        dias_curtos: [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+      pedido:
+        valor_oculto: 'hidden value'
+        responder:
+          ja_respondido: 'This request was already answered or closed.'
+          fora_do_prazo: 'The deadline for this request has passed.'
+          sem_decisao: 'Say whether you approve or decline this request.'
+  notifications:
+    notification_title:
+      automacao_aprovacao: 'An automation is waiting for your approval'

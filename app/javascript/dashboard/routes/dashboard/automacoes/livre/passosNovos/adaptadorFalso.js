@@ -4,12 +4,14 @@
 // aprovação e o ensaio. Tudo de exemplo, com nomes inventados e sem chamar
 // nada fora da tela. A implementação troca cada função pela rota de verdade.
 import { galhosDe, todosOsPassos } from '../receita';
-import { P, ehPassoNovo, listaPronta } from './passosNovos';
+import { P, ehPassoNovo, emTeste, listaPronta } from './passosNovos';
 
 const E = `${P}.EXEMPLO`;
 
+// Só os passos que ainda não salvam (#2932–#2934) fazem o ensaio de exemplo; a
+// aprovação, a reunião e a pesquisa vão ao ensaio de verdade.
 export const temPassoNovo = (passos = []) =>
-  todosOsPassos(passos).some(ehPassoNovo);
+  todosOsPassos(passos).some(emTeste);
 
 // As pessoas da lista de exemplo (contagem, ensaio e histórico).
 const NOMES = ['Ana Souza', 'Bruno Lima', 'Carla Dias', 'Diego Rocha'];
