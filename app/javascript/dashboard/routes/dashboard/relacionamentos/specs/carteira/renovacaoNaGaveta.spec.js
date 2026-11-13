@@ -599,9 +599,12 @@ describe('na carteira fictícia, do começo ao fim', () => {
     await salvarFormulario(w);
 
     expect(situacao(w)).toBe('Renovou. A apólice nova já está guardada.');
-    expect(azul(w).attributes('data-acao')).not.toBe(
-      DO_RODAPE.GUARDAR_APOLICE_NOVA
-    );
+    // Este seguro da demonstração não tem PDF e já não vale: com a apólice nova
+    // guardada, o rodapé fica sem botão azul (só "Corrigir" e o "⋯").
+    expect(
+      w.find(`[data-acao="${DO_RODAPE.GUARDAR_APOLICE_NOVA}"]`).exists()
+    ).toBe(false);
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
     // A fonte da demonstração responde depois de um instante do relógio falso.
     const pedido = fonte.listar({ busca: 'NOVA-000105' });
     await assentar();
