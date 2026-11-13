@@ -189,8 +189,13 @@ const clicar = async (w, seletor) => {
   await assentar();
 };
 
+// Na conta com a carteira a lista de pessoas da demonstração também baixa a
+// carteira fictícia da lista (o grupo e a busca) e a peça do selo.
 const carregarPecas = async () => {
   await carregarDemonstracao();
+  await import('../../demo/carteiraNaLista.js');
+  await import('../../fonte/carteiraFonte');
+  await import('../../components/carteira/SeloDoSeguro.vue');
   await import('../../components/carteira/ListaDeSeguros.vue');
   await import('../../components/carteira/SegurosDaFicha.vue');
 };
