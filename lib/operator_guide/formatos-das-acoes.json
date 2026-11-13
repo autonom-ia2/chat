@@ -8364,6 +8364,16 @@
       "related_category_ids"
     ]
   },
+  "PATCH relacionamentos/seguros/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
   "PATCH relationships/:entity/:id/values": {
     "campos": {
       "field": {}
@@ -20548,6 +20558,26 @@
     ],
     "sem_corpo": false
   },
+  "POST relacionamentos/seguros/:id/cancelar": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros#cancelar",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:51",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/seguros/:id/voltar_a_ativo": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros#voltar_a_ativo",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
   "POST saml_settings": {
     "campos": {
       "certificate": {
@@ -28290,6 +28320,16 @@
     "so_no_envelope": [
       "related_category_ids"
     ]
+  },
+  "PUT relacionamentos/seguros/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
   },
   "PUT relationships/configuration": {
     "campos": {

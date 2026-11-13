@@ -324,12 +324,7 @@ RSpec.describe Account do
       # #2942: agente_ferramentas_prontas_ip_proprio depois dela, 46 (1 << 45 = 35184372088832), Orquestração (12/11).
       # #2414: automacao_passos_novos depois dela, 47 pela ordem do features.yml (1 << 46 = 70368744177664).
       # #2499: automacao_no_crm depois dela, 48 pela ordem (1 << 47 = 140737488355328). Flag nova entra no fim.
-      # #2881: agente_modelos_seguro fica no FIM do arquivo. A Orquestração reservou a 50 (1 << 49 = 562949953421312), que
-      # só vale quando a flag da posição 49 (de outro PR, #2962) entrar; até lá o bit é o da ordem real do arquivo. Por
-      # isso ela é conferida pela posição (a última, com o bit seguinte ao da penúltima), sem número fixo.
-      mapa_ext_2 = described_class.flag_mapping['feature_flags_ext_2']
-      expect(mapa_ext_2.to_a.last).to eq([:feature_agente_modelos_seguro, 1 << (mapa_ext_2.size - 1)])
-      expect(mapa_ext_2.except(:feature_agente_modelos_seguro)).to eq(
+      expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
         feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256,
@@ -353,7 +348,11 @@ RSpec.describe Account do
         feature_agente_ferramentas_prontas_bases: 4_398_046_511_104, feature_agente_ferramentas_prontas_premium: 8_796_093_022_208,
         feature_relacionamentos_novo: 17_592_186_044_416, feature_agente_ferramentas_prontas_ip_proprio: 35_184_372_088_832,
         feature_automacao_passos_novos: 70_368_744_177_664,
-        feature_automacao_no_crm: 140_737_488_355_328
+        feature_automacao_no_crm: 140_737_488_355_328,
+        # #2897: carteira_seguros depois dela, 49 pela ordem do features.yml (1 << 48 = 281474976710656).
+        feature_carteira_seguros: 281_474_976_710_656,
+        # #2881: agente_modelos_seguro depois dela, 50 (1 << 49 = 562949953421312), Orquestração (12/11). Flag nova entra no fim.
+        feature_agente_modelos_seguro: 562_949_953_421_312
       )
     end
 
