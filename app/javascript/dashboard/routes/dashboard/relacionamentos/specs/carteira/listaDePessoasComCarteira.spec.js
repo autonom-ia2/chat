@@ -13,6 +13,9 @@ import { daCarteira, erroHttp } from './apoio';
 // própria lista; só o selo é uma leitura a mais, com os ids da página. Na conta
 // sem a carteira a tela é a de sempre e nenhuma rota da carteira é chamada.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// O registro de erros do painel: a carteira que falha vai para lá.
+const sentry = vi.hoisted(() => ({ reportarSemDados: vi.fn() }));
+vi.mock('dashboard/helper/sentryPrivacy', () => sentry);
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./apoio')).DialogoFalso,
 }));
@@ -21,20 +24,26 @@ vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
-vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({
-    isCloudFeatureEnabled: () => false,
-    currentAccount: { value: conta },
-  }),
-}));
-vi.mock('../../lista/usePermissoesDaLista', () => ({
-  usePermissoesDaLista: () => ({
-    podeCriarCards: { value: false },
-    podeEtiquetar: { value: false },
-    podeApagar: { value: false },
-    podeTrazer: { value: false },
-  }),
-}));
+vi.mock('dashboard/composables/useAccount', async () => {
+  const { ref } = await import('vue');
+  return {
+    useAccount: () => ({
+      isCloudFeatureEnabled: () => false,
+      currentAccount: ref(conta),
+    }),
+  };
+});
+vi.mock('../../lista/usePermissoesDaLista', async () => {
+  const { ref } = await import('vue');
+  return {
+    usePermissoesDaLista: () => ({
+      podeCriarCards: ref(false),
+      podeEtiquetar: ref(false),
+      podeApagar: ref(false),
+      podeTrazer: ref(false),
+    }),
+  };
+});
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
@@ -203,7 +212,7 @@ describe('na conta com a carteira de seguros', () => {
   });
 
   it.each([500, 404, 401])(
-    'com a carteira respondendo %i, a lista aparece inteira, sem selo e sem erro',
+    'com a carteira respondendo %i, a lista aparece inteira, sem selo e sem erro na tela, e a falha é registrada',
     async status => {
       SegurosAPI.resumoPorPessoa.mockRejectedValue(erroHttp(status));
 
@@ -216,6 +225,9 @@ describe('na conta com a carteira de seguros', () => {
       expect(linhas(w)).toHaveLength(3);
       expect(w.find(daCarteira('selo')).exists()).toBe(false);
       expect(w.find(daLista('erro')).exists()).toBe(false);
+      expect(sentry.reportarSemDados.mock.calls).toEqual([
+        [expect.any(Error), { tela: 'relacionamentos_lista_selos' }],
+      ]);
     }
   );
 });
