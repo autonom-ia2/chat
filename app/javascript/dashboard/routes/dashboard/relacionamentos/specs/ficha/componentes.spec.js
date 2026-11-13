@@ -691,10 +691,17 @@ describe('MenuMais: foco', () => {
   it('fecha quando o foco sai para fora do menu, mas não quando anda dentro dele', async () => {
     const fora = document.createElement('button');
     document.body.appendChild(fora);
-    const w = mount(MenuMais, { attachTo: document.body, global: { stubs } });
+    // #2970 — fora da demonstração o menu só existe com dois itens: é o de
+    // quem é cliente (Alterar informações e Não é mais cliente).
+    const w = mount(MenuMais, {
+      attachTo: document.body,
+      props: { ehCliente: true },
+      global: { stubs },
+    });
     const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
     await gatilho.trigger('click');
     const itens = w.findAll('.n-dropdown-item button');
+    expect(itens).toHaveLength(2);
     await itens[0].trigger('focusout', { relatedTarget: itens[1].element });
     expect(gatilho.attributes('aria-expanded')).toBe('true');
     await itens[0].trigger('focusout', { relatedTarget: fora });
