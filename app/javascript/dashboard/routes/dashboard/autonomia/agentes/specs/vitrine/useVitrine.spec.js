@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
 vi.mock('dashboard/api/autonomia/ferramentasProntas', () => ({ default: api }));
 
 const LISTA = {
-  fontes: [{ chave: 'cep' }, { chave: 'cnpj' }],
+  fontes: [{ chave: 'cep', consultas: 2 }, { chave: 'cnpj', consultas: 1 }],
   incluidas: [
     {
       id: 31,
@@ -62,6 +62,9 @@ describe('useVitrine · carregar', () => {
     await vitrine.carregar();
     expect(api.listar).toHaveBeenCalledTimes(1);
     expect(vitrine.fontes.value).toEqual(['cep', 'cnpj']);
+    expect(vitrine.consultasDe('cep')).toBe(2);
+    expect(vitrine.consultasDe('cnpj')).toBe(1);
+    expect(vitrine.consultasDe('fipe')).toBeUndefined();
     expect(vitrine.doAgente(7).map(item => item.fonte)).toEqual(['cep']);
     expect(vitrine.doAgente('8').map(item => item.id)).toEqual([32]);
     expect(vitrine.tem(7, 'cep')).toBe(true);

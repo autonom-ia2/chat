@@ -130,6 +130,7 @@ const ehDinheiro = (chave, unidade) =>
 const CHAVES_DE_IDENTIFICACAO = [
   'ano',
   'ano_modelo',
+  'ano_fabricacao',
   'cep',
   'matricula',
   'numero',

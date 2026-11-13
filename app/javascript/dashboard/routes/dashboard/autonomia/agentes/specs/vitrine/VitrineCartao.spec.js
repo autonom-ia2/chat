@@ -96,10 +96,27 @@ describe('VitrineCartao · tipos de pergunta do Premium', () => {
 
     expect(wrapper.text()).not.toContain('tipos de pergunta');
   });
+});
 
-  it('keeps the catalog count on a free card', async () => {
-    const wrapper = await montar('fipe', [{ chave: 'fipe' }]);
+// A FIPE oferece três consultas sem cadastro no ambiente e quatro com ele. A tela acompanha a listagem.
+describe('VitrineCartao · tipos de pergunta grátis', () => {
+  it.each([3, 4])(
+    'shows the FIPE count sent by the server: %s',
+    async consultas => {
+      const wrapper = await montar('fipe', [{ chave: 'fipe', consultas }]);
 
-    expect(wrapper.text()).toContain('Responde 3 tipos de pergunta');
-  });
+      expect(wrapper.text()).toContain(
+        `Responde ${consultas} tipos de pergunta`
+      );
+    }
+  );
+
+  it.each([undefined, 1])(
+    'shows no badge without a count or with a single question: %s',
+    async consultas => {
+      const wrapper = await montar('fipe', [{ chave: 'fipe', consultas }]);
+
+      expect(wrapper.text()).not.toContain('tipos de pergunta');
+    }
+  );
 });
