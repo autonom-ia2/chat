@@ -12,28 +12,33 @@
 #   (Carteira::Termo: o mesmo começo ou o mesmo fim). Sem número não há como achar: nasce outra.
 # - Não achou, ou é outro termo da mesma apólice (a renovação que mantém o número): nasce uma linha, com a origem de
 #   quem chamou e o primeiro passo da história (`chegada`). Situação `nova`.
-# - Achou e nada muda: nada é gravado. Situação `igual`.
+# - Achou e os dados da apólice não mudam: situação `igual`. Nada é gravado, a não ser quando a fonte é mais forte que
+#   a `origem` guardada: aí a origem sobe e fica registrado que chegou de novo (ver a precedência, abaixo).
 # - Achou e muda o tipo, o começo, o fim, o valor ou o bem (Carteira::Guardar::Mudancas): a apólice é atualizada e a
 #   história ganha `chegou_de_novo` com o antes e o depois de cada campo, na forma do banco (Carteira::Campos): é o que
 #   o desfazer repõe. Situação `atualizada`.
-# - Achou e a apólice está cancelada: continua cancelada e não é alterada, nem a história. Situação `cancelada`, para
-#   quem chamou poder mostrar.
+# - Achou e a apólice está cancelada: continua cancelada e não é alterada, nem a história, venha de que fonte vier
+#   (da mão também). Situação `cancelada`, para quem chamou poder mostrar.
 # - O campo corrigido à mão (`corrigido_a_mao`) nunca muda. O dado que não veio não apaga o que estava guardado.
 # - Precedência das fontes: conector > PDF > planilha. A fonte mais fraca que a `origem` da apólice só preenche campo
 #   vazio. A mais forte atualiza, e a `origem` da apólice passa a ser a dela: é sempre a fonte mais forte que já
 #   escreveu ali. Quando a origem sobe, a história ganha o passo (`chegou_de_novo` com `valores.origem_antes` e
-#   `valores.origem_depois`), mesmo sem campo mudado. A apólice de origem `manual` só é completada pelas fontes.
+#   `valores.origem_depois`), mesmo sem campo mudado: nesse caso a situação continua `igual`, porque os dados da
+#   apólice não mudaram. A apólice de origem `manual` só é completada pelas fontes.
 # - A origem `manual` só CRIA: quem edita à mão a apólice que já existe é a gaveta (Carteira::Corrigir).
 # - Seguradora e número são a identidade (foi por eles que a apólice foi achada): ficam como estavam.
 #
 # Recusas com código (CustomExceptions::CarteiraRecusa), sem tocar em nada:
-# - `termo_ambiguo`: há mais de um termo guardado que pode ser o dos dados, e o gravador não adivinha;
+# - `termo_ambiguo`: há mais de um termo guardado que pode ser o dos dados, e o gravador não adivinha (Carteira::Termo).
+#   Também quando ATUALIZAR a apólice achada bate no índice único: o fim que chegou já é de outro termo guardado. Isso
+#   não é corrida, é termo errado, e não há nova tentativa;
 # - `apolice_de_outra_pessoa`: a apólice achada é de outro contato. Nada é mesclado nem mudado de dono;
 # - `apolice_repetida`: a origem `manual` achou a apólice, ou outra gravação da mesma seguradora, número e fim chegou ao
-#   mesmo tempo e a segunda tentativa também bateu no índice único. A mensagem do banco, que traz o número da apólice,
-#   nunca é repassada.
-# Erros de quem chamou (ArgumentError com o nome do que está errado, nunca com o valor): `origem`, `chegada`, `user` ou
-# `importacao` de outra conta, ao criar o gravador; o campo fora da forma do banco, ao chamar.
+#   mesmo tempo: CRIAR bateu no índice único, e a nova tentativa (uma só) também.
+# A mensagem do banco na batida do índice único traz o número da apólice: nunca é repassada (a recusa sai sem causa).
+# Erros de quem chamou (ArgumentError com o nome do que está errado, nunca com o valor): `account`, `origem`, `chegada`,
+# `valores`, `user` ou `importacao` de outra conta, ao criar o gravador; `dados`, `contato`, `empresa` ou o campo fora
+# da forma do banco, ao chamar.
 # O que o model da apólice recusa sobe como ActiveRecord::RecordInvalid (sem seguradora, sem fim, tipo fora da lista,
 # fim antes do começo, pessoa ou empresa de outra conta).
 #
@@ -56,6 +61,8 @@ class Carteira::Guardar
   DE_OUTRA_PESSOA = 'apolice_de_outra_pessoa'.freeze
   REPETIDA = 'apolice_repetida'.freeze
   TENTATIVAS = 2
+  # Criar bateu no índice único: outra gravação da mesma apólice entrou no meio. Só existe para tentar de novo.
+  ChegouJunto = Class.new(StandardError)
 
   # origem: uma de Carteira::Apolice::ORIGENS. user: quem trouxe (nil: o sistema). importacao: o lote que trouxe.
   # valores: o que a história mostra da chegada ({ arquivo: 'carteira.xlsx' }). chegada: o tipo do primeiro passo da
@@ -74,10 +81,13 @@ class Carteira::Guardar
 
   def call(dados, contato:, empresa: nil)
     dados = Carteira::Guardar::Dados.call(dados)
+    raise ArgumentError, 'contato' unless contato.is_a?(Contact)
+    raise ArgumentError, 'empresa' unless empresa.nil? || empresa.is_a?(Company)
+
     tentativas = 0
     begin
       Carteira::Apolice.transaction(requires_new: true) { gravar(dados, contato, empresa) }
-    rescue ActiveRecord::RecordNotUnique
+    rescue ChegouJunto
       retry if (tentativas += 1) < TENTATIVAS
       recusar(REPETIDA)
     end
@@ -86,8 +96,15 @@ class Carteira::Guardar
   private
 
   def conferir_a_fonte
+    raise ArgumentError, 'account' unless @account.is_a?(Account)
     raise ArgumentError, 'origem' unless Carteira::Apolice::ORIGENS.include?(@origem)
     raise ArgumentError, 'chegada' unless Carteira::ApoliceEvento::TIPOS.include?(@chegada)
+    raise ArgumentError, 'valores' unless @valores.is_a?(Hash)
+
+    conferir_que_sao_da_conta
+  end
+
+  def conferir_que_sao_da_conta
     raise ArgumentError, 'user' unless @user.nil? || @account.account_users.exists?(user_id: @user.id)
     raise ArgumentError, 'importacao' unless @importacao.nil? || @importacao.account_id == @account.id
   end
@@ -97,9 +114,9 @@ class Carteira::Guardar
     return Resultado.new(apolice: criar(dados, contato, empresa), situacao: NOVA) unless guardada
 
     recusar(DE_OUTRA_PESSOA) unless guardada.contact_id == contato.id
-    recusar(REPETIDA) if @origem == MANUAL
     return Resultado.new(apolice: guardada, situacao: CANCELADA) if guardada.cancelado_em
 
+    recusar(REPETIDA) if @origem == MANUAL
     atualizar(guardada, dados)
   end
 
@@ -118,6 +135,8 @@ class Carteira::Guardar
     )
     registrar(apolice, @chegada, valores: @valores)
     apolice
+  rescue ActiveRecord::RecordNotUnique
+    raise ChegouJunto
   end
 
   def atualizar(apolice, dados)
@@ -129,6 +148,8 @@ class Carteira::Guardar
     apolice.update!(mudancas.colunas.merge(origem: origem))
     registrar(apolice, DE_NOVO, valores: @valores.merge(subiu), mudancas: mudancas.lista.presence)
     Resultado.new(apolice: apolice, situacao: mudancas.nenhuma? ? IGUAL : ATUALIZADA)
+  rescue ActiveRecord::RecordNotUnique
+    recusar(TERMO_AMBIGUO)
   end
 
   def forca(origem)
