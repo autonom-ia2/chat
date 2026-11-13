@@ -15,12 +15,15 @@
 # Processors::Ocr, com os limites de recurso e de tempo deles) e o mesmo teto de pixels por página.
 #
 # Arquivo que não abre nunca levanta para quem chama com outro erro que não Ilegivel: caminho que não existe, arquivo
-# maior que o teto, PDF com senha, truncado ou quebrado. O leitor de PDF levanta de tudo com arquivo ruim (os erros
-# dele, de entrada e saída, e até NoMethodError), por isso a abertura e a leitura do texto de cada página pegam
-# qualquer erro; o resto da classe não.
+# maior que o teto, PDF com senha, truncado ou quebrado. O leitor de PDF lê entrada hostil e levanta de tudo com
+# arquivo ruim (os erros dele, de entrada e saída, e até NoMethodError), por isso SÓ as duas chamadas a ele (abrir o
+# arquivo e tirar o texto de uma página) pegam qualquer erro, e registram a classe do erro. O resto da classe não
+# pega: erro nosso sobe.
 #
 # O texto das páginas é dado de cliente: não vai para log. O log leva só o número da página e a classe do erro.
 class Carteira::Leitor::Paginas
+  include Carteira::Leitor::Reservado
+
   # `tokens`: os pedaços do texto, para a conferência de valor (Carteira::Leitor::Tokens).
   Pagina = Struct.new(:numero, :texto, keyword_init: true) do
     def tokens
@@ -32,6 +35,10 @@ class Carteira::Leitor::Paginas
       "#<#{self.class.name} numero=#{numero.inspect} caracteres=#{texto.to_s.length}>"
     end
     alias_method :to_s, :inspect
+
+    def as_json(*)
+      { 'numero' => numero }
+    end
   end
   PROCESSADORES = Autonomia::Agents::Knowledge::Processors
   TOKENS = Carteira::Leitor::Tokens
@@ -82,19 +89,23 @@ class Carteira::Leitor::Paginas
     end
   end
 
-  # O tamanho é conferido antes de o leitor de PDF tocar no arquivo.
+  # O tamanho é conferido antes de o leitor de PDF tocar no arquivo. As conferências daqui não têm resgate: erro
+  # nosso nelas sobe.
   def abrir
+    raise Ilegivel, 'nao_existe' unless File.file?(@caminho)
     raise Ilegivel, 'grande_demais' if File.size(@caminho) > MAXIMO_DE_BYTES
     raise Ilegivel, 'nao_e_pdf' unless PROCESSADORES::Rasterizacao.pdf?(@caminho)
 
-    require 'pdf-reader'
-    @paginas = PDF::Reader.new(@caminho).pages
+    @paginas = paginas_do_pdf
     @total = @paginas.size
-  rescue Ilegivel
-    raise
+  end
+
+  def paginas_do_pdf
+    require 'pdf-reader'
+    PDF::Reader.new(@caminho).pages
   rescue StandardError => e
-    # O registro leva a classe do erro, para um defeito nosso não se esconder atrás de "PDF ilegível". Só a classe: a
-    # mensagem pode trazer o caminho do arquivo ou um pedaço dele.
+    # O registro leva a classe do erro, para um defeito do leitor de PDF não se esconder atrás de "PDF ilegível". Só a
+    # classe: a mensagem pode trazer o caminho do arquivo ou um pedaço dele.
     Rails.logger.warn("[carteira][leitor] pdf_nao_abriu #{e.class}")
     raise Ilegivel, e.class.name
   end
@@ -129,12 +140,18 @@ class Carteira::Leitor::Paginas
     (0...@total).first(TETO_DE_BUSCA).lazy.select { |indice| yield texto(indice) }.first(MAXIMO)
   end
 
-  # O texto que o PDF traz na página. Página que o leitor de PDF não entende (qualquer erro dele) conta como sem texto.
+  # O texto que o PDF traz na página.
   def texto(indice)
-    @textos[indice] ||= em_utf8(@paginas[indice].text)
+    @textos[indice] ||= em_utf8(do_leitor_de_pdf(indice))
+  end
+
+  # Página que o leitor de PDF não entende (qualquer erro dele) conta como sem texto, e o registro leva a classe do
+  # erro e o número da página.
+  def do_leitor_de_pdf(indice)
+    @paginas[indice].text
   rescue StandardError => e
     Rails.logger.warn("[carteira][leitor] pagina_ilegivel pagina=#{indice + 1} #{e.class}")
-    @textos[indice] = ''
+    ''
   end
 
   # Sempre uma cópia: o leitor de PDF devolve um texto congelado na página vazia, e marcar a codificação mexe nele.

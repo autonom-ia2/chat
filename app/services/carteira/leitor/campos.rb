@@ -15,13 +15,16 @@
 # nasce com a conta e a feature. Conta sem a credencial: SemIa. Roda em job: o prazo é longo e há nova tentativa.
 # `cliente:` troca o cliente (a bateria com gabarito e os specs); a trava da conta vale do mesmo jeito.
 #
-# Quebra da chamada (rede, prazo, HTTP, resposta cortada, fora do esquema ou que não é JSON) vira Falhou (o leitor
-# responde "não deu para ler"), só com a classe do erro: a mensagem pode trazer o texto da apólice. A lista é fechada
-# (FALHAS_DA_CHAMADA): erro de programação nosso sobe, não vira "o modelo falhou".
+# Quebra da chamada vira Falhou (o leitor responde "não deu para ler"), só com a classe do erro: a mensagem pode
+# trazer o texto da apólice. O que conta como quebra é uma lista fechada (FALHAS_DA_CHAMADA, ver lá o que entra):
+# erro de programação nosso sobe, não vira "o modelo falhou". Resposta cortada e resposta fora do esquema também
+# viram Falhou.
 #
 # Mudou as instruções ou o esquema? Rode a bateria com gabarito (lib/tasks/carteira_leitor.rake) no mesmo PR, com
 # orçamento aprovado: o comportamento do modelo não tem teste determinístico.
 class Carteira::Leitor::Campos
+  include Carteira::Leitor::Reservado
+
   # A chamada ao modelo quebrou, voltou cortada ou voltou fora do esquema.
   class Falhou < StandardError; end
   # A conta não tem a leitura liberada.
@@ -37,12 +40,22 @@ class Carteira::Leitor::Campos
       "#<#{self.class.name} e_apolice=#{e_apolice.inspect}>"
     end
     alias_method :to_s, :inspect
+
+    def as_json(*)
+      { 'e_apolice' => e_apolice }
+    end
   end
-  # O que conta como falha da chamada: o erro do cliente de IA (HTTP, e a rede e o prazo que ele já embrulha), os
-  # erros de rede e de prazo crus (para o cliente trocado), o SSL e o JSON quebrado. Qualquer outro erro é defeito
-  # nosso e sobe: não pode se disfarçar de "o modelo falhou".
-  FALHAS_DA_CHAMADA = [Crm::Ai::ResponsesClient::Error, *Crm::Ai::ResponsesClient::NETWORK_ERRORS, Timeout::Error,
-                       OpenSSL::SSL::SSLError, JSON::ParserError].freeze
+  # O que conta como falha da chamada, conferido contra o que o Crm::Ai::ResponsesClient deixa subir de `create`:
+  # - o erro dele (resposta HTTP de erro, resposta vazia, endereço recusado, e a rede e o prazo que ele embrulha
+  #   depois das novas tentativas: NETWORK_ERRORS);
+  # - o que o HTTParty levanta e ele NÃO embrulha: os demais erros de rede, de protocolo HTTP e de SSL, pela lista da
+  #   própria biblioteca (HTTParty::COMMON_NETWORK_ERRORS: host ou rede fora do ar, conexão abortada, cano quebrado,
+  #   resposta HTTP malformada), e os dois erros de redirecionamento;
+  # - a resposta que não é JSON.
+  # São classes nomeadas, nunca a classe-mãe (StandardError, SystemCallError, HTTParty::Error). Qualquer outro erro é
+  # defeito nosso e sobe: não pode se disfarçar de "o modelo falhou".
+  FALHAS_DA_CHAMADA = [Crm::Ai::ResponsesClient::Error, *Crm::Ai::ResponsesClient::NETWORK_ERRORS, *HTTParty::COMMON_NETWORK_ERRORS,
+                       HTTParty::RedirectionTooDeep, HTTParty::DuplicateLocationHeader, JSON::ParserError].uniq.freeze
   VALOR = 'valor_centavos'.freeze
 
   FEATURE = 'carteira_leitor'.freeze
@@ -120,7 +133,7 @@ class Carteira::Leitor::Campos
     campos = conferidos(resposta, ancora)
     # O valor que está escrito, mas não logo depois de "R$", pode ser outra medida: só vale depois de alguém confirmar.
     sem_cifrao = campos.slice(VALOR).reject { |_campo, valor| valor.nil? || ancora.com_cifrao?(valor) }
-    Lido.new(e_apolice: true, campos: campos.merge(sem_cifrao.transform_values { nil }), a_confirmar: sem_cifrao, resposta: resposta)
+    Lido.new(e_apolice: true, campos: campos.except(*sem_cifrao.keys), a_confirmar: sem_cifrao, resposta: resposta)
   end
 
   private

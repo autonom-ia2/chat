@@ -9,8 +9,8 @@
 # 4. o telefone é fixo ou celular do Brasil com DDD que existe, pela biblioteca de telefone da casa
 #    (`TelephoneNumber`, só os tipos fixo e celular). Ficam de fora o 0800, o que a biblioteca não reconhece como
 #    fixo nem celular (sem DDD, com DDD que não existe, o número curto de central escrito sem DDD) e o "telefone" que
-#    é o próprio CPF/CNPJ ou o número da apólice. Não há lista de prefixos: o número de central escrito COM DDD
-#    ("(11) 4004-0010") tem forma de telefone fixo e passa.
+#    é o próprio CPF/CNPJ ou o número da apólice. O único prefixo conferido aqui é o 0800 (`GRATUITO`); não há lista
+#    de prefixos de central: o número de central escrito COM DDD ("(11) 4004-0010") tem forma de telefone fixo e passa.
 # Falhou qualquer uma: "não achei" (nil). Não há lista de palavras nem regex: quem decide de quem é o telefone é o
 # modelo; aqui só se confere o que está escrito e onde.
 #
@@ -22,6 +22,8 @@
 # O telefone sai só com os dígitos, como está escrito na apólice (com o DDD, sem código do país acrescentado); pôr no
 # formato da ficha é de quem grava a pessoa. O e-mail sai em minúsculas.
 class Carteira::Leitor::ContatoDoSegurado
+  include Carteira::Leitor::Reservado
+
   PAIS = :br
   TIPOS_DE_TELEFONE = %i[mobile fixed_line].freeze
   GRATUITO = '0800'.freeze

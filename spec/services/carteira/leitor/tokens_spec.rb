@@ -53,8 +53,9 @@ RSpec.describe Carteira::Leitor::Tokens do
     end
   end
 
-  it 'o inspect não mostra o texto' do
+  it 'o inspect e o JSON não mostram o texto' do
     expect(tokens.inspect).to eq("#<Carteira::Leitor::Tokens blocos=#{tokens.blocos.size}>")
+    expect(tokens.to_json).to eq('{"classe":"Carteira::Leitor::Tokens"}')
   end
 
   it 'blocos emendados: só a quebra de linha junta dois pedaços' do

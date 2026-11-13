@@ -106,6 +106,12 @@ RSpec.describe Rake::Task do
       expect(Crm::Ai::ResponsesClient).to have_received(:new).once.with(credential: credencial, max_retries: 0)
     end
 
+    it 'o inspect e o JSON da bateria não mostram o cliente, que leva a chave' do
+      bateria = CarteiraLeitorBateria.new(cliente: cliente)
+
+      expect([bateria.inspect, bateria.to_json]).to eq(['#<CarteiraLeitorBateria>', '{"classe":"CarteiraLeitorBateria"}'])
+    end
+
     # Achado J da revisão: em produção a chave seria a de produção, e na CI ninguém aprovou o gasto.
     it 'na CI, a tarefa para mesmo com tudo ligado, e quem não passa um cliente não chega ao modelo' do
       with_modified_env(inteira.merge(CI: 'true')) do

@@ -41,6 +41,8 @@
 # - o Resultado não vai para log, cache nem argumento de outro job: `campos` é dado de cliente. O que pode sair dele
 #   para `totais` e para log são a recusa, o motivo e as contagens.
 class Carteira::Leitor
+  include Carteira::Leitor::Reservado
+
   def initialize(account:, ocr: false, cliente: nil)
     @account = account
     @ocr = ocr

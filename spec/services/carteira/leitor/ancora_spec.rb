@@ -21,6 +21,8 @@ RSpec.describe Carteira::Leitor::Ancora do
       Maria Modelo. Franquia: R$ 3.500,00
       Item 12/34. CEP 01122-028. Protocolo 15032026. Emitida em 05-01-2027, 06.01.2027 e 07/01/27.
       Juros de 7,38% ao mês. Peso da carga: 1.250,50 kg. Total sem o cifrão: 9.876,54
+      Renovação da apólice RS-0114.
+      000777 (a quebra de linha partiu o número)
     TEXTO
   end
 
@@ -68,9 +70,25 @@ RSpec.describe Carteira::Leitor::Ancora do
     expect(['123.456.789-01', '123.456.789', '998877', '890.012.345-67', '', nil].map { |valor| ancora.documento(valor) }).to all(be_nil)
   end
 
+  # Terceira revisão: o número partido pela quebra de linha confere emendado, como o e-mail.
+  it 'número da apólice: o bloco que a quebra de linha partiu em dois confere emendado' do
+    expect(ancora.codigo('RS-0114.000777')).to eq('RS-0114.000777')
+    expect(['RS-0114.000778', 'RS-0114.000777a', '0114.000777'].map { |valor| ancora.codigo(valor) }).to all(be_nil)
+  end
+
   # Segunda revisão, alto 1: o CEP "01122-028" fazia a data 01/12/2028 passar, e o protocolo 15032026, a 15/03/2026.
   it 'data: dígitos colados nunca são data, nem com hífen de CEP' do
-    expect(%w[2028-12-01 2026-03-15 0112-20-28].map { |valor| ancora.data(valor) }).to all(be_nil)
+    expect(%w[2028-12-01 2026-03-15].map { |valor| ancora.data(valor) }).to all(be_nil)
+  end
+
+  # Terceira revisão, alto: "07/01/27" na página fazia 1927-01-07 e 2127-01-07 passarem, porque o ano curto joga o
+  # século fora.
+  it 'data: o ano escrito com dois dígitos só confere para o ano 2000 + aa' do
+    expect(%w[2027-01-07 1927-01-07 2127-01-07 0027-01-07].map { |valor| ancora.data(valor) }).to eq(['2027-01-07', nil, nil, nil])
+  end
+
+  it 'o inspect e o JSON da âncora não mostram o texto das páginas' do
+    expect([ancora.inspect, ancora.to_json]).to eq(['#<Carteira::Leitor::Ancora>', '{"classe":"Carteira::Leitor::Ancora"}'])
   end
 
   it 'data: aceita cada forma escrita com separador, com o ano curto só depois de barra' do

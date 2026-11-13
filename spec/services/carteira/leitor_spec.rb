@@ -51,6 +51,16 @@ RSpec.describe Carteira::Leitor do
     JSON.parse(perguntas.last[:input])['paginas'].pluck('numero')
   end
 
+  # Terceira revisão: o leitor guarda a conta e o cliente de IA, que leva a credencial.
+  it 'o inspect e o JSON do leitor não mostram a credencial do cliente nem a conta' do
+    # `new` está trocado pelo dublê no `before`; este é um cliente de verdade, com a credencial dentro.
+    de_verdade = Crm::Ai::ResponsesClient.allocate
+    de_verdade.instance_variable_set(:@credential, { api_key: 'chave-secreta-de-teste' })
+    com_a_chave = described_class.new(account: account, cliente: de_verdade)
+
+    expect([com_a_chave.inspect, com_a_chave.to_json]).to eq(['#<Carteira::Leitor>', '{"classe":"Carteira::Leitor"}'])
+  end
+
   describe 'a chave da conta' do
     it 'desligada: devolve leitura_desligada sem abrir o arquivo e sem chamar o modelo' do
       Carteira::Leitor::Liberado.desligar!(account)

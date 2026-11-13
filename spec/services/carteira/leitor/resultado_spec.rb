@@ -38,22 +38,48 @@ RSpec.describe Carteira::Leitor::Resultado do
       expect([por_engano.valores_a_confirmar, por_engano.duvidas.last(2)]).to eq([{}, contato.keys])
     end
 
-    it 'o valor a confirmar sai de campos e dos dados da apólice, mesmo mandado nos dois, e não é dúvida' do
+    # Terceira revisão: a chave com nil em `campos` e em `dados_da_apolice` ainda convidava a gravar "sem valor".
+    it 'o valor a confirmar some de campos e dos dados da apólice, nem como chave com nil, mesmo mandado nos dois' do
       com_valor = described_class.lido(campos: lidos, a_confirmar: { 'valor_centavos' => 225_498 }, paginas_total: 2, paginas_enviadas: [1])
 
       expect(com_valor.valores_a_confirmar).to eq('valor_centavos' => 225_498)
-      expect([com_valor.campos['valor_centavos'], com_valor.dados_da_apolice[:valor_centavos]]).to eq([nil, nil])
+      expect(com_valor.campos.keys).to eq(described_class::CAMPOS - ['valor_centavos'])
+      expect(com_valor.dados_da_apolice.keys).not_to include(:valor_centavos)
       expect(com_valor.duvidas).not_to include('valor_centavos')
-      expect(resultado.campos['valor_centavos']).to eq(225_498)
+      expect([resultado.campos['valor_centavos'], resultado.dados_da_apolice[:valor_centavos]]).to eq([225_498, 225_498])
     end
 
     it 'cada nome sai em um lugar só: campos com valor, a confirmar ou dúvida' do
       misto = described_class.lido(campos: lidos, a_confirmar: contato.slice('segurado_telefone').merge('valor_centavos' => 225_498),
                                    paginas_total: 2, paginas_enviadas: [1])
 
-      com_valor = misto.campos.compact.keys
+      com_valor, sem_valor = misto.campos.partition { |_nome, valor| valor }.map { |pares| pares.map(&:first) }
+      expect(misto.campos.keys & misto.a_confirmar).to eq([])
+      expect(sem_valor).to eq(misto.duvidas - described_class::CONTATO)
       expect((com_valor + misto.a_confirmar + misto.duvidas).sort).to eq(described_class::NOMES.sort)
       expect(misto.duvidas).to eq(%w[ramo_original inicio_vigencia bem corretora segurado_email])
+    end
+
+    it 'campos e valores_a_confirmar são congelados, e o valor de quem chamou não é mexido' do
+      telefone = +'11999990001'
+      congelado = described_class.lido(campos: lidos, a_confirmar: { 'segurado_telefone' => telefone }, paginas_total: 2, paginas_enviadas: [1])
+
+      expect([congelado.campos, congelado.valores_a_confirmar, congelado.valores_a_confirmar['segurado_telefone']]).to all(be_frozen)
+      expect(telefone).not_to be_frozen
+      expect(described_class.recusado('nao_e_apolice').campos).to be_frozen
+    end
+
+    # Terceira revisão: o `as_json` do ActiveSupport serializaria as variáveis de instância, com os valores lidos.
+    it 'o JSON traz só a recusa, o motivo, as contagens e os nomes: nunca um valor lido' do
+      com_contato = described_class.lido(campos: lidos, a_confirmar: contato, paginas_total: 2, paginas_enviadas: [1])
+
+      expect(com_contato.as_json).to eq('recusa' => nil, 'motivo' => nil, 'paginas_total' => 2, 'paginas_enviadas' => [1],
+                                        'duvidas' => %w[ramo_original inicio_vigencia bem corretora],
+                                        'a_confirmar' => %w[segurado_telefone segurado_email])
+      expect((lidos.values + contato.values).map(&:to_s).none? { |valor| com_contato.to_json.include?(valor) }).to be(true)
+      expect(described_class.recusado('nao_deu_para_ler', motivo: :pdf_ilegivel).as_json)
+        .to eq('recusa' => 'nao_deu_para_ler', 'motivo' => 'pdf_ilegivel', 'paginas_total' => nil, 'paginas_enviadas' => [],
+               'duvidas' => [], 'a_confirmar' => [])
     end
 
     it 'só aceita a confirmar o contato e o valor; sem achado, e no recusado, não há nada a confirmar' do

@@ -115,6 +115,16 @@ class CarteiraLeitorBateria
     saida
   end
 
+  # O cliente de verdade leva a chave: o `inspect` e o `as_json` não mostram nada de dentro do objeto. (O mesmo do
+  # Carteira::Leitor::Reservado, escrito aqui porque este arquivo é carregado antes de a aplicação subir.)
+  def inspect
+    "#<#{self.class.name}>"
+  end
+
+  def as_json(*)
+    { 'classe' => self.class.name }
+  end
+
   private
 
   # O único caminho que paga: recusa de novo aqui, para ninguém chegar ao modelo por fora da tarefa.

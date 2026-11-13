@@ -98,10 +98,11 @@ RSpec.describe Carteira::Leitor::Campos do
     lidos = [225_498, 125_050, 738, 350_000].map do |valor|
       responde('e_apolice' => true, 'valor_centavos' => valor)
       lido = pergunta.ler(sem_cifrao)
-      [lido.campos['valor_centavos'], lido.a_confirmar]
+      [lido.campos.fetch('valor_centavos', :sem_a_chave), lido.a_confirmar]
     end
 
-    expect(lidos).to eq([[nil, { 'valor_centavos' => 225_498 }], [nil, { 'valor_centavos' => 125_050 }], [nil, {}], [350_000, {}]])
+    expect(lidos).to eq([[:sem_a_chave, { 'valor_centavos' => 225_498 }], [:sem_a_chave, { 'valor_centavos' => 125_050 }], [nil, {}],
+                         [350_000, {}]])
   end
 
   it 'o inspect do que foi lido não mostra campo nem resposta' do
@@ -110,6 +111,14 @@ RSpec.describe Carteira::Leitor::Campos do
     lido = pergunta.ler(paginas)
 
     expect([lido.inspect, lido.to_s]).to all(eq('#<Carteira::Leitor::Campos::Lido e_apolice=true>'))
+    expect(lido.to_json).to eq('{"e_apolice":true}')
+  end
+
+  # Terceira revisão: o objeto guarda o cliente de IA, que leva a credencial. O `inspect` padrão a imprimiria.
+  it 'o inspect e o JSON da pergunta não mostram a credencial do cliente nem a conta' do
+    com_a_chave = pergunta(cliente: Crm::Ai::ResponsesClient.new(credential: { api_key: 'chave-secreta-de-teste' }))
+
+    expect([com_a_chave.inspect, com_a_chave.to_json]).to eq(['#<Carteira::Leitor::Campos>', '{"classe":"Carteira::Leitor::Campos"}'])
   end
 
   it 'não é apólice: sem campo nenhum, mesmo que o modelo mande algum' do
@@ -126,13 +135,16 @@ RSpec.describe Carteira::Leitor::Campos do
 
   # Segunda revisão, alto 4: defeito nosso não pode virar "o modelo falhou".
   it 'só falha de rede, de prazo, do cliente de IA e de JSON vira Falhou; erro de programação sobe' do
-    falhas = [Net::ReadTimeout.new, Timeout::Error.new, Errno::ECONNRESET.new, SocketError.new, OpenSSL::SSL::SSLError.new, EOFError.new]
+    falhas = [Net::ReadTimeout.new, Timeout::Error.new, Errno::ECONNRESET.new, SocketError.new, OpenSSL::SSL::SSLError.new, EOFError.new,
+              Errno::EHOSTUNREACH.new, Errno::ENETUNREACH.new, Errno::EPIPE.new, Errno::ECONNABORTED.new, Net::HTTPBadResponse.new,
+              HTTParty::RedirectionTooDeep.new(nil), HTTParty::DuplicateLocationHeader.new(nil)]
     falhas.each do |erro|
       allow(cliente).to receive(:create).and_raise(erro)
 
       expect { pergunta.ler(paginas) }.to raise_error(described_class::Falhou, erro.class.name)
     end
-    [NoMethodError.new('texto da apólice'), TypeError.new, ArgumentError.new, KeyError.new].each do |defeito|
+    [NoMethodError.new('texto da apólice'), TypeError.new, ArgumentError.new, KeyError.new, Errno::ENOENT.new, HTTParty::UnsupportedFormat.new,
+     RuntimeError.new].each do |defeito|
       allow(cliente).to receive(:create).and_raise(defeito)
 
       expect { pergunta.ler(paginas) }.to raise_error(defeito.class)

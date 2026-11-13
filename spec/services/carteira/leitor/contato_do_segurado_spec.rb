@@ -125,7 +125,14 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
     expect([telefone('(11) 3000-0002'), email('contato@corretora-amostra.invalid')]).to eq(['1130000002', 'contato@corretora-amostra.invalid'])
   end
 
-  # Não há lista de prefixos: o número de central escrito com DDD tem forma de telefone fixo.
+  it 'o inspect e o JSON não mostram o documento do segurado nem o texto das páginas' do
+    do_segurado = described_class.new(paginas, documento: documento, numero: 'EX-2026.001234')
+
+    expect([do_segurado.inspect, do_segurado.to_json])
+      .to eq(['#<Carteira::Leitor::ContatoDoSegurado>', '{"classe":"Carteira::Leitor::ContatoDoSegurado"}'])
+  end
+
+  # Não há lista de prefixos de central: o número de central escrito com DDD tem forma de telefone fixo.
   it 'o número de central escrito com DDD também passa; sem DDD, não' do
     expect([telefone('(11) 4004-0011'), telefone('4004 0010')]).to eq(['1140040011', nil])
   end

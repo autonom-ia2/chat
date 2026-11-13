@@ -12,6 +12,8 @@
 #
 # Não interpreta nada: separa por caractere, com método de texto, sem regex. Quem entende o texto é o modelo.
 class Carteira::Leitor::Tokens
+  include Carteira::Leitor::Reservado
+
   FORA_DA_PALAVRA = '^a-z0-9'.freeze
   FORA_DO_BLOCO = '^a-z0-9.,/@_+$%-'.freeze
   PONTAS = '.,/@_+-'.freeze

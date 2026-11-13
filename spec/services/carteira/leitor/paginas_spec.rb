@@ -178,19 +178,36 @@ RSpec.describe Carteira::Leitor::Paginas do
       expect(Rails.logger).to have_received(:warn).once.with('[carteira][leitor] pdf_nao_abriu NoMethodError')
     end
 
-    it 'o inspect da página não mostra o texto' do
+    # Terceira revisão: o resgate amplo fica só em volta do leitor de PDF. Erro nosso nas conferências de antes sobe.
+    it 'erro de programação na conferência do arquivo sobe, não vira ilegível' do
+      allow(processadores::Rasterizacao).to receive(:pdf?).and_raise(NoMethodError)
+
+      expect { abrir(longa) }.to raise_error(NoMethodError)
+    end
+
+    it 'o inspect e o JSON da página mostram só o número, nunca o texto' do
       pagina = described_class::Pagina.new(numero: 3, texto: 'Marina Exemplo de Souza')
 
       expect([pagina.inspect, pagina.to_s]).to all(eq('#<Carteira::Leitor::Paginas::Pagina numero=3 caracteres=23>'))
+      expect([pagina.as_json, [pagina].to_json]).to eq([{ 'numero' => 3 }, '[{"numero":3}]'])
     end
 
-    it 'erro ao ler o texto de uma página deixa a página de fora e não levanta' do
+    it 'o inspect e o JSON das páginas não mostram o caminho, o documento nem o texto' do
+      paginas = described_class.new(longa, documento: '987.654.321-99', nome: 'Renata Amostra Lima')
+      paginas.escolhidas
+
+      expect([paginas.inspect, paginas.to_json]).to eq(['#<Carteira::Leitor::Paginas>', '{"classe":"Carteira::Leitor::Paginas"}'])
+    end
+
+    it 'erro ao ler o texto de uma página deixa a página de fora, não levanta, e o registro leva a classe do erro' do
       quebrada = instance_double(PDF::Reader::Page)
       allow(quebrada).to receive(:text).and_raise(TypeError, 'texto da apólice')
       boa = instance_double(PDF::Reader::Page, text: 'Condições gerais do seguro, página dois')
       allow(PDF::Reader).to receive(:new).and_return(instance_double(PDF::Reader, pages: [quebrada, boa]))
+      allow(Rails.logger).to receive(:warn)
 
       expect(numeros(longa)).to eq([2])
+      expect(Rails.logger).to have_received(:warn).once.with('[carteira][leitor] pagina_ilegivel pagina=1 TypeError')
     end
 
     # Achado G da revisão: o tamanho é conferido antes de o leitor de PDF tocar no arquivo.

@@ -2,8 +2,9 @@
 # mudou, pôr no Conferir, chamar Carteira::Guardar).
 #
 # Cada um dos NOMES que o leitor procura sai em UM de três lugares, nunca em dois:
-# - `campos`: o que foi achado e pode ser gravado. Traz todos os nomes de CAMPOS, cada um com o valor na forma do banco
-#   (texto, AAAA-MM-DD, centavos, só dígitos no documento) ou nil;
+# - `campos`: o que foi achado e pode ser gravado. Traz os nomes de CAMPOS, cada um com o valor na forma do banco
+#   (texto, AAAA-MM-DD, centavos, só dígitos no documento) ou nil. O nome que saiu a confirmar NÃO aparece aqui, nem
+#   como chave com nil (e por isso também não aparece em `dados_da_apolice`);
 # - `valores_a_confirmar`: o que foi achado, mas só vale depois de uma pessoa confirmar. É um objeto à parte, que não
 #   se mistura com `campos` nem com `dados_da_apolice`: quem grava iterando `campos` não o alcança por engano. Quem
 #   recebe (o Conferir, o "o que mudou") mostra cada um para a pessoa confirmar e só então grava. `a_confirmar` são os
@@ -21,8 +22,9 @@
 # - `paginas_total` e `paginas_enviadas` (os números das páginas que foram ao modelo): só contagem, podem ir para log
 #   e para `totais`.
 #
-# `campos` e `valores_a_confirmar` são dado de cliente: não vão para log, argumento de job nem cache. O `inspect` não
-# os mostra.
+# `campos` e `valores_a_confirmar` são dado de cliente: não vão para log, argumento de job nem cache. O `inspect` e o
+# `as_json` (e o `to_json`) não os mostram: trazem só a recusa, o motivo, as contagens e os NOMES das dúvidas e do que
+# está a confirmar. Os dois são congelados.
 class Carteira::Leitor::Resultado
   DESLIGADA = 'leitura_desligada'.freeze
   NAO_E_APOLICE = 'nao_e_apolice'.freeze
@@ -53,8 +55,8 @@ class Carteira::Leitor::Resultado
   def initialize(paginas_total:, paginas_enviadas:, recusa: nil, motivo: nil, achados: SEM_ACHADOS)
     @recusa = recusa
     @motivo = motivo
-    @valores_a_confirmar = achados[:a_confirmar].slice(*A_CONFIRMAR).compact.freeze
-    @campos = recusa ? {} : CAMPOS.index_with { |campo| achados[:campos][campo] unless @valores_a_confirmar.key?(campo) }
+    @valores_a_confirmar = achados[:a_confirmar].slice(*A_CONFIRMAR).compact.transform_values { |valor| valor.dup.freeze }.freeze
+    @campos = (recusa ? {} : (CAMPOS - a_confirmar).index_with { |campo| achados[:campos][campo] }).freeze
     @paginas_total = paginas_total
     @paginas_enviadas = paginas_enviadas
   end
@@ -84,5 +86,11 @@ class Carteira::Leitor::Resultado
   def inspect
     "#<#{self.class.name} recusa=#{recusa.inspect} motivo=#{motivo.inspect} duvidas=#{duvidas.size} " \
       "a_confirmar=#{a_confirmar.size} paginas=#{paginas_enviadas.size}/#{paginas_total.inspect}>"
+  end
+
+  # O que pode ir para log e para `totais`: nomes e contagens, nunca um valor lido.
+  def as_json(*)
+    { 'recusa' => recusa, 'motivo' => motivo&.to_s, 'paginas_total' => paginas_total, 'paginas_enviadas' => paginas_enviadas,
+      'duvidas' => duvidas, 'a_confirmar' => a_confirmar }
   end
 end
