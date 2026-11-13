@@ -218,6 +218,18 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
       expect([anterior.reload.renovado_em, anterior.eventos.count]).to eq([nil, 0])
     end
 
+    it 'recusa a apólice que a conta já tem marcada como cancelada: ela não é mexida nem vira a apólice nova' do
+      cancelada = criar_apolice(marina, seguradora: 'Outra Seguradora Exemplo', numero: 'OS-777001', inicio_vigencia: Date.new(2026, 12, 2),
+                                        fim_vigencia: Date.new(2027, 12, 2), cancelado_em: agora)
+      antes = cancelada.reload.attributes
+
+      guardar
+
+      expect(recusa).to eq([422, { 'error' => 'apolice_cancelada' }])
+      expect([cancelada.reload.attributes, cancelada.eventos.count, seguros.count]).to eq([antes, 0, 2])
+      expect([anterior.reload.renovado_em, anterior.eventos.count]).to eq([nil, 0])
+    end
+
     it 'o mesmo número com o mesmo começo da anterior é a própria anterior: recusa como repetida, e ela não é mexida' do
       antes = anterior.reload.attributes
 
