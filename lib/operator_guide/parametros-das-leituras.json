@@ -2480,6 +2480,12 @@
     "controller": "api/v1/accounts/relacionamentos/seguros#resumo",
     "parametros": []
   },
+  "relacionamentos/seguros/resumo_por_dono": {
+    "controller": "api/v1/accounts/relacionamentos/seguros/resumo_por_dono#show",
+    "parametros": [
+      "pessoa_ids"
+    ]
+  },
   "relacionamentos/seguros/todos": {
     "controller": "api/v1/accounts/relacionamentos/seguros#todos",
     "parametros": [

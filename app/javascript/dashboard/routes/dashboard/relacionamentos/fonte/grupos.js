@@ -35,8 +35,27 @@ export const GRUPO_PADRAO = {
   [ABAS.EMPRESAS]: 'todas',
 };
 
-export const gruposDaAba = aba =>
-  aba === ABAS.EMPRESAS ? GRUPOS_DE_EMPRESAS : GRUPOS_DE_PESSOAS;
+// #2897 — na conta que tem a carteira de seguros a lista de pessoas ganha um
+// grupo, logo depois de "Clientes": quem tem só um seguro ativo. Quem diz
+// quem pertence é o servidor (Carteira::NaListaDePessoas); na demonstração, a
+// carteira fictícia (demo/carteiraNaLista.js). O nome mora no catálogo da
+// carteira.
+export const GRUPO_SO_UM_SEGURO = 'so_um_seguro';
+const SO_UM_SEGURO = {
+  id: GRUPO_SO_UM_SEGURO,
+  nome: 'RELACIONAMENTOS_CARTEIRA.PESSOAS.SO_UM_SEGURO.NOME',
+  explicacao: 'RELACIONAMENTOS_CARTEIRA.PESSOAS.SO_UM_SEGURO.EXPLICACAO',
+};
+const GRUPO_ANTES_DO_DE_SEGUROS = 'clientes';
+const GRUPOS_DE_PESSOAS_COM_SEGUROS = GRUPOS_DE_PESSOAS.flatMap(item =>
+  item.id === GRUPO_ANTES_DO_DE_SEGUROS ? [item, SO_UM_SEGURO] : [item]
+);
+
+// `comSeguros`: a conta tem a carteira de seguros.
+export const gruposDaAba = (aba, { comSeguros = false } = {}) => {
+  if (aba === ABAS.EMPRESAS) return GRUPOS_DE_EMPRESAS;
+  return comSeguros ? GRUPOS_DE_PESSOAS_COM_SEGUROS : GRUPOS_DE_PESSOAS;
+};
 
 // Dias desde a última conversa; null quando nunca houve. A data vem em segundos
 // (como a API de contatos devolve).
