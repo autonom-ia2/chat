@@ -1,11 +1,11 @@
 import { computed, ref, watch } from 'vue';
 import { ETAPAS } from '../trazer/etapas';
-import { ERROS } from '../trazer/falhasDaTela';
 import {
   PERGUNTA_SEGUROS,
   destinosQueFaltam,
   numerosDosSeguros,
   segurosConferidos,
+  sugestoesParaConfirmar,
   temSeguros,
 } from './segurosDaPlanilha';
 
@@ -13,37 +13,34 @@ import {
 // seguros. O estado continua sendo o da tela das listas
 // (trazer/useTrazerLista.js): aqui só se decide em que momentos a tela é a da
 // carteira (`passo`) e o que ela pede a mais.
-//   - COMO: antes de enviar, a pessoa escolhe como quer trazer (hoje, só a
-//     planilha);
 //   - PERGUNTA: "Esta planilha tem seguros?". A resposta vai junto das outras;
-//   - CONFERIR: a planilha tem seguros. Faltando coluna obrigatória, o clique
-//     em Trazer não vai ao servidor: a tela diz o que falta (`faltam`);
+//   - CONFERIR: a planilha tem seguros. As colunas que o servidor sugere são
+//     confirmadas de uma vez (`confirmarColunas`). Faltando coluna obrigatória,
+//     o clique em Trazer não vai ao servidor: a tela diz o que falta
+//     (`faltam`). Enquanto a lista é trazida a tela continua sendo o Conferir,
+//     que diz que está trazendo;
 //   - PRONTO: a lista trouxe seguros. `chegaram` diz quantos e de quantas
 //     pessoas (a conta do servidor; sem ela, a do Conferir).
-// Fora desses momentos `passo` é nulo e a tela é a das listas. Na conta sem
-// carteira (`ligado` falso) é sempre nulo.
+// Fora desses momentos `passo` é nulo e a tela é a das listas: o envio da
+// planilha é o de sempre (só existe um jeito de trazer, a planilha). Na conta
+// sem carteira (`ligado` falso) é sempre nulo.
 export const PASSOS = {
-  COMO: 'como',
   PERGUNTA: 'pergunta',
   CONFERIR: 'conferir',
   PRONTO: 'pronto',
 };
 
 export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
-  // A pessoa já disse como quer trazer.
-  const escolheu = ref(false);
   // Quantas vezes pediu para trazer com coluna faltando (cada pedido leva o
   // foco ao aviso de novo).
   const pedidosComFalta = ref(0);
+  // A confirmação das colunas sugeridas: em voo, e se parou no meio.
+  const conferindo = ref(false);
+  const erroAoConferir = ref(false);
   // Os números do Conferir na hora do trazer: valem se o andamento não os diz.
   const doConferir = ref(null);
 
   const faltando = computed(() => destinosQueFaltam(tela.leitura.value));
-
-  // Enviar: a escolha vem antes do arquivo, menos quando a tela já está lendo
-  // ou tem um erro para dizer.
-  const antesDeEnviar = () =>
-    !escolheu.value && !tela.lendo.value && tela.erro.value === ERROS.NENHUM;
 
   const chegaram = computed(() => {
     if (tela.etapa.value !== ETAPAS.PRONTO || !doConferir.value) return null;
@@ -55,9 +52,10 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
 
   // O passo da carteira em cada etapa da tela das listas (falso: não há).
   const DA_ETAPA = {
-    [ETAPAS.ENVIAR]: () => antesDeEnviar() && PASSOS.COMO,
     [ETAPAS.PERGUNTAS]: () => naPergunta() && PASSOS.PERGUNTA,
     [ETAPAS.CONFERIR]: () => comSeguros() && PASSOS.CONFERIR,
+    // A lista que traz seguros está sendo trazida: a tela não muda no meio.
+    [ETAPAS.TRAZENDO]: () => Boolean(doConferir.value) && PASSOS.CONFERIR,
     [ETAPAS.PRONTO]: () => Boolean(chegaram.value) && PASSOS.PRONTO,
   };
 
@@ -78,16 +76,36 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
   );
 
   // De volta ao começo (a pessoa recomeçou, ou a lista parou no meio): os
-  // números da lista anterior não valem para a próxima.
+  // números e o erro da lista anterior não valem para a próxima.
   watch(
     () => tela.etapa.value,
     etapa => {
-      if (etapa === ETAPAS.ENVIAR) doConferir.value = null;
+      if (etapa !== ETAPAS.ENVIAR) return;
+      doConferir.value = null;
+      erroAoConferir.value = false;
     }
   );
 
-  const escolherPlanilha = () => {
-    escolheu.value = true;
+  // "Está certo": cada coluna sugerida vira a coluna do destino dela, uma
+  // escrita de cada vez e na ordem de carteira/segurosDaPlanilha.js. A que não
+  // der certo para a fila: as anteriores já estão salvas, e o "Tentar de novo"
+  // manda só as que o servidor ainda sugere. Sobrando obrigatório sem coluna (a
+  // sugestão não veio para ele), a tela diz qual falta.
+  const confirmarColunas = async () => {
+    if (conferindo.value || tela.ocupado.value) return;
+    conferindo.value = true;
+    erroAoConferir.value = false;
+    try {
+      const guardou = await sugestoesParaConfirmar(tela.leitura.value).reduce(
+        async (anteriores, { coluna, destino }) =>
+          (await anteriores) && tela.trocarDestino(coluna, destino),
+        Promise.resolve(true)
+      );
+      erroAoConferir.value = !guardou;
+      if (guardou && faltando.value.length > 0) pedidosComFalta.value += 1;
+    } finally {
+      conferindo.value = false;
+    }
   };
 
   // Uma ação só: a resposta já segue para a próxima tela.
@@ -108,10 +126,10 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
     return tela.trazer();
   };
 
-  // "Trazer outra lista": a escolha de como trazer volta a ser feita.
+  // "Trazer outra lista": o que a tela dizia da lista anterior deixa de valer.
   const recomecar = () => {
-    escolheu.value = false;
     pedidosComFalta.value = 0;
+    erroAoConferir.value = false;
   };
 
   return {
@@ -120,8 +138,10 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
     // trazer; antes disso, nada a dizer.
     faltam: computed(() => (pedidosComFalta.value > 0 ? faltando.value : [])),
     pedidosComFalta,
+    conferindo,
+    erroAoConferir,
     chegaram,
-    escolherPlanilha,
+    confirmarColunas,
     responder,
     trazer,
     recomecar,

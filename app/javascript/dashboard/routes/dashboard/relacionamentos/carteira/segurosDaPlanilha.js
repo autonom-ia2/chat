@@ -5,8 +5,12 @@
 //   - a pergunta `seguros` ("Esta planilha tem seguros?"), com a resposta `sim`
 //     ou `nao`;
 //   - com `sim`, a leitura traz o bloco `seguros`: os destinos de seguro que as
-//     colunas podem ter e os obrigatórios que ainda não têm coluna (`faltam`).
-//     Enquanto falta algum, as linhas ainda não foram conferidas como seguro;
+//     colunas podem ter (`destinos`), quais são obrigatórios (`obrigatorios`),
+//     os obrigatórios que ainda não têm coluna (`faltam`) e a coluna que o
+//     servidor sugere para cada destino ainda sem coluna (`sugestao`). Sugerida
+//     não é escolhida: só vale o destino que a coluna tem em `colunas`, e é a
+//     confirmação da pessoa que o põe lá. Enquanto falta algum obrigatório, as
+//     linhas ainda não foram conferidas como seguro;
 //   - conferida, o `resumo` diz quantos seguros entram, de quantas pessoas, e
 //     quantos de cada tipo. O tipo de cada seguro já vem decidido.
 // Cada número diz "seguros" ou "pessoas": `resumo.novas` e `resumo.completadas`
@@ -53,6 +57,66 @@ export const destinosDeSeguro = leitura =>
     .filter(destino => CHAVES_DOS_DESTINOS.has(destino))
     .map(destino => ({ value: destino, chave: chaveDoDestino(destino) }));
 
+// Onde está cada coisa do seguro, antes de as linhas serem conferidas:
+// `[{ destino, chave, situacao, coluna, nome }]`, na ordem do servidor.
+//   - CONFIRMADA: a pessoa já deu o destino a uma coluna;
+//   - SUGERIDA: o servidor sugere a coluna e a pessoa ainda não confirmou;
+//   - FALTA: obrigatório sem coluna e sem sugestão (a pessoa aponta à mão).
+// O destino que não é obrigatório e não tem coluna nem sugestão não aparece.
+export const SITUACAO_DA_COLUNA = {
+  CONFIRMADA: 'confirmada',
+  SUGERIDA: 'sugerida',
+  FALTA: 'falta',
+};
+
+const colunaDoDestino = (leitura, destino) => {
+  const colunas = leitura?.colunas ?? [];
+  const confirmada = colunas.find(coluna => coluna.destino === destino);
+  if (confirmada) {
+    return { situacao: SITUACAO_DA_COLUNA.CONFIRMADA, coluna: confirmada };
+  }
+  const indice = leitura?.seguros?.sugestao?.[destino];
+  const sugerida = colunas.find(coluna => coluna.indice === indice);
+  if (sugerida) {
+    return { situacao: SITUACAO_DA_COLUNA.SUGERIDA, coluna: sugerida };
+  }
+  return (leitura?.seguros?.obrigatorios ?? []).includes(destino)
+    ? { situacao: SITUACAO_DA_COLUNA.FALTA, coluna: null }
+    : null;
+};
+
+export const colunasDosSeguros = leitura =>
+  destinosDeSeguro(leitura)
+    .map(({ value: destino, chave }) => {
+      const achada = colunaDoDestino(leitura, destino);
+      return (
+        achada && {
+          destino,
+          chave,
+          situacao: achada.situacao,
+          coluna: achada.coluna?.indice ?? null,
+          nome: achada.coluna?.nome ?? '',
+        }
+      );
+    })
+    .filter(Boolean);
+
+// As colunas sugeridas que a pessoa confirma de uma vez: `[{ destino, coluna }]`
+// na ordem em que vão ao servidor, os destinos que não são obrigatórios
+// primeiro e os obrigatórios por último. Só a confirmação que completa os
+// obrigatórios faz a planilha ser lida de novo: assim ela é lida uma vez só.
+export const sugestoesParaConfirmar = leitura => {
+  const obrigatorios = leitura?.seguros?.obrigatorios ?? [];
+  const sugeridas = colunasDosSeguros(leitura).filter(
+    ({ situacao }) => situacao === SITUACAO_DA_COLUNA.SUGERIDA
+  );
+  const ehObrigatorio = ({ destino }) => obrigatorios.includes(destino);
+  return [
+    ...sugeridas.filter(sugerida => !ehObrigatorio(sugerida)),
+    ...sugeridas.filter(ehObrigatorio),
+  ].map(({ destino, coluna }) => ({ destino, coluna }));
+};
+
 // ---- os números ---------------------------------------------------------------
 
 const inteiro = valor => (Number.isInteger(valor) ? valor : ZERO);
@@ -68,6 +132,11 @@ export const numerosDosSeguros = leitura => {
     pessoasNovas: Math.max(ZERO, pessoas - jaEstavam),
     pessoasQueJaEstavam: jaEstavam,
     repetidos: inteiro(resumo.repetidos),
+    // Seguros da planilha que aqui estão cancelados: a linha entra, o seguro
+    // continua cancelado.
+    cancelados: inteiro(resumo.cancelados),
+    // Pessoas que entram sem o telefone escrito na planilha (conta das listas).
+    semTelefone: inteiro(resumo.semTelefone),
   };
 };
 
@@ -129,9 +198,11 @@ const FRASE_DO_TIPO = new Map([
 const FRASE_DO_MOTIVO = new Map([
   ['numero:falta', `${BASE_DOS_PROBLEMAS}.NUMERO`],
   ['numero:notacao_cientifica', `${BASE_DOS_PROBLEMAS}.NUMERO_ESTRAGADO`],
+  ['numero:de_outra_pessoa', `${BASE_DOS_PROBLEMAS}.DE_OUTRA_PESSOA`],
   ['falta_termina:falta', `${BASE_DOS_PROBLEMAS}.TERMINA`],
   ['falta_termina:data_invalida', `${BASE_DOS_PROBLEMAS}.TERMINA_ILEGIVEL`],
   ['falta_termina:termina_antes', `${BASE_DOS_PROBLEMAS}.TERMINA_ANTES`],
+  ['falta_termina:termo_ambiguo', `${BASE_DOS_PROBLEMAS}.TERMO_AMBIGUO`],
 ]);
 
 export const chaveDoProblemaDoSeguro = problema =>
