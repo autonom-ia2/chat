@@ -1,0 +1,7 @@
+# Carteira de seguros (#1240): os textos que o servidor escreve. Arquivo próprio para não disputar o pt_BR.yml com as
+# outras frentes.
+pt_BR:
+  carteira:
+    renovacao:
+      card:
+        titulo: 'Renovação · %{seguradora}'

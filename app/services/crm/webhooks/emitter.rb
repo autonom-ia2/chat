@@ -59,7 +59,7 @@ module Crm
         event = EVENT_MAP[@event_type]
         return dispatch_for_automacao if event.blank?
         return unless any_account_webhook_subscribed?(event) || meta_sync_subscribed?(event) || google_sync_subscribed?(event) ||
-                      automacao_subscribed?(event)
+                      automacao_subscribed?(event) || carteira_subscribed?(event)
 
         dispatch(event)
       end
@@ -117,6 +117,13 @@ module Crm
       # one exists? on (account_id, ativa). On error it answers true (fail-open): the async job decides.
       def automacao_subscribed?(event)
         Autonomia::Automacao::Escuta.assinante?(account, event, @changed_attributes, card_id: @card_id)
+      end
+
+      # #2898 (insurance portfolio, E5): the outcome of a renewal card is written on its policy
+      # (Carteira::RenovacaoListener), also in an account with no webhook, ad sync or automation. Asked last, and only
+      # for outcome events: one read on the unique index of the card.
+      def carteira_subscribed?(event)
+        Carteira::Renovacao::Escuta.assinante?(event, card_id: @card_id)
       end
 
       def sync_subscribed?(event, metadata_key)
