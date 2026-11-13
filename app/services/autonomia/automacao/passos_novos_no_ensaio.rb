@@ -9,8 +9,22 @@
 #   caminhos: o de quando a busca dá certo (segue) e o galho `nao_consultou`. Na consulta pronta, diz também o que ela
 #   usaria desta conversa (`entradas`). A busca de verdade só pelo botão "Buscar agora" da tela, que chama o teste do
 #   passo (AutomacoesPassosNovosController#testar_consulta).
+#
+# Os três que esperam resposta (#2931/#2935/#2936: aprovação, reunião e pesquisa) dizem o que fariam e abrem os
+# caminhos pelo EsperaNoEnsaio; o Ensaio manda os seis para `dos_seis`.
 module Autonomia::Automacao::PassosNovosNoEnsaio
   private
+
+  def dos_seis(passo, valores)
+    ::Autonomia::Automacao::PassosQueEsperam::TIPOS.include?(passo['tipo']) ? espera(passo, valores) : passo_novo(passo, valores)
+  end
+
+  def espera(passo, valores) = esperas.ensaiar(passo, valores) { |primeiro| caminho(primeiro, valores) }
+
+  # Uma por conversa ensaiada: a conversa e o envio mudam a cada uma.
+  def esperas
+    ::Autonomia::Automacao::EsperaNoEnsaio.new(conta: @conta, alvo: @registro, conversa: @conversa, envio: envio, roteiro: @roteiro)
+  end
 
   def passo_novo(passo, valores)
     return seguir(passo, no(passo, 'passos_novos_desligados')) unless ::Autonomia::Automacao::PassosNovos.ligados?(@conta)

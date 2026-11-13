@@ -110,9 +110,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     ensaiar(rascunho ? receita : @automacao.versao_ativa&.receita, conferir: rascunho)
   end
 
-  def ensaio_novo
-    ensaiar(receita, conferir: true)
-  end
+  def ensaio_novo = ensaiar(receita, conferir: true)
 
   private
 
@@ -157,10 +155,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def origem = ::Autonomia::Guide::PeloGuia.agora? ? 'guia' : 'manual'
 
   # A receita é livre de propósito: o esquema e a Receita conferem tudo ao salvar, com erro em frase.
-  def receita
-    valor = params[:receita]
-    valor.respond_to?(:to_unsafe_h) ? valor.to_unsafe_h : valor
-  end
+  def receita = params[:receita].then { |valor| valor.respond_to?(:to_unsafe_h) ? valor.to_unsafe_h : valor }
 
   # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: ChaveDeFunis (inclusive nos blocos
   # que a receita usa, #2933).

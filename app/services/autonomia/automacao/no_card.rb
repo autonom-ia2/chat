@@ -107,11 +107,8 @@ class Autonomia::Automacao::NoCard
 
   def linhas(escopo) = escopo.pluck(:id, :automacao_id, :alvo_type, :alvo_id).to_h { |id, *resto| [id, resto] }
 
-  # Os alvos das mães, uma condição por tipo (a lista de milhares de contatos vira um IN só).
-  def nos_alvos(linhas)
-    linhas.group_by { |_, tipo, _| tipo }
-          .map { |tipo, do_tipo| Execucao.where(alvo_type: tipo, alvo_id: do_tipo.map(&:last).uniq) }.reduce(:or)
-  end
+  # Os alvos das mães, só para a busca ir pelo índice do alvo: quem garante que a filha é desta mãe é o id na marca.
+  def nos_alvos(linhas) = { alvo_type: linhas.pluck(1).uniq, alvo_id: linhas.map(&:last).uniq }
 
   def para_tela(execucao, registros)
     {
