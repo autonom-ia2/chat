@@ -1308,6 +1308,7 @@ module Autonomia
 
         # #2858 F3: a escolha do Construtor já é a sugestão do cartão; a página do agente novo não paga outra chamada.
         Autonomia::FerramentasProntas::SugestaoParaAgente.semear_do_construtor!(agent.reload) if aplicada == true && criacao?
+        # #2984: daqui para baixo só chegam a criação, o rascunho e o ajuste que mudou o agente.
         # #18 — marca ready INCONDICIONALMENTE: se a escrita não venceu por SUPERSEDE (existe um ajuste
         # mais NOVO do agente), o token DESTA thread ainda é válido → mark_ready! tira a thread de
         # `processing` (senão o front pollaria até timeout — regressão do supersede). Se não venceu por

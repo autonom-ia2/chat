@@ -110,6 +110,27 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  describe 'quando o Construtor muda só uma chave da configuração' do
+    before { rodar(saida('voice' => 'feminina')) }
+
+    it 'conta como mudança' do
+      expect(estado).to include('applied' => true, 'needs_more_info' => false)
+      expect(agent.reload.config['voice']).to eq('feminina')
+    end
+  end
+
+  describe 'quando o agente guarda na configuração chaves que o Construtor não escreve' do
+    before do
+      agent.update!(config: agent.config.merge('topic_map' => { 'precos' => 3 }))
+      rodar(saida)
+    end
+
+    it 'a saída igual continua sem mudança, e as chaves ficam' do
+      expect(estado).to include('applied' => false, 'next_question' => texto(:sem_pedido))
+      expect(agent.reload.config['topic_map']).to eq('precos' => 3)
+    end
+  end
+
   describe 'quando o agente está pausado' do
     before do
       agent.update!(status: :paused)
