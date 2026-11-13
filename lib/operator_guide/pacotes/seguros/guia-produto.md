@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (262 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (266 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -2776,3 +2776,43 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha (Excel ou CSV); 3. Responda às perguntas, uma por vez (por exemplo, se essas pessoas já são clientes e de quem é o telefone); 4. Confira: quantas pessoas achei, as linhas que precisam de você e o que vou guardar de cada coluna; 5. Conserte ou deixe de fora as linhas com problema; 6. Clique em Trazer e acompanhe a barra até o Pronto; 7. Para voltar atrás, use Desfazer na lista que aparece embaixo da tela.
 - gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; a prévia do Desfazer mostra quem sai, quem fica e o que volta ao valor de antes; Desfazer não tem prazo; pessoa nova que já conversou ou recebeu campanha não é apagada no Desfazer; planilha sem nome e sem telefone ou e-mail não é aceita e a tela diz o que falta.
 - nav_target: `relacionamentos_trazer`
+
+### Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)
+- intent: Onde vejo os seguros de um cliente?; Esse cliente tem seguro com a gente?; Quando vence o seguro dessa pessoa?; Onde vejo os seguros de uma empresa?; Como abro o PDF da apólice de um cliente?
+- onde_fica: Relacionamentos > clicar no nome da pessoa > bloco Seguros, logo acima das conversas. Na ficha da empresa o bloco se chama Seguros da empresa.
+- rota: `relacionamentos_pessoa` - `/app/accounts/:accountId/relacionamentos/pessoas/:contactId`
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: conta de corretora de seguros com a carteira de seguros ligada (carteira_seguros) e as telas novas de Relacionamentos (relacionamentos_novo); poder ver contatos
+- passos: 1. Abra Relacionamentos e clique no nome da pessoa; 2. Leia o bloco Seguros: cada linha traz o tipo, o selo (Ativo, Vencido ou Cancelado), a seguradora com o número da apólice e quando vence; 3. Clique na linha para abrir o seguro e ver todos os dados e o histórico dele; 4. Clique em Ver PDF para abrir o arquivo da apólice, ou em Guardar PDF quando o seguro ainda não tem o arquivo.
+- gotchas: o bloco só existe em conta de corretora de seguros com a carteira ligada, e em outra conta ele não aparece; o vencido vem primeiro, depois o ativo que termina antes, e o cancelado fica por último; o título diz quantos seguros a pessoa tem; Guardar PDF aparece só para quem pode alterar a pessoa; na ficha da empresa entram os seguros em que a empresa é o segurado, e não os seguros das pessoas dela; o seguro de uma empresa também aparece na ficha da pessoa a que ele está ligado; quem não pode ver os seguros não vê o bloco.
+- nav_target: `relacionamentos_pessoa`
+
+### Ver a aba Seguros e quem vence primeiro (carteira de seguros)
+- intent: Quais seguros vencem esta semana?; Onde vejo todos os seguros da corretora?; Quem está com o seguro vencido?; Como acho um seguro pelo número da apólice?; Quais seguros são de cliente sem telefone?; Como filtro os seguros por seguradora?
+- onde_fica: Menu lateral > Relacionamentos > aba Seguros (ao lado de Pessoas e Empresas)
+- rota: `relationships_home` - `/app/accounts/:accountId/relationships`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: conta de corretora de seguros com a carteira de seguros ligada (carteira_seguros) e as telas novas de Relacionamentos (relacionamentos_novo); poder ver contatos
+- passos: 1. Abra Relacionamentos e clique na aba Seguros; 2. Leia a frase do topo e clique no botão dela: Ver quais quando há seguro que vence nos próximos 7 dias, Ver vencidos quando nada vence na semana e há seguro vencido, ou Ver todos quando não há nem um nem outro; 3. Ou escolha um grupo pronto: Todos, Vence em até 7 dias, Vence em até 30 dias, Vence em até 90 dias, Vencido ou Sem telefone; 4. Procure pelo nome da pessoa ou pelo número da apólice, mude a ordem (Vence primeiro, Nome ou Mais novos) ou abra Mais filtros (Tipo de seguro e Seguradora); 5. Clique na linha para abrir o seguro.
+- gotchas: os grupos de vencimento somam (Vence em até 30 dias inclui quem vence amanhã) e contam só seguro ativo, então vencido e cancelado ficam de fora deles; o seguro cancelado aparece só em Todos e em Sem telefone, com o selo Cancelado; o número de cada grupo acompanha a busca e os filtros, e a frase do topo fala da carteira inteira; o selo e os dias que faltam seguem o dia de hoje da conta; o seguro ativo que vence em até 30 dias tem o selo Ativo em âmbar; no grupo Sem telefone a pessoa do seguro está sem telefone, e para arrumar é abrir o seguro, clicar no nome da pessoa e escrever o telefone na ficha; a aba Seguros não marca seguros, não manda mensagem e não traz seguros; conta sem nenhum seguro lê que ainda não há seguros e vê um exemplo de como a lista vai ficar; quem não pode ver contatos lê que não tem acesso aos seguros.
+- nav_target: `relationships_home`
+
+### Corrigir os dados de um seguro ou marcar como cancelado (carteira de seguros)
+- intent: Como corrijo o número da apólice?; A data do seguro veio errada, como arrumo?; Como marco um seguro como cancelado?; Cancelei um seguro sem querer, como volto?; Quem mudou esse seguro?; Como troco a seguradora de um seguro?
+- onde_fica: Relacionamentos > aba Seguros > clicar no seguro (ou clicar no seguro no bloco Seguros da ficha da pessoa). O seguro abre em uma gaveta, com Corrigir no rodapé e Marcar como cancelado nos três pontinhos do rodapé.
+- rota: `relationships_home` - `/app/accounts/:accountId/relationships`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: conta de corretora de seguros com a carteira de seguros ligada; poder ver contatos para abrir o seguro e poder alterar a pessoa para corrigir ou cancelar
+- passos: 1. Abra o seguro pela aba Seguros ou pela ficha da pessoa; 2. Clique em Corrigir; 3. Mude o que está errado: Tipo de seguro, Seguradora, Número da apólice, Começa, Termina, Valor que o cliente paga (R$) ou O que está segurado; 4. Clique em Salvar; 5. Para cancelar, abra os três pontinhos do rodapé e clique em Marcar como cancelado; 6. Para voltar atrás, clique em Desfazer, no aviso, ou, se o aviso já sumiu, abra os três pontinhos e clique em Desfazer o cancelamento.
+- gotchas: o que você corrige à mão fica assim mesmo se o seguro chegar de novo em outra planilha; Salvar sem mudar nada avisa que nada mudou; sair do Corrigir com algo mudado pergunta Sair sem salvar? antes de perder o que foi escrito; o seguro precisa do número da apólice e da data em que termina, e não pode terminar antes de começar; a tela recusa dois seguros com a mesma seguradora, o mesmo número e a mesma data de término; Marcar como cancelado não pede confirmação e o Desfazer não tem prazo; seguro cancelado continua na lista e na ficha, com o selo Cancelado, e sai dos grupos de vencimento; o Histórico mostra cada mudança, quem fez e quando, com o que era e como ficou; o topo do seguro diz de quem ele é, e Abrir a ficha leva à ficha da pessoa ou da empresa; quem só pode ver a pessoa lê os dados e o histórico, sem Corrigir nem os três pontinhos.
+- nav_target: `relationships_home`
+
+### Guardar, ver, trocar ou apagar o PDF de um seguro (carteira de seguros)
+- intent: Como guardo o PDF da apólice?; Onde vejo o PDF do seguro de um cliente?; Como troco o PDF de um seguro?; Como apago o PDF de um seguro?; Por que o PDF não foi aceito?
+- onde_fica: Relacionamentos > aba Seguros > clicar no seguro > botão azul do rodapé (Guardar o PDF, ou Ver PDF quando já há um). No seguro vencido ou cancelado que ainda não tem PDF, Guardar o PDF fica nos três pontinhos do rodapé. Na ficha da pessoa, o mesmo pelos botões Guardar PDF e Ver PDF da linha do seguro.
+- rota: `relationships_home` - `/app/accounts/:accountId/relationships`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: conta de corretora de seguros com a carteira de seguros ligada; poder ver contatos para ver o PDF e poder alterar a pessoa para guardar, trocar ou apagar; o arquivo da apólice em PDF
+- passos: 1. Abra o seguro pela aba Seguros ou pela ficha da pessoa; 2. Clique em Guardar o PDF; 3. Arraste o arquivo ou clique para escolher, e ele fica guardado assim que você escolhe; 4. Depois, clique em Ver PDF para abrir o arquivo em outra aba; 5. Para trocar, abra os três pontinhos do rodapé, clique em Guardar outro PDF, escolha o arquivo e confirme em Trocar o PDF; 6. Para apagar, clique em Apagar o PDF nos três pontinhos e confirme.
+- gotchas: cada seguro guarda um PDF só, e trocar pede confirmação porque o PDF que estava guardado sai e não volta; logo depois de guardar o primeiro PDF, o aviso traz Desfazer; Apagar o PDF pede confirmação porque o arquivo não volta; só entra arquivo PDF de verdade; PDF grande demais não é guardado, e a tela pede o PDF da apólice que a seguradora envia, não a cópia escaneada; o PDF só fica guardado: a plataforma não lê o que está escrito nele; o nome original do arquivo não aparece em lugar nenhum; o Histórico registra quando o PDF foi guardado e quando foi apagado; quem só pode ver a pessoa tem Ver PDF, sem guardar, trocar nem apagar; o Guia não guarda, não apaga e não abre o PDF por você, isso se faz na tela.
+- nav_target: `relationships_home`

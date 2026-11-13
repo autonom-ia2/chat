@@ -49,7 +49,7 @@ class Autonomia::Automacao::EnviosDaExecucao
     @visiveis ||= mensagens.map(&:conversation).uniq.select { |conversa| conversa == @conversa || ve?(quem_ligou, conversa) }
   end
 
-  def quem_ligou = @execucao.automacao.ligada_por
+  def quem_ligou = @execucao.dona.ligada_por
 
   def ve?(pessoa, conversa) = pessoa.present? && ::Autonomia::Automacao::Acesso.alcanca?(pessoa, conversa)
 

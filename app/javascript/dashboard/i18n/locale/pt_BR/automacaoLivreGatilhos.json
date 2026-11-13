@@ -35,7 +35,8 @@
     "ORIGEM": {
       "CONVERSA": "Da conversa",
       "CARD": "Do card do funil",
-      "ANTIGO": "Do jeito antigo"
+      "ANTIGO": "Do jeito antigo",
+      "BLOCO": "Bloco"
     },
     "CONVERSA_NOVA": {
       "CAIXA": "Caixa para falar com quem ainda não tem conversa",

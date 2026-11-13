@@ -115,9 +115,16 @@ const {
 } = editor;
 
 // Ligada, o "Salvar tudo" vale na hora só para quem a ligou; quando outra
-// pessoa salva, ela pausa até ser ligada de novo.
+// pessoa salva, ela pausa até ser ligada de novo. O bloco (#2933) nunca está
+// ligado, mas pausa do mesmo jeito as automações que outras pessoas ligaram e
+// que usam ele (o servidor diz quais).
 const meuId = useMapGetter('getCurrentUserID');
 const avisoDeLigada = computed(() => {
+  const pausaria = automacao.value?.bloco_pausaria || [];
+  if (pausaria.length)
+    return t('AUTOMACAO_LIVRE.EDITOR.BLOCO_PAUSA_OUTRAS', {
+      nomes: pausaria.join(', '),
+    });
   if (!automacao.value?.ativa) return '';
   return automacao.value.ligada_por?.id === meuId.value
     ? t('AUTOMACAO_LIVRE.EDITOR.LIGADA_AVISO')

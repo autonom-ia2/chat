@@ -33,6 +33,9 @@
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
 class Autonomia::Automacao::Ensaio
+  # Os passos novos com motor (#2932–#2934): PassosNovosNoEnsaio.
+  include ::Autonomia::Automacao::PassosNovosNoEnsaio
+
   RECENTES = 10
   # As seguintes, para "Ensaiar em outra conversa": só o nome, sem ensaiar.
   OUTRAS = 40
@@ -190,8 +193,8 @@ class Autonomia::Automacao::Ensaio
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
     when 'decidir' then decidir(passo, valores)
-    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then espera(passo, valores)
     when 'parar' then [no(passo, 'parar'), nil]
+    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS, *::Autonomia::Automacao::PassosNovos::TIPOS then dos_seis(passo, valores)
     else seguir(passo, em_frente(passo, valores))
     end
   end
@@ -292,14 +295,6 @@ class Autonomia::Automacao::Ensaio
   # O "esperar até" (EsperarAteNoEnsaio): segue na hora quando já vale; senão, os caminhos possíveis.
   def esperar_ate(passo, valores)
     ::Autonomia::Automacao::EsperarAteNoEnsaio.new(roteiro: @roteiro) { |primeiro| caminho(primeiro, valores) }.ensaiar(passo, valores)
-  end
-
-  # #2931/#2935/#2936: a aprovação, a reunião e a pesquisa dizem o que fariam e abrem os caminhos (EsperaNoEnsaio).
-  def espera(passo, valores) = esperas.ensaiar(passo, valores) { |primeiro| caminho(primeiro, valores) }
-
-  # Uma por conversa ensaiada: a conversa e o envio mudam a cada uma.
-  def esperas
-    ::Autonomia::Automacao::EsperaNoEnsaio.new(conta: @conta, alvo: @registro, conversa: @conversa, envio: envio, roteiro: @roteiro)
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.

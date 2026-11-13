@@ -13,10 +13,8 @@ pt_BR:
         horario_ocupado: 'Outra pessoa marcou esse horário antes. Seguiu pelo caminho “Se pedir outro horário”.'
         reuniao_nao_marcou: 'Não deu para marcar a reunião. Seguiu pelo caminho “Se pedir outro horário”.'
         pesquisa_recente: 'Esta pessoa respondeu uma pesquisa há pouco. Pulou a pergunta e seguiu.'
-        passos_novos_desligados: 'Os passos de aprovação, reunião e pesquisa estão desligados nesta conta.'
         pedido_sumiu: 'O pedido deste passo não foi encontrado (os registros ficam 30 dias).'
       receita:
-        passos_novos_desligados: 'Passo %{passo}: os passos de aprovação, reunião e pesquisa estão desligados nesta conta.'
         quem_sem_responsavel: 'Passo %{passo}: “quem cuida do card” precisa de card ou conversa, e este gatilho não tem. Escolha uma pessoa ou um time.'
         espera_resposta_sem_conversa: 'Passo %{passo}: este passo pergunta ao cliente na conversa, e este gatilho não tem conversa. Use um gatilho de conversa ou de card.'
         reuniao_sem_agenda: 'Passo %{passo}: as páginas de agendamento estão desligadas nesta conta, então não há agenda para oferecer horários.'

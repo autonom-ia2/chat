@@ -84,7 +84,12 @@ nativos:
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo e a Issue que os leva para a tela. A receita
 # aceita e o motor roda; a tela só os mostra quando tiver as peças.
-nativos_fora_do_editor: {}
+nativos_fora_do_editor:
+  # #2932, #2933, #2934 (épico #2414): a tela monta os três pela peça dos passos novos (passosNovos.js, LivrePassoNovo),
+  # só com a flag automacao_passos_novos; o catálogo do servidor não os repete.
+  repetir_lista: peça própria dos passos novos, com a flag automacao_passos_novos (#2932)
+  usar_bloco: peça própria dos passos novos, com a flag automacao_passos_novos (#2933)
+  consultar: peça própria dos passos novos, com a flag automacao_passos_novos (#2934)
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os

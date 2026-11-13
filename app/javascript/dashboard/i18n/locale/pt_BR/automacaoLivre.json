@@ -296,7 +296,12 @@
       "DO_FUNIL": "As automações das etapas do funil ficam em Configurar › Editar funil.",
       "VER_FUNIL": "Ver no funil",
       "SEM_PASSO": "Ainda sem passo",
-      "CUSTO_IA": "IA: {custo} nas execuções dos últimos 30 dias"
+      "CUSTO_IA": "IA: {custo} nas execuções dos últimos 30 dias",
+      "USAR_COMO_BLOCO": "Usar como bloco",
+      "TIRAR_BLOCO": "Deixar de ser bloco",
+      "BLOCO_AVISO": "Bloco não tem gatilho próprio: roda quando outra automação usa ele.",
+      "VIROU_BLOCO": "Agora é um bloco. Outras automações podem usar.",
+      "DEIXOU_DE_SER_BLOCO": "Deixou de ser bloco."
     },
     "EDITOR": {
       "NOVA": "Nova automação",
@@ -313,6 +318,7 @@
       "NAO_SALVA": "Complete o passo que falta para poder salvar.",
       "LIGADA_AVISO": "Esta automação está ligada. Suas mudanças só valem quando você tocar em Salvar tudo.",
       "LIGADA_POR_OUTRA": "Esta automação foi ligada por outra pessoa. Quando você tocar em Salvar tudo, ela pausa até ser ligada de novo.",
+      "BLOCO_PAUSA_OUTRAS": "Este bloco é usado por automações que outras pessoas ligaram: {nomes}. Quando você tocar em Salvar tudo, elas pausam até serem ligadas de novo.",
       "SAIR": {
         "TITULO": "Sair sem salvar?",
         "TEXTO": "Suas mudanças ainda não foram salvas. Se sair agora, elas somem.",
@@ -421,6 +427,8 @@
       "NOTA_BAIXA": "Nota baixa",
       "NOTA_MEDIA": "Nota média",
       "NOTA_ALTA": "Nota alta",
+      "DENTRO": "Dentro do bloco",
+      "CONSULTOU": "Se conseguir buscar",
       "MARCOU": "Se marcar"
     },
     "SELETOR": {

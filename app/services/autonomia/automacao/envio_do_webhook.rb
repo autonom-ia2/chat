@@ -66,6 +66,15 @@ class Autonomia::Automacao::EnvioDoWebhook
   # Os IPs da própria plataforma, para o nome de fora que aponta para ela (outro apelido, o IP público).
   def self.ips_da_plataforma = hosts_da_plataforma.flat_map { |host| Resolv.getaddresses(host) }
 
+  # Algum dos IPs que o nome resolveu é interno ou da plataforma? O "buscar em outro sistema" (#2934) pergunta aqui
+  # também (ConsultaDeFora): uma régua só para tudo que sai do servidor por um endereço escrito pela conta.
+  def self.algum_interno?(ips)
+    da_plataforma = ips_da_plataforma
+    ips.any? { |ip| da_plataforma.include?(ip) || endereco_interno?(IPAddr.new(ip)) }
+  rescue IPAddr::InvalidAddressError
+    true
+  end
+
   def initialize(url:, corpo:, segredo:, execucao_id:, passo_id:)
     @url = url.to_s
     @corpo = corpo.to_json
@@ -81,7 +90,7 @@ class Autonomia::Automacao::EnvioDoWebhook
 
     ips = Resolv.getaddresses(@host.to_s)
     return resposta(:sem_resposta) if ips.empty?
-    return resposta(:recusado_aqui, motivo: 'webhook_endereco_interno') if algum_interno?(ips)
+    return resposta(:recusado_aqui, motivo: 'webhook_endereco_interno') if self.class.algum_interno?(ips)
 
     postar(ips)
   end
@@ -92,13 +101,6 @@ class Autonomia::Automacao::EnvioDoWebhook
     URI.parse(url).hostname
   rescue URI::InvalidURIError
     nil
-  end
-
-  def algum_interno?(ips)
-    da_plataforma = self.class.ips_da_plataforma
-    ips.any? { |ip| da_plataforma.include?(ip) || self.class.endereco_interno?(IPAddr.new(ip)) }
-  rescue IPAddr::InvalidAddressError
-    true
   end
 
   # Conecta só nos IPs já conferidos: o SafeFetch não resolve o nome de novo.

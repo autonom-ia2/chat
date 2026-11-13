@@ -34,6 +34,24 @@ RSpec.describe Autonomia::CentralDeAjuda::Leitura do
     end
   end
 
+  # #2897: o artigo da carteira de seguros segue o mesmo portão da tela (Carteira::Acesso), não só a chave.
+  describe 'artigo que pede a carteira de seguros' do
+    before { artigo('09.20', 'Ver os seguros', 'requer' => 'carteira_seguros') }
+
+    it 'aparece para a corretora de seguros com a carteira e as telas novas de Relacionamentos' do
+      Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
+      conta.enable_features!('relacionamentos_novo', 'carteira_seguros')
+
+      expect(leitura.artigos.size).to eq(1)
+    end
+
+    it 'não aparece para a conta que só tem a chave ligada' do
+      conta.enable_features!('carteira_seguros')
+
+      expect(leitura.artigos).to be_empty
+    end
+  end
+
   # A ferramenta ler_da_central monta o texto do modelo com campos escolhidos do resumo: as chaves novas
   # não chegam ao modelo, e o que ele recebe fica igual ao de antes.
   describe 'o que a ferramenta ler_da_central entrega ao modelo' do

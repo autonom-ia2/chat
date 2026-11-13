@@ -15,9 +15,9 @@ const hora = iso => `hora:${iso}`;
 const P = 'AUTOMACAO_LIVRE.PASSOS_NOVOS';
 
 describe('os passos que salvam', () => {
-  it('só os outros três seguem em teste; os galhos dos três são conhecidos', () => {
+  it('nenhum dos seis segue em teste; os galhos dos três que esperam são conhecidos', () => {
     expect(emTeste({ tipo: 'pedir_aprovacao' })).toBe(false);
-    expect(emTeste({ tipo: 'usar_bloco' })).toBe(true);
+    expect(emTeste({ tipo: 'usar_bloco' })).toBe(false);
     expect(emTeste({ tipo: 'parar' })).toBe(false);
     expect(RAMOS_QUE_SALVAM).toEqual([
       'aprovado',

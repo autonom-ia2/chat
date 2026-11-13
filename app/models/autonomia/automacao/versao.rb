@@ -69,6 +69,8 @@ class Autonomia::Automacao::Versao < ApplicationRecord
     return unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
     problemas = ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: autor_na_conta).problemas
+    # #2933: o bloco usado que leva de volta a esta automação (laço); o resto da cadeia o passo confere.
+    problemas += ::Autonomia::Automacao::Bloco.laco_ao_salvar(receita, automacao)
     problemas.each { |problema| errors.add(:receita, problema) }
   end
 

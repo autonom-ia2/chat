@@ -1,16 +1,23 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { fraseDoPasso } from '../frases';
 import { P } from './passosNovos';
-import { blocosDaConta } from './adaptadorFalso';
+import {
+  blocosDaConta,
+  carregarBlocos,
+  guardarFrasesDoBloco,
+} from './dadosDaConta';
 
 // #2933 — Usar outra automação: os blocos da conta (automações sem gatilho
-// próprio), cada um com o que faz em uma frase. Escolhido, a tela mostra os
-// passos de dentro. Mudar o bloco muda em todas as automações que usam ele.
+// próprio, marcadas "Usar como bloco" na lista), cada um com o que faz em uma
+// frase. Escolhido, a tela mostra os passos de dentro. Mudar o bloco muda em
+// todas as automações que usam ele.
 const props = defineProps({
   modelValue: { type: Object, required: true },
+  catalogo: { type: Object, required: true },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -20,7 +27,15 @@ const B = `${P}.BLOCO`;
 const route = useRoute();
 const router = useRouter();
 
-const blocos = computed(() => blocosDaConta(t));
+// A frase de cada bloco é a do 1º passo dele; os passos de dentro, em frase.
+const frasesDe = bloco =>
+  bloco.passos.map(passo => fraseDoPasso(passo, props.catalogo, t));
+const blocos = computed(() =>
+  blocosDaConta().map(bloco => {
+    const frases = frasesDe(bloco);
+    return { ...bloco, frase: frases[0] || '', passos: frases };
+  })
+);
 // Sem bloco na conta: o caminho é marcar uma automação como bloco, na lista.
 const irParaLista = () =>
   router.push({
@@ -33,8 +48,23 @@ const escolhido = computed(() =>
 const escolher = id =>
   emit('update:modelValue', { ...props.modelValue, bloco_id: id });
 
+// As frases ficam guardadas para a prévia e o histórico dizerem o que o bloco
+// faz (frasesDosNovos).
+watch(
+  escolhido,
+  bloco => {
+    if (
+      bloco &&
+      !blocosDaConta().find(item => item.id === bloco.id)?.frases.length
+    )
+      guardarFrasesDoBloco(bloco.id, bloco.passos);
+  },
+  { immediate: true }
+);
+
 // Começar pronto: o primeiro bloco já vem escolhido.
-onMounted(() => {
+onMounted(async () => {
+  await carregarBlocos();
   if (props.modelValue.bloco_id == null && blocos.value.length)
     escolher(blocos.value[0].id);
 });

@@ -14,13 +14,17 @@ class Autonomia::Automacao::Roteiro
   # A filha do "em outro registro" (G18, #2671) anda só no ramo do passo que a abriu: começa no primeiro passo dele e
   # acaba no fim dele, sem seguir os passos da mãe. Se o passo não estiver na versão, a filha não anda (nunca a receita
   # inteira da mãe no registro dela). As outras execuções andam na receita inteira.
+  # A filha do "para cada um de uma lista" (#2932) anda do mesmo jeito, no galho `cada`.
   def self.da(execucao)
     receita = execucao.versao.receita
     _mae_id, passo_id = ::Autonomia::Automacao::EmOutroRegistro.da(execucao)
+    ramo = 'passos' if passo_id
+    _mae_id, passo_id = ::Autonomia::Automacao::RepetirLista.da(execucao) unless passo_id
+    ramo ||= ::Autonomia::Automacao::RepetirLista::RAMO if passo_id
     return new(receita) unless passo_id
 
     # Chaves explícitas: com o `voltar:` no initialize, o hash sem chaves viraria palavra-chave.
-    new({ 'passos' => Array(new(receita).passo(passo_id)&.dig('passos')) })
+    new({ 'passos' => Array(new(receita).passo(passo_id)&.dig(ramo)) })
   end
 
   def initialize(receita, voltar: true)
