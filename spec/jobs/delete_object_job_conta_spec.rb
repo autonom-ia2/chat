@@ -87,6 +87,11 @@ RSpec.describe DeleteObjectJob do
                                           seguradora_chave: 'seguradoraexemplo', numero: 'EX-001234', numero_chave: 'EX001234',
                                           fim_vigencia: 1.year.from_now.to_date, origem: 'planilha')
     historia = linha!('carteira_apolice_eventos', apolice_id: apolice, tipo: 'chegou_planilha', quando: Time.current)
+    # E5 (#2898): a escolha de onde ficam as renovações, e uma apólice que renovou a anterior (chave para a própria tabela).
+    linha!('carteira_renovacao_configs', account_id: account.id, pipeline_id: pipeline.id, stage_id: stage.id, user_id: user.id)
+    linha!('carteira_apolices', account_id: account.id, contact_id: contact.id, tipo: 'auto', seguradora: 'Seguradora Exemplo',
+                                seguradora_chave: 'seguradoraexemplo', numero: 'EX-001235', numero_chave: 'EX001235',
+                                fim_vigencia: 2.years.from_now.to_date, origem: 'manual', apolice_anterior_id: apolice)
     # Linhas sem account_id: achadas pela campanha, pelo dono do token e pela apólice. O usuário técnico do MCP sai pelo revoke!.
     { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id,
       'carteira_apolice_eventos' => historia }
