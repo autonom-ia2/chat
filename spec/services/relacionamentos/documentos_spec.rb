@@ -101,8 +101,8 @@ RSpec.describe Relacionamentos::Documentos do
       expect(Relacionamentos::Documento.encrypted_attributes.to_a).to eq([])
     end
 
-    # O log de consultas (debug) fica de fora aqui: sem cifra, o valor da consulta é o próprio número, como em qualquer
-    # outra coluna. A produção registra a partir de info.
+    # O log de consultas (debug) fica de fora aqui: sem cifra, o valor vai na consulta como o de qualquer outra coluna,
+    # e escondê-lo depende do filtro de atributos do Active Record, que este PR não mexe. A produção registra a partir de info.
     it 'no nível de log da produção, nada do que o serviço faz traz o número' do
       marina
       escrito = log_de(:info) do
@@ -170,7 +170,7 @@ RSpec.describe Relacionamentos::Documentos do
       de_fora = create(:contact, account: create(:account), name: 'Caio Exemplo')
       sem_o_numero = ->(erro) { expect(erro.message + erro.record.inspect).not_to include('12345678909', '98765432100') }
 
-      expect(documento.inspect).not_to include('12345678909')
+      expect(documento.inspect + documento.to_json).not_to include('12345678909')
       expect("#{documento.numero} #{documento.numero.inspect}").not_to include('12345678909', '123.456.789')
       expect { documentos.guardar(de_fora, outro_cpf) }.to raise_error(ActiveRecord::RecordInvalid, &sem_o_numero)
     end

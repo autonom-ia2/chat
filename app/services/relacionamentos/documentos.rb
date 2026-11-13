@@ -22,6 +22,8 @@ class Relacionamentos::Documentos
   # Guarda o CPF ou o CNPJ do dono (uma pessoa ou uma empresa da conta). Se o dono já tem documento desse tipo, troca.
   # Número que não confere levanta CustomExceptions::DocumentoRecusa ('invalido'); dono de outra conta levanta
   # ActiveRecord::RecordInvalid. Nenhum dos dois erros traz o número.
+  # Dois pedidos ao mesmo tempo para o mesmo dono e o mesmo tipo: o índice único recusa o segundo com
+  # ActiveRecord::RecordNotUnique. Quem grava em paralelo (um job por arquivo) tenta de novo.
   def guardar(dono, texto)
     numero = Relacionamentos::NumeroDeDocumento.new(texto)
     raise CustomExceptions::DocumentoRecusa, 'invalido' unless numero.valido?

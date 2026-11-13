@@ -8,8 +8,8 @@
 # cifrado, e `where(valor: ...)` e o índice [account_id, tipo, valor] acham por valor exato. Sem as chaves fica em texto
 # puro, como as outras colunas cifradas do fork, e tudo funciona igual. Busca por pedaço do número não existe aqui.
 #
-# O número inteiro não vai para log, erro, cache nem argumento de job: use `mascarado`. O `inspect` sai sem ele
-# (`filter_attributes`), e as mensagens de validação não repetem valor.
+# O número inteiro não vai para log, erro, cache nem argumento de job: use `mascarado`. O `inspect` e o JSON do model
+# saem sem ele, e as mensagens de validação não repetem valor. Quem precisa do número pede `valor` ou `formatado`.
 #
 # Quem apaga: o banco, em cascata, quando a pessoa ou a empresa sai (inclusive por caminho sem callback); a exclusão
 # da conta apaga antes do DELETE da conta (Autonomia::ExclusaoDaConta).
@@ -52,6 +52,11 @@ class Relacionamentos::Documento < ApplicationRecord
   end
 
   delegate :formatado, :mascarado, to: :numero
+
+  # O JSON do model (as_json, to_json) é o que acaba em payload, cache e evento: vai sem o número.
+  def serializable_hash(options = nil)
+    super.except('valor')
+  end
 
   private
 

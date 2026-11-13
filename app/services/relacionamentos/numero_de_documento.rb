@@ -3,7 +3,9 @@
 # A forma de comparação é o que o banco guarda e o que a busca compara: só os dígitos do CPF (11), e os 14 caracteres do
 # CNPJ em maiúscula. O CNPJ novo da Receita (desde julho de 2026) tem letra nas 12 primeiras posições; os dois últimos
 # seguem dígitos. Ponto, traço, barra e espaço saem por método de texto, sem regex. Isto compara valor: não lê frase.
-# Quem chama manda o número, não um texto que o contém ("CPF 123..." não é um número).
+# Quem chama manda só o número. Como o CNPJ novo tem letra, um texto com letras na frente do número ("CPF 123...") tem
+# o tamanho de um CNPJ e só é recusado pelo dígito verificador, que deixa passar cerca de 1 em cada 100: não serve de
+# filtro de texto livre.
 #
 # Confere quando os dois dígitos verificadores batem (módulo 11). No CNPJ cada caractere vale o código dele menos 48,
 # a regra da Receita, que para dígito dá o próprio dígito. Número de um caractere só repetido (000..., 111...) passa na
