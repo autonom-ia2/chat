@@ -40,6 +40,15 @@ RSpec.describe Carteira::Guardar do
     apolice.eventos.order(:id).last.mudancas
   end
 
+  def recusar_com(codigo)
+    raise_error(CustomExceptions::CarteiraRecusa) { |recusa| expect(recusa.codigo).to eq(codigo) }
+  end
+
+  # A apólice, a história dela e as outras da conta, para provar que uma recusa não mexeu em nada.
+  def retrato
+    [apolices.order(:id).map(&:attributes), Carteira::ApoliceEvento.count]
+  end
+
   describe 'a apólice que a conta ainda não tem' do
     it 'nasce da pessoa, com a origem de quem chamou e o primeiro passo da história' do
       resultado = guardar
@@ -120,11 +129,24 @@ RSpec.describe Carteira::Guardar do
       expect(ultimas_mudancas(primeira)).to eq([{ 'campo' => 'termina', 'antes' => '2027-03-10', 'depois' => '2027-04-10' }])
     end
 
+    it 'com o começo da vigência corrigido na origem (mesmo fim), atualiza a mesma apólice' do
+      resultado = guardar(inicio_vigencia: comeca + 22.days)
+
+      expect([resultado.situacao, apolices.count, primeira.reload.inicio_vigencia]).to eq(['atualizada', 1, comeca + 22.days])
+      expect(ultimas_mudancas(primeira)).to eq([{ 'campo' => 'comeca', 'antes' => '2026-03-10', 'depois' => '2026-04-01' }])
+    end
+
     it 'o tipo que muda leva junto o ramo como veio' do
       guardar(tipo: 'empresarial', ramo_original: 'Frota')
 
       expect(primeira.reload.slice(:tipo, :ramo_original).values).to eq(%w[empresarial Frota])
       expect(ultimas_mudancas(primeira)).to eq([{ 'campo' => 'tipo', 'antes' => 'auto', 'depois' => 'empresarial' }])
+    end
+
+    it 'o tipo que muda sem o ramo (nil é "não veio") não apaga o ramo guardado' do
+      guardar(tipo: 'empresarial', ramo_original: nil)
+
+      expect(primeira.reload.slice(:tipo, :ramo_original).values).to eq(%w[empresarial Automóvel])
     end
 
     it 'o dado que não veio não apaga o guardado, e o tipo "outro" não desfaz o tipo decidido' do
@@ -146,12 +168,28 @@ RSpec.describe Carteira::Guardar do
       expect(ultimas_mudancas(primeira).pluck('campo')).to eq(%w[bem])
     end
 
-    it 'continua da pessoa que tinha, e o cancelado continua cancelado' do
+    it 'de outra pessoa é recusada, sem mesclar e sem tocar em nada' do
+      antes = retrato
+
+      expect { guardar(contato: create(:contact, account: account), valor_centavos: 389_000) }.to recusar_com('apolice_de_outra_pessoa')
+      expect(retrato).to eq(antes)
+    end
+
+    it 'cancelada continua cancelada e não é alterada, mesmo com dados diferentes: quem chamou fica sabendo' do
       primeira.update!(cancelado_em: Time.current)
+      antes = retrato
 
-      guardar(contato: create(:contact, account: account), valor_centavos: 389_000)
+      resultado = guardar(valor_centavos: 389_000, origem: 'conector')
 
-      expect([primeira.reload.contact, primeira.cancelado_em.present?, primeira.valor_centavos]).to eq([pessoa, true, 389_000])
+      expect([resultado.situacao, resultado.apolice]).to eq(['cancelada', primeira])
+      expect(retrato).to eq(antes)
+    end
+
+    it 'e a história entram juntas: se o passo não grava, a apólice fica como estava' do
+      com_passo_que_nao_grava = described_class.new(account, origem: 'planilha', valores: { arquivo: "carteira\u0000.csv" })
+
+      expect { com_passo_que_nao_grava.call(dados.merge(valor_centavos: 389_000), contato: pessoa) }.to raise_error(ActiveRecord::StatementInvalid)
+      expect([primeira.reload.valor_centavos, passos(primeira)]).to eq([341_000, %w[chegou_planilha]])
     end
   end
 
@@ -167,15 +205,40 @@ RSpec.describe Carteira::Guardar do
       expect([passos(anterior), passos(resultado.apolice)]).to eq([%w[chegou_planilha], %w[chegou_planilha]])
     end
 
+    it 'antecipada (começa antes de a anterior terminar, com começo e fim diferentes) também nasce ao lado: nunca sobrescreve' do
+      resultado = guardar(inicio_vigencia: termina - 37.days, fim_vigencia: termina + 328.days, valor_centavos: 389_000)
+
+      expect([resultado.situacao, apolices.count]).to eq(['nova', 2])
+      expect(guardado(anterior)).to eq(dados)
+    end
+
     it 'com os dois termos guardados, o que chega de novo atualiza o termo dele' do
       nova = guardar(**renovada).apolice
 
       guardar(bem: 'Carro Exemplo 2023')
-      guardar(inicio_vigencia: nil, fim_vigencia: termina + 13.months, valor_centavos: 395_000)
+      guardar(**renovada, fim_vigencia: termina + 13.months, valor_centavos: 395_000)
 
       expect(apolices.count).to eq(2)
       expect([anterior.reload.bem, anterior.fim_vigencia, anterior.valor_centavos]).to eq(['Carro Exemplo 2023', termina, 341_000])
       expect([nova.reload.fim_vigencia, nova.valor_centavos]).to eq([termina + 13.months, 395_000])
+    end
+
+    it 'com os dois termos guardados, o fim corrigido do primeiro vai para o primeiro, não para o que termina mais perto' do
+      nova = guardar(**renovada).apolice
+
+      resultado = guardar(fim_vigencia: termina + 9.months)
+
+      expect([resultado.situacao, resultado.apolice, apolices.count]).to eq(['atualizada', anterior, 2])
+      expect([anterior.reload.fim_vigencia, guardado(nova)]).to eq([termina + 9.months, dados.merge(renovada)])
+    end
+
+    it 'com dois termos de mesmo começo guardados e nenhum igual em tudo, recusa em vez de adivinhar' do
+      criar_apolice(pessoa, **dados.slice(:seguradora, :numero, :inicio_vigencia), fim_vigencia: termina + 3.months)
+      antes = retrato
+
+      expect { guardar(fim_vigencia: termina + 6.months) }.to recusar_com('termo_ambiguo')
+      expect(retrato).to eq(antes)
+      expect(guardar(bem: 'Carro Exemplo 2023').apolice).to eq(anterior)
     end
   end
 
@@ -202,12 +265,15 @@ RSpec.describe Carteira::Guardar do
       expect(passos(da_planilha)).to eq(%w[chegou_planilha chegou_de_novo])
     end
 
-    it 'a fonte mais forte que traz o mesmo passa a ser a origem, sem escrever na história' do
+    it 'a fonte mais forte que traz o mesmo passa a ser a origem, e a história ganha o passo com a origem de antes e a de agora' do
       da_planilha = guardar.apolice
 
       resultado = guardar(origem: 'pdf')
+      passo = da_planilha.eventos.order(:id).last
 
-      expect([resultado.situacao, da_planilha.reload.origem, passos(da_planilha)]).to eq(['igual', 'pdf', %w[chegou_planilha]])
+      expect([resultado.situacao, da_planilha.reload.origem, passos(da_planilha)]).to eq(['igual', 'pdf', %w[chegou_planilha chegou_de_novo]])
+      expect([passo.mudancas, passo.valores]).to eq([nil, { 'arquivo' => 'carteira-exemplo.csv', 'origem_antes' => 'planilha', 'origem_depois' => 'pdf' }])
+      expect { guardar(origem: 'pdf') }.not_to(change { passos(da_planilha) })
     end
 
     it 'a apólice feita à mão não é mexida por fonte nenhuma, só completada' do
@@ -216,6 +282,16 @@ RSpec.describe Carteira::Guardar do
       guardar(origem: 'conector', valor_centavos: 389_000, bem: 'Carro Exemplo 2024')
 
       expect([a_mao.reload.valor_centavos, a_mao.bem, a_mao.origem]).to eq([341_000, 'Carro Exemplo 2024', 'manual'])
+    end
+
+    it 'a origem "manual" só cria: achando a apólice, recusa (quem edita à mão é a gaveta)' do
+      da_planilha = guardar.apolice
+      antes = retrato
+
+      expect { guardar(origem: 'manual', valor_centavos: 389_000) }.to recusar_com('apolice_repetida')
+      expect(retrato).to eq(antes)
+      expect(guardar(origem: 'manual', inicio_vigencia: termina, fim_vigencia: termina + 1.year).situacao).to eq('nova')
+      expect(da_planilha.reload.origem).to eq('planilha')
     end
   end
 
@@ -227,12 +303,60 @@ RSpec.describe Carteira::Guardar do
       expect(described_class.new(account, origem: 'planilha')).to be_a(described_class)
     end
 
+    it 'ao ser criado: o usuário que não é da conta e a importação de outra conta' do
+      outra = create(:account)
+      de_fora = create(:user, account: outra)
+      importacao_de_fora = create_campaign_import(account: outra, user: de_fora, content: "Nome;Celular\nAna Albuquerino;11987650001\n")
+
+      expect { described_class.new(account, origem: 'planilha', user: de_fora) }.to raise_error(ArgumentError, 'user')
+      expect { described_class.new(account, origem: 'planilha', importacao: importacao_de_fora) }.to raise_error(ArgumentError, 'importacao')
+    end
+
+    it 'o dado fora da forma do banco: valor em texto, data que não é data, texto que não é texto' do
+      fora_da_forma = [[{ valor_centavos: '341000' }, 'valor_centavos'], [{ valor_centavos: 3410.0 }, 'valor_centavos'],
+                       [{ fim_vigencia: '10/03/2027' }, 'fim_vigencia'], [{ inicio_vigencia: Time.current }, 'inicio_vigencia'],
+                       [{ tipo: :auto }, 'tipo'], [{ numero: 1234 }, 'numero']]
+
+      fora_da_forma.each { |campos, campo| expect { guardar(**campos) }.to raise_error(ArgumentError, campo) }
+      expect(apolices.count).to eq(0)
+    end
+
+    it 'o valor em texto não vira "chegou de novo" a cada chegada: é recusado antes de comparar' do
+      primeira = guardar.apolice
+
+      expect { guardar(valor_centavos: '341000') }.to raise_error(ArgumentError, 'valor_centavos')
+      expect(passos(primeira)).to eq(%w[chegou_planilha])
+    end
+
+    it 'a gravação da mesma apólice que chegou ao mesmo tempo: tenta de novo uma vez e atualiza a que entrou' do
+      guardada = guardar.apolice
+      chamadas = 0
+      # A primeira procura não vê a apólice, como na corrida: a criação bate no índice único e a segunda procura acha.
+      allow(Carteira::Termo).to receive(:escolher).and_wrap_original do |original, *argumentos|
+        (chamadas += 1) == 1 ? nil : original.call(*argumentos)
+      end
+
+      resultado = guardar(valor_centavos: 389_000)
+
+      expect([resultado.situacao, resultado.apolice, apolices.count, chamadas]).to eq(['atualizada', guardada, 1, 2])
+      expect(guardada.reload.valor_centavos).to eq(389_000)
+    end
+
+    it 'se bater de novo no índice único, recusa com o código, sem repassar a mensagem do banco (que traz o número)' do
+      guardar
+      allow(Carteira::Termo).to receive(:escolher).and_return(nil)
+
+      expect { guardar(valor_centavos: 389_000) }.to raise_error(CustomExceptions::CarteiraRecusa) { |recusa|
+        expect([recusa.codigo, recusa.message, recusa.cause]).to eq(['apolice_repetida', 'apolice_repetida', nil])
+      }
+      expect([apolices.count, apolices.sole.valor_centavos]).to eq([1, 341_000])
+    end
+
     it 'os dados que o model da apólice recusa, sem gravar nada' do
       de_fora = create(:contact, account: create(:account))
       recusados = [{ tipo: 'moto' }, { fim_vigencia: nil }, { seguradora: nil }, { fim_vigencia: comeca - 1.day }, { contato: de_fora }]
 
       recusados.each { |campos| expect { guardar(**campos) }.to raise_error(ActiveRecord::RecordInvalid) }
-      expect { guardar(fim_vigencia: '10/03/2027') }.to raise_error(Date::Error)
       expect([apolices.count, Carteira::ApoliceEvento.count]).to eq([0, 0])
     end
 
