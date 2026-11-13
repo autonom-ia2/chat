@@ -1266,7 +1266,7 @@
 - perfil: somente `administrator`. Se o perfil nao puder, diga que ele pode aplicar etiquetas onde tiver acesso, mas criar/editar/excluir o catalogo de etiquetas exige administrador.
 - pre_requisitos: nenhum
 - passos: 1. Abra Configuracoes; 2. Entre em Etiquetas; 3. Clique em adicionar etiqueta ou edite uma existente; 4. Preencha nome, descricao, cor e a opcao de exibir na sidebar; 5. Salve ou confirme a exclusao quando necessario.
-- gotchas: esta tela gerencia o catalogo, diferente de aplicar etiqueta em conversa/contato; o nome e salvo em lowercase; a opcao `show_on_sidebar` controla se aparece na sidebar; etiquetas ocultas ainda podem existir e ser usadas por fluxos customizados.
+- gotchas: esta tela gerencia o catalogo, diferente de aplicar etiqueta em conversa/contato; o nome e salvo em lowercase; a opcao `show_on_sidebar` ("Exibir etiqueta na barra lateral") controla se aparece no menu da esquerda, e a opcao `show_on_conversation_list` ("Exibir etiqueta na lista de conversas", desligada por padrao) controla se aparece no card da conversa, na lista; por a etiqueta na conversa nao basta para ela aparecer na lista; etiquetas ocultas ainda podem existir e ser usadas por fluxos customizados.
 - highlight: `settings-add-label`
 
 ### gerenciar_atributos_customizados
