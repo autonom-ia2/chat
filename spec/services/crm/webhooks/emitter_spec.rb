@@ -109,6 +109,8 @@ RSpec.describe Crm::Webhooks::Emitter do
   # #2898 (insurance portfolio, E5): the renewal card of a policy, in an account with no webhook, ad sync or automation.
   # Without this branch "Renovou" on the board would never reach the policy.
   context 'when the card is the renewal card of an insurance policy and nothing else subscribes' do
+    # The account has the insurance portfolio (Carteira::Acesso): the gate asks that first, before any query.
+    let(:account) { conta_com_carteira }
     let(:stage) { account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'A vencer', position: 0) }
     let(:renewal_card) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Renovação') }
     let(:other_card) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Pedido') }
@@ -136,6 +138,14 @@ RSpec.describe Crm::Webhooks::Emitter do
       %w[create move].each { |event_type| emit_for(renewal_card, event_type) }
 
       (outcomes.values + %w[crm.card.created crm.card.moved]).each { |event| expect_no_card_dispatch(event) }
+    end
+
+    it 'does not dispatch for an account that no longer has the insurance portfolio' do
+      account.disable_features!('carteira_seguros')
+
+      outcomes.each_key { |event_type| emit_for(renewal_card, event_type) }
+
+      outcomes.each_value { |event| expect_no_card_dispatch(event) }
     end
   end
 end
