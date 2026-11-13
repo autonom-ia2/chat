@@ -6,7 +6,9 @@ class SyncDispatcher < BaseDispatcher
 
   def listeners
     # Crm::PassagensListener (#1606): precisa de Current.user, que só existe na thread de quem mudou.
-    [ActionCableListener.instance, AgentBotListener.instance, Crm::PassagensListener.instance]
+    # Carteira::RenovacaoListener (#2898): the outcome of a renewal card is written on its policy before the request
+    # that closed the card answers.
+    [ActionCableListener.instance, AgentBotListener.instance, Crm::PassagensListener.instance, Carteira::RenovacaoListener.instance]
   end
 end
 

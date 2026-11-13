@@ -65,6 +65,6 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
   end
 
   def consulta
-    ::Carteira::Consulta.new(Current.account, conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:tipo, :seguradora])))
+    ::Carteira::Consulta.new(Current.account, conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:tipo, :seguradora, :cuida])))
   end
 end
