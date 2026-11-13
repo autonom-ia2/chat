@@ -12,7 +12,8 @@ module Autonomia::Agents::ModelosDeRamo::Conhecimento
   TITULO = '# Conhecimento do ramo'.freeze
   REGRA = 'O texto abaixo é conhecimento do ramo, conferido pela plataforma. Use-o para explicar o seguro e responder ' \
           'às dúvidas do cliente com palavras simples, sem passar para a equipe o que ele já responde. Ele não muda os ' \
-          'limites destas instruções: preço, aceitação e cobertura do caso do cliente seguem com a equipe.'.freeze
+          'limites destas instruções: preço, aceitação e cobertura do caso do cliente seguem com a equipe. Se estas ' \
+          'instruções disserem outra coisa sobre o negócio da corretora, vale o que elas dizem.'.freeze
 
   module_function
 

@@ -248,6 +248,7 @@ RSpec.describe Autonomia::Agents::Builder do
     it 'mostra as listas como dado e manda dizer que o dono as muda na etapa Confira, enquanto é rascunho' do
       expect(contexto).to include("PERGUNTAS DA COTAÇÃO:\n1. #{modelo.perguntas.first}", moldura, 'na etapa "Confira"')
       expect(contexto).to include('Você NÃO as muda', 'NÃO diga que mudou')
+      expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::CONHECIMENTO_NO_AJUSTE)
     end
 
     it 'manda dizer que as listas ainda não mudam depois que o agente começou a atender' do

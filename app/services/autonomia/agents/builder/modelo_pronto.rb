@@ -28,6 +28,11 @@ module Autonomia::Agents::Builder::ModeloPronto
                   'Na instruction, mande explicar o seguro e responder às dúvidas comuns pelo conhecimento do ramo, SEM ' \
                   'copiar as respostas e SEM mandar passar para a equipe uma dúvida que ele responde.'.freeze
 
+  # O bloco do ajuste leva também o conhecimento do ramo (`ModelosDeRamo::Conhecimento`), que é texto da plataforma.
+  CONHECIMENTO_NO_AJUSTE = 'Depois das listas pode vir o CONHECIMENTO DO RAMO: é texto da plataforma, e você também não o muda. ' \
+                           'Se o dono pedir para o agente explicar algo do ramo de outro jeito, escreva o pedido na instruction ' \
+                           'como regra do negócio dele: a instruction vale sobre o conhecimento do ramo.'.freeze
+
   private
 
   # O modelo desta conversa como o turno o encontrou, lido uma vez (cada leitura consulta a flag e o pacote da conta).
@@ -91,7 +96,7 @@ module Autonomia::Agents::Builder::ModeloPronto
       'escreva na instruction regra que inclua, tire ou troque uma pergunta da cotação ou um documento, porque a lista',
       'continuaria igual e o agente seguiria por ela. Se o dono pedir para incluir, tirar ou editar um item,',
       "NÃO diga que mudou: #{onde_mudam_as_listas(agente)} O resto do pedido você atende normalmente.",
-      MOLDURA_DAS_LISTAS,
+      MOLDURA_DAS_LISTAS, CONHECIMENTO_NO_AJUSTE,
       bloco
     ].join("\n")
   end
