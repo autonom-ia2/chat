@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue';
 
-// #2414 F6.5 (protótipo só da demo) — a gaveta "Editar funil" tem mudança não salva? A etapa pergunta antes de sair
+// #2499 F6.5 — a gaveta "Editar funil" tem mudança não salva? A etapa pergunta antes de sair
 // para o editor da Automação (a gaveta não avisa sozinha e o que foi mudado se perderia). Compara o formulário e as
 // frases das etapas com o retrato de quando a gaveta abriu (`sessao` muda a cada abertura). A contagem de cards das
 // etapas, que o tempo real atualiza, não conta. As frases chegam depois (painel da IA): o retrato delas sai quando

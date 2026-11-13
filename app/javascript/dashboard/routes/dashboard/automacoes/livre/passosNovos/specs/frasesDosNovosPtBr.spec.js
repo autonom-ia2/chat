@@ -4,6 +4,7 @@ import { novoPassoNovo } from '../passosNovos';
 import {
   fraseDoPassoNovo,
   linhaDoEnsaioNovo,
+  linhaDoEnsaioReal,
   quemEmFrase,
 } from '../frasesDosNovos';
 import { guardarNomesDosPassosNovos } from '../nomesDaConta';
@@ -106,6 +107,19 @@ describe('frases dos passos novos em pt_BR', () => {
     });
     expect(linhaDoEnsaioNovo(comModelo, t).aviso).toContain(
       'vai o modelo pesquisa_nps'
+    );
+  });
+
+  // Decisão do Rodrigo (12/11): sem com quem marcar, a reunião segue sem
+  // reunião pelo "Se o cliente não responder"; o ensaio diz o mesmo que o motor.
+  it('a reunião sem com quem marcar diz que segue sem reunião', () => {
+    const aviso = faria => linhaDoEnsaioReal({ faria, dados: {} }, t).aviso;
+
+    expect(aviso('reuniao_sem_responsavel')).toBe(
+      'Sem responsável no card nem na conversa: seguiria sem reunião, pelo caminho “Se o cliente não responder”.'
+    );
+    expect(aviso('reuniao_sem_pagina')).toBe(
+      'O responsável não tem uma página de agendamento só dele: seguiria sem reunião, pelo caminho “Se o cliente não responder”.'
     );
   });
 

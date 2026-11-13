@@ -24,6 +24,10 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
   # "em andamento", e a repetição do passo levaria 409).
   PEDEM_CHAVE = ['POST crm/cards/:card_id/contact'].freeze
 
+  # Ligar e desligar o agente de IA (D3, #2660 lote E) vale só para o agente já publicado. O `um_de` da lista limita o
+  # status de destino, não o de origem: o rascunho que ninguém terminou nem revisou iria direto a atender clientes.
+  SO_AGENTE_PUBLICADO = ['PATCH autonomia/agents/:id', 'PUT autonomia/agents/:id'].freeze
+
   attr_reader :codigo
 
   def initialize(execucao:, account_user:)
@@ -50,13 +54,27 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
 
   # A lista já deixa de fora o que só se faz na tela; a conferência aqui é a rede, caso a lista erre.
   # Os dados da ação (#2446) não mudam a regra do motor: a lista, a chave de automações e, na ação de funil (crm/), a
-  # chave de funis, a mesma pergunta do salvar, reconferida a cada execução (#2633).
-  def garantir_permitida!(acao, _dados = nil)
+  # chave de funis, a mesma pergunta do salvar, reconferida a cada execução (#2633). Com os dados, também o agente de IA
+  # em rascunho (SO_AGENTE_PUBLICADO).
+  def garantir_permitida!(acao, dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, I18n.t('autonomia.automacao.motivos.acao_fora') unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
     raise SemPermissao, 'quem_ligou_sem_permissao' unless @account_user&.permission_granted?(::Autonomia::Automacao::Acesso::PERMISSAO)
-    return unless ::Autonomia::Automacao::AcoesPermitidas.de_funil?(acao)
-    raise SemPermissao, 'sem_chave_de_funis' unless ::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
+    if ::Autonomia::Automacao::AcoesPermitidas.de_funil?(acao) && !::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
+      raise SemPermissao, 'sem_chave_de_funis'
+    end
+
+    recusar_agente_em_rascunho!(acao, dados)
+  end
+
+  # O agente do caminho é lido na conta; o de outra conta segue e o endpoint responde que não acha.
+  def recusar_agente_em_rascunho!(acao, dados)
+    return unless dados && SO_AGENTE_PUBLICADO.include?(acao.to_s)
+
+    id = (dados[:caminho] || {}).to_h.transform_keys(&:to_s)['id']
+    return unless ::Autonomia::Agents::Agent.draft.exists?(account_id: @account.id, id: id)
+
+    raise Recusada, I18n.t('autonomia.automacao.motivos.agente_em_rascunho')
   end
 
   # O `proibe` da lista vale também na hora de rodar, e não só ao salvar (G15): a versão salva antes da regra, ou montada

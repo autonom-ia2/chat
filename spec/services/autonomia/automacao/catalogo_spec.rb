@@ -98,7 +98,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'campanha', 'decidir', 'extrair', 'escrever', 'resumir', 'ia_assumir', 'retorno',
                                                      'card', 'em_outro_registro', 'prospeccao', 'conversa_ao_responsavel', 'para_cada', 'rodizio',
-                                                     'webhook', 'lista_de_email')
+                                                     'webhook', 'lista_de_email', 'pedir_aprovacao', 'marcar_reuniao', 'pesquisa_nota')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end

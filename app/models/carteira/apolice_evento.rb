@@ -5,9 +5,14 @@
 class Carteira::ApoliceEvento < ApplicationRecord
   self.table_name = 'carteira_apolice_eventos'
 
+  # E4: chegou pela planilha (a primeira vez e de novo, com o que mudou), foi corrigido na tela, cancelado, voltou a
+  # ativo, ganhou o PDF e ficou sem ele.
+  TIPOS = %w[chegou_planilha chegou_de_novo corrigido cancelado voltou_a_ativo pdf_anexado pdf_tirado].freeze
+
   belongs_to :apolice, class_name: 'Carteira::Apolice', inverse_of: :eventos
   belongs_to :user, optional: true
   belongs_to :campaign_import, optional: true
 
-  validates :tipo, :quando, presence: true
+  validates :tipo, inclusion: { in: TIPOS }
+  validates :quando, presence: true
 end

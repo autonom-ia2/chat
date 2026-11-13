@@ -23,7 +23,6 @@ import { MODELOS, corLivre, modeloDoFunil } from './funil/funil';
 import { useFunilMoldura } from './funil/useFunilMoldura';
 import { useFunilSugestao } from './funil/useFunilSugestao';
 import { useFunilModelo } from './funil/useFunilModelo';
-import { marcaDaDemo } from './automacaoNoCrm/fonteDasAutomacoes';
 import { useFunilComMudanca } from './automacaoNoCrm/useFunilComMudanca';
 import {
   avisarEm,
@@ -445,9 +444,8 @@ watch(
   { immediate: true }
 );
 
-// #2414 F6.5 (protótipo só da demo: build de desenvolvimento e funil marcado pelo seed): a etapa aberta mostra as
-// automações dela numa lista só e pergunta antes de sair para o editor se o funil tem mudança não salva.
-const demo = computed(() => marcaDaDemo(props.pipeline));
+// #2499 F6.5: a etapa aberta mostra as automações dela numa lista só e pergunta antes de sair para o editor se o
+// funil tem mudança não salva.
 const funilComMudanca = useFunilComMudanca({
   form,
   aiPanel,
@@ -626,8 +624,7 @@ useFixedPanelPresence(computed(() => props.show));
               :erro="improvementError"
               :nomes-faltando="hasUnnamedStages"
               :editando="isEditing"
-              :demo="demo"
-              :tem-mudanca="Boolean(demo) && funilComMudanca"
+              :tem-mudanca="funilComMudanca"
               @mudar="mudarEtapa"
               @melhorar="improveCriteria"
               @usar="applySuggestion"

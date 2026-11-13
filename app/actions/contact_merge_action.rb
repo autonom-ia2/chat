@@ -27,6 +27,7 @@ class ContactMergeAction
       merge_contact_notes
       merge_calls
       merge_prospecting_leads
+      merge_carteira_apolices
       merge_crm_records
       merge_and_remove_mergee_contact
     end
@@ -70,6 +71,13 @@ class ContactMergeAction
   def merge_prospecting_leads
     Autonomia::Prospecting::Lead.where(account_id: @account.id, contact_id: @mergee_contact.id)
                                 .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # #2897: os seguros são da pessoa. Sem isto, o destroy! do absorvido apagaria as apólices dele, com o PDF e a história
+  # de cada uma (ContactCarteira). A apólice é única na conta, não por contato: passar para o que fica nunca colide.
+  def merge_carteira_apolices
+    Carteira::Apolice.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                     .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   # O contato absorvido é apagado logo depois. Sem isto, os cards ficariam sem contato (o Rails anula o vínculo) e os

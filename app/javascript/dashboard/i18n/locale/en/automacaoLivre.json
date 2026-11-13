@@ -137,7 +137,10 @@
       "RETORNO": "Create a follow-up for the team",
       "LISTA_DE_EMAIL": "Add to an e-mail list",
       "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards",
-      "WEBHOOK": "Send data to another system"
+      "WEBHOOK": "Send data to another system",
+      "PEDIR_APROVACAO": "Ask for approval",
+      "MARCAR_REUNIAO": "Book a meeting in the conversation",
+      "PESQUISA_NOTA": "Satisfaction survey"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -425,7 +428,8 @@
       "NOTA_MEDIA": "Medium score",
       "NOTA_ALTA": "High score",
       "DENTRO": "Inside the block",
-      "CONSULTOU": "If it looks it up"
+      "CONSULTOU": "If it looks it up",
+      "MARCOU": "If booked"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",

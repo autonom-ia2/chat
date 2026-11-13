@@ -42,7 +42,12 @@ Rails.application.config.filter_parameters += [
   # (`fonte[url]`, pode trazer chave na query) e o exemplo de cada entrada (`fonte[exemplos]`, CEP, placa, CPF de cliente).
   # Nenhum dos dois vai para o log. O filtro casa qualquer chave que contenha "url" ou "exemplos": num parâmetro de outro
   # endpoint (avatar_url, webhook url), só o log perde o endereço.
-  :url, :exemplos
+  :url, :exemplos,
+  # #2897 — carteira de seguros: o que a pessoa corrige num seguro (PATCH relacionamentos/seguros/:id) e o PDF que ela
+  # guarda são dados do cliente. O número da apólice, a seguradora e o bem (que costuma trazer a placa) não vão para o log,
+  # nem o `arquivo` enviado (o log mostraria o nome do arquivo); `valor` e `busca` já saem filtrados acima. O filtro casa
+  # qualquer chave que contenha "numero", "seguradora", "bem" ou "arquivo": em outro endpoint, só o log perde o valor.
+  :numero, :seguradora, :bem, :arquivo
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

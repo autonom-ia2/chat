@@ -27,6 +27,14 @@ const CATALOGO = comPassosNovos(
   true
 );
 
+const conversaDoServidor = passos => ({
+  conversa_id: 901,
+  nome: 'Ana',
+  entraria: true,
+  ultima_atividade: new Date().toISOString(),
+  passos,
+});
+
 const montar = receita =>
   mount(LivreEnsaio, {
     props: { automacaoId: 5, receita, catalogo: CATALOGO, rascunho: true },
@@ -40,21 +48,53 @@ describe('LivreEnsaio com passo novo', () => {
     window.matchMedia = vi.fn(() => ({ matches: false }));
   });
 
-  it('não chama o servidor e mostra a linha do passo novo', async () => {
-    const pesquisa = novoPassoNovo('pesquisa_nota', 'p1', t);
+  it('passo que ainda não salva: não chama o servidor e mostra a linha de exemplo', async () => {
     const tela = montar({
       gatilho: { tipo: 'conversa.resolvida' },
-      passos: [pesquisa, { id: 'p2', tipo: 'parar' }],
+      passos: [
+        novoPassoNovo('repetir_lista', 'p1', t),
+        { id: 'p2', tipo: 'parar' },
+      ],
     });
     await flushPromises();
 
     expect(AutomacoesAPI.ensaiar).not.toHaveBeenCalled();
     expect(tela.findAll('[data-ensaio-item]')).toHaveLength(2);
+    expect(tela.find('[data-ensaio-passos]').text()).toContain(
+      'REPETIR.ENSAIO'
+    );
+  });
+
+  it('a pesquisa (#2936) ensaia pelo servidor, com a pergunta no balão', async () => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        conversas: [
+          conversaDoServidor([
+            {
+              id: 'p1',
+              tipo: 'pesquisa_nota',
+              faria: 'pesquisa_nota',
+              dados: {
+                pergunta: 'De 0 a 10?',
+                espera: { valor: 2, unidade: 'dias' },
+              },
+            },
+          ]),
+        ],
+        outras: [],
+      },
+    });
+    const tela = montar({
+      gatilho: { tipo: 'conversa.resolvida' },
+      passos: [novoPassoNovo('pesquisa_nota', 'p1', t)],
+    });
+    await flushPromises();
+
+    expect(AutomacoesAPI.ensaiar).toHaveBeenCalledTimes(1);
+    expect(tela.find('[data-ensaio-de-exemplo]').exists()).toBe(false);
     const passos = tela.find('[data-ensaio-passos]');
     expect(passos.text()).toContain('PESQUISA.ENSAIO');
-    expect(passos.find('[data-balao]').text()).toBe(
-      'AUTOMACAO_LIVRE.PASSOS_NOVOS.PESQUISA.PERGUNTA_PADRAO'
-    );
+    expect(passos.find('[data-balao]').text()).toBe('De 0 a 10?');
   });
 
   it('avisa no topo que o ensaio é de exemplo', async () => {
@@ -74,6 +114,28 @@ describe('LivreEnsaio com passo novo', () => {
       ...novoPassoNovo('pedir_aprovacao', 'p1', t),
       aprovado: [{ id: 'p2', tipo: 'parar' }],
     };
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: {
+        conversas: [
+          conversaDoServidor([
+            {
+              id: 'p1',
+              tipo: 'pedir_aprovacao',
+              faria: 'pedir_aprovacao',
+              dados: { para: ['Gerente Ana'] },
+              ramos: [
+                {
+                  chave: 'aprovado',
+                  fixo: true,
+                  passos: [{ id: 'p2', tipo: 'parar', faria: 'parar' }],
+                },
+              ],
+            },
+          ]),
+        ],
+        outras: [],
+      },
+    });
     const tela = montar({
       gatilho: { tipo: 'conversa.resolvida' },
       passos: [aprovacao],

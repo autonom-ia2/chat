@@ -1,14 +1,15 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useFormato } from '../card/useFormato';
+import { useFormato } from './card/useFormato';
 
-// #2710, variante 2 — no quadro, o selo do card que a página de agendamento criou para quem já comprou: "Já é
-// cliente desde 3 de novembro" (o `customer_since` do contato). Fica no lugar do selo "Cliente" só nesse card. É um
-// botão: abre o card ganho. O clique não abre o card de baixo.
+// #2710, variante 2 — no quadro, o selo do card que a página de agendamento criou para quem já comprou: "Já é cliente
+// desde 3 de novembro". Fica no lugar do selo "Cliente" só nesse card. É um botão: abre o card ganho (a compra). O clique
+// não abre o card de baixo. O servidor só manda o selo para quem pode ver o card ganho (Crm::Cards::JaECliente).
 const props = defineProps({
-  // `customer_since` do contato, em segundos (como vem no card); pode faltar.
+  // Em segundos, como as outras datas do quadro; pode faltar.
   desde: { type: Number, default: null },
+  // A página está buscando a compra: o botão espera, sem segundo clique.
   ocupado: { type: Boolean, default: false },
 });
 
@@ -18,13 +19,13 @@ const { t, locale } = useI18n();
 const formato = useFormato({ t, locale });
 const texto = computed(() =>
   props.desde
-    ? t('AUTOMACAO_NO_CRM.CLIENTE.SELO', {
+    ? t('CRM_CARD.JA_CLIENTE.SELO', {
         dia: formato.diaCurto(new Date(props.desde * 1000)),
       })
-    : t('AUTOMACAO_NO_CRM.CLIENTE.SELO_SEM_DATA')
+    : t('CRM_CARD.JA_CLIENTE.SELO_SEM_DATA')
 );
 const rotulo = computed(() =>
-  t('AUTOMACAO_NO_CRM.CLIENTE.SELO_ROTULO', { selo: texto.value })
+  t('CRM_CARD.JA_CLIENTE.SELO_ROTULO', { selo: texto.value })
 );
 </script>
 

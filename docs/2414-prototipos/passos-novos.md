@@ -1,18 +1,22 @@
 # Protótipo: os 6 passos novos da Automação livre
 
-Issues #2931 a #2936 (épico #2414). Protótipo em tela real, para o Rodrigo
-aprovar antes de alguém escrever o motor. Aprovado em 12/11. Três deles já têm
-motor de verdade (#2932, #2933 e #2934, seção "Motor" abaixo); os outros três
-(#2931, #2935 e #2936) seguem só na tela, com o adaptador falso, e não salvam.
+Issues #2931 a #2936 (épico #2414). Protótipo em tela real, aprovado pelo
+Rodrigo em 12/11. Os seis já são de verdade: "Para cada", "Usar outra
+automação" e "Buscar em outro sistema" (#2932, #2933, #2934, seção "Os três com
+motor") e Pedir aprovação, Marcar reunião e Pesquisa de satisfação (#2931,
+#2935, #2936, seção "Já de verdade"). Todos salvam, rodam no motor, têm ensaio e
+linha no histórico.
 
 ## Como ligar
 
 1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
    `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
-   `config/features.yml`; o bit está na seção "Motor" abaixo.
+   `config/features.yml`. A Orquestração reservou a posição 47 (1 << 46) em
+   12/11, logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
    **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
    **desligada em produção**, ligada só na conta de demonstração, até o motor
-   dos passos existir. Ligada num cliente, ele monta passos que não salvam.
+   dos seis passos estar completo. Desligar é o rollback: quem espera resposta
+   num destes passos para naquele ponto, sem mandar nada.
 2. Abrir **Automações › Montar do zero** (ou uma automação já salva) com quem tem
    `automation_manage`. Escolher qualquer gatilho.
 3. Tocar no **+** do Confira. Os 6 passos aparecem misturados aos de hoje, cada
@@ -26,7 +30,7 @@ do servidor.
 "Fazer para cada um de uma lista", "Usar outra automação" e "Buscar informação
 em outro sistema" já são de verdade: esquema, salvar, motor, ensaio e histórico.
 Sem o aviso "ainda está em teste": salvam e ligam como qualquer passo. Os outros
-três (#2931, #2935, #2936) seguem no protótipo, como descrito abaixo.
+três (#2931, #2935, #2936) também já são de verdade (seção "Já de verdade").
 
 - **Flag.** `automacao_passos_novos`, no fim de `config/features.yml`. O bit
   reservado é o 47 (1 << 46), logo depois de
@@ -138,18 +142,18 @@ valor consultado.
 - **Outro endereço.** O teste avisa antes que a IA da conta sugere os nomes dos
   dados e que esse uso entra no custo da IA da conta.
 
-## O que é de verdade e o que é falso (os três ainda no protótipo)
+## O que é de verdade e o que é exemplo
 
-| Parte                                                                               | Situação                                                                                             |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Lista "Adicionar passo", nome e frase                                               | De verdade (catálogo do editor, com `requer` da flag)                                                |
-| Formulário de cada passo, começar pronto, "Salvar" do painel                        | De verdade, no rascunho da tela                                                                      |
-| Galhos no Confira (aprovado, recusado...)                                           | De verdade (`receita.js`, `RAMOS`)                                                                   |
-| Linha do ensaio (botão **Ensaiar**)                                                 | #2932–#2934: servidor. Os outros três: adaptador falso, com a faixa "Ensaio de exemplo" no topo      |
-| Linha do histórico                                                                  | #2932–#2934: servidor. Os outros três: exemplo na prévia do painel ("Veja como fica")                |
-| Blocos, públicos, contagem da lista, teste da busca                                 | Servidor (`passosNovos/dadosDaConta.js`)                                                             |
-| Horários livres, card do pedido de aprovação                                        | Adaptador falso (`passosNovos/adaptadorFalso.js`)                                                    |
-| **Salvar tudo / Guardar / Ligar**                                                   | #2932–#2934 salvam. Os outros três: desligados, com a frase "ainda está em teste"                    |
+| Parte                                                        | Situação                                                                                     |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Lista "Adicionar passo", nome e frase                        | De verdade (catálogo do editor, com `requer` da flag)                                        |
+| Formulário de cada passo, começar pronto, "Salvar" do painel | De verdade, no rascunho da tela                                                              |
+| Galhos no Confira (aprovado, recusado...)                    | De verdade (`receita.js`, `RAMOS`)                                                           |
+| Linha do ensaio (botão **Ensaiar**)                          | Servidor, para os seis                                                                       |
+| Linha do histórico                                           | Servidor, para os seis                                                                       |
+| Blocos, públicos, contagem da lista, teste da busca          | Servidor (`passosNovos/dadosDaConta.js`)                                                     |
+| Prévia "Veja como fica" no painel                            | Exemplo (`passosNovos/adaptadorFalso.js`): horários, card do pedido, linha do histórico      |
+| **Salvar tudo / Guardar / Ligar**                            | Os seis salvam e ligam; a trava "ainda está em teste" fica para um passo novo que o servidor ainda não conheça |
 
 ## Roteiro de cada jornada
 
@@ -277,19 +281,57 @@ tela no celular; o pedido empilha o card embaixo no celular e põe ao lado no
 computador. Todos os botões e escolhas têm 44 px de altura; as escolhas usam o
 `ChoiceSelect` (teclado e leitor de tela), sem `<select>`.
 
+## Já de verdade: aprovação, reunião e pesquisa (frente B, 12/11)
+
+Pedir aprovação (#2931), Marcar reunião pela conversa (#2935) e Pesquisa de
+satisfação (#2936) saíram do protótipo: estão no esquema da receita, salvam,
+rodam no motor, têm ensaio de verdade e linha no histórico. A tela é a aprovada;
+nenhum dos seis passos tem mais o aviso "em teste" nem o Salvar desligado.
+
+- **Uma espera para os três** (`EsperaDeResposta`, no Executor): o passo
+  pergunta, a execução espera até o prazo pelo `due_at` de sempre e segue pelo
+  galho da resposta, ou pelo galho "sem resposta" no prazo. Sem tabela nova: o
+  pedido é o registro do passo (`esperando_resposta`). A mensagem nova do
+  cliente acorda a reunião e a pesquisa (Escuta); a resposta do painel acorda a
+  aprovação.
+- **Aprovação**: só recebe quem a escolha aponta e ainda vê o registro
+  (CardPolicy, ConversationPolicy). O pedido chega no sino (aviso
+  `automacao_aprovacao`, só no painel) e na tela **Pedidos de aprovação**
+  (`automacoes_aprovacoes`, API `autonomia/aprovacoes`). Vale a primeira
+  resposta; no prazo o pedido fecha antes de seguir. O valor de venda na
+  pergunta e no card só para quem vê valores.
+- **Reunião**: os 3 próximos horários livres da página de agendamento da pessoa
+  (a mesma do link da agenda), em botões no chat do site e no WhatsApp oficial,
+  numerados nos outros canais. A IA de decidir entende a resposta (nunca lista
+  de palavras); a reserva é a do Booker, com a trava do horário (o segundo
+  cliente segue por "Se pedir outro horário"). Sem com quem marcar (card sem
+  responsável, pessoa fora da conta) ou sem página de agendamento da pessoa,
+  segue sem reunião por "Se o cliente não responder", com o porquê no
+  histórico, e não trava (decisão de 12/11). A saída é a mesma na primeira
+  pergunta e depois do modelo da janela fechada, e o ensaio diz o mesmo.
+- **Pesquisa**: a nota de 0 a 10, entendida pela IA; não pergunta de novo antes
+  de `intervalo_dias`. A nota e a data ficam no contato (`pesquisas.<automação>`
+  e `pesquisa_satisfacao`) e no card, e a lista mostra a média e quantas pessoas
+  responderam. O comentário do cliente fica só no registro do passo: o
+  histórico o mostra a quem vê a conversa, e no contato ou no card ele sairia
+  para quem não vê.
+- **Janela de 24 h fechada** (decisão de 12/11): como o passo mensagem, o modelo
+  no lugar, ou nada e a automação para nesta conversa. Na reunião e na pesquisa,
+  a pergunta de verdade (os horários, as notas) vai quando o cliente responder
+  ao modelo, e só com a janela daquela conversa aberta: a resposta dele em outra
+  conversa não manda nada, não empurra o prazo e nunca dispara um segundo
+  modelo. Na pesquisa, só a pergunta que saiu conta para o intervalo.
+- **Ensaio**: confere na mesma ordem do motor (na reunião, a pessoa, a página e
+  os horários antes do canal; na pesquisa, a recente antes do canal).
+- **Índices** (migration `20261112091000`, aditiva e `CONCURRENTLY`): um
+  parcial nos registros de espera, para a tela de pedidos não ler os outros
+  registros da conta, e um parcial nos contatos que já responderam pesquisa,
+  para o resumo da lista não varrer todos os contatos.
+
 ## O que fica para a implementação
 
-- O bit final da flag depende da ordem dos merges (ver "Motor").
-- O comportamento do motor com a janela de 24 h fechada na reunião e na
-  pesquisa: o protótipo segue o passo mensagem (modelo escolhido ou nada); o
-  Rodrigo decide na aprovação da tela.
-- O esquema da receita, o salvar, o motor e o ensaio de verdade dos três passos
-  sem motor (#2931, #2935, #2936), com as regras das Issues: alcance de quem ligou, bloqueados e descadastrados,
-  janela de 24 h, trava de horário, proteção contra endereço interno, laço e
-  profundidade dos blocos, parecer das funções personalizadas.
-- Onde o pedido de aprovação chega de verdade (notificação e painel). Tela nova
-  no painel precisa de `porques.md` + `central:check` e `guia:build`.
-- O resumo da pesquisa na lista.
+- Ligar a flag em produção só com o OK do Rodrigo, depois da conferência dos
+  seis passos na conta de demonstração.
 
 ## Arquivos
 

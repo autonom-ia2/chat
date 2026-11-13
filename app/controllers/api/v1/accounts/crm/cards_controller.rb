@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
   rescue_from ::Crm::Access::CardGuard::OwnerWithoutFunnel, with: :render_owner_without_funnel
+  rescue_from ::Crm::Cards::EtapaDeEntrada::FunilSemEtapa, with: :render_funil_sem_etapa
 
   include Crm::FilterParameters
 
@@ -275,7 +276,6 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     title description value_cents currency lost_reason source priority score
     expected_close_at pipeline_id stage_id owner_id team_id contact_id
   ].freeze
-  UPSERT_SEM_ETAPA_DO_FUNIL = 'crm.upsert_stage_of_pipeline_required'.freeze
 
   # O card devolve o contato vinculado (#1849): só vincula quem vê esse contato.
   def attachable_contact!(contact_id)
@@ -301,50 +301,67 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize @card, :update?
     attributes = permitted_params.slice(*(UPSERT_ATTRIBUTES.map(&:to_s) - hidden_value_attributes)).compact
     attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
-    ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
-    return render_unprocessable(UPSERT_SEM_ETAPA_DO_FUNIL) if upsert_sem_etapa_do_funil?(attributes)
-
-    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
+    destino = upsert_destino_permitido!(attributes)
     # Campos do card (#1146): o upsert junta com o que já está salvo, como o PATCH.
     if permitted_params[:custom_attributes].present?
       ensure_contact_fields_attachable!(permitted_params[:custom_attributes], @card.custom_attributes)
       attributes['custom_attributes'] = @card.custom_attributes.to_h.merge(permitted_params[:custom_attributes].to_h).compact
     end
-    apply_upsert!(attributes)
+    apply_upsert!(attributes, *destino)
     render :show, status: :ok
   end
 
-  def apply_upsert!(attributes)
-    target_stage = upsert_target_stage(attributes)
-    attributes = attributes.except('pipeline_id', 'stage_id') if target_stage
+  # #2501: o funil de destino é resolvido uma vez, antes de qualquer gravação. Primeiro o funil do pedido; depois o da
+  # etapa que vai vencer (upsert_destino), que é de outro funil quando o pedido repete o funil do card e manda a etapa
+  # de outro. O Mover e o dono são conferidos contra esse destino. Devolve [etapa de destino, motivo da etapa de entrada].
+  def upsert_destino_permitido!(attributes)
+    pedido = upsert_pipeline_id(attributes)
+    muda_etapa = attributes.key?('pipeline_id') || attributes.key?('stage_id')
+    ensure_move_allowed!(@card, pedido) if muda_etapa
+    destino = upsert_destino(attributes)
+    funil = destino.first&.pipeline_id || pedido
+    ensure_move_allowed!(@card, funil) if muda_etapa && funil.to_s != pedido.to_s
+    ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: funil || @card.pipeline_id) if attributes.key?('owner_id')
+    destino
+  end
+
+  # Com funil no pedido, funil e etapa só mudam pelo Mover (upsert_destino); o update! fica com os outros campos.
+  def apply_upsert!(attributes, target_stage, etapa_de_entrada)
+    attributes = attributes.except('pipeline_id', 'stage_id') if target_stage || attributes.key?('pipeline_id')
     if attributes.present?
       @card.update!(attributes)
       ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
-    upsert_move!(target_stage) if target_stage
+    upsert_move!(target_stage, etapa_de_entrada) if target_stage
+  end
+
+  # #2501: funil novo sem uma etapa dele no pedido: o card vai para a etapa de entrada do funil (Crm::Cards::EtapaDeEntrada),
+  # e não para um erro; a resposta devolve o card com a etapa escolhida. No funil em que o card já está, sem etapa nenhuma,
+  # o card fica na etapa em que está. Devolve [etapa de destino, motivo da etapa de entrada].
+  def upsert_destino(attributes)
+    entrada = ::Crm::Cards::EtapaDeEntrada.para(account: Current.account, pipeline_id: attributes['pipeline_id'],
+                                                stage_id: attributes['stage_id'])
+    return [upsert_target_stage(attributes), nil] if entrada.nil?
+    return [entrada.stage, entrada.motivo] unless entrada.stage.pipeline_id == @card.pipeline_id
+
+    # O pedido repete o funil em que o card já está e manda uma etapa de outro funil. O funil repetido é eco do card;
+    # a etapa é o que a integração pediu. O card vai para ela, trocando de funil como no #move, com a permissão do
+    # funil da etapa, conferida em upsert_destino_permitido! junto com a do dono.
+    [upsert_target_stage(attributes), nil]
   end
 
   # #2501: mudar a etapa pelo upsert é mover. Passa pelo Mover, como o #move: grava entered_stage_at e a atividade
   # `move` e roda as automações de saída e de entrada. A etapa de outro funil, mesmo sem pipeline_id, troca o card de
-  # funil, como o #move, com a permissão do funil da etapa (ensure_move_allowed!, acima).
+  # funil, como o #move, com a permissão do funil da etapa (upsert_destino_permitido!).
   def upsert_target_stage(attributes)
     stage = Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])
     stage unless stage.nil? || stage.id == @card.stage_id
   end
 
-  # Funil pedido (pipeline_id) sem uma etapa dele: o upsert não escolhe a etapa por conta própria (a criação também exige
-  # uma) e responde 422, em vez de cair na validação do card (500). O mesmo funil do card, sem etapa, segue como sempre.
-  def upsert_sem_etapa_do_funil?(attributes)
-    pipeline_id = attributes['pipeline_id'].presence&.to_s
-    return false if pipeline_id.nil? || (attributes['stage_id'].blank? && pipeline_id == @card.pipeline_id.to_s)
-
-    Current.account.crm_pipeline_stages.find_by(id: attributes['stage_id'])&.pipeline_id&.to_s != pipeline_id
-  end
-
-  def upsert_move!(target_stage)
+  def upsert_move!(target_stage, etapa_de_entrada)
     @card = ::Crm::Cards::Mover.new(card: @card, actor: Current.user, target_stage: target_stage,
-                                    automacao: ::Autonomia::Automacao::Cadeia.automacao_livre).perform
+                                    automacao: ::Autonomia::Automacao::Cadeia.automacao_livre, etapa_de_entrada: etapa_de_entrada).perform
     broadcast_card(::Events::Types::CRM_CARD_MOVED)
   end
 
@@ -502,10 +519,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
     ensure_create_allowed!(resolved_params.to_h.with_indifferent_access, conversation)
+    resolved_params, etapa = etapa_da_criacao(resolved_params, etapa_escolhida: permitted_params[:stage_id].present?)
     if @registration
       card = @registration.perform do |contact|
         ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id),
-                                  etapa_escolhida: permitted_params[:stage_id].present?).perform
+                                  **etapa).perform
       end
       return [card, true]
     end
@@ -514,7 +532,17 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return [current, false] if current
 
     [::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation,
-                               etapa_escolhida: permitted_params[:stage_id].present?).perform, true]
+                               **etapa).perform, true]
+  end
+
+  # #2501: funil sem uma etapa dele no pedido: o card nasce na etapa de entrada do funil (Crm::Cards::EtapaDeEntrada), que
+  # não conta como etapa escolhida; o motivo fica no histórico e a resposta devolve o card com a etapa.
+  def etapa_da_criacao(resolved_params, etapa_escolhida:)
+    entrada = ::Crm::Cards::EtapaDeEntrada.para(account: Current.account, pipeline_id: resolved_params[:pipeline_id],
+                                                stage_id: resolved_params[:stage_id])
+    return [resolved_params, { etapa_escolhida: etapa_escolhida }] if entrada.nil?
+
+    [resolved_params.merge(stage_id: entrada.stage.id), { etapa_escolhida: false, etapa_de_entrada: entrada.motivo }]
   end
 
   # O card aberto da conversa no funil pedido, que o agente enxerga. Trava a conversa (como from_conversation) para duas
@@ -675,6 +703,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   def render_owner_without_funnel
     render_unprocessable(::Crm::Access::CardGuard::OwnerWithoutFunnel::CODE)
+  end
+
+  # #2501: o único pedido de funil sem resolução é o do funil sem etapa nenhuma.
+  def render_funil_sem_etapa
+    render_unprocessable(::Crm::Cards::EtapaDeEntrada::FunilSemEtapa::CODE)
   end
 
   # Recusa por funil (#1148, decisão b; #1149): quem não tem o funil do card recebe um código que a tela traduz, em

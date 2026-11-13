@@ -103,6 +103,8 @@ export const FEATURE_FLAGS = {
   AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
   // #2894 — Relacionamentos: lista, ficha e "Trazer minha lista" novas.
   RELACIONAMENTOS_NOVO: 'relacionamentos_novo',
+  // #2897 — carteira de seguros: aba Seguros, bloco na ficha e painel da conversa.
+  CARTEIRA_SEGUROS: 'carteira_seguros',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
@@ -113,6 +115,8 @@ export const FEATURE_FLAGS = {
   // Protótipo dos 6 passos novos da Automação livre (#2931–#2936, épico #2414).
   // Desligada em produção até o motor existir (config/features.yml).
   AUTOMACAO_PASSOS_NOVOS: 'automacao_passos_novos',
+  // "Automações deste card" e "desta etapa" no CRM (#2499 F6.3/F6.5): a tela e as três rotas dela.
+  AUTOMACAO_NO_CRM: 'automacao_no_crm',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

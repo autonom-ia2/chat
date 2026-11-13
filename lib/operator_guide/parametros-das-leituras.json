@@ -199,6 +199,14 @@
       "range"
     ]
   },
+  "autonomia/aprovacoes": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#index",
+    "parametros": []
+  },
+  "autonomia/aprovacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#show",
+    "parametros": []
+  },
   "autonomia/automacoes": {
     "controller": "api/v1/accounts/autonomia/automacoes#index",
     "parametros": []
@@ -1353,6 +1361,10 @@
       "params inteiro repassado a ::Crm::Cards::OrganizarPor.lista_nova?"
     ]
   },
+  "crm/cards/:card_id/automacoes": {
+    "controller": "api/v1/accounts/crm/cards/automacoes#index",
+    "parametros": []
+  },
   "crm/cards/:id": {
     "controller": "api/v1/accounts/crm/cards#show",
     "parametros": []
@@ -1791,6 +1803,10 @@
       "positions",
       "template"
     ]
+  },
+  "crm/stages/:stage_id/automacoes": {
+    "controller": "api/v1/accounts/crm/stage_automacoes#index",
+    "parametros": []
   },
   "crm/stages/:stage_id/stage_automations": {
     "controller": "api/v1/accounts/crm/stage_automations#index",
@@ -2341,6 +2357,10 @@
     "controller": "api/v1/accounts/relacionamentos/empresas#pessoas",
     "parametros": []
   },
+  "relacionamentos/empresas/:id/seguros": {
+    "controller": "api/v1/accounts/relacionamentos/empresas/seguros#index",
+    "parametros": []
+  },
   "relacionamentos/empresas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/empresas#contagens",
     "parametros": [
@@ -2392,6 +2412,10 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas#origem",
     "parametros": []
   },
+  "relacionamentos/pessoas/:id/seguros": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas/seguros#index",
+    "parametros": []
+  },
   "relacionamentos/pessoas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",
     "parametros": [
@@ -2415,6 +2439,52 @@
   "relacionamentos/resumo": {
     "controller": "api/v1/accounts/relacionamentos/resumo#show",
     "parametros": []
+  },
+  "relacionamentos/seguros": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#index",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/seguros/:id": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#show",
+    "parametros": []
+  },
+  "relacionamentos/seguros/:id/historia": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#historia",
+    "parametros": []
+  },
+  "relacionamentos/seguros/contagens": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#contagens",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
+  },
+  "relacionamentos/seguros/opcoes_de_filtro": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#opcoes_de_filtro",
+    "parametros": []
+  },
+  "relacionamentos/seguros/resumo": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#resumo",
+    "parametros": []
+  },
+  "relacionamentos/seguros/todos": {
+    "controller": "api/v1/accounts/relacionamentos/seguros#todos",
+    "parametros": [
+      "busca",
+      "filtros",
+      "grupo",
+      "ordem",
+      "pagina"
+    ]
   },
   "relationships/configuration": {
     "controller": "api/v1/accounts/relationships/configurations#show",

@@ -47,6 +47,10 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::BlocoNoExecutor
   # Fechar a execução e o que vem depois de fechar (FimNoExecutor).
   include ::Autonomia::Automacao::FimNoExecutor
+  # A aprovação, a reunião e a pesquisa: perguntam e esperam a resposta (#2931, #2935, #2936).
+  include ::Autonomia::Automacao::EsperaDeResposta
+  # O que impede a execução de andar agora (impedida?, impedimento), conferido no começo e antes de cada ação.
+  include ::Autonomia::Automacao::ImpedimentoNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -112,50 +116,13 @@ class Autonomia::Automacao::Executor
     when 'lista_de_email' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeListaDeEmail, mensagem: false)
     when 'card' then passo_de_card(passo)
     when *::Autonomia::Automacao::PassosNovos::TIPOS then passo_novo(passo)
+    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then passo_que_espera(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
     else encerrar(passo['id'], 'falhou', 'tipo_desconhecido', 'falhou', 'tipo' => passo['tipo'].to_s)
     end
   end
-
-  # Fecha a execução e devolve true quando ela não pode andar agora. A execução que já não é desta rodada (a varredura a
-  # fechou como travada, alguém a desligou) para sem gravar nada na execução.
-  def impedida?(passo_id)
-    return parou_por_fora(passo_id) unless desta_rodada?
-
-    estado, motivo = impedimento
-    encerrar(passo_id, estado, motivo) if estado
-    estado.present?
-  end
-
-  # Desligada no meio da rodada: o desligar não registra a execução que está andando (o cursor dela não diz o passo,
-  # Definicao#desligar!), então o porquê fica aqui, no passo em que a rodada ia (#2750, revisão). A varredura que a
-  # fechou como travada já deixou o registro dela.
-  def parou_por_fora(passo_id)
-    @parou = true
-    desligada = Execucao.exists?(id: @execucao.id, estado: 'parada') && !@definicao.class.exists?(id: @definicao.id, ativa: true)
-    registrar(passo_id, 'pulado', 'desligada') if desligada
-    true
-  end
-
-  # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
-  def impedimento
-    return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
-    return %w[parada desligada] unless @definicao.ativa
-
-    flag = flag_desligada
-    return ['parada', flag] if flag
-    return %w[interrompida alvo_sumiu] unless alvo_da_conta?
-    return %w[parada spam] if contexto.no_spam?
-
-    motivo = motivo_de_quem_ligou
-    ['parada', pausar(motivo)] if motivo
-  end
-
-  def alvo_da_conta? = alvo.present? && contexto.conta_id == @account.id
-
-  def desta_rodada? = Execucao.exists?(id: @execucao.id, estado: 'andando', travada_em: @marca)
 
   # A rodada quebrou no meio (erro inesperado): fica o passo e a classe do erro, e a execução continua andando para a
   # varredura fechá-la como travada, sem repetir. A mensagem do erro vai só para o log: pode trazer dado do cliente.

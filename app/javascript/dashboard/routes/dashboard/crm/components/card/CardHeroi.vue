@@ -15,8 +15,9 @@ defineProps({
   voltar: { type: String, default: '' },
   // No resumo: o contato, para o selo "Cliente desde…" de quem já comprou.
   contato: { type: Object, default: null },
-  // #2710, variante 2 (protótipo só da demo): o selo "Cliente desde…" vira botão que abre a compra (o card ganho).
-  abreCompra: { type: Boolean, default: false },
+  // #2710: no card que a página de agendamento criou para quem já comprou ({ card_id, desde } do card ganho), o selo
+  // vira botão que abre a compra e mostra a mesma data do selo do quadro.
+  compra: { type: Object, default: null },
   abrindoCompra: { type: Boolean, default: false },
 });
 
@@ -80,7 +81,7 @@ defineEmits(['voltar', 'fechar', 'compra']);
           <span class="size-4 shrink-0" :class="icone" aria-hidden="true" />
           {{ rotulo }}
           <button
-            v-if="contato && abreCompra"
+            v-if="contato && compra"
             type="button"
             data-heroi-compra
             class="-my-3 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-white/80 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-wait"
@@ -88,9 +89,13 @@ defineEmits(['voltar', 'fechar', 'compra']);
             :disabled="abrindoCompra"
             @click="$emit('compra')"
           >
-            <CustomerBadge :contact="contato" show-since data-heroi-cliente />
+            <CustomerBadge
+              :contact="{ ...contato, customer_since: compra.desde }"
+              show-since
+              data-heroi-cliente
+            />
             <span class="sr-only">
-              {{ $t('AUTOMACAO_NO_CRM.CLIENTE.ABRIR_COMPRA') }}
+              {{ $t('CRM_CARD.JA_CLIENTE.ABRIR_COMPRA') }}
             </span>
             <span
               class="i-lucide-chevron-right size-3.5 shrink-0 rtl:rotate-180"

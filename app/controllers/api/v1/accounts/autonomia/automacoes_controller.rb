@@ -34,8 +34,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id).to_a
     semana = ::Autonomia::Automacao::Historico.semana(automacoes.map(&:id))
     pausas = ::Autonomia::Automacao::Pausa.das(automacoes)
+    # #2936: a média e quantas pessoas responderam, só nas que têm a pesquisa de satisfação.
+    pesquisas = ::Autonomia::Automacao::ResumoDaPesquisa.das(Current.account, automacoes)
     render json: { automacoes: automacoes.map do |automacao|
-      para_tela(automacao, receita: true, pausa: pausas[automacao.id]).merge(semana: semana[automacao.id])
+      para_tela(automacao, receita: true, pausa: pausas[automacao.id])
+        .merge(semana: semana[automacao.id], **{ pesquisa: pesquisas[automacao.id] }.compact)
     end }
   end
 
@@ -169,9 +172,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   # O rascunho passa pela mesma conferência do salvar (esquema + Receita); a versão salva já passou por ela, e assim o
-  # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Só gatilho de conversa: o de
-  # card espera a F3 (#2499).
+  # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Gatilho de conversa e de card
+  # (#2631); o de card pede antes a chave de funis de quem ensaia, como o salvar (D2), porque lê os cards da conta.
   def ensaiar(receita, conferir:)
+    return recusar_funil if sem_funil?(receita) && ::Autonomia::Automacao::Ensaio.de_card?(receita)
+
     problemas = problemas_do_ensaio(receita, conferir)
     return recusar_ensaio('receita_invalida', problemas) if problemas.any?
     return render(json: recorrente_no_ensaio(receita)) if ::Autonomia::Automacao::Gatilhos.recorrente?(receita.dig('gatilho', 'tipo'))

@@ -28,8 +28,16 @@ class Carteira::Apolice < ApplicationRecord
   validates :fim_vigencia, comparison: { greater_than_or_equal_to: :inicio_vigencia }, if: -> { inicio_vigencia && fim_vigencia }
   validates :valor_centavos, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validate :numero_e_chave_juntos
+  validate :pessoa_e_empresa_da_conta, if: -> { will_save_change_to_contact_id? || will_save_change_to_company_id? }
 
   private
+
+  # O banco só confere que a pessoa e a empresa existem, não de quem são: apólice de uma conta apontando para o contato
+  # de outra mostraria o seguro na ficha errada. Só confere quando um dos dois muda.
+  def pessoa_e_empresa_da_conta
+    errors.add(:contact, :invalid) if contact && contact.account_id != account_id
+    errors.add(:company, :invalid) if company && company.account_id != account_id
+  end
 
   # O número e a chave dele andam juntos, e a chave nunca é texto vazio (CHECKs `_numero` e `_chaves`).
   def numero_e_chave_juntos

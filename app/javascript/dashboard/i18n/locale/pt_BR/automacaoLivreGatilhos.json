@@ -24,7 +24,13 @@
       "CARD_ANTES_DA_REUNIAO": "Antes de uma reunião",
       "CARD_RECORRENTE": "Numa data ou de tempo em tempo, em cards",
       "CONTATO_RECORRENTE": "Numa data ou de tempo em tempo, em contatos",
-      "CONTA_RECORRENTE": "Numa data ou de tempo em tempo, na conta"
+      "CONTA_RECORRENTE": "Numa data ou de tempo em tempo, na conta",
+      "CONVERSA_RESPONSAVEL_MUDOU": "Quando muda quem atende a conversa",
+      "CONVERSA_TIME_MUDOU": "Quando muda o time da conversa",
+      "CONVERSA_ETIQUETA_POSTA": "Quando uma etiqueta é posta na conversa",
+      "CONVERSA_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada da conversa",
+      "CONTATO_ETIQUETA_POSTA": "Quando uma etiqueta é posta no contato",
+      "CONTATO_ETIQUETA_TIRADA": "Quando uma etiqueta é tirada do contato"
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
@@ -87,13 +93,15 @@
       "MUDANCA": "Mudança",
       "REPETE": "Repete",
       "PAGINA_ID": "Página de agendamento",
-      "ANTES": "Quanto tempo antes do início"
+      "ANTES": "Quanto tempo antes do início",
+      "ETIQUETA": "Etiqueta"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
       "CARD": "Card do funil",
       "REUNIAO": "Reunião",
-      "TEMPO": "Tempo"
+      "TEMPO": "Tempo",
+      "CONTATO": "Contato"
     },
     "GATILHO_COM": {
       "CARD_CRIADO": "Quando um card é criado em {funil}",
@@ -110,7 +118,11 @@
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h",
-      "CARD_ANTES_DA_REUNIAO": "{antes} antes de uma reunião"
+      "CARD_ANTES_DA_REUNIAO": "{antes} antes de uma reunião",
+      "CONVERSA_ETIQUETA_POSTA": "Quando a etiqueta {etiqueta} é posta na conversa",
+      "CONVERSA_ETIQUETA_TIRADA": "Quando a etiqueta {etiqueta} é tirada da conversa",
+      "CONTATO_ETIQUETA_POSTA": "Quando a etiqueta {etiqueta} é posta no contato",
+      "CONTATO_ETIQUETA_TIRADA": "Quando a etiqueta {etiqueta} é tirada do contato"
     },
     "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
     "GATILHO_NA_PAGINA": "{frase}, pela página {pagina}",

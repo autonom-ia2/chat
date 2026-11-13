@@ -145,6 +145,9 @@
       "file": "prospectingAchar.json"
     },
     {
+      "file": "automacaoNoCrm.json"
+    },
+    {
       "file": "relacionamentos.json"
     },
     {
@@ -152,9 +155,6 @@
     },
     {
       "file": "relacionamentosTrazer.json"
-    },
-    {
-      "file": "automacaoNoCrm.json"
     }
   ],
   "pacotes": {

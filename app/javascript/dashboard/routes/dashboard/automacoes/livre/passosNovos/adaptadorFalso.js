@@ -1,15 +1,14 @@
-// #2414 — o adaptador falso do protótipo dos passos novos (#2931–#2936): o que
-// o servidor ainda não responde para os três sem motor (#2931, #2935, #2936):
-// os horários livres, o pedido de aprovação e o ensaio. Tudo de exemplo, com
-// nomes inventados e sem chamar nada fora da tela. Os de #2932–#2934 já leem o
-// servidor (dadosDaConta).
+// #2414 — o adaptador falso dos passos novos (#2931–#2936): os exemplos das
+// prévias do painel ("Veja como fica": os horários livres, o card do pedido de
+// aprovação, a linha do histórico) e o ensaio de exemplo de um passo novo que o
+// servidor ainda não conheça. Nomes inventados, sem chamar nada fora da tela.
 import { galhosDe, todosOsPassos } from '../receita';
 import { P, ehPassoNovo, emTeste } from './passosNovos';
 
 const E = `${P}.EXEMPLO`;
 
-// Só os passos novos sem motor ainda levam o ensaio de exemplo: os de #2932–#2934
-// passam pelo servidor.
+// Só um passo novo que o servidor ainda não conhece (emTeste) faria o ensaio de
+// exemplo. Hoje nenhum: os seis vão ao ensaio de verdade.
 export const temPassoNovo = (passos = []) =>
   todosOsPassos(passos).some(emTeste);
 

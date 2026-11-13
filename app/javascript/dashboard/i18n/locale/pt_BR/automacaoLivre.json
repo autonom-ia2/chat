@@ -137,7 +137,10 @@
       "RETORNO": "Criar um retorno para a equipe",
       "LISTA_DE_EMAIL": "Pôr na lista de e-mail",
       "EM_OUTRO_REGISTRO": "Fazer no contato ou nos cards ligados",
-      "WEBHOOK": "Mandar dados para outro sistema"
+      "WEBHOOK": "Mandar dados para outro sistema",
+      "PEDIR_APROVACAO": "Pedir aprovação",
+      "MARCAR_REUNIAO": "Marcar reunião pela conversa",
+      "PESQUISA_NOTA": "Pesquisa de satisfação"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -425,7 +428,8 @@
       "NOTA_MEDIA": "Nota média",
       "NOTA_ALTA": "Nota alta",
       "DENTRO": "Dentro do bloco",
-      "CONSULTOU": "Se conseguir buscar"
+      "CONSULTOU": "Se conseguir buscar",
+      "MARCOU": "Se marcar"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",

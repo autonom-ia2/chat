@@ -12,7 +12,7 @@ import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 import CrmOriginMorePopover from './CrmOriginMorePopover.vue';
-import SeloJaCliente from './automacaoNoCrm/SeloJaCliente.vue';
+import SeloJaCliente from './SeloJaCliente.vue';
 import {
   buildCrmCardIdentity,
   crmCardIdentityLabel,
@@ -38,11 +38,7 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-  // #2710 (protótipo só da demo): { contatoId, desde } do card que a página de agendamento criou para quem já comprou.
-  jaCliente: {
-    type: Object,
-    default: null,
-  },
+  // #2710: a página está buscando a compra que o selo "Já é cliente" abre.
   abrindoJaCliente: {
     type: Boolean,
     default: false,
@@ -56,6 +52,9 @@ const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
 
 const STAGE_FALLBACK_COLOR = '#64748b';
+
+// #2710: o card que a página de agendamento criou para quem já comprou: { card_id, desde } do card ganho.
+const jaCliente = computed(() => props.card.ja_cliente || null);
 
 const railStyle = computed(() => ({
   backgroundColor: props.stageColor || STAGE_FALLBACK_COLOR,

@@ -1345,6 +1345,58 @@ describe('CardGaveta (#1423)', () => {
     );
   });
 
+  it('#2710: no card da página de agendamento, o selo do topo abre a compra', async () => {
+    // Sem customer_since no contato: o topo usa a mesma data do selo do quadro (a do ganho).
+    const cliente = { ...cardBase.contact, contact_type: 'customer' };
+    const wrapper = montar({
+      card: {
+        ...cardBase,
+        contact: cliente,
+        ja_cliente: { card_id: 41, desde: 1790000000 },
+      },
+    });
+    await flushPromises();
+    const botao = wrapper.find('[data-card-heroi] [data-heroi-compra]');
+    expect(botao.find('[data-heroi-cliente]').exists()).toBe(true);
+    const selo = botao.findComponent({ name: 'CustomerBadge' });
+    expect(selo.props('contact').customer_since).toBe(1790000000);
+    await botao.trigger('click');
+    expect(wrapper.emitted('abrirCompra')).toEqual([
+      [{ card_id: 41, desde: 1790000000 }],
+    ]);
+  });
+
+  it('#2710: enquanto a página busca a compra, o selo do topo espera', async () => {
+    const wrapper = montar({
+      abrindoCompra: true,
+      card: {
+        ...cardBase,
+        contact: { ...cardBase.contact, contact_type: 'customer' },
+        ja_cliente: { card_id: 41, desde: 1790000000 },
+      },
+    });
+    await flushPromises();
+    const botao = wrapper.find('[data-heroi-compra]');
+    expect(botao.attributes('disabled')).toBeDefined();
+    expect(botao.attributes('aria-busy')).toBe('true');
+  });
+
+  it('#2710: sem compra que a pessoa possa ver, o selo do topo não é botão', async () => {
+    const wrapper = montar({
+      card: {
+        ...cardBase,
+        contact: {
+          ...cardBase.contact,
+          contact_type: 'customer',
+          customer_since: 1790000000,
+        },
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-heroi-cliente]').exists()).toBe(true);
+    expect(wrapper.find('[data-heroi-compra]').exists()).toBe(false);
+  });
+
   it('Marcar como cliente pede confirmação e usa a mesma rota da ficha do contato', async () => {
     const wrapper = montar();
     await flushPromises();

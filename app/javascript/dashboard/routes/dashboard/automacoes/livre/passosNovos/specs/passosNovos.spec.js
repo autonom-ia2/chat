@@ -201,14 +201,47 @@ describe('a lista do "para cada um"', () => {
 });
 
 describe('o Salvar tudo com passo novo', () => {
-  it('a receita com passo novo não vai à API: o passo está em teste', () => {
+  it('a receita com passo que ainda não salva não vai à API: o passo está em teste', () => {
     const gatilho = { tipo: 'conversa.resolvida' };
-    const se = { id: 'p1', tipo: 'se', entao: [novo('pesquisa_nota')] };
+    const se = { id: 'p1', tipo: 'se', entao: [novo('usar_bloco')] };
 
     expect(falta({ gatilho, passos: [se] })).toBe('EM_TESTE');
     expect(falta({ gatilho, passos: [{ id: 'p2', tipo: 'parar' }] })).toBe(
       null
     );
+  });
+
+  it('a aprovação, a reunião e a pesquisa (#2931, #2935, #2936) já salvam', () => {
+    const gatilho = { tipo: 'conversa.resolvida' };
+
+    ['pedir_aprovacao', 'marcar_reuniao', 'pesquisa_nota'].forEach(tipo => {
+      expect(falta({ gatilho, passos: [novo(tipo)] })).toBeNull();
+    });
+  });
+});
+
+describe('o catálogo do servidor com os passos que salvam', () => {
+  it('a entrada da tela fica no lugar da do servidor, sem repetir', () => {
+    const doServidor = {
+      passos: [
+        { tipo: 'parar', campos: [] },
+        {
+          tipo: 'pedir_aprovacao',
+          frase: 'AUTOMACAO_LIVRE.PASSOS.PEDIR_APROVACAO',
+          campos: [],
+        },
+      ],
+    };
+
+    const juntos = comPassosNovos(doServidor, true).passos;
+
+    expect(juntos.filter(item => item.tipo === 'pedir_aprovacao')).toHaveLength(
+      1
+    );
+    expect(juntos.find(item => item.tipo === 'pedir_aprovacao').dica).toBe(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.APROVACAO.DICA'
+    );
+    expect(juntos[0].tipo).toBe('parar');
   });
 });
 
@@ -248,8 +281,14 @@ describe('em frase', () => {
     expect(fraseDoPasso(consulta, catalogo, t)).toContain('Status do pedido');
   });
 
-  it('sem a flag, o passo novo aparece como ação avançada', () => {
+  // #2931/#2935/#2936: o catálogo do servidor já conhece os três passos que
+  // esperam resposta; sem a flag, o Confira diz o que eles fazem. O passo que
+  // o servidor ainda não conhece aparece como ação avançada.
+  it('sem a flag, só o passo que o servidor não conhece aparece como ação avançada', () => {
     expect(fraseDoPasso(novo('pesquisa_nota'), catalogoGerado, t)).toContain(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.PESQUISA.FRASE'
+    );
+    expect(fraseDoPasso(novo('repetir_lista'), catalogoGerado, t)).toContain(
       'AUTOMACAO_LIVRE.FRASES.AVANCADA'
     );
   });
@@ -300,6 +339,8 @@ describe('ensaio pelo adaptador falso', () => {
 
     expect(temPassoNovo([se])).toBe(true);
     expect(temPassoNovo([{ id: 'p1', tipo: 'parar' }])).toBe(false);
+    // A aprovação já vai ao ensaio de verdade.
+    expect(temPassoNovo([novo('pedir_aprovacao')])).toBe(false);
   });
 
   it('os passos com motor (#2932–#2934) não passam pelo ensaio de exemplo', () => {

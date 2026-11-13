@@ -1401,16 +1401,43 @@
 
 # Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
 # passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
-# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. O servidor valida, salva, ensaia e roda os passos que
-# já têm motor (#2932 Para cada, #2933 Usar outra automação, #2934 Buscar em outro sistema); os demais seguem com a
-# trava "ainda está em teste" no salvar até o motor deles entrar. Desligada: o editor fica o de hoje e o motor recusa
-# esses passos. Uma migration aditiva (20261112092000: coluna `bloco` em autonomia_automacoes, padrão falso), inerte
-# com a flag desligada. Rollback: desligar a flag.
-# Posição 47 (70368744177664, 1 << 46), reservada com a Orquestração, logo depois da
-# agente_ferramentas_prontas_ip_proprio (#2945, 46). Flag nova entra sempre no fim do arquivo.
-# EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): esta fica DESLIGADA em produção até o motor dos 6 passos
-# estar completo. Ligada só na conta de demonstração e no painel local.
+# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Os seis salvam, rodam no motor, têm ensaio e linha no
+# histórico: Pedir aprovação, Marcar reunião e Pesquisa de satisfação (#2931, #2935, #2936) esperam a resposta da
+# pessoa; Para cada (#2932), Usar outra automação (#2933) e Buscar em outro sistema (#2934) rodam na hora. Desligada:
+# o editor fica o de hoje e o motor recusa esses passos (quem espera resposta num deles para naquele ponto, sem mandar
+# nada). Duas migrations aditivas, inertes com a flag desligada: 20261112091000 (dois índices parciais, das esperas e
+# do resumo da pesquisa) e 20261112092000 (coluna `bloco` em autonomia_automacoes, padrão falso). Rollback: desligar a
+# flag.
+# Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11, logo depois da
+# agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): fica
+# DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o Rodrigo liberar.
 - name: automacao_passos_novos
-  display_name: Automação › passos novos (em construção)
+  display_name: Automação › passos novos (aprovação, para cada, outra automação, outro sistema, reunião, pesquisa)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Automação no CRM (#2499 F6.3/F6.5, épico #2414): "Automações deste card" (o que roda no card, o que já fez e "Parar
+# para este card") e "Automações desta etapa" (a lista única da etapa no "Editar funil"). É o interruptor da tela e das
+# três rotas: GET crm/cards/:card_id/automacoes, POST crm/cards/:card_id/automacoes/:id/parar e
+# GET crm/stages/:stage_id/automacoes. Ligada (junto com automacao_motor e automacao_gatilhos): o card e a etapa mostram
+# as automações do motor novo. Desligada: as três rotas dão 404, as duas partes somem e a etapa volta ao cartão das
+# ações da etapa, como antes. Sem migration. Rollback: desligar a flag na conta.
+# Nasce ligada em todas as contas (regra de 07/11): `enabled: true` faz a conta nova nascer com ela (o ConfigLoader do
+# deploy acrescenta a flag nova ao ACCOUNT_LEVEL_FEATURE_DEFAULTS com este valor); as contas que já existem a
+# Orquestração liga depois do deploy, com backup, como as outras flags novas.
+# Posição pela ordem deste arquivo: 48 (140737488355328, 1 << 47), logo depois da automacao_passos_novos (47). As flags
+# que vierem depois entram abaixo desta, no fim do arquivo (spec/models/account_spec.rb confere o bit).
+- name: automacao_no_crm
+  display_name: Automação › no card e na etapa do CRM
+  enabled: true
+  column: feature_flags_ext_2
+
+# Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
+# Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
+# Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:
+# desligar a flag na conta. É a última entrada do arquivo: a posição dela na feature_flags_ext_2 sai da ordem de entrada
+# na main e é conferida antes do merge.
+- name: carteira_seguros
+  display_name: Relacionamentos › carteira de seguros
   enabled: false
   column: feature_flags_ext_2

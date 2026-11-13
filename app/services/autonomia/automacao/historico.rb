@@ -20,10 +20,13 @@ class Autonomia::Automacao::Historico
   # Os passos novos (#2932–#2934): a lista do "para cada" (de onde vem e o teto); a execução do bloco (`filha_id`, para o
   # "Ver o que aconteceu dentro"); os nomes que a pessoa deu aos dados buscados (`guardados`, `ausentes`), nunca o
   # endereço nem o valor.
+  # #2931/#2935/#2936: quem respondeu o pedido de aprovação e o motivo da recusa (texto da equipe, não da conversa), o
+  # horário e o id da reunião marcada, e a nota da pesquisa.
   CHAVES = %w[ramo ate sem_prazo conferir_as vez volta tentativa ia conversa_principal_do_card conversas_fora numero_novo
-              lista teto filha_id guardados ausentes].freeze
-  # Estas apontam para dentro da conversa: só saem para quem a enxerga.
-  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta].freeze
+              lista teto filha_id guardados ausentes por_nome motivo_da_recusa horario reuniao_id nota].freeze
+  # Estas apontam para dentro da conversa: só saem para quem a enxerga. O comentário da pesquisa (#2936) é o que o cliente
+  # escreveu, resumido pela IA.
+  CHAVES_DA_CONVERSA = %w[mensagem_id nota_id conversa_aberta comentario].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
   IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
   # O valor em dinheiro é custo da conta: só sai com `com_valores` (administrador ou financial_view, #1969, #2557). Os
@@ -45,6 +48,16 @@ class Autonomia::Automacao::Historico
       semana[id][:rodou] += total
       semana[id][:parou] += total if PAROU.include?(estado)
     end
+  end
+
+  # Até quando espera. Sem prazo (#2750), o `due_at` é só a próxima conferência do motor, não uma hora para mostrar: sai
+  # `esperando_sem_prazo`. O registro da espera diz qual é (o da execução aberta não sai pela limpeza). As "Automações
+  # deste card" (#2499 F6.3, NoCard) dizem a espera do mesmo jeito.
+  def self.espera(execucao, registros)
+    return { esperando_ate: nil } unless execucao.estado == 'esperando'
+    return { esperando_ate: nil, esperando_sem_prazo: true } if registros.any? { |r| r.passo == execucao.cursor && r.dados['sem_prazo'] }
+
+    { esperando_ate: execucao.due_at }
   end
 
   def initialize(automacao:, usuario:, com_valores: false, pagina: 1)
@@ -117,19 +130,10 @@ class Autonomia::Automacao::Historico
     conversa = visiveis[execucao.alvo_id] if execucao.alvo_type == 'Conversation'
     {
       id: execucao.id, estado: execucao.estado, versao_id: execucao.versao_id, criada_em: execucao.created_at,
-      finalizada_em: execucao.finalizada_em, **espera(execucao, registros),
+      finalizada_em: execucao.finalizada_em, **self.class.espera(execucao, registros),
       alvo: conversa ? alvo_conversa(conversa) : outro_alvo(execucao, outros[[execucao.alvo_type, execucao.alvo_id]]),
       passos: registros.map { |registro| passo(registro, visivel: conversa.present?) }
     }
-  end
-
-  # Até quando espera. Sem prazo (#2750), o `due_at` é só a próxima conferência do motor, não uma hora para mostrar: sai
-  # `esperando_sem_prazo`. O registro da espera diz qual é (o da execução aberta não sai pela limpeza).
-  def espera(execucao, registros)
-    return { esperando_ate: nil } unless execucao.estado == 'esperando'
-    return { esperando_ate: nil, esperando_sem_prazo: true } if registros.any? { |r| r.passo == execucao.cursor && r.dados['sem_prazo'] }
-
-    { esperando_ate: execucao.due_at }
   end
 
   def alvo_conversa(conversa)

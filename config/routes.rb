@@ -350,6 +350,10 @@ Rails.application.routes.draw do
             resources :stage_automations, only: [:show, :update, :destroy] do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
+            # #2499 F6.5/F6.3: as automações do motor novo na etapa e no card (o que roda, o que já fez, parar só no card).
+            get 'stages/:stage_id/automacoes', to: 'stage_automacoes#index'
+            get 'cards/:card_id/automacoes', to: 'cards/automacoes#index'
+            post 'cards/:card_id/automacoes/:id/parar', to: 'cards/automacoes#parar'
             post 'cards/bulk', to: 'cards/bulk#create'
             # Excluir de vez cards arquivados (#2096), um ou vários, só administrador.
             post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'
@@ -774,6 +778,10 @@ Rails.application.routes.draw do
                 post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
               end
             end
+            # #2931 — os pedidos do passo "Pedir aprovação", do lado de quem aprova.
+            resources :aprovacoes, only: [:index, :show] do
+              post :responder, on: :member
+            end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
             get 'pendencias_do_guia', to: 'pendencias_do_guia#index'
@@ -1140,6 +1148,26 @@ Rails.application.routes.draw do
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
             post :apagar, to: 'apagar#create'
+            # #2897 — carteira de seguros (chave carteira_seguros, só em conta corretora de seguros; 404 sem isso): a aba
+            # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
+            resources :seguros, only: [:index, :show, :update] do
+              collection do
+                get :todos
+                get :contagens
+                get :resumo
+                get :opcoes_de_filtro
+              end
+              member do
+                get :historia
+                post :cancelar
+                post :voltar_a_ativo
+                get :pdf, to: 'seguros/pdf#show'
+                post :pdf, to: 'seguros/pdf#create'
+                delete :pdf, to: 'seguros/pdf#destroy'
+              end
+            end
+            get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
+            get 'empresas/:id/seguros', to: 'empresas/seguros#index' if ChatwootApp.enterprise?
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

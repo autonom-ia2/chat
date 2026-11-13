@@ -6,6 +6,7 @@
 # trazem também os dias, o campo de data, antes ou depois e a hora.
 # G12: o de reunião marca `reunioes` — o editor só oferece com as reuniões da instalação ligadas.
 # G50: o que aceita "começa outra vez" quando se repete marca `se_repetir` — só nele o editor pergunta.
+# G10 (F8.7): o de contato que vem de evento (a etiqueta) fica no grupo Contato e pede a flag da F6, como o contato.data.
 module Autonomia::Automacao::CatalogoDoEsquema
   module_function
 
@@ -14,7 +15,7 @@ module Autonomia::Automacao::CatalogoDoEsquema
       card = ::Autonomia::Automacao::Gatilhos.do_card?(tipo)
       tempo = ::Autonomia::Automacao::Gatilhos.de_tempo?(tipo)
       { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
-        'grupo' => grupo(tipo, card, tempo), 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card || tempo),
+        'grupo' => grupo(tipo, card, tempo), 'requer' => requer(tipo, card, tempo),
         'funil' => (true if card), 'reunioes' => (true if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)),
         'se_repetir' => (true if ::Autonomia::Automacao::Gatilhos.pode_repetir?(tipo)),
         'parametros' => parametros(esquema, tipo).presence,
@@ -22,11 +23,17 @@ module Autonomia::Automacao::CatalogoDoEsquema
     end
   end
 
+  # A flag da F6: os de card, os de tempo e os de contato.
+  def requer(tipo, card, tempo)
+    ::Autonomia::Automacao::Motor::FLAG_GATILHOS if card || tempo || ::Autonomia::Automacao::Gatilhos.do_contato?(tipo)
+  end
+
   # A reunião (G12) é do card, mas fica num grupo próprio no editor: quem procura "reunião" não pensa em "card do funil".
   # #2499 PR3: os de tempo (inclusive o card parado e a data do card) ficam no grupo Tempo.
   def grupo(tipo, card, tempo)
     return 'reuniao' if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
     return 'tempo' if tempo
+    return 'contato' if ::Autonomia::Automacao::Gatilhos.do_contato?(tipo)
 
     card ? 'card' : 'conversa'
   end
@@ -54,6 +61,15 @@ module Autonomia::Automacao::CatalogoDoEsquema
       ops = forma.dig('properties', 'op', 'enum')
       ops&.map { |op| { 'op' => op, 'pede_valor' => forma['required'].include?('valor'), 'frase' => chave('OPERADORES', op) } }
     end.flatten
+  end
+
+  # #2414: os campos do passo novo (aprovação, reunião, pesquisa): uma peça só, com o rótulo dela, e os galhos, que o
+  # Confira mostra como os do "se".
+  def passo_novo(forma)
+    peca = ::Autonomia::Automacao::Catalogo::PASSO_NOVO
+    galhos = forma['properties'].select { |_nome, propriedade| propriedade['$ref'].to_s.end_with?('/passos_opcionais') }.keys
+    [{ 'nome' => peca, 'peca' => peca, 'obrigatorio' => true, 'rotulo' => chave('PASSOS_NOVOS', 'MONTAR') },
+     *galhos.map { |galho| { 'nome' => galho, 'peca' => 'passos', 'obrigatorio' => false } }]
   end
 
   def chave(*partes) = ::Autonomia::Automacao::Catalogo.chave(*partes)

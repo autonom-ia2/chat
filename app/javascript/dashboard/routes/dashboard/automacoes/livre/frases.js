@@ -38,6 +38,8 @@ const VALOR_DA_PECA = {
       ? t(`AUTOMACAO_LIVRE.QUANDO_DA_DATA.${valor.toUpperCase()}`)
       : undefined,
   campo: (valor, t, nomes, alvo) => nomes.campo?.[alvo]?.[valor],
+  // G10 (F8.7): a etiqueta já é o nome.
+  etiqueta: valor => valor || undefined,
   // #2709: o lembrete diz quanto tempo antes da reunião ("1 dia").
   antes: (valor, t) =>
     Number.isInteger(valor?.valor) && valor?.unidade

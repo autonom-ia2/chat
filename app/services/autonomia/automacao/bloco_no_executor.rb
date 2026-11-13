@@ -1,7 +1,7 @@
 # Os passos novos com motor (#2932–#2934) no Executor, e o "usar outra automação" (#2933), que espera o bloco.
 #
 # Sem a flag `automacao_passos_novos` (rollback), a execução que chega num deles para ali, com o motivo, e a filha da
-# lista ou a execução do bloco já abertas param na reconferência (Executor#impedimento, `flag_desligada`): nada dos
+# lista ou a execução do bloco já abertas param na reconferência (ImpedimentoNoExecutor#impedimento, `flag_desligada`): nada dos
 # passos novos roda pela metade. O "para cada" e o "buscar em outro sistema" seguem pela porta da ação (PassoDeAcao); o "usar
 # outra automação" fica aqui, porque espera.
 #

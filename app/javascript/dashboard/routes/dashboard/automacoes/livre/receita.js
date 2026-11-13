@@ -178,10 +178,10 @@ const incompleto = passo => {
 };
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
-// e "Esperar até" completos. Protótipo #2931, #2935, #2936: o servidor ainda não
-// conhece esses três passos novos, então a receita com um deles não vai à API
-// (o Salvar tudo e o Ligar ficam desligados e dizem que o passo está em teste).
-// Os três com motor (#2932–#2934) salvam como qualquer passo.
+// e "Esperar até" completos. Os seis passos novos (#2931–#2936) salvam como
+// qualquer passo; a trava EM_TESTE fica para um passo novo que o servidor ainda
+// não conheça (emTeste): a receita com ele não vai à API, e o Salvar tudo e o
+// Ligar dizem que o passo está em teste.
 export const falta = receita => {
   if (!receita?.gatilho?.tipo) return 'GATILHO';
   if (!receita.passos?.length) return 'PASSO';

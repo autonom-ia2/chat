@@ -7,8 +7,9 @@ import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
 import { acharPasso } from '../receita';
-import { chaveDoNome } from '../passosNovos/passosNovos';
+import { RAMOS_QUE_SALVAM, chaveDoNome } from '../passosNovos/passosNovos';
 import { abaixoDoMinimo, dolares } from '../custoDaIa';
+import { detalheDoHistorico } from '../passosNovos/frasesDosNovos';
 
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
@@ -61,6 +62,10 @@ const RAMO = {
   se_recusar: 'SE_RECUSAR',
   // #2934: a busca em outro sistema não deu.
   nao_consultou: 'NAO_CONSULTOU',
+  // #2931/#2935/#2936: os galhos da aprovação, da reunião e da pesquisa.
+  ...Object.fromEntries(
+    RAMOS_QUE_SALVAM.map(ramo => [ramo, ramo.toUpperCase()])
+  ),
 };
 
 const hora = iso =>
@@ -360,6 +365,18 @@ onMounted(() => carregar());
                         ramo: ramoDe(execucao, passo),
                       })
                     }}
+                  </span>
+                  <span
+                    v-for="(linha, i) in detalheDoHistorico(
+                      passo.dados,
+                      t,
+                      hora
+                    )"
+                    :key="`detalhe-${i}`"
+                    data-detalhe
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ linha }}
                   </span>
                   <span
                     v-if="passo.dados.sem_prazo"

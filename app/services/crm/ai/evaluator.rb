@@ -276,11 +276,12 @@ module Crm
       end
 
       # A linha do tempo do card: a etapa escolhida por uma pessoa (mover no quadro, em lote ou aceitando uma sugestão;
-      # reabrir; criar o card escolhendo a etapa, Crm::Cards::Creator `etapa_escolhida`).
+      # reabrir; criar o card escolhendo a etapa, Crm::Cards::Creator `etapa_escolhida`). A etapa de entrada do pedido da
+      # API sem etapa (#2501) não conta, na criação nem no upsert (MovimentoDaAutomacao.escolhas_da_pessoa).
       def pessoa_mexeu_na_etapa?
         return false if @trigger == 'manual'
 
-        da_pessoa = MovimentoDaAutomacao.sem_automacao(
+        da_pessoa = MovimentoDaAutomacao.escolhas_da_pessoa(
           Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user', created_at: RESPEITO_AO_MOVIMENTO.ago..)
         )
         criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)

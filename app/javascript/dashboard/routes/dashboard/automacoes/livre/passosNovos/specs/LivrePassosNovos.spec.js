@@ -8,12 +8,7 @@ import LivrePesquisa from '../LivrePesquisa.vue';
 import LivreAprovacao from '../LivreAprovacao.vue';
 import LivrePedidoAprovacao from '../LivrePedidoAprovacao.vue';
 import LivreSeletorPasso from '../../components/LivreSeletorPasso.vue';
-import {
-  PASSOS_NOVOS,
-  comPassosNovos,
-  novoPassoNovo,
-  temMotor,
-} from '../passosNovos';
+import { PASSOS_NOVOS, comPassosNovos, novoPassoNovo } from '../passosNovos';
 import * as servidor from '../dadosDaConta';
 
 // Protótipo #2931–#2936 — as telas dos passos novos: cada uma começa pronta,
@@ -185,7 +180,7 @@ const novo = tipo => novoPassoNovo(tipo, 'p9', t);
 
 describe('LivrePassoNovo', () => {
   it.each(Object.keys(PASSOS_NOVOS))(
-    '%s: mostra o formulário, o aviso de teste (só sem motor) e a prévia',
+    '%s: mostra o formulário e a prévia, sem o aviso de teste (os seis salvam)',
     tipo => {
       const tela = montar(LivrePassoNovo, {
         modelValue: novo(tipo),
@@ -196,7 +191,7 @@ describe('LivrePassoNovo', () => {
       });
 
       expect(tela.find(`[data-passo-novo="${tipo}"]`).exists()).toBe(true);
-      expect(tela.find('[data-em-teste]').exists()).toBe(!temMotor({ tipo }));
+      expect(tela.find('[data-em-teste]').exists()).toBe(false);
       expect(tela.find('[data-previa-ensaio]').text()).not.toBe('');
       expect(tela.find('[data-previa-historico]').text()).not.toBe('');
     }
