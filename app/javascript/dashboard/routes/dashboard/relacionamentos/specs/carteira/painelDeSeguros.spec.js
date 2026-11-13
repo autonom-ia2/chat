@@ -234,8 +234,9 @@ describe('os seguros de quem está na conversa', () => {
     expect(primeira.get(daCarteira('selo')).attributes('data-selo')).toBe(
       'verde'
     );
+    // Como o "Cancelado em": dia e mês, sem o ano.
     expect(textoDe(primeira, daCarteira('painel-quando'))).toBe(
-      'Renovado em 10/11/2026'
+      'Renovado em 10/11'
     );
     expect(primeira.text()).not.toContain('RELACIONAMENTOS');
   });
