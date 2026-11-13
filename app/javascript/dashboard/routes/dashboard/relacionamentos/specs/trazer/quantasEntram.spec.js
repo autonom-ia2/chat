@@ -109,14 +109,31 @@ describe('fonte real: "ficar com esta" lê a leitura de novo', () => {
     expect(reaberta.problemas[1].estado).toBe('deixado');
   });
 
-  it('se a leitura de novo falha, vale o que o conserto devolveu (ele já está salvo)', async () => {
-    const { fonte } = await comGrupo();
-    responde('consertar', { problema: FICOU, entram: 195 });
-    TrazerAPI.leitura.mockRejectedValueOnce(semRede());
-    const nova = await fonte.consertar(812, 143, 143);
-    expect(nova.problemas[0]).toEqual(FICOU);
-    expect(nova.resumo.entram).toBe(195);
-  });
+  // O conserto está salvo, mas a outra linha do grupo ainda aparece aberta na
+  // leitura que a fonte tem: ela não a devolve como se estivesse em dia.
+  it.each([
+    ['a rede cai', () => TrazerAPI.leitura.mockRejectedValueOnce(semRede())],
+    [
+      'o servidor falha',
+      () => TrazerAPI.leitura.mockRejectedValueOnce(erroHttp(500)),
+    ],
+    [
+      'a leitura não volta pronta',
+      () => responde('leitura', { id: 812, situacao: 'lendo' }),
+    ],
+  ])(
+    'se a leitura de novo não vem (%s), devolve o marcador `lendo`: a tela pergunta de novo',
+    async (_caso, semALeitura) => {
+      const { fonte } = await comGrupo();
+      responde('consertar', { problema: FICOU, entram: 195 });
+      semALeitura();
+      expect(await fonte.consertar(812, 143, 143)).toEqual({
+        situacao: 'lendo',
+        id: 812,
+      });
+      expect(TrazerAPI.consertar).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it('o conserto que o servidor recusa não lê nada de novo', async () => {
     const { fonte } = await comGrupo();

@@ -281,6 +281,27 @@ describe('a tela espera a leitura de novo depois da escrita', () => {
     expect(tela.leitura.value).toEqual(SEM_CEL);
   });
 
+  // "Ficar com esta" numa linha repetida: o conserto está salvo, mas a fonte não
+  // conseguiu ler de novo como ficaram as outras linhas e devolve o marcador.
+  it('"ficar com esta" sem a leitura de novo: fica "releitura parada", sem dizer que não salvou nem mostrar a lista velha', async () => {
+    const { tela, fonte, avisar } = await noConferir(lida(), {
+      consertar: vi.fn().mockResolvedValue(MARCADOR_DA_TELA),
+      retomar: vi
+        .fn()
+        .mockRejectedValueOnce(PENDENTE)
+        .mockResolvedValueOnce(SEM_CEL),
+    });
+    await tela.guardar(143, 143);
+    expect(fonte.retomar).toHaveBeenCalledWith('l1');
+    expect(tela.releituraParada.value).toBe(true);
+    expect(tela.recusaDoConserto.value).toBeNull();
+    expect(avisar).not.toHaveBeenCalled();
+    await tela.tentarDeNovo();
+    expect(fonte.consertar).toHaveBeenCalledTimes(1);
+    expect(tela.releituraParada.value).toBe(false);
+    expect(tela.leitura.value).toEqual(SEM_CEL);
+  });
+
   it('a resposta que faz ler de novo: a espera falha e, ao tentar de novo, a tela segue para o Conferir', async () => {
     const comPerguntas = lida({ perguntas: PERGUNTAS_DA_TELA });
     const fonte = fonteDeMentira({

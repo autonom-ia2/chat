@@ -263,16 +263,22 @@ const escritasDaLeitura = guardadas => {
 
 // "Ficar com esta" numa linha repetida deixa de fora, no servidor, todas as
 // outras linhas da mesma pessoa (até uma escolha anterior), e a resposta só
-// traz a linha tocada: a leitura é pedida de novo. Se esse pedido falha, vale
-// a linha que o conserto devolveu (ele já está salvo).
-const relerDepoisDeFicarCom = async (guardadas, id, comALinha) => {
+// traz a linha tocada: a leitura é pedida de novo. Se esse pedido falha, ou a
+// leitura não volta pronta, o conserto já está salvo mas a tela não sabe como
+// ficaram as outras linhas: volta o marcador `lendo`, o mesmo de uma escrita
+// que faz o servidor ler de novo. A tela pergunta pela leitura outra vez e, se
+// não conseguir, diz que parou e oferece tentar de novo (`releituraParada`),
+// em vez de seguir mostrando como abertas as linhas que o servidor já deixou
+// de fora.
+const relerDepoisDeFicarCom = async (guardadas, id) => {
+  const desatualizada = { situacao: SITUACAO_DA_LEITURA.LENDO, id };
   try {
     const resposta = await leituraNoServidor(id, PRIMEIRA_PAGINA);
     return resposta.situacao === SITUACAO_DA_LEITURA.PRONTA
       ? guardadas.guardarAPrimeiraPagina(id, resposta)
-      : comALinha;
+      : desatualizada;
   } catch {
-    return comALinha;
+    return desatualizada;
   }
 };
 
@@ -312,9 +318,7 @@ const escritasDeLinha = guardadas => {
       const comALinha = await escreverNaLinha(leituraId, linha, problema =>
         TrazerAPI.consertar(leituraId, linha, corpoDoConserto(problema, valor))
       );
-      return repetida
-        ? relerDepoisDeFicarCom(guardadas, leituraId, comALinha)
-        : comALinha;
+      return repetida ? relerDepoisDeFicarCom(guardadas, leituraId) : comALinha;
     },
     deixarDeFora: (leituraId, linha) =>
       escreverNaLinha(leituraId, linha, () =>
