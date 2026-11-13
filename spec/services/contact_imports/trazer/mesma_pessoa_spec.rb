@@ -100,4 +100,34 @@ RSpec.describe ContactImports::Trazer::MesmaPessoa, :aggregate_failures do
     expect(juntadas).to eq(0)
     expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, ['formula_detected']]])
   end
+
+  # E4 (#2897): na planilha que traz seguros cada linha é um seguro da pessoa.
+  describe 'sem juntar (a planilha que traz seguros)' do
+    def resolver_sem_juntar(linhas)
+      [described_class.new(linhas, juntar: false).call, linhas]
+    end
+
+    it 'as três linhas da mesma pessoa ficam na lista, como vieram, e nenhuma é contada como juntada' do
+      juntadas, linhas = resolver_sem_juntar([
+                                               linha(2, nome: 'Ana Albuquerino', telefone: '+5511987650001', extras: { 'Apólice' => 'EX-001234' }),
+                                               linha(3, nome: 'Ana Albuquerino', telefone: '+5511987650001', email: 'ana@exemplo.com.br',
+                                                        extras: { 'Apólice' => 'EX-005678' }),
+                                               linha(4, nome: 'Ana Albuquerino', email: 'ANA@exemplo.com.br', extras: { 'Apólice' => 'VD-000042' })
+                                             ])
+
+      expect(juntadas).to eq(0)
+      expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, []], [4, []]])
+      expect(linhas.pluck(:email)).to eq([nil, 'ana@exemplo.com.br', 'ANA@exemplo.com.br'])
+      expect(linhas.pluck(:extra_values)).to eq([{ 'Apólice' => 'EX-001234' }, { 'Apólice' => 'EX-005678' }, { 'Apólice' => 'VD-000042' }])
+    end
+
+    it 'o dado em conflito continua virando problema na segunda linha' do
+      juntadas, linhas = resolver_sem_juntar([linha(2, nome: 'Ana Albuquerino', telefone: '+5511987650001'),
+                                              linha(3, nome: 'Bruno Brandolim', telefone: '+5511987650001')])
+
+      expect(juntadas).to eq(0)
+      expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, ['duplicate_phone_in_file']]])
+      expect(linhas.last[:outra]).to equal(linhas.first)
+    end
+  end
 end
