@@ -270,27 +270,22 @@ Ressalvas:
 
 ## FIPE pela placa ou pelo chassi (#2993)
 
-O agente manda a placa (ou o chassi) e recebe a placa, o chassi, a marca, o modelo, os anos e as versões na tabela
-FIPE, cada uma com o valor do mês. Quem responde é uma fonte parceira (`fontes/fipe/pela_placa.rb`), com o cadastro da
-plataforma. Quem é a fonte, os endereços dela e o cadastro não ficam no repositório.
+Quando configurada, a consulta devolve os dados do veículo para o registro da equipe. O agente não deve dizer ao
+cliente o chassi nem a placa achada pelo chassi. A identidade da fonte, os endereços e o cadastro ficam fora do repositório.
 
-- **O que precisa estar no ambiente:** `PRONTAS_VEICULO_FONTE`, um JSON de uma linha com os endereços `passe`,
-  `entrada`, `placa` e `chassi` (todos HTTPS) e o `corpo` do cadastro que a entrada pede. Faltando a variável, um
-  endereço ou o corpo, a consulta `veiculo` não é oferecida ao agente e o card segue com marcas, modelos e preço.
-- **Quantas chamadas:** com o acesso guardado (vale 50 minutos por processo), 1 pela placa e 2 pelo chassi; sem ele,
-  mais 2 (o passe e a entrada). Depois, o valor do mês de até 2 versões sai da consulta de preço da própria FIPE (do
-  cache, ou 1 chamada à BrasilAPI por versão; com ela fora, 2 ou 3 na parallelum).
-- **O valor não é o da fonte.** Ela devolve um valor por versão que não é o da tabela do mês (conferido em
-  13/11/2026: 170.086 lá, 163.320 na FIPE de novembro, mesmo código e ano). O valor que vai ao agente é o da FIPE.
+- **Configuração:** `PRONTAS_VEICULO_FONTE` contém os endereços e o corpo do cadastro. Sem configuração válida, a
+  consulta `veiculo` não é oferecida; o card segue com marcas, modelos e preço. Um aviso indica só o campo inválido,
+  uma vez por processo.
+- **Valor do mês:** vem da consulta de preço da FIPE, para até duas versões. Sem ele, o veículo ainda é entregue,
+  mas a resposta não fica no cache para permitir nova tentativa.
+- **Falhas:** veículo ausente orienta a conferir o dado e seguir pedindo marca, modelo e ano. Falhas de autenticação
+  têm motivo próprio. O aviso da fonte traz só o nome interno do provedor e o status, sem o dado consultado.
 - **Placa e chassi vão os dois na resposta**, venha o pedido por um ou pelo outro (decisão do Rodrigo, 13/11/2026).
   Dado de pessoa não vem: esta consulta é só do veículo.
-- **Erros conferidos em 13/11/2026:** placa que a fonte não acha, HTTP 400; chassi que ela não acha, HTTP 450. Os dois
-  viram "não encontrado", com a orientação de conferir o dado e seguir pedindo marca, modelo e ano. Acesso vencido,
-  401: entra de novo, uma vez. Falha na entrada vira o motivo `veiculo_pela_placa.entrada.<motivo>` no contador.
 - **Tipo do veículo:** sai do primeiro dígito do código FIPE (0 carro, 5 caminhão, 8 moto), conferido na tabela
   pública em 13/11/2026. Código com outro começo vai sem o tipo.
-- **Desligar sem deploy:** o host da consulta em `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS`. Tirar a variável do ambiente
-  também desliga, no deploy seguinte.
+- **Desligar sem deploy:** o host da consulta em `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS` impede também a autenticação.
+  Tirar a variável do ambiente deixa a consulta indisponível no deploy seguinte.
 
 ## FIPE pelo nome: quantas chamadas uma pergunta gasta (regra "QI 70", #2858)
 

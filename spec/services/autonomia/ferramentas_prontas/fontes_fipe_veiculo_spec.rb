@@ -144,7 +144,9 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(tipos).to eq(['motos', 'caminhoes', nil])
     end
 
-    it 'a placa que a fonte nao acha (400) e o chassi que ela nao acha (450): nao encontrado, com o que fazer' do
+    it 'veículo não encontrado: orienta o agente e avisa o status sem expor os dados consultados' do
+      avisos = []
+      allow(Rails.logger).to receive(:warn) { |mensagem| avisos << mensagem }
       fonte_recusa(placa, 400, 'nao achei')
       fonte_recusa(chassi, 450, 'nao achei')
 
@@ -154,6 +156,8 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(pela_placa).to include('situacao' => 'nao_encontrado', 'orientacao' => fipe::VEICULO_NAO_ENCONTRADO)
       expect(pelo_chassi).to include('situacao' => 'nao_encontrado', 'orientacao' => fipe::VEICULO_NAO_ENCONTRADO)
       expect(a_request(:get, /brasilapi|parallelum/)).not_to have_been_made
+      expect(avisos).to eq(['[autonomia][pronta] veiculo_pela_placa não encontrado status=400',
+                            '[autonomia][pronta] veiculo_pela_placa não encontrado status=450'])
     end
 
     it 'sem placa e sem chassi, ou com a placa fora do formato: pedido invalido na placa, e nada sai para a rede' do
@@ -230,6 +234,46 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
                                                           'chassi' => include('type' => %w[string null]))
     end
 
+    it 'o schema aceita tipo nulo, mas marcas, modelos e preço continuam exigindo tipo' do
+      schema = fipe::FONTE.openai_schema(slug: 'pronta_fipe', usar_quando: '')
+
+      expect(schema[:parameters][:properties]['tipo']['type']).to eq(%w[string null])
+      %w[marcas modelos preco].each do |nome|
+        expect(fipe::FONTE.consulta(nome).conferir({}).last.campo).to eq('tipo')
+      end
+    end
+
+    it 'a descrição instrui o agente a guardar os identificadores só para a equipe' do
+      schema = fipe::FONTE.openai_schema(slug: 'pronta_fipe', usar_quando: '')
+
+      expect(schema[:description]).to include(
+        'A placa e o chassi devolvidos são para o registro da equipe.',
+        'Nunca diga ao cliente o chassi, nem a placa achada pelo chassi'
+      )
+    end
+
+    it 'inspect e to_s escondem o cadastro e o acesso usados na consulta' do
+      fonte_responde(placa, da_placa)
+      fonte_responde(preco, da_fipe)
+      cliente = Autonomia::FerramentasProntas::ClienteHttp.new(hosts: [],
+                                                               prazo_final: Autonomia::FerramentasProntas::ClienteHttp.agora + 5)
+      consulta = provedor.new(cliente, prazo: 3)
+      consulta.consultar(nil, 'placa' => 'ABC1D23')
+
+      expect(consulta.inspect).to eq("#<#{provedor.name} [REDACTED]>")
+      expect(consulta.to_s).to eq(consulta.inspect)
+    end
+
+    it 'com o host da consulta desligado, nem a entrada sai para a rede' do
+      with_modified_env(AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS: 'veiculos.exemplo.test') do
+        saida = veiculo('placa' => 'ABC1D23')
+
+        expect(saida['situacao']).to eq('nao_consegui_consultar')
+        expect(Autonomia::FerramentasProntas::Uso.sole.motivos).to eq('veiculo_pela_placa.provedor_desligado' => 1)
+        expect(a_request(:any, ->(uri) { %w[veiculos.exemplo.test passe.exemplo.test].include?(uri.host) })).not_to have_been_made
+      end
+    end
+
     it 'o login so sai pelo IP do servidor: o POST a um host que nao e de cadastro e recusado' do
       cliente = Autonomia::FerramentasProntas::ClienteHttp.new(hosts: ['veiculos.exemplo.test'], conta: account.id,
                                                                prazo_final: Autonomia::FerramentasProntas::ClienteHttp.agora + 5)
@@ -251,6 +295,24 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(schema[:parameters][:properties]['tipo']['type']).to eq('string')
     end
 
+    it 'o schema exige tipo como string nas três consultas restantes' do
+      schema = fipe::FONTE.openai_schema(slug: 'pronta_fipe', usar_quando: '')
+
+      expect(schema[:parameters][:properties]['tipo']['type']).to eq('string')
+      expect(schema[:parameters][:properties]['tipo']['enum']).to eq(fipe::TIPOS)
+      %w[marcas modelos preco].each do |nome|
+        expect(fipe::FONTE.consulta(nome).conferir({}).last.campo).to eq('tipo')
+      end
+    end
+
+    it 'a variável ausente não gera aviso' do
+      allow(Rails.logger).to receive(:warn)
+
+      3.times { provedor.cadastro }
+
+      expect(Rails.logger).not_to have_received(:warn)
+    end
+
     it 'o pedido de veiculo que chegar mesmo assim e recusado, sem ir a rede' do
       expect(veiculo('placa' => 'ABC1D23')).to include('situacao' => 'pedido_invalido', 'campo' => 'consulta')
       expect(a_request(:any, /veiculos|passe/)).not_to have_been_made
@@ -267,6 +329,44 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
 
       expect(configurados).to all(be(false))
       expect(with_modified_env(cadastro) { provedor.configurado? }).to be(true)
+    end
+  end
+
+  describe 'aviso de cadastro inválido' do
+    around do |example|
+      avisado = provedor.instance_variable_get(:@cadastro_avisado)
+      provedor.instance_variable_set(:@cadastro_avisado, nil)
+      example.run
+    ensure
+      provedor.instance_variable_set(:@cadastro_avisado, avisado)
+    end
+
+    { 'json' => 'PRONTAS_VEICULO_FONTE', 'objeto' => 'PRONTAS_VEICULO_FONTE',
+      'corpo_ausente' => 'corpo', 'corpo_vazio' => 'corpo', 'corpo_invalido' => 'corpo', 'passe' => 'passe',
+      'porta' => 'entrada', 'host' => 'entrada', 'usuario' => 'entrada', 'placa' => 'placa', 'chassi' => 'chassi',
+      'endereco_ausente' => 'chassi' }.each do |caso, campo|
+      it "avisa uma vez, só com o nome do campo: #{caso}" do
+        invalidos = {
+          'json' => 'cadastro-secreto-inválido', 'objeto' => ['segredo'].to_json,
+          'corpo_ausente' => fonte.except(:corpo).to_json, 'corpo_vazio' => fonte.merge(corpo: {}).to_json,
+          'corpo_invalido' => fonte.merge(corpo: 'segredo').to_json,
+          'passe' => fonte.merge(passe: 'http://passe.exemplo.test/bilhete').to_json,
+          'porta' => fonte.merge(entrada: 'https://veiculos.exemplo.test:8443/acesso').to_json,
+          'host' => fonte.merge(entrada: 'https:/acesso').to_json,
+          'usuario' => fonte.merge(entrada: 'https://alguem:segredo@veiculos.exemplo.test/acesso').to_json,
+          'placa' => fonte.merge(placa: 'https://veiculos.exemplo.test/placa').to_json,
+          'chassi' => fonte.merge(chassi: 'https://veiculos.exemplo.test/chassi').to_json,
+          'endereco_ausente' => fonte.except(:chassi).to_json
+        }
+        avisos = []
+        allow(Rails.logger).to receive(:warn) { |mensagem| avisos << mensagem }
+
+        with_modified_env(PRONTAS_VEICULO_FONTE: invalidos.fetch(caso)) do
+          expect(Array.new(3) { provedor.cadastro }).to eq([nil, nil, nil])
+        end
+
+        expect(avisos).to eq(["[autonomia][pronta] veiculo_pela_placa cadastro inválido campo=#{campo}"])
+      end
     end
   end
 end

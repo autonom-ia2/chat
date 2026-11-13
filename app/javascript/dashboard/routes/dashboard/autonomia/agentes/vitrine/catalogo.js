@@ -1,8 +1,7 @@
 // #2858 F2 — vitrine de ferramentas prontas: o que a tela sabe de cada fonte do catálogo do servidor
 // (Autonomia::FerramentasProntas::Catalogo). `id` é a chave do servidor; os textos ficam no i18n em
-// AGENTS.VITRINE.FERRAMENTAS.<ID EM MAIÚSCULAS>. Aqui só o que não é frase: ícone, grupo, quantas perguntas a mesma
-// ferramenta responde (o agente escolhe a consulta pela conversa) e os ramos em que o cartão fica em destaque. A
-// vitrine mostra só os cartões cujas chaves o servidor mandou em `fontes` (as flags da conta decidem).
+// AGENTS.VITRINE.FERRAMENTAS.<ID EM MAIÚSCULAS>. Aqui só ícone, grupo e os ramos de destaque. O servidor manda
+// em `fontes` quais cartões estão liberados e quantas consultas cada um oferece hoje.
 //
 // `naVitrine: false`: a fonte de uso interno (Fonte#na_vitrine? no servidor), que fica no catálogo para os agentes de um
 // ramo, sem card avulso. A tela não a oferece (vitrine, sugestão, Construtor), mas a reconhece na gaveta do agente que
@@ -23,15 +22,13 @@ export const GRUPOS = [
 // A data de exemplo da contagem de dias úteis: daqui a 20 dias (sempre no futuro, dentro do limite de dois anos).
 const DIAS_DO_EXEMPLO = 20;
 
-// `consultas`: quantas perguntas diferentes a fonte responde no servidor (o agente escolhe).
 // `ramos`: camadas do pacote da conta (#1550) em que o cartão aparece em destaque.
 // `semCampo`: o "Experimente" não pede valor (o servidor responde o dólar do dia).
 // `exemplo`: o valor de exemplo que muda com o tempo (a data final da contagem de dias úteis); sem ele, o do i18n.
 // `base`: a fonte é uma base que a plataforma baixa (F5); o cartão diz de quando é a cópia.
 // `premium`: consulta paga (F7). Fica no grupo do assunto, depois das grátis do grupo (`premiumPorUltimo`), com o selo
 // "Premium". Não entra no destaque; o preço, as grátis que restam e quantas perguntas ele responde vêm do servidor
-// (`premium` de cada fonte em `listar`): a conta muda quando a BigDataCorp desliga uma consulta (#2946), por isso o card
-// Premium não tem `consultas` aqui. O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
+// (`premium` de cada fonte em `listar`). O "Experimente" dele usa as grátis do card e, acabadas elas, só com o clique no preço.
 export const FERRAMENTAS = [
   { id: 'cnpj', grupo: 'PESSOAS', icone: 'i-lucide-building-2' },
   {
@@ -41,28 +38,25 @@ export const FERRAMENTAS = [
     ramos: ['seguros'],
   },
   { id: 'cep', grupo: 'LUGAR', icone: 'i-lucide-map-pin', ramos: ['seguros'] },
-  { id: 'cidades', grupo: 'LUGAR', icone: 'i-lucide-landmark', consultas: 2 },
+  { id: 'cidades', grupo: 'LUGAR', icone: 'i-lucide-landmark' },
   { id: 'localizacao', grupo: 'LUGAR', icone: 'i-lucide-locate-fixed' },
   { id: 'ddd', grupo: 'LUGAR', icone: 'i-lucide-phone' },
   {
     id: 'fipe',
     grupo: 'VEICULOS',
     icone: 'i-lucide-car',
-    consultas: 4,
     ramos: ['seguros'],
   },
   {
     id: 'banco_central',
     grupo: 'DINHEIRO',
     icone: 'i-lucide-trending-up',
-    consultas: 4,
     semCampo: true,
   },
   {
     id: 'feriados',
     grupo: 'DINHEIRO',
     icone: 'i-lucide-calendar-days',
-    consultas: 2,
     // Em inglês o mês vai por extenso ("November 30, 2026"): "01/12/2026" se lê 12 de janeiro.
     exemplo: (hoje, idioma = 'pt_BR') => {
       const data = new Date(hoje);
@@ -87,9 +81,8 @@ export const FERRAMENTAS = [
     id: 'procedimentos',
     grupo: 'SAUDE',
     icone: 'i-lucide-stethoscope',
-    consultas: 2,
   },
-  { id: 'doencas', grupo: 'SAUDE', icone: 'i-lucide-book-open', consultas: 2 },
+  { id: 'doencas', grupo: 'SAUDE', icone: 'i-lucide-book-open' },
   { id: 'estacoes', grupo: 'CLIMA', icone: 'i-lucide-radio-tower' },
   { id: 'chuva', grupo: 'CLIMA', icone: 'i-lucide-cloud-rain' },
   { id: 'compras_governo', grupo: 'CLIENTES', icone: 'i-lucide-landmark' },
@@ -98,17 +91,15 @@ export const FERRAMENTAS = [
     id: 'produtos_seguradoras',
     grupo: 'SEGUROS',
     icone: 'i-lucide-file-search',
-    consultas: 2,
     naVitrine: false,
   },
   {
     id: 'corretor_susep',
     grupo: 'SEGUROS',
     icone: 'i-lucide-badge-check',
-    consultas: 2,
     ramos: ['seguros'],
   },
-  { id: 'ncm', grupo: 'OUTROS', icone: 'i-lucide-barcode', consultas: 2 },
+  { id: 'ncm', grupo: 'OUTROS', icone: 'i-lucide-barcode' },
   // F5 (flag `agente_ferramentas_prontas_bases`): bases que a plataforma baixa e mantém atualizadas. `base`: o cartão
   // mostra o "atualizado em…" que o servidor manda.
   {
@@ -130,7 +121,6 @@ export const FERRAMENTAS = [
     id: 'geracao_solar',
     grupo: 'LUGAR',
     icone: 'i-lucide-sun',
-    consultas: 2,
     base: true,
   },
   { id: 'queimadas', grupo: 'CLIMA', icone: 'i-lucide-flame', base: true },

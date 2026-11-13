@@ -63,6 +63,42 @@ RSpec.describe Autonomia::FerramentasProntas::ClienteHttp do
     expect(saiu_por).to eq(['203.0.113.11', nil])
   end
 
+  it 'falha de um host pelo servidor não conta como queda do proxy já usado pelo cliente' do
+    webshare_datacenter([proxy_da_webshare(11, '203.0.113.11')])
+    fonte_responde(cep, { city: 'São Paulo' })
+    allow(Resolv).to receive(:getaddresses).with('veiculos.exemplo.test').and_return(['93.184.216.66'])
+    stub_request(:get, 'https://veiculos.exemplo.test/veiculo').to_raise(Net::OpenTimeout)
+    allow(Autonomia::FerramentasProntas::Saida::ProxyMorto).to receive(:caiu!)
+    com_cadastro = described_class.new(hosts: %w[brasilapi.com.br veiculos.exemplo.test],
+                                       prazo_final: described_class.agora + 5, conta: account.id)
+    com_cadastro.pelo_servidor!('veiculos.exemplo.test')
+
+    com_cadastro.get_json('brasilapi.com.br', '/api/cep/v2/01001000', prazo: 3)
+    expect(motivo_de { com_cadastro.get_json('veiculos.exemplo.test', '/veiculo', prazo: 3) }).to eq('tempo_esgotado')
+    com_cadastro.get_json('brasilapi.com.br', '/api/cep/v2/01001000', prazo: 3)
+
+    expect(Autonomia::FerramentasProntas::Saida::ProxyMorto).not_to have_received(:caiu!)
+    expect(saiu_por).to eq(['203.0.113.11', nil, '203.0.113.11'])
+  end
+
+  it 'post_json recusa redirecionamentos sem mandar o corpo a outro endereço' do
+    allow(Resolv).to receive(:getaddresses).with('veiculos.exemplo.test').and_return(['93.184.216.66'])
+    com_cadastro = described_class.new(hosts: ['veiculos.exemplo.test'], prazo_final: described_class.agora + 5, conta: account.id)
+    com_cadastro.pelo_servidor!('veiculos.exemplo.test')
+
+    [301, 302, 303, 307, 308].each do |status|
+      stub_request(:post, 'https://veiculos.exemplo.test/acesso')
+        .to_return(status: status, headers: { 'Location' => 'https://veiculos.exemplo.test/outro' })
+
+      expect(motivo_de { com_cadastro.post_json('veiculos.exemplo.test', '/acesso', { segredo: 'teste' }, prazo: 3) })
+        .to eq('redirecionamento')
+    end
+
+    expect(a_request(:post, 'https://veiculos.exemplo.test/acesso')).to have_been_made.times(5)
+    expect(a_request(:any, 'https://veiculos.exemplo.test/outro')).not_to have_been_made
+    expect(saiu_por).to eq([nil, nil, nil, nil, nil])
+  end
+
   it 'a Webshare fora: a consulta sai pelo IP do servidor (decisao do Rodrigo, 12/11) e responde' do
     webshare_datacenter_fora
     fonte_responde(cep, { city: 'São Paulo' })

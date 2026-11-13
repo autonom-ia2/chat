@@ -25,7 +25,7 @@ const emit = defineEmits(['abrir']);
 
 const NS = 'AGENTS.VITRINE';
 const { t, te, locale } = useI18n();
-const { atualizadoEm, estaEmPreparacao } = useVitrine();
+const { atualizadoEm, estaEmPreparacao, consultasDe } = useVitrine();
 
 // #2858 F5 — a base que a plataforma baixa diz de quando é a cópia ("Atualizado em 11/11/2026"); antes da primeira
 // cópia, que os dados chegam logo; se a primeira cópia já falhou, "em preparação" (sem prometer prazo). O dia vem do
@@ -63,10 +63,9 @@ const TONS = {
   cinza: 'bg-n-slate-3 text-n-slate-11',
 };
 
-// Quantas perguntas a ferramenta responde: no card Premium, a conta do servidor (`premium.consultas`), que acompanha as
-// consultas que a BigDataCorp responde hoje (#2946); nas grátis, a do catálogo da tela. Com uma só, sem selo.
+// Quantas perguntas a ferramenta responde hoje, sempre pela conta do servidor. Com uma só ou sem conta, sem selo.
 const tiposDePergunta = computed(
-  () => props.premium?.consultas ?? props.ferramenta.consultas ?? 0
+  () => props.premium?.consultas ?? consultasDe(props.ferramenta.id) ?? 0
 );
 
 const selo = computed(() => {

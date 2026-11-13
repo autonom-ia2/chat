@@ -7,9 +7,8 @@
 #   - preço: pelo código FIPE (BrasilAPI, reserva parallelum) ou por marca e modelo (parallelum). Sem o ano, a
 #     parallelum devolve os anos que existem e a faixa (o preço do ano mais antigo e do mais novo), para o agente mostrar
 #     a faixa antes de perguntar o ano.
-#   - veículo (#2993): pela placa ou pelo chassi, numa fonte parceira, com o cadastro da plataforma
-#     (`fipe/pela_placa.rb`): a placa, o chassi, a marca, o modelo, os anos e as versões, as 2 primeiras com o valor do
-#     mês (que sai da consulta preço, pelo código). Sem o cadastro no ambiente, a consulta não é oferecida e o card segue com as outras três.
+#   - veículo (#2993): pela placa ou pelo chassi, quando houver cadastro no ambiente (`fipe/pela_placa.rb`).
+#     Sem ele, o card segue com as outras três consultas. O valor vem da consulta de preço desta fonte.
 # Termos: as duas são gratuitas; a parallelum sem chave aceita poucas centenas de pedidos por dia por IP, por isso ela
 # é só reserva e o cache segura o resto. A tabela muda uma vez por mês: preço com 1 dia de cache, listas com 7.
 module Autonomia::FerramentasProntas::Fontes::Fipe
@@ -158,7 +157,8 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   PRECO = 'o preço do mês; pede tipo, marca e modelo pelo nome, como o cliente disse (o código sai das listas aqui), e o ' \
           'ano; ou o código FIPE. Sem o ano, vem a faixa e os anos que existem'.freeze
   VEICULO = 'o veículo pela placa (ou pelo chassi): placa, chassi, marca, modelo, ano, versões e o valor do mês. Com a ' \
-            'placa em mãos, use esta em vez de perguntar marca, modelo e ano'.freeze
+            'placa em mãos, use esta em vez de perguntar marca, modelo e ano. A placa e o chassi devolvidos são para o ' \
+            'registro da equipe. Nunca diga ao cliente o chassi, nem a placa achada pelo chassi'.freeze
   VEICULO_NAO_ENCONTRADO = 'Não achei veículo com essa placa ou esse chassi. Confira o dado com o cliente; se estiver ' \
                            'certo, siga pedindo a marca, o modelo e o ano. Não invente.'.freeze
 

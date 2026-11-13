@@ -3565,14 +3565,14 @@
         "FIPE": {
           "NOME": "Car value",
           "APOIO": "FIPE table",
-          "FAZ": "Finds the vehicle by its plate and tells how much a car, motorcycle or truck is worth in this month's FIPE table.",
+          "FAZ": "Tells how much a car, motorcycle or truck is worth in this month's FIPE table. If plate lookup is available, it also finds the vehicle by its plate.",
           "CONSEGUE": "tell how much a car is worth",
           "CLIENTE": "How much is my 2020 Onix worth?",
           "AGENTE": "The 2020 Onix LT 1.0 is worth R$ 60,822 in this month's table.",
-          "USE_QUANDO": "Use when the customer gives the vehicle plate or wants to know how much a car, motorcycle or truck is worth.",
+          "USE_QUANDO": "Use when the customer wants to know how much a car, motorcycle or truck is worth. If plate lookup is available, also use it when they give the plate.",
           "ROTULO": "Car and year",
           "EXEMPLO": "Onix 2020",
-          "CONSULTAS": "makes, models of a make, this month's price, vehicle by plate or chassis"
+          "CONSULTAS": "makes, models of a make and this month's price. Vehicle by plate or chassis, when this lookup is available"
         },
         "BANCO_CENTRAL": {
           "NOME": "Interest, inflation and dollar",

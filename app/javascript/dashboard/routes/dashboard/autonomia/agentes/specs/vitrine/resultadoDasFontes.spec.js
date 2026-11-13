@@ -114,6 +114,11 @@ describe('linhasDoResultado com o dado real de cada fonte', () => {
     expect(valor('fipe', 'preco', 'Valor')).toContain('R$');
     expect(valor('fipe', 'veiculo', 'Placa')).toBe('ABC1D23');
     expect(valor('fipe', 'veiculo', 'Chassi')).toBe('9BWZZZ377VT004251');
+    expect(valor('fipe', 'veiculo', 'Ano de fabricação')).toBe('2025');
+    expect(linhas('fipe', 'veiculo', EN)).toContainEqual([
+      'Manufacturing year',
+      '2025',
+    ]);
     expect(valor('feriados', 'feriados', 'Feriados')).toContain(
       'Confraternização'
     );

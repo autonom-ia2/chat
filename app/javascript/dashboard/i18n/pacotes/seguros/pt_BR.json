@@ -267,7 +267,7 @@
       },
       "FERRAMENTAS": {
         "FIPE": {
-          "USE_QUANDO": "Use quando o cliente informar a placa do veículo, pedir cotação de seguro de carro, moto ou caminhão, ou quiser saber quanto o veículo vale.",
+          "USE_QUANDO": "Use quando o cliente pedir cotação de seguro de carro, moto ou caminhão, ou quiser saber quanto o veículo vale. Se a consulta pela placa estiver disponível, use também quando ele informar a placa.",
           "CLIENTE": "Quero cotar o seguro do meu Onix 2020.",
           "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês. Vou usar esse valor na cotação."
         },

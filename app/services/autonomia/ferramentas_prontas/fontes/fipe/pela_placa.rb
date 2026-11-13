@@ -1,33 +1,22 @@
-# O VEÍCULO PELA PLACA OU PELO CHASSI (#2993), numa fonte parceira, com o cadastro da PLATAFORMA (um só, de todas as
-# contas). O agente manda a placa (ou o chassi) e recebe a placa, o chassi, a marca, o modelo, os anos e as versões na
-# tabela FIPE (até 5; as 2 primeiras com o valor do mês); o cliente deixa de ditar marca, modelo e ano. O que o agente
-# faz com o dado (guardar para a equipe, na venda; responder a quem perguntou, na consulta) é da instrução dele.
+# O VEÍCULO PELA PLACA OU PELO CHASSI (#2993), com o cadastro da PLATAFORMA (um só, de todas as contas). O agente manda
+# a placa (ou o chassi) e recebe a placa, o chassi, a marca, o modelo, os anos e as versões na tabela FIPE (até 5; as 2
+# primeiras com o valor do mês); o cliente deixa de ditar marca, modelo e ano.
 #
-# QUEM É A FONTE NÃO FICA NO CÓDIGO. Os endereços e o cadastro vêm de UMA variável de ambiente (`CADASTRO`, só o nome
-# dela fica aqui), em JSON de uma linha:
-#   { "passe": "<endereço do passe>", "entrada": "<endereço da entrada>", "placa": "<endereço da consulta pela placa,
-#     terminado em />", "chassi": "<o mesmo, pelo chassi>", "corpo": { <os campos do cadastro que a entrada pede> } }
-# Os quatro endereços são HTTPS. Faltando a variável, um endereço ou o corpo, a consulta nem é oferecida
-# (`configurado?`).
-#
-# Três idas, nenhuma pelo IP próprio da conta (`ClienteHttp#pelo_servidor!`):
-#   1. o passe: GET no endereço `passe`, que devolve o bilhete;
-#   2. a entrada: POST do bilhete com o `corpo` do cadastro, que devolve o acesso. O acesso vale 1 hora na fonte e fica
-#      50 minutos na memória do processo (`ACESSOS`); o 401 apaga o acesso recusado (não o que outra consulta já
-#      renovou) e entra de novo, uma vez;
-#   3. a consulta: pela placa, ou pelo chassi (que devolve a placa, e a placa devolve o resto, na mesma ida do agente).
-# Os endereços vêm do ambiente: cada host passa pela conferência de rede interna do cliente (`permitir_host!`).
+# QUEM É A FONTE NÃO FICA NO REPOSITÓRIO. Os endereços e o cadastro vêm de UMA variável de ambiente (`CADASTRO`): um
+# JSON de uma linha com os endereços de `ENDERECOS` (HTTPS; os de `COM_O_DADO_NO_FIM` terminam em barra) e o `corpo`.
+# Sem cadastro válido, a consulta nem é oferecida (`configurado?`), e o campo que não serviu vai ao log, sem o valor.
+# Nenhuma ida sai pelo IP próprio da conta (`ClienteHttp#pelo_servidor!`), e cada host passa pela conferência de rede
+# interna do cliente (`permitir_host!`).
 #
 # A placa e o chassi vão os dois na resposta, venha o pedido por um ou pelo outro (decisão do Rodrigo, 13/11/2026: a
-# cotação de seguro usa os dois).
-# O VALOR: a fonte devolve um valor por versão, mas não é o da tabela do mês (conferido em 13/11/2026: 170.086 lá,
-# 163.320 na FIPE de novembro, para o mesmo código e ano). Por isso o valor sai da consulta `preco` desta fonte, pelo
-# código e pelo ano-modelo (`Apoio`, com o cache dela). A FIPE fora do ar não derruba a consulta: o veículo vai sem o
-# valor, e a resposta em que faltou o valor de alguma das versões que o teriam não fica no cache.
+# cotação de seguro usa os dois). São para o registro da equipe: a descrição da consulta manda o agente não dizer ao
+# cliente o chassi, nem a placa achada pelo chassi.
+# O VALOR sai da consulta `preco` desta fonte, pelo código e pelo ano-modelo (`Apoio`, com o cache dela), porque é o da
+# tabela do mês. A FIPE fora do ar não derruba a consulta: o veículo vai sem o valor, e a resposta em que faltou o valor
+# de alguma das versões que o teriam não fica no cache.
 # O TIPO sai do primeiro dígito do código FIPE, conferido na tabela pública em 13/11/2026 (0 carro, 5 caminhão, 8
 # moto). Código com outro começo (há carro com 3) vai sem o tipo; o valor é procurado como carro.
-# Erros da fonte: placa que ela não acha, 400; chassi que ela não acha, 450. Os dois viram "não encontrado".
-# Cadastro, bilhete, acesso, placa e chassi nunca vão a log nem a erro.
+# Cadastro, acesso, placa e chassi nunca vão a log nem a erro.
 class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::FerramentasProntas::Provedor
   Fipe = Autonomia::FerramentasProntas::Fontes::Fipe
   ClienteHttp = Autonomia::FerramentasProntas::ClienteHttp
@@ -38,6 +27,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
   # Os endereços em que a placa ou o chassi é colado no fim: sem a barra, o caminho sairia errado e toda placa viraria
   # "não encontrado", em silêncio.
   COM_O_DADO_NO_FIM = %w[placa chassi].freeze
+  # Estados da resposta e prazo do acesso guardado só na memória do processo.
   NAO_ACHOU = [400, 450].freeze
   ACESSO_VENCIDO = 401
   VALIDADE_DO_ACESSO = 50.minutes
@@ -49,6 +39,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
   VARIAS_VERSOES = 'A placa aponta para mais de uma versão do modelo. Cada versão tem o seu valor: não trate um deles ' \
                    'como o valor do veículo.'.freeze
 
+  AVISO_DO_CADASTRO = Mutex.new
   ACESSOS = Autonomia::FerramentasProntas::Premium::Tokens.new
 
   class << self
@@ -61,19 +52,38 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
       cadastro&.dig('placa')&.host
     end
 
-    # -> os quatro endereços (URI) e o corpo da entrada, ou nil quando falta algo ou a variável não é o JSON esperado.
+    # O campo inválido precisa aparecer para quem configura, sem expor o cadastro e sem repetir a cada listagem.
     def cadastro
+      return if ENV.fetch(CADASTRO, nil).blank?
+
+      # `chave_do_ambiente` recusa o valor com quebra de linha (nil): o texto vazio cai no erro de JSON, que avisa.
       dado = JSON.parse(chave_do_ambiente(CADASTRO).to_s)
-      return unless dado.is_a?(Hash) && dado['corpo'].is_a?(Hash) && dado['corpo'].present?
+      return cadastro_invalido(CADASTRO) unless dado.is_a?(Hash)
+      return cadastro_invalido('corpo') unless dado['corpo'].is_a?(Hash) && dado['corpo'].present?
 
       enderecos = ENDERECOS.index_with { |nome| endereco(dado[nome]) }
-      enderecos.merge('corpo' => dado['corpo']) if completos?(enderecos)
+      campo = campo_invalido(enderecos)
+      return cadastro_invalido(campo) if campo
+
+      enderecos.merge('corpo' => dado['corpo'])
     rescue JSON::ParserError
-      nil
+      cadastro_invalido(CADASTRO)
     end
 
-    def completos?(enderecos)
-      enderecos.values.all? && COM_O_DADO_NO_FIM.all? { |nome| enderecos[nome].request_uri.end_with?('/') }
+    def campo_invalido(enderecos)
+      ENDERECOS.find do |nome|
+        enderecos[nome].nil? || (COM_O_DADO_NO_FIM.include?(nome) && !enderecos[nome].request_uri.end_with?('/'))
+      end
+    end
+
+    def cadastro_invalido(campo)
+      AVISO_DO_CADASTRO.synchronize do
+        unless @cadastro_avisado
+          @cadastro_avisado = true
+          Rails.logger.warn("[autonomia][pronta] #{NOME} cadastro inválido campo=#{campo}")
+        end
+      end
+      nil
     end
 
     # Só HTTPS na 443, com host e sem usuário no endereço (o `ClienteHttp` monta o pedido só com o host). Fora disso, o
@@ -100,12 +110,16 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
   def consultar(_consulta, params)
     @cadastro = self.class.cadastro
     raise Falha, 'nao_configurada' if @cadastro.nil?
+    raise Falha, 'provedor_desligado' if Autonomia::FerramentasProntas::TetoDoProvedor.desligado?(self.class.host)
 
     hosts = ENDERECOS.map { |nome| @cadastro[nome].host }.uniq
     hosts.each { |host| @cliente.permitir_host!(host) }
     @cliente.pelo_servidor!(*hosts)
     com_valor(veiculo(params['placa'] ? pela_placa(params['placa']) : pelo_chassi(params['chassi'])))
   end
+
+  def inspect = "#<#{self.class.name} [REDACTED]>"
+  alias to_s inspect
 
   private
 
@@ -130,7 +144,10 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
   def ler(endereco, valor)
     @cliente.get_json(endereco.host, "#{endereco.request_uri}#{valor}", prazo: @prazo, cabecalhos: { 'Authorization' => "Bearer #{acesso}" })
   rescue Falha => e
-    raise NaoEncontrado, 'nao_encontrado' if NAO_ACHOU.include?(e.status)
+    if NAO_ACHOU.include?(e.status)
+      Rails.logger.warn("[autonomia][pronta] #{NOME} não encontrado status=#{e.status}")
+      raise NaoEncontrado, 'nao_encontrado'
+    end
     raise unless e.status == ACESSO_VENCIDO && !@entrou_de_novo
 
     @entrou_de_novo = true
@@ -138,8 +155,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
     retry
   end
 
-  # -> o acesso guardado, enquanto vale; senão, entra de novo e guarda. `@usado`: o que esta consulta usou, para o 401
-  # apagar só ele.
+  # Apaga só o acesso recusado: outra consulta pode já ter renovado o que está guardado.
   def acesso
     @usado = ACESSOS.read
     return @usado.first if @usado && ClienteHttp.agora < @usado.last
@@ -149,8 +165,7 @@ class Autonomia::FerramentasProntas::Fontes::Fipe::PelaPlaca < Autonomia::Ferram
     @usado.first
   end
 
-  # A falha da entrada sai sem o status e com o motivo próprio (`veiculo_pela_placa.entrada.pedido_recusado`): o cadastro recusado
-  # (400) nunca é lido como "não achei o veículo", e quem olha o contador vê que foi a entrada.
+  # Falha de autenticação não significa veículo ausente; o motivo distingue as duas para quem opera.
   def entrar
     passe = @cadastro['passe']
     entrada = @cadastro['entrada']
