@@ -102,6 +102,15 @@ vi.mock('../../fonte/trazerSegurosFonte', async importOriginal => {
 // de 5 s por teste é de relógio, não de lógica.
 vi.setConfig({ testTimeout: 30000 });
 
+// A página baixa as telas da carteira e a demonstração por import() dinâmico,
+// que leva tempo de verdade: carregadas antes, cada teste fica só por conta do
+// relógio falso.
+beforeAll(async () => {
+  await import('../../components/carteira/trazer/TrazerSeguros.vue');
+  await import('../../demo/trazer.js');
+  await import('../../demo/trazerSeguros.js');
+}, 60000);
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
   vi.setSystemTime(AGORA);
