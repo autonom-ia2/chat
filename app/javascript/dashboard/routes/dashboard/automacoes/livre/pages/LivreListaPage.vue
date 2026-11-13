@@ -22,6 +22,9 @@ import { useEscolhasDosGatilhos } from '../useEscolhasDosGatilhos';
 import { erroDaApi } from '../erroDaApi';
 import { custoEmTexto } from '../custoDaIa';
 import { oQueLigarFaz } from '../aoLigar';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FLAG as PASSOS_NOVOS } from '../passosNovos/passosNovos';
+import { esquecerBlocos } from '../passosNovos/dadosDaConta';
 import { resumoDaPesquisa } from '../passosNovos/frasesDosNovos';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
@@ -42,6 +45,9 @@ const { escolhas: escolhasDoGatilho, carregar: carregarFunis } =
   useEscolhasDosGatilhos();
 const globalConfig = useMapGetter('globalConfig/get');
 const temFunil = computed(() => globalConfig.value?.crmKanbanEnabled === true);
+// #2933: com os passos novos, a automação nova pode virar bloco.
+const { isCloudFeatureEnabled } = useAccount();
+const comBlocos = computed(() => isCloudFeatureEnabled(PASSOS_NOVOS));
 
 const estado = ref('carregando');
 const novas = ref([]);
@@ -138,6 +144,7 @@ const linhaDaNova = automacao => {
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
+    bloco: Boolean(automacao.bloco),
     pausa: automacao.pausa?.frase || '',
     doCard: alvoDoGatilho(automacao) === 'Crm::Card',
     fato: [
@@ -207,6 +214,35 @@ const alternarNova = async automacao => {
       : item
   );
   return data.ativa;
+};
+
+// #2933: marcar desliga a automação (o bloco não liga sozinho); tirar a marca do
+// bloco que uma automação ligada usa volta com os nomes delas.
+const alternarBloco = async linha => {
+  if (!podeMudar.value || mudando.value) return;
+  mudando.value = linha.chave;
+  try {
+    const { data } = await AutomacoesAPI.marcarBloco(
+      linha.automacao.id,
+      !linha.bloco
+    );
+    novas.value = novas.value.map(item =>
+      item.id === data.id ? { ...item, ...data } : item
+    );
+    esquecerBlocos();
+    useAlert(
+      t(
+        data.bloco
+          ? 'AUTOMACAO_LIVRE.LISTA.VIROU_BLOCO'
+          : 'AUTOMACAO_LIVRE.LISTA.DEIXOU_DE_SER_BLOCO'
+      )
+    );
+  } catch (erro) {
+    const { mensagem } = erroDaApi(erro, t);
+    useAlert(mensagem);
+  } finally {
+    mudando.value = null;
+  }
 };
 
 const executarAlternar = async linha => {
@@ -420,10 +456,13 @@ const ligarConfirmada = () => {
               :antiga="linha.antiga"
               :do-card="linha.doCard"
               :pausa="linha.pausa || ''"
+              :bloco="Boolean(linha.bloco)"
+              :pode-ser-bloco="comBlocos && !linha.antiga"
               :pode-mudar="podeMudar"
               :mudando="mudando === linha.chave"
               @abrir="abrir(linha)"
               @alternar="alternar(linha)"
+              @bloco="alternarBloco(linha)"
             />
           </ul>
         </template>

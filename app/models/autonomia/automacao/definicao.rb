@@ -58,6 +58,19 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # Ligada agora ou alguma vez (alguém assumiu e ligou).
   def ja_ligada? = ativa || ligada_em.present?
 
+  # #2933: marcar como bloco (sem gatilho próprio) desliga a automação: ela passa a rodar só quando outra a usa, como quem
+  # ligou essa outra. Quem a tinha ligado sai junto: o bloco nunca age por ela, e o que ainda lesse `ligada_por` dele
+  # encontra ninguém (e para), em vez de uma pessoa de antes. Desmarcar é recusado enquanto uma automação ligada ainda a
+  # usa: devolve os nomes delas, e nada muda. Vazio = feito.
+  def marcar_bloco!(sim)
+    usuarias = sim ? [] : ::Autonomia::Automacao::Bloco.usado_por(self)
+    return usuarias if usuarias.any?
+
+    desligar! if sim && ativa
+    update!(bloco: sim, **(sim ? { ligada_por: nil } : {}))
+    []
+  end
+
   # O desfazer nunca deixa a automação ligada de novo (#2889): ligar é "assumir" (assumir_e_religar!), com a versão que
   # a pessoa viu e a confirmação dela. Nem troca a versão de uma automação ligada: ela rodaria uma versão que quem ligou
   # não viu.
@@ -102,12 +115,16 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   #
   # `base` é a versão sobre a qual a pessoa editou (nil na primeira). Com ela, quem salva por cima de uma versão que
   # não viu recebe VersaoMudou, em vez de o último a salvar ganhar em silêncio. Sem `base:`, salva sobre a atual.
+  #
+  # O bloco (#2933) nunca está ligado, mas roda como quem ligou cada automação que o usa: a versão nova dele pausa essas
+  # automações, menos as que o próprio autor ligou. Alguém assume e religa, e o religar confere o bloco com essa pessoa.
   def salvar_versao!(receita:, autor: nil, base: :atual)
     with_lock do
       raise VersaoMudou if base != :atual && versao_ativa_id != base
 
       versao = versoes.create!(account: account, numero: versoes.maximum(:numero).to_i + 1, receita: receita, autor: autor)
       update!(versao_ativa: versao, ativa: ativa && autor.present? && autor.id == ligada_por_id)
+      pausar_quem_usa(autor) if bloco
       versao
     end
   end
@@ -130,7 +147,18 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
 
   private
 
+  # As automações ligadas que chegam neste bloco e que `autor` não ligou: pausam como na Executor#pausar (só `ativa`), e
+  # o motor para as execuções delas na próxima reconferência (`desligada`).
+  def pausar_quem_usa(autor)
+    ::Autonomia::Automacao::Bloco.ligadas_por_outras(self, autor).each do |automacao|
+      Rails.logger.info("[automacao][motor] pausada automacao=#{automacao.id} conta=#{account_id} motivo=bloco_mudou bloco=#{id}")
+      automacao.update!(ativa: false)
+    end
+  end
+
+  # #2933: o bloco não tem gatilho próprio e nunca liga sozinho: roda quando outra automação o usa, como quem a ligou.
   def recusa_para_ligar(usuario)
+    return Recusa.new(motivo: 'bloco_nao_liga', problemas: []) if bloco
     return Recusa.new(motivo: 'sem_versao', problemas: []) unless versao_ativa
 
     problemas = problemas_da_receita(usuario)
@@ -147,7 +175,9 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     receita = versao_ativa.receita
     return [I18n.t('autonomia.automacao.motivos.receita_com_problema')] unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: account.account_users.find_by(user_id: usuario&.id)).problemas
+    quem = account.account_users.find_by(user_id: usuario&.id)
+    ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: quem).problemas +
+      ::Autonomia::Automacao::Bloco.laco_ao_salvar(receita, self)
   end
 
   def versao_ativa_desta_automacao

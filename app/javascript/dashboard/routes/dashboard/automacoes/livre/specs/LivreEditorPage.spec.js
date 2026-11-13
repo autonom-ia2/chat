@@ -251,6 +251,14 @@ describe('LivreEditorPage', () => {
       { ativa: true, ligada_por: { id: 8 } },
       'LIGADA_POR_OUTRA',
     ],
+    // #2933: o bloco nunca está ligado, mas salvar pausa as automações que
+    // outras pessoas ligaram e que usam ele.
+    [
+      'bloco usado por automação de outra pessoa',
+      { bloco: true, bloco_pausaria: ['Boas-vindas VIP'] },
+      'BLOCO_PAUSA_OUTRAS',
+    ],
+    ['bloco sem quem pause', { bloco: true, bloco_pausaria: [] }, null],
   ])('%s: aviso no topo', async (_caso, extra, chave) => {
     AutomacoesAPI.show.mockResolvedValue({ data: salva(extra) });
     const wrapper = montar();

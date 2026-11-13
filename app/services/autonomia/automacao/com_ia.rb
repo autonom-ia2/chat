@@ -70,7 +70,7 @@ module Autonomia::Automacao::ComIa
   def anexos_novos
     return unless ::Autonomia::Automacao::AnexosDaConversa.novos?(@passo)
 
-    marco = ::Autonomia::Automacao::Resposta.marco(@conversa.contact, @execucao.automacao.ligada_por)
+    marco = ::Autonomia::Automacao::Resposta.marco(@conversa.contact, @execucao.dona.ligada_por)
     { depois_de: marco_anterior || @execucao.created_at, ate: marco }
   end
 
@@ -90,7 +90,7 @@ module Autonomia::Automacao::ComIa
 
   # O card vai à IA só se quem ligou a automação o vê (a pergunta do resto do CRM); senão o passo lê o resto.
   def card_visivel?(leituras, estado)
-    leituras.exclude?('card') || estado.card.nil? || ::Autonomia::Automacao::ComIa.ve_o_card?(@execucao.automacao.ligada_por, estado.card)
+    leituras.exclude?('card') || estado.card.nil? || ::Autonomia::Automacao::ComIa.ve_o_card?(@execucao.dona.ligada_por, estado.card)
   end
 
   # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores; #2780: só no
@@ -100,7 +100,7 @@ module Autonomia::Automacao::ComIa
 
   # Quem ligou a automação, na conta da conversa; nil quando saiu dela.
   def quem_ligou_na_conta
-    quem = @execucao.automacao.ligada_por
+    quem = @execucao.dona.ligada_por
     quem && @conversa.account.account_users.find_by(user_id: quem.id)
   end
 

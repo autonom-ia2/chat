@@ -11,7 +11,7 @@ import { P, emTeste } from './passosNovos';
 // #2931–#2936 — a peça do "Alterar" para os passos novos: o formulário de cada
 // um, já pronto, e a prévia do ensaio e do histórico. O passo inteiro entra e
 // sai por `modelValue`, como no "para cada item" (G24). O aviso "em teste" só
-// nos que ainda não salvam (#2932–#2934).
+// num passo novo que o servidor ainda não conheça (emTeste; hoje, nenhum).
 defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
@@ -53,11 +53,14 @@ const mudar = novo => emit('update:modelValue', novo);
     <LivreBloco
       v-else-if="modelValue.tipo === 'usar_bloco'"
       :model-value="modelValue"
+      :catalogo="catalogo"
       @update:model-value="mudar"
     />
     <LivreConsulta
       v-else-if="modelValue.tipo === 'consultar'"
       :model-value="modelValue"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
       @update:model-value="mudar"
     />
     <LivreReuniao

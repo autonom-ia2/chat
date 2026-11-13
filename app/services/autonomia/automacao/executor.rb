@@ -43,6 +43,10 @@ class Autonomia::Automacao::Executor
   include ::Autonomia::Automacao::DecidirDeNovo
   # O passo da filha do "em outro registro" que lê o registro de origem fora do alcance de quem ligou (G65).
   include ::Autonomia::Automacao::OrigemNoExecutor
+  # O "usar outra automação" (#2933): abre a execução do bloco e espera ela terminar.
+  include ::Autonomia::Automacao::BlocoNoExecutor
+  # Fechar a execução e o que vem depois de fechar (FimNoExecutor).
+  include ::Autonomia::Automacao::FimNoExecutor
   # A aprovação, a reunião e a pesquisa: perguntam e esperam a resposta (#2931, #2935, #2936).
   include ::Autonomia::Automacao::EsperaDeResposta
   # O que impede a execução de andar agora (impedida?, impedimento), conferido no começo e antes de cada ação.
@@ -64,7 +68,8 @@ class Autonomia::Automacao::Executor
   def initialize(execucao, marca, raiz = nil)
     @execucao = execucao
     @marca = marca
-    @definicao = execucao.automacao
+    # A dona (#2933): na execução de um bloco, a automação de cima, de quem valem quem ligou, o "ligada" e a pausa.
+    @definicao = execucao.dona
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
     @roteiro = ::Autonomia::Automacao::Roteiro.da(execucao)
@@ -110,6 +115,7 @@ class Autonomia::Automacao::Executor
     # G52: pôr o contato na lista de e-mail. Não manda mensagem: não depende da flag da F4.
     when 'lista_de_email' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeListaDeEmail, mensagem: false)
     when 'card' then passo_de_card(passo)
+    when *::Autonomia::Automacao::PassosNovos::TIPOS then passo_novo(passo)
     when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then passo_que_espera(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
@@ -202,22 +208,6 @@ class Autonomia::Automacao::Executor
     nil
   end
 
-  # Fecha a execução. Com `resultado`, deixa antes o registro do passo em que ela parou; depois de `pausar`, marcado
-  # como pausa para a tela (Registro::PAUSOU).
-  def encerrar(passo_id, estado, motivo, resultado = 'pulado', dados = {})
-    dados = dados.merge(::Autonomia::Automacao::Registro::PAUSOU => true) if @pausou
-    registrar(passo_id, resultado, motivo, dados) if resultado
-    finalizar(estado)
-    nil
-  end
-
-  # Fechou nesta rodada: a cobertura da agente de IA que ainda valer devolve a conversa à pessoa (decisão 18).
-  # G55: a execução que fecha deixa de segurar a campanha da vez do recorrente de card ou contato; confere se ela fecha.
-  def finalizar(estado)
-    ::Autonomia::Automacao::Cobertura.encerrar([@execucao.id]) if gravar(estado: estado, travada_em: nil)
-    ::Autonomia::Automacao::CampanhaDaOcorrencia.conferir_execucao(@execucao)
-  end
-
   # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.
   # Devolve se gravou.
   def gravar(**atributos)
@@ -236,7 +226,7 @@ class Autonomia::Automacao::Executor
   end
 
   def registrar(passo_id, resultado, motivo = nil, dados = {})
-    ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: @execucao, passo: passo_id,
+    ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @execucao.automacao, execucao: @execucao, passo: passo_id,
                                              resultado: resultado, motivo: motivo, dados: dados)
   end
 

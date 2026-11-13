@@ -1401,16 +1401,18 @@
 
 # Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
 # passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
-# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Pedir aprovação, Marcar reunião e Pesquisa de
-# satisfação (#2931, #2935, #2936) já salvam, rodam no motor, têm ensaio de verdade e linha no histórico; os outros três
-# seguem no protótipo (o Salvar fica desligado enquanto a receita tiver um deles). Desligada: o editor fica o de hoje e
-# o motor não roda nenhum dos seis. Sem migration. Rollback: desligar a flag (quem espera resposta num destes passos
-# para naquele ponto, sem mandar nada). Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11,
-# logo depois da agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada
-# em todas): fica DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o motor dos seis
-# passos estar completo.
+# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Os seis salvam, rodam no motor, têm ensaio e linha no
+# histórico: Pedir aprovação, Marcar reunião e Pesquisa de satisfação (#2931, #2935, #2936) esperam a resposta da
+# pessoa; Para cada (#2932), Usar outra automação (#2933) e Buscar em outro sistema (#2934) rodam na hora. Desligada:
+# o editor fica o de hoje e o motor recusa esses passos (quem espera resposta num deles para naquele ponto, sem mandar
+# nada). Duas migrations aditivas, inertes com a flag desligada: 20261112091000 (dois índices parciais, das esperas e
+# do resumo da pesquisa) e 20261112092000 (coluna `bloco` em autonomia_automacoes, padrão falso). Rollback: desligar a
+# flag.
+# Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11, logo depois da
+# agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): fica
+# DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o Rodrigo liberar.
 - name: automacao_passos_novos
-  display_name: Automação › passos novos (aprovação, reunião, pesquisa e os outros)
+  display_name: Automação › passos novos (aprovação, para cada, outra automação, outro sistema, reunião, pesquisa)
   enabled: false
   column: feature_flags_ext_2
 

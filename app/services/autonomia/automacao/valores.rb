@@ -112,6 +112,13 @@ class Autonomia::Automacao::Valores
   IA = 'ia.'.freeze
   PASSOS_QUE_ESCREVEM = %w[escrever resumir].freeze
 
+  # #2934: o dado que um "buscar em outro sistema" desta execução guardou: `consulta.<id do passo>.<chave>`. Como o texto
+  # da IA, vale em qualquer alvo e só na execução que buscou (ConsultaNaReceita, PassoConsultar).
+  CONSULTA = 'consulta.'.freeze
+
+  # Os valores que ficam na execução, não no alvo (o texto da IA, o registro criado, o dado buscado): Valores::DaExecucao.
+  extend ::Autonomia::Automacao::Valores::DaExecucao
+
   # G44: o link da agenda de uma página escolhida, `agenda.<id da página>` (AgendaDaPagina), em qualquer alvo.
   PAGINA = ::Autonomia::Automacao::AgendaDaPagina
 
@@ -171,14 +178,6 @@ class Autonomia::Automacao::Valores
     def da_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.do_caminho?(caminho)
     def caminho_da_origem(caminho) = ::Autonomia::Automacao::Valores::Origem.sem_prefixo(caminho)
     def na_origem?(caminho) = ::Autonomia::Automacao::Valores::Origem.le?(caminho)
-
-    def da_ia?(caminho) = caminho.to_s.start_with?(IA) && caminho.to_s.length > IA.length
-
-    # O texto da IA (#2679), a página da agenda (G44) e o registro criado (G49) valem em qualquer alvo.
-    def livre?(caminho) = da_ia?(caminho) || PAGINA.caminho?(caminho) || CRIADO.caminho?(caminho)
-
-    # "ia.p3" => "p3".
-    def passo_da_ia(caminho) = caminho.to_s.delete_prefix(IA)
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
@@ -248,6 +247,7 @@ class Autonomia::Automacao::Valores
   def do_passo(caminho)
     return @contexto.texto_da_ia(self.class.passo_da_ia(caminho)) if self.class.da_ia?(caminho)
     return @contexto.criado(CRIADO.passo_do(caminho)) if CRIADO.caminho?(caminho)
+    return @contexto.consulta(*self.class.da_consulta(caminho)) if self.class.da_consulta(caminho)
     return origem&.ler(self.class.caminho_da_origem(caminho)) if self.class.da_origem?(caminho)
 
     lido(caminho)

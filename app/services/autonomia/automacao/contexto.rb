@@ -29,9 +29,21 @@ class Autonomia::Automacao::Contexto
 
   # Os `textos` do ensaio (#2679): ele não chama a IA, e no lugar do texto de cada passo que escreve vai a marca de onde
   # ele entraria. Do "para cada item" (G24), uma marca por valor (`<id>.quantos`, `<id>.nomes`).
+  # Do "buscar em outro sistema" (#2934), que o ensaio não chama sem a pessoa pedir, a marca de cada dado guardado.
   def self.marcas_da_ia(receita, conta)
-    ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos.flat_map { |passo| chaves_da_ia(passo) }
-                                   .index_with { |chave| I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: chave) }
+    passos = ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: nil).passos
+    passos.flat_map { |passo| chaves_da_ia(passo) }
+          .index_with { |chave| I18n.t('autonomia.automacao.ensaio.texto_da_ia', passo: chave) }
+          .merge(marcas_da_consulta(passos))
+  end
+
+  def self.marcas_da_consulta(passos)
+    passos.select { |passo| passo['tipo'] == 'consultar' }.to_h do |passo|
+      marcas = Array(passo['guardar']).to_h do |dado|
+        [::Autonomia::Automacao::PassoConsultar.chave(dado['nome']), I18n.t('autonomia.automacao.ensaio.dado_buscado', nome: dado['nome'])]
+      end
+      ["#{::Autonomia::Automacao::PassoConsultar::CHAVE}#{passo['id']}", marcas]
+    end
   end
 
   def self.chaves_da_ia(passo)
@@ -163,6 +175,9 @@ class Autonomia::Automacao::Contexto
   # nil.
   def texto_da_ia(passo_id) = (@textos || @execucao&.textos).to_h[passo_id.to_s]
 
+  # #2934: o dado que o "buscar em outro sistema" guardou nesta execução (PassoConsultar). No ensaio, a marca do dado.
+  def consulta(passo_id, chave) = (@textos || @execucao&.textos).to_h["#{::Autonomia::Automacao::PassoConsultar::CHAVE}#{passo_id}"].to_h[chave]
+
   # G49: o id do registro que o passo `passo_id` criou nesta execução; sem execução (o ensaio) ou antes do passo, nil.
   def criado(passo_id) = ::Autonomia::Automacao::RegistroCriado.da_execucao(@execucao, passo_id)&.dig('id')
 
@@ -225,10 +240,12 @@ class Autonomia::Automacao::Contexto
     @mae_com_alvo = (mae if mae&.alvo)
   end
 
+  # Quem ligou é o da dona da mãe (#2933): no "em outro registro" dentro de um bloco, a mãe é a execução do bloco, que
+  # age como quem ligou a automação de cima.
   def origem_ao_alcance?(mae)
     return @origem_ao_alcance if defined?(@origem_ao_alcance)
 
-    @origem_ao_alcance = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho).alcanca?(mae.alvo, mae)
+    @origem_ao_alcance = ::Autonomia::Automacao::Acesso.new(mae.dona, chave_gatilho: mae.chave_gatilho).alcanca?(mae.alvo, mae)
   end
 
   def buscar_mensagem_que_falhou

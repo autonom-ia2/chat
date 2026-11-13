@@ -190,6 +190,136 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
     end
   end
 
+  # "Cancela tudo" (decisão do Rodrigo, 12/11): o parar fecha também as filhas da lista (`lista:<mãe>:...`), as execuções
+  # dos blocos que ela usou (`bloco:<mãe>:...`, de outra automação, no mesmo alvo) e as filhas dessas, por qualquer marca.
+  describe 'o que a lista e o bloco começaram' do
+    let(:contato) { create(:contact, account: account) }
+    let(:outro) { account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, title: 'Outro', currency: 'BRL') }
+    let(:bloco) do
+      create(:autonomia_automacao, account: account, bloco: true).tap do |definicao|
+        definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil_e_etapa.last.id },
+                                            'passos' => [esperar_passo('b1')] }, autor: admin)
+      end
+    end
+
+    before { account.enable_features!('automacao_passos_novos') }
+
+    def esperando(automacao, alvo, evento: nil, **atributos)
+      Autonomia::Automacao::Execucao.create!(account: account, automacao: automacao, versao: automacao.versao_ativa, alvo: alvo,
+                                             chave_gatilho: 'card.entrou_na_etapa', estado: 'esperando', cursor: 'p1',
+                                             due_at: 1.day.from_now, evento: evento, **atributos)
+    end
+
+    def da_lista(mae, item) = esperando(mae.automacao, item, evento: Autonomia::Automacao::RepetirLista.marca(mae, item, 'p_lista'))
+
+    def do_bloco(mae) = esperando(bloco, mae.alvo, evento: Autonomia::Automacao::Bloco.marca(mae, 'p_bloco', 1), paralela: true)
+
+    it 'a filha da lista aberta para com o mesmo motivo', :aggregate_failures do
+      filha = da_lista(execucao, contato)
+
+      expect(no_card.parar!(definicao)).to eq(2)
+
+      expect(filha.reload).to have_attributes(estado: 'parada', finalizada_em: be_present)
+      expect(parada_no_card.find_by(execucao: filha)).to have_attributes(passo: 'p1', resultado: 'pulado')
+    end
+
+    it 'a execução do bloco que ela usou, de outra automação, para com o mesmo motivo', :aggregate_failures do
+      filha = do_bloco(execucao)
+
+      expect(no_card.parar!(definicao)).to eq(2)
+
+      expect(filha.reload.estado).to eq('parada')
+      expect(parada_no_card.find_by(execucao: filha)).to have_attributes(passo: 'p1', resultado: 'pulado')
+    end
+
+    it 'as netas também param: o bloco que a filha da lista usou e o "em outro registro" do bloco', :aggregate_failures do
+      neta_da_lista = do_bloco(da_lista(execucao, contato))
+      bloco_do_card = do_bloco(execucao)
+      indicado = create(:contact, account: account)
+      neta_do_bloco = esperando(bloco, indicado, evento: Autonomia::Automacao::EmOutroRegistro.marca(bloco_do_card, indicado, 'p_outro'))
+
+      expect(no_card.parar!(definicao)).to eq(5)
+
+      expect([neta_da_lista, bloco_do_card, neta_do_bloco].map { |uma| uma.reload.estado }).to all(eq('parada'))
+    end
+
+    it 'o que nasceu de outro card, ou de outra automação neste card, não muda', :aggregate_failures do
+      execucao
+      de_outro_card = esperando(definicao, outro)
+      outra_automacao = automacao_ligada(account, admin, [esperar_passo('p1')],
+                                         gatilho: { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil_e_etapa.last.id })
+      da_outra_automacao = esperando(outra_automacao, card)
+      intactas = [de_outro_card, do_bloco(de_outro_card), da_lista(de_outro_card, contato), da_outra_automacao, do_bloco(da_outra_automacao)]
+
+      expect(no_card.parar!(definicao)).to eq(1)
+
+      expect(intactas.map { |uma| uma.reload.estado }).to all(eq('esperando'))
+      expect(parada_no_card.where(execucao: intactas)).to be_empty
+    end
+
+    # Como no FilhasDoPasso: o RepetirListaJob pode rodar depois do parar, e o parar não desliga a automação. A mãe
+    # parada não abre filha nenhuma; sem o parar, a mesma lista abre a filha do contato.
+    describe 'o job da lista depois do parar' do
+      let(:passo) do
+        { 'id' => 'p_lista', 'tipo' => 'repetir_lista', 'lista' => { 'de' => 'etiqueta', 'etiqueta' => 'vip' }, 'teto' => 2,
+          'ritmo' => 'rapido', 'cada' => [esperar_passo('c1')] }
+      end
+
+      before do
+        account.labels.create!(title: 'vip')
+        contato.update!(label_list: ['vip'])
+        execucao.update!(estado: 'esperando', cursor: 'p1', travada_em: nil, due_at: 1.hour.from_now)
+      end
+
+      def abrir_filhas = Autonomia::Automacao::FilhasDaLista.new(execucao.reload, passo).abrir
+
+      it 'parar no card antes de o job rodar: nenhuma filha nova e nenhuma linha no histórico da mãe', :aggregate_failures do
+        no_card.parar!(definicao)
+
+        expect { expect(abrir_filhas).to eq('mae_parada' => 1) }.not_to change(Autonomia::Automacao::Execucao, :count)
+        expect(Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'p_lista')).to be_empty
+      end
+
+      it 'sem o parar, a mesma lista abre a filha do contato' do
+        expect { abrir_filhas }.to change { Autonomia::Automacao::Execucao.where(alvo: contato).count }.by(1)
+      end
+
+      it 'a mãe que já tinha concluído ganha a marca do parar, e o job da lista ainda na fila não abre', :aggregate_failures do
+        execucao.update!(estado: 'concluida', cursor: nil, due_at: nil)
+
+        expect(no_card.parar!(definicao)).to eq(0)
+        expect(execucao.reload.textos).to eq(Autonomia::Automacao::Execucao::PORQUE => described_class::MOTIVO)
+        expect { expect(abrir_filhas).to eq('mae_parada' => 1) }.not_to change(Autonomia::Automacao::Execucao, :count)
+      end
+
+      it 'o parar que chega no meio da rodada: a filha já gravada é fechada por ele, a seguinte não abre', :aggregate_failures do
+        segundo = create(:contact, account: account, label_list: ['vip'])
+        lista = Autonomia::Automacao::FilhasDaLista.new(execucao.reload, passo)
+        vezes = 0
+        # 1ª conferência: a de entrada; 2ª: a da primeira filha; na 3ª (a da segunda filha) o parar acontece antes.
+        allow(lista).to receive(:mae_parada?).and_wrap_original do |original|
+          vezes += 1
+          no_card.parar!(definicao) if vezes == 3
+          original.call
+        end
+
+        expect(lista.abrir).to eq('mae_parada' => 1)
+        filhas = Autonomia::Automacao::Execucao.where(alvo: [contato, segundo])
+        expect(filhas.count).to eq(1)
+        expect(filhas.first.estado).to eq('parada')
+      end
+
+      it 'a mãe parada pelo desligar mantém o porquê dela: o parar no card não o troca' do
+        execucao.update_columns(estado: 'parada', finalizada_em: Time.current, # rubocop:disable Rails/SkipsModelValidations
+                                textos: { Autonomia::Automacao::Execucao::PORQUE => 'desligada' })
+
+        no_card.parar!(definicao)
+
+        expect(execucao.reload.textos).to eq(Autonomia::Automacao::Execucao::PORQUE => 'desligada')
+      end
+    end
+  end
+
   it 'a lista do card fechado sai vazia sem ler as execuções' do
     execucao
     card.update!(status: :lost)
