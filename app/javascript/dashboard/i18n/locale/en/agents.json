@@ -747,7 +747,8 @@
         },
         "PAGINA": {
           "TITULO": "What {nome} asks and requests",
-          "NOTA": "Whatever you change here, {nome} follows from the customer's next message."
+          "NOTA": "Whatever you change here, {nome} follows from the customer's next message.",
+          "MUDA_NA_PAGINA": "The quote questions and the documents {nome} asks for do not change in this chat. To change them, go back to {nome}'s page and open \"What {nome} asks and requests\"."
         }
       },
       "HEROI": {

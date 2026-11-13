@@ -747,7 +747,8 @@
         },
         "PAGINA": {
           "TITULO": "O que {nome} pergunta e pede",
-          "NOTA": "O que você mudar aqui, {nome} já segue na próxima mensagem do cliente."
+          "NOTA": "O que você mudar aqui, {nome} já segue na próxima mensagem do cliente.",
+          "MUDA_NA_PAGINA": "As perguntas da cotação e os documentos que {nome} pede não mudam por esta conversa. Para mudar, volte à página de {nome} e abra \"O que {nome} pergunta e pede\"."
         }
       },
       "HEROI": {
