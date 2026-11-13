@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #2993: o veículo pela placa ou pelo chassi, dentro do card do carro (FIPE), pelo caminho real (a `Execucao` da
-# ferramenta pronta de um agente), com o WebMock no lugar da fonte parceira e da FIPE. As respostas têm o formato conferido ao
-# vivo em 13/11/2026; a placa, o chassi e o cadastro são inventados.
+# ferramenta pronta de um agente), com o WebMock no lugar da fonte parceira e da FIPE. A placa, o chassi, o cadastro e
+# os valores são inventados.
 RSpec.describe Autonomia::FerramentasProntas::Fontes do
   let(:account) { create(:account) }
   let(:agent) do
@@ -24,7 +24,7 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
   let(:da_placa) do
     { manufacturing_year: 2025, model: 'Toyota - YARIS Cross XRX 1.5 16V 5p Aut.', chassi: '9BWZZZ377VT004251', plate: 'ABC1D23',
       model_year: 2026, brand: 'Toyota',
-      fipes_info: [{ fipe_code: '002224-1', description: 'Toyota - YARIS Cross XRX 1.5 16V 5p Aut.', fipe_price: 170_086 }] }
+      fipes_info: [{ fipe_code: '002224-1', description: 'Toyota - YARIS Cross XRX 1.5 16V 5p Aut.', fipe_price: 150_000 }] }
   end
   let(:do_chassi) { [{ brand: 'Toyota', model: 'YARIS Cross XRX 1.5 16V 5p Aut.', year: 2026, fipe: '002224-1', plate: 'ABC1D23' }] }
   let(:da_fipe) do

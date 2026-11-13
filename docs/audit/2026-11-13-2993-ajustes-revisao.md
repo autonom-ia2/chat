@@ -1,6 +1,6 @@
 # #2993 — ajustes da revisão do PR #3001
 
-Branch: `feat/2993-veiculo-pela-placa`. Alterações locais, sem commit, push ou operação de troca/limpeza de Git.
+Branch: `feat/2993-veiculo-pela-placa`. Segunda e terceira rodadas de revisão do PR #3001, nos commits seguintes ao `28c7c0981e`.
 
 ## Decisões e alterações
 

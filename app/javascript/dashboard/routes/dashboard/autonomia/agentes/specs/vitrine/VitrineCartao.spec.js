@@ -105,7 +105,9 @@ describe('VitrineCartao · tipos de pergunta grátis', () => {
     async consultas => {
       const wrapper = await montar('fipe', [{ chave: 'fipe', consultas }]);
 
-      expect(wrapper.text()).toContain(`Responde ${consultas} tipos de pergunta`);
+      expect(wrapper.text()).toContain(
+        `Responde ${consultas} tipos de pergunta`
+      );
     }
   );
 

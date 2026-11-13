@@ -80,7 +80,7 @@ describe('VitrineSugestaoDoAgente', () => {
       fonte: 'fipe',
       agenteId: 7,
       usarQuando:
-        'Use quando o cliente informar a placa do veículo ou quiser saber quanto vale um carro, moto ou caminhão.',
+        'Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão. Se a consulta pela placa estiver disponível, use também quando ele informar a placa.',
     });
     expect(alerta).toHaveBeenCalledWith(
       'Pronto! Ana já consegue dizer quanto vale um carro.'
