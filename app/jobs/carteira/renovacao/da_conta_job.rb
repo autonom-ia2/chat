@@ -18,10 +18,18 @@ class Carteira::Renovacao::DaContaJob < ApplicationJob
 
     nasceram, erro = criar_cards(account, config)
     Rails.logger.info("[carteira][renovacao] conta=#{account.id} cards=#{nasceram}") if nasceram.positive?
+    avisar(account, config) if nasceram.positive?
     raise erro if erro
   end
 
   private
+
+  # O aviso no sino conta os seguros que entraram em renovação hoje. Se ele falhar, os cards já nasceram: fica no log.
+  def avisar(account, config)
+    Carteira::Aviso.new(account, config).entraram
+  rescue StandardError => e
+    Rails.logger.error("[carteira][renovacao] aviso não saiu conta=#{account.id} #{e.class}")
+  end
 
   def pode_criar?(account, config)
     Crm::Config.enabled? && Carteira::Acesso.liberada?(account) && config.escolhida? && config.pipeline.active?

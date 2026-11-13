@@ -5,3 +5,10 @@ en:
     renovacao:
       card:
         titulo: 'Renewal · %{seguradora}'
+  notifications:
+    notification_title:
+      carteira_renovacao: 'Insurance policies entered renewal'
+    carteira_renovacao:
+      entraram:
+        one: '1 insurance policy entered renewal today'
+        other: '%{count} insurance policies entered renewal today'

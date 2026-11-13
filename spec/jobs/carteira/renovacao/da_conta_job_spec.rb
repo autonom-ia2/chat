@@ -79,6 +79,27 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     expect(Carteira::ApoliceEvento.where(apolice_id: seguros.map(&:id), tipo: 'card_nasceu').count).to eq(3)
   end
 
+  it 'avisa no sino quantos seguros entraram em renovação hoje, e a passada que não cria card não avisa de novo' do
+    Array.new(2) { |i| criar_apolice(marina, numero: "EX-00007#{i}", fim_vigencia: hoje + 30 + i) }
+
+    rodar
+    rodar
+
+    aviso = Notification.where(notification_type: 'carteira_renovacao').sole
+    expect(aviso).to have_attributes(user_id: admin.id, primary_actor: config, meta: { 'quantos' => 2 })
+  end
+
+  it 'o aviso que falha não desfaz os cards nem derruba a rotina' do
+    criar_apolice(marina, numero: 'EX-000080', fim_vigencia: hoje + 30)
+    allow(Rails.logger).to receive(:error)
+    allow(Carteira::Aviso).to receive(:new).and_raise(ActiveRecord::StatementTimeout, 'canceling statement')
+
+    rodar
+
+    expect(cards.count).to eq(1)
+    expect(Rails.logger).to have_received(:error).with("[carteira][renovacao] aviso não saiu conta=#{account.id} ActiveRecord::StatementTimeout")
+  end
+
   it 'quem apagou o card de propósito não o vê voltar nesta vigência' do
     seguro = criar_apolice(marina, numero: 'EX-000030', fim_vigencia: hoje + 30, renovacao_card_removido_em: agora - 1.day)
 

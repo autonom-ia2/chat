@@ -17,11 +17,18 @@ class Carteira::RenovacaoConfig < ApplicationRecord
   belongs_to :pipeline, class_name: 'Crm::Pipeline', optional: true
   belongs_to :stage, class_name: 'Crm::PipelineStage', optional: true
   belongs_to :user, optional: true
+  # O aviso da carteira no sino tem esta linha como ator: sem ela, o aviso não tem o que abrir.
+  has_many :notifications, as: :primary_actor, dependent: :delete_all
 
   validates :account_id, uniqueness: true
   validates :dias_antes, numericality: { only_integer: true, in: DIAS }
   validates :mensagens, inclusion: { in: MENSAGENS }
   validate :funil_e_etapa_da_conta, if: -> { will_save_change_to_pipeline_id? || will_save_change_to_stage_id? }
+
+  # O aviso da carteira no sino (Notification `carteira_renovacao`) tem esta linha como ator: só o id, sem dado de cliente.
+  def push_event_data
+    { id: id }
+  end
 
   # A conta já disse onde ficam as renovações (e o funil escolhido continua existindo).
   def escolhida?

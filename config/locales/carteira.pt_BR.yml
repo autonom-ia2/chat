@@ -5,3 +5,10 @@ pt_BR:
     renovacao:
       card:
         titulo: 'Renovação · %{seguradora}'
+  notifications:
+    notification_title:
+      carteira_renovacao: 'Seguros entraram em renovação'
+    carteira_renovacao:
+      entraram:
+        one: '1 seguro entrou em renovação hoje'
+        other: '%{count} seguros entraram em renovação hoje'

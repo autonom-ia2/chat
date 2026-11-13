@@ -226,7 +226,31 @@ const abrirPedidoDeAprovacao = async notificationItem => {
   });
 };
 
+// #2898 — seguros entraram em renovação: abre a aba Seguros no grupo "Em renovação".
+const abrirSegurosEmRenovacao = async notificationItem => {
+  const { id, primaryActorId, primaryActorType } = notificationItem;
+  try {
+    await store.dispatch('notifications/read', {
+      id,
+      primaryActorId,
+      primaryActorType,
+      unreadCount: meta.value.unreadCount,
+    });
+    store.dispatch('notifications/unReadCount');
+  } catch {
+    // a tela abre mesmo assim; marcar como lido fica para a próxima
+  }
+  router.push({
+    name: 'relationships_home',
+    query: { aba: 'seguros', grupo: 'em_renovacao' },
+  });
+};
+
 const openConversation = async notificationItem => {
+  if (notificationItem.notificationType === 'carteira_renovacao') {
+    await abrirSegurosEmRenovacao(notificationItem);
+    return;
+  }
   if (notificationItem.notificationType === 'automacao_aprovacao') {
     await abrirPedidoDeAprovacao(notificationItem);
     return;
