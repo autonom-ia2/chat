@@ -56,6 +56,15 @@ RSpec.describe Relacionamentos::Documento do
     expect([documento(contact: marina), documento(company: oficina, tipo: 'cnpj', valor: cnpj)]).to all(be_valid)
   end
 
+  it 'guarda o CNPJ com letra na forma de comparação, sem pontuação e em maiúscula, e mostra pontuado' do
+    da_empresa = ->(valor) { documento(company: oficina, tipo: 'cnpj', valor: valor) }
+    com_letra = da_empresa.call('12ABC34501DE35')
+
+    expect([com_letra.save, com_letra.reload.valor]).to eq([true, '12ABC34501DE35'])
+    expect([com_letra.formatado, com_letra.mascarado]).to eq(['12.ABC.345/01DE-35', '**.***.***/****-35'])
+    expect(%w[12abc34501de35 12.ABC.345/01DE-35 12ABC34501DE36].map { |valor| da_empresa.call(valor).valid? }).to all(be(false))
+  end
+
   it 'a empresa só tem CNPJ; a pessoa pode ter CPF e CNPJ (o MEI é pessoa com CNPJ)' do
     cpf_em_empresa = documento(company: oficina)
 

@@ -15,11 +15,37 @@ RSpec.describe Relacionamentos::NumeroDeDocumento do
     expect(lidos.map(&:valido?)).to all(be(true))
   end
 
-  it 'aceita o CNPJ novo, com letras, em qualquer caixa' do
-    com_letras = numero('12.abc.345/01de-35')
+  it 'aceita o CNPJ novo, com letras, em qualquer caixa, escrito com a pontuação completa' do
+    lidos = ['12.abc.345/01de-35', '12.ABC.345/01DE-35', " 12.Abc.345/01dE-35\n"].map { |texto| numero(texto) }
 
-    expect([com_letras.canonico, com_letras.tipo, com_letras.valido?]).to eq(['12ABC34501DE35', 'cnpj', true])
-    expect(numero('12.ABC.345/01DE-36').valido?).to be(false)
+    expect(lidos.map { |lido| [lido.canonico, lido.tipo, lido.valido?] }).to all(eq(['12ABC34501DE35', 'cnpj', true]))
+    expect(lidos.map(&:letra_fora_da_forma?)).to all(be(false))
+    expect([numero('12.ABC.345/01DE-36').valido?, numero('12.ABC.345/01DE-36').letra_fora_da_forma?]).to eq([false, false])
+  end
+
+  # Com letra, só a forma XX.XXX.XXX/XXXX-DD é número: 18 caracteres, cada sinal no seu lugar, os dois últimos dígitos.
+  it 'recusa texto com letra fora da forma completa do CNPJ, em qualquer caixa, e diz que foi por isso' do
+    fora_da_forma = ['12ABC34501DE35', '12abc34501de35', '12.ABC.345/01DE35', '12ABC.345/01DE-35', '12.ABC-345/01DE.35',
+                     '.12ABC.345/01DE-35', '12.ABC.345/01DE-3A', '1234567890A'].map { |texto| numero(texto) }
+
+    expect(fora_da_forma.map { |lido| [lido.canonico, lido.tipo, lido.valido?, lido.letra_fora_da_forma?] }).to all(eq(['', nil, false, true]))
+    expect(fora_da_forma.map { |lido| [lido.formatado, lido.mascarado, lido.to_s] }).to all(eq([nil, nil, '']))
+  end
+
+  it 'texto só com dígitos nunca é recusado por letra, com a pontuação inteira, pela metade ou sem nenhuma' do
+    textos = ['123.456.789-09', '123456789-09', '112223330001-81', '11222333000181', '123.456.789-08', '1234567890', '']
+    so_digitos = textos.map { |texto| numero(texto) }
+
+    expect(so_digitos.map(&:letra_fora_da_forma?)).to all(be(false))
+    expect(so_digitos.map(&:valido?)).to eq([true, true, true, true, false, false, false])
+  end
+
+  it 'lê o que já está guardado na forma de comparação, sem pedir a pontuação do CNPJ com letra' do
+    guardados = %w[12ABC34501DE35 11222333000181 12345678909].map { |valor| described_class.guardado(valor) }
+
+    expect(guardados.map(&:valido?)).to all(be(true))
+    expect(guardados.map(&:formatado)).to eq(['12.ABC.345/01DE-35', '11.222.333/0001-81', '123.456.789-09'])
+    expect(guardados.map(&:letra_fora_da_forma?)).to all(be(false))
   end
 
   it 'recusa dígito verificador errado, tamanho errado, número repetido, letra no CPF e texto vazio' do
@@ -29,14 +55,14 @@ RSpec.describe Relacionamentos::NumeroDeDocumento do
   end
 
   # "CLI" mais os onze dígitos deste CPF dão 14 caracteres que passam na conta do dígito verificador do CNPJ: só tirando
-  # espaço e pontuação, o rótulo na frente fazia o CPF de uma pessoa ser guardado como CNPJ.
-  it 'recusa texto que não é só o número: rótulo na frente, espaço no meio, dois-pontos, outro tipo de traço' do
-    com_rotulo = numero('CLI 123.456.789-09')
+  # espaço e pontuação, o rótulo na frente fazia o CPF de uma pessoa ser guardado como CNPJ. Colado ou com espaço, o
+  # rótulo tem letra e o texto não está na forma completa do CNPJ: recusado.
+  it 'recusa texto que não é só o número: rótulo na frente, colado ou não, espaço no meio, dois-pontos, outro tipo de traço' do
+    com_rotulo = ['CLI 123.456.789-09', 'CLI123.456.789-09', 'CLI12345678909', 'cli12345678909'].map { |texto| numero(texto) }
     outros = ['CPF 12345678909', 'CPF: 123.456.789-09', '123 456 789 09', '123.456.789-09, da Marina', "123.456.789\u201109"]
 
-    expect([com_rotulo.canonico, com_rotulo.tipo, com_rotulo.valido?]).to eq(['', nil, false])
+    expect(com_rotulo.map { |lido| [lido.canonico, lido.tipo, lido.valido?, lido.letra_fora_da_forma?] }).to all(eq(['', nil, false, true]))
     expect(outros.map { |texto| numero(texto).valido? }).to all(be(false))
-    expect([numero('CLI12345678909').tipo, numero('CLI12345678909').valido?]).to eq(['cnpj', true])
   end
 
   it 'aceita espaço e quebra de linha só nas pontas' do

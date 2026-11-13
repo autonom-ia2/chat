@@ -164,11 +164,45 @@ RSpec.describe Relacionamentos::Documentos do
     end
 
     it 'vale para todo texto que não é CPF nem CNPJ, e a busca por ele não acha ninguém' do
-      errados = ['', nil, '1234567890', '111.111.111-11', '11.222.333/0001-80', 'não sei o CPF', 'CLI 123.456.789-09']
+      errados = ['', nil, '1234567890', '111.111.111-11', '11.222.333/0001-80', 'não sei o CPF', 'CLI 123.456.789-09', 'CLI123.456.789-09',
+                 'CLI12345678909']
 
       errados.each { |texto| expect { documentos.guardar(marina, texto) }.to raise_error(CustomExceptions::DocumentoRecusa) }
       expect(errados.map { |texto| documentos.donos(texto) }).to all(eq([]))
       expect(Relacionamentos::Documento.count).to eq(0)
+    end
+  end
+
+  describe 'texto com letra' do
+    let(:frase) do
+      'Este número tem letras. Se é um CNPJ com letras, escreva com os pontos, a barra e o traço, assim: 12.ABC.345/01DE-35. ' \
+        'Se não é, digite só os números.'
+    end
+
+    # O rótulo colado no CPF e o CNPJ com letra sem pontuação têm os mesmos 14 caracteres: sem a pontuação não dá para
+    # saber qual dos dois é, e o CPF de uma pessoa era guardado como CNPJ.
+    it 'fora da forma completa do CNPJ é recusado com código próprio e uma frase que diz o que fazer' do
+      conferir = lambda do |recusa|
+        expect([recusa.codigo, recusa.message, recusa.http_status]).to eq(['letra_fora_da_forma_do_cnpj', frase, 422])
+        expect(recusa.to_hash).to eq(error: 'letra_fora_da_forma_do_cnpj', message: frase)
+        expect(recusa.message + recusa.inspect).not_to include('123456789', '123.456.789', 'CLI')
+      end
+
+      I18n.with_locale(:pt_BR) do
+        ['CLI123.456.789-09', 'CLI12345678909', 'cli12345678909', '12ABC34501DE35', '12abc34501de35'].each do |texto|
+          expect { documentos.guardar(marina, texto) }.to raise_error(CustomExceptions::DocumentoRecusa, &conferir)
+        end
+      end
+      expect(Relacionamentos::Documento.count).to eq(0)
+    end
+
+    it 'na forma completa do CNPJ, em qualquer caixa, é guardado como CNPJ e achado; sem a pontuação a busca não acha' do
+      documentos.guardar(oficina, '12.abc.345/01de-35')
+
+      expect(documentos.ler(oficina).attributes.slice('tipo', 'valor')).to eq('tipo' => 'cnpj', 'valor' => '12ABC34501DE35')
+      expect([documentos.ler(oficina).formatado, documentos.ler(oficina).mascarado]).to eq(['12.ABC.345/01DE-35', '**.***.***/****-35'])
+      expect([documentos.donos('12.ABC.345/01DE-35'), documentos.donos('12.abc.345/01de-35')]).to eq([[oficina], [oficina]])
+      expect([documentos.donos('12ABC34501DE35'), documentos.donos('12.ABC.345/01DE-36')]).to eq([[], []])
     end
   end
 
@@ -206,6 +240,22 @@ RSpec.describe Relacionamentos::Documentos do
       expect(procuras).to eq(2)
       expect([guardado.valor, Relacionamentos::Documento.where(contact_id: marina.id).count]).to eq(['98765432100', 1])
       expect(documentos.donos(outro_cpf)).to eq([marina])
+    end
+
+    # A segunda tentativa também não acha o documento (toda procura devolve um novo, às cegas) e o banco recusa de novo.
+    it 'tenta de novo uma vez só: se o banco recusa outra vez, o erro sobe e o documento fica como estava' do
+      documentos.guardar(marina, cpf)
+      procuras = 0
+      allow(documentos).to receive(:do_tipo) do
+        procuras += 1
+        Relacionamentos::Documento.new(account_id: account.id, contact_id: marina.id, tipo: 'cpf')
+      end
+
+      expect { documentos.guardar(marina, outro_cpf) }.to raise_error(ActiveRecord::RecordNotUnique)
+
+      expect(procuras).to eq(2)
+      expect([documentos.ler(marina).valor, Relacionamentos::Documento.where(contact_id: marina.id).count]).to eq(['12345678909', 1])
+      expect([documentos.donos(cpf), documentos.donos(outro_cpf)]).to eq([[marina], []])
     end
   end
 

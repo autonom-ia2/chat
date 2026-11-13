@@ -5,9 +5,16 @@
 #
 # Isto compara valor: não lê frase. Quem chama manda só o número. O texto pode ter espaço nas pontas e, no meio, só
 # dígito, letra, ponto, barra e hífen; qualquer outro caractere (espaço no meio, dois-pontos, vírgula) faz o texto não
-# ser número nenhum. Sem isso, um rótulo na frente do CPF ("CLI 123.456.789-09") ficava com os 14 caracteres de um CNPJ,
-# passava na conta do dígito verificador em cerca de 1 caso em 100 e gravava dado de pessoa como CNPJ. Tudo por método
-# de texto, sem regex.
+# ser número nenhum. Tudo por método de texto, sem regex.
+#
+# Texto só com dígitos vale com a pontuação inteira, pela metade ou sem nenhuma: 11 dígitos é CPF, 14 é CNPJ. Texto com
+# letra só é CNPJ quando vem na forma completa, XX.XXX.XXX/XXXX-DD: 18 caracteres, os pontos, a barra e o hífen cada um
+# no seu lugar e os dois últimos dígitos. Sem isso, um rótulo colado no CPF ("CLI123.456.789-09") ficava com os 14
+# caracteres de um CNPJ, passava na conta do dígito verificador em cerca de 1 caso em 100 e gravava dado de pessoa como
+# CNPJ. O preço: o CNPJ com letra digitado cru (os 14 caracteres sem pontuação) é recusado até a pessoa pôr a pontuação;
+# `letra_fora_da_forma?` diz que foi esse o motivo.
+#
+# O que já está guardado (a forma de comparação, sem pontuação) entra por `guardado`, que não pede a forma completa.
 #
 # Confere quando os dois dígitos verificadores batem (módulo 11). No CNPJ cada caractere vale o código dele menos 48,
 # a regra da Receita, que para dígito dá o próprio dígito. Número de um caractere só repetido (000..., 111...) passa na
@@ -22,6 +29,7 @@ class Relacionamentos::NumeroDeDocumento
   DE_DOCUMENTO = '-./0-9A-Z'.freeze
   PONTUACAO = '-./'.freeze
   DIGITOS = '0-9'.freeze
+  LETRAS = 'A-Z'.freeze
   CODIGO_DO_ZERO = '0'.ord
   # Os pesos de cada dígito verificador: o primeiro sobre o corpo, o segundo sobre o corpo e o primeiro dígito.
   PESOS = {
@@ -31,12 +39,26 @@ class Relacionamentos::NumeroDeDocumento
   TAMANHO_DO_CPF = 11
   TAMANHO_DO_CNPJ = 14
   CORPO_DO_CNPJ = 12
+  # A forma completa do CNPJ, XX.XXX.XXX/XXXX-DD: o tamanho e a posição de cada sinal.
+  TAMANHO_DO_CNPJ_PONTUADO = 18
+  SINAIS_DO_CNPJ = { 2 => '.', 6 => '.', 10 => '/', 15 => '-' }.freeze
 
   attr_reader :canonico
 
-  def initialize(texto)
+  # O número que já está guardado, na forma de comparação: o CNPJ com letra vem sem pontuação.
+  def self.guardado(valor)
+    new(valor, digitado: false)
+  end
+
+  def initialize(texto, digitado: true)
     limpo = texto.to_s.strip.upcase
-    @canonico = (limpo.count(DE_DOCUMENTO) == limpo.length ? limpo.delete(PONTUACAO) : '').freeze
+    @letra_fora_da_forma = digitado && limpo.count(LETRAS).positive? && !forma_do_cnpj?(limpo)
+    @canonico = (so_de_documento?(limpo) && !@letra_fora_da_forma ? limpo.delete(PONTUACAO) : '').freeze
+  end
+
+  # O texto digitado tem letra e não está na forma completa do CNPJ: não é lido como número nenhum.
+  def letra_fora_da_forma?
+    @letra_fora_da_forma
   end
 
   # 'cpf', 'cnpj' ou nil quando o tamanho não é de nenhum dos dois.
@@ -88,8 +110,17 @@ class Relacionamentos::NumeroDeDocumento
 
   private
 
+  def so_de_documento?(texto)
+    texto.count(DE_DOCUMENTO) == texto.length
+  end
+
   def so_digitos?(texto)
     texto.count(DIGITOS) == texto.length
+  end
+
+  def forma_do_cnpj?(texto)
+    texto.length == TAMANHO_DO_CNPJ_PONTUADO && so_de_documento?(texto) && texto.count(PONTUACAO) == SINAIS_DO_CNPJ.size &&
+      SINAIS_DO_CNPJ.all? { |posicao, sinal| texto[posicao] == sinal } && so_digitos?(texto[-2..])
   end
 
   def verificador(valores, pesos)

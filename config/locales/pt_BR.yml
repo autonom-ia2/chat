@@ -73,6 +73,7 @@ pt_BR:
       documento:
         invalido: 'Este CPF ou CNPJ não confere. Confira os números e digite de novo: o CPF tem 11 dígitos e o CNPJ tem 14 caracteres.'
         cpf_em_empresa: 'Empresa tem CNPJ, não CPF. Digite aqui o CNPJ da empresa e guarde o CPF na pessoa que é dona dele.'
+        letra_fora_da_forma_do_cnpj: 'Este número tem letras. Se é um CNPJ com letras, escreva com os pontos, a barra e o traço, assim: 12.ABC.345/01DE-35. Se não é, digite só os números.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta
       email_limit_exceeded: O limite diário de envio de e-mails desta conta foi atingido

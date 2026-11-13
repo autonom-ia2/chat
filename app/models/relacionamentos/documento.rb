@@ -55,7 +55,7 @@ class Relacionamentos::Documento < ApplicationRecord
   end
 
   def numero
-    Relacionamentos::NumeroDeDocumento.new(valor)
+    Relacionamentos::NumeroDeDocumento.guardado(valor)
   end
 
   delegate :formatado, :mascarado, to: :numero
