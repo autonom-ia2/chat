@@ -98,6 +98,7 @@ describe('label form with the free name (#1823)', () => {
       color: '#000',
       description: undefined,
       show_on_sidebar: undefined,
+      show_on_conversation_list: false,
     });
     expect(NomesDeEtiquetasAPI.gravar).toHaveBeenCalledWith(
       7,

@@ -32,7 +32,7 @@ class Autonomia::Automacao::PassoDeListaDeEmail
   def initialize(execucao:, passo:, alvo:)
     @passo = passo
     @alvo = alvo
-    @automacao = execucao.automacao
+    @automacao = execucao.dona
     @conta = execucao.account
     @quem = @automacao.ligada_por
   end

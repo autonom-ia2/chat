@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -19,6 +19,7 @@ import SecaoConversas from '../components/ficha/SecaoConversas.vue';
 import SecaoPessoasDaEmpresa from '../components/ficha/SecaoPessoasDaEmpresa.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { ABAS } from '../fonte/grupos';
 import { FALHA_DA_PARTE } from '../ficha/falhas';
 import { linhasDaEmpresa } from '../ficha/informacoes';
@@ -31,6 +32,12 @@ import {
 import { useFichaDaEmpresa } from '../ficha/useFichaDaEmpresa';
 import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 
+// #2897 — o bloco Seguros (com a gaveta do seguro) só é baixado na conta que
+// tem a carteira.
+const SegurosDaFicha = defineAsyncComponent(
+  () => import('../components/carteira/SegurosDaFicha.vue')
+);
+
 // #2894 — a ficha da empresa: o mesmo desenho da pessoa, mais simples. Cabeçalho,
 // as pessoas dela, as conversas, os cards e as informações. A ação principal é
 // "Mandar mensagem" (sempre abre o diálogo que diz quem recebe e quem fica de
@@ -38,6 +45,8 @@ import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 // lê e grava no servidor (#2895), e quem só pode ver não tem "Alterar". A parte
 // que quem está olhando não pode ver some; a que não carregou fica, com "Tentar
 // de novo".
+// #2897 — na conta que tem a carteira de seguros, os seguros em nome da empresa
+// vêm depois de Pessoas.
 // #2970 — "Mandar mensagem", o ícone de conversar de cada pessoa e o "Ver
 // todas" das conversas ainda só avisam: aparecem só na demonstração, até serem
 // de verdade.
@@ -45,7 +54,9 @@ const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
 const permissoes = usePermissoesDaFicha();
-const fonte = fichaFonte({ demo: usarDemo(route.query) });
+const demo = usarDemo(route.query);
+const fonte = fichaFonte({ demo });
+const comSeguros = useContaDeSeguros(demo);
 // Na demonstração tudo aparece, como na lista: é o desenho inteiro da tela.
 const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
 const id = computed(() => Number(route.params?.companyId));
@@ -62,6 +73,8 @@ const linhas = computed(() =>
 );
 const avisar = chave =>
   acoes.avisar(`RELACIONAMENTOS_FICHA.EMPRESA.${chave}`, nome.value);
+const abrirSegurado = ({ tipo, id: donoId }) =>
+  tipo === 'empresa' ? acoes.abrirEmpresa(donoId) : acoes.abrirPessoa(donoId);
 
 const resultado = (deuCerto, certo, erro) => {
   const texto = t(deuCerto ? certo : erro);
@@ -193,6 +206,15 @@ watch(
                       pessoa.name
                     )
                 "
+              />
+              <SegurosDaFicha
+                v-if="comSeguros"
+                da-empresa
+                :dono-id="id"
+                :demo="demo"
+                :pode-editar="podeEditar"
+                :agora="agora"
+                @abrir-segurado="abrirSegurado"
               />
               <SecaoConversas
                 v-if="podeVer('conversas')"

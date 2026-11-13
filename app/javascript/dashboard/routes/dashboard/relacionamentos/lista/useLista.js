@@ -16,11 +16,22 @@ const SEM_ERRO = Object.freeze({ resumo: null, contagens: null, lista: null });
 // respondeu não apaga o erro da que falhou. Basta uma delas ser recusada por
 // falta de acesso para `semAcesso` ligar: a tela mostra um estado só, sem
 // "tentar de novo".
-export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
-  const grupo = ref(GRUPO_PADRAO[aba.value]);
+// #2897 — a aba Seguros usa o mesmo estado, com o grupo, a ordem e os filtros
+// dela (`grupoPadrao`, `ordemPadrao`, `filtrosVazios`, `contar`), e relê o que
+// está à vista com `atualizar`, sem voltar à página 1.
+export const useLista = ({
+  fonte,
+  aba,
+  aoMudarConsulta = () => {},
+  grupoPadrao = nome => GRUPO_PADRAO[nome],
+  ordemPadrao = ORDENS.ULTIMA_CONVERSA,
+  filtrosVazios = FILTROS_VAZIOS,
+  contar = contarFiltros,
+}) => {
+  const grupo = ref(grupoPadrao(aba.value));
   const busca = ref('');
-  const ordem = ref(ORDENS.ULTIMA_CONVERSA);
-  const filtros = ref({ ...FILTROS_VAZIOS });
+  const ordem = ref(ordemPadrao);
+  const filtros = ref({ ...filtrosVazios });
   const pagina = ref(PRIMEIRA_PAGINA);
   const itens = ref([]);
   const total = ref(0);
@@ -49,7 +60,7 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     filtros: filtros.value,
   });
 
-  const filtrosAtivos = computed(() => contarFiltros(filtros.value));
+  const filtrosAtivos = computed(() => contar(filtros.value));
 
   const terminar = (numero, aMais) => {
     if (numero !== pedidoAtual) return;
@@ -118,6 +129,35 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     ]);
   };
 
+  // Relê o que está à vista sem mexer na tela: as páginas já mostradas voltam
+  // inteiras, `carregando` não liga (não pisca o esqueleto) e o "Mostrar mais"
+  // continua onde estava. Com outra leitura da lista em andamento, só os
+  // números são relidos: ela mesma traz a lista. Se a pessoa mudar a consulta
+  // no meio, a resposta daqui é descartada.
+  const atualizar = async () => {
+    carregarResumo();
+    carregarContagens();
+    if (carregando.value || carregandoMais.value) return;
+    const meu = pedidoAtual;
+    const paginas = Array.from(
+      { length: pagina.value },
+      (_, indice) => indice + PRIMEIRA_PAGINA
+    );
+    try {
+      const respostas = await Promise.all(
+        paginas.map(numero => fonte.listar({ ...consulta(), pagina: numero }))
+      );
+      if (meu !== pedidoAtual) return;
+      const ultima = respostas[respostas.length - 1];
+      itens.value = respostas.flatMap(resposta => resposta.itens);
+      total.value = ultima.total;
+      temMais.value = ultima.temMais;
+      guardarErro('lista', null);
+    } catch (falha) {
+      if (meu === pedidoAtual) guardarErro('lista', falha);
+    }
+  };
+
   const recomecar = () => {
     pagina.value = PRIMEIRA_PAGINA;
     aoMudarConsulta();
@@ -137,8 +177,8 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
   };
 
   watch(aba, nova => {
-    grupo.value = GRUPO_PADRAO[nova];
-    filtros.value = { ...FILTROS_VAZIOS };
+    grupo.value = grupoPadrao(nova);
+    filtros.value = { ...filtrosVazios };
     recomecarRecontando();
   });
 
@@ -159,15 +199,16 @@ export const useLista = ({ fonte, aba, aoMudarConsulta = () => {} }) => {
     filtrosAtivos,
     iniciar: recarregar,
     recarregar,
+    atualizar,
     escolherGrupo: id => mudar(grupo, id),
     mudarBusca: texto => mudar(busca, texto, true),
     mudarOrdem: nova => mudar(ordem, nova),
     mudarFiltros: novos => {
-      filtros.value = { ...FILTROS_VAZIOS, ...novos };
+      filtros.value = { ...filtrosVazios, ...novos };
       return recomecarRecontando();
     },
     limparFiltros: () => {
-      filtros.value = { ...FILTROS_VAZIOS };
+      filtros.value = { ...filtrosVazios };
       return recomecarRecontando();
     },
     mostrarMais: () =>

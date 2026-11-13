@@ -1,8 +1,7 @@
-// #2414 — protótipo dos 6 passos novos da Automação livre (#2931–#2936). O
-// servidor ainda não conhece estes passos: o catálogo do editor ganha as
-// entradas aqui, só com a flag ligada, e o que viria do servidor sai do
-// adaptadorFalso. O Rodrigo aprova a tela antes do motor. O motor, o esquema e o
-// salvar de verdade são da implementação.
+// #2414 — os 6 passos novos da Automação livre (#2931–#2936). O catálogo do
+// editor ganha as entradas aqui, só com a flag ligada. Os seis já têm motor,
+// esquema, salvar, ensaio e histórico de verdade no servidor; o adaptadorFalso
+// guarda só os exemplos das prévias do painel ("Veja como fica").
 
 export const FLAG = 'automacao_passos_novos';
 export const P = 'AUTOMACAO_LIVRE.PASSOS_NOVOS';
@@ -28,13 +27,13 @@ export const PASSOS_NOVOS = {
     ramos: [],
     icone: 'i-lucide-boxes',
   },
-  // #2934: montar pede a chave de integrações (como o webhook, G13).
+  // #2934: as consultas prontas servem a quem monta automações; só o "Outro
+  // endereço" pede a chave de integrações (como o webhook, G13), na peça.
   consultar: {
     chave: 'CONSULTAR',
     grupo: 'OUTRO_SISTEMA',
     ramos: ['nao_consultou'],
     icone: 'i-lucide-search',
-    permissao: 'integration_manage',
   },
   marcar_reuniao: {
     chave: 'REUNIAO',
@@ -52,19 +51,28 @@ export const PASSOS_NOVOS = {
 
 export const ehPassoNovo = passo => Boolean(PASSOS_NOVOS[passo?.tipo]);
 
-// #2931, #2935 e #2936: os passos que o servidor já conhece (o motor, o salvar,
-// o ensaio e o histórico de verdade). Os outros três seguem só no protótipo: a
-// receita com um deles não vai à API.
+// #2932–#2934: os que rodam na hora. O ensaio e o histórico deles vêm do
+// servidor, com os galhos fixos.
+export const COM_MOTOR = ['repetir_lista', 'usar_bloco', 'consultar'];
+export const temMotor = passo => COM_MOTOR.includes(passo?.tipo);
+
+// #2931, #2935 e #2936: os que perguntam e esperam a resposta. O ensaio e o
+// histórico deles também são de verdade, pelo caminho próprio (ensaio.js).
 export const PASSOS_QUE_SALVAM = [
   'pedir_aprovacao',
   'marcar_reuniao',
   'pesquisa_nota',
 ];
-export const emTeste = passo =>
-  ehPassoNovo(passo) && !PASSOS_QUE_SALVAM.includes(passo.tipo);
 export const RAMOS_QUE_SALVAM = [
   ...new Set(PASSOS_QUE_SALVAM.flatMap(tipo => PASSOS_NOVOS[tipo].ramos)),
 ];
+
+// Em teste: passo novo que o servidor ainda não conhece (a receita com ele não
+// vai à API). Hoje os seis salvam; a trava fica para o próximo passo novo.
+export const emTeste = passo =>
+  ehPassoNovo(passo) &&
+  !temMotor(passo) &&
+  !PASSOS_QUE_SALVAM.includes(passo.tipo);
 export const chaveDoPasso = tipo => `${P}.${PASSOS_NOVOS[tipo].chave}`;
 
 // Os galhos de cada passo, para a travessia da receita (receita.js, RAMOS).
@@ -120,7 +128,10 @@ const NOVOS = {
     ritmo: 'aos_poucos',
   }),
   usar_bloco: () => ({ bloco_id: null }),
-  consultar: () => ({ fonte: { de: 'integracao', id: null }, guardar: [] }),
+  consultar: () => ({
+    fonte: { de: 'pronta', consulta: null, entradas: {} },
+    guardar: [],
+  }),
   marcar_reuniao: t => ({
     com: { de: 'responsavel' },
     duracao: 30,
@@ -152,6 +163,19 @@ export const QUEM = ['responsavel', 'pessoa', 'time'];
 export const quemPronto = quem =>
   quem?.de === 'responsavel' ||
   (['pessoa', 'time'].includes(quem?.de) && Number.isInteger(quem.id));
+
+// #2934: a consulta pronta escolhida e o que ela pede, cada um dito (a peça
+// põe uma entrada para cada coisa que a consulta pede, ao escolher).
+export const PRONTA = 'pronta';
+export const ENDERECO = 'endereco';
+const prontaPronta = fonte => {
+  const entradas = Object.values(fonte.entradas || {});
+  return (
+    Boolean(fonte.consulta) &&
+    entradas.length > 0 &&
+    entradas.every(textoEscrito)
+  );
+};
 
 // O endereço próprio do "Consultar": só https. Endereço interno ou privado o
 // servidor recusa (SSRF, #2934); a tela não decide isso.
@@ -193,9 +217,9 @@ const PRONTO = {
     teto <= TETO_MAXIMO,
   usar_bloco: passo => passo.bloco_id != null,
   consultar: ({ fonte, guardar }) =>
-    (fonte?.de === 'endereco'
+    (fonte?.de === ENDERECO
       ? enderecoServe(fonte.url)
-      : Boolean(fonte?.id)) &&
+      : fonte?.de === PRONTA && prontaPronta(fonte)) &&
     (guardar || []).length > 0 &&
     guardar.every(dado => escrito(dado.nome) && escrito(dado.caminho)),
   marcar_reuniao: passo =>

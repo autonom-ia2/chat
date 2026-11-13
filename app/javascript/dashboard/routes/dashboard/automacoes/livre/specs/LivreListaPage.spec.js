@@ -8,11 +8,12 @@ import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 // #2414 F5 — a lista única: as novas (em frase pelo catálogo) e as do jeito
 // antigo, que abrem na tela de hoje. Ligar leva a versão vista e a linha
 // continua com a frase (a resposta de ligar não traz a receita).
-const { routerPush, config, caixas, porta } = vi.hoisted(() => ({
+const { routerPush, config, caixas, porta, conta } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   config: { crmKanbanEnabled: false },
   caixas: [{ id: 5, name: 'WhatsApp Vendas' }],
   porta: {},
+  conta: { passosNovos: false },
 }));
 
 vi.mock('vue-i18n', () => ({
@@ -29,6 +30,9 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: routerPush }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => conta.passosNovos }),
+}));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref } = await import('vue');
   porta.podeMudar = ref(true);
@@ -74,7 +78,13 @@ vi.mock('../../porta/usePorta', async () => {
   return { usePorta: () => ({ ligada: porta.ligada, camadas: ref([]) }) };
 });
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
-  default: { get: vi.fn(), passos: vi.fn(), ligar: vi.fn(), desligar: vi.fn() },
+  default: {
+    get: vi.fn(),
+    passos: vi.fn(),
+    ligar: vi.fn(),
+    desligar: vi.fn(),
+    marcarBloco: vi.fn(),
+  },
 }));
 
 const CATALOGO = {
@@ -133,6 +143,26 @@ describe('LivreListaPage', () => {
     AutomationAPI.get.mockResolvedValue({ data: { payload: [ANTIGA] } });
     porta.ligada.value = false;
     porta.podeMudar.value = true;
+    conta.passosNovos = false;
+  });
+
+  it('#2933: sem os passos novos a linha não oferece virar bloco', async () => {
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-marcar-bloco]').exists()).toBe(false);
+  });
+
+  it('#2933: com os passos novos, "Usar como bloco" marca e a linha mostra o aviso', async () => {
+    conta.passosNovos = true;
+    AutomacoesAPI.marcarBloco.mockResolvedValue({
+      data: { id: 3, bloco: true, ativa: false },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    await wrapper.find('[data-marcar-bloco]').trigger('click');
+    await flushPromises();
+    expect(AutomacoesAPI.marcarBloco).toHaveBeenCalledWith(3, true);
+    expect(wrapper.find('[data-bloco-aviso]').exists()).toBe(true);
   });
 
   it('sem a porta: título de sempre, botão Nova e vazio com convite', async () => {

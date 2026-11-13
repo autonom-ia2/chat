@@ -14,6 +14,10 @@ module Autonomia
       include DesfechoDoAjuste
       include PendenciaDoAjuste
       include MateriaisDaFase2
+      # #2881 — o modelo pronto de ramo: roteiro, entrevista curta, nome e ferramentas fixas. Sem modelo, nada muda.
+      include ModeloPronto
+      # #2984 — fora da Fase 2, o ajuste que não mudou nada no agente (ou cuja escrita não venceu) não fecha como aplicado.
+      include AjusteSemMudanca
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
@@ -641,14 +645,15 @@ module Autonomia
       # e entre as duas chamadas do turno. nil (Fase 2 desligada ou sem bloco) some no compact_blank.
       def context_blocks
         [segmento_context, actuation_context, knowledge_intent_context, skeleton_context, prontas_context, booking_context, adjust_context,
-         knowledge_context,
+         listas_do_modelo_no_ajuste_context, knowledge_context,
          send_media_context, materials_status_context, opening_context, turn_budget_context,
          pending_request_context].compact_blank
       end
 
       # #2858 F3: as ferramentas prontas liberadas para a conta, só na criação (o ajuste não troca as ferramentas).
+      # #2881: com modelo pronto as ferramentas são as do modelo, e o modelo de IA não recebe a lista para escolher.
       def prontas_context
-        ProntasSugeridas.contexto(@account) if criacao?
+        ProntasSugeridas.contexto(@account) if criacao? && modelo_do_rascunho.nil?
       end
 
       # SEGMENTO (tema 8, #1429): orientação e vocabulário do ramo, como DADO. Moldura em PromptParts. Com agente na
@@ -711,7 +716,7 @@ module Autonomia
         # (so_pergunta) nunca é pendência.
         return state['pergunta_pendente'].to_s.strip if ajuste_da_fase2? && state.key?('pergunta_pendente')
         return '' unless adjust_mode? && state['needs_more_info'] == true
-        return '' if state['so_pergunta'] == true
+        return '' if state['so_pergunta'] == true || BuildThread.aviso_fixo?(state)
 
         state['next_question'].to_s.strip
       end
@@ -754,6 +759,10 @@ module Autonomia
       # com fala do usuário; o jbuilder nunca o ecoa (IP oculto).
       def skeleton_context
         return '' if adjust_mode?
+
+        # #2881: com modelo pronto, o roteiro é o do modelo (com as listas atuais), no lugar do esqueleto do tipo.
+        modelo = modelo_do_rascunho
+        return roteiro_do_modelo_context(modelo) if modelo
 
         skeleton = if booking_enabled? && builder_agent_type == 'scheduler'
                      SCHEDULER_WITH_BOOKING_SKELETON
@@ -905,8 +914,9 @@ module Autonomia
       # Contamos turnos `user` como proxy do nº de respostas (desde E1 as perguntas do assistant
       # também são persistidas, mas a contagem por RESPOSTA segue mais fiel — a abertura do
       # Construtor não tem turno de usuário, logo cada resposta corresponde a uma pergunta respondida).
+      # #2881: com modelo pronto o teto desce para 2 (`teto_da_entrevista`); sem modelo, MAX_INTERVIEW_QUESTIONS.
       def interview_budget_exhausted?
-        Array(@thread.messages).count { |m| m['role'] == 'user' } >= MAX_INTERVIEW_QUESTIONS
+        Array(@thread.messages).count { |m| m['role'] == 'user' } >= teto_da_entrevista
       end
 
       # Mapeia o JSON estruturado do Builder p/ colunas do Agent. instruction/scaffold ficam aqui
@@ -1205,6 +1215,9 @@ module Autonomia
         return '' unless @forced_close || close_intent? || force_close_declared?
 
         state = @thread.state.to_h
+        # #2984: o aviso fixo do ajuste que não mudou nada não é pergunta em aberto.
+        return '' if BuildThread.aviso_fixo?(state)
+
         state['needs_more_info'] == true ? state['next_question'].to_s.strip : ''
       end
 
@@ -1271,7 +1284,12 @@ module Autonomia
       end
 
       # #2858 F3: o "já vem com" e o "também combina" da Confira, como o canal (no state e no config do agente).
+      # #2881: com modelo pronto o turno não grava estas chaves. As do modelo (fixas, filtradas pelo que a conta tem
+      # liberado) nascem com a conversa e com o rascunho, e depois só a edição do dono as muda (`ModelosDeRamo::Edicao`).
+      # Gravá-las daqui, da cópia da conversa lida no começo do turno, desfaria uma mudança feita com o turno em andamento.
       def prontas_do_turno(parsed)
+        return {} if modelo_do_rascunho
+
         dispensadas = @thread.agent&.config.to_h[Autonomia::FerramentasProntas::SugestaoParaAgente::DISPENSADAS]
         divisao = ProntasSugeridas.dividir(@account, parsed, fora: dispensadas)
         { 'ferramentas_sugeridas' => divisao[:sugeridas], 'ferramentas_tambem' => divisao[:tambem] }
@@ -1286,8 +1304,11 @@ module Autonomia
         attrs = build_attributes(parsed)
         log_truncation
         aplicada = agent.apply_builder_config!(token, attrs)
+        return fechar_ajuste_sem_efeito!(token, parsed, aplicada) if ajuste_sem_efeito?(agent, aplicada)
+
         # #2858 F3: a escolha do Construtor já é a sugestão do cartão; a página do agente novo não paga outra chamada.
         Autonomia::FerramentasProntas::SugestaoParaAgente.semear_do_construtor!(agent.reload) if aplicada == true && criacao?
+        # #2984: daqui para baixo só chegam a criação, o rascunho e o ajuste que mudou o agente.
         # #18 — marca ready INCONDICIONALMENTE: se a escrita não venceu por SUPERSEDE (existe um ajuste
         # mais NOVO do agente), o token DESTA thread ainda é válido → mark_ready! tira a thread de
         # `processing` (senão o front pollaria até timeout — regressão do supersede). Se não venceu por
@@ -1313,6 +1334,8 @@ module Autonomia
         if criacao?
           attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido'])
           attrs[:config].merge!(prontas_do_turno(parsed))
+          # #2881: com modelo pronto, o tipo é o do modelo e o agente guarda a marca dele (as listas do dono).
+          attrs = com_modelo_pronto(attrs)
         end
         attrs
       end
@@ -1343,10 +1366,12 @@ module Autonomia
 
       # O config com que o rascunho nasce: a base declarada, quando a abertura foi "Ajuda outros agentes" (tema 14), a
       # marca de origem do ajudante, e com a Fase 2 a marca de base do segmento (#1429). As marcas só nascem aqui.
+      # #2881: com modelo pronto, também a marca do modelo (as listas como o dono as deixou) e as ferramentas dela.
       def config_do_rascunho
         papel = @thread.state.to_h['papel']
-        { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
-          'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account) }.compact
+        base = { 'with_knowledge' => with_knowledge?, 'papel' => (papel if papel == Autonomia::Agents::BuildThread::PAPEL_AJUDANTE),
+                 'base' => Autonomia::Agents::PromptParts::SegmentoDoAgente.marca(@thread.account) }.compact
+        base.merge(modelo_pronto_para_o_rascunho)
       end
 
       # Garante o Agent vinculado à thread (modo guided). Cria um rascunho mínimo na PRIMEIRA geração
@@ -1397,8 +1422,9 @@ module Autonomia
 
       # GATE/P2 — nome-padrão derivado do tipo do agente para o fallback de fechamento. Usa o mesmo
       # mapeamento canônico de agent_type_for (tipo desconhecido → 'custom' → 'Assistente').
+      # #2881: com modelo pronto, o nome padrão é o do modelo.
       def default_agent_name(parsed)
-        DEFAULT_NAMES[self.class.agent_type_for(parsed['agent_type'])] || 'Assistente'
+        nome_do_modelo || DEFAULT_NAMES[self.class.agent_type_for(parsed['agent_type'])] || 'Assistente'
       end
 
       # CONHECIMENTO REVISADO (Revisor v2): para cada fonte APROVADA pela IA Revisora, o resumo curto

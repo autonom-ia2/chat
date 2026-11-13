@@ -21,6 +21,7 @@ import telaInicial from './telaInicial.json';
 import relacionamentos from './relacionamentos.json';
 import relacionamentosFicha from './relacionamentosFicha.json';
 import relacionamentosTrazer from './relacionamentosTrazer.json';
+import relacionamentosCarteira from './relacionamentosCarteira.json';
 import seusPosts from './seusPosts.json';
 import metaAdsComentariosIa from './metaAdsComentariosIa.json';
 import painelDoContato from './painelDoContato.json';
@@ -120,6 +121,7 @@ export default {
   ...relacionamentos,
   ...relacionamentosFicha,
   ...relacionamentosTrazer,
+  ...relacionamentosCarteira,
   ...seusPosts,
   ...metaAdsComentariosIa,
   ...painelDoContato,

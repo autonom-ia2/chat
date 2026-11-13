@@ -1,0 +1,44 @@
+chave: transporte_carga
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Carga"
+ramo: "Seguro de transporte de carga"
+seguradoras_sugeridas: "Tokio Marine, Sompo e AXA"
+perguntas:
+  - "Você leva carga de outros e cobra frete, ou a carga é sua?"
+  - "Qual o CNPJ da empresa?"
+  - "Que mercadorias vocês levam? As principais."
+  - "De onde para onde? Só no Brasil ou também para fora?"
+  - "Quanto vale, em média, a carga de uma viagem? E a maior que já foi num caminhão só?"
+  - "Quantas viagens por mês, mais ou menos?"
+  - "Quantos veículos são próprios e quantos são de agregados ou autônomos?"
+  - "Como protegem a carga: rastreador, empresa de gerenciamento de risco, escolta?"
+  - "Já tem seguro de carga? Qual a seguradora, quando vence e se teve roubo ou acidente com carga nos últimos anos."
+  - "Quem cuida disso na empresa, e qual o melhor contato?"
+documentos:
+  - "Cartão do CNPJ e, para transportadora, o comprovante do registro na ANTT."
+  - "Capa das apólices atuais e a lista de sinistros dos últimos anos."
+  - "Um conhecimento de transporte ou nota fiscal de uma viagem comum."
+  - "Lista das mercadorias e das rotas principais."
+  - "As regras de proteção da carga que a empresa já segue (plano de gerenciamento de risco), se houver."
+  - "Contratos com donos de carga que exigem seguro ou que trazem carta de dispensa, se houver."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ da transportadora ou do dono da carga, para conferir o nome, a situação e a atividade da empresa sem perguntar de novo."
+  - fonte: transportadoras
+    usar_quando: "Use quando o cliente for transportadora e informar o CNPJ ou o número do registro, para conferir se o registro na ANTT está ativo sem perguntar a ele. Se não estiver ativo, avise com calma e passe para a equipe."
+  - fonte: ncm
+    usar_quando: "Use quando o cliente disser a mercadoria com uma palavra geral, como eletrônicos ou peças, para achar o código certo dela e anotar para a equipe saber exatamente o que vai na carga."
+  - fonte: cidades
+    usar_quando: "Use quando o cliente disser de onde a carga sai e para onde vai, para conferir o nome certo da cidade e o estado de cada ponta da rota."
+tambem:
+  - fonte: chuva
+    usar_quando: "Use quando houver aviso de carga molhada ou de acidente na chuva, para anotar quanto choveu no dia e no lugar e passar junto com o aviso para a equipe. Não use para dizer se o seguro cobre."
+  - fonte: localizacao
+    usar_quando: "Use quando o motorista ou o cliente mandar a localização de um acidente ou de um roubo, para dizer a cidade e o estado e anotar no aviso que vai para a equipe."
+premium:
+  - raio_x_empresa
+  - historico_placa
+teste:
+  - "Quais seguros a transportadora é obrigada a ter?"
+  - "Levo eletrônicos de São Paulo para Recife"
+  - "Pode cotar para mim"

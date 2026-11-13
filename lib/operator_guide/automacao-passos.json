@@ -2722,6 +2722,13 @@
           "peca": "sim_nao",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
           "obrigatorio": false
+        },
+        {
+          "nome": "show_on_conversation_list",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_CONVERSATION_LIST",
+          "obrigatorio": false,
+          "padrao": false
         }
       ]
     },
@@ -2761,6 +2768,12 @@
           "nome": "show_on_sidebar",
           "peca": "sim_nao",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
+          "obrigatorio": false
+        },
+        {
+          "nome": "show_on_conversation_list",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_CONVERSATION_LIST",
           "obrigatorio": false
         }
       ]

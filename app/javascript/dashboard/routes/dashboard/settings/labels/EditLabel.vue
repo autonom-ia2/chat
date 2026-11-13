@@ -37,6 +37,7 @@ export default {
       nomeInicial: '',
       description: '',
       showOnSidebar: true,
+      showOnConversationList: false,
       color: '',
     };
   },
@@ -67,6 +68,7 @@ export default {
         color: this.color,
         description: this.description,
         show_on_sidebar: this.showOnSidebar,
+        show_on_conversation_list: this.showOnConversationList,
       };
       if (this.nomeLegivelLigado) return dados;
       return { ...dados, title: this.title.toLowerCase() };
@@ -119,6 +121,9 @@ export default {
       this.nomeInicial = this.title;
       this.description = this.selectedResponse.description;
       this.showOnSidebar = this.selectedResponse.show_on_sidebar;
+      this.showOnConversationList = Boolean(
+        this.selectedResponse.show_on_conversation_list
+      );
       this.color = this.selectedResponse.color;
     },
     editLabel() {
@@ -185,6 +190,10 @@ export default {
           {{ $t('LABEL_MGMT.FORM.SHOW_ON_SIDEBAR.LABEL') }}
         </label>
       </div>
+      <label class="flex items-center w-full gap-2 cursor-pointer">
+        <input v-model="showOnConversationList" type="checkbox" />
+        {{ $t('LABEL_MGMT.FORM.SHOW_ON_CONVERSATION_LIST.LABEL') }}
+      </label>
       <div class="flex items-center justify-end w-full gap-2 px-0 py-2">
         <NextButton
           faded

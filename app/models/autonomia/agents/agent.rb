@@ -59,6 +59,8 @@ module Autonomia
       include Autonomia::Agents::ConfigDoMaterial
       # #1479 / #2723 — "Endereço e telefone" do agente (`config['atendimento']`), validado em todo caminho que grava.
       include Autonomia::Agents::DadosDoAtendimento
+      # #2881 — a marca do modelo pronto de ramo (listas do dono e ferramentas), protegida do save com cópia velha.
+      include Autonomia::Agents::MarcaDoModeloPronto
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true
@@ -259,6 +261,7 @@ module Autonomia
       # `esperado` (#1428, correção do ajuste do piloto): o updated_at que a escrita espera achar, conferido sob a trava;
       # se o agente mudou por outro caminho (uma volta de versão), não escreve e devolve :agente_mudou.
       def apply_builder_config!(build_token, attrs, esperado: nil)
+        @escrita_do_construtor_mudou = nil
         recusar_se_instrucao_mantida!
         recusar_se_modo_manual!
         return false if build_token.blank?
@@ -281,6 +284,12 @@ module Autonomia
           # cada "Ajustar com IA". A versão da aplicação leva como autor quem conversava (#1428).
           apply_builder_attributes!(attrs, thread.created_by_id, esperado)
         end
+      end
+
+      # #2984 — a última escrita do Construtor neste objeto mudou alguma coluna do agente? false quando a escrita não
+      # venceu ou gravou o agente igual ao que já era.
+      def escrita_do_construtor_mudou?
+        @escrita_do_construtor_mudou == true
       end
 
       # #3 INSTRUÇÃO VIVA — Atualiza a instrução fora do fluxo do Construtor (a KB mudou, não há
@@ -327,6 +336,8 @@ module Autonomia
             merged = attrs.dup
             merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
             update!(merged)
+            # #2984 — decidido aqui, sob a trava: uma edição de outra pessoa logo depois não entra na conta.
+            @escrita_do_construtor_mudou = saved_changes.except('updated_at').present?
             true
           end
         end

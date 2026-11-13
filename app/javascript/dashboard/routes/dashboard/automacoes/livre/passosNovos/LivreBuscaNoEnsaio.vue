@@ -3,12 +3,12 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { P } from './passosNovos';
-import { buscarNoEnsaio } from './adaptadorFalso';
+import { buscarNoEnsaio } from './dadosDaConta';
 import { fonteEmFrase } from './frasesDosNovos';
 
 // #2934 — no ensaio, o "Buscar em outro sistema" só busca com o OK explícito de
 // quem ensaia: o botão, a frase que diz o que vai acontecer e a confirmação. O
-// resultado só aparece aqui. No protótipo, a resposta é a do teste.
+// resultado só aparece aqui; nada é gravado na automação.
 const props = defineProps({
   passo: { type: Object, required: true },
 });
@@ -18,11 +18,14 @@ const C = `${P}.CONSULTAR`;
 // null: ainda não pediu; 'confirmando'; 'buscando'; 'pronto'.
 const estado = ref(null);
 const dados = ref([]);
+const erro = ref('');
 const fonte = computed(() => fonteEmFrase(props.passo.fonte, t));
 
 const buscar = async () => {
   estado.value = 'buscando';
-  dados.value = await buscarNoEnsaio(props.passo, t);
+  const achou = await buscarNoEnsaio(props.passo);
+  erro.value = achou.ok ? '' : achou.error || t(`${C}.TESTE_FALHOU`);
+  dados.value = achou.ok ? achou.dados : [];
   estado.value = 'pronto';
 };
 </script>
@@ -72,6 +75,14 @@ const buscar = async () => {
       </div>
     </div>
 
+    <p
+      v-else-if="erro"
+      data-busca-erro
+      role="alert"
+      class="mb-0 text-sm text-n-ruby-11"
+    >
+      {{ erro }}
+    </p>
     <div v-else data-busca-resultado role="status" class="flex flex-col gap-1">
       <p class="mb-0 text-sm font-medium text-n-slate-12">
         {{ $t(`${C}.BUSCOU_NO_ENSAIO`, { fonte }) }}

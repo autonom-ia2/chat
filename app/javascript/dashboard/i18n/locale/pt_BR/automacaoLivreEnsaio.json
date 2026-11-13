@@ -179,7 +179,11 @@
         "NADA": "Ainda não rodou esta semana",
         "RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
         "PAROU": "1 parou | {n} pararam"
-      }
+      },
+      "GUARDOU": "Guardou: {dados}.",
+      "VER_DENTRO": "Ver o que aconteceu dentro",
+      "FECHAR_DENTRO": "Esconder o que aconteceu dentro",
+      "DENTRO_ERRO": "Não deu para abrir o que aconteceu dentro do bloco."
     }
   }
 }

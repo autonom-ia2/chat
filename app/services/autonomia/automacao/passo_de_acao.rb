@@ -25,12 +25,16 @@ class Autonomia::Automacao::PassoDeAcao
   # para fora e grava a resposta por esta porta. O "atribuir em rodízio" (#2502) também: a pessoa que o rodízio da caixa
   # escolheu entra pelo mesmo pedido do "Atribuir".
   # `alvo`: o alvo relido pelo executor; o G66 (o dono do card que um passo anterior trocou) e o rodízio (a conversa).
-  def self.executar(passo:, alvo: nil, **)
+  # Um tipo por linha: a complexidade é a lista.
+  def self.executar(passo:, alvo: nil, **) # rubocop:disable Metrics/CyclomaticComplexity
     case passo['tipo']
     when 'retorno' then ::Autonomia::Automacao::PassoDeRetorno.new(passo: passo, **).executar
     when 'em_outro_registro' then ::Autonomia::Automacao::PassoEmOutroRegistro.new(passo: passo, **).executar
     when 'prospeccao' then ::Autonomia::Automacao::PassoDeProspeccao.new(passo: passo, **).executar
     when 'webhook' then ::Autonomia::Automacao::PassoDeWebhook.new(passo: passo, **).executar
+    # #2932 e #2934: chegam pelo Executor#passo_novo, que confere a flag dos passos novos antes.
+    when 'repetir_lista' then ::Autonomia::Automacao::PassoRepetirLista.new(passo: passo, **).executar
+    when 'consultar' then ::Autonomia::Automacao::PassoConsultar.new(passo: passo, **).executar
     when ::Autonomia::Automacao::PassoDeConversaAoResponsavel::TIPO
       ::Autonomia::Automacao::PassoDeConversaAoResponsavel.new(passo: passo, alvo: alvo, **).executar
     when ::Autonomia::Automacao::PassoDeRodizio::TIPO then ::Autonomia::Automacao::PassoDeRodizio.new(passo: passo, alvo: alvo, **).executar

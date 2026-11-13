@@ -608,6 +608,7 @@ fora:
       - autonomia/agents/channels
       - autonomia/agents/instruction_versions
       - autonomia/agents/material
+      - autonomia/agents/modelo_pronto
       - autonomia/agents/onde_atende
       - autonomia/agents/playground
       - autonomia/agents/sources
@@ -731,6 +732,7 @@ fora:
       - autonomia/automacoes
       - autonomia/automacoes_ia
       - autonomia/automacoes_webhook
+      - autonomia/automacoes_passos_novos
       # #2931: responder o pedido de aprovação é da pessoa que a automação escolheu, nunca de outra automação.
       - autonomia/aprovacoes
       - crm/stage_automations
