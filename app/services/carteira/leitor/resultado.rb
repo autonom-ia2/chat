@@ -4,6 +4,10 @@
 # - `lido?`: o arquivo é uma apólice e foi lido. `campos` traz TODOS os nomes de CAMPOS, cada um com o valor na forma
 #   do banco (texto, AAAA-MM-DD, centavos, só dígitos no documento e no telefone) ou nil. nil é "não achei": o leitor
 #   nunca chuta. `duvidas` são os nomes dos campos que ficaram sem valor.
+# - `a_confirmar`: dos campos que vieram COM valor, os que não podem ser gravados sem uma pessoa confirmar. Telefone e
+#   e-mail lidos de PDF nunca são dados por certos: a apólice traz o telefone do corretor ao lado do CPF do segurado,
+#   e nenhuma conferência de valor separa um do outro. Quem recebe o resultado (o Conferir, o "o que mudou") mostra
+#   esses campos para a pessoa confirmar antes de gravar na ficha. É separado de `duvidas`: dúvida é campo sem valor.
 # - `recusa`: por que não leu. `leitura_desligada` (a conta não tem a leitura liberada), `nao_e_apolice` (o arquivo não
 #   é uma apólice de seguro) ou `nao_deu_para_ler` (arquivo ilegível, sem texto, conta sem a IA configurada ou falha
 #   do modelo; o detalhe fica em `motivo`, que é para registro, não para a tela).
@@ -19,6 +23,7 @@ class Carteira::Leitor::Resultado
   DA_APOLICE = %w[tipo ramo_original seguradora numero inicio_vigencia fim_vigencia valor_centavos bem].freeze
   # `corretora` é a corretora que aparece na apólice (serve ao seguro de outra corretora).
   CAMPOS = (DA_APOLICE + %w[corretora segurado_nome segurado_documento segurado_telefone segurado_email]).freeze
+  A_CONFIRMAR = %w[segurado_telefone segurado_email].freeze
 
   attr_reader :recusa, :motivo, :campos, :paginas_total, :paginas_enviadas
 
@@ -48,6 +53,10 @@ class Carteira::Leitor::Resultado
     campos.select { |_campo, valor| valor.nil? }.keys
   end
 
+  def a_confirmar
+    campos.slice(*A_CONFIRMAR).compact.keys
+  end
+
   # Os dados da apólice como Carteira::Guardar recebe, com as chaves de comparação.
   def dados_da_apolice
     campos.slice(*DA_APOLICE).symbolize_keys.merge(
@@ -58,6 +67,6 @@ class Carteira::Leitor::Resultado
 
   def inspect
     "#<#{self.class.name} recusa=#{recusa.inspect} motivo=#{motivo.inspect} duvidas=#{duvidas.size} " \
-      "paginas=#{paginas_enviadas.size}/#{paginas_total.inspect}>"
+      "a_confirmar=#{a_confirmar.size} paginas=#{paginas_enviadas.size}/#{paginas_total.inspect}>"
   end
 end

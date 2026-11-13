@@ -3,11 +3,17 @@
 # "não achei" (null). Só as páginas escolhidas (Carteira::Leitor::Paginas) vão na pergunta.
 #
 # O que o modelo devolve não é aceito de olhos fechados: cada valor passa pela Carteira::Leitor::Ancora, que confere se
-# ele está escrito nas páginas enviadas. O que não está vira "não achei". O tipo do seguro é a única decisão que fica
+# ele está escrito, inteiro, numa das páginas enviadas. O que não está vira "não achei". O tipo do seguro é a única decisão que fica
 # só com o modelo (é interpretação do ramo), dentro da lista de Carteira::Apolice::TIPOS.
 #
-# A chamada usa o cliente da casa (Crm::Ai::ResponsesClient), que registra o uso na Gestão IA
-# (Crm::Ai::UsageRecorder) quando nasce com a conta e a feature. Roda em job: o prazo é longo e há nova tentativa.
+# Quem paga é esta classe, então a trava é dela: sem a leitura liberada na conta (Carteira::Leitor::Liberado) ela
+# levanta Desligada antes de qualquer chamada, mesmo que quem a use tenha esquecido de conferir. O Carteira::Leitor
+# confere antes de abrir o arquivo; aqui é a segunda porta.
+#
+# A IA é a da conta, pelo caminho da casa: a credencial do Kanban CRM (Autonomia::Prospecting::AiCredential, sem a
+# chave da instalação) e o Crm::Ai::ResponsesClient, que registra o uso na Gestão IA (Crm::Ai::UsageRecorder) porque
+# nasce com a conta e a feature. Conta sem a credencial: SemIa. Roda em job: o prazo é longo e há nova tentativa.
+# `cliente:` troca o cliente (a bateria com gabarito e os specs); a trava da conta vale do mesmo jeito.
 #
 # Qualquer quebra da chamada vira Falhou (o leitor responde "não deu para ler"), só com a classe do erro: a mensagem
 # pode trazer o texto da apólice.
@@ -17,6 +23,10 @@
 class Carteira::Leitor::Campos
   # A chamada ao modelo quebrou, voltou cortada ou voltou fora do esquema.
   class Falhou < StandardError; end
+  # A conta não tem a leitura liberada.
+  class Desligada < StandardError; end
+  # A conta não tem a IA configurada.
+  class SemIa < StandardError; end
 
   Lido = Struct.new(:e_apolice, :campos, :resposta, keyword_init: true)
 
@@ -24,6 +34,8 @@ class Carteira::Leitor::Campos
   MODEL = Crm::Ai::Config::MODEL_CLASSIFY
   EFFORT = Crm::Ai::Config::CLASSIFY_REASONING_EFFORT
   TIMEOUT = 90
+  # Uma nova tentativa do HTTP: roda em job, sem ninguém esperando na tela.
+  NOVAS_TENTATIVAS = 1
   # Teto de saída: o raciocínio mais o JSON do esquema (uns 300 tokens).
   MAX_OUTPUT_TOKENS = 4_000
 
@@ -43,7 +55,7 @@ class Carteira::Leitor::Campos
     - numero: o número da apólice, como está escrito, com os pontos e traços. Não é o número da proposta, do endosso, do item, do certificado de registro nem o código da seguradora ou do ramo.
     - inicio_vigencia e fim_vigencia: o começo e o fim da vigência do seguro, no formato AAAA-MM-DD. Não é a data de emissão nem a de vencimento de parcela.
     - valor_centavos: o prêmio total do seguro (o total a pagar, com impostos), em centavos, como número inteiro: "R$ 1.234,56" vira 123456. Não é o valor de uma parcela, o prêmio líquido, a importância segurada nem a franquia. Sem o prêmio total escrito: null.
-    - bem: o que está segurado, em uma linha curta, com as palavras da apólice (o veículo com a placa, o endereço do imóvel). Seguro de vida ou sem bem descrito: null.
+    - bem: o que está segurado, copiado de UM trecho contínuo da página, do jeito que está escrito, sem pular palavra, sem trocar a ordem e sem resumir (o veículo com a placa, o endereço do imóvel). Seguro de vida ou sem bem descrito: null.
     - corretora: o nome da corretora de seguros ou do corretor que aparece na apólice, como está escrito. Senão null.
     - segurado_nome: o nome do segurado (a pessoa ou a empresa dona do seguro), como está escrito. Não é o condutor, o beneficiário, o estipulante nem o corretor.
     - segurado_documento: o CPF ou o CNPJ do segurado, como está escrito. Não é o documento do corretor, da seguradora nem de outra pessoa.
@@ -75,13 +87,17 @@ class Carteira::Leitor::Campos
       schema: { type: 'object', additionalProperties: false, required: propriedades.keys, properties: propriedades } }
   end
 
-  # cliente: um Crm::Ai::ResponsesClient (ou quem responda a `create` do mesmo jeito).
-  def initialize(cliente)
+  # cliente: quem responde a `create` como o Crm::Ai::ResponsesClient; sem ele, o cliente da conta.
+  def initialize(account:, cliente: nil)
+    @account = account
     @cliente = cliente
   end
 
-  # paginas: as de Carteira::Leitor::Paginas#escolhidas. Devolve Lido; levanta Falhou.
+  # paginas: as de Carteira::Leitor::Paginas#escolhidas. Devolve Lido; levanta Desligada, SemIa ou Falhou.
   def ler(paginas)
+    raise Desligada unless Carteira::Leitor::Liberado.para?(@account)
+
+    @cliente ||= cliente_da_conta
     resposta = perguntar(paginas)
     return Lido.new(e_apolice: false, campos: {}, resposta: {}) unless resposta['e_apolice'] == true
 
@@ -89,6 +105,13 @@ class Carteira::Leitor::Campos
   end
 
   private
+
+  def cliente_da_conta
+    credencial = Autonomia::Prospecting::AiCredential.new(account: @account).resolve
+    raise SemIa if credencial.blank?
+
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account, max_retries: NOVAS_TENTATIVAS)
+  end
 
   def perguntar(paginas)
     entrada = { paginas: paginas.map { |pagina| { numero: pagina.numero, texto: pagina.texto } } }.to_json
@@ -109,7 +132,7 @@ class Carteira::Leitor::Campos
 
   # Cada valor só passa se estiver escrito nas páginas enviadas; senão é "não achei".
   def conferidos(resposta, paginas)
-    ancora = Carteira::Leitor::Ancora.new(paginas.map(&:texto).join("\n"))
+    ancora = Carteira::Leitor::Ancora.new(paginas)
     conferidos = CONFERENCIAS.to_h { |campo, da_resposta, conferencia| [campo, ancora.public_send(conferencia, resposta[da_resposta])] }
     conferidos.merge('tipo' => (resposta['tipo'] if Carteira::Apolice::TIPOS.include?(resposta['tipo'])))
   end

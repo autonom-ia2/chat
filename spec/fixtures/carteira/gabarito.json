@@ -1,5 +1,5 @@
 {
-  "aviso": "Gabarito dos PDFs fictícios do leitor de apólice (E6, #2899). Tudo inventado; os PDFs saem de gerar.rb. Cada campo traz o valor esperado na forma do banco; null quer dizer que o leitor NÃO pode devolver valor ali; {\"contem\": [...]} aceita qualquer valor que contenha os trechos. Campo que não aparece no caso não é conferido.",
+  "aviso": "Gabarito dos PDFs fictícios do leitor de apólice (E6, #2899). Tudo inventado; os PDFs saem de gerar.rb. Cada campo traz o valor esperado na forma do banco; null quer dizer que o leitor NÃO pode devolver valor ali; {\"contem\": [...]} aceita qualquer valor que contenha os trechos. Campo que não aparece no caso não é conferido. O contato do segurado (telefone e e-mail) só é esperado onde ele está escrito como do segurado: telefone e e-mail do corretor, da central e do 0800 que estejam na mesma página do CPF têm de ficar em null.",
   "casos": [
     {
       "nome": "auto, tudo na primeira página",
@@ -7,13 +7,21 @@
       "recusa": null,
       "campos": {
         "tipo": "auto",
-        "ramo_original": { "contem": ["Automóvel"] },
+        "ramo_original": {
+          "contem": [
+            "Automóvel"
+          ]
+        },
         "seguradora": "Seguradora Exemplo S.A.",
         "numero": "EX-2026.001234",
         "inicio_vigencia": "2026-11-12",
         "fim_vigencia": "2027-11-12",
         "valor_centavos": 225498,
-        "bem": { "contem": ["EXM0A00"] },
+        "bem": {
+          "contem": [
+            "EXM0A00"
+          ]
+        },
         "corretora": "Corretora Amostra de Seguros Ltda.",
         "segurado_nome": "Marina Exemplo de Souza",
         "segurado_documento": "12345678900",
@@ -27,16 +35,47 @@
       "recusa": null,
       "campos": {
         "tipo": "empresarial",
-        "ramo_original": { "contem": ["Empresarial"] },
+        "ramo_original": {
+          "contem": [
+            "Empresarial"
+          ]
+        },
         "seguradora": "Seguradora Exemplo S.A.",
         "numero": "77.0118.0005678",
         "inicio_vigencia": "2027-01-01",
         "fim_vigencia": "2028-01-01",
         "valor_centavos": 500000,
-        "bem": { "contem": ["Avenida do Exemplo"] },
+        "bem": {
+          "contem": [
+            "Avenida do Exemplo"
+          ]
+        },
         "corretora": "Corretora Amostra de Seguros Ltda.",
         "segurado_nome": "Padaria Amostra Ltda.",
         "segurado_documento": "12345678000100",
+        "segurado_telefone": null,
+        "segurado_email": null
+      }
+    },
+    {
+      "nome": "auto, na página do CPF só há o contato do corretor e o 0800",
+      "arquivo": "apolice_contato_so_do_corretor.pdf",
+      "recusa": null,
+      "campos": {
+        "tipo": "auto",
+        "seguradora": "Seguradora Exemplo S.A.",
+        "numero": "EX-2026.004455",
+        "inicio_vigencia": "2027-01-05",
+        "fim_vigencia": "2028-01-05",
+        "valor_centavos": 312050,
+        "bem": {
+          "contem": [
+            "EXM1B11"
+          ]
+        },
+        "corretora": "Corretora Amostra de Seguros Ltda.",
+        "segurado_nome": "Bruno Amostra Pereira",
+        "segurado_documento": "22233344400",
         "segurado_telefone": null,
         "segurado_email": null
       }
@@ -63,41 +102,6 @@
         "segurado_documento": "11122233300",
         "segurado_telefone": "21977770007",
         "segurado_email": "paulo.modelo@exemplo.invalid"
-      }
-    },
-    {
-      "nome": "longa (160 páginas), sem saber quem é o segurado",
-      "arquivo": "apolice_longa.pdf",
-      "recusa": null,
-      "paginas_enviadas": [1, 2, 3, 4],
-      "campos": {
-        "tipo": "residencial",
-        "seguradora": "Seguradora Exemplo S.A.",
-        "numero": "RS-0114.000777",
-        "inicio_vigencia": "2027-02-01",
-        "fim_vigencia": "2028-02-01",
-        "valor_centavos": 89040,
-        "bem": { "contem": ["Rua do Modelo"] },
-        "segurado_nome": "Renata Amostra Lima",
-        "segurado_documento": "98765432199",
-        "segurado_telefone": "31966660008",
-        "segurado_email": "renata.amostra@exemplo.invalid"
-      }
-    },
-    {
-      "nome": "longa (160 páginas), pelo CPF de quem já se sabe",
-      "arquivo": "apolice_longa.pdf",
-      "documento": "987.654.321-99",
-      "recusa": null,
-      "paginas_enviadas": [1, 2, 160],
-      "campos": {
-        "tipo": "residencial",
-        "numero": "RS-0114.000777",
-        "fim_vigencia": "2028-02-01",
-        "valor_centavos": 89040,
-        "segurado_documento": "98765432199",
-        "segurado_telefone": "31966660008",
-        "segurado_email": "renata.amostra@exemplo.invalid"
       }
     }
   ]

@@ -16,6 +16,18 @@ RSpec.describe Carteira::Leitor::Resultado do
     expect(resultado.duvidas).to eq(%w[ramo_original inicio_vigencia bem corretora segurado_telefone segurado_email])
   end
 
+  # Decisão de produto da revisão (achados D e E): telefone e e-mail lidos de PDF nunca são dados por certos.
+  it 'a confirmar: o telefone e o e-mail que vieram com valor, separados das dúvidas' do
+    com_contato = described_class.lido(campos: lidos.merge('segurado_telefone' => '11999990001', 'segurado_email' => 'marina@exemplo.invalid'),
+                                       paginas_total: 2, paginas_enviadas: [1])
+    so_com_telefone = described_class.lido(campos: lidos.merge('segurado_telefone' => '11999990001'), paginas_total: 2, paginas_enviadas: [1])
+
+    expect(com_contato.a_confirmar).to eq(%w[segurado_telefone segurado_email])
+    expect(com_contato.duvidas & com_contato.a_confirmar).to eq([])
+    expect([so_com_telefone.a_confirmar, so_com_telefone.duvidas.include?('segurado_email')]).to eq([['segurado_telefone'], true])
+    expect([resultado.a_confirmar, described_class.recusado('nao_e_apolice').a_confirmar]).to eq([[], []])
+  end
+
   it 'entrega os dados da apólice como o gravador recebe, com as chaves de comparação' do
     expect(resultado.dados_da_apolice).to eq(
       tipo: 'auto', ramo_original: nil, seguradora: 'Seguradora Exemplo S.A.', numero: 'EX-2026.001234', inicio_vigencia: nil,
@@ -37,7 +49,7 @@ RSpec.describe Carteira::Leitor::Resultado do
   it 'o inspect não mostra o que foi lido' do
     texto = resultado.inspect
 
-    expect(texto).to eq('#<Carteira::Leitor::Resultado recusa=nil motivo=nil duvidas=6 paginas=2/160>')
+    expect(texto).to eq('#<Carteira::Leitor::Resultado recusa=nil motivo=nil duvidas=6 a_confirmar=0 paginas=2/160>')
     expect(lidos.values.map(&:to_s).none? { |valor| texto.include?(valor) }).to be(true)
   end
 end

@@ -1,21 +1,25 @@
 require 'rails_helper'
 
-# E6 (#2899): o valor que o modelo devolveu só é aceito se estiver escrito nas páginas. Dados fictícios.
+# E6 (#2899): o valor que o modelo devolveu só é aceito se estiver escrito, inteiro, numa das páginas. Dados fictícios.
 RSpec.describe Carteira::Leitor::Ancora do
-  subject(:ancora) { described_class.new(texto) }
+  subject(:ancora) { described_class.new([pagina.new(numero: 1, texto: primeira), pagina.new(numero: 2, texto: segunda)]) }
 
-  let(:texto) do
+  let(:pagina) { Carteira::Leitor::Paginas::Pagina }
+  let(:primeira) do
     <<~TEXTO
       SEGURADORA EXEMPLO S.A.   Apólice nº: EX-2026.001234   Proposta nº: 998877
       Vigência: das 24h de 12/11/2026 às 24h de 12/11/2027. Emissão em 2026-11-10.
       Segurado: José   Antônio  Exemplo    CPF: 123.456.789-00    CNPJ do estipulante: 12.345.678/0001-00
-      Prêmio total: R$ 2.254,98 em 6 parcelas. Importância segurada: R$ 80.000
+      Prêmio líquido: R$ 2.100,00   IOF: R$ 154,98   Prêmio total: R$ 2.254,98 em 6 parcelas de R$ 375,83.
+      Importância segurada: R$ 80.000   Produto: Banana Prata Residencial
     TEXTO
   end
+  let(:segunda) { "Endosso da apólice 0531 12 345678.\nSegurada adicional: Lia\nMaria Modelo. Franquia: R$ 3.500,00" }
 
   it 'texto: aceita o que está escrito, sem contar caixa, acento, espaço e pontuação, e devolve sem espaço sobrando' do
-    expect(ancora.escrito('  seguradora   exemplo SA ')).to eq('seguradora exemplo SA')
+    expect(ancora.escrito('  seguradora   exemplo s.a. ')).to eq('seguradora exemplo s.a.')
     expect(ancora.escrito('Jose Antonio Exemplo')).to eq('Jose Antonio Exemplo')
+    expect(ancora.escrito('Lia Maria Modelo')).to eq('Lia Maria Modelo')
   end
 
   it 'texto: recusa o que tem palavra fora das páginas, o vazio, só pontuação, o que não é texto e o comprido demais' do
@@ -25,28 +29,56 @@ RSpec.describe Carteira::Leitor::Ancora do
     expect(recusados.map { |valor| ancora.escrito(valor) }).to all(be_nil)
   end
 
-  it 'número da apólice: letras e dígitos juntos e na ordem' do
-    expect([ancora.codigo('EX-2026.001234'), ancora.codigo(' ex 2026 001234 ')]).to eq(['EX-2026.001234', 'ex 2026 001234'])
-    expect(['EX-2026.001235', '2026.001234-EX', '', '--', nil, 2026].map { |valor| ancora.codigo(valor) }).to all(be_nil)
+  # Achado C da revisão: "Ana" passava por estar dentro de "Banana", e a frase passava com um pedaço de cada lugar.
+  it 'texto: palavra inteira, nunca um pedaço de outra, e a frase seguida, na ordem e na mesma página' do
+    expect(ancora.escrito('Banana Prata')).to eq('Banana Prata')
+    pedaco_de_palavra = %w[Ana Segura Resid]
+    fora_de_ordem_ou_salteada = ['Exemplo José Antônio', 'José Exemplo', 'Seguradora S.A.']
+    um_pedaco_de_cada_pagina = ['Banana Prata Residencial Endosso', 'Maria Modelo José Antônio']
+
+    expect((pedaco_de_palavra + fora_de_ordem_ou_salteada + um_pedaco_de_cada_pagina).map { |valor| ancora.escrito(valor) }).to all(be_nil)
   end
 
-  it 'documento: só CPF ou CNPJ escrito nas páginas, devolvido só com os dígitos' do
+  # Achado A da revisão: "001234" passava por estar dentro de "EX-2026.001234".
+  it 'número da apólice: o bloco inteiro como está escrito, nunca um pedaço dele' do
+    expect([ancora.codigo('EX-2026.001234'), ancora.codigo(' ex2026001234 '), ancora.codigo('0531 12 345678')])
+      .to eq(['EX-2026.001234', 'ex2026001234', '0531 12 345678'])
+    pedacos = ['001234', '2026.001234', 'EX-2026', 'EX-2026.00123', 'X-2026.001234', '0531 12 3456']
+    outros = ['EX-2026.001235', 'ex 2026 001234', '2026.001234-EX', '', '--', nil, 2026]
+
+    expect((pedacos + outros).map { |valor| ancora.codigo(valor) }).to all(be_nil)
+  end
+
+  it 'documento: só CPF ou CNPJ escrito por inteiro nas páginas, devolvido só com os dígitos' do
     expect([ancora.documento('123.456.789-00'), ancora.documento('12345678000100')]).to eq(%w[12345678900 12345678000100])
-    expect(['123.456.789-01', '123.456.789', '998877', '', nil].map { |valor| ancora.documento(valor) }).to all(be_nil)
+    # '890.012.345-67' são os últimos dígitos do CPF emendados nos primeiros do CNPJ: não é um documento escrito.
+    expect(['123.456.789-01', '123.456.789', '998877', '890.012.345-67', '', nil].map { |valor| ancora.documento(valor) }).to all(be_nil)
   end
 
-  it 'data: AAAA-MM-DD que aparece nas páginas como dia, mês e ano' do
+  it 'data: AAAA-MM-DD escrita por inteiro nas páginas como dia, mês e ano' do
     expect(%w[2026-11-12 2027-11-12 2026-11-10].map { |valor| ancora.data(valor) }).to eq(%w[2026-11-12 2027-11-12 2026-11-10])
-    expect(['2027-11-13', '12/11/2026', '2026-13-45', 'ontem', '', nil, 20_261_112].map { |valor| ancora.data(valor) }).to all(be_nil)
+    # 12/11/20 é só o começo de 12/11/2026.
+    expect(['2027-11-13', '2020-11-12', '12/11/2026', '2026-13-45', 'ontem', '', nil, 20_261_112].map { |valor| ancora.data(valor) })
+      .to all(be_nil)
   end
 
-  it 'valor: centavos inteiros e positivos que aparecem nas páginas; o redondo também vale sem os centavos' do
-    expect([ancora.centavos(225_498), ancora.centavos(8_000_000)]).to eq([225_498, 8_000_000])
-    expect([225_499, 0, -225_498, 2254.98, '225498', nil].map { |valor| ancora.centavos(valor) }).to all(be_nil)
+  # Achado B da revisão: 2254 passava por estar dentro de "2.254,98".
+  it 'valor: um dos valores em dinheiro escritos, por inteiro; um pedaço dele e o valor sem os centavos não passam' do
+    expect([225_498, 210_000, 350_000].map { |valor| ancora.centavos(valor) }).to eq([225_498, 210_000, 350_000])
+    pedacos = [2254, 22_549, 25_498, 254, 98, 6]
+    outros = [225_499, 8_000_000, 80_000, 0, -225_498, 2254.98, '225498', nil]
+
+    expect((pedacos + outros).map { |valor| ancora.centavos(valor) }).to all(be_nil)
+  end
+
+  # O limite que fica: a âncora só diz que o valor está escrito, não que ele é o prêmio total. Quem mede se o modelo
+  # troca o prêmio pela parcela ou pelo IOF é a bateria com gabarito.
+  it 'valor: a parcela e o IOF também estão escritos, e a âncora não sabe que não são o prêmio' do
+    expect([ancora.centavos(37_583), ancora.centavos(15_498)]).to eq([37_583, 15_498])
   end
 
   it 'página sem dígito nem letra não confirma nada' do
-    vazia = described_class.new(" \n ")
+    vazia = described_class.new([pagina.new(numero: 1, texto: " \n ")])
 
     expect([vazia.escrito('Exemplo'), vazia.codigo('EX-1'), vazia.documento('123.456.789-00'), vazia.data('2026-11-12'),
             vazia.centavos(100)]).to all(be_nil)

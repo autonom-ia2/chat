@@ -15,7 +15,7 @@ RSpec.describe Rake::Task do
     {
       'EX-2026.001234' => da_seguradora.merge(
         'tipo' => 'auto', 'ramo' => '0531 - Automóvel - Casco', 'numero' => 'EX-2026.001234', 'inicio_vigencia' => '2026-11-12',
-        'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498, 'bem' => 'Veículo Modelo Exemplo 1.0 2024 Placa EXM0A00',
+        'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498, 'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00',
         'corretora' => 'Corretora Amostra de Seguros Ltda.', 'segurado_nome' => 'Marina Exemplo de Souza',
         'segurado_documento' => '123.456.789-00', 'segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 1,
         'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1
@@ -29,18 +29,19 @@ RSpec.describe Rake::Task do
         'segurado_telefone' => '(11) 98888-0005', 'segurado_telefone_pagina' => 2,
         'segurado_email' => 'vistoria@exemplo.invalid', 'segurado_email_pagina' => 2
       ),
+      # Na página do CPF só há o contato do corretor e o 0800: o modelo que acerta não devolve contato do segurado.
+      'EX-2026.004455' => da_seguradora.merge(
+        'tipo' => 'auto', 'numero' => 'EX-2026.004455', 'inicio_vigencia' => '2027-01-05', 'fim_vigencia' => '2028-01-05',
+        'valor_centavos' => 312_050, 'bem' => 'Veículo Exemplo Sedan 2.0 2025 Placa EXM1B11',
+        'corretora' => 'Corretora Amostra de Seguros Ltda.', 'segurado_nome' => 'Bruno Amostra Pereira',
+        'segurado_documento' => '222.333.444-00'
+      ),
       'COMUNICADO DE ASSEMBLEIA' => { 'e_apolice' => false },
       'VD-0093.004321' => da_seguradora.merge(
         'tipo' => 'vida', 'numero' => 'VD-0093.004321', 'inicio_vigencia' => '2026-03-15', 'fim_vigencia' => '2027-03-15',
         'valor_centavos' => 138_000, 'segurado_nome' => 'Paulo Modelo Ferreira', 'segurado_documento' => '111.222.333-00',
         'segurado_telefone' => '(21) 97777-0007', 'segurado_telefone_pagina' => 1,
         'segurado_email' => 'paulo.modelo@exemplo.invalid', 'segurado_email_pagina' => 1
-      ),
-      'RS-0114.000777' => da_seguradora.merge(
-        'tipo' => 'residencial', 'numero' => 'RS-0114.000777', 'inicio_vigencia' => '2027-02-01', 'fim_vigencia' => '2028-02-01',
-        'valor_centavos' => 89_040, 'bem' => 'Rua do Modelo, 45, apto 12 - Bairro Exemplo', 'segurado_nome' => 'Renata Amostra Lima',
-        'segurado_documento' => '987.654.321-99', 'segurado_telefone' => '(31) 96666-0008', 'segurado_telefone_pagina' => 2,
-        'segurado_email' => 'renata.amostra@exemplo.invalid', 'segurado_email_pagina' => 2
       )
     }
   end
@@ -71,16 +72,18 @@ RSpec.describe Rake::Task do
   end
 
   describe 'desligada por padrão' do
+    let(:inteira) { { AUTONOMIA_EVAL_PAGO: '1', CARTEIRA_LEITOR_BATERIA: '1', OPENAI_API_KEY: 'chave-de-desenvolvimento', CI: nil } }
+
     it 'sem as variáveis, a tarefa para antes de criar o cliente e diz como ligar' do
-      with_modified_env(AUTONOMIA_EVAL_PAGO: nil, CARTEIRA_LEITOR_BATERIA: nil, OPENAI_API_KEY: nil) do
+      with_modified_env(AUTONOMIA_EVAL_PAGO: nil, CARTEIRA_LEITOR_BATERIA: nil, OPENAI_API_KEY: nil, CI: nil) do
         expect { expect { task.invoke }.to raise_error(SystemExit) }.to output(a_string_including('Bateria desligada')).to_stderr
       end
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     end
 
     it 'só liga com as duas variáveis em 1 e a chave: faltando qualquer uma, segue desligada' do
-      inteira = { AUTONOMIA_EVAL_PAGO: '1', CARTEIRA_LEITOR_BATERIA: '1', OPENAI_API_KEY: 'chave-de-desenvolvimento' }
-      tentativas = inteira.keys.map { |falta| inteira.merge(falta => nil) } + [inteira.merge(CARTEIRA_LEITOR_BATERIA: 'true'), inteira]
+      ligar = inteira.except(:CI)
+      tentativas = ligar.keys.map { |falta| inteira.merge(falta => nil) } + [inteira.merge(CARTEIRA_LEITOR_BATERIA: 'true'), inteira]
 
       ligadas = tentativas.map { |ambiente| with_modified_env(ambiente) { CarteiraLeitorBateria.ligada? } }
 
@@ -88,8 +91,29 @@ RSpec.describe Rake::Task do
     end
 
     it 'fora da tarefa, quem não passa um cliente também não chega ao modelo com a bateria desligada' do
-      with_modified_env(AUTONOMIA_EVAL_PAGO: nil, CARTEIRA_LEITOR_BATERIA: nil, OPENAI_API_KEY: nil) do
+      with_modified_env(AUTONOMIA_EVAL_PAGO: nil, CARTEIRA_LEITOR_BATERIA: nil, OPENAI_API_KEY: nil, CI: nil) do
         expect { CarteiraLeitorBateria.new }.to raise_error(ArgumentError)
+      end
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
+
+    # Achado J da revisão: em produção a chave seria a de produção, e na CI ninguém aprovou o gasto.
+    it 'na CI, a tarefa para mesmo com tudo ligado, e quem não passa um cliente não chega ao modelo' do
+      with_modified_env(inteira.merge(CI: 'true')) do
+        expect(CarteiraLeitorBateria.ligada?).to be(false)
+        expect { expect { task.invoke }.to raise_error(SystemExit) }.to output(a_string_including('não roda em produção nem na CI')).to_stderr
+        expect { CarteiraLeitorBateria.new }.to raise_error(ArgumentError, CarteiraLeitorBateria::PROIBIDA)
+      end
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
+
+    it 'em produção, a tarefa para mesmo com tudo ligado, e quem não passa um cliente não chega ao modelo' do
+      allow(Rails.env).to receive(:production?).and_return(true)
+
+      with_modified_env(inteira) do
+        expect(CarteiraLeitorBateria.ligada?).to be(false)
+        expect { expect { task.invoke }.to raise_error(SystemExit) }.to output(a_string_including('não roda em produção nem na CI')).to_stderr
+        expect { CarteiraLeitorBateria.new }.to raise_error(ArgumentError, CarteiraLeitorBateria::PROIBIDA)
       end
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     end
@@ -102,9 +126,21 @@ RSpec.describe Rake::Task do
 
     expect { expect(bateria.rodar(saida: saida)).to be(true) }.to not_change(Account, :count).and not_change(Crm::AiUsageEvent, :count)
 
-    expect(saida.string).to include('6 casos.', 'Campos errados: 0 (o aceite é 0).', 'Campos em "não achei" que o gabarito tinha: 0.')
+    expect(saida.string).to include('5 casos.', 'Campos errados: 0 (o aceite é 0).', 'Campos em "não achei" que o gabarito tinha: 0.')
     expect(saida.string).not_to include('ERRADO')
-    expect(cliente).to have_received(:create).exactly(6).times
+    expect(cliente).to have_received(:create).exactly(5).times
+  end
+
+  # O que a conferência de valor não separa (o contato do corretor está escrito por inteiro na página do CPF), o
+  # gabarito pega: o modelo que der o contato do corretor como do segurado reprova a bateria.
+  it 'reprova a bateria quando o modelo dá o contato do corretor, que está na página do CPF, como do segurado' do
+    respostas['EX-2026.004455'].merge!('segurado_telefone' => '(11) 3000-0002', 'segurado_telefone_pagina' => 1,
+                                       'segurado_email' => 'contato@corretora-amostra.invalid', 'segurado_email_pagina' => 1)
+    modelo_acerta
+    saida = StringIO.new
+
+    expect(CarteiraLeitorBateria.new(cliente: cliente).rodar(saida: saida)).to be(false)
+    expect(saida.string).to include('errados: segurado_telefone, segurado_email', 'Campos errados: 2 (o aceite é 0).')
   end
 
   it 'a saída traz só nomes de campo e contagens, nada do que foi lido' do
@@ -164,7 +200,7 @@ RSpec.describe Rake::Task do
 
   describe 'o teto de custo' do
     it 'o pior caso estimado da bateria inteira fica muito abaixo do teto' do
-      expect(CarteiraLeitorBateria.teto_por_caso * 6).to be_between(0.0001, CarteiraLeitorBateria::TETO_USD / 10)
+      expect(CarteiraLeitorBateria.teto_por_caso * 5).to be_between(0.0001, CarteiraLeitorBateria::TETO_USD / 10)
     end
 
     it 'para no caso seguinte quando o custo real passa do teto' do

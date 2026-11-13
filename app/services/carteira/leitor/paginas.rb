@@ -2,7 +2,8 @@
 # de 160 páginas não manda 160 páginas ao modelo.
 #
 # A escolha é por valor exato, nunca por lista de palavras:
-# 1. quando já se sabe quem é o segurado, as páginas em que os dígitos do CPF/CNPJ dele aparecem;
+# 1. quando já se sabe quem é o segurado, as páginas em que os dígitos do CPF/CNPJ dele aparecem, e as vizinhas
+#    imediatas de cada uma (a vigência e o prêmio costumam estar na página ao lado da que traz o CPF);
 # 2. sem documento (ou se ele não aparece em nenhuma), as páginas em que o nome dele aparece, sem contar espaço, caixa,
 #    acento e pontuação (Carteira::Chave);
 # 3. sem nenhum dos dois, as primeiras páginas.
@@ -13,10 +14,25 @@
 # simplesmente não é lida. Reaproveita a rasterização e o OCR da base de conhecimento (Processors::Rasterizacao e
 # Processors::Ocr, com os limites de recurso e de tempo deles) e o mesmo teto de pixels por página.
 #
+# Arquivo que não abre nunca levanta para quem chama com outro erro que não Ilegivel: caminho que não existe, arquivo
+# maior que o teto, PDF com senha, truncado ou quebrado. O leitor de PDF levanta de tudo com arquivo ruim (os erros
+# dele, de entrada e saída, e até NoMethodError), por isso a abertura e a leitura do texto de cada página pegam
+# qualquer erro; o resto da classe não.
+#
 # O texto das páginas é dado de cliente: não vai para log. O log leva só o número da página e a classe do erro.
 class Carteira::Leitor::Paginas
-  Pagina = Struct.new(:numero, :texto, keyword_init: true)
+  # `tokens`: os pedaços do texto, para a conferência de valor (Carteira::Leitor::Tokens).
+  Pagina = Struct.new(:numero, :texto, keyword_init: true) do
+    def tokens
+      @tokens ||= Carteira::Leitor::Tokens.new(texto)
+    end
+  end
   PROCESSADORES = Autonomia::Agents::Knowledge::Processors
+  TOKENS = Carteira::Leitor::Tokens
+
+  # O maior arquivo que o leitor abre: o limite de anexo que a carteira pratica para o PDF da apólice quando a
+  # instalação não configura outro (Carteira::Pdf). Abrir um PDF maior que isso custa memória demais para um job.
+  MAXIMO_DE_BYTES = Carteira::Pdf::LIMITE_PADRAO_MB.megabytes
 
   # Quantas páginas vão ao modelo, no máximo.
   MAXIMO = 6
@@ -31,7 +47,7 @@ class Carteira::Leitor::Paginas
   # Nome com menos letras que isto apareceria em qualquer página: não serve para escolher.
   MINIMO_DO_NOME = 5
 
-  # O arquivo não é um PDF, ou o leitor de PDF não o entende (quebrado, com senha).
+  # O arquivo não existe, é grande demais, não é um PDF, ou o leitor de PDF não o entende (quebrado, com senha).
   class Ilegivel < StandardError; end
 
   # Quantas páginas o arquivo tem. Só depois de `escolhidas`.
@@ -39,7 +55,7 @@ class Carteira::Leitor::Paginas
 
   def initialize(caminho, documento: nil, nome: nil, ocr: false)
     @caminho = caminho.to_s
-    @documento = Carteira::Leitor::Ancora.digitos(documento)
+    @documento = TOKENS.digitos(documento)
     @nome = Carteira::Chave.seguradora(nome)
     @ocr = ocr
     @textos = {}
@@ -53,27 +69,45 @@ class Carteira::Leitor::Paginas
   private
 
   def ler
+    abrir
+    indices.filter_map do |indice|
+      texto = texto_ou_ocr(indice)
+      Pagina.new(numero: indice + 1, texto: texto.first(MAXIMO_POR_PAGINA)) unless sem_texto?(texto)
+    end
+  end
+
+  # O tamanho é conferido antes de o leitor de PDF tocar no arquivo.
+  def abrir
+    raise Ilegivel, 'grande_demais' if File.size(@caminho) > MAXIMO_DE_BYTES
     raise Ilegivel, 'nao_e_pdf' unless PROCESSADORES::Rasterizacao.pdf?(@caminho)
 
     require 'pdf-reader'
     @paginas = PDF::Reader.new(@caminho).pages
     @total = @paginas.size
-    indices.filter_map do |indice|
-      texto = texto_ou_ocr(indice)
-      Pagina.new(numero: indice + 1, texto: texto.first(MAXIMO_POR_PAGINA)) unless sem_texto?(texto)
-    end
-  rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
+  rescue Ilegivel
+    raise
+  rescue StandardError => e
+    # Só a classe: a mensagem do erro pode trazer o caminho do arquivo ou um pedaço dele.
     raise Ilegivel, e.class.name
   end
 
   def indices
-    do_documento.presence || do_nome.presence || (0...@total).first(PRIMEIRAS)
+    com_o_documento = do_documento
+    return com_as_vizinhas(com_o_documento) if com_o_documento.any?
+
+    do_nome.presence || (0...@total).first(PRIMEIRAS)
+  end
+
+  # As páginas do documento entram todas (já são no máximo MAXIMO); o que sobra do teto vai para as vizinhas, na ordem.
+  def com_as_vizinhas(chaves)
+    vizinhas = chaves.flat_map { |indice| [indice - 1, indice + 1] }.uniq.select { |indice| indice.between?(0, @total - 1) } - chaves
+    (chaves + vizinhas.first(MAXIMO - chaves.size)).sort
   end
 
   def do_documento
     return [] unless Carteira::Leitor::Ancora::TAMANHOS_DE_DOCUMENTO.include?(@documento.length)
 
-    onde { |texto| Carteira::Leitor::Ancora.digitos(texto).include?(@documento) }
+    onde { |texto| TOKENS.digitos(texto).include?(@documento) }
   end
 
   def do_nome
@@ -87,10 +121,10 @@ class Carteira::Leitor::Paginas
     (0...@total).first(TETO_DE_BUSCA).lazy.select { |indice| yield texto(indice) }.first(MAXIMO)
   end
 
-  # O texto que o PDF traz na página. Página que o leitor de PDF não entende conta como sem texto.
+  # O texto que o PDF traz na página. Página que o leitor de PDF não entende (qualquer erro dele) conta como sem texto.
   def texto(indice)
     @textos[indice] ||= em_utf8(@paginas[indice].text)
-  rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
+  rescue StandardError => e
     Rails.logger.warn("[carteira][leitor] pagina_ilegivel pagina=#{indice + 1} #{e.class}")
     @textos[indice] = ''
   end

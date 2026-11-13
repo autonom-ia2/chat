@@ -6,6 +6,8 @@
 #
 # Cada caso é uma chamada paga: FORA DO CI de propósito, e só roda com orçamento aprovado pelo dono. Sem as duas
 # variáveis e a chave, a tarefa para antes de qualquer chamada. A chave nunca é impressa e nunca é a de produção.
+# Em produção (`Rails.env.production?`) e na CI (variável `CI`) a tarefa para sempre, mesmo com tudo ligado: lá a
+# chave seria a de produção, e na CI ninguém aprovou o gasto.
 #
 # Nada é gravado: a conta é um objeto em memória com a leitura liberada, e o cliente não registra uso no banco. Antes
 # da primeira chamada, a estimativa pelo pior caso (todas as páginas que cabem numa pergunta, cheias, e a saída no
@@ -26,6 +28,8 @@ class CarteiraLeitorBateria
   CHAVE = 'OPENAI_API_KEY'.freeze
   COMO_LIGAR = "Bateria desligada. Ela chama o modelo de verdade e custa dinheiro: rode só com orçamento aprovado, com #{LIGAR.join('=1 ')}=1 " \
                "e #{CHAVE} (chave de desenvolvimento).".freeze
+  PROIBIDA = 'A bateria do leitor de apólice não roda em produção nem na CI: ela chama o modelo de verdade e custa dinheiro.'.freeze
+  AMBIENTE_DA_CI = 'CI'.freeze
   TETO_USD = 2.0
   # Estimativa generosa: instruções e esquema; uma página cheia (Paginas::MAXIMO_POR_PAGINA caracteres).
   TOKENS_FIXOS = 2_500
@@ -36,8 +40,19 @@ class CarteiraLeitorBateria
 
   class EstourouOTeto < StandardError; end
 
+  def self.proibida?
+    Rails.env.production? || ENV.fetch(AMBIENTE_DA_CI, nil).present?
+  end
+
   def self.ligada?
-    LIGAR.all? { |variavel| ENV.fetch(variavel, nil) == '1' } && ENV.fetch(CHAVE, nil).present?
+    !proibida? && LIGAR.all? { |variavel| ENV.fetch(variavel, nil) == '1' } && ENV.fetch(CHAVE, nil).present?
+  end
+
+  # nil quando a bateria pode rodar; senão, o aviso para quem tentou.
+  def self.por_que_nao_roda
+    return PROIBIDA if proibida?
+
+    COMO_LIGAR unless ligada?
   end
 
   # O pior caso de uma pergunta, em dólar, na tarifa do modelo do leitor.
@@ -102,7 +117,7 @@ class CarteiraLeitorBateria
 
   # O único caminho que paga: recusa de novo aqui, para ninguém chegar ao modelo por fora da tarefa.
   def cliente_de_verdade
-    raise ArgumentError, COMO_LIGAR unless self.class.ligada?
+    raise ArgumentError, self.class.por_que_nao_roda unless self.class.ligada?
 
     credencial = { api_key: ENV.fetch(CHAVE), api_base: ENV.fetch('OPENAI_API_BASE', nil).presence, source: :bateria }
     Crm::Ai::ResponsesClient.new(credential: credencial)
@@ -139,7 +154,8 @@ namespace :carteira do
   namespace :leitor do
     desc 'Bateria paga do leitor de apólice contra o gabarito (desligada por padrão; ver o cabeçalho do arquivo)'
     task bateria: :environment do
-      abort CarteiraLeitorBateria::COMO_LIGAR unless CarteiraLeitorBateria.ligada?
+      aviso = CarteiraLeitorBateria.por_que_nao_roda
+      abort aviso if aviso
       exit(1) unless CarteiraLeitorBateria.new.rodar
     end
   end

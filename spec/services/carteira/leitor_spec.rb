@@ -1,7 +1,9 @@
 require 'rails_helper'
+require 'pdf-reader'
 
 # E6 (#2899): o leitor de apólice em PDF, do arquivo ao resultado. Os PDFs são fictícios (spec/fixtures/carteira,
-# gerados por gerar.rb) e o modelo é um dublê que responde no esquema fechado: nenhuma chamada paga sai daqui.
+# gerados por gerar.rb; o de 160 páginas é montado na hora) e o modelo é um dublê que responde no esquema fechado:
+# nenhuma chamada paga sai daqui.
 RSpec.describe Carteira::Leitor do
   let(:account) { create(:account) }
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
@@ -11,7 +13,7 @@ RSpec.describe Carteira::Leitor do
   let(:do_auto) do
     { 'tipo' => 'auto', 'ramo' => '0531 - Automóvel - Casco', 'seguradora' => 'SEGURADORA EXEMPLO S.A.', 'numero' => 'EX-2026.001234',
       'inicio_vigencia' => '2026-11-12', 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498,
-      'bem' => 'Veículo Modelo Exemplo 1.0 2024 Placa EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
+      'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
       'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '123.456.789-00',
       'segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 1,
       'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1 }
@@ -39,6 +41,11 @@ RSpec.describe Carteira::Leitor do
     described_class.new(account: account, ocr: ocr).ler(pdf(arquivo), **quem)
   end
 
+  # A apólice de 160 páginas é montada na hora (spec/support/carteira_pdf_longo.rb).
+  def ler_a_longa(**quem)
+    described_class.new(account: account).ler(CarteiraPdfLongo.caminho, **quem)
+  end
+
   # Os números das páginas que foram na última pergunta ao modelo.
   def paginas_perguntadas
     JSON.parse(perguntas.last[:input])['paginas'].pluck('numero')
@@ -53,6 +60,15 @@ RSpec.describe Carteira::Leitor do
 
       expect(resultado).to have_attributes(recusa: 'leitura_desligada', lido?: false, campos: {}, duvidas: [], paginas_enviadas: [])
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+      expect(perguntas).to be_empty
+    end
+
+    # Achado H da revisão: quem pergunta ao modelo confere a chave de novo; se ela caiu no meio, nada é pago.
+    it 'desligada entre abrir o arquivo e perguntar: devolve leitura_desligada sem chamar o modelo' do
+      allow(Carteira::Leitor::Liberado).to receive(:para?).and_return(true, false)
+      modelo_responde(do_auto)
+
+      expect(ler('apolice_auto.pdf')).to have_attributes(recusa: 'leitura_desligada', campos: {}, paginas_enviadas: [])
       expect(perguntas).to be_empty
     end
 
@@ -77,11 +93,12 @@ RSpec.describe Carteira::Leitor do
     expect(resultado.campos).to eq(
       'tipo' => 'auto', 'ramo_original' => '0531 - Automóvel - Casco', 'seguradora' => 'SEGURADORA EXEMPLO S.A.',
       'numero' => 'EX-2026.001234', 'inicio_vigencia' => '2026-11-12', 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498,
-      'bem' => 'Veículo Modelo Exemplo 1.0 2024 Placa EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
+      'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
       'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '12345678900', 'segurado_telefone' => '11999990001',
       'segurado_email' => 'marina.exemplo@exemplo.invalid'
     )
-    expect(resultado).to have_attributes(recusa: nil, duvidas: [], paginas_total: 2, paginas_enviadas: [1, 2])
+    expect(resultado).to have_attributes(recusa: nil, duvidas: [], a_confirmar: %w[segurado_telefone segurado_email], paginas_total: 2,
+                                         paginas_enviadas: [1, 2])
     expect(resultado.dados_da_apolice).to include(seguradora_chave: 'seguradoraexemplosa', numero_chave: 'EX2026001234', tipo: 'auto')
   end
 
@@ -109,6 +126,18 @@ RSpec.describe Carteira::Leitor do
       expect(resultado.duvidas).to include(*nomes)
       expect(resultado.campos['ramo_original']).to eq('0531 - Automóvel - Casco')
       expect(resultado).to be_lido
+    end
+
+    # Achados A, B e C da revisão: um pedaço do que está escrito não é o valor escrito.
+    it 'um pedaço do número, do prêmio ou de uma palavra, e a frase montada com pedaços de lugares diferentes, viram "não achei"' do
+      pedacos = { 'numero' => '001234', 'valor_centavos' => 2254, 'segurado_nome' => 'Marina Exemplo Souza', 'corretora' => 'Amostra de Seguro',
+                  'bem' => 'Veículo Modelo Exemplo Placa EXM0A00' }
+      modelo_responde(do_auto.merge(pedacos))
+
+      resultado = ler('apolice_auto.pdf')
+
+      expect(resultado.campos.slice(*pedacos.keys).values).to all(be_nil)
+      expect(resultado.duvidas).to eq(%w[numero valor_centavos bem corretora segurado_nome])
     end
 
     it 'valor que não é número inteiro de centavos não passa' do
@@ -157,6 +186,30 @@ RSpec.describe Carteira::Leitor do
       end
     end
 
+    # Achados D e E da revisão.
+    it 'recusa o 0800, o CPF devolvido como telefone, o DDD trocado e o pedaço de um e-mail, mesmo na página do CPF' do
+      tentativas = [{ 'segurado_telefone' => '0800 000 0003' }, { 'segurado_telefone' => '123.456.789-00' },
+                    { 'segurado_telefone' => '(21) 99999-0001' }, { 'segurado_telefone' => '99999-0001' },
+                    { 'segurado_email' => 'exemplo@exemplo.invalid' }, { 'segurado_email' => 'marina.exemplo@exemplo.inv' }]
+
+      tentativas.each do |campos|
+        modelo_responde(do_auto.merge(campos))
+
+        expect(ler('apolice_auto.pdf').campos[campos.keys.first]).to be_nil
+      end
+    end
+
+    # A decisão de produto dos achados D e E: o contato do corretor está escrito por inteiro na página do CPF, e nenhuma
+    # conferência de valor o separa do contato do segurado. Por isso o que passa nunca é dado por certo.
+    it 'o contato que passa sai como "a confirmar", nunca como dúvida, e o que não passa sai só como dúvida' do
+      modelo_responde(do_auto.merge('segurado_telefone' => '(11) 3000-0002', 'segurado_email' => nil))
+
+      resultado = ler('apolice_auto.pdf')
+
+      expect(resultado.campos).to include('segurado_telefone' => '1130000002', 'segurado_email' => nil)
+      expect(resultado).to have_attributes(a_confirmar: ['segurado_telefone'], duvidas: ['segurado_email'])
+    end
+
     it 'recusa telefone inventado, com dígitos de menos e página que não foi enviada' do
       tentativas = [{ 'segurado_telefone' => '(11) 91234-5678' }, { 'segurado_telefone' => '9999-0001' }, { 'segurado_telefone_pagina' => 7 },
                     { 'segurado_telefone_pagina' => nil }, { 'segurado_telefone_pagina' => '1' }]
@@ -173,26 +226,43 @@ RSpec.describe Carteira::Leitor do
     it 'PDF de 160 páginas não manda 160 páginas: sem saber quem é o segurado, vão as primeiras' do
       modelo_responde('tipo' => 'residencial')
 
-      resultado = ler('apolice_longa.pdf')
+      resultado = ler_a_longa
 
       expect(perguntas.size).to eq(1)
       expect(paginas_perguntadas).to eq([1, 2, 3, 4])
       expect(resultado).to have_attributes(paginas_total: 160, paginas_enviadas: [1, 2, 3, 4])
     end
 
-    it 'sabendo o CPF, vão só as páginas em que ele aparece, mesmo a última' do
+    # Achado I da revisão.
+    it 'sabendo o CPF, vão só as páginas em que ele aparece, mesmo a última, e as vizinhas de cada uma' do
       modelo_responde('tipo' => 'residencial')
 
-      resultado = ler('apolice_longa.pdf', documento: '987.654.321-99')
+      resultado = ler_a_longa(documento: '987.654.321-99')
 
-      expect(paginas_perguntadas).to eq([1, 2, 160])
-      expect(resultado.paginas_enviadas).to eq([1, 2, 160])
+      expect(paginas_perguntadas).to eq([1, 2, 3, 159, 160])
+      expect(resultado.paginas_enviadas).to eq([1, 2, 3, 159, 160])
+    end
+
+    it 'lê a apólice longa pelas primeiras páginas, com o contato da página 2, onde o CPF também está' do
+      modelo_responde('tipo' => 'residencial', 'seguradora' => 'SEGURADORA EXEMPLO S.A.', 'numero' => 'RS-0114.000777',
+                      'inicio_vigencia' => '2027-02-01', 'fim_vigencia' => '2028-02-01', 'valor_centavos' => 89_040,
+                      'bem' => 'Rua do Modelo, 45, apto 12 - Bairro Exemplo', 'segurado_nome' => 'Renata Amostra Lima',
+                      'segurado_documento' => '987.654.321-99', 'segurado_telefone' => '(31) 96666-0008', 'segurado_telefone_pagina' => 2,
+                      'segurado_email' => 'renata.amostra@exemplo.invalid', 'segurado_email_pagina' => 2)
+
+      resultado = ler_a_longa
+
+      expect(resultado.campos).to include('numero' => 'RS-0114.000777', 'inicio_vigencia' => '2027-02-01', 'fim_vigencia' => '2028-02-01',
+                                          'valor_centavos' => 89_040, 'bem' => 'Rua do Modelo, 45, apto 12 - Bairro Exemplo',
+                                          'segurado_documento' => '98765432199', 'segurado_telefone' => '31966660008',
+                                          'segurado_email' => 'renata.amostra@exemplo.invalid')
+      expect(resultado).to have_attributes(duvidas: %w[ramo_original corretora], a_confirmar: %w[segurado_telefone segurado_email])
     end
 
     it 'sem o CPF, mas com o nome, vão as páginas em que o nome aparece' do
       modelo_responde('tipo' => 'residencial')
 
-      ler('apolice_longa.pdf', nome: 'RENATA amostra Lima')
+      ler_a_longa(nome: 'RENATA amostra Lima')
 
       expect(paginas_perguntadas).to eq([1, 2, 160])
     end
@@ -261,6 +331,40 @@ RSpec.describe Carteira::Leitor do
       end
       expect(perguntas).to be_empty
     end
+
+    # Achado F da revisão: nenhum arquivo ruim faz o leitor levantar.
+    it 'caminho que não existe e PDF com senha: nao_deu_para_ler, sem levantar' do
+      modelo_responde(do_auto)
+      ilegivel = { recusa: 'nao_deu_para_ler', motivo: :pdf_ilegivel, paginas_total: nil, paginas_enviadas: [] }
+
+      Tempfile.create(['com_senha', '.pdf']) do |com_senha|
+        Prawn::Document.generate(com_senha.path) do |documento|
+          documento.encrypt_document(user_password: 'senha-de-exemplo', owner_password: 'outra-senha-de-exemplo')
+          documento.text 'Apólice com senha de abertura'
+        end
+
+        expect(described_class.new(account: account).ler(com_senha.path)).to have_attributes(ilegivel)
+      end
+      expect(described_class.new(account: account).ler('/caminho/que/nao/existe.pdf')).to have_attributes(ilegivel)
+      expect(perguntas).to be_empty
+    end
+
+    it 'erro que o leitor de PDF não previu: nao_deu_para_ler, sem levantar' do
+      modelo_responde(do_auto)
+      allow(PDF::Reader).to receive(:new).and_raise(NoMethodError)
+
+      expect(ler('apolice_auto.pdf')).to have_attributes(recusa: 'nao_deu_para_ler', motivo: :pdf_ilegivel)
+      expect(perguntas).to be_empty
+    end
+
+    # Achado G da revisão.
+    it 'arquivo maior que o teto: nao_deu_para_ler, sem abrir o PDF' do
+      stub_const('Carteira::Leitor::Paginas::MAXIMO_DE_BYTES', 1_000)
+      modelo_responde(do_auto)
+
+      expect(ler('apolice_auto.pdf')).to have_attributes(recusa: 'nao_deu_para_ler', motivo: :pdf_ilegivel, paginas_total: nil)
+      expect(perguntas).to be_empty
+    end
   end
 
   describe 'página-chave sem texto (PDF escaneado)' do
@@ -295,7 +399,7 @@ RSpec.describe Carteira::Leitor do
       expect(resultado.campos).to include('tipo' => 'vida', 'numero' => 'VD-0093.004321', 'fim_vigencia' => '2027-03-15',
                                           'valor_centavos' => 138_000, 'segurado_documento' => '11122233300',
                                           'segurado_telefone' => '21977770007', 'bem' => nil)
-      expect(resultado.paginas_enviadas).to eq([1])
+      expect(resultado).to have_attributes(paginas_enviadas: [1], a_confirmar: ['segurado_telefone'])
     end
   end
 end

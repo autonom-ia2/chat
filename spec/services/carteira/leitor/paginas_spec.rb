@@ -1,9 +1,10 @@
 require 'rails_helper'
+require 'pdf-reader'
 
 # E6 (#2899): quais páginas de um PDF vão ao modelo. Dados fictícios; os PDFs daqui são montados na hora.
 RSpec.describe Carteira::Leitor::Paginas do
   let(:processadores) { Autonomia::Agents::Knowledge::Processors }
-  let(:longa) { Rails.root.join('spec/fixtures/carteira/apolice_longa.pdf').to_s }
+  let(:longa) { CarteiraPdfLongo.caminho }
   let(:lido_no_ocr) { 'Apólice nº: EX-0001 lida pelo OCR da página escaneada' }
 
   before do
@@ -12,9 +13,10 @@ RSpec.describe Carteira::Leitor::Paginas do
   end
 
   # Um PDF com uma página por item: texto, ou :sem_texto para a página que só tem desenho.
-  def com_pdf(paginas, tamanho: 10)
+  def com_pdf(paginas, tamanho: 10, senha: nil)
     Tempfile.create(['paginas', '.pdf']) do |arquivo|
       Prawn::Document.generate(arquivo.path, page_size: 'A4') do |documento|
+        documento.encrypt_document(user_password: senha, owner_password: "dono-#{senha}") if senha
         documento.font_size tamanho
         paginas.each_with_index do |conteudo, indice|
           documento.start_new_page unless indice.zero?
@@ -37,9 +39,17 @@ RSpec.describe Carteira::Leitor::Paginas do
     expect(paginas.escolhidas.first.texto).to include('RS-0114.000777')
   end
 
-  it 'com o CPF, escolhe as páginas em que os dígitos dele aparecem, escrito com ou sem pontuação' do
-    expect(numeros(longa, documento: '987.654.321-99')).to eq([1, 2, 160])
-    expect(numeros(longa, documento: '98765432199')).to eq([1, 2, 160])
+  # Achado I da revisão: a vigência e o prêmio costumam estar na página ao lado da que traz o CPF.
+  it 'com o CPF, escolhe as páginas em que os dígitos dele aparecem, escrito com ou sem pontuação, e as vizinhas de cada uma' do
+    expect(numeros(longa, documento: '987.654.321-99')).to eq([1, 2, 3, 159, 160])
+    expect(numeros(longa, documento: '98765432199')).to eq([1, 2, 3, 159, 160])
+  end
+
+  it 'as vizinhas entram só no que sobra do teto: as páginas do CPF vêm todas, e o total nunca passa do máximo' do
+    paginas = Array.new(10) { |indice| "Página #{indice + 1} das condições gerais do seguro" }
+    [1, 4, 7].each { |indice| paginas[indice] = 'Dados do segurado de CPF 111.222.333-00' }
+
+    com_pdf(paginas) { |caminho| expect(numeros(caminho, documento: '111.222.333-00')).to eq([1, 2, 3, 4, 5, 8]) }
   end
 
   it 'com o nome, escolhe as páginas em que ele aparece, sem contar caixa, acento e espaço' do
@@ -51,7 +61,7 @@ RSpec.describe Carteira::Leitor::Paginas do
                'Anexo de cobrança em nome de Ana Modelo, débito em conta', 'Condições gerais do seguro, sem dado de segurado nenhum']
 
     com_pdf(paginas) do |caminho|
-      expect(numeros(caminho, documento: '111.222.333-00', nome: 'Ana Modelo')).to eq([2])
+      expect(numeros(caminho, documento: '111.222.333-00', nome: 'Ana Modelo')).to eq([1, 2, 3])
       expect(numeros(caminho, documento: '999.888.777-66', nome: 'Ana Modelo')).to eq([1, 3])
       expect(numeros(caminho, documento: '999.888.777-66', nome: 'Outra Pessoa')).to eq([1, 2, 3, 4])
     end
@@ -120,14 +130,71 @@ RSpec.describe Carteira::Leitor::Paginas do
     end
   end
 
-  it 'arquivo que não é PDF, ou que o leitor de PDF não entende, é ilegível' do
-    ['texto puro', '%PDF-1.4 e depois lixo'].each do |conteudo|
-      Tempfile.create(['arquivo', '.pdf']) do |arquivo|
-        arquivo.write(conteudo)
+  describe 'arquivo que não abre' do
+    let(:ilegivel) { described_class::Ilegivel }
+
+    def abrir(caminho)
+      described_class.new(caminho).escolhidas
+    end
+
+    it 'arquivo que não é PDF, ou que o leitor de PDF não entende, é ilegível' do
+      ['texto puro', '%PDF-1.4 e depois lixo'].each do |conteudo|
+        Tempfile.create(['arquivo', '.pdf']) do |arquivo|
+          arquivo.write(conteudo)
+          arquivo.flush
+
+          expect { abrir(arquivo.path) }.to raise_error(ilegivel)
+        end
+      end
+    end
+
+    # Achado F da revisão: qualquer erro de abertura vira Ilegivel, nunca outro erro.
+    it 'caminho que não existe é ilegível' do
+      expect { abrir('/caminho/que/nao/existe.pdf') }.to raise_error(ilegivel)
+      expect { abrir(Rails.root.join('spec/fixtures/carteira').to_s) }.to raise_error(ilegivel)
+    end
+
+    it 'PDF com senha é ilegível' do
+      com_pdf(['Apólice com senha de abertura'], senha: 'senha-de-exemplo') { |caminho| expect { abrir(caminho) }.to raise_error(ilegivel) }
+    end
+
+    it 'PDF cortado no meio é ilegível' do
+      inteiro = File.binread(longa)
+
+      Tempfile.create(['cortado', '.pdf'], binmode: true) do |arquivo|
+        arquivo.write(inteiro.first(inteiro.bytesize / 2))
         arquivo.flush
 
-        expect { described_class.new(arquivo.path).escolhidas }.to raise_error(described_class::Ilegivel)
+        expect { abrir(arquivo.path) }.to raise_error(ilegivel)
       end
+    end
+
+    it 'erro que o leitor de PDF não previu também vira ilegível, só com a classe do erro' do
+      allow(PDF::Reader).to receive(:new).and_raise(NoMethodError, 'undefined method para o texto da apólice')
+
+      expect { abrir(longa) }.to raise_error(ilegivel, 'NoMethodError')
+    end
+
+    it 'erro ao ler o texto de uma página deixa a página de fora e não levanta' do
+      quebrada = instance_double(PDF::Reader::Page)
+      allow(quebrada).to receive(:text).and_raise(TypeError, 'texto da apólice')
+      boa = instance_double(PDF::Reader::Page, text: 'Condições gerais do seguro, página dois')
+      allow(PDF::Reader).to receive(:new).and_return(instance_double(PDF::Reader, pages: [quebrada, boa]))
+
+      expect(numeros(longa)).to eq([2])
+    end
+
+    # Achado G da revisão: o tamanho é conferido antes de o leitor de PDF tocar no arquivo.
+    it 'arquivo maior que o teto é ilegível, sem abrir' do
+      stub_const("#{described_class}::MAXIMO_DE_BYTES", 1_000)
+      allow(PDF::Reader).to receive(:new).and_call_original
+
+      expect { abrir(longa) }.to raise_error(ilegivel, 'grande_demais')
+      expect(PDF::Reader).not_to have_received(:new)
+    end
+
+    it 'o teto é o limite de anexo que a carteira pratica para o PDF da apólice' do
+      expect(described_class::MAXIMO_DE_BYTES).to eq(Carteira::Pdf::LIMITE_PADRAO_MB.megabytes)
     end
   end
 end
