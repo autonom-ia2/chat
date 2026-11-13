@@ -15,8 +15,10 @@
 # - leituras.account: sem cascata, como as outras tabelas do fork; Autonomia::ExclusaoDaConta apaga antes da conta;
 # - leituras.user: SET NULL. Apagar a pessoa não apaga o lote;
 # - itens.account: sem cascata, como a da leitura; a exclusão da conta tira os itens (com o PDF) antes das leituras;
-# - itens.leitura: em cascata, o item não existe sem o lote. Quem apaga item com PDF é o app (a cascata do banco não
-#   apaga arquivo);
+# - itens.leitura: em cascata, o item não existe sem o lote. A cascata é só a proteção do banco contra linha órfã: ela
+#   NÃO apaga o PDF do item. Por isso o app nunca apaga leitura com `delete` nem `delete_all`, só com `destroy`, que
+#   passa por cada item e tira o arquivo (Carteira::Leitura). A limpeza dos itens vencidos (E6.2) usa `destroy` em lote
+#   pequeno, e a exclusão da conta tira os itens e os anexos deles antes das leituras;
 # - itens.contact e itens.apolice: SET NULL. Apagar a pessoa ou o seguro não apaga o que foi lido;
 # - apolices.leitura: SET NULL. Apagar o lote não apaga seguro.
 #
@@ -34,7 +36,17 @@
 # têm padrão constante, que o Postgres guarda no catálogo sem reescrever a tabela (produção roda o 18); as outras são
 # nulas. A chave de `leitura_id` entra NOT VALID e é validada depois (SHARE UPDATE EXCLUSIVE: leitura e escrita seguem;
 # a coluna nasce toda nula). Tudo com o lock_timeout curto do strong_migrations (5 s, 3 tentativas). Cada passo pode
-# rodar de novo sem erro se o deploy cair no meio. Só aditiva: o código anterior não conhece as tabelas nem as colunas,
+# rodar de novo sem erro se o deploy cair no meio.
+#
+# A migration roda fora de transação por causa do índice CONCURRENTLY, que é o único comando que precisa disso e é em
+# tabela que já existe. Cada tabela NOVA é criada dentro de uma transação própria (tabela, chaves e índices dela): sem
+# isso, uma queda entre o CREATE TABLE e os índices deixaria no banco uma tabela sem os índices dela (inclusive o
+# único) até a migration rodar de novo. As chaves vão dentro do próprio CREATE TABLE; os índices são comandos à parte.
+# Dentro de transação o strong_migrations não repete o comando quando a trava estoura (repetir um comando numa
+# transação que já falhou não funciona), então a repetição da transação inteira é feita aqui, com os mesmos números
+# dele.
+#
+# Só aditiva: o código anterior não conhece as tabelas nem as colunas,
 # e nenhuma coluna nova é obrigatória para ele (as não nulas têm padrão).
 #
 # Rollback: o `down` tira a chave, o índice, as sete colunas e as duas tabelas (nada mais depende deles). Antes de
@@ -52,8 +64,8 @@ class CreateCarteiraLeituras < ActiveRecord::Migration[7.2]
   ].freeze
 
   def up
-    criar_leituras
-    criar_itens
+    inteira { criar_leituras }
+    inteira { criar_itens }
     COLUNAS.each { |coluna, tipo, opcoes| add_column :carteira_apolices, coluna, tipo, **opcoes, if_not_exists: true }
     criar_o_indice_da_leitura
     ligar_a_leitura
@@ -69,6 +81,20 @@ class CreateCarteiraLeituras < ActiveRecord::Migration[7.2]
   end
 
   private
+
+  # A tabela nova nasce inteira ou não nasce.
+  def inteira(&)
+    tentativas = 0
+    begin
+      connection.transaction(&)
+    rescue ActiveRecord::LockWaitTimeout
+      tentativas += 1
+      raise if tentativas > StrongMigrations.lock_timeout_retries
+
+      sleep(StrongMigrations.lock_timeout_retry_delay)
+      retry
+    end
+  end
 
   def criar_leituras
     create_table :carteira_leituras, if_not_exists: true do |t|

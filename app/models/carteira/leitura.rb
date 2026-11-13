@@ -6,6 +6,11 @@
 # `totais` guarda só contagens (quantos lidos, quantos recusados): nome, documento, telefone e texto do PDF nunca entram
 # ali. A validação recusa qualquer valor que não seja número inteiro.
 #
+# APAGAR LEITURA É SÓ COM `destroy` (ou `destroy!`), nunca com `delete` nem `delete_all`. O banco apaga os itens em
+# cascata, mas a cascata não apaga arquivo: o PDF de cada item ficaria no armazenamento, sem dono. O `destroy` passa
+# por cada item e tira o PDF junto. A limpeza dos itens vencidos (E6.2) apaga com `destroy`, em lote pequeno. A única
+# exceção é a exclusão da conta (Autonomia::ExclusaoDaConta), que tira os itens e os anexos deles antes das leituras.
+#
 # O banco só lista as origens. Os estados crescem com quem grava (o anexar, o trazer por PDFs, a busca no conector) e
 # são validados aqui.
 class Carteira::Leitura < ApplicationRecord

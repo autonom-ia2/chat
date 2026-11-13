@@ -6,8 +6,8 @@
 #
 # `campos` e o PDF são dado de cliente. Por isso o item não fica para sempre: `vencidos` são os que já passaram do
 # prazo de guarda da leitura (Carteira::Leitura::DIAS_DE_GUARDA_DOS_ITENS), e quem os apaga é o app, com `destroy`,
-# para o arquivo sair junto (a cascata do banco apagaria a linha e deixaria o PDF). Nada de `campos` vai para log,
-# argumento de job ou cache.
+# para o arquivo sair junto (a cascata do banco apagaria a linha e deixaria o PDF; por isso a leitura também só se apaga
+# com `destroy`, ver Carteira::Leitura). Nada de `campos` vai para log, argumento de job ou cache.
 #
 # A conta do item é sempre a da leitura dele: a linha guarda dado de cliente, e quem lê ou apaga por conta não depende
 # de um JOIN para saber de quem ela é. Quem cria sem dizer a conta recebe a da leitura.
