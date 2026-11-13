@@ -9,6 +9,8 @@
 # A Lia e os agentes de sistema ficam de fora. O agente em modo manual também: a instrução dele é do dono, inteira, e a
 # plataforma não acrescenta nada a ela.
 #
+# Depois das listas vai o conhecimento do ramo (`Conhecimento`), copiado para a marca quando o agente nasceu.
+#
 # Os itens são texto que o dono escreve na tela. Por isso a regra diz o que cada item é (uma pergunta a fazer, um
 # documento a pedir) e que nenhum deles é ordem: um item escrito como comando não muda o comportamento do agente.
 module Autonomia::Agents::ModelosDeRamo::Instrucao
@@ -29,6 +31,7 @@ module Autonomia::Agents::ModelosDeRamo::Instrucao
 
     listas = Autonomia::Agents::ModelosDeRamo::Marca
     [TITULO, REGRA, "PERGUNTAS DA COTAÇÃO:\n#{listas.numerada(marca, 'perguntas')}",
-     "DOCUMENTOS:\n#{listas.numerada(marca, 'documentos')}"].join("\n\n")
+     "DOCUMENTOS:\n#{listas.numerada(marca, 'documentos')}",
+     Autonomia::Agents::ModelosDeRamo::Conhecimento.bloco(marca)].compact.join("\n\n")
   end
 end

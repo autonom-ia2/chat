@@ -6,7 +6,8 @@
 #     paga só entra no agente pela escolha de uma pessoa, na vitrine;
 #   - `premium`: só sugestão de cartão pago, e por isso só chave de cartão Premium;
 #   - `teste`: as 3 perguntas de teste;
-#   - o roteiro (`.md`) CRU em até 8.000 bytes, com cada marcador uma única vez e sozinho na linha. O teto vale antes
+#   - o roteiro (`.md`) CRU em até 8.000 bytes, com cada marcador uma única vez e sozinho na linha, e com o trecho do
+#     conhecimento do ramo (`Conhecimento`). O teto vale antes
 #     da troca dos marcadores: o que o dono acrescenta depois é limitado por quantidade e tamanho de item.
 class Autonomia::Agents::ModelosDeRamo::Formato
   OBRIGATORIOS = %w[chave tipo nome_padrao ramo perguntas documentos ja_vem teste].freeze
@@ -136,6 +137,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
     negar("roteiro: passa de #{ROTEIRO_MAX} bytes") if @roteiro.bytesize > ROTEIRO_MAX
 
     conferir_marcadores!
+    negar('roteiro: falta o conhecimento do ramo') if Autonomia::Agents::ModelosDeRamo::Conhecimento.do_roteiro(@roteiro).empty?
     @roteiro.strip.freeze
   end
 

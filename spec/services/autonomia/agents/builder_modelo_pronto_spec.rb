@@ -80,6 +80,14 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(builder.send(:skeleton_context)).to include(Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS)
     end
 
+    # Sem este aviso o Construtor cortava as respostas do ramo (a instrução-mãe manda não inventar fato do negócio).
+    it 'manda manter na instrução as dúvidas comuns do ramo, cada uma com a resposta' do
+      contexto = builder.send(:skeleton_context)
+
+      expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::FATOS_DO_RAMO)
+      expect(contexto).to include('DÚVIDAS COMUNS', 'O SEGURO EM PALAVRAS SIMPLES')
+    end
+
     it 'usa as listas que o dono já mudou' do
       Autonomia::Agents::ModelosDeRamo::Edicao.new(thread: thread, mudancas: { perguntas: [{ texto: 'A obra já começou?' }] }).call
 

@@ -19,6 +19,15 @@ module Autonomia::Agents::Builder::ModeloPronto
   PRIMEIRA_RESPOSTA = 'Se a conversa já começa com uma mensagem do dono, a tela fez a pergunta (1) antes de a conversa abrir: ' \
                       'essa primeira mensagem é a resposta dela (o nome da corretora). Não repita a pergunta (1); pergunte só a (2).'.freeze
 
+  # A instrução-mãe manda nunca inventar fato do negócio, e por isso o Construtor cortava as respostas do ramo que o
+  # roteiro traz (visto no teste com IA real, mesmo mandando manter). Elas não dependem mais dele: a plataforma as
+  # entrega ao agente em bloco próprio (`ModelosDeRamo::Conhecimento`). Aqui ele só é avisado, para não mandar o agente
+  # passar para a equipe o que o bloco responde.
+  FATOS_DO_RAMO = 'CONHECIMENTO DO RAMO: as partes "O SEGURO EM PALAVRAS SIMPLES" e "DÚVIDAS COMUNS" do roteiro são fatos do ' \
+                  'ramo já conferidos pela plataforma, que os entrega ao agente em bloco próprio ("Conhecimento do ramo"). ' \
+                  'Na instruction, mande explicar o seguro e responder às dúvidas comuns pelo conhecimento do ramo, SEM ' \
+                  'copiar as respostas e SEM mandar passar para a equipe uma dúvida que ele responde.'.freeze
+
   private
 
   # O modelo desta conversa como o turno o encontrou, lido uma vez (cada leitura consulta a flag e o pacote da conta).
@@ -56,7 +65,7 @@ module Autonomia::Agents::Builder::ModeloPronto
       'ENTREVISTA CURTA: o roteiro já traz quase tudo. Pergunte só duas coisas, uma por vez: (1) o nome da corretora;',
       "(2) com quais seguradoras ela trabalha neste ramo#{sugestao}. Se o dono disser que decide depois ou que ainda não",
       'sabe, aceite: não repita a pergunta e escreva na instruction que a equipe da corretora confirma as seguradoras.',
-      PRIMEIRA_RESPOSTA,
+      PRIMEIRA_RESPOSTA, FATOS_DO_RAMO,
       'Não pergunte nome do agente, tom, horário nem mais nada. O que continuar sem resposta (como o horário da equipe),',
       'escreva de forma neutra, sem inventar e sem deixar marcador [[a coletar]] na instruction.',
       "NOME DO AGENTE: use \"#{modelo.nome_padrao}\" sem perguntar, a menos que o dono peça outro.",

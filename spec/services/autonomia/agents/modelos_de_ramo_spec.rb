@@ -34,6 +34,18 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
       end
     end
 
+    # O que o ramo explica (o seguro em palavras simples e as dúvidas comuns) vai do roteiro para a marca do agente.
+    it 'traz o conhecimento do ramo no roteiro e o copia para a marca com que o agente nasce' do
+      piloto.each do |chave|
+        modelo = described_class.buscar(chave)
+        saber = described_class::Conhecimento.do_roteiro(modelo.roteiro)
+
+        expect(saber).to start_with(described_class::Conhecimento::INICIO).and include('DÚVIDAS COMUNS')
+        expect(saber).not_to include(described_class::Conhecimento::FIM)
+        expect(described_class::Marca.inicial(modelo)['conhecimento']).to eq(saber)
+      end
+    end
+
     it 'só traz ferramenta grátis da vitrine no "Já vem com" e no "Também combina", sem repetir' do
       sugeriveis = Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis
 
@@ -138,6 +150,12 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
         gravar(dados, texto)
         expect(lidos).to eq({})
       end
+    end
+
+    it 'recusa o roteiro sem o trecho do conhecimento do ramo' do
+      gravar(dados, roteiro.sub(described_class::Conhecimento::INICIO, 'O SEGURO:'))
+
+      expect(lidos).to eq({})
     end
 
     it 'deixa de fora só o modelo com defeito' do

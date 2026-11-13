@@ -4,7 +4,8 @@
 #   { 'chave' => 'seguro_garantia',
 #     'perguntas'   => [{ 'id' => 'p1', 'texto' => '...', 'tirada' => false }, ...],
 #     'documentos'  => [{ 'id' => 'd1', 'texto' => '...', 'tirada' => false }, ...],
-#     'ferramentas' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando ...' }, ...] }   # o "Já vem com"
+#     'ferramentas' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando ...' }, ...],    # o "Já vem com"
+#     'conhecimento' => 'O SEGURO EM PALAVRAS SIMPLES: ...' }   # o que o ramo explica (`Conhecimento`); o dono não edita
 #
 # Ela nasce como cópia do arquivo do modelo e depois só muda pela mão do dono (`Edicao`): editar o arquivo num deploy
 # não muda rascunho nem agente que já existe. O item que o dono tirou fica na lista com `tirada: true` (a tela pode
@@ -20,7 +21,8 @@ module Autonomia::Agents::ModelosDeRamo::Marca
     { 'chave' => modelo.chave,
       'perguntas' => numerar(modelo.perguntas, 'perguntas'),
       'documentos' => numerar(modelo.documentos, 'documentos'),
-      'ferramentas' => modelo.ja_vem.map { |ferramenta| { 'fonte' => ferramenta.fonte, 'usar_quando' => ferramenta.usar_quando } } }
+      'ferramentas' => modelo.ja_vem.map { |ferramenta| { 'fonte' => ferramenta.fonte, 'usar_quando' => ferramenta.usar_quando } },
+      'conhecimento' => Autonomia::Agents::ModelosDeRamo::Conhecimento.do_roteiro(modelo.roteiro) }
   end
 
   def numerar(textos, lista)

@@ -55,6 +55,20 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Instrucao do
     expect(described_class.do_agente(agente)).to include("DOCUMENTOS:\n#{Autonomia::Agents::ModelosDeRamo::Marca::LISTA_VAZIA}")
   end
 
+  # O conhecimento do ramo não depende do que o Construtor escreveu: sai da marca, depois das listas.
+  it 'acrescenta o conhecimento do ramo que a marca guarda' do
+    saber = "O SEGURO EM PALAVRAS SIMPLES: garante uma obrigação.\nDÚVIDAS COMUNS:\n- É fiança? Não."
+    agente.update!(config: agente.config.merge('modelo_pronto' => marca.merge('conhecimento' => saber)))
+    texto = described_class.do_agente(agente)
+
+    expect(texto).to include(Autonomia::Agents::ModelosDeRamo::Conhecimento::TITULO, saber)
+    expect(texto.index('DOCUMENTOS:')).to be < texto.index(saber)
+  end
+
+  it 'fica só com as listas na marca que não guarda o conhecimento do ramo' do
+    expect(described_class.do_agente(agente)).not_to include(Autonomia::Agents::ModelosDeRamo::Conhecimento::TITULO)
+  end
+
   it 'não acrescenta nada ao agente que não nasceu de um modelo' do
     comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'sdr', instruction: 'Atenda bem.')
 
