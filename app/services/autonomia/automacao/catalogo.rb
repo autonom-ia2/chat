@@ -75,6 +75,10 @@ module Autonomia::Automacao::Catalogo
                           'cobrir_pessoa' => 'sim_nao', 'descricao' => 'descricao', 'url' => 'endereco_do_webhook',
                           'corpo' => 'corpo_do_webhook', 'gravar' => 'resposta_do_webhook', 'time_id' => 'time' }.freeze
 
+  # #2414: o passo novo (aprovação, reunião, pesquisa) aparece numa peça só, com o rótulo dela; os galhos ficam no
+  # Confira, como os do "se".
+  PASSO_NOVO = 'passo_novo'.freeze
+
   module_function
 
   def todos
@@ -150,6 +154,8 @@ module Autonomia::Automacao::Catalogo
   # `peca` no yml (a campanha, G14): uma peça só mostra o passo inteiro. `rotulos` (G41): o rótulo próprio de um campo
   # neste passo.
   def campos_nativos(forma, peca_do_passo = nil, rotulos = nil)
+    return ::Autonomia::Automacao::CatalogoDoEsquema.passo_novo(forma) if peca_do_passo == PASSO_NOVO
+
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
       peca = peca_do_passo || PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
       { 'nome' => nome, 'peca' => peca,

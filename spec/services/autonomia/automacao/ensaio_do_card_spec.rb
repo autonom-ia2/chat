@@ -206,6 +206,22 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
       expect(nos.second[:dados]).to include(texto: 'Oi', conversa_nova: caixa.name)
       expect { faria(gatilho) }.not_to(change { [Conversation.count, ContactInbox.count, Message.count] })
     end
+
+    # #2931/#2936 com o #2631: como o motor, a aprovação vai a quem alcança o card; a pesquisa pula sem conversa e segue.
+    it 'a aprovação vai a quem alcança o card; a pesquisa pula e segue', :aggregate_failures do
+      account.enable_features!('automacao_passos_novos', 'automacao_ia')
+      aprovacao = { 'id' => 'ap', 'tipo' => 'pedir_aprovacao', 'quem' => { 'de' => 'pessoa', 'id' => admin.id }, 'pergunta' => ['Pode?'],
+                    'prazo' => { 'valor' => 1, 'unidade' => 'dias' } }
+      pesquisa = { 'id' => 'nota', 'tipo' => 'pesquisa_nota', 'pergunta' => 'De 0 a 10?', 'baixa_ate' => 6, 'alta_desde' => 9,
+                   'intervalo_dias' => 30, 'espera' => { 'valor' => 2, 'unidade' => 'dias' } }
+      gatilho = { 'tipo' => 'card.criado' }
+
+      no = ensaio(receita(aprovacao, gatilho: gatilho), conversa_id: sem_conversa.id)[:conversas].first[:passos].first
+      expect(no).to include(faria: 'pedir_aprovacao', dados: { para: [admin.name] })
+
+      nos = ensaio(receita(pesquisa, esperar_passo('depois'), gatilho: gatilho), conversa_id: sem_conversa.id)[:conversas].first[:passos]
+      expect(nos.pluck(:id, :faria)).to eq([%w[nota sem_conversa], %w[depois esperar]])
+    end
   end
 
   describe 'o alcance de quem ensaia' do

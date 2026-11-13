@@ -111,6 +111,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
+    @registro = alvo
     contexto = ::Autonomia::Automacao::Contexto.de(alvo, textos: textos_da_ia, fato: fato)
     @contato = contexto.contato
     @conversa, @caixa_nova = conversa_do_ensaio(contexto)
@@ -188,7 +189,8 @@ class Autonomia::Automacao::Ensaio
     case passo['tipo']
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
-    when 'decidir' then @conversa ? [decidir(passo, valores), nil] : [no(passo, 'sem_conversa'), @roteiro.seguinte(passo['id'])]
+    when 'decidir' then decidir(passo, valores)
+    when *::Autonomia::Automacao::PassosQueEsperam::TIPOS then espera(passo, valores)
     when 'parar' then [no(passo, 'parar'), nil]
     else seguir(passo, em_frente(passo, valores))
     end
@@ -287,33 +289,29 @@ class Autonomia::Automacao::Ensaio
     [no(passo, 'se', { ramo: ramo }), @roteiro.entrar(passo, ramo)]
   end
 
-  # Já vale agora: segue na hora, como o motor; com hora marcada (G64), não: o motor só confere na hora. Não vale: os
-  # caminhos possíveis; sem prazo (#2750), sem o "se vencer". Com o galho "a cada mensagem" (G63), mais um caminho: os
-  # passos dele, que param no fim com a marca `volta` (o roteiro do ensaio não volta a esperar).
+  # O "esperar até" (EsperarAteNoEnsaio): segue na hora quando já vale; senão, os caminhos possíveis.
   def esperar_ate(passo, valores)
-    return [no(passo, 'esperar_ate_ja_vale'), @roteiro.seguinte(passo['id'])] if segue_na_hora?(passo, valores)
-
-    ramos = [{ chave: 'chegou', passos: caminho(@roteiro.seguinte(passo['id']), valores) }]
-    unless ::Autonomia::Automacao::Duracao.sem_prazo?(passo['prazo'])
-      ramos << { chave: 'se_vencer', passos: caminho(@roteiro.entrar(passo, 'se_vencer'), valores) }
-    end
-    ramos << galho_do_ensaio(passo, valores) if ::Autonomia::Automacao::EnquantoEspera.a_cada?(passo)
-    [no(passo, 'esperar_ate', ramos: ramos), nil]
+    ::Autonomia::Automacao::EsperarAteNoEnsaio.new(roteiro: @roteiro) { |primeiro| caminho(primeiro, valores) }.ensaiar(passo, valores)
   end
 
-  def segue_na_hora?(passo, valores) = !::Autonomia::Automacao::EnquantoEspera.conferir_as?(passo) && condicao?(passo['condicao'], valores)
+  # #2931/#2935/#2936: a aprovação, a reunião e a pesquisa dizem o que fariam e abrem os caminhos (EsperaNoEnsaio).
+  def espera(passo, valores) = esperas.ensaiar(passo, valores) { |primeiro| caminho(primeiro, valores) }
 
-  def galho_do_ensaio(passo, valores, chave = ::Autonomia::Automacao::EnquantoEspera::A_CADA)
-    { chave: chave, volta: @roteiro.volta(passo, chave), passos: caminho(@roteiro.entrar(passo, chave), valores) }
+  # Uma por conversa ensaiada: a conversa e o envio mudam a cada uma.
+  def esperas
+    ::Autonomia::Automacao::EsperaNoEnsaio.new(conta: @conta, alvo: @registro, conversa: @conversa, envio: envio, roteiro: @roteiro)
   end
 
   # A IA escolheria o caminho: o ensaio mostra todos, sem chamar modelo nenhum.
   # G31: o caminho que decide de novo espera a próxima resposta e não roda passo nenhum; vencido o prazo, a execução
   # acaba sem mandar nada. G46: o caminho que volta mostra os passos dele e a qual "esperar até" volta
   # (DecidirDeNovo.ramos_do_ensaio).
+  # O card sem conversa pula e segue, como no motor.
   def decidir(passo, valores)
+    return [no(passo, 'sem_conversa'), @roteiro.seguinte(passo['id'])] unless @conversa
+
     ramos = ::Autonomia::Automacao::DecidirDeNovo.ramos_do_ensaio(passo, @roteiro) { |primeiro| caminho(primeiro, valores) }
-    no(passo, 'decidir', ia_do_ensaio.anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos)
+    [no(passo, 'decidir', ia_do_ensaio.anexos(passo, ::Autonomia::Automacao::PassoDeDecidir), ramos: ramos), nil]
   end
 
   # O que a IA faria, só com o que a receita diz, ou por que pularia (IaNoEnsaio).

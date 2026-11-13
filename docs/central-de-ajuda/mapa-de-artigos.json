@@ -3430,6 +3430,28 @@
      ],
      "revisar": false,
      "nota": "#2414 F5 — editor da Automação livre, atrás da flag automacao_editor."
+    },
+    {
+     "id": "12.07",
+     "titulo": "Responder um pedido de aprovação de uma automação",
+     "para_que_serve": "Aprovar ou recusar o que uma automação pediu, pelo sino e pela tela Pedidos de aprovação.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "automacoes_aprovacoes"
+     ],
+     "me_leve_ate_la": {
+      "rota": "automacoes_aprovacoes",
+      "destaque": null
+     },
+     "requer": "automacao_passos_novos",
+     "prints": [],
+     "fontes": [
+      "porques: Responder um pedido de aprovacao de uma automacao"
+     ],
+     "revisar": false,
+     "nota": "#2931 — o lado de quem aprova do passo Pedir aprovação, atrás da flag automacao_passos_novos."
     }
    ]
   },

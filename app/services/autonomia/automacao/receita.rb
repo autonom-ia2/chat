@@ -12,6 +12,7 @@
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
 # - o "esperar até" sem prazo não tem passos em "se vencer", que nunca rodariam (#2750);
 # - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo);
+# - a aprovação, a reunião e a pesquisa (#2931, #2935, #2936): flags, quem, conversa, agenda e faixas (PassosQueEsperam);
 # - o que o "esperar até" faz enquanto espera (G63, G64): a hora da conferência só sem prazo, o galho "a cada mensagem"
 #   só com cliente e fora de outro galho (EnquantoEspera).
 #
@@ -22,7 +23,8 @@ class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
   # o do "webhook" (G13), quando o outro sistema recusa.
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos].freeze
+  # #2931/#2935/#2936: os galhos dos passos que esperam resposta (PassosQueEsperam::RAMOS).
+  RAMOS = (%w[entao senao se_vencer a_cada_mensagem se_recusar passos] + ::Autonomia::Automacao::PassosQueEsperam.todos_os_ramos).freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -90,6 +92,7 @@ class Autonomia::Automacao::Receita
     return mensagens.problemas(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return passos_de_ia.problemas(passo) if IA.include?(passo['tipo'])
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
+    return passos_que_esperam(passo) if ::Autonomia::Automacao::PassosQueEsperam.do_tipo?(passo)
     return [] unless passo['tipo'] == 'acao'
 
     acao.problemas(passo)
@@ -101,6 +104,13 @@ class Autonomia::Automacao::Receita
                                                                     alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
                                                                       leitura.problemas(id, c, **opcoes)
                                                                     end
+  end
+
+  # A aprovação, a reunião e a pesquisa (#2931, #2935, #2936): o texto do pedido passa pela régua dos valores.
+  def passos_que_esperam(passo)
+    ::Autonomia::Automacao::PassosQueEsperam.problemas_ao_salvar(passo, conta: @conta, account_user: @account_user, alvo: alvo) do |c|
+      leitura.problemas(passo['id'], c, onde: :texto)
+    end
   end
 
   # A régua dos valores (Leitura): a ação, as condições, os passos próprios e os textos perguntam aqui.

@@ -257,3 +257,105 @@ export const linhaDoHistoricoNovo = (passo, t) =>
   HISTORICO[passo.tipo](passo, t);
 
 export const nomeDoPassoNovo = (tipo, t) => t(`${chaveDoPasso(tipo)}.NOME`);
+
+// #2931, #2935 e #2936 — a linha do ensaio de verdade, do nó que a API devolve
+// (EsperaNoEnsaio): quem receberia o pedido, os horários livres de agora, o
+// balão como o cliente leria e o que sai com a janela de 24 h fechada. Sem
+// passo pronto no nó, nil: o ensaio usa a linha de sempre (o canal, a pausa).
+const modeloForaDaJanela = (modelo, t) =>
+  modelo
+    ? t('AUTOMACAO_LIVRE.ENSAIO.MODELO_FORA_DA_JANELA', { modelo })
+    : t(`${P}.SEM_MODELO_FORA_DA_JANELA`);
+const comOpcoes = (texto, opcoes, botoes) =>
+  [
+    texto,
+    ...opcoes.map((opcao, i) => (botoes ? opcao : `${i + 1}. ${opcao}`)),
+  ].join('\n');
+
+const ENSAIO_REAL = {
+  pedir_aprovacao: (dados, t) => ({
+    destaque: t(`${P}.APROVACAO.ENSAIO_PARA`, {
+      nomes: emLista(dados.para || [], t),
+    }),
+  }),
+  sem_quem_aprove: (dados, t) => ({
+    aviso: t(`${P}.APROVACAO.ENSAIO_SEM_QUEM`),
+  }),
+  marcar_reuniao: (dados, t) => ({
+    destaque: t(`${P}.REUNIAO.ENSAIO`, {
+      horarios: emLista(dados.horarios || [], t),
+    }),
+    balao: comOpcoes(dados.convite, dados.horarios || [], dados.botoes),
+    aviso: modeloForaDaJanela(dados.modelo, t),
+  }),
+  reuniao_sem_responsavel: (dados, t) => ({
+    aviso: t(`${P}.REUNIAO.ENSAIO_SEM_RESPONSAVEL`),
+  }),
+  reuniao_sem_pagina: (dados, t) => ({
+    aviso: t(`${P}.REUNIAO.ENSAIO_SEM_PAGINA`),
+  }),
+  sem_horario: (dados, t) => ({ aviso: t(`${P}.REUNIAO.ENSAIO_SEM_HORARIO`) }),
+  pesquisa_nota: (dados, t) => ({
+    destaque: t(`${P}.PESQUISA.ENSAIO`, {
+      espera: duracaoEmFrase(dados.espera, t),
+    }),
+    balao: dados.pergunta,
+    aviso: modeloForaDaJanela(dados.modelo, t),
+  }),
+  pesquisa_recente: (dados, t) => ({
+    aviso: t(`${P}.PESQUISA.ENSAIO_RECENTE`),
+  }),
+  passos_novos_desligados: (dados, t) => ({
+    aviso: t(`${P}.ENSAIO_DESLIGADO`),
+  }),
+  ia_desligada: (dados, t) => ({ aviso: t(`${P}.ENSAIO_IA_DESLIGADA`) }),
+};
+
+export const linhaDoEnsaioReal = (no, t) =>
+  ENSAIO_REAL[no.faria]?.(no.dados || {}, t) || null;
+
+// A linha do histórico de verdade: quem respondeu o pedido e o motivo, o
+// horário da reunião marcada, a nota (e o comentário, para quem vê a
+// conversa). `hora` formata a data no idioma de quem olha.
+export const detalheDoHistorico = (dados, t, hora) => {
+  const linhas = [];
+  if (dados.por_nome)
+    linhas.push(
+      t(
+        `${P}.APROVACAO.${dados.ramo === 'recusado' ? 'HISTORICO_RECUSOU' : 'HISTORICO_APROVOU'}`,
+        { quem: dados.por_nome }
+      )
+    );
+  if (dados.motivo_da_recusa)
+    linhas.push(
+      t(`${P}.APROVACAO.HISTORICO_MOTIVO_DITO`, {
+        motivo: dados.motivo_da_recusa,
+      })
+    );
+  if (dados.horario)
+    linhas.push(t(`${P}.REUNIAO.HISTORICO`, { horario: hora(dados.horario) }));
+  if (Number.isInteger(dados.nota))
+    linhas.push(
+      dados.comentario
+        ? t(`${P}.PESQUISA.HISTORICO_NOTA_COMENTARIO`, {
+            nota: dados.nota,
+            comentario: dados.comentario,
+          })
+        : t(`${P}.PESQUISA.HISTORICO_NOTA`, { nota: dados.nota })
+    );
+  return linhas;
+};
+
+// O resumo da pesquisa na lista: "Pesquisa: média 8,6 com 37 respostas".
+export const resumoDaPesquisa = (pesquisa, t, locale) => {
+  if (!pesquisa) return '';
+  if (!pesquisa.respostas) return t(`${P}.PESQUISA.RESUMO_VAZIO`);
+  const media = new Intl.NumberFormat(locale.replace('_', '-'), {
+    maximumFractionDigits: 1,
+  }).format(pesquisa.media);
+  return t(
+    `${P}.PESQUISA.RESUMO`,
+    { media, n: pesquisa.respostas },
+    pesquisa.respostas
+  );
+};
