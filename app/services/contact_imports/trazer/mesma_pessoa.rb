@@ -13,7 +13,13 @@
 #   não é conflito: completa a outra. A coluna que a pessoa mandou não guardar nem chega aqui.
 #
 # Com `juntar: false` (a planilha que traz seguros, E4 #2897: cada linha é um seguro da pessoa) as linhas sem conflito
-# ficam todas na lista, como estão, e nenhuma é contada como juntada. O conflito continua virando problema.
+# ficam todas na lista, como estão, e nenhuma é contada como juntada. O conflito continua virando problema, com duas
+# diferenças:
+# - a linha é comparada com TODAS as linhas da pessoa que ficaram, não só com a primeira: como nenhuma completa a
+#   outra, o nome que só a segunda e a terceira trazem, diferente nas duas, passaria sem ninguém ver. `:outra` é a
+#   primeira linha com que ela se contradiz;
+# - as outras colunas não contam: nesta planilha elas são do seguro da linha (o número, o ramo, a placa, a parcela) e
+#   diferem em toda linha da mesma pessoa. Só nome, telefone, e-mail e empresa são conflito.
 #
 # Recebe as linhas do validador e mexe nelas no lugar, como o passo de repetidas dele faz. Só olha linha sem erro.
 class ContactImports::Trazer::MesmaPessoa
@@ -28,6 +34,8 @@ class ContactImports::Trazer::MesmaPessoa
     @linhas = linhas
     @juntar = juntar
     @primeiras = { telefone: {}, email: {} }
+    # A primeira linha de cada pessoa => as linhas dela que ficaram na lista (sem juntar, mais de uma).
+    @da_pessoa = {}.compare_by_identity
   end
 
   # Devolve quantas linhas foram juntadas a outra.
@@ -57,15 +65,20 @@ class ContactImports::Trazer::MesmaPessoa
   end
 
   def juntou?(primeira, linha, meio)
-    if conflito?(primeira, linha)
+    em_conflito = linhas_da(primeira).find { |anterior| conflito?(anterior, linha) }
+    if em_conflito
       linha[:errors] << MOTIVOS.fetch(meio)
-      linha[:outra] = primeira
+      linha[:outra] = em_conflito
       return false
     end
 
-    completar(primeira, linha) if @juntar
+    @juntar ? completar(primeira, linha) : linhas_da(primeira) << linha
     lembrar(primeira, linha)
     @juntar
+  end
+
+  def linhas_da(primeira)
+    @da_pessoa[primeira] ||= [primeira]
   end
 
   def lembrar(primeira, linha)
@@ -86,11 +99,14 @@ class ContactImports::Trazer::MesmaPessoa
   end
 
   def conflito?(primeira, linha)
+    contato_diferente?(primeira, linha) || (@juntar && outra_coluna_diferente?(primeira, linha))
+  end
+
+  def contato_diferente?(primeira, linha)
     diferentes?(texto(primeira[:normalized_name]), texto(linha[:normalized_name])) ||
       diferentes?(chave_do_telefone(primeira[:normalized_phone]), chave_do_telefone(linha[:normalized_phone])) ||
       diferentes?(primeira[:email]&.downcase, linha[:email]&.downcase) ||
-      diferentes?(texto(primeira[:company_name]), texto(linha[:company_name])) ||
-      outra_coluna_diferente?(primeira, linha)
+      diferentes?(texto(primeira[:company_name]), texto(linha[:company_name]))
   end
 
   def outra_coluna_diferente?(primeira, linha)

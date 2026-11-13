@@ -100,7 +100,8 @@ RSpec.describe 'Trazer minha lista: a planilha traz seguros (Relacionamentos)', 
       ler_de_novo
       corpo = ler(importacao)
       expect(corpo['respostas']).to include('seguros' => 'sim')
-      expect(corpo['seguros']).to eq('destinos' => Carteira::Trazer::ColunasDeSeguro::DESTINOS, 'faltam' => obrigatorios)
+      expect(corpo['seguros']).to eq('destinos' => Carteira::Trazer::ColunasDeSeguro::DESTINOS, 'obrigatorios' => obrigatorios,
+                                     'faltam' => obrigatorios, 'sugestao' => {})
 
       trazer(importacao)
       expect(response).to have_http_status(:unprocessable_entity)
@@ -136,6 +137,32 @@ RSpec.describe 'Trazer minha lista: a planilha traz seguros (Relacionamentos)', 
       )
       # O modelo recebeu só os ramos distintos das linhas boas, uma vez.
       expect(pergunta).to have_received(:call).with(match_array(%w[automóvel residencial vida])).once
+    end
+
+    it 'sugere as colunas do seguro pelo modelo, uma vez; a sugestão não vale como destino até a pessoa confirmar' do
+      do_modelo_das_colunas = { 'seguro_numero' => 3, 'seguro_seguradora' => 4, 'seguro_tipo' => 5, 'seguro_termina' => 7, 'seguro_valor' => 8 }
+      sugestao = instance_double(Carteira::Trazer::SugestaoDasColunas, call: do_modelo_das_colunas)
+      allow(Carteira::Trazer::SugestaoDasColunas).to receive(:new).and_return(sugestao)
+      importacao = ler_planilha(planilha_de(seguros_bons))
+      responder(importacao, seguros: 'sim')
+      ler_de_novo
+      corpo = ler(importacao)
+
+      # Sugerido não é escolhido: nada foi conferido como seguro, e as colunas continuam informação.
+      expect(corpo['seguros']).to include('faltam' => obrigatorios, 'sugestao' => do_modelo_das_colunas)
+      expect(corpo['colunas'].select { |coluna| coluna['indice'] >= 3 }.pluck('destino').uniq).to eq(['informacao'])
+      expect(corpo['resumo']).not_to have_key('seguros')
+
+      # A pessoa confirma uma coluna e manda outra para outro lugar: as duas saem da sugestão.
+      trocar(importacao, 3, destino: 'seguro_numero')
+      trocar(importacao, 4, destino: 'cidade')
+      expect(response.parsed_body['seguros']).to include(
+        'faltam' => obrigatorios - ['seguro_numero'], 'sugestao' => do_modelo_das_colunas.except('seguro_numero', 'seguro_seguradora')
+      )
+
+      escolher_as_colunas(importacao)
+      expect(ler(importacao)['seguros']).to include('faltam' => [], 'sugestao' => {})
+      expect(sugestao).to have_received(:call).once
     end
 
     it 'a linha com problema no seguro não tem conserto na tela, só na planilha; na apólice repetida a pessoa escolhe a linha' do
@@ -202,6 +229,38 @@ RSpec.describe 'Trazer minha lista: a planilha traz seguros (Relacionamentos)', 
       expect(apolice('EX-005678').eventos.order(:id).last.mudancas)
         .to eq([{ 'campo' => 'termina', 'antes' => '2026-06-01', 'depois' => '2026-07-01' }])
       expect(apolice('EX-009999').eventos.pluck(:tipo)).to eq(%w[chegou_planilha])
+    end
+
+    it 'o seguro que a carteira recusaria vira problema da linha, e o cancelado entra sem mudar nada' do
+      trazer_tudo(planilha_de(seguros_bons))
+      da_ana = account.contacts.find_by!(phone_number: '+5511987650001')
+      apolice('EX-009999').update!(cancelado_em: Time.current)
+      criar_apolice(da_ana, seguradora: 'Seguradora Exemplo', numero: 'EX-005678', inicio_vigencia: Date.new(2025, 6, 1),
+                            fim_vigencia: Date.new(2026, 9, 1))
+      retrato = -> { [apolices.order(:id).map(&:attributes), Carteira::ApoliceEvento.count, account.contacts.count] }
+      antes = retrato.call
+      # Linhas 2 a 5: a apólice da Ana em nome da Carla, o termo que não dá para saber qual é, a cancelada e uma igual.
+      segunda = ['Carla Carvalhedo;11987650003;;EX-001234;Seguradora Exemplo;Automóvel;10/03/2026;10/03/2027;R$ 3.410;Carro Exemplo ABC1D23',
+                 "#{ana};EX-005678;Seguradora Exemplo;Residencial;01/06/2025;01/12/2026;890.50;Casa Exemplo",
+                 'Bruno Brandolim;11987650002;;EX-009999;Seguradora Exemplo;Automóvel;05/01/2026;05/01/2027;9.999;Moto Exemplo XYZ9A87',
+                 seguros_bons[2]]
+
+      importacao = conferir_com_seguros(planilha_de(segunda))
+      corpo = ler(importacao)
+
+      expect(corpo['problemas'].map { |problema| problema.slice('linha', 'tipo', 'motivo') }).to eq(
+        [{ 'linha' => 2, 'tipo' => 'numero', 'motivo' => 'de_outra_pessoa' },
+         { 'linha' => 3, 'tipo' => 'falta_termina', 'motivo' => 'termo_ambiguo' }]
+      )
+      expect(corpo['resumo']).to include('comProblema' => 2, 'seguros' => 2, 'cancelados' => 1)
+      consertar(importacao, 2, valor: 'EX-000001')
+      expect([response.status, response.parsed_body]).to eq([422, { 'error' => 'valor_invalido', 'motivo' => 'conserto_na_planilha' }])
+
+      trazer(importacao)
+      gravar_a_lista
+
+      expect(importacao.reload).to be_completed
+      expect(retrato.call).to eq(antes)
     end
 
     it 'nenhuma linha de log leva número de apólice, placa nem o texto das células do seguro' do

@@ -9,8 +9,15 @@
 #   número, porque quem entra com seguro vira cliente;
 # - `pessoasQueJaEstavam`: dessas, quantas a conta já tinha, contado na leitura;
 # - `porTipo`: os seguros que entram, por tipo (o ramo de cada linha com o tipo que a leitura decidiu);
-# - `repetidos`: linhas iguais a outra, que a leitura tirou.
+# - `repetidos`: linhas iguais a outra, que a leitura tirou;
+# - `cancelados`: linhas boas cuja apólice está cancelada na carteira, contado na leitura. A linha entra (a pessoa é
+#   trazida), mas o seguro continua cancelado e não muda.
 # Enquanto falta coluna obrigatória (`faltam`), as linhas ainda não foram conferidas como seguro e só o bloco existe.
+#
+# O bloco (`bloco`) diz os destinos de coluna do seguro (`destinos`), quais são obrigatórios (`obrigatorios`), quais
+# obrigatórios ainda não têm coluna (`faltam`) e a sugestão do modelo para os que a pessoa ainda não escolheu
+# (`sugestao`: { destino => índice da coluna }, Carteira::Trazer::SugestaoDasColunas). A sugestão não vale como
+# destino: a tela a mostra como sugerida e só a coluna que a pessoa confirma (o destino em `colunas`) é usada.
 #
 # Os exemplos ganham os seguros de cada pessoa; linhas seguidas da mesma pessoa viram um exemplo só.
 class Carteira::Trazer::NaConferencia
@@ -31,7 +38,8 @@ class Carteira::Trazer::NaConferencia
   end
 
   def bloco
-    { destinos: Carteira::Trazer::ColunasDeSeguro::DESTINOS, faltam: @colunas.faltam }
+    { destinos: Carteira::Trazer::ColunasDeSeguro::DESTINOS, obrigatorios: Carteira::Trazer::ColunasDeSeguro::OBRIGATORIOS,
+      faltam: @colunas.faltam, sugestao: Carteira::Trazer::SugestaoDasColunas.para_a_tela(@importacao) }
   end
 
   # quem_entra: ContactImports::Trazer::QuemEntra.
@@ -41,7 +49,7 @@ class Carteira::Trazer::NaConferencia
     pessoas = Carteira::Trazer::PessoasQueEntram.new(@importacao, quem_entra).quantas
     contado = @importacao.validation_summary.to_h
     { seguros: quem_entra.quantas, pessoas: pessoas, clientes: pessoas, pessoasQueJaEstavam: contado['pessoas_que_ja_estavam'].to_i,
-      porTipo: por_tipo(quem_entra), repetidos: contado['seguros_repetidos'].to_i }
+      porTipo: por_tipo(quem_entra), repetidos: contado['seguros_repetidos'].to_i, cancelados: contado['seguros_cancelados'].to_i }
   end
 
   # exemplos: [{ linha:, nome:, telefone:, email:, empresa:, cliente: }]; valores: { número da linha => extra_values }.

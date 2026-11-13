@@ -56,10 +56,17 @@ RSpec.describe Carteira::Trazer::ProblemasDeSeguro, :aggregate_failures do
     expect(linhas.pluck(:row_number, :errors)).to eq([[2, []]])
   end
 
-  it 'a renovação que mantém o número não é repetida: são dois seguros' do
-    repetidas, linhas = marcar([linha(2), linha(3, { 'Início' => '10/03/2027', 'Fim' => '10/03/2028' })])
+  it 'a renovação que mantém o número não é repetida, nem a antecipada: são dois seguros' do
+    repetidas, linhas = marcar([linha(2), linha(3, { 'Início' => '10/03/2027', 'Fim' => '10/03/2028' }),
+                                linha(4, { 'Início' => '01/02/2028', 'Fim' => '01/02/2029' })])
 
-    expect([repetidas, linhas.pluck(:errors)]).to eq([0, [[], []]])
+    expect([repetidas, linhas.pluck(:errors)]).to eq([0, [[], [], []]])
+  end
+
+  it 'o mesmo começo com outro fim (ou o mesmo fim com outro começo) é a mesma apólice: a pessoa escolhe a linha' do
+    _, linhas = marcar([linha(2), linha(3, { 'Fim' => '10/04/2027' }), linha(4, { 'Início' => '01/04/2026' })])
+
+    expect(linhas.pluck(:errors)).to eq([[], %w[seguro_duplicado], %w[seguro_duplicado]])
   end
 
   it 'a linha que já tinha problema não é comparada com as outras' do
@@ -73,6 +80,8 @@ RSpec.describe Carteira::Trazer::ProblemasDeSeguro, :aggregate_failures do
 
     expect([pendencia.tipo, pendencia.motivo]).to eq(%w[falta_termina data_invalida])
     expect(described_class.pendencia(%w[seguro_duplicado]).to_h).to include(tipo: 'duplicado', motivo: nil)
+    expect(described_class.pendencia(%w[seguro_de_outra_pessoa]).to_h).to include(tipo: 'numero', motivo: 'de_outra_pessoa')
+    expect(described_class.pendencia(%w[seguro_termo_ambiguo]).to_h).to include(tipo: 'falta_termina', motivo: 'termo_ambiguo')
     expect(described_class.pendencia(%w[invalid_phone])).to be_nil
     expect(%w[falta_termina numero seguradora comeca valor duplicado telefone].map { |tipo| described_class.sem_conserto?(tipo) })
       .to eq([true, true, true, true, true, false, false])

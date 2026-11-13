@@ -266,6 +266,14 @@
       "ARQUIVO_GRANDE": "Este PDF é grande demais para guardar aqui. Peça à seguradora o PDF da apólice, não a cópia escaneada, e guarde esse.",
       "SEM_PDF": "Este seguro não tem mais PDF guardado. Atualizei a tela.",
       "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo."
+    },
+    "TRAZER": {
+      "PRECISAM": {
+        "PROBLEMA": {
+          "DE_OUTRA_PESSOA": "{quem}: este seguro já está guardado aqui no nome de outra pessoa. Confira na planilha o número da apólice, o telefone e o e-mail desta linha.",
+          "TERMO_AMBIGUO": "{quem}: já existe mais de um seguro guardado aqui com este número de apólice, e as datas desta linha não dizem qual deles é. Confira na planilha a data em que o seguro começa e a data em que termina."
+        }
+      }
     }
   }
 }

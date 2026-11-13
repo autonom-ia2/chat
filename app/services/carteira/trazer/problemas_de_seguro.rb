@@ -6,6 +6,8 @@
 # - igual em tudo (os mesmos dados, a mesma pessoa): é a linha repetida da planilha; a segunda sai e é contada;
 # - diferente em alguma coisa: a segunda vira problema (`seguro_duplicado`) e guarda qual é a primeira (`:outra`), para
 #   a pessoa escolher com qual fica. O sistema nunca escolhe calado. É o mesmo desenho da linha repetida de pessoa.
+# A linha boa que o gravador da carteira recusaria (a apólice que já está guardada em nome de outra pessoa, ou com dois
+# termos guardados sem dar para saber qual é o da linha) ganha o motivo dela em Carteira::Trazer::JaNaCarteira.
 #
 # Para a tela (`pendencia`, `duplicado`): o tipo e o motivo em palavras dela. A linha com problema de seguro não tem
 # conserto na tela (só pode ficar de fora, ou a pessoa arruma a planilha e envia de novo), menos a duplicada, em que
@@ -19,6 +21,7 @@ class Carteira::Trazer::ProblemasDeSeguro
     'seguro_seguradora_falta' => %w[seguradora falta], 'seguro_termina_falta' => %w[falta_termina falta],
     'seguro_termina_invalida' => %w[falta_termina data_invalida], 'seguro_termina_antes' => %w[falta_termina termina_antes],
     'seguro_comeca_invalida' => %w[comeca data_invalida], 'seguro_valor_invalido' => %w[valor valor_invalido],
+    'seguro_de_outra_pessoa' => %w[numero de_outra_pessoa], 'seguro_termo_ambiguo' => %w[falta_termina termo_ambiguo],
     DUPLICADO => [TIPO_DUPLICADO, nil]
   }.freeze
   SEM_CONSERTO = (NA_TELA.values.map(&:first).uniq - [TIPO_DUPLICADO]).freeze

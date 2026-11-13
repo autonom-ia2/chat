@@ -20,8 +20,9 @@
 # - a leitura que falha depois de uma mudança da pessoa (troca de coluna, resposta) desfaz a mudança e lê de novo, uma
 #   vez só (ContactImports::Trazer::DesfazerMudanca). Sem mudança para desfazer, falha como sempre.
 # - na planilha que traz seguros (E4, #2897: a resposta "sim" numa conta com a carteira), as linhas da mesma pessoa não
-#   se juntam (cada linha é um seguro dela), o seguro de cada linha é conferido e o tipo de cada ramo é decidido. Tudo
-#   isso mora em Carteira::Trazer::NaLeitura, o único ponto que esta leitura chama; sem seguros, `seguros` é nil.
+#   se juntam (cada linha é um seguro dela), o seguro de cada linha é conferido, o tipo de cada ramo é decidido e as
+#   colunas do seguro são sugeridas. Tudo isso mora em Carteira::Trazer::NaLeitura, o único ponto que esta leitura
+#   chama; sem seguros, `seguros` é nil.
 # validation_summary guarda só contagens: `mesma_pessoa` (linhas juntadas a outra) e `ddd_juntado` (linhas com DDD junto);
 # com seguros, também `pessoas_distintas`, `pessoas_que_ja_estavam` e `seguros_repetidos`.
 #
@@ -162,6 +163,7 @@ class ContactImports::Trazer::Validador < ContactImports::Validator
     @consertos.reaplicar(row_results, ContactImports::Trazer::Conserto.new(alvos: @reading.mapping, contatos: row_contacts))
     @tipos_das_colunas = CampaignImports::ColumnTypes.new(@reading).perform
     seguros&.resolver_tipos(row_results)
+    seguros&.sugerir_colunas(@reading)
     super
   rescue Superada
     descartar

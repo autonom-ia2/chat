@@ -157,5 +157,25 @@ RSpec.describe ContactImports::Trazer::MesmaPessoa, :aggregate_failures do
       expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, ['duplicate_phone_in_file']]])
       expect(linhas.last[:outra]).to equal(linhas.first)
     end
+
+    it 'a linha é comparada com todas as da pessoa, não só com a primeira: o conflito entre a segunda e a terceira é problema' do
+      juntadas, linhas = resolver_sem_juntar([linha(2, telefone: '+5511987650001'),
+                                              linha(3, nome: 'Ana Albuquerino', telefone: '+5511987650001'),
+                                              linha(4, nome: 'Bruno Brandolim', telefone: '+5511987650001'),
+                                              linha(5, nome: 'ana albuquerino', telefone: '+5511987650001')])
+
+      expect(juntadas).to eq(0)
+      expect(linhas.pluck(:row_number, :errors)).to eq([[2, []], [3, []], [4, ['duplicate_phone_in_file']], [5, []]])
+      expect(linhas[2][:outra]).to equal(linhas[1])
+    end
+
+    it 'as outras colunas não são conflito: nesta planilha elas são do seguro de cada linha' do
+      da_primeira = { 'Placa' => 'ABC1D23', 'Cidade' => 'Campinas' }
+      da_segunda = { 'Placa' => 'XYZ9A87', 'Cidade' => 'Santos' }
+      juntadas, linhas = resolver_sem_juntar([linha(2, nome: 'Ana', telefone: '+5511987650001', extras: da_primeira),
+                                              linha(3, nome: 'Ana', telefone: '+5511987650001', extras: da_segunda)])
+
+      expect([juntadas, linhas.pluck(:errors)]).to eq([0, [[], []]])
+    end
   end
 end

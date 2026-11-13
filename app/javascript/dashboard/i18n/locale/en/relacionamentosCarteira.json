@@ -266,6 +266,14 @@
       "ARQUIVO_GRANDE": "This PDF is too large to save here. Ask the insurer for the policy PDF, not the scanned copy, and save that one.",
       "SEM_PDF": "This policy no longer has a saved PDF. I refreshed the screen.",
       "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again."
+    },
+    "TRAZER": {
+      "PRECISAM": {
+        "PROBLEMA": {
+          "DE_OUTRA_PESSOA": "{quem}: this policy is already saved here under another person. Check the policy number, the phone and the email of this row in the spreadsheet.",
+          "TERMO_AMBIGUO": "{quem}: more than one policy is already saved here with this policy number, and the dates in this row do not tell which one it is. Check the start date and the end date in the spreadsheet."
+        }
+      }
     }
   }
 }

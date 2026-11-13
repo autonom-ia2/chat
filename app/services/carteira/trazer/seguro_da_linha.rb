@@ -7,6 +7,12 @@
 # seguro não grava, a linha inteira falha e a gravação segue com as outras. A mesma planilha pode voltar quantas vezes
 # for: nada duplica.
 #
+# A apólice que está cancelada na carteira não é alterada pela planilha (o gravador responde `cancelada`): a linha
+# entra, a pessoa é trazida, e o seguro fica como estava. Essa linha não faz ninguém virar cliente.
+# O que o gravador recusa (CustomExceptions::CarteiraRecusa: a apólice de outra pessoa, o termo ambíguo) a leitura já
+# apontou como problema da linha (Carteira::Trazer::JaNaCarteira); se ainda assim acontecer na gravação (a carteira
+# mudou entre a leitura e o "Trazer"), a linha falha e as outras seguem.
+#
 # A empresa só entra como segurada quando o seguro é empresarial e a gravação ligou a pessoa à empresa DA LINHA (o
 # vinculador respondeu `created` ou `reused`). Fora disso o seguro fica só na pessoa.
 #
@@ -35,13 +41,15 @@ class Carteira::Trazer::SeguroDaLinha
   end
 
   # valores: as outras colunas da linha (extra_values); empresa: o que o vinculador de empresas respondeu, ou nil.
-  # Devolve a apólice da linha (a nova ou a que já existia), ou nil quando a linha não tem um seguro inteiro.
+  # Devolve a apólice da linha (a nova ou a que já existia), ou nil quando a linha não tem um seguro inteiro ou a
+  # apólice dela está cancelada na carteira.
   def gravar(contato, valores, empresa: nil)
     lido = Carteira::Trazer::SeguroLido.call(@colunas.valores(valores))
     return unless lido.completo?
 
     dados = lido.atributos.merge(tipo: @tipos.de(lido.ramo), ramo_original: lido.ramo)
-    @gravador.call(dados, contato: contato, empresa: segurada(dados[:tipo], empresa)).apolice
+    guardado = @gravador.call(dados, contato: contato, empresa: segurada(dados[:tipo], empresa))
+    guardado.apolice unless guardado.situacao == Carteira::Guardar::CANCELADA
   end
 
   private
