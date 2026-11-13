@@ -19,7 +19,7 @@ import SecaoNotas from './SecaoNotas.vue';
 // leitor de tela percorrem. A parte que quem está olhando não pode ver some; a
 // que não carregou fica, com "Tentar de novo" (`falhas`, ficha/falhas.js). Quem
 // só pode ver o contato (`podeEditar` falso) não tem "Alterar" nem a caixa de
-// nota.
+// nota. "Ver todas" das conversas ainda só avisa: só com `podeVerTodas` (#2970).
 const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -32,6 +32,7 @@ const props = defineProps({
   guardandoNota: { type: Boolean, default: false },
   falhas: { type: Object, default: () => ({}) },
   podeEditar: { type: Boolean, default: true },
+  podeVerTodas: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'verTodas',
@@ -64,6 +65,7 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
         :conversas="conversas"
         :agora="agora"
         :falhou="falhou('conversas')"
+        :pode-ver-todas="podeVerTodas"
         @ver-todas="emit('verTodas')"
         @tentar="emit('tentar', 'conversas')"
       />
