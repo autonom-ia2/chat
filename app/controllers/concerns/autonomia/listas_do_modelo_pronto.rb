@@ -1,10 +1,11 @@
 # #2881 — o pedido de mudança das listas de um modelo pronto de ramo (perguntas, documentos e ferramentas), igual nos
-# dois endereços: pela conversa do Construtor (`build_threads/:id/modelo_pronto`) e pelo rascunho do agente
-# (`agents/:agent_id/modelo_pronto`, quando a tela reabre o rascunho sem a conversa). Cada lista que vem substitui a
+# dois endereços: pela conversa do Construtor (`build_threads/:id/modelo_pronto`) e pelo agente
+# (`agents/:agent_id/modelo_pronto`: o rascunho reaberto sem a conversa e, depois do "Começar", a página do agente). Cada lista que vem substitui a
 # lista inteira; a que não vem (ou vem `null`) fica como está. Nenhuma chamada de IA.
 # Permissão: perguntas e documentos, `autonomia_manage`; a lista de ferramentas, também `autonomia_tools_manage`.
 # Sem modelo (conta sem o pacote `seguros`, flag desligada, agente que não nasceu de um modelo; a Lia, pelo endereço do
-# agente): 404 `sem_modelo`. Lista fora do formato ou agente que já começou a atender: 422 com o motivo e o campo. A
+# agente): 404 `sem_modelo`. Lista fora do formato, ou o que não muda mais no agente que já começou a atender (tudo
+# pela conversa; as ferramentas pelo agente): 422 com o motivo e o campo. A
 # Lia pela conversa e o agente em modo manual: 422, de cada controller, antes de chegar aqui. Nada é gravado quando
 # algo é recusado.
 module Autonomia::ListasDoModeloPronto

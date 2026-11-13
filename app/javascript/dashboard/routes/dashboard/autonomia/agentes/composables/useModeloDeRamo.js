@@ -1,9 +1,10 @@
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { modeloDeRamo } from '../constants/modelosDeRamo';
 import { oferecida } from '../vitrine/catalogo';
+import { useMudancaDasListas } from './useMudancaDasListas';
 
 // #2881 — o agente pronto por ramo de seguro na página "Criar agente" (AgenteCriarPage), fora dela para a página não
 // crescer. O ramo entra por `?ramo=<chave>` (`pedido`, lido uma vez pela página) e vale de dois jeitos:
@@ -96,10 +97,6 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     )
   );
 
-  const gravando = ref({});
-  const marcar = (campo, valor) => {
-    gravando.value = { ...gravando.value, [campo]: valor };
-  };
   const avisoDoErro = erro =>
     erro?.response?.data?.motivo === JA_COMECOU
       ? t('AGENTS.JORNADA.RAMOS.CONFIRA.ERRO_JA_COMECOU')
@@ -117,28 +114,12 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
           listas,
         });
 
-  // Um pedido de cada vez no modelo inteiro: cada resposta traz o modelo todo, e duas respostas fora de ordem
-  // deixariam na tela uma lista velha (a mudança seguinte nela apagaria a que o dono acabou de fazer). A mudança de
-  // outra lista espera a vez.
-  let fila = Promise.resolve();
-  const naVez = tarefa => {
-    const vez = fila.then(tarefa);
-    fila = vez.catch(() => {});
-    return vez;
-  };
-
-  // `campo`: perguntas, documentos ou ferramentas. `itens`: a lista inteira nova.
-  const mudar = async (campo, itens) => {
-    if (gravando.value[campo] || !modelo.value) return;
-    marcar(campo, true);
-    try {
-      await naVez(() => gravar({ [campo]: itens }));
-    } catch (erro) {
-      useAlert(avisoDoErro(erro));
-    } finally {
-      marcar(campo, false);
-    }
-  };
+  // Um pedido por lista de cada vez, e um de cada vez no modelo inteiro (useMudancaDasListas).
+  const { gravando, mudar } = useMudancaDasListas({
+    gravar,
+    pode: () => Boolean(modelo.value),
+    aoFalhar: erro => useAlert(avisoDoErro(erro)),
+  });
 
   return {
     ativo,

@@ -149,13 +149,17 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     { Autonomia::Agents::ModelosDeRamo::Marca::CHAVE => @marca }.merge(chaves_das_prontas)
   end
 
-  # O que a tela recebe. Nada do roteiro: ele é dado nosso e fica oculto, como a instrução.
+  # O que a tela de criação recebe. Nada do roteiro: ele é dado nosso e fica oculto, como a instrução.
   def para_tela
+    para_a_pagina.merge('nome_padrao' => @modelo.nome_padrao, 'seguradoras_sugeridas' => @modelo.seguradoras_sugeridas,
+                        'ferramentas' => ferramentas, 'tambem' => tambem, 'premium' => premium, 'teste' => @modelo.teste)
+  end
+
+  # O que a página do agente que já atende recebe (#2976): o ramo e as duas listas, que continuam mudando por lá.
+  def para_a_pagina
     listas = Autonomia::Agents::ModelosDeRamo::Marca
-    { 'chave' => @modelo.chave, 'ramo' => @modelo.ramo, 'nome_padrao' => @modelo.nome_padrao,
-      'seguradoras_sugeridas' => @modelo.seguradoras_sugeridas,
-      'perguntas' => listas.itens(@marca, 'perguntas'), 'documentos' => listas.itens(@marca, 'documentos'),
-      'ferramentas' => ferramentas, 'tambem' => tambem, 'premium' => premium, 'teste' => @modelo.teste }
+    { 'chave' => @modelo.chave, 'ramo' => @modelo.ramo,
+      'perguntas' => listas.itens(@marca, 'perguntas'), 'documentos' => listas.itens(@marca, 'documentos') }
   end
 
   private

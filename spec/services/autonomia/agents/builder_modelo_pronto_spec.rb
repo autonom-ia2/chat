@@ -88,6 +88,15 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include('SEM copiar as respostas', 'SEM mandar passar para a equipe')
     end
 
+    it 'não dá o aviso quando a marca da conversa não tem o conhecimento do ramo' do
+      thread.update!(state: thread.state.merge(chave_da_marca => thread.state[chave_da_marca].except('conhecimento')))
+
+      contexto = described_class.new(account: account, build_thread: thread.reload).send(:skeleton_context)
+
+      expect(contexto).not_to include('CONHECIMENTO DO RAMO')
+      expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::PRIMEIRA_RESPOSTA, 'NOME DO AGENTE')
+    end
+
     it 'usa as listas que o dono já mudou' do
       Autonomia::Agents::ModelosDeRamo::Edicao.new(thread: thread, mudancas: { perguntas: [{ texto: 'A obra já começou?' }] }).call
 
@@ -258,11 +267,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::CONHECIMENTO_NO_AJUSTE)
     end
 
-    it 'manda dizer que as listas ainda não mudam depois que o agente começou a atender' do
+    # #2976 — depois do "Começar" o dono muda as listas na página do agente.
+    it 'manda dizer que o dono muda as listas na página do agente, depois que ele começou a atender' do
       agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(contexto).to include('as listas ainda não mudam por aqui')
+      expect(contexto).to include('muda as listas na página do agente')
       expect(contexto).not_to include('na etapa "Confira"')
+    end
+
+    it 'não manda o dono à página quando a conta não pode mais usar o modelo (a página não mostra as listas)' do
+      agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
+      account.disable_features!('agente_modelos_seguro')
+
+      expect(contexto).to include('as listas deste agente não mudam por aqui')
+      expect(contexto).not_to include('na página do agente')
     end
 
     it 'entra nos blocos de contexto do turno de ajuste' do

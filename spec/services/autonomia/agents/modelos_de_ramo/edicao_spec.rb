@@ -251,12 +251,41 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(listas['documentos'].pluck('texto')).to eq(['Contrato social.'])
     end
 
-    it 'recusa o agente que não nasceu de um modelo e o que já começou a atender' do
+    it 'recusa o agente que não nasceu de um modelo' do
       comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
       expect { editar_pelo_agente({ perguntas: [] }, comum) }.to raise_error(described_class::Recusada, 'sem_modelo')
+    end
 
+    # #2976 — depois do "Começar" as duas listas continuam mudando pela página do agente.
+    it 'muda perguntas e documentos do agente que já começou a atender, sem tocar no resto do config' do
       comecar!(agente)
-      expect { editar_pelo_agente(perguntas: []) }.to raise_error(described_class::Recusada, 'agente_ja_comecou')
+      antes = agente.reload.config
+
+      editar_pelo_agente(perguntas: [{ texto: 'A obra já começou?' }], documentos: [{ texto: 'Contrato social.' }])
+
+      depois = agente.reload.config
+      expect(depois[chave_da_marca]['perguntas'].pluck('texto')).to eq(['A obra já começou?'])
+      expect(depois[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(depois[chave_da_marca].except('perguntas', 'documentos')).to eq(antes[chave_da_marca].except('perguntas', 'documentos'))
+      expect(depois.except(chave_da_marca)).to eq(antes.except(chave_da_marca))
+    end
+
+    it 'entrega a lista nova ao agente que atende já no turno seguinte' do
+      comecar!(agente)
+
+      editar_pelo_agente(perguntas: [{ texto: 'A obra já começou?' }])
+
+      expect(Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(agente.reload)).to include("PERGUNTAS DA COTAÇÃO:\n1. A obra já começou?")
+    end
+
+    it 'recusa mexer nas ferramentas do agente que já começou a atender, dizendo o campo, sem gravar' do
+      comecar!(agente)
+      antes = agente.reload.config
+
+      expect { editar_pelo_agente(perguntas: [], ferramentas: [{ fonte: 'cnpj' }]) }.to raise_error(described_class::Recusada) do |erro|
+        expect([erro.motivo, erro.campo]).to eq(%w[agente_ja_comecou ferramentas])
+      end
+      expect(agente.reload.config).to eq(antes)
     end
   end
 

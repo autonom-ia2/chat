@@ -70,7 +70,7 @@ module Autonomia::Agents::Builder::ModeloPronto
       'ENTREVISTA CURTA: o roteiro já traz quase tudo. Pergunte só duas coisas, uma por vez: (1) o nome da corretora;',
       "(2) com quais seguradoras ela trabalha neste ramo#{sugestao}. Se o dono disser que decide depois ou que ainda não",
       'sabe, aceite: não repita a pergunta e escreva na instruction que a equipe da corretora confirma as seguradoras.',
-      PRIMEIRA_RESPOSTA, FATOS_DO_RAMO,
+      PRIMEIRA_RESPOSTA, fatos_do_ramo(rascunho),
       'Não pergunte nome do agente, tom, horário nem mais nada. O que continuar sem resposta (como o horário da equipe),',
       'escreva de forma neutra, sem inventar e sem deixar marcador [[a coletar]] na instruction.',
       "NOME DO AGENTE: use \"#{modelo.nome_padrao}\" sem perguntar, a menos que o dono peça outro.",
@@ -79,7 +79,12 @@ module Autonomia::Agents::Builder::ModeloPronto
       'documentos "da lista", com as regras de uso de cada lista que o roteiro traz, SEM copiar os itens.',
       MOLDURA_DAS_LISTAS,
       'ROTEIRO:', rascunho.roteiro
-    ].join("\n")
+    ].compact.join("\n")
+  end
+
+  # O aviso do conhecimento do ramo só vale para a marca que o tem: é ela que o entrega ao agente (`Conhecimento.bloco`).
+  def fatos_do_ramo(rascunho)
+    FATOS_DO_RAMO if rascunho.marca['conhecimento'].to_s.strip.present?
   end
 
   # O AJUSTE de um agente que nasceu de um modelo pronto (a instrução já fechada, rascunho ou não). As duas listas não
@@ -101,12 +106,13 @@ module Autonomia::Agents::Builder::ModeloPronto
     ].join("\n")
   end
 
+  # Onde o dono muda as listas: no rascunho, na Confira; no agente que atende, na página dele (#2976). A página só
+  # mostra as listas enquanto a conta pode usar o modelo (`Rascunho.do_agente`): sem isso, não há onde mudar.
   def onde_mudam_as_listas(agente)
-    if agente.draft?
-      'explique que ele mesmo muda as listas na etapa "Confira" da criação, antes de o agente começar a atender.'
-    else
-      'explique que, depois que o agente começou a atender, as listas ainda não mudam por aqui.'
-    end
+    return 'explique que ele mesmo muda as listas na etapa "Confira" da criação, antes de o agente começar a atender.' if agente.draft?
+    return 'explique que as listas deste agente não mudam por aqui.' if Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(agente).nil?
+
+    'explique que ele mesmo muda as listas na página do agente, no bloco que mostra o que o agente pergunta e pede.'
   end
 
   # Os atributos do fechamento com o tipo do modelo e, quando falta, a marca dele.

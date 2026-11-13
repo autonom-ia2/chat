@@ -743,6 +743,10 @@
           "VER_PAGAS": "See the paid lookups",
           "ERRO_AO_MUDAR": "I could not save the change. Try again.",
           "ERRO_JA_COMECOU": "This agent has already started serving. The lists can no longer be changed here."
+        },
+        "PAGINA": {
+          "TITULO": "What {nome} asks and requests",
+          "NOTA": "Whatever you change here, {nome} follows from the customer's next message."
         }
       },
       "HEROI": {

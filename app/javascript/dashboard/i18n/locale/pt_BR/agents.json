@@ -743,6 +743,10 @@
           "VER_PAGAS": "Ver as consultas pagas",
           "ERRO_AO_MUDAR": "Não consegui guardar a mudança. Tente de novo.",
           "ERRO_JA_COMECOU": "Este agente já começou a atender. Aqui não dá mais para mudar as listas."
+        },
+        "PAGINA": {
+          "TITULO": "O que {nome} pergunta e pede",
+          "NOTA": "O que você mudar aqui, {nome} já segue na próxima mensagem do cliente."
         }
       },
       "HEROI": {

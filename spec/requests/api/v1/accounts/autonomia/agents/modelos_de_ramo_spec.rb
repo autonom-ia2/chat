@@ -375,12 +375,24 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(rascunho.reload.config[chave_da_marca]).to eq(antes)
     end
 
-    it 'recusa com 422 o agente que já começou a atender e com 404 o que não nasceu de um modelo' do
+    # #2976 — depois do "Começar" a página do agente continua mudando perguntas e documentos; as ferramentas, não.
+    it 'muda as listas do agente que já começou a atender e devolve só o ramo e as duas listas' do
       ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
-      expect(mudar_pelo_agente({ perguntas: [] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => nil)
-      expect(response).to have_http_status(:unprocessable_entity)
 
+      resposta = mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, ativo, com_funcao(%w[autonomia_manage]))
+
+      expect(response).to have_http_status(:ok)
+      expect(resposta).not_to have_key('modelo_pronto')
+      expect(resposta['listas_do_ramo'].keys).to match_array(%w[chave ramo perguntas documentos])
+      expect(resposta['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(ver_agente(ativo)['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+
+      expect(mudar_pelo_agente({ ferramentas: [{ fonte: 'cnpj' }] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => 'ferramentas')
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'responde 404 para o agente que não nasceu de um modelo' do
       comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
       expect(mudar_pelo_agente({ perguntas: [] }, comum)).to eq('motivo' => 'sem_modelo', 'campo' => nil)
       expect(response).to have_http_status(:not_found)
@@ -394,6 +406,10 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(manual.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
       expect(ver_agente(manual)).not_to have_key('modelo_pronto')
+      atendendo = Autonomia::Agents::Agent.create!(account: account, name: 'Manual que atende', agent_type: 'sdr', mode: :manual, status: :active,
+                                                   enabled: true, instruction: 'Atenda do meu jeito.',
+                                                   config: { chave_da_marca => conversa.state[chave_da_marca] })
+      expect(ver_agente(atendendo)).not_to have_key('listas_do_ramo')
 
       conversa.update!(agent: manual)
       expect(ver['modelo_pronto']).to be_nil
@@ -417,13 +433,14 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep compras_governo])
     end
 
-    it 'deixa de mandar o modelo, na conversa e no agente, depois que o agente começou a atender' do
+    it 'deixa de mandar o modelo inteiro, na conversa e no agente, depois que o agente começou a atender' do
       ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
       conversa.update!(agent: ativo)
 
       expect(ver['modelo_pronto']).to be_nil
       expect(ver_agente(ativo)).not_to have_key('modelo_pronto')
+      expect(ver_agente(rascunho)).not_to have_key('listas_do_ramo')
     end
 
     it 'responde 404 com a flag desligada e para a Lia, sem gravar' do
