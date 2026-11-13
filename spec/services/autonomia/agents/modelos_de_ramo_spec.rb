@@ -152,10 +152,16 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
       end
     end
 
-    it 'recusa o roteiro sem o trecho do conhecimento do ramo' do
-      gravar(dados, roteiro.sub(described_class::Conhecimento::INICIO, 'O SEGURO:'))
+    it 'recusa o roteiro sem o trecho do conhecimento do ramo, sem as dúvidas comuns ou com marcador dentro dele' do
+      saber = described_class::Conhecimento
+      sem_trecho = roteiro.sub(saber::INICIO, 'O SEGURO:')
+      sem_duvidas = roteiro.sub(saber::DUVIDAS, 'PERGUNTAS FREQUENTES')
+      com_marcador = roteiro.sub(saber::INICIO, "#{saber::INICIO} [[a coletar: empresa]]")
 
-      expect(lidos).to eq({})
+      [sem_trecho, sem_duvidas, com_marcador].each do |texto|
+        gravar(dados, texto)
+        expect(lidos).to eq({})
+      end
     end
 
     it 'deixa de fora só o modelo com defeito' do

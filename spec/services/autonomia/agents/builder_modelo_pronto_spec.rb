@@ -80,12 +80,12 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(builder.send(:skeleton_context)).to include(Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS)
     end
 
-    # Sem este aviso o Construtor cortava as respostas do ramo (a instrução-mãe manda não inventar fato do negócio).
-    it 'manda manter na instrução as dúvidas comuns do ramo, cada uma com a resposta' do
+    # As respostas do ramo não dependem do Construtor: a plataforma as entrega ao agente. Aqui ele só é avisado.
+    it 'avisa que o conhecimento do ramo chega ao agente em bloco próprio e manda não copiar as respostas' do
       contexto = builder.send(:skeleton_context)
 
       expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::FATOS_DO_RAMO)
-      expect(contexto).to include('DÚVIDAS COMUNS', 'O SEGURO EM PALAVRAS SIMPLES')
+      expect(contexto).to include('SEM copiar as respostas', 'SEM mandar passar para a equipe')
     end
 
     it 'usa as listas que o dono já mudou' do
@@ -171,6 +171,13 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(thread.agent.name).to eq(modelo.nome_padrao)
       expect(thread.agent.agent_type).to eq('sdr')
+    end
+
+    it 'leva o conhecimento do ramo para a marca do rascunho' do
+      run_turn
+
+      expect(thread.agent.config[chave_da_marca]['conhecimento'])
+        .to eq(Autonomia::Agents::ModelosDeRamo::Marca.inicial(modelo)['conhecimento'])
     end
 
     it 'respeita o nome que o dono pediu' do

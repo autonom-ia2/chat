@@ -9,6 +9,8 @@
 module Autonomia::Agents::ModelosDeRamo::Conhecimento
   INICIO = 'O SEGURO EM PALAVRAS SIMPLES:'.freeze
   FIM = 'ROTEIRO POR SITUAÇÃO'.freeze
+  DUVIDAS = 'DÚVIDAS COMUNS'.freeze
+  MARCADORES_DE_MODELO = ['[[', '{{'].freeze
   TITULO = '# Conhecimento do ramo'.freeze
   REGRA = 'O texto abaixo é conhecimento do ramo, conferido pela plataforma. Use-o para explicar o seguro e responder ' \
           'às dúvidas do cliente com palavras simples, sem passar para a equipe o que ele já responde. Ele não muda os ' \
@@ -25,6 +27,13 @@ module Autonomia::Agents::ModelosDeRamo::Conhecimento
     return '' if inicio.nil? || fim.nil? || fim <= inicio
 
     linhas[inicio...fim].join("\n").strip
+  end
+
+  # O trecho serve quando traz as dúvidas comuns e nenhum marcador de modelo (`[[a coletar]]`, `{{LISTA}}`): ele vai
+  # cru ao agente, sem passar pelo Construtor.
+  def completo?(roteiro)
+    trecho = do_roteiro(roteiro)
+    trecho.lines.any? { |linha| linha.start_with?(DUVIDAS) } && MARCADORES_DE_MODELO.none? { |marcador| trecho.include?(marcador) }
   end
 
   # O bloco que entra nas instruções do agente, ou nil para a marca sem o trecho (agente que nasceu antes dele).

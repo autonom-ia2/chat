@@ -137,7 +137,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
     negar("roteiro: passa de #{ROTEIRO_MAX} bytes") if @roteiro.bytesize > ROTEIRO_MAX
 
     conferir_marcadores!
-    negar('roteiro: falta o conhecimento do ramo') if Autonomia::Agents::ModelosDeRamo::Conhecimento.do_roteiro(@roteiro).empty?
+    negar('roteiro: falta o conhecimento do ramo') unless Autonomia::Agents::ModelosDeRamo::Conhecimento.completo?(@roteiro)
     @roteiro.strip.freeze
   end
 

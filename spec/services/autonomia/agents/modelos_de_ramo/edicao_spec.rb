@@ -211,6 +211,19 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
                                        config: { chave_da_marca => conversa.state[chave_da_marca], 'guardrails' => ['regra'] })
     end
 
+    # O conhecimento do ramo não é editável: a edição das listas tem de deixá-lo como nasceu, na conversa e no rascunho.
+    it 'mantém o conhecimento do ramo na marca, pela conversa e pelo agente' do
+      saber = Autonomia::Agents::ModelosDeRamo::Marca.inicial(modelo)['conhecimento']
+      expect(saber).to be_present
+
+      editar(documentos: [{ texto: 'Contrato social.' }])
+      expect(agente.reload.config[chave_da_marca]['conhecimento']).to eq(saber)
+      expect(conversa.reload.state[chave_da_marca]['conhecimento']).to eq(saber)
+
+      described_class.new(agent: agente, mudancas: { perguntas: [{ texto: 'A obra já começou?' }] }).call
+      expect(agente.reload.config[chave_da_marca]['conhecimento']).to eq(saber)
+    end
+
     def editar_pelo_agente(mudancas, alvo = agente)
       described_class.new(agent: alvo, mudancas: mudancas).call
     end

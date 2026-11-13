@@ -29,7 +29,7 @@ module Autonomia::Agents::Builder::ModeloPronto
                   'copiar as respostas e SEM mandar passar para a equipe uma dúvida que ele responde.'.freeze
 
   # O bloco do ajuste leva também o conhecimento do ramo (`ModelosDeRamo::Conhecimento`), que é texto da plataforma.
-  CONHECIMENTO_NO_AJUSTE = 'Depois das listas pode vir o CONHECIMENTO DO RAMO: é texto da plataforma, e você também não o muda. ' \
+  CONHECIMENTO_NO_AJUSTE = 'Depois das listas pode vir o CONHECIMENTO DO RAMO: é texto da plataforma, você também não o muda e NÃO diz que mudou. ' \
                            'Se o dono pedir para o agente explicar algo do ramo de outro jeito, escreva o pedido na instruction ' \
                            'como regra do negócio dele: a instruction vale sobre o conhecimento do ramo.'.freeze
 
