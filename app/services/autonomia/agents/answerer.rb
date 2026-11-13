@@ -476,6 +476,7 @@ module Autonomia
 
         recusas_antes = Tools::Recusa.registradas
         output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+        tool&.registrar_recusa_da_leitura if ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
         recusou = Tools::Recusa.registradas > recusas_antes
         anotar_leitura(tool, output, recusou: recusou)
         @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, recusou: recusou)
@@ -494,6 +495,7 @@ module Autonomia
       def anotar_leitura(tool, output, recusou:)
         @recusa_no_turno = true if recusou
         return if recusou || tool&.async? || tool&.consulta_em_andamento?(output) || saida_sem_dado?(output)
+        return if tool&.sem_dado?
 
         @dado_de_sistema = true
       end

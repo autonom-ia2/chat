@@ -7,6 +7,8 @@
 # `execute` NUNCA levanta. Erro vira JSON curto e nomeado, que o modelo lê e trata. Um turno não
 # pode morrer porque uma ferramenta falhou.
 class Autonomia::Agents::Tools::Bound
+  include ::Autonomia::Agents::Tools::LeituraDaPronta
+
   AsyncConfig = ::Autonomia::Agents::Tools::AsyncConfig
 
   MAX_OUTPUT_CHARS = 8_000
@@ -76,12 +78,14 @@ class Autonomia::Agents::Tools::Bound
   # `operador` é quem está pedindo, quando a ferramenta age em nome de uma pessoa (#568).
   # `turno`: só para o `Idempotency-Key` da ferramenta HTTP, quando ela roda sem `delivery` (o ajudante, #1430).
   def execute(call, delivery: nil, operador: nil, turno: nil)
+    @situacao_da_pronta = nil
     args = JSON.parse(call['arguments'].presence || '{}')
     output = if async?
                accept_async(args, delivery)
              else
                native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno, call)
              end
+    anotar_saida_pronta(output, operador, delivery || turno)
     cabendo(output)
   rescue JSON::ParserError
     recusar('invalid_tool_arguments', delivery)
@@ -124,11 +128,6 @@ class Autonomia::Agents::Tools::Bound
     consulta(JSON.parse(call['arguments'].presence || '{}'), turno, call).disparar(pre_disparo: true)
   rescue JSON::ParserError, ::Autonomia::Agents::Tools::HttpExecutor::ValorRecusado
     nil
-  end
-
-  # A saída de uma consulta que não chegou na janela: não é dado de sistema (`Answerer#anotar_leitura`).
-  def consulta_em_andamento?(output)
-    output == ::Autonomia::Agents::Tools::ConsultaNoTurno::EM_ANDAMENTO
   end
 
   private

@@ -410,5 +410,66 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Execucao do
     expect(Autonomia::FerramentasProntas.calculada_aqui?(certidoes)).to be(false)
   end
 
+  describe 'a leitura no turno (#3006)' do
+    let(:chamada_no_turno) { { 'name' => certidoes.slug, 'call_id' => 'premium', 'arguments' => cnj.to_json } }
+
+    it 'a falha não é dado e registra recusa sem trocar o texto do modelo' do
+      ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
+      stub_request(:post, "#{FerramentasPremiumHelper::BDC}/ondemand").to_return(status: 504, body: '')
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      texto = ligada.execute(chamada_no_turno)
+      ligada.registrar_recusa_da_leitura
+
+      expect(texto).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(ligada.sem_dado?).to be(true)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes + 1)
+      expect(registros_premium.sole).to have_attributes(resultado: 'falha', cobranca: 'sem_cobranca')
+    end
+
+    it 'o pedido inválido deixa a tentativa corrigida contar como dado, sem recusa no turno' do
+      ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
+      cnj_responde
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+      invalida = chamada_no_turno.merge('arguments' => cnj.merge('cnpj' => 'invalido').to_json)
+
+      expect(JSON.parse(ligada.execute(invalida))['situacao']).to eq('pedido_invalido')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(true)
+      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('encontrado')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+      expect(registros_premium.count).to eq(1)
+    end
+
+    it 'o sem registro continua sendo dado e continua contado para o cliente' do
+      ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
+      cnj_responde(nil)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('nao_encontrado')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+      expect(registros_premium.sole).to have_attributes(resultado: 'sem_registro', cobranca: 'gratis', numero: 1)
+    end
+
+    it 'o documento inválido na fonte continua sendo dado, inclusive quando vem do cache' do
+      ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: certidoes)
+      cnj_responde(nil, code: -114, message: 'INVALID DOCUMENT')
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('documento_invalido')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(false)
+      expect(JSON.parse(ligada.execute(chamada_no_turno))['situacao']).to eq('documento_invalido')
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+      expect(registros_premium.order(:id).pluck(:resultado, :cobranca))
+        .to eq([%w[documento_invalido gratis], %w[documento_invalido sem_cobranca]])
+    end
+  end
+
   # O Experimente do card Premium (decisão A do Rodrigo, 11/11) está em `experimente_premium_spec.rb`.
 end

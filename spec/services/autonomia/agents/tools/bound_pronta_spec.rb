@@ -93,10 +93,71 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
       fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
 
-      saida = JSON.parse(described_class.new(agent: agent, record: pronta).execute(chamada))
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+      texto = ligada.execute(chamada)
+      ligada.registrar_recusa_da_leitura
+      saida = JSON.parse(texto)
 
       expect(saida['situacao']).to eq('nao_consegui_consultar')
       expect(saida['orientacao']).to include('Não invente')
+      expect(texto).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(ligada.sem_dado?).to be(true)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes + 1)
+    end
+
+    it 'o pedido inválido não registra recusa, e a tentativa corrigida volta a contar como dado' do
+      fonte_responde(principal, endereco)
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      invalida = chamada.merge('arguments' => { cep: 'invalido' }.to_json)
+      expect(JSON.parse(ligada.execute(invalida))['situacao']).to eq('pedido_invalido')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(true)
+
+      expect(JSON.parse(ligada.execute(chamada))['situacao']).to eq('encontrado')
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+    end
+
+    it 'não altera o registro de recusas do Guia' do
+      fonte_fora(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(ligada.execute(chamada, operador: Object.new)).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      ligada.registrar_recusa_da_leitura
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+    end
+
+    it 'a consulta interna de especialista ou ajudante não registra a nova recusa por conta própria' do
+      fonte_fora(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(ligada.execute(chamada)).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+    end
+
+    it 'não interpreta a situação de um JSON devolvido pela ferramenta HTTP cadastrada' do
+      texto = Autonomia::FerramentasProntas::Resposta.nao_consegui
+      allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new)
+        .and_return(instance_double(Autonomia::Agents::Tools::HttpExecutor, call: texto))
+      ligada = described_class.new(agent: agent, record: manual)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(ligada.execute(chamada)).to eq(texto)
+      ligada.registrar_recusa_da_leitura
+
+      expect(ligada.sem_dado?).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
     end
   end
 
@@ -111,6 +172,22 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 77)
       saida = described_class.new(agent: agent, record: pronta).execute(chamada, delivery: entrega)
       [saida, Autonomia::Agents::ToolRun.sole]
+    end
+
+    it 'a falha que chega na janela do turno conserva o texto e pode ser registrada como recusa' do
+      fonte_fora(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      relogio_do_turno { rodar_consultas }
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 80)
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(ligada.execute(chamada, delivery: entrega)).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      ligada.registrar_recusa_da_leitura
+
+      expect(ligada.sem_dado?).to be(true)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes + 1)
     end
 
     it 'a consulta lenta sai do turno: o modelo le "em andamento" e a execucao fica na fila agent_tools' do

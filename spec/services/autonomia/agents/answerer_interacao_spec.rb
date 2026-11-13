@@ -67,7 +67,9 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   def ferramenta_devolve(saida, slug: 'pedido')
-    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: false, disparar: nil, consulta_em_andamento?: false,
+    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: false, disparar: nil,
+                                                             consulta_em_andamento?: false, sem_dado?: false,
+                                                             registrar_recusa_da_leitura: nil,
                                                              openai_schema: { type: 'function', name: slug, parameters: {} })
     allow(bound).to receive(:execute).and_return(saida)
     allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).and_return([bound])
