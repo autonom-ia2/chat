@@ -104,6 +104,12 @@
       "GUARDAR_PDF_DE": "Save the PDF of the {tipo} policy",
       "ABRIR": "Open the {tipo} policy"
     },
+    "PAINEL": {
+      "TITULO": "Insurance",
+      "VER_OS_OUTROS": "See the other policy | See the other {count} policies",
+      "MOSTRAR_MENOS": "Show less",
+      "VER_NA_FICHA": "See on the page"
+    },
     "QUANDO": {
       "LISTA": {
         "VENCE_EM": "ends in {count} days ({data})",
