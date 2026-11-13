@@ -330,4 +330,153 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       expect(consultas_feitas(&ler)).to eq(com_tres)
     end
   end
+
+  # E4 (#2897) — o que a carteira de seguros soma à lista (Carteira::NaListaDePessoas). Tudo fictício.
+  describe 'na conta com a carteira de seguros' do
+    # 11/11/2026, 9h em São Paulo: para a conta, hoje é dia 11.
+    let(:account) { conta_com_carteira(reporting_timezone: 'America/Sao_Paulo') }
+    let(:hoje) { Date.new(2026, 11, 11) }
+
+    def com_seguros(nome, *seguros)
+      pessoa(nome).tap { |dona| seguros.each { |campos| criar_apolice(dona, **campos) } }
+    end
+
+    describe 'o grupo "Só tem um seguro"' do
+      let(:ativo) { { fim_vigencia: hoje + 200 } }
+      let(:vencido) { { fim_vigencia: hoje - 1 } }
+      let(:cancelado) { { fim_vigencia: hoje + 200, cancelado_em: agora - 3.days } }
+      let(:com_um) { ['Um ativo', 'Ativo e vencido', 'Ativo e cancelado', 'Vence hoje'] }
+
+      before do
+        com_seguros('Um ativo', ativo)
+        com_seguros('Dois ativos', ativo, ativo)
+        com_seguros('Ativo e vencido', ativo, vencido)
+        com_seguros('Ativo e cancelado', ativo, cancelado)
+        com_seguros('Vence hoje', { fim_vigencia: hoje })
+        com_seguros('Só vencido', vencido)
+        com_seguros('Só cancelado', cancelado)
+        pessoa('Sem seguro')
+      end
+
+      it 'traz quem tem exatamente um seguro valendo: cancelado e vencido não contam' do
+        expect(nomes(grupo: 'so_um_seguro')).to match_array(com_um)
+      end
+
+      it 'entra na contagem dos grupos, com o mesmo número da lista e na mesma consulta' do
+        contando = consulta
+
+        expect(contando.contagens).to include('todos' => 8, 'so_um_seguro' => 4)
+        expect(consulta(grupo: 'so_um_seguro').total).to eq(4)
+        expect(consultas_feitas { contando.contagens }).to eq(1)
+      end
+
+      it 'cruza com a busca, os filtros e "Marcar todas"' do
+        expect(nomes(grupo: 'so_um_seguro', busca: 'ativo e')).to contain_exactly('Ativo e vencido', 'Ativo e cancelado')
+        expect(consulta(grupo: 'so_um_seguro').todos.pluck(:name)).to match_array(com_um)
+      end
+
+      it 'vira o dia no fuso da conta: às 22h de São Paulo o seguro que vence hoje ainda conta' do
+        travel_to(Time.utc(2026, 11, 12, 1))
+
+        expect(nomes(grupo: 'so_um_seguro')).to include('Vence hoje')
+
+        travel_to(Time.utc(2026, 11, 12, 4))
+
+        expect(nomes(grupo: 'so_um_seguro')).not_to include('Vence hoje')
+      end
+
+      it 'não conta seguro de outra conta' do
+        outra = conta_com_carteira
+        de_fora = create(:contact, account: outra, name: 'Um ativo de fora', contact_type: :customer)
+        criar_apolice(de_fora, **ativo)
+
+        expect(nomes(grupo: 'so_um_seguro')).to match_array(com_um)
+        expect(described_class.new(outra, grupo: 'so_um_seguro').itens.map(&:name)).to eq(['Um ativo de fora'])
+      end
+    end
+
+    describe 'a busca pelos seguros' do
+      before do
+        com_seguros('Marina Exemplo', { numero: 'EX-001234', bem: 'Carro Exemplo 2022 placa ABC1D23' })
+        com_seguros('Bruno Exemplo', { numero: 'EX-005678', bem: 'Apartamento na Praça Açaí' }, { numero: 'ZZ 9090', bem: nil })
+        pessoa('Carla Sem Seguro', phone_number: '+5511910310001')
+      end
+
+      it 'acha a pessoa pelo número da apólice, com ou sem pontuação e só pelos dígitos' do
+        expect(nomes(busca: 'EX-001234')).to contain_exactly('Marina Exemplo')
+        expect(nomes(busca: 'ex001234')).to contain_exactly('Marina Exemplo')
+        expect(nomes(busca: '001234')).to contain_exactly('Marina Exemplo')
+        expect(nomes(busca: 'zz 9090')).to contain_exactly('Bruno Exemplo')
+        expect(nomes(busca: 'ex-00')).to contain_exactly('Marina Exemplo', 'Bruno Exemplo')
+      end
+
+      it 'acha pelo texto do bem segurado, sem acento, e pela placa que estiver nele' do
+        expect(nomes(busca: 'carro exemplo')).to contain_exactly('Marina Exemplo')
+        expect(nomes(busca: 'abc1d23')).to contain_exactly('Marina Exemplo')
+        expect(nomes(busca: 'praca acai')).to contain_exactly('Bruno Exemplo')
+      end
+
+      it 'continua achando pelo que a lista já procurava, e só número não procura no bem' do
+        expect(nomes(busca: 'carla')).to contain_exactly('Carla Sem Seguro')
+        expect(nomes(busca: '910310001')).to contain_exactly('Carla Sem Seguro')
+        expect(nomes(busca: '2022')).to be_empty
+        expect(nomes(busca: '---')).to be_empty
+      end
+
+      it 'a contagem dos grupos acompanha a busca pelos seguros' do
+        expect(consulta(busca: 'EX-00').contagens).to include('todos' => 2, 'so_um_seguro' => 1)
+      end
+
+      it 'trata % e _ como texto, não como curinga' do
+        expect(nomes(busca: 'EX_001234')).to be_empty
+        expect(nomes(busca: 'EX%1234')).to be_empty
+      end
+
+      it 'não acha pessoa pelo seguro de outra conta' do
+        outra = conta_com_carteira
+        criar_apolice(create(:contact, account: outra, name: 'Dona de fora', contact_type: :customer), numero: 'FORA-4242')
+
+        expect(nomes(busca: 'FORA-4242')).to be_empty
+        expect(described_class.new(outra, busca: 'EX-001234').itens).to be_empty
+      end
+    end
+
+    describe 'com a carteira desligada' do
+      # A conta já tem seguros gravados; desligar a chave tem de devolver a lista de antes, inteira.
+      before do
+        com_seguros('Marina Exemplo', { numero: 'EX-001234', bem: 'Carro Exemplo 2022' })
+        account.disable_features!('carteira_seguros')
+      end
+
+      def sql_de(&)
+        feitas = []
+        guardar = ->(*, dados) { feitas << dados[:sql] unless dados[:cached] || %w[SCHEMA TRANSACTION].include?(dados[:name]) }
+        ActiveSupport::Notifications.subscribed(guardar, 'sql.active_record', &)
+        feitas
+      end
+
+      it 'a lista não tem o grupo nem procura nos seguros' do
+        expect(consulta.contagens.keys).to eq(described_class::GRUPOS.keys)
+        expect { consulta(grupo: 'so_um_seguro') }.to raise_error(Relacionamentos::PedidoInvalido, 'grupo desconhecido: so_um_seguro')
+        expect(nomes(busca: 'EX-001234')).to be_empty
+        expect(nomes(busca: 'carro exemplo')).to be_empty
+        expect(nomes(busca: 'marina')).to contain_exactly('Marina Exemplo')
+      end
+
+      it 'a consulta é a mesma de antes da carteira, letra por letra' do
+        de_antes = described_class.base(account).where('TRUE').order(Arel.sql(Relacionamentos::Consulta.por_nome('contacts')))
+                                  .offset(0).limit(Relacionamentos::Consulta::POR_PAGINA)
+
+        expect(consulta(ordem: 'nome').itens.to_sql).to eq(de_antes.to_sql)
+      end
+
+      it 'faz o mesmo número de consultas de antes e nenhuma toca nos seguros' do
+        lendo = consulta(busca: 'marina')
+        feitas = { contagens: sql_de { lendo.contagens }, total: sql_de { lendo.total }, todos: sql_de { lendo.todos } }
+
+        expect(feitas.transform_values(&:size)).to eq(contagens: 1, total: 1, todos: 1)
+        expect(feitas.values.flatten.select { |sql| sql.include?('carteira_apolices') }).to be_empty
+      end
+    end
+  end
 end
