@@ -7,14 +7,16 @@ const FichaDaPessoaPage = () => import('./pages/FichaDaPessoaPage.vue');
 const FichaDaEmpresaPage = () => import('./pages/FichaDaEmpresaPage.vue');
 const TrazerListaPage = () => import('./pages/TrazerListaPage.vue');
 const AjustarRenovacoesPage = () => import('./pages/AjustarRenovacoesPage.vue');
+const ResultadosDasRenovacoesPage = () =>
+  import('./pages/ResultadosDasRenovacoesPage.vue');
 
 // #2894 — as telas novas de Relacionamentos, atrás de relacionamentos_novo. A
 // lista não ganha rota: ela é a própria `relationships_home` (ver
 // relationships/routes.js), que escolhe a tela pela flag. Mesmas permissões da
 // página de hoje.
-// #2898 — "Ajustar renovações" é da carteira de seguros: a conta sem ela, se
-// chegar pelo endereço, volta para a lista sem chamar rota nenhuma (a própria
-// página decide, com useContaDeSeguros).
+// #2898 — "Ajustar renovações" e "Resultados das renovações" são da carteira
+// de seguros: a conta sem ela, se chegar pelo endereço, volta para a lista sem
+// chamar rota nenhuma (a própria página decide, com useContaDeSeguros).
 const PERMISSIONS = [
   'administrator',
   'agent',
@@ -56,5 +58,10 @@ export const routes = [
     'seguros/renovacoes',
     'relacionamentos_renovacoes',
     AjustarRenovacoesPage
+  ),
+  rota(
+    'seguros/resultados',
+    'relacionamentos_resultados',
+    ResultadosDasRenovacoesPage
   ),
 ];
