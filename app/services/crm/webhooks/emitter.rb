@@ -60,7 +60,7 @@ module Crm
         return dispatch_for_automacao if event.blank?
         # Carteira::Renovacao::Escuta (#2898): the outcome of a renewal card reaches its insurance policy.
         return unless any_account_webhook_subscribed?(event) || meta_sync_subscribed?(event) || google_sync_subscribed?(event) ||
-                      automacao_subscribed?(event) || Carteira::Renovacao::Escuta.assinante?(event, card_id: @card_id)
+                      automacao_subscribed?(event) || Carteira::Renovacao::Escuta.assinante?(account, event, card_id: @card_id)
 
         dispatch(event)
       end

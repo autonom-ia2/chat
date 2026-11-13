@@ -41,7 +41,7 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
   end
 
   def historia
-    render json: ::Carteira::Historia.new(@seguro).call
+    render json: ::Carteira::Historia.new(@seguro, quem: pundit_user).call
   end
 
   def update

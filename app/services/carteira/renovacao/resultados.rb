@@ -11,7 +11,9 @@
 # - `motivos`: os que não renovaram, por motivo. Vêm sempre todos os motivos, mais `sem_motivo` (ninguém disse por quê:
 #   o card foi fechado no quadro sem motivo, ou o seguro só venceu);
 # - `recortes`: só as linhas que têm algum seguro no período, das que mais venceram para as que menos. "Quem cuida" é
-#   o dono do card de renovação; seguro sem card, ou com card sem dono, não entra nesse recorte.
+#   o dono do card de renovação HOJE; seguro sem card, ou com card sem dono, não entra nesse recorte. Se o card trocou
+#   de dono depois de fechado, o número vai para o dono novo. Com quem o card nasceu fica na história do seguro
+#   (`valores.cuida_id` do passo `renovacao_card_nasceu`), para o dia em que o recorte precisar de quem cuidava na época.
 #
 # Os totais, os motivos e os recortes por tipo e por seguradora são dado da carteira: vão para quem vê contatos. O
 # recorte por quem cuida é desempenho de cada pessoa, e mostra o dono de card de funil que quem pede pode não abrir: é

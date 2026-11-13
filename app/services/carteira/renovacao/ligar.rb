@@ -1,6 +1,7 @@
 # A apólice nova se liga à que ela renovou (E5, #2898), e a anterior fica renovada: o card de renovação aberto fecha
-# como ganho (quem escreve no seguro é o ouvinte do card, Carteira::RenovacaoListener); sem card aberto, o seguro é
-# marcado direto.
+# como ganho e o seguro é acertado por ele aqui mesmo (Carteira::Renovacao::Fechar.pelo_card), sem esperar o ouvinte do
+# card; sem card aberto, o seguro é marcado direto. A anterior fica travada, e o card dela também, na mesma ordem da
+# gaveta.
 #
 # `com(anterior)`: quem trouxe a apólice disse qual ela renovou (a apólice nova feita à mão).
 #
@@ -73,12 +74,19 @@ class Carteira::Renovacao::Ligar
   private
 
   def renovar(anterior)
-    return if anterior.renovado_em || anterior.nao_renovou_em
+    anterior.with_lock do
+      next if anterior.renovado_em || anterior.nao_renovou_em
 
-    card = anterior.crm_card
-    return Carteira::Renovacao::Desfecho.new(anterior, user: @user).renovou_sem_card unless card&.open? && anterior.renovacao_card_removido_em.nil?
+      card = anterior.crm_card
+      next sem_card(anterior) if card.nil? || anterior.renovacao_card_removido_em
 
-    Crm::Cards::Closer.new(card: card, actor: @user, result: Carteira::Renovacao::Fechar::GANHO).perform
-    ActiveRecord.after_all_transactions_commit { Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED) }
+      card.with_lock do
+        card.open? ? Carteira::Renovacao::Fechar.pelo_card(anterior, card, Carteira::Renovacao::Fechar::GANHO, user: @user) : sem_card(anterior)
+      end
+    end
+  end
+
+  def sem_card(anterior)
+    Carteira::Renovacao::Desfecho.new(anterior, user: @user).renovou_sem_card
   end
 end

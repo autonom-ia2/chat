@@ -184,7 +184,7 @@ RSpec.describe Carteira::RenovacaoListener do
     fechar('won')
     travel 1.hour
 
-    2.times { Carteira::Renovacao::Desfecho.do_card(card.id, user: admin) }
+    2.times { Carteira::Renovacao::Desfecho.new(seguro.reload, user: admin).acertar }
 
     expect([desfecho, passos]).to eq([{ 'renovado_em' => agora }, %w[renovacao_card_nasceu renovou]])
   end
@@ -199,12 +199,60 @@ RSpec.describe Carteira::RenovacaoListener do
 
   it 'a falha ao escrever no seguro não desfaz o fechamento do card: vai para o log, só com ids' do
     allow(Rails.logger).to receive(:error)
-    allow(Carteira::Renovacao::Desfecho).to receive(:do_card).and_raise(ActiveRecord::StatementTimeout, 'canceling statement')
+    allow(Carteira::Renovacao::Desfecho).to receive(:new).and_raise(ActiveRecord::StatementTimeout, 'canceling statement')
 
     fechar('won')
 
     expect([card.reload.status, desfecho]).to eq(['won', {}])
     expect(Rails.logger).to have_received(:error)
       .with("[carteira][renovacao] desfecho não chegou ao seguro card=#{card.id} ActiveRecord::StatementTimeout")
+  end
+
+  # Estes eventos saem para todo card de toda conta que tenha qualquer assinante (webhook, anúncio, automação), e a
+  # pergunta do emissor roda a cada desfecho de card. A conta sem a carteira não paga consulta nenhuma por isso; o card
+  # que não é de seguro paga só a leitura que diz que ele não é. Ninguém procura quem fechou o card antes disso.
+  describe 'o que a escuta custa a quem não tem seguro no card' do
+    let(:solto) { account.crm_cards.create!(pipeline: ajustes.pipeline, stage: ajustes.stage, contact: marina, title: 'Outro assunto') }
+
+    def perguntar(o_card)
+      Carteira::Renovacao::Escuta.assinante?(account, Events::Types::CRM_CARD_WON, card_id: o_card.id)
+    end
+
+    # Como num pedido do painel: a conta do pedido já está carregada.
+    def consultas_do_ouvinte(o_card)
+      evento = Events::Base.new(Events::Types::CRM_CARD_WON, Time.zone.now, account_id: account.id, card_id: o_card.id, activity_id: 0)
+      Current.account = account
+      consultas_da_carteira { described_class.instance.crm_card_won(evento) }
+    ensure
+      Current.reset
+    end
+
+    it 'na conta sem a carteira não faz consulta nenhuma, nem no emissor nem no ouvinte, mesmo com card de seguro' do
+      account.disable_features!('carteira_seguros')
+
+      expect([consultas_da_carteira { perguntar(card) }, consultas_do_ouvinte(card)]).to eq([0, 0])
+      expect(perguntar(card)).to be(false)
+    end
+
+    it 'na conta com a carteira, o card que não é de seguro custa só a leitura que procura o seguro' do
+      solto
+
+      expect([consultas_da_carteira { perguntar(solto) }, consultas_do_ouvinte(solto)]).to eq([1, 1])
+      expect([perguntar(solto), perguntar(card)]).to eq([false, true])
+    end
+
+    it 'o card de seguro de outra conta não passa pelo portão desta' do
+      outra = conta_com_carteira
+
+      expect(Carteira::Renovacao::Escuta.assinante?(outra, Events::Types::CRM_CARD_WON, card_id: card.id)).to be(false)
+    end
+
+    it 'a conta que ficou sem a carteira não tem o seguro mexido quando o card fecha' do
+      account.disable_features!('carteira_seguros')
+
+      fechar('won')
+
+      expect([card.reload.status, desfecho, passos]).to eq(['won', {}, ['renovacao_card_nasceu']])
+    end
   end
 end

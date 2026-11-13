@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # E5 (#2898) — a renovação na aba Seguros e na gaveta: o seguro com o card de renovação, o grupo "Em renovação", o
-# filtro "quem cuida", o resumo, e "Renovou", "Não renovou" e "Desfazer", que fecham e reabrem o CARD (quem escreve no
-# seguro é o ouvinte do card, o mesmo caminho do quadro). A recusa é um código em `error`. A metade de função
+# filtro "quem cuida", o resumo, e "Renovou", "Não renovou" e "Desfazer", que fecham e reabrem o CARD (o seguro é
+# acertado pelo card, como quando o card fecha no quadro). A recusa é um código em `error`. A metade de função
 # personalizada fica em spec/enterprise/requests/relacionamentos/seguros_renovacao_spec.rb. Tudo fictício.
 RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request do
   # Meio-dia em São Paulo: para a conta, hoje é 12/11/2026.
@@ -72,6 +72,33 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(da_lista).to eq('desfecho' => nil)
       expect(ler("seguros/#{seguro.id}", quem: agente)).to include('selo' => 'renovado', 'renovacao' => { 'desfecho' => 'renovou' })
       expect(ler('seguros')['itens'].sole['renovacao']).to include('cardId' => card.id, 'funil' => 'Renovação', 'cuida' => 'Bia Exemplo')
+    end
+
+    # Quem saiu da conta e ficou de dono de um card não é mais "quem cuida": o nome dele não aparece no seguro nem nas
+    # opções do filtro.
+    it 'o dono do card que já saiu da conta não aparece como quem cuida' do
+      caio = create(:user, account: account, role: :agent, name: 'Caio Exemplo')
+      card.update!(owner: caio)
+      antes = [ler("seguros/#{seguro.id}")['renovacao'].slice('cuida', 'cuidaId'), ler('seguros/opcoes_de_filtro')['cuida']]
+      AccountUser.where(account_id: account.id, user_id: caio.id).delete_all
+
+      expect(antes).to eq([{ 'cuida' => 'Caio Exemplo', 'cuidaId' => caio.id }, [{ 'id' => caio.id, 'nome' => 'Caio Exemplo' }]])
+      expect(ler("seguros/#{seguro.id}")['renovacao']).to include('cardId' => card.id, 'cuida' => nil, 'cuidaId' => nil)
+      expect(ler('seguros')['itens'].sole['renovacao']).to include('cardId' => card.id, 'cuida' => nil, 'cuidaId' => nil)
+      expect(ler('seguros/opcoes_de_filtro')['cuida']).to eq([])
+    end
+
+    # O passo "o card nasceu" guarda o funil e com quem o card nasceu. Isso é do quadro: só sai para quem enxerga o card.
+    it 'a história conta o funil e quem cuida do card só a quem enxerga o card no quadro' do
+      agente = create(:user, account: account, role: :agent)
+      ajustes.update!(user: admin)
+      outro = criar_apolice(marina, numero: 'EX-000002', fim_vigencia: hoje + 5)
+      por_em_renovacao(outro, ajustes)
+      do_passo = ->(quem) { ler("seguros/#{outro.id}/historia", quem: quem).last.slice('tipo', 'valores') }
+
+      expect(do_passo.call(admin)).to eq('tipo' => 'renovacao_card_nasceu',
+                                         'valores' => { 'funil' => ajustes.pipeline_id, 'cuida' => 'Bia Exemplo', 'cuida_id' => admin.id })
+      expect(do_passo.call(agente)).to eq('tipo' => 'renovacao_card_nasceu', 'valores' => {})
     end
 
     it 'o card sem dono vem sem "quem cuida", e o card tirado do quadro some do seguro' do

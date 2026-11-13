@@ -44,7 +44,7 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
   end
 
   # O card sem dono e sem caixa só apareceria para o administrador: quem escolheu o funil é quem cuida.
-  it 'quem escolheu o funil cuida do card, e a história do seguro guarda o nome' do
+  it 'quem escolheu o funil cuida do card, e a história do seguro guarda o nome e o id de quem era' do
     bia = create(:user, account: account, role: :agent, name: 'Bia Exemplo')
     config.update!(user: bia)
     seguro = criar_apolice(marina, numero: 'EX-000001', fim_vigencia: hoje + 10)
@@ -53,7 +53,7 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
 
     expect(cards.sole.owner_id).to eq(bia.id)
     expect(seguro.eventos.sole).to have_attributes(tipo: 'renovacao_card_nasceu', user_id: nil,
-                                                   valores: { 'funil' => funil.id, 'cuida' => 'Bia Exemplo' })
+                                                   valores: { 'funil' => funil.id, 'cuida' => 'Bia Exemplo', 'cuida_id' => bia.id })
   end
 
   it 'quem escolheu e já saiu da conta não vira dono: o card nasce sem dono' do
@@ -116,6 +116,17 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     expect(cards.count).to eq(3)
     expect(seguros.map { |seguro| seguro.reload.crm_card_id }).to eq(primeiros)
     expect(Carteira::ApoliceEvento.where(apolice_id: seguros.map(&:id), tipo: 'renovacao_card_nasceu').count).to eq(3)
+  end
+
+  # Duas passadas ao mesmo tempo: a segunda leu o seguro antes de a primeira criar o card. Sob a trava ela relê o seguro
+  # e desiste, em vez de confiar no que tinha lido.
+  it 'a passada que leu o seguro antes de a outra criar o card não cria o segundo' do
+    seguro = criar_apolice(marina, numero: 'EX-000001', fim_vigencia: hoje + 10)
+    lido_antes = Carteira::Apolice.find(seguro.id)
+    criar = Carteira::Renovacao::CriarCard.new(account, config)
+
+    expect([criar.call(seguro), criar.call(lido_antes)]).to eq([true, false])
+    expect([cards.count, seguro.eventos.count, lido_antes.crm_card_id]).to eq([1, 1, seguro.crm_card_id])
   end
 
   it 'avisa no sino quantos seguros entraram em renovação hoje, e a passada que não cria card não avisa de novo' do

@@ -4,7 +4,8 @@
 # `origem: 'carteira'`).
 #
 # Quem cuida do card é quem escolheu o funil nos ajustes, enquanto for da conta e ainda enxergar esse funil no quadro:
-# o card sem dono e sem caixa só apareceria para o administrador. A história do seguro guarda o nome (`valores.cuida`).
+# o card sem dono e sem caixa só apareceria para o administrador. A história do seguro guarda com quem o card nasceu:
+# o nome (`valores.cuida`) e o id (`valores.cuida_id`), que não muda quando o card troca de dono depois.
 # Se essa pessoa saiu da conta, perdeu o CRM na função ou perdeu o funil no acesso por funil, o card nasce sem dono: com
 # ela de dona, ele seria de quem não o abre.
 #
@@ -33,12 +34,16 @@ class Carteira::Renovacao::CriarCard
       next false unless Carteira::Renovacao::EntramHoje.entra?(apolice)
 
       apolice.update!(crm_card: criar(apolice))
-      apolice.eventos.create!(tipo: NASCEU, quando: Time.current, valores: { funil: @config.pipeline_id, cuida: @dono&.name }.compact)
+      apolice.eventos.create!(tipo: NASCEU, quando: Time.current, valores: do_nascimento)
       true
     end
   end
 
   private
+
+  def do_nascimento
+    { funil: @config.pipeline_id, cuida: @dono&.name, cuida_id: @dono&.id }.compact
+  end
 
   # A mesma régua do quadro para pôr um card avulso num funil: ver o CRM (Crm::PipelinePolicy#index?) e ter o funil
   # entre os que a pessoa enxerga (Crm::Access::CardGuard#create_allowed?).

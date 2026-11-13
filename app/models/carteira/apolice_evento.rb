@@ -12,8 +12,9 @@ class Carteira::ApoliceEvento < ApplicationRecord
   DA_E4 = %w[chegou_planilha chegou_de_novo corrigido cancelado voltou_a_ativo pdf_anexado pdf_tirado].freeze
   # E5 a E9: a renovação no funil, a proposta, os avisos ao cliente, a apólice nova e a chegada pelo conector.
   # `desfez_desfecho` (E5, #2898): alguém desfez o "renovou" ou o "não renovou"; `valores.anterior` diz qual era.
-  # `renovacao_card_nasceu` (E5, #2898): o card de renovação do seguro nasceu; `valores.funil` é o funil em que nasceu e
-  # `valores.cuida`, quem cuida. Só a renovação grava este tipo: a rotina conta com ele para não repetir o card.
+  # `renovacao_card_nasceu` (E5, #2898): o card de renovação do seguro nasceu; `valores.funil` é o funil em que nasceu,
+  # `valores.cuida`, o nome de quem cuida, e `valores.cuida_id`, o id. Só a renovação grava este tipo: a rotina conta
+  # com ele para não repetir o card.
   DAS_PROXIMAS = %w[
     chegou_agger card_nasceu respondeu_algo_mudou proposta_pronta proposta_enviada cliente_respondeu endosso renovou
     nao_renovou nao_renovou_outro apolice_nova cotacao_pedida proposta_enviada_sozinha proposta_nao_saiu aviso_nao_saiu

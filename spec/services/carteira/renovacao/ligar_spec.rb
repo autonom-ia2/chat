@@ -169,6 +169,20 @@ RSpec.describe Carteira::Renovacao::Ligar do
       expect(Carteira::Selo.de(chegou.reload, hoje: hoje)).to eq('ativo')
     end
 
+    # A ligação, o card fechado e o seguro renovado entram juntos: a anterior não fica esperando o ouvinte do card, que
+    # só roda depois do commit e pode falhar.
+    it 'deixa a anterior renovada mesmo quando o aviso do card não chega ao seguro' do
+      antiga = anterior
+      card = por_em_renovacao(antiga, ajustes)
+      allow(Carteira::RenovacaoListener.instance).to receive(:crm_card_won)
+      chegou = nova
+
+      ligar(chegou)
+
+      expect([card.reload.status, antiga.reload.renovado_em]).to eq(['won', agora])
+      expect(antiga.eventos.order(:id).last).to have_attributes(tipo: 'renovou', user_id: admin.id)
+    end
+
     it 'a anterior que já estava renovada continua com o desfecho que tinha, sem passo repetido' do
       antiga = anterior
       card = por_em_renovacao(antiga, ajustes)

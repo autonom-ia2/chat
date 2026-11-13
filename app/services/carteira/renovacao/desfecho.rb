@@ -1,9 +1,11 @@
 # Como terminou a renovação, escrito no seguro (E5, #2898). É o único lugar que escreve `renovado_em`, `nao_renovou_em`
-# e `renovacao_card_removido_em`: venha o desfecho do quadro (alguém fechou o card), da gaveta do seguro, da IA ou de
-# uma automação, o caminho é o mesmo, pelo card (Carteira::RenovacaoListener).
+# e `renovacao_card_removido_em`, sempre pelo estado do card. Quem mexe no card pela carteira (a gaveta do seguro, o
+# cancelamento, a apólice nova) chama `acertar` na própria transação, para o card e o seguro entrarem juntos
+# (Carteira::Renovacao::Fechar.pelo_card); o que vem do quadro, da IA ou de uma automação chega pelo ouvinte do card
+# (Carteira::RenovacaoListener), depois do commit.
 #
-# Não confia no nome do evento: lê como o card está agora e acerta o seguro por ele. Por isso rodar duas vezes, ou
-# receber os eventos fora de ordem, dá no mesmo.
+# Não confia no nome do evento: lê como o card está agora e acerta o seguro por ele, e só escreve o que falta. Por isso
+# rodar duas vezes, ou receber os eventos fora de ordem, dá no mesmo.
 # - card ganho ou resolvido: o seguro renovou;
 # - card perdido ou cancelado: não renovou (o motivo vem depois, de quem souber: #dizer_motivo);
 # - card aberto de novo: o desfecho é desfeito e o seguro volta a "em renovação", com o passo `desfez_desfecho` na
@@ -27,12 +29,6 @@ class Carteira::Renovacao::Desfecho
   SEM_DESFECHO = { renovado_em: nil, nao_renovou_em: nil, motivo_nao_renovou: nil, motivo_escrito: nil,
                    renovacao_card_removido_em: nil }.freeze
 
-  # O card mudou: acerta o seguro dele. Card que não é de seguro nenhum: nada.
-  def self.do_card(card_id, user: nil)
-    apolice = Carteira::Apolice.find_by(crm_card_id: card_id)
-    new(apolice, user: user).acertar if apolice
-  end
-
   def initialize(apolice, user: nil)
     @apolice = apolice
     @user = user
@@ -54,9 +50,10 @@ class Carteira::Renovacao::Desfecho
 
   # O motivo de não ter renovado, dito na gaveta: na hora de fechar ou depois, quando o card foi fechado no quadro sem
   # motivo. Fica no seguro e no passo "Não renovou" da história (o escrito à mão, com as palavras de quem escreveu).
+  # Motivo para um seguro que não está como "não renovou" é recusado (`sem_desfecho`): nunca some calado.
   def dizer_motivo(motivo, escrito)
     @apolice.with_lock do
-      next unless @apolice.nao_renovou_em
+      raise CustomExceptions::CarteiraRecusa, 'sem_desfecho' unless @apolice.nao_renovou_em
 
       @apolice.update!(motivo_nao_renovou: motivo, motivo_escrito: escrito)
       passo_de_nao_renovou&.update!(com_o_motivo(motivo, escrito))
