@@ -11,8 +11,11 @@
 class Carteira::NaListaDePessoas
   GRUPO = 'so_um_seguro'.freeze
   DA_PESSOA = 'carteira_apolices.contact_id = contacts.id'.freeze
-  SO_UM_VALENDO = "(SELECT COUNT(*) FROM carteira_apolices WHERE #{DA_PESSOA} " \
-                  "AND carteira_apolices.account_id = contacts.account_id AND #{Carteira::Consulta::VALENDO}) = 1".freeze
+  # Quem tem exatamente um seguro valendo sai de uma leitura só dos seguros da conta, agrupada por pessoa: não é uma
+  # contagem refeita para cada pessoa da lista.
+  SO_UM_VALENDO = 'contacts.id IN (SELECT carteira_apolices.contact_id FROM carteira_apolices ' \
+                  "WHERE carteira_apolices.account_id = :conta_da_carteira AND #{Carteira::Consulta::VALENDO} " \
+                  'GROUP BY carteira_apolices.contact_id HAVING COUNT(*) = 1)'.freeze
   # Onde a busca procura, como na aba Seguros: com letra, no número (como foi escrito e na forma de comparação) e no
   # bem; só com número, nos dígitos do número da apólice.
   TEXTOS = %w[carteira_apolices.numero carteira_apolices.numero_chave carteira_apolices.bem].freeze
@@ -27,9 +30,9 @@ class Carteira::NaListaDePessoas
     ligada? ? { GRUPO => SO_UM_VALENDO } : {}
   end
 
-  # O dia de hoje da conta, que a condição do grupo usa pelo nome (`:hoje`).
+  # O dia de hoje da conta e a própria conta, que a condição do grupo usa pelo nome (`:hoje`, `:conta_da_carteira`).
   def cortes
-    ligada? ? { hoje: Carteira::Selo.hoje(@account) } : {}
+    ligada? ? { hoje: Carteira::Selo.hoje(@account), conta_da_carteira: @account.id } : {}
   end
 
   # `achados` é quem a busca da lista já achou dentro de `base`; aqui entra também quem tem um seguro que combina.
