@@ -7,6 +7,8 @@
 #   - preço: pelo código FIPE (BrasilAPI, reserva parallelum) ou por marca e modelo (parallelum). Sem o ano, a
 #     parallelum devolve os anos que existem e a faixa (o preço do ano mais antigo e do mais novo), para o agente mostrar
 #     a faixa antes de perguntar o ano.
+#   - veículo (#2993): pela placa ou pelo chassi, quando houver cadastro no ambiente (`fipe/pela_placa.rb`).
+#     Sem ele, o card segue com as outras três consultas. O valor vem da consulta de preço desta fonte.
 # Termos: as duas são gratuitas; a parallelum sem chave aceita poucas centenas de pedidos por dia por IP, por isso ela
 # é só reserva e o cache segura o resto. A tabela muda uma vez por mês: preço com 1 dia de cache, listas com 7.
 module Autonomia::FerramentasProntas::Fontes::Fipe
@@ -43,6 +45,9 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
   UNIDADES = { 'valor' => 'R$' }.freeze
   MESES = %w[janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro].freeze
   TAMANHO_DO_ANO = 4
+  TAMANHO_DO_CHASSI = 17
+  # As letras que o chassi (o VIN) nunca tem, por se confundirem com 1 e 0.
+  FORA_DO_CHASSI = 'IOQ'.freeze
 
   def self.lista(itens, chave, maximo)
     Autonomia::FerramentasProntas::Lista.cortar(itens, chave, maximo)
@@ -93,6 +98,17 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
     'modelo' unless params['modelo']
   end
 
+  # O veículo pede a placa ou o chassi. Falta: a placa (é o que o cliente tem em mãos).
+  def self.regra_do_veiculo(params)
+    'placa' unless params['placa'] || params['chassi']
+  end
+
+  # "9bw zzz377 vt004251" -> "9BWZZZ377VT004251": 17 letras ou dígitos, sem I, O e Q.
+  def self.chassi(valor)
+    texto = valor.to_s.upcase.delete("^#{Parametro::ALFANUMERICO}")
+    texto if texto.length == TAMANHO_DO_CHASSI && texto.count(FORA_DO_CHASSI).zero?
+  end
+
   # O código (como veio de uma lista) ou o nome que o cliente disse.
   def self.codigo_ou_nome(valor)
     Parametro.codigo(valor) || Parametro.texto_curto(valor)
@@ -122,6 +138,14 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
     Parametro.inteiro(valor, 1000..2100) || Parametro.inteiro(valor, ZERO_KM..ZERO_KM)
   end
 
+  # A mesma regra de placa do card Premium (antiga ou Mercosul, com ou sem traço).
+  PLACA = Parametro.new(nome: 'placa', descricao: 'A placa do veículo como o cliente escreveu (antiga ou Mercosul, com ou sem traço).',
+                        pergunte: 'a placa do veículo (ou o chassi, se ele não tiver a placa)') do |valor|
+    Autonomia::FerramentasProntas::Premium::Parametros.placa(valor)
+  end
+  CHASSI = Parametro.new(nome: 'chassi', descricao: 'O chassi do veículo (17 letras e números), se o cliente informou em vez da placa.',
+                         pergunte: 'o chassi do veículo, com as 17 letras e números, ou a placa') { |valor| chassi(valor) }
+
   # Interna, fora da lista que o modelo vê: os anos de um veículo, guardados no cache da fonte pela parallelum.
   ANOS = Consulta.new(nome: 'anos', descricao: 'os anos de um veículo (interna)', obrigatorios: [TIPO],
                       opcionais: [CODIGO_FIPE, MARCA, MODELO], provedores: [], validade: 7.days, prazo_por_fonte: 5, prazo_total: 5)
@@ -132,6 +156,11 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
 
   PRECO = 'o preço do mês; pede tipo, marca e modelo pelo nome, como o cliente disse (o código sai das listas aqui), e o ' \
           'ano; ou o código FIPE. Sem o ano, vem a faixa e os anos que existem'.freeze
+  VEICULO = 'o veículo pela placa (ou pelo chassi): placa, chassi, marca, modelo, ano, versões e o valor do mês. Com a ' \
+            'placa em mãos, use esta em vez de perguntar marca, modelo e ano. A placa e o chassi devolvidos são para o ' \
+            'registro da equipe. Nunca diga ao cliente o chassi, nem a placa achada pelo chassi'.freeze
+  VEICULO_NAO_ENCONTRADO = 'Não achei veículo com essa placa ou esse chassi. Confira o dado com o cliente; se estiver ' \
+                           'certo, siga pedindo a marca, o modelo e o ano. Não invente.'.freeze
 
   FONTE = Autonomia::FerramentasProntas::Fonte.new(
     chave: 'fipe', slug: 'pronta_fipe', nome: 'Valor do carro (FIPE)',
@@ -145,10 +174,15 @@ module Autonomia::FerramentasProntas::Fontes::Fipe
                    prazo_por_fonte: 5, prazo_total: 9, refinar: method(:refinar_modelos), resolver: PeloNome.method(:resolver)),
       Consulta.new(nome: 'preco', descricao: PRECO, obrigatorios: [TIPO], opcionais: [CODIGO_FIPE, MARCA, MODELO, ANO],
                    provedores: [BrasilApi, Parallelum], validade: 1.day, prazo_por_fonte: 4, prazo_total: 12,
-                   regra: method(:regra_do_preco), resolver: PeloNome.method(:resolver), refinar: method(:refinar_preco))
+                   regra: method(:regra_do_preco), resolver: PeloNome.method(:resolver), refinar: method(:refinar_preco)),
+      # No turno: cabe na janela de 8 s (`Consulta::FOLGA_DO_TURNO`). A fonte respondeu em menos de 0,1 s por chamada
+      # (medido em 13/11/2026); o resto do prazo é da FIPE.
+      Consulta.new(nome: 'veiculo', descricao: VEICULO, opcionais: [PLACA, CHASSI], provedores: [PelaPlaca], validade: 1.day,
+                   prazo_por_fonte: 3, prazo_total: 7, regra: method(:regra_do_veiculo), nao_encontrado: VEICULO_NAO_ENCONTRADO)
     ],
     limite_diario: 500,
     termos: 'BrasilAPI e parallelum: gratuitas; a parallelum sem chave tem teto diário por IP e fica só de reserva. ' \
-            'Cache de 1 dia no preço e 7 dias nas listas.'
+            'Cache de 1 dia no preço e 7 dias nas listas. Veículo pela placa: fonte parceira, com o cadastro da ' \
+            'plataforma; cache de 1 dia.'
   )
 end

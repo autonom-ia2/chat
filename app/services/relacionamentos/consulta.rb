@@ -59,7 +59,12 @@ class Relacionamentos::Consulta
   end
 
   def com_os_cortes(condicao)
-    ActiveRecord::Base.sanitize_sql_array([condicao, { falou_ha_pouco: @agora - FALOU_HA_POUCO, sumiu: @agora - SUMIU }])
+    ActiveRecord::Base.sanitize_sql_array([condicao, cortes])
+  end
+
+  # As datas de corte que as condições dos grupos usam pelo nome (`:falou_ha_pouco`).
+  def cortes
+    { falou_ha_pouco: @agora - FALOU_HA_POUCO, sumiu: @agora - SUMIU }
   end
 
   def buscados(escopo, textos:, numeros:)
