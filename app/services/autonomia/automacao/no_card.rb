@@ -40,9 +40,16 @@ class Autonomia::Automacao::NoCard
   end
 
   # Devolve quantas execuções fechou, as que ela começou incluídas (0 quando nada rodava desta automação neste card).
+  #
+  # Duas passadas na mesma transação, contra a lista que abre filha ao mesmo tempo (FilhasDaLista confere a mãe com a
+  # linha travada antes de gravar): a primeira fecha e trava as abertas; depois a marca nas terminadas do card (a mãe
+  # concluída com o job da lista ainda na fila) também trava a linha delas. Daí em diante a lista vê a mãe parada; a
+  # filha que ela gravou antes disso já está no banco, e a segunda passada a acha e fecha.
   def parar!(automacao)
     fechadas = Execucao.transaction do
-      Execucao.parar_por_fora!(Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao)), MOTIVO)
+      primeira = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+      marcar_terminadas(automacao)
+      primeira + Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
     end
     return 0 if fechadas.empty?
 
@@ -54,6 +61,15 @@ class Autonomia::Automacao::NoCard
   private
 
   def abertas = Execucao.abertas.where(account_id: @card.account_id, alvo: @card)
+
+  def do_escopo(automacao) = Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao))
+
+  # As vezes já terminadas desta automação no card ganham o porquê nos `textos` (que a terminada não usa): a lista que
+  # ainda vai abrir filhas por uma delas lê a marca e não abre (FilhasDaLista#mae_parada?).
+  def marcar_terminadas(automacao)
+    Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card).where.not(finalizada_em: nil)
+            .update_all(textos: { Execucao::PORQUE => MOTIVO }) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   # Os ids das execuções desta automação neste card e de tudo o que elas começaram, nível a nível (uma mãe por vez não
   # cabe: o card pode ter muitas vezes da automação). A filha é achada pela marca do evento (`em:`, `lista:` ou
@@ -88,9 +104,10 @@ class Autonomia::Automacao::NoCard
 
   def linhas(escopo) = escopo.pluck(:id, :automacao_id, :alvo_type, :alvo_id).to_h { |id, *resto| [id, resto] }
 
-  # OR dos alvos (alvo_type, alvo_id) das mães, sem repetir.
+  # Os alvos das mães, uma condição por tipo (a lista de milhares de contatos vira um IN só).
   def nos_alvos(linhas)
-    linhas.map { |_, tipo, id| [tipo, id] }.uniq.map { |tipo, id| Execucao.where(alvo_type: tipo, alvo_id: id) }.reduce(:or)
+    linhas.group_by { |_, tipo, _| tipo }
+          .map { |tipo, do_tipo| Execucao.where(alvo_type: tipo, alvo_id: do_tipo.map(&:last).uniq) }.reduce(:or)
   end
 
   def para_tela(execucao, registros)

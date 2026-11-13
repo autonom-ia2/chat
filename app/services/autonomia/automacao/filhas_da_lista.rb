@@ -37,24 +37,38 @@ class Autonomia::Automacao::FilhasDaLista
     return anotar('desligada', {}) unless @mae.dona.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
     return { 'mae_parada' => 1 } if mae_parada?
 
-    @contagem = Hash.new(0)
-    @abertas = 0
-    @perguntas = 0
-    itens.find_in_batches(batch_size: LOTE) do |lote|
-      percorrer(lote)
-      break if sem_perguntas?
-    end
+    rodar
+    return { 'mae_parada' => 1 } if @mae_parou
+
     anotar('lista_rodou', CONTAGENS.index_with(0).merge(@contagem, 'teto' => teto))
   end
 
   private
 
+  def rodar
+    @contagem = Hash.new(0)
+    @abertas = 0
+    @perguntas = 0
+    itens.find_in_batches(batch_size: LOTE) do |lote|
+      percorrer(lote)
+      break if sem_perguntas? || @mae_parou
+    end
+  end
+
   # O "Parar para este card" (NoCard) fecha a mãe sem desligar a automação, e o que ela começou na lista também para: a
-  # mãe parada não abre filha, como no FilhasDoPasso. A leitura trava a linha da mãe, então espera um parar em curso
-  # terminar. Sem linha no histórico: o da mãe já diz que ela parou. A finalizada_em não serve: a mãe concluída continua
-  # abrindo filhas (ela não espera as filhas).
+  # mãe parada não abre filha, como no FilhasDoPasso. A mãe que já tinha concluído (ela não espera as filhas) ganha do
+  # parar o porquê nos `textos`, e vale igual. A leitura trava a linha da mãe: conferida de novo na transação de cada
+  # filha (gravar), a trava fica até a filha estar gravada, e o parar, que trava a mesma linha, vem antes ou depois
+  # inteiro. Sem linha no histórico: o da mãe já diz que ela parou.
   def mae_parada?
-    Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado) } == 'parada'
+    estado, textos = Execucao.transaction { Execucao.where(id: @mae.id).lock.pick(:estado, :textos) }
+    estado == 'parada' || textos.to_h.key?(Execucao::PORQUE)
+  end
+
+  # O parar chegou no meio da rodada: as filhas que já estavam gravadas o parar fecha; daqui não abre mais nenhuma.
+  def parou_no_meio
+    @mae_parou = true
+    nil
   end
 
   def teto = @passo['teto'].to_i.clamp(1, ::Autonomia::Automacao::RepetirLista::TETO_MAXIMO)
@@ -69,7 +83,7 @@ class Autonomia::Automacao::FilhasDaLista
     @no_meio = no_meio(lote)
     @recusados = ItensDaLista.recusados(lote)
     lote.each do |item|
-      break if sem_perguntas?
+      break if sem_perguntas? || @mae_parou
 
       motivo = @abertas >= teto ? depois_do_teto(item) : abrir_para(item)
       @contagem[motivo] += 1 if motivo
@@ -119,11 +133,15 @@ class Autonomia::Automacao::FilhasDaLista
   def gravar(filha, marca)
     espera = @passo['ritmo'] == 'rapido' ? 0 : @abertas
     filha.assign_attributes(estado: 'esperando', travada_em: nil, due_at: marca + (espera * RITMO)) if espera.positive?
-    Execucao.transaction do
+    gravou = Execucao.transaction do
+      next false if mae_parada?
+
       filha.save!
       ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @mae.automacao, execucao: filha, passo: 'inicio',
                                                resultado: 'ok', motivo: 'repetir_lista', dados: { 'mae_id' => @mae.id })
     end
+    return parou_no_meio unless gravou
+
     ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, marca.iso8601(6)) unless espera.positive?
     @abertas += 1
     'abertas'

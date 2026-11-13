@@ -283,6 +283,24 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
       it 'sem o parar, a mesma lista abre a filha do contato' do
         expect { abrir_filhas }.to change { Autonomia::Automacao::Execucao.where(alvo: contato).count }.by(1)
       end
+
+      it 'a mãe que já tinha concluído ganha a marca do parar, e o job da lista ainda na fila não abre', :aggregate_failures do
+        execucao.update!(estado: 'concluida', cursor: nil, due_at: nil)
+
+        expect(no_card.parar!(definicao)).to eq(0)
+        expect(execucao.reload.textos).to eq(Autonomia::Automacao::Execucao::PORQUE => described_class::MOTIVO)
+        expect { expect(abrir_filhas).to eq('mae_parada' => 1) }.not_to change(Autonomia::Automacao::Execucao, :count)
+      end
+
+      it 'o parar que chega no meio da rodada: a filha já gravada fica (o parar a fecha), a seguinte não abre', :aggregate_failures do
+        segundo = create(:contact, account: account, label_list: ['vip'])
+        lista = Autonomia::Automacao::FilhasDaLista.new(execucao.reload, passo)
+        # 1ª conferência: a de entrada; 2ª: a da primeira filha; 3ª: a da segunda, com o parar já feito.
+        allow(lista).to receive(:mae_parada?).and_return(false, false, true)
+
+        expect { expect(lista.abrir).to eq('mae_parada' => 1) }.to change(Autonomia::Automacao::Execucao, :count).by(1)
+        expect(Autonomia::Automacao::Execucao.where(alvo: [contato, segundo]).count).to eq(1)
+      end
     end
   end
 
