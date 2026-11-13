@@ -34,15 +34,26 @@ class Autonomia::Automacao::LinkDaAgenda
     @pagina_id = pagina_id
   end
 
+  # #2935: a página em que a pessoa atende e o link próprio dela, para a reunião pela conversa marcar pelo Booker na
+  # mesma página do link da agenda. [página, link, por]; sem página, o `por`, como o link.
+  def self.pagina_de(conta, pessoa) = new(conta, pessoa, nil).pagina_e_link
+
   def resultado
-    return vazio('sem_responsavel') if @pessoa.nil?
-    return vazio('sem_pagina') unless ::Crm::Config.booking_v2_enabled?(@conta)
+    pagina, link, por = pagina_e_link
+    return vazio(por) if por
+
+    Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link), por: nil)
+  end
+
+  def pagina_e_link
+    return [nil, nil, 'sem_responsavel'] if @pessoa.nil?
+    return [nil, nil, 'sem_pagina'] unless ::Crm::Config.booking_v2_enabled?(@conta)
 
     onde_atende = paginas.usable.select { |pagina| atende?(pagina) }
     pagina = escolhida(onde_atende)
-    return vazio(onde_atende.many? ? 'varias_paginas' : 'sem_pagina') unless pagina
+    return [nil, nil, onde_atende.many? ? 'varias_paginas' : 'sem_pagina'] unless pagina
 
-    Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link_proprio(pagina)), por: nil)
+    [pagina, link_proprio(pagina), nil]
   end
 
   def da_pagina

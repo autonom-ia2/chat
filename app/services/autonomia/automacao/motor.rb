@@ -24,6 +24,14 @@ module Autonomia::Automacao::Motor
     ligado?(account) && account.feature_enabled?(FLAG_IA)
   end
 
+  # #2931/#2935/#2936: os passos que esperam resposta (aprovação, reunião, pesquisa) e os outros três passos novos do
+  # #2414, só com o motor ligado. Desligada em produção até o motor dos seis estar completo.
+  FLAG_PASSOS_NOVOS = 'automacao_passos_novos'.freeze
+
+  def self.passos_novos?(account)
+    ligado?(account) && account.feature_enabled?(FLAG_PASSOS_NOVOS)
+  end
+
   # F6 (#2499): os gatilhos de card do funil, só com o motor ligado e o CRM da instalação.
   FLAG_GATILHOS = 'automacao_gatilhos'.freeze
 
