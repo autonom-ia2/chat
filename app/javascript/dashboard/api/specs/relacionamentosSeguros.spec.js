@@ -1,3 +1,4 @@
+import axios from 'axios';
 import seguros from '../relacionamentosSeguros';
 import ApiClient from '../ApiClient';
 
@@ -30,5 +31,29 @@ describe('#RelacionamentosSegurosAPI', () => {
       `${BASE}/seguros/resumo_por_dono`,
       { params: { pessoa_ids: [7, 8, 9] } }
     );
+  });
+
+  // O servidor só aceita a lista como `pessoa_ids[]=7&pessoa_ids[]=8`: é como
+  // o axios do painel escreve uma lista, e aqui o endereço é montado por ele.
+  it('no endereço, cada id vai num `pessoa_ids[]`', () => {
+    seguros.resumoPorPessoa([7, 8, 9]);
+
+    const [url, pedido] = axiosMock.get.mock.calls[0];
+    const endereco = new URL(
+      axios.getUri({ url, ...pedido }),
+      'https://painel.exemplo'
+    );
+
+    expect(endereco.pathname).toBe(`${BASE}/seguros/resumo_por_dono`);
+    expect([...endereco.searchParams.keys()]).toEqual([
+      'pessoa_ids[]',
+      'pessoa_ids[]',
+      'pessoa_ids[]',
+    ]);
+    expect(endereco.searchParams.getAll('pessoa_ids[]')).toEqual([
+      '7',
+      '8',
+      '9',
+    ]);
   });
 });

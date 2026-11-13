@@ -36,26 +36,35 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
-vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({
-    isCloudFeatureEnabled: () => false,
-    currentAccount: { value: conta },
-  }),
-}));
-vi.mock('../../lista/usePermissoesDaLista', () => ({
-  usePermissoesDaLista: () => ({
-    podeCriarCards: { value: false },
-    podeEtiquetar: { value: false },
-    podeApagar: { value: false },
-    podeTrazer: { value: false },
-  }),
-}));
-vi.mock('../../ficha/usePermissoesDaFicha', () => ({
-  usePermissoesDaFicha: () => ({
-    podeEditar: { value: true },
-    podeCriarCards: { value: false },
-  }),
-}));
+vi.mock('dashboard/composables/useAccount', async () => {
+  const { ref } = await import('vue');
+  return {
+    useAccount: () => ({
+      isCloudFeatureEnabled: () => false,
+      currentAccount: ref(conta),
+    }),
+  };
+});
+vi.mock('../../lista/usePermissoesDaLista', async () => {
+  const { ref } = await import('vue');
+  return {
+    usePermissoesDaLista: () => ({
+      podeCriarCards: ref(false),
+      podeEtiquetar: ref(false),
+      podeApagar: ref(false),
+      podeTrazer: ref(false),
+    }),
+  };
+});
+vi.mock('../../ficha/usePermissoesDaFicha', async () => {
+  const { ref } = await import('vue');
+  return {
+    usePermissoesDaFicha: () => ({
+      podeEditar: ref(true),
+      podeCriarCards: ref(false),
+    }),
+  };
+});
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
     pessoa: vi.fn(),
