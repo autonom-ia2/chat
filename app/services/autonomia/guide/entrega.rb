@@ -44,6 +44,15 @@ class Autonomia::Guide::Entrega
     end
   end
 
+  # A caixa do WhatsApp oficial perdeu o acesso à conta da Meta (#2907): urgente, para todos os administradores.
+  # `chave` leva o instante da queda: uma queda é um aviso só.
+  def whatsapp_oficial_sem_acesso!(inbox, caiu_em)
+    administradores.find_each do |user|
+      entregar(user, chave: "whatsapp_oficial_sem_acesso:#{user.id}:#{inbox.id}:#{caiu_em.to_i}", gravidade: AVISO::URGENTE,
+                     sinal: { 'inbox_id' => inbox.id }, texto: @texto.whatsapp_oficial_sem_acesso(inbox))
+    end
+  end
+
   # O WhatsApp avisou que o número está perto (ou no) limite de conversas novas (chat#1067).
   # Uma vez por estado e ciclo; urgente só no bloqueio.
   def whatsapp_api_limite!(inbox, estado, inicio_ciclo, fim_ciclo)

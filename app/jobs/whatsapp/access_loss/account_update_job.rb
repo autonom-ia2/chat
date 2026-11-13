@@ -33,8 +33,13 @@ class Whatsapp::AccessLoss::AccountUpdateJob < ApplicationJob
     waba_id = value.dig('waba_info', 'waba_id').presence || change['entry_id']
     channels_for(waba_id).each do |channel|
       log(channel, event, value['disconnection_info'])
-      event == RECONNECTED_EVENT ? reconnected(channel) : channel.prompt_reauthorization!
+      event == RECONNECTED_EVENT ? reconnected(channel) : access_lost(channel)
     end
+  end
+
+  def access_lost(channel)
+    channel.prompt_reauthorization!
+    Whatsapp::AccessLoss::GuideAlert.avisar!(channel)
   end
 
   def reconnected(channel)

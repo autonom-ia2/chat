@@ -19,7 +19,10 @@ module Whatsapp::AccessLoss::HealthCheck
   end
 
   def record_access_error(error)
-    @channel.authorization_error! if error.is_a?(Whatsapp::HealthService::ApiError) && error.authorization_error?
+    return unless error.is_a?(Whatsapp::HealthService::ApiError) && error.authorization_error?
+
+    @channel.authorization_error!
+    Whatsapp::AccessLoss::GuideAlert.avisar!(@channel) if @channel.reauthorization_required?
   end
 
   def record_access_ok
