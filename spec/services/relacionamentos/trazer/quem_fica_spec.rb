@@ -52,14 +52,19 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     expect(described_class.new(importacao).entre([])).to be_empty
   end
 
-  it 'fica quem teve a ficha editada depois da lista: nome, telefone, e-mail, cidade, empresa, informação ou tipo' do
+  it 'fica quem teve a ficha editada depois da lista, por qualquer campo dela' do
     intocada = criada('Pessoa Intocada', phone_number: '+5511987650030', email: 'pessoa.intocada@exemplo.com.br',
                                          additional_attributes: { 'city' => 'Campinas' }, custom_attributes: { 'plano' => 'Ouro' })
     mudancas = {
       'Pessoa Nome' => { name: 'Pessoa Renomeada' },
       'Pessoa Telefone' => { phone_number: '+5511987650039' },
       'Pessoa Email' => { email: 'pessoa.nova@exemplo.com.br' },
+      'Pessoa Nome do Meio' => { middle_name: 'Maria' },
+      'Pessoa Sobrenome' => { last_name: 'Silveirino' },
+      'Pessoa Identificador' => { identifier: 'cliente-0042' },
       'Pessoa Cidade' => { additional_attributes: { 'city' => 'Recife' } },
+      'Pessoa Biografia' => { additional_attributes: { 'description' => 'Prefere ligação à tarde' } },
+      'Pessoa Rede Social' => { additional_attributes: { 'social_profiles' => { 'instagram' => 'pessoa.rede' } } },
       'Pessoa Informacao' => { custom_attributes: { 'plano' => 'Diamante' } },
       'Pessoa Empresa' => { company: account.companies.create!(name: 'Oficina Central') },
       'Pessoa Cliente' => { contact_type: :customer, customer_since: Time.current }
@@ -73,6 +78,16 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     intocada.update!(last_activity_at: Time.current)
 
     expect(ficam(intocada, *editadas)).to match_array(editadas.map(&:id))
+  end
+
+  # A tela de edição manda os campos em branco e as redes sociais vazias mesmo quando ninguém escreveu nada neles.
+  it 'salvar a ficha sem mudar nada não segura: o que chega em branco é o mesmo que ausente, em qualquer nível' do
+    salva = criada('Pessoa Salva', phone_number: '+5511987650040', additional_attributes: { 'city' => 'Campinas' })
+    em_branco = { 'description' => '', 'company_name' => nil, 'social_profiles' => { 'facebook' => '', 'instagram' => '' } }
+
+    salva.update!(additional_attributes: salva.additional_attributes.merge(em_branco), custom_attributes: { 'plano' => '' })
+
+    expect(ficam(salva)).to be_empty
   end
 
   # Sem a anotação não há com o que comparar: o Desfazer não apaga quem não dá para provar que ninguém editou.

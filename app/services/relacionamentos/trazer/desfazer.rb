@@ -4,9 +4,11 @@
 #    tenha editado (Relacionamentos::Trazer::QuemFica). Sai pelo serviço de apagar em lote de hoje
 #    (Contacts::BulkDeleteService), com os avisos de sempre: aqui nenhum evento é suprimido. Apagar um bloco leva tempo,
 #    e nesse tempo alguém pode cuidar da pessoa: por isso o bloco é conferido de novo de FATIA em FATIA pessoas, por
-#    todas as regras de uma vez, e a conversa (que chega sozinha, a qualquer segundo) pessoa a pessoa, logo antes de
-#    sair. O apagar em lote mantém a pessoa quando algo dá errado nela (a reunião que não cancela, o card que mudou) e
-#    segue com as outras: quantas ficaram assim é contado e guardado na importação (`ficaram`), para a tela dizer.
+#    todas as regras de uma vez, e o que chega em segundos (a conversa, o card e a nota) pessoa a pessoa, logo antes
+#    de sair. As outras regras só valem até a conferência da fatia: o que mudar nelas depois disso já não segura a
+#    pessoa. A pessoa em que o apagar dá errado (a reunião que não cancela, o card que mudou, um erro do banco) fica, e
+#    o Desfazer segue com as outras: quantas ficaram assim é contado e guardado na importação (`ficaram`), para a tela
+#    dizer.
 # 2. Na pessoa que a conta já tinha, cada campo que a lista preencheu volta a vazio, se o valor ainda é o que a lista
 #    pôs (Relacionamentos::Trazer::CampoQueVolta). A empresa a que a lista a ligou é desligada, e quem a lista marcou
 #    como cliente volta ao tipo que tinha. Essa volta não avisa "contato mudou" (webhooks, automações): são muitas
@@ -66,7 +68,8 @@ class Relacionamentos::Trazer::Desfazer
     importacao.validation_summary.to_h[FICARAM].to_i
   end
 
-  # quem: a pessoa que pediu. Vai para a Auditoria de quem foi apagado.
+  # quem: a pessoa que pediu. Com a flag `crm_arquivados` ligada na conta, vai para a Auditoria de quem foi apagado; sem
+  # a flag, o apagar em lote não registra quem pediu.
   def initialize(importacao, quem: nil)
     @importacao = importacao
     @conta = importacao.account
@@ -144,12 +147,21 @@ class Relacionamentos::Trazer::Desfazer
     tentadas.empty? ? 0 : @conta.contacts.where(id: tentadas).count
   end
 
-  # Diz se tentou tirar a pessoa: quem ganhou conversa agora há pouco fica, e não conta como falha.
+  # Diz se tentou tirar a pessoa: quem ganhou conversa, card ou nota agora há pouco fica, e não conta como falha.
   def tirar(id, quem_fica)
-    return false if quem_fica.tem_conversa?(id)
+    return false if quem_fica.tem_conversa_card_ou_nota?(id)
 
-    Contacts::BulkDeleteService.new(account: @conta, contact_ids: [id], user: @quem).perform
+    apagar_uma(id)
     true
+  end
+
+  # Sem a flag `crm_arquivados`, o apagar em lote deixa o erro de uma pessoa subir. Aqui ele não derruba o Desfazer: a
+  # pessoa fica, entra na conta das que ficaram (`apagar` conta quem foi tentada e ainda existe) e as outras seguem. O
+  # registro leva só o id da pessoa e a classe do erro, nunca a mensagem: a mensagem de erro do banco traz valor.
+  def apagar_uma(id)
+    Contacts::BulkDeleteService.new(account: @conta, contact_ids: [id], user: @quem).perform
+  rescue StandardError => e
+    Rails.logger.warn("[relacionamentos][trazer][desfazer] contact=#{id} kept: #{e.class.name}")
   end
 
   def devolver_os_campos
@@ -159,8 +171,11 @@ class Relacionamentos::Trazer::Desfazer
     end
   end
 
-  # Sob a trava da empresa: quem foi ligado a ela enquanto o desfazer rodava a mantém.
+  # Sob a trava da empresa: quem foi ligado a ela enquanto o desfazer rodava a mantém. A lista sem anotação nenhuma (a
+  # da tela antiga, que nunca anota) não apaga empresa: dela o Desfazer não tira nada.
   def apagar_as_empresas_criadas
+    return unless Campo.da_importacao(@importacao).exists?
+
     criadas = @importacao.campaign_import_rows.where(company_result: CRIADA).where.not(company_id: nil).distinct.pluck(:company_id)
     criadas.each_slice(BLOCO) do |ids|
       @conta.companies.where(id: ids).where.missing(:contacts).find_each do |empresa|

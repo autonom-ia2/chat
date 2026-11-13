@@ -22,8 +22,8 @@
 # Quem já não existe (apagada à mão, ou mesclada em outra pessoa) não sai nem fica: é pulada.
 #
 # A prévia e o Desfazer leem por aqui, em blocos, então o que a prévia promete é o que o Desfazer faz. O Desfazer ainda
-# pergunta de novo antes de apagar: por `entre`, de poucas em poucas pessoas, e por `tem_conversa?`, pessoa a pessoa
-# (Relacionamentos::Trazer::Desfazer). Quem ganhou conversa enquanto o bloco andava fica.
+# pergunta de novo antes de apagar: por `entre`, de poucas em poucas pessoas, e por `tem_conversa_card_ou_nota?`, pessoa
+# a pessoa (Relacionamentos::Trazer::Desfazer). Quem ganhou conversa, card ou nota enquanto o bloco andava fica.
 #
 # Toda fonte é lida só dentro da conta, mesmo as que não têm a coluna da conta (vão pela campanha, pela importação ou
 # pela busca a que pertencem).
@@ -62,9 +62,11 @@ class Relacionamentos::Trazer::QuemFica
     entre([id]).any?
   end
 
-  # A conversa é o que chega sozinho, a qualquer segundo: o Desfazer pergunta por ela pessoa a pessoa, logo antes de apagar.
-  def tem_conversa?(id)
-    Conversation.where(da_conta).exists?(contact_id: id)
+  # O que chega em segundos, pela mão do cliente ou de alguém da conta: a conversa, o card (da pessoa ou pedido por ela)
+  # e a nota. O Desfazer pergunta por eles pessoa a pessoa, logo antes de apagar. As outras regras só são conferidas por
+  # `entre`.
+  def tem_conversa_card_ou_nota?(id)
+    conversa_card_e_nota.any? { |registros, coluna| registros.exists?(coluna => id) }
   end
 
   private
@@ -79,11 +81,17 @@ class Relacionamentos::Trazer::QuemFica
   end
 
   def conversa_funil_e_ficha
+    conversa_card_e_nota + [
+      [Crm::FollowUp.where(da_conta), :contact_id], [Crm::FollowUpSeries.where(da_conta), :contact_id],
+      [ActsAsTaggableOn::Tagging.where(taggable_type: Contact.name), :taggable_id]
+    ]
+  end
+
+  def conversa_card_e_nota
     [
       [Conversation.where(da_conta), :contact_id],
       [Crm::Card.where(da_conta), :contact_id], [Crm::Card.where(da_conta), :solicitante_contact_id],
-      [Note.where(da_conta), :contact_id], [Crm::FollowUp.where(da_conta), :contact_id], [Crm::FollowUpSeries.where(da_conta), :contact_id],
-      [ActsAsTaggableOn::Tagging.where(taggable_type: Contact.name), :taggable_id]
+      [Note.where(da_conta), :contact_id]
     ]
   end
 

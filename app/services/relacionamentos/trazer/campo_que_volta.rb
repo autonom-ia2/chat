@@ -22,9 +22,12 @@
 # numa gravação, a marca de cliente na gravação dela (Contact#revert_customer!; são duas gravações quando a pessoa tem
 # os dois) e uma marca de "devolvido" para todos, em vez de uma por campo. Nenhuma dessas gravações avisa "contato
 # mudou": o Desfazer as faz com os avisos suprimidos (Relacionamentos::Trazer::Desfazer). Roda sob a trava do registro
-# e confere de novo, com ele relido, o que só ele sabe: o valor de hoje e se a pessoa continua cliente. O ganho e a
-# procura são os do bloco (Relacionamentos::Trazer::CamposDaLista os lê uma vez por bloco, logo antes de entregar): não
-# são consultados de novo por pessoa. A gravação pula as validações, como a marca de cliente e a recusa
+# e confere de novo, com ele relido, o que só ele sabe: o valor de hoje e se a pessoa continua cliente. A procura é a
+# do bloco (Relacionamentos::Trazer::CamposDaLista a lê uma vez por bloco, logo antes de entregar): não é consultada de
+# novo por pessoa. O ganho do bloco tira da fila quem já tinha ganho; para quem vai deixar de ser cliente, ele é
+# consultado de novo sob a trava da pessoa (parecer de Multifunnel): o card ganho depois de o bloco ser lido não mexe
+# em quem já é cliente, e sem a consulta quem comprou no meio do Desfazer voltaria a lead. É uma consulta a mais por
+# pessoa, só na marca de cliente. A gravação pula as validações, como a marca de cliente e a recusa
 # (ContactCustomer, ContactOptOut): esvaziar um campo não cria dado fora do formato, e o dado antigo fora do formato
 # não pode impedir o Desfazer.
 #
@@ -72,12 +75,13 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   # alvo: a pessoa de hoje, ou a empresa da linha quando o campo é o telefone da empresa; nil quando não existe mais.
-  # ganhou: a pessoa tem card ganho desde a criação da importação (só importa para "cliente"). procurada: a conta a
-  # procurou de lá para cá (só importa para telefone e e-mail). Os dois vêm do bloco
-  # (Relacionamentos::Trazer::CamposDaLista).
-  def initialize(registro, alvo:, ganhou: false, procurada: false)
+  # desde: a criação da importação, de onde se conta o card ganho. ganhou: a pessoa tem card ganho de lá para cá (só
+  # importa para "cliente"). procurada: a conta a procurou de lá para cá (só importa para telefone e e-mail). Os dois
+  # últimos vêm do bloco (Relacionamentos::Trazer::CamposDaLista).
+  def initialize(registro, alvo:, desde:, ganhou: false, procurada: false)
     @registro = registro
     @alvo = alvo
+    @desde = desde
     @ganhou = ganhou
     @procurada = procurada
   end
@@ -123,10 +127,16 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   def desmarcar_cliente
-    @alvo.revert_customer!(to: tipo_de_antes) { volta? }
+    @alvo.revert_customer!(to: tipo_de_antes) { volta? && !ganhou_desde_o_bloco? }
   end
 
   private
+
+  # O card ganho entre a leitura do bloco e a trava da pessoa, arquivado depois ou não: a mesma conta do bloco
+  # (Relacionamentos::Trazer::CamposDaLista#quem_ganhou), feita de novo com a pessoa travada.
+  def ganhou_desde_o_bloco?
+    Crm::Card.com_desfecho(:won).exists?(account_id: @alvo.account_id, contact_id: @alvo.id, closed_at: @desde..)
+  end
 
   # 'visitor' ou 'lead'; nil quando a anotação não tem o tipo de antes ou tem um para o qual não se volta.
   def tipo_de_antes

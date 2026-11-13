@@ -47,6 +47,8 @@ class CreateRelacionamentosCamposPreenchidos < ActiveRecord::Migration[7.2]
     end
   end
 
+  # Apaga as anotações. Depois de uma lista ter sido trazida, voltar esta migration tira a possibilidade de desfazê-la:
+  # sem anotação o Desfazer não tira ninguém nem devolve campo nenhum.
   def down
     drop_table :relacionamentos_campos_preenchidos
   end

@@ -52,6 +52,25 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     expect(account.companies.pluck(:name)).to eq(['Mercado Sol'])
   end
 
+  # Todo contato salvo com e-mail ganha, uns 30 segundos depois, a busca da foto (Avatarable#fetch_avatar_from_gravatar).
+  # O job da foto grava as marcas da busca nos atributos adicionais, tenha achado foto ou não. Aqui ele roda de verdade,
+  # só com a ida à internet trocada: se um dia ele gravar outra chave, este exemplo quebra.
+  it 'a busca da foto, que o sistema faz sozinho em quem tem e-mail, não conta como ficha editada: a pessoa sai' do
+    importacao = trazer_lista("Nome,Celular,E-mail\nDavi Dornelino,11987650004,davi.dornelino@exemplo.com.br\n", trazer: {})
+    davi = pessoa('Davi Dornelino')
+    allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::HttpError.new('404 Not Found', status: 404))
+
+    Avatar::AvatarFromUrlJob.perform_now(davi, 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=404')
+
+    expect(davi.reload.additional_attributes.keys).to include('last_avatar_sync_at', 'avatar_url_hash')
+    expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([davi.id])).to be_empty
+    expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 0)
+
+    desfazer(importacao)
+
+    expect(account.contacts.exists?(davi.id)).to be(false)
+  end
+
   it 'não tira quem tem seguro na carteira: a apólice sairia junto com a pessoa' do
     importacao = trazer_lista
     carla = pessoa('Carla Carvalhedo')
@@ -170,6 +189,85 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     expect(account.contacts.exists?(carla.id)).to be(true)
   end
 
+  # A fatia já passou de novo por todas as regras; o que chega depois disso, em segundos, é perguntado pessoa a pessoa.
+  describe 'o que chega entre a conferência da fatia e o apagar' do
+    def card_de(quem, pedido_por: nil)
+      funil, etapa = create_crm_pipeline(account: account, user: user)
+      account.crm_cards.create!(pipeline: funil, stage: etapa, contact: quem, solicitante: pedido_por, title: 'Venda')
+    end
+
+    # A chegada acontece logo antes de o Desfazer perguntar pela pessoa, com a fatia já conferida.
+    def desfazer_com_chegada(importacao, quem)
+      quem_fica = Relacionamentos::Trazer::QuemFica.new(importacao)
+      allow(Relacionamentos::Trazer::QuemFica).to receive(:new).and_return(quem_fica)
+      allow(quem_fica).to receive(:tem_conversa_card_ou_nota?).and_wrap_original do |original, id|
+        yield if id == quem.id
+        original.call(id)
+      end
+      desfazer(importacao)
+    end
+
+    it 'a conversa segura a pessoa' do
+      importacao = trazer_lista
+      carla = pessoa('Carla Carvalhedo')
+
+      desfeita = desfazer_com_chegada(importacao, carla) { create(:conversation, account: account, contact: carla) }
+
+      expect(account.contacts.exists?(carla.id)).to be(true)
+      # Quem ficou porque alguém cuidou dela não é falha do apagar.
+      expect(described_class.ficaram(desfeita)).to eq(0)
+    end
+
+    it 'a nota escrita na ficha segura a pessoa' do
+      importacao = trazer_lista
+      carla = pessoa('Carla Carvalhedo')
+
+      desfazer_com_chegada(importacao, carla) { create(:note, account: account, contact: carla, user: user) }
+
+      expect(account.contacts.exists?(carla.id)).to be(true)
+      expect(Note.where(contact_id: carla.id).count).to eq(1)
+    end
+
+    it 'o card da pessoa segura a pessoa' do
+      importacao = trazer_lista
+      carla = pessoa('Carla Carvalhedo')
+
+      desfazer_com_chegada(importacao, carla) { card_de(carla) }
+
+      expect(account.contacts.exists?(carla.id)).to be(true)
+      expect(account.crm_cards.where(contact_id: carla.id).count).to eq(1)
+    end
+
+    it 'o card de outra pessoa, pedido por ela, segura a pessoa' do
+      importacao = trazer_lista
+      carla = pessoa('Carla Carvalhedo')
+
+      desfazer_com_chegada(importacao, carla) { card_de(ana, pedido_por: carla) }
+
+      expect(account.contacts.exists?(carla.id)).to be(true)
+      expect(account.crm_cards.where(solicitante_contact_id: carla.id).count).to eq(1)
+    end
+  end
+
+  it 'a pessoa em que o apagar quebra fica e é contada; as outras saem, e o registro não leva a mensagem do erro' do
+    tres = "Nome,Celular\nPessoa Alfa,11987650021\nPessoa Beta,11987650022\nPessoa Gama,11987650023\n"
+    importacao = trazer_lista(tres, trazer: {})
+    alfa, beta, gama = ['Pessoa Alfa', 'Pessoa Beta', 'Pessoa Gama'].map { |nome| pessoa(nome) }
+    com_defeito = instance_double(Contacts::BulkDeleteService)
+    allow(com_defeito).to receive(:perform).and_raise(ActiveRecord::InvalidForeignKey, 'Key (id)=(valor da ficha) is still referenced')
+    allow(Contacts::BulkDeleteService).to receive(:new).and_call_original
+    allow(Contacts::BulkDeleteService).to receive(:new).with(account: account, contact_ids: [beta.id], user: user).and_return(com_defeito)
+    allow(Rails.logger).to receive(:warn)
+
+    desfeita = desfazer(importacao)
+
+    expect(desfeita.undo_status).to eq('completed')
+    expect(account.contacts.where(id: [alfa.id, beta.id, gama.id]).ids).to eq([beta.id])
+    expect(described_class.ficaram(desfeita)).to eq(1)
+    expect(Rails.logger).to have_received(:warn).with(a_string_including("contact=#{beta.id} kept", 'ActiveRecord::InvalidForeignKey'))
+    expect(Rails.logger).not_to have_received(:warn).with(a_string_including('valor da ficha'))
+  end
+
   it 'desfaz também a lista que quebrou no meio da gravação' do
     importacao = trazer_lista
     carla = pessoa('Carla Carvalhedo')
@@ -278,6 +376,41 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
 
       expect(ganhou.reload).to have_attributes(contact_type: 'lead', customer_since: nil)
     end
+
+    # O bloco já leu quem ganhou card; a venda fecha depois disso, antes de a pessoa ser travada. O ganho não mexe em
+    # quem já é cliente, então só a consulta feita de novo sob a trava segura a pessoa.
+    it 'o card ganho depois de o bloco ser lido e antes da trava da pessoa segura a pessoa como cliente' do
+      importacao = trazer_lista(clientes, trazer: { 'respostas' => { 'clientes' => 'sim_todas' } })
+      allow(Relacionamentos::Trazer::CampoQueVolta).to receive(:devolver!).and_wrap_original do |original, do_alvo|
+        ganhar_card(volta, 1.minute.from_now) if do_alvo.first.alvo == volta
+        original.call(do_alvo)
+      end
+
+      desfazer(importacao)
+
+      expect(volta.reload.contact_type).to eq('customer')
+      expect(volta.customer_since).to be_present
+      expect(desmarcada.reload).to have_attributes(contact_type: 'lead', customer_since: nil)
+      expect(campos.pendentes.where(campo: 'cliente').pluck(:contact_id)).to eq([volta.id])
+    end
+
+    # Visitante com e-mail só existe de antes de o e-mail promover a lead. A lista o acha pelo e-mail e guarda que ele
+    # era visitante; o Desfazer o devolve a visitante, e a gravação o promove a lead, como faria com qualquer visitante
+    # que tem por onde ser contatado (Contacts::SyncAttributes).
+    it 'o visitante que a lista marcou como cliente termina lead: ele tem e-mail' do
+      # Sem Empresas, para o e-mail de empresa não ligar a pessoa a uma empresa pelo domínio.
+      account.disable_features!('companies')
+      visitante = create(:contact, account: account, name: 'Pessoa Visitante', email: 'pessoa.visitante@exemplo.com.br')
+      visitante.update_columns(contact_type: Contact.contact_types[:visitor]) # rubocop:disable Rails/SkipsModelValidations
+      de_visitante = "Nome,E-mail\nPessoa Visitante,pessoa.visitante@exemplo.com.br\n"
+      importacao = trazer_lista(de_visitante, trazer: { 'respostas' => { 'clientes' => 'sim_todas' } })
+      expect(visitante.reload.contact_type).to eq('customer')
+      expect(campos.find_by!(campo: 'cliente', contact_id: visitante.id).tipo_anterior).to eq(Contact.contact_types[:visitor])
+
+      desfazer(importacao)
+
+      expect(visitante.reload).to have_attributes(contact_type: 'lead', customer_since: nil, email: 'pessoa.visitante@exemplo.com.br')
+    end
   end
 
   describe 'as empresas' do
@@ -360,6 +493,17 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       expect(ana.reload).to have_attributes(email: 'ana.albuquerino@exemplo.com.br', contact_type: 'customer')
       expect(bruno.reload).to have_attributes(name: 'Bruno Brandolim', phone_number: '+5511987650002')
       # A Padaria continua com a Ana e o Mercado Sol com a Carla.
+      expect(account.companies.pluck(:name)).to contain_exactly('Padaria Bom Dia', 'Mercado Sol')
+    end
+
+    it 'não apaga a empresa que a lista criou, nem a que ficou sem ninguém: a tela disse que nada sai' do
+      importacao = trazer_lista
+      campos.delete_all
+      # O Mercado Sol nasceu com a lista e fica sem ninguém.
+      pessoa('Carla Carvalhedo').update!(company_id: nil)
+
+      desfazer(importacao)
+
       expect(account.companies.pluck(:name)).to contain_exactly('Padaria Bom Dia', 'Mercado Sol')
     end
 
@@ -476,9 +620,9 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     it 'quando quebra, marca o desfazer como falho, deixa o erro subir e aceita um novo clique' do
       importacao = trazer_lista
       described_class.new(importacao).pedir
-      apagador = instance_double(Contacts::BulkDeleteService)
-      allow(apagador).to receive(:perform).and_raise(ActiveRecord::QueryCanceled, 'canceling statement due to statement timeout')
-      allow(Contacts::BulkDeleteService).to receive(:new).and_return(apagador)
+      # O erro ao apagar uma pessoa não derruba o Desfazer (ela fica e é contada); o de devolver os campos derruba.
+      allow(Relacionamentos::Trazer::CampoQueVolta).to receive(:devolver!)
+        .and_raise(ActiveRecord::QueryCanceled, 'canceling statement due to statement timeout')
 
       expect { described_class.new(importacao.reload, quem: user).call }.to raise_error(ActiveRecord::QueryCanceled)
 

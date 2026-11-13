@@ -24,7 +24,8 @@ class Relacionamentos::Trazer::QuemFoiProcurado
 
   def onde_aparece
     da_conta = { account_id: @conta_id }
-    [Conversation.where(da_conta), CampaignRecipient.where(da_conta), EmailCampaignRecipient.all,
+    [Conversation.where(da_conta), CampaignRecipient.where(da_conta),
+     EmailCampaignRecipient.where(email_campaign_id: EmailCampaign.where(da_conta).select(:id)),
      WhatsappApiCampaignRecipient.where(da_conta)]
   end
 end

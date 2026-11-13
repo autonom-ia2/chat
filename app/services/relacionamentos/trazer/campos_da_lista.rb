@@ -9,7 +9,8 @@
 # Cada bloco custa um número fixo de consultas: os campos do bloco, as pessoas, quem tem card ganho desde a lista e quem
 # já foi procurado desde a lista (Relacionamentos::Trazer::QuemFoiProcurado); com telefone de empresa no bloco, mais as
 # linhas (para achar a empresa) e as empresas. A consulta que acha o bloco relê as linhas da lista inteira, então o
-# tempo cresce com o número de blocos.
+# tempo cresce com o número de blocos. Só o Desfazer faz uma consulta a mais por pessoa, e só para a marca de cliente:
+# o card ganho é conferido de novo com a pessoa travada (Relacionamentos::Trazer::CampoQueVolta#desmarcar_cliente).
 class Relacionamentos::Trazer::CamposDaLista
   Campo = Relacionamentos::CampoPreenchido
   BLOCO = Relacionamentos::Trazer::QuemFica::BLOCO
@@ -67,7 +68,7 @@ class Relacionamentos::Trazer::CamposDaLista
   end
 
   def campo(registro, alvo, ganhou: false, procurada: false)
-    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, ganhou: ganhou, procurada: procurada)
+    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, desde: @importacao.created_at, ganhou: ganhou, procurada: procurada)
   end
 
   def quem_ganhou(pessoas)
