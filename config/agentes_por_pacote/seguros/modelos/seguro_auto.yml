@@ -19,7 +19,7 @@ documentos:
   - "Nota fiscal do veículo, se for zero-quilômetro e ainda não tiver o documento."
 ja_vem:
   - fonte: fipe
-    usar_quando: "Use quando o cliente disser a marca, o modelo e o ano do veículo, por ser zero-quilômetro ou por não ter a placa em mãos, para achar o modelo certo na tabela FIPE e anotar o valor de referência para a equipe. Esse valor não é o preço do seguro."
+    usar_quando: "Use quando o cliente informar a placa, para achar o veículo sem perguntar marca, modelo e ano; ou quando ele disser a marca, o modelo e o ano, por ser zero-quilômetro ou por não ter a placa em mãos, para achar o modelo certo na tabela FIPE. Anote o veículo e o valor de referência para a equipe. Esse valor não é o preço do seguro."
   - fonte: cep
     usar_quando: "Use quando o cliente informar o CEP de onde mora ou de onde o veículo passa a noite, para confirmar a rua, o bairro e a cidade sem pedir o endereço inteiro."
   - fonte: cpf

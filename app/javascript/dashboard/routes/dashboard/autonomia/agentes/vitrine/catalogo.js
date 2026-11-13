@@ -48,7 +48,7 @@ export const FERRAMENTAS = [
     id: 'fipe',
     grupo: 'VEICULOS',
     icone: 'i-lucide-car',
-    consultas: 3,
+    consultas: 4,
     ramos: ['seguros'],
   },
   {

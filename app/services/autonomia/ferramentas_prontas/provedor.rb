@@ -12,8 +12,17 @@ class Autonomia::FerramentasProntas::Provedor
   # nenhuma tiver, o agente ouve que não há registro.
   class NaoEncontrado < StandardError; end
 
-  # A fonte não respondeu como devia. `message` é o motivo curto do código (nunca texto de fora).
+  # A fonte não respondeu como devia. `message` é o motivo curto do código (nunca texto de fora). `status`: o código HTTP,
+  # quando a falha foi uma resposta de erro da fonte; serve ao provedor em que um status tem sentido próprio (#2993: no
+  # veículo pela placa, 400 e 450 são "não achei o veículo" e 401 é o acesso que venceu).
   class Falha < StandardError
+    attr_reader :status
+
+    def initialize(motivo = nil, status: nil)
+      super(motivo)
+      @status = status
+    end
+
     def motivo
       message
     end
@@ -29,6 +38,12 @@ class Autonomia::FerramentasProntas::Provedor
     end
 
     def aplica?(_consulta, _params)
+      true
+    end
+
+    # O provedor que entra com um cadastro da plataforma (#2993, o veículo pela placa) responde falso sem ele no ambiente. A consulta
+    # que só tem provedor assim deixa de ser oferecida (`Consulta#desligada?`): o modelo nem a vê.
+    def configurado?
       true
     end
 

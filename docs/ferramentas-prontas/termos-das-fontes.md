@@ -73,6 +73,7 @@ Desligado, o provedor é pulado com o motivo `provedor_desligado`.
 | `minhareceita.org` | CNPJ (reserva) | Não achamos número publicado. | 120 por minuto (padrão) | 1 dia |
 | `api.opencnpj.org` | CNPJ (2ª reserva) | Não achamos número publicado na página de documentação. | 120 por minuto (padrão) | 1 dia |
 | `parallelum.com.br` | FIPE | **500 pedidos por dia por IP sem chave**; 1.000 com chave gratuita (documentação da API FIPE v2). | **450 por dia** | 1 dia (preço), 7 dias (listas) |
+| Fonte parceira (endereços só no ambiente, `PRONTAS_VEICULO_FONTE`) | FIPE: o veículo pela placa ou pelo chassi (#2993) | **Acesso com o cadastro da plataforma**, um só para todas as contas, autorizado pelo Rodrigo em 13/11/2026. Sem número publicado. Sai sempre pelo IP do servidor, nunca pelo IP próprio da conta. Sem a variável, a consulta não é oferecida. | 120 por minuto (padrão) | 1 dia; faltando o valor do mês de uma das 2 primeiras versões, sem cache |
 | `date.nager.at` | Feriados (reserva) | API aberta, sem chave. A página de termos não trouxe número. | 30 por minuto | 30 dias |
 | `api.bcb.gov.br` | Banco Central (SGS) | Dados abertos do Banco Central, sem chave e sem limite publicado. | 120 por minuto (padrão) | 1 a 6 horas |
 | `olinda.bcb.gov.br` | Banco Central (PTAX e Focus) | Dados abertos do Banco Central, sem chave e sem limite publicado. | 120 por minuto (padrão) | 1 a 6 horas |
@@ -266,6 +267,30 @@ Ressalvas:
 
   Os dois tempos medidos ficam dentro da trava de 2h30 da rodada. O espaço não é guardado pela importação: o `Estado`
   guarda as linhas, e guardar o tamanho pediria coluna nova sem servir ao alerta, que só olha a falha.
+
+## FIPE pela placa ou pelo chassi (#2993)
+
+O agente manda a placa (ou o chassi) e recebe a placa, o chassi, a marca, o modelo, os anos e as versões na tabela
+FIPE, cada uma com o valor do mês. Quem responde é uma fonte parceira (`fontes/fipe/pela_placa.rb`), com o cadastro da
+plataforma. Quem é a fonte, os endereços dela e o cadastro não ficam no repositório.
+
+- **O que precisa estar no ambiente:** `PRONTAS_VEICULO_FONTE`, um JSON de uma linha com os endereços `passe`,
+  `entrada`, `placa` e `chassi` (todos HTTPS) e o `corpo` do cadastro que a entrada pede. Faltando a variável, um
+  endereço ou o corpo, a consulta `veiculo` não é oferecida ao agente e o card segue com marcas, modelos e preço.
+- **Quantas chamadas:** com o acesso guardado (vale 50 minutos por processo), 1 pela placa e 2 pelo chassi; sem ele,
+  mais 2 (o passe e a entrada). Depois, o valor do mês de até 2 versões sai da consulta de preço da própria FIPE (do
+  cache, ou 1 chamada à BrasilAPI por versão; com ela fora, 2 ou 3 na parallelum).
+- **O valor não é o da fonte.** Ela devolve um valor por versão que não é o da tabela do mês (conferido em
+  13/11/2026: 170.086 lá, 163.320 na FIPE de novembro, mesmo código e ano). O valor que vai ao agente é o da FIPE.
+- **Placa e chassi vão os dois na resposta**, venha o pedido por um ou pelo outro (decisão do Rodrigo, 13/11/2026).
+  Dado de pessoa não vem: esta consulta é só do veículo.
+- **Erros conferidos em 13/11/2026:** placa que a fonte não acha, HTTP 400; chassi que ela não acha, HTTP 450. Os dois
+  viram "não encontrado", com a orientação de conferir o dado e seguir pedindo marca, modelo e ano. Acesso vencido,
+  401: entra de novo, uma vez. Falha na entrada vira o motivo `veiculo_pela_placa.entrada.<motivo>` no contador.
+- **Tipo do veículo:** sai do primeiro dígito do código FIPE (0 carro, 5 caminhão, 8 moto), conferido na tabela
+  pública em 13/11/2026. Código com outro começo vai sem o tipo.
+- **Desligar sem deploy:** o host da consulta em `AUTONOMIA_PRONTAS_HOSTS_DESLIGADOS`. Tirar a variável do ambiente
+  também desliga, no deploy seguinte.
 
 ## FIPE pelo nome: quantas chamadas uma pergunta gasta (regra "QI 70", #2858)
 
