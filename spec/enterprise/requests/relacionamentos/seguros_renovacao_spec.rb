@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # E5 (#2898) — a parte da renovação da carteira que depende do Enterprise: o que a função personalizada muda. Ler pede
-# ver contatos; guardar os ajustes pede as DUAS chaves, editar contatos e montar os funis; escolher o funil pede também
-# ver o CRM; dizer como a renovação terminou pede editar contatos e poder mexer naquele card no quadro; o id do card só
+# ver contatos; guardar os ajustes pede as DUAS chaves, editar contatos e montar os funis (que já traz a de ver o
+# CRM); dizer como a renovação terminou pede editar contatos e poder mexer naquele card no quadro; o id do card só
 # vai para quem o enxerga; o aviso no sino vai a quem vê contatos e o CRM. Tudo fictício.
 RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
   # Meio-dia em São Paulo: para a conta, hoje é 12/11/2026.
@@ -89,14 +89,18 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect(ajustes.reload).to have_attributes(pipeline_id: outro_funil.id, user_id: monta.id)
     end
 
-    it 'quem tem as duas chaves sem ver o CRM muda os dias, mas não escolhe o funil nem vira quem escolheu' do
-      sem_ver = pessoa_com(%w[contact_manage crm_manage_pipelines])
+    # Não existe "monta os funis sem ver o CRM": a função com uma chave de mexer no CRM é salva com `crm_view` junto
+    # (CustomRole, #2124). Quem tem as duas chaves enxerga os funis e escolhe; mudar só os dias não faz dela quem escolheu.
+    it 'a chave de montar os funis já traz a de ver o CRM: quem tem as duas muda os dias e escolhe o funil' do
+      monta = pessoa_com(%w[contact_manage crm_manage_pipelines])
 
-      dos_dias = guardar_ajustes(sem_ver, { dias: 45 })
-      do_funil = guardar_ajustes(sem_ver, { funilId: ajustes.pipeline_id, etapaId: ajustes.stage_id })
+      dos_dias = guardar_ajustes(monta, { dias: 45 })
+      quem_escolheu = ajustes.reload.user_id
+      do_funil = guardar_ajustes(monta, { funilId: ajustes.pipeline_id, etapaId: ajustes.stage_id })
 
-      expect([dos_dias.first, do_funil]).to eq([200, [422, { 'error' => 'funil_desconhecido' }]])
-      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: nil)
+      expect(AccountUser.find_by(account: account, user: monta).custom_role.permissions).to include('crm_view')
+      expect([dos_dias.first, quem_escolheu, do_funil.first]).to eq([200, nil, 200])
+      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: monta.id)
     end
 
     it 'sem a chave de contatos não lê nem guarda' do
