@@ -19,8 +19,9 @@ import PrecisamDeVoce from './PrecisamDeVoce.vue';
 // (`resumo.clientes`, conta do servidor); com zero, ela não aparece, a não ser
 // que a pessoa tenha respondido quais valores querem dizer cliente: aí a linha
 // diz que ninguém entra como cliente (a escolha não pegou ninguém). E o
-// trazer que o servidor recusa por não haver ninguém para entrar
-// (`recusaDoTrazer`) é dito como alerta, com o botão de trazer ligado.
+// trazer que o servidor recusa por não haver ninguém para entrar, ou porque a
+// conta está desfazendo uma lista (`recusaDoTrazer`), é dito como alerta, com
+// o que fazer e com o botão de trazer ligado.
 // Quando há pessoas que entram sem o telefone que estava escrito na planilha
 // (`resumo.semTelefone`, conta do servidor), um aviso diz quantas são e o que
 // fazer. Ele não trava nada: o botão de trazer continua como está.
@@ -72,6 +73,10 @@ const ROTULOS_DO_CONTADOR = {
 
 const semNinguemParaTrazer = computed(
   () => props.recusaDoTrazer === ERROS.NADA_PARA_TRAZER
+);
+// A conta está desfazendo uma lista: é só esperar e trazer de novo.
+const desfazerEmCurso = computed(
+  () => props.recusaDoTrazer === ERROS.DESFAZER_EM_CURSO
 );
 
 // A pessoa disse quais valores querem dizer cliente e nenhuma das que entram
@@ -303,6 +308,14 @@ const irParaPrecisam = () => {
         class="m-0 text-base font-medium text-n-ruby-11"
       >
         {{ t('RELACIONAMENTOS_TRAZER.ERROS.NADA_PARA_TRAZER') }}
+      </p>
+      <p
+        v-else-if="desfazerEmCurso"
+        data-relacionamentos="recusa-do-trazer"
+        role="alert"
+        class="m-0 text-base font-medium text-n-ruby-11"
+      >
+        {{ t('RELACIONAMENTOS_TRAZER.ERROS.DESFAZER_EM_CURSO') }}
       </p>
       <div v-if="comErro" data-relacionamentos="erro">
         <ErroComTentarDeNovo

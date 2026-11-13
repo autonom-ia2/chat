@@ -500,7 +500,15 @@ describe('listaDaTela', () => {
       porcentagem: 100,
       podeTentar: false,
       podeDesfazer: true,
+      ficaram: 0,
     });
+  });
+
+  // Só a lista desfeita em que alguém devia ter saído e ficou traz o número.
+  it('`ficaram` é o número que o servidor manda, e zero quando ele não manda', () => {
+    const desfeita = { ...DO_SERVIDOR, situacao: 'desfeito' };
+    expect(listaDaTela({ ...desfeita, ficaram: 3 }).ficaram).toBe(3);
+    expect(listaDaTela(desfeita).ficaram).toBe(0);
   });
 
   // Quem diz se dá para desfazer é o servidor, não a situação.

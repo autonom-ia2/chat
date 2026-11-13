@@ -9,6 +9,7 @@ class Relacionamentos::Trazer::Historico
   # "Desfazer" aparece na lista pronta e na que quebrou depois de pôr gente na base. Enquanto ela entra ou sai, não; a
   # não ser que o desfazer tenha parado no meio (Relacionamentos::Trazer::Desfazer.parado?).
   COM_DESFAZER = ['pronto', FALHOU].freeze
+  DESFEITO = 'desfeito'.freeze
 
   def initialize(importacoes)
     @importacoes = importacoes
@@ -36,7 +37,13 @@ class Relacionamentos::Trazer::Historico
       porcentagem: Relacionamentos::Trazer::Situacao.porcentagem(situacao, linhas_que_passaram.fetch(lista.id, 0), lista.valid_rows),
       pode_tentar: situacao == FALHOU && Relacionamentos::Trazer::Situacao.pode_tentar?(lista),
       pode_desfazer: pode_desfazer?(lista, situacao)
-    }
+    }.merge(ficaram(lista, situacao))
+  end
+
+  # Só na lista desfeita em que alguém devia ter saído e ficou (Relacionamentos::Trazer::Desfazer): quantas pessoas.
+  def ficaram(lista, situacao)
+    quantas = situacao == DESFEITO ? Relacionamentos::Trazer::Desfazer.ficaram(lista) : 0
+    quantas.positive? ? { ficaram: quantas } : {}
   end
 
   def pode_desfazer?(lista, situacao)

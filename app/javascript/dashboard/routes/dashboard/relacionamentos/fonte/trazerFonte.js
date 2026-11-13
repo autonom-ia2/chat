@@ -353,8 +353,9 @@ const listasTrazidas = () => ({
     return { trazidaId: resposta?.trazidaId ?? leituraId };
   },
   // A lista que parou no meio continua de onde parou.
+  // A recusa do servidor ganha nome, como a do trazer.
   async tentarDeNovo(trazidaId) {
-    await doServidor(TrazerAPI.confirmar(trazidaId));
+    await escritaNaLeitura(TrazerAPI.confirmar(trazidaId));
     return { trazidaId };
   },
   async andamento(trazidaId) {

@@ -767,7 +767,7 @@ describe('DialogoDesfazer', () => {
       [
         'voltam',
         '15 pessoas voltam a ser como eram',
-        'Já estavam aqui antes desta lista.',
+        'Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
       ],
     ]);
     // A frase de quem não quer receber mensagens vem depois da lista.
@@ -815,7 +815,7 @@ describe('DialogoDesfazer', () => {
       [
         'voltam',
         '1 pessoa volta a ser como era',
-        'Já estava aqui antes desta lista.',
+        'Já estava aqui antes desta lista. O que a lista preencheu nela, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
       ],
     ]);
     // O item que é zero some; os outros continuam na ordem.
@@ -826,7 +826,7 @@ describe('DialogoDesfazer', () => {
       [
         'voltam',
         '15 pessoas voltam a ser como eram',
-        'Já estavam aqui antes desta lista.',
+        'Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
       ],
     ]);
     const textoSo = marca(so, 'dialogo-desfazer').text();
@@ -849,10 +849,14 @@ describe('DialogoDesfazer', () => {
     ).toBeUndefined();
   });
 
-  it('enquanto não sabe o que sai: esqueleto e Desfazer desabilitado', () => {
+  // Nenhum botão desligado por falta de dado: sem a prévia, o Desfazer não
+  // está na tela (o esqueleto mostra a espera) e sobra só o botão de sair.
+  it('enquanto não sabe o que sai: esqueleto, sem o Desfazer e sem botão desligado', () => {
     const w = montar({ previa: null });
     expect(w.findAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(marca(w, 'desfazer-confirmar').attributes('disabled')).toBeDefined();
+    expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
+    expect(w.findAll('button').map(b => b.text())).toEqual(['Cancelar']);
+    expect(w.find('button[disabled]').exists()).toBe(false);
   });
 
   it('erro na prévia: frase e botão que emite "tentar"', async () => {
@@ -873,11 +877,18 @@ describe('DialogoDesfazer', () => {
     expect(w.emitted('fechar')).toHaveLength(1);
   });
 
-  it('o botão mostra o carregando enquanto desfaz e fica desabilitado', () => {
+  it('o botão mostra o carregando enquanto desfaz, sem ficar desligado', () => {
+    const parado = montar({ previa: { tira: 1, ficam: 0, devolve: 0 } });
+    expect(marca(parado, 'desfazer-confirmar').find('svg').exists()).toBe(
+      false
+    );
     const w = montar({
       previa: { tira: 1, ficam: 0, devolve: 0 },
       desfazendo: true,
     });
-    expect(marca(w, 'desfazer-confirmar').attributes('disabled')).toBeDefined();
+    const confirmar = marca(w, 'desfazer-confirmar');
+    expect(confirmar.find('svg.animate-spin').exists()).toBe(true);
+    expect(confirmar.attributes('aria-busy')).toBe('true');
+    expect(confirmar.attributes('disabled')).toBeUndefined();
   });
 });

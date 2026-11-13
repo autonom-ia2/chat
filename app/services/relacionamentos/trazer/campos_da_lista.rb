@@ -73,6 +73,7 @@ class Relacionamentos::Trazer::CamposDaLista
   def quem_ganhou(pessoas)
     return Set.new if pessoas.empty?
 
-    Crm::Card.won.where(account_id: @conta.id, contact_id: pessoas, closed_at: @importacao.created_at..).distinct.pluck(:contact_id).to_set
+    ganhos = Crm::Card.com_desfecho(:won).where(account_id: @conta.id, contact_id: pessoas, closed_at: @importacao.created_at..)
+    ganhos.distinct.pluck(:contact_id).to_set
   end
 end

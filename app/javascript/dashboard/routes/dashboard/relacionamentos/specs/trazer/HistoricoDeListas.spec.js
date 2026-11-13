@@ -94,6 +94,51 @@ describe('Desfazer sem prazo', () => {
     }
   );
 
+  // O apagar manteve alguém (a reunião que não cancela, o card que mudou): a
+  // lista fica "Desfeito" e a linha diz quantas pessoas ficaram e o que fazer.
+  describe('a lista desfeita em que alguém ficou', () => {
+    const ficaram = (w, id) =>
+      w.find(`[data-lista="${id}"] [data-relacionamentos="desfazer-ficaram"]`);
+
+    it('diz quantas pessoas ficaram, no plural e no singular, e mantém o selo "Desfeito"', () => {
+      const w = mount(HistoricoDeListas, {
+        props: {
+          temDesfazer: true,
+          listas: [
+            lista('varias', 'desfeito', { ficaram: 3 }),
+            lista('uma', 'desfeito', { ficaram: 1 }),
+          ],
+        },
+      });
+      expect(ficaram(w, 'varias').text()).toBe(
+        '3 pessoas ficaram na base: não consegui tirar. Se quiser, apague essas pessoas na lista de pessoas.'
+      );
+      expect(ficaram(w, 'uma').text()).toBe(
+        '1 pessoa ficou na base: não consegui tirar. Se quiser, apague essa pessoa na lista de pessoas.'
+      );
+      expect(w.get('[data-lista="varias"] span[data-situacao]').text()).toBe(
+        'Desfeito'
+      );
+      expect(w.findAll('button')).toHaveLength(0);
+    });
+
+    it('sem ninguém ter ficado, ou fora da lista desfeita, não diz nada', () => {
+      const w = mount(HistoricoDeListas, {
+        props: {
+          temDesfazer: true,
+          listas: [
+            lista('zero', 'desfeito', { ficaram: 0 }),
+            lista('sem-dizer', 'desfeito'),
+            lista('pronta', 'pronto', { ficaram: 2, podeDesfazer: true }),
+          ],
+        },
+      });
+      expect(w.find('[data-relacionamentos="desfazer-ficaram"]').exists()).toBe(
+        false
+      );
+    });
+  });
+
   it('a lista sendo desfeita diz "Desfazendo…", como lista em andamento, e não tem botão', () => {
     const w = mount(HistoricoDeListas, {
       props: { temDesfazer: true, listas: [lista('a', 'desfazendo')] },

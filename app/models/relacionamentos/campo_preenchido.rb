@@ -36,6 +36,12 @@
 # Campos: os da ficha (`DA_FICHA`), a cidade, a empresa (o id da empresa a que a lista ligou a pessoa), cliente (a data
 # em que a lista marcou a pessoa, com o `tipo_anterior` dela), o telefone da empresa (que fica na empresa da linha, não
 # na pessoa) e cada informação da pessoa (`informacao:<chave do atributo>`).
+#
+# `pessoa_criada` não é um campo que volta: é o resumo da pessoa que a linha criou, inteira, como a lista a deixou
+# (Relacionamentos::Trazer::PessoaCriada). Por ele o Desfazer sabe se alguém mexeu nela depois, e aí ela fica.
+#
+# Terminado o Desfazer, saem daqui as anotações das pessoas que saíram da base e as dos campos que voltaram
+# (Relacionamentos::Trazer::Desfazer): o resumo de um telefone não fica guardado depois que a pessoa foi embora.
 class Relacionamentos::CampoPreenchido < ApplicationRecord
   self.table_name = 'relacionamentos_campos_preenchidos'
 
@@ -47,6 +53,7 @@ class Relacionamentos::CampoPreenchido < ApplicationRecord
   EMPRESA = 'empresa'.freeze
   CLIENTE = 'cliente'.freeze
   TELEFONE_DA_EMPRESA = 'telefone_da_empresa'.freeze
+  PESSOA_CRIADA = 'pessoa_criada'.freeze
   INFORMACAO = 'informacao:'.freeze
   SAL = 'relacionamentos/trazer/campos_preenchidos'.freeze
   # Entre o id da linha, o campo e o valor. O id é um número inteiro e o valor vai em JSON, que escreve o caractere

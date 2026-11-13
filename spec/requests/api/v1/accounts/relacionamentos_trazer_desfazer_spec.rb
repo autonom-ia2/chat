@@ -128,6 +128,31 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       end
     end
 
+    it 'se o job não chega à fila, a lista não fica presa em "desfazendo": a marca volta e dá para pedir de novo' do
+      importacao = trazer_lista
+      allow(job).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+
+      pedir_desfazer(importacao)
+
+      expect(response).to have_http_status(:internal_server_error)
+      expect(importacao.reload).to have_attributes(undo_status: 'failed', undo_completed_at: nil)
+      expect(situacao_na_lista(importacao)).to eq('pronto')
+
+      allow(job).to receive(:perform_later).and_call_original
+      expect { pedir_desfazer(importacao) }.to have_enqueued_job(job).with(importacao, user).once
+      expect(response.parsed_body).to eq('id' => importacao.id, 'situacao' => 'desfazendo')
+    end
+
+    it 'a fila que recusa o job sem levantar erro também não deixa a lista presa' do
+      importacao = trazer_lista
+      allow(job).to receive(:perform_later).and_return(false)
+
+      pedir_desfazer(importacao)
+
+      expect(response).to have_http_status(:internal_server_error)
+      expect(importacao.reload.undo_status).to eq('failed')
+    end
+
     it 'recusa com nao_pode_desfazer a lista que ainda está entrando' do
       importacao = trazer_lista
       [{ status: :confirmed }, { status: :queued }, { status: :importing }].each do |estado|

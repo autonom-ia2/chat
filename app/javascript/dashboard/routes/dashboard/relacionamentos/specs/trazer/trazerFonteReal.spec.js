@@ -718,6 +718,14 @@ describe('trazer e tentar de novo', () => {
     expect(TrazerAPI.trazer).not.toHaveBeenCalled();
   });
 
+  it('tentar de novo enquanto a conta desfaz uma lista (422 `desfazer_em_curso`) ganha nome', async () => {
+    const { fonte } = montar();
+    TrazerAPI.confirmar.mockRejectedValue(erroHttp(422, 'desfazer_em_curso'));
+    await expect(fonte.tentarDeNovo(812)).rejects.toMatchObject({
+      name: 'DESFAZER_EM_CURSO',
+    });
+  });
+
   it.each([
     ['trazer', 'trazer'],
     ['tentarDeNovo', 'confirmar'],

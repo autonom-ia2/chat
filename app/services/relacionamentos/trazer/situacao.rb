@@ -35,6 +35,13 @@ module Relacionamentos::Trazer::Situacao
     )
   end
 
+  # As importações do escopo que o "Desfazer" de uma lista já desfez: as que ele aceita (Relacionamentos::Trazer::Desfazer.pode?)
+  # com o desfazer terminado. A base de campanha que só teve as etiquetas desfeitas (CampaignImports::UndoLabels) também
+  # fica com `undo_status: completed`, mas com o status `labels_undone`: não entra aqui.
+  def desfeitas(importacoes)
+    importacoes.where(status: GRAVADA).or(importacoes.where(status: :failed).where.not(import_started_at: nil)).undo_status_completed
+  end
+
   # "Tentar de novo" serve: a gravação que parou no meio continua, e o fechamento que desistiu é tentado de novo.
   # O fechamento que desistiu numa conferência vencida não: os consertos já sumiram.
   def pode_tentar?(importacao)

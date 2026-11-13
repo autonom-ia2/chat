@@ -1,6 +1,8 @@
 # #2896 (fatia 3): uma lista trazida grande, montada direto no banco (insert_all), para medir o que o "Desfazer" lê.
 # Passar pela leitura e pela gravação de verdade levaria minutos; aqui só importa o que elas deixam gravado: as pessoas,
 # as linhas da importação e os campos anotados. Todos os dados são inventados.
+#
+# Quem usa inclui o módulo no próprio spec (`include ListaTrazidaGrandeHelpers`): ele não entra em todos os specs.
 module ListaTrazidaGrandeHelpers
   LOTE = 5_000
   CLIENTE_DESDE = Time.utc(2026, 1, 15, 12)
@@ -15,11 +17,14 @@ module ListaTrazidaGrandeHelpers
                                    options: { 'flow' => CampaignImport::CONTACTS_FLOW, 'trazer' => {} })
   end
 
-  # `quantas` pessoas que a lista criou, uma linha cada. Devolve quantas recusaram mensagens.
+  # `quantas` pessoas que a lista criou, uma linha cada, com o resumo de cada uma anotado como a gravação anota (nenhuma
+  # foi editada depois). Devolve quantas recusaram mensagens.
   def por_pessoas_criadas(importacao, quantas)
     em_lotes(importacao, quantas) do |numeros|
       pessoas = numeros.map { |numero| pessoa_criada(importacao.account_id, numero) }
-      inserir_linhas(importacao, numeros, inserir(Contact, pessoas), ja_existia: false)
+      ids = inserir(Contact, pessoas)
+      linhas = inserir_linhas(importacao, numeros, ids, ja_existia: false)
+      inserir(Relacionamentos::CampoPreenchido, resumos_das_criadas(importacao, linhas, ids))
     end
     quantas / UMA_RECUSA_A_CADA
   end
@@ -82,6 +87,16 @@ module ListaTrazidaGrandeHelpers
     inserir(CampaignImportRow, linhas)
   end
 
+  # O resumo de cada pessoa como está no banco (Relacionamentos::Trazer::PessoaCriada), na linha que a criou.
+  def resumos_das_criadas(importacao, linhas, ids)
+    campo = Relacionamentos::CampoPreenchido
+    como_estao = Relacionamentos::Trazer::PessoaCriada.new(importacao).conteudos(ids)
+    linhas.zip(ids).map do |linha, id|
+      carimbos.merge(account_id: importacao.account_id, campaign_import_row_id: linha, contact_id: id, campo: campo::PESSOA_CRIADA,
+                     valor_posto_hash: campo.resumo(linha, campo::PESSOA_CRIADA, como_estao.fetch(id)))
+    end
+  end
+
   def campos_das_linhas(conta_id, linhas, ids, pessoas)
     campo = Relacionamentos::CampoPreenchido
     linhas.zip(ids, pessoas).flat_map do |linha, id, pessoa|
@@ -107,8 +122,4 @@ module ListaTrazidaGrandeHelpers
   def tabela_da_consulta(sql)
     sql.split(' FROM ', 2).last.to_s.split.first.to_s.delete('"')
   end
-end
-
-RSpec.configure do |config|
-  config.include ListaTrazidaGrandeHelpers
 end
