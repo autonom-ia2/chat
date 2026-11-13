@@ -31,6 +31,46 @@ RSpec.describe 'Webhooks::WhatsappController: aviso de acesso à conta', type: :
     )
   end
 
+  it 'o conteúdo sai do corpo assinado: query string com outro entry não muda o que chega ao job' do
+    content = payload.to_json
+    headers = { 'CONTENT_TYPE' => 'application/json',
+                'X-Hub-Signature-256' => "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', app_secret, content)}" }
+    query = { entry: [{ id: 'forjado', changes: [{ field: 'account_update', value: { event: 'ACCOUNT_DELETED' } }] }] }.to_query
+    with_modified_env(WHATSAPP_APP_SECRET: app_secret) do
+      post "/webhooks/whatsapp/#{url_channel.phone_number}?#{query}", params: content, headers: headers
+    end
+
+    expect(Whatsapp::AccessLoss::AccountUpdateJob).to have_received(:perform_later).with(
+      [{ 'entry_id' => '2949482758682047', 'value' => { 'event' => 'PARTNER_REMOVED', 'waba_info' => { 'waba_id' => '980198427658004' } } }]
+    )
+  end
+
+  it 'value fora do formato chega ao job como hash vazio (sem 500)' do
+    payload[:entry].first[:changes] = [{ field: 'account_update', value: 'x' }]
+
+    post_payload(payload.to_json)
+
+    expect(response).to have_http_status(:ok)
+    expect(Whatsapp::AccessLoss::AccountUpdateJob).to have_received(:perform_later).with([{ 'entry_id' => '2949482758682047', 'value' => {} }])
+  end
+
+  it 'sem assinatura: recusa com 401' do
+    url = "/webhooks/whatsapp/#{url_channel.phone_number}"
+    with_modified_env(WHATSAPP_APP_SECRET: app_secret) { post url, params: payload.to_json, headers: { 'CONTENT_TYPE' => 'application/json' } }
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(Whatsapp::AccessLoss::AccountUpdateJob).not_to have_received(:perform_later)
+  end
+
+  it 'segredo do app vazio: recusa com 401 (fecha, não abre)' do
+    content = payload.to_json
+    headers = { 'CONTENT_TYPE' => 'application/json', 'X-Hub-Signature-256' => "sha256=#{OpenSSL::HMAC.hexdigest('SHA256', '', content)}" }
+    with_modified_env(WHATSAPP_APP_SECRET: '') { post "/webhooks/whatsapp/#{url_channel.phone_number}", params: content, headers: headers }
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(Whatsapp::AccessLoss::AccountUpdateJob).not_to have_received(:perform_later)
+  end
+
   it 'assinatura de outro segredo: recusa com 401 e não enfileira nada' do
     post_payload(payload.to_json, secret: 'outro')
 

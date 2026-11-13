@@ -3,9 +3,10 @@
 # (`Reauthorizable::AUTHORIZATION_ERROR_THRESHOLD`; erro de outro tipo, como 5xx, não zera nem soma), a caixa fica "precisa
 # reconectar": acende o aviso do menu, manda o e-mail aos administradores e o evento da caixa.
 #
-# Uma checagem boa apaga só o que a contagem marcou. O aviso que veio do webhook da Meta (`AccountUpdateJob`, contagem 0)
-# fica até a reconexão ou o ACCOUNT_RECONNECTED: depois de um ACCOUNT_OFFBOARDED a Graph ainda pode ler o número enquanto o
-# envio falha. Prepended em `Whatsapp::HealthService`.
+# Uma checagem boa apaga só o que a contagem marcou. O aviso que veio do webhook da Meta (`AccountUpdateJob`, marca
+# `GuideAlert::PELA_META`, mesmo que a contagem também tenha subido) fica até a reconexão ou o ACCOUNT_RECONNECTED:
+# depois de um ACCOUNT_OFFBOARDED a Graph ainda pode ler o número enquanto o envio falha. Prepended em
+# `Whatsapp::HealthService`.
 module Whatsapp::AccessLoss::HealthCheck
   private
 
@@ -26,6 +27,8 @@ module Whatsapp::AccessLoss::HealthCheck
   end
 
   def record_access_ok
+    return if Whatsapp::AccessLoss::GuideAlert.marcado_pela_meta?(@channel)
+
     @channel.reauthorized! if @channel.authorization_error_count.positive?
   end
 end

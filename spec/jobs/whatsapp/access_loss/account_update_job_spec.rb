@@ -42,6 +42,31 @@ RSpec.describe Whatsapp::AccessLoss::AccountUpdateJob do
     expect(channel.reauthorization_required?).to be(false)
   end
 
+  it 'campos fora do formato (waba_info e disconnection_info como texto) não derrubam o job nem as outras mudanças' do
+    torto = { 'event' => 'ACCOUNT_DELETED', 'waba_info' => 'x', 'disconnection_info' => 'y' }
+    described_class.perform_now(['lixo', { 'entry_id' => waba_id, 'value' => torto }])
+
+    expect(channel.reauthorization_required?).to be(true)
+  end
+
+  it 'Meta reenviando o mesmo aviso: a caixa já marcada não é marcada de novo (o e-mail de desconexão sai uma vez)' do
+    change = { 'entry_id' => waba_id, 'value' => { 'event' => 'ACCOUNT_DELETED' } }
+    mailer = double(deliver_later: nil) # rubocop:disable RSpec/VerifiedDoubles
+    allow(AdministratorNotifications::ChannelNotificationsMailer).to receive(:with).and_return(double(whatsapp_disconnect: mailer)) # rubocop:disable RSpec/VerifiedDoubles
+
+    3.times { described_class.perform_now([change]) }
+
+    expect(mailer).to have_received(:deliver_later).once
+  end
+
+  it 'evento de acesso sem caixa conhecida vai para o log' do
+    allow(Rails.logger).to receive(:warn)
+
+    described_class.perform_now([{ 'entry_id' => '999', 'value' => { 'event' => 'PARTNER_REMOVED' } }])
+
+    expect(Rails.logger).to have_received(:warn).with(include('sem caixa conhecida waba_id=999'))
+  end
+
   it 'eventos que não são de acesso (PARTNER_ADDED, VERIFIED_ACCOUNT) e WABA desconhecida não mexem em nada' do
     described_class.perform_now([{ 'entry_id' => waba_id, 'value' => { 'event' => 'PARTNER_ADDED' } },
                                  { 'entry_id' => waba_id, 'value' => { 'event' => 'VERIFIED_ACCOUNT' } },

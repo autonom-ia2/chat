@@ -74,6 +74,25 @@ RSpec.describe Whatsapp::AccessLoss::GuideAlert do
     expect(avisos).to be_empty
   end
 
+  it 'entrega que falhou não trava a queda: o próximo sinal avisa' do
+    allow(Autonomia::Guide::Entrega).to receive(:new).and_raise(StandardError, 'fora')
+    perdeu_pela_meta
+    allow(Autonomia::Guide::Entrega).to receive(:new).and_call_original
+
+    perdeu_pela_meta
+
+    expect(avisos.where(user: admin).count).to eq(1)
+  end
+
+  it 'marcada pela Meta, a checagem de saúde boa não apaga, mesmo com erro de autorização contado antes' do
+    perdeu_pela_meta
+    channel.authorization_error!
+
+    Whatsapp::HealthService.new(channel).send(:record_access_ok)
+
+    expect(channel.reauthorization_required?).to be(true)
+  end
+
   it 'falha no aviso não impede a marcação' do
     allow(Autonomia::Guide::Entrega).to receive(:new).and_raise(StandardError, 'fora')
 

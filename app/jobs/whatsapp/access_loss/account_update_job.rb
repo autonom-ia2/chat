@@ -11,7 +11,10 @@
 # e pede uma checagem de saúde: se o acesso não voltou de fato, a contagem da checagem marca de novo.
 #
 # A WABA vem em `waba_info.waba_id` nos eventos de parceiro (lá o `entry.id` é o portfólio do parceiro) e no `entry.id`
-# nos demais.
+# nos demais. Campo fora do formato é ignorado, nunca derruba as outras mudanças do POST; evento de acesso sem caixa
+# conhecida fica no log.
+#
+# A Meta reenvia o mesmo aviso: a caixa já marcada não é marcada de novo (o e-mail de desconexão sai a cada marcação).
 class Whatsapp::AccessLoss::AccountUpdateJob < ApplicationJob
   queue_as :default
 
@@ -20,25 +23,29 @@ class Whatsapp::AccessLoss::AccountUpdateJob < ApplicationJob
 
   # changes: [{ 'entry_id', 'value' }], na ordem do POST.
   def perform(changes)
-    Array(changes).each { |change| apply(change.to_h) }
+    Array(changes).each { |change| apply(change) if change.is_a?(Hash) }
   end
 
   private
 
   def apply(change)
-    value = change['value'].to_h
+    value = hash_or_empty(change['value'])
     event = value['event'].to_s
     return unless ACCESS_LOST_EVENTS.include?(event) || event == RECONNECTED_EVENT
 
-    waba_id = value.dig('waba_info', 'waba_id').presence || change['entry_id']
-    channels_for(waba_id).each do |channel|
-      log(channel, event, value['disconnection_info'])
+    waba_id = hash_or_empty(value['waba_info'])['waba_id'].to_s.presence || change['entry_id'].to_s
+    channels = channels_for(waba_id).to_a
+    return log_unknown(event, waba_id) if channels.empty?
+
+    channels.each do |channel|
+      log(channel, event, hash_or_empty(value['disconnection_info']))
       event == RECONNECTED_EVENT ? reconnected(channel) : access_lost(channel)
     end
   end
 
   def access_lost(channel)
-    channel.prompt_reauthorization!
+    Whatsapp::AccessLoss::GuideAlert.marcar_pela_meta!(channel)
+    channel.prompt_reauthorization! unless channel.reauthorization_required?
     Whatsapp::AccessLoss::GuideAlert.avisar!(channel)
   end
 
@@ -53,10 +60,16 @@ class Whatsapp::AccessLoss::AccountUpdateJob < ApplicationJob
     Channel::Whatsapp.where(provider: 'whatsapp_cloud').where("provider_config ->> 'business_account_id' = ?", waba_id.to_s)
   end
 
+  def hash_or_empty(value) = value.is_a?(Hash) ? value : {}
+
   def log(channel, event, disconnection_info)
     Rails.logger.warn(
       "[WHATSAPP ACCESS] account_update event=#{event} account_id=#{channel.account_id} inbox_id=#{channel.inbox&.id} " \
-      "channel_id=#{channel.id} disconnection=#{disconnection_info.to_h.slice('reason', 'initiated_by').to_json}"
+      "channel_id=#{channel.id} disconnection=#{disconnection_info.slice('reason', 'initiated_by').to_json}"
     )
+  end
+
+  def log_unknown(event, waba_id)
+    Rails.logger.warn("[WHATSAPP ACCESS] account_update event=#{event} sem caixa conhecida waba_id=#{waba_id.presence || '-'}")
   end
 end
