@@ -8,6 +8,8 @@ require 'rails_helper'
 # é o número de consultas, que não varia: um número fixo por bloco de campos
 # (spec/services/relacionamentos/trazer/previa_do_desfazer_consultas_spec.rb diz de onde ele vem).
 RSpec.describe Relacionamentos::Trazer::PreviaDoDesfazer, :aggregate_failures do
+  include ListaTrazidaGrandeHelpers
+
   let(:pessoas) { 50_000 }
   let(:campos_por_pessoa) { 3 }
   let(:por_bloco_de_campos) { 7 }
