@@ -65,6 +65,7 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
       'Pessoa Cidade' => { additional_attributes: { 'city' => 'Recife' } },
       'Pessoa Biografia' => { additional_attributes: { 'description' => 'Prefere ligação à tarde' } },
       'Pessoa Rede Social' => { additional_attributes: { 'social_profiles' => { 'instagram' => 'pessoa.rede' } } },
+      'Pessoa Parceira' => { relacao: :parceiro },
       # Sem empresa ligada, o nome da empresa é texto que alguém escreve na ficha.
       'Pessoa Empresa em Texto' => { additional_attributes: { 'company_name' => 'Oficina do Bairro' } },
       'Pessoa Informacao' => { custom_attributes: { 'plano' => 'Diamante' } },

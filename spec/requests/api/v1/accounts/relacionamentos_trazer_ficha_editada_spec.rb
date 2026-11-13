@@ -1,12 +1,14 @@
 require 'rails_helper'
 
-# #2896 (fatia 3) — editar a ficha de quem a lista criou segura a pessoa no "Desfazer", por qualquer campo que a API de
-# contatos aceita gravar. O resumo "a ficha como a lista deixou" (Relacionamentos::Trazer::PessoaCriada) tem de cobrir
-# todos: o campo que ficar de fora deixa o Desfazer apagar uma pessoa que alguém editou.
+# #2896 (fatia 3) — editar a ficha de quem a lista criou segura a pessoa no "Desfazer", por qualquer caminho que a tela
+# tem para editar: a API de contatos (campo a campo), a gaveta da ficha (que manda o nome da empresa digitado) e a
+# relação (interessado, parceiro, não é negócio). O resumo "a ficha como a lista deixou"
+# (Relacionamentos::Trazer::PessoaCriada) tem de cobrir todos: o que ficar de fora deixa o Desfazer apagar uma pessoa
+# que alguém editou. As colunas, uma a uma, são cobradas em spec/services/relacionamentos/trazer/pessoa_criada_spec.rb.
 #
-# A lista dos campos sai do próprio controller, e não de uma cópia: o que `permitted_params` pede ao `permit` e o que o
-# Enterprise acrescenta por fora dele (a empresa). O campo que a API passar a aceitar e não tiver uma edição aqui quebra
-# o primeiro exemplo.
+# A lista dos campos da API sai do próprio controller, e não de uma cópia: o que `permitted_params` pede ao `permit` e o
+# que o Enterprise acrescenta por fora dele (a empresa). O campo que a API passar a aceitar e não tiver uma edição aqui
+# quebra o primeiro exemplo.
 RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Relacionamentos)', :aggregate_failures, type: :request do
   include_context 'with lista trazida'
 
@@ -26,14 +28,22 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
   end
   # A foto fica de fora de propósito (#3005): não é coluna da ficha, e trocar a foto não segura a pessoa.
   let(:de_fora) { %w[avatar avatar_url] }
-  # O bloqueio segura por outra regra (Relacionamentos::Trazer::QuemFica), não pelo resumo da ficha.
-  let(:fora_do_resumo) { %w[blocked] }
   # Uma pessoa por edição, na ordem das edições, e uma a mais, em quem ninguém mexe.
   let(:telefones) { Array.new(edicoes.size + 1) { |indice| format('119876501%02d', indice) } }
   let(:nomes) { %w[Alfa Beta Gama Delta Epsilon Zeta Eta Teta Iota Kapa] }
   let(:planilha_das_pessoas) do
     linhas = telefones.each_with_index.map { |telefone, indice| "Pessoa #{nomes.fetch(indice)},#{telefone}" }
     "Nome,Celular\n#{linhas.join("\n")}\n"
+  end
+  # Três pessoas que a lista cria na mesma empresa, que também nasce com a lista, e uma sem empresa.
+  let(:planilha_da_gaveta) do
+    <<~CSV
+      Nome,Celular,Empresa
+      Pessoa Digitada,11987650201,Mercado Sol
+      Pessoa Salva,11987650202,Mercado Sol
+      Pessoa Parceira,11987650203,Mercado Sol
+      Pessoa Intocada,11987650204,
+    CSV
   end
 
   # Os nomes que `permitted_params` pede ao `permit`, lidos da chamada de verdade, mais o que ele devolve além disso
@@ -46,8 +56,11 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
       pedidos.concat(filtros)
       original.call(*filtros)
     end
-    devolvidos = Current.set(account: account) { controller.send(:permitted_params).keys }
+    Current.account = account
+    devolvidos = controller.send(:permitted_params).keys
     (pedidos.flat_map { |filtro| filtro.is_a?(Hash) ? filtro.keys : [filtro] }.map(&:to_s) + devolvidos).uniq
+  ensure
+    Current.reset
   end
 
   def da_linha(indice)
@@ -75,7 +88,7 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
       [campo, quem]
     end
 
-    editadas.except(*fora_do_resumo).each do |campo, quem|
+    editadas.each do |campo, quem|
       expect(criada.tocadas([quem.id])).to contain_exactly(quem.id), "editar #{campo} não mudou o resumo da ficha"
     end
     expect(criada.tocadas([intocada.id])).to be_empty
@@ -85,5 +98,44 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
 
     expect(account.contacts.where(id: editadas.values.map(&:id)).count).to eq(edicoes.size)
     expect(account.contacts.exists?(intocada.id)).to be(false)
+  end
+
+  describe 'a gaveta da ficha e a relação' do
+    # O que a gaveta manda ao salvar (relacionamentos/ficha/informacoes.js#dadosParaSalvar): a ficha inteira, com o nome
+    # da empresa como está escrito no campo e os campos vazios em branco.
+    def salvar_pela_gaveta(quem, empresa:)
+      editar(quem, { name: quem.name, phone_number: quem.phone_number, email: nil, custom_attributes: {},
+                     additional_attributes: { city: '', company_name: empresa, social_profiles: {} } })
+    end
+
+    def marcar_relacao(quem, relacao)
+      rota = "/api/v1/accounts/#{account.id}/crm/contacts/#{quem.id}/relacao"
+      with_modified_env(CRM_KANBAN_ENABLED: 'true') do
+        put rota, params: { relacao: relacao }, headers: user.create_new_auth_token, as: :json
+      end
+      expect(response).to have_http_status(:success)
+    end
+
+    it 'o nome da empresa digitado e a relação mudada seguram a pessoa; salvar a gaveta sem mudar nada não segura' do
+      account.enable_features!('contato_relacao')
+      importacao = trazer_lista(planilha_da_gaveta, trazer: {})
+      criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
+      digitada, salva, parceira, intocada = ['Pessoa Digitada', 'Pessoa Salva', 'Pessoa Parceira', 'Pessoa Intocada'].map { |nome| pessoa(nome) }
+      expect(digitada.company.name).to eq('Mercado Sol')
+      expect(previa(importacao)).to eq(tira: 4, ficam: 0, devolve: 0)
+
+      salvar_pela_gaveta(digitada, empresa: 'Mercado do Sol Nascente')
+      salvar_pela_gaveta(salva, empresa: 'Mercado Sol')
+      marcar_relacao(parceira, 'parceiro')
+
+      expect(digitada.reload.additional_attributes).to include('company_name' => 'Mercado do Sol Nascente')
+      expect(parceira.reload).to be_relacao_parceiro
+      expect(criada.tocadas([digitada.id, salva.id, parceira.id, intocada.id])).to contain_exactly(digitada.id, parceira.id)
+      expect(previa(importacao)).to eq(tira: 2, ficam: 2, devolve: 0)
+
+      desfazer(importacao)
+
+      expect(account.contacts.where(id: [digitada.id, salva.id, parceira.id, intocada.id]).ids).to contain_exactly(digitada.id, parceira.id)
+    end
   end
 end

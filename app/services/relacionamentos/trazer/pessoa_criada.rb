@@ -1,41 +1,51 @@
 # "Trazer minha lista" (#2896): a pessoa que a lista criou, como a lista a deixou. O "Desfazer" só tira quem a lista
-# trouxe e em quem ninguém tocou, e editar a ficha é tocar: quem teve o nome, o telefone, o e-mail, a cidade, a empresa,
-# uma informação ou o tipo (lead, cliente) mudados depois da lista fica (Relacionamentos::Trazer::QuemFica).
+# trouxe e em quem ninguém tocou, e editar a ficha é tocar: quem teve qualquer coisa da ficha mudada depois da lista (o
+# nome, o telefone, a empresa, a relação, uma informação, o tipo) fica (Relacionamentos::Trazer::QuemFica).
 #
 # Para reconhecer isso sem guardar a ficha, a gravação anota o resumo com segredo do que a linha deixou na pessoa
 # (Relacionamentos::CampoPreenchido, campo `pessoa_criada`), lido do banco logo depois de a linha escrever tudo: o que
 # se compara no Desfazer passa pelo mesmo caminho. Quando uma linha de baixo da mesma lista completa a pessoa que uma
 # linha de cima criou, o resumo é refeito: foi a lista que mexeu, não alguém.
 #
-# Entra tudo o que dá para escrever na ficha (`COLUNAS`): o que a API de contatos aceita gravar
-# (Api::V1::Accounts::ContactsController#permitted_params) e o nome do meio e o sobrenome, que são colunas da ficha.
-# De `additional_attributes` entra o conjunto inteiro, e não só a cidade: a biografia, o cargo, as redes sociais e o que
-# mais alguém escrever ali, menos o que o sistema grava ali sozinho (`DO_SISTEMA`). Se o sistema passar a gravar outra
-# chave sozinho depois da lista, a pessoa fica: o erro possível é deixar na base quem podia sair, nunca apagar quem
-# alguém editou. A foto não segura ninguém: não é coluna da ficha, e as marcas que a busca dela deixa estão em
-# `DO_SISTEMA`. O nome da empresa escrito na ficha só entra em quem não está ligado a uma empresa: em quem está, ele é
-# cópia do nome da empresa. O bloqueio segura a pessoa por outra regra (Relacionamentos::Trazer::QuemFica). O tipo entra
-# porque quem a lista criou já nasce lead (tem telefone ou e-mail) e daí só muda por decisão de alguém: marcar ou
-# desmarcar cliente. A última atividade e o resto, que mudam sozinhos, ficam de fora. O spec
-# relacionamentos_trazer_ficha_editada_spec.rb percorre o que a API aceita, campo a campo: um campo novo aceito pela API
-# sem cobertura quebra o spec.
+# O resumo cobre TODAS as colunas de `contacts`, menos a lista fechada das que o sistema mantém sozinho (`DE_FORA`). A
+# coluna que for criada depois entra no resumo sem ninguém lembrar dela: o erro possível é deixar na base quem podia
+# sair, nunca apagar quem alguém editou. Assim entram, sem lista à mão, o que a API de contatos aceita gravar, a relação
+# (interessado, parceiro, não é negócio), o bloqueio, a recusa, a marca de cliente e o que mais uma pessoa ou o cliente
+# muda. O valor vazio e o valor igual ao padrão da coluna não entram: são o mesmo que a coluna não existir, e por isso
+# a coluna nova, que nasce vazia ou no padrão em todo mundo, não muda o resumo de quem a lista já anotou.
+#
+# Dos dois conjuntos de chave e valor (`additional_attributes` e `custom_attributes`) entra tudo, sem os vazios, em
+# qualquer nível. Só duas coisas ficam de fora de `additional_attributes`, as duas gravadas sem ninguém editar a ficha:
+# as marcas da busca da foto (`DO_SISTEMA`) e o nome da empresa quando é igual ao nome de hoje da empresa a que a pessoa
+# está ligada (é cópia: Companies::SyncContactNamesJob a regrava quando a empresa muda de nome). O nome da empresa
+# diferente do da empresa, ou escrito em quem não tem empresa ligada, foi alguém que digitou, e entra. A foto não
+# segura ninguém: não é coluna da ficha.
 #
 # A pessoa sem anotação (a lista trazida antes de existir a anotação, ou pela tela antiga, que nunca anota) fica: não
 # há com o que comparar, e o Desfazer não apaga quem não dá para provar que ninguém editou. O Desfazer de uma lista sem
 # anotação nenhuma não tira ninguém.
 class Relacionamentos::Trazer::PessoaCriada
   Campo = Relacionamentos::CampoPreenchido
-  # Os textos da ficha: vazio e ausente são a mesma coisa.
-  TEXTOS = %i[name middle_name last_name identifier phone_number email].freeze
-  # Os dois conjuntos de chave e valor: os atributos adicionais e as informações da pessoa.
-  CONJUNTOS = %i[additional_attributes custom_attributes].freeze
-  COLUNAS = (TEXTOS + %i[company_id contact_type] + CONJUNTOS).freeze
+  # As colunas de `contacts` que ficam fora do resumo: só as que o sistema mantém sozinho. Na dúvida, a coluna entra.
+  # - id e account_id: a chave da linha e a conta, que não mudam;
+  # - created_at e updated_at: os carimbos do banco; toda gravação move o segundo, inclusive as do sistema;
+  # - last_activity_at: movida pela mensagem que chega (e aí há conversa, que segura por outra regra);
+  # - location e country_code: cópias da cidade e do país de `additional_attributes`, refeitas a cada gravação
+  #   (Contacts::SyncAttributes).
+  DE_FORA = %w[id account_id created_at updated_at last_activity_at location country_code].freeze
+  ADICIONAIS = 'additional_attributes'.freeze
+  EMPRESA = 'company_id'.freeze
   # O que o sistema grava sozinho em `additional_attributes`, sem ninguém editar a ficha: as marcas da busca da foto
   # (Avatar::AvatarFromUrlJob#update_avatar_sync_attributes). Todo contato salvo com e-mail ganha essa busca uns 30
   # segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
   # dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia.
   DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash].freeze
   NOME_DA_EMPRESA = 'company_name'.freeze
+
+  # As colunas que entram no resumo, em ordem de nome.
+  def self.colunas
+    @colunas ||= (Contact.column_names - DE_FORA).sort.freeze
+  end
 
   def initialize(importacao)
     @importacao = importacao
@@ -47,9 +57,13 @@ class Relacionamentos::Trazer::PessoaCriada
     conteudos([id]).fetch(id)
   end
 
-  # { id => conteúdo }, só das pessoas que ainda existem. Uma consulta.
+  # { id => conteúdo }, só das pessoas que ainda existem. Uma consulta, e mais uma (os nomes das empresas) quando alguém
+  # entre elas está ligado a uma empresa.
   def conteudos(ids)
-    Contact.where(account_id: @conta_id, id: ids).pluck(:id, *COLUNAS).to_h { |id, *colunas| [id, resumivel(COLUNAS.zip(colunas).to_h)] }
+    colunas = self.class.colunas
+    fichas = Contact.where(account_id: @conta_id, id: ids).pluck(:id, *colunas).to_h { |id, *valores| [id, colunas.zip(valores).to_h] }
+    empresas = nomes_das_empresas(fichas.each_value.filter_map { |ficha| ficha[EMPRESA] }.uniq)
+    fichas.transform_values { |ficha| resumivel(ficha, empresas[ficha[EMPRESA]]) }
   end
 
   # Uma linha de baixo completou a pessoa que esta lista criou: o resumo passa a ser o de agora. Quem não foi criada por
@@ -62,7 +76,7 @@ class Relacionamentos::Trazer::PessoaCriada
   end
 
   # ids: pessoas da conta. Devolve o conjunto das que não dá para dizer que estão como a lista as deixou: as que alguém
-  # editou depois e as que a lista não anotou. Duas consultas, quantas forem as pessoas.
+  # editou depois e as que a lista não anotou. Duas consultas, quantas forem as pessoas (três com empresa entre elas).
   def tocadas(ids)
     return Set.new if ids.empty?
 
@@ -76,23 +90,37 @@ class Relacionamentos::Trazer::PessoaCriada
     Campo.da_importacao(@importacao).where(campo: Campo::PESSOA_CRIADA, contact_id: ids)
   end
 
-  def resumivel(ficha)
-    TEXTOS.map { |coluna| ficha[coluna].presence } + [ficha[:company_id], ficha[:contact_type]] +
-      [sem_vazios(adicionais(ficha)), sem_vazios(ficha[:custom_attributes].to_h)]
+  def nomes_das_empresas(ids)
+    ids.empty? ? {} : Company.where(account_id: @conta_id, id: ids).pluck(:id, :name).to_h
   end
 
-  # Em quem está ligado a uma empresa, o nome dela na ficha é cópia (Companies::SyncContactNamesJob o regrava quando a
-  # empresa muda de nome): corrigir o nome da empresa não é editar a pessoa. Sem empresa, é texto que alguém escreve.
-  def adicionais(ficha)
-    de_fora = ficha[:company_id] ? DO_SISTEMA + [NOME_DA_EMPRESA] : DO_SISTEMA
-    ficha[:additional_attributes].to_h.except(*de_fora)
+  # coluna => valor, em ordem de coluna, só do que não está vazio nem no padrão da coluna.
+  def resumivel(ficha, nome_da_empresa)
+    padroes = Contact.column_defaults
+    com_adicionais = ficha.merge(ADICIONAIS => adicionais(ficha[ADICIONAIS], nome_da_empresa))
+    com_adicionais.transform_values { |valor| normal(valor) }.reject { |coluna, valor| vazio?(valor) || valor == normal(padroes[coluna]) }
   end
 
-  # Vazio e ausente são a mesma coisa, em qualquer nível (a tela de edição manda as redes sociais em branco), e a ordem
-  # das chaves não importa. O conjunto vira uma lista de pares em ordem de chave.
-  def sem_vazios(valor)
-    return valor unless valor.is_a?(Hash)
+  # nome_da_empresa: o nome de hoje da empresa a que a pessoa está ligada; nil quando não está ligada a nenhuma. O nome
+  # escrito na ficha igual a ele é cópia e sai; diferente dele, ou sem empresa ligada, fica.
+  def adicionais(atributos, nome_da_empresa)
+    atributos = atributos.to_h.except(*DO_SISTEMA)
+    copia = nome_da_empresa.present? && atributos[NOME_DA_EMPRESA] == nome_da_empresa
+    copia ? atributos.except(NOME_DA_EMPRESA) : atributos
+  end
 
-    valor.transform_values { |dentro| sem_vazios(dentro) }.reject { |_chave, dentro| dentro.nil? || dentro == '' || dentro == [] }.sort
+  # O valor na forma que é resumida. No conjunto, vazio e ausente são a mesma coisa, em qualquer nível (a tela de edição
+  # manda as redes sociais em branco), e a ordem das chaves não importa; ele continua sendo um conjunto, para não se
+  # confundir com uma lista de pares. A data vai com o instante exato que o banco guarda.
+  def normal(valor)
+    case valor
+    when Hash then valor.transform_values { |dentro| normal(dentro) }.reject { |_chave, dentro| vazio?(dentro) }.sort.to_h
+    when Time, ActiveSupport::TimeWithZone then Campo.instante(valor)
+    else valor
+    end
+  end
+
+  def vazio?(valor)
+    valor.nil? || valor == '' || valor == {} || valor == []
   end
 end

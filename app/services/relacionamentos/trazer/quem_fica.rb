@@ -5,8 +5,8 @@
 # - tem card no funil, como a pessoa do card ou como quem pediu (solicitante);
 # - tem nota escrita na ficha, retorno marcado ou etiqueta (saem junto com a pessoa, e foi alguém que os pôs lá; a
 #   importação de contatos não põe etiqueta em ninguém);
-# - teve a ficha editada depois da lista: o nome, o telefone, o e-mail, a cidade, a empresa ou uma informação já não são
-#   os que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou: quem ela
+# - teve a ficha editada depois da lista: qualquer coluna dela (o nome, o telefone, a relação, uma informação) já não é
+#   a que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou: quem ela
 #   não anotou (a lista da tela antiga, que nunca anota) fica também, porque não dá para provar que ninguém a editou;
 # - tem convite de agendamento, é convidada de uma reunião ou a IA já guardou memória dela;
 # - tem seguro na carteira (Carteira::Apolice): a apólice, a história e o PDF dela sairiam junto com a pessoa;
