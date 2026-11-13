@@ -44,8 +44,8 @@ class Whatsapp::AccessLoss::AccountUpdateJob < ApplicationJob
   end
 
   def access_lost(channel)
-    Whatsapp::AccessLoss::GuideAlert.marcar_pela_meta!(channel)
-    channel.prompt_reauthorization! unless channel.reauthorization_required?
+    primeiro_aviso = Whatsapp::AccessLoss::GuideAlert.marcar_pela_meta!(channel)
+    channel.prompt_reauthorization! if primeiro_aviso && !channel.reauthorization_required?
     Whatsapp::AccessLoss::GuideAlert.avisar!(channel)
   end
 

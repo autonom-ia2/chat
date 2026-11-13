@@ -27,7 +27,8 @@ module Whatsapp::AccessLoss::HealthCheck
   end
 
   def record_access_ok
-    return if Whatsapp::AccessLoss::GuideAlert.marcado_pela_meta?(@channel)
+    # Marcada pela Meta: não apaga. Repete o aviso do Guia (idempotente), caso a entrega da hora tenha falhado.
+    return Whatsapp::AccessLoss::GuideAlert.avisar!(@channel) if Whatsapp::AccessLoss::GuideAlert.marcado_pela_meta?(@channel)
 
     @channel.reauthorized! if @channel.authorization_error_count.positive?
   end
