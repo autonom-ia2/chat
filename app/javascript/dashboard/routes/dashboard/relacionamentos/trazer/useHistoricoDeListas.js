@@ -1,7 +1,7 @@
 import { onScopeDispose, ref } from 'vue';
 import { ehSemAcesso } from '../lista/falhas';
 import { INTERVALO_INICIAL_MS, agendaComRecuo } from './consultaComRecuo';
-import { AVISO_ERRO_TRAZER } from './falhasDaTela';
+import { avisoDoTentarDeNovo } from './falhasDaTela';
 import { SITUACOES_DA_LISTA } from './prazo';
 
 // #2894 — "O que eu já trouxe": a lista de listas, a prévia do que sai e o
@@ -15,7 +15,9 @@ import { SITUACOES_DA_LISTA } from './prazo';
 // liga `naoPodeDesfazer`: o diálogo diz por quê, em vez de "tente de novo".
 // #2896 — a lista que parou no meio tem "Tentar de novo"; e quem o servidor
 // recusa por falta de acesso liga `semAcesso` (a tela diz isso, sem oferecer
-// tentar), seja ao tentar de novo, ao pedir a prévia ou ao desfazer.
+// tentar), seja ao tentar de novo, ao pedir a prévia ou ao desfazer. O "Tentar
+// de novo" recusado porque a conta está desfazendo uma lista avisa isso, com o
+// que fazer (esperar o desfazer terminar), em vez de "não consegui trazer".
 // O desfazer que travou no servidor (a lista segue `desfazendo`, mas volta com
 // `podeDesfazer`) não é acompanhado: perguntar de novo não muda nada, quem
 // resolve é a pessoa clicar em Desfazer.
@@ -156,9 +158,11 @@ const useDesfazerDaLista = ({ fonte, avisar, carga }) => {
   };
 
   // Devolve true quando o servidor aceitou desfazer (a tela fecha o diálogo); a
-  // carga seguinte volta a perguntar pela lista até ela ser desfeita.
+  // carga seguinte volta a perguntar pela lista até ela ser desfeita. Um pedido
+  // por vez: o botão não fica desligado durante o pedido, e o segundo clique
+  // não pede de novo.
   const confirmarDesfazer = async () => {
-    if (!alvo.value || naoPodeDesfazer.value) return false;
+    if (!alvo.value || naoPodeDesfazer.value || desfazendo.value) return false;
     const { id } = alvo.value;
     desfazendo.value = true;
     try {
@@ -209,7 +213,7 @@ export const useHistoricoDeListas = ({
       return true;
     } catch (falha) {
       if (ehSemAcesso(falha)) semAcesso.value = true;
-      else avisar(AVISO_ERRO_TRAZER);
+      else avisar(avisoDoTentarDeNovo(falha));
       return false;
     } finally {
       tentando.value = null;

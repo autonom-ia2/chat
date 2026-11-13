@@ -32,6 +32,8 @@ import { SEPARADOR } from '../comum/ponto';
 // tela leva o foco depois de desfazer, quando o botão clicado some.
 // A frase do problema nasce depois da linha; quem a anuncia é o bloco da
 // esquerda (`aria-live`), que já está na tela quando ela chega.
+// A lista desfeita em que alguém devia ter saído e ficou (`ficaram`, só o
+// número) diz quantas pessoas ficaram e o que fazer, no mesmo bloco.
 const props = defineProps({
   listas: { type: Array, required: true },
   temDesfazer: { type: Boolean, default: false },
@@ -58,6 +60,9 @@ const podeDesfazer = lista => props.temDesfazer && Boolean(lista.podeDesfazer);
 const desfazerParou = lista =>
   lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO && podeDesfazer(lista);
 const temSelo = lista => !falhou(lista) && !desfazerParou(lista);
+const SEM_NINGUEM = 0;
+const ficouAlguem = lista =>
+  lista.situacao === SITUACOES_DA_LISTA.DESFEITO && lista.ficaram > SEM_NINGUEM;
 const podeTentarDeNovo = lista => falhou(lista) && Boolean(lista.podeTentar);
 const temBotao = lista => podeTentarDeNovo(lista) || podeDesfazer(lista);
 
@@ -140,6 +145,19 @@ const NOMES = {
             class="m-0 text-sm font-medium text-n-amber-11"
           >
             {{ t('RELACIONAMENTOS_TRAZER.HISTORICO.DESFAZER_PAROU') }}
+          </p>
+          <p
+            v-else-if="ficouAlguem(lista)"
+            data-relacionamentos="desfazer-ficaram"
+            class="m-0 text-sm font-medium text-n-amber-11 tabular-nums"
+          >
+            {{
+              t(
+                'RELACIONAMENTOS_TRAZER.HISTORICO.FICARAM',
+                { count: lista.ficaram },
+                lista.ficaram
+              )
+            }}
           </p>
         </div>
         <div

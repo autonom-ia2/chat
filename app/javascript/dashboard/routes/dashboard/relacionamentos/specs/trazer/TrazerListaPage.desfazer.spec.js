@@ -158,7 +158,7 @@ describe('Desfazer', () => {
     ]);
     expect(itemDaPrevia(w, 'voltam')).toEqual([
       '12 pessoas voltam a ser como eram',
-      'Já estavam aqui antes desta lista.',
+      'Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
     ]);
     expect(
       w.findAll('[data-linha]').map(item => item.attributes('data-linha'))

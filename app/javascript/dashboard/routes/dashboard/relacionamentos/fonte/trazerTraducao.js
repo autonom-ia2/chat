@@ -221,6 +221,8 @@ export const corpoDoDestino = (destino, campo) =>
 //     querem dizer cliente (o servidor não traz adivinhando);
 //   - `conferencia_vencida`: a planilha foi enviada há mais de 7 dias e já foi
 //     apagada (toda escrita e o trazer);
+//   - `desfazer_em_curso`: trazer (ou "tentar de novo") enquanto a conta desfaz
+//     uma lista;
 //   - os outros: a tela pediu algo que o servidor já não tem (a leitura não
 //     está pronta ou já foi trazida, a linha, a coluna, a pergunta ou a resposta
 //     não existe; entre elas, o valor marcado que já não é da coluna e os
@@ -242,6 +244,7 @@ const NOME_DA_RECUSA = new Map([
   ['nada_para_trazer', 'NADA_PARA_TRAZER'],
   ['falta_valores_cliente', 'FALTA_VALORES_CLIENTE'],
   ['conferencia_vencida', CONFERENCIA_VENCIDA],
+  ['desfazer_em_curso', 'DESFAZER_EM_CURSO'],
   ['leitura_nao_pronta', TELA_DESATUALIZADA],
   ['linha_desconhecida', TELA_DESATUALIZADA],
   ['resposta_desconhecida', TELA_DESATUALIZADA],
@@ -342,6 +345,8 @@ export const listaDaTela = lista => ({
   // Quem diz se dá para desfazer é o servidor: a lista pronta, a que parou no
   // meio depois de pôr gente na base e a que teve o desfazer travado.
   podeDesfazer: lista.pode_desfazer === true,
+  // Só a lista desfeita em que alguém devia ter saído e ficou traz o número.
+  ficaram: lista.ficaram ?? 0,
 });
 
 export const andamentoDaTela = andamento => ({

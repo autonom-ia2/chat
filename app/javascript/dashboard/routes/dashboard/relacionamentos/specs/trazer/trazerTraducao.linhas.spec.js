@@ -194,6 +194,7 @@ describe('tradução: as recusas do servidor ganham nome', () => {
     ['sem_contato', 'TROCA_SEM_CONTATO'],
     ['planilha_apagada', 'PLANILHA_APAGADA'],
     ['nada_para_trazer', 'NADA_PARA_TRAZER'],
+    ['desfazer_em_curso', 'DESFAZER_EM_CURSO'],
     ['sem_empresa', 'SEM_EMPRESA'],
     ['leitura_nao_pronta', 'TELA_DESATUALIZADA'],
     ['linha_desconhecida', 'TELA_DESATUALIZADA'],

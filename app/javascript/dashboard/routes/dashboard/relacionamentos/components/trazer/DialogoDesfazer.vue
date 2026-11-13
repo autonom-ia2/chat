@@ -16,9 +16,11 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // #2896 — `naoPode`: o servidor recusou porque a lista ainda não foi trazida
 // até o fim. O diálogo diz isso num alerta, com o foco nele, no lugar da
 // prévia; o botão de desfazer sai (não há o que confirmar) e fica só o de sair.
-// O botão de desfazer só fica desabilitado enquanto o sistema trabalha (a
-// prévia chegando, o pedido em curso). Se a prévia não veio, ele sai: quem
-// resolve é o "Tentar de novo" do erro.
+// O botão de desfazer só existe com a prévia na tela: nenhum botão desligado
+// por falta de dado. Enquanto ela chega, o esqueleto mostra a espera e só há o
+// botão de sair; se ela não veio, quem resolve é o "Tentar de novo" do erro.
+// Durante o pedido ele mostra que está trabalhando, sem ficar desligado; o
+// segundo clique não pede de novo (trazer/useHistoricoDeListas.js).
 const props = defineProps({
   // O nome da lista que vai ser desfeita, no título.
   arquivo: { type: String, default: '' },
@@ -168,7 +170,7 @@ defineExpose({
           @click="dialogo?.close()"
         />
         <Button
-          v-if="!naoPode && !comErroNaPrevia"
+          v-if="previa && !naoPode && !comErroNaPrevia"
           color="ruby"
           size="lg"
           class="w-full"
@@ -176,7 +178,7 @@ defineExpose({
           data-relacionamentos="desfazer-confirmar"
           :label="t('RELACIONAMENTOS_TRAZER.DESFAZER.CONFIRMAR')"
           :is-loading="desfazendo"
-          :disabled="!previa || desfazendo"
+          :aria-busy="desfazendo"
         />
       </div>
     </template>

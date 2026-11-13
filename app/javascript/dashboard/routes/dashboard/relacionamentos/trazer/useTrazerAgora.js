@@ -1,5 +1,5 @@
 import { EVENTOS, ETAPAS } from './etapas';
-import { AVISO_ERRO_TRAZER, ERROS, NOMES } from './falhasDaTela';
+import { AVISO_ERRO_TRAZER, ERROS, NOMES, erroDoTrazer } from './falhasDaTela';
 import { useAndamentoDaLista } from './useAndamentoDaLista';
 
 // #2896, Fatia 2 — o trazer da tela "Trazer minha lista" (as partes de
@@ -37,10 +37,7 @@ const aoFalharOTrazer = async (tela, falha) => {
   ) {
     return;
   }
-  tela.erro.value =
-    falha?.name === NOMES.NADA_PARA_TRAZER
-      ? ERROS.NADA_PARA_TRAZER
-      : ERROS.TRAZER;
+  tela.erro.value = erroDoTrazer(falha);
 };
 
 export const useTrazerAgora = tela => {

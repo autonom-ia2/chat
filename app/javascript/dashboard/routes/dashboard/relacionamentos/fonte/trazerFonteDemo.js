@@ -122,6 +122,8 @@ const vistaDaLista = (lista, agora, demo) => {
     podeTentar:
       situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar === true,
     podeDesfazer: COM_DESFAZER.includes(situacao),
+    // Na demonstração o desfazer nunca deixa ninguém para trás.
+    ficaram: 0,
   };
 };
 

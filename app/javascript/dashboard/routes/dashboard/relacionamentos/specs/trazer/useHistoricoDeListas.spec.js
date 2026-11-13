@@ -225,6 +225,31 @@ describe('desfazer', () => {
     expect(historico.desfazendo.value).toBe(false);
   });
 
+  // O botão do diálogo não fica desligado durante o pedido: quem segura o
+  // segundo clique é o pedido em curso.
+  it('com um pedido de desfazer em curso, o segundo clique não pede de novo', async () => {
+    let responder;
+    const desfazer = vi.fn(
+      () =>
+        new Promise(resolve => {
+          responder = resolve;
+        })
+    );
+    const { historico } = montar({
+      historico: vi.fn(async () => [lista('a', 'pronto')]),
+      desfazer,
+    });
+    await historico.carregar();
+    await historico.abrirDesfazer(historico.listas.value[0]);
+    const primeiro = historico.confirmarDesfazer();
+    expect(historico.desfazendo.value).toBe(true);
+    expect(await historico.confirmarDesfazer()).toBe(false);
+    responder({ id: 'a', situacao: 'desfazendo' });
+    expect(await primeiro).toBe(true);
+    expect(desfazer).toHaveBeenCalledTimes(1);
+    expect(historico.desfazendo.value).toBe(false);
+  });
+
   // O servidor aceitou (202) e a linha já fica como ele respondeu, antes de o
   // histórico ser lido de novo: só a lista pedida muda, e sem botão nenhum.
   it('aceito o pedido, a linha já fica como o servidor respondeu, antes da releitura', async () => {
@@ -554,6 +579,21 @@ describe('tentar de novo', () => {
     expect(await historico.tentarDeNovo(falhou)).toBe(false);
     expect(avisar).toHaveBeenCalledWith('RELACIONAMENTOS_TRAZER.ERROS.TRAZER');
     expect(historico.tentando.value).toBeNull();
+  });
+
+  // A conta está desfazendo uma lista: o aviso diz para esperar, em vez de
+  // "não consegui trazer".
+  it('recusado porque há um desfazer em curso: avisa o que fazer', async () => {
+    const { historico, avisar } = montar({
+      tentarDeNovo: vi.fn(async () => {
+        throw Object.assign(new Error('422'), { name: 'DESFAZER_EM_CURSO' });
+      }),
+    });
+    expect(await historico.tentarDeNovo(falhou)).toBe(false);
+    expect(avisar).toHaveBeenCalledTimes(1);
+    expect(avisar).toHaveBeenCalledWith(
+      'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER_EM_CURSO'
+    );
   });
 
   it('recusa por falta de acesso liga `semAcesso`, sem aviso', async () => {

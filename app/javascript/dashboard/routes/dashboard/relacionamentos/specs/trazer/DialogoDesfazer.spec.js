@@ -85,6 +85,35 @@ describe('diálogo Desfazer', () => {
     ]);
   });
 
+  // Regra do dono: nenhum botão desligado por falta de dado.
+  describe('o botão de desfazer', () => {
+    const PREVIA = { tira: 5, ficam: 0, devolve: 0 };
+
+    it('enquanto a prévia não chega, não está na tela: só o esqueleto e o botão de sair', () => {
+      const w = montar({ arquivo: 'a.xlsx', previa: null });
+      expect(w.findAll('.animate-pulse').length).toBeGreaterThan(0);
+      expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
+      expect(w.findAll('button').map(b => b.text())).toEqual(['Cancelar']);
+      expect(w.find('button[disabled]').exists()).toBe(false);
+    });
+
+    it('com a prévia na tela, aparece ligado', () => {
+      const w = montar({ arquivo: 'a.xlsx', previa: PREVIA });
+      const confirmar = marca(w, 'desfazer-confirmar');
+      expect(confirmar.text()).toBe('Desfazer');
+      expect(confirmar.attributes('disabled')).toBeUndefined();
+    });
+
+    it('durante o pedido mostra que está trabalhando, sem ficar desligado', () => {
+      const w = montar({ arquivo: 'a.xlsx', previa: PREVIA, desfazendo: true });
+      const confirmar = marca(w, 'desfazer-confirmar');
+      expect(confirmar.find('svg.animate-spin').exists()).toBe(true);
+      expect(confirmar.attributes('aria-busy')).toBe('true');
+      expect(confirmar.attributes('disabled')).toBeUndefined();
+      expect(w.find('button[disabled]').exists()).toBe(false);
+    });
+  });
+
   describe('a lista que ainda não dá para desfazer', () => {
     const NAO_PODE =
       'Esta lista ainda está sendo trazida. Quando terminar, você pode desfazer.';
