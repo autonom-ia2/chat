@@ -212,12 +212,12 @@ acoes:
   etiqueta_criar:
     acao: POST labels
     grupo: ETIQUETA
-    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao, show_on_conversation_list: sim_nao }
   etiqueta_alterar:
     acao: PATCH labels/:id
     grupo: ETIQUETA
     caminho: { id: { escolher: etiqueta } }
-    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao, show_on_conversation_list: sim_nao }
   atributo_criar:
     acao: POST custom_attribute_definitions
     grupo: ATRIBUTO

@@ -187,6 +187,7 @@
       "RESULT": "Ganho ou perdido?",
       "LOST_REASON": "Motivo da perda (opcional)",
       "COLOR": "Cor",
+      "SHOW_ON_CONVERSATION_LIST": "Mostrar na lista de conversas",
       "SHOW_ON_SIDEBAR": "Mostrar no menu",
       "ATTRIBUTE_DISPLAY_NAME": "Nome do campo",
       "ATTRIBUTE_KEY": "Chave do campo",

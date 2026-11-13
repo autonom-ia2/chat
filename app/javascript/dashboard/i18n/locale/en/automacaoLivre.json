@@ -187,6 +187,7 @@
       "RESULT": "Won or lost?",
       "LOST_REASON": "Reason for losing (optional)",
       "COLOR": "Color",
+      "SHOW_ON_CONVERSATION_LIST": "Show on the conversation list",
       "SHOW_ON_SIDEBAR": "Show in the menu",
       "ATTRIBUTE_DISPLAY_NAME": "Field name",
       "ATTRIBUTE_KEY": "Field key",
