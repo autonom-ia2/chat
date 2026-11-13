@@ -540,8 +540,10 @@ export const actions = {
     // baixo, sem piscar.
     const showsSpinner =
       !append && !stringMatches($state.board?.pipeline?.id, pipelineId);
-    // A resposta de uma busca antiga (outro filtro, outro funil) não pisa na da busca mais nova.
-    const request = append ? boardRequestSeq : (boardRequestSeq += 1);
+    // A resposta de uma busca antiga (outro filtro, outro funil) não pisa na da busca mais nova. O "carregar mais"
+    // não entra na contagem: a recarga do tempo real não pode jogar fora o clique da pessoa.
+    const request = append ? null : (boardRequestSeq += 1);
+    const superada = () => !append && request !== boardRequestSeq;
     if (showsSpinner)
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: true });
     try {
@@ -557,16 +559,26 @@ export const actions = {
       } = normalizeFilters($state.filters);
       // An explicit stageIds payload (used to refetch specific columns) wins;
       // otherwise keep the Stage filter's stage_ids from normalizeFilters.
-      const response = await CrmKanbanAPI.getBoard({
-        ...boardFilters,
-        pipeline_id: pipelineId,
-        cursor_by_stage: cursorByStage,
-        limit_per_stage: limitPerStage,
-        include_counts: includeCounts,
-        ...(stageIds.length ? { stage_ids: stageIds } : {}),
-      });
+      let response;
+      try {
+        response = await CrmKanbanAPI.getBoard({
+          ...boardFilters,
+          pipeline_id: pipelineId,
+          cursor_by_stage: cursorByStage,
+          limit_per_stage: limitPerStage,
+          include_counts: includeCounts,
+          ...(stageIds.length ? { stage_ids: stageIds } : {}),
+        });
+      } catch (error) {
+        // O erro de uma busca que outra mais nova já substituiu não diz nada do quadro na tela: sem aviso falso.
+        if (superada()) return $state.board;
+        throw error;
+      }
       const board = response.data.payload || emptyBoard();
-      if (request !== boardRequestSeq) return $state.board;
+      if (superada()) return $state.board;
+      // O "carregar mais" de um funil que já saiu da tela não entra no quadro novo.
+      if (append && !stringMatches($state.board?.pipeline?.id, pipelineId))
+        return $state.board;
       commit(
         append
           ? types.APPEND_CRM_KANBAN_STAGE_CARDS
@@ -576,7 +588,7 @@ export const actions = {
       return board;
     } finally {
       // Quem desliga é a busca mais nova, mesmo sem ter ligado: um carregando aceso por uma busca antiga não fica preso.
-      if (!append && request === boardRequestSeq)
+      if (!append && !superada())
         commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
     }
   },

@@ -1047,3 +1047,57 @@ describe('#crmKanban board refresh without blinking', () => {
     expect(boards).toEqual([7]);
   });
 });
+
+// #2986, revisão: o "carregar mais" e o erro de busca superada.
+describe('#crmKanban board refresh races', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const boardOf = pipelineId => ({ pipeline: { id: pipelineId }, stages: [] });
+
+  it('keeps a load-more answer even when a refresh started meanwhile', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(7) };
+    let answerMore;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          answerMore = resolve;
+        })
+      )
+      .mockResolvedValueOnce({ data: { payload: boardOf(7) } });
+
+    const more = actions.fetchBoard(
+      { commit, state },
+      { pipelineId: 7, append: true, cursorByStage: { 1: 'abc' } }
+    );
+    await actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    answerMore({ data: { payload: boardOf(7) } });
+    await more;
+
+    expect(commit).toHaveBeenCalledWith(
+      types.APPEND_CRM_KANBAN_STAGE_CARDS,
+      boardOf(7)
+    );
+  });
+
+  it('does not throw the error of a fetch already replaced by a newer one', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(7) };
+    let failOld;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          failOld = reject;
+        })
+      )
+      .mockResolvedValueOnce({ data: { payload: boardOf(7) } });
+
+    const older = actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    await actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    failOld(new Error('rede'));
+
+    await expect(older).resolves.toEqual(boardOf(7));
+  });
+});
