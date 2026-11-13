@@ -6,7 +6,8 @@
 # - tem nota escrita na ficha, retorno marcado ou etiqueta (saem junto com a pessoa, e foi alguém que os pôs lá; a
 #   importação de contatos não põe etiqueta em ninguém);
 # - teve a ficha editada depois da lista: o nome, o telefone, o e-mail, a cidade, a empresa ou uma informação já não são
-#   os que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou;
+#   os que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou: quem ela
+#   não anotou (a lista da tela antiga, que nunca anota) fica também, porque não dá para provar que ninguém a editou;
 # - tem convite de agendamento, é convidada de uma reunião ou a IA já guardou memória dela;
 # - tem seguro na carteira (Carteira::Apolice): a apólice, a história e o PDF dela sairiam junto com a pessoa;
 # - veio também da prospecção ou de um formulário de anúncio (o lead perderia a pessoa);
@@ -54,7 +55,7 @@ class Relacionamentos::Trazer::QuemFica
     return Set.new if ids.empty?
 
     seguradas = onde_aparece.flat_map { |registros, coluna| registros.where(coluna => ids).distinct.pluck(coluna) }.to_set
-    seguradas.merge(@criada.editadas(ids - seguradas.to_a))
+    seguradas.merge(@criada.tocadas(ids - seguradas.to_a))
   end
 
   def fica?(id)

@@ -220,7 +220,7 @@
       "SAEM": "{count} person leaves | {count} people leave",
       "SAEM_PORQUE": "Came with this list and nobody has worked with them yet. | Came with this list and nobody has worked with them yet.",
       "FICAM": "{count} person stays | {count} people stay",
-      "FICAM_PORQUE": "Someone already worked with them (conversation, card, label or campaign) or they also came in another list. | Someone already worked with them (conversation, card, label or campaign) or they also came in another list.",
+      "FICAM_PORQUE": "Someone already worked with them (conversation, card, label, campaign or insurance) or changed their record after the list, they also came in another list, or the list was not brought in through this screen and there is no way to know whether someone changed them. | Someone already worked with them (conversation, card, label, campaign or insurance) or changed their record after the list, they also came in another list, or the list was not brought in through this screen and there is no way to know whether someone changed them.",
       "VOLTAM": "{count} person goes back to how they were | {count} people go back to how they were",
       "VOLTAM_PORQUE": "Was already here before this list. What the list filled in for them, like phone, e-mail or city, goes back to empty. What someone changed afterwards stays as it is. | Were already here before this list. What the list filled in for them, like phone, e-mail or city, goes back to empty. What someone changed afterwards stays as it is.",
       "NADA": "Nobody else leaves. It only needs to finish.",

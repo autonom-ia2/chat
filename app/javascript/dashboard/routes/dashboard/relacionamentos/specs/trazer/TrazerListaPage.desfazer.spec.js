@@ -32,7 +32,7 @@ const situacoes = w =>
 const itemDaPrevia = (w, chave) =>
   w.findAll(`[data-linha="${chave}"] p`).map(linha => linha.text());
 const FICAM_PORQUE =
-  'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.';
+  'Alguém já cuidou delas (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha delas depois da lista, elas vieram também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nelas.';
 
 const estado = vi.hoisted(() => ({ demo: 'cheio' }));
 

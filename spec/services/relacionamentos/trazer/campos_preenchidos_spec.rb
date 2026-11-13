@@ -44,11 +44,13 @@ RSpec.describe Relacionamentos::Trazer::CamposPreenchidos, :aggregate_failures d
     importacao = trazer_lista
     carla = pessoa('Carla Carvalhedo')
     criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
-    expect(criada.editadas([carla.id, ana.id, bruno.id])).to be_empty
+    expect(criada.tocadas([carla.id])).to be_empty
+    # A Ana e o Bruno não nasceram com a lista: sem o resumo anotado, não há como dizer que estão como ela os deixou.
+    expect(criada.tocadas([carla.id, ana.id, bruno.id])).to contain_exactly(ana.id, bruno.id)
 
     carla.update!(name: 'Carla C.')
 
-    expect(criada.editadas([carla.id, ana.id, bruno.id])).to contain_exactly(carla.id)
+    expect(criada.tocadas([carla.id])).to contain_exactly(carla.id)
     guardado = campos.find_by!(contact_id: carla.id, campo: 'pessoa_criada').attributes.values.join(' ')
     expect(guardado).not_to include('Carvalhedo')
     expect(guardado).not_to include('11987650003')
@@ -65,7 +67,7 @@ RSpec.describe Relacionamentos::Trazer::CamposPreenchidos, :aggregate_failures d
     described_class.new(importacao).registrar(de_baixo, gravada, {}, ContactImports::Trazer::DestinosDaLinha::Postos.new)
 
     expect(anotados(carla)).to match_array(%w[pessoa_criada telefone_da_empresa email])
-    expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).editadas([carla.id])).to be_empty
+    expect(Relacionamentos::Trazer::PessoaCriada.new(importacao).tocadas([carla.id])).to be_empty
     expect(Relacionamentos::Trazer::PreviaDoDesfazer.new(importacao).call).to include(tira: 1, ficam: 0)
   end
 

@@ -344,31 +344,34 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     expect(campos.pendentes.count).to eq(0)
   end
 
-  describe 'a lista trazida antes de existir a anotação dos campos' do
-    it 'só tira quem ela criou: não há o que devolver' do
+  # Sem anotação não dá para provar que ninguém editou a pessoa: ela fica. E não há o que devolver.
+  describe 'a lista sem anotação nenhuma' do
+    it 'não tira ninguém e não devolve nada: a prévia diz isso antes' do
       importacao = trazer_lista
-      campos.delete_all # a lista é de antes da fatia 3: nada dela foi anotado
+      campos.delete_all # nada desta lista foi anotado
       carla = pessoa('Carla Carvalhedo')
-      expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 0)
+      expect(previa(importacao)).to eq(tira: 0, ficam: 1, devolve: 0)
 
-      desfazer(importacao)
+      desfeita = desfazer(importacao)
 
-      expect(account.contacts.exists?(carla.id)).to be(false)
+      expect(desfeita.undo_status).to eq('completed')
+      expect(described_class.ficaram(desfeita)).to eq(0)
+      expect(account.contacts.exists?(carla.id)).to be(true)
       expect(ana.reload).to have_attributes(email: 'ana.albuquerino@exemplo.com.br', contact_type: 'customer')
       expect(bruno.reload).to have_attributes(name: 'Bruno Brandolim', phone_number: '+5511987650002')
-      # A Padaria continua com a Ana; o Mercado Sol nasceu com a lista e ficou sem ninguém.
-      expect(account.companies.pluck(:name)).to eq(['Padaria Bom Dia'])
+      # A Padaria continua com a Ana e o Mercado Sol com a Carla.
+      expect(account.companies.pluck(:name)).to contain_exactly('Padaria Bom Dia', 'Mercado Sol')
     end
 
-    it 'vale também para a importação da tela antiga, que nunca anota' do
+    it 'vale para a importação da tela antiga, que nunca anota' do
       linhas = ['Nome,Celular,E-mail', 'Ana Albuquerino,11987650001,ana.albuquerino@exemplo.com.br', 'Davi Dornelino,11987650004,']
       importacao = importar_pela_tela_antiga("#{linhas.join("\n")}\n")
       davi = pessoa('Davi Dornelino')
-      expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 0)
+      expect(previa(importacao)).to eq(tira: 0, ficam: 1, devolve: 0)
 
       desfazer(importacao)
 
-      expect(account.contacts.exists?(davi.id)).to be(false)
+      expect(account.contacts.exists?(davi.id)).to be(true)
       expect(ana.reload.email).to eq('ana.albuquerino@exemplo.com.br')
     end
   end

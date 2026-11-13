@@ -11,8 +11,9 @@
 # a lista criou já nasce lead (tem telefone ou e-mail) e daí só muda por decisão de alguém: marcar ou desmarcar cliente.
 # A última atividade e o resto, que mudam sozinhos, ficam de fora.
 #
-# A pessoa sem anotação (a lista trazida antes de existir a anotação, ou pela tela antiga, que nunca anota) não entra
-# em `editadas`: não há com o que comparar, e ela segue as outras regras de QuemFica.
+# A pessoa sem anotação (a lista trazida antes de existir a anotação, ou pela tela antiga, que nunca anota) fica: não
+# há com o que comparar, e o Desfazer não apaga quem não dá para provar que ninguém editou. O Desfazer de uma lista sem
+# anotação nenhuma não tira ninguém.
 class Relacionamentos::Trazer::PessoaCriada
   Campo = Relacionamentos::CampoPreenchido
   CIDADE = ContactImports::Trazer::DestinosDaLinha::CIDADE
@@ -42,14 +43,13 @@ class Relacionamentos::Trazer::PessoaCriada
     anotacao.update!(valor_posto_hash: Campo.resumo(anotacao.campaign_import_row_id, Campo::PESSOA_CRIADA, conteudo(id)))
   end
 
-  # ids: pessoas da conta. Devolve o conjunto das que esta lista criou e que já não estão como ela as deixou.
-  def editadas(ids)
+  # ids: pessoas da conta. Devolve o conjunto das que não dá para dizer que estão como a lista as deixou: as que alguém
+  # editou depois e as que a lista não anotou. Duas consultas, quantas forem as pessoas.
+  def tocadas(ids)
     return Set.new if ids.empty?
 
     anotadas = anotacoes(ids).index_by(&:contact_id)
-    return Set.new if anotadas.empty?
-
-    conteudos(anotadas.keys).filter_map { |id, atual| id unless anotadas.fetch(id).mesmo_valor?(atual) }.to_set
+    conteudos(ids).filter_map { |id, atual| id unless anotadas[id]&.mesmo_valor?(atual) }.to_set
   end
 
   private

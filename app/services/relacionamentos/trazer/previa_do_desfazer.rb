@@ -1,10 +1,13 @@
 # "Trazer minha lista" (#2896): o que o "Desfazer" de uma lista faria agora, em três números para a tela:
 #
 # - tira: as pessoas que a lista criou e em quem ninguém tocou. Saem da base;
-# - ficam: as que a lista criou e que já têm conversa, card, campanha ou recusa (Relacionamentos::Trazer::QuemFica).
-#   Ficam como estão;
+# - ficam: as que a lista criou e que já têm conversa, card, campanha, seguro ou recusa, as que alguém editou depois e
+#   as que a lista não anotou (Relacionamentos::Trazer::QuemFica). Ficam como estão;
 # - devolve: as pessoas que a conta já tinha e em que ao menos um campo preenchido pela lista volta ao que era (inclusive
-#   a marca de cliente). Lista trazida antes de existir a anotação dos campos não tem o que devolver: 0.
+#   a marca de cliente).
+#
+# A lista sem anotação nenhuma (a da tela antiga, que nunca anota) não tem o que devolver nem quem tirar: todas as
+# pessoas que ela criou ficam, e a prévia diz 0 em `tira` e em `devolve`.
 #
 # Os três grupos não se misturam: quem a lista criou sai ou fica inteira, e só quem já existia tem campo devolvido.
 # Nada é gravado. A conta é feita com as mesmas regras do Desfazer, em blocos (os dos campos são maiores aqui:

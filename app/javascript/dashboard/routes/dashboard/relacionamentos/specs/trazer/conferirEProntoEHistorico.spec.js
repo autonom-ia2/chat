@@ -762,7 +762,7 @@ describe('DialogoDesfazer', () => {
       [
         'ficam',
         '18 pessoas ficam',
-        'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.',
+        'Alguém já cuidou delas (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha delas depois da lista, elas vieram também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nelas.',
       ],
       [
         'voltam',
@@ -810,7 +810,7 @@ describe('DialogoDesfazer', () => {
       [
         'ficam',
         '1 pessoa fica',
-        'Alguém já cuidou dela (conversa, card, etiqueta ou campanha) ou ela veio também em outra lista.',
+        'Alguém já cuidou dela (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha dela depois da lista, ela veio também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nela.',
       ],
       [
         'voltam',

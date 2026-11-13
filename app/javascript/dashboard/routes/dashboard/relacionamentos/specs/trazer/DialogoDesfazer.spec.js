@@ -55,7 +55,7 @@ describe('diálogo Desfazer', () => {
     const ficam = com.get('[data-linha="ficam"]').findAll('p');
     expect(ficam.map(linha => linha.text())).toEqual([
       '18 pessoas ficam',
-      'Alguém já cuidou delas (conversa, card, etiqueta ou campanha) ou elas vieram também em outra lista.',
+      'Alguém já cuidou delas (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha delas depois da lista, elas vieram também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nelas.',
     ]);
     const sem = montar({
       arquivo: 'a.xlsx',

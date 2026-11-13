@@ -11,14 +11,19 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
                                    options: { 'flow' => CampaignImport::CONTACTS_FLOW, 'trazer' => {} })
   end
 
-  # Uma pessoa que a lista criou.
+  # Uma pessoa que a lista criou, com o resumo dela anotado, como a gravação de "Trazer minha lista" deixa.
   def criada(nome, **dados)
+    anotada(sem_anotacao(nome, **dados))
+  end
+
+  # Uma pessoa que a lista criou e não anotou: a lista veio pela tela antiga, que nunca anota.
+  def sem_anotacao(nome, **dados)
     quem = create(:contact, account: account, name: nome, **dados)
     importacao.campaign_import_rows.create!(row_number: importacao.campaign_import_rows.count + 2, status: :imported, contact_id: quem.id)
     quem
   end
 
-  # O que a gravação de "Trazer minha lista" anota de quem ela cria: o resumo da pessoa como está agora.
+  # O que a gravação anota de quem ela cria: o resumo da pessoa como está agora.
   def anotada(quem)
     campo = Relacionamentos::CampoPreenchido
     linha = importacao.campaign_import_rows.find_by!(contact_id: quem.id)
@@ -48,8 +53,8 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
   end
 
   it 'fica quem teve a ficha editada depois da lista: nome, telefone, e-mail, cidade, empresa, informação ou tipo' do
-    intocada = anotada(criada('Pessoa Intocada', phone_number: '+5511987650030', email: 'pessoa.intocada@exemplo.com.br',
-                                                 additional_attributes: { 'city' => 'Campinas' }, custom_attributes: { 'plano' => 'Ouro' }))
+    intocada = criada('Pessoa Intocada', phone_number: '+5511987650030', email: 'pessoa.intocada@exemplo.com.br',
+                                         additional_attributes: { 'city' => 'Campinas' }, custom_attributes: { 'plano' => 'Ouro' })
     mudancas = {
       'Pessoa Nome' => { name: 'Pessoa Renomeada' },
       'Pessoa Telefone' => { phone_number: '+5511987650039' },
@@ -60,7 +65,7 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
       'Pessoa Cliente' => { contact_type: :customer, customer_since: Time.current }
     }
     editadas = mudancas.map do |nome, mudanca|
-      quem = anotada(criada(nome))
+      quem = criada(nome)
       quem.update!(mudanca)
       quem
     end
@@ -70,11 +75,14 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     expect(ficam(intocada, *editadas)).to match_array(editadas.map(&:id))
   end
 
-  it 'a pessoa sem anotação (lista de antes, ou da tela antiga) não fica só por ter sido editada' do
-    sem_anotacao = criada('Pessoa Sem Anotação')
-    sem_anotacao.update!(name: 'Pessoa Renomeada')
+  # Sem a anotação não há com o que comparar: o Desfazer não apaga quem não dá para provar que ninguém editou.
+  it 'fica a pessoa sem anotação (lista da tela antiga, que nunca anota), editada ou não' do
+    intocada = sem_anotacao('Pessoa Sem Anotação')
+    renomeada = sem_anotacao('Pessoa Sem Anotação Dois')
+    renomeada.update!(name: 'Pessoa Renomeada')
+    anotada = criada('Pessoa Anotada')
 
-    expect(ficam(sem_anotacao)).to be_empty
+    expect(ficam(intocada, renomeada, anotada)).to contain_exactly(intocada.id, renomeada.id)
   end
 
   it 'fica quem tem seguro na carteira' do
