@@ -28462,7 +28462,7 @@
     "controller": "api/v1/accounts/relacionamentos/seguros/renovacoes#update",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/seguros/renovacoes_controller.rb:16",
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/renovacoes_controller.rb:17",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57"
     ],
     "sem_corpo": false
