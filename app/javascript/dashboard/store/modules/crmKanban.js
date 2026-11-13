@@ -543,7 +543,12 @@ export const actions = {
     // A resposta de uma busca antiga (outro filtro, outro funil) não pisa na da busca mais nova. O "carregar mais"
     // não entra na contagem: a recarga do tempo real não pode jogar fora o clique da pessoa.
     const request = append ? null : (boardRequestSeq += 1);
-    const superada = () => !append && request !== boardRequestSeq;
+    // #2994: a resposta só vale para a conta em que a busca começou. Trocar de conta sem recarregar a página (e a
+    // conta nova sem funil não começa busca nenhuma) não pode deixar o quadro da conta anterior aparecer.
+    const account = CrmKanbanAPI.accountIdFromRoute;
+    const superada = () =>
+      account !== CrmKanbanAPI.accountIdFromRoute ||
+      (!append && request !== boardRequestSeq);
     if (showsSpinner)
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: true });
     try {
@@ -588,7 +593,8 @@ export const actions = {
       return board;
     } finally {
       // Quem desliga é a busca mais nova, mesmo sem ter ligado: um carregando aceso por uma busca antiga não fica preso.
-      if (!append && !superada())
+      // Vale também depois de trocar de conta: a resposta é descartada, o carregando não fica aceso na conta nova.
+      if (!append && request === boardRequestSeq)
         commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
     }
   },

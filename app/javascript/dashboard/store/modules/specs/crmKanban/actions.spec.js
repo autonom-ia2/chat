@@ -1101,3 +1101,115 @@ describe('#crmKanban board refresh races', () => {
     await expect(older).resolves.toEqual(boardOf(7));
   });
 });
+
+// #2994: trocar de conta durante a busca não traz o quadro da conta anterior.
+describe('#crmKanban board fetch across an account change', () => {
+  const boardOf = pipelineId => ({ pipeline: { id: pipelineId }, stages: [] });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CrmKanbanAPI.accountIdFromRoute = '1';
+  });
+
+  afterEach(() => {
+    CrmKanbanAPI.accountIdFromRoute = '1';
+  });
+
+  it('drops the board of the previous account and turns the spinner off', async () => {
+    const commit = vi.fn();
+    let answer;
+    CrmKanbanAPI.getBoard.mockReturnValueOnce(
+      new Promise(resolve => {
+        answer = resolve;
+      })
+    );
+
+    const pending = actions.fetchBoard(
+      { commit, state: { filters: defaultFilters(), board: boardOf(null) } },
+      { pipelineId: 7 }
+    );
+    CrmKanbanAPI.accountIdFromRoute = '2';
+    answer({ data: { payload: boardOf(7) } });
+    await pending;
+
+    expect(commit).not.toHaveBeenCalledWith(
+      types.SET_CRM_KANBAN_BOARD,
+      expect.anything()
+    );
+    expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isFetchingBoard: false,
+    });
+  });
+
+  it('does not report the error of a fetch from the previous account', async () => {
+    const commit = vi.fn();
+    let fail;
+    CrmKanbanAPI.getBoard.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        fail = reject;
+      })
+    );
+
+    const pending = actions.fetchBoard(
+      { commit, state: { filters: defaultFilters(), board: boardOf(7) } },
+      { pipelineId: 7 }
+    );
+    CrmKanbanAPI.accountIdFromRoute = '2';
+    fail(new Error('rede'));
+
+    await expect(pending).resolves.toEqual(boardOf(7));
+  });
+});
+
+// #2994, revisão: a busca da conta anterior não apaga o carregando da busca da conta nova.
+describe('#crmKanban spinner ownership across an account change', () => {
+  const boardOf = pipelineId => ({ pipeline: { id: pipelineId }, stages: [] });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CrmKanbanAPI.accountIdFromRoute = '1';
+  });
+
+  afterEach(() => {
+    CrmKanbanAPI.accountIdFromRoute = '1';
+  });
+
+  it('keeps the spinner of the new account until its own board arrives', async () => {
+    const commit = vi.fn();
+    const state = { filters: defaultFilters(), board: boardOf(null) };
+    let answerOld;
+    let answerNew;
+    CrmKanbanAPI.getBoard
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          answerOld = resolve;
+        })
+      )
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          answerNew = resolve;
+        })
+      );
+
+    const older = actions.fetchBoard({ commit, state }, { pipelineId: 7 });
+    CrmKanbanAPI.accountIdFromRoute = '2';
+    const newer = actions.fetchBoard({ commit, state }, { pipelineId: 9 });
+    answerOld({ data: { payload: boardOf(7) } });
+    await older;
+
+    expect(commit).not.toHaveBeenCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isFetchingBoard: false,
+    });
+
+    answerNew({ data: { payload: boardOf(9) } });
+    await newer;
+
+    const boards = commit.mock.calls
+      .filter(([type]) => type === types.SET_CRM_KANBAN_BOARD)
+      .map(([, board]) => board.pipeline.id);
+    expect(boards).toEqual([9]);
+    expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isFetchingBoard: false,
+    });
+  });
+});
