@@ -16,7 +16,7 @@ module Autonomia
       include MateriaisDaFase2
       # #2881 — o modelo pronto de ramo: roteiro, entrevista curta, nome e ferramentas fixas. Sem modelo, nada muda.
       include ModeloPronto
-      # #2984 — fora da Fase 2, o ajuste que não mudou nada no agente não fecha como aplicado.
+      # #2984 — fora da Fase 2, o ajuste que não mudou nada no agente (ou cuja escrita não venceu) não fecha como aplicado.
       include AjusteSemMudanca
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
@@ -716,7 +716,7 @@ module Autonomia
         # (so_pergunta) nunca é pendência.
         return state['pergunta_pendente'].to_s.strip if ajuste_da_fase2? && state.key?('pergunta_pendente')
         return '' unless adjust_mode? && state['needs_more_info'] == true
-        return '' if state['so_pergunta'] == true
+        return '' if state['so_pergunta'] == true || BuildThread.aviso_fixo?(state)
 
         state['next_question'].to_s.strip
       end
@@ -1215,6 +1215,9 @@ module Autonomia
         return '' unless @forced_close || close_intent? || force_close_declared?
 
         state = @thread.state.to_h
+        # #2984: o aviso fixo do ajuste que não mudou nada não é pergunta em aberto.
+        return '' if BuildThread.aviso_fixo?(state)
+
         state['needs_more_info'] == true ? state['next_question'].to_s.strip : ''
       end
 
@@ -1298,11 +1301,10 @@ module Autonomia
         agent = ensure_agent(token)
         return if agent.nil? # geração substituída (token perdido) ao garantir o agente: no-op
 
-        antes = retrato_do_ajuste(agent)
         attrs = build_attributes(parsed)
         log_truncation
         aplicada = agent.apply_builder_config!(token, attrs)
-        return fechar_sem_mudanca!(token, parsed) if aplicada == true && antes && retrato_do_ajuste(agent.reload) == antes
+        return fechar_ajuste_sem_efeito!(token, parsed, aplicada) if ajuste_sem_efeito?(agent, aplicada)
 
         # #2858 F3: a escolha do Construtor já é a sugestão do cartão; a página do agente novo não paga outra chamada.
         Autonomia::FerramentasProntas::SugestaoParaAgente.semear_do_construtor!(agent.reload) if aplicada == true && criacao?

@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #2984 — o "Mudar conversando" nas contas fora da Fase 2 dos agentes: o ajuste que não muda nada no agente não fecha
-# como aplicado. Antes o turno terminava com `applied: true` e a tela mostrava "Pronto" para um pedido que não entrou.
+# #2984 — o "Mudar conversando" nas contas fora da Fase 2 dos agentes: o ajuste que não muda nada no agente, ou cuja
+# escrita não venceu, não fecha como aplicado. Antes o turno terminava com `applied: true` e a tela mostrava "Pronto"
+# para um pedido que não entrou. O aviso fixo que vai ao dono nunca vira pergunta pendente do Construtor.
 RSpec.describe Autonomia::Agents::Builder do
   let(:account) { create(:account) }
   let(:agent) do
@@ -15,10 +16,11 @@ RSpec.describe Autonomia::Agents::Builder do
     )
   end
   let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agent) }
-  let(:builder) { described_class.new(account: account, build_thread: thread) }
   let(:estado) { thread.reload.state }
-  let(:sem_pedido) do
-    I18n.t('autonomia.agents.ajuste.sem_pedido', locale: Autonomia::Agents::Builder::TextosDoAjuste.idioma(nil, account))
+  let(:falas_do_construtor) { Array(thread.reload.messages).select { |m| m['role'] == 'assistant' }.pluck('content') }
+
+  def texto(chave)
+    I18n.t("autonomia.agents.ajuste.#{chave}", locale: Autonomia::Agents::Builder::TextosDoAjuste.idioma(nil, account))
   end
 
   # A saída do Construtor no ajuste: o agente como está, com o que o teste mudar por cima.
@@ -30,11 +32,12 @@ RSpec.describe Autonomia::Agents::Builder do
       'voice' => 'masculina', 'needs_more_info' => false, 'next_question' => '', 'user_asked_to_close' => false }.merge(overrides)
   end
 
-  def rodar(parsed)
-    fake_client = instance_double(Crm::Ai::ResponsesClient, create: { text: parsed.to_json })
-    allow(builder).to receive(:client).and_return(fake_client)
-    thread.append_message!('user', 'Tire a pergunta sobre o valor da garantia.')
-    builder.run!(thread.begin_build!)
+  # Um turno do dono, com o Construtor dublado. Cada turno tem o seu Construtor, como no job.
+  def rodar(parsed, fala: 'Tire a pergunta sobre o valor da garantia.', conversa: thread)
+    construtor = described_class.new(account: account, build_thread: conversa.reload)
+    allow(construtor).to receive(:client).and_return(instance_double(Crm::Ai::ResponsesClient, create: { text: parsed.to_json }))
+    conversa.append_message!('user', fala)
+    construtor.run!(conversa.begin_build!)
   end
 
   it 'está fora da Fase 2 dos agentes' do
@@ -46,18 +49,45 @@ RSpec.describe Autonomia::Agents::Builder do
 
     it 'não fecha como aplicado e deixa a conversa aberta' do
       expect(thread.reload).to be_ready
-      expect(estado).to include('applied' => false, 'needs_more_info' => true, 'next_question' => sem_pedido)
+      expect(estado).to include('applied' => false, 'needs_more_info' => true, 'next_question' => texto(:sem_pedido))
     end
 
     it 'responde ao dono com o texto fixo, nunca com um texto do modelo' do
-      ultima = Array(thread.reload.messages).last
-
-      expect(ultima).to include('role' => 'assistant', 'content' => sem_pedido)
+      expect(falas_do_construtor).to eq([texto(:sem_pedido)])
     end
 
-    it 'deixa o agente como estava' do
-      expect(agent.reload).to have_attributes(tone: 'cordial', instruction: 'Atenda o cliente da corretora com cordialidade.',
-                                              name: 'Hubber')
+    it 'não deixa o aviso fixo como pergunta pendente do turno seguinte' do
+      seguinte = described_class.new(account: account, build_thread: thread.reload)
+
+      expect(seguinte.send(:pending_question)).to eq('')
+      expect(seguinte.send(:pending_request_context)).to eq('')
+    end
+
+    it 'não leva o aviso fixo como pendência para a sessão nova' do
+      proxima = Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+
+      proxima.inherit_pending_question!
+
+      expect(proxima.reload.state['pending_question']).to be_nil
+    end
+
+    it 'não grava o aviso fixo no cartão quando o dono manda fechar no turno seguinte' do
+      rodar(saida('user_asked_to_close' => true), fala: 'Deixa assim, pode fechar.')
+
+      expect(agent.reload.human_card).to eq('O Hubber atende os clientes.')
+      expect(estado).to include('applied' => false)
+    end
+
+    it 'aplica o pedido de verdade que vier depois, e a pergunta do Construtor volta a valer como pendência' do
+      rodar(saida('greeting' => 'Olá!', 'needs_more_info' => true, 'next_question' => 'Mais formal ou informal?'),
+            fala: 'Troque a saudação.')
+      expect(described_class.new(account: account, build_thread: thread.reload).send(:pending_question))
+        .to eq('Mais formal ou informal?')
+
+      rodar(saida('greeting' => 'Olá!'), fala: 'Informal.')
+
+      expect(agent.reload.greeting).to eq('Olá!')
+      expect(estado).to include('applied' => true, 'needs_more_info' => false)
     end
   end
 
@@ -67,7 +97,27 @@ RSpec.describe Autonomia::Agents::Builder do
     it 'fecha como aplicado, sem pergunta' do
       expect(estado).to include('applied' => true, 'needs_more_info' => false)
       expect(agent.reload.tone).to eq('cordial e curto')
-      expect(Array(thread.reload.messages).pluck('role')).not_to include('assistant')
+      expect(falas_do_construtor).to be_empty
+    end
+  end
+
+  describe 'quando o Construtor muda só o tipo do agente' do
+    before { rodar(saida('agent_type' => 'sdr')) }
+
+    it 'conta como mudança' do
+      expect(estado).to include('applied' => true)
+      expect(agent.reload.agent_type).to eq('sdr')
+    end
+  end
+
+  describe 'quando o agente está pausado' do
+    before do
+      agent.update!(status: :paused)
+      rodar(saida)
+    end
+
+    it 'vale a mesma regra do agente que atende' do
+      expect(estado).to include('applied' => false, 'needs_more_info' => true, 'next_question' => texto(:sem_pedido))
     end
   end
 
@@ -82,12 +132,17 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
-  describe 'quando o Construtor muda só o tipo do agente' do
-    before { rodar(saida('agent_type' => 'sdr')) }
+  describe 'quando existe um ajuste mais novo do mesmo agente' do
+    before do
+      thread
+      Autonomia::Agents::BuildThread.create!(account: account, agent: agent)
+      rodar(saida('tone' => 'cordial e curto'))
+    end
 
-    it 'conta como mudança' do
-      expect(estado).to include('applied' => true)
-      expect(agent.reload.agent_type).to eq('sdr')
+    it 'não grava e não fecha como aplicado: avisa que o ajuste mais novo vale' do
+      expect(agent.reload.tone).to eq('cordial')
+      expect(estado).to include('applied' => false, 'needs_more_info' => true, 'next_question' => texto(:superado))
+      expect(falas_do_construtor).to eq([texto(:superado)])
     end
   end
 end

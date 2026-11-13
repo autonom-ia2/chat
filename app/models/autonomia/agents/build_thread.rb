@@ -149,11 +149,19 @@ module Autonomia
           return previous_state['pendencia_no_teto'] == true ? '' : previous_state['pergunta_pendente'].to_s.strip
         end
         return '' unless previous_state['needs_more_info'] == true
-        return '' if previous_state['so_pergunta'] == true
+        return '' if previous_state['so_pergunta'] == true || self.class.aviso_fixo?(previous_state)
 
         previous_state['next_question'].to_s.strip
       end
       private :pending_question_of
+
+      # #2984 — o `next_question` deste state é um aviso fixo do Construtor (o ajuste que não mudou nada no agente), não
+      # uma pergunta em aberto: nunca vira pendência nem nota de "pergunta sem resposta". A marca guarda o próprio texto,
+      # então deixa de valer sozinha quando outro turno grava outra pergunta.
+      def self.aviso_fixo?(estado)
+        aviso = estado.to_h['aviso_fixo'].to_s
+        aviso.present? && aviso == estado.to_h['next_question'].to_s
+      end
 
       # #2881 — junta chaves ao `state` sem token e sem mudar o status: é escolha do dono na tela (as listas do modelo
       # pronto), não uma transição da geração, e vale também com a geração em andamento. O merge é no banco, no próprio
