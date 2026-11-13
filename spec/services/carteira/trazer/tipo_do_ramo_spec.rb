@@ -33,7 +33,9 @@ RSpec.describe Carteira::Trazer::TipoDoRamo, :aggregate_failures do
     guardar(mapa)
 
     expect(mapa.keys.map(&:length)).to eq([64, 64])
-    expect(importacao.reload.options.to_json.downcase).not_to include('autom', 'vida')
+    # O que fica guardado é { resumo => tipo }: o tipo é um dos cinco da carteira, e o ramo não aparece.
+    expect(mapa.keys.join.downcase).not_to include('autom', 'vida')
+    expect(importacao.reload.options.to_json.downcase).not_to include('autom')
     expect(mapa.keys.first).not_to eq(described_class.chave(importacao.id + 1, 'Automóvel'))
     expect(['Automóvel', ' automóvel', 'VIDA', 'Náutico', '', nil].map { |ramo| tipos.de(ramo) }).to eq(%w[auto auto vida outro outro outro])
   end

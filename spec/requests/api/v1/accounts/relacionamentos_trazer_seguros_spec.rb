@@ -232,7 +232,8 @@ RSpec.describe 'Trazer minha lista: a planilha traz seguros (Relacionamentos)', 
     it 'a planilha sem seguros continua juntando as linhas da mesma pessoa, e nada vai para a carteira' do
       importacao = ler_planilha(planilha_de(seguros_bons))
 
-      expect(ler(importacao)['resumo']).to include('total' => 4, 'juntadas' => 2, 'entram' => 2)
+      # As três linhas da Ana viram uma só: sobram duas pessoas.
+      expect(ler(importacao)['resumo']).to include('total' => 2, 'juntadas' => 2, 'entram' => 2)
       trazer(importacao)
       gravar_a_lista
       expect([importacao.reload.completed?, account.contacts.count, apolices.count]).to eq([true, 2, 0])
