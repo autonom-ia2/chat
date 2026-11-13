@@ -18,6 +18,16 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     quem
   end
 
+  # O que a gravação de "Trazer minha lista" anota de quem ela cria: o resumo da pessoa como está agora.
+  def anotada(quem)
+    campo = Relacionamentos::CampoPreenchido
+    linha = importacao.campaign_import_rows.find_by!(contact_id: quem.id)
+    como_esta = Relacionamentos::Trazer::PessoaCriada.new(importacao).conteudo(quem.id)
+    campo.create!(account_id: account.id, campaign_import_row_id: linha.id, contact_id: quem.id, campo: campo::PESSOA_CRIADA,
+                  valor_posto_hash: campo.resumo(linha.id, campo::PESSOA_CRIADA, como_esta))
+    quem
+  end
+
   # Linha mínima numa tabela, sem passar pelo modelo: aqui só importa a linha existir.
   def linha!(tabela, atributos)
     modelo = Class.new(ApplicationRecord) { self.table_name = tabela }
@@ -35,6 +45,44 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
 
     expect(ficam(intocada)).to be_empty
     expect(described_class.new(importacao).entre([])).to be_empty
+  end
+
+  it 'fica quem teve a ficha editada depois da lista: nome, telefone, e-mail, cidade, empresa, informação ou tipo' do
+    intocada = anotada(criada('Pessoa Intocada', phone_number: '+5511987650030', email: 'pessoa.intocada@exemplo.com.br',
+                                                 additional_attributes: { 'city' => 'Campinas' }, custom_attributes: { 'plano' => 'Ouro' }))
+    mudancas = {
+      'Pessoa Nome' => { name: 'Pessoa Renomeada' },
+      'Pessoa Telefone' => { phone_number: '+5511987650039' },
+      'Pessoa Email' => { email: 'pessoa.nova@exemplo.com.br' },
+      'Pessoa Cidade' => { additional_attributes: { 'city' => 'Recife' } },
+      'Pessoa Informacao' => { custom_attributes: { 'plano' => 'Diamante' } },
+      'Pessoa Empresa' => { company: account.companies.create!(name: 'Oficina Central') },
+      'Pessoa Cliente' => { contact_type: :customer, customer_since: Time.current }
+    }
+    editadas = mudancas.map do |nome, mudanca|
+      quem = anotada(criada(nome))
+      quem.update!(mudanca)
+      quem
+    end
+    # O que muda sozinho não é edição: a última atividade não segura ninguém.
+    intocada.update!(last_activity_at: Time.current)
+
+    expect(ficam(intocada, *editadas)).to match_array(editadas.map(&:id))
+  end
+
+  it 'a pessoa sem anotação (lista de antes, ou da tela antiga) não fica só por ter sido editada' do
+    sem_anotacao = criada('Pessoa Sem Anotação')
+    sem_anotacao.update!(name: 'Pessoa Renomeada')
+
+    expect(ficam(sem_anotacao)).to be_empty
+  end
+
+  it 'fica quem tem seguro na carteira' do
+    com_seguro = criada('Pessoa Segurada')
+    sem = criada('Pessoa Sem')
+    create(:carteira_apolice, account: account, contact: com_seguro)
+
+    expect(ficam(com_seguro, sem)).to contain_exactly(com_seguro.id)
   end
 
   it 'fica quem tem conversa' do
@@ -130,6 +178,25 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     expect(ficam(em_lista_desfeita)).to be_empty
   end
 
+  it 'a lista que quebrou no meio e foi desfeita também não segura ninguém' do
+    em_lista_desfeita = criada('Pessoa Lista Quebrada')
+    desfeita = lista
+    desfeita.update!(status: :failed, import_started_at: 1.hour.ago, undo_status: :completed)
+    desfeita.campaign_import_rows.create!(row_number: 2, status: :imported, contact_id: em_lista_desfeita.id, was_existing_contact: true)
+
+    expect(ficam(em_lista_desfeita)).to be_empty
+  end
+
+  # CampaignImports::UndoLabels também grava `undo_status: completed`, mas só tirou as etiquetas: a pessoa segue na base.
+  it 'a base de campanha que só teve as etiquetas desfeitas continua segurando a pessoa' do
+    na_base = criada('Pessoa Na Base')
+    so_nesta = criada('Pessoa Só Nesta')
+    base = account.campaign_imports.create!(user: user, status: :labels_undone, undo_status: :completed, mode: 'single_label')
+    base.campaign_import_rows.create!(row_number: 2, status: :labels_undone, contact_id: na_base.id, was_existing_contact: true)
+
+    expect(ficam(na_base, so_nesta)).to contain_exactly(na_base.id)
+  end
+
   it 'fica quem entrou num Público montado pelas conversas' do
     no_publico = criada('Pessoa Público')
     sem = criada('Pessoa Sem')
@@ -176,5 +243,19 @@ RSpec.describe Relacionamentos::Trazer::QuemFica, :aggregate_failures do
     intocada = criada('Pessoa Intocada')
 
     expect(ficam(intocada, de_fora)).to be_empty
+  end
+
+  it 'não olha a importação, a campanha de e-mail nem o Público de outra conta' do
+    outra = create(:account)
+    intocada = criada('Pessoa Intocada')
+    lista(conta: outra).campaign_import_rows.create!(row_number: 2, status: :imported, contact_id: intocada.id, was_existing_contact: true)
+    remetente = linha!('email_sender_identities', account_id: outra.id, domain: 'exemplo.invalid')
+    de_email = linha!('email_campaigns', account_id: outra.id, name: 'Novidades', sender_identity_id: remetente)
+    linha!('email_campaign_recipients', email_campaign_id: de_email, email: 'pessoa.email@exemplo.invalid', contact_id: intocada.id)
+    conversa = create(:conversation, account: outra)
+    busca = linha!('conversation_audience_searches', account_id: outra.id, request: 'quem pediu orçamento', period: '30d')
+    linha!('conversation_audience_people', search_id: busca, contact_id: intocada.id, conversation_id: conversa.id, group: 'sure')
+
+    expect(ficam(intocada)).to be_empty
   end
 end

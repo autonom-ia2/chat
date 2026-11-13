@@ -8,9 +8,12 @@ require 'rails_helper'
 # só (a conta, o bloco vazio que acha o fim) some na conta. Quem acrescentar um lugar onde a pessoa pode aparecer
 # (QuemFica#onde_aparece) sobe o número aqui, de propósito.
 RSpec.describe Relacionamentos::Trazer::PreviaDoDesfazer, :aggregate_failures do
+  include ListaTrazidaGrandeHelpers
+
   let(:bloco) { Relacionamentos::Trazer::QuemFica::BLOCO }
-  # Pegar o bloco, ver quem ainda existe, as listas já desfeitas e os 19 lugares onde a pessoa pode aparecer.
-  let(:por_bloco_de_pessoas_criadas) { 22 }
+  # Pegar o bloco, ver quem ainda existe, as listas já desfeitas, os 20 lugares onde a pessoa pode aparecer e, de quem
+  # não apareceu em nenhum, o resumo anotado e a ficha de hoje (para saber se alguém a editou).
+  let(:por_bloco_de_pessoas_criadas) { 25 }
   # Pegar o bloco, carregar os campos, as pessoas, quem ganhou card desde a lista e os 4 lugares de quem foi procurado.
   let(:por_bloco_de_campos) { 8 }
   # Cada pessoa completada tem três campos anotados (ListaTrazidaGrandeHelpers#por_pessoas_completadas).
@@ -27,7 +30,7 @@ RSpec.describe Relacionamentos::Trazer::PreviaDoDesfazer, :aggregate_failures do
     medida.consultas
   end
 
-  it 'faz 22 consultas por bloco de pessoas que a lista criou' do
+  it 'faz 25 consultas por bloco de pessoas que a lista criou' do
     de_um_bloco = consultas_da_previa do |importacao|
       recusaram = por_pessoas_criadas(importacao, bloco)
       { tira: bloco - recusaram, ficam: recusaram, devolve: 0 }

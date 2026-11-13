@@ -5,11 +5,15 @@
 # - tem card no funil, como a pessoa do card ou como quem pediu (solicitante);
 # - tem nota escrita na ficha, retorno marcado ou etiqueta (saem junto com a pessoa, e foi alguém que os pôs lá; a
 #   importação de contatos não põe etiqueta em ninguém);
+# - teve a ficha editada depois da lista: o nome, o telefone, o e-mail, a cidade, a empresa ou uma informação já não são
+#   os que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou;
 # - tem convite de agendamento, é convidada de uma reunião ou a IA já guardou memória dela;
+# - tem seguro na carteira (Carteira::Apolice): a apólice, a história e o PDF dela sairiam junto com a pessoa;
 # - veio também da prospecção ou de um formulário de anúncio (o lead perderia a pessoa);
 # - recebeu, ou está na fila de, uma campanha (WhatsApp ou SMS, e-mail, WhatsApp Oficial);
 # - está em outra importação: outra lista trazida, um Público ou uma base de campanha. A lista que já foi desfeita não
-#   segura ninguém: quem trouxe a mesma planilha duas vezes e desfez uma consegue desfazer a outra;
+#   segura ninguém: quem trouxe a mesma planilha duas vezes e desfez uma consegue desfazer a outra. A base de campanha
+#   que só teve as etiquetas desfeitas continua segurando (Relacionamentos::Trazer::Situacao.desfeitas);
 # - entrou num Público montado pelas conversas;
 # - recusou mensagens (opted_out_at), recusou avisos de agendamento ou está bloqueada. Apagar a pessoa apagaria a
 #   recusa junto, e a próxima pessoa criada com o mesmo telefone voltaria a receber.
@@ -17,13 +21,18 @@
 # Quem já não existe (apagada à mão, ou mesclada em outra pessoa) não sai nem fica: é pulada.
 #
 # A prévia e o Desfazer leem por aqui, em blocos, então o que a prévia promete é o que o Desfazer faz. O Desfazer ainda
-# pergunta de novo, pessoa a pessoa, logo antes de apagar (`fica?`): quem ganhou conversa enquanto o bloco andava fica.
+# pergunta de novo antes de apagar: por `entre`, de poucas em poucas pessoas, e por `tem_conversa?`, pessoa a pessoa
+# (Relacionamentos::Trazer::Desfazer). Quem ganhou conversa enquanto o bloco andava fica.
+#
+# Toda fonte é lida só dentro da conta, mesmo as que não têm a coluna da conta (vão pela campanha, pela importação ou
+# pela busca a que pertencem).
 class Relacionamentos::Trazer::QuemFica
   BLOCO = 500
 
   def initialize(importacao)
     @importacao = importacao
     @conta = importacao.account
+    @criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
   end
 
   # Bloco a bloco, das pessoas que a lista criou e que ainda existem: os ids das que saem e os das que ficam.
@@ -44,11 +53,17 @@ class Relacionamentos::Trazer::QuemFica
   def entre(ids)
     return Set.new if ids.empty?
 
-    onde_aparece.flat_map { |registros, coluna| registros.where(coluna => ids).distinct.pluck(coluna) }.to_set
+    seguradas = onde_aparece.flat_map { |registros, coluna| registros.where(coluna => ids).distinct.pluck(coluna) }.to_set
+    seguradas.merge(@criada.editadas(ids - seguradas.to_a))
   end
 
   def fica?(id)
     entre([id]).any?
+  end
+
+  # A conversa é o que chega sozinho, a qualquer segundo: o Desfazer pergunta por ela pessoa a pessoa, logo antes de apagar.
+  def tem_conversa?(id)
+    Conversation.where(da_conta).exists?(contact_id: id)
   end
 
   private
@@ -73,22 +88,23 @@ class Relacionamentos::Trazer::QuemFica
 
   def campanhas_e_listas
     [
-      [CampaignRecipient.where(da_conta), :contact_id], [EmailCampaignRecipient.all, :contact_id],
+      [CampaignRecipient.where(da_conta), :contact_id],
+      [EmailCampaignRecipient.where(email_campaign_id: EmailCampaign.where(da_conta).select(:id)), :contact_id],
       [WhatsappApiCampaignRecipient.where(da_conta), :contact_id],
-      [CampaignImportRow.where.not(campaign_import_id: que_nao_seguram), :contact_id],
-      [ConversationAudiencePerson.all, :contact_id]
+      [CampaignImportRow.where(campaign_import_id: @conta.campaign_imports.where.not(id: que_nao_seguram).select(:id)), :contact_id],
+      [ConversationAudiencePerson.where(search_id: ConversationAudienceSearch.where(da_conta).select(:id)), :contact_id]
     ]
   end
 
-  # As importações que não seguram ninguém: esta e as que a conta já desfez.
+  # As importações que não seguram ninguém: esta e as listas que a conta já desfez.
   def que_nao_seguram
-    [@importacao.id] + @conta.campaign_imports.undo_status_completed.ids
+    [@importacao.id] + Relacionamentos::Trazer::Situacao.desfeitas(@conta.campaign_imports).ids
   end
 
   def agenda_memoria_e_leads
     [
       [Crm::BookingInvite.where(da_conta), :contact_id], [Crm::MeetingGuest.where(da_conta), :contact_id],
-      [Crm::MemoriaFato.where(da_conta), :contact_id],
+      [Crm::MemoriaFato.where(da_conta), :contact_id], [Carteira::Apolice.where(da_conta), :contact_id],
       [Autonomia::Prospecting::Lead.where(da_conta), :contact_id], [Crm::MetaAdsLead.where(da_conta), :contact_id]
     ]
   end
