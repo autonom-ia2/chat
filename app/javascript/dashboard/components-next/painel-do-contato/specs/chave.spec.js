@@ -25,9 +25,16 @@ vi.mock('dashboard/composables/useUISettings', () => ({
     isOnExpandedLayout: { value: false },
   }),
 }));
-vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
-}));
+// #2897: o painel pergunta à conta se ela tem a carteira de seguros; esta não tem.
+vi.mock('dashboard/composables/useAccount', async () => {
+  const { ref } = await import('vue');
+  return {
+    useAccount: () => ({
+      isCloudFeatureEnabled: () => false,
+      currentAccount: ref({}),
+    }),
+  };
+});
 vi.mock('@vueuse/core', async importOriginal => ({
   ...(await importOriginal()),
   useWindowSize: () => ({ width: { value: 390 } }),

@@ -93,10 +93,6 @@ class Carteira::Consulta < Relacionamentos::Consulta
   end
 
   # As datas de corte de cada grupo, no dia de hoje da conta.
-  def com_os_cortes(condicao)
-    ActiveRecord::Base.sanitize_sql_array([condicao, cortes])
-  end
-
   def cortes
     @cortes ||= { hoje: hoje }.merge(VENCE_EM.to_h { |dias| [:"em_#{dias}_dias", hoje + dias] },
                                      NAO_RENOVARAM_EM.to_h { |dias| [:"ha_#{dias}_dias", hoje - dias] })

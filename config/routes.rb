@@ -1165,6 +1165,8 @@ Rails.application.routes.draw do
                 get :contagens
                 get :resumo
                 get :opcoes_de_filtro
+                # O selo de seguro das pessoas da página da lista de pessoas (`pessoa_ids[]`).
+                get :resumo_por_dono, to: 'seguros/resumo_por_dono#show'
                 # #2898 (E5.1) — "Ajustar renovações": onde ficam as renovações da conta (funil, etapa, dias, mensagens).
                 get :renovacoes, to: 'seguros/renovacoes#show'
                 put :renovacoes, to: 'seguros/renovacoes#update'
