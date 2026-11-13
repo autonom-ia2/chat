@@ -60,7 +60,8 @@ export const useCarteiraNaLista = ({
       const chegaram = await carteiraFonte({ demo }).resumoPorPessoa(ids);
       if (minha === consulta) guardar(ids, chegaram);
     } catch (falha) {
-      // Sem a carteira a lista segue inteira, só sem os selos.
+      // De propósito: sem a carteira a lista segue inteira, só sem os selos.
+      // Mas a falha fica registrada.
       reportarSemDados(falha, ONDE_FALHOU);
     }
   };
