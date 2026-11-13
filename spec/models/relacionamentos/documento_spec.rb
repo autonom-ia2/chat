@@ -34,10 +34,11 @@ RSpec.describe Relacionamentos::Documento do
     expect([documento(contact: marina).save, documento(contact: repetida).save]).to eq([true, true])
   end
 
-  it 'o banco recusa documento sem dono, com dois donos e de tipo fora da lista' do
+  it 'o banco recusa documento sem dono, com dois donos, de tipo fora da lista e CPF em empresa' do
     fora = {
-      'relacionamentos_documentos_dono' => [{}, { contact: marina, company: oficina }],
-      'relacionamentos_documentos_tipo' => [{ contact: marina, tipo: 'rg' }]
+      'relacionamentos_documentos_dono' => [{ tipo: 'cnpj', valor: cnpj }, { contact: marina, company: oficina }],
+      'relacionamentos_documentos_tipo' => [{ contact: marina, tipo: 'rg' }],
+      'relacionamentos_documentos_cpf_so_de_pessoa' => [{ company: oficina }]
     }
 
     fora.each do |check, tentativas|
@@ -53,6 +54,13 @@ RSpec.describe Relacionamentos::Documento do
 
     expect(invalidos.map { |campos| documento(**campos).valid? }).to all(be(false))
     expect([documento(contact: marina), documento(company: oficina, tipo: 'cnpj', valor: cnpj)]).to all(be_valid)
+  end
+
+  it 'a empresa só tem CNPJ; a pessoa pode ter CPF e CNPJ (o MEI é pessoa com CNPJ)' do
+    cpf_em_empresa = documento(company: oficina)
+
+    expect([cpf_em_empresa.valid?, cpf_em_empresa.errors.attribute_names]).to eq([false, [:tipo]])
+    expect([documento(contact: marina), documento(contact: marina, tipo: 'cnpj', valor: cnpj)]).to all(be_valid)
   end
 
   it 'recusa a pessoa e a empresa de outra conta: o banco só confere que elas existem' do

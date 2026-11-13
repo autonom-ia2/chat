@@ -1,11 +1,13 @@
 # Um CPF ou um CNPJ como número (épico #1240, decisão R1): a forma de comparação, se confere e como aparece.
 #
 # A forma de comparação é o que o banco guarda e o que a busca compara: só os dígitos do CPF (11), e os 14 caracteres do
-# CNPJ em maiúscula. O CNPJ novo da Receita (desde julho de 2026) tem letra nas 12 primeiras posições; os dois últimos
-# seguem dígitos. Ponto, traço, barra e espaço saem por método de texto, sem regex. Isto compara valor: não lê frase.
-# Quem chama manda só o número. Como o CNPJ novo tem letra, um texto com letras na frente do número ("CPF 123...") tem
-# o tamanho de um CNPJ e só é recusado pelo dígito verificador, que deixa passar cerca de 1 em cada 100: não serve de
-# filtro de texto livre.
+# CNPJ em maiúscula. O formato novo do CNPJ, com letra nas 12 primeiras posições, é aceito; os dois últimos seguem dígitos.
+#
+# Isto compara valor: não lê frase. Quem chama manda só o número. O texto pode ter espaço nas pontas e, no meio, só
+# dígito, letra, ponto, barra e hífen; qualquer outro caractere (espaço no meio, dois-pontos, vírgula) faz o texto não
+# ser número nenhum. Sem isso, um rótulo na frente do CPF ("CLI 123.456.789-09") ficava com os 14 caracteres de um CNPJ,
+# passava na conta do dígito verificador em cerca de 1 caso em 100 e gravava dado de pessoa como CNPJ. Tudo por método
+# de texto, sem regex.
 #
 # Confere quando os dois dígitos verificadores batem (módulo 11). No CNPJ cada caractere vale o código dele menos 48,
 # a regra da Receita, que para dígito dá o próprio dígito. Número de um caractere só repetido (000..., 111...) passa na
@@ -16,7 +18,9 @@
 class Relacionamentos::NumeroDeDocumento
   CPF = 'cpf'.freeze
   CNPJ = 'cnpj'.freeze
-  FORA_LETRA_E_DIGITO = '^0-9A-Z'.freeze
+  # Conjuntos de caracteres do String#count e do String#delete (não são regex). O hífen vem na frente para valer como hífen.
+  DE_DOCUMENTO = '-./0-9A-Z'.freeze
+  PONTUACAO = '-./'.freeze
   DIGITOS = '0-9'.freeze
   CODIGO_DO_ZERO = '0'.ord
   # Os pesos de cada dígito verificador: o primeiro sobre o corpo, o segundo sobre o corpo e o primeiro dígito.
@@ -31,7 +35,8 @@ class Relacionamentos::NumeroDeDocumento
   attr_reader :canonico
 
   def initialize(texto)
-    @canonico = texto.to_s.upcase.delete(FORA_LETRA_E_DIGITO).freeze
+    limpo = texto.to_s.strip.upcase
+    @canonico = (limpo.count(DE_DOCUMENTO) == limpo.length ? limpo.delete(PONTUACAO) : '').freeze
   end
 
   # 'cpf', 'cnpj' ou nil quando o tamanho não é de nenhum dos dois.
@@ -39,6 +44,10 @@ class Relacionamentos::NumeroDeDocumento
     return CPF if canonico.length == TAMANHO_DO_CPF && so_digitos?(canonico)
 
     CNPJ if canonico.length == TAMANHO_DO_CNPJ && so_digitos?(canonico[CORPO_DO_CNPJ..])
+  end
+
+  def cpf?
+    tipo == CPF
   end
 
   def valido?

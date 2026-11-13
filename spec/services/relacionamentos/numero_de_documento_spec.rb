@@ -23,10 +23,24 @@ RSpec.describe Relacionamentos::NumeroDeDocumento do
   end
 
   it 'recusa dígito verificador errado, tamanho errado, número repetido, letra no CPF e texto vazio' do
-    errados = ['123.456.789-08', '11.222.333/0001-80', '1234567890', '111.111.111-11', '00.000.000/0000-00', '1234567890A',
-               'CPF 12345678909', '', nil]
+    errados = ['123.456.789-08', '11.222.333/0001-80', '1234567890', '111.111.111-11', '00.000.000/0000-00', '1234567890A', '', nil]
 
     expect(errados.map { |texto| numero(texto).valido? }).to all(be(false))
+  end
+
+  # "CLI" mais os onze dígitos deste CPF dão 14 caracteres que passam na conta do dígito verificador do CNPJ: só tirando
+  # espaço e pontuação, o rótulo na frente fazia o CPF de uma pessoa ser guardado como CNPJ.
+  it 'recusa texto que não é só o número: rótulo na frente, espaço no meio, dois-pontos, outro tipo de traço' do
+    com_rotulo = numero('CLI 123.456.789-09')
+    outros = ['CPF 12345678909', 'CPF: 123.456.789-09', '123 456 789 09', '123.456.789-09, da Marina', "123.456.789\u201109"]
+
+    expect([com_rotulo.canonico, com_rotulo.tipo, com_rotulo.valido?]).to eq(['', nil, false])
+    expect(outros.map { |texto| numero(texto).valido? }).to all(be(false))
+    expect([numero('CLI12345678909').tipo, numero('CLI12345678909').valido?]).to eq(['cnpj', true])
+  end
+
+  it 'aceita espaço e quebra de linha só nas pontas' do
+    expect([numero(" 123.456.789-09\n").canonico, numero("\t11.222.333/0001-81 ").canonico]).to eq(%w[12345678909 11222333000181])
   end
 
   it 'mostra o número pontuado só para quem pede, e mascarado em to_s e inspect' do

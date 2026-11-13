@@ -69,18 +69,25 @@ RSpec.describe Relacionamentos::Documentos do
       expect(gravados.uniq.size).to eq(1)
     end
 
-    it 'lê o documento que foi gravado em texto puro antes de as chaves existirem' do
-      documento = documentos.guardar(marina, cpf)
-      ActiveRecord::Base.connection.execute("UPDATE relacionamentos_documentos SET valor = '12345678909' WHERE id = #{Integer(documento.id)}")
+    # A instalação que guardou documento sem as chaves e passou a tê-las depois: a linha antiga segue em texto puro. O
+    # `extend_queries` do Rails, ligado junto com as chaves em config/application.rb, faz a busca procurar as duas formas.
+    it 'lê e acha pelo número também o documento gravado em texto puro antes de as chaves existirem' do
+      antiga = create(:contact, account: account, name: 'Marina E.')
+      documentos.guardar(marina, cpf)
+      gravar_em_texto_puro(documentos.guardar(antiga, cpf), '12345678909')
 
-      expect(documentos.ler(marina).valor).to eq('12345678909')
+      expect(Relacionamentos::Documento.order(:id).map { |documento| valor_no_banco(documento) == '12345678909' }).to eq([false, true])
+      expect(documentos.donos(cpf)).to eq([marina, antiga])
+      expect(documentos.ler(antiga).valor).to eq('12345678909')
     end
 
-    it 'nem o log de consultas, no nível mais falador, traz o número' do
+    # Guardar e ler nunca levam o número em claro para a consulta. A busca (`donos`) fica de fora: com o `extend_queries`
+    # ela procura também a forma em texto puro, que vai na consulta, e escondê-la no log de consultas depende do filtro
+    # do ActiveRecord::Base, que este PR não mexe (o `filter_attributes` do model só cobre o `inspect`).
+    it 'guardar e ler não põem o número nem no log de consultas, o nível mais falador' do
       marina
       escrito = log_de(:debug) do
         documentos.guardar(marina, cpf)
-        documentos.donos(cpf)
         documentos.ler(marina)
       end
 
@@ -102,7 +109,8 @@ RSpec.describe Relacionamentos::Documentos do
     end
 
     # O log de consultas (debug) fica de fora aqui: sem cifra, o valor vai na consulta como o de qualquer outra coluna,
-    # e escondê-lo depende do filtro de atributos do Active Record, que este PR não mexe. A produção registra a partir de info.
+    # e escondê-lo ali depende do filtro do ActiveRecord::Base, que este PR não mexe (o `filter_attributes` do model só
+    # cobre o `inspect`). A produção registra a partir de info.
     it 'no nível de log da produção, nada do que o serviço faz traz o número' do
       marina
       escrito = log_de(:info) do
@@ -156,11 +164,48 @@ RSpec.describe Relacionamentos::Documentos do
     end
 
     it 'vale para todo texto que não é CPF nem CNPJ, e a busca por ele não acha ninguém' do
-      errados = ['', nil, '1234567890', '111.111.111-11', '11.222.333/0001-80', 'não sei o CPF']
+      errados = ['', nil, '1234567890', '111.111.111-11', '11.222.333/0001-80', 'não sei o CPF', 'CLI 123.456.789-09']
 
       errados.each { |texto| expect { documentos.guardar(marina, texto) }.to raise_error(CustomExceptions::DocumentoRecusa) }
       expect(errados.map { |texto| documentos.donos(texto) }).to all(eq([]))
       expect(Relacionamentos::Documento.count).to eq(0)
+    end
+  end
+
+  describe 'CPF em empresa' do
+    let(:frase) { 'Empresa tem CNPJ, não CPF. Digite aqui o CNPJ da empresa e guarde o CPF na pessoa que é dona dele.' }
+
+    it 'é recusado com uma frase que diz o que fazer; a pessoa pode ter CNPJ' do
+      conferir = lambda do |recusa|
+        expect([recusa.codigo, recusa.message, recusa.http_status]).to eq(['cpf_em_empresa', frase, 422])
+        expect(recusa.message + recusa.inspect).not_to include('123', '456', '789')
+      end
+
+      I18n.with_locale(:pt_BR) do
+        expect { documentos.guardar(oficina, cpf) }.to raise_error(CustomExceptions::DocumentoRecusa, &conferir)
+      end
+      expect(documentos.guardar(marina, cnpj).tipo).to eq('cnpj')
+      expect(Relacionamentos::Documento.where(company_id: oficina.id)).to be_empty
+    end
+  end
+
+  describe 'dois pedidos ao mesmo tempo para o mesmo dono' do
+    # O segundo pedido procurou o documento antes de o primeiro gravar: não achou, e vai criar um que o índice único
+    # recusa. Aqui o primeiro já gravou, e a primeira procura do segundo devolve o que ele viu naquela hora: nada.
+    it 'o que chega depois tenta de novo e troca o documento, sem erro e sem derrubar a transação de quem chamou' do
+      documentos.guardar(marina, cpf)
+      visto_antes = Relacionamentos::Documento.new(account_id: account.id, contact_id: marina.id, tipo: 'cpf')
+      procuras = 0
+      allow(documentos).to receive(:do_tipo).and_wrap_original do |procurar, *argumentos|
+        procuras += 1
+        procuras == 1 ? visto_antes : procurar.call(*argumentos)
+      end
+
+      guardado = documentos.guardar(marina, outro_cpf)
+
+      expect(procuras).to eq(2)
+      expect([guardado.valor, Relacionamentos::Documento.where(contact_id: marina.id).count]).to eq(['98765432100', 1])
+      expect(documentos.donos(outro_cpf)).to eq([marina])
     end
   end
 

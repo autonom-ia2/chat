@@ -1,12 +1,18 @@
 # O CPF de uma pessoa ou o CNPJ de uma empresa (épico #1240, decisão R1): tabela própria do fork, com o número cifrado
 # e busca por valor exato. O dono é a pessoa (`contact`) OU a empresa (`company`), nunca os dois; cada dono tem no
-# máximo um CPF e um CNPJ (índices únicos do banco). O mesmo número pode estar em mais de um dono da conta: a base real
-# tem a mesma pessoa cadastrada duas vezes, e quem casa pessoa por documento recebe todos e decide.
+# máximo um documento de cada tipo (índices únicos do banco). A pessoa pode ter CPF e CNPJ (o MEI é pessoa com CNPJ); a
+# empresa só tem CNPJ. O mesmo número pode estar em mais de um dono da conta: a base real tem a mesma pessoa cadastrada
+# duas vezes, e quem casa pessoa por documento recebe todos e decide.
 #
 # `valor` é a forma de comparação do número (Relacionamentos::NumeroDeDocumento#canonico). Com as chaves do Active
 # Record Encryption na instalação, vai cifrado de forma determinística: o mesmo número vira sempre o mesmo texto
 # cifrado, e `where(valor: ...)` e o índice [account_id, tipo, valor] acham por valor exato. Sem as chaves fica em texto
 # puro, como as outras colunas cifradas do fork, e tudo funciona igual. Busca por pedaço do número não existe aqui.
+#
+# Instalação que guardou documento sem as chaves e passou a tê-las depois: a linha antiga, em texto puro, continua lida
+# (`support_unencrypted_data`) e achada pela busca (`extend_queries`, que faz o `where(valor: ...)` procurar as duas
+# formas). Os dois são ligados em `config/application.rb`, no mesmo bloco que lê as chaves; sem o `extend_queries` a
+# busca só acha a linha cifrada.
 #
 # O número inteiro não vai para log, erro, cache nem argumento de job: use `mascarado`. O `inspect` e o JSON do model
 # saem sem ele, e as mensagens de validação não repetem valor. Quem precisa do número pede `valor` ou `formatado`.
@@ -30,6 +36,7 @@ class Relacionamentos::Documento < ApplicationRecord
 
   validates :tipo, inclusion: { in: TIPOS }
   validate :numero_que_confere
+  validate :cpf_so_de_pessoa
   validate :um_dono_da_conta, if: -> { new_record? || will_save_change_to_contact_id? || will_save_change_to_company_id? }
 
   scope :da_conta, ->(account) { where(account_id: account.id) }
@@ -63,6 +70,11 @@ class Relacionamentos::Documento < ApplicationRecord
   # O que se guarda é a forma de comparação de um número que confere, do tipo declarado.
   def numero_que_confere
     errors.add(:valor, :invalid) unless numero.valido? && numero.tipo == tipo && numero.canonico == valor
+  end
+
+  # Empresa não tem CPF (CHECK `_cpf_so_de_pessoa`). CNPJ a pessoa pode ter.
+  def cpf_so_de_pessoa
+    errors.add(:tipo, :invalid) if tipo == Relacionamentos::NumeroDeDocumento::CPF && contact_id.nil? && company_id
   end
 
   # O banco garante um dono só (CHECK) e que ele existe (chave), não de quem ele é: documento de uma conta apontando
