@@ -15,11 +15,22 @@ import MenuMais from './MenuMais.vue';
 // contato (`podeEditar` falso) não tem "Marcar como cliente", "Não é mais
 // cliente" nem "Alterar informações"; quem não pode criar card
 // (`podeCriarCards` falso) não tem "Novo card".
+// #2970 — o que ainda não é de verdade não aparece: "Conversar" só existe com
+// `podeConversar` (a página liga quando há conversa para abrir, ou na
+// demonstração). Sem ele nenhum botão é preenchido: as outras ações seguem
+// discretas, na mesma ordem. "Lembrete" e, no "⋯", Juntar, Bloquear e Apagar
+// ainda só avisam: só existem com `naDemonstracao`. Fora dela sobra o que é de
+// quem pode editar: de quem é cliente, o "⋯" com "Alterar informações" e "Não
+// é mais cliente"; de quem não é, só o botão "Alterar informações", sem menu.
+// Quem só pode ver não tem nenhum dos dois; sem ação nenhuma, o grupo de ações
+// não é desenhado.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcandoCliente: { type: Boolean, default: false },
   podeEditar: { type: Boolean, default: true },
   podeCriarCards: { type: Boolean, default: true },
+  podeConversar: { type: Boolean, default: false },
+  naDemonstracao: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'conversar',
@@ -43,6 +54,32 @@ const clienteDesde = computed(() =>
 );
 const empresa = computed(
   () => props.pessoa.additional_attributes?.company_name || ''
+);
+
+// O "⋯" só é menu com dois itens ou mais: o desenho todo, na demonstração, ou
+// "Alterar informações" e "Não é mais cliente", de quem é cliente. Com um item
+// só, "Alterar informações" é um botão: ninguém abre menu para uma escolha.
+const temMais = computed(
+  () => props.naDemonstracao || (props.podeEditar && ehCliente.value)
+);
+const alteraDireto = computed(() => props.podeEditar && !temMais.value);
+const temSecundarias = computed(
+  () => props.podeCriarCards || props.podeEditar || props.naDemonstracao
+);
+// Celular, com o "⋯": os botões com rótulo ao lado dele (Novo card, Lembrete)
+// dividem a linha e ele fica na ponta; sozinho, continua na ponta. Sem o "⋯",
+// cada botão ocupa a linha toda: "Alterar informações" não cabe ao lado de
+// outro.
+const GRADE_COM_MAIS = [
+  'grid-cols-1 justify-items-end',
+  'grid-cols-[1fr_auto]',
+  'grid-cols-[1fr_1fr_auto]',
+];
+const botoesAoLadoDoMais = computed(
+  () => [props.podeCriarCards, props.naDemonstracao].filter(Boolean).length
+);
+const grade = computed(() =>
+  temMais.value ? GRADE_COM_MAIS[botoesAoLadoDoMais.value] : 'grid-cols-1'
 );
 </script>
 
@@ -164,6 +201,7 @@ const empresa = computed(
       </div>
     </div>
     <div
+      v-if="podeConversar || temSecundarias"
       role="group"
       :aria-label="
         t('RELACIONAMENTOS_FICHA.CABECALHO.ACOES', { nome: pessoa.name })
@@ -171,6 +209,7 @@ const empresa = computed(
       class="flex flex-col w-full min-w-0 gap-3 lg:w-auto lg:flex-row lg:items-center lg:shrink-0"
     >
       <Button
+        v-if="podeConversar"
         data-relacionamentos="conversar"
         size="lg"
         class="w-full lg:w-auto whitespace-nowrap shrink-0"
@@ -179,11 +218,10 @@ const empresa = computed(
         @click="emit('conversar')"
       />
       <div
+        v-if="temSecundarias"
         data-relacionamentos="acoes-secundarias"
         class="grid items-center gap-3 lg:flex lg:shrink-0"
-        :class="
-          podeCriarCards ? 'grid-cols-[1fr_1fr_auto]' : 'grid-cols-[1fr_auto]'
-        "
+        :class="grade"
       >
         <Button
           v-if="podeCriarCards"
@@ -196,6 +234,7 @@ const empresa = computed(
           @click="emit('novoCard')"
         />
         <Button
+          v-if="naDemonstracao"
           slate
           faded
           size="lg"
@@ -203,9 +242,21 @@ const empresa = computed(
           :label="t('RELACIONAMENTOS_FICHA.ACOES.LEMBRETE')"
           @click="emit('lembrete')"
         />
+        <Button
+          v-if="alteraDireto"
+          data-relacionamentos="alterar-informacoes"
+          slate
+          faded
+          size="lg"
+          class="w-full whitespace-nowrap shrink-0 lg:w-auto"
+          :label="t('RELACIONAMENTOS_FICHA.ACOES.ALTERAR_INFORMACOES')"
+          @click="emit('maisAcao', 'alterar')"
+        />
         <MenuMais
+          v-if="temMais"
           :pode-alterar="podeEditar"
           :eh-cliente="ehCliente"
+          :na-demonstracao="naDemonstracao"
           @acao="escolha => emit('maisAcao', escolha)"
         />
       </div>

@@ -731,6 +731,8 @@ fora:
       - autonomia/automacoes
       - autonomia/automacoes_ia
       - autonomia/automacoes_webhook
+      # #2931: responder o pedido de aprovação é da pessoa que a automação escolheu, nunca de outra automação.
+      - autonomia/aprovacoes
       - crm/stage_automations
       - crm/stage_automation_steps
       - crm/cards/automacoes

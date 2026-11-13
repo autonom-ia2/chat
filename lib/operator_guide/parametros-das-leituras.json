@@ -199,6 +199,14 @@
       "range"
     ]
   },
+  "autonomia/aprovacoes": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#index",
+    "parametros": []
+  },
+  "autonomia/aprovacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#show",
+    "parametros": []
+  },
   "autonomia/automacoes": {
     "controller": "api/v1/accounts/autonomia/automacoes#index",
     "parametros": []

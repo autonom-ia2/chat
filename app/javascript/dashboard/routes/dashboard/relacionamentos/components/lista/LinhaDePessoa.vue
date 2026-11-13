@@ -13,9 +13,15 @@ import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 // "Conversar" ficam por cima e não abrem a ficha. No desktop o "Conversar"
 // fica sempre à vista, discreto (ninguém descobre um botão que só aparece no
 // hover). No celular é um ícone.
+// #2970 — o que ainda não é de verdade não aparece: "Conversar" daqui só
+// simula, então só existe com `podeConversar` (a página liga na demonstração).
+// E a caixa de marcar só existe com `podeMarcar`: sem nenhuma ação em grupo
+// para fazer, marcar não levaria a nada.
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
+  podeMarcar: { type: Boolean, default: true },
+  podeConversar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
 });
 const emit = defineEmits(['abrir', 'alternar', 'conversar']);
@@ -36,6 +42,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
     :class="{ 'bg-n-alpha-1': marcada }"
   >
     <label
+      v-if="podeMarcar"
       class="relative z-10 flex items-center justify-center cursor-pointer size-11 shrink-0"
     >
       <span class="sr-only">
@@ -73,6 +80,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
       <SegundaLinha :partes="partes" />
     </div>
     <Button
+      v-if="podeConversar"
       slate
       faded
       class="relative z-10 hidden sm:inline-flex"
@@ -80,6 +88,7 @@ const ehCliente = computed(() => props.pessoa.contact_type === 'customer');
       @click="emit('conversar', pessoa)"
     />
     <Button
+      v-if="podeConversar"
       slate
       faded
       class="relative z-10 size-11 sm:hidden"
