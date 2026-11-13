@@ -199,6 +199,14 @@
       "range"
     ]
   },
+  "autonomia/aprovacoes": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#index",
+    "parametros": []
+  },
+  "autonomia/aprovacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/aprovacoes#show",
+    "parametros": []
+  },
   "autonomia/automacoes": {
     "controller": "api/v1/accounts/autonomia/automacoes#index",
     "parametros": []
@@ -214,6 +222,7 @@
   "autonomia/automacoes/:id/historico": {
     "controller": "api/v1/accounts/autonomia/automacoes#historico",
     "parametros": [
+      "dentro",
       "pagina"
     ]
   },
@@ -223,6 +232,10 @@
   },
   "autonomia/automacoes/agentes_de_ia": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
+    "parametros": []
+  },
+  "autonomia/automacoes/consultas_prontas": {
+    "controller": "api/v1/accounts/autonomia/automacoes_passos_novos#consultas_prontas",
     "parametros": []
   },
   "autonomia/automacoes/custos": {
@@ -322,6 +335,10 @@
   },
   "autonomia/invite_connection/:inbox_id/connection": {
     "controller": "api/v1/accounts/autonomia/invite_connections#connection",
+    "parametros": []
+  },
+  "autonomia/modelos_de_ramo": {
+    "controller": "api/v1/accounts/autonomia/agents/modelos_de_ramo#index",
     "parametros": []
   },
   "autonomia/numeros_da_semana": {

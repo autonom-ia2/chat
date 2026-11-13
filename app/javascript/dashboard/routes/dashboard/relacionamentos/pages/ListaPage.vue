@@ -1,5 +1,12 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import {
+  computed,
+  defineAsyncComponent,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -27,8 +34,10 @@ import MarcarTodas from '../components/lista/MarcarTodas.vue';
 import MostrarMais from '../components/lista/MostrarMais.vue';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
+import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
@@ -38,6 +47,12 @@ import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
 
+// #2897 — a aba Seguros só é baixada quando abre: quem não tem a carteira (ou
+// não abre a aba) não carrega a tela dela.
+const ListaDeSeguros = defineAsyncComponent(
+  () => import('../components/carteira/ListaDeSeguros.vue')
+);
+
 // #2894 — a lista de Relacionamentos: herói com a frase do dia, abas
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
 // filtros", a lista com ações em grupo e os estados (vazio, carregando, erro,
@@ -45,6 +60,9 @@ import { useMarcados } from '../lista/useMarcados';
 // Fala só com `listaFonte` e `acoesDaListaFonte`; em `?demo=` tudo é inventado
 // e as escritas só simulam. Fora da demonstração a lista lê do servidor e as
 // ações em grupo escrevem nele.
+// #2897 — a conta que tem a carteira de seguros ganha a aba Seguros
+// (`?aba=seguros`), que é outra peça (components/carteira/ListaDeSeguros.vue):
+// enquanto ela está aberta, a lista de pessoas não carrega.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -74,6 +92,21 @@ const aba = computed(() => {
 });
 const ehEmpresas = computed(() => aba.value === ABAS.EMPRESAS);
 
+// A aba Seguros é de quem tem a carteira (o servidor diz no payload da conta);
+// sem ela a aba some e `?aba=seguros` abre Pessoas. Como a aba de cima, só
+// acompanha o endereço enquanto a rota é a da lista.
+const temSeguros = useContaDeSeguros(demo);
+const segurosPedidos = () =>
+  temSeguros.value && route.query.aba === ABA_SEGUROS;
+let segurosNaUrl = segurosPedidos();
+const naAbaDeSeguros = computed(() => {
+  if (route.name && route.name !== ROTA_DA_LISTA) return segurosNaUrl;
+  segurosNaUrl = segurosPedidos();
+  return segurosNaUrl;
+});
+// As abas aparecem quando há mais de uma.
+const temAbas = computed(() => temEmpresas.value || temSeguros.value);
+
 // "Criar cards", "Etiqueta" e "Apagar" são de quem pode (usePermissoesDaLista);
 // a demonstração só simula e mostra as três sempre.
 const permissoes = usePermissoesDaLista();
@@ -84,6 +117,14 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// #2970 — "Conversar" da linha e "Mandar mensagem" da barra ainda só simulam:
+// aparecem só na demonstração. Fora dela, quem não pode nenhuma das três ações
+// de verdade não tem o que fazer com gente marcada, e a lista não oferece a
+// caixa de marcar (sem ela não há "Marcar todas" nem barra).
+const naDemonstracao = Boolean(demo);
+const podeMarcar = computed(
+  () => podeCriarCards.value || podeEtiquetar.value || podeApagar.value
+);
 // #2896 — "Trazer minha lista" só aparece para quem pode importar contato.
 const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
@@ -94,12 +135,14 @@ const lista = useLista({
   aoMudarConsulta: marcados.limpar,
 });
 
+// Trocar de aba fecha a gaveta do seguro que estiver aberta (`?apolice=`).
+const DA_ABA = ['aba', 'apolice'];
 const trocarAba = nova => {
   const resto = Object.fromEntries(
-    Object.entries(route.query).filter(([chave]) => chave !== 'aba')
+    Object.entries(route.query).filter(([chave]) => !DA_ABA.includes(chave))
   );
   return router.push({
-    query: nova === ABAS.EMPRESAS ? { ...resto, aba: nova } : resto,
+    query: nova === ABAS.PESSOAS ? resto : { ...resto, aba: nova },
   });
 };
 
@@ -185,6 +228,7 @@ const abrirPessoa = ({ id }) =>
 const abrirEmpresa = ({ id }) =>
   router.push({ name: 'relacionamentos_empresa', params: { companyId: id } });
 // Simulado: a conversa e a campanha reais ainda não recebem a pessoa de fora.
+// Só a demonstração chega aqui (#2970).
 const conversar = ({ name }) =>
   useAlert(t('RELACIONAMENTOS.LISTA.LINHA.ABRINDO_CONVERSA', { nome: name }));
 const abrirCampanha = quantas =>
@@ -240,7 +284,13 @@ const barraVisivel = computed(
 const raiz = useTemplateRef('raiz');
 useRolarPilula(raiz, lista.grupo);
 
-onMounted(lista.iniciar);
+// Na aba Seguros quem carrega é a peça dela. Ao voltar, a lista se atualiza.
+onMounted(() => {
+  if (!naAbaDeSeguros.value) lista.iniciar();
+});
+watch(naAbaDeSeguros, estaNela => {
+  if (!estaNela) lista.recarregar();
+});
 </script>
 
 <template>
@@ -249,7 +299,13 @@ onMounted(lista.iniciar);
     class="flex flex-col flex-1 w-full h-full min-w-0 bg-n-surface-1"
     data-relacionamentos="lista"
   >
-    <main class="flex-1 min-w-0 overflow-y-auto">
+    <ListaDeSeguros
+      v-if="naAbaDeSeguros"
+      :demo="demo"
+      :com-empresas="temEmpresas"
+      @trocar-aba="trocarAba"
+    />
+    <main v-else class="flex-1 min-w-0 overflow-y-auto">
       <div
         class="flex flex-col w-full min-w-0 max-w-6xl min-h-full gap-6 px-5 pt-8 mx-auto md:px-8 md:pt-10"
         :class="barraVisivel ? 'pb-48 md:pb-28' : 'pb-24 md:pb-10'"
@@ -286,14 +342,16 @@ onMounted(lista.iniciar);
           <LinhasDeExemplo v-if="contaVazia" />
           <template v-else>
             <AbasDaLista
-              v-if="temEmpresas"
+              v-if="temAbas"
+              :com-empresas="temEmpresas"
+              :com-seguros="temSeguros"
               :model-value="aba"
               @update:model-value="trocarAba"
             />
             <div
               :id="PAINEL_DAS_ABAS"
-              :role="temEmpresas ? 'tabpanel' : undefined"
-              :aria-labelledby="temEmpresas ? idDaAba(aba) : undefined"
+              :role="temAbas ? 'tabpanel' : undefined"
+              :aria-labelledby="temAbas ? idDaAba(aba) : undefined"
               class="flex flex-col min-w-0 gap-5"
             >
               <div v-if="!lista.semAcesso.value" class="flex flex-col">
@@ -365,6 +423,8 @@ onMounted(lista.iniciar);
                       :key="pessoa.id"
                       :pessoa="pessoa"
                       :marcada="marcados.ehMarcado(pessoa.id)"
+                      :pode-marcar="podeMarcar"
+                      :pode-conversar="naDemonstracao"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
@@ -394,6 +454,7 @@ onMounted(lista.iniciar);
             class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
             :conta="contaDeMarcados"
+            :pode-mandar-mensagem="naDemonstracao"
             :pode-criar-cards="podeCriarCards"
             :pode-etiquetar="podeEtiquetar"
             :pode-apagar="podeApagar"
@@ -415,7 +476,9 @@ onMounted(lista.iniciar);
       @aplicar="aplicarFiltros"
       @limpar="limparFiltros"
     />
+    <!-- #2970: sem "Mandar mensagem" fora da demonstração, nada abre isto. -->
     <DialogoMandarMensagem
+      v-if="naDemonstracao"
       ref="dialogoDeMensagem"
       :pessoas="marcados.pessoas.value"
       @continuar="abrirCampanha"

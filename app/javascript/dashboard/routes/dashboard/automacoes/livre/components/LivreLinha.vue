@@ -21,13 +21,19 @@ const props = defineProps({
   // #2572: a frase do motivo com que o motor a pausou (quem ligou perdeu o
   // acesso). Ligar de novo é assumir: o botão diz isso no lugar do interruptor.
   pausa: { type: String, default: '' },
+  // #2933: marcada "Usar como bloco" (sem gatilho próprio: não liga sozinha).
+  bloco: { type: Boolean, default: false },
+  // A conta tem os passos novos: a linha oferece marcar e desmarcar o bloco.
+  podeSerBloco: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['abrir', 'alternar']);
+const emit = defineEmits(['abrir', 'alternar', 'bloco']);
 
 // O selo diz de onde a automação vem: do jeito antigo, de um card do funil ou
 // de uma conversa.
 const selo = computed(() => {
+  if (props.bloco)
+    return { icone: 'i-lucide-boxes', chave: 'AUTOMACAO_LIVRE.ORIGEM.BLOCO' };
   if (props.antiga)
     return {
       icone: 'i-lucide-history',
@@ -112,8 +118,32 @@ const selo = computed(() => {
       class="self-start min-h-11 sm:self-center shrink-0"
       @click="emit('abrir')"
     />
+    <Button
+      v-if="podeSerBloco && podeMudar"
+      data-marcar-bloco
+      :label="
+        $t(
+          bloco
+            ? 'AUTOMACAO_LIVRE.LISTA.TIRAR_BLOCO'
+            : 'AUTOMACAO_LIVRE.LISTA.USAR_COMO_BLOCO'
+        )
+      "
+      icon="i-lucide-boxes"
+      slate
+      link
+      class="self-start min-h-11 sm:self-center shrink-0"
+      :disabled="mudando"
+      @click="emit('bloco')"
+    />
+    <p
+      v-if="bloco"
+      data-bloco-aviso
+      class="mb-0 text-sm text-n-slate-11 sm:order-last sm:basis-full"
+    >
+      {{ $t('AUTOMACAO_LIVRE.LISTA.BLOCO_AVISO') }}
+    </p>
     <div
-      v-if="pausa && !ativa"
+      v-else-if="pausa && !ativa"
       data-pausa
       role="status"
       class="flex flex-col gap-3 p-4 text-[0.9375rem] rounded-xl bg-n-amber-3 text-n-amber-12 sm:order-last sm:basis-full"
@@ -138,7 +168,7 @@ const selo = computed(() => {
       </template>
     </div>
     <label
-      v-else
+      v-if="!bloco && !(pausa && !ativa)"
       class="flex items-center self-start gap-3 px-3 select-none sm:self-center min-h-11 shrink-0"
       :class="
         podeMudar && !mudando

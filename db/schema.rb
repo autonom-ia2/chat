@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_13_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -674,6 +674,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
     t.string "motivo"
     t.jsonb "dados", default: {}, null: false
     t.datetime "created_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_autonomia_automacao_registros_esperando", where: "((motivo)::text = 'esperando_resposta'::text)"
     t.index ["account_id"], name: "index_autonomia_automacao_registros_on_account_id"
     t.index ["automacao_id", "created_at"], name: "idx_autonomia_automacao_registros_automacao"
     t.index ["created_at"], name: "index_autonomia_automacao_registros_on_created_at"
@@ -704,6 +705,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
     t.datetime "updated_at", null: false
     t.datetime "ligada_em"
     t.integer "segredo_geracao", default: 0, null: false
+    t.boolean "bloco", default: false, null: false
     t.index ["account_id", "ativa"], name: "idx_autonomia_automacoes_ligadas"
     t.index ["ligada_por_id"], name: "index_autonomia_automacoes_on_ligada_por_id"
     t.index ["versao_ativa_id"], name: "index_autonomia_automacoes_on_versao_ativa_id"
@@ -2227,6 +2229,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
+    t.index ["account_id"], name: "idx_contacts_com_pesquisa", where: "(jsonb_typeof((additional_attributes -> 'pesquisas'::text)) = 'object'::text)"
     t.index ["account_id"], name: "idx_contacts_relacao_fora_do_funil", where: "(relacao <> 0)"
     t.index ["account_id"], name: "index_contacts_on_account_id"
     t.index ["account_id"], name: "index_contacts_on_account_id_opted_out", where: "(opted_out_at IS NOT NULL)"
@@ -4311,6 +4314,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_12_100000) do
     t.bigint "account_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "show_on_conversation_list", default: false, null: false
     t.index ["account_id"], name: "index_labels_on_account_id"
     t.index ["title", "account_id"], name: "index_labels_on_title_and_account_id", unique: true
   end

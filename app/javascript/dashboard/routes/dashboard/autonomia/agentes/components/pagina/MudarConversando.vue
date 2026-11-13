@@ -72,6 +72,9 @@ const limparConversa = () => {
 };
 
 const nome = computed(() => props.agente.name || '');
+// #2976 — as perguntas da cotação e os documentos do agente pronto por ramo ficam fora da instrução: esta conversa
+// não as muda. O aviso é fixo, na abertura, e não depende de o Construtor dizer onde elas mudam.
+const temListasDoRamo = computed(() => Boolean(props.agente.listas_do_ramo));
 
 const rascunhoErrado = ({ pergunta, resposta }) =>
   t(`${NS}.RASCUNHO_ERRADO`, {
@@ -478,6 +481,17 @@ onBeforeUnmount(() => {
               >
                 <span class="sr-only">{{ t(`${NS}.ASSISTENTE`) }}</span>
                 {{ t(`${NS}.ABERTURA`, { nome }) }}
+              </p>
+              <p
+                v-if="temListasDoRamo"
+                data-listas-do-ramo
+                class="flex items-start gap-3 p-3 m-0 text-sm rounded-xl bg-n-blue-2 text-n-slate-12 ring-1 ring-inset ring-n-blue-6"
+              >
+                <span
+                  class="i-lucide-info size-5 shrink-0 mt-0.5 text-n-blue-11"
+                  aria-hidden="true"
+                />
+                {{ t('AGENTS.JORNADA.RAMOS.PAGINA.MUDA_NA_PAGINA', { nome }) }}
               </p>
               <RespostasRapidas
                 v-if="!comecou && ideias.length"

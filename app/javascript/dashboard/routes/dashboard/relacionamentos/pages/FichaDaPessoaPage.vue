@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -15,6 +15,8 @@ import GavetaDoCard from '../components/ficha/GavetaDoCard.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
+import { FALHA_DA_PARTE } from '../ficha/falhas';
 import { linhasDaPessoa, redesPreenchidas } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -25,16 +27,26 @@ import {
 import { useFichaDaPessoa } from '../ficha/useFichaDaPessoa';
 import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 
+// #2897 — o bloco Seguros (com a gaveta do seguro) só é baixado na conta que
+// tem a carteira.
+const SegurosDaFicha = defineAsyncComponent(
+  () => import('../components/carteira/SegurosDaFicha.vue')
+);
+
 // #2894 — a ficha da pessoa: primeiro "quem é e o que tem comigo". Editar é um
 // passo a mais, de propósito (a gaveta "Alterar informações"). Em 390 px a ordem é
 // cabeçalho, faixa, Conversas, Cards, Informações, Notas, Arquivos, De onde veio
 // (o DOM segue essa ordem; ver `CorpoDaFichaDaPessoa`). Fora da demonstração lê e
 // grava no servidor (#2895), e quem só pode ver não tem os botões de escrita.
+// #2897 — na conta que tem a carteira de seguros, o bloco Seguros vem antes de
+// Conversas.
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
 const permissoes = usePermissoesDaFicha();
-const fonte = fichaFonte({ demo: usarDemo(route.query) });
+const demo = usarDemo(route.query);
+const fonte = fichaFonte({ demo });
+const comSeguros = useContaDeSeguros(demo);
 // Na demonstração tudo aparece, como na lista: é o desenho inteiro da tela.
 const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
 const podeCriarCards = computed(
@@ -58,6 +70,8 @@ const redes = computed(() =>
 );
 const avisar = chave =>
   acoes.avisar(`RELACIONAMENTOS_FICHA.AVISOS.${chave}`, nome.value);
+const abrirSegurado = ({ tipo, id: donoId }) =>
+  tipo === 'empresa' ? acoes.abrirEmpresa(donoId) : acoes.abrirPessoa(donoId);
 
 const resultado = (deuCerto, certo, erro, valores) => {
   const texto = t(deuCerto ? certo : erro, valores);
@@ -118,7 +132,8 @@ const AVISO_DO_MAIS = {
 };
 
 // "Alterar informações" abre a gaveta e "Não é mais cliente" desmarca na hora;
-// as outras escolhas só avisam, por ora.
+// as outras escolhas só avisam, por ora: por isso, como "Lembrete" e "Ver
+// todas", só existem na demonstração (#2970).
 const escolherNoMais = escolha => {
   if (escolha === 'alterar') gavetaAberta.value = true;
   else if (escolha === 'desmarcar') desmarcarCliente();
@@ -127,12 +142,29 @@ const escolherNoMais = escolha => {
 
 // As saídas que têm rota real. Na demonstração as pessoas, as conversas e os
 // cards são inventados: lá o clique só avisa (ou abre o quadro do CRM, sem card).
-// "Conversar" abre a conversa mais recente; com quem nunca conversou ainda só
-// avisa (começar conversa nova não é só uma rota).
-const conversar = () => {
+// "Conversar" abre a conversa mais recente. Começar conversa nova não é só uma
+// rota: com quem nunca conversou o botão não aparece (#2970 — o que ainda não é
+// de verdade não aparece). Se a leitura das conversas falhou, a ficha não sabe
+// se há conversa: o botão aparece, e o clique lê de novo antes de abrir. Sem
+// conversa para abrir ele não sai do lugar, e a parte Conversas diz o que
+// houve. A demonstração mostra sempre, e só avisa.
+const conversasNaoVieram = computed(
+  () => ficha.falhas.value.conversas === FALHA_DA_PARTE.ERRO
+);
+const podeConversar = computed(
+  () =>
+    fonte.usaDemo ||
+    ficha.conversas.value.length > 0 ||
+    conversasNaoVieram.value
+);
+const conversar = async () => {
+  if (fonte.usaDemo) {
+    avisar('CONVERSAR');
+    return;
+  }
+  if (conversasNaoVieram.value) await ficha.relerParte('conversas');
   const [maisRecente] = ficha.conversas.value;
-  if (fonte.usaDemo || !maisRecente) avisar('CONVERSAR');
-  else acoes.abrirConversa(maisRecente.id);
+  if (maisRecente) acoes.abrirConversa(maisRecente.id);
 };
 
 const novoCard = () => {
@@ -221,6 +253,8 @@ watch(
             :marcando-cliente="ficha.ocupado.value === 'marcarCliente'"
             :pode-editar="podeEditar"
             :pode-criar-cards="podeCriarCards"
+            :pode-conversar="podeConversar"
+            :na-demonstracao="fonte.usaDemo"
             @conversar="conversar"
             @novo-card="novoCard"
             @lembrete="avisar('LEMBRETE')"
@@ -251,12 +285,23 @@ watch(
             :guardando-nota="ficha.ocupado.value === 'guardarNota'"
             :falhas="ficha.falhas.value"
             :pode-editar="podeEditar"
+            :pode-ver-todas="fonte.usaDemo"
             @tentar="ficha.relerParte"
             @ver-todas="avisar('VER_TODAS')"
             @abrir-card="card => (cardAberto = card)"
             @guardar-nota="guardarNota"
             @alterar="gavetaAberta = true"
-          />
+          >
+            <template v-if="comSeguros" #antes>
+              <SegurosDaFicha
+                :dono-id="id"
+                :demo="demo"
+                :pode-editar="podeEditar"
+                :agora="agora"
+                @abrir-segurado="abrirSegurado"
+              />
+            </template>
+          </CorpoDaFichaDaPessoa>
         </div>
       </div>
     </main>

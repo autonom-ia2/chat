@@ -2,11 +2,17 @@
 // #2894 — selo pequeno ao lado do nome: "Cliente" (verde, mesmo visual do
 // CustomerBadge), "Não quer mensagens" (âmbar) ou um aviso neutro. O texto vem
 // de quem usa o selo; o selo nunca encolhe (quem corta é o nome ao lado).
+// #2897 — três tons só de cor, sem ícone, para os selos da carteira de
+// seguros: verde (ativo), âmbar (ativo que vence logo) e vermelho (vencido). O
+// cancelado usa o neutro.
 defineProps({
   tom: {
     type: String,
     default: 'neutro',
-    validator: valor => ['cliente', 'alerta', 'neutro'].includes(valor),
+    validator: valor =>
+      ['cliente', 'alerta', 'neutro', 'verde', 'ambar', 'vermelho'].includes(
+        valor
+      ),
   },
 });
 
@@ -14,11 +20,13 @@ const ESTILOS = {
   cliente: 'bg-n-teal-3 text-n-teal-11',
   alerta: 'bg-n-amber-3 text-n-amber-11',
   neutro: 'bg-n-alpha-2 text-n-slate-11',
+  verde: 'bg-n-teal-3 text-n-teal-11',
+  ambar: 'bg-n-amber-3 text-n-amber-11',
+  vermelho: 'bg-n-ruby-3 text-n-ruby-11',
 };
 const ICONES = {
   cliente: 'i-lucide-badge-check',
   alerta: 'i-lucide-bell-off',
-  neutro: '',
 };
 </script>
 

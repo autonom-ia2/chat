@@ -1,0 +1,44 @@
+chave: seguro_garantia
+tipo: sdr
+nome_padrao: "Assistente de Seguro Garantia"
+ramo: "Seguro garantia"
+seguradoras_sugeridas: "Junto Seguros, Pottencial e Tokio Marine"
+perguntas:
+  - "Para que é a garantia: participar de uma licitação, um contrato que a empresa ganhou, um processo na Justiça ou outro caso?"
+  - "Qual o CNPJ da empresa que vai contratar o seguro?"
+  - "Quem está pedindo a garantia: um órgão público, uma empresa ou a Justiça?"
+  - "Qual o número do edital, do contrato ou do processo? Pode mandar o arquivo."
+  - "Qual o valor da garantia? Se não souber, o valor do contrato e a porcentagem que o edital pede."
+  - "De quando até quando a garantia precisa valer?"
+  - "Até que dia vocês precisam entregar a apólice?"
+  - "O edital ou o contrato pede cobertura de ações trabalhistas ou de multas?"
+  - "A empresa já tem seguro garantia ou cadastro em alguma seguradora?"
+  - "Quem cuida disso na empresa, e qual o melhor contato?"
+documentos:
+  - "Edital, minuta do contrato ou contrato assinado. Em processo na Justiça: a decisão e o cálculo do valor."
+  - "Contrato social ou estatuto, com a última alteração."
+  - "Documento dos sócios ou administradores que assinam."
+  - "Balanço e resultado dos últimos anos, e um balancete recente."
+  - "Ficha de cadastro da seguradora, que a equipe da corretora envia para preencher."
+  - "Apólice anterior, se houver."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ da empresa que vai contratar a garantia, para conferir o nome, a situação e a atividade sem perguntar de novo. Se a empresa não estiver ativa, avise com calma e passe para a equipe."
+  - fonte: compras_governo
+    usar_quando: "Use quando o cliente falar de uma licitação e não souber o número do edital, para achar a compra pública pela cidade e pelo assunto e confirmar com ele qual é, com o órgão e o que está sendo comprado."
+  - fonte: feriados
+    usar_quando: "Use quando o cliente disser até que dia precisa entregar a apólice, ou quando termina o prazo do recurso, para contar os dias úteis que faltam e avisar a equipe se o prazo estiver curto. Não prometa que dá tempo."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP da empresa ou do local da obra, para completar o endereço sem perguntar rua, bairro e cidade."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando o cliente disser a cidade da licitação e for preciso conferir o nome certo da cidade e o estado antes de procurar a compra pública."
+  - fonte: banco_central
+    usar_quando: "Use quando o contrato corrigir o valor por um índice e o cliente perguntar da inflação, para dizer o número oficial do IPCA. Não calcule o novo valor da garantia: quem define é o contrato, e a equipe confirma."
+premium:
+  - certidoes_empresa
+  - raio_x_empresa
+teste:
+  - "O que é seguro garantia?"
+  - "Quanto custa?"
+  - "Já mandei tudo. Podem cotar"

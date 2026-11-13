@@ -193,7 +193,7 @@ class Autonomia::Automacao::PassoDeAviso
     contexto = ::Autonomia::Automacao::Contexto.de(@execucao.alvo, execucao: @execucao)
     return contexto.reuniao&.created_by_id if ::Autonomia::Automacao::Gatilhos.de_reuniao?(@execucao.chave_gatilho)
 
-    ::Autonomia::Automacao::ValoresDaReuniao.proxima_do_contato(contexto.contato, @execucao.automacao.ligada_por)&.created_by_id
+    ::Autonomia::Automacao::ValoresDaReuniao.proxima_do_contato(contexto.contato, @execucao.dona.ligada_por)&.created_by_id
   end
 
   # Quem cuida do card da execução, lido na hora do passo. Pelo alvo da execução, como a reunião: o "resumir" chama este

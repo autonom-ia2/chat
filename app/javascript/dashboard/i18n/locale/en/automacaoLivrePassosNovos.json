@@ -50,7 +50,12 @@
         "PERGUNTA": "What to ask",
         "PRAZO": "Time to answer",
         "QUEM_PODE": "Only people who can see the card get the request. If no one answers in time, the automation takes the “If no one answers in time” path.",
-        "VER_PEDIDO": "See it as the approver"
+        "VER_PEDIDO": "See it as the approver",
+        "ENSAIO_PARA": "Would ask {nomes} for approval. In the test, nobody gets the request.",
+        "ENSAIO_SEM_QUEM": "Nobody who can see this conversation could approve. It would follow the “If nobody answers in time” path.",
+        "HISTORICO_APROVOU": "{quem} approved.",
+        "HISTORICO_RECUSOU": "{quem} refused.",
+        "HISTORICO_MOTIVO_DITO": "Reason: {motivo}"
       },
       "PEDIDO": {
         "TITULO": "Approval request",
@@ -68,7 +73,12 @@
         "APROVAR": "Approve",
         "RECUSAR": "Refuse",
         "CARD": "The request's card",
-        "FECHAR": "Close"
+        "FECHAR": "Close",
+        "APROVADO_POR": "{nome} approved. The automation moved on.",
+        "RECUSADO_POR": "{nome} refused. The automation followed the refusal path.",
+        "ENCERRADO": "This request is no longer waiting for an answer: the deadline passed or the automation stopped.",
+        "PRAZO_ATE": "Answer by {quando}. Automation: {automacao}.",
+        "ABRIR_CONVERSA": "Open the conversation"
       },
       "REPETIR": {
         "NOME": "Do it for each one in a list",
@@ -91,7 +101,6 @@
         "QUAL_ETAPA": "Which stage",
         "QUAL_ETIQUETA": "Which label",
         "QUAL_PUBLICO": "Which audience",
-        "ENTRARIAM_HOJE": "would go in today | would go in today",
         "PRIMEIROS": "The first ones in the list",
         "FICAM_FORA": "Only people you can see go in. Blocked contacts and those who asked not to receive messages are left out.",
         "TETO": "Most at a time",
@@ -100,7 +109,13 @@
         "RITMO": "Pace",
         "RITMO_AOS_POUCOS": "Slowly: one per minute",
         "RITMO_RAPIDO": "Faster: one every 10 seconds",
-        "ONDE_POR_PASSOS": "After saving, put the steps for each one in the “For each one in the list” path."
+        "ONDE_POR_PASSOS": "After saving, put the steps for each one in the “For each one in the list” path.",
+        "ENSAIO_NINGUEM": "Today no one would go in.",
+        "ENTRAM_HOJE": "goes in today | go in today",
+        "PARA_DEPOIS": "Today {total} of {todos} go in. The other {fora} go in the next times.",
+        "PARA_DEPOIS_MAIS": "Today {total} of more than {todos} go in. The others go in the next times.",
+        "ENSAIO_COM_TETO": "Today {total} of {todos} would go in. The other {fora} would go in the next times. The first ones: {nomes}.",
+        "ENSAIO_COM_TETO_MAIS": "Today {total} of more than {todos} would go in. The others would go in the next times. The first ones: {nomes}."
       },
       "BLOCO": {
         "NOME": "Use another automation",
@@ -113,23 +128,28 @@
         "VAZIO_BOTAO": "See my automations",
         "QUAL": "Which block to use",
         "O_QUE_FAZ": "What this block does",
-        "MUDA_EM_TODAS": "If you change the block, it changes in every automation that uses it."
+        "MUDA_EM_TODAS": "If you change the block, it changes in every automation that uses it.",
+        "ENSAIO_DE_VERDADE": "Would go into the block “{bloco}” and do:",
+        "BLOCO_SUMIU": "The block no longer exists or is no longer a block. It would skip this step.",
+        "BLOCO_DE_OUTRO_ALVO": "The block runs on another kind of record. It would skip this step.",
+        "BLOCO_EM_LACO": "The block ends up using itself again. It would stop here.",
+        "BLOCO_FUNDO_DEMAIS": "Too many blocks inside blocks. It would stop here."
       },
       "CONSULTAR": {
         "NOME": "Look up information in another system",
-        "DICA": "Looks up data outside, like an order status, and uses it in the next steps.",
-        "ENDERECO_PROPRIO": "your own address",
-        "SEM_FONTE": "another system",
-        "FRASE": "Look up in {fonte}: {dados}",
-        "FRASE_SEM_DADO": "Look up in {fonte}",
-        "ENSAIO": "Would look up in {fonte}. In a test run, it only looks up if you ask.",
+        "DICA": "Looks up data outside, like the address of a ZIP code, and uses it in the next steps.",
+        "ENDERECO_PROPRIO": "at your own address",
+        "SEM_FONTE": "in another system",
+        "FRASE": "Look up {fonte}: {dados}",
+        "FRASE_SEM_DADO": "Look up {fonte}",
+        "ENSAIO": "Would look up {fonte}. In a test run, it only looks up if you ask.",
         "BUSCAR_DE_VERDADE": "Really look up in this test run",
-        "CONFIRMAR_BUSCA": "It will look up in {fonte} once, now. The result only shows here: nothing is saved and no one gets anything.",
+        "CONFIRMAR_BUSCA": "It will look up {fonte} once, now. The result only shows here: nothing is saved and no one gets anything.",
         "BUSCAR_AGORA": "Look up now",
-        "BUSCOU_NO_ENSAIO": "Looked up in {fonte}:",
+        "BUSCOU_NO_ENSAIO": "Looked up {fonte}:",
         "DADO_E_VALOR": "{dado}: {valor}",
-        "HISTORICO": "Looked up in {fonte}: {dado} is {valor}.",
-        "HISTORICO_SEM_DADO": "Looked up in {fonte}.",
+        "HISTORICO": "Looked up {fonte}: {dado} is {valor}.",
+        "HISTORICO_SEM_DADO": "Looked up {fonte}.",
         "OUTRO_ENDERECO": "Another address",
         "FONTE": "Where to look",
         "ENDERECO": "Address",
@@ -144,7 +164,24 @@
         "NOME_DO_DADO": "Data name",
         "NOME_DICA": "It shows up with this name in “Add data” in the next steps.",
         "FALTA_DADO": "Run a test and tap at least one piece of data.",
-        "SE_FALHAR": "If the other system fails or takes too long, the automation takes the “If it can't look it up” path."
+        "SE_FALHAR": "If the lookup does not work, the automation takes the “If it can't look it up” path.",
+        "TESTE_FALHOU": "Could not look it up. Check the address and try again.",
+        "NA_CONSULTA": "with the “{consulta}” lookup",
+        "OUTRO_ENDERECO_FAZ": "Looks up at an https address of your company system.",
+        "AVANCADO": "Advanced",
+        "GRATIS": "Free",
+        "CARREGANDO": "Loading the lookups…",
+        "ENDERECO_SEM_CHAVE": "Only people who manage integrations can change this address.",
+        "NENHUMA": "No lookup is enabled on this account yet.",
+        "PRECISA": "What the lookup needs",
+        "PRECISA_DICA": "Use “Add data” to take it from the contact or the card.",
+        "VOLTA": "What comes back",
+        "VOLTA_DICA": "You use this data in the next steps, with “Add data”.",
+        "EXEMPLO_DE": "{rotulo} for the test",
+        "TESTE_PRONTA_DICA": "The test runs a real lookup. It counts toward the limit of {limite} lookups per day for this lookup, the same one AI agents use.",
+        "TESTE_FALHOU_PRONTA": "Could not look it up now. Check the example and try again.",
+        "IA_CUSTO": "In the test, your account AI suggests a name for each piece of data. This use is charged to your account AI.",
+        "ENSAIO_SEM_ENTRADA": "This conversation is missing {entradas}. It would take the “If it can't look it up” path."
       },
       "REUNIAO": {
         "NOME": "Book a meeting in the chat",
@@ -160,7 +197,10 @@
         "COMO_O_CLIENTE_VE": "What the customer sees",
         "SEM_BOTOES": "If the channel has no buttons, the numbers 1, 2 and 3 are sent.",
         "ESPERA": "Wait for the answer for",
-        "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path."
+        "COMO_FUNCIONA": "The AI understands the customer's answer. If no time works, the automation takes the “If they ask for another time” path.",
+        "ENSAIO_SEM_RESPONSAVEL": "No owner on the card or the conversation: it would move on without a meeting, on the “If the customer doesn't answer” path.",
+        "ENSAIO_SEM_PAGINA": "The owner has no booking page of their own: it would move on without a meeting, on the “If the customer doesn't answer” path.",
+        "ENSAIO_SEM_HORARIO": "There is no free time right now: it would follow the “If they ask for another time” path."
       },
       "PESQUISA": {
         "NOME": "Satisfaction survey",
@@ -188,7 +228,12 @@
         "INTERVALO": "Ask the same person again only after",
         "ESPERA": "Wait for the answer for",
         "RESUMO_EXEMPLO": "In the list, the automation shows the average and how many people answered. Example: average 8.6 from 37 answers.",
-        "REGRAS": "Blocked contacts and those who asked not to receive messages are left out. The score is kept on the contact and on the card."
+        "REGRAS": "Blocked contacts and those who asked not to receive messages are left out. The score is kept on the contact and on the card.",
+        "ENSAIO_RECENTE": "This person answered a survey recently: it would skip the question and move on.",
+        "HISTORICO_NOTA": "Score {nota}.",
+        "HISTORICO_NOTA_COMENTARIO": "Score {nota}: “{comentario}”.",
+        "RESUMO": "Survey: average {media} from {n} answer | Survey: average {media} from {n} answers",
+        "RESUMO_VAZIO": "Survey: no answers yet"
       },
       "PREVIA": {
         "TITULO": "See how it looks",
@@ -197,56 +242,24 @@
         "VER_DENTRO": "See what happened inside"
       },
       "EXEMPLO": {
-        "BLOCOS": {
-          "BOAS_VINDAS": {
-            "NOME": "Welcome new customer",
-            "FRASE": "Welcomes the customer and asks if they have any questions.",
-            "PASSO_1": "Send the welcome message",
-            "PASSO_2": "Wait 1 day",
-            "PASSO_3": "Ask if they have any questions"
-          },
-          "LEMBRAR": {
-            "NOME": "Remind the owner",
-            "FRASE": "Tells whoever handles the card and waits for them.",
-            "PASSO_1": "Tell whoever handles the card",
-            "PASSO_2": "Wait until the card changes stage"
-          },
-          "DOCUMENTO": {
-            "NOME": "Ask for a document",
-            "FRASE": "Asks the customer for a document and reminds them once.",
-            "PASSO_1": "Ask the customer for the document",
-            "PASSO_2": "Remind after 2 days, if it doesn't arrive"
-          }
-        },
-        "INTEGRACOES": {
-          "LOJA": "Online store",
-          "CEP": "Postal code lookup",
-          "BOLETOS": "Payment slips"
-        },
-        "DADOS": {
-          "NUMERO_DO_PEDIDO": "Order number",
-          "STATUS_DO_PEDIDO": "Order status",
-          "PREVISAO_DE_ENTREGA": "Expected delivery",
-          "NOME_DO_CLIENTE": "Customer name",
-          "RUA": "Street",
-          "BAIRRO": "Neighborhood",
-          "CIDADE": "City",
-          "ESTADO": "State",
-          "SITUACAO_DO_BOLETO": "Bank slip status",
-          "VENCIMENTO_DO_BOLETO": "Bank slip due date",
-          "VALOR_DO_BOLETO": "Bank slip amount"
-        },
-        "PUBLICOS": {
-          "CLIENTES_ATIVOS": "Active customers",
-          "SEM_COMPRA": "No purchase in 90 days"
-        },
-        "STATUS_ENVIADO": "Shipped",
-        "SITUACAO_PAGO": "Paid",
         "HORARIO_1": "Thursday, 10 AM",
         "HORARIO_2": "Thursday, 3 PM",
         "HORARIO_3": "Friday, 9 AM",
         "CARD_TITULO": "Order with a 12% discount",
         "VALOR_OCULTO": "hidden value"
+      },
+      "DESLIGADOS_NO_ENSAIO": "This step is not available on this account. The automation would stop here.",
+      "ENSAIO_DESLIGADO": "The new steps are off for this account: the automation would stop here.",
+      "ENSAIO_IA_DESLIGADA": "AI steps are off for this account: the automation would stop here.",
+      "APROVACOES": {
+        "TITULO": "Approval requests",
+        "SUBTITULO": "When an automation needs your OK, the request shows up here.",
+        "CARREGANDO": "Loading the requests",
+        "VAZIO": "No request is waiting for you.",
+        "ERRO": "The requests could not be loaded.",
+        "TENTAR_DE_NOVO": "Try again",
+        "NAO_ACHOU": "This request is not with you anymore.",
+        "NAO_RESPONDEU": "The answer did not go through. Try again."
       }
     }
   }

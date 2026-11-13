@@ -69,6 +69,14 @@ class AutonomiaBuildThreadsAPI extends ApiClient {
   desfazer(threadId) {
     return axios.post(`${this.url}/${threadId}/desfazer`);
   }
+
+  // #2881 — o dono muda as listas do modelo pronto de ramo antes de começar. `listas` leva `perguntas`, `documentos`
+  // ([{ id, texto, tirada }]; sem `id` é item novo) e/ou `ferramentas` ([{ fonte, usar_quando }], o "Já vem com"
+  // inteiro). Cada lista enviada substitui a inteira; a que não vai fica como está. A resposta é a conversa, com o
+  // `modelo_pronto` já mudado. 404 { motivo: 'sem_modelo' }; 422 { motivo, campo }.
+  mudarModeloPronto(threadId, listas) {
+    return axios.patch(`${this.url}/${threadId}/modelo_pronto`, listas);
+  }
 }
 
 export default new AutonomiaBuildThreadsAPI();

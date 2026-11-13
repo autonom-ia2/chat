@@ -40,6 +40,7 @@ export default {
       description: '',
       title: '',
       showOnSidebar: true,
+      showOnConversationList: false,
     };
   },
   validations() {
@@ -100,6 +101,7 @@ export default {
           description: this.description,
           title: this.tituloTecnico,
           show_on_sidebar: this.showOnSidebar,
+          show_on_conversation_list: this.showOnConversationList,
         });
         const nomeGuardado =
           !this.nomeLegivelLigado || (await this.guardarNomeDaCriada());
@@ -169,6 +171,10 @@ export default {
           {{ $t('LABEL_MGMT.FORM.SHOW_ON_SIDEBAR.LABEL') }}
         </label>
       </div>
+      <label class="flex items-center w-full gap-2 cursor-pointer">
+        <input v-model="showOnConversationList" type="checkbox" />
+        {{ $t('LABEL_MGMT.FORM.SHOW_ON_CONVERSATION_LIST.LABEL') }}
+      </label>
       <div class="flex items-center justify-end w-full gap-2 px-0 py-2">
         <NextButton
           faded

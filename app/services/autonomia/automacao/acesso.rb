@@ -38,7 +38,8 @@ class Autonomia::Automacao::Acesso
     'quem_ligou_sem_acesso' unless alcanca?(alvo, execucao)
   end
 
-  def filha_no_card?(alvo, execucao) = alvo.is_a?(::Crm::Card) && ::Autonomia::Automacao::EmOutroRegistro.da(execucao).present?
+  # A filha do "para cada" (#2932) nos cards de uma etapa também.
+  def filha_no_card?(alvo, execucao) = alvo.is_a?(::Crm::Card) && ::Autonomia::Automacao::RepetirLista.filha?(execucao)
 
   # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa em que os passos
   # agem (a principal dele, ou a da mãe na filha do "em outro registro", G18: Contexto#conversa, a mesma que os passos

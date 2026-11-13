@@ -26,6 +26,9 @@ const props = defineProps({
   respostas: { type: Number, default: 0 },
   ideias: { type: Array, default: () => [] },
   exemploDoCampo: { type: String, default: '' },
+  // #2881 — agente pronto por ramo: a conversa tem duas perguntas, e as ideias e o exemplo do campo acompanham cada
+  // uma (a página troca os textos), não só a primeira.
+  ideiasEmTodaPergunta: { type: Boolean, default: false },
   // No celular a etapa é a tela inteira e o campo fica fixo embaixo, com a barra do slot `barra`.
   celular: { type: Boolean, default: false },
   // Copiloto da equipe (#1494): a introdução fala de ajudar a equipe, não de atender.
@@ -59,10 +62,13 @@ const offline = computed(
 const primeiraPerguntaChegou = computed(
   () => !props.pensando && props.falas.some(fala => fala.de === 'assistente')
 );
+const noComeco = computed(
+  () => props.respostas === 0 || props.ideiasEmTodaPergunta
+);
 const mostrarIdeias = computed(
   () =>
     props.ideias.length > 0 &&
-    props.respostas === 0 &&
+    noComeco.value &&
     !props.fechada &&
     primeiraPerguntaChegou.value
 );
@@ -71,7 +77,7 @@ const mostrarLinhaDoAnexo = computed(
 );
 const silencioso = computed(() => props.fechada && !props.celular);
 const placeholder = computed(() =>
-  props.respostas === 0 && props.exemploDoCampo
+  noComeco.value && props.exemploDoCampo
     ? props.exemploDoCampo
     : t('AGENTS.JORNADA.COMPOSITOR.ESCREVA')
 );

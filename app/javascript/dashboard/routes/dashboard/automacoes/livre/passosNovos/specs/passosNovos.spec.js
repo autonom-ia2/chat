@@ -9,17 +9,19 @@ import {
   passoNovoPronto,
   valoresDaConsulta,
 } from '../passosNovos';
-import {
-  ensaiarComPassosNovos,
-  temPassoNovo,
-  testarConsulta,
-} from '../adaptadorFalso';
+import { ensaiarComPassosNovos, temPassoNovo } from '../adaptadorFalso';
+import { carregarBlocos, guardarFrasesDoBloco } from '../dadosDaConta';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import { linhaDoEnsaioNovo, linhaDoHistoricoNovo } from '../frasesDosNovos';
 import { comTextosDaIa, entradaDoPasso, novoPasso } from '../../catalogo';
 import { fraseDoPasso } from '../../frases';
 import { linhasDoEnsaio } from '../../ensaio';
 import { falta, galhosDe, inserirPasso, idDaLista } from '../../receita';
 import catalogoGerado from '../../../../../../../../../lib/operator_guide/automacao-passos.json';
+
+vi.mock('dashboard/api/autonomia/automacoes', () => ({
+  default: { get: vi.fn() },
+}));
 
 // Protótipo #2931–#2936 — os 6 passos novos da Automação livre: só com a flag
 // no catálogo, nascem prontos, o "Salvar" espera o que falta, os galhos entram
@@ -54,13 +56,12 @@ describe('catálogo dos passos novos', () => {
     });
   });
 
-  it('montar o "Buscar em outro sistema" pede a chave de integrações', () => {
-    const consultar = catalogo.passos.find(item => item.tipo === 'consultar');
-
-    expect(consultar.chave).toBe('integration_manage');
+  // #2934: as consultas prontas servem a quem monta automações; só o "Outro
+  // endereço", dentro da peça, pede a chave de integrações.
+  it('nenhum passo novo pede chave além de montar automações', () => {
     expect(
       catalogo.passos.filter(item => PASSOS_NOVOS[item.tipo] && item.chave)
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
 
   it('o passo da receita acha a entrada dele', () => {
@@ -135,7 +136,7 @@ describe('o que segura o "Salvar"', () => {
   it('busca com a fonte e pelo menos um dado com nome', () => {
     const passo = {
       ...novo('consultar'),
-      fonte: { de: 'integracao', id: 'loja' },
+      fonte: { de: 'endereco', url: 'https://loja.exemplo/pedido' },
       guardar: [{ nome: 'Status do pedido', caminho: 'pedido.status' }],
     };
 
@@ -149,6 +150,29 @@ describe('o que segura o "Salvar"', () => {
     ).toBe(false);
     expect(
       passoNovoPronto({ ...passo, fonte: { de: 'endereco', url: 'http://a' } })
+    ).toBe(false);
+  });
+
+  it('consulta pronta: escolhida e com tudo o que ela pede dito', () => {
+    const passo = {
+      ...novo('consultar'),
+      fonte: {
+        de: 'pronta',
+        consulta: 'cep',
+        entradas: { cep: [{ $valor: 'contato.atributos.cep' }] },
+      },
+      guardar: [{ nome: 'Rua', caminho: 'logradouro' }],
+    };
+
+    expect(passoNovoPronto(passo)).toBe(true);
+    expect(
+      passoNovoPronto({
+        ...passo,
+        fonte: { ...passo.fonte, entradas: { cep: [] } },
+      })
+    ).toBe(false);
+    expect(
+      passoNovoPronto({ ...passo, fonte: { ...passo.fonte, consulta: null } })
     ).toBe(false);
   });
 
@@ -177,14 +201,49 @@ describe('a lista do "para cada um"', () => {
 });
 
 describe('o Salvar tudo com passo novo', () => {
-  it('a receita com passo novo não vai à API: o passo está em teste', () => {
+  it('nenhum dos seis passos novos trava o salvar como "em teste"', () => {
     const gatilho = { tipo: 'conversa.resolvida' };
-    const se = { id: 'p1', tipo: 'se', entao: [novo('pesquisa_nota')] };
 
-    expect(falta({ gatilho, passos: [se] })).toBe('EM_TESTE');
+    TIPOS.forEach(tipo => {
+      const se = { id: 'p1', tipo: 'se', entao: [novo(tipo)] };
+      expect(falta({ gatilho, passos: [se] })).not.toBe('EM_TESTE');
+    });
     expect(falta({ gatilho, passos: [{ id: 'p2', tipo: 'parar' }] })).toBe(
       null
     );
+  });
+
+  it('a aprovação, a reunião e a pesquisa (#2931, #2935, #2936) já salvam', () => {
+    const gatilho = { tipo: 'conversa.resolvida' };
+
+    ['pedir_aprovacao', 'marcar_reuniao', 'pesquisa_nota'].forEach(tipo => {
+      expect(falta({ gatilho, passos: [novo(tipo)] })).toBeNull();
+    });
+  });
+});
+
+describe('o catálogo do servidor com os passos que salvam', () => {
+  it('a entrada da tela fica no lugar da do servidor, sem repetir', () => {
+    const doServidor = {
+      passos: [
+        { tipo: 'parar', campos: [] },
+        {
+          tipo: 'pedir_aprovacao',
+          frase: 'AUTOMACAO_LIVRE.PASSOS.PEDIR_APROVACAO',
+          campos: [],
+        },
+      ],
+    };
+
+    const juntos = comPassosNovos(doServidor, true).passos;
+
+    expect(juntos.filter(item => item.tipo === 'pedir_aprovacao')).toHaveLength(
+      1
+    );
+    expect(juntos.find(item => item.tipo === 'pedir_aprovacao').dica).toBe(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.APROVACAO.DICA'
+    );
+    expect(juntos[0].tipo).toBe('parar');
   });
 });
 
@@ -224,8 +283,14 @@ describe('em frase', () => {
     expect(fraseDoPasso(consulta, catalogo, t)).toContain('Status do pedido');
   });
 
-  it('sem a flag, o passo novo aparece como ação avançada', () => {
+  // #2931/#2935/#2936: o catálogo do servidor já conhece os três passos que
+  // esperam resposta; sem a flag, o Confira diz o que eles fazem. O passo que
+  // o servidor ainda não conhece aparece como ação avançada.
+  it('sem a flag, só o passo que o servidor não conhece aparece como ação avançada', () => {
     expect(fraseDoPasso(novo('pesquisa_nota'), catalogoGerado, t)).toContain(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.PESQUISA.FRASE'
+    );
+    expect(fraseDoPasso(novo('repetir_lista'), catalogoGerado, t)).toContain(
       'AUTOMACAO_LIVRE.FRASES.AVANCADA'
     );
   });
@@ -241,13 +306,24 @@ describe('em frase', () => {
     );
   });
 
-  it('o histórico do bloco traz os passos de dentro', () => {
+  it('o histórico do bloco traz os passos de dentro, pelo bloco da conta', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: {
+        automacoes: [
+          { id: 1, nome: 'Boas-vindas', bloco: true, versao: { receita: {} } },
+          { id: 2, nome: 'Comum', bloco: false },
+        ],
+      },
+    });
+    await carregarBlocos();
+    guardarFrasesDoBloco(1, ['Mandar oi', 'Pôr etiqueta', 'Avisar o time']);
     const linha = linhaDoHistoricoNovo(
       { ...novo('usar_bloco'), bloco_id: 1 },
       t
     );
 
     expect(linha.texto).toContain('BLOCO.HISTORICO');
+    expect(linha.texto).toContain('Boas-vindas');
     expect(linha.dentro).toHaveLength(3);
   });
 
@@ -260,10 +336,12 @@ describe('em frase', () => {
 });
 
 describe('ensaio pelo adaptador falso', () => {
-  it('acha o passo novo em qualquer galho', () => {
-    const se = { id: 'p1', tipo: 'se', entao: [novo('usar_bloco')] };
-
-    expect(temPassoNovo([se])).toBe(true);
+  it('nenhum dos seis passos novos passa pelo ensaio de exemplo, em galho nenhum', () => {
+    TIPOS.forEach(tipo => {
+      const se = { id: 'p1', tipo: 'se', entao: [novo(tipo)] };
+      expect(temPassoNovo([se])).toBe(false);
+      expect(temPassoNovo([novo(tipo)])).toBe(false);
+    });
     expect(temPassoNovo([{ id: 'p1', tipo: 'parar' }])).toBe(false);
   });
 
@@ -301,16 +379,6 @@ describe('ensaio pelo adaptador falso', () => {
 
     expect(linhas[1].texto).toContain('SE_CAMINHO');
     expect(linhas[1].texto).toContain('Quer comprar');
-  });
-
-  it('o teste da busca devolve os dados para tocar', async () => {
-    const dados = await testarConsulta({ de: 'integracao', id: 'loja' }, t);
-
-    expect(dados.map(dado => dado.caminho)).toContain('pedido.status');
-    // O nome é o do dia a dia, não a chave do JSON.
-    expect(dados.find(d => d.caminho === 'cliente.nome').nome).toBe(
-      'AUTOMACAO_LIVRE.PASSOS_NOVOS.EXEMPLO.DADOS.NOME_DO_CLIENTE'
-    );
   });
 });
 

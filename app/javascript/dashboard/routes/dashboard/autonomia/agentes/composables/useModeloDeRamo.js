@@ -1,0 +1,149 @@
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useAlert } from 'dashboard/composables';
+import { modeloDeRamo } from '../constants/modelosDeRamo';
+import { oferecida } from '../vitrine/catalogo';
+import { useMudancaDasListas } from './useMudancaDasListas';
+
+// #2881 — o agente pronto por ramo de seguro na página "Criar agente" (AgenteCriarPage), fora dela para a página não
+// crescer. O ramo entra por `?ramo=<chave>` (`pedido`, lido uma vez pela página) e vale de dois jeitos:
+// - ANTES de a conversa existir, a tela fala primeiro: a pergunta do nome da corretora, o exemplo do campo e a
+//   conversa de exemplo ao lado são os do cartão do ramo. A conversa só abre no servidor com a primeira resposta.
+// - DEPOIS, quem manda é o servidor: o `modelo_pronto` da conversa (store autonomiaBuildThreads) diz se há modelo e
+//   traz a chave do ramo, as listas, as ferramentas com a frase "Use quando" e as perguntas de teste. A query já não
+//   tem o ramo (só `?agente=`), e conta sem direito ao modelo recebe nulo: a tela segue como a de qualquer agente.
+// - RASCUNHO REABERTO (`?agente=`, sem conversa na tela): o mesmo `modelo_pronto` vem no próprio agente, e as
+//   mudanças são gravadas por ele. Havendo conversa com modelo, vale a da conversa.
+// As listas na tela são sempre as do servidor. Cada mudança (`mudar`) manda a lista inteira nova e a tela só muda com
+// a resposta; se o servidor recusar, um aviso curto e a lista fica como ele a tem. Um pedido por lista de cada vez.
+// `conversa`: o useConversaDeCriacao da página (quantas respostas a pessoa já deu e se a conversa fechou).
+// `agente`: o rascunho da página (computed), ou null enquanto ele não existe.
+const NS = 'AGENTS.JORNADA.RAMOS';
+const JA_COMECOU = 'agente_ja_comecou';
+
+export function useModeloDeRamo({ pedido, conversa, agente }) {
+  const store = useStore();
+  const { t } = useI18n();
+  const thread = useMapGetter('autonomiaBuildThreads/getThread');
+  const daConversa = useMapGetter('autonomiaBuildThreads/getModeloPronto');
+
+  const threadId = computed(() => thread.value?.id || null);
+  const modelo = computed(
+    () => daConversa.value || agente.value?.modelo_pronto || null
+  );
+  const ativo = computed(
+    () => Boolean(modelo.value) || (!threadId.value && Boolean(pedido))
+  );
+  const cartao = computed(() =>
+    ativo.value ? modeloDeRamo(modelo.value?.chave || pedido) : null
+  );
+  const textoDoCartao = campo => t(`${NS}.ITENS.${cartao.value.i18n}.${campo}`);
+  // Um nome só na tela, do começo ao fim: o título do cartão, que é traduzido. O `ramo` do servidor é o nome por
+  // extenso que ele usa no que escreve para a IA ("Seguro de automóvel"); na tela só vale para um ramo que ela ainda
+  // não conhece (sem cartão).
+  const ramo = computed(() =>
+    cartao.value ? textoDoCartao('TITULO') : modelo.value?.ramo || ''
+  );
+
+  const falaDeAbertura = computed(() =>
+    t('AGENTS.JORNADA.RAMOS.CRIAR.PERGUNTA_EMPRESA', { ramo: ramo.value })
+  );
+  // A segunda pergunta é a das seguradoras: a sugestão do ramo e "Decido depois" preenchem o campo.
+  const ideias = computed(() => {
+    if (!modelo.value || conversa.fechada.value) return [];
+    if (conversa.respostas.value !== 1) return [];
+    return [
+      modelo.value.seguradoras_sugeridas,
+      t('AGENTS.JORNADA.RAMOS.CRIAR.DECIDO_DEPOIS'),
+    ].filter(Boolean);
+  });
+  const exemploDoCampo = computed(() => {
+    if (conversa.respostas.value === 0) {
+      return t('AGENTS.JORNADA.RAMOS.CRIAR.EXEMPLO_EMPRESA');
+    }
+    return conversa.respostas.value === 1
+      ? t('AGENTS.JORNADA.RAMOS.CRIAR.EXEMPLO_SEGURADORAS')
+      : '';
+  });
+  // A conversa de exemplo ao lado, enquanto a conversa com o Construtor não fecha: a do cartão do ramo.
+  const exemplo = computed(() => {
+    if (!cartao.value) return null;
+    const hora = cartao.value.horario;
+    return [
+      { de: 'cliente', texto: textoDoCartao('CLIENTE'), hora },
+      { de: 'agente', texto: textoDoCartao('AGENTE'), hora },
+    ];
+  });
+
+  const lista = campo =>
+    computed(() => (modelo.value?.[campo] || []).filter(Boolean));
+  const soOferecidas = campo =>
+    computed(() =>
+      (modelo.value?.[campo] || []).filter(item => oferecida(item.fonte))
+    );
+  const perguntas = lista('perguntas');
+  const documentos = lista('documentos');
+  const perguntasDeTeste = lista('teste');
+  const ferramentas = soOferecidas('ferramentas');
+  const tambem = soOferecidas('tambem');
+  // As do "Já vem com" do modelo que o dono tirou (o servidor as devolve no "Também combina", junto com as que nunca
+  // entraram): no "Começar" viram "Agora não".
+  const tiradas = computed(() =>
+    (modelo.value?.tiradas || []).filter(oferecida)
+  );
+  const pagas = computed(() => (modelo.value?.premium || []).filter(oferecida));
+  // A frase "Use quando" de cada ferramenta do ramo, para o "Começar" mandar junto ao incluir.
+  const frases = computed(() =>
+    Object.fromEntries(
+      [...ferramentas.value, ...tambem.value].map(item => [
+        item.fonte,
+        item.usar_quando,
+      ])
+    )
+  );
+
+  const avisoDoErro = erro =>
+    erro?.response?.data?.motivo === JA_COMECOU
+      ? t('AGENTS.JORNADA.RAMOS.CONFIRA.ERRO_JA_COMECOU')
+      : t('AGENTS.JORNADA.RAMOS.CONFIRA.ERRO_AO_MUDAR');
+
+  // Pela conversa quando o modelo é o dela; sem conversa (rascunho reaberto), pelo agente.
+  const gravar = listas =>
+    daConversa.value
+      ? store.dispatch('autonomiaBuildThreads/mudarModeloPronto', {
+          threadId: threadId.value,
+          listas,
+        })
+      : store.dispatch('autonomiaAgents/mudarModeloPronto', {
+          agentId: agente.value.id,
+          listas,
+        });
+
+  // Um pedido por lista de cada vez, e um de cada vez no modelo inteiro (useMudancaDasListas).
+  const { gravando, mudar } = useMudancaDasListas({
+    gravar,
+    pode: () => Boolean(modelo.value),
+    aoFalhar: erro => useAlert(avisoDoErro(erro)),
+  });
+
+  return {
+    ativo,
+    modelo,
+    ramo,
+    falaDeAbertura,
+    ideias,
+    exemploDoCampo,
+    exemplo,
+    perguntas,
+    documentos,
+    perguntasDeTeste,
+    ferramentas,
+    tambem,
+    tiradas,
+    pagas,
+    frases,
+    gravando,
+    mudar,
+  };
+}

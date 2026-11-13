@@ -16,3 +16,7 @@ properties:
     type: boolean
     description: Whether the label should appear in the sidebar
     example: true
+  show_on_conversation_list:
+    type: boolean
+    description: Whether the label should appear on the conversation cards of the conversation list
+    example: false

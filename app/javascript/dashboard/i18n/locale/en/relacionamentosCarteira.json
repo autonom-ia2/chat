@@ -1,0 +1,271 @@
+{
+  "RELACIONAMENTOS_CARTEIRA": {
+    "TITULO": "Insurance",
+    "ABA": "Insurance",
+    "NUMERO_DA_APOLICE": "no. {numero}",
+    "TIPOS": {
+      "AUTO": "Auto",
+      "RESIDENCIAL": "Home",
+      "VIDA": "Life",
+      "EMPRESARIAL": "Business",
+      "OUTRO": "Other"
+    },
+    "SELOS": {
+      "ATIVO": "Active",
+      "VENCIDO": "Expired",
+      "CANCELADO": "Cancelled"
+    },
+    "CAMPOS": {
+      "TIPO": "Type of insurance",
+      "SEGURADORA": "Insurer",
+      "NUMERO": "Policy number",
+      "COMECA": "Starts",
+      "TERMINA": "Ends",
+      "VALOR": "Price the client pays",
+      "BEM": "What is insured"
+    },
+    "GRUPOS": {
+      "TODOS": {
+        "NOME": "All"
+      },
+      "VENCE_7_DIAS": {
+        "NOME": "Ends within 7 days",
+        "EXPLICACAO": "Policies that end in the next 7 days."
+      },
+      "VENCE_30_DIAS": {
+        "NOME": "Ends within 30 days",
+        "EXPLICACAO": "Policies that end in the next 30 days."
+      },
+      "VENCE_90_DIAS": {
+        "NOME": "Ends within 90 days",
+        "EXPLICACAO": "Policies that end in the next three months."
+      },
+      "VENCIDO": {
+        "NOME": "Expired",
+        "EXPLICACAO": "Policies that have already ended."
+      },
+      "SEM_TELEFONE": {
+        "NOME": "No phone",
+        "EXPLICACAO": "The person has no phone, so you cannot send a message. Open the policy, click their name and type the phone on their page."
+      }
+    },
+    "HEROI": {
+      "SEM_SEGURO": "There are no policies here yet.",
+      "SEM_SEGURO_APOIO": "The policies you look after show up here and on each person's page.",
+      "VENCE_7": "{count} policy ends in the next 7 days. | {count} policies end in the next 7 days.",
+      "VENCIDOS": "{count} policy has already expired. | {count} policies have already expired.",
+      "RESUMO": "You have {count} policy. It does not end in the next 7 days. | You have {count} policies. None ends in the next 7 days.",
+      "VER_QUAIS": "See which ones",
+      "VER_VENCIDOS": "See expired",
+      "VER_TODOS": "See all"
+    },
+    "LISTA": {
+      "BUSCA": "Search by name or policy number",
+      "BUSCA_CURTA": "Search policy",
+      "ORDENAR": {
+        "ROTULO": "Sort",
+        "VENCE_PRIMEIRO": "Ends first",
+        "NOME": "Name",
+        "MAIS_NOVOS": "Newest"
+      },
+      "FILTROS": {
+        "BOTAO": "More filters",
+        "BOTAO_COM_CONTAGEM": "More filters · {count}",
+        "TITULO": "More filters",
+        "TIPO": "Type of insurance",
+        "SEGURADORA": "Insurer",
+        "TODOS": "All",
+        "TODAS": "All",
+        "VER_RESULTADO": "See result",
+        "LIMPAR": "Clear",
+        "SEM_RESULTADO": "No policy with these filters.",
+        "LIMPAR_FILTROS": "Clear filters"
+      },
+      "ABRIR": "Open the {tipo} policy of {nome}",
+      "SEM_TELEFONE": "No phone",
+      "GRUPO_VAZIO": "No policy in this group right now.",
+      "BUSCA_SEM_RESULTADO": "I found no policy with “{busca}”.",
+      "LIMPAR_BUSCA": "Clear search",
+      "ERRO": "I could not show the policies. Try again.",
+      "SEM_ACESSO": "You do not have access to this account's policies.",
+      "EXEMPLO_LEGENDA": "Your list of policies will look like this:"
+    },
+    "FICHA": {
+      "TITULO": "Insurance",
+      "TITULO_COM_QUANTOS": "Insurance ({count})",
+      "TITULO_DA_EMPRESA": "Company insurance",
+      "TITULO_COM_QUANTOS_DA_EMPRESA": "Company insurance ({count})",
+      "VAZIO": "No insurance yet.",
+      "ERRO": "I could not show the policies. Try again.",
+      "SEGURADORA_E_NUMERO": "{seguradora} · {numero}",
+      "VER_PDF": "See PDF",
+      "VER_PDF_DE": "See the PDF of the {tipo} policy",
+      "GUARDAR_PDF": "Save PDF",
+      "GUARDAR_PDF_DE": "Save the PDF of the {tipo} policy",
+      "ABRIR": "Open the {tipo} policy"
+    },
+    "QUANDO": {
+      "LISTA": {
+        "VENCE_EM": "ends in {count} days ({data})",
+        "VENCE_AMANHA": "ends tomorrow ({data})",
+        "VENCE_HOJE": "ends today",
+        "VENCE_NA_DATA": "ends on {data}",
+        "VENCEU_HA": "expired {count} days ago",
+        "VENCEU_ONTEM": "expired yesterday",
+        "CANCELADO_EM": "cancelled on {data}"
+      },
+      "FICHA": {
+        "VENCE_EM": "Ends in {count} days · {data}",
+        "VENCE_AMANHA": "Ends tomorrow · {data}",
+        "VENCE_HOJE": "Ends today",
+        "VENCE_NA_DATA": "Ends on {data}",
+        "VENCEU_HA": "Expired {count} days ago",
+        "VENCEU_ONTEM": "Expired yesterday",
+        "CANCELADO_EM": "Cancelled on {data}"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "{tipo} · {seguradora}",
+      "CARREGANDO": "Opening the policy",
+      "ERRO": "I could not open this policy. Try again.",
+      "NAO_ESTA_MAIS": "This policy is no longer here.",
+      "SEM_ACESSO": "You do not have access to this policy.",
+      "FECHAR": "Close",
+      "DE_QUEM": "Policy of {nome}",
+      "ABRIR_FICHA": "Open the page",
+      "FRASE": {
+        "VENCE_EM": "Ends in {count} days, on {data}.",
+        "VENCE_AMANHA": "Ends tomorrow.",
+        "VENCE_HOJE": "Ends today.",
+        "VENCE_NA_DATA": "Valid until {data}.",
+        "VENCEU_HA": "Expired {count} days ago.",
+        "VENCEU_ONTEM": "Expired yesterday.",
+        "CANCELADO_EM": "Cancelled on {data}.",
+        "SEM_PDF": "The PDF has not been saved yet."
+      },
+      "AVISOS": {
+        "CANCELADO": "Policy marked as cancelled.",
+        "CANCELAMENTO_DESFEITO": "Cancellation undone.",
+        "PDF_GUARDADO": "PDF saved.",
+        "PDF_TROCADO": "PDF replaced.",
+        "PDF_APAGADO": "PDF deleted.",
+        "DESFEITO": "Undone.",
+        "NAO_DEU": "I could not do that. Try again.",
+        "DESFAZER": "Undo"
+      },
+      "DADOS": {
+        "TITULO": "Policy details",
+        "TIPO": "Type of insurance",
+        "RAMO": "In the spreadsheet it was",
+        "SEGURADORA": "Insurer",
+        "NUMERO": "Policy number",
+        "COMECA": "Starts",
+        "TERMINA": "Ends",
+        "VALOR": "Price the client pays",
+        "BEM": "What is insured",
+        "ORIGEM": "How it arrived",
+        "POR_PLANILHA": "Arrived from a spreadsheet, on {data}",
+        "CHEGOU_EM": "Arrived on {data}",
+        "NAO_INFORMADO": "Not informed"
+      },
+      "RODAPE": {
+        "VER_PDF": "See PDF",
+        "GUARDAR_PDF": "Save the PDF",
+        "GUARDAR_OUTRO_PDF": "Save another PDF",
+        "APAGAR_PDF": "Delete the PDF",
+        "CORRIGIR": "Fix",
+        "MARCAR_CANCELADO": "Mark as cancelled",
+        "DESFAZER_CANCELAMENTO": "Undo the cancellation",
+        "MAIS": "More options for this policy"
+      }
+    },
+    "CORRIGIR": {
+      "TITULO": "Fix the {tipo} policy",
+      "TIPO": "Type of insurance",
+      "SEGURADORA": "Insurer",
+      "OUTRA": "Another one",
+      "OUTRA_SEGURADORA": "Insurer name",
+      "NUMERO": "Policy number",
+      "COMECA": "Starts",
+      "TERMINA": "Ends",
+      "VALOR": "Price the client pays (R$)",
+      "BEM": "What is insured",
+      "APOIO": "What you fix here stays this way, even if this policy arrives again in another spreadsheet.",
+      "SALVAR": "Save",
+      "VOLTAR": "Back",
+      "SALVO": "Saved.",
+      "ERRO_AO_SALVAR": "I could not save. Try again.",
+      "FALTA": {
+        "NADA_MUDOU": "You have not changed anything yet. Change what is wrong and save.",
+        "NUMERO": "Type the policy number.",
+        "COMECA": "That date does not exist. Pick in the calendar when the policy starts.",
+        "TERMINA": "Choose when the policy ends.",
+        "TERMINA_ANTES": "The policy cannot end before it starts. Check both dates.",
+        "VALOR": "Type the price the client pays in reais, like 1.250,00. If you do not know it, leave it blank.",
+        "OUTRA_SEGURADORA": "Type the insurer name."
+      },
+      "SAIR": {
+        "TITULO": "Leave without saving?",
+        "AVISO": "What you changed will not be saved.",
+        "CONFIRMAR": "Leave without saving",
+        "VOLTAR": "Keep fixing"
+      }
+    },
+    "HISTORIA": {
+      "TITULO": "History",
+      "ERRO": "I could not show the history. Try again.",
+      "MUDOU_DE_PARA": "{item}: was {antes}, now {depois}",
+      "NAO_INFORMADO": "not informed",
+      "TIPOS": {
+        "CHEGOU_PLANILHA": "Arrived from a spreadsheet.",
+        "CHEGOU_DE_NOVO": "Arrived again from a spreadsheet.",
+        "CORRIGIDO": "Policy fixed by hand.",
+        "CANCELADO": "Policy marked as cancelled.",
+        "VOLTOU_A_ATIVO": "Cancellation undone.",
+        "PDF_ANEXADO": "PDF saved.",
+        "PDF_TIRADO": "PDF deleted."
+      }
+    },
+    "PDF": {
+      "TITULO": "Save the PDF of the {tipo} policy",
+      "TITULO_OUTRO": "Save another PDF of the {tipo} policy",
+      "SOLTAR": "Drag the PDF here or click to choose",
+      "APOIO": "As soon as you choose it, the PDF is saved in this policy.",
+      "APOIO_OUTRO": "After you choose, you confirm the replacement.",
+      "GUARDANDO": "Saving the PDF…",
+      "USAR_EXEMPLO": "Use a sample PDF",
+      "NAO_GUARDOU": "I could not save the PDF. Try again.",
+      "NAO_ABRIU": "I could not open the PDF. Try again.",
+      "FECHAR": "Close",
+      "APAGAR": {
+        "TITULO": "Delete the PDF from this policy?",
+        "AVISO": "The file leaves this policy and does not come back. If you need it later, save the PDF again.",
+        "CONFIRMAR": "Delete the PDF",
+        "VOLTAR": "Back"
+      },
+      "TROCAR": {
+        "TITULO": "Replace the PDF of this policy?",
+        "AVISO": "The PDF that is saved goes out and does not come back. The new one takes its place.",
+        "CONFIRMAR": "Replace the PDF",
+        "VOLTAR": "Back"
+      }
+    },
+    "RECUSAS": {
+      "FALTA_NUMERO": "The policy number is missing. Type the number and save again.",
+      "FALTA_SEGURADORA": "The insurer is missing. Choose the insurer and save again.",
+      "FALTA_TERMINA": "The date the policy ends is missing. Choose the date and save again.",
+      "TERMINA_ANTES": "The policy cannot end before it starts. Check both dates.",
+      "DATA_INVALIDA": "One of the dates does not exist. Pick the date in the calendar and save again.",
+      "VALOR_INVALIDO": "I did not understand the price the client pays. Type only the number in reais, like 1.250,00.",
+      "TIPO_DESCONHECIDO": "I do not know this type of insurance. Choose a type from the list.",
+      "APOLICE_REPETIDA": "There is already a policy with this insurer, this number and this end date. Check the policy number.",
+      "JA_CANCELADO": "This policy was already marked as cancelled. I refreshed the screen.",
+      "NAO_CANCELADO": "This policy was no longer cancelled. I refreshed the screen.",
+      "ARQUIVO_OBRIGATORIO": "The file did not arrive. Choose the PDF again.",
+      "TIPO": "This file is not a PDF. Choose the policy PDF.",
+      "ARQUIVO_GRANDE": "This PDF is too large to save here. Ask the insurer for the policy PDF, not the scanned copy, and save that one.",
+      "SEM_PDF": "This policy no longer has a saved PDF. I refreshed the screen.",
+      "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again."
+    }
+  }
+}

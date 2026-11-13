@@ -38,6 +38,9 @@
       "SHOW_ON_SIDEBAR": {
         "LABEL": "Exibir etiqueta na barra lateral"
       },
+      "SHOW_ON_CONVERSATION_LIST": {
+        "LABEL": "Exibir etiqueta na lista de conversas"
+      },
       "EDIT": "Alterar",
       "CREATE": "Criar",
       "DELETE": "Excluir",

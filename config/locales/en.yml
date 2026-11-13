@@ -838,6 +838,7 @@ en:
         whatsapp_api_caiu: 'WhatsApp API on the inbox "%{caixa}" disconnected. Until you reconnect it in the inbox WhatsApp API tab, replies after 24 hours need an approved template. Do you want me to show you how to reconnect?'
         whatsapp_api_perto_do_limite: 'WhatsApp is close to limiting new conversations on the inbox "%{caixa}" (cycle ends on %{fim}). I already slowed down sending through WhatsApp API. Avoid starting conversations with new contacts there for now. Want to see the numbers?'
         whatsapp_api_bloqueado: 'WhatsApp blocked new conversations through WhatsApp API on the inbox "%{caixa}" until %{fim}. Replies to people you already talk to keep going; for new contacts use an approved template. Want me to explain?'
+        whatsapp_oficial_sem_acesso: 'The inbox "%{caixa}" lost its connection to the WhatsApp account at Meta and needs to be reconnected. Until then, messages through this inbox may not arrive or be sent. Do you want me to show you how to reconnect?'
         whatsapp_proxy:
           plano_esgotado: 'WhatsApp proxy: the %{plano} plan has no free Brazilian IP in this stack slice. Inbox %{caixa} (account %{conta}) is running without proxy. Buy more IPs on Webshare or widen the slice.'
           fatia_vazia: 'WhatsApp proxy: the %{plano} slice of this stack is empty, so no number gets a proxy from that plan. Set the slice variable.'
