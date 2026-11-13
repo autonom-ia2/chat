@@ -266,12 +266,18 @@ describe('a aba Seguros na lista de Relacionamentos', () => {
     expect(w.find(daCarteira('heroi')).exists()).toBe(false);
   });
 
-  it('a aba Seguros não oferece trazer seguros', async () => {
+  it('a aba Seguros oferece trazer seguros, e o botão leva a "Trazer minha lista"', async () => {
     const w = await abrirLista('cheio', { aba: 'seguros' });
 
-    expect(w.find(daCarteira('heroi')).exists()).toBe(true);
-    expect(w.find(daCarteira('heroi-trazer')).exists()).toBe(false);
-    expect(w.get(daCarteira('heroi')).text()).not.toContain('Trazer');
+    expect(w.get(daCarteira('heroi-trazer')).text()).toBe('Trazer seguros');
+    // A ação principal continua sendo a da frase do dia.
+    expect(w.findAll(daCarteira('heroi-acao'))).toHaveLength(1);
+
+    await clicar(w, daCarteira('heroi-trazer'));
+
+    expect(roteador.push).toHaveBeenLastCalledWith({
+      name: 'relacionamentos_trazer',
+    });
   });
 
   it('conta de outro segmento não tem a aba, e `?aba=seguros` abre Pessoas', async () => {

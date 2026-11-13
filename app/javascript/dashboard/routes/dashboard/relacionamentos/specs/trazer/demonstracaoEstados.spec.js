@@ -12,6 +12,13 @@ withFullI18n('pt_BR');
 
 const estado = vi.hoisted(() => ({ demo: 'cheio', planilha: undefined }));
 
+// #2897 — a conta destes testes não tem a carteira de seguros: a tela é a das
+// listas, sem a pergunta dos seguros.
+vi.mock('../../carteira/useContaDeSeguros', async () => {
+  const { ref } = await import('vue');
+  return { useContaDeSeguros: () => ref(false) };
+});
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({ query: { planilha: estado.planilha } }),
   useRouter: () => ({ push: vi.fn() }),

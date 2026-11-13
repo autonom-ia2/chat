@@ -171,7 +171,17 @@ describe('o herói e as abas', () => {
     expect(linhas(w)).toHaveLength(Math.min(vence7, POR_PAGINA));
   });
 
-  it('a aba não oferece trazer seguros, marcar nem mandar mensagem', async () => {
+  it('quem pode trazer lista vê o botão de trazer seguros, que avisa a página', async () => {
+    const w = await abrir({ podeTrazer: true });
+
+    expect(textoDe(w, daCarteira('heroi-trazer'))).toBe('Trazer seguros');
+
+    await clicar(w, daCarteira('heroi-trazer'));
+
+    expect(w.emitted('trazer')).toHaveLength(1);
+  });
+
+  it('sem poder trazer lista, a aba não oferece trazer seguros; e não há marcar nem mandar mensagem', async () => {
     const w = await abrir();
 
     expect(w.find(daCarteira('heroi-trazer')).exists()).toBe(false);

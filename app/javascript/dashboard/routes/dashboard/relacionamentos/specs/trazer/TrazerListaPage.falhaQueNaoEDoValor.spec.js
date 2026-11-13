@@ -37,6 +37,13 @@ const servidor = vi.hoisted(() => ({
   confirmar: vi.fn(),
 }));
 
+// #2897 — a conta destes testes não tem a carteira de seguros: a tela é a das
+// listas, sem a pergunta dos seguros.
+vi.mock('../../carteira/useContaDeSeguros', async () => {
+  const { ref } = await import('vue');
+  return { useContaDeSeguros: () => ref(false) };
+});
+
 vi.mock('dashboard/api/relacionamentosTrazer', () => ({ default: servidor }));
 
 vi.mock('vue-router', () => ({
