@@ -1163,6 +1163,9 @@ Rails.application.routes.draw do
                 get :contagens
                 get :resumo
                 get :opcoes_de_filtro
+                # #2898 (E5.1) — "Ajustar renovações": onde ficam as renovações da conta (funil, etapa, dias, mensagens).
+                get :renovacoes, to: 'seguros/renovacoes#show'
+                put :renovacoes, to: 'seguros/renovacoes#update'
               end
               member do
                 get :historia
