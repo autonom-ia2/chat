@@ -146,7 +146,7 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       <<~CSV
         Nome,Celular,Email,Empresa,Plano
         Ana Albuquerino,11987650001,,,Ouro
-        ana albuquerino,(11) 98765-0001,ANA@exemplo.com.br,Padaria Bom Dia,Prata
+        ana albuquerino,(11) 98765-0001,ANA@exemplo.com.br,Padaria Bom Dia,
         Bia Brandolim,11987650002,bia@exemplo.com.br,,
         Beatriz Outra,11987650009,BIA@exemplo.com.br,,
         Ana Albuquerino,11987650007,,,
