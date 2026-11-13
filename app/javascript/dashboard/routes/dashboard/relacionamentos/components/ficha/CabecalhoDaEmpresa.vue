@@ -8,9 +8,14 @@ import BotaoCopiar from './BotaoCopiar.vue';
 // #2894 — o cabeçalho da ficha da empresa: nome, CNPJ com copiar e o site, e as
 // ações: "Mandar mensagem" (a única preenchida) e "Alterar" (discreta). Quem só
 // pode ver (`podeEditar` falso) não tem "Alterar".
+// #2970 — o que ainda não é de verdade não aparece: "Mandar mensagem" daqui só
+// simula, então só existe com `podeMandarMensagem` (a página liga na
+// demonstração). Sem ele fica só "Alterar", e quem só pode ver não tem o grupo
+// de ações.
 defineProps({
   empresa: { type: Object, required: true },
   podeEditar: { type: Boolean, default: true },
+  podeMandarMensagem: { type: Boolean, default: false },
 });
 const emit = defineEmits(['mandarMensagem', 'alterar']);
 
@@ -71,6 +76,7 @@ const { t } = useI18n();
       </div>
     </div>
     <div
+      v-if="podeMandarMensagem || podeEditar"
       role="group"
       :aria-label="
         t('RELACIONAMENTOS_FICHA.EMPRESA.ACOES', { nome: empresa.name })
@@ -79,6 +85,7 @@ const { t } = useI18n();
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button
+          v-if="podeMandarMensagem"
           data-relacionamentos="mandar-mensagem"
           size="lg"
           class="w-full sm:w-auto whitespace-nowrap shrink-0"

@@ -194,6 +194,10 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'mais-acoes').exists()).toBe(true);
     expect(marca(w, 'alterar').exists()).toBe(true);
     expect(marca(w, 'conversas').findAll('li')).toHaveLength(3);
+    // A demonstração mostra o desenho inteiro, com o que ainda só avisa (fora
+    // dela, não: #2970, em paginasReal.spec.js).
+    expect(marca(w, 'cabecalho').text()).toContain('ACOES.LEMBRETE');
+    expect(marca(w, 'conversas').text()).toContain('CONVERSAS.VER_TODAS');
     expect(w.findAll('[data-relacionamentos="card"]').length).toBeGreaterThan(
       0
     );
@@ -329,6 +333,9 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'cards').find('button').exists()).toBe(false);
     expect(marca(w, 'arquivos').find('li').exists()).toBe(false);
     expect(marca(w, 'marcar-cliente').exists()).toBe(true);
+    // A demonstração mostra o desenho inteiro: "Conversar" aparece mesmo sem
+    // conversa (fora dela, não: #2970, em paginasReal.spec.js).
+    expect(marca(w, 'conversar').exists()).toBe(true);
   });
 
   it('Marcar como cliente simula e o selo aparece', async () => {

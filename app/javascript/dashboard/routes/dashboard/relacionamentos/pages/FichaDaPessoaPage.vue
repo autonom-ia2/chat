@@ -16,6 +16,7 @@ import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
+import { FALHA_DA_PARTE } from '../ficha/falhas';
 import { linhasDaPessoa, redesPreenchidas } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
@@ -131,7 +132,8 @@ const AVISO_DO_MAIS = {
 };
 
 // "Alterar informações" abre a gaveta e "Não é mais cliente" desmarca na hora;
-// as outras escolhas só avisam, por ora.
+// as outras escolhas só avisam, por ora: por isso, como "Lembrete" e "Ver
+// todas", só existem na demonstração (#2970).
 const escolherNoMais = escolha => {
   if (escolha === 'alterar') gavetaAberta.value = true;
   else if (escolha === 'desmarcar') desmarcarCliente();
@@ -140,12 +142,29 @@ const escolherNoMais = escolha => {
 
 // As saídas que têm rota real. Na demonstração as pessoas, as conversas e os
 // cards são inventados: lá o clique só avisa (ou abre o quadro do CRM, sem card).
-// "Conversar" abre a conversa mais recente; com quem nunca conversou ainda só
-// avisa (começar conversa nova não é só uma rota).
-const conversar = () => {
+// "Conversar" abre a conversa mais recente. Começar conversa nova não é só uma
+// rota: com quem nunca conversou o botão não aparece (#2970 — o que ainda não é
+// de verdade não aparece). Se a leitura das conversas falhou, a ficha não sabe
+// se há conversa: o botão aparece, e o clique lê de novo antes de abrir. Sem
+// conversa para abrir ele não sai do lugar, e a parte Conversas diz o que
+// houve. A demonstração mostra sempre, e só avisa.
+const conversasNaoVieram = computed(
+  () => ficha.falhas.value.conversas === FALHA_DA_PARTE.ERRO
+);
+const podeConversar = computed(
+  () =>
+    fonte.usaDemo ||
+    ficha.conversas.value.length > 0 ||
+    conversasNaoVieram.value
+);
+const conversar = async () => {
+  if (fonte.usaDemo) {
+    avisar('CONVERSAR');
+    return;
+  }
+  if (conversasNaoVieram.value) await ficha.relerParte('conversas');
   const [maisRecente] = ficha.conversas.value;
-  if (fonte.usaDemo || !maisRecente) avisar('CONVERSAR');
-  else acoes.abrirConversa(maisRecente.id);
+  if (maisRecente) acoes.abrirConversa(maisRecente.id);
 };
 
 const novoCard = () => {
@@ -234,6 +253,8 @@ watch(
             :marcando-cliente="ficha.ocupado.value === 'marcarCliente'"
             :pode-editar="podeEditar"
             :pode-criar-cards="podeCriarCards"
+            :pode-conversar="podeConversar"
+            :na-demonstracao="fonte.usaDemo"
             @conversar="conversar"
             @novo-card="novoCard"
             @lembrete="avisar('LEMBRETE')"
@@ -264,6 +285,7 @@ watch(
             :guardando-nota="ficha.ocupado.value === 'guardarNota'"
             :falhas="ficha.falhas.value"
             :pode-editar="podeEditar"
+            :pode-ver-todas="fonte.usaDemo"
             @tentar="ficha.relerParte"
             @ver-todas="avisar('VER_TODAS')"
             @abrir-card="card => (cardAberto = card)"
