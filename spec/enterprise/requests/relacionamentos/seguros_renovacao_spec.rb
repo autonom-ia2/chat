@@ -1,9 +1,9 @@
 require 'rails_helper'
 
 # E5 (#2898) — a parte da renovação da carteira que depende do Enterprise: o que a função personalizada muda. Ler pede
-# ver contatos; guardar os ajustes pede editar contatos; escolher o funil pede também ver o CRM; dizer como a renovação
-# terminou pede editar contatos e poder mexer naquele card no quadro; o aviso no sino vai a quem vê contatos e o CRM.
-# Tudo fictício.
+# ver contatos; guardar os ajustes pede as DUAS chaves, editar contatos e montar os funis; escolher o funil pede também
+# ver o CRM; dizer como a renovação terminou pede editar contatos e poder mexer naquele card no quadro; o id do card só
+# vai para quem o enxerga; o aviso no sino vai a quem vê contatos e o CRM. Tudo fictício.
 RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
   # Meio-dia em São Paulo: para a conta, hoje é 12/11/2026.
   let(:agora) { Time.utc(2026, 11, 12, 15) }
@@ -60,37 +60,43 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect(lido['ajustes']).to include('funilId' => ajustes.pipeline_id, 'dias' => 60)
     end
 
-    it 'quem vê contatos e o CRM lê os funis, mas não guarda' do
-      so_ve = pessoa_com(%w[contact_view crm_view])
+    # Guardar muda uma escolha da conta inteira e diz em que funil o CRM recebe os cards: pede as duas chaves.
+    # Os quatro casos: nenhuma, só editar contatos, só montar os funis, as duas.
+    {
+      'nenhuma das duas' => [%w[contact_view crm_view], false],
+      'só a de editar contatos' => [%w[contact_manage crm_view], false],
+      'só a de montar os funis' => [%w[contact_view crm_view crm_manage_pipelines], false],
+      'as duas' => [%w[contact_manage crm_view crm_manage_pipelines], true]
+    }.each do |caso, (chaves, guarda)|
+      it "com #{caso}, #{guarda ? 'guarda' : 'lê os funis mas não guarda'}" do
+        quem = pessoa_com(chaves)
 
-      lido = ler_ajustes(so_ve)
-      guardado = guardar_ajustes(so_ve, { dias: 30 })
+        lido = ler_ajustes(quem)
+        guardado = guardar_ajustes(quem, { dias: 30 })
 
-      expect(lido['funis'].pluck('nome')).to eq(['Renovação'])
-      expect(lido['semPermissao']).to be(true)
-      expect([guardado.first, ajustes.reload.dias_antes]).to eq([401, 60])
+        expect(lido['funis'].pluck('nome')).to eq(['Renovação'])
+        expect([lido['semPermissao'], guardado.first, ajustes.reload.dias_antes]).to eq(guarda ? [false, 200, 30] : [true, 401, 60])
+      end
     end
 
-    it 'quem edita contatos e vê o CRM guarda, com o funil' do
-      edita = pessoa_com(%w[contact_manage crm_view])
+    it 'quem tem as duas chaves guarda com o funil, e fica como quem escolheu' do
+      monta = pessoa_com(%w[contact_manage crm_view crm_manage_pipelines])
       outro_funil, outra_etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
 
-      lido = ler_ajustes(edita)
-      guardado = guardar_ajustes(edita, { funilId: outro_funil.id, etapaId: outra_etapa.id, dias: 30 })
+      guardado = guardar_ajustes(monta, { funilId: outro_funil.id, etapaId: outra_etapa.id, dias: 30 })
 
-      expect(lido['semPermissao']).to be(false)
-      expect(guardado).to eq([200, { 'funilId' => outro_funil.id, 'etapaId' => outra_etapa.id, 'dias' => 30, 'mensagens' => 'mandar' }])
-      expect(ajustes.reload).to have_attributes(pipeline_id: outro_funil.id, user_id: edita.id)
+      expect(guardado).to eq([200, { 'funilId' => outro_funil.id, 'etapaId' => outra_etapa.id, 'dias' => 30 }])
+      expect(ajustes.reload).to have_attributes(pipeline_id: outro_funil.id, user_id: monta.id)
     end
 
-    it 'quem edita contatos sem ver o CRM muda os dias, mas não escolhe o funil' do
-      edita = pessoa_com(%w[contact_manage])
+    it 'quem tem as duas chaves sem ver o CRM muda os dias, mas não escolhe o funil' do
+      sem_ver = pessoa_com(%w[contact_manage crm_manage_pipelines])
 
-      dos_dias = guardar_ajustes(edita, { dias: 45 })
-      do_funil = guardar_ajustes(edita, { funilId: ajustes.pipeline_id, etapaId: ajustes.stage_id })
+      dos_dias = guardar_ajustes(sem_ver, { dias: 45 })
+      do_funil = guardar_ajustes(sem_ver, { funilId: ajustes.pipeline_id, etapaId: ajustes.stage_id })
 
       expect([dos_dias.first, do_funil]).to eq([200, [422, { 'error' => 'funil_desconhecido' }]])
-      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: edita.id)
+      expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: sem_ver.id)
     end
 
     it 'sem a chave de contatos não lê nem guarda' do
@@ -123,6 +129,24 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
 
       expect(sem_o_card).to eq([401, 401, 401])
       expect([response.status, card.reload.status, seguro.reload.renovado_em]).to eq([200, 'won', agora])
+    end
+
+    it 'o id do card de renovação só vai para quem enxerga o card no quadro' do
+      quem = pessoa_com(%w[contact_view crm_view])
+      sem_crm = pessoa_com(%w[contact_view])
+      ler_o_card = lambda do |pessoa|
+        get "#{base}/seguros/#{seguro.id}", headers: pessoa.create_new_auth_token
+        response.parsed_body['renovacao'].slice('cardId', 'funil')
+      end
+
+      sem_ver = ler_o_card.call(quem)
+      card.update!(owner: sem_crm)
+      dona_sem_crm = ler_o_card.call(sem_crm)
+      card.update!(owner: quem)
+
+      expect([sem_ver, dona_sem_crm]).to all(eq('cardId' => nil, 'funil' => 'Renovação'))
+      expect(ler_o_card.call(quem)).to eq('cardId' => card.id, 'funil' => 'Renovação')
+      expect(ler_o_card.call(admin)).to eq('cardId' => card.id, 'funil' => 'Renovação')
     end
 
     it 'guardar a apólice nova pede só editar contatos' do

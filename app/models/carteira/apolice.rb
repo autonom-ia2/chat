@@ -14,7 +14,7 @@
 # `renovacao_card_removido_em` marca que alguém apagou esse card de propósito, e ele não volta nesta vigência;
 # `apolice_anterior` é a apólice que esta renovou. O desfecho é um só: `renovado_em` ou `nao_renovou_em`, este com o
 # motivo em um toque (`motivo_nao_renovou`) e, no motivo "outro", o que a pessoa escreveu (`motivo_escrito`). Apagar o
-# card ou a apólice anterior só anula a coluna.
+# card ou a apólice anterior só anula a coluna. `apolice_nova` é o outro lado: a apólice que renovou esta.
 class Carteira::Apolice < ApplicationRecord
   self.table_name = 'carteira_apolices'
 
@@ -22,7 +22,9 @@ class Carteira::Apolice < ApplicationRecord
   ORIGENS = %w[planilha manual pdf conector].freeze
   # Por que não renovou. Sem CHECK no banco: a lista pode crescer.
   MOTIVO_ESCRITO = 'outro'.freeze
-  MOTIVOS_DE_NAO_RENOVAR = %w[achou_caro outra_corretora vendeu_o_bem nao_respondeu outro].freeze
+  # Quem põe é o sistema, quando o seguro é marcado como cancelado com a renovação aberta (Carteira::Cancelamento).
+  MOTIVO_CANCELOU = 'cancelou'.freeze
+  MOTIVOS_DE_NAO_RENOVAR = %w[achou_caro outra_corretora vendeu_o_bem nao_respondeu cancelou outro].freeze
   MOTIVO_ESCRITO_MAXIMO = 500
 
   belongs_to :account
@@ -31,6 +33,8 @@ class Carteira::Apolice < ApplicationRecord
   belongs_to :campaign_import, optional: true
   belongs_to :crm_card, class_name: 'Crm::Card', optional: true
   belongs_to :apolice_anterior, class_name: 'Carteira::Apolice', optional: true
+  # Sem `dependent`: quem anula a coluna da apólice nova é a chave do banco (SET NULL).
+  has_one :apolice_nova, class_name: 'Carteira::Apolice', foreign_key: :apolice_anterior_id, inverse_of: :apolice_anterior, dependent: nil
   has_many :eventos, class_name: 'Carteira::ApoliceEvento', inverse_of: :apolice, dependent: :delete_all
   has_one_attached :pdf
 

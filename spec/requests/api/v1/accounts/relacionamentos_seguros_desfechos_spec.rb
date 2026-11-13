@@ -59,6 +59,18 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       )
     end
 
+    it 'quem não enxerga o card no quadro lê a renovação sem o id do card' do
+      agente = create(:user, account: account, role: :agent)
+
+      do_agente = ler("seguros/#{seguro.id}", quem: agente)['renovacao']
+      da_lista = ler('seguros', quem: agente)['itens'].sole['renovacao']
+
+      expect(do_agente).to eq('cardId' => nil, 'funil' => 'Renovação', 'etapa' => 'Novo Lead', 'desfecho' => nil, 'cuida' => nil,
+                              'cuidaId' => nil)
+      expect(da_lista).to eq(do_agente)
+      expect(ler('seguros')['itens'].sole['renovacao']).to include('cardId' => card.id)
+    end
+
     it 'o card sem dono vem sem "quem cuida", e o card tirado do quadro some do seguro' do
       sem_dono = ler("seguros/#{seguro.id}")['renovacao']
       Crm::Cards::Archiver.new(card: card, actor: admin).perform
@@ -82,7 +94,8 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
 
       expect(ler('seguros', grupo: 'em_renovacao')['itens'].pluck('numero', 'selo')).to eq([%w[EX-000001 em_renovacao], %w[EX-LONGE em_renovacao]])
       expect(ler('seguros/contagens')).to include('todos' => 8, 'em_renovacao' => 2, 'vencido' => 1, 'vence_7_dias' => 1)
-      expect(ler('seguros/resumo')).to eq('total' => 8, 'vence7' => 1, 'vence7EmRenovacao' => 1, 'emRenovacao' => 2, 'aggerLigado' => false)
+      expect(ler('seguros/resumo')).to eq('total' => 8, 'vence7' => 1, 'vence7EmRenovacao' => 1, 'emRenovacao' => 2,
+                                          'funilEscolhido' => true, 'aggerLigado' => false)
     end
 
     it 'o renovado sai dos grupos de vencimento e não vira vencido depois do fim' do
@@ -236,6 +249,17 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(seguro.reload.nao_renovou_em).to be_nil
     end
 
+    it 'a história guarda quem desfez e qual era o desfecho' do
+      acao('renovou')
+      travel 1.hour
+      acao('desfazer_desfecho')
+
+      historia = ler("seguros/#{seguro.id}/historia")
+      expect(historia.pluck('tipo')).to eq(%w[desfez_desfecho renovou card_nasceu])
+      expect(historia.first).to include('quando' => (agora + 1.hour).to_i, 'quem' => { 'id' => admin.id, 'nome' => 'Bia Exemplo' },
+                                        'valores' => { 'anterior' => 'renovou' })
+    end
+
     it 'depois de desfazer o "renovou", dá para dizer "não renovou"' do
       acao('renovou')
       acao('desfazer_desfecho')
@@ -243,6 +267,54 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
 
       expect(response.parsed_body).to include('renovadoEm' => nil, 'motivo' => 'achou_caro')
       expect(card.reload.status).to eq('lost')
+    end
+  end
+
+  # Card de seguro cancelado não fica aberto para sempre: cancelar fecha a renovação como perdida, com o motivo
+  # "cancelou". Voltar a ativo não reabre.
+  describe 'cancelar o seguro com a renovação aberta' do
+    it 'fecha o card como perdido, com o motivo "cancelou", e a história guarda os dois passos com quem cancelou' do
+      acao('cancelar')
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('selo' => 'cancelado', 'motivo' => 'cancelou', 'motivoEscrito' => nil, 'renovadoEm' => nil)
+      expect(response.parsed_body['renovacao']).to include('desfecho' => 'nao_renovou')
+      expect([card.reload.status, seguro.reload.nao_renovou_em, passos]).to eq(['lost', agora, %w[card_nasceu cancelado nao_renovou]])
+      expect(seguro.eventos.order(:id).last).to have_attributes(user_id: admin.id, valores: { 'motivo' => 'cancelou' })
+      expect(card.activities.order(:id).last).to have_attributes(event_type: 'lost', actor_type: 'user', actor_id: admin.id)
+    end
+
+    it 'voltar a ativo não reabre o card, e o cancelado não desfaz o desfecho pela gaveta' do
+      acao('cancelar')
+      acao('desfazer_desfecho')
+      desfazendo_cancelado = recusa
+      acao('voltar_a_ativo')
+
+      expect(desfazendo_cancelado).to eq([422, { 'error' => 'ja_cancelado' }])
+      expect(response.parsed_body).to include('selo' => 'ativo', 'motivo' => 'cancelou')
+      expect([card.reload.status, seguro.reload.nao_renovou_em]).to eq(['lost', agora])
+    end
+
+    it 'depois de voltar a ativo, desfazer o desfecho põe o seguro em renovação de novo' do
+      acao('cancelar')
+      acao('voltar_a_ativo')
+      acao('desfazer_desfecho')
+
+      expect(response.parsed_body).to include('selo' => 'em_renovacao', 'motivo' => nil)
+      expect(card.reload.status).to eq('open')
+    end
+
+    it 'não mexe no card que já tem desfecho nem no que foi tirado do quadro' do
+      no_quadro('won')
+      tirado = criar_apolice(marina, numero: 'EX-000002', fim_vigencia: hoje + 5)
+      card_tirado = por_em_renovacao(tirado, ajustes)
+      Crm::Cards::Archiver.new(card: card_tirado, actor: admin).perform
+
+      acao('cancelar')
+      acao('cancelar', id: tirado.id)
+
+      expect([card.reload.status, seguro.reload.renovado_em, passos]).to eq(['won', agora, %w[card_nasceu renovou cancelado]])
+      expect([card_tirado.reload.status, tirado.reload.nao_renovou_em, passos(tirado)]).to eq(['archived', nil, %w[card_nasceu cancelado]])
     end
   end
 

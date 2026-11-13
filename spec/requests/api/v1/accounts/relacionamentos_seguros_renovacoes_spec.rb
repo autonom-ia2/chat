@@ -37,21 +37,23 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
   end
 
   describe 'ler' do
-    it 'a conta que ainda não escolheu vem com o padrão, sem funil, e nada é gravado' do
+    # As mensagens antes de vencer só entram na resposta quando a conta tiver a receita da Automação (E5.6): até lá,
+    # nem a escolha (`mensagens`) nem o exemplo das prévias vêm.
+    it 'a conta que ainda não escolheu vem com o padrão, sem funil e sem o bloco das mensagens, e nada é gravado' do
       etapa
       ler
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to eq(
-        'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60, 'mensagens' => 'mandar' },
+        'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60 },
         'funis' => [{ 'id' => funil.id, 'nome' => 'Renovação', 'etapas' => [{ 'id' => etapa.id, 'nome' => 'Novo Lead' }] }],
-        'vencimentos' => [], 'semPermissao' => false, 'exemplo' => nil,
+        'vencimentos' => [], 'semPermissao' => false,
         'aggerLigado' => false, 'cotaSozinha' => false, 'cotaSemConversa' => false, 'agente' => nil
       )
       expect(config).to be_nil
     end
 
-    it 'traz as escolhas guardadas, em quantos dias cada seguro que ainda vale termina e o exemplo das prévias' do
+    it 'traz as escolhas guardadas e em quantos dias cada seguro que ainda vale termina' do
       create(:carteira_renovacao_config, account: account, pipeline: funil, stage: etapa, dias_antes: 45, mensagens: 'nao_mandar')
       criar_apolice(marina, numero: 'EX-000002', tipo: 'residencial', fim_vigencia: hoje + 90)
       criar_apolice(marina, numero: 'EX-000001', tipo: 'auto', fim_vigencia: hoje)
@@ -61,9 +63,9 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       ler
 
       expect(response.parsed_body).to include(
-        'ajustes' => { 'funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 45, 'mensagens' => 'nao_mandar' },
-        'vencimentos' => [0, 90], 'exemplo' => { 'nome' => 'Marina', 'tipo' => 'auto', 'termina' => '2026-11-12' }
+        'ajustes' => { 'funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 45 }, 'vencimentos' => [0, 90]
       )
+      expect(response.parsed_body.keys).not_to include('exemplo')
     end
 
     it 'atende quem só vê contatos, avisando que não pode mudar' do
@@ -88,11 +90,11 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
   end
 
   describe 'guardar' do
-    it 'guarda o funil, a etapa, os dias e as mensagens, com quem escolheu, e devolve os ajustes' do
+    it 'guarda o funil, a etapa, os dias e as mensagens, com quem escolheu, e devolve os ajustes sem as mensagens' do
       guardar({ funilId: funil.id, etapaId: etapa.id, dias: 30, mensagens: 'nao_mandar' })
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 30, 'mensagens' => 'nao_mandar')
+      expect(response.parsed_body).to eq('funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 30)
       expect(config).to have_attributes(pipeline_id: funil.id, stage_id: etapa.id, dias_antes: 30, mensagens: 'nao_mandar', user_id: admin.id)
     end
 
@@ -100,7 +102,7 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       guardar({ funilId: funil.id, etapaId: etapa.id })
       guardar({ dias: '15' })
 
-      expect(response.parsed_body).to eq('funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 15, 'mensagens' => 'mandar')
+      expect(response.parsed_body).to eq('funilId' => funil.id, 'etapaId' => etapa.id, 'dias' => 15)
       expect(Carteira::RenovacaoConfig.where(account_id: account.id).count).to eq(1)
     end
 
@@ -205,7 +207,7 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       lido = response.parsed_body
       put da_outra, params: { funilId: funil.id, etapaId: etapa.id }, headers: dona.create_new_auth_token, as: :json
 
-      expect(lido).to include('ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60, 'mensagens' => 'mandar' }, 'funis' => [])
+      expect(lido).to include('ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60 }, 'funis' => [])
       expect(recusa).to eq([422, { 'error' => 'funil_desconhecido' }])
       expect(config).to have_attributes(dias_antes: 45, pipeline_id: funil.id)
       expect(Carteira::RenovacaoConfig.where(account_id: outra.id)).to be_empty

@@ -43,6 +43,29 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     expect(card.activities.find_by(event_type: 'create').payload).to include('by' => 'automacao', 'origem' => 'carteira')
   end
 
+  # O card sem dono e sem caixa só apareceria para o administrador: quem escolheu o funil é quem cuida.
+  it 'quem escolheu o funil cuida do card, e a história do seguro guarda o nome' do
+    bia = create(:user, account: account, role: :agent, name: 'Bia Exemplo')
+    config.update!(user: bia)
+    seguro = criar_apolice(marina, numero: 'EX-000001', fim_vigencia: hoje + 10)
+
+    rodar
+
+    expect(cards.sole.owner_id).to eq(bia.id)
+    expect(seguro.eventos.sole).to have_attributes(tipo: 'card_nasceu', user_id: nil, valores: { 'cuida' => 'Bia Exemplo' })
+  end
+
+  it 'quem escolheu e já saiu da conta não vira dono: o card nasce sem dono' do
+    bia = create(:user, account: account, role: :agent, name: 'Bia Exemplo')
+    config.update!(user: bia)
+    AccountUser.where(account_id: account.id, user_id: bia.id).delete_all
+    seguro = criar_apolice(marina, numero: 'EX-000001', fim_vigencia: hoje + 10)
+
+    rodar
+
+    expect([cards.sole.owner_id, seguro.eventos.sole.valores.to_h]).to eq([nil, {}])
+  end
+
   it 'o dia de hoje é o da conta: às 23h30 de São Paulo ainda não entra quem só entraria amanhã' do
     amanha = criar_apolice(marina, numero: 'EX-000002', fim_vigencia: hoje + 61)
 

@@ -6,14 +6,15 @@
 # receber os eventos fora de ordem, dá no mesmo.
 # - card ganho ou resolvido: o seguro renovou;
 # - card perdido ou cancelado: não renovou (o motivo vem depois, de quem souber: #dizer_motivo);
-# - card aberto de novo: o desfecho é desfeito e o seguro volta a "em renovação"; o card restaurado do arquivo volta a
-#   aparecer no seguro;
+# - card aberto de novo: o desfecho é desfeito e o seguro volta a "em renovação", com o passo `desfez_desfecho` na
+#   história (quem desfez e, em `valores.anterior`, o que estava: `renovou` ou `nao_renovou`); o card restaurado do
+#   arquivo volta a aparecer no seguro;
 # - card arquivado sem desfecho: alguém tirou a renovação do quadro de propósito. O seguro guarda a data e a rotina não
 #   cria outro card nesta vigência (Carteira::Renovacao::EntramHoje);
 # - card arquivado depois de fechado: o desfecho que ele tinha continua valendo (Crm::Card.desfecho_de).
 #
 # O seguro fica travado e é relido sob a trava. O passo da história ("Renovou.", "Não renovou.") entra junto com a
-# mudança, com quem fechou o card (nulo: a IA, uma automação ou o sistema). Desfazer não tem passo próprio na história.
+# mudança, com quem fechou o card (nulo: a IA, uma automação ou o sistema).
 class Carteira::Renovacao::Desfecho
   RENOVOU = %w[won resolved].freeze
   NAO_RENOVOU = %w[lost cancelled].freeze
@@ -22,6 +23,7 @@ class Carteira::Renovacao::Desfecho
   PASSO_RENOVOU = 'renovou'.freeze
   PASSO_NAO_RENOVOU = 'nao_renovou'.freeze
   PASSO_COM_MOTIVO_ESCRITO = 'nao_renovou_outro'.freeze
+  PASSO_DESFEZ = 'desfez_desfecho'.freeze
   SEM_DESFECHO = { renovado_em: nil, nao_renovou_em: nil, motivo_nao_renovou: nil, motivo_escrito: nil,
                    renovacao_card_removido_em: nil }.freeze
 
@@ -91,7 +93,17 @@ class Carteira::Renovacao::Desfecho
   end
 
   def reabrir
-    @apolice.update!(SEM_DESFECHO) unless @apolice.slice(*SEM_DESFECHO.keys).values.all?(&:nil?)
+    return if @apolice.slice(*SEM_DESFECHO.keys).values.all?(&:nil?)
+
+    anterior = desfecho_de_agora
+    @apolice.update!(SEM_DESFECHO)
+    @apolice.eventos.create!(tipo: PASSO_DESFEZ, quando: Time.current, user: @user, valores: { anterior: anterior }) if anterior
+  end
+
+  def desfecho_de_agora
+    return PASSO_RENOVOU if @apolice.renovado_em
+
+    PASSO_NAO_RENOVOU if @apolice.nao_renovou_em
   end
 
   def tirar_do_quadro

@@ -6,9 +6,10 @@
 # chegou, quando foi cancelado) vai em segundos, como no resto de Relacionamentos. O valor vai em reais.
 #
 # A renovação (E5, #2898): `renovadoEm`, o motivo de não ter renovado (`motivo` da lista, `motivoEscrito` quando é
-# "outro"), `apoliceNova` (este seguro é a apólice nova de um anterior) e `renovacao`, o card de renovação que o seguro
-# mostra: o id do card, o nome do funil e da etapa, como terminou (`renovou`, `nao_renovou` ou nulo) e quem cuida (o
-# nome e o id do dono do card). `renovacao` é nulo sem card e quando ele foi tirado do quadro.
+# "outro"), `apoliceNova` (a apólice que renovou este seguro já está guardada) e `renovacao`, o card de renovação que o
+# seguro mostra: o nome do funil e da etapa, como terminou (`renovou`, `nao_renovou` ou nulo) e quem cuida (o nome e o
+# id do dono do card). `renovacao` é nulo sem card e quando ele foi tirado do quadro. O `cardId` só vai para quem
+# enxerga aquele card no quadro: para os outros vem nulo, e a tela não oferece "Abrir no CRM".
 #
 # O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
 # endosso, seguro de outra corretora) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por
@@ -18,17 +19,20 @@ class Carteira::Apresentacao
   RENOVOU = 'renovou'.freeze
   NAO_RENOVOU = 'nao_renovou'.freeze
 
-  def initialize(account)
+  # cards: os cards que quem pede enxerga no quadro (o escopo de Crm::CardPolicy). Sem eles, nenhum `cardId` sai.
+  def initialize(account, cards: Crm::Card.none)
     @hoje = Carteira::Selo.hoje(account)
+    @cards = cards
   end
 
   def de(apolice)
-    do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice), DAS_PROXIMAS_ENTREGAS)
+    de_cada([apolice]).first
   end
 
-  # Na ordem em que chegaram: quem pede a lista já ordenou.
+  # Na ordem em que chegaram: quem pede a lista já ordenou. Os cards visíveis da página saem numa consulta só.
   def de_cada(apolices)
-    apolices.map { |apolice| de(apolice) }
+    visiveis = cards_visiveis(apolices)
+    apolices.map { |apolice| do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), DAS_PROXIMAS_ENTREGAS) }
   end
 
   # O bloco Seguros da ficha: o que pede atenção primeiro.
@@ -50,17 +54,22 @@ class Carteira::Apresentacao
       temPdf: apolice.pdf.attached?, canceladoEm: apolice.cancelado_em&.to_i, corrigidoAMao: apolice.corrigido_a_mao }
   end
 
-  def da_renovacao(apolice)
-    { renovadoEm: apolice.renovado_em&.to_i, motivo: apolice.motivo_nao_renovou, motivoEscrito: apolice.motivo_escrito,
-      apoliceNova: apolice.apolice_anterior_id.present?, renovacao: renovacao(apolice) }
+  def cards_visiveis(apolices)
+    ids = apolices.filter_map(&:crm_card_id)
+    ids.empty? ? [] : @cards.where(id: ids).pluck(:id)
   end
 
-  def renovacao(apolice)
+  def da_renovacao(apolice, cards_visiveis)
+    { renovadoEm: apolice.renovado_em&.to_i, motivo: apolice.motivo_nao_renovou, motivoEscrito: apolice.motivo_escrito,
+      apoliceNova: apolice.apolice_nova.present?, renovacao: renovacao(apolice, cards_visiveis) }
+  end
+
+  def renovacao(apolice, cards_visiveis)
     card = apolice.crm_card
     return if card.nil? || apolice.renovacao_card_removido_em
 
-    { cardId: card.id, funil: card.pipeline.name, etapa: card.stage.name, desfecho: desfecho(apolice),
-      cuida: card.owner&.name, cuidaId: card.owner_id }
+    { cardId: (card.id if cards_visiveis.include?(card.id)), funil: card.pipeline.name, etapa: card.stage.name,
+      desfecho: desfecho(apolice), cuida: card.owner&.name, cuidaId: card.owner_id }
   end
 
   def desfecho(apolice)

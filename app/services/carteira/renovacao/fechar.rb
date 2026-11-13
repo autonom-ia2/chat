@@ -5,11 +5,14 @@
 # - renovou: fecha o card como ganho. Pedir de novo no seguro já renovado não muda nada.
 # - nao_renovou: fecha o card como perdido e guarda o motivo, quando veio. No seguro que já está como "não renovou" (o
 #   card foi fechado no quadro, sem motivo), só guarda o motivo.
-# - desfazer: reabre o card; o seguro volta a "em renovação".
+# - desfazer: reabre o card; o seguro volta a "em renovação". O seguro cancelado não reabre: volte a ativo antes.
+# - por_cancelamento: o seguro foi marcado como cancelado com a renovação aberta. O card fecha como perdido, com o
+#   motivo "cancelou": card de seguro cancelado não fica aberto para sempre.
 #
 # Recusas (CustomExceptions::CarteiraRecusa): `sem_renovacao` (o seguro não tem card de renovação, ou ele foi tirado do
 # quadro), `ja_tem_desfecho` (pedir "renovou" no que não renovou, ou o contrário: desfaça antes), `sem_desfecho` (não
-# há o que desfazer), `motivo_desconhecido`, `falta_texto` (motivo "outro" sem dizer qual) e `texto_longo`.
+# há o que desfazer), `ja_cancelado` (desfazer no seguro cancelado), `motivo_desconhecido`, `falta_texto` (motivo
+# "outro" sem dizer qual) e `texto_longo`.
 #
 # Quem confere se a pessoa pode fechar o card é quem chama (Crm::CardPolicy#close?).
 class Carteira::Renovacao::Fechar
@@ -38,8 +41,22 @@ class Carteira::Renovacao::Fechar
 
   def desfazer
     recusar('sem_desfecho') unless @apolice.renovado_em || @apolice.nao_renovou_em
+    recusar('ja_cancelado') if @apolice.cancelado_em
 
     fechar(REABRIR)
+  end
+
+  # Roda dentro da transação de quem cancela (Carteira::Cancelamento): o cancelamento, o card fechado, o desfecho e o
+  # motivo entram juntos ou não entram. Por isso o seguro é acertado aqui mesmo, pelo estado do card; o ouvinte, que só
+  # roda depois do commit, encontra tudo no lugar. Sem renovação aberta, nada acontece.
+  def por_cancelamento
+    card = @apolice.crm_card
+    return unless card&.open? && @apolice.renovacao_card_removido_em.nil?
+
+    Crm::Cards::Closer.new(card: card, actor: @user, result: PERDIDO).perform
+    ActiveRecord.after_all_transactions_commit { Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED) }
+    Carteira::Renovacao::Desfecho.new(@apolice, user: @user).acertar
+    Carteira::Renovacao::Desfecho.new(@apolice).dizer_motivo(Carteira::Apolice::MOTIVO_CANCELOU, nil)
   end
 
   private

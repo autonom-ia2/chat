@@ -358,7 +358,8 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
 
       ler('seguros/resumo')
 
-      expect(response.parsed_body).to eq('total' => 8, 'vence7' => 2, 'vence7EmRenovacao' => 0, 'emRenovacao' => 0, 'aggerLigado' => false)
+      expect(response.parsed_body).to eq('total' => 8, 'vence7' => 2, 'vence7EmRenovacao' => 0, 'emRenovacao' => 0,
+                                         'funilEscolhido' => false, 'aggerLigado' => false)
     end
 
     it 'responde 422, sem repetir o que foi pedido, para grupo, ordem, página, filtro ou formato que a carteira não conhece' do

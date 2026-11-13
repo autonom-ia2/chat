@@ -13,7 +13,7 @@ RSpec.describe 'Carteira de seguros: resultados das renovações', type: :reques
   let(:base) { "/api/v1/accounts/#{account.id}/relacionamentos" }
   let(:ajustes) { escolher_funil_de_renovacao(account, user: admin) }
   let(:marina) { create(:contact, account: account, name: 'Marina Exemplo', phone_number: '+5511900000023', contact_type: :customer) }
-  let(:sem_motivos) { %w[achou_caro outra_corretora vendeu_o_bem nao_respondeu outro sem_motivo].index_with(0) }
+  let(:sem_motivos) { %w[achou_caro outra_corretora vendeu_o_bem nao_respondeu cancelou outro sem_motivo].index_with(0) }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 

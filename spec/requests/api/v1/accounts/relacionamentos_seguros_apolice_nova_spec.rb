@@ -53,7 +53,7 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
       expect(response.parsed_body).to include(
         'id' => nova.id, 'pessoaId' => marina.id, 'tipo' => 'auto', 'seguradora' => 'Outra Seguradora Exemplo', 'numero' => 'OS-777001',
         'comeca' => '2026-12-02', 'termina' => '2027-12-02', 'valor' => 3650.5, 'bem' => 'Carro Exemplo 2022', 'selo' => 'ativo',
-        'apoliceNova' => true, 'renovacao' => nil, 'renovadoEm' => nil
+        'apoliceNova' => false, 'renovacao' => nil, 'renovadoEm' => nil
       )
       expect(response.parsed_body['origem']).to include('tipo' => 'manual')
       expect(nova).to have_attributes(apolice_anterior_id: anterior.id, contact_id: marina.id, company_id: nil, origem: 'manual',
@@ -66,6 +66,18 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
 
       expect(anterior.reload).to have_attributes(renovado_em: agora, nao_renovou_em: nil)
       expect(anterior.eventos.sole).to have_attributes(tipo: 'renovou', user_id: admin.id)
+    end
+
+    it 'o anterior passa a dizer que a apólice nova dele já está guardada' do
+      ler_o_anterior = lambda do
+        get "#{caminho}/#{anterior.id}", headers: admin.create_new_auth_token
+        response.parsed_body.slice('selo', 'apoliceNova')
+      end
+      antes = ler_o_anterior.call
+
+      guardar
+
+      expect([antes, ler_o_anterior.call]).to eq([{ 'selo' => 'ativo', 'apoliceNova' => false }, { 'selo' => 'renovado', 'apoliceNova' => true }])
     end
 
     it 'o card de renovação aberto do anterior fecha como ganho, e é ele que deixa o anterior renovado' do

@@ -89,7 +89,16 @@ RSpec.describe Carteira::RenovacaoListener do
 
     expect(com_motivo).to eq('nao_renovou_em' => agora, 'motivo_nao_renovou' => 'achou_caro')
     expect([card.reload.status, desfecho, selo]).to eq(['open', {}, 'em_renovacao'])
-    expect(passos).to eq(%w[card_nasceu nao_renovou])
+    expect(passos).to eq(%w[card_nasceu nao_renovou desfez_desfecho])
+    expect(seguro.eventos.order(:id).last).to have_attributes(user_id: admin.id, quando: agora, valores: { 'anterior' => 'nao_renovou' })
+  end
+
+  it 'reabrir o card ganho guarda na história que o desfecho desfeito era "renovou"' do
+    fechar('won')
+    fechar('reopen')
+
+    expect(passos).to eq(%w[card_nasceu renovou desfez_desfecho])
+    expect(seguro.eventos.order(:id).last.valores).to eq('anterior' => 'renovou')
   end
 
   it 'o card ganho que alguém marca como perdido troca o desfecho do seguro' do
@@ -114,7 +123,7 @@ RSpec.describe Carteira::RenovacaoListener do
     arquivar
     fechar('reopen')
 
-    expect([card.reload.status, desfecho, selo]).to eq(['open', {}, 'em_renovacao'])
+    expect([card.reload.status, desfecho, selo, passos]).to eq(['open', {}, 'em_renovacao', ['card_nasceu']])
   end
 
   it 'arquivar o card já ganho não desfaz a renovação' do

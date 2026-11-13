@@ -42,7 +42,14 @@ class Api::V1::Accounts::Relacionamentos::CarteiraController < Api::V1::Accounts
   end
 
   def apresentacao
-    ::Carteira::Apresentacao.new(Current.account)
+    ::Carteira::Apresentacao.new(Current.account, cards: cards_que_ve)
+  end
+
+  # Os cards que quem pede enxerga no quadro do CRM: só para esses o seguro leva o id do card de renovação.
+  def cards_que_ve
+    return ::Crm::Card.none unless ::Crm::Config.enabled? && policy(::Crm::Card).index?
+
+    policy_scope(::Crm::Card)
   end
 
   def responder_seguro(seguro = @seguro)

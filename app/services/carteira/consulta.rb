@@ -36,10 +36,10 @@ class Carteira::Consulta < Relacionamentos::Consulta
   TEXTOS = ['contacts.name', 'companies.name', 'carteira_apolices.numero', 'carteira_apolices.numero_chave', 'carteira_apolices.bem'].freeze
   NUMEROS = ['carteira_apolices.numero'].freeze
   # O que a linha de um seguro lê além da apólice (Carteira::Apresentacao): a pessoa com a foto, a empresa, a planilha
-  # de onde veio, se tem PDF e o card de renovação com o funil, a etapa e quem cuida. Um Hash só, como o da lista de
-  # pessoas: é o formato que o preload recebe num argumento.
+  # de onde veio, se tem PDF, o card de renovação com o funil, a etapa e quem cuida, e a apólice que a renovou. Um
+  # Hash só, como o da lista de pessoas: é o formato que o preload recebe num argumento.
   O_QUE_A_LINHA_USA = { company: {}, campaign_import: {}, contact: { avatar_attachment: :blob }, pdf_attachment: :blob,
-                        crm_card: [:pipeline, :stage, :owner] }.freeze
+                        crm_card: [:pipeline, :stage, :owner], apolice_nova: {} }.freeze
 
   # O que as ações em grupo leem da pessoa de cada seguro marcado.
   DA_PESSOA = %i[id name phone_number blocked opted_out_at].freeze

@@ -11,10 +11,12 @@ class Carteira::ApoliceEvento < ApplicationRecord
   # ativo, ganhou o PDF e ficou sem ele.
   DA_E4 = %w[chegou_planilha chegou_de_novo corrigido cancelado voltou_a_ativo pdf_anexado pdf_tirado].freeze
   # E5 a E9: a renovação no funil, a proposta, os avisos ao cliente, a apólice nova e a chegada pelo conector.
+  # `desfez_desfecho` (E5, #2898): alguém desfez o "renovou" ou o "não renovou"; `valores.anterior` diz qual era.
   DAS_PROXIMAS = %w[
     chegou_agger card_nasceu respondeu_algo_mudou proposta_pronta proposta_enviada cliente_respondeu endosso renovou
     nao_renovou nao_renovou_outro apolice_nova cotacao_pedida proposta_enviada_sozinha proposta_nao_saiu aviso_nao_saiu
     algo_mudou_nao_saiu palavras_nao_saiu proposta_pedida proposta_anexada palavras_enviadas parcela_avisada
+    desfez_desfecho
   ].freeze
   TIPOS = (DA_E4 + DAS_PROXIMAS).freeze
 
