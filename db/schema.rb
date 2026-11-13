@@ -1964,6 +1964,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_181000) do
   end
 
   create_table "carteira_leitura_itens", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.bigint "leitura_id", null: false
     t.integer "posicao", null: false
     t.string "estado", default: "lendo", null: false
@@ -1973,6 +1974,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_181000) do
     t.bigint "apolice_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_carteira_leitura_itens_on_account_id"
     t.index ["apolice_id"], name: "index_carteira_leitura_itens_on_apolice_id", where: "(apolice_id IS NOT NULL)"
     t.index ["contact_id"], name: "index_carteira_leitura_itens_on_contact_id", where: "(contact_id IS NOT NULL)"
     t.index ["leitura_id", "posicao"], name: "index_carteira_leitura_itens_on_leitura_id_and_posicao", unique: true
@@ -5127,6 +5129,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_181000) do
   add_foreign_key "carteira_apolices", "carteira_leituras", column: "leitura_id", on_delete: :nullify
   add_foreign_key "carteira_apolices", "companies", on_delete: :nullify
   add_foreign_key "carteira_apolices", "contacts"
+  add_foreign_key "carteira_leitura_itens", "accounts"
   add_foreign_key "carteira_leitura_itens", "carteira_apolices", column: "apolice_id", on_delete: :nullify
   add_foreign_key "carteira_leitura_itens", "carteira_leituras", column: "leitura_id", on_delete: :cascade
   add_foreign_key "carteira_leitura_itens", "contacts", on_delete: :nullify

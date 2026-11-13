@@ -27,6 +27,7 @@ class Carteira::Leitura < ApplicationRecord
   validates :origem, inclusion: { in: ORIGENS }
   validates :estado, inclusion: { in: ESTADOS }
   validate :totais_so_com_contagens
+  validate :pessoa_da_conta, if: :will_save_change_to_user_id?
 
   # As leituras cujos itens já passaram do prazo de guarda.
   scope :com_a_guarda_vencida, lambda { |agora = Time.current|
@@ -37,5 +38,10 @@ class Carteira::Leitura < ApplicationRecord
 
   def totais_so_com_contagens
     errors.add(:totais, :invalid) unless totais.is_a?(Hash) && totais.values.all?(Integer)
+  end
+
+  # O banco só confere que a pessoa existe, não que ela é da conta.
+  def pessoa_da_conta
+    errors.add(:user, :invalid) if user && !AccountUser.exists?(account_id: account_id, user_id: user.id)
   end
 end

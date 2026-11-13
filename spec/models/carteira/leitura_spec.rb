@@ -61,8 +61,15 @@ RSpec.describe Carteira::Leitura do
     expect(seguro.reload).to have_attributes(leitura_id: nil, contact_id: contact.id)
   end
 
+  it 'recusa quem enviou quando a pessoa não é da conta: o banco só confere que ela existe' do
+    de_fora = build(:carteira_leitura, account: account, user: create(:user, account: create(:account)))
+
+    expect([de_fora.valid?, de_fora.errors.attribute_names]).to eq([false, [:user]])
+    expect(leitura(user: create(:user, account: account))).to be_persisted
+  end
+
   it 'apagar a pessoa que enviou deixa o lote, sem ela' do
-    pessoa = create(:user)
+    pessoa = create(:user, account: account)
     lote = leitura(user: pessoa)
 
     User.where(id: pessoa.id).delete_all

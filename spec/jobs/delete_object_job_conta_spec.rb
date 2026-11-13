@@ -82,9 +82,9 @@ RSpec.describe DeleteObjectJob do
     modelo = create_whatsapp_api_template(account: account, inbox: create_crm_whatsapp_api_inbox(account: account), user: user)
     linha!('whatsapp_api_campaigns', account_id: account.id, created_by_id: user.id, title: 'Aviso',
                                      whatsapp_api_message_template_id: modelo.id)
-    # Leituras da carteira (#2899): o item não tem account_id, guarda o PDF e aponta para o contato com SET NULL.
+    # Leituras da carteira (#2899): o item guarda o PDF e aponta para o contato com SET NULL.
     leitura = linha!('carteira_leituras', account_id: account.id, user_id: user.id, origem: 'pdf')
-    item_lido = linha!('carteira_leitura_itens', leitura_id: leitura, posicao: 0, contact_id: contact.id)
+    item_lido = linha!('carteira_leitura_itens', account_id: account.id, leitura_id: leitura, posicao: 0, contact_id: contact.id)
     pdf_lido = ActiveStorage::Blob.create_and_upload!(io: StringIO.new('%PDF-1.4 exemplo'), filename: 'exemplo.pdf')
     anexo_lido = ActiveStorage::Attachment.create!(record_type: 'Carteira::LeituraItem', record_id: item_lido, name: 'pdf', blob: pdf_lido)
     # Carteira (#2897): a apólice aponta para o contato sem cascata (sai antes do pré-apagar) e leva a história dela.
@@ -94,7 +94,7 @@ RSpec.describe DeleteObjectJob do
     historia = linha!('carteira_apolice_eventos', apolice_id: apolice, tipo: 'chegou_planilha', quando: Time.current)
     # Linhas sem account_id: achadas pela campanha, pelo dono do token e pela apólice. O usuário técnico do MCP sai pelo revoke!.
     { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id,
-      'carteira_apolice_eventos' => historia, 'carteira_leitura_itens' => item_lido, 'active_storage_attachments' => anexo_lido.id }
+      'carteira_apolice_eventos' => historia, 'active_storage_attachments' => anexo_lido.id }
   end
   # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 

@@ -127,9 +127,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
-    # Leituras da carteira (E6, #2899): o item não tem account_id e guarda o PDF, então sai pela leitura dele e antes
-    # dela (a cascata do banco apagaria a linha e deixaria o arquivo). Apólice e contato só anulam a coluna do item.
-    ['Carteira::LeituraItem', :por_leitura_da_carteira],
+    # Leituras da carteira (E6, #2899): o item guarda o PDF, então sai antes da leitura dele (a cascata do banco
+    # apagaria a linha e deixaria o arquivo). Apólice e contato só anulam a coluna do item.
+    ['Carteira::LeituraItem', :por_conta],
     ['Carteira::Leitura', :por_conta],
     # Carteira de seguros (E4, #2897): a história de cada apólice (eventos) sai na cascata dela. A apólice aponta para o
     # contato sem cascata e tem PDF, então também sai antes do pré-apagar (ANTES_DO_PRE_APAGAR).
@@ -286,9 +286,5 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
 
   def por_destinatario_de_campanha(classe)
     classe.unscoped.where(recipient_id: por_campanha_de_email(EmailCampaignRecipient).select(:id))
-  end
-
-  def por_leitura_da_carteira(classe)
-    classe.unscoped.where(leitura_id: Carteira::Leitura.unscoped.where(account_id: account.id).select(:id))
   end
 end

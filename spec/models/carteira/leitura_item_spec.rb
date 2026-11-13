@@ -16,6 +16,20 @@ RSpec.describe Carteira::LeituraItem do
     described_class::ESTADOS.each { |estado| expect(item(estado: estado)).to be_persisted }
   end
 
+  it 'a conta do item é a da leitura: nasce com ela, e o model recusa outra' do
+    de_outra_conta = build(:carteira_leitura_item, leitura: leitura, account: create(:account))
+
+    expect(item.account_id).to eq(account.id)
+    expect([de_outra_conta.valid?, de_outra_conta.errors.attribute_names]).to eq([false, [:account]])
+  end
+
+  it 'o banco recusa o item sem conta, mesmo sem o model' do
+    linha = described_class.where(id: item.id)
+    sem_conta = -> { described_class.transaction(requires_new: true) { linha.update_all(account_id: nil) } } # rubocop:disable Rails/SkipsModelValidations
+
+    expect { sem_conta.call }.to raise_error(ActiveRecord::NotNullViolation)
+  end
+
   it 'recusa estado fora da lista, posição negativa, campos que não são objeto e dúvidas que não são lista de nomes' do
     invalidos = [{ estado: 'inventado' }, { posicao: -1 }, { posicao: nil }, { campos: ['numero'] }, { duvidas: { 'numero' => true } },
                  { duvidas: [1] }]
