@@ -89,10 +89,15 @@ class Carteira::Leitor::Paginas
 
   # O texto que o PDF traz na página. Página que o leitor de PDF não entende conta como sem texto.
   def texto(indice)
-    @textos[indice] ||= @paginas[indice].text.to_s.force_encoding('UTF-8').scrub('')
+    @textos[indice] ||= em_utf8(@paginas[indice].text)
   rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
     Rails.logger.warn("[carteira][leitor] pagina_ilegivel pagina=#{indice + 1} #{e.class}")
     @textos[indice] = ''
+  end
+
+  # Sempre uma cópia: o leitor de PDF devolve um texto congelado na página vazia, e marcar a codificação mexe nele.
+  def em_utf8(texto)
+    texto.to_s.dup.force_encoding('UTF-8').scrub('')
   end
 
   def sem_texto?(texto)
@@ -111,8 +116,7 @@ class Carteira::Leitor::Paginas
   def ocr(indice)
     return unless cabe?(@paginas[indice])
 
-    lido = PROCESSADORES::Rasterizacao.pagina(@caminho, indice) { |png| PROCESSADORES::Ocr.ler(png) }
-    lido.to_s.force_encoding('UTF-8').scrub('')
+    em_utf8(PROCESSADORES::Rasterizacao.pagina(@caminho, indice) { |png| PROCESSADORES::Ocr.ler(png) })
   rescue PROCESSADORES::Rasterizacao::Falhou, PROCESSADORES::Ocr::Falhou, PROCESSADORES::Ocr::Indisponivel => e
     Rails.logger.warn("[carteira][leitor] ocr_falhou pagina=#{indice + 1} #{e.class}")
     nil

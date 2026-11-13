@@ -19,7 +19,7 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
                  'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1 }
 
     expect(contato(resposta)).to eq('segurado_telefone' => '11999990001', 'segurado_email' => 'marina.exemplo@exemplo.invalid')
-    expect(contato('segurado_telefone' => '+55 11 98888-0005', 'segurado_telefone_pagina' => 9)['segurado_telefone']).to eq('5511988880005')
+    expect(contato({ 'segurado_telefone' => '+55 11 98888-0005', 'segurado_telefone_pagina' => 9 })['segurado_telefone']).to eq('5511988880005')
   end
 
   it 'recusa o contato da página em que o documento do segurado não aparece' do
@@ -49,7 +49,7 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
     telefones = [['9999-0001', 1], ['0800 000 0004 0800 000', 1], ['(11) 99999-0001', 2], ['(11) 99999-0001', nil], ['(11) 99999-0001', '1'],
                  [nil, 1], [11_999_990_001, 1]]
 
-    expect(telefones.map { |valor, numero| contato('segurado_telefone' => valor, 'segurado_telefone_pagina' => numero)['segurado_telefone'] })
+    expect(telefones.map { |valor, numero| contato({ 'segurado_telefone' => valor, 'segurado_telefone_pagina' => numero })['segurado_telefone'] })
       .to all(be_nil)
   end
 
@@ -57,6 +57,6 @@ RSpec.describe Carteira::Leitor::ContatoDoSegurado do
     emails = ['marina.exemplo@', '@exemplo.invalid', 'marina.exemplo@exemplo', 'marina exemplo@exemplo.invalid', 'a@b@exemplo.invalid',
               'marina.exemplo@.invalid', nil, 42]
 
-    expect(emails.map { |valor| contato('segurado_email' => valor, 'segurado_email_pagina' => 1)['segurado_email'] }).to all(be_nil)
+    expect(emails.map { |valor| contato({ 'segurado_email' => valor, 'segurado_email_pagina' => 1 })['segurado_email'] }).to all(be_nil)
   end
 end
