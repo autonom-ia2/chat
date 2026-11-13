@@ -3,15 +3,18 @@ require 'rails_helper'
 # #2896 — "Trazer minha lista" de ponta a ponta, com uma planilha de 200 linhas (dados inventados): 180 pessoas novas, 15
 # que a conta já tinha e 5 linhas que precisam da pessoa. Da leitura ao que fica gravado, passando pelas respostas, pelos
 # destinos das colunas, por um conserto, uma linha deixada de fora e duas leituras de novo no meio.
+#
+# E a mesma planilha com o DDD numa coluna à parte: a leitura não junta o DDD ao número (#3010), e o que não dá para
+# usar aparece na tela em vez de entrar errado.
 RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gravação', :aggregate_failures do # rubocop:disable RSpec/DescribeClass
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
   let(:desde) { Time.zone.parse('2024-03-10 12:00') }
-  # Colunas depois de juntar o DDD: 0 Nome, 1 Celular, 2 E-mail, 3 Empresa, 4 Cidade, 5 Plano, 6 Segredo.
+  # As linhas, com o DDD à parte do número: nome, DDD, número, e-mail, empresa, cidade, plano e segredo.
   # A pessoa N está na linha N + 1. Linhas com problema: 197 telefone, 198 e-mail, 199 sem nome, 200 sem contato e
   # 201 a mesma pessoa da linha 2 com outro nome.
-  let(:planilha) do
+  let(:linhas) do
     pessoas = (1..195).map do |numero|
       ["Pessoa #{numero} Albuquerino", '11', format('98765-%04d', numero), numero.odd? ? "pessoa#{numero}@exemplo.com.br" : '',
        (numero % 10).zero? ? 'Padaria Bom Dia' : '', (numero % 3).zero? ? 'Campinas' : '', numero.even? ? 'Ouro' : '', "segredo-#{numero}"]
@@ -21,9 +24,20 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
       ['', '11', '98765-9199', '', '', '', '', ''], ['Helena Problema', '', '', '', '', '', '', ''],
       ['Pessoa Um Outro', '11', '98765-0001', '', '', '', '', '']
     ]
+    pessoas + problemas
+  end
+  # O DDD junto do número, na mesma coluna: 0 Nome, 1 Celular, 2 E-mail, 3 Empresa, 4 Cidade, 5 Plano, 6 Segredo.
+  let(:planilha) do
+    CSV.generate do |csv|
+      csv << %w[Nome Celular E-mail Empresa Cidade Plano Segredo]
+      linhas.each { |nome, ddd, numero, *resto| csv << [nome, numero.present? ? "(#{ddd}) #{numero}" : '', *resto] }
+    end
+  end
+  # O DDD numa coluna e o número em outra: 0 Nome, 1 DDD, 2 Celular, 3 E-mail, 4 Empresa, 5 Cidade, 6 Plano, 7 Segredo.
+  let(:planilha_com_o_ddd_a_parte) do
     CSV.generate do |csv|
       csv << %w[Nome DDD Celular E-mail Empresa Cidade Plano Segredo]
-      (pessoas + problemas).each { |linha| csv << linha }
+      linhas.each { |linha| csv << linha }
     end
   end
 
@@ -62,7 +76,6 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
     expect(leitura[:colunas].pluck(:nome)).to eq(%w[Nome Celular E-mail Empresa Cidade Plano Segredo])
     expect(leitura[:problemas].pluck(:linha, :tipo))
       .to eq([[197, 'telefone'], [198, 'email'], [199, 'nome'], [200, 'sem_contato'], [201, 'duplicada']])
-    expect(importacao.validation_summary).to include('ddd_juntado' => 197)
 
     # A conferência: todas são clientes, a cidade vai para a cidade, o segredo não é guardado, um telefone é
     # consertado e uma linha é deixada de fora.
@@ -130,5 +143,20 @@ RSpec.describe 'Trazer minha lista: uma planilha de 200 linhas, da leitura à gr
     expect(account.contacts.pluck(:custom_attributes).flat_map(&:keys).uniq).to eq(['plano'])
     expect(account.contacts.pluck(:custom_attributes).to_json).not_to include('segredo')
     expect(account.companies.find_by!(name: 'Padaria Bom Dia').contacts.count).to eq(19)
+  end
+
+  # Das 195 pessoas, as 97 de número par só têm telefone: sem o DDD junto, viram linha para a pessoa conferir. As 98 de
+  # número ímpar têm e-mail e entram só com ele (limite conhecido, #3010): ninguém entra com um telefone errado.
+  it 'com o DDD numa coluna à parte, não junta: o número sem DDD vira problema e ninguém entra com telefone' do
+    importacao = create_contact_import(account: account, user: user, content: planilha_com_o_ddd_a_parte)
+    importacao.update!(options: importacao.options.merge('trazer' => {}))
+    ler_planilha(importacao)
+
+    leitura = Relacionamentos::Trazer::Leitura.new(importacao).call
+    expect(leitura[:colunas].pluck(:nome, :destino)).to include(%w[DDD informacao], %w[Celular telefone])
+    expect(leitura[:resumo]).to include(total: 200, comProblema: 102, completadas: 0, entram: 98)
+    expect(leitura[:problemas].pluck(:tipo).tally).to eq('telefone' => 100, 'email' => 1, 'sem_contato' => 1)
+    expect(importacao.validation_summary).not_to have_key('ddd_juntado')
+    expect(CampaignImports::NormalizedRows.new(importacao).perform.pluck(:phone_number).compact).to be_empty
   end
 end

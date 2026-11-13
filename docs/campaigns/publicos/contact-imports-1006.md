@@ -110,11 +110,14 @@ Com a marca:
   `ready_to_confirm`. `schema_resolution` fica com `needs_confirmation: false` e mantém `uncertain_targets` e
   `targets[*].confident`: a tela mostra a coluna sugerida sem certeza como `duvidosa`, e a pessoa troca ali.
   Planilha sem coluna de telefone nem de e-mail → `validation_failed` com `missing_contact_column`.
-- **DDD em coluna separada é juntado ao telefone** antes da leitura (`ContactImports::Trazer::JuntarDdd`): a coluna
-  com título de DDD ao lado de uma coluna de telefone, ou a coluna sem título colada à esquerda do telefone que só tem
-  DDDs que existem. A coluna do DDD some da planilha lida (não vira informação) e `validation_summary.ddd_juntado`
-  conta as linhas juntadas. DDD que não existe ou telefone sem 8 ou 9 dígitos: a linha fica como veio. Célula que
-  parece fórmula (no DDD ou no número) nunca é juntada: segue como veio e a leitura acusa a fórmula.
+- **DDD em coluna separada não é juntado ao telefone.** O telefone é lido como está na coluna dele; a coluna do DDD
+  fica como qualquer outra (vira informação, ou "não guardar"). A junção que existia decidia pelo título qual coluna
+  era o DDD, com uma lista de palavras, e saiu: lista de palavras para entender o que a pessoa escreveu falha em
+  silêncio quando o título é outro (#3010 trata de apontar a coluna do DDD na tela). O que a pessoa vê hoje: o número
+  sem DDD vira problema de telefone (`invalid_brazilian_mobile_number`) e pode ser consertado linha a linha; quando
+  nenhuma linha tem contato que dê para usar, a leitura falha (`no_valid_rows`, ou `missing_contact_column` sem coluna
+  de telefone nem de e-mail) e a tela pede o DDD junto do número, na mesma coluna. **Limite conhecido:** a linha com
+  e-mail bom e telefone sem DDD entra só com o e-mail, sem virar problema, como já acontece com o telefone fixo.
 - **A mesma pessoa em várias linhas vira uma só** (`ContactImports::Trazer::MesmaPessoa`): mesmo telefone (com ou sem
   o nono dígito) ou mesmo e-mail. Sem conflito, a primeira linha é completada com o que só a outra tinha (os campos
   da linha e as células que a conferência usa: se ela virar problema, o conserto leva o e-mail e a empresa que vieram
@@ -196,7 +199,7 @@ Com a marca:
 **O anexo das linhas com problema** é um arquivo de texto com uma linha da planilha por linha, em JSON, na ordem
 dos números: `{"linha": 143, "celulas": {"name", "phone", "email", "company"}, "outra": {"linha": 88, "celulas": {...}}}`
 (`outra` só na linha repetida: é a linha da mesma pessoa que ficou aprovada). Só as células dos quatro alvos entram
-(o telefone já com o DDD juntado): nenhuma outra coluna, nem a marcada "não guardar". É regravado inteiro a cada
+(como vieram na planilha): nenhuma outra coluna, nem a marcada "não guardar". É regravado inteiro a cada
 leitura e apagado quando a leitura recomeça.
 
 **O anexo dos consertos** tem uma linha por linha consertada: o último campo consertado (`campo`), o que a pessoa
