@@ -156,8 +156,10 @@ RSpec.describe Autonomia::FerramentasProntas::Fontes do
       expect(pela_placa).to include('situacao' => 'nao_encontrado', 'orientacao' => fipe::VEICULO_NAO_ENCONTRADO)
       expect(pelo_chassi).to include('situacao' => 'nao_encontrado', 'orientacao' => fipe::VEICULO_NAO_ENCONTRADO)
       expect(a_request(:get, /brasilapi|parallelum/)).not_to have_been_made
-      expect(avisos).to eq(['[autonomia][pronta] veiculo_pela_placa não encontrado status=400',
-                            '[autonomia][pronta] veiculo_pela_placa não encontrado status=450'])
+      # Só os avisos deste provedor: o cliente HTTP também avisa, uma vez por processo, quando roda sem teto por leitura.
+      expect(avisos.select { |aviso| aviso.include?(provedor::NOME) })
+        .to eq(['[autonomia][pronta] veiculo_pela_placa não encontrado status=400',
+                '[autonomia][pronta] veiculo_pela_placa não encontrado status=450'])
     end
 
     it 'sem placa e sem chassi, ou com a placa fora do formato: pedido invalido na placa, e nada sai para a rede' do
