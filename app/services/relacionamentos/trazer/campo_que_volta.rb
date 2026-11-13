@@ -9,7 +9,7 @@
 # campanha de lá para cá, Relacionamentos::Trazer::QuemFoiProcurado). A conta já falou com a pessoa por ali.
 #
 # "Cliente" tem três condições a mais, combinadas com Multifunnel: a pessoa continua cliente; a data de cliente é a que
-# a lista gravou; e nenhum card dela foi ganho desde que a lista existe (`desde`, a criação da importação), nem que
+# a lista gravou; e nenhum card dela foi ganho desde que a lista existe (a criação da importação), nem que
 # tenha sido arquivado depois de ganho (Crm::Card.com_desfecho, o filtro dos números e das metas). O ganho
 # chama Contact#become_customer!, que não mexe em quem já é cliente: sem a terceira condição, quem comprou de verdade
 # voltaria a lead. Conta-se da criação da importação, e não do instante em que a linha foi gravada, porque o ganho que
@@ -72,12 +72,12 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   # alvo: a pessoa de hoje, ou a empresa da linha quando o campo é o telefone da empresa; nil quando não existe mais.
-  # desde: a criação da importação (de quando o bloco conta o ganho e a procura). ganhou: a pessoa tem card ganho de lá
-  # para cá (só importa para "cliente"). procurada: a conta a procurou de lá para cá (só importa para telefone e e-mail).
-  def initialize(registro, alvo:, desde:, ganhou: false, procurada: false)
+  # ganhou: a pessoa tem card ganho desde a criação da importação (só importa para "cliente"). procurada: a conta a
+  # procurou de lá para cá (só importa para telefone e e-mail). Os dois vêm do bloco
+  # (Relacionamentos::Trazer::CamposDaLista).
+  def initialize(registro, alvo:, ganhou: false, procurada: false)
     @registro = registro
     @alvo = alvo
-    @desde = desde
     @ganhou = ganhou
     @procurada = procurada
   end

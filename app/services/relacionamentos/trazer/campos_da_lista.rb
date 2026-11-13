@@ -67,7 +67,7 @@ class Relacionamentos::Trazer::CamposDaLista
   end
 
   def campo(registro, alvo, ganhou: false, procurada: false)
-    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, desde: @importacao.created_at, ganhou: ganhou, procurada: procurada)
+    Relacionamentos::Trazer::CampoQueVolta.new(registro, alvo: alvo, ganhou: ganhou, procurada: procurada)
   end
 
   def quem_ganhou(pessoas)
