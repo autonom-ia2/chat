@@ -19,10 +19,12 @@ class Api::V1::Accounts::Relacionamentos::Seguros::RenovacoesController < Api::V
 
   private
 
-  # Os funis que a pessoa vê no quadro, como no "Criar cards" da lista. Com o CRM desligado não há funil.
+  # Os funis que a pessoa vê no quadro, como no "Criar cards" da lista. Com o CRM desligado, ou para quem a função não
+  # dá o CRM, não há funil: a pessoa lê os ajustes e muda os dias e as mensagens, mas não escolhe onde.
   def funis
-    authorize ::Crm::Pipeline, :index?
-    ::Crm::Config.enabled? ? policy_scope(::Crm::Pipeline) : ::Crm::Pipeline.none
+    return ::Crm::Pipeline.none unless ::Crm::Config.enabled? && policy(::Crm::Pipeline).index?
+
+    policy_scope(::Crm::Pipeline)
   end
 
   def pode_mudar?

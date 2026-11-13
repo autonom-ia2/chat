@@ -4,8 +4,8 @@
 # (Notification::RemoveDuplicateNotificationJob, pelo ator): se a rotina criar mais cards à tarde, a pessoa continua com
 # um aviso só, com o total.
 #
-# Recebe quem pode ver a carteira (ver contatos) e enxerga o funil das renovações no quadro. Só no painel: sem e-mail
-# nem push. O ator é a linha de ajustes da conta; o aviso leva só a contagem, nenhum dado de cliente. O aviso de uma
+# Recebe quem pode ver a carteira (ver contatos), tem o CRM e enxerga o funil das renovações no quadro. Só no painel: sem
+# e-mail nem push. O ator é a linha de ajustes da conta; o aviso leva só a contagem, nenhum dado de cliente. O aviso de uma
 # pessoa que falhar não para os outros.
 class Carteira::Aviso
   TIPO = 'carteira_renovacao'.freeze
@@ -42,6 +42,7 @@ class Carteira::Aviso
 
   def recebe?(vinculo)
     de_quem = { user: vinculo.user, account: @account, account_user: vinculo }
-    ContactPolicy.new(de_quem, Contact).index? && Crm::Access::VisiblePipelines.new(**de_quem).visible?(@config.pipeline_id)
+    ContactPolicy.new(de_quem, Contact).index? && Crm::PipelinePolicy.new(de_quem, Crm::Pipeline).index? &&
+      Crm::Access::VisiblePipelines.new(**de_quem).visible?(@config.pipeline_id)
   end
 end
