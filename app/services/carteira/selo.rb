@@ -15,6 +15,8 @@ module Carteira::Selo
   CANCELADO = 'cancelado'.freeze
   # A ordem do bloco Seguros da ficha: o que pede atenção primeiro, o cancelado por último.
   URGENCIA = [VENCIDO, EM_RENOVACAO, RENOVADO, ATIVO, CANCELADO].freeze
+  # As colunas da apólice que o selo lê. Quem busca a apólice com poucas colunas (Carteira::ResumoPorPessoa) traz estas.
+  COLUNAS = %i[cancelado_em renovado_em fim_vigencia crm_card_id nao_renovou_em renovacao_card_removido_em].freeze
 
   module_function
 
