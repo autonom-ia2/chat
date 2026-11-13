@@ -4536,8 +4536,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_184000) do
     t.index ["account_id", "tipo", "valor"], name: "idx_relacionamentos_documentos_busca"
     t.index ["company_id", "tipo"], name: "idx_relacionamentos_documentos_da_empresa", unique: true, where: "(company_id IS NOT NULL)"
     t.index ["contact_id", "tipo"], name: "idx_relacionamentos_documentos_da_pessoa", unique: true, where: "(contact_id IS NOT NULL)"
-    t.check_constraint "tipo::text = 'cnpj'::text OR contact_id IS NOT NULL", name: "relacionamentos_documentos_cpf_so_de_pessoa"
     t.check_constraint "num_nonnulls(contact_id, company_id) = 1", name: "relacionamentos_documentos_dono"
+    t.check_constraint "tipo::text = 'cnpj'::text OR contact_id IS NOT NULL", name: "relacionamentos_documentos_cpf_so_de_pessoa"
     t.check_constraint "tipo::text = ANY ('{cpf,cnpj}'::text[])", name: "relacionamentos_documentos_tipo"
   end
 
