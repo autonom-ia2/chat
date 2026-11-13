@@ -86,6 +86,18 @@ RSpec.describe 'Carteira de seguros: funções e empresa', type: :request do
       expect([seguro.reload.attributes, seguro.eventos.count, seguro.pdf.attached?]).to eq([antes, 0, true])
     end
 
+    it 'o selo da lista de pessoas (seguros/resumo_por_dono): sem a chave de contatos, 401; com contact_view, lê' do
+      ler('seguros/resumo_por_dono', quem: pessoa_com(%w[conversation_manage crm_view]), pessoa_ids: [marina.id])
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.body).not_to include('quantos')
+
+      ler('seguros/resumo_por_dono', quem: pessoa_com(%w[contact_view]), pessoa_ids: [marina.id])
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.keys).to eq([marina.id.to_s])
+    end
+
     it 'a função com contact_manage, o agente sem função e o administrador leem e escrevem' do
       [pessoa_com(%w[contact_manage]), agente, admin].each do |quem|
         leituras.each do |caminho|

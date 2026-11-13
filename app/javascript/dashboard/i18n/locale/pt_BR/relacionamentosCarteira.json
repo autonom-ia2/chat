@@ -90,6 +90,19 @@
       "SEM_ACESSO": "Você não tem acesso aos seguros desta conta.",
       "EXEMPLO_LEGENDA": "Sua lista de seguros vai ficar assim:"
     },
+    "PESSOAS": {
+      "BUSCA": "Buscar por nome, telefone, documento ou apólice",
+      "SO_UM_SEGURO": {
+        "NOME": "Só tem um seguro",
+        "EXPLICACAO": "Quem tem só um seguro ativo. Boa hora para oferecer outro."
+      },
+      "SELOS": {
+        "ATIVO": "Seguro ativo",
+        "VENCIDO": "Seguro vencido",
+        "CANCELADO": "Seguro cancelado"
+      },
+      "SELOS_FALHARAM": "Não consegui mostrar quem tem seguro agora."
+    },
     "FICHA": {
       "TITULO": "Seguros",
       "TITULO_COM_QUANTOS": "Seguros ({count})",
@@ -103,6 +116,12 @@
       "GUARDAR_PDF": "Guardar PDF",
       "GUARDAR_PDF_DE": "Guardar o PDF do seguro {tipo}",
       "ABRIR": "Abrir o seguro {tipo}"
+    },
+    "PAINEL": {
+      "TITULO": "Seguros",
+      "VER_OS_OUTROS": "Ver o outro seguro | Ver os outros {count} seguros",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "VER_NA_FICHA": "Ver na ficha"
     },
     "QUANDO": {
       "LISTA": {

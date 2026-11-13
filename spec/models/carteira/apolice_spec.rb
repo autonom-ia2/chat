@@ -90,12 +90,20 @@ RSpec.describe Carteira::Apolice do
     expect(build(:carteira_apolice, account: account, contact: contact, company: create(:company, account: account))).to be_valid
   end
 
-  it 'a história só aceita os tipos de evento que alguém grava' do
+  it 'a história só aceita os tipos de evento da lista' do
     seguro = apolice
     tipos = Carteira::ApoliceEvento::TIPOS + ['inventado']
     validos = tipos.map { |tipo| seguro.eventos.build(tipo: tipo, quando: Time.current).valid? }
 
     expect(validos).to eq(Carteira::ApoliceEvento::TIPOS.map { true } + [false])
+  end
+
+  it 'a lista tem todo passo que o catálogo da tela nomeia, sem repetir nenhum' do
+    catalogo = Rails.root.join('app/javascript/dashboard/i18n/locale/en/relacionamentosCarteira.json').read
+    da_tela = JSON.parse(catalogo).dig('RELACIONAMENTOS_CARTEIRA', 'HISTORIA', 'TIPOS').keys.map(&:downcase)
+
+    expect(da_tela - Carteira::ApoliceEvento::TIPOS).to eq([])
+    expect(Carteira::ApoliceEvento::TIPOS.uniq).to eq(Carteira::ApoliceEvento::TIPOS)
   end
 
   it 'apagar a apólice leva a história dela, pela chave em cascata' do
@@ -114,5 +122,86 @@ RSpec.describe Carteira::Apolice do
     empresa.destroy!
 
     expect(seguro.reload).to have_attributes(company_id: nil, contact_id: contact.id)
+  end
+
+  # E5 (#2898): o card de renovação, o desfecho e a apólice que esta renovou.
+  describe 'a renovação' do
+    let(:user) { create(:user, account: account, role: :administrator) }
+    let(:agora) { Time.current }
+
+    def card_de(conta, dono)
+      funil, etapa = create_crm_pipeline(account: conta, user: dono, name: 'Renovação')
+      conta.crm_cards.create!(pipeline: funil, stage: etapa, title: 'Renovação do seguro')
+    end
+
+    it 'um card é de uma apólice só, pelo índice único do banco; apólices sem card não colidem' do
+      card = card_de(account, user)
+      apolice(crm_card: card)
+      apolice
+      apolice
+
+      expect { apolice(crm_card: card) }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+
+    it 'apagar o card ou a apólice anterior só anula a coluna: o seguro fica' do
+      card = card_de(account, user)
+      anterior = apolice
+      seguro = apolice(crm_card: card, apolice_anterior: anterior)
+
+      Crm::Card.where(id: card.id).delete_all
+      described_class.where(id: anterior.id).delete_all
+
+      expect(seguro.reload).to have_attributes(crm_card_id: nil, apolice_anterior_id: nil)
+    end
+
+    it 'recusa o card e a apólice anterior de outra conta, e a apólice que renova a si mesma' do
+      outra = create(:account)
+      card_de_fora = card_de(outra, create(:user, account: outra))
+      apolice_de_fora = apolice(conta: outra, pessoa: create(:contact, account: outra))
+      seguro = apolice
+
+      seguro.assign_attributes(crm_card: card_de_fora, apolice_anterior: apolice_de_fora)
+      expect(seguro).not_to be_valid
+      expect(seguro.errors.attribute_names).to eq(%i[crm_card apolice_anterior])
+
+      seguro.assign_attributes(crm_card: card_de(account, user), apolice_anterior: seguro)
+      expect(seguro).not_to be_valid
+      expect(seguro.errors.attribute_names).to eq(%i[apolice_anterior])
+
+      seguro.assign_attributes(apolice_anterior: apolice)
+      expect(seguro).to be_valid
+    end
+
+    it 'o banco recusa a apólice que renova a si mesma, mesmo sem passar pelo model' do
+      linha = described_class.where(id: apolice.id)
+      pelo_check = lambda do |erro|
+        expect([erro.cause.class.name, erro.cause.message.include?('carteira_apolices_anterior_nao_e_ela')]).to eq(['PG::CheckViolation', true])
+      end
+
+      expect do
+        described_class.transaction(requires_new: true) { linha.update_all('apolice_anterior_id = id') } # rubocop:disable Rails/SkipsModelValidations
+      end.to raise_error(ActiveRecord::StatementInvalid, &pelo_check)
+    end
+
+    it 'o desfecho é um só: renovou ou não renovou' do
+      expect(build(:carteira_apolice, account: account, contact: contact, renovado_em: agora, nao_renovou_em: agora)).not_to be_valid
+      expect(build(:carteira_apolice, account: account, contact: contact, renovado_em: agora)).to be_valid
+      expect(build(:carteira_apolice, account: account, contact: contact, nao_renovou_em: agora)).to be_valid
+    end
+
+    it 'aceita cada motivo da lista em quem não renovou; o texto escrito só existe, e sempre existe, no motivo "outro"' do
+      montar = ->(campos) { build(:carteira_apolice, account: account, contact: contact, **campos) }
+      de_um_toque = described_class::MOTIVOS_DE_NAO_RENOVAR - ['outro']
+      invalidas = [{ motivo_nao_renovou: 'achou_caro' }, { nao_renovou_em: agora, motivo_nao_renovou: 'mudou_de_ideia' },
+                   { nao_renovou_em: agora, motivo_nao_renovou: 'outro' },
+                   { nao_renovou_em: agora, motivo_nao_renovou: 'outro', motivo_escrito: ' ' },
+                   { nao_renovou_em: agora, motivo_nao_renovou: 'achou_caro', motivo_escrito: 'Preferiu esperar' },
+                   { nao_renovou_em: agora, motivo_escrito: 'Preferiu esperar' },
+                   { nao_renovou_em: agora, motivo_nao_renovou: 'outro', motivo_escrito: 'a' * 501 }]
+
+      expect(invalidas.map { |campos| montar.call(campos).valid? }).to all(be(false))
+      expect(de_um_toque.map { |motivo| montar.call(nao_renovou_em: agora, motivo_nao_renovou: motivo).valid? }).to all(be(true))
+      expect(montar.call(nao_renovou_em: agora, motivo_nao_renovou: 'outro', motivo_escrito: 'Preferiu esperar')).to be_valid
+    end
   end
 end

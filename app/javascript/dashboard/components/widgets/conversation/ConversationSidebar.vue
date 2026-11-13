@@ -6,6 +6,7 @@ import { useWindowSize } from '@vueuse/core';
 import { vOnClickOutside } from '@vueuse/components';
 import wootConstants from 'dashboard/constants/globals';
 import { usePainelNovo } from 'dashboard/components-next/painel-do-contato/usePainelNovo';
+import { gavetaDoSeguroAberta } from 'dashboard/routes/dashboard/relacionamentos/carteira/segurosNoPainel';
 
 defineProps({
   currentChat: {
@@ -31,9 +32,11 @@ const isSmallScreen = computed(
 );
 
 // #2138: com o painel novo, um clique dentro de um Dialog aberto não fecha o painel.
+// #2897: nem com a gaveta do seguro aberta por cima dele (ela fica no body, fora do painel).
 const painelNovo = usePainelNovo();
 const closeContactPanel = event => {
   if (painelNovo.value && event?.target?.closest?.('dialog[open]')) return;
+  if (gavetaDoSeguroAberta()) return;
   if (isSmallScreen.value && uiSettings.value?.is_contact_sidebar_open) {
     updateUISettings({
       is_contact_sidebar_open: false,
