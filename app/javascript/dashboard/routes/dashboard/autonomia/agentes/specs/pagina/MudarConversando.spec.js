@@ -107,6 +107,29 @@ describe('MudarConversando', () => {
     wrapper.unmount();
   });
 
+  it('tells upfront that the lists of a ready-made agent change on the agent page, not in this chat', async () => {
+    const wrapper = montar({
+      agente: {
+        ...AGENTE,
+        listas_do_ramo: { perguntas: [], documentos: [] },
+      },
+    });
+    await nextTick();
+
+    expect(no('[data-listas-do-ramo]').textContent).toContain(
+      'RAMOS.PAGINA.MUDA_NA_PAGINA'
+    );
+    wrapper.unmount();
+  });
+
+  it('shows no note about lists for an agent that was not born from a ready-made agent', async () => {
+    const wrapper = montar();
+    await nextTick();
+
+    expect(no('[data-listas-do-ramo]')).toBeNull();
+    wrapper.unmount();
+  });
+
   it('cleans up again when the first message comes back after leaving', async () => {
     let soltar;
     store.dispatch.mockImplementation(acao =>

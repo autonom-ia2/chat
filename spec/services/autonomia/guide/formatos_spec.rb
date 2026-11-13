@@ -56,10 +56,11 @@ RSpec.describe Autonomia::Guide::Formatos do
     etiqueta = formato('PATCH labels/:id')
 
     expect(etiqueta).to include('envelope' => 'label', 'completo' => true)
-    expect(etiqueta['campos'].keys).to contain_exactly('title', 'description', 'color', 'show_on_sidebar')
+    expect(etiqueta['campos'].keys).to contain_exactly('title', 'description', 'color', 'show_on_sidebar', 'show_on_conversation_list')
     expect(etiqueta['campos']['title']).to include('nao_pode_ficar_vazio' => true)
     expect(etiqueta['campos']['title']).not_to have_key('obrigatorio')
     expect(etiqueta['campos']['show_on_sidebar']).to include('tipo' => 'booleano')
+    expect(etiqueta['campos']['show_on_conversation_list']).to include('tipo' => 'booleano')
   end
 
   # Bateria, C03: "Title is invalid" não diz a regra. O formato leva a expressão do FormatValidator e a

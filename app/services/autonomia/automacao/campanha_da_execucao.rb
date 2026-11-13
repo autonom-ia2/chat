@@ -72,7 +72,7 @@ class Autonomia::Automacao::CampanhaDaExecucao
     "#{@passo['titulo']} · #{data.strftime(formato)}"
   end
 
-  def quem_ligou = @execucao.automacao.ligada_por
+  def quem_ligou = @execucao.dona.ligada_por
 
   def publico_id(campanha) = CampaignAudienceLink.for_campaign(campanha)&.campaign_import_id
 

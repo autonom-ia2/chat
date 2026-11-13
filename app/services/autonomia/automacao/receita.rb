@@ -12,6 +12,7 @@
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499);
 # - o "esperar até" sem prazo não tem passos em "se vencer", que nunca rodariam (#2750);
 # - o "decidir" a cada resposta (G31/G46) repete caminhos dele e deixa um para seguir (DecidirDeNovo);
+# - a aprovação, a reunião e a pesquisa (#2931, #2935, #2936): flags, quem, conversa, agenda e faixas (PassosQueEsperam);
 # - o que o "esperar até" faz enquanto espera (G63, G64): a hora da conferência só sem prazo, o galho "a cada mensagem"
 #   só com cliente e fora de outro galho (EnquantoEspera).
 #
@@ -21,8 +22,11 @@
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado. `se_recusar`:
-  # o do "webhook" (G13), quando o outro sistema recusa.
-  RAMOS = %w[entao senao se_vencer a_cada_mensagem se_recusar passos].freeze
+  # o do "webhook" (G13), quando o outro sistema recusa. `cada`: o do "para cada um de uma lista" (#2932), que roda numa
+  # execução filha por item. `nao_consultou`: o do "buscar em outro sistema" (#2934), quando a busca não deu.
+  # #2931/#2935/#2936: os galhos dos passos que esperam resposta (PassosQueEsperam::RAMOS).
+  RAMOS = (%w[entao senao se_vencer a_cada_mensagem se_recusar passos cada nao_consultou] +
+           ::Autonomia::Automacao::PassosQueEsperam.todos_os_ramos).freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -79,7 +83,11 @@ class Autonomia::Automacao::Receita
   # no registro ligado, e é conferido lá. O texto da IA (#2679) também só passa entre passos da mesma execução.
   def do_alvo(lista = @receita['passos']) = Array(lista).flat_map { |passo| [passo, *ramos_do_alvo(passo).flat_map { |ramo| do_alvo(ramo) }] }
 
-  def ramos_do_alvo(passo) = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) ? [] : self.class.ramos(passo)
+  # O galho do "para cada" (#2932) também roda numa execução filha, no item.
+  def ramos_do_alvo(passo)
+    filha = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) || ::Autonomia::Automacao::RepetirLista.do_tipo?(passo)
+    filha ? [] : self.class.ramos(passo)
+  end
 
   private
 
@@ -90,9 +98,17 @@ class Autonomia::Automacao::Receita
     return mensagens.problemas(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return passos_de_ia.problemas(passo) if IA.include?(passo['tipo'])
     return passos_proprios.problemas(passo) if ::Autonomia::Automacao::PassosProprios.do_tipo?(passo)
+    return problemas_do_passo_novo(passo) if passo_novo?(passo)
     return [] unless passo['tipo'] == 'acao'
 
     acao.problemas(passo)
+  end
+
+  # Os seis passos novos (#2931–#2936): os que rodam na hora (PassosNovos) e os que esperam a resposta (PassosQueEsperam).
+  def passo_novo?(passo) = ::Autonomia::Automacao::PassosNovos.do_tipo?(passo) || ::Autonomia::Automacao::PassosQueEsperam.do_tipo?(passo)
+
+  def problemas_do_passo_novo(passo)
+    ::Autonomia::Automacao::PassosNovos.do_tipo?(passo) ? passos_novos(passo) : passos_que_esperam(passo)
   end
 
   # Os passos com conferência própria (PassosProprios); os caminhos que eles leem passam pela régua daqui.
@@ -101,6 +117,22 @@ class Autonomia::Automacao::Receita
                                                                     alvo: alvo, dentro: @alvo.present?) do |id, c, **opcoes|
                                                                       leitura.problemas(id, c, **opcoes)
                                                                     end
+  end
+
+  # Os passos novos com motor (#2932–#2934, PassosNovos). As entradas da consulta pronta (#2934) leem valores do alvo,
+  # conferidos pela régua de sempre, como o texto de uma mensagem.
+  def passos_novos(passo)
+    conferencia = ::Autonomia::Automacao::PassosNovos::Conferencia.new(conta: @conta, account_user: @account_user, alvo: alvo,
+                                                                       dentro: @alvo.present?)
+    lidos = ::Autonomia::Automacao::PassoConsultar.caminhos_lidos(passo).flat_map { |caminho| leitura.problemas(passo['id'], caminho, onde: :texto) }
+    ::Autonomia::Automacao::PassosNovos.problemas_ao_salvar(passo, conferencia) + lidos
+  end
+
+  # A aprovação, a reunião e a pesquisa (#2931, #2935, #2936): o texto do pedido passa pela régua dos valores.
+  def passos_que_esperam(passo)
+    ::Autonomia::Automacao::PassosQueEsperam.problemas_ao_salvar(passo, conta: @conta, account_user: @account_user, alvo: alvo) do |c|
+      leitura.problemas(passo['id'], c, onde: :texto)
+    end
   end
 
   # A régua dos valores (Leitura): a ação, as condições, os passos próprios e os textos perguntam aqui.

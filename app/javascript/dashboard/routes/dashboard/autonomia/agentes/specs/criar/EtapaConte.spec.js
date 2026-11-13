@@ -157,6 +157,30 @@ describe('EtapaConte', () => {
     );
   });
 
+  // #2881 — agente pronto por ramo: duas perguntas, e as ideias e o exemplo do campo acompanham cada uma.
+  it('with a short interview, keeps the ideas and the field hint of the question of the turn after the first answer', async () => {
+    const wrapper = montar({
+      ideiasEmTodaPergunta: true,
+      respostas: 1,
+      ideias: ['Porto, Allianz e Tokio Marine', 'Decido depois'],
+      exemploDoCampo: 'Escreva os nomes das seguradoras',
+    });
+
+    expect(wrapper.get('[data-ideias]').findAll('button')).toHaveLength(2);
+    expect(wrapper.get('textarea').attributes('placeholder')).toBe(
+      'Escreva os nomes das seguradoras'
+    );
+    await wrapper.get('[data-ideias]').findAll('button')[1].trigger('click');
+    expect(wrapper.emitted('enviar')).toBeUndefined();
+    expect(wrapper.get('textarea').element.value).toBe('Decido depois');
+
+    // Enquanto o Construtor pensa, e depois que a conversa fecha, as ideias somem.
+    await wrapper.setProps({ pensando: true });
+    expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+    await wrapper.setProps({ pensando: false, fechada: true });
+    expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+  });
+
   it('invites to tell more, quietly, once the conversation closed (computer)', async () => {
     const wrapper = montar({ fechada: true });
     expect(wrapper.text()).toContain('AGENTS.JORNADA.CRIAR.CONTE.MAIS');

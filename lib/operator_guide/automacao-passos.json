@@ -2151,6 +2151,93 @@
       ]
     },
     {
+      "tipo": "pedir_aprovacao",
+      "grupo": "EQUIPE",
+      "requer": "automacao_passos_novos",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.PEDIR_APROVACAO",
+      "campos": [
+        {
+          "nome": "passo_novo",
+          "peca": "passo_novo",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.PASSOS_NOVOS.MONTAR"
+        },
+        {
+          "nome": "aprovado",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "recusado",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "ninguem_respondeu",
+          "peca": "passos",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "marcar_reuniao",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_passos_novos",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.MARCAR_REUNIAO",
+      "campos": [
+        {
+          "nome": "passo_novo",
+          "peca": "passo_novo",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.PASSOS_NOVOS.MONTAR"
+        },
+        {
+          "nome": "outro_horario",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "nao_respondeu",
+          "peca": "passos",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "pesquisa_nota",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_passos_novos",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.PESQUISA_NOTA",
+      "campos": [
+        {
+          "nome": "passo_novo",
+          "peca": "passo_novo",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.PASSOS_NOVOS.MONTAR"
+        },
+        {
+          "nome": "nota_baixa",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "nota_media",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "nota_alta",
+          "peca": "passos",
+          "obrigatorio": false
+        },
+        {
+          "nome": "nao_respondeu",
+          "peca": "passos",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
       "tipo": "acao",
       "nome": "conversa_etiquetas",
       "acao": "PATCH conversations/:conversation_id/labels/alterar",
@@ -2635,6 +2722,13 @@
           "peca": "sim_nao",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
           "obrigatorio": false
+        },
+        {
+          "nome": "show_on_conversation_list",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_CONVERSATION_LIST",
+          "obrigatorio": false,
+          "padrao": false
         }
       ]
     },
@@ -2674,6 +2768,12 @@
           "nome": "show_on_sidebar",
           "peca": "sim_nao",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
+          "obrigatorio": false
+        },
+        {
+          "nome": "show_on_conversation_list",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_CONVERSATION_LIST",
           "obrigatorio": false
         }
       ]

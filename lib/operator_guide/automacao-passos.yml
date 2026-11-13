@@ -75,10 +75,21 @@ nativos:
   # G21 (#2706): buscar empresas na Prospecção e marcar a recusa do lead. Sem flag própria: quem recusa é a Receita
   # (Prospecção desligada, sem a chave dela). `peca`: o passo inteiro numa peça só (LivreProspeccao.vue).
   prospeccao: { grupo: FUNIL, peca: prospeccao }
+  # #2931, #2935 e #2936 (#2414): os passos que perguntam e esperam a resposta, com a flag dos passos novos (desligada em
+  # produção até o motor dos seis estar completo). `peca: passo_novo`: o passo inteiro numa peça só (LivrePassoNovo); os
+  # galhos ficam no Confira. A reunião e a pesquisa pedem também as flags das mensagens e da IA: quem recusa é a Receita.
+  pedir_aprovacao: { grupo: EQUIPE, requer: automacao_passos_novos, peca: passo_novo }
+  marcar_reuniao: { grupo: MENSAGEM, requer: automacao_passos_novos, peca: passo_novo }
+  pesquisa_nota: { grupo: MENSAGEM, requer: automacao_passos_novos, peca: passo_novo }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo e a Issue que os leva para a tela. A receita
 # aceita e o motor roda; a tela só os mostra quando tiver as peças.
-nativos_fora_do_editor: {}
+nativos_fora_do_editor:
+  # #2932, #2933, #2934 (épico #2414): a tela monta os três pela peça dos passos novos (passosNovos.js, LivrePassoNovo),
+  # só com a flag automacao_passos_novos; o catálogo do servidor não os repete.
+  repetir_lista: peça própria dos passos novos, com a flag automacao_passos_novos (#2932)
+  usar_bloco: peça própria dos passos novos, com a flag automacao_passos_novos (#2933)
+  consultar: peça própria dos passos novos, com a flag automacao_passos_novos (#2934)
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os
@@ -201,12 +212,12 @@ acoes:
   etiqueta_criar:
     acao: POST labels
     grupo: ETIQUETA
-    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao, show_on_conversation_list: sim_nao }
   etiqueta_alterar:
     acao: PATCH labels/:id
     grupo: ETIQUETA
     caminho: { id: { escolher: etiqueta } }
-    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao }
+    campos: { title: texto, description: texto, color: cor, show_on_sidebar: sim_nao, show_on_conversation_list: sim_nao }
   atributo_criar:
     acao: POST custom_attribute_definitions
     grupo: ATRIBUTO

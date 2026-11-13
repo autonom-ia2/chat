@@ -41,4 +41,12 @@ describe('#AutonomiaJornadaAPI', () => {
       '/api/v1/accounts/85/autonomia/canais_ocupados'
     );
   });
+
+  // #2881 — os agentes prontos por ramo de seguro que a conta pode usar.
+  it('reads the ready-made agents by line of insurance the account may use', () => {
+    jornada.modelosDeRamo();
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/modelos_de_ramo'
+    );
+  });
 });

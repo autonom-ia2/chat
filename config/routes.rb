@@ -689,6 +689,9 @@ Rails.application.routes.draw do
               post 'base/desfazer', to: 'agents/base_de_seguros#desfazer'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
+              # #2881 — as listas do modelo pronto de ramo pelo agente: o rascunho reaberto sem a conversa e, depois do
+              # "Começar" (#2976), a página do agente (só perguntas e documentos).
+              patch 'modelo_pronto', to: 'agents/modelo_pronto#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id
               resources :tools, only: [:index, :show, :create, :update, :destroy],
@@ -721,8 +724,12 @@ Rails.application.routes.draw do
                 post :retry, action: :retry_build
                 # #1428 (parte 3, piloto) — desfaz o último ajuste desta conversa (sem id de versão do cliente).
                 post :desfazer
+                # #2881 — o dono muda as listas do modelo pronto de ramo (perguntas, documentos, ferramentas) antes de começar.
+                patch :modelo_pronto
               end
             end
+            # #2881 — os modelos prontos de ramo que a conta pode usar (pacote `seguros` e a flag agente_modelos_seguro).
+            get 'modelos_de_ramo', to: 'agents/modelos_de_ramo#index'
             # MULTIMODAL (Construtor/Ajustar): upload de imagem do builder (image-only, retorna signed_id;
             # não cria conhecimento). O turno referencia o signed_id; o Builder a lê inline no job.
             post 'builder_images', to: 'agents/builder_images#create'
@@ -763,6 +770,10 @@ Rails.application.routes.draw do
               get :custos, on: :collection, to: 'automacoes_ia#custos'
               # G15: as agentes de IA do passo "Passar para a agente de IA".
               get :agentes_de_ia, on: :collection, to: 'automacoes_ia#agentes_de_ia'
+              # #2932/#2934: quantos entrariam no "para cada", o teste e as consultas prontas do "buscar em outro sistema".
+              post :contar_lista, on: :collection, to: 'automacoes_passos_novos#contar_lista'
+              post :testar_consulta, on: :collection, to: 'automacoes_passos_novos#testar_consulta'
+              get :consultas_prontas, on: :collection, to: 'automacoes_passos_novos#consultas_prontas'
               member do
                 post :ligar
                 post :desligar
@@ -773,6 +784,10 @@ Rails.application.routes.draw do
                 get :segredo_do_webhook, to: 'automacoes_webhook#segredo'
                 post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
               end
+            end
+            # #2931 — os pedidos do passo "Pedir aprovação", do lado de quem aprova.
+            resources :aprovacoes, only: [:index, :show] do
+              post :responder, on: :member
             end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
@@ -1140,6 +1155,22 @@ Rails.application.routes.draw do
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
             post :apagar, to: 'apagar#create'
+            # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
+            # consertar ou deixar de fora uma linha, trazer, as listas já trazidas e o andamento de uma.
+            namespace :trazer do
+              resources :leituras, only: [:create, :show] do
+                patch :respostas, on: :member
+                post :trazer, on: :member
+                resources :colunas, only: [:update], param: :indice
+                resources :linhas, only: [:update], param: :linha do
+                  post :deixar_de_fora, on: :member
+                  post :reabrir, on: :member
+                end
+              end
+              resources :listas, only: [:index] do
+                get :andamento, on: :member
+              end
+            end
             # #2897 — carteira de seguros (chave carteira_seguros, só em conta corretora de seguros; 404 sem isso): a aba
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
             resources :seguros, only: [:index, :show, :update] do
@@ -1160,22 +1191,6 @@ Rails.application.routes.draw do
             end
             get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
             get 'empresas/:id/seguros', to: 'empresas/seguros#index' if ChatwootApp.enterprise?
-            # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
-            # consertar ou deixar de fora uma linha, trazer, as listas já trazidas e o andamento de uma.
-            namespace :trazer do
-              resources :leituras, only: [:create, :show] do
-                patch :respostas, on: :member
-                post :trazer, on: :member
-                resources :colunas, only: [:update], param: :indice
-                resources :linhas, only: [:update], param: :linha do
-                  post :deixar_de_fora, on: :member
-                  post :reabrir, on: :member
-                end
-              end
-              resources :listas, only: [:index] do
-                get :andamento, on: :member
-              end
-            end
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

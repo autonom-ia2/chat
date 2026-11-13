@@ -431,8 +431,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:80",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:82",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -3555,6 +3555,42 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/agents/:agent_id/modelo_pronto": {
+    "campos": {
+      "documentos": {
+        "campos": {
+          "id": {},
+          "texto": {},
+          "tirada": {}
+        },
+        "tipo": "objeto"
+      },
+      "ferramentas": {
+        "campos": {
+          "fonte": {},
+          "usar_quando": {}
+        },
+        "tipo": "objeto"
+      },
+      "perguntas": {
+        "campos": {
+          "id": {},
+          "texto": {},
+          "tirada": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/modelo_pronto#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:19",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:43",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:27"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/agents/:agent_id/tools/:id": {
     "campos": {
       "description": {
@@ -3717,10 +3753,10 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:208",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:244",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
     ],
@@ -3749,6 +3785,10 @@
         "tipo": "id",
         "tipo_pela_leitura": "nome"
       },
+      "bloco": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "nome": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -3762,14 +3802,16 @@
     "controller": "api/v1/accounts/autonomia/automacoes#update",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:62",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:143",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:68",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:67",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:149",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:234",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:220",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:66",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
     ],
     "sem_corpo": false
   },
@@ -3794,6 +3836,42 @@
       "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:28",
       "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:43",
       "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH autonomia/build_threads/:id/modelo_pronto": {
+    "campos": {
+      "documentos": {
+        "campos": {
+          "id": {},
+          "texto": {},
+          "tirada": {}
+        },
+        "tipo": "objeto"
+      },
+      "ferramentas": {
+        "campos": {
+          "fonte": {},
+          "usar_quando": {}
+        },
+        "tipo": "objeto"
+      },
+      "perguntas": {
+        "campos": {
+          "id": {},
+          "texto": {},
+          "tirada": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/agents/build_threads#modelo_pronto",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:86",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:43",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:157"
     ],
     "sem_corpo": false
   },
@@ -4827,7 +4905,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:40",
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:42",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -4840,7 +4918,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:53",
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -7401,6 +7479,10 @@
       "description": {
         "tipo": "string"
       },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "show_on_sidebar": {
         "tipo": "booleano"
       },
@@ -8299,6 +8381,63 @@
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:id/respostas": {
+    "campos": {
+      "clientes": {},
+      "coluna_cliente": {},
+      "telefone": {},
+      "valores_cliente": {
+        "campos": {
+          "chaves": {
+            "tipo": "lista"
+          },
+          "modo": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#respostas",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:23",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:25",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {},
+      "nome": {},
+      "para_que_serve": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:8",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:11",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:9"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha": {
+    "campos": {
+      "ficar_com": {},
+      "valor": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
     ],
     "sem_corpo": false
   },
@@ -11050,9 +11189,9 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:208",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:244",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:43"
     ],
@@ -11405,6 +11544,27 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/aprovacoes/:id/responder": {
+    "campos": {
+      "aprovado": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "motivo": {
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/aprovacoes#responder",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/aprovacoes_controller.rb:51"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/automacoes": {
     "campos": {
       "nome": {
@@ -11420,9 +11580,9 @@
     "controller": "api/v1/accounts/autonomia/automacoes#create",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:52"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:55"
     ],
     "sem_corpo": false
   },
@@ -11430,8 +11590,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/automacoes#desligar",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:86",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:89",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
     ],
     "sem_corpo": true
   },
@@ -11449,11 +11609,11 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:100",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:202",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:101",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:108",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:181",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:109",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
     ],
     "sem_corpo": false
   },
@@ -11468,10 +11628,10 @@
     "controller": "api/v1/accounts/autonomia/automacoes#ligar",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:78",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:82",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:76",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
     ],
     "sem_corpo": false
   },
@@ -11483,6 +11643,32 @@
       "app/controllers/api/v1/accounts/autonomia/automacoes_webhook_controller.rb:39"
     ],
     "sem_corpo": true
+  },
+  "POST autonomia/automacoes/contar_lista": {
+    "campos": {
+      "lista": {},
+      "passo_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "teto": {
+        "tipo": "inteiro",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes_passos_novos#contar_lista",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "motivos": [
+      "leitura crua sem tipo: lista"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:27"
+    ],
+    "sem_corpo": false
   },
   "POST autonomia/automacoes/ensaio": {
     "campos": {
@@ -11498,9 +11684,24 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:105",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:202",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:113",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:181",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/automacoes/testar_consulta": {
+    "campos": {
+      "fonte": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes_passos_novos#testar_consulta",
+    "motivos": [
+      "leitura crua sem tipo: fonte"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:40",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_passos_novos_controller.rb:41"
     ],
     "sem_corpo": false
   },
@@ -11572,6 +11773,10 @@
         "tipo": "lista"
       },
       "message": {},
+      "modelo": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "no_materials": {
         "tipo": "booleano",
         "tipo_pela_leitura": "uso"
@@ -11587,19 +11792,20 @@
       "leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:122",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:142",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:137",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:126",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:124",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:115",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:106",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:104",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:95",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:129",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:94",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:34",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:28",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:182"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:149",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:114",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:107",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:101",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:202"
     ],
     "sem_corpo": false
   },
@@ -11607,8 +11813,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#desfazer",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:11",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:137"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:15",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:157"
     ],
     "sem_corpo": true
   },
@@ -11641,18 +11847,18 @@
       "leitura crua sem tipo: message (repassada a @thread.append_message!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:46",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:122",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:117",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:50",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:142",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:137",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:135",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:126",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:124",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:115",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:106",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:104",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:95",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:129",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:94",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:171",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:47",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:137"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:149",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:114",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:191",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:157"
     ],
     "sem_corpo": false
   },
@@ -11660,8 +11866,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/build_threads#retry_build",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:67",
-      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:137"
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:157"
     ],
     "sem_corpo": true
   },
@@ -14077,7 +14283,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:28",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:108",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:110",
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:29"
     ],
     "sem_corpo": false
@@ -14087,7 +14293,7 @@
     "controller": "api/v1/accounts/contact_imports#confirm",
     "origem": [
       "app/controllers/api/v1/accounts/contact_imports_controller.rb:64",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -19492,6 +19698,10 @@
       "description": {
         "tipo": "string"
       },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "show_on_sidebar": {
         "tipo": "booleano"
       },
@@ -20500,6 +20710,49 @@
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
     "sem_corpo": false
+  },
+  "POST relacionamentos/trazer/leituras": {
+    "campos": {
+      "arquivo": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#create",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:12",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:13"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/trazer/leituras/:id/trazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#trazer",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:35",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:36"
+    ],
+    "sem_corpo": true
+  },
+  "POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#deixar_de_fora",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:12",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
+    ],
+    "sem_corpo": true
+  },
+  "POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#reabrir",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:17",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
+    ],
+    "sem_corpo": true
   },
   "POST saml_settings": {
     "campos": {
@@ -23805,10 +24058,10 @@
     "modelo": "Autonomia::Agents::Agent",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:79",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:208",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:210",
       "app/controllers/concerns/autonomia/modo_do_agente.rb:30",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:292",
-      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:244",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:294",
+      "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:246",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:167",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:133"
     ],
@@ -23819,6 +24072,10 @@
       "base_versao_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
+      },
+      "bloco": {
+        "padrao": false,
+        "tipo": "booleano"
       },
       "nome": {
         "nao_pode_ficar_vazio": true,
@@ -23833,14 +24090,16 @@
     "controller": "api/v1/accounts/autonomia/automacoes#update",
     "modelo": "Autonomia::Automacao::Definicao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:62",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:143",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:153",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:68",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:67",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:64",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:63",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:124"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:149",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:158",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:70",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:234",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:220",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:66",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:130"
     ],
     "sem_corpo": false
   },
@@ -27415,6 +27674,10 @@
       "description": {
         "tipo": "string"
       },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "show_on_sidebar": {
         "tipo": "booleano"
       },
@@ -28251,6 +28514,38 @@
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {},
+      "nome": {},
+      "para_que_serve": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:8",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:11",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:9"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha": {
+    "campos": {
+      "ficar_com": {},
+      "valor": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
     ],
     "sem_corpo": false
   },

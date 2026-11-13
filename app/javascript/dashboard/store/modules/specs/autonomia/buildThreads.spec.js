@@ -6,7 +6,9 @@ vi.mock('../../../../api/autonomia/buildThreads', () => ({
     create: vi.fn(),
     show: vi.fn(),
     sendMessage: vi.fn(),
+    retryBuild: vi.fn(),
     desfazer: vi.fn(),
+    mudarModeloPronto: vi.fn(),
   },
 }));
 
@@ -336,6 +338,172 @@ describe('#autonomiaBuildThreads store', () => {
       ).rejects.toBe(erro);
     });
 
+    // #2881 — o modelo pronto de ramo da conversa e as listas que o dono muda antes de começar.
+    describe('ready-made model (#2881)', () => {
+      const modelo = lista => ({ chave: 'seguro_garantia', perguntas: lista });
+
+      it('keeps the model the thread payload brings, and null when there is none', async () => {
+        const commit = vi.fn();
+        AutonomiaBuildThreadsAPI.create.mockResolvedValue({
+          data: { payload: { id: 3, modelo_pronto: modelo(['a']) } },
+        });
+        await actions.start({ commit, dispatch: vi.fn() }, { modelo: 'x' });
+        expect(commit).toHaveBeenCalledWith('SET_MODELO_PRONTO', modelo(['a']));
+
+        commit.mockClear();
+        AutonomiaBuildThreadsAPI.show.mockResolvedValue({
+          data: { payload: { id: 3, modelo_pronto: null } },
+        });
+        await actions.fetch({ commit, dispatch: vi.fn() }, { threadId: 3 });
+        expect(commit).toHaveBeenCalledWith('SET_MODELO_PRONTO', null);
+      });
+
+      it('leaves the model alone when the payload does not carry the key', async () => {
+        const commit = vi.fn();
+        AutonomiaBuildThreadsAPI.show.mockResolvedValue({
+          data: { payload: { id: 3, status: 'processing' } },
+        });
+        await actions.fetch({ commit, dispatch: vi.fn() }, { threadId: 3 });
+
+        expect(commit).not.toHaveBeenCalledWith(
+          'SET_MODELO_PRONTO',
+          expect.anything()
+        );
+      });
+
+      it('mudarModeloPronto patches the lists and keeps only the model the server answered', async () => {
+        const commit = vi.fn();
+        const listas = { perguntas: [{ texto: 'Nova', tirada: false }] };
+        AutonomiaBuildThreadsAPI.mudarModeloPronto.mockResolvedValue({
+          data: {
+            payload: { id: 3, status: 'ready', modelo_pronto: modelo(['b']) },
+          },
+        });
+
+        await actions.mudarModeloPronto({ commit }, { threadId: 3, listas });
+
+        expect(AutonomiaBuildThreadsAPI.mudarModeloPronto).toHaveBeenCalledWith(
+          3,
+          listas
+        );
+        expect(commit.mock.calls).toEqual([
+          ['SET_MODELO_PRONTO', modelo(['b'])],
+        ]);
+      });
+
+      it('mudarModeloPronto rethrows the raw error so the page can tell the reason', async () => {
+        const erro = {
+          response: { status: 422, data: { motivo: 'agente_ja_comecou' } },
+        };
+        AutonomiaBuildThreadsAPI.mudarModeloPronto.mockRejectedValue(erro);
+        const commit = vi.fn();
+
+        await expect(
+          actions.mudarModeloPronto({ commit }, { threadId: 3, listas: {} })
+        ).rejects.toBe(erro);
+        expect(commit).not.toHaveBeenCalled();
+      });
+
+      it('a thread read asked before a change does not bring the old lists back', async () => {
+        const commit = vi.fn();
+        let responder;
+        AutonomiaBuildThreadsAPI.show.mockReturnValue(
+          new Promise(resolve => {
+            responder = resolve;
+          })
+        );
+        const leitura = actions.fetch(
+          { commit, dispatch: vi.fn() },
+          { threadId: 3 }
+        );
+        AutonomiaBuildThreadsAPI.mudarModeloPronto.mockResolvedValue({
+          data: { payload: { id: 3, modelo_pronto: modelo(['nova']) } },
+        });
+        await actions.mudarModeloPronto(
+          { commit },
+          { threadId: 3, listas: {} }
+        );
+
+        responder({
+          data: {
+            payload: {
+              id: 3,
+              status: 'ready',
+              modelo_pronto: modelo(['velha']),
+            },
+          },
+        });
+        await leitura;
+
+        expect(commit).toHaveBeenCalledWith('SET_STATUS', 'ready');
+        expect(commit).not.toHaveBeenCalledWith(
+          'SET_MODELO_PRONTO',
+          modelo(['velha'])
+        );
+      });
+
+      // Toda resposta que traz a conversa de volta guarda o contador antes de pedir, como a leitura.
+      it.each([
+        ['send', 'sendMessage', { threadId: 3, content: 'oi' }],
+        ['retry', 'retryBuild', { threadId: 3 }],
+        ['desfazerAjuste', 'desfazer', { threadId: 3 }],
+      ])(
+        '%s asked before a change does not bring the old lists back either',
+        async (acao, chamada, dados) => {
+          const commit = vi.fn();
+          let responder;
+          AutonomiaBuildThreadsAPI[chamada].mockReturnValue(
+            new Promise(resolve => {
+              responder = resolve;
+            })
+          );
+          const pedido = actions[acao]({ commit, dispatch: vi.fn() }, dados);
+          AutonomiaBuildThreadsAPI.mudarModeloPronto.mockResolvedValue({
+            data: { payload: { id: 3, modelo_pronto: modelo(['nova']) } },
+          });
+          await actions.mudarModeloPronto(
+            { commit },
+            { threadId: 3, listas: {} }
+          );
+
+          responder({
+            data: {
+              payload: {
+                id: 3,
+                status: 'ready',
+                modelo_pronto: modelo(['velha']),
+              },
+            },
+          });
+          await pedido;
+
+          expect(commit).toHaveBeenCalledWith('SET_STATUS', 'ready');
+          expect(commit).toHaveBeenCalledWith(
+            'SET_MODELO_PRONTO',
+            modelo(['nova'])
+          );
+          expect(commit).not.toHaveBeenCalledWith(
+            'SET_MODELO_PRONTO',
+            modelo(['velha'])
+          );
+        }
+      );
+
+      it('send keeps the model of its answer when no change happened meanwhile', async () => {
+        const commit = vi.fn();
+        AutonomiaBuildThreadsAPI.sendMessage.mockResolvedValue({
+          data: { payload: { id: 3, modelo_pronto: modelo(['a']) } },
+        });
+
+        await actions.send(
+          { commit, dispatch: vi.fn() },
+          { threadId: 3, content: 'oi' }
+        );
+
+        expect(commit).toHaveBeenCalledWith('SET_MODELO_PRONTO', modelo(['a']));
+      });
+    });
+
     it('onSettled surfaces a visible error when the build failed', async () => {
       const commit = vi.fn();
       const dispatch = vi.fn();
@@ -598,6 +766,7 @@ describe('#autonomiaBuildThreads store', () => {
         mergedCount: 4,
         status: 'ready',
         threadState: 'turn',
+        modeloPronto: { chave: 'seguro_garantia' },
         agent: { id: 9 },
         phase: 'reviewing',
         error: 'failed',
@@ -609,10 +778,20 @@ describe('#autonomiaBuildThreads store', () => {
         mergedCount: 0,
         status: null,
         threadState: {},
+        modeloPronto: null,
         agent: null,
         phase: 'interviewing',
         error: null,
       });
+    });
+
+    it('SET_MODELO_PRONTO keeps the model, or null when the conversation has none (#2881)', () => {
+      const state = { modeloPronto: null };
+      mutations.SET_MODELO_PRONTO(state, { chave: 'seguro_auto' });
+      expect(state.modeloPronto).toEqual({ chave: 'seguro_auto' });
+
+      mutations.SET_MODELO_PRONTO(state, undefined);
+      expect(state.modeloPronto).toBeNull();
     });
 
     it('APPEND_MESSAGE tags locally-authored turns so the merge can confirm them later', () => {

@@ -62,6 +62,7 @@
   "servidor": {
     "autonomia.guide.avisos.whatsapp_proxy.sessao_instavel_trocada": "\"O número ganhou outro\" IP: aviso técnico do proxy do WhatsApp; não é resultado de venda.",
     "whatsapp_templates.errors.catalog_not_found": "\"A conexão perdeu o acesso\" ao catálogo do WhatsApp: aviso de conexão; não é resultado de venda.",
+    "autonomia.guide.avisos.whatsapp_oficial_sem_acesso": "\"A caixa perdeu a conexão\" com a conta do WhatsApp na Meta (chat#2907): aviso de conexão; não é resultado de venda.",
     "waha.call.missed_voice": "\"Ligação de voz perdida\": ligação do WhatsApp que ninguém atendeu (chat#1709); não é resultado de venda.",
     "waha.call.missed_video": "\"Ligação de vídeo perdida\": ligação do WhatsApp que ninguém atendeu (chat#1709); não é resultado de venda.",
     "autonomia.desempenho2.c.acoes.subtitulo": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",

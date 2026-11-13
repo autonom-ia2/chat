@@ -12,14 +12,19 @@
 # então sem migration. Fecha como o Definicao#desligar!, só no card (Execucao.parar_por_fora!): a que esperava ganha o
 # registro no passo da espera; a que estava no meio de uma rodada leva o porquê, para sozinha e registra lá.
 #
-# Para também o que a automação começou em outro registro por causa deste card (decisão do Rodrigo, 12/11): as filhas
-# abertas do passo "em outro registro" (EmOutroRegistro) que nasceram de uma execução desta automação neste card, como
-# a mensagem agendada para o contato indicado. Valem as filhas de qualquer vez dela no card, aberta ou já terminada: a
-# mãe não espera as filhas. Tudo numa leitura travada só, com o mesmo motivo. As filhas de outro card não mudam.
+# Para também tudo o que a automação começou por causa deste card ("Cancela tudo", decisão do Rodrigo, 12/11): as
+# filhas do passo "em outro registro" (EmOutroRegistro), como a mensagem agendada para o contato indicado, as do "fazer
+# para cada um de uma lista" (RepetirLista) e as execuções dos blocos que ela usou (Bloco, de outra automação), e as
+# filhas dessas, em quantos níveis houver. Valem as de qualquer vez dela no card, aberta ou já terminada: a mãe não
+# espera as filhas da lista nem as do "em outro registro". Tudo numa leitura travada só, com o mesmo motivo. O que
+# nasceu de outro card não muda.
 class Autonomia::Automacao::NoCard
   Execucao = ::Autonomia::Automacao::Execucao
   Registro = ::Autonomia::Automacao::Registro
+  Bloco = ::Autonomia::Automacao::Bloco
   MOTIVO = 'parada_no_card'.freeze
+  # As marcas das filhas que ficam na automação da mãe; a do bloco (Bloco::MARCA) é de outra automação.
+  MARCAS_DA_MESMA = [::Autonomia::Automacao::EmOutroRegistro::MARCA, ::Autonomia::Automacao::RepetirLista::MARCA].freeze
 
   def initialize(card:, account_user:)
     @card = card
@@ -34,9 +39,25 @@ class Autonomia::Automacao::NoCard
     execucoes.map { |execucao| para_tela(execucao, registros.fetch(execucao.id, [])) }
   end
 
-  # Devolve quantas execuções fechou, filhas em outro registro incluídas (0 quando nada rodava desta automação neste card).
+  # Devolve quantas execuções fechou, as que ela começou incluídas (0 quando nada rodava desta automação neste card).
+  #
+  # Na mesma transação, contra quem abre filha ao mesmo tempo (FilhasDaLista e FilhasDoPasso conferem a mãe com a linha
+  # travada antes de gravar, Execucao.nao_abre_filha?): a primeira passada fecha e trava as abertas; a marca nas
+  # terminadas do card (a mãe concluída com o job ainda na fila) trava a linha delas. Daí em diante nenhuma mãe fechada
+  # abre filha; a filha gravada antes disso já está no banco, e as passadas seguintes a acham e fecham, até uma passada
+  # não achar nada (o teto, Bloco::ACIMA_MAXIMO, é só contra defeito).
   def parar!(automacao)
-    fechadas = Execucao.transaction { Execucao.parar_por_fora!(do_card_e_filhas(automacao), MOTIVO) }
+    fechadas = Execucao.transaction do
+      todas = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+      marcar_terminadas(automacao)
+      Bloco::ACIMA_MAXIMO.times do
+        novas = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+        break if novas.empty?
+
+        todas += novas
+      end
+      todas
+    end
     return 0 if fechadas.empty?
 
     ::Autonomia::Automacao::Cobertura.encerrar(fechadas)
@@ -48,18 +69,53 @@ class Autonomia::Automacao::NoCard
 
   def abertas = Execucao.abertas.where(account_id: @card.account_id, alvo: @card)
 
-  # As execuções desta automação neste card e as filhas delas em outro registro, numa consulta só, sem trazer as mães
-  # para o Ruby (o card pode ter muitas vezes da automação). A filha é achada pela marca do evento
-  # (`em:<id da mãe>:...`, EmOutroRegistro.marca): o prefixo `em:` usa o índice (automacao_id, evento) com
-  # text_pattern_ops (LIKE com diferença de maiúsculas, nunca ILIKE), e o id da mãe, o segundo pedaço da marca, é
-  # comparado como texto com as execuções do card. Pedaço inteiro: a mãe 12 não leva a filha da 123.
-  def do_card_e_filhas(automacao)
-    da_automacao = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id)
-    no_card = da_automacao.where(alvo: @card)
-    filhas = da_automacao.where(Execucao.arel_table[:evento].matches("#{::Autonomia::Automacao::EmOutroRegistro::MARCA}:%", nil, true))
-                         .where("split_part(#{Execucao.table_name}.evento, ':', 2) IN (?)", no_card.select(Arel.sql('id::text')))
-    no_card.or(filhas)
+  def do_escopo(automacao) = Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao))
+
+  # As vezes já terminadas desta automação no card (concluída, falhou, interrompida) ganham o porquê nos `textos`: a lista
+  # que ainda vai abrir filhas por uma delas lê a marca e não abre (Execucao.nao_abre_filha?). A já parada fica como
+  # está: o estado já basta, e o porquê dela (o desligar, por exemplo) não pode ser trocado. Trava pela ordem do id antes
+  # de gravar, como o parar_por_fora!. A terminada não é salva de novo com callback (o AO_TERMINAR apagaria a marca).
+  def marcar_terminadas(automacao)
+    ids = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card).where.not(finalizada_em: nil)
+                  .where.not(estado: 'parada').order(:id).lock.pluck(:id)
+    Execucao.where(id: ids).update_all(textos: { Execucao::PORQUE => MOTIVO }) if ids.any? # rubocop:disable Rails/SkipsModelValidations
   end
+
+  # Os ids das execuções desta automação neste card e de tudo o que elas começaram, nível a nível (uma mãe por vez não
+  # cabe: o card pode ter muitas vezes da automação). A filha é achada pela marca do evento (`em:`, `lista:` ou
+  # `bloco:<id da mãe>:...`): o id da mãe, o segundo pedaço da marca, é comparado como texto com os ids do nível de cima.
+  # Pedaço inteiro: a mãe 12 não leva a filha da 123. Para no primeiro nível sem filha nova; o teto (Bloco::ACIMA_MAXIMO,
+  # o mesmo da subida pelas mães) é só contra defeito.
+  def do_card_e_descendentes(automacao)
+    todas = linhas(Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card))
+    nivel = todas
+    Bloco::ACIMA_MAXIMO.times do
+      break if nivel.empty?
+
+      nivel = filhas_de(nivel).except(*todas.keys)
+      todas = todas.merge(nivel)
+    end
+    todas.keys
+  end
+
+  # { id => [automacao_id, alvo_type, alvo_id] } das filhas das `maes` (mesmo formato). As do "em outro registro" e da
+  # lista são da automação da mãe: o prefixo usa o índice (automacao_id, evento) com text_pattern_ops (LIKE com diferença
+  # de maiúsculas, nunca ILIKE). A do bloco é de outra automação, e qual bloco não se sabe pela mãe (a marca de bloco
+  # pode ser tirada depois); mas roda no mesmo alvo da mãe (PassoUsarBloco), então a busca vai pelo índice do alvo.
+  def filhas_de(maes)
+    evento = Execucao.arel_table[:evento]
+    da_conta = Execucao.where(account_id: @card.account_id)
+                       .where("split_part(#{Execucao.table_name}.evento, ':', 2) IN (?)", maes.keys.map(&:to_s))
+    prefixos = MARCAS_DA_MESMA.map { |marca| "#{marca}:%" }
+    da_mesma = da_conta.where(automacao_id: maes.values.map(&:first).uniq).where(evento.matches_any(prefixos, nil, true))
+    de_bloco = da_conta.where(evento.matches("#{Bloco::MARCA}:%", nil, true)).where(nos_alvos(maes.values))
+    linhas(da_mesma).merge(linhas(de_bloco))
+  end
+
+  def linhas(escopo) = escopo.pluck(:id, :automacao_id, :alvo_type, :alvo_id).to_h { |id, *resto| [id, resto] }
+
+  # Os alvos das mães, só para a busca ir pelo índice do alvo: quem garante que a filha é desta mãe é o id na marca.
+  def nos_alvos(linhas) = { alvo_type: linhas.pluck(1).uniq, alvo_id: linhas.map(&:last).uniq }
 
   def para_tela(execucao, registros)
     {

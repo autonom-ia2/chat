@@ -7,7 +7,9 @@ import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
 import { acharPasso } from '../receita';
+import { RAMOS_QUE_SALVAM, chaveDoNome } from '../passosNovos/passosNovos';
 import { abaixoDoMinimo, dolares } from '../custoDaIa';
+import { detalheDoHistorico } from '../passosNovos/frasesDosNovos';
 
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
@@ -58,6 +60,12 @@ const RAMO = {
   nenhum: 'NENHUM',
   // G13 (#2670): o outro sistema recusou.
   se_recusar: 'SE_RECUSAR',
+  // #2934: a busca em outro sistema não deu.
+  nao_consultou: 'NAO_CONSULTOU',
+  // #2931/#2935/#2936: os galhos da aprovação, da reunião e da pesquisa.
+  ...Object.fromEntries(
+    RAMOS_QUE_SALVAM.map(ramo => [ramo, ramo.toUpperCase()])
+  ),
 };
 
 const hora = iso =>
@@ -87,9 +95,11 @@ const custoDaIa = valor =>
     { valor: dolares(valor, locale.value) }
   );
 
-const fraseDe = (execucao, passo) => {
+// `lidas`: as versões de onde a frase sai (as da página, ou as de dentro de um
+// bloco, #2933).
+const fraseDe = (execucao, passo, lidas = versoes.value) => {
   if (passo.passo === 'inicio') return t('AUTOMACAO_LIVRE.HISTORICO.INICIO');
-  const receita = versoes.value[execucao.versao_id]?.receita;
+  const receita = lidas[execucao.versao_id]?.receita;
   const achado = acharPasso(receita?.passos || [], passo.passo);
   const frase = achado
     ? fraseDoPasso(achado, props.catalogo, t)
@@ -111,6 +121,42 @@ const ramoDe = (execucao, passo) => {
   const { ramo } = passo.dados;
   if (RAMO[ramo]) return t(`AUTOMACAO_LIVRE.RAMOS.${RAMO[ramo]}`);
   return nomeDoCaminho(execucao, passo) || ramo;
+};
+
+// #2934: os dados que a busca guardou, pelo nome que a pessoa deu (o servidor
+// manda só a chave do nome, nunca o valor nem o endereço).
+const guardadosDe = (execucao, passo, lidas = versoes.value) => {
+  const receita = lidas[execucao.versao_id]?.receita;
+  const consulta = acharPasso(receita?.passos || [], passo.passo);
+  return (passo.dados.guardados || [])
+    .map(
+      chave =>
+        (consulta?.guardar || []).find(dado => chaveDoNome(dado.nome) === chave)
+          ?.nome || chave
+    )
+    .join(', ');
+};
+
+// #2933: "Ver o que aconteceu dentro" do bloco, lido só quando a pessoa pede.
+const dentro = ref({});
+const verDentro = async filhaId => {
+  if (dentro.value[filhaId]) {
+    const { [filhaId]: _fechado, ...resto } = dentro.value;
+    dentro.value = resto;
+    return;
+  }
+  try {
+    const { data } = await AutomacoesAPI.historicoDentro(
+      props.automacaoId,
+      filhaId
+    );
+    dentro.value = {
+      ...dentro.value,
+      [filhaId]: { execucao: data.execucoes[0], versoes: data.versoes },
+    };
+  } catch {
+    dentro.value = { ...dentro.value, [filhaId]: { erro: true } };
+  }
 };
 
 // G63: a volta do galho "a cada mensagem" à espera não vira linha: cada volta
@@ -321,6 +367,18 @@ onMounted(() => carregar());
                     }}
                   </span>
                   <span
+                    v-for="(linha, i) in detalheDoHistorico(
+                      passo.dados,
+                      t,
+                      hora
+                    )"
+                    :key="`detalhe-${i}`"
+                    data-detalhe
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ linha }}
+                  </span>
+                  <span
                     v-if="passo.dados.sem_prazo"
                     data-sem-prazo
                     class="text-sm text-n-slate-11"
@@ -362,6 +420,70 @@ onMounted(() => carregar());
                     class="text-sm text-n-slate-11"
                   >
                     {{ passo.motivo }}
+                  </span>
+                  <span
+                    v-if="passo.dados.guardados?.length"
+                    data-guardados
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{
+                      $t('AUTOMACAO_LIVRE.HISTORICO.GUARDOU', {
+                        dados: guardadosDe(execucao, passo),
+                      })
+                    }}
+                  </span>
+                  <span v-if="passo.dados.filha_id" class="flex flex-col gap-2">
+                    <Button
+                      data-ver-dentro
+                      type="button"
+                      :label="
+                        $t(
+                          dentro[passo.dados.filha_id]
+                            ? 'AUTOMACAO_LIVRE.HISTORICO.FECHAR_DENTRO'
+                            : 'AUTOMACAO_LIVRE.HISTORICO.VER_DENTRO'
+                        )
+                      "
+                      icon="i-lucide-boxes"
+                      slate
+                      link
+                      class="self-start min-h-11"
+                      @click="verDentro(passo.dados.filha_id)"
+                    />
+                    <span
+                      v-if="dentro[passo.dados.filha_id]?.erro"
+                      role="alert"
+                      class="text-sm text-n-ruby-11"
+                    >
+                      {{ $t('AUTOMACAO_LIVRE.HISTORICO.DENTRO_ERRO') }}
+                    </span>
+                    <ol
+                      v-else-if="dentro[passo.dados.filha_id]"
+                      data-dentro
+                      class="flex flex-col gap-1.5 p-0 m-0 border-s-2 border-n-weak ps-3 list-none"
+                    >
+                      <li
+                        v-for="(deDentro, n) in dentro[passo.dados.filha_id]
+                          .execucao.passos"
+                        :key="n"
+                        class="flex flex-col gap-0.5"
+                      >
+                        <span class="text-sm text-n-slate-12">
+                          {{
+                            fraseDe(
+                              dentro[passo.dados.filha_id].execucao,
+                              deDentro,
+                              dentro[passo.dados.filha_id].versoes
+                            )
+                          }}
+                        </span>
+                        <span
+                          v-if="deDentro.motivo"
+                          class="text-sm text-n-slate-11"
+                        >
+                          {{ deDentro.motivo }}
+                        </span>
+                      </li>
+                    </ol>
                   </span>
                   <span
                     v-if="passo.dados.tentativa"

@@ -1,6 +1,12 @@
 import types from '../../mutation-types';
 import NotificationsAPI from '../../../api/notifications';
 
+// Os avisos cujo ator não é conversa: marcar como lido vai pelo id do aviso.
+const LIDOS_PELO_ID = [
+  'ConversationAudienceSearch',
+  'Autonomia::Automacao::Registro',
+];
+
 export const actions = {
   index: async ({ commit }, { page = 1, status, type, sortOrder } = {}) => {
     commit(types.SET_NOTIFICATIONS_UI_FLAG, { isFetching: true });
@@ -41,8 +47,9 @@ export const actions = {
   ) => {
     commit(types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: true });
     try {
-      // #2277: the audience search notification is read by its own id.
-      if (primaryActorType === 'ConversationAudienceSearch') {
+      // #2277: the audience search notification is read by its own id. The same
+      // for the approval request of an automation (#2931).
+      if (LIDOS_PELO_ID.includes(primaryActorType)) {
         await NotificationsAPI.readOne(id);
       } else {
         await NotificationsAPI.read(primaryActorType, primaryActorId);

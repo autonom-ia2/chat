@@ -1,0 +1,35 @@
+# Automação livre, os passos que perguntam e esperam a resposta (#2414: #2931 aprovação, #2935 reunião, #2936 pesquisa).
+# Arquivo próprio para não disputar o pt_BR.yml com outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        esperando_resposta: 'Perguntou e está esperando a resposta.'
+        resposta_ambigua: 'A resposta não deixou claro. Esperando a próxima, até o prazo.'
+        sem_quem_aprove: 'Ninguém que vê o registro podia aprovar. Seguiu pelo caminho “Se ninguém responder a tempo”.'
+        reuniao_sem_responsavel: 'Sem responsável no card nem na conversa (ou a pessoa escolhida saiu da conta), então não havia com quem marcar. Seguiu sem reunião, pelo caminho “Se o cliente não responder”.'
+        reuniao_sem_pagina: 'O responsável não tem uma página de agendamento só dele, então não havia horários para oferecer. Seguiu sem reunião, pelo caminho “Se o cliente não responder”.'
+        sem_horario: 'Não havia horário livre na página de agendamento. Seguiu pelo caminho “Se pedir outro horário”.'
+        horario_ocupado: 'Outra pessoa marcou esse horário antes. Seguiu pelo caminho “Se pedir outro horário”.'
+        reuniao_nao_marcou: 'Não deu para marcar a reunião. Seguiu pelo caminho “Se pedir outro horário”.'
+        pesquisa_recente: 'Esta pessoa respondeu uma pesquisa há pouco. Pulou a pergunta e seguiu.'
+        pedido_sumiu: 'O pedido deste passo não foi encontrado (os registros ficam 30 dias).'
+      receita:
+        quem_sem_responsavel: 'Passo %{passo}: “quem cuida do card” precisa de card ou conversa, e este gatilho não tem. Escolha uma pessoa ou um time.'
+        espera_resposta_sem_conversa: 'Passo %{passo}: este passo pergunta ao cliente na conversa, e este gatilho não tem conversa. Use um gatilho de conversa ou de card.'
+        reuniao_sem_agenda: 'Passo %{passo}: as páginas de agendamento estão desligadas nesta conta, então não há agenda para oferecer horários.'
+        reuniao_sem_permissao: 'Passo %{passo}: só quem vê as páginas de agendamento pode marcar reunião por uma automação.'
+        pesquisa_faixa_media_vazia: 'Passo %{passo}: deixe pelo menos uma nota para a nota média.'
+      valores:
+        horario_da_reuniao: '%{dia} %{data}'
+        data_curta: '%d/%m %H:%M'
+        dias_curtos: [Dom, Seg, Ter, Qua, Qui, Sex, Sáb]
+      pedido:
+        valor_oculto: 'valor oculto'
+        responder:
+          ja_respondido: 'Este pedido já foi respondido ou encerrado.'
+          fora_do_prazo: 'O prazo deste pedido já venceu.'
+          sem_decisao: 'Diga se aprova ou recusa este pedido.'
+  notifications:
+    notification_title:
+      automacao_aprovacao: 'Uma automação espera a sua aprovação'
