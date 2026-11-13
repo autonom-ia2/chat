@@ -149,6 +149,45 @@ describe('useConversaDeCriacao', () => {
     });
   });
 
+  // #2881 — agente pronto por ramo: a tela faz a primeira pergunta e a conversa abre com a resposta, levando o modelo.
+  it('with a line-of-insurance model, the screen speaks first and the thread opens with the answer, carrying `modelo`', async () => {
+    const { conversa } = montar({ modelo: 'sdr', ramo: 'seguro_garantia' });
+    conversa.comecarComFala('Qual é o nome da sua corretora?');
+
+    expect(store.dispatch).not.toHaveBeenCalled();
+    expect(conversa.falas.value).toEqual([
+      {
+        de: 'assistente',
+        texto: 'Qual é o nome da sua corretora?',
+        chave: 't0',
+      },
+    ]);
+
+    await conversa.enviar({ texto: 'Horizonte Seguros' });
+
+    expect(chamadas('autonomiaBuildThreads/start')).toEqual([
+      [
+        'autonomiaBuildThreads/start',
+        {
+          type: 'sdr',
+          actuation: 'external',
+          with_knowledge: true,
+          modelo: 'seguro_garantia',
+          message: 'Horizonte Seguros',
+        },
+      ],
+    ]);
+  });
+
+  it('without a line-of-insurance model, the opening never carries `modelo`', () => {
+    const { conversa } = montar({ modelo: 'sdr' });
+    conversa.comecar();
+
+    expect(chamadas('autonomiaBuildThreads/start')[0][1]).not.toHaveProperty(
+      'modelo'
+    );
+  });
+
   it('reopens the thread with the message when the first start had failed', async () => {
     const { conversa } = montar({ modelo: 'reception' });
     await conversa.enviar({ texto: 'Oi' });

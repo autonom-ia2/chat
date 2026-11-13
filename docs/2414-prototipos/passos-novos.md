@@ -1,8 +1,11 @@
 # Protótipo: os 6 passos novos da Automação livre
 
 Issues #2931 a #2936 (épico #2414). Protótipo em tela real, aprovado pelo
-Rodrigo em 12/11. Pedir aprovação, Marcar reunião e Pesquisa de satisfação já
-são de verdade (seção abaixo); os outros três seguem no adaptador falso.
+Rodrigo em 12/11. Os seis já são de verdade: "Para cada", "Usar outra
+automação" e "Buscar em outro sistema" (#2932, #2933, #2934, seção "Os três com
+motor") e Pedir aprovação, Marcar reunião e Pesquisa de satisfação (#2931,
+#2935, #2936, seção "Já de verdade"). Todos salvam, rodam no motor, têm ensaio e
+linha no histórico.
 
 ## Como ligar
 
@@ -22,17 +25,135 @@ são de verdade (seção abaixo); os outros três seguem no adaptador falso.
 Sem a flag, o editor fica idêntico ao de hoje: o catálogo volta o mesmo objeto
 do servidor.
 
-## O que é de verdade e o que é falso
+## Os três com motor (#2932, #2933, #2934 — 12/11)
 
-| Parte                                                                               | Situação                                                                                             |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Lista "Adicionar passo", nome e frase                                               | De verdade (catálogo do editor, com `requer` da flag)                                                |
-| Formulário de cada passo, começar pronto, "Salvar" do painel                        | De verdade, no rascunho da tela                                                                      |
-| Galhos no Confira (aprovado, recusado...)                                           | De verdade (`receita.js`, `RAMOS`)                                                                   |
-| Linha do ensaio (botão **Ensaiar**)                                                 | Adaptador falso: duas conversas de exemplo, com a faixa "Ensaio de exemplo" no topo                  |
-| Linha do histórico                                                                  | Exemplo na prévia do painel ("Veja como fica"), até o motor existir                                  |
-| Blocos, integrações, públicos, resposta do teste, horários livres, contagem         | Adaptador falso (`passosNovos/adaptadorFalso.js`)                                                    |
-| **Salvar tudo / Guardar / Ligar**                                                   | Desligados com passo novo na receita, com a frase "ainda está em teste"; a tela não chama a API      |
+"Fazer para cada um de uma lista", "Usar outra automação" e "Buscar informação
+em outro sistema" já são de verdade: esquema, salvar, motor, ensaio e histórico.
+Sem o aviso "ainda está em teste": salvam e ligam como qualquer passo. Os outros
+três (#2931, #2935, #2936) também já são de verdade (seção "Já de verdade").
+
+- **Flag.** `automacao_passos_novos`, no fim de `config/features.yml`. O bit
+  reservado é o 47 (1 << 46), logo depois de
+  `agente_ferramentas_prontas_ip_proprio` (46, #2945), como
+  `spec/models/account_spec.rb` confere. **Desligada em
+  produção** (exceção à regra de 07/11). Desligada depois de ligada: o salvar
+  recusa a receita com um dos três e o motor para a execução que chega num deles
+  (`passos_novos_desligados`). É o rollback: também não abre as filhas de um
+  "para cada" cujo job já estava na fila, e a filha da lista ou a execução do
+  bloco que já estavam abertas param na próxima reconferência.
+- **Para cada** (`repetir_lista`): cards de uma etapa, contatos de uma etiqueta
+  ou de um público salvo. Cada item ganha uma execução própria (a "filha da
+  lista") que roda o galho `cada` com o item como alvo, até o teto por vez
+  (1 a 200) e no ritmo escolhido (um por minuto, ou todos de uma vez). Bloqueado
+  ou descadastrado fica de fora, e só entra quem quem ligou alcança. O item que
+  já está no meio desta automação não entra de novo (sem laço). A tela conta
+  "entrariam hoje" no servidor, pela mesma régua (`contar_lista`), quando a
+  pessoa para de digitar o teto. O alcance é uma pergunta às políticas por item:
+  a contagem e a rodada leem no máximo o teto mais 300 itens alcançáveis; o
+  resto entra na próxima vez.
+- **Bloco** (`usar_bloco`): "Usar como bloco" na lista marca a automação (coluna
+  `autonomia_automacoes.bloco`, migration `20261112092000`). O bloco não liga
+  sozinho. O passo abre uma execução do bloco no mesmo alvo e espera ela acabar;
+  o bloco age como quem ligou a automação de cima. Laço (A usa B, que usa A) e
+  bloco dentro de bloco além de 3 níveis são recusados ao salvar e de novo ao
+  rodar. O histórico mostra "Ver o que aconteceu dentro".
+  - Mudar o bloco **pausa** as automações ligadas que chegam nele (direto ou por
+    outro bloco), menos as que a própria pessoa ligou: a mesma regra de quem
+    salva uma automação ligada por outra pessoa. Sem isso, quem tem menos
+    permissões poria passos no bloco que rodariam com as de quem ligou. A tela
+    do bloco avisa antes quais pausam. Alguém assume e religa, e o religar
+    confere o bloco com essa pessoa. Aprovado pelo Rodrigo em 12/11.
+  - Marcar como bloco tira quem tinha ligado (`ligada_por`): o bloco nunca age
+    por ela.
+  - Dentro do galho de um "para cada" (ou de um "em outro registro") o bloco
+    usado também não pode ter "para cada" nem "em outro registro", nem pelos
+    blocos que ele usa: o salvar recusa e a rodada confere de novo. Sem isso, um
+    "para cada" abriria outro pelo bloco e as execuções se multiplicariam.
+- **Buscar em outro sistema** (`consultar`): uma consulta pronta (veja
+  "Consultas prontas" abaixo) ou "Outro endereço". O endereço: só https, só com
+  `integration_manage`. Endereço interno é recusado depois de resolver o nome
+  (o IP resolvido é o que se usa: sem DNS rebinding). Prazo curto, sem seguir
+  redirecionamento, resposta até 64 KB. Os dados guardados têm o nome que a
+  pessoa deu (o teste sugere um nome do dia a dia, pela IA da conta ou pelo
+  caminho). Nos dois casos, cada dado vira `consulta.<passo>.<chave>` nos passos
+  seguintes. Galho "Se não conseguir buscar". O endereço não aparece no Confira
+  para quem não tem a chave, nem no histórico; o histórico guarda só os nomes
+  dos dados. No ensaio, só busca com "Buscar agora".
+- **Loja virtual e Boletos** do protótipo não existem como integração na
+  plataforma: ficaram de fora, sem item falso.
+
+### Decisões do Rodrigo (12/11, "resolve!!! foco na jornada e experiência do usuário")
+
+A revisão independente de 12/11 listou cinco pontos em que a implementação fugia
+do protótipo. O Rodrigo decidiu:
+
+1. **Onde buscar volta a ser uma lista de consultas prontas.** Cada uma tem um
+   nome do dia a dia, diz o que a pessoa informa ("O CEP", com "Pôr um dado") e
+   já devolve os dados com rótulo pronto (Rua, Bairro, Cidade…), sem IA e sem
+   chave de JSON. Elas reaproveitam as Ferramentas prontas dos agentes (veja
+   "Consultas prontas" abaixo). **Outro endereço** fica por último, como
+   avançado, só para quem tem `integration_manage`, com tudo o que já valia.
+   Loja virtual e Boletos não entraram: não existe integração deles na
+   plataforma.
+2. **Histórico da busca** continua mostrando só os nomes dos dados, sem o valor
+   (privacidade).
+3. **Ensaio do bloco** continua mostrando os passos reais do bloco.
+4. **"Entrariam hoje"** mostra o total de verdade e os primeiros nomes. Passou
+   do teto por vez, diz numa frase quantos ficam para depois: "Hoje entram 50 de
+   120. Os outros 70 entram nas próximas vezes." Quando a contagem para no
+   limite de leitura (teto + 300), diz "mais de".
+5. **Mudar um bloco pausa as automações de outras pessoas** que o usam, e a tela
+   avisa antes de salvar. Aprovado.
+
+### Consultas prontas (#2934)
+
+`Autonomia::Automacao::ConsultasProntas` lista as consultas; a busca roda por
+`ConsultaPronta`, que usa a mesma `FerramentasProntas::Execucao` do agente, numa
+ferramenta não salva (como o "Experimente" da vitrine). Vale tudo o que vale
+para o agente: provedores com reserva, cache, o **limite do dia da conta naquela
+fonte (500, o mesmo que os agentes gastam)**, o corte individual e o log sem o
+valor consultado.
+
+| Consulta | Ferramenta pronta | A pessoa informa | Volta |
+| --- | --- | --- | --- |
+| Busca de CEP | `cep` / `endereco` | o CEP | Rua, Bairro, Cidade, Estado, CEP |
+| Consulta de CNPJ | `cnpj` / `empresa` | o CNPJ | Nome da empresa, Nome fantasia, Situação na Receita, Data de abertura, O que a empresa faz, Porte, Cidade e Estado da empresa |
+| Valor do carro (tabela FIPE) | `fipe` / `preco` (tipo carro) | a marca, o modelo e o ano | Valor do carro (em reais), Versão, Ano, Combustível, Mês da tabela |
+| Conferir CPF | `cpf` / `conferir` | o CPF | CPF válido (Sim/Não), Estados onde foi emitido |
+
+- **Regras de cada ferramenta.** A consulta aparece só se a conta tem a flag das
+  prontas (`agente_ferramentas_prontas`) e, no CPF, a da fase
+  (`agente_ferramentas_prontas_consultas`). Sem ela, ou com a fonte cortada pela
+  equipe, a consulta continua na lista, travada, com o que falta em linguagem
+  leiga. O salvar recusa e o motor segue pelo galho "Se não conseguir buscar".
+- **Premium (pagas) não entram nesta fatia.** Uma busca que roda em lote (o
+  "para cada" faz até 200 de uma vez) gastaria as grátis do mês e cobraria na
+  fatura sem ninguém clicar: precisa de decisão do Rodrigo sobre cobrança antes.
+- **Quem monta.** Consulta pronta pede só `automation_manage` (dado público e
+  grátis). "Outro endereço" segue pedindo `integration_manage`, ao salvar e ao
+  rodar.
+- **Receita.** `fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [texto
+  com $valor] } }`; `guardar` traz os dados da consulta com o rótulo pronto. As
+  entradas passam pela régua de valores de sempre (`Receita::Leitura`).
+- **Teste e ensaio.** "Fazer um teste" busca com um exemplo já preenchido e
+  avisa que gasta uma das buscas do dia. No ensaio, o servidor diz o que a
+  consulta usaria daquela conversa; com o dado vazio, a tela diz o que falta e
+  que seguiria por "Se não conseguir buscar". "Buscar agora" só com o OK.
+- **Outro endereço.** O teste avisa antes que a IA da conta sugere os nomes dos
+  dados e que esse uso entra no custo da IA da conta.
+
+## O que é de verdade e o que é exemplo
+
+| Parte                                                        | Situação                                                                                     |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Lista "Adicionar passo", nome e frase                        | De verdade (catálogo do editor, com `requer` da flag)                                        |
+| Formulário de cada passo, começar pronto, "Salvar" do painel | De verdade, no rascunho da tela                                                              |
+| Galhos no Confira (aprovado, recusado...)                    | De verdade (`receita.js`, `RAMOS`)                                                           |
+| Linha do ensaio (botão **Ensaiar**)                          | Servidor, para os seis                                                                       |
+| Linha do histórico                                           | Servidor, para os seis                                                                       |
+| Blocos, públicos, contagem da lista, teste da busca          | Servidor (`passosNovos/dadosDaConta.js`)                                                     |
+| Prévia "Veja como fica" no painel                            | Exemplo (`passosNovos/adaptadorFalso.js`): horários, card do pedido, linha do histórico      |
+| **Salvar tudo / Guardar / Ligar**                            | Os seis salvam e ligam; a trava "ainda está em teste" fica para um passo novo que o servidor ainda não conheça |
 
 ## Roteiro de cada jornada
 
@@ -65,7 +186,9 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
 
 1. **+** › grupo **Tempo e condições** › **Fazer para cada um de uma lista**.
 2. Já vem com **Os cards de uma etapa** e a primeira etapa escolhida.
-3. O quadro mostra **12 entrariam hoje** e os 3 primeiros nomes.
+3. O quadro mostra **12 entram hoje** e os 3 primeiros nomes. Com mais itens
+   que o teto, diz embaixo: "Hoje entram 50 de 120. Os outros 70 entram nas
+   próximas vezes."
 4. Troque para **Os contatos com uma etiqueta** (a primeira etiqueta já vem) e
    para **Os contatos de um público** (o primeiro público de exemplo já vem).
    O Confira diz a lista com o nome: "Para cada card da etapa Proposta, até 50
@@ -74,7 +197,9 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
    no máximo para ver o aviso.
 6. **Salvar**. No Confira aparece o caminho **Em cada um da lista**; os passos de
    cada um entram pelo **+** dele.
-7. **Ensaiar**: "Hoje entrariam 12. Os primeiros: …".
+7. **Ensaiar**: "Hoje entrariam 12. Os primeiros: …" (passou do teto: "Hoje
+   entrariam 50 de 120. Os outros 70 entrariam nas próximas vezes. Os
+   primeiros: …").
 
 ### 3. Usar outra automação (#2933)
 
@@ -87,23 +212,33 @@ histórico. **Salvar** (no pé do painel) põe o passo no Confira. O botão
 
 ### 4. Buscar informação em outro sistema (#2934)
 
-Só aparece para quem tem a chave de integrações (`integration_manage`).
+Aparece para quem monta automações. "Outro endereço" só para quem tem a chave
+de integrações (`integration_manage`).
 
 1. **+** › grupo **Outro sistema** › **Buscar informação em outro sistema**.
-2. **Onde buscar** já vem com **Loja virtual**. Também há **Busca de CEP**,
-   **Boletos** e **Outro endereço** (só https; endereço sem https mostra o aviso
-   e trava o teste).
-3. Toque em **Fazer um teste**. Aparece a resposta, dado por dado.
-4. Toque em **Status do pedido**. Ele vai para **Dados guardados** com esse
-   nome, que dá para trocar. No protótipo, cada dado de exemplo tem um nome do
-   dia a dia; a implementação precisa do mesmo (rótulo sugerido pela integração
-   ou pela IA), nunca a chave crua do JSON.
-5. **Salvar**. Em outro passo (uma mensagem, por exemplo), **Pôr um dado** já
-   oferece "Status do pedido". No Confira aparece o caminho **Se não conseguir
-   buscar**. O endereço nunca aparece no Confira nem no histórico.
-6. **Ensaiar**: "Buscaria em Loja virtual. No ensaio, só busca se você pedir."
-   Toque em **Buscar de verdade neste ensaio**: a tela diz o que vai acontecer
-   e pede **Buscar agora**. Só então aparece "Status do pedido: Enviado".
+2. **Onde buscar** é uma lista de cartões: **Busca de CEP** (já escolhida),
+   **Consulta de CNPJ**, **Valor do carro (tabela FIPE)** e **Conferir CPF**,
+   cada uma com o selo **Grátis** e uma frase do que faz. A que a conta não pode
+   usar fica travada, com o que falta. Por último, **Outro endereço**
+   (**Avançado**).
+3. Em **O que a busca precisa**, diga de onde vem o CEP: **Pôr um dado em “O
+   CEP”** e escolha o dado do contato ou do card.
+4. **O que volta da busca** mostra Rua, Bairro, Cidade, Estado e CEP: eles
+   aparecem no **Pôr um dado** dos próximos passos.
+5. **Fazer um teste**: o exemplo já vem preenchido (01310-100). A tela avisa
+   que o teste gasta uma das buscas do dia. Aparece cada dado pelo nome, com o
+   valor.
+6. **Salvar**. Em outro passo (uma mensagem, por exemplo), **Pôr um dado** já
+   oferece "Rua". No Confira: "Buscar na consulta “Busca de CEP”: Rua, Bairro…"
+   e o caminho **Se não conseguir buscar**.
+7. **Ensaiar**: "Buscaria na consulta “Busca de CEP”." Com o CEP preenchido na
+   conversa, **Buscar de verdade neste ensaio** › **Buscar agora** mostra os
+   dados. Com o CEP vazio, a tela diz o que falta e que seguiria por "Se não
+   conseguir buscar".
+8. **Outro endereço** (com a chave): o endereço https, o aviso de que a IA da
+   conta sugere os nomes no teste (custo da conta), **Fazer um teste**, o toque
+   no dado e o nome dele em **Dados guardados**. O endereço nunca aparece no
+   Confira nem no histórico.
 
 ### 5. Marcar reunião pela conversa (#2935)
 
@@ -151,7 +286,7 @@ computador. Todos os botões e escolhas têm 44 px de altura; as escolhas usam o
 Pedir aprovação (#2931), Marcar reunião pela conversa (#2935) e Pesquisa de
 satisfação (#2936) saíram do protótipo: estão no esquema da receita, salvam,
 rodam no motor, têm ensaio de verdade e linha no histórico. A tela é a aprovada;
-o aviso "em teste" e o Salvar desligado ficam só para os outros três passos.
+nenhum dos seis passos tem mais o aviso "em teste" nem o Salvar desligado.
 
 - **Uma espera para os três** (`EsperaDeResposta`, no Executor): o passo
   pergunta, a execução espera até o prazo pelo `due_at` de sempre e segue pelo
@@ -195,12 +330,8 @@ o aviso "em teste" e o Salvar desligado ficam só para os outros três passos.
 
 ## O que fica para a implementação
 
-- O esquema da receita, o salvar, o motor e o ensaio de verdade dos outros três
-  passos (#2932 repetir, #2933 bloco, #2934 consultar), com as regras das
-  Issues: proteção contra endereço interno, laço e profundidade dos blocos,
-  parecer das funções personalizadas.
-- Marcar uma automação como bloco (sem gatilho próprio) na lista.
-- Ligar a flag em produção só quando os seis estiverem completos.
+- Ligar a flag em produção só com o OK do Rodrigo, depois da conferência dos
+  seis passos na conta de demonstração.
 
 ## Arquivos
 

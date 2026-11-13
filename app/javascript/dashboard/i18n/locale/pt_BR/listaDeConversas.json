@@ -58,6 +58,12 @@
       "DICA": "Funil {funil}, etapa {etapa}",
       "MAIS": "+{n}"
     },
+    "ETIQUETAS": {
+      "ARIA": "Etiquetas",
+      "MAIS": "+{n}",
+      "MENOS": "menos",
+      "VER_TODAS": "+1, ver todas as etiquetas | +{n}, ver todas as etiquetas"
+    },
     "ARIA": {
       "SUA_VEZ": "Sua vez de pegar esta conversa. Faltam {n} minutos",
       "RESERVADA": "Reservada para {nome} por mais {n} minutos",

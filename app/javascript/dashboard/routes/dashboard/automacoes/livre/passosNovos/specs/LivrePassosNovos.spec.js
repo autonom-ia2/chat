@@ -8,12 +8,8 @@ import LivrePesquisa from '../LivrePesquisa.vue';
 import LivreAprovacao from '../LivreAprovacao.vue';
 import LivrePedidoAprovacao from '../LivrePedidoAprovacao.vue';
 import LivreSeletorPasso from '../../components/LivreSeletorPasso.vue';
-import {
-  PASSOS_NOVOS,
-  comPassosNovos,
-  emTeste,
-  novoPassoNovo,
-} from '../passosNovos';
+import { PASSOS_NOVOS, comPassosNovos, novoPassoNovo } from '../passosNovos';
+import * as servidor from '../dadosDaConta';
 
 // Protótipo #2931–#2936 — as telas dos passos novos: cada uma começa pronta,
 // mostra antes de fazer (contagem, teste, prévia da mensagem) e o "Pedir
@@ -22,6 +18,100 @@ const t = (chave, valores) =>
   valores ? `${chave}(${Object.values(valores).join(',')})` : chave;
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t }) }));
+// #2932–#2934: o que vem do servidor (os públicos, os blocos, a contagem e o
+// teste da busca). Os outros três passos seguem no adaptador falso. As
+// respostas entram a cada teste: a config zera os mocks (mockReset).
+const BLOCOS = vi.hoisted(() => [
+  {
+    id: 1,
+    nome: 'Boas-vindas',
+    passos: [
+      { id: 'b1', tipo: 'parar' },
+      { id: 'b2', tipo: 'parar' },
+    ],
+    frases: [],
+  },
+  {
+    id: 2,
+    nome: 'Lembrete',
+    passos: [{ id: 'b3', tipo: 'parar' }],
+    frases: [],
+  },
+]);
+vi.mock('../dadosDaConta', async () => ({
+  ...(await vi.importActual('../dadosDaConta')),
+  carregarPublicos: vi.fn(),
+  publicosDaConta: vi.fn(),
+  carregarBlocos: vi.fn(),
+  blocosDaConta: vi.fn(),
+  guardarFrasesDoBloco: vi.fn(),
+  contarLista: vi.fn(),
+  testarConsulta: vi.fn(),
+  buscarNoEnsaio: vi.fn(),
+  carregarConsultasProntas: vi.fn(),
+  consultasProntasDaConta: vi.fn(),
+}));
+// #2934: as consultas prontas do servidor; a do CNPJ a conta não pode usar.
+const CONSULTAS = vi.hoisted(() => [
+  {
+    id: 'cep',
+    nome: 'Busca de CEP',
+    faz: 'Acha a rua de um CEP.',
+    limite_do_dia: 500,
+    entradas: [{ nome: 'cep', rotulo: 'O CEP', exemplo: '01310-100' }],
+    dados: [
+      { caminho: 'logradouro', rotulo: 'Rua' },
+      { caminho: 'cidade', rotulo: 'Cidade' },
+    ],
+    disponivel: true,
+    falta: null,
+  },
+  {
+    id: 'cnpj',
+    nome: 'Consulta de CNPJ',
+    faz: 'Mostra a empresa.',
+    limite_do_dia: 500,
+    entradas: [{ nome: 'cnpj', rotulo: 'O CNPJ', exemplo: '' }],
+    dados: [{ caminho: 'razao_social', rotulo: 'Nome da empresa' }],
+    disponivel: false,
+    falta: 'Ainda não está liberada nesta conta.',
+  },
+]);
+const integra = vi.hoisted(() => ({ sim: true }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => integra.sim) };
+});
+beforeEach(() => {
+  servidor.carregarPublicos.mockResolvedValue([]);
+  servidor.publicosDaConta.mockReturnValue([
+    { value: 4, label: 'Clientes ativos' },
+  ]);
+  servidor.carregarBlocos.mockResolvedValue(BLOCOS);
+  servidor.blocosDaConta.mockReturnValue(BLOCOS);
+  servidor.contarLista.mockResolvedValue({
+    total: 12,
+    primeiros: ['Ana', 'Bruno', 'Carla'],
+    fora_do_teto: 0,
+  });
+  servidor.testarConsulta.mockResolvedValue({
+    ok: true,
+    dados: [
+      {
+        caminho: 'pedido.status',
+        valor: 'enviado',
+        rotulo: 'Status do pedido',
+      },
+    ],
+  });
+  servidor.carregarConsultasProntas.mockResolvedValue(CONSULTAS);
+  servidor.consultasProntasDaConta.mockReturnValue(CONSULTAS);
+  integra.sim = true;
+  servidor.buscarNoEnsaio.mockResolvedValue({
+    ok: true,
+    dados: [{ nome: 'Status do pedido', valor: 'enviado' }],
+  });
+});
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 1 } }),
   useRouter: () => ({ push: vi.fn() }),
@@ -75,7 +165,11 @@ const OPCOES = {
 const ETAPAS = [
   { label: 'Vendas', options: [{ value: 12, label: 'Proposta' }] },
 ];
-const CATALOGO = { unidades: [], valores: [] };
+const CATALOGO = {
+  unidades: [],
+  valores: [],
+  passos: [{ tipo: 'parar', frase: 'PARAR', campos: [] }],
+};
 
 const montar = (componente, props) =>
   mount(componente, { props, global: { stubs, mocks: { $t: t } } });
@@ -86,7 +180,7 @@ const novo = tipo => novoPassoNovo(tipo, 'p9', t);
 
 describe('LivrePassoNovo', () => {
   it.each(Object.keys(PASSOS_NOVOS))(
-    '%s: mostra o formulário, a prévia e o aviso de teste só nos que não salvam',
+    '%s: mostra o formulário e a prévia, sem o aviso de teste (os seis salvam)',
     tipo => {
       const tela = montar(LivrePassoNovo, {
         modelValue: novo(tipo),
@@ -97,7 +191,7 @@ describe('LivrePassoNovo', () => {
       });
 
       expect(tela.find(`[data-passo-novo="${tipo}"]`).exists()).toBe(true);
-      expect(tela.find('[data-em-teste]').exists()).toBe(emTeste(novo(tipo)));
+      expect(tela.find('[data-em-teste]').exists()).toBe(false);
       expect(tela.find('[data-previa-ensaio]').text()).not.toBe('');
       expect(tela.find('[data-previa-historico]').text()).not.toBe('');
     }
@@ -125,7 +219,7 @@ describe('Veja como fica', () => {
     const tela = montar(LivrePassoNovo, {
       modelValue: {
         ...novo('consultar'),
-        fonte: { de: 'integracao', id: 'loja' },
+        fonte: { de: 'endereco', url: 'https://loja.exemplo.com/pedido' },
         guardar: [{ nome: 'Status do pedido', caminho: 'pedido.status' }],
       },
       catalogo: CATALOGO,
@@ -144,7 +238,8 @@ describe('Veja como fica', () => {
 
     const resultado = tela.find('[data-busca-resultado]').text();
     expect(resultado).toContain('Status do pedido');
-    expect(resultado).toContain('EXEMPLO.STATUS_ENVIADO');
+    expect(resultado).toContain('enviado');
+    expect(servidor.buscarNoEnsaio).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -222,10 +317,10 @@ describe('LivreRepetir', () => {
       'publico'
     );
 
-    expect(ultimo(tela).lista).toEqual({ de: 'publico', publico_id: 1 });
+    expect(ultimo(tela).lista).toEqual({ de: 'publico', publico_id: 4 });
   });
 
-  it('diz quantos entrariam hoje e mostra os 3 primeiros', () => {
+  it('diz quantos entrariam hoje (pelo servidor) e mostra os 3 primeiros', async () => {
     const tela = montar(LivreRepetir, {
       modelValue: {
         ...novo('repetir_lista'),
@@ -234,10 +329,71 @@ describe('LivreRepetir', () => {
       opcoes: OPCOES,
       etapas: ETAPAS,
     });
+    await flushPromises();
     const contagem = tela.find('[data-repetir-contagem]');
+
+    expect(servidor.contarLista).toHaveBeenCalledWith(
+      { de: 'etapa', etapa_id: 12 },
+      50
+    );
 
     expect(contagem.text()).toContain('12');
     expect(contagem.findAll('li')).toHaveLength(3);
+  });
+
+  it('passou do teto: diz o total de verdade e quantos ficam para depois', async () => {
+    servidor.contarLista.mockResolvedValue({
+      total: 50,
+      primeiros: ['Ana', 'Bruno', 'Carla'],
+      fora_do_teto: 70,
+      mais_alem: false,
+    });
+    const tela = montar(LivreRepetir, {
+      modelValue: {
+        ...novo('repetir_lista'),
+        lista: { de: 'etapa', etapa_id: 12 },
+      },
+      opcoes: OPCOES,
+      etapas: ETAPAS,
+    });
+    await flushPromises();
+
+    expect(tela.find('[data-repetir-para-depois]').text()).toBe(
+      'AUTOMACAO_LIVRE.PASSOS_NOVOS.REPETIR.PARA_DEPOIS(50,120,70)'
+    );
+  });
+
+  // O servidor pergunta o alcance item a item: digitar o teto conta uma vez
+  // só, quando a pessoa para.
+  it('quem digita o teto conta uma vez só, depois de parar', async () => {
+    vi.useFakeTimers();
+    try {
+      const modelValue = {
+        ...novo('repetir_lista'),
+        lista: { de: 'etapa', etapa_id: 12 },
+      };
+      const tela = montar(LivreRepetir, {
+        modelValue,
+        opcoes: OPCOES,
+        etapas: ETAPAS,
+      });
+      await flushPromises();
+      servidor.contarLista.mockClear();
+
+      await tela.setProps({ modelValue: { ...modelValue, teto: 1 } });
+      await tela.setProps({ modelValue: { ...modelValue, teto: 12 } });
+      await tela.setProps({ modelValue: { ...modelValue, teto: 120 } });
+      expect(servidor.contarLista).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(400);
+      expect(servidor.contarLista).toHaveBeenCalledTimes(1);
+      expect(servidor.contarLista).toHaveBeenCalledWith(
+        { de: 'etapa', etapa_id: 12 },
+        120
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('teto fora de 1 a 200 avisa', () => {
@@ -257,7 +413,11 @@ describe('LivreRepetir', () => {
 
 describe('LivreBloco', () => {
   it('começa com o primeiro bloco e troca pelo toque', async () => {
-    const tela = montar(LivreBloco, { modelValue: novo('usar_bloco') });
+    const tela = montar(LivreBloco, {
+      modelValue: novo('usar_bloco'),
+      catalogo: CATALOGO,
+    });
+    await flushPromises();
 
     expect(ultimo(tela).bloco_id).toBe(1);
     await tela.find('[data-bloco="2"]').trigger('click');
@@ -267,49 +427,148 @@ describe('LivreBloco', () => {
   it('o bloco escolhido mostra os passos de dentro', () => {
     const tela = montar(LivreBloco, {
       modelValue: { ...novo('usar_bloco'), bloco_id: 1 },
+      catalogo: CATALOGO,
     });
 
     expect(tela.find('[data-bloco="1"]').attributes('aria-pressed')).toBe(
       'true'
     );
-    expect(tela.findAll('[data-bloco-dentro] li')).toHaveLength(3);
+    expect(tela.findAll('[data-bloco-dentro] li')).toHaveLength(2);
   });
 });
 
 describe('LivreConsulta', () => {
-  it('começa com a primeira integração conectada', () => {
-    const tela = montar(LivreConsulta, { modelValue: novo('consultar') });
-
-    expect(ultimo(tela).fonte).toEqual({ de: 'integracao', id: 'loja' });
-  });
-
-  it('o teste mostra os dados e o toque guarda o escolhido', async () => {
-    const tela = montar(LivreConsulta, {
-      modelValue: {
-        ...novo('consultar'),
-        fonte: { de: 'integracao', id: 'loja' },
-      },
+  const consulta = modelValue =>
+    montar(LivreConsulta, {
+      modelValue,
+      catalogo: CATALOGO,
+      atributosDo: () => [],
     });
 
+  it('começa na primeira consulta pronta que a conta pode usar, com os dados de nome pronto', async () => {
+    const tela = consulta(novo('consultar'));
+    await flushPromises();
+
+    expect(ultimo(tela).fonte).toEqual({
+      de: 'pronta',
+      consulta: 'cep',
+      entradas: { cep: [] },
+    });
+    expect(ultimo(tela).guardar).toEqual([
+      { nome: 'Rua', caminho: 'logradouro' },
+      { nome: 'Cidade', caminho: 'cidade' },
+    ]);
+  });
+
+  it('a consulta que a conta não pode usar aparece com o que falta e não se escolhe', async () => {
+    const tela = consulta(novo('consultar'));
+    await flushPromises();
+    const cnpj = tela.find('[data-consulta-opcao="cnpj"]');
+
+    expect(cnpj.text()).toContain('Consulta de CNPJ');
+    expect(cnpj.find('[data-consulta-falta]').text()).toContain(
+      'não está liberada'
+    );
+    expect(cnpj.find('input').attributes('disabled')).toBeDefined();
+  });
+
+  it('"Outro endereço" fica por último e só para quem cuida das integrações', async () => {
+    let tela = consulta(novo('consultar'));
+    await flushPromises();
+    const opcoes = tela
+      .findAll('[data-consulta-opcao]')
+      .map(opcao => opcao.attributes('data-consulta-opcao'));
+    expect(opcoes).toEqual(['cep', 'cnpj', 'endereco']);
+
+    integra.sim = false;
+    tela = consulta(novo('consultar'));
+    await flushPromises();
+    expect(tela.find('[data-consulta-opcao="endereco"]').exists()).toBe(false);
+  });
+
+  it('a consulta pronta pede o dado com "Pôr um dado" e mostra o que volta', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [] } },
+    });
+    await flushPromises();
+
+    expect(tela.findAll('[data-consulta-pronta] [data-texto]')).toHaveLength(1);
+    expect(tela.find('[data-consulta-volta]').text()).toContain('Rua');
+    expect(tela.find('[data-consulta-volta]').text()).toContain('Cidade');
+  });
+
+  it('o teste da consulta pronta busca com o exemplo e mostra cada dado pelo nome', async () => {
+    servidor.testarConsulta.mockResolvedValueOnce({
+      ok: true,
+      dados: [
+        { caminho: 'logradouro', valor: 'Avenida Paulista', rotulo: 'Rua' },
+      ],
+    });
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'pronta', consulta: 'cep', entradas: { cep: [] } },
+    });
+    await flushPromises();
+
+    await tela.find('[data-consulta-testar]').trigger('click');
+    await flushPromises();
+
+    expect(servidor.testarConsulta).toHaveBeenCalledWith({
+      de: 'pronta',
+      consulta: 'cep',
+      exemplos: { cep: '01310-100' },
+    });
+    const resposta = tela.find('[data-consulta-resposta]').text();
+    expect(resposta).toContain('Rua');
+    expect(resposta).toContain('Avenida Paulista');
+  });
+
+  it('outro endereço: o teste mostra os dados e o toque guarda o escolhido', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'https://loja.exemplo.com/pedido' },
+    });
+    await flushPromises();
+
+    expect(tela.find('[data-consulta-custo-ia]').exists()).toBe(true);
     await tela.find('[data-consulta-testar]').trigger('click');
     await flushPromises();
     await tela.find('[data-consulta-dado="pedido.status"]').trigger('click');
 
+    expect(servidor.testarConsulta).toHaveBeenCalledWith({
+      de: 'endereco',
+      url: 'https://loja.exemplo.com/pedido',
+    });
     expect(ultimo(tela).guardar).toEqual([
-      {
-        nome: 'AUTOMACAO_LIVRE.PASSOS_NOVOS.EXEMPLO.DADOS.STATUS_DO_PEDIDO',
-        caminho: 'pedido.status',
-      },
+      { nome: 'Status do pedido', caminho: 'pedido.status' },
     ]);
   });
 
-  it('endereço sem https avisa e não deixa testar', () => {
-    const tela = montar(LivreConsulta, {
-      modelValue: {
-        ...novo('consultar'),
-        fonte: { de: 'endereco', url: 'http://x' },
-      },
+  it('o teste que não dá diz o porquê do servidor', async () => {
+    servidor.testarConsulta.mockResolvedValueOnce({
+      ok: false,
+      error: 'Este endereço aponta para uma rede interna.',
     });
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'https://interno.exemplo.com/x' },
+    });
+    await flushPromises();
+
+    await tela.find('[data-consulta-testar]').trigger('click');
+    await flushPromises();
+
+    expect(tela.find('[data-consulta-erro]').text()).toContain('rede interna');
+    expect(tela.find('[data-consulta-resposta]').exists()).toBe(false);
+  });
+
+  it('endereço sem https avisa e não deixa testar', async () => {
+    const tela = consulta({
+      ...novo('consultar'),
+      fonte: { de: 'endereco', url: 'http://x' },
+    });
+    await flushPromises();
 
     expect(tela.text()).toContain('CONSULTAR.ENDERECO_RUIM');
     expect(

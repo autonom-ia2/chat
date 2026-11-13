@@ -1401,16 +1401,18 @@
 
 # Automação livre: os 6 passos novos (#2931–#2936, épico #2414). Ligada (junto com automacao_editor): o "Adicionar
 # passo" ganha Pedir aprovação, Fazer para cada um de uma lista, Usar outra automação, Buscar informação em outro
-# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Pedir aprovação, Marcar reunião e Pesquisa de
-# satisfação (#2931, #2935, #2936) já salvam, rodam no motor, têm ensaio de verdade e linha no histórico; os outros três
-# seguem no protótipo (o Salvar fica desligado enquanto a receita tiver um deles). Desligada: o editor fica o de hoje e
-# o motor não roda nenhum dos seis. Sem migration. Rollback: desligar a flag (quem espera resposta num destes passos
-# para naquele ponto, sem mandar nada). Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11,
-# logo depois da agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada
-# em todas): fica DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o motor dos seis
-# passos estar completo.
+# sistema, Marcar reunião pela conversa e Pesquisa de satisfação. Os seis salvam, rodam no motor, têm ensaio e linha no
+# histórico: Pedir aprovação, Marcar reunião e Pesquisa de satisfação (#2931, #2935, #2936) esperam a resposta da
+# pessoa; Para cada (#2932), Usar outra automação (#2933) e Buscar em outro sistema (#2934) rodam na hora. Desligada:
+# o editor fica o de hoje e o motor recusa esses passos (quem espera resposta num deles para naquele ponto, sem mandar
+# nada). Duas migrations aditivas, inertes com a flag desligada: 20261112091000 (dois índices parciais, das esperas e
+# do resumo da pesquisa) e 20261112092000 (coluna `bloco` em autonomia_automacoes, padrão falso). Rollback: desligar a
+# flag.
+# Posição 47 (70368744177664, 1 << 46), reservada pela Orquestração em 12/11, logo depois da
+# agente_ferramentas_prontas_ip_proprio (#2945, 46). EXCEÇÃO à regra de 07/11 (flag nova nasce ligada em todas): fica
+# DESLIGADA em produção, ligada só na conta de demonstração e no painel local, até o Rodrigo liberar.
 - name: automacao_passos_novos
-  display_name: Automação › passos novos (aprovação, reunião, pesquisa e os outros)
+  display_name: Automação › passos novos (aprovação, para cada, outra automação, outro sistema, reunião, pesquisa)
   enabled: false
   column: feature_flags_ext_2
 
@@ -1433,9 +1435,22 @@
 # Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
 # Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
 # Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:
-# desligar a flag na conta. É a última entrada do arquivo: a posição dela na feature_flags_ext_2 sai da ordem de entrada
-# na main e é conferida antes do merge.
+# desligar a flag na conta. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
 - name: carteira_seguros
   display_name: Relacionamentos › carteira de seguros
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: modelos prontos por ramo de seguro (#2881). Ligada, e só em conta com o pacote `seguros`: "Criar agente"
+# oferece os agentes prontos de seguro auto, seguro garantia e transporte de carga. O agente nasce como comercial
+# (`sdr`), com o roteiro do ramo, as perguntas da cotação, os documentos, as ferramentas grátis com a frase "Use quando"
+# do ramo e as perguntas de teste; a conversa com o Construtor só pergunta o nome da corretora e as seguradoras. O dono
+# pode mudar as listas antes de começar. O conteúdo fica em config/agentes_por_pacote/seguros/modelos. Sem migration e
+# sem tipo novo de agente. Desligada: a criação de agente fica como antes (a chave do modelo é ignorada). O agente que
+# já nasceu de um modelo continua com as listas dele. Rollback: desligar a flag na conta. Posição pela ordem deste
+# arquivo: 50 (562949953421312, 1 << 49), logo depois da carteira_seguros (49), como a Orquestração reservou em 12/11.
+# Flag nova entra abaixo desta, no fim do arquivo (spec/models/account_spec.rb confere o bit).
+- name: agente_modelos_seguro
+  display_name: Agentes › modelos prontos por ramo de seguro
   enabled: false
   column: feature_flags_ext_2

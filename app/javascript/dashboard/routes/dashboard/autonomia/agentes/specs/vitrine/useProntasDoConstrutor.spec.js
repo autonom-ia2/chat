@@ -30,7 +30,12 @@ vi.mock('../../vitrine/useVitrineLigada', () => ({
 
 const montadas = [];
 // useI18n pede um componente: o composable roda no setup de um componente vazio.
-const usar = (sugeridas = ['fipe', 'cep', 'cpf'], tambem = []) => {
+const usar = (
+  sugeridas = ['fipe', 'cep', 'cpf'],
+  tambem = [],
+  frases = undefined,
+  ficaramFora = undefined
+) => {
   let prontas;
   const wrapper = mount(
     defineComponent({
@@ -39,6 +44,8 @@ const usar = (sugeridas = ['fipe', 'cep', 'cpf'], tambem = []) => {
           agenteId: computed(() => 7),
           sugeridas: ref(sugeridas),
           tambem: ref(tambem),
+          frases,
+          ficaramFora,
         });
         return () => null;
       },
@@ -90,6 +97,81 @@ describe('useProntasDoConstrutor', () => {
       usarQuando:
         'Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.',
     });
+  });
+
+  // #2881 — agente pronto por ramo: a frase que vai com a ferramenta é a do ramo (ou a que o dono alterou).
+  it('with a line-of-insurance model, includes each tool with the sentence of the line, also the "also fits" ones', async () => {
+    vitrine.fontes = ref(['cnpj', 'cep', 'cidades']);
+    const frases = ref({
+      cnpj: 'Use quando o cliente informar o CNPJ da empresa que vai contratar a garantia.',
+      cidades: 'Use quando o cliente disser a cidade da licitação.',
+    });
+    const prontas = usar(['cnpj', 'cep'], ['cidades'], frases);
+    prontas.incluirTambem();
+
+    expect(await prontas.incluirTodas()).toEqual([]);
+    expect(vitrine.incluir).toHaveBeenCalledWith({
+      fonte: 'cnpj',
+      agenteId: 7,
+      usarQuando:
+        'Use quando o cliente informar o CNPJ da empresa que vai contratar a garantia.',
+    });
+    expect(vitrine.incluir).toHaveBeenCalledWith({
+      fonte: 'cidades',
+      agenteId: 7,
+      usarQuando: 'Use quando o cliente disser a cidade da licitação.',
+    });
+    // Sem frase do ramo para a fonte, vai a geral da vitrine.
+    const doCep = vitrine.incluir.mock.calls.find(
+      ([pedido]) => pedido.fonte === 'cep'
+    )[0];
+    expect(doCep.usarQuando.startsWith('Use quando')).toBe(true);
+    expect(doCep.usarQuando).not.toBe(frases.value.cnpj);
+  });
+
+  it('the sentence follows what the owner changed up to the "Start"', async () => {
+    const frases = ref({ fipe: 'Use quando o cliente disser o modelo.' });
+    const prontas = usar(['fipe'], [], frases);
+    frases.value = { fipe: 'Use quando o cliente disser a placa.' };
+
+    await prontas.incluirTodas();
+
+    expect(vitrine.incluir).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usarQuando: 'Use quando o cliente disser a placa.',
+      })
+    );
+  });
+
+  // #2881 — no ramo, o que o dono tirou volta do servidor no "Também combina": o que ficou fora do "Já vem com" vira
+  // "Agora não" no "Começar", para o cartão "pode ganhar" não oferecer de volta.
+  it('with a line-of-insurance model, "Start" records as "Not now" the tools of the line left out of the "comes with" list', async () => {
+    vitrine.fontes = ref(['cnpj', 'cep', 'cidades']);
+    const ficaramFora = ref(['cidades']);
+    const prontas = usar(['cnpj', 'cep'], ['cidades'], undefined, ficaramFora);
+    // O dono tirou o CNPJ no meio do caminho: o servidor passou a devolvê-lo no "Também combina".
+    ficaramFora.value = ['cnpj', 'cidades'];
+
+    await prontas.incluirTodas();
+
+    expect(api.dispensar.mock.calls).toEqual([
+      [7, 'cnpj'],
+      [7, 'cidades'],
+    ]);
+  });
+
+  it('without a line-of-insurance model, the "also fits" tools nobody removed are not recorded as "Not now"', async () => {
+    const prontas = usar(['fipe'], ['cep']);
+
+    await prontas.incluirTodas();
+
+    expect(api.dispensar).not.toHaveBeenCalled();
+  });
+
+  it('says whether this person can include tools', () => {
+    expect(usar().podeIncluir.value).toBe(true);
+    ligada.construtor = ref(false);
+    expect(usar().podeIncluir.value).toBe(false);
   });
 
   it('removing every tool still records each removal on "Start"', async () => {

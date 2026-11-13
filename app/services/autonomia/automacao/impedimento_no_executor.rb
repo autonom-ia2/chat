@@ -1,7 +1,7 @@
 # O que impede uma execução de andar agora, no Executor (#2414 F3): o motor, a automação ligada, a flag dos gatilhos de
-# card, o alvo, o Spam e quem ligou. Saiu do Executor sem mudar nada (#2931: a classe passou do tamanho com os passos que
-# esperam resposta). Usa os métodos dele (encerrar, registrar, pausar, alvo, contexto, motivo_de_quem_ligou) e o estado
-# da rodada (@execucao, @marca, @definicao, @account, @parou).
+# card e a dos passos novos, o alvo, o Spam e quem ligou. Saiu do Executor (#2931: a classe passou do tamanho com os
+# passos que esperam resposta). Usa os métodos dele (encerrar, registrar, pausar, alvo, contexto, motivo_de_quem_ligou,
+# flag_desligada do BlocoNoExecutor) e o estado da rodada (@execucao, @marca, @definicao, @account, @parou).
 module Autonomia::Automacao::ImpedimentoNoExecutor
   Execucao = ::Autonomia::Automacao::Execucao
 
@@ -32,8 +32,11 @@ module Autonomia::Automacao::ImpedimentoNoExecutor
   def impedimento
     return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
     return %w[parada desligada] unless @definicao.ativa
-    # #2499: a flag dos gatilhos de card desligada é o rollback da F6; a execução aberta de gatilho de card fecha.
-    return %w[parada gatilho_desligado] unless ::Autonomia::Automacao::Gatilhos.disponivel?(@execucao.chave_gatilho, @account)
+
+    # A flag que é o rollback do que esta execução faz (a dos gatilhos de card, #2499; a dos passos novos, #2932–#2934):
+    # BlocoNoExecutor#flag_desligada.
+    flag = flag_desligada
+    return ['parada', flag] if flag
     return %w[interrompida alvo_sumiu] unless alvo_da_conta?
     return %w[parada spam] if contexto.no_spam?
 

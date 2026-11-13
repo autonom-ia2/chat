@@ -113,7 +113,7 @@ class Autonomia::Automacao::PassoDeIaAssumir
   # Decisão 18: com a opção e uma pessoa no nome (lida sob a trava), quem ligou pede, como na tela; senão, o CRM (pessoa
   # no nome vence).
   def quem_pede
-    tira_da_pessoa? ? { por: :pessoa, pedida_por: @execucao.automacao.ligada_por } : { por: :crm }
+    tira_da_pessoa? ? { por: :pessoa, pedida_por: @execucao.dona.ligada_por } : { por: :crm }
   end
 
   def cobrir(agente, pessoa_id)

@@ -64,7 +64,8 @@ class Autonomia::Automacao::PassoDeReuniao
 
   def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao))
 
-  def quem_ligou = @execucao.automacao.ligada_por
+  # #2933: na execução de um bloco, quem age é quem ligou a automação de cima (Execucao#dona).
+  def quem_ligou = @execucao.dona.ligada_por
 
   # Sem com quem marcar, ou sem a página dela: segue sem reunião, pelo galho "Se o cliente não responder".
   def sem_reuniao(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados.merge('ramo' => NAO_RESPONDEU))

@@ -12,6 +12,8 @@ module Autonomia::Automacao::UrlDoWebhook
   ESCONDIDO = '•••'.freeze
   ACAO_DA_REGRA = 'send_webhook_event'.freeze
   PASSO = 'webhook'.freeze
+  # #2934: o endereço do "buscar em outro sistema" também costuma levar token.
+  CONSULTA = 'consultar'.freeze
 
   module_function
 
@@ -42,9 +44,14 @@ module Autonomia::Automacao::UrlDoWebhook
     return receita if ve?(account_user) || !receita.is_a?(Hash)
 
     receita.deep_dup.tap do |copia|
-      ::Autonomia::Automacao::Receita.new(copia, conta: nil, account_user: nil).passos.each do |passo|
-        passo['url'] = mascarada(passo['url']) if passo.is_a?(Hash) && passo['tipo'] == PASSO
-      end
+      ::Autonomia::Automacao::Receita.new(copia, conta: nil, account_user: nil).passos.each { |passo| mascarar(passo) if passo.is_a?(Hash) }
     end
+  end
+
+  # O endereço do webhook e o do "buscar em outro sistema" (#2934), na cópia.
+  def mascarar(passo)
+    passo['url'] = mascarada(passo['url']) if passo['tipo'] == PASSO
+    fonte = passo['fonte']
+    fonte['url'] = mascarada(fonte['url']) if passo['tipo'] == CONSULTA && fonte.is_a?(Hash) && fonte.key?('url')
   end
 end

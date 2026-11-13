@@ -222,6 +222,17 @@ describe('AgentesCriarEntrada', () => {
       expect(wrapper.find('[data-nova]').exists()).toBe(false);
     });
 
+    // #2881: `?ramo=` (agente pronto por ramo de seguro) também é uma escolha.
+    it('goes straight to the creation with a line of insurance in the URL', async () => {
+      comConta(ligada);
+      rota.atual.query = { ramo: 'seguro_auto' };
+      const wrapper = mount(AgentesCriarEntrada);
+      await flushPromises();
+
+      expect(wrapper.find('[data-nova]').exists()).toBe(true);
+      expect(wrapper.find('[data-escolher]').exists()).toBe(false);
+    });
+
     it('does not ask for the focus when the creation opens straight from the URL', async () => {
       comConta(ligada);
       const wrapper = mount(AgentesCriarEntrada);

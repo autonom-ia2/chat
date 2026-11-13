@@ -58,6 +58,12 @@
       "DICA": "Pipeline {funil}, stage {etapa}",
       "MAIS": "+{n}"
     },
+    "ETIQUETAS": {
+      "ARIA": "Labels",
+      "MAIS": "+{n}",
+      "MENOS": "less",
+      "VER_TODAS": "+1, show all labels | +{n}, show all labels"
+    },
     "ARIA": {
       "SUA_VEZ": "Your turn to pick up this conversation. {n} minutes left",
       "RESERVADA": "Reserved for {nome} for {n} more minutes",
