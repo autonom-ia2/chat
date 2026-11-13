@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# E4 (#2897), fatia 1: o que o banco garante da carteira de seguros. `seguradora_chave` e `numero_chave` chegam prontas
-# aqui; quem as calcula é quem grava (fatias seguintes).
+# E4 (#2897): o que o banco e o model garantem da carteira de seguros. `seguradora_chave` e `numero_chave` chegam prontas
+# aqui; quem as calcula é quem grava, com Carteira::Chave.
 RSpec.describe Carteira::Apolice do
   let(:account) { create(:account) }
   let(:contact) { create(:contact, account: account) }
@@ -28,6 +28,16 @@ RSpec.describe Carteira::Apolice do
     it 'entra de novo com outro fim da vigência: a renovação que mantém o número' do
       expect(apolice(**mesma, fim_vigencia: fim + 1.year)).to be_persisted
     end
+  end
+
+  it 'a mesma apólice escrita de outro jeito (espaço, caixa, acento, pontuação) não entra de novo: a forma de comparação junta' do
+    escrita = lambda do |seguradora, numero|
+      { seguradora: seguradora, seguradora_chave: Carteira::Chave.seguradora(seguradora), numero: numero,
+        numero_chave: Carteira::Chave.numero(numero), fim_vigencia: fim }
+    end
+    apolice(**escrita.call('Seguradora Exemplo S.A.', 'EX-001234'))
+
+    expect { apolice(**escrita.call(' segúradora EXEMPLO sa ', 'ex 001.234')) }.to raise_error(ActiveRecord::RecordNotUnique)
   end
 
   it 'seguro sem número não colide com outro sem número da mesma seguradora e vigência' do
@@ -68,6 +78,24 @@ RSpec.describe Carteira::Apolice do
     expect(invalidas.map { |campos| build(:carteira_apolice, account: account, contact: contact, **campos).valid? }).to all(be(false))
     described_class::TIPOS.each { |tipo| expect(apolice(tipo: tipo)).to be_persisted }
     described_class::ORIGENS.each { |origem| expect(apolice(origem: origem)).to be_persisted }
+  end
+
+  it 'recusa a pessoa e a empresa de outra conta: o banco só confere que elas existem' do
+    outra = create(:account)
+    da_pessoa_de_fora = build(:carteira_apolice, account: account, contact: create(:contact, account: outra))
+    da_empresa_de_fora = build(:carteira_apolice, account: account, contact: contact, company: create(:company, account: outra))
+
+    expect([da_pessoa_de_fora, da_empresa_de_fora].map(&:valid?)).to eq([false, false])
+    expect(da_pessoa_de_fora.errors.attribute_names + da_empresa_de_fora.errors.attribute_names).to eq(%i[contact company])
+    expect(build(:carteira_apolice, account: account, contact: contact, company: create(:company, account: account))).to be_valid
+  end
+
+  it 'a história só aceita os tipos de evento que alguém grava' do
+    seguro = apolice
+    tipos = Carteira::ApoliceEvento::TIPOS + ['inventado']
+    validos = tipos.map { |tipo| seguro.eventos.build(tipo: tipo, quando: Time.current).valid? }
+
+    expect(validos).to eq(Carteira::ApoliceEvento::TIPOS.map { true } + [false])
   end
 
   it 'apagar a apólice leva a história dela, pela chave em cascata' do

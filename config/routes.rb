@@ -1144,6 +1144,26 @@ Rails.application.routes.draw do
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
             post :apagar, to: 'apagar#create'
+            # #2897 — carteira de seguros (chave carteira_seguros, só em conta corretora de seguros; 404 sem isso): a aba
+            # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
+            resources :seguros, only: [:index, :show, :update] do
+              collection do
+                get :todos
+                get :contagens
+                get :resumo
+                get :opcoes_de_filtro
+              end
+              member do
+                get :historia
+                post :cancelar
+                post :voltar_a_ativo
+                get :pdf, to: 'seguros/pdf#show'
+                post :pdf, to: 'seguros/pdf#create'
+                delete :pdf, to: 'seguros/pdf#destroy'
+              end
+            end
+            get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
+            get 'empresas/:id/seguros', to: 'empresas/seguros#index' if ChatwootApp.enterprise?
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]

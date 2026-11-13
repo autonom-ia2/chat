@@ -348,7 +348,10 @@ RSpec.describe Account do
         feature_agente_ferramentas_prontas_bases: 4_398_046_511_104, feature_agente_ferramentas_prontas_premium: 8_796_093_022_208,
         feature_relacionamentos_novo: 17_592_186_044_416, feature_agente_ferramentas_prontas_ip_proprio: 35_184_372_088_832,
         feature_automacao_passos_novos: 70_368_744_177_664,
-        feature_automacao_no_crm: 140_737_488_355_328
+        feature_automacao_no_crm: 140_737_488_355_328,
+        # #2897: carteira_seguros é a última entrada do features.yml. Hoje é a 49 (1 << 48); se outra flag entrar na main
+        # antes dela, a posição muda e este número segue a ordem do arquivo.
+        feature_carteira_seguros: 281_474_976_710_656
       )
     end
 
