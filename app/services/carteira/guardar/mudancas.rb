@@ -7,7 +7,8 @@
 # - na fonte mais fraca que a da apólice, o campo que já tem valor: ela só preenche o que está vazio.
 #
 # `lista` é o que a história guarda ([{ campo:, antes:, depois: }], com os nomes da tela e os valores na forma do
-# banco: Carteira::Campos) e `colunas` o que gravar na apólice. O ramo como veio acompanha o tipo.
+# banco: Carteira::Campos) e `colunas` o que gravar na apólice. O ramo como veio acompanha o tipo, quando veio: nil é
+# "não veio" e não apaga o ramo guardado.
 class Carteira::Guardar::Mudancas
   CAMPOS = %w[tipo comeca termina valor bem].freeze
   TIPO = 'tipo'.freeze
@@ -36,7 +37,8 @@ class Carteira::Guardar::Mudancas
 
   def colunas
     colunas = lista.map { |mudanca| Carteira::Campos::COLUNAS.fetch(mudanca[:campo]) }
-    colunas.include?(:tipo) ? @dados.slice(*colunas, :ramo_original) : @dados.slice(*colunas)
+    com_o_ramo = colunas.include?(:tipo) && !@dados[:ramo_original].nil?
+    com_o_ramo ? @dados.slice(*colunas, :ramo_original) : @dados.slice(*colunas)
   end
 
   private

@@ -272,7 +272,8 @@ RSpec.describe Carteira::Guardar do
       passo = da_planilha.eventos.order(:id).last
 
       expect([resultado.situacao, da_planilha.reload.origem, passos(da_planilha)]).to eq(['igual', 'pdf', %w[chegou_planilha chegou_de_novo]])
-      expect([passo.mudancas, passo.valores]).to eq([nil, { 'arquivo' => 'carteira-exemplo.csv', 'origem_antes' => 'planilha', 'origem_depois' => 'pdf' }])
+      expect(passo.mudancas).to be_nil
+      expect(passo.valores).to eq('arquivo' => 'carteira-exemplo.csv', 'origem_antes' => 'planilha', 'origem_depois' => 'pdf')
       expect { guardar(origem: 'pdf') }.not_to(change { passos(da_planilha) })
     end
 
