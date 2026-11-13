@@ -16,6 +16,8 @@ module Autonomia
       include MateriaisDaFase2
       # #2881 — o modelo pronto de ramo: roteiro, entrevista curta, nome e ferramentas fixas. Sem modelo, nada muda.
       include ModeloPronto
+      # #2984 — fora da Fase 2, o ajuste que não mudou nada no agente não fecha como aplicado.
+      include AjusteSemMudanca
 
       # ORÇAMENTO DE CARACTERES declarado ao modelo (§8 do MOTHER_INSTRUCTION + descrição do schema).
       # O Construtor não conhecia teto nenhum e a saída estourava as validações globais do
@@ -1296,9 +1298,12 @@ module Autonomia
         agent = ensure_agent(token)
         return if agent.nil? # geração substituída (token perdido) ao garantir o agente: no-op
 
+        antes = retrato_do_ajuste(agent)
         attrs = build_attributes(parsed)
         log_truncation
         aplicada = agent.apply_builder_config!(token, attrs)
+        return fechar_sem_mudanca!(token, parsed) if aplicada == true && antes && retrato_do_ajuste(agent.reload) == antes
+
         # #2858 F3: a escolha do Construtor já é a sugestão do cartão; a página do agente novo não paga outra chamada.
         Autonomia::FerramentasProntas::SugestaoParaAgente.semear_do_construtor!(agent.reload) if aplicada == true && criacao?
         # #18 — marca ready INCONDICIONALMENTE: se a escrita não venceu por SUPERSEDE (existe um ajuste
