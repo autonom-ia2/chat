@@ -7,7 +7,8 @@
 #   a marca de cliente). Lista trazida antes de existir a anotação dos campos não tem o que devolver: 0.
 #
 # Os três grupos não se misturam: quem a lista criou sai ou fica inteira, e só quem já existia tem campo devolvido.
-# Nada é gravado. A conta é feita com as mesmas regras do Desfazer, em blocos.
+# Nada é gravado. A conta é feita com as mesmas regras do Desfazer, em blocos (os dos campos são maiores aqui:
+# Relacionamentos::Trazer::CamposDaLista::BLOCO_DA_PREVIA).
 class Relacionamentos::Trazer::PreviaDoDesfazer
   def initialize(importacao)
     @importacao = importacao
@@ -27,7 +28,8 @@ class Relacionamentos::Trazer::PreviaDoDesfazer
 
   def quantas_voltam
     pessoas = Set.new
-    Relacionamentos::Trazer::CamposDaLista.new(@importacao).em_blocos do |campos|
+    campos_da_lista = Relacionamentos::Trazer::CamposDaLista
+    campos_da_lista.new(@importacao).em_blocos(tamanho: campos_da_lista::BLOCO_DA_PREVIA) do |campos|
       pessoas.merge(campos.select(&:volta?).filter_map(&:pessoa_id))
     end
     pessoas.size
