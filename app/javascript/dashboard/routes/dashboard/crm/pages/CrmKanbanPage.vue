@@ -1040,11 +1040,16 @@ const handleRealtimeConnected = async () => {
 
 // Server-only filters (responsible=bot/none, AI-pending) cannot be evaluated from a
 // single realtime card payload, so the store asks us to refetch active view instead.
-// Debounce so a burst of realtime events triggers a single reload.
+// #2986: no funil movimentado chegam vários eventos por minuto. Uma recarga por janela: o primeiro evento marca a
+// hora, os que chegam até ela entram na mesma busca, e a fila não se adia para sempre numa rajada contínua.
+const REALTIME_REFETCH_MS = 1500;
 let refetchTimer = null;
 const handleServerFilterRefetch = () => {
-  if (refetchTimer) clearTimeout(refetchTimer);
-  refetchTimer = setTimeout(() => loadActiveView(true), 400);
+  if (refetchTimer) return;
+  refetchTimer = setTimeout(() => {
+    refetchTimer = null;
+    loadActiveView(true);
+  }, REALTIME_REFETCH_MS);
 };
 
 // #1883: o responsável que veio pelo link só vale se for alguém da equipe que a pessoa enxerga. Confere assim que
@@ -2630,6 +2635,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (companySearchTimer) clearTimeout(companySearchTimer);
+  if (refetchTimer) clearTimeout(refetchTimer);
 });
 </script>
 

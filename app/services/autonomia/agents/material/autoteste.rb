@@ -186,12 +186,15 @@ class Autonomia::Agents::Material::Autoteste
 
   # O que o dono mandou o agente fazer (#2444): o juiz precisa saber, porque a regra do dono vale mais que o material
   # (ex.: "a cotação é no WhatsApp, não colete dados aqui"). As mesmas partes que o PromptBuilder põe no prompt: a
-  # instrução que vai ao modelo, os limites duros e a regra de passagem.
+  # instrução que vai ao modelo, os limites duros e a regra de passagem. No agente que nasceu de um modelo de ramo
+  # (#2881) entram também as listas e o conhecimento do ramo, que a plataforma entrega ao agente fora da instrução:
+  # sem eles o juiz marcaria como inventada a resposta que o agente tirou do conhecimento do ramo.
   def regras_do_dono
     limites = Array(@agent.guardrails).compact_blank
     limites = limites.any? && "Limites duros:\n#{limites.map { |limite| "- #{limite}" }.join("\n")}"
     passagem = @agent.handoff_rule.presence && "Quando passar para a equipe: #{@agent.handoff_rule}"
-    [@agent.instrucao_do_sistema.presence, limites, passagem].select(&:present?).join("\n\n")
+    [@agent.instrucao_do_sistema.presence, Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(@agent), limites, passagem]
+      .select(&:present?).join("\n\n")
   end
 
   # Só trechos do material deste agente (a imagem da mensagem e o que não é dele ficam de fora), na ordem do Answerer.

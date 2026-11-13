@@ -1,0 +1,132 @@
+# Automação livre, passos novos com motor (#2414: #2932 "fazer para cada um de uma lista", #2933 "usar outra automação",
+# #2934 "buscar informação em outro sistema"). Arquivo próprio para não disputar o pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        passos_novos_desligados: 'Este passo não está disponível nesta conta agora. A automação parou aqui.'
+        bloco_nao_liga: 'Esta automação é um bloco: não tem gatilho próprio e só roda quando outra automação usa ela.'
+        bloco_chamado: 'Começou o bloco. Esta automação segue quando o bloco terminar.'
+        bloco_terminou: 'O bloco terminou. Esta automação seguiu.'
+        bloco_de: 'Começou a pedido de outra automação que usa este bloco.'
+        bloco_sumiu: 'O bloco que este passo usa não existe mais, ou deixou de ser bloco.'
+        bloco_de_outro_alvo: 'O bloco que este passo usa agora roda em outro tipo de registro. Nada foi feito.'
+        bloco_em_laco: 'O bloco acaba usando ele mesmo de novo. Parou aqui para não ficar em laço.'
+        bloco_fundo_demais: 'Bloco dentro de bloco demais. Parou aqui.'
+        bloco_falhou: 'O bloco falhou, então esta automação também parou.'
+        bloco_parou: 'O bloco parou antes do fim, então esta automação também parou.'
+        repetir_lista: 'Começou para um item de uma lista, em outra vez desta automação.'
+        lista_rodou: 'Começou para %{abertas} item(ns) da lista (limite de %{teto} por vez). %{passou_do_teto} ficaram para a próxima; %{bloqueados} bloqueados ou que não querem receber; %{fora_do_alcance} fora do alcance de quem ligou; %{ja_aberta} já estavam nesta automação.'
+        consulta_so_https: 'O endereço precisa começar com https://.'
+        consulta_sem_senha_no_endereco: 'O endereço não pode levar usuário nem senha.'
+        consulta_endereco_interno: 'Este endereço aponta para uma rede interna e não pode ser usado.'
+        consulta_sem_resposta: 'O outro sistema não respondeu a tempo.'
+        consulta_recusada: 'O outro sistema respondeu com erro.'
+        consulta_resposta_grande: 'A resposta do outro sistema é grande demais.'
+        consulta_resposta_sem_dados: 'O outro sistema respondeu, mas não com dados que a automação consiga ler.'
+        consulta_sem_permissao: 'Quem ligou a automação não pode mais buscar dados em outros sistemas. Assuma e religue.'
+        consulta_pronta_desligada: 'Esta consulta não está liberada nesta conta. Nada foi buscado.'
+        consulta_pronta_pausada: 'A equipe da plataforma pausou esta consulta nesta conta. Nada foi buscado.'
+        consulta_pronta_sem_dado: 'O dado que a busca usa estava vazio. Nada foi buscado.'
+        consulta_pronta_nao_achou: 'A consulta não achou nada para esse dado. Confira o dado.'
+        consulta_pronta_dado_invalido: 'O dado usado na busca não está no formato certo. Confira o número.'
+        consulta_pronta_sem_resposta: 'A consulta não respondeu agora (ou as buscas do dia acabaram). Tente de novo mais tarde.'
+      receita:
+        passos_novos_desligados: 'Passo %{passo}: este passo não está disponível nesta conta.'
+        consulta_no_gatilho: 'Passo %{passo}: %{caminho} é um dado buscado por um passo, e no gatilho nenhum passo rodou ainda.'
+        consulta_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um dado guardado por um passo "Buscar em outro sistema" desta automação.'
+        consulta_depois: 'Passo %{passo}: %{caminho} vem de um passo "Buscar em outro sistema" que nunca roda antes deste.'
+        lista:
+          aninhado: 'Passo %{passo}: "Fazer para cada um de uma lista" não cabe dentro de outro passo que roda em outros registros.'
+          sem_chave_de_funis: 'Passo %{passo}: a lista é de cards do funil, e você não gerencia funis.'
+          etapa_de_fora: 'Passo %{passo}: escolha uma etapa de funil desta conta.'
+          etiqueta_de_fora: 'Passo %{passo}: escolha uma etiqueta desta conta.'
+          publico_de_fora: 'Passo %{passo}: escolha um público salvo desta conta.'
+          publico_sem_permissao: 'Passo %{passo}: você não pode ver este público.'
+        bloco:
+          laco_volta: 'Esta automação é usada pelo bloco "%{bloco}", que ela também usa. Isso nunca terminaria.'
+          de_fora: 'Passo %{passo}: escolha uma automação desta conta marcada como bloco.'
+          vazio: 'Passo %{passo}: o bloco "%{bloco}" ainda não tem versão salva.'
+          outro_alvo: 'Passo %{passo}: o bloco "%{bloco}" roda em outro tipo de registro.'
+          laco: 'Passo %{passo}: o bloco "%{bloco}" acaba usando esta automação de novo. Isso nunca terminaria.'
+          fundo: 'Passo %{passo}: o bloco "%{bloco}" passa de %{maximo} blocos, um dentro do outro.'
+          com_problema: 'Passo %{passo}: o bloco "%{bloco}" tem um problema: %{problema}'
+        consulta:
+          sem_permissao: 'Passo %{passo}: só o administrador, ou uma função que gerencia integrações, busca dados em outros sistemas.'
+          fonte_desconhecida: 'Passo %{passo}: escolha onde buscar.'
+          pronta_desconhecida: 'Passo %{passo}: esta consulta não existe mais. Escolha outra.'
+          pronta_desligada: 'Passo %{passo}: a consulta "%{consulta}" não está liberada nesta conta.'
+          pronta_pausada: 'Passo %{passo}: a equipe da plataforma pausou a consulta "%{consulta}" nesta conta.'
+          pronta_sem_entrada: 'Passo %{passo}: diga de onde vem %{entrada} para a consulta "%{consulta}".'
+          pronta_dado_desconhecido: 'Passo %{passo}: a consulta "%{consulta}" não devolve o dado "%{nome}".'
+          consulta_so_https: 'Passo %{passo}: o endereço precisa começar com https://.'
+          consulta_sem_senha_no_endereco: 'Passo %{passo}: o endereço não pode levar usuário nem senha.'
+          consulta_endereco_interno: 'Passo %{passo}: este endereço aponta para uma rede interna e não pode ser usado.'
+          nome_sem_letra: 'Passo %{passo}: o nome "%{nome}" precisa de pelo menos uma letra ou número.'
+          nome_repetido: 'Passo %{passo}: dois dados guardados têm o mesmo nome (%{chave}). Dê um nome para cada um.'
+          caminho_invalido: 'Passo %{passo}: o lugar "%{caminho}" na resposta não é válido.'
+      editor:
+        bloco_em_uso: 'Este bloco é usado por automações ligadas: %{nomes}. Mude elas antes.'
+        bloco_desligado: 'Blocos não estão disponíveis nesta conta.'
+      ensaio:
+        dado_buscado: '[%{nome}, vindo da busca]'
+      consultas_prontas:
+        sim: 'Sim'
+        nao: 'Não'
+        falta:
+          desligada: 'Ainda não está liberada nesta conta. Para usar, peça ao suporte da plataforma para ligar as consultas prontas.'
+          pausada: 'A equipe da plataforma pausou esta consulta na sua conta. Fale com o suporte para voltar a usar.'
+        cep:
+          nome: 'Busca de CEP'
+          faz: 'Acha a rua, o bairro e a cidade de um CEP.'
+          entradas:
+            cep: 'O CEP'
+          exemplos:
+            cep: '01310-100'
+          dados:
+            logradouro: 'Rua'
+            bairro: 'Bairro'
+            cidade: 'Cidade'
+            uf: 'Estado'
+            cep: 'CEP'
+        cnpj:
+          nome: 'Consulta de CNPJ'
+          faz: 'Mostra o nome da empresa, se ela está ativa e o que ela faz.'
+          entradas:
+            cnpj: 'O CNPJ'
+          exemplos:
+            cnpj: '00.000.000/0001-91'
+          dados:
+            razao_social: 'Nome da empresa'
+            nome_fantasia: 'Nome fantasia'
+            situacao: 'Situação na Receita'
+            abertura: 'Data de abertura'
+            atividade_principal_descricao: 'O que a empresa faz'
+            porte: 'Porte da empresa'
+            cidade: 'Cidade da empresa'
+            uf: 'Estado da empresa'
+        fipe:
+          nome: 'Valor do carro (tabela FIPE)'
+          faz: 'Diz quanto vale um carro na tabela FIPE deste mês.'
+          entradas:
+            marca: 'A marca do carro'
+            modelo: 'O modelo do carro'
+            ano: 'O ano do carro'
+          exemplos:
+            marca: 'Volkswagen'
+            modelo: 'Gol'
+            ano: '2020'
+          dados:
+            precos_0_valor: 'Valor do carro'
+            precos_0_modelo: 'Versão do carro'
+            precos_0_ano_modelo: 'Ano do carro'
+            precos_0_combustivel: 'Combustível'
+            precos_0_mes_de_referencia: 'Mês da tabela'
+        cpf:
+          nome: 'Conferir CPF'
+          faz: 'Confere se o número do CPF é válido. Não mostra nome nem situação na Receita.'
+          entradas:
+            cpf: 'O CPF'
+          dados:
+            valido: 'CPF válido'
+            estados: 'Estados onde foi emitido'

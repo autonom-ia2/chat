@@ -38,6 +38,11 @@ Rails.application.config.filter_parameters += [
   # #2895 — o que a pessoa digita na busca da lista de Relacionamentos (`busca`) costuma ser nome, telefone ou CPF de
   # cliente: não vai para o log. O filtro casa qualquer chave que contenha "busca"; em outro endpoint, só o log perde o texto.
   :busca,
+  # #2934 — o "Fazer um teste" do "buscar em outro sistema" (POST automacoes_passos_novos/testar_consulta) manda o endereço
+  # (`fonte[url]`, pode trazer chave na query) e o exemplo de cada entrada (`fonte[exemplos]`, CEP, placa, CPF de cliente).
+  # Nenhum dos dois vai para o log. O filtro casa qualquer chave que contenha "url" ou "exemplos": num parâmetro de outro
+  # endpoint (avatar_url, webhook url), só o log perde o endereço.
+  :url, :exemplos,
   # #2897 — carteira de seguros: o que a pessoa corrige num seguro (PATCH relacionamentos/seguros/:id) e o PDF que ela
   # guarda são dados do cliente. O número da apólice, a seguradora e o bem (que costuma trazer a placa) não vão para o log,
   # nem o `arquivo` enviado (o log mostraria o nome do arquivo); `valor` e `busca` já saem filtrados acima. O filtro casa

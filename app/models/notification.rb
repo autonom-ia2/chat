@@ -49,7 +49,9 @@ class Notification < ApplicationRecord
     # #935 — aviso urgente do Guia da Plataforma (o ator é o `Autonomia::Guide::Aviso`).
     guide_alert: 11,
     # #2277 — a search by conversation ended (the actor is the `ConversationAudienceSearch`). In-app only.
-    conversation_audience_ready: 12
+    conversation_audience_ready: 12,
+    # #2931 — an automation asks for approval (the actor is the step's `Autonomia::Automacao::Registro`). In-app only.
+    automacao_aprovacao: 13
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -108,6 +110,7 @@ class Notification < ApplicationRecord
 
     return I18n.t('notifications.notification_title.guide_alert') if guide_alert?
     return I18n.t('notifications.notification_title.conversation_audience_ready') if conversation_audience_ready?
+    return I18n.t('notifications.notification_title.automacao_aprovacao') if automacao_aprovacao?
 
     i18n_key = notification_title_map[notification_type]
     return '' unless i18n_key
@@ -131,12 +134,8 @@ class Notification < ApplicationRecord
       message_body(secondary_actor)
     when 'conversation_assignment', 'conversation_handoff_request', 'sla_missed_next_response', 'sla_missed_resolution'
       message_body((conversation.messages.incoming.last || conversation.messages.outgoing.last))
-    when 'guide_alert'
-      primary_actor.texto.to_s.truncate(200)
-    when 'conversation_audience_ready'
-      conversation_audience_body
     else
-      ''
+      fork_message_body
     end
   end
 
@@ -145,6 +144,16 @@ class Notification < ApplicationRecord
   end
 
   private
+
+  # The fork's own notification types (the guide alert, #2277 the audience, #2931 the automation approval request).
+  def fork_message_body
+    case notification_type
+    when 'guide_alert' then primary_actor.texto.to_s.truncate(200)
+    when 'conversation_audience_ready' then conversation_audience_body
+    when 'automacao_aprovacao' then primary_actor&.automacao&.nome.to_s
+    else ''
+    end
+  end
 
   # #2277: the audience's suggested name and how the search ended.
   def conversation_audience_body
@@ -174,8 +183,9 @@ class Notification < ApplicationRecord
   end
 
   def process_notification_delivery
-    # #2277: the search-by-conversation bell is in-app only; push and e-mail are made for conversations.
-    return Notification::RemoveDuplicateNotificationJob.perform_later(self) if conversation_audience_ready?
+    # #2277: the search-by-conversation bell is in-app only; push and e-mail are made for conversations. The same for the
+    # approval request of an automation (#2931).
+    return Notification::RemoveDuplicateNotificationJob.perform_later(self) if conversation_audience_ready? || automacao_aprovacao?
 
     Notification::PushNotificationJob.perform_later(self) if user_subscribed_to_notification?('push')
 

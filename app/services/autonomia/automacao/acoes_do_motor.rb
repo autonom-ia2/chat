@@ -32,7 +32,7 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
 
   def initialize(execucao:, account_user:)
     @execucao = execucao
-    super(account: execucao.account, user: execucao.automacao.ligada_por, account_user: account_user)
+    super(account: execucao.account, user: execucao.dona.ligada_por, account_user: account_user)
   end
 
   def executar(acao, dados)

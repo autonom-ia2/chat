@@ -114,6 +114,29 @@ describe('Autonomia API clients', () => {
     });
   });
 
+  // #2881 — as listas do modelo pronto de ramo, pela conversa e pelo rascunho reaberto: o mesmo corpo nos dois.
+  describe('ready-made model lists (#2881)', () => {
+    const listas = {
+      perguntas: [{ id: 'p1', texto: 'Qual o CNPJ?', tirada: true }],
+    };
+
+    it('patches the lists through the Builder conversation', () => {
+      buildThreads.mudarModeloPronto(3, listas);
+      expect(axiosMock.patch).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/build_threads/3/modelo_pronto',
+        listas
+      );
+    });
+
+    it('patches the lists through the agent when the draft was reopened', () => {
+      agents.mudarModeloPronto(7, listas);
+      expect(axiosMock.patch).toHaveBeenCalledWith(
+        '/api/v1/accounts/85/autonomia/agents/7/modelo_pronto',
+        listas
+      );
+    });
+  });
+
   describe('#AutonomiaSourcesAPI', () => {
     it('lists, deletes and resyncs sources for an agent', () => {
       sources.get(7);

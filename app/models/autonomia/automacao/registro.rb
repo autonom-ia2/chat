@@ -20,6 +20,12 @@ class Autonomia::Automacao::Registro < ApplicationRecord
 
   scope :de_pausa, -> { where('dados @> ?', { PAUSOU => true }.to_json) }
 
+  # #2931: o pedido de aprovação no sino (Notification `automacao_aprovacao`): só o id e o nome da automação, nunca a
+  # pergunta (ela sai na tela, com os valores lidos pelas permissões de quem olha).
+  def push_event_data
+    { id: id, name: automacao&.nome, automacao_id: automacao_id }
+  end
+
   private
 
   # Execução de outra conta prenderia a exclusão daquela conta nesta chave estrangeira.

@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import AgentesHeroi from '../components/AgentesHeroi.vue';
 import ModeloCartao from '../components/ModeloCartao.vue';
+import RamoCartao from '../components/RamoCartao.vue';
 import { MODELOS, MODELO_DO_MEU_JEITO } from '../constants/modelos';
 import {
   ATUACAO_INTERNA_NA_QUERY,
@@ -12,6 +13,7 @@ import {
   PAPEL_AREA_NA_QUERY,
 } from '../constants/criacao';
 import { useFase2 } from '../composables/useFase2';
+import { useRamosDeSeguro } from '../composables/useRamosDeSeguro';
 
 // #1543 — "Criar agente" em página inteira, no lugar da gaveta da lista (protótipo aprovado na
 // rodada 3, #1366/#1424). O agente normal é o destaque: os modelos e "Do meu jeito" seguem a criação
@@ -22,6 +24,9 @@ import { useFase2 } from '../composables/useFase2';
 // Tema 14 (#1434): "Ajuda outros agentes" (`?papel=ajudante`), também só com a Fase 2, na ordem do
 // protótipo (depois do agente da equipe): responde só para outro agente, nunca para o cliente.
 // A rota já exige autonomia_manage; quem só vê não chega aqui, mas a página também não oferece ação.
+// #2881 — "Prontos para o seu ramo": em conta de seguros com os agentes prontos liberados (quem diz é o servidor,
+// useRamosDeSeguro), a fileira vem primeiro, dentro do herói, e cada cartão leva `?ramo=<chave>`. Os três modelos
+// gerais continuam embaixo, iguais. Sem ramo liberado, a página é a de sempre.
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
@@ -32,7 +37,10 @@ const NS = 'AGENTS.JORNADA.ESCOLHER';
 const COPILOTO = 'copiloto';
 const EQUIPE = 'equipe';
 const AJUDANTE = 'ajudante';
+const RAMOS = 'AGENTS.JORNADA.RAMOS';
 const comecando = ref(null);
+const { ramos } = useRamosDeSeguro();
+const comRamos = computed(() => ramos.value.length > 0);
 
 const escolher = (chave, query) => {
   if (comecando.value) return;
@@ -41,6 +49,7 @@ const escolher = (chave, query) => {
 };
 
 const usarModelo = chave => escolher(chave, { modelo: chave });
+const usarRamo = chave => escolher(chave, { ramo: chave });
 const usarCopiloto = () =>
   escolher(COPILOTO, { atuacao: ATUACAO_INTERNA_NA_QUERY });
 const usarEquipe = () => escolher(EQUIPE, { papel: PAPEL_AREA_NA_QUERY });
@@ -72,9 +81,45 @@ const voltar = () => router.push({ name: 'autonomia_agents_index' });
       <AgentesHeroi
         :titulo="t(`${NS}.TITULO`)"
         :texto="
-          podeGerenciar ? t(`${NS}.TEXTO`) : t('AGENTS.JORNADA.HEROI.SO_VER')
+          podeGerenciar
+            ? t(comRamos ? `${RAMOS}.TEXTO_DA_PAGINA` : `${NS}.TEXTO`)
+            : t('AGENTS.JORNADA.HEROI.SO_VER')
         "
       >
+        <section
+          v-if="comRamos"
+          data-ramos
+          aria-labelledby="ramos-titulo"
+          class="flex flex-col gap-4"
+        >
+          <div class="flex flex-col max-w-2xl gap-1">
+            <h2 id="ramos-titulo" class="m-0 text-xl font-semibold text-white">
+              {{ t(`${RAMOS}.TITULO`) }}
+            </h2>
+            <p class="m-0 text-base leading-relaxed text-white/80">
+              {{ t(`${RAMOS}.TEXTO`) }}
+            </p>
+          </div>
+          <ul
+            :aria-label="t(`${RAMOS}.TITULO`)"
+            class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-2 lg:grid-cols-3"
+          >
+            <RamoCartao
+              v-for="ramo in ramos"
+              :key="ramo.chave"
+              :ramo="ramo"
+              :pode-usar="podeGerenciar"
+              :comecando="comecando === ramo.chave"
+              :bloqueado="!!comecando && comecando !== ramo.chave"
+              @usar="usarRamo"
+            />
+          </ul>
+          <h2
+            class="pt-6 m-0 text-xl font-semibold text-white border-t border-white/15"
+          >
+            {{ t(`${RAMOS}.OUTROS_TITULO`) }}
+          </h2>
+        </section>
         <ul
           :aria-label="t('AGENTS.JORNADA.MODELOS.ROTULO')"
           class="grid grid-cols-1 gap-4 p-0 m-0 list-none md:grid-cols-3"

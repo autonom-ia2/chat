@@ -4,11 +4,18 @@ import { novoPassoNovo } from '../passosNovos';
 import {
   fraseDoPassoNovo,
   linhaDoEnsaioNovo,
+  linhaDoEnsaioReal,
   quemEmFrase,
 } from '../frasesDosNovos';
 import { guardarNomesDosPassosNovos } from '../nomesDaConta';
+import { carregarPublicos } from '../dadosDaConta';
+import { audiencesAPI as AudiencesAPI } from 'dashboard/api/campaignJourneyAudiences';
 import { ensaiarComPassosNovos } from '../adaptadorFalso';
 import { linhasDoEnsaio } from '../../ensaio';
+
+vi.mock('dashboard/api/campaignJourneyAudiences', () => ({
+  audiencesAPI: { list: vi.fn() },
+}));
 
 // Protótipo #2931–#2936 — as frases dos passos novos com o catálogo pt_BR de
 // verdade: o que o Rodrigo lê no Confira e no ensaio. O `t` falso dos outros
@@ -66,7 +73,12 @@ describe('frases dos passos novos em pt_BR', () => {
     );
   });
 
-  it('a lista diz o nome da etapa ou do público', () => {
+  it('a lista diz o nome da etapa ou do público (o salvo na conta)', async () => {
+    AudiencesAPI.list.mockResolvedValue({
+      data: { payload: [{ id: 1, name: 'Clientes ativos' }] },
+    });
+    await carregarPublicos();
+
     expect(frase(lista({ de: 'etapa', etapa_id: 12 }))).toBe(
       'Para cada card da etapa Proposta, até 50 por vez'
     );
@@ -98,12 +110,25 @@ describe('frases dos passos novos em pt_BR', () => {
     );
   });
 
+  // Decisão do Rodrigo (12/11): sem com quem marcar, a reunião segue sem
+  // reunião pelo "Se o cliente não responder"; o ensaio diz o mesmo que o motor.
+  it('a reunião sem com quem marcar diz que segue sem reunião', () => {
+    const aviso = faria => linhaDoEnsaioReal({ faria, dados: {} }, t).aviso;
+
+    expect(aviso('reuniao_sem_responsavel')).toBe(
+      'Sem responsável no card nem na conversa: seguiria sem reunião, pelo caminho “Se o cliente não responder”.'
+    );
+    expect(aviso('reuniao_sem_pagina')).toBe(
+      'O responsável não tem uma página de agendamento só dele: seguiria sem reunião, pelo caminho “Se o cliente não responder”.'
+    );
+  });
+
   it('no ensaio, o galho do passo novo diz o próprio nome', async () => {
-    const comGalho = novo('pedir_aprovacao', {
+    const pedido = novo('pedir_aprovacao', {
       aprovado: [{ id: 'p2', tipo: 'parar' }],
     });
     const { data } = await ensaiarComPassosNovos(
-      { passos: [comGalho] },
+      { passos: [pedido] },
       () => ''
     );
     const [, caminho] = linhasDoEnsaio(data.conversas[0].passos, () => '', t);
