@@ -11,6 +11,9 @@ import FichaDaEmpresaPage from '../../pages/FichaDaEmpresaPage.vue';
 // As duas fichas fora da demonstração (#2895): leem do servidor pelas leituras
 // novas, escrevem pelos endpoints que o painel já tem, mostram cada erro no
 // lugar certo, levam às rotas reais e escondem a escrita de quem só pode ver.
+// O que ainda só avisa não aparece aqui (#2970): "Conversar" sem conversa para
+// abrir, "Lembrete", "Ver todas", Juntar, Bloquear e Apagar do "⋯", "Mandar
+// mensagem" da empresa e o ícone de conversar de cada pessoa.
 const contexto = vi.hoisted(() => ({ params: {}, empurrar: vi.fn() }));
 const pode = vi.hoisted(() => ({ editar: true, criarCards: true }));
 
@@ -296,14 +299,88 @@ describe('ficha da pessoa: para onde os botões levam', () => {
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  it('Conversar com quem nunca conversou só avisa', async () => {
+  // #2970 — começar conversa nova ainda não é de verdade: sem conversa para
+  // abrir, o botão não aparece. As outras ações do cabeçalho continuam.
+  it('com quem nunca conversou não há Conversar', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({ data: [] });
     const w = await abrirPessoa();
-    await w.get(marca('conversar')).trigger('click');
-    expect(contexto.empurrar).not.toHaveBeenCalled();
-    expect(useAlert).toHaveBeenCalledWith(
-      'Aqui abre a conversa com Ana Albuquerino.'
+    expect(w.find(marca('conversar')).exists()).toBe(false);
+    expect(w.get(marca('cabecalho')).text()).not.toContain('Conversar');
+    expect(w.find(marca('novo-card')).exists()).toBe(true);
+    expect(w.find(marca('alterar-informacoes')).exists()).toBe(true);
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  // #2970 — "Lembrete", "Ver todas" e, no "⋯", Juntar, Bloquear e Apagar ainda
+  // só avisam ("Aqui abre…"): fora da demonstração não existem. Sobra um item
+  // só, e ele não fica em menu: "Alterar informações" é um botão.
+  it('não tem Lembrete, Ver todas nem "⋯", e "Alterar informações" abre a gaveta', async () => {
+    const w = await abrirPessoa();
+    expect(w.get(marca('cabecalho')).text()).not.toContain('Lembrete');
+    expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(2);
+    expect(w.get(marca('conversas')).text()).not.toContain('Ver todas');
+    expect(w.find(`${marca('conversas')} button`).exists()).toBe(false);
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+    const alterar = w.get(marca('alterar-informacoes'));
+    expect(alterar.text()).toContain('Alterar informações');
+    await alterar.trigger('click');
+    expect(w.find(`${marca('gaveta-informacoes')} [data-foco]`).exists()).toBe(
+      true
     );
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  // #2970 — a leitura das conversas falhou: a ficha não sabe se a pessoa tem
+  // conversa, e o botão não pode sumir de quem tem. O clique lê de novo.
+  const AVISO_DE_FALHA = `${marca('conversas')} ${marca('falha-da-parte')}`;
+
+  it('se as conversas não vieram, Conversar aparece, lê de novo e abre a mais recente', async () => {
+    RelacionamentosAPI.conversasDaPessoa.mockRejectedValueOnce(erroHttp(500));
+    const w = await abrirPessoa();
+    expect(w.find(AVISO_DE_FALHA).exists()).toBe(true);
+    await w.get(marca('conversar')).trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.conversasDaPessoa).toHaveBeenCalledTimes(2);
+    expect(contexto.empurrar).toHaveBeenCalledWith({
+      name: 'inbox_conversation',
+      params: { conversation_id: 55 },
+      query: undefined,
+    });
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('se as conversas continuam sem vir, Conversar não sai do lugar e a parte segue dizendo que falhou', async () => {
+    RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(500));
+    const w = await abrirPessoa();
+    await w.get(marca('conversar')).trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.conversasDaPessoa).toHaveBeenCalledTimes(2);
+    expect(contexto.empurrar).not.toHaveBeenCalled();
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(w.get(AVISO_DE_FALHA).text()).toContain(
+      'Não consegui mostrar esta parte.'
+    );
+    expect(w.find(marca('conversar')).exists()).toBe(true);
+  });
+
+  it('se a nova leitura diz que não há conversa, Conversar some sem sair do lugar', async () => {
+    RelacionamentosAPI.conversasDaPessoa
+      .mockRejectedValueOnce(erroHttp(500))
+      .mockResolvedValueOnce({ data: [] });
+    const w = await abrirPessoa();
+    await w.get(marca('conversar')).trigger('click');
+    await flushPromises();
+    expect(contexto.empurrar).not.toHaveBeenCalled();
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(w.find(AVISO_DE_FALHA).exists()).toBe(false);
+    expect(w.find(marca('conversar')).exists()).toBe(false);
+  });
+
+  it('quem não pode ver as conversas fica sem a parte e sem Conversar', async () => {
+    RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(401));
+    const w = await abrirPessoa();
+    expect(w.find(marca('conversas')).exists()).toBe(false);
+    expect(w.find(marca('conversar')).exists()).toBe(false);
   });
 
   it('Abrir no CRM leva ao card', async () => {
@@ -384,11 +461,22 @@ describe('ficha da pessoa: escritas', () => {
     expect(useAlert).toHaveBeenCalledWith('Não consegui mudar. Tente de novo.');
   });
 
-  it('quem não é cliente não tem "Não é mais cliente" no ⋯', async () => {
+  it('quem não é cliente não tem "⋯" nem "Não é mais cliente"', async () => {
     const w = await abrirPessoa();
-    await w.get(marca('mais-acoes')).trigger('click');
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
     expect(w.text()).toContain('Alterar informações');
     expect(w.text()).not.toContain('Não é mais cliente');
+  });
+
+  it('de quem é cliente, o "⋯" guarda "Alterar informações" e "Não é mais cliente", sem botão solto', async () => {
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: CLIENTE });
+    const w = await abrirPessoa();
+    expect(w.find(marca('alterar-informacoes')).exists()).toBe(false);
+    await w.get(marca('mais-acoes')).trigger('click');
+    const itens = w.findAll('.n-dropdown-item button');
+    expect(itens).toHaveLength(2);
+    expect(itens[0].text()).toContain('Alterar informações');
+    expect(itens[1].text()).toContain('Não é mais cliente');
   });
 
   it('Salvar nota escreve e a nota entra no topo', async () => {
@@ -479,7 +567,8 @@ describe('ficha da pessoa: quem só pode ver', () => {
     expect(w.find(marca('guardar-nota')).exists()).toBe(false);
     expect(w.find(marca('faixa-nao-quer')).exists()).toBe(true);
     expect(w.get(marca('notas')).text()).toContain('Ligar.');
-    await w.get(marca('mais-acoes')).trigger('click');
+    // #2970 — sem item de verdade para quem só pode ver, o "⋯" não aparece.
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
     expect(w.text()).not.toContain('Alterar informações');
   });
 
@@ -490,9 +579,25 @@ describe('ficha da pessoa: quem só pode ver', () => {
     });
     const w = await abrirPessoa();
     expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
-    await w.get(marca('mais-acoes')).trigger('click');
-    expect(w.text()).toContain('Juntar com outra pessoa');
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
     expect(w.text()).not.toContain('Não é mais cliente');
+  });
+
+  // #2970 — sem nada de verdade para fazer, o cabeçalho não desenha o grupo
+  // de ações; com conversa, sobra só Conversar.
+  it('sem poder criar card e sem conversa, o cabeçalho fica sem ação nenhuma', async () => {
+    pode.editar = false;
+    pode.criarCards = false;
+    RelacionamentosAPI.conversasDaPessoa.mockResolvedValueOnce({ data: [] });
+    const semConversa = await abrirPessoa();
+    expect(
+      semConversa.find(`${marca('cabecalho')} [role="group"]`).exists()
+    ).toBe(false);
+    semConversa.unmount();
+    const comConversa = await abrirPessoa();
+    const grupo = comConversa.get(`${marca('cabecalho')} [role="group"]`);
+    expect(grupo.findAll('button')).toHaveLength(1);
+    expect(grupo.find(marca('conversar')).exists()).toBe(true);
   });
 });
 
@@ -571,10 +676,31 @@ describe('ficha da empresa com os dados do servidor', () => {
     expect(w.get('h1').text()).toBe('Padaria Nova');
   });
 
-  it('quem só pode ver não tem Alterar', async () => {
+  // #2970 — "Mandar mensagem" e o ícone de conversar de cada pessoa ainda só
+  // avisam: fora da demonstração não aparecem.
+  it('não tem Mandar mensagem, o ícone de conversar de cada pessoa nem Ver todas; Alterar continua', async () => {
+    const w = await abrirEmpresa();
+    expect(w.find(marca('mandar-mensagem')).exists()).toBe(false);
+    expect(w.get(marca('cabecalho')).text()).not.toContain('Mandar mensagem');
+    expect(w.find(marca('conversar-com-pessoa')).exists()).toBe(false);
+    expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(1);
+    expect(w.get(marca('conversas')).text()).not.toContain('Ver todas');
+    expect(w.find(`${marca('conversas')} button`).exists()).toBe(false);
+    expect(w.find(marca('alterar-empresa')).exists()).toBe(true);
+    await w.get(marca('pessoa-da-empresa')).trigger('click');
+    expect(contexto.empurrar).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { contactId: 7 },
+      query: undefined,
+    });
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('quem só pode ver não tem Alterar: o cabeçalho fica sem botão de ação', async () => {
     pode.editar = false;
     const w = await abrirEmpresa();
     expect(w.find(marca('alterar-empresa')).exists()).toBe(false);
-    expect(w.find(marca('mandar-mensagem')).exists()).toBe(true);
+    expect(w.find(marca('mandar-mensagem')).exists()).toBe(false);
+    expect(w.find(`${marca('cabecalho')} [role="group"]`).exists()).toBe(false);
   });
 });

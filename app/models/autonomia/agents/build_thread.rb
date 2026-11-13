@@ -90,12 +90,18 @@ module Autonomia
       #
       # `papel: 'ajudante'` (tema 14, #1434) — "Ajuda outros agentes": o agente nasce interno e com a marca de origem
       # (`config['papel']`, gravada pelo Builder no rascunho). É o único jeito de a marca nascer. Outro valor é ignorado.
-      def persist_start_options!(type:, actuation: nil, with_knowledge: nil, papel: nil)
+      #
+      # `modelo:` (#2881) — a chave de um modelo pronto de ramo (`ModelosDeRamo`). Só vale quando a chave existe e a
+      # conta pode usar (pacote `seguros` e a flag): aí a conversa guarda a marca do modelo em `state['modelo_pronto']` e
+      # o tipo passa a ser o do modelo. Chave desconhecida ou conta sem direito: segue como antes, sem erro. Com
+      # `papel: 'ajudante'` o modelo é ignorado: o roteiro do ramo é de atendimento ao cliente, não de ajudante interno.
+      def persist_start_options!(type:, actuation: nil, with_knowledge: nil, papel: nil, modelo: nil)
         persist_agent_type!(type)
-        merged = (state || {}).dup
+        ajudante = papel.to_s == PAPEL_AJUDANTE
+        merged = (state || {}).merge(ajudante ? {} : inicio_com_modelo_pronto(modelo))
 
         merged['actuation'] = ACTUATIONS.include?(actuation.to_s) ? actuation.to_s : 'external' unless actuation.nil?
-        merged = merged.merge('papel' => PAPEL_AJUDANTE, 'actuation' => 'internal') if papel.to_s == PAPEL_AJUDANTE
+        merged = merged.merge('papel' => PAPEL_AJUDANTE, 'actuation' => 'internal') if ajudante
 
         # with_knowledge=false NÃO semeia no_materials_declared: aquele flag é o portão de FECHAMENTO
         # ("sem material, feche") e fecharia o build no 1º turno sem coletar o essencial. A orientação de
@@ -148,6 +154,15 @@ module Autonomia
         previous_state['next_question'].to_s.strip
       end
       private :pending_question_of
+
+      # #2881 — junta chaves ao `state` sem token e sem mudar o status: é escolha do dono na tela (as listas do modelo
+      # pronto), não uma transição da geração, e vale também com a geração em andamento. O merge é no banco, no próprio
+      # UPDATE (como o `guarded_update`): nunca regrava o state inteiro a partir da cópia em memória, e o que o turno
+      # gravar no meio não se perde. Não toca o `updated_at`, que mede a geração presa.
+      def juntar_ao_estado!(chaves)
+        self.class.where(id: id).update_all(expressao_do_estado(chaves, nil))
+        reload
+      end
 
       # #1428 — tira chaves do `state` (guardado pelo token, sem mudar o status). No-op quando nenhuma existe: fora do
       # piloto nada muda.
@@ -257,6 +272,16 @@ module Autonomia
       end
 
       private
+
+      # #2881 — o que a abertura acrescenta ao `state` com um modelo pronto: a marca, as ferramentas que saem dela (as
+      # chaves que a Confira lê) e o tipo do modelo. {} sem modelo. As ferramentas nascem aqui e depois só a edição do dono
+      # as muda (`ModelosDeRamo::Edicao`): o turno do Construtor não as regrava.
+      def inicio_com_modelo_pronto(chave)
+        rascunho = ::Autonomia::Agents::ModelosDeRamo::Rascunho.de_inicio(account: account, agent: agent, chave: chave)
+        return {} if rascunho.nil?
+
+        rascunho.para_guardar.merge('agent_type' => rascunho.modelo.tipo)
+      end
 
       # Só as chaves com conteúdo: o turno sem anexo mantém o shape legado {role, content, at}.
       def anexos_do_turno(image_signed_ids, materiais_a_caminho)

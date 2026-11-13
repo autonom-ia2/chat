@@ -38,6 +38,9 @@ import { usePermissoesDaFicha } from '../ficha/usePermissoesDaFicha';
 // lê e grava no servidor (#2895), e quem só pode ver não tem "Alterar". A parte
 // que quem está olhando não pode ver some; a que não carregou fica, com "Tentar
 // de novo".
+// #2970 — "Mandar mensagem", o ícone de conversar de cada pessoa e o "Ver
+// todas" das conversas ainda só avisam: aparecem só na demonstração, até serem
+// de verdade.
 const { t } = useI18n();
 const route = useRoute();
 const acoes = useAcoesDaFicha();
@@ -167,6 +170,7 @@ watch(
           <CabecalhoDaEmpresa
             :empresa="ficha.empresa.value"
             :pode-editar="podeEditar"
+            :pode-mandar-mensagem="fonte.usaDemo"
             @mandar-mensagem="dialogoDaMensagem?.open()"
             @alterar="gavetaAberta = true"
           />
@@ -179,6 +183,7 @@ watch(
                 :pessoas="ficha.pessoas.value"
                 :total="ficha.empresa.value.contacts_count ?? 0"
                 :falhou="falhou('pessoas')"
+                :pode-conversar="fonte.usaDemo"
                 @tentar="ficha.relerParte('pessoas')"
                 @abrir="acoes.abrirPessoa"
                 @conversar="
@@ -194,6 +199,7 @@ watch(
                 :conversas="ficha.conversas.value"
                 :agora="agora"
                 :falhou="falhou('conversas')"
+                :pode-ver-todas="fonte.usaDemo"
                 @tentar="ficha.relerParte('conversas')"
                 @ver-todas="avisar('VER_TODAS')"
               />
@@ -219,8 +225,9 @@ watch(
       </div>
     </main>
 
+    <!-- #2970: sem "Mandar mensagem" fora da demonstração, nada abre isto. -->
     <DialogoMandarMensagem
-      v-if="ficha.empresa.value"
+      v-if="fonte.usaDemo && ficha.empresa.value"
       ref="dialogoDaMensagem"
       :pessoas="ficha.pessoas.value"
       @continuar="continuarMensagem"

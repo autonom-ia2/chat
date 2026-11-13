@@ -59,6 +59,8 @@ module Autonomia
       include Autonomia::Agents::ConfigDoMaterial
       # #1479 / #2723 — "Endereço e telefone" do agente (`config['atendimento']`), validado em todo caminho que grava.
       include Autonomia::Agents::DadosDoAtendimento
+      # #2881 — a marca do modelo pronto de ramo (listas do dono e ferramentas), protegida do save com cópia velha.
+      include Autonomia::Agents::MarcaDoModeloPronto
 
       belongs_to :account
       belongs_to :created_by, class_name: 'User', optional: true

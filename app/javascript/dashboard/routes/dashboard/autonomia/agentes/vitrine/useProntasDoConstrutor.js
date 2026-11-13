@@ -13,8 +13,16 @@ import { useVitrineLigada } from './useVitrineLigada';
 // ficam para quem cuida delas, e o agente nasce sem elas. O que o agente já tem (rascunho reaberto depois do
 // "Começar") não aparece de novo. As que vieram depois das 4 primeiras (`ferramentas_tambem`) ficam na linha "Também
 // combina": "Incluir também" as junta ao "Já vem com", num toque, e elas entram no "Começar" como as outras.
-//   agenteId, sugeridas, tambem: refs (ou computeds) da página.
-export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
+// #2881 — agente pronto por ramo de seguro: a frase "Use quando" de cada ferramenta é a do ramo (ou a que o dono
+// alterou), que a página lê do servidor e passa em `frases` ({ fonte: frase }). Sem frase para a fonte, vai a frase
+// geral da vitrine, como sempre.
+//   agenteId, sugeridas, tambem, frases: refs (ou computeds) da página.
+export function useProntasDoConstrutor({
+  agenteId,
+  sugeridas,
+  tambem,
+  frases,
+}) {
   const { t } = useI18n();
   const vitrine = useVitrine();
   const { construtor, construtorNaConta } = useVitrineLigada();
@@ -64,9 +72,9 @@ export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
     vitrine.incluir({
       fonte: id,
       agenteId: agenteId.value,
-      usarQuando: t(
-        `AGENTS.VITRINE.FERRAMENTAS.${chaveDoTexto(id)}.USE_QUANDO`
-      ),
+      usarQuando:
+        frases?.value?.[id] ||
+        t(`AGENTS.VITRINE.FERRAMENTAS.${chaveDoTexto(id)}.USE_QUANDO`),
     });
 
   // Inclui as que ficaram e o agente ainda não tem. -> as que não entraram (a tela avisa; a pessoa inclui depois). Sem
@@ -103,6 +111,7 @@ export function useProntasDoConstrutor({ agenteId, sugeridas, tambem }) {
     semPermissao,
     escolhidas,
     combinaTambem,
+    podeIncluir: construtor,
     tirar,
     incluirTambem,
     incluirTodas,

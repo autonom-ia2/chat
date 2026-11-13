@@ -15,6 +15,7 @@ import { usePermissoesDaJornada } from '../composables/usePermissoesDaJornada';
 import { useFase2 } from '../composables/useFase2';
 import { useSalvarEquipe } from '../composables/useSalvarEquipe';
 import { useAjudanteNaCriacao } from '../composables/useAjudanteNaCriacao';
+import { useModeloDeRamo } from '../composables/useModeloDeRamo';
 import {
   ATUACAO,
   ETAPA,
@@ -34,6 +35,10 @@ import {
   perguntasDoAgente,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
+import {
+  TIPO_DO_MODELO_DE_RAMO,
+  ramoDaQuery,
+} from '../constants/modelosDeRamo';
 import {
   TRABALHANDO,
   canaisDoAgente,
@@ -58,6 +63,8 @@ import EtapaConfira from '../components/criar/EtapaConfira.vue';
 import EtapaComece from '../components/criar/EtapaComece.vue';
 import EtapaPronto from '../components/criar/EtapaPronto.vue';
 import BaseDaCriacao from '../components/criar/BaseDaCriacao.vue';
+import RamoJaSabe from '../components/criar/RamoJaSabe.vue';
+import RamoNaConfira from '../components/criar/RamoNaConfira.vue';
 import EquipeCanais from '../components/onde/EquipeCanais.vue';
 import ResumoOndeTrabalha from '../components/onde/ResumoOndeTrabalha.vue';
 import AjudanteNaCriacao from '../components/onde/AjudanteNaCriacao.vue';
@@ -95,6 +102,13 @@ import { useProntasDoConstrutor } from '../vitrine/useProntasDoConstrutor';
 // Tema 14 (#1434) — "Ajuda outros agentes" (`?papel=ajudante`, só com a Fase 2), no mesmo molde: antes da
 // conversa, "Quem {nome} vai ajudar?" e "Quando chamar {nome}?" (useAjudanteNaCriacao). A conversa abre
 // com `papel: 'ajudante'`; "Começar a ajudar" grava o vínculo e liga o agente, sem canal.
+// #2881 — agente pronto por ramo de seguro (`?ramo=<chave>`, da fileira "Prontos para o seu ramo"): é um agente de
+// vendas com o modelo do ramo por cima (useModeloDeRamo). A tela faz a primeira pergunta (o nome da corretora) e a
+// conversa abre no servidor com a resposta, levando `modelo`; o Construtor só pergunta mais uma coisa (as seguradoras).
+// No Confira, no lugar do "Já vem com estas ferramentas", entra o que o agente já traz (perguntas, documentos e
+// ferramentas, que o dono pode mudar), e o teste usa as perguntas do ramo. Depois do rascunho a query fica só com
+// `?agente=`: o bloco do ramo vem do `modelo_pronto` da conversa (ou do próprio rascunho, quando ele é reaberto sem
+// conversa), não da URL.
 const props = defineProps({
   focarTitulo: { type: Boolean, default: false },
 });
@@ -136,7 +150,10 @@ const IDEIA = {
 
 const celular = useMediaQuery('(max-width: 767px)');
 
-const modeloPedido = modeloDaQuery(route.query);
+const ramoPedido = ramoDaQuery(route.query);
+const modeloPedido = ramoPedido
+  ? TIPO_DO_MODELO_DE_RAMO
+  : modeloDaQuery(route.query);
 const idInicial = idDaQuery(route.query);
 const atuacaoPedida = atuacaoDaQuery(route.query);
 
@@ -147,6 +164,7 @@ const conversa = useConversaDeCriacao({
   atuacao: atuacaoPedida,
   papel: () =>
     ajudanteNaCriacao?.ajudante.value ? PAPEL_AJUDANTE_NA_QUERY : null,
+  ramo: ramoPedido,
 });
 const fase2 = useFase2();
 // O rascunho ainda está sendo escrito pelo Construtor: só o id; quem diz "incompleto" é o 422.
@@ -197,6 +215,7 @@ const agente = computed(
     conversa.agenteGerado.value ||
     null
 );
+const ramo = useModeloDeRamo({ pedido: ramoPedido, conversa, agente });
 const nome = computed(
   () => agente.value?.name || t('AGENTS.JORNADA.COMUM.NOVO_AGENTE')
 );
@@ -300,20 +319,25 @@ const canalPedido = computed(
     null
 );
 // #2858 F3: as ferramentas prontas que o Construtor escolheu (lista vazia = nenhuma combina). Mesma leitura do canal.
+// #2881: com modelo de ramo, as ferramentas e a frase "Use quando" de cada uma são as do modelo.
+const chavesDe = itens => itens.map(item => item.fonte);
 const prontas = useProntasDoConstrutor({
   agenteId: computed(() => conversa.agenteId.value),
-  sugeridas: computed(
-    () =>
-      estadoDaConversa.value?.ferramentas_sugeridas ??
-      agente.value?.config?.ferramentas_sugeridas ??
-      []
+  sugeridas: computed(() =>
+    ramo.modelo.value
+      ? chavesDe(ramo.ferramentas.value)
+      : (estadoDaConversa.value?.ferramentas_sugeridas ??
+        agente.value?.config?.ferramentas_sugeridas ??
+        [])
   ),
-  tambem: computed(
-    () =>
-      estadoDaConversa.value?.ferramentas_tambem ??
-      agente.value?.config?.ferramentas_tambem ??
-      []
+  tambem: computed(() =>
+    ramo.modelo.value
+      ? chavesDe(ramo.tambem.value)
+      : (estadoDaConversa.value?.ferramentas_tambem ??
+        agente.value?.config?.ferramentas_tambem ??
+        [])
   ),
+  frases: ramo.frases,
 });
 const sugerido = computed(() =>
   canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
@@ -415,6 +439,20 @@ const numeroDaEtapa = computed(
       [ETAPA.PRONTO]: 4,
     })[etapa.value]
 );
+const tituloDaPagina = computed(() => {
+  if (celular.value && etapa.value === ETAPA.CONFIRA) {
+    return tituloDaConfiraNoCelular.value;
+  }
+  return ramo.ativo.value
+    ? t('AGENTS.JORNADA.RAMOS.CRIAR.TITULO', { ramo: ramo.ramo.value })
+    : t('AGENTS.JORNADA.CRIAR.TITULO');
+});
+// #2881: com modelo de ramo, o teste usa as perguntas prontas do ramo.
+const perguntasProntasDoTeste = computed(() =>
+  ramo.perguntasDeTeste.value.length
+    ? ramo.perguntasDeTeste.value
+    : perguntasDoAgente(agente.value, ajudante.value)
+);
 
 // Computador: ao fechar a conversa, a URL acompanha (Confira) sem trocar de tela.
 watch(
@@ -435,6 +473,7 @@ watch(
       modelo: _modelo,
       type: _type,
       atuacao: _atuacao,
+      ramo: _ramo,
       ...resto
     } = route.query;
     router.replace({ query: { ...resto, agente: String(id) } });
@@ -460,6 +499,7 @@ watch(etapa, async nova => {
 });
 
 const exemplo = computed(() => {
+  if (ramo.exemplo.value) return ramo.exemplo.value;
   const chave = exemploDoModelo(modelo.value);
   const hora = (MODELOS.find(item => item.i18n === chave) || {}).horario;
   const falas = CONVERSA_DO_MODELO[chave]();
@@ -483,13 +523,17 @@ const exemploInterno = computed(() => {
     ? t('AGENTS.JORNADA.CRIAR.EXEMPLO.AJUDANTE', { nome: nome.value })
     : t('AGENTS.JORNADA.CRIAR.EXEMPLO.COPILOTO', { nome: nome.value });
 });
-const ideias = computed(() =>
-  interno.value || modelo.value === MODELO_DO_MEU_JEITO || idInicial
+// #2881: no agente de ramo, as ideias e o exemplo do campo são os da pergunta da vez (useModeloDeRamo).
+const ideias = computed(() => {
+  if (idInicial) return [];
+  if (ramo.ativo.value) return ramo.ideias.value;
+  return interno.value || modelo.value === MODELO_DO_MEU_JEITO
     ? []
-    : IDEIAS_PARA_COMECAR.map(chave => IDEIA[chave]())
-);
+    : IDEIAS_PARA_COMECAR.map(chave => IDEIA[chave]());
+});
 const exemploDoCampo = computed(() => {
   if (idInicial) return '';
+  if (ramo.ativo.value) return ramo.exemploDoCampo.value;
   if (ajudante.value) return t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_AJUDANTE');
   if (interno.value) return t('AGENTS.JORNADA.CRIAR.CONTE.EXEMPLO_COPILOTO');
   return modelo.value === MODELO_DO_MEU_JEITO
@@ -643,13 +687,15 @@ const incluirProntas = async () => {
 };
 
 // "Ver mais ferramentas": a vitrine já com este agente escolhido, numa aba nova, para a Confira continuar onde está.
-const verMaisFerramentas = () => {
-  const { href } = router.resolve({
-    name: 'autonomia_agents_vitrine',
-    query: { agente: conversa.agenteId.value },
-  });
-  window.open(href, '_blank', 'noopener');
-};
+const linkDaVitrine = computed(
+  () =>
+    router.resolve({
+      name: 'autonomia_agents_vitrine',
+      query: { agente: conversa.agenteId.value },
+    }).href
+);
+const verMaisFerramentas = () =>
+  window.open(linkDaVitrine.value, '_blank', 'noopener');
 
 const abrirComece = async () => {
   // Um clique só: o segundo, enquanto as ferramentas entram, não começa de novo.
@@ -815,6 +861,11 @@ onMounted(() => {
     return;
   }
   if (atuacaoPedida !== ATUACAO.INTERNA && !ajudante.value) ocupacao.carregar();
+  // #2881: no agente de ramo a tela pergunta primeiro; a conversa abre no servidor com a resposta.
+  if (ramoPedido) {
+    conversa.comecarComFala(ramo.falaDeAbertura.value);
+    return;
+  }
   // O agente da equipe e o ajudante escolhem antes: a conversa só começa depois (escolheuCanais, escolheuAjuda).
   if (!escolhendoCanais.value && !escolhendoAjuda.value) {
     conversa.comecar();
@@ -948,11 +999,7 @@ onMounted(() => {
           tabindex="-1"
           class="m-0 text-2xl font-bold tracking-tight outline-none text-n-slate-12"
         >
-          {{
-            celular && etapa === ETAPA.CONFIRA
-              ? tituloDaConfiraNoCelular
-              : t('AGENTS.JORNADA.CRIAR.TITULO')
-          }}
+          {{ tituloDaPagina }}
         </h1>
         <AgentesEtapas :atual="numeroDaEtapa" />
       </div>
@@ -1032,6 +1079,7 @@ onMounted(() => {
           :respostas="conversa.respostas.value"
           :ideias="ideias"
           :exemplo-do-campo="exemploDoCampo"
+          :ideias-em-toda-pergunta="ramo.ativo.value"
           :celular="celular"
           :interno="interno"
           :ajudante="ajudante"
@@ -1094,7 +1142,7 @@ onMounted(() => {
           :nome="nome"
           :empresa="empresa"
           :perguntas="perguntasDeTeste(modelo, interno, ajudante)"
-          :perguntas-do-agente="perguntasDoAgente(agente, ajudante)"
+          :perguntas-do-agente="perguntasProntasDoTeste"
           :interno="interno"
           :ajudante="ajudante"
           :mensagens="teste.mensagens.value"
@@ -1119,7 +1167,16 @@ onMounted(() => {
           @ajustes="fazerAjustesAvancados"
         >
           <template #ferramentas>
+            <RamoNaConfira
+              v-if="ramo.modelo.value"
+              :ramo="ramo"
+              :prontas="prontas"
+              :nome="nome"
+              :pode-mudar="podeGerenciar"
+              :link-da-vitrine="linkDaVitrine"
+            />
             <VitrineJaVem
+              v-else
               :nome="nome"
               :ids="
                 prontas.semPermissao.value
@@ -1161,7 +1218,8 @@ onMounted(() => {
               :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
               :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
             />
-            <p class="m-0 text-sm text-n-slate-11">
+            <RamoJaSabe v-if="ramo.ativo.value" :ramo="ramo.ramo.value" />
+            <p v-else class="m-0 text-sm text-n-slate-11">
               {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
             </p>
           </template>
@@ -1220,7 +1278,8 @@ onMounted(() => {
           :selo="t('AGENTS.JORNADA.MODELOS.EXEMPLO')"
           :rotulo-sr="t('AGENTS.JORNADA.MODELOS.EXEMPLO_SR')"
         />
-        <p class="m-0 text-sm text-n-slate-11">
+        <RamoJaSabe v-if="ramo.ativo.value" :ramo="ramo.ramo.value" />
+        <p v-else class="m-0 text-sm text-n-slate-11">
           {{ t('AGENTS.JORNADA.CRIAR.EXEMPLO.LEGENDA', { nome }) }}
         </p>
       </template>

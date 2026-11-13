@@ -108,10 +108,133 @@ describe('CabecalhoDaPessoa', () => {
     expect(w.emitted('marcarCliente')).toHaveLength(1);
   });
 
-  it('Conversar é a ação principal e emite', async () => {
-    const w = montar({ pessoa: pessoa() });
+  it('com `podeConversar`, Conversar é a ação principal e emite', async () => {
+    const w = montar({ pessoa: pessoa(), podeConversar: true });
     await w.get('[data-relacionamentos="conversar"]').trigger('click');
     expect(w.emitted('conversar')).toHaveLength(1);
+  });
+
+  // #2970 — sem conversa para abrir o botão não existe (a demonstração mostra
+  // "Lembrete" e o menu inteiro: `naDemonstracao`).
+  it('sem `podeConversar` não tem Conversar, e as outras ações seguem discretas, sem botão preenchido', () => {
+    const w = montar({ pessoa: pessoa(), naDemonstracao: true });
+    expect(w.find('[data-relacionamentos="conversar"]').exists()).toBe(false);
+    const secundarias = w.get('[data-relacionamentos="acoes-secundarias"]');
+    expect(
+      secundarias.find('[data-relacionamentos="novo-card"]').exists()
+    ).toBe(true);
+    expect(secundarias.classes()).toContain('grid-cols-[1fr_1fr_auto]');
+    const rotulos = ['NOVO_CARD', 'LEMBRETE'].map(
+      chave => `RELACIONAMENTOS_FICHA.ACOES.${chave}`
+    );
+    const discretos = secundarias
+      .findAllComponents(Button)
+      .filter(b => rotulos.includes(b.props('label')));
+    expect(discretos).toHaveLength(2);
+    discretos.forEach(b =>
+      expect(b.vm.$attrs).toMatchObject({ slate: '', faded: '' })
+    );
+  });
+
+  it('na demonstração, sem poder criar card, Lembrete e o "⋯" dividem a linha', () => {
+    const w = montar({
+      pessoa: pessoa(),
+      podeCriarCards: false,
+      naDemonstracao: true,
+    });
+    expect(w.find('[data-relacionamentos="novo-card"]').exists()).toBe(false);
+    expect(
+      w.get('[data-relacionamentos="acoes-secundarias"]').classes()
+    ).toContain('grid-cols-[1fr_auto]');
+  });
+
+  // #2970 — "Lembrete" e, no "⋯", Juntar, Bloquear e Apagar ainda só avisam.
+  // Com um item só não há menu: "Alterar informações" é um botão.
+  describe('sem `naDemonstracao`', () => {
+    const CLIENTE = { contact_type: 'customer' };
+    const ALTERAR = '[data-relacionamentos="alterar-informacoes"]';
+    const MAIS = '[data-relacionamentos="mais-acoes"]';
+    const itensDoMais = async w => {
+      await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
+      return w.findAll('.n-dropdown-item button').map(item => item.text());
+    };
+    const grade = w =>
+      w.get('[data-relacionamentos="acoes-secundarias"]').classes();
+
+    it('não tem Lembrete nem "⋯": "Alterar informações" é um botão discreto, que emite', async () => {
+      const w = montar({ pessoa: pessoa() });
+      expect(w.text()).not.toContain('ACOES.LEMBRETE');
+      expect(w.find('[data-relacionamentos="novo-card"]').exists()).toBe(true);
+      expect(w.find(MAIS).exists()).toBe(false);
+      expect(grade(w)).toContain('grid-cols-1');
+      expect(grade(w)).not.toContain('justify-items-end');
+      const alterar = w
+        .findAllComponents(Button)
+        .find(
+          b =>
+            b.props('label') ===
+            'RELACIONAMENTOS_FICHA.ACOES.ALTERAR_INFORMACOES'
+        );
+      expect(alterar.vm.$attrs).toMatchObject({ slate: '', faded: '' });
+      await w.get(ALTERAR).trigger('click');
+      expect(w.emitted('maisAcao')[0]).toEqual(['alterar']);
+    });
+
+    it('de quem é cliente, o "⋯" guarda "Alterar informações" e "Não é mais cliente", sem botão solto', async () => {
+      const w = montar({ pessoa: pessoa(CLIENTE) });
+      expect(w.find(ALTERAR).exists()).toBe(false);
+      expect(grade(w)).toContain('grid-cols-[1fr_auto]');
+      const itens = await itensDoMais(w);
+      expect(itens).toHaveLength(2);
+      expect(itens[0]).toContain('ACOES.ALTERAR_INFORMACOES');
+      expect(itens[1]).toContain('ACOES.DESMARCAR_CLIENTE');
+    });
+
+    it('sem poder criar card, o "⋯" de quem é cliente fica sozinho, na ponta', () => {
+      const w = montar({ pessoa: pessoa(CLIENTE), podeCriarCards: false });
+      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
+      expect(w.find(MAIS).exists()).toBe(true);
+      expect(grade(w)).toEqual(
+        expect.arrayContaining(['grid-cols-1', 'justify-items-end'])
+      );
+    });
+
+    it('sem poder criar card, quem não é cliente fica só com "Alterar informações", na linha toda', () => {
+      const w = montar({ pessoa: pessoa(), podeCriarCards: false });
+      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
+      expect(w.find(ALTERAR).exists()).toBe(true);
+      expect(grade(w)).toContain('grid-cols-1');
+      expect(grade(w)).not.toContain('justify-items-end');
+    });
+
+    it('quem só pode ver não tem "⋯" nem "Alterar informações": sobra Novo card, na linha toda', () => {
+      const w = montar({ pessoa: pessoa(), podeEditar: false });
+      expect(w.find(MAIS).exists()).toBe(false);
+      expect(w.find(ALTERAR).exists()).toBe(false);
+      expect(w.get('[role="group"]').findAll('button')).toHaveLength(1);
+      expect(grade(w)).toContain('grid-cols-1');
+      expect(grade(w)).not.toContain('justify-items-end');
+    });
+
+    it('quem só pode ver e não cria card fica sem grupo de ações; com conversa, só Conversar', () => {
+      const semNada = montar({
+        pessoa: pessoa(),
+        podeEditar: false,
+        podeCriarCards: false,
+      });
+      expect(semNada.find('[role="group"]').exists()).toBe(false);
+      const comConversa = montar({
+        pessoa: pessoa(),
+        podeEditar: false,
+        podeCriarCards: false,
+        podeConversar: true,
+      });
+      const grupo = comConversa.get('[role="group"]');
+      expect(grupo.findAll('button')).toHaveLength(1);
+      expect(
+        grupo.find('[data-relacionamentos="acoes-secundarias"]').exists()
+      ).toBe(false);
+    });
   });
 
   it('a empresa é um link que leva à ficha dela', async () => {
@@ -126,7 +249,7 @@ describe('CabecalhoDaPessoa', () => {
   });
 
   it('repassa a escolha do "⋯"', async () => {
-    const w = montar({ pessoa: pessoa() });
+    const w = montar({ pessoa: pessoa(), naDemonstracao: true });
     await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
     const itens = w.findAll('.n-dropdown-item button');
     await itens[1].trigger('click');
@@ -144,8 +267,12 @@ describe('CabecalhoDaPessoa', () => {
 });
 
 describe('MenuMais', () => {
-  it('abre com 4 itens, anda pelas setas e fecha com Esc', async () => {
-    const w = mount(MenuMais, { attachTo: document.body, global: { stubs } });
+  it('na demonstração abre com 4 itens, anda pelas setas e fecha com Esc', async () => {
+    const w = mount(MenuMais, {
+      props: { naDemonstracao: true },
+      attachTo: document.body,
+      global: { stubs },
+    });
     const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
     expect(gatilho.attributes('aria-expanded')).toBe('false');
     await gatilho.trigger('click');
@@ -176,7 +303,10 @@ describe('MenuMais', () => {
   };
 
   it('"Não é mais cliente" vem logo depois de "Alterar informações", só para quem é cliente', async () => {
-    const deCliente = await textosDoMenu({ ehCliente: true });
+    const deCliente = await textosDoMenu({
+      ehCliente: true,
+      naDemonstracao: true,
+    });
     expect(deCliente).toHaveLength(5);
     expect(deCliente[0]).toContain('ACOES.ALTERAR_INFORMACOES');
     expect(deCliente[1]).toContain('ACOES.DESMARCAR_CLIENTE');
@@ -187,9 +317,22 @@ describe('MenuMais', () => {
   });
 
   it('quem só pode ver não tem "Não é mais cliente", mesmo com cliente', async () => {
-    const textos = await textosDoMenu({ ehCliente: true, podeAlterar: false });
+    const textos = await textosDoMenu({
+      ehCliente: true,
+      podeAlterar: false,
+      naDemonstracao: true,
+    });
     expect(textos).toHaveLength(3);
     expect(textos.join(' ')).not.toContain('DESMARCAR_CLIENTE');
+  });
+
+  // #2970 — Juntar, Bloquear e Apagar ainda só avisam: só na demonstração.
+  it('sem `naDemonstracao` não tem Juntar, Bloquear nem Apagar', async () => {
+    const deCliente = await textosDoMenu({ ehCliente: true });
+    expect(deCliente).toHaveLength(2);
+    expect(deCliente[0]).toContain('ACOES.ALTERAR_INFORMACOES');
+    expect(deCliente[1]).toContain('ACOES.DESMARCAR_CLIENTE');
+    expect(await textosDoMenu({ ehCliente: false })).toHaveLength(1);
   });
 
   it('escolher "Não é mais cliente" emite desmarcar', async () => {
@@ -230,7 +373,11 @@ describe('CabecalhoDaPessoa: celular e contato', () => {
   });
 
   it('em 390 px Conversar ocupa a linha e as outras três dividem a de baixo', () => {
-    const w = montar({ pessoa: pessoa() });
+    const w = montar({
+      pessoa: pessoa(),
+      podeConversar: true,
+      naDemonstracao: true,
+    });
     expect(w.get('[data-relacionamentos="conversar"]').classes()).toContain(
       'w-full'
     );
@@ -248,11 +395,14 @@ describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
 
   it('Conversar segue como botão principal, cheio e clicável, mesmo com a faixa de não quer', async () => {
     const normal = mount(CabecalhoDaPessoa, {
-      props: { pessoa: pessoa() },
+      props: { pessoa: pessoa(), podeConversar: true },
       global: { stubs },
     });
     const calada = mount(CabecalhoDaPessoa, {
-      props: { pessoa: pessoa({ opted_out_at: SEGUNDOS }) },
+      props: {
+        pessoa: pessoa({ opted_out_at: SEGUNDOS }),
+        podeConversar: true,
+      },
       global: { stubs },
     });
     [normal, calada].forEach(w => {
@@ -271,11 +421,14 @@ describe('CabecalhoDaPessoa: quem não quer mensagens', () => {
 describe('botões de ação usam o Button da casa', () => {
   it('sem rounded-xl nem min-h-12 nos botões de ação do cabeçalho e das gavetas', () => {
     const pessoaW = mount(CabecalhoDaPessoa, {
-      props: { pessoa: pessoa() },
+      props: { pessoa: pessoa(), podeConversar: true },
       global: { stubs },
     });
     const empresaW = mount(CabecalhoDaEmpresa, {
-      props: { empresa: { id: 1, name: 'Padaria Dornelaz' } },
+      props: {
+        empresa: { id: 1, name: 'Padaria Dornelaz' },
+        podeMandarMensagem: true,
+      },
     });
     const gaveta = mount(GavetaDaEmpresa, {
       props: {
@@ -303,8 +456,10 @@ describe('ficha da empresa: ações', () => {
   const quemPodeReceber = pessoa({ id: 1 });
   const quemPediuSilencio = pessoa({ id: 2, opted_out_at: SEGUNDOS });
 
-  it('o cabeçalho tem Mandar mensagem (cheio) e Alterar (discreto)', async () => {
-    const w = mount(CabecalhoDaEmpresa, { props: { empresa } });
+  it('com `podeMandarMensagem`, o cabeçalho tem Mandar mensagem (cheio) e Alterar (discreto)', async () => {
+    const w = mount(CabecalhoDaEmpresa, {
+      props: { empresa, podeMandarMensagem: true },
+    });
     const botoes = w.findAllComponents(Button);
     const mandar = botoes.find(
       b => b.vm.$attrs['data-relacionamentos'] === 'mandar-mensagem'
@@ -320,8 +475,28 @@ describe('ficha da empresa: ações', () => {
     expect(w.emitted('alterar')).toHaveLength(1);
   });
 
-  it('Mandar mensagem nunca fica desligado, nem explica o motivo no cabeçalho', () => {
+  // #2970 — "Mandar mensagem" ainda só simula: sem a página ligar, não há.
+  it('sem `podeMandarMensagem` sobra só Alterar, discreto', async () => {
     const w = mount(CabecalhoDaEmpresa, { props: { empresa } });
+    expect(w.find('[data-relacionamentos="mandar-mensagem"]').exists()).toBe(
+      false
+    );
+    const grupo = w.get('[role="group"]');
+    expect(grupo.findAll('button')).toHaveLength(1);
+    const alterar = grupo.getComponent(Button);
+    expect(alterar.vm.$attrs).toMatchObject({
+      'data-relacionamentos': 'alterar-empresa',
+      slate: '',
+      faded: '',
+    });
+    await grupo.get('button').trigger('click');
+    expect(w.emitted('alterar')).toHaveLength(1);
+  });
+
+  it('Mandar mensagem nunca fica desligado, nem explica o motivo no cabeçalho', () => {
+    const w = mount(CabecalhoDaEmpresa, {
+      props: { empresa, podeMandarMensagem: true },
+    });
     expect(
       w.get('[data-relacionamentos="mandar-mensagem"]').attributes('disabled')
     ).toBeUndefined();
@@ -399,9 +574,9 @@ describe('ficha da empresa: ações', () => {
     ).toBe(false);
   });
 
-  it('cada pessoa da lista tem o botão de conversar, com nome para o leitor de tela', async () => {
+  it('com `podeConversar`, cada pessoa da lista tem o botão de conversar, com nome para o leitor de tela', async () => {
     const w = mount(SecaoPessoasDaEmpresa, {
-      props: { pessoas: [quemPodeReceber] },
+      props: { pessoas: [quemPodeReceber], podeConversar: true },
     });
     const botao = w.get('[data-relacionamentos="conversar-com-pessoa"]');
     expect(botao.attributes('aria-label')).toContain('CONVERSAR_COM');
@@ -409,6 +584,22 @@ describe('ficha da empresa: ações', () => {
     await botao.trigger('click');
     expect(w.emitted('conversar')[0][0]).toMatchObject({ id: 1 });
     expect(w.emitted('abrir')).toBeUndefined();
+  });
+
+  // #2970 — o ícone de conversar ainda só simula: sem a página ligar, não há,
+  // e a linha não guarda o espaço dele no celular.
+  it('sem `podeConversar` a pessoa da lista não tem o botão de conversar e a linha usa a largura toda', async () => {
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [quemPodeReceber] },
+    });
+    expect(
+      w.find('[data-relacionamentos="conversar-com-pessoa"]').exists()
+    ).toBe(false);
+    expect(w.get('li').findAll('button')).toHaveLength(1);
+    const linha = w.get('[data-relacionamentos="pessoa-da-empresa"]');
+    expect(linha.classes()).not.toContain('pe-14');
+    await linha.trigger('click');
+    expect(w.emitted('abrir')[0]).toEqual([1]);
   });
 
   // #2895 — a ficha traz as primeiras pessoas da empresa. Quando a empresa tem
@@ -438,7 +629,11 @@ describe('CabecalhoDaPessoa: terceira rodada', () => {
     mount(CabecalhoDaPessoa, { props, global: { stubs } });
 
   it('nenhum rótulo de botão do cabeçalho encolhe ou quebra', () => {
-    const w = montar({ pessoa: pessoa() });
+    const w = montar({
+      pessoa: pessoa(),
+      podeConversar: true,
+      naDemonstracao: true,
+    });
     const botoes = [
       w.get('[data-relacionamentos="conversar"]'),
       ...w.get('[data-relacionamentos="acoes-secundarias"]').findAll('button'),
@@ -496,10 +691,17 @@ describe('MenuMais: foco', () => {
   it('fecha quando o foco sai para fora do menu, mas não quando anda dentro dele', async () => {
     const fora = document.createElement('button');
     document.body.appendChild(fora);
-    const w = mount(MenuMais, { attachTo: document.body, global: { stubs } });
+    // #2970 — fora da demonstração o menu só existe com dois itens: é o de
+    // quem é cliente (Alterar informações e Não é mais cliente).
+    const w = mount(MenuMais, {
+      attachTo: document.body,
+      props: { ehCliente: true },
+      global: { stubs },
+    });
     const gatilho = w.get('[data-relacionamentos="mais-acoes"]');
     await gatilho.trigger('click');
     const itens = w.findAll('.n-dropdown-item button');
+    expect(itens).toHaveLength(2);
     await itens[0].trigger('focusout', { relatedTarget: itens[1].element });
     expect(gatilho.attributes('aria-expanded')).toBe('true');
     await itens[0].trigger('focusout', { relatedTarget: fora });
@@ -641,6 +843,7 @@ describe('SecaoConversas', () => {
       props: {
         conversas: [1, 2, 3, 4, 5].map(id => conversa(id)),
         agora: AGORA,
+        podeVerTodas: true,
       },
     });
     expect(w.findAll('li')).toHaveLength(3);
@@ -651,12 +854,24 @@ describe('SecaoConversas', () => {
     expect(w.text()).toContain('CONVERSAS.VER_TODAS');
   });
 
-  it('Ver todas emite', async () => {
+  it('com `podeVerTodas`, Ver todas emite', async () => {
     const w = mount(SecaoConversas, {
-      props: { conversas: [conversa(1)], agora: AGORA },
+      props: { conversas: [conversa(1)], agora: AGORA, podeVerTodas: true },
     });
     await w.get('button').trigger('click');
     expect(w.emitted('verTodas')).toHaveLength(1);
+  });
+
+  // #2970 — "Ver todas" ainda só avisa: sem a página ligar, não há. O título e
+  // as conversas continuam.
+  it('sem `podeVerTodas` não tem Ver todas, e a seção segue com título e conversas', () => {
+    const w = mount(SecaoConversas, {
+      props: { conversas: [conversa(1), conversa(2)], agora: AGORA },
+    });
+    expect(w.find('button').exists()).toBe(false);
+    expect(w.text()).not.toContain('VER_TODAS');
+    expect(w.get('h2').text()).toContain('CONVERSAS.TITULO');
+    expect(w.findAll('li')).toHaveLength(2);
   });
 
   it('vazio dentro da seção: só a frase, sem cartão interno nem botão', () => {
@@ -1018,7 +1233,10 @@ describe('ficha da empresa: celular', () => {
 
   it('na lista de pessoas o selo fica ao lado do nome e o e-mail ganha a linha toda', () => {
     const w = mount(SecaoPessoasDaEmpresa, {
-      props: { pessoas: [pessoa({ contact_type: 'customer' })] },
+      props: {
+        pessoas: [pessoa({ contact_type: 'customer' })],
+        podeConversar: true,
+      },
     });
     const email = w.get('[data-relacionamentos="email-da-pessoa"]');
     // O e-mail começa na mesma coluna do nome, nunca debaixo do avatar.
@@ -1035,6 +1253,9 @@ describe('ficha da empresa: celular', () => {
     expect(
       w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
     ).toContain('absolute');
+    expect(linha.classes()).toEqual(
+      expect.arrayContaining(['pe-14', 'md:pe-2'])
+    );
     // Celular: o e-mail inteiro (quebra se preciso); md+: uma linha com reticências.
     expect(email.classes()).toEqual(
       expect.arrayContaining(['break-words', 'md:truncate'])
@@ -1081,7 +1302,9 @@ describe('SecaoPessoasDaEmpresa: quem não quer mensagens', () => {
   });
 
   it('o botão de conversar tem alvo de 44 px e não encolhe', () => {
-    const w = mount(SecaoPessoasDaEmpresa, { props: { pessoas: [pessoa()] } });
+    const w = mount(SecaoPessoasDaEmpresa, {
+      props: { pessoas: [pessoa()], podeConversar: true },
+    });
     expect(
       w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
     ).toEqual(expect.arrayContaining(['size-11', 'shrink-0']));
@@ -1322,7 +1545,7 @@ describe('parte da ficha que não carregou', () => {
 });
 
 describe('quem só pode ver não tem os botões de escrita', () => {
-  it('cabeçalho da pessoa: sem Marcar como cliente e sem "Alterar informações" no ⋯', async () => {
+  it('cabeçalho da pessoa: sem Marcar como cliente, sem "⋯" e sem "Alterar informações"', () => {
     const w = mount(CabecalhoDaPessoa, {
       props: { pessoa: pessoa(), podeEditar: false },
       global: { stubs },
@@ -1330,11 +1553,11 @@ describe('quem só pode ver não tem os botões de escrita', () => {
     expect(w.find('[data-relacionamentos="marcar-cliente"]').exists()).toBe(
       false
     );
-    await w.get('[data-relacionamentos="mais-acoes"]').trigger('click');
-    const itens = w.findAll('.n-dropdown-item button');
-    expect(itens).toHaveLength(3);
-    await itens[0].trigger('click');
-    expect(w.emitted('maisAcao')[0]).toEqual(['juntar']);
+    expect(w.find('[data-relacionamentos="mais-acoes"]').exists()).toBe(false);
+    expect(
+      w.find('[data-relacionamentos="alterar-informacoes"]').exists()
+    ).toBe(false);
+    expect(w.text()).not.toContain('ALTERAR_INFORMACOES');
   });
 
   it('cabeçalho da pessoa: quem é cliente continua com o selo', () => {
@@ -1348,7 +1571,7 @@ describe('quem só pode ver não tem os botões de escrita', () => {
     expect(w.find('[data-selo="cliente"]').exists()).toBe(true);
   });
 
-  it('Novo card some para quem não pode criar card, e as duas ações que sobram dividem a linha', () => {
+  it('Novo card some para quem não pode criar card, e o resto do cabeçalho fica', () => {
     const montar = podeCriarCards =>
       mount(CabecalhoDaPessoa, {
         props: { pessoa: pessoa(), podeCriarCards },
@@ -1356,14 +1579,14 @@ describe('quem só pode ver não tem os botões de escrita', () => {
       });
     const com = montar(true);
     expect(com.find('[data-relacionamentos="novo-card"]').exists()).toBe(true);
-    expect(
-      com.get('[data-relacionamentos="acoes-secundarias"]').classes()
-    ).toContain('grid-cols-[1fr_1fr_auto]');
     const sem = montar(false);
     expect(sem.find('[data-relacionamentos="novo-card"]').exists()).toBe(false);
     expect(
-      sem.get('[data-relacionamentos="acoes-secundarias"]').classes()
-    ).toContain('grid-cols-[1fr_auto]');
+      sem.find('[data-relacionamentos="alterar-informacoes"]').exists()
+    ).toBe(true);
+    expect(sem.find('[data-relacionamentos="marcar-cliente"]').exists()).toBe(
+      true
+    );
   });
 
   it('a faixa de quem não quer mensagens fica sem Liberar', () => {
@@ -1443,9 +1666,13 @@ describe('quem só pode ver não tem os botões de escrita', () => {
     expect(w.emitted('tentar')[0]).toEqual(['conversas']);
   });
 
-  it('cabeçalho da empresa: sem Alterar, com Mandar mensagem', () => {
+  it('cabeçalho da empresa: sem Alterar, com Mandar mensagem quando a página liga', () => {
     const w = mount(CabecalhoDaEmpresa, {
-      props: { empresa: { id: 1, name: 'Padaria' }, podeEditar: false },
+      props: {
+        empresa: { id: 1, name: 'Padaria' },
+        podeEditar: false,
+        podeMandarMensagem: true,
+      },
     });
     expect(w.find('[data-relacionamentos="alterar-empresa"]').exists()).toBe(
       false
@@ -1453,5 +1680,16 @@ describe('quem só pode ver não tem os botões de escrita', () => {
     expect(w.find('[data-relacionamentos="mandar-mensagem"]').exists()).toBe(
       true
     );
+  });
+
+  // #2970 — fora da demonstração "Mandar mensagem" não existe: quem só pode ver
+  // fica sem botão nenhum, e o grupo de ações não sobra vazio.
+  it('cabeçalho da empresa: sem Alterar e sem Mandar mensagem, não há grupo de ações', () => {
+    const w = mount(CabecalhoDaEmpresa, {
+      props: { empresa: { id: 1, name: 'Padaria' }, podeEditar: false },
+    });
+    expect(w.find('[role="group"]').exists()).toBe(false);
+    expect(w.find('button').exists()).toBe(false);
+    expect(w.get('h1').text()).toBe('Padaria');
   });
 });

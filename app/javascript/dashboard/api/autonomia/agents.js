@@ -76,6 +76,14 @@ class AutonomiaAgentsAPI extends ApiClient {
     });
   }
 
+  // #2881 — the owner changes the lists of the ready-made model of a draft that
+  // was reopened (no Builder conversation on screen). Same body and same errors
+  // as the conversation's PATCH (buildThreads.mudarModeloPronto); the answer is
+  // the agent itself, with the new `modelo_pronto`.
+  mudarModeloPronto(agentId, listas) {
+    return axios.patch(`${this.url}/${agentId}/modelo_pronto`, listas);
+  }
+
   getTools(agentId) {
     return axios.get(`${this.url}/${agentId}/tools`);
   }

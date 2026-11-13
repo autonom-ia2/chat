@@ -85,6 +85,14 @@ const podeEtiquetar = computed(
   () => Boolean(demo) || permissoes.podeEtiquetar.value
 );
 const podeApagar = computed(() => Boolean(demo) || permissoes.podeApagar.value);
+// #2970 — "Conversar" da linha e "Mandar mensagem" da barra ainda só simulam:
+// aparecem só na demonstração. Fora dela, quem não pode nenhuma das três ações
+// de verdade não tem o que fazer com gente marcada, e a lista não oferece a
+// caixa de marcar (sem ela não há "Marcar todas" nem barra).
+const naDemonstracao = Boolean(demo);
+const podeMarcar = computed(
+  () => podeCriarCards.value || podeEtiquetar.value || podeApagar.value
+);
 // "Trazer minha lista" é de quem pode importar contatos, e só aparece onde há
 // para onde levar (#2947).
 const podeTrazer = computed(
@@ -189,6 +197,7 @@ const abrirPessoa = ({ id }) =>
 const abrirEmpresa = ({ id }) =>
   router.push({ name: 'relacionamentos_empresa', params: { companyId: id } });
 // Simulado: a conversa e a campanha reais ainda não recebem a pessoa de fora.
+// Só a demonstração chega aqui (#2970).
 const conversar = ({ name }) =>
   useAlert(t('RELACIONAMENTOS.LISTA.LINHA.ABRINDO_CONVERSA', { nome: name }));
 const abrirCampanha = quantas =>
@@ -369,6 +378,8 @@ onMounted(lista.iniciar);
                       :key="pessoa.id"
                       :pessoa="pessoa"
                       :marcada="marcados.ehMarcado(pessoa.id)"
+                      :pode-marcar="podeMarcar"
+                      :pode-conversar="naDemonstracao"
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
@@ -398,6 +409,7 @@ onMounted(lista.iniciar);
             class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
             :conta="contaDeMarcados"
+            :pode-mandar-mensagem="naDemonstracao"
             :pode-criar-cards="podeCriarCards"
             :pode-etiquetar="podeEtiquetar"
             :pode-apagar="podeApagar"
@@ -419,7 +431,9 @@ onMounted(lista.iniciar);
       @aplicar="aplicarFiltros"
       @limpar="limparFiltros"
     />
+    <!-- #2970: sem "Mandar mensagem" fora da demonstração, nada abre isto. -->
     <DialogoMandarMensagem
+      v-if="naDemonstracao"
       ref="dialogoDeMensagem"
       :pessoas="marcados.pessoas.value"
       @continuar="abrirCampanha"

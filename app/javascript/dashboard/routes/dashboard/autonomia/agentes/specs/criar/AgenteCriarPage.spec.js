@@ -33,12 +33,14 @@ vi.mock('@vueuse/core', async original => ({
 }));
 
 const alerta = vi.hoisted(() => vi.fn());
-const permissao = vi.hoisted(() => ({ gerenciar: true }));
+// `ferramentas` (#2881): a chave "Ferramentas dos agentes", quando o teste a separa da permissão de gerenciar.
+const permissao = vi.hoisted(() => ({ gerenciar: true, ferramentas: null }));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
   return {
     useCanManage: () => computed(() => permissao.gerenciar),
-    usePermissionGranted: () => computed(() => permissao.gerenciar),
+    usePermissionGranted: () =>
+      computed(() => permissao.ferramentas ?? permissao.gerenciar),
   };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
@@ -2250,6 +2252,374 @@ describe('AgenteCriarPage', () => {
         'AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_COPILOTO'
       );
       expect(wrapper.find('[data-ajuda-criacao]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+  });
+
+  // #2881 — agente pronto por ramo de seguro (`?ramo=<chave>`): a tela faz a primeira pergunta e a conversa abre com a
+  // resposta, levando `modelo`. No Confira entra o que o agente já traz, com as listas do servidor; cada mudança grava
+  // a lista inteira. Rascunho reaberto (sem conversa) lê o modelo do próprio agente e grava por ele.
+  describe('Agente pronto por ramo de seguro (#2881)', () => {
+    const MODELO = {
+      chave: 'seguro_garantia',
+      ramo: 'Seguro garantia',
+      nome_padrao: 'Assistente de Seguro Garantia',
+      seguradoras_sugeridas: 'Junto Seguros e Pottencial',
+      perguntas: [
+        { id: 'p1', texto: 'Qual o CNPJ da empresa?', tirada: false },
+        { id: 'p2', texto: 'Qual o valor da garantia?', tirada: false },
+      ],
+      documentos: [{ id: 'd1', texto: 'Edital ou contrato.', tirada: false }],
+      ferramentas: [
+        { fonte: 'cnpj', usar_quando: 'Use quando vier o CNPJ da empresa.' },
+        { fonte: 'cep', usar_quando: 'Use quando vier o CEP da obra.' },
+      ],
+      tambem: [{ fonte: 'cidades', usar_quando: 'Use quando vier a cidade.' }],
+      premium: ['certidoes_empresa'],
+      teste: ['O que é seguro garantia?', 'Quanto custa?'],
+    };
+    const fontesDeAntes = vitrine.fontes.value;
+    const ligarConstrutor = () => {
+      store.state['accounts/getAccount'] = () => ({
+        id: 1,
+        name: 'Loja da Ana',
+        features: {
+          agente_ferramentas_prontas: true,
+          agente_ferramentas_prontas_vitrine: true,
+          agente_ferramentas_prontas_construtor: true,
+        },
+      });
+    };
+    const modeloDaConversa = (modelo = MODELO) => {
+      store.state['autonomiaBuildThreads/getModeloPronto'] = modelo;
+    };
+    // A conversa de um ramo já fechada, com o modelo que o servidor mandou.
+    const noConfira = async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_garantia' } });
+      ligarConstrutor();
+      modeloDaConversa();
+      conversaFecha();
+      await flushPromises();
+      return wrapper;
+    };
+    const abrirLinha = async (wrapper, linha) => {
+      await wrapper.get(`[data-linha="${linha}"] button`).trigger('click');
+      return corpo().querySelector('[role="dialog"]');
+    };
+
+    beforeEach(() => {
+      vitrine.fontes.value = ['cnpj', 'cep', 'cidades'];
+      vitrine.carregar.mockReset().mockResolvedValue();
+      vitrine.incluir.mockReset().mockResolvedValue({});
+      vitrine.tem.mockReset().mockReturnValue(false);
+      prontasApi.dispensar.mockReset().mockResolvedValue({});
+    });
+    afterEach(() => {
+      vitrine.fontes.value = fontesDeAntes;
+      permissao.ferramentas = null;
+    });
+
+    it('the screen asks the first question itself, with the example of the line, and opens nothing on the server', async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_garantia' } });
+
+      expect(ordem).not.toContain('autonomiaBuildThreads/start');
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.RAMOS.CRIAR.TITULO'
+      );
+      expect(wrapper.get('[data-fala="assistente"]').text()).toContain(
+        'AGENTS.JORNADA.RAMOS.CRIAR.PERGUNTA_EMPRESA'
+      );
+      expect(
+        secaoDaConversa(wrapper).get('textarea').attributes('placeholder')
+      ).toBe('AGENTS.JORNADA.RAMOS.CRIAR.EXEMPLO_EMPRESA');
+      const exemplo = wrapper.get('[data-exemplo]');
+      expect(exemplo.text()).toContain(
+        'AGENTS.JORNADA.RAMOS.ITENS.GARANTIA.CLIENTE'
+      );
+      expect(exemplo.find('[data-ja-sabe]').exists()).toBe(true);
+      expect(wrapper.find('[data-ideias]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+
+    it('the first answer opens the conversation as a sales agent carrying `modelo`', async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_garantia' } });
+      const secao = secaoDaConversa(wrapper);
+
+      await secao.get('textarea').setValue('Horizonte Seguros');
+      await secao.get('form').trigger('submit');
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/start',
+        {
+          type: 'sdr',
+          actuation: 'external',
+          with_knowledge: true,
+          modelo: 'seguro_garantia',
+          message: 'Horizonte Seguros',
+        }
+      );
+      wrapper.unmount();
+    });
+
+    it('once the draft exists the query keeps only ?agente=, and the block of the line still comes from the conversation', async () => {
+      const wrapper = await noConfira();
+
+      expect(rota.atual.query.agente).toBe('90');
+      expect(rota.atual.query.ramo).toBeUndefined();
+      expect(wrapper.find('[data-pronto-do-ramo]').exists()).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('on the second question, offers the insurers of the line and "decide later"', async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_garantia' } });
+      store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: 90 };
+      modeloDaConversa();
+      store.state['autonomiaBuildThreads/getMessages'] = [
+        { role: 'user', content: 'Horizonte Seguros' },
+        {
+          role: 'assistant',
+          content: 'Com quais seguradoras vocês trabalham?',
+        },
+      ];
+      await flushPromises();
+
+      expect(
+        wrapper
+          .get('[data-ideias]')
+          .findAll('button')
+          .map(botao => botao.text())
+      ).toEqual([
+        'Junto Seguros e Pottencial',
+        'AGENTS.JORNADA.RAMOS.CRIAR.DECIDO_DEPOIS',
+      ]);
+      wrapper.unmount();
+    });
+
+    it('Confira shows what the agent brings instead of the generic tools box, and tests with the questions of the line', async () => {
+      const wrapper = await noConfira();
+
+      expect(wrapper.find('[data-ja-vem]').exists()).toBe(false);
+      const bloco = wrapper.get('[data-pronto-do-ramo]');
+      expect(
+        bloco
+          .findAll('[data-linha]')
+          .map(linha => linha.attributes('data-linha'))
+      ).toEqual(['perguntas', 'documentos', 'ferramentas']);
+      expect(
+        wrapper
+          .get('[data-perguntas]')
+          .findAll('button')
+          .map(botao => botao.text())
+      ).toEqual(MODELO.teste);
+      wrapper.unmount();
+    });
+
+    it('removing a question patches the conversation with the whole list, and the screen follows the server answer', async () => {
+      const wrapper = await noConfira();
+      const gaveta = await abrirLinha(wrapper, 'perguntas');
+
+      gaveta.querySelector('[data-item="p1"] [data-tirar-item]').click();
+      await flushPromises();
+
+      const tirada = [
+        { ...MODELO.perguntas[0], tirada: true },
+        MODELO.perguntas[1],
+      ];
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/mudarModeloPronto',
+        { threadId: 7, listas: { perguntas: tirada } }
+      );
+      // Só o servidor muda a tela: antes da resposta, a lista é a de antes.
+      expect(
+        gaveta.querySelector('[data-item="p1"] [data-texto-do-item]').className
+      ).not.toContain('line-through');
+      modeloDaConversa({ ...MODELO, perguntas: tirada });
+      await flushPromises();
+      expect(
+        gaveta.querySelector('[data-item="p1"] [data-texto-do-item]').className
+      ).toContain('line-through');
+      wrapper.unmount();
+    });
+
+    it('a refused change warns and leaves the list as the server has it', async () => {
+      const wrapper = await noConfira();
+      falharAcao(
+        'autonomiaBuildThreads/mudarModeloPronto',
+        Object.assign(new Error('422'), {
+          response: { status: 422, data: { motivo: 'texto_invalido' } },
+        })
+      );
+      const gaveta = await abrirLinha(wrapper, 'documentos');
+
+      gaveta.querySelector('[data-item="d1"] [data-tirar-item]').click();
+      await flushPromises();
+
+      expect(alerta).toHaveBeenCalledWith(
+        'AGENTS.JORNADA.RAMOS.CONFIRA.ERRO_AO_MUDAR'
+      );
+      expect(
+        gaveta.querySelector('[data-item="d1"] [data-texto-do-item]').className
+      ).not.toContain('line-through');
+      expect(
+        gaveta
+          .querySelector('[data-item="d1"] [data-tirar-item]')
+          .getAttribute('aria-disabled')
+      ).toBeNull();
+      wrapper.unmount();
+    });
+
+    it('the tools drawer changes the "comes with" list: remove, change the sentence and add the "also fits"', async () => {
+      const wrapper = await noConfira();
+      const gaveta = await abrirLinha(wrapper, 'ferramentas');
+
+      expect(gaveta.querySelectorAll('[data-ferramenta]')).toHaveLength(2);
+      gaveta
+        .querySelector('[data-ferramenta="cnpj"] [data-tirar-ferramenta]')
+        .click();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/mudarModeloPronto',
+        { threadId: 7, listas: { ferramentas: [MODELO.ferramentas[1]] } }
+      );
+
+      gaveta.querySelector('[data-incluir-tambem]').click();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/mudarModeloPronto',
+        {
+          threadId: 7,
+          listas: { ferramentas: [...MODELO.ferramentas, ...MODELO.tambem] },
+        }
+      );
+      expect(
+        gaveta.querySelector('[data-quer-tambem] a').getAttribute('href')
+      ).toBe('/app/autonomia_agents_vitrine');
+      wrapper.unmount();
+    });
+
+    it('without the tools key, the tools are only read and no change carries the tools list', async () => {
+      permissao.ferramentas = false;
+      const wrapper = await noConfira();
+      const gaveta = await abrirLinha(wrapper, 'ferramentas');
+
+      expect(gaveta.querySelectorAll('[data-quando]')).toHaveLength(2);
+      expect(gaveta.querySelector('[data-tirar-ferramenta]')).toBeNull();
+      expect(gaveta.querySelector('[data-alterar-quando]')).toBeNull();
+      expect(gaveta.querySelector('[data-incluir-tambem]')).toBeNull();
+      gaveta.querySelector('[data-fechar]').click();
+      await flushPromises();
+
+      const perguntas = await abrirLinha(wrapper, 'perguntas');
+      perguntas.querySelector('[data-item="p1"] [data-tirar-item]').click();
+      await flushPromises();
+
+      const mudancas = store.dispatch.mock.calls.filter(
+        ([acao]) => acao === 'autonomiaBuildThreads/mudarModeloPronto'
+      );
+      expect(mudancas).toHaveLength(1);
+      expect(Object.keys(mudancas[0][1].listas)).toEqual(['perguntas']);
+      wrapper.unmount();
+    });
+
+    it('"Start" includes each tool with the sentence of the line', async () => {
+      const wrapper = await noConfira();
+
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(vitrine.incluir).toHaveBeenCalledTimes(2);
+      expect(vitrine.incluir).toHaveBeenCalledWith({
+        fonte: 'cnpj',
+        agenteId: 90,
+        usarQuando: 'Use quando vier o CNPJ da empresa.',
+      });
+      expect(vitrine.incluir).toHaveBeenCalledWith({
+        fonte: 'cep',
+        agenteId: 90,
+        usarQuando: 'Use quando vier o CEP da obra.',
+      });
+      expect(prontasApi.dispensar).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('a reopened draft (only ?agente=, no conversation) reads the model from the agent and saves through the agent', async () => {
+      prepararStore({ agente: { ...AGENTE, modelo_pronto: MODELO } });
+      ligarConstrutor();
+      const wrapper = await montar({ query: { agente: '90' } });
+
+      expect(ordem).not.toContain('autonomiaBuildThreads/start');
+      expect(wrapper.get('h1').text()).toBe(
+        'AGENTS.JORNADA.RAMOS.CRIAR.TITULO'
+      );
+      expect(wrapper.find('[data-ja-vem]').exists()).toBe(false);
+      expect(
+        wrapper
+          .get('[data-perguntas]')
+          .findAll('button')
+          .map(botao => botao.text())
+      ).toEqual(MODELO.teste);
+
+      const gaveta = await abrirLinha(wrapper, 'perguntas');
+      gaveta.querySelector('[data-item="p2"] [data-tirar-item]').click();
+      await flushPromises();
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaAgents/mudarModeloPronto',
+        {
+          agentId: 90,
+          listas: {
+            perguntas: [
+              MODELO.perguntas[0],
+              { ...MODELO.perguntas[1], tirada: true },
+            ],
+          },
+        }
+      );
+      expect(ordem).not.toContain('autonomiaBuildThreads/mudarModeloPronto');
+      wrapper.unmount();
+    });
+
+    it('a reopened draft also starts with the sentences of the line', async () => {
+      prepararStore({ agente: { ...AGENTE, modelo_pronto: MODELO } });
+      ligarConstrutor();
+      const wrapper = await montar({ query: { agente: '90' } });
+
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(vitrine.incluir).toHaveBeenCalledWith({
+        fonte: 'cnpj',
+        agenteId: 90,
+        usarQuando: 'Use quando vier o CNPJ da empresa.',
+      });
+      wrapper.unmount();
+    });
+
+    it('when the server opens the conversation without the model, the creation goes on as any sales agent', async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_garantia' } });
+      ligarConstrutor();
+      modeloDaConversa(null);
+      store.state['autonomiaBuildThreads/getThreadState'] = {
+        ferramentas_sugeridas: ['cep'],
+      };
+      conversaFecha();
+      await flushPromises();
+
+      expect(wrapper.find('[data-pronto-do-ramo]').exists()).toBe(false);
+      expect(wrapper.findAll('[data-ja-vem-item]')).toHaveLength(1);
+      expect(wrapper.get('h1').text()).toBe('AGENTS.JORNADA.CRIAR.TITULO');
+      wrapper.unmount();
+    });
+
+    it('an unknown key in ?ramo= is not a line of insurance: the Builder opens as always', async () => {
+      const wrapper = await montar({ query: { ramo: 'seguro_de_vida' } });
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/start',
+        { type: 'custom', actuation: 'external', with_knowledge: true }
+      );
+      expect(wrapper.find('[data-ja-sabe]').exists()).toBe(false);
       wrapper.unmount();
     });
   });

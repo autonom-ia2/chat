@@ -15,6 +15,7 @@ import { useAgenteIaPorCaixaNaEntrada } from '../composables/useAgenteIaPorCaixa
 // a criação só monta depois dela, porque lê a URL uma vez, ao montar, e o "Voltar" do navegador na
 // criação devolve a URL sem escolha, que mostra a página de novo.
 // #1433: `?papel=area` (agente da equipe) também é uma escolha.
+// #2881: `?ramo=<chave>` (agente pronto por ramo de seguro) também.
 const AgenteCriarPage = defineAsyncComponent(
   () => import('../pages/AgenteCriarPage.vue')
 );
@@ -39,6 +40,7 @@ const semEscolha = query =>
   !query.agente &&
   !query.atuacao &&
   !query.papel &&
+  !query.ramo &&
   !(porCaixa && query.conectar);
 const conectando = computed(
   () => jornadaAtiva && porCaixa && route.query.conectar === 'outro'

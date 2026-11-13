@@ -25,6 +25,11 @@ vi.mock('dashboard/composables/store', async () => {
   return { useMapGetter: nome => computed(() => getters[nome]()) };
 });
 vi.mock('vue-router', () => ({ useRouter: () => router }));
+// #2881: quais agentes prontos por ramo a conta pode usar vem do servidor. Sem resposta combinada, nenhum.
+const jornada = vi.hoisted(() => ({
+  modelosDeRamo: vi.fn(() => Promise.resolve({ data: { modelos: [] } })),
+}));
+vi.mock('dashboard/api/autonomia/jornada', () => ({ default: jornada }));
 
 const montar = () => mount(AgenteEscolherPage);
 
@@ -118,6 +123,124 @@ describe('AgenteEscolherPage', () => {
         expect(wrapper.get(seletor).classes()).toContain('min-h-11');
       }
     );
+  });
+});
+
+// #2881 — "Prontos para o seu ramo": quem decide quais cartões aparecem é o servidor. Lista vazia ou leitura que
+// falhou: a página fica exatamente como sempre foi.
+describe('AgenteEscolherPage com agentes prontos por ramo (#2881)', () => {
+  const comRamos = async modelos => {
+    jornada.modelosDeRamo.mockResolvedValueOnce({ data: { modelos } });
+    const wrapper = montar();
+    await flushPromises();
+    return wrapper;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    estado.podeGerenciar = true;
+    conta.fase2 = false;
+  });
+
+  it('shows the row first, only with the keys the server sent, and keeps the three general templates below', async () => {
+    const wrapper = await comRamos(['transporte_carga', 'seguro_de_vida']);
+    const fileira = wrapper.get('[data-heroi] [data-ramos]');
+
+    expect(jornada.modelosDeRamo).toHaveBeenCalledTimes(1);
+    expect(fileira.get('h2').text()).toBe('AGENTS.JORNADA.RAMOS.TITULO');
+    const cartoes = fileira.findAll('[data-ramo]');
+    expect(cartoes).toHaveLength(1);
+    expect(cartoes[0].get('h3').text()).toBe(
+      'AGENTS.JORNADA.RAMOS.ITENS.CARGA.TITULO'
+    );
+    expect(wrapper.get('[data-heroi]').text()).toContain(
+      'AGENTS.JORNADA.RAMOS.TEXTO_DA_PAGINA'
+    );
+    expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+    expect(wrapper.find('[data-do-meu-jeito]').exists()).toBe(true);
+  });
+
+  it('shows the three cards, in the order of the screen, when the server sends the three keys', async () => {
+    const wrapper = await comRamos([
+      'transporte_carga',
+      'seguro_garantia',
+      'seguro_auto',
+    ]);
+
+    expect(
+      wrapper.findAll('[data-ramo] h3').map(titulo => titulo.text())
+    ).toEqual([
+      'AGENTS.JORNADA.RAMOS.ITENS.AUTO.TITULO',
+      'AGENTS.JORNADA.RAMOS.ITENS.GARANTIA.TITULO',
+      'AGENTS.JORNADA.RAMOS.ITENS.CARGA.TITULO',
+    ]);
+  });
+
+  it('with an empty list, the page is the one of today', async () => {
+    const wrapper = await comRamos([]);
+
+    expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+    expect(wrapper.find('[data-ramo]').exists()).toBe(false);
+    expect(wrapper.get('[data-heroi]').text()).toContain(
+      'AGENTS.JORNADA.ESCOLHER.TEXTO'
+    );
+    expect(wrapper.html()).not.toContain('AGENTS.JORNADA.RAMOS');
+    expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+  });
+
+  it('when the read fails, the page is the one of today and the failure is logged, not swallowed', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    jornada.modelosDeRamo.mockRejectedValueOnce(
+      Object.assign(new Error('500'), { response: { status: 500 } })
+    );
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-usar]')).toHaveLength(3);
+    expect(wrapper.get('[data-heroi]').text()).toContain(
+      'AGENTS.JORNADA.ESCOLHER.TEXTO'
+    );
+    expect(aviso).toHaveBeenCalledWith('[agentes] ramos: leitura falhou', 500);
+    aviso.mockRestore();
+  });
+
+  it('an answer that is not a list shows no card', async () => {
+    jornada.modelosDeRamo.mockResolvedValueOnce({ data: { modelos: 'tudo' } });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-ramos]').exists()).toBe(false);
+  });
+
+  it('a card goes to the creation with ?ramo=, and a second click while it starts is ignored', async () => {
+    const wrapper = await comRamos(['seguro_auto', 'seguro_garantia']);
+    const usar = wrapper.findAll('[data-usar-ramo]');
+
+    await usar[1].trigger('click');
+    await usar[0].trigger('click');
+    await wrapper.findAll('[data-usar]')[0].trigger('click');
+
+    expect(wrapper.emitted('escolher')).toEqual([
+      [{ ramo: 'seguro_garantia' }],
+    ]);
+    expect(usar[0].attributes('disabled')).toBeDefined();
+    expect(usar[1].attributes('aria-busy')).toBe('true');
+  });
+
+  it('offers no "use this one" on the cards to a view only seat', async () => {
+    estado.podeGerenciar = false;
+    const wrapper = await comRamos(['seguro_auto']);
+
+    expect(wrapper.findAll('[data-ramo]')).toHaveLength(1);
+    expect(wrapper.find('[data-usar-ramo]').exists()).toBe(false);
+  });
+
+  it('keeps the card button at least 44 px tall and never renders a native select', async () => {
+    const wrapper = await comRamos(['seguro_auto']);
+
+    expect(wrapper.find('select').exists()).toBe(false);
+    expect(wrapper.get('[data-usar-ramo]').classes()).toContain('min-h-12');
   });
 });
 
