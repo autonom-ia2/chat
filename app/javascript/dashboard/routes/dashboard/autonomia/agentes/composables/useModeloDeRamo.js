@@ -1,16 +1,17 @@
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { modeloDeRamo } from '../constants/modelosDeRamo';
 import { oferecida } from '../vitrine/catalogo';
+import { useMudancaDasListas } from './useMudancaDasListas';
 
 // #2881 — o agente pronto por ramo de seguro na página "Criar agente" (AgenteCriarPage), fora dela para a página não
 // crescer. O ramo entra por `?ramo=<chave>` (`pedido`, lido uma vez pela página) e vale de dois jeitos:
 // - ANTES de a conversa existir, a tela fala primeiro: a pergunta do nome da corretora, o exemplo do campo e a
 //   conversa de exemplo ao lado são os do cartão do ramo. A conversa só abre no servidor com a primeira resposta.
 // - DEPOIS, quem manda é o servidor: o `modelo_pronto` da conversa (store autonomiaBuildThreads) diz se há modelo e
-//   traz o nome do ramo, as listas, as ferramentas com a frase "Use quando" e as perguntas de teste. A query já não
+//   traz a chave do ramo, as listas, as ferramentas com a frase "Use quando" e as perguntas de teste. A query já não
 //   tem o ramo (só `?agente=`), e conta sem direito ao modelo recebe nulo: a tela segue como a de qualquer agente.
 // - RASCUNHO REABERTO (`?agente=`, sem conversa na tela): o mesmo `modelo_pronto` vem no próprio agente, e as
 //   mudanças são gravadas por ele. Havendo conversa com modelo, vale a da conversa.
@@ -38,11 +39,12 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     ativo.value ? modeloDeRamo(modelo.value?.chave || pedido) : null
   );
   const textoDoCartao = campo => t(`${NS}.ITENS.${cartao.value.i18n}.${campo}`);
-  // O nome do ramo é o do servidor assim que ele chega; antes, o título do cartão.
-  const ramo = computed(() => {
-    if (modelo.value?.ramo) return modelo.value.ramo;
-    return cartao.value ? textoDoCartao('TITULO') : '';
-  });
+  // Um nome só na tela, do começo ao fim: o título do cartão, que é traduzido. O `ramo` do servidor é o nome por
+  // extenso que ele usa no que escreve para a IA ("Seguro de automóvel"); na tela só vale para um ramo que ela ainda
+  // não conhece (sem cartão).
+  const ramo = computed(() =>
+    cartao.value ? textoDoCartao('TITULO') : modelo.value?.ramo || ''
+  );
 
   const falaDeAbertura = computed(() =>
     t('AGENTS.JORNADA.RAMOS.CRIAR.PERGUNTA_EMPRESA', { ramo: ramo.value })
@@ -85,6 +87,11 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
   const perguntasDeTeste = lista('teste');
   const ferramentas = soOferecidas('ferramentas');
   const tambem = soOferecidas('tambem');
+  // As do "Já vem com" do modelo que o dono tirou (o servidor as devolve no "Também combina", junto com as que nunca
+  // entraram): no "Começar" viram "Agora não".
+  const tiradas = computed(() =>
+    (modelo.value?.tiradas || []).filter(oferecida)
+  );
   const pagas = computed(() => (modelo.value?.premium || []).filter(oferecida));
   // A frase "Use quando" de cada ferramenta do ramo, para o "Começar" mandar junto ao incluir.
   const frases = computed(() =>
@@ -96,10 +103,6 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     )
   );
 
-  const gravando = ref({});
-  const marcar = (campo, valor) => {
-    gravando.value = { ...gravando.value, [campo]: valor };
-  };
   const avisoDoErro = erro =>
     erro?.response?.data?.motivo === JA_COMECOU
       ? t('AGENTS.JORNADA.RAMOS.CONFIRA.ERRO_JA_COMECOU')
@@ -117,28 +120,12 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
           listas,
         });
 
-  // Um pedido de cada vez no modelo inteiro: cada resposta traz o modelo todo, e duas respostas fora de ordem
-  // deixariam na tela uma lista velha (a mudança seguinte nela apagaria a que o dono acabou de fazer). A mudança de
-  // outra lista espera a vez.
-  let fila = Promise.resolve();
-  const naVez = tarefa => {
-    const vez = fila.then(tarefa);
-    fila = vez.catch(() => {});
-    return vez;
-  };
-
-  // `campo`: perguntas, documentos ou ferramentas. `itens`: a lista inteira nova.
-  const mudar = async (campo, itens) => {
-    if (gravando.value[campo] || !modelo.value) return;
-    marcar(campo, true);
-    try {
-      await naVez(() => gravar({ [campo]: itens }));
-    } catch (erro) {
-      useAlert(avisoDoErro(erro));
-    } finally {
-      marcar(campo, false);
-    }
-  };
+  // Um pedido por lista de cada vez, e um de cada vez no modelo inteiro (useMudancaDasListas).
+  const { gravando, mudar } = useMudancaDasListas({
+    gravar,
+    pode: () => Boolean(modelo.value),
+    aoFalhar: erro => useAlert(avisoDoErro(erro)),
+  });
 
   return {
     ativo,
@@ -153,6 +140,7 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     perguntasDeTeste,
     ferramentas,
     tambem,
+    tiradas,
     pagas,
     frases,
     gravando,

@@ -65,6 +65,9 @@ const abrir = async (wrapper, linha) => {
   await wrapper.get(`[data-linha="${linha}"] button`).trigger('click');
   return document.body.querySelector('[role="dialog"]');
 };
+// O que foi pedido ao `mudar`: a lista e os itens. O terceiro valor é o aviso de "gravou", que só os campos de texto dão.
+const pedidos = ramo =>
+  ramo.mudar.mock.calls.map(([lista, itens]) => [lista, itens]);
 
 afterEach(() => {
   montadas.splice(0).forEach(wrapper => wrapper.unmount());
@@ -84,11 +87,69 @@ describe('RamoNaConfira', () => {
     gaveta.querySelector('[data-incluir-tambem]').click();
     await flushPromises();
 
-    expect(ramo.mudar.mock.calls).toEqual([
+    expect(pedidos(ramo)).toEqual([
       ['ferramentas', [FERRAMENTAS[1]]],
       ['ferramentas', [...FERRAMENTAS, ...TAMBEM]],
     ]);
     expect(gaveta.querySelector('[data-quer-tambem]')).not.toBeNull();
+  });
+
+  it('a changed "Use when" sentence goes with the "saved" notice, and the field closes only when it is called', async () => {
+    const { wrapper, ramo } = montar(comChave());
+    const gaveta = await abrir(wrapper, 'ferramentas');
+
+    gaveta
+      .querySelector('[data-ferramenta="cep"] [data-alterar-quando]')
+      .click();
+    await flushPromises();
+    const campo = gaveta.querySelector('[data-alterando] textarea');
+    campo.value = 'Use quando vier o CEP do cliente.';
+    campo.dispatchEvent(new Event('input'));
+    await flushPromises();
+    gaveta.querySelector('[data-salvar-quando]').click();
+    await flushPromises();
+
+    expect(pedidos(ramo)).toEqual([
+      [
+        'ferramentas',
+        [
+          FERRAMENTAS[0],
+          { fonte: 'cep', usar_quando: 'Use quando vier o CEP do cliente.' },
+        ],
+      ],
+    ]);
+    // Quem grava (o `mudar` do ramo) ainda não avisou: o campo continua aberto, com a frase.
+    expect(gaveta.querySelector('[data-alterando] textarea').value).toBe(
+      'Use quando vier o CEP do cliente.'
+    );
+    ramo.mudar.mock.calls[0][2]();
+    await flushPromises();
+    expect(gaveta.querySelector('[data-alterando]')).toBeNull();
+  });
+
+  it('an edited question goes with the "saved" notice too', async () => {
+    const { wrapper, ramo } = montar(comChave());
+    const gaveta = await abrir(wrapper, 'perguntas');
+
+    gaveta.querySelector('[data-item="p1"] [data-editar-item]').click();
+    await flushPromises();
+    const campo = gaveta.querySelector('[data-editando] textarea');
+    campo.value = 'Qual o CNPJ de quem contrata?';
+    campo.dispatchEvent(new Event('input'));
+    await flushPromises();
+    gaveta.querySelector('[data-salvar-item]').click();
+    await flushPromises();
+
+    expect(pedidos(ramo)).toEqual([
+      [
+        'perguntas',
+        [{ ...PERGUNTAS[0], texto: 'Qual o CNPJ de quem contrata?' }],
+      ],
+    ]);
+    expect(gaveta.querySelector('[data-editando]')).not.toBeNull();
+    ramo.mudar.mock.calls[0][2]();
+    await flushPromises();
+    expect(gaveta.querySelector('[data-editando]')).toBeNull();
   });
 
   it('a tools change keeps, in place, the tools of the server list that the screen does not show', async () => {
@@ -109,7 +170,7 @@ describe('RamoNaConfira', () => {
     gaveta.querySelector('[data-incluir-tambem]').click();
     await flushPromises();
 
-    expect(ramo.mudar.mock.calls).toEqual([
+    expect(pedidos(ramo)).toEqual([
       ['ferramentas', [desconhecida, FERRAMENTAS[1], jaTem]],
       ['ferramentas', [...doServidor, ...TAMBEM]],
     ]);
@@ -146,7 +207,7 @@ describe('RamoNaConfira', () => {
     gaveta.querySelector('[data-item="p1"] [data-tirar-item]').click();
     await flushPromises();
 
-    expect(ramo.mudar.mock.calls).toEqual([
+    expect(pedidos(ramo)).toEqual([
       ['perguntas', [{ ...PERGUNTAS[0], tirada: true }]],
     ]);
   });

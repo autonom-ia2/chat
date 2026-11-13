@@ -12,9 +12,16 @@ import ListaDoRamo from './ListaDoRamo.vue';
 // As listas são as do servidor ([{ id, texto, tirada }]): a mudança sai como `mudar` ({ lista, itens }, a lista
 // inteira nova) e a tela só muda quando o servidor responde. As ferramentas são de quem chama: a gaveta delas mostra
 // o slot `ferramentas`, e a linha só aparece quando há o que mostrar (`ferramentas` com um número).
+// Mudança que veio de um campo de texto (editar, incluir) leva também `aoGravar`, o aviso de "gravou" da ListaDoRamo:
+// quem grava chama quando o servidor guardou, e só então o campo fecha.
 // `gravando`: { perguntas, documentos }, a lista cuja mudança ainda está indo.
+// Serve também à página do agente que já atende (#2976, RamoNaPagina): `naPagina` dá ao bloco a moldura dos blocos da
+// página, `titulo` troca o título e `nota` põe uma frase curta embaixo dele.
 const props = defineProps({
   nome: { type: String, required: true },
+  titulo: { type: String, default: '' },
+  nota: { type: String, default: '' },
+  naPagina: { type: Boolean, default: false },
   perguntas: { type: Array, default: () => [] },
   documentos: { type: Array, default: () => [] },
   // Quantas ferramentas prontas o agente leva. null: a conta não tem ferramentas para mostrar.
@@ -59,19 +66,25 @@ const linhas = computed(() => [
       ]),
 ]);
 
+// A nota da gaveta; a frase "Você pode tirar, editar e incluir." só para quem pode (#2976: quem só vê não tem botão).
+const notaDe = (chave, nome) =>
+  [t(chave, nome), props.podeMudar ? t(`${NS}.PODE_MUDAR`) : '']
+    .filter(Boolean)
+    .join(' ');
+
 const gaveta = computed(() => {
   const nome = { nome: props.nome };
   const MOLDE = {
     [PERGUNTAS]: {
       titulo: t(`${NS}.PERGUNTAS_TITULO`, nome),
-      nota: t(`${NS}.PERGUNTAS_NOTA`, nome),
+      nota: notaDe(`${NS}.PERGUNTAS_NOTA`, nome),
       incluir: t(`${NS}.INCLUIR_PERGUNTA`),
       exemplo: t(`${NS}.NOVA_PERGUNTA`),
       itens: props.perguntas,
     },
     [DOCUMENTOS]: {
       titulo: t(`${NS}.DOCUMENTOS_TITULO`, nome),
-      nota: t(`${NS}.DOCUMENTOS_NOTA`, nome),
+      nota: notaDe(`${NS}.DOCUMENTOS_NOTA`, nome),
       incluir: t(`${NS}.INCLUIR_DOCUMENTO`),
       exemplo: t(`${NS}.NOVO_DOCUMENTO`),
       itens: props.documentos,
@@ -86,14 +99,23 @@ const gaveta = computed(() => {
   <section
     data-pronto-do-ramo
     aria-labelledby="pronto-do-ramo-titulo"
-    class="flex flex-col gap-1 p-4 rounded-2xl bg-n-solid-2 ring-1 ring-inset ring-n-weak"
+    class="flex flex-col gap-1 rounded-2xl ring-1 ring-inset ring-n-weak"
+    :class="
+      naPagina
+        ? 'p-5 shadow-sm bg-n-solid-1 dark:ring-n-slate-6'
+        : 'p-4 bg-n-solid-2'
+    "
   >
-    <h3
+    <component
+      :is="naPagina ? 'h2' : 'h3'"
       id="pronto-do-ramo-titulo"
       class="m-0 text-base font-semibold text-n-slate-12"
     >
-      {{ t(`${NS}.TITULO`, { nome }) }}
-    </h3>
+      {{ titulo || t(`${NS}.TITULO`, { nome }) }}
+    </component>
+    <p v-if="nota" data-nota-do-ramo class="m-0 text-sm text-n-slate-11">
+      {{ nota }}
+    </p>
     <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
       <li
         v-for="linha in linhas"
@@ -139,7 +161,10 @@ const gaveta = computed(() => {
           :exemplo="gaveta.exemplo"
           :pode-mudar="podeMudar"
           :gravando="gravando[gaveta.lista] === true"
-          @mudar="emit('mudar', { lista: gaveta.lista, itens: $event })"
+          @mudar="
+            (itens, aoGravar) =>
+              emit('mudar', { lista: gaveta.lista, itens, aoGravar })
+          "
         />
       </div>
     </AgenteGaveta>

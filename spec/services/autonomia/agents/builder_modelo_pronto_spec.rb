@@ -80,12 +80,21 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(builder.send(:skeleton_context)).to include(Autonomia::Agents::Builder::ModeloPronto::MOLDURA_DAS_LISTAS)
     end
 
-    # Sem este aviso o Construtor cortava as respostas do ramo (a instrução-mãe manda não inventar fato do negócio).
-    it 'manda manter na instrução as dúvidas comuns do ramo, cada uma com a resposta' do
+    # As respostas do ramo não dependem do Construtor: a plataforma as entrega ao agente. Aqui ele só é avisado.
+    it 'avisa que o conhecimento do ramo chega ao agente em bloco próprio e manda não copiar as respostas' do
       contexto = builder.send(:skeleton_context)
 
       expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::FATOS_DO_RAMO)
-      expect(contexto).to include('DÚVIDAS COMUNS', 'O SEGURO EM PALAVRAS SIMPLES')
+      expect(contexto).to include('SEM copiar as respostas', 'SEM mandar passar para a equipe')
+    end
+
+    it 'não dá o aviso quando a marca da conversa não tem o conhecimento do ramo' do
+      thread.update!(state: thread.state.merge(chave_da_marca => thread.state[chave_da_marca].except('conhecimento')))
+
+      contexto = described_class.new(account: account, build_thread: thread.reload).send(:skeleton_context)
+
+      expect(contexto).not_to include('CONHECIMENTO DO RAMO')
+      expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::PRIMEIRA_RESPOSTA, 'NOME DO AGENTE')
     end
 
     it 'usa as listas que o dono já mudou' do
@@ -173,6 +182,13 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(thread.agent.agent_type).to eq('sdr')
     end
 
+    it 'leva o conhecimento do ramo para a marca do rascunho' do
+      run_turn
+
+      expect(thread.agent.config[chave_da_marca]['conhecimento'])
+        .to eq(Autonomia::Agents::ModelosDeRamo::Marca.inicial(modelo)['conhecimento'])
+    end
+
     it 'respeita o nome que o dono pediu' do
       payload['name'] = 'Gabi'
       run_turn
@@ -249,13 +265,23 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include("PERGUNTAS DA COTAÇÃO:\n1. #{modelo.perguntas.first}", moldura, 'na etapa "Confira"')
       expect(contexto).to include('Você NÃO as muda', 'NÃO diga que mudou')
       expect(contexto).to include(Autonomia::Agents::Builder::ModeloPronto::CONHECIMENTO_NO_AJUSTE)
+      expect(contexto).to include('você também não o muda e NÃO diz que mudou')
     end
 
-    it 'manda dizer que as listas ainda não mudam depois que o agente começou a atender' do
+    # #2976 — depois do "Começar" o dono muda as listas na página do agente.
+    it 'manda dizer que o dono muda as listas na página do agente, depois que ele começou a atender' do
       agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
 
-      expect(contexto).to include('as listas ainda não mudam por aqui')
+      expect(contexto).to include('muda as listas na página do agente')
       expect(contexto).not_to include('na etapa "Confira"')
+    end
+
+    it 'não manda o dono à página quando a conta não pode mais usar o modelo (a página não mostra as listas)' do
+      agente.update_columns(status: Autonomia::Agents::Agent.statuses[:active], enabled: true) # rubocop:disable Rails/SkipsModelValidations
+      account.disable_features!('agente_modelos_seguro')
+
+      expect(contexto).to include('as listas deste agente não mudam por aqui')
+      expect(contexto).not_to include('na página do agente')
     end
 
     it 'entra nos blocos de contexto do turno de ajuste' do

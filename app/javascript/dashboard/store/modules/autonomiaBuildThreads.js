@@ -61,7 +61,9 @@ let pendingTurn = null;
 // #2881 — the lists of the ready-made model (`modelo_pronto`) change through a
 // request of their own (mudarModeloPronto), outside the turn. A thread read that
 // was asked BEFORE the last change carries the old lists: the rest of it still
-// applies, the model does not.
+// applies, the model does not. The same holds for every answer that brings the
+// thread back (send, retry, desfazerAjuste): each one notes the counter before
+// asking.
 let modelChanges = 0;
 
 const clientIdForTurn = (threadId, content) => {
@@ -248,6 +250,7 @@ export const actions = {
     // reuses the pending id so the backend replies idempotently instead of
     // stacking a duplicate turn + build.
     const clientMessageId = clientIdForTurn(threadId, content);
+    const askedAt = modelChanges;
     try {
       const { data } = await AutonomiaBuildThreadsAPI.sendMessage(
         threadId,
@@ -258,7 +261,7 @@ export const actions = {
       // Turn accepted and persisted server-side: the next identical content is
       // a NEW turn and must get a fresh id.
       pendingTurn = null;
-      const payload = applyThreadResponse(commit, data);
+      const payload = applyThreadResponse(commit, data, askedAt);
       dispatch('poll', { threadId: payload.id });
       return payload;
     } catch (error) {
@@ -290,9 +293,10 @@ export const actions = {
     commit('SET_ERROR', null);
     commit('SET_PHASE', 'interviewing');
     clearPoll();
+    const askedAt = modelChanges;
     try {
       const { data } = await AutonomiaBuildThreadsAPI.retryBuild(threadId);
-      const payload = applyThreadResponse(commit, data);
+      const payload = applyThreadResponse(commit, data, askedAt);
       dispatch('poll', { threadId: payload.id });
       return payload;
     } catch (error) {
@@ -306,8 +310,9 @@ export const actions = {
   // (the agent changed after) from a generic failure.
   desfazerAjuste: async ({ commit, dispatch }, { threadId } = {}) => {
     if (!threadId) return null;
+    const askedAt = modelChanges;
     const { data } = await AutonomiaBuildThreadsAPI.desfazer(threadId);
-    const payload = applyThreadResponse(commit, data);
+    const payload = applyThreadResponse(commit, data, askedAt);
     await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
     return payload;
   },

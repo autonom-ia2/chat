@@ -319,7 +319,8 @@ const canalPedido = computed(
     null
 );
 // #2858 F3: as ferramentas prontas que o Construtor escolheu (lista vazia = nenhuma combina). Mesma leitura do canal.
-// #2881: com modelo de ramo, as ferramentas e a frase "Use quando" de cada uma são as do modelo.
+// #2881: com modelo de ramo, as ferramentas e a frase "Use quando" de cada uma são as do modelo. As que o dono tirou
+// do "Já vem com" (`tiradas`, do servidor) viram "Agora não" no "Começar"; as que nunca entraram, não.
 const chavesDe = itens => itens.map(item => item.fonte);
 const prontas = useProntasDoConstrutor({
   agenteId: computed(() => conversa.agenteId.value),
@@ -338,6 +339,7 @@ const prontas = useProntasDoConstrutor({
         [])
   ),
   frases: ramo.frases,
+  ficaramFora: ramo.tiradas,
 });
 const sugerido = computed(() =>
   canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
@@ -670,6 +672,11 @@ const comecarNaEquipe = async () => {
 
 // As que ficaram no "Já vem com" entram antes de o agente começar; a que falhar é avisada e a pessoa inclui depois
 // pela gaveta de ferramentas.
+// #2881: enquanto uma lista do ramo ainda está sendo gravada, o "Começar" espera. Sem isso a ferramenta entraria com
+// a frase "Use quando" de antes, e o que o dono acabou de tirar não viraria "Agora não".
+const gravandoListas = computed(() =>
+  Object.values(ramo.gravando.value).some(Boolean)
+);
 const incluindoProntas = ref(false);
 const incluirProntas = async () => {
   incluindoProntas.value = true;
@@ -1158,7 +1165,9 @@ onMounted(() => {
           :link-conectar-canal="linkConectarCanal"
           :celular="celular"
           :abrindo-ajustes="abrindoAjustes"
-          :carregando-canais="carregandoComecar || incluindoProntas"
+          :carregando-canais="
+            carregandoComecar || incluindoProntas || gravandoListas
+          "
           @perguntar="perguntarNoTeste"
           @tentar-de-novo="teste.tentarDeNovo"
           @limpar="teste.limpar"

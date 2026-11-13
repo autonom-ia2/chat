@@ -211,6 +211,19 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
                                        config: { chave_da_marca => conversa.state[chave_da_marca], 'guardrails' => ['regra'] })
     end
 
+    # O conhecimento do ramo não é editável: a edição das listas tem de deixá-lo como nasceu, na conversa e no rascunho.
+    it 'mantém o conhecimento do ramo na marca, pela conversa e pelo agente' do
+      saber = Autonomia::Agents::ModelosDeRamo::Marca.inicial(modelo)['conhecimento']
+      expect(saber).to be_present
+
+      editar(documentos: [{ texto: 'Contrato social.' }])
+      expect(agente.reload.config[chave_da_marca]['conhecimento']).to eq(saber)
+      expect(conversa.reload.state[chave_da_marca]['conhecimento']).to eq(saber)
+
+      described_class.new(agent: agente, mudancas: { perguntas: [{ texto: 'A obra já começou?' }] }).call
+      expect(agente.reload.config[chave_da_marca]['conhecimento']).to eq(saber)
+    end
+
     def editar_pelo_agente(mudancas, alvo = agente)
       described_class.new(agent: alvo, mudancas: mudancas).call
     end
@@ -238,12 +251,43 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(listas['documentos'].pluck('texto')).to eq(['Contrato social.'])
     end
 
-    it 'recusa o agente que não nasceu de um modelo e o que já começou a atender' do
+    it 'recusa o agente que não nasceu de um modelo' do
       comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
       expect { editar_pelo_agente({ perguntas: [] }, comum) }.to raise_error(described_class::Recusada, 'sem_modelo')
+    end
 
+    # #2976 — depois do "Começar" as duas listas continuam mudando pela página do agente.
+    it 'muda perguntas e documentos do agente que já começou a atender, sem tocar no resto do config' do
       comecar!(agente)
-      expect { editar_pelo_agente(perguntas: []) }.to raise_error(described_class::Recusada, 'agente_ja_comecou')
+      antes = agente.reload.config
+
+      editar_pelo_agente(perguntas: [{ texto: 'A obra já começou?' }], documentos: [{ texto: 'Contrato social.' }])
+
+      depois = agente.reload.config
+      expect(depois[chave_da_marca]['perguntas'].pluck('texto')).to eq(['A obra já começou?'])
+      expect(depois[chave_da_marca]['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(depois[chave_da_marca].except('perguntas', 'documentos')).to eq(antes[chave_da_marca].except('perguntas', 'documentos'))
+      expect(depois.except(chave_da_marca)).to eq(antes.except(chave_da_marca))
+    end
+
+    it 'entrega a lista nova ao agente que atende já no turno seguinte' do
+      comecar!(agente)
+
+      editar_pelo_agente(perguntas: [{ texto: 'A obra já começou?' }])
+
+      expect(Autonomia::Agents::ModelosDeRamo::Instrucao.do_agente(agente.reload)).to include("PERGUNTAS DA COTAÇÃO:\n1. A obra já começou?")
+    end
+
+    it 'recusa mexer nas ferramentas do agente que já começou a atender, dizendo o campo, sem gravar nem registrar' do
+      comecar!(agente)
+      antes = agente.reload.config
+      allow(Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca).to receive(:gravar!)
+
+      expect { editar_pelo_agente(perguntas: [], ferramentas: [{ fonte: 'cnpj' }]) }.to raise_error(described_class::Recusada) do |erro|
+        expect([erro.motivo, erro.campo]).to eq(%w[agente_ja_comecou ferramentas])
+      end
+      expect(agente.reload.config).to eq(antes)
+      expect(Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca).not_to have_received(:gravar!)
     end
   end
 

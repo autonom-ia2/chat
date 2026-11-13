@@ -110,7 +110,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     it 'traz o modelo pronto com as listas, as ferramentas liberadas com a frase do ramo e as perguntas de teste' do
       pronto = ver['modelo_pronto']
 
-      expect(pronto.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem premium teste])
+      expect(pronto.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem tiradas premium teste])
       expect(pronto['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
       expect(pronto['documentos'].size).to eq(modelo.documentos.size)
       expect(pronto['ferramentas']).to eq(modelo.ja_vem.reject { |f| f.fonte == 'compras_governo' }
@@ -160,7 +160,8 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(pronto['documentos']).to eq([{ 'id' => 'd1', 'texto' => modelo.documentos.first, 'tirada' => true }])
       expect(pronto['ferramentas']).to eq([{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando o cliente mandar o CNPJ.' },
                                            { 'fonte' => 'cidades', 'usar_quando' => modelo.tambem.first.usar_quando }])
-      expect(pronto['tambem'].pluck('fonte')).to eq(%w[feriados cep banco_central])
+      # `tiradas`: só o que o dono tirou do "Já vem com"; a que nunca entrou (banco_central) fica só no "Também combina".
+      expect([pronto['tambem'].pluck('fonte'), pronto['tiradas']]).to eq([%w[feriados cep banco_central], %w[feriados cep]])
       expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
     end
 
@@ -375,12 +376,40 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(rascunho.reload.config[chave_da_marca]).to eq(antes)
     end
 
-    it 'recusa com 422 o agente que já começou a atender e com 404 o que não nasceu de um modelo' do
+    # #2976 — depois do "Começar" a página do agente continua mudando perguntas e documentos; as ferramentas, não.
+    it 'muda as listas do agente que já começou a atender e devolve só as duas listas' do
       ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
-      expect(mudar_pelo_agente({ perguntas: [] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => nil)
-      expect(response).to have_http_status(:unprocessable_entity)
 
+      resposta = mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, ativo, com_funcao(%w[autonomia_manage]))
+
+      expect(response).to have_http_status(:ok)
+      expect(resposta).not_to have_key('modelo_pronto')
+      expect(resposta['listas_do_ramo'].keys).to eq(%w[perguntas documentos])
+      expect(resposta['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+      expect(ver_agente(ativo)['listas_do_ramo']['documentos'].pluck('texto')).to eq(['Contrato social.'])
+
+      expect(mudar_pelo_agente({ ferramentas: [{ fonte: 'cnpj' }] }, ativo)).to eq('motivo' => 'agente_ja_comecou', 'campo' => 'ferramentas')
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    # Quem mudou e quando: a mudança vale na hora e não passa pelas versões da instrução.
+    it 'registra quem mudou as listas do agente que já atende, só com metadados, e não registra a do rascunho' do
+      ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
+                                               instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
+      registros = -> { Audited.audit_class.where(auditable_type: ativo.class.name, auditable_id: [ativo.id, rascunho.id]) }
+
+      expect { mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, rascunho) }.not_to(change { registros.call.count })
+      expect { mudar_pelo_agente({ documentos: [{ texto: 'Contrato social.' }] }, ativo) }.to change { registros.call.count }.by(1)
+
+      registro = registros.call.last
+      expect([registro.auditable_id, registro.user_id, registro.associated_id, registro.action]).to eq([ativo.id, admin.id, account.id, 'update'])
+      expect(registro.audited_changes).to include('event' => 'autonomia.agent.listas_do_ramo_mudadas', 'actor_id' => admin.id,
+                                                  'listas' => { 'documentos' => { 'antes' => modelo.documentos.size, 'depois' => 1 } })
+      expect(registro.audited_changes.to_json).not_to include('Contrato social')
+    end
+
+    it 'responde 404 para o agente que não nasceu de um modelo' do
       comum = Autonomia::Agents::Agent.create!(account: account, name: 'Comum', agent_type: 'support', instruction: 'Atenda.')
       expect(mudar_pelo_agente({ perguntas: [] }, comum)).to eq('motivo' => 'sem_modelo', 'campo' => nil)
       expect(response).to have_http_status(:not_found)
@@ -394,6 +423,10 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(manual.reload.config[chave_da_marca]['perguntas'].size).to eq(modelo.perguntas.size)
       expect(ver_agente(manual)).not_to have_key('modelo_pronto')
+      atendendo = Autonomia::Agents::Agent.create!(account: account, name: 'Manual que atende', agent_type: 'sdr', mode: :manual, status: :active,
+                                                   enabled: true, instruction: 'Atenda do meu jeito.',
+                                                   config: { chave_da_marca => conversa.state[chave_da_marca] })
+      expect(ver_agente(atendendo)).not_to have_key('listas_do_ramo')
 
       conversa.update!(agent: manual)
       expect(ver['modelo_pronto']).to be_nil
@@ -417,13 +450,14 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(rascunho.reload.config[chave_da_marca]['ferramentas'].pluck('fonte')).to eq(%w[cep compras_governo])
     end
 
-    it 'deixa de mandar o modelo, na conversa e no agente, depois que o agente começou a atender' do
+    it 'deixa de mandar o modelo inteiro, na conversa e no agente, depois que o agente começou a atender' do
       ativo = Autonomia::Agents::Agent.create!(account: account, name: 'Assistente', agent_type: 'sdr', status: :active, enabled: true,
                                                instruction: 'Atenda.', config: { chave_da_marca => conversa.state[chave_da_marca] })
       conversa.update!(agent: ativo)
 
       expect(ver['modelo_pronto']).to be_nil
       expect(ver_agente(ativo)).not_to have_key('modelo_pronto')
+      expect(ver_agente(rascunho)).not_to have_key('listas_do_ramo')
     end
 
     it 'responde 404 com a flag desligada e para a Lia, sem gravar' do

@@ -129,6 +129,13 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
            .map { |ferramenta| { 'fonte' => ferramenta.fonte, 'usar_quando' => ferramenta.usar_quando } }
   end
 
+  # As ferramentas que o modelo traz no "Já vem com" e o dono tirou (#2976): estão no "Também combina", mas não são
+  # as que nunca entraram. No "Começar" a tela as dispensa ("Agora não"), para o cartão "pode ganhar" da página do
+  # agente não oferecer de volta o que ele tirou.
+  def tiradas
+    tambem.pluck('fonte') & @modelo.ja_vem.map(&:fonte)
+  end
+
   # Os cartões pagos que o modelo sugere e a conta vê na vitrine. Só sugestão: quem inclui é uma pessoa, na vitrine.
   def premium
     return [] unless Autonomia::FerramentasProntas.vitrine?(@account)
@@ -149,13 +156,18 @@ class Autonomia::Agents::ModelosDeRamo::Rascunho
     { Autonomia::Agents::ModelosDeRamo::Marca::CHAVE => @marca }.merge(chaves_das_prontas)
   end
 
-  # O que a tela recebe. Nada do roteiro: ele é dado nosso e fica oculto, como a instrução.
+  # O que a tela de criação recebe. Nada do roteiro: ele é dado nosso e fica oculto, como a instrução.
   def para_tela
-    listas = Autonomia::Agents::ModelosDeRamo::Marca
     { 'chave' => @modelo.chave, 'ramo' => @modelo.ramo, 'nome_padrao' => @modelo.nome_padrao,
-      'seguradoras_sugeridas' => @modelo.seguradoras_sugeridas,
-      'perguntas' => listas.itens(@marca, 'perguntas'), 'documentos' => listas.itens(@marca, 'documentos'),
-      'ferramentas' => ferramentas, 'tambem' => tambem, 'premium' => premium, 'teste' => @modelo.teste }
+      'seguradoras_sugeridas' => @modelo.seguradoras_sugeridas }
+      .merge(para_a_pagina, 'ferramentas' => ferramentas, 'tambem' => tambem, 'tiradas' => tiradas, 'premium' => premium,
+                            'teste' => @modelo.teste)
+  end
+
+  # O que a página do agente que já atende recebe (#2976): as duas listas, que continuam mudando por lá.
+  def para_a_pagina
+    listas = Autonomia::Agents::ModelosDeRamo::Marca
+    { 'perguntas' => listas.itens(@marca, 'perguntas'), 'documentos' => listas.itens(@marca, 'documentos') }
   end
 
   private

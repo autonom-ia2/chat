@@ -3584,10 +3584,10 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/modelo_pronto#update",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:17",
-      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:42",
-      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:35",
-      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:25"
+      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:19",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:43",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:36",
+      "app/controllers/api/v1/accounts/autonomia/agents/modelo_pronto_controller.rb:27"
     ],
     "sem_corpo": false
   },
@@ -3869,8 +3869,8 @@
     "controller": "api/v1/accounts/autonomia/agents/build_threads#modelo_pronto",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:86",
-      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:42",
-      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:35",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:43",
+      "app/controllers/concerns/autonomia/listas_do_modelo_pronto.rb:36",
       "app/controllers/api/v1/accounts/autonomia/agents/build_threads_controller.rb:157"
     ],
     "sem_corpo": false

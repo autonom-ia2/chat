@@ -15,13 +15,16 @@ import { useVitrineLigada } from './useVitrineLigada';
 // combina": "Incluir também" as junta ao "Já vem com", num toque, e elas entram no "Começar" como as outras.
 // #2881 — agente pronto por ramo de seguro: a frase "Use quando" de cada ferramenta é a do ramo (ou a que o dono
 // alterou), que a página lê do servidor e passa em `frases` ({ fonte: frase }). Sem frase para a fonte, vai a frase
-// geral da vitrine, como sempre.
-//   agenteId, sugeridas, tambem, frases: refs (ou computeds) da página.
+// geral da vitrine, como sempre. No ramo, quem guarda o que o dono tirou é o servidor (aqui o `tirar` não é chamado).
+// Por isso a página passa em `ficaramFora` as ferramentas que o dono tirou do "Já vem com" do modelo: no "Começar"
+// elas viram "Agora não", como as tiradas. As do "Também combina" que nunca entraram continuam oferecidas.
+//   agenteId, sugeridas, tambem, frases, ficaramFora: refs (ou computeds) da página.
 export function useProntasDoConstrutor({
   agenteId,
   sugeridas,
   tambem,
   frases,
+  ficaramFora,
 }) {
   const { t } = useI18n();
   const vitrine = useVitrine();
@@ -63,7 +66,7 @@ export function useProntasDoConstrutor({
 
   const dispensarTiradas = () =>
     Promise.allSettled(
-      tiradas.value.map(id =>
+      [...tiradas.value, ...(ficaramFora?.value || [])].map(id =>
         FerramentasProntasAPI.dispensar(agenteId.value, id)
       )
     );

@@ -1,8 +1,13 @@
-# O DONO MUDA O MODELO PRONTO ANTES DE COMEÇAR (#2881, pedido do Rodrigo): tirar, editar e incluir perguntas e
-# documentos; tirar ferramenta, incluir as do "Também combina" e alterar a frase "Use quando" de cada uma. Tudo fica no
-# `state` da conversa (sem migration) e, quando o rascunho do agente já existe, também na marca dele (`config`), que é
-# de onde o agente que atende lê as listas. Pelo rascunho sem conversa (a tela reaberta), só na marca dele. Nenhuma
-# chamada de IA.
+# O DONO MUDA O MODELO PRONTO (#2881, pedido do Rodrigo): tirar, editar e incluir perguntas e documentos; tirar
+# ferramenta, incluir as do "Também combina" e alterar a frase "Use quando" de cada uma. Tudo fica no `state` da
+# conversa (sem migration) e, quando o rascunho do agente já existe, também na marca dele (`config`), que é de onde o
+# agente que atende lê as listas. Pelo agente sem conversa (a tela reaberta, ou a página dele), só na marca dele.
+# Nenhuma chamada de IA.
+#
+# DEPOIS DO "COMEÇAR" (#2976): perguntas e documentos continuam mudando, pelo agente (`agent:`, a página dele). A
+# mudança vale no turno seguinte, porque o agente lê as listas da marca a cada turno (`Instrucao`). As ferramentas não
+# mudam mais por aqui: no agente que atende elas são as da gaveta "Ferramentas", e a marca já não decide nada. Pela
+# conversa de criação também não: ela ficou para trás.
 #
 # Cada lista que vem substitui a lista inteira; a que não vem fica como está.
 #   perguntas / documentos: [{ id, texto, tirada }] — `id` de um item que já existe o mantém; sem `id` (ou com um que
@@ -12,7 +17,8 @@
 #
 # Validação estrita, e nada é gravado quando algo falha (`Recusada#motivo` e `#campo`): só texto, até 20 itens por
 # lista, até 300 letras por item, a frase no limite do "Incluir". Recusa também a conversa sem modelo (conta sem o
-# pacote `seguros`, flag desligada, a Lia: `sem_modelo`) e o agente que já começou a atender (`agente_ja_comecou`).
+# pacote `seguros`, flag desligada, a Lia: `sem_modelo`) e, no agente que já começou a atender, o que não muda mais
+# (`agente_ja_comecou`: tudo pela conversa; as ferramentas pelo agente).
 class Autonomia::Agents::ModelosDeRamo::Edicao
   LISTAS = %w[perguntas documentos].freeze
   FERRAMENTAS = 'ferramentas'.freeze
@@ -31,11 +37,13 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     end
   end
 
-  # `thread:` — pela conversa do Construtor (a criação em andamento). `agent:` — pelo rascunho do agente, quando a tela o
-  # reabre sem a conversa. Um dos dois.
-  def initialize(mudancas:, thread: nil, agent: nil)
+  # `thread:` — pela conversa do Construtor (a criação em andamento). `agent:` — pelo agente, sem a conversa: o rascunho
+  # que a tela reabriu, ou o agente que já atende (a página dele). Um dos dois. `actor:` — quem pediu, para o registro
+  # da mudança num agente que já atende (`RegistroDaMudanca`).
+  def initialize(mudancas:, thread: nil, agent: nil, actor: nil)
     @thread = thread
     @agent = agent
+    @actor = actor
     @mudancas = mudancas.to_h.deep_stringify_keys
   end
 
@@ -62,18 +70,45 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     agente.with_lock { editar(agente) }
   end
 
-  # O "Começar" pode chegar no meio da edição: por isso o rascunho é conferido aqui, com o agente travado, e a lista
-  # nunca entra num agente que já atende. A recusa desfaz tudo.
+  # O "Começar" pode chegar no meio da edição: por isso o rascunho é conferido aqui, com o agente travado, e o que
+  # não muda mais depois dele é recusado pelo estado que o agente tem agora. A recusa desfaz tudo.
   def editar(agente)
-    rascunho = @thread ? Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread) : Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(agente)
+    rascunho = rascunho_de(agente)
     negar('sem_modelo') if rascunho.nil?
-    negar('agente_ja_comecou') if agente && !agente.draft?
+    ja_atende = agente.present? && !agente.draft?
+    recusar_o_que_nao_muda_mais if ja_atende
 
     novo = rascunho.com(rascunho.marca.merge(listas(rascunho.marca), ferramentas(rascunho)))
+    ja_atende ? gravar_no_que_atende(agente, rascunho, novo) : gravar_antes_de_comecar(agente, novo)
+    novo
+  end
+
+  # Antes do "Começar": a marca e as chaves das prontas, no rascunho (quando ele já existe) e na conversa.
+  def gravar_antes_de_comecar(agente, novo)
     chaves = novo.para_guardar
     gravar_no_agente(agente, chaves) if agente
     @thread&.juntar_ao_estado!(chaves)
-    novo
+  end
+
+  # Depois do "Começar": só a marca (as chaves das prontas são da criação, e regravá-las mexeria no cartão "pode
+  # ganhar") e o registro de quem mudou e quando. Dentro da trava do agente: se o registro falhar, a mudança se desfaz.
+  def gravar_no_que_atende(agente, rascunho, novo)
+    gravar_no_agente(agente, novo.para_guardar.slice(Autonomia::Agents::ModelosDeRamo::Marca::CHAVE))
+    Autonomia::Agents::ModelosDeRamo::RegistroDaMudanca.gravar!(
+      agente: agente, autor: @actor, antes: rascunho.marca, depois: novo.marca, listas: LISTAS.select { |campo| @mudancas.key?(campo) }
+    )
+  end
+
+  def rascunho_de(agente)
+    return Autonomia::Agents::ModelosDeRamo::Rascunho.do_thread(@thread) if @thread
+
+    Autonomia::Agents::ModelosDeRamo::Rascunho.do_agente(agente)
+  end
+
+  # No agente que já atende: pela conversa de criação nada muda, e as ferramentas não mudam por aqui.
+  def recusar_o_que_nao_muda_mais
+    negar('agente_ja_comecou') if @thread
+    negar('agente_ja_comecou', FERRAMENTAS) if @mudancas.key?(FERRAMENTAS)
   end
 
   # Só a coluna `config`, sem tocar no `updated_at` (como a sugestão de prontas, `SugestaoParaAgente.gravar`): o

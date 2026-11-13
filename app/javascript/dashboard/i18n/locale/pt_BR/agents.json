@@ -717,9 +717,10 @@
           "VER_DOCUMENTOS": "Ver os documentos que {nome} pede",
           "VER_FERRAMENTAS": "Ver as ferramentas de {nome}",
           "PERGUNTAS_TITULO": "O que {nome} pergunta",
-          "PERGUNTAS_NOTA": "Ele pergunta uma coisa por vez, nesta ordem. O que uma ferramenta descobre sozinha, como o endereço pelo CEP, ele não pergunta. Você pode tirar, editar e incluir.",
+          "PERGUNTAS_NOTA": "Ele pergunta uma coisa por vez, nesta ordem. O que uma ferramenta descobre sozinha, como o endereço pelo CEP, ele não pergunta.",
           "DOCUMENTOS_TITULO": "Documentos que {nome} pede",
-          "DOCUMENTOS_NOTA": "Ele pede depois das perguntas e sempre avisa que cada documento costuma ser pedido e que a seguradora confirma a lista. Você pode tirar, editar e incluir.",
+          "DOCUMENTOS_NOTA": "Ele pede depois das perguntas e sempre avisa que cada documento costuma ser pedido e que a seguradora confirma a lista.",
+          "PODE_MUDAR": "Você pode tirar, editar e incluir.",
           "FERRAMENTAS_TITULO": "Ferramentas de {nome}",
           "FERRAMENTAS_NOTA": "{nome} decide sozinho a hora de usar cada ferramenta, pelo sentido da conversa. A frase embaixo de cada uma é a orientação que ele segue.",
           "FERRAMENTAS_PODE_ALTERAR": "Ela já vem escrita para este seguro, e você pode alterar.",
@@ -743,6 +744,11 @@
           "VER_PAGAS": "Ver as consultas pagas",
           "ERRO_AO_MUDAR": "Não consegui guardar a mudança. Tente de novo.",
           "ERRO_JA_COMECOU": "Este agente já começou a atender. Aqui não dá mais para mudar as listas."
+        },
+        "PAGINA": {
+          "TITULO": "O que {nome} pergunta e pede",
+          "NOTA": "O que você mudar aqui, {nome} já segue na próxima mensagem do cliente.",
+          "MUDA_NA_PAGINA": "As perguntas da cotação e os documentos que {nome} pede não mudam por esta conversa. Para mudar, volte à página de {nome} e abra \"O que {nome} pergunta e pede\"."
         }
       },
       "HEROI": {

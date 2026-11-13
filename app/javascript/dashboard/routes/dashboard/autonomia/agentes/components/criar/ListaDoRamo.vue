@@ -13,6 +13,9 @@ import {
 // daqui como a lista inteira nova (`mudar`), quem chama grava e devolve a lista do servidor. Aqui só ficam o rascunho
 // do item em edição e o do item novo. Um item em edição por vez. O campo mostra a contagem de letras: é ela que
 // liga o limite do item (o mesmo do servidor).
+// O campo de editar e o de incluir só fecham quando o servidor guarda: junto com a lista vai um aviso de "gravou"
+// (o segundo valor do `mudar`), que quem grava chama. Se o servidor recusar ou a rede cair, o campo continua aberto com
+// o texto que a pessoa escreveu.
 // itens: [{ id, texto, tirada }]. O item novo vai sem `id`: quem dá é o servidor.
 // `podeMudar` falso: só leitura. `gravando`: uma mudança ainda está indo, e os botões esperam.
 const props = defineProps({
@@ -34,11 +37,8 @@ const incluindo = ref(false);
 const novo = ref('');
 const cheia = computed(() => props.itens.length >= MAXIMO_DE_ITENS);
 
-const trocar = (id, mudanca) =>
-  emit(
-    'mudar',
-    props.itens.map(item => (item.id === id ? { ...item, ...mudanca } : item))
-  );
+const trocada = (id, mudanca) =>
+  props.itens.map(item => (item.id === id ? { ...item, ...mudanca } : item));
 
 const editar = item => {
   incluindo.value = false;
@@ -48,10 +48,12 @@ const editar = item => {
 const salvar = () => {
   const texto = rascunho.value.trim();
   if (!texto) return;
-  trocar(editando.value, { texto });
-  editando.value = null;
+  emit('mudar', trocada(editando.value, { texto }), () => {
+    editando.value = null;
+  });
 };
-const alternar = item => trocar(item.id, { tirada: !item.tirada });
+const alternar = item =>
+  emit('mudar', trocada(item.id, { tirada: !item.tirada }));
 const abrirInclusao = () => {
   editando.value = null;
   novo.value = '';
@@ -60,8 +62,9 @@ const abrirInclusao = () => {
 const incluir = () => {
   const texto = novo.value.trim();
   if (!texto) return;
-  emit('mudar', [...props.itens, { texto, tirada: false }]);
-  incluindo.value = false;
+  emit('mudar', [...props.itens, { texto, tirada: false }], () => {
+    incluindo.value = false;
+  });
 };
 </script>
 

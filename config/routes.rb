@@ -689,7 +689,8 @@ Rails.application.routes.draw do
               post 'base/desfazer', to: 'agents/base_de_seguros#desfazer'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
-              # #2881 — as listas do modelo pronto de ramo pelo rascunho do agente (a tela reaberta sem a conversa).
+              # #2881 — as listas do modelo pronto de ramo pelo agente: o rascunho reaberto sem a conversa e, depois do
+              # "Começar" (#2976), a página do agente (só perguntas e documentos).
               patch 'modelo_pronto', to: 'agents/modelo_pronto#update'
               resources :channels, only: [:index, :create, :destroy],
                                    controller: 'agents/channels', param: :inbox_id

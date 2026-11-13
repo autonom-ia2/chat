@@ -39,8 +39,8 @@ const tambem = computed(() =>
 );
 // A lista que sai do FerramentasDoRamo só tem as ferramentas que ele mostra, e o servidor troca a lista inteira. As
 // que a tela não mostra (o agente já tem, ou esta tela não conhece) continuam na lista, no lugar em que estavam: não
-// é por não aparecerem aqui que saem do agente pronto.
-const mudarFerramentas = nova => {
+// é por não aparecerem aqui que saem do agente pronto. `aoGravar`: o aviso de "gravou" do campo da frase, quando há.
+const mudarFerramentas = (nova, aoGravar) => {
   const mostradas = ferramentas.value.map(item => item.fonte);
   const todas =
     props.ramo.modelo?.value?.ferramentas || props.ramo.ferramentas.value;
@@ -50,10 +50,11 @@ const mudarFerramentas = nova => {
     return mudada ? [mudada] : [];
   });
   const jaNaLista = mantidas.map(item => item.fonte);
-  props.ramo.mudar('ferramentas', [
-    ...mantidas,
-    ...nova.filter(item => !jaNaLista.includes(item.fonte)),
-  ]);
+  props.ramo.mudar(
+    'ferramentas',
+    [...mantidas, ...nova.filter(item => !jaNaLista.includes(item.fonte))],
+    aoGravar
+  );
 };
 const link = computed(() => (podeIncluir.value ? props.linkDaVitrine : ''));
 const pagas = computed(() => (link.value ? props.ramo.pagas.value : []));
@@ -73,7 +74,7 @@ const quantas = computed(() => {
     :ferramentas="quantas"
     :pode-mudar="podeMudar"
     :gravando="ramo.gravando.value"
-    @mudar="ramo.mudar($event.lista, $event.itens)"
+    @mudar="ramo.mudar($event.lista, $event.itens, $event.aoGravar)"
   >
     <template #ferramentas>
       <VitrineJaVem
