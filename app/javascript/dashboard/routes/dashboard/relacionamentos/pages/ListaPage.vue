@@ -145,7 +145,7 @@ const marcados = useMarcados();
 // seguro daquelas pessoas; nas outras, a fonte passa como é.
 const carteira = useCarteiraNaLista({ demo, ligada: temSeguros });
 const lista = useLista({
-  fonte: carteira.comSelos(listaFonte({ demo, comSeguros: temSeguros.value })),
+  fonte: carteira.comSelos(listaFonte({ demo, comSeguros: temSeguros })),
   aba,
   aoMudarConsulta: marcados.limpar,
 });

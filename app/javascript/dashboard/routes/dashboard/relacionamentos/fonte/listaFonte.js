@@ -1,3 +1,4 @@
+import { toValue } from 'vue';
 import {
   ABAS,
   GRUPO_PADRAO,
@@ -164,8 +165,9 @@ const comACarteira = (regras, aba, extra) =>
         },
       };
 
+// `comSeguros()`: a conta tem a carteira de seguros, perguntado a cada leitura.
 // `carteira`: o que a carteira fictícia soma à lista de pessoas (uma função do
-// agora), ou nulo quando a conta da demonstração não tem seguros.
+// agora), ou nulo quando a demonstração não tem a carteira fictícia.
 const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
   const baseDaDemo = async () => {
     // `?demo=carregando`: a fonte nunca responde, para o print do esqueleto.
@@ -176,7 +178,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
   const contarGrupo = (lista, regras, grupoId, agora) =>
     lista.filter(item => regras.pertence(item, grupoId, agora)).length;
   const regrasDe = async (aba, agora) =>
-    carteira
+    carteira && comSeguros()
       ? comACarteira(regrasDaAba(aba), aba, await carteira(agora))
       : regrasDaAba(aba);
 
@@ -237,7 +239,7 @@ const fonteDemo = ({ estado, carregarDemo, atraso, carteira, comSeguros }) => {
         .daBase(base, agora)
         .filter(passaNaConsulta(aba, consulta, agora, regras));
       return Object.fromEntries(
-        gruposDaAba(aba, { comSeguros }).map(grupo => [
+        gruposDaAba(aba, { comSeguros: comSeguros() }).map(grupo => [
           grupo.id,
           contarGrupo(lista, regras, grupo.id, agora),
         ])
@@ -362,9 +364,11 @@ const fonteReal = () => ({
   },
 });
 
-// `comSeguros`: a conta tem a carteira de seguros. Só a demonstração usa: na
-// fonte real o servidor já sabe, e o grupo e a busca vão no mesmo pedido.
-// `?demo=sem-seguros` é a conta de seguros que ainda não tem nenhum.
+// `comSeguros`: a conta tem a carteira de seguros (o valor, ou o `computed` de
+// useContaDeSeguros: é lido a cada leitura, porque a conta pode chegar depois
+// de a tela montar). Só a demonstração usa: na fonte real o servidor já sabe,
+// e o grupo e a busca vão no mesmo pedido. `?demo=sem-seguros` é a conta de
+// seguros que ainda não tem nenhum.
 export const listaFonte = ({
   demo = null,
   comSeguros = false,
@@ -373,14 +377,13 @@ export const listaFonte = ({
   atraso = ATRASO_DA_DEMO_MS,
 } = {}) => {
   if (!demo || !carregarDemo) return fonteReal();
-  const temSeguros =
-    comSeguros && carregarCarteira && demo !== DEMO_SEM_SEGUROS;
+  const temCarteiraFicticia = carregarCarteira && demo !== DEMO_SEM_SEGUROS;
   return fonteDemo({
     estado: demo,
     carregarDemo,
     atraso,
-    comSeguros,
-    carteira: temSeguros
+    comSeguros: () => Boolean(toValue(comSeguros)),
+    carteira: temCarteiraFicticia
       ? async agora => (await carregarCarteira()).carteiraNaLista(agora)
       : null,
   });

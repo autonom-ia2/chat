@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
 import {
@@ -202,6 +203,19 @@ describe('a lista de pessoas da demonstração, na conta com a carteira', () => 
 
     expect(Object.keys(contagens)).toEqual(ids(GRUPOS_DE_PESSOAS));
     expect(await achadas(semCarteira(), APOLICE_DELA)).toEqual([]);
+  });
+
+  it('a conta que chega depois de a fonte ser criada já vale na leitura seguinte', async () => {
+    const naConta = ref(false);
+    const fonte = listaFonte({ demo: 'cheio', comSeguros: naConta, atraso: 0 });
+
+    expect(await achadas(fonte, APOLICE_DELA)).toEqual([]);
+    naConta.value = true;
+
+    expect(await achadas(fonte, APOLICE_DELA)).toEqual([PESSOA_COM_TRES]);
+    expect(Object.keys(await fonte.contagens(ABAS.PESSOAS))).toContain(
+      GRUPO_SO_UM_SEGURO
+    );
   });
 
   it('na conta de seguros que ainda não tem seguro, o grupo existe e está vazio', async () => {
