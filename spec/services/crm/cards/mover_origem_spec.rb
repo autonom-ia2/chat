@@ -43,4 +43,13 @@ RSpec.describe Crm::Cards::Mover do
 
     expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(lote)
   end
+
+  it 'grava o motivo da etapa de entrada e o nome do funil, e deixa o movimento de fora da escolha da pessoa (#2501)' do
+    described_class.new(card: card, actor: admin, target_stage: proposta, automation_context: { skip_automations: true },
+                        etapa_de_entrada: Crm::Cards::EtapaDeEntrada::SEM_ETAPA).perform
+    movimento = Crm::Activity.where(card: card, event_type: 'move').last
+
+    expect(movimento.payload).to include('motivo' => 'etapa_nao_veio', 'to_pipeline_name' => 'Funil Comercial')
+    expect(Crm::Ai::EscolhaDePessoa.movimentos(account.id, desde: 1.hour.ago)).not_to include(movimento)
+  end
 end

@@ -10,6 +10,7 @@ class Crm::Kanban::BoardPayloadBuilder
     @params = context.params
     @account_user = context.account_user
     @account = context.account
+    @user = context.user
     @conversation_visibility = Crm::Conversations::Visibility.new(
       account: context.account,
       user: context.user,
@@ -25,6 +26,8 @@ class Crm::Kanban::BoardPayloadBuilder
     end
     board_cards = cards_by_stage.values.flat_map { |cards, _has_more| cards }
     @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(board_cards)
+    # #2710: o selo "Já é cliente" de todos os cards do quadro numa consulta só.
+    @ja_cliente_por_card = Crm::Cards::JaECliente.new(user: @user, account: @account, account_user: @account_user).para(board_cards)
     # Acesso por funil (#1148, parte C): a visibilidade das conversas do quadro (principais e vinculadas) numa consulta só.
     @conversation_visibility.preload_cards(board_cards)
     # O selo de SLA lê a conta de cada card (#2295): a da requisição já está carregada, então nenhum SELECT por card.
@@ -139,7 +142,8 @@ class Crm::Kanban::BoardPayloadBuilder
       conversation_visibility: @conversation_visibility,
       account_user: @account_user,
       pending_suggestion: pending_suggestions[card.id],
-      company: @company_by_card_id.fetch(card.id)
+      company: @company_by_card_id.fetch(card.id),
+      ja_cliente: @ja_cliente_por_card[card.id]
     ).perform
   end
 

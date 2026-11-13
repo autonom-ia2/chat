@@ -1,0 +1,47 @@
+{
+  "AUTOMACAO_NO_CRM": {
+    "CARD": {
+      "TITULO": "Automações deste card",
+      "CARREGANDO": "Procurando as automações…",
+      "VAZIO": "Nenhuma automação está cuidando deste card agora.",
+      "CRIAR": "Criar uma automação para quem entrar em {etapa}",
+      "ITEM": "{nome} — {situacao}",
+      "ESPERA_ATE": "espera até {dia}",
+      "ESPERA_CONDICAO": "espera acontecer o que o passo pede",
+      "AGINDO": "agindo agora",
+      "PASSO": "Passo {n} de {total}: {frase}",
+      "HISTORICO": "O que já fez",
+      "COMECOU": "{dia}: começou neste card",
+      "FEZ": "{dia}: {frase}",
+      "PARAR": "Parar para este card",
+      "PARAR_ROTULO": "Parar {nome} para este card",
+      "CONFIRMA": "Parar {nome} neste card? O que ela começou em outro contato, conversa ou card por causa deste também para.",
+      "SIM": "Sim, parar",
+      "VOLTAR": "Voltar",
+      "PAROU": "{nome} parou neste card. Os outros cards continuam.",
+      "ERRO_PARAR": "Não deu para parar agora. Tente de novo.",
+      "ERRO_LISTA": "Não deu para ver as automações agora.",
+      "TENTAR": "Tentar de novo"
+    },
+    "ETAPA": {
+      "TITULO": "Automações desta etapa",
+      "AJUDA": "O que acontece sozinho quando um card entra, sai ou fica parado aqui.",
+      "CARREGANDO": "Procurando as automações…",
+      "VAZIO": "Esta etapa ainda não tem automação.",
+      "NOVA": "Nova automação para esta etapa",
+      "QUANDO_ENTRA": "Quando o card entra nesta etapa",
+      "QUANDO_SAI": "Quando o card sai desta etapa",
+      "JEITO_ANTIGO": "Jeito antigo",
+      "PASSO_RETORNO": "Criar o retorno “{titulo}”",
+      "PASSO_OUTRO": "Outra ação",
+      "SO_VER": "Você pode ver. Só quem cuida das automações pode mudar.",
+      "AVISO": "Ainda não contam como entrar ou sair desta etapa: arquivar vários cards de uma vez, apagar a etapa e mover cards pela integração.",
+      "SAIR_PERGUNTA": "Sair sem salvar? O que você mudou no funil não fica guardado.",
+      "SAIR_SIM": "Sair sem salvar",
+      "FICAR": "Ficar",
+      "ERRO_LIGAR": "Não deu para mudar agora. Tente de novo.",
+      "ERRO_LISTA": "Não deu para ver as automações agora.",
+      "TENTAR": "Tentar de novo"
+    }
+  }
+}

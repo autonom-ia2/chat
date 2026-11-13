@@ -40,6 +40,8 @@ json.autonomia_insurance_enabled Autonomia::Insurance::Config.enabled?(@account)
 # #1433 (tema 13) — Fase 2 dos Agentes ligada na conta (piloto): a página "Criar agente" oferece o agente da equipe.
 json.autonomia_agents_fase2 Autonomia::Agents::Config.enabled?(@account) && Autonomia::Agents::Fase2.ligada?(@account)
 json.autonomia_pacote Autonomia::Segmentos::Pacotes.nome(@account)
+# #2897 — a conta tem a carteira de seguros (chave ligada e corretora de seguros): a tela mostra a aba e o bloco Seguros.
+json.carteira_seguros Carteira::Acesso.liberada?(@account)
 # #1648 — aba "Agente de IA" por caixa e agentes de outro sistema na lista de Agentes (piloto 1, 16 e 18).
 json.autonomia_agente_ia_por_caixa Autonomia::Agents::AgenteIaPorCaixa.ligada?(@account)
 # Guia da Plataforma: gate EXATO do backend (Config.enabled? + credencial de IA resolvível) — o widget

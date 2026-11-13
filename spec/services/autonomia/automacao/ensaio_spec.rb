@@ -81,6 +81,17 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
         .to eq([['mensagem', { texto: 'Oi.', modelo: 'retorno' }], ['esperar', {}]])
     end
 
+    # O motor manda o modelo sem ler o texto (PassoDeMensagem#mandar_aqui): o texto vazio não o impede.
+    it 'com o modelo que sai e o texto vazio, mostra só o modelo e segue; com a janela aberta, o texto vazio pula', :aggregate_failures do
+      canal.update!(message_templates: [aprovado])
+      vazio = com_modelo.merge('texto' => ['   '])
+
+      expect(passos_de(receita(vazio, esperar_passo('e1'))).map { |no| [no[:faria], no[:dados]] })
+        .to eq([['mensagem', { modelo: 'retorno' }], ['esperar', {}]])
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'Oi')
+      expect(passos_de(receita(vazio, esperar_passo('e1'))).pluck(:faria)).to eq(%w[texto_vazio esperar])
+    end
+
     it 'com a janela aberta, a mensagem sairia e segue' do
       create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'Oi')
 
@@ -103,10 +114,16 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     end
   end
 
-  it 'sem a mensagem automática, diz que não sairia' do
+  # O motor encerra a execução aí (Executor#passo_nativo): o caminho acaba, como no "pararia".
+  it 'sem a mensagem automática, diz que não sairia e o caminho acaba', :aggregate_failures do
     account.disable_features!('automacao_mensagens')
 
-    expect(passos_de(receita(mensagem_passo('p1', 'Oi')))).to eq([{ id: 'p1', tipo: 'mensagem', faria: 'mensagens_desligadas', dados: {} }])
+    expect(passos_de(receita(mensagem_passo('p1', 'Oi'), esperar_passo('e1'))))
+      .to eq([{ id: 'p1', tipo: 'mensagem', faria: 'mensagens_desligadas', dados: {} }])
+    expect(passos_de(receita(avisar_passo('a1', { 'responsavel' => true }, 'Oi'), esperar_passo('e1'))).pluck(:faria))
+      .to eq(%w[mensagens_desligadas])
+    expect(passos_de(receita({ 'id' => 'm1', 'tipo' => 'email', 'caixa_id' => 0 }, esperar_passo('e1'))).pluck(:faria))
+      .to eq(%w[mensagens_desligadas])
   end
 
   it 'valor vazio na conversa: o passo pularia, como no motor' do
@@ -234,15 +251,16 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
     end
 
-    it 'sem a mensagem automática, o que falaria com gente não sairia; a sugestão e a nota sim' do
+    # O motor encerra a execução no que falaria com gente (IaNoExecutor#passo_de_ia): o caminho acaba ali.
+    it 'sem a mensagem automática, o que falaria com gente não sairia e o caminho acaba; a sugestão e a nota sim', :aggregate_failures do
       account.disable_features!('automacao_mensagens')
       sugestao = escrever.merge('id' => 'i4', 'destino' => 'sugestao')
       nota = resumir.merge('id' => 'i5', 'destino' => 'nota')
+      ids_e_farias = ->(passos) { passos_de(receita(*passos)).map { |no| [no[:id], no[:faria]] } }
 
-      passos = passos_de(receita(escrever, resumir, sugestao, nota))
-
-      expect(passos.map { |no| [no[:id], no[:faria]] })
-        .to eq([%w[i2 mensagens_desligadas], %w[i3 mensagens_desligadas], %w[i4 ia_escrever], %w[i5 ia_resumir]])
+      expect(ids_e_farias.call([escrever, sugestao])).to eq([%w[i2 mensagens_desligadas]])
+      expect(ids_e_farias.call([resumir, nota])).to eq([%w[i3 mensagens_desligadas]])
+      expect(ids_e_farias.call([sugestao, nota])).to eq([%w[i4 ia_escrever], %w[i5 ia_resumir]])
     end
 
     # #2552: o resumo que sai pelo "avisar" mostra o mesmo que o avisar, sem e com a reserva da caixa.
@@ -275,10 +293,12 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
       expect(Crm::FollowUp.count).to eq(0)
     end
 
-    it 'com a mensagem e sem a mensagem automática, diz que não sairia' do
+    # No retorno o motor só pula (PassoDeRetorno#executar): o caminho segue.
+    it 'com a mensagem e sem a mensagem automática, diz que não sairia, e o caminho segue' do
       account.disable_features!('automacao_mensagens')
 
-      expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['Oi'] }))).first[:faria]).to eq('mensagens_desligadas')
+      expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['Oi'] }), esperar_passo('e1'))).pluck(:faria))
+        .to eq(%w[mensagens_desligadas esperar])
     end
 
     it 'a mensagem com valor vazio ou só de espaços pula como o motor', :aggregate_failures do
