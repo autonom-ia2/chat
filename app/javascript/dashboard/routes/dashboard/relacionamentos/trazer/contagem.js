@@ -39,7 +39,9 @@ export const problemasPorCarregar = leitura =>
 // vieram mais as que ainda não vieram, que contam como abertas) e as que ela
 // deixou de fora entre as que vieram. `juntadas` são as linhas que eram a mesma
 // pessoa de outra e que a leitura já juntou (não entram no total). `clientes`
-// (E3) são as que entram como cliente com as respostas de agora.
+// (E3) são as que entram como cliente com as respostas de agora. `semTelefone`
+// são as que entram sem o telefone que estava escrito na planilha: o número não
+// deu para ler e a linha entra pelo e-mail (conta do servidor).
 export const resumoDaTela = leitura => {
   const { abertos, deixados } = contarProblemas(leitura?.problemas);
   const resumo = leitura?.resumo ?? {};
@@ -50,6 +52,7 @@ export const resumoDaTela = leitura => {
     precisamDeVoce: abertos + problemasPorCarregar(leitura),
     deixadas: deixados,
     juntadas: resumo.juntadas ?? ZERO,
+    semTelefone: resumo.semTelefone ?? ZERO,
     entram: resumo.entram ?? ZERO,
     clientes: resumo.clientes ?? ZERO,
   };

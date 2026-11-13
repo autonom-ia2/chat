@@ -258,7 +258,7 @@ describe('a linha resolvida mostra o valor salvo', () => {
   it('a deixada de fora continua com a frase do problema', () => {
     const w = montar({ ...TELEFONE, estado: 'deixado' });
     expect(w.text()).toContain(
-      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.'
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.'
     );
     expect(w.text()).toContain('Deixada de fora');
   });
@@ -354,7 +354,7 @@ describe('as frases de cada problema', () => {
   it.each([
     [
       TELEFONE,
-      'Tadeu Imbirussu: este telefone não parece um celular. Confira o DDD e os dígitos.',
+      'Tadeu Imbirussu: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.',
     ],
     [EMAIL, 'Rita Carvalhedo: este e-mail não parece certo.'],
     [

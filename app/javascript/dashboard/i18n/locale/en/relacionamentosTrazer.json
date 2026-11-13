@@ -18,7 +18,7 @@
       "ERRO_GRANDE": "This spreadsheet is too big. Send it in smaller parts.",
       "ERRO_LEITURA": "I couldn't read this spreadsheet.",
       "ERRO_VAZIA": "This spreadsheet is empty.",
-      "ERRO_SEM_CONTATO": "I couldn't find a name and a phone or e-mail in this spreadsheet.",
+      "ERRO_SEM_CONTATO": "I couldn't find a phone or an e-mail I can use in this spreadsheet. The phone must be a mobile number, with the area code together with the number, in the same column. Fix the spreadsheet and send it again.",
       "ERRO_DEMOROU": "I haven't finished reading your spreadsheet yet.",
       "ERRO_SEM_NINGUEM": "With that change there was no one left with a phone or e-mail. Send the spreadsheet again.",
       "ERRO_VENCIDA": "This spreadsheet was sent more than 7 days ago and has already been deleted from here. Send the spreadsheet again.",
@@ -74,6 +74,7 @@
       "JUNTADAS": "I merged {count} row from a person who appeared more than once. | I merged {count} rows from people who appeared more than once.",
       "CLIENTES": "{count} comes in as a customer. | {count} come in as customers.",
       "SEM_CLIENTES": "No one comes in as a customer.",
+      "ENTRAM_SEM_TELEFONE": "{count} person will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: this person gets the phone. | {count} people will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: they get the phone.",
       "MUDOU": "This list changed while you were checking it. I'm showing how it is now.",
       "MUDANCA_DESFEITA": "I didn't make that change: with it there would be no one left with a phone or e-mail. I left it as it was.",
       "RELENDO": "Reading your spreadsheet again…",
@@ -111,7 +112,7 @@
         "OUTRO_PROBLEMA": "Line {linha}: saved. There is still something else to fix on this line."
       },
       "PROBLEMA": {
-        "TELEFONE": "{quem}: this phone number doesn't look like a mobile number. Check the area code and the digits.",
+        "TELEFONE": "{quem}: this phone number doesn't look like a mobile number. Check the digits and the area code: the area code must be together with the number, in the same column.",
         "EMAIL": "{quem}: this e-mail doesn't look right.",
         "NOME": "{quem}: the name is missing",
         "DUPLICADA": "{quem} shows up twice. Which one stays?",

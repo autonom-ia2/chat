@@ -2500,6 +2500,26 @@
      ],
      "revisar": false,
      "nota": "Issue #2897 (E4, parte 5). Não há rota nova: é a tela de Trazer minha lista (09.17), que na conta com a carteira de seguros ganha a escolha de como trazer, a pergunta dos seguros e o Conferir com seguros. O portão é o da carteira (Carteira::Acesso), não o da rota."
+    },
+    {
+     "id": "09.23",
+     "titulo": "Ver os seguros de quem está na conversa",
+     "para_que_serve": "Ver, no painel do contato ao lado da conversa, os seguros de quem está sendo atendido: tipo, selo, seguradora e quando vence, abrir o PDF e o seguro sem sair do atendimento, e ir à ficha para mudar algo.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ver os seguros de quem está na conversa (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2897 (E4, parte 7). Não há rota nova: o bloco mora no painel do contato da conversa, por isso o botão leva às conversas. A numeração pula o 09.22, que é da planilha com seguros. O bloco só aparece para quem pode ver contatos e quando a pessoa tem seguro; pelo painel é só leitura."
     }
    ]
   },

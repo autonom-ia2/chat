@@ -8,6 +8,8 @@
 #   validation_summary['import_error'] (nunca a mensagem do erro): a tela mostra "falhou" e "Tentar de novo".
 # - "Tentar de novo" (Relacionamentos::Trazer::Trazer) recomeça a contagem.
 # - `sem_arquivo`: o fechamento que não tem de onde ler desiste na hora, com o mesmo código. Repetir não adiantaria.
+# - `desligada`: a importação de planilhas foi desligada na instalação entre o clique e o job. Nada fecharia nem
+#   gravaria a lista; ela falha na hora, com o mesmo código, em vez de a tela mostrar "trazendo" sem fim.
 #
 # O fechamento roda inteiro numa transação: o que quebrou não deixa nada pela metade, e tentar de novo parte do mesmo
 # ponto.
@@ -47,8 +49,12 @@ class ContactImports::Trazer::Fechamentos
 
   # Devolve verdadeiro: a tentativa está encerrada, e a lista (se ainda esperava o fechamento) falhou.
   def sem_arquivo
-    @importacao.with_lock { desistir if @importacao.confirmed? }
+    desistir_se_ainda_espera
     true
+  end
+
+  def desligada
+    desistir_se_ainda_espera
   end
 
   # Sob a trava de quem chama: a lista volta a poder ser fechada, com a contagem do começo.
@@ -59,6 +65,10 @@ class ContactImports::Trazer::Fechamentos
   end
 
   private
+
+  def desistir_se_ainda_espera
+    @importacao.with_lock { desistir if @importacao.confirmed? }
+  end
 
   def desistir
     @importacao.update!(status: :failed, validation_summary: @importacao.validation_summary.to_h.merge('import_error' => ERRO))

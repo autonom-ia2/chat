@@ -110,17 +110,26 @@ Com a marca:
   `ready_to_confirm`. `schema_resolution` fica com `needs_confirmation: false` e mantém `uncertain_targets` e
   `targets[*].confident`: a tela mostra a coluna sugerida sem certeza como `duvidosa`, e a pessoa troca ali.
   Planilha sem coluna de telefone nem de e-mail → `validation_failed` com `missing_contact_column`.
-- **DDD em coluna separada é juntado ao telefone** antes da leitura (`ContactImports::Trazer::JuntarDdd`): a coluna
-  com título de DDD ao lado de uma coluna de telefone, ou a coluna sem título colada à esquerda do telefone que só tem
-  DDDs que existem. A coluna do DDD some da planilha lida (não vira informação) e `validation_summary.ddd_juntado`
-  conta as linhas juntadas. DDD que não existe ou telefone sem 8 ou 9 dígitos: a linha fica como veio. Célula que
-  parece fórmula (no DDD ou no número) nunca é juntada: segue como veio e a leitura acusa a fórmula.
+- **DDD em coluna separada não é juntado ao telefone.** O telefone é lido como está na coluna dele; a coluna do DDD
+  fica como qualquer outra (vira informação, ou "não guardar"). A junção que existia decidia pelo título qual coluna
+  era o DDD, com uma lista de palavras, e saiu: lista de palavras para entender o que a pessoa escreveu falha em
+  silêncio quando o título é outro (#3010 trata de apontar a coluna do DDD na tela). O que a pessoa vê hoje: o número
+  sem DDD vira problema de telefone (`invalid_brazilian_mobile_number`) e pode ser consertado linha a linha; quando
+  nenhuma linha tem contato que dê para usar, a leitura falha (`no_valid_rows`, ou `missing_contact_column` sem coluna
+  de telefone nem de e-mail) e a tela pede o DDD junto do número, na mesma coluna. A linha com e-mail bom e telefone
+  que não dá para ler (sem DDD, fixo, dígito faltando) entra só com o e-mail, pela regra de leitura que Públicos e
+  Importar contatos já têm (`CampaignImports::AudienceRowContacts`); a leitura conta quantas são
+  (`validation_summary.sem_telefone`, `resumo.semTelefone` na tela, só o número) e a Conferir avisa, sem travar o
+  "Trazer". A planilha corrigida, enviada de novo, acha a pessoa pelo e-mail e completa o telefone
+  (`CampaignImports::ContactRow`, `CampaignImports::ContactBlankFields`).
 - **A mesma pessoa em várias linhas vira uma só** (`ContactImports::Trazer::MesmaPessoa`): mesmo telefone (com ou sem
   o nono dígito) ou mesmo e-mail. Sem conflito, a primeira linha é completada com o que só a outra tinha (os campos
   da linha e as células que a conferência usa: se ela virar problema, o conserto leva o e-mail e a empresa que vieram
   da outra) e a outra sai da contagem (`validation_summary.mesma_pessoa`, `resumo.juntadas` na tela). Com conflito (nome, telefone,
-  e-mail ou empresa preenchidos e diferentes nas duas) a segunda vira problema `duplicada` e a pessoa escolhe com
-  qual fica. Nome igual não junta ninguém.
+  e-mail, empresa ou qualquer outra coluna guardada, preenchidos e diferentes nas duas) a segunda vira problema
+  `duplicada` e a pessoa escolhe com qual fica. As outras colunas contam porque juntar ficaria com o valor da
+  primeira e o da outra sumiria sem ninguém ver (o "Sim" de quem é cliente, a cidade, o telefone da empresa, uma
+  informação); a coluna que só uma das linhas preencheu completa a outra, sem conflito. Nome igual não junta ninguém.
 - **Linha sem nome é problema** (`blank_name`) quando a planilha tem coluna de nome: a pessoa escreve o nome ou deixa
   a linha de fora.
 - **Coluna `nao_guardar` não deixa valor em lugar nenhum.** A leitura não põe o valor dela em
@@ -194,7 +203,7 @@ Com a marca:
 **O anexo das linhas com problema** é um arquivo de texto com uma linha da planilha por linha, em JSON, na ordem
 dos números: `{"linha": 143, "celulas": {"name", "phone", "email", "company"}, "outra": {"linha": 88, "celulas": {...}}}`
 (`outra` só na linha repetida: é a linha da mesma pessoa que ficou aprovada). Só as células dos quatro alvos entram
-(o telefone já com o DDD juntado): nenhuma outra coluna, nem a marcada "não guardar". É regravado inteiro a cada
+(como vieram na planilha): nenhuma outra coluna, nem a marcada "não guardar". É regravado inteiro a cada
 leitura e apagado quando a leitura recomeça.
 
 **O anexo dos consertos** tem uma linha por linha consertada: o último campo consertado (`campo`), o que a pessoa
@@ -345,6 +354,8 @@ continua subindo para a fila. Na terceira tentativa que não termina a importaç
 fechamento na fila outra vez. O fechamento roda inteiro numa transação: o que quebrou não deixa nada pela metade.
 Sem de onde ler (o arquivo conferido apagado antes do job, ou o conferido ou os consertos fora do armazenamento) o
 fechamento desiste na primeira tentativa, com o mesmo código: a lista não segue para a gravação nem fica esperando.
+O mesmo quando o job roda com a importação de planilhas desligada na instalação (`CAMPAIGN_IMPORT_ENABLED`): a lista
+vira `failed` com o código, em vez de ficar `confirmed` e a tela mostrar "trazendo" sem fim.
 
 **A rota antiga de "Importar" não pula o fechamento.** O `POST /contact_imports/:id/confirm` de uma importação com a
 marca passa sempre por `Relacionamentos::Trazer::Trazer`, com as respostas de sempre (`200` com a importação,
@@ -352,6 +363,11 @@ marca passa sempre por `Relacionamentos::Trazer::Trazer`, com as respostas de se
 leitura que termina entre a busca e a trava não vai para a gravação sem fechamento. O estado é conferido pelo
 `Trazer`, sob a trava; a lista que já foi trazida responde `200` sem enfileirar nada. Só a gravação que parou no meio
 (`import_resumable?`) continua pelo caminho antigo, direto para o importador: a conferência dela já foi fechada.
+
+**As rotas antigas de colunas e de empresas recusam a importação com a marca.** `PATCH /contact_imports/:id/columns`
+e `PATCH /contact_imports/:id/companies` respondem `422` (`campaign_import.column_choice_not_available` e
+`campaign_import.companies_choice_not_available`) sem mudar nada: a lista marcada só muda de coluna pela tela dela
+(`PATCH leituras/:id/colunas/:indice`), que lê a planilha de novo com as regras da conferência.
 
 **Importação parada.** Se um job se perde (o worker morreu, o deploy caiu no meio), a varredura de importações paradas
 (`CampaignImports::StalledImportsJob`, a cada 5 minutos) chama `ContactImports::Trazer::ConferenciasParadas`. A
@@ -427,7 +443,7 @@ vem). `pagina` que não existe (texto, zero, negativa, além da
   esse destino); `algumas` sem nenhuma coluna
   `cliente` deixa de valer e a pergunta volta sem resposta. `options.trazer.respostas` guarda o que a pessoa respondeu;
   o que a tela recebe é isto.
-- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `entram`, `clientes`. Os cinco primeiros são
+- `resumo`: `total`, `novas`, `completadas`, `comProblema`, `juntadas`, `semTelefone`, `entram`, `clientes`. Os seis primeiros são
   os da leitura e não mudam com o que a pessoa conserta. `entram` (inteiro) é quantas pessoas entram se ela mandar
   trazer agora: a mesma conta do `POST trazer` (`ContactImports::Trazer::QuemEntra`), que muda a cada conserto.
   `clientes` (inteiro) é quantas dessas entram como cliente com a resposta de agora: todas com `sim_todas`, as que a

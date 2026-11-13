@@ -6,8 +6,11 @@
 #   e-mail, empresa e as outras colunas; o que a primeira já tinha não muda), e a outra sai da lista. As células da
 #   conferência (`:celulas`, por alvo) são completadas do mesmo jeito: se a primeira virar problema, o conserto dela
 #   leva o que veio da outra.
-# - Com conflito (nome, telefone, e-mail ou empresa preenchidos e diferentes nas duas), a segunda linha vira problema
-#   de linha repetida e guarda qual é a primeira (`:outra`), para a pessoa escolher com qual ficar.
+# - Com conflito (nome, telefone, e-mail, empresa ou qualquer outra coluna preenchidos e diferentes nas duas), a segunda
+#   linha vira problema de linha repetida e guarda qual é a primeira (`:outra`), para a pessoa escolher com qual ficar.
+#   As outras colunas contam porque juntar ficaria com o valor da primeira e o da outra sumiria sem ninguém ver: o
+#   "Sim" de "é cliente", a cidade, o telefone da empresa ou uma informação. A coluna que só uma das linhas preencheu
+#   não é conflito: completa a outra. A coluna que a pessoa mandou não guardar nem chega aqui.
 #
 # Recebe as linhas do validador e mexe nelas no lugar, como o passo de repetidas dele faz. Só olha linha sem erro.
 class ContactImports::Trazer::MesmaPessoa
@@ -82,7 +85,13 @@ class ContactImports::Trazer::MesmaPessoa
     diferentes?(texto(primeira[:normalized_name]), texto(linha[:normalized_name])) ||
       diferentes?(chave_do_telefone(primeira[:normalized_phone]), chave_do_telefone(linha[:normalized_phone])) ||
       diferentes?(primeira[:email]&.downcase, linha[:email]&.downcase) ||
-      diferentes?(texto(primeira[:company_name]), texto(linha[:company_name]))
+      diferentes?(texto(primeira[:company_name]), texto(linha[:company_name])) ||
+      outra_coluna_diferente?(primeira, linha)
+  end
+
+  def outra_coluna_diferente?(primeira, linha)
+    da_primeira = primeira[:extra_values].to_h
+    linha[:extra_values].to_h.any? { |coluna, valor| diferentes?(texto(da_primeira[coluna]), texto(valor)) }
   end
 
   def diferentes?(primeiro, segundo)
@@ -99,7 +108,7 @@ class ContactImports::Trazer::MesmaPessoa
     copiar(primeira, linha, DO_TELEFONE) if primeira[:normalized_phone].blank?
     copiar(primeira, linha, DO_EMAIL) if primeira[:email].blank?
     primeira[:company_name] = primeira[:company_name].presence || linha[:company_name]
-    primeira[:extra_values] = linha[:extra_values].to_h.merge(primeira[:extra_values].to_h)
+    primeira[:extra_values] = completado(primeira[:extra_values].to_h, linha[:extra_values].to_h)
     completar_celulas(primeira, linha)
   end
 
@@ -107,7 +116,12 @@ class ContactImports::Trazer::MesmaPessoa
   def completar_celulas(primeira, linha)
     return unless primeira[:celulas] && linha[:celulas]
 
-    primeira[:celulas] = primeira[:celulas].merge(linha[:celulas]) { |_alvo, tinha, veio| tinha.to_s.strip.empty? ? veio : tinha }
+    primeira[:celulas] = completado(primeira[:celulas], linha[:celulas])
+  end
+
+  # O que a primeira já tinha fica; o que nela estava vazio, ou nem existia, vem da outra.
+  def completado(da_primeira, da_outra)
+    da_primeira.merge(da_outra) { |_chave, tinha, veio| tinha.to_s.strip.empty? ? veio : tinha }
   end
 
   def copiar(primeira, linha, campos)

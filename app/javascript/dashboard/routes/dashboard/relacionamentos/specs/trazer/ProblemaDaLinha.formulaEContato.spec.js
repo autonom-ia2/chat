@@ -112,11 +112,11 @@ describe('ProblemaDaLinha: o motivo que vem com o problema aberto', () => {
     [{ ...EMAIL, motivo: 'blank_email' }, 'Davi Dornelino: falta o e-mail'],
     [
       { ...TELEFONE, motivo: 'invalid_brazilian_mobile_number' },
-      'Carla Carvalhedo: este telefone não parece um celular. Confira o DDD e os dígitos.',
+      'Carla Carvalhedo: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.',
     ],
     [
       TELEFONE,
-      'Carla Carvalhedo: este telefone não parece um celular. Confira o DDD e os dígitos.',
+      'Carla Carvalhedo: este telefone não parece um celular. Confira os dígitos e o DDD: o DDD precisa estar junto do número, na mesma coluna.',
     ],
   ])('o cartão de %o diz "%s"', (problema, frase) => {
     expect(montar(problema).get('form p').text()).toBe(frase);

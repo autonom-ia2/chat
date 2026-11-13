@@ -44,6 +44,7 @@ describe('a planilha de exemplo', () => {
       completadas: 15,
       comProblema: 8,
       juntadas: 3,
+      semTelefone: 0,
       entram: ENTRAM,
       // Ninguém é cliente até a pessoa dizer quem é (E3).
       clientes: 0,
