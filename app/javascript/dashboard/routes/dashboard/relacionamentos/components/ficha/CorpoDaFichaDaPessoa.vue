@@ -20,6 +20,8 @@ import SecaoNotas from './SecaoNotas.vue';
 // que não carregou fica, com "Tentar de novo" (`falhas`, ficha/falhas.js). Quem
 // só pode ver o contato (`podeEditar` falso) não tem "Alterar" nem a caixa de
 // nota. "Ver todas" das conversas ainda só avisa: só com `podeVerTodas` (#2970).
+// #2897 — o slot `antes` abre a coluna principal: é onde a ficha põe o bloco
+// Seguros (o que a pessoa tem com a corretora vem antes da conversa).
 const props = defineProps({
   conversas: { type: Array, required: true },
   cards: { type: Array, required: true },
@@ -60,6 +62,7 @@ defineExpose({ limpar: () => caixaDeNotas.value?.limpar() });
       data-relacionamentos="coluna-principal"
       class="flex flex-col min-w-0 gap-6 lg:col-span-2"
     >
+      <slot name="antes" />
       <SecaoConversas
         v-if="podeVer('conversas')"
         :conversas="conversas"
