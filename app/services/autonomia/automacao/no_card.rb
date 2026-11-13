@@ -61,7 +61,7 @@ class Autonomia::Automacao::NoCard
   # Pedaço inteiro: a mãe 12 não leva a filha da 123. Para no primeiro nível sem filha nova; o teto (Bloco::ACIMA_MAXIMO,
   # o mesmo da subida pelas mães) é só contra defeito.
   def do_card_e_descendentes(automacao)
-    todas = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card).pluck(:id, :automacao_id).to_h
+    todas = linhas(Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card))
     nivel = todas
     Bloco::ACIMA_MAXIMO.times do
       break if nivel.empty?
@@ -72,18 +72,25 @@ class Autonomia::Automacao::NoCard
     todas.keys
   end
 
-  # { id => automacao_id } das filhas das `maes` ({ id => automacao_id }). As do "em outro registro" e da lista são da
-  # automação da mãe: o prefixo usa o índice (automacao_id, evento) com text_pattern_ops (LIKE com diferença de
-  # maiúsculas, nunca ILIKE). A do bloco é de outra automação, e qual bloco não se sabe pela mãe (a marca de bloco pode
-  # ser tirada depois): sem automacao_id, esse índice não serve, e a busca vai pela conta.
+  # { id => [automacao_id, alvo_type, alvo_id] } das filhas das `maes` (mesmo formato). As do "em outro registro" e da
+  # lista são da automação da mãe: o prefixo usa o índice (automacao_id, evento) com text_pattern_ops (LIKE com diferença
+  # de maiúsculas, nunca ILIKE). A do bloco é de outra automação, e qual bloco não se sabe pela mãe (a marca de bloco
+  # pode ser tirada depois); mas roda no mesmo alvo da mãe (PassoUsarBloco), então a busca vai pelo índice do alvo.
   def filhas_de(maes)
     evento = Execucao.arel_table[:evento]
     da_conta = Execucao.where(account_id: @card.account_id)
                        .where("split_part(#{Execucao.table_name}.evento, ':', 2) IN (?)", maes.keys.map(&:to_s))
     prefixos = MARCAS_DA_MESMA.map { |marca| "#{marca}:%" }
-    da_mesma = da_conta.where(automacao_id: maes.values.uniq).where(evento.matches_any(prefixos, nil, true))
-    de_bloco = da_conta.where(evento.matches("#{Bloco::MARCA}:%", nil, true))
-    da_mesma.pluck(:id, :automacao_id).to_h.merge(de_bloco.pluck(:id, :automacao_id).to_h)
+    da_mesma = da_conta.where(automacao_id: maes.values.map(&:first).uniq).where(evento.matches_any(prefixos, nil, true))
+    de_bloco = da_conta.where(evento.matches("#{Bloco::MARCA}:%", nil, true)).where(nos_alvos(maes.values))
+    linhas(da_mesma).merge(linhas(de_bloco))
+  end
+
+  def linhas(escopo) = escopo.pluck(:id, :automacao_id, :alvo_type, :alvo_id).to_h { |id, *resto| [id, resto] }
+
+  # OR dos alvos (alvo_type, alvo_id) das mães, sem repetir.
+  def nos_alvos(linhas)
+    linhas.map { |_, tipo, id| [tipo, id] }.uniq.map { |tipo, id| Execucao.where(alvo_type: tipo, alvo_id: id) }.reduce(:or)
   end
 
   def para_tela(execucao, registros)
