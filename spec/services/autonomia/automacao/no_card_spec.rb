@@ -292,14 +292,30 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
         expect { expect(abrir_filhas).to eq('mae_parada' => 1) }.not_to change(Autonomia::Automacao::Execucao, :count)
       end
 
-      it 'o parar que chega no meio da rodada: a filha já gravada fica (o parar a fecha), a seguinte não abre', :aggregate_failures do
+      it 'o parar que chega no meio da rodada: a filha já gravada é fechada por ele, a seguinte não abre', :aggregate_failures do
         segundo = create(:contact, account: account, label_list: ['vip'])
         lista = Autonomia::Automacao::FilhasDaLista.new(execucao.reload, passo)
-        # 1ª conferência: a de entrada; 2ª: a da primeira filha; 3ª: a da segunda, com o parar já feito.
-        allow(lista).to receive(:mae_parada?).and_return(false, false, true)
+        vezes = 0
+        # 1ª conferência: a de entrada; 2ª: a da primeira filha; na 3ª (a da segunda filha) o parar acontece antes.
+        allow(lista).to receive(:mae_parada?).and_wrap_original do |original|
+          vezes += 1
+          no_card.parar!(definicao) if vezes == 3
+          original.call
+        end
 
-        expect { expect(lista.abrir).to eq('mae_parada' => 1) }.to change(Autonomia::Automacao::Execucao, :count).by(1)
-        expect(Autonomia::Automacao::Execucao.where(alvo: [contato, segundo]).count).to eq(1)
+        expect(lista.abrir).to eq('mae_parada' => 1)
+        filhas = Autonomia::Automacao::Execucao.where(alvo: [contato, segundo])
+        expect(filhas.count).to eq(1)
+        expect(filhas.first.estado).to eq('parada')
+      end
+
+      it 'a mãe parada pelo desligar mantém o porquê dela: o parar no card não o troca' do
+        execucao.update_columns(estado: 'parada', finalizada_em: Time.current, # rubocop:disable Rails/SkipsModelValidations
+                                textos: { Autonomia::Automacao::Execucao::PORQUE => 'desligada' })
+
+        no_card.parar!(definicao)
+
+        expect(execucao.reload.textos).to eq(Autonomia::Automacao::Execucao::PORQUE => 'desligada')
       end
     end
   end

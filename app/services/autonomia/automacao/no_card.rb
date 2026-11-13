@@ -64,11 +64,14 @@ class Autonomia::Automacao::NoCard
 
   def do_escopo(automacao) = Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao))
 
-  # As vezes já terminadas desta automação no card ganham o porquê nos `textos` (que a terminada não usa): a lista que
-  # ainda vai abrir filhas por uma delas lê a marca e não abre (FilhasDaLista#mae_parada?).
+  # As vezes já terminadas desta automação no card (concluída, falhou, interrompida) ganham o porquê nos `textos`: a lista
+  # que ainda vai abrir filhas por uma delas lê a marca e não abre (FilhasDaLista#mae_parada?). A já parada fica como
+  # está: o estado já basta, e o porquê dela (o desligar, por exemplo) não pode ser trocado. Trava pela ordem do id antes
+  # de gravar, como o parar_por_fora!. A terminada não é salva de novo com callback (o AO_TERMINAR apagaria a marca).
   def marcar_terminadas(automacao)
-    Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card).where.not(finalizada_em: nil)
-            .update_all(textos: { Execucao::PORQUE => MOTIVO }) # rubocop:disable Rails/SkipsModelValidations
+    ids = Execucao.where(account_id: @card.account_id, automacao_id: automacao.id, alvo: @card).where.not(finalizada_em: nil)
+                  .where.not(estado: 'parada').order(:id).lock.pluck(:id)
+    Execucao.where(id: ids).update_all(textos: { Execucao::PORQUE => MOTIVO }) if ids.any? # rubocop:disable Rails/SkipsModelValidations
   end
 
   # Os ids das execuções desta automação neste card e de tudo o que elas começaram, nível a nível (uma mãe por vez não
