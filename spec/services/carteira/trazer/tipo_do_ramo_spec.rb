@@ -16,6 +16,12 @@ RSpec.describe Carteira::Trazer::TipoDoRamo, :aggregate_failures do
     described_class.new(importacao.reload, pergunta: pergunta)
   end
 
+  # { resumo do ramo => tipo }, como o serviço devolve. A ordem das chaves não é contrato: o que volta das opções da
+  # importação (jsonb) vem na ordem do banco, não na de inserção.
+  def resolvidos(ramos)
+    ramos.transform_keys { |ramo| described_class.chave(importacao.id, ramo) }
+  end
+
   # Como a leitura da planilha guarda o que resolveu.
   def guardar(mapa)
     importacao.update!(options: importacao.options.merge('trazer' => { 'tipos_do_ramo' => mapa }))
@@ -25,7 +31,7 @@ RSpec.describe Carteira::Trazer::TipoDoRamo, :aggregate_failures do
     mapa = tipos.resolver(['Automóvel', ' AUTOMÓVEL ', 'Vida', '', nil, 'vida'])
 
     expect(pergunta).to have_received(:call).with(%w[automóvel vida]).once
-    expect(mapa.values).to eq(%w[auto vida])
+    expect(mapa).to eq(resolvidos('Automóvel' => 'auto', 'vida' => 'vida'))
   end
 
   it 'guarda o resumo do ramo, nunca o texto: o que a célula dizia não fica nas opções da importação' do
@@ -36,7 +42,8 @@ RSpec.describe Carteira::Trazer::TipoDoRamo, :aggregate_failures do
     # O que fica guardado é { resumo => tipo }: o tipo é um dos cinco da carteira, e o ramo não aparece.
     expect(mapa.keys.join.downcase).not_to include('autom', 'vida')
     expect(importacao.reload.options.to_json.downcase).not_to include('autom')
-    expect(mapa.keys.first).not_to eq(described_class.chave(importacao.id + 1, 'Automóvel'))
+    expect(mapa.keys).to include(described_class.chave(importacao.id, 'Automóvel'))
+    expect(mapa.keys).not_to include(described_class.chave(importacao.id + 1, 'Automóvel'))
     expect(['Automóvel', ' automóvel', 'VIDA', 'Náutico', '', nil].map { |ramo| tipos.de(ramo) }).to eq(%w[auto auto vida outro outro outro])
   end
 
@@ -49,7 +56,8 @@ RSpec.describe Carteira::Trazer::TipoDoRamo, :aggregate_failures do
     expect(pergunta).to have_received(:call).with(%w[automóvel]).once
     expect(pergunta).to have_received(:call).with(%w[vida]).once
     expect(pergunta).to have_received(:call).twice
-    expect(mapa.values).to eq(%w[auto vida])
+    expect(mapa).to eq(resolvidos('Automóvel' => 'auto', 'vida' => 'vida'))
+    expect(%w[AUTOMÓVEL vida].map { |ramo| tipos.de(ramo) }).to eq(%w[auto vida])
   end
 
   it 'o ramo que a conta já tem resolvido nas apólices dela não chama o modelo: vale o tipo mais frequente, e "outro" não conta' do
