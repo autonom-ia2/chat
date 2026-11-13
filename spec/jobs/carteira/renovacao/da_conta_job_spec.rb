@@ -67,6 +67,21 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
     expect([cards.sole.owner_id, seguro.eventos.sole.valores.to_h]).to eq([nil, { 'funil' => funil.id }])
   end
 
+  # Acesso por funil (#1148): o funil das renovações fica numa caixa que não é dela, e ela tem restrição em outra. O
+  # quadro dela não mostra esse funil; com ela de dona, o card seria de quem não o abre.
+  it 'quem escolheu e perdeu o acesso ao funil não vira dono: o card nasce sem dono' do
+    bia = create(:user, account: account, role: :agent, name: 'Bia Exemplo')
+    config.update!(user: bia)
+    Crm::PipelineInbox.create!(account: account, inbox: create_crm_inbox(account: account, name: 'Caixa de outros'), pipeline: funil)
+    Crm::InboxAgentAccess.create!(account: account, inbox: create_crm_inbox(account: account, name: 'Caixa dela', members: [bia]),
+                                  user: bia, all_pipelines: false, triage: false, only_own: false)
+    seguro = criar_apolice(marina, numero: 'EX-000001', fim_vigencia: hoje + 10)
+
+    rodar
+
+    expect([cards.sole.owner_id, seguro.eventos.sole.valores.to_h]).to eq([nil, { 'funil' => funil.id }])
+  end
+
   it 'o dia de hoje é o da conta: às 23h30 de São Paulo ainda não entra quem só entraria amanhã' do
     amanha = criar_apolice(marina, numero: 'EX-000002', fim_vigencia: hoje + 61)
 

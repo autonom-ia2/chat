@@ -13,8 +13,13 @@
 # - `recortes`: só as linhas que têm algum seguro no período, das que mais venceram para as que menos. "Quem cuida" é
 #   o dono do card de renovação; seguro sem card, ou com card sem dono, não entra nesse recorte.
 #
-# Só números, nenhum dado de cliente. Cinco consultas, qualquer que seja o tamanho da carteira: os três períodos saem
-# juntos, um COUNT(*) FILTER por número.
+# Os totais, os motivos e os recortes por tipo e por seguradora são dado da carteira: vão para quem vê contatos. O
+# recorte por quem cuida é desempenho de cada pessoa, e mostra o dono de card de funil que quem pede pode não abrir: é
+# relatório, e só vai para quem vê os relatórios (ReportPolicy#view?: administrador ou a chave `report_manage`). Para os
+# outros a chave `cuida` nem vem.
+#
+# Só números, nenhum dado de cliente. Até cinco consultas, qualquer que seja o tamanho da carteira: os três períodos
+# saem juntos, um COUNT(*) FILTER por número.
 class Carteira::Renovacao::Resultados
   PERIODOS = Carteira::Consulta::NAO_RENOVARAM_EM
   SEM_MOTIVO = 'sem_motivo'.freeze
@@ -25,16 +30,17 @@ class Carteira::Renovacao::Resultados
   # [venceram, renovou] de cada linha de um recorte.
   DA_LINHA = [nil, RENOVOU].freeze
 
-  def initialize(account)
+  # quem: o contexto de quem pede, como o Pundit o recebe ({ user:, account:, account_user: }).
+  def initialize(account, quem: nil)
     @account = account
+    @quem = quem
     @hoje = Carteira::Selo.hoje(account)
   end
 
   def call
     totais = venceram.pick(*colunas(do_total)).each_slice(do_total.size).to_a
     recortes = { tipo: recorte(:tipo, venceram.group(:tipo), 'carteira_apolices.tipo'),
-                 seguradora: recorte(:nome, venceram.group(:seguradora_chave), NOME_DA_SEGURADORA),
-                 cuida: recorte(:nome, venceram.joins(crm_card: :owner).group('users.id'), 'MIN(users.name)') }
+                 seguradora: recorte(:nome, venceram.group(:seguradora_chave), NOME_DA_SEGURADORA) }.merge(de_quem_cuida)
     periodos = PERIODOS.each_with_index.map do |dias, indice|
       periodo(dias, totais[indice], recortes.transform_values { |linhas| linhas[indice] })
     end
@@ -42,6 +48,12 @@ class Carteira::Renovacao::Resultados
   end
 
   private
+
+  def de_quem_cuida
+    return {} unless @quem.present? && Pundit.policy!(@quem, :report).view?
+
+    { cuida: recorte(:nome, venceram.joins(crm_card: :owner).group('users.id'), 'MIN(users.name)') }
+  end
 
   # Tudo que terminou no período mais longo; cada número filtra o período dele.
   def venceram

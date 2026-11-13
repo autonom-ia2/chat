@@ -1,10 +1,11 @@
 # "Ajustar renovações" (E5, #2898): ler e guardar onde ficam as renovações da conta. Ler pede o mesmo que ver a carteira
-# (ver contatos). Guardar muda uma escolha da conta inteira e diz em que funil o CRM recebe os cards: pede as duas
-# chaves, `contact_manage` e `crm_manage_pipelines` (administrador, ou função com as duas), e só aceita funil que quem
-# pede enxerga no quadro. Quem só lê recebe `semPermissao`, e a tela não oferece o salvar.
+# (ver contatos). Guardar muda uma escolha da conta inteira e diz em que funil o CRM recebe os cards: pede editar
+# contatos (`contact_manage`) e a chave de funis, uma das duas (`crm_manage_pipelines` ou `crm_admin`, a mesma régua
+# da Automação: Autonomia::Automacao::RegraDoFunil.chave?). Só aceita funil que quem pede enxerga no quadro. Quem só lê
+# recebe `semPermissao`, e a tela não oferece o salvar.
 class Api::V1::Accounts::Relacionamentos::Seguros::RenovacoesController < Api::V1::Accounts::Relacionamentos::CarteiraController
   CAMPOS = ::Carteira::Renovacao::SalvarAjustes::CAMPOS
-  PARA_MUDAR = %w[contact_manage crm_manage_pipelines].freeze
+  EDITAR_CONTATOS = 'contact_manage'.freeze
 
   before_action :sem_parametros, only: :show
   before_action :poder_mudar, only: :update
@@ -30,7 +31,7 @@ class Api::V1::Accounts::Relacionamentos::Seguros::RenovacoesController < Api::V
 
   def pode_mudar?
     conta = Current.account_user
-    conta.present? && PARA_MUDAR.all? { |chave| conta.permission_granted?(chave) }
+    conta.present? && conta.permission_granted?(EDITAR_CONTATOS) && ::Autonomia::Automacao::RegraDoFunil.chave?(conta)
   end
 
   def poder_mudar

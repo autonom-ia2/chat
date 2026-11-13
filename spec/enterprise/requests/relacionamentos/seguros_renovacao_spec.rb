@@ -1,9 +1,10 @@
 require 'rails_helper'
 
 # E5 (#2898) — a parte da renovação da carteira que depende do Enterprise: o que a função personalizada muda. Ler pede
-# ver contatos; guardar os ajustes pede as DUAS chaves, editar contatos e montar os funis (que já traz a de ver o
-# CRM); dizer como a renovação terminou pede editar contatos e poder mexer naquele card no quadro; o id do card só
-# vai para quem o enxerga; o aviso no sino vai a quem vê contatos e o CRM. Tudo fictício.
+# ver contatos; guardar os ajustes pede editar contatos e a chave de funis, uma das duas (montar os funis, que já traz
+# a de ver o CRM, ou administrar o CRM); dizer como a renovação terminou pede editar contatos e poder mexer naquele card
+# no quadro; o card de renovação (id, funil, etapa, dono) só vai para quem o enxerga; o recorte por quem cuida só vai
+# para quem vê os relatórios; o aviso no sino vai a quem vê contatos e o CRM. Tudo fictício.
 RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
   # Meio-dia em São Paulo: para a conta, hoje é 12/11/2026.
   let(:agora) { Time.utc(2026, 11, 12, 15) }
@@ -60,13 +61,15 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect(lido['ajustes']).to include('funilId' => ajustes.pipeline_id, 'dias' => 60)
     end
 
-    # Guardar muda uma escolha da conta inteira e diz em que funil o CRM recebe os cards: pede as duas chaves.
-    # Os quatro casos: nenhuma, só editar contatos, só montar os funis, as duas.
+    # Guardar muda uma escolha da conta inteira e diz em que funil o CRM recebe os cards: pede editar contatos E a chave
+    # de funis, que é uma das duas (montar os funis ou administrar o CRM, como na Automação: RegraDoFunil.chave?).
     {
       'nenhuma das duas' => [%w[contact_view crm_view], false],
       'só a de editar contatos' => [%w[contact_manage crm_view], false],
       'só a de montar os funis' => [%w[contact_view crm_view crm_manage_pipelines], false],
-      'as duas' => [%w[contact_manage crm_view crm_manage_pipelines], true]
+      'as duas' => [%w[contact_manage crm_view crm_manage_pipelines], true],
+      'a de editar contatos e a de administrar o CRM' => [%w[contact_manage crm_admin], true],
+      'só a de administrar o CRM' => [%w[contact_view crm_admin], false]
     }.each do |caso, (chaves, guarda)|
       it "com #{caso}, #{guarda ? 'guarda' : 'lê os funis mas não guarda'}" do
         quem = pessoa_com(chaves)
@@ -103,13 +106,14 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect(ajustes.reload).to have_attributes(dias_antes: 45, user_id: monta.id)
     end
 
-    it 'sem a chave de contatos não lê nem guarda' do
-      sem_contatos = pessoa_com(%w[conversation_manage crm_view])
+    it 'sem a chave de contatos não lê nem guarda, nem administrando o CRM' do
+      respostas = [%w[conversation_manage crm_view], %w[crm_admin]].map do |chaves|
+        sem_contatos = pessoa_com(chaves)
+        ler_ajustes(sem_contatos)
+        [response.status, guardar_ajustes(sem_contatos, { dias: 30 }).first]
+      end
 
-      ler_ajustes(sem_contatos)
-      lendo = response.status
-
-      expect([lendo, guardar_ajustes(sem_contatos, { dias: 30 }).first, ajustes.reload.dias_antes]).to eq([401, 401, 60])
+      expect([respostas, ajustes.reload.dias_antes]).to eq([[[401, 401], [401, 401]], 60])
     end
   end
 
@@ -135,12 +139,12 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       expect([response.status, card.reload.status, seguro.reload.renovado_em]).to eq([200, 'won', agora])
     end
 
-    it 'o id do card de renovação só vai para quem enxerga o card no quadro' do
+    it 'o card de renovação (id, funil, etapa e dono) só vai para quem o enxerga no quadro; os outros leem só o desfecho' do
       quem = pessoa_com(%w[contact_view crm_view])
       sem_crm = pessoa_com(%w[contact_view])
       ler_o_card = lambda do |pessoa|
         get "#{base}/seguros/#{seguro.id}", headers: pessoa.create_new_auth_token
-        response.parsed_body['renovacao'].slice('cardId', 'funil')
+        response.parsed_body['renovacao']
       end
 
       sem_ver = ler_o_card.call(quem)
@@ -148,9 +152,26 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
       dona_sem_crm = ler_o_card.call(sem_crm)
       card.update!(owner: quem)
 
-      expect([sem_ver, dona_sem_crm]).to all(eq('cardId' => nil, 'funil' => 'Renovação'))
-      expect(ler_o_card.call(quem)).to eq('cardId' => card.id, 'funil' => 'Renovação')
-      expect(ler_o_card.call(admin)).to eq('cardId' => card.id, 'funil' => 'Renovação')
+      inteiro = { 'cardId' => card.id, 'funil' => 'Renovação', 'etapa' => 'Novo Lead', 'desfecho' => nil, 'cuida' => quem.name,
+                  'cuidaId' => quem.id }
+      expect([sem_ver, dona_sem_crm]).to all(eq('desfecho' => nil))
+      expect([ler_o_card.call(quem), ler_o_card.call(admin)]).to all(eq(inteiro))
+    end
+
+    it 'quem cuida, no filtro e nas opções, só conta os cards que quem pede enxerga' do
+      quem = pessoa_com(%w[contact_view crm_view])
+      card.update!(owner: admin)
+      ler_quem_cuida = lambda do |dono|
+        get "#{base}/seguros/opcoes_de_filtro", headers: quem.create_new_auth_token
+        opcoes = response.parsed_body['cuida'].pluck('id')
+        get "#{base}/seguros", params: { filtros: { cuida: dono.id } }, headers: quem.create_new_auth_token
+        [opcoes, response.parsed_body['total']]
+      end
+
+      sem_ver = ler_quem_cuida.call(admin)
+      card.update!(owner: quem)
+
+      expect([sem_ver, ler_quem_cuida.call(quem)]).to eq([[[], 0], [[quem.id], 1]])
     end
 
     it 'guardar a apólice nova pede só editar contatos' do
@@ -162,6 +183,38 @@ RSpec.describe 'Carteira de seguros: renovação e funções', type: :request do
 
       expect(respostas).to eq([401, 201])
       expect([card.reload.status, seguro.reload.renovado_em]).to eq(['won', agora])
+    end
+  end
+
+  describe 'os resultados das renovações' do
+    it 'o recorte por quem cuida só vai para quem vê os relatórios; os outros nem recebem a chave' do
+      recortes_de = lambda do |chaves|
+        get "#{base}/seguros/resultados", headers: pessoa_com(chaves).create_new_auth_token
+        [response.status, response.parsed_body['periodos'].map { |periodo| periodo['recortes'].keys }.uniq]
+      end
+
+      expect(recortes_de.call(%w[contact_view])).to eq([200, [%w[tipo seguradora]]])
+      expect(recortes_de.call(%w[contact_view crm_view crm_manage_cards])).to eq([200, [%w[tipo seguradora]]])
+      expect(recortes_de.call(%w[contact_view report_manage])).to eq([200, [%w[tipo seguradora cuida]]])
+    end
+  end
+
+  describe 'quem cuida do card que nasce' do
+    def card_do_proximo(numero)
+      proximo = criar_apolice(marina, numero: numero, fim_vigencia: hoje + 6)
+      Carteira::Renovacao::DaContaJob.perform_now(account.id)
+      proximo.reload.crm_card
+    end
+
+    it 'quem escolheu o funil e perdeu o CRM na função não vira dona: o card nasce sem dono' do
+      com_crm = pessoa_com(%w[contact_manage crm_view crm_manage_pipelines])
+      ajustes.update!(user: com_crm)
+      dela = card_do_proximo('EX-000002')
+      AccountUser.find_by(account: account, user: com_crm).custom_role.update!(permissions: %w[contact_manage])
+
+      sem_dono = card_do_proximo('EX-000003')
+
+      expect([dela.owner_id, sem_dono.owner_id]).to eq([com_crm.id, nil])
     end
   end
 

@@ -3,9 +3,10 @@
 # e a IA do funil respeita a etapa em que ele nasceu, como respeita a de uma automação (Crm::Ai::MovimentoDaAutomacao;
 # `origem: 'carteira'`).
 #
-# Quem cuida do card é quem escolheu o funil nos ajustes, enquanto for da conta: o card sem dono e sem caixa só
-# apareceria para o administrador. A história do seguro guarda o nome (`valores.cuida`). Se essa pessoa saiu da conta,
-# o card nasce sem dono.
+# Quem cuida do card é quem escolheu o funil nos ajustes, enquanto for da conta e ainda enxergar esse funil no quadro:
+# o card sem dono e sem caixa só apareceria para o administrador. A história do seguro guarda o nome (`valores.cuida`).
+# Se essa pessoa saiu da conta, perdeu o CRM na função ou perdeu o funil no acesso por funil, o card nasce sem dono: com
+# ela de dona, ele seria de quem não o abre.
 #
 # O passo da história (`renovacao_card_nasceu`, só deste card) guarda também o funil em que o card nasceu
 # (`valores.funil`, o id): é por ele que a rotina sabe se o seguro ainda pode ganhar outro card nesta vigência
@@ -21,7 +22,7 @@ class Carteira::Renovacao::CriarCard
   def initialize(account, config)
     @account = account
     @config = config
-    @dono = config.user if config.user_id && AccountUser.exists?(account_id: account.id, user_id: config.user_id)
+    @dono = quem_escolheu_e_ainda_ve_o_funil
     @locale = account.locale.presence || I18n.default_locale
     @fuso = Crm::Timezone::Resolver.new(account: account).name_or_default
   end
@@ -38,6 +39,17 @@ class Carteira::Renovacao::CriarCard
   end
 
   private
+
+  # A mesma régua do quadro para pôr um card avulso num funil: ver o CRM (Crm::PipelinePolicy#index?) e ter o funil
+  # entre os que a pessoa enxerga (Crm::Access::CardGuard#create_allowed?).
+  def quem_escolheu_e_ainda_ve_o_funil
+    conta_dela = @config.user_id && AccountUser.find_by(account_id: @account.id, user_id: @config.user_id)
+    return unless conta_dela
+
+    quem = { user: @config.user, account: @account, account_user: conta_dela }
+    ve = Pundit.policy!(quem, Crm::Pipeline).index? && Crm::Access::CardGuard.new(**quem).create_allowed?(@config.pipeline_id, conversation: nil)
+    @config.user if ve
+  end
 
   def criar(apolice)
     Crm::Cards::Creator.new(account: @account, user: nil, params: do_card(apolice), automacao: { origem: ORIGEM, id: apolice.id }).perform

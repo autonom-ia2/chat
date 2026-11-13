@@ -8,8 +8,9 @@
 # nesta entrega.
 #
 # Com a renovação (E5, #2898): o grupo "Em renovação" (a mesma regra do selo, Carteira::Selo, só com as colunas da
-# apólice), o filtro "quem cuida" (o dono do card de renovação) e os grupos temporários "Não renovaram nos últimos N
-# dias", que só existem quando a tela de resultados leva até eles: terminaram nesse período sem renovar.
+# apólice), o filtro "quem cuida" (o dono do card de renovação, só entre os cards que quem pede enxerga no quadro) e os
+# grupos temporários "Não renovaram nos últimos N dias", que só existem quando a tela de resultados leva até eles:
+# terminaram nesse período sem renovar.
 class Carteira::Consulta < Relacionamentos::Consulta
   ORDEM_DA_CARTEIRA = 'vence_primeiro'.freeze
   VENCE_EM = [7, 30, 90].freeze
@@ -46,6 +47,12 @@ class Carteira::Consulta < Relacionamentos::Consulta
 
   def self.base(account)
     Carteira::Apolice.where(account_id: account.id).joins(:contact).left_joins(:company)
+  end
+
+  # quem: o contexto de quem pede, como o Pundit o recebe. Só o filtro "quem cuida" o usa (Carteira::CardsVisiveis).
+  def initialize(account, pedido, quem: nil)
+    @quem = quem
+    super(account, pedido)
   end
 
   # A consulta inteira, para "Marcar todas as N": só o que as ações em grupo leem de cada seguro (a mensagem vai por pessoa).
@@ -113,11 +120,13 @@ class Carteira::Consulta < Relacionamentos::Consulta
     { seguradora_chave: Carteira::Chave.seguradora(filtro(:seguradora)) } if filtro(:seguradora)
   end
 
-  # "Quem cuida" é o dono do card de renovação que o seguro mostra (o tirado do quadro não conta).
+  # "Quem cuida" é o dono do card de renovação que o seguro mostra (o tirado do quadro não conta). Só entre os cards que
+  # quem pede enxerga no quadro: sem isto, filtrar pelo id de um colega contaria de que seguros ele cuida num funil
+  # que a pessoa não abre.
   def de_quem_cuida
     return unless filtro(:cuida)
 
-    cards = Crm::Card.where(account_id: @account.id, owner_id: quem_cuida).select(:id)
+    cards = Carteira::CardsVisiveis.new(@quem).call.where(owner_id: quem_cuida).select(:id)
     { crm_card_id: cards, renovacao_card_removido_em: nil }
   end
 

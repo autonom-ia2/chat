@@ -59,16 +59,19 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       )
     end
 
-    it 'quem não enxerga o card no quadro lê a renovação sem o id do card' do
+    # A carteira não conta que existe um card num funil que a pessoa não abre: só como a renovação terminou.
+    it 'quem não enxerga o card no quadro lê da renovação só o desfecho: nem o id, nem o funil, nem a etapa, nem o dono' do
       agente = create(:user, account: account, role: :agent)
+      card.update!(owner: admin)
 
-      do_agente = ler("seguros/#{seguro.id}", quem: agente)['renovacao']
+      do_agente = ler("seguros/#{seguro.id}", quem: agente)
       da_lista = ler('seguros', quem: agente)['itens'].sole['renovacao']
+      no_quadro('won')
 
-      expect(do_agente).to eq('cardId' => nil, 'funil' => 'Renovação', 'etapa' => 'Novo Lead', 'desfecho' => nil, 'cuida' => nil,
-                              'cuidaId' => nil)
-      expect(da_lista).to eq(do_agente)
-      expect(ler('seguros')['itens'].sole['renovacao']).to include('cardId' => card.id)
+      expect(do_agente).to include('selo' => 'em_renovacao', 'renovacao' => { 'desfecho' => nil })
+      expect(da_lista).to eq('desfecho' => nil)
+      expect(ler("seguros/#{seguro.id}", quem: agente)).to include('selo' => 'renovado', 'renovacao' => { 'desfecho' => 'renovou' })
+      expect(ler('seguros')['itens'].sole['renovacao']).to include('cardId' => card.id, 'funil' => 'Renovação', 'cuida' => 'Bia Exemplo')
     end
 
     it 'o card sem dono vem sem "quem cuida", e o card tirado do quadro some do seguro' do
@@ -125,6 +128,22 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(ler('seguros/contagens', filtros: { cuida: admin.id })).to include('todos' => 1, 'em_renovacao' => 1)
       expect(ler('seguros/opcoes_de_filtro')['cuida']).to eq([{ 'id' => admin.id, 'nome' => 'Bia Exemplo' },
                                                               { 'id' => caio.id, 'nome' => 'Caio Exemplo' }])
+    end
+
+    # O card de renovação não tem caixa: fora o administrador, só a dona o enxerga no quadro.
+    it 'quem cuida, no filtro e nas opções, só conta os cards que quem pede enxerga no quadro' do
+      caio = create(:user, account: account, role: :agent, name: 'Caio Exemplo')
+      card.update!(owner: admin)
+      do_caio = criar_apolice(marina, numero: 'EX-000002', fim_vigencia: hoje + 20)
+      por_em_renovacao(do_caio, ajustes).update!(owner: caio)
+
+      das_opcoes = ler('seguros/opcoes_de_filtro', quem: caio)['cuida']
+      da_colega = ler('seguros', quem: caio, filtros: { cuida: admin.id })
+      dele = ler('seguros', quem: caio, filtros: { cuida: caio.id })
+
+      expect(das_opcoes).to eq([{ 'id' => caio.id, 'nome' => 'Caio Exemplo' }])
+      expect([da_colega['itens'], da_colega['total']]).to eq([[], 0])
+      expect(dele['itens'].pluck('numero')).to eq(['EX-000002'])
     end
 
     it 'a lista não faz uma consulta a mais por seguro em renovação' do

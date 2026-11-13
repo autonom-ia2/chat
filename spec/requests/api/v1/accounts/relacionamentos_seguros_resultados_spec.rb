@@ -84,6 +84,19 @@ RSpec.describe 'Carteira de seguros: resultados das renovações', type: :reques
     )
   end
 
+  # O recorte por quem cuida é desempenho de cada pessoa: é relatório. Os totais e os outros recortes são da carteira.
+  it 'quem vê contatos mas não vê os relatórios recebe os mesmos números, sem o recorte por quem cuida' do
+    montar_carteira
+    do_admin = ler['periodos']
+
+    do_agente = ler(quem: caio)['periodos']
+
+    expect(response).to have_http_status(:ok)
+    expect(do_agente.map { |periodo| periodo['recortes'].keys }).to all(eq(%w[tipo seguradora]))
+    expect(do_admin.map { |periodo| periodo['recortes'].keys }).to all(eq(%w[tipo seguradora cuida]))
+    expect(do_agente).to eq(do_admin.map { |periodo| periodo.merge('recortes' => periodo['recortes'].except('cuida')) })
+  end
+
   it 'a conta sem seguro vem com os três períodos zerados' do
     lido = ler
 

@@ -8,8 +8,9 @@
 # A renovação (E5, #2898): `renovadoEm`, o motivo de não ter renovado (`motivo` da lista, `motivoEscrito` quando é
 # "outro"), `apoliceNova` (a apólice que renovou este seguro já está guardada) e `renovacao`, o card de renovação que o
 # seguro mostra: o nome do funil e da etapa, como terminou (`renovou`, `nao_renovou` ou nulo) e quem cuida (o nome e o
-# id do dono do card). `renovacao` é nulo sem card e quando ele foi tirado do quadro. O `cardId` só vai para quem
-# enxerga aquele card no quadro: para os outros vem nulo, e a tela não oferece "Abrir no CRM".
+# id do dono do card). `renovacao` é nulo sem card e quando ele foi tirado do quadro. Quem não enxerga aquele card no
+# quadro (Carteira::CardsVisiveis) recebe `renovacao` só com `desfecho`: nem o id, nem o funil, nem a etapa, nem o
+# dono, para a carteira não contar que existe um card num funil que a pessoa não abre.
 #
 # O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
 # endosso, seguro de outra corretora) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por
@@ -20,7 +21,7 @@ class Carteira::Apresentacao
   NAO_RENOVOU = 'nao_renovou'.freeze
 
   # quem: o contexto de quem pede, como o Pundit o recebe ({ user:, account:, account_user: }). É por ele que se sabe
-  # quais cards a pessoa enxerga no quadro (Crm::CardPolicy). Sem ele, nenhum `cardId` sai.
+  # quais cards a pessoa enxerga no quadro. Sem ele, de nenhum card sai mais que o desfecho.
   def initialize(account, quem: nil)
     @hoje = Carteira::Selo.hoje(account)
     @quem = quem
@@ -57,13 +58,9 @@ class Carteira::Apresentacao
 
   def cards_visiveis(apolices)
     ids = apolices.filter_map(&:crm_card_id)
-    return [] if ids.empty? || !ve_o_quadro?
+    return [] if ids.empty?
 
-    Pundit.policy_scope!(@quem, Crm::Card).where(id: ids).pluck(:id)
-  end
-
-  def ve_o_quadro?
-    @quem.present? && Crm::Config.enabled? && Pundit.policy!(@quem, Crm::Card).index?
+    Carteira::CardsVisiveis.new(@quem).call.where(id: ids).pluck(:id)
   end
 
   def da_renovacao(apolice, cards_visiveis)
@@ -74,9 +71,10 @@ class Carteira::Apresentacao
   def renovacao(apolice, cards_visiveis)
     card = apolice.crm_card
     return if card.nil? || apolice.renovacao_card_removido_em
+    return { desfecho: desfecho(apolice) } unless cards_visiveis.include?(card.id)
 
-    { cardId: (card.id if cards_visiveis.include?(card.id)), funil: card.pipeline.name, etapa: card.stage.name,
-      desfecho: desfecho(apolice), cuida: card.owner&.name, cuidaId: card.owner_id }
+    { cardId: card.id, funil: card.pipeline.name, etapa: card.stage.name, desfecho: desfecho(apolice), cuida: card.owner&.name,
+      cuidaId: card.owner_id }
   end
 
   def desfecho(apolice)
