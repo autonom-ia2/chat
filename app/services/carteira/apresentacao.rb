@@ -19,10 +19,11 @@ class Carteira::Apresentacao
   RENOVOU = 'renovou'.freeze
   NAO_RENOVOU = 'nao_renovou'.freeze
 
-  # cards: os cards que quem pede enxerga no quadro (o escopo de Crm::CardPolicy). Sem eles, nenhum `cardId` sai.
-  def initialize(account, cards: Crm::Card.none)
+  # quem: o contexto de quem pede, como o Pundit o recebe ({ user:, account:, account_user: }). É por ele que se sabe
+  # quais cards a pessoa enxerga no quadro (Crm::CardPolicy). Sem ele, nenhum `cardId` sai.
+  def initialize(account, quem: nil)
     @hoje = Carteira::Selo.hoje(account)
-    @cards = cards
+    @quem = quem
   end
 
   def de(apolice)
@@ -56,7 +57,13 @@ class Carteira::Apresentacao
 
   def cards_visiveis(apolices)
     ids = apolices.filter_map(&:crm_card_id)
-    ids.empty? ? [] : @cards.where(id: ids).pluck(:id)
+    return [] if ids.empty? || !ve_o_quadro?
+
+    Pundit.policy_scope!(@quem, Crm::Card).where(id: ids).pluck(:id)
+  end
+
+  def ve_o_quadro?
+    @quem.present? && Crm::Config.enabled? && Pundit.policy!(@quem, Crm::Card).index?
   end
 
   def da_renovacao(apolice, cards_visiveis)
