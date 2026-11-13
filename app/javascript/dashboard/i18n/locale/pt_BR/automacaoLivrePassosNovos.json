@@ -50,7 +50,12 @@
         "PERGUNTA": "O que perguntar",
         "PRAZO": "Prazo para responder",
         "QUEM_PODE": "Só quem pode ver o card recebe o pedido. Se ninguém responder no prazo, a automação segue pelo caminho “Se ninguém responder a tempo”.",
-        "VER_PEDIDO": "Ver como quem aprova"
+        "VER_PEDIDO": "Ver como quem aprova",
+        "ENSAIO_PARA": "Pediria aprovação a {nomes}. No ensaio, ninguém recebe o pedido.",
+        "ENSAIO_SEM_QUEM": "Ninguém que vê esta conversa poderia aprovar. Seguiria pelo caminho “Se ninguém responder a tempo”.",
+        "HISTORICO_APROVOU": "{quem} aprovou.",
+        "HISTORICO_RECUSOU": "{quem} recusou.",
+        "HISTORICO_MOTIVO_DITO": "Motivo: {motivo}"
       },
       "PEDIDO": {
         "TITULO": "Pedido de aprovação",
@@ -68,7 +73,12 @@
         "APROVAR": "Aprovar",
         "RECUSAR": "Recusar",
         "CARD": "O card do pedido",
-        "FECHAR": "Fechar"
+        "FECHAR": "Fechar",
+        "APROVADO_POR": "{nome} aprovou. A automação seguiu.",
+        "RECUSADO_POR": "{nome} recusou. A automação seguiu pelo caminho da recusa.",
+        "ENCERRADO": "Este pedido não espera mais resposta: o prazo acabou ou a automação parou.",
+        "PRAZO_ATE": "Responda até {quando}. Automação: {automacao}.",
+        "ABRIR_CONVERSA": "Abrir a conversa"
       },
       "REPETIR": {
         "NOME": "Fazer para cada um de uma lista",
@@ -160,7 +170,10 @@
         "COMO_O_CLIENTE_VE": "Como o cliente vê",
         "SEM_BOTOES": "Se o canal não tem botões, vão os números 1, 2 e 3.",
         "ESPERA": "Esperar a resposta por",
-        "COMO_FUNCIONA": "A IA entende a resposta do cliente. Se nenhum horário servir, a automação segue pelo caminho “Se pedir outro horário”."
+        "COMO_FUNCIONA": "A IA entende a resposta do cliente. Se nenhum horário servir, a automação segue pelo caminho “Se pedir outro horário”.",
+        "ENSAIO_SEM_RESPONSAVEL": "Sem responsável no card nem na conversa: seguiria sem reunião, pelo caminho “Se o cliente não responder”.",
+        "ENSAIO_SEM_PAGINA": "O responsável não tem uma página de agendamento só dele: seguiria sem reunião, pelo caminho “Se o cliente não responder”.",
+        "ENSAIO_SEM_HORARIO": "Não há horário livre agora: seguiria pelo caminho “Se pedir outro horário”."
       },
       "PESQUISA": {
         "NOME": "Pesquisa de satisfação",
@@ -188,7 +201,12 @@
         "INTERVALO": "Perguntar de novo à mesma pessoa só depois de",
         "ESPERA": "Esperar a resposta por",
         "RESUMO_EXEMPLO": "Na lista, a automação mostra a média e quantas pessoas responderam. Exemplo: média 8,6 com 37 respostas.",
-        "REGRAS": "Contatos bloqueados ou que pediram para não receber ficam de fora. A nota fica no contato e no card."
+        "REGRAS": "Contatos bloqueados ou que pediram para não receber ficam de fora. A nota fica no contato e no card.",
+        "ENSAIO_RECENTE": "Esta pessoa respondeu uma pesquisa há pouco: pularia a pergunta e seguiria.",
+        "HISTORICO_NOTA": "Nota {nota}.",
+        "HISTORICO_NOTA_COMENTARIO": "Nota {nota}: “{comentario}”.",
+        "RESUMO": "Pesquisa: média {media} com {n} resposta | Pesquisa: média {media} com {n} respostas",
+        "RESUMO_VAZIO": "Pesquisa: nenhuma resposta ainda"
       },
       "PREVIA": {
         "TITULO": "Veja como fica",
@@ -247,6 +265,18 @@
         "HORARIO_3": "Sexta, 9h",
         "CARD_TITULO": "Pedido com desconto de 12%",
         "VALOR_OCULTO": "valor oculto"
+      },
+      "ENSAIO_DESLIGADO": "Os passos novos estão desligados nesta conta: a automação pararia aqui.",
+      "ENSAIO_IA_DESLIGADA": "Os passos de IA estão desligados nesta conta: a automação pararia aqui.",
+      "APROVACOES": {
+        "TITULO": "Pedidos de aprovação",
+        "SUBTITULO": "Quando uma automação precisa do seu OK, o pedido aparece aqui.",
+        "CARREGANDO": "Carregando os pedidos",
+        "VAZIO": "Nenhum pedido esperando você.",
+        "ERRO": "Não deu para carregar os pedidos.",
+        "TENTAR_DE_NOVO": "Tentar de novo",
+        "NAO_ACHOU": "Este pedido não está mais com você.",
+        "NAO_RESPONDEU": "Não deu para responder. Tente de novo."
       }
     }
   }

@@ -781,6 +781,10 @@ Rails.application.routes.draw do
                 post :trocar_segredo_do_webhook, to: 'automacoes_webhook#trocar_segredo'
               end
             end
+            # #2931 — os pedidos do passo "Pedir aprovação", do lado de quem aprova.
+            resources :aprovacoes, only: [:index, :show] do
+              post :responder, on: :member
+            end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
             get 'pendencias_do_guia', to: 'pendencias_do_guia#index'

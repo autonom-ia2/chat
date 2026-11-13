@@ -6,11 +6,12 @@ import LivreConsulta from './LivreConsulta.vue';
 import LivreReuniao from './LivreReuniao.vue';
 import LivrePesquisa from './LivrePesquisa.vue';
 import LivrePassoNovoPrevia from './LivrePassoNovoPrevia.vue';
-import { P } from './passosNovos';
+import { P, emTeste } from './passosNovos';
 
-// Protótipo #2931–#2936 — a peça do "Alterar" para os passos novos: o
-// formulário de cada um, já pronto, e a prévia do ensaio e do histórico. O
-// passo inteiro entra e sai por `modelValue`, como no "para cada item" (G24).
+// #2931–#2936 — a peça do "Alterar" para os passos novos: o formulário de cada
+// um, já pronto, e a prévia do ensaio e do histórico. O passo inteiro entra e
+// sai por `modelValue`, como no "para cada item" (G24). O aviso "em teste" só
+// nos que ainda não salvam (#2932–#2934).
 defineProps({
   modelValue: { type: Object, required: true },
   catalogo: { type: Object, required: true },
@@ -26,6 +27,7 @@ const mudar = novo => emit('update:modelValue', novo);
 <template>
   <div class="flex flex-col gap-6" data-peca="passo_novo">
     <p
+      v-if="emTeste(modelValue)"
       data-em-teste
       role="note"
       class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-blue-2 text-n-blue-12"

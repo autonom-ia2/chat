@@ -63,5 +63,14 @@ module Autonomia::Automacao::CatalogoDoEsquema
     end.flatten
   end
 
+  # #2414: os campos do passo novo (aprovação, reunião, pesquisa): uma peça só, com o rótulo dela, e os galhos, que o
+  # Confira mostra como os do "se".
+  def passo_novo(forma)
+    peca = ::Autonomia::Automacao::Catalogo::PASSO_NOVO
+    galhos = forma['properties'].select { |_nome, propriedade| propriedade['$ref'].to_s.end_with?('/passos_opcionais') }.keys
+    [{ 'nome' => peca, 'peca' => peca, 'obrigatorio' => true, 'rotulo' => chave('PASSOS_NOVOS', 'MONTAR') },
+     *galhos.map { |galho| { 'nome' => galho, 'peca' => 'passos', 'obrigatorio' => false } }]
+  end
+
   def chave(*partes) = ::Autonomia::Automacao::Catalogo.chave(*partes)
 end

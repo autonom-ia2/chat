@@ -14,9 +14,13 @@ import {
 // apagar. "Não é mais cliente" só aparece para quem é cliente (`ehCliente`).
 // Quem só pode ver o contato (`podeAlterar` falso) não tem "Alterar
 // informações" nem "Não é mais cliente".
+// #2970 — o que ainda não é de verdade não aparece: Juntar, Bloquear e Apagar
+// daqui só avisam, então só existem com `naDemonstracao`. Quem usa só desenha
+// o menu com dois itens ou mais (ver `CabecalhoDaPessoa`).
 const props = defineProps({
   podeAlterar: { type: Boolean, default: true },
   ehCliente: { type: Boolean, default: false },
+  naDemonstracao: { type: Boolean, default: false },
 });
 const emit = defineEmits(['acao']);
 
@@ -38,6 +42,9 @@ const ITENS = [
 const APARECE = {
   alterar: () => props.podeAlterar,
   desmarcar: () => props.podeAlterar && props.ehCliente,
+  juntar: () => props.naDemonstracao,
+  bloquear: () => props.naDemonstracao,
+  apagar: () => props.naDemonstracao,
 };
 const itensDoMenu = computed(() =>
   ITENS.filter(item => APARECE[item.evento]?.() ?? true)
