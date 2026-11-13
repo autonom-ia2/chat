@@ -201,11 +201,13 @@ describe('a lista do "para cada um"', () => {
 });
 
 describe('o Salvar tudo com passo novo', () => {
-  it('a receita com passo que ainda não salva não vai à API: o passo está em teste', () => {
+  it('nenhum dos seis passos novos trava o salvar como "em teste"', () => {
     const gatilho = { tipo: 'conversa.resolvida' };
-    const se = { id: 'p1', tipo: 'se', entao: [novo('usar_bloco')] };
 
-    expect(falta({ gatilho, passos: [se] })).toBe('EM_TESTE');
+    TIPOS.forEach(tipo => {
+      const se = { id: 'p1', tipo: 'se', entao: [novo(tipo)] };
+      expect(falta({ gatilho, passos: [se] })).not.toBe('EM_TESTE');
+    });
     expect(falta({ gatilho, passos: [{ id: 'p2', tipo: 'parar' }] })).toBe(
       null
     );
@@ -334,20 +336,13 @@ describe('em frase', () => {
 });
 
 describe('ensaio pelo adaptador falso', () => {
-  it('acha o passo novo sem motor em qualquer galho', () => {
-    const se = { id: 'p1', tipo: 'se', entao: [novo('pedir_aprovacao')] };
-
-    expect(temPassoNovo([se])).toBe(true);
-    expect(temPassoNovo([{ id: 'p1', tipo: 'parar' }])).toBe(false);
-    // A aprovação já vai ao ensaio de verdade.
-    expect(temPassoNovo([novo('pedir_aprovacao')])).toBe(false);
-  });
-
-  it('os passos com motor (#2932–#2934) não passam pelo ensaio de exemplo', () => {
-    ['repetir_lista', 'usar_bloco', 'consultar'].forEach(tipo => {
+  it('nenhum dos seis passos novos passa pelo ensaio de exemplo, em galho nenhum', () => {
+    TIPOS.forEach(tipo => {
       const se = { id: 'p1', tipo: 'se', entao: [novo(tipo)] };
       expect(temPassoNovo([se])).toBe(false);
+      expect(temPassoNovo([novo(tipo)])).toBe(false);
     });
+    expect(temPassoNovo([{ id: 'p1', tipo: 'parar' }])).toBe(false);
   });
 
   it('responde no formato da API e a linha sai pela frase do passo novo', async () => {

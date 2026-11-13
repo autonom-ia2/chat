@@ -3,9 +3,9 @@ import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreEnsaio from '../../components/LivreEnsaio.vue';
 import { comPassosNovos, novoPassoNovo } from '../passosNovos';
 
-// Protótipo #2931–#2936 — o Ensaiar com um passo novo: o servidor ainda não
-// conhece o passo, então o ensaio vem do adaptador falso, com as conversas de
-// exemplo e a linha do passo novo. Sem passo novo, segue a API de sempre.
+// #2931–#2936 — o Ensaiar com um passo novo: os seis já ensaiam no servidor,
+// com a linha de cada um a partir do nó que a API devolve. O adaptador falso só
+// serviria a um passo novo que o servidor ainda não conheça.
 const t = (chave, valores) =>
   valores ? `${chave}(${Object.values(valores).join(',')})` : chave;
 
@@ -48,21 +48,26 @@ describe('LivreEnsaio com passo novo', () => {
     window.matchMedia = vi.fn(() => ({ matches: false }));
   });
 
-  it('passo que ainda não salva: não chama o servidor e mostra a linha de exemplo', async () => {
+  // O "usar outra automação" também, no teste do bloco abaixo (ele lê os blocos
+  // da conta, guardados entre os testes).
+  it.each([
+    'pedir_aprovacao',
+    'repetir_lista',
+    'consultar',
+    'marcar_reuniao',
+    'pesquisa_nota',
+  ])('%s ensaia pelo servidor, sem a faixa de exemplo', async tipo => {
+    AutomacoesAPI.ensaiar.mockResolvedValueOnce({
+      data: { conversas: [], outras: [] },
+    });
     const tela = montar({
       gatilho: { tipo: 'conversa.resolvida' },
-      passos: [
-        novoPassoNovo('repetir_lista', 'p1', t),
-        { id: 'p2', tipo: 'parar' },
-      ],
+      passos: [novoPassoNovo(tipo, 'p1', t), { id: 'p2', tipo: 'parar' }],
     });
     await flushPromises();
 
-    expect(AutomacoesAPI.ensaiar).not.toHaveBeenCalled();
-    expect(tela.findAll('[data-ensaio-item]')).toHaveLength(2);
-    expect(tela.find('[data-ensaio-passos]').text()).toContain(
-      'REPETIR.ENSAIO'
-    );
+    expect(AutomacoesAPI.ensaiar).toHaveBeenCalledTimes(1);
+    expect(tela.find('[data-ensaio-de-exemplo]').exists()).toBe(false);
   });
 
   it('a pesquisa (#2936) ensaia pelo servidor, com a pergunta no balão', async () => {
@@ -95,18 +100,6 @@ describe('LivreEnsaio com passo novo', () => {
     const passos = tela.find('[data-ensaio-passos]');
     expect(passos.text()).toContain('PESQUISA.ENSAIO');
     expect(passos.find('[data-balao]').text()).toBe('De 0 a 10?');
-  });
-
-  it('avisa no topo que o ensaio é de exemplo', async () => {
-    const tela = montar({
-      gatilho: { tipo: 'conversa.resolvida' },
-      passos: [novoPassoNovo('marcar_reuniao', 'p1', t)],
-    });
-    await flushPromises();
-
-    expect(tela.find('[data-ensaio-de-exemplo]').text()).toBe(
-      'AUTOMACAO_LIVRE.PASSOS_NOVOS.ENSAIO_DE_EXEMPLO'
-    );
   });
 
   it('o galho do passo novo diz o nome dele, sem "Se a IA escolher"', async () => {

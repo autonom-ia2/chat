@@ -13,10 +13,8 @@ en:
         horario_ocupado: 'Someone else booked that time first. Followed the "If they ask for another time" path.'
         reuniao_nao_marcou: 'The meeting could not be booked. Followed the "If they ask for another time" path.'
         pesquisa_recente: 'This person answered a survey recently. Skipped the question and moved on.'
-        passos_novos_desligados: 'The approval, meeting and survey steps are off for this account.'
         pedido_sumiu: 'The request of this step was not found (records are kept for 30 days).'
       receita:
-        passos_novos_desligados: 'Step %{passo}: the approval, meeting and survey steps are off for this account.'
         quem_sem_responsavel: 'Step %{passo}: "who looks after the card" needs a card or a conversation, and this trigger has none. Choose a person or a team.'
         espera_resposta_sem_conversa: 'Step %{passo}: this step asks the customer in the conversation, and this trigger has none. Use a conversation or card trigger.'
         reuniao_sem_agenda: 'Step %{passo}: booking pages are off in this account, so there is no calendar to offer times from.'

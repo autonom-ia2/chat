@@ -1,6 +1,7 @@
-# Os passos novos da Automação livre que já têm motor (#2931–#2936, épico #2414): "fazer para cada um de uma lista"
+# Os passos novos da Automação livre que rodam na hora (#2931–#2936, épico #2414): "fazer para cada um de uma lista"
 # (#2932, PassoRepetirLista), "usar outra automação" (#2933, PassoUsarBloco) e "buscar informação em outro sistema"
-# (#2934, PassoConsultar). Os outros três passos novos do protótipo ainda não existem no esquema.
+# (#2934, PassoConsultar). Os outros três, que perguntam e esperam a resposta (aprovação, reunião e pesquisa), ficam em
+# PassosQueEsperam, com a mesma flag.
 #
 # Só com a flag `automacao_passos_novos`: desligada, o salvar recusa a receita que tem um deles e o motor para a execução
 # que chega num deles (BlocoNoExecutor#passo_novo). É o rollback.
