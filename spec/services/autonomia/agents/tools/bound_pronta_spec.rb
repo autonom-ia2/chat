@@ -93,10 +93,49 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
       fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
 
-      saida = JSON.parse(described_class.new(agent: agent, record: pronta).execute(chamada))
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+      texto = ligada.execute(chamada)
+      saida = JSON.parse(texto)
 
       expect(saida['situacao']).to eq('nao_consegui_consultar')
       expect(saida['orientacao']).to include('Não invente')
+      expect(texto).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(ligada.situacao_da_pronta(texto)).to eq('nao_consegui_consultar')
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+    end
+
+    it 'lê cada saída sem depender da ordem das chamadas' do
+      fonte_responde(principal, endereco)
+      ligada = described_class.new(agent: agent, record: pronta)
+      invalida = chamada.merge('arguments' => { cep: 'invalido' }.to_json)
+
+      pedido_invalido = ligada.execute(invalida)
+      encontrado = ligada.execute(chamada)
+
+      expect(ligada.situacao_da_pronta(encontrado)).to eq('encontrado')
+      expect(ligada.situacao_da_pronta(pedido_invalido)).to eq('pedido_invalido')
+      expect(ligada.situacao_da_pronta(encontrado)).to eq('encontrado')
+    end
+
+    ['texto solto', '[]', '{}', 'null'].each do |saida|
+      it "não atribui situação à saída sem objeto JSON com essa chave: #{saida}" do
+        ligada = described_class.new(agent: agent, record: pronta)
+
+        expect(ligada.situacao_da_pronta(saida)).to be_nil
+      end
+    end
+
+    it 'não interpreta a situação de um JSON devolvido pela ferramenta HTTP cadastrada' do
+      texto = Autonomia::FerramentasProntas::Resposta.nao_consegui
+      allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new)
+        .and_return(instance_double(Autonomia::Agents::Tools::HttpExecutor, call: texto))
+      ligada = described_class.new(agent: agent, record: manual)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(ligada.execute(chamada)).to eq(texto)
+      expect(ligada.situacao_da_pronta(texto)).to be_nil
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
     end
   end
 
@@ -111,6 +150,22 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
       entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 77)
       saida = described_class.new(agent: agent, record: pronta).execute(chamada, delivery: entrega)
       [saida, Autonomia::Agents::ToolRun.sole]
+    end
+
+    it 'a falha que chega na janela do turno conserva o texto e sua situação' do
+      fonte_fora(principal)
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      relogio_do_turno { rodar_consultas }
+      entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 80)
+      ligada = described_class.new(agent: agent, record: pronta)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      texto = ligada.execute(chamada, delivery: entrega)
+
+      expect(texto).to eq(Autonomia::FerramentasProntas::Resposta.nao_consegui)
+      expect(ligada.situacao_da_pronta(texto)).to eq('nao_consegui_consultar')
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
     end
 
     it 'a consulta lenta sai do turno: o modelo le "em andamento" e a execucao fica na fila agent_tools' do
