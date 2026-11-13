@@ -75,6 +75,15 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   end
   private_class_method :fechar_por_fora
 
+  # A mãe que não abre mais filha (FilhasDaLista, FilhasDoPasso): a parada pelo "Parar para este card" e a que já tinha
+  # concluído e ganhou do parar o porquê nos `textos` (NoCard#marcar_terminadas; ela não espera as filhas). Trava a linha:
+  # chamada dentro da transação que grava a filha, a trava fica até a filha estar gravada, e o parar, que trava a mesma
+  # linha, vem antes ou depois inteiro.
+  def self.nao_abre_filha?(id)
+    estado, textos = transaction { where(id: id).lock.pick(:estado, :textos) }
+    estado == 'parada' || textos.to_h.key?(PORQUE)
+  end
+
   # Uma linha por espera fechada, numa gravação só.
   def self.registrar_esperas(linhas, motivo, agora)
     return if linhas.empty?

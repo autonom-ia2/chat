@@ -41,15 +41,22 @@ class Autonomia::Automacao::NoCard
 
   # Devolve quantas execuções fechou, as que ela começou incluídas (0 quando nada rodava desta automação neste card).
   #
-  # Duas passadas na mesma transação, contra a lista que abre filha ao mesmo tempo (FilhasDaLista confere a mãe com a
-  # linha travada antes de gravar): a primeira fecha e trava as abertas; depois a marca nas terminadas do card (a mãe
-  # concluída com o job da lista ainda na fila) também trava a linha delas. Daí em diante a lista vê a mãe parada; a
-  # filha que ela gravou antes disso já está no banco, e a segunda passada a acha e fecha.
+  # Na mesma transação, contra quem abre filha ao mesmo tempo (FilhasDaLista e FilhasDoPasso conferem a mãe com a linha
+  # travada antes de gravar, Execucao.nao_abre_filha?): a primeira passada fecha e trava as abertas; a marca nas
+  # terminadas do card (a mãe concluída com o job ainda na fila) trava a linha delas. Daí em diante nenhuma mãe fechada
+  # abre filha; a filha gravada antes disso já está no banco, e as passadas seguintes a acham e fecham, até uma passada
+  # não achar nada (o teto, Bloco::ACIMA_MAXIMO, é só contra defeito).
   def parar!(automacao)
     fechadas = Execucao.transaction do
-      primeira = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+      todas = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
       marcar_terminadas(automacao)
-      primeira + Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+      Bloco::ACIMA_MAXIMO.times do
+        novas = Execucao.parar_por_fora!(do_escopo(automacao), MOTIVO)
+        break if novas.empty?
+
+        todas += novas
+      end
+      todas
     end
     return 0 if fechadas.empty?
 
@@ -65,7 +72,7 @@ class Autonomia::Automacao::NoCard
   def do_escopo(automacao) = Execucao.where(account_id: @card.account_id, id: do_card_e_descendentes(automacao))
 
   # As vezes já terminadas desta automação no card (concluída, falhou, interrompida) ganham o porquê nos `textos`: a lista
-  # que ainda vai abrir filhas por uma delas lê a marca e não abre (FilhasDaLista#mae_parada?). A já parada fica como
+  # que ainda vai abrir filhas por uma delas lê a marca e não abre (Execucao.nao_abre_filha?). A já parada fica como
   # está: o estado já basta, e o porquê dela (o desligar, por exemplo) não pode ser trocado. Trava pela ordem do id antes
   # de gravar, como o parar_por_fora!. A terminada não é salva de novo com callback (o AO_TERMINAR apagaria a marca).
   def marcar_terminadas(automacao)

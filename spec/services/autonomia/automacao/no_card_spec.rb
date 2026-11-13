@@ -187,6 +187,32 @@ RSpec.describe Autonomia::Automacao::NoCard, :automacao_motor do
       it 'sem o parar, a mesma procura abre a filha no outro card' do
         expect { abrir_filhas }.to change { Autonomia::Automacao::Execucao.where(alvo: outro).count }.by(1)
       end
+
+      # #2978: a mesma régua da lista (Execucao.nao_abre_filha?).
+      it 'a mãe que já tinha concluído ganha a marca do parar, e o job ainda na fila não abre filha', :aggregate_failures do
+        execucao.update!(estado: 'concluida', cursor: nil, due_at: nil)
+
+        expect(no_card.parar!(definicao)).to eq(0)
+        expect { expect(abrir_filhas).to eq('mae_parada' => 1) }.not_to change(Autonomia::Automacao::Execucao, :count)
+      end
+
+      it 'o parar que chega no meio da procura: a filha já gravada é fechada por ele, a seguinte não abre', :aggregate_failures do
+        terceiro = account.crm_cards.create!(pipeline: funil_e_etapa.first, stage: funil_e_etapa.last, title: 'Terceiro', currency: 'BRL',
+                                             contact: contato)
+        filhas = Autonomia::Automacao::FilhasDoPasso.new(execucao.reload, passo, contato.id)
+        vezes = 0
+        # 1ª conferência: a de entrada; 2ª: a da primeira filha; na 3ª (a da segunda filha) o parar acontece antes.
+        allow(filhas).to receive(:mae_parada?).and_wrap_original do |original|
+          vezes += 1
+          no_card.parar!(definicao) if vezes == 3
+          original.call
+        end
+
+        expect(filhas.abrir).to eq('mae_parada' => 1)
+        abertas = Autonomia::Automacao::Execucao.where(alvo: [outro, terceiro])
+        expect(abertas.count).to eq(1)
+        expect(abertas.first.estado).to eq('parada')
+      end
     end
   end
 
