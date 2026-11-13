@@ -74,7 +74,7 @@ class Autonomia::Automacao::PassoDeEmail
   end
 
   # A mesma pergunta do ensaio (Ensaio#email, #2604).
-  def na_caixa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.automacao.ligada_por, caixa)
+  def na_caixa?(caixa) = ::Autonomia::Automacao::Acesso.pessoa_comeca_conversa?(@execucao.dona.ligada_por, caixa)
 
   # A caixa que trava numa conversa só devolve a dela: o assunto deste envio passa a ser o dela, porque o envio lê o
   # assunto da conversa.

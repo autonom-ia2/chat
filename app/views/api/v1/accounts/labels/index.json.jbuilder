@@ -5,5 +5,6 @@ json.payload do
     json.description label.description
     json.color label.color
     json.show_on_sidebar label.show_on_sidebar
+    json.show_on_conversation_list label.show_on_conversation_list
   end
 end

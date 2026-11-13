@@ -5,6 +5,16 @@ RSpec.describe Label do
     it { is_expected.to belong_to(:account) }
   end
 
+  describe 'show_on_conversation_list' do
+    it 'treats nil as false instead of hitting the NOT NULL constraint' do
+      label = create(:label)
+
+      label.update!(show_on_conversation_list: nil)
+
+      expect(label.reload.show_on_conversation_list).to be false
+    end
+  end
+
   describe 'title validations' do
     it 'would not let you start title without numbers or letters' do
       label = FactoryBot.build(:label, title: '_12')

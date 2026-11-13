@@ -35,7 +35,8 @@
     "ORIGEM": {
       "CONVERSA": "From the conversation",
       "CARD": "From a pipeline card",
-      "ANTIGO": "The old way"
+      "ANTIGO": "The old way",
+      "BLOCO": "Block"
     },
     "CONVERSA_NOVA": {
       "CAIXA": "Inbox to reach someone with no conversation yet",

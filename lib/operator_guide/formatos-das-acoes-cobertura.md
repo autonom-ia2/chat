@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 737 |
-| Sem corpo | 210 |
-| Com corpo | 527 |
-| Com corpo e formato completo | 442 (83,9%) |
-| Com corpo e formato incompleto | 85 |
+| No catálogo | 751 |
+| Sem corpo | 214 |
+| Com corpo | 537 |
+| Com corpo e formato completo | 450 (83,8%) |
+| Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 20 de 220 |
-| Leituras cruas tipadas | 226 de 317 |
+| Campos aninhados com vocabulário | 20 de 227 |
+| Leituras cruas tipadas | 229 de 322 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 71 |
+| leitura crua sem tipo | 73 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -49,7 +49,9 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
 - `POST autonomia/agents/:agent_id/tools/:id/test` — leitura crua sem tipo: params
 - `POST autonomia/automacoes/:id/ensaio` — leitura crua sem tipo: receita
+- `POST autonomia/automacoes/contar_lista` — leitura crua sem tipo: lista
 - `POST autonomia/automacoes/ensaio` — leitura crua sem tipo: receita
+- `POST autonomia/automacoes/testar_consulta` — leitura crua sem tipo: fonte
 - `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)
 - `POST autonomia/build_threads/:id/messages` — leitura crua sem tipo: message (repassada a @thread.append_message!)
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
@@ -133,6 +135,8 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/agents/tools#test` params — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/automacoes#ensaio` receita — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/automacoes#ensaio_novo` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes_passos_novos#contar_lista` lista — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes_passos_novos#testar_consulta` fonte — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#chat` message — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` draft — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` instruction — o código não converte nem compara o valor
@@ -219,8 +223,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 477 |
-| Com parâmetros conhecidos | 426 |
+| No catálogo | 483 |
+| Com parâmetros conhecidos | 432 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

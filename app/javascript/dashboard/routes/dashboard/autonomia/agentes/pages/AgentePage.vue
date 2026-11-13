@@ -11,6 +11,7 @@ import PaginaHeroi from '../components/pagina/PaginaHeroi.vue';
 import PaginaBlocos from '../components/pagina/PaginaBlocos.vue';
 import AgenteSemana from '../components/pagina/AgenteSemana.vue';
 import AgenteSilencios from '../components/pagina/AgenteSilencios.vue';
+import RamoNaPagina from '../components/pagina/RamoNaPagina.vue';
 import VitrineSugestaoDoAgente from '../vitrine/components/VitrineSugestaoDoAgente.vue';
 import DialogoAcao from '../components/pagina/DialogoAcao.vue';
 import GavetaTestar from '../components/pagina/GavetaTestar.vue';
@@ -938,6 +939,7 @@ const tirarPergunta = id => {
           :agente-id="agente.id"
           :nome="nome"
         />
+        <RamoNaPagina :agente="agente" :nome="nome" :pode-mudar="podeMudar" />
         <PaginaBlocos
           :agente="agente"
           :nome="nome"

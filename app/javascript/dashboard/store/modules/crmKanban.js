@@ -73,6 +73,9 @@ export const defaultFilters = () => ({
 // broadcast a card upsert, so the payload's labels can be stale mid-session.
 // campaignSourceIds is here because, without meta_ads_view, the ad touch comes
 // without source_id (#2271) while the server still matches the card.
+// #2986: numera as buscas do quadro; só a mais nova grava o resultado.
+let boardRequestSeq = 0;
+
 export const SERVER_ONLY_FILTER_KEYS = [
   'companyId',
   'search',
@@ -532,7 +535,22 @@ export const actions = {
       limitPerStage = 30,
       stageIds = [],
     } = payload;
-    commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: !append });
+    // #2986: o carregando ocupa a tela só quando não há quadro deste funil para mostrar (primeira abertura, troca
+    // de funil). Atualizar o funil que já está na tela (tempo real, filtro, depois de mover) troca os cards por
+    // baixo, sem piscar.
+    const showsSpinner =
+      !append && !stringMatches($state.board?.pipeline?.id, pipelineId);
+    // A resposta de uma busca antiga (outro filtro, outro funil) não pisa na da busca mais nova. O "carregar mais"
+    // não entra na contagem: a recarga do tempo real não pode jogar fora o clique da pessoa.
+    const request = append ? null : (boardRequestSeq += 1);
+    // #2994: a resposta só vale para a conta em que a busca começou. Trocar de conta sem recarregar a página (e a
+    // conta nova sem funil não começa busca nenhuma) não pode deixar o quadro da conta anterior aparecer.
+    const account = CrmKanbanAPI.accountIdFromRoute;
+    const superada = () =>
+      account !== CrmKanbanAPI.accountIdFromRoute ||
+      (!append && request !== boardRequestSeq);
+    if (showsSpinner)
+      commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: true });
     try {
       // The board is strictly open-only; never forward the List-only `result`
       // filter so won/lost/archived selections cannot leak into board fetches.
@@ -546,15 +564,26 @@ export const actions = {
       } = normalizeFilters($state.filters);
       // An explicit stageIds payload (used to refetch specific columns) wins;
       // otherwise keep the Stage filter's stage_ids from normalizeFilters.
-      const response = await CrmKanbanAPI.getBoard({
-        ...boardFilters,
-        pipeline_id: pipelineId,
-        cursor_by_stage: cursorByStage,
-        limit_per_stage: limitPerStage,
-        include_counts: includeCounts,
-        ...(stageIds.length ? { stage_ids: stageIds } : {}),
-      });
+      let response;
+      try {
+        response = await CrmKanbanAPI.getBoard({
+          ...boardFilters,
+          pipeline_id: pipelineId,
+          cursor_by_stage: cursorByStage,
+          limit_per_stage: limitPerStage,
+          include_counts: includeCounts,
+          ...(stageIds.length ? { stage_ids: stageIds } : {}),
+        });
+      } catch (error) {
+        // O erro de uma busca que outra mais nova já substituiu não diz nada do quadro na tela: sem aviso falso.
+        if (superada()) return $state.board;
+        throw error;
+      }
       const board = response.data.payload || emptyBoard();
+      if (superada()) return $state.board;
+      // O "carregar mais" de um funil que já saiu da tela não entra no quadro novo.
+      if (append && !stringMatches($state.board?.pipeline?.id, pipelineId))
+        return $state.board;
       commit(
         append
           ? types.APPEND_CRM_KANBAN_STAGE_CARDS
@@ -563,7 +592,10 @@ export const actions = {
       );
       return board;
     } finally {
-      commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
+      // Quem desliga é a busca mais nova, mesmo sem ter ligado: um carregando aceso por uma busca antiga não fica preso.
+      // Vale também depois de trocar de conta: a resposta é descartada, o carregando não fica aceso na conta nova.
+      if (!append && request === boardRequestSeq)
+        commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingBoard: false });
     }
   },
 

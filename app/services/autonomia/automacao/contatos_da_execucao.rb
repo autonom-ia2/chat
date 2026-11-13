@@ -59,5 +59,5 @@ class Autonomia::Automacao::ContatosDaExecucao
     dados.flat_map { |item| item.to_h.values_at(*chaves).flat_map { |valor| Array(valor) } }.grep(Integer)
   end
 
-  def acesso = (@acesso ||= ::Autonomia::Automacao::Acesso.new(@execucao.automacao))
+  def acesso = (@acesso ||= ::Autonomia::Automacao::Acesso.new(@execucao.dona))
 end

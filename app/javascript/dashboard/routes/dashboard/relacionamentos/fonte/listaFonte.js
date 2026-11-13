@@ -56,7 +56,7 @@ const digitosContem = (campos, digitos) =>
 
 // Letras buscam em nome, e-mail e empresa; só número busca em telefone e
 // documento (com ou sem pontuação).
-const combinaComBusca = (busca, { textos, numeros }) => {
+export const combinaComBusca = (busca, { textos, numeros }) => {
   const termo = normalizado(busca);
   if (!termo) return true;
   if (temLetra(termo)) return textoContem(textos, termo);

@@ -52,6 +52,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/relacionamentos.json
       - /app/javascript/dashboard/i18n/locale/en/relacionamentosFicha.json
       - /app/javascript/dashboard/i18n/locale/en/relacionamentosTrazer.json
+      - /app/javascript/dashboard/i18n/locale/en/relacionamentosCarteira.json
       - /app/javascript/dashboard/i18n/locale/en/listaDeConversas.json
       - /app/javascript/dashboard/i18n/locale/en/seusPosts.json
       - /app/javascript/dashboard/i18n/locale/en/metaAdsComentariosIa.json

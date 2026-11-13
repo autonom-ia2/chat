@@ -38,6 +38,9 @@
       "SHOW_ON_SIDEBAR": {
         "LABEL": "Show label on sidebar"
       },
+      "SHOW_ON_CONVERSATION_LIST": {
+        "LABEL": "Show label on the conversation list"
+      },
       "EDIT": "Edit",
       "CREATE": "Create",
       "DELETE": "Delete",

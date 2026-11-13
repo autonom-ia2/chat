@@ -119,6 +119,19 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     )
   end
 
+  # #2976: no agente pronto por ramo as listas e o conhecimento do ramo chegam ao agente fora da instrução (a marca).
+  # Sem eles o juiz marcaria como inventada a resposta que os segue.
+  it 'o juiz recebe também as listas e o conhecimento do ramo do agente pronto por ramo' do
+    marca = Autonomia::Agents::ModelosDeRamo::Marca.inicial(Autonomia::Agents::ModelosDeRamo.buscar('seguro_garantia'))
+    agent.update_columns(config: agent.config.to_h.merge('modelo_pronto' => marca)) # rubocop:disable Rails/SkipsModelValidations
+
+    pedir_e_rodar
+
+    expect(Autonomia::Agents::Material::JuizDoAutoteste).to have_received(:new).with(
+      account: account, regras: a_string_including('PERGUNTAS DA COTAÇÃO:', 'DOCUMENTOS:', '# Conhecimento do ramo')
+    )
+  end
+
   # t4d: "De onde {agente} tirou". Só trechos deste agente; no máximo 3; o texto vai curto; páginas do material grande.
   it 'guarda até 3 trechos que o agente usou, com material, páginas e texto curto', :aggregate_failures do
     grande = material('manual.pdf', trechos: [])
