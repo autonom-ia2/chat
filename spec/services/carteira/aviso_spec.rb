@@ -65,13 +65,14 @@ RSpec.describe Carteira::Aviso do
 
     expect { avisar }.to have_enqueued_job(Notification::RemoveDuplicateNotificationJob).once
 
-    expect(enqueued_jobs.pluck('job_class')).not_to include('Notification::PushNotificationJob', 'Notification::EmailNotificationJob')
+    expect(enqueued_jobs.pluck(:job)).not_to include(Notification::PushNotificationJob, Notification::EmailNotificationJob)
   end
 
   it 'a segunda passada do dia deixa um aviso só por pessoa, com o total' do
     nasceu('EX-000001')
     avisar
-    travel 1.hour
+    # Ainda no mesmo dia da conta (23h40 em São Paulo).
+    travel 10.minutes
     nasceu('EX-000002')
 
     perform_enqueued_jobs(only: Notification::RemoveDuplicateNotificationJob) { avisar }
