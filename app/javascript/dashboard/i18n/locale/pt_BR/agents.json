@@ -3322,6 +3322,10 @@
         "ANO_MODELO": "Ano",
         "COMBUSTIVEL": "Combustível",
         "CODIGO_FIPE": "Código na tabela",
+        "PLACA": "Placa",
+        "CHASSI": "Chassi",
+        "ANO_FABRICACAO": "Ano de fabricação",
+        "VERSOES": "Versões",
         "MES_DE_REFERENCIA": "Mês de referência",
         "PRECOS": "Preços na tabela",
         "ANOS_DISPONIVEIS": "Anos na tabela",
@@ -3561,14 +3565,14 @@
         "FIPE": {
           "NOME": "Valor do carro",
           "APOIO": "tabela FIPE",
-          "FAZ": "Diz quanto vale um carro, uma moto ou um caminhão na tabela FIPE do mês.",
+          "FAZ": "Diz quanto vale um carro, uma moto ou um caminhão na tabela FIPE do mês. Se a consulta pela placa estiver disponível, também acha o veículo pela placa.",
           "CONSEGUE": "dizer quanto vale um carro",
           "CLIENTE": "Quanto vale meu Onix 2020?",
           "AGENTE": "O Onix LT 1.0 2020 vale R$ 60.822 na tabela deste mês.",
-          "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão.",
+          "USE_QUANDO": "Use quando o cliente quiser saber quanto vale um carro, moto ou caminhão. Se a consulta pela placa estiver disponível, use também quando ele informar a placa.",
           "ROTULO": "Carro e ano",
           "EXEMPLO": "Onix 2020",
-          "CONSULTAS": "marcas, modelos de uma marca, preço do mês"
+          "CONSULTAS": "marcas, modelos de uma marca e preço do mês. Veículo pela placa ou chassi, quando essa consulta está disponível"
         },
         "BANCO_CENTRAL": {
           "NOME": "Juros, inflação e dólar",

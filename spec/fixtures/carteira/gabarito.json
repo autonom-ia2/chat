@@ -1,0 +1,108 @@
+{
+  "aviso": "Gabarito dos PDFs fictícios do leitor de apólice (E6, #2899). Tudo inventado; os PDFs saem de gerar.rb. Cada campo traz o valor esperado na forma do banco; null quer dizer que o leitor NÃO pode devolver valor ali; {\"contem\": [...]} aceita qualquer valor que contenha os trechos. Campo que não aparece no caso não é conferido. O contato do segurado (telefone e e-mail) só é esperado onde ele está escrito como do segurado: telefone e e-mail do corretor, da central e do 0800 que estejam na mesma página do CPF têm de ficar em null.",
+  "casos": [
+    {
+      "nome": "auto, tudo na primeira página",
+      "arquivo": "apolice_auto.pdf",
+      "recusa": null,
+      "campos": {
+        "tipo": "auto",
+        "ramo_original": {
+          "contem": [
+            "Automóvel"
+          ]
+        },
+        "seguradora": "Seguradora Exemplo S.A.",
+        "numero": "EX-2026.001234",
+        "inicio_vigencia": "2026-11-12",
+        "fim_vigencia": "2027-11-12",
+        "valor_centavos": 225498,
+        "bem": {
+          "contem": [
+            "EXM0A00"
+          ]
+        },
+        "corretora": "Corretora Amostra de Seguros Ltda.",
+        "segurado_nome": "Marina Exemplo de Souza",
+        "segurado_documento": "12345678900",
+        "segurado_telefone": "11999990001",
+        "segurado_email": "marina.exemplo@exemplo.invalid"
+      }
+    },
+    {
+      "nome": "empresarial, contato numa página sem o CNPJ",
+      "arquivo": "apolice_empresarial.pdf",
+      "recusa": null,
+      "campos": {
+        "tipo": "empresarial",
+        "ramo_original": {
+          "contem": [
+            "Empresarial"
+          ]
+        },
+        "seguradora": "Seguradora Exemplo S.A.",
+        "numero": "77.0118.0005678",
+        "inicio_vigencia": "2027-01-01",
+        "fim_vigencia": "2028-01-01",
+        "valor_centavos": 500000,
+        "bem": {
+          "contem": [
+            "Avenida do Exemplo"
+          ]
+        },
+        "corretora": "Corretora Amostra de Seguros Ltda.",
+        "segurado_nome": "Padaria Amostra Ltda.",
+        "segurado_documento": "12345678000100",
+        "segurado_telefone": null,
+        "segurado_email": null
+      }
+    },
+    {
+      "nome": "auto, na página do CPF só há o contato do corretor e o 0800",
+      "arquivo": "apolice_contato_so_do_corretor.pdf",
+      "recusa": null,
+      "campos": {
+        "tipo": "auto",
+        "seguradora": "Seguradora Exemplo S.A.",
+        "numero": "EX-2026.004455",
+        "inicio_vigencia": "2027-01-05",
+        "fim_vigencia": "2028-01-05",
+        "valor_centavos": 312050,
+        "bem": {
+          "contem": [
+            "EXM1B11"
+          ]
+        },
+        "corretora": "Corretora Amostra de Seguros Ltda.",
+        "segurado_nome": "Bruno Amostra Pereira",
+        "segurado_documento": "22233344400",
+        "segurado_telefone": null,
+        "segurado_email": null
+      }
+    },
+    {
+      "nome": "não é apólice",
+      "arquivo": "nao_e_apolice.pdf",
+      "recusa": "nao_e_apolice"
+    },
+    {
+      "nome": "escaneada, sem texto na página-chave",
+      "arquivo": "apolice_escaneada.pdf",
+      "ocr": true,
+      "recusa": null,
+      "campos": {
+        "tipo": "vida",
+        "numero": "VD-0093.004321",
+        "inicio_vigencia": "2026-03-15",
+        "fim_vigencia": "2027-03-15",
+        "valor_centavos": 138000,
+        "bem": null,
+        "corretora": null,
+        "segurado_nome": "Paulo Modelo Ferreira",
+        "segurado_documento": "11122233300",
+        "segurado_telefone": "21977770007",
+        "segurado_email": "paulo.modelo@exemplo.invalid"
+      }
+    }
+  ]
+}
