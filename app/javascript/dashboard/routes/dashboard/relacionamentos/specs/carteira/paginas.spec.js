@@ -36,28 +36,37 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 // A conta aberta, como o servidor manda: `carteira_seguros` liga a carteira.
 const conta = vi.hoisted(() => ({ carteira_seguros: true }));
-vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({
-    isCloudFeatureEnabled: () => false,
-    currentAccount: { value: conta },
-  }),
-}));
-vi.mock('../../lista/usePermissoesDaLista', () => ({
-  usePermissoesDaLista: () => ({
-    podeCriarCards: { value: false },
-    podeEtiquetar: { value: false },
-    podeApagar: { value: false },
-    podeTrazer: { value: false },
-  }),
-}));
-vi.mock('../../ficha/usePermissoesDaFicha', () => ({
-  usePermissoesDaFicha: () => ({
-    podeEditar: { value: true },
-    podeCriarCards: { value: false },
-    podeExportar: { value: false },
-    podeAjustarRenovacoes: { value: false },
-  }),
-}));
+vi.mock('dashboard/composables/useAccount', async () => {
+  const { ref } = await import('vue');
+  return {
+    useAccount: () => ({
+      isCloudFeatureEnabled: () => false,
+      currentAccount: ref(conta),
+    }),
+  };
+});
+vi.mock('../../lista/usePermissoesDaLista', async () => {
+  const { ref } = await import('vue');
+  return {
+    usePermissoesDaLista: () => ({
+      podeCriarCards: ref(false),
+      podeEtiquetar: ref(false),
+      podeApagar: ref(false),
+      podeTrazer: ref(false),
+    }),
+  };
+});
+vi.mock('../../ficha/usePermissoesDaFicha', async () => {
+  const { ref } = await import('vue');
+  return {
+    usePermissoesDaFicha: () => ({
+      podeEditar: ref(true),
+      podeCriarCards: ref(false),
+      podeExportar: ref(false),
+      podeAjustarRenovacoes: ref(false),
+    }),
+  };
+});
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
     pessoa: vi.fn(),
@@ -191,8 +200,13 @@ const clicar = async (w, seletor) => {
   await assentar();
 };
 
+// Na conta com a carteira a lista de pessoas da demonstração também baixa a
+// carteira fictícia da lista (o grupo e a busca) e a peça do selo.
 const carregarPecas = async () => {
   await carregarDemonstracao();
+  await import('../../demo/carteiraNaLista.js');
+  await import('../../fonte/carteiraFonte');
+  await import('../../components/carteira/SeloDoSeguro.vue');
   await import('../../components/carteira/ListaDeSeguros.vue');
   await import('../../components/carteira/SegurosDaFicha.vue');
 };

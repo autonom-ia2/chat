@@ -1,0 +1,14 @@
+# Insurance portfolio (#1240): the texts the server writes. Its own file, so it does not compete for en.yml with the
+# other fronts.
+en:
+  carteira:
+    renovacao:
+      card:
+        titulo: 'Renewal · %{seguradora}'
+  notifications:
+    notification_title:
+      carteira_renovacao: 'Insurance policies entered renewal'
+    carteira_renovacao:
+      entraram:
+        one: '1 insurance policy entered renewal today'
+        other: '%{count} insurance policies entered renewal today'

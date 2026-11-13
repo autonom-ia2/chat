@@ -141,6 +141,9 @@ export const carteiraFonteReal = () => ({
   opcoesDeFiltro: () => noServidor(() => SegurosAPI.opcoesDeFiltro()),
   daPessoa: id => variosSeguros(() => SegurosAPI.daPessoa(id)),
   daEmpresa: id => variosSeguros(() => SegurosAPI.daEmpresa(id)),
+  // A lista de pessoas: o selo de seguro de cada pessoa da página (`ids`). Vem
+  // só quem tem seguro, com o selo e os dias prontos, no dia da conta.
+  resumoPorPessoa: ids => noServidor(() => SegurosAPI.resumoPorPessoa(ids)),
   seguro: id => umSeguro(() => SegurosAPI.seguro(id)),
   historia: async id =>
     (await noServidor(() => SegurosAPI.historia(id))).map(passoDaTela),

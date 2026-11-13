@@ -112,6 +112,15 @@ class RelacionamentosSegurosAPI extends ApiClient {
   criar(dados) {
     return axios.post(`${this.url}/seguros`, dados);
   }
+
+  // O selo de seguro das pessoas de uma página da lista de pessoas: de quem tem
+  // seguro, `{ <id da pessoa>: { quantos, selo, tipo, dias } }`. `ids` são só
+  // os da página (vão como `pessoa_ids[]`); o servidor recusa mais de 100.
+  resumoPorPessoa(ids) {
+    return axios.get(`${this.url}/seguros/resumo_por_dono`, {
+      params: { pessoa_ids: ids },
+    });
+  }
 }
 
 export default new RelacionamentosSegurosAPI();

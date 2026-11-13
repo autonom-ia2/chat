@@ -11,6 +11,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // ação em grupo). `tamanho` é o do botão: 'md' (44 px, o menor alvo de toque)
 // ou 'lg' (48 px, ao lado de botões grandes, como no rodapé de uma gaveta).
 // #2898 — `paraBaixo` abre a lista para baixo (o "⋯" que mora no alto da tela).
+// O item não quebra em duas linhas: o menu alarga até caber o maior texto.
 const props = defineProps({
   itens: { type: Array, required: true },
   rotulo: { type: String, default: '' },
@@ -119,7 +120,7 @@ onClickOutside(raiz, () => {
         type="button"
         role="menuitem"
         :data-acao="item.id"
-        class="flex items-center gap-3 px-3 text-sm font-medium text-start border-0 rounded-lg bg-transparent min-h-11 hover:bg-n-alpha-1 focus-visible:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="flex items-center gap-3 px-3 text-sm font-medium whitespace-nowrap text-start border-0 rounded-lg bg-transparent min-h-11 hover:bg-n-alpha-1 focus-visible:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :class="[
           item.destrutivo ? 'text-n-ruby-11' : 'text-n-slate-12',
           { 'sm:hidden': item.soNoCelular },

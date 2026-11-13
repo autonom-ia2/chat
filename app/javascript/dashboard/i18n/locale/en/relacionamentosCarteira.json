@@ -111,6 +111,19 @@
       "SEM_ACESSO": "You do not have access to this account's policies.",
       "EXEMPLO_LEGENDA": "Your list of policies will look like this:"
     },
+    "PESSOAS": {
+      "BUSCA": "Search by name, phone, document or policy",
+      "SO_UM_SEGURO": {
+        "NOME": "Only one policy",
+        "EXPLICACAO": "People with only one active policy. A good time to offer another one."
+      },
+      "SELOS": {
+        "ATIVO": "Active policy",
+        "VENCIDO": "Expired policy",
+        "CANCELADO": "Cancelled policy"
+      },
+      "SELOS_FALHARAM": "I couldn't show who has insurance right now."
+    },
     "FICHA": {
       "TITULO": "Insurance",
       "TITULO_COM_QUANTOS": "Insurance ({count})",

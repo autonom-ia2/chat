@@ -1157,12 +1157,21 @@ Rails.application.routes.draw do
             post :apagar, to: 'apagar#create'
             # #2897 — carteira de seguros (chave carteira_seguros, só em conta corretora de seguros; 404 sem isso): a aba
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
+            # #2898 (E5.3) — "Apólice nova" feita à mão, a partir do seguro que ela renovou.
+            post 'seguros', to: 'seguros/apolices_novas#create'
             resources :seguros, only: [:index, :show, :update] do
               collection do
                 get :todos
                 get :contagens
                 get :resumo
                 get :opcoes_de_filtro
+                # O selo de seguro das pessoas da página da lista de pessoas (`pessoa_ids[]`).
+                get :resumo_por_dono, to: 'seguros/resumo_por_dono#show'
+                # #2898 (E5.1) — "Ajustar renovações": onde ficam as renovações da conta (funil, etapa, dias, mensagens).
+                get :renovacoes, to: 'seguros/renovacoes#show'
+                put :renovacoes, to: 'seguros/renovacoes#update'
+                # #2898 (E5.4) — os resultados das renovações: venceram, renovaram e por que não, por período.
+                get :resultados, to: 'seguros/resultados#show'
               end
               member do
                 get :historia
@@ -1171,6 +1180,10 @@ Rails.application.routes.draw do
                 get :pdf, to: 'seguros/pdf#show'
                 post :pdf, to: 'seguros/pdf#create'
                 delete :pdf, to: 'seguros/pdf#destroy'
+                # #2898 (E5.3) — como terminou a renovação: fecham ou reabrem o card de renovação do seguro.
+                post :renovou, to: 'seguros/desfechos#renovou'
+                post :nao_renovou, to: 'seguros/desfechos#nao_renovou'
+                post :desfazer_desfecho, to: 'seguros/desfechos#desfazer'
               end
             end
             get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
