@@ -2438,6 +2438,26 @@
      "nota": "Issue #2897. A gaveta abre com ?apolice=<id> na lista e nas fichas, por isso o botão leva à lista. Corrigir e mudar o PDF pedem poder alterar a pessoa; quem só pode ver lê os dados e abre o PDF."
     },
     {
+     "id": "09.23",
+     "titulo": "Ver os seguros de quem está na conversa",
+     "para_que_serve": "Ver, no painel do contato ao lado da conversa, os seguros de quem está sendo atendido: tipo, selo, seguradora e quando vence, abrir o PDF e o seguro sem sair do atendimento, e ir à ficha para mudar algo.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "home",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ver os seguros de quem está na conversa (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2897 (E4, parte 7). Não há rota nova: o bloco mora no painel do contato da conversa, por isso o botão leva às conversas. A numeração pula o 09.22, que é da planilha com seguros. O bloco só aparece para quem pode ver contatos e quando a pessoa tem seguro; pelo painel é só leitura."
+    },
+    {
      "id": "09.24",
      "titulo": "Renovações: escolher o funil, dizer se renovou e guardar a apólice nova",
      "para_que_serve": "Escolher em que funil e etapa as renovações aparecem e quantos dias antes do fim, ver os seguros em renovação, dizer se o cliente renovou ou não (com o motivo), guardar a apólice nova, desfazer e exportar o histórico do seguro.",
