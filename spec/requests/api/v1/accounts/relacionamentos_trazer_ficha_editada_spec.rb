@@ -28,8 +28,15 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
   end
   # A foto fica de fora de propósito (#3005): não é coluna da ficha, e trocar a foto não segura a pessoa.
   let(:de_fora) { %w[avatar avatar_url] }
+  # `additional_attributes` aceita qualquer chave por baixo (o `permit` pede o conjunto livre e o controller junta com o
+  # que a ficha tem): a lista de cima, só com os nomes de topo, não cobre isso. Uma chave que o sistema também usa (o
+  # código da pessoa no CRM de fora), gravada pela API, é edição como as outras.
+  let(:subchaves_livres) do
+    { 'additional_attributes.external' => { additional_attributes: { external: { crm_de_fora_id: 'codigo-0042' } } } }
+  end
+  let(:todas_as_edicoes) { edicoes.merge(subchaves_livres) }
   # Uma pessoa por edição, na ordem das edições, e uma a mais, em quem ninguém mexe.
-  let(:telefones) { Array.new(edicoes.size + 1) { |indice| format('119876501%02d', indice) } }
+  let(:telefones) { Array.new(todas_as_edicoes.size + 1) { |indice| format('119876501%02d', indice) } }
   let(:nomes) { %w[Alfa Beta Gama Delta Epsilon Zeta Eta Teta Iota Kapa] }
   let(:planilha_das_pessoas) do
     linhas = telefones.each_with_index.map { |telefone, indice| "Pessoa #{nomes.fetch(indice)},#{telefone}" }
@@ -86,10 +93,10 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
   it 'editar qualquer um desses campos pela API segura a pessoa que a lista criou; a intocada sai' do
     importacao = trazer_lista(planilha_das_pessoas, trazer: {})
     criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
-    intocada = da_linha(edicoes.size)
+    intocada = da_linha(todas_as_edicoes.size)
     expect(previa(importacao)).to eq(tira: telefones.size, ficam: 0, devolve: 0)
 
-    editadas = edicoes.each_with_index.to_h do |(campo, corpo), indice|
+    editadas = todas_as_edicoes.each_with_index.to_h do |(campo, corpo), indice|
       quem = da_linha(indice)
       editar(quem, corpo)
       [campo, quem]
@@ -99,11 +106,13 @@ RSpec.describe 'Trazer minha lista: a ficha editada pela API segura a pessoa (Re
       expect(criada.tocadas([quem.id])).to contain_exactly(quem.id), "editar #{campo} não mudou o resumo da ficha"
     end
     expect(criada.tocadas([intocada.id])).to be_empty
-    expect(previa(importacao)).to eq(tira: 1, ficam: edicoes.size, devolve: 0)
+    do_crm_de_fora = editadas.fetch('additional_attributes.external').reload.additional_attributes
+    expect(do_crm_de_fora).to include('external' => { 'crm_de_fora_id' => 'codigo-0042' })
+    expect(previa(importacao)).to eq(tira: 1, ficam: todas_as_edicoes.size, devolve: 0)
 
     desfazer(importacao)
 
-    expect(account.contacts.where(id: editadas.values.map(&:id)).count).to eq(edicoes.size)
+    expect(account.contacts.where(id: editadas.values.map(&:id)).count).to eq(todas_as_edicoes.size)
     expect(account.contacts.exists?(intocada.id)).to be(false)
   end
 

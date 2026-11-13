@@ -38,14 +38,13 @@ class Relacionamentos::Trazer::PessoaCriada
   #   (Contacts::SyncAttributes).
   DE_FORA = %w[id account_id created_at updated_at last_activity_at location country_code].freeze
   ADICIONAIS = 'additional_attributes'.freeze
-  # O que o sistema grava sozinho em `additional_attributes`, sem ninguém editar a ficha:
-  # - last_avatar_sync_at e avatar_url_hash: as marcas da busca da foto
-  #   (Avatar::AvatarFromUrlJob#update_avatar_sync_attributes). Todo contato salvo com e-mail ganha essa busca uns 30
-  #   segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
-  #   dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia;
-  # - external: o código da pessoa no CRM de fora, guardado pela integração quando ela manda o contato para lá
-  #   (Crm::BaseProcessorService#store_external_id).
-  DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash external].freeze
+  # O que o sistema grava sozinho em `additional_attributes`, sem ninguém editar a ficha: as marcas da busca da foto
+  # (Avatar::AvatarFromUrlJob#update_avatar_sync_attributes). Todo contato salvo com e-mail ganha essa busca uns 30
+  # segundos depois (Avatarable#fetch_avatar_from_gravatar), e as marcas são gravadas tenha ela achado foto ou não:
+  # dentro do resumo, nenhuma pessoa que a lista criou com e-mail sairia.
+  # `external` (o código da pessoa no CRM de fora) NÃO está aqui: a API de contatos grava qualquer chave de
+  # `additional_attributes`, e a gravação da lista suprime os eventos que fariam a integração escrevê-lo sozinha.
+  DO_SISTEMA = %w[last_avatar_sync_at avatar_url_hash].freeze
 
   # As colunas que entram no resumo, em ordem de nome.
   def self.colunas

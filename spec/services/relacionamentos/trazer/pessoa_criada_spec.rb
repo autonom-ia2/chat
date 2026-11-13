@@ -81,13 +81,13 @@ RSpec.describe Relacionamentos::Trazer::PessoaCriada, :aggregate_failures do
     expect(texto).to eq(antes)
   end
 
-  # Crm::BaseProcessorService#store_external_id: a integração guarda na ficha o código da pessoa no CRM de fora.
-  it 'o código da pessoa no CRM de fora, guardado pela integração, não muda o resumo' do
+  # A API de contatos grava qualquer chave de `additional_attributes`, e esta também: mudá-la é editar a ficha.
+  it 'o código da pessoa no CRM de fora (`external`) é um valor como os outros: mudá-lo muda o resumo' do
     antes = texto
 
     gravar(additional_attributes: { 'external' => { 'crm_de_fora_id' => 'codigo-0042' } })
 
-    expect(texto).to eq(antes)
+    expect(texto).not_to eq(antes)
   end
 
   # O valor igual ao padrão da coluna não entra no resumo. Isso não esconde a volta ao padrão: o valor que a lista pôs
