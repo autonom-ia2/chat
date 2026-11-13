@@ -7479,6 +7479,10 @@
       "description": {
         "tipo": "string"
       },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "show_on_sidebar": {
         "tipo": "booleano"
       },
@@ -19637,6 +19641,10 @@
       "description": {
         "tipo": "string"
       },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
       "show_on_sidebar": {
         "tipo": "booleano"
       },
@@ -27565,6 +27573,10 @@
       },
       "description": {
         "tipo": "string"
+      },
+      "show_on_conversation_list": {
+        "padrao": false,
+        "tipo": "booleano"
       },
       "show_on_sidebar": {
         "tipo": "booleano"

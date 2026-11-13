@@ -4,7 +4,8 @@
 //   1. quem é e quando foi a última mensagem ("17:21", "Ontem", "seg", "12/10");
 //   2. quem disse e o quê ("Você:", "Ana:", "Gabriela [IA]:", "Equipe:") + a bolinha;
 //   3. só quando importa: a prioridade alta/urgente, um sinal que nunca é cortado
-//      e, à direita, a etapa (que desce inteira quando não cabe).
+//      e, à direita, a etapa (que desce inteira quando não cabe);
+//   4. só quando a conversa tem etiqueta marcada para a lista: as etiquetas (#2996).
 // Mesmas props e eventos do ConversationCard antigo; raiz div.conversation(.active)
 // para o Alt+J/K continuar achando o item.
 import { computed, inject, ref, watch } from 'vue';
@@ -24,6 +25,7 @@ import MessagePreview from 'dashboard/components/widgets/conversation/MessagePre
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import SeloIA from './SeloIA.vue';
+import EtiquetasDoCard from './EtiquetasDoCard.vue';
 import { horaDaLista } from './horaDaLista';
 import { REMETENTE, prefixoDoRemetente } from './prefixoDoRemetente';
 import { FAIXA_DA_VEZ, sinalDaConversa } from './sinalDaConversa';
@@ -322,125 +324,130 @@ const selecionada = computed({
         </template>
       </Avatar>
     </div>
-    <button
-      type="button"
-      class="flex flex-col flex-1 min-w-0 gap-0.5 p-0 m-0 text-start bg-transparent border-0 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand rounded"
-      :aria-label="rotulo"
-      data-card-texto
-    >
-      <span class="flex items-center min-w-0 gap-2" data-linha="1">
-        <span class="text-sm font-medium truncate text-n-slate-12" data-nome>
-          {{ nome }}
-        </span>
-        <CustomerBadge :contact="currentContact" />
-        <span
-          class="flex items-center flex-shrink-0 gap-1 ms-auto text-xs tabular-nums text-n-slate-11"
-        >
-          <Icon
-            v-if="iconeDoCanal"
-            :icon="iconeDoCanal"
-            class="size-3.5 text-n-slate-11"
-          />
-          <time :datetime="horaIso" :title="dicaDaHora" data-hora>
-            {{ hora }}
-          </time>
-        </span>
-      </span>
-      <span class="flex items-center min-w-0 gap-2" data-linha="2">
-        <span
-          class="flex items-center flex-1 min-w-0 gap-1 text-sm text-n-slate-11"
-        >
-          <span
-            v-if="prefixo.tipo === 'nota'"
-            class="flex-shrink-0 i-lucide-lock size-3.5 text-n-slate-11"
-          />
-          <span
-            v-if="prefixoNaTela"
-            class="flex items-center flex-shrink-0 font-medium text-n-slate-12 max-w-[50%]"
-            data-prefixo
-          >
-            <span class="truncate">{{ prefixoNaTela }}</span>
-            <SeloIA v-if="prefixo.tipo === 'robo'" class="ms-1" />
-            <!-- Os dois-pontos encostam no selo (o respiro que se via era o recuo interno do selo). -->
-            <span :class="prefixo.tipo === 'robo' && '-ms-0.5'">{{
-              $t('LISTA_DE_CONVERSAS.PREFIXO.SEPARADOR')
-            }}</span>
-          </span>
-          <MessagePreview
-            v-if="ultima"
-            :message="ultima"
-            :show-message-type="false"
-            tag="span"
-            class="flex-1 min-w-0 leading-5"
-          />
-          <span v-else class="truncate">
-            {{ $t('CHAT_LIST.NO_MESSAGES') }}
-          </span>
-        </span>
-        <span
-          v-if="naoLidas > 0"
-          class="flex items-center justify-center flex-shrink-0 h-5 px-1.5 text-xs font-semibold text-white rounded-full min-w-5 bg-n-brand tabular-nums"
-          data-nao-lidas
-        >
-          {{ textoDasNaoLidas }}
-        </span>
-      </span>
-      <span
-        v-if="temLinha3"
-        class="flex flex-wrap items-center min-w-0 text-xs gap-x-2 gap-y-0.5 leading-5"
-        data-linha="3"
+    <div class="flex flex-col flex-1 min-w-0 gap-1">
+      <button
+        type="button"
+        class="flex flex-col w-full min-w-0 gap-0.5 p-0 m-0 text-start bg-transparent border-0 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand rounded"
+        :aria-label="rotulo"
+        data-card-texto
       >
-        <span class="flex items-center flex-shrink-0 gap-1.5 whitespace-nowrap">
-          <span
-            v-if="linha3.prioridade"
-            class="flex items-center gap-1 font-medium text-n-slate-12"
-            data-prioridade
-          >
-            <span class="i-lucide-flag size-3.5" />
-            {{ linha3.prioridade }}
+        <span class="flex items-center min-w-0 gap-2" data-linha="1">
+          <span class="text-sm font-medium truncate text-n-slate-12" data-nome>
+            {{ nome }}
           </span>
+          <CustomerBadge :contact="currentContact" />
           <span
-            v-if="linha3.prioridade && linha3.sinal"
-            class="text-n-slate-11"
+            class="flex items-center flex-shrink-0 gap-1 ms-auto text-xs tabular-nums text-n-slate-11"
           >
-            {{ $t('LISTA_DE_CONVERSAS.SINAL.SEPARADOR') }}
+            <Icon
+              v-if="iconeDoCanal"
+              :icon="iconeDoCanal"
+              class="size-3.5 text-n-slate-11"
+            />
+            <time :datetime="horaIso" :title="dicaDaHora" data-hora>
+              {{ hora }}
+            </time>
           </span>
+        </span>
+        <span class="flex items-center min-w-0 gap-2" data-linha="2">
           <span
-            v-if="linha3.sinal"
-            class="flex items-center gap-1.5"
-            :class="cor.texto"
-            :data-sinal="linha3.sinal.familia"
-            :data-faixa="linha3.sinal.faixa"
+            class="flex items-center flex-1 min-w-0 gap-1 text-sm text-n-slate-11"
           >
             <span
-              v-if="cor.ponto"
-              class="flex-shrink-0 rounded-full size-2"
-              :class="cor.ponto"
+              v-if="prefixo.tipo === 'nota'"
+              class="flex-shrink-0 i-lucide-lock size-3.5 text-n-slate-11"
             />
             <span
-              v-else-if="linha3.sinal.icone"
-              class="flex-shrink-0 size-3.5"
-              :class="linha3.sinal.icone"
+              v-if="prefixoNaTela"
+              class="flex items-center flex-shrink-0 font-medium text-n-slate-12 max-w-[50%]"
+              data-prefixo
+            >
+              <span class="truncate">{{ prefixoNaTela }}</span>
+              <SeloIA v-if="prefixo.tipo === 'robo'" class="ms-1" />
+              <!-- Os dois-pontos encostam no selo (o respiro que se via era o recuo interno do selo). -->
+              <span :class="prefixo.tipo === 'robo' && '-ms-0.5'">{{
+                $t('LISTA_DE_CONVERSAS.PREFIXO.SEPARADOR')
+              }}</span>
+            </span>
+            <MessagePreview
+              v-if="ultima"
+              :message="ultima"
+              :show-message-type="false"
+              tag="span"
+              class="flex-1 min-w-0 leading-5"
             />
-            <span>{{ linha3.sinal.texto }}</span>
-            <SeloIA v-if="linha3.sinal.selo" />
+            <span v-else class="truncate">
+              {{ $t('CHAT_LIST.NO_MESSAGES') }}
+            </span>
+          </span>
+          <span
+            v-if="naoLidas > 0"
+            class="flex items-center justify-center flex-shrink-0 h-5 px-1.5 text-xs font-semibold text-white rounded-full min-w-5 bg-n-brand tabular-nums"
+            data-nao-lidas
+          >
+            {{ textoDasNaoLidas }}
           </span>
         </span>
         <span
-          v-if="textoDaEtapa"
-          class="flex items-center gap-1 whitespace-nowrap ms-auto text-n-slate-11"
-          :title="dicaDaEtapa"
-          data-etapa
+          v-if="temLinha3"
+          class="flex flex-wrap items-center min-w-0 text-xs gap-x-2 gap-y-0.5 leading-5"
+          data-linha="3"
         >
-          {{ textoDaEtapa }}
           <span
-            v-if="outrosAssuntos"
-            class="px-1 rounded-full text-[10px] font-semibold leading-4 bg-n-alpha-2"
+            class="flex items-center flex-shrink-0 gap-1.5 whitespace-nowrap"
           >
-            {{ $t('LISTA_DE_CONVERSAS.ETAPA.MAIS', { n: outrosAssuntos }) }}
+            <span
+              v-if="linha3.prioridade"
+              class="flex items-center gap-1 font-medium text-n-slate-12"
+              data-prioridade
+            >
+              <span class="i-lucide-flag size-3.5" />
+              {{ linha3.prioridade }}
+            </span>
+            <span
+              v-if="linha3.prioridade && linha3.sinal"
+              class="text-n-slate-11"
+            >
+              {{ $t('LISTA_DE_CONVERSAS.SINAL.SEPARADOR') }}
+            </span>
+            <span
+              v-if="linha3.sinal"
+              class="flex items-center gap-1.5"
+              :class="cor.texto"
+              :data-sinal="linha3.sinal.familia"
+              :data-faixa="linha3.sinal.faixa"
+            >
+              <span
+                v-if="cor.ponto"
+                class="flex-shrink-0 rounded-full size-2"
+                :class="cor.ponto"
+              />
+              <span
+                v-else-if="linha3.sinal.icone"
+                class="flex-shrink-0 size-3.5"
+                :class="linha3.sinal.icone"
+              />
+              <span>{{ linha3.sinal.texto }}</span>
+              <SeloIA v-if="linha3.sinal.selo" />
+            </span>
+          </span>
+          <span
+            v-if="textoDaEtapa"
+            class="flex items-center gap-1 whitespace-nowrap ms-auto text-n-slate-11"
+            :title="dicaDaEtapa"
+            data-etapa
+          >
+            {{ textoDaEtapa }}
+            <span
+              v-if="outrosAssuntos"
+              class="px-1 rounded-full text-[10px] font-semibold leading-4 bg-n-alpha-2"
+            >
+              {{ $t('LISTA_DE_CONVERSAS.ETAPA.MAIS', { n: outrosAssuntos }) }}
+            </span>
           </span>
         </span>
-      </span>
-    </button>
+      </button>
+      <EtiquetasDoCard :titulos="chat.labels || []" />
+    </div>
   </div>
 </template>

@@ -2,14 +2,15 @@
 #
 # Table name: labels
 #
-#  id              :bigint           not null, primary key
-#  color           :string           default("#1f93ff"), not null
-#  description     :text
-#  show_on_sidebar :boolean
-#  title           :string
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  account_id      :bigint
+#  id                        :bigint           not null, primary key
+#  color                     :string           default("#1f93ff"), not null
+#  description               :text
+#  show_on_conversation_list :boolean          default(FALSE), not null
+#  show_on_sidebar           :boolean
+#  title                     :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  account_id                :bigint
 #
 # Indexes
 #

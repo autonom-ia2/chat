@@ -38,6 +38,14 @@ const store = createStore({
     'accounts/getAccount': () => () => ({ id: 1, timezone: FUSO }),
     'inboxes/getInboxes': () => [{ id: 1, channel_type: 'Channel::Whatsapp' }],
     'agents/getAgentById': () => () => ({}),
+    'labels/getLabels': () => [
+      {
+        id: 9,
+        title: 'cobrança',
+        color: '#8B3A3A',
+        show_on_conversation_list: true,
+      },
+    ],
   },
 });
 
@@ -122,6 +130,16 @@ describe('CardDaConversa (#2202)', () => {
     expect(wrapper.find('[data-avatar="40"]').classes()).toEqual(
       expect.arrayContaining(['hidden', 'md:inline-flex'])
     );
+  });
+
+  it('etiqueta marcada para a lista: linha própria, fora do botão (#2996)', () => {
+    const semEtiqueta = montar();
+    expect(semEtiqueta.find('[data-etiquetas]').isVisible()).toBe(false);
+
+    const wrapper = montar({ chat: chat({ labels: ['cobrança'] }) });
+    const linha = wrapper.find('[data-etiquetas]');
+    expect(linha.text()).toBe('cobrança');
+    expect(linha.element.closest('button')).toBeNull();
   });
 
   it('a prévia dentro do botão é span', () => {
