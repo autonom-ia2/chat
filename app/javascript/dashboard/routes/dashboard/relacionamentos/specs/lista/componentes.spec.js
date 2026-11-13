@@ -579,9 +579,9 @@ describe('LinhaDePessoa', () => {
     );
   });
 
-  it('tem "Conversar" no desktop e um ícone com nome no celular', async () => {
+  it('com `podeConversar`, tem "Conversar" no desktop e um ícone com nome no celular', async () => {
     const w = mount(LinhaDePessoa, {
-      props: { pessoa: pessoa(), agora: AGORA },
+      props: { pessoa: pessoa(), podeConversar: true, agora: AGORA },
     });
     const botoes = w
       .findAll('button')
@@ -599,6 +599,30 @@ describe('LinhaDePessoa', () => {
     await celular.trigger('click');
     expect(w.emitted('conversar')).toHaveLength(2);
     expect(w.emitted('abrir')).toBeUndefined();
+  });
+
+  // #2970 — o "Conversar" da linha ainda só simula: sem a página ligar, não há.
+  it('sem `podeConversar` não tem "Conversar": sobram a caixa de marcar e o nome', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa(), agora: AGORA },
+    });
+    expect(w.text()).not.toContain('Conversar');
+    expect(
+      w.find('button[aria-label="Conversar com Ana Albuquerino"]').exists()
+    ).toBe(false);
+    expect(w.findAll('button')).toHaveLength(1);
+    expect(w.find('[data-relacionamentos="marcar"]').exists()).toBe(true);
+  });
+
+  // #2970 — sem ação em grupo para fazer, marcar não leva a nada.
+  it('sem `podeMarcar` não tem caixa de marcar, e o nome continua abrindo a ficha', async () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa(), podeMarcar: false, agora: AGORA },
+    });
+    expect(w.find('[data-relacionamentos="marcar"]').exists()).toBe(false);
+    expect(w.find('label').exists()).toBe(false);
+    await w.get('button').trigger('click');
+    expect(w.emitted('abrir')).toHaveLength(1);
   });
 });
 
@@ -673,8 +697,13 @@ describe('MostrarMais', () => {
 });
 
 describe('BarraDeAcaoEmGrupo', () => {
+  // A barra inteira, como na demonstração: "Mandar mensagem" só existe com
+  // `podeMandarMensagem` (#2970).
   const montar = quantas =>
-    mount(BarraDeAcaoEmGrupo, { props: { quantas }, attachTo: document.body });
+    mount(BarraDeAcaoEmGrupo, {
+      props: { quantas, podeMandarMensagem: true },
+      attachTo: document.body,
+    });
 
   it('diz "12 marcadas" e a ação principal é Mandar mensagem', async () => {
     const w = montar(12);
@@ -707,17 +736,29 @@ describe('BarraDeAcaoEmGrupo', () => {
       { id: 5, phone_number: null },
     ];
     const w = mount(BarraDeAcaoEmGrupo, {
-      props: { quantas: 5, conta: contaDaMensagem(pessoas) },
+      props: {
+        quantas: 5,
+        conta: contaDaMensagem(pessoas),
+        podeMandarMensagem: true,
+      },
     });
     expect(w.get('p').text()).toBe(
       '5 marcadas · 2 vão receber · 1 pediu para não receber · 1 com bloqueio · 1 sem telefone'
     );
     const todos = mount(BarraDeAcaoEmGrupo, {
-      props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(0, 2)) },
+      props: {
+        quantas: 2,
+        conta: contaDaMensagem(pessoas.slice(0, 2)),
+        podeMandarMensagem: true,
+      },
     });
     expect(todos.get('p').text()).toBe('2 marcadas');
     const ninguem = mount(BarraDeAcaoEmGrupo, {
-      props: { quantas: 2, conta: contaDaMensagem(pessoas.slice(2, 4)) },
+      props: {
+        quantas: 2,
+        conta: contaDaMensagem(pessoas.slice(2, 4)),
+        podeMandarMensagem: true,
+      },
     });
     expect(ninguem.get('p').text()).toBe(
       '2 marcadas · 1 pediu para não receber · 1 com bloqueio'
@@ -856,6 +897,7 @@ describe('BarraDeAcaoEmGrupo', () => {
     const w = mount(BarraDeAcaoEmGrupo, {
       props: {
         quantas: 3,
+        podeMandarMensagem: true,
         podeCriarCards: false,
         podeEtiquetar: false,
         podeApagar: false,
@@ -888,6 +930,66 @@ describe('BarraDeAcaoEmGrupo', () => {
     await doCelular[0].trigger('click');
     expect(w.emitted('criarCards')).toHaveLength(1);
     w.unmount();
+  });
+
+  // #2970 — "Mandar mensagem" ainda só simula: sem a página ligar, não há.
+  describe('sem `podeMandarMensagem`', () => {
+    const deFora = [
+      { id: 1, phone_number: '+5511910310001' },
+      { id: 2, phone_number: '+5511910310002', opted_out_at: 1700000000 },
+      { id: 3, phone_number: null },
+    ];
+
+    it('não tem "Mandar mensagem" nem a segunda linha do celular', () => {
+      const w = mount(BarraDeAcaoEmGrupo, { props: { quantas: 3 } });
+      expect(w.find('[data-relacionamentos="mandar-mensagem"]').exists()).toBe(
+        false
+      );
+      expect(w.text()).not.toContain('Mandar mensagem');
+      expect(w.find('[data-quebra-de-linha]').exists()).toBe(false);
+    });
+
+    it('a frase é só "N marcadas", mesmo com gente que ficaria de fora', () => {
+      const w = mount(BarraDeAcaoEmGrupo, {
+        props: { quantas: 3, conta: contaDaMensagem(deFora) },
+      });
+      expect(w.get('p').text()).toBe('3 marcadas');
+    });
+
+    it('as ações de verdade continuam: Criar cards e Etiqueta na barra, as três no "⋯", e o ×', async () => {
+      const w = mount(BarraDeAcaoEmGrupo, {
+        props: { quantas: 3 },
+        attachTo: document.body,
+      });
+      await w.get('[data-relacionamentos="criar-cards"]').trigger('click');
+      await w.get('[data-relacionamentos="etiqueta"]').trigger('click');
+      expect(w.emitted('criarCards')).toHaveLength(1);
+      expect(w.emitted('etiqueta')).toHaveLength(1);
+      expect(
+        w.findAll('[role="menuitem"]').map(i => i.attributes('data-acao'))
+      ).toEqual(['criarCards', 'etiqueta', 'apagar']);
+      expect(w.getComponent(MenuMaisAcoes).classes()).not.toContain(
+        'sm:hidden'
+      );
+      expect(w.find('button[aria-label="Desmarcar todas"]').exists()).toBe(
+        true
+      );
+      w.unmount();
+    });
+
+    it('sem nenhuma ação, sobram "N marcadas" e o ×', () => {
+      const w = mount(BarraDeAcaoEmGrupo, {
+        props: {
+          quantas: 3,
+          podeCriarCards: false,
+          podeEtiquetar: false,
+          podeApagar: false,
+        },
+      });
+      expect(w.findAll('button')).toHaveLength(1);
+      expect(w.get('button').attributes('aria-label')).toBe('Desmarcar todas');
+      expect(w.get('p').text()).toBe('3 marcadas');
+    });
   });
 });
 

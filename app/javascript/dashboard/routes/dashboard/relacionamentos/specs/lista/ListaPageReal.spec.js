@@ -12,7 +12,8 @@ import ListaPage from '../../pages/ListaPage.vue';
 // o erro com "Tentar de novo" quando o servidor recusa. Quem não pode ver (401
 // ou 403) lê que não tem acesso, sem botão de tentar. As ações em grupo
 // escrevem no servidor, somem para quem não tem a permissão e recarregam a
-// lista depois.
+// lista depois. O que ainda só simula ("Conversar" da linha e "Mandar mensagem"
+// da barra) não aparece aqui (#2970).
 const flagsLigadas = vi.hoisted(() => new Set());
 const pode = vi.hoisted(() => ({
   criarCards: true,
@@ -403,15 +404,34 @@ describe('ações em grupo: quem vê o quê', () => {
     expect(w.find(marca('criar-cards')).exists()).toBe(true);
   });
 
-  it('sem nenhuma das três, a barra fica só com "Mandar mensagem"', async () => {
+  // #2970 — sem ação em grupo para fazer, marcar não leva a nada.
+  it('sem nenhuma das três, a lista não tem caixa de marcar nem barra, e o nome ainda abre a ficha', async () => {
     pode.criarCards = false;
     pode.etiquetar = false;
     pode.apagar = false;
     const w = await abrir();
-    await marcarAna(w);
-    expect(w.find(marca('mandar-mensagem')).exists()).toBe(true);
-    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+    expect(w.findAll(marca('linha'))).toHaveLength(1);
+    expect(w.find(marca('marcar')).exists()).toBe(false);
+    expect(w.find(marca('barra')).exists()).toBe(false);
+    expect(w.text()).not.toContain('Marcar todas');
+    await w.get(`${marca('linha')} button`).trigger('click');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { contactId: 1 },
+    });
   });
+
+  it.each(['criarCards', 'etiquetar', 'apagar'])(
+    'só com %s, a caixa de marcar continua',
+    async unica => {
+      pode.criarCards = unica === 'criarCards';
+      pode.etiquetar = unica === 'etiquetar';
+      pode.apagar = unica === 'apagar';
+      const w = await abrir();
+      await marcarAna(w);
+      expect(w.find(marca('barra')).exists()).toBe(true);
+    }
+  );
 
   it('quem não pode apagar contato não vê "Apagar"', async () => {
     pode.apagar = false;
@@ -419,6 +439,40 @@ describe('ações em grupo: quem vê o quê', () => {
     await marcarAna(w);
     expect(w.find('[data-acao="apagar"]').exists()).toBe(false);
     expect(w.find(marca('criar-cards')).exists()).toBe(true);
+  });
+});
+
+// #2970 — "recurso que não existe é invisível": fora da demonstração, a
+// conversa pela linha e a mensagem em grupo ainda não são de verdade.
+describe('o que ainda só simula não aparece', () => {
+  it('a linha não tem "Conversar": só a caixa de marcar e o nome', async () => {
+    const w = await abrir();
+    const linha = w.get(marca('linha'));
+    expect(linha.text()).not.toContain('Conversar');
+    expect(
+      linha.find('button[aria-label="Conversar com Ana Albuquerino"]').exists()
+    ).toBe(false);
+    expect(linha.findAll('button')).toHaveLength(1);
+    expect(linha.find(marca('marcar')).exists()).toBe(true);
+  });
+
+  it('a barra não tem "Mandar mensagem" e não fala de quem recebe', async () => {
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: {
+        itens: [{ ...ANA, opted_out_at: 1700000000 }],
+        total: 1,
+        tem_mais: false,
+      },
+    });
+    const w = await abrir();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    expect(w.find(marca('mandar-mensagem')).exists()).toBe(false);
+    expect(w.get(marca('barra')).text()).not.toContain('Mandar mensagem');
+    expect(w.get(`${marca('barra')} p`).text()).toBe('1 marcada');
+    expect(w.find(marca('criar-cards')).exists()).toBe(true);
+    expect(w.find(marca('etiqueta')).exists()).toBe(true);
+    expect(w.find('[data-acao="apagar"]').exists()).toBe(true);
+    expect(useAlert).not.toHaveBeenCalled();
   });
 });
 

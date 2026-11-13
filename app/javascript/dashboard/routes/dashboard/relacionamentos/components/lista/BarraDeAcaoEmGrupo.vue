@@ -10,10 +10,16 @@ import MenuMaisAcoes from './MenuMaisAcoes.vue';
 // vista; Criar cards e Etiqueta vão para o menu "⋯" junto com Apagar.
 // "Criar cards", "Etiqueta" e "Apagar" só aparecem para quem pode (quem decide
 // é a página). Sem nenhuma das três, fica só "Mandar mensagem", sem o "⋯".
+// #2970 — o que ainda não é de verdade não aparece: "Mandar mensagem" daqui só
+// simula, então só existe com `podeMandarMensagem` (a página liga na
+// demonstração). Sem ele a barra não fala de quem recebe, fica numa linha só no
+// celular ("N marcadas", "⋯" e ×) e, de `sm` para cima, mostra Criar cards e
+// Etiqueta lado a lado, sem botão preenchido.
 const props = defineProps({
   quantas: { type: Number, required: true },
   // A conta de quem recebe (`contaDaMensagem`); sem ela, só "N marcadas".
   conta: { type: Object, default: null },
+  podeMandarMensagem: { type: Boolean, default: false },
   podeCriarCards: { type: Boolean, default: true },
   podeEtiquetar: { type: Boolean, default: true },
   podeApagar: { type: Boolean, default: true },
@@ -46,7 +52,7 @@ const frase = computed(() => {
     props.quantas
   );
   const conta = props.conta;
-  if (!conta?.fora) return marcadas;
+  if (!props.podeMandarMensagem || !conta?.fora) return marcadas;
   const receber = conta.recebem
     ? [
         t(
@@ -105,6 +111,7 @@ const menuSoNoCelular = computed(() =>
       {{ frase }}
     </p>
     <Button
+      v-if="podeMandarMensagem"
       size="lg"
       class="order-3 flex-1 min-w-0 whitespace-nowrap sm:order-2 sm:flex-none"
       icon="i-lucide-send"
@@ -151,8 +158,10 @@ const menuSoNoCelular = computed(() =>
       @click="emit('fechar')"
     />
     <!-- Celular: quebra a linha entre "marcadas ⋯ ×" e "Mandar mensagem", que
-         fica com a linha inteira (ao lado do "⋯" o texto saía cortado). -->
+         fica com a linha inteira (ao lado do "⋯" o texto saía cortado). Sem
+         "Mandar mensagem" não há segunda linha. -->
     <span
+      v-if="podeMandarMensagem"
       data-quebra-de-linha
       class="order-2 h-0 basis-full sm:hidden"
       aria-hidden="true"
