@@ -136,6 +136,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Carteira::Apolice', :por_conta],
     # E5 (#2898): onde ficam as renovações da conta. Aponta para o funil, a etapa e a pessoa com SET NULL.
     ['Carteira::RenovacaoConfig', :por_conta],
+    # CPF e CNPJ (#1240, R1): o documento sai em cascata com a pessoa e com a empresa. O da pessoa já saiu no pré-apagar
+    # dos contatos; o da empresa ainda está aqui, porque as empresas só saem depois do commit, e barraria o DELETE da conta.
+    ['Relacionamentos::Documento', :por_conta],
     # Automação livre (#2414): conversão do antigo (F9), registro, execução, versão e automação. A conversão aponta
     # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
