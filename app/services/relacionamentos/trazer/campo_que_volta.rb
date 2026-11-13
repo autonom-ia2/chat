@@ -9,22 +9,32 @@
 # campanha de lá para cá, Relacionamentos::Trazer::QuemFoiProcurado). A conta já falou com a pessoa por ali.
 #
 # "Cliente" tem três condições a mais, combinadas com Multifunnel: a pessoa continua cliente; a data de cliente é a que
-# a lista gravou; e nenhum card dela foi ganho desde que a lista existe (`desde`, a criação da importação). O ganho
+# a lista gravou; e nenhum card dela foi ganho desde que a lista existe (`desde`, a criação da importação), nem que
+# tenha sido arquivado depois de ganho (Crm::Card.com_desfecho, o filtro dos números e das metas). O ganho
 # chama Contact#become_customer!, que não mexe em quem já é cliente: sem a terceira condição, quem comprou de verdade
 # voltaria a lead. Conta-se da criação da importação, e não do instante em que a linha foi gravada, porque o ganho que
 # acontece enquanto o bloco da linha é gravado espera a trava da pessoa e fica com a hora de antes da anotação. Quem
 # ganhou um card nesse intervalo antes de a lista chegar à linha já era cliente, e a lista nem a anotou. A pessoa volta
-# ao tipo que tinha antes (Contact#revert_customer!), não sempre a lead.
+# ao tipo que tinha antes (Contact#revert_customer!), não sempre a lead. Sem o tipo de antes anotado (ou com um tipo
+# para o qual não se volta), a marca não volta e a prévia não a conta: não há para onde voltar.
 #
-# `devolver!` recebe os campos de uma mesma pessoa (ou empresa) e os devolve juntos: uma trava, uma gravação e um aviso
-# de "contato mudou", em vez de um por campo. Roda sob a trava do registro e confere tudo de novo com ele relido; o
-# ganho e a procura são consultados ali, na hora. A marca de cliente tem a gravação dela (Contact#revert_customer!). A
-# gravação pula as validações, como a marca de cliente e a recusa (ContactCustomer, ContactOptOut): esvaziar um campo
-# não cria dado fora do formato, e o dado antigo fora do formato não pode impedir o Desfazer.
+# `devolver!` recebe os campos de uma mesma pessoa (ou empresa) e os devolve juntos, sob uma trava só: os campos comuns
+# numa gravação, a marca de cliente na gravação dela (Contact#revert_customer!; são duas gravações quando a pessoa tem
+# os dois) e uma marca de "devolvido" para todos, em vez de uma por campo. Nenhuma dessas gravações avisa "contato
+# mudou": o Desfazer as faz com os avisos suprimidos (Relacionamentos::Trazer::Desfazer). Roda sob a trava do registro
+# e confere de novo, com ele relido, o que só ele sabe: o valor de hoje e se a pessoa continua cliente. O ganho e a
+# procura são os do bloco (Relacionamentos::Trazer::CamposDaLista os lê uma vez por bloco, logo antes de entregar): não
+# são consultados de novo por pessoa. A gravação pula as validações, como a marca de cliente e a recusa
+# (ContactCustomer, ContactOptOut): esvaziar um campo não cria dado fora do formato, e o dado antigo fora do formato
+# não pode impedir o Desfazer.
+#
+# O campo que nunca vai voltar sai da fila já na primeira passada, marcado como os devolvidos: o de quem não existe mais
+# e a marca de cliente sem tipo de antes. Sem isso a linha ficaria pendente para sempre.
 class Relacionamentos::Trazer::CampoQueVolta
   Campo = Relacionamentos::CampoPreenchido
   CIDADE = ContactImports::Trazer::DestinosDaLinha::CIDADE
   TELEFONE = ContactImports::Trazer::DestinosDaLinha::TELEFONE_DA_EMPRESA
+  TIPOS_DE_ANTES = ContactCustomer::TYPES_BEFORE_CUSTOMER
 
   attr_reader :alvo
 
@@ -32,15 +42,26 @@ class Relacionamentos::Trazer::CampoQueVolta
   # Devolve quantos voltaram.
   def self.devolver!(campos)
     alvo = campos.first.alvo
-    return 0 if alvo.nil?
+    if alvo.nil?
+      marcar(campos)
+      return 0
+    end
 
     alvo.with_lock do
-      de_cliente, comuns = campos.select(&:volta_agora?).partition(&:cliente?)
+      de_cliente, comuns = campos.select(&:volta?).partition(&:cliente?)
       esvaziar(alvo, comuns)
       voltaram = comuns + de_cliente.select(&:desmarcar_cliente)
-      voltaram.each(&:marcar_devolvido)
+      marcar(voltaram + campos.select(&:sem_tipo_de_antes?))
       voltaram.size
     end
+  end
+
+  # Uma escrita para todos os campos do alvo.
+  def self.marcar(campos)
+    return if campos.empty?
+
+    agora = Time.current
+    Campo.where(id: campos.map(&:registro_id)).update_all(devolvido_em: agora, updated_at: agora) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def self.esvaziar(alvo, campos)
@@ -51,8 +72,8 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   # alvo: a pessoa de hoje, ou a empresa da linha quando o campo é o telefone da empresa; nil quando não existe mais.
-  # desde: a criação da importação. ganhou: a pessoa tem card ganho de lá para cá (só importa para "cliente").
-  # procurada: a conta a procurou de lá para cá (só importa para telefone e e-mail).
+  # desde: a criação da importação (de quando o bloco conta o ganho e a procura). ganhou: a pessoa tem card ganho de lá
+  # para cá (só importa para "cliente"). procurada: a conta a procurou de lá para cá (só importa para telefone e e-mail).
   def initialize(registro, alvo:, desde:, ganhou: false, procurada: false)
     @registro = registro
     @alvo = alvo
@@ -68,22 +89,24 @@ class Relacionamentos::Trazer::CampoQueVolta
 
   def volta?
     return false if @alvo.nil? || !@registro.mesmo_valor?(atual)
-    return @alvo.customer? && !@ganhou if cliente?
+    return @alvo.customer? && !@ganhou && tipo_de_antes.present? if cliente?
 
     !(@registro.de_contato? && @procurada)
   end
 
-  # Daqui para baixo, o que `devolver!` usa, sempre sob a trava do alvo.
-
-  # Com o ganho e a procura consultados na hora.
-  def volta_agora?
-    @ganhou = @alvo.crm_cards.won.exists?(closed_at: @desde..) if cliente?
-    @procurada = Relacionamentos::Trazer::QuemFoiProcurado.new(@alvo.account_id, desde: @desde).procurada?(@alvo.id) if @registro.de_contato?
-    volta?
-  end
-
   def cliente?
     @registro.campo == Campo::CLIENTE
+  end
+
+  # Daqui para baixo, o que `devolver!` usa, sempre sob a trava do alvo.
+
+  def registro_id
+    @registro.id
+  end
+
+  # A marca de cliente que não tem para onde voltar: a anotação não diz o tipo de antes (ou diz um para o qual não se volta).
+  def sem_tipo_de_antes?
+    cliente? && tipo_de_antes.nil?
   end
 
   # O que gravar no alvo para o campo ficar vazio. Lê o alvo como está agora, já com os campos anteriores esvaziados.
@@ -100,14 +123,16 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   def desmarcar_cliente
-    @alvo.revert_customer!(to: Contact.contact_types.key(@registro.tipo_anterior)) { volta? }
-  end
-
-  def marcar_devolvido
-    @registro.update!(devolvido_em: Time.current)
+    @alvo.revert_customer!(to: tipo_de_antes) { volta? }
   end
 
   private
+
+  # 'visitor' ou 'lead'; nil quando a anotação não tem o tipo de antes ou tem um para o qual não se volta.
+  def tipo_de_antes
+    tipo = Contact.contact_types.key(@registro.tipo_anterior)
+    tipo if TIPOS_DE_ANTES.include?(tipo)
+  end
 
   def atual
     case @registro.campo

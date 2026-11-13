@@ -20,6 +20,8 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     expect(desfeita).to have_attributes(status: 'completed', undo_status: 'completed')
     expect([desfeita.undo_started_at, desfeita.undo_finished_at, desfeita.undo_completed_at]).to all(be_present)
     expect(Relacionamentos::Trazer::Situacao.de(desfeita)).to eq('desfeito')
+    expect(described_class.ficaram(desfeita)).to eq(0)
+    expect(desfeita.validation_summary).not_to include('desfazer_ficaram')
     expect(account.contacts.exists?(carla.id)).to be(false)
     expect(ana.reload).to have_attributes(name: 'Ana A.', phone_number: '+5511987650001', email: nil, contact_type: 'lead', customer_since: nil,
                                           company_id: nil, custom_attributes: {})
@@ -32,6 +34,87 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
     # As linhas da importação ficam como estavam: o desfazer só grava o estado dele.
     expect(importacao.campaign_import_rows.pluck(:status).uniq).to eq(['imported'])
     expect(previa(importacao)).to eq(tira: 0, ficam: 0, devolve: 0)
+  end
+
+  it 'deixa na base a pessoa que a lista criou e alguém editou depois, e a prévia a conta entre as que ficam' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    expect(previa(importacao)).to eq(tira: 1, ficam: 0, devolve: 2)
+
+    carla.update!(email: 'carla.carvalhedo@exemplo.com.br')
+    expect(previa(importacao)).to eq(tira: 0, ficam: 1, devolve: 2)
+
+    desfazer(importacao)
+
+    expect(account.contacts.exists?(carla.id)).to be(true)
+    expect(carla.reload).to have_attributes(email: 'carla.carvalhedo@exemplo.com.br', phone_number: '+5511987650003')
+    # O Mercado Sol nasceu com a lista, mas a Carla continua nele.
+    expect(account.companies.pluck(:name)).to eq(['Mercado Sol'])
+  end
+
+  it 'não tira quem tem seguro na carteira: a apólice sairia junto com a pessoa' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    apolice = create(:carteira_apolice, account: account, contact: carla)
+    expect(previa(importacao)).to eq(tira: 0, ficam: 1, devolve: 2)
+
+    desfazer(importacao)
+
+    expect(account.contacts.exists?(carla.id)).to be(true)
+    expect(Carteira::Apolice.exists?(apolice.id)).to be(true)
+  end
+
+  it 'quando o apagar em lote mantém alguém, a lista fica desfeita e guarda quantas pessoas ficaram, só o número' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    # O apagar em lote não levanta erro quando mantém a pessoa (a reunião que não cancela, o card que mudou): só segue.
+    allow(Contacts::BulkDeleteService).to receive(:new).and_return(instance_double(Contacts::BulkDeleteService, perform: nil))
+
+    desfeita = desfazer(importacao)
+
+    expect(desfeita.undo_status).to eq('completed')
+    expect(account.contacts.exists?(carla.id)).to be(true)
+    expect(described_class.ficaram(desfeita)).to eq(1)
+    expect(desfeita.validation_summary).to include('desfazer_ficaram' => 1)
+    historico = Relacionamentos::Trazer::Historico.new(account.campaign_imports.contact_imports).call
+    expect(historico.sole).to include(situacao: 'desfeito', ficaram: 1)
+  end
+
+  it 'a lista desfeita sem ninguém ficar não leva o número no histórico; a que ainda não foi desfeita também não' do
+    importacao = trazer_lista
+    historico = -> { Relacionamentos::Trazer::Historico.new(account.campaign_imports.contact_imports).call.sole }
+    expect(historico.call).not_to include(:ficaram)
+
+    desfazer(importacao)
+
+    expect(historico.call).to include(situacao: 'desfeito')
+    expect(historico.call).not_to include(:ficaram)
+  end
+
+  it 'devolver os campos não avisa "contato mudou"; o aviso de quem saiu continua' do
+    importacao = trazer_lista
+    avisador = Rails.configuration.dispatcher
+    allow(avisador).to receive(:dispatch).and_call_original
+
+    desfazer(importacao)
+
+    expect(ana.reload).to have_attributes(email: nil, contact_type: 'lead')
+    expect(avisador).not_to have_received(:dispatch).with(Events::Types::CONTACT_UPDATED, any_args)
+    expect(avisador).to have_received(:dispatch).with(Events::Types::CONTACT_DELETED, any_args)
+    expect(Current.suppress_contact_events).to be_nil
+  end
+
+  it 'apaga as anotações de quem saiu e as dos campos que voltaram; fica só a do campo que não voltou' do
+    importacao = trazer_lista
+    carla = pessoa('Carla Carvalhedo')
+    expect(anotados(carla)).to match_array(%w[pessoa_criada telefone_da_empresa])
+    ana.reload.update!(custom_attributes: { 'plano' => 'Diamante' })
+
+    desfazer(importacao)
+
+    expect(campos.where(contact_id: carla.id)).to be_empty
+    expect(campos.where.not(devolvido_em: nil)).to be_empty
+    expect(campos.pluck(:contact_id, :campo)).to eq([[ana.id, 'informacao:plano']])
   end
 
   it 'não devolve o campo que alguém mudou depois da lista' do
@@ -130,6 +213,13 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       funil, etapa = create_crm_pipeline(account: account, user: user)
       card = account.crm_cards.create!(pipeline: funil, stage: etapa, contact: de_quem, title: 'Venda')
       card.update_columns(status: Crm::Card.statuses[:won], closed_at: quando) # rubocop:disable Rails/SkipsModelValidations
+      card
+    end
+
+    # Arquivar o card ganho muda o status e guarda o desfecho; a data do fechamento fica (Crm::Card::DESFECHO_ARQUIVADO).
+    def arquivar(card)
+      card.update_columns(status: Crm::Card.statuses[:archived], # rubocop:disable Rails/SkipsModelValidations
+                          metadata: card.metadata.to_h.merge(Crm::Card::DESFECHO_ARQUIVADO => 'won'))
     end
 
     it 'devolve ao tipo de antes só quem continua cliente, com a mesma data, e não ganhou card desde a lista' do
@@ -152,6 +242,32 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       expect(remarcada.customer_since).to be_present
       expect(ganhou.reload.contact_type).to eq('customer')
       expect(campos.pendentes.where(campo: 'cliente').pluck(:contact_id)).to contain_exactly(desmarcada.id, remarcada.id, ganhou.id)
+    end
+
+    it 'sem o tipo de antes anotado, a marca não volta, a prévia não a conta e a anotação não fica pendente para sempre' do
+      importacao = trazer_lista(clientes, trazer: { 'respostas' => { 'clientes' => 'sim_todas' } })
+      campos.where(campo: 'cliente', contact_id: volta.id).update_all(tipo_anterior: nil) # rubocop:disable Rails/SkipsModelValidations
+      expect(previa(importacao)).to eq(tira: 0, ficam: 0, devolve: 3)
+
+      desfazer(importacao)
+
+      expect(volta.reload.contact_type).to eq('customer')
+      expect(volta.customer_since).to be_present
+      expect(desmarcada.reload).to have_attributes(contact_type: 'lead', customer_since: nil)
+      expect(campos.where(contact_id: volta.id)).to be_empty
+    end
+
+    it 'o card ganho e arquivado depois da lista segura a pessoa como cliente' do
+      importacao = trazer_lista(clientes, trazer: { 'respostas' => { 'clientes' => 'sim_todas' } })
+      arquivar(ganhar_card(ganhou, 1.minute.from_now))
+      expect(previa(importacao)).to eq(tira: 0, ficam: 0, devolve: 3)
+
+      desfazer(importacao)
+
+      expect(ganhou.reload.contact_type).to eq('customer')
+      expect(ganhou.customer_since).to be_present
+      expect(volta.reload).to have_attributes(contact_type: 'lead', customer_since: nil)
+      expect(campos.pendentes.where(campo: 'cliente').pluck(:contact_id)).to eq([ganhou.id])
     end
 
     it 'o card ganho antes de a lista existir não segura a marca que a lista pôs' do
@@ -197,6 +313,19 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
       # A Padaria nasceu com a lista e ficou sem ninguém: sai.
       expect(account.companies.pluck(:name)).to contain_exactly('Oficina Central', 'Mercado Sol')
     end
+
+    it 'mantém a empresa criada pela lista que tem seguro em nome dela' do
+      importacao = trazer_lista
+      mercado = account.companies.find_by!(name: 'Mercado Sol')
+      segurado = create(:contact, account: account, name: 'Pessoa Segurada')
+      apolice = create(:carteira_apolice, account: account, contact: segurado, company: mercado)
+
+      desfazer(importacao)
+
+      # A Carla saiu e o Mercado Sol ficou sem ninguém, mas a apólice é dele: sem a empresa, ela ficaria sem dono.
+      expect(account.companies.pluck(:name)).to eq(['Mercado Sol'])
+      expect(apolice.reload.company_id).to eq(mercado.id)
+    end
   end
 
   it 'pula a pessoa que não existe mais, apagada ou mesclada em outra' do
@@ -210,7 +339,9 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
 
     expect(desfeita.undo_status).to eq('completed')
     expect(ana.reload).to have_attributes(email: nil, contact_type: 'lead')
-    expect(campos.pendentes.where(contact_id: bruno.id).count).to eq(5)
+    # Os campos de quem não existe mais nunca vão voltar: saem da fila, e as anotações dele não ficam guardadas.
+    expect(campos.where(contact_id: [bruno.id, carla.id])).to be_empty
+    expect(campos.pendentes.count).to eq(0)
   end
 
   describe 'a lista trazida antes de existir a anotação dos campos' do
@@ -290,6 +421,33 @@ RSpec.describe Relacionamentos::Trazer::Desfazer, :aggregate_failures do
         expect(described_class.new(importacao).pedir).to have_attributes(erro: nil, enfileirar: true)
         expect(described_class.new(importacao).pedir).to have_attributes(erro: nil, enfileirar: false)
       end
+    end
+
+    it 'diz que há um desfazer em curso na conta só enquanto ele está vivo' do
+      importacao = trazer_lista
+      expect(described_class.em_curso?(account)).to be(false)
+
+      described_class.new(importacao).pedir
+
+      expect(described_class.em_curso?(account)).to be(true)
+      expect(described_class.em_curso?(create(:account))).to be(false)
+      # O desfazer que parou no meio não apaga ninguém: não segura quem quer trazer outra lista.
+      travel_to(CampaignImports::Config.stalled_import_after.from_now + 1.minute) do
+        expect(described_class.em_curso?(account)).to be(false)
+      end
+    end
+
+    it 'desistir devolve a marca de "desfazendo" quando o job não chegou à fila, e só ela' do
+      importacao = trazer_lista
+      described_class.new(importacao).desistir
+      expect(importacao.reload.undo_status).to eq('pending')
+
+      described_class.new(importacao).pedir
+      described_class.new(importacao).desistir
+
+      expect(importacao.reload).to have_attributes(undo_status: 'failed', undo_completed_at: nil)
+      expect(Relacionamentos::Trazer::Situacao.de(importacao)).to eq('pronto')
+      expect(described_class.new(importacao).pedir).to have_attributes(erro: nil, enfileirar: true)
     end
 
     it 'não enfileira nada para a lista já desfeita, e o job repetido não faz nada' do
