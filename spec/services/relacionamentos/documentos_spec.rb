@@ -1,0 +1,183 @@
+require 'rails_helper'
+
+# Épico #1240, decisão R1: guardar o CPF e o CNPJ, achar o dono pelo número inteiro e ler o de um dono, dentro da conta.
+# Os números são inventados (sequências), válidos só na conta do dígito verificador.
+RSpec.describe Relacionamentos::Documentos do
+  let(:account) { create(:account) }
+  let(:marina) { create(:contact, account: account, name: 'Marina Exemplo') }
+  let(:oficina) { create(:company, account: account, name: 'Oficina Exemplo') }
+  let(:documentos) { described_class.new(account) }
+  let(:cpf) { '123.456.789-09' }
+  let(:outro_cpf) { '987.654.321-00' }
+  let(:cnpj) { '11.222.333/0001-81' }
+
+  shared_examples 'guarda e acha por valor exato' do
+    it 'guarda o CPF da pessoa e o CNPJ da empresa e acha cada dono pelo número, com ou sem pontuação' do
+      documentos.guardar(marina, cpf)
+      documentos.guardar(oficina, cnpj)
+
+      expect([documentos.donos('12345678909'), documentos.donos(cpf), documentos.donos('11222333000181')]).to eq([[marina], [marina], [oficina]])
+      expect(documentos.ler(marina).attributes.slice('tipo', 'valor')).to eq('tipo' => 'cpf', 'valor' => '12345678909')
+      expect([documentos.ler(marina).formatado, documentos.ler(oficina).mascarado]).to eq(['123.456.789-09', '**.***.***/****-81'])
+    end
+
+    it 'só acha pelo número inteiro: pedaço do número e outro número não são de ninguém' do
+      documentos.guardar(marina, cpf)
+
+      expect([documentos.donos('123456789'), documentos.donos(outro_cpf), documentos.donos('')]).to eq([[], [], []])
+    end
+
+    it 'guardar de novo troca o documento do dono, sem criar outro' do
+      documentos.guardar(marina, cpf)
+      documentos.guardar(marina, outro_cpf)
+
+      expect(Relacionamentos::Documento.where(contact_id: marina.id).count).to eq(1)
+      expect([documentos.donos(cpf), documentos.donos(outro_cpf)]).to eq([[], [marina]])
+    end
+
+    it 'o mesmo número em dois cadastros da conta devolve os dois, na ordem em que os documentos entraram' do
+      repetida = create(:contact, account: account, name: 'Marina E.')
+      documentos.guardar(marina, cpf)
+      documentos.guardar(repetida, cpf)
+
+      expect(documentos.donos(cpf)).to eq([marina, repetida])
+    end
+
+    it 'a pessoa pode ter CPF e CNPJ; sem dizer o tipo, lê o CPF da pessoa e o CNPJ da empresa' do
+      documentos.guardar(marina, cpf)
+      documentos.guardar(marina, cnpj)
+      documentos.guardar(oficina, cnpj)
+
+      expect([documentos.ler(marina).tipo, documentos.ler(marina, tipo: 'cnpj').tipo, documentos.ler(oficina).tipo]).to eq(%w[cpf cnpj cnpj])
+      expect([documentos.ler(oficina, tipo: 'cpf'), documentos.donos(cnpj)]).to eq([nil, [marina, oficina]])
+    end
+  end
+
+  context 'when a cifra está ligada (as três variáveis ACTIVE_RECORD_ENCRYPTION_* presentes)' do
+    include_context 'with o model do documento recarregado'
+
+    before { carregar_o_documento(com_cifra: true) }
+
+    it_behaves_like 'guarda e acha por valor exato'
+
+    it 'grava o número cifrado, e o mesmo número vira sempre o mesmo texto cifrado' do
+      repetida = create(:contact, account: account, name: 'Marina E.')
+      gravados = [documentos.guardar(marina, cpf), documentos.guardar(repetida, cpf)].map { |documento| valor_no_banco(documento) }
+
+      expect(Relacionamentos::Documento.encrypted_attributes.to_a).to eq([:valor])
+      expect(gravados.first).not_to include('12345678909')
+      expect(gravados.uniq.size).to eq(1)
+    end
+
+    it 'lê o documento que foi gravado em texto puro antes de as chaves existirem' do
+      documento = documentos.guardar(marina, cpf)
+      ActiveRecord::Base.connection.execute("UPDATE relacionamentos_documentos SET valor = '12345678909' WHERE id = #{Integer(documento.id)}")
+
+      expect(documentos.ler(marina).valor).to eq('12345678909')
+    end
+
+    it 'nem o log de consultas, no nível mais falador, traz o número' do
+      marina
+      escrito = log_de(:debug) do
+        documentos.guardar(marina, cpf)
+        documentos.donos(cpf)
+        documentos.ler(marina)
+      end
+
+      expect(escrito).to include('relacionamentos_documentos')
+      expect(escrito).not_to include('12345678909', '123.456.789-09')
+    end
+  end
+
+  context 'when a cifra está desligada (sem as variáveis)' do
+    include_context 'with o model do documento recarregado'
+
+    before { carregar_o_documento(com_cifra: false) }
+
+    it_behaves_like 'guarda e acha por valor exato'
+
+    it 'grava a forma de comparação em texto puro' do
+      expect(valor_no_banco(documentos.guardar(marina, cpf))).to eq('12345678909')
+      expect(Relacionamentos::Documento.encrypted_attributes.to_a).to eq([])
+    end
+
+    # O log de consultas (debug) fica de fora aqui: sem cifra, o valor da consulta é o próprio número, como em qualquer
+    # outra coluna. A produção registra a partir de info.
+    it 'no nível de log da produção, nada do que o serviço faz traz o número' do
+      marina
+      escrito = log_de(:info) do
+        documentos.guardar(marina, cpf)
+        documentos.donos(cpf)
+        documentos.ler(marina)
+      end
+
+      expect(escrito).not_to include('12345678909', '123.456.789-09')
+    end
+  end
+
+  describe 'isolamento entre contas' do
+    let(:outra) { create(:account) }
+    let(:de_fora) { create(:contact, account: outra, name: 'Caio Exemplo') }
+    let(:documentos_da_outra) { described_class.new(outra) }
+
+    it 'o mesmo número em outra conta não aparece na busca desta, nem o desta na de lá' do
+      documentos.guardar(marina, cpf)
+      documentos_da_outra.guardar(de_fora, cpf)
+
+      expect([documentos.donos(cpf), documentos_da_outra.donos(cpf)]).to eq([[marina], [de_fora]])
+    end
+
+    it 'não lê nem guarda documento de pessoa ou de empresa de outra conta' do
+      documentos_da_outra.guardar(de_fora, cpf)
+      empresa_de_fora = create(:company, account: outra, name: 'Empresa de Fora')
+
+      expect(documentos.ler(de_fora)).to be_nil
+      expect { documentos.guardar(de_fora, outro_cpf) }.to raise_error(ActiveRecord::RecordInvalid)
+      expect { documentos.guardar(empresa_de_fora, cnpj) }.to raise_error(ActiveRecord::RecordInvalid)
+      expect(Relacionamentos::Documento.where(account_id: account.id)).to be_empty
+      expect(documentos_da_outra.ler(de_fora).valor).to eq('12345678909')
+    end
+  end
+
+  describe 'número que não confere' do
+    let(:frase) { 'Este CPF ou CNPJ não confere. Confira os números e digite de novo: o CPF tem 11 dígitos e o CNPJ tem 14 caracteres.' }
+
+    it 'é recusado com uma frase que diz o que fazer e não repete o que foi digitado' do
+      conferir = lambda do |recusa|
+        expect([recusa.codigo, recusa.message, recusa.http_status]).to eq(['invalido', frase, 422])
+        expect(recusa.to_hash).to eq(error: 'invalido', message: frase)
+        expect(recusa.message + recusa.inspect).not_to include('123', '456', '789', '08')
+      end
+
+      I18n.with_locale(:pt_BR) do
+        expect { documentos.guardar(marina, '123.456.789-08') }.to raise_error(CustomExceptions::DocumentoRecusa, &conferir)
+      end
+      expect(Relacionamentos::Documento.count).to eq(0)
+    end
+
+    it 'vale para todo texto que não é CPF nem CNPJ, e a busca por ele não acha ninguém' do
+      errados = ['', nil, '1234567890', '111.111.111-11', '11.222.333/0001-80', 'não sei o CPF']
+
+      errados.each { |texto| expect { documentos.guardar(marina, texto) }.to raise_error(CustomExceptions::DocumentoRecusa) }
+      expect(errados.map { |texto| documentos.donos(texto) }).to all(eq([]))
+      expect(Relacionamentos::Documento.count).to eq(0)
+    end
+  end
+
+  describe 'o número fora do erro e do inspect' do
+    it 'o inspect do documento e o erro de validação não trazem o número' do
+      documento = documentos.guardar(marina, cpf)
+      de_fora = create(:contact, account: create(:account), name: 'Caio Exemplo')
+      sem_o_numero = ->(erro) { expect(erro.message + erro.record.inspect).not_to include('12345678909', '98765432100') }
+
+      expect(documento.inspect).not_to include('12345678909')
+      expect("#{documento.numero} #{documento.numero.inspect}").not_to include('12345678909', '123.456.789')
+      expect { documentos.guardar(de_fora, outro_cpf) }.to raise_error(ActiveRecord::RecordInvalid, &sem_o_numero)
+    end
+
+    it 'recusa dono que não é pessoa nem empresa' do
+      expect { documentos.guardar(account, cpf) }.to raise_error(ArgumentError)
+      expect { documentos.ler(account) }.to raise_error(ArgumentError)
+    end
+  end
+end

@@ -69,6 +69,9 @@ pt_BR:
       out_of_reach: 'Você não pode dar parte desta função. Peça ao administrador.'
       own_role: 'Ninguém muda a própria função.'
       feature_off: 'As funções da equipe não estão disponíveis nesta conta agora.'
+    relacionamentos:
+      documento:
+        invalido: 'Este CPF ou CNPJ não confere. Confira os números e digite de novo: o CPF tem 11 dígitos e o CNPJ tem 14 caracteres.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta
       email_limit_exceeded: O limite diário de envio de e-mails desta conta foi atingido
