@@ -186,7 +186,9 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           account.disable_features!(Autonomia::FerramentasProntas::FLAG)
           ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: pronta)
           allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).with(agent).and_return([ligada])
-          rodar_principal({ 'name' => pronta.slug, 'call_id' => 'c1', 'arguments' => '{"cep":"01001000"}' })
+          resposta = rodar_principal({ 'name' => pronta.slug, 'call_id' => 'c1', 'arguments' => '{"cep":"01001000"}' })
+          # No atendimento (`trust_instruction`) a consulta que falhou só registra: a resposta ao cliente sai como veio.
+          expect(resposta.reply).to eq('ok')
         }
       },
       'bound.rb#execute#1' => {

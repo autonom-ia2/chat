@@ -4,7 +4,7 @@
 - PR aberto: https://github.com/autonom-ia2/chat/pull/3008
 - Branch: `fix/3006-consulta-que-falhou-nao-e-dado`.
 - Segunda rodada, depois da revisão independente do commit `5e1d52f380`: desenho sem estado, no commit seguinte da mesma branch.
-- Specs escritos e ajustados, sem execução nesta máquina. Execução na CI ainda não verificada nesta rodada.
+- Specs escritos e ajustados, sem execução nesta máquina. Rodaram na CI do PR: verde no commit `e70d07117d` (28 passaram, 2 puladas).
 
 ## Decisão
 
@@ -131,7 +131,7 @@ Não foram executados RSpec, build, servidor, Rails, consultas a banco ou avalia
 
 ## Riscos e entrega
 
-- A validação é estática; não há prova de execução dos specs nem de produção nesta rodada.
+- A validação local é estática; os specs rodaram só na CI do PR. Não há prova de produção.
 - A recusa permanece no turno mesmo se outra consulta posterior tiver sucesso. Prontas são leitura: o contador
   recebido por `UmaEscritaPorTurno#concluir` não muda quais escritas contam como feitas.
 - O contador continua isolado por fio de execução. Paralelizar ferramentas em outros fios exigiria transportar a
