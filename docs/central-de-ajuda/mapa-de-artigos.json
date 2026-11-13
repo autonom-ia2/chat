@@ -2436,6 +2436,29 @@
      ],
      "revisar": false,
      "nota": "Issue #2897. A gaveta abre com ?apolice=<id> na lista e nas fichas, por isso o botão leva à lista. Corrigir e mudar o PDF pedem poder alterar a pessoa; quem só pode ver lê os dados e abre o PDF."
+    },
+    {
+     "id": "09.24",
+     "titulo": "Renovações: escolher o funil, dizer se renovou e guardar a apólice nova",
+     "para_que_serve": "Escolher em que funil e etapa as renovações aparecem e quantos dias antes do fim, ver os seguros em renovação, dizer se o cliente renovou ou não (com o motivo), guardar a apólice nova, desfazer e exportar o histórico do seguro.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_renovacoes"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_renovacoes",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ajustar as renovações: funil, dias antes do fim e mensagens (carteira de seguros)",
+      "porques: Dizer se um seguro renovou ou não e guardar a apólice nova (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2898 (E5 do épico #1240). A tela Ajustar renovações é seguros/renovacoes; dizer se renovou acontece na gaveta do seguro (?apolice=<id>), por isso o botão leva aos ajustes. Mudar os ajustes é do administrador ou da função com contact_manage. A numeração pula de 09.21 para 09.24 de propósito: os números do meio estão em PRs abertos (#2980 e #2981)."
     }
    ]
   },

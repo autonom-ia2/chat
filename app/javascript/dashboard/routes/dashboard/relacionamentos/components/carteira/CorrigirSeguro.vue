@@ -3,6 +3,11 @@ import { computed, nextTick, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
+  dadosDaApoliceNova,
+  faltasDaApoliceNova,
+  formularioDaApoliceNova,
+} from '../../carteira/apoliceNova';
+import {
   OUTRA_SEGURADORA,
   dadosParaCorrigir,
   faltasDoFormulario,
@@ -18,10 +23,14 @@ import CampoDoSeguro from './CampoDoSeguro.vue';
 // e nada é enviado; se nada mudou, o aviso diz isso e o foco vai ao primeiro
 // campo. Com tudo certo, emite `salvar` só com o que mudou. `temMudanca()` diz
 // a quem usa se há algo a perder ao sair sem salvar.
+// #2898 — com `apoliceNova`, o mesmo formulário escreve a apólice nova do
+// seguro que renovou (carteira/apoliceNova.js): nasce com o que não muda de um
+// ano para o outro, pede o número e emite tudo o que foi preenchido.
 const props = defineProps({
   seguro: { type: Object, required: true },
   // As seguradoras que a conta já tem (a lista da escolha).
   seguradoras: { type: Array, default: () => [] },
+  apoliceNova: { type: Boolean, default: false },
 });
 const emit = defineEmits(['salvar']);
 
@@ -31,8 +40,18 @@ const base = useId();
 const idDe = campo => `${base}-${campo}`;
 const idDoNadaMudou = `${base}-nada-mudou`;
 
-const inicial = formularioDoSeguro(props.seguro, props.seguradoras);
+const inicial = props.apoliceNova
+  ? formularioDaApoliceNova(props.seguro, props.seguradoras)
+  : formularioDoSeguro(props.seguro, props.seguradoras);
 const formulario = ref(inicial);
+const faltasDe = campos =>
+  props.apoliceNova
+    ? faltasDaApoliceNova(campos)
+    : faltasDoFormulario(campos, inicial);
+const dadosDe = campos =>
+  props.apoliceNova
+    ? dadosDaApoliceNova(campos)
+    : dadosParaCorrigir(inicial, campos);
 const tentou = ref(false);
 const nadaMudou = ref(false);
 
@@ -43,9 +62,7 @@ const mudar = (campo, valor) => {
 
 // Os avisos só aparecem depois da primeira tentativa e somem conforme a pessoa
 // conserta cada campo.
-const faltas = computed(() =>
-  tentou.value ? faltasDoFormulario(formulario.value, inicial) : {}
-);
+const faltas = computed(() => (tentou.value ? faltasDe(formulario.value) : {}));
 const falta = campo =>
   faltas.value[campo] ? ca(`FALTA.${faltas.value[campo]}`) : '';
 
@@ -67,13 +84,13 @@ const focar = async campo => {
 
 const tentarSalvar = () => {
   tentou.value = true;
-  const oQueFalta = faltasDoFormulario(formulario.value, inicial);
+  const oQueFalta = faltasDe(formulario.value);
   const primeiro = primeiroCampoQueFalta(oQueFalta);
   if (primeiro) {
     focar(primeiro);
     return;
   }
-  const dados = dadosParaCorrigir(inicial, formulario.value);
+  const dados = dadosDe(formulario.value);
   if (!Object.keys(dados).length) {
     nadaMudou.value = true;
     focar('tipo');
@@ -156,6 +173,8 @@ const TEXTOS = [
       :model-value="formulario[item.campo]"
       @update:model-value="mudar(item.campo, $event)"
     />
-    <p class="m-0 text-sm text-n-slate-11">{{ ca('APOIO') }}</p>
+    <p class="m-0 text-sm text-n-slate-11">
+      {{ ca(apoliceNova ? 'APOIO_DA_APOLICE_NOVA' : 'APOIO') }}
+    </p>
   </form>
 </template>

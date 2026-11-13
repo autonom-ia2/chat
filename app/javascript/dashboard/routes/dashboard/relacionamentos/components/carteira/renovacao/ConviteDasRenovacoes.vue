@@ -1,0 +1,56 @@
+<script setup>
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
+
+// #2898 — o convite da aba Seguros para a conta que ainda não escolheu em que
+// funil as renovações aparecem: uma frase e um botão, que leva a "Ajustar
+// renovações". Enquanto ninguém escolhe, nenhuma renovação aparece em funil
+// nenhum. A conta que já escolheu não vê nada aqui. Se a leitura dos ajustes
+// falhar, o convite só não aparece: a lista de seguros não depende dele, e a
+// tela "Ajustar renovações" mostra o erro e o "tentar de novo" dela.
+const props = defineProps({
+  // A fonte das renovações (fonte/renovacoesFonte.js).
+  fonte: { type: Object, required: true },
+});
+const emit = defineEmits(['escolher']);
+
+const { t } = useI18n();
+const doConvite = chave =>
+  t(`RELACIONAMENTOS_CARTEIRA.RENOVACAO.CONVITE.${chave}`);
+const falta = ref(false);
+
+onMounted(async () => {
+  try {
+    const { ajustes, semPermissao } = await props.fonte.ajustes();
+    falta.value = !ajustes.funilId && !semPermissao;
+  } catch {
+    falta.value = false;
+  }
+});
+</script>
+
+<template>
+  <!-- `contents`: sem o convite, a peça não ocupa lugar na coluna da lista. -->
+  <div class="contents">
+    <section
+      v-if="falta"
+      data-carteira="convite-das-renovacoes"
+      class="flex flex-wrap items-center justify-between min-w-0 p-5 border gap-x-6 gap-y-4 rounded-2xl border-n-blue-4 bg-n-blue-2"
+    >
+      <div class="flex flex-col flex-1 min-w-0 gap-1 basis-64">
+        <p class="m-0 text-lg font-semibold text-n-slate-12">
+          {{ doConvite('FRASE') }}
+        </p>
+        <p class="m-0 text-base text-n-slate-11">{{ doConvite('APOIO') }}</p>
+      </div>
+      <Button
+        size="lg"
+        class="basis-full sm:basis-auto whitespace-nowrap"
+        data-carteira="escolher-funil-das-renovacoes"
+        :label="doConvite('BOTAO')"
+        @click="emit('escolher')"
+      />
+    </section>
+  </div>
+</template>

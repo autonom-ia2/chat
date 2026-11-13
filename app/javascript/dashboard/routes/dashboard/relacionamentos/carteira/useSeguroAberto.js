@@ -9,6 +9,9 @@
 // seguro e a história que estão na tela não são tocados, e a recusa da ação
 // antiga não fica guardada. A ação continua devolvendo se deu certo; quem
 // chama confere se ainda está no mesmo seguro antes de avisar.
+// #2898 — a renovação soma três ações (renovou, não renovou e o desfazer) e a
+// apólice nova, que é outro seguro: `guardarApoliceNova` devolve o seguro novo
+// (ou `null`, se não deu) e relê o que está aberto.
 import { ref, watch } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
 import { codigoDaRecusa } from './recusas';
@@ -93,6 +96,15 @@ export const useSeguroAberto = (fonte, id) => {
   const acao = nome => dados =>
     executar(nome, alvo => fonte[nome](alvo, dados));
 
+  const guardarApoliceNova = async dados => {
+    let nova = null;
+    const certo = await executar('apoliceNova', async alvo => {
+      nova = await fonte.apoliceNova(alvo, dados);
+      return fonte.seguro(alvo);
+    });
+    return certo ? nova : null;
+  };
+
   return {
     estado,
     seguro,
@@ -109,5 +121,9 @@ export const useSeguroAberto = (fonte, id) => {
     voltarAAtivo: acao('voltarAAtivo'),
     corrigir: acao('corrigir'),
     tirarPdf: acao('tirarPdf'),
+    renovou: acao('renovou'),
+    naoRenovou: acao('naoRenovou'),
+    desfazerDesfecho: acao('desfazerDesfecho'),
+    guardarApoliceNova,
   };
 };

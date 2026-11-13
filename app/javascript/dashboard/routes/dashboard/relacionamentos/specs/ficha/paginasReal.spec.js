@@ -59,6 +59,7 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
         return pode.criarCards;
       },
     },
+    podeExportar: { value: false },
   }),
 }));
 vi.mock('dashboard/api/relacionamentos', () => ({

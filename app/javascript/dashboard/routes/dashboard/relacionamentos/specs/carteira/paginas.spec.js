@@ -54,6 +54,8 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
   usePermissoesDaFicha: () => ({
     podeEditar: { value: true },
     podeCriarCards: { value: false },
+    podeExportar: { value: false },
+    podeAjustarRenovacoes: { value: false },
   }),
 }));
 vi.mock('dashboard/api/relacionamentos', () => ({

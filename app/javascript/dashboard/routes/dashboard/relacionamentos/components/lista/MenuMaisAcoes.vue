@@ -10,9 +10,11 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // #2897 — `rotulo` troca o nome acessível do "⋯" (o padrão é o da barra de
 // ação em grupo). `tamanho` é o do botão: 'md' (44 px, o menor alvo de toque)
 // ou 'lg' (48 px, ao lado de botões grandes, como no rodapé de uma gaveta).
+// #2898 — `paraBaixo` abre a lista para baixo (o "⋯" que mora no alto da tela).
 const props = defineProps({
   itens: { type: Array, required: true },
   rotulo: { type: String, default: '' },
+  paraBaixo: { type: Boolean, default: false },
   tamanho: {
     type: String,
     default: 'md',
@@ -108,7 +110,8 @@ onClickOutside(raiz, () => {
       v-show="aberto"
       :id="idDoMenu"
       role="menu"
-      class="absolute bottom-full mb-2 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak ltr:right-0 rtl:left-0"
+      class="absolute z-10 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak ltr:right-0 rtl:left-0"
+      :class="paraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'"
     >
       <button
         v-for="item in props.itens"
