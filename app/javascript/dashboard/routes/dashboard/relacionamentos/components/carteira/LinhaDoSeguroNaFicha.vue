@@ -11,7 +11,7 @@ import SeloDoSeguro from './SeloDoSeguro.vue';
 // (quando o seguro tem número), quando vence e o botão do PDF ("Ver PDF", ou
 // "Guardar PDF" quando falta e quem olha pode guardar). Clicar na linha abre a
 // gaveta do seguro: o botão do tipo estica a área de clique; o botão do PDF
-// fica por cima. Em tela estreita "Guardar PDF" desce para a linha de baixo,
+// fica por cima. Em tela estreita o botão do PDF desce para a linha de baixo,
 // inteiro: ao lado ele espremeria o texto.
 const props = defineProps({
   seguro: { type: Object, required: true },
@@ -86,7 +86,7 @@ const corDasLinhas = computed(() =>
       slate
       faded
       size="lg"
-      class="relative z-10 shrink-0"
+      class="relative z-10 basis-full shrink-0 whitespace-nowrap sm:basis-auto"
       icon="i-lucide-file-text"
       data-carteira="seguro-pdf"
       :label="tf('VER_PDF')"
