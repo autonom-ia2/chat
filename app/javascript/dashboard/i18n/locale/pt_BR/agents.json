@@ -669,6 +669,82 @@
           "AGENTE": "Oi! Que bom ter você aqui. Sobre qual assunto você quer falar?"
         }
       },
+      "RAMOS": {
+        "TITULO": "Prontos para o seu ramo",
+        "TEXTO": "Já sabem explicar o seguro, tirar dúvidas e pedir os dados da cotação. Com os dados em mãos, passam para a sua equipe cotar.",
+        "TEXTO_DA_PAGINA": "Escolha o seguro que você vende. O agente já vem pronto, e você decide quando ele começa a atender.",
+        "OUTROS_TITULO": "Ou escolha pelo tipo de trabalho",
+        "ITENS": {
+          "AUTO": {
+            "TITULO": "Seguro auto",
+            "TEXTO": "Carro, moto e caminhão. Pede a placa, o CEP e quem dirige.",
+            "CLIENTE": "Quero um seguro para o meu carro",
+            "AGENTE": "Vamos lá! Qual a placa do carro? Com ela a equipe já acha o modelo e o ano."
+          },
+          "GARANTIA": {
+            "TITULO": "Seguro garantia",
+            "TEXTO": "Licitação, contrato e processo na Justiça. Pede o edital e os dados da empresa.",
+            "CLIENTE": "Minha empresa venceu uma licitação e pediram garantia",
+            "AGENTE": "Parabéns! Me diz o CNPJ da empresa que venceu? Aí eu sigo com as outras perguntas."
+          },
+          "CARGA": {
+            "TITULO": "Transporte de carga",
+            "TEXTO": "Para transportadora e para o dono da carga. Pede a mercadoria, as rotas e os valores.",
+            "CLIENTE": "Preciso de seguro para a minha transportadora",
+            "AGENTE": "Posso ajudar. Vocês levam carga de outros e cobram frete, ou a carga é de vocês?"
+          }
+        },
+        "CRIAR": {
+          "TITULO": "Criar agente de {ramo}",
+          "PERGUNTA_EMPRESA": "Este agente já vem pronto para {ramo}: explica o seguro, tira dúvidas e pede os dados da cotação. Só preciso de duas respostas suas.\n\nQual é o nome da sua corretora?",
+          "DECIDO_DEPOIS": "Decido depois",
+          "EXEMPLO_EMPRESA": "Ex.: Horizonte Seguros",
+          "EXEMPLO_SEGURADORAS": "Escreva os nomes das seguradoras",
+          "JA_SABE": {
+            "TITULO": "O agente de {ramo} já vem sabendo",
+            "EXPLICA": "Explicar o seguro e tirar as dúvidas mais comuns.",
+            "PERGUNTA": "Pedir os dados da cotação, uma pergunta por vez.",
+            "PASSA": "Passar para a sua equipe cotar, com os dados em mãos."
+          }
+        },
+        "CONFIRA": {
+          "TITULO": "O que {nome} já traz",
+          "PERGUNTA": "Perguntas ao cliente, uma por vez: {n}",
+          "PEDE": "Documentos que pede: {n}",
+          "JA_VEM": "Ferramentas que já vêm: {n}",
+          "VER": "Ver",
+          "VER_PERGUNTAS": "Ver o que {nome} pergunta",
+          "VER_DOCUMENTOS": "Ver os documentos que {nome} pede",
+          "VER_FERRAMENTAS": "Ver as ferramentas de {nome}",
+          "PERGUNTAS_TITULO": "O que {nome} pergunta",
+          "PERGUNTAS_NOTA": "Ele pergunta uma coisa por vez, nesta ordem. O que uma ferramenta descobre sozinha, como o endereço pelo CEP, ele não pergunta. Você pode tirar, editar e incluir.",
+          "DOCUMENTOS_TITULO": "Documentos que {nome} pede",
+          "DOCUMENTOS_NOTA": "Ele pede depois das perguntas e sempre avisa que cada documento costuma ser pedido e que a seguradora confirma a lista. Você pode tirar, editar e incluir.",
+          "FERRAMENTAS_TITULO": "Ferramentas de {nome}",
+          "FERRAMENTAS_NOTA": "{nome} decide sozinho a hora de usar cada ferramenta, pelo sentido da conversa. A frase embaixo de cada uma é a orientação que ele segue.",
+          "FERRAMENTAS_PODE_ALTERAR": "Ela já vem escrita para este seguro, e você pode alterar.",
+          "EDITAR": "Editar",
+          "EDITAR_SR": "Editar: {item}",
+          "TIRAR_SR": "Tirar: {item}",
+          "VOLTAR": "Pôr de volta",
+          "VOLTAR_SR": "Pôr de volta: {item}",
+          "SALVAR": "Salvar",
+          "CANCELAR": "Cancelar",
+          "INCLUIR": "Incluir",
+          "INCLUIR_PERGUNTA": "Incluir pergunta",
+          "NOVA_PERGUNTA": "Escreva a pergunta do jeito que o agente deve fazer",
+          "INCLUIR_DOCUMENTO": "Incluir documento",
+          "NOVO_DOCUMENTO": "Escreva o documento que o agente deve pedir",
+          "LISTA_CHEIA": "Esta lista já tem {n} itens, que é o máximo. Para incluir outro, edite um dos que já estão aqui.",
+          "ALTERAR_QUANDO": "Alterar quando usar",
+          "ALTERAR_QUANDO_SR": "Alterar quando usar {ferramenta}",
+          "INCLUIR_FERRAMENTA": "Incluir outra ferramenta",
+          "QUER_TAMBEM": "Quer também? Consultas pagas que combinam: {pagas}. Cada uma tem consultas grátis por mês. Depois, o preço aparece antes de você incluir.",
+          "VER_PAGAS": "Ver as consultas pagas",
+          "ERRO_AO_MUDAR": "Não consegui guardar a mudança. Tente de novo.",
+          "ERRO_JA_COMECOU": "Este agente já começou a atender. Aqui não dá mais para mudar as listas."
+        }
+      },
       "HEROI": {
         "TITULO": "Quem vai responder seus clientes quando você não puder?",
         "SO_VER": "Aqui ficam os agentes que respondem seus clientes. Criar e mudar fica com quem administra a conta.",

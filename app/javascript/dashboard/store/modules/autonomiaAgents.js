@@ -101,6 +101,18 @@ export default createStore({
       return data;
     },
 
+    // #2881 — the lists of the ready-made model of a reopened draft. The backend
+    // returns the agent with the new `modelo_pronto`: UPSERT it so the creation
+    // page shows what the server kept. Errors go back raw (the page warns).
+    async mudarModeloPronto({ commit }, { agentId, listas }) {
+      const { data } = await AutonomiaAgentsAPI.mudarModeloPronto(
+        agentId,
+        listas
+      );
+      commit(mutationTypes.UPSERT, data);
+      return data;
+    },
+
     // Same shape as `test`, used to suggest a reply to a human agent.
     async suggest(_, { agentId, message, history = [] }) {
       const { data } = await AutonomiaAgentsAPI.suggest(agentId, {

@@ -669,6 +669,82 @@
           "AGENTE": "Hi! Great to have you here. What would you like to talk about?"
         }
       },
+      "RAMOS": {
+        "TITULO": "Ready for your line of business",
+        "TEXTO": "They already know how to explain the insurance, answer questions and ask for the quote details. With the details in hand, they hand over to your team to quote.",
+        "TEXTO_DA_PAGINA": "Pick the insurance you sell. The agent comes ready, and you decide when it starts serving.",
+        "OUTROS_TITULO": "Or pick by kind of work",
+        "ITENS": {
+          "AUTO": {
+            "TITULO": "Auto insurance",
+            "TEXTO": "Car, motorcycle and truck. Asks for the plate, the postal code and who drives.",
+            "CLIENTE": "I want insurance for my car",
+            "AGENTE": "Let's go! What is the car's plate? With it the team finds the model and the year."
+          },
+          "GARANTIA": {
+            "TITULO": "Surety bond",
+            "TEXTO": "Public bids, contracts and court cases. Asks for the bid notice and the company details.",
+            "CLIENTE": "My company was awarded a public bid and they asked for a bond",
+            "AGENTE": "Congratulations! What is the tax ID of the company that was awarded the bid? Then I go on with the other questions."
+          },
+          "CARGA": {
+            "TITULO": "Cargo transport",
+            "TEXTO": "For carriers and for cargo owners. Asks for the goods, the routes and the values.",
+            "CLIENTE": "I need insurance for my carrier company",
+            "AGENTE": "I can help. Do you carry other people's cargo and charge freight, or is the cargo yours?"
+          }
+        },
+        "CRIAR": {
+          "TITULO": "Create agent for {ramo}",
+          "PERGUNTA_EMPRESA": "This agent comes ready for {ramo}: it explains the insurance, answers questions and asks for the quote details. I only need two answers from you.\n\nWhat is the name of your brokerage?",
+          "DECIDO_DEPOIS": "I will decide later",
+          "EXEMPLO_EMPRESA": "E.g.: Horizonte Seguros",
+          "EXEMPLO_SEGURADORAS": "Write the insurers' names",
+          "JA_SABE": {
+            "TITULO": "The agent for {ramo} already knows how to",
+            "EXPLICA": "Explain the insurance and answer the most common questions.",
+            "PERGUNTA": "Ask for the quote details, one question at a time.",
+            "PASSA": "Hand over to your team to quote, with the details in hand."
+          }
+        },
+        "CONFIRA": {
+          "TITULO": "What {nome} already brings",
+          "PERGUNTA": "Questions to the customer, one at a time: {n}",
+          "PEDE": "Documents it requests: {n}",
+          "JA_VEM": "Tools it comes with: {n}",
+          "VER": "See",
+          "VER_PERGUNTAS": "See what {nome} asks",
+          "VER_DOCUMENTOS": "See the documents {nome} requests",
+          "VER_FERRAMENTAS": "See {nome}'s tools",
+          "PERGUNTAS_TITULO": "What {nome} asks",
+          "PERGUNTAS_NOTA": "It asks one thing at a time, in this order. What a tool finds out by itself, like the address from the postal code, it does not ask. You can remove, edit and add.",
+          "DOCUMENTOS_TITULO": "Documents {nome} requests",
+          "DOCUMENTOS_NOTA": "It asks for them after the questions and always says that each document is usually requested and that the insurer confirms the list. You can remove, edit and add.",
+          "FERRAMENTAS_TITULO": "{nome}'s tools",
+          "FERRAMENTAS_NOTA": "{nome} decides by itself when to use each tool, from the meaning of the conversation. The sentence under each one is the guidance it follows.",
+          "FERRAMENTAS_PODE_ALTERAR": "It comes written for this insurance, and you can change it.",
+          "EDITAR": "Edit",
+          "EDITAR_SR": "Edit: {item}",
+          "TIRAR_SR": "Remove: {item}",
+          "VOLTAR": "Put back",
+          "VOLTAR_SR": "Put back: {item}",
+          "SALVAR": "Save",
+          "CANCELAR": "Cancel",
+          "INCLUIR": "Add",
+          "INCLUIR_PERGUNTA": "Add question",
+          "NOVA_PERGUNTA": "Write the question the way the agent should ask it",
+          "INCLUIR_DOCUMENTO": "Add document",
+          "NOVO_DOCUMENTO": "Write the document the agent should request",
+          "LISTA_CHEIA": "This list already has {n} items, which is the limit. To add another one, edit one that is already here.",
+          "ALTERAR_QUANDO": "Change when to use",
+          "ALTERAR_QUANDO_SR": "Change when to use {ferramenta}",
+          "INCLUIR_FERRAMENTA": "Add another tool",
+          "QUER_TAMBEM": "Want more? Paid lookups that fit: {pagas}. Each one has free lookups every month. After that, the price shows before you add it.",
+          "VER_PAGAS": "See the paid lookups",
+          "ERRO_AO_MUDAR": "I could not save the change. Try again.",
+          "ERRO_JA_COMECOU": "This agent has already started serving. The lists can no longer be changed here."
+        }
+      },
       "HEROI": {
         "TITULO": "Who will answer your customers when you can't?",
         "SO_VER": "This is where the agents that answer your customers live. Creating and changing them is up to whoever manages the account.",

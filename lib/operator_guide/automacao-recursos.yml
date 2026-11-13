@@ -608,6 +608,7 @@ fora:
       - autonomia/agents/channels
       - autonomia/agents/instruction_versions
       - autonomia/agents/material
+      - autonomia/agents/modelo_pronto
       - autonomia/agents/onde_atende
       - autonomia/agents/playground
       - autonomia/agents/sources

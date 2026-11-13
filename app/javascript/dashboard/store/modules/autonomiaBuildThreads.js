@@ -58,6 +58,12 @@ const clearProva = () => {
 // and is never swallowed by the dedupe.
 let pendingTurn = null;
 
+// #2881 — the lists of the ready-made model (`modelo_pronto`) change through a
+// request of their own (mudarModeloPronto), outside the turn. A thread read that
+// was asked BEFORE the last change carries the old lists: the rest of it still
+// applies, the model does not.
+let modelChanges = 0;
+
 const clientIdForTurn = (threadId, content) => {
   if (
     pendingTurn &&
@@ -79,6 +85,9 @@ export const state = {
   mergedCount: 0,
   status: null,
   threadState: {},
+  // #2881 — the ready-made model of this conversation (null without one): what
+  // the screen shows of it, lists as the owner left them.
+  modeloPronto: null,
   agent: null,
   // UI phase derived from status + state, so the page never confuses a `ready`
   // thread that still needs info with a finished build:
@@ -107,6 +116,9 @@ export const getters = {
   getThreadState($state) {
     return $state.threadState;
   },
+  getModeloPronto($state) {
+    return $state.modeloPronto;
+  },
   getAgent($state) {
     return $state.agent;
   },
@@ -129,7 +141,7 @@ export const getters = {
 // them) into the local list instead of replacing it, so the question bubbles the
 // front injects between turns survive each re-poll and the full interview stays
 // visible.
-const applyThreadResponse = (commit, data) => {
+const applyThreadResponse = (commit, data, askedAt = modelChanges) => {
   const payload = data.payload || data || {};
   commit('SET_THREAD', {
     id: payload.id,
@@ -138,6 +150,9 @@ const applyThreadResponse = (commit, data) => {
   if (payload.messages) commit('MERGE_MESSAGES', payload.messages);
   if (payload.status) commit('SET_STATUS', payload.status);
   if (payload.state) commit('SET_THREAD_STATE', payload.state);
+  if ('modelo_pronto' in payload && askedAt === modelChanges) {
+    commit('SET_MODELO_PRONTO', payload.modelo_pronto);
+  }
   return payload;
 };
 
@@ -200,9 +215,10 @@ export const actions = {
 
   fetch: async ({ commit, dispatch }, { threadId }) => {
     commit('SET_UI_FLAG', { fetching: true });
+    const askedAt = modelChanges;
     try {
       const { data } = await AutonomiaBuildThreadsAPI.show(threadId);
-      const payload = applyThreadResponse(commit, data);
+      const payload = applyThreadResponse(commit, data, askedAt);
       dispatch('onSettled', payload);
       return payload;
     } catch (error) {
@@ -293,6 +309,22 @@ export const actions = {
     const { data } = await AutonomiaBuildThreadsAPI.desfazer(threadId);
     const payload = applyThreadResponse(commit, data);
     await fetchGeneratedAgent(commit, dispatch, payload.agent_id);
+    return payload;
+  },
+
+  // #2881 — the owner changes the lists of the ready-made model (questions,
+  // documents, tools) before starting. No turn and no generation: only the
+  // model slice is replaced by what the server answered. Errors go back raw
+  // (the page tells the reason apart and warns).
+  mudarModeloPronto: async ({ commit }, { threadId, listas } = {}) => {
+    if (!threadId) return null;
+    const { data } = await AutonomiaBuildThreadsAPI.mudarModeloPronto(
+      threadId,
+      listas
+    );
+    modelChanges += 1;
+    const payload = data.payload || data || {};
+    commit('SET_MODELO_PRONTO', payload.modelo_pronto);
     return payload;
   },
 
@@ -532,6 +564,9 @@ export const mutations = {
       resultado: { ...resultado, prova: { ...resultado.prova, ...prova } },
     };
   },
+  SET_MODELO_PRONTO($state, modeloPronto) {
+    $state.modeloPronto = modeloPronto || null;
+  },
   SET_AGENT($state, agent) {
     $state.agent = agent;
   },
@@ -547,6 +582,7 @@ export const mutations = {
     $state.mergedCount = 0;
     $state.status = null;
     $state.threadState = {};
+    $state.modeloPronto = null;
     $state.agent = null;
     $state.phase = 'interviewing';
     $state.error = null;

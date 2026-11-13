@@ -1,5 +1,9 @@
 class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Accounts::Autonomia::BaseController
-  before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer]
+  # #2881 — o pedido de mudança das listas do modelo pronto (o mesmo do rascunho do agente).
+  include ::Autonomia::ListasDoModeloPronto
+
+  before_action :conferir_chave_de_ferramentas!, only: [:modelo_pronto]
+  before_action :fetch_thread, only: [:show, :messages, :retry_build, :desfazer, :modelo_pronto]
   rescue_from ::Autonomia::Agents::DesfazerAjuste::AjusteMudou, with: :render_ajuste_mudou
   rescue_from ActiveRecord::Deadlocked, with: :render_conflito_de_trava
 
@@ -26,7 +30,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     @thread = build_threads_scope.new(thread_params)
     @thread.created_by = Current.user
     @thread.persist_start_options!(type: params[:type], actuation: params[:actuation], with_knowledge: params[:with_knowledge],
-                                   papel: papel_de_inicio)
+                                   papel: papel_de_inicio, modelo: modelo_de_inicio)
     @thread.save!
     # A pendência não pode morrer com a sessão: abrindo uma thread de AJUSTE (agente já vinculado),
     # herda a pergunta que ficou sem resposta na thread anterior daquele agente.
@@ -74,6 +78,16 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     claim_build_and_enqueue
   end
 
+  # #2881 — o dono muda as listas do modelo pronto antes de começar: perguntas, documentos e ferramentas (com a frase
+  # "Use quando" de cada uma). Cada lista que vem substitui a lista inteira; a que não vem (ou vem `null`) fica como
+  # está. Nenhuma chamada de IA: grava no `state` da conversa e na marca do rascunho. Conversa sem modelo (conta sem o
+  # pacote `seguros`, flag desligada): 404. Conversa da Lia ou de agente manual: 422, do `fetch_thread`. Lista fora do
+  # formato: 422 com o motivo e o campo, e nada é gravado.
+  def modelo_pronto
+    editar_modelo_pronto(thread: @thread)
+    render :show
+  end
+
   private
 
   # 409 com código estável: o agente mudou depois do ajuste (ou há conversa mais nova); o caminho é Versões.
@@ -85,6 +99,12 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   # o pedido abre a conversa de sempre (sem a marca), como a tela faz.
   def papel_de_inicio
     params[:papel] if ::Autonomia::Agents::Fase2.ligada?(Current.account)
+  end
+
+  # #2881 — a chave do modelo pronto de ramo escolhido na abertura, como texto. Quem decide se ela vale (a chave existe
+  # e a conta pode usar) é o `persist_start_options!`; sem modelo, nil.
+  def modelo_de_inicio
+    params[:modelo].to_s.presence
   end
 
   # Empilha a mensagem do usuário no turno atual (texto + imagens anexadas). Compartilhado por

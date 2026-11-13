@@ -332,6 +332,10 @@
     "controller": "api/v1/accounts/autonomia/invite_connections#connection",
     "parametros": []
   },
+  "autonomia/modelos_de_ramo": {
+    "controller": "api/v1/accounts/autonomia/agents/modelos_de_ramo#index",
+    "parametros": []
+  },
   "autonomia/numeros_da_semana": {
     "controller": "api/v1/accounts/autonomia/numeros_da_semana#index",
     "parametros": [
