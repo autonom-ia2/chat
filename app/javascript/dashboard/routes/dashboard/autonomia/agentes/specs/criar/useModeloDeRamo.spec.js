@@ -135,15 +135,31 @@ describe('useModeloDeRamo', () => {
     expect(ramo.exemplo.value).toBeNull();
   });
 
-  it('with the model of the conversation, the name, the lists and the test questions are the server ones', () => {
+  it('with the model of the conversation, the lists and the test questions are the server ones', () => {
     const { ramo } = usar({ pedido: null });
     comConversa();
 
     expect(ramo.ativo.value).toBe(true);
-    expect(ramo.ramo.value).toBe('Seguro garantia');
     expect(ramo.perguntas.value).toEqual(MODELO.perguntas);
     expect(ramo.documentos.value).toEqual(MODELO.documentos);
     expect(ramo.perguntasDeTeste.value).toEqual(MODELO.teste);
+  });
+
+  it('shows one name for the line from start to end: the title of the card, never the long name the server writes to the AI', () => {
+    const { ramo } = usar();
+    const antes = ramo.ramo.value;
+    comConversa({ ...MODELO, ramo: 'Seguro garantia por extenso' });
+
+    expect(antes).toBe('AGENTS.JORNADA.RAMOS.ITENS.GARANTIA.TITULO');
+    expect(ramo.ramo.value).toBe(antes);
+  });
+
+  it('a line this screen has no card for keeps the name the server sends', () => {
+    const { ramo } = usar({ pedido: null });
+    comConversa({ ...MODELO, chave: 'seguro_de_vida', ramo: 'Seguro de vida' });
+
+    expect(ramo.ramo.value).toBe('Seguro de vida');
+    expect(ramo.exemplo.value).toBeNull();
   });
 
   it('keeps only tools the showcase knows, and maps each one to its "Use when" sentence', () => {
@@ -246,6 +262,23 @@ describe('useModeloDeRamo', () => {
     expect(ramo.gravando.value.perguntas).toBe(false);
   });
 
+  it('tells who asked that the change was saved, and says nothing when the server refuses', async () => {
+    const { ramo } = usar();
+    comConversa();
+    const aoGravar = vi.fn();
+
+    await ramo.mudar('perguntas', [], aoGravar);
+    expect(aoGravar).toHaveBeenCalledTimes(1);
+
+    store.dispatch.mockRejectedValue({
+      response: { status: 422, data: { motivo: 'texto_invalido' } },
+    });
+    await ramo.mudar('perguntas', [], aoGravar);
+
+    expect(aoGravar).toHaveBeenCalledTimes(1);
+    expect(alerta).toHaveBeenCalledTimes(1);
+  });
+
   it('an agent that already started has its own warning', async () => {
     const { ramo } = usar();
     comConversa();
@@ -267,7 +300,7 @@ describe('useModeloDeRamo', () => {
     });
 
     expect(ramo.ativo.value).toBe(true);
-    expect(ramo.ramo.value).toBe('Seguro garantia');
+    expect(ramo.ramo.value).toBe('AGENTS.JORNADA.RAMOS.ITENS.GARANTIA.TITULO');
     expect(ramo.documentos.value).toEqual(MODELO.documentos);
     expect(ramo.frases.value.cnpj).toBe('Use quando vier o CNPJ da empresa.');
 
@@ -284,11 +317,12 @@ describe('useModeloDeRamo', () => {
   it('with a conversation that has the model, the conversation wins over the agent copy', async () => {
     const { ramo } = usar({
       pedido: null,
-      agente: { id: 90, modelo_pronto: { ...MODELO, ramo: 'Cópia antiga' } },
+      agente: { id: 90, modelo_pronto: { ...MODELO, perguntas: [] } },
     });
+    expect(ramo.perguntas.value).toEqual([]);
     comConversa();
 
-    expect(ramo.ramo.value).toBe('Seguro garantia');
+    expect(ramo.perguntas.value).toEqual(MODELO.perguntas);
     await ramo.mudar('perguntas', []);
     expect(store.dispatch.mock.calls[0][0]).toBe(
       'autonomiaBuildThreads/mudarModeloPronto'

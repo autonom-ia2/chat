@@ -5,6 +5,8 @@ import { ref } from 'vue';
 // servidor: cada mudança manda a lista inteira nova e a tela só muda com a resposta.
 // `gravar(listas)`: manda `{ [campo]: itens }` ao servidor e devolve a promessa. `pode()`: há o que mudar agora.
 // `aoFalhar(erro)`: o servidor recusou ou a rede caiu; quem chama avisa a pessoa.
+// Quem pediu a mudança com um campo de texto aberto (editar, incluir, alterar a frase) passa `aoGravar`: o campo só
+// fecha quando o servidor guarda. Se a gravação falhar, ele continua aberto com o texto, para a pessoa tentar de novo.
 // `gravando`: { [campo]: true } enquanto a mudança daquela lista está indo.
 export function useMudancaDasListas({ gravar, pode, aoFalhar }) {
   const gravando = ref({});
@@ -22,12 +24,14 @@ export function useMudancaDasListas({ gravar, pode, aoFalhar }) {
     return vez;
   };
 
-  // `campo`: perguntas, documentos ou ferramentas. `itens`: a lista inteira nova.
-  const mudar = async (campo, itens) => {
+  // `campo`: perguntas, documentos ou ferramentas. `itens`: a lista inteira nova. `aoGravar` (opcional): chamado só
+  // quando o servidor guardou a mudança.
+  const mudar = async (campo, itens, aoGravar) => {
     if (gravando.value[campo] || !pode()) return;
     marcar(campo, true);
     try {
       await naVez(() => gravar({ [campo]: itens }));
+      aoGravar?.();
     } catch (erro) {
       aoFalhar(erro);
     } finally {

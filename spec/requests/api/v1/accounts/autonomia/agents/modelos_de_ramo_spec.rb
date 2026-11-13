@@ -160,7 +160,8 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       expect(pronto['documentos']).to eq([{ 'id' => 'd1', 'texto' => modelo.documentos.first, 'tirada' => true }])
       expect(pronto['ferramentas']).to eq([{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando o cliente mandar o CNPJ.' },
                                            { 'fonte' => 'cidades', 'usar_quando' => modelo.tambem.first.usar_quando }])
-      expect(pronto['tambem'].pluck('fonte')).to eq(%w[feriados cep banco_central])
+      # `tiradas`: só o que o dono tirou do "Já vem com"; a que nunca entrou (banco_central) fica só no "Também combina".
+      expect([pronto['tambem'].pluck('fonte'), pronto['tiradas']]).to eq([%w[feriados cep banco_central], %w[feriados cep]])
       expect(Autonomia::Agents::Builder::SubmitJob).not_to have_received(:perform_later)
     end
 

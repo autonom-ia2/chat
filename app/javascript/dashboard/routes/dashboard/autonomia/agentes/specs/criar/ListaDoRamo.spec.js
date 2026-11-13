@@ -2,7 +2,8 @@ import { mount } from '@vue/test-utils';
 import ListaDoRamo from '../../components/criar/ListaDoRamo.vue';
 
 // #2881 — uma lista do agente pronto por ramo (perguntas da cotação ou documentos): tirar e voltar, editar e incluir.
-// A lista é a do servidor; cada mudança sai como a lista inteira nova, e quem chama grava.
+// A lista é a do servidor; cada mudança sai como a lista inteira nova, e quem chama grava. O campo de editar e o de
+// incluir só fecham quando quem grava avisa que o servidor guardou (o segundo valor do `mudar`).
 const ITENS = [
   { id: 'p1', texto: 'Qual o CNPJ da empresa?', tirada: false },
   { id: 'p2', texto: 'Qual o valor da garantia?', tirada: false },
@@ -80,16 +81,38 @@ describe('ListaDoRamo', () => {
     await campo.setValue('  Qual o valor do contrato?  ');
     await wrapper.get('[data-salvar-item]').trigger('click');
 
-    expect(wrapper.emitted('mudar')).toEqual([
-      [
-        [
-          ITENS[0],
-          { ...ITENS[1], texto: 'Qual o valor do contrato?' },
-          ITENS[2],
-        ],
-      ],
+    expect(wrapper.emitted('mudar')).toHaveLength(1);
+    const [lista, aoGravar] = wrapper.emitted('mudar')[0];
+    expect(lista).toEqual([
+      ITENS[0],
+      { ...ITENS[1], texto: 'Qual o valor do contrato?' },
+      ITENS[2],
     ]);
+    // O campo só fecha quando quem grava avisa que o servidor guardou.
+    expect(wrapper.find('[data-editando]').exists()).toBe(true);
+    aoGravar();
+    await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-editando]').exists()).toBe(false);
+  });
+
+  it('when the save fails, the edit field stays open with what the owner typed', async () => {
+    const wrapper = montar();
+
+    await item(wrapper, 'p2').get('[data-editar-item]').trigger('click');
+    await wrapper
+      .get('[data-editando] textarea')
+      .setValue('Qual o valor do contrato?');
+    await wrapper.get('[data-salvar-item]').trigger('click');
+    // O servidor recusou (ou a rede caiu): o pedido termina e ninguém avisa que gravou.
+    await wrapper.setProps({ gravando: true });
+    await wrapper.setProps({ gravando: false });
+
+    expect(wrapper.get('[data-editando] textarea').element.value).toBe(
+      'Qual o valor do contrato?'
+    );
+    expect(
+      wrapper.get('[data-salvar-item]').attributes('aria-disabled')
+    ).toBeUndefined();
   });
 
   it('does not save an empty text', async () => {
@@ -112,10 +135,35 @@ describe('ListaDoRamo', () => {
     await campo.setValue('Já tem seguro hoje?');
     await wrapper.get('[data-confirmar-inclusao]').trigger('click');
 
-    expect(wrapper.emitted('mudar')).toEqual([
-      [[...ITENS, { texto: 'Já tem seguro hoje?', tirada: false }]],
+    expect(wrapper.emitted('mudar')).toHaveLength(1);
+    const [lista, aoGravar] = wrapper.emitted('mudar')[0];
+    expect(lista).toEqual([
+      ...ITENS,
+      { texto: 'Já tem seguro hoje?', tirada: false },
     ]);
+    // O campo só fecha quando quem grava avisa que o servidor guardou.
+    expect(wrapper.find('[data-incluindo]').exists()).toBe(true);
+    aoGravar();
+    await wrapper.vm.$nextTick();
     expect(wrapper.find('[data-incluindo]').exists()).toBe(false);
+  });
+
+  it('when the save fails, the new item field stays open with what the owner typed', async () => {
+    const wrapper = montar();
+
+    await wrapper.get('[data-incluir-item]').trigger('click');
+    await wrapper
+      .get('[data-incluindo] textarea')
+      .setValue('Já tem seguro hoje?');
+    await wrapper.get('[data-confirmar-inclusao]').trigger('click');
+    // O servidor recusou (ou a rede caiu): o pedido termina e ninguém avisa que gravou.
+    await wrapper.setProps({ gravando: true });
+    await wrapper.setProps({ gravando: false });
+
+    expect(wrapper.get('[data-incluindo] textarea').element.value).toBe(
+      'Já tem seguro hoje?'
+    );
+    expect(wrapper.findAll('[data-texto-do-item]')).toHaveLength(3);
   });
 
   it('while a change is being saved, the buttons wait and nothing else is sent', async () => {

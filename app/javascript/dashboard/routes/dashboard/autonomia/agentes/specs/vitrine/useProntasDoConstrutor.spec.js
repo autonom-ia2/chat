@@ -33,7 +33,8 @@ const montadas = [];
 const usar = (
   sugeridas = ['fipe', 'cep', 'cpf'],
   tambem = [],
-  frases = undefined
+  frases = undefined,
+  ficaramFora = undefined
 ) => {
   let prontas;
   const wrapper = mount(
@@ -44,6 +45,7 @@ const usar = (
           sugeridas: ref(sugeridas),
           tambem: ref(tambem),
           frases,
+          ficaramFora,
         });
         return () => null;
       },
@@ -139,6 +141,31 @@ describe('useProntasDoConstrutor', () => {
         usarQuando: 'Use quando o cliente disser a placa.',
       })
     );
+  });
+
+  // #2881 — no ramo, o que o dono tirou volta do servidor no "Também combina": o que ficou fora do "Já vem com" vira
+  // "Agora não" no "Começar", para o cartão "pode ganhar" não oferecer de volta.
+  it('with a line-of-insurance model, "Start" records as "Not now" the tools of the line left out of the "comes with" list', async () => {
+    vitrine.fontes = ref(['cnpj', 'cep', 'cidades']);
+    const ficaramFora = ref(['cidades']);
+    const prontas = usar(['cnpj', 'cep'], ['cidades'], undefined, ficaramFora);
+    // O dono tirou o CNPJ no meio do caminho: o servidor passou a devolvê-lo no "Também combina".
+    ficaramFora.value = ['cnpj', 'cidades'];
+
+    await prontas.incluirTodas();
+
+    expect(api.dispensar.mock.calls).toEqual([
+      [7, 'cnpj'],
+      [7, 'cidades'],
+    ]);
+  });
+
+  it('without a line-of-insurance model, the "also fits" tools nobody removed are not recorded as "Not now"', async () => {
+    const prontas = usar(['fipe'], ['cep']);
+
+    await prontas.incluirTodas();
+
+    expect(api.dispensar).not.toHaveBeenCalled();
   });
 
   it('says whether this person can include tools', () => {

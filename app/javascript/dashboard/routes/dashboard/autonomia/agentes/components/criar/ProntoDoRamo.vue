@@ -12,6 +12,8 @@ import ListaDoRamo from './ListaDoRamo.vue';
 // As listas são as do servidor ([{ id, texto, tirada }]): a mudança sai como `mudar` ({ lista, itens }, a lista
 // inteira nova) e a tela só muda quando o servidor responde. As ferramentas são de quem chama: a gaveta delas mostra
 // o slot `ferramentas`, e a linha só aparece quando há o que mostrar (`ferramentas` com um número).
+// Mudança que veio de um campo de texto (editar, incluir) leva também `aoGravar`, o aviso de "gravou" da ListaDoRamo:
+// quem grava chama quando o servidor guardou, e só então o campo fecha.
 // `gravando`: { perguntas, documentos }, a lista cuja mudança ainda está indo.
 // Serve também à página do agente que já atende (#2976, RamoNaPagina): `naPagina` dá ao bloco a moldura dos blocos da
 // página, `titulo` troca o título e `nota` põe uma frase curta embaixo dele.
@@ -153,7 +155,10 @@ const gaveta = computed(() => {
           :exemplo="gaveta.exemplo"
           :pode-mudar="podeMudar"
           :gravando="gravando[gaveta.lista] === true"
-          @mudar="emit('mudar', { lista: gaveta.lista, itens: $event })"
+          @mudar="
+            (itens, aoGravar) =>
+              emit('mudar', { lista: gaveta.lista, itens, aoGravar })
+          "
         />
       </div>
     </AgenteGaveta>

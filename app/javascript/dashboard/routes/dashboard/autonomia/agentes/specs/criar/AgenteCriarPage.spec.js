@@ -2539,7 +2539,62 @@ describe('AgenteCriarPage', () => {
         agenteId: 90,
         usarQuando: 'Use quando vier o CEP da obra.',
       });
+      // A do "Também combina" que nunca entrou não vira "Agora não": o cartão "pode ganhar" segue oferecendo.
       expect(prontasApi.dispensar).not.toHaveBeenCalled();
+      wrapper.unmount();
+    });
+
+    it('"Start" records as "Not now" only the tool the owner removed, not the "also fits" one that never came in', async () => {
+      const wrapper = await noConfira();
+      modeloDaConversa({
+        ...MODELO,
+        ferramentas: [MODELO.ferramentas[1]],
+        tambem: [MODELO.ferramentas[0], ...MODELO.tambem],
+        tiradas: ['cnpj'],
+      });
+      await flushPromises();
+
+      await wrapper.get('[data-comecar] button').trigger('click');
+      await flushPromises();
+
+      expect(vitrine.incluir).toHaveBeenCalledTimes(1);
+      expect(vitrine.incluir).toHaveBeenCalledWith(
+        expect.objectContaining({ fonte: 'cep', agenteId: 90 })
+      );
+      expect(prontasApi.dispensar.mock.calls).toEqual([[90, 'cnpj']]);
+      wrapper.unmount();
+    });
+
+    it('"Start" waits while a list of the line is still being saved', async () => {
+      const wrapper = await noConfira();
+      const original = store.dispatch.getMockImplementation();
+      let responder;
+      store.dispatch.mockImplementation((acao, dados) =>
+        acao === 'autonomiaBuildThreads/mudarModeloPronto'
+          ? new Promise(resolve => {
+              responder = resolve;
+            })
+          : original(acao, dados)
+      );
+      const gaveta = await abrirLinha(wrapper, 'perguntas');
+      gaveta.querySelector('[data-item="p1"] [data-tirar-item]').click();
+      await flushPromises();
+      gaveta.querySelector('[data-fechar]').click();
+      await flushPromises();
+
+      const comecar = () => wrapper.get('[data-comecar] button');
+      expect(comecar().attributes('aria-busy')).toBe('true');
+      await comecar().trigger('click');
+      await flushPromises();
+      expect(vitrine.incluir).not.toHaveBeenCalled();
+      expect(rota.atual.query.etapa).not.toBe('comece');
+
+      responder(null);
+      await flushPromises();
+      expect(comecar().attributes('aria-busy')).toBeUndefined();
+      await comecar().trigger('click');
+      await flushPromises();
+      expect(vitrine.incluir).toHaveBeenCalledTimes(2);
       wrapper.unmount();
     });
 

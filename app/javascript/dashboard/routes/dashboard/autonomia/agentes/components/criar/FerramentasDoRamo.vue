@@ -12,7 +12,9 @@ import { MAXIMO_DE_LETRAS_DO_QUANDO } from '../../constants/modelosDeRamo';
 // conversa. Nada de lista de palavras.
 // ferramentas ("Já vem com") e tambem ("Também combina"): [{ fonte, usar_quando }], com a chave do catálogo da
 // vitrine. Cada mudança sai daqui como o "Já vem com" inteiro novo (`mudar`); quem chama grava e devolve as duas
-// listas do servidor (a ferramenta tirada volta no "Também combina").
+// listas do servidor (a ferramenta tirada volta no "Também combina"). O campo da frase só fecha quando o servidor
+// guarda: junto com a lista vai um aviso de "gravou" (o segundo valor do `mudar`), que quem grava chama. Se o servidor
+// recusar ou a rede cair, o campo continua aberto com a frase que a pessoa escreveu.
 // pagas: chaves das consultas pagas que combinam. Só sugestão: quem inclui é a pessoa, na vitrine.
 // `podeMudar` falso (a pessoa não cuida das ferramentas dos agentes): as ferramentas e as frases aparecem, sem botões.
 const props = defineProps({
@@ -54,9 +56,11 @@ const salvar = () => {
     'mudar',
     props.ferramentas.map(item =>
       item.fonte === alterando.value ? { ...item, usar_quando: frase } : item
-    )
+    ),
+    () => {
+      alterando.value = null;
+    }
   );
-  alterando.value = null;
 };
 const tirar = fonte =>
   emit(

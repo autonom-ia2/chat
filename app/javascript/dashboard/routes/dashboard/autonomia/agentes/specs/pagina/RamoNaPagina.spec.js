@@ -44,6 +44,18 @@ const montar = (props = {}) => {
 };
 const linha = (wrapper, chave) => wrapper.get(`[data-linha="${chave}"]`);
 const gaveta = () => document.body.querySelector('[role="dialog"]');
+// Abre as perguntas, edita a primeira e salva.
+const editarAPrimeira = async (wrapper, texto) => {
+  await linha(wrapper, 'perguntas').get('button').trigger('click');
+  gaveta().querySelector('[data-item="p1"] [data-editar-item]').click();
+  await flushPromises();
+  const campo = gaveta().querySelector('[data-editando] textarea');
+  campo.value = texto;
+  campo.dispatchEvent(new Event('input'));
+  await flushPromises();
+  gaveta().querySelector('[data-salvar-item]').click();
+  await flushPromises();
+};
 
 beforeEach(() => {
   store.dispatch.mockReset().mockResolvedValue(null);
@@ -109,6 +121,45 @@ describe('RamoNaPagina', () => {
     expect(alerta).toHaveBeenCalledWith(
       'Não consegui guardar a mudança. Tente de novo.'
     );
+  });
+
+  it('closes the edit field once the server keeps the change', async () => {
+    const wrapper = montar();
+
+    await editarAPrimeira(wrapper, 'Qual o CNPJ de quem contrata?');
+
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaAgents/mudarModeloPronto',
+      {
+        agentId: 7,
+        listas: {
+          perguntas: [
+            { ...PERGUNTAS[0], texto: 'Qual o CNPJ de quem contrata?' },
+            PERGUNTAS[1],
+          ],
+        },
+      }
+    );
+    expect(gaveta().querySelector('[data-editando]')).toBeNull();
+    expect(alerta).not.toHaveBeenCalled();
+  });
+
+  it('when the server refuses, warns and keeps the edit field open with what the owner typed', async () => {
+    store.dispatch.mockRejectedValue(new Error('recusado'));
+    const wrapper = montar();
+
+    await editarAPrimeira(wrapper, 'Qual o CNPJ de quem contrata?');
+
+    expect(alerta).toHaveBeenCalledWith(
+      'Não consegui guardar a mudança. Tente de novo.'
+    );
+    expect(gaveta().querySelector('[data-editando] textarea').value).toBe(
+      'Qual o CNPJ de quem contrata?'
+    );
+    // O pedido terminou: dá para tentar de novo.
+    expect(
+      gaveta().querySelector('[data-salvar-item]').getAttribute('aria-disabled')
+    ).toBeNull();
   });
 
   it('opens the lists read-only, with no note, for who can only see', async () => {

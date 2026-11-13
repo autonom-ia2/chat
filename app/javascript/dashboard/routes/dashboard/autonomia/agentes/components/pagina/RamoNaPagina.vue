@@ -47,7 +47,7 @@ const { gravando, mudar } = useMudancaDasListas({
     :documentos="listas.documentos"
     :pode-mudar="podeMudar"
     :gravando="gravando"
-    @mudar="mudar($event.lista, $event.itens)"
+    @mudar="mudar($event.lista, $event.itens, $event.aoGravar)"
   />
   <!-- Agente que não nasceu de um agente pronto por ramo: o bloco não aparece. -->
   <template v-else />

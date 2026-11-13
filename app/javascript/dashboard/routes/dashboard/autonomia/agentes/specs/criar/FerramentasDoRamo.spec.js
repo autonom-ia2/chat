@@ -2,7 +2,8 @@ import { mount, flushPromises } from '@vue/test-utils';
 import FerramentasDoRamo from '../../components/criar/FerramentasDoRamo.vue';
 
 // #2881 — as ferramentas prontas de um agente pronto por ramo: cada uma com a frase "Use quando" do ramo, que o dono
-// pode alterar; tirar; incluir as do "Também combina"; e a nota das consultas pagas, que só leva à vitrine.
+// pode alterar; tirar; incluir as do "Também combina"; e a nota das consultas pagas, que só leva à vitrine. O campo da
+// frase só fecha quando quem grava avisa que o servidor guardou (o segundo valor do `mudar`).
 const FERRAMENTAS = [
   { fonte: 'cnpj', usar_quando: 'Use quando o cliente informar o CNPJ.' },
   { fonte: 'cep', usar_quando: 'Use quando o cliente informar o CEP.' },
@@ -68,20 +69,44 @@ describe('FerramentasDoRamo', () => {
     await campo.setValue(' Use quando o cliente disser o CEP da obra. ');
     await wrapper.get('[data-salvar-quando]').trigger('click');
 
-    expect(wrapper.emitted('mudar')).toEqual([
-      [
-        [
-          FERRAMENTAS[0],
-          {
-            fonte: 'cep',
-            usar_quando: 'Use quando o cliente disser o CEP da obra.',
-          },
-        ],
-      ],
+    expect(wrapper.emitted('mudar')).toHaveLength(1);
+    const [lista, aoGravar] = wrapper.emitted('mudar')[0];
+    expect(lista).toEqual([
+      FERRAMENTAS[0],
+      {
+        fonte: 'cep',
+        usar_quando: 'Use quando o cliente disser o CEP da obra.',
+      },
     ]);
-    expect(wrapper.find('[data-alterando]').exists()).toBe(false);
     expect(FERRAMENTAS[1].usar_quando).toBe(
       'Use quando o cliente informar o CEP.'
+    );
+    // O campo só fecha quando quem grava avisa que o servidor guardou.
+    expect(wrapper.find('[data-alterando]').exists()).toBe(true);
+    aoGravar();
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-alterando]').exists()).toBe(false);
+  });
+
+  it('when the save fails, the sentence field stays open with what the owner typed', async () => {
+    const wrapper = montar();
+
+    await ferramenta(wrapper, 'cep')
+      .get('[data-alterar-quando]')
+      .trigger('click');
+    await wrapper
+      .get('[data-alterando] textarea')
+      .setValue('Use quando o cliente disser o CEP da obra.');
+    await wrapper.get('[data-salvar-quando]').trigger('click');
+    // O servidor recusou (ou a rede caiu): o pedido termina e ninguém avisa que gravou.
+    await wrapper.setProps({ gravando: true });
+    await wrapper.setProps({ gravando: false });
+
+    expect(wrapper.get('[data-alterando] textarea').element.value).toBe(
+      'Use quando o cliente disser o CEP da obra.'
+    );
+    expect(ferramenta(wrapper, 'cep').find('[data-quando]').exists()).toBe(
+      false
     );
   });
 

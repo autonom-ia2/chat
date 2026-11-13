@@ -6,6 +6,7 @@ vi.mock('../../../../api/autonomia/buildThreads', () => ({
     create: vi.fn(),
     show: vi.fn(),
     sendMessage: vi.fn(),
+    retryBuild: vi.fn(),
     desfazer: vi.fn(),
     mudarModeloPronto: vi.fn(),
   },
@@ -439,6 +440,67 @@ describe('#autonomiaBuildThreads store', () => {
           'SET_MODELO_PRONTO',
           modelo(['velha'])
         );
+      });
+
+      // Toda resposta que traz a conversa de volta guarda o contador antes de pedir, como a leitura.
+      it.each([
+        ['send', 'sendMessage', { threadId: 3, content: 'oi' }],
+        ['retry', 'retryBuild', { threadId: 3 }],
+        ['desfazerAjuste', 'desfazer', { threadId: 3 }],
+      ])(
+        '%s asked before a change does not bring the old lists back either',
+        async (acao, chamada, dados) => {
+          const commit = vi.fn();
+          let responder;
+          AutonomiaBuildThreadsAPI[chamada].mockReturnValue(
+            new Promise(resolve => {
+              responder = resolve;
+            })
+          );
+          const pedido = actions[acao]({ commit, dispatch: vi.fn() }, dados);
+          AutonomiaBuildThreadsAPI.mudarModeloPronto.mockResolvedValue({
+            data: { payload: { id: 3, modelo_pronto: modelo(['nova']) } },
+          });
+          await actions.mudarModeloPronto(
+            { commit },
+            { threadId: 3, listas: {} }
+          );
+
+          responder({
+            data: {
+              payload: {
+                id: 3,
+                status: 'ready',
+                modelo_pronto: modelo(['velha']),
+              },
+            },
+          });
+          await pedido;
+
+          expect(commit).toHaveBeenCalledWith('SET_STATUS', 'ready');
+          expect(commit).toHaveBeenCalledWith(
+            'SET_MODELO_PRONTO',
+            modelo(['nova'])
+          );
+          expect(commit).not.toHaveBeenCalledWith(
+            'SET_MODELO_PRONTO',
+            modelo(['velha'])
+          );
+        }
+      );
+
+      it('send keeps the model of its answer when no change happened meanwhile', async () => {
+        const commit = vi.fn();
+        AutonomiaBuildThreadsAPI.sendMessage.mockResolvedValue({
+          data: { payload: { id: 3, modelo_pronto: modelo(['a']) } },
+        });
+
+        await actions.send(
+          { commit, dispatch: vi.fn() },
+          { threadId: 3, content: 'oi' }
+        );
+
+        expect(commit).toHaveBeenCalledWith('SET_MODELO_PRONTO', modelo(['a']));
       });
     });
 

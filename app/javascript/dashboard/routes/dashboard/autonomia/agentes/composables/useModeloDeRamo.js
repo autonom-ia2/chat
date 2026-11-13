@@ -11,7 +11,7 @@ import { useMudancaDasListas } from './useMudancaDasListas';
 // - ANTES de a conversa existir, a tela fala primeiro: a pergunta do nome da corretora, o exemplo do campo e a
 //   conversa de exemplo ao lado são os do cartão do ramo. A conversa só abre no servidor com a primeira resposta.
 // - DEPOIS, quem manda é o servidor: o `modelo_pronto` da conversa (store autonomiaBuildThreads) diz se há modelo e
-//   traz o nome do ramo, as listas, as ferramentas com a frase "Use quando" e as perguntas de teste. A query já não
+//   traz a chave do ramo, as listas, as ferramentas com a frase "Use quando" e as perguntas de teste. A query já não
 //   tem o ramo (só `?agente=`), e conta sem direito ao modelo recebe nulo: a tela segue como a de qualquer agente.
 // - RASCUNHO REABERTO (`?agente=`, sem conversa na tela): o mesmo `modelo_pronto` vem no próprio agente, e as
 //   mudanças são gravadas por ele. Havendo conversa com modelo, vale a da conversa.
@@ -39,11 +39,12 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     ativo.value ? modeloDeRamo(modelo.value?.chave || pedido) : null
   );
   const textoDoCartao = campo => t(`${NS}.ITENS.${cartao.value.i18n}.${campo}`);
-  // O nome do ramo é o do servidor assim que ele chega; antes, o título do cartão.
-  const ramo = computed(() => {
-    if (modelo.value?.ramo) return modelo.value.ramo;
-    return cartao.value ? textoDoCartao('TITULO') : '';
-  });
+  // Um nome só na tela, do começo ao fim: o título do cartão, que é traduzido. O `ramo` do servidor é o nome por
+  // extenso que ele usa no que escreve para a IA ("Seguro de automóvel"); na tela só vale para um ramo que ela ainda
+  // não conhece (sem cartão).
+  const ramo = computed(() =>
+    cartao.value ? textoDoCartao('TITULO') : modelo.value?.ramo || ''
+  );
 
   const falaDeAbertura = computed(() =>
     t('AGENTS.JORNADA.RAMOS.CRIAR.PERGUNTA_EMPRESA', { ramo: ramo.value })
@@ -86,6 +87,11 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
   const perguntasDeTeste = lista('teste');
   const ferramentas = soOferecidas('ferramentas');
   const tambem = soOferecidas('tambem');
+  // As do "Já vem com" do modelo que o dono tirou (o servidor as devolve no "Também combina", junto com as que nunca
+  // entraram): no "Começar" viram "Agora não".
+  const tiradas = computed(() =>
+    (modelo.value?.tiradas || []).filter(oferecida)
+  );
   const pagas = computed(() => (modelo.value?.premium || []).filter(oferecida));
   // A frase "Use quando" de cada ferramenta do ramo, para o "Começar" mandar junto ao incluir.
   const frases = computed(() =>
@@ -134,6 +140,7 @@ export function useModeloDeRamo({ pedido, conversa, agente }) {
     perguntasDeTeste,
     ferramentas,
     tambem,
+    tiradas,
     pagas,
     frases,
     gravando,

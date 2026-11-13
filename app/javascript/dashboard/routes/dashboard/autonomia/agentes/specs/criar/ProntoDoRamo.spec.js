@@ -100,6 +100,32 @@ describe('ProntoDoRamo', () => {
     ]);
   });
 
+  it('a change typed in a field carries the "saved" notice, and the field closes only when it is called', async () => {
+    const wrapper = montar();
+    await linha(wrapper, 'perguntas').get('button').trigger('click');
+
+    gaveta().querySelector('[data-item="p1"] [data-editar-item]').click();
+    await wrapper.vm.$nextTick();
+    const campo = gaveta().querySelector('[data-editando] textarea');
+    campo.value = 'Qual o CNPJ de quem contrata?';
+    campo.dispatchEvent(new Event('input'));
+    await wrapper.vm.$nextTick();
+    gaveta().querySelector('[data-salvar-item]').click();
+    await wrapper.vm.$nextTick();
+
+    const [{ lista, itens, aoGravar }] = wrapper.emitted('mudar')[0];
+    expect(lista).toBe('perguntas');
+    expect(itens).toEqual([
+      { ...PERGUNTAS[0], texto: 'Qual o CNPJ de quem contrata?' },
+      PERGUNTAS[1],
+      PERGUNTAS[2],
+    ]);
+    expect(gaveta().querySelector('[data-editando]')).not.toBeNull();
+    aoGravar();
+    await wrapper.vm.$nextTick();
+    expect(gaveta().querySelector('[data-editando]')).toBeNull();
+  });
+
   it('the documents drawer changes the documents list', async () => {
     const wrapper = montar();
 
