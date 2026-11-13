@@ -243,10 +243,12 @@ module Autonomia::Automacao::Escuta
   end
 
   # O "esperar até" e o "decidir" que espera a próxima resposta (G31). Este, só sem nova tentativa marcada: a do erro
-  # passageiro da IA segue o relógio, como a da ação.
+  # passageiro da IA segue o relógio, como a da ação. A reunião e a pesquisa (#2935, #2936) esperam o cliente; a
+  # aprovação (#2931) acorda pelo painel (PedidosDeAprovacao), nunca pela mensagem.
   def esperando_condicao?(execucao)
     passo = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)
-    passo&.fetch('tipo', nil) == 'esperar_ate' || (::Autonomia::Automacao::DecidirDeNovo.espera?(passo) && execucao.tentativas.zero?)
+    passo&.fetch('tipo', nil) == 'esperar_ate' || (::Autonomia::Automacao::DecidirDeNovo.espera?(passo) && execucao.tentativas.zero?) ||
+      ::Autonomia::Automacao::PassosQueEsperam.espera_o_cliente?(passo)
   end
 
   # A mesma reserva da varredura (marca nova, só se continua esperando), mantendo o `due_at`: é o prazo do "esperar até",
