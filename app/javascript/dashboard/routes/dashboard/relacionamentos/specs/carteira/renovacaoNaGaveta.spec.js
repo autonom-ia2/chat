@@ -1,0 +1,991 @@
+import { mount } from '@vue/test-utils';
+import { withFullI18n } from 'test-i18n';
+import GavetaDoSeguro from '../../components/carteira/GavetaDoSeguro.vue';
+import { baixarArquivo } from '../../carteira/exportarHistoria';
+import { DO_RODAPE } from '../../carteira/rodapeDoSeguro';
+import { esquecerEscritasDaCarteira } from '../../demo/carteira';
+import { carteiraFonte } from '../../fonte/carteiraFonte';
+import {
+  aoMeioDia,
+  assentar,
+  carregarDemonstracao,
+  daCarteira,
+  recusa,
+  textoDe,
+} from './apoio';
+
+// A renovação na gaveta do seguro (#2898), com o texto de verdade em pt_BR: os
+// selos Em renovação e Renovado, a parte "Renovação", "Renovou" e "Não renovou"
+// (com o motivo em um toque), o desfazer, a apólice nova e o "Exportar" do
+// histórico. Duas fontes: uma de mentira, com o seguro no formato do servidor,
+// e a carteira fictícia (os caminhos inteiros). Todos os dados são inventados.
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () => ({ value: { maximumFileUploadSize: 40 } }),
+}));
+vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
+  default: (await import('./apoio')).DialogoFalso,
+}));
+vi.mock('dashboard/components-next/TeleportWithDirection.vue', async () => ({
+  default: (await import('./apoio')).TeleportFalso,
+}));
+vi.mock('dashboard/api/relacionamentosSeguros', () => ({ default: {} }));
+vi.mock('../../carteira/abrirPdf', () => ({ abrirPdf: vi.fn() }));
+vi.mock('../../carteira/exportarHistoria', async importOriginal => ({
+  ...(await importOriginal()),
+  baixarArquivo: vi.fn(),
+}));
+
+withFullI18n('pt_BR');
+vi.setConfig({ testTimeout: 30000 });
+
+// Na carteira fictícia (demo/carteira.js): um seguro com a renovação aberta,
+// um que renovou e um que não renovou (achou caro).
+const ABERTA_NA_DEMO = 104;
+const RENOVADO_NA_DEMO = 105;
+const PERDIDO_NA_DEMO = 115;
+const SEM_RENOVACAO_NA_DEMO = 1;
+
+// 12/11/2026, às 10h de quem roda o teste.
+const AGORA = new Date(2026, 10, 12, 10).getTime();
+const HA_DOIS_DIAS = new Date(2026, 10, 10, 9, 30).getTime() / 1000;
+const RENOVACAO = {
+  cardId: 88,
+  funil: 'Renovação',
+  etapa: 'A vencer',
+  desfecho: null,
+  cuida: 'Bruna Teixeirão',
+};
+// Seguros como a fonte real entrega: selo e dias vêm do servidor.
+const EM_RENOVACAO = {
+  id: 7,
+  pessoaId: 23,
+  pessoa: { id: 23, name: 'Ana Albuquerino', phone_number: null },
+  segurado: {
+    tipo: 'pessoa',
+    id: 23,
+    nome: 'Ana Albuquerino',
+    documento: null,
+  },
+  tipo: 'auto',
+  ramoOriginal: 'Automóvel',
+  seguradora: 'Seguradora Atlântica',
+  numero: 'AT-000451',
+  valor: 2760,
+  bem: 'Carro hatch prata',
+  comeca: aoMeioDia(2025, 11, 29),
+  termina: aoMeioDia(2026, 11, 29),
+  selo: 'em_renovacao',
+  dias: 17,
+  origem: { tipo: 'planilha', arquivo: null, em: HA_DOIS_DIAS },
+  temPdf: true,
+  canceladoEm: null,
+  corrigidoAMao: [],
+  renovacao: RENOVACAO,
+  renovadoEm: null,
+  motivo: null,
+  motivoEscrito: '',
+  apoliceNova: false,
+};
+const RENOVADO = {
+  ...EM_RENOVACAO,
+  selo: 'renovado',
+  renovacao: { ...RENOVACAO, desfecho: 'renovou' },
+  renovadoEm: HA_DOIS_DIAS,
+};
+const PERDIDO = {
+  ...EM_RENOVACAO,
+  selo: 'ativo',
+  renovacao: { ...RENOVACAO, desfecho: 'nao_renovou' },
+  motivo: 'achou_caro',
+};
+const PERDIDO_SEM_MOTIVO = { ...PERDIDO, motivo: null };
+const SEM_RENOVACAO = { ...EM_RENOVACAO, selo: 'ativo', renovacao: null };
+
+const fonteDaDemo = () => carteiraFonte({ demo: 'cheio', atraso: 0 });
+// O 401 do servidor, como a fonte real o entrega às peças.
+const semAcesso = () =>
+  Object.assign(new Error('sem acesso'), { name: 'SEM_ACESSO' });
+const NAO_PODE_FECHAR =
+  'Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.';
+const fonteDeMentira = (seguro, resto = {}) => ({
+  usaDemo: false,
+  seguro: vi.fn().mockResolvedValue(seguro),
+  historia: vi.fn().mockResolvedValue([]),
+  opcoesDeFiltro: vi
+    .fn()
+    .mockResolvedValue({ tipos: ['auto'], seguradoras: [seguro.seguradora] }),
+  ...resto,
+});
+
+let aberta;
+const abrir = async (apoliceId, fonte, props = {}) => {
+  aberta = mount(GavetaDoSeguro, {
+    attachTo: document.body,
+    props: { apoliceId, fonte, podeEditar: true, ...props },
+    global: { stubs: { transition: true } },
+  });
+  await assentar();
+  return aberta;
+};
+const abrirDoServidor = (seguro, resto, props) =>
+  abrir(seguro.id, fonteDeMentira(seguro, resto), { agora: AGORA, ...props });
+const abrirDaDemo = id => abrir(id, fonteDaDemo());
+
+const azul = w => w.get(daCarteira('gaveta-acao'));
+const selo = w => w.get(daCarteira('selo')).attributes('data-selo-da-carteira');
+const situacao = w => textoDe(w, daCarteira('situacao-da-renovacao'));
+const avisoVivo = w => textoDe(w, daCarteira('aviso-vivo'));
+const alerta = w => textoDe(w, daCarteira('alerta-da-gaveta'));
+const historico = w =>
+  w.findAll(daCarteira('item-da-historia')).map(item => item.text());
+const doMenu = w =>
+  w
+    .findAll(`${daCarteira('mais-do-seguro')} [role="menuitem"]`)
+    .map(item => item.attributes('data-acao'));
+const clicar = async (w, seletor) => {
+  await w.get(seletor).trigger('click');
+  await assentar();
+};
+const escolherNoMenu = async (w, nome) => {
+  await w
+    .get(`${daCarteira('mais-do-seguro')} [aria-haspopup="menu"]`)
+    .trigger('click');
+  await clicar(w, `[role="menuitem"][data-acao="${nome}"]`);
+};
+// Os diálogos de mentira ficam lado a lado: cada um é achado pela marca do que
+// tem dentro.
+const dialogoDe = (w, marca) =>
+  w
+    .findAll('[data-dialogo-falso]')
+    .find(dialogo => dialogo.find(daCarteira(marca)).exists());
+const motivoAberto = w => w.find(daCarteira('motivo')).exists();
+const escrever = (w, campo, texto) =>
+  w.get(`input[data-campo="${campo}"]`).setValue(texto);
+const salvarFormulario = w => clicar(w, daCarteira('salvar-correcao'));
+
+beforeAll(carregarDemonstracao, 60000);
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  baixarArquivo.mockClear();
+});
+afterEach(() => {
+  vi.useRealTimers();
+  aberta?.unmount();
+  aberta = null;
+  esquecerEscritasDaCarteira();
+});
+
+describe('o que a gaveta mostra de um seguro em renovação', () => {
+  it('o selo, em que etapa do funil está e quem cuida', async () => {
+    const w = await abrirDoServidor(EM_RENOVACAO);
+
+    expect(selo(w)).toBe('em_renovacao');
+    expect(textoDe(w, daCarteira('selo'))).toBe('Em renovação');
+    expect(textoDe(w, `${daCarteira('renovacao')} h3`)).toBe('Renovação');
+    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(textoDe(w, daCarteira('quem-cuida'))).toBe(
+      'Quem cuida: Bruna Teixeirão'
+    );
+  });
+
+  it('o azul é "Renovou", "Não renovou" fica ao lado e o resto vai para o "⋯"', async () => {
+    const w = await abrirDoServidor(EM_RENOVACAO);
+
+    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.RENOVOU);
+    expect(w.findAll(daCarteira('gaveta-acao'))).toHaveLength(1);
+    expect(textoDe(w, daCarteira('nao-renovou'))).toBe('Não renovou');
+    expect(w.find(daCarteira('corrigir')).exists()).toBe(false);
+    expect(doMenu(w)).toEqual([
+      DO_RODAPE.VER_PDF,
+      DO_RODAPE.CORRIGIR,
+      DO_RODAPE.GUARDAR_OUTRO_PDF,
+      DO_RODAPE.APAGAR_PDF,
+      DO_RODAPE.MARCAR_CANCELADO,
+    ]);
+    expect(w.findAll('button[disabled]')).toHaveLength(0);
+  });
+
+  it('"Abrir no CRM" avisa quem abriu a gaveta, com o card', async () => {
+    const w = await abrirDoServidor(EM_RENOVACAO);
+
+    await clicar(w, daCarteira('abrir-no-crm'));
+
+    expect(w.emitted('abrirCard')).toEqual([[88]]);
+  });
+
+  it('"Corrigir", pelo "⋯", abre o formulário de sempre', async () => {
+    const w = await abrirDoServidor(EM_RENOVACAO);
+
+    await escolherNoMenu(w, DO_RODAPE.CORRIGIR);
+
+    expect(textoDe(w, '[data-view-title]')).toBe('Corrigir o seguro Auto');
+    expect(w.get('input[data-campo="numero"]').element.value).toBe('AT-000451');
+  });
+
+  // Quem não enxerga o card da renovação a recebe só com o desfecho, e quase
+  // nunca pode fechá-lo: a renovação é só leitura, sem botão que só daria erro.
+  it('sem o card à vista: só leitura, sem "Renovou" nem "Não renovou", sem linha vazia nem "Abrir no CRM"', async () => {
+    const w = await abrirDoServidor({
+      ...EM_RENOVACAO,
+      renovacao: { desfecho: null },
+    });
+
+    expect(selo(w)).toBe('em_renovacao');
+    expect(situacao(w)).toBe(
+      'A renovação está em andamento. Quem cuida dela marca se renovou ou não.'
+    );
+    expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
+    expect(textoDe(w, daCarteira('renovacao'))).not.toContain('undefined');
+    expect(azul(w).text()).toBe('Ver PDF');
+    expect(w.find(daCarteira('nao-renovou')).exists()).toBe(false);
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
+    expect(doMenu(w)).toEqual([
+      DO_RODAPE.GUARDAR_OUTRO_PDF,
+      DO_RODAPE.APAGAR_PDF,
+      DO_RODAPE.MARCAR_CANCELADO,
+    ]);
+    expect(w.findAll('button[disabled]')).toHaveLength(0);
+  });
+
+  it('sem o card à vista e já terminada: lê como terminou, sem "Desfazer" nem convite para dizer o motivo', async () => {
+    const w = await abrirDoServidor({
+      ...PERDIDO_SEM_MOTIVO,
+      renovacao: { desfecho: 'nao_renovou' },
+    });
+
+    expect(situacao(w)).toBe('Não renovou. Ninguém disse o motivo.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+    expect(doMenu(w)).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  it('com o card à vista, "Renovou" e "Não renovou" continuam no rodapé', async () => {
+    const w = await abrirDoServidor(EM_RENOVACAO);
+
+    expect(azul(w).text()).toBe('Renovou');
+    expect(textoDe(w, daCarteira('nao-renovou'))).toBe('Não renovou');
+  });
+
+  it('card à vista e o dono saiu da conta: sem a linha de quem cuida', async () => {
+    const w = await abrirDoServidor({
+      ...EM_RENOVACAO,
+      renovacao: { ...RENOVACAO, cuida: null, cuidaId: null },
+    });
+
+    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
+    expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(true);
+  });
+
+  it('seguro sem renovação não mostra a parte "Renovação"', async () => {
+    const w = await abrirDoServidor(SEM_RENOVACAO);
+
+    expect(w.find(daCarteira('renovacao')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Ver PDF');
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
+    expect(w.find(daCarteira('nao-renovou')).exists()).toBe(false);
+  });
+
+  it('quem só pode ver lê a renovação e não tem "Renovou" nem "Não renovou"', async () => {
+    const w = await abrirDoServidor(
+      PERDIDO_SEM_MOTIVO,
+      {},
+      {
+        podeEditar: false,
+      }
+    );
+
+    expect(situacao(w)).toBe('Não renovou. Ninguém disse o motivo.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+    expect(w.find(daCarteira('nao-renovou')).exists()).toBe(false);
+    expect(w.find(daCarteira('mais-do-seguro')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Ver PDF');
+  });
+});
+
+describe('"Renovou"', () => {
+  it('não pede confirmação: guarda, avisa com Desfazer e o próximo passo vira a apólice nova', async () => {
+    const renovou = vi.fn().mockResolvedValue(RENOVADO);
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(renovou).toHaveBeenCalledTimes(1);
+    expect(renovou.mock.calls[0][0]).toBe(7);
+    expect(avisoVivo(w)).toContain('Marcado como renovado.');
+    expect(w.find(daCarteira('desfazer')).exists()).toBe(true);
+    expect(w.emitted('mudou')).toHaveLength(1);
+    expect(selo(w)).toBe('renovado');
+    expect(textoDe(w, daCarteira('selo'))).toBe('Renovado');
+    expect(textoDe(w, daCarteira('frase-do-seguro'))).toBe(
+      'Renovado em 10/11/2026.'
+    );
+    expect(situacao(w)).toBe('Renovou. Falta guardar a apólice nova.');
+    expect(azul(w).text()).toBe('Guardar a apólice nova');
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
+  });
+
+  it('"Desfazer", no aviso, reabre a renovação', async () => {
+    const renovou = vi.fn().mockResolvedValue(RENOVADO);
+    const desfazerDesfecho = vi.fn().mockResolvedValue(EM_RENOVACAO);
+    const w = await abrirDoServidor(EM_RENOVACAO, {
+      renovou,
+      desfazerDesfecho,
+    });
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    await clicar(w, daCarteira('desfazer'));
+
+    expect(desfazerDesfecho).toHaveBeenCalledTimes(1);
+    expect(desfazerDesfecho.mock.calls[0][0]).toBe(7);
+    expect(avisoVivo(w)).toBe('Desfeito.');
+    expect(azul(w).text()).toBe('Renovou');
+    expect(w.emitted('mudou')).toHaveLength(2);
+  });
+
+  it('alguém já tinha dito que não renovou: diz o que fazer e relê o seguro', async () => {
+    const renovou = vi.fn().mockRejectedValue(recusa('ja_tem_desfecho'));
+    const fonte = fonteDeMentira(EM_RENOVACAO, { renovou });
+    const w = await abrir(EM_RENOVACAO.id, fonte, { agora: AGORA });
+    fonte.seguro.mockResolvedValue(PERDIDO);
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(
+      'Esta renovação já tem resultado. Atualizei a tela: confira como ficou.'
+    );
+    expect(situacao(w)).toBe('Não renovou: achou caro.');
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('a renovação saiu do funil por outro caminho: diz isso e relê o seguro', async () => {
+    const renovou = vi.fn().mockRejectedValue(recusa('sem_renovacao'));
+    const fonte = fonteDeMentira(EM_RENOVACAO, { renovou });
+    const w = await abrir(EM_RENOVACAO.id, fonte, { agora: AGORA });
+    fonte.seguro.mockResolvedValue(SEM_RENOVACAO);
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(
+      'Este seguro não está mais em renovação. Atualizei a tela.'
+    );
+    expect(w.find(daCarteira('renovacao')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Ver PDF');
+  });
+
+  // O segundo clique chega com o primeiro pedido ainda a caminho: sem a guarda
+  // ele iria ao servidor, que responderia "já tem resultado" por cima do aviso.
+  it('dois cliques seguidos em "Renovou" mandam um pedido só, e o aviso não vira recusa', async () => {
+    let responder;
+    const renovou = vi
+      .fn()
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          responder = resolve;
+        })
+      )
+      .mockRejectedValue(recusa('ja_tem_desfecho'));
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+    const botao = azul(w);
+
+    botao.trigger('click');
+    await botao.trigger('click');
+
+    expect(renovou).toHaveBeenCalledTimes(1);
+    expect(botao.attributes('disabled')).toBeUndefined();
+
+    responder(RENOVADO);
+    await assentar();
+
+    expect(selo(w)).toBe('renovado');
+    expect(avisoVivo(w)).toContain('Marcado como renovado.');
+    expect(w.find(daCarteira('alerta-da-gaveta')).exists()).toBe(false);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('com "Renovou" a caminho, "Não renovou" nem pergunta o motivo', async () => {
+    const renovou = vi.fn().mockReturnValue(new Promise(() => {}));
+    const naoRenovou = vi.fn().mockResolvedValue(PERDIDO);
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou, naoRenovou });
+    await azul(w).trigger('click');
+
+    await clicar(w, daCarteira('nao-renovou'));
+
+    expect(motivoAberto(w)).toBe(false);
+    expect(renovou).toHaveBeenCalledTimes(1);
+    expect(naoRenovou).not.toHaveBeenCalled();
+    expect(w.find(daCarteira('alerta-da-gaveta')).exists()).toBe(false);
+  });
+
+  // Fechar a renovação pede poder mexer no card dela no quadro: o servidor
+  // responde 401 a quem não mexe naquele funil (a fonte dá o nome SEM_ACESSO).
+  it('quem não pode fechar o card lê que não tem permissão, e não "tente de novo"', async () => {
+    const renovou = vi.fn().mockRejectedValue(semAcesso());
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe(NAO_PODE_FECHAR);
+    expect(azul(w).text()).toBe('Renovou');
+    expect(selo(w)).toBe('em_renovacao');
+    expect(w.emitted('mudou')).toBeUndefined();
+  });
+
+  it('a frase de quem não pode some quando a ação seguinte falha por outro motivo', async () => {
+    const renovou = vi
+      .fn()
+      .mockRejectedValueOnce(semAcesso())
+      .mockRejectedValueOnce(new Error('Network Error'));
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe('Não consegui fazer isso. Tente de novo.');
+  });
+
+  it('se não der certo, diz o que fazer e o seguro continua em renovação', async () => {
+    const renovou = vi.fn().mockRejectedValue(new Error('Network Error'));
+    const w = await abrirDoServidor(EM_RENOVACAO, { renovou });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(alerta(w)).toBe('Não consegui fazer isso. Tente de novo.');
+    expect(azul(w).text()).toBe('Renovou');
+    expect(w.emitted('mudou')).toBeUndefined();
+  });
+});
+
+describe('"Não renovou" e o motivo em um toque', () => {
+  it('pergunta o motivo, e um toque guarda', async () => {
+    const naoRenovou = vi.fn().mockResolvedValue(PERDIDO);
+    const w = await abrirDoServidor(EM_RENOVACAO, { naoRenovou });
+
+    await clicar(w, daCarteira('nao-renovou'));
+
+    expect(motivoAberto(w)).toBe(true);
+    expect(naoRenovou).not.toHaveBeenCalled();
+
+    await clicar(w, '[data-motivo="achou_caro"]');
+
+    expect(naoRenovou).toHaveBeenCalledWith(7, { motivo: 'achou_caro' });
+    expect(motivoAberto(w)).toBe(false);
+    expect(avisoVivo(w)).toContain('Marcado como não renovado.');
+    expect(w.find(daCarteira('desfazer')).exists()).toBe(true);
+    expect(situacao(w)).toBe('Não renovou: achou caro.');
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('dois toques seguidos no mesmo motivo guardam uma vez só', async () => {
+    let responder;
+    const naoRenovou = vi
+      .fn()
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          responder = resolve;
+        })
+      )
+      .mockRejectedValue(recusa('ja_tem_desfecho'));
+    const w = await abrirDoServidor(EM_RENOVACAO, { naoRenovou });
+    await clicar(w, daCarteira('nao-renovou'));
+    const motivo = w.get('[data-motivo="achou_caro"]');
+
+    motivo.trigger('click');
+    await motivo.trigger('click');
+
+    expect(naoRenovou).toHaveBeenCalledTimes(1);
+
+    responder(PERDIDO);
+    await assentar();
+
+    expect(avisoVivo(w)).toContain('Marcado como não renovado.');
+    expect(w.find(daCarteira('alerta-da-gaveta')).exists()).toBe(false);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('"Outro motivo" guarda o que a pessoa escreveu', async () => {
+    const naoRenovou = vi.fn().mockResolvedValue({
+      ...PERDIDO,
+      motivo: 'outro',
+      motivoEscrito: 'Mudou de país',
+    });
+    const w = await abrirDoServidor(EM_RENOVACAO, { naoRenovou });
+    await clicar(w, daCarteira('nao-renovou'));
+    await clicar(w, daCarteira('motivo-outro'));
+    await w.get(daCarteira('motivo-escrito')).setValue('Mudou de país');
+
+    await dialogoDe(w, 'motivo').get('[data-confirmar]').trigger('click');
+    await assentar();
+
+    expect(naoRenovou).toHaveBeenCalledWith(7, {
+      motivo: 'outro',
+      texto: 'Mudou de país',
+    });
+    expect(situacao(w)).toBe('Não renovou. Motivo: Mudou de país');
+  });
+
+  it('fechar o diálogo sem escolher não guarda nada', async () => {
+    const naoRenovou = vi.fn();
+    const w = await abrirDoServidor(EM_RENOVACAO, { naoRenovou });
+    await clicar(w, daCarteira('nao-renovou'));
+
+    await dialogoDe(w, 'motivo').get('[data-cancelar]').trigger('click');
+    await assentar();
+
+    expect(naoRenovou).not.toHaveBeenCalled();
+    expect(motivoAberto(w)).toBe(false);
+    expect(azul(w).text()).toBe('Renovou');
+  });
+
+  it('quem não renovou continua com o selo do seguro e ganha o desfazer no "⋯"', async () => {
+    const w = await abrirDoServidor(PERDIDO);
+
+    expect(selo(w)).toBe('ativo');
+    expect(azul(w).text()).toBe('Ver PDF');
+    expect(doMenu(w)).toEqual([
+      DO_RODAPE.GUARDAR_OUTRO_PDF,
+      DO_RODAPE.APAGAR_PDF,
+      DO_RODAPE.DESFAZER_RENOVACAO,
+      DO_RODAPE.MARCAR_CANCELADO,
+    ]);
+    expect(textoDe(w, `[data-acao="${DO_RODAPE.DESFAZER_RENOVACAO}"]`)).toBe(
+      'Desfazer o resultado da renovação'
+    );
+  });
+
+  it('o desfazer do "⋯" reabre a renovação e diz o que aconteceu', async () => {
+    const desfazerDesfecho = vi.fn().mockResolvedValue(EM_RENOVACAO);
+    const w = await abrirDoServidor(PERDIDO, { desfazerDesfecho });
+
+    await escolherNoMenu(w, DO_RODAPE.DESFAZER_RENOVACAO);
+
+    expect(desfazerDesfecho).toHaveBeenCalledTimes(1);
+    expect(avisoVivo(w)).toBe(
+      'Resultado desfeito. O seguro voltou a estar em renovação.'
+    );
+    expect(w.find(daCarteira('desfazer')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Renovou');
+  });
+});
+
+describe('seguro cancelado com a renovação aberta', () => {
+  const FECHADA_PELO_CANCELAMENTO = {
+    ...PERDIDO,
+    selo: 'cancelado',
+    canceladoEm: HA_DOIS_DIAS,
+    motivo: 'cancelou',
+  };
+
+  it('diz que não renovou porque foi cancelado, e só oferece desfazer o cancelamento', async () => {
+    const w = await abrirDoServidor(FECHADA_PELO_CANCELAMENTO);
+
+    expect(situacao(w)).toBe('Não renovou: o seguro foi cancelado.');
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_CANCELAMENTO);
+    expect(doMenu(w)).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  it('de volta a ativo, o "Desfazer" da renovação aparece', async () => {
+    const w = await abrirDoServidor({
+      ...FECHADA_PELO_CANCELAMENTO,
+      selo: 'ativo',
+      canceladoEm: null,
+    });
+
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+});
+
+describe('renovação fechada sem motivo', () => {
+  it('convida a dizer o motivo, e dizer só completa o que faltava', async () => {
+    const naoRenovou = vi.fn().mockResolvedValue(PERDIDO);
+    const w = await abrirDoServidor(PERDIDO_SEM_MOTIVO, { naoRenovou });
+
+    expect(situacao(w)).toBe('Não renovou. Ninguém disse o motivo.');
+    expect(textoDe(w, daCarteira('dizer-o-motivo'))).toBe(
+      'Dizer por que não renovou'
+    );
+
+    await clicar(w, daCarteira('dizer-o-motivo'));
+    await clicar(w, '[data-motivo="achou_caro"]');
+
+    expect(naoRenovou).toHaveBeenCalledWith(7, { motivo: 'achou_caro' });
+    expect(avisoVivo(w)).toBe('Motivo guardado.');
+    expect(w.find(daCarteira('desfazer')).exists()).toBe(false);
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
+    expect(situacao(w)).toBe('Não renovou: achou caro.');
+  });
+});
+
+describe('guardar a apólice nova', () => {
+  const NOVA = { ...SEM_RENOVACAO, id: 8, numero: 'AT-000987' };
+  const fonteQueGuarda = () => {
+    const apoliceNova = vi.fn().mockResolvedValue(NOVA);
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    // Depois de guardar, o seguro anterior passa a dizer que já tem a nova.
+    apoliceNova.mockImplementation(async () => {
+      fonte.seguro.mockResolvedValue({ ...RENOVADO, apoliceNova: true });
+      return NOVA;
+    });
+    return { fonte, apoliceNova };
+  };
+  const abrirFormulario = async fonte => {
+    const w = await abrir(RENOVADO.id, fonte, { agora: AGORA });
+    await clicar(w, daCarteira('gaveta-acao'));
+    return w;
+  };
+
+  it('abre o formulário já com o que não muda, e com o número e o valor em branco', async () => {
+    const { fonte } = fonteQueGuarda();
+
+    const w = await abrirFormulario(fonte);
+
+    expect(textoDe(w, '[data-view-title]')).toBe('Apólice nova do seguro Auto');
+    expect(w.get('input[data-campo="numero"]').element.value).toBe('');
+    expect(w.get('input[data-campo="valor"]').element.value).toBe('');
+    expect(w.get('input[data-campo="comeca"]').element.value).toBe(
+      '2026-11-29'
+    );
+    expect(w.get('input[data-campo="termina"]').element.value).toBe(
+      '2027-11-29'
+    );
+    expect(w.get('input[data-campo="bem"]').element.value).toBe(
+      'Carro hatch prata'
+    );
+    expect(w.text()).toContain(
+      'Já veio com o que não muda de um ano para o outro.'
+    );
+  });
+
+  // A seguradora pode demorar a emitir, e o servidor não exige o número.
+  it('o campo do número diz que pode ficar para depois', async () => {
+    const { fonte } = fonteQueGuarda();
+
+    const w = await abrirFormulario(fonte);
+
+    const numero = w.get('input[data-campo="numero"]');
+    expect(w.get(`label[for="${numero.attributes('id')}"]`).text()).toBe(
+      'Número da apólice (pode preencher depois)'
+    );
+    expect(w.text()).toContain(
+      'Se a seguradora ainda não mandou o número da apólice, salve sem ele e preencha depois, em Corrigir.'
+    );
+  });
+
+  it('sem o número, guarda a apólice nova mesmo assim, sem mandar o número', async () => {
+    const { fonte, apoliceNova } = fonteQueGuarda();
+    const w = await abrirFormulario(fonte);
+
+    await salvarFormulario(w);
+
+    expect(w.text()).not.toContain('Escreva o número da apólice.');
+    expect(apoliceNova).toHaveBeenCalledWith(7, {
+      tipo: 'auto',
+      seguradora: 'Seguradora Atlântica',
+      comeca: aoMeioDia(2026, 11, 29),
+      termina: aoMeioDia(2027, 11, 29),
+      bem: 'Carro hatch prata',
+    });
+    expect(w.find(daCarteira('gaveta-seguro')).exists()).toBe(true);
+    expect(avisoVivo(w)).toBe(
+      'Apólice nova guardada. Ela já aparece na lista de seguros.'
+    );
+  });
+
+  it('sem a data em que termina, Salvar ainda diz o que falta e não guarda', async () => {
+    const { fonte, apoliceNova } = fonteQueGuarda();
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'termina', '');
+
+    await salvarFormulario(w);
+
+    expect(w.text()).toContain('Escolha quando o seguro termina.');
+    expect(apoliceNova).not.toHaveBeenCalled();
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+  });
+
+  it('dois cliques seguidos em Salvar guardam uma apólice nova só', async () => {
+    let responder;
+    const apoliceNova = vi.fn().mockReturnValue(
+      new Promise(resolve => {
+        responder = resolve;
+      })
+    );
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+    const botao = w.get(daCarteira('salvar-correcao'));
+
+    botao.trigger('click');
+    await botao.trigger('click');
+
+    expect(apoliceNova).toHaveBeenCalledTimes(1);
+
+    fonte.seguro.mockResolvedValue({ ...RENOVADO, apoliceNova: true });
+    responder(NOVA);
+    await assentar();
+
+    expect(avisoVivo(w)).toBe(
+      'Apólice nova guardada. Ela já aparece na lista de seguros.'
+    );
+    expect(w.find(daCarteira('alerta-da-gaveta')).exists()).toBe(false);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('com o número, guarda a apólice nova e volta ao seguro, que já diz que a tem', async () => {
+    const { fonte, apoliceNova } = fonteQueGuarda();
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+
+    await salvarFormulario(w);
+
+    expect(apoliceNova).toHaveBeenCalledWith(7, {
+      tipo: 'auto',
+      seguradora: 'Seguradora Atlântica',
+      numero: 'AT-000987',
+      comeca: aoMeioDia(2026, 11, 29),
+      termina: aoMeioDia(2027, 11, 29),
+      bem: 'Carro hatch prata',
+    });
+    expect(w.find(daCarteira('gaveta-seguro')).exists()).toBe(true);
+    expect(avisoVivo(w)).toBe(
+      'Apólice nova guardada. Ela já aparece na lista de seguros.'
+    );
+    expect(situacao(w)).toBe('Renovou. A apólice nova já está guardada.');
+    expect(azul(w).text()).toBe('Ver PDF');
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('apólice repetida: a frase diz o que conferir e o formulário continua aberto', async () => {
+    const apoliceNova = vi.fn().mockRejectedValue(recusa('apolice_repetida'));
+    const w = await abrirFormulario(fonteDeMentira(RENOVADO, { apoliceNova }));
+    await escrever(w, 'numero', 'AT-000451');
+
+    await salvarFormulario(w);
+
+    expect(alerta(w)).toBe(
+      'Já existe um seguro com essa seguradora, esse número e essa data de término. Confira o número da apólice.'
+    );
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+    expect(w.get('input[data-campo="numero"]').element.value).toBe('AT-000451');
+    expect(w.emitted('mudou')).toBeUndefined();
+  });
+
+  it('outra pessoa já guardou a apólice nova: sai do formulário, relê o seguro e diz onde ela está', async () => {
+    const apoliceNova = vi
+      .fn()
+      .mockRejectedValue(recusa('ja_tem_apolice_nova'));
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+    fonte.seguro.mockResolvedValue({ ...RENOVADO, apoliceNova: true });
+
+    await salvarFormulario(w);
+
+    expect(alerta(w)).toBe(
+      'A apólice nova deste seguro já está guardada. Atualizei a tela: procure por ela na lista de seguros.'
+    );
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(false);
+    expect(situacao(w)).toBe('Renovou. A apólice nova já está guardada.');
+    expect(fonte.seguro).toHaveBeenCalledTimes(2);
+    expect(w.emitted('mudou')).toHaveLength(1);
+  });
+
+  it('a data de término antes da do seguro anterior: a frase diz o que conferir e o formulário continua aberto', async () => {
+    const apoliceNova = vi
+      .fn()
+      .mockRejectedValue(recusa('termina_antes_da_anterior'));
+    const fonte = fonteDeMentira(RENOVADO, { apoliceNova });
+    const w = await abrirFormulario(fonte);
+    await escrever(w, 'numero', 'AT-000987');
+
+    await salvarFormulario(w);
+
+    expect(alerta(w)).toBe(
+      'A apólice nova precisa terminar depois do seguro que ela renova. Confira a data em que ela termina.'
+    );
+    expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+    expect(fonte.seguro).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [
+      'apolice_de_outra_pessoa',
+      'Essa seguradora e esse número de apólice já estão guardados no seguro de outra pessoa. Confira o número da apólice.',
+    ],
+    [
+      'termo_ambiguo',
+      'Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas.',
+    ],
+  ])(
+    'a recusa %s do gravador tem frase, sem a chave crua',
+    async (codigo, frase) => {
+      const apoliceNova = vi.fn().mockRejectedValue(recusa(codigo));
+      const w = await abrirFormulario(
+        fonteDeMentira(RENOVADO, { apoliceNova })
+      );
+      await escrever(w, 'numero', 'AT-000987');
+
+      await salvarFormulario(w);
+
+      expect(alerta(w)).toBe(frase);
+      expect(alerta(w)).not.toContain('AT-000987');
+      expect(w.find(daCarteira('corrigir-gaveta')).exists()).toBe(true);
+    }
+  );
+
+  it('"Voltar" sem escrever nada sai sem perguntar', async () => {
+    const { fonte, apoliceNova } = fonteQueGuarda();
+    const w = await abrirFormulario(fonte);
+
+    await clicar(w, daCarteira('voltar-da-correcao'));
+
+    expect(w.find(daCarteira('gaveta-seguro')).exists()).toBe(true);
+    expect(azul(w).text()).toBe('Guardar a apólice nova');
+    expect(apoliceNova).not.toHaveBeenCalled();
+  });
+});
+
+describe('o histórico e o "Exportar"', () => {
+  const PASSOS = [
+    {
+      tipo: 'nao_renovou',
+      quando: HA_DOIS_DIAS,
+      quem: { nome: 'Bruna Teixeirão' },
+      valores: { motivo: 'achou_caro' },
+      mudancas: null,
+    },
+    {
+      tipo: 'card_nasceu',
+      quando: HA_DOIS_DIAS,
+      quem: null,
+      valores: {},
+      mudancas: null,
+    },
+  ];
+  const comHistorico = () => ({
+    historia: vi.fn().mockResolvedValue(PASSOS),
+  });
+
+  it('conta os passos da renovação', async () => {
+    const w = await abrirDoServidor(PERDIDO, comHistorico());
+    const [naoRenovou, comecou] = historico(w);
+
+    expect(naoRenovou).toContain('Não renovou: achou caro.');
+    expect(naoRenovou).toContain('Bruna Teixeirão');
+    expect(comecou).toContain('A renovação começou.');
+  });
+
+  it('quem pode exportar baixa o histórico e lê que baixou', async () => {
+    const w = await abrirDoServidor(PERDIDO, comHistorico(), {
+      podeExportar: true,
+    });
+
+    await clicar(w, daCarteira('exportar-historico'));
+
+    expect(baixarArquivo).toHaveBeenCalledTimes(1);
+    const [nome, conteudo] = baixarArquivo.mock.calls[0];
+    expect(nome).toBe('historico-do-seguro.csv');
+    expect(conteudo).toContain('"Não renovou: achou caro."');
+    expect(conteudo).not.toContain('AT-000451');
+    expect(avisoVivo(w)).toBe('Histórico baixado.');
+  });
+
+  it('quem não pode exportar não vê o botão', async () => {
+    const w = await abrirDoServidor(PERDIDO, comHistorico());
+
+    expect(w.find(daCarteira('exportar-historico')).exists()).toBe(false);
+  });
+});
+
+describe('na carteira fictícia, do começo ao fim', () => {
+  it('"Renovou" e depois "Desfazer" voltam o seguro para em renovação', async () => {
+    const w = await abrirDaDemo(ABERTA_NA_DEMO);
+
+    expect(selo(w)).toBe('em_renovacao');
+    expect(situacao(w)).toContain('Está no funil Renovação, na etapa ');
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(selo(w)).toBe('renovado');
+    expect(textoDe(w, daCarteira('frase-do-seguro'))).toContain('Renovado em ');
+    expect(historico(w)[0]).toContain('Renovou.');
+    expect(azul(w).text()).toBe('Guardar a apólice nova');
+
+    await clicar(w, daCarteira('desfazer'));
+
+    // Como no servidor, a história não perde o passo: ganha o do desfazer.
+    expect(selo(w)).toBe('em_renovacao');
+    expect(azul(w).text()).toBe('Renovou');
+    expect(historico(w)[0]).toContain(
+      'O "Renovou" foi desfeito. O seguro voltou a estar em renovação.'
+    );
+    expect(historico(w)[1]).toContain('Renovou.');
+  });
+
+  it('cancelar o seguro com a renovação aberta fecha a renovação como não renovada', async () => {
+    const w = await abrirDaDemo(ABERTA_NA_DEMO);
+
+    await escolherNoMenu(w, DO_RODAPE.MARCAR_CANCELADO);
+
+    expect(selo(w)).toBe('cancelado');
+    expect(situacao(w)).toBe('Não renovou: o seguro foi cancelado.');
+    expect(historico(w)[0]).toContain('Não renovou: o seguro foi cancelado.');
+    expect(historico(w)[1]).toContain('Seguro marcado como cancelado.');
+    expect(doMenu(w)).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  it('"Não renovou" com o motivo aparece na situação e no histórico', async () => {
+    const w = await abrirDaDemo(ABERTA_NA_DEMO);
+
+    await clicar(w, daCarteira('nao-renovou'));
+    await clicar(w, '[data-motivo="vendeu_o_bem"]');
+
+    expect(situacao(w)).toBe('Não renovou: vendeu o bem.');
+    expect(historico(w)[0]).toContain('Não renovou: vendeu o bem.');
+    expect(doMenu(w)).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  it('o seguro que renovou guarda a apólice nova e passa a dizer que já a tem', async () => {
+    const fonte = fonteDaDemo();
+    const w = await abrir(RENOVADO_NA_DEMO, fonte);
+
+    expect(situacao(w)).toBe('Renovou. Falta guardar a apólice nova.');
+
+    await clicar(w, daCarteira('gaveta-acao'));
+    await escrever(w, 'numero', 'NOVA-000105');
+    await salvarFormulario(w);
+
+    expect(situacao(w)).toBe('Renovou. A apólice nova já está guardada.');
+    // Este seguro da demonstração não tem PDF e já não vale: com a apólice nova
+    // guardada, o rodapé fica sem botão azul (só "Corrigir" e o "⋯").
+    expect(
+      w.find(`[data-acao="${DO_RODAPE.GUARDAR_APOLICE_NOVA}"]`).exists()
+    ).toBe(false);
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
+    // A fonte da demonstração responde depois de um instante do relógio falso.
+    const pedido = fonte.listar({ busca: 'NOVA-000105' });
+    await assentar();
+    const { itens } = await pedido;
+    expect(itens).toHaveLength(1);
+    expect(itens[0].renovacao).toBeNull();
+  });
+
+  it('o que não renovou diz o motivo e conta a história inteira', async () => {
+    const w = await abrirDaDemo(PERDIDO_NA_DEMO);
+
+    expect(situacao(w)).toBe('Não renovou: achou caro.');
+    expect(historico(w).join(' ')).toContain('Não renovou: achou caro.');
+    expect(historico(w).join(' ')).toContain('A renovação começou.');
+  });
+
+  it('seguro sem renovação continua como sempre', async () => {
+    const w = await abrirDaDemo(SEM_RENOVACAO_NA_DEMO);
+
+    expect(w.find(daCarteira('renovacao')).exists()).toBe(false);
+    expect(azul(w).text()).toBe('Ver PDF');
+    expect(textoDe(w, daCarteira('corrigir'))).toBe('Corrigir');
+  });
+});

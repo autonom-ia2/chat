@@ -62,6 +62,8 @@ vi.mock('../../ficha/usePermissoesDaFicha', async () => {
     usePermissoesDaFicha: () => ({
       podeEditar: ref(true),
       podeCriarCards: ref(false),
+      podeExportar: ref(false),
+      podeAjustarRenovacoes: ref(false),
     }),
   };
 });
@@ -257,6 +259,31 @@ describe('a aba Seguros na lista de Relacionamentos', () => {
     expect(w.get(daLista('aba-seguros')).attributes('aria-selected')).toBe(
       'true'
     );
+  });
+
+  // O aviso do sino ("N seguros entraram em renovação hoje") leva a este
+  // endereço (carteira/avisoDaRenovacao.js).
+  it('o endereço do aviso do sino abre a aba Seguros já no grupo "Em renovação"', async () => {
+    const w = await abrirLista('cheio', {
+      aba: 'seguros',
+      grupo: 'em_renovacao',
+    });
+    const selos = w
+      .findAll(`${daCarteira('linha')} ${daCarteira('selo')}`)
+      .map(selo => selo.attributes('data-selo-da-carteira'));
+
+    expect(w.get(daLista('aba-seguros')).attributes('aria-selected')).toBe(
+      'true'
+    );
+    expect(
+      w.get('[data-grupo="em_renovacao"]').attributes('aria-pressed')
+    ).toBe('true');
+    expect(w.get('[data-grupo="todos"]').attributes('aria-pressed')).toBe(
+      'false'
+    );
+    expect(selos.length).toBeGreaterThan(0);
+    expect(new Set(selos)).toEqual(new Set(['em_renovacao']));
+    expect(w.find(daLista('linha')).exists()).toBe(false);
   });
 
   it('voltar para Pessoas tira a aba e o seguro aberto do endereço', async () => {

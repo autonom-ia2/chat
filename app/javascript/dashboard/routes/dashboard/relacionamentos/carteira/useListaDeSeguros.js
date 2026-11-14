@@ -1,6 +1,9 @@
 // #2897 — o estado da aba Seguros: a lista (o mesmo `useLista` da lista de
 // pessoas, com os grupos, a ordem e os filtros de seguros) e os textos que
 // dependem da consulta. A página só liga as peças.
+// #2898 — `grupoInicial` é o grupo que o endereço pediu (`?grupo=`) e
+// `temporario` o grupo "Não renovaram" que entra no fim da barra quando a tela
+// de resultados leva até ele.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
@@ -10,13 +13,16 @@ import {
   contarFiltrosDeSeguros,
 } from '../fonte/carteiraFonte';
 import {
-  GRUPOS_DE_SEGUROS,
   GRUPO_PADRAO_DE_SEGUROS,
   GRUPO_VENCIDO,
+  gruposDaBarra,
 } from '../fonte/gruposDeSeguros';
 import { useLista } from '../lista/useLista';
 
-export const useListaDeSeguros = fonte => {
+export const useListaDeSeguros = (
+  fonte,
+  { grupoInicial = '', temporario = '' } = {}
+) => {
   const { t } = useI18n();
   const daLista = (chave, valores) =>
     t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`, valores);
@@ -24,21 +30,22 @@ export const useListaDeSeguros = fonte => {
   const lista = useLista({
     fonte,
     aba: ref(ABA_SEGUROS),
-    grupoPadrao: () => GRUPO_PADRAO_DE_SEGUROS,
+    grupoPadrao: () => grupoInicial || GRUPO_PADRAO_DE_SEGUROS,
     ordemPadrao: ORDENS_DE_SEGUROS.VENCE_PRIMEIRO,
     filtrosVazios: FILTROS_DE_SEGUROS_VAZIOS,
     contar: contarFiltrosDeSeguros,
   });
 
+  const daBarra = gruposDaBarra(temporario);
   const grupos = computed(() =>
-    GRUPOS_DE_SEGUROS.map(({ id, nome }) => ({
+    daBarra.map(({ id, nome }) => ({
       id,
       nome: t(nome),
       total: lista.contagens.value[id],
     }))
   );
   const explicacao = computed(() => {
-    const atual = GRUPOS_DE_SEGUROS.find(g => g.id === lista.grupo.value);
+    const atual = daBarra.find(g => g.id === lista.grupo.value);
     return atual?.explicacao ? t(atual.explicacao) : '';
   });
 

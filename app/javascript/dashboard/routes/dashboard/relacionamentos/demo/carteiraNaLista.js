@@ -27,7 +27,8 @@ export const carteiraNaLista = (agora = Date.now()) => {
   const de = pessoa => mapa.get(pessoa.id) ?? SEM_SEGURO;
   return {
     grupos: {
-      // Cancelado e vencido não contam.
+      // Só conta o seguro que ainda vale (ativo ou em renovação): o
+      // cancelado, o vencido e o renovado não contam.
       [GRUPO_SO_UM_SEGURO]: pessoa =>
         de(pessoa).filter(seguro => estaValendo(seguro, agora)).length === 1,
     },

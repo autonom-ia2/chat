@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -12,11 +12,17 @@ import EstadoSemResultado from '../lista/EstadoSemResultado.vue';
 import ListaDeLinhas from '../lista/ListaDeLinhas.vue';
 import MostrarMais from '../lista/MostrarMais.vue';
 import { ABA_SEGUROS, carteiraFonte } from '../../fonte/carteiraFonte';
-import { GRUPO_SEM_TELEFONE } from '../../fonte/gruposDeSeguros';
+import {
+  GRUPO_SEM_TELEFONE,
+  grupoConhecido,
+  grupoTemporario,
+} from '../../fonte/gruposDeSeguros';
 import { pecaPedida } from '../../fonte/modoCarteira';
+import { renovacoesFonte } from '../../fonte/renovacoesFonte';
 import { usePermissoesDaFicha } from '../../ficha/usePermissoesDaFicha';
 import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 import { useRolarPilula } from '../../lista/useRolarPilula';
+import { destinoDoCard } from '../../carteira/cardNoCrm';
 import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
 import { useListaDeSeguros } from '../../carteira/useListaDeSeguros';
 import ControlesDeSeguros from './ControlesDeSeguros.vue';
@@ -25,13 +31,8 @@ import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import HeroiDeSeguros from './HeroiDeSeguros.vue';
 import LinhaDeSeguro from './LinhaDeSeguro.vue';
 import SegurosDeExemplo from './SegurosDeExemplo.vue';
+import ConviteDasRenovacoes from './renovacao/ConviteDasRenovacoes.vue';
 
-// #2897 — a aba Seguros de Relacionamentos (`?aba=seguros`): herói com a frase
-// do dia, abas, grupos por vencimento, busca, ordem, "Mais filtros", um seguro
-// por linha e a gaveta do seguro (`?apolice=<id>`). Fala só com
-// `carteiraFonte`: fora da demonstração lê do servidor e grava nele. Quem não
-// pode ver os contatos lê só que não tem acesso. Quando a gaveta muda um
-// seguro, a lista relê o que está à vista sem voltar ao começo.
 const props = defineProps({
   demo: { type: String, default: null },
   // A conta tem a aba Empresas? (as abas mostram só as que existem)
@@ -40,8 +41,20 @@ const props = defineProps({
   // do botão "Trazer minha lista" da lista de pessoas; quem decide é a página).
   podeTrazer: { type: Boolean, default: false },
 });
+
 const emit = defineEmits(['trocarAba', 'trazer']);
 
+// #2897 — a aba Seguros de Relacionamentos (`?aba=seguros`): herói com a frase
+// do dia, abas, grupos por vencimento, busca, ordem, "Mais filtros", um seguro
+// por linha e a gaveta do seguro (`?apolice=<id>`). Fala só com
+// `carteiraFonte`: fora da demonstração lê do servidor e grava nele. Quem não
+// pode ver os contatos lê só que não tem acesso. Quando a gaveta muda um
+// seguro, a lista relê o que está à vista sem voltar ao começo.
+// #2898 — a renovação soma o grupo "Em renovação", os atalhos "Resultados" e
+// "Ajustar renovações" e, na conta que ainda não escolheu o funil das
+// renovações, o convite para escolher (só para quem pode mudar os ajustes). O
+// endereço pode pedir um grupo (`?grupo=<id>`): é assim que a tela de
+// resultados leva a "Não renovaram".
 const { t } = useI18n();
 const ca = chave => t(`RELACIONAMENTOS_CARTEIRA.LISTA.${chave}`);
 const route = useRoute();
@@ -50,9 +63,22 @@ const fonte = carteiraFonte({
   demo: props.demo,
   peca: pecaPedida(route.query),
 });
+const fonteDasRenovacoes = renovacoesFonte({
+  demo: props.demo,
+  peca: pecaPedida(route.query),
+});
 // Na demonstração tudo aparece, como na lista e na ficha.
 const permissoes = usePermissoesDaFicha();
 const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
+const podeExportar = computed(
+  () => fonte.usaDemo || permissoes.podeExportar.value
+);
+// Mudar onde ficam as renovações é de quem o servidor deixa: o atalho e o
+// convite só aparecem para essa pessoa.
+const podeAjustar = computed(
+  () => fonte.usaDemo || permissoes.podeAjustarRenovacoes.value
+);
+const grupoInicial = grupoConhecido(route.query.grupo);
 const {
   lista,
   grupos,
@@ -62,8 +88,26 @@ const {
   semResultado,
   semSeguros,
   avisoDaLista,
-} = useListaDeSeguros(fonte);
+} = useListaDeSeguros(fonte, {
+  grupoInicial,
+  temporario: grupoTemporario(grupoInicial)?.id ?? '',
+});
 const { apolice, abrir, fechar } = useApoliceNaUrl();
+// O endereço pediu outro grupo com a aba já aberta (o aviso do sino leva a
+// `?aba=seguros&grupo=em_renovacao`): a lista troca de grupo sem recarregar a
+// tela. Só vale o grupo que está na barra.
+watch(
+  () => route.query.grupo,
+  pedido => {
+    const pedidoDaBarra = grupos.value.find(item => item.id === pedido);
+    if (pedidoDaBarra) lista.escolherGrupo(pedidoDaBarra.id);
+  }
+);
+
+const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
+const ajustarRenovacoes = () =>
+  router.push({ name: 'relacionamentos_renovacoes' });
+const abrirCard = cardId => router.push(destinoDoCard(cardId, fonte.usaDemo));
 
 const abrirSegurado = ({ tipo, id }) =>
   router.push(
@@ -73,7 +117,7 @@ const abrirSegurado = ({ tipo, id }) =>
   );
 
 const gavetaDeFiltros = ref(false);
-const opcoesDeFiltro = ref({ tipos: [], seguradoras: [] });
+const opcoesDeFiltro = ref({ tipos: [], seguradoras: [], cuida: [] });
 const abrirFiltros = async () => {
   gavetaDeFiltros.value = true;
   try {
@@ -145,6 +189,11 @@ onMounted(lista.iniciar);
           </div>
           <SegurosDeExemplo v-else-if="semSeguros" />
           <template v-else>
+            <ConviteDasRenovacoes
+              v-if="podeAjustar"
+              :fonte="fonteDasRenovacoes"
+              @escolher="ajustarRenovacoes"
+            />
             <div data-carteira="grupos" class="flex flex-col">
               <PilulasDeGrupo
                 :grupos="grupos"
@@ -164,6 +213,9 @@ onMounted(lista.iniciar);
               :busca="lista.busca.value"
               :ordem="lista.ordem.value"
               :filtros-ativos="lista.filtrosAtivos.value"
+              :pode-ajustar="podeAjustar"
+              @resultados="verResultados"
+              @ajustar="ajustarRenovacoes"
               @update:busca="lista.mudarBusca"
               @update:ordem="lista.mudarOrdem"
               @abrir-filtros="abrirFiltros"
@@ -220,9 +272,11 @@ onMounted(lista.iniciar);
       :apolice-id="apolice"
       :fonte="fonte"
       :pode-editar="podeEditar"
+      :pode-exportar="podeExportar"
       @fechar="fechar"
       @mudou="lista.atualizar"
       @abrir-segurado="abrirSegurado"
+      @abrir-card="abrirCard"
     />
   </main>
 </template>

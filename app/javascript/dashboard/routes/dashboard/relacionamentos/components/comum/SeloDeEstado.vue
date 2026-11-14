@@ -5,14 +5,21 @@
 // #2897 — três tons só de cor, sem ícone, para os selos da carteira de
 // seguros: verde (ativo), âmbar (ativo que vence logo) e vermelho (vencido). O
 // cancelado usa o neutro.
+// #2898 — azul para o seguro em renovação.
 defineProps({
   tom: {
     type: String,
     default: 'neutro',
     validator: valor =>
-      ['cliente', 'alerta', 'neutro', 'verde', 'ambar', 'vermelho'].includes(
-        valor
-      ),
+      [
+        'cliente',
+        'alerta',
+        'neutro',
+        'verde',
+        'ambar',
+        'vermelho',
+        'azul',
+      ].includes(valor),
   },
 });
 
@@ -23,6 +30,7 @@ const ESTILOS = {
   verde: 'bg-n-teal-3 text-n-teal-11',
   ambar: 'bg-n-amber-3 text-n-amber-11',
   vermelho: 'bg-n-ruby-3 text-n-ruby-11',
+  azul: 'bg-n-blue-3 text-n-blue-11',
 };
 const ICONES = {
   cliente: 'i-lucide-badge-check',

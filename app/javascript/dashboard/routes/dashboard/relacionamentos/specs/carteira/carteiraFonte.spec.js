@@ -66,7 +66,11 @@ describe('escolha da fonte', () => {
 
   it('a aba Seguros tem nome e os filtros nascem vazios', () => {
     expect(ABA_SEGUROS).toBe('seguros');
-    expect(FILTROS_DE_SEGUROS_VAZIOS).toEqual({ tipo: '', seguradora: '' });
+    expect(FILTROS_DE_SEGUROS_VAZIOS).toEqual({
+      tipo: '',
+      seguradora: '',
+      cuida: '',
+    });
   });
 
   it('conta os filtros preenchidos', () => {
@@ -467,6 +471,97 @@ describe('escritas (só na memória)', () => {
   });
 });
 
+// A renovação na carteira fictícia segue o servidor (#2898): o formato do
+// seguro, os passos da história e o que cada escrita deixa para trás.
+describe('a renovação na demonstração, como o servidor', () => {
+  // Na carteira fictícia (demo/carteira.js): um seguro com a renovação aberta.
+  const ABERTA = 104;
+  const tipos = historia => historia.map(passo => passo.tipo);
+
+  it('a renovação aberta traz quem cuida, com o id, e a história conta com quem começou', async () => {
+    const seguro = await fonte().seguro(ABERTA);
+    const historia = await fonte().historia(ABERTA);
+
+    expect(seguro.renovacao).toMatchObject({
+      desfecho: null,
+      cuida: 'Caio Montenegro',
+      cuidaId: 2,
+    });
+    expect(tipos(historia)).toEqual([
+      'renovacao_card_nasceu',
+      'chegou_planilha',
+    ]);
+    expect(historia[0].valores).toEqual({ cuida: 'Caio Montenegro' });
+  });
+
+  it('desfazer não apaga a história: soma o passo do que foi desfeito', async () => {
+    await fonte().renovou(ABERTA);
+
+    const desfeito = await fonte().desfazerDesfecho(ABERTA);
+
+    expect(seloDoSeguro(desfeito)).toBe(SELOS.EM_RENOVACAO);
+    expect(desfeito.renovacao.desfecho).toBeNull();
+    const historia = await fonte().historia(ABERTA);
+    expect(tipos(historia).slice(0, 3)).toEqual([
+      'desfez_desfecho',
+      'renovou',
+      'renovacao_card_nasceu',
+    ]);
+    expect(historia[0].valores).toEqual({ anterior: 'renovou' });
+  });
+
+  it('cancelar com a renovação aberta fecha como "não renovou", com o motivo "cancelou"', async () => {
+    const cancelado = await fonte().cancelar(ABERTA);
+
+    expect(seloDoSeguro(cancelado)).toBe(SELOS.CANCELADO);
+    expect(cancelado.renovacao.desfecho).toBe('nao_renovou');
+    expect(cancelado.motivo).toBe('cancelou');
+    const historia = await fonte().historia(ABERTA);
+    expect(tipos(historia).slice(0, 2)).toEqual(['nao_renovou', 'cancelado']);
+    expect(historia[0].valores).toEqual({ motivo: 'cancelou' });
+
+    // Desfazer o cancelamento não reabre a renovação.
+    const ativo = await fonte().voltarAAtivo(ABERTA);
+    expect(ativo.renovacao.desfecho).toBe('nao_renovou');
+  });
+
+  it('dizer o motivo depois completa o passo que já existia, sem criar outro', async () => {
+    const semMotivo = await fonte().naoRenovou(ABERTA, {});
+    expect(semMotivo.motivo).toBeNull();
+
+    const comMotivo = await fonte().naoRenovou(ABERTA, {
+      motivo: 'outro',
+      texto: 'Mudou de cidade',
+    });
+
+    expect(comMotivo).toMatchObject({
+      motivo: 'outro',
+      motivoEscrito: 'Mudou de cidade',
+    });
+    const historia = await fonte().historia(ABERTA);
+    expect(tipos(historia).slice(0, 2)).toEqual([
+      'nao_renovou_outro',
+      'renovacao_card_nasceu',
+    ]);
+    expect(historia[0].valores).toEqual({ texto: 'Mudou de cidade' });
+  });
+
+  it('as opções de filtro trazem quem cuida de alguma renovação, pelo nome', async () => {
+    expect((await fonte().opcoesDeFiltro()).cuida).toEqual([
+      { id: 1, nome: 'Bia Lunardelli' },
+      { id: 2, nome: 'Caio Montenegro' },
+    ]);
+  });
+
+  it('o filtro "quem cuida" deixa só os seguros de quem cuida', async () => {
+    const dele = await todasAsPaginas({ filtros: { cuida: 2 } });
+
+    expect(dele.length).toBeGreaterThan(0);
+    expect(dele.every(seguro => seguro.renovacao?.cuidaId === 2)).toBe(true);
+    expect(dele.length).toBeLessThan(await total({}));
+  });
+});
+
 describe('estados da demonstração', () => {
   it.each(['vazio', 'sem-seguros', 'fora-do-segmento'])(
     '%s não tem seguro nenhum',
@@ -481,6 +576,7 @@ describe('estados da demonstração', () => {
       expect(await fonte(estado).opcoesDeFiltro()).toEqual({
         tipos: [],
         seguradoras: [],
+        cuida: [],
       });
       await expect(fonte(estado).seguro(SEGURO_COM_PDF)).rejects.toMatchObject({
         name: NAO_ACHEI,

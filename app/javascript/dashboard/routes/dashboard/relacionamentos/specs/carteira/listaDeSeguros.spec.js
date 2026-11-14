@@ -46,6 +46,8 @@ const permissoes = vi.hoisted(() => ({ podeEditar: true }));
 vi.mock('../../ficha/usePermissoesDaFicha', () => ({
   usePermissoesDaFicha: () => ({
     podeEditar: { value: permissoes.podeEditar },
+    podeExportar: { value: false },
+    podeAjustarRenovacoes: { value: false },
   }),
 }));
 vi.mock('vue-router', async () => {

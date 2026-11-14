@@ -59,6 +59,10 @@ const fonte = fichaFonte({ demo });
 const comSeguros = useContaDeSeguros(demo);
 // Na demonstração tudo aparece, como na lista: é o desenho inteiro da tela.
 const podeEditar = computed(() => fonte.usaDemo || permissoes.podeEditar.value);
+// #2898 — "Exportar" no histórico do seguro: quem pode exportar contatos.
+const podeExportar = computed(
+  () => fonte.usaDemo || permissoes.podeExportar.value
+);
 const id = computed(() => Number(route.params?.companyId));
 const ficha = useFichaDaEmpresa(fonte, id);
 const agora = Date.now();
@@ -213,6 +217,7 @@ watch(
                 :dono-id="id"
                 :demo="demo"
                 :pode-editar="podeEditar"
+                :pode-exportar="podeExportar"
                 :agora="agora"
                 @abrir-segurado="abrirSegurado"
               />
