@@ -78,10 +78,13 @@ class Whatsapp::Templates::MetaClient
   end
 
   # Edita componentes ou validade (a Meta não deixa mudar nome nem idioma; a categoria o produto não muda, #1394). Volta para análise na Meta.
+  # O formato de variável vai junto, igual ao que o modelo já tem na Meta: sem ele, `{{nome}}` é lido como
+  # variável com número e a edição é recusada sem motivo (#3013). O formato do pedido não vale: a Meta não muda.
   def update(template_id, name, body)
-    ensure_owned!(template_id, name)
+    remote = ensure_owned!(template_id, name)
     body = body.to_h.deep_stringify_keys.slice(*EDIT_KEYS)
     body['components'] = sanitize_components(body['components']) if body.key?('components')
+    body['parameter_format'] = remote['parameter_format'] if remote['parameter_format'].present?
     with_retry do
       response = HTTParty.post(graph_url(template_id.to_s), headers: bearer_headers, body: body.to_json, timeout: REQUEST_TIMEOUT)
       next true if response.success?
