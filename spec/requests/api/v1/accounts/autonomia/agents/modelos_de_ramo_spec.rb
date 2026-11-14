@@ -65,7 +65,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     end
 
     it 'deixa ler quem tem a função de ver os agentes e recusa o agente comum' do
-      expect(listar(com_funcao(%w[autonomia_view]))['modelos'].size).to eq(3)
+      expect(listar(com_funcao(%w[autonomia_view]))['modelos'].size).to eq(4)
 
       listar(create(:user, account: account, role: :agent))
       expect(response).to have_http_status(:unauthorized)
