@@ -2,8 +2,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { PERGUNTA_SEGUROS } from '../../../carteira/segurosDaPlanilha';
 import { PASSOS } from '../../../carteira/useTrazerSeguros';
+import { ETAPAS } from '../../../trazer/etapas';
 import { ERROS } from '../../../trazer/falhasDaTela';
-import ComoTrazer from './ComoTrazer.vue';
 import ConferirSeguros from './ConferirSeguros.vue';
 import PerguntaDeSeguros from './PerguntaDeSeguros.vue';
 import ProntoDeSeguros from './ProntoDeSeguros.vue';
@@ -11,8 +11,9 @@ import ProntoDeSeguros from './ProntoDeSeguros.vue';
 // #2897 — as telas que "Trazer minha lista" ganha na conta que tem a carteira
 // de seguros. A página (pages/TrazerListaPage.vue) só baixa esta peça nessa
 // conta, e só a mostra nos momentos em que a tela é a da carteira
-// (carteira/useTrazerSeguros.js, `passo`): escolher como trazer, a pergunta
-// "Esta planilha tem seguros?", o Conferir com seguros e o fim.
+// (carteira/useTrazerSeguros.js, `passo`): a pergunta "Esta planilha tem
+// seguros?", o Conferir com seguros (que continua na tela enquanto a lista é
+// trazida) e o fim.
 // `tela` é o estado de "Trazer minha lista" (trazer/useTrazerLista.js) e
 // `carteira`, o que a carteira pede a mais: os dois chegam inteiros, como a
 // página os tem.
@@ -25,23 +26,19 @@ const emit = defineEmits(['ver', 'outra']);
 const raiz = ref(null);
 const passo = computed(() => props.carteira.passo.value);
 
-// A página leva o foco ao título de cada tela nova, mas esta peça chega depois
-// (ela é baixada à parte): na primeira vez o foco é por conta dela. A escolha
-// de como trazer é a tela em que a pessoa entra: ali o foco fica onde está.
+const trazendo = computed(() => props.tela.etapa.value === ETAPAS.TRAZENDO);
+
+// A página leva o foco ao título de cada tela nova; na primeira vez que esta
+// peça aparece, o foco é por conta dela.
 onMounted(() => {
-  if (passo.value === PASSOS.COMO) return;
   raiz.value?.querySelector('[data-titulo-da-tela]')?.focus();
 });
 </script>
 
 <template>
   <div ref="raiz" data-carteira="trazer-seguros-tela" :data-passo="passo">
-    <ComoTrazer
-      v-if="passo === PASSOS.COMO"
-      @planilha="carteira.escolherPlanilha"
-    />
     <PerguntaDeSeguros
-      v-else-if="passo === PASSOS.PERGUNTA"
+      v-if="passo === PASSOS.PERGUNTA"
       :resposta="tela.respostas.value[PERGUNTA_SEGUROS] ?? ''"
       :ocupado="tela.ocupado.value"
       :relendo="tela.relendo.value"
@@ -61,12 +58,16 @@ onMounted(() => {
       :faltam-carregar="tela.faltamCarregar.value"
       :carregando-mais="tela.carregandoMais.value"
       :erro-do-mais="tela.erroDoMais.value"
-      :faltam="carteira.faltam.value"
-      :pedidos="carteira.pedidosComFalta.value"
+      :conferindo="carteira.conferindo.value"
+      :erro-ao-conferir="carteira.erroAoConferir.value"
+      :trazendo="trazendo"
+      :porcentagem="tela.porcentagem.value"
+      :erro-no-andamento="tela.erro.value === ERROS.ANDAMENTO"
       @guardar="tela.guardar"
       @deixar-de-fora="tela.deixarDeFora"
       @reabrir="tela.reabrir"
       @trocar="tela.trocarDestino"
+      @confirmar="carteira.confirmarColunas"
       @mostrar-mais="tela.mostrarMais"
       @trazer="carteira.trazer"
       @escolher-outra="emit('outra')"

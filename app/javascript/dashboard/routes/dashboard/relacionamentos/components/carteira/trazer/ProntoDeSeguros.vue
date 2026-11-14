@@ -2,6 +2,10 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import {
+  BOTAO_DISCRETO_DO_HEROI,
+  BOTAO_PRINCIPAL_DO_HEROI,
+} from '../../../carteira/botoesDoHeroi';
 import HeroiEscuro from '../../comum/HeroiEscuro.vue';
 
 // #2897 — o fim, na lista que trouxe seguros: "164 seguros chegaram, de 118
@@ -49,14 +53,14 @@ const novas = computed(() => props.chegaram.pessoasNovas ?? 0);
       <Button
         size="lg"
         data-carteira="ver-os-seguros"
-        class="!bg-white !text-n-heroi font-semibold hover:enabled:!bg-white/90 focus-visible:!outline-white"
+        :class="BOTAO_PRINCIPAL_DO_HEROI"
         :label="t(`${BASE}.VER`)"
         @click="emit('ver')"
       />
       <Button
         size="lg"
         data-carteira="trazer-outra"
-        class="!bg-white/10 !text-white/90 !outline-white/20 hover:enabled:!bg-white/20 focus-visible:!outline-white"
+        :class="BOTAO_DISCRETO_DO_HEROI"
         :label="t('RELACIONAMENTOS_TRAZER.PRONTO.OUTRA')"
         @click="emit('outra')"
       />

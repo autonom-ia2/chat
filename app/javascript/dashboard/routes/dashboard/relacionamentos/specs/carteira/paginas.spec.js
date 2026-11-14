@@ -280,7 +280,10 @@ describe('a aba Seguros na lista de Relacionamentos', () => {
     expect(w.find(daCarteira('heroi')).exists()).toBe(false);
   });
 
-  it('a aba Seguros oferece trazer seguros, e o botão leva a "Trazer minha lista"', async () => {
+  // Na demonstração todo mundo pode trazer lista. Fora dela quem decide é a
+  // permissão: com ela e sem ela, em listaDeSeguros.spec.js ("fora da
+  // demonstração") e em trazerNoHeroi.spec.js.
+  it('na demonstração, o botão de trazer seguros da aba leva a "Trazer minha lista"', async () => {
     const w = await abrirLista('cheio', { aba: 'seguros' });
 
     expect(w.get(daCarteira('heroi-trazer')).text()).toBe('Trazer seguros');

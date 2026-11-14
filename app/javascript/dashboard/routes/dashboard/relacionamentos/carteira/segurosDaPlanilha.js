@@ -58,62 +58,103 @@ export const destinosDeSeguro = leitura =>
     .map(destino => ({ value: destino, chave: chaveDoDestino(destino) }));
 
 // Onde está cada coisa do seguro, antes de as linhas serem conferidas:
-// `[{ destino, chave, situacao, coluna, nome }]`, na ordem do servidor.
-//   - CONFIRMADA: a pessoa já deu o destino a uma coluna;
-//   - SUGERIDA: o servidor sugere a coluna e a pessoa ainda não confirmou;
-//   - FALTA: obrigatório sem coluna e sem sugestão (a pessoa aponta à mão).
-// O destino que não é obrigatório e não tem coluna nem sugestão não aparece.
+// `[{ destino, chave, obrigatorio, situacao, coluna }]`, na ordem do servidor.
+// `mexidas` é o que a pessoa escolheu na tela e ainda não confirmou
+// (`{ destino: índice da coluna }`; nulo: ela deu a coluna a outro destino).
+//   - CONFIRMADA: o servidor já guarda a coluna deste destino;
+//   - ESCOLHIDA: a pessoa apontou a coluna agora, e falta confirmar;
+//   - SUGERIDA: o servidor sugere a coluna, e falta confirmar;
+//   - FALTA: obrigatório sem coluna (a pessoa aponta à mão);
+//   - OPCIONAL: não é obrigatório e não tem coluna (a planilha pode não ter).
 export const SITUACAO_DA_COLUNA = {
   CONFIRMADA: 'confirmada',
+  ESCOLHIDA: 'escolhida',
   SUGERIDA: 'sugerida',
   FALTA: 'falta',
+  OPCIONAL: 'opcional',
 };
 
-const colunaDoDestino = (leitura, destino) => {
+const DESTINO_LIVRE = 'informacao';
+
+const colunaDoDestino = (leitura, destino, mexidas) => {
   const colunas = leitura?.colunas ?? [];
+  const existe = indice => colunas.some(coluna => coluna.indice === indice);
   const confirmada = colunas.find(coluna => coluna.destino === destino);
+  if (destino in mexidas && mexidas[destino] !== confirmada?.indice) {
+    return existe(mexidas[destino])
+      ? { situacao: SITUACAO_DA_COLUNA.ESCOLHIDA, coluna: mexidas[destino] }
+      : null;
+  }
   if (confirmada) {
-    return { situacao: SITUACAO_DA_COLUNA.CONFIRMADA, coluna: confirmada };
+    return {
+      situacao: SITUACAO_DA_COLUNA.CONFIRMADA,
+      coluna: confirmada.indice,
+    };
   }
-  const indice = leitura?.seguros?.sugestao?.[destino];
-  const sugerida = colunas.find(coluna => coluna.indice === indice);
-  if (sugerida) {
-    return { situacao: SITUACAO_DA_COLUNA.SUGERIDA, coluna: sugerida };
-  }
-  return (leitura?.seguros?.obrigatorios ?? []).includes(destino)
-    ? { situacao: SITUACAO_DA_COLUNA.FALTA, coluna: null }
+  const sugerida = leitura?.seguros?.sugestao?.[destino];
+  // A coluna sugerida que a pessoa já deu a outro destino não é sugerida de novo.
+  const tomada = Object.values(mexidas).includes(sugerida);
+  return existe(sugerida) && !tomada
+    ? { situacao: SITUACAO_DA_COLUNA.SUGERIDA, coluna: sugerida }
     : null;
 };
 
-export const colunasDosSeguros = leitura =>
-  destinosDeSeguro(leitura)
-    .map(({ value: destino, chave }) => {
-      const achada = colunaDoDestino(leitura, destino);
-      return (
-        achada && {
-          destino,
-          chave,
-          situacao: achada.situacao,
-          coluna: achada.coluna?.indice ?? null,
-          nome: achada.coluna?.nome ?? '',
-        }
-      );
-    })
-    .filter(Boolean);
-
-// As colunas sugeridas que a pessoa confirma de uma vez: `[{ destino, coluna }]`
-// na ordem em que vão ao servidor, os destinos que não são obrigatórios
-// primeiro e os obrigatórios por último. Só a confirmação que completa os
-// obrigatórios faz a planilha ser lida de novo: assim ela é lida uma vez só.
-export const sugestoesParaConfirmar = leitura => {
+export const colunasDosSeguros = (leitura, mexidas = {}) => {
   const obrigatorios = leitura?.seguros?.obrigatorios ?? [];
-  const sugeridas = colunasDosSeguros(leitura).filter(
-    ({ situacao }) => situacao === SITUACAO_DA_COLUNA.SUGERIDA
+  return destinosDeSeguro(leitura).map(({ value: destino, chave }) => {
+    const obrigatorio = obrigatorios.includes(destino);
+    const semColuna = obrigatorio
+      ? SITUACAO_DA_COLUNA.FALTA
+      : SITUACAO_DA_COLUNA.OPCIONAL;
+    const achada = colunaDoDestino(leitura, destino, mexidas);
+    return {
+      destino,
+      chave,
+      obrigatorio,
+      situacao: achada?.situacao ?? semColuna,
+      coluna: achada?.coluna ?? null,
+    };
+  });
+};
+
+// As colunas que a pessoa pode apontar para um destino de seguro: as que ainda
+// são só informação da pessoa e as que já são de algum destino de seguro. A
+// coluna do nome, do telefone, do e-mail ou da empresa não é oferecida.
+export const colunasQueServem = leitura => {
+  const deSeguro = leitura?.seguros?.destinos ?? [];
+  return (leitura?.colunas ?? []).filter(
+    ({ destino }) => destino === DESTINO_LIVRE || deSeguro.includes(destino)
   );
-  const ehObrigatorio = ({ destino }) => obrigatorios.includes(destino);
+};
+
+// A pessoa apontou `coluna` para `destino`: o destino que tinha essa coluna na
+// tela fica sem coluna (cada coluna guarda uma coisa só, como no servidor).
+export const comAEscolhaDaColuna = (leitura, mexidas, destino, coluna) => {
+  const outros = colunasDosSeguros(leitura, mexidas)
+    .filter(linha => linha.destino !== destino && linha.coluna === coluna)
+    .map(linha => [linha.destino, null]);
+  return { ...mexidas, ...Object.fromEntries(outros), [destino]: coluna };
+};
+
+// Os obrigatórios que ainda não têm coluna na tela.
+export const obrigatoriosSemColuna = linhas =>
+  linhas
+    .filter(({ situacao }) => situacao === SITUACAO_DA_COLUNA.FALTA)
+    .map(({ destino }) => destino);
+
+// O que "Está certo" manda ao servidor: `[{ destino, coluna }]` das colunas
+// que estão na tela e o servidor ainda não guarda, os destinos que não são
+// obrigatórios primeiro e os obrigatórios por último. Só a confirmação que
+// completa os obrigatórios faz a planilha ser lida de novo: assim ela é lida
+// uma vez só.
+export const colunasParaConfirmar = linhas => {
+  const pendentes = linhas.filter(
+    ({ situacao, coluna }) =>
+      coluna !== null && situacao !== SITUACAO_DA_COLUNA.CONFIRMADA
+  );
   return [
-    ...sugeridas.filter(sugerida => !ehObrigatorio(sugerida)),
-    ...sugeridas.filter(ehObrigatorio),
+    ...pendentes.filter(({ obrigatorio }) => !obrigatorio),
+    ...pendentes.filter(({ obrigatorio }) => obrigatorio),
   ].map(({ destino, coluna }) => ({ destino, coluna }));
 };
 

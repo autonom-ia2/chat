@@ -6,6 +6,8 @@ import { useI18n } from 'vue-i18n';
 // vem com a palavra dele ("3 linhas precisam de você", "7 pessoas novas"):
 // número sozinho não diz se conta seguros ou pessoas. Contador zerado não vem
 // (carteira/segurosDaPlanilha.js). "Precisam de você" leva à lista das linhas.
+// Em tela estreita são duas colunas, quantos forem os contadores: três
+// espremem os rótulos longos a 390 px.
 const props = defineProps({
   // `[{ chave, count }]`
   contadores: { type: Array, required: true },
@@ -15,7 +17,6 @@ const emit = defineEmits(['precisam']);
 const { t } = useI18n();
 const BASE = 'RELACIONAMENTOS_CARTEIRA.TRAZER.CONFERIR.CONTADOR';
 const QUE_LEVA_AS_LINHAS = 'PRECISAM';
-const QUATRO = 4;
 
 const itens = computed(() =>
   props.contadores.map(({ chave, count }) => {
@@ -36,8 +37,7 @@ const itens = computed(() =>
     data-carteira="contadores-dos-seguros"
     aria-live="polite"
     :aria-label="t(`${BASE}.LISTA`)"
-    class="grid p-0 m-0 list-none gap-x-6 gap-y-4 md:flex md:flex-wrap md:gap-x-10"
-    :class="itens.length === QUATRO ? 'grid-cols-2' : 'grid-cols-3'"
+    class="grid grid-cols-2 p-0 m-0 list-none gap-x-6 gap-y-4 md:flex md:flex-wrap md:gap-x-10"
   >
     <li v-for="item in itens" :key="item.chave" :data-contador="item.chave">
       <component

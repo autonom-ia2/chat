@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import TrazerAPI from 'dashboard/api/relacionamentosTrazer';
 import { doServidor } from './doServidor';
 import {
@@ -77,17 +78,18 @@ export const contasDosSeguros = andamento =>
     : null;
 
 // A tela das listas só lê do andamento a barra e a situação: o que chegou de
-// seguros fica guardado aqui, para a tela da carteira dizer no fim.
+// seguros fica guardado aqui, para a tela da carteira dizer no fim. É um `ref`:
+// quem lê `chegaram()` dentro de um `computed` é avisado quando a conta chega.
 const lembrandoOQueChegou = fonte => {
-  let ultimas = null;
+  const ultimas = ref(null);
   return {
     ...fonte,
     async andamento(trazidaId) {
       const andamento = await fonte.andamento(trazidaId);
-      ultimas = contasDosSeguros(andamento);
+      ultimas.value = contasDosSeguros(andamento);
       return andamento;
     },
-    chegaram: () => (ultimas ? { ...ultimas } : null),
+    chegaram: () => (ultimas.value ? { ...ultimas.value } : null),
   };
 };
 
@@ -307,26 +309,28 @@ const fonteDeDemonstracao = ({ estado, listas, carregarDemo }) => {
       const daDemo = await dados();
       const { demo } = daDemo;
       const { base, seguros } = guardadaDe(daDemo, id);
-      const daCarteira = Boolean(seguros.destinos[coluna]);
+      const agora = demo.comSeguros(base, seguros);
+      const conhecida = agora.colunas.some(({ indice }) => indice === coluna);
       const dasPessoas = base.colunas.some(({ indice }) => indice === coluna);
+      // A coluna que só existe na planilha de seguros da demonstração.
+      const soDaCarteira = conhecida && !dasPessoas;
       const trocar = () =>
         comOsSeguros(id, guardada =>
           demo.comODestino(guardada.seguros, coluna, destino)
         );
       if (demo.ehDestinoDeSeguro(destino)) {
-        const conhecida = daCarteira || dasPessoas;
         if (seguros.resposta !== TEM_SEGUROS || !conhecida) {
           throw telaDesatualizada();
         }
-        const faltava = destinosQueFaltam(demo.comSeguros(base, seguros));
+        const faltava = destinosQueFaltam(agora);
         const leitura = await trocar();
         const completou =
           faltava.length > 0 && destinosQueFaltam(leitura).length === 0;
         return completou ? marcador(id) : leitura;
       }
-      if (daCarteira && !dasPessoas) return trocar();
+      if (soDaCarteira) return trocar();
       const resultado = await listas.trocarDestino(id, coluna, destino, campo);
-      if (daCarteira) {
+      if (seguros.destinos[coluna]) {
         await comOsSeguros(id, guardada =>
           demo.semODestino(guardada.seguros, coluna)
         );

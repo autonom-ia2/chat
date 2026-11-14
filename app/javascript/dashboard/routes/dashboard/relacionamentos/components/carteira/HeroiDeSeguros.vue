@@ -3,6 +3,10 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import HeroiEscuro from '../comum/HeroiEscuro.vue';
+import {
+  BOTAO_DISCRETO_DO_HEROI as DISCRETO,
+  BOTAO_PRINCIPAL_DO_HEROI as PRINCIPAL,
+} from '../../carteira/botoesDoHeroi';
 import { fraseDoHeroiDeSeguros } from '../../carteira/fraseDoHeroiDeSeguros';
 
 // #2897 — o herói da aba Seguros: a frase do dia (escolhida por
@@ -20,10 +24,6 @@ const props = defineProps({
 const emit = defineEmits(['verGrupo', 'trazer']);
 
 const { t } = useI18n();
-const PRINCIPAL =
-  '!bg-white !text-n-heroi font-semibold hover:enabled:!bg-white/90 focus-visible:!bg-white/90 focus-visible:!outline-white dark:!bg-white dark:!text-n-heroi';
-const DISCRETO =
-  '!bg-white/10 !text-white/90 !outline-white/20 hover:enabled:!bg-white/20 focus-visible:!outline-white';
 
 const frase = computed(() =>
   fraseDoHeroiDeSeguros(props.resumo, props.vencidos)

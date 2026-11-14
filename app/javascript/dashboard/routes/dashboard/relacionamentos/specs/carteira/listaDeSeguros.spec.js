@@ -457,6 +457,27 @@ describe('fora da demonstração (o servidor)', () => {
     SegurosAPI.historia.mockResolvedValue({ data: [] });
   };
 
+  // Na demonstração todo mundo pode trazer; aqui quem decide é a permissão.
+  it('oferece trazer seguros a quem pode trazer lista', async () => {
+    servidorResponde();
+    const w = await abrir({ demo: null, podeTrazer: true });
+
+    expect(textoDe(w, daCarteira('heroi-trazer'))).toBe('Trazer seguros');
+
+    await clicar(w, daCarteira('heroi-trazer'));
+
+    expect(w.emitted('trazer')).toHaveLength(1);
+  });
+
+  it('não oferece trazer seguros a quem não pode trazer lista', async () => {
+    servidorResponde();
+    const w = await abrir({ demo: null, podeTrazer: false });
+
+    expect(nomes(w)).toEqual(['Ana Albuquerino']);
+    expect(w.find(daCarteira('heroi-trazer')).exists()).toBe(false);
+    expect(w.text()).not.toContain('Trazer seguros');
+  });
+
   it('lê do servidor e escreve a linha com o selo e os dias que ele mandou', async () => {
     servidorResponde();
     const w = await abrir({ demo: null });

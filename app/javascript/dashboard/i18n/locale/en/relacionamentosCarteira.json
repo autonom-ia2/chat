@@ -289,11 +289,6 @@
     "TRAZER": {
       "BOTAO": "Bring policies",
       "BOTAO_VAZIO": "Bring my policies",
-      "COMO": {
-        "TITULO": "How do you want to bring the people and the policies?",
-        "PLANILHA": "Spreadsheet",
-        "PLANILHA_APOIO": "Excel or CSV, with the policies or only the people."
-      },
       "PERGUNTA": {
         "TITULO": "Does this spreadsheet have policies?",
         "APOIO": "If it does, each policy comes in together with the person who owns it.",
@@ -311,11 +306,25 @@
         "BEM": "What is insured"
       },
       "COLUNAS": {
+        "TITULO_SUGERIDO": "I found the policies in your spreadsheet. Is this right?",
+        "APOIO_SUGERIDO": "See in which column of the spreadsheet I found each thing. If one is wrong, change it. If everything is right, tap “That's right”.",
         "TITULO": "Tell me where the policies are",
-        "APOIO": "To bring the policies, I need to know which column of the spreadsheet holds each of these. Choose in the list below what each column holds.",
-        "LISTA": "What is still missing",
+        "APOIO": "To bring the policies, I need to know which column of the spreadsheet holds each of these things. Choose the column for each one and tap “That's right”.",
+        "LISTA": "Where each part of the policy is",
+        "ESCOLHER": "Spreadsheet column with: {destino}",
+        "ESCOLHA": "Choose the column",
+        "COLUNA_SEM_NOME": "Column {numero}",
+        "SITUACAO": {
+          "CERTA": "Already saved.",
+          "ESCOLHIDA": "You chose this one.",
+          "SUGERIDA": "This is the column I found. Please check.",
+          "FALTA": "I did not find it. Choose the column.",
+          "OPCIONAL": "I did not find it. If the spreadsheet does not have it, you can leave it like this."
+        },
         "FALTA": "You still need to choose the column for: {lista}.",
-        "TRAZER": "Bring the policies"
+        "CERTO": "That's right",
+        "GUARDANDO": "Saving the columns…",
+        "ERRO": "I could not save all the columns. What worked is already saved."
       },
       "CONFERIR": {
         "ACHEI": "I found {count} policy | I found {count} policies",
@@ -337,7 +346,9 @@
         "RAMO": "in the spreadsheet: {ramo}",
         "SEM_SEGUROS": "No policy in this spreadsheet can come in as it is.",
         "TRAZER": "Bring {count} policy | Bring {count} policies",
-        "TRAZER_DE": "from {count} person | from {count} people"
+        "TRAZER_DE": "from {count} person | from {count} people",
+        "CANCELADOS": "{count} policy in this spreadsheet is cancelled here and stays as it is. | {count} policies in this spreadsheet are cancelled here and stay as they are.",
+        "TRAZENDO": "Bringing the policies… {porcentagem}%."
       },
       "PRECISAM": {
         "QUEM_SEM_NOME": "Row {linha}",
@@ -345,7 +356,7 @@
         "FICAR_COM_ESTE": "Keep this one",
         "PROBLEMA": {
           "NUMERO": "{quem}: the policy number is missing.",
-          "NUMERO_ESTRAGADO": "{quem}: the policy number came damaged from the spreadsheet. In Excel, set that column as text before saving.",
+          "NUMERO_ESTRAGADO": "{quem}: the policy number came damaged from the spreadsheet, with letters and signs in place of the digits. Write the right number in the spreadsheet and bring it again.",
           "NUMERO_COM_PROBLEMA": "{quem}: the policy number needs fixing in the spreadsheet.",
           "SEGURADORA": "{quem}: the insurer is missing.",
           "TERMINA": "{quem}: the date the policy ends is missing.",
@@ -365,6 +376,15 @@
         "DE_PESSOAS": "from {count} person. | from {count} people.",
         "PESSOAS_NOVAS": "{count} person is new here. | {count} people are new here.",
         "VER": "See the policies"
+      },
+      "MUDANCA_DESFEITA": "I did not make that change: with it I could not read the spreadsheet. I left it as it was. Check that the column you chose really has what you said. For example: the column for when the policy ends must have dates.",
+      "DESFAZER": {
+        "SAEM": "{count} policy leaves the portfolio | {count} policies leave the portfolio",
+        "SAEM_PORQUE": "It came in this list and nobody touched it afterwards. | They came in this list and nobody touched them afterwards.",
+        "FICAM": "{count} policy stays in the portfolio | {count} policies stay in the portfolio",
+        "FICAM_PORQUE": "Someone already corrected it, saved its PDF or is working on its renewal. | Someone already corrected them, saved their PDF or is working on their renewal.",
+        "VOLTAM": "{count} policy goes back to how it was | {count} policies go back to how they were",
+        "VOLTAM_PORQUE": "It was already here. Only what this list changed in it is removed. | They were already here. Only what this list changed in them is removed."
       }
     }
   }

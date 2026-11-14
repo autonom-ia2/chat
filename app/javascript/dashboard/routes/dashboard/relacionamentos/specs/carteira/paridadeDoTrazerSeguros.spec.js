@@ -5,6 +5,10 @@ import {
   trazerSegurosFonte,
 } from '../../fonte/trazerSegurosFonte';
 import {
+  colunasDosSeguros,
+  colunasParaConfirmar,
+} from '../../carteira/segurosDaPlanilha';
+import {
   LENDO,
   PLANILHA,
   erroHttp,
@@ -42,6 +46,7 @@ const DESTINOS = [
   'seguro_valor',
   'seguro_bem',
 ];
+const OBRIGATORIOS = DESTINOS.slice(0, 4);
 const ID = 812;
 const LINHA_REPETIDA = 131;
 const OUTRA_LINHA = 88;
@@ -59,6 +64,7 @@ const RESUMO = {
   pessoasQueJaEstavam: 2,
   porTipo: { auto: 7, residencial: 1, vida: 2, empresarial: 0, outro: 2 },
   repetidos: 1,
+  cancelados: 0,
 };
 
 const REPETIDA = {
@@ -125,7 +131,12 @@ const conferida = (extra = {}) =>
     id: ID,
     perguntas: [{ id: 'clientes' }, { id: 'seguros' }],
     respostas: { clientes: 'sim_todas', seguros: 'sim' },
-    seguros: { destinos: DESTINOS, faltam: [] },
+    seguros: {
+      destinos: DESTINOS,
+      obrigatorios: OBRIGATORIOS,
+      faltam: [],
+      sugestao: {},
+    },
     resumo: RESUMO,
     exemplos: [
       {
@@ -179,12 +190,32 @@ const fonteDemo = () =>
 
 const SIM = { clientes: 'sim_todas', telefone: 'da_pessoa', seguros: 'sim' };
 
-// A demonstração com a planilha de exemplo lida e o "sim" respondido.
-const demoComSeguros = async () => {
+// A demonstração com a planilha de exemplo lida e o "sim" respondido: como no
+// servidor, a coluna de cada coisa do seguro só está SUGERIDA.
+const demoSoComSim = async () => {
   const fonte = fonteDemo();
   const { id } = await fonte.ler(PLANILHA);
   const marcador = await fonte.responder(id, SIM);
   return { fonte, id, marcador, leitura: await fonte.retomar(id) };
+};
+
+// E com as colunas sugeridas confirmadas, uma de cada vez e na ordem em que a
+// tela as manda no "Está certo" (os obrigatórios por último).
+const demoComSeguros = async () => {
+  const demo = await demoSoComSim();
+  const pedidos = colunasParaConfirmar(colunasDosSeguros(demo.leitura));
+  const respostas = await pedidos.reduce(
+    async (anteriores, { coluna, destino }) => [
+      ...(await anteriores),
+      await demo.fonte.trocarDestino(demo.id, coluna, destino),
+    ],
+    Promise.resolve([])
+  );
+  return {
+    ...demo,
+    respostas,
+    leitura: await demo.fonte.retomar(demo.id),
+  };
 };
 
 // ---- a forma ----------------------------------------------------------------
@@ -245,6 +276,58 @@ describe('a pergunta e a resposta dos seguros', () => {
     expect(leitura.respostas.seguros).toBe('nao');
     expect(leitura.seguros).toBeUndefined();
     expect(leitura.resumo.seguros).toBeUndefined();
+  });
+});
+
+describe('o "sim" só sugere as colunas', () => {
+  it('nenhuma coluna vira destino de seguro antes de a pessoa confirmar', async () => {
+    const { leitura } = await demoSoComSim();
+
+    expect(leitura.seguros.obrigatorios).toEqual(OBRIGATORIOS);
+    expect(leitura.seguros.faltam).toEqual(OBRIGATORIOS);
+    expect(chaves(leitura.seguros.sugestao)).toEqual(chaves(DESTINOS));
+    expect(
+      leitura.colunas.filter(({ destino }) => DESTINOS.includes(destino))
+    ).toEqual([]);
+    // Cada coluna sugerida existe e ainda é só informação da pessoa.
+    Object.values(leitura.seguros.sugestao).forEach(indice => {
+      expect(
+        leitura.colunas.find(coluna => coluna.indice === indice).destino
+      ).toBe('informacao');
+    });
+    // As linhas ainda não foram conferidas como seguro.
+    expect(leitura.resumo.seguros).toBeUndefined();
+  });
+
+  it('só a confirmação que completa os obrigatórios faz a planilha ser lida de novo', async () => {
+    const demo = await demoComSeguros();
+
+    expect(demo.respostas).toHaveLength(DESTINOS.length);
+    const [ultima, ...anteriores] = [...demo.respostas].reverse();
+    expect(ultima).toEqual({ situacao: 'lendo', id: demo.id });
+    anteriores.forEach(resposta => {
+      expect(resposta.situacao).toBeUndefined();
+      expect(resposta.seguros.faltam.length).toBeGreaterThan(0);
+    });
+    // O que foi confirmado deixa de ser sugerido.
+    expect(demo.leitura.seguros.sugestao).toEqual({});
+  });
+
+  it('a coluna confirmada sai da sugestão; a que falta continua sugerida', async () => {
+    const demo = await demoSoComSim();
+    const numero = demo.leitura.seguros.sugestao.seguro_numero;
+
+    const leitura = await demo.fonte.trocarDestino(
+      demo.id,
+      numero,
+      'seguro_numero'
+    );
+
+    expect(leitura.seguros.sugestao.seguro_numero).toBeUndefined();
+    expect(leitura.seguros.faltam).not.toContain('seguro_numero');
+    expect(leitura.seguros.sugestao.seguro_termina).toBe(
+      demo.leitura.seguros.sugestao.seguro_termina
+    );
   });
 });
 

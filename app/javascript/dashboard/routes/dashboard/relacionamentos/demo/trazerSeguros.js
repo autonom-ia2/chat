@@ -46,29 +46,33 @@ export const ehDestinoDeSeguro = destino =>
 // ---- o que a demonstração lembra de cada leitura -------------------------------
 
 // `resposta`: o que a pessoa respondeu à pergunta dos seguros. `destinos`: o
-// destino de cada coluna que a demonstração dos seguros decide (pelo índice).
+// destino de cada coluna que a pessoa confirmou (pelo índice). `sugestao`: a
+// coluna que a demonstração sugere para cada destino (`{ destino: índice }`).
 // `linhas`: o estado de cada linha com problema de seguro.
 export const estadoInicial = () => ({
   resposta: undefined,
   destinos: {},
+  sugestao: {},
   linhas: {},
 });
 
-const destinosDeFabrica = colunasDasPessoas =>
+const sugestaoDeFabrica = colunasDasPessoas =>
   Object.fromEntries(
     COLUNAS_DE_SEGURO.map(({ destino }, posicao) => [
-      colunasDasPessoas + posicao,
       destino,
+      colunasDasPessoas + posicao,
     ])
   );
 
-// "Sim" põe cada coluna de seguro no destino dela; "Não" tira os destinos de
-// seguro (as colunas voltam a ser informação). `colunasDasPessoas` é quantas
-// colunas a leitura das pessoas tem: as de seguro vêm depois delas.
+// Como no servidor, "Sim" só SUGERE a coluna de cada coisa do seguro: nenhuma
+// vira destino antes de a pessoa confirmar. "Não" tira os destinos de seguro
+// (as colunas voltam a ser informação). `colunasDasPessoas` é quantas colunas a
+// leitura das pessoas tem: as de seguro vêm depois delas.
 export const comAResposta = (estado, resposta, colunasDasPessoas) => ({
   ...estado,
   resposta,
-  destinos: resposta === SIM ? destinosDeFabrica(colunasDasPessoas) : {},
+  destinos: {},
+  sugestao: resposta === SIM ? sugestaoDeFabrica(colunasDasPessoas) : {},
 });
 
 // Só uma coluna por destino de seguro: a nova toma o destino e a antiga volta
@@ -83,6 +87,13 @@ export const comODestino = (estado, indice, destino) => {
     destinos: { ...Object.fromEntries(outras), [indice]: destino },
   };
 };
+
+// "Está certo": toda coluna sugerida vira a coluna do destino dela.
+export const comAsSugestoesConfirmadas = estado =>
+  Object.entries(estado.sugestao).reduce(
+    (atual, [destino, indice]) => comODestino(atual, indice, destino),
+    estado
+  );
 
 // A coluna deixou de ser decidida aqui (voltou para a demonstração das listas).
 export const semODestino = (estado, indice) => ({
@@ -208,6 +219,7 @@ const resumoComSeguros = resumo => {
     pessoasQueJaEstavam: Math.min(pessoas, resumo.completadas),
     porTipo: porTipo(seguros),
     repetidos: LINHAS_IDENTICAS,
+    cancelados: 0,
   };
 };
 
@@ -275,6 +287,17 @@ const faltamNas = colunas =>
     destino => !colunas.some(coluna => coluna.destino === destino)
   );
 
+// Como no servidor: só é sugerido o destino que ainda não tem coluna, numa
+// coluna que continua livre (é só informação da pessoa).
+const sugestaoQueServe = (estado, colunas) =>
+  Object.fromEntries(
+    Object.entries(estado.sugestao ?? {}).filter(
+      ([destino, indice]) =>
+        !colunas.some(coluna => coluna.destino === destino) &&
+        colunas.find(coluna => coluna.indice === indice)?.destino === INFORMACAO
+    )
+  );
+
 // Com "Sim" e as quatro colunas obrigatórias, as linhas são conferidas como
 // seguro: aí entram os números, os seguros dos exemplos e as linhas com
 // problema de seguro. Faltando coluna, só o bloco `seguros` diz o que falta.
@@ -305,7 +328,12 @@ export const comSeguros = (leituraDasPessoas, estado) => {
   const faltam = faltamNas(colunas);
   const comOBloco = {
     ...leitura,
-    seguros: { destinos: [...DESTINOS_DE_SEGURO], faltam },
+    seguros: {
+      destinos: [...DESTINOS_DE_SEGURO],
+      obrigatorios: [...OBRIGATORIOS],
+      faltam,
+      sugestao: sugestaoQueServe(estado, colunas),
+    },
   };
   return faltam.length ? comOBloco : conferida(comOBloco, estado);
 };

@@ -88,7 +88,6 @@ const frases = computed(() => ({
       : t('RELACIONAMENTOS_TRAZER.PRECISAM.LINHA_DA_PLANILHA', {
           linha: props.problema.linha,
         }),
-  naPlanilha: '',
 }));
 
 // O que distingue um seguro do outro: quando termina, o valor e o que está

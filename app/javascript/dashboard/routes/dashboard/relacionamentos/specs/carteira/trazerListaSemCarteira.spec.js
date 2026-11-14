@@ -1,17 +1,17 @@
 import { withFullI18n } from 'test-i18n';
 import {
-  abrir,
   aparece,
   erroHttp,
   irAteConferir,
   marca,
 } from '../trazer/apoioDaPagina';
 import { esquecerMemoriaDaDemo } from '../../fonte/trazerFonte';
+import { abrirAPorta } from './apoioDaPorta';
 
-// #2897 — "Trazer minha lista" na conta que NÃO tem a carteira de seguros: a
-// tela é a das listas, do começo ao fim. Não há a escolha de como trazer, a
-// pergunta dos seguros não aparece e a peça da carteira
-// (components/carteira/trazer/TrazerSeguros.vue) nem é baixada.
+// #2897 — "Trazer minha lista" na conta que NÃO tem a carteira de seguros, pela
+// porta que a rota abre (pages/TrazerPage.vue): a tela é a das listas, do
+// começo ao fim. A pergunta dos seguros não aparece e o que os seguros pedem
+// (carteira/trazerComSeguros.js) nem é baixado.
 withFullI18n('pt_BR');
 
 const AGORA = Date.UTC(2026, 10, 13, 15);
@@ -19,8 +19,9 @@ const AGORA = Date.UTC(2026, 10, 13, 15);
 const estado = vi.hoisted(() => ({ demo: 'fora-do-segmento' }));
 // A conta aberta, como o servidor manda (fora da demonstração).
 const conta = vi.hoisted(() => ({ carteira_seguros: false }));
-// Quantas vezes a peça da carteira foi baixada.
+// Quantas vezes o que os seguros pedem foi baixado.
 const baixou = vi.hoisted(() => vi.fn());
+const abrir = () => abrirAPorta({ baixarSeguros: baixou });
 
 const servidor = vi.hoisted(() => ({
   enviar: vi.fn(),
@@ -35,11 +36,6 @@ const servidor = vi.hoisted(() => ({
   andamento: vi.fn(),
   confirmar: vi.fn(),
 }));
-
-vi.mock('../../components/carteira/trazer/TrazerSeguros.vue', () => {
-  baixou();
-  return { default: { render: () => null } };
-});
 
 vi.mock('dashboard/api/relacionamentosTrazer', () => ({ default: servidor }));
 
@@ -97,7 +93,7 @@ describe('conta sem a carteira de seguros', () => {
   it('a demonstração de outro segmento vai do enviar ao conferir sem a pergunta dos seguros', async () => {
     const w = await abrir();
 
-    // A tela de entrada já é a de enviar, sem a escolha de como trazer.
+    // A tela de entrada já é a de enviar.
     expect(w.get('h1').text()).toBe('Traga sua lista. A gente organiza.');
     expect(marca(w, 'soltar-arquivo').exists()).toBe(true);
 

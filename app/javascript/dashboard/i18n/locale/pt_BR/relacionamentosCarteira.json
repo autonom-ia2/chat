@@ -289,11 +289,6 @@
     "TRAZER": {
       "BOTAO": "Trazer seguros",
       "BOTAO_VAZIO": "Trazer meus seguros",
-      "COMO": {
-        "TITULO": "Como você quer trazer as pessoas e os seguros?",
-        "PLANILHA": "Planilha",
-        "PLANILHA_APOIO": "Excel ou CSV, com os seguros ou só as pessoas."
-      },
       "PERGUNTA": {
         "TITULO": "Esta planilha tem seguros?",
         "APOIO": "Se tiver, cada seguro entra junto da pessoa que é dona dele.",
@@ -311,11 +306,25 @@
         "BEM": "O que está segurado"
       },
       "COLUNAS": {
+        "TITULO_SUGERIDO": "Achei os seguros na sua planilha. Está certo?",
+        "APOIO_SUGERIDO": "Veja em qual coluna da planilha encontrei cada coisa. Se alguma estiver errada, troque. Se estiver tudo certo, toque em “Está certo”.",
         "TITULO": "Me diga onde estão os seguros",
-        "APOIO": "Para trazer os seguros, preciso saber qual coluna da planilha guarda cada uma destas coisas. Escolha na lista abaixo o que cada coluna guarda.",
-        "LISTA": "O que ainda falta escolher",
+        "APOIO": "Para trazer os seguros, preciso saber em qual coluna da planilha está cada uma destas coisas. Escolha a coluna de cada uma e toque em “Está certo”.",
+        "LISTA": "Onde está cada coisa do seguro",
+        "ESCOLHER": "Coluna da planilha com: {destino}",
+        "ESCOLHA": "Escolha a coluna",
+        "COLUNA_SEM_NOME": "Coluna {numero}",
+        "SITUACAO": {
+          "CERTA": "Já está guardada.",
+          "ESCOLHIDA": "Foi você quem escolheu.",
+          "SUGERIDA": "Foi a coluna que achei. Confira.",
+          "FALTA": "Não achei. Escolha a coluna.",
+          "OPCIONAL": "Não achei. Se a planilha não tiver, pode deixar assim."
+        },
         "FALTA": "Ainda falta escolher a coluna de: {lista}.",
-        "TRAZER": "Trazer os seguros"
+        "CERTO": "Está certo",
+        "GUARDANDO": "Guardando as colunas…",
+        "ERRO": "Não consegui guardar todas as colunas. O que deu certo já está salvo."
       },
       "CONFERIR": {
         "ACHEI": "Achei {count} seguro | Achei {count} seguros",
@@ -337,7 +346,9 @@
         "RAMO": "na planilha: {ramo}",
         "SEM_SEGUROS": "Nenhum seguro desta planilha pode entrar do jeito que está.",
         "TRAZER": "Trazer {count} seguro | Trazer {count} seguros",
-        "TRAZER_DE": "de {count} pessoa | de {count} pessoas"
+        "TRAZER_DE": "de {count} pessoa | de {count} pessoas",
+        "CANCELADOS": "{count} seguro desta planilha está cancelado aqui e fica como está. | {count} seguros desta planilha estão cancelados aqui e ficam como estão.",
+        "TRAZENDO": "Trazendo os seguros… {porcentagem}%."
       },
       "PRECISAM": {
         "QUEM_SEM_NOME": "Linha {linha}",
@@ -345,7 +356,7 @@
         "FICAR_COM_ESTE": "Ficar com este",
         "PROBLEMA": {
           "NUMERO": "{quem}: falta o número da apólice.",
-          "NUMERO_ESTRAGADO": "{quem}: o número da apólice veio estragado da planilha. No Excel, deixe essa coluna como texto antes de salvar.",
+          "NUMERO_ESTRAGADO": "{quem}: o número da apólice veio estragado da planilha, com letras e sinais no lugar dos números. Escreva o número certo na planilha e traga de novo.",
           "NUMERO_COM_PROBLEMA": "{quem}: o número da apólice precisa de conserto na planilha.",
           "SEGURADORA": "{quem}: falta a seguradora.",
           "TERMINA": "{quem}: falta a data em que o seguro termina.",
@@ -365,6 +376,15 @@
         "DE_PESSOAS": "de {count} pessoa. | de {count} pessoas.",
         "PESSOAS_NOVAS": "{count} pessoa é nova aqui. | {count} pessoas são novas aqui.",
         "VER": "Ver os seguros"
+      },
+      "MUDANCA_DESFEITA": "Não fiz essa mudança: com ela eu não conseguiria ler a planilha. Deixei como estava. Confira se a coluna que você escolheu tem mesmo o que você disse. Por exemplo: a coluna de quando o seguro termina precisa ter datas.",
+      "DESFAZER": {
+        "SAEM": "{count} seguro sai da carteira | {count} seguros saem da carteira",
+        "SAEM_PORQUE": "Veio nesta lista e ninguém mexeu nele depois. | Vieram nesta lista e ninguém mexeu neles depois.",
+        "FICAM": "{count} seguro fica na carteira | {count} seguros ficam na carteira",
+        "FICAM_PORQUE": "Alguém já corrigiu, guardou o PDF ou está cuidando da renovação dele. | Alguém já corrigiu, guardou o PDF ou está cuidando da renovação deles.",
+        "VOLTAM": "{count} seguro volta a ser como era | {count} seguros voltam a ser como eram",
+        "VOLTAM_PORQUE": "Já estava aqui antes. Sai só o que esta lista mudou nele. | Já estavam aqui antes. Sai só o que esta lista mudou neles."
       }
     }
   }

@@ -5,7 +5,6 @@ import {
   destinosQueFaltam,
   numerosDosSeguros,
   segurosConferidos,
-  sugestoesParaConfirmar,
   temSeguros,
 } from './segurosDaPlanilha';
 
@@ -14,11 +13,11 @@ import {
 // (trazer/useTrazerLista.js): aqui só se decide em que momentos a tela é a da
 // carteira (`passo`) e o que ela pede a mais.
 //   - PERGUNTA: "Esta planilha tem seguros?". A resposta vai junto das outras;
-//   - CONFERIR: a planilha tem seguros. As colunas que o servidor sugere são
-//     confirmadas de uma vez (`confirmarColunas`). Faltando coluna obrigatória,
-//     o clique em Trazer não vai ao servidor: a tela diz o que falta
-//     (`faltam`). Enquanto a lista é trazida a tela continua sendo o Conferir,
-//     que diz que está trazendo;
+//   - CONFERIR: a planilha tem seguros. As colunas que estão na tela (as que o
+//     servidor sugere e as que a pessoa apontou) são confirmadas de uma vez
+//     (`confirmarColunas`). Com coluna obrigatória faltando no servidor, o
+//     Trazer não é pedido. Enquanto a lista é trazida a tela continua sendo o
+//     Conferir, que diz que está trazendo;
 //   - PRONTO: a lista trouxe seguros. `chegaram` diz quantos e de quantas
 //     pessoas (a conta do servidor; sem ela, a do Conferir).
 // Fora desses momentos `passo` é nulo e a tela é a das listas: o envio da
@@ -31,9 +30,6 @@ export const PASSOS = {
 };
 
 export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
-  // Quantas vezes pediu para trazer com coluna faltando (cada pedido leva o
-  // foco ao aviso de novo).
-  const pedidosComFalta = ref(0);
   // A confirmação das colunas sugeridas: em voo, e se parou no meio.
   const conferindo = ref(false);
   const erroAoConferir = ref(false);
@@ -67,14 +63,6 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
     return DA_ETAPA[etapa]?.() || null;
   });
 
-  // Apontadas as colunas, o aviso do que faltava deixa de valer.
-  watch(
-    () => faltando.value.length,
-    quantas => {
-      if (quantas === 0) pedidosComFalta.value = 0;
-    }
-  );
-
   // De volta ao começo (a pessoa recomeçou, ou a lista parou no meio): os
   // números e o erro da lista anterior não valem para a próxima.
   watch(
@@ -86,23 +74,22 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
     }
   );
 
-  // "Está certo": cada coluna sugerida vira a coluna do destino dela, uma
-  // escrita de cada vez e na ordem de carteira/segurosDaPlanilha.js. A que não
-  // der certo para a fila: as anteriores já estão salvas, e o "Tentar de novo"
-  // manda só as que o servidor ainda sugere. Sobrando obrigatório sem coluna (a
-  // sugestão não veio para ele), a tela diz qual falta.
-  const confirmarColunas = async () => {
+  // "Está certo": cada coluna da tela vira a coluna do destino dela, uma
+  // escrita de cada vez e na ordem que a tela manda (`colunas`:
+  // `[{ destino, coluna }]`, carteira/segurosDaPlanilha.js). A que não der
+  // certo para a fila: as anteriores já estão salvas, e o "Tentar de novo"
+  // manda só as que faltam.
+  const confirmarColunas = async colunas => {
     if (conferindo.value || tela.ocupado.value) return;
     conferindo.value = true;
     erroAoConferir.value = false;
     try {
-      const guardou = await sugestoesParaConfirmar(tela.leitura.value).reduce(
+      const guardou = await colunas.reduce(
         async (anteriores, { coluna, destino }) =>
           (await anteriores) && tela.trocarDestino(coluna, destino),
         Promise.resolve(true)
       );
       erroAoConferir.value = !guardou;
-      if (guardou && faltando.value.length > 0) pedidosComFalta.value += 1;
     } finally {
       conferindo.value = false;
     }
@@ -114,11 +101,10 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
     return tela.continuar();
   };
 
+  // Com coluna obrigatória faltando não há o que trazer: a tela ainda está
+  // pedindo as colunas, e o botão dela é o de confirmá-las.
   const trazer = () => {
-    if (faltando.value.length > 0) {
-      pedidosComFalta.value += 1;
-      return undefined;
-    }
+    if (faltando.value.length > 0) return undefined;
     const leitura = tela.leitura.value;
     doConferir.value = segurosConferidos(leitura)
       ? numerosDosSeguros(leitura)
@@ -128,16 +114,11 @@ export const useTrazerSeguros = ({ tela, fonte, ligado }) => {
 
   // "Trazer outra lista": o que a tela dizia da lista anterior deixa de valer.
   const recomecar = () => {
-    pedidosComFalta.value = 0;
     erroAoConferir.value = false;
   };
 
   return {
     passo,
-    // Os destinos obrigatórios sem coluna, depois que a pessoa pediu para
-    // trazer; antes disso, nada a dizer.
-    faltam: computed(() => (pedidosComFalta.value > 0 ? faltando.value : [])),
-    pedidosComFalta,
     conferindo,
     erroAoConferir,
     chegaram,

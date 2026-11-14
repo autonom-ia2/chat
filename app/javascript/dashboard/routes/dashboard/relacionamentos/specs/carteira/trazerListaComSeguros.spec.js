@@ -1,6 +1,5 @@
 import { withFullI18n } from 'test-i18n';
 import {
-  abrir,
   aparece,
   continuar,
   erroHttp,
@@ -12,12 +11,14 @@ import { esquecerMemoriaDaDemo } from '../../fonte/trazerFonte';
 import { esquecerOsSegurosDaDemo } from '../../fonte/trazerSegurosFonte';
 import { DURACAO_DA_TRAZIDA_MS } from '../../demo/trazer';
 import { daCarteira } from './apoio';
+import { abrirAPorta as abrir } from './apoioDaPorta';
 
 // #2897 — "Trazer minha lista" na conta que tem a carteira de seguros, com a
-// página inteira (pages/TrazerListaPage.vue), o texto de verdade em pt_BR e a
-// planilha de exemplo da demonstração: a escolha de como trazer, a pergunta
-// "Esta planilha tem seguros?", o Conferir com seguros e pessoas contados e o
-// fim, que leva à aba Seguros.
+// página inteira como a rota a abre (pages/TrazerPage.vue), o texto de verdade
+// em pt_BR e a planilha de exemplo da demonstração: o envio de sempre, a
+// pergunta "Esta planilha tem seguros?", as colunas que o servidor sugere e o
+// "Está certo", o Conferir com seguros e pessoas contados e o fim, que leva à
+// aba Seguros.
 withFullI18n('pt_BR');
 
 const AGORA = Date.UTC(2026, 10, 13, 15);
@@ -102,11 +103,11 @@ vi.mock('../../fonte/trazerSegurosFonte', async importOriginal => {
 // de 5 s por teste é de relógio, não de lógica.
 vi.setConfig({ testTimeout: 30000 });
 
-// A página baixa as telas da carteira e a demonstração por import() dinâmico,
-// que leva tempo de verdade: carregadas antes, cada teste fica só por conta do
+// A página baixa o que os seguros pedem e a demonstração por import() dinâmico,
+// que leva tempo de verdade: carregados antes, cada teste fica só por conta do
 // relógio falso.
 beforeAll(async () => {
-  await import('../../components/carteira/trazer/TrazerSeguros.vue');
+  await import('../../carteira/trazerComSeguros.js');
   await import('../../demo/trazer.js');
   await import('../../demo/trazerSeguros.js');
 }, 60000);
@@ -132,15 +133,9 @@ const peca = (w, nome) => w.find(daCarteira(nome));
 const apareceDaCarteira = (w, nome) =>
   esperarPor(() => expect(peca(w, nome).exists()).toBe(true));
 
-const escolherPlanilha = async w => {
-  await apareceDaCarteira(w, 'origem');
-  await peca(w, 'origem').trigger('click');
-  await aparece(w, 'soltar-arquivo');
-};
-
-// Da escolha de como trazer até "Esta planilha tem seguros?".
+// Do link de exemplo até "Esta planilha tem seguros?".
 const irAteAPerguntaDosSeguros = async w => {
-  await escolherPlanilha(w);
+  await aparece(w, 'usar-exemplo');
   await marca(w, 'usar-exemplo').trigger('click');
   await aparece(w, 'pergunta');
   await escolher(w, 'sim_todas');
@@ -158,46 +153,41 @@ const responderDosSeguros = (w, resposta) =>
     .get(`${daCarteira('resposta-dos-seguros')}[data-resposta="${resposta}"]`)
     .trigger('click');
 
-const irAteConferirSeguros = async w => {
+const conferidos = w =>
+  peca(w, 'conferir-seguros').attributes('data-conferidos');
+
+// "Sim": a tela chega com a coluna que foi achada para cada coisa do seguro.
+const irAteAsColunas = async w => {
   await irAteAPerguntaDosSeguros(w);
   await responderDosSeguros(w, 'sim');
-  await apareceDaCarteira(w, 'conferir-seguros');
+  await apareceDaCarteira(w, 'confirmar-colunas');
 };
 
-describe('como trazer', () => {
-  it('a conta de seguros escolhe primeiro como trazer, e só há o cartão Planilha', async () => {
+// "Está certo": as colunas são confirmadas e as linhas, conferidas como seguro.
+const irAteConferirSeguros = async w => {
+  await irAteAsColunas(w);
+  await peca(w, 'confirmar-colunas').trigger('click');
+  await esperarPor(() => expect(conferidos(w)).toBe('sim'));
+};
+
+describe('a entrada', () => {
+  it('a conta de seguros começa na tela de enviar, a mesma das listas, sem escolher como trazer', async () => {
     const w = await abrir();
-    await apareceDaCarteira(w, 'origem');
+    await aparece(w, 'soltar-arquivo');
 
-    expect(w.get('h1').text()).toBe(
-      'Como você quer trazer as pessoas e os seguros?'
-    );
-    expect(w.findAll(daCarteira('origem'))).toHaveLength(1);
-    expect(peca(w, 'origem').attributes('data-origem')).toBe('planilha');
-    expect(peca(w, 'origem').text()).toContain('Planilha');
-    // O cartão nasce ligado.
-    expect(peca(w, 'como-trazer').findAll('button[disabled]')).toHaveLength(0);
-    // Antes da escolha não há onde soltar o arquivo.
-    expect(marca(w, 'soltar-arquivo').exists()).toBe(false);
-    w.unmount();
-  });
-
-  it('Planilha leva à tela de enviar, a mesma das listas', async () => {
-    const w = await abrir();
-    await escolherPlanilha(w);
-
-    expect(peca(w, 'origem').exists()).toBe(false);
     expect(w.get('h1').text()).toBe('Traga sua lista. A gente organiza.');
     expect(marca(w, 'usar-exemplo').exists()).toBe(true);
+    expect(w.find('[data-carteira]').exists()).toBe(false);
     w.unmount();
   });
 
-  it('fora da demonstração, quem diz que a conta tem a carteira é o servidor', async () => {
+  it('fora da demonstração, a conta que o servidor diz que tem a carteira abre a mesma tela', async () => {
     estado.demo = null;
     const w = await abrir();
-    await escolherPlanilha(w);
+    await aparece(w, 'soltar-arquivo');
 
     expect(marca(w, 'usar-exemplo').exists()).toBe(false);
+    expect(peca(w, 'nao-baixou').exists()).toBe(false);
     w.unmount();
   });
 });
@@ -235,14 +225,37 @@ describe('a pergunta dos seguros', () => {
   });
 });
 
+describe('onde estão os seguros', () => {
+  it('"Sim" mostra a coluna achada para cada coisa do seguro e pede só a confirmação', async () => {
+    const w = await abrir();
+    await irAteAsColunas(w);
+
+    expect(conferidos(w)).toBe('nao');
+    expect(w.get('h1').text()).toBe(
+      'Achei os seguros na sua planilha. Está certo?'
+    );
+    const linhas = w.findAll(`${daCarteira('colunas-dos-seguros')} > li`);
+    expect(linhas).toHaveLength(7);
+    linhas.forEach(linha =>
+      expect(linha.attributes('data-situacao')).toBe('sugerida')
+    );
+    const certo = peca(w, 'confirmar-colunas');
+    expect(certo.text()).toBe('Está certo');
+    expect(certo.attributes('disabled')).toBeUndefined();
+    // Nenhum seguro foi contado ainda, e o Conferir das listas não aparece.
+    expect(peca(w, 'trazer-seguros').exists()).toBe(false);
+    expect(marca(w, 'conferir').exists()).toBe(false);
+    w.unmount();
+  });
+});
+
 describe('Conferir com seguros', () => {
-  it('"Sim" mostra os seguros e as pessoas contados, com a palavra de cada número', async () => {
+  it('"Está certo" confirma as colunas e mostra os seguros e as pessoas contados, com a palavra de cada número', async () => {
     const w = await abrir();
     await irAteConferirSeguros(w);
 
-    expect(peca(w, 'conferir-seguros').attributes('data-conferidos')).toBe(
-      'sim'
-    );
+    expect(peca(w, 'colunas-dos-seguros').exists()).toBe(false);
+    expect(peca(w, 'erro-nas-colunas').exists()).toBe(false);
     expect(w.get('h1').text()).toBe(
       `Achei ${SEGUROS} seguros de ${PESSOAS} pessoas.`
     );
@@ -302,7 +315,10 @@ describe('o fim', () => {
   const trazerTudo = async w => {
     await irAteConferirSeguros(w);
     await peca(w, 'trazer-seguros').trigger('click');
-    await aparece(w, 'andamento');
+    // Enquanto traz, a tela continua sendo o Conferir com seguros.
+    await apareceDaCarteira(w, 'trazendo-seguros');
+    expect(conferidos(w)).toBe('sim');
+    expect(marca(w, 'andamento').exists()).toBe(false);
     await vi.advanceTimersByTimeAsync(ATE_TRAZER_TUDO_MS);
     await apareceDaCarteira(w, 'pronto-de-seguros');
   };
@@ -329,14 +345,15 @@ describe('o fim', () => {
     w.unmount();
   });
 
-  it('"Trazer outra lista" volta à escolha de como trazer', async () => {
+  it('"Trazer outra lista" volta à tela de enviar', async () => {
     const w = await abrir();
     await trazerTudo(w);
 
     await peca(w, 'trazer-outra').trigger('click');
-    await apareceDaCarteira(w, 'origem');
+    await aparece(w, 'soltar-arquivo');
 
     expect(peca(w, 'pronto-de-seguros').exists()).toBe(false);
+    expect(w.find('[data-carteira]').exists()).toBe(false);
     w.unmount();
   });
 });

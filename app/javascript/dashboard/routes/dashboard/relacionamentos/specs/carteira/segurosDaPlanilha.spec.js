@@ -1,12 +1,18 @@
 import {
+  SITUACAO_DA_COLUNA,
   chaveDoDestino,
   chaveDoProblemaDoSeguro,
+  colunasDosSeguros,
+  colunasParaConfirmar,
+  colunasQueServem,
+  comAEscolhaDaColuna,
   contadoresDosSeguros,
   destinosDeSeguro,
   destinosQueFaltam,
   ehApoliceRepetida,
   ehProblemaDoSeguro,
   numerosDosSeguros,
+  obrigatoriosSemColuna,
   segurosConferidos,
   segurosPorTipo,
   temSeguros,
@@ -89,6 +95,192 @@ describe('os destinos de seguro das colunas', () => {
   });
 });
 
+// A planilha que respondeu "sim": as colunas das pessoas, as de seguro (ainda só
+// informação) e o que o servidor sugere para cada coisa do seguro.
+const OBRIGATORIOS = DESTINOS.slice(0, 4);
+const coluna = (indice, nome, destino = 'informacao') => ({
+  indice,
+  nome,
+  destino,
+});
+const comColunas = ({ colunas, sugestao = {}, faltam = OBRIGATORIOS }) => ({
+  colunas,
+  seguros: { destinos: DESTINOS, obrigatorios: OBRIGATORIOS, faltam, sugestao },
+  resumo: {},
+});
+const DA_PLANILHA = [
+  coluna(0, 'Nome', 'nome'),
+  coluna(1, 'Cel', 'telefone'),
+  coluna(2, 'Cidade'),
+  coluna(3, 'Apólice'),
+  coluna(4, 'Cia'),
+  coluna(5, 'Ramo'),
+  coluna(6, 'Fim'),
+  coluna(7, 'Prêmio'),
+];
+const SUGESTAO = {
+  seguro_numero: 3,
+  seguro_seguradora: 4,
+  seguro_tipo: 5,
+  seguro_termina: 6,
+  seguro_valor: 7,
+};
+const { CONFIRMADA, ESCOLHIDA, SUGERIDA, FALTA, OPCIONAL } = SITUACAO_DA_COLUNA;
+const doDestino = (linhas, destino) =>
+  linhas.find(linha => linha.destino === destino);
+const situacoes = linhas =>
+  Object.fromEntries(linhas.map(linha => [linha.destino, linha.situacao]));
+
+describe('onde está cada coisa do seguro', () => {
+  it('uma linha por destino, na ordem do servidor, com a coluna sugerida', () => {
+    const linhas = colunasDosSeguros(
+      comColunas({ colunas: DA_PLANILHA, sugestao: SUGESTAO })
+    );
+
+    expect(linhas.map(linha => linha.destino)).toEqual(DESTINOS);
+    expect(doDestino(linhas, 'seguro_numero')).toEqual({
+      destino: 'seguro_numero',
+      chave: chaveDoDestino('seguro_numero'),
+      obrigatorio: true,
+      situacao: SUGERIDA,
+      coluna: 3,
+    });
+    expect(doDestino(linhas, 'seguro_valor')).toMatchObject({
+      obrigatorio: false,
+      situacao: SUGERIDA,
+      coluna: 7,
+    });
+  });
+
+  it('sem sugestão, o obrigatório falta e o outro pode ficar sem coluna', () => {
+    const linhas = colunasDosSeguros(comColunas({ colunas: DA_PLANILHA }));
+
+    expect(situacoes(linhas)).toEqual({
+      seguro_numero: FALTA,
+      seguro_seguradora: FALTA,
+      seguro_tipo: FALTA,
+      seguro_termina: FALTA,
+      seguro_comeca: OPCIONAL,
+      seguro_valor: OPCIONAL,
+      seguro_bem: OPCIONAL,
+    });
+    linhas.forEach(linha => expect(linha.coluna).toBeNull());
+    expect(obrigatoriosSemColuna(linhas)).toEqual(OBRIGATORIOS);
+  });
+
+  it('a coluna que o servidor já guarda está confirmada, mesmo com outra sugerida', () => {
+    const colunas = DA_PLANILHA.map(item =>
+      item.indice === 3 ? { ...item, destino: 'seguro_numero' } : item
+    );
+    const linhas = colunasDosSeguros(
+      comColunas({ colunas, sugestao: { seguro_numero: 2 } })
+    );
+
+    expect(doDestino(linhas, 'seguro_numero')).toMatchObject({
+      situacao: CONFIRMADA,
+      coluna: 3,
+    });
+  });
+
+  it('a sugestão de uma coluna que a planilha não tem não vale', () => {
+    const linhas = colunasDosSeguros(
+      comColunas({ colunas: DA_PLANILHA, sugestao: { seguro_numero: 99 } })
+    );
+
+    expect(doDestino(linhas, 'seguro_numero')).toMatchObject({
+      situacao: FALTA,
+      coluna: null,
+    });
+  });
+
+  it('o que a pessoa escolhe na tela vale mais que a sugestão', () => {
+    const leitura = comColunas({ colunas: DA_PLANILHA, sugestao: SUGESTAO });
+    const mexidas = comAEscolhaDaColuna(leitura, {}, 'seguro_numero', 2);
+
+    expect(
+      doDestino(colunasDosSeguros(leitura, mexidas), 'seguro_numero')
+    ).toMatchObject({ situacao: ESCOLHIDA, coluna: 2 });
+  });
+
+  it('cada coluna guarda uma coisa só: quem tinha a coluna escolhida fica sem', () => {
+    const leitura = comColunas({ colunas: DA_PLANILHA, sugestao: SUGESTAO });
+    // O valor está, na verdade, na coluna que foi sugerida para o fim.
+    const mexidas = comAEscolhaDaColuna(leitura, {}, 'seguro_valor', 6);
+    const linhas = colunasDosSeguros(leitura, mexidas);
+
+    expect(doDestino(linhas, 'seguro_valor')).toMatchObject({
+      situacao: ESCOLHIDA,
+      coluna: 6,
+    });
+    expect(doDestino(linhas, 'seguro_termina')).toMatchObject({
+      situacao: FALTA,
+      coluna: null,
+    });
+    expect(obrigatoriosSemColuna(linhas)).toEqual(['seguro_termina']);
+  });
+
+  it('escolher de volta a coluna que o servidor já guarda não é mudança', () => {
+    const colunas = DA_PLANILHA.map(item =>
+      item.indice === 3 ? { ...item, destino: 'seguro_numero' } : item
+    );
+    const leitura = comColunas({ colunas });
+    const mexidas = comAEscolhaDaColuna(leitura, {}, 'seguro_numero', 3);
+
+    expect(
+      doDestino(colunasDosSeguros(leitura, mexidas), 'seguro_numero')
+    ).toMatchObject({ situacao: CONFIRMADA, coluna: 3 });
+  });
+
+  it('só servem a um seguro as colunas livres e as que já são de seguro', () => {
+    const colunas = DA_PLANILHA.map(item =>
+      item.indice === 3 ? { ...item, destino: 'seguro_numero' } : item
+    );
+
+    expect(
+      colunasQueServem(comColunas({ colunas })).map(({ indice }) => indice)
+    ).toEqual([2, 3, 4, 5, 6, 7]);
+    expect(colunasQueServem({})).toEqual([]);
+  });
+});
+
+describe('o que o "Está certo" manda ao servidor', () => {
+  it('as colunas da tela que o servidor ainda não guarda, os obrigatórios por último', () => {
+    const linhas = colunasDosSeguros(
+      comColunas({ colunas: DA_PLANILHA, sugestao: SUGESTAO })
+    );
+
+    expect(colunasParaConfirmar(linhas)).toEqual([
+      { destino: 'seguro_valor', coluna: 7 },
+      { destino: 'seguro_numero', coluna: 3 },
+      { destino: 'seguro_seguradora', coluna: 4 },
+      { destino: 'seguro_tipo', coluna: 5 },
+      { destino: 'seguro_termina', coluna: 6 },
+    ]);
+  });
+
+  it('a coluna já guardada e o destino sem coluna não são mandados', () => {
+    const colunas = DA_PLANILHA.map(item =>
+      item.indice === 3 ? { ...item, destino: 'seguro_numero' } : item
+    );
+    const linhas = colunasDosSeguros(
+      comColunas({ colunas, sugestao: { seguro_tipo: 5 } })
+    );
+
+    expect(colunasParaConfirmar(linhas)).toEqual([
+      { destino: 'seguro_tipo', coluna: 5 },
+    ]);
+  });
+
+  it('a coluna que a pessoa escolheu vai no lugar da sugerida', () => {
+    const leitura = comColunas({ colunas: DA_PLANILHA, sugestao: SUGESTAO });
+    const mexidas = comAEscolhaDaColuna(leitura, {}, 'seguro_numero', 2);
+
+    expect(
+      colunasParaConfirmar(colunasDosSeguros(leitura, mexidas))
+    ).toContainEqual({ destino: 'seguro_numero', coluna: 2 });
+  });
+});
+
 describe('os números da conferência', () => {
   it('diz os seguros, as pessoas e quantas delas são novas', () => {
     expect(numerosDosSeguros(conferida())).toEqual({
@@ -97,6 +289,18 @@ describe('os números da conferência', () => {
       pessoasNovas: 7,
       pessoasQueJaEstavam: 2,
       repetidos: 1,
+      cancelados: 0,
+      semTelefone: 0,
+    });
+  });
+
+  it('diz os seguros que aqui estão cancelados e as pessoas que entram sem telefone', () => {
+    const leitura = conferida({
+      resumo: { seguros: 5, pessoas: 4, cancelados: 2, semTelefone: 1 },
+    });
+    expect(numerosDosSeguros(leitura)).toMatchObject({
+      cancelados: 2,
+      semTelefone: 1,
     });
   });
 
@@ -107,6 +311,8 @@ describe('os números da conferência', () => {
       pessoasNovas: 0,
       pessoasQueJaEstavam: 0,
       repetidos: 0,
+      cancelados: 0,
+      semTelefone: 0,
     });
   });
 
