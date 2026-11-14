@@ -50,6 +50,21 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
                                         { 'id' => "p#{modelo.perguntas.size + 1}", 'texto' => 'A obra já começou?', 'tirada' => false }])
     end
 
+    # #3020 — no modelo em blocos, ligar e desligar é o `tirada` de sempre, e o lugar da pergunta segue o item.
+    it 'liga e desliga pergunta de um modelo em blocos sem perder o bloco, a condição e de quem ela depende' do
+      conversa = conversa_com_modelo(account, 'seguro_condominio')
+      antes = conversa.state[chave_da_marca]['perguntas']
+      andares = antes.find { |item| item['texto'].start_with?('Quantos andares') }
+      pedido = antes.map { |item| item.slice('id', 'texto').merge('tirada' => item['id'] != andares['id'], 'bloco' => 'Outro') }
+
+      editar({ perguntas: pedido + [{ texto: 'Tem portaria 24 horas?' }] }, conversa)
+
+      depois = conversa.reload.state[chave_da_marca]['perguntas']
+      expect(depois.reject { |item| item['tirada'] }.pluck('texto')).to eq([andares['texto'], 'Tem portaria 24 horas?'])
+      expect(depois.find { |item| item['id'] == andares['id'] }).to include('bloco' => 'O prédio', 'se' => 'for de prédios', 'segue' => true)
+      expect(depois.last.keys).to eq(%w[id texto tirada])
+    end
+
     it 'só troca a lista que veio: as outras ficam como estavam' do
       antes = marca
 
@@ -76,12 +91,14 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(marca['perguntas'].pluck('id')).to eq(["p#{modelo.perguntas.size + 1}", 'p9'])
     end
 
-    it 'recusa o que não é lista de objetos, a lista com mais de 20 itens e o id repetido' do
-      muitos = Array.new(21) { |i| { texto: "Pergunta #{i}?" } }
+    it 'recusa o que não é lista de objetos, a lista acima do teto (20 itens; 200 nas perguntas) e o id repetido' do
+      muitos = ->(quantos) { Array.new(quantos) { |i| { texto: "Item #{i}?" } } }
 
       expect(recusa(perguntas: 'Qual o CNPJ?')).to eq(%w[lista_invalida perguntas])
       expect(recusa(documentos: ['Contrato social.'])).to eq(%w[lista_invalida documentos])
-      expect(recusa(perguntas: muitos)).to eq(%w[lista_invalida perguntas])
+      expect(recusa(documentos: muitos.call(21))).to eq(%w[lista_invalida documentos])
+      expect(recusa(perguntas: muitos.call(201))).to eq(%w[lista_invalida perguntas])
+      expect(recusa(perguntas: muitos.call(21))).to be_nil
       expect(recusa(perguntas: [{ id: 'p1', texto: 'Uma?' }, { id: 'p1', texto: 'Outra?' }])).to eq(%w[id_repetido perguntas])
     end
 

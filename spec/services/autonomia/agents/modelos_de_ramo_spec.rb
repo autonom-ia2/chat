@@ -8,10 +8,12 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
   include ModelosDeRamoHelper
 
   let(:piloto) { %w[seguro_auto seguro_garantia transporte_carga] }
+  # #3020: o primeiro modelo com as perguntas em blocos.
+  let(:em_blocos) { %w[seguro_condominio] }
 
   describe 'os modelos do piloto' do
     it 'carrega os três, cada um com o tipo comercial, o roteiro e as listas' do
-      expect(described_class.chaves).to match_array(piloto)
+      expect(described_class.chaves).to match_array(piloto + em_blocos)
 
       piloto.each do |chave|
         modelo = described_class.buscar(chave)
@@ -69,6 +71,45 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     end
   end
 
+  # #3020 — as perguntas em blocos: o ramo traz a lista inteira, e só o mínimo vem ligado.
+  describe 'o modelo em blocos' do
+    let(:modelo) { described_class.buscar('seguro_condominio') }
+    let(:marca) { described_class::Marca.inicial(modelo) }
+
+    it 'carrega com o roteiro, as ferramentas e cada pergunta no bloco dela' do
+      expect(modelo.tipo).to eq('sdr')
+      expect(modelo.roteiro.bytesize).to be <= described_class::Formato::ROTEIRO_MAX
+      expect(modelo.perguntas.size).to be > described_class::ITENS_MAX
+      expect(modelo.molde_das_perguntas.pluck('bloco').uniq.first(3)).to eq(['O pedido', 'Quem é e contato', 'Endereço'])
+      expect(modelo.molde_das_perguntas).to all(include('bloco'))
+    end
+
+    it 'nasce só com o mínimo ligado: o resto fica guardado, desligado' do
+      ligadas = marca['perguntas'].reject { |item| item['tirada'] }
+
+      expect(ligadas.size).to eq(12)
+      expect(ligadas.pluck('texto')).to include('Qual o CNPJ do próprio condomínio?', 'Qual o CEP do condomínio?')
+      expect(marca['perguntas'].pluck('id')).to eq((1..modelo.perguntas.size).map { |numero| "p#{numero}" })
+    end
+
+    it 'manda ao agente só as ligadas, com a condição na frente da pergunta que tem uma' do
+      textos = described_class::Marca.textos(marca, 'perguntas')
+
+      expect(textos.size).to eq(12)
+      expect(textos).to include('Se for de prédios: Quantos andares tem cada bloco, contando térreo e subsolos?')
+      expect(textos).not_to include(a_string_including('extintores'))
+    end
+
+    it 'entrega à tela o lugar de cada pergunta, e nada a mais nos itens de um modelo de lista corrida' do
+      da_tela = described_class::Marca.itens(marca, 'perguntas')
+      andares = da_tela.find { |item| item['texto'].start_with?('Quantos andares') }
+
+      expect(andares).to include('bloco' => 'O prédio', 'se' => 'for de prédios', 'segue' => true, 'tirada' => false)
+      corrida = described_class::Marca.inicial(described_class.buscar('seguro_garantia'))
+      expect(described_class::Marca.itens(corrida, 'perguntas').first.keys).to eq(%w[id texto tirada])
+    end
+  end
+
   describe 'a conferência do arquivo' do
     let(:pasta) { Pathname(Dir.mktmpdir) }
     let(:original) { described_class::PASTA }
@@ -106,11 +147,44 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     end
 
     it 'recusa texto acima do limite e lista longa demais' do
-      longa = dados.merge('perguntas' => Array.new(described_class::ITENS_MAX + 1) { |i| "Pergunta #{i}?" })
+      longa = dados.merge('perguntas' => Array.new(described_class::PERGUNTAS_MAX + 1) { |i| "Pergunta #{i}?" })
       comprida = dados.merge('documentos' => ['a' * (described_class::ITEM_MAX + 1)])
       frase = dados.merge('ja_vem' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'a' * 501 }])
 
       [longa, comprida, frase, dados.merge('teste' => %w[uma duas])].each do |invalido|
+        gravar(invalido)
+        expect(lidos).to eq({})
+      end
+    end
+
+    # #3020
+    it 'aceita as perguntas em blocos no lugar da lista corrida' do
+      perguntas = [{ 'texto' => 'Qual o CNPJ?', 'ligada' => true },
+                   { 'texto' => 'Qual a razão social?', 'se' => 'o CNPJ não trouxer', 'segue' => true }]
+      gravar(dados.except('perguntas').merge('blocos' => [{ 'nome' => 'A empresa', 'perguntas' => perguntas }]))
+
+      expect(lidos['seguro_garantia'].molde_das_perguntas).to eq(
+        [{ 'texto' => 'Qual o CNPJ?', 'tirada' => false, 'bloco' => 'A empresa' },
+         { 'texto' => 'Qual a razão social?', 'tirada' => true, 'bloco' => 'A empresa', 'se' => 'o CNPJ não trouxer', 'segue' => true }]
+      )
+    end
+
+    it 'recusa blocos fora do formato' do
+      bloco = ->(perguntas, nome = 'A empresa') { { 'nome' => nome, 'perguntas' => perguntas } }
+      ligada = { 'texto' => 'Qual o CNPJ?', 'ligada' => true }
+      sem_lista = dados.except('perguntas')
+      invalidos = [
+        dados.merge('blocos' => [bloco.call([ligada])]),                                              # perguntas e blocos
+        sem_lista.merge('blocos' => [bloco.call([{ 'texto' => 'Qual o CNPJ?' }])]),                   # nenhuma ligada
+        sem_lista.merge('blocos' => [bloco.call([ligada]), bloco.call([ligada])]),                    # nome repetido
+        sem_lista.merge('blocos' => [bloco.call([])]),                                                # bloco vazio
+        sem_lista.merge('blocos' => [bloco.call([ligada.merge('segue' => true)])]),                   # a primeira segue
+        sem_lista.merge('blocos' => [bloco.call([ligada, { 'texto' => 'Qual?' }, { 'texto' => 'E?', 'segue' => true, 'ligada' => true }])]),
+        sem_lista.merge('blocos' => [bloco.call([ligada.merge('ordem' => 2)])]),                      # campo desconhecido
+        sem_lista.merge('blocos' => [bloco.call([ligada.merge('ligada' => 'sim')])])                  # não é sim ou não
+      ]
+
+      invalidos.each do |invalido|
         gravar(invalido)
         expect(lidos).to eq({})
       end
@@ -186,7 +260,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
 
       conta_de_seguros(account)
       expect(described_class.liberado?(account)).to be(true)
-      expect(described_class.liberados(account)).to match_array(piloto)
+      expect(described_class.liberados(account)).to match_array(piloto + em_blocos)
     end
 
     it 'não libera conta de seguros sem a flag, nem com o interruptor dos pacotes desligado' do

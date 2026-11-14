@@ -692,6 +692,12 @@
             "TEXTO": "For carriers and for cargo owners. Asks for the goods, the routes and the values.",
             "CLIENTE": "I need insurance for my carrier company",
             "AGENTE": "I can help. Do you carry other people's cargo and charge freight, or is the cargo yours?"
+          },
+          "CONDOMINIO": {
+            "TITULO": "Condominium insurance",
+            "TEXTO": "Apartment buildings and gated communities. Asks for the condominium and building details.",
+            "CLIENTE": "I manage a building and need its insurance",
+            "AGENTE": "Let's do it! Is this a new policy or the renewal of one you already have?"
           }
         },
         "CRIAR": {
@@ -743,7 +749,20 @@
           "QUER_TAMBEM": "Want more? Paid lookups that fit: {pagas}. Each one has free lookups every month. After that, the price shows before you add it.",
           "VER_PAGAS": "See the paid lookups",
           "ERRO_AO_MUDAR": "I could not save the change. Try again.",
-          "ERRO_JA_COMECOU": "This agent has already started serving. The lists can no longer be changed here."
+          "ERRO_JA_COMECOU": "This agent has already started serving. The lists can no longer be changed here.",
+          "BLOCOS": {
+            "NOTA": "Turn on only what {nome} should ask. It asks one thing at a time. What a tool finds out by itself, like the address from the postal code, it does not ask.",
+            "LIGADAS": "Questions turned on",
+            "RESUMO": "Every customer answers: {todos}. Only depending on the answer: {conforme}.",
+            "DO_BLOCO": "Turned on: {n} of {total}",
+            "LIGAR_TODAS": "Turn all on",
+            "LIGAR_TODAS_SR": "Turn on all the questions in {bloco}",
+            "DESLIGAR_TODAS": "Turn all off",
+            "DESLIGAR_TODAS_SR": "Turn off all the questions in {bloco}",
+            "SO_SE": "Only asks if {condicao}.",
+            "SUAS": "Your questions",
+            "SUAS_NOTA": "Is a question missing? Write your own. {nome} asks it after the others."
+          }
         },
         "PAGINA": {
           "TITULO": "What {nome} asks and requests",

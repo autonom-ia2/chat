@@ -27,12 +27,20 @@ export const MODELOS_DE_RAMO = [
     tom: 'teal',
     horario: '15:22',
   },
+  {
+    chave: 'seguro_condominio',
+    i18n: 'CONDOMINIO',
+    icone: 'i-lucide-building-2',
+    tom: 'iris',
+    horario: '10:17',
+  },
 ];
 
 export const TOM_DO_RAMO = {
   azul: 'bg-n-blue-3 text-n-blue-11',
   teal: 'bg-n-teal-3 text-n-teal-11',
   ambar: 'bg-n-amber-3 text-n-amber-11',
+  iris: 'bg-n-iris-3 text-n-iris-11',
 };
 
 export const modeloDeRamo = chave =>
@@ -42,7 +50,8 @@ export const modeloDeRamo = chave =>
 export const ramoDaQuery = (query = {}) =>
   modeloDeRamo(query.ramo)?.chave || null;
 
-// Limites do servidor (ModelosDeRamo::ITENS_MAX e ITEM_MAX; FerramentasProntas::Incluir::MAX_USAR_QUANDO).
+// Limites do servidor (ModelosDeRamo::ITENS_MAX e ITEM_MAX; FerramentasProntas::Incluir::MAX_USAR_QUANDO). No modelo em
+// blocos (#3020) o limite de 20 vale para as perguntas que o dono escreve; as do modelo têm teto próprio no servidor.
 export const MAXIMO_DE_ITENS = 20;
 export const MAXIMO_DE_LETRAS_DO_ITEM = 300;
 export const MAXIMO_DE_LETRAS_DO_QUANDO = 500;

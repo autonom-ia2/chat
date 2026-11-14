@@ -25,14 +25,25 @@ module Autonomia::Agents::ModelosDeRamo
   # Limites de uma lista (perguntas, documentos, ferramentas), no arquivo e no que o dono edita.
   ITENS_MAX = 20
   ITEM_MAX = 300
+  # As perguntas têm teto próprio (#3020): o ramo traz a lista inteira em blocos, quase toda desligada, e o dono liga
+  # o que quer que o agente pergunte.
+  PERGUNTAS_MAX = 200
+  MAXIMOS = Hash.new(ITENS_MAX).merge('perguntas' => PERGUNTAS_MAX).freeze
   # No roteiro, cada marcador fica sozinho numa linha e é trocado pela lista numerada de mesmo nome.
   MARCADORES = { '{{PERGUNTAS_DA_COTACAO}}' => 'perguntas', '{{DOCUMENTOS}}' => 'documentos' }.freeze
   AGENTE_DE_COTACAO = 'insurance_quote'.freeze
 
   Ferramenta = Data.define(:fonte, :usar_quando)
 
-  Modelo = Data.define(:chave, :tipo, :nome_padrao, :ramo, :seguradoras_sugeridas, :perguntas, :documentos, :ja_vem,
+  # `molde_das_perguntas`: uma entrada por pergunta, na ordem, já no formato da marca sem o `id`
+  # ({ 'texto', 'tirada' } e, no modelo em blocos, 'bloco', 'se' e 'segue'; ver `Perguntas`).
+  Modelo = Data.define(:chave, :tipo, :nome_padrao, :ramo, :seguradoras_sugeridas, :molde_das_perguntas, :documentos, :ja_vem,
                        :tambem, :premium, :teste, :roteiro) do
+    # Só os textos, na ordem do arquivo (também os das perguntas que vêm desligadas).
+    def perguntas
+      molde_das_perguntas.pluck('texto')
+    end
+
     # As ferramentas grátis do modelo, na ordem: as do "Já vem com" e depois as do "Também combina".
     def ferramentas
       ja_vem + tambem

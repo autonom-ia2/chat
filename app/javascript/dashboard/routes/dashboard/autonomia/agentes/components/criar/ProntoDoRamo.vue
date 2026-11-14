@@ -4,11 +4,15 @@ import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import ListaDoRamo from './ListaDoRamo.vue';
+import PerguntasEmBlocos from './PerguntasEmBlocos.vue';
+import { temBlocos } from '../../utils/perguntasEmBlocos';
 
 // #2881 — no Confira de um agente pronto por ramo: o que ele já traz, em linhas curtas. "Mostrar antes de fazer":
 // cada linha abre uma gaveta com a lista inteira. Nas perguntas e nos documentos o dono pode tirar (e voltar), editar
 // e incluir (ListaDoRamo). A tela principal continua com uma ação só, o "Começar a atender", e o celular do teste
 // fica logo abaixo.
+// #3020 — quando o modelo traz as perguntas em blocos, a gaveta delas é a PerguntasEmBlocos: o dono liga e desliga
+// cada pergunta, e as que ele escreve ficam no fim. Modelo sem blocos segue com a lista de sempre.
 // As listas são as do servidor ([{ id, texto, tirada }]): a mudança sai como `mudar` ({ lista, itens }, a lista
 // inteira nova) e a tela só muda quando o servidor responde. As ferramentas são de quem chama: a gaveta delas mostra
 // o slot `ferramentas`, e a linha só aparece quando há o que mostrar (`ferramentas` com um número).
@@ -40,6 +44,7 @@ const FERRAMENTAS = 'ferramentas';
 
 const aberta = ref(null);
 const restam = itens => itens.filter(item => !item.tirada).length;
+const emBlocos = computed(() => temBlocos(props.perguntas));
 
 const linhas = computed(() => [
   {
@@ -77,7 +82,10 @@ const gaveta = computed(() => {
   const MOLDE = {
     [PERGUNTAS]: {
       titulo: t(`${NS}.PERGUNTAS_TITULO`, nome),
-      nota: notaDe(`${NS}.PERGUNTAS_NOTA`, nome),
+      nota:
+        emBlocos.value && props.podeMudar
+          ? t(`${NS}.BLOCOS.NOTA`, nome)
+          : notaDe(`${NS}.PERGUNTAS_NOTA`, nome),
       incluir: t(`${NS}.INCLUIR_PERGUNTA`),
       exemplo: t(`${NS}.NOVA_PERGUNTA`),
       itens: props.perguntas,
@@ -155,7 +163,21 @@ const gaveta = computed(() => {
         <p class="m-0 text-sm leading-relaxed text-n-slate-11">
           {{ gaveta.nota }}
         </p>
+        <PerguntasEmBlocos
+          v-if="gaveta.lista === PERGUNTAS && emBlocos"
+          :itens="gaveta.itens"
+          :nome="nome"
+          :rotulo-incluir="gaveta.incluir"
+          :exemplo="gaveta.exemplo"
+          :pode-mudar="podeMudar"
+          :gravando="gravando[gaveta.lista] === true"
+          @mudar="
+            (itens, aoGravar) =>
+              emit('mudar', { lista: gaveta.lista, itens, aoGravar })
+          "
+        />
         <ListaDoRamo
+          v-else
           :itens="gaveta.itens"
           :rotulo-incluir="gaveta.incluir"
           :exemplo="gaveta.exemplo"

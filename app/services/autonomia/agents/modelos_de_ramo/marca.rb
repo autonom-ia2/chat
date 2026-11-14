@@ -3,6 +3,8 @@
 #
 #   { 'chave' => 'seguro_garantia',
 #     'perguntas'   => [{ 'id' => 'p1', 'texto' => '...', 'tirada' => false }, ...],
+#       no modelo em blocos (#3020) a pergunta leva também o lugar dela, que o dono não muda:
+#       'bloco' (o nome do bloco na tela), 'se' (a condição: "houver elevadores") e 'segue' (depende da de cima)
 #     'documentos'  => [{ 'id' => 'd1', 'texto' => '...', 'tirada' => false }, ...],
 #     'ferramentas' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'Use quando ...' }, ...],    # o "Já vem com"
 #     'conhecimento' => 'O SEGURO EM PALAVRAS SIMPLES: ...' }   # o que o ramo explica (`Conhecimento`); o dono não edita
@@ -13,13 +15,15 @@
 module Autonomia::Agents::ModelosDeRamo::Marca
   CHAVE = 'modelo_pronto'.freeze
   PREFIXOS = { 'perguntas' => 'p', 'documentos' => 'd' }.freeze
+  # O lugar da pergunta no modelo em blocos. Nasce com o agente e segue o item pelo `id`.
+  LUGAR = %w[bloco se segue].freeze
   LISTA_VAZIA = '(nenhum item nesta lista)'.freeze
 
   module_function
 
   def inicial(modelo)
     { 'chave' => modelo.chave,
-      'perguntas' => numerar(modelo.perguntas, 'perguntas'),
+      'perguntas' => modelo.molde_das_perguntas.each_with_index.map { |item, indice| { 'id' => "p#{indice + 1}" }.merge(item) },
       'documentos' => numerar(modelo.documentos, 'documentos'),
       'ferramentas' => modelo.ja_vem.map { |ferramenta| { 'fonte' => ferramenta.fonte, 'usar_quando' => ferramenta.usar_quando } },
       'conhecimento' => Autonomia::Agents::ModelosDeRamo::Conhecimento.do_roteiro(modelo.roteiro) }
@@ -29,16 +33,24 @@ module Autonomia::Agents::ModelosDeRamo::Marca
     textos.each_with_index.map { |texto, indice| { 'id' => "#{PREFIXOS.fetch(lista)}#{indice + 1}", 'texto' => texto, 'tirada' => false } }
   end
 
-  # Os itens da lista como a tela os recebe: { id, texto, tirada }.
+  # Os itens da lista como a tela os recebe: { id, texto, tirada } e, na pergunta de um modelo em blocos, o lugar dela.
   def itens(marca, lista)
     Array(marca.to_h[lista]).grep(Hash).map do |item|
-      { 'id' => item['id'].to_s, 'texto' => item['texto'].to_s, 'tirada' => item['tirada'] == true }
+      { 'id' => item['id'].to_s, 'texto' => item['texto'].to_s, 'tirada' => item['tirada'] == true }.merge(lugar(item))
     end
   end
 
-  # Só os textos que valem: fora os que o dono tirou.
+  def lugar(item)
+    item.slice(*LUGAR).compact_blank
+  end
+
+  # Só os textos que valem: fora os que o dono tirou. A pergunta com condição vai ao agente com ela na frente.
   def textos(marca, lista)
-    itens(marca, lista).reject { |item| item['tirada'] }.pluck('texto').compact_blank
+    itens(marca, lista).reject { |item| item['tirada'] }.map { |item| texto_para_o_agente(item) }.compact_blank
+  end
+
+  def texto_para_o_agente(item)
+    item['se'].present? ? "Se #{item['se']}: #{item['texto']}" : item['texto']
   end
 
   # A lista numerada que entra no roteiro e nas instruções do agente.

@@ -692,6 +692,12 @@
             "TEXTO": "Para transportadora e para o dono da carga. Pede a mercadoria, as rotas e os valores.",
             "CLIENTE": "Preciso de seguro para a minha transportadora",
             "AGENTE": "Posso ajudar. Vocês levam carga de outros e cobram frete, ou a carga é de vocês?"
+          },
+          "CONDOMINIO": {
+            "TITULO": "Seguro de condomínio",
+            "TEXTO": "Prédios e condomínios de casas. Pede os dados do condomínio e do prédio.",
+            "CLIENTE": "Sou síndico e preciso do seguro do prédio",
+            "AGENTE": "Vamos lá! É um seguro novo ou a renovação de um que já existe?"
           }
         },
         "CRIAR": {
@@ -743,7 +749,20 @@
           "QUER_TAMBEM": "Quer também? Consultas pagas que combinam: {pagas}. Cada uma tem consultas grátis por mês. Depois, o preço aparece antes de você incluir.",
           "VER_PAGAS": "Ver as consultas pagas",
           "ERRO_AO_MUDAR": "Não consegui guardar a mudança. Tente de novo.",
-          "ERRO_JA_COMECOU": "Este agente já começou a atender. Aqui não dá mais para mudar as listas."
+          "ERRO_JA_COMECOU": "Este agente já começou a atender. Aqui não dá mais para mudar as listas.",
+          "BLOCOS": {
+            "NOTA": "Ligue só o que {nome} deve perguntar. Ele pergunta uma coisa por vez. O que uma ferramenta descobre sozinha, como o endereço pelo CEP, ele não pergunta.",
+            "LIGADAS": "Perguntas ligadas",
+            "RESUMO": "Todo cliente responde: {todos}. Só conforme a resposta: {conforme}.",
+            "DO_BLOCO": "Ligadas: {n} de {total}",
+            "LIGAR_TODAS": "Ligar todas",
+            "LIGAR_TODAS_SR": "Ligar todas as perguntas de {bloco}",
+            "DESLIGAR_TODAS": "Desligar todas",
+            "DESLIGAR_TODAS_SR": "Desligar todas as perguntas de {bloco}",
+            "SO_SE": "Só pergunta se {condicao}.",
+            "SUAS": "Suas perguntas",
+            "SUAS_NOTA": "Falta alguma pergunta? Escreva a sua. {nome} pergunta depois das outras."
+          }
         },
         "PAGINA": {
           "TITULO": "O que {nome} pergunta e pede",

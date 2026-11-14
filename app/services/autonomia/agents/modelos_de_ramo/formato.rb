@@ -2,6 +2,7 @@
 # de campo e chave de ferramenta; nunca o texto do arquivo). O que confere:
 #   - só campos conhecidos, e todos os obrigatórios; `chave` igual ao nome do arquivo; `tipo` com roteiro geral;
 #   - textos e listas dentro do limite (até 20 itens de até 300 letras; a frase "Use quando" no limite do "Incluir");
+#   - as perguntas, em lista corrida (`perguntas`) ou em blocos (`blocos`), um dos dois (`Perguntas`);
 #   - `ja_vem` e `tambem`: ferramenta do catálogo, da vitrine e grátis, sem repetir. Premium nunca entra aqui: consulta
 #     paga só entra no agente pela escolha de uma pessoa, na vitrine;
 #   - `premium`: só sugestão de cartão pago, e por isso só chave de cartão Premium;
@@ -10,8 +11,9 @@
 #     conhecimento do ramo (`Conhecimento`). O teto vale antes
 #     da troca dos marcadores: o que o dono acrescenta depois é limitado por quantidade e tamanho de item.
 class Autonomia::Agents::ModelosDeRamo::Formato
-  OBRIGATORIOS = %w[chave tipo nome_padrao ramo perguntas documentos ja_vem teste].freeze
+  OBRIGATORIOS = %w[chave tipo nome_padrao ramo documentos ja_vem teste].freeze
   OPCIONAIS = %w[seguradoras_sugeridas tambem premium].freeze
+  CONHECIDOS = (OBRIGATORIOS + OPCIONAIS + Autonomia::Agents::ModelosDeRamo::Perguntas::CAMPOS).freeze
   CAMPOS_DA_FERRAMENTA = %w[fonte usar_quando].freeze
   SEM_ROTEIRO_GERAL = %w[custom insurance_quote].freeze
   NOME_MAX = 120
@@ -43,7 +45,7 @@ class Autonomia::Agents::ModelosDeRamo::Formato
     negar('o arquivo não é uma lista de campos') unless @dados.is_a?(Hash)
 
     nomes = @dados.keys.map(&:to_s)
-    negar("campo desconhecido: #{(nomes - OBRIGATORIOS - OPCIONAIS).join(', ')}") if (nomes - OBRIGATORIOS - OPCIONAIS).any?
+    negar("campo desconhecido: #{(nomes - CONHECIDOS).join(', ')}") if (nomes - CONHECIDOS).any?
     negar("falta o campo: #{(OBRIGATORIOS - nomes).join(', ')}") if (OBRIGATORIOS - nomes).any?
     negar('chave diferente do nome do arquivo') unless @dados['chave'] == @chave
   end
@@ -70,7 +72,8 @@ class Autonomia::Agents::ModelosDeRamo::Formato
     teste = lista('teste')
     negar("teste: são #{TESTES} perguntas") unless teste.size == TESTES
 
-    { perguntas: lista('perguntas'), documentos: lista('documentos'), teste: teste }
+    { molde_das_perguntas: Autonomia::Agents::ModelosDeRamo::Perguntas.new(dados: @dados, texto: method(:texto)).molde,
+      documentos: lista('documentos'), teste: teste }
   end
 
   def prontas
