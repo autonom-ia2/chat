@@ -105,4 +105,47 @@ RSpec.describe Crm::Webhooks::Emitter do
       expect_no_card_dispatch('crm.card.won')
     end
   end
+
+  # #2898 (insurance portfolio, E5): the renewal card of a policy, in an account with no webhook, ad sync or automation.
+  # Without this branch "Renovou" on the board would never reach the policy.
+  context 'when the card is the renewal card of an insurance policy and nothing else subscribes' do
+    # The account has the insurance portfolio (Carteira::Acesso): the gate asks that first, before any query.
+    let(:account) { conta_com_carteira }
+    let(:stage) { account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'A vencer', position: 0) }
+    let(:renewal_card) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Renovação') }
+    let(:other_card) { account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Pedido') }
+    let(:outcomes) do
+      { 'won' => 'crm.card.won', 'lost' => 'crm.card.lost', 'resolved' => 'crm.card.resolved', 'cancelled' => 'crm.card.cancelled',
+        'reopen' => 'crm.card.reopened', 'archive' => 'crm.card.archived' }
+    end
+
+    before { create(:carteira_apolice, account: account, crm_card: renewal_card) }
+
+    def emit_for(card, event_type)
+      described_class.emit(account_id: account.id, card_id: card.id, activity_id: 2, event_type: event_type, changed_attributes: nil)
+    end
+
+    it 'dispatches every outcome event of that card' do
+      outcomes.each_key { |event_type| emit_for(renewal_card, event_type) }
+
+      outcomes.each_value do |event|
+        expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(event, anything, hash_including(card_id: renewal_card.id)).once
+      end
+    end
+
+    it 'does not dispatch the outcome of a card with no policy, nor the creation or the move of the renewal card' do
+      outcomes.each_key { |event_type| emit_for(other_card, event_type) }
+      %w[create move].each { |event_type| emit_for(renewal_card, event_type) }
+
+      (outcomes.values + %w[crm.card.created crm.card.moved]).each { |event| expect_no_card_dispatch(event) }
+    end
+
+    it 'does not dispatch for an account that no longer has the insurance portfolio' do
+      account.disable_features!('carteira_seguros')
+
+      outcomes.each_key { |event_type| emit_for(renewal_card, event_type) }
+
+      outcomes.each_value { |event| expect_no_card_dispatch(event) }
+    end
+  end
 end

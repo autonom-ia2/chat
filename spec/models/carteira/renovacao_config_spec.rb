@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# E5 (#2898): onde ficam as renovações de uma conta. Uma linha por conta; o funil e a etapa são da própria conta, e
-# apagar um deles devolve a conta a "ainda não escolheu".
+# E5 (#2898): onde ficam as renovações de uma conta. Uma linha por conta; o funil e a etapa são da própria conta. A
+# escolha só vale com o funil ativo, e o funil arquivado ou apagado não se confunde com "ninguém escolheu".
 RSpec.describe Carteira::RenovacaoConfig do
   let(:account) { create(:account) }
   let(:user) { create(:user, account: account, role: :administrator) }
@@ -13,7 +13,7 @@ RSpec.describe Carteira::RenovacaoConfig do
     ajustes = described_class.create!(account: account)
 
     expect(ajustes.reload).to have_attributes(dias_antes: 60, mensagens: 'mandar', pipeline_id: nil, stage_id: nil, user_id: nil)
-    expect(ajustes).not_to be_escolhida
+    expect([ajustes.escolhida?, ajustes.escolha]).to eq([false, 'nunca_feita'])
   end
 
   it 'guarda o funil, a etapa e quem escolheu' do
@@ -21,7 +21,21 @@ RSpec.describe Carteira::RenovacaoConfig do
 
     expect(ajustes.reload).to have_attributes(pipeline_id: funil.id, stage_id: etapa.id, user_id: user.id, dias_antes: 45,
                                               mensagens: 'nao_mandar')
-    expect(ajustes).to be_escolhida
+    expect([ajustes.escolhida?, ajustes.escolha]).to eq([true, 'feita'])
+  end
+
+  # Arquivar o funil só muda o status dele: a linha continua apontando para ele, mas a escolha deixa de valer.
+  it 'o funil arquivado continua guardado e deixa de valer; restaurado, volta a valer sozinho' do
+    ajustes = described_class.create!(account: account, pipeline: funil, stage: etapa, user: user)
+
+    como_esta = -> { described_class.find(ajustes.id).then { |lida| [lida.pipeline_id, lida.escolhida?, lida.escolha] } }
+
+    funil.update!(status: :archived)
+    arquivado = como_esta.call
+    funil.update!(status: :active)
+
+    expect(arquivado).to eq([funil.id, false, 'funil_arquivado'])
+    expect(como_esta.call).to eq([funil.id, true, 'feita'])
   end
 
   it 'é uma por conta: o model recusa a segunda e o índice único do banco também' do
@@ -69,15 +83,25 @@ RSpec.describe Carteira::RenovacaoConfig do
     expect(described_class.new(account: account, user: user)).to be_valid
   end
 
-  it 'apagar a etapa, o funil ou quem escolheu deixa a conta sem escolha, e a linha fica' do
+  # A chave do banco anula a coluna sem passar pelo app. O que sobra diz que a escolha sumiu: o funil sem a etapa, ou
+  # quem escolheu sem o funil.
+  it 'apagar a etapa ou o funil deixa a conta sem escolha, a linha fica e dá para saber que a escolha sumiu' do
     ajustes = described_class.create!(account: account, pipeline: funil, stage: etapa, user: user)
 
     Crm::PipelineStage.where(id: etapa.id).delete_all
-    expect(ajustes.reload).to have_attributes(stage_id: nil, pipeline_id: funil.id)
-    expect(ajustes).not_to be_escolhida
+    expect(ajustes.reload).to have_attributes(stage_id: nil, pipeline_id: funil.id, escolhida?: false, escolha: 'sumiu')
 
     Crm::Pipeline.where(id: funil.id).delete_all
+    expect(ajustes.reload).to have_attributes(pipeline_id: nil, stage_id: nil, user_id: user.id, escolhida?: false, escolha: 'sumiu')
+  end
+
+  it 'apagar também quem escolheu deixa a linha como a de quem nunca escolheu' do
+    ajustes = described_class.create!(account: account, pipeline: funil, stage: etapa, user: user)
+
+    Crm::PipelineStage.where(id: etapa.id).delete_all
+    Crm::Pipeline.where(id: funil.id).delete_all
     User.where(id: user.id).delete_all
-    expect(ajustes.reload).to have_attributes(pipeline_id: nil, stage_id: nil, user_id: nil)
+
+    expect(ajustes.reload).to have_attributes(pipeline_id: nil, stage_id: nil, user_id: nil, escolha: 'nunca_feita')
   end
 end

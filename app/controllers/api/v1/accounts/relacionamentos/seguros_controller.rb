@@ -33,7 +33,7 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
   end
 
   def opcoes_de_filtro
-    render json: ::Carteira::OpcoesDeFiltro.new(Current.account).call
+    render json: ::Carteira::OpcoesDeFiltro.new(Current.account, quem: pundit_user).call
   end
 
   def show
@@ -41,7 +41,7 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
   end
 
   def historia
-    render json: ::Carteira::Historia.new(@seguro).call
+    render json: ::Carteira::Historia.new(@seguro, quem: pundit_user).call
   end
 
   def update
@@ -65,6 +65,7 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
   end
 
   def consulta
-    ::Carteira::Consulta.new(Current.account, conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:tipo, :seguradora])))
+    pedido = conferido(params.permit(:grupo, :busca, :ordem, :pagina, filtros: [:tipo, :seguradora, :cuida]))
+    ::Carteira::Consulta.new(Current.account, pedido, quem: pundit_user)
   end
 end

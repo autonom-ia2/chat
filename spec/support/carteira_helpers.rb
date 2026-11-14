@@ -21,6 +21,18 @@ module CarteiraHelpers
     apolice
   end
 
+  # A conta escolhe onde ficam as renovações (E5, #2898): um funil novo com a etapa dele. Devolve os ajustes.
+  def escolher_funil_de_renovacao(conta, user:, nome: 'Renovação', **ajustes)
+    funil, etapa = create_crm_pipeline(account: conta, user: user, name: nome)
+    create(:carteira_renovacao_config, account: conta, pipeline: funil, stage: etapa, **ajustes)
+  end
+
+  # O card de renovação do seguro, criado como a rotina cria.
+  def por_em_renovacao(apolice, ajustes)
+    Carteira::Renovacao::CriarCard.new(apolice.account, ajustes).call(apolice)
+    apolice.reload.crm_card
+  end
+
   # Quantas consultas o bloco fez no banco, fora as de esquema e de transação.
   def consultas_da_carteira(&)
     feitas = 0

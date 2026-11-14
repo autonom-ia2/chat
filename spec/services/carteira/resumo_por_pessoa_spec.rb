@@ -32,6 +32,22 @@ RSpec.describe Carteira::ResumoPorPessoa do
     )
   end
 
+  # E5 (#2898): o selo lê as colunas da renovação, e esta leitura traz só as colunas que usa. Sem elas o resumo quebra.
+  it 'mostra o seguro em renovação antes do ativo, e o renovado com o selo dele' do
+    admin = create(:user, account: account, role: :administrator)
+    marina = pessoa('Marina Exemplo')
+    criar_apolice(marina, tipo: 'vida', fim_vigencia: hoje + 5)
+    em_renovacao = criar_apolice(marina, tipo: 'auto', fim_vigencia: hoje + 40)
+    with_modified_env(CRM_KANBAN_ENABLED: 'true') { por_em_renovacao(em_renovacao, escolher_funil_de_renovacao(account, user: admin)) }
+    bruno = pessoa('Bruno Exemplo')
+    criar_apolice(bruno, tipo: 'residencial', fim_vigencia: hoje + 18, renovado_em: agora)
+
+    expect(resumo(marina, bruno)).to eq(
+      marina.id => { quantos: 2, selo: 'em_renovacao', tipo: 'auto', dias: 40 },
+      bruno.id => { quantos: 1, selo: 'renovado', tipo: 'residencial', dias: 18 }
+    )
+  end
+
   it 'quem só tem seguro cancelado mostra o cancelado, e quem não tem seguro não vem' do
     carla = pessoa('Carla Exemplo')
     criar_apolice(carla, tipo: 'empresarial', fim_vigencia: hoje + 90, cancelado_em: agora - 2.days)

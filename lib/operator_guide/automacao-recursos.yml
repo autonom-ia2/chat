@@ -718,6 +718,15 @@ fora:
       automação. Guardar e tirar o PDF nem chegam ao catálogo: só se fazem na tela (Acoes::SO_NA_TELA).
     recursos:
       - relacionamentos/seguros
+  - motivo: >-
+      Renovação da carteira de seguros (#2898): onde ficam as renovações é escolha da conta inteira, feita por uma
+      pessoa na tela "Ajustar renovações"; não é passo de automação. Dizer como a renovação terminou (renovou, não
+      renovou com o motivo, desfazer) e guardar a apólice nova à mão são ações de pessoa, na gaveta do seguro: a
+      automação que fecha o card de renovação já chega ao seguro pelo próprio card.
+    recursos:
+      - relacionamentos/seguros/renovacoes
+      - relacionamentos/seguros/desfechos
+      - relacionamentos/seguros/apolices_novas
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

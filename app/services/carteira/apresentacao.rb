@@ -5,24 +5,39 @@
 # vigência vão como AAAA-MM-DD (data sem hora; em segundos o dia mudaria com o fuso de quem lê). O que é instante (quando
 # chegou, quando foi cancelado) vai em segundos, como no resto de Relacionamentos. O valor vai em reais.
 #
-# O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas
-# (renovação, parcela, endosso, seguro de outra corretora) vem vazio, com a chave presente: as peças da tela leem essas
-# chaves e somem por dado ausente.
+# A renovação (E5, #2898): `renovadoEm`, o motivo de não ter renovado (`motivo` da lista, `motivoEscrito` quando é
+# "outro"), `apoliceNova` (a apólice que renovou este seguro já está guardada) e `renovacao`, o card de renovação que o
+# seguro mostra: o nome do funil e da etapa, como terminou (`renovou`, `nao_renovou` ou nulo) e quem cuida (o nome e o
+# id do dono do card, enquanto ele for da conta: quem saiu da conta não aparece). `renovacao` é nulo sem card e quando
+# ele foi tirado do quadro. Quem não enxerga aquele card no quadro (Carteira::CardsVisiveis) recebe `renovacao` só com
+# `desfecho`: nem o id, nem o funil, nem a etapa, nem o dono, para a carteira não contar que existe um card num funil
+# que a pessoa não abre.
+#
+# O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
+# endosso, seguro de outra corretora) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por
+# dado ausente.
 class Carteira::Apresentacao
-  DAS_PROXIMAS_ENTREGAS = { renovadoEm: nil, motivo: nil, parcelaAbertaEm: nil, renovacao: nil, endosso: nil, apoliceNova: false,
-                            deFora: false, corretora: '', lembreteEm: nil }.freeze
+  DAS_PROXIMAS_ENTREGAS = { parcelaAbertaEm: nil, endosso: nil, deFora: false, corretora: '', lembreteEm: nil }.freeze
+  RENOVOU = 'renovou'.freeze
+  NAO_RENOVOU = 'nao_renovou'.freeze
 
-  def initialize(account)
+  # quem: o contexto de quem pede, como o Pundit o recebe ({ user:, account:, account_user: }). É por ele que se sabe
+  # quais cards a pessoa enxerga no quadro. Sem ele, de nenhum card sai mais que o desfecho.
+  def initialize(account, quem: nil)
+    @account = account
     @hoje = Carteira::Selo.hoje(account)
+    @quem = quem
   end
 
   def de(apolice)
-    do_seguro(apolice).merge(da_situacao(apolice), DAS_PROXIMAS_ENTREGAS)
+    de_cada([apolice]).first
   end
 
-  # Na ordem em que chegaram: quem pede a lista já ordenou.
+  # Na ordem em que chegaram: quem pede a lista já ordenou. Os cards visíveis da página saem numa consulta só, e os
+  # donos deles que ainda são da conta, em outra.
   def de_cada(apolices)
-    apolices.map { |apolice| de(apolice) }
+    visiveis = cards_visiveis(apolices)
+    apolices.map { |apolice| do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), DAS_PROXIMAS_ENTREGAS) }
   end
 
   # O bloco Seguros da ficha: o que pede atenção primeiro.
@@ -42,6 +57,42 @@ class Carteira::Apresentacao
   def da_situacao(apolice)
     { selo: Carteira::Selo.de(apolice, hoje: @hoje), dias: Carteira::Selo.dias(apolice, hoje: @hoje), origem: origem(apolice),
       temPdf: apolice.pdf.attached?, canceladoEm: apolice.cancelado_em&.to_i, corrigidoAMao: apolice.corrigido_a_mao }
+  end
+
+  # { id do card que a pessoa enxerga => o dono dele ainda é da conta? }
+  def cards_visiveis(apolices)
+    ids = apolices.filter_map(&:crm_card_id)
+    return {} if ids.empty?
+
+    donos = Carteira::CardsVisiveis.new(@quem).call.where(id: ids).pluck(:id, :owner_id).to_h
+    da_conta = ainda_da_conta(donos.values.compact.uniq)
+    donos.transform_values { |dono| da_conta.include?(dono) }
+  end
+
+  def ainda_da_conta(pessoas)
+    return [] if pessoas.empty?
+
+    AccountUser.where(account_id: @account.id, user_id: pessoas).pluck(:user_id)
+  end
+
+  def da_renovacao(apolice, cards_visiveis)
+    { renovadoEm: apolice.renovado_em&.to_i, motivo: apolice.motivo_nao_renovou, motivoEscrito: apolice.motivo_escrito,
+      apoliceNova: apolice.apolice_nova.present?, renovacao: renovacao(apolice, cards_visiveis) }
+  end
+
+  def renovacao(apolice, cards_visiveis)
+    card = apolice.crm_card
+    return if card.nil? || apolice.renovacao_card_removido_em
+    return { desfecho: desfecho(apolice) } unless cards_visiveis.key?(card.id)
+
+    dono = card.owner if cards_visiveis[card.id]
+    { cardId: card.id, funil: card.pipeline.name, etapa: card.stage.name, desfecho: desfecho(apolice), cuida: dono&.name, cuidaId: dono&.id }
+  end
+
+  def desfecho(apolice)
+    return RENOVOU if apolice.renovado_em
+
+    NAO_RENOVOU if apolice.nao_renovou_em
   end
 
   def pessoa(contato)

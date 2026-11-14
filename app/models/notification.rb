@@ -51,10 +51,15 @@ class Notification < ApplicationRecord
     # #2277 — a search by conversation ended (the actor is the `ConversationAudienceSearch`). In-app only.
     conversation_audience_ready: 12,
     # #2931 — an automation asks for approval (the actor is the step's `Autonomia::Automacao::Registro`). In-app only.
-    automacao_aprovacao: 13
+    automacao_aprovacao: 13,
+    # #2898 — insurance policies entered renewal today (the actor is the account's `Carteira::RenovacaoConfig`). In-app only.
+    carteira_renovacao: 14
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
+
+  # #2898 — what the insurance renewal notification has of its own (title, body, in-app only) lives in its module.
+  prepend Carteira::NotificacaoDaRenovacao
 
   before_create :set_last_activity_at
   after_create_commit :process_notification_delivery, :dispatch_create_event
