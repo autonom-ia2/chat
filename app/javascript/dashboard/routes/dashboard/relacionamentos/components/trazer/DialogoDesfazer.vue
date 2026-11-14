@@ -19,6 +19,9 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // O botão de desfazer só existe com a prévia na tela: nenhum botão desligado
 // por falta de dado. Enquanto ela chega, o esqueleto mostra a espera e só há o
 // botão de sair; se ela não veio, quem resolve é o "Tentar de novo" do erro.
+// #2897 — na lista que trouxe seguros a prévia diz também, depois das pessoas,
+// quantos seguros saem da carteira, quantos ficam e quantos voltam ao que eram
+// (`previa.seguros`). Na lista sem seguros nada disso aparece.
 // Durante o pedido ele mostra que está trabalhando, sem ficar desligado; o
 // segundo clique não pede de novo (trazer/useHistoricoDeListas.js).
 const props = defineProps({
@@ -72,9 +75,39 @@ const ITENS_DA_PREVIA = [
   },
 ];
 
-// Um item para quem sai, quem fica e quem volta ao que era; some o que é zero.
+// Os seguros da lista, na mesma ordem: os que saem, os que ficam e os que
+// voltam ao que eram.
+const SEGUROS = 'RELACIONAMENTOS_CARTEIRA.TRAZER.DESFAZER';
+const ITENS_DOS_SEGUROS = [
+  {
+    chave: 'seguros-saem',
+    campo: 'saem',
+    quantas: total => t(`${SEGUROS}.SAEM`, { count: total }, total),
+    porque: total => t(`${SEGUROS}.SAEM_PORQUE`, total),
+  },
+  {
+    chave: 'seguros-ficam',
+    campo: 'ficam',
+    quantas: total => t(`${SEGUROS}.FICAM`, { count: total }, total),
+    porque: total => t(`${SEGUROS}.FICAM_PORQUE`, total),
+  },
+  {
+    chave: 'seguros-voltam',
+    campo: 'voltam',
+    quantas: total => t(`${SEGUROS}.VOLTAM`, { count: total }, total),
+    porque: total => t(`${SEGUROS}.VOLTAM_PORQUE`, total),
+  },
+];
+
+// Um item para quem sai, quem fica e quem volta ao que era, das pessoas e
+// depois dos seguros; some o que é zero.
+const comOTotal = (itens, numeros) =>
+  itens.map(item => ({ ...item, total: numeros?.[item.campo] ?? SEM_PESSOAS }));
 const linhasDaPrevia = computed(() =>
-  ITENS_DA_PREVIA.map(item => ({ ...item, total: props.previa[item.campo] }))
+  [
+    ...comOTotal(ITENS_DA_PREVIA, props.previa),
+    ...comOTotal(ITENS_DOS_SEGUROS, props.previa.seguros),
+  ]
     .filter(item => item.total > SEM_PESSOAS)
     .map(item => ({
       chave: item.chave,

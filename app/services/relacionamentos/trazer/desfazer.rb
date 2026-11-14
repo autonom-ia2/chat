@@ -1,5 +1,10 @@
 # O "Desfazer" de uma lista trazida (#2896): tira da base o que a lista pôs e em que ninguém tocou.
 #
+# 0. Na lista que trouxe seguros (E4, #2897), antes de tudo: o seguro que ela criou e em que ninguém mexeu sai da
+#    carteira, e o que ela só completou num seguro que já existia volta ao que era (Carteira::Trazer::DesfazerSeguros).
+#    O seguro que alguém já corrigiu, que tem PDF, renovação em andamento ou resultado fica, e segura a pessoa dele.
+#    Vem primeiro porque os passos seguintes olham a carteira como ela fica: a pessoa sem seguro pode sair, e quem
+#    continua com seguro continua cliente.
 # 1. A pessoa que a lista criou sai, a menos que já tenha conversa, card, campanha, seguro ou recusa, ou que alguém a
 #    tenha editado (Relacionamentos::Trazer::QuemFica). Sai pelo serviço de apagar em lote de hoje
 #    (Contacts::BulkDeleteService), com os avisos de sempre: aqui nenhum evento é suprimido. Apagar um bloco leva tempo,
@@ -90,6 +95,7 @@ class Relacionamentos::Trazer::Desfazer
   def call
     return unless self.class.pode?(@importacao) && @importacao.undo_status_processing?
 
+    Carteira::Trazer::DesfazerSeguros.new(@importacao).call { vivo }
     ficaram = apagar_as_pessoas_criadas
     with_suppressed_contact_events { devolver_os_campos }
     apagar_as_empresas_criadas

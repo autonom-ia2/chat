@@ -10,12 +10,18 @@
 #   já cuidou dela (Relacionamentos::Trazer::QuemFica). Anota-se o resumo dela inteira, como a linha a deixou
 #   (`pessoa_criada`, Relacionamentos::Trazer::PessoaCriada): é por ele que o Desfazer sabe se alguém a editou depois.
 #   Quando uma linha de baixo completa a pessoa que uma linha de cima criou, esse resumo é refeito.
+# - Na planilha com seguros (E4, #2897), a mesma pessoa vem em várias linhas, e o seguro mais antigo dela pode estar
+#   numa linha de baixo: a data de cliente vai para mais cedo (`postos.adiantou`). A marca de cliente que esta lista
+#   anotou numa linha de cima passa a ser a da data nova, e o resumo da pessoa que ela criou é refeito. Sem isso o
+#   Desfazer acharia que alguém mexeu. De quem já era cliente antes da lista nada é anotado: a data que a lista
+#   adiantou nessa pessoa não volta (o valor de antes não é guardado; limite conhecido).
 # - O telefone da empresa fica na empresa da linha, que pode ser de outras pessoas: é anotado seja a pessoa da linha
 #   nova ou não.
 class Relacionamentos::Trazer::CamposPreenchidos
   Campo = Relacionamentos::CampoPreenchido
 
   def initialize(importacao)
+    @importacao = importacao
     @conta_id = importacao.account_id
     @criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
   end
@@ -27,10 +33,17 @@ class Relacionamentos::Trazer::CamposPreenchidos
     pessoa_id = gravada.contact.id
     dela = gravada.existing ? da_pessoa(gravada, informacoes, postos) : { Campo::PESSOA_CRIADA => @criada.conteudo(pessoa_id) }
     anotar(linha, pessoa_id, da_empresa(postos).merge(dela), postos)
-    @criada.refazer(pessoa_id) if gravada.existing && dela.any?
+    adiantar_cliente(pessoa_id, postos.adiantou) if postos.adiantou
+    @criada.refazer(pessoa_id) if gravada.existing && (dela.any? || postos.adiantou)
   end
 
   private
+
+  # A marca de cliente que esta lista anotou na pessoa passa a valer para a data de agora.
+  def adiantar_cliente(pessoa_id, desde)
+    anotacao = Campo.pendentes.da_importacao(@importacao).find_by(campo: Campo::CLIENTE, contact_id: pessoa_id)
+    anotacao&.update!(valor_posto_hash: Campo.resumo(anotacao.campaign_import_row_id, Campo::CLIENTE, Campo.instante(desde)))
+  end
 
   def anotar(linha, pessoa_id, valores, postos)
     return if valores.empty?

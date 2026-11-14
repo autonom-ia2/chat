@@ -37,6 +37,61 @@ describe('diálogo Desfazer', () => {
     );
   });
 
+  // #2897 — a lista que trouxe seguros diz também o que acontece com eles.
+  it('na lista que trouxe seguros, diz quantos saem, quantos ficam e quantos voltam, depois das pessoas', () => {
+    const w = montar({
+      arquivo: 'carteira.xlsx',
+      previa: {
+        tira: 2,
+        ficam: 0,
+        devolve: 0,
+        seguros: { saem: 5, ficam: 1, voltam: 2 },
+      },
+    });
+    const linhas = w.findAll('[data-linha]');
+    expect(linhas.map(item => item.attributes('data-linha'))).toEqual([
+      'saem',
+      'seguros-saem',
+      'seguros-ficam',
+      'seguros-voltam',
+    ]);
+    expect(
+      linhas.slice(1).map(item => item.findAll('p').map(p => p.text()))
+    ).toEqual([
+      [
+        '5 seguros saem da carteira',
+        'Vieram nesta lista e ninguém mexeu neles depois.',
+      ],
+      [
+        '1 seguro fica na carteira',
+        'Alguém já corrigiu, guardou o PDF ou está cuidando da renovação dele.',
+      ],
+      [
+        '2 seguros voltam a ser como eram',
+        'Já estavam aqui antes. Sai só o que esta lista mudou neles.',
+      ],
+    ]);
+  });
+
+  it('o seguro que é zero não vira item, e a lista sem seguros não fala deles', () => {
+    const soSaem = montar({
+      previa: {
+        tira: 0,
+        ficam: 0,
+        devolve: 0,
+        seguros: { saem: 3, ficam: 0, voltam: 0 },
+      },
+    });
+    expect(
+      soSaem.findAll('[data-linha]').map(item => item.attributes('data-linha'))
+    ).toEqual(['seguros-saem']);
+    // Só seguros para desfazer ainda é o que desfazer: não é o "nada a tirar".
+    expect(marca(soSaem, 'desfazer-nada').exists()).toBe(false);
+
+    const semSeguros = montar({ previa: { tira: 1, ficam: 0, devolve: 0 } });
+    expect(semSeguros.text()).not.toContain('seguro');
+  });
+
   it('sem nome volta ao título geral', () => {
     const w = montar({ previa: null });
     expect(w.get('[data-relacionamentos="titulo-do-dialogo"]').text()).toBe(

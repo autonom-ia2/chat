@@ -380,6 +380,17 @@ export const previaDoDesfazerDaTela = previa => ({
   tira: previa.tira,
   ficam: previa.ficam,
   devolve: previa.devolve,
+  // #2897 — só na lista que trouxe seguros: quantos saem da carteira, quantos
+  // ficam como estão e quantos voltam ao que eram.
+  ...(previa.seguros
+    ? {
+        seguros: {
+          saem: previa.seguros.saem,
+          ficam: previa.seguros.ficam,
+          voltam: previa.seguros.voltam,
+        },
+      }
+    : {}),
 });
 
 // O servidor recusa a prévia e o desfazer da lista que ainda não foi gravada

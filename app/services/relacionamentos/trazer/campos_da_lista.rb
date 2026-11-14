@@ -11,6 +11,10 @@
 # linhas (para achar a empresa) e as empresas. A consulta que acha o bloco relê as linhas da lista inteira, então o
 # tempo cresce com o número de blocos. Só o Desfazer faz uma consulta a mais por pessoa, e só para a marca de cliente:
 # o card ganho é conferido de novo com a pessoa travada (Relacionamentos::Trazer::CampoQueVolta#desmarcar_cliente).
+#
+# Na lista que trouxe seguros (E4, #2897), cada bloco com marca de cliente faz uma consulta a mais: quem continua com
+# seguro na carteira depois deste Desfazer continua cliente (Carteira::Trazer::SegurosDaLista#que_ficam). A lista sem
+# seguros não faz essa consulta, e a marca de cliente dela volta como sempre.
 class Relacionamentos::Trazer::CamposDaLista
   Campo = Relacionamentos::CampoPreenchido
   BLOCO = Relacionamentos::Trazer::QuemFica::BLOCO
@@ -45,12 +49,24 @@ class Relacionamentos::Trazer::CamposDaLista
 
   def das_pessoas(registros)
     pessoas = @conta.contacts.where(id: registros.map(&:contact_id).uniq).index_by(&:id)
-    ganharam = quem_ganhou(registros.select { |registro| registro.campo == Campo::CLIENTE }.map(&:contact_id))
+    marcadas = registros.select { |registro| registro.campo == Campo::CLIENTE }.map(&:contact_id)
+    continuam = quem_ganhou(marcadas) | quem_tem_seguro(marcadas)
     procuradas = procurado.entre(registros.select(&:de_contato?).map(&:contact_id))
     registros.map do |registro|
       id = registro.contact_id
-      campo(registro, pessoas[id], ganhou: ganharam.include?(id), procurada: procuradas.include?(id))
+      campo(registro, pessoas[id], ganhou: continuam.include?(id), procurada: procuradas.include?(id))
     end
+  end
+
+  # Quem continua com seguro na carteira depois deste Desfazer. Só a lista que trouxe seguros pergunta.
+  def quem_tem_seguro(pessoas)
+    return Set.new if pessoas.empty? || !seguros.trouxe_seguros?
+
+    seguros.que_ficam.where(contact_id: pessoas).distinct.pluck(:contact_id).to_set
+  end
+
+  def seguros
+    @seguros ||= Carteira::Trazer::SegurosDaLista.new(@importacao)
   end
 
   def procurado
