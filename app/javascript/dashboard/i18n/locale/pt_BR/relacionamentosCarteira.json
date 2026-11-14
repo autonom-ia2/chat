@@ -303,7 +303,9 @@
         "NAO_RENOVOU": "Não renovou.",
         "NAO_RENOVOU_OUTRO": "Não renovou.",
         "APOLICE_NOVA": "Apólice nova guardada.",
-        "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação."
+        "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação.",
+        "CHEGOU_PDF": "Chegou por PDF.",
+        "CHEGOU_DE_NOVO_PDF": "Atualizado por PDF."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
@@ -477,7 +479,25 @@
         "AVISO": "O PDF que está guardado sai e não volta. O novo entra no lugar.",
         "CONFIRMAR": "Trocar o PDF",
         "VOLTAR": "Voltar"
-      }
+      },
+      "APOIO_LER": "Depois de escolher, eu leio o PDF e mostro o que está diferente antes de guardar.",
+      "LENDO": "Lendo o PDF… isso leva até um minuto.",
+      "GUARDAR_SEM_LER": "Guardar sem ler",
+      "MUDOU": {
+        "TITULO": "O PDF diz algo diferente",
+        "APOIO": "Escolha o que trazer do PDF. O que você não escolher fica como está.",
+        "OUTRA_APOLICE": "A seguradora ou o número da apólice no PDF não são os guardados. Este PDF pode ser de outra apólice: confira antes de usar qualquer coisa dele.",
+        "ANTES": "Guardado",
+        "NO_PDF": "No PDF",
+        "LEGENDA": "O que o PDF diz de diferente do seguro guardado",
+        "INFORMACAO": "Informação",
+        "USAR": "Usar o do PDF",
+        "CONFIRA": "Confira: achei isto sem certeza.",
+        "CORRIGIDO_A_MAO": "Alguém corrigiu isto à mão. Se usar o do PDF, ele continua protegido como corrigido.",
+        "GUARDAR": "Guardar",
+        "MANTER": "Manter como está"
+      },
+      "SOLTAR_VARIOS": "Arraste os PDFs para cá ou clique para escolher"
     },
     "RECUSAS": {
       "FALTA_NUMERO": "Falta o número da apólice. Escreva o número e salve de novo.",
@@ -511,7 +531,17 @@
       "FALTA_TIPO": "Falta o tipo de seguro. Escolha o tipo e salve de novo.",
       "TERMINA_ANTES_DA_ANTERIOR": "A apólice nova precisa terminar depois do seguro que ela renova. Confira a data em que ela termina.",
       "APOLICE_DE_OUTRA_PESSOA": "Essa seguradora e esse número de apólice já estão guardados no seguro de outra pessoa. Confira o número da apólice.",
-      "TERMO_AMBIGUO": "Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas."
+      "TERMO_AMBIGUO": "Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas.",
+      "LEITURA_DESLIGADA": "A leitura de PDF não está disponível nesta conta. Você ainda pode guardar o PDF sem ler.",
+      "NAO_E_APOLICE": "Este PDF não é uma apólice de seguro. Escolha o PDF da apólice que a seguradora mandou.",
+      "NAO_DEU_PARA_LER": "Não consegui ler este PDF. Você pode guardar sem ler, ou pedir à seguradora o PDF da apólice, não a cópia escaneada, e tentar de novo.",
+      "LEITURA_EXPIROU": "Esta leitura não está mais aqui. Escolha o PDF de novo.",
+      "LEITURA_NAO_PRONTA": "O PDF ainda está sendo lido. Espere um pouco e tente de novo.",
+      "LEITURA_FECHADA": "Estes PDFs já foram trazidos. Atualizei a tela.",
+      "ITEM_FECHADO": "Este PDF não pode mais ser mudado. Atualizei a tela.",
+      "CAMPO_INVALIDO": "Não entendi o que foi escrito. Confira e salve de novo.",
+      "NADA_PARA_TRAZER": "Nenhum PDF está pronto para entrar ainda. Preencha o que falta ou deixe o PDF de fora.",
+      "NAO_PODE_DESFAZER": "Estes PDFs não podem mais ser desfeitos."
     },
     "TRAZER": {
       "BOTAO": "Trazer seguros",
@@ -612,6 +642,83 @@
         "FICAM_PORQUE": "Alguém já corrigiu, guardou o PDF ou está cuidando da renovação dele. | Alguém já corrigiu, guardou o PDF ou está cuidando da renovação deles.",
         "VOLTAM": "{count} seguro volta a ser como era | {count} seguros voltam a ser como eram",
         "VOLTAM_PORQUE": "Já estava aqui antes. Sai só o que esta lista mudou nele. | Já estavam aqui antes. Sai só o que esta lista mudou neles."
+      }
+    },
+    "PDFS": {
+      "TITULO": "Trazer seguros por PDFs",
+      "APOIO": "Escolha até 50 PDFs de apólices. Eu leio cada um e mostro o que achei antes de qualquer coisa entrar.",
+      "ENVIANDO": "Enviando os PDFs…",
+      "LENDO": "Lendo os PDFs… {lidos} de {total} lidos. Pode sair desta página: a leitura continua.",
+      "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
+      "TRAZENDO": "Trazendo os seguros… {porcentagem}%",
+      "COMO": {
+        "TITULO": "Como você quer trazer seus clientes?",
+        "PLANILHA": {
+          "TITULO": "Por planilha",
+          "APOIO": "Uma lista de clientes e seguros em Excel ou CSV."
+        },
+        "PDFS": {
+          "TITULO": "Por PDFs das apólices",
+          "APOIO": "Os PDFs das apólices que as seguradoras mandaram. Eu leio cada um para você."
+        }
+      },
+      "CONFERIR": {
+        "ENTRAM": "{seguros} seguros prontos para entrar, de {pessoas} pessoas.",
+        "PRECISAM": "{n} precisam de você",
+        "RECUSADOS": "{n} não são apólices",
+        "NAO_LEU": "{n} não deram para ler",
+        "FORA": "{n} deixados de fora",
+        "TRAZER": "Trazer {n} seguros",
+        "OUTROS": "Enviar outros PDFs"
+      },
+      "ITEM": {
+        "TITULO": "PDF {posicao}",
+        "FALTAM": "Não achei isto. Escreva para trazer este seguro, ou deixe o PDF de fora.",
+        "SALVAR": "Salvar o que escrevi",
+        "DEIXAR_DE_FORA": "Deixar este PDF de fora",
+        "TRAZER_DE_VOLTA": "Trazer este PDF de volta",
+        "CAMPOS": {
+          "TIPO": "Tipo de seguro",
+          "SEGURADORA": "Seguradora",
+          "TERMINA": "Termina",
+          "NOME": "Nome do segurado"
+        },
+        "CONFIRA": {
+          "TELEFONE": "Achei o telefone {valor}, mas ele pode ser do corretor. É do cliente?",
+          "EMAIL": "Achei o e-mail {valor}, mas ele pode ser do corretor. É do cliente?",
+          "VALOR": "Achei o valor {valor} sem \"R$\". É o valor que o cliente paga?",
+          "E_DO_CLIENTE": "Sim, é do cliente",
+          "NAO_E_DO_CLIENTE": "Não é"
+        },
+        "ESTADO": {
+          "RECUSADO": "Este PDF não é uma apólice de seguro. Ele não entra.",
+          "FALHOU": "Não consegui ler este PDF. Mande de novo num lote novo, ou peça à seguradora o PDF da apólice, não a cópia escaneada.",
+          "FORA": "Deixado de fora. Ele não entra.",
+          "NAO_ENTROU": "Este seguro não entrou: ele já está guardado de outro jeito. Confira na lista de seguros.",
+          "LENDO": "Ainda lendo.",
+          "TRAZIDO": "Trazido."
+        }
+      },
+      "HISTORICO": {
+        "TITULO": "PDFs já enviados",
+        "LINHA": "{pdfs} PDFs · {seguros} seguros",
+        "CONTINUAR": "Continuar",
+        "DESFAZER": "Desfazer",
+        "SITUACAO": {
+          "LENDO": "lendo",
+          "LIDA": "esperando você",
+          "TRAZENDO": "entrando",
+          "TRAZIDA": "trazido",
+          "DESFAZENDO": "sendo desfeito",
+          "DESFEITA": "desfeito"
+        },
+        "PREVIA": {
+          "TITULO": "Desfazer estes PDFs?",
+          "AVISO": "{saem} seguros saem e {voltam} voltam ao que eram. {ficam} ficam porque alguém já cuidou deles. {pessoasSaem} pessoas saem; {pessoasFicam} ficam.",
+          "CONFIRMAR": "Desfazer",
+          "VOLTAR": "Voltar"
+        },
+        "QUANDO": "{quando} · {situacao}"
       }
     }
   }
