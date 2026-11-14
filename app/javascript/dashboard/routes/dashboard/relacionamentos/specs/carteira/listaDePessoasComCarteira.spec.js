@@ -215,6 +215,30 @@ describe('na conta com a carteira de seguros', () => {
     );
   });
 
+  // O servidor pode ganhar um selo antes da tela: ele vira "Seguro", em cor
+  // neutra, e a chave do catálogo nunca aparece.
+  it('o selo que a tela não conhece, ou que não veio, vira só "Seguro"', async () => {
+    SegurosAPI.resumoPorPessoa.mockResolvedValue({
+      data: {
+        1: { quantos: 1, selo: 'suspenso', tipo: 'auto', dias: 12 },
+        2: { quantos: 1, selo: null, tipo: 'vida', dias: 200 },
+      },
+    });
+
+    const w = await abrir();
+
+    await vi.waitFor(() =>
+      expect(w.findAll(daCarteira('selo'))).toHaveLength(2)
+    );
+    const [ana, bruno] = linhas(w).map(seloDaLinha);
+    expect(ana.text()).toBe('Seguro');
+    expect(ana.attributes('data-selo')).toBe('neutro');
+    expect(bruno.text()).toBe('Seguro');
+    [ana, bruno].forEach(selo =>
+      expect(selo.text()).not.toContain('RELACIONAMENTOS')
+    );
+  });
+
   it('tem o grupo "Só tem um seguro" depois de "Clientes", com o número que o servidor contou', async () => {
     const w = await abrir();
 

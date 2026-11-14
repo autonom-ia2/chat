@@ -49,15 +49,35 @@ export const etapasDoFunil = (funis = [], funilId = null) =>
 // apagado).
 export const ondeFicam = (funis = [], { funilId, etapaId } = {}) => {
   const funil = funis.find(item => item.id === funilId);
-  const etapa = funil?.etapas.find(item => item.id === etapaId);
+  const etapa = (funil?.etapas ?? []).find(item => item.id === etapaId);
   return etapa ? { funil: funil.nome, etapa: etapa.nome } : null;
 };
 
-// O que falta para guardar os ajustes: '' = nada. A ordem é a da tela.
-export const FALTAS = { FUNIL: 'FUNIL', ETAPA: 'ETAPA', DIAS: 'DIAS' };
-export const faltaNosAjustes = ({ funilId, etapaId, dias } = {}) => {
+// O funil escolhido está entre os da conta e não tem etapa nenhuma: não há
+// onde a renovação entrar. O CRM não deixa apagar a última etapa de um funil,
+// mas um funil pode nascer sem etapa (a criação do funil e a das etapas são
+// pedidos separados): a tela não depende de isso nunca acontecer.
+export const funilSemEtapa = (funis = [], funilId = null) =>
+  funis.some(funil => funil.id === funilId) &&
+  !etapasDoFunil(funis, funilId).length;
+
+// O que falta para guardar os ajustes: '' = nada. A ordem é a da tela. No
+// funil sem etapa não adianta pedir a etapa: o que falta é outro funil (ou
+// criar a etapa no CRM).
+export const FALTAS = {
+  FUNIL: 'FUNIL',
+  ETAPA: 'ETAPA',
+  SEM_ETAPA: 'SEM_ETAPA',
+  DIAS: 'DIAS',
+};
+export const faltaNosAjustes = (
+  { funilId, etapaId, dias } = {},
+  funis = []
+) => {
   if (!funilId) return FALTAS.FUNIL;
-  if (!etapaId) return FALTAS.ETAPA;
+  if (!etapaId) {
+    return funilSemEtapa(funis, funilId) ? FALTAS.SEM_ETAPA : FALTAS.ETAPA;
+  }
   return dias ? '' : FALTAS.DIAS;
 };
 

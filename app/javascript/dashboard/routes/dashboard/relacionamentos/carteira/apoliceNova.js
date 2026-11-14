@@ -3,7 +3,9 @@
 // (carteira/formularioDoSeguro.js). Nasce com o que não muda de um ano para o
 // outro (tipo, seguradora, o que está segurado) e com a vigência seguinte: a
 // nova começa no dia em que a anterior termina e vale um ano. Número e valor
-// ficam em branco: são da apólice nova. Tudo função pura.
+// ficam em branco: são da apólice nova. O número pode ficar para depois (a
+// seguradora demora a emitir, e o servidor não o exige): a pessoa o preenche
+// em "Corrigir", no seguro novo. Tudo função pura.
 import { paraCampoDeData } from './formatosDoSeguro';
 import {
   dadosParaCorrigir,
@@ -34,11 +36,6 @@ export const formularioDaApoliceNova = (anterior, seguradoras = []) => ({
   termina: paraCampoDeData(umAnoDepois(anterior.termina)),
 });
 
-// A apólice nova sempre tem número: sem ele não dá para achá-la depois.
-const SEMPRE_COM_NUMERO = { numero: 'obrigatorio' };
-export const faltasDaApoliceNova = formulario =>
-  faltasDoFormulario(formulario, SEMPRE_COM_NUMERO);
-
 const EM_BRANCO = {
   tipo: '',
   seguradora: '',
@@ -49,6 +46,11 @@ const EM_BRANCO = {
   valor: '',
   bem: '',
 };
+
+// O que falta na apólice nova: o mesmo do "Corrigir", sem pedir o número (ela
+// nasce em branco, e o número em branco não é falta).
+export const faltasDaApoliceNova = formulario =>
+  faltasDoFormulario(formulario, EM_BRANCO);
 
 // Tudo o que foi preenchido, no formato do seguro (datas em segundos, valor em
 // número). O que ficou em branco não vai.

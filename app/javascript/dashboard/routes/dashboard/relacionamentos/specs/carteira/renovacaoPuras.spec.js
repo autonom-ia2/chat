@@ -9,6 +9,7 @@ import {
   diasDigitados,
   etapasDoFunil,
   faltaNosAjustes,
+  funilSemEtapa,
   ondeFicam,
   quantosEntram,
   semOFunil,
@@ -64,10 +65,15 @@ import {
   faltaApoliceNova,
   faltaMotivo,
   motivoTemNome,
+  renovacaoSoDeLeitura,
   situacaoDaRenovacao,
   terminou,
 } from '../../carteira/situacaoDaRenovacao';
-import { chaveDoSelo, tomDoSelo } from '../../carteira/tomDoSelo';
+import {
+  chaveDoSelo,
+  chaveDoSeloDaPessoa,
+  tomDoSelo,
+} from '../../carteira/tomDoSelo';
 import {
   GRUPOS_DE_SEGUROS,
   GRUPO_EM_RENOVACAO,
@@ -222,6 +228,39 @@ describe('ajustar renovações: o funil e a etapa', () => {
     expect(faltaNosAjustes({ ...completos, etapaId: null })).toBe(FALTAS.ETAPA);
     expect(faltaNosAjustes({ ...completos, dias: null })).toBe(FALTAS.DIAS);
     expect(faltaNosAjustes(completos)).toBe('');
+  });
+
+  // O funil pode existir sem etapa nenhuma: pedir a etapa seria um beco sem
+  // saída (não há etapa para escolher).
+  describe('o funil escolhido que não tem etapa', () => {
+    const SEM_ETAPA = { id: 3, nome: 'Novo', etapas: [] };
+    const SEM_A_LISTA = { id: 4, nome: 'Antigo' };
+    const funis = [...FUNIS, SEM_ETAPA, SEM_A_LISTA];
+
+    it('é reconhecido só quando o funil está entre os da conta', () => {
+      expect(funilSemEtapa(funis, 3)).toBe(true);
+      expect(funilSemEtapa(funis, 4)).toBe(true);
+      expect(funilSemEtapa(funis, 1)).toBe(false);
+      expect(funilSemEtapa(funis, 99)).toBe(false);
+      expect(funilSemEtapa(funis, null)).toBe(false);
+      expect(funilSemEtapa()).toBe(false);
+    });
+
+    it('o Salvar pede outro funil, e não uma etapa que não existe', () => {
+      const semEtapa = { funilId: 3, etapaId: null, dias: 60 };
+
+      expect(faltaNosAjustes(semEtapa, funis)).toBe(FALTAS.SEM_ETAPA);
+      expect(faltaNosAjustes({ ...semEtapa, funilId: 1 }, funis)).toBe(
+        FALTAS.ETAPA
+      );
+      // Sem a lista de funis não dá para saber: pede a etapa, como antes.
+      expect(faltaNosAjustes(semEtapa)).toBe(FALTAS.ETAPA);
+    });
+
+    it('escolher esse funil deixa a etapa em branco, e a escolha de hoje não quebra', () => {
+      expect(comOFunil(AJUSTES_PADRAO, funis, 3).etapaId).toBeNull();
+      expect(ondeFicam(funis, { funilId: 4, etapaId: 11 })).toBeNull();
+    });
   });
 
   it('cada falta tem a frase dela nos dois idiomas', () => {
@@ -563,6 +602,28 @@ describe('os selos da renovação', () => {
     nosDoisIdiomas(chaveDoSelo(SELOS.RENOVADO));
   });
 
+  // O servidor pode ganhar um selo antes da tela: a chave nunca aparece crua.
+  it.each(['suspenso', 'constructor', 'ATIVO', '', null, undefined, 7])(
+    'o selo que a tela não conhece (%j) cai no texto neutro, sem quebrar',
+    selo => {
+      expect(chaveDoSelo(selo)).toBe(daCarteira('SELOS.DESCONHECIDO'));
+      expect(chaveDoSeloDaPessoa(selo)).toBe(
+        daCarteira('PESSOAS.SELOS.DESCONHECIDO')
+      );
+      expect(tomDoSelo(selo)).toBe('neutro');
+    }
+  );
+
+  it('cada selo conhecido tem o texto da linha e o da lista de pessoas, nos dois idiomas', () => {
+    Object.values(SELOS).forEach(selo => {
+      nosDoisIdiomas(chaveDoSelo(selo));
+      nosDoisIdiomas(chaveDoSeloDaPessoa(selo));
+    });
+    nosDoisIdiomas(chaveDoSelo('suspenso'));
+    nosDoisIdiomas(chaveDoSeloDaPessoa('suspenso'));
+    expect(doCatalogo(ptBR, chaveDoSelo('suspenso'))).toBe('Seguro');
+  });
+
   it('na ficha: vencido, em renovação, renovado, ativo e cancelado', () => {
     const seguros = [
       terminaEm(5, { id: 1, canceladoEm: 9 }),
@@ -788,6 +849,60 @@ describe('o rodapé da gaveta com a renovação', () => {
     expect(deVoltaAAtivo.menu).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
   });
 
+  // Quem não enxerga o card da renovação recebe a renovação sem `cardId`, e
+  // quase nunca pode fechá-lo: botão que só dá erro não aparece.
+  describe('a renovação que chega sem o card (só com o desfecho)', () => {
+    const semCard = (desfecho, resto = {}) =>
+      terminaEm(20, { renovacao: { desfecho }, ...resto });
+
+    it('é só leitura; o seguro sem renovação nenhuma não entra nessa regra', () => {
+      expect(renovacaoSoDeLeitura(semCard(null))).toBe(true);
+      expect(renovacaoSoDeLeitura(semCard('renovou'))).toBe(true);
+      expect(renovacaoSoDeLeitura(emRenovacao())).toBe(false);
+      expect(renovacaoSoDeLeitura(terminaEm(20, { renovacao: null }))).toBe(
+        false
+      );
+      expect(renovacaoSoDeLeitura(terminaEm(20))).toBe(false);
+      expect(renovacaoSoDeLeitura()).toBe(false);
+    });
+
+    it('aberta: sem "Renovou" nem "Não renovou"; o rodapé é o de um seguro comum', () => {
+      expect(rodape(semCard(null, { temPdf: true }))).toEqual({
+        azul: DO_RODAPE.VER_PDF,
+        secundario: DO_RODAPE.CORRIGIR,
+        menu: [
+          DO_RODAPE.GUARDAR_OUTRO_PDF,
+          DO_RODAPE.APAGAR_PDF,
+          DO_RODAPE.MARCAR_CANCELADO,
+        ],
+      });
+      expect(rodape(semCard(null))).toEqual({
+        azul: DO_RODAPE.GUARDAR_PDF,
+        secundario: DO_RODAPE.CORRIGIR,
+        menu: [DO_RODAPE.MARCAR_CANCELADO],
+      });
+    });
+
+    it('terminada: sem o "Desfazer" no "⋯"; a apólice nova continua, que não mexe no card', () => {
+      const renovou = rodape(semCard('renovou', { renovadoEm: 1790000000 }));
+      const naoRenovou = rodape(semCard('nao_renovou'));
+
+      expect(renovou.azul).toBe(DO_RODAPE.GUARDAR_APOLICE_NOVA);
+      expect(renovou.menu).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+      expect(naoRenovou.menu).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    });
+
+    it('o seguro que renovou sem card nenhum (a apólice nova chegou) ainda desfaz', () => {
+      const semRenovacao = terminaEm(20, {
+        renovacao: null,
+        renovadoEm: 1790000000,
+        apoliceNova: true,
+      });
+
+      expect(rodape(semRenovacao).menu).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    });
+  });
+
   it('quem só pode ver não tem nada da renovação', () => {
     expect(
       rodape(emRenovacao(20, { temPdf: true }), { podeEditar: false })
@@ -951,7 +1066,7 @@ describe('o arquivo do histórico', () => {
     expect(csv).toBe(`${MARCA_UTF8}"Disse ""depois eu vejo""; não voltou"`);
   });
 
-  it.each(['=1+1', '+5511900000001', '-3', '@alguem'])(
+  it.each(['=1+1', '+5511900000001', '-3', '@alguem', '\t=1+1', '\r=1+1'])(
     'o valor %j ganha um apóstrofo para a planilha não ler como fórmula',
     valor => {
       expect(csvDoHistorico([[valor]])).toBe(`${MARCA_UTF8}"'${valor}"`);
@@ -969,6 +1084,7 @@ describe('o arquivo do histórico', () => {
   });
 
   it('baixa o arquivo pelo navegador e solta o endereço depois', () => {
+    vi.useFakeTimers();
     const criar = vi.fn(() => 'blob:historico');
     const soltar = vi.fn();
     const antes = {
@@ -978,19 +1094,27 @@ describe('o arquivo do histórico', () => {
     URL.createObjectURL = criar;
     URL.revokeObjectURL = soltar;
     const baixados = [];
+    // O link só é clicado dentro da página (fora dela há navegador que ignora).
     const clique = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(function guardar() {
-        baixados.push(this.download);
+        baixados.push({ nome: this.download, naPagina: this.isConnected });
       });
 
     baixarArquivo('historico-do-seguro.csv', 'conteúdo');
 
-    expect(baixados).toEqual(['historico-do-seguro.csv']);
+    expect(baixados).toEqual([
+      { nome: 'historico-do-seguro.csv', naPagina: true },
+    ]);
+    expect(document.querySelector('a[download]')).toBeNull();
     expect(criar).toHaveBeenCalledTimes(1);
     expect(criar.mock.calls[0][0]).toBeInstanceOf(Blob);
+    // O endereço só é solto depois, com o navegador já baixando.
+    expect(soltar).not.toHaveBeenCalled();
+    vi.runAllTimers();
     expect(soltar).toHaveBeenCalledWith('blob:historico');
 
+    vi.useRealTimers();
     clique.mockRestore();
     URL.createObjectURL = antes.criar;
     URL.revokeObjectURL = antes.soltar;
@@ -1201,12 +1325,19 @@ describe('a apólice nova', () => {
     });
   });
 
-  it('sempre pede o número', () => {
+  // A seguradora pode demorar a emitir, e o servidor não exige o número.
+  it('o número pode ficar para depois: em branco não é falta, e não vai no pedido', () => {
     const formulario = formularioDaApoliceNova(ANTERIOR, SEGURADORAS);
 
-    expect(faltasDaApoliceNova(formulario)).toEqual({ numero: 'NUMERO' });
+    expect(formulario.numero).toBe('');
+    expect(faltasDaApoliceNova(formulario)).toEqual({});
+    expect(faltasDaApoliceNova({ ...formulario, numero: '   ' })).toEqual({});
     expect(faltasDaApoliceNova({ ...formulario, numero: 'AT-000987' })).toEqual(
       {}
+    );
+    expect(dadosDaApoliceNova(formulario)).not.toHaveProperty('numero');
+    expect(Object.keys(dadosDaApoliceNova(formulario))).toEqual(
+      expect.arrayContaining(['tipo', 'seguradora', 'termina'])
     );
   });
 

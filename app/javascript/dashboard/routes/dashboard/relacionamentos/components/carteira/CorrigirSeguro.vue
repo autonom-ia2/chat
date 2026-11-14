@@ -25,7 +25,8 @@ import CampoDoSeguro from './CampoDoSeguro.vue';
 // a quem usa se há algo a perder ao sair sem salvar.
 // #2898 — com `apoliceNova`, o mesmo formulário escreve a apólice nova do
 // seguro que renovou (carteira/apoliceNova.js): nasce com o que não muda de um
-// ano para o outro, pede o número e emite tudo o que foi preenchido.
+// ano para o outro e emite tudo o que foi preenchido. O número pode ficar para
+// depois, e o rótulo do campo diz isso.
 const props = defineProps({
   seguro: { type: Object, required: true },
   // As seguradoras que a conta já tem (a lista da escolha).
@@ -105,7 +106,10 @@ const temMudanca = () =>
 defineExpose({ tentarSalvar, temMudanca });
 
 const TEXTOS = [
-  { campo: 'numero', rotulo: 'NUMERO' },
+  {
+    campo: 'numero',
+    rotulo: props.apoliceNova ? 'NUMERO_DA_APOLICE_NOVA' : 'NUMERO',
+  },
   { campo: 'comeca', rotulo: 'COMECA', tipo: 'date' },
   { campo: 'termina', rotulo: 'TERMINA', tipo: 'date' },
   { campo: 'valor', rotulo: 'VALOR', modo: 'decimal' },

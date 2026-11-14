@@ -6,9 +6,11 @@ const SEPARADOR = ';';
 // Marca que diz à planilha que o arquivo é UTF-8 (sem ela, o acento sai errado).
 const MARCA_UTF8 = '\uFEFF';
 const NOME_DO_ARQUIVO = 'historico-do-seguro.csv';
-// Um valor que começa por um destes a planilha lê como fórmula. O apóstrofo na
-// frente faz ela ler como texto.
-const COMECO_DE_FORMULA = ['=', '+', '-', '@'];
+const SOLTAR_O_ENDERECO_EM_MS = 1000;
+// Um valor que começa por um destes a planilha lê como fórmula (a tabulação e
+// o retorno de carro também abrem uma). O apóstrofo na frente faz ela ler como
+// texto.
+const COMECO_DE_FORMULA = ['=', '+', '-', '@', '\t', '\r'];
 
 const comoTexto = valor => {
   const texto = String(valor ?? '');
@@ -33,6 +35,10 @@ export const baixarArquivo = (nome, conteudo) => {
     href: endereco,
     download: nome,
   });
+  // Fora da página alguns navegadores ignoram o clique; e o endereço só é
+  // solto depois, para o navegador ter tempo de começar a baixar.
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(endereco);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(endereco), SOLTAR_O_ENDERECO_EM_MS);
 };

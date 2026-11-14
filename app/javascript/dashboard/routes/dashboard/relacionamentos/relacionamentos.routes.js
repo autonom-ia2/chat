@@ -24,16 +24,32 @@ const PERMISSIONS = [
   'contact_manage',
   'attribute_manage',
 ];
+// #2898 — as duas telas da renovação pedem o que o servidor pede, para a
+// pessoa nem chegar a elas sem poder. `meta.permissions` é "uma destas":
+// - Resultados: ver contatos, como a carteira inteira (o administrador, o
+//   agente sem função e a função com `contact_view` ou `contact_manage`). São
+//   as da lista, menos quem só mexe em campos, que não lê a carteira;
+// - Ajustar renovações: salvar pede editar contatos E uma chave de funil. A
+//   rota pede a chave de funil; quem a tem sem editar contatos lê a escolha de
+//   hoje, sem o Salvar (a própria página decide, e o servidor confirma).
+export const PERMISSOES_DOS_RESULTADOS = PERMISSIONS.filter(
+  permissao => permissao !== 'attribute_manage'
+);
+export const PERMISSOES_DOS_AJUSTES = [
+  'administrator',
+  'crm_manage_pipelines',
+  'crm_admin',
+];
 const FLAG = FEATURE_FLAGS.RELACIONAMENTOS_NOVO;
 // As mesmas flags da lista (`relationships_home`): a tela nova mora dentro do
 // menu de Relacionamentos, então quem não o tem não chega nas fichas por link.
 const FLAGS = [FLAG, FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION];
 
-const rota = (path, name, component) => ({
+const rota = (path, name, component, permissions = PERMISSIONS) => ({
   path: frontendURL(`accounts/:accountId/relacionamentos/${path}`),
   name,
   component,
-  meta: { featureFlag: FLAG, permissions: PERMISSIONS },
+  meta: { featureFlag: FLAG, permissions },
   beforeEnter: comFlags(...FLAGS),
 });
 
@@ -57,11 +73,13 @@ export const routes = [
   rota(
     'seguros/renovacoes',
     'relacionamentos_renovacoes',
-    AjustarRenovacoesPage
+    AjustarRenovacoesPage,
+    PERMISSOES_DOS_AJUSTES
   ),
   rota(
     'seguros/resultados',
     'relacionamentos_resultados',
-    ResultadosDasRenovacoesPage
+    ResultadosDasRenovacoesPage,
+    PERMISSOES_DOS_RESULTADOS
   ),
 ];

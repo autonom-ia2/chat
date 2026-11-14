@@ -9,7 +9,8 @@ import { MOTIVOS, MOTIVO_ESCRITO } from '../../../carteira/situacaoDaRenovacao';
 // #2898 — "Por que não renovou?": quatro motivos, um toque guarda e fecha.
 // "Outro motivo" abre uma linha para escrever, e aí aparece o Salvar (sempre
 // ligado: sem texto, o clique diz o que falta e leva o foco até lá). Emite
-// `escolher` com { motivo } ou { motivo: 'outro', texto }.
+// `escolher` com { motivo } ou { motivo: 'outro', texto }, uma vez só por
+// abertura: o segundo toque, com o diálogo ainda fechando, não emite de novo.
 const emit = defineEmits(['escolher']);
 
 const { t } = useI18n();
@@ -19,10 +20,13 @@ const dialogo = ref(null);
 const escrevendo = ref(false);
 const texto = ref('');
 const falta = ref(false);
+const escolhido = ref(false);
 
 const focarTexto = () => document.getElementById(`${id}-texto`)?.focus();
 
 const escolher = escolha => {
+  if (escolhido.value) return;
+  escolhido.value = true;
   dialogo.value?.close();
   emit('escolher', escolha);
 };
@@ -43,6 +47,7 @@ defineExpose({
     escrevendo.value = false;
     texto.value = '';
     falta.value = false;
+    escolhido.value = false;
     dialogo.value?.open();
   },
 });

@@ -7,12 +7,15 @@ import {
   FALTAS,
   comOFunil,
   etapasDoFunil,
+  funilSemEtapa,
 } from '../../../carteira/ajustesDaRenovacao';
 
 // #2898 — "Onde ficam as renovações?": o funil da conta em que a renovação de
 // cada seguro aparece e a etapa em que ela entra. Escolher o funil já escolhe a
 // primeira etapa dele. A conta sem funil nenhum lê o que fazer e ganha o
-// caminho até o CRM: não há lista vazia nem botão desligado.
+// caminho até o CRM: não há lista vazia nem botão desligado. O funil escolhido
+// que não tem etapa nenhuma também: no lugar de uma escolha vazia, a tela diz
+// isso e oferece o CRM (a pessoa cria a etapa lá, ou escolhe outro funil aqui).
 //   v-model: { funilId, etapaId, ... } (o resto dos ajustes passa direto)
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -35,8 +38,19 @@ const opcoesDeEtapa = computed(() =>
   paraEscolher(etapasDoFunil(props.funis, props.modelValue.funilId))
 );
 
+const semEtapa = computed(() =>
+  funilSemEtapa(props.funis, props.modelValue.funilId)
+);
+// O funil é o campo a mexer também quando o escolhido não tem etapa.
+const FALTA_NO_FUNIL = [FALTAS.FUNIL, FALTAS.SEM_ETAPA];
+const faltaNoFunil = computed(() => FALTA_NO_FUNIL.includes(props.falta));
+
 // Leva o foco ao que falta (o botão de quem usa diz o que é).
-const CAMPOS = { [FALTAS.FUNIL]: 'funil', [FALTAS.ETAPA]: 'etapa' };
+const CAMPOS = {
+  [FALTAS.FUNIL]: 'funil',
+  [FALTAS.SEM_ETAPA]: 'funil',
+  [FALTAS.ETAPA]: 'etapa',
+};
 defineExpose({
   focar: falta => document.getElementById(`${id}-${CAMPOS[falta]}`)?.focus(),
 });
@@ -69,15 +83,30 @@ defineExpose({
         :options="opcoesDeFunil"
         :aria-label="to('FUNIL')"
         :placeholder="to('ESCOLHA_O_FUNIL')"
-        :invalid="falta === FALTAS.FUNIL"
-        :described-by="falta === FALTAS.FUNIL ? idDoAviso : undefined"
+        :invalid="faltaNoFunil"
+        :described-by="faltaNoFunil ? idDoAviso : undefined"
         @update:model-value="
           emit('update:modelValue', comOFunil(modelValue, funis, $event))
         "
       />
     </div>
     <div
-      v-if="modelValue.funilId"
+      v-if="semEtapa"
+      data-carteira="funil-sem-etapa"
+      class="flex flex-col items-start min-w-0 gap-3"
+    >
+      <p class="m-0 text-base text-n-slate-12">{{ to('SEM_ETAPA') }}</p>
+      <Button
+        slate
+        faded
+        size="lg"
+        data-carteira="abrir-crm"
+        :label="to('ABRIR_CRM')"
+        @click="emit('abrirCrm')"
+      />
+    </div>
+    <div
+      v-else-if="modelValue.funilId"
       data-carteira="escolher-etapa"
       class="flex flex-col min-w-0 gap-2"
     >

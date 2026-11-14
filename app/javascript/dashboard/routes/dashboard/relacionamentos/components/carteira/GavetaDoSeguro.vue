@@ -172,9 +172,16 @@ const dizerRecusa = async (padrao, semAcesso = padrao) => {
   if (seguroJaMudou(codigo) && (await aberto.reler())) emit('mudou');
 };
 
+// Um pedido por vez. Com uma escrita ainda a caminho, o segundo clique (no
+// mesmo botão ou em outro) não manda outro pedido nem troca o aviso do
+// primeiro por uma recusa. Os botões continuam ligados: a guarda fica no
+// começo de cada ação.
+const emAndamento = () => Boolean(aberto.ocupado.value);
+
 // Cada ação que muda o seguro: avisa quem abriu a gaveta (a lista e a ficha
 // releem) e diz o que aconteceu, com o desfazer quando há.
 const agir = async (acao, texto, desfazer = null, semAcesso = NAO_DEU) => {
+  if (emAndamento()) return false;
   const { vale, certo } = await noMesmoSeguro(acao);
   if (!vale) return false;
   if (!certo) {
@@ -217,7 +224,10 @@ const guardarMotivo = escolha =>
         tg('AVISOS.NAO_RENOVOU'),
         desfazerNoAviso
       );
-const perguntarMotivo = () => dialogoDoMotivo.value?.abrir();
+const perguntarMotivo = () => {
+  if (emAndamento()) return;
+  dialogoDoMotivo.value?.abrir();
+};
 
 const verPdf = async () => {
   const alvo = props.apoliceId;
@@ -252,6 +262,7 @@ const perguntarSeApaga = () => {
 // dentro dela; se a recusa é "este seguro já não tem PDF", não há mais o que
 // perguntar: ela fecha e a gaveta relê o seguro.
 const apagarPdf = async () => {
+  if (emAndamento()) return;
   alertaDeApagar.value = '';
   const { vale, certo } = await noMesmoSeguro(aberto.tirarPdf);
   if (!vale) return;
@@ -310,6 +321,7 @@ const sairSemSalvar = () => {
 // O formulário serve aos dois: corrigir este seguro ou guardar a apólice nova
 // dele (que é outro seguro; este só passa a dizer que já a tem).
 const salvarCorrecao = async dados => {
+  if (emAndamento()) return;
   alerta.value = '';
   const daApoliceNova = paraApoliceNova.value;
   const { vale, certo } = await noMesmoSeguro(async () =>

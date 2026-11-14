@@ -299,6 +299,35 @@ describe('os números do período', () => {
     ]);
   });
 
+  // A chave da linha não é o nome: duas pessoas podem ter o mesmo.
+  it('duas pessoas com o mesmo nome aparecem as duas, cada uma com o número dela', async () => {
+    const [de30, ...resto] = NUMEROS.periodos;
+    servidorResponde({
+      ...NUMEROS,
+      periodos: [
+        {
+          ...de30,
+          recortes: {
+            ...de30.recortes,
+            cuida: [
+              { nome: 'Bruna Teixeirão', venceram: 4, renovou: 3 },
+              { nome: 'Bruna Teixeirão', venceram: 2, renovou: 0 },
+            ],
+          },
+        },
+        ...resto,
+      ],
+    });
+    const w = await abrir();
+
+    await clicar(w, `${daCarteira('recorte')} [data-grupo="cuida"]`);
+
+    expect(barras(w, 'recorte')).toEqual([
+      ['Bruna Teixeirão', '3 de 4 renovaram'],
+      ['Bruna Teixeirão', '0 de 2 renovaram'],
+    ]);
+  });
+
   it('trocar o recorte mostra as linhas dele', async () => {
     servidorResponde();
     const w = await abrir();
@@ -446,6 +475,34 @@ describe('frases com um seguro só', () => {
 
     expect(w.find(daCarteira('vencem-30')).exists()).toBe(false);
   });
+});
+
+// 401 ou 403 ao ler os resultados: "tente de novo" nunca resolveria.
+describe('quem o servidor não deixa ler', () => {
+  it.each([401, 403])(
+    'com %i, diz que não tem acesso e oferece voltar, sem "tentar de novo"',
+    async status => {
+      SegurosAPI.resultados.mockRejectedValue(erroHttp(status));
+
+      const w = await abrir();
+
+      const semAcesso = w.get(daCarteira('resultados-sem-acesso'));
+      expect(semAcesso.text()).toContain(
+        'Você não tem acesso aos resultados das renovações. Peça a um administrador da conta.'
+      );
+      expect(w.find(daCarteira('erro')).exists()).toBe(false);
+      expect(w.text()).not.toContain('Tente de novo');
+      expect(w.findAll('button[disabled]')).toHaveLength(0);
+
+      await clicar(w, `${daCarteira('resultados-sem-acesso')} button`);
+
+      expect(roteador.push).toHaveBeenCalledWith({
+        name: 'relationships_home',
+        query: { aba: 'seguros' },
+      });
+      expect(SegurosAPI.resultados).toHaveBeenCalledTimes(1);
+    }
+  );
 });
 
 describe('carregando, erro e demonstração', () => {

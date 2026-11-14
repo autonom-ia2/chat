@@ -12,8 +12,16 @@
 // renovação que terminou ganha "Desfazer" no "⋯", sem prazo. No seguro
 // cancelado o servidor não desfaz a renovação (o cancelamento a fechou): o
 // "Desfazer" dela só volta depois de desfazer o cancelamento.
+// "Renovou", "Não renovou" e o "Desfazer" fecham ou reabrem o card da
+// renovação: só aparecem para quem enxerga esse card (`renovacao.cardId`).
+// Para quem não enxerga, a renovação é só leitura
+// (carteira/situacaoDaRenovacao.js) e o rodapé é o de um seguro comum.
 import { estaValendo, renovacaoAberta } from '../fonte/selosDoSeguro';
-import { faltaApoliceNova, terminou } from './situacaoDaRenovacao';
+import {
+  faltaApoliceNova,
+  renovacaoSoDeLeitura,
+  terminou,
+} from './situacaoDaRenovacao';
 
 export const DO_RODAPE = {
   VER_PDF: 'VER_PDF',
@@ -70,7 +78,8 @@ export const rodapeDoSeguro = (
   const cancelarOuDesfazer = seguro.canceladoEm
     ? DO_RODAPE.DESFAZER_CANCELAMENTO
     : DO_RODAPE.MARCAR_CANCELADO;
-  if (renovacaoAberta(seguro) && !seguro.canceladoEm) {
+  const mexeNaRenovacao = !seguro.canceladoEm && !renovacaoSoDeLeitura(seguro);
+  if (renovacaoAberta(seguro) && mexeNaRenovacao) {
     return {
       azul: DO_RODAPE.RENOVOU,
       secundario: DO_RODAPE.NAO_RENOVOU,
@@ -78,9 +87,7 @@ export const rodapeDoSeguro = (
     };
   }
   const desfazer =
-    terminou(seguro) && !seguro.canceladoEm
-      ? [DO_RODAPE.DESFAZER_RENOVACAO]
-      : [];
+    terminou(seguro) && mexeNaRenovacao ? [DO_RODAPE.DESFAZER_RENOVACAO] : [];
   // Renovou e a apólice nova ainda não foi guardada: guardar é o próximo passo.
   const guardaANova = faltaApoliceNova(seguro) && !seguro.canceladoEm;
   const doPdf = guardaANova

@@ -23,6 +23,7 @@ import { usarDemo } from '../fonte/modoDemo';
 import { renovacoesFonte } from '../fonte/renovacoesFonte';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
+import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CampoDeDias from '../components/carteira/renovacao/CampoDeDias.vue';
@@ -37,8 +38,10 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // aparece. O cartão das mensagens só existe quando o servidor manda a escolha
 // (a conta que tem as mensagens de renovação): sem ela, nada é mostrado no
 // lugar. Quem não pode mudar (carteira/usePodeAjustarRenovacoes.js) lê a
-// escolha de hoje e não vê Salvar. Conta sem a carteira de seguros não chama
-// rota nenhuma e volta para a lista.
+// escolha de hoje e não vê Salvar. Quem o servidor não deixa nem ler (401 ou
+// 403) lê que não tem acesso e ganha o "Voltar": "tente de novo" nunca
+// resolveria. Conta sem a carteira de seguros não chama rota nenhuma e volta
+// para a lista.
 // O funil escolhido que foi arquivado ou apagado (carteira/funilDasRenovacoes.js)
 // para as renovações: o aviso no topo do cartão do funil diz isso e pede outro
 // funil; o Salvar pede o funil enquanto a pessoa não escolhe.
@@ -67,7 +70,7 @@ const pronto = computed(() => tela.estado.value === ESTADOS.PRONTO);
 const podeMudar = computed(
   () => (fonte.usaDemo || podeAjustar.value) && !conta.value?.semPermissao
 );
-const temFunis = computed(() => Boolean(conta.value?.funis.length));
+const temFunis = computed(() => Boolean(conta.value?.funis?.length));
 // A conta já escolheu, e o funil escolhido ainda serve.
 const temFunilQueServe = computed(
   () => tela.jaEscolheu.value && !tela.funilParou.value
@@ -127,8 +130,11 @@ const focarOQueFalta = async () => {
 // funis da conta, e o aviso continua dizendo o que fazer.
 const FUNIS_MUDARAM = ['funil_desconhecido', 'etapa_de_outro_funil'];
 
+// Um pedido por vez: o segundo clique, com o primeiro ainda a caminho, não
+// manda outro pedido nem troca o "Ajustes salvos." por um alerta.
 const salvar = async () => {
-  falta.value = faltaNosAjustes(rascunho.value);
+  if (tela.salvando.value) return;
+  falta.value = faltaNosAjustes(rascunho.value, conta.value.funis);
   if (falta.value) {
     alertar(ta(`FALTA.${falta.value}`));
     focarOQueFalta();
@@ -197,6 +203,16 @@ onMounted(async () => {
           :linhas="6"
           data-carteira="carregando"
         />
+        <div
+          v-else-if="tela.estado.value === ESTADOS.SEM_ACESSO"
+          data-carteira="ajustes-sem-acesso"
+        >
+          <VazioComUmBotao
+            :frase="ta('SEM_ACESSO')"
+            :botao="ta('VOLTAR_ROTULO')"
+            @acao="voltar"
+          />
+        </div>
         <div v-else-if="!pronto" data-carteira="erro">
           <ErroComTentarDeNovo :mensagem="ta('ERRO')" @tentar="tela.carregar" />
         </div>

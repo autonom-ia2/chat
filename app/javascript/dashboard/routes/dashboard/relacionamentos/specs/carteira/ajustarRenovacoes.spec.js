@@ -366,8 +366,69 @@ describe('o funil e a etapa', () => {
   });
 });
 
+// O funil pode existir sem etapa nenhuma (a criação do funil e a das etapas são
+// pedidos separados): sem tratar isso a pessoa fica sem saída, com o Salvar
+// pedindo uma etapa que não há.
+describe('o funil escolhido que não tem etapa', () => {
+  const COM_UM_VAZIO = [...FUNIS, { id: 3, nome: 'Novo', etapas: [] }];
+  const SEM_ETAPA =
+    'Esse funil não tem etapa para a renovação entrar. Escolha outro funil ou crie uma etapa nele no CRM.';
+  const abrirEEscolherOVazio = async () => {
+    servidorResponde({ ajustes: SEM_ESCOLHA, funis: COM_UM_VAZIO });
+    const w = await abrir();
+    await escolher(escolhas(w)[0], 3);
+    return w;
+  };
+
+  it('diz que o funil não tem etapa e oferece o CRM, sem escolha vazia', async () => {
+    const w = await abrirEEscolherOVazio();
+
+    expect(w.get(daCarteira('funil-sem-etapa')).text()).toContain(
+      'Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.'
+    );
+    expect(escolhas(w)).toHaveLength(1);
+    expect(w.findAll('button[disabled]')).toHaveLength(0);
+
+    await clicar(w, daCarteira('abrir-crm'));
+
+    expect(roteador.push).toHaveBeenCalledWith({ name: 'crm_kanban_index' });
+  });
+
+  it('Salvar pede outro funil (e não a etapa), marca o funil e não vai ao servidor', async () => {
+    const w = await abrirEEscolherOVazio();
+
+    await salvar(w);
+
+    expect(alerta(w)).toBe(SEM_ETAPA);
+    expect(escolhas(w)[0].props('invalid')).toBe(true);
+    expect(document.activeElement?.id).toBe(escolhas(w)[0].props('triggerId'));
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+  });
+
+  it('escolher um funil com etapa tira o aviso, e Salvar guarda', async () => {
+    servidorGuarda();
+    const w = await abrirEEscolherOVazio();
+    await salvar(w);
+
+    await escolher(escolhas(w)[0], 2);
+
+    expect(temAlerta(w)).toBe(false);
+    expect(w.find(daCarteira('funil-sem-etapa')).exists()).toBe(false);
+
+    await salvar(w);
+
+    expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledWith({
+      funilId: 2,
+      etapaId: 21,
+      dias: 60,
+      mensagens: 'mandar',
+    });
+    expect(salvos(w)).toBe('Ajustes salvos.');
+  });
+});
+
 // O funil que a conta escolheu foi arquivado, ou o funil (ou a etapa) foi
-// apagado: as renovações param de virar card. A tela diz isso no topo do cartão
+// apagado: as renovações param de aparecer. A tela diz isso no topo do cartão
 // do funil e pede outro.
 describe.each([
   {
@@ -593,6 +654,33 @@ describe('salvar', () => {
     expect(salvos(w)).toBe('');
   });
 
+  // O segundo clique chega com o primeiro pedido ainda a caminho.
+  it('dois cliques seguidos em Salvar mandam um pedido só, e o "salvo" não vira alerta', async () => {
+    servidorResponde();
+    let responder;
+    SegurosAPI.salvarRenovacoes.mockReturnValue(
+      new Promise(resolve => {
+        responder = resolve;
+      })
+    );
+    const w = await abrir();
+    await escreverDias(w, '45');
+    const botao = w.get(daCarteira('salvar-ajustes'));
+
+    botao.trigger('click');
+    await botao.trigger('click');
+
+    expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledTimes(1);
+    expect(botao.attributes('disabled')).toBeUndefined();
+    expect(temAlerta(w)).toBe(false);
+
+    responder({ data: { ...ESCOLHAS, dias: 45 } });
+    await assentar();
+
+    expect(salvos(w)).toBe('Ajustes salvos.');
+    expect(temAlerta(w)).toBe(false);
+  });
+
   it('funil que não existe mais: diz o que fazer e relê os funis', async () => {
     servidorResponde();
     SegurosAPI.salvarRenovacoes.mockRejectedValue(
@@ -676,6 +764,35 @@ describe('quem não pode mudar', () => {
       'Ninguém escolheu ainda em que funil as renovações ficam. Até lá, nenhuma renovação aparece.'
     );
   });
+});
+
+// 401 ou 403 ao ler os ajustes: "tente de novo" nunca resolveria.
+describe('quem o servidor não deixa nem ler', () => {
+  it.each([401, 403])(
+    'com %i, diz que não tem acesso e oferece voltar, sem "tentar de novo"',
+    async status => {
+      SegurosAPI.renovacoes.mockRejectedValue(erroHttp(status));
+
+      const w = await abrir();
+
+      const semAcesso = w.get(daCarteira('ajustes-sem-acesso'));
+      expect(semAcesso.text()).toContain(
+        'Você não tem acesso aos ajustes das renovações. Peça a um administrador da conta.'
+      );
+      expect(w.find(daCarteira('erro')).exists()).toBe(false);
+      expect(w.text()).not.toContain('Tente de novo');
+      expect(w.find(daCarteira('salvar-ajustes')).exists()).toBe(false);
+      expect(w.findAll('button[disabled]')).toHaveLength(0);
+
+      await clicar(w, `${daCarteira('ajustes-sem-acesso')} button`);
+
+      expect(roteador.push).toHaveBeenCalledWith({
+        name: 'relationships_home',
+        query: { aba: 'seguros' },
+      });
+      expect(SegurosAPI.renovacoes).toHaveBeenCalledTimes(1);
+    }
+  );
 });
 
 describe('carregando e erro', () => {

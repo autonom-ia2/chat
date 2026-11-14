@@ -15,6 +15,7 @@
       "VENCIDO": "Vencido",
       "EM_RENOVACAO": "Em renovação",
       "RENOVADO": "Renovado",
+      "DESCONHECIDO": "Seguro",
       "CANCELADO": "Cancelado"
     },
     "CAMPOS": {
@@ -124,6 +125,7 @@
         "VENCIDO": "Seguro vencido",
         "EM_RENOVACAO": "Seguro em renovação",
         "RENOVADO": "Seguro renovado",
+        "DESCONHECIDO": "Seguro",
         "CANCELADO": "Seguro cancelado"
       },
       "SELOS_FALHARAM": "Não consegui mostrar quem tem seguro agora."
@@ -244,12 +246,13 @@
       "OUTRA": "Outra",
       "OUTRA_SEGURADORA": "Nome da seguradora",
       "NUMERO": "Número da apólice",
+      "NUMERO_DA_APOLICE_NOVA": "Número da apólice (pode preencher depois)",
       "COMECA": "Começa",
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga (R$)",
       "BEM": "O que está segurado",
       "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo em outra planilha.",
-      "APOIO_DA_APOLICE_NOVA": "Já veio com o que não muda de um ano para o outro. Escreva o número da apólice nova e confira as datas e o valor.",
+      "APOIO_DA_APOLICE_NOVA": "Já veio com o que não muda de um ano para o outro. Confira as datas e o valor. Se a seguradora ainda não mandou o número da apólice, salve sem ele e preencha depois, em Corrigir.",
       "SALVAR": "Salvar",
       "VOLTAR": "Voltar",
       "SALVO": "Salvo.",
@@ -321,7 +324,7 @@
       "ABRIR_NO_CRM": "Abrir no CRM",
       "SITUACAO": {
         "EM_ETAPA": "Está no funil {funil}, na etapa {etapa}.",
-        "EM_ANDAMENTO": "A renovação está em andamento.",
+        "EM_ANDAMENTO": "A renovação está em andamento. Quem cuida dela marca se renovou ou não.",
         "RENOVOU_FALTA": "Renovou. Falta guardar a apólice nova.",
         "RENOVOU": "Renovou. A apólice nova já está guardada.",
         "NAO_RENOVOU": "Não renovou. Ninguém disse o motivo.",
@@ -354,12 +357,12 @@
       },
       "CONVITE": {
         "FRASE": "Escolha em que funil as renovações aparecem.",
-        "APOIO": "Enquanto ninguém escolhe, os seguros perto de vencer não viram card de renovação.",
+        "APOIO": "Enquanto ninguém escolhe, a renovação dos seguros perto de vencer não aparece em funil nenhum.",
         "PAROU": {
           "ARQUIVADO": "O funil das renovações foi arquivado.",
           "APAGADO": "O funil ou a etapa das renovações não existe mais."
         },
-        "APOIO_PAROU": "Enquanto ninguém escolhe outro funil, os seguros perto de vencer não viram card de renovação.",
+        "APOIO_PAROU": "Enquanto ninguém escolhe outro funil, a renovação dos seguros perto de vencer não aparece em funil nenhum.",
         "BOTAO_PAROU": "Escolher outro funil",
         "BOTAO": "Escolher o funil"
       }
@@ -378,20 +381,23 @@
       "HOJE": "Hoje as renovações ficam no funil {funil}, na etapa {etapa}, e aparecem {count} dia antes do fim. | Hoje as renovações ficam no funil {funil}, na etapa {etapa}, e aparecem {count} dias antes do fim.",
       "HOJE_SEM_FUNIL": "Ninguém escolheu ainda em que funil as renovações ficam. Até lá, nenhuma renovação aparece.",
       "SEM_PERMISSAO": "Você pode ver estes ajustes, mas não mudar. Peça a um administrador da conta.",
+      "SEM_ACESSO": "Você não tem acesso aos ajustes das renovações. Peça a um administrador da conta.",
       "FALTA": {
         "FUNIL": "Escolha o funil em que as renovações ficam.",
         "ETAPA": "Escolha a etapa em que a renovação entra.",
+        "SEM_ETAPA": "Esse funil não tem etapa para a renovação entrar. Escolha outro funil ou crie uma etapa nele no CRM.",
         "DIAS": "Escreva quantos dias antes, a partir de 1."
       },
       "ONDE": {
         "TITULO": "Onde ficam as renovações?",
         "SEM_FUNIL": "Sua conta ainda não tem funil. Crie um funil no CRM e volte aqui para escolher.",
+        "SEM_ETAPA": "Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.",
         "ABRIR_CRM": "Abrir o CRM",
         "FUNIL": "Funil",
         "ESCOLHA_O_FUNIL": "Escolha o funil",
         "ETAPA": "Em qual etapa a renovação entra?",
         "ESCOLHA_A_ETAPA": "Escolha a etapa",
-        "APOIO": "Cada seguro que chega perto do fim vira um card nessa etapa. Enquanto ninguém escolhe, nenhuma renovação aparece."
+        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher. Enquanto ninguém escolhe, nenhuma renovação aparece."
       },
       "DIAS": {
         "TITULO": "Quantos dias antes do fim?",
@@ -426,6 +432,7 @@
       "VER_NAO_RENOVARAM": "Ver o que não renovou | Ver os {count} que não renovaram",
       "VOLTAR": "Seguros",
       "VOLTAR_ROTULO": "Voltar aos seguros",
+      "SEM_ACESSO": "Você não tem acesso aos resultados das renovações. Peça a um administrador da conta.",
       "PERIODO": {
         "ROTULO": "Período",
         "DIAS_30": "Últimos 30 dias",
@@ -493,7 +500,7 @@
       "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo.",
       "MENSAGENS_INVALIDAS": "Não entendi a escolha das mensagens. Escolha \"Mandar\" ou \"Não mandar\" e salve de novo.",
       "SEM_RENOVACAO": "Este seguro não está mais em renovação. Atualizei a tela.",
-      "JA_TEM_DESFECHO": "A renovação deste seguro já foi fechada por outra pessoa ou no quadro do funil. Atualizei a tela: para mudar, abra \"Mais opções deste seguro\" e toque em \"Desfazer o resultado da renovação\".",
+      "JA_TEM_DESFECHO": "Esta renovação já tem resultado. Atualizei a tela: confira como ficou.",
       "SEM_DESFECHO": "A renovação deste seguro mudou por outro caminho e não deu para fazer isso. Atualizei a tela: confira como ela ficou.",
       "MOTIVO_DESCONHECIDO": "Não conheço esse motivo. Abra os motivos de novo e escolha um da lista.",
       "FALTA_TEXTO": "Faltou escrever o motivo. Abra os motivos de novo e escreva qual foi, ou escolha um da lista.",

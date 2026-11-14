@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import {
   SITUACOES,
   faltaMotivo,
+  renovacaoSoDeLeitura,
   situacaoDaRenovacao,
 } from '../../carteira/situacaoDaRenovacao';
 
@@ -12,8 +13,9 @@ import {
 // funil, ou como terminou), quem cuida e o caminho até o card no CRM. É
 // leitura: "Renovou" e "Não renovou" ficam no rodapé da gaveta. Uma renovação
 // perdida sem motivo (foi fechada pelo quadro do funil, que não pergunta)
-// convida quem pode alterar a dizer o motivo. Só existe no seguro que tem
-// renovação.
+// convida quem pode alterar a dizer o motivo. Quem não enxerga o card da
+// renovação (ela chega sem `cardId`) só lê: sem convite e sem o caminho até o
+// CRM. Só existe no seguro que tem renovação.
 const props = defineProps({
   seguro: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
@@ -34,7 +36,10 @@ const emQuePe = computed(() => {
     : tr(`SITUACAO.${id}`, valores);
 });
 const convidaADizer = computed(
-  () => props.podeEditar && faltaMotivo(props.seguro)
+  () =>
+    props.podeEditar &&
+    faltaMotivo(props.seguro) &&
+    !renovacaoSoDeLeitura(props.seguro)
 );
 </script>
 

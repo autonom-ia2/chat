@@ -15,6 +15,7 @@
       "VENCIDO": "Expired",
       "EM_RENOVACAO": "Renewing",
       "RENOVADO": "Renewed",
+      "DESCONHECIDO": "Policy",
       "CANCELADO": "Cancelled"
     },
     "CAMPOS": {
@@ -124,6 +125,7 @@
         "VENCIDO": "Expired policy",
         "EM_RENOVACAO": "Policy in renewal",
         "RENOVADO": "Renewed policy",
+        "DESCONHECIDO": "Policy",
         "CANCELADO": "Cancelled policy"
       },
       "SELOS_FALHARAM": "I couldn't show who has insurance right now."
@@ -244,12 +246,13 @@
       "OUTRA": "Another one",
       "OUTRA_SEGURADORA": "Insurer name",
       "NUMERO": "Policy number",
+      "NUMERO_DA_APOLICE_NOVA": "Policy number (you can fill it in later)",
       "COMECA": "Starts",
       "TERMINA": "Ends",
       "VALOR": "Price the client pays (R$)",
       "BEM": "What is insured",
       "APOIO": "What you fix here stays this way, even if this policy arrives again in another spreadsheet.",
-      "APOIO_DA_APOLICE_NOVA": "It already comes with what does not change from one year to the next. Type the new policy number and check the dates and the amount.",
+      "APOIO_DA_APOLICE_NOVA": "It already comes with what does not change from one year to the next. Check the dates and the amount. If the insurer has not sent the policy number yet, save without it and fill it in later, under Fix.",
       "SALVAR": "Save",
       "VOLTAR": "Back",
       "SALVO": "Saved.",
@@ -321,7 +324,7 @@
       "ABRIR_NO_CRM": "Open in the CRM",
       "SITUACAO": {
         "EM_ETAPA": "It is in the {funil} pipeline, at the {etapa} stage.",
-        "EM_ANDAMENTO": "The renewal is in progress.",
+        "EM_ANDAMENTO": "The renewal is in progress. Whoever is in charge of it records whether it renewed or not.",
         "RENOVOU_FALTA": "Renewed. The new policy still has to be saved.",
         "RENOVOU": "Renewed. The new policy is already saved.",
         "NAO_RENOVOU": "Did not renew. Nobody said why.",
@@ -354,12 +357,12 @@
       },
       "CONVITE": {
         "FRASE": "Choose the pipeline where renewals show up.",
-        "APOIO": "While nobody chooses, policies close to the end do not become a renewal card.",
+        "APOIO": "While nobody chooses, the renewal of policies close to the end does not show up in any pipeline.",
         "PAROU": {
           "ARQUIVADO": "The renewals pipeline was archived.",
           "APAGADO": "The renewals pipeline or stage no longer exists."
         },
-        "APOIO_PAROU": "While nobody chooses another pipeline, policies close to the end do not become a renewal card.",
+        "APOIO_PAROU": "While nobody chooses another pipeline, the renewal of policies close to the end does not show up in any pipeline.",
         "BOTAO_PAROU": "Choose another pipeline",
         "BOTAO": "Choose the pipeline"
       }
@@ -378,20 +381,23 @@
       "HOJE": "Today renewals stay in the {funil} pipeline, at the {etapa} stage, and show up {count} day before the end. | Today renewals stay in the {funil} pipeline, at the {etapa} stage, and show up {count} days before the end.",
       "HOJE_SEM_FUNIL": "Nobody has chosen the pipeline where renewals stay yet. Until then, no renewal shows up.",
       "SEM_PERMISSAO": "You can see these settings, but not change them. Ask an account administrator.",
+      "SEM_ACESSO": "You do not have access to the renewal settings. Ask an account administrator.",
       "FALTA": {
         "FUNIL": "Choose the pipeline where renewals stay.",
         "ETAPA": "Choose the stage where the renewal enters.",
+        "SEM_ETAPA": "That pipeline has no stage for the renewal to enter. Choose another pipeline or create a stage in it in the CRM.",
         "DIAS": "Type how many days before, starting from 1."
       },
       "ONDE": {
         "TITULO": "Where do renewals stay?",
         "SEM_FUNIL": "Your account has no pipeline yet. Create a pipeline in the CRM and come back here to choose.",
+        "SEM_ETAPA": "That pipeline has no stage yet. Choose another pipeline, or create a stage in it in the CRM and come back here.",
         "ABRIR_CRM": "Open the CRM",
         "FUNIL": "Pipeline",
         "ESCOLHA_O_FUNIL": "Choose the pipeline",
         "ETAPA": "At which stage does the renewal enter?",
         "ESCOLHA_A_ETAPA": "Choose the stage",
-        "APOIO": "Each policy that gets close to the end becomes a card at that stage. While nobody chooses, no renewal shows up."
+        "APOIO": "The renewal of each policy that gets close to the end shows up in the pipeline, at the stage you choose. While nobody chooses, no renewal shows up."
       },
       "DIAS": {
         "TITULO": "How many days before the end?",
@@ -426,6 +432,7 @@
       "VER_NAO_RENOVARAM": "See the one that did not renew | See the {count} that did not renew",
       "VOLTAR": "Policies",
       "VOLTAR_ROTULO": "Back to the policies",
+      "SEM_ACESSO": "You do not have access to the renewal results. Ask an account administrator.",
       "PERIODO": {
         "ROTULO": "Period",
         "DIAS_30": "Last 30 days",
@@ -493,7 +500,7 @@
       "DIAS_INVALIDOS": "That number of days does not work. Type a whole number from 1 to 3650 and save again.",
       "MENSAGENS_INVALIDAS": "I did not understand the choice about messages. Choose \"Send\" or \"Do not send\" and save again.",
       "SEM_RENOVACAO": "This policy is no longer in renewal. I refreshed the screen.",
-      "JA_TEM_DESFECHO": "The renewal of this policy was already closed by someone else or on the pipeline board. I refreshed the screen: to change it, open \"More options for this policy\" and tap \"Undo the renewal result\".",
+      "JA_TEM_DESFECHO": "This renewal already has a result. I refreshed the screen: check how it is now.",
       "SEM_DESFECHO": "The renewal of this policy changed some other way, so I could not do that. I refreshed the screen: check how it is now.",
       "MOTIVO_DESCONHECIDO": "I do not know that reason. Open the reasons again and choose one from the list.",
       "FALTA_TEXTO": "The reason was not typed. Open the reasons again and type what it was, or choose one from the list.",

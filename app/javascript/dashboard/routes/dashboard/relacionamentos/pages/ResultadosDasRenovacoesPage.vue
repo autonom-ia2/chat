@@ -28,6 +28,7 @@ import { renovacoesFonte } from '../fonte/renovacoesFonte';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import HeroiEscuro from '../components/comum/HeroiEscuro.vue';
+import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
 import CartaoDaSecao from '../components/ficha/CartaoDaSecao.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
@@ -37,8 +38,9 @@ import BarraDeResultado from '../components/carteira/renovacao/BarraDeResultado.
 // período e por que perdeu os outros. Uma ação principal: ver quem não renovou
 // (abre a aba Seguros já nesse grupo). O período muda tudo junto. Só aparece o
 // que tem número: motivo que ninguém escolheu não vira barra vazia, e o
-// recorte sem linha nem vira pílula. Conta sem a carteira de seguros não chama
-// rota nenhuma e volta para a lista.
+// recorte sem linha nem vira pílula. Quem o servidor não deixa ler (401 ou
+// 403) lê que não tem acesso e ganha o "Voltar", em vez de "tente de novo".
+// Conta sem a carteira de seguros não chama rota nenhuma e volta para a lista.
 const { t } = useI18n();
 const tr = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.RESULTADOS.${chave}`, valores, plural);
@@ -162,6 +164,16 @@ onMounted(async () => {
           com-topo
           data-carteira="carregando"
         />
+        <div
+          v-else-if="estado === ESTADOS.SEM_ACESSO"
+          data-carteira="resultados-sem-acesso"
+        >
+          <VazioComUmBotao
+            :frase="tr('SEM_ACESSO')"
+            :botao="tr('VOLTAR_ROTULO')"
+            @acao="voltar"
+          />
+        </div>
         <div v-else-if="estado !== ESTADOS.PRONTO" data-carteira="erro">
           <ErroComTentarDeNovo
             :mensagem="tr('ERRO')"
@@ -252,9 +264,11 @@ onMounted(async () => {
                   aria-live="polite"
                   class="p-0 m-0 list-none divide-y divide-n-weak"
                 >
+                  <!-- Duas pessoas (ou seguradoras) podem ter o mesmo nome:
+                       a chave é a posição da linha dentro do recorte. -->
                   <BarraDeResultado
-                    v-for="linha in linhas"
-                    :key="linha.nome"
+                    v-for="(linha, posicao) in linhas"
+                    :key="`${recorte}-${posicao}`"
                     :nome="linha.nome"
                     :valor="
                       tr(

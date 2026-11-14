@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
 import ControlesDeSeguros from '../../components/carteira/ControlesDeSeguros.vue';
 import HistoriaDoSeguro from '../../components/carteira/HistoriaDoSeguro.vue';
 import RenovacaoDoSeguro from '../../components/carteira/RenovacaoDoSeguro.vue';
@@ -8,6 +9,7 @@ import BarraDeResultado from '../../components/carteira/renovacao/BarraDeResulta
 import CampoDeDias from '../../components/carteira/renovacao/CampoDeDias.vue';
 import ConviteDasRenovacoes from '../../components/carteira/renovacao/ConviteDasRenovacoes.vue';
 import DialogoMotivo from '../../components/carteira/renovacao/DialogoMotivo.vue';
+import SeloDoSeguro from '../../components/carteira/SeloDoSeguro.vue';
 import OndeFicamAsRenovacoes from '../../components/carteira/renovacao/OndeFicamAsRenovacoes.vue';
 import { FALTAS } from '../../carteira/ajustesDaRenovacao';
 import { baixarArquivo } from '../../carteira/exportarHistoria';
@@ -26,6 +28,10 @@ vi.mock('../../carteira/exportarHistoria', async importOriginal => ({
   ...(await importOriginal()),
   baixarArquivo: vi.fn(),
 }));
+vi.mock('dashboard/helper/sentryPrivacy', async importOriginal => ({
+  ...(await importOriginal()),
+  reportarSemDados: vi.fn(),
+}));
 
 withFullI18n('pt_BR');
 
@@ -38,6 +44,7 @@ afterEach(() => {
   montada?.unmount();
   montada = null;
   baixarArquivo.mockClear();
+  reportarSemDados.mockClear();
 });
 
 const RENOVACAO = {
@@ -90,6 +97,31 @@ describe('o diálogo "Por que não renovou?"', () => {
 
     expect(w.emitted('escolher')).toEqual([[{ motivo: 'outra_corretora' }]]);
     expect(aberto(w)).toBe(false);
+  });
+
+  // O segundo toque chega com o diálogo ainda fechando.
+  it('dois toques seguidos no motivo guardam uma vez só', async () => {
+    const w = await abrir();
+    const botao = w.get('[data-motivo="achou_caro"]');
+
+    botao.trigger('click');
+    await botao.trigger('click');
+
+    expect(w.emitted('escolher')).toEqual([[{ motivo: 'achou_caro' }]]);
+  });
+
+  it('aberto de novo, o diálogo volta a guardar', async () => {
+    const w = await abrir();
+    await w.get('[data-motivo="achou_caro"]').trigger('click');
+
+    w.vm.abrir();
+    await w.vm.$nextTick();
+    await w.get('[data-motivo="vendeu_o_bem"]').trigger('click');
+
+    expect(w.emitted('escolher')).toEqual([
+      [{ motivo: 'achou_caro' }],
+      [{ motivo: 'vendeu_o_bem' }],
+    ]);
   });
 
   it('"Outro motivo" abre a linha de escrever e leva o foco até ela', async () => {
@@ -188,11 +220,15 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
     expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
   });
 
-  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho.
-  it('só com o desfecho, aberta: diz que está em andamento e mais nada', () => {
+  // Quem não enxerga o card da renovação a recebe só com o desfecho: para
+  // essa pessoa a renovação é só leitura.
+  it('só com o desfecho, aberta: diz que está em andamento e quem marca o resultado, e mais nada', () => {
     const w = abrir({ ...seguroCom(), renovacao: { desfecho: null } });
 
-    expect(situacao(w)).toBe('A renovação está em andamento.');
+    expect(situacao(w)).toBe(
+      'A renovação está em andamento. Quem cuida dela marca se renovou ou não.'
+    );
+    expect(w.findAll('button')).toHaveLength(0);
     expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
     expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
     expect(w.findAll('p')).toHaveLength(1);
@@ -200,15 +236,16 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
     expect(w.text()).not.toContain('{');
   });
 
-  it('só com o desfecho, perdida sem motivo: ainda convida a dizer o motivo', () => {
+  it('só com o desfecho, perdida sem motivo: lê como terminou, sem convite para dizer o motivo', () => {
     const w = abrir({
       ...seguroCom(),
       renovacao: { desfecho: 'nao_renovou' },
     });
 
     expect(situacao(w)).toBe('Não renovou. Ninguém disse o motivo.');
-    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(true);
+    expect(w.find(daCarteira('dizer-o-motivo')).exists()).toBe(false);
     expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(false);
+    expect(w.findAll('button')).toHaveLength(0);
   });
 
   it('renovou: diz se a apólice nova já foi guardada', () => {
@@ -289,6 +326,26 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
   });
 });
 
+describe('o selo de um seguro que a tela não conhece', () => {
+  it('vira "Seguro" em cor neutra, sem mostrar a chave do catálogo', () => {
+    const w = montar(SeloDoSeguro, {
+      seguro: { id: 7, selo: 'suspenso', dias: 5 },
+    });
+
+    expect(w.text()).toBe('Seguro');
+    expect(w.attributes('data-selo')).toBe('neutro');
+  });
+
+  it('o selo conhecido continua com o nome e a cor dele', () => {
+    const w = montar(SeloDoSeguro, {
+      seguro: { id: 7, selo: 'em_renovacao', dias: 5 },
+    });
+
+    expect(w.text()).toBe('Em renovação');
+    expect(w.attributes('data-selo')).toBe('azul');
+  });
+});
+
 describe('o convite para escolher o funil das renovações', () => {
   const fonteCom = resposta => ({
     ajustes: vi.fn().mockResolvedValue(resposta),
@@ -344,7 +401,7 @@ describe('o convite para escolher o funil das renovações', () => {
       expect(convite(w).attributes('data-estado')).toBe(estado);
       expect(convite(w).text()).toContain(frase);
       expect(convite(w).text()).toContain(
-        'Enquanto ninguém escolhe outro funil, os seguros perto de vencer não viram card de renovação.'
+        'Enquanto ninguém escolhe outro funil, a renovação dos seguros perto de vencer não aparece em funil nenhum.'
       );
       const botao = w.get(daCarteira('escolher-funil-das-renovacoes'));
       expect(botao.text()).toBe('Escolher outro funil');
@@ -374,12 +431,31 @@ describe('o convite para escolher o funil das renovações', () => {
     expect(convite(w).exists()).toBe(false);
   });
 
-  it('se a leitura falhar, o convite só não aparece', async () => {
-    const w = await abrir({
-      ajustes: vi.fn().mockRejectedValue(new Error('Network Error')),
-    });
+  it('se a leitura falhar, o convite só não aparece, e a falha fica registrada', async () => {
+    const falha = new Error('Network Error');
+    const w = await abrir({ ajustes: vi.fn().mockRejectedValue(falha) });
 
     expect(convite(w).exists()).toBe(false);
+    expect(reportarSemDados).toHaveBeenCalledWith(falha, {
+      tela: 'relacionamentos_convite_das_renovacoes',
+    });
+  });
+
+  it('sem falha, nada é registrado', async () => {
+    await abrir(fonteCom({ ajustes: SEM_FUNIL, semPermissao: false }));
+
+    expect(reportarSemDados).not.toHaveBeenCalled();
+  });
+
+  it('as frases do convite falam do funil, sem palavra de sistema', async () => {
+    const w = await abrir(
+      fonteCom({ ajustes: SEM_FUNIL, semPermissao: false })
+    );
+
+    expect(convite(w).text()).toContain(
+      'Enquanto ninguém escolhe, a renovação dos seguros perto de vencer não aparece em funil nenhum.'
+    );
+    expect(convite(w).text()).not.toContain('card');
   });
 });
 
@@ -573,6 +649,64 @@ describe('onde ficam as renovações', () => {
 
     expect(funil.props('invalid')).toBe(true);
     expect(funil.props('describedBy')).toBe('aviso');
+  });
+
+  // O funil pode existir sem etapa nenhuma: uma escolha de etapa vazia
+  // deixaria a pessoa sem saída (o Salvar pede a etapa, e não há etapa).
+  describe('o funil escolhido que não tem etapa', () => {
+    const COM_UM_VAZIO = [...FUNIS, { id: 3, nome: 'Novo', etapas: [] }];
+    const NO_VAZIO = { ...SEM_ESCOLHA, funilId: 3, etapaId: null };
+    const abrirNoVazio = (resto = {}) =>
+      abrir(NO_VAZIO, { funis: COM_UM_VAZIO, ...resto });
+
+    it('diz que o funil não tem etapa e leva ao CRM, sem escolha vazia nem botão desligado', async () => {
+      const w = abrirNoVazio();
+
+      expect(w.get(daCarteira('funil-sem-etapa')).text()).toContain(
+        'Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.'
+      );
+      expect(w.find(daCarteira('escolher-etapa')).exists()).toBe(false);
+      expect(escolhas(w)).toHaveLength(1);
+      expect(w.find('button[disabled]').exists()).toBe(false);
+
+      await w.get(daCarteira('abrir-crm')).trigger('click');
+
+      expect(w.emitted('abrirCrm')).toHaveLength(1);
+    });
+
+    it('a pessoa ainda pode escolher outro funil', () => {
+      const w = abrirNoVazio();
+
+      expect(rotulos(escolhas(w)[0])).toEqual(['Renovação', 'Vendas', 'Novo']);
+
+      escolhas(w)[0].vm.$emit('update:modelValue', 1);
+
+      expect(w.emitted('update:modelValue')).toEqual([
+        [{ ...NO_VAZIO, funilId: 1, etapaId: 11 }],
+      ]);
+    });
+
+    it('o que falta é outro funil: o funil fica marcado e recebe o foco', () => {
+      const w = abrirNoVazio({ falta: FALTAS.SEM_ETAPA, idDoAviso: 'aviso' });
+      const [funil] = escolhas(w);
+
+      expect(funil.props('invalid')).toBe(true);
+      expect(funil.props('describedBy')).toBe('aviso');
+
+      w.vm.focar(FALTAS.SEM_ETAPA);
+
+      expect(document.activeElement?.id).toBe(funil.props('triggerId'));
+    });
+
+    it('o funil com etapa continua perguntando a etapa', () => {
+      const w = abrir(
+        { ...SEM_ESCOLHA, funilId: 1, etapaId: 11 },
+        { funis: COM_UM_VAZIO }
+      );
+
+      expect(w.find(daCarteira('funil-sem-etapa')).exists()).toBe(false);
+      expect(w.find(daCarteira('escolher-etapa')).exists()).toBe(true);
+    });
   });
 });
 

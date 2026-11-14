@@ -2,15 +2,17 @@
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
 
 // #2898 — o convite da aba Seguros para a conta que ainda não escolheu em que
 // funil as renovações aparecem: uma frase e um botão, que leva a "Ajustar
 // renovações". Enquanto ninguém escolhe, nenhuma renovação aparece em funil
 // nenhum. A conta que já escolheu não vê nada aqui. Se a leitura dos ajustes
 // falhar, o convite só não aparece: a lista de seguros não depende dele, e a
-// tela "Ajustar renovações" mostra o erro e o "tentar de novo" dela.
+// tela "Ajustar renovações" mostra o erro e o "tentar de novo" dela. A falha
+// fica registrada, sem dado de ninguém.
 // O convite volta quando o funil escolhido foi arquivado ou apagado
-// (carteira/funilDasRenovacoes.js): as renovações pararam de virar card, e a
+// (carteira/funilDasRenovacoes.js): as renovações pararam de aparecer, e a
 // frase diz por quê.
 const props = defineProps({
   // A fonte das renovações (fonte/renovacoesFonte.js).
@@ -24,13 +26,17 @@ const doConvite = chave =>
 const falta = ref(false);
 // '' = a conta ainda não escolheu; ARQUIVADO ou APAGADO = o funil parou.
 const parou = ref('');
+const ONDE_FALHOU = { tela: 'relacionamentos_convite_das_renovacoes' };
 
 onMounted(async () => {
   try {
     const { ajustes, semPermissao, funilParou } = await props.fonte.ajustes();
     parou.value = funilParou || '';
     falta.value = (!ajustes.funilId || Boolean(parou.value)) && !semPermissao;
-  } catch {
+  } catch (falha) {
+    // De propósito: sem os ajustes a aba Seguros segue inteira, só sem o
+    // convite.
+    reportarSemDados(falha, ONDE_FALHOU);
     falta.value = false;
   }
 });

@@ -42,6 +42,14 @@ export const renovou = seguro =>
 export const naoRenovou = seguro =>
   seguro.renovacao?.desfecho === DESFECHOS.NAO_RENOVOU;
 
+// O seguro tem renovação, mas quem olha não enxerga o card dela no funil: o
+// servidor manda a renovação sem `cardId` (só com o desfecho). Quem não
+// enxerga o card quase nunca pode fechá-lo, e botão que só dá erro não ajuda:
+// para essa pessoa a renovação é só leitura, e quem cuida dela marca o
+// resultado. O seguro sem renovação nenhuma (`renovacao` nula) não entra aqui.
+export const renovacaoSoDeLeitura = seguro =>
+  Boolean(seguro?.renovacao) && !seguro.renovacao.cardId;
+
 // A renovação terminou (de um jeito ou de outro): dá para desfazer.
 export const terminou = seguro => renovou(seguro) || naoRenovou(seguro);
 
@@ -73,8 +81,9 @@ export const situacaoDaRenovacao = seguro => {
       id: seguro.apoliceNova ? SITUACOES.RENOVOU : SITUACOES.RENOVOU_FALTA,
     };
   }
-  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho,
-  // sem o funil nem a etapa: a frase diz que ela está aberta e mais nada.
+  // Quem não enxerga o card no funil recebe a renovação só com o desfecho,
+  // sem o funil nem a etapa: a frase diz que ela está em andamento e que quem
+  // cuida dela marca o resultado.
   const { funil, etapa } = seguro.renovacao;
   return funil && etapa
     ? { id: SITUACOES.EM_ETAPA, funil, etapa }
