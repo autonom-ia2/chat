@@ -10,7 +10,7 @@
 # - A key never repeats within the file and never takes a standard contact field (name, email,
 #   city...): it gets "_2", "_3"...
 class ContactImports::AttributeColumns
-  Column = Struct.new(:column, :key, :label, :existing, :definition, keyword_init: true) do
+  Column = Struct.new(:column, :key, :label, :existing, :definition, :description, keyword_init: true) do
     def type = definition&.attribute_display_type || 'text'
 
     # Values of a typed attribute are converted, and left out when they do not fit (AttributeValue).
@@ -22,15 +22,20 @@ class ContactImports::AttributeColumns
   RESERVED_KEYS = CustomAttributeDefinition::STANDARD_ATTRIBUTES[:contact]
   FALLBACK_KEY = 'coluna'.freeze
 
-  def initialize(account, extra_columns)
+  # fields: { header => { 'nome' => 'Plano', 'para_que_serve' => '…' } }, what the person wrote for a column on Trazer
+  # minha lista (#2896): the attribute is looked up and named by that name, and a new one is born with the description.
+  # Without it (every other caller) the header names the attribute, as before.
+  def initialize(account, extra_columns, fields: {})
     @account = account
     @extra_columns = Array(extra_columns)
+    @fields = fields
   end
 
   def perform
     used = []
     @extra_columns.map do |header|
-      column = existing_column(header, used) || new_column(header, used)
+      name = @fields.dig(header, 'nome').presence || header
+      column = existing_column(header, name, used) || new_column(header, name, used)
       used << column.key
       column
     end
@@ -42,18 +47,18 @@ class ContactImports::AttributeColumns
 
   private
 
-  def existing_column(header, used)
-    definition = definitions_by_key[self.class.normalize(header)] || definitions_by_label[self.class.normalize(header)]
+  def existing_column(header, name, used)
+    definition = definitions_by_key[self.class.normalize(name)] || definitions_by_label[self.class.normalize(name)]
     return if definition.nil? || used.include?(definition.attribute_key)
 
     Column.new(column: header, key: definition.attribute_key, label: definition.attribute_display_name, existing: true, definition: definition)
   end
 
-  def new_column(header, used)
-    base = self.class.normalize(header).presence || FALLBACK_KEY
+  def new_column(header, name, used)
+    base = self.class.normalize(name).presence || FALLBACK_KEY
     taken = used + RESERVED_KEYS + definitions_by_key.keys
     key = taken.include?(base) ? (2..).lazy.map { |number| "#{base}_#{number}" }.find { |candidate| taken.exclude?(candidate) } : base
-    Column.new(column: header, key: key, label: header.to_s.strip, existing: false)
+    Column.new(column: header, key: key, label: name.to_s.strip, existing: false, description: @fields.dig(header, 'para_que_serve').presence)
   end
 
   def definitions

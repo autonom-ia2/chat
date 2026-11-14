@@ -2,6 +2,7 @@
   "RELACIONAMENTOS_TRAZER": {
     "TITULO": "Bring your list. We'll sort it out.",
     "PESSOAS": "People",
+    "SEM_ACESSO": "You can't bring lists into this account. Ask whoever manages the account.",
     "ETAPAS": {
       "LISTA": "Steps",
       "ENVIAR": "Upload",
@@ -14,9 +15,14 @@
       "SOLTAR": "Drag the spreadsheet here or click to choose",
       "APOIO": "Excel or CSV. It needs a name and a phone or e-mail.",
       "ERRO_TIPO": "This file is not a spreadsheet. Use Excel or CSV.",
+      "ERRO_GRANDE": "This spreadsheet is too big. Send it in smaller parts.",
       "ERRO_LEITURA": "I couldn't read this spreadsheet.",
       "ERRO_VAZIA": "This spreadsheet is empty.",
-      "ERRO_SEM_CONTATO": "I couldn't find a name and a phone or e-mail in this spreadsheet.",
+      "ERRO_SEM_CONTATO": "I couldn't find a phone or an e-mail I can use in this spreadsheet. The phone must be a mobile number, with the area code together with the number, in the same column. Fix the spreadsheet and send it again.",
+      "ERRO_DEMOROU": "I haven't finished reading your spreadsheet yet.",
+      "ERRO_SEM_NINGUEM": "With that change there was no one left with a phone or e-mail. Send the spreadsheet again.",
+      "ERRO_VENCIDA": "This spreadsheet was sent more than 7 days ago and has already been deleted from here. Send the spreadsheet again.",
+      "JA_TRAZIDA": "This list has already been brought in. See below.",
       "LENDO": "Reading your spreadsheet…",
       "USAR_EXEMPLO": "Use a sample spreadsheet"
     },
@@ -28,13 +34,26 @@
         "SIM_TODAS": "Yes, all of them",
         "AINDA_NAO": "Not yet",
         "ALGUMAS": "Some of them",
+        "DE_NOVO": "You changed the column that said who is a customer. Answer again.",
         "QUAL_COLUNA": "Which column says who is a customer?"
       },
       "TELEFONE": {
         "TITULO": "Whose phone is in the “{coluna}” column?",
         "DA_PESSOA": "The person's",
         "DA_EMPRESA": "The company's",
+        "DE_NOVO": "You changed the phone column. Answer again.",
         "NAO_USAR": "Don't use it"
+      },
+      "VALORES": {
+        "TITULO": "Which of these mean customer?",
+        "COLUNA": "Column “{coluna}”",
+        "PREENCHIDAS": "Every row with something written in this column",
+        "LINHAS": "{count} row | {count} rows",
+        "OUTROS": "Plus {valores}, {linhas}. To check them all, choose the first option.",
+        "OUTROS_VALORES": "{count} other value | {count} other values",
+        "OUTROS_LINHAS": "in {count} row | in {count} rows",
+        "ERRO_MARQUE": "Check at least one.",
+        "COLUNA_VAZIA": "This column is empty in this spreadsheet. Go back and choose another column, or answer “Not yet”."
       }
     },
     "CONFERIR": {
@@ -52,20 +71,30 @@
       "SOSSEGO": "You can undo this whenever you want.",
       "NINGUEM": "There is no one left to bring in.",
       "ESCOLHER_OUTRA": "Choose another spreadsheet",
+      "JUNTADAS": "I merged {count} row from a person who appeared more than once. | I merged {count} rows from people who appeared more than once.",
+      "CLIENTES": "{count} comes in as a customer. | {count} come in as customers.",
+      "SEM_CLIENTES": "No one comes in as a customer.",
+      "ENTRAM_SEM_TELEFONE": "{count} person will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: this person gets the phone. | {count} people will come in without the phone: the number in the spreadsheet doesn't look like a mobile number with an area code. You can bring the list in anyway. If it is a mobile number, write the area code together with the number, in the same column, and send the spreadsheet again: they get the phone.",
+      "MUDOU": "This list changed while you were checking it. I'm showing how it is now.",
+      "MUDANCA_DESFEITA": "I didn't make that change: with it there would be no one left with a phone or e-mail. I left it as it was.",
+      "RELENDO": "Reading your spreadsheet again…",
+      "RELEITURA_PAROU": "I haven't finished reading your spreadsheet again yet. What you changed is already saved.",
       "TRAZER": "Bring in {count} person | Bring in {count} people"
     },
     "PRECISAM": {
       "TITULO": "Need you ({count})",
       "APOIO": "Anyone left unsolved stays out.",
+      "PLANILHA_APAGADA": "The spreadsheet has already been deleted from here. To fix a line, send the spreadsheet again.",
       "LINHA_DA_PLANILHA": "Line {linha} of the spreadsheet",
       "LINHAS_DA_PLANILHA": "Lines {outraLinha} and {linha} of the spreadsheet",
       "QUEM_SEM_NOME": "Line {linha}",
       "SEM_TELEFONE": "no phone",
-      "SEM_EMAIL": "no e-mail",
       "ERRO_PREENCHER": "Write the {campo} to save.",
+      "ERRO_TELEFONE_IGUAL": "Fix the phone number to save.",
       "QUE_FALTA": { "NOME": "name", "TELEFONE": "phone number", "EMAIL": "email" },
       "RESOLVIDO": "All sorted",
       "PRONTO": "Done",
+      "RESOLVIDA": "{quem}: {valor}",
       "DEIXADA": "Left out",
       "GUARDAR": "Save",
       "DEIXAR_DE_FORA": "Leave out",
@@ -74,23 +103,49 @@
       "FICAR_COM_ESTA": "Keep this one",
       "VOLTAR_ATRAS": "Go back",
       "VOLTAR_ATRAS_LINHA": "Go back on line {linha}",
+      "MOSTRAR_MAIS": "Show more",
+      "ERRO_MOSTRAR_MAIS": "I couldn't show more. Try again.",
       "ANUNCIO": {
         "PRONTO": "Line {linha}: done",
         "DEIXADA": "Line {linha}: left out",
-        "REABERTA": "Line {linha}: back for you to check"
+        "REABERTA": "Line {linha}: back for you to check",
+        "OUTRO_PROBLEMA": "Line {linha}: saved. There is still something else to fix on this line."
       },
       "PROBLEMA": {
-        "TELEFONE": "{quem}: the phone number is missing a digit",
-        "EMAIL": "{quem}: the e-mail has no “{'@'}”",
+        "TELEFONE": "{quem}: this phone number doesn't look like a mobile number. Check the digits and the area code: the area code must be together with the number, in the same column.",
+        "EMAIL": "{quem}: this e-mail doesn't look right.",
         "NOME": "{quem}: the name is missing",
         "DUPLICADA": "{quem} shows up twice. Which one stays?",
-        "SEM_CONTATO": "{quem}: there is no phone or e-mail"
+        "DUPLICADA_SEM_ESCOLHA": "{quem} shows up twice.",
+        "SEM_CONTATO": "{quem}: there is no phone or e-mail",
+        "TELEFONE_VAZIO": "{quem}: the phone number is missing",
+        "EMAIL_VAZIO": "{quem}: the e-mail is missing",
+        "TELEFONE_FORMULA": "{quem}: the phone number starts with a sign (=, +, - or {'@'}). Write it without the sign.",
+        "EMAIL_FORMULA": "{quem}: the e-mail starts with a sign (=, +, - or {'@'}). Write it without the sign.",
+        "NOME_FORMULA": "{quem}: the name starts with a sign (=, +, - or {'@'}). Write it without the sign.",
+        "FORMULA": "On this line, “{campo}” starts with a sign (=, +, - or {'@'}). Fix it in the spreadsheet and send it again, or leave this line out.",
+        "FORMULA_SEM_CAMPO": "On this line, a piece of information starts with a sign (=, +, - or {'@'}). Fix it in the spreadsheet and send it again, or leave this line out.",
+        "FORMULA_RESUMO": "{quem}: a piece of information starts with a sign (=, +, - or {'@'})"
       },
       "CAMPO": {
         "TELEFONE": "Correct phone",
         "PAIS": "Phone country",
         "EMAIL": "Correct e-mail",
+        "CONTATO": "Phone or e-mail",
         "NOME": "Name"
+      },
+      "RECUSA": {
+        "TELEFONE": "This phone doesn't look like a Brazilian mobile number. Check the area code and the digits.",
+        "EMAIL": "This e-mail doesn't look right.",
+        "NOME": "Write the name.",
+        "CONTATO": "Write a phone or an e-mail.",
+        "FORMULA": "This text starts with a sign (=, +, - or {'@'}). Write it without the sign.",
+        "CAMPO": {
+          "TELEFONE": "Check this phone and try again.",
+          "EMAIL": "Check this e-mail and try again.",
+          "NOME": "Check this name and try again.",
+          "LINHA": "I couldn't save this row. Try again."
+        }
       }
     },
     "GUARDAR": {
@@ -98,11 +153,20 @@
       "APOIO": "Each column of your spreadsheet and where it goes.",
       "FICA_COMO": "“{coluna}” is saved as {destino}.",
       "FICA_COMO_INFORMACAO": "“{coluna}” is saved as new information.",
+      "DIZ_QUEM_E_CLIENTE": "“{coluna}” says who is a customer.",
+      "DUVIDOSA": "Check this column.",
       "NAO_VOU_GUARDAR": "I won't keep “{coluna}”",
+      "COLUNA_SEM_NOME": "Column {numero}",
       "TROCAR": "Change",
       "ROTULO_TROCAR": "Where the “{coluna}” column goes",
       "ROTULO_MUDAR": "Change where the {coluna} column goes",
-      "NAO_GUARDAR": "Don't keep"
+      "NAO_GUARDAR": "Don't keep",
+      "CAMPO_NOME": "Name of this information",
+      "CAMPO_PARA_QUE_SERVE": "What is it for?",
+      "AJUDA_PARA_QUE_SERVE": "A short sentence. E.g.: month the insurance expires.",
+      "SALVAR_CAMPO": "Save",
+      "SALVO": "Saved",
+      "ERRO_NOME_DO_CAMPO": "Write a name for this information."
     },
     "DESTINOS": {
       "NOME": "Name",
@@ -117,7 +181,7 @@
     },
     "ANDAMENTO": {
       "TITULO": "Bringing in… {porcentagem}%.",
-      "APOIO": "You can close this screen; I'll let you know when it's done.",
+      "APOIO": "You can leave this screen. The list shows up down here when it's done.",
       "ROTULO": "Progress"
     },
     "PRONTO": {
@@ -138,27 +202,45 @@
       "SITUACAO": {
         "PRONTO": "Done",
         "TRAZENDO": "Bringing in {porcentagem}%",
+        "DESFAZENDO": "Undoing…",
         "DESFEITO": "Undone"
       },
       "DESFAZER": "Undo",
-      "ROTULO_DESFAZER": "Undo the list {arquivo}"
+      "ROTULO_DESFAZER": "Undo the list {arquivo}",
+      "DESFAZER_PAROU": "The undo stopped halfway.",
+      "FICARAM": "{count} person stayed: I couldn't remove them. If you want, delete that person from the people list. | {count} people stayed: I couldn't remove them. If you want, delete those people from the people list.",
+      "CONTINUAR": "Continue",
+      "ROTULO_CONTINUAR": "Continue undoing the list {arquivo}",
+      "FALHOU": "I couldn't bring in this list.",
+      "ROTULO_TENTAR": "Try again: bring in the list {arquivo}"
     },
     "DESFAZER": {
       "TITULO": "Undo this list?",
       "TITULO_ARQUIVO": "Undo “{arquivo}”?",
-      "TIRA": "This removes the person who came with this list and hasn't talked with you yet. | This removes the {count} people who came with this list and haven't talked with you yet.",
-      "FICAM": "{count} stays here, because they already talked with you or already got a campaign. | {count} stay here, because they already talked with you or already got a campaign.",
-      "DEVOLVE": "The person who was already here goes back to how they were. | The {count} who were already here go back to how they were.",
+      "SAEM": "{count} person leaves | {count} people leave",
+      "SAEM_PORQUE": "Came with this list and nobody has worked with them yet. | Came with this list and nobody has worked with them yet.",
+      "FICAM": "{count} person stays | {count} people stay",
+      "FICAM_PORQUE": "Someone already worked with them (conversation, card, label, campaign or insurance) or changed their record after the list, they also came in another list, or the list was not brought in through this screen and there is no way to know whether someone changed them. | Someone already worked with them (conversation, card, label, campaign or insurance) or changed their record after the list, they also came in another list, or the list was not brought in through this screen and there is no way to know whether someone changed them.",
+      "VOLTAM": "{count} person goes back to how they were | {count} people go back to how they were",
+      "VOLTAM_PORQUE": "Was already here before this list. What the list filled in for them, like phone, e-mail or city, goes back to empty. What someone changed afterwards stays as it is. | Were already here before this list. What the list filled in for them, like phone, e-mail or city, goes back to empty. What someone changed afterwards stays as it is.",
+      "NADA": "Nobody else leaves. It only needs to finish.",
       "NAO_RECEBER": "People who asked not to get messages stay that way.",
       "CONFIRMAR": "Undo",
-      "ERRO_PREVIA": "I couldn't see what will be removed."
+      "ERRO_PREVIA": "I couldn't see what will be removed.",
+      "NAO_PODE": "This list is still being brought in. You can undo it when it's done."
     },
     "ERROS": {
       "GUARDAR": "I couldn't save this. Try again.",
       "DESFAZER": "I couldn't undo this. Try again.",
       "TRAZER": "I couldn't bring in the list.",
       "ANDAMENTO": "I couldn't check how it's going.",
-      "HISTORICO": "I couldn't show what you already brought in."
+      "HISTORICO": "I couldn't show what you already brought in.",
+      "NADA_PARA_TRAZER": "There is no one left to bring in. Send the spreadsheet again.",
+      "DESFAZER_EM_CURSO": "A list is being undone right now. Wait for the undo to finish and try again.",
+      "FALTA_VALORES_CLIENTE": "Before bringing in the list, say who is a customer.",
+      "SEM_EMPRESA": "To keep the company phone, the spreadsheet needs a column with the company name.",
+      "MUITO_LONGO": "This text is too long. Shorten it and try again.",
+      "SEM_COLUNA_DE_CONTATO": "I didn't change this column: the list needs at least one phone or e-mail column."
     }
   }
 }

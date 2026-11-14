@@ -2,89 +2,48 @@ import { ehPlanilha } from '../../trazer/arquivo';
 import {
   SITUACAO_DO_PROBLEMA,
   contarProblemas,
-  nomeValido,
   partesDaFrase,
-  resumoAoVivo,
-  totalATrazer,
-  totalDaLeitura,
+  problemasPorCarregar,
+  resumoDaTela,
 } from '../../trazer/contagem';
 import { formatarDia } from '../../trazer/prazo';
 
-const leituraCom = estados => ({
-  resumo: { total: 200, novas: 180, completadas: 15, comProblema: 5 },
+// Quantas pessoas entram quem diz é o servidor (`resumo.entram`): a tela só
+// conta as linhas que ela mesma mostra (quantasEntram.spec.js tem o resto).
+const leituraCom = (estados, extra = {}) => ({
+  resumo: {
+    total: 200,
+    novas: 180,
+    completadas: 15,
+    comProblema: 5,
+    entram: 195,
+  },
   problemas: estados.map((estado, i) => ({ linha: i + 1, estado })),
+  problemasTotal: estados.length,
+  ...extra,
 });
 const { ABERTO, GUARDADO, DEIXADO } = SITUACAO_DO_PROBLEMA;
 
-describe('totalATrazer', () => {
-  it('é novas + completadas + consertadas − deixadas de fora', () => {
-    expect(
-      totalATrazer({
-        novas: 180,
-        completadas: 15,
-        consertadas: 5,
-        deixadasDeFora: 2,
-      })
-    ).toBe(198);
-  });
-
-  it('sem conserto é só novas + completadas', () => {
-    expect(totalATrazer({ novas: 180, completadas: 15 })).toBe(195);
-  });
-
-  it('nunca fica abaixo de zero', () => {
-    expect(totalATrazer({ deixadasDeFora: 3 })).toBe(0);
-  });
-});
-
-describe('totalDaLeitura', () => {
-  it('começa em 195 com as 5 linhas abertas', () => {
-    expect(
-      totalDaLeitura(leituraCom([ABERTO, ABERTO, ABERTO, ABERTO, ABERTO]))
-    ).toBe(195);
-  });
-
-  it('sobe 1 para cada linha guardada', () => {
-    expect(
-      totalDaLeitura(leituraCom([GUARDADO, GUARDADO, ABERTO, ABERTO, ABERTO]))
-    ).toBe(197);
-  });
-
-  it('linha deixada de fora não entra', () => {
-    expect(
-      totalDaLeitura(leituraCom([GUARDADO, DEIXADO, ABERTO, ABERTO, ABERTO]))
-    ).toBe(196);
-  });
-
-  it('todas guardadas dão 200', () => {
-    expect(
-      totalDaLeitura(
-        leituraCom([GUARDADO, GUARDADO, GUARDADO, GUARDADO, GUARDADO])
-      )
-    ).toBe(200);
-  });
-
-  it('leitura vazia dá zero', () => {
-    expect(totalDaLeitura(null)).toBe(0);
-  });
-});
-
-describe('resumoAoVivo e partesDaFrase', () => {
-  it('conserto vira "nova" e diminui os que precisam de você', () => {
-    const resumo = resumoAoVivo(
+describe('resumoDaTela e partesDaFrase', () => {
+  it('o conserto diminui os que precisam de você, sem virar "nova"', () => {
+    const resumo = resumoDaTela(
       leituraCom([GUARDADO, ABERTO, ABERTO, ABERTO, ABERTO])
     );
     expect(resumo).toEqual({
       total: 200,
-      novas: 181,
+      novas: 180,
       completadas: 15,
       precisamDeVoce: 4,
       deixadas: 0,
+      juntadas: 0,
+      semTelefone: 0,
+      entram: 195,
+      clientes: 0,
     });
   });
 
   it('a frase tem as quatro partes quando todas existem', () => {
-    const resumo = resumoAoVivo(
+    const resumo = resumoDaTela(
       leituraCom([DEIXADO, ABERTO, ABERTO, ABERTO, ABERTO])
     );
     expect(partesDaFrase(resumo)).toEqual([
@@ -96,7 +55,7 @@ describe('resumoAoVivo e partesDaFrase', () => {
   });
 
   it('parte zerada some da frase', () => {
-    const resumo = resumoAoVivo(
+    const resumo = resumoDaTela(
       leituraCom([GUARDADO, GUARDADO, GUARDADO, GUARDADO, GUARDADO])
     );
     expect(partesDaFrase(resumo).map(parte => parte.chave)).toEqual([
@@ -114,23 +73,38 @@ describe('resumoAoVivo e partesDaFrase', () => {
       deixados: 1,
     });
   });
+
+  it('leitura vazia dá zero em tudo', () => {
+    expect(resumoDaTela(null).entram).toBe(0);
+    expect(partesDaFrase(resumoDaTela(null))).toEqual([]);
+  });
 });
 
-describe('campos de conserto', () => {
-  it('nomeValido pede alguma letra', () => {
-    expect(nomeValido('Ana')).toBe(true);
-    expect(nomeValido('   ')).toBe(false);
-    expect(nomeValido(null)).toBe(false);
+describe('problemasPorCarregar', () => {
+  it('é o que o servidor tem a mais do que a tela já mostra', () => {
+    expect(
+      problemasPorCarregar(leituraCom([ABERTO, ABERTO], { problemasTotal: 5 }))
+    ).toBe(3);
+  });
+
+  it('nunca fica abaixo de zero, nem sem leitura', () => {
+    expect(
+      problemasPorCarregar(leituraCom([ABERTO, ABERTO], { problemasTotal: 1 }))
+    ).toBe(0);
+    expect(problemasPorCarregar(null)).toBe(0);
   });
 });
 
 describe('ehPlanilha', () => {
-  it.each(['lista.xlsx', 'LISTA.XLS', 'contatos.csv', ' clientes 2025.CSV '])(
+  it.each(['lista.xlsx', 'LISTA.XLSX', 'contatos.csv', ' clientes 2025.CSV '])(
     'aceita %s',
     nome => expect(ehPlanilha(nome)).toBe(true)
   );
 
+  // O Excel antigo (.xls) saiu (#2896): o servidor só lê .xlsx e .csv.
   it.each([
+    'lista.xls',
+    'LISTA.XLS',
     'foto.png',
     'documento.pdf',
     'csv',

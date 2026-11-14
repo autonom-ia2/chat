@@ -3,6 +3,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
+import { QUEM_TRAZ_LISTA } from '../trazer/quemTraz';
 
 // As mesmas regras da barra de ações da lista de contatos de hoje
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
@@ -10,8 +11,6 @@ import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 // `contact_delete`.
 export const QUEM_EDITA_CONTATO = ['administrator', 'agent', 'contact_manage'];
 const QUEM_APAGA_CONTATO = ['administrator', 'contact_delete'];
-// Trazer uma lista é importar contatos: a regra de ContactPolicy#import?.
-const QUEM_TRAZ_LISTA = ['administrator', 'contact_manage'];
 // Exportar contatos: a regra de ContactPolicy#export? (a mesma do menu da lista
 // de contatos de hoje, Contacts/ContactsHeader/components/ContactMoreActions.vue).
 const QUEM_EXPORTA_CONTATO = ['administrator', 'contact_export'];
@@ -25,8 +24,9 @@ const QUEM_EXPORTA_CONTATO = ['administrator', 'contact_export'];
 //    CRM não basta: o servidor recusaria e a tela ofereceria um "tentar de
 //    novo" que nunca funciona;
 //  - Etiqueta: quem pode editar contato;
-//  - Apagar: quem pode apagar contato;
-//  - Trazer minha lista: quem pode importar contatos.
+//  - Apagar: quem pode apagar contato.
+// #2896 — e quem vê "Trazer minha lista" no herói: quem pode importar contato
+// (a mesma regra da rota `relacionamentos_trazer` e do servidor).
 export const usePermissoesDaLista = () => {
   const globalConfig = useMapGetter('globalConfig/get');
   const { canViewCrm, canManageCards } = useCrmPermissions();

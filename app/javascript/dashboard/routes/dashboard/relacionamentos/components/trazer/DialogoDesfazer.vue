@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -9,41 +9,79 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 
 // #2894 — o diálogo de Desfazer: mostra ANTES quem sai, quem fica aqui (já
 // conversou ou recebeu campanha) e o que volta ao que era. Destrutivo: tocar fora não fecha.
+// A prévia é uma lista de até três itens, nesta ordem: quem sai, quem fica e
+// quem volta a ser como era. Cada item tem o número em destaque e, embaixo, o
+// porquê. O item que é zero some; com os três em zero (o desfazer que parou
+// quando já não havia quem tirar), uma frase diz que falta só terminar.
+// #2896 — `naoPode`: o servidor recusou porque a lista ainda não foi trazida
+// até o fim. O diálogo diz isso num alerta, com o foco nele, no lugar da
+// prévia; o botão de desfazer sai (não há o que confirmar) e fica só o de sair.
+// O botão de desfazer só existe com a prévia na tela: nenhum botão desligado
+// por falta de dado. Enquanto ela chega, o esqueleto mostra a espera e só há o
+// botão de sair; se ela não veio, quem resolve é o "Tentar de novo" do erro.
+// Durante o pedido ele mostra que está trabalhando, sem ficar desligado; o
+// segundo clique não pede de novo (trazer/useHistoricoDeListas.js).
 const props = defineProps({
   // O nome da lista que vai ser desfeita, no título.
   arquivo: { type: String, default: '' },
   previa: { type: Object, default: null },
   comErroNaPrevia: { type: Boolean, default: false },
   desfazendo: { type: Boolean, default: false },
+  naoPode: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirmar', 'fechar', 'tentar']);
 
 const { t } = useI18n();
 const dialogo = ref(null);
+const recusa = ref(null);
+
+// A recusa chegou: o foco vai para ela (leitor de tela e teclado).
+watch(
+  () => props.naoPode,
+  recusou => {
+    if (recusou) recusa.value?.focus();
+  },
+  { flush: 'post' }
+);
 
 const SEM_PESSOAS = 0;
 
-// Uma frase para quem sai, quem fica e quem volta ao que era; some a que é zero.
-const fraseDoQueSai = computed(() => {
-  const { tira, ficam, devolve } = props.previa;
-  const frases = [];
-  if (tira > SEM_PESSOAS) {
-    frases.push(
-      t('RELACIONAMENTOS_TRAZER.DESFAZER.TIRA', { count: tira }, tira)
-    );
-  }
-  if (ficam > SEM_PESSOAS) {
-    frases.push(
-      t('RELACIONAMENTOS_TRAZER.DESFAZER.FICAM', { count: ficam }, ficam)
-    );
-  }
-  if (devolve > SEM_PESSOAS) {
-    frases.push(
-      t('RELACIONAMENTOS_TRAZER.DESFAZER.DEVOLVE', { count: devolve }, devolve)
-    );
-  }
-  return frases.join(' ');
-});
+// Os itens da prévia, na ordem em que aparecem: o campo que o servidor manda,
+// a frase com o número e a frase do porquê (as duas mudam no singular).
+const ITENS_DA_PREVIA = [
+  {
+    chave: 'saem',
+    campo: 'tira',
+    quantas: total =>
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.SAEM', { count: total }, total),
+    porque: total => t('RELACIONAMENTOS_TRAZER.DESFAZER.SAEM_PORQUE', total),
+  },
+  {
+    chave: 'ficam',
+    campo: 'ficam',
+    quantas: total =>
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.FICAM', { count: total }, total),
+    porque: total => t('RELACIONAMENTOS_TRAZER.DESFAZER.FICAM_PORQUE', total),
+  },
+  {
+    chave: 'voltam',
+    campo: 'devolve',
+    quantas: total =>
+      t('RELACIONAMENTOS_TRAZER.DESFAZER.VOLTAM', { count: total }, total),
+    porque: total => t('RELACIONAMENTOS_TRAZER.DESFAZER.VOLTAM_PORQUE', total),
+  },
+];
+
+// Um item para quem sai, quem fica e quem volta ao que era; some o que é zero.
+const linhasDaPrevia = computed(() =>
+  ITENS_DA_PREVIA.map(item => ({ ...item, total: props.previa[item.campo] }))
+    .filter(item => item.total > SEM_PESSOAS)
+    .map(item => ({
+      chave: item.chave,
+      quantas: item.quantas(item.total),
+      porque: item.porque(item.total),
+    }))
+);
 
 const titulo = computed(() =>
   props.arquivo
@@ -74,8 +112,41 @@ defineExpose({
       aria-live="polite"
     >
       <TituloDoDialogo :titulo="titulo" />
-      <template v-if="previa">
-        <p class="m-0 text-n-slate-12">{{ fraseDoQueSai }}</p>
+      <p
+        v-if="naoPode"
+        ref="recusa"
+        data-relacionamentos="desfazer-nao-pode"
+        role="alert"
+        tabindex="-1"
+        class="m-0 text-base font-medium outline-none text-n-slate-12"
+      >
+        {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_PODE') }}
+      </p>
+      <template v-else-if="previa">
+        <ul
+          v-if="linhasDaPrevia.length"
+          data-relacionamentos="desfazer-previa"
+          class="flex flex-col gap-3 p-0 m-0 list-none"
+        >
+          <li
+            v-for="linha in linhasDaPrevia"
+            :key="linha.chave"
+            :data-linha="linha.chave"
+            class="flex flex-col gap-0.5"
+          >
+            <p class="m-0 text-base font-medium text-n-slate-12 tabular-nums">
+              {{ linha.quantas }}
+            </p>
+            <p class="m-0 text-sm text-n-slate-11">{{ linha.porque }}</p>
+          </li>
+        </ul>
+        <p
+          v-else
+          data-relacionamentos="desfazer-nada"
+          class="m-0 text-base font-medium text-n-slate-12"
+        >
+          {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NADA') }}
+        </p>
         <p class="m-0">
           {{ t('RELACIONAMENTOS_TRAZER.DESFAZER.NAO_RECEBER') }}
         </p>
@@ -99,6 +170,7 @@ defineExpose({
           @click="dialogo?.close()"
         />
         <Button
+          v-if="previa && !naoPode && !comErroNaPrevia"
           color="ruby"
           size="lg"
           class="w-full"
@@ -106,7 +178,7 @@ defineExpose({
           data-relacionamentos="desfazer-confirmar"
           :label="t('RELACIONAMENTOS_TRAZER.DESFAZER.CONFIRMAR')"
           :is-loading="desfazendo"
-          :disabled="!previa || desfazendo"
+          :aria-busy="desfazendo"
         />
       </div>
     </template>

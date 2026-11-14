@@ -8,10 +8,11 @@ import { ACOES_DO_HEROI, escolherFrase } from '../../lista/fraseDoHeroi';
 // #2894 — o herói da lista: a frase do dia (escolhida por `escolherFrase`) e
 // UMA ação principal. "Trazer minha lista" fica discreto, ao lado dela, quando
 // não é a principal (igual às duas ações do Pronto).
+// #2896 — quem não pode trazer lista (`podeTrazer` falso) não vê o botão de
+// trazer, nem o discreto nem o principal: fica a frase.
 const props = defineProps({
   resumo: { type: Object, required: true },
   aba: { type: String, default: 'pessoas' },
-  // Quem não pode trazer uma lista não vê o convite (nem como ação principal).
   podeTrazer: { type: Boolean, default: true },
 });
 const emit = defineEmits(['trazer', 'verGrupo']);
@@ -27,10 +28,11 @@ const texto = computed(() =>
     .join(' ')
 );
 
+// A ação principal que a pessoa pode usar: "trazer" some para quem não pode.
 const acaoPrincipal = computed(() => {
   const acao = frase.value.principal;
-  const ehTrazer = acao?.acao === ACOES_DO_HEROI.TRAZER;
-  return ehTrazer && !props.podeTrazer ? null : acao;
+  if (!acao) return null;
+  return acao.acao === ACOES_DO_HEROI.TRAZER && !props.podeTrazer ? null : acao;
 });
 const trazerDiscreto = computed(
   () => frase.value.mostraTrazerDiscreto && props.podeTrazer

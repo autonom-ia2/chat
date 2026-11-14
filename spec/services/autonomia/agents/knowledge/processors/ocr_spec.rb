@@ -17,6 +17,28 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
     with_modified_env(PATH: path, &)
   end
 
+  # #3016 — logo depois do KILL ao grupo, o neto ainda pode existir: o sinal foi entregue e o sistema ainda não o aplicou,
+  # ou ele já morreu e é zumbi esperando quem o adotou recolher (zumbi ainda responde a `kill(0)`). Morto é: sumiu, ou é
+  # zumbi. Confere em passos curtos até o prazo (argumento, e não constante: constante no `describe` cai no RuboCop).
+  def morreu?(pid, prazo: 2, passo: 0.05)
+    limite = Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo
+    until sumiu_ou_zumbi?(pid)
+      return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) > limite
+
+      sleep passo
+    end
+    true
+  end
+
+  # `/proc/<pid>/stat` é "pid (nome) ESTADO ..."; o nome pode ter ") ", por isso o último.
+  def sumiu_ou_zumbi?(pid)
+    Process.kill(0, pid)
+    estado = "/proc/#{pid}/stat"
+    File.exist?(estado) && File.read(estado).rpartition(') ').last.start_with?('Z')
+  rescue Errno::ESRCH, Errno::ENOENT
+    true
+  end
+
   it 'returns what tesseract printed, reading the file in Portuguese' do
     tesseract_falso('echo "$1|$2|$3|$4"')
 
@@ -66,11 +88,15 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Ocr do
   # V4 — o tempo estourado mata o GRUPO: um filho que o tesseract deixou rodando também morre.
   it 'kills the whole process group on timeout, children included' do
     filho = File.join(pasta, 'filho')
-    tesseract_falso("sleep 30 & echo $! > #{filho}; wait")
+    # O filho solta a saída do tesseract: se segurasse o cano, o `ler` esperaria ele terminar sozinho e o teste passaria
+    # mesmo com o KILL indo só ao processo, e não ao grupo.
+    tesseract_falso("sleep 30 >/dev/null 2>&1 & echo $! > #{filho}; wait")
 
+    inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     expect { com_path("#{pasta}:/usr/bin:/bin") { described_class.ler('/tmp/foto.png', tempo: 1) } }
       .to raise_error(described_class::Falhou, 'tesseract_timeout')
 
-    expect { Process.kill(0, File.read(filho).to_i) }.to raise_error(Errno::ESRCH)
+    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio).to be < 10
+    expect(morreu?(File.read(filho).to_i)).to be(true)
   end
 end

@@ -71,6 +71,22 @@ RSpec.describe 'Import retry through confirm (#2921)', :aggregate_failures, type
     end
   end
 
+  # #2896: someone asked to undo the list ("Desfazer"). Writing the missing rows while the undo removes the written
+  # ones, or after it removed them, would bring back half of what was undone. An undo that failed is asked again.
+  describe 'a failed import that someone asked to undo' do
+    %i[processing completed failed].each do |undo_status|
+      it "refuses to go on while the undo is #{undo_status}, on the route and in the writer" do
+        campaign_import = failed_midway(:contacts)
+        campaign_import.update!(undo_status: undo_status)
+
+        expect(campaign_import).not_to be_import_resumable
+        expect_refused(campaign_import)
+        expect(CampaignImports::Importer.new(campaign_import).send(:startable?)).to be(false)
+        expect(account.contacts.count).to eq(2)
+      end
+    end
+  end
+
   describe 'a failed import that is not a writing that broke' do
     it 'refuses a contact import that never started writing' do
       campaign_import = queued_import(:contacts, account: account, user: admin)

@@ -127,10 +127,14 @@ watch(semLinhas, vazio => {
     Object.keys(resposta.value?.dados || {})
   );
 });
+// Na paga, "não achou" quer dizer que a consulta foi feita (e contou) e a base não tinha o dado; o documento recusado é
+// `documento_invalido`. A tela diz isso antes de pedir para conferir, e só o valor digitado à mão (#3015): uma placa
+// ou um código CAR errado, mas no formato certo, também cai aqui.
 const aviso = computed(() => {
   if (!resposta.value || encontrado.value) return '';
   const chave = SITUACOES[resposta.value.situacao] || 'NAO_CONSEGUI';
-  return t(`${NS}.RESULTADO.${chave}`);
+  const semRegistroPago = Boolean(props.premium) && chave === 'NAO_ENCONTRADO';
+  return t(`${NS}.RESULTADO.${semRegistroPago ? 'SEM_REGISTRO_PAGA' : chave}`);
 });
 
 const rodar = async () => {

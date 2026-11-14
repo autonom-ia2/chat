@@ -26,6 +26,7 @@ class CampaignImports::StalledImportsJob < ApplicationJob
       # One import that breaks does not stop the others. No message: it may carry what the import holds.
       Rails.logger.error("[CampaignImports::StalledImportsJob] import_id=#{campaign_import.id} #{e.class}")
     end
+    ContactImports::Trazer::ConferenciasParadas.new.call
   end
 
   private

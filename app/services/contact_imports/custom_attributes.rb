@@ -30,13 +30,16 @@ class ContactImports::CustomAttributes
   #
   # The contact is locked and read again first: two writers on the same contact (two automation runs, #2771) would
   # otherwise each write the whole hash they read before, and the last one would drop the keys the other just wrote.
+  #
+  # Returns what it added ({ 'plano' => 'Ouro' }, by attribute key), or {} when it added nothing.
   def merge!(contact, extra_values)
-    return if extra_values.blank?
+    return {} if extra_values.blank?
 
     contact.with_lock do
       current = contact.custom_attributes.to_h
       additions = additions(current, extra_values)
       contact.update!(custom_attributes: current.merge(additions)) if additions.any?
+      additions
     end
   end
 
@@ -58,7 +61,23 @@ class ContactImports::CustomAttributes
   end
 
   def columns
-    @columns ||= ContactImports::AttributeColumns.new(@account, @extra_columns).perform
+    @columns ||= ContactImports::AttributeColumns.new(@account, kept_columns, fields: trazer&.campos || {}).perform
+  end
+
+  # Trazer minha lista (#2896, options['trazer']): a column the person marked "não guardar" on the screen writes no
+  # value and creates no attribute, and neither does one sent to the city, the company phone or the customer mark.
+  # Without the mark every extra column is kept, as before.
+  def kept_columns
+    return @extra_columns unless trazer
+
+    Array(@extra_columns) - Relacionamentos::Trazer::Colunas.new(@campaign_import).chaves_que_nao_guardam - trazer.chaves
+  end
+
+  # nil for every import without the mark and for the automation step (no import record).
+  def trazer
+    return @trazer if defined?(@trazer)
+
+    @trazer = ContactImports::Trazer::DestinosDaLinha.da(@campaign_import)
   end
 
   def columns_by_header
@@ -71,7 +90,8 @@ class ContactImports::CustomAttributes
     scope = @account.custom_attribute_definitions.where(attribute_model: :contact_attribute)
     return false if scope.exists?(attribute_key: column.key)
 
-    scope.create!(attribute_key: column.key, attribute_display_name: column.label, attribute_display_type: :text)
+    scope.create!(attribute_key: column.key, attribute_display_name: column.label, attribute_display_type: :text,
+                  attribute_description: column.description)
     true
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
     raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:attribute_key, :taken)

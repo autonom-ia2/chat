@@ -2375,8 +2375,8 @@
     },
     {
      "id": "09.17",
-     "titulo": "Trazer minha lista: enviar uma planilha de pessoas e desfazer se precisar",
-     "para_que_serve": "Enviar uma planilha Excel ou CSV, responder às perguntas, conferir e consertar linhas, trazer as pessoas, acompanhar o andamento e desfazer uma lista.",
+     "titulo": "Trazer minha lista: enviar uma planilha de pessoas, conferir e trazer",
+     "para_que_serve": "Enviar uma planilha Excel ou CSV, responder às perguntas, conferir o que a tela achou, trazer as pessoas, acompanhar o andamento e ver as listas já trazidas.",
      "publico": "ambos",
      "prioridade": "P1",
      "assuntos": [],
@@ -2393,7 +2393,51 @@
       "porques: Trazer minha lista de pessoas (planilha)"
      ],
      "revisar": false,
-     "nota": "Issue #2894."
+     "nota": "Issue #2894. Dividido em 12/11/2026 (#2896) para caber no teto de 600 palavras: as linhas que precisam de você foram para o 09.18 e as colunas para o 09.19. O Desfazer ainda não existe fora da demonstração (em fonte/trazerFonte.js a fonte real diz temDesfazer: false, Fatia 3): a tela não mostra o botão e o artigo não fala dele. Quando o desfazer entrar, escrever o passo a passo."
+    },
+    {
+     "id": "09.18",
+     "titulo": "Trazer minha lista: corrigir as linhas que precisam de você",
+     "para_que_serve": "Corrigir telefone, e-mail ou nome de uma linha da planilha, escolher com qual linha repetida ficar, deixar uma linha de fora e voltar atrás, antes de trazer a lista.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_trazer"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer minha lista de pessoas (planilha)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2896. Saiu do 09.17 em 12/11/2026. A parte Precisam de você só aparece depois de enviar a planilha, então o botão leva ao começo da tela."
+    },
+    {
+     "id": "09.19",
+     "titulo": "Trazer minha lista: escolher o que guardar de cada coluna",
+     "para_que_serve": "Conferir para onde vai cada coluna da planilha, mudar o destino, mandar não guardar e dar nome a uma informação nova, antes de trazer a lista.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_trazer"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "relacionamentos_novo",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer minha lista de pessoas (planilha)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2896. Saiu do 09.17 em 12/11/2026. O que vou guardar só aparece depois de enviar a planilha, então o botão leva ao começo da tela."
     },
     {
      "id": "09.20",

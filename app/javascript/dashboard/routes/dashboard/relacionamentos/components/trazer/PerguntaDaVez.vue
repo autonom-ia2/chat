@@ -1,18 +1,43 @@
 <script setup>
-import { computed, ref, useId, watch } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CartoesDeEscolha from './CartoesDeEscolha.vue';
+import ValoresDeCliente from './ValoresDeCliente.vue';
+import { chaveDaColuna, podeDizerQuemEhCliente } from '../../trazer/destinos';
+import {
+  PERGUNTA_CLIENTES,
+  PERGUNTA_VALORES,
+  RESPOSTA_ALGUMAS,
+} from '../../trazer/respostas';
 
 // #2894 — UMA pergunta por tela, só quando a leitura pede. Cada pergunta tem
 // Continuar (sempre ligado: sem resposta, o clique diz o que falta) e Voltar.
+// #2896 — a coluna que diz quem é cliente vai pela chave dela (o índice, quando
+// vem do servidor; 0 é a primeira). Coluna sem título aparece pela posição. Só
+// entram as colunas que podem dizer isso; sem nenhuma, "Algumas" não aparece.
+// `temEmpresa`: sem empresa na leitura, a pergunta do telefone não oferece "Da
+// empresa".
+// Fatia 2 — `deNovo`: a pessoa mudou a coluna de que esta resposta dependia e a
+// pergunta diz por que está sendo feita de novo. `recusa` (`{ chave }`): a
+// resposta que o servidor não aceitou (ou que falhou) fica dita aqui, como
+// alerta, com o foco de volta nas respostas. `relendo`: a planilha está sendo
+// lida de novo. Com a resposta sendo gravada, o Voltar fica desligado.
+// E3 — "Quais destes querem dizer cliente?" (`valores_cliente`): em vez dos
+// cartões de escolha única, a pessoa marca os valores da coluna
+// (ValoresDeCliente.vue). A pergunta diz de que coluna é e, sem nada marcado, o
+// Continuar diz "Marque pelo menos um." e leva o foco à primeira opção.
 const props = defineProps({
   pergunta: { type: Object, required: true },
   respostas: { type: Object, required: true },
   colunas: { type: Array, default: () => [] },
+  temEmpresa: { type: Boolean, default: true },
   podeContinuar: { type: Boolean, default: false },
   ocupado: { type: Boolean, default: false },
+  relendo: { type: Boolean, default: false },
+  deNovo: { type: Boolean, default: false },
+  recusa: { type: Object, default: null },
 });
 const emit = defineEmits([
   'responder',
@@ -26,8 +51,13 @@ const id = useId();
 const raiz = ref(null);
 const erro = ref('');
 
-const CLIENTES = 'clientes';
-const RESPOSTA_ALGUMAS = 'algumas';
+const RESPOSTA_DA_EMPRESA = 'da_empresa';
+
+const nomeDaColuna = (nome, indice) =>
+  nome ||
+  t('RELACIONAMENTOS_TRAZER.GUARDAR.COLUNA_SEM_NOME', {
+    numero: (indice ?? 0) + 1,
+  });
 
 const opcoesDa = {
   clientes: [
@@ -42,26 +72,60 @@ const opcoesDa = {
   ],
 };
 
-const ehDeClientes = computed(() => props.pergunta.id === CLIENTES);
-const titulo = computed(() =>
-  ehDeClientes.value
-    ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.TITULO')
-    : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.TITULO', {
-        coluna: props.pergunta.coluna,
-      })
+const ehDeClientes = computed(() => props.pergunta.id === PERGUNTA_CLIENTES);
+const ehDeValores = computed(() => props.pergunta.id === PERGUNTA_VALORES);
+const colunaDaPergunta = computed(() =>
+  nomeDaColuna(props.pergunta.coluna, props.pergunta.indice)
 );
-const opcoes = computed(() =>
-  opcoesDa[props.pergunta.id].map(([opcaoId, chave]) => ({
-    id: opcaoId,
-    rotulo: t(chave),
-  }))
+// As duas perguntas de cliente voltam pelo mesmo motivo: a coluna mudou.
+const porQueDeNovo = computed(() =>
+  ehDeClientes.value || ehDeValores.value
+    ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.DE_NOVO')
+    : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.DE_NOVO')
 );
-const respostaAtual = computed(() => props.respostas[props.pergunta.id] || '');
-const pedeColuna = computed(
-  () => ehDeClientes.value && respostaAtual.value === RESPOSTA_ALGUMAS
+const titulo = computed(() => {
+  if (ehDeClientes.value) {
+    return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.TITULO');
+  }
+  if (ehDeValores.value) {
+    return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.TITULO');
+  }
+  return t('RELACIONAMENTOS_TRAZER.PERGUNTAS.TELEFONE.TITULO', {
+    coluna: colunaDaPergunta.value,
+  });
+});
+// O que o título tem de apoio: de que coluna é e por que voltou.
+const apoiosDoTitulo = computed(() =>
+  [
+    ehDeValores.value ? `${id}-coluna-da-pergunta` : '',
+    props.deNovo ? `${id}-de-novo` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 );
 const opcoesDeColuna = computed(() =>
-  props.colunas.map(coluna => ({ value: coluna.nome, label: coluna.nome }))
+  props.colunas.filter(podeDizerQuemEhCliente).map(coluna => ({
+    value: chaveDaColuna(coluna),
+    label: nomeDaColuna(coluna.nome, coluna.indice),
+  }))
+);
+// A resposta que a leitura não comporta não é oferecida.
+const cabe = opcaoId => {
+  if (opcaoId === RESPOSTA_ALGUMAS) return opcoesDeColuna.value.length > 0;
+  if (opcaoId === RESPOSTA_DA_EMPRESA) return props.temEmpresa;
+  return true;
+};
+const opcoes = computed(() =>
+  (opcoesDa[props.pergunta.id] ?? [])
+    .filter(([opcaoId]) => cabe(opcaoId))
+    .map(([opcaoId, chave]) => ({ id: opcaoId, rotulo: t(chave) }))
+);
+const respostaAtual = computed(() => props.respostas[props.pergunta.id] || '');
+const valoresMarcados = computed(
+  () => props.respostas[PERGUNTA_VALORES] ?? null
+);
+const pedeColuna = computed(
+  () => ehDeClientes.value && respostaAtual.value === RESPOSTA_ALGUMAS
 );
 
 // Nada de botão desligado por falta de preenchimento: o clique diz o que falta
@@ -72,8 +136,10 @@ const tentarContinuar = () => {
     emit('continuar');
     return;
   }
-  if (!respostaAtual.value) {
-    erro.value = t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_ESCOLHA');
+  if (ehDeValores.value || !respostaAtual.value) {
+    erro.value = ehDeValores.value
+      ? t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.ERRO_MARQUE')
+      : t('RELACIONAMENTOS_TRAZER.PERGUNTAS.ERRO_ESCOLHA');
     raiz.value?.querySelector('[data-relacionamentos="resposta"]')?.focus();
     return;
   }
@@ -84,6 +150,30 @@ const tentarContinuar = () => {
 watch([respostaAtual, () => props.respostas.colunaCliente], () => {
   erro.value = '';
 });
+
+// O que o alerta diz: o que falta preencher ou, sem isso, a recusa do servidor.
+const mensagem = computed(() => {
+  if (erro.value) return erro.value;
+  return props.recusa ? t(props.recusa.chave) : '';
+});
+
+// A recusa chegou: o foco volta à resposta escolhida (ou à primeira).
+const focarAResposta = async () => {
+  await nextTick();
+  const respostasDaTela = raiz.value?.querySelectorAll(
+    '[data-relacionamentos="resposta"]'
+  );
+  const escolhida = [...(respostasDaTela ?? [])].find(
+    resposta => resposta.getAttribute('data-resposta') === respostaAtual.value
+  );
+  (escolhida ?? respostasDaTela?.[0])?.focus();
+};
+watch(
+  () => props.recusa,
+  recusa => {
+    if (recusa) focarAResposta();
+  }
+);
 </script>
 
 <template>
@@ -97,16 +187,47 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
       :id="`${id}-titulo`"
       data-titulo-da-tela
       tabindex="-1"
+      :aria-describedby="apoiosDoTitulo || undefined"
       class="m-0 text-3xl font-bold tracking-tight outline-none md:text-4xl text-n-slate-12"
     >
       {{ titulo }}
     </h1>
+    <p
+      v-if="ehDeValores"
+      :id="`${id}-coluna-da-pergunta`"
+      data-relacionamentos="coluna-da-pergunta"
+      class="m-0 -mt-4 text-lg text-n-slate-11"
+    >
+      {{
+        t('RELACIONAMENTOS_TRAZER.PERGUNTAS.VALORES.COLUNA', {
+          coluna: colunaDaPergunta,
+        })
+      }}
+    </p>
+    <p
+      v-if="deNovo"
+      :id="`${id}-de-novo`"
+      data-relacionamentos="pergunta-de-novo"
+      class="m-0 -mt-4 text-lg text-n-slate-11"
+    >
+      {{ porQueDeNovo }}
+    </p>
+    <ValoresDeCliente
+      v-if="ehDeValores"
+      :pergunta="pergunta"
+      :model-value="valoresMarcados"
+      :rotulo-id="`${id}-titulo`"
+      :invalido="Boolean(erro)"
+      :descrito-por="mensagem ? `${id}-erro` : undefined"
+      @update:model-value="emit('responder', pergunta.id, $event)"
+    />
     <CartoesDeEscolha
+      v-else
       :opcoes="opcoes"
       :model-value="respostaAtual"
       :rotulo-id="`${id}-titulo`"
       :invalido="Boolean(erro) && !respostaAtual"
-      :descrito-por="erro ? `${id}-erro` : undefined"
+      :descrito-por="mensagem ? `${id}-erro` : undefined"
       @update:model-value="emit('responder', pergunta.id, $event)"
     />
     <div v-if="pedeColuna" class="flex flex-col gap-2 max-w-sm">
@@ -115,7 +236,7 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
       </label>
       <ChoiceSelect
         :trigger-id="`${id}-coluna`"
-        :model-value="respostas.colunaCliente || ''"
+        :model-value="respostas.colunaCliente ?? ''"
         :options="opcoesDeColuna"
         :aria-label="t('RELACIONAMENTOS_TRAZER.PERGUNTAS.CLIENTES.QUAL_COLUNA')"
         :invalid="Boolean(erro) && Boolean(respostaAtual)"
@@ -124,13 +245,13 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
       />
     </div>
     <p
-      v-if="erro"
+      v-if="mensagem"
       :id="`${id}-erro`"
       data-relacionamentos="erro-da-pergunta"
       role="alert"
       class="m-0 text-base font-medium text-n-ruby-11"
     >
-      {{ erro }}
+      {{ mensagem }}
     </p>
     <div class="flex flex-wrap items-center gap-3">
       <Button
@@ -146,8 +267,16 @@ watch([respostaAtual, () => props.respostas.colunaCliente], () => {
         faded
         size="lg"
         :label="t('RELACIONAMENTOS.COMUM.VOLTAR')"
+        :disabled="ocupado"
         @click="emit('voltar')"
       />
+      <p
+        data-relacionamentos="relendo"
+        role="status"
+        class="m-0 text-base text-n-slate-11"
+      >
+        {{ relendo ? t('RELACIONAMENTOS_TRAZER.CONFERIR.RELENDO') : '' }}
+      </p>
     </div>
   </section>
 </template>

@@ -1,7 +1,7 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { comFlags } from 'dashboard/helper/comFlags';
-import { desvioDoTrazer } from './lista/rotaDoTrazer';
+import { QUEM_TRAZ_LISTA } from './trazer/quemTraz';
 
 const FichaDaPessoaPage = () => import('./pages/FichaDaPessoaPage.vue');
 const FichaDaEmpresaPage = () => import('./pages/FichaDaEmpresaPage.vue');
@@ -13,7 +13,8 @@ const ResultadosDasRenovacoesPage = () =>
 // #2894 — as telas novas de Relacionamentos, atrás de relacionamentos_novo. A
 // lista não ganha rota: ela é a própria `relationships_home` (ver
 // relationships/routes.js), que escolhe a tela pela flag. Mesmas permissões da
-// página de hoje.
+// página de hoje; "Trazer minha lista" (#2896) é só de quem pode importar
+// contato.
 // #2898 — "Ajustar renovações" e "Resultados das renovações" são da carteira
 // de seguros: a conta sem ela, se chegar pelo endereço, volta para a lista sem
 // chamar rota nenhuma (a própria página decide, com useContaDeSeguros).
@@ -43,33 +44,25 @@ export const PERMISSOES_DOS_AJUSTES = [
 const FLAG = FEATURE_FLAGS.RELACIONAMENTOS_NOVO;
 // As mesmas flags da lista (`relationships_home`): a tela nova mora dentro do
 // menu de Relacionamentos, então quem não o tem não chega nas fichas por link.
-const FLAGS = [FLAG, FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION];
+// Quem leva a uma destas telas de fora (a importação de contatos de hoje,
+// #2896) confere as mesmas flags antes.
+export const FLAGS_DAS_TELAS_NOVAS = [
+  FLAG,
+  FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
+];
 
 const rota = (path, name, component, permissions = PERMISSIONS) => ({
   path: frontendURL(`accounts/:accountId/relacionamentos/${path}`),
   name,
   component,
   meta: { featureFlag: FLAG, permissions },
-  beforeEnter: comFlags(...FLAGS),
+  beforeEnter: comFlags(...FLAGS_DAS_TELAS_NOVAS),
 });
-
-// #2947 — até a E3 (#2896) a tela nova de trazer só existe na demonstração: as
-// flags decidem primeiro; liberada, fora da demonstração a pessoa cai na
-// importação de contatos.
-const comAsFlags = comFlags(...FLAGS);
-const trazerSoNaDemonstracao = (to, from, next) =>
-  comAsFlags(to, from, barrada => {
-    const destino = barrada || desvioDoTrazer(to);
-    return destino ? next(destino) : next();
-  });
 
 export const routes = [
   rota('pessoas/:contactId', 'relacionamentos_pessoa', FichaDaPessoaPage),
   rota('empresas/:companyId', 'relacionamentos_empresa', FichaDaEmpresaPage),
-  {
-    ...rota('trazer', 'relacionamentos_trazer', TrazerListaPage),
-    beforeEnter: trazerSoNaDemonstracao,
-  },
+  rota('trazer', 'relacionamentos_trazer', TrazerListaPage, QUEM_TRAZ_LISTA),
   rota(
     'seguros/renovacoes',
     'relacionamentos_renovacoes',

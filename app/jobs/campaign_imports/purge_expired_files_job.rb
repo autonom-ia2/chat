@@ -4,6 +4,7 @@ class CampaignImports::PurgeExpiredFilesJob < ApplicationJob
   def perform
     purge_original_files
     purge_generated_files
+    ContactImports::Trazer::AnexosVencidos.new.call
   end
 
   private

@@ -108,6 +108,19 @@ describe('VitrineExperimente · Premium', () => {
     );
   });
 
+  it('with no record in the database, says the lookup ran before asking to check a typed value (#3015)', async () => {
+    experimentar.mockResolvedValue({ situacao: 'nao_encontrado' });
+    const wrapper = montar('historico_placa', {
+      gratis: 20,
+      restantes: 12,
+      precos: ['0.09'],
+    });
+    await rodar(wrapper);
+    expect(wrapper.find('[data-experimente-aviso]').text()).toBe(
+      'A consulta foi feita e não havia registro para esse valor. Se ele foi digitado à mão, confira.'
+    );
+  });
+
   it('when the lookup did not start in time, says nothing was charged and to try again', async () => {
     experimentar.mockResolvedValue({ situacao: 'nao_comecou' });
     const wrapper = montar('historico_placa', {
