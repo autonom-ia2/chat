@@ -8,12 +8,14 @@
         {
           "telefone": "19 30000000",
           "tipo": "WORK",
-          "principal": true
+          "principal": true,
+          "pode_estar_desatualizado": false
         },
         {
           "telefone": "19 990000000",
           "tipo": "MOBILE",
-          "principal": false
+          "principal": false,
+          "pode_estar_desatualizado": true
         }
       ]
     }
