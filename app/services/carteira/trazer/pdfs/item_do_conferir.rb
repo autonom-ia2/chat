@@ -54,11 +54,12 @@ class Carteira::Trazer::Pdfs::ItemDoConferir
     precisa? || A_MOSTRAR.include?(@item.estado)
   end
 
-  # A pessoa que este PDF traz: a da conta, ou uma chave para a que vai nascer (o documento, senão o nome).
+  # A pessoa que este PDF traz: a da conta, ou uma chave para a que vai nascer (o documento; sem ele, a posição do PDF,
+  # porque duas pessoas com o mesmo nome e sem documento não são, com certeza, a mesma).
   def chave_da_pessoa
     return "pessoa:#{@pessoa.id}" if @pessoa
 
-    "nova:#{@lido.certo('segurado_documento') || Carteira::Chave.seguradora(@lido.certo(NOME))}"
+    "nova:#{@lido.certo('segurado_documento') || "posicao-#{@item.posicao}"}"
   end
 
   def para_a_tela

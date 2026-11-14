@@ -98,7 +98,8 @@ RSpec.describe 'Carteira de seguros: leitura de PDF', type: :request do
     end
 
     it 'recusa lote sem arquivo e com arquivos demais' do
-      enviar_pdfs(arquivos: [])
+      expect { enviar_pdfs(arquivos: []) }.not_to have_enqueued_job(Carteira::LeituraJob)
+      expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('pedido_invalido').or eq('arquivo_obrigatorio')
 
       enviar_pdfs(arquivos: Array.new(Carteira::Trazer::Pdfs::Receber::MAXIMO + 1) { pdf })

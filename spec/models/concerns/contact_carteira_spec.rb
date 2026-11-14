@@ -87,13 +87,20 @@ RSpec.describe ContactCarteira, type: :request do
     expect { marina.destroy! }.not_to raise_error
   end
 
-  it 'o Guia não guarda nem tira o PDF, nem recebe o link dele: os três só na tela, com a frase nos dois idiomas' do
+  it 'o Guia não guarda, tira, lê nem recebe o link do PDF, e não traz seguros por PDF: só na tela, com a frase nos dois idiomas' do
     trava = Carteira::Pdf::SO_NA_TELA_DO_GUIA
     rotas = Rails.application.routes.routes.map do |rota|
       "#{rota.verb} #{Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))}"
     end
 
-    expect(trava.keys.map { |acao| acao.split.first }).to match_array(%w[POST DELETE GET])
+    expect(trava.keys).to contain_exactly(
+      ['POST relacionamentos/seguros/:id/pdf', 'DELETE relacionamentos/seguros/:id/pdf', 'GET relacionamentos/seguros/:id/pdf',
+       'POST relacionamentos/seguros/:id/pdf/leitura', 'GET relacionamentos/seguros/:id/pdf/leitura/:leitura_id',
+       'POST relacionamentos/trazer/seguros/leituras', 'POST relacionamentos/trazer/seguros/leituras/:id/trazer',
+       'POST relacionamentos/trazer/seguros/leituras/:id/desfazer',
+       'PATCH relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id',
+       'PUT relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id']
+    )
     expect(rotas).to include(*trava.keys)
     expect(Autonomia::Guide::Acoes::SO_NA_TELA).to include(trava)
     expect(trava.keys.map { |acao| Autonomia::Guide::Acoes.fora_do_catalogo?(acao) }).to all(be(true))

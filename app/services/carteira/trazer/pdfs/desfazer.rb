@@ -55,7 +55,11 @@ class Carteira::Trazer::Pdfs::Desfazer
 
   def voltar(seguros)
     seguros.que_voltam do |bloco|
-      bloco.each { |apolice| com_cuidado(apolice) { devolver(seguros, apolice) } }
+      bloco.each do |apolice|
+        arquivo = com_cuidado(apolice) { devolver(seguros, apolice) }
+        # O arquivo vai para a limpeza só depois de a transação fechar (mesmo padrão de Carteira::Pdf#tirar).
+        arquivo&.purge_later
+      end
     end
   end
 
@@ -64,8 +68,18 @@ class Carteira::Trazer::Pdfs::Desfazer
     return unless volta
 
     apolice.update!(volta[:colunas]) if volta[:colunas].any?
-    apolice.pdf.purge_later if volta[:tirar_pdf] && apolice.pdf.attached?
+    arquivo = soltar_o_pdf(apolice) if volta[:tirar_pdf]
     seguros.passos_do_lote_em(apolice).delete_all
+    arquivo
+  end
+
+  # Solta o PDF da apólice e devolve o arquivo, que quem chama manda limpar depois do commit.
+  def soltar_o_pdf(apolice)
+    return unless apolice.pdf.attached?
+
+    arquivo = apolice.pdf.blob
+    apolice.pdf.detach
+    arquivo
   end
 
   def tirar(seguros)
@@ -74,7 +88,7 @@ class Carteira::Trazer::Pdfs::Desfazer
         com_cuidado(apolice) do
           next unless seguros.sai?(apolice)
 
-          apolice.pdf.purge_later if apolice.pdf.attached?
+          # O has_one_attached limpa o arquivo depois do commit do destroy.
           apolice.destroy!
         end
       end
@@ -87,6 +101,7 @@ class Carteira::Trazer::Pdfs::Desfazer
     nil
   rescue StandardError => e
     Rails.logger.warn("[carteira][pdfs][desfazer] apolice=#{apolice.id} kept: #{e.class.name}")
+    nil
   end
 
   # Devolve quantas pessoas criadas pelo lote ficaram.

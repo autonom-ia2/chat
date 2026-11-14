@@ -8,8 +8,8 @@
 #    apólice que já existia é completada pela regra de sempre; a de outra pessoa, a repetida e a ambígua são recusadas;
 # 3. o PDF passa do item para o seguro (o mesmo arquivo, sem cópia, com o nome `apolice-<id>.pdf`) quando o seguro é
 #    novo ou ainda não tem PDF; a história ganha `pdf_anexado` com a leitura, para o Desfazer reconhecer.
-# O PDF que dá recusa vira `nao_entrou` (o motivo é só contado) e os outros seguem. Rodar de novo continua de onde
-# parou: o PDF que já entrou (`trazido`) não é gravado outra vez.
+# O PDF que dá recusa, ou falha por um erro inesperado, vira `nao_entrou` (o motivo é só contado) e os outros seguem.
+# Rodar de novo continua de onde parou: o PDF que já entrou (`trazido`) não é gravado outra vez.
 # No fim a leitura fica `trazida`, com quantos seguros e quantas pessoas entraram. Nada daqui vai para log além de ids.
 class Carteira::Trazer::Pdfs::Gravar
   def initialize(leitura)
@@ -50,6 +50,10 @@ class Carteira::Trazer::Pdfs::Gravar
     nao_entrou(vista.item, e.codigo)
   rescue ActiveRecord::RecordInvalid
     nao_entrou(vista.item, 'invalido')
+  rescue StandardError => e
+    # Falha inesperada de um PDF: só ele não entra, e o lote não fica preso em `trazendo`. No registro, só a classe e o id.
+    Rails.logger.warn("[carteira][pdfs][gravar] item=#{vista.item.id} nao_entrou: #{e.class.name}")
+    nao_entrou(vista.item, 'falha')
   end
 
   def trazer(vista)
