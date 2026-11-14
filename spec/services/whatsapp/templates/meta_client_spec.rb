@@ -160,6 +160,28 @@ RSpec.describe Whatsapp::Templates::MetaClient do
       expect(edit).to have_been_requested.once
     end
 
+    # #3013: sem o formato, a Meta lê `{{nome}}` como variável com número e recusa a edição sem motivo.
+    it 'edita mandando o formato de variável que o modelo já tem na Meta, nunca o do pedido' do
+      stub_lookup([remote.merge('parameter_format' => 'NAMED')])
+      stub_request(:post, "#{graph}/777").to_return(status: 200, headers: json, body: { success: true }.to_json)
+      named = [{ type: 'BODY', text: 'Olá {{nome}}, seu pedido saiu.', example: { body_text_named_params: [{ param_name: 'nome', example: 'Ana' }] } }]
+
+      client.update('777', 'pedido_enviado', { components: named, parameter_format: 'POSITIONAL' })
+
+      expect(a_request(:post, "#{graph}/777").with { |request| JSON.parse(request.body)['parameter_format'] == 'NAMED' })
+        .to have_been_made.once
+    end
+
+    it 'edita modelo sem formato na Meta sem mandar o formato do pedido' do
+      stub_lookup([remote])
+      stub_request(:post, "#{graph}/777").to_return(status: 200, headers: json, body: { success: true }.to_json)
+
+      client.update('777', 'pedido_enviado', { components: [{ type: 'BODY', text: 'Olá {{1}}' }], parameter_format: 'NAMED' })
+
+      expect(a_request(:post, "#{graph}/777").with { |request| !JSON.parse(request.body).key?('parameter_format') })
+        .to have_been_made.once
+    end
+
     it 'id que não está na WABA da caixa não é editado, apagado nem consultado' do
       stub_lookup([remote])
       edit = stub_request(:post, "#{graph}/999")
