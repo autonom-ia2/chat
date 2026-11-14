@@ -2476,6 +2476,14 @@
     "controller": "api/v1/accounts/relacionamentos/seguros#opcoes_de_filtro",
     "parametros": []
   },
+  "relacionamentos/seguros/renovacoes": {
+    "controller": "api/v1/accounts/relacionamentos/seguros/renovacoes#show",
+    "parametros": []
+  },
+  "relacionamentos/seguros/resultados": {
+    "controller": "api/v1/accounts/relacionamentos/seguros/resultados#show",
+    "parametros": []
+  },
   "relacionamentos/seguros/resumo": {
     "controller": "api/v1/accounts/relacionamentos/seguros#resumo",
     "parametros": []

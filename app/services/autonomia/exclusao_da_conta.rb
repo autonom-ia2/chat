@@ -127,11 +127,18 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
+    # Leituras da carteira (E6, #2899): o item guarda o PDF, então sai antes da leitura dele (a cascata do banco
+    # apagaria a linha e deixaria o arquivo). Apólice e contato só anulam a coluna do item.
+    ['Carteira::LeituraItem', :por_conta],
+    ['Carteira::Leitura', :por_conta],
     # Carteira de seguros (E4, #2897): a história de cada apólice (eventos) sai na cascata dela. A apólice aponta para o
     # contato sem cascata e tem PDF, então também sai antes do pré-apagar (ANTES_DO_PRE_APAGAR).
     ['Carteira::Apolice', :por_conta],
     # E5 (#2898): onde ficam as renovações da conta. Aponta para o funil, a etapa e a pessoa com SET NULL.
     ['Carteira::RenovacaoConfig', :por_conta],
+    # CPF e CNPJ (#1240, R1): o documento sai em cascata com a pessoa e com a empresa. O da pessoa já saiu no pré-apagar
+    # dos contatos; o da empresa ainda está aqui, porque as empresas só saem depois do commit, e barraria o DELETE da conta.
+    ['Relacionamentos::Documento', :por_conta],
     # Automação livre (#2414): conversão do antigo (F9), registro, execução, versão e automação. A conversão aponta
     # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.

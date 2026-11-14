@@ -82,6 +82,11 @@ en:
       out_of_reach: "You can't give part of this role. Ask the administrator."
       own_role: 'Nobody changes their own role.'
       feature_off: 'Team roles are not available on this account right now.'
+    relacionamentos:
+      documento:
+        invalido: 'This CPF or CNPJ does not check out. Check the numbers and type it again: a CPF has 11 digits and a CNPJ has 14 characters.'
+        cpf_em_empresa: 'A company has a CNPJ, not a CPF. Type the company CNPJ here, and put the CPF on the person it belongs to.'
+        letra_fora_da_forma_do_cnpj: 'This number has letters. If it is a CNPJ with letters, write it with the dots, the slash and the dash, like this: 12.ABC.345/01DE-35. If it is not, type only the digits.'
     crm:
       contact_already_linked: 'is already linked to this card. Use the existing contact or change the link explicitly.'
       contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this card.'

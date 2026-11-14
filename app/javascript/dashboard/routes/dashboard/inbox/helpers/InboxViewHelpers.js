@@ -17,4 +17,6 @@ export const NOTIFICATION_TYPES_MAPPING = {
   GUIDE_ALERT: ['i-lucide-bell-ring', 'text-n-amber-11'],
   // #2277 — a search by conversation ended (Campanhas › Novo público).
   CONVERSATION_AUDIENCE_READY: ['i-lucide-users-round', 'text-n-blue-11'],
+  // #2898 — seguros entraram em renovação (carteira de seguros).
+  CARTEIRA_RENOVACAO: ['i-lucide-shield-check', 'text-n-blue-11'],
 };

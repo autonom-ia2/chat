@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_13_184000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1949,6 +1949,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
     t.datetime "nao_renovou_em"
     t.string "motivo_nao_renovou"
     t.string "motivo_escrito"
+    t.bigint "leitura_id"
+    t.jsonb "duvidas", default: [], null: false
+    t.boolean "de_fora", default: false, null: false
+    t.string "corretora_de_fora"
+    t.datetime "lembrete_aceito_em"
+    t.text "palavras_texto"
+    t.datetime "palavras_enviadas_em"
     t.index ["account_id", "fim_vigencia"], name: "index_carteira_apolices_on_account_id_and_fim_vigencia"
     t.index ["account_id", "seguradora_chave", "numero_chave", "fim_vigencia"], name: "idx_carteira_apolices_seguradora_numero_vigencia", unique: true, where: "(numero_chave IS NOT NULL)"
     t.index ["apolice_anterior_id"], name: "idx_carteira_apolices_apolice_anterior", where: "(apolice_anterior_id IS NOT NULL)"
@@ -1956,6 +1963,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
     t.index ["company_id"], name: "index_carteira_apolices_on_company_id", where: "(company_id IS NOT NULL)"
     t.index ["contact_id"], name: "index_carteira_apolices_on_contact_id"
     t.index ["crm_card_id"], name: "idx_carteira_apolices_crm_card", unique: true, where: "(crm_card_id IS NOT NULL)"
+    t.index ["leitura_id"], name: "idx_carteira_apolices_leitura", where: "(leitura_id IS NOT NULL)"
     t.check_constraint "(numero IS NULL) = (numero_chave IS NULL)", name: "carteira_apolices_numero"
     t.check_constraint "apolice_anterior_id <> id", name: "carteira_apolices_anterior_nao_e_ela"
     t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
@@ -1963,6 +1971,38 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
     t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
     t.check_constraint "tipo::text = ANY ('{auto,residencial,vida,empresarial,outro}'::text[])", name: "carteira_apolices_tipo"
     t.check_constraint "valor_centavos IS NULL OR valor_centavos >= 0", name: "carteira_apolices_valor"
+  end
+
+  create_table "carteira_leitura_itens", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "leitura_id", null: false
+    t.integer "posicao", null: false
+    t.string "estado", default: "lendo", null: false
+    t.jsonb "campos", default: {}, null: false
+    t.jsonb "duvidas", default: [], null: false
+    t.bigint "contact_id"
+    t.bigint "apolice_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_carteira_leitura_itens_on_account_id"
+    t.index ["apolice_id"], name: "index_carteira_leitura_itens_on_apolice_id", where: "(apolice_id IS NOT NULL)"
+    t.index ["contact_id"], name: "index_carteira_leitura_itens_on_contact_id", where: "(contact_id IS NOT NULL)"
+    t.index ["leitura_id", "posicao"], name: "index_carteira_leitura_itens_on_leitura_id_and_posicao", unique: true
+  end
+
+  create_table "carteira_leituras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "origem", null: false
+    t.string "estado", default: "lendo", null: false
+    t.jsonb "totais", default: {}, null: false
+    t.datetime "confirmada_em"
+    t.datetime "desfeita_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_carteira_leituras_on_account_id_and_created_at"
+    t.index ["user_id"], name: "index_carteira_leituras_on_user_id", where: "(user_id IS NOT NULL)"
+    t.check_constraint "origem::text = ANY ('{pdf,conector}'::text[])", name: "carteira_leituras_origem"
   end
 
   create_table "carteira_renovacao_configs", force: :cascade do |t|
@@ -4551,6 +4591,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
     t.index ["user_id"], name: "index_portals_members_on_user_id"
   end
 
+  create_table "relacionamentos_documentos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id"
+    t.bigint "company_id"
+    t.string "tipo", null: false
+    t.string "valor", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "tipo", "valor"], name: "idx_relacionamentos_documentos_busca"
+    t.index ["company_id", "tipo"], name: "idx_relacionamentos_documentos_da_empresa", unique: true, where: "(company_id IS NOT NULL)"
+    t.index ["contact_id", "tipo"], name: "idx_relacionamentos_documentos_da_pessoa", unique: true, where: "(contact_id IS NOT NULL)"
+    t.check_constraint "num_nonnulls(contact_id, company_id) = 1", name: "relacionamentos_documentos_dono"
+    t.check_constraint "tipo::text = 'cnpj'::text OR contact_id IS NOT NULL", name: "relacionamentos_documentos_cpf_so_de_pessoa"
+    t.check_constraint "tipo::text = ANY ('{cpf,cnpj}'::text[])", name: "relacionamentos_documentos_tipo"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -5113,9 +5169,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
   add_foreign_key "carteira_apolices", "accounts"
   add_foreign_key "carteira_apolices", "campaign_imports", on_delete: :nullify
   add_foreign_key "carteira_apolices", "carteira_apolices", column: "apolice_anterior_id", on_delete: :nullify
+  add_foreign_key "carteira_apolices", "carteira_leituras", column: "leitura_id", on_delete: :nullify
   add_foreign_key "carteira_apolices", "companies", on_delete: :nullify
   add_foreign_key "carteira_apolices", "contacts"
   add_foreign_key "carteira_apolices", "crm_cards", on_delete: :nullify
+  add_foreign_key "carteira_leitura_itens", "accounts"
+  add_foreign_key "carteira_leitura_itens", "carteira_apolices", column: "apolice_id", on_delete: :nullify
+  add_foreign_key "carteira_leitura_itens", "carteira_leituras", column: "leitura_id", on_delete: :cascade
+  add_foreign_key "carteira_leitura_itens", "contacts", on_delete: :nullify
+  add_foreign_key "carteira_leituras", "accounts"
+  add_foreign_key "carteira_leituras", "users", on_delete: :nullify
   add_foreign_key "carteira_renovacao_configs", "accounts"
   add_foreign_key "carteira_renovacao_configs", "crm_pipeline_stages", column: "stage_id", on_delete: :nullify
   add_foreign_key "carteira_renovacao_configs", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
@@ -5328,6 +5391,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_180000) do
   add_foreign_key "mcp_integration_tokens", "accounts"
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "relacionamentos_documentos", "accounts"
+  add_foreign_key "relacionamentos_documentos", "companies", on_delete: :cascade
+  add_foreign_key "relacionamentos_documentos", "contacts", on_delete: :cascade
   add_foreign_key "user_sessions", "users"
   add_foreign_key "whatsapp_api_campaign_recipients", "accounts"
   add_foreign_key "whatsapp_api_campaign_recipients", "contacts", on_delete: :cascade

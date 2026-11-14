@@ -13,6 +13,10 @@ import InboxListHeader from './components/InboxListHeader.vue';
 import IntersectionObserver from 'dashboard/components/IntersectionObserver.vue';
 import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBarConversationSnooze.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import {
+  AVISO_DA_RENOVACAO,
+  abrirAvisoDaCarteira,
+} from '../relacionamentos/carteira/avisoDaRenovacao';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -227,6 +231,11 @@ const abrirPedidoDeAprovacao = async notificationItem => {
 };
 
 const openConversation = async notificationItem => {
+  // #2898 — o aviso da carteira de seguros abre a aba Seguros, pelo módulo dele.
+  if (notificationItem.notificationType === AVISO_DA_RENOVACAO) {
+    await abrirAvisoDaCarteira(notificationItem, { store, router, meta });
+    return;
+  }
   if (notificationItem.notificationType === 'automacao_aprovacao') {
     await abrirPedidoDeAprovacao(notificationItem);
     return;

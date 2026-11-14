@@ -68,6 +68,7 @@ const montar = async fontes => {
     fontes: ref(fontes),
     carregar: vi.fn().mockResolvedValue(),
     tem: vi.fn(() => false),
+    consultasDe: vi.fn(() => undefined),
     premiumDe: vi.fn(id => (PREMIUM.includes(id) ? GRATIS_DO_MES : null)),
     registrarBuscaSemResultado: vi.fn(),
     atualizadoEm: vi.fn(() => '2026-11-11'),

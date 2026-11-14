@@ -149,7 +149,8 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
         'bem' => 'Carro Exemplo 2022', 'comeca' => '2025-12-16', 'termina' => '2026-12-16', 'selo' => 'ativo', 'dias' => 34,
         'origem' => { 'tipo' => 'planilha', 'arquivo' => nil, 'em' => agora.to_i },
         'temPdf' => false, 'canceladoEm' => nil, 'corrigidoAMao' => [],
-        'renovadoEm' => nil, 'motivo' => nil, 'parcelaAbertaEm' => nil, 'renovacao' => nil, 'endosso' => nil, 'apoliceNova' => false,
+        'renovadoEm' => nil, 'motivo' => nil, 'motivoEscrito' => nil, 'parcelaAbertaEm' => nil, 'renovacao' => nil, 'endosso' => nil,
+        'apoliceNova' => false,
         'deFora' => false, 'corretora' => '', 'lembreteEm' => nil
       }
     end
@@ -269,8 +270,8 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
 
       ler('seguros/contagens')
 
-      expect(response.parsed_body).to eq('todos' => 8, 'vence_7_dias' => 2, 'vence_30_dias' => 3, 'vence_90_dias' => 4, 'vencido' => 1,
-                                         'sem_telefone' => 1)
+      expect(response.parsed_body).to eq('todos' => 8, 'vence_7_dias' => 2, 'vence_30_dias' => 3, 'vence_90_dias' => 4, 'em_renovacao' => 0,
+                                         'vencido' => 1, 'sem_telefone' => 1)
     end
 
     it 'mostra em cada grupo os seguros dele, e o selo de cada um bate com o grupo' do
@@ -352,18 +353,19 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       )
     end
 
-    it 'o resumo conta a carteira inteira e os que vencem em até 7 dias; renovação e conector ainda vêm zerados' do
+    it 'o resumo conta a carteira inteira e os que vencem em até 7 dias; sem renovação em curso, os números dela vêm zerados' do
       montar_carteira
 
       ler('seguros/resumo')
 
-      expect(response.parsed_body).to eq('total' => 8, 'vence7' => 2, 'vence7EmRenovacao' => 0, 'emRenovacao' => 0, 'aggerLigado' => false)
+      expect(response.parsed_body).to eq('total' => 8, 'vence7' => 2, 'vence7EmRenovacao' => 0, 'emRenovacao' => 0,
+                                         'funilEscolhido' => false, 'aggerLigado' => false)
     end
 
     it 'responde 422, sem repetir o que foi pedido, para grupo, ordem, página, filtro ou formato que a carteira não conhece' do
-      pedidos = [{ grupo: 'em_renovacao' }, { grupo: 'parcela_atrasada' }, { grupo: 'clientes' }, { ordem: 'ultima_conversa' }, { pagina: 0 },
-                 { pagina: 'dois' }, { filtros: { tipo: 'moto' } }, { filtros: { cuida: 'Marina Exemplo' } }, { filtros: 'tudo' },
-                 { grupo: %w[todos vencido] }]
+      pedidos = [{ grupo: 'nao_renovaram_60' }, { grupo: 'parcela_atrasada' }, { grupo: 'clientes' }, { ordem: 'ultima_conversa' },
+                 { pagina: 0 }, { pagina: 'dois' }, { filtros: { tipo: 'moto' } }, { filtros: { cuida: 'Marina Exemplo' } },
+                 { filtros: { cuida: '0' } }, { filtros: 'tudo' }, { grupo: %w[todos vencido] }]
 
       %w[seguros seguros/todos seguros/contagens].each do |caminho|
         pedidos.each do |pedido|

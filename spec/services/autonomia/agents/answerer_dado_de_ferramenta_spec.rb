@@ -52,7 +52,8 @@ RSpec.describe Autonomia::Agents::Answerer do
   # Uma ferramenta nativa no catálogo do agente, sem a página de agendamento de verdade: o que se testa é o
   # portão, não a agenda. `execute` faz o que a nativa faria: devolve o texto e, numa recusa, registra.
   def nativa(slug, async: false, &execucao)
-    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: async, disparar: nil, consulta_em_andamento?: false,
+    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: async, disparar: nil,
+                                                             consulta_em_andamento?: false, situacao_da_pronta: nil,
                                                              openai_schema: { type: 'function', name: slug, parameters: {} })
     allow(bound).to receive(:execute, &execucao)
     allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).and_return([bound])
@@ -131,6 +132,105 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
+  describe 'com ferramenta pronta (#3006)' do
+    let(:pronta) { incluir_pronta('cep', conta: account, agente: agent) }
+    let(:chamada_pronta) do
+      chamada(pronta.slug).merge('arguments' => { cep: '01001-000' }.to_json)
+    end
+    let(:endereco) { { cep: '01001-000', logradouro: 'Praça da Sé', bairro: 'Sé', localidade: 'São Paulo', uf: 'SP' } }
+    let(:fala_com_valor) { 'Temos 3 unidades por R$ 89.' }
+
+    before do
+      ligar_prontas(account)
+      resolver_hosts_das_prontas
+      cache_em_memoria
+    end
+
+    it 'barra a resposta com valor quando nenhuma fonte conseguiu consultar' do
+      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      modelo_responde(resposta_do_modelo(fala_com_valor), chamadas: [chamada_pronta])
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      expect(barrou?(testar)).to be(true)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes + 1)
+    end
+
+    it 'mantém a resposta e o contador quando a pronta do especialista falha', :aggregate_failures do
+      especialista = Autonomia::Agents::Specialist.create!(
+        agent: agent, name: 'Endereço', slug: 'endereco', description: 'Consulta endereço', instruction: 'Consulte o CEP.',
+        tool_slugs: [pronta.slug]
+      )
+      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'ai-credential'))
+      client = instance_double(Crm::Ai::ResponsesClient)
+      saidas_do_especialista = []
+      allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
+        if kwargs[:schema] == Autonomia::Agents::Specialists::Runner::RESULT_SCHEMA
+          saidas_do_especialista.concat(executor.call([chamada_pronta]))
+          { text: { resposta: 'A fonte ficou indisponível.', dados_faltando: [] }.to_json }
+        else
+          executor.call([chamada(especialista.function_name).merge('arguments' => { pedido: 'Consulte o CEP 01001000' }.to_json)])
+          { text: resposta_do_modelo(fala_com_valor) }
+        end
+      end
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      resultado = testar
+
+      expect(JSON.parse(saidas_do_especialista.sole[:output])['situacao']).to eq('nao_consegui_consultar')
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
+      expect(resultado.handoff[:should]).to be(false)
+      expect(resultado.reply).to eq(fala_com_valor)
+    end
+
+    it 'não conta o pedido inválido como dado' do
+      invalida = chamada_pronta.merge('arguments' => { cep: 'invalido' }.to_json)
+      modelo_responde(resposta_do_modelo(fala_com_valor), chamadas: [invalida])
+
+      expect(barrou?(testar)).to be(true)
+    end
+
+    it 'conta a nova tentativa encontrada depois de pedido inválido no mesmo turno', :aggregate_failures do
+      fonte_responde('https://viacep.com.br/ws/01001000/json/', endereco)
+      invalida = chamada_pronta.merge('call_id' => 'invalida', 'arguments' => { cep: 'invalido' }.to_json)
+      modelo_responde(resposta_do_modelo(fala_com_valor), chamadas: [invalida, chamada_pronta])
+
+      resultado = testar
+
+      expect(resultado.handoff[:should]).to be(false)
+      expect(resultado.reply).to eq(fala_com_valor)
+    end
+
+    it 'continua contando a consulta sem registro como dado', :aggregate_failures do
+      fonte_responde('https://viacep.com.br/ws/01001000/json/', { erro: true })
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000', status: 404)
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000', status: 404)
+      modelo_responde(resposta_do_modelo(fala_com_valor), chamadas: [chamada_pronta])
+
+      resultado = testar
+
+      expect(resultado.handoff[:should]).to be(false)
+      expect(resultado.reply).to eq(fala_com_valor)
+    end
+
+    it 'a falha da pronta continua sendo recusa mesmo com dado de outra ferramenta no turno' do
+      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      ferramenta_http('consulta_estoque')
+      http_devolve({ unidades: 3, preco: 89 }.to_json)
+      modelo_responde(resposta_do_modelo(fala_com_valor), chamadas: [chamada('consulta_estoque'), chamada_pronta])
+
+      expect(barrou?(testar)).to be(true)
+    end
+  end
+
   describe 'com recusa de ferramenta' do
     it 'barra como hoje a recusa em JSON (erro HTTP registrado)' do
       ferramenta_http('consulta_estoque')
@@ -193,6 +293,26 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       expect(resultado.confidence).to eq(0.29)
       expect(resultado.handoff[:should]).to be(false)
+    end
+
+    it 'a pronta que falha mantém a resposta sem registrar a nova recusa', :aggregate_failures do
+      ligar_prontas(account)
+      resolver_hosts_das_prontas
+      cache_em_memoria
+      pronta = incluir_pronta('cep', conta: account, agente: agent)
+      fonte_fora('https://viacep.com.br/ws/01001000/json/')
+      fonte_fora('https://cep.awesomeapi.com.br/json/01001000')
+      fonte_fora('https://brasilapi.com.br/api/cep/v2/01001000')
+      fala = 'Temos 3 unidades por R$ 89.'
+      consulta = chamada(pronta.slug).merge('arguments' => { cep: '01001-000' }.to_json)
+      modelo_responde(resposta_do_modelo(fala), chamadas: [consulta])
+      recusas_antes = Autonomia::Agents::Tools::Recusa.registradas
+
+      resultado = described_class.new(agent: agent, query: 'qual o endereço?', operador: guia).answer
+
+      expect(resultado.reply).to eq(fala)
+      expect(resultado.handoff[:should]).to be(false)
+      expect(Autonomia::Agents::Tools::Recusa.registradas).to eq(recusas_antes)
     end
   end
 

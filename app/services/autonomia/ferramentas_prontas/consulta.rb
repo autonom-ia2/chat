@@ -54,10 +54,11 @@ class Autonomia::FerramentasProntas::Consulta
     false
   end
 
-  # A fonte de fora desligou esta consulta (#2946, `Premium::DESLIGADAS_NA_FONTE`): a `Fonte` não a oferece. As grátis,
-  # nunca.
+  # A consulta que a `Fonte` não oferece agora: a Premium que a fonte de fora desligou (#2946,
+  # `Premium::DESLIGADAS_NA_FONTE`) e a grátis em que nenhum provedor tem o cadastro da plataforma no ambiente (#2993,
+  # `Provedor.configurado?`: o veículo pela placa, sem o cadastro da fonte). As outras grátis, nunca.
   def desligada?
-    false
+    provedores.any? && provedores.none?(&:configurado?)
   end
 
   # Os argumentos do modelo, normalizados. -> [params, nil] ou [nil, a `Falta` do parâmetro que não serve].

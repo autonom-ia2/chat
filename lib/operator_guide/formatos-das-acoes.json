@@ -8379,7 +8379,7 @@
     "controller": "api/v1/accounts/relacionamentos/seguros#update",
     "origem": [
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
-      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
     "sem_corpo": false
@@ -20691,12 +20691,52 @@
     ],
     "sem_corpo": false
   },
+  "POST relacionamentos/seguros": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/apolices_novas#create",
+    "modelo": "Carteira::Apolice",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/apolices_novas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
   "POST relacionamentos/seguros/:id/cancelar": {
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#cancelar",
     "origem": [
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:51",
-      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/seguros/:id/desfazer_desfecho": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/desfechos#desfazer",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/desfechos_controller.rb:19",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/seguros/:id/nao_renovou": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/desfechos#nao_renovou",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/desfechos_controller.rb:14",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/seguros/:id/renovou": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/desfechos#renovou",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/desfechos_controller.rb:9",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
     "sem_corpo": false
@@ -20706,7 +20746,7 @@
     "controller": "api/v1/accounts/relacionamentos/seguros#voltar_a_ativo",
     "origem": [
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:56",
-      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
     "sem_corpo": false
@@ -28512,8 +28552,18 @@
     "controller": "api/v1/accounts/relacionamentos/seguros#update",
     "origem": [
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
-      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/seguros/renovacoes": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/renovacoes#update",
+    "modelo": "Crm::Pipeline",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/renovacoes_controller.rb:17",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57"
     ],
     "sem_corpo": false
   },
