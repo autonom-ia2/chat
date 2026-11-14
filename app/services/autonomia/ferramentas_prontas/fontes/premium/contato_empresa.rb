@@ -55,8 +55,8 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
   CONSULTAS = [
     Premium::ConsultaPaga.new(
       nome: 'telefone',
-      descricao: 'os telefones da empresa. O que vier com pode_estar_desatualizado pode não atender mais: passe ao cliente ' \
-                 'com esse aviso',
+      descricao: 'os telefones da empresa. O telefone com pode_estar_desatualizado: true pode não atender mais: passe ' \
+                 'ao cliente com esse aviso',
       obrigatorios: [Premium::Parametros::CNPJ], nao_encontrado: SEM_TELEFONE,
       versao_do_cache: VERSAO_DO_CACHE_DOS_TELEFONES,
       dataset: Premium::Dataset.new(nome: 'phones_extended', rota: '/empresas', resposta: 'ExtendedPhones', custo: '0.06',

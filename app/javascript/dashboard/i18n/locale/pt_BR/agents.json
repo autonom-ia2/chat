@@ -3237,7 +3237,7 @@
         "ZERO_KM": "Zero quilômetro",
         "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "A consulta não achou nada para esse valor. Confira e tente de novo.",
-        "SEM_REGISTRO_PAGA": "A consulta foi feita, e a base não tem esse dado para esse valor.",
+        "SEM_REGISTRO_PAGA": "A consulta foi feita e não havia registro para esse valor. Se ele foi digitado à mão, confira.",
         "NAO_CONSEGUI": "Não deu para consultar agora. Tente de novo daqui a pouco.",
         "PEDIDO_INVALIDO": "Esse valor não está no formato certo. Veja o exemplo e tente de novo.",
         "DESLIGADA": "Esta ferramenta não está liberada para a sua conta agora.",

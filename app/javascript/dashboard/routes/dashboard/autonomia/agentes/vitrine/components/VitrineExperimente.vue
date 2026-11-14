@@ -127,8 +127,9 @@ watch(semLinhas, vazio => {
     Object.keys(resposta.value?.dados || {})
   );
 });
-// Na paga, "não achou" é a base sem o dado, não o valor errado (o documento recusado é `documento_invalido`): a tela não
-// manda conferir o que o cliente digitou (#3015).
+// Na paga, "não achou" quer dizer que a consulta foi feita (e contou) e a base não tinha o dado; o documento recusado é
+// `documento_invalido`. A tela diz isso antes de pedir para conferir, e só o valor digitado à mão (#3015): uma placa
+// ou um código CAR errado, mas no formato certo, também cai aqui.
 const aviso = computed(() => {
   if (!resposta.value || encontrado.value) return '';
   const chave = SITUACOES[resposta.value.situacao] || 'NAO_CONSEGUI';

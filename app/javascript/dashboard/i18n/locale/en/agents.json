@@ -3237,7 +3237,7 @@
         "ZERO_KM": "Brand new",
         "NENHUM_VALOR": "—",
         "NAO_ENCONTRADO": "The lookup found nothing for this value. Check it and try again.",
-        "SEM_REGISTRO_PAGA": "The lookup ran, and the database has no record of this for that value.",
+        "SEM_REGISTRO_PAGA": "The lookup ran and there was no record for this value. If you typed it by hand, check it.",
         "NAO_CONSEGUI": "Could not look it up right now. Try again in a moment.",
         "PEDIDO_INVALIDO": "This value is not in the right format. See the example and try again.",
         "DESLIGADA": "This tool is not available for your account right now.",
