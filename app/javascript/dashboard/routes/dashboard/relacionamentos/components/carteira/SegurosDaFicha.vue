@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { carteiraFonte } from '../../fonte/carteiraFonte';
 import { pecaPedida } from '../../fonte/modoCarteira';
+import { destinoDoCard } from '../../carteira/cardNoCrm';
 import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
 import {
   ESTADOS_DOS_SEGUROS as ESTADOS,
@@ -26,17 +27,21 @@ const props = defineProps({
   daEmpresa: { type: Boolean, default: false },
   demo: { type: String, default: null },
   podeEditar: { type: Boolean, default: false },
+  podeExportar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
 });
 const emit = defineEmits(['abrirSegurado']);
 
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
 const fonte = carteiraFonte({
   demo: props.demo,
   peca: pecaPedida(route.query),
 });
 const { apolice, abrir, fechar } = useApoliceNaUrl();
+// #2898 — "Abrir no CRM" da renovação de um seguro.
+const abrirCard = cardId => router.push(destinoDoCard(cardId, fonte.usaDemo));
 const verPdfDe = useVerPdf(fonte);
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
 
@@ -76,10 +81,12 @@ onMounted(lista.carregar);
     :apolice-id="apolice"
     :fonte="fonte"
     :pode-editar="podeEditar"
+    :pode-exportar="podeExportar"
     :agora="agora"
     @fechar="fechar"
     @mudou="lista.atualizar"
     @abrir-segurado="emit('abrirSegurado', $event)"
+    @abrir-card="abrirCard"
   />
   <DialogoAnexarPdf
     v-if="podeEditar"

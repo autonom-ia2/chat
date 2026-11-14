@@ -16,7 +16,18 @@ export const contaDeSeguros = (demo, conta) =>
 // `?demo-carteira=carregando|erro|vazio` muda só a fonte da carteira: a ficha
 // aparece inteira e só a peça de seguros fica no esqueleto, no erro ou vazia.
 // Não "gruda": vale para o endereço em que veio, e só no desenvolvimento.
-export const PECAS_DA_CARTEIRA = ['carregando', 'erro', 'vazio'];
+// #2898 — `funil-arquivado` e `funil-apagado` mostram a conta cujo funil das
+// renovações parou de servir (fonte/renovacoesFonte.js): o aviso em "Ajustar
+// renovações" e o convite da aba Seguros.
+export const PECA_FUNIL_ARQUIVADO = 'funil-arquivado';
+export const PECA_FUNIL_APAGADO = 'funil-apagado';
+export const PECAS_DA_CARTEIRA = [
+  'carregando',
+  'erro',
+  'vazio',
+  PECA_FUNIL_ARQUIVADO,
+  PECA_FUNIL_APAGADO,
+];
 
 export const pecaPedida = (
   query = {},

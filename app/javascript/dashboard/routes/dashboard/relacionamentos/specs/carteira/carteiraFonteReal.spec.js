@@ -133,6 +133,21 @@ describe('a lista', () => {
     });
   });
 
+  it('leva quem cuida da renovação pelo id, na lista e nas contagens', async () => {
+    responde('lista', { itens: [], total: 0, temMais: false });
+    responde('contagens', { todos: 0 });
+    const filtros = { tipo: '', seguradora: '', cuida: 9 };
+
+    await real().listar({ grupo: 'em_renovacao', filtros });
+    await real().contagens('seguros', { busca: '', filtros });
+
+    expect(SegurosAPI.lista).toHaveBeenCalledWith({
+      grupo: 'em_renovacao',
+      'filtros[cuida]': 9,
+    });
+    expect(SegurosAPI.contagens).toHaveBeenCalledWith({ 'filtros[cuida]': 9 });
+  });
+
   it('as contagens levam a busca e os filtros, nunca o grupo', async () => {
     const contagens = { todos: 4, vence_7_dias: 1 };
     responde('contagens', contagens);

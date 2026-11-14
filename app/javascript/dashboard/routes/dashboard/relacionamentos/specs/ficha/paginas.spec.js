@@ -61,6 +61,7 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
   usePermissoesDaFicha: () => ({
     podeEditar: { value: true },
     podeCriarCards: { value: true },
+    podeExportar: { value: false },
   }),
 }));
 // Fora da demonstração (`demo` nulo) a ficha lê do servidor: aqui ele não

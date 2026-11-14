@@ -195,7 +195,7 @@ describe('o estado da lista, com o que é da aba Seguros', () => {
       grupo: 'todos',
       busca: '',
       ordem: 'vence_primeiro',
-      filtros: { tipo: '', seguradora: '' },
+      filtros: { tipo: '', seguradora: '', cuida: '' },
       pagina: 1,
     });
     expect(lista.filtrosAtivos.value).toBe(0);
@@ -207,11 +207,15 @@ describe('o estado da lista, com o que é da aba Seguros', () => {
 
     await lista.mudarFiltros({ tipo: 'auto' });
 
-    expect(lista.filtros.value).toEqual({ tipo: 'auto', seguradora: '' });
+    expect(lista.filtros.value).toEqual({
+      tipo: 'auto',
+      seguradora: '',
+      cuida: '',
+    });
     expect(lista.filtrosAtivos.value).toBe(1);
     expect(fonte.contagens).toHaveBeenLastCalledWith('seguros', {
       busca: '',
-      filtros: { tipo: 'auto', seguradora: '' },
+      filtros: { tipo: 'auto', seguradora: '', cuida: '' },
     });
 
     await lista.limparFiltros();

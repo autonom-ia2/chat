@@ -39,6 +39,7 @@ import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { chaveDoSeloDaPessoa } from '../carteira/tomDoSelo';
 import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { ehSemAcesso } from '../lista/falhas';
@@ -150,10 +151,11 @@ const lista = useLista({
   aoMudarConsulta: marcados.limpar,
 });
 // O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
-// texto do selo dela: "Seguro vencido", "Seguro ativo" ou "Seguro cancelado".
+// texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
+// renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
 const seguroDe = ({ id }) => carteira.daPessoa(id);
-const rotuloDoSeguro = ({ selo }) =>
-  t(`RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS.${selo.toUpperCase()}`);
+// O selo que a tela não conhece vira só "Seguro" (carteira/tomDoSelo.js).
+const rotuloDoSeguro = ({ selo }) => t(chaveDoSeloDaPessoa(selo));
 
 // Trocar de aba fecha a gaveta do seguro que estiver aberta (`?apolice=`).
 const DA_ABA = ['aba', 'apolice'];

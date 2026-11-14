@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import store from 'dashboard/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { hasPermissions } from 'dashboard/helper/permissionsHelper';
 import HeroiEscuro from '../components/comum/HeroiEscuro.vue';
 import SeloDeEstado from '../components/comum/SeloDeEstado.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
@@ -333,4 +334,70 @@ describe('permissões das rotas de Relacionamentos', () => {
       );
     }
   );
+});
+
+// #2898 — as duas telas da renovação pedem na rota o que o servidor pede, para
+// a pessoa nem chegar a uma tela que só diria "sem acesso". As chaves de cada
+// assento são as que o servidor manda em `permissions`.
+describe('quem chega às telas da renovação', () => {
+  const ADMINISTRADOR = ['administrator'];
+  const AGENTE_SEM_FUNCAO = ['agent'];
+  const comFuncao = (...chaves) => ['custom_role', ...chaves];
+  const chegaA = (nome, chaves) =>
+    hasPermissions(
+      routes.find(rota => rota.name === nome).meta.permissions,
+      chaves
+    );
+
+  it.each([
+    ['o administrador', ADMINISTRADOR],
+    [
+      'a função com a chave de mexer nos funis',
+      comFuncao('crm_manage_pipelines'),
+    ],
+    ['a função com a chave de administrar o CRM', comFuncao('crm_admin')],
+    [
+      'a função que edita contatos e mexe nos funis',
+      comFuncao('contact_manage', 'crm_manage_pipelines'),
+    ],
+  ])('%s chega a "Ajustar renovações"', (_quem, chaves) => {
+    expect(chegaA('relacionamentos_renovacoes', chaves)).toBe(true);
+  });
+
+  it.each([
+    ['o agente sem função', AGENTE_SEM_FUNCAO],
+    ['a função que só vê contatos', comFuncao('contact_view')],
+    ['a função que só edita contatos', comFuncao('contact_manage')],
+    ['a função que só mexe em campos', comFuncao('attribute_manage')],
+  ])('%s não chega a "Ajustar renovações"', (_quem, chaves) => {
+    expect(chegaA('relacionamentos_renovacoes', chaves)).toBe(false);
+  });
+
+  it.each([
+    ['o administrador', ADMINISTRADOR],
+    ['o agente sem função', AGENTE_SEM_FUNCAO],
+    ['a função que vê contatos', comFuncao('contact_view')],
+    ['a função que edita contatos', comFuncao('contact_manage')],
+  ])('%s chega a "Resultados das renovações"', (_quem, chaves) => {
+    expect(chegaA('relacionamentos_resultados', chaves)).toBe(true);
+  });
+
+  it.each([
+    ['a função que só mexe em campos', comFuncao('attribute_manage')],
+    ['a função que só mexe nos funis', comFuncao('crm_manage_pipelines')],
+  ])('%s não chega a "Resultados das renovações"', (_quem, chaves) => {
+    expect(chegaA('relacionamentos_resultados', chaves)).toBe(false);
+  });
+
+  it('as fichas continuam com as permissões da lista', () => {
+    const daFicha = routes.find(rota => rota.name === 'relacionamentos_pessoa');
+
+    expect(daFicha.meta.permissions).toEqual([
+      'administrator',
+      'agent',
+      'contact_view',
+      'contact_manage',
+      'attribute_manage',
+    ]);
+  });
 });

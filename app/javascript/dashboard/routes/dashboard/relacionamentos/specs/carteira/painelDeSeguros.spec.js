@@ -195,6 +195,52 @@ describe('os seguros de quem está na conversa', () => {
     );
   });
 
+  // #2898 — os selos da renovação chegam também ao painel da conversa.
+  it('o seguro em renovação tem selo azul e diz quando vence, sem cor de alerta', async () => {
+    const emRenovacao = doServidor(10, {
+      selo: 'em_renovacao',
+      renovacao: { desfecho: null },
+    });
+    servidorManda(emRenovacao);
+
+    const w = await abrir();
+    const primeira = linha(w, emRenovacao.id);
+
+    expect(primeira.get(daCarteira('selo')).text()).toBe('Em renovação');
+    expect(primeira.get(daCarteira('selo')).attributes('data-selo')).toBe(
+      'azul'
+    );
+    expect(textoDe(primeira, daCarteira('painel-quando'))).toBe(
+      'Vence em 17 dias · 29/11/2026'
+    );
+    expect(primeira.get(daCarteira('painel-quando')).classes()).toContain(
+      'text-n-slate-11'
+    );
+  });
+
+  it('o seguro renovado tem selo verde e diz quando renovou', async () => {
+    const renovado = doServidor(11, {
+      selo: 'renovado',
+      dias: -3,
+      renovadoEm: new Date(2026, 10, 10, 9, 30).getTime() / 1000,
+      renovacao: { desfecho: 'renovou' },
+    });
+    servidorManda(renovado);
+
+    const w = await abrir();
+    const primeira = linha(w, renovado.id);
+
+    expect(primeira.get(daCarteira('selo')).text()).toBe('Renovado');
+    expect(primeira.get(daCarteira('selo')).attributes('data-selo')).toBe(
+      'verde'
+    );
+    // Como o "Cancelado em": dia e mês, sem o ano.
+    expect(textoDe(primeira, daCarteira('painel-quando'))).toBe(
+      'Renovado em 10/11'
+    );
+    expect(primeira.text()).not.toContain('RELACIONAMENTOS');
+  });
+
   it('nenhum botão fica desligado', async () => {
     servidorManda(VENCIDO, VENCE_LOGO, VENCE_LONGE);
 

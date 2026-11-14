@@ -21,6 +21,7 @@ import {
   DO_RODAPE,
   rodapeDoSeguro,
 } from '../../carteira/rodapeDoSeguro';
+import { naoRenovou } from '../../carteira/situacaoDaRenovacao';
 import { useSeguroAberto } from '../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { useVerPdf } from '../../carteira/useVerPdf';
@@ -32,6 +33,8 @@ import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
 import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
 import FraseDoSeguro from './FraseDoSeguro.vue';
 import HistoriaDoSeguro from './HistoriaDoSeguro.vue';
+import RenovacaoDoSeguro from './RenovacaoDoSeguro.vue';
+import DialogoMotivo from './renovacao/DialogoMotivo.vue';
 
 // #2897 — a gaveta do seguro: tudo de um seguro e o que dá para fazer com ele.
 // O rodapé (à vista também no celular) tem no máximo UM botão azul: "Ver PDF",
@@ -45,15 +48,25 @@ import HistoriaDoSeguro from './HistoriaDoSeguro.vue';
 // gaveta já mostra outro quando a resposta chega, nada é dito nem gravado nele.
 // Quem só pode ver a pessoa (`podeEditar` falso) lê tudo e só tem "Ver PDF".
 // `apoliceId` nulo = fechada.
+// #2898 — o seguro que tem renovação mostra em que pé ela está, logo abaixo da
+// frase do topo. Com a renovação aberta, o azul do rodapé é "Renovou" e ao lado
+// fica "Não renovou", que pergunta o motivo em um toque. Nenhum dos dois pede
+// confirmação: o aviso traz "Desfazer", e o "⋯" guarda "Desfazer a renovação",
+// sem prazo. Depois de renovar, o azul é "Guardar a apólice nova": o mesmo
+// formulário do Corrigir, já com o que não muda de um ano para o outro.
 const props = defineProps({
   apoliceId: { type: Number, default: null },
   fonte: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
+  podeExportar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
 });
-const emit = defineEmits(['fechar', 'mudou', 'abrirSegurado']);
+const emit = defineEmits(['fechar', 'mudou', 'abrirSegurado', 'abrirCard']);
 
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_DEU';
+// Fechar ou reabrir a renovação pede poder mexer no card dela no quadro.
+const NAO_PODE_FECHAR =
+  'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_PODE_FECHAR_A_RENOVACAO';
 const NAO_SALVOU = 'RELACIONAMENTOS_CARTEIRA.CORRIGIR.ERRO_AO_SALVAR';
 
 const { t } = useI18n();
@@ -67,6 +80,8 @@ const { seguro } = aberto;
 const verPdfDe = useVerPdf(props.fonte);
 
 const corrigindo = ref(false);
+// O formulário aberto é o da apólice nova, e não o de corrigir este seguro.
+const paraApoliceNova = ref(false);
 const seguradoras = ref([]);
 // O que acabou de acontecer (com o desfazer, quando há) e o que não deu certo.
 const aviso = ref({ texto: '', desfazer: null });
@@ -81,15 +96,23 @@ const formulario = useTemplateRef('formulario');
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
 const dialogoDeApagar = useTemplateRef('dialogoDeApagar');
 const dialogoDeSair = useTemplateRef('dialogoDeSair');
+const dialogoDoMotivo = useTemplateRef('dialogoDoMotivo');
 
 const pronto = computed(() => aberto.estado.value === ESTADOS.PRONTO);
 const tipo = computed(() => (seguro.value ? textos.tipo(seguro.value) : ''));
 const titulo = computed(() => {
   if (aberto.estado.value === ESTADOS.CARREGANDO) return tg('CARREGANDO');
   if (!pronto.value) return tCarteira('TITULO');
-  return corrigindo.value
-    ? tCarteira('CORRIGIR.TITULO', { tipo: tipo.value })
-    : tg('TITULO', { tipo: tipo.value, seguradora: seguro.value.seguradora });
+  if (corrigindo.value) {
+    return tCarteira(
+      paraApoliceNova.value ? 'APOLICE_NOVA.TITULO' : 'CORRIGIR.TITULO',
+      { tipo: tipo.value }
+    );
+  }
+  return tg('TITULO', {
+    tipo: tipo.value,
+    seguradora: seguro.value.seguradora,
+  });
 });
 const rodape = computed(() =>
   rodapeDoSeguro(seguro.value, {
@@ -102,7 +125,12 @@ const rodape = computed(() =>
 const temRodape = computed(
   () =>
     pronto.value &&
-    Boolean(rodape.value.azul || rodape.value.secundario || alerta.value)
+    Boolean(
+      rodape.value.azul ||
+        rodape.value.secundario ||
+        alerta.value ||
+        aviso.value.texto
+    )
 );
 
 const dizer = (texto, desfazer = null) => {
@@ -134,20 +162,30 @@ const noMesmoSeguro = async acao => {
 
 // O que não deu certo, na frase do código que o servidor mandou. Quando a
 // recusa diz que o seguro já mudou por outro caminho (outra pessoa cancelou,
-// apagou o PDF), a gaveta relê o seguro e avisa quem a abriu.
-const dizerRecusa = async padrao => {
+// apagou o PDF), a gaveta relê o seguro e avisa quem a abriu. `semAcesso` é a
+// frase de quando o servidor diz que quem pediu não pode fazer aquilo.
+const dizerRecusa = async (padrao, semAcesso = padrao) => {
   const codigo = aberto.recusa.value;
-  alertar(t(chaveDaRecusa(codigo, padrao)));
+  alertar(
+    t(aberto.semAcesso.value ? semAcesso : chaveDaRecusa(codigo, padrao))
+  );
   if (seguroJaMudou(codigo) && (await aberto.reler())) emit('mudou');
 };
 
+// Um pedido por vez. Com uma escrita ainda a caminho, o segundo clique (no
+// mesmo botão ou em outro) não manda outro pedido nem troca o aviso do
+// primeiro por uma recusa. Os botões continuam ligados: a guarda fica no
+// começo de cada ação.
+const emAndamento = () => Boolean(aberto.ocupado.value);
+
 // Cada ação que muda o seguro: avisa quem abriu a gaveta (a lista e a ficha
 // releem) e diz o que aconteceu, com o desfazer quando há.
-const agir = async (acao, texto, desfazer = null) => {
+const agir = async (acao, texto, desfazer = null, semAcesso = NAO_DEU) => {
+  if (emAndamento()) return false;
   const { vale, certo } = await noMesmoSeguro(acao);
   if (!vale) return false;
   if (!certo) {
-    await dizerRecusa(NAO_DEU);
+    await dizerRecusa(NAO_DEU, semAcesso);
     return false;
   }
   emit('mudou');
@@ -161,6 +199,35 @@ const marcarCancelado = () =>
   agir(aberto.cancelar, tg('AVISOS.CANCELADO'), () =>
     agir(aberto.voltarAAtivo, tg('AVISOS.DESFEITO'))
   );
+
+// "Renovou" e "Não renovou" não pedem confirmação: o aviso traz "Desfazer".
+// As três ações da renovação fecham ou reabrem o card dela: quem não mexe
+// naquele funil lê que não pode, em vez de "tente de novo".
+const naRenovacao = (acao, texto, desfazer = null) =>
+  agir(acao, texto, desfazer, NAO_PODE_FECHAR);
+const desfazerRenovacao = () =>
+  naRenovacao(aberto.desfazerDesfecho, tg('AVISOS.RENOVACAO_DESFEITA'));
+const desfazerNoAviso = () =>
+  naRenovacao(aberto.desfazerDesfecho, tg('AVISOS.DESFEITO'));
+const marcarRenovou = () =>
+  naRenovacao(aberto.renovou, tg('AVISOS.RENOVOU'), desfazerNoAviso);
+// O motivo de uma renovação que já estava perdida só completa o que faltava:
+// não há o que desfazer.
+const guardarMotivo = escolha =>
+  naoRenovou(seguro.value)
+    ? naRenovacao(
+        () => aberto.naoRenovou(escolha),
+        tg('AVISOS.MOTIVO_GUARDADO')
+      )
+    : naRenovacao(
+        () => aberto.naoRenovou(escolha),
+        tg('AVISOS.NAO_RENOVOU'),
+        desfazerNoAviso
+      );
+const perguntarMotivo = () => {
+  if (emAndamento()) return;
+  dialogoDoMotivo.value?.abrir();
+};
 
 const verPdf = async () => {
   const alvo = props.apoliceId;
@@ -195,6 +262,7 @@ const perguntarSeApaga = () => {
 // dentro dela; se a recusa é "este seguro já não tem PDF", não há mais o que
 // perguntar: ela fecha e a gaveta relê o seguro.
 const apagarPdf = async () => {
+  if (emAndamento()) return;
   alertaDeApagar.value = '';
   const { vale, certo } = await noMesmoSeguro(aberto.tirarPdf);
   if (!vale) return;
@@ -223,9 +291,14 @@ const abrirCorrecao = async () => {
   corrigindo.value = true;
   focarTitulo();
 };
+const abrirApoliceNova = async () => {
+  paraApoliceNova.value = true;
+  await abrirCorrecao();
+};
 const sairDaCorrecao = () => {
   alerta.value = '';
   corrigindo.value = false;
+  paraApoliceNova.value = false;
   focarTitulo();
 };
 const fecharGaveta = () => emit('fechar');
@@ -245,17 +318,31 @@ const sairSemSalvar = () => {
   dialogoDeSair.value?.fechar();
   saida?.();
 };
+// O formulário serve aos dois: corrigir este seguro ou guardar a apólice nova
+// dele (que é outro seguro; este só passa a dizer que já a tem).
 const salvarCorrecao = async dados => {
+  if (emAndamento()) return;
   alerta.value = '';
-  const { vale, certo } = await noMesmoSeguro(() => aberto.corrigir(dados));
+  const daApoliceNova = paraApoliceNova.value;
+  const { vale, certo } = await noMesmoSeguro(async () =>
+    daApoliceNova
+      ? Boolean(await aberto.guardarApoliceNova(dados))
+      : aberto.corrigir(dados)
+  );
   if (!vale) return;
   if (!certo) {
+    // O seguro mudou por outro caminho e a apólice nova já não cabe (outra
+    // pessoa a guardou, o seguro foi cancelado): não há o que continuar
+    // preenchendo. A gaveta volta ao seguro, já relido, e diz o que houve.
+    if (daApoliceNova && seguroJaMudou(aberto.recusa.value)) sairDaCorrecao();
     await dizerRecusa(NAO_SALVOU);
     return;
   }
   emit('mudou');
   sairDaCorrecao();
-  dizer(tCarteira('CORRIGIR.SALVO'));
+  dizer(
+    daApoliceNova ? tg('AVISOS.APOLICE_NOVA') : tCarteira('CORRIGIR.SALVO')
+  );
 };
 
 // O que cada nome do rodapé (carteira/rodapeDoSeguro.js) faz e como aparece.
@@ -279,7 +366,29 @@ const DO_SEGURO = {
     icone: 'i-lucide-circle-slash',
     fazer: marcarCancelado,
   },
+  [DO_RODAPE.RENOVOU]: { icone: 'i-lucide-check', fazer: marcarRenovou },
+  [DO_RODAPE.NAO_RENOVOU]: { icone: 'i-lucide-x', fazer: perguntarMotivo },
+  [DO_RODAPE.GUARDAR_APOLICE_NOVA]: {
+    icone: 'i-lucide-file-plus',
+    fazer: abrirApoliceNova,
+  },
+  [DO_RODAPE.DESFAZER_RENOVACAO]: {
+    icone: 'i-lucide-rotate-ccw',
+    fazer: desfazerRenovacao,
+  },
 };
+// O `data-carteira` do botão ao lado do azul, e o que deixa o azul girando.
+const MARCA_DO_SECUNDARIO = {
+  [DO_RODAPE.CORRIGIR]: 'corrigir',
+  [DO_RODAPE.NAO_RENOVOU]: 'nao-renovou',
+};
+const azulOcupado = computed(
+  () =>
+    (rodape.value.azul === DO_RODAPE.VER_PDF && abrindoPdf.value) ||
+    (rodape.value.azul === DO_RODAPE.RENOVOU &&
+      aberto.ocupado.value === 'renovou')
+);
+const SALVANDO = ['corrigir', 'apoliceNova'];
 const fazer = nome => DO_SEGURO[nome].fazer();
 const rotuloDe = nome => tg(`RODAPE.${nome}`);
 const itensDoMenu = computed(() =>
@@ -295,6 +404,7 @@ watch(
   () => props.apoliceId,
   id => {
     corrigindo.value = false;
+    paraApoliceNova.value = false;
     saidaPendente.value = null;
     dizer('');
     if (id) aberto.carregar();
@@ -357,6 +467,7 @@ onMounted(() => {
         ref="formulario"
         :seguro="seguro"
         :seguradoras="seguradoras"
+        :apolice-nova="paraApoliceNova"
         @salvar="salvarCorrecao"
       />
       <template v-else>
@@ -365,12 +476,21 @@ onMounted(() => {
           :agora="agora"
           @abrir-segurado="emit('abrirSegurado', $event)"
         />
+        <RenovacaoDoSeguro
+          v-if="seguro.renovacao"
+          :seguro="seguro"
+          :pode-editar="podeEditar"
+          @abrir-card="emit('abrirCard', $event)"
+          @dizer-motivo="perguntarMotivo"
+        />
         <DadosDoSeguro :seguro="seguro" :agora="agora" />
         <HistoriaDoSeguro
           :itens="aberto.historia.value"
           :estado="aberto.estadoDaHistoria.value"
+          :pode-exportar="podeExportar"
           :agora="agora"
           @tentar="aberto.carregarHistoria"
+          @exportado="dizer(tg('AVISOS.HISTORICO_BAIXADO'))"
         />
       </template>
     </div>
@@ -397,7 +517,7 @@ onMounted(() => {
             size="lg"
             class="flex-1 sm:flex-none"
             data-carteira="salvar-correcao"
-            :is-loading="aberto.ocupado.value === 'corrigir'"
+            :is-loading="SALVANDO.includes(aberto.ocupado.value)"
             :label="tCarteira('CORRIGIR.SALVAR')"
             @click="formulario?.tentarSalvar()"
           />
@@ -419,7 +539,7 @@ onMounted(() => {
             data-carteira="gaveta-acao"
             :data-acao="rodape.azul"
             :icon="DO_SEGURO[rodape.azul].icone"
-            :is-loading="rodape.azul === DO_RODAPE.VER_PDF && abrindoPdf"
+            :is-loading="azulOcupado"
             :label="rotuloDe(rodape.azul)"
             @click="fazer(rodape.azul)"
           />
@@ -435,8 +555,8 @@ onMounted(() => {
               slate
               faded
               size="lg"
-              class="flex-1 sm:flex-none"
-              data-carteira="corrigir"
+              class="flex-1 sm:flex-none whitespace-nowrap"
+              :data-carteira="MARCA_DO_SECUNDARIO[rodape.secundario]"
               :label="rotuloDe(rodape.secundario)"
               @click="fazer(rodape.secundario)"
             />
@@ -476,9 +596,14 @@ onMounted(() => {
       :titulo="tCarteira('CORRIGIR.SAIR.TITULO')"
       :aviso="tCarteira('CORRIGIR.SAIR.AVISO')"
       :confirmar="tCarteira('CORRIGIR.SAIR.CONFIRMAR')"
-      :voltar="tCarteira('CORRIGIR.SAIR.VOLTAR')"
+      :voltar="
+        tCarteira(
+          paraApoliceNova ? 'APOLICE_NOVA.CONTINUAR' : 'CORRIGIR.SAIR.VOLTAR'
+        )
+      "
       @confirmar="sairSemSalvar"
       @fechou="saidaPendente = null"
     />
+    <DialogoMotivo ref="dialogoDoMotivo" @escolher="guardarMotivo" />
   </template>
 </template>

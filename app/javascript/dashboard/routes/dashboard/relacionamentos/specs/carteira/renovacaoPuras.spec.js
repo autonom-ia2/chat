@@ -1,0 +1,1396 @@
+import en from 'dashboard/i18n/locale/en/relacionamentosCarteira.json';
+import ptBR from 'dashboard/i18n/locale/pt_BR/relacionamentosCarteira.json';
+import {
+  AJUSTES_PADRAO,
+  FALTAS,
+  MENSAGENS,
+  ajustesMudaram,
+  comOFunil,
+  diasDigitados,
+  etapasDoFunil,
+  faltaNosAjustes,
+  funilSemEtapa,
+  ondeFicam,
+  quantosEntram,
+  semOFunil,
+  umDiaAMais,
+  umDiaAMenos,
+} from '../../carteira/ajustesDaRenovacao';
+import {
+  dadosDaApoliceNova,
+  faltasDaApoliceNova,
+  formularioDaApoliceNova,
+} from '../../carteira/apoliceNova';
+import { destinoDoCard } from '../../carteira/cardNoCrm';
+import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
+import {
+  baixarArquivo,
+  csvDoHistorico,
+  nomeDoArquivoDoHistorico,
+} from '../../carteira/exportarHistoria';
+import {
+  DETALHES,
+  PASSOS_COM_FRASE,
+  PASSO_SEM_NOME,
+  fraseDoPasso,
+} from '../../carteira/passoDoHistorico';
+import { quandoDoSeguro } from '../../carteira/quandoDoSeguro';
+import {
+  CODIGOS_DE_RECUSA,
+  chaveDaRecusa,
+  seguroJaMudou,
+} from '../../carteira/recusas';
+import {
+  PERIODOS,
+  RECORTES,
+  SEM_MOTIVO,
+  grupoDosQueNaoRenovaram,
+  linhasDoRecorte,
+  motivosCitados,
+  periodoEscolhido,
+  porcentagem,
+  recortesComLinhas,
+  semMotivo,
+} from '../../carteira/resultados';
+import {
+  DESTRUTIVOS,
+  DO_RODAPE,
+  rodapeDoSeguro,
+} from '../../carteira/rodapeDoSeguro';
+import {
+  MOTIVOS,
+  MOTIVO_DO_CANCELAMENTO,
+  MOTIVO_ESCRITO,
+  SITUACOES,
+  faltaApoliceNova,
+  faltaMotivo,
+  motivoTemNome,
+  renovacaoSoDeLeitura,
+  situacaoDaRenovacao,
+  terminou,
+} from '../../carteira/situacaoDaRenovacao';
+import {
+  chaveDoSelo,
+  chaveDoSeloDaPessoa,
+  tomDoSelo,
+} from '../../carteira/tomDoSelo';
+import {
+  GRUPOS_DE_SEGUROS,
+  GRUPO_EM_RENOVACAO,
+  grupoConhecido,
+  grupoTemporario,
+  gruposDaBarra,
+  seguroPertenceAoGrupo,
+} from '../../fonte/gruposDeSeguros';
+import {
+  SELOS,
+  estaValendo,
+  porUrgencia,
+  seloDoSeguro,
+} from '../../fonte/selosDoSeguro';
+import { aoMeioDia } from './apoio';
+
+// As funções puras da renovação no funil (#2898): os ajustes, a situação da
+// renovação e os selos, os grupos, o rodapé da gaveta, os números dos
+// resultados, o arquivo do histórico e a apólice nova. O relógio é fixo:
+// 12/11/2026, às 10h de quem roda o teste. Todos os dados são inventados.
+const AGORA = new Date(2026, 10, 12, 10).getTime();
+const terminaEm = (dias, resto = {}) => ({
+  id: 1,
+  termina: aoMeioDia(2026, 11, 12 + dias),
+  canceladoEm: null,
+  temPdf: false,
+  pessoa: { id: 5, phone_number: '+5511900000001' },
+  ...resto,
+});
+const ABERTA = {
+  cardId: 88,
+  funil: 'Renovação',
+  etapa: 'A vencer',
+  desfecho: null,
+  cuida: 'Bruna Teixeirão',
+};
+const RENOVOU = { ...ABERTA, desfecho: 'renovou' };
+const NAO_RENOVOU = { ...ABERTA, desfecho: 'nao_renovou' };
+const emRenovacao = (dias = 20, resto = {}) =>
+  terminaEm(dias, { renovacao: ABERTA, ...resto });
+const renovado = (resto = {}) =>
+  terminaEm(20, { renovacao: RENOVOU, renovadoEm: 1790000000, ...resto });
+const perdido = (dias = -10, resto = {}) =>
+  terminaEm(dias, { renovacao: NAO_RENOVOU, ...resto });
+
+const FUNIS = [
+  {
+    id: 1,
+    nome: 'Renovação',
+    etapas: [
+      { id: 11, nome: 'A vencer' },
+      { id: 12, nome: 'Em conversa' },
+    ],
+  },
+  { id: 2, nome: 'Vendas', etapas: [{ id: 21, nome: 'Novo contato' }] },
+];
+
+// A frase do catálogo de um idioma, pelo caminho com pontos.
+const doCatalogo = (catalogo, chave) =>
+  chave.split('.').reduce((no, parte) => no?.[parte], catalogo);
+const nosDoisIdiomas = chave => {
+  expect(doCatalogo(ptBR, chave)).toBeTruthy();
+  expect(doCatalogo(en, chave)).toBeTruthy();
+};
+const daCarteira = chave => `RELACIONAMENTOS_CARTEIRA.${chave}`;
+
+describe('ajustar renovações: os dias', () => {
+  it.each([
+    ['60', 60],
+    [' 7 ', 7],
+    ['1', 1],
+    [45, 45],
+  ])('%j vale como número de dias', (escrito, dias) => {
+    expect(diasDigitados(escrito)).toBe(dias);
+  });
+
+  it.each(['0', '', '   ', '1e2', '12,5', '1.5', '-3', 'dez', null, undefined])(
+    '%j não é um número de dias',
+    escrito => {
+      expect(diasDigitados(escrito)).toBeNull();
+    }
+  );
+
+  it('os botões de menos e mais andam de um em um e não passam de 1', () => {
+    expect(umDiaAMenos(60)).toBe(59);
+    expect(umDiaAMenos(1)).toBe(1);
+    expect(umDiaAMenos(null)).toBe(1);
+    expect(umDiaAMais(60)).toBe(61);
+    expect(umDiaAMais(null)).toBe(1);
+  });
+
+  it('conta quantos seguros entram com o número de dias escrito', () => {
+    const vencimentos = [3, 20, 60, 61, 200];
+
+    expect(quantosEntram(vencimentos, 60)).toBe(3);
+    expect(quantosEntram(vencimentos, 1)).toBe(0);
+    expect(quantosEntram(vencimentos, 365)).toBe(5);
+  });
+
+  it('sem número de dias, ou sem seguro, ninguém entra', () => {
+    expect(quantosEntram([3, 20], null)).toBe(0);
+    expect(quantosEntram([], 60)).toBe(0);
+    expect(quantosEntram()).toBe(0);
+  });
+});
+
+describe('ajustar renovações: o funil e a etapa', () => {
+  it('a conta nasce sem funil, com 60 dias e mandando as mensagens', () => {
+    expect(AJUSTES_PADRAO).toEqual({
+      funilId: null,
+      etapaId: null,
+      dias: 60,
+      mensagens: MENSAGENS.MANDAR,
+    });
+  });
+
+  it('as etapas são as do funil escolhido', () => {
+    expect(etapasDoFunil(FUNIS, 1).map(etapa => etapa.id)).toEqual([11, 12]);
+    expect(etapasDoFunil(FUNIS, 99)).toEqual([]);
+    expect(etapasDoFunil(FUNIS, null)).toEqual([]);
+    expect(etapasDoFunil()).toEqual([]);
+  });
+
+  it('escolher o funil já escolhe a primeira etapa dele, sem mexer no que chegou', () => {
+    const antes = { ...AJUSTES_PADRAO, funilId: 1, etapaId: 12 };
+    const depois = comOFunil(antes, FUNIS, 2);
+
+    expect(depois).toEqual({ ...antes, funilId: 2, etapaId: 21 });
+    expect(antes).toEqual({ ...AJUSTES_PADRAO, funilId: 1, etapaId: 12 });
+    expect(comOFunil(antes, FUNIS, 99).etapaId).toBeNull();
+  });
+
+  it('diz a escolha de hoje com os nomes que a corretora deu', () => {
+    expect(ondeFicam(FUNIS, { funilId: 1, etapaId: 12 })).toEqual({
+      funil: 'Renovação',
+      etapa: 'Em conversa',
+    });
+  });
+
+  it('sem escolha, ou com funil ou etapa que não existe mais, não há o que dizer', () => {
+    expect(ondeFicam(FUNIS, AJUSTES_PADRAO)).toBeNull();
+    expect(ondeFicam(FUNIS, { funilId: 99, etapaId: 11 })).toBeNull();
+    expect(ondeFicam(FUNIS, { funilId: 1, etapaId: 21 })).toBeNull();
+    expect(ondeFicam()).toBeNull();
+  });
+
+  it('o que falta para salvar, na ordem da tela', () => {
+    const completos = { funilId: 1, etapaId: 11, dias: 60 };
+
+    expect(faltaNosAjustes()).toBe(FALTAS.FUNIL);
+    expect(faltaNosAjustes({ ...completos, funilId: null })).toBe(FALTAS.FUNIL);
+    expect(faltaNosAjustes({ ...completos, etapaId: null })).toBe(FALTAS.ETAPA);
+    expect(faltaNosAjustes({ ...completos, dias: null })).toBe(FALTAS.DIAS);
+    expect(faltaNosAjustes(completos)).toBe('');
+  });
+
+  // O funil pode existir sem etapa nenhuma: pedir a etapa seria um beco sem
+  // saída (não há etapa para escolher).
+  describe('o funil escolhido que não tem etapa', () => {
+    const SEM_ETAPA = { id: 3, nome: 'Novo', etapas: [] };
+    const SEM_A_LISTA = { id: 4, nome: 'Antigo' };
+    const funis = [...FUNIS, SEM_ETAPA, SEM_A_LISTA];
+
+    it('é reconhecido só quando o funil está entre os da conta', () => {
+      expect(funilSemEtapa(funis, 3)).toBe(true);
+      expect(funilSemEtapa(funis, 4)).toBe(true);
+      expect(funilSemEtapa(funis, 1)).toBe(false);
+      expect(funilSemEtapa(funis, 99)).toBe(false);
+      expect(funilSemEtapa(funis, null)).toBe(false);
+      expect(funilSemEtapa()).toBe(false);
+    });
+
+    it('o Salvar pede outro funil, e não uma etapa que não existe', () => {
+      const semEtapa = { funilId: 3, etapaId: null, dias: 60 };
+
+      expect(faltaNosAjustes(semEtapa, funis)).toBe(FALTAS.SEM_ETAPA);
+      expect(faltaNosAjustes({ ...semEtapa, funilId: 1 }, funis)).toBe(
+        FALTAS.ETAPA
+      );
+      // Sem a lista de funis não dá para saber: pede a etapa, como antes.
+      expect(faltaNosAjustes(semEtapa)).toBe(FALTAS.ETAPA);
+    });
+
+    it('escolher esse funil deixa a etapa em branco, e a escolha de hoje não quebra', () => {
+      expect(comOFunil(AJUSTES_PADRAO, funis, 3).etapaId).toBeNull();
+      expect(ondeFicam(funis, { funilId: 4, etapaId: 11 })).toBeNull();
+    });
+  });
+
+  it('cada falta tem a frase dela nos dois idiomas', () => {
+    Object.values(FALTAS).forEach(falta => {
+      nosDoisIdiomas(daCarteira(`AJUSTES.FALTA.${falta}`));
+    });
+  });
+
+  it('só as quatro escolhas contam como mudança', () => {
+    const salvos = { funilId: 1, etapaId: 11, dias: 60, mensagens: 'mandar' };
+
+    expect(ajustesMudaram(salvos, { ...salvos })).toBe(false);
+    expect(ajustesMudaram(salvos, { ...salvos, outra: 'coisa' })).toBe(false);
+    expect(ajustesMudaram(salvos, { ...salvos, dias: 45 })).toBe(true);
+    expect(ajustesMudaram(salvos, { ...salvos, etapaId: 12 })).toBe(true);
+    expect(
+      ajustesMudaram(salvos, { ...salvos, mensagens: MENSAGENS.NAO_MANDAR })
+    ).toBe(true);
+  });
+
+  it('as recusas dos ajustes têm frase nos dois idiomas', () => {
+    ['funil_desconhecido', 'etapa_de_outro_funil', 'dias_invalidos'].forEach(
+      codigo => {
+        expect(CODIGOS_DE_RECUSA).toContain(codigo);
+        nosDoisIdiomas(chaveDaRecusa(codigo, 'PADRAO'));
+      }
+    );
+  });
+});
+
+describe('o funil das renovações que parou de servir', () => {
+  it('sem o sinal do servidor, o funil serve', () => {
+    expect(funilParou()).toBe('');
+    expect(funilParou(null)).toBe('');
+    expect(funilParou({ ajustes: {}, funis: [] })).toBe('');
+  });
+
+  it.each([
+    ['funil_arquivado', FUNIL_PAROU.ARQUIVADO],
+    ['sumiu', FUNIL_PAROU.APAGADO],
+  ])('a escolha %s do servidor diz que o funil parou', (escolha, estado) => {
+    expect(funilParou({ escolha, ajustes: { funilId: null } })).toBe(estado);
+  });
+
+  it.each(['feita', 'nunca_feita'])(
+    'a escolha %s não é funil parado',
+    escolha => {
+      expect(funilParou({ escolha })).toBe('');
+    }
+  );
+
+  it.each(['escolha_de_amanha', 'constructor', '', null, 7])(
+    'a escolha que a tela não conhece (%j) não vira aviso',
+    escolha => {
+      expect(funilParou({ escolha })).toBe('');
+    }
+  );
+
+  it.each(Object.values(FUNIL_PAROU))(
+    'o estado %s tem frase nos dois idiomas, na tela de ajustes e no convite',
+    estado => {
+      nosDoisIdiomas(daCarteira(`AJUSTES.PAROU.${estado}`));
+      nosDoisIdiomas(daCarteira(`AJUSTES.HOJE_PAROU.${estado}`));
+      nosDoisIdiomas(daCarteira(`RENOVACAO.CONVITE.PAROU.${estado}`));
+    }
+  );
+
+  it('o convite do funil que parou tem apoio e botão próprios', () => {
+    nosDoisIdiomas(daCarteira('RENOVACAO.CONVITE.APOIO_PAROU'));
+    nosDoisIdiomas(daCarteira('RENOVACAO.CONVITE.BOTAO_PAROU'));
+  });
+
+  it('o funil que parou sai da escolha, e o resto fica', () => {
+    const salvos = { funilId: 1, etapaId: 11, dias: 45, mensagens: 'mandar' };
+
+    expect(semOFunil(salvos)).toEqual({
+      funilId: null,
+      etapaId: null,
+      dias: 45,
+      mensagens: 'mandar',
+    });
+    expect(salvos.funilId).toBe(1);
+    expect(faltaNosAjustes(semOFunil(salvos))).toBe(FALTAS.FUNIL);
+  });
+});
+
+// Cada código que o servidor da renovação manda numa recusa (os do gravador da
+// apólice e os da renovação). Nenhum pode aparecer cru na tela.
+describe('as recusas da renovação', () => {
+  const DO_SERVIDOR = [
+    'apolice_repetida',
+    'apolice_de_outra_pessoa',
+    'termo_ambiguo',
+    'anterior_desconhecida',
+    'anterior_cancelada',
+    'ja_tem_desfecho',
+    'ja_tem_apolice_nova',
+    'falta_tipo',
+    'falta_seguradora',
+    'falta_termina',
+    'termina_antes',
+    'termina_antes_da_anterior',
+    'sem_renovacao',
+    'sem_desfecho',
+    'ja_cancelado',
+    'motivo_desconhecido',
+    'falta_texto',
+    'texto_longo',
+    'funil_desconhecido',
+    'etapa_de_outro_funil',
+    'dias_invalidos',
+    'mensagens_invalidas',
+  ];
+
+  it.each(DO_SERVIDOR)(
+    'o código %s tem frase nos dois idiomas, sem lugar para o que foi digitado',
+    codigo => {
+      expect(CODIGOS_DE_RECUSA).toContain(codigo);
+      const chave = chaveDaRecusa(codigo, 'PADRAO');
+
+      expect(chave).not.toBe('PADRAO');
+      [ptBR, en].forEach(catalogo => {
+        const frase = doCatalogo(catalogo, chave);
+        expect(frase).toBeTruthy();
+        expect(frase).not.toContain('{');
+        expect(frase).not.toContain(codigo);
+      });
+    }
+  );
+
+  it('o código que a tela não conhece fica com a frase de sempre de quem chamou', () => {
+    expect(chaveDaRecusa('codigo_de_amanha', 'PADRAO')).toBe('PADRAO');
+  });
+
+  it.each([
+    'sem_renovacao',
+    'ja_tem_desfecho',
+    'sem_desfecho',
+    'ja_tem_apolice_nova',
+    'anterior_cancelada',
+    'ja_cancelado',
+  ])('%s diz que o seguro mudou por outro caminho: a tela relê', codigo => {
+    expect(seguroJaMudou(codigo)).toBe(true);
+  });
+
+  it.each([
+    'motivo_desconhecido',
+    'falta_texto',
+    'texto_longo',
+    'termina_antes_da_anterior',
+    'apolice_de_outra_pessoa',
+    'termo_ambiguo',
+    'falta_tipo',
+  ])('%s é do que a pessoa escreveu: nada a reler', codigo => {
+    expect(seguroJaMudou(codigo)).toBe(false);
+  });
+});
+
+describe('em que pé está a renovação', () => {
+  it('seguro sem renovação não tem situação', () => {
+    expect(situacaoDaRenovacao(terminaEm(20))).toBeNull();
+    expect(situacaoDaRenovacao(null)).toBeNull();
+  });
+
+  it('aberta: diz o funil e a etapa, com os nomes da corretora', () => {
+    expect(situacaoDaRenovacao(emRenovacao())).toEqual({
+      id: SITUACOES.EM_ETAPA,
+      funil: 'Renovação',
+      etapa: 'A vencer',
+    });
+  });
+
+  // Quem não enxerga o card no quadro recebe a renovação só com o desfecho.
+  it.each([
+    ['só com o desfecho', { desfecho: null }],
+    ['sem a etapa', { desfecho: null, funil: 'Renovação' }],
+    ['sem o funil', { desfecho: null, etapa: 'A vencer' }],
+    ['com os nomes nulos', { desfecho: null, funil: null, etapa: null }],
+  ])(
+    'aberta %s: diz que está em andamento, sem frase com buraco',
+    (_, renovacao) => {
+      expect(situacaoDaRenovacao(terminaEm(20, { renovacao }))).toEqual({
+        id: SITUACOES.EM_ANDAMENTO,
+      });
+      nosDoisIdiomas(daCarteira('RENOVACAO.SITUACAO.EM_ANDAMENTO'));
+    }
+  );
+
+  it('só com o desfecho, o que terminou continua dizendo como terminou', () => {
+    expect(
+      situacaoDaRenovacao(
+        terminaEm(20, {
+          renovacao: { desfecho: 'renovou' },
+          renovadoEm: 1790000000,
+        })
+      )
+    ).toEqual({ id: SITUACOES.RENOVOU_FALTA });
+    expect(
+      situacaoDaRenovacao(
+        terminaEm(-3, {
+          renovacao: { desfecho: 'nao_renovou' },
+          motivo: 'achou_caro',
+        })
+      )
+    ).toEqual({ id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: 'achou_caro' });
+  });
+
+  it('renovou: falta a apólice nova até ela ser guardada', () => {
+    expect(situacaoDaRenovacao(renovado())).toEqual({
+      id: SITUACOES.RENOVOU_FALTA,
+    });
+    expect(situacaoDaRenovacao(renovado({ apoliceNova: true }))).toEqual({
+      id: SITUACOES.RENOVOU,
+    });
+    expect(faltaApoliceNova(renovado())).toBe(true);
+    expect(faltaApoliceNova(renovado({ apoliceNova: true }))).toBe(false);
+    expect(faltaApoliceNova(emRenovacao())).toBe(false);
+  });
+
+  it('não renovou: sem motivo, com motivo de um toque e com motivo escrito', () => {
+    expect(situacaoDaRenovacao(perdido())).toEqual({
+      id: SITUACOES.NAO_RENOVOU,
+    });
+    expect(situacaoDaRenovacao(perdido(-10, { motivo: 'achou_caro' }))).toEqual(
+      { id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: 'achou_caro' }
+    );
+    expect(
+      situacaoDaRenovacao(
+        perdido(-10, { motivo: MOTIVO_ESCRITO, motivoEscrito: 'Mudou de país' })
+      )
+    ).toEqual({ id: SITUACOES.NAO_RENOVOU_ESCRITO, texto: 'Mudou de país' });
+  });
+
+  it('"outro" sem o texto continua sendo um motivo de um toque', () => {
+    expect(
+      situacaoDaRenovacao(perdido(-10, { motivo: MOTIVO_ESCRITO }))
+    ).toEqual({ id: SITUACOES.NAO_RENOVOU_MOTIVO, motivo: MOTIVO_ESCRITO });
+  });
+
+  it('só quem não renovou e ficou sem motivo é convidado a dizer o motivo', () => {
+    expect(faltaMotivo(perdido())).toBe(true);
+    expect(faltaMotivo(perdido(-10, { motivo: 'nao_respondeu' }))).toBe(false);
+    expect(faltaMotivo(renovado())).toBe(false);
+    expect(faltaMotivo(emRenovacao())).toBe(false);
+  });
+
+  it('o seguro cancelado com a renovação aberta diz que foi cancelado', () => {
+    const cancelado = perdido(20, {
+      canceladoEm: 1790000000,
+      motivo: MOTIVO_DO_CANCELAMENTO,
+    });
+
+    expect(situacaoDaRenovacao(cancelado)).toEqual({
+      id: SITUACOES.NAO_RENOVOU_MOTIVO,
+      motivo: 'cancelou',
+    });
+    expect(faltaMotivo(cancelado)).toBe(false);
+    expect(MOTIVOS).not.toContain(MOTIVO_DO_CANCELAMENTO);
+    nosDoisIdiomas(daCarteira('RENOVACAO.MOTIVO.NOME.CANCELOU'));
+    nosDoisIdiomas(daCarteira('RENOVACAO.MOTIVO.NA_FRASE.CANCELOU'));
+  });
+
+  it('o motivo que a tela não conhece vira só "Não renovou", sem convite', () => {
+    const deAmanha = perdido(-10, { motivo: 'motivo_de_amanha' });
+
+    expect(motivoTemNome('motivo_de_amanha')).toBe(false);
+    expect(situacaoDaRenovacao(deAmanha)).toEqual({
+      id: SITUACOES.NAO_RENOVOU_SO,
+    });
+    expect(faltaMotivo(deAmanha)).toBe(false);
+  });
+
+  it('a renovação terminou quando renovou ou quando não renovou', () => {
+    expect(terminou(renovado())).toBe(true);
+    expect(terminou(perdido())).toBe(true);
+    expect(terminou(emRenovacao())).toBe(false);
+    expect(terminou(terminaEm(20))).toBe(false);
+  });
+
+  it('cada situação e cada motivo têm frase nos dois idiomas', () => {
+    Object.values(SITUACOES).forEach(situacao => {
+      nosDoisIdiomas(daCarteira(`RENOVACAO.SITUACAO.${situacao}`));
+    });
+    [...MOTIVOS, MOTIVO_ESCRITO, MOTIVO_DO_CANCELAMENTO].forEach(motivo => {
+      const nome = motivo.toUpperCase();
+      expect(motivoTemNome(motivo)).toBe(true);
+      nosDoisIdiomas(daCarteira(`RENOVACAO.MOTIVO.NOME.${nome}`));
+      nosDoisIdiomas(daCarteira(`RENOVACAO.MOTIVO.NA_FRASE.${nome}`));
+    });
+  });
+
+  it('são quatro motivos de um toque, e "outro" é o que se escreve', () => {
+    expect(MOTIVOS).toEqual([
+      'achou_caro',
+      'outra_corretora',
+      'vendeu_o_bem',
+      'nao_respondeu',
+    ]);
+    expect(MOTIVOS).not.toContain(MOTIVO_ESCRITO);
+  });
+});
+
+describe('os selos da renovação', () => {
+  it('com a renovação aberta e o seguro valendo, o selo é Em renovação', () => {
+    expect(seloDoSeguro(emRenovacao(), AGORA)).toBe(SELOS.EM_RENOVACAO);
+    expect(estaValendo(emRenovacao(), AGORA)).toBe(true);
+  });
+
+  it('quem renovou tem o selo Renovado, mesmo depois de terminar', () => {
+    expect(seloDoSeguro(renovado(), AGORA)).toBe(SELOS.RENOVADO);
+    expect(seloDoSeguro(terminaEm(-5, { renovadoEm: 1790000000 }), AGORA)).toBe(
+      SELOS.RENOVADO
+    );
+    expect(estaValendo(renovado(), AGORA)).toBe(false);
+  });
+
+  it('cancelado ganha de renovado, e vencido ganha de em renovação', () => {
+    expect(seloDoSeguro(renovado({ canceladoEm: 1 }), AGORA)).toBe(
+      SELOS.CANCELADO
+    );
+    expect(seloDoSeguro(emRenovacao(-3), AGORA)).toBe(SELOS.VENCIDO);
+  });
+
+  it('quem não renovou e ainda vale continua Ativo', () => {
+    expect(seloDoSeguro(perdido(12), AGORA)).toBe(SELOS.ATIVO);
+  });
+
+  it('o selo que o servidor manda vale mais que a conta daqui', () => {
+    const doServidor = terminaEm(20, { selo: SELOS.EM_RENOVACAO, dias: 20 });
+
+    expect(seloDoSeguro(doServidor, AGORA)).toBe(SELOS.EM_RENOVACAO);
+  });
+
+  it('Em renovação vai em azul e Renovado em verde, com nome nos dois idiomas', () => {
+    expect(tomDoSelo(SELOS.EM_RENOVACAO)).toBe('azul');
+    expect(tomDoSelo(SELOS.EM_RENOVACAO, 3)).toBe('azul');
+    expect(tomDoSelo(SELOS.RENOVADO)).toBe('verde');
+    nosDoisIdiomas(chaveDoSelo(SELOS.EM_RENOVACAO));
+    nosDoisIdiomas(chaveDoSelo(SELOS.RENOVADO));
+  });
+
+  // O servidor pode ganhar um selo antes da tela: a chave nunca aparece crua.
+  it.each(['suspenso', 'constructor', 'ATIVO', '', null, undefined, 7])(
+    'o selo que a tela não conhece (%j) cai no texto neutro, sem quebrar',
+    selo => {
+      expect(chaveDoSelo(selo)).toBe(daCarteira('SELOS.DESCONHECIDO'));
+      expect(chaveDoSeloDaPessoa(selo)).toBe(
+        daCarteira('PESSOAS.SELOS.DESCONHECIDO')
+      );
+      expect(tomDoSelo(selo)).toBe('neutro');
+    }
+  );
+
+  it('cada selo conhecido tem o texto da linha e o da lista de pessoas, nos dois idiomas', () => {
+    Object.values(SELOS).forEach(selo => {
+      nosDoisIdiomas(chaveDoSelo(selo));
+      nosDoisIdiomas(chaveDoSeloDaPessoa(selo));
+    });
+    nosDoisIdiomas(chaveDoSelo('suspenso'));
+    nosDoisIdiomas(chaveDoSeloDaPessoa('suspenso'));
+    expect(doCatalogo(ptBR, chaveDoSelo('suspenso'))).toBe('Seguro');
+  });
+
+  it('na ficha: vencido, em renovação, renovado, ativo e cancelado', () => {
+    const seguros = [
+      terminaEm(5, { id: 1, canceladoEm: 9 }),
+      terminaEm(40, { id: 2 }),
+      renovado({ id: 3 }),
+      emRenovacao(20, { id: 4 }),
+      terminaEm(-3, { id: 5 }),
+    ];
+
+    expect(porUrgencia(seguros, AGORA).map(s => s.id)).toEqual([5, 4, 3, 2, 1]);
+  });
+
+  it('o renovado diz quando renovou, na lista, na ficha e na gaveta', () => {
+    expect(quandoDoSeguro(renovado(), AGORA)).toEqual({
+      id: 'RENOVOU_EM',
+      data: 1790000000,
+    });
+    [ptBR, en].forEach(catalogo => {
+      const { QUANDO, GAVETA } = catalogo.RELACIONAMENTOS_CARTEIRA;
+      expect(QUANDO.LISTA.RENOVOU_EM).toContain('{data}');
+      expect(QUANDO.FICHA.RENOVOU_EM).toContain('{data}');
+      expect(GAVETA.FRASE.RENOVOU_EM).toContain('{data}');
+    });
+  });
+});
+
+describe('os grupos da renovação', () => {
+  it('"Em renovação" entra na barra depois dos grupos de vencimento', () => {
+    expect(GRUPOS_DE_SEGUROS.map(grupo => grupo.id)).toEqual([
+      'todos',
+      'vence_7_dias',
+      'vence_30_dias',
+      'vence_90_dias',
+      GRUPO_EM_RENOVACAO,
+      'vencido',
+      'sem_telefone',
+    ]);
+  });
+
+  it('"Em renovação" é quem tem o selo: a renovação aberta e o seguro valendo', () => {
+    const noGrupo = seguro =>
+      seguroPertenceAoGrupo(seguro, GRUPO_EM_RENOVACAO, AGORA);
+
+    expect(noGrupo(emRenovacao())).toBe(true);
+    expect(noGrupo(terminaEm(20))).toBe(false);
+    expect(noGrupo(emRenovacao(-3))).toBe(false);
+    expect(noGrupo(renovado())).toBe(false);
+    expect(noGrupo(emRenovacao(20, { canceladoEm: 1 }))).toBe(false);
+  });
+
+  it('o seguro em renovação continua nos grupos de vencimento, e o renovado sai', () => {
+    expect(seguroPertenceAoGrupo(emRenovacao(), 'vence_30_dias', AGORA)).toBe(
+      true
+    );
+    expect(seguroPertenceAoGrupo(renovado(), 'vence_30_dias', AGORA)).toBe(
+      false
+    );
+  });
+
+  it.each([
+    [30, 30, 31],
+    [90, 90, 91],
+    [365, 365, 366],
+  ])(
+    '"Não renovaram" de %i dias: terminou há até %i dias, e há %i fica de fora',
+    (periodo, dentro, fora) => {
+      const grupo = grupoDosQueNaoRenovaram(periodo);
+
+      expect(seguroPertenceAoGrupo(perdido(-1), grupo, AGORA)).toBe(true);
+      expect(seguroPertenceAoGrupo(perdido(-dentro), grupo, AGORA)).toBe(true);
+      expect(seguroPertenceAoGrupo(perdido(-fora), grupo, AGORA)).toBe(false);
+    }
+  );
+
+  it('"Não renovaram" conta quem só venceu, sem ninguém dizer nada', () => {
+    const grupo = grupoDosQueNaoRenovaram(30);
+
+    expect(seguroPertenceAoGrupo(terminaEm(-5), grupo, AGORA)).toBe(true);
+    expect(seguroPertenceAoGrupo(terminaEm(-31), grupo, AGORA)).toBe(false);
+  });
+
+  it('"Não renovaram" não conta quem ainda vale, quem renovou nem o cancelado', () => {
+    const grupo = grupoDosQueNaoRenovaram(30);
+
+    expect(seguroPertenceAoGrupo(perdido(5), grupo, AGORA)).toBe(false);
+    expect(seguroPertenceAoGrupo(perdido(0), grupo, AGORA)).toBe(false);
+    expect(
+      seguroPertenceAoGrupo(perdido(-5, { canceladoEm: 1 }), grupo, AGORA)
+    ).toBe(false);
+    expect(
+      seguroPertenceAoGrupo(
+        terminaEm(-5, { renovacao: RENOVOU, renovadoEm: 1 }),
+        grupo,
+        AGORA
+      )
+    ).toBe(false);
+  });
+
+  it('o endereço só pede grupo que existe', () => {
+    expect(grupoConhecido(GRUPO_EM_RENOVACAO)).toBe(GRUPO_EM_RENOVACAO);
+    expect(grupoConhecido('vencido')).toBe('vencido');
+    expect(grupoConhecido('nao_renovaram_90')).toBe('nao_renovaram_90');
+    expect(grupoConhecido('inventado')).toBe('');
+    expect(grupoConhecido(undefined)).toBe('');
+    expect(grupoConhecido(['vencido', 'todos'])).toBe('');
+  });
+
+  it('o grupo temporário só entra na barra quando é pedido, e no fim', () => {
+    const deSempre = GRUPOS_DE_SEGUROS.map(grupo => grupo.id);
+
+    expect(gruposDaBarra().map(grupo => grupo.id)).toEqual(deSempre);
+    expect(gruposDaBarra('vencido').map(grupo => grupo.id)).toEqual(deSempre);
+    expect(gruposDaBarra('nao_renovaram_365').map(grupo => grupo.id)).toEqual([
+      ...deSempre,
+      'nao_renovaram_365',
+    ]);
+    expect(grupoTemporario('vencido')).toBeNull();
+    expect(grupoTemporario('nao_renovaram_30').id).toBe('nao_renovaram_30');
+  });
+
+  it('cada grupo temporário tem nome e explicação nos dois idiomas', () => {
+    PERIODOS.forEach(dias => {
+      const { nome, explicacao } = grupoTemporario(
+        grupoDosQueNaoRenovaram(dias)
+      );
+
+      nosDoisIdiomas(nome);
+      nosDoisIdiomas(explicacao);
+    });
+  });
+});
+
+describe('o rodapé da gaveta com a renovação', () => {
+  const rodape = (seguro, opcoes) =>
+    rodapeDoSeguro(seguro, { agora: AGORA, ...opcoes });
+
+  it('aberta, com PDF: "Renovou" em azul, "Não renovou" ao lado e o resto no "⋯"', () => {
+    expect(rodape(emRenovacao(20, { temPdf: true }))).toEqual({
+      azul: DO_RODAPE.RENOVOU,
+      secundario: DO_RODAPE.NAO_RENOVOU,
+      menu: [
+        DO_RODAPE.VER_PDF,
+        DO_RODAPE.CORRIGIR,
+        DO_RODAPE.GUARDAR_OUTRO_PDF,
+        DO_RODAPE.APAGAR_PDF,
+        DO_RODAPE.MARCAR_CANCELADO,
+      ],
+    });
+  });
+
+  it('aberta, sem PDF: guardar o PDF e corrigir ficam no "⋯"', () => {
+    expect(rodape(emRenovacao()).menu).toEqual([
+      DO_RODAPE.GUARDAR_PDF,
+      DO_RODAPE.CORRIGIR,
+      DO_RODAPE.MARCAR_CANCELADO,
+    ]);
+  });
+
+  it('aberta e já vencida: ainda dá para dizer se renovou', () => {
+    expect(rodape(emRenovacao(-3)).azul).toBe(DO_RODAPE.RENOVOU);
+  });
+
+  it('renovou: o azul é "Guardar a apólice nova", e o "⋯" desfaz', () => {
+    expect(rodape(renovado())).toEqual({
+      azul: DO_RODAPE.GUARDAR_APOLICE_NOVA,
+      secundario: DO_RODAPE.CORRIGIR,
+      menu: [
+        DO_RODAPE.GUARDAR_PDF,
+        DO_RODAPE.DESFAZER_RENOVACAO,
+        DO_RODAPE.MARCAR_CANCELADO,
+      ],
+    });
+  });
+
+  it('renovou e já tem a apólice nova: o rodapé volta ao de sempre, com o desfazer', () => {
+    expect(rodape(renovado({ apoliceNova: true, temPdf: true }))).toEqual({
+      azul: DO_RODAPE.VER_PDF,
+      secundario: DO_RODAPE.CORRIGIR,
+      menu: [
+        DO_RODAPE.GUARDAR_OUTRO_PDF,
+        DO_RODAPE.APAGAR_PDF,
+        DO_RODAPE.DESFAZER_RENOVACAO,
+        DO_RODAPE.MARCAR_CANCELADO,
+      ],
+    });
+  });
+
+  it('não renovou: sem botão da renovação, e o "⋯" desfaz', () => {
+    expect(rodape(perdido())).toEqual({
+      azul: null,
+      secundario: DO_RODAPE.CORRIGIR,
+      menu: [
+        DO_RODAPE.GUARDAR_PDF,
+        DO_RODAPE.DESFAZER_RENOVACAO,
+        DO_RODAPE.MARCAR_CANCELADO,
+      ],
+    });
+  });
+
+  it('seguro cancelado não oferece "Renovou" nem a apólice nova', () => {
+    const aberta = rodape(emRenovacao(20, { canceladoEm: 1 }));
+    const renovada = rodape(renovado({ canceladoEm: 1 }));
+
+    expect(aberta.azul).toBeNull();
+    expect(aberta.secundario).toBe(DO_RODAPE.CORRIGIR);
+    expect(aberta.menu).toContain(DO_RODAPE.DESFAZER_CANCELAMENTO);
+    expect(renovada.azul).toBeNull();
+  });
+
+  it('no seguro cancelado, o "Desfazer" da renovação só volta depois de desfazer o cancelamento', () => {
+    const fechadaPeloCancelamento = perdido(20, {
+      motivo: MOTIVO_DO_CANCELAMENTO,
+    });
+
+    const cancelado = rodape({ ...fechadaPeloCancelamento, canceladoEm: 1 });
+    const deVoltaAAtivo = rodape(fechadaPeloCancelamento);
+
+    expect(cancelado.menu).toContain(DO_RODAPE.DESFAZER_CANCELAMENTO);
+    expect(cancelado.menu).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    expect(rodape(renovado({ canceladoEm: 1 })).menu).not.toContain(
+      DO_RODAPE.DESFAZER_RENOVACAO
+    );
+    expect(deVoltaAAtivo.menu).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+  });
+
+  // Quem não enxerga o card da renovação recebe a renovação sem `cardId`, e
+  // quase nunca pode fechá-lo: botão que só dá erro não aparece.
+  describe('a renovação que chega sem o card (só com o desfecho)', () => {
+    const semCard = (desfecho, resto = {}) =>
+      terminaEm(20, { renovacao: { desfecho }, ...resto });
+
+    it('é só leitura; o seguro sem renovação nenhuma não entra nessa regra', () => {
+      expect(renovacaoSoDeLeitura(semCard(null))).toBe(true);
+      expect(renovacaoSoDeLeitura(semCard('renovou'))).toBe(true);
+      expect(renovacaoSoDeLeitura(emRenovacao())).toBe(false);
+      expect(renovacaoSoDeLeitura(terminaEm(20, { renovacao: null }))).toBe(
+        false
+      );
+      expect(renovacaoSoDeLeitura(terminaEm(20))).toBe(false);
+      expect(renovacaoSoDeLeitura()).toBe(false);
+    });
+
+    it('aberta: sem "Renovou" nem "Não renovou"; o rodapé é o de um seguro comum', () => {
+      expect(rodape(semCard(null, { temPdf: true }))).toEqual({
+        azul: DO_RODAPE.VER_PDF,
+        secundario: DO_RODAPE.CORRIGIR,
+        menu: [
+          DO_RODAPE.GUARDAR_OUTRO_PDF,
+          DO_RODAPE.APAGAR_PDF,
+          DO_RODAPE.MARCAR_CANCELADO,
+        ],
+      });
+      expect(rodape(semCard(null))).toEqual({
+        azul: DO_RODAPE.GUARDAR_PDF,
+        secundario: DO_RODAPE.CORRIGIR,
+        menu: [DO_RODAPE.MARCAR_CANCELADO],
+      });
+    });
+
+    it('terminada: sem o "Desfazer" no "⋯"; a apólice nova continua, que não mexe no card', () => {
+      const renovou = rodape(semCard('renovou', { renovadoEm: 1790000000 }));
+      const naoRenovou = rodape(semCard('nao_renovou'));
+
+      expect(renovou.azul).toBe(DO_RODAPE.GUARDAR_APOLICE_NOVA);
+      expect(renovou.menu).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+      expect(naoRenovou.menu).not.toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    });
+
+    it('o seguro que renovou sem card nenhum (a apólice nova chegou) ainda desfaz', () => {
+      const semRenovacao = terminaEm(20, {
+        renovacao: null,
+        renovadoEm: 1790000000,
+        apoliceNova: true,
+      });
+
+      expect(rodape(semRenovacao).menu).toContain(DO_RODAPE.DESFAZER_RENOVACAO);
+    });
+  });
+
+  it('quem só pode ver não tem nada da renovação', () => {
+    expect(
+      rodape(emRenovacao(20, { temPdf: true }), { podeEditar: false })
+    ).toEqual({ azul: DO_RODAPE.VER_PDF, secundario: null, menu: [] });
+    expect(rodape(renovado(), { podeEditar: false })).toEqual({
+      azul: null,
+      secundario: null,
+      menu: [],
+    });
+  });
+
+  it('nada da renovação vem em vermelho, e tudo tem nome nos dois idiomas', () => {
+    [
+      DO_RODAPE.RENOVOU,
+      DO_RODAPE.NAO_RENOVOU,
+      DO_RODAPE.GUARDAR_APOLICE_NOVA,
+      DO_RODAPE.DESFAZER_RENOVACAO,
+    ].forEach(nome => {
+      expect(DESTRUTIVOS).not.toContain(nome);
+      nosDoisIdiomas(daCarteira(`GAVETA.RODAPE.${nome}`));
+    });
+  });
+});
+
+describe('os números dos resultados', () => {
+  it('a largura da barra é a parte do total, de 0 a 100', () => {
+    expect(porcentagem(7, 9)).toBe(78);
+    expect(porcentagem(1, 3)).toBe(33);
+    expect(porcentagem(4, 4)).toBe(100);
+    expect(porcentagem(0, 5)).toBe(0);
+    expect(porcentagem(3, 0)).toBe(0);
+  });
+
+  it('acha o período pelo número de dias', () => {
+    const periodos = [{ dias: 30 }, { dias: 90 }];
+
+    expect(periodoEscolhido(periodos, 90)).toBe(periodos[1]);
+    expect(periodoEscolhido(periodos)).toBe(periodos[0]);
+    expect(periodoEscolhido(periodos, 365)).toBeNull();
+    expect(periodoEscolhido()).toBeNull();
+  });
+
+  it('só vira barra o motivo que alguém escolheu, do mais citado ao menos', () => {
+    const motivos = [
+      { motivo: 'achou_caro', quantos: 1 },
+      { motivo: 'vendeu_o_bem', quantos: 0 },
+      { motivo: 'outra_corretora', quantos: 4 },
+    ];
+
+    expect(motivosCitados(motivos)).toEqual([
+      { motivo: 'outra_corretora', quantos: 4 },
+      { motivo: 'achou_caro', quantos: 1 },
+    ]);
+    expect(motivos.map(({ motivo }) => motivo)).toEqual([
+      'achou_caro',
+      'vendeu_o_bem',
+      'outra_corretora',
+    ]);
+    expect(motivosCitados()).toEqual([]);
+  });
+
+  it('a linha "sem_motivo" do servidor não é um motivo: fica fora das barras', () => {
+    const motivos = [
+      { motivo: 'achou_caro', quantos: 2 },
+      { motivo: 'cancelou', quantos: 1 },
+      { motivo: 'outro', quantos: 0 },
+      { motivo: SEM_MOTIVO, quantos: 5 },
+    ];
+
+    expect(motivosCitados(motivos)).toEqual([
+      { motivo: 'achou_caro', quantos: 2 },
+      { motivo: 'cancelou', quantos: 1 },
+    ]);
+    expect(semMotivo({ naoRenovou: 8, motivos })).toBe(5);
+  });
+
+  it('a linha "sem_motivo" com zero não vira "Sem motivo"', () => {
+    const motivos = [
+      { motivo: 'achou_caro', quantos: 3 },
+      { motivo: SEM_MOTIVO, quantos: 0 },
+    ];
+
+    expect(semMotivo({ naoRenovou: 3, motivos })).toBe(0);
+  });
+
+  it('o motivo que a tela não conhece entra em "Outro motivo"', () => {
+    const motivos = [
+      { motivo: 'outro', quantos: 1 },
+      { motivo: 'motivo_de_amanha', quantos: 2 },
+      { motivo: 'achou_caro', quantos: 1 },
+    ];
+
+    expect(motivosCitados(motivos)).toEqual([
+      { motivo: 'outro', quantos: 3 },
+      { motivo: 'achou_caro', quantos: 1 },
+    ]);
+  });
+
+  it('"sem motivo" é quem não renovou e não teve motivo dito', () => {
+    const motivos = [{ quantos: 2 }, { quantos: 1 }];
+
+    expect(semMotivo({ naoRenovou: 5, motivos })).toBe(2);
+    expect(semMotivo({ naoRenovou: 3, motivos })).toBe(0);
+    expect(semMotivo({ naoRenovou: 2, motivos })).toBe(0);
+    expect(semMotivo({ naoRenovou: 4 })).toBe(4);
+    expect(semMotivo()).toBe(0);
+  });
+
+  it('o recorte só mostra a linha em que alguém venceu', () => {
+    const recortes = {
+      tipo: [
+        { tipo: 'auto', venceram: 9, renovou: 7 },
+        { tipo: 'vida', venceram: 0, renovou: 0 },
+      ],
+      seguradora: [{ nome: 'Horizonte Seguros', venceram: 0, renovou: 0 }],
+      cuida: [{ nome: 'Bruna Teixeirão', venceram: 2, renovou: 2 }],
+    };
+
+    expect(linhasDoRecorte(recortes, 'tipo')).toEqual([
+      { tipo: 'auto', venceram: 9, renovou: 7 },
+    ]);
+    expect(linhasDoRecorte(recortes, 'seguradora')).toEqual([]);
+    expect(linhasDoRecorte(recortes, 'inventado')).toEqual([]);
+    expect(linhasDoRecorte()).toEqual([]);
+    expect(recortesComLinhas(recortes)).toEqual(['tipo', 'cuida']);
+    expect(recortesComLinhas()).toEqual([]);
+  });
+
+  it('cada período tem a frase do topo, o nome e o grupo nos dois idiomas', () => {
+    expect(PERIODOS).toEqual([30, 90, 365]);
+    PERIODOS.forEach(dias => {
+      nosDoisIdiomas(daCarteira(`RESULTADOS.HEROI.DIAS_${dias}`));
+      nosDoisIdiomas(daCarteira(`RESULTADOS.PERIODO.DIAS_${dias}`));
+      expect(grupoConhecido(grupoDosQueNaoRenovaram(dias))).toBe(
+        `nao_renovaram_${dias}`
+      );
+    });
+    RECORTES.forEach(recorte => {
+      nosDoisIdiomas(daCarteira(`RESULTADOS.RECORTE.${recorte.toUpperCase()}`));
+    });
+  });
+});
+
+describe('o arquivo do histórico', () => {
+  const MARCA_UTF8 = String.fromCharCode(0xfeff);
+
+  it('uma linha por passo, cada valor entre aspas, separados por ponto e vírgula', () => {
+    const csv = csvDoHistorico([
+      ['Data', 'O que aconteceu'],
+      ['12/11', 'Renovou.'],
+    ]);
+
+    expect(csv).toBe(
+      `${MARCA_UTF8}"Data";"O que aconteceu"\r\n"12/11";"Renovou."`
+    );
+  });
+
+  it('aspas de dentro dobram, e o ponto e vírgula de dentro não separa', () => {
+    const csv = csvDoHistorico([['Disse "depois eu vejo"; não voltou']]);
+
+    expect(csv).toBe(`${MARCA_UTF8}"Disse ""depois eu vejo""; não voltou"`);
+  });
+
+  it.each(['=1+1', '+5511900000001', '-3', '@alguem', '\t=1+1', '\r=1+1'])(
+    'o valor %j ganha um apóstrofo para a planilha não ler como fórmula',
+    valor => {
+      expect(csvDoHistorico([[valor]])).toBe(`${MARCA_UTF8}"'${valor}"`);
+    }
+  );
+
+  it('valor vazio vira um campo vazio', () => {
+    expect(csvDoHistorico([['a', null, undefined, '']])).toBe(
+      `${MARCA_UTF8}"a";"";"";""`
+    );
+  });
+
+  it('o nome do arquivo não leva o número da apólice nem o nome de ninguém', () => {
+    expect(nomeDoArquivoDoHistorico()).toBe('historico-do-seguro.csv');
+  });
+
+  it('baixa o arquivo pelo navegador e solta o endereço depois', () => {
+    vi.useFakeTimers();
+    const criar = vi.fn(() => 'blob:historico');
+    const soltar = vi.fn();
+    const antes = {
+      criar: URL.createObjectURL,
+      soltar: URL.revokeObjectURL,
+    };
+    URL.createObjectURL = criar;
+    URL.revokeObjectURL = soltar;
+    const baixados = [];
+    // O link só é clicado dentro da página (fora dela há navegador que ignora).
+    const clique = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function guardar() {
+        baixados.push({ nome: this.download, naPagina: this.isConnected });
+      });
+
+    baixarArquivo('historico-do-seguro.csv', 'conteúdo');
+
+    expect(baixados).toEqual([
+      { nome: 'historico-do-seguro.csv', naPagina: true },
+    ]);
+    expect(document.querySelector('a[download]')).toBeNull();
+    expect(criar).toHaveBeenCalledTimes(1);
+    expect(criar.mock.calls[0][0]).toBeInstanceOf(Blob);
+    // O endereço só é solto depois, com o navegador já baixando.
+    expect(soltar).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(soltar).toHaveBeenCalledWith('blob:historico');
+
+    vi.useRealTimers();
+    clique.mockRestore();
+    URL.createObjectURL = antes.criar;
+    URL.revokeObjectURL = antes.soltar;
+  });
+});
+
+describe('os passos da renovação no histórico', () => {
+  it('o passo com detalhe usa a frase que o escreve', () => {
+    expect(
+      fraseDoPasso({ tipo: 'nao_renovou', valores: { motivo: 'achou_caro' } })
+    ).toEqual({
+      chave: 'TIPOS_COM.NAO_RENOVOU',
+      detalhe: DETALHES.MOTIVO,
+      valor: 'achou_caro',
+    });
+    expect(
+      fraseDoPasso({
+        tipo: 'nao_renovou_outro',
+        valores: { texto: 'Mudou de país' },
+      })
+    ).toEqual({
+      chave: 'TIPOS_COM.NAO_RENOVOU_OUTRO',
+      detalhe: DETALHES.TEXTO,
+      valor: 'Mudou de país',
+    });
+    expect(
+      fraseDoPasso({ tipo: 'apolice_nova', valores: { anterior: 'AT-000451' } })
+    ).toEqual({
+      chave: 'TIPOS_COM.APOLICE_NOVA',
+      detalhe: DETALHES.ANTERIOR,
+      valor: 'AT-000451',
+    });
+  });
+
+  it('sem o detalhe, vale a frase curta: nunca uma frase com buraco', () => {
+    const curta = tipo => ({
+      chave: `TIPOS.${tipo.toUpperCase()}`,
+      detalhe: null,
+      valor: null,
+    });
+
+    expect(fraseDoPasso({ tipo: 'nao_renovou', valores: {} })).toEqual(
+      curta('nao_renovou')
+    );
+    expect(fraseDoPasso({ tipo: 'nao_renovou_outro' })).toEqual(
+      curta('nao_renovou_outro')
+    );
+    expect(fraseDoPasso({ tipo: 'apolice_nova', valores: null })).toEqual(
+      curta('apolice_nova')
+    );
+  });
+
+  it('o motivo que a tela não conhece fica na frase curta, sem a chave crua', () => {
+    expect(
+      fraseDoPasso({
+        tipo: 'nao_renovou',
+        valores: { motivo: 'motivo_de_amanha' },
+      })
+    ).toEqual({ chave: 'TIPOS.NAO_RENOVOU', detalhe: null, valor: null });
+    expect(
+      fraseDoPasso({ tipo: 'nao_renovou', valores: { motivo: 'cancelou' } })
+    ).toEqual({
+      chave: 'TIPOS_COM.NAO_RENOVOU',
+      detalhe: DETALHES.MOTIVO,
+      valor: 'cancelou',
+    });
+  });
+
+  it('desfazer o resultado diz o que foi desfeito, quando o servidor conta', () => {
+    const semDetalhe = chave => ({ chave, detalhe: null, valor: null });
+
+    expect(
+      fraseDoPasso({
+        tipo: 'desfez_desfecho',
+        valores: { anterior: 'renovou' },
+      })
+    ).toEqual(semDetalhe('DESFEZ.RENOVOU'));
+    expect(
+      fraseDoPasso({
+        tipo: 'desfez_desfecho',
+        valores: { anterior: 'nao_renovou' },
+      })
+    ).toEqual(semDetalhe('DESFEZ.NAO_RENOVOU'));
+    expect(fraseDoPasso({ tipo: 'desfez_desfecho' })).toEqual(
+      semDetalhe('TIPOS.DESFEZ_DESFECHO')
+    );
+    expect(
+      fraseDoPasso({ tipo: 'desfez_desfecho', valores: { anterior: 'outra' } })
+    ).toEqual(semDetalhe('TIPOS.DESFEZ_DESFECHO'));
+    nosDoisIdiomas(daCarteira('HISTORIA.DESFEZ.RENOVOU'));
+    nosDoisIdiomas(daCarteira('HISTORIA.DESFEZ.NAO_RENOVOU'));
+  });
+
+  it('a renovação que começou diz quem cuida, quando o servidor conta', () => {
+    expect(
+      fraseDoPasso({
+        tipo: 'renovacao_card_nasceu',
+        valores: { funil: 3, cuida: 'Bruna Teixeirão', cuida_id: 9 },
+      })
+    ).toEqual({
+      chave: 'TIPOS_COM.RENOVACAO_CARD_NASCEU',
+      detalhe: DETALHES.CUIDA,
+      valor: 'Bruna Teixeirão',
+    });
+  });
+
+  // Quem não enxerga o card recebe o passo sem `valores`; o card sem dono vem
+  // só com o funil.
+  it.each([[{}], [{ funil: 3 }], [undefined], [null], [{ cuida: '' }]])(
+    'a renovação que começou sem quem cuida (%j) fica na frase curta',
+    valores => {
+      expect(fraseDoPasso({ tipo: 'renovacao_card_nasceu', valores })).toEqual({
+        chave: 'TIPOS.RENOVACAO_CARD_NASCEU',
+        detalhe: null,
+        valor: null,
+      });
+    }
+  );
+
+  it.each(['proposta_enviada', 'passo_de_amanha', '', undefined, null])(
+    'o passo que a tela não conhece (%j) vira a frase neutra, nunca a chave crua',
+    tipo => {
+      expect(fraseDoPasso({ tipo, valores: { anterior: 'renovou' } })).toEqual({
+        chave: PASSO_SEM_NOME,
+        detalhe: null,
+        valor: null,
+      });
+      nosDoisIdiomas(daCarteira(`HISTORIA.${PASSO_SEM_NOME}`));
+    }
+  );
+
+  it('os passos com frase são os do catálogo, nos dois idiomas, nem mais nem menos', () => {
+    const nomes = PASSOS_COM_FRASE.map(tipo => tipo.toUpperCase()).sort();
+
+    [ptBR, en].forEach(catalogo => {
+      expect(
+        Object.keys(catalogo.RELACIONAMENTOS_CARTEIRA.HISTORIA.TIPOS).sort()
+      ).toEqual(nomes);
+    });
+  });
+
+  it('os outros passos seguem com a frase do tipo', () => {
+    expect(
+      fraseDoPasso({ tipo: 'corrigido', valores: { campos: [] } })
+    ).toEqual({ chave: 'TIPOS.CORRIGIDO', detalhe: null, valor: null });
+    expect(fraseDoPasso({ tipo: 'card_nasceu' }).chave).toBe(
+      'TIPOS.CARD_NASCEU'
+    );
+  });
+
+  it('cada passo da renovação tem a frase curta e, quando há detalhe, a frase com ele', () => {
+    [
+      'CARD_NASCEU',
+      'RENOVACAO_CARD_NASCEU',
+      'RENOVOU',
+      'NAO_RENOVOU',
+      'NAO_RENOVOU_OUTRO',
+      'APOLICE_NOVA',
+    ].forEach(tipo => {
+      nosDoisIdiomas(daCarteira(`HISTORIA.TIPOS.${tipo}`));
+    });
+    [
+      ['RENOVACAO_CARD_NASCEU', '{cuida}'],
+      ['NAO_RENOVOU', '{motivo}'],
+      ['NAO_RENOVOU_OUTRO', '{texto}'],
+      ['APOLICE_NOVA', '{anterior}'],
+    ].forEach(([tipo, lugar]) => {
+      [ptBR, en].forEach(catalogo => {
+        expect(
+          catalogo.RELACIONAMENTOS_CARTEIRA.HISTORIA.TIPOS_COM[tipo]
+        ).toContain(lugar);
+      });
+    });
+  });
+});
+
+describe('a apólice nova', () => {
+  const SEGURADORAS = ['Horizonte Seguros', 'Seguradora Atlântica'];
+  const ANTERIOR = {
+    tipo: 'auto',
+    seguradora: 'Seguradora Atlântica',
+    numero: 'AT-000451',
+    comeca: aoMeioDia(2025, 11, 29),
+    termina: aoMeioDia(2026, 11, 29),
+    valor: 2760,
+    bem: 'Carro hatch prata',
+  };
+
+  it('nasce com o que não muda e com a vigência seguinte; número e valor em branco', () => {
+    expect(formularioDaApoliceNova(ANTERIOR, SEGURADORAS)).toEqual({
+      tipo: 'auto',
+      seguradora: 'Seguradora Atlântica',
+      outraSeguradora: '',
+      numero: '',
+      comeca: '2026-11-29',
+      termina: '2027-11-29',
+      valor: '',
+      bem: 'Carro hatch prata',
+    });
+  });
+
+  it('a que terminava em 29 de fevereiro vale até 1º de março do ano seguinte', () => {
+    const bissexto = { ...ANTERIOR, termina: aoMeioDia(2028, 2, 29) };
+
+    expect(formularioDaApoliceNova(bissexto, SEGURADORAS)).toMatchObject({
+      comeca: '2028-02-29',
+      termina: '2029-03-01',
+    });
+  });
+
+  // A seguradora pode demorar a emitir, e o servidor não exige o número.
+  it('o número pode ficar para depois: em branco não é falta, e não vai no pedido', () => {
+    const formulario = formularioDaApoliceNova(ANTERIOR, SEGURADORAS);
+
+    expect(formulario.numero).toBe('');
+    expect(faltasDaApoliceNova(formulario)).toEqual({});
+    expect(faltasDaApoliceNova({ ...formulario, numero: '   ' })).toEqual({});
+    expect(faltasDaApoliceNova({ ...formulario, numero: 'AT-000987' })).toEqual(
+      {}
+    );
+    expect(dadosDaApoliceNova(formulario)).not.toHaveProperty('numero');
+    expect(Object.keys(dadosDaApoliceNova(formulario))).toEqual(
+      expect.arrayContaining(['tipo', 'seguradora', 'termina'])
+    );
+  });
+
+  it('pede a data em que termina e recusa terminar antes de começar', () => {
+    const formulario = {
+      ...formularioDaApoliceNova(ANTERIOR, SEGURADORAS),
+      numero: 'AT-000987',
+    };
+
+    expect(faltasDaApoliceNova({ ...formulario, termina: '' })).toEqual({
+      termina: 'TERMINA',
+    });
+    expect(
+      faltasDaApoliceNova({ ...formulario, termina: '2026-01-10' })
+    ).toEqual({ termina: 'TERMINA_ANTES' });
+  });
+
+  it('manda tudo o que foi preenchido, e o que ficou em branco não vai', () => {
+    const formulario = {
+      ...formularioDaApoliceNova(ANTERIOR, SEGURADORAS),
+      numero: ' AT-000987 ',
+    };
+
+    expect(dadosDaApoliceNova(formulario)).toEqual({
+      tipo: 'auto',
+      seguradora: 'Seguradora Atlântica',
+      numero: 'AT-000987',
+      comeca: aoMeioDia(2026, 11, 29),
+      termina: aoMeioDia(2027, 11, 29),
+      bem: 'Carro hatch prata',
+    });
+    expect(dadosDaApoliceNova({ ...formulario, valor: '2.900,00' }).valor).toBe(
+      2900
+    );
+  });
+});
+
+describe('abrir o card da renovação no CRM', () => {
+  it('leva ao quadro com o card aberto', () => {
+    expect(destinoDoCard(88)).toEqual({
+      name: 'crm_kanban_index',
+      query: { card_id: '88' },
+    });
+  });
+
+  it('na demonstração, ou sem card, abre só o quadro', () => {
+    expect(destinoDoCard(88, true)).toEqual({
+      name: 'crm_kanban_index',
+      query: undefined,
+    });
+    expect(destinoDoCard(null)).toEqual({
+      name: 'crm_kanban_index',
+      query: undefined,
+    });
+  });
+});

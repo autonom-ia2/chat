@@ -8,6 +8,9 @@ import { chaveDoSelo, tomDoSelo } from '../../carteira/tomDoSelo';
 // #2897 — o selo de um seguro: Ativo, Vencido ou Cancelado. A cor e o texto
 // saem de uma regra só (carteira/tomDoSelo.js): o ativo que vence logo fica em
 // âmbar.
+// #2898 — a renovação soma Em renovação (azul) e Renovado (verde). Os cinco
+// chegam em todo lugar que mostra o selo: a aba Seguros, a ficha, o painel da
+// conversa e a lista de pessoas.
 // Na linha de um seguro o selo diz só "Vencido". Fora dela (a lista de pessoas)
 // quem usa manda o texto inteiro em `rotulo` ("Seguro vencido"): sozinho, ao
 // lado do nome de uma pessoa, "Vencido" não diz o quê.

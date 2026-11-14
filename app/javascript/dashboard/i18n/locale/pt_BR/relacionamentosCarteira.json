@@ -13,6 +13,9 @@
     "SELOS": {
       "ATIVO": "Ativo",
       "VENCIDO": "Vencido",
+      "EM_RENOVACAO": "Em renovação",
+      "RENOVADO": "Renovado",
+      "DESCONHECIDO": "Seguro",
       "CANCELADO": "Cancelado"
     },
     "CAMPOS": {
@@ -40,6 +43,10 @@
         "NOME": "Vence em até 90 dias",
         "EXPLICACAO": "Seguros que terminam nos próximos três meses."
       },
+      "EM_RENOVACAO": {
+        "NOME": "Em renovação",
+        "EXPLICACAO": "Seguros com a renovação em andamento: já estão no funil e ainda falta dizer se renovaram."
+      },
       "VENCIDO": {
         "NOME": "Vencido",
         "EXPLICACAO": "Seguros que já terminaram."
@@ -47,6 +54,18 @@
       "SEM_TELEFONE": {
         "NOME": "Sem telefone",
         "EXPLICACAO": "A pessoa está sem telefone, então não dá para mandar mensagem. Abra o seguro, clique no nome dela e escreva o telefone na ficha."
+      },
+      "NAO_RENOVARAM_30": {
+        "NOME": "Não renovaram (últimos 30 dias)",
+        "EXPLICACAO": "Seguros que terminaram nos últimos 30 dias e não renovaram."
+      },
+      "NAO_RENOVARAM_90": {
+        "NOME": "Não renovaram (últimos 90 dias)",
+        "EXPLICACAO": "Seguros que terminaram nos últimos 90 dias e não renovaram."
+      },
+      "NAO_RENOVARAM_365": {
+        "NOME": "Não renovaram (últimos 12 meses)",
+        "EXPLICACAO": "Seguros que terminaram nos últimos 12 meses e não renovaram."
       }
     },
     "HEROI": {
@@ -62,6 +81,9 @@
     "LISTA": {
       "BUSCA": "Buscar por nome ou número da apólice",
       "BUSCA_CURTA": "Buscar seguro",
+      "RESULTADOS": "Resultados",
+      "AJUSTAR": "Ajustar renovações",
+      "MAIS": "Mais opções da carteira",
       "ORDENAR": {
         "ROTULO": "Ordenar",
         "VENCE_PRIMEIRO": "Vence primeiro",
@@ -76,6 +98,8 @@
         "SEGURADORA": "Seguradora",
         "TODOS": "Todos",
         "TODAS": "Todas",
+        "CUIDA": "Quem cuida da renovação",
+        "QUALQUER_PESSOA": "Qualquer pessoa",
         "VER_RESULTADO": "Ver resultado",
         "LIMPAR": "Limpar",
         "SEM_RESULTADO": "Nenhum seguro com esses filtros.",
@@ -99,6 +123,9 @@
       "SELOS": {
         "ATIVO": "Seguro ativo",
         "VENCIDO": "Seguro vencido",
+        "EM_RENOVACAO": "Seguro em renovação",
+        "RENOVADO": "Seguro renovado",
+        "DESCONHECIDO": "Seguro",
         "CANCELADO": "Seguro cancelado"
       },
       "SELOS_FALHARAM": "Não consegui mostrar quem tem seguro agora."
@@ -131,7 +158,8 @@
         "VENCE_NA_DATA": "vence em {data}",
         "VENCEU_HA": "venceu há {count} dias",
         "VENCEU_ONTEM": "venceu ontem",
-        "CANCELADO_EM": "cancelado em {data}"
+        "CANCELADO_EM": "cancelado em {data}",
+        "RENOVOU_EM": "renovado em {data}"
       },
       "FICHA": {
         "VENCE_EM": "Vence em {count} dias · {data}",
@@ -140,7 +168,8 @@
         "VENCE_NA_DATA": "Vence em {data}",
         "VENCEU_HA": "Venceu há {count} dias",
         "VENCEU_ONTEM": "Venceu ontem",
-        "CANCELADO_EM": "Cancelado em {data}"
+        "CANCELADO_EM": "Cancelado em {data}",
+        "RENOVOU_EM": "Renovado em {data}"
       }
     },
     "GAVETA": {
@@ -160,6 +189,7 @@
         "VENCEU_HA": "Venceu há {count} dias.",
         "VENCEU_ONTEM": "Venceu ontem.",
         "CANCELADO_EM": "Cancelado em {data}.",
+        "RENOVOU_EM": "Renovado em {data}.",
         "SEM_PDF": "Ainda não tem o PDF guardado."
       },
       "AVISOS": {
@@ -168,7 +198,14 @@
         "PDF_GUARDADO": "PDF guardado.",
         "PDF_TROCADO": "PDF trocado.",
         "PDF_APAGADO": "PDF apagado.",
+        "RENOVOU": "Marcado como renovado.",
+        "NAO_RENOVOU": "Marcado como não renovado.",
+        "MOTIVO_GUARDADO": "Motivo guardado.",
+        "RENOVACAO_DESFEITA": "Resultado desfeito. O seguro voltou a estar em renovação.",
+        "APOLICE_NOVA": "Apólice nova guardada. Ela já aparece na lista de seguros.",
+        "HISTORICO_BAIXADO": "Histórico baixado.",
         "DESFEITO": "Desfeito.",
+        "NAO_PODE_FECHAR_A_RENOVACAO": "Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.",
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
         "DESFAZER": "Desfazer"
       },
@@ -195,6 +232,10 @@
         "CORRIGIR": "Corrigir",
         "MARCAR_CANCELADO": "Marcar como cancelado",
         "DESFAZER_CANCELAMENTO": "Desfazer o cancelamento",
+        "RENOVOU": "Renovou",
+        "NAO_RENOVOU": "Não renovou",
+        "GUARDAR_APOLICE_NOVA": "Guardar a apólice nova",
+        "DESFAZER_RENOVACAO": "Desfazer o resultado da renovação",
         "MAIS": "Mais opções deste seguro"
       }
     },
@@ -205,11 +246,13 @@
       "OUTRA": "Outra",
       "OUTRA_SEGURADORA": "Nome da seguradora",
       "NUMERO": "Número da apólice",
+      "NUMERO_DA_APOLICE_NOVA": "Número da apólice (pode preencher depois)",
       "COMECA": "Começa",
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga (R$)",
       "BEM": "O que está segurado",
       "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo em outra planilha.",
+      "APOIO_DA_APOLICE_NOVA": "Já veio com o que não muda de um ano para o outro. Confira as datas e o valor. Se a seguradora ainda não mandou o número da apólice, salve sem ele e preencha depois, em Corrigir.",
       "SALVAR": "Salvar",
       "VOLTAR": "Voltar",
       "SALVO": "Salvo.",
@@ -230,11 +273,22 @@
         "VOLTAR": "Continuar corrigindo"
       }
     },
+    "APOLICE_NOVA": {
+      "TITULO": "Apólice nova do seguro {tipo}",
+      "CONTINUAR": "Continuar preenchendo"
+    },
     "HISTORIA": {
       "TITULO": "Histórico",
       "ERRO": "Não consegui mostrar o histórico. Tente de novo.",
       "MUDOU_DE_PARA": "{item}: era {antes}, ficou {depois}",
       "NAO_INFORMADO": "não informado",
+      "EXPORTAR": "Exportar",
+      "ARQUIVO": {
+        "DATA": "Data",
+        "HORA": "Hora",
+        "O_QUE": "O que aconteceu",
+        "QUEM": "Quem fez"
+      },
       "TIPOS": {
         "CHEGOU_PLANILHA": "Chegou por planilha.",
         "CHEGOU_DE_NOVO": "Chegou de novo por planilha.",
@@ -242,8 +296,164 @@
         "CANCELADO": "Seguro marcado como cancelado.",
         "VOLTOU_A_ATIVO": "Cancelamento desfeito.",
         "PDF_ANEXADO": "PDF guardado.",
-        "PDF_TIRADO": "PDF apagado."
+        "PDF_TIRADO": "PDF apagado.",
+        "CARD_NASCEU": "A renovação começou.",
+        "RENOVACAO_CARD_NASCEU": "A renovação começou.",
+        "RENOVOU": "Renovou.",
+        "NAO_RENOVOU": "Não renovou.",
+        "NAO_RENOVOU_OUTRO": "Não renovou.",
+        "APOLICE_NOVA": "Apólice nova guardada.",
+        "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação."
+      },
+      "TIPOS_COM": {
+        "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
+        "NAO_RENOVOU": "Não renovou: {motivo}.",
+        "NAO_RENOVOU_OUTRO": "Não renovou. Motivo: {texto}",
+        "APOLICE_NOVA": "Apólice nova guardada. A anterior era a {anterior}."
+      },
+      "DESFEZ": {
+        "RENOVOU": "O \"Renovou\" foi desfeito. O seguro voltou a estar em renovação.",
+        "NAO_RENOVOU": "O \"Não renovou\" foi desfeito. O seguro voltou a estar em renovação."
+      },
+      "PASSO_SEM_NOME": "Algo mudou neste seguro."
+    },
+    "RENOVACAO": {
+      "TITULO": "Renovação",
+      "QUEM_CUIDA": "Quem cuida: {nome}",
+      "DIZER_O_MOTIVO": "Dizer por que não renovou",
+      "ABRIR_NO_CRM": "Abrir no CRM",
+      "SITUACAO": {
+        "EM_ETAPA": "Está no funil {funil}, na etapa {etapa}.",
+        "EM_ANDAMENTO": "A renovação está em andamento. Quem cuida dela marca se renovou ou não.",
+        "RENOVOU_FALTA": "Renovou. Falta guardar a apólice nova.",
+        "RENOVOU": "Renovou. A apólice nova já está guardada.",
+        "NAO_RENOVOU": "Não renovou. Ninguém disse o motivo.",
+        "NAO_RENOVOU_MOTIVO": "Não renovou: {motivo}.",
+        "NAO_RENOVOU_ESCRITO": "Não renovou. Motivo: {texto}",
+        "NAO_RENOVOU_SO": "Não renovou."
+      },
+      "MOTIVO": {
+        "TITULO": "Por que não renovou?",
+        "NOME": {
+          "ACHOU_CARO": "Achou caro",
+          "OUTRA_CORRETORA": "Foi para outra corretora",
+          "VENDEU_O_BEM": "Vendeu o bem",
+          "NAO_RESPONDEU": "Não respondeu",
+          "CANCELOU": "O seguro foi cancelado",
+          "OUTRO": "Outro motivo"
+        },
+        "NA_FRASE": {
+          "ACHOU_CARO": "achou caro",
+          "OUTRA_CORRETORA": "foi para outra corretora",
+          "VENDEU_O_BEM": "vendeu o bem",
+          "NAO_RESPONDEU": "não respondeu",
+          "CANCELOU": "o seguro foi cancelado",
+          "OUTRO": "outro motivo"
+        },
+        "QUAL": "Qual foi o motivo?",
+        "SALVAR": "Salvar o motivo",
+        "VOLTAR": "Voltar",
+        "FALTA": "Escreva o motivo ou toque em um dos motivos acima."
+      },
+      "CONVITE": {
+        "FRASE": "Escolha em que funil as renovações aparecem.",
+        "APOIO": "Enquanto ninguém escolhe, a renovação dos seguros perto de vencer não aparece em funil nenhum.",
+        "PAROU": {
+          "ARQUIVADO": "O funil das renovações foi arquivado.",
+          "APAGADO": "O funil ou a etapa das renovações não existe mais."
+        },
+        "APOIO_PAROU": "Enquanto ninguém escolhe outro funil, a renovação dos seguros perto de vencer não aparece em funil nenhum.",
+        "BOTAO_PAROU": "Escolher outro funil",
+        "BOTAO": "Escolher o funil"
       }
+    },
+    "AJUSTES": {
+      "TITULO": "Ajustar renovações",
+      "APOIO": "Mude o que quiser e salve.",
+      "APOIO_SEM_FUNIL": "Escolha em que funil as renovações ficam. Até lá, nenhuma renovação aparece.",
+      "VOLTAR": "Seguros",
+      "VOLTAR_ROTULO": "Voltar aos seguros",
+      "ERRO": "Não consegui abrir os ajustes. Tente de novo.",
+      "SALVAR": "Salvar ajustes",
+      "SALVO": "Ajustes salvos.",
+      "ERRO_SALVAR": "Não consegui salvar. Tente de novo.",
+      "NADA_MUDOU": "Você ainda não mudou nada. Mude o que quiser e salve.",
+      "HOJE": "Hoje as renovações ficam no funil {funil}, na etapa {etapa}, e aparecem {count} dia antes do fim. | Hoje as renovações ficam no funil {funil}, na etapa {etapa}, e aparecem {count} dias antes do fim.",
+      "HOJE_SEM_FUNIL": "Ninguém escolheu ainda em que funil as renovações ficam. Até lá, nenhuma renovação aparece.",
+      "SEM_PERMISSAO": "Você pode ver estes ajustes, mas não mudar. Peça a um administrador da conta.",
+      "SEM_ACESSO": "Você não tem acesso aos ajustes das renovações. Peça a um administrador da conta.",
+      "FALTA": {
+        "FUNIL": "Escolha o funil em que as renovações ficam.",
+        "ETAPA": "Escolha a etapa em que a renovação entra.",
+        "SEM_ETAPA": "Esse funil não tem etapa para a renovação entrar. Escolha outro funil ou crie uma etapa nele no CRM.",
+        "DIAS": "Escreva quantos dias antes, a partir de 1."
+      },
+      "ONDE": {
+        "TITULO": "Onde ficam as renovações?",
+        "SEM_FUNIL": "Sua conta ainda não tem funil. Crie um funil no CRM e volte aqui para escolher.",
+        "SEM_ETAPA": "Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.",
+        "ABRIR_CRM": "Abrir o CRM",
+        "FUNIL": "Funil",
+        "ESCOLHA_O_FUNIL": "Escolha o funil",
+        "ETAPA": "Em qual etapa a renovação entra?",
+        "ESCOLHA_A_ETAPA": "Escolha a etapa",
+        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher. Enquanto ninguém escolhe, nenhuma renovação aparece."
+      },
+      "DIAS": {
+        "TITULO": "Quantos dias antes do fim?",
+        "ROTULO": "Dias antes de o seguro terminar",
+        "MENOS": "Um dia a menos",
+        "MAIS": "Um dia a mais",
+        "COM_DIAS": "Com {count} dia, | Com {count} dias,",
+        "ENTRAM": "nenhum seguro entra em renovação agora. | {count} seguro já entra em renovação. | {count} seguros já entram em renovação."
+      },
+      "MENSAGENS": {
+        "TITULO": "Mensagens antes de vencer",
+        "MANDAR": "Mandar",
+        "NAO_MANDAR": "Não mandar",
+        "APOIO": "Esta escolha vale para todos os seguros da conta."
+      },
+      "PAROU": {
+        "ARQUIVADO": "O funil das renovações foi arquivado. Escolha outro para as renovações voltarem a aparecer.",
+        "APAGADO": "O funil ou a etapa das renovações não existe mais. Escolha outro funil para as renovações voltarem a aparecer."
+      },
+      "HOJE_PAROU": {
+        "ARQUIVADO": "O funil das renovações foi arquivado. Até alguém escolher outro, nenhuma renovação aparece.",
+        "APAGADO": "O funil ou a etapa das renovações não existe mais. Até alguém escolher outro funil, nenhuma renovação aparece."
+      }
+    },
+    "RESULTADOS": {
+      "TITULO": "Resultados das renovações",
+      "HEROI": {
+        "DIAS_30": "Nos últimos 30 dias, você renovou {renovou} de {count} seguro. | Nos últimos 30 dias, você renovou {renovou} de {count} seguros.",
+        "DIAS_90": "Nos últimos 90 dias, você renovou {renovou} de {count} seguro. | Nos últimos 90 dias, você renovou {renovou} de {count} seguros.",
+        "DIAS_365": "Nos últimos 12 meses, você renovou {renovou} de {count} seguro. | Nos últimos 12 meses, você renovou {renovou} de {count} seguros."
+      },
+      "VER_NAO_RENOVARAM": "Ver o que não renovou | Ver os {count} que não renovaram",
+      "VOLTAR": "Seguros",
+      "VOLTAR_ROTULO": "Voltar aos seguros",
+      "SEM_ACESSO": "Você não tem acesso aos resultados das renovações. Peça a um administrador da conta.",
+      "PERIODO": {
+        "ROTULO": "Período",
+        "DIAS_30": "Últimos 30 dias",
+        "DIAS_90": "Últimos 90 dias",
+        "DIAS_365": "Últimos 12 meses"
+      },
+      "MOTIVOS": "Por que não renovou",
+      "SEM_MOTIVO": "Sem motivo",
+      "RECORTE": {
+        "TITULO": "Quem renovou mais",
+        "ROTULO": "Ver por",
+        "TIPO": "Tipo de seguro",
+        "SEGURADORA": "Seguradora",
+        "CUIDA": "Quem cuida",
+        "NAO_INFORMADO": "Não informado"
+      },
+      "RENOVARAM": "{count} de {total} renovou | {count} de {total} renovaram",
+      "VENCEM_30": "Vence nos próximos 30 dias: {count} seguro. | Vencem nos próximos 30 dias: {count} seguros.",
+      "VER_QUAIS": "Ver quem vence",
+      "VAZIO": "Nenhum seguro venceu neste período.",
+      "ERRO": "Não consegui mostrar os resultados. Tente de novo."
     },
     "PDF": {
       "TITULO": "Guardar o PDF do seguro {tipo}",
@@ -284,7 +494,24 @@
       "TIPO": "Este arquivo não é um PDF. Escolha o PDF da apólice.",
       "ARQUIVO_GRANDE": "Este PDF é grande demais para guardar aqui. Peça à seguradora o PDF da apólice, não a cópia escaneada, e guarde esse.",
       "SEM_PDF": "Este seguro não tem mais PDF guardado. Atualizei a tela.",
-      "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo."
+      "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo.",
+      "FUNIL_DESCONHECIDO": "Esse funil não existe mais ou você não pode vê-lo. Atualizei a lista: escolha outro funil e salve de novo.",
+      "ETAPA_DE_OUTRO_FUNIL": "Essa etapa não é mais desse funil. Atualizei a lista: escolha a etapa e salve de novo.",
+      "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo.",
+      "MENSAGENS_INVALIDAS": "Não entendi a escolha das mensagens. Escolha \"Mandar\" ou \"Não mandar\" e salve de novo.",
+      "SEM_RENOVACAO": "Este seguro não está mais em renovação. Atualizei a tela.",
+      "JA_TEM_DESFECHO": "Esta renovação já tem resultado. Atualizei a tela: confira como ficou.",
+      "SEM_DESFECHO": "A renovação deste seguro mudou por outro caminho e não deu para fazer isso. Atualizei a tela: confira como ela ficou.",
+      "MOTIVO_DESCONHECIDO": "Não conheço esse motivo. Abra os motivos de novo e escolha um da lista.",
+      "FALTA_TEXTO": "Faltou escrever o motivo. Abra os motivos de novo e escreva qual foi, ou escolha um da lista.",
+      "TEXTO_LONGO": "O motivo ficou comprido demais. Abra os motivos de novo e escreva com menos palavras.",
+      "ANTERIOR_DESCONHECIDA": "Não achei mais o seguro que esta apólice renova. Atualize a página e tente de novo.",
+      "ANTERIOR_CANCELADA": "Este seguro foi marcado como cancelado. Atualizei a tela: para guardar a apólice nova, desfaça o cancelamento primeiro.",
+      "JA_TEM_APOLICE_NOVA": "A apólice nova deste seguro já está guardada. Atualizei a tela: procure por ela na lista de seguros.",
+      "FALTA_TIPO": "Falta o tipo de seguro. Escolha o tipo e salve de novo.",
+      "TERMINA_ANTES_DA_ANTERIOR": "A apólice nova precisa terminar depois do seguro que ela renova. Confira a data em que ela termina.",
+      "APOLICE_DE_OUTRA_PESSOA": "Essa seguradora e esse número de apólice já estão guardados no seguro de outra pessoa. Confira o número da apólice.",
+      "TERMO_AMBIGUO": "Já há mais de um seguro guardado com essa seguradora e esse número, e não deu para saber de qual deles esta apólice é. Confira o número e as duas datas."
     }
   }
 }

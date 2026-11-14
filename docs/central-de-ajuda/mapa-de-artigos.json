@@ -2500,6 +2500,51 @@
      ],
      "revisar": false,
      "nota": "Issue #2897 (E4, parte 7). Não há rota nova: o bloco mora no painel do contato da conversa, por isso o botão leva às conversas. A numeração pula o 09.22, que é da planilha com seguros. O bloco só aparece para quem pode ver contatos e quando a pessoa tem seguro; pelo painel é só leitura."
+    },
+    {
+     "id": "09.24",
+     "titulo": "Renovações: escolher o funil, dizer se renovou e guardar a apólice nova",
+     "para_que_serve": "Escolher em que funil e etapa as renovações aparecem e quantos dias antes do fim, ver os seguros em renovação, dizer se o cliente renovou ou não (com o motivo), guardar a apólice nova, desfazer e exportar o histórico do seguro.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_renovacoes"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_renovacoes",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ajustar as renovações: funil, dias antes do fim e mensagens (carteira de seguros)",
+      "porques: Dizer se um seguro renovou ou não e guardar a apólice nova (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2898 (E5 do épico #1240). A tela Ajustar renovações é seguros/renovacoes; dizer se renovou acontece na gaveta do seguro (?apolice=<id>), por isso o botão leva aos ajustes. Mudar os ajustes é do administrador ou da função com contact_manage. A numeração pula de 09.21 para 09.24 de propósito: os números do meio estão em PRs abertos (#2980 e #2981)."
+    },
+    {
+     "id": "09.25",
+     "titulo": "Ver os resultados das renovações",
+     "para_que_serve": "Ler quantos seguros foram renovados entre os que venceram no período, os motivos de quem não renovou e quem renovou mais por tipo, seguradora e quem cuida, e abrir na lista os que não renovaram.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relacionamentos_resultados"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_resultados",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Ver os resultados das renovações (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2898 (E5 do épico #1240). A tela é seguros/resultados e só mostra números: não muda nenhum seguro. O botão do topo abre a aba Seguros com ?grupo=nao_renovaram_<dias>."
     }
    ]
   },
