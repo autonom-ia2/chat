@@ -69,9 +69,13 @@ module Crm
       # cada nova tentativa usa o `timeout` inteiro de novo, mais a espera, e passaria do teto de 15 s.
       # `cache_key:` (#1367) é para quem mede com um rótulo diferente da chave de cache (o Construtor, com uma
       # feature por fase e uma chave só por conta). Ausente, a chave é exatamente a de antes.
+      # `log_so_tipo_e_status: true` (#2899, decisão D5) é para quem manda dado de cliente que a mensagem de erro pode
+      # ecoar (o leitor de apólice em PDF): o registro de falha leva o tipo, o código e o status do erro, nunca a
+      # mensagem. Desligado, o padrão, o registro é exatamente o de antes.
       def initialize(credential:, feature: nil, account: nil, pipeline: nil, cache_key_scope: :account, max_retries: MAX_RETRIES,
-                     cache_key: nil)
+                     cache_key: nil, log_so_tipo_e_status: false)
         @credential = credential
+        @log_so_tipo_e_status = log_so_tipo_e_status
         @max_retries = max_retries
         @feature = feature
         @account = account
@@ -481,7 +485,7 @@ module Crm
           "[crm][ai][openai_error] operation=#{operation} model=#{model} status=#{status} " \
           "error_code=#{error_code} error_type=#{error_type} request_id=#{request_id} " \
           "response_id=#{response_id} credential_source=#{@credential[:source]} api_host=#{api_host} " \
-          "latency_ms=#{latency} message=#{error_message.to_s.truncate(300)}"
+          "latency_ms=#{latency} message=#{@log_so_tipo_e_status ? nil : error_message.to_s.truncate(300)}"
         )
       end
 

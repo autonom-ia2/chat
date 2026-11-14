@@ -10,7 +10,8 @@
 #   passa;
 # - número da apólice: o bloco inteiro, como está escrito, com a pontuação de dentro. "001234" não está em
 #   "EX-001234", e "1234" não está em "12/34". O número que a quebra de linha partiu em dois ("EX-2026." no fim de uma
-#   linha e "001234" no começo da seguinte) confere emendado, como o e-mail;
+#   linha e "001234" no começo da seguinte) confere emendado, mas só quando a quebra caiu num ponto, traço ou barra:
+#   "12345" numa linha e "6789" na seguinte não são o número "123456789";
 # - CPF e CNPJ: os 11 ou 14 dígitos são um bloco inteiro de número;
 # - data: escrita com separador, como um bloco inteiro: 12/11/2026, 12-11-2026, 12.11.2026, 2026-11-12 ou 12/11/26.
 #   O ano com dois dígitos só confere para este século: "12/11/27" é 2027, nunca 1927 nem 2127. Dígitos colados nunca
@@ -86,9 +87,9 @@ class Carteira::Leitor::Ancora
   private
 
   # Os blocos do número, seguidos e na ordem; ou, quando o número é um bloco só, esse bloco partido por uma quebra de
-  # linha.
+  # linha que caiu num separador (Carteira::Leitor::Tokens#blocos_emendados_no_separador).
   def codigo_escrito?(pagina, blocos)
-    TOKENS.sequencia?(pagina.blocos, blocos) || (blocos.one? && pagina.blocos_emendados.include?(blocos.first))
+    TOKENS.sequencia?(pagina.blocos, blocos) || (blocos.one? && pagina.blocos_emendados_no_separador.include?(blocos.first))
   end
 
   # As formas em que a data pode estar escrita na página.

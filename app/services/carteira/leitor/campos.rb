@@ -12,7 +12,9 @@
 #
 # A IA é a da conta, pelo caminho da casa: a credencial do Kanban CRM (Autonomia::Prospecting::AiCredential, sem a
 # chave da instalação) e o Crm::Ai::ResponsesClient, que registra o uso na Gestão IA (Crm::Ai::UsageRecorder) porque
-# nasce com a conta e a feature. Conta sem a credencial: SemIa. Roda em job: o prazo é longo e há nova tentativa.
+# nasce com a conta e a feature. Ele nasce com `log_so_tipo_e_status` (decisão D5): o registro de falha dele leva só o
+# tipo e o status do erro, nunca a mensagem, que pode ecoar o texto da apólice. Conta sem a credencial: SemIa. Roda em
+# job: o prazo é longo e há nova tentativa.
 # `cliente:` troca o cliente (a bateria com gabarito e os specs); a trava da conta vale do mesmo jeito.
 #
 # Quebra da chamada vira Falhou (o leitor responde "não deu para ler"), só com a classe do erro: a mensagem pode
@@ -142,7 +144,8 @@ class Carteira::Leitor::Campos
     credencial = Autonomia::Prospecting::AiCredential.new(account: @account).resolve
     raise SemIa if credencial.blank?
 
-    Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account, max_retries: NOVAS_TENTATIVAS)
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account, max_retries: NOVAS_TENTATIVAS,
+                                 log_so_tipo_e_status: true)
   end
 
   def perguntar(paginas)

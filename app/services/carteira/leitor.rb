@@ -54,8 +54,10 @@ class Carteira::Leitor
 
     paginas = Paginas.new(caminho, documento: documento, nome: nome, ocr: @ocr)
     ler_as_paginas(paginas)
-  rescue Paginas::Ilegivel
-    nao_deu(:pdf_ilegivel, paginas)
+  rescue Paginas::Ilegivel => e
+    # O motivo da página (nao_existe, grande_demais, nao_e_pdf ou a classe do erro do leitor de PDF) segue para o
+    # registro: é um código nosso ou um nome de classe, nunca texto do arquivo.
+    nao_deu(:pdf_ilegivel, paginas, detalhe: e.message)
   rescue Campos::Desligada
     Resultado.recusado(Resultado::DESLIGADA)
   rescue Campos::SemIa
@@ -79,8 +81,10 @@ class Carteira::Leitor
                    paginas_enviadas: enviadas)
   end
 
-  def nao_deu(motivo, paginas, enviadas: [])
-    Rails.logger.warn("[carteira][leitor] account_id=#{@account.id} nao_deu_para_ler motivo=#{motivo} paginas=#{paginas&.total.inspect}")
+  def nao_deu(motivo, paginas, enviadas: [], detalhe: nil)
+    com_detalhe = detalhe ? " detalhe=#{detalhe}" : ''
+    Rails.logger.warn("[carteira][leitor] account_id=#{@account.id} nao_deu_para_ler motivo=#{motivo}#{com_detalhe} " \
+                      "paginas=#{paginas&.total.inspect}")
     Resultado.recusado(Resultado::NAO_DEU, motivo: motivo, paginas_total: paginas&.total, paginas_enviadas: enviadas.map(&:numero))
   end
 end

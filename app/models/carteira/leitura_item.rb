@@ -2,7 +2,11 @@
 # leitor achou, em forma canônica (centavos, data ISO), e `duvidas`, os nomes dos campos sem certeza, que o Conferir
 # pede para a pessoa preencher. `contact` e `apolice` só são preenchidos ao trazer.
 #
-# Estados: lendo; lido; recusado (o arquivo não é uma apólice); falhou (não deu para ler).
+# Estados: lendo; lido; recusado (o arquivo não é uma apólice); falhou (não deu para ler); fora (a pessoa o deixou de
+# fora no Conferir); trazido (a apólice foi gravada, `apolice` aponta para ela); nao_entrou (o gravador recusou a
+# apólice ao trazer: de outra pessoa, termo que não dá para escolher).
+#
+# Quem lê `campos` e `duvidas` é só Carteira::ItemLido: ninguém itera `campos` cru (decisão D1 da E6.2).
 #
 # `campos` e o PDF são dado de cliente. Por isso o item não fica para sempre: `vencidos` são os que já passaram do
 # prazo de guarda da leitura (Carteira::Leitura::DIAS_DE_GUARDA_DOS_ITENS), e quem os apaga é o app, com `destroy`,
@@ -14,7 +18,7 @@
 class Carteira::LeituraItem < ApplicationRecord
   self.table_name = 'carteira_leitura_itens'
 
-  ESTADOS = %w[lendo lido recusado falhou].freeze
+  ESTADOS = %w[lendo lido recusado falhou fora trazido nao_entrou].freeze
 
   belongs_to :account
   belongs_to :leitura, class_name: 'Carteira::Leitura', inverse_of: :itens
