@@ -108,6 +108,19 @@ describe('VitrineExperimente · Premium', () => {
     );
   });
 
+  it('with no record in the database, says so without asking to check the value (#3015)', async () => {
+    experimentar.mockResolvedValue({ situacao: 'nao_encontrado' });
+    const wrapper = montar('historico_placa', {
+      gratis: 20,
+      restantes: 12,
+      precos: ['0.09'],
+    });
+    await rodar(wrapper);
+    expect(wrapper.find('[data-experimente-aviso]').text()).toBe(
+      'A consulta foi feita, e a base não tem esse dado para esse valor.'
+    );
+  });
+
   it('when the lookup did not start in time, says nothing was charged and to try again', async () => {
     experimentar.mockResolvedValue({ situacao: 'nao_comecou' });
     const wrapper = montar('historico_placa', {

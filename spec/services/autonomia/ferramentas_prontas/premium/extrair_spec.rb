@@ -139,6 +139,40 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
       .to eq('empresas' => 10, 'ativas' => 8)
   end
 
+  # #3015 — o formato de uma resposta real (13/11, empresa grande): 11 telefones, 1 ativo, e o principal inativo. Números
+  # fictícios; as marcas são as da resposta.
+  it 'contato da empresa: o telefone inativo sai com o aviso, depois dos ativos, e o principal antes dos outros' do
+    fones = { 'Phones' => [{ 'AreaCode' => '21', 'Number' => '30000001', 'IsActive' => false, 'IsMainForEntity' => false },
+                           { 'AreaCode' => '21', 'Number' => '30000002', 'IsActive' => false, 'IsMainForEntity' => true },
+                           { 'AreaCode' => '21', 'Number' => '30000003', 'IsActive' => true, 'IsInDoNotCallList' => true },
+                           { 'AreaCode' => '21', 'Number' => '30000004', 'IsActive' => true, 'IsMainForEntity' => false },
+                           { 'AreaCode' => '21', 'Number' => '30000005', 'IsActive' => false, 'IsMainForEntity' => false }] }
+
+    expect(ler('contato_empresa', 'telefone', fones).dados['telefones']).to eq(
+      [{ 'telefone' => '21 30000004', 'principal' => false, 'pode_estar_desatualizado' => false },
+       { 'telefone' => '21 30000002', 'principal' => true, 'pode_estar_desatualizado' => true },
+       { 'telefone' => '21 30000001', 'principal' => false, 'pode_estar_desatualizado' => true }]
+    )
+  end
+
+  it 'contato da empresa: com todos os telefones inativos, a consulta acha (não vira "não havia registro")' do
+    fones = { 'Phones' => [{ 'AreaCode' => '11', 'Number' => '30000000', 'IsActive' => false, 'IsMainForEntity' => true }] }
+
+    resultado = ler('contato_empresa', 'telefone', fones)
+
+    expect(resultado.situacao).to eq('encontrado')
+    expect(resultado.dados['telefones']).to eq([{ 'telefone' => '11 30000000', 'principal' => true, 'pode_estar_desatualizado' => true }])
+  end
+
+  it 'contato da empresa: sem telefone, o agente não sugere que o CNPJ está errado' do
+    fonte = Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa::FONTE
+    consulta = consultas_do_card('contato_empresa').find { |item| item.nome == 'telefone' }
+
+    orientacao = JSON.parse(Autonomia::FerramentasProntas::Resposta.nao_encontrado(fonte, consulta))['orientacao']
+
+    expect(orientacao).to eq(Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa::SEM_TELEFONE)
+  end
+
   it 'contato de MEI ou EI: o telefone sai sempre, mesmo celular ou pessoal (decisão do Rodrigo, 11/11)' do
     fones = { 'Phones' => [{ 'AreaCode' => '11', 'Number' => '990000000', 'Type' => 'MOBILE' },
                            { 'AreaCode' => '21', 'Number' => '980000000', 'Type' => 'PERSONAL' }] }

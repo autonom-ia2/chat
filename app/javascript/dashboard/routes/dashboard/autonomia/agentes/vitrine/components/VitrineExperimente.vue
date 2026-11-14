@@ -127,10 +127,13 @@ watch(semLinhas, vazio => {
     Object.keys(resposta.value?.dados || {})
   );
 });
+// Na paga, "não achou" é a base sem o dado, não o valor errado (o documento recusado é `documento_invalido`): a tela não
+// manda conferir o que o cliente digitou (#3015).
 const aviso = computed(() => {
   if (!resposta.value || encontrado.value) return '';
   const chave = SITUACOES[resposta.value.situacao] || 'NAO_CONSEGUI';
-  return t(`${NS}.RESULTADO.${chave}`);
+  const semRegistroPago = Boolean(props.premium) && chave === 'NAO_ENCONTRADO';
+  return t(`${NS}.RESULTADO.${semRegistroPago ? 'SEM_REGISTRO_PAGA' : chave}`);
 });
 
 const rodar = async () => {
