@@ -22,6 +22,9 @@ import {
 // responder na hora, a tela mostra uma cópia (`local`) que muda no toque. Enquanto uma mudança está indo (`gravando`),
 // o toque seguinte fica guardado e sai quando ela termina, já com tudo o que a pessoa tocou. Se o servidor recusar, a
 // cópia volta a ser a lista dele.
+// Não há botão de salvar: ao lado do título do contador a tela diz "Salvando…" enquanto a mudança vai e "Salvo"
+// quando o servidor guardou (o aviso de "gravou", o segundo valor do `mudar`). O contador fica preso no topo da gaveta:
+// a pessoa rola os blocos sem perder de vista quantas perguntas o cliente dela vai responder.
 const props = defineProps({
   itens: { type: Array, required: true },
   nome: { type: String, required: true },
@@ -39,6 +42,15 @@ const idBase = useId();
 
 const local = ref(props.itens);
 const pendente = ref(false);
+const salvo = ref(false);
+// Manda a lista e, junto, o aviso de "gravou": só ele acende o "Salvo". `depois`: o aviso de quem pediu (ListaDoRamo).
+const enviar = (lista, depois) => {
+  salvo.value = false;
+  emit('mudar', lista, () => {
+    salvo.value = true;
+    depois?.();
+  });
+};
 watch(
   () => props.itens,
   itens => {
@@ -51,7 +63,7 @@ watch(
     if (gravando) return;
     if (pendente.value) {
       pendente.value = false;
-      emit('mudar', local.value);
+      enviar(local.value);
       return;
     }
     local.value = props.itens;
@@ -60,8 +72,13 @@ watch(
 const mudar = nova => {
   local.value = nova;
   if (props.gravando) pendente.value = true;
-  else emit('mudar', nova);
+  else enviar(nova);
 };
+// '' enquanto a pessoa ainda não mudou nada (ou o servidor recusou a última mudança).
+const estado = computed(() => {
+  if (props.gravando || pendente.value) return 'SALVANDO';
+  return salvo.value ? 'SALVO' : '';
+});
 
 const blocos = computed(() => blocosDe(local.value));
 const conta = computed(() => contar(local.value));
@@ -88,31 +105,55 @@ const mostraCondicao = (bloco, indice) => {
 };
 
 const mudarProprias = (novas, aoGravar) =>
-  emit('mudar', [...doModelo.value, ...novas], aoGravar);
+  enviar([...doModelo.value, ...novas], aoGravar);
 </script>
 
 <template>
   <div data-perguntas-em-blocos class="flex flex-col gap-4">
-    <div
-      data-contador
-      aria-live="polite"
-      class="flex items-center gap-4 p-4 rounded-2xl bg-n-blue-2 ring-1 ring-inset ring-n-blue-4"
-    >
-      <span
-        data-ligadas
-        class="text-4xl font-semibold leading-none tabular-nums text-n-blue-11"
+    <div class="sticky z-10 pt-4 pb-2 -mt-4 -mb-2 -top-4 bg-n-solid-1">
+      <div
+        data-contador
+        aria-live="polite"
+        class="flex items-center gap-4 p-4 rounded-2xl bg-n-blue-2 ring-1 ring-inset ring-n-blue-4"
       >
-        {{ conta.ligadas }}
-      </span>
-      <div class="flex flex-col min-w-0">
-        <span class="text-base font-semibold text-n-slate-12">
-          {{ t(`${NS}.LIGADAS`) }}
+        <span
+          data-ligadas
+          class="text-4xl font-semibold leading-none text-center min-w-12 tabular-nums text-n-blue-11"
+        >
+          {{ conta.ligadas }}
         </span>
-        <span class="text-sm leading-relaxed text-n-slate-11">
-          {{
-            t(`${NS}.RESUMO`, { todos: conta.todos, conforme: conta.conforme })
-          }}
-        </span>
+        <div class="flex flex-col flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-x-3">
+            <span class="text-base font-semibold text-n-slate-12">
+              {{ t(`${NS}.LIGADAS`) }}
+            </span>
+            <span
+              v-if="estado"
+              data-estado
+              class="flex items-center gap-1 text-sm font-medium"
+              :class="estado === 'SALVO' ? 'text-n-teal-11' : 'text-n-slate-11'"
+            >
+              <span
+                class="size-4 shrink-0"
+                :class="
+                  estado === 'SALVO'
+                    ? 'i-lucide-check'
+                    : 'i-lucide-loader-circle animate-spin motion-reduce:animate-none'
+                "
+                aria-hidden="true"
+              />
+              {{ t(`${NS}.${estado}`) }}
+            </span>
+          </div>
+          <span class="text-sm leading-relaxed text-n-slate-11">
+            {{
+              t(`${NS}.RESUMO`, {
+                todos: conta.todos,
+                conforme: conta.conforme,
+              })
+            }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -128,7 +169,7 @@ const mudarProprias = (novas, aoGravar) =>
           data-abrir-bloco
           :aria-expanded="aberto(bloco.nome)"
           :aria-controls="idDoBloco(numero)"
-          class="flex items-center w-full gap-3 px-4 py-3 bg-transparent border-0 cursor-pointer min-h-14 text-start focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-blue-9"
+          class="flex items-center w-full gap-3 px-4 py-3 transition-colors bg-transparent border-0 cursor-pointer min-h-14 text-start hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-blue-9"
           @click="abrirOuFechar(bloco.nome)"
         >
           <span class="flex flex-col flex-1 min-w-0">
@@ -156,82 +197,101 @@ const mudarProprias = (novas, aoGravar) =>
         </button>
       </h3>
 
-      <div
-        v-if="aberto(bloco.nome)"
-        :id="idDoBloco(numero)"
-        class="flex flex-col border-t border-n-weak"
+      <Transition
+        enter-active-class="transition-opacity duration-200 motion-reduce:transition-none"
+        enter-from-class="opacity-0"
       >
-        <div v-if="podeMudar" class="flex flex-wrap gap-1 px-1 pt-1">
-          <AgenteBotao
-            v-if="ligadasDo(bloco) < bloco.perguntas.length"
-            data-ligar-todas
-            variante="fantasma"
-            :aria-label="t(`${NS}.LIGAR_TODAS_SR`, { bloco: bloco.nome })"
-            @click="mudar(mudarBloco(local, bloco.nome, true))"
-          >
-            {{ t(`${NS}.LIGAR_TODAS`) }}
-          </AgenteBotao>
-          <AgenteBotao
-            v-if="ligadasDo(bloco) > 0"
-            data-desligar-todas
-            variante="fantasma"
-            :aria-label="t(`${NS}.DESLIGAR_TODAS_SR`, { bloco: bloco.nome })"
-            @click="mudar(mudarBloco(local, bloco.nome, false))"
-          >
-            {{ t(`${NS}.DESLIGAR_TODAS`) }}
-          </AgenteBotao>
-        </div>
-        <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
-          <li v-for="(pergunta, indice) in bloco.perguntas" :key="pergunta.id">
-            <button
-              type="button"
-              role="switch"
-              :data-pergunta="pergunta.id"
-              :aria-checked="ligada(pergunta)"
-              :disabled="!podeMudar"
-              class="flex items-center w-full gap-3 py-3 bg-transparent border-0 pe-4 min-h-11 text-start focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-blue-9"
-              :class="[
-                pergunta.segue ? 'ps-9' : 'ps-4',
-                podeMudar ? 'cursor-pointer' : 'cursor-default',
-              ]"
-              @click="mudar(alternarPergunta(local, pergunta.id))"
+        <div
+          v-if="aberto(bloco.nome)"
+          :id="idDoBloco(numero)"
+          class="flex flex-col border-t border-n-weak"
+        >
+          <div v-if="podeMudar" class="flex flex-wrap gap-1 px-1 pt-1">
+            <AgenteBotao
+              v-if="ligadasDo(bloco) < bloco.perguntas.length"
+              data-ligar-todas
+              variante="fantasma"
+              :aria-label="t(`${NS}.LIGAR_TODAS_SR`, { bloco: bloco.nome })"
+              @click="mudar(mudarBloco(local, bloco.nome, true))"
             >
-              <span class="flex flex-col flex-1 min-w-0 gap-0.5">
-                <span
-                  data-texto-da-pergunta
-                  class="text-base leading-snug"
-                  :class="
-                    ligada(pergunta) ? 'text-n-slate-12' : 'text-n-slate-11'
-                  "
-                >
-                  {{ pergunta.texto }}
-                </span>
-                <span
-                  v-if="mostraCondicao(bloco, indice)"
-                  data-condicao
-                  class="text-sm text-n-slate-11"
-                >
-                  {{ t(`${NS}.SO_SE`, { condicao: pergunta.se }) }}
-                </span>
-              </span>
-              <span
-                aria-hidden="true"
-                class="relative h-6 transition-colors rounded-full w-11 shrink-0"
-                :class="ligada(pergunta) ? 'bg-n-blue-9' : 'bg-n-slate-8'"
+              {{ t(`${NS}.LIGAR_TODAS`) }}
+            </AgenteBotao>
+            <AgenteBotao
+              v-if="ligadasDo(bloco) > 0"
+              data-desligar-todas
+              variante="fantasma"
+              :aria-label="t(`${NS}.DESLIGAR_TODAS_SR`, { bloco: bloco.nome })"
+              @click="mudar(mudarBloco(local, bloco.nome, false))"
+            >
+              {{ t(`${NS}.DESLIGAR_TODAS`) }}
+            </AgenteBotao>
+          </div>
+          <ul class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak">
+            <li
+              v-for="(pergunta, indice) in bloco.perguntas"
+              :key="pergunta.id"
+            >
+              <button
+                type="button"
+                role="switch"
+                :data-pergunta="pergunta.id"
+                :aria-checked="ligada(pergunta)"
+                :disabled="!podeMudar"
+                class="flex items-center w-full gap-3 py-3 transition-colors bg-transparent border-0 pe-4 min-h-12 text-start focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-blue-9"
+                :class="[
+                  pergunta.segue ? 'ps-6' : 'ps-4',
+                  podeMudar
+                    ? 'cursor-pointer hover:bg-n-alpha-1 active:bg-n-alpha-2'
+                    : 'cursor-default',
+                ]"
+                @click="mudar(alternarPergunta(local, pergunta.id))"
               >
                 <span
-                  class="absolute bg-white rounded-full shadow top-0.5 size-5 transition-transform ltr:left-0.5 rtl:right-0.5"
-                  :class="
-                    ligada(pergunta)
-                      ? 'ltr:translate-x-5 rtl:-translate-x-5'
-                      : ''
-                  "
+                  v-if="pergunta.segue"
+                  data-segue
+                  class="self-start mt-1 size-4 shrink-0 text-n-slate-9 i-lucide-corner-down-right rtl:-scale-x-100"
+                  aria-hidden="true"
                 />
-              </span>
-            </button>
-          </li>
-        </ul>
-      </div>
+                <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+                  <span
+                    data-texto-da-pergunta
+                    class="text-base leading-snug"
+                    :class="
+                      ligada(pergunta) ? 'text-n-slate-12' : 'text-n-slate-11'
+                    "
+                  >
+                    {{ pergunta.texto }}
+                  </span>
+                  <span
+                    v-if="mostraCondicao(bloco, indice)"
+                    data-condicao
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ t(`${NS}.SO_SE`, { condicao: pergunta.se }) }}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  class="relative h-6 transition-colors duration-200 ease-in-out rounded-full w-11 shrink-0"
+                  :class="[
+                    ligada(pergunta) ? 'bg-n-brand' : 'bg-n-slate-7',
+                    podeMudar ? '' : 'opacity-60',
+                  ]"
+                >
+                  <span
+                    class="absolute bg-white rounded-full shadow-md top-0.5 size-5 transition-transform duration-[350ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none ltr:left-0.5 rtl:right-0.5"
+                    :class="
+                      ligada(pergunta)
+                        ? 'ltr:translate-x-5 rtl:-translate-x-5'
+                        : ''
+                    "
+                  />
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </Transition>
     </section>
 
     <section

@@ -760,6 +760,8 @@
             "DESLIGAR_TODAS": "Turn all off",
             "DESLIGAR_TODAS_SR": "Turn off all the questions in {bloco}",
             "SO_SE": "Only asks if {condicao}.",
+            "SALVANDO": "Saving…",
+            "SALVO": "Saved",
             "SUAS": "Your questions",
             "SUAS_NOTA": "Is a question missing? Write your own. {nome} asks it after the others."
           }

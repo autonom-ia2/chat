@@ -81,6 +81,37 @@ describe('PerguntasEmBlocos', () => {
     );
   });
 
+  it('marks the question that depends on the one above it', () => {
+    const wrapper = montar();
+
+    expect(pergunta(wrapper, 'p2').find('[data-segue]').exists()).toBe(true);
+    expect(pergunta(wrapper, 'p1').find('[data-segue]').exists()).toBe(false);
+  });
+
+  it('says it is saving while the change goes, and saved only when the server kept it', async () => {
+    const wrapper = montar();
+    expect(wrapper.find('[data-estado]').exists()).toBe(false);
+
+    await pergunta(wrapper, 'p1').trigger('click');
+    await wrapper.setProps({ gravando: true });
+    expect(wrapper.get('[data-estado]').text()).toBe('Salvando…');
+
+    const [lista, aoGravar] = wrapper.emitted('mudar')[0];
+    aoGravar();
+    await wrapper.setProps({ itens: lista, gravando: false });
+    expect(wrapper.get('[data-estado]').text()).toBe('Salvo');
+  });
+
+  it('does not say saved when the server refuses the change', async () => {
+    const wrapper = montar();
+
+    await pergunta(wrapper, 'p1').trigger('click');
+    await wrapper.setProps({ gravando: true });
+    await wrapper.setProps({ gravando: false });
+
+    expect(wrapper.find('[data-estado]').exists()).toBe(false);
+  });
+
   it('a tap changes the screen at once and sends the whole new list', async () => {
     const wrapper = montar();
 

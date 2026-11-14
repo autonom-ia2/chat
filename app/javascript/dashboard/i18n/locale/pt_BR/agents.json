@@ -760,6 +760,8 @@
             "DESLIGAR_TODAS": "Desligar todas",
             "DESLIGAR_TODAS_SR": "Desligar todas as perguntas de {bloco}",
             "SO_SE": "Só pergunta se {condicao}.",
+            "SALVANDO": "Salvando…",
+            "SALVO": "Salvo",
             "SUAS": "Suas perguntas",
             "SUAS_NOTA": "Falta alguma pergunta? Escreva a sua. {nome} pergunta depois das outras."
           }

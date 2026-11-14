@@ -14,14 +14,14 @@ blocos:
       - texto: "Qual o número da apólice atual?"
         se: "já tiver seguro"
         segue: true
-      - texto: "Em que dia ele vence?"
+      - texto: "Em que dia o seguro atual vence?"
         se: "já tiver seguro"
         segue: true
       - texto: "Há uma classe de bônus, a indicação do histórico do seguro, na apólice?"
         se: "já tiver seguro"
         segue: true
       - texto: "A partir de que dia vocês querem o seguro?"
-      - texto: "Até quando querem que ele valha?"
+      - texto: "Até que dia querem que o seguro valha?"
   - nome: "Quem é e contato"
     perguntas:
       - texto: "Qual o CNPJ do próprio condomínio?"
@@ -35,17 +35,17 @@ blocos:
       - texto: "Você é o síndico ou cuida disso pela administradora?"
       - texto: "Qual o CPF de quem vai tratar do seguro, para o cadastro de contato?"
       - texto: "Quer deixar outro número ou e-mail para contato?"
-      - texto: "Qual é?"
+      - texto: "Qual é o outro número?"
         se: "quiser contato em outro número"
         segue: true
       - texto: "Qual e-mail a equipe pode usar?"
         se: "quiser contato por e-mail"
         segue: true
       - texto: "O condomínio tem telefone ou e-mail próprio, diferente dos que você já passou?"
-      - texto: "Qual é?"
+      - texto: "Qual o telefone do condomínio?"
         se: "o condomínio tiver telefone próprio"
         segue: true
-      - texto: "Qual é?"
+      - texto: "Qual o e-mail do condomínio?"
         se: "o condomínio tiver e-mail próprio"
         segue: true
   - nome: "Endereço"
@@ -63,8 +63,8 @@ blocos:
     perguntas:
       - texto: "Em que ano o condomínio foi fundado?"
         ligada: true
-      - texto: "De quando ela é?"
-        se: "a construção for de outro ano que não o da fundação"
+      - texto: "Em que ano o prédio foi construído?"
+        se: "a construção for de outro ano"
         segue: true
       - texto: "É de prédios ou de casas?"
         ligada: true
@@ -75,27 +75,27 @@ blocos:
       - texto: "Quantas unidades há em cada andar?"
         se: "for de prédios"
         segue: true
-      - texto: "Qual a altura dele, se souber?"
-        se: "houver prédio"
+      - texto: "Qual a altura do prédio, se souber?"
+        se: "for de prédios"
         segue: true
       - texto: "O condomínio é residencial, de escritórios, consultórios, lojas, flat, shopping ou tem mais de um uso?"
         ligada: true
       - texto: "O local tem indústria, logística, galpões, armazéns ou garagem comercial?"
-        se: "o uso ainda não estiver detalhado"
+        se: "o uso não tiver ficado claro"
         segue: true
       - texto: "O condomínio já está formalmente constituído, por exemplo com a ata de constituição registrada?"
-        se: "a constituição formal ainda não estiver informada ou documentada"
+        se: "isso ainda não tiver sido dito"
       - texto: "A construção é de tijolos ou blocos, de madeira ou mistura dos dois?"
       - texto: "Quantos blocos são ao todo?"
-      - texto: "Quantos deles vocês querem incluir na cotação?"
+      - texto: "Quantos blocos vocês querem incluir na cotação?"
         se: "houver mais de um bloco"
         segue: true
       - texto: "Quantas unidades são ao todo?"
       - texto: "Quantos elevadores existem no condomínio?"
       - texto: "Quantos elevadores há em cada bloco?"
-        se: "houver elevadores e faltar o detalhe por bloco"
+        se: "houver elevadores e mais de um bloco"
         segue: true
-      - texto: "Qual a marca deles?"
+      - texto: "Qual a marca dos elevadores?"
         se: "houver elevadores"
         segue: true
       - texto: "Qual a área construída em metros quadrados?"
@@ -112,13 +112,13 @@ blocos:
   - nome: "Funcionários"
     perguntas:
       - texto: "Quantos funcionários o condomínio tem?"
-      - texto: "Eles são do condomínio, terceirizados ou dos dois?"
+      - texto: "Os funcionários são do condomínio, terceirizados ou dos dois?"
         se: "houver funcionários"
         segue: true
       - texto: "Quantos empregados são registrados pelo condomínio?"
-        se: "houver funcionários e o número de registrados ainda não estiver informado"
+        se: "houver funcionários"
         segue: true
-      - texto: "Eles têm treinamento para incêndio?"
+      - texto: "Os funcionários têm treinamento para incêndio?"
         se: "houver funcionários"
         segue: true
   - nome: "Segurança e incêndio"
@@ -129,16 +129,16 @@ blocos:
       - texto: "Tem chuveiros automáticos de incêndio, os sprinklers?"
       - texto: "Tem detectores de fumaça?"
       - texto: "Tem alarme de incêndio?"
-      - texto: "Algum deles é monitorado por uma empresa?"
-        se: "houver alarme contra roubo ou de incêndio"
+      - texto: "Algum alarme é monitorado por uma empresa?"
+        se: "houver alarme"
         segue: true
-      - texto: "Ele se comunica pela rede de celular, chamada GPRS, ou por linha telefônica?"
+      - texto: "O alarme se comunica pela rede de celular, chamada GPRS, ou por linha telefônica?"
         se: "o alarme for monitorado"
         segue: true
       - texto: "Tem brigada de incêndio, uma equipe preparada para agir em caso de fogo?"
       - texto: "Tem para-raios?"
       - texto: "A vigilância é armada, desarmada ou não há vigilância?"
-      - texto: "Ela funciona 24 horas?"
+      - texto: "A vigilância funciona 24 horas?"
         se: "houver vigilância"
         segue: true
       - texto: "Tem botão de pânico?"
@@ -248,7 +248,7 @@ blocos:
       - texto: "Quer avaliar despesas com retirada de entulho depois de um dano, como um incêndio?"
         se: "a pessoa quiser escolher"
         segue: true
-      - texto: "Quer avaliar proteção caso elas estraguem?"
+      - texto: "Quer avaliar proteção para mercadorias refrigeradas, caso estraguem?"
         se: "a pessoa quiser escolher e houver mercadorias refrigeradas"
         segue: true
       - texto: "Quer avaliar a opção de indenização sem desconto pelo envelhecimento dos bens?"
@@ -279,9 +279,9 @@ blocos:
     perguntas:
       - texto: "Há mais alguma informação sobre o condomínio que a equipe precisa saber?"
       - texto: "Você é servidor público? É uma informação desse cadastro da corretora."
-        se: "a corretora marcou no ESCOPO que usa esse cadastro"
+        se: "a corretora usar esse cadastro"
       - texto: "Você é pai, mãe, filho, marido ou mulher de servidor público? É uma informação desse cadastro da corretora."
-        se: "a corretora marcou no ESCOPO que usa esse cadastro"
+        se: "a corretora usar esse cadastro"
       - texto: "Quem pode acompanhar a visita?"
         se: "pedirem inspeção"
       - texto: "Qual o telefone da pessoa que acompanha a visita?"

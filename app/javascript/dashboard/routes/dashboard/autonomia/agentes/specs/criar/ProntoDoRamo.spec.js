@@ -208,6 +208,7 @@ describe('ProntoDoRamo', () => {
         {
           lista: 'perguntas',
           itens: [emBlocos[0], { ...emBlocos[1], tirada: false }],
+          aoGravar: expect.any(Function),
         },
       ],
     ]);
