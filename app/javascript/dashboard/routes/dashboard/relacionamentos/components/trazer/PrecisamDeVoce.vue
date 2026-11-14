@@ -31,6 +31,10 @@ const props = defineProps({
   faltamCarregar: { type: Number, default: 0 },
   carregandoMais: { type: Boolean, default: false },
   erroDoMais: { type: Boolean, default: false },
+  // #2897 — quem usa pode ter linhas com problema de outro assunto (as de
+  // seguro): a função devolve o cartão delas, com as mesmas entradas e saídas
+  // de ProblemaDaLinha, ou nada para a linha que é daqui.
+  cartaoDe: { type: Function, default: null },
 });
 const emit = defineEmits(['guardar', 'deixarDeFora', 'reabrir', 'mostrarMais']);
 
@@ -174,7 +178,8 @@ watch(
       {{ anuncio }}
     </p>
     <ul class="flex flex-col gap-3 p-0 m-0 list-none">
-      <ProblemaDaLinha
+      <component
+        :is="cartaoDe?.(problema) ?? ProblemaDaLinha"
         v-for="problema in problemas"
         :key="`${problema.linha}:${problema.tipo}`"
         :problema="problema"

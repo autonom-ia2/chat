@@ -17,6 +17,10 @@
 # - `aviso` só existe quando há o que avisar: `mudanca_desfeita` depois que a mudança da pessoa fez a leitura falhar e
 #   o servidor a desfez (ContactImports::Trazer::DesfazerMudanca). Some na próxima mudança que der certo.
 #
+# - Na planilha que traz seguros (E4, #2897: a resposta "sim" numa conta com a carteira), `seguros` diz os destinos
+#   de coluna do seguro e quais obrigatórios ainda faltam, e o resumo ganha os números de seguros e de pessoas
+#   (Carteira::Trazer::NaConferencia). Sem isso nenhuma dessas chaves existe.
+#
 # A troca de coluna que vale na hora responde com esta mesma leitura inteira.
 #
 # Cada arquivo da conferência é lido uma vez por resposta: o leitor dos consertos é criado aqui e passado adiante.
@@ -58,7 +62,18 @@ class Relacionamentos::Trazer::Leitura
       arquivo: @importacao.source_filename, valores: problemas.inteiros? ? 'inteiros' : 'mascarados', resumo: resumo(consertos.ler),
       exemplos: Relacionamentos::Trazer::Exemplos.new(@importacao).call, problemas: problemas.call,
       problemas_total: @importacao.invalid_rows, pagina: @pagina, por_pagina: POR_PAGINA
-    ).merge(aviso)
+    ).merge(aviso, dos_seguros)
+  end
+
+  # { seguros: { destinos:, faltam: } }, ou nada.
+  def dos_seguros
+    seguros ? { seguros: seguros.bloco } : {}
+  end
+
+  def seguros
+    return @seguros if defined?(@seguros)
+
+    @seguros = Carteira::Trazer::NaConferencia.da(@importacao)
   end
 
   def das_colunas
@@ -70,9 +85,10 @@ class Relacionamentos::Trazer::Leitura
 
   def resumo(consertos)
     ja_existiam = @importacao.validation_summary.to_h['existing_contacts'].to_i
+    quem_entra = ContactImports::Trazer::QuemEntra.new(@importacao, consertos)
     { total: @importacao.total_rows, novas: @importacao.valid_rows - ja_existiam, completadas: ja_existiam, comProblema: @importacao.invalid_rows,
       juntadas: @importacao.validation_summary.to_h['mesma_pessoa'].to_i }
-      .merge(ContactImports::Trazer::QuemEntra.new(@importacao, consertos).contas)
+      .merge(quem_entra.contas, seguros ? seguros.resumo(quem_entra) : {})
   end
 
   # { aviso: 'mudanca_desfeita' }, ou nada.

@@ -9,6 +9,10 @@
 # A lista sem anotação nenhuma (a da tela antiga, que nunca anota) não tem o que devolver nem quem tirar: todas as
 # pessoas que ela criou ficam, e a prévia diz 0 em `tira` e em `devolve`.
 #
+# Na lista que trouxe seguros (E4, #2897) a prévia leva também `seguros`: quantos saem da carteira, quantos voltam ao
+# que eram e quantos ficam como estão (Carteira::Trazer::SegurosDaLista#previa). As pessoas são contadas com a carteira
+# como ela fica depois do Desfazer: quem só tinha seguro desta lista, e ninguém mexeu nele, sai com ele.
+#
 # Os três grupos não se misturam: quem a lista criou sai ou fica inteira, e só quem já existia tem campo devolvido.
 # Nada é gravado. A conta é feita com as mesmas regras do Desfazer, em blocos (os dos campos são maiores aqui:
 # Relacionamentos::Trazer::CamposDaLista::BLOCO_DA_PREVIA).
@@ -24,7 +28,9 @@ class Relacionamentos::Trazer::PreviaDoDesfazer
       tira += saem.size
       ficam += ficaram.size
     end
-    { tira: tira, ficam: ficam, devolve: quantas_voltam }
+    pessoas = { tira: tira, ficam: ficam, devolve: quantas_voltam }
+    seguros = Carteira::Trazer::SegurosDaLista.new(@importacao)
+    seguros.tem? ? pessoas.merge(seguros: seguros.previa) : pessoas
   end
 
   private

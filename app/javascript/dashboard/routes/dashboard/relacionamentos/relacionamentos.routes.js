@@ -5,7 +5,7 @@ import { QUEM_TRAZ_LISTA } from './trazer/quemTraz';
 
 const FichaDaPessoaPage = () => import('./pages/FichaDaPessoaPage.vue');
 const FichaDaEmpresaPage = () => import('./pages/FichaDaEmpresaPage.vue');
-const TrazerListaPage = () => import('./pages/TrazerListaPage.vue');
+const TrazerPage = () => import('./pages/TrazerPage.vue');
 const AjustarRenovacoesPage = () => import('./pages/AjustarRenovacoesPage.vue');
 const ResultadosDasRenovacoesPage = () =>
   import('./pages/ResultadosDasRenovacoesPage.vue');
@@ -62,7 +62,7 @@ const rota = (path, name, component, permissions = PERMISSIONS) => ({
 export const routes = [
   rota('pessoas/:contactId', 'relacionamentos_pessoa', FichaDaPessoaPage),
   rota('empresas/:companyId', 'relacionamentos_empresa', FichaDaEmpresaPage),
-  rota('trazer', 'relacionamentos_trazer', TrazerListaPage, QUEM_TRAZ_LISTA),
+  rota('trazer', 'relacionamentos_trazer', TrazerPage, QUEM_TRAZ_LISTA),
   rota(
     'seguros/renovacoes',
     'relacionamentos_renovacoes',

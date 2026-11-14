@@ -29,6 +29,13 @@ const palco = vi.hoisted(() => ({
 }));
 const substituir = vi.hoisted(() => vi.fn());
 
+// #2897 — a conta destes testes não tem a carteira de seguros: a tela é a das
+// listas, sem a pergunta dos seguros.
+vi.mock('../../carteira/useContaDeSeguros', async () => {
+  const { ref } = await import('vue');
+  return { useContaDeSeguros: () => ref(false) };
+});
+
 vi.mock('vue-router', () => ({
   useRoute: () => palco.rota,
   useRouter: () => ({ push: vi.fn(), replace: substituir }),

@@ -9,7 +9,9 @@
 #   a que a linha deixou (Relacionamentos::Trazer::PessoaCriada). Só dá para saber de quem a lista anotou: quem ela
 #   não anotou (a lista da tela antiga, que nunca anota) fica também, porque não dá para provar que ninguém a editou;
 # - tem convite de agendamento, é convidada de uma reunião ou a IA já guardou memória dela;
-# - tem seguro na carteira (Carteira::Apolice): a apólice, a história e o PDF dela sairiam junto com a pessoa;
+# - tem seguro na carteira (Carteira::Apolice): a apólice, a história e o PDF dela sairiam junto com a pessoa. Não
+#   conta o seguro que esta mesma lista criou e em que ninguém mexeu: esse sai antes, com o Desfazer
+#   (Carteira::Trazer::SegurosDaLista#que_ficam);
 # - veio também da prospecção ou de um formulário de anúncio (o lead perderia a pessoa);
 # - recebeu, ou está na fila de, uma campanha (WhatsApp ou SMS, e-mail, WhatsApp Oficial);
 # - está em outra importação: outra lista trazida, um Público ou uma base de campanha. A lista que já foi desfeita não
@@ -30,10 +32,13 @@
 class Relacionamentos::Trazer::QuemFica
   BLOCO = 500
 
-  def initialize(importacao)
+  # seguros_ja_desfeitos: o Desfazer pergunta depois de a parte dos seguros rodar; aí todo seguro que ainda existe
+  # segura a pessoa, inclusive o que devia ter saído e não saiu (Carteira::Trazer::SegurosDaLista#que_ficam).
+  def initialize(importacao, seguros_ja_desfeitos: false)
     @importacao = importacao
     @conta = importacao.account
     @criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
+    @seguros = Carteira::Trazer::SegurosDaLista.new(importacao, ja_desfez: seguros_ja_desfeitos)
   end
 
   # Bloco a bloco, das pessoas que a lista criou e que ainda existem: os ids das que saem e os das que ficam.
@@ -113,7 +118,7 @@ class Relacionamentos::Trazer::QuemFica
   def agenda_memoria_e_leads
     [
       [Crm::BookingInvite.where(da_conta), :contact_id], [Crm::MeetingGuest.where(da_conta), :contact_id],
-      [Crm::MemoriaFato.where(da_conta), :contact_id], [Carteira::Apolice.where(da_conta), :contact_id],
+      [Crm::MemoriaFato.where(da_conta), :contact_id], [@seguros.que_ficam, :contact_id],
       [Autonomia::Prospecting::Lead.where(da_conta), :contact_id], [Crm::MetaAdsLead.where(da_conta), :contact_id]
     ]
   end

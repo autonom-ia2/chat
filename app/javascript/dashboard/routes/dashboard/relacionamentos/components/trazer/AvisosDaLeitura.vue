@@ -9,9 +9,12 @@ import { useI18n } from 'vue-i18n';
 //   - `mudou`: a lista mudou por fora (outra aba, outra pessoa da conta) e a
 //     tela já mostra como ela está agora.
 // Aviso que a tela não conhece não vira frase.
+// #2897 — na planilha que traz seguros (`comSeguros`) a mudança desfeita pode
+// ser a de uma coluna do seguro: a frase diz o que conferir na coluna.
 const props = defineProps({
   aviso: { type: String, default: '' },
   mudou: { type: Boolean, default: false },
+  comSeguros: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -22,7 +25,9 @@ const frases = computed(() =>
     {
       nome: 'mudanca-desfeita',
       vale: props.aviso === MUDANCA_DESFEITA,
-      chave: 'RELACIONAMENTOS_TRAZER.CONFERIR.MUDANCA_DESFEITA',
+      chave: props.comSeguros
+        ? 'RELACIONAMENTOS_CARTEIRA.TRAZER.MUDANCA_DESFEITA'
+        : 'RELACIONAMENTOS_TRAZER.CONFERIR.MUDANCA_DESFEITA',
     },
     {
       nome: 'lista-mudou',

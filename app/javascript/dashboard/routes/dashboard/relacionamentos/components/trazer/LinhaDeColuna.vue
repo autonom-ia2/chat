@@ -33,6 +33,9 @@ const props = defineProps({
   relendo: { type: Boolean, default: false },
   recusa: { type: Object, default: null },
   temEmpresa: { type: Boolean, default: true },
+  // #2897 — destinos que só existem em quem usa (os de seguro), já com o nome
+  // que a tela dá a cada um: `{ value, label }`.
+  destinosAMais: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['trocar']);
 
@@ -59,7 +62,9 @@ const querInformacao = ref(false);
 // Esta linha pediu a troca que está indo ao servidor.
 const pediuATroca = ref(false);
 
-const nomeDoDestino = destino => t(CHAVES_DOS_DESTINOS[destino]);
+const nomeDoDestino = destino =>
+  props.destinosAMais.find(({ value }) => value === destino)?.label ??
+  t(CHAVES_DOS_DESTINOS[destino]);
 
 const nome = computed(
   () =>
@@ -69,12 +74,13 @@ const nome = computed(
     })
 );
 
-const opcoes = computed(() =>
-  destinosDisponiveis(props.temEmpresa).map(destino => ({
+const opcoes = computed(() => [
+  ...destinosDisponiveis(props.temEmpresa).map(destino => ({
     value: destino,
     label: nomeDoDestino(destino),
-  }))
-);
+  })),
+  ...props.destinosAMais,
+]);
 
 const naoGuarda = computed(() => props.coluna.destino === DESTINOS.NAO_GUARDAR);
 const virouInformacao = computed(

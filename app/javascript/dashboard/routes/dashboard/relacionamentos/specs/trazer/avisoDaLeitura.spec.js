@@ -32,6 +32,17 @@ describe('AvisosDaLeitura', () => {
     expect(alerta.text()).toBe(DESFEITA);
   });
 
+  // #2897 — na planilha que traz seguros a mudança desfeita pode ser a de uma
+  // coluna do seguro: a frase diz o que conferir na coluna.
+  it('na planilha com seguros, a mudança desfeita diz o que conferir na coluna', () => {
+    const w = montar({ aviso: 'mudanca_desfeita', comSeguros: true });
+    const alerta = marca(w, 'mudanca-desfeita');
+    expect(alerta.attributes('role')).toBe('alert');
+    expect(alerta.text()).toBe(
+      'Não fiz essa mudança: com ela eu não conseguiria ler a planilha. Deixei como estava. Confira se a coluna que você escolheu tem mesmo o que você disse. Por exemplo: a coluna de quando o seguro termina precisa ter datas.'
+    );
+  });
+
   it('aviso que a tela não conhece não vira frase', () => {
     expect(montar({ aviso: 'outra_coisa' }).text()).toBe('');
   });

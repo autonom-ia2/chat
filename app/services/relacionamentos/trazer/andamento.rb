@@ -1,5 +1,8 @@
 # O andamento de uma lista que está entrando (#2896): quanto já passou e quantas pessoas são novas ou foram completadas.
 # Sai das linhas da importação numa consulta só, sem depender dos contadores que o importador só grava no fim.
+#
+# A lista que trouxe seguros (E4, #2897) diz também quantos seguros já entraram e de quantas pessoas, novas e que já
+# estavam (Carteira::Trazer::PessoasQueEntram.gravadas): nela `novas` e `completadas` contam linhas, não pessoas.
 class Relacionamentos::Trazer::Andamento
   PASSARAM = %w[imported import_failed].freeze
 
@@ -13,10 +16,16 @@ class Relacionamentos::Trazer::Andamento
     {
       porcentagem: Relacionamentos::Trazer::Situacao.porcentagem(situacao, contagem.values.sum, total), situacao: situacao, total: total,
       novas: gravadas(ja_existia: false), completadas: gravadas(ja_existia: true)
-    }
+    }.merge(dos_seguros)
   end
 
   private
+
+  def dos_seguros
+    return {} unless Carteira::Trazer::ColunasDeSeguro.com_seguros?(@importacao)
+
+    Carteira::Trazer::PessoasQueEntram.gravadas(@importacao)
+  end
 
   # { ['imported', false] => 70, ['imported', true] => 12, ['import_failed', false] => 1 }
   def contagem

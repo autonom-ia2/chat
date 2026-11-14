@@ -2458,7 +2458,7 @@
       "porques: Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)"
      ],
      "revisar": false,
-     "nota": "Issue #2897 (E4 do épico #1240). Não há rota nova: a aba é ?aba=seguros na rota da lista. A numeração pula de 09.17 para 09.20 de propósito. O portão é Carteira::Acesso (a chave carteira_seguros, as telas novas e a conta ser corretora de seguros). A aba não marca seguros, não manda mensagem e não traz seguros."
+     "nota": "Issue #2897 (E4 do épico #1240). Não há rota nova: a aba é ?aba=seguros na rota da lista. A numeração pula de 09.17 para 09.20 de propósito. O portão é Carteira::Acesso (a chave carteira_seguros, as telas novas e a conta ser corretora de seguros). A aba não marca seguros e não manda mensagem; quem pode trazer lista tem no topo o botão de trazer seguros (09.22)."
     },
     {
      "id": "09.21",
@@ -2480,6 +2480,26 @@
      ],
      "revisar": false,
      "nota": "Issue #2897. A gaveta abre com ?apolice=<id> na lista e nas fichas, por isso o botão leva à lista. Corrigir e mudar o PDF pedem poder alterar a pessoa; quem só pode ver lê os dados e abre o PDF."
+    },
+    {
+     "id": "09.22",
+     "titulo": "Trazer uma planilha com seguros",
+     "para_que_serve": "Trazer os seguros de uma planilha Excel ou CSV em Trazer minha lista: responder que a planilha tem seguros, confirmar a coluna que a tela achou para cada coisa do seguro, conferir quantos seguros e de quantas pessoas, resolver as linhas que não podem entrar, trazer e, se precisar, desfazer.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer uma planilha com seguros (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2897 (E4, parte 5). Não há rota nova: é a tela de Trazer minha lista (09.17), que na conta com a carteira de seguros ganha a pergunta dos seguros, a confirmação das colunas que a tela sugere e o Conferir com seguros; o Desfazer da lista também tira os seguros dela. O portão é o da carteira (Carteira::Acesso), não o da rota."
     },
     {
      "id": "09.23",

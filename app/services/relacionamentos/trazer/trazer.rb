@@ -21,12 +21,14 @@
 #
 # Enquanto a conta desfaz uma lista (Relacionamentos::Trazer::Desfazer.em_curso?), a recusa é `desfazer_em_curso`: a
 # lista nova completaria uma pessoa que o desfazer está apagando. Nada muda na leitura; é só esperar e trazer de novo.
+# Na planilha que traz seguros (E4, #2897), sem coluna para o número, a seguradora, o ramo ou o fim da vigência não há
+# seguro para gravar: a recusa é `falta_coluna_do_seguro`, com os destinos que faltam (`faltam`).
 class Relacionamentos::Trazer::Trazer
   VENCIDA = ContactImports::Trazer::Conferencia::VENCIDA
   DESFAZER_EM_CURSO = 'desfazer_em_curso'.freeze
   # As recusas que a rota antiga diz com o código da tela nova: têm frase própria, que diz o que fazer.
   COM_FRASE_PROPRIA = [VENCIDA, DESFAZER_EM_CURSO].freeze
-  Resultado = Struct.new(:erro, keyword_init: true) do
+  Resultado = Struct.new(:erro, :faltam, keyword_init: true) do
     # A rota antiga de confirmar só conhece "não está pronta"; a conferência vencida e o desfazer em curso ela diz com
     # o código da tela nova.
     def erro_da_rota_antiga
@@ -62,11 +64,9 @@ class Relacionamentos::Trazer::Trazer
   def call
     @importacao.with_lock do
       next Resultado.new if JA_TRAZIDA.include?(@importacao.status)
-      next Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
-      next Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
-      next Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
-      next Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
-      next Resultado.new(erro: DESFAZER_EM_CURSO) if Relacionamentos::Trazer::Desfazer.em_curso?(@importacao.account)
+
+      recusada = recusa
+      next recusada if recusada
 
       confirmar
       ContactImports::Trazer::FecharConferenciaJob.perform_later(@importacao)
@@ -75,6 +75,22 @@ class Relacionamentos::Trazer::Trazer
   end
 
   private
+
+  # A primeira recusa que vale, na ordem em que a tela as explica; nil quando a lista pode ser trazida. Roda sob a trava.
+  def recusa
+    return Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
+    return Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
+    return Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
+    return Resultado.new(erro: 'falta_coluna_do_seguro', faltam: colunas_que_faltam) if colunas_que_faltam.any?
+    return Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
+
+    Resultado.new(erro: DESFAZER_EM_CURSO) if Relacionamentos::Trazer::Desfazer.em_curso?(@importacao.account)
+  end
+
+  # Os destinos obrigatórios do seguro que ainda não têm coluna; nenhum na planilha sem seguros.
+  def colunas_que_faltam
+    @colunas_que_faltam ||= Carteira::Trazer::ColunasDeSeguro.da(@importacao)&.faltam.to_a
+  end
 
   def confirmar
     ContactImports::Trazer::Fechamentos.new(@importacao).recomecar

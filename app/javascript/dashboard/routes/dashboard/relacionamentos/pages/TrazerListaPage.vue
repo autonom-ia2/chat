@@ -28,6 +28,19 @@ import TelaPronto from '../components/trazer/TelaPronto.vue';
 // demonstração): quem recarrega a página continua de onde estava, sem enviar a
 // planilha de novo. O parâmetro sai quando a leitura deixa de estar em aberto
 // (a pessoa recomeçou, trouxe a lista, ou a leitura já tinha sido trazida).
+// #2897 — na conta que tem a carteira de seguros a planilha pode trazer
+// seguros. Tudo o que é dos seguros chega pronto em `seguros`
+// (carteira/trazerComSeguros.js), que só essa conta baixa
+// (pages/TrazerPage.vue): a fonte é a das listas com o que os seguros pedem por
+// cima e, nos momentos em que a tela é a da carteira (`carteira.passo`: a
+// pergunta dos seguros, o Conferir com seguros e o fim), quem desenha é a peça
+// `TrazerSeguros`. Na conta sem carteira `seguros` é nulo e nada disso existe:
+// a fonte, as perguntas e as telas são as das listas.
+const props = defineProps({
+  // `{ trazerSegurosFonte, useTrazerSeguros, TrazerSeguros }`, ou nulo.
+  seguros: { type: Object, default: null },
+});
+
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -35,7 +48,11 @@ const router = useRouter();
 const demo = usarDemo(route.query);
 // `?planilha=` só vale em demonstração (e a demonstração só existe no DEV).
 const planilha = demo && import.meta.env.DEV ? route.query.planilha : undefined;
-const fonte = trazerFonte({ demo, planilha });
+const fonteDasListas = trazerFonte({ demo, planilha });
+const fonte = props.seguros
+  ? props.seguros.trazerSegurosFonte({ demo, listas: fonteDasListas })
+  : fonteDasListas;
+const TrazerSeguros = props.seguros?.TrazerSeguros;
 const temDesfazer = Boolean(fonte.temDesfazer);
 const avisar = chave => useAlert(t(chave));
 
@@ -55,6 +72,12 @@ const tela = useTrazerLista({
 const semAcesso = computed(
   () => tela.semAcesso.value || historico.semAcesso.value
 );
+
+// Sem a carteira, a tela nunca é a dos seguros.
+const SEM_CARTEIRA = { passo: computed(() => null), recomecar: () => {} };
+const carteira = props.seguros
+  ? props.seguros.useTrazerSeguros({ tela, fonte, ligado: true })
+  : SEM_CARTEIRA;
 
 const raiz = ref(null);
 const dialogo = ref(null);
@@ -112,7 +135,7 @@ const chaveDaPergunta = computed(
 
 // A cada tela nova o foco vai para o título dela (leitor de tela e teclado).
 watch(
-  () => [tela.etapa.value, chaveDaPergunta.value],
+  () => [tela.etapa.value, chaveDaPergunta.value, carteira.passo.value],
   async () => {
     await nextTick();
     raiz.value?.querySelector('[data-titulo-da-tela]')?.focus();
@@ -125,9 +148,12 @@ watch(chegou, agora => {
 });
 
 const verAsPessoas = () => router.push({ name: 'relationships_home' });
+const verOsSeguros = () =>
+  router.push({ name: 'relationships_home', query: { aba: 'seguros' } });
 
 const trazerOutra = () => {
   tela.recomecar();
+  carteira.recomecar();
   historico.carregar();
 };
 
@@ -233,9 +259,18 @@ watch(semAcesso, sem => {
             <AvisosDaLeitura
               :aviso="tela.leitura.value.aviso"
               :mudou="tela.mudou.value"
+              :com-seguros="Boolean(tela.leitura.value.seguros)"
+            />
+            <component
+              :is="TrazerSeguros"
+              v-if="carteira.passo.value"
+              :tela="tela"
+              :carteira="carteira"
+              @ver="verOsSeguros"
+              @outra="trazerOutra"
             />
             <PerguntaDaVez
-              v-if="tela.etapa.value === ETAPAS.PERGUNTAS"
+              v-else-if="tela.etapa.value === ETAPAS.PERGUNTAS"
               :key="chaveDaPergunta"
               :pergunta="tela.perguntaAtual.value"
               :respostas="tela.respostas.value"
@@ -278,6 +313,14 @@ watch(semAcesso, sem => {
             />
           </template>
 
+          <component
+            :is="TrazerSeguros"
+            v-else-if="noFim && carteira.passo.value"
+            :tela="tela"
+            :carteira="carteira"
+            @ver="verOsSeguros"
+            @outra="trazerOutra"
+          />
           <TelaPronto
             v-else-if="noFim"
             :trazendo="trazendo"

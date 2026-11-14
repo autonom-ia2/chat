@@ -8,19 +8,23 @@ import { chaveDaColuna } from '../../trazer/destinos';
 // Recolhido por padrão; abre com um clique.
 // Fatia 2 — `recusa` (`{ coluna, chave }`): a troca que não deu certo é dita na
 // linha da coluna dela. `relendo`: a planilha está sendo lida de novo.
-defineProps({
+const props = defineProps({
   colunas: { type: Array, required: true },
   ocupado: { type: Boolean, default: false },
   relendo: { type: Boolean, default: false },
   recusa: { type: Object, default: null },
   // #2896 — se o telefone da empresa existe nesta leitura.
   temEmpresa: { type: Boolean, default: true },
+  // #2897 — destinos que só existem em quem usa (os de seguro): `{ value, label }`.
+  destinosAMais: { type: Array, default: () => [] },
+  // #2897 — a tela que pede para a pessoa mexer nas colunas já as mostra.
+  comecaAberto: { type: Boolean, default: false },
 });
 const emit = defineEmits(['trocar']);
 
 const { t } = useI18n();
 const id = useId();
-const aberto = ref(false);
+const aberto = ref(props.comecaAberto);
 </script>
 
 <template>
@@ -61,6 +65,7 @@ const aberto = ref(false);
         :relendo="relendo"
         :recusa="recusa?.coluna === chaveDaColuna(coluna) ? recusa : null"
         :tem-empresa="temEmpresa"
+        :destinos-a-mais="destinosAMais"
         @trocar="(...troca) => emit('trocar', ...troca)"
       />
     </ul>

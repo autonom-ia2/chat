@@ -1,0 +1,562 @@
+[
+  {
+    "ramo": "Automóvel",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "AUTO",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Individual",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Seguro Auto",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "automovel",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "AUTOMOVEL - CASCO",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "0531 - Automóvel - Casco",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "0553 - RCF-V",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "RCF-V",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "RCFV",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Frota",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Frota de Veículos",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Moto",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Motocicleta",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Seg. Moto",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Caminhão",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Caminhao - Casco",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto + RCF + APP",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "APP - Acidentes Pessoais de Passageiros",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Carro",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Veículo",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Veic.",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Popular",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Mensal",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Carta Verde",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Utilitário",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Clássico",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Seguro de Táxi",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Auto Compreensivo",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Assistência 24h Auto",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "AUTOMOVEIS",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Aut.",
+    "tipo": "auto"
+  },
+  {
+    "ramo": "Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "RESID.",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Residência",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Seguro Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "0114 - Compreensivo Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Compreensivo Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Casa",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Apartamento",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Residencial Habitual",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Residencial Veraneio",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Multirrisco Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Lar",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Seguro da Casa",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Resid Simplificado",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Conteúdo Residencial",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "RESIDENCIA HABITUAL",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Res.",
+    "tipo": "residencial"
+  },
+  {
+    "ramo": "Vida",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "VIDA INDIVIDUAL",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Vida em Grupo",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "VG",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "VG/APC",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "1391 - Vida Individual",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "0993 - Vida em Grupo",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Acidentes Pessoais",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "AP Individual",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "APC",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Acid. Pessoais Coletivo",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Prestamista",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "0977 - Prestamista",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Funeral",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Auxílio Funeral",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Seguro de Vida Mulher",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Vida Inteira",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Vida Resgatável",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Doenças Graves",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "DIT - Diária por Incapacidade Temporária",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Vida PME",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "VIDA GLOBAL",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Seg Vida",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Acidentes Pessoais Escolar",
+    "tipo": "vida"
+  },
+  {
+    "ramo": "Empresarial",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "EMP",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Compreensivo Empresarial",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "0118 - Compreensivo Empresarial",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Empresa",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Seguro Comércio e Serviços",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Condomínio",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "0116 - Compreensivo Condomínio",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RC Geral",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RC Profissional",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RC Prof.",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "E&O",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "D&O",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RC Obras",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Riscos de Engenharia",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Transporte Nacional",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RCTR-C",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "RC-DC",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Transportes",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Seguro Garantia",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Garantia Judicial",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Cyber",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Riscos Cibernéticos",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Máquinas e Equipamentos",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Agrícola",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Rural",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Lucros Cessantes",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Riscos Nomeados",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Riscos Operacionais",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Multirrisco Empresarial",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "EMPRESARIAL PME",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Cond.",
+    "tipo": "empresarial"
+  },
+  {
+    "ramo": "Saúde",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Plano de Saúde",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Saúde PME",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Odonto",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Dental",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Viagem",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Seguro Viagem",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Pet",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Previdência",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "PGBL",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "VGBL",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Capitalização",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Título de Capitalização",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Consórcio",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Fiança Locatícia",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Celular",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Portáteis",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Bike",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Bicicleta",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Náutico",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Embarcações",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Aeronáutico",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Garantia Estendida",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Diversos",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Outros",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "RE",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Massificados",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Benefícios",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "123",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Novo",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Renovação",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "N/D",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "RC",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Patrimonial",
+    "tipo": "outro"
+  },
+  {
+    "ramo": "Compreensivo",
+    "tipo": "outro"
+  }
+]

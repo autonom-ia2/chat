@@ -37,9 +37,12 @@ const props = defineProps({
   demo: { type: String, default: null },
   // A conta tem a aba Empresas? (as abas mostram só as que existem)
   comEmpresas: { type: Boolean, default: false },
+  // Quem pode trazer lista vê o botão de trazer seguros no herói (a regra é a
+  // do botão "Trazer minha lista" da lista de pessoas; quem decide é a página).
+  podeTrazer: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['trocarAba']);
+const emit = defineEmits(['trocarAba', 'trazer']);
 
 // #2897 — a aba Seguros de Relacionamentos (`?aba=seguros`): herói com a frase
 // do dia, abas, grupos por vencimento, busca, ordem, "Mais filtros", um seguro
@@ -158,7 +161,9 @@ onMounted(lista.iniciar);
           v-if="lista.resumo.value"
           :resumo="lista.resumo.value"
           :vencidos="vencidos"
+          :pode-trazer="podeTrazer"
           @ver-grupo="lista.escolherGrupo"
+          @trazer="emit('trazer')"
         />
         <AbasDaLista
           com-seguros

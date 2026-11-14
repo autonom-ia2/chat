@@ -22,6 +22,13 @@
 # - O nome e o "para que serve" têm teto de tamanho (`valor_invalido`, motivo `muito_longo`) e nunca levam caractere
 #   de controle (Relacionamentos::Trazer::Texto): quebra de linha e tabulação viram espaço, o resto sai.
 #
+# - Na planilha que traz seguros (E4, #2897), a coluna que não é alvo também pode ir para um destino do seguro
+#   (Carteira::Trazer::ColunasDeSeguro): número, seguradora, ramo, fim, começo, valor e bem. Fora dela (conta sem a
+#   carteira, ou sem a resposta "sim") o destino é recusado como desconhecido. Cada destino do seguro tem uma coluna
+#   só: a nova toma o lugar da que tinha, que volta a ser informação. Enquanto falta coluna obrigatória a troca vale
+#   na hora; a troca que completa as obrigatórias, ou que mexe numa planilha que já as tinha, lê a planilha de novo,
+#   porque é a leitura que confere o seguro de cada linha.
+#
 # Antes de mandar ler a planilha de novo, a conferência como estava fica guardada (`anterior`): se a leitura nova
 # falhar, o servidor desfaz a troca (ContactImports::Trazer::DesfazerMudanca). A troca que dá certo apaga o aviso de
 # uma mudança desfeita antes.
@@ -42,6 +49,7 @@ class Relacionamentos::Trazer::TrocarDestino
   TELEFONE_DA_EMPRESA = Relacionamentos::Trazer::Colunas::TELEFONE_DA_EMPRESA
   CLIENTE = ContactImports::Trazer::Cliente::DESTINO
   EXTRAS = Relacionamentos::Trazer::Colunas::EXTRAS
+  Seguros = Carteira::Trazer::ColunasDeSeguro
   # O nome vira o nome do atributo (texto curto); o "para que serve", a descrição dele.
   TETOS = { 'nome' => 255, 'para_que_serve' => 1000 }.freeze
 
@@ -97,17 +105,25 @@ class Relacionamentos::Trazer::TrocarDestino
 
   def erro_da_troca
     return 'coluna_desconhecida' unless colunas.indices.include?(@indice)
-    return 'destino_desconhecido' unless ALVO_DO_DESTINO.key?(@destino) || EXTRAS.include?(@destino)
+    return 'destino_desconhecido' unless ALVO_DO_DESTINO.key?(@destino) || colunas.aceita?(@destino)
 
     'sem_empresa' if @destino == TELEFONE_DA_EMPRESA && !colunas.tem_empresa?(nova_escolha)
   end
 
   def trocar_extra(atual)
-    return ler_de_novo(colunas.alvos) if atual == NAO_GUARDAR && @destino != NAO_GUARDAR
+    return ler_de_novo(colunas.alvos) if (atual == NAO_GUARDAR && @destino != NAO_GUARDAR) || confere_os_seguros_de_novo?(atual)
 
     @destino == NAO_GUARDAR && atual != NAO_GUARDAR ? deixar_de_guardar : guardar_destino
     acompanhar_os_valores_de_cliente(atual)
     Resultado.new(revalida: false)
+  end
+
+  # A troca que tira ou põe uma coluna do seguro muda o que a leitura confere em cada linha, quando as colunas
+  # obrigatórias estão todas escolhidas antes ou depois dela.
+  def confere_os_seguros_de_novo?(atual)
+    return false unless Seguros.destino?(atual) || Seguros.destino?(@destino)
+
+    Seguros.faltam(conferencia.destinos).empty? || Seguros.faltam(destinos_com_a_troca).empty?
   end
 
   def acompanhar_os_valores_de_cliente(atual)
@@ -144,12 +160,24 @@ class Relacionamentos::Trazer::TrocarDestino
   # "informação" é o padrão de toda coluna que não é alvo: só os outros destinos ficam escritos. O nome e o "para que
   # serve" só existem na coluna que é informação.
   def guardar_destino(com_empresa: true)
+    conferencia.gravar('destinos' => destinos_com_a_troca(com_empresa: com_empresa), 'campos' => campos_com_o_da_coluna(@indice.to_s))
+  end
+
+  # Os destinos como ficam com a troca. Só uma coluna diz quem é cliente, e cada destino do seguro tem uma coluna só.
+  def destinos_com_a_troca(com_empresa: true)
     chave = @indice.to_s
-    destinos = conferencia.destinos.except(chave)
-    destinos = destinos.reject { |_indice, destino| destino == TELEFONE_DA_EMPRESA } unless com_empresa
-    destinos = destinos.reject { |_indice, destino| destino == CLIENTE } if @destino == CLIENTE
-    destinos = destinos.merge(chave => @destino) if EXTRAS.include?(@destino) && @destino != INFORMACAO
-    conferencia.gravar('destinos' => destinos, 'campos' => campos_com_o_da_coluna(chave))
+    saem = [(TELEFONE_DA_EMPRESA unless com_empresa), (@destino if de_uma_coluna_so?)].compact
+    destinos = conferencia.destinos.except(chave).reject { |_indice, destino| saem.include?(destino) }
+    fica_escrito? ? destinos.merge(chave => @destino) : destinos
+  end
+
+  def de_uma_coluna_so?
+    @destino == CLIENTE || Seguros.destino?(@destino)
+  end
+
+  # "informação" é o padrão e os alvos moram em outro lugar: só os outros destinos ficam escritos.
+  def fica_escrito?
+    colunas.aceita?(@destino) && @destino != INFORMACAO
   end
 
   def campos_com_o_da_coluna(chave)

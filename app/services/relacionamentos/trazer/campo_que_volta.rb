@@ -17,6 +17,8 @@
 # ganhou um card nesse intervalo antes de a lista chegar à linha já era cliente, e a lista nem a anotou. A pessoa volta
 # ao tipo que tinha antes (Contact#revert_customer!), não sempre a lead. Sem o tipo de antes anotado (ou com um tipo
 # para o qual não se volta), a marca não volta e a prévia não a conta: não há para onde voltar.
+# Na lista que trouxe seguros (E4, #2897) há mais uma: quem continua com seguro na carteira depois do Desfazer continua
+# cliente. Quem monta o bloco já traz essa pessoa como quem ganhou (`ganhou`): para a marca, dá no mesmo.
 #
 # `devolver!` recebe os campos de uma mesma pessoa (ou empresa) e os devolve juntos, sob uma trava só: os campos comuns
 # numa gravação, a marca de cliente na gravação dela (Contact#revert_customer!; são duas gravações quando a pessoa tem
@@ -75,9 +77,9 @@ class Relacionamentos::Trazer::CampoQueVolta
   end
 
   # alvo: a pessoa de hoje, ou a empresa da linha quando o campo é o telefone da empresa; nil quando não existe mais.
-  # desde: a criação da importação, de onde se conta o card ganho. ganhou: a pessoa tem card ganho de lá para cá (só
-  # importa para "cliente"). procurada: a conta a procurou de lá para cá (só importa para telefone e e-mail). Os dois
-  # últimos vêm do bloco (Relacionamentos::Trazer::CamposDaLista).
+  # desde: a criação da importação, de onde se conta o card ganho. ganhou: a pessoa tem card ganho de lá para cá, ou
+  # continua com seguro na carteira (só importa para "cliente"). procurada: a conta a procurou de lá para cá (só importa
+  # para telefone e e-mail). Os dois últimos vêm do bloco (Relacionamentos::Trazer::CamposDaLista).
   def initialize(registro, alvo:, desde:, ganhou: false, procurada: false)
     @registro = registro
     @alvo = alvo
