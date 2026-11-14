@@ -2,7 +2,6 @@ chave: seguro_rural
 tipo: sdr
 nome_padrao: "Assistente de Seguro Rural"
 ramo: "Seguro rural (agrícola, pecuário, benfeitorias e máquinas)"
-seguradoras_sugeridas: "[[a coletar]]"
 blocos:
   - nome: "O pedido"
     perguntas:

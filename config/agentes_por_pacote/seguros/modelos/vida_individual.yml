@@ -2,7 +2,6 @@ chave: vida_individual
 tipo: sdr
 nome_padrao: "Assistente de Seguro de Vida"
 ramo: "Seguro de vida individual"
-seguradoras_sugeridas: "[[a coletar]]"
 blocos:
   - nome: "Quem vai ter o seguro"
     perguntas:

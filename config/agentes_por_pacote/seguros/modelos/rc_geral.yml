@@ -74,7 +74,7 @@ blocos:
         segue: true
         ligada: true
       - texto: "Onde fica o local principal onde o trabalho acontece?"
-        se: "o CEP informado não for o do local principal do trabalho"
+        se: "a pessoa disser que trabalha em mais de um local"
         segue: true
         ligada: true
   - nome: "Proteções"

@@ -2,7 +2,6 @@ chave: acidentes_pessoais
 tipo: sdr
 nome_padrao: "Assistente de Seguro de Acidentes Pessoais"
 ramo: "Seguro de acidentes pessoais"
-seguradoras_sugeridas: "[[a coletar]]"
 blocos:
   - nome: "Quem vai ter o seguro"
     perguntas:

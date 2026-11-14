@@ -291,7 +291,7 @@ documentos:
   - "Relação de afastados ou aposentados por invalidez, se a empresa já tiver seguro de vida em grupo hoje, houver essas pessoas e a equipe solicitar; saúde é tratada com a própria pessoa, sem pedir diagnóstico ao RH."
 ja_vem:
   - fonte: cnpj
-    usar_quando: "Use quando o cliente informar o CNPJ da empresa, para completar razão social, nome usado, situação, abertura, atividade, porte, natureza jurídica, cidade e UF sem perguntar de novo. Anote esses dados para a equipe, marcados como \"achado pelo CNPJ, não confirmado com o cliente\". A consulta não traz rua nem CEP. Situação diferente de ativa fica anotada só para a equipe. Se o número estiver incompleto, peça que confira. Se falhar ou não achar, anote a falha e peça só o dado cadastral ainda faltante previsto nas perguntas, sem dizer que não achou nem repetir o retorno; se continuar faltando, passe à equipe com a pendência."
+    usar_quando: "Use quando o cliente informar o CNPJ da empresa, para completar razão social, nome usado, situação, abertura, atividade, porte, cidade e UF sem perguntar de novo. Anote para a equipe como \"achado pelo CNPJ, não confirmado com o cliente\". Não traz rua nem CEP. Situação diferente de ativa fica só para a equipe. Número incompleto: peça que confira. Se não achar, peça só o dado que falta, sem dizer que não achou."
   - fonte: cep
     usar_quando: "Use quando o cliente informar o CEP da empresa ou de uma pessoa participante, ou quando rua e cidade já estiverem disponíveis, para completar o endereço. Anote o retorno para a equipe, marcado como \"achado pelo CEP, não confirmado com o cliente\", e pule só o que ele respondeu. Se falhar ou não achar, anote a falha e passe à equipe, sem repetir resultado nem pedir confirmação."
   - fonte: cpf

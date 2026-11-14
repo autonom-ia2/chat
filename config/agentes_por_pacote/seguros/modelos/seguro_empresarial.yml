@@ -2,7 +2,6 @@ chave: seguro_empresarial
 tipo: sdr
 nome_padrao: "Assistente de Seguro Empresarial"
 ramo: "Seguro empresarial"
-seguradoras_sugeridas: "[[a coletar]]"
 blocos:
   - nome: "O pedido"
     perguntas:
