@@ -179,4 +179,42 @@ describe('ProntoDoRamo', () => {
     expect(gaveta().textContent).toContain('Ferramentas de Bia');
     expect(gaveta().querySelector('[data-do-slot]')).not.toBeNull();
   });
+
+  // #3020 — o modelo que traz as perguntas em blocos abre a gaveta de ligar e desligar; o resto segue igual.
+  it('opens the questions in blocks when the model brings them in blocks, and a tap leaves with the whole list', async () => {
+    const emBlocos = [
+      { id: 'p1', texto: 'Qual o CEP?', tirada: false, bloco: 'Endereço' },
+      { id: 'p2', texto: 'Tem complemento?', tirada: true, bloco: 'Endereço' },
+    ];
+    const wrapper = montar({ perguntas: emBlocos });
+
+    expect(linha(wrapper, 'perguntas').text()).toContain(
+      'Perguntas ao cliente, uma por vez: 1'
+    );
+    await linha(wrapper, 'perguntas').get('button').trigger('click');
+    expect(gaveta().textContent).toContain(
+      'Ligue só o que Bia deve perguntar.'
+    );
+    expect(gaveta().querySelector('[data-perguntas-em-blocos]')).not.toBeNull();
+    expect(
+      gaveta().querySelector('[data-itens-do-ramo] [data-item]')
+    ).toBeNull();
+
+    gaveta().querySelector('[data-pergunta="p2"]').click();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.emitted('mudar')).toEqual([
+      [
+        {
+          lista: 'perguntas',
+          itens: [emBlocos[0], { ...emBlocos[1], tirada: false }],
+          aoGravar: expect.any(Function),
+        },
+      ],
+    ]);
+
+    await wrapper.setProps({ perguntas: PERGUNTAS });
+    expect(gaveta().querySelector('[data-perguntas-em-blocos]')).toBeNull();
+    expect(gaveta().querySelectorAll('[data-item]')).toHaveLength(3);
+  });
 });

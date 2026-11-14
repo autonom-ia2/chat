@@ -1,0 +1,333 @@
+chave: seguro_condominio
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Condomínio"
+ramo: "Seguro de condomínio"
+seguradoras_sugeridas: "Mapfre, Allianz e Bradesco"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "É um seguro novo ou a renovação de um que já existe?"
+        ligada: true
+      - texto: "Qual é a seguradora?"
+        se: "já tiver seguro"
+        segue: true
+      - texto: "Qual o número da apólice atual?"
+        se: "já tiver seguro"
+        segue: true
+      - texto: "Em que dia o seguro atual vence?"
+        se: "já tiver seguro"
+        segue: true
+      - texto: "Há uma classe de bônus, a indicação do histórico do seguro, na apólice?"
+        se: "já tiver seguro"
+        segue: true
+      - texto: "A partir de que dia vocês querem o seguro?"
+      - texto: "Até que dia querem que o seguro valha?"
+  - nome: "Quem é e contato"
+    perguntas:
+      - texto: "Qual o CNPJ do próprio condomínio?"
+        ligada: true
+      - texto: "Qual o nome do condomínio?"
+        se: "o nome ainda não estiver na ficha"
+        segue: true
+        ligada: true
+      - texto: "Qual seu nome?"
+        ligada: true
+      - texto: "Você é o síndico ou cuida disso pela administradora?"
+      - texto: "Qual o CPF de quem vai tratar do seguro, para o cadastro de contato?"
+      - texto: "Quer deixar outro número ou e-mail para contato?"
+      - texto: "Qual é o outro número?"
+        se: "quiser contato em outro número"
+        segue: true
+      - texto: "Qual e-mail a equipe pode usar?"
+        se: "quiser contato por e-mail"
+        segue: true
+      - texto: "O condomínio tem telefone ou e-mail próprio, diferente dos que você já passou?"
+      - texto: "Qual o telefone do condomínio?"
+        se: "o condomínio tiver telefone próprio"
+        segue: true
+      - texto: "Qual o e-mail do condomínio?"
+        se: "o condomínio tiver e-mail próprio"
+        segue: true
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual o CEP do condomínio?"
+        ligada: true
+      - texto: "Qual o endereço do condomínio?"
+        se: "não souber o CEP"
+        segue: true
+        ligada: true
+      - texto: "Qual o número do condomínio no endereço?"
+        ligada: true
+      - texto: "Tem complemento no endereço do condomínio?"
+  - nome: "O prédio"
+    perguntas:
+      - texto: "Em que ano o condomínio foi fundado?"
+        ligada: true
+      - texto: "Em que ano o prédio foi construído?"
+        se: "a construção for de outro ano"
+        segue: true
+      - texto: "É de prédios ou de casas?"
+        ligada: true
+      - texto: "Quantos andares tem cada bloco, contando térreo e subsolos?"
+        se: "for de prédios"
+        segue: true
+        ligada: true
+      - texto: "Quantas unidades há em cada andar?"
+        se: "for de prédios"
+        segue: true
+      - texto: "Qual a altura do prédio, se souber?"
+        se: "for de prédios"
+        segue: true
+      - texto: "O condomínio é residencial, de escritórios, consultórios, lojas, flat, shopping ou tem mais de um uso?"
+        ligada: true
+      - texto: "O local tem indústria, logística, galpões, armazéns ou garagem comercial?"
+        se: "o uso não tiver ficado claro"
+        segue: true
+      - texto: "O condomínio já está formalmente constituído, por exemplo com a ata de constituição registrada?"
+        se: "isso ainda não tiver sido dito"
+      - texto: "A construção é de tijolos ou blocos, de madeira ou mistura dos dois?"
+      - texto: "Quantos blocos são ao todo?"
+      - texto: "Quantos blocos vocês querem incluir na cotação?"
+        se: "houver mais de um bloco"
+        segue: true
+      - texto: "Quantas unidades são ao todo?"
+      - texto: "Quantos elevadores existem no condomínio?"
+      - texto: "Quantos elevadores há em cada bloco?"
+        se: "houver elevadores e mais de um bloco"
+        segue: true
+      - texto: "Qual a marca dos elevadores?"
+        se: "houver elevadores"
+        segue: true
+      - texto: "Qual a área construída em metros quadrados?"
+        ligada: true
+      - texto: "Qual a área total do condomínio em metros quadrados?"
+      - texto: "Qual a área comum em metros quadrados?"
+      - texto: "Quantas vagas de garagem existem?"
+      - texto: "Alguma parte do condomínio é tombada ou preservada pelo patrimônio histórico?"
+      - texto: "Quais equipamentos e áreas de lazer o condomínio tem?"
+      - texto: "Houve reforma importante no prédio?"
+      - texto: "Quando foi essa reforma?"
+        se: "houve reforma importante"
+        segue: true
+  - nome: "Funcionários"
+    perguntas:
+      - texto: "Quantos funcionários o condomínio tem?"
+      - texto: "Os funcionários são do condomínio, terceirizados ou dos dois?"
+        se: "houver funcionários"
+        segue: true
+      - texto: "Quantos empregados são registrados pelo condomínio?"
+        se: "houver funcionários"
+        segue: true
+      - texto: "Os funcionários têm treinamento para incêndio?"
+        se: "houver funcionários"
+        segue: true
+  - nome: "Segurança e incêndio"
+    perguntas:
+      - texto: "Que itens de segurança o condomínio tem, como câmeras, cerca elétrica ou porteiro eletrônico?"
+      - texto: "O condomínio tem extintores?"
+      - texto: "Tem hidrantes?"
+      - texto: "Tem chuveiros automáticos de incêndio, os sprinklers?"
+      - texto: "Tem detectores de fumaça?"
+      - texto: "Tem alarme de incêndio?"
+      - texto: "Algum alarme é monitorado por uma empresa?"
+        se: "houver alarme"
+        segue: true
+      - texto: "O alarme se comunica pela rede de celular, chamada GPRS, ou por linha telefônica?"
+        se: "o alarme for monitorado"
+        segue: true
+      - texto: "Tem brigada de incêndio, uma equipe preparada para agir em caso de fogo?"
+      - texto: "Tem para-raios?"
+      - texto: "A vigilância é armada, desarmada ou não há vigilância?"
+      - texto: "A vigilância funciona 24 horas?"
+        se: "houver vigilância"
+        segue: true
+      - texto: "Tem botão de pânico?"
+      - texto: "Tem central telefônica?"
+      - texto: "O AVCB, documento dos bombeiros sobre a segurança contra incêndio, está em dia?"
+  - nome: "Valores"
+    perguntas:
+      - texto: "Vocês têm uma estimativa do custo para reconstruir o prédio, sem o terreno?"
+      - texto: "Qual o valor dos bens e equipamentos das áreas comuns, se tiverem esse levantamento?"
+      - texto: "Vocês têm um balancete ou comprovante de despesas disponível? Ajuda a equipe a cotar."
+  - nome: "Histórico de danos"
+    perguntas:
+      - texto: "Nos últimos 12 meses, houve algum dano no condomínio, como incêndio, vazamento ou roubo?"
+      - texto: "E nos últimos três anos, houve outra ocorrência?"
+      - texto: "Em que data aconteceu cada uma?"
+        se: "houve ocorrência"
+      - texto: "O que aconteceu em cada uma?"
+        se: "houve ocorrência"
+      - texto: "Qual cobertura foi acionada em cada caso?"
+        se: "houve ocorrência e usaram o seguro"
+      - texto: "Quanto foi indenizado em cada caso, se souber?"
+        se: "houve ocorrência e usaram o seguro"
+      - texto: "Vocês têm registro de ocorrências e de uso do seguro de quantos anos para trás?"
+      - texto: "Qual o índice de sinistralidade dos últimos três anos, que compara indenizações com o custo do seguro?"
+        se: "houver relatório da seguradora"
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Quer escolher as proteções ou prefere que a equipe sugira?"
+      - texto: "Quer que a equipe compare a opção simples com a ampla, que costuma reunir mais situações e também tem exclusões?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para danos elétricos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para vendaval e granizo?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para impacto de veículos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para vidros, espelhos e pedras fixas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para anúncios e letreiros?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para tumultos e greves?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para roubo ou furto de bens do condomínio?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para roubo ou furto de bens dos moradores?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para dinheiro do condomínio durante o transporte por funcionários?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para alagamento e inundação?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para desmoronamento?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para vazamento de tubulações e tanques?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para vazamento dos chuveiros automáticos de incêndio, os sprinklers?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para danos que o condomínio cause a outras pessoas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para danos a outras pessoas pelos quais o síndico seja responsabilizado?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer que a equipe avalie a responsabilidade por danos a funcionários no trabalho?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para danos morais, como ofensa à honra ou à imagem de alguém?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para portões e cancelas automáticos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção pela responsabilidade na guarda de veículos na garagem?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para incêndio nos bens dos moradores?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para despesas fixas depois de um dano, como um incêndio?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para perda ou pagamento de aluguel?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar lucros cessantes, o ganho que deixa de entrar depois de um dano, como um incêndio?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção específica para equipamentos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer que a equipe explique a opção chamada fidelidade antes de vocês decidirem?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar despesas com retirada de entulho depois de um dano, como um incêndio?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para mercadorias refrigeradas, caso estraguem?"
+        se: "a pessoa quiser escolher e houver mercadorias refrigeradas"
+        segue: true
+      - texto: "Quer avaliar a opção de indenização sem desconto pelo envelhecimento dos bens?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar serviços de assistência para o condomínio, como chaveiro e reparos emergenciais?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar seguro de vida para os funcionários?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar acidentes pessoais para os funcionários?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar auxílio funeral para os funcionários?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Vocês têm a convenção coletiva, o acordo de trabalho da categoria?"
+        se: "houver interesse em vida ou acidentes pessoais dos funcionários"
+        segue: true
+      - texto: "Existe algum limite de cobertura, o valor máximo daquela proteção, que vocês já querem manter ou avaliar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Há alguma preferência de franquia, a parte do prejuízo que fica com o condomínio, para a equipe comparar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Outras informações"
+    perguntas:
+      - texto: "Há mais alguma informação sobre o condomínio que a equipe precisa saber?"
+      - texto: "Você é servidor público? É uma informação desse cadastro da corretora."
+        se: "a corretora usar esse cadastro"
+      - texto: "Você é pai, mãe, filho, marido ou mulher de servidor público? É uma informação desse cadastro da corretora."
+        se: "a corretora usar esse cadastro"
+      - texto: "Quem pode acompanhar a visita?"
+        se: "pedirem inspeção"
+      - texto: "Qual o telefone da pessoa que acompanha a visita?"
+        se: "pedirem inspeção e o contato ainda não estiver informado"
+        segue: true
+      - texto: "Qual o CEP desse local?"
+        se: "pedirem inspeção em outro endereço"
+        segue: true
+      - texto: "Qual o número desse local?"
+        se: "pedirem inspeção em outro endereço"
+        segue: true
+      - texto: "Tem complemento nesse local?"
+        se: "pedirem inspeção em outro endereço"
+        segue: true
+documentos:
+  - "Identificação do condomínio/CNPJ, se os dados ainda não estiverem reunidos."
+  - "Convenção do condomínio e última ata de eleição do síndico."
+  - "AVCB disponível, o documento dos bombeiros sobre segurança contra incêndio, com sua situação. A equipe confere a necessidade no caso."
+  - "Balancete ou comprovantes de despesas, se tiverem; a equipe confirma se a seguradora vai pedir."
+  - "Apólice atual, se já houver seguro, especialmente na renovação."
+  - "Laudo ou memorial com o custo de reconstrução, se houver."
+  - "Histórico de sinistros, se houver ocorrências e o documento estiver disponível."
+  - "Comprovantes de origem dos equipamentos, como notas fiscais: não peça na cotação; só se a equipe pedir depois."
+  - "Registro dos manobristas, se houver manobristas e a equipe confirmar a necessidade no produto escolhido."
+  - "Planta original, se houver fachada de vidro; a equipe confere a necessidade no produto escolhido."
+  - "Convenção coletiva de trabalho, se houver interesse em vida ou acidentes pessoais dos funcionários."
+  - "Ata de constituição registrada, se o condomínio não tiver CNPJ e o documento existir; a equipe avalia como seguir, sem garantia de contratação."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use com o CNPJ do próprio condomínio para completar nome, situação e cadastro. Resultado, falha ou ausência ficam só para a equipe, sem recitar nem pedir confirmação. Se indicar administradora, outra empresa ou situação não ativa, anote a divergência para a equipe e siga a coleta, sem concluir aceitação. Endereço cadastral não prova o local segurado; atividade cadastral não prova o uso do prédio."
+  - fonte: cep
+    usar_quando: "Use com o CEP do condomínio ou da inspeção para completar rua, bairro, cidade e UF; ou com endereço, cidade e UF para buscar o CEP. Anote os dados para a equipe, sem dizer o resultado nem pedir confirmação. Número e complemento vêm do cliente. Se houver ambiguidade, peça só o detalhe que falta, sem recitar resultados. Falha ou ausência de resultado fica para a equipe."
+  - fonte: cpf
+    usar_quando: "Use com o CPF do representante para conferir apenas a validade do número. Anote para a equipe, sem recitar o resultado ao cliente nem pedir confirmação de dados encontrados. Se o número for inválido, peça que confira a digitação, sem repeti-lo. Não identifica nome ou nascimento e não substitui o CNPJ do condomínio. Se a consulta falhar ou não achar, anote para a equipe, sem anunciar ao cliente."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use com a cidade informada quando cidade e UF ainda não tiverem sido resolvidas pelo CEP. Anote a forma padronizada para a equipe, sem dizer o resultado ao cliente nem pedir confirmação. Se a consulta falhar ou não achar, anote a pendência para a equipe, sem anunciar ao cliente."
+  - fonte: localizacao
+    usar_quando: "Use quando a pessoa enviar a localização do imóvel para descobrir somente a cidade. Anote para a equipe, sem dizer o resultado ao cliente nem pedir confirmação. A consulta não informa número, área ou características do prédio. Falha ou ausência de resultado fica anotada para a equipe, sem anunciar ao cliente."
+  - fonte: feriados
+    usar_quando: "Use com a data de vencimento e o local para contar os dias úteis restantes e anotar para a equipe. Não diga o resultado ao cliente nem peça confirmação. Não transforme a contagem em promessa de emissão, aceitação ou início de proteção. Se falhar ou não achar, anote a pendência para a equipe, sem anunciar ao cliente."
+premium:
+  - risco_endereco
+  - certidoes_empresa
+  - raio_x_empresa
+teste:
+  - "Quanto custa o seguro do condomínio?"
+  - "Quero renovar e já tenho a apólice atual"
+  - "O carro na garagem fica coberto com certeza?"

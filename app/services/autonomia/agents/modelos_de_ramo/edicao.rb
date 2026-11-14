@@ -15,8 +15,12 @@
 #   ferramentas: [{ fonte, usar_quando }] — o "Já vem com" inteiro. `fonte` só as do modelo; sem `usar_quando` (ou
 #     vazio), a frase do ramo.
 #
+# No modelo em blocos (#3020) a pergunta guarda o lugar dela (`bloco`, `se`, `segue`): ele segue o item pelo `id` e
+# não vem do pedido. Ligar e desligar uma pergunta é o mesmo `tirada` de sempre.
+#
 # Validação estrita, e nada é gravado quando algo falha (`Recusada#motivo` e `#campo`): só texto, até 20 itens por
-# lista, até 300 letras por item, a frase no limite do "Incluir". Recusa também a conversa sem modelo (conta sem o
+# lista (nas perguntas, até 200 no total e até 20 escritas pelo dono), até 300 letras por item, a frase no limite do
+# "Incluir". Recusa também a conversa sem modelo (conta sem o
 # pacote `seguros`, flag desligada, a Lia: `sem_modelo`) e, no agente que já começou a atender, o que não muda mais
 # (`agente_ja_comecou`: tudo pela conversa; as ferramentas pelo agente).
 class Autonomia::Agents::ModelosDeRamo::Edicao
@@ -118,26 +122,36 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
     agente.update_columns(config: agente.config.to_h.merge(chaves)) # rubocop:disable Rails/SkipsModelValidations
   end
 
-  def lista_valida?(valor)
-    valor.is_a?(Array) && valor.size <= Autonomia::Agents::ModelosDeRamo::ITENS_MAX && valor.all?(Hash)
+  def lista_valida?(valor, campo = FERRAMENTAS)
+    valor.is_a?(Array) && valor.size <= Autonomia::Agents::ModelosDeRamo::MAXIMOS[campo] && valor.all?(Hash)
   end
 
   def listas(marca)
     LISTAS.select { |campo| @mudancas.key?(campo) }.index_with do |campo|
-      negar('lista_invalida', campo) unless lista_valida?(@mudancas[campo])
+      negar('lista_invalida', campo) unless lista_valida?(@mudancas[campo], campo)
 
-      atuais = Autonomia::Agents::ModelosDeRamo::Marca.itens(marca, campo).pluck('id')
-      @mudancas[campo].reduce([]) { |prontos, bruto| prontos + [item(campo, bruto, atuais, prontos.pluck('id'))] }
+      atuais = Autonomia::Agents::ModelosDeRamo::Marca.itens(marca, campo).index_by { |atual| atual['id'] }
+      itens = @mudancas[campo].reduce([]) { |prontos, bruto| prontos + [item(campo, bruto, atuais, prontos.pluck('id'))] }
+      negar('lista_invalida', campo) if do_dono_demais?(itens)
+      itens
     end
   end
 
+  # Os 200 das perguntas são para a lista do modelo em blocos. O que o dono escreve (item sem lugar no modelo, e toda a
+  # lista de um modelo sem blocos) segue no teto de sempre.
+  def do_dono_demais?(itens)
+    itens.count { |item| Autonomia::Agents::ModelosDeRamo::Marca.lugar(item).empty? } > Autonomia::Agents::ModelosDeRamo::ITENS_MAX
+  end
+
+  # `atuais`: id => item que a lista já tem. O lugar da pergunta no modelo em blocos vem dele, nunca do pedido.
   def item(campo, bruto, atuais, usados)
     texto = bruto['texto'].is_a?(String) ? bruto['texto'].squish : ''
     negar('texto_invalido', campo) if texto.empty? || texto.length > Autonomia::Agents::ModelosDeRamo::ITEM_MAX
     negar('tirada_invalida', campo) unless VALORES_DE_TIRADA.include?(bruto['tirada'])
 
-    { 'id' => id_do_item(campo, bruto['id'], atuais, usados), 'texto' => texto,
-      'tirada' => ActiveModel::Type::Boolean.new.cast(bruto['tirada']) == true }
+    id = id_do_item(campo, bruto['id'], atuais.keys, usados)
+    { 'id' => id, 'texto' => texto, 'tirada' => ActiveModel::Type::Boolean.new.cast(bruto['tirada']) == true }
+      .merge(Autonomia::Agents::ModelosDeRamo::Marca.lugar(atuais[id].to_h))
   end
 
   # O id que veio só vale se é de um item que a lista já tem; dois itens com o mesmo id são recusados.
