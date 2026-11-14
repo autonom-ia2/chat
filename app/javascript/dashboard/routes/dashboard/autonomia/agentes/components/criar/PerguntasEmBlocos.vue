@@ -261,7 +261,7 @@ const mudarProprias = (novas, aoGravar) =>
                   class="self-start mt-1 size-4 shrink-0 text-n-slate-9 i-lucide-corner-down-right rtl:-scale-x-100"
                   aria-hidden="true"
                 />
-                <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+                <span class="relative flex flex-col flex-1 min-w-0 gap-0.5">
                   <span
                     data-texto-da-pergunta
                     class="text-base leading-snug"
