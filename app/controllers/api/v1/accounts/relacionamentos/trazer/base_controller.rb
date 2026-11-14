@@ -55,7 +55,8 @@ class Api::V1::Accounts::Relacionamentos::Trazer::BaseController < Api::V1::Acco
     marcadas.where(status: ::Relacionamentos::Trazer::Leitura::RASCUNHO)
   end
 
-  def recusar_com(codigo, motivo = nil)
-    render json: { error: codigo, motivo: motivo }.compact, status: :unprocessable_entity
+  # mais: o que a recusa diz além do código e do motivo (os destinos do seguro que faltam, no "Trazer").
+  def recusar_com(codigo, motivo = nil, **mais)
+    render json: { error: codigo, motivo: motivo }.merge(mais).compact, status: :unprocessable_entity
   end
 end

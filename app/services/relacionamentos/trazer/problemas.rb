@@ -18,6 +18,11 @@
 # - ainda sobrou problema: `aberto`, com o tipo e o motivo do que sobrou (a linha sem nome que teve o telefone
 #   consertado).
 # A linha que a pessoa deixou de fora (ContactImports::Trazer::Conferencia) é `deixado`.
+#
+# Na planilha que traz seguros (E4, #2897) a linha também pode ter problema no seguro dela
+# (Carteira::Trazer::ProblemasDeSeguro): o tipo e o motivo saem de lá e vêm antes dos de contato, porque essa linha
+# não tem conserto na tela. O texto da célula errada não volta. A linha com a mesma apólice de outra (`duplicado`) traz
+# o número e as duas linhas lado a lado, e a pessoa escolhe com qual fica, como na linha repetida.
 class Relacionamentos::Trazer::Problemas
   Pendencia = Relacionamentos::Trazer::Pendencia
   REPETIDA = Pendencia::REPETIDA
@@ -34,6 +39,7 @@ class Relacionamentos::Trazer::Problemas
   MASCARAS = { 'phone' => :raw_phone_masked, 'email' => :email_masked, 'name' => :raw_name }.freeze
   # O que a linha no banco também guarda inteiro: serve quando o arquivo das linhas com problema já foi apagado.
   NA_LINHA = { 'name' => :raw_name, 'company' => :company_name }.freeze
+  DoSeguro = Carteira::Trazer::ProblemasDeSeguro
 
   # arquivo: ContactImports::Trazer::LinhasComProblema; consertos: ContactImports::Trazer::Consertos. Quem não passa
   # ganha um de cada.
@@ -70,7 +76,7 @@ class Relacionamentos::Trazer::Problemas
   def problema(linha)
     feito = consertos[linha.row_number]
     estado = estado_de(linha.row_number, feito)
-    pendencia = estado == GUARDADO ? Pendencia::Resultado.new(tipo: TIPO_DO_CAMPO.fetch(feito['campo'])) : pendencia_de(linha, feito)
+    pendencia = estado == GUARDADO ? Pendencia::Resultado.new(tipo: tipo_guardado(linha, feito)) : pendencia_de(linha, feito)
     item = { linha: linha.row_number, tipo: pendencia.tipo, nome: linha.raw_name.to_s, estado: estado }.merge(do_tipo(linha, pendencia))
     item = item.merge(motivo: pendencia.motivo) if estado == ABERTO && pendencia.motivo
     estado == GUARDADO ? item.merge(guardado(linha, feito)) : item
@@ -82,15 +88,29 @@ class Relacionamentos::Trazer::Problemas
     feito && feito['conferida'] ? GUARDADO : ABERTO
   end
 
-  # O que falta na linha: do que sobrou do último conserto ou, sem conserto, dos motivos que a leitura gravou.
+  # A linha que a pessoa escolheu manter é `duplicada` (a mesma pessoa) ou `duplicado` (a mesma apólice).
+  def tipo_guardado(linha, feito)
+    return DoSeguro::TIPO_DUPLICADO if feito['campo'] == FICAR_COM && DoSeguro.duplicada?(linha.error_messages)
+
+    TIPO_DO_CAMPO.fetch(feito['campo'])
+  end
+
+  # O que falta na linha: o problema do seguro dela ou, sem ele, o que sobrou do último conserto ou, sem conserto, os
+  # motivos que a leitura gravou.
   def pendencia_de(linha, feito)
+    do_seguro = DoSeguro.pendencia(Array(linha.error_messages))
+    return do_seguro if do_seguro
+
     motivos = feito ? [feito['sobrou']].compact : Array(linha.error_messages)
     Pendencia.new(motivos, celulas_de_agora(linha), com_nome: com_nome?).call
   end
 
-  # O que cada tipo mostra além do comum: o valor que deu problema ou, no campo que a tela não conserta, o campo.
+  # O que cada tipo mostra além do comum: o valor que deu problema ou, no campo que a tela não conserta, o campo. O
+  # problema de seguro não mostra valor; o duplicado mostra as duas linhas.
   def do_tipo(linha, pendencia)
     return { campo: pendencia.campo } if pendencia.campo
+    return apolice_repetida(linha) if pendencia.tipo == DoSeguro::TIPO_DUPLICADO
+    return {} if DoSeguro.sem_conserto?(pendencia.tipo)
 
     tipo = pendencia.tipo
     item = { valor: valor(linha, alvo_do_valor(linha, tipo)) }
@@ -150,6 +170,17 @@ class Relacionamentos::Trazer::Problemas
     entrada = entradas[linha.row_number]
     outra = entrada && entrada['outra']
     { outraLinha: outra && outra['linha'], duplicadas: outra ? [outra, entrada].map { |uma| contatos_da_linha(uma) } : [] }
+  end
+
+  # O número da apólice e as duas linhas que a trazem. A outra linha vem do arquivo das linhas com problema; sem ele,
+  # só esta.
+  def apolice_repetida(linha)
+    colunas = Carteira::Trazer::ColunasDeSeguro.da(@importacao)
+    return {} unless colunas
+
+    numero = entradas[linha.row_number].to_h.dig('outra', 'linha')
+    outra = numero && @importacao.campaign_import_rows.find_by(row_number: numero)
+    DoSeguro.new(colunas).duplicado(linha, outra)
   end
 
   def contatos_da_linha(entrada)

@@ -22,6 +22,10 @@
 # cliente a apaga (ContactImports::Trazer::Conferencia#gravar), e a leitura da planilha apaga a que aponta um valor que
 # sumiu. Sem a escolha a lista não é trazida, e o "Trazer" ainda confere, sob a trava, que os valores escolhidos
 # continuam entre os da coluna (`falta_valores_cliente?`): nunca se traz com meia escolha.
+#
+# "Esta planilha tem seguros?" (E4, #2897) só existe na conta com a carteira (Carteira::Acesso). A resposta ("sim" ou
+# "nao") fica guardada com as outras e, com "sim", as colunas ganham os destinos do seguro
+# (Carteira::Trazer::ColunasDeSeguro). Conta sem a carteira não recebe a pergunta nem a resposta.
 class Relacionamentos::Trazer::Perguntas
   SIM_TODAS = 'sim_todas'.freeze
   ALGUMAS = 'algumas'.freeze
@@ -38,7 +42,7 @@ class Relacionamentos::Trazer::Perguntas
   end
 
   def call
-    [{ id: 'clientes' }, valores_cliente, telefone].compact
+    [{ id: 'clientes' }, valores_cliente, telefone, seguros].compact
   end
 
   # { id: 'valores_cliente', coluna: 'Já é cliente?', indice: 4, preenchidas: 35, valores: [{ chave:, valor:, linhas: }],
@@ -73,7 +77,13 @@ class Relacionamentos::Trazer::Perguntas
   # O que a pessoa respondeu e ainda vale, como a tela mandou: sem a coluna do telefone, que é assunto do servidor.
   def respostas_da_tela
     da_tela = coluna_respondida ? clientes.merge(respostas.slice('telefone')) : clientes
+    da_tela = da_tela.merge(respostas.slice(Carteira::Trazer::ColunasDeSeguro::RESPOSTA)) if seguros
     coluna_dos_valores.nil? ? da_tela : da_tela.merge(respostas.slice(VALORES_CLIENTE))
+  end
+
+  # { id: 'seguros' } na conta que tem a carteira, ou nil.
+  def seguros
+    { id: Carteira::Trazer::ColunasDeSeguro::RESPOSTA } if Carteira::Trazer::ColunasDeSeguro.liberada?(@importacao)
   end
 
   private

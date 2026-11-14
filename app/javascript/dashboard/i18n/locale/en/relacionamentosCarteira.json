@@ -355,7 +355,9 @@
           "COMECA": "{quem}: I did not understand the date the policy starts.",
           "VALOR": "{quem}: I did not understand the price of the policy.",
           "DUPLICADO": "{quem}: policy {numero} appears in two rows, with different data. Which one do you keep?",
-          "DUPLICADO_ESCOLHIDO": "{quem}: policy {numero} appeared in two rows."
+          "DUPLICADO_ESCOLHIDO": "{quem}: policy {numero} appeared in two rows.",
+          "DE_OUTRA_PESSOA": "{quem}: this policy is already saved here under another person. Check the policy number, the phone and the email of this row in the spreadsheet.",
+          "TERMO_AMBIGUO": "{quem}: more than one policy is already saved here with this policy number, and the dates in this row do not tell which one it is. Check the start date and the end date in the spreadsheet."
         }
       },
       "PRONTO": {

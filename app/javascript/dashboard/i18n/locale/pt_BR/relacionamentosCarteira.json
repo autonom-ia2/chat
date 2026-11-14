@@ -355,7 +355,9 @@
           "COMECA": "{quem}: não entendi a data em que o seguro começa.",
           "VALOR": "{quem}: não entendi o valor do seguro.",
           "DUPLICADO": "{quem}: a apólice {numero} aparece em duas linhas, com dados diferentes. Com qual você fica?",
-          "DUPLICADO_ESCOLHIDO": "{quem}: a apólice {numero} aparecia em duas linhas."
+          "DUPLICADO_ESCOLHIDO": "{quem}: a apólice {numero} aparecia em duas linhas.",
+          "DE_OUTRA_PESSOA": "{quem}: este seguro já está guardado aqui no nome de outra pessoa. Confira na planilha o número da apólice, o telefone e o e-mail desta linha.",
+          "TERMO_AMBIGUO": "{quem}: já existe mais de um seguro guardado aqui com este número de apólice, e as datas desta linha não dizem qual deles é. Confira na planilha a data em que o seguro começa e a data em que termina."
         }
       },
       "PRONTO": {

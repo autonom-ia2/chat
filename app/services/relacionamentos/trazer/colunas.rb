@@ -8,6 +8,9 @@
 #
 # O destino "telefone da empresa" só existe com coluna de empresa na planilha e Empresas ligada na conta (`tem_empresa?`).
 #
+# Na planilha que traz seguros (E4, #2897: a pessoa respondeu "sim" numa conta com a carteira) a coluna que não é alvo
+# também pode ser do seguro: os destinos de Carteira::Trazer::ColunasDeSeguro. `aceita?` diz se o destino vale agora.
+#
 # `chaves_que_nao_guardam` é a única regra de quais colunas ficam de fora: a leitura (que não põe o valor na linha nem no
 # resumo), a gravação (que não cria a informação) e a troca na tela (que apaga o valor das linhas) perguntam aqui.
 class Relacionamentos::Trazer::Colunas
@@ -62,6 +65,12 @@ class Relacionamentos::Trazer::Colunas
 
   def destino_da_extra(indice)
     destinos.fetch(indice.to_s, INFORMACAO)
+  end
+
+  # O destino de uma coluna que não é alvo vale nesta importação: os de sempre e, na planilha com seguros, os do seguro.
+  def aceita?(destino)
+    EXTRAS.include?(destino) ||
+      (Carteira::Trazer::ColunasDeSeguro.destino?(destino) && Carteira::Trazer::ColunasDeSeguro.com_seguros?(@importacao))
   end
 
   # Para onde vai a coluna deste índice: um dos quatro alvos ou o destino da coluna que não é alvo.
