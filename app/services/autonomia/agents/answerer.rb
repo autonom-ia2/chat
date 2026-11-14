@@ -476,8 +476,9 @@ module Autonomia
 
         recusas_antes = Tools::Recusa.registradas
         output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+        situacao = ler_saida_pronta(tool, output) if ferramenta_do_sistema?(call, tools_by_slug, specialists_by_function)
         recusou = Tools::Recusa.registradas > recusas_antes
-        anotar_leitura(tool, output, recusou: recusou)
+        anotar_leitura(tool, output, recusou: recusou, situacao: situacao)
         @uma_escrita&.concluir(call, tools_by_slug, specialists_by_function, recusou: recusou)
         output
       end
@@ -488,12 +489,26 @@ module Autonomia
         specialists_by_function[nome].nil? && tools_by_slug.key?(nome)
       end
 
+      # Só a ferramenta direta do principal muda a leitura; o Guia e as consultas internas mantêm a regra anterior.
+      def ler_saida_pronta(tool, output)
+        return if @operador
+
+        situacao = tool.situacao_da_pronta(output)
+        if situacao == 'nao_consegui_consultar'
+          Tools::Recusa.registrar(
+            'consulta_pronta_indisponivel', slug: tool.slug, agente: @agent, conversa: Tools::Recusa.conversa_de(@delivery)
+          )
+        end
+        situacao
+      end
+
       # DADO DE SISTEMA NO TURNO (#1361). Quem diz que a chamada recusou é o registro de recusas (`Tools::Recusa`),
       # nunca o texto da saída. A promessa da ferramenta assíncrona ("consulta iniciada") não é dado, e saída vazia
       # ou com erro também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
-      def anotar_leitura(tool, output, recusou:)
+      def anotar_leitura(tool, output, recusou:, situacao: nil)
         @recusa_no_turno = true if recusou
         return if recusou || tool&.async? || tool&.consulta_em_andamento?(output) || saida_sem_dado?(output)
+        return if %w[pedido_invalido nao_consegui_consultar].include?(situacao)
 
         @dado_de_sistema = true
       end

@@ -15,14 +15,15 @@
 # - Deixar de fora e voltar atrás esquecem o que tinha sido consertado na linha.
 #
 # Devolve a linha como a tela a mostra agora (`problema`), quantas pessoas entram se a pessoa mandar trazer agora
-# (`entram`) e quantas delas como cliente (`clientes`): as contas de ContactImports::Trazer::QuemEntra, as do resumo.
+# (`entram`), quantas delas como cliente (`clientes`) e quantas sem o telefone que estava escrito na planilha
+# (`semTelefone`): as contas de ContactImports::Trazer::QuemEntra, as do resumo.
 #
 # Cada pedido regrava só o arquivo dos consertos, que tem o tamanho dos consertos, não o da planilha, e lê cada arquivo
 # da conferência uma vez só: os dois leitores são criados aqui e passados adiante. O arquivo conferido só é mexido na
 # hora de trazer (ContactImports::Trazer::FecharConferencia). A linha no banco continua como problema até lá: a tela
 # segue mostrando a linha, agora guardada ou deixada.
 class Relacionamentos::Trazer::MudarLinha
-  Resultado = Struct.new(:erro, :motivo, :problema, :entram, :clientes, keyword_init: true)
+  Resultado = Struct.new(:erro, :motivo, :problema, :entram, :clientes, :semTelefone, keyword_init: true)
   FICAR_COM = ContactImports::Trazer::Conserto::FICAR_COM
   CONTATO = ContactImports::Trazer::Conserto::CONTATO
   CAMPO_DO_TIPO = { 'telefone' => 'telefone', 'email' => 'email', 'nome' => 'nome', 'sem_contato' => CONTATO }.freeze
@@ -103,7 +104,8 @@ class Relacionamentos::Trazer::MudarLinha
 
     colunas = conserto.valores.keys.index_with { |alvo| conferidor.alvos[alvo] }
     guardar({ 'linha' => @numero, 'campo' => campo, 'outra' => outra || feito['outra'], 'valores' => conserto.valores, 'colunas' => colunas,
-              'conferida' => conserto.conferida, 'sobrou' => conserto.sobrou }.compact, fora: fora)
+              'conferida' => conserto.conferida, 'sobrou' => conserto.sobrou, 'sem_telefone' => (true if conserto.sem_telefone) }.compact,
+            fora: fora)
   end
 
   # O valor que nem chega a ser conferido: longo demais, ou numa linha que a tela não conserta.

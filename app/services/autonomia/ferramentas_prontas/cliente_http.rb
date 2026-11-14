@@ -25,11 +25,14 @@
 #   - o proxy que caiu (`ProxyMorto.ligacao_caiu?`: a ligação com ele recusada ou sem resposta no prazo de abertura; ou o túnel
 #     recusado, como o 407, que primeiro relê a credencial na Webshare e tenta UMA vez de novo pelo mesmo IP): a chamada
 #     repete pelo IP do servidor, reservando o teto dele, e o cliente larga o proxy (a reserva da mesma fonte não o
-#     reusa). A queda vai ao `Saida::ProxyMorto` (contagem, troca, falha geral). Só GET (este cliente só faz GET).
+#     reusa). A queda vai ao `Saida::ProxyMorto` (contagem, troca, falha geral). Só GET (o POST deste cliente nunca sai
+#     pelo proxy: é só dos hosts de `pelo_servidor!`).
 #     Decisão do Rodrigo (12/11/2026): sem IP próprio vivo, o cliente recebe a resposta pelo IP do servidor. São do SITE,
 #     sem repetir e sem contar contra o IP: o túnel com 502 ou 504 (o proxy não chegou ao site) e o prazo de leitura com
 #     o túnel aberto. Ressalva: o prazo de abertura (`Net::OpenTimeout`) também cobre o TLS com o site, dentro do túnel;
 #     esse caso conta como do proxy;
+#   - o host em que a plataforma entra com o cadastro DELA (#2993, `pelo_servidor!`): nunca sai pelo IP próprio da
+#     conta. O mesmo login chegando de um IP por conta pareceria ataque, e a cota ali não é por IP;
 #   - o prazo da chamada é medido depois de achar a saída (que pode ir à Webshare), para não passar do prazo final.
 #
 # Erro vira `Provedor::Falha` com um motivo curto do código (`tempo_esgotado`, `erro_da_fonte`…): a mensagem de fora
@@ -78,6 +81,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
     @conta = conta
     @hosts = hosts.map(&:downcase)
     @de_fora = []
+    @pelo_servidor = []
     @prazo_final = prazo_final
     @chamadas = 0
     @saida = Autonomia::FerramentasProntas::Saida::DoCliente.new(conta: conta, ate: prazo_final - MINIMO)
@@ -92,6 +96,11 @@ class Autonomia::FerramentasProntas::ClienteHttp
     @de_fora |= [nome]
   end
 
+  # Os hosts em que a plataforma entra com o cadastro dela (#2993): o pedido nunca sai pelo IP próprio da conta.
+  def pelo_servidor!(*hosts)
+    @pelo_servidor |= hosts.map { |host| host.to_s.downcase }
+  end
+
   def self.agora
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
@@ -101,6 +110,17 @@ class Autonomia::FerramentasProntas::ClienteHttp
   # `cabecalhos`: os próprios do provedor (`Provedor.cabecalhos`), por baixo dos fixos daqui.
   def get_json(host, caminho, prazo:, max_bytes: MAX_BYTES, cabecalhos: {})
     ler_json(buscar(host, caminho, prazo: prazo, max_bytes: max_bytes, aceita: { tipos: TIPOS, cabecalhos: cabecalhos }))
+  end
+
+  # O POST com corpo JSON (#2993), para o provedor que entra com o cadastro da plataforma antes de consultar. As mesmas
+  # proteções do GET. O corpo leva a credencial: nunca vai a log nem a erro (a falha é só o motivo curto), e nenhum
+  # redirecionamento é seguido (o corpo não é mandado de novo a outro endereço).
+  def post_json(host, caminho, corpo, prazo:, cabecalhos: {})
+    raise Falha, 'endereco_recusado' unless @pelo_servidor.include?(host.to_s.downcase)
+
+    envio = { method: :post, body: corpo.to_json, max_redirects: 0 }
+    aceita = { tipos: TIPOS, cabecalhos: cabecalhos.merge('Content-Type' => TIPOS.first), envio: envio }
+    ler_json(buscar(host, caminho, prazo: prazo, max_bytes: MAX_BYTES, aceita: aceita))
   end
 
   # O mesmo, para o provedor que responde sem corpo quando não há registro (o PNCP manda 204): o vazio vira "não
@@ -148,7 +168,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   # `@saida`: o proxy da conta e as quedas dele (`Saida::DoCliente`), que mandam repetir quando o proxy cai.
   def pedir(host, url, prazo:, max_bytes:, aceita:)
-    proxy = @saida.proxy
+    proxy = @pelo_servidor.include?(host.to_s.downcase) ? nil : @saida.proxy
     segundos = prazo_da_chamada(prazo)
     liberar!(host, proxy)
     @chamadas += 1
@@ -236,7 +256,7 @@ class Autonomia::FerramentasProntas::ClienteHttp
       max_redirects: MAX_REDIRECTS, cross_origin_redirects: false, allowed_ports: [PORTA], schemes: %w[https],
       allowed_content_types: tipos, allowed_content_type_prefixes: [], validate_content_type: aceita.fetch(:conferir_tipo, true),
       sensitive_headers: aceita.fetch(:cabecalhos).keys # se um dia o salto para outra origem for aceito, a chave cai antes
-    }.merge(aceita.fetch(:fixos, {}), pela_saida)
+    }.merge(aceita.fetch(:envio, {}), aceita.fetch(:fixos, {}), pela_saida)
   end
 
   def traduzir(erro)
@@ -248,9 +268,9 @@ class Autonomia::FerramentasProntas::ClienteHttp
 
   def falha_http(status)
     return NaoEncontrado.new('nao_encontrado') if status == 404
-    return Falha.new('limite_da_fonte') if status == 429
-    return Falha.new('erro_da_fonte') if status >= 500
+    return Falha.new('limite_da_fonte', status: status) if status == 429
+    return Falha.new('erro_da_fonte', status: status) if status >= 500
 
-    Falha.new(status.between?(300, 399) ? 'redirecionamento' : 'pedido_recusado')
+    Falha.new(status.between?(300, 399) ? 'redirecionamento' : 'pedido_recusado', status: status)
   end
 end

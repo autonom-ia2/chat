@@ -178,6 +178,19 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
   # que a linha registrada tem de diferente do padrão.
   def gatilhos # rubocop:disable Metrics/MethodLength, Metrics/AbcSize -- a tabela é o ponto: um gatilho por saída
     {
+      'answerer.rb#ler_saida_pronta#1' => {
+        espera: { motivo: 'consulta_pronta_indisponivel', slug: 'pronta_cep' },
+        dispara: lambda {
+          ligar_prontas(account)
+          pronta = incluir_pronta('cep', conta: account, agente: agent)
+          account.disable_features!(Autonomia::FerramentasProntas::FLAG)
+          ligada = Autonomia::Agents::Tools::Bound.new(agent: agent, record: pronta)
+          allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).with(agent).and_return([ligada])
+          resposta = rodar_principal({ 'name' => pronta.slug, 'call_id' => 'c1', 'arguments' => '{"cep":"01001000"}' })
+          # No atendimento (`trust_instruction`) a consulta que falhou só registra: a resposta ao cliente sai como veio.
+          expect(resposta.reply).to eq('ok')
+        }
+      },
       'bound.rb#execute#1' => {
         espera: { motivo: 'invalid_tool_arguments' },
         dispara: -> { bound.execute(call.merge('arguments' => 'nao-e-json'), delivery: delivery) }

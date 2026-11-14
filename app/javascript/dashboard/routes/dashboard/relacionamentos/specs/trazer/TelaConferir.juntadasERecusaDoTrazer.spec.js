@@ -13,6 +13,8 @@ vi.setConfig({ testTimeout: 30000 });
 
 const NADA_PARA_TRAZER =
   'Não sobrou ninguém para trazer. Envie a planilha de novo.';
+const DESFAZER_EM_CURSO =
+  'Tem uma lista sendo desfeita agora. Espere o Desfazer terminar e tente de novo.';
 
 // As linhas como o servidor as devolve (a planilha `com_problemas` do spec).
 const TELEFONE = {
@@ -146,6 +148,22 @@ describe('TelaConferir: as linhas juntadas e a recusa do trazer', () => {
     expect(aviso(w).text()).toBe(NADA_PARA_TRAZER);
     expect(w.find('[data-relacionamentos="erro"]').exists()).toBe(false);
     // O botão de trazer continua ligado: nada de botão desligado.
+    expect(
+      w.get('[data-relacionamentos="trazer-confirmar"]').attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('a recusa do trazer "desfazer em curso" diz o que fazer, como alerta, sem "tentar de novo"', () => {
+    const w = montar(comJuntadas(0), {
+      recusaDoTrazer: ERROS.DESFAZER_EM_CURSO,
+    });
+    expect(aviso(w).attributes('role')).toBe('alert');
+    expect(aviso(w).text()).toBe(DESFAZER_EM_CURSO);
+    expect(w.findAll('[data-relacionamentos="recusa-do-trazer"]')).toHaveLength(
+      1
+    );
+    expect(w.find('[data-relacionamentos="erro"]').exists()).toBe(false);
+    // O botão de trazer continua ligado: é por ele que a pessoa tenta depois.
     expect(
       w.get('[data-relacionamentos="trazer-confirmar"]').attributes('disabled')
     ).toBeUndefined();

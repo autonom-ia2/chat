@@ -12,6 +12,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
@@ -37,6 +39,7 @@ import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
 import { usarDemo } from '../fonte/modoDemo';
+import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { ehSemAcesso } from '../lista/falhas';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
@@ -52,6 +55,11 @@ import { useMarcados } from '../lista/useMarcados';
 const ListaDeSeguros = defineAsyncComponent(
   () => import('../components/carteira/ListaDeSeguros.vue')
 );
+// O selo de seguro da linha da pessoa, idem: só é baixado quando há uma pessoa
+// com seguro na tela, o que só acontece na conta que tem a carteira.
+const SeloDoSeguro = defineAsyncComponent(
+  () => import('../components/carteira/SeloDoSeguro.vue')
+);
 
 // #2894 — a lista de Relacionamentos: herói com a frase do dia, abas
 // Pessoas · Empresas (na URL, `?aba=empresas`), grupos, busca, ordem, "Mais
@@ -62,7 +70,9 @@ const ListaDeSeguros = defineAsyncComponent(
 // ações em grupo escrevem nele.
 // #2897 — a conta que tem a carteira de seguros ganha a aba Seguros
 // (`?aba=seguros`), que é outra peça (components/carteira/ListaDeSeguros.vue):
-// enquanto ela está aberta, a lista de pessoas não carrega.
+// enquanto ela está aberta, a lista de pessoas não carrega. Nessa conta a lista
+// de pessoas também ganha o selo do seguro ao lado do nome, o grupo "Só tem um
+// seguro" e a busca pelo número da apólice (carteira/useCarteiraNaLista.js).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -129,11 +139,21 @@ const podeMarcar = computed(
 const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
 const marcados = useMarcados();
+// Na conta com a carteira, cada página de pessoas que chega pede os selos de
+// seguro daquelas pessoas; nas outras, a fonte passa como é. Se os selos não
+// chegam, a tela avisa acima das linhas: pessoa sem selo se lê como "não tem
+// seguro", e aqui isso não se sabe.
+const carteira = useCarteiraNaLista({ demo, ligada: temSeguros });
 const lista = useLista({
-  fonte: listaFonte({ demo }),
+  fonte: carteira.comSelos(listaFonte({ demo, comSeguros: temSeguros })),
   aba,
   aoMudarConsulta: marcados.limpar,
 });
+// O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
+// texto do selo dela: "Seguro vencido", "Seguro ativo" ou "Seguro cancelado".
+const seguroDe = ({ id }) => carteira.daPessoa(id);
+const rotuloDoSeguro = ({ selo }) =>
+  t(`RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS.${selo.toUpperCase()}`);
 
 // Trocar de aba fecha a gaveta do seguro que estiver aberta (`?apolice=`).
 const DA_ABA = ['aba', 'apolice'];
@@ -150,8 +170,12 @@ const trocarAba = nova => {
 // está aberta.
 const verGrupo = id => lista.escolherGrupo(id);
 
+// Os grupos da aba; a conta com a carteira tem um a mais em Pessoas.
+const gruposDaLista = computed(() =>
+  gruposDaAba(aba.value, { comSeguros: temSeguros.value })
+);
 const grupos = computed(() =>
-  gruposDaAba(aba.value).map(({ id, nome }) => ({
+  gruposDaLista.value.map(({ id, nome }) => ({
     id,
     nome: t(nome),
     total: lista.contagens.value[id],
@@ -161,17 +185,22 @@ const grupos = computed(() =>
 // a altura (`min-h-5`) para a tela não pular ao trocar de grupo.
 const explicacao = computed(() => {
   if (lista.grupo.value === GRUPO_PADRAO[aba.value]) return '';
-  const atual = gruposDaAba(aba.value).find(g => g.id === lista.grupo.value);
+  const atual = gruposDaLista.value.find(g => g.id === lista.grupo.value);
   return atual ? t(atual.explicacao) : '';
 });
 const contaDeMarcados = computed(() => contaDaMensagem(marcados.pessoas.value));
 
 const contaVazia = computed(() => lista.resumo.value?.total === 0);
-const placeholder = computed(() =>
-  t(
+// Na conta com a carteira a busca de pessoas também acha pelo número da
+// apólice, e o campo diz isso.
+const placeholder = computed(() => {
+  if (temSeguros.value && !ehEmpresas.value) {
+    return t('RELACIONAMENTOS_CARTEIRA.PESSOAS.BUSCA');
+  }
+  return t(
     `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
-  )
-);
+  );
+});
 const placeholderCurto = computed(() =>
   t(
     `RELACIONAMENTOS.LISTA.BUSCA.PLACEHOLDER_CURTO_${ehEmpresas.value ? 'EMPRESAS' : 'PESSOAS'}`
@@ -404,6 +433,27 @@ watch(naAbaDeSeguros, estaNela => {
                 @acao="semResultado.acao"
               />
               <template v-else>
+                <Banner
+                  v-if="temSeguros && !ehEmpresas && carteira.falhou.value"
+                  color="amber"
+                  role="alert"
+                  data-carteira="aviso-dos-selos"
+                >
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm">
+                      {{ t('RELACIONAMENTOS_CARTEIRA.PESSOAS.SELOS_FALHARAM') }}
+                    </span>
+                    <Button
+                      slate
+                      faded
+                      size="lg"
+                      data-carteira="tentar-os-selos"
+                      :is-loading="carteira.tentando.value"
+                      :label="t('RELACIONAMENTOS.COMUM.TENTAR_DE_NOVO')"
+                      @click="carteira.tentarDeNovo"
+                    />
+                  </div>
+                </Banner>
                 <MarcarTodas
                   v-if="!ehEmpresas && faltamMarcar"
                   :total="lista.total.value"
@@ -430,7 +480,14 @@ watch(naAbaDeSeguros, estaNela => {
                       @alternar="marcados.alternar"
                       @abrir="abrirPessoa"
                       @conversar="conversar"
-                    />
+                    >
+                      <template v-if="seguroDe(pessoa)" #selos>
+                        <SeloDoSeguro
+                          :seguro="seguroDe(pessoa)"
+                          :rotulo="rotuloDoSeguro(seguroDe(pessoa))"
+                        />
+                      </template>
+                    </LinhaDePessoa>
                   </template>
                 </ListaDeLinhas>
                 <MostrarMais

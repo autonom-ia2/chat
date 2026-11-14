@@ -205,6 +205,20 @@ describe('useTrazerLista: as recusas do servidor', () => {
     expect(trazer).toHaveBeenCalledTimes(1);
   });
 
+  // A conta está desfazendo uma lista: a tela diz para esperar; o botão de
+  // trazer segue ligado e é por ele que a pessoa pede de novo.
+  it('trazer recusado (DESFAZER_EM_CURSO): fica em conferir, com o erro próprio, e o clique seguinte pede de novo', async () => {
+    const trazer = vi.fn().mockRejectedValue(erroDeNome('DESFAZER_EM_CURSO'));
+    const { tela } = await montar({ trazer }, SEM_PERGUNTAS);
+    await tela.trazer();
+    expect(tela.erro.value).toBe(ERROS.DESFAZER_EM_CURSO);
+    expect(tela.ocupado.value).toBe(false);
+    await tela.tentarDeNovo();
+    expect(trazer).toHaveBeenCalledTimes(1);
+    await tela.trazer();
+    expect(trazer).toHaveBeenCalledTimes(2);
+  });
+
   it('trazer com a tela desatualizada: lê a leitura de novo, diz que mudou e não tenta de novo sozinho', async () => {
     const trazer = vi.fn().mockRejectedValue(erroDeNome('TELA_DESATUALIZADA'));
     const retomar = vi.fn(async () => SEM_PERGUNTAS);

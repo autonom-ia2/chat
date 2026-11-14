@@ -14,11 +14,14 @@
 #   Nunca o valor. Nada é para guardar;
 # - senão `valores` (o que guardar) e a linha `conferida`, pronta para o arquivo conferido, quando a linha inteira
 #   ficou boa; ou `sobrou`, o motivo que ainda falta resolver nela (a linha sem nome que teve o telefone consertado).
+#   Com a linha `conferida`, `sem_telefone` diz se ela entra sem o telefone que está escrito nela: o número não deu
+#   para ler e a linha vale pelo e-mail (a linha sem nome que teve só o nome consertado, a repetida que a pessoa
+#   escolheu manter). É só a marca, nunca o que estava escrito.
 # A fórmula numa célula que a tela não conserta (a empresa) sobra antes de tudo (`formula_detected`): nenhum conserto
 # resolve a linha, e ela só pode ficar de fora (Relacionamentos::Trazer::Pendencia diz isso à tela). Depois vem o que
 # a tela conserta.
 class ContactImports::Trazer::Conserto
-  Resultado = Struct.new(:motivo, :valores, :conferida, :sobrou, keyword_init: true)
+  Resultado = Struct.new(:motivo, :valores, :conferida, :sobrou, :sem_telefone, keyword_init: true)
   ALVOS = CampaignImports::SpreadsheetReader::TARGETS
   ALVO_DO_CAMPO = { 'telefone' => 'phone', 'email' => 'email', 'nome' => 'name' }.freeze
   CONTATO = 'contato'.freeze
@@ -92,9 +95,14 @@ class ContactImports::Trazer::Conserto
     linha = ALVOS.index_with { |alvo| (valores[alvo] || celulas[alvo]).to_s.strip }
     contato = @contatos.fields(linha['phone'], linha['email'])
     sobrou = motivo_da_linha(linha, contato)
-    return Resultado.new(valores: valores, conferida: conferida(numero, linha, contato)) unless sobrou
+    return Resultado.new(valores: valores, sobrou: sobrou) if sobrou
 
-    Resultado.new(valores: valores, sobrou: sobrou)
+    Resultado.new(valores: valores, conferida: conferida(numero, linha, contato), sem_telefone: sem_telefone?(contato))
+  end
+
+  # O telefone da linha tem número e não deu para ler: a máscara é a mesma que a leitura grava na linha aprovada.
+  def sem_telefone?(contato)
+    contato[:normalized_phone].nil? && contato[:raw_phone_masked].present?
   end
 
   # O primeiro motivo que falta resolver. O que a tela não conserta vem antes: com ele, consertar o resto não adianta.

@@ -54,6 +54,7 @@ class ContactImports::Trazer::ConsertosDaLeitura
     return if resultado.motivo
 
     feito.slice('linha', 'campo', 'outra', 'colunas')
-         .merge('valores' => resultado.valores, 'conferida' => resultado.conferida, 'sobrou' => resultado.sobrou).compact
+         .merge('valores' => resultado.valores, 'conferida' => resultado.conferida, 'sobrou' => resultado.sobrou,
+                'sem_telefone' => (true if resultado.sem_telefone)).compact
   end
 end

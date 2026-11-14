@@ -548,9 +548,9 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
         expect(response.parsed_body).to eq(
           [
             { 'id' => entrando.id, 'arquivo' => 'Clientes de setembro.xlsx', 'quando' => '2026-11-08T14:02:00Z', 'quem' => 'Marina Pavanelli',
-              'total' => 4, 'situacao' => 'trazendo', 'porcentagem' => 25, 'pode_tentar' => false },
+              'total' => 4, 'situacao' => 'trazendo', 'porcentagem' => 25, 'pode_tentar' => false, 'pode_desfazer' => false },
             { 'id' => antiga.id, 'arquivo' => 'Clientes de setembro.xlsx', 'quando' => '2026-11-05T14:03:00Z', 'quem' => 'Marina Pavanelli',
-              'total' => 3, 'situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false }
+              'total' => 3, 'situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false, 'pode_desfazer' => true }
           ]
         )
       end
@@ -590,11 +590,20 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       listas
 
       por_id = response.parsed_body.index_by { |item| item['id'] }
-      expect(por_id[desfeita.id]).to include('situacao' => 'desfeito', 'porcentagem' => 100, 'pode_tentar' => false)
-      expect(por_id[desfazendo.id]).to include('situacao' => 'desfazendo', 'porcentagem' => 100, 'pode_tentar' => false)
-      expect(por_id[parou.id]).to include('situacao' => 'falhou', 'porcentagem' => 50, 'pode_tentar' => true)
-      expect(por_id[sem_arquivo.id]).to include('situacao' => 'falhou', 'porcentagem' => 0, 'pode_tentar' => false)
-      expect(por_id[com_falhas.id]).to include('situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false)
+      expect(por_id[desfeita.id]).to include('situacao' => 'desfeito', 'porcentagem' => 100, 'pode_tentar' => false, 'pode_desfazer' => false)
+      expect(por_id[desfazendo.id]).to include('situacao' => 'desfazendo', 'porcentagem' => 100, 'pode_tentar' => false, 'pode_desfazer' => false)
+      # A que quebrou no meio pode continuar ou ser desfeita; a pessoa escolhe.
+      expect(por_id[parou.id]).to include('situacao' => 'falhou', 'porcentagem' => 50, 'pode_tentar' => true, 'pode_desfazer' => true)
+      expect(por_id[sem_arquivo.id]).to include('situacao' => 'falhou', 'porcentagem' => 0, 'pode_tentar' => false, 'pode_desfazer' => true)
+      expect(por_id[com_falhas.id]).to include('situacao' => 'pronto', 'porcentagem' => 100, 'pode_tentar' => false, 'pode_desfazer' => true)
+    end
+
+    it 'volta a oferecer o Desfazer na lista em que ele parou no meio' do
+      parou = lista(undo_status: :processing)
+
+      travel_to((CampaignImports::Config.stalled_import_after + 1.minute).from_now) { listas }
+
+      expect(response.parsed_body.sole).to include('id' => parou.id, 'situacao' => 'desfazendo', 'pode_desfazer' => true)
     end
 
     it 'faz o mesmo número de consultas com 3 e com 10 listas' do

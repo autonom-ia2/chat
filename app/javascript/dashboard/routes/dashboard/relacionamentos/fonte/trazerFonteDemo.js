@@ -89,7 +89,18 @@ const proximoNumero = dados => {
 const porcentagemDaLista = (lista, agora, demo) =>
   demo.porcentagemDaTrazida(lista.retomadaEm ?? lista.quando, agora);
 
+// Como o servidor: o Desfazer aparece na lista pronta e na que parou no meio
+// (na demonstração, a que parou sempre chegou a pôr gente na base).
+const COM_DESFAZER = [SITUACOES_DA_LISTA.PRONTO, SITUACOES_DA_LISTA.FALHOU];
+
+// O desfazer também leva um tempo: a lista fica `desfazendo` desde o pedido
+// (`desfazendoDesde`) e depois aparece `desfeito`.
 const situacaoDaLista = (lista, agora, demo) => {
+  if (lista.situacao === SITUACOES_DA_LISTA.DESFAZENDO) {
+    return demo.desfazerTerminou(lista.desfazendoDesde, agora)
+      ? SITUACOES_DA_LISTA.DESFEITO
+      : lista.situacao;
+  }
   if (lista.situacao !== SITUACOES_DA_LISTA.TRAZENDO) return lista.situacao;
   const porcentagem = porcentagemDaLista(lista, agora, demo);
   return porcentagem >= 100 ? SITUACOES_DA_LISTA.PRONTO : lista.situacao;
@@ -108,7 +119,11 @@ const vistaDaLista = (lista, agora, demo) => {
       situacao === SITUACOES_DA_LISTA.TRAZENDO
         ? porcentagemDaLista(lista, agora, demo)
         : 100,
-    podeTentar: lista.podeTentar === true,
+    podeTentar:
+      situacao === SITUACOES_DA_LISTA.FALHOU && lista.podeTentar === true,
+    podeDesfazer: COM_DESFAZER.includes(situacao),
+    // Na demonstração o desfazer nunca deixa ninguém para trás.
+    ficaram: 0,
   };
 };
 
@@ -285,6 +300,22 @@ const trazidasDaDemo = ({ dados, atraso, agora }) => ({
   },
 });
 
+// Como o servidor: só a lista que ainda está entrando não tem prévia nem
+// desfazer. A que parou no meio tem: as pessoas que ela chegou a pôr não ficam
+// presas numa lista que não dá para apagar. Devolve a lista e a situação dela
+// agora.
+const listaQueJaEntrou = (dadosDaDemo, trazidaId, agora) => {
+  const lista = listaDe(dadosDaDemo, trazidaId);
+  const { situacao } = vistaDaLista(lista, agora, dadosDaDemo.demo);
+  if (situacao === SITUACOES_DA_LISTA.TRAZENDO) {
+    throw erroNomeado(
+      'NAO_PODE_DESFAZER',
+      'Essa lista ainda não pode ser desfeita.'
+    );
+  }
+  return { lista, situacao };
+};
+
 // O que a conta já trouxe e o desfazer.
 const historicoDaDemo = ({ dados, atraso, agora }) => ({
   async historico() {
@@ -299,7 +330,7 @@ const historicoDaDemo = ({ dados, atraso, agora }) => ({
   },
   async previaDoDesfazer(trazidaId) {
     await esperar(atraso);
-    const lista = listaDe(await dados(), trazidaId);
+    const { lista } = listaQueJaEntrou(await dados(), trazidaId, agora());
     return {
       tira: lista.novas - lista.ficam,
       ficam: lista.ficam,
@@ -309,20 +340,20 @@ const historicoDaDemo = ({ dados, atraso, agora }) => ({
   async desfazer(trazidaId) {
     await esperar(atraso);
     const dadosDaDemo = await dados();
-    const lista = listaDe(dadosDaDemo, trazidaId);
-    const vista = vistaDaLista(lista, agora(), dadosDaDemo.demo);
-    // Pronta desfaz sempre, sem data limite; trazendo e desfeita não.
-    if (vista.situacao !== SITUACOES_DA_LISTA.PRONTO) {
-      throw erroNomeado(
-        'NAO_PODE_DESFAZER',
-        'Essa lista não pode mais ser desfeita.'
-      );
+    const momento = agora();
+    const { situacao } = listaQueJaEntrou(dadosDaDemo, trazidaId, momento);
+    // A pronta e a que parou no meio desfazem sempre, sem data limite. O
+    // pedido repetido não muda nada: responde a situação de agora
+    // (`desfazendo` ou `desfeito`).
+    if (!COM_DESFAZER.includes(situacao)) {
+      return { id: trazidaId, situacao };
     }
     trocarALista(dadosDaDemo, trazidaId, item => ({
       ...item,
-      situacao: SITUACOES_DA_LISTA.DESFEITO,
+      situacao: SITUACOES_DA_LISTA.DESFAZENDO,
+      desfazendoDesde: momento,
     }));
-    return { id: trazidaId, situacao: SITUACOES_DA_LISTA.DESFEITO };
+    return { id: trazidaId, situacao: SITUACOES_DA_LISTA.DESFAZENDO };
   },
 });
 
@@ -335,7 +366,6 @@ export const fonteDemo = opcoes => {
   const comOsDados = { ...opcoes, dados };
   return {
     usaDemo: true,
-    // A demonstração desfaz uma lista; a fonte real, ainda não (Fatia 3).
     temDesfazer: true,
     planilhaDeDemo: planilha,
     arquivoDeExemplo: () => ARQUIVOS_DE_MENTIRA[planilha] ?? null,

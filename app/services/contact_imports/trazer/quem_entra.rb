@@ -8,6 +8,10 @@
 # - A linha repetida que a pessoa escolheu manter tira do lugar a outra linha da mesma pessoa (`trocadas`). A trocada
 #   não entra nem quando ela mesma tinha sido consertada: de um grupo de linhas da mesma pessoa entra uma só.
 #
+# - Das que entram, `sem_telefone` conta as que ficam sem o telefone que estava escrito na planilha: o número não deu
+#   para ler como celular e a linha entra pelo e-mail. É a fonte única desse número, sempre sobre quem entra de fato:
+#   a linha aprovada que saiu no lugar de uma repetida não conta, e a consertada que entra sem telefone conta.
+#
 # Recebe os consertos já lidos ({ número => o que o arquivo guarda }): quem chama leu o arquivo uma vez.
 class ContactImports::Trazer::QuemEntra
   def initialize(importacao, consertos)
@@ -32,10 +36,21 @@ class ContactImports::Trazer::QuemEntra
     @importacao.valid_rows + novas.size - linhas.status_valid.where(row_number: trocadas).count
   end
 
-  # O que a tela mostra de quem entra: quantas pessoas e quantas delas como cliente, com a resposta de agora
-  # (ContactImports::Trazer::Cliente#quantas). É a mesma conta no resumo da leitura e na resposta de quem mexe numa linha.
+  # Quantas das que entram ficam sem o telefone que estava escrito na planilha. Na linha aprovada, a leitura deixou o
+  # telefone sem resumo e a máscara do que estava na célula (vazia quando a célula não tinha número nenhum). Na linha
+  # consertada, quem diz é o conserto (ContactImports::Trazer::Conserto), que guarda só a marca.
+  def sem_telefone
+    return 0 unless @importacao.normalized_csv.attached?
+
+    aprovadas = linhas.status_valid.where.not(row_number: trocadas).where(normalized_phone_hash: nil).where.not(raw_phone_masked: [nil, ''])
+    aprovadas.count + guardadas.except(*trocadas).count { |_numero, feito| feito['sem_telefone'] }
+  end
+
+  # O que a tela mostra de quem entra: quantas pessoas, quantas delas como cliente, com a resposta de agora
+  # (ContactImports::Trazer::Cliente#quantas), e quantas sem o telefone da planilha. São as mesmas contas no resumo da
+  # leitura e na resposta de quem mexe numa linha.
   def contas
-    { entram: quantas, clientes: ContactImports::Trazer::Cliente.new(@importacao).quantas(self) }
+    { entram: quantas, clientes: ContactImports::Trazer::Cliente.new(@importacao).quantas(self), semTelefone: sem_telefone }
   end
 
   # { o que a linha tem nesta coluna (pela chave em extra_values; nil na vazia) => quantas das que entram }, numa

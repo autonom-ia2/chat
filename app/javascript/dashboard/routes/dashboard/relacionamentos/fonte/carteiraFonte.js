@@ -21,7 +21,12 @@ import {
   DEMO_SEM_SEGUROS,
   esperarParaSempre,
 } from './modoDemo';
-import { estaValendo, porUrgencia } from './selosDoSeguro';
+import {
+  diasParaTerminar,
+  estaValendo,
+  porUrgencia,
+  seloDoSeguro,
+} from './selosDoSeguro';
 import { NAO_ACHEI } from '../ficha/falhas';
 
 const CARREGAR_DEMO = import.meta.env.DEV
@@ -98,6 +103,21 @@ const unicos = lista => [...new Set(lista.filter(Boolean))].sort();
 
 const empresaSegurada = seguro =>
   seguro.segurado.tipo === 'empresa' ? seguro.segurado.id : null;
+
+// A lista de pessoas, como no servidor (Carteira::ResumoPorPessoa): quantos
+// seguros a pessoa tem e o selo, o tipo e os dias do que mais pede atenção.
+// Quem não tem seguro não entra.
+const resumoDosSeguros = (seguros, agora) => {
+  const [urgente] = porUrgencia(seguros, agora);
+  return urgente
+    ? {
+        quantos: seguros.length,
+        selo: seloDoSeguro(urgente, agora),
+        tipo: urgente.tipo,
+        dias: diasParaTerminar(urgente, agora),
+      }
+    : null;
+};
 
 // ---- demonstração -----------------------------------------------------------
 
@@ -218,6 +238,22 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
         seguro => empresaSegurada(seguro) === id
       );
       return porUrgencia(dela, agora);
+    },
+    // A lista de pessoas: o selo de seguro de cada pessoa da página (`ids`).
+    async resumoPorPessoa(ids = []) {
+      const agora = Date.now();
+      const seguros = await daCarteira(agora);
+      return Object.fromEntries(
+        ids
+          .map(id => [
+            id,
+            resumoDosSeguros(
+              seguros.filter(seguro => seguro.pessoaId === id),
+              agora
+            ),
+          ])
+          .filter(([, resumo]) => resumo)
+      );
     },
     seguro: async id => (await umSeguro(id)).seguroPorId(id),
     historia: async id => (await umSeguro(id)).historiaDoSeguro(id),

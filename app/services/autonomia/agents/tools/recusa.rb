@@ -48,6 +48,7 @@ module Autonomia::Agents::Tools::Recusa
     'json_invalido' => 'o campo `dados` não era um objeto JSON válido',
     'tool_execution_error' => 'a ferramenta levantou uma exceção ao executar',
     'tool_http_error' => 'a ferramenta HTTP respondeu com erro',
+    'consulta_pronta_indisponivel' => 'a ferramenta pronta não conseguiu consultar agora',
     'capabilities_unavailable' => 'a lista de ramos que a corretora cota não pôde ser lida',
     # O especialista é o único caminho até a cotação; quando ele não roda, o pedido morreu antes.
     'especialista_sem_pedido' => 'o principal chamou o especialista sem escrever o pedido',

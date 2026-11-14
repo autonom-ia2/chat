@@ -202,22 +202,32 @@
       "SITUACAO": {
         "PRONTO": "Pronto",
         "TRAZENDO": "Trazendo {porcentagem}%",
+        "DESFAZENDO": "Desfazendo…",
         "DESFEITO": "Desfeito"
       },
       "DESFAZER": "Desfazer",
       "ROTULO_DESFAZER": "Desfazer a lista {arquivo}",
+      "DESFAZER_PAROU": "O desfazer parou no meio.",
+      "FICARAM": "{count} pessoa ficou na base: não consegui tirar. Se quiser, apague essa pessoa na lista de pessoas. | {count} pessoas ficaram na base: não consegui tirar. Se quiser, apague essas pessoas na lista de pessoas.",
+      "CONTINUAR": "Continuar",
+      "ROTULO_CONTINUAR": "Continuar a desfazer a lista {arquivo}",
       "FALHOU": "Não consegui trazer esta lista.",
-      "ROTULO_TENTAR": "Tentar trazer de novo a lista {arquivo}"
+      "ROTULO_TENTAR": "Tentar de novo: trazer a lista {arquivo}"
     },
     "DESFAZER": {
       "TITULO": "Desfazer esta lista?",
       "TITULO_ARQUIVO": "Desfazer “{arquivo}”?",
-      "TIRA": "Isto tira a pessoa que veio nesta lista e ainda não conversou com você. | Isto tira as {count} pessoas que vieram nesta lista e ainda não conversaram com você.",
-      "FICAM": "{count} fica aqui, porque já conversou com você ou já recebeu campanha. | {count} ficam aqui, porque já conversaram com você ou já receberam campanha.",
-      "DEVOLVE": "A pessoa que já estava aqui volta a ser como era. | As {count} que já estavam aqui voltam a ser como eram.",
+      "SAEM": "{count} pessoa sai | {count} pessoas saem",
+      "SAEM_PORQUE": "Veio nesta lista e ninguém cuidou dela ainda. | Vieram nesta lista e ninguém cuidou delas ainda.",
+      "FICAM": "{count} pessoa fica | {count} pessoas ficam",
+      "FICAM_PORQUE": "Alguém já cuidou dela (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha dela depois da lista, ela veio também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nela. | Alguém já cuidou delas (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha delas depois da lista, elas vieram também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nelas.",
+      "VOLTAM": "{count} pessoa volta a ser como era | {count} pessoas voltam a ser como eram",
+      "VOLTAM_PORQUE": "Já estava aqui antes desta lista. O que a lista preencheu nela, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está. | Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.",
+      "NADA": "Ninguém mais sai. Falta só terminar.",
       "NAO_RECEBER": "Quem pediu para não receber mensagens continua assim.",
       "CONFIRMAR": "Desfazer",
-      "ERRO_PREVIA": "Não consegui ver o que sai."
+      "ERRO_PREVIA": "Não consegui ver o que sai.",
+      "NAO_PODE": "Esta lista ainda está sendo trazida. Quando terminar, você pode desfazer."
     },
     "ERROS": {
       "GUARDAR": "Não consegui salvar. Tente de novo.",
@@ -226,6 +236,7 @@
       "ANDAMENTO": "Não consegui ver como está indo.",
       "HISTORICO": "Não consegui mostrar o que você já trouxe.",
       "NADA_PARA_TRAZER": "Não sobrou ninguém para trazer. Envie a planilha de novo.",
+      "DESFAZER_EM_CURSO": "Tem uma lista sendo desfeita agora. Espere o Desfazer terminar e tente de novo.",
       "FALTA_VALORES_CLIENTE": "Antes de trazer, diga quem é cliente.",
       "SEM_EMPRESA": "Para guardar o telefone da empresa, a planilha precisa de uma coluna com o nome da empresa.",
       "MUITO_LONGO": "Este texto é longo demais. Encurte e tente de novo.",

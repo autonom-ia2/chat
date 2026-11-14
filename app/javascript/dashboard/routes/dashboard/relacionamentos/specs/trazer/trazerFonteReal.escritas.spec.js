@@ -177,6 +177,41 @@ describe('fonte real: o que o servidor responde a cada escrita', () => {
     expect(daLinha(deixada, 4)).toEqual({ ...TELEFONE, estado: 'deixado' });
   });
 
+  // A linha sem nome tem e-mail bom e um celular sem DDD: consertado o nome,
+  // ela entra só com o e-mail, e o servidor já responde com a conta nova.
+  it('a resposta de quem mexe numa linha traz quantas entram sem o telefone da planilha, e a leitura passa a ter esse número', async () => {
+    const fonte = await comLeitura();
+    const guardado = {
+      ...SEM_NOME,
+      estado: 'guardado',
+      corrigido: 'Fabio Ferreirinho',
+    };
+    responde('consertar', {
+      problema: guardado,
+      entram: 3,
+      clientes: 0,
+      semTelefone: 1,
+    });
+    const guardada = await fonte.consertar(812, 6, 'Fabio Ferreirinho');
+    expect(resumoDaTela(guardada)).toMatchObject({ entram: 3, semTelefone: 1 });
+    responde('deixarDeFora', {
+      problema: { ...SEM_NOME, estado: 'deixado' },
+      entram: 2,
+      clientes: 0,
+      semTelefone: 0,
+    });
+    const deixada = await fonte.deixarDeFora(812, 6);
+    expect(resumoDaTela(deixada)).toMatchObject({ entram: 2, semTelefone: 0 });
+    responde('reabrir', {
+      problema: SEM_NOME,
+      entram: 2,
+      clientes: 0,
+      semTelefone: 0,
+    });
+    const reaberta = await fonte.reabrir(812, 6);
+    expect(resumoDaTela(reaberta).semTelefone).toBe(0);
+  });
+
   it('o valor valeu e a linha ainda tem outro problema (200): o problema que sobrou toma o lugar, sem erro', async () => {
     const fonte = await comLeitura();
     responde('consertar', { problema: SOBROU_O_NOME, entram: 2 });
@@ -286,6 +321,14 @@ describe('fonte real: o que o servidor responde a cada escrita', () => {
     recusa('trazer', erroHttp(422, 'nada_para_trazer'));
     await expect(fonte.trazer(812)).rejects.toMatchObject({
       name: 'NADA_PARA_TRAZER',
+    });
+  });
+
+  it('trazer enquanto a conta desfaz uma lista (422 `desfazer_em_curso`) ganha nome', async () => {
+    const fonte = await comLeitura();
+    recusa('trazer', erroHttp(422, 'desfazer_em_curso'));
+    await expect(fonte.trazer(812)).rejects.toMatchObject({
+      name: 'DESFAZER_EM_CURSO',
     });
   });
 

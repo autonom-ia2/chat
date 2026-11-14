@@ -13,4 +13,6 @@ export const apiDeMentira = () => ({
   listas: vi.fn(),
   andamento: vi.fn(),
   confirmar: vi.fn(),
+  previaDoDesfazer: vi.fn(),
+  desfazer: vi.fn(),
 });

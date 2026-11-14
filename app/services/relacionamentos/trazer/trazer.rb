@@ -18,25 +18,34 @@
 # Com uma coluna dizendo quem é cliente e sem a pessoa ter escolhido quais valores dela querem dizer cliente, ou com a
 # escolha apontando um valor que a coluna não tem mais (Relacionamentos::Trazer::Perguntas#falta_valores_cliente?,
 # conferido aqui, sob a trava), a recusa é `falta_valores_cliente`: nunca se traz adivinhando nem com meia escolha.
+#
+# Enquanto a conta desfaz uma lista (Relacionamentos::Trazer::Desfazer.em_curso?), a recusa é `desfazer_em_curso`: a
+# lista nova completaria uma pessoa que o desfazer está apagando. Nada muda na leitura; é só esperar e trazer de novo.
 class Relacionamentos::Trazer::Trazer
   VENCIDA = ContactImports::Trazer::Conferencia::VENCIDA
+  DESFAZER_EM_CURSO = 'desfazer_em_curso'.freeze
+  # As recusas que a rota antiga diz com o código da tela nova: têm frase própria, que diz o que fazer.
+  COM_FRASE_PROPRIA = [VENCIDA, DESFAZER_EM_CURSO].freeze
   Resultado = Struct.new(:erro, keyword_init: true) do
-    # A rota antiga de confirmar só conhece "não está pronta"; a conferência vencida ela diz com o código da tela nova.
+    # A rota antiga de confirmar só conhece "não está pronta"; a conferência vencida e o desfazer em curso ela diz com
+    # o código da tela nova.
     def erro_da_rota_antiga
-      erro == VENCIDA ? erro : 'campaign_import.not_ready'
+      COM_FRASE_PROPRIA.include?(erro) ? erro : 'campaign_import.not_ready'
     end
   end
   JA_TRAZIDA = (Relacionamentos::Trazer::Situacao::TRAZENDO + Relacionamentos::Trazer::Situacao::GRAVADA).freeze
   # O Guia pede confirmação antes de toda escrita da conferência (`Autonomia::Guide::Acoes::SEM_DESFAZER`): o caderno do
   # desfazer dele só enxerga o que passa por callback de model, e aqui se grava com update_all, anexo e job. Enviar a
-  # planilha e trazer a lista ainda gravam em lote. Os nomes são os do catálogo do Guia (verbo e rota).
+  # planilha e trazer a lista ainda gravam em lote. O "Desfazer" de uma lista (fatia 3) também: apaga pessoas e esvazia
+  # campos em lote, num job, e não tem desfazer do desfazer. Os nomes são os do catálogo do Guia (verbo e rota).
   SEM_DESFAZER_DO_GUIA = [
     'POST relacionamentos/trazer/leituras', 'POST relacionamentos/trazer/leituras/:id/trazer',
     'PATCH relacionamentos/trazer/leituras/:id/respostas',
     'PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice', 'PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice',
     'PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha', 'PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha',
     'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora',
-    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir'
+    'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir',
+    'POST relacionamentos/trazer/listas/:id/desfazer'
   ].freeze
 
   # A importação marcada que este "Trazer" confirma: a leitura pronta ou a lista cujo fechamento desistiu.
@@ -57,6 +66,7 @@ class Relacionamentos::Trazer::Trazer
       next Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
       next Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
       next Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
+      next Resultado.new(erro: DESFAZER_EM_CURSO) if Relacionamentos::Trazer::Desfazer.em_curso?(@importacao.account)
 
       confirmar
       ContactImports::Trazer::FecharConferenciaJob.perform_later(@importacao)

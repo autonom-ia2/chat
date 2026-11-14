@@ -26,6 +26,9 @@ export const ERROS = {
   VENCIDA: 'vencida',
   TRAZER: 'trazer',
   NADA_PARA_TRAZER: 'nada_para_trazer',
+  // A conta está desfazendo uma lista: trazer agora completaria quem está de
+  // saída. É só esperar o desfazer terminar e trazer de novo.
+  DESFAZER_EM_CURSO: 'desfazer_em_curso',
   ANDAMENTO: 'andamento',
 };
 
@@ -39,6 +42,7 @@ export const NOMES = {
   // querem dizer cliente.
   FALTA_VALORES_CLIENTE: 'FALTA_VALORES_CLIENTE',
   CONFERENCIA_VENCIDA: 'CONFERENCIA_VENCIDA',
+  DESFAZER_EM_CURSO: 'DESFAZER_EM_CURSO',
 };
 
 // O envio e a leitura que não deram certo.
@@ -64,6 +68,25 @@ export const erroDaRetomada = falha =>
 // A lista que não foi trazida (o trazer que parou no meio, ou o "tentar de
 // novo" do histórico que falhou).
 export const AVISO_ERRO_TRAZER = 'RELACIONAMENTOS_TRAZER.ERROS.TRAZER';
+const AVISO_DESFAZER_EM_CURSO =
+  'RELACIONAMENTOS_TRAZER.ERROS.DESFAZER_EM_CURSO';
+
+// O trazer que o servidor recusa com frase própria, que diz o que fazer: não
+// tem "tentar de novo" (repetir na hora dá na mesma). O resto é "não consegui
+// trazer", com "tentar de novo".
+const RECUSAS_DO_TRAZER = new Map([
+  [NOMES.NADA_PARA_TRAZER, ERROS.NADA_PARA_TRAZER],
+  [NOMES.DESFAZER_EM_CURSO, ERROS.DESFAZER_EM_CURSO],
+]);
+
+export const erroDoTrazer = falha =>
+  RECUSAS_DO_TRAZER.get(falha?.name) ?? ERROS.TRAZER;
+
+// O aviso do "Tentar de novo" do histórico que não deu certo.
+export const avisoDoTentarDeNovo = falha =>
+  falha?.name === NOMES.DESFAZER_EM_CURSO
+    ? AVISO_DESFAZER_EM_CURSO
+    : AVISO_ERRO_TRAZER;
 const AVISO_ERRO_GUARDAR = 'RELACIONAMENTOS_TRAZER.ERROS.GUARDAR';
 // O que a pergunta dos valores diz a quem tentou trazer sem respondê-la.
 export const FRASE_FALTA_VALORES =

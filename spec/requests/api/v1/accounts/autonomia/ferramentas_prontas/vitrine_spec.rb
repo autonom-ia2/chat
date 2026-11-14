@@ -116,6 +116,23 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       expect(response.body).not_to include('brasilapi', 'http', 'chave_interna')
     end
 
+    it 'lista a quantidade de consultas da FIPE que estão disponíveis no ambiente' do
+      cadastro = { passe: 'https://passe.exemplo.test/bilhete', entrada: 'https://veiculos.exemplo.test/acesso',
+                   placa: 'https://veiculos.exemplo.test/placa/', chassi: 'https://veiculos.exemplo.test/chassi/',
+                   corpo: { cadastro: 'teste' } }
+
+      [nil, cadastro.to_json].zip([3, 4]).each do |valor, quantidade|
+        with_modified_env(PRONTAS_VEICULO_FONTE: valor) do
+          get base, headers: admin.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:ok)
+          fontes = response.parsed_body['fontes'].index_by { |fonte| fonte['chave'] }
+          expect(fontes['fipe']).to eq('chave' => 'fipe', 'consultas' => quantidade)
+          expect(fontes['cnpj']).to eq('chave' => 'cnpj', 'consultas' => 1)
+        end
+      end
+    end
+
     it 'F5: a base baixada leva o dia em que foi atualizada (nil antes de baixar); as outras fontes não levam o campo' do
       account.enable_features!(Autonomia::FerramentasProntas::Bases::FLAG)
       estado = Autonomia::FerramentasProntas::Bases::Estado
@@ -125,10 +142,10 @@ RSpec.describe 'Vitrine de ferramentas prontas', type: :request do
       get base, headers: admin.create_new_auth_token, as: :json
 
       fontes = response.parsed_body['fontes'].index_by { |fonte| fonte['chave'] }
-      expect(fontes['aeronaves']).to eq('chave' => 'aeronaves', 'atualizado_em' => '2026-11-11', 'em_preparacao' => false)
-      expect(fontes['transportadoras']).to eq('chave' => 'transportadoras', 'atualizado_em' => nil, 'em_preparacao' => false)
-      expect(fontes['geracao_solar']).to eq('chave' => 'geracao_solar', 'atualizado_em' => nil, 'em_preparacao' => true)
-      expect(fontes['cep']).to eq('chave' => 'cep')
+      expect(fontes['aeronaves']).to eq('chave' => 'aeronaves', 'consultas' => 1, 'atualizado_em' => '2026-11-11', 'em_preparacao' => false)
+      expect(fontes['transportadoras']).to eq('chave' => 'transportadoras', 'consultas' => 1, 'atualizado_em' => nil, 'em_preparacao' => false)
+      expect(fontes['geracao_solar']).to eq('chave' => 'geracao_solar', 'consultas' => 2, 'atualizado_em' => nil, 'em_preparacao' => true)
+      expect(fontes['cep']).to eq('chave' => 'cep', 'consultas' => 2)
       expect(response.body).not_to include('erro_da_fonte')
     end
 

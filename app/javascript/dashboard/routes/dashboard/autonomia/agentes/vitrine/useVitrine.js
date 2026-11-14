@@ -40,6 +40,8 @@ const comMotivo = erro =>
   });
 
 const fontes = ref([]);
+// A conta das consultas grátis vem do servidor, que conhece as consultas disponíveis nesta instalação.
+const consultas = ref({});
 // #2858 F5: chave da base baixada -> o dia em que a cópia que vale entrou ("2026-11-11"), ou null antes de baixar.
 const atualizacoes = ref({});
 const emPreparacao = ref([]);
@@ -67,6 +69,9 @@ const carregar = () => {
       velha = versaoDoPedido !== versao;
       if (velha) return;
       fontes.value = (data?.fontes || []).map(item => item.chave);
+      consultas.value = Object.fromEntries(
+        (data?.fontes || []).map(item => [item.chave, item.consultas])
+      );
       atualizacoes.value = Object.fromEntries(
         (data?.fontes || [])
           .filter(item => 'atualizado_em' in item)
@@ -246,6 +251,7 @@ export const useVitrine = () => ({
   carregando: computed(() => carregando.value),
   carregada: computed(() => carregada.value),
   erro: computed(() => erro.value),
+  consultasDe: fonte => consultas.value[fonte],
   premiumDe,
   doAgente,
   tem,

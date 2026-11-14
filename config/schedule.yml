@@ -331,6 +331,14 @@ autonomia_automacao_tempo_job:
   class: 'Autonomia::Automacao::TempoJob'
   queue: scheduled_jobs
 
+# executed every hour; a renovação da carteira de seguros (#2898, E5): um job por conta que já escolheu onde ficam as
+# renovações cria o card de cada seguro que entra em renovação hoje. De hora em hora porque o dia vira no fuso de cada
+# conta; quem já tem card não entra de novo.
+carteira_renovacao_rotina_job:
+  cron: '20 * * * *'
+  class: 'Carteira::Renovacao::RotinaJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
 autonomia_guide_tarefas_vigia_job:
   cron: '*/5 * * * *'
