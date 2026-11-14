@@ -8,6 +8,9 @@ import DialogoDeConfirmacao from '../../DialogoDeConfirmacao.vue';
 // que ainda está no Conferir tem "Continuar"; o trazido, dentro da guarda,
 // tem "Desfazer", que antes mostra o que sai e o que fica (a prévia diz o
 // mesmo que o Desfazer vai fazer: só sai o que veio no lote e ninguém mexeu).
+// O lote que ficou em "entrando" tem "Tentar de novo": pede o Trazer outra vez
+// (o servidor é idempotente e só põe a gravação na fila de novo se ela parou) e
+// leva a pessoa a acompanhar.
 const props = defineProps({
   fonte: { type: Object, required: true },
 });
@@ -15,8 +18,10 @@ const emit = defineEmits(['continuar']);
 
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.PDFS.NAO_DEU';
 const NO_CONFERIR = ['lendo', 'lida'];
+const ENTRANDO = 'trazendo';
 
 const { t, locale } = useI18n();
+const tp = chave => t(`RELACIONAMENTOS_CARTEIRA.PDFS.${chave}`);
 const th = (chave, valores) =>
   t(`RELACIONAMENTOS_CARTEIRA.PDFS.HISTORICO.${chave}`, valores);
 const lotes = ref([]);
@@ -46,6 +51,16 @@ const pedirDesfazer = async lote => {
     previa.value = await props.fonte.previaDoDesfazer(lote.id);
     escolhido.value = lote;
     dialogo.value?.abrir();
+  } catch (falha) {
+    erro.value = chaveDaRecusa(codigoDaRecusa(falha), NAO_DEU);
+  }
+};
+
+const tentarDeNovo = async lote => {
+  erro.value = '';
+  try {
+    await props.fonte.trazer(lote.id);
+    emit('continuar', lote.id);
   } catch (falha) {
     erro.value = chaveDaRecusa(codigoDaRecusa(falha), NAO_DEU);
   }
@@ -109,6 +124,15 @@ defineExpose({ carregar });
           @click="emit('continuar', lote.id)"
         >
           {{ th('CONTINUAR') }}
+        </button>
+        <button
+          v-else-if="lote.situacao === ENTRANDO"
+          type="button"
+          data-carteira="tentar-lote-de-novo"
+          class="self-start px-3 text-sm font-medium border rounded-xl min-h-11 border-n-weak text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          @click="tentarDeNovo(lote)"
+        >
+          {{ tp('TENTAR_DE_NOVO') }}
         </button>
         <button
           v-else-if="lote.podeDesfazer"

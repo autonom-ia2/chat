@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useTemplateRef } from 'vue';
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
@@ -23,6 +23,7 @@ import SoltarPdf from './SoltarPdf.vue';
 // diz `leituraDePdf`), o PDF é lido antes de guardar e a pessoa vê o que mudou
 // (OQueMudou.vue): "Guardar" leva os campos escolhidos, "Manter como está"
 // guarda só o PDF. Sem a leitura, nada aqui fala de leitura (decisão D4).
+// A cada etapa nova (lendo, o que mudou), o foco vai ao título dela.
 const props = defineProps({
   fonte: { type: Object, required: true },
 });
@@ -36,19 +37,27 @@ const tp = (chave, valores) =>
 const textos = useTextosDoSeguro();
 const dialogo = useTemplateRef('dialogo');
 const dialogoDeTroca = useTemplateRef('dialogoDeTroca');
+const tituloDaEtapa = useTemplateRef('tituloDaEtapa');
 const pdf = useAnexarPdf(props.fonte);
 // O arquivo escolhido para entrar no lugar do que está guardado, à espera do
 // "Trocar o PDF".
 const paraTrocar = ref(null);
 // A conta lê PDF? Só com `leituraDePdf: true` no resumo; na dúvida, não.
 const lePdf = ref(false);
+// Quem abriu por último é quem responde: a resposta de uma abertura antiga não
+// mexe na tela de outro seguro.
+let pergunta = 0;
 
 const perguntarSeLe = async () => {
+  pergunta += 1;
+  const minha = pergunta;
+  let le = false;
   try {
-    lePdf.value = (await props.fonte.resumo())?.leituraDePdf === true;
+    le = (await props.fonte.resumo())?.leituraDePdf === true;
   } catch {
-    lePdf.value = false;
+    le = false;
   }
+  if (minha === pergunta) lePdf.value = le;
 };
 
 const tinhaPdf = computed(() => Boolean(pdf.seguro.value?.temPdf));
@@ -58,6 +67,14 @@ const titulo = computed(() =>
         tipo: textos.tipo(pdf.seguro.value),
       })
     : ''
+);
+
+watch(
+  () => pdf.etapa.value,
+  async () => {
+    await nextTick();
+    tituloDaEtapa.value?.focus();
+  }
 );
 
 const terminar = guardado => {
@@ -105,6 +122,8 @@ defineExpose({
       <TituloDoDialogo :titulo="titulo" />
       <p
         v-if="pdf.guardando.value || pdf.etapa.value === ETAPAS.LENDO"
+        ref="tituloDaEtapa"
+        tabindex="-1"
         data-carteira="guardando-pdf"
         role="status"
         aria-busy="true"
@@ -113,7 +132,11 @@ defineExpose({
         {{ tp(pdf.guardando.value ? 'GUARDANDO' : 'LENDO') }}
       </p>
       <template v-else-if="pdf.etapa.value === ETAPAS.MUDOU">
-        <h3 class="m-0 text-lg font-semibold text-n-slate-12">
+        <h3
+          ref="tituloDaEtapa"
+          tabindex="-1"
+          class="m-0 text-lg font-semibold text-n-slate-12"
+        >
           {{ tp('MUDOU.TITULO') }}
         </h3>
         <OQueMudou

@@ -11,6 +11,9 @@
 // apólice, vêm sem escolha) e a pessoa troca. Nada mudou: o PDF já é guardado.
 // O arquivo que não é apólice e o que não deu para ler voltam ao começo com a
 // frase do que fazer; o que não deu para ler pode ser guardado sem leitura.
+// Guardar o que foi lido que falha também volta ao começo, com a frase.
+// Cada leitura é do seguro que a pediu: a resposta de um seguro nunca preenche
+// a tela de outro (`rodada`, que `comecar` troca).
 import { computed, ref, shallowRef } from 'vue';
 import { ARQUIVO_GRANDE, chaveDaRecusa, codigoDaRecusa } from './recusas';
 import { useLimiteDoPdf } from './useLimiteDoPdf';
@@ -30,8 +33,12 @@ export const useAnexarPdf = fonte => {
   const escolhidos = ref([]);
   // O arquivo que não deu para ler, para guardar sem leitura se a pessoa quiser.
   const naoLido = shallowRef(null);
+  // Muda toda vez que a tela passa para outro seguro: a resposta que chega de
+  // uma rodada antiga é descartada.
+  let rodada = 0;
 
   const comecar = alvo => {
+    rodada += 1;
     seguro.value = alvo;
     erro.value = '';
     etapa.value = ETAPAS.SOLTAR;
@@ -66,10 +73,15 @@ export const useAnexarPdf = fonte => {
     return tentar(() => fonte.guardarPdf(seguro.value.id, arquivo));
   };
 
-  const guardarLido = usar =>
-    tentar(() =>
+  // Devolve o seguro como ficou, ou null: a frase do erro fica em `erro` e a
+  // tela volta ao começo (a leitura já não vale).
+  const guardarLido = async usar => {
+    const guardado = await tentar(() =>
       fonte.guardarPdfLido(seguro.value.id, leitura.value.leituraId, usar)
     );
+    if (!guardado) etapa.value = ETAPAS.SOLTAR;
+    return guardado;
+  };
 
   // Lê o PDF. Devolve o seguro quando nada mudou (o PDF já foi guardado); null
   // quando a tela mostra o que mudou ou a frase do que fazer.
@@ -77,15 +89,20 @@ export const useAnexarPdf = fonte => {
     if (!conferir(arquivo)) return null;
     etapa.value = ETAPAS.LENDO;
     naoLido.value = null;
+    const minhaRodada = rodada;
+    let lida;
     try {
-      leitura.value = await fonte.lerPdf(seguro.value.id, arquivo);
+      lida = await fonte.lerPdf(seguro.value.id, arquivo);
     } catch (falha) {
+      if (minhaRodada !== rodada) return null;
       const codigo = codigoDaRecusa(falha);
       etapa.value = ETAPAS.SOLTAR;
       erro.value = chaveDaRecusa(codigo, NAO_GUARDOU);
       if (codigo === NAO_LEU) naoLido.value = arquivo;
       return null;
     }
+    if (minhaRodada !== rodada) return null;
+    leitura.value = lida;
     if (!leitura.value.mudancas.length) return guardarLido([]);
     escolhidos.value = leitura.value.mudancas
       .filter(mudanca => mudanca.usar)

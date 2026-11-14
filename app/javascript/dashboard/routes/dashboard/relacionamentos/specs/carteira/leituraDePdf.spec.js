@@ -75,6 +75,50 @@ describe('useAnexarPdf com a leitura', () => {
     expect(fonte.guardarPdfLido).toHaveBeenCalledWith(7, 3, ['valor']);
   });
 
+  it('falha ao guardar o que foi lido: volta ao começo com a frase, em vez de ficar lendo', async () => {
+    const fonte = {
+      lerPdf: vi.fn().mockResolvedValue({
+        leituraId: 3,
+        outraApolice: false,
+        mudancas: [],
+      }),
+      guardarPdfLido: vi.fn().mockRejectedValue(recusa('leitura_expirou')),
+    };
+    const pdf = comFonte(fonte);
+
+    expect(await pdf.ler(ARQUIVO)).toBeNull();
+    expect(pdf.etapa.value).toBe(ETAPAS.SOLTAR);
+    expect(pdf.erro.value).toBe(
+      'RELACIONAMENTOS_CARTEIRA.RECUSAS.LEITURA_EXPIROU'
+    );
+  });
+
+  it('a resposta de leitura de um seguro nunca preenche a tela de outro', async () => {
+    let responder;
+    const fonte = {
+      lerPdf: vi.fn().mockReturnValue(
+        new Promise(resolve => {
+          responder = resolve;
+        })
+      ),
+      guardarPdfLido: vi.fn(),
+    };
+    const pdf = comFonte(fonte);
+
+    const pendente = pdf.ler(ARQUIVO);
+    pdf.comecar({ id: 8, temPdf: false });
+    responder({
+      leituraId: 3,
+      outraApolice: false,
+      mudancas: [mudanca('termina', true)],
+    });
+
+    expect(await pendente).toBeNull();
+    expect(pdf.etapa.value).toBe(ETAPAS.SOLTAR);
+    expect(pdf.mudancas.value).toEqual([]);
+    expect(fonte.guardarPdfLido).not.toHaveBeenCalled();
+  });
+
   it('recusa o PDF que não é apólice com a frase dele e não guarda nada', async () => {
     const fonte = {
       lerPdf: vi.fn().mockRejectedValue(recusa('nao_e_apolice')),
@@ -161,6 +205,68 @@ describe('useLeituraDePdfs', () => {
     await leitura.trazer();
     expect(leitura.etapa.value).toBe(ETAPAS_DOS_PDFS.PRONTO);
     expect(leitura.andamento.value.seguros).toBe(2);
+  });
+
+  it('falha ao acompanhar a leitura: fica o erro, e "tentar de novo" retoma o mesmo lote', async () => {
+    const lendo = { id: 9, estado: 'lendo', total: 2, lidos: 1 };
+    const fonte = {
+      lote: vi
+        .fn()
+        .mockResolvedValueOnce(lendo)
+        .mockRejectedValueOnce(new Error('rede'))
+        .mockResolvedValue({ id: 9, estado: 'lida', total: 2, lidos: 2 }),
+    };
+    const leitura = useLeituraDePdfs(fonte);
+
+    await leitura.abrir(9);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(leitura.semAcompanhar.value).toBe(true);
+    expect(leitura.erro.value).toBe('RELACIONAMENTOS_CARTEIRA.PDFS.NAO_DEU');
+    expect(leitura.etapa.value).toBe(ETAPAS_DOS_PDFS.LENDO);
+
+    await leitura.tentarDeNovo();
+    expect(fonte.lote).toHaveBeenLastCalledWith(9);
+    expect(leitura.semAcompanhar.value).toBe(false);
+    expect(leitura.erro.value).toBe('');
+    expect(leitura.etapa.value).toBe(ETAPAS_DOS_PDFS.CONFERIR);
+  });
+
+  it('no "Trazendo", a falha do acompanhamento e o lote parado pedem o Trazer de novo', async () => {
+    const parada = { estado: 'trazendo', porcentagem: 40, seguros: 2 };
+    const fonte = {
+      lote: vi.fn().mockResolvedValue({ id: 9, estado: 'trazendo' }),
+      andamento: vi
+        .fn()
+        .mockResolvedValueOnce(parada)
+        .mockResolvedValue(parada),
+      trazer: vi.fn().mockResolvedValue(parada),
+    };
+    const leitura = useLeituraDePdfs(fonte);
+
+    await leitura.abrir(9);
+    expect(leitura.parado.value).toBe(false);
+    await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+    expect(leitura.parado.value).toBe(true);
+
+    await leitura.tentarDeNovo();
+    expect(fonte.trazer).toHaveBeenCalledWith(9);
+    expect(leitura.parado.value).toBe(false);
+
+    fonte.andamento.mockRejectedValue(new Error('rede'));
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(leitura.semAcompanhar.value).toBe(true);
+    expect(leitura.etapa.value).toBe(ETAPAS_DOS_PDFS.TRAZENDO);
+  });
+
+  it('um segundo envio enquanto o primeiro corre é ignorado: nunca dois lotes', async () => {
+    const fonte = {
+      enviar: vi.fn().mockResolvedValue({ id: 9 }),
+      lote: vi.fn().mockResolvedValue({ id: 9, estado: 'lida' }),
+    };
+    const leitura = useLeituraDePdfs(fonte);
+
+    await Promise.all([leitura.enviar([ARQUIVO]), leitura.enviar([ARQUIVO])]);
+    expect(fonte.enviar).toHaveBeenCalledTimes(1);
   });
 
   it('diz a frase da recusa quando nada está pronto para trazer', async () => {

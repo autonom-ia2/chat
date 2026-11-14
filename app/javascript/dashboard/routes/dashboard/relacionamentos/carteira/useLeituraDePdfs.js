@@ -7,6 +7,13 @@
 // O lote em que a pessoa está fica no endereço (`?lote=`), para ela voltar a
 // ele. Recusa do servidor vira a frase do código (carteira/recusas.js); falha
 // de rede, a frase de sempre. Nada daqui guarda o que foi lido fora da tela.
+//
+// Quando o acompanhamento falha (`semAcompanhar`) ou o lote para de andar
+// (`parado`, o mesmo prazo em que o servidor aceita pôr a gravação na fila de
+// novo), a tela mostra "Tentar de novo": `tentarDeNovo` retoma a leitura do
+// mesmo lote, ou pede o "Trazer" outra vez (o servidor é idempotente).
+// Enquanto envia, um segundo envio é ignorado: duas arrastadas seguidas nunca
+// criam dois lotes.
 import { ref } from 'vue';
 import { chaveDaRecusa, codigoDaRecusa } from './recusas';
 
@@ -18,6 +25,7 @@ export const ETAPAS_DOS_PDFS = {
   PRONTO: 'pronto',
 };
 const PERGUNTA_MS = 2000;
+const PARADO_MS = 10 * 60 * 1000;
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.PDFS.NAO_DEU';
 const ESTADO_DA_ETAPA = {
   lendo: ETAPAS_DOS_PDFS.LENDO,
@@ -31,7 +39,14 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
   const andamento = ref(null);
   const erro = ref('');
   const ocupado = ref(false);
+  // O acompanhamento (da leitura ou da gravação) falhou: a pessoa decide tentar.
+  const semAcompanhar = ref(false);
+  // O lote está trazendo e não anda há tempo demais.
+  const parado = ref(false);
   let relogio = null;
+  let enviando = false;
+  let ultimoAvanco = 0;
+  let ultimaMarca = '';
 
   const parar = () => {
     clearTimeout(relogio);
@@ -42,12 +57,32 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
     erro.value = chaveDaRecusa(codigoDaRecusa(falha), NAO_DEU);
   };
 
+  const falhouAoAcompanhar = falha => {
+    falhou(falha);
+    semAcompanhar.value = true;
+  };
+
+  // Lembra quando o lote andou pela última vez: parado é o que não muda há PARADO_MS.
+  const marcarAvanco = atual => {
+    const marca = `${atual.porcentagem}-${atual.seguros}`;
+    if (marca !== ultimaMarca) {
+      ultimaMarca = marca;
+      ultimoAvanco = Date.now();
+    }
+    parado.value = Date.now() - ultimoAvanco >= PARADO_MS;
+  };
+
   const comAndamento = async id => {
     andamento.value = await fonte.andamento(id);
     if (andamento.value.estado === 'trazendo') {
-      relogio = setTimeout(() => comAndamento(id).catch(falhou), PERGUNTA_MS);
+      marcarAvanco(andamento.value);
+      relogio = setTimeout(
+        () => comAndamento(id).catch(falhouAoAcompanhar),
+        PERGUNTA_MS
+      );
       return;
     }
+    parado.value = false;
     etapa.value = ETAPAS_DOS_PDFS.PRONTO;
   };
 
@@ -56,20 +91,32 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
     lote.value = atual;
     etapa.value = ESTADO_DA_ETAPA[atual.estado] || ETAPAS_DOS_PDFS.PRONTO;
     if (etapa.value === ETAPAS_DOS_PDFS.LENDO) {
-      relogio = setTimeout(() => comLote(id).catch(falhou), PERGUNTA_MS);
+      relogio = setTimeout(
+        () => comLote(id).catch(falhouAoAcompanhar),
+        PERGUNTA_MS
+      );
     } else if (etapa.value !== ETAPAS_DOS_PDFS.CONFERIR) {
       await comAndamento(id);
     }
   };
 
+  const zerarAcompanhamento = () => {
+    erro.value = '';
+    semAcompanhar.value = false;
+    parado.value = false;
+    ultimaMarca = '';
+    ultimoAvanco = Date.now();
+  };
+
   const abrir = async id => {
     parar();
-    erro.value = '';
+    zerarAcompanhamento();
     try {
       await comLote(id);
     } catch (falha) {
-      falhou(falha);
-      etapa.value = ETAPAS_DOS_PDFS.ENVIAR;
+      // Quem já está na leitura ou no "Trazendo" fica ali, com "Tentar de novo";
+      // quem não achou o lote fica no envio, com a frase.
+      falhouAoAcompanhar(falha);
     }
   };
 
@@ -87,10 +134,24 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
   };
 
   const enviar = async arquivos => {
-    const criado = await tentar(() => fonte.enviar(arquivos));
-    if (!criado) return;
-    aoMudarLote(criado.id);
-    await abrir(criado.id);
+    if (enviando) return;
+    enviando = true;
+    try {
+      const criado = await tentar(() => fonte.enviar(arquivos));
+      if (!criado) return;
+      aoMudarLote(criado.id);
+      // Já na leitura, antes da primeira resposta: a zona de soltar não volta.
+      lote.value = {
+        id: criado.id,
+        estado: 'lendo',
+        total: arquivos.length,
+        lidos: 0,
+      };
+      etapa.value = ETAPAS_DOS_PDFS.LENDO;
+      await abrir(criado.id);
+    } finally {
+      enviando = false;
+    }
   };
 
   const mudarItem = async (itemId, pedido) => {
@@ -101,18 +162,29 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
   };
 
   const trazer = async () => {
+    parar();
     const pedido = await tentar(() => fonte.trazer(lote.value.id));
-    if (!pedido) return;
+    if (!pedido) {
+      // Já no "Trazendo", a falha deixa a saída de tentar de novo.
+      semAcompanhar.value = etapa.value === ETAPAS_DOS_PDFS.TRAZENDO;
+      return;
+    }
+    zerarAcompanhamento();
     andamento.value = pedido;
     etapa.value = ETAPAS_DOS_PDFS.TRAZENDO;
-    await comAndamento(lote.value.id).catch(falhou);
+    await comAndamento(lote.value.id).catch(falhouAoAcompanhar);
   };
+
+  // "Tentar de novo": no "Trazendo", pede o Trazer outra vez; na leitura,
+  // retoma o acompanhamento do mesmo lote.
+  const tentarDeNovo = () =>
+    etapa.value === ETAPAS_DOS_PDFS.TRAZENDO ? trazer() : abrir(lote.value.id);
 
   const recomecar = () => {
     parar();
     lote.value = null;
     andamento.value = null;
-    erro.value = '';
+    zerarAcompanhamento();
     etapa.value = ETAPAS_DOS_PDFS.ENVIAR;
     aoMudarLote(null);
   };
@@ -123,10 +195,13 @@ export const useLeituraDePdfs = (fonte, { aoMudarLote = () => {} } = {}) => {
     andamento,
     erro,
     ocupado,
+    semAcompanhar,
+    parado,
     abrir,
     enviar,
     mudarItem,
     trazer,
+    tentarDeNovo,
     recomecar,
     parar,
   };

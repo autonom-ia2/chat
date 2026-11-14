@@ -55,6 +55,7 @@ export const CODIGOS_DE_RECUSA = [
   'campo_invalido',
   'nada_para_trazer',
   'nao_pode_desfazer',
+  'lote_grande',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela

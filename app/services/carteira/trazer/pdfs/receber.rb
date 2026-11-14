@@ -2,7 +2,8 @@
 # fila do leitor (Carteira::LeituraJob, só com o id). A leitura leva a marca `pdfs` em `totais` (com quantos arquivos
 # vieram), que a separa da leitura do anexar (Carteira::Leitura.do_trazer).
 #
-# - De 1 a MAXIMO arquivos por lote; fora disso, `pedido_invalido`. Entrada que não é arquivo: `arquivo_obrigatorio`.
+# - De 1 a MAXIMO arquivos por lote: nenhum é `pedido_invalido`, e demais é `lote_grande` (a tela diz para enviar uma parte agora
+#   e o resto depois, sem número). Entrada que não é arquivo: `arquivo_obrigatorio`.
 # - O arquivo que não passa na conferência de sempre (Carteira::Pdf.conferir!: tipo, tamanho) não derruba o lote: vira
 #   um item `falhou`, sem arquivo, e o motivo é só contado (`motivo_<código>`). A tela diz o que fazer com ele.
 # - O arquivo é guardado com nome genérico (`pdf-<posição>.pdf`): o nome que veio do computador da pessoa costuma
@@ -18,7 +19,8 @@ class Carteira::Trazer::Pdfs::Receber
 
   def call(arquivos)
     arquivos = Array(arquivos)
-    recusar('pedido_invalido') unless arquivos.size.between?(1, MAXIMO)
+    recusar('pedido_invalido') if arquivos.empty?
+    recusar('lote_grande') if arquivos.size > MAXIMO
     # Entrada que nem arquivo é (o campo veio vazio) é pedido errado, não PDF ruim: recusa o lote todo, com o código.
     recusar('arquivo_obrigatorio') unless arquivos.all?(ActionDispatch::Http::UploadedFile)
 

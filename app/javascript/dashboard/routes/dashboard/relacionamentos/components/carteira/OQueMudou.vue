@@ -1,4 +1,5 @@
 <script setup>
+import { useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 
@@ -7,7 +8,8 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // PDF", que liga e desliga. A linha achada sem certeza avisa "Confira" e a
 // corrigida à mão avisa que continua protegida; nenhuma das duas vem
 // escolhida. Quando o PDF pode ser de outra apólice, o aviso vem antes e nada
-// vem escolhido.
+// vem escolhido. Cada interruptor tem nome próprio para leitor de tela: o nome
+// do campo e o "Usar o do PDF" (aria-labelledby).
 //   mudancas: [{ campo, antes, noPdf, corrigidoAMao, confira }]
 defineProps({
   mudancas: { type: Array, required: true },
@@ -18,6 +20,7 @@ const emit = defineEmits(['trocar']);
 
 const { t } = useI18n();
 const textos = useTextosDoSeguro();
+const uid = useId();
 const tp = chave => t(`RELACIONAMENTOS_CARTEIRA.PDF.MUDOU.${chave}`);
 const nomeDoCampo = campo =>
   t(`RELACIONAMENTOS_CARTEIRA.CAMPOS.${campo.toUpperCase()}`);
@@ -59,6 +62,7 @@ const escrito = (campo, valor) =>
         <template v-for="linha in mudancas" :key="linha.campo">
           <tr :data-mudanca="linha.campo" class="align-top text-n-slate-12">
             <th
+              :id="`${uid}-${linha.campo}-nome`"
               scope="row"
               class="py-2 font-medium break-words text-start pe-2"
             >
@@ -91,6 +95,7 @@ const escrito = (campo, valor) =>
                 role="switch"
                 data-carteira="usar-o-do-pdf"
                 :aria-checked="escolhidos.includes(linha.campo)"
+                :aria-labelledby="`${uid}-${linha.campo}-nome ${uid}-${linha.campo}-usar`"
                 class="inline-flex items-center gap-2 px-3 text-sm font-medium border rounded-xl min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                 :class="
                   escolhidos.includes(linha.campo)
@@ -108,7 +113,7 @@ const escrito = (campo, valor) =>
                       : 'i-lucide-square'
                   "
                 />
-                {{ tp('USAR') }}
+                <span :id="`${uid}-${linha.campo}-usar`">{{ tp('USAR') }}</span>
               </button>
             </td>
           </tr>

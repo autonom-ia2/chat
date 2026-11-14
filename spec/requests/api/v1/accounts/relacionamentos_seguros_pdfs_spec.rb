@@ -103,7 +103,7 @@ RSpec.describe 'Carteira de seguros: leitura de PDF', type: :request do
       expect(response.parsed_body['error']).to eq('pedido_invalido').or eq('arquivo_obrigatorio')
 
       enviar_pdfs(arquivos: Array.new(Carteira::Trazer::Pdfs::Receber::MAXIMO + 1) { pdf })
-      expect(response.parsed_body).to eq('error' => 'pedido_invalido')
+      expect(response.parsed_body).to eq('error' => 'lote_grande')
     end
   end
 

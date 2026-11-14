@@ -1,5 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, useTemplateRef } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  useTemplateRef,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -19,22 +25,40 @@ import ItemDoPdf from './ItemDoPdf.vue';
 // "Trazer" grava os prontos pela regra de sempre da carteira. Os lotes já
 // enviados ficam embaixo, com "Desfazer". Só aparece na conta que lê PDF
 // (pages/TrazerPage.vue).
+//
+// Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
+// que fazer fica no lugar. Enquanto envia ou lê, a zona de soltar não aceita
+// outro envio. Se o acompanhamento falha ou o lote para de andar, "Tentar de
+// novo" retoma o mesmo lote. A cada etapa nova, o foco vai ao título.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerPdfsFonte() },
 });
 
 const { t } = useI18n();
-const tp = (chave, valores) =>
-  t(`RELACIONAMENTOS_CARTEIRA.PDFS.${chave}`, valores);
+const tp = (chave, valores, plural) =>
+  plural === undefined
+    ? t(`RELACIONAMENTOS_CARTEIRA.PDFS.${chave}`, valores)
+    : t(`RELACIONAMENTOS_CARTEIRA.PDFS.${chave}`, valores, plural);
 const route = useRoute();
 const router = useRouter();
 const historico = useTemplateRef('historico');
+const titulo = useTemplateRef('titulo');
 
 const leitura = useLeituraDePdfs(props.fonte, {
   aoMudarLote: id =>
     router.replace({ query: { ...route.query, lote: id ?? undefined } }),
 });
-const { etapa, lote, andamento, erro, ocupado } = leitura;
+const { etapa, lote, andamento, erro, ocupado, semAcompanhar, parado } =
+  leitura;
+
+const rotuloDeTrazer = seguros =>
+  tp('CONFERIR.TRAZER', { count: seguros }, seguros);
+const podeTentarDeNovo = computed(() => semAcompanhar.value || parado.value);
+
+watch(etapa, async () => {
+  await nextTick();
+  titulo.value?.focus();
+});
 
 const itensDoConferir = computed(() => lote.value?.itens ?? []);
 const chegaram = computed(() => ({
@@ -69,6 +93,7 @@ onBeforeUnmount(leitura.parar);
       class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
     >
       <h1
+        ref="titulo"
         data-titulo-da-tela
         tabindex="-1"
         class="m-0 text-2xl font-semibold text-n-slate-12"
@@ -80,10 +105,21 @@ onBeforeUnmount(leitura.parar);
       </p>
 
       <template v-if="etapa === ETAPAS_DOS_PDFS.ENVIAR">
-        <SoltarPdf varios :apoio="tp('APOIO')" @arquivos="leitura.enviar" />
-        <p v-if="ocupado" role="status" class="m-0 text-base text-n-slate-11">
+        <p
+          v-if="ocupado"
+          role="status"
+          aria-busy="true"
+          data-carteira="enviando-pdfs"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
           {{ tp('ENVIANDO') }}
         </p>
+        <SoltarPdf
+          v-else
+          varios
+          :apoio="tp('APOIO')"
+          @arquivos="leitura.enviar"
+        />
         <HistoricoDosPdfs
           ref="historico"
           :fonte="fonte"
@@ -91,15 +127,25 @@ onBeforeUnmount(leitura.parar);
         />
       </template>
 
-      <p
-        v-else-if="etapa === ETAPAS_DOS_PDFS.LENDO"
-        role="status"
-        aria-busy="true"
-        data-carteira="lendo-pdfs"
-        class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
-      >
-        {{ tp('LENDO', { lidos: lote.lidos, total: lote.total }) }}
-      </p>
+      <template v-else-if="etapa === ETAPAS_DOS_PDFS.LENDO">
+        <p
+          role="status"
+          aria-busy="true"
+          data-carteira="lendo-pdfs"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
+          {{ tp('LENDO', { lidos: lote.lidos, total: lote.total }) }}
+        </p>
+        <Button
+          v-if="semAcompanhar"
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="tentar-de-novo"
+          :label="tp('TENTAR_DE_NOVO')"
+          @click="leitura.tentarDeNovo"
+        />
+      </template>
 
       <template v-else-if="etapa === ETAPAS_DOS_PDFS.CONFERIR">
         <p data-carteira="numeros-dos-pdfs" class="m-0 text-lg text-n-slate-12">
@@ -143,24 +189,49 @@ onBeforeUnmount(leitura.parar);
             @click="outra"
           />
           <Button
+            v-if="lote.seguros"
             size="lg"
             type="button"
             data-carteira="trazer-pdfs"
-            :disabled="!lote.seguros || ocupado"
-            :label="tp('CONFERIR.TRAZER', { n: lote.seguros })"
+            :disabled="ocupado"
+            :label="rotuloDeTrazer(lote.seguros)"
             @click="leitura.trazer"
           />
+          <p
+            v-else
+            data-carteira="nada-para-trazer"
+            class="m-0 text-base text-n-slate-11 sm:self-center sm:text-end"
+          >
+            {{ t('RELACIONAMENTOS_CARTEIRA.RECUSAS.NADA_PARA_TRAZER') }}
+          </p>
         </div>
       </template>
 
-      <p
-        v-else-if="etapa === ETAPAS_DOS_PDFS.TRAZENDO"
-        role="status"
-        aria-busy="true"
-        class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
-      >
-        {{ tp('TRAZENDO', { porcentagem: andamento?.porcentagem ?? 0 }) }}
-      </p>
+      <template v-else-if="etapa === ETAPAS_DOS_PDFS.TRAZENDO">
+        <p
+          role="status"
+          aria-busy="true"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
+          {{ tp('TRAZENDO', { porcentagem: andamento?.porcentagem ?? 0 }) }}
+        </p>
+        <p
+          v-if="parado && !semAcompanhar"
+          data-carteira="trazendo-parado"
+          class="m-0 text-base text-n-slate-11"
+        >
+          {{ tp('PARADO') }}
+        </p>
+        <Button
+          v-if="podeTentarDeNovo"
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="tentar-de-novo"
+          :label="tp('TENTAR_DE_NOVO')"
+          @click="leitura.tentarDeNovo"
+        />
+      </template>
 
       <ProntoDeSeguros
         v-else

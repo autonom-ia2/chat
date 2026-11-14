@@ -481,7 +481,7 @@
         "VOLTAR": "Voltar"
       },
       "APOIO_LER": "Depois de escolher, eu leio o PDF e mostro o que está diferente antes de guardar.",
-      "LENDO": "Lendo o PDF… isso leva até um minuto.",
+      "LENDO": "Lendo o PDF… isso pode levar alguns minutos.",
       "GUARDAR_SEM_LER": "Guardar sem ler",
       "MUDOU": {
         "TITULO": "O PDF diz algo diferente",
@@ -515,6 +515,7 @@
       "ARQUIVO_GRANDE": "Este PDF é grande demais para guardar aqui. Peça à seguradora o PDF da apólice, não a cópia escaneada, e guarde esse.",
       "SEM_PDF": "Este seguro não tem mais PDF guardado. Atualizei a tela.",
       "PEDIDO_INVALIDO": "Não consegui fazer isso. Atualize a página e tente de novo.",
+      "LOTE_GRANDE": "São PDFs demais de uma vez. Envie uma parte agora e o resto depois.",
       "FUNIL_DESCONHECIDO": "Esse funil não existe mais ou você não pode vê-lo. Atualizei a lista: escolha outro funil e salve de novo.",
       "ETAPA_DE_OUTRO_FUNIL": "Essa etapa não é mais desse funil. Atualizei a lista: escolha a etapa e salve de novo.",
       "DIAS_INVALIDOS": "Esse número de dias não serve. Escreva um número inteiro, de 1 a 3650, e salve de novo.",
@@ -646,11 +647,13 @@
     },
     "PDFS": {
       "TITULO": "Trazer seguros por PDFs",
-      "APOIO": "Escolha até 50 PDFs de apólices. Eu leio cada um e mostro o que achei antes de qualquer coisa entrar.",
+      "APOIO": "Escolha os PDFs das apólices. Eu leio cada um e mostro o que achei antes de qualquer coisa entrar.",
       "ENVIANDO": "Enviando os PDFs…",
       "LENDO": "Lendo os PDFs… {lidos} de {total} lidos. Pode sair desta página: a leitura continua.",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
       "TRAZENDO": "Trazendo os seguros… {porcentagem}%",
+      "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\" para eu continuar de onde parei.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
       "COMO": {
         "TITULO": "Como você quer trazer seus clientes?",
         "PLANILHA": {
@@ -668,13 +671,19 @@
         "RECUSADOS": "{n} não são apólices",
         "NAO_LEU": "{n} não deram para ler",
         "FORA": "{n} deixados de fora",
-        "TRAZER": "Trazer {n} seguros",
+        "TRAZER": "Trazer {count} seguro dos PDFs | Trazer {count} seguros dos PDFs",
         "OUTROS": "Enviar outros PDFs"
       },
       "ITEM": {
         "TITULO": "PDF {posicao}",
         "FALTAM": "Não achei isto. Escreva para trazer este seguro, ou deixe o PDF de fora.",
         "SALVAR": "Salvar o que escrevi",
+        "FALTA_CAMPO": {
+          "TIPO": "Escolha o tipo de seguro.",
+          "SEGURADORA": "Escreva o nome da seguradora.",
+          "TERMINA": "Escolha a data em que o seguro termina.",
+          "NOME": "Escreva o nome do segurado."
+        },
         "DEIXAR_DE_FORA": "Deixar este PDF de fora",
         "TRAZER_DE_VOLTA": "Trazer este PDF de volta",
         "CAMPOS": {
@@ -688,13 +697,13 @@
           "EMAIL": "Achei o e-mail {valor}, mas ele pode ser do corretor. É do cliente?",
           "VALOR": "Achei o valor {valor} sem \"R$\". É o valor que o cliente paga?",
           "E_DO_CLIENTE": "Sim, é do cliente",
-          "NAO_E_DO_CLIENTE": "Não é"
+          "NAO_E_DO_CLIENTE": "Não, não é do cliente"
         },
         "ESTADO": {
           "RECUSADO": "Este PDF não é uma apólice de seguro. Ele não entra.",
-          "FALHOU": "Não consegui ler este PDF. Mande de novo num lote novo, ou peça à seguradora o PDF da apólice, não a cópia escaneada.",
+          "FALHOU": "Não consegui ler este PDF. Envie este PDF outra vez, ou peça à seguradora o PDF da apólice, não a cópia escaneada.",
           "FORA": "Deixado de fora. Ele não entra.",
-          "NAO_ENTROU": "Este seguro não entrou: ele já está guardado de outro jeito. Confira na lista de seguros.",
+          "NAO_ENTROU": "Este seguro não entrou. Ele pode já estar guardado de outro jeito: confira na lista de seguros. Se não estiver lá, envie este PDF outra vez.",
           "LENDO": "Ainda lendo.",
           "TRAZIDO": "Trazido."
         }
