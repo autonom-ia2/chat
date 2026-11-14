@@ -64,12 +64,9 @@ class Relacionamentos::Trazer::Trazer
   def call
     @importacao.with_lock do
       next Resultado.new if JA_TRAZIDA.include?(@importacao.status)
-      next Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
-      next Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
-      next Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
-      next Resultado.new(erro: 'falta_coluna_do_seguro', faltam: colunas_que_faltam) if colunas_que_faltam.any?
-      next Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
-      next Resultado.new(erro: DESFAZER_EM_CURSO) if Relacionamentos::Trazer::Desfazer.em_curso?(@importacao.account)
+
+      recusada = recusa
+      next recusada if recusada
 
       confirmar
       ContactImports::Trazer::FecharConferenciaJob.perform_later(@importacao)
@@ -78,6 +75,17 @@ class Relacionamentos::Trazer::Trazer
   end
 
   private
+
+  # A primeira recusa que vale, na ordem em que a tela as explica; nil quando a lista pode ser trazida. Roda sob a trava.
+  def recusa
+    return Resultado.new(erro: VENCIDA) if ContactImports::Trazer::Conferencia.vencida?(@importacao)
+    return Resultado.new(erro: 'leitura_nao_pronta') unless self.class.fecha?(@importacao)
+    return Resultado.new(erro: 'falta_valores_cliente') if Relacionamentos::Trazer::Perguntas.new(@importacao).falta_valores_cliente?
+    return Resultado.new(erro: 'falta_coluna_do_seguro', faltam: colunas_que_faltam) if colunas_que_faltam.any?
+    return Resultado.new(erro: 'nada_para_trazer') unless quantas_entram.positive?
+
+    Resultado.new(erro: DESFAZER_EM_CURSO) if Relacionamentos::Trazer::Desfazer.em_curso?(@importacao.account)
+  end
 
   # Os destinos obrigatórios do seguro que ainda não têm coluna; nenhum na planilha sem seguros.
   def colunas_que_faltam

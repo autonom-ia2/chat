@@ -57,6 +57,7 @@ const RESUMO = {
   completadas: 0,
   comProblema: 3,
   juntadas: 0,
+  semTelefone: 0,
   entram: 12,
   clientes: 9,
   seguros: 12,
@@ -285,7 +286,7 @@ describe('o "sim" só sugere as colunas', () => {
 
     expect(leitura.seguros.obrigatorios).toEqual(OBRIGATORIOS);
     expect(leitura.seguros.faltam).toEqual(OBRIGATORIOS);
-    expect(chaves(leitura.seguros.sugestao)).toEqual(chaves(DESTINOS));
+    expect(chaves(leitura.seguros.sugestao)).toEqual([...DESTINOS].sort());
     expect(
       leitura.colunas.filter(({ destino }) => DESTINOS.includes(destino))
     ).toEqual([]);
