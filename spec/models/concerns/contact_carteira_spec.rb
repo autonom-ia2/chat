@@ -94,12 +94,12 @@ RSpec.describe ContactCarteira, type: :request do
     end
 
     expect(trava.keys).to contain_exactly(
-      ['POST relacionamentos/seguros/:id/pdf', 'DELETE relacionamentos/seguros/:id/pdf', 'GET relacionamentos/seguros/:id/pdf',
-       'POST relacionamentos/seguros/:id/pdf/leitura', 'GET relacionamentos/seguros/:id/pdf/leitura/:leitura_id',
-       'POST relacionamentos/trazer/seguros/leituras', 'POST relacionamentos/trazer/seguros/leituras/:id/trazer',
-       'POST relacionamentos/trazer/seguros/leituras/:id/desfazer',
-       'PATCH relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id',
-       'PUT relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id']
+      'POST relacionamentos/seguros/:id/pdf', 'DELETE relacionamentos/seguros/:id/pdf', 'GET relacionamentos/seguros/:id/pdf',
+      'POST relacionamentos/seguros/:id/pdf/leitura', 'GET relacionamentos/seguros/:id/pdf/leitura/:leitura_id',
+      'POST relacionamentos/trazer/seguros/leituras', 'POST relacionamentos/trazer/seguros/leituras/:id/trazer',
+      'POST relacionamentos/trazer/seguros/leituras/:id/desfazer',
+      'PATCH relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id',
+      'PUT relacionamentos/trazer/seguros/leituras/:leitura_id/itens/:id'
     )
     expect(rotas).to include(*trava.keys)
     expect(Autonomia::Guide::Acoes::SO_NA_TELA).to include(trava)
