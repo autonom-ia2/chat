@@ -173,6 +173,12 @@ RSpec.describe Autonomia::FerramentasProntas::Premium::Extrair do
     expect(orientacao).to eq(Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa::SEM_TELEFONE)
   end
 
+  it 'contato da empresa: o cache do dia dos telefones muda de versão (o guardado antes, sem o inativo, não é lido)' do
+    consulta = consultas_do_card('contato_empresa').find { |item| item.nome == 'telefone' }
+
+    expect(consulta.chave_do_cache('cnpj' => '00000000000000')).to include('versao_do_cache' => 2)
+  end
+
   it 'contato de MEI ou EI: o telefone sai sempre, mesmo celular ou pessoal (decisão do Rodrigo, 11/11)' do
     fones = { 'Phones' => [{ 'AreaCode' => '11', 'Number' => '990000000', 'Type' => 'MOBILE' },
                            { 'AreaCode' => '21', 'Number' => '980000000', 'Type' => 'PERSONAL' }] }

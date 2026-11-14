@@ -18,13 +18,14 @@ class Autonomia::FerramentasProntas::Premium::ConsultaPaga < Autonomia::Ferramen
   SEM_RUA = 'a rua do endereço (e o bairro e o número, se souber): a contagem é da região do CEP, não da cidade inteira, ' \
             'e o CEP geral da cidade não serve'.freeze
 
-  def initialize(nome:, descricao:, dataset:, obrigatorios:, opcionais: [], pelo_endereco: false, exige_rua: false, nao_encontrado: nil) # rubocop:disable Metrics/ParameterLists
+  def initialize(nome:, descricao:, dataset:, obrigatorios:, opcionais: [], pelo_endereco: false, exige_rua: false, nao_encontrado: nil, # rubocop:disable Metrics/ParameterLists
+                 versao_do_cache: nil)
     @dataset = dataset
     @pelo_endereco = pelo_endereco
     @exige_rua = exige_rua
     super(nome: nome, descricao: descricao, obrigatorios: obrigatorios, opcionais: opcionais,
           provedores: [Autonomia::FerramentasProntas::Premium::BigDataCorp], validade: 1.day, prazo_por_fonte: dataset.prazo,
-          prazo_total: dataset.prazo + FOLGA, nao_encontrado: nao_encontrado)
+          prazo_total: dataset.prazo + FOLGA, nao_encontrado: nao_encontrado, versao_do_cache: versao_do_cache)
   end
 
   # `conta`: o id da conta, que segue para a procura do CEP (a fatia da conta no teto do ViaCEP).

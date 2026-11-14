@@ -14,6 +14,9 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
   # O CNPJ que a base recusa é `documento_invalido`; aqui a base aceitou e não tem telefone (#3015).
   SEM_TELEFONE = 'A consulta foi feita e a base não tem telefone desta empresa. Diga isso ao cliente sem sugerir que o ' \
                  'CNPJ está errado e, se ajudar, ofereça procurar o e-mail. Não invente.'.freeze
+  # O formato do que os telefones guardam no cache do dia (`Consulta#versao_do_cache`): 2 desde o inativo com aviso
+  # (#3015). O que foi guardado antes (só os ativos, ou "não havia registro") deixa de ser lido.
+  VERSAO_DO_CACHE_DOS_TELEFONES = 2
 
   # Ordem: os ativos primeiro, e o principal antes dos outros; no empate, a ordem da base.
   TELEFONES = lambda do |dado|
@@ -55,6 +58,7 @@ module Autonomia::FerramentasProntas::Fontes::Premium::ContatoEmpresa
       descricao: 'os telefones da empresa. O que vier com pode_estar_desatualizado pode não atender mais: passe ao cliente ' \
                  'com esse aviso',
       obrigatorios: [Premium::Parametros::CNPJ], nao_encontrado: SEM_TELEFONE,
+      versao_do_cache: VERSAO_DO_CACHE_DOS_TELEFONES,
       dataset: Premium::Dataset.new(nome: 'phones_extended', rota: '/empresas', resposta: 'ExtendedPhones', custo: '0.06',
                                     preco: '0.09', busca: POR_CNPJ, extrair: TELEFONES)
     ),
