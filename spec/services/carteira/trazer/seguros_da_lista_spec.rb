@@ -107,6 +107,30 @@ RSpec.describe Carteira::Trazer::SegurosDaLista, :aggregate_failures, type: :req
       expect(da(importacao).previa).to eq(saem: 3, ficam: 1, voltam: 0)
     end
 
+    # Tirar o card da renovação do quadro só grava a data na apólice, sem passo na história: mesmo assim é alguém cuidando.
+    {
+      'teve o card da renovação tirado do quadro' => ->(seguro) { seguro.update!(renovacao_card_removido_em: Time.current) },
+      'teve o resultado da renovação' => ->(seguro) { seguro.update!(renovado_em: Time.current) },
+      'ganhou o PDF' => ->(seguro) { guardar_pdf_na(seguro) }
+    }.each do |o_que_houve, mexer|
+      it "não volta o seguro que #{o_que_houve}, mesmo sem passo novo na história" do
+        importacao = trazer_tudo(planilha_de(seguros_bons))
+        instance_exec(carro.reload, &mexer)
+        lista = da(importacao)
+
+        expect(que_voltam(importacao)).to eq([])
+        expect(lista.volta(carro.reload)).to be_nil
+        expect(lista.previa).to eq(saem: 3, ficam: 1, voltam: 0)
+      end
+    end
+
+    it 'depois de a parte dos seguros rodar, todo seguro que ainda existe segura a pessoa, até o que devia ter saído' do
+      importacao = trazer_tudo(planilha_de(seguros_bons))
+
+      expect(da(importacao).que_ficam.pluck(:id)).to eq([carro.id])
+      expect(described_class.new(importacao.reload, ja_desfez: true).que_ficam.count).to eq(4)
+    end
+
     it 'o seguro que já existia continua segurando a pessoa na base' do
       importacao = trazer_tudo(planilha_de(seguros_bons))
 

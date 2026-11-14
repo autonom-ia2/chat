@@ -101,6 +101,25 @@ RSpec.describe 'Trazer minha lista: desfazer a lista que trouxe seguros (Relacio
     end
   end
 
+  describe 'o seguro que devia sair e a escrita falhou' do
+    # O apagar de todo seguro dá erro: nenhum sai. Quem tem seguro na carteira não pode sair da base, senão o seguro iria
+    # junto com a pessoa, sem conferência nenhuma.
+    before do
+      allow_any_instance_of(Carteira::Apolice).to receive(:destroy!).and_raise(ActiveRecord::RecordNotDestroyed) # rubocop:disable RSpec/AnyInstance
+    end
+
+    it 'o seguro fica, a pessoa dele fica na base, e quem já era da base continua cliente' do
+      ja_estava = ana_que_ja_estava
+      importacao = trazer_tudo(planilha_de(seguros_bons))
+
+      expect(desfazer(importacao).undo_status).to eq('completed')
+
+      expect(apolices.count).to eq(4)
+      expect(pessoa_do(telefone_do_bruno)).to be_present
+      expect(ja_estava.reload.contact_type).to eq('customer')
+    end
+  end
+
   describe 'o seguro que já existia e a lista só completou' do
     # A Ana já tinha o seguro do carro (sem o bem e com outro valor) e o da casa (com outro valor).
     def seguros_que_ja_estavam(pessoa)
@@ -126,6 +145,18 @@ RSpec.describe 'Trazer minha lista: desfazer a lista que trouxe seguros (Relacio
       expect(carro.eventos.where(campaign_import_id: importacao.id)).to be_empty
       expect(casa.reload.valor_centavos).to eq(70_000)
       expect(casa.eventos.where(campaign_import_id: importacao.id).pluck(:tipo)).to eq(%w[chegou_de_novo])
+    end
+
+    it 'o que teve o card da renovação tirado do quadro depois da lista não volta' do
+      carro, = seguros_que_ja_estavam(ana_que_ja_estava)
+      importacao = trazer_tudo(planilha_de(seguros_bons))
+      carro.reload.update!(renovacao_card_removido_em: Time.current)
+
+      expect(pedir_previa(importacao)['seguros']).to eq('saem' => 2, 'ficam' => 1, 'voltam' => 1)
+      desfazer(importacao)
+
+      expect(carro.reload).to have_attributes(valor_centavos: 341_000, bem: 'Carro Exemplo ABC1D23')
+      expect(carro.eventos.where(campaign_import_id: importacao.id).pluck(:tipo)).to eq(%w[chegou_de_novo])
     end
 
     it 'o que foi cancelado depois da lista não volta nem sai' do

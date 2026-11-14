@@ -32,11 +32,13 @@
 class Relacionamentos::Trazer::QuemFica
   BLOCO = 500
 
-  def initialize(importacao)
+  # seguros_ja_desfeitos: o Desfazer pergunta depois de a parte dos seguros rodar; aí todo seguro que ainda existe
+  # segura a pessoa, inclusive o que devia ter saído e não saiu (Carteira::Trazer::SegurosDaLista#que_ficam).
+  def initialize(importacao, seguros_ja_desfeitos: false)
     @importacao = importacao
     @conta = importacao.account
     @criada = Relacionamentos::Trazer::PessoaCriada.new(importacao)
-    @seguros = Carteira::Trazer::SegurosDaLista.new(importacao)
+    @seguros = Carteira::Trazer::SegurosDaLista.new(importacao, ja_desfez: seguros_ja_desfeitos)
   end
 
   # Bloco a bloco, das pessoas que a lista criou e que ainda existem: os ids das que saem e os das que ficam.

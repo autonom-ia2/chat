@@ -24,9 +24,12 @@ class Relacionamentos::Trazer::CamposDaLista
   # O que a prévia e o Desfazer leem de cada campo. O Desfazer grava `devolvido_em` sem precisar tê-lo lido.
   COLUNAS = %i[id campo contact_id campaign_import_row_id valor_posto_hash tipo_anterior].freeze
 
-  def initialize(importacao)
+  # seguros_ja_desfeitos: o Desfazer pergunta depois de a parte dos seguros rodar; aí todo seguro que ainda existe
+  # mantém a marca de cliente (Carteira::Trazer::SegurosDaLista#que_ficam).
+  def initialize(importacao, seguros_ja_desfeitos: false)
     @importacao = importacao
     @conta = importacao.account
+    @seguros_ja_desfeitos = seguros_ja_desfeitos
   end
 
   # Entrega, bloco a bloco, um CampoQueVolta por campo ainda não devolvido.
@@ -66,7 +69,7 @@ class Relacionamentos::Trazer::CamposDaLista
   end
 
   def seguros
-    @seguros ||= Carteira::Trazer::SegurosDaLista.new(@importacao)
+    @seguros ||= Carteira::Trazer::SegurosDaLista.new(@importacao, ja_desfez: @seguros_ja_desfeitos)
   end
 
   def procurado

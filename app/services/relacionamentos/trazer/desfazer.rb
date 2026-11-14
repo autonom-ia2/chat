@@ -136,7 +136,7 @@ class Relacionamentos::Trazer::Desfazer
 
   # Devolve quantas pessoas deviam sair e ficaram.
   def apagar_as_pessoas_criadas
-    quem_fica = Relacionamentos::Trazer::QuemFica.new(@importacao)
+    quem_fica = Relacionamentos::Trazer::QuemFica.new(@importacao, seguros_ja_desfeitos: true)
     ficaram = 0
     quem_fica.em_blocos do |saem, _ficam|
       saem.each_slice(FATIA) do |fatia|
@@ -171,7 +171,7 @@ class Relacionamentos::Trazer::Desfazer
   end
 
   def devolver_os_campos
-    Relacionamentos::Trazer::CamposDaLista.new(@importacao).em_blocos do |campos|
+    Relacionamentos::Trazer::CamposDaLista.new(@importacao, seguros_ja_desfeitos: true).em_blocos do |campos|
       campos.group_by(&:alvo).each_value { |do_alvo| Relacionamentos::Trazer::CampoQueVolta.devolver!(do_alvo) }
       vivo
     end

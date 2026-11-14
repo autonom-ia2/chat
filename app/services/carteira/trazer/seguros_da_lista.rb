@@ -16,6 +16,10 @@
 # origem veio depois do passo desta lista, o seguro não está cancelado e cada campo que a lista mudou ainda tem o valor
 # que ela pôs. Voltam todos os campos que a lista mudou nele, ou nenhum. O ramo como estava escrito antes não é
 # guardado pelo gravador: quando o tipo volta, o ramo escrito fica o da planilha (limite conhecido).
+# Nem tudo o que acontece com um seguro deixa passo na história (tirar o card da renovação do quadro só grava a data na
+# apólice). Por isso o seguro que já existia e que tem card ou resultado de renovação, PDF, leitura de PDF, apólice nova
+# ou lembrete NÃO volta, mesmo que isso seja de antes da lista: não dá para provar que foi antes. Ele fica como a lista
+# deixou, e a prévia o conta em "ficam" (limite aceito: errar para o lado de não mexer).
 #
 # FICA todo o resto: o que a lista criou e alguém já cuidou, e o que ela completou e alguém mudou depois.
 #
@@ -38,9 +42,13 @@ class Carteira::Trazer::SegurosDaLista
   SEM_APOLICE_NOVA = 'NOT EXISTS (SELECT 1 FROM carteira_apolices nova WHERE nova.apolice_anterior_id = carteira_apolices.id)'.freeze
   SEM_LEITURA_DE_PDF = 'NOT EXISTS (SELECT 1 FROM carteira_leitura_itens item WHERE item.apolice_id = carteira_apolices.id)'.freeze
 
-  def initialize(importacao)
+  # ja_desfez: quem pergunta é o Desfazer, DEPOIS de a parte dos seguros rodar (Carteira::Trazer::DesfazerSeguros). Aí o
+  # seguro que devia sair e continua na carteira (a escrita falhou, ou alguém mexeu nele no meio) é seguro que ficou:
+  # `que_ficam` passa a ser tudo o que existe. A prévia, que roda antes, desconta os que vão sair.
+  def initialize(importacao, ja_desfez: false)
     @importacao = importacao
     @conta_id = importacao.account_id
+    @ja_desfez = ja_desfez
   end
 
   # A lista pôs alguma coisa na carteira (criou seguro ou completou algum).
@@ -59,9 +67,7 @@ class Carteira::Trazer::SegurosDaLista
 
   # Os seguros que a lista criou e em que ninguém mexeu depois.
   def saem
-    criados.where(origem: PLANILHA, de_fora: false, **DEPOIS_DA_LISTA.index_with { nil })
-           .where(COMO_CHEGOU).where(SO_PASSOS_DA_LISTA, @importacao.id)
-           .where(SEM_PDF).where(SEM_APOLICE_NOVA).where(SEM_LEITURA_DE_PDF)
+    sem_cuidado_depois(criados.where(origem: PLANILHA, de_fora: false)).where(COMO_CHEGOU).where(SO_PASSOS_DA_LISTA, @importacao.id)
   end
 
   def sai?(apolice)
@@ -72,12 +78,14 @@ class Carteira::Trazer::SegurosDaLista
   # marca de cliente dela (Relacionamentos::Trazer::QuemFica, Relacionamentos::Trazer::CamposDaLista).
   def que_ficam
     todos = Carteira::Apolice.where(account_id: @conta_id)
-    tem? ? todos.where.not(id: saem.select(:id)) : todos
+    return todos if @ja_desfez || !tem?
+
+    todos.where.not(id: saem.select(:id))
   end
 
   # Bloco a bloco, os seguros que a lista só completou e que voltam ao que eram: [apólice, { coluna => valor de antes }].
   def que_voltam
-    completados.in_batches(of: BLOCO) do |apolices|
+    sem_cuidado_depois(completados).in_batches(of: BLOCO) do |apolices|
       passos = Carteira::ApoliceEvento.where(apolice_id: apolices.select(:id)).order(:id).group_by(&:apolice_id)
       voltam = apolices.filter_map do |apolice|
         colunas = colunas_de_antes(apolice, passos.fetch(apolice.id, []))
@@ -89,6 +97,8 @@ class Carteira::Trazer::SegurosDaLista
 
   # O que a apólice volta a ter, lido de novo (o Desfazer chama com a apólice travada). nil: ela fica como está.
   def volta(apolice)
+    return unless sem_cuidado_depois(completados).exists?(id: apolice.id)
+
     colunas_de_antes(apolice, apolice.eventos.order(:id).to_a)
   end
 
@@ -109,6 +119,11 @@ class Carteira::Trazer::SegurosDaLista
 
   def criados
     Carteira::Apolice.where(account_id: @conta_id, campaign_import_id: @importacao.id)
+  end
+
+  # Sem nada do que só é preenchido depois de o seguro chegar, tenha isso deixado passo na história ou não.
+  def sem_cuidado_depois(apolices)
+    apolices.where(**DEPOIS_DA_LISTA.index_with { nil }).where(SEM_PDF).where(SEM_APOLICE_NOVA).where(SEM_LEITURA_DE_PDF)
   end
 
   def passos_da_lista
