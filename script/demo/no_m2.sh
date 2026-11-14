@@ -111,6 +111,11 @@ banco_existe() {
 # SNAP, DB e as portas vêm do demo.env (carregar_estado). Ambiente limpo (env -i): nenhuma variável do shell
 # entra. E-mail vai para uma porta morta (sem SMTP_ADDRESS o Rails usaria sendmail, que entrega de verdade) e a
 # Cloud API do WhatsApp também. O Sidekiq não roda na demo: job enfileirado não executa.
+# Os interruptores da instalação (CRM_KANBAN, AUTONOMIA_PACOTES, CRM_CALENDAR_MEETINGS e AUTONOMIA_AGENTS) sobem
+# ligados. O dos agentes tem padrão `true` nas duas produções (infra/*/variables.tf) e só abre a porta da
+# instalação: o `up` não marca a conta. A marca (autonomia_agents_enabled nos atributos internos) vem do arquivo de
+# seed da demo que precisa da tela, rodado com `bin/demo seed`. Sem o interruptor o painel recebe "false" e a rota
+# dos agentes volta para o início (#2991).
 # As chaves (SECRET_KEY_BASE e as do Active Record) nunca passam pelo argv, que qualquer usuário vê no `ps`: o
 # bash abaixo lê cada uma do arquivo 0600 em $L/chaves e exporta no próprio ambiente, que o processo herda.
 # Arquivo ausente ou vazio para tudo. O `env` final aceita VAR=valor antes do comando (DEMO_FLAG=... no flag).
@@ -146,7 +151,7 @@ demo_env() {
     VITE_RUBY_PORT="$VITE_PORT" VITE_RUBY_HOST=localhost VITE_RUBY_AUTO_BUILD=false \
     VITE_RUBY_DEV_SERVER_CONNECT_TIMEOUT=2 NODE_OPTIONS=--max-old-space-size=4096 \
     WHATSAPP_CLOUD_BASE_URL=http://127.0.0.1:9 CRM_KANBAN_ENABLED=true AUTONOMIA_PACOTES_ENABLED=true \
-    CRM_CALENDAR_MEETINGS_ENABLED=true \
+    CRM_CALENDAR_MEETINGS_ENABLED=true AUTONOMIA_AGENTS_ENABLED=true \
     SMTP_ADDRESS=127.0.0.1 SMTP_PORT=9 SMTP_USERNAME= SMTP_PASSWORD= MAILER_SENDER_EMAIL=demo@demo.invalid \
     /bin/bash -c "$CARREGAR_CHAVES" demo_env "$@"
 }

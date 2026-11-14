@@ -117,6 +117,17 @@ podem ser a mesma. Os textos abaixo que dizem "no M2" valem para a máquina da d
   `DISABLE_MINI_PROFILER=1`. Nada sai para fora: `WHATSAPP_CLOUD_BASE_URL` e o SMTP (`SMTP_ADDRESS=127.0.0.1`,
   `SMTP_PORT=9`) apontam para uma porta morta. Sem `SMTP_ADDRESS` o Rails usaria `sendmail`, que entrega de verdade.
   O Sidekiq não roda na demo: job enfileirado não executa.
+- **Interruptores da instalação**: o painel sobe com `CRM_KANBAN_ENABLED`, `AUTONOMIA_PACOTES_ENABLED`,
+  `CRM_CALENDAR_MEETINGS_ENABLED` e `AUTONOMIA_AGENTS_ENABLED` ligados. Não edite o kit para ligar nenhum deles.
+- **Agentes de IA**: `AUTONOMIA_AGENTS_ENABLED` tem padrão `true` nas duas produções (`infra/*/variables.tf`) e só
+  abre a porta da instalação. O `up` não marca a conta: sem a marca (`autonomia_agents_enabled` nos atributos
+  internos da conta), a tela de Agentes volta para o início. A demo que precisa da tela põe, no arquivo de seed
+  do caso, a linha `Autonomia::Agents::Config.enable_for!(Account.find(1))` (a conta 1 é a da demo) e roda com
+  `bin/demo seed <slug> <arquivo.rb>`. O `AUTONOMIA_AGENTS_GLOBAL` da produção fica de fora: ele só liga conta
+  que tem chave de IA, e o banco novo da demo não tem nenhuma. Por isso as telas abrem, mas nada que chame o
+  modelo responde. Não grave chave de IA de verdade na demo (seed, Super Admin ou integração de IA do Kanban): o
+  kit desvia o e-mail e a Cloud API do WhatsApp para uma porta morta, mas não o endereço do modelo, e a chamada
+  sairia para fora e seria cobrada.
 - **Postgres**: o `127.0.0.1:55432` de cada Mac é o cluster de teste do MacCluster
   (`/Users/Shared/maccluster-test-services/postgres-chat2you`, servidor 16.15, com `fsync=off`). Só tem bancos de
   teste e de demo. O cliente (`psql`, `createdb`, `dropdb`) é o 17.11 no M2 e o 16.15 no M4, que não tem o 17.11
