@@ -489,8 +489,8 @@ describe('listaDaTela', () => {
     pode_tentar: false,
   };
 
-  it('traduz a data para milissegundos e `pode_tentar` para `podeTentar`', () => {
-    expect(listaDaTela(DO_SERVIDOR)).toEqual({
+  it('traduz a data para milissegundos, `pode_tentar` para `podeTentar` e `pode_desfazer` para `podeDesfazer`', () => {
+    expect(listaDaTela({ ...DO_SERVIDOR, pode_desfazer: true })).toEqual({
       id: 812,
       arquivo: 'Clientes 2025.xlsx',
       quando: Date.UTC(2026, 10, 8, 14, 3),
@@ -499,7 +499,39 @@ describe('listaDaTela', () => {
       situacao: 'pronto',
       porcentagem: 100,
       podeTentar: false,
+      podeDesfazer: true,
+      ficaram: 0,
     });
+  });
+
+  // Só a lista desfeita em que alguém devia ter saído e ficou traz o número.
+  it('`ficaram` é o número que o servidor manda, e zero quando ele não manda', () => {
+    const desfeita = { ...DO_SERVIDOR, situacao: 'desfeito' };
+    expect(listaDaTela({ ...desfeita, ficaram: 3 }).ficaram).toBe(3);
+    expect(listaDaTela(desfeita).ficaram).toBe(0);
+  });
+
+  // Quem diz se dá para desfazer é o servidor, não a situação.
+  it.each([
+    ['pronto', true],
+    ['falhou', true],
+    ['desfazendo', true],
+    ['desfazendo', false],
+    ['pronto', false],
+  ])(
+    'lista %s com `pode_desfazer` %s: `podeDesfazer` igual',
+    (situacao, pode) => {
+      const lista = listaDaTela({
+        ...DO_SERVIDOR,
+        situacao,
+        pode_desfazer: pode,
+      });
+      expect(lista.podeDesfazer).toBe(pode);
+    }
+  );
+
+  it('sem `pode_desfazer` não pode desfazer', () => {
+    expect(listaDaTela(DO_SERVIDOR).podeDesfazer).toBe(false);
   });
 
   it.each([
@@ -507,7 +539,7 @@ describe('listaDaTela', () => {
     ['trazendo', 'trazendo'],
     ['desfeito', 'desfeito'],
     ['falhou', 'falhou'],
-    ['desfazendo', 'desfeito'],
+    ['desfazendo', 'desfazendo'],
   ])('situação %s chega à tela como %s', (doServidor, daTela) => {
     expect(listaDaTela({ ...DO_SERVIDOR, situacao: doServidor }).situacao).toBe(
       daTela
@@ -551,9 +583,9 @@ describe('andamentoDaTela', () => {
     });
   });
 
-  it('`desfazendo` chega como `desfeito`', () => {
+  it('`desfazendo` chega como o servidor diz', () => {
     expect(andamentoDaTela({ situacao: 'desfazendo' }).situacao).toBe(
-      'desfeito'
+      'desfazendo'
     );
   });
 });

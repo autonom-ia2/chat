@@ -587,13 +587,20 @@ describe('HistoricoDeListas', () => {
       props: { listas: [], temDesfazer: true, ...props },
     });
 
+  const PODE = { podeDesfazer: true };
+
   it('cheio: arquivo, quando, quem, pessoas, situação e Desfazer, sem data limite', () => {
-    const w = montar({ listas: [lista('Clientes 2025', 'pronto')] });
+    const w = montar({ listas: [lista('Clientes 2025', 'pronto', PODE)] });
     const linha = w.get('[data-lista="Clientes 2025"]');
     expect(linha.text()).toContain('Clientes 2025.xlsx');
     expect(linha.text()).toContain('em 08/11');
     expect(linha.text()).toContain('por Marina Dornelaz');
     expect(linha.text()).toContain('195 pessoas');
+    // A linha de baixo é uma frase só, com espaço dos dois lados de cada ponto.
+    expect(linha.findAll('p')[1].text()).toBe(
+      'em 08/11 · por Marina Dornelaz · 195 pessoas'
+    );
+    expect(linha.findAll('p')[1].classes()).toContain('tabular-nums');
     expect(linha.get('[data-situacao]').text()).toBe('Pronto');
     expect(linha.text()).not.toContain('até');
     expect(marca(w, 'desfazer').text()).toBe('Desfazer');
@@ -608,10 +615,20 @@ describe('HistoricoDeListas', () => {
     expect(texto).toContain('em 08/11');
     expect(texto).toContain('195 pessoas');
     expect(texto).not.toContain('por');
+    expect(w.findAll('[data-lista="a"] p')[1].text()).toBe(
+      'em 08/11 · 195 pessoas'
+    );
+  });
+
+  it('uma pessoa só: a linha de baixo fica no singular', () => {
+    const w = montar({ listas: [lista('a', 'pronto', { total: 1 })] });
+    expect(w.findAll('[data-lista="a"] p')[1].text()).toBe(
+      'em 08/11 · por Marina Dornelaz · 1 pessoa'
+    );
   });
 
   it('Desfazer emite a lista', async () => {
-    const pronta = lista('a', 'pronto');
+    const pronta = lista('a', 'pronto', PODE);
     const w = montar({ listas: [pronta] });
     await marca(w, 'desfazer').trigger('click');
     expect(w.emitted('desfazer')).toEqual([[pronta]]);
@@ -631,7 +648,7 @@ describe('HistoricoDeListas', () => {
 
   it('lista pronta antiga tem Desfazer sempre, sem prazo nem data', () => {
     const w = montar({
-      listas: [lista('a', 'pronto', { quando: AGORA - 400 * DIA })],
+      listas: [lista('a', 'pronto', { quando: AGORA - 400 * DIA, ...PODE })],
     });
     expect(marca(w, 'desfazer').exists()).toBe(true);
     expect(w.text()).not.toContain('Prazo');
@@ -648,7 +665,7 @@ describe('HistoricoDeListas', () => {
     const tentar = marca(w, 'tentar-de-novo');
     expect(tentar.text()).toBe('Tentar de novo');
     expect(tentar.attributes('aria-label')).toBe(
-      'Tentar trazer de novo a lista a.xlsx'
+      'Tentar de novo: trazer a lista a.xlsx'
     );
     expect(tentar.attributes('disabled')).toBeUndefined();
     expect(marca(w, 'desfazer').exists()).toBe(false);
@@ -723,16 +740,59 @@ describe('DialogoDesfazer', () => {
       global: { stubs: { Dialog: DialogFalso } },
     });
 
+  // Os itens da prévia, na ordem em que aparecem: [chave, quantas, porquê].
+  const itens = w =>
+    w
+      .findAll('[data-relacionamentos="desfazer-previa"] [data-linha]')
+      .map(item => [
+        item.attributes('data-linha'),
+        ...item.findAll('p').map(linha => linha.text()),
+      ]);
+
   it('mostra ANTES o que sai, quem fica aqui e o que volta ao que era, nesta ordem', () => {
     const w = montar({
       previa: { tira: 162, ficam: 18, devolve: 15 },
     });
-    const texto = marca(w, 'dialogo-desfazer').text();
-    expect(texto).toContain(
-      'Isto tira as 162 pessoas que vieram nesta lista e ainda não conversaram com você. 18 ficam aqui, porque já conversaram com você ou já receberam campanha. As 15 que já estavam aqui voltam a ser como eram.'
-    );
-    expect(texto).toContain(
+    expect(itens(w)).toEqual([
+      [
+        'saem',
+        '162 pessoas saem',
+        'Vieram nesta lista e ninguém cuidou delas ainda.',
+      ],
+      [
+        'ficam',
+        '18 pessoas ficam',
+        'Alguém já cuidou delas (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha delas depois da lista, elas vieram também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nelas.',
+      ],
+      [
+        'voltam',
+        '15 pessoas voltam a ser como eram',
+        'Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
+      ],
+    ]);
+    // A frase de quem não quer receber mensagens vem depois da lista.
+    const previa = marca(w, 'desfazer-previa').element;
+    expect(previa.nextElementSibling.textContent.trim()).toBe(
       'Quem pediu para não receber mensagens continua assim.'
+    );
+    expect(marca(w, 'desfazer-nada').exists()).toBe(false);
+  });
+
+  it('o número fica em destaque e o porquê embaixo, no tom do diálogo', () => {
+    const w = montar({ previa: { tira: 162, ficam: 18, devolve: 15 } });
+    const previa = marca(w, 'desfazer-previa');
+    expect(previa.element.tagName).toBe('UL');
+    const [quantas, porque] = previa.get('[data-linha="saem"]').findAll('p');
+    expect(quantas.classes()).toEqual(
+      expect.arrayContaining([
+        'text-base',
+        'font-medium',
+        'text-n-slate-12',
+        'tabular-nums',
+      ])
+    );
+    expect(porque.classes()).toEqual(
+      expect.arrayContaining(['text-sm', 'text-n-slate-11'])
     );
   });
 
@@ -744,32 +804,66 @@ describe('DialogoDesfazer', () => {
   });
 
   it('singular e casos sem pessoas em cada grupo', () => {
-    const um = montar({ previa: { tira: 1, ficam: 1, devolve: 0 } });
-    const textoUm = marca(um, 'dialogo-desfazer').text();
-    expect(textoUm).toContain(
-      'Isto tira a pessoa que veio nesta lista e ainda não conversou com você.'
-    );
-    expect(textoUm).toContain(
-      '1 fica aqui, porque já conversou com você ou já recebeu campanha.'
-    );
+    const um = montar({ previa: { tira: 1, ficam: 1, devolve: 1 } });
+    expect(itens(um)).toEqual([
+      ['saem', '1 pessoa sai', 'Veio nesta lista e ninguém cuidou dela ainda.'],
+      [
+        'ficam',
+        '1 pessoa fica',
+        'Alguém já cuidou dela (conversa, card, etiqueta, campanha ou seguro) ou mudou a ficha dela depois da lista, ela veio também em outra lista, ou a lista não foi trazida por esta tela e não dá para saber se alguém mexeu nela.',
+      ],
+      [
+        'voltam',
+        '1 pessoa volta a ser como era',
+        'Já estava aqui antes desta lista. O que a lista preencheu nela, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
+      ],
+    ]);
+    // O item que é zero some; os outros continuam na ordem.
+    const semFicam = montar({ previa: { tira: 1, ficam: 0, devolve: 15 } });
+    expect(itens(semFicam).map(([chave]) => chave)).toEqual(['saem', 'voltam']);
     const so = montar({ previa: { tira: 0, ficam: 0, devolve: 15 } });
+    expect(itens(so)).toEqual([
+      [
+        'voltam',
+        '15 pessoas voltam a ser como eram',
+        'Já estavam aqui antes desta lista. O que a lista preencheu nelas, como telefone, e-mail ou cidade, fica vazio de novo. O que alguém mudou depois continua como está.',
+      ],
+    ]);
     const textoSo = marca(so, 'dialogo-desfazer').text();
-    expect(textoSo).toContain(
-      'As 15 que já estavam aqui voltam a ser como eram.'
-    );
-    expect(textoSo).not.toContain('Isto tira');
-    expect(textoSo).not.toContain('aqui, porque');
+    expect(textoSo).not.toContain('saem');
+    expect(textoSo).not.toContain('ficam');
   });
 
-  it('enquanto não sabe o que sai: esqueleto e Desfazer desabilitado', () => {
+  // O desfazer que parou quando já não havia quem tirar: nada de lista vazia.
+  it('com as três contagens em zero, diz que falta só terminar, e o Desfazer continua ligado', () => {
+    const w = montar({ previa: { tira: 0, ficam: 0, devolve: 0 } });
+    expect(marca(w, 'desfazer-previa').exists()).toBe(false);
+    expect(marca(w, 'desfazer-nada').text()).toBe(
+      'Ninguém mais sai. Falta só terminar.'
+    );
+    expect(marca(w, 'dialogo-desfazer').text()).toContain(
+      'Quem pediu para não receber mensagens continua assim.'
+    );
+    expect(
+      marca(w, 'desfazer-confirmar').attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  // Nenhum botão desligado por falta de dado: sem a prévia, o Desfazer não
+  // está na tela (o esqueleto mostra a espera) e sobra só o botão de sair.
+  it('enquanto não sabe o que sai: esqueleto, sem o Desfazer e sem botão desligado', () => {
     const w = montar({ previa: null });
     expect(w.findAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(marca(w, 'desfazer-confirmar').attributes('disabled')).toBeDefined();
+    expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
+    expect(w.findAll('button').map(b => b.text())).toEqual(['Cancelar']);
+    expect(w.find('button[disabled]').exists()).toBe(false);
   });
 
   it('erro na prévia: frase e botão que emite "tentar"', async () => {
     const w = montar({ previa: null, comErroNaPrevia: true });
     expect(w.text()).toContain('Não consegui ver o que sai.');
+    // Sem prévia não há o que confirmar: o Desfazer sai, em vez de ficar apagado.
+    expect(marca(w, 'desfazer-confirmar').exists()).toBe(false);
     await marca(w, 'dialogo-desfazer').get('button').trigger('click');
     expect(w.emitted('tentar')).toHaveLength(1);
   });
@@ -783,11 +877,18 @@ describe('DialogoDesfazer', () => {
     expect(w.emitted('fechar')).toHaveLength(1);
   });
 
-  it('o botão mostra o carregando enquanto desfaz e fica desabilitado', () => {
+  it('o botão mostra o carregando enquanto desfaz, sem ficar desligado', () => {
+    const parado = montar({ previa: { tira: 1, ficam: 0, devolve: 0 } });
+    expect(marca(parado, 'desfazer-confirmar').find('svg').exists()).toBe(
+      false
+    );
     const w = montar({
       previa: { tira: 1, ficam: 0, devolve: 0 },
       desfazendo: true,
     });
-    expect(marca(w, 'desfazer-confirmar').attributes('disabled')).toBeDefined();
+    const confirmar = marca(w, 'desfazer-confirmar');
+    expect(confirmar.find('svg.animate-spin').exists()).toBe(true);
+    expect(confirmar.attributes('aria-busy')).toBe('true');
+    expect(confirmar.attributes('disabled')).toBeUndefined();
   });
 });

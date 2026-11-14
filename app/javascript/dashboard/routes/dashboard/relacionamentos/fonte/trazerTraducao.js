@@ -9,9 +9,11 @@
 //     pessoa lê; o valor de cada problema fica como está na planilha;
 //   - quem identifica a coluna é o índice dela na planilha: o nome pode repetir
 //     ou vir vazio;
-//   - a lista do histórico troca a data por milissegundos e `pode_tentar` por
-//     `podeTentar`; `desfazendo` chega como `desfeito` (a tela ainda não tem esse
-//     selo);
+//   - a lista do histórico troca a data por milissegundos, `pode_tentar` por
+//     `podeTentar` e `pode_desfazer` por `podeDesfazer`; a situação chega como
+//     o servidor diz;
+//   - (Fatia 3) o desfazer que o servidor recusa (422 `nao_pode_desfazer`)
+//     ganha o nome `NAO_PODE_DESFAZER`;
 //   - (Fatia 2) as respostas das perguntas trocam `coluna_cliente` por
 //     `colunaCliente`; o conserto de uma linha vira `{ valor }` ou
 //     `{ ficar_com }`, e a linha que volta (o servidor devolve a linha inteira)
@@ -35,7 +37,6 @@ import { formatarTelefone } from '../lista/telefone';
 import { DESTINOS, aparado } from '../trazer/destinos';
 import { PERGUNTA_VALORES, RESPOSTA_ALGUMAS } from '../trazer/respostas';
 import { corpoDosValores } from '../trazer/valoresDeCliente';
-import { SITUACOES_DA_LISTA } from '../trazer/prazo';
 
 export const SITUACAO_DA_LEITURA = {
   LENDO: 'lendo',
@@ -45,7 +46,6 @@ export const SITUACAO_DA_LEITURA = {
   VENCIDA: 'vencida',
 };
 
-const DESFAZENDO = 'desfazendo';
 export const STATUS_NAO_ACHEI = 404;
 
 export const erroNomeado = (nome, mensagem, causa) =>
@@ -221,6 +221,8 @@ export const corpoDoDestino = (destino, campo) =>
 //     querem dizer cliente (o servidor não traz adivinhando);
 //   - `conferencia_vencida`: a planilha foi enviada há mais de 7 dias e já foi
 //     apagada (toda escrita e o trazer);
+//   - `desfazer_em_curso`: trazer (ou "tentar de novo") enquanto a conta desfaz
+//     uma lista;
 //   - os outros: a tela pediu algo que o servidor já não tem (a leitura não
 //     está pronta ou já foi trazida, a linha, a coluna, a pergunta ou a resposta
 //     não existe; entre elas, o valor marcado que já não é da coluna e os
@@ -242,6 +244,7 @@ const NOME_DA_RECUSA = new Map([
   ['nada_para_trazer', 'NADA_PARA_TRAZER'],
   ['falta_valores_cliente', 'FALTA_VALORES_CLIENTE'],
   ['conferencia_vencida', CONFERENCIA_VENCIDA],
+  ['desfazer_em_curso', 'DESFAZER_EM_CURSO'],
   ['leitura_nao_pronta', TELA_DESATUALIZADA],
   ['linha_desconhecida', TELA_DESATUALIZADA],
   ['resposta_desconhecida', TELA_DESATUALIZADA],
@@ -337,9 +340,6 @@ export const leituraComProblema = (
 
 // ---- as listas que a conta já trouxe ---------------------------------------
 
-const situacaoDaTela = situacao =>
-  situacao === DESFAZENDO ? SITUACOES_DA_LISTA.DESFEITO : situacao;
-
 export const listaDaTela = lista => ({
   id: lista.id,
   arquivo: lista.arquivo,
@@ -347,15 +347,44 @@ export const listaDaTela = lista => ({
   // Quem trouxe pode já ter saído da conta.
   quem: lista.quem ?? '',
   total: lista.total,
-  situacao: situacaoDaTela(lista.situacao),
+  situacao: lista.situacao,
   porcentagem: lista.porcentagem,
   podeTentar: lista.pode_tentar === true,
+  // Quem diz se dá para desfazer é o servidor: a lista pronta, a que parou no
+  // meio depois de pôr gente na base e a que teve o desfazer travado.
+  podeDesfazer: lista.pode_desfazer === true,
+  // Só a lista desfeita em que alguém devia ter saído e ficou traz o número.
+  ficaram: lista.ficaram ?? 0,
 });
 
 export const andamentoDaTela = andamento => ({
   porcentagem: andamento.porcentagem,
-  situacao: situacaoDaTela(andamento.situacao),
+  situacao: andamento.situacao,
   total: andamento.total,
   novas: andamento.novas,
   completadas: andamento.completadas,
 });
+
+// ---- o desfazer de uma lista trazida ----------------------------------------
+
+// O que o desfazer faria agora: quantas pessoas saem, quantas ficam (já foram
+// usadas) e quantas voltam a ser como eram.
+export const previaDoDesfazerDaTela = previa => ({
+  tira: previa.tira,
+  ficam: previa.ficam,
+  devolve: previa.devolve,
+});
+
+// O servidor recusa a prévia e o desfazer da lista que ainda não foi gravada
+// (está sendo trazida, ou parou no meio): 422 com `nao_pode_desfazer`. O resto
+// sobe como veio.
+const RECUSA_DO_DESFAZER = 'nao_pode_desfazer';
+
+export const erroDoDesfazer = falha =>
+  falha?.response?.data?.error === RECUSA_DO_DESFAZER
+    ? erroNomeado(
+        'NAO_PODE_DESFAZER',
+        'Essa lista ainda não pode ser desfeita.',
+        falha
+      )
+    : falha;

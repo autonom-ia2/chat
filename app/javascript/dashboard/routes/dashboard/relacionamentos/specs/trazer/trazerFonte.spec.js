@@ -1,10 +1,13 @@
 import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
-import { DURACAO_DA_TRAZIDA_MS } from '../../demo/trazer';
+import {
+  DURACAO_DA_TRAZIDA_MS,
+  DURACAO_DO_DESFAZER_MS,
+} from '../../demo/trazer';
 import { agendaComRecuo } from '../../trazer/consultaComRecuo';
 
 // A fonte de "Trazer minha lista" (#2894): a demonstração. A fonte real (#2896)
-// está em trazerFonteReal.spec.js; aqui só o que ela ainda não faz. O que a
-// demonstração faz como o servidor está em demonstracaoLinhas.spec.js e
+// está em trazerFonteReal.spec.js. O que a demonstração faz como o servidor
+// está em demonstracaoLinhas.spec.js e
 // demonstracaoColunas.spec.js; a forma do que ela devolve, em
 // paridadeDaDemonstracao.spec.js.
 const DIA = 24 * 60 * 60 * 1000;
@@ -29,25 +32,11 @@ const fonteComRelogio = (estado = 'cheio') => {
 
 beforeEach(() => esquecerMemoriaDaDemo());
 
-describe('fonte real (o que fica para as próximas fatias)', () => {
-  it.each(['previaDoDesfazer', 'desfazer'])(
-    '%s diz FONTE_REAL_PENDENTE',
-    async metodo => {
-      const fonte = trazerFonte({ demo: null });
-      expect(fonte.usaDemo).toBe(false);
-      await expect(fonte[metodo]('x')).rejects.toMatchObject({
-        name: 'FONTE_REAL_PENDENTE',
-      });
-    }
-  );
-
-  it('sem módulo de demonstração (produção) volta à fonte real', async () => {
+describe('qual fonte', () => {
+  it('sem módulo de demonstração (produção) volta à fonte real', () => {
     const fonte = trazerFonte({ demo: 'cheio', carregarDemo: null });
     expect(fonte.usaDemo).toBe(false);
-    expect(fonte.temDesfazer).toBe(false);
-    await expect(fonte.desfazer('x')).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
+    expect(fonte.temDesfazer).toBe(true);
   });
 });
 
@@ -239,6 +228,8 @@ describe('historico', () => {
     ]);
     // Só a que parou no meio tem como continuar.
     expect(listas.map(l => l.podeTentar)).toEqual([false, false, false, true]);
+    // Dá para desfazer a pronta e a que parou no meio (ela chegou a pôr gente).
+    expect(listas.map(l => l.podeDesfazer)).toEqual([true, false, true, true]);
     // Da mais nova para a mais antiga, como o servidor entrega.
     expect(listas.map(l => l.quando)).toEqual(
       [...listas.map(l => l.quando)].sort((a, b) => b - a)
@@ -272,8 +263,8 @@ describe('trazer e andamento', () => {
     return fonte.trazer(id);
   };
 
-  it('a lista recém-trazida entra no topo, com a prévia da planilha de exemplo', async () => {
-    const { fonte } = fonteComRelogio();
+  it('a lista recém-trazida entra no topo e, depois de trazida, tem a prévia da planilha de exemplo', async () => {
+    const { fonte, relogio } = fonteComRelogio();
     const { trazidaId } = await trazerUma(fonte);
     const [nova] = await fonte.historico();
     expect(nova).toMatchObject({
@@ -281,6 +272,7 @@ describe('trazer e andamento', () => {
       arquivo: 'Clientes 2025.xlsx',
       total: 195,
     });
+    relogio.agora += DURACAO_DA_TRAZIDA_MS;
     expect(await fonte.previaDoDesfazer(trazidaId)).toEqual({
       tira: 162,
       ficam: 18,
@@ -420,22 +412,80 @@ describe('tentar de novo (lista que parou no meio)', () => {
     });
   });
 
-  it('a lista que parou no meio não tem o que desfazer', async () => {
-    const { fonte } = fonteComRelogio();
+  // Como o servidor: as pessoas que a lista chegou a pôr não ficam presas
+  // numa lista que não dá para apagar. A pessoa escolhe continuar ou desfazer.
+  it('a lista que parou no meio pode ser desfeita: tem prévia, fica "desfazendo" e depois "desfeito"', async () => {
+    const { fonte, relogio } = fonteComRelogio();
     const falhou = await aQueFalhou(fonte);
-    await expect(fonte.desfazer(falhou.id)).rejects.toMatchObject({
-      name: 'NAO_PODE_DESFAZER',
+    expect(falhou).toMatchObject({ podeTentar: true, podeDesfazer: true });
+    expect(await fonte.previaDoDesfazer(falhou.id)).toEqual({
+      tira: 63,
+      ficam: 7,
+      devolve: 10,
+    });
+    expect(await fonte.desfazer(falhou.id)).toEqual({
+      id: falhou.id,
+      situacao: 'desfazendo',
+    });
+    const durante = (await fonte.historico()).find(l => l.id === falhou.id);
+    // Sendo desfeita, não há o que continuar nem o que desfazer de novo.
+    expect(durante).toMatchObject({
+      situacao: 'desfazendo',
+      podeTentar: false,
+      podeDesfazer: false,
+    });
+    await expect(fonte.tentarDeNovo(falhou.id)).rejects.toMatchObject({
+      name: 'NAO_PODE_TENTAR',
+    });
+    relogio.agora += DURACAO_DO_DESFAZER_MS;
+    const depois = (await fonte.historico()).find(l => l.id === falhou.id);
+    expect(depois).toMatchObject({
+      situacao: 'desfeito',
+      podeTentar: false,
+      podeDesfazer: false,
     });
   });
 });
 
 describe('desfazer', () => {
-  it('desfaz a lista pronta', async () => {
-    const { fonte } = fonteComRelogio();
+  const situacaoDe = async (fonte, id) =>
+    (await fonte.historico()).find(l => l.id === id).situacao;
+
+  it('a lista pronta fica "desfazendo" e, passado o tempo do desfazer, "desfeito"', async () => {
+    const { fonte, relogio } = fonteComRelogio();
+    const [pronta] = await fonte.historico();
+    expect(await fonte.desfazer(pronta.id)).toEqual({
+      id: pronta.id,
+      situacao: 'desfazendo',
+    });
+    const [durante] = await fonte.historico();
+    expect(durante).toMatchObject({
+      situacao: 'desfazendo',
+      porcentagem: 100,
+      podeDesfazer: false,
+    });
+    expect((await fonte.andamento(pronta.id)).situacao).toBe('desfazendo');
+    relogio.agora += DURACAO_DO_DESFAZER_MS - 1;
+    expect(await situacaoDe(fonte, pronta.id)).toBe('desfazendo');
+    relogio.agora += 1;
+    expect(await situacaoDe(fonte, pronta.id)).toBe('desfeito');
+  });
+
+  // Como o servidor: o pedido repetido não é erro nem recomeça o desfazer.
+  it('pedir de novo responde a situação de agora, sem recomeçar', async () => {
+    const { fonte, relogio } = fonteComRelogio();
     const [pronta] = await fonte.historico();
     await fonte.desfazer(pronta.id);
-    const [depois] = await fonte.historico();
-    expect(depois.situacao).toBe('desfeito');
+    relogio.agora += DURACAO_DO_DESFAZER_MS - 1;
+    expect(await fonte.desfazer(pronta.id)).toEqual({
+      id: pronta.id,
+      situacao: 'desfazendo',
+    });
+    relogio.agora += 1;
+    expect(await fonte.desfazer(pronta.id)).toEqual({
+      id: pronta.id,
+      situacao: 'desfeito',
+    });
   });
 
   it('lista pronta antiga tem Desfazer, com prévia própria', async () => {
@@ -451,22 +501,33 @@ describe('desfazer', () => {
     expect(previa).not.toEqual(primeira);
     expect(previa.tira + previa.ficam + previa.devolve).toBe(antiga.total);
     await fonte.desfazer(antiga.id);
-    const depois = (await fonte.historico()).find(l => l.id === antiga.id);
-    expect(depois.situacao).toBe('desfeito');
+    relogio.agora += DURACAO_DO_DESFAZER_MS;
+    expect(await situacaoDe(fonte, antiga.id)).toBe('desfeito');
   });
 
-  it('não desfaz lista que ainda está sendo trazida nem lista já desfeita', async () => {
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    'a lista que ainda está sendo trazida não tem o que desfazer (%s)',
+    async metodo => {
+      const { fonte } = fonteComRelogio();
+      const { id } = await fonte.ler(null);
+      const { trazidaId } = await fonte.trazer(id);
+      const [trazendo] = await fonte.historico();
+      expect(trazendo).toMatchObject({ id: trazidaId, podeDesfazer: false });
+      await expect(fonte[metodo](trazidaId)).rejects.toMatchObject({
+        name: 'NAO_PODE_DESFAZER',
+      });
+    }
+  );
+
+  it('a lista já desfeita responde "desfeito" e continua como está', async () => {
     const { fonte } = fonteComRelogio();
-    const { id } = await fonte.ler(null);
-    const { trazidaId } = await fonte.trazer(id);
-    await expect(fonte.desfazer(trazidaId)).rejects.toMatchObject({
-      name: 'NAO_PODE_DESFAZER',
-    });
     const antiga = (await fonte.historico()).find(
       l => l.situacao === 'desfeito'
     );
-    await expect(fonte.desfazer(antiga.id)).rejects.toMatchObject({
-      name: 'NAO_PODE_DESFAZER',
+    expect(await fonte.desfazer(antiga.id)).toEqual({
+      id: antiga.id,
+      situacao: 'desfeito',
     });
+    expect(await situacaoDe(fonte, antiga.id)).toBe('desfeito');
   });
 });

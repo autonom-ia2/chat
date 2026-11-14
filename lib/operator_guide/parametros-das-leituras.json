@@ -2518,6 +2518,10 @@
     "controller": "api/v1/accounts/relacionamentos/trazer/listas#andamento",
     "parametros": []
   },
+  "relacionamentos/trazer/listas/:id/previa_do_desfazer": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/listas#previa_do_desfazer",
+    "parametros": []
+  },
   "relationships/configuration": {
     "controller": "api/v1/accounts/relationships/configurations#show",
     "parametros": []

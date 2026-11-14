@@ -10,6 +10,7 @@ class CampaignImports::ContactBlankFields
     @account.contacts.where('LOWER(email) = ?', email.downcase).first
   end
 
+  # Returns the fields it filled (:name, :phone_number, :email), or [] when the contact lacked none of them.
   def fill!(contact, row)
     attributes = {
       name: (row[:name] if contact.name.blank?),
@@ -17,6 +18,7 @@ class CampaignImports::ContactBlankFields
       email: (row[:email] if contact.email.blank? && email_free?(row[:email]))
     }.compact_blank
     contact.update!(attributes) if attributes.any?
+    attributes.keys
   end
 
   private

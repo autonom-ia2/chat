@@ -55,14 +55,6 @@ export const esperar = ms =>
     setTimeout(resolve, ms);
   });
 
-export const erroFonteRealPendente = () =>
-  Object.assign(
-    new Error('A fonte real de Relacionamentos ainda não existe.'),
-    {
-      name: 'FONTE_REAL_PENDENTE',
-    }
-  );
-
 // ---- busca -----------------------------------------------------------------
 
 const temLetra = texto => [...texto].some(char => char >= 'a' && char <= 'z');

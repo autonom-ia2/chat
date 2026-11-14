@@ -324,6 +324,14 @@ describe('fonte real: o que o servidor responde a cada escrita', () => {
     });
   });
 
+  it('trazer enquanto a conta desfaz uma lista (422 `desfazer_em_curso`) ganha nome', async () => {
+    const fonte = await comLeitura();
+    recusa('trazer', erroHttp(422, 'desfazer_em_curso'));
+    await expect(fonte.trazer(812)).rejects.toMatchObject({
+      name: 'DESFAZER_EM_CURSO',
+    });
+  });
+
   it('a leitura inteira que volta das respostas traz o estado e o valor guardado de cada linha', async () => {
     const fonte = await comLeitura();
     responde(

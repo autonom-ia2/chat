@@ -1,6 +1,6 @@
 import TrazerAPI from 'dashboard/api/relacionamentosTrazer';
 import { doServidor } from './doServidor';
-import { ATRASO_DA_DEMO_MS, erroFonteRealPendente } from './listaFonte';
+import { ATRASO_DA_DEMO_MS } from './listaFonte';
 import { PLANILHAS_DE_DEMO, fonteDemo } from './trazerFonteDemo';
 import {
   SITUACAO_DA_LEITURA,
@@ -15,12 +15,14 @@ import {
   erroDaEscrita,
   erroDaLeitura,
   erroDaLeituraPendente,
+  erroDoDesfazer,
   erroDoEnvio,
   erroNomeado,
   leituraComMaisProblemas,
   leituraComProblema,
   leituraDaTela,
   listaDaTela,
+  previaDoDesfazerDaTela,
   problemaDaLeitura,
 } from './trazerTraducao';
 import { SEM_ACESSO } from '../lista/falhas';
@@ -30,11 +32,11 @@ import { SEM_ACESSO } from '../lista/falhas';
 //   1. fonte real (#2896): lê a planilha no servidor, grava as respostas das
 //      perguntas, conserta ou deixa de fora cada linha (e volta atrás), troca o
 //      destino de uma coluna, traz, acompanha o andamento, lista o que já foi
-//      trazido e continua a lista que parou no meio
+//      trazido, continua a lista que parou no meio e desfaz uma lista (Fatia
+//      3: a prévia do que sai e o pedido; o servidor responde na hora com
+//      `desfazendo` e a tela acompanha pelo histórico até `desfeito`)
 //      (dashboard/api/relacionamentosTrazer.js; a tradução está em
-//      trazerTraducao.js). Só o desfazer ainda não existe (Fatia 3): a fonte
-//      diz `temDesfazer: false`, a tela não o mostra, e os dois métodos dele
-//      respondem `FONTE_REAL_PENDENTE` a quem os chamar mesmo assim.
+//      trazerTraducao.js).
 //      Quem o servidor recusa por falta de permissão (aqui sempre 401)
 //      recebe a falha de nome `SEM_ACESSO` (fonte/doServidor.js, o mesmo da
 //      lista). As recusas das escritas (422) também ganham nome: o que a
@@ -49,9 +51,11 @@ import { SEM_ACESSO } from '../lista/falhas';
 //      leitura); e o pedido que o servidor já não conhece (a leitura
 //      não está pronta ou já foi trazida, a linha, a coluna, a pergunta ou a
 //      resposta não existe; e o 404 de qualquer escrita) é
-//      `TELA_DESATUALIZADA`. O resto sobe como veio;
+//      `TELA_DESATUALIZADA`. O desfazer (e a prévia dele) da lista que ainda
+//      não foi gravada é `NAO_PODE_DESFAZER`. O resto sobe como veio;
 //   2. demonstração: com `?demo=<estado>` e só no desenvolvimento
-//      (fonte/trazerFonteDemo.js). Ela tem o desfazer (`temDesfazer: true`).
+//      (fonte/trazerFonteDemo.js).
+// As duas têm o desfazer (`temDesfazer: true`).
 // A leitura que a tela recebe traz os problemas da primeira página e o total
 // deles (`problemasTotal`); as outras páginas vêm com `maisProblemas`. Ler
 // demora: o servidor responde `lendo` e a fonte pergunta de novo até sair
@@ -333,8 +337,14 @@ const escritasDeLinha = guardadas => {
   };
 };
 
-const pendente = async () => {
-  throw erroFonteRealPendente();
+// A prévia e o pedido do desfazer: a recusa do servidor ganha nome
+// (trazerTraducao.js, `erroDoDesfazer`).
+const pedidoDoDesfazer = async pedido => {
+  try {
+    return await doServidor(pedido);
+  } catch (falha) {
+    throw erroDoDesfazer(falha);
+  }
 };
 
 // As listas que a conta já trouxe e a que está sendo trazida.
@@ -345,8 +355,9 @@ const listasTrazidas = () => ({
     return { trazidaId: resposta?.trazidaId ?? leituraId };
   },
   // A lista que parou no meio continua de onde parou.
+  // A recusa do servidor ganha nome, como a do trazer.
   async tentarDeNovo(trazidaId) {
-    await doServidor(TrazerAPI.confirmar(trazidaId));
+    await escritaNaLeitura(TrazerAPI.confirmar(trazidaId));
     return { trazidaId };
   },
   async andamento(trazidaId) {
@@ -356,8 +367,19 @@ const listasTrazidas = () => ({
     const listas = await doServidor(TrazerAPI.listas());
     return listas.map(listaDaTela);
   },
-  previaDoDesfazer: pendente,
-  desfazer: pendente,
+  async previaDoDesfazer(trazidaId) {
+    return previaDoDesfazerDaTela(
+      await pedidoDoDesfazer(TrazerAPI.previaDoDesfazer(trazidaId))
+    );
+  },
+  // O servidor só marca a lista e responde na hora: `desfazendo`, ou `desfeito`
+  // quando ela já tinha sido desfeita.
+  async desfazer(trazidaId) {
+    const { id, situacao } = await pedidoDoDesfazer(
+      TrazerAPI.desfazer(trazidaId)
+    );
+    return { id, situacao };
+  },
 });
 
 const fonteReal = opcoes => {
@@ -365,8 +387,7 @@ const fonteReal = opcoes => {
   const { retomar, encerrar } = esperaDaLeitura(opcoes, guardadas);
   return {
     usaDemo: false,
-    // O desfazer fica para a Fatia 3: a tela não mostra o que a conta não tem.
-    temDesfazer: false,
+    temDesfazer: true,
     encerrar,
     // Envia a planilha e espera a leitura. O envio que deu certo não se repete:
     // se a espera falha, o erro `LEITURA_PENDENTE` leva o id para o `retomar`.

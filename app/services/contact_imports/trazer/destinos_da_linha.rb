@@ -16,7 +16,15 @@
 # informações da pessoa (CampaignImports::Importer#import_one), tenha a linha ou não alguma coluna além das de contato:
 # "sim, todas" vale para todo mundo. Quem grava as informações (ContactImports::CustomAttributes) só pergunta aqui
 # quais colunas não viram informação (`chaves`) e que nome a pessoa deu a cada uma (`campos`).
+#
+# O importador chama `gravar`, que aplica os destinos e manda anotar o que a linha preencheu
+# (Relacionamentos::Trazer::CamposPreenchidos), para o "Desfazer" devolver só isso. `aplicar` responde o que pôs
+# (`Postos`): a cidade e o telefone da empresa como ficaram gravados, ou nil quando já havia valor, e a promoção de quem
+# virou cliente agora (`Promocao`: o tipo que a pessoa tinha, lido sob a trava, e a data como ficou no banco). Quem já
+# era cliente não tem promoção.
 class ContactImports::Trazer::DestinosDaLinha
+  Postos = Struct.new(:cidade, :telefone_da_empresa, :cliente, keyword_init: true)
+  Promocao = Struct.new(:tipo_anterior, :desde, keyword_init: true)
   CIDADE = 'city'.freeze
   TELEFONE_DA_EMPRESA = 'phone_number'.freeze
   FORA_DAS_INFORMACOES = %w[cidade telefone_da_empresa cliente].freeze
@@ -34,6 +42,7 @@ class ContactImports::Trazer::DestinosDaLinha
     @colunas = Relacionamentos::Trazer::Colunas.new(importacao)
     @chaves = FORA_DAS_INFORMACOES.index_with { |destino| @colunas.chaves_do_destino(destino) }
     @cliente = ContactImports::Trazer::Cliente.new(importacao)
+    @preenchidos = Relacionamentos::Trazer::CamposPreenchidos.new(importacao)
   end
 
   # As colunas (pela chave em extra_values) que não viram informação da pessoa.
@@ -46,12 +55,21 @@ class ContactImports::Trazer::DestinosDaLinha
     @colunas.campos_por_chave
   end
 
+  # A gravação de uma linha, dentro da transação dela. linha: a linha da importação. gravada: o que o importador
+  # escreveu (CampaignImports::ContactRow::Result). informacoes: o que ContactImports::CustomAttributes#merge! acrescentou.
+  def gravar(linha, gravada, informacoes)
+    postos = aplicar(gravada.contact, linha.extra_values, empresa: gravada.company)
+    @preenchidos.registrar(linha, gravada, informacoes, postos)
+  end
+
   # empresa: o que o vinculador de empresas respondeu para esta linha (CampaignImports::CompanyLinker::Result) ou nil.
   def aplicar(contato, valores, empresa: nil)
     valores = valores.to_h
-    preencher_cidade(contato, primeiro(valores, 'cidade'))
-    preencher_telefone_da_empresa(empresa, primeiro(valores, 'telefone_da_empresa'))
-    contato.become_customer! if cliente?(valores)
+    Postos.new(
+      cidade: preencher_cidade(contato, primeiro(valores, 'cidade')),
+      telefone_da_empresa: preencher_telefone_da_empresa(empresa, primeiro(valores, 'telefone_da_empresa')),
+      cliente: (virar_cliente(contato) if cliente?(valores))
+    )
   end
 
   def cliente?(valores)
@@ -69,7 +87,10 @@ class ContactImports::Trazer::DestinosDaLinha
 
     contato.with_lock do
       atuais = contato.additional_attributes.to_h
-      contato.update!(additional_attributes: atuais.merge(CIDADE => cidade)) if atuais[CIDADE].blank?
+      next if atuais[CIDADE].present?
+
+      contato.update!(additional_attributes: atuais.merge(CIDADE => cidade))
+      cidade
     end
   end
 
@@ -79,7 +100,19 @@ class ContactImports::Trazer::DestinosDaLinha
     empresa = vinculo.company
     empresa.with_lock do
       atuais = empresa.additional_attributes.to_h
-      empresa.update!(additional_attributes: atuais.merge(TELEFONE_DA_EMPRESA => telefone)) if atuais[TELEFONE_DA_EMPRESA].blank?
+      next if atuais[TELEFONE_DA_EMPRESA].present?
+
+      empresa.update!(additional_attributes: atuais.merge(TELEFONE_DA_EMPRESA => telefone))
+      telefone
+    end
+  end
+
+  def virar_cliente(contato)
+    contato.with_lock do
+      antes = contato.contact_type
+      next unless contato.become_customer!
+
+      Promocao.new(tipo_anterior: Contact.contact_types[antes], desde: contato.reload.customer_since)
     end
   end
 end

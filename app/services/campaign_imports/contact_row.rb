@@ -14,7 +14,7 @@
 #   before touching anything.
 class CampaignImports::ContactRow
   NotAllowed = Class.new(StandardError)
-  Result = Struct.new(:contact, :existing, :company, keyword_init: true)
+  Result = Struct.new(:contact, :existing, :company, :filled, keyword_init: true)
   # Públicos and the campaign base flow are not a contact import: their controller asks
   # CampaignImportPolicy, and the Importer passes this instead of an actor.
   UNCHECKED = :unchecked
@@ -39,16 +39,17 @@ class CampaignImports::ContactRow
     @allowed = @account_user == UNCHECKED || self.class.allowed?(@account_user)
   end
 
-  # Result: the contact, whether it already existed, and the CompanyLinker::Result (nil without a
-  # linker). row: { name:, phone_number: (normalized, with +), email:, company_name: }.
+  # Result: the contact, whether it already existed, the CompanyLinker::Result (nil without a
+  # linker) and the fields the row filled in it (ContactBlankFields#fill!).
+  # row: { name:, phone_number: (normalized, with +), email:, company_name: }.
   def write(row)
     raise NotAllowed unless allowed?
 
     contact = find(row)
     existing = contact.present?
     contact ||= @account.contacts.create!(name: row[:name], phone_number: row[:phone_number], email: row[:email])
-    blank_fields.fill!(contact, row)
-    Result.new(contact: contact, existing: existing, company: link_company(contact, row))
+    filled = blank_fields.fill!(contact, row)
+    Result.new(contact: contact, existing: existing, company: link_company(contact, row), filled: filled)
   end
 
   private

@@ -32,6 +32,14 @@ RSpec.describe Relacionamentos::Trazer::Situacao, :aggregate_failures do
     expect(described_class.de(importacao(status: :failed))).to be_nil
   end
 
+  it 'a lista que quebrou no meio também passa por "desfazendo" e "desfeito"' do
+    quebrada = { status: :failed, import_started_at: 1.hour.ago }
+
+    expect(described_class.de(importacao(**quebrada, undo_status: :processing))).to eq('desfazendo')
+    expect(described_class.de(importacao(**quebrada, undo_status: :completed))).to eq('desfeito')
+    expect(described_class.de(importacao(**quebrada, undo_status: :failed))).to eq('falhou')
+  end
+
   it 'não dá situação ao rascunho nem ao que não é lista trazida' do
     %i[uploaded validating validation_failed ready_to_confirm needs_column_choice cancelled expired undoing_labels labels_undone
        undo_failed].each do |status|

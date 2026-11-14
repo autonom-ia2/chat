@@ -137,9 +137,28 @@ const abrirDesfazer = async lista => {
   await aberta;
 };
 
-const confirmarDesfazer = async () => {
-  if (await historico.confirmarDesfazer()) dialogo.value?.fechar();
+// Aceito o pedido, o botão Desfazer da linha some. O diálogo, ao fechar,
+// devolveria o foco a ele: sem o botão, o foco cairia no começo da página.
+// Vai para a linha da lista, que agora diz "Desfazendo…".
+const focarALinha = async id => {
+  await nextTick();
+  [...(raiz.value?.querySelectorAll('[data-lista]') ?? [])]
+    .find(linha => linha.dataset.lista === String(id))
+    ?.focus();
 };
+
+const confirmarDesfazer = async () => {
+  const id = historico.alvo.value?.id;
+  if (!(await historico.confirmarDesfazer())) return;
+  dialogo.value?.fechar();
+  await focarALinha(id);
+};
+
+// Sem acesso (401) na prévia ou ao desfazer: a tela inteira vira a frase de
+// sem acesso, e o diálogo não fica aberto por cima dela.
+watch(semAcesso, sem => {
+  if (sem) dialogo.value?.fechar();
+});
 </script>
 
 <template>
@@ -294,6 +313,7 @@ const confirmarDesfazer = async () => {
       :previa="historico.previa.value"
       :com-erro-na-previa="historico.previaComErro.value"
       :desfazendo="historico.desfazendo.value"
+      :nao-pode="historico.naoPodeDesfazer.value"
       @confirmar="confirmarDesfazer"
       @fechar="historico.fecharDesfazer"
       @tentar="() => historico.abrirDesfazer(historico.alvo.value)"
