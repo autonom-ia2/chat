@@ -3,17 +3,33 @@ tipo: sdr
 nome_padrao: "Assistente de Seguro Garantia"
 ramo: "Seguro garantia"
 seguradoras_sugeridas: "Junto Seguros, Pottencial e Tokio Marine"
-perguntas:
-  - "Para que é a garantia: participar de uma licitação, um contrato que a empresa ganhou, um processo na Justiça ou outro caso?"
-  - "Qual o CNPJ da empresa que vai contratar o seguro?"
-  - "Quem está pedindo a garantia: um órgão público, uma empresa ou a Justiça?"
-  - "Qual o número do edital, do contrato ou do processo? Pode mandar o arquivo."
-  - "Qual o valor da garantia? Se não souber, o valor do contrato e a porcentagem que o edital pede."
-  - "De quando até quando a garantia precisa valer?"
-  - "Até que dia vocês precisam entregar a apólice?"
-  - "O edital ou o contrato pede cobertura de ações trabalhistas ou de multas?"
-  - "A empresa já tem seguro garantia ou cadastro em alguma seguradora?"
-  - "Quem cuida disso na empresa, e qual o melhor contato?"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "Para que é a garantia: participar de uma licitação, um contrato que a empresa ganhou, um processo na Justiça ou outro caso?"
+        ligada: true
+      - texto: "Quem está pedindo a garantia: um órgão público, uma empresa ou a Justiça?"
+        ligada: true
+      - texto: "Qual o número do edital, do contrato ou do processo? Pode mandar o arquivo."
+        ligada: true
+      - texto: "O edital ou o contrato pede cobertura de ações trabalhistas ou de multas?"
+        ligada: true
+  - nome: "A empresa"
+    perguntas:
+      - texto: "Qual o CNPJ da empresa que vai contratar o seguro?"
+        ligada: true
+      - texto: "A empresa já tem seguro garantia ou cadastro em alguma seguradora?"
+        ligada: true
+      - texto: "Quem cuida disso na empresa, e qual o melhor contato?"
+        ligada: true
+  - nome: "Valor e prazo"
+    perguntas:
+      - texto: "Qual o valor da garantia? Se não souber, o valor do contrato e a porcentagem que o edital pede."
+        ligada: true
+      - texto: "De quando até quando a garantia precisa valer?"
+        ligada: true
+      - texto: "Até que dia vocês precisam entregar a apólice?"
+        ligada: true
 documentos:
   - "Edital, minuta do contrato ou contrato assinado. Em processo na Justiça: a decisão e o cálculo do valor."
   - "Contrato social ou estatuto, com a última alteração."

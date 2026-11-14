@@ -1,0 +1,114 @@
+chave: vida_individual
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Vida"
+ramo: "Seguro de vida individual"
+seguradoras_sugeridas: "[[a coletar]]"
+blocos:
+  - nome: "Quem vai ter o seguro"
+    perguntas:
+      - texto: "Qual é o seu CPF? É pedido no cadastro da cotação."
+        ligada: true
+      - texto: "Qual é o seu nome completo?"
+        se: "o nome ainda não tiver vindo na conversa"
+        ligada: true
+      - texto: "Qual é a sua data de nascimento?"
+        ligada: true
+      - texto: "Qual é o seu sexo, masculino ou feminino? É pedido no cadastro."
+        ligada: true
+      - texto: "Qual é o seu estado civil? É pedido no cadastro."
+        ligada: true
+      - texto: "Qual é o CEP de onde você mora?"
+        ligada: true
+  - nome: "Trabalho e renda"
+    perguntas:
+      - texto: "Qual é a sua renda por mês, mais ou menos? É pedida no cadastro e ajuda a equipe a cotar."
+        ligada: true
+      - texto: "Qual é a sua profissão? Ajuda a equipe a cotar."
+        ligada: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "A equipe pode falar por este WhatsApp ou você prefere contato em outro número ou por e-mail?"
+      - texto: "Qual outro número a equipe pode usar para falar com você?"
+        se: "preferir outro número e ele ainda não tiver vindo"
+        segue: true
+      - texto: "Qual e-mail a equipe pode usar para falar com você?"
+        se: "preferir e-mail e ele ainda não tiver vindo"
+        segue: true
+  - nome: "Esportes"
+    perguntas:
+      - texto: "Você pratica algum esporte radical, como paraquedismo ou voo livre?"
+        ligada: true
+      - texto: "Qual esporte radical você pratica?"
+        se: "praticar esporte radical"
+        segue: true
+        ligada: true
+  - nome: "Saúde"
+    perguntas:
+      - texto: "Você fuma? É pedido no cadastro."
+      - texto: "Qual é a sua altura?"
+      - texto: "Qual é o seu peso, em quilos?"
+      - texto: "Você tem ou já teve alguma doença grave? É pedido no cadastro."
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Que valor de proteção você quer avaliar para o caso de morte, o valor destinado a quem você indicar se o plano pagar? Se não souber, a equipe sugere."
+        ligada: true
+      - texto: "Quer escolher as proteções do seguro, como acidente, invalidez, diária e funeral, ou prefere que a equipe sugira?"
+      - texto: "Quer incluir no seguro morte por acidente, com um valor próprio para esse caso?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor de proteção você quer para o caso de morte por acidente?"
+        se: "a pessoa quiser escolher e incluir morte por acidente"
+        segue: true
+      - texto: "Quer incluir no seguro invalidez por acidente? Cada seguradora define o que conta."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor de proteção você quer para o caso de invalidez por acidente?"
+        se: "a pessoa quiser escolher e incluir invalidez por acidente"
+        segue: true
+      - texto: "Quer avaliar no seguro invalidez por doença? Cada seguradora define o que conta."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor de proteção você quer para o caso de invalidez por doença?"
+        se: "a pessoa quiser escolher e incluir invalidez por doença"
+        segue: true
+      - texto: "Quer incluir no seguro um valor por dia de internação no hospital?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor você quer receber por dia internado no hospital?"
+        se: "a pessoa quiser escolher e incluir o valor por dia de internação"
+        segue: true
+      - texto: "Quer avaliar no seguro uma diária, um valor por dia, por afastamento temporário do trabalho por doença ou acidente? Cada seguradora tem suas regras."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Por quantos dias você quer receber a diária por afastamento do trabalho? Se não souber, a equipe sugere."
+        se: "a pessoa quiser escolher e incluir a diária por afastamento"
+        segue: true
+      - texto: "Quer incluir no seguro doenças graves, uma proteção para quando houver o diagnóstico de uma das doenças que o plano lista?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Para quantas doenças graves você quer a proteção, se souber? Se não souber, a equipe sugere."
+        se: "a pessoa quiser escolher e incluir doenças graves"
+        segue: true
+      - texto: "Que valor de proteção você quer para o caso de doenças graves?"
+        se: "a pessoa quiser escolher e incluir doenças graves"
+        segue: true
+      - texto: "Quer incluir no seguro ajuda com o funeral?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "A ajuda com o funeral é só para você ou também para a família?"
+        se: "a pessoa quiser escolher e incluir ajuda com o funeral"
+        segue: true
+documentos: []
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF, para conferir se o número é válido. A consulta não traz nome, nascimento, sexo nem estado civil: continue perguntando. Anote o resultado para a equipe, sem repetir o número nem pedir que confira. Se o número não fechar ou a consulta falhar, anote para a equipe e siga, sem avisar o cliente."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP de onde mora, ou o CEP comercial, para achar rua, bairro, cidade e estado. Anote para a equipe, sem repetir o endereço nem pedir confirmação, e não pergunte o que o CEP já trouxe. Se a consulta falhar ou não achar, anote o endereço como pendente e siga, sem dizer ao cliente que não achou."
+tambem: []
+# Nome e nascimento pelo CPF: consulta prevista, sem chave; perguntar enquanto não houver retorno real.
+# cidades: existe na lista, mas a ficha não confirma entrada e saída; não ativada.
+premium: []
+teste:
+  - "Quanto custa um seguro de vida?"
+  - "Se eu morrer de doença o seguro paga com certeza?"
+  - "Já mandei meus dados, pode passar para a equipe"

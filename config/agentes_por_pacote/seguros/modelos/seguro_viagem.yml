@@ -1,0 +1,183 @@
+chave: seguro_viagem
+tipo: sdr
+nome_padrao: "Assistente de Seguro Viagem"
+ramo: "Seguro viagem"
+seguradoras_sugeridas: "Porto, MAPFRE e Bradesco Seguros"
+blocos:
+  - nome: "A viagem"
+    perguntas:
+      - texto: "A viagem é pelo Brasil ou para fora?"
+        ligada: true
+      - texto: "Para qual estado do Brasil vocês vão?"
+        se: "a viagem for pelo Brasil"
+        segue: true
+        ligada: true
+      - texto: "Para qual país vocês vão?"
+        se: "a viagem for para fora do Brasil"
+        segue: true
+        ligada: true
+      - texto: "Vocês vão passar por mais algum país na viagem?"
+        se: "a viagem for para fora do Brasil"
+        segue: true
+      - texto: "Vocês vão passar pela Europa na viagem?"
+        se: "a viagem for para fora do Brasil e o roteiro ainda não mostrar isso"
+        segue: true
+      - texto: "De qual estado do Brasil vocês vão sair?"
+        se: "a saída for do Brasil"
+        ligada: true
+      - texto: "A viagem é a lazer, estudo ou negócios?"
+        ligada: true
+      - texto: "Vão de avião, navio ou por terra?"
+      - texto: "O seguro é para essa viagem ou para várias viagens no ano?"
+      - texto: "Quem vai viajar mora no Brasil?"
+        se: "ainda não estiver claro onde mora quem vai viajar"
+      - texto: "Vocês vão morar em outro país ou voltam depois da viagem?"
+        se: "ainda não estiver claro se vão voltar ou mudar de país"
+  - nome: "Datas"
+    perguntas:
+      - texto: "Em que dia vocês saem para a viagem?"
+        se: "for uma viagem só, ou já se souber a primeira de várias viagens"
+        ligada: true
+      - texto: "Em que dia vocês voltam da viagem?"
+        se: "for uma viagem só, ou já se souber a primeira de várias viagens"
+        ligada: true
+  - nome: "Quem vai viajar"
+    perguntas:
+      - texto: "Quantas pessoas vão viajar?"
+        se: "a lista completa de quem vai viajar ainda não tiver sido enviada"
+        ligada: true
+      - texto: "Qual é o nome completo da primeira pessoa que vai viajar?"
+        ligada: true
+      - texto: "Qual é o CPF da primeira pessoa que vai viajar? É um dado pedido para cotar."
+        ligada: true
+      - texto: "Qual é a data de nascimento da primeira pessoa que vai viajar?"
+        se: "o cliente não estiver com pressa"
+        ligada: true
+      - texto: "Qual é o nome completo de cada outra pessoa que vai viajar?"
+        se: "for mais de uma pessoa viajando"
+        ligada: true
+      - texto: "Qual é o CPF de cada outra pessoa que vai viajar? É um dado pedido para cotar."
+        se: "for mais de uma pessoa viajando"
+        segue: true
+        ligada: true
+      - texto: "Qual é a data de nascimento de cada outra pessoa que vai viajar?"
+        se: "for mais de uma pessoa viajando e o cliente não estiver com pressa"
+        segue: true
+        ligada: true
+      - texto: "Qual é a idade de cada pessoa que vai viajar e ainda não deu a data de nascimento?"
+        se: "faltar a data de nascimento de alguém que vai viajar"
+        ligada: true
+      - texto: "Quem é o responsável legal pela contratação do seguro do menor de idade que vai viajar?"
+        se: "alguém que vai viajar for menor de idade"
+  - nome: "Esporte e moto"
+    perguntas:
+      - texto: "Alguém vai praticar esporte radical na viagem?"
+      - texto: "Quem vai praticar esporte radical na viagem?"
+        se: "alguém for praticar esporte radical e não estiver claro quem"
+        segue: true
+      - texto: "Qual esporte cada pessoa que pratica vai fazer na viagem?"
+        se: "alguém for praticar esporte"
+        segue: true
+      - texto: "Quem pratica esporte na viagem vai praticar como amador ou profissional?"
+        se: "alguém for praticar esporte"
+        segue: true
+      - texto: "Quem pratica esporte vai participar de competição na viagem?"
+        se: "alguém for praticar esporte"
+        segue: true
+      - texto: "A competição da viagem tem pagamento ou prêmio em dinheiro?"
+        se: "alguém for participar de competição"
+        segue: true
+      - texto: "Alguém vai usar moto na viagem?"
+      - texto: "Quem vai usar moto na viagem?"
+        se: "alguém for usar moto e não estiver claro quem"
+        segue: true
+      - texto: "Em quais países cada pessoa vai usar a moto na viagem?"
+        se: "alguém for usar moto e o roteiro ainda não mostrar isso"
+        segue: true
+  - nome: "Saúde"
+    perguntas:
+      - texto: "Alguém que vai viajar tem alguma doença ou condição de saúde já diagnosticada? Ajuda a equipe a ver as opções de plano."
+      - texto: "Quem tem a doença ou condição de saúde já diagnosticada?"
+        se: "alguém tiver doença ou condição diagnosticada e não estiver claro quem"
+        segue: true
+      - texto: "Qual é a doença ou condição de saúde diagnosticada de cada pessoa que tem uma?"
+        se: "alguém tiver doença ou condição diagnosticada"
+        segue: true
+      - texto: "Há quanto tempo cada pessoa recebeu o diagnóstico da doença ou condição de saúde?"
+        se: "alguém tiver doença ou condição diagnosticada"
+        segue: true
+      - texto: "A doença ou condição de saúde diagnosticada está controlada?"
+        se: "alguém tiver doença ou condição diagnosticada"
+        segue: true
+      - texto: "Alguém que vai viajar faz tratamento contínuo, que precisa manter?"
+      - texto: "Quem faz o tratamento contínuo?"
+        se: "alguém fizer tratamento contínuo e não estiver claro quem"
+        segue: true
+      - texto: "Alguém que vai viajar usa remédio de forma contínua, com uso regular?"
+      - texto: "Quem usa remédio de forma contínua?"
+        se: "alguém usar remédio de forma contínua e não estiver claro quem"
+        segue: true
+      - texto: "Há alguém grávida entre as pessoas que vão viajar? Ajuda a equipe a ver as opções de plano."
+        se: "o cliente ainda não tiver dito"
+      - texto: "Quem está grávida entre as pessoas que vão viajar?"
+        se: "houver alguém grávida e não estiver claro quem"
+        segue: true
+      - texto: "Com quantas semanas de gravidez está a viajante grávida?"
+        se: "houver alguém grávida"
+        segue: true
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Todas as pessoas que vão viajar moram no mesmo endereço?"
+        se: "for mais de uma pessoa viajando e os endereços ainda não estiverem claros"
+      - texto: "Em qual país fica cada endereço diferente do primeiro?"
+        se: "houver endereço diferente e o país dele ainda não tiver sido dito"
+        segue: true
+      - texto: "Qual é o CEP de onde mora quem vai viajar?"
+        se: "o endereço for no Brasil e ainda não estiver completo; vale para o primeiro endereço e para cada endereço diferente"
+      - texto: "Qual é o número do endereço de quem vai viajar?"
+        se: "o endereço for no Brasil e faltar o número; vale para o primeiro endereço e para cada endereço diferente"
+        segue: true
+      - texto: "O endereço de quem vai viajar tem algum complemento?"
+        se: "o endereço for no Brasil e o complemento ainda não tiver sido dito; vale para o primeiro endereço e para cada endereço diferente"
+        segue: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "A equipe pode seguir com você por aqui, ou prefere outro número ou e-mail?"
+        se: "o cliente ainda não tiver dito como prefere o contato"
+      - texto: "Qual é o outro número para a equipe falar com você?"
+        se: "o cliente preferir outro número"
+        segue: true
+      - texto: "Qual é o e-mail para a equipe falar com você?"
+        se: "o cliente preferir e-mail"
+        segue: true
+      - texto: "Você tem telefone fixo para contato?"
+        se: "o cliente ainda não tiver dito"
+      - texto: "Qual é o número do telefone fixo?"
+        se: "tiver telefone fixo"
+        segue: true
+      - texto: "De quais pessoas que vão viajar a equipe pode tratar com você por aqui?"
+        se: "for mais de uma pessoa viajando e o cliente ainda não tiver dito; no caso de menor de idade, vale o responsável"
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Já tem outro seguro para essa viagem?"
+      - texto: "Quer escolher as proteções do seguro ou prefere que a equipe sugira?"
+      - texto: "Tem alguma proteção que faz questão de incluir no seguro?"
+        se: "o cliente quiser escolher"
+        segue: true
+documentos:
+  - "Só se a equipe pedir depois, na análise de saúde: laudo médico recente. Não pedir nesta coleta."
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use quando receber o CPF de um viajante para validar o número. Anote o resultado na ficha dessa pessoa para a equipe; não recite nem peça confirmação do resultado. CPF inválido: peça para conferir só o número. Não comprova identidade nem traz nome ou nascimento. Se a consulta falhar ou não achar, anote a pendência para a equipe sem dizer ao cliente que não achou."
+  - fonte: cep
+    usar_quando: "Use com CEP brasileiro para completar rua, bairro, cidade e UF, ou com endereço brasileiro já enviado para obter o CEP. Anote na ficha para a equipe, sem recitar nem pedir confirmação. Peça apenas número e complemento que faltarem. CEP com formato inválido: peça para conferir o CEP. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use com cidade mencionada para padronizar cidade e UF no roteiro nacional. Anote para a equipe no lugar correspondente, sem inferir partida pela residência, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+  - fonte: localizacao
+    usar_quando: "Use quando receber localização para identificar a cidade do lugar a que a mensagem se refere. Anote para a equipe nesse contexto, sem deduzir o roteiro, recitar o resultado ou pedir confirmação. Se a consulta falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou."
+premium: []
+teste:
+  - "Tô com pressa, quanto fica o seguro da viagem?"
+  - "Vou com um bebê e queria esquiar. Cobre com certeza?"
+  - "Já comecei a viagem e preciso falar com uma pessoa."

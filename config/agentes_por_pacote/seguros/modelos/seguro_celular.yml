@@ -1,0 +1,159 @@
+chave: seguro_celular
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Celular"
+ramo: "Seguro de celular"
+seguradoras_sugeridas: "Pier, Zurich e Porto Seguro"
+blocos:
+  - nome: "O celular"
+    perguntas:
+      - texto: "Qual é a marca do celular?"
+        ligada: true
+      - texto: "Qual é o modelo do celular?"
+        ligada: true
+      - texto: "Quanto o celular tem de armazenamento, o espaço para fotos e aplicativos?"
+        ligada: true
+      - texto: "Quanto você estima que o celular vale hoje?"
+        ligada: true
+      - texto: "Há quanto tempo o celular está em uso?"
+        ligada: true
+      - texto: "O celular foi comprado novo, usado ou recondicionado, aquele revisado para voltar à venda?"
+      - texto: "Em que data o celular foi comprado?"
+        se: "o celular tiver sido comprado usado ou recondicionado, ou a pessoa não lembrar bem do tempo de uso"
+        segue: true
+      - texto: "O celular está funcionando normalmente, sem dano?"
+      - texto: "Qual é o IMEI do celular, o número que identifica o aparelho? Para ver, digite *#06#; mande todos se houver mais de um."
+  - nome: "Nota e origem"
+    perguntas:
+      - texto: "Você tem a nota fiscal do celular?"
+      - texto: "Que comprovante da compra do celular você tem?"
+        se: "não tiver a nota fiscal"
+        segue: true
+      - texto: "O celular foi comprado no Brasil ou no exterior?"
+      - texto: "O celular já entrou no Brasil?"
+        se: "o celular tiver sido comprado no exterior"
+        segue: true
+  - nome: "Quem usa o celular"
+    perguntas:
+      - texto: "Quem vai usar o celular?"
+      - texto: "Quem usa o celular tem mais de 18 anos?"
+        ligada: true
+  - nome: "Quem vai contratar"
+    perguntas:
+      - texto: "Qual é o CPF de quem vai contratar o seguro? A equipe precisa dele para cotar."
+        ligada: true
+      - texto: "Qual o nome completo de quem vai contratar?"
+        ligada: true
+      - texto: "Qual a data de nascimento de quem vai contratar?"
+      - texto: "Qual é o sexo de quem vai contratar? É pedido no cadastro da cotação."
+      - texto: "Qual é a profissão de quem vai contratar?"
+      - texto: "Quem vai contratar mora no Brasil?"
+      - texto: "Qual é o CEP de onde mora quem vai contratar?"
+        se: "quem vai contratar morar no Brasil"
+        segue: true
+      - texto: "Qual é o número do endereço de quem vai contratar?"
+        se: "quem vai contratar morar no Brasil"
+        segue: true
+      - texto: "O endereço de quem vai contratar tem complemento, como apartamento ou bloco?"
+        se: "quem vai contratar morar no Brasil"
+        segue: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "Quer que a equipe fale com você também por outro número ou por e-mail?"
+      - texto: "Qual é o outro número, com DDD, para a equipe falar com você?"
+        se: "quiser outro número ou o celular desta conversa não for seu"
+        segue: true
+      - texto: "Qual e-mail a equipe pode usar para falar com você?"
+        se: "quiser contato por e-mail"
+        segue: true
+  - nome: "Cadastro para contratar"
+    perguntas:
+      - texto: "Quer deixar o cadastro pronto para a contratação? São mais umas perguntas que costumam ser pedidas."
+      - texto: "Qual é o número do documento de identificação de quem vai contratar?"
+        se: "quiser deixar o cadastro pronto"
+        segue: true
+      - texto: "Qual órgão emitiu o documento de identificação de quem vai contratar?"
+        se: "quiser deixar o cadastro pronto"
+        segue: true
+      - texto: "Em que data foi emitido o documento de identificação de quem vai contratar?"
+        se: "quiser deixar o cadastro pronto"
+        segue: true
+      - texto: "Para o cadastro, prefere informar a renda ou o patrimônio de quem vai contratar?"
+        se: "quiser deixar o cadastro pronto"
+        segue: true
+      - texto: "Qual é, mais ou menos, a renda mensal de quem vai contratar? É pedido no cadastro."
+        se: "quiser deixar o cadastro pronto e preferir informar a renda"
+        segue: true
+      - texto: "Quanto quem vai contratar estima ter em bens e valores? É pedido no cadastro."
+        se: "quiser deixar o cadastro pronto e preferir informar o patrimônio"
+        segue: true
+      - texto: "Sabe se quem vai contratar é pessoa politicamente exposta, quer dizer, se tem ligação com cargo público de destaque? É pedido no cadastro."
+        se: "quiser deixar o cadastro pronto"
+        segue: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Quer escolher as proteções do seguro ou prefere que a equipe sugira?"
+        ligada: true
+      - texto: "Prefere proteção para roubo, quebra, roubo e quebra, roubo e furto, ou roubo, furto e quebra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para transações digitais e Pix?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar proteção para dano acidental por líquido no celular?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Você pretende usar o celular em viagem ao exterior?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir algum acessório do celular no seguro?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual acessório do celular quer incluir no seguro?"
+        se: "a pessoa quiser escolher e quiser incluir acessório"
+        segue: true
+      - texto: "Quer comparar opções de franquia, a sua parte no prejuízo?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Se acontecer algo com o celular, prefere receber em dinheiro, consertar ou trocar? A equipe vê o que cada plano oferece."
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Seguro que já existe"
+    perguntas:
+      - texto: "Já existe algum seguro para o celular?"
+        ligada: true
+      - texto: "Sabe quais situações o seguro que o celular já tem cobre?"
+        se: "já existir seguro para o celular"
+        segue: true
+  - nome: "Datas e pagamento"
+    perguntas:
+      - texto: "A partir de que dia gostaria que o seguro começasse?"
+      - texto: "Até que dia você quer o seguro?"
+        se: "a pessoa ainda não tiver dito até quando quer o seguro"
+      - texto: "Você prefere pagamento mensal ou anual do seguro?"
+      - texto: "Na hora de pagar, prefere cartão ou Pix? É só a preferência; ninguém pede dado de cartão aqui."
+  - nome: "Vistoria e aplicativo"
+    perguntas:
+      - texto: "Já fez a vistoria digital, a checagem do aparelho pela seguradora, para esse pedido?"
+        se: "a pessoa falar em vistoria"
+      - texto: "Aceitaria usar o aplicativo da seguradora com a localização ligada, se a opção pedir?"
+        se: "a pessoa falar no aplicativo da seguradora"
+documentos:
+  - "Se quis deixar o cadastro pronto e prefere mandar foto: o documento de identificação, se ainda faltar."
+  - "Se disse que tem nota fiscal e ainda não enviou: a nota."
+  - "Se comprou usado ou recondicionado e disse que tem comprovante da origem: o comprovante, se ainda faltar."
+  - "Se a pessoa disser que a seguradora pediu vistoria digital: as fotos e testes, feitos no canal da seguradora, se faltarem."
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use com o CPF informado para verificar a validade do número e anotar para a equipe. Não identifica a pessoa nem traz nome ou nascimento. Se o número for inválido, peça que confira sem repeti-lo. Se a consulta falhar, anote a pendência para a equipe, sem dizer ao cliente que não achou."
+  - fonte: cep
+    usar_quando: "Use com o CEP para completar rua, bairro, cidade e UF, ou com endereço suficiente para obter o CEP. Anote o resultado para a equipe sem recitar nem pedir confirmação. Número e complemento vêm do cliente se faltarem. CEP com formato inválido: peça que confira. Se a consulta falhar ou não achar, anote para a equipe sem anunciar a falha ao cliente."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando a cidade e o estado já informados precisarem de padronização para completar o endereço. Anote para a equipe sem dizer o resultado nem pedir confirmação. Não descobre rua, número nem residência. Se falhar ou não achar, anote a pendência para a equipe sem anunciar a falha ao cliente."
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente compartilhar localização para obter a cidade e anotar para a equipe. Só trate como residência se ele já disser que mora ali. Não recite o resultado nem peça confirmação. Se falhar ou não achar, anote a pendência para a equipe sem anunciar a falha ao cliente."
+premium: []
+teste:
+  - "Tô com pressa, quanto custa o seguro do celular?"
+  - "Meu celular é usado e não tenho nota. Dá para ver?"
+  - "Pode fechar, já fica valendo agora?"

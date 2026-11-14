@@ -1,0 +1,316 @@
+chave: seguro_empresarial
+tipo: sdr
+nome_padrao: "Assistente de Seguro Empresarial"
+ramo: "Seguro empresarial"
+seguradoras_sugeridas: "[[a coletar]]"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "Esse seguro é novo ou é para renovar um que está vencendo?"
+        ligada: true
+      - texto: "Qual é a seguradora da apólice que vence?"
+        se: "for renovação e a apólice não mostrar isso"
+        segue: true
+      - texto: "Qual é a classe de bônus, a indicação do histórico do seguro, que aparece na apólice que vence?"
+        se: "for renovação e a apólice não mostrar isso"
+        segue: true
+      - texto: "Em que dia termina o seguro atual?"
+        se: "for renovação e a apólice não mostrar isso"
+        segue: true
+      - texto: "Qual é o número da apólice que vence?"
+        se: "for renovação e a apólice não mostrar isso"
+        segue: true
+      - texto: "Além da apólice que vence, a empresa tem outro seguro para esses mesmos bens ou riscos?"
+        se: "for renovação"
+        segue: true
+      - texto: "A empresa tem algum seguro para os bens ou riscos que quer proteger agora?"
+        se: "for seguro novo"
+        segue: true
+      - texto: "Em que dia você gostaria que o novo seguro começasse?"
+      - texto: "Até que dia você gostaria que o novo seguro valesse?"
+  - nome: "Quem contrata"
+    perguntas:
+      - texto: "Qual é o CNPJ de quem vai contratar o seguro?"
+        ligada: true
+      - texto: "Qual é o número do CPF de quem vai contratar o seguro?"
+        se: "a pessoa disser que vai contratar no nome dela"
+        ligada: true
+      - texto: "Em qual nome será o seguro?"
+        se: "o nome ainda não tiver aparecido na conversa, nos documentos ou na consulta do CNPJ"
+        ligada: true
+      - texto: "Com quem a equipe pode falar sobre esse pedido de seguro?"
+        se: "ainda não se souber quem é o contato"
+        ligada: true
+      - texto: "Qual telefone ou e-mail a equipe deve usar para falar sobre o seguro?"
+        se: "a pessoa quiser outro canal além deste"
+  - nome: "O negócio"
+    perguntas:
+      - texto: "O que o negócio faz no local que vai ter o seguro?"
+        ligada: true
+      - texto: "Além disso, o negócio faz mais alguma coisa no local que vai ter o seguro?"
+        se: "ainda não estiver claro tudo o que o negócio faz lá"
+        segue: true
+      - texto: "Como você descreveria o tamanho do negócio: pequeno, médio ou grande?"
+        se: "o tamanho ainda não estiver claro pelas respostas"
+      - texto: "Quantas pessoas trabalham na empresa?"
+        se: "isso ainda não tiver sido dito"
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual é o CEP do estabelecimento?"
+        ligada: true
+      - texto: "Qual é a rua do estabelecimento?"
+        se: "a consulta do CEP não trouxer a rua"
+        segue: true
+        ligada: true
+      - texto: "Qual é o bairro do estabelecimento?"
+        se: "a consulta do CEP não trouxer o bairro"
+        segue: true
+        ligada: true
+      - texto: "Qual é o número do endereço do estabelecimento?"
+        ligada: true
+      - texto: "O endereço do estabelecimento tem complemento, como sala ou loja?"
+        ligada: true
+      - texto: "Em que andar o negócio funciona?"
+      - texto: "O estabelecimento fica em shopping, condomínio comercial, supermercado, aeroporto ou outro tipo de local?"
+      - texto: "O ponto do negócio é de vocês ou é alugado?"
+      - texto: "O estabelecimento faz divisa com algum lote vazio ou desocupado?"
+  - nome: "O que proteger"
+    perguntas:
+      - texto: "Você quer proteger a construção, os bens da empresa ou os dois?"
+        ligada: true
+      - texto: "Quanto valem os bens e a construção que quer colocar no seguro?"
+        ligada: true
+      - texto: "Quanto custaria reconstruir o imóvel, sem contar o terreno?"
+        se: "a construção entrar no seguro e o valor dela ainda não tiver vindo separado"
+        segue: true
+      - texto: "Quanto custaria repor os móveis e utensílios da empresa?"
+        se: "os bens da empresa entrarem no seguro"
+        segue: true
+      - texto: "Quanto custaria repor as máquinas e os equipamentos da empresa?"
+        se: "os bens da empresa entrarem no seguro"
+        segue: true
+      - texto: "Qual é o valor da mercadoria ou da matéria-prima que fica guardada no local?"
+        se: "a atividade indicar mercadoria ou matéria-prima"
+        segue: true
+      - texto: "Há depósito no estabelecimento?"
+      - texto: "A empresa guarda no local produtos que pegam fogo com facilidade?"
+      - texto: "Ficam bens de clientes ou de outras pessoas sob os cuidados da empresa?"
+  - nome: "A construção"
+    perguntas:
+      - texto: "De que material são as paredes do imóvel?"
+      - texto: "De que material é a estrutura do imóvel?"
+        se: "isso ainda não tiver ficado claro"
+        segue: true
+      - texto: "De que material é o telhado do imóvel?"
+        se: "isso ainda não tiver ficado claro"
+        segue: true
+      - texto: "Mais de um quarto da construção do imóvel é de madeira?"
+        se: "as respostas sobre paredes, estrutura e telhado não deixarem isso claro"
+        segue: true
+      - texto: "O imóvel tem painel com material isolante entre as chapas, o chamado isopainel?"
+        se: "isso ainda não estiver claro"
+        segue: true
+      - texto: "De que material é o contêiner onde o negócio funciona?"
+        se: "o local for um contêiner e a pessoa souber"
+      - texto: "A construção do imóvel tem laterais abertas?"
+        se: "isso ainda não tiver sido descrito"
+      - texto: "O imóvel já recebeu algum aviso oficial de interdição, ou seja, proibindo o uso do local?"
+      - texto: "Está acontecendo alguma obra ou reforma no imóvel?"
+      - texto: "A obra no imóvel envolve demolição ou mudança na estrutura?"
+        se: "houver obra"
+        segue: true
+  - nome: "Segurança do local"
+    perguntas:
+      - texto: "Há hidrante no local?"
+      - texto: "Há extintores no local?"
+      - texto: "Há chuveiros automáticos contra incêndio, os sprinklers, no local?"
+      - texto: "Em que horários há vigilância no local, se houver?"
+      - texto: "A vigilância do local usa arma?"
+        se: "houver vigilância"
+        segue: true
+      - texto: "Tem alarme no local?"
+      - texto: "O alarme do local é acompanhado por uma central?"
+        se: "houver alarme"
+        segue: true
+      - texto: "Tem cofre no local?"
+      - texto: "O cofre do local é preso ao imóvel, embutido ou é de outro tipo?"
+        se: "houver cofre"
+        segue: true
+  - nome: "Prejuízos anteriores"
+    perguntas:
+      - texto: "Já houve algum prejuízo no local do negócio comunicado a um seguro?"
+        se: "a apólice não mostrar isso"
+      - texto: "O que aconteceu em cada prejuízo comunicado ao seguro?"
+        se: "houver prejuízo e ainda faltar dizer o que aconteceu"
+        segue: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Você quer escolher as proteções ou prefere que a equipe sugira?"
+      - texto: "Quer que a equipe avalie proteção por danos que o negócio cause a clientes ou a outras pessoas no dia a dia?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para danos que o negócio cause a clientes ou a outras pessoas, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse nesses danos"
+        segue: true
+      - texto: "Quer incluir roubo dos bens do estabelecimento na avaliação?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para roubo, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em roubo"
+        segue: true
+      - texto: "Quer avaliar proteção contra vendaval?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para vendaval, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em vendaval"
+        segue: true
+      - texto: "Quer avaliar proteção para danos elétricos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para danos elétricos, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em danos elétricos"
+        segue: true
+      - texto: "Quer avaliar proteção para despesas que continuam se o negócio parar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para as despesas que continuam se o negócio parar, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse nessas despesas"
+        segue: true
+      - texto: "Por quantos dias de negócio parado gostaria da proteção para as despesas que continuam?"
+        se: "a pessoa quiser escolher e tiver interesse nessas despesas"
+        segue: true
+      - texto: "Quer avaliar proteção para quebra de vidros?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para os vidros, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em vidros"
+        segue: true
+      - texto: "Quer avaliar proteção para danos de um veículo que bata no imóvel?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para danos de um veículo que bata no imóvel, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse nesses danos de veículo"
+        segue: true
+      - texto: "Quer avaliar proteção para danos por vazamento?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para vazamento, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em vazamento"
+        segue: true
+      - texto: "Quer avaliar o aluguel que se perde ou que se paga enquanto o local não pode ser usado?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para o aluguel perdido ou pago enquanto o local não pode ser usado, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse no aluguel"
+        segue: true
+      - texto: "Quer avaliar proteção para desmoronamento?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para desmoronamento, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e tiver interesse em desmoronamento"
+        segue: true
+      - texto: "Quer avaliar danos morais, o abalo de quem sofreu um dano causado pelo negócio?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Há interesse em proteção para danos aos empregados?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Proteções adicionais"
+    perguntas:
+      - texto: "Quer avaliar alguma proteção adicional para o seu tipo de negócio?"
+        se: "a pessoa quiser escolher as proteções"
+      - texto: "Quer avaliar proteção para alagamento ou inundação?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para roubo de dinheiro ou de outros valores?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção específica para equipamentos?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para os anúncios e letreiros?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para danos por tumultos?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para danos pelo vazamento dos chuveiros automáticos contra incêndio, os sprinklers?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para prejuízos por desvio de dinheiro ou bens feito por empregados?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Há placas solares que gostaria de proteger?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "O negócio tem mercadoria que depende de refrigeração?"
+        se: "a pessoa quiser escolher, quiser ver as adicionais e a atividade indicar isso"
+        segue: true
+      - texto: "Há bens da empresa em outros locais ou em feiras?"
+        se: "a pessoa quiser escolher, quiser ver as adicionais e o jeito de trabalhar do negócio indicar isso"
+        segue: true
+      - texto: "Quer avaliar proteção para os gastos de refazer documentos do negócio?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Quer avaliar proteção para os gastos de retirar entulho depois de um dano?"
+        se: "a pessoa quiser escolher e quiser ver as adicionais"
+        segue: true
+      - texto: "Para a proteção adicional escolhida, até quanto em reais quer de proteção, se já tiver um valor em mente?"
+        se: "a pessoa quiser escolher e houver adicional escolhida ainda sem valor"
+        segue: true
+  - nome: "Perda de lucro"
+    perguntas:
+      - texto: "Quer avaliar a perda de lucro se uma situação prevista no seguro parar a empresa?"
+        se: "a pessoa quiser escolher as proteções e ainda não tiver falado de perda de lucro"
+      - texto: "Por quantos meses gostaria de avaliar a proteção para perda de lucro?"
+        se: "houver interesse em perda de lucro"
+        segue: true
+      - texto: "Qual foi a receita de vendas e serviços da empresa no último ano fechado? Isso ajuda a equipe a cotar."
+        se: "houver interesse em perda de lucro e a pessoa souber"
+        segue: true
+      - texto: "Qual foi o lucro líquido da empresa, o que sobra depois das despesas, no último ano fechado? Isso ajuda a equipe a cotar."
+        se: "houver interesse em perda de lucro e a pessoa souber"
+        segue: true
+      - texto: "Quanto a empresa gastou com despesas fixas, como aluguel e salários, no último ano fechado? Isso ajuda a equipe a cotar."
+        se: "houver interesse em perda de lucro, a pessoa souber e ainda não tiver dito essas despesas"
+        segue: true
+      - texto: "Até quanto em reais quer de proteção para a perda de lucro, se já tiver um valor em mente?"
+        se: "houver interesse em perda de lucro e a pessoa souber"
+        segue: true
+documentos:
+  - "Cartão do CNPJ."
+  - "Contrato social ou estatuto da empresa, com as alterações."
+  - "Só se a equipe pedir: registro da empresa na junta comercial e atas."
+  - "Documento dos sócios ou de quem representa a empresa."
+  - "Só se a equipe pedir: papel que mostre quem pode assinar pela empresa."
+  - "Comprovante de endereço do local."
+  - "Se o ponto for de vocês: matrícula do imóvel, o registro dele no cartório."
+  - "Se o ponto for alugado: contrato de aluguel."
+  - "Se a empresa tiver: inscrição e licença de funcionamento."
+  - "Se a atividade pedir: licença sanitária ou ambiental."
+  - "Lista dos bens, com as notas fiscais."
+  - "Só se a equipe pedir: identificação dos equipamentos e fotos."
+  - "Se for renovação: apólice que vence."
+  - "Só se a equipe pedir: balanço, DRE (relatório de resultados), balancete ou relatório de receitas e despesas."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o titular informar o CNPJ, para trazer a razão social para a ficha da equipe. Não diga o achado ao cliente nem peça confirmação; não prometa situação cadastral ou atividade. Número com dígitos faltando ou inválido: peça a correção, uma pergunta por vez. Falha de serviço ou ausência de resultado: anote a pendência para a equipe e siga a próxima pergunta, sem dizer que não achou."
+  - fonte: cpf
+    usar_quando: "Use quando o titular informar o CPF, para validar o número para a ficha da equipe; não traz nome nem nascimento. Não recite resultado nem peça confirmação de achado. Número informado inválido: peça correção, uma pergunta por vez. Falha de serviço ou ausência de resultado: anote para a equipe e siga a próxima pergunta, sem dizer que não achou."
+  - fonte: cep
+    usar_quando: "Use com o CEP do estabelecimento ou endereço informado sem CEP, para preencher rua, bairro, município e UF retornados, ou o CEP faltante, para a equipe. Número e complemento vêm do cliente. Não diga o endereço achado nem peça confirmação. Se falhar ou não achar, anote para a equipe e siga a próxima pergunta, sem dizer que não achou; rua e bairro só entram se ainda faltarem."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando necessário com o município informado, para padronizar cidade e estado na ficha da equipe, sem presumir endereço completo. Não diga o resultado ao cliente nem peça confirmação. Se falhar ou não achar, anote para a equipe e siga, sem dizer que não achou."
+  - fonte: localizacao
+    usar_quando: "Use com uma localização enviada para anotar município e estado para a equipe; não prova endereço completo, titularidade ou atividade. Não diga o resultado ao cliente nem peça confirmação. Se falhar ou não achar, anote para a equipe e siga, sem dizer que não achou."
+  - fonte: feriados
+    usar_quando: "Use com datas informadas da vigência e local pertinente para contar os dias úteis que faltam e anotar para a equipe. Não diga a contagem ao cliente nem prometa que dá tempo. Se falhar ou não achar, anote para a equipe e siga, sem dizer que não achou."
+premium:
+  - risco_endereco
+  - raio_x_empresa
+  - certidoes_empresa
+teste:
+  - "Quanto custa para proteger minha empresa?"
+  - "Tenho o CNPJ, o CEP e o valor dos bens. Posso mandar tudo de uma vez?"
+  - "Cobre alagamento com certeza?"

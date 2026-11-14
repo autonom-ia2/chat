@@ -1,0 +1,244 @@
+chave: seguro_rural
+tipo: sdr
+nome_padrao: "Assistente de Seguro Rural"
+ramo: "Seguro rural (agrícola, pecuário, benfeitorias e máquinas)"
+seguradoras_sugeridas: "[[a coletar]]"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "O que você quer segurar: lavoura, animais, máquinas e equipamentos, ou construções da propriedade?"
+        ligada: true
+      - texto: "É um seguro novo ou a renovação de um que você já tem?"
+        ligada: true
+      - texto: "Qual a seguradora do seguro de hoje?"
+        se: "for renovação"
+        segue: true
+      - texto: "Em que dia o seguro de hoje vence?"
+        se: "for renovação"
+        segue: true
+      - texto: "Fora o seguro que você tem hoje, tem mais algum sobre a mesma lavoura ou os mesmos bens?"
+        se: "for renovação"
+        segue: true
+      - texto: "Tem algum outro seguro sobre a mesma lavoura ou os mesmos bens?"
+        se: "for seguro novo"
+        segue: true
+      - texto: "Você vai contratar o seguro sozinho ou por uma cooperativa ou sindicato?"
+      - texto: "Por qual cooperativa ou sindicato você vai contratar o seguro?"
+        se: "for contratar por cooperativa ou sindicato"
+        segue: true
+      - texto: "Você quer usar a ajuda do governo para pagar o seguro?"
+      - texto: "Você tem algum financiamento do Renovagro? Se não souber o que é, tudo bem."
+        se: "quiser a ajuda do governo"
+        segue: true
+      - texto: "Sobre as proteções e os valores do seguro: você quer escolher ou prefere que a equipe sugira?"
+  - nome: "A propriedade"
+    perguntas:
+      - texto: "Qual o CEP da propriedade?"
+        ligada: true
+      - texto: "Qual o município e o bairro ou a localidade da propriedade?"
+        se: "não souber o CEP da propriedade"
+        segue: true
+        ligada: true
+      - texto: "Qual o nome da propriedade?"
+      - texto: "Pode me mandar a localização da propriedade aqui pelo WhatsApp?"
+      - texto: "Como se chega à propriedade? Me conta o caminho, com as distâncias e uma referência, como ponte, rio ou estrada."
+  - nome: "A lavoura"
+    perguntas:
+      - texto: "Qual a cultura plantada na lavoura?"
+        se: "for lavoura"
+        ligada: true
+      - texto: "Quantos hectares você plantou da cultura que quer segurar?"
+        se: "for lavoura"
+        ligada: true
+      - texto: "Quer segurar a área toda da lavoura ou só uma parte?"
+        se: "for lavoura"
+      - texto: "Quantos hectares da lavoura quer segurar?"
+        se: "for só uma parte da lavoura"
+        segue: true
+      - texto: "A lavoura tem Proagro ou Proagro Mais, os programas de garantia do governo?"
+        se: "for lavoura"
+      - texto: "A lavoura é irrigada?"
+        se: "for lavoura"
+      - texto: "Em que data começa o plantio da lavoura, ou a data prevista?"
+        se: "for lavoura"
+      - texto: "Em que data termina o plantio da lavoura, ou a data prevista?"
+        se: "for lavoura"
+      - texto: "Quanto você espera colher por hectare da lavoura, em sacas, toneladas ou arrobas?"
+        se: "for lavoura"
+      - texto: "A lavoura é de planta que dura anos, como café ou fruta?"
+        se: "for lavoura"
+      - texto: "A planta que dura anos foi plantada há pouco ou está sendo arrancada?"
+        se: "for planta que dura anos"
+        segue: true
+      - texto: "A lavoura já teve algum estrago até agora?"
+        se: "for lavoura"
+      - texto: "A lavoura é financiada?"
+        se: "for lavoura"
+      - texto: "Por qual banco a lavoura é financiada?"
+        se: "a lavoura for financiada"
+        segue: true
+      - texto: "Quem deve receber a indenização da lavoura, o valor que o seguro paga, se não for você? Por exemplo, um banco ou uma cooperativa."
+        se: "for lavoura"
+      - texto: "Qual o CPF ou CNPJ de quem deve receber a indenização da lavoura?"
+        se: "tiver outra pessoa ou empresa para receber a indenização"
+        segue: true
+      - texto: "Quanto ou qual percentual da indenização da lavoura fica para quem deve recebê-la?"
+        se: "tiver outra pessoa ou empresa para receber a indenização"
+        segue: true
+      - texto: "Se tiver vistoria da lavoura e você não puder estar, quem acompanha no seu lugar?"
+        se: "for lavoura"
+      - texto: "Qual o CPF de quem vai acompanhar a vistoria da lavoura no seu lugar?"
+        se: "outra pessoa for acompanhar a vistoria"
+        segue: true
+  - nome: "Pedaços da lavoura"
+    perguntas:
+      - texto: "Você tem um desenho ou mapa da área da lavoura, com os pedaços se tiver? Pode mandar uma foto."
+        se: "for lavoura"
+      - texto: "A área da lavoura é dividida em pedaços?"
+        se: "for lavoura"
+      - texto: "Quantos pedaços tem a área da lavoura?"
+        se: "a área tiver pedaços"
+        segue: true
+      - texto: "Qual o tamanho de cada pedaço da área da lavoura?"
+        se: "a área tiver pedaços e a pessoa não tiver mandado desenho"
+        segue: true
+      - texto: "Algum pedaço da área da lavoura é de outra pessoa?"
+        se: "a área tiver pedaços"
+        segue: true
+  - nome: "Valores da lavoura"
+    perguntas:
+      - texto: "Quantos por cento da colheita esperada você quer garantir no seguro?"
+        se: "for lavoura e a pessoa quiser escolher"
+      - texto: "Quanto quer segurar por hectare do custeio, o que você gastou para plantar?"
+        se: "for lavoura e a pessoa quiser escolher"
+      - texto: "Alguns seguros de lavoura têm a quebra de safra, para quando a colheita fica abaixo do combinado. Quer que a equipe veja essa opção?"
+        se: "for lavoura e a pessoa quiser escolher"
+      - texto: "A partir de quanto de colheita por hectare a quebra de safra deve começar a valer?"
+        se: "quiser a quebra de safra"
+        segue: true
+      - texto: "Qual o valor por hectare da quebra de safra?"
+        se: "quiser a quebra de safra"
+        segue: true
+      - texto: "A perda da lavoura deve ser medida pela área toda, pela área segurada ou por pedaço?"
+        se: "for lavoura e a pessoa quiser escolher"
+  - nome: "Cana-de-açúcar"
+    perguntas:
+      - texto: "Quanto cada pedaço da lavoura de cana colheu na última safra?"
+        se: "for cana-de-açúcar"
+      - texto: "Qual a idade de corte de cada pedaço da lavoura de cana?"
+        se: "for cana-de-açúcar"
+      - texto: "O seguro da cana é para este ano-safra ou para o seguinte?"
+        se: "for cana-de-açúcar"
+  - nome: "Máquinas"
+    perguntas:
+      - texto: "Qual é a máquina ou o equipamento que quer segurar?"
+        se: "for máquina"
+        ligada: true
+      - texto: "Quanto a máquina vale hoje, mais ou menos?"
+        se: "for máquina"
+        ligada: true
+      - texto: "A máquina fica parada num lugar só ou circula?"
+        se: "for máquina"
+      - texto: "Em que lugares a máquina trabalha?"
+        se: "a máquina circular"
+        segue: true
+      - texto: "A máquina trabalha perto de rio, açude ou represa?"
+        se: "a máquina circular"
+        segue: true
+      - texto: "A máquina é usada na lavoura ou com os animais?"
+        se: "for máquina"
+      - texto: "A máquina está financiada?"
+        se: "for máquina"
+      - texto: "Você aluga a máquina para outras pessoas?"
+        se: "for máquina"
+      - texto: "Quanto a máquina rende de aluguel por mês?"
+        se: "a máquina for alugada para outras pessoas"
+        segue: true
+      - texto: "Se a máquina parar por acidente, você precisaria alugar outra no lugar?"
+        se: "for máquina e a pessoa quiser escolher"
+      - texto: "Quer incluir dano elétrico, roubo ou furto da máquina no seguro?"
+        se: "for máquina e a pessoa quiser escolher"
+      - texto: "Quer incluir no seguro danos que a máquina cause a outras pessoas?"
+        se: "a pessoa quiser escolher e a máquina circular"
+  - nome: "Animais"
+    perguntas:
+      - texto: "Quais animais quer segurar: boi, búfalo, cabra, ovelha, jumento, mula ou porco?"
+        se: "for animais"
+        ligada: true
+      - texto: "Quantos animais quer segurar?"
+        se: "for animais"
+        ligada: true
+      - texto: "Quanto vale cada animal, mais ou menos?"
+        se: "for animais"
+      - texto: "Para que servem os animais: consumo, produção, cria, recria, engorda, tração ou reprodução?"
+        se: "for animais"
+      - texto: "A reprodução dos animais é por monta natural, coleta de sêmen ou transferência de embrião?"
+        se: "os animais forem de reprodução"
+        segue: true
+      - texto: "O seguro dos animais é com ou sem o FESR, um fundo do seguro rural? Se não souber, a equipe vê."
+        se: "for animais e a pessoa quiser escolher"
+  - nome: "Quem contrata"
+    perguntas:
+      - texto: "O seguro vai no seu nome ou no de uma empresa?"
+        ligada: true
+      - texto: "Qual o seu nome completo?"
+        se: "for no seu nome"
+        segue: true
+        ligada: true
+      - texto: "Qual o seu CPF?"
+        se: "for no seu nome"
+        segue: true
+        ligada: true
+      - texto: "Qual o CNPJ da empresa?"
+        se: "for empresa"
+        segue: true
+        ligada: true
+      - texto: "Qual o CEP de onde você mora? Se for a própria propriedade, é só dizer."
+        se: "for no seu nome"
+        segue: true
+      - texto: "Qual a sua profissão?"
+        se: "for no seu nome"
+        segue: true
+  - nome: "Cadastro"
+    perguntas:
+      - texto: "Qual a sua renda por mês, mais ou menos, ou o seu patrimônio? É pedido no cadastro."
+        se: "o seguro for no seu nome"
+      - texto: "Você tem cargo público ou político importante? É pedido no cadastro."
+        se: "o seguro for no seu nome"
+      - texto: "Algum dono ou administrador da empresa tem cargo público ou político importante? É pedido no cadastro."
+        se: "o seguro for de empresa"
+      - texto: "Quem são os sócios que mandam na empresa e os administradores dela?"
+        se: "o seguro for de empresa"
+      - texto: "Quem são os procuradores da empresa, as pessoas com procuração para agir por ela, se tiver?"
+        se: "o seguro for de empresa"
+      - texto: "Quem são os donos finais da empresa?"
+        se: "o seguro for de empresa"
+      - texto: "Como está a situação financeira da empresa? É pedido no cadastro."
+        se: "o seguro for de empresa"
+  - nome: "Contato"
+    perguntas:
+      - texto: "Quer que a equipe fale com você por aqui mesmo, ou prefere outro número ou e-mail?"
+      - texto: "Qual o outro número ou e-mail para a equipe falar com você?"
+        se: "preferir outro número ou e-mail"
+        segue: true
+documentos:
+  - "Cópia do contrato de financiamento da lavoura, se ela for financiada."
+ja_vem:
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP da propriedade ou o de onde mora, para achar a rua, o município e o estado sem pedir o endereço inteiro. Se ele só disser o município e a localidade, use para achar o CEP da propriedade. Anote para a equipe, com o endereço da propriedade separado do endereço do cliente. Não repita o endereço nem peça confirmação. Se não achar, anote e siga."
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente mandar a localização da propriedade pelo WhatsApp, para achar o município e o estado e anotar o ponto para a equipe, que serve de roteiro de acesso. Não repita a cidade para ele. Se não achar, anote o ponto e siga."
+  - fonte: cnpj
+    usar_quando: "Use quando o seguro for no nome de uma empresa e o cliente informar o CNPJ, para achar a razão social, a atividade e o endereço sem perguntar de novo. Anote para a equipe e não leia os dados de volta. Se não achar, anote e siga."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF, para conferir se o número foi digitado certo. Se não for válido, peça para ele conferir o número. Se for válido, anote para a equipe e siga."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando o cliente disser o nome do município da propriedade, para conferir a grafia certa e o estado. Anote para a equipe sem perguntar de novo. Se não achar, anote como a pessoa escreveu e siga, sem comentar."
+  - fonte: ddd
+    usar_quando: "Use no começo da conversa, com o número do WhatsApp, para anotar o estado do telefone para a equipe. Não pergunte o telefone e não comente o resultado."
+premium: []
+teste:
+  - "Quero fazer seguro da minha soja, quanto fica?"
+  - "Tenho 200 hectares de milho em Rio Verde, CEP 75900-000"
+  - "A chuva de granizo acabou com a lavoura, o seguro cobre?"

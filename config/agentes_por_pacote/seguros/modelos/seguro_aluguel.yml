@@ -1,0 +1,301 @@
+chave: seguro_aluguel
+tipo: sdr
+nome_padrao: "Assistente de Seguro Aluguel"
+ramo: "Seguro aluguel (fiança locatícia)"
+seguradoras_sugeridas: "Porto Seguro e Chubb"
+blocos:
+  - nome: "Quem escreve"
+    perguntas:
+      - texto: "Você vai alugar, é o dono do imóvel ou está ajudando alguém, como imobiliária, corretor ou banco?"
+        se: "ainda não estiver claro quem escreve"
+      - texto: "Quem pede a cotação é a imobiliária ou quem vai alugar?"
+        se: "o papel de quem escreve ainda não tiver deixado isso claro"
+        segue: true
+      - texto: "Qual é o seu CRECI, o registro no conselho de corretores de imóveis?"
+        se: "quem escreve for corretor de imóvel ou gestor de imobiliária"
+  - nome: "O pedido"
+    perguntas:
+      - texto: "É um seguro novo ou a renovação de um que já existe?"
+        ligada: true
+      - texto: "Consegue mandar aqui a apólice atual, o documento do seguro?"
+        se: "for renovação e a apólice ainda não tiver vindo"
+        segue: true
+      - texto: "Qual é a seguradora do seguro atual?"
+        se: "for renovação e a seguradora não der para ler na apólice recebida nem tiver sido dita"
+        segue: true
+      - texto: "Qual é o número da apólice atual, o documento do seguro?"
+        se: "for renovação e o número não der para ler na apólice recebida nem tiver sido dito"
+        segue: true
+      - texto: "O que aparece escrito como bônus na apólice atual?"
+        se: "for renovação e o bônus não der para ler na apólice recebida nem tiver sido dito"
+        segue: true
+      - texto: "Qual é o prazo do contrato de aluguel, em meses?"
+      - texto: "Em que data você precisa que o seguro comece?"
+      - texto: "Qual é a data final que você quer para o seguro?"
+        se: "essa data ainda não tiver vindo na conversa ou em documento"
+  - nome: "Quem vai alugar"
+    perguntas:
+      - texto: "Quem vai alugar é uma pessoa ou uma empresa?"
+        ligada: true
+      - texto: "Qual é o CPF de quem vai alugar?"
+        se: "quem vai alugar for pessoa física"
+        segue: true
+        ligada: true
+      - texto: "Qual é o CNPJ da empresa que vai alugar?"
+        se: "quem vai alugar for empresa"
+        segue: true
+        ligada: true
+      - texto: "Qual é o nome completo de quem vai alugar?"
+        se: "for pessoa física e o nome ainda não tiver vindo"
+        segue: true
+        ligada: true
+      - texto: "Qual é o nome registrado da empresa que vai alugar, a razão social?"
+        se: "for empresa e a razão social não tiver vindo na consulta"
+        segue: true
+        ligada: true
+      - texto: "Qual é a data de nascimento de quem vai alugar?"
+        se: "for pessoa física e o nascimento ainda não tiver vindo"
+        segue: true
+      - texto: "Qual é o estado civil de quem vai alugar?"
+        se: "for pessoa física"
+        segue: true
+      - texto: "Quem vai alugar tem nacionalidade brasileira ou estrangeira?"
+        se: "for pessoa física"
+        segue: true
+      - texto: "Qual é o CPF do marido, esposa ou companheiro de quem vai alugar? É pedido no cadastro."
+        se: "for pessoa física e tiver cônjuge, marido, esposa ou companheiro"
+        segue: true
+      - texto: "Qual é o nome completo do marido, esposa ou companheiro de quem vai alugar?"
+        se: "for pessoa física, tiver cônjuge e o nome ainda não tiver vindo"
+        segue: true
+      - texto: "Quem vai alugar vai morar nesse imóvel?"
+        se: "quem vai alugar for pessoa física"
+        segue: true
+      - texto: "Qual é o CPF de quem vai morar no imóvel?"
+        se: "for pessoa física e outra pessoa for morar no imóvel"
+        segue: true
+      - texto: "Qual é o nome completo de quem vai morar no imóvel?"
+        se: "for pessoa física, outra pessoa for morar e o nome ainda não tiver vindo"
+        segue: true
+  - nome: "O imóvel"
+    perguntas:
+      - texto: "O imóvel vai ser usado para morar ou para uma atividade comercial?"
+        ligada: true
+      - texto: "O imóvel é apartamento ou casa?"
+        se: "for para morar"
+        segue: true
+      - texto: "O imóvel é sala, loja, prédio ou galpão?"
+        se: "for comercial"
+        segue: true
+      - texto: "A loja é de rua, em galeria, em um centro comercial pequeno ou em shopping?"
+        se: "for loja"
+        segue: true
+      - texto: "O imóvel fica em condomínio?"
+        se: "for casa, sala, prédio ou galpão"
+        segue: true
+      - texto: "Qual é o motivo da mudança de quem vai alugar? É pedido no cadastro."
+        se: "for pessoa física alugando para morar"
+        segue: true
+      - texto: "A moradia é para alguém que a empresa contratou ou para uma transferência de funcionário?"
+        se: "for empresa alugando para moradia"
+        segue: true
+      - texto: "O imóvel comercial é para instalar a empresa, mudar a sede ou abrir uma filial?"
+        se: "for comercial"
+        segue: true
+  - nome: "Endereço do imóvel"
+    perguntas:
+      - texto: "Qual é o CEP do imóvel que vai alugar?"
+        ligada: true
+      - texto: "Em qual estado fica o imóvel?"
+        se: "o estado ainda faltar na conversa, nos documentos e na consulta"
+        segue: true
+        ligada: true
+      - texto: "Em qual cidade fica o imóvel?"
+        se: "a cidade ainda faltar na conversa, nos documentos e na consulta"
+        segue: true
+        ligada: true
+      - texto: "Qual é o nome da rua ou avenida do imóvel?"
+        se: "a rua ainda faltar na conversa, nos documentos e na consulta"
+        segue: true
+        ligada: true
+      - texto: "Qual é o bairro do imóvel?"
+        se: "o bairro ainda faltar na conversa, nos documentos e na busca pelo endereço"
+        segue: true
+      - texto: "Qual é o número do imóvel no endereço?"
+        ligada: true
+      - texto: "O imóvel tem complemento, como bloco, apartamento ou sala?"
+  - nome: "Renda"
+    perguntas:
+      - texto: "Qual é a renda mensal de quem vai alugar? Ajuda a equipe a cotar."
+        se: "for pessoa física"
+        ligada: true
+      - texto: "De onde vem a renda de quem vai alugar? Ajuda a equipe a cotar."
+        se: "for pessoa física"
+      - texto: "Em que data quem vai alugar começou no emprego atual? É pedido no cadastro."
+        se: "for pessoa física com emprego"
+        segue: true
+      - texto: "Qual é o faturamento mensal da empresa que vai alugar? Ajuda a equipe a cotar."
+        se: "for empresa"
+        ligada: true
+      - texto: "Só o nome do banco, sem conta nem senha: com qual banco quem vai alugar mais se relaciona? É pedido no cadastro."
+  - nome: "Dados da empresa"
+    perguntas:
+      - texto: "Qual é a data de fundação da empresa que vai alugar?"
+        se: "for empresa e a data de abertura não tiver vindo na consulta nem a fundação tiver sido dita"
+      - texto: "Como a empresa que vai alugar paga os impostos, pelo Simples, Lucro Presumido ou Lucro Real?"
+        se: "for empresa"
+      - texto: "Qual é a atividade principal da empresa que vai alugar?"
+        se: "for empresa e a consulta não tiver trazido a atividade"
+      - texto: "Qual é o CPF de quem pode assinar pela empresa, o representante legal?"
+        se: "for empresa"
+      - texto: "Qual é o nome completo de quem pode assinar pela empresa?"
+        se: "for empresa e o nome ainda não tiver vindo"
+      - texto: "Se quiser informar, qual é a renda média mensal de quem assina pela empresa? É opcional."
+        se: "for empresa"
+  - nome: "Valores"
+    perguntas:
+      - texto: "Qual é o valor mensal do aluguel?"
+        ligada: true
+      - texto: "Qual é o valor mensal do IPTU, o imposto do imóvel?"
+        se: "a pessoa souber o valor mensal separado das outras taxas"
+      - texto: "Qual é o valor anual do IPTU, o imposto do imóvel?"
+        se: "a pessoa só souber o IPTU anual, no lugar do mensal"
+        segue: true
+      - texto: "Qual é o valor mensal do condomínio do imóvel?"
+      - texto: "Qual é o gasto mensal estimado de água do imóvel?"
+      - texto: "Qual é o gasto mensal estimado de luz do imóvel?"
+      - texto: "Qual é o gasto mensal estimado de gás do imóvel?"
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Quer escolher as proteções ou prefere que a equipe sugira?"
+      - texto: "Quer incluir o IPTU, o imposto do imóvel, no pedido de cobertura?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir o condomínio no pedido de cobertura?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir a água no pedido de cobertura?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir a luz no pedido de cobertura?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir o gás no pedido de cobertura?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir danos ao imóvel no pedido?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor quer pedir para a proteção de danos ao imóvel?"
+        se: "a pessoa quiser escolher, tiver pedido danos ao imóvel e souber o valor"
+        segue: true
+      - texto: "Quer incluir multa por encerrar a locação antes do prazo?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor quer pedir para a multa por encerrar a locação antes do prazo?"
+        se: "a pessoa quiser escolher, tiver pedido essa multa e souber o valor"
+        segue: true
+      - texto: "Quer incluir pintura interna no pedido?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor quer pedir para pintura interna?"
+        se: "a pessoa quiser escolher, tiver pedido pintura interna e souber o valor"
+        segue: true
+      - texto: "Quer incluir pintura externa no pedido?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor quer pedir para pintura externa?"
+        se: "a pessoa quiser escolher, tiver pedido pintura externa e souber o valor"
+        segue: true
+      - texto: "Quer que a equipe inclua assistência ao imóvel na cotação? O que ela inclui muda de seguradora para seguradora."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual modalidade de assistência ao imóvel foi pedida, Básica, Completa ou Intermediária?"
+        se: "a pessoa quiser escolher e já tiver uma exigência ou escolha de assistência"
+        segue: true
+      - texto: "Quer que a equipe avalie cobertura para os móveis do proprietário que ficam no imóvel?"
+        se: "a pessoa quiser escolher e houver móveis do proprietário na locação"
+        segue: true
+      - texto: "Quer que a equipe avalie cobertura para o fundo de promoção, a verba de divulgação que o shopping cobra?"
+        se: "a pessoa quiser escolher e a loja for em shopping que cobre fundo de promoção"
+        segue: true
+  - nome: "Imobiliária e proprietário"
+    perguntas:
+      - texto: "A locação está sendo tratada por imobiliária ou direto com o proprietário?"
+        se: "isso ainda não estiver claro"
+      - texto: "Qual é o nome da imobiliária?"
+        se: "houver imobiliária"
+        segue: true
+      - texto: "Quem cuida dessa locação na imobiliária?"
+        se: "houver imobiliária"
+        segue: true
+      - texto: "Qual é o telefone de quem cuida da locação na imobiliária?"
+        se: "houver imobiliária, o contato for outra pessoa e o telefone ainda não tiver vindo"
+        segue: true
+      - texto: "Quer deixar outro telefone da imobiliária, além deste WhatsApp?"
+        se: "o contato da imobiliária for quem escreve e ainda não tiver definido o contato"
+        segue: true
+      - texto: "Qual é o e-mail de quem cuida da locação na imobiliária?"
+        se: "houver imobiliária e o e-mail dessa pessoa ainda não tiver vindo"
+        segue: true
+      - texto: "Qual é o nome completo do proprietário do imóvel?"
+        se: "a negociação for com o proprietário e ele ainda não estiver identificado"
+        segue: true
+      - texto: "Qual é o telefone do proprietário do imóvel?"
+        se: "a negociação for com o proprietário, ele for outra pessoa e o telefone ainda não tiver vindo"
+        segue: true
+      - texto: "Quer deixar outro telefone seu, como proprietário, além deste WhatsApp?"
+        se: "a negociação for com o proprietário, ele for quem escreve e ainda não tiver definido o contato"
+        segue: true
+      - texto: "O outro telefone do proprietário tem WhatsApp?"
+        se: "a negociação for com o proprietário e tiver informado outro telefone dele"
+        segue: true
+      - texto: "Qual é o e-mail do proprietário do imóvel?"
+        se: "a negociação for com o proprietário e o e-mail dele ainda não tiver vindo"
+        segue: true
+  - nome: "Contatos e observações"
+    perguntas:
+      - texto: "Qual é o celular de quem vai alugar?"
+        se: "quem vai alugar for outra pessoa e o celular ainda não tiver vindo"
+      - texto: "Quer deixar outro celular de contato, além deste WhatsApp?"
+        se: "quem vai alugar for quem escreve e ainda não tiver definido o contato"
+      - texto: "Quem vai alugar tem telefone fixo para deixar de contato?"
+        se: "o telefone fixo ainda não tiver vindo"
+      - texto: "Qual e-mail quer deixar para contato com quem vai alugar?"
+        se: "o e-mail ainda não tiver sido informado"
+      - texto: "Quem é a pessoa de contato na empresa que vai alugar?"
+        se: "for empresa e houver uma pessoa de contato diferente da já informada"
+      - texto: "Qual é o telefone da pessoa de contato da empresa?"
+        se: "for empresa, houver contato diferente de quem escreve e o telefone ainda não tiver vindo"
+        segue: true
+      - texto: "Quer deixar outro telefone de contato da empresa, além deste WhatsApp?"
+        se: "o contato da empresa for quem escreve e ainda não tiver definido o contato"
+        segue: true
+      - texto: "Qual é o e-mail da pessoa de contato da empresa?"
+        se: "for empresa, houver outro contato e o e-mail dessa pessoa ainda não tiver vindo"
+        segue: true
+      - texto: "Tem alguma observação que você quer passar para a equipe?"
+documentos:
+  - "Se for pessoa física: CPF, RG e comprovante de residência."
+  - "Se for pessoa física e a renda não se encaixar nos perfis abaixo: declaração de imposto de renda e holerites, se tiver."
+  - "Se tiver emprego com carteira assinada: última declaração de imposto de renda, três últimos holerites e cópia da Carteira de Trabalho."
+  - "Se for autônomo: última declaração de imposto de renda e extratos bancários dos últimos três meses."
+  - "Se receber pensão: três últimos recibos; se for pensão alimentícia, também cópia da sentença. Para aposentadoria, a equipe confirma o comprovante específico."
+  - "Se a renda vier de aluguel: declaração de imposto de renda, extratos dos últimos três meses, documento de propriedade, contrato de locação e último recibo de aluguel."
+  - "Se for empresa: contrato social com alterações, inscrição municipal, o cadastro da empresa na prefeitura (em algumas cidades chamado CCM), declaração de imposto de renda completa e extratos bancários."
+  - "Se a empresa estiver em constituição: documentos dos futuros sócios e comprovação de capital."
+  - "Se for renovação e a apólice ainda não tiver vindo: apólice anterior, o documento do seguro."
+  - "Se tiver pedido pintura, danos ao imóvel ou cobertura para móveis e os documentos já existirem: contrato de locação e laudo de vistoria de entrada assinado, o relatório do estado do imóvel na entrega."
+ja_vem:
+  - fonte: cep
+    usar_quando: "Use com o CEP do imóvel para preencher rua, bairro, cidade e UF; ou com UF, cidade e rua para buscar o CEP. Anote resultado e origem para a equipe, sem recitar nem pedir confirmação. Número e complemento vêm do cliente. Se houver candidatos ambíguos, não escolha. Se o formato informado for inválido, peça correção; se a consulta falhar ou não achar, registre a pendência internamente e passe à equipe."
+  - fonte: cpf
+    usar_quando: "Use com o CPF informado do pretendente, ocupante, cônjuge ou representante para validar os dígitos. Anote o resultado para a equipe, sem recitar o número. Se for inválido, peça que confira. Falha da consulta fica como pendência interna, sem anunciar que não achou. Não traz nome, nascimento, renda, crédito nem aprovação; consulta de nome e nascimento pelo CPF é prevista, sem chave."
+tambem:
+  - fonte: cnpj
+    usar_quando: "Use com o CNPJ de quem vai alugar para obter razão social, nome fantasia, abertura, atividade/CNAE, situação, porte e cidade/UF. Anote os dados e a origem para a equipe, sem recitar nem pedir confirmação. Com abertura retornada, pule a pergunta de fundação; anote a abertura e deixe qualquer diferença para a equipe. Sede não é o imóvel; cadastro ativo não aprova seguro. Se falhar ou não achar, registre internamente e passe à equipe."
+premium: []
+teste:
+  - "Tô sem fiador e com pressa, quanto fica o seguro aluguel?"
+  - "Minha empresa vai alugar uma loja em shopping. A equipe pode sugerir as proteções?"
+  - "Meu seguro vence e quero renovar. Já mandei a apólice, o bônus fica igual?"

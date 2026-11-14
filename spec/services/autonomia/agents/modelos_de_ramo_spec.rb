@@ -7,27 +7,30 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::ModelosDeRamo do
   include ModelosDeRamoHelper
 
-  let(:piloto) { %w[seguro_auto seguro_garantia transporte_carga] }
-  # #3020: o primeiro modelo com as perguntas em blocos.
-  let(:em_blocos) { %w[seguro_condominio] }
+  # #3024: os 20 ramos, todos com as perguntas em blocos.
+  let(:ramos) do
+    %w[acidentes_pessoais aviacao planos_de_saude rc_geral rc_profissional riscos_de_engenharia seguro_aluguel seguro_auto
+       seguro_bike seguro_celular seguro_cibernetico seguro_condominio seguro_empresarial seguro_garantia seguro_residencial
+       seguro_rural seguro_viagem transporte_carga vida_em_grupo vida_individual]
+  end
 
-  describe 'os modelos do piloto' do
-    it 'carrega os três, cada um com o tipo comercial, o roteiro e as listas' do
-      expect(described_class.chaves).to match_array(piloto + em_blocos)
+  describe 'os modelos dos ramos' do
+    it 'carrega os vinte, cada um com o tipo comercial, as perguntas em blocos e as listas' do
+      expect(described_class.chaves).to match_array(ramos)
 
-      piloto.each do |chave|
+      ramos.each do |chave|
         modelo = described_class.buscar(chave)
         expect(modelo.chave).to eq(chave)
         expect(modelo.tipo).to eq('sdr')
         expect(modelo.nome_padrao).to be_present
-        expect(modelo.perguntas).not_to be_empty
+        expect(modelo.molde_das_perguntas).to be_present.and all(include('bloco'))
         expect(modelo.ja_vem).not_to be_empty
         expect(modelo.teste.size).to eq(3)
       end
     end
 
     it 'guarda o roteiro cru em até 8.000 bytes, com cada marcador uma vez e sozinho na linha' do
-      piloto.each do |chave|
+      ramos.each do |chave|
         roteiro = described_class.buscar(chave).roteiro
         linhas = roteiro.lines.map(&:strip)
 
@@ -38,7 +41,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
 
     # O que o ramo explica (o seguro em palavras simples e as dúvidas comuns) vai do roteiro para a marca do agente.
     it 'traz o conhecimento do ramo no roteiro e o copia para a marca com que o agente nasce' do
-      piloto.each do |chave|
+      ramos.each do |chave|
         modelo = described_class.buscar(chave)
         saber = described_class::Conhecimento.do_roteiro(modelo.roteiro)
 
@@ -51,7 +54,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     it 'só traz ferramenta grátis da vitrine no "Já vem com" e no "Também combina", sem repetir' do
       sugeriveis = Autonomia::FerramentasProntas::Catalogo.chaves_sugeriveis
 
-      piloto.each do |chave|
+      ramos.each do |chave|
         fontes = described_class.buscar(chave).ferramentas.map(&:fonte)
         expect(fontes - sugeriveis).to be_empty
         expect(fontes.uniq).to eq(fontes)
@@ -61,7 +64,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     it 'só sugere cartão Premium na lista dos pagos' do
       cartoes = Autonomia::FerramentasProntas::Catalogo.premium_no_codigo.map(&:chave)
 
-      expect(piloto.flat_map { |chave| described_class.buscar(chave).premium } - cartoes).to be_empty
+      expect(ramos.flat_map { |chave| described_class.buscar(chave).premium } - cartoes).to be_empty
     end
 
     it 'devolve nil para chave desconhecida, vazia ou que não é texto' do
@@ -105,7 +108,8 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
       andares = da_tela.find { |item| item['texto'].start_with?('Quantos andares') }
 
       expect(andares).to include('bloco' => 'O prédio', 'se' => 'for de prédios', 'segue' => true, 'tirada' => false)
-      corrida = described_class::Marca.inicial(described_class.buscar('seguro_garantia'))
+      # O agente que nasceu de um modelo de lista corrida (antes do #3024) guarda as perguntas sem lugar.
+      corrida = { 'perguntas' => [{ 'id' => 'p1', 'texto' => 'Qual o CNPJ?', 'tirada' => false }] }
       expect(described_class::Marca.itens(corrida, 'perguntas').first.keys).to eq(%w[id texto tirada])
     end
   end
@@ -115,6 +119,8 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     let(:original) { described_class::PASTA }
     let(:dados) { YAML.safe_load(File.read(original.join('seguro_garantia.yml'), encoding: 'UTF-8')) }
     let(:roteiro) { File.read(original.join('seguro_garantia.md'), encoding: 'UTF-8') }
+    # O formato de antes do #3020, que o leitor ainda aceita: as perguntas numa lista corrida, sem blocos.
+    let(:corrida) { dados.except('blocos').merge('perguntas' => ['Para que é a garantia?', 'Qual o CNPJ?']) }
 
     after { FileUtils.remove_entry(pasta) }
 
@@ -127,10 +133,11 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
       described_class::Leitor.new(pasta).modelos
     end
 
-    it 'aceita a cópia fiel do arquivo do piloto' do
-      gravar(dados)
-
-      expect(lidos.keys).to eq(['seguro_garantia'])
+    it 'aceita a cópia fiel do arquivo do ramo e a lista corrida de antes' do
+      [dados, corrida].each do |conteudo|
+        gravar(conteudo)
+        expect(lidos.keys).to eq(['seguro_garantia'])
+      end
     end
 
     it 'recusa o que não é YAML e segue sem o modelo, sem levantar' do
@@ -140,7 +147,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     end
 
     it 'recusa campo desconhecido, campo que falta e chave diferente do nome do arquivo' do
-      [dados.merge('preco' => 'R$ 10'), dados.except('perguntas'), dados.merge('chave' => 'outra')].each do |invalido|
+      [dados.merge('preco' => 'R$ 10'), dados.except('blocos'), dados.merge('chave' => 'outra')].each do |invalido|
         gravar(invalido)
         expect(lidos).to eq({})
       end
@@ -148,7 +155,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
 
     it 'recusa texto acima do limite e lista longa demais' do
       # A lista corrida segue no teto de 20; o de 200 é só do modelo em blocos.
-      longa = dados.merge('perguntas' => Array.new(described_class::ITENS_MAX + 1) { |i| "Pergunta #{i}?" })
+      longa = corrida.merge('perguntas' => Array.new(described_class::ITENS_MAX + 1) { |i| "Pergunta #{i}?" })
       comprida = dados.merge('documentos' => ['a' * (described_class::ITEM_MAX + 1)])
       frase = dados.merge('ja_vem' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'a' * 501 }])
 
@@ -162,7 +169,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     it 'aceita as perguntas em blocos no lugar da lista corrida' do
       perguntas = [{ 'texto' => 'Qual o CNPJ?', 'ligada' => true },
                    { 'texto' => 'Qual a razão social?', 'se' => 'o CNPJ não trouxer', 'segue' => true }]
-      gravar(dados.except('perguntas').merge('blocos' => [{ 'nome' => 'A empresa', 'perguntas' => perguntas }]))
+      gravar(dados.merge('blocos' => [{ 'nome' => 'A empresa', 'perguntas' => perguntas }]))
 
       expect(lidos['seguro_garantia'].molde_das_perguntas).to eq(
         [{ 'texto' => 'Qual o CNPJ?', 'tirada' => false, 'bloco' => 'A empresa' },
@@ -173,9 +180,9 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     it 'recusa blocos fora do formato' do
       bloco = ->(perguntas, nome = 'A empresa') { { 'nome' => nome, 'perguntas' => perguntas } }
       ligada = { 'texto' => 'Qual o CNPJ?', 'ligada' => true }
-      sem_lista = dados.except('perguntas')
+      sem_lista = dados.except('blocos')
       invalidos = [
-        dados.merge('blocos' => [bloco.call([ligada])]),                                              # perguntas e blocos
+        corrida.merge('blocos' => [bloco.call([ligada])]),                                            # perguntas e blocos
         sem_lista.merge('blocos' => [bloco.call([{ 'texto' => 'Qual o CNPJ?' }])]),                   # nenhuma ligada
         sem_lista.merge('blocos' => [bloco.call([ligada]), bloco.call([ligada])]),                    # nome repetido
         sem_lista.merge('blocos' => [bloco.call([])]),                                                # bloco vazio
@@ -262,7 +269,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
 
       conta_de_seguros(account)
       expect(described_class.liberado?(account)).to be(true)
-      expect(described_class.liberados(account)).to match_array(piloto + em_blocos)
+      expect(described_class.liberados(account)).to match_array(ramos)
     end
 
     it 'não libera conta de seguros sem a flag, nem com o interruptor dos pacotes desligado' do

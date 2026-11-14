@@ -1,0 +1,242 @@
+chave: seguro_bike
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Bicicleta"
+ramo: "Seguro de bicicleta"
+seguradoras_sugeridas: "Porto Seguro, Essor, Gente, Akad e Fairfax"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "É um seguro novo ou a renovação de um que você já tem?"
+        ligada: true
+      - texto: "Esta bike já tem algum seguro?"
+        se: "for seguro novo"
+        segue: true
+      - texto: "Além do seguro atual, a bike tem outro seguro?"
+        se: "for renovação"
+        segue: true
+      - texto: "Qual é a seguradora do seguro atual da bike?"
+        se: "for renovação e isso não tiver vindo no documento"
+        segue: true
+      - texto: "Qual é o número da apólice, o documento do seguro atual?"
+        se: "for renovação e isso não tiver vindo no documento"
+        segue: true
+      - texto: "Em que dia o seguro atual da bike termina?"
+        se: "for renovação e isso não tiver vindo no documento"
+        segue: true
+      - texto: "Em que data você quer que o seguro comece?"
+      - texto: "Em que data você quer que o seguro termine? A equipe confirma o período possível."
+  - nome: "A bike"
+    perguntas:
+      - texto: "Qual é a marca da bike?"
+        ligada: true
+      - texto: "Qual é o modelo da bike?"
+        ligada: true
+      - texto: "Que tipo de bike é: urbana, de trilha, de estrada, elétrica ou outra?"
+        ligada: true
+      - texto: "Qual é o ano de fabricação da bike?"
+        ligada: true
+      - texto: "Quanto a bike vale hoje, pelo que você sabe?"
+        ligada: true
+      - texto: "Em que data você comprou a bike?"
+      - texto: "Qual é o número de série, o número que vem marcado no quadro da bike?"
+      - texto: "A bike é nova ou usada?"
+      - texto: "De que material é o quadro da bike?"
+      - texto: "A bike está original ou foi personalizada?"
+      - texto: "O que foi trocado ou acrescentado na bike?"
+        se: "foi personalizada"
+        segue: true
+      - texto: "Você já recebeu a bike?"
+        se: "a pessoa ainda não tiver dito que está com a bike"
+      - texto: "A bike já tem algum dano ou problema que ainda não foi reparado?"
+  - nome: "Nota e compra"
+    perguntas:
+      - texto: "Onde você comprou a bike?"
+      - texto: "Você tem a nota fiscal da bike?"
+      - texto: "Em nome de quem está a nota fiscal da bike?"
+        se: "tiver nota e isso ainda não tiver vindo no documento"
+        segue: true
+      - texto: "Qual é o vínculo de quem está na nota fiscal com quem vai contratar?"
+        se: "a nota estiver em nome de outra pessoa e isso ainda faltar"
+        segue: true
+      - texto: "Você tem recibo ou documento de transferência da bike?"
+        se: "a bike veio de outro dono"
+      - texto: "A bike foi comprada no Brasil ou no exterior?"
+      - texto: "Você tem a invoice, a nota da compra feita no exterior?"
+        se: "veio do exterior"
+        segue: true
+      - texto: "Você tem o documento que declara a importação da bike e informa as taxas de entrada no Brasil?"
+        se: "veio do exterior"
+        segue: true
+  - nome: "Bike elétrica"
+    perguntas:
+      - texto: "Qual é a potência do motor da bike, em watts?"
+        se: "for elétrica ou um equipamento que anda com o motor sem precisar pedalar"
+      - texto: "O motor da bike veio de fábrica ou foi adaptado depois?"
+        se: "for elétrica"
+      - texto: "A bike tem acelerador?"
+        se: "for elétrica ou um equipamento que anda com o motor sem precisar pedalar"
+      - texto: "A bike tem pedais?"
+        se: "for elétrica ou um equipamento que anda com o motor sem precisar pedalar"
+      - texto: "Qual é a velocidade máxima que o motor da bike alcança, segundo o fabricante?"
+        se: "for elétrica ou um equipamento que anda com o motor sem precisar pedalar"
+  - nome: "Como usa"
+    perguntas:
+      - texto: "Você usa a bike para ir e voltar no dia a dia, no lazer, para trabalhar com ela, como em entregas, ou em competição? Pode ser mais de um."
+        ligada: true
+      - texto: "Você pedala na cidade, no triatlo, que reúne natação, ciclismo e corrida, em trilhas ou em descidas de montanha? Pode ser mais de um."
+        se: "onde a pessoa pedala ainda não tiver ficado claro"
+      - texto: "O chão por onde você pedala é mais asfalto, rodovia, terra ou montanha? Pode ser mais de um."
+        se: "o tipo de chão ainda não tiver ficado claro"
+      - texto: "Quantas vezes por semana você usa a bike?"
+      - texto: "Você treina com acompanhamento de uma assessoria esportiva?"
+      - texto: "Você precisa usar a bike fora do Brasil?"
+  - nome: "Quem usa"
+    perguntas:
+      - texto: "Quem usa a bike normalmente?"
+      - texto: "Qual é a idade de quem usa a bike?"
+        se: "quem usa for menor de idade"
+        segue: true
+      - texto: "Quem é o responsável pelo menor de idade que usa a bike?"
+        se: "quem usa for menor de idade"
+        segue: true
+      - texto: "Outras pessoas também usam a bike?"
+      - texto: "Qual é o vínculo das outras pessoas que usam a bike com quem vai contratar?"
+        se: "outras pessoas usarem"
+        segue: true
+      - texto: "Qual é a idade do segundo usuário da bike?"
+        se: "houver segundo usuário e a idade ainda faltar"
+        segue: true
+      - texto: "A bike é alugada?"
+      - texto: "Você aluga a bike para outras pessoas?"
+      - texto: "Existe contrato escrito do aluguel da bike?"
+        se: "a bike for alugada ou a pessoa alugar a bike para outras pessoas"
+  - nome: "Guarda e transporte"
+    perguntas:
+      - texto: "Onde você costuma guardar a bike?"
+      - texto: "Há um ponto fixo para prender a bike na área externa onde ela fica?"
+        se: "a bike ficar em área externa"
+        segue: true
+      - texto: "O bicicletário onde a bike fica tem controle de quem entra e sai?"
+        se: "a bike ficar num bicicletário"
+        segue: true
+      - texto: "Como a bike fica presa ou trancada no lugar onde é guardada?"
+      - texto: "A bike fica sob os cuidados de outra pessoa ou empresa?"
+      - texto: "Você costuma transportar a bike em carro ou outro veículo?"
+      - texto: "Como você acomoda a bike no veículo para ela ficar presa?"
+        se: "transportar a bike em veículo"
+        segue: true
+      - texto: "Você despacha a bike em avião, ônibus, trem ou com transportadora?"
+  - nome: "Quem contrata"
+    perguntas:
+      - texto: "Qual é o CPF de quem vai contratar? É pedido no cadastro, para identificar quem contrata."
+        ligada: true
+      - texto: "Qual é o nome completo de quem vai contratar?"
+        se: "o nome ainda faltar"
+        ligada: true
+      - texto: "Qual é a data de nascimento de quem vai contratar? É pedida no cadastro."
+        se: "a data ainda faltar"
+      - texto: "Qual é o sexo de quem vai contratar? É pedido no cadastro."
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual é o CEP de onde mora quem vai contratar?"
+        se: "o CEP ainda faltar"
+        ligada: true
+      - texto: "Qual é a rua do endereço de quem vai contratar?"
+        se: "a rua ainda faltar"
+        segue: true
+        ligada: true
+      - texto: "Qual é o bairro do endereço de quem vai contratar?"
+        se: "o bairro ainda faltar"
+        segue: true
+        ligada: true
+      - texto: "Qual é a cidade de quem vai contratar?"
+        se: "a cidade ainda faltar"
+        segue: true
+        ligada: true
+      - texto: "Em qual estado fica o endereço de quem vai contratar?"
+        se: "o estado ainda faltar"
+        segue: true
+        ligada: true
+      - texto: "Qual é o número do endereço de quem vai contratar?"
+      - texto: "Tem complemento no endereço de quem vai contratar?"
+  - nome: "Contato"
+    perguntas:
+      - texto: "A equipe pode falar com você por aqui mesmo, ou prefere outro número ou um e-mail?"
+      - texto: "Qual é o outro celular para falar com quem vai contratar?"
+        se: "quiser contato por outro celular"
+        segue: true
+      - texto: "Qual é o telefone fixo de quem vai contratar?"
+        se: "quem vai contratar tiver telefone fixo para contato"
+        segue: true
+      - texto: "Qual é o e-mail de quem vai contratar?"
+        se: "quiser contato por e-mail"
+        segue: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Quer escolher as proteções ou prefere que a equipe sugira?"
+      - texto: "Quer que a equipe veja proteção para a bike durante o transporte da viagem ao exterior?"
+        se: "a pessoa quiser escolher e for levar a bike para fora do Brasil"
+        segue: true
+      - texto: "Quer que a equipe inclua assistência na cotação? São serviços à parte do seguro da bike, e cada plano tem os seus."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer proteção para danos à bike?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor de proteção você tem em mente para danos à bike?"
+        se: "a pessoa quiser escolher e já tiver um valor em mente para danos"
+        segue: true
+      - texto: "Quer proteção para roubo da bike?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor de proteção você tem em mente para roubo da bike?"
+        se: "a pessoa quiser escolher e já tiver um valor em mente para roubo"
+        segue: true
+      - texto: "Quer incluir proteção para danos que você cause a outras pessoas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual limite você quer para a proteção de danos a outras pessoas?"
+        se: "a pessoa quiser escolher e já souber o limite desejado"
+        segue: true
+      - texto: "Quer incluir proteção para estragos na parte elétrica da bike? Cada seguradora define quais."
+        se: "a pessoa quiser escolher e a bike for elétrica"
+        segue: true
+      - texto: "Qual valor você tem em mente para a proteção da parte elétrica da bike?"
+        se: "a pessoa quiser escolher, quiser proteção para a parte elétrica e já tiver um valor em mente"
+        segue: true
+      - texto: "Quer incluir acidentes pessoais, uma proteção para quem pedala se se machucar num acidente?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Qual valor de proteção você quer para acidentes pessoais?"
+        se: "a pessoa quiser escolher e já souber o valor desejado"
+        segue: true
+      - texto: "Quer incluir acessórios na cotação?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Sobre a franquia, a parte que fica por sua conta ao usar o seguro, tem alguma preferência para a equipe avaliar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quais acessórios da bike você quer incluir?"
+        se: "a pessoa já tiver dito que quer incluir acessórios"
+      - texto: "Quanto vale cada acessório que você quer incluir?"
+        se: "a pessoa já tiver dito que quer incluir acessórios"
+        segue: true
+documentos:
+  - "Se disponível: nota fiscal ou comprovante de compra ou propriedade. A falta de nota vai para a equipe avaliar."
+  - "Se comprada de outra pessoa e disponível: recibo ou documento de transferência. A equipe confere o que é aceito."
+  - "Se comprada no exterior e disponíveis: invoice, a nota de compra de lá, e documento que declara a importação e informa as taxas de entrada no Brasil. A equipe confere a exigência do produto."
+  - "Se houver personalização ou interesse em acessórios: relação e comprovantes dos acessórios e das peças alteradas, quando disponíveis."
+  - "Se for renovação: apólice anterior, o documento do seguro atual."
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use ao receber o CPF de quem vai contratar, só para ver se o número é válido. Anote o resultado para a equipe. Só se o CPF vier inválido ou com algarismo a menos ou a mais, peça para a pessoa conferir o número, sem tom de bronca e sem dizer que consultou; se vier igual, anote e siga. Se a consulta falhar ou não responder, não é CPF inválido: anote a pendência para a equipe e siga, sem comentar. Não traz nome nem nascimento."
+  - fonte: cep
+    usar_quando: "Use com o CEP residencial para completar rua, bairro, cidade e UF; ou com endereço já informado para buscar o CEP. Anote os dados e a origem para a equipe, sem recitar nem pedir confirmação. Pergunte apenas componentes que ainda faltem, sem dizer que a busca falhou. CEP com algarismo a menos ou a mais: peça para conferir, sem tom de bronca. Se falhar ou não localizar, anote a pendência para a equipe e siga. Número e complemento vêm da pessoa ou do documento."
+tambem:
+  - fonte: localizacao
+    usar_quando: "Use quando a pessoa enviar localização para identificar a cidade e anotá-la para a equipe como contexto do pedido. Não recite nem peça confirmação do resultado. Não assuma que é a residência. Se falhar ou não localizar, anote a pendência para a equipe e siga a conversa, sem dizer que não achou."
+premium: []
+teste:
+  - "to com pressa, quanto custa o seguro da minha bike?"
+  - "é elétrica e uso pra entrega, cobre com certeza?"
+  - "quero renovar, posso mandar o documento do seguro atual?"

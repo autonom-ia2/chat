@@ -1,0 +1,108 @@
+chave: rc_geral
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Responsabilidade Civil Geral"
+ramo: "Seguro de responsabilidade civil geral"
+seguradoras_sugeridas: "Porto, AXA, Allianz e Sompo"
+blocos:
+  - nome: "Quem contrata"
+    perguntas:
+      - texto: "Você vai fazer o seguro no seu nome ou no nome de uma empresa?"
+        ligada: true
+      - texto: "Qual é o CPF de quem vai contratar o seguro ou, se for empresa, o CNPJ?"
+        ligada: true
+      - texto: "Qual é o seu nome completo?"
+        ligada: true
+      - texto: "A equipe pode falar com você por aqui mesmo, ou prefere também outro número ou e-mail?"
+      - texto: "Qual e-mail a equipe pode usar para falar com você?"
+        se: "a pessoa quiser e-mail"
+        segue: true
+      - texto: "Qual número de telefone fixo a equipe pode usar para falar com você?"
+        se: "a pessoa quiser telefone fixo"
+        segue: true
+      - texto: "Qual outro número de celular, além deste WhatsApp, a equipe pode usar para falar com você?"
+        se: "a pessoa quiser outro celular"
+        segue: true
+  - nome: "O pedido"
+    perguntas:
+      - texto: "É a renovação de um seguro que você já tem?"
+        ligada: true
+      - texto: "Em que dia o seguro atual termina?"
+        se: "for renovação"
+        segue: true
+      - texto: "Por quanto tempo você precisa que o seguro valha?"
+      - texto: "Qual valor máximo você quer pedir para o seguro, o chamado limite de garantia? Se não souber, pode dizer: a equipe vê isso com você."
+        ligada: true
+  - nome: "O trabalho"
+    perguntas:
+      - texto: "O que você ou a empresa faz no dia a dia?"
+        se: "a atividade ainda não tiver sido dita nem vier na consulta do CNPJ"
+        ligada: true
+      - texto: "O trabalho de você ou da empresa é de comércio, indústria ou serviços?"
+        se: "não der para saber pela atividade já dita"
+        segue: true
+      - texto: "A empresa é pequena, média ou grande?"
+        se: "for empresa"
+      - texto: "Para ajudar a equipe a cotar, quanto a empresa fatura por ano, mais ou menos?"
+        se: "for empresa"
+      - texto: "Em quais cidades, estados ou regiões você ou a empresa atua?"
+      - texto: "Você ou a empresa faz serviços no local dos clientes ou de outras pessoas?"
+      - texto: "Você ou a empresa faz serviços de vigilância?"
+      - texto: "O trabalho de você ou da empresa envolve obras ou montagem?"
+      - texto: "Qual é o valor da obra que vai ter o seguro?"
+        se: "o pedido for para uma obra"
+        segue: true
+      - texto: "Você ou a empresa tem placas de anúncio, letreiros ou antenas?"
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual é o CEP do local onde o trabalho acontece?"
+        ligada: true
+      - texto: "Qual é o nome da rua, avenida ou estrada do local onde o trabalho acontece?"
+        se: "a rua ainda não tiver sido dita nem vier na consulta do CEP"
+        segue: true
+      - texto: "Qual é o número do endereço do local onde o trabalho acontece?"
+        se: "o número ainda não tiver sido dito nem vier na consulta do CEP"
+        segue: true
+      - texto: "Qual é o complemento do endereço do local onde o trabalho acontece?"
+        se: "houver complemento que ainda não foi dito nem veio na consulta do CEP"
+        segue: true
+      - texto: "Em que cidade fica o local onde o trabalho acontece?"
+        se: "a cidade ainda não tiver sido dita nem vier na consulta do CEP"
+        segue: true
+        ligada: true
+      - texto: "Em que estado fica o local onde o trabalho acontece?"
+        se: "o estado ainda não tiver sido dito nem vier na consulta do CEP"
+        segue: true
+        ligada: true
+      - texto: "Onde fica o local principal onde o trabalho acontece?"
+        se: "o CEP informado não for o do local principal do trabalho"
+        segue: true
+        ligada: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Você quer escolher as proteções ou prefere que a equipe sugira?"
+      - texto: "Quais proteções quer que a equipe avalie, como operação da empresa, produtos, obras ou montagem, serviços no local de outras pessoas, vigilância, eventos, guarda de veículos ou embarcações ou alimentos?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Danos anteriores"
+    perguntas:
+      - texto: "Já houve algum dano ou reclamação ligada à atividade que vai ter o seguro?"
+      - texto: "Pode contar o que aconteceu nos danos ou reclamações anteriores?"
+        se: "já houve dano ou reclamação"
+        segue: true
+documentos:
+  - "Para cotar: nenhum. Não peça documento; a equipe diz se precisa de algum."
+  - "Em sinistro: não peça documento. Diga para guardar fotos, avisos e notificações recebidos; a equipe orienta o resto conforme a apólice."
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use quando a pessoa informar CPF, para verificar a validade. Anote o resultado para a equipe, sem recitar o número nem pedir confirmação de resultado. Se o número for explicitamente inválido, peça que confira só esse dado. Se a consulta falhar, registre para a equipe sem dizer que não achou. Não busca nome nem nascimento."
+  - fonte: cep
+    usar_quando: "Use quando a pessoa informar CEP, para completar o endereço. Anote para a equipe o que a consulta devolver, sem dizer o resultado ao cliente nem pedir confirmação. Pule os campos já obtidos. Em CEP genérico, colha só o que faltar. Dado inválido: peça que confira só esse dado. Falha ou ausência de resultado: registre para a equipe, sem dizer que não achou."
+tambem:
+  - fonte: cnpj
+    usar_quando: "Use quando a pessoa informar CNPJ, para obter nome, situação e atividade da empresa. Anote para a equipe com origem na consulta; não recite o resultado nem peça confirmação. Pule perguntas já respondidas. Nome da empresa não substitui o da pessoa. Atividade não prova aceitação. Se falhar ou não achar, registre para a equipe sem anunciar a falha."
+# Prevista: consulta de nome e nascimento pelo CPF, sem chave; indisponível hoje.
+premium: []
+teste:
+  - "Tô com pressa, quanto fica o RC geral da minha empresa?"
+  - "Cobre multa e dano moral com certeza?"
+  - "Recebi uma reclamação de um cliente, posso fazer acordo?"
