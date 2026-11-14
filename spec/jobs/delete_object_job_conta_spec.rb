@@ -97,6 +97,11 @@ RSpec.describe DeleteObjectJob do
     linha!('carteira_apolices', account_id: account.id, contact_id: contact.id, tipo: 'auto', seguradora: 'Seguradora Exemplo',
                                 seguradora_chave: 'seguradoraexemplo', numero: 'EX-001235', numero_chave: 'EX001235',
                                 fim_vigencia: 2.years.from_now.to_date, origem: 'manual', apolice_anterior_id: apolice)
+    # CPF e CNPJ (#1240, R1): o documento da pessoa sai na cascata do contato. O da empresa ainda existe quando a conta
+    # sai (as empresas só saem depois do commit) e barraria o DELETE da conta se a exclusão não o apagasse antes.
+    empresa = linha!('companies', account_id: account.id, name: 'Oficina Exemplo')
+    linha!('relacionamentos_documentos', account_id: account.id, contact_id: contact.id, tipo: 'cpf', valor: '12345678909')
+    linha!('relacionamentos_documentos', account_id: account.id, company_id: empresa, tipo: 'cnpj', valor: '11222333000181')
     # Linhas sem account_id: achadas pela campanha, pelo dono do token e pela apólice. O usuário técnico do MCP sai pelo revoke!.
     { 'email_campaign_recipients' => destinatario, 'email_events' => evento, 'access_tokens' => bearer, 'users' => mcp.account_user.user_id,
       'carteira_apolice_eventos' => historia, 'active_storage_attachments' => anexo_lido.id }

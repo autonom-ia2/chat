@@ -4606,6 +4606,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
     t.index ["contact_id"], name: "index_relacionamentos_campos_preenchidos_on_contact_id"
   end
 
+  create_table "relacionamentos_documentos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "contact_id"
+    t.bigint "company_id"
+    t.string "tipo", null: false
+    t.string "valor", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "tipo", "valor"], name: "idx_relacionamentos_documentos_busca"
+    t.index ["company_id", "tipo"], name: "idx_relacionamentos_documentos_da_empresa", unique: true, where: "(company_id IS NOT NULL)"
+    t.index ["contact_id", "tipo"], name: "idx_relacionamentos_documentos_da_pessoa", unique: true, where: "(contact_id IS NOT NULL)"
+    t.check_constraint "num_nonnulls(contact_id, company_id) = 1", name: "relacionamentos_documentos_dono"
+    t.check_constraint "tipo::text = 'cnpj'::text OR contact_id IS NOT NULL", name: "relacionamentos_documentos_cpf_so_de_pessoa"
+    t.check_constraint "tipo::text = ANY ('{cpf,cnpj}'::text[])", name: "relacionamentos_documentos_tipo"
+  end
+
   create_table "related_categories", force: :cascade do |t|
     t.bigint "category_id"
     t.bigint "related_category_id"
@@ -5391,6 +5407,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
   add_foreign_key "mcp_integration_tokens", "custom_roles", on_delete: :nullify
   add_foreign_key "mcp_integration_tokens", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "relacionamentos_campos_preenchidos", "campaign_import_rows", on_delete: :cascade
+  add_foreign_key "relacionamentos_documentos", "accounts"
+  add_foreign_key "relacionamentos_documentos", "companies", on_delete: :cascade
+  add_foreign_key "relacionamentos_documentos", "contacts", on_delete: :cascade
   add_foreign_key "user_sessions", "users"
   add_foreign_key "whatsapp_api_campaign_recipients", "accounts"
   add_foreign_key "whatsapp_api_campaign_recipients", "contacts", on_delete: :cascade
