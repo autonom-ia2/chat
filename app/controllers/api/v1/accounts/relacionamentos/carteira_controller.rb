@@ -41,8 +41,9 @@ class Api::V1::Accounts::Relacionamentos::CarteiraController < Api::V1::Accounts
     authorize @seguro.contact, :update?
   end
 
+  # Com quem pede: o id do card de renovação só vai no seguro para quem enxerga aquele card no quadro.
   def apresentacao
-    ::Carteira::Apresentacao.new(Current.account)
+    ::Carteira::Apresentacao.new(Current.account, quem: pundit_user)
   end
 
   def responder_seguro(seguro = @seguro)

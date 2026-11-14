@@ -2,7 +2,7 @@
 # quem cria o card e mistura formatos: o card que nasce de uma conversa grava o tipo do canal (`Channel::Whatsapp`,
 # Crm::Cards::Creator#hydrate_from_conversation); os outros gravam um nome próprio. Aqui cada um vira um grupo que a
 # pessoa reconhece. O que não tem grupo (card do quadro, da API, de uma regra, criado em grupo
-# na lista de Relacionamentos) é "outro".
+# na lista de Relacionamentos, o card de renovação da carteira de seguros, que nasce sem source) é "outro".
 #
 # Quem cria card está em QUEM_CRIA_CARD; o spec derruba a CI quando surge um lugar novo, para o source dele ganhar grupo.
 module Autonomia::Automacao::OrigemDoCard
@@ -29,6 +29,7 @@ module Autonomia::Automacao::OrigemDoCard
     app/services/automation_rules/crm_actions.rb
     app/services/autonomia/automacao/card_novo.rb
     app/services/autonomia/prospecting/crm_card_converter.rb
+    app/services/carteira/renovacao/criar_card.rb
     app/services/crm/booking_v2/booking_card.rb
     app/services/crm/booking_v2/contact_request.rb
     app/services/crm/calendar/public_booking_service.rb

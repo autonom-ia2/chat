@@ -1,11 +1,12 @@
 require 'rails_helper'
 
-# E4 (#2897): o selo do seguro e o dia de hoje da conta. O selo não é coluna: sai da data, no fuso da conta.
+# E4 (#2897): o selo do seguro e o dia de hoje da conta. O selo não é coluna: sai da data, no fuso da conta. Com a
+# renovação (E5, #2898) entram Renovado e Em renovação, pelas colunas que o desfecho do card mantém.
 RSpec.describe Carteira::Selo do
   let(:hoje) { Date.new(2026, 11, 12) }
 
-  def seguro(termina:, cancelado: false)
-    Carteira::Apolice.new(fim_vigencia: termina, cancelado_em: (Time.current if cancelado))
+  def seguro(termina:, cancelado: false, **renovacao)
+    Carteira::Apolice.new(fim_vigencia: termina, cancelado_em: (Time.current if cancelado), **renovacao)
   end
 
   it 'dá o selo e os dias de cada situação: no dia do vencimento ainda vale, no dia seguinte venceu' do
@@ -22,11 +23,30 @@ RSpec.describe Carteira::Selo do
     end
   end
 
+  it 'com a renovação: o card aberto dá Em renovação, o renovado é Renovado mesmo depois do fim, e o cancelado ganha de todos' do
+    agora = Time.current
+    tabela = {
+      'com card de renovação, ainda valendo' => [seguro(termina: hoje + 20, crm_card_id: 7), 'em_renovacao'],
+      'com card, no dia do vencimento' => [seguro(termina: hoje, crm_card_id: 7), 'em_renovacao'],
+      'com card, já vencido' => [seguro(termina: hoje - 1, crm_card_id: 7), 'vencido'],
+      'renovado, ainda valendo' => [seguro(termina: hoje + 20, crm_card_id: 7, renovado_em: agora), 'renovado'],
+      'renovado, depois do fim' => [seguro(termina: hoje - 40, crm_card_id: 7, renovado_em: agora), 'renovado'],
+      'renovado sem card' => [seguro(termina: hoje + 20, renovado_em: agora), 'renovado'],
+      'não renovou, ainda valendo' => [seguro(termina: hoje + 20, crm_card_id: 7, nao_renovou_em: agora), 'ativo'],
+      'não renovou, depois do fim' => [seguro(termina: hoje - 1, crm_card_id: 7, nao_renovou_em: agora), 'vencido'],
+      'card tirado do quadro' => [seguro(termina: hoje + 20, crm_card_id: 7, renovacao_card_removido_em: agora), 'ativo'],
+      'renovado e cancelado' => [seguro(termina: hoje + 20, cancelado: true, crm_card_id: 7, renovado_em: agora), 'cancelado']
+    }
+
+    tabela.each { |caso, (apolice, selo)| expect(described_class.de(apolice, hoje: hoje)).to eq(selo), caso }
+  end
+
   it 'põe na frente o que pede atenção, o cancelado por último e, no empate, quem termina antes' do
-    apolices = [seguro(termina: hoje + 90), seguro(termina: hoje + 5, cancelado: true), seguro(termina: hoje - 3), seguro(termina: hoje + 10)]
+    apolices = [seguro(termina: hoje + 90), seguro(termina: hoje + 5, cancelado: true), seguro(termina: hoje - 3), seguro(termina: hoje + 10),
+                seguro(termina: hoje + 50, renovado_em: Time.current), seguro(termina: hoje + 60, crm_card_id: 7)]
     apolices.each_with_index { |apolice, indice| apolice.id = indice + 1 }
 
-    expect(described_class.por_urgencia(apolices, hoje: hoje).map(&:id)).to eq([3, 4, 1, 2])
+    expect(described_class.por_urgencia(apolices, hoje: hoje).map(&:id)).to eq([3, 6, 5, 4, 1, 2])
   end
 
   describe 'o dia de hoje' do
