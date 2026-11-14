@@ -44,6 +44,18 @@ export const CODIGOS_DE_RECUSA = [
   'termina_antes_da_anterior',
   'apolice_de_outra_pessoa',
   'termo_ambiguo',
+  // #2899 — a leitura de PDF: anexar e ver o que mudou, e trazer por PDFs.
+  'leitura_desligada',
+  'nao_e_apolice',
+  'nao_deu_para_ler',
+  'leitura_expirou',
+  'leitura_nao_pronta',
+  'leitura_fechada',
+  'item_fechado',
+  'campo_invalido',
+  'nada_para_trazer',
+  'nao_pode_desfazer',
+  'lote_grande',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela

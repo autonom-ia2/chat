@@ -21,7 +21,10 @@ class Carteira::ApoliceEvento < ApplicationRecord
     algo_mudou_nao_saiu palavras_nao_saiu proposta_pedida proposta_anexada palavras_enviadas parcela_avisada
     desfez_desfecho renovacao_card_nasceu
   ].freeze
-  TIPOS = (DA_E4 + DAS_PROXIMAS).freeze
+  # E6 (#2899): chegou por PDF (Trazer por PDFs) e chegou de novo por PDF, com o que mudou (Trazer por PDFs, ou o PDF
+  # anexado na gaveta em que a pessoa escolheu usar o que o PDF diz). `valores.leitura` é o lote que trouxe.
+  DA_E6 = %w[chegou_pdf chegou_de_novo_pdf].freeze
+  TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6).freeze
 
   belongs_to :apolice, class_name: 'Carteira::Apolice', inverse_of: :eventos
   belongs_to :user, optional: true

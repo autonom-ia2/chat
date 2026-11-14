@@ -5,3 +5,9 @@
 export { trazerSegurosFonte } from '../fonte/trazerSegurosFonte';
 export { useTrazerSeguros } from './useTrazerSeguros';
 export { default as TrazerSeguros } from '../components/carteira/trazer/TrazerSeguros.vue';
+
+// #2899 (E6.4) — "Trazer por PDFs", na conta que lê PDF: a tela e quem diz se
+// a conta lê (o resumo da carteira, `leituraDePdf`). A demonstração não lê.
+export { default as TrazerPdfs } from '../components/carteira/trazer/pdfs/TrazerPdfs.vue';
+export { default as ComoTrazer } from '../components/carteira/trazer/pdfs/ComoTrazer.vue';
+export { leituraDePdf } from './leituraDePdf';
