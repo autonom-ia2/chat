@@ -33,14 +33,22 @@ class Autonomia::Agents::ModelosDeRamo::Perguntas
   def molde
     negar('perguntas: use perguntas ou blocos, um dos dois') unless CAMPOS.one? { |campo| @dados.key?(campo) }
 
-    itens = @dados.key?('blocos') ? dos_blocos : corridas
-    maximo = Autonomia::Agents::ModelosDeRamo::PERGUNTAS_MAX
+    itens = em_blocos? ? dos_blocos : corridas
     negar("perguntas: passa de #{maximo} itens") if itens.size > maximo
     negar('perguntas: nenhuma vem ligada') if itens.all? { |item| item['tirada'] }
     itens.freeze
   end
 
   private
+
+  def em_blocos?
+    @dados.key?('blocos')
+  end
+
+  # A lista corrida segue no teto de sempre; o teto maior é só do modelo em blocos.
+  def maximo
+    em_blocos? ? Autonomia::Agents::ModelosDeRamo::PERGUNTAS_MAX : Autonomia::Agents::ModelosDeRamo::ITENS_MAX
+  end
 
   def negar(motivo)
     raise Autonomia::Agents::ModelosDeRamo::Formato::Invalido, motivo

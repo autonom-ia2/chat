@@ -6,10 +6,12 @@ import ListaDoRamo from './ListaDoRamo.vue';
 import {
   alternarPergunta,
   blocosDe,
+  comToques,
   contar,
   ligada,
   mudarBloco,
   soltas,
+  toquesEntre,
 } from '../../utils/perguntasEmBlocos';
 
 // #3020 — as perguntas de um agente pronto por ramo, em blocos: o dono abre o bloco e liga ou desliga cada pergunta.
@@ -20,8 +22,10 @@ import {
 //
 // A lista que vale é a do servidor (`itens`), e cada mudança sai como a lista inteira nova (`mudar`). Para o botão
 // responder na hora, a tela mostra uma cópia (`local`) que muda no toque. Enquanto uma mudança está indo (`gravando`),
-// o toque seguinte fica guardado e sai quando ela termina, já com tudo o que a pessoa tocou. Se o servidor recusar, a
-// cópia volta a ser a lista dele.
+// o toque seguinte fica guardado (`tocadas`, só o que ligou ou desligou) e sai quando ela termina, por cima da lista
+// que o servidor devolveu: assim a pergunta que a pessoa acabou de incluir ou editar não se perde. Se o servidor
+// recusar a mudança que ia, os toques guardados caem junto e a cópia volta a ser a lista dele.
+// `pendente` (exposto): há toque guardado. Quem abre a gaveta espera ele sair antes de fechar.
 // Não há botão de salvar: ao lado do título do contador a tela diz "Salvando…" enquanto a mudança vai e "Salvo"
 // quando o servidor guardou (o aviso de "gravou", o segundo valor do `mudar`). O contador fica preso no topo da gaveta:
 // a pessoa rola os blocos sem perder de vista quantas perguntas o cliente dela vai responder.
@@ -41,7 +45,8 @@ const NS = 'AGENTS.JORNADA.RAMOS.CONFIRA.BLOCOS';
 const idBase = useId();
 
 const local = ref(props.itens);
-const pendente = ref(false);
+const tocadas = ref({});
+const pendente = computed(() => Object.keys(tocadas.value).length > 0);
 const salvo = ref(false);
 // Manda a lista e, junto, o aviso de "gravou": só ele acende o "Salvo". `depois`: o aviso de quem pediu (ListaDoRamo).
 const enviar = (lista, depois) => {
@@ -54,26 +59,29 @@ const enviar = (lista, depois) => {
 watch(
   () => props.itens,
   itens => {
-    if (!pendente.value) local.value = itens;
+    local.value = comToques(itens, tocadas.value);
   }
 );
 watch(
   () => props.gravando,
   gravando => {
     if (gravando) return;
-    if (pendente.value) {
-      pendente.value = false;
-      enviar(local.value);
-      return;
-    }
-    local.value = props.itens;
+    const guardou = salvo.value;
+    const havia = pendente.value;
+    const lista = guardou ? comToques(props.itens, tocadas.value) : props.itens;
+    tocadas.value = {};
+    local.value = lista;
+    if (guardou && havia) enviar(lista);
   }
 );
 const mudar = nova => {
+  if (props.gravando) {
+    tocadas.value = { ...tocadas.value, ...toquesEntre(local.value, nova) };
+  }
   local.value = nova;
-  if (props.gravando) pendente.value = true;
-  else enviar(nova);
+  if (!props.gravando) enviar(nova);
 };
+defineExpose({ pendente });
 // '' enquanto a pessoa ainda não mudou nada (ou o servidor recusou a última mudança).
 const estado = computed(() => {
   if (props.gravando || pendente.value) return 'SALVANDO';
@@ -96,7 +104,8 @@ const abrirOuFechar = nome => {
 const idDoBloco = indice => `${idBase}-bloco-${indice}`;
 const ligadasDo = bloco => bloco.perguntas.filter(ligada).length;
 
-// A condição aparece uma vez: a pergunta que segue outra com a mesma condição da de cima não a repete.
+// A condição aparece uma vez: a pergunta que segue outra com a mesma condição da de cima não a repete na tela (o
+// leitor de tela ouve a condição em todas).
 const mostraCondicao = (bloco, indice) => {
   const pergunta = bloco.perguntas[indice];
   if (!pergunta.se) return false;
@@ -208,18 +217,18 @@ const mudarProprias = (novas, aoGravar) =>
         >
           <div v-if="podeMudar" class="flex flex-wrap gap-1 px-1 pt-1">
             <AgenteBotao
-              v-if="ligadasDo(bloco) < bloco.perguntas.length"
               data-ligar-todas
               variante="fantasma"
+              :inativo="ligadasDo(bloco) === bloco.perguntas.length"
               :aria-label="t(`${NS}.LIGAR_TODAS_SR`, { bloco: bloco.nome })"
               @click="mudar(mudarBloco(local, bloco.nome, true))"
             >
               {{ t(`${NS}.LIGAR_TODAS`) }}
             </AgenteBotao>
             <AgenteBotao
-              v-if="ligadasDo(bloco) > 0"
               data-desligar-todas
               variante="fantasma"
+              :inativo="ligadasDo(bloco) === 0"
               :aria-label="t(`${NS}.DESLIGAR_TODAS_SR`, { bloco: bloco.nome })"
               @click="mudar(mudarBloco(local, bloco.nome, false))"
             >
@@ -267,6 +276,9 @@ const mudarProprias = (novas, aoGravar) =>
                     data-condicao
                     class="text-sm text-n-slate-11"
                   >
+                    {{ t(`${NS}.SO_SE`, { condicao: pergunta.se }) }}
+                  </span>
+                  <span v-else-if="pergunta.se" class="sr-only">
                     {{ t(`${NS}.SO_SE`, { condicao: pergunta.se }) }}
                   </span>
                 </span>

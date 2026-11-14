@@ -98,9 +98,18 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
       expect(recusa(documentos: ['Contrato social.'])).to eq(%w[lista_invalida documentos])
       expect(recusa(documentos: muitos.call(21))).to eq(%w[lista_invalida documentos])
       expect(recusa(perguntas: muitos.call(201))).to eq(%w[lista_invalida perguntas])
+      expect(recusa(perguntas: muitos.call(21))).to eq(%w[lista_invalida perguntas])
       expect(recusa(perguntas: [{ id: 'p1', texto: 'Uma?' }, { id: 'p1', texto: 'Outra?' }])).to eq(%w[id_repetido perguntas])
-      # Por último: esta é aceita e troca a lista inteira (o `p1` do modelo deixa de existir).
-      expect(recusa(perguntas: muitos.call(21))).to be_nil
+    end
+
+    it 'no modelo em blocos, aceita a lista inteira do modelo e até 20 perguntas escritas pelo dono' do
+      conversa = conversa_com_modelo(account, 'seguro_condominio')
+      do_modelo = conversa.state[chave_da_marca]['perguntas'].map { |item| item.slice('id', 'texto', 'tirada') }
+      do_dono = ->(quantas) { Array.new(quantas) { |i| { texto: "Minha pergunta #{i}?" } } }
+
+      expect(do_modelo.size).to be > Autonomia::Agents::ModelosDeRamo::ITENS_MAX
+      expect(recusa({ perguntas: do_modelo + do_dono.call(21) }, conversa)).to eq(%w[lista_invalida perguntas])
+      expect(recusa({ perguntas: do_modelo + do_dono.call(20) }, conversa)).to be_nil
     end
 
     it 'recusa texto vazio, que não é texto ou com mais de 300 letras, e tirada que não é verdadeiro ou falso' do

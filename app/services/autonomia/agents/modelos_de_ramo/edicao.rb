@@ -19,7 +19,8 @@
 # não vem do pedido. Ligar e desligar uma pergunta é o mesmo `tirada` de sempre.
 #
 # Validação estrita, e nada é gravado quando algo falha (`Recusada#motivo` e `#campo`): só texto, até 20 itens por
-# lista (200 nas perguntas), até 300 letras por item, a frase no limite do "Incluir". Recusa também a conversa sem modelo (conta sem o
+# lista (nas perguntas, até 200 no total e até 20 escritas pelo dono), até 300 letras por item, a frase no limite do
+# "Incluir". Recusa também a conversa sem modelo (conta sem o
 # pacote `seguros`, flag desligada, a Lia: `sem_modelo`) e, no agente que já começou a atender, o que não muda mais
 # (`agente_ja_comecou`: tudo pela conversa; as ferramentas pelo agente).
 class Autonomia::Agents::ModelosDeRamo::Edicao
@@ -130,8 +131,16 @@ class Autonomia::Agents::ModelosDeRamo::Edicao
       negar('lista_invalida', campo) unless lista_valida?(@mudancas[campo], campo)
 
       atuais = Autonomia::Agents::ModelosDeRamo::Marca.itens(marca, campo).index_by { |atual| atual['id'] }
-      @mudancas[campo].reduce([]) { |prontos, bruto| prontos + [item(campo, bruto, atuais, prontos.pluck('id'))] }
+      itens = @mudancas[campo].reduce([]) { |prontos, bruto| prontos + [item(campo, bruto, atuais, prontos.pluck('id'))] }
+      negar('lista_invalida', campo) if do_dono_demais?(itens)
+      itens
     end
+  end
+
+  # Os 200 das perguntas são para a lista do modelo em blocos. O que o dono escreve (item sem lugar no modelo, e toda a
+  # lista de um modelo sem blocos) segue no teto de sempre.
+  def do_dono_demais?(itens)
+    itens.count { |item| Autonomia::Agents::ModelosDeRamo::Marca.lugar(item).empty? } > Autonomia::Agents::ModelosDeRamo::ITENS_MAX
   end
 
   # `atuais`: id => item que a lista já tem. O lugar da pergunta no modelo em blocos vem dele, nunca do pedido.

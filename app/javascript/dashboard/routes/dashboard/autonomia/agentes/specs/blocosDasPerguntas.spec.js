@@ -1,10 +1,12 @@
 import {
   alternarPergunta,
   blocosDe,
+  comToques,
   contar,
   mudarBloco,
   soltas,
   temBlocos,
+  toquesEntre,
 } from '../utils/perguntasEmBlocos';
 
 // #3020 — as perguntas do agente pronto por ramo, em blocos. A lista é a do servidor; nada aqui a muda no lugar.
@@ -94,5 +96,26 @@ describe('perguntasEmBlocos', () => {
       'p6',
     ]);
     expect(ligadas(mudarBloco(ITENS, 'Endereço', false))).toEqual(['p6']);
+  });
+
+  it('keeps only what was turned on or off, and puts it back over a newer list', () => {
+    const antes = [
+      { id: 'p1', texto: 'Uma?', tirada: false },
+      { id: 'p2', texto: 'Outra?', tirada: true },
+    ];
+    const depois = [
+      { id: 'p1', texto: 'Uma?', tirada: true },
+      { id: 'p2', texto: 'Outra?', tirada: true },
+    ];
+    const toques = toquesEntre(antes, depois);
+    expect(toques).toEqual({ p1: true });
+
+    const nova = [...antes, { id: 'p3', texto: 'Nova?', tirada: false }];
+    expect(comToques(nova, toques)).toEqual([
+      { id: 'p1', texto: 'Uma?', tirada: true },
+      { id: 'p2', texto: 'Outra?', tirada: true },
+      { id: 'p3', texto: 'Nova?', tirada: false },
+    ]);
+    expect(nova[0].tirada).toBe(false);
   });
 });

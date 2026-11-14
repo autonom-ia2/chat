@@ -73,6 +73,22 @@ export const alternarPergunta = (itens, id) => {
   );
 };
 
+// O que ligou ou desligou de `antes` para `depois`: { id: tirada }.
+export const toquesEntre = (antes, depois) => {
+  const eram = new Map(antes.map(item => [item.id, item.tirada]));
+  return Object.fromEntries(
+    depois
+      .filter(item => eram.get(item.id) !== item.tirada)
+      .map(item => [item.id, item.tirada])
+  );
+};
+
+// A lista com os toques ({ id: tirada }) por cima. O resto de cada item fica como a lista trouxe.
+export const comToques = (itens, toques) =>
+  itens.map(item =>
+    item.id in toques ? { ...item, tirada: toques[item.id] } : item
+  );
+
 // Liga ou desliga todas as perguntas de um bloco.
 export const mudarBloco = (itens, nome, ligar) =>
   itens.map(item => (item.bloco === nome ? { ...item, tirada: !ligar } : item));

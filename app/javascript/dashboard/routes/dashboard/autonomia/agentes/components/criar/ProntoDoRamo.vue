@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteGaveta from '../AgenteGaveta.vue';
@@ -43,6 +43,26 @@ const DOCUMENTOS = 'documentos';
 const FERRAMENTAS = 'ferramentas';
 
 const aberta = ref(null);
+// A gaveta dos blocos guarda o toque feito enquanto a mudança anterior ainda vai (`pendente`). Fechar nessa hora
+// desmontaria a gaveta com o toque dentro, e a pessoa teria visto ligar o que nunca foi gravado: a gaveta espera o
+// toque sair e fecha sozinha.
+const blocos = ref(null);
+const querFechar = ref(false);
+const podeFechar = () => {
+  if (!blocos.value?.pendente) return true;
+  querFechar.value = true;
+  return false;
+};
+const fechar = () => {
+  querFechar.value = false;
+  aberta.value = null;
+};
+watch(
+  () => blocos.value?.pendente,
+  pendente => {
+    if (!pendente && querFechar.value) fechar();
+  }
+);
 const restam = itens => itens.filter(item => !item.tirada).length;
 const emBlocos = computed(() => temBlocos(props.perguntas));
 
@@ -158,13 +178,20 @@ const gaveta = computed(() => {
       <slot name="ferramentas" />
     </AgenteGaveta>
 
-    <AgenteGaveta v-if="gaveta" :titulo="gaveta.titulo" @fechar="aberta = null">
+    <AgenteGaveta
+      v-if="gaveta"
+      :titulo="gaveta.titulo"
+      :pode-fechar="podeFechar"
+      guarda-no-x
+      @fechar="fechar"
+    >
       <div class="flex flex-col gap-4">
         <p class="m-0 text-sm leading-relaxed text-n-slate-11">
           {{ gaveta.nota }}
         </p>
         <PerguntasEmBlocos
           v-if="gaveta.lista === PERGUNTAS && emBlocos"
+          ref="blocos"
           :itens="gaveta.itens"
           :nome="nome"
           :rotulo-incluir="gaveta.incluir"

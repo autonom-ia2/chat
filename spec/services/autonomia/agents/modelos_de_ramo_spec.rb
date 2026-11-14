@@ -147,7 +147,8 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
     end
 
     it 'recusa texto acima do limite e lista longa demais' do
-      longa = dados.merge('perguntas' => Array.new(described_class::PERGUNTAS_MAX + 1) { |i| "Pergunta #{i}?" })
+      # A lista corrida segue no teto de 20; o de 200 é só do modelo em blocos.
+      longa = dados.merge('perguntas' => Array.new(described_class::ITENS_MAX + 1) { |i| "Pergunta #{i}?" })
       comprida = dados.merge('documentos' => ['a' * (described_class::ITEM_MAX + 1)])
       frase = dados.merge('ja_vem' => [{ 'fonte' => 'cnpj', 'usar_quando' => 'a' * 501 }])
 
@@ -181,7 +182,8 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
         sem_lista.merge('blocos' => [bloco.call([ligada.merge('segue' => true)])]),                   # a primeira segue
         sem_lista.merge('blocos' => [bloco.call([ligada, { 'texto' => 'Qual?' }, { 'texto' => 'E?', 'segue' => true, 'ligada' => true }])]),
         sem_lista.merge('blocos' => [bloco.call([ligada.merge('ordem' => 2)])]),                      # campo desconhecido
-        sem_lista.merge('blocos' => [bloco.call([ligada.merge('ligada' => 'sim')])])                  # não é sim ou não
+        sem_lista.merge('blocos' => [bloco.call([ligada.merge('ligada' => 'sim')])]),                 # não é sim ou não
+        sem_lista.merge('blocos' => [bloco.call([ligada] * (described_class::PERGUNTAS_MAX + 1))])    # passa de 200
       ]
 
       invalidos.each do |invalido|

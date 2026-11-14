@@ -131,9 +131,13 @@ describe('PerguntasEmBlocos', () => {
     await wrapper.setProps({ gravando: true });
     await pergunta(wrapper, 'p4').trigger('click');
     expect(wrapper.emitted('mudar')).toHaveLength(1);
+    expect(wrapper.vm.pendente).toBe(true);
 
-    await wrapper.setProps({ gravando: false });
+    const [primeira, aoGravar] = wrapper.emitted('mudar')[0];
+    aoGravar();
+    await wrapper.setProps({ itens: primeira, gravando: false });
 
+    expect(wrapper.vm.pendente).toBe(false);
     expect(wrapper.emitted('mudar')).toHaveLength(2);
     expect(ligadas(wrapper.emitted('mudar')[1][0])).toEqual([
       'p1',
@@ -142,6 +146,45 @@ describe('PerguntasEmBlocos', () => {
       'p4',
       'p5',
     ]);
+  });
+
+  it('a tap while a new question of the owner is being saved does not lose that question', async () => {
+    const wrapper = montar();
+    const suas = wrapper.get('[data-suas-perguntas]');
+    await suas.get('[data-incluir-item]').trigger('click');
+    await suas.get('[data-incluindo] textarea').setValue('Tem piscina?');
+    await suas.get('[data-confirmar-inclusao]').trigger('click');
+    await wrapper.setProps({ gravando: true });
+
+    await pergunta(wrapper, 'p1').trigger('click');
+
+    const [enviada, aoGravar] = wrapper.emitted('mudar')[0];
+    const doServidor = enviada.map(item =>
+      item.id ? item : { ...item, id: 'p6' }
+    );
+    aoGravar();
+    await wrapper.setProps({ itens: doServidor, gravando: false });
+
+    const [segunda] = wrapper.emitted('mudar')[1];
+    expect(segunda.find(item => item.id === 'p6')).toEqual({
+      id: 'p6',
+      texto: 'Tem piscina?',
+      tirada: false,
+    });
+    expect(segunda.find(item => item.id === 'p1').tirada).toBe(true);
+  });
+
+  it('when the server refuses, the taps kept while it went are dropped too', async () => {
+    const wrapper = montar();
+
+    await pergunta(wrapper, 'p1').trigger('click');
+    await wrapper.setProps({ gravando: true });
+    await pergunta(wrapper, 'p2').trigger('click');
+    await wrapper.setProps({ gravando: false });
+
+    expect(wrapper.emitted('mudar')).toHaveLength(1);
+    expect(wrapper.get('[data-ligadas]').text()).toBe('3');
+    expect(wrapper.vm.pendente).toBe(false);
   });
 
   it('when the server refuses, the screen goes back to the list it has', async () => {
@@ -159,14 +202,24 @@ describe('PerguntasEmBlocos', () => {
     const wrapper = montar();
     const endereco = bloco(wrapper, 'Endereço');
 
-    expect(endereco.find('[data-ligar-todas]').exists()).toBe(false);
+    expect(endereco.get('[data-ligar-todas]').attributes('aria-disabled')).toBe(
+      'true'
+    );
+    await endereco.get('[data-ligar-todas]').trigger('click');
+    expect(wrapper.emitted('mudar')).toBeUndefined();
+
     await endereco.get('[data-desligar-todas]').trigger('click');
 
     expect(ligadas(wrapper.emitted('mudar')[0][0])).toEqual(['p5']);
     expect(endereco.get('[data-ligadas-do-bloco]').text()).toBe(
       'Ligadas: 0 de 2'
     );
-    expect(endereco.find('[data-ligar-todas]').exists()).toBe(true);
+    expect(
+      endereco.get('[data-ligar-todas]').attributes('aria-disabled')
+    ).toBeUndefined();
+    expect(
+      endereco.get('[data-desligar-todas]').attributes('aria-disabled')
+    ).toBe('true');
   });
 
   it('keeps the questions the owner wrote at the end, and a new one leaves after the ones of the model', async () => {
