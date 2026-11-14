@@ -2768,13 +2768,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - nav_target: `relacionamentos_empresa`
 
 ### Trazer minha lista de pessoas (planilha)
-- intent: Como importo meus contatos?; Como subo uma planilha de clientes?; Tenho uma lista no Excel, como coloco aqui?; Trouxe a lista errada, como desfaço?; Onde vejo as listas que já trouxe?
+- intent: Como importo meus contatos?; Como subo uma planilha de clientes?; Tenho uma lista no Excel, como coloco aqui?; Onde vejo as listas que já trouxe?
 - onde_fica: Relacionamentos > botão Trazer minha lista (no topo da lista de pessoas)
 - rota: `relacionamentos_trazer` - `/app/accounts/:accountId/relacionamentos/trazer`
-- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
-- pre_requisitos: telas novas de Relacionamentos ligadas na conta; poder trazer contatos; uma planilha Excel ou CSV com nome e telefone ou e-mail
-- passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha (Excel ou CSV); 3. Responda às perguntas, uma por vez (por exemplo, se essas pessoas já são clientes e de quem é o telefone); 4. Confira: quantas pessoas achei, as linhas que precisam de você e o que vou guardar de cada coluna; 5. Conserte ou deixe de fora as linhas com problema; 6. Clique em Trazer e acompanhe a barra até o Pronto; 7. Para voltar atrás, use Desfazer na lista que aparece embaixo da tela.
-- gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; a prévia do Desfazer mostra quem sai, quem fica e o que volta ao valor de antes; Desfazer não tem prazo; pessoa nova que já conversou ou recebeu campanha não é apagada no Desfazer; planilha sem nome e sem telefone ou e-mail não é aceita e a tela diz o que falta.
+- gate: feature flag `relacionamentos_novo`; papel `administrator` ou `contact_manage`
+- pre_requisitos: telas novas de Relacionamentos ligadas na conta; poder trazer contatos; uma planilha Excel ou CSV com nome e telefone (celular, com o DDD junto do número) ou e-mail
+- passos: 1. Abra Relacionamentos e clique em Trazer minha lista; 2. Envie a planilha (Excel ou CSV); 3. Responda às perguntas, uma por vez (por exemplo, se essas pessoas já são clientes e de quem é o telefone). Se só algumas são clientes, você aponta a coluna e escolhe quais valores dela querem dizer cliente: nada vem marcado, quem decide é você; 4. Confira: quantas pessoas achei, as linhas que precisam de você e o que vou guardar de cada coluna; 5. Conserte ou deixe de fora as linhas com problema; 6. Clique em Trazer e acompanhe a barra até o Pronto; 7. A lista trazida aparece embaixo da tela, com a data e quantas pessoas vieram.
+- gotchas: quem já estava aqui não é duplicado, só ganha o que faltava; nada entra antes do Trazer; pode sair da tela enquanto a lista entra, ela aparece embaixo quando terminar; desfazer uma lista trazida ainda não existe: depois de trazida, não há como tirar de uma vez quem veio na planilha; o telefone precisa vir com o DDD junto do número, na mesma coluna: DDD em outra coluna não é juntado, o número sem DDD vira linha para você conferir; a pessoa que também tem e-mail entra só com o e-mail, a tela avisa quantas são antes de você trazer, e a planilha corrigida, enviada de novo, completa o telefone delas; planilha sem telefone nem e-mail que dê para usar não é aceita e a tela diz o que falta.
 - nav_target: `relacionamentos_trazer`
 
 ### Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)

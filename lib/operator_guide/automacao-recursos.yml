@@ -713,6 +713,14 @@ fora:
       - relacionamentos/cards
       - relacionamentos/etiqueta
   - motivo: >-
+      Trazer minha lista (#2896): a pessoa envia a planilha, confere o que foi lido e traz pela tela. Enviar e trazer
+      gravam em lote, num job; colunas, respostas e linhas só valem dentro dessa conferência. No Guia, as nove escritas
+      pedem confirmação e não têm desfazer (Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA).
+    recursos:
+      - relacionamentos/trazer/leituras
+      - relacionamentos/trazer/colunas
+      - relacionamentos/trazer/linhas
+  - motivo: >-
       Carteira de seguros (#2897): corrigir um seguro, marcar como cancelado e voltar a ativo mudam o dado de um cliente
       que a corretora confere com a apólice na mão; nesta entrega é ação de pessoa, na gaveta do seguro, não passo de
       automação. Guardar e tirar o PDF nem chegam ao catálogo: só se fazem na tela (Acoes::SO_NA_TELA).

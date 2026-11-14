@@ -40,6 +40,25 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(described_class::SEM_DESFAZER - para(admin).catalogo).to be_empty
     end
 
+    # #2896: o caderno do desfazer só enxerga o que passa por callback de model, e a conferência de "Trazer minha
+    # lista" grava com update_all, anexo e job. Toda escrita dela pede confirmação.
+    it 'toda escrita de "Trazer minha lista" pede confirmação', :aggregate_failures do
+      do_trazer = [
+        'POST relacionamentos/trazer/leituras', 'POST relacionamentos/trazer/leituras/:id/trazer',
+        'PATCH relacionamentos/trazer/leituras/:id/respostas',
+        'PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice', 'PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice',
+        'PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha', 'PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha',
+        'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora',
+        'POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir'
+      ]
+
+      expect(Relacionamentos::Trazer::Trazer::SEM_DESFAZER_DO_GUIA).to match_array(do_trazer)
+      expect(described_class::SEM_DESFAZER).to include(*do_trazer)
+      expect(do_trazer.map { |acao| para(admin).desfazivel?(acao) }).to eq([false] * 9)
+      # Não sobra escrita do Trazer no catálogo sem confirmação.
+      expect(para(admin).catalogo.select { |acao| acao.include?(' relacionamentos/trazer/') }).to match_array(do_trazer)
+    end
+
     # #1809: "Excluir para sempre" da Lixeira do e-mail apaga a conversa num job; o Guia pede confirmação.
     it 'excluir para sempre da Lixeira do e-mail pede confirmação, mover de pasta não' do
       expect(para(admin).desfazivel?('DELETE conversa_canal/pastas_do_email/:conversation_id')).to be(false)

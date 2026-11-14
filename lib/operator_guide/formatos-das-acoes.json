@@ -431,8 +431,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:80",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:87",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": true
   },
@@ -4903,9 +4903,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#columns",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:40",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:42",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:45",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:47",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -4916,9 +4916,9 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#companies",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:53",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:58",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:59",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -8381,6 +8381,63 @@
       "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:id/respostas": {
+    "campos": {
+      "clientes": {},
+      "coluna_cliente": {},
+      "telefone": {},
+      "valores_cliente": {
+        "campos": {
+          "chaves": {
+            "tipo": "lista"
+          },
+          "modo": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#respostas",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:23",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:25",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {},
+      "nome": {},
+      "para_que_serve": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:8",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:11",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:9"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH relacionamentos/trazer/leituras/:leitura_id/linhas/:linha": {
+    "campos": {
+      "ficar_com": {},
+      "valor": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
     ],
     "sem_corpo": false
   },
@@ -14225,9 +14282,9 @@
     "controller": "api/v1/accounts/contact_imports#create",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:28",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:108",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:29"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:33",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:119",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:34"
     ],
     "sem_corpo": false
   },
@@ -14235,8 +14292,8 @@
     "completo": true,
     "controller": "api/v1/accounts/contact_imports#confirm",
     "origem": [
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:64",
-      "app/controllers/api/v1/accounts/contact_imports_controller.rb:102"
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:69",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:109"
     ],
     "sem_corpo": true
   },
@@ -20693,6 +20750,49 @@
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
     "sem_corpo": false
+  },
+  "POST relacionamentos/trazer/leituras": {
+    "campos": {
+      "arquivo": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#create",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:12",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:13"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/trazer/leituras/:id/trazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/leituras#trazer",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:35",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/leituras_controller.rb:36"
+    ],
+    "sem_corpo": true
+  },
+  "POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/deixar_de_fora": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#deixar_de_fora",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:12",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
+    ],
+    "sem_corpo": true
+  },
+  "POST relacionamentos/trazer/leituras/:leitura_id/linhas/:linha/reabrir": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#reabrir",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:17",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
+    ],
+    "sem_corpo": true
   },
   "POST saml_settings": {
     "campos": {
@@ -28464,6 +28564,38 @@
     "origem": [
       "app/controllers/api/v1/accounts/relacionamentos/seguros/renovacoes_controller.rb:17",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/trazer/leituras/:leitura_id/colunas/:indice": {
+    "campos": {
+      "destino": {},
+      "nome": {},
+      "para_que_serve": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/colunas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:8",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:11",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/colunas_controller.rb:9"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/trazer/leituras/:leitura_id/linhas/:linha": {
+    "campos": {
+      "ficar_com": {},
+      "valor": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/trazer/linhas#update",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:7",
+      "app/controllers/api/v1/accounts/relacionamentos/trazer/linhas_controller.rb:24"
     ],
     "sem_corpo": false
   },

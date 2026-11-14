@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import { QUEM_TRAZ_LISTA } from '../trazer/quemTraz';
 
 // As mesmas regras da barra de ações da lista de contatos de hoje
 // (contacts/components/ContactsBulkActionBar.vue) e do servidor (ContactPolicy):
@@ -9,8 +10,6 @@ import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/us
 // `contact_delete`.
 export const QUEM_EDITA_CONTATO = ['administrator', 'agent', 'contact_manage'];
 const QUEM_APAGA_CONTATO = ['administrator', 'contact_delete'];
-// Trazer uma lista é importar contatos: a regra de ContactPolicy#import?.
-const QUEM_TRAZ_LISTA = ['administrator', 'contact_manage'];
 
 // #2894 — quem vê "Criar cards", "Etiqueta" e "Apagar" na barra de ação em
 // grupo da lista. Nenhuma regra nova: são as que o painel já usa. Esconder é só
@@ -21,8 +20,9 @@ const QUEM_TRAZ_LISTA = ['administrator', 'contact_manage'];
 //    CRM não basta: o servidor recusaria e a tela ofereceria um "tentar de
 //    novo" que nunca funciona;
 //  - Etiqueta: quem pode editar contato;
-//  - Apagar: quem pode apagar contato;
-//  - Trazer minha lista: quem pode importar contatos.
+//  - Apagar: quem pode apagar contato.
+// #2896 — e quem vê "Trazer minha lista" no herói: quem pode importar contato
+// (a mesma regra da rota `relacionamentos_trazer` e do servidor).
 export const usePermissoesDaLista = () => {
   const globalConfig = useMapGetter('globalConfig/get');
   const { canViewCrm, canManageCards } = useCrmPermissions();

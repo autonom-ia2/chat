@@ -7,10 +7,15 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
   BOOLEAN_VALUES = %w[true false].freeze
   PROBLEM_ROWS_SHOWN = 20
   RESULTS_PER_PAGE = 25
+  # Trazer minha lista (#2896): the marked import changes its columns and companies only on its own screen, which
+  # reads the sheet again under its own rules (Relacionamentos::Trazer::TrocarDestino and the answers).
+  NOT_FOR_TRAZER = { 'columns' => 'campaign_import.column_choice_not_available',
+                     'companies' => 'campaign_import.companies_choice_not_available' }.freeze
 
   before_action :ensure_contact_import_enabled
   before_action -> { authorize(Contact, :import?) }
   before_action :fetch_contact_import, except: [:index, :create]
+  before_action :refuse_trazer_draft_change, only: [:columns, :companies]
 
   # GET /contact_imports?page= — Contatos > Importações (#2771, decision 15): the account's contact imports,
   # from a file or from the automation step "para cada item", newest first. Never Públicos or campaign bases.
@@ -62,6 +67,8 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
 
   # POST /contact_imports/:id/confirm — "Importar": contacts, companies and attributes are written; a writing that broke goes on (#2921).
   def confirm
+    return confirm_trazer if ContactImports::Trazer::Conferencia.marcada?(@campaign_import) && !@campaign_import.import_resumable?
+
     queued = false
     @campaign_import.with_lock do
       @campaign_import.reload
@@ -102,6 +109,10 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
     @campaign_import = Current.account.campaign_imports.contact_imports.includes(:user, :campaign_import_labels).find(params[:id])
   end
 
+  def refuse_trazer_draft_change
+    render_unprocessable(NOT_FOR_TRAZER.fetch(action_name)) if ContactImports::Trazer::Conferencia.marcada?(@campaign_import)
+  end
+
   def build_contact_import(file)
     Current.account.campaign_imports.create!(
       user: Current.user, status: :uploaded, mode: 'single_label', batch_count: 1,
@@ -109,6 +120,14 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
       source_filename: file.original_filename, source_content_type: file.content_type, source_byte_size: file.size,
       source_format: File.extname(file.original_filename.to_s).delete('.').downcase
     )
+  end
+
+  # Trazer minha lista (#2896): the marked import never skips the closing of its review. Same answers as `confirm`.
+  def confirm_trazer
+    trazer = Relacionamentos::Trazer::Trazer.new(@campaign_import).call
+    return render_unprocessable(trazer.erro_da_rota_antiga) if trazer.erro
+
+    render_import
   end
 
   def render_import(status: :ok)

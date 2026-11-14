@@ -10,12 +10,15 @@ import { larguraDaBarra } from '../../trazer/larguraDaBarra';
 // a frase "pode fechar esta tela". Quando termina: "180 pessoas chegaram e 15
 // foram completadas." (a verdade, não o total), a ação principal (Ver as
 // pessoas) e a discreta (Trazer outra lista).
+// #2896 — a linha "Você pode desfazer quando quiser, aqui embaixo." só aparece
+// quando a conta tem o desfazer (`temDesfazer`, que vem da fonte).
 const props = defineProps({
   trazendo: { type: Boolean, default: false },
   porcentagem: { type: Number, default: 0 },
   novas: { type: Number, default: 0 },
   completadas: { type: Number, default: 0 },
   comErro: { type: Boolean, default: false },
+  temDesfazer: { type: Boolean, default: false },
 });
 const emit = defineEmits(['ver', 'outra', 'tentar']);
 
@@ -109,6 +112,7 @@ const frase = computed(() => {
       </template>
     </HeroiEscuro>
     <p
+      v-if="temDesfazer"
       data-relacionamentos="pronto-sossego"
       class="flex items-center gap-2 m-0 text-base text-n-slate-11"
     >

@@ -59,6 +59,12 @@ export const telefoneCompleto = (digitos, pais) => {
   return numero?.isValid() ? numero.number : '';
 };
 
+// O número como a pessoa escreveu, com o código do país na frente ("1198" no
+// Brasil → "+551198"), mesmo sem ser um número válido: para a tela em que quem
+// confere o número é o servidor (#2896).
+export const telefoneComoEscrito = (digitos, pais) =>
+  digitos ? `+${getCountryCallingCode(pais)}${digitos}` : '';
+
 // Número com + (contato da base, colado ou digitado): separa país e número
 // assim que o código do país fica claro ("+55" já é Brasil). Enquanto não fica
 // (só "+", "+1" de vários países, "+800" sem país), devolve o texto como está

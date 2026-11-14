@@ -1,10 +1,17 @@
 import { esquecerMemoriaDaDemo, trazerFonte } from '../../fonte/trazerFonte';
 import { DURACAO_DA_TRAZIDA_MS } from '../../demo/trazer';
+import { agendaComRecuo } from '../../trazer/consultaComRecuo';
 
-// A fonte de "Trazer minha lista" (#2894): demonstração e fonte real pendente.
+// A fonte de "Trazer minha lista" (#2894): a demonstração. A fonte real (#2896)
+// está em trazerFonteReal.spec.js; aqui só o que ela ainda não faz. O que a
+// demonstração faz como o servidor está em demonstracaoLinhas.spec.js e
+// demonstracaoColunas.spec.js; a forma do que ela devolve, em
+// paridadeDaDemonstracao.spec.js.
 const DIA = 24 * 60 * 60 * 1000;
 const AGORA = Date.UTC(2026, 10, 11, 15);
 const carregarDemo = () => import('../../demo/trazer.js');
+// As colunas da planilha de exemplo, pelo índice.
+const COLUNA = { CEL: 1, SITUACAO: 5, ANIVERSARIO: 6 };
 
 const fonteDoRelogio = (relogio, estado = 'cheio') =>
   trazerFonte({
@@ -22,58 +29,60 @@ const fonteComRelogio = (estado = 'cheio') => {
 
 beforeEach(() => esquecerMemoriaDaDemo());
 
-describe('fonte real (pendente)', () => {
-  it.each([
-    'ler',
-    'responder',
-    'consertar',
-    'deixarDeFora',
-    'reabrir',
-    'trocarDestino',
-    'trazer',
-    'andamento',
-    'historico',
-    'previaDoDesfazer',
-    'desfazer',
-  ])('%s diz FONTE_REAL_PENDENTE', async metodo => {
-    const fonte = trazerFonte({ demo: null });
-    expect(fonte.usaDemo).toBe(false);
-    await expect(fonte[metodo]('x')).rejects.toMatchObject({
-      name: 'FONTE_REAL_PENDENTE',
-    });
-  });
+describe('fonte real (o que fica para as próximas fatias)', () => {
+  it.each(['previaDoDesfazer', 'desfazer'])(
+    '%s diz FONTE_REAL_PENDENTE',
+    async metodo => {
+      const fonte = trazerFonte({ demo: null });
+      expect(fonte.usaDemo).toBe(false);
+      await expect(fonte[metodo]('x')).rejects.toMatchObject({
+        name: 'FONTE_REAL_PENDENTE',
+      });
+    }
+  );
 
   it('sem módulo de demonstração (produção) volta à fonte real', async () => {
     const fonte = trazerFonte({ demo: 'cheio', carregarDemo: null });
     expect(fonte.usaDemo).toBe(false);
-    await expect(fonte.ler()).rejects.toMatchObject({
+    expect(fonte.temDesfazer).toBe(false);
+    await expect(fonte.desfazer('x')).rejects.toMatchObject({
       name: 'FONTE_REAL_PENDENTE',
     });
   });
 });
 
 describe('ler', () => {
-  it('qualquer planilha devolve a leitura de 200 pessoas com 5 problemas', async () => {
+  it('qualquer planilha devolve a leitura de 203 pessoas com 8 problemas', async () => {
     const { fonte } = fonteComRelogio();
     const leitura = await fonte.ler({ name: 'minha-lista.csv' });
     expect(leitura.arquivo).toBe('minha-lista.csv');
     expect(leitura.resumo).toEqual({
-      total: 200,
+      total: 203,
       novas: 180,
       completadas: 15,
-      comProblema: 5,
+      comProblema: 8,
+      juntadas: 3,
+      semTelefone: 0,
+      // A conta de quantas entram, que na demonstração a própria demo faz.
+      entram: 195,
+      // Ninguém é cliente até a pessoa dizer quem é (E3).
+      clientes: 0,
     });
-    expect(leitura.problemas).toHaveLength(5);
+    expect(leitura.problemasTotal).toBe(8);
+    expect(leitura.problemas).toHaveLength(8);
     expect(leitura.problemas.map(p => p.tipo)).toEqual([
       'telefone',
       'email',
       'nome',
+      'telefone',
+      'formula',
+      'duplicada',
       'duplicada',
       'sem_contato',
     ]);
     expect(leitura.exemplos).toHaveLength(3);
     expect(leitura.perguntas.map(p => p.id)).toEqual(['clientes', 'telefone']);
-    expect(leitura.colunas.find(c => c.duvidosa).nome).toBe('Fone 2');
+    expect(leitura.colunas.find(c => c.duvidosa).nome).toBe('Cel');
   });
 
   it('a planilha de exemplo (sem arquivo) tem nome próprio', async () => {
@@ -85,7 +94,7 @@ describe('ler', () => {
     const { fonte } = fonteComRelogio();
     const primeira = await fonte.ler(null);
     const segunda = await fonte.ler(null);
-    expect({ ...primeira, id: '' }).toEqual({ ...segunda, id: '' });
+    expect({ ...primeira, id: 0 }).toEqual({ ...segunda, id: 0 });
     expect(primeira.id).not.toBe(segunda.id);
   });
 
@@ -100,36 +109,42 @@ describe('ler', () => {
 });
 
 describe('escritas na leitura', () => {
-  it('responder muda a coluna duvidosa e marca os exemplos', async () => {
+  it('responder tira a dúvida da coluna e marca os exemplos', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
     const nova = await fonte.responder(id, {
       clientes: 'sim_todas',
-      telefone: 'da_empresa',
+      telefone: 'da_pessoa',
     });
-    const fone2 = nova.colunas.find(c => c.nome === 'Fone 2');
-    expect(fone2).toMatchObject({
-      destino: 'telefone_da_empresa',
-      duvidosa: false,
-    });
+    const cel = nova.colunas.find(c => c.nome === 'Cel');
+    expect(cel.destino).toBe('telefone');
+    expect(cel).not.toHaveProperty('duvidosa');
     expect(nova.exemplos.every(e => e.cliente)).toBe(true);
   });
 
-  it('"Algumas" deixa o selo só em quem a coluna diz que é cliente', async () => {
+  // E3 — a coluna não diz sozinha quem é cliente: marcar a coluna faz a
+  // planilha ser lida de novo, e o selo só aparece em quem tem um valor que a
+  // pessoa marcou.
+  it('"Algumas" deixa o selo só em quem tem o valor que a pessoa marcou', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
-    const nova = await fonte.responder(id, {
+    const respostas = {
       clientes: 'algumas',
-      colunaCliente: 'Situação',
-      telefone: 'nao_usar',
-    });
-    expect(nova.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
-    expect(nova.colunas.find(c => c.nome === 'Situação').destino).toBe(
+      colunaCliente: COLUNA.SITUACAO,
+      telefone: 'da_pessoa',
+    };
+    const lida = await fonte.responder(id, respostas);
+    expect(lida.colunas.find(c => c.nome === 'Situação').destino).toBe(
       'cliente'
     );
-    expect(nova.colunas.find(c => c.nome === 'Fone 2').destino).toBe(
-      'nao_guardar'
-    );
+    expect(lida.exemplos.some(e => e.cliente)).toBe(false);
+    const dosValores = lida.perguntas.find(p => p.id === 'valores_cliente');
+    const { chave } = dosValores.valores.find(v => v.valor === 'Cliente');
+    const nova = await fonte.responder(id, {
+      ...respostas,
+      valores_cliente: { modo: 'valores', chaves: [chave] },
+    });
+    expect(nova.exemplos.map(e => e.cliente)).toEqual([true, false, true]);
   });
 
   it('"Ainda não" não marca ninguém', async () => {
@@ -145,7 +160,7 @@ describe('escritas na leitura', () => {
   it('consertar guarda a linha e deixarDeFora tira a linha', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
-    await fonte.consertar(id, 14, '+5511973800014');
+    await fonte.consertar(id, 14, '(11) 97380-0014');
     const nova = await fonte.deixarDeFora(id, 62);
     const por = linha => nova.problemas.find(p => p.linha === linha);
     expect(por(14)).toMatchObject({
@@ -159,18 +174,48 @@ describe('escritas na leitura', () => {
   it('trocarDestino muda só a coluna pedida', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
-    const nova = await fonte.trocarDestino(id, 'Aniversário', 'nao_guardar');
+    const nova = await fonte.trocarDestino(
+      id,
+      COLUNA.ANIVERSARIO,
+      'nao_guardar'
+    );
     expect(nova.colunas.find(c => c.nome === 'Aniversário').destino).toBe(
       'nao_guardar'
     );
     expect(nova.colunas.find(c => c.nome === 'Cel').destino).toBe('telefone');
   });
 
+  // #2896, Fatia 2 — a informação nova guarda o nome do campo e o "para que
+  // serve", no mesmo formato do servidor.
+  it('trocarDestino para informação nova guarda o campo; outro destino o tira', async () => {
+    const { fonte } = fonteComRelogio();
+    const { id } = await fonte.ler(null);
+    const campo = { nome: 'Nascimento', para_que_serve: 'dia do aniversário' };
+    const nova = await fonte.trocarDestino(
+      id,
+      COLUNA.ANIVERSARIO,
+      'informacao',
+      campo
+    );
+    expect(nova.colunas.find(c => c.nome === 'Aniversário')).toMatchObject({
+      destino: 'informacao',
+      campo,
+    });
+    const fora = await fonte.trocarDestino(
+      id,
+      COLUNA.ANIVERSARIO,
+      'nao_guardar'
+    );
+    expect(
+      fora.colunas.find(c => c.nome === 'Aniversário').campo
+    ).toBeUndefined();
+  });
+
   it('devolve cópia: mexer no resultado não muda a próxima leitura', async () => {
     const { fonte } = fonteComRelogio();
     const lida = await fonte.ler(null);
     lida.problemas[0].estado = 'guardado';
-    const nova = await fonte.trocarDestino(lida.id, 'Cel', 'telefone');
+    const nova = await fonte.trocarDestino(lida.id, COLUNA.CEL, 'telefone');
     expect(nova.problemas[0].estado).toBe('aberto');
   });
 
@@ -183,14 +228,21 @@ describe('escritas na leitura', () => {
 });
 
 describe('historico', () => {
-  it('cheio traz três listas antigas: duas prontas (uma bem antiga) e uma desfeita', async () => {
+  it('cheio traz quatro listas antigas: duas prontas, uma desfeita e uma que parou no meio', async () => {
     const { fonte } = fonteComRelogio('cheio');
     const listas = await fonte.historico();
     expect(listas.map(l => l.situacao)).toEqual([
       'pronto',
       'desfeito',
       'pronto',
+      'falhou',
     ]);
+    // Só a que parou no meio tem como continuar.
+    expect(listas.map(l => l.podeTentar)).toEqual([false, false, false, true]);
+    // Da mais nova para a mais antiga, como o servidor entrega.
+    expect(listas.map(l => l.quando)).toEqual(
+      [...listas.map(l => l.quando)].sort((a, b) => b - a)
+    );
     expect(listas[0]).toMatchObject({
       arquivo: 'Clientes de setembro.xlsx',
       total: 132,
@@ -236,7 +288,7 @@ describe('trazer e andamento', () => {
     });
   });
 
-  it('sobe de 0 a 100 em cerca de 6 segundos e termina pronto', async () => {
+  it('sobe de 0 a 100 em 17 segundos e termina pronto', async () => {
     const { fonte, relogio } = fonteComRelogio();
     const { trazidaId } = await trazerUma(fonte);
     expect(await fonte.andamento(trazidaId)).toMatchObject({
@@ -258,10 +310,55 @@ describe('trazer e andamento', () => {
     });
   });
 
+  // A tela pergunta pelo andamento com a espera crescendo
+  // (trazer/consultaComRecuo.js). A demonstração dura o bastante para a barra
+  // andar aos poucos nessas consultas, e não em dois saltos.
+  describe('nas consultas que a tela faz', () => {
+    const CONSULTAS = 6;
+    // Quanto tempo depois do começo cai cada consulta, pela agenda da tela.
+    const temposDasConsultas = () => {
+      vi.useFakeTimers();
+      const inicio = Date.now();
+      const agenda = agendaComRecuo();
+      const tempos = [0];
+      const consultar = () => {
+        tempos.push(Date.now() - inicio);
+        if (tempos.length < CONSULTAS) agenda.agendar(consultar);
+      };
+      agenda.agendar(consultar);
+      vi.runAllTimers();
+      vi.useRealTimers();
+      return tempos;
+    };
+
+    it('a barra passa por 0, 8, 22, 41 e 71 e termina na sexta consulta', async () => {
+      const tempos = temposDasConsultas();
+      expect(tempos).toEqual([0, 1500, 3750, 7125, 12125, 17125]);
+      const { fonte, relogio } = fonteComRelogio();
+      const { trazidaId } = await trazerUma(fonte);
+      const vistos = await tempos.reduce(async (anteriores, tempo) => {
+        const ate = await anteriores;
+        relogio.agora = AGORA + tempo;
+        return [...ate, await fonte.andamento(trazidaId)];
+      }, Promise.resolve([]));
+      expect(vistos.map(visto => visto.porcentagem)).toEqual([
+        0, 8, 22, 41, 71, 100,
+      ]);
+      expect(vistos.map(visto => visto.situacao)).toEqual([
+        'trazendo',
+        'trazendo',
+        'trazendo',
+        'trazendo',
+        'trazendo',
+        'pronto',
+      ]);
+    });
+  });
+
   it('o total conta as linhas consertadas e tira as deixadas de fora', async () => {
     const { fonte } = fonteComRelogio();
     const { id } = await fonte.ler(null);
-    await fonte.consertar(id, 14, '+5511973800014');
+    await fonte.consertar(id, 14, '(11) 97380-0014');
     await fonte.consertar(id, 37, 'rita@exemplo.com.br');
     await fonte.deixarDeFora(id, 62);
     const { trazidaId } = await fonte.trazer(id);
@@ -281,6 +378,53 @@ describe('trazer e andamento', () => {
     const { fonte } = fonteComRelogio();
     await expect(fonte.andamento('nada')).rejects.toMatchObject({
       name: 'LISTA_NAO_ENCONTRADA',
+    });
+  });
+});
+
+// #2896 — a lista que parou no meio, em demonstração: "Tentar de novo" faz ela
+// voltar a ser trazida e terminar, como no servidor.
+describe('tentar de novo (lista que parou no meio)', () => {
+  const aQueFalhou = async fonte =>
+    (await fonte.historico()).find(l => l.situacao === 'falhou');
+
+  it('a lista volta a ser trazida, do começo da barra, e termina pronta', async () => {
+    const { fonte, relogio } = fonteComRelogio();
+    const falhou = await aQueFalhou(fonte);
+    expect(await fonte.tentarDeNovo(falhou.id)).toEqual({
+      trazidaId: falhou.id,
+    });
+    const logoDepois = (await fonte.historico()).find(l => l.id === falhou.id);
+    expect(logoDepois).toMatchObject({
+      situacao: 'trazendo',
+      porcentagem: 0,
+      podeTentar: false,
+    });
+    // O dia em que a lista foi enviada não muda por tentar de novo.
+    expect(logoDepois.quando).toBe(falhou.quando);
+    relogio.agora += DURACAO_DA_TRAZIDA_MS / 2;
+    expect((await fonte.andamento(falhou.id)).porcentagem).toBe(50);
+    relogio.agora += DURACAO_DA_TRAZIDA_MS;
+    const noFim = (await fonte.historico()).find(l => l.id === falhou.id);
+    expect(noFim).toMatchObject({ situacao: 'pronto', porcentagem: 100 });
+  });
+
+  it('só continua lista que parou no meio', async () => {
+    const { fonte } = fonteComRelogio();
+    const [pronta] = await fonte.historico();
+    await expect(fonte.tentarDeNovo(pronta.id)).rejects.toMatchObject({
+      name: 'NAO_PODE_TENTAR',
+    });
+    await expect(fonte.tentarDeNovo('nada')).rejects.toMatchObject({
+      name: 'LISTA_NAO_ENCONTRADA',
+    });
+  });
+
+  it('a lista que parou no meio não tem o que desfazer', async () => {
+    const { fonte } = fonteComRelogio();
+    const falhou = await aQueFalhou(fonte);
+    await expect(fonte.desfazer(falhou.id)).rejects.toMatchObject({
+      name: 'NAO_PODE_DESFAZER',
     });
   });
 });

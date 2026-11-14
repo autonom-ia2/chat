@@ -13,7 +13,7 @@ import {
   DEMO_SEM_SEGUROS,
   esperarParaSempre,
 } from './modoDemo';
-import { SEM_ACESSO } from '../lista/falhas';
+import { doServidor } from './doServidor';
 import { pessoaPassaNosFiltros, preenchido } from '../lista/filtros';
 
 // #2894 — de onde a lista de Relacionamentos lê (molde:
@@ -292,8 +292,8 @@ const FILTRO_NO_SERVIDOR = {
 };
 
 const filtrosDoPedido = (filtros = {}) =>
-  Object.entries(FILTRO_NO_SERVIDOR).map(([daTela, doServidor]) => [
-    `filtros[${doServidor}]`,
+  Object.entries(FILTRO_NO_SERVIDOR).map(([daTela, noServidor]) => [
+    `filtros[${noServidor}]`,
     filtros[daTela],
   ]);
 
@@ -310,27 +310,9 @@ const paramsDoPedido = ({ aba, grupo, busca, ordem, pagina, filtros }) =>
     ].filter(([, valor]) => preenchido(valor))
   );
 
-// O servidor responde 401 quando a permissão de ver recusa (e sem sessão) e
-// 403 quando Empresas está desligada na conta: nos dois a pessoa não pode ver.
-const STATUS_SEM_ACESSO = [401, 403];
-
-const erroSemAcesso = causa =>
-  Object.assign(new Error('Sem acesso a Relacionamentos.', { cause: causa }), {
-    name: SEM_ACESSO,
-  });
-
-// Toda leitura do servidor passa por aqui: a recusa por falta de acesso ganha
-// nome; qualquer outro erro sobe como veio.
-const doServidor = async pedido => {
-  try {
-    return (await pedido).data;
-  } catch (falha) {
-    throw STATUS_SEM_ACESSO.includes(falha?.response?.status)
-      ? erroSemAcesso(falha)
-      : falha;
-  }
-};
-
+// Toda leitura do servidor passa por `doServidor` (fonte/doServidor.js): a
+// recusa por falta de acesso (401 quando a permissão de ver recusa, 403 quando
+// Empresas está desligada na conta) ganha nome; o resto sobe como veio.
 const fonteReal = () => ({
   usaDemo: false,
   async resumo() {

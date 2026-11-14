@@ -115,15 +115,19 @@ describe('Apagar: administrador ou a chave contact_delete', () => {
   });
 });
 
-describe('Trazer minha lista: quem pode importar contatos', () => {
-  it('administrador vê; agente sem função não', () => {
+// #2896 — a mesma regra da rota e do servidor (ContactPolicy#import?).
+describe('Trazer minha lista: administrador ou a chave contact_manage', () => {
+  it('administrador traz', () => {
     expect(assento({ papel: 'administrator' }).trazer).toBe(true);
+  });
+
+  it('agente sem função não traz', () => {
     expect(assento().trazer).toBe(false);
   });
 
-  it('função personalizada precisa de `contact_manage`', () => {
+  it('função personalizada só com contact_manage', () => {
     const comFuncao = chaves => assento({ funcao: 3, chaves }).trazer;
-    expect(comFuncao(['contact_manage'])).toBe(true);
-    expect(comFuncao(['contact_view'])).toBe(false);
+    expect(comFuncao(['custom_role', 'contact_view'])).toBe(false);
+    expect(comFuncao(['custom_role', 'contact_manage'])).toBe(true);
   });
 });

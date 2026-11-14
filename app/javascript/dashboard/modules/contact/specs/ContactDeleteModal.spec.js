@@ -26,6 +26,10 @@ vi.mock('vue-i18n', async () => {
   };
 });
 vi.mock('vuex', () => ({ useStore: () => ({ dispatch }) }));
+// As rotas reais de contatos leem a conta na store (a importação que leva a "Trazer minha lista", #2896).
+vi.mock('dashboard/store', () => ({
+  default: { getters: {}, dispatch: vi.fn() },
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => rotaAtual,
   useRouter: () => ({ push }),
