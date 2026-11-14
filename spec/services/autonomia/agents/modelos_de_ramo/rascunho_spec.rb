@@ -160,7 +160,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Rascunho do
       expect(tela.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem tiradas premium teste])
       expect(tela.slice('chave', 'ramo', 'nome_padrao')).to eq('chave' => 'seguro_garantia', 'ramo' => modelo.ramo,
                                                                'nome_padrao' => modelo.nome_padrao)
-      expect(tela['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
+      expect(tela['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false, 'bloco' => 'O pedido')
       expect(tela['ferramentas'].first.keys).to eq(%w[fonte usar_quando])
       expect(tela['teste']).to eq(modelo.teste)
       expect(tela.to_json).not_to include('ROTEIRO POR SITUAÇÃO')

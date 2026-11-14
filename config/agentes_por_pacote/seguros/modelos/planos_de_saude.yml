@@ -1,0 +1,140 @@
+chave: planos_de_saude
+tipo: sdr
+nome_padrao: "Assistente de Plano de Saúde"
+ramo: "Plano de saúde (individual, familiar e empresarial)"
+seguradoras_sugeridas: "Unimed, Bradesco Saúde e Porto Saúde"
+blocos:
+  - nome: "Para quem é o plano"
+    perguntas:
+      - texto: "O plano é só para você, para você e a sua família, ou para a sua empresa?"
+        ligada: true
+      - texto: "Quantas pessoas vão entrar no plano?"
+        ligada: true
+      - texto: "Qual a idade de cada pessoa que vai entrar no plano? Pode mandar numa lista."
+        ligada: true
+  - nome: "Quem é o titular"
+    perguntas:
+      - texto: "Qual o seu nome?"
+        ligada: true
+      - texto: "Qual o nome de quem vai ser o titular do plano?"
+        se: "o plano não for de empresa e o titular não for quem está conversando"
+        ligada: true
+      - texto: "Qual o CPF de quem vai ser o titular do plano? É pedido no cadastro da cotação."
+        se: "o plano for só para a pessoa ou para a família dela"
+        ligada: true
+  - nome: "Empresa"
+    perguntas:
+      - texto: "Qual o CNPJ da empresa, mesmo que seja MEI?"
+        se: "o plano for de empresa, inclusive MEI"
+        ligada: true
+      - texto: "Qual o nome da empresa?"
+        se: "a consulta pelo CNPJ não trouxer o nome"
+        segue: true
+        ligada: true
+      - texto: "Qual o seu cargo na empresa? É pedido no cadastro."
+        se: "o plano for de empresa"
+      - texto: "No plano da empresa, quem vai entrar como titular: sócios, funcionários ou os dois?"
+        se: "o plano for de empresa"
+      - texto: "No plano da empresa, entram só os titulares, ou os dependentes, como cônjuge e filhos, também?"
+        se: "o plano for de empresa"
+      - texto: "Todo funcionário vai entrar no plano da empresa, ou só quem quiser?"
+        se: "o plano for de empresa"
+  - nome: "Onde vão usar"
+    perguntas:
+      - texto: "Qual o seu CEP? Se não souber, pode mandar o endereço."
+        ligada: true
+      - texto: "Vão usar o plano mais na cidade onde moram, ou em outra?"
+      - texto: "Em qual cidade vão usar mais o plano?"
+        se: "for usar mais em outra cidade"
+        segue: true
+  - nome: "Plano de hoje"
+    perguntas:
+      - texto: "Vocês têm plano de saúde hoje?"
+        ligada: true
+      - texto: "De qual operadora, a empresa do plano, é o plano de saúde que vocês têm hoje?"
+        se: "tiver plano hoje"
+        segue: true
+      - texto: "Qual o nome do plano de hoje, como aparece na carteirinha?"
+        se: "tiver plano hoje"
+        segue: true
+      - texto: "Desde quando vocês têm o plano de hoje? Pode ser mês e ano."
+        se: "tiver plano hoje"
+        segue: true
+      - texto: "Quanto vem por mês a fatura do plano de hoje?"
+        se: "tiver plano hoje"
+        segue: true
+      - texto: "No plano de hoje, você paga uma parte quando usa?"
+        se: "tiver plano hoje"
+        segue: true
+      - texto: "Pode me mandar uma foto da fatura e das carteirinhas do plano de hoje?"
+        se: "tiver plano hoje"
+        segue: true
+  - nome: "Como quer o plano novo"
+    perguntas:
+      - texto: "Quer escolher como vai ser o plano novo, ou prefere que a equipe sugira?"
+      - texto: "O plano novo precisa cobrir só a sua região, o Brasil todo, ou fora do país também?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "O plano novo deve ter só consultas e exames, ou internação também?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "O plano novo precisa cobrir parto?"
+        se: "a pessoa quiser escolher e pedir internação"
+        segue: true
+      - texto: "No plano novo, prefere quarto individual ou enfermaria, que é o quarto dividido?"
+        se: "a pessoa quiser escolher e pedir internação"
+        segue: true
+      - texto: "Quer incluir dentista no plano novo?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "O plano novo pode ser um em que você paga uma parte quando usa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer poder ir a médico que não atende pelo plano e pedir o dinheiro de volta, o reembolso, ou só os médicos e hospitais do plano estão bons?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Tem algum hospital, laboratório ou médico que você faz questão de ter no plano?"
+  - nome: "Saúde"
+    perguntas:
+      - texto: "Alguém que vai entrar no plano tem alguma doença ou lesão que já sabe que tem? Pergunto porque ajuda a equipe a cotar."
+      - texto: "Quem é a pessoa que tem doença ou lesão?"
+        se: "alguém tiver doença ou lesão"
+        segue: true
+      - texto: "Qual é a doença ou lesão de quem vai entrar no plano e tem alguma? Se for mais de uma pessoa, pergunte de uma por vez."
+        se: "alguém tiver doença ou lesão"
+        segue: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "Quer deixar um e-mail para a equipe falar com você também por lá? Se quiser, qual é?"
+      - texto: "Quer deixar outro número, além deste, para a equipe falar com você? Se quiser, qual é?"
+documentos:
+  - "Se for MEI ou empresário individual: comprovante do registro da empresa e de que ela está ativa na Receita há pelo menos 6 meses."
+ja_vem:
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP, para achar a rua, o bairro, a cidade e o estado sem pedir o endereço inteiro. Se ele mandar o endereço sem CEP, use para achar o CEP. Anote para a equipe; não repita o endereço para o cliente. Se o CEP vier com dígito faltando, peça para conferir; se a consulta não achar, anote e siga."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF do titular, para conferir se o número foi digitado certo antes de passar para a equipe. Se o número não for válido, peça com naturalidade para ele conferir, sem falar da consulta. Se a consulta falhar, anote o número como veio e siga. Anote o resultado para a equipe."
+  - fonte: cnpj
+    usar_quando: "Use quando o plano for de empresa, inclusive MEI, e o cliente informar o CNPJ, para anotar o nome, a situação, a data de abertura e a atividade sem perguntar de novo. A data de abertura e a situação são para a equipe ver os 6 meses de registro ativo: não diga ao cliente se a empresa tem ou não esse tempo, nem se está regular. Não conte o resultado ao cliente; se a consulta não achar, anote e siga."
+  - fonte: planos_de_saude
+    usar_quando: "Use quando o cliente disser a operadora do plano que tem hoje, para anotar o nome certo e o registro dela na ANS para a equipe. Não repita os dados para o cliente nem comente o plano dele. Se a consulta não achar, anote o que o cliente disse e siga, sem dizer que não achou."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando o cliente disser a cidade em que vai usar mais o plano, para anotar o nome certo da cidade e o estado para a equipe, sem pedir confirmação. Se a consulta não achar, anote o que o cliente disse e siga, sem dizer que não achou."
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente mandar a localização pelo WhatsApp em vez de escrever a cidade, para anotar a cidade e o estado de uso para a equipe, sem repetir para ele. Se a consulta não achar, anote e siga, sem dizer que não achou."
+  - fonte: hospitais
+    usar_quando: "Use quando o cliente citar um hospital que faz questão de ter no plano, para anotar o nome certo do hospital na cidade dele para a equipe. Não diga se o hospital está na rede de alguma operadora. Se a consulta não achar, anote o que o cliente disse e siga, sem dizer que não achou."
+  - fonte: doencas
+    usar_quando: "Use quando o cliente disser uma doença ou lesão de alguém que vai entrar no plano, para anotar o nome padrão da doença na ficha da equipe. Não comente a doença com o cliente nem diga o que o plano fará com ela. Se a consulta não achar, anote o que o cliente disse e siga, sem dizer que não achou."
+  - fonte: procedimentos
+    usar_quando: "Use quando o cliente disser que vai precisar de uma cirurgia ou tratamento, para anotar o nome padrão do procedimento para a equipe. Não diga se o plano cobre nem se há carência. Se a consulta não achar, anote o que o cliente disse e siga, sem dizer que não achou."
+premium:
+  - certidoes_empresa
+  - raio_x_empresa
+  - conferir_pessoa
+  - contato_empresa
+teste:
+  - "Quanto custa um plano para mim e minha esposa?"
+  - "Sou MEI e quero plano para mim e dois funcionários"
+  - "Tenho diabetes. Vocês aceitam?"

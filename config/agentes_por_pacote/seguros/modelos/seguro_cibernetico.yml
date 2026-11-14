@@ -1,0 +1,103 @@
+chave: seguro_cibernetico
+tipo: sdr
+nome_padrao: "Assistente de Seguro Cibernético"
+ramo: "Seguro cibernético"
+seguradoras_sugeridas: "Chubb, AIG e AXA"
+blocos:
+  - nome: "A empresa"
+    perguntas:
+      - texto: "Qual o CNPJ da empresa?"
+        ligada: true
+      - texto: "Qual o nome da empresa que está no CNPJ?"
+        se: "a consulta do CNPJ não trouxer o nome da empresa"
+        segue: true
+        ligada: true
+      - texto: "O que a empresa faz no dia a dia?"
+        se: "a consulta do CNPJ não trouxer a atividade"
+        segue: true
+        ligada: true
+      - texto: "Qual o CEP da empresa?"
+        se: "a consulta do CNPJ não trouxer o endereço"
+        segue: true
+      - texto: "Qual o telefone da empresa, com DDD?"
+        se: "a consulta do CNPJ não trouxer o telefone da empresa"
+        segue: true
+      - texto: "Qual o endereço do site da empresa?"
+        se: "a empresa tiver site"
+      - texto: "Qual o faturamento da empresa por ano, mais ou menos? Isso ajuda a equipe a cotar."
+        ligada: true
+  - nome: "Quem fala"
+    perguntas:
+      - texto: "Qual o seu nome?"
+        ligada: true
+      - texto: "Qual o seu cargo na empresa?"
+      - texto: "Qual o melhor e-mail para a equipe falar com você?"
+      - texto: "A equipe pode falar com você por este WhatsApp ou prefere outro número?"
+  - nome: "Os dados da empresa"
+    perguntas:
+      - texto: "Que tipo de dado a empresa guarda: de clientes, de funcionários ou da própria empresa?"
+        ligada: true
+      - texto: "Alguma empresa terceirizada cuida dos dados da empresa ou tem acesso a eles?"
+  - nome: "Cuidados de segurança"
+    perguntas:
+      - texto: "A empresa faz backup, aquela cópia de segurança dos dados?"
+      - texto: "A cópia de segurança dos dados fica guardada num lugar separado do original?"
+        se: "a empresa fizer backup"
+        segue: true
+      - texto: "Os acessos à rede da empresa usam senha forte? Não precisa me dizer senha nenhuma, só sim ou não."
+      - texto: "Os programas que a empresa usa são originais?"
+      - texto: "Os programas que a empresa usa ficam sempre atualizados?"
+      - texto: "A empresa faz alguma verificação de falhas de segurança de tempos em tempos?"
+      - texto: "A empresa tem um plano para o caso de um ataque ou de o sistema cair?"
+      - texto: "O pessoal da empresa recebe algum treinamento sobre golpe e segurança digital?"
+      - texto: "Tem alguém ou alguma área cuidando de segurança e de dados na empresa?"
+      - texto: "Se a seguradora pedir um teste de segurança ou uma visita, vocês topam?"
+  - nome: "Seguro de hoje"
+    perguntas:
+      - texto: "A empresa tem ou já teve seguro cibernético, o seguro para ataques e vazamento de dados?"
+        ligada: true
+      - texto: "Com qual seguradora a empresa tem ou teve o seguro cibernético?"
+        se: "a empresa tiver ou já tiver tido o seguro"
+        segue: true
+      - texto: "Até quando o seguro cibernético da empresa vale ou valeu?"
+        se: "a empresa tiver ou já tiver tido o seguro"
+        segue: true
+  - nome: "Ataques e vazamentos"
+    perguntas:
+      - texto: "Já aconteceu na empresa algum ataque, vazamento ou reclamação ligada a dados?"
+        ligada: true
+      - texto: "Quando aconteceu o ataque, vazamento ou reclamação ligada a dados, mais ou menos?"
+        se: "isso já tiver acontecido"
+        segue: true
+  - nome: "O seguro que quer"
+    perguntas:
+      - texto: "Quanto de proteção você gostaria de ter, mais ou menos? É o valor máximo que o seguro paga. Se não souber, a equipe ajuda."
+        ligada: true
+      - texto: "A partir de quando você quer que o seguro comece?"
+      - texto: "Quer escolher proteções extras ou prefere que a equipe sugira?"
+      - texto: "Quer proteção para golpe de engenharia social, quando alguém se passa por outra pessoa para enganar a equipe da empresa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer a proteção extra de troca de equipamento? A equipe explica o que ela inclui."
+        se: "a pessoa quiser escolher"
+        segue: true
+documentos:
+  - "Se a empresa já tem outro seguro para os mesmos riscos: o aviso por escrito desse seguro. A equipe orienta como fazer."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ, para achar a razão social, a atividade, o endereço e a situação da empresa sem perguntar. Anote tudo na ficha para a equipe; não repita para o cliente nem peça confirmação. Se o número não for válido, peça uma vez que ele confira os dígitos. Se vier errado de novo, anote como veio e siga. Se a consulta falhar ou não achar, não diga isso ao cliente: anote e siga."
+  - fonte: cep
+    usar_quando: "Use quando a consulta pelo CNPJ trouxer o CEP ou quando o cliente informar o CEP da empresa, para completar rua, bairro e cidade sem perguntar. Anote o endereço para a equipe; não repita para o cliente. Se o CEP não for válido, peça uma vez que ele confira. Se vier errado de novo, anote como veio e siga. Se não achar, anote e siga."
+  - fonte: ddd
+    usar_quando: "Use quando o cliente passar outro número para a equipe falar com ele ou o telefone da empresa, para anotar a região do telefone na ficha. Não comente o resultado com o cliente. Se a consulta falhar, anote o número e siga."
+tambem:
+  - fonte: cpf
+    usar_quando: "Use só quando o cliente mandar o CPF do representante da empresa, para conferir se o número é válido antes de anotar para a equipe. Se não for válido, peça uma vez que ele confira os dígitos. Não diga ao cliente nada além disso."
+premium:
+  - certidoes_empresa
+  - raio_x_empresa
+  - contato_empresa
+teste:
+  - "Quanto custa um seguro contra hacker pra minha empresa?"
+  - "Fomos invadidos agora, o sistema travou e estão pedindo resgate"
+  - "Se vazar dado de cliente, cobre com certeza?"

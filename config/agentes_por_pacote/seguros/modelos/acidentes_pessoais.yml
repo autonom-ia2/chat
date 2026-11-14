@@ -1,0 +1,176 @@
+chave: acidentes_pessoais
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Acidentes Pessoais"
+ramo: "Seguro de acidentes pessoais"
+blocos:
+  - nome: "Quem vai ter o seguro"
+    perguntas:
+      - texto: "O seguro é para você ou para outra pessoa?"
+        ligada: true
+      - texto: "Qual é o CPF de quem vai ter o seguro?"
+        ligada: true
+      - texto: "Qual é o nome completo de quem vai ter o seguro?"
+        se: "o nome ainda não tiver sido dito"
+        ligada: true
+      - texto: "Qual é a data de nascimento de quem vai ter o seguro?"
+        se: "a data ainda não tiver sido dita"
+        ligada: true
+      - texto: "Qual o sexo de quem vai ter o seguro? É pedido no cadastro."
+        ligada: true
+      - texto: "Qual é o estado civil de quem vai ter o seguro? É pedido no cadastro."
+        ligada: true
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual é o CEP de onde mora quem vai ter o seguro?"
+      - texto: "Qual é o número do imóvel de quem vai ter o seguro?"
+        se: "o número faltar no endereço"
+        segue: true
+      - texto: "Tem complemento no endereço de quem vai ter o seguro?"
+        se: "o complemento faltar no endereço"
+        segue: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "A equipe pode falar por este WhatsApp ou prefere outro número ou e-mail?"
+      - texto: "Qual outro número a equipe pode usar para falar com você?"
+        se: "preferir outro número"
+        segue: true
+      - texto: "Qual e-mail a equipe pode usar para falar com você?"
+        se: "preferir e-mail"
+        segue: true
+  - nome: "Trabalho e renda"
+    perguntas:
+      - texto: "Com o que trabalha quem vai ter o seguro? Ajuda a equipe a cotar."
+        ligada: true
+      - texto: "Quem vai ter o seguro está trabalhando hoje? É para a análise da atividade."
+        se: "a profissão não tiver deixado isso claro"
+        segue: true
+      - texto: "Qual é a renda mensal de quem vai ter o seguro, mais ou menos? É pedido no cadastro e ajuda a equipe a cotar."
+        ligada: true
+  - nome: "Esportes e atividades"
+    perguntas:
+      - texto: "Quem vai ter o seguro pratica esporte de risco, como paraquedismo ou voo livre? É para a análise da atividade."
+        ligada: true
+      - texto: "Qual esporte de risco quem vai ter o seguro pratica?"
+        se: "praticar esporte de risco"
+        segue: true
+        ligada: true
+      - texto: "Quem vai ter o seguro participa de competição esportiva, como amador ou profissional? É para a análise da atividade."
+      - texto: "Quem vai ter o seguro faz parte da tripulação de avião, helicóptero ou similar, por trabalho ou hobby? É para a análise da atividade."
+      - texto: "Qual é a atividade de competição ou de tripulação de quem vai ter o seguro?"
+        se: "competir ou fizer parte de tripulação e faltar detalhe"
+  - nome: "Saúde"
+    perguntas:
+      - texto: "Quem vai ter o seguro fuma? É pedido no cadastro."
+      - texto: "Qual é a altura de quem vai ter o seguro? É pedido no cadastro."
+      - texto: "Qual é o peso de quem vai ter o seguro? É pedido no cadastro."
+      - texto: "Quem vai ter o seguro tem limitação física para trabalhar? É para a análise de saúde da seguradora."
+      - texto: "Nos últimos três anos, quem vai ter o seguro teve doença, passageira ou duradoura, que pediu acompanhamento com especialista? É para a análise de saúde da seguradora."
+      - texto: "Qual foi o diagnóstico da doença que pediu acompanhamento com especialista?"
+        se: "teve essa doença"
+        segue: true
+      - texto: "Qual foi o tratamento da doença que pediu acompanhamento com especialista?"
+        se: "teve essa doença"
+        segue: true
+      - texto: "Nos últimos três anos, quem vai ter o seguro fez cirurgia ou biópsia, a retirada de material para exame? É para a análise de saúde da seguradora."
+      - texto: "Quando foi a cirurgia ou a biópsia?"
+        se: "fez cirurgia ou biópsia"
+        segue: true
+      - texto: "Qual foi o diagnóstico depois da cirurgia ou da biópsia?"
+        se: "fez cirurgia ou biópsia"
+        segue: true
+      - texto: "Quem vai ter o seguro tem deficiência em órgão, membro, visão ou audição? É para a análise de saúde da seguradora."
+      - texto: "Qual é a deficiência de quem vai ter o seguro?"
+        se: "tiver deficiência"
+        segue: true
+      - texto: "O médico deu algum grau para a deficiência? Se não souber, tudo bem."
+        se: "tiver deficiência"
+        segue: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Quer escolher as proteções do seguro ou prefere que a equipe sugira?"
+      - texto: "Quer incluir no seguro a proteção de morte por acidente?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quanto quer que seja pago a quem recebe em caso de morte por acidente?"
+        se: "a pessoa quiser escolher e incluir morte por acidente"
+        segue: true
+      - texto: "Quer incluir no seguro invalidez por acidente, uma sequela que não passa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quanto quer receber em caso de invalidez por acidente?"
+        se: "a pessoa quiser escolher e incluir invalidez por acidente"
+        segue: true
+      - texto: "Quer no seguro reembolso de gastos com médico, hospital e dentista por acidente?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Até quanto quer de reembolso de gastos com médico, hospital e dentista por acidente?"
+        se: "a pessoa quiser escolher e incluir o reembolso"
+        segue: true
+      - texto: "Quer avaliar no seguro um valor por dia se um acidente impedir você de trabalhar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor por dia deseja receber se um acidente impedir você de trabalhar?"
+        se: "a pessoa quiser escolher e quiser o valor por dia de afastamento"
+        segue: true
+      - texto: "Quer avaliar também o valor por dia de afastamento do trabalho por doença?"
+        se: "a pessoa quiser escolher e quiser o valor por dia de afastamento"
+        segue: true
+      - texto: "No valor por dia de afastamento do trabalho, quer avaliar menos dias de espera para começar a receber?"
+        se: "a pessoa quiser escolher e quiser o valor por dia de afastamento"
+        segue: true
+      - texto: "Quer avaliar no seguro um valor por dia de internação por acidente?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que valor por dia de internação por acidente deseja?"
+        se: "a pessoa quiser escolher e quiser o valor por dia de internação"
+        segue: true
+      - texto: "Quer incluir no seguro ajuda com o funeral?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Prefere a ajuda com o funeral individual ou familiar?"
+        se: "a pessoa quiser escolher e incluir funeral"
+        segue: true
+      - texto: "Quer avaliar uma opção que aumenta o valor pago em caso de invalidez?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer avaliar cesta básica para os beneficiários, quem recebe em caso de morte?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Datas e beneficiários"
+    perguntas:
+      - texto: "Quando gostaria de começar o seguro?"
+        se: "a pessoa quiser contratar ou falar em datas ou beneficiários"
+      - texto: "Até quando gostaria de manter o seguro?"
+        se: "a pessoa quiser contratar ou falar em datas ou beneficiários"
+      - texto: "Quem quer indicar como beneficiário, quem recebe em caso de morte?"
+        se: "a pessoa quiser contratar ou falar em datas ou beneficiários"
+      - texto: "Qual é a data de nascimento de cada beneficiário?"
+        se: "indicar beneficiários"
+        segue: true
+      - texto: "Qual é o parentesco de cada beneficiário com quem vai ter o seguro?"
+        se: "indicar beneficiários"
+        segue: true
+      - texto: "Qual porcentagem do valor quer destinar a cada beneficiário?"
+        se: "indicar beneficiários"
+        segue: true
+documentos:
+  - "Proposta da seguradora preenchida e assinada, na contratação, com a equipe."
+  - "Declaração de saúde e/ou atividade no formulário da seguradora, conforme o produto, com a equipe."
+  - "Relatório médico, exames e declarações complementares, só se a seguradora pedir na análise."
+ja_vem:
+  - fonte: cpf
+    usar_quando: "Use quando a pessoa informar o CPF de quem terá o seguro, para conferir os números e anotar para a equipe; não traz nome nem nascimento. Não repita o número. Se os números não fecharem ou faltar dígito, peça com calma para a pessoa conferir; se ela disser que está certo, anote e siga, sem insistir. Se a consulta falhar, anote a pendência para a equipe e siga, sem avisar a pessoa."
+  - fonte: cep
+    usar_quando: "Use o CEP para completar endereço ou o endereço informado para buscar CEP. Guarde para a equipe só o que retornar, sem recitar nem pedir confirmação, e pule perguntas respondidas. Se o CEP vier com número faltando, peça com calma para conferir. Falha, ausência ou resultado ambíguo vira pendência interna, sem anunciar que não encontrou nem escolher um resultado como certo."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use para normalizar cidade informada; guarde nome oficial e UF para a equipe, sem recitar nem pedir confirmação. Não comprova residência. Falha ou ausência vira pendência interna, sem anunciar que não encontrou."
+  - fonte: localizacao
+    usar_quando: "Use a localização compartilhada para obter município como apoio ao endereço; guarde para a equipe, sem recitar nem pedir confirmação. Não prova residência. Falha ou ausência vira pendência interna, sem anunciar que não encontrou."
+# Nome e nascimento pelo CPF: consulta prevista, sem chave; perguntar enquanto não houver retorno real.
+# conferir_pessoa: opcional na ficha, não ativada; disponibilidade depende do dono.
+premium: []
+teste:
+  - "Tô com pressa, só quero saber quanto custa."
+  - "É para outra pessoa. Caiu ontem, se contratar hoje cobre?"
+  - "Me garante que cobre? E tem desconto?"

@@ -1,0 +1,108 @@
+chave: aviacao
+tipo: sdr
+nome_padrao: "Assistente de Seguro Aeronáutico"
+ramo: "Seguro aeronáutico (casco, responsabilidade civil e RETA)"
+seguradoras_sugeridas: "AXA, MAPFRE, Essor e Ezze"
+blocos:
+  - nome: "O que proteger"
+    perguntas:
+      - texto: "O que você quer proteger: o próprio avião, os danos que ele pode causar a outras pessoas, ou os dois?"
+        ligada: true
+      - texto: "Quanto o avião vale hoje, mais ou menos?"
+        se: "quiser proteger o próprio avião"
+        segue: true
+        ligada: true
+      - texto: "O avião é seu, ou você opera o de outra pessoa ou empresa?"
+      - texto: "Você já tem o RETA, aquele seguro obrigatório da aeronave?"
+  - nome: "Hangar ou oficina"
+    perguntas:
+      - texto: "O seguro é para o hangar ou para a oficina?"
+        se: "a pessoa falar em hangar ou oficina"
+      - texto: "Vocês fazem voo de teste depois da manutenção feita no hangar ou na oficina?"
+        se: "for hangar ou oficina"
+        segue: true
+  - nome: "A aeronave"
+    perguntas:
+      - texto: "Qual a matrícula da aeronave, as letras de registro dela? Se não souber agora, tudo bem."
+        ligada: true
+      - texto: "A aeronave é avião, helicóptero ou drone?"
+        se: "não houver matrícula ou a consulta pela matrícula não trouxer o tipo, e a pessoa ainda não tiver dito"
+        segue: true
+        ligada: true
+      - texto: "Qual a marca e o modelo da aeronave?"
+        se: "não houver matrícula ou a consulta pela matrícula não trouxer isso"
+        segue: true
+        ligada: true
+      - texto: "De que ano é a aeronave?"
+        se: "não houver matrícula ou a consulta pela matrícula não trouxer isso"
+        segue: true
+        ligada: true
+      - texto: "Qual o motor da aeronave: pistão, turbo-hélice ou jato?"
+        se: "não houver matrícula ou a consulta pela matrícula não trouxer isso"
+        segue: true
+      - texto: "A manutenção da aeronave está em dia?"
+  - nome: "Uso e voos"
+    perguntas:
+      - texto: "Para que a aeronave voa? Por exemplo, uso próprio, da empresa, táxi aéreo, agrícola ou experimental."
+        ligada: true
+      - texto: "A empresa tem a autorização da ANAC, a agência que cuida da aviação, para prestar esse serviço com a aeronave?"
+        se: "a aeronave prestar serviço, como táxi aéreo"
+        segue: true
+      - texto: "A aeronave é de um órgão de segurança pública?"
+        se: "a pessoa falar em polícia, bombeiro ou órgão público"
+      - texto: "Quantas vezes a aeronave voa por mês, mais ou menos?"
+      - texto: "A aeronave leva carga, além de passageiros?"
+      - texto: "A aeronave costuma voar por cima de cidade ou de área com muita casa?"
+  - nome: "Proteções a mais"
+    perguntas:
+      - texto: "Sobre as proteções a mais do seguro: quer escolher uma a uma, ou prefere que a equipe sugira?"
+      - texto: "Quer incluir peças e motores de reserva no seguro?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer a cobertura de busca e salvamento, para o caso de o avião sumir?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Tudo bem a equipe cotar o seguro do próprio avião também com a proteção de danos a outras pessoas, já que há seguradora que só faz assim?"
+        se: "a pessoa quiser escolher e tiver pedido só o seguro do próprio avião"
+        segue: true
+      - texto: "Quer uma proteção a mais para danos a outras pessoas, acima do limite do RETA, o seguro obrigatório da aeronave?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "O piloto"
+    perguntas:
+      - texto: "Quem pilota a aeronave: você ou outra pessoa?"
+      - texto: "A habilitação do piloto está em dia na ANAC?"
+      - texto: "Quantas horas de voo o piloto tem no total?"
+        ligada: true
+      - texto: "Quantas das horas de voo do piloto foram como comandante?"
+      - texto: "O piloto já voa esse modelo de aeronave?"
+      - texto: "Quantas horas de voo o piloto tem nesse modelo de aeronave?"
+        se: "o piloto já voar esse modelo"
+        segue: true
+      - texto: "Que treinamentos o piloto faz?"
+      - texto: "O piloto faz reciclagem, o treino de atualização, com frequência?"
+        se: "a pessoa ainda não tiver falado de reciclagem"
+  - nome: "Titular e contato"
+    perguntas:
+      - texto: "Qual o CPF de quem vai ser o titular do seguro? Se for empresa, o CNPJ."
+        ligada: true
+      - texto: "A equipe pode falar com você por aqui mesmo, ou prefere outra pessoa, outro número ou e-mail?"
+documentos:
+  - "Documento da habilitação do piloto em dia na ANAC."
+ja_vem:
+  - fonte: aeronaves
+    usar_quando: "Use quando o cliente disser a matrícula, para achar tipo, modelo, ano, motor, situação do registro e donos. Anote tudo para a equipe como \"achado pela matrícula, não confirmado com o cliente\" e pule só as perguntas que a consulta respondeu, sem repetir nada ao cliente. O dono registrado não diz quem é o titular: pergunte o CPF ou CNPJ. Dado diferente do que o cliente contou, registro não ativo ou certificado vencido: não comente; anote para a equipe. Não traz drone. Se não achar, siga sem dizer."
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente disser o CNPJ do titular, ou quando a consulta da matrícula trouxer a empresa dona ou operadora, para anotar o nome, a situação e a atividade da empresa para a equipe, sem perguntar de novo e sem repetir ao cliente. Se a consulta falhar, anote e siga."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente disser o CPF do titular, para conferir se o número foi digitado certo e anotar para a equipe. Se o número não for válido, peça para ele conferir os números, sem dizer mais nada sobre o CPF."
+tambem:
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente mandar a localização de um acidente ou de um dano com a aeronave, para anotar a cidade e o estado no aviso que vai para a equipe. Não repita o lugar para o cliente."
+  - fonte: chuva
+    usar_quando: "Use quando houver aviso de acidente ou dano com a aeronave em dia de chuva, para anotar quanto choveu no dia e no lugar e passar junto com o aviso para a equipe. Não use para dizer se o seguro cobre."
+premium: []
+teste:
+  - "Quanto custa o seguro do meu avião?"
+  - "Tenho um helicóptero, matrícula PX-0001, quero casco e RC"
+  - "Só o RETA já basta?"

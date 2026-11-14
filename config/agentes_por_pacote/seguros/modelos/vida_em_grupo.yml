@@ -1,0 +1,314 @@
+chave: vida_em_grupo
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Vida em Grupo"
+ramo: "Seguro de vida em grupo da empresa para funcionários"
+seguradoras_sugeridas: "Allianz, AXA e Icatu"
+blocos:
+  - nome: "A empresa"
+    perguntas:
+      - texto: "Qual é o CNPJ da empresa?"
+        ligada: true
+      - texto: "Qual é o nome da empresa, como está no CNPJ?"
+        se: "a consulta pelo CNPJ não trouxer o nome"
+        segue: true
+        ligada: true
+      - texto: "O que a empresa faz?"
+        se: "a consulta pelo CNPJ não tiver trazido a atividade"
+        segue: true
+        ligada: true
+      - texto: "Qual nome a empresa usa no dia a dia?"
+        se: "a consulta pelo CNPJ não tiver trazido esse nome"
+        segue: true
+      - texto: "Quando a empresa foi fundada?"
+        se: "a consulta pelo CNPJ não tiver trazido a data"
+        segue: true
+      - texto: "A empresa é MEI, microempresa, pequena empresa ou maior?"
+        se: "a consulta pelo CNPJ não tiver trazido o tamanho"
+        segue: true
+      - texto: "A empresa tem filiais?"
+  - nome: "Endereço da empresa"
+    perguntas:
+      - texto: "Qual é o CEP da empresa?"
+        se: "o CEP ainda não tiver sido dito"
+        ligada: true
+      - texto: "Qual é a rua da empresa?"
+        se: "não souber o CEP e a rua ainda faltar"
+        segue: true
+      - texto: "Em qual cidade fica a empresa?"
+        se: "não souber o CEP e a cidade ainda faltar"
+        segue: true
+      - texto: "Em qual estado fica a empresa?"
+        se: "não souber o CEP e o estado ainda faltar"
+        segue: true
+      - texto: "Qual é o número do endereço da empresa?"
+        se: "o número ainda não tiver vindo"
+      - texto: "Tem complemento no endereço da empresa?"
+        se: "o complemento ainda não tiver vindo"
+  - nome: "Quem cuida do seguro"
+    perguntas:
+      - texto: "Quem da empresa vai cuidar do seguro com a equipe?"
+        ligada: true
+      - texto: "Qual é a sua função na empresa?"
+      - texto: "Qual é o CPF de quem responde pela empresa? É pedido no cadastro."
+      - texto: "Quer deixar outro número para a equipe, fixo ou celular, além deste WhatsApp?"
+      - texto: "Qual e-mail podemos registrar para a equipe falar com vocês?"
+        se: "quiserem contato por e-mail"
+      - texto: "Mais alguém do RH ou dos benefícios participa da decisão sobre o seguro?"
+  - nome: "Motivo e benefícios"
+    perguntas:
+      - texto: "O que fez vocês procurarem essa cotação de seguro de vida?"
+        se: "o motivo ainda não estiver claro pela conversa"
+      - texto: "Que outros benefícios a empresa já oferece ao pessoal?"
+      - texto: "O que vocês sentem falta de proteger hoje, no pessoal da empresa?"
+  - nome: "Seguro de hoje"
+    perguntas:
+      - texto: "A empresa já tem seguro de vida para o grupo?"
+        ligada: true
+      - texto: "Qual é a seguradora do seguro de vida em grupo de hoje?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "Quando vence a apólice, o contrato do seguro de vida em grupo de hoje?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "Qual é o capital por pessoa no seguro de hoje, ou seja, o valor de proteção?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "Quanto a empresa paga hoje pelo seguro de vida em grupo?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "Qual é a taxa do seguro de hoje, o percentual cobrado, se souberem?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "O que sabem sobre quantas vezes o seguro de hoje foi usado nos últimos 12 meses? Se não souberem, tudo bem."
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+      - texto: "Qual é o número da apólice do seguro de vida em grupo de hoje?"
+        se: "a empresa já tiver seguro de vida em grupo e o número ainda faltar"
+        segue: true
+      - texto: "Há aposentados por invalidez a considerar no seguro de hoje?"
+        se: "a empresa já tiver seguro de vida em grupo"
+        segue: true
+  - nome: "Quem entra no seguro"
+    perguntas:
+      - texto: "Quantos funcionários vocês querem incluir no seguro?"
+        ligada: true
+      - texto: "Quantos sócios vocês querem incluir no seguro?"
+        ligada: true
+      - texto: "É isso mesmo, nenhum funcionário e nenhum sócio vai entrar no seguro?"
+        se: "funcionários e sócios vierem zero e isso ainda não tiver sido esclarecido"
+        ligada: true
+      - texto: "Há outras pessoas que vocês querem incluir no seguro, além de funcionários e sócios?"
+      - texto: "Vocês esperam incluir mais pessoas no seguro depois?"
+  - nome: "O pessoal da empresa"
+    perguntas:
+      - texto: "Quantas pessoas trabalham na empresa ao todo?"
+        se: "o total ainda não estiver claro pelas respostas"
+      - texto: "Quantas pessoas estão trabalhando normalmente na empresa hoje?"
+        se: "isso ainda não estiver claro pelas respostas"
+      - texto: "Quantas pessoas da empresa estão afastadas do trabalho hoje?"
+      - texto: "Quantas pessoas da empresa estão de atestado ou licença hoje?"
+      - texto: "Qual é a faixa de idade do pessoal da empresa?"
+        se: "as idades ainda não estiverem claras"
+      - texto: "Qual é a faixa de salário mais comum do pessoal? Ajuda a equipe a cotar."
+      - texto: "Como é a troca de funcionários da empresa ao longo do ano?"
+  - nome: "Convenção coletiva"
+    perguntas:
+      - texto: "A empresa segue alguma convenção ou acordo coletivo, as regras combinadas com o sindicato?"
+      - texto: "Qual é o sindicato ou a categoria da convenção ou do acordo coletivo?"
+        se: "houver convenção ou acordo coletivo"
+        segue: true
+      - texto: "Pode mandar a convenção ou o acordo coletivo que vale hoje?"
+        se: "houver convenção ou acordo coletivo"
+        segue: true
+  - nome: "Valor da proteção"
+    perguntas:
+      - texto: "Querem um valor de proteção igual para cada pessoa ou ligado ao salário?"
+        ligada: true
+      - texto: "Que valor em reais querem prever por funcionário? É a proteção desejada, não o preço."
+        se: "houver funcionários e escolherem valor igual para cada pessoa"
+        segue: true
+        ligada: true
+      - texto: "Que valor em reais querem prever por sócio? É a proteção desejada, não o preço."
+        se: "houver sócios e escolherem valor igual para cada pessoa"
+        segue: true
+        ligada: true
+      - texto: "Quantos salários querem usar como referência para o valor de proteção?"
+        se: "escolherem valor ligado ao salário"
+        segue: true
+        ligada: true
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Vocês querem escolher as proteções do seguro ou preferem que a equipe sugira?"
+      - texto: "Querem incluir no seguro morte por doença ou por outras causas naturais?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem incluir no seguro morte por acidente?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar um valor adicional para a família em caso de morte por acidente?"
+        se: "quiserem escolher as proteções e tiverem interesse em morte por acidente"
+        segue: true
+      - texto: "Querem proteção para invalidez por acidente, uma perda permanente de capacidade após um acidente?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem que a equipe veja se há opção de invalidez total e permanente por acidente, perda permanente de toda a capacidade, e explique antes de escolherem?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar proteção para invalidez por doença?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem incluir no seguro a adaptação da casa ou do veículo?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem assistência funeral só para a pessoa, para a família também, ou preferem sem?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Há um valor de funeral que vocês precisam atender?"
+        se: "quiserem escolher as proteções e precisarem de um valor certo de funeral"
+        segue: true
+      - texto: "Querem auxílio em dinheiro para funeral, separado da assistência funeral?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem incluir cônjuges no seguro?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem incluir filhos no seguro?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem proteção para um filho que nasça depois da morte de quem tem o seguro?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem proteção para doença congênita, presente desde o nascimento, dos filhos?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem incluir no seguro proteção para diagnóstico de câncer?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem que a equipe veja se há opção ampliada de câncer e explique antes de escolherem?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem proteção para outras doenças graves?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar proteção para doenças terminais, em fase avançada sem possibilidade de cura?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar um valor por dia em caso de afastamento temporário do trabalho?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "O valor por dia de afastamento do trabalho seria por doença, por acidente ou pelos dois?"
+        se: "quiserem escolher as proteções e tiverem interesse no valor por dia de afastamento"
+        segue: true
+      - texto: "Querem avaliar um valor por dia de internação?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem proteção para despesas com médico, hospital e dentista por acidente?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem proteção para fraturas?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem que a equipe avalie opções de cesta básica, como auxílio ou assistência?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar ajuda com os custos do acerto trabalhista quando um funcionário morre?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem que a equipe veja se há indenização complementar e explique antes de decidirem?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar proteção adicional para morte em crime?"
+        se: "quiserem escolher as proteções"
+        segue: true
+      - texto: "Querem avaliar proteção adicional em acidente no transporte público?"
+        se: "quiserem escolher as proteções"
+        segue: true
+  - nome: "Assistências"
+    perguntas:
+      - texto: "Querem assistência em viagem no seguro?"
+        se: "quiserem escolher as proteções"
+      - texto: "Querem avaliar assistência para a casa? Se a seguradora tiver mais de uma versão, a equipe explica."
+        se: "quiserem escolher as proteções"
+      - texto: "Querem que a equipe veja se há serviço de funeral ampliado e explique antes de escolherem?"
+        se: "quiserem escolher as proteções"
+      - texto: "Querem avaliar outras assistências no seguro?"
+        se: "quiserem escolher as proteções"
+      - texto: "Querem avaliar ajuda para a chegada de um bebê, em cartão ou cesta?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma segunda opinião de médico sobre um caso?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar descontos em remédios?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma rede de descontos?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma assistência de suporte de informática?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar ajuda para procurar um novo trabalho?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma assistência a filhos?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar um serviço de ajuda com orientações do dia a dia, chamado concierge?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma assistência de orientação nutricional?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma assistência de atividade física?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar uma assistência para pet?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+      - texto: "Querem avaliar descarte ecológico, ajuda para descartar objetos velhos do jeito certo?"
+        se: "quiserem escolher as proteções e tiverem pedido outras assistências"
+        segue: true
+  - nome: "Pagamento e início"
+    perguntas:
+      - texto: "A empresa vai pagar todo o seguro ou vocês querem avaliar que os funcionários paguem uma parte?"
+      - texto: "Qual parte do pagamento pelos funcionários vocês gostariam de avaliar? A equipe confere se o plano permite isso."
+        se: "a empresa quiser que os funcionários paguem uma parte"
+        segue: true
+      - texto: "Como vocês gostariam de pagar o seguro? A equipe confere as formas aceitas pela seguradora."
+      - texto: "Há um orçamento mensal desejado para o seguro?"
+      - texto: "Como a empresa paga os impostos: pelo Simples, Lucro Presumido, Lucro Real ou outro regime?"
+      - texto: "Querem que a equipe converse com o contador de vocês sobre o seguro? A equipe não promete vantagem no imposto."
+        se: "a empresa for do Lucro Real"
+        segue: true
+      - texto: "Para que data vocês desejam o início do seguro?"
+documentos:
+  - "Cadastro da empresa com CNPJ e CEP, só se esses dados ainda faltarem após as consultas e perguntas."
+  - "Contrato social e registro do quadro de trabalhadores, só quando a equipe precisar comprovar o grupo."
+  - "Relação de participantes, só quando a equipe solicitar a lista nominal; aproveite os dados do arquivo sem perguntar tudo pessoa por pessoa."
+  - "Convenção ou acordo coletivo vigente, se houver e ainda não tiver sido enviado."
+  - "Apólice e informações do seguro atual, se a empresa já tiver seguro de vida em grupo hoje e ainda não tiver enviado."
+  - "Relação de afastados ou aposentados por invalidez, se a empresa já tiver seguro de vida em grupo hoje, houver essas pessoas e a equipe solicitar; saúde é tratada com a própria pessoa, sem pedir diagnóstico ao RH."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ da empresa, para completar razão social, nome usado, situação, abertura, atividade, porte, cidade e UF sem perguntar de novo. Anote para a equipe como \"achado pelo CNPJ, não confirmado com o cliente\". Não traz rua nem CEP. Situação diferente de ativa fica só para a equipe. Número incompleto: peça que confira. Se não achar, peça só o dado que falta, sem dizer que não achou."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP da empresa ou de uma pessoa participante, ou quando rua e cidade já estiverem disponíveis, para completar o endereço. Anote o retorno para a equipe, marcado como \"achado pelo CEP, não confirmado com o cliente\", e pule só o que ele respondeu. Se falhar ou não achar, anote a falha e passe à equipe, sem repetir resultado nem pedir confirmação."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF do responsável, de participante ou de beneficiário, para conferir se o número é válido. Anote o resultado para a equipe. Se o formato não for válido, peça que confira o número; se a consulta falhar, anote a falha e passe à equipe, sem dizer o resultado da consulta."
+  - fonte: feriados
+    usar_quando: "Use se a empresa já tiver seguro de vida em grupo hoje e houver data de vencimento e local pertinente, para anotar à equipe a contagem de dias úteis. Não transforme a contagem em promessa de início, cotação ou emissão. Se falhar, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando a cidade da empresa, do participante ou do beneficiário precisar ser normalizada, para anotar o município e a UF corretos para a equipe. Não use o retorno para afirmar onde a pessoa mora. Se falhar, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente enviar uma localização pertinente ao endereço da empresa ou de participante, para anotar município e UF à equipe. Não infira número, CEP, vínculo ou residência. Se falhar ou não identificar o local, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+premium:
+  - conferir_pessoa
+  - raio_x_empresa
+  - certidoes_empresa
+  - contato_empresa
+teste:
+  - "Quanto custa o seguro para o meu grupo de funcionários?"
+  - "Quero incluir funcionários e sócios e escolher as proteções."
+  - "Uma pessoa do grupo tem uma doença. Posso mandar os dados para cotar?"

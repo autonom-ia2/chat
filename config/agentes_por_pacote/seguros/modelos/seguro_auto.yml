@@ -3,38 +3,294 @@ tipo: sdr
 nome_padrao: "Assistente de Seguro Auto"
 ramo: "Seguro de automóvel"
 seguradoras_sugeridas: "Porto, Allianz e Tokio Marine"
-perguntas:
-  - "É um seguro novo ou a renovação de um que você já tem?"
-  - "Qual a placa do veículo? Se for zero-quilômetro e ainda não tiver placa, qual a marca, o modelo e o ano?"
-  - "Qual o CEP de onde você mora?"
-  - "Qual o CPF de quem vai ser o titular do seguro? Se o veículo for de empresa, o CNPJ."
-  - "Se for renovação: qual a seguradora de hoje e em que dia o seguro vence?"
-  - "Quem dirige o veículo na maior parte do tempo: você ou outra pessoa?"
-  - "Alguém com até 25 anos dirige o veículo? Se sim, qual a idade e o sexo dessa pessoa?"
-  - "Quem é a melhor pessoa para a equipe falar, e por qual telefone?"
+blocos:
+  - nome: "O pedido"
+    perguntas:
+      - texto: "É um seguro novo ou a renovação de um que você já tem?"
+        ligada: true
+      - texto: "Pode me mandar uma foto ou o PDF da apólice do seguro de hoje?"
+        se: "for renovação"
+        segue: true
+        ligada: true
+      - texto: "Em qual seguradora está o seguro hoje?"
+        se: "for renovação e não tiver mandado a apólice"
+        segue: true
+        ligada: true
+      - texto: "Em que dia o seguro de hoje vence?"
+        se: "for renovação e não tiver mandado a apólice"
+        segue: true
+      - texto: "Qual a classe de bônus que aparece na apólice de hoje? É o desconto de quem não usou o seguro."
+        se: "for renovação e não tiver mandado a apólice"
+        segue: true
+      - texto: "Você usou o seguro nesse último ano?"
+        se: "for renovação e a apólice não mostrar isso"
+        segue: true
+      - texto: "A apólice de hoje está no nome do titular do seguro?"
+        se: "for renovação e não tiver mandado a apólice"
+        segue: true
+  - nome: "O veículo"
+    perguntas:
+      - texto: "Quantos veículos são para segurar?"
+        se: "a pessoa falar em mais de um veículo"
+      - texto: "Pode me mandar as placas dos veículos, em lista ou em foto dos documentos?"
+        se: "for mais de um veículo"
+        segue: true
+      - texto: "Qual a placa do veículo?"
+        se: "for um veículo só"
+        ligada: true
+      - texto: "Qual a marca e o modelo certinho do veículo, com a versão?"
+        se: "não tiver a placa, a placa não achar o veículo ou não houver a consulta pela placa"
+        segue: true
+        ligada: true
+      - texto: "De que ano é o modelo do veículo?"
+        se: "não tiver a placa, a placa não achar o veículo ou não houver a consulta pela placa"
+        segue: true
+        ligada: true
+      - texto: "O veículo é zero-quilômetro ou já está rodando?"
+        ligada: true
+      - texto: "O veículo é carro, moto ou caminhão?"
+        se: "for zero sem placa e a pessoa ainda não tiver dito"
+        segue: true
+      - texto: "Tem o número do chassi do veículo aí? Se não tiver, tudo bem."
+        se: "for zero sem placa"
+        segue: true
+      - texto: "O veículo é flex, gasolina, diesel ou elétrico?"
+        se: "a consulta do veículo não tiver trazido o combustível"
+      - texto: "O veículo é automático ou manual?"
+        se: "a consulta do veículo não tiver trazido o câmbio"
+  - nome: "Titular do seguro"
+    perguntas:
+      - texto: "O seguro vai ficar no seu nome, no de outra pessoa ou no de uma empresa?"
+        ligada: true
+      - texto: "Qual o CPF de quem vai ser o titular do seguro?"
+        se: "o titular for pessoa"
+        segue: true
+        ligada: true
+      - texto: "Qual o CNPJ da empresa que vai ser a titular do seguro?"
+        se: "o titular for empresa"
+        segue: true
+        ligada: true
+      - texto: "Qual o nome completo do titular do seguro?"
+        se: "o titular for pessoa e o nome ainda faltar"
+        segue: true
+        ligada: true
+      - texto: "Quando o titular do seguro nasceu?"
+        se: "o titular for pessoa e a data ainda faltar"
+        segue: true
+      - texto: "Qual o sexo do titular do seguro, como está no documento? É pedido no cadastro da cotação."
+        se: "o titular for pessoa"
+        segue: true
+      - texto: "O titular do seguro é casado, solteiro, vive junto…?"
+        se: "o titular for pessoa"
+        segue: true
+      - texto: "Qual a profissão do titular do seguro? É pedido no cadastro."
+        se: "o titular for pessoa"
+        segue: true
+      - texto: "O veículo está no nome do titular do seguro?"
+      - texto: "Qual o CPF ou CNPJ do dono do veículo?"
+        se: "o veículo não estiver no nome do titular"
+        segue: true
+  - nome: "Endereço"
+    perguntas:
+      - texto: "Qual o CEP de onde o titular mora? Se o titular for empresa, o CEP da empresa."
+        ligada: true
+      - texto: "Qual o número e o complemento do endereço do titular, se tiver?"
+      - texto: "O veículo dorme no endereço do titular mesmo?"
+      - texto: "Qual o CEP de onde o veículo passa a noite?"
+        se: "o veículo não dormir no endereço do titular"
+        segue: true
+  - nome: "Quem dirige"
+    perguntas:
+      - texto: "Quem dirige o veículo na maior parte do tempo, você ou outra pessoa?"
+        se: "o titular for pessoa"
+        ligada: true
+      - texto: "Qual o nome de quem dirige o veículo?"
+        se: "quem dirige não for o titular"
+        segue: true
+        ligada: true
+      - texto: "Qual o CPF de quem dirige o veículo?"
+        se: "quem dirige não for o titular"
+        segue: true
+      - texto: "Quando nasceu quem dirige o veículo?"
+        se: "quem dirige não for o titular"
+        segue: true
+      - texto: "Qual o sexo de quem dirige o veículo, como está no documento? É pedido no cadastro da cotação."
+        se: "quem dirige não for o titular"
+        segue: true
+      - texto: "Quem dirige o veículo é funcionário, sócio ou tem outro vínculo com a empresa?"
+        se: "o titular for empresa"
+      - texto: "Desde quando quem dirige o veículo tem carteira de motorista?"
+      - texto: "Quem dirige o veículo mora em casa ou em apartamento?"
+      - texto: "Alguém de 17 a 25 anos dirige o veículo?"
+        ligada: true
+      - texto: "Qual a idade de quem tem de 17 a 25 anos e dirige o veículo?"
+        se: "alguém de 17 a 25 anos dirigir e a pessoa ainda não tiver dito"
+        segue: true
+      - texto: "Qual o sexo de quem tem de 17 a 25 anos e dirige o veículo, como está no documento? É pedido no cadastro da cotação."
+        se: "alguém de 17 a 25 anos dirigir e a pessoa ainda não tiver dito"
+        segue: true
+      - texto: "Mora com o titular alguém de 17 a 25 anos, mesmo que não dirija o veículo?"
+        se: "o titular for pessoa"
+      - texto: "Mais alguém dirige o veículo, além de quem você já falou?"
+      - texto: "Qual o nome de cada outra pessoa que dirige o veículo?"
+        se: "mais alguém dirigir"
+        segue: true
+      - texto: "Quando nasceu cada outra pessoa que dirige o veículo?"
+        se: "mais alguém dirigir"
+        segue: true
+      - texto: "Cada outra pessoa que dirige o veículo é casada, solteira, vive junto…?"
+        se: "mais alguém dirigir"
+        segue: true
+      - texto: "Qual o sexo de cada outra pessoa que dirige o veículo, como está no documento? É pedido no cadastro da cotação."
+        se: "mais alguém dirigir"
+        segue: true
+      - texto: "Quem dirige o veículo é pessoa com deficiência? Ajuda a equipe a cotar."
+        se: "a pessoa tocar no assunto"
+  - nome: "Uso e garagem"
+    perguntas:
+      - texto: "O veículo é usado só no dia a dia e passeio, ou para ganhar dinheiro, como aplicativo, entrega ou frete?"
+      - texto: "Quantos quilômetros o veículo roda por mês, mais ou menos?"
+      - texto: "O veículo fica em garagem à noite?"
+      - texto: "A garagem onde o veículo fica à noite tem portão?"
+        se: "o veículo ficar em garagem"
+        segue: true
+      - texto: "Quem dirige usa o veículo para ir até o trabalho?"
+      - texto: "No trabalho, o veículo fica em estacionamento fechado?"
+        se: "quem dirige usar o veículo para ir ao trabalho"
+        segue: true
+      - texto: "Quem dirige usa o veículo para ir até a escola ou a faculdade?"
+        se: "o titular for pessoa"
+      - texto: "Na escola ou na faculdade, o veículo fica em estacionamento fechado?"
+        se: "quem dirige usar o veículo para ir à escola ou à faculdade"
+        segue: true
+      - texto: "Quantos veículos tem na casa do titular, contando com o que vai no seguro?"
+        se: "o titular for pessoa"
+  - nome: "Itens do veículo"
+    perguntas:
+      - texto: "O veículo tem rastreador?"
+      - texto: "Qual a marca do rastreador do veículo?"
+        se: "tiver rastreador"
+        segue: true
+      - texto: "O veículo tem alarme ou trava?"
+      - texto: "O veículo é blindado?"
+      - texto: "Quanto vale a blindagem do veículo?"
+        se: "for blindado"
+        segue: true
+      - texto: "O veículo tem kit gás?"
+      - texto: "Quanto vale o kit gás do veículo?"
+        se: "tiver kit gás"
+        segue: true
+      - texto: "O veículo está financiado?"
+      - texto: "O veículo foi comprado com isenção de imposto?"
+      - texto: "O veículo tem som, multimídia ou roda especial que você quer incluir no seguro?"
+  - nome: "Moto"
+    perguntas:
+      - texto: "Quantos dias por semana a moto é usada?"
+        se: "for moto"
+      - texto: "Você é associado a alguma entidade de classe, como sindicato, associação ou conselho de profissão?"
+        se: "for moto"
+  - nome: "Caminhão"
+    perguntas:
+      - texto: "O caminhão roda mais de dia, de noite ou varia?"
+        se: "for caminhão"
+      - texto: "O caminhão leva carga própria ou trabalha como transportadora?"
+        se: "for caminhão"
+      - texto: "Qual o tipo da carroceria do caminhão?"
+        se: "for caminhão"
+      - texto: "Tem algum equipamento instalado no caminhão?"
+        se: "for caminhão"
+      - texto: "Que tipo de carga o caminhão leva?"
+        se: "for caminhão"
+      - texto: "A carga do caminhão tem seguro próprio?"
+        se: "for caminhão"
+      - texto: "O caminhão tem gerenciamento de risco, que são as regras de proteção combinadas para a viagem?"
+        se: "for caminhão"
+      - texto: "Por onde o caminhão roda mais, na cidade, na região ou na estrada?"
+        se: "for caminhão"
+      - texto: "O caminhão roda só dentro do estado?"
+        se: "for caminhão"
+      - texto: "Quantos eixos o caminhão tem?"
+        se: "for caminhão"
+      - texto: "Quando está parado, o caminhão fica em garagem?"
+        se: "for caminhão"
+  - nome: "Proteções"
+    perguntas:
+      - texto: "Você quer escolher as proteções do seguro ou prefere que a equipe sugira?"
+      - texto: "Prefere um seguro com proteção mais simples, média ou mais completa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Prefere franquia menor ou parcela menor? Franquia é a parte do conserto que fica com você."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Em roubo ou perda total, quanto da tabela FIPE, a tabela de preço de referência dos veículos, você quer que o seguro considere?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quanto quer de proteção para estragos que você causar no carro ou nas coisas de outra pessoa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quanto quer de proteção para ferimentos que você causar em outras pessoas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quanto quer de proteção para danos morais a outras pessoas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer proteção para morte ou invalidez dos passageiros em acidente?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer a opção de valor de novo, ligada ao preço do carro zero? Cada seguradora tem a sua regra, e a equipe explica."
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer ajuda com despesas extras, como documentação, se der perda total?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer proteção para pneus e rodas?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer reparo rápido, como martelinho e para-choque?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer carro reserva?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Por quantos dias quer o carro reserva?"
+        se: "a pessoa quiser escolher e quiser carro reserva"
+        segue: true
+      - texto: "Quer proteção para vidros, faróis, lanternas e retrovisores?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Que assistência 24 horas, os serviços como guincho, você quer: mais simples ou mais completa?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Contato e cadastro"
+    perguntas:
+      - texto: "A equipe pode falar com você por aqui mesmo, ou prefere outro número?"
+      - texto: "Quer deixar um e-mail para a equipe também?"
+      - texto: "Você tem conta em algum banco? Só o nome do banco, nada de número de conta nem senha. É pedido no cadastro da cotação."
 documentos:
-  - "Documento do veículo (CRLV)."
+  - "Documento do veículo (CRLV), quando já tiver placa."
   - "Carteira de motorista de quem mais dirige."
-  - "Apólice atual, se for renovação."
-  - "Nota fiscal do veículo, se for zero-quilômetro e ainda não tiver o documento."
+  - "Apólice atual, se for renovação e ainda não mandou."
 ja_vem:
   - fonte: fipe
-    usar_quando: "Se você tiver a consulta pela placa, use quando o cliente informar a placa, para achar o veículo sem perguntar marca, modelo e ano. Sem essa consulta, em zero-quilômetro ou sem a placa em mãos, use quando ele disser a marca, o modelo e o ano, para achar o modelo certo na tabela FIPE. Anote o veículo e o valor de referência para a equipe. Esse valor não é o preço do seguro."
+    usar_quando: "Se você tiver a consulta pela placa, use quando o cliente informar a placa, para achar o veículo sem perguntar marca, modelo e ano; anote para a equipe como achado pela placa, não confirmado com o cliente. Sem essa consulta, ou sem placa, use a marca, o modelo e o ano que ele disser para achar o modelo certo. Se a consulta não trouxer o combustível ou o câmbio, eles são perguntados. Não repita o veículo nem o valor ao cliente; se não achar, pergunte o que falta sem dizer que não achou."
   - fonte: cep
-    usar_quando: "Use quando o cliente informar o CEP de onde mora ou de onde o veículo passa a noite, para confirmar a rua, o bairro e a cidade sem pedir o endereço inteiro."
+    usar_quando: "Use quando o cliente informar o CEP de onde mora ou de onde o veículo dorme, para anotar rua, bairro, cidade e estado para a equipe sem pedir o endereço inteiro. Se ele não souber o CEP, busque pelo endereço que ele der. Não recite o endereço nem peça confirmação. Se a consulta falhar ou não achar, anote a pendência e siga, sem dizer ao cliente que não achou."
   - fonte: cpf
-    usar_quando: "Use quando o cliente informar o CPF do titular ou de quem dirige, para conferir se o número foi digitado certo antes de passar para a equipe. Se o número não for válido, peça para ele conferir."
+    usar_quando: "Use quando o cliente informar o CPF do titular ou de quem dirige, só para conferir se o número foi digitado certo. Se o resultado disser que o CPF é inválido, peça para ele conferir o número. Se a consulta falhar, não é CPF inválido: anote a pendência para a equipe e siga, sem comentar."
   - fonte: feriados
-    usar_quando: "Use quando for renovação e o cliente disser o dia em que o seguro atual vence, para contar quantos dias úteis faltam e avisar a equipe quando o prazo estiver curto."
+    usar_quando: "Use quando for renovação e o vencimento do seguro de hoje for conhecido, pelo cliente ou pela apólice, para contar os dias úteis que faltam e anotar para a equipe quando o prazo estiver curto. Não comente a conta com o cliente nem prometa que dá tempo."
 tambem:
   - fonte: cnpj
-    usar_quando: "Use quando o seguro for de empresa ou de frota e o cliente informar o CNPJ, para conferir o nome e a situação da empresa sem perguntar de novo."
+    usar_quando: "Use quando o seguro for de empresa ou de frota e o cliente informar o CNPJ, para anotar para a equipe a razão social e a situação da empresa sem perguntar o nome. Não recite o resultado nem peça confirmação. Se falhar ou não achar, anote e siga, sem dizer ao cliente que não achou."
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente mandar a localização pelo WhatsApp em vez do CEP, para anotar a cidade para a equipe; depois, com a rua que ele disser, ache o CEP pela consulta de CEP. Não recite o resultado nem peça confirmação. Se falhar, pergunte o CEP sem dizer que não achou."
   - fonte: chuva
-    usar_quando: "Use quando o cliente avisar de um dano por chuva ou alagamento no veículo, para anotar quanto choveu no dia e na cidade e passar junto com o aviso para a equipe. Não use para dizer se o seguro cobre."
+    usar_quando: "Use quando o cliente avisar de dano por chuva ou alagamento no veículo, com o dia e o lugar que ele já disse, para anotar quanto choveu e passar junto com o aviso para a equipe. Não use para dizer se o seguro cobre, não atrase a passagem e não comente o resultado com o cliente."
 premium:
   - historico_placa
   - conferir_pessoa
+  - risco_endereco
 teste:
   - "Quanto custa o seguro do meu carro?"
   - "Minha placa é ABC1D23 e moro no CEP 01001-000"
-  - "Pode fechar, quero o seguro"
+  - "Cobre enchente com certeza? Pode fechar, quero o seguro"

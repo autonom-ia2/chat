@@ -1,0 +1,129 @@
+chave: rc_profissional
+tipo: sdr
+nome_padrao: "Assistente de RC Profissional"
+ramo: "Seguro de responsabilidade civil profissional"
+seguradoras_sugeridas: "Sompo, Allianz, Porto e Tokio Marine"
+blocos:
+  - nome: "Quem contrata"
+    perguntas:
+      - texto: "O seguro é para você, como pessoa física, ou para a sua empresa?"
+        ligada: true
+      - texto: "Qual o CNPJ da empresa?"
+        se: "for empresa"
+        segue: true
+        ligada: true
+      - texto: "Qual o seu CPF?"
+        se: "for pessoa física"
+        segue: true
+        ligada: true
+      - texto: "A empresa tem filiais ou outras empresas ligadas a ela?"
+        se: "for empresa"
+        segue: true
+      - texto: "Qual o CEP do seu escritório ou da empresa?"
+        se: "a consulta do CNPJ não trouxer o endereço"
+  - nome: "A profissão"
+    perguntas:
+      - texto: "Qual é a sua profissão?"
+        ligada: true
+      - texto: "O que exatamente você faz para os seus clientes?"
+        ligada: true
+      - texto: "Você faz algum serviço fora da sua atividade principal?"
+      - texto: "A sua profissão pede registro em conselho ou órgão de classe, como CREA, OAB ou CRC?"
+      - texto: "Qual o número do seu registro no conselho ou órgão de classe?"
+        se: "a profissão pedir registro"
+        segue: true
+      - texto: "O seu registro no conselho ou órgão de classe está ativo hoje?"
+        se: "a profissão pedir registro"
+        segue: true
+  - nome: "Como você trabalha"
+    perguntas:
+      - texto: "Você tem funcionários ou estagiários?"
+      - texto: "Você contrata outros profissionais ou empresas para fazer parte do serviço em seu nome?"
+      - texto: "Em que país fora do Brasil você tem cliente ou trabalho, se tiver algum?"
+      - texto: "Você usa alguma técnica, produto ou equipamento que ainda é experimental?"
+      - texto: "Você fabrica, vende ou revende algum produto?"
+      - texto: "Você faz consultoria financeira ou de investimentos?"
+      - texto: "Você é administrador, diretor ou conselheiro de alguma empresa? Isso ajuda a equipe a cotar."
+      - texto: "Nos seus contratos, você garante um resultado ou um prazo para o cliente?"
+      - texto: "Você trabalha com dados pessoais, sistemas ou informações sigilosas dos clientes?"
+  - nome: "Faturamento"
+    perguntas:
+      - texto: "Quanto você faturou nos últimos 12 meses, mais ou menos? Isso ajuda a equipe a cotar."
+        ligada: true
+      - texto: "Quanto você espera faturar nos próximos 12 meses?"
+  - nome: "Valor de cobertura"
+    perguntas:
+      - texto: "Tem um valor de cobertura em mente? É até quanto o seguro pode pagar."
+        ligada: true
+      - texto: "Algum contrato, edital ou conselho está pedindo que você tenha este seguro?"
+      - texto: "O contrato que pede o seguro já diz o valor de cobertura?"
+        se: "um contrato pedir o seguro"
+        segue: true
+  - nome: "Proteções extras"
+    perguntas:
+      - texto: "Quer escolher as proteções extras ou prefere que a equipe sugira?"
+      - texto: "Quer incluir proteção para dano moral que um cliente reclamar?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir proteção para dano a bens ou a pessoas causado pelo seu serviço?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir proteção para o que um cliente deixou de ganhar por causa de um erro no seu serviço?"
+        se: "a pessoa quiser escolher"
+        segue: true
+  - nome: "Seguro de antes"
+    perguntas:
+      - texto: "Você já tem ou já teve seguro para erros no seu trabalho, o de responsabilidade civil profissional?"
+        ligada: true
+      - texto: "Em qual seguradora você tem ou teve esse seguro para erros no trabalho?"
+        se: "já tiver ou tiver tido o seguro"
+        segue: true
+      - texto: "Até quando vale, ou até quando valeu, a apólice do seu seguro para erros no trabalho?"
+        se: "já tiver ou tiver tido o seguro"
+        segue: true
+      - texto: "Desde quando você tem o seguro para erros no trabalho sem interrupção? Isso ajuda a equipe a cotar."
+        se: "já tiver ou tiver tido o seguro"
+        segue: true
+      - texto: "A seguradora já pagou algum caso seu no seguro para erros no trabalho?"
+        se: "já tiver ou tiver tido o seguro"
+        segue: true
+        ligada: true
+  - nome: "Reclamações"
+    perguntas:
+      - texto: "Algum cliente já reclamou ou entrou com processo por causa do seu serviço? Isso ajuda a equipe a cotar."
+        se: "não tiver contado de caso pago pelo seguro"
+        ligada: true
+      - texto: "Você sabe de algum caso que pode virar reclamação de cliente?"
+      - texto: "Quando foi a reclamação ou o caso que pode virar reclamação?"
+        se: "houver reclamação ou caso conhecido"
+      - texto: "O que aconteceu, por cima, na reclamação ou no caso que pode virar reclamação?"
+        se: "houver reclamação ou caso conhecido"
+      - texto: "Qual pode ser o prejuízo, mais ou menos, da reclamação ou do caso que pode virar reclamação?"
+        se: "houver reclamação ou caso conhecido"
+  - nome: "Contato"
+    perguntas:
+      - texto: "Quem cuida deste seguro do seu lado, para a equipe procurar?"
+        ligada: true
+      - texto: "Prefere que a equipe fale por este WhatsApp, por outro número ou por e-mail?"
+documentos:
+  - "Comprovante do registro no conselho ou órgão da profissão, se ela exigir registro."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ da empresa, para achar o nome, a situação, a atividade e o endereço sem perguntar de novo. Anote tudo para a equipe. Não repita os dados para o cliente nem peça confirmação. Se o número vier com dígito a menos ou inválido, peça com calma para ele conferir o CNPJ, sem dizer o que a consulta achou. Se a consulta falhar ou não achar a empresa, não diga isso a ele: anote e siga."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente for pessoa física e informar o CPF, para conferir se o número foi digitado certo. Anote o resultado para a equipe. Se o número não for válido, peça com calma para ele conferir o CPF, sem dizer o que a consulta achou. Se a consulta falhar, não diga isso a ele: anote e siga."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP do escritório ou da empresa, para achar a rua, o bairro e a cidade sem pedir o endereço inteiro. Anote o endereço para a equipe, sem repetir para o cliente. Se o CNPJ já trouxe o endereço, não pergunte o CEP. Se a consulta falhar ou não achar o CEP, não diga isso ao cliente nem peça rua e bairro: anote o CEP como veio e siga."
+tambem:
+  - fonte: cidades
+    usar_quando: "Use quando o cliente disser a cidade onde trabalha e for preciso conferir o nome certo da cidade e o estado. Anote para a equipe, sem repetir para o cliente."
+  - fonte: corretor_susep
+    usar_quando: "Use quando o cliente disser que é corretor de seguros, para conferir o registro dele na Susep pelo nome ou pelo número. Anote o resultado e avise a equipe que o cliente é corretor. Não diga ao cliente o que a consulta achou nem se ela não achou nada."
+premium:
+  - certidoes_empresa
+  - raio_x_empresa
+  - conferir_pessoa
+teste:
+  - "Quanto custa o seguro de RC profissional para engenheiro?"
+  - "Sou contadora, tenho escritório com 3 funcionários, CNPJ 11.222.333/0001-81"
+  - "Um cliente está me processando. O seguro cobre?"
