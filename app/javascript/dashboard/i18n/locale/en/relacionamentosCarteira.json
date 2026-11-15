@@ -773,7 +773,7 @@
       "SEGURADORAS": {
         "LINHA": "Agger did not look for new policies at {count} insurer right now. The ones already in Agger came in. | Agger did not look for new policies at {count} insurers right now. The ones already in Agger came in.",
         "NADA_VEIO": "No policy came in this time: Agger could not search the insurers right now. See what to do for each one and search again later.",
-        "VER_QUAIS": "See which",
+        "VER_QUAIS": "See which insurers",
         "ESCONDER": "Hide",
         "UMA": "one insurer | {count} insurers",
         "MAIS": "one more insurer | {count} more insurers",

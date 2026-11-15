@@ -773,7 +773,7 @@
       "SEGURADORAS": {
         "LINHA": "O Agger não buscou seguros novos em {count} seguradora agora. Os que já estavam no Agger vieram. | O Agger não buscou seguros novos em {count} seguradoras agora. Os que já estavam no Agger vieram.",
         "NADA_VEIO": "Nenhum seguro veio desta vez: o Agger não conseguiu buscar nas seguradoras agora. Veja o que fazer em cada uma e busque de novo mais tarde.",
-        "VER_QUAIS": "Ver quais",
+        "VER_QUAIS": "Ver quais seguradoras",
         "ESCONDER": "Esconder",
         "UMA": "uma seguradora | {count} seguradoras",
         "MAIS": "mais uma seguradora | mais {count} seguradoras",

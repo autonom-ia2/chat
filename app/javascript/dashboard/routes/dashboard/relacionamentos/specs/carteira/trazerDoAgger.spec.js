@@ -236,7 +236,7 @@ describe('as seguradoras que não buscaram seguros novos', () => {
     );
   });
 
-  it('é uma linha calma só, com "Ver quais" fechado; os grupos ficam escondidos até abrir', async () => {
+  it('é uma linha calma só, com "Ver quais seguradoras" fechado; os grupos ficam escondidos até abrir', async () => {
     const w = avisos(variadas);
 
     expect(w.get('[data-carteira="frase-das-seguradoras"]').text()).toBe(
@@ -244,14 +244,14 @@ describe('as seguradoras que não buscaram seguros novos', () => {
     );
     const ver = w.get('[data-carteira="ver-quais"]');
     expect(ver.element.tagName).toBe('BUTTON');
-    expect(ver.text()).toBe('Ver quais');
+    expect(ver.text()).toBe('Ver quais seguradoras');
     expect(ver.attributes('aria-expanded')).toBe('false');
-    const grupos = w.get('[data-carteira="grupos-das-seguradoras"]');
-    expect(ver.attributes('aria-controls')).toBe(grupos.attributes('id'));
-    expect(grupos.isVisible()).toBe(false);
+    const grupos = () => w.get('[data-carteira="grupos-das-seguradoras"]');
+    expect(ver.attributes('aria-controls')).toBe(grupos().attributes('id'));
+    expect(grupos().attributes('style')).toContain('display: none');
 
     await ver.trigger('click');
-    expect(grupos.isVisible()).toBe(true);
+    expect(grupos().attributes('style') ?? '').not.toContain('display: none');
     expect(ver.attributes('aria-expanded')).toBe('true');
     expect(ver.text()).toBe('Esconder');
   });
