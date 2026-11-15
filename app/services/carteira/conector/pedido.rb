@@ -16,6 +16,7 @@ class Carteira::Conector::Pedido
 
   # Depois da guarda, o item sai: a busca trazida fica sem o andamento, e quem lê recebe vazio.
   def initialize(leitura)
+    @leitura = leitura
     @item = leitura.itens.find_by(posicao: POSICAO, estado: ESTADO)
   end
 
@@ -25,6 +26,8 @@ class Carteira::Conector::Pedido
   def cursor = campos['cursor']
   def status = campos['status']
   def pagina = campos['pagina'].to_i
+  # A primeira posição dos registros deste pedido: os de antes vieram num pedido anterior da mesma busca (Carteira::Conector::Ler).
+  def desde_posicao = campos['desde_posicao'].to_i
 
   # [{ 'nome' => 'Seguradora X' | nil, 'situacao' => 'pronta' }]
   def por_seguradora
@@ -32,7 +35,8 @@ class Carteira::Conector::Pedido
   end
 
   def pedido!(sync_id, status)
-    mudar!('sync_id' => sync_id, 'status' => status, 'cursor' => nil, 'pagina' => 0)
+    desde = (@leitura.itens.maximum(:posicao) || POSICAO) + 1
+    mudar!('sync_id' => sync_id, 'status' => status, 'cursor' => nil, 'pagina' => 0, 'desde_posicao' => desde)
   end
 
   def andamento!(status, seguradoras)

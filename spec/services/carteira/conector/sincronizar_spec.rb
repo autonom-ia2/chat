@@ -34,7 +34,10 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect([pedido.desde, pedido.ate]).to eq([(hoje - 36.months).iso8601, hoje.iso8601])
       expect(leitura).to have_attributes(origem: 'conector', estado: 'lendo', user: admin)
       expect(described_class.primeira(account, user: admin)).to eq(leitura)
-      expect(enqueued_jobs.pluck('arguments').flatten).to all(be_a(Integer))
+      # As factories põem na fila jobs de outros eventos (a conta criada, o agente adicionado): só os do conector contam.
+      do_conector = enqueued_jobs.select { |job| job['job_class'].to_s.start_with?('Carteira::Conector::') }
+      expect(do_conector).not_to be_empty
+      expect(do_conector.pluck('arguments').flatten).to all(be_a(Integer))
     end
 
     it 'lê as duas páginas e termina no Conferir; a conta fecha: registros + ignorados = total do conector' do
@@ -60,12 +63,25 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       )
     end
 
-    it 'o Conferir conta como os PDFs: seguros, pessoas, sem telefone e o que não deu para trazer' do
+    it 'o Conferir conta como os PDFs, e a conta fecha: entram + não deu + ignorados + repetidos = total' do
       leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
 
       conferir = Carteira::Conector::Conferir.new(leitura).call
-      expect(conferir).to include(estado: 'lida', seguros: 3, pessoas: 3, pessoasNovas: 3, semTelefone: 3, naoDeuParaTrazer: 2, total: 6)
+      expect(conferir).to include(estado: 'lida', seguros: 3, pessoas: 3, pessoasNovas: 3, semTelefone: 3, naoDeuParaTrazer: 2, total: 6,
+                                  ignorados: 1, repetidos: 1, jaNaCarteira: 0, porTipo: { 'auto' => 1, 'residencial' => 1, 'empresarial' => 1 })
+      nao_deu = conferir[:naoDeuParaTrazer] - conferir[:ignorados]
+      expect(conferir[:seguros] + nao_deu + conferir[:ignorados] + conferir[:repetidos]).to eq(conferir[:total])
       expect(conferir[:porSeguradora].size).to eq(4)
+    end
+
+    it 'os números do Conferir são calculados no job: a requisição só lê, sem procurar a pessoa de nenhum registro' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+      allow(Carteira::Conector::PessoaDoRegistro).to receive(:new).and_call_original
+
+      expect(Carteira::Conector::Conferir.new(leitura).call).to include(seguros: 3)
+      expect { Carteira::Conector::Trazer.new(leitura).call }.to have_enqueued_job(Carteira::Conector::GravarJob).with(leitura.id)
+      expect(Carteira::Conector::PessoaDoRegistro).not_to have_received(:new)
+      expect(leitura.reload.totais).to include('conferir_prontos' => 4, 'conferir_seguros' => 3)
     end
 
     it 'buscar de novo uma busca já lida pede o mesmo período e não repete registro' do
@@ -77,7 +93,39 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect(leitura.estado).to eq('lida')
       expect(leitura.itens.where(estado: 'lido').count).to eq(4)
       expect(leitura.itens.where(estado: 'falhou').count).to eq(1)
-      expect(leitura.totais.values_at('recebidos', 'repetidos')).to eq([5, 4])
+      expect(leitura.totais.values_at('recebidos', 'repetidos', 'ja_lidos')).to eq([5, 0, 4])
+      conferir = Carteira::Conector::Conferir.new(leitura).call
+      expect(conferir.values_at(:seguros, :naoDeuParaTrazer, :repetidos, :total)).to eq([3, 2, 1, 6])
+    end
+
+    it 'buscar de novo não pergunta outra vez o tipo de ramo nenhum, nem o que o modelo respondeu "outro"' do
+      pergunta = instance_double(Carteira::Trazer::PerguntaDoRamo)
+      allow(pergunta).to receive(:call) { |ramos| ramos.index_with { |ramo| ramo == 'empresarial' ? 'outro' : 'auto' } }
+      allow(Carteira::Trazer::PerguntaDoRamo).to receive(:new).and_return(pergunta)
+
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+      expect(pergunta).to have_received(:call).once
+      described_class.de_novo(leitura)
+      andar_ate_o_fim(leitura)
+      andar_ate_o_fim(described_class.diaria(account))
+
+      expect(pergunta).to have_received(:call).once
+      expect(leitura.reload.itens.where(estado: 'lido').map { |item| item.campos['tipo'] }).to include('outro')
+    end
+
+    it 'o ramo que já está na carteira não vai ao modelo, nem quando está lá como outro' do
+      pessoa = create(:contact, account: account)
+      criar_apolice(pessoa, seguradora: 'Seguradora Exemplo', numero: 'EX-1', tipo: 'auto', ramo_original: 'AUTOMÓVEL',
+                            fim_vigencia: Date.new(2027, 1, 1))
+      criar_apolice(pessoa, seguradora: 'Seguradora Exemplo', numero: 'EX-2', tipo: 'outro', ramo_original: 'Residencial',
+                            fim_vigencia: Date.new(2027, 1, 1))
+      pergunta = instance_double(Carteira::Trazer::PerguntaDoRamo)
+      allow(pergunta).to receive(:call) { |ramos| ramos.index_with { 'empresarial' } }
+      allow(Carteira::Trazer::PerguntaDoRamo).to receive(:new).and_return(pergunta)
+
+      andar_ate_o_fim(described_class.primeira(account, user: admin))
+
+      expect(pergunta).to have_received(:call).once.with(['empresarial'])
     end
   end
 
@@ -103,6 +151,7 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
 
       expect(leitura.reload.estado).to eq('parou')
       expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'parou', motivo: 'agger_pede_login')
+      expect(Carteira::Conector.pede_login?(account)).to be(true)
     end
 
     it 'o Agger fora do ar é tentado de novo, e depois de 3 vezes a busca para com "não deu"' do
@@ -160,8 +209,43 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       Carteira::Conector::BuscaDiaria.new(account).mudar!(true)
       Carteira::Conector::BuscaDiaria.new(outra).mudar!(false)
 
-      expect { Carteira::Conector::BuscaDiariaJob.perform_now }.to have_enqueued_job(Carteira::Conector::BuscaJob).exactly(:once)
+      expect { Carteira::Conector::BuscaDiariaJob.perform_now }.to have_enqueued_job(Carteira::Conector::BuscaDiariaJob).exactly(:once)
+      expect { perform_enqueued_jobs(only: Carteira::Conector::BuscaDiariaJob) }.to have_enqueued_job(Carteira::Conector::BuscaJob).exactly(:once)
       expect(Carteira::Leitura.do_conector.pluck(:account_id)).to eq([account.id])
+    end
+
+    it 'a rotina espaça as contas: um job por conta, só com o id, 20 segundos uma depois da outra' do
+      outra = conta_com_carteira
+      conectar!(outra)
+      [account, outra].each { |conta| Carteira::Conector::BuscaDiaria.new(conta).mudar!(true) }
+
+      freeze_time do
+        expect { Carteira::Conector::BuscaDiariaJob.perform_now }
+          .to have_enqueued_job(Carteira::Conector::BuscaDiariaJob).with(account.id).at(Time.current)
+          .and have_enqueued_job(Carteira::Conector::BuscaDiariaJob).with(outra.id).at(20.seconds.from_now)
+      end
+    end
+
+    it 'a primeira nunca devolve uma de todo dia, e a de todo dia retoma a que parou há mais de 10 minutos' do
+      diaria = described_class.diaria(account)
+      primeira = described_class.primeira(account, user: admin)
+      expect(primeira).not_to eq(diaria)
+      expect(primeira.totais).to have_key('primeira')
+      expect(described_class.diaria(account)).to eq(diaria)
+      expect { described_class.diaria(account) }.not_to have_enqueued_job(Carteira::Conector::BuscaJob)
+
+      travel(11.minutes)
+      expect { expect(described_class.diaria(account)).to eq(diaria) }.to have_enqueued_job(Carteira::Conector::BuscaJob).with(diaria.id)
+    end
+
+    it 'o login recusado: a rotina não busca, e o resumo diz que o Agger pediu para entrar de novo' do
+      Carteira::Conector::BuscaDiaria.new(account).mudar!(true)
+      Carteira::Conector.conexao(account).update!(status: 'auth_required')
+      allow(Rails.logger).to receive(:info)
+
+      expect { Carteira::Conector::BuscaDiariaJob.perform_now(account.id) }.not_to have_enqueued_job(Carteira::Conector::BuscaJob)
+      expect(Rails.logger).to have_received(:info).with("[carteira][conector][diaria] account=#{account.id} pede_login")
+      expect(Carteira::Resumo.new(account).call).to include(aggerLigado: false, aggerPedeLogin: true)
     end
   end
 

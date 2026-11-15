@@ -28,7 +28,17 @@ class Carteira::Conector::BuscaDiaria
 
   # Liga na primeira vez que a conta traz uma busca do Agger: só se nenhuma busca dela tinha sido trazida antes.
   def ligar_na_primeira!(leitura)
-    trazidas = Carteira::Leitura.do_conector.where(account_id: @account.id).where.not(id: leitura.id).where.not(confirmada_em: nil)
-    mudar!(true) unless trazidas.exists?
+    mudar!(true) unless trazidas.where.not(id: leitura.id).exists?
+  end
+
+  # A conta já trouxe uma busca do Agger: só então a tela mostra o interruptor.
+  def ja_trouxe?
+    trazidas.exists?
+  end
+
+  private
+
+  def trazidas
+    Carteira::Leitura.do_conector.where(account_id: @account.id).where.not(confirmada_em: nil)
   end
 end

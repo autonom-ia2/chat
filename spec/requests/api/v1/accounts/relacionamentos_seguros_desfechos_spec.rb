@@ -126,7 +126,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
       expect(ler('seguros/contagens')).to include('todos' => 8, 'em_renovacao' => 2, 'vencido' => 1, 'vence_7_dias' => 1)
       expect(ler('seguros/resumo')).to eq('total' => 8, 'vence7' => 1, 'vence7EmRenovacao' => 1, 'emRenovacao' => 2,
                                           'funilEscolhido' => true, 'aggerLigado' => false, 'aggerDisponivel' => true,
-                                          'leituraDePdf' => false)
+                                          'aggerPedeLogin' => false, 'leituraDePdf' => false)
     end
 
     # Arquivar o funil só muda o status dele: a escolha continua guardada, mas deixa de valer, e a tela convida a escolher.

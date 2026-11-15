@@ -360,7 +360,7 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
 
       expect(response.parsed_body).to eq('total' => 8, 'vence7' => 2, 'vence7EmRenovacao' => 0, 'emRenovacao' => 0,
                                          'funilEscolhido' => false, 'aggerLigado' => false, 'aggerDisponivel' => true,
-                                         'leituraDePdf' => false)
+                                         'aggerPedeLogin' => false, 'leituraDePdf' => false)
     end
 
     # E6 (#2899, decisão D4): a tela só mostra a leitura de PDF na conta que o Super Admin liberou.

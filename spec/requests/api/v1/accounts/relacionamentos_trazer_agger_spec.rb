@@ -72,6 +72,9 @@ RSpec.describe 'Carteira de seguros: trazer do Agger', :aggregate_failures, type
       expect(response.parsed_body).to match([include('id' => id, 'diaria' => false, 'situacao' => 'trazida', 'seguros' => 3,
                                                      'podeDesfazer' => true)])
 
+      get "#{base}/busca_diaria", headers: admin.create_new_auth_token
+      expect(response.parsed_body).to eq('ligado' => true, 'jaTrouxe' => true)
+
       get "#{base}/leituras", headers: admin.create_new_auth_token
       expect(response.parsed_body).to eq([])
 
@@ -88,7 +91,7 @@ RSpec.describe 'Carteira de seguros: trazer do Agger', :aggregate_failures, type
 
     it 'o interruptor da busca de todo dia liga e desliga, e recusa o que não é sim ou não' do
       get "#{base}/busca_diaria", headers: admin.create_new_auth_token
-      expect(response.parsed_body).to eq('ligado' => false)
+      expect(response.parsed_body).to eq('ligado' => false, 'jaTrouxe' => false)
 
       put "#{base}/busca_diaria", params: { ligado: true }, headers: admin.create_new_auth_token, as: :json
       expect(response.parsed_body).to eq('ligado' => true)

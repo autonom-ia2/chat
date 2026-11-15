@@ -2,11 +2,14 @@
 # (Carteira::ItemLido: os nomes do leitor de PDF, os valores na forma do banco). O conector já entrega os campos
 # separados, então nada fica "a confirmar": o que veio no formato certo vale, e o que veio fora dele não vem.
 #
-# - `pagina(itens, ignorados:)`: os registros de uma página. O registro repetido (o mesmo `ref` e o mesmo endosso) não
-#   vira outro item: é contado em `repetidos`. O que o adapter não leu vem contado em `ignorados`.
+# - `pagina(itens, ignorados:)`: os registros de uma página. O registro que já é item (o mesmo `ref` e o mesmo endosso)
+#   não vira outro: no mesmo pedido, é contado em `repetidos`; vindo de um pedido anterior desta busca ("Buscar de novo"
+#   pede o período inteiro outra vez), em `ja_lidos`, porque o item dele já está contado. O que o adapter não leu vem
+#   contado em `ignorados`. Assim, para cada pedido, o Conferir fecha com o `total` do conector.
 # - O item sem `ref` fica `falhou` ("não deu para trazer"): sem a referência, a busca seguinte não acharia o mesmo
 #   seguro e criaria outro. O sem seguradora ou sem fim da vigência também: o seguro não entra sem eles.
-# - `tipos!`: no fim da busca, o tipo de cada item sai do ramo (Carteira::Conector::TiposDoRamo).
+# - `tipos!`: no fim da busca, o tipo de cada item sai do ramo (Carteira::Conector::TiposDoRamo). O item cujo tipo foi
+#   respondido (pela conta ou pelo modelo) fica marcado (TiposDoRamo::RESPONDIDO): a próxima busca não pergunta de novo.
 #
 # Os registros têm dado de cliente (nome, documento, e-mail, número da apólice, `pdf_ref`): ficam só nos itens, que saem
 # quando a guarda vence, e nada daqui vai para log, argumento de job ou cache.
@@ -22,22 +25,24 @@ class Carteira::Conector::Ler
 
   def pagina(itens, ignorados: 0)
     posicao = (@leitura.itens.maximum(:posicao) || Carteira::Conector::Pedido::POSICAO) + 1
-    repetidos = 0
+    contas = Hash.new(0)
     Array(itens).each do |registro|
-      next repetidos += 1 if repetido?(registro)
+      ja_veio = ja_veio(registro)
+      next contas[ja_veio] += 1 if ja_veio
 
       criar(registro, posicao)
       posicao += 1
     end
-    somar('recebidos' => Array(itens).size, 'repetidos' => repetidos, 'ignorados' => ignorados.to_i)
+    somar('recebidos' => Array(itens).size, 'repetidos' => contas['repetidos'], 'ja_lidos' => contas['ja_lidos'], 'ignorados' => ignorados.to_i)
   end
 
   def tipos!
     lidos = @leitura.itens.where(estado: LIDO)
     tipos = Carteira::Conector::TiposDoRamo.new(@leitura.account).call(lidos.map { |item| Carteira::ItemLido.new(item).valor('ramo_original') })
     lidos.find_each(batch_size: BLOCO) do |item|
-      ramo = Carteira::Trazer::TipoDoRamo.agrupado(Carteira::ItemLido.new(item).valor('ramo_original'))
-      item.update!(Carteira::ItemLido.new(item).com('tipo' => tipos.fetch(ramo, Carteira::Conector::TiposDoRamo::OUTRO)))
+      lido = Carteira::ItemLido.new(item)
+      tipo = tipos[Carteira::Trazer::TipoDoRamo.agrupado(lido.valor('ramo_original'))]
+      item.update!(lido.com('tipo' => tipo || Carteira::Conector::TiposDoRamo::OUTRO, Carteira::Conector::TiposDoRamo::RESPONDIDO => tipo && 1))
     end
   end
 
@@ -52,15 +57,24 @@ class Carteira::Conector::Ler
     campos['ref'].present? && campos['seguradora'].present? && campos['fim_vigencia'].present?
   end
 
-  def repetido?(registro)
-    return false unless registro.is_a?(Hash) && texto(registro['ref'])
+  # 'repetidos' (o mesmo registro já veio neste pedido), 'ja_lidos' (veio num pedido anterior desta busca) ou nil (é novo).
+  def ja_veio(registro)
+    return unless registro.is_a?(Hash) && texto(registro['ref'])
 
-    @leitura.itens.where("carteira_leitura_itens.campos ->> 'ref' = ?", texto(registro['ref']))
-            .exists?(["COALESCE(carteira_leitura_itens.campos ->> 'endosso', '') = ?", endosso(registro).to_s])
+    posicoes = @leitura.itens.where("carteira_leitura_itens.campos ->> 'ref' = ?", texto(registro['ref']))
+                       .where("COALESCE(carteira_leitura_itens.campos ->> 'endosso', '') = ?", endosso(registro).to_s).pluck(:posicao)
+    return if posicoes.empty?
+
+    posicoes.max >= desde_posicao ? 'repetidos' : 'ja_lidos'
+  end
+
+  def desde_posicao
+    @desde_posicao ||= Carteira::Conector::Pedido.new(@leitura).desde_posicao
   end
 
   def campos_do(registro)
     { 'ref' => texto(registro['ref']), 'pdf_ref' => texto(registro['pdf_ref']), 'endosso' => endosso(registro),
+      'endosso_data' => endosso_data(registro),
       'seguradora' => texto(registro['seguradora']), 'numero' => texto(registro['numero']), 'ramo_original' => texto(registro['ramo']),
       'inicio_vigencia' => data(registro['inicio_vigencia']), 'fim_vigencia' => data(registro['fim_vigencia']),
       'valor_centavos' => centavos(registro['premio_centavos']), 'bem' => texto(registro['item']) }.merge(segurado_do(registro))
@@ -74,6 +88,11 @@ class Carteira::Conector::Ler
 
   def endosso(registro)
     registro['endosso'].is_a?(Hash) ? texto(registro['endosso']['numero']) : nil
+  end
+
+  # A data do endosso ordena a gravação (Carteira::Conector::Gravar::ORDEM): o mais novo fica por cima.
+  def endosso_data(registro)
+    registro['endosso'].is_a?(Hash) ? data(registro['endosso']['data']) : nil
   end
 
   def texto(valor)

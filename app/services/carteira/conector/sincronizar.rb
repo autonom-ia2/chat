@@ -8,15 +8,17 @@
 #   com Desfazer;
 # - `de_novo(leitura)`: a busca que parou num erro continua de onde estava; a que terminou com alguma seguradora sem
 #   vir pede de novo o mesmo período (os registros que já chegaram não se repetem).
-# Enquanto uma busca da conta anda, pedir outra devolve a mesma: nunca duas ao mesmo tempo na plataforma da corretora.
-# Sem conexão pronta: `agger_desligado`.
+# Enquanto uma busca da conta anda, pedir outra DO MESMO TIPO devolve a mesma (a primeira nunca devolve uma de todo dia, e
+# vice-versa). A que não anda há PARADA (o processo morreu, o job se perdeu) é retomada ali: a rotina de todo dia não fica
+# presa numa busca parada. Sem conexão pronta: `agger_desligado`.
 #
 # Andar (`passo`, no Carteira::Conector::BuscaJob, que se reagenda com a espera que o passo devolve): UMA chamada ao
 # conector por passo, nunca em rajada.
 # 1. sem pedido: pede o período (`portfolio_sync_start`);
 # 2. pedido buscando: pergunta o andamento (`portfolio_sync_status`) e guarda como cada seguradora está;
 # 3. pedido pronto: lê uma página (`portfolio_policies`) e passa para a seguinte;
-# 4. sem página seguinte: decide o tipo de cada seguro e termina (`lida`; a de todo dia já vai para a gravação).
+# 4. sem página seguinte: decide o tipo de cada seguro e termina (`lida`, com os números do Conferir já calculados:
+#    Carteira::Conector::Conferir#calcular!; a de todo dia já vai para a gravação).
 # O pedido que falhou inteiro (nenhuma seguradora pronta) também termina, sem seguro: a tela diz o que fazer em cada uma.
 #
 # Erros: o login do Agger recusado (depois da renovação da sessão, que é uma só por operação) para a busca com o motivo
@@ -34,7 +36,7 @@ class Carteira::Conector::Sincronizar
   # A busca que não anda há este tanto (o processo morreu, o job se perdeu) pode ser pedida de novo.
   PARADA = 10.minutes
   # O que a lista de um pedido conta (Carteira::Conector::Ler e o total que o conector informa).
-  CONTAS_DA_LISTA = %w[recebidos repetidos ignorados total].freeze
+  CONTAS_DA_LISTA = %w[recebidos repetidos ja_lidos ignorados total].freeze
 
   class << self
     def primeira(account, user:)
@@ -62,10 +64,12 @@ class Carteira::Conector::Sincronizar
     private
 
     # A busca parada (ou que não anda há PARADA) continua de onde estava. A que terminou pede o período de novo, e as contas
-    # da lista recomeçam: cada pedido tem o seu total.
+    # da lista e os números do Conferir recomeçam: cada pedido tem o seu total.
     def totais_de_novo(leitura)
       totais = leitura.totais.to_h.except('parou', 'tentativas').reject { |chave, _| chave.start_with?('motivo_agger') }
-      leitura.estado == 'lida' ? totais.except(*CONTAS_DA_LISTA) : totais
+      return totais unless leitura.estado == 'lida'
+
+      totais.except(*CONTAS_DA_LISTA).reject { |chave, _| chave.start_with?(Carteira::Conector::Conferir::CHAVE) }
     end
 
     # Os registros que não deram para trazer voltam na lista nova (o sem referência não tem como ser reconhecido como
@@ -78,11 +82,23 @@ class Carteira::Conector::Sincronizar
     def comecar(account, user:, tipo:)
       recusar(DESLIGADO) unless Carteira::Conector.ligado?(account)
 
-      andando = Carteira::Leitura.do_conector.find_by(account_id: account.id, estado: 'lendo')
-      return andando if andando
+      andando = Carteira::Leitura.do_conector.where(account_id: account.id, estado: 'lendo')
+                                 .where('carteira_leituras.totais ->> ? IS NOT NULL', tipo).order(:id).last
+      return retomar(andando) if andando
 
       leitura = Carteira::Leitura.transaction { criar(account, user, tipo) }
       Carteira::Conector::BuscaJob.perform_later(leitura.id)
+      leitura
+    end
+
+    # A busca do mesmo tipo que ainda anda é devolvida como está; a que não anda há PARADA volta para a fila.
+    def retomar(leitura)
+      parada = leitura.with_lock do
+        next false unless leitura.estado == 'lendo' && leitura.updated_at <= PARADA.ago
+
+        leitura.update!(updated_at: Time.current)
+      end
+      Carteira::Conector::BuscaJob.perform_later(leitura.id) if parada
       leitura
     end
 
@@ -162,6 +178,7 @@ class Carteira::Conector::Sincronizar
       @leitura.update!(estado: 'trazendo', totais: @leitura.totais.to_h.merge('para_trazer' => lidos))
       Carteira::Conector::GravarJob.perform_later(@leitura.id)
     else
+      Carteira::Conector::Conferir.new(@leitura).calcular!
       @leitura.update!(estado: 'lida')
     end
     nil

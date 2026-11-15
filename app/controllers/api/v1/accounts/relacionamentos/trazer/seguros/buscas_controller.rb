@@ -13,10 +13,12 @@ class Api::V1::Accounts::Relacionamentos::Trazer::Seguros::BuscasController < Ap
     render json: { leituraId: busca.id }, status: :created
   end
 
-  # GET trazer/seguros/busca_diaria → { ligado }
+  # GET trazer/seguros/busca_diaria → { ligado, jaTrouxe }. `jaTrouxe`: a conta já trouxe uma busca do Agger; antes disso
+  # a tela não mostra o interruptor.
   def busca_diaria
     sem_parametros
-    render json: { ligado: ::Carteira::Conector::BuscaDiaria.new(Current.account).ligada? }
+    diaria = ::Carteira::Conector::BuscaDiaria.new(Current.account)
+    render json: { ligado: diaria.ligada?, jaTrouxe: diaria.ja_trouxe? }
   end
 
   # PUT trazer/seguros/busca_diaria { ligado } → { ligado }
