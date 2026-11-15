@@ -10,7 +10,7 @@ require 'rails_helper'
 #
 # O CAMINHO É O REAL: o agente é o que o `Builder` cria (principal + especialista de auto), o
 # catálogo do turno é o do `Answerer` (que esconde do principal o que o especialista reservou), e a
-# ferramenta executada é a `InsuranceGeneralConditions` de verdade, contra o `/query` dublado por
+# ferramenta executada é a `InsuranceGeneralConditions` de verdade, contra o `/perguntar` dublado por
 # WebMock. Só o MODELO é dublado: ele devolve a chamada de função, que é a decisão que a instrução
 # §7.1 pede. O que este spec afirma é o que o CÓDIGO garante — o que chega ao modelo e o que fica no
 # banco. A frase final ao cliente é do modelo, e não se prova por máquina.
@@ -39,13 +39,13 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
   let(:runs) { Autonomia::Agents::ToolRun.for_conversation(conversation.id) }
   let(:cotacao) { Autonomia::Agents::Tools::Native::InsuranceQuote }
-  let(:url) { 'https://agent.autonomia.site/query' }
+  let(:url) { 'https://agent.autonomia.site/perguntar' }
   let(:trecho) { 'A assistência 24 horas inclui reboque até 200 km do local do evento.' }
   let(:duvida) { 'a assistência 24h da Porto cobre guincho?' }
   let(:chamada_da_cg) do
     { 'name' => 'consultar_condicoes_gerais', 'call_id' => 'cg1',
-      'arguments' => { 'seguradora' => 'Porto', 'pergunta' => 'A assistência 24h cobre guincho?',
-                       'ramo' => 'Automóvel' }.to_json }
+      'arguments' => { 'seguradora' => 'Porto',
+                       'pergunta' => 'A assistência 24h da Porto cobre guincho no seguro auto?' }.to_json }
   end
   # A resposta do modelo depois da rodada de ferramentas. O conteúdo dela não prova nada aqui: quem
   # escreve a frase ao cliente é o modelo.
@@ -95,12 +95,17 @@ RSpec.describe Autonomia::Agents::Answerer do
     run.reload
   end
 
+  # A chave da conta (hook crm_kanban_ai): sem ela a ferramenta nem entra no catálogo.
+  def chave_da_conta = 'sk-conta-do-cliente-0123456789'
+
   def stub_da_cg(status:, grounded:, text: trecho, resolved: ['Porto Seguro'])
-    body = { 'answer_text' => text, 'answer_status' => status, 'grounded' => grounded,
-             'interpreted' => { 'insurers' => [{ 'sent' => 'Porto', 'resolved' => resolved,
-                                                 'did_you_mean' => [] }] } }
-    stub_request(:post, url).to_return(status: 200, body: body.to_json,
-                                       headers: { 'Content-Type' => 'application/json' })
+    allow(Autonomia::Insurance::GeneralConditions::Client).to receive(:account_key).and_return(chave_da_conta)
+    resposta = { 'answer_text' => text, 'answer_status' => status, 'grounded' => grounded,
+                 'interpreted' => { 'insurers' => [{ 'sent' => 'Porto', 'resolved' => resolved,
+                                                     'did_you_mean' => [] }] } }
+    body = { 'encaminhamento' => { 'rota' => 'consulta' }, 'resposta' => resposta }
+    stub_request(:post, url).with(query: { 'api_key' => chave_da_conta })
+                            .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
   # O modelo dublado: recebe o catálogo do turno e devolve a chamada de função que a §7.1 pede. Sem
@@ -144,8 +149,8 @@ RSpec.describe Autonomia::Agents::Answerer do
       responder
 
       # Assert — a consulta aconteceu, com a seguradora que o cliente citou
-      expect(WebMock).to(have_requested(:post, url)
-        .with { |req| JSON.parse(req.body)['insurer_name'] == 'Porto' })
+      expect(WebMock).to(have_requested(:post, url).with(query: { 'api_key' => chave_da_conta })
+        .with { |req| JSON.parse(req.body)['pergunta'] == 'A assistência 24h da Porto cobre guincho no seguro auto?' })
       expect(saida_da_ferramenta(capturado)).to include('Porto Seguro', trecho)
     end
 

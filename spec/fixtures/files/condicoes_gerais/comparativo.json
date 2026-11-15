@@ -1,0 +1,95 @@
+{
+  "encaminhamento": {
+    "rota": "comparativo",
+    "seguradoras": [
+      "Porto Seguro",
+      "Allianz Seguros"
+    ],
+    "seguradoras_lidas": [
+      {
+        "como_escrito": "Porto Seguro",
+        "nome": "Porto Seguro",
+        "serve_para_varias": false
+      },
+      {
+        "como_escrito": "Allianz",
+        "nome": "Allianz Seguros",
+        "serve_para_varias": false
+      }
+    ],
+    "produto": "Automóvel - Casco",
+    "processos": [],
+    "motivo": "Pergunta pela diferença entre a cobertura de carro reserva de duas seguradoras no seguro auto.",
+    "modelo": "gpt-6-luna"
+  },
+  "resposta": {
+    "query_text": "Qual a diferença do carro reserva entre Porto Seguro e Allianz no seguro auto?",
+    "insurance_type": "Automóvel - Casco",
+    "lob": null,
+    "compare_status": "answered",
+    "insurers_found": 2,
+    "insurers_compared": 2,
+    "comparison_text": "### Acionamento e situações cobertas\n- **Porto Seguro:** conforme a cláusula contratada, pode haver locação de veículo ou crédito em aplicativo. No contrato em cosseguro com Mitsui Sumitomo, o benefício pode ser concedido em sinistro de casco indenizável, em certas situações de atendimento do segurado como terceiro e, se contratada essa hipótese, por pane mecânica ou elétrica que impeça o veículo de trafegar, a até 50 km de locadora referenciada. Para o contrato da Porto Seguro Companhia de Seguros Gerais, os critérios de concessão **não foi possível apurar nesta consulta**.\n- **Allianz:** cobertura facultativa, contratada mediante prêmio adicional e não isoladamente. Acionável quando sinistro coberto pelo casco deixa o veículo indisponível; em perda parcial, o orçamento deve superar a franquia. A solicitação ocorre após abertura do aviso de sinistro, e o veículo deve ser disponibilizado em até 2 dias úteis, atendidos os requisitos da garantia.\n\n### Modalidade e limites\n- **Porto Seguro:** os limites variam conforme cláusula e porte do veículo. No contrato em cosseguro, a locação tem valores de **R$ 630 a R$ 3.780 por evento**; para pane, os limites são por vigência, mas seus valores **não foi possível apurar nesta consulta**. No contrato da Porto Seguro Companhia de Seguros Gerais, os valores de locação também vão de **R$ 630 a R$ 3.780 por evento**, com limites diários de **R$ 90 ou R$ 126**. Há créditos de aplicativo, mas a tabela disponível não permite apurar todos os valores.\n- **Allianz:** escolha entre categorias Básico, Intermediário e Superior. Os limites por vigência são:\n  - **7 diárias:** R$ 55, R$ 105 ou R$ 180 por dia, respectivamente;\n  - **15 diárias:** R$ 825, R$ 1.575 ou R$ 2.700;\n  - **30 diárias:** R$ 1.650, R$ 3.150 ou R$ 5.400;\n  - **45 diárias:** R$ 2.475, R$ 4.725 ou R$ 8.100.\n  As diárias são por vigência, sem reintegração automática. O veículo corresponde à categoria contratada e tem quilometragem livre.\n\n### Aplicativo e atendimento como terceiro\n- **Porto Seguro:** prevê créditos para aplicativos conforme cláusula e situação; os valores variam. Para o contrato da Porto Seguro Companhia de Seguros Gerais, a tabela disponível é incompleta.\n- **Allianz:** em perda parcial ou indenização integral, exceto roubo ou furto, pode-se optar por voucher Uber no valor total das diárias contratadas; após a liberação do crédito, a escolha não pode ser revertida. Em roubo ou furto, exige-se boletim de ocorrência. Se atendido como terceiro, o segurado pode usar somente carro Básico ou escolher voucher, observados os limites; nessa situação, não há dedução das diárias da cobertura contratada.",
+    "insurer_results": [
+      {
+        "insurer_name": "Porto Seguro",
+        "insurer_id": "fac4494b-c792-4d54-aa8c-9b64b38a4677",
+        "process_count": 9,
+        "answer_text": "Na Porto, o carro reserva pode ser oferecido por locação ou por crédito em aplicativo de transporte, conforme a cláusula contratada. No contrato em cosseguro com Mitsui Sumitomo Seguros (SUSEP 15414.648028/2023-32), a concessão pode ocorrer em sinistro de casco indenizável, em certas situações em que o segurado é atendido como terceiro e, se contratada a hipótese, em pane mecânica ou elétrica que impeça o veículo de trafegar, ocorrida a até 50 km de uma locadora referenciada. Os limites de locação por evento variam conforme a cláusula e o tipo de veículo: a tabela apresenta valores de R$ 630 a R$ 3.780; para pane, os limites são por vigência. Há também créditos para aplicativos, com valores que variam conforme a cláusula e a situação. (SUSEP 15414.648028/2023-32)\n\nNo contrato Porto Seguro Companhia de Seguros Gerais (SUSEP 15414.610648/2024-80), a tabela disponível também diferencia cláusulas, tipo de locadora e porte do veículo: os limites de locação por evento apresentados vão de R$ 630 a R$ 3.780, considerando limites diários de R$ 90 ou R$ 126. O trecho disponível lista créditos de aplicativo para algumas cláusulas, mas não traz a tabela completa. Os critérios de concessão e outros detalhes desse contrato não estão detalhados nos trechos fornecidos.",
+        "answer_status": "answered",
+        "used_context_count": 4,
+        "warnings": [
+          "context_budget_exhausted",
+          "model_marked_partial"
+        ],
+        "chunks_retrieved": 10,
+        "used_citation_labels": [
+          "docver:583e18c9 section p43 r25",
+          "docver:583e18c9 section p43 r2",
+          "docver:583e18c9 section p44 r1",
+          "docver:3d9517fa section p48 r39"
+        ],
+        "grounded": true,
+        "consulted": true,
+        "document_count": 9
+      },
+      {
+        "insurer_name": "Allianz Seguros",
+        "insurer_id": "27a7b6e0-38b8-477a-bed8-79773246204d",
+        "process_count": 1,
+        "answer_text": "No Allianz Auto Automóvel, o carro reserva é uma cobertura facultativa, contratada mediante prêmio adicional, e não pode ser contratada isoladamente. Pode ser acionada quando um sinistro coberto pelo casco deixa o veículo indisponível; em perda parcial, o orçamento deve superar a franquia. A solicitação é feita após a abertura do aviso de sinistro, e o veículo deve ser disponibilizado em até 2 dias úteis, desde que atendidos os requisitos da garantia. [Processo SUSEP 15414.002216/2004-57]\n\nNa contratação, o segurado escolhe entre as categorias Básico (popular compacto, ar-condicionado e câmbio manual), Intermediário (ar-condicionado e câmbio automático) e Superior (SUV, ar-condicionado e câmbio automático). Para o Allianz Auto Automóvel, os limites de reembolso por vigência são: 7 diárias — R$ 55/dia no Básico, R$ 105/dia no Intermediário ou R$ 180/dia no Superior; 15 diárias — R$ 825, R$ 1.575 ou R$ 2.700, respectivamente; 30 diárias — R$ 1.650, R$ 3.150 ou R$ 5.400; e 45 diárias — R$ 2.475, R$ 4.725 ou R$ 8.100. As diárias são por vigência, sem reintegração automática. O carro fornecido corresponde à categoria contratada e tem quilometragem livre.\n\nEm perda parcial ou indenização integral, exceto roubo ou furto, há também a opção de voucher Uber pelo valor total das diárias contratadas; depois de liberado o crédito, a escolha não pode ser revertida. Para roubo ou furto, é necessário apresentar boletim de ocorrência. Se o segurado for atendido como terceiro, só pode usar carro Básico ou optar pelo voucher, observados os limites e condições previstos; nessa situação, não há dedução das diárias da cobertura contratada.",
+        "answer_status": "answered",
+        "used_context_count": 5,
+        "warnings": [
+          "context_budget_exhausted"
+        ],
+        "chunks_retrieved": 10,
+        "used_citation_labels": [
+          "docver:58eecd64 section p54 r2",
+          "docver:58eecd64 section p55 r46",
+          "docver:58eecd64 section p56 r10",
+          "docver:58eecd64 section p56 r12",
+          "docver:58eecd64 section p56 r33"
+        ],
+        "grounded": true,
+        "consulted": true,
+        "document_count": 1
+      }
+    ],
+    "model_name": "gpt-6-luna",
+    "generated_at": "2026-11-15T21:09:08.438928+00:00",
+    "warnings": [],
+    "coverage": {
+      "insurers_with_documents": [
+        "Allianz Seguros",
+        "Porto Seguro"
+      ],
+      "insurers_without_documents": [],
+      "documents_per_insurer": {
+        "Porto Seguro": 9,
+        "Allianz Seguros": 1
+      },
+      "note": "Seguradora sem documento nesta base não indica ausência de cobertura: indica que não há condição geral desse produto ingerida aqui."
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "encaminhamento": {
+    "rota": "catalogo",
+    "seguradoras": [],
+    "seguradoras_lidas": [],
+    "produto": "Automóvel",
+    "processos": [],
+    "motivo": "Pergunta quais seguradoras têm condições gerais de seguro auto na base."
+  },
+  "resposta": {
+    "kind": "susep_foundation.catalog.v1",
+    "served_at": "2026-11-15T21:11:15Z",
+    "generated_at": "2026-11-15T21:11:15Z",
+    "data_updated_at": "2026-11-15T04:27:19Z",
+    "filters": {
+      "insurer": null,
+      "product": "Automóvel"
+    },
+    "insurers": [
+      {
+        "name": "Chubb Seguros Brasil S.A.",
+        "documents": 171
+      },
+      {
+        "name": "Zurich Minas Brasil Seguros S.A.",
+        "documents": 135
+      }
+    ],
+    "products": [
+      {
+        "name": "Automóvel - Casco",
+        "documents": 119
+      }
+    ],
+    "aliases": [
+      {
+        "alias": "AKAD",
+        "insurer": "Akad Seguros S.A."
+      },
+      {
+        "alias": "Allianz",
+        "insurer": "Allianz Seguros"
+      }
+    ],
+    "availability": [
+      {
+        "insurer": "Akad Seguros S.A.",
+        "product": "Automóvel - Casco",
+        "documents": 4
+      },
+      {
+        "insurer": "Alfa Seguradora",
+        "product": "Automóvel - Casco",
+        "documents": 1
+      }
+    ],
+    "totals": {
+      "insurers": 151,
+      "products": 55,
+      "pairs_available": 1590
+    }
+  }
+}

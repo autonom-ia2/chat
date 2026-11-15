@@ -28,7 +28,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   let(:leituras) { {} }
   let(:chamada_da_cg) do
     { 'name' => 'consultar_condicoes_gerais', 'call_id' => 'cg1',
-      'arguments' => { 'seguradora' => 'Zurich', 'pergunta' => 'Cobre enchente?', 'ramo' => 'Automóvel' }.to_json }
+      'arguments' => { 'seguradora' => 'Zurich', 'pergunta' => 'O seguro auto da Zurich cobre enchente?' }.to_json }
   end
 
   around do |example|
@@ -38,10 +38,14 @@ RSpec.describe Autonomia::Agents::Answerer do
   before do
     enable_test_encryption!
     agente.update!(config: agente.config.merge('with_knowledge' => false))
-    body = { 'answer_text' => 'Alagamento e enchente estão cobertos.', 'answer_status' => 'answered',
-             'grounded' => true,
-             'interpreted' => { 'insurers' => [{ 'sent' => 'Zurich', 'resolved' => ['Zurich'], 'did_you_mean' => [] }] } }
-    stub_request(:post, 'https://agent.autonomia.site/query')
+    # A consulta às condições gerais só entra no catálogo com a chave da própria conta (#3035).
+    allow(Autonomia::Insurance::GeneralConditions::Client).to receive(:account_key).and_return('sk-conta-do-cliente-0123456789')
+    resposta = { 'answer_text' => 'Alagamento e enchente estão cobertos.', 'answer_status' => 'answered',
+                 'grounded' => true,
+                 'interpreted' => { 'insurers' => [{ 'sent' => 'Zurich', 'resolved' => ['Zurich'], 'did_you_mean' => [] }] } }
+    body = { 'encaminhamento' => { 'rota' => 'consulta' }, 'resposta' => resposta }
+    stub_request(:post, 'https://agent.autonomia.site/perguntar')
+      .with(query: { 'api_key' => 'sk-conta-do-cliente-0123456789' })
       .to_return(status: 200, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 

@@ -55,17 +55,6 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
     end
   end
 
-  # A ferramenta que quebrou em produção, nomeada.
-  describe 'consultar_condicoes_gerais' do
-    it 'declara ramo como opcional sem tirá-lo de required' do
-      schema = Autonomia::Agents::Tools::Native::InsuranceGeneralConditions.openai_schema
-
-      expect(schema[:parameters][:required]).to include('ramo')
-      # A ordem dentro do array não importa para a OpenAI; o que importa é `null` estar lá.
-      expect(schema[:parameters][:properties]['ramo']['type']).to match_array(%w[string null])
-    end
-  end
-
   # A FERRAMENTA DE RESULTADO DA LIA (fatia 2 do #420): um parâmetro opcional, e é do principal — um
   # opcional mal declarado derruba a chamada inteira dela, como em 08/09.
   describe 'ver_resultado_da_cotacao' do
