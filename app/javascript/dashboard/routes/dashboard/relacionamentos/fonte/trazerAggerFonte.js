@@ -8,18 +8,33 @@
 import AggerAPI from 'dashboard/api/relacionamentosTrazerAgger';
 import PdfsAPI from 'dashboard/api/relacionamentosTrazerPdfs';
 import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
+import { LOGIN } from '../carteira/useBuscaNoAgger';
 import { noServidor } from './carteiraFonteReal';
 
 // O login deu certo: a conexão está pronta ou varrendo os produtos da Cotação
 // (a carteira não espera a varredura; Carteira::Conector.pronta?).
 const LOGIN_ACEITO = ['ready', 'discovering'];
+// O Agger não respondeu como devia (fora do ar, lento, pedindo alguém, ainda
+// entrando): não é o login e a senha que estão errados.
+const AGGER_FORA_DO_AR = [
+  'degraded',
+  'offline',
+  'human_required',
+  'provisioning',
+  'authenticating',
+];
+
+const respostaDoLogin = status => {
+  if (LOGIN_ACEITO.includes(status)) return LOGIN.ACEITO;
+  return AGGER_FORA_DO_AR.includes(status) ? LOGIN.FORA_DO_AR : LOGIN.RECUSADO;
+};
 
 export const trazerAggerFonte = () => ({
   conectar: async ({ login, senha }) => {
     const resposta = await noServidor(() =>
       AutonomiaInsuranceAPI.connect({ username: login, password: senha })
     );
-    return LOGIN_ACEITO.includes(resposta?.payload?.status);
+    return respostaDoLogin(resposta?.payload?.status);
   },
   buscar: () => noServidor(() => AggerAPI.buscar()),
   deNovo: id => noServidor(() => AggerAPI.deNovo(id)),
@@ -29,9 +44,17 @@ export const trazerAggerFonte = () => ({
   historico: () => noServidor(() => AggerAPI.historico()),
   previaDoDesfazer: id => noServidor(() => PdfsAPI.previaDoDesfazer(id)),
   desfazer: id => noServidor(() => PdfsAPI.desfazer(id)),
-  buscaDiaria: async () =>
-    (await noServidor(() => AggerAPI.buscaDiaria())).ligado === true,
-  mudarBuscaDiaria: async ligado =>
-    (await noServidor(() => AggerAPI.mudarBuscaDiaria(ligado))).ligado ===
-    true,
+  // { ligado, jaTrouxe }: o interruptor só aparece depois da primeira busca
+  // trazida.
+  buscaDiaria: async () => {
+    const resposta = await noServidor(() => AggerAPI.buscaDiaria());
+    return {
+      ligado: resposta.ligado === true,
+      jaTrouxe: resposta.jaTrouxe === true,
+    };
+  },
+  mudarBuscaDiaria: async ligado => {
+    const resposta = await noServidor(() => AggerAPI.mudarBuscaDiaria(ligado));
+    return resposta.ligado === true;
+  },
 });

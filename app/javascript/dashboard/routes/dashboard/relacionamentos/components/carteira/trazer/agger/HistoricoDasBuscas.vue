@@ -1,7 +1,10 @@
 <script setup>
-import { onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { chaveDaRecusa, codigoDaRecusa } from '../../../../carteira/recusas';
+import {
+  chaveDaRecusaDoAgger,
+  codigoDaRecusa,
+} from '../../../../carteira/recusas';
 import DialogoDeConfirmacao from '../../DialogoDeConfirmacao.vue';
 
 // #2900 (E7.3) — as buscas no Agger já feitas, a mais nova primeiro: a
@@ -9,6 +12,7 @@ import DialogoDeConfirmacao from '../../DialogoDeConfirmacao.vue';
 // sozinhas. A que ainda está buscando ou no Conferir tem "Continuar"; a
 // trazida, dentro da guarda, tem "Desfazer", que antes mostra o que sai e o que
 // fica (a mesma prévia dos PDFs: só sai o que veio na busca e ninguém mexeu).
+// A prévia diz só as partes que não são zero, cada uma no singular ou plural.
 const props = defineProps({
   fonte: { type: Object, required: true },
 });
@@ -17,6 +21,13 @@ const emit = defineEmits(['continuar']);
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.AGGER.NAO_DEU';
 const CONTINUA = ['lendo', 'parou', 'lida', 'trazendo'];
 const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO';
+const PARTES_DA_PREVIA = [
+  ['SAEM', 'saem'],
+  ['VOLTAM', 'voltam'],
+  ['FICAM', 'ficam'],
+  ['PESSOAS_SAEM', 'pessoasSaem'],
+  ['PESSOAS_FICAM', 'pessoasFicam'],
+];
 
 const { t, locale } = useI18n();
 const th = (chave, valores, plural) =>
@@ -37,8 +48,18 @@ const quando = texto =>
   }).format(new Date(texto));
 
 const falhou = falha => {
-  erro.value = chaveDaRecusa(codigoDaRecusa(falha), NAO_DEU);
+  erro.value = chaveDaRecusaDoAgger(codigoDaRecusa(falha), NAO_DEU);
 };
+
+const avisoDaPrevia = computed(() => {
+  if (!previa.value) return '';
+  const comNumero = PARTES_DA_PREVIA.filter(([, campo]) => previa.value[campo]);
+  const partes = comNumero.map(([chave, campo]) => {
+    const count = previa.value[campo];
+    return th(`PREVIA.AVISO.${chave}`, { count }, count);
+  });
+  return partes.length ? partes.join(' ') : th('PREVIA.AVISO.NADA');
+});
 
 const carregar = async () => {
   erro.value = '';
@@ -145,7 +166,7 @@ defineExpose({ carregar });
       ref="dialogo"
       marca="desfazer-busca"
       :titulo="th('PREVIA.TITULO')"
-      :aviso="previa ? th('PREVIA.AVISO', previa) : ''"
+      :aviso="avisoDaPrevia"
       :confirmar="th('PREVIA.CONFIRMAR')"
       :voltar="th('PREVIA.VOLTAR')"
       :ocupado="ocupado"

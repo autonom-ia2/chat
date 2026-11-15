@@ -9,6 +9,7 @@ import {
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { trazerAggerFonte } from '../../../../fonte/trazerAggerFonte';
 import {
   ETAPAS_DO_AGGER,
@@ -38,10 +39,16 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
 // que fazer fica no lugar. Toda espera que pode falhar tem "Tentar de novo". A
 // cada etapa nova, o foco vai ao título.
+//
+// Escrever o login do Agger é de quem pode mexer na Cotação
+// (`insurance_manage`, como o servidor). Sem essa permissão, a tela não oferece
+// a janela do login: diz para pedir a quem administra a conta.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerAggerFonte() },
   // O login do Agger da conta já foi aceito (o resumo da carteira).
   ligado: { type: Boolean, default: false },
+  // O Agger recusou o login guardado (o resumo da carteira, `aggerPedeLogin`).
+  pedeLogin: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -55,9 +62,10 @@ const router = useRouter();
 const titulo = useTemplateRef('titulo');
 const login = useTemplateRef('login');
 const historico = useTemplateRef('historico');
+const podeLigar = usePermissionGranted('insurance_manage');
 
 const busca = useBuscaNoAgger(props.fonte, {
-  ligado: props.ligado,
+  ligado: props.ligado && !props.pedeLogin,
   aoMudarBusca: id =>
     router.replace({ query: { ...route.query, busca: id ?? undefined } }),
 });
@@ -69,6 +77,7 @@ const {
   ocupado,
   semAcompanhar,
   parado,
+  conectado,
 } = busca;
 
 const parou = computed(() => atual.value?.estado === 'parou');
@@ -79,11 +88,31 @@ const motivoDaParada = computed(() =>
   pedeLogin.value ? 'PEDE_LOGIN' : 'FALHOU'
 );
 const podeTentarDeNovo = computed(
-  () =>
-    semAcompanhar.value || parado.value || (parou.value && !pedeLogin.value)
+  () => semAcompanhar.value || parado.value || (parou.value && !pedeLogin.value)
+);
+// O que fazer quando a busca parou. Sem poder escrever o login, pedir.
+const fazerDaParada = computed(() =>
+  pedeLogin.value && !podeLigar.value
+    ? ta('PECA_AO_ADMIN')
+    : ta(`PAROU.${motivoDaParada.value}_FAZER`)
+);
+// Sem o login aceito e sem poder escrevê-lo, não há janela para abrir.
+const pedirAoAdmin = computed(() => !conectado.value && !podeLigar.value);
+const loginRecusadoNaConta = computed(
+  () => props.pedeLogin && !conectado.value
 );
 const rotuloDeTrazer = seguros =>
   ta('CONFERIR.TRAZER', { count: seguros }, seguros);
+const fraseDosNumeros = computed(() =>
+  [
+    ta('CONFERIR.ENTRAM', { count: atual.value.seguros }, atual.value.seguros),
+    ta(
+      'CONFERIR.DE_PESSOAS',
+      { count: atual.value.pessoas },
+      atual.value.pessoas
+    ),
+  ].join(' ')
+);
 const seguradoras = computed(() => atual.value?.porSeguradora ?? []);
 const chegaram = computed(() => ({
   seguros: andamento.value?.seguros ?? 0,
@@ -154,7 +183,15 @@ onBeforeUnmount(busca.parar);
 
       <template v-if="etapa === ETAPAS_DO_AGGER.INICIO">
         <p class="m-0 text-lg text-n-slate-11">{{ ta('APOIO') }}</p>
+        <p
+          v-if="pedirAoAdmin"
+          data-carteira="peca-ao-admin"
+          class="m-0 text-base font-medium text-n-slate-12"
+        >
+          {{ ta('PECA_AO_ADMIN') }}
+        </p>
         <Button
+          v-else
           size="lg"
           type="button"
           data-carteira="buscar-no-agger"
@@ -163,7 +200,12 @@ onBeforeUnmount(busca.parar);
           :label="ta('BUSCAR')"
           @click="comecar"
         />
-        <BuscaDeTodoDia :fonte="fonte" />
+        <BuscaDeTodoDia
+          :fonte="fonte"
+          :pede-login="loginRecusadoNaConta"
+          :pode-ligar="podeLigar"
+          @entrar="login?.abrir()"
+        />
         <HistoricoDasBuscas
           ref="historico"
           :fonte="fonte"
@@ -191,7 +233,7 @@ onBeforeUnmount(busca.parar);
             {{ ta(`PAROU.${motivoDaParada}`) }}
           </span>
           <span class="text-base text-n-slate-11">
-            {{ ta(`PAROU.${motivoDaParada}_FAZER`) }}
+            {{ fazerDaParada }}
           </span>
         </div>
         <SeguradorasDaBusca
@@ -207,7 +249,7 @@ onBeforeUnmount(busca.parar);
           {{ ta('PARADO') }}
         </p>
         <Button
-          v-if="pedeLogin"
+          v-if="pedeLogin && podeLigar"
           size="lg"
           type="button"
           class="self-start"
@@ -229,16 +271,20 @@ onBeforeUnmount(busca.parar);
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.CONFERIR">
         <p data-carteira="numeros-do-agger" class="m-0 text-lg text-n-slate-12">
-          {{
-            ta('CONFERIR.ENTRAM', {
-              seguros: atual.seguros,
-              pessoas: atual.pessoas,
-            })
-          }}
+          {{ fraseDosNumeros }}
         </p>
         <ul
           class="flex flex-wrap gap-2 p-0 m-0 text-sm list-none text-n-slate-11"
         >
+          <li v-if="atual.jaNaCarteira" data-carteira="ja-na-carteira">
+            {{
+              ta(
+                'CONFERIR.JA_NA_CARTEIRA',
+                { count: atual.jaNaCarteira },
+                atual.jaNaCarteira
+              )
+            }}
+          </li>
           <li v-if="atual.pessoasNovas" data-carteira="pessoas-novas">
             {{
               ta(
@@ -350,7 +396,12 @@ onBeforeUnmount(busca.parar);
             />
           </template>
         </HeroiEscuro>
-        <BuscaDeTodoDia :fonte="fonte" />
+        <BuscaDeTodoDia
+          :fonte="fonte"
+          :pede-login="loginRecusadoNaConta"
+          :pode-ligar="podeLigar"
+          @entrar="login?.abrir()"
+        />
       </template>
     </div>
     <DialogoDoLoginNoAgger ref="login" :conectar="busca.conectar" />

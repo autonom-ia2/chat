@@ -1,7 +1,8 @@
 // #2900 (E7.3) — por onde a conta traz os seguros, além da planilha: os PDFs
 // das apólices (`leituraDePdf: true` no resumo da carteira, decisão D4) e o
-// Agger (`aggerDisponivel`), e se o login do Agger já foi aceito
-// (`aggerLigado`). Uma pergunta só ao resumo. A demonstração não tem nenhum
+// Agger (`aggerDisponivel`), se o login do Agger já foi aceito
+// (`aggerLigado`) e se o Agger recusou o login guardado (`aggerPedeLogin`).
+// Uma pergunta só ao resumo. A demonstração não tem nenhum
 // dos dois, e na dúvida (o resumo falhou) a resposta é não: a porta fica só
 // com a planilha, como era.
 import { carteiraFonteReal } from '../fonte/carteiraFonteReal';
@@ -10,6 +11,7 @@ export const SEM_CAMINHOS = Object.freeze({
   pdfs: false,
   agger: false,
   aggerLigado: false,
+  aggerPedeLogin: false,
 });
 
 export const caminhosDeTrazer = async ({ demo = false, fonte = null } = {}) => {
@@ -21,6 +23,7 @@ export const caminhosDeTrazer = async ({ demo = false, fonte = null } = {}) => {
       pdfs: resumo?.leituraDePdf === true,
       agger,
       aggerLigado: agger && resumo?.aggerLigado === true,
+      aggerPedeLogin: agger && resumo?.aggerPedeLogin === true,
     };
   } catch {
     return SEM_CAMINHOS;

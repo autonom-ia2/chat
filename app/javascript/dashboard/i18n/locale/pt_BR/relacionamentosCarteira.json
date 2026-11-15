@@ -754,6 +754,13 @@
       "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "ENTRAR": "Entrar no Agger",
+      "PECA_AO_ADMIN": "Peça a quem administra a conta para ligar o Agger.",
+      "RECUSAS": {
+        "LEITURA_NAO_PRONTA": "Esta busca ainda não terminou. Espere um pouco e tente de novo.",
+        "LEITURA_FECHADA": "Esta busca já foi trazida ou desfeita. Veja as buscas aqui embaixo.",
+        "NADA_PARA_TRAZER": "Nenhum seguro desta busca está pronto para entrar.",
+        "NAO_PODE_DESFAZER": "Esta busca não pode mais ser desfeita."
+      },
       "TRAZENDO": "Trazendo os seguros… {porcentagem}%",
       "PAROU": {
         "PEDE_LOGIN": "O Agger não aceitou o seu login.",
@@ -780,7 +787,9 @@
         "TENTAR": "Tentar de novo"
       },
       "CONFERIR": {
-        "ENTRAM": "{seguros} seguros prontos para entrar, de {pessoas} pessoas.",
+        "ENTRAM": "{count} seguro pronto para entrar, | {count} seguros prontos para entrar,",
+        "DE_PESSOAS": "de {count} pessoa. | de {count} pessoas.",
+        "JA_NA_CARTEIRA": "{count} já estava na carteira e só é atualizado | {count} já estavam na carteira e só são atualizados",
         "PESSOAS_NOVAS": "{count} pessoa nova | {count} pessoas novas",
         "SEM_TELEFONE": "{count} pessoa fica sem telefone | {count} pessoas ficam sem telefone",
         "NAO_DEU": "{count} não deu para trazer | {count} não deram para trazer",
@@ -795,7 +804,9 @@
       "TODO_DIA": {
         "ROTULO": "Buscar novos seguros todo dia",
         "LIGADO": "Ligado: uma vez por dia eu busco no Agger, e os seguros novos entram sozinhos. Você desfaz pelas buscas, aqui embaixo.",
-        "DESLIGADO": "Desligado: os seguros só vêm quando você tocar em \"Trazer meus seguros do Agger\"."
+        "DESLIGADO": "Desligado: os seguros só vêm quando você tocar em \"Trazer meus seguros do Agger\".",
+        "PEDE_LOGIN": "O Agger pediu para você entrar de novo",
+        "PEDE_LOGIN_FAZER": "Até lá, eu não busco todo dia. Toque em \"Entrar no Agger\" e escreva o login e a senha que você usa no Agger."
       },
       "LOGIN": {
         "TITULO": "Entrar no Agger",
@@ -803,9 +814,11 @@
         "CAMPO_LOGIN": "Login do Agger",
         "CAMPO_SENHA": "Senha do Agger",
         "ENTRAR": "Entrar e buscar",
+        "TENTAR_DE_NOVO": "Tentar de novo",
         "VOLTAR": "Voltar",
         "FALTA": "Escreva o login e a senha do Agger.",
         "RECUSADO": "O Agger não aceitou esse login e essa senha. Confira e tente de novo.",
+        "FORA_DO_AR": "O Agger está fora do ar agora. Tente de novo mais tarde.",
         "NAO_DEU": "Não consegui falar com o Agger agora. Tente de novo."
       },
       "HISTORICO": {
@@ -825,7 +838,14 @@
         },
         "PREVIA": {
           "TITULO": "Desfazer esta busca?",
-          "AVISO": "{saem} seguros saem e {voltam} voltam ao que eram. {ficam} ficam porque alguém já cuidou deles. {pessoasSaem} pessoas saem; {pessoasFicam} ficam.",
+          "AVISO": {
+            "SAEM": "{count} seguro sai. | {count} seguros saem.",
+            "VOLTAM": "{count} seguro volta ao que era. | {count} seguros voltam ao que eram.",
+            "FICAM": "{count} seguro fica porque alguém já cuidou dele. | {count} seguros ficam porque alguém já cuidou deles.",
+            "PESSOAS_SAEM": "{count} pessoa sai. | {count} pessoas saem.",
+            "PESSOAS_FICAM": "{count} pessoa fica. | {count} pessoas ficam.",
+            "NADA": "Nada muda na sua carteira."
+          },
           "CONFIRMAR": "Desfazer",
           "VOLTAR": "Voltar"
         },

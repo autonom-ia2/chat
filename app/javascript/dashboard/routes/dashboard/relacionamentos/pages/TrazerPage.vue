@@ -36,7 +36,12 @@ const contaDeSeguros = useContaDeSeguros(demo).value;
 
 const seguros = shallowRef(null);
 const naoBaixou = ref(false);
-const caminhos = ref({ pdfs: false, agger: false, aggerLigado: false });
+const caminhos = ref({
+  pdfs: false,
+  agger: false,
+  aggerLigado: false,
+  aggerPedeLogin: false,
+});
 
 const baixar = async () => {
   naoBaixou.value = false;
@@ -85,6 +90,7 @@ if (contaDeSeguros) baixar();
       :is="seguros.TrazerDoAgger"
       v-else-if="como === 'agger'"
       :ligado="caminhos.aggerLigado"
+      :pede-login="caminhos.aggerPedeLogin"
     />
     <TrazerListaPage v-else :seguros="seguros" />
   </template>

@@ -754,6 +754,13 @@
       "NAO_DEU": "I could not do that. Try again.",
       "TENTAR_DE_NOVO": "Try again",
       "ENTRAR": "Sign in to Agger",
+      "PECA_AO_ADMIN": "Ask the person who manages the account to turn on Agger.",
+      "RECUSAS": {
+        "LEITURA_NAO_PRONTA": "This search is not finished yet. Wait a little and try again.",
+        "LEITURA_FECHADA": "This search was already brought in or undone. Look at the searches below.",
+        "NADA_PARA_TRAZER": "No policy from this search is ready to come in.",
+        "NAO_PODE_DESFAZER": "This search can no longer be undone."
+      },
       "TRAZENDO": "Bringing the policies in… {porcentagem}%",
       "PAROU": {
         "PEDE_LOGIN": "Agger did not accept your sign-in.",
@@ -780,7 +787,9 @@
         "TENTAR": "Try again"
       },
       "CONFERIR": {
-        "ENTRAM": "{seguros} policies are ready to come in, from {pessoas} people.",
+        "ENTRAM": "{count} policy is ready to come in, | {count} policies are ready to come in,",
+        "DE_PESSOAS": "from {count} person. | from {count} people.",
+        "JA_NA_CARTEIRA": "{count} was already in your book and is only updated | {count} were already in your book and are only updated",
         "PESSOAS_NOVAS": "{count} new person | {count} new people",
         "SEM_TELEFONE": "{count} person has no phone | {count} people have no phone",
         "NAO_DEU": "{count} could not be brought | {count} could not be brought",
@@ -795,7 +804,9 @@
       "TODO_DIA": {
         "ROTULO": "Look up new policies every day",
         "LIGADO": "On: once a day I search Agger, and new policies come in on their own. You can undo them from the searches below.",
-        "DESLIGADO": "Off: policies only come when you tap \"Bring my policies from Agger\"."
+        "DESLIGADO": "Off: policies only come when you tap \"Bring my policies from Agger\".",
+        "PEDE_LOGIN": "Agger asked you to sign in again",
+        "PEDE_LOGIN_FAZER": "Until then, I do not search every day. Tap \"Sign in to Agger\" and type the login and password you use in Agger."
       },
       "LOGIN": {
         "TITULO": "Sign in to Agger",
@@ -803,9 +814,11 @@
         "CAMPO_LOGIN": "Agger login",
         "CAMPO_SENHA": "Agger password",
         "ENTRAR": "Sign in and search",
+        "TENTAR_DE_NOVO": "Try again",
         "VOLTAR": "Back",
         "FALTA": "Type the Agger login and password.",
         "RECUSADO": "Agger did not accept this login and password. Check them and try again.",
+        "FORA_DO_AR": "Agger is down right now. Try again later.",
         "NAO_DEU": "I could not reach Agger right now. Try again."
       },
       "HISTORICO": {
@@ -825,7 +838,14 @@
         },
         "PREVIA": {
           "TITULO": "Undo this search?",
-          "AVISO": "{saem} policies leave and {voltam} go back to how they were. {ficam} stay because someone already took care of them. {pessoasSaem} people leave; {pessoasFicam} stay.",
+          "AVISO": {
+            "SAEM": "{count} policy leaves. | {count} policies leave.",
+            "VOLTAM": "{count} policy goes back to how it was. | {count} policies go back to how they were.",
+            "FICAM": "{count} policy stays because someone already took care of it. | {count} policies stay because someone already took care of them.",
+            "PESSOAS_SAEM": "{count} person leaves. | {count} people leave.",
+            "PESSOAS_FICAM": "{count} person stays. | {count} people stay.",
+            "NADA": "Nothing changes in your book."
+          },
           "CONFIRMAR": "Undo",
           "VOLTAR": "Back"
         },

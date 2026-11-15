@@ -95,3 +95,17 @@ export const chaveDaRecusa = (codigo, padrao) =>
   CODIGOS_DE_RECUSA.includes(codigo)
     ? `RELACIONAMENTOS_CARTEIRA.RECUSAS.${codigo.toUpperCase()}`
     : padrao;
+
+// #2900 (E7) — na busca no Agger, as recusas da leitura ganham a frase da
+// busca: a frase de sempre fala de PDF. As outras seguem as de sempre.
+const RECUSAS_DO_AGGER = [
+  'leitura_nao_pronta',
+  'leitura_fechada',
+  'nada_para_trazer',
+  'nao_pode_desfazer',
+];
+
+export const chaveDaRecusaDoAgger = (codigo, padrao) =>
+  RECUSAS_DO_AGGER.includes(codigo)
+    ? `RELACIONAMENTOS_CARTEIRA.AGGER.RECUSAS.${codigo.toUpperCase()}`
+    : chaveDaRecusa(codigo, padrao);

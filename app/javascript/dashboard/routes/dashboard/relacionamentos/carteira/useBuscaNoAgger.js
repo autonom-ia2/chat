@@ -16,7 +16,7 @@
 // Quando o Agger recusou o login (`busca.motivo === PEDE_LOGIN`), a tela pede
 // o login de novo e, com ele aceito, busca de novo.
 import { ref } from 'vue';
-import { chaveDaRecusa, codigoDaRecusa } from './recusas';
+import { chaveDaRecusaDoAgger, codigoDaRecusa } from './recusas';
 
 export const ETAPAS_DO_AGGER = {
   INICIO: 'inicio',
@@ -29,6 +29,13 @@ export const PEDE_LOGIN = 'agger_pede_login';
 // O que `comecar` devolve quando a conta ainda não tem o login aceito: a tela
 // abre a janela do login.
 export const PEDIR_LOGIN = 'pedir_login';
+// O que o Agger respondeu ao login (fonte/trazerAggerFonte.js): aceitou, está
+// fora do ar (não é o login que está errado) ou recusou o login e a senha.
+export const LOGIN = Object.freeze({
+  ACEITO: 'aceito',
+  FORA_DO_AR: 'fora_do_ar',
+  RECUSADO: 'recusado',
+});
 const PERGUNTA_MS = 2000;
 const PARADO_MS = 10 * 60 * 1000;
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.AGGER.NAO_DEU';
@@ -62,7 +69,7 @@ export const useBuscaNoAgger = (
   };
 
   const falhou = falha => {
-    erro.value = chaveDaRecusa(codigoDaRecusa(falha), NAO_DEU);
+    erro.value = chaveDaRecusaDoAgger(codigoDaRecusa(falha), NAO_DEU);
   };
 
   const falhouAoAcompanhar = falha => {
@@ -171,16 +178,16 @@ export const useBuscaNoAgger = (
     await abrir(busca.value.id);
   };
 
-  // A janela do login: devolve se o Agger aceitou. Aceito, segue de onde a
-  // pessoa estava (a primeira busca, ou a busca que parou pelo login). A falha
-  // de rede sobe para a janela dizer.
+  // A janela do login: devolve o que o Agger respondeu (LOGIN). Aceito, segue
+  // de onde a pessoa estava (a primeira busca, ou a busca que parou pelo
+  // login). A falha de rede sobe para a janela dizer.
   const conectar = async credenciais => {
-    const aceito = await fonte.conectar(credenciais);
-    if (!aceito) return false;
+    const resposta = await fonte.conectar(credenciais);
+    if (resposta !== LOGIN.ACEITO) return resposta;
     conectado.value = true;
     if (busca.value?.estado === 'parou') await deNovo();
     else if (etapa.value === ETAPAS_DO_AGGER.INICIO) await comecarBusca();
-    return true;
+    return resposta;
   };
 
   const trazer = async () => {

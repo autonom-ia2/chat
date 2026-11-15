@@ -1,11 +1,18 @@
 import { mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
+import AutonomiaInsuranceAPI from 'dashboard/api/autonomiaInsurance';
 import {
   ETAPAS_DO_AGGER,
+  LOGIN,
   PEDIR_LOGIN,
   useBuscaNoAgger,
 } from '../../carteira/useBuscaNoAgger';
-import { caminhosDeTrazer } from '../../carteira/caminhosDeTrazer';
+import {
+  caminhosDeTrazer,
+  SEM_CAMINHOS,
+} from '../../carteira/caminhosDeTrazer';
+import { chaveDaRecusaDoAgger } from '../../carteira/recusas';
+import { trazerAggerFonte } from '../../fonte/trazerAggerFonte';
 import SeguradorasDaBusca from '../../components/carteira/trazer/agger/SeguradorasDaBusca.vue';
 import { recusa } from './apoio';
 
@@ -33,7 +40,7 @@ describe('useBuscaNoAgger', () => {
 
   it('sem o login aceito, pede o login antes; aceito, busca, confere e traz', async () => {
     const fonte = {
-      conectar: vi.fn().mockResolvedValue(true),
+      conectar: vi.fn().mockResolvedValue(LOGIN.ACEITO),
       buscar: vi.fn().mockResolvedValue({ leituraId: 5 }),
       busca: vi.fn().mockResolvedValueOnce(lendo()).mockResolvedValue(lida),
       trazer: vi.fn().mockResolvedValue({ estado: 'trazendo', porcentagem: 0 }),
@@ -50,7 +57,9 @@ describe('useBuscaNoAgger', () => {
     expect(await busca.comecar()).toBe(PEDIR_LOGIN);
     expect(fonte.buscar).not.toHaveBeenCalled();
 
-    expect(await busca.conectar({ login: 'exemplo', senha: 'x' })).toBe(true);
+    expect(await busca.conectar({ login: 'exemplo', senha: 'x' })).toBe(
+      LOGIN.ACEITO
+    );
     expect(aoMudarBusca).toHaveBeenCalledWith(5);
     expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.BUSCANDO);
 
@@ -62,23 +71,28 @@ describe('useBuscaNoAgger', () => {
     expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.PRONTO);
   });
 
-  it('o login recusado não busca e deixa a janela dizer', async () => {
-    const fonte = {
-      conectar: vi.fn().mockResolvedValue(false),
-      buscar: vi.fn(),
-    };
-    const busca = useBuscaNoAgger(fonte);
+  it.each([LOGIN.RECUSADO, LOGIN.FORA_DO_AR])(
+    'o login %s não busca e deixa a janela dizer',
+    async resposta => {
+      const fonte = {
+        conectar: vi.fn().mockResolvedValue(resposta),
+        buscar: vi.fn(),
+      };
+      const busca = useBuscaNoAgger(fonte);
 
-    expect(await busca.conectar({ login: 'exemplo', senha: 'x' })).toBe(false);
-    expect(fonte.buscar).not.toHaveBeenCalled();
-    expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.INICIO);
-  });
+      expect(await busca.conectar({ login: 'exemplo', senha: 'x' })).toBe(
+        resposta
+      );
+      expect(fonte.buscar).not.toHaveBeenCalled();
+      expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.INICIO);
+    }
+  );
 
   it('a busca parada pelo login: o login aceito de novo busca de novo a mesma', async () => {
     const parou = lendo({ estado: 'parou', motivo: 'agger_pede_login' });
     const fonte = {
       busca: vi.fn().mockResolvedValueOnce(parou).mockResolvedValue(lida),
-      conectar: vi.fn().mockResolvedValue(true),
+      conectar: vi.fn().mockResolvedValue(LOGIN.ACEITO),
       deNovo: vi.fn().mockResolvedValue(lendo()),
     };
     const busca = useBuscaNoAgger(fonte, { ligado: true });
@@ -130,6 +144,34 @@ describe('useBuscaNoAgger', () => {
     );
     expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.INICIO);
   });
+
+  it('as recusas da leitura falam da busca, não do PDF; as outras seguem as de sempre', () => {
+    expect(chaveDaRecusaDoAgger('nao_pode_desfazer', 'PADRAO')).toBe(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.RECUSAS.NAO_PODE_DESFAZER'
+    );
+    expect(chaveDaRecusaDoAgger('agger_desligado', 'PADRAO')).toBe(
+      'RELACIONAMENTOS_CARTEIRA.RECUSAS.AGGER_DESLIGADO'
+    );
+    expect(chaveDaRecusaDoAgger('', 'PADRAO')).toBe('PADRAO');
+  });
+});
+
+describe('a resposta do Agger ao login', () => {
+  it.each([
+    ['ready', LOGIN.ACEITO],
+    ['discovering', LOGIN.ACEITO],
+    ['offline', LOGIN.FORA_DO_AR],
+    ['degraded', LOGIN.FORA_DO_AR],
+    ['human_required', LOGIN.FORA_DO_AR],
+    ['auth_required', LOGIN.RECUSADO],
+  ])('a conexão em %s é %s', async (status, resposta) => {
+    const conexao = { data: { payload: { status } } };
+    AutonomiaInsuranceAPI.connect = vi.fn().mockResolvedValue(conexao);
+
+    expect(
+      await trazerAggerFonte().conectar({ login: 'exemplo', senha: 'x' })
+    ).toBe(resposta);
+  });
 });
 
 describe('os avisos das seguradoras', () => {
@@ -179,27 +221,45 @@ describe('caminhosDeTrazer', () => {
       await caminhosDeTrazer({
         fonte: resumo({ aggerDisponivel: true, aggerLigado: true }),
       })
-    ).toEqual({ pdfs: false, agger: true, aggerLigado: true });
+    ).toEqual({
+      pdfs: false,
+      agger: true,
+      aggerLigado: true,
+      aggerPedeLogin: false,
+    });
     expect(
       await caminhosDeTrazer({
         fonte: resumo({ aggerDisponivel: false, aggerLigado: true }),
       })
-    ).toEqual({ pdfs: false, agger: false, aggerLigado: false });
+    ).toEqual({
+      pdfs: false,
+      agger: false,
+      aggerLigado: false,
+      aggerPedeLogin: false,
+    });
+  });
+
+  it('o login recusado pelo Agger chega à porta', async () => {
+    const caminhos = await caminhosDeTrazer({
+      fonte: resumo({
+        aggerDisponivel: true,
+        aggerLigado: true,
+        aggerPedeLogin: true,
+      }),
+    });
+
+    expect(caminhos.aggerPedeLogin).toBe(true);
   });
 
   it('a demonstração e o resumo que falhou ficam só com a planilha', async () => {
     const falhou = { resumo: vi.fn().mockRejectedValue(new Error('rede')) };
 
-    expect(await caminhosDeTrazer({ fonte: falhou })).toEqual({
-      pdfs: false,
-      agger: false,
-      aggerLigado: false,
-    });
+    expect(await caminhosDeTrazer({ fonte: falhou })).toEqual(SEM_CAMINHOS);
     expect(
       await caminhosDeTrazer({
         demo: true,
         fonte: resumo({ aggerDisponivel: true, leituraDePdf: true }),
       })
-    ).toEqual({ pdfs: false, agger: false, aggerLigado: false });
+    ).toEqual(SEM_CAMINHOS);
   });
 });
