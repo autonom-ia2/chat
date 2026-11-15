@@ -2565,6 +2565,27 @@
      ],
      "revisar": false,
      "nota": "Issue #2898 (E5 do épico #1240). A tela é seguros/resultados e só mostra números: não muda nenhum seguro. O botão do topo abre a aba Seguros com ?grupo=nao_renovaram_<dias>."
+    },
+    {
+     "id": "09.26",
+     "titulo": "Ler o PDF da apólice: ver o que mudou e trazer seguros por PDFs",
+     "para_que_serve": "Na conta com a leitura de PDF: guardar o PDF de um seguro vendo o que ele diz de diferente e escolhendo o que trazer, e trazer seguros por PDFs das apólices (enviar, conferir, trazer e desfazer).",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Anexar o PDF de um seguro e ver o que mudou (carteira de seguros com leitura de PDF)",
+      "porques: Trazer seguros por PDFs das apólices (carteira de seguros com leitura de PDF)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2899 (E6 do épico #1240). Não há rota nova: Trazer por PDFs é a tela de Trazer (?como=pdfs) e o que mudou aparece no diálogo de guardar o PDF da gaveta. Tudo só aparece na conta com a leitura de PDF liberada (resumo da carteira com leituraDePdf)."
     }
    ]
   },

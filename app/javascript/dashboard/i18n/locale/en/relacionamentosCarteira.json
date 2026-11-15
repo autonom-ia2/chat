@@ -303,7 +303,9 @@
         "NAO_RENOVOU": "Did not renew.",
         "NAO_RENOVOU_OUTRO": "Did not renew.",
         "APOLICE_NOVA": "New policy saved.",
-        "DESFEZ_DESFECHO": "Renewal result undone. The policy is in renewal again."
+        "DESFEZ_DESFECHO": "Renewal result undone. The policy is in renewal again.",
+        "CHEGOU_PDF": "Arrived from a PDF.",
+        "CHEGOU_DE_NOVO_PDF": "Updated from a PDF."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
@@ -477,7 +479,25 @@
         "AVISO": "The PDF that is saved goes out and does not come back. The new one takes its place.",
         "CONFIRMAR": "Replace the PDF",
         "VOLTAR": "Back"
-      }
+      },
+      "APOIO_LER": "After you choose, I read the PDF and show what is different before saving.",
+      "LENDO": "Reading the PDF… this can take a few minutes.",
+      "GUARDAR_SEM_LER": "Save without reading",
+      "MUDOU": {
+        "TITULO": "The PDF says something different",
+        "APOIO": "Choose what to take from the PDF. What you do not choose stays as it is.",
+        "OUTRA_APOLICE": "The insurer or the policy number in the PDF is not the one saved. This PDF may be from another policy: check before using anything from it.",
+        "ANTES": "Saved",
+        "NO_PDF": "In the PDF",
+        "LEGENDA": "What the PDF says that is different from the saved policy",
+        "INFORMACAO": "Information",
+        "USAR": "Use the one in the PDF",
+        "CONFIRA": "Check: I found this without certainty.",
+        "CORRIGIDO_A_MAO": "Someone fixed this by hand. If you use the one in the PDF, it stays protected as fixed.",
+        "GUARDAR": "Save",
+        "MANTER": "Keep as it is"
+      },
+      "SOLTAR_VARIOS": "Drag the PDFs here or click to choose"
     },
     "RECUSAS": {
       "FALTA_NUMERO": "The policy number is missing. Type the number and save again.",
@@ -495,6 +515,7 @@
       "ARQUIVO_GRANDE": "This PDF is too large to save here. Ask the insurer for the policy PDF, not the scanned copy, and save that one.",
       "SEM_PDF": "This policy no longer has a saved PDF. I refreshed the screen.",
       "PEDIDO_INVALIDO": "I could not do that. Refresh the page and try again.",
+      "LOTE_GRANDE": "That is too many PDFs at once. Send some now and the rest later.",
       "FUNIL_DESCONHECIDO": "That pipeline no longer exists or you cannot see it. I refreshed the list: choose another pipeline and save again.",
       "ETAPA_DE_OUTRO_FUNIL": "That stage is no longer part of that pipeline. I refreshed the list: choose the stage and save again.",
       "DIAS_INVALIDOS": "That number of days does not work. Type a whole number from 1 to 3650 and save again.",
@@ -511,7 +532,17 @@
       "FALTA_TIPO": "The type of insurance is missing. Choose the type and save again.",
       "TERMINA_ANTES_DA_ANTERIOR": "The new policy must end after the policy it renews. Check the date it ends.",
       "APOLICE_DE_OUTRA_PESSOA": "This insurer and this policy number are already saved in another person's policy. Check the policy number.",
-      "TERMO_AMBIGUO": "There is already more than one policy saved with this insurer and this number, and I could not tell which of them this one is. Check the number and both dates."
+      "TERMO_AMBIGUO": "There is already more than one policy saved with this insurer and this number, and I could not tell which of them this one is. Check the number and both dates.",
+      "LEITURA_DESLIGADA": "Reading PDFs is not available in this account. You can still save the PDF without reading it.",
+      "NAO_E_APOLICE": "This PDF is not an insurance policy. Choose the policy PDF the insurer sent.",
+      "NAO_DEU_PARA_LER": "I could not read this PDF. You can save it without reading, or ask the insurer for the policy PDF, not a scanned copy, and try again.",
+      "LEITURA_EXPIROU": "This reading is no longer here. Choose the PDF again.",
+      "LEITURA_NAO_PRONTA": "The PDF is still being read. Wait a moment and try again.",
+      "LEITURA_FECHADA": "These PDFs were already brought in. I refreshed the screen.",
+      "ITEM_FECHADO": "This PDF can no longer be changed. I refreshed the screen.",
+      "CAMPO_INVALIDO": "I did not understand what was typed. Check it and save again.",
+      "NADA_PARA_TRAZER": "No PDF is ready to come in yet. Fill in what is missing, or leave the PDF out.",
+      "NAO_PODE_DESFAZER": "These PDFs can no longer be undone."
     },
     "TRAZER": {
       "BOTAO": "Bring policies",
@@ -612,6 +643,91 @@
         "FICAM_PORQUE": "Someone already corrected it, saved its PDF or is working on its renewal. | Someone already corrected them, saved their PDF or is working on their renewal.",
         "VOLTAM": "{count} policy goes back to how it was | {count} policies go back to how they were",
         "VOLTAM_PORQUE": "It was already here. Only what this list changed in it is removed. | They were already here. Only what this list changed in them is removed."
+      }
+    },
+    "PDFS": {
+      "TITULO": "Bring policies from PDFs",
+      "APOIO": "Choose the policy PDFs. I read each one and show what I found before anything comes in.",
+      "ENVIANDO": "Sending the PDFs…",
+      "LENDO": "Reading the PDFs… {lidos} of {total} read. You can leave this page: the reading continues.",
+      "NAO_DEU": "I could not do that. Try again.",
+      "TRAZENDO": "Bringing the policies in… {porcentagem}%",
+      "PARADO": "This is taking longer than usual. Tap \"Try again\" and I will continue where I stopped.",
+      "TENTAR_DE_NOVO": "Try again",
+      "COMO": {
+        "TITULO": "How do you want to bring your clients?",
+        "PLANILHA": {
+          "TITULO": "From a spreadsheet",
+          "APOIO": "A list of clients and policies in Excel or CSV."
+        },
+        "PDFS": {
+          "TITULO": "From policy PDFs",
+          "APOIO": "The policy PDFs the insurers sent. I read each one for you."
+        }
+      },
+      "CONFERIR": {
+        "ENTRAM": "{seguros} policies are ready to come in, from {pessoas} people.",
+        "PRECISAM": "{n} need you",
+        "RECUSADOS": "{n} are not policies",
+        "NAO_LEU": "{n} could not be read",
+        "FORA": "{n} left out",
+        "TRAZER": "Bring {count} policy from the PDFs | Bring {count} policies from the PDFs",
+        "OUTROS": "Send other PDFs"
+      },
+      "ITEM": {
+        "TITULO": "PDF {posicao}",
+        "FALTAM": "I could not find this. Type it to bring this policy, or leave the PDF out.",
+        "SALVAR": "Save what I typed",
+        "FALTA_CAMPO": {
+          "TIPO": "Choose the type of insurance.",
+          "SEGURADORA": "Type the name of the insurer.",
+          "TERMINA": "Choose the date the policy ends.",
+          "NOME": "Type the name of the insured."
+        },
+        "DEIXAR_DE_FORA": "Leave this PDF out",
+        "TRAZER_DE_VOLTA": "Bring this PDF back",
+        "CAMPOS": {
+          "TIPO": "Type of insurance",
+          "SEGURADORA": "Insurer",
+          "TERMINA": "Ends",
+          "NOME": "Name of the insured"
+        },
+        "CONFIRA": {
+          "TELEFONE": "I found the phone {valor}, but it may be the broker's. Is it the client's?",
+          "EMAIL": "I found the e-mail {valor}, but it may be the broker's. Is it the client's?",
+          "VALOR": "I found the price {valor} without \"R$\". Is it the price the client pays?",
+          "E_DO_CLIENTE": "Yes, it is the client's",
+          "NAO_E_DO_CLIENTE": "No, it is not the client's"
+        },
+        "ESTADO": {
+          "RECUSADO": "This PDF is not an insurance policy. It does not come in.",
+          "FALHOU": "I could not read this PDF. Send this PDF again, or ask the insurer for the policy PDF, not a scanned copy.",
+          "FORA": "Left out. It does not come in.",
+          "NAO_ENTROU": "This policy did not come in. It may already be saved in another way: check the list of policies. If it is not there, send this PDF again.",
+          "LENDO": "Still reading.",
+          "TRAZIDO": "Brought in."
+        }
+      },
+      "HISTORICO": {
+        "TITULO": "PDFs already sent",
+        "LINHA": "{pdfs} PDFs · {seguros} policies",
+        "CONTINUAR": "Continue",
+        "DESFAZER": "Undo",
+        "SITUACAO": {
+          "LENDO": "reading",
+          "LIDA": "waiting for you",
+          "TRAZENDO": "coming in",
+          "TRAZIDA": "brought in",
+          "DESFAZENDO": "being undone",
+          "DESFEITA": "undone"
+        },
+        "PREVIA": {
+          "TITULO": "Undo these PDFs?",
+          "AVISO": "{saem} policies leave and {voltam} go back to how they were. {ficam} stay because someone already took care of them. {pessoasSaem} people leave; {pessoasFicam} stay.",
+          "CONFIRMAR": "Undo",
+          "VOLTAR": "Back"
+        },
+        "QUANDO": "{quando} · {situacao}"
       }
     }
   }

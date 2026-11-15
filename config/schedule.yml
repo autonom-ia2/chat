@@ -479,3 +479,10 @@ autonomia_ferramentas_prontas_reconciliar_saidas_job:
   cron: '3,13,23,33,43,53 * * * *'
   class: 'Autonomia::FerramentasProntas::ReconciliarSaidasJob'
   queue: low
+
+# executed daily; a limpeza das leituras de PDF da carteira de seguros (#2899, E6): os itens lidos guardam dado de
+# cliente e saem quando a guarda de 30 dias vence; a leitura do anexar que ninguém terminou sai inteira.
+carteira_limpeza_das_leituras_job:
+  cron: '40 4 * * *'
+  class: 'Carteira::LimpezaDasLeiturasJob'
+  queue: scheduled_jobs

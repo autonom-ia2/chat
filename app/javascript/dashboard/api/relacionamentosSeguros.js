@@ -78,6 +78,25 @@ class RelacionamentosSegurosAPI extends ApiClient {
     return axios.delete(`${this.url}/seguros/${id}/pdf`);
   }
 
+  // #2899 (E6.2) — anexar o PDF e ver o que mudou: enviar o arquivo para ler
+  // (responde o id da leitura), perguntar pela leitura até sair de "lendo" e
+  // guardar com os campos escolhidos (`usar`: nomes dos campos da gaveta).
+  lerPdf(id, arquivo) {
+    const corpo = new FormData();
+    corpo.append('arquivo', arquivo);
+    return axios.post(`${this.url}/seguros/${id}/pdf/leitura`, corpo, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  leituraDoPdf(id, leituraId) {
+    return axios.get(`${this.url}/seguros/${id}/pdf/leitura/${leituraId}`);
+  }
+
+  guardarPdfLido(id, leituraId, usar) {
+    return axios.post(`${this.url}/seguros/${id}/pdf`, { leituraId, usar });
+  }
+
   // #2898 — a renovação no funil. Os ajustes da conta (em que funil e etapa a
   // renovação aparece, quantos dias antes, as mensagens) e o que a tela
   // precisa para mostrá-los.

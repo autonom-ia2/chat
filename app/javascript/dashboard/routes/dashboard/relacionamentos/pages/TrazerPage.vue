@@ -1,5 +1,5 @@
 <script setup>
-import { ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { usarDemo } from '../fonte/modoDemo';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
@@ -13,6 +13,10 @@ import TrazerListaPage from './TrazerListaPage.vue';
 // não vai no pacote de quem não tem a carteira. Se não deu para baixar (a rede
 // caiu, o painel foi atualizado), a pessoa vê o erro com "Tentar de novo" em
 // vez de uma tela em branco.
+//
+// #2899 (E6.4) — na conta que lê PDF, a porta pergunta antes como trazer
+// (`?como=planilha` ou `?como=pdfs`). Quem já está numa lista (`?leitura=`)
+// segue nela. Sem a leitura, nada muda: só a tela das listas.
 const props = defineProps({
   // De onde vem o que os seguros pedem. A rota não passa nada: vale o import.
   baixarSeguros: {
@@ -22,26 +26,49 @@ const props = defineProps({
 });
 
 const route = useRoute();
-const contaDeSeguros = useContaDeSeguros(usarDemo(route.query)).value;
+const demo = usarDemo(route.query);
+const contaDeSeguros = useContaDeSeguros(demo).value;
 
 const seguros = shallowRef(null);
 const naoBaixou = ref(false);
+const lePdf = ref(false);
 
 const baixar = async () => {
   naoBaixou.value = false;
   try {
-    seguros.value = await props.baixarSeguros();
+    const baixado = await props.baixarSeguros();
+    lePdf.value = (await baixado.leituraDePdf?.({ demo })) === true;
+    seguros.value = baixado;
   } catch {
     naoBaixou.value = true;
   }
 };
+
+const QUERY_DA_LISTA = ['leitura', 'planilha'];
+const como = computed(() => {
+  if (!lePdf.value) return 'planilha';
+  if (route.query.como) return route.query.como;
+  return QUERY_DA_LISTA.some(chave => route.query[chave]) ? 'planilha' : '';
+});
+const rotasDoComo = computed(() => ({
+  planilha: { query: { ...route.query, como: 'planilha' } },
+  pdfs: { query: { ...route.query, como: 'pdfs' } },
+}));
 
 if (contaDeSeguros) baixar();
 </script>
 
 <template>
   <TrazerListaPage v-if="!contaDeSeguros" />
-  <TrazerListaPage v-else-if="seguros" :seguros="seguros" />
+  <template v-else-if="seguros">
+    <component
+      :is="seguros.ComoTrazer"
+      v-if="como === ''"
+      :rotas="rotasDoComo"
+    />
+    <component :is="seguros.TrazerPdfs" v-else-if="como === 'pdfs'" />
+    <TrazerListaPage v-else :seguros="seguros" />
+  </template>
   <section
     v-else
     data-relacionamentos="trazer"

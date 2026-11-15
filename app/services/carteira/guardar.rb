@@ -5,6 +5,10 @@
 #   Carteira::Guardar.new(account, origem: 'planilha', user: user, importacao: importacao, valores: { arquivo: 'carteira.xlsx' })
 #                    .call(dados, contato: contato, empresa: nil)   # => Resultado(apolice:, situacao:)
 #
+# O lote de PDFs (E6, #2899) chama com `origem: 'pdf'` e `leitura:`: a apólice que nasce aponta para o lote
+# (`leitura_id`), e os passos da história levam `valores.leitura`, que é por onde o Desfazer do lote acha o que ele
+# completou. A fonte diz os passos dela: `chegou_pdf` na que nasce e `chegou_de_novo_pdf` na que muda.
+#
 # dados: { seguradora:, seguradora_chave:, numero:, numero_chave:, tipo:, ramo_original:, inicio_vigencia:, fim_vigencia:,
 #          valor_centavos:, bem: } — a forma do banco, conferida por Carteira::Guardar::Dados.
 #
@@ -55,8 +59,10 @@ class Carteira::Guardar
   # As fontes que disputam os campos, da mais fraca para a mais forte. A apólice feita à mão fica acima de todas.
   FORCA = %w[planilha pdf conector].freeze
   # O primeiro passo da história de cada fonte. A fonte que não está aqui diz o dela em `chegada:`.
-  CHEGOU = { 'planilha' => 'chegou_planilha' }.freeze
+  CHEGOU = { 'planilha' => 'chegou_planilha', 'pdf' => 'chegou_pdf' }.freeze
   DE_NOVO = 'chegou_de_novo'.freeze
+  # O passo de quando a apólice chega de novo e muda, da fonte que tem o seu. As outras usam DE_NOVO.
+  DE_NOVO_DA = { 'pdf' => 'chegou_de_novo_pdf' }.freeze
   TERMO_AMBIGUO = 'termo_ambiguo'.freeze
   DE_OUTRA_PESSOA = 'apolice_de_outra_pessoa'.freeze
   REPETIDA = 'apolice_repetida'.freeze
@@ -64,18 +70,21 @@ class Carteira::Guardar
   # Criar bateu no índice único: outra gravação da mesma apólice entrou no meio. Só existe para tentar de novo.
   ChegouJunto = Class.new(StandardError)
 
-  # origem: uma de Carteira::Apolice::ORIGENS. user: quem trouxe (nil: o sistema). importacao: o lote que trouxe.
-  # valores: o que a história mostra da chegada ({ arquivo: 'carteira.xlsx' }). chegada: o tipo do primeiro passo da
-  # história da apólice que nasce (um de Carteira::ApoliceEvento::TIPOS).
+  # origem: uma de Carteira::Apolice::ORIGENS. user: quem trouxe (nil: o sistema). importacao: a planilha que trouxe.
+  # leitura: o lote de PDFs que trouxe (Carteira::Leitura). valores: o que a história mostra da chegada
+  # ({ arquivo: 'carteira.xlsx' }). chegada: o tipo do primeiro passo da história da apólice que nasce (um de
+  # Carteira::ApoliceEvento::TIPOS).
   # rubocop:disable Metrics/ParameterLists -- o que cada fonte diz de si, cada um com o seu padrão
-  def initialize(account, origem:, user: nil, importacao: nil, valores: {}, chegada: CHEGOU[origem])
+  def initialize(account, origem:, user: nil, importacao: nil, leitura: nil, valores: {}, chegada: CHEGOU[origem])
     # rubocop:enable Metrics/ParameterLists
     @account = account
     @origem = origem
     @user = user
     @importacao = importacao
-    @valores = valores
+    @leitura = leitura
+    @valores = leitura && valores.is_a?(Hash) ? valores.merge(leitura: leitura.id) : valores
     @chegada = chegada
+    @de_novo = DE_NOVO_DA.fetch(origem, DE_NOVO)
     conferir_a_fonte
   end
 
@@ -107,6 +116,7 @@ class Carteira::Guardar
   def conferir_que_sao_da_conta
     raise ArgumentError, 'user' unless @user.nil? || @account.account_users.exists?(user_id: @user.id)
     raise ArgumentError, 'importacao' unless @importacao.nil? || @importacao.account_id == @account.id
+    raise ArgumentError, 'leitura' unless @leitura.nil? || @leitura.account_id == @account.id
   end
 
   def gravar(dados, contato, empresa)
@@ -131,7 +141,7 @@ class Carteira::Guardar
 
   def criar(dados, contato, empresa)
     apolice = Carteira::Apolice.create!(
-      dados.merge(account: @account, contact: contato, company: empresa, origem: @origem, campaign_import: @importacao)
+      dados.merge(account: @account, contact: contato, company: empresa, origem: @origem, campaign_import: @importacao, leitura: @leitura)
     )
     registrar(apolice, @chegada, valores: @valores)
     apolice
@@ -146,7 +156,7 @@ class Carteira::Guardar
 
     subiu = origem == apolice.origem ? {} : { origem_antes: apolice.origem, origem_depois: origem }
     apolice.update!(mudancas.colunas.merge(origem: origem))
-    registrar(apolice, DE_NOVO, valores: @valores.merge(subiu), mudancas: mudancas.lista.presence)
+    registrar(apolice, @de_novo, valores: @valores.merge(subiu), mudancas: mudancas.lista.presence)
     Resultado.new(apolice: apolice, situacao: mudancas.nenhuma? ? IGUAL : ATUALIZADA)
   rescue ActiveRecord::RecordNotUnique
     recusar(TERMO_AMBIGUO)

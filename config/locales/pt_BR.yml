@@ -1302,6 +1302,7 @@ pt_BR:
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
         ready_tool_test: 'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o cartão › Experimente.'
         seguro_pdf: 'O PDF de um seguro só se guarda, tira ou abre na tela: Relacionamentos › Seguros › abra o seguro.'
+        seguros_por_pdf: 'Trazer seguros por PDFs só se faz na tela: Relacionamentos › Trazer › Por PDFs das apólices.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'

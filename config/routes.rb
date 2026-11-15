@@ -1173,6 +1173,19 @@ Rails.application.routes.draw do
                 get :previa_do_desfazer, on: :member
                 post :desfazer, on: :member
               end
+              # #2899 (E6.3) — Trazer por PDFs: enviar os PDFs, conferir o lote (escrever o que faltou, confirmar ou
+              # recusar o contato, deixar um PDF de fora), trazer, o andamento, os lotes já enviados e o desfazer.
+              namespace :seguros do
+                resources :leituras, only: [:index, :show, :create] do
+                  member do
+                    post :trazer
+                    get :andamento
+                    get :previa_do_desfazer
+                    post :desfazer
+                  end
+                  resources :itens, only: [:update]
+                end
+              end
             end
             # #2897 — carteira de seguros (chave carteira_seguros, só em conta corretora de seguros; 404 sem isso): a aba
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
@@ -1199,6 +1212,10 @@ Rails.application.routes.draw do
                 get :pdf, to: 'seguros/pdf#show'
                 post :pdf, to: 'seguros/pdf#create'
                 delete :pdf, to: 'seguros/pdf#destroy'
+                # #2899 (E6.2) — anexar o PDF e ver o que mudou: ler o arquivo e perguntar pela leitura. Guardar com os
+                # campos escolhidos é o POST :pdf, com `leituraId` e `usar`.
+                post 'pdf/leitura', to: 'seguros/pdf_leituras#create'
+                get 'pdf/leitura/:leitura_id', to: 'seguros/pdf_leituras#show'
                 # #2898 (E5.3) — como terminou a renovação: fecham ou reabrem o card de renovação do seguro.
                 post :renovou, to: 'seguros/desfechos#renovou'
                 post :nao_renovou, to: 'seguros/desfechos#nao_renovou'

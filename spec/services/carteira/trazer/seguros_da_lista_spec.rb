@@ -39,6 +39,10 @@ RSpec.describe Carteira::Trazer::SegurosDaLista, :aggregate_failures, type: :req
       'tem a apólice nova da renovação' => lambda { |seguro|
         criar_apolice(seguro.contact, seguradora: seguro.seguradora, numero: 'EX-NOVA-1', apolice_anterior: seguro)
       },
+      'ganhou um PDF lido que mudou campo (passo chegou_de_novo_pdf)' => lambda { |seguro|
+        seguro.eventos.create!(tipo: 'chegou_de_novo_pdf', quando: Time.current, user: admin, valores: {},
+                               mudancas: [{ 'campo' => 'bem', 'antes' => seguro.bem, 'depois' => 'Moto Exemplo XYZ9A87' }])
+      },
       'passou a ser de outra fonte' => ->(seguro) { seguro.update!(origem: 'pdf') },
       'é de outra corretora' => ->(seguro) { seguro.update!(de_fora: true) }
     }.each do |o_que_houve, mexer|
@@ -103,6 +107,17 @@ RSpec.describe Carteira::Trazer::SegurosDaLista, :aggregate_failures, type: :req
       carro.update!(cancelado_em: nil)
       expect(que_voltam(importacao)).to eq([['EX-001234', { 'valor_centavos' => 100_000 }]])
       carro.eventos.create!(tipo: 'pdf_anexado', quando: Time.current, user: admin)
+      expect(que_voltam(importacao)).to eq([])
+      expect(da(importacao).previa).to eq(saem: 3, ficam: 1, voltam: 0)
+    end
+
+    it 'não volta o seguro em que um PDF lido trocou campo depois da lista (passo chegou_de_novo_pdf): o campo não volta' do
+      importacao = trazer_tudo(planilha_de(seguros_bons))
+      expect(que_voltam(importacao)).to eq([['EX-001234', { 'valor_centavos' => 100_000 }]])
+
+      carro.reload.eventos.create!(tipo: 'chegou_de_novo_pdf', quando: Time.current, user: admin, valores: {},
+                                   mudancas: [{ 'campo' => 'bem', 'antes' => 'Carro Exemplo ABC1D23', 'depois' => 'Carro Exemplo 2024' }])
+
       expect(que_voltam(importacao)).to eq([])
       expect(da(importacao).previa).to eq(saem: 3, ficam: 1, voltam: 0)
     end

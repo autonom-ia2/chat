@@ -8,10 +8,14 @@ import { useI18n } from 'vue-i18n';
 // com o File escolhido. Conferir se é mesmo um PDF é com o servidor, que olha o
 // conteúdo do arquivo e não o nome dele. `apoio` é a linha embaixo do convite:
 // diz o que acontece depois de escolher.
-defineProps({
+//
+// #2899 (E6.4) — com `varios`, aceita vários PDFs de uma vez e entrega
+// `arquivos` (a lista), e o convite fala em PDFs.
+const props = defineProps({
   apoio: { type: String, required: true },
+  varios: { type: Boolean, default: false },
 });
-const emit = defineEmits(['arquivo']);
+const emit = defineEmits(['arquivo', 'arquivos']);
 
 const SO_PDF = '.pdf,application/pdf';
 
@@ -24,7 +28,12 @@ const arrastando = ref(false);
 const abrirSeletor = () => seletor.value?.click();
 
 const entregar = arquivos => {
-  const [arquivo] = arquivos || [];
+  const lista = [...(arquivos || [])];
+  if (props.varios) {
+    if (lista.length) emit('arquivos', lista);
+    return;
+  }
+  const [arquivo] = lista;
   if (arquivo) emit('arquivo', arquivo);
 };
 
@@ -65,7 +74,7 @@ const aoSoltar = evento => {
         <span class="i-lucide-file-text size-8" />
       </span>
       <span class="text-xl font-semibold pointer-events-none text-n-slate-12">
-        {{ tp('SOLTAR') }}
+        {{ tp(varios ? 'SOLTAR_VARIOS' : 'SOLTAR') }}
       </span>
       <span
         :id="`${id}-apoio`"
@@ -81,6 +90,7 @@ const aoSoltar = evento => {
       tabindex="-1"
       aria-hidden="true"
       :accept="SO_PDF"
+      :multiple="varios"
       @change="aoEscolher"
     />
   </div>

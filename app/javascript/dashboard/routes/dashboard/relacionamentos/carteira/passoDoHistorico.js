@@ -33,6 +33,9 @@ export const PASSOS_COM_FRASE = [
   'nao_renovou_outro',
   'apolice_nova',
   'desfez_desfecho',
+  // #2899 — o seguro que chegou por PDF e o que um PDF atualizou.
+  'chegou_pdf',
+  'chegou_de_novo_pdf',
 ];
 export const PASSO_SEM_NOME = 'PASSO_SEM_NOME';
 // Alguém desfez o "Renovou" ou o "Não renovou": `valores.anterior` diz qual.

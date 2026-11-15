@@ -123,6 +123,55 @@ const paramsDoPedido = ({ grupo, busca, ordem, pagina, filtros = {} }) =>
     ].filter(([, valor]) => preenchido(valor))
   );
 
+// #2899 (E6.2) — a leitura do PDF anexado roda em segundo plano: a fonte
+// pergunta de PERGUNTA_MS em PERGUNTA_MS até sair de "lendo", por no máximo
+// TENTATIVAS vezes. O PDF que não é apólice e o que não deu para ler chegam
+// como a falha `RECUSADO` com o código (`nao_e_apolice`, `nao_deu_para_ler`).
+const PERGUNTA_MS = 2000;
+const TENTATIVAS = 120;
+const LENDO = 'lendo';
+
+const esperarUmPouco = () =>
+  new Promise(resolve => {
+    setTimeout(resolve, PERGUNTA_MS);
+  });
+
+const recusaDaLeitura = codigo =>
+  Object.assign(new Error('A leitura do PDF não deu.'), {
+    name: RECUSADO,
+    codigo,
+  });
+
+const mudancaDoPdf = mudanca =>
+  ehData(mudanca.campo)
+    ? {
+        ...mudanca,
+        antes: doCampoDeData(mudanca.antes),
+        noPdf: doCampoDeData(mudanca.noPdf),
+      }
+    : mudanca;
+
+const lerPdf = async (id, arquivo) => {
+  const { leituraId } = await noServidor(() => SegurosAPI.lerPdf(id, arquivo));
+  for (let vez = 0; vez < TENTATIVAS; vez += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await esperarUmPouco();
+    // eslint-disable-next-line no-await-in-loop
+    const leitura = await noServidor(() =>
+      SegurosAPI.leituraDoPdf(id, leituraId)
+    );
+    if (leitura.recusa) throw recusaDaLeitura(leitura.recusa);
+    if (leitura.estado !== LENDO) {
+      return {
+        leituraId,
+        outraApolice: Boolean(leitura.outraApolice),
+        mudancas: (leitura.mudancas || []).map(mudancaDoPdf),
+      };
+    }
+  }
+  throw recusaDaLeitura('nao_deu_para_ler');
+};
+
 export const carteiraFonteReal = () => ({
   usaDemo: false,
   resumo: () => noServidor(() => SegurosAPI.resumo()),
@@ -155,6 +204,11 @@ export const carteiraFonteReal = () => ({
   guardarPdf: (id, arquivo) =>
     umSeguro(() => SegurosAPI.guardarPdf(id, arquivo)),
   tirarPdf: id => umSeguro(() => SegurosAPI.tirarPdf(id)),
+  // #2899 (E6.2) — ler o PDF antes de guardar: `{ leituraId, outraApolice,
+  // mudancas }`, e guardar com os campos escolhidos (devolve o seguro).
+  lerPdf,
+  guardarPdfLido: (id, leituraId, usar) =>
+    umSeguro(() => SegurosAPI.guardarPdfLido(id, leituraId, usar)),
   // #2898 — como a renovação terminou. As três devolvem o seguro como ficou.
   renovou: id => umSeguro(() => SegurosAPI.renovou(id)),
   naoRenovou: (id, dados) => umSeguro(() => SegurosAPI.naoRenovou(id, dados)),

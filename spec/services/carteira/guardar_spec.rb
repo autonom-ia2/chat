@@ -302,7 +302,7 @@ RSpec.describe Carteira::Guardar do
       resultado = guardar(origem: 'pdf')
       passo = da_planilha.eventos.order(:id).last
 
-      expect([resultado.situacao, da_planilha.reload.origem, passos(da_planilha)]).to eq(['igual', 'pdf', %w[chegou_planilha chegou_de_novo]])
+      expect([resultado.situacao, da_planilha.reload.origem, passos(da_planilha)]).to eq(['igual', 'pdf', %w[chegou_planilha chegou_de_novo_pdf]])
       expect(passo.mudancas).to be_nil
       expect(passo.valores).to eq('arquivo' => 'carteira-exemplo.csv', 'origem_antes' => 'planilha', 'origem_depois' => 'pdf')
       expect { guardar(origem: 'pdf') }.not_to(change { passos(da_planilha) })
@@ -330,9 +330,10 @@ RSpec.describe Carteira::Guardar do
   describe 'o que o gravador recusa' do
     it 'ao ser criado: a origem que não existe e a fonte sem primeiro passo da história' do
       expect { described_class.new(account, origem: 'email') }.to raise_error(ArgumentError, 'origem')
-      expect { described_class.new(account, origem: 'pdf') }.to raise_error(ArgumentError, 'chegada')
-      expect { described_class.new(account, origem: 'pdf', chegada: 'inventado') }.to raise_error(ArgumentError, 'chegada')
+      expect { described_class.new(account, origem: 'conector') }.to raise_error(ArgumentError, 'chegada')
+      expect { described_class.new(account, origem: 'conector', chegada: 'inventado') }.to raise_error(ArgumentError, 'chegada')
       expect(described_class.new(account, origem: 'planilha')).to be_a(described_class)
+      expect(described_class.new(account, origem: 'pdf')).to be_a(described_class)
     end
 
     it 'ao ser criado: o usuário que não é da conta e a importação de outra conta' do

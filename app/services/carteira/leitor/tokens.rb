@@ -24,6 +24,7 @@ class Carteira::Leitor::Tokens
   VIRGULA = ','.freeze
   CIFRAO = 'r$'.freeze
   PORCENTO = '%'.freeze
+  SEPARADORES = %w[. - /].freeze
   CASAS_DOS_CENTAVOS = 2
   CENTAVOS_POR_REAL = 100
 
@@ -53,8 +54,15 @@ class Carteira::Leitor::Tokens
   # O fim de cada linha emendado no começo da linha seguinte: o e-mail que a quebra de linha partiu em dois volta a ser
   # um bloco. Só a quebra de linha é emendada, nunca o espaço.
   def blocos_emendados
-    @blocos_emendados ||= @texto.lines.map(&:split).reject(&:empty?).each_cons(2).flat_map do |de_cima, de_baixo|
-      em_blocos(de_cima.last + de_baixo.first)
+    @blocos_emendados ||= pares_de_linhas.flat_map { |de_cima, de_baixo| em_blocos(de_cima.last + de_baixo.first) }
+  end
+
+  # Como `blocos_emendados`, mas só onde a quebra caiu num separador: a linha de cima termina, ou a de baixo começa, com
+  # ponto, traço ou barra ("EX-2026." e "001234"). É a emenda do número da apólice: dois números que só estão um
+  # embaixo do outro ("12345" e "6789") não viram um número só.
+  def blocos_emendados_no_separador
+    @blocos_emendados_no_separador ||= pares_de_linhas.flat_map do |de_cima, de_baixo|
+      SEPARADORES.include?(de_cima.last[-1]) || SEPARADORES.include?(de_baixo.first[0]) ? em_blocos(de_cima.last + de_baixo.first) : []
     end
   end
 
@@ -88,6 +96,11 @@ class Carteira::Leitor::Tokens
   end
 
   private
+
+  # As palavras de cada linha com texto, de duas em duas linhas seguidas.
+  def pares_de_linhas
+    @texto.lines.map(&:split).reject(&:empty?).each_cons(2)
+  end
 
   # [centavos, com cifrão?] de cada bloco de dinheiro.
   def dinheiro

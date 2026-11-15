@@ -151,6 +151,7 @@ const ESCRITAS = [
 ];
 // O "PDF" da demonstração: uma página em branco do navegador.
 const PDF_DA_DEMO = 'about:blank';
+const ARQUIVO_DA_DEMO = { name: 'apolice-de-exemplo.pdf' };
 
 const erroDaDemo = () =>
   Object.assign(new Error('A demonstração pediu o erro desta peça.'), {
@@ -279,6 +280,14 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
     seguro: async id => (await umSeguro(id)).seguroPorId(id),
     historia: async id => (await umSeguro(id)).historiaDoSeguro(id),
     ...Object.fromEntries(ESCRITAS.map(nome => [nome, escrita(nome)])),
+    // #2899 (E6.2) — a demonstração não lê PDF (o resumo dela não liga a
+    // leitura): ler devolve "nada mudou" e guardar o lido guarda o PDF.
+    async lerPdf(id) {
+      await umSeguro(id);
+      return { leituraId: 0, outraApolice: false, mudancas: [] };
+    },
+    guardarPdfLido: async id =>
+      (await umSeguro(id)).guardarPdf(id, ARQUIVO_DA_DEMO),
     async pdf(id) {
       await umSeguro(id);
       return PDF_DA_DEMO;

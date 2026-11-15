@@ -2522,6 +2522,28 @@
     "controller": "api/v1/accounts/relacionamentos/trazer/listas#previa_do_desfazer",
     "parametros": []
   },
+  "relacionamentos/trazer/seguros/leituras": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/seguros/leituras#index",
+    "parametros": []
+  },
+  "relacionamentos/trazer/seguros/leituras/:id": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/seguros/leituras#show",
+    "parametros": [
+      "leitura_id"
+    ]
+  },
+  "relacionamentos/trazer/seguros/leituras/:id/andamento": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/seguros/leituras#andamento",
+    "parametros": [
+      "leitura_id"
+    ]
+  },
+  "relacionamentos/trazer/seguros/leituras/:id/previa_do_desfazer": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/seguros/leituras#previa_do_desfazer",
+    "parametros": [
+      "leitura_id"
+    ]
+  },
   "relationships/configuration": {
     "controller": "api/v1/accounts/relationships/configurations#show",
     "parametros": []

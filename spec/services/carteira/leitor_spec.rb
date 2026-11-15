@@ -89,7 +89,8 @@ RSpec.describe Carteira::Leitor do
 
       expect(resultado).to be_lido
       expect(Crm::Ai::ResponsesClient).to have_received(:new)
-        .with(credential: hash_including(api_key: 'chave-da-conta'), feature: 'carteira_leitor', account: account, max_retries: 1)
+        .with(credential: hash_including(api_key: 'chave-da-conta'), feature: 'carteira_leitor', account: account, max_retries: 1,
+              log_so_tipo_e_status: true)
       expect(perguntas.last).to include(model: Carteira::Leitor::Campos::MODEL, schema: Carteira::Leitor::Campos.schema,
                                         max_output_tokens: Carteira::Leitor::Campos::MAX_OUTPUT_TOKENS)
     end

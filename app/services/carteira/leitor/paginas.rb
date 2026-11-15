@@ -90,14 +90,22 @@ class Carteira::Leitor::Paginas
   end
 
   # O tamanho é conferido antes de o leitor de PDF tocar no arquivo. As conferências daqui não têm resgate: erro
-  # nosso nelas sobe.
+  # nosso nelas sobe. A única exceção é o tamanho (`grande_demais?`): o arquivo pode sumir entre conferir que existe e
+  # medir.
   def abrir
     raise Ilegivel, 'nao_existe' unless File.file?(@caminho)
-    raise Ilegivel, 'grande_demais' if File.size(@caminho) > MAXIMO_DE_BYTES
+    raise Ilegivel, 'grande_demais' if grande_demais?
     raise Ilegivel, 'nao_e_pdf' unless PROCESSADORES::Rasterizacao.pdf?(@caminho)
 
     @paginas = paginas_do_pdf
     @total = @paginas.size
+  end
+
+  # O arquivo que sumiu (ou ficou sem permissão) entre o `File.file?` e a medida é ilegível, com a classe do erro.
+  def grande_demais?
+    File.size(@caminho) > MAXIMO_DE_BYTES
+  rescue SystemCallError => e
+    raise Ilegivel, e.class.name
   end
 
   def paginas_do_pdf
