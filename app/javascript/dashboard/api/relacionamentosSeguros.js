@@ -97,6 +97,59 @@ class RelacionamentosSegurosAPI extends ApiClient {
     return axios.post(`${this.url}/seguros/${id}/pdf`, { leituraId, usar });
   }
 
+  // #2899 (E6.5) — o seguro que a pessoa tem em outra corretora: os PDFs que
+  // já chegaram nas conversas dela, ler um PDF (o arquivo, ou `anexoId` de um
+  // PDF da conversa), perguntar pela leitura e guardar com o que foi conferido.
+  arquivosDeFora(pessoaId) {
+    return axios.get(
+      `${this.url}/pessoas/${pessoaId}/seguros_de_fora/arquivos`
+    );
+  }
+
+  lerDeFora(pessoaId, { arquivo = null, anexoId = null }) {
+    const url = `${this.url}/pessoas/${pessoaId}/seguros_de_fora/leitura`;
+    if (anexoId) return axios.post(url, { anexoId });
+    const corpo = new FormData();
+    corpo.append('arquivo', arquivo);
+    return axios.post(url, corpo, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
+  leituraDeFora(pessoaId, leituraId) {
+    return axios.get(
+      `${this.url}/pessoas/${pessoaId}/seguros_de_fora/leitura/${leituraId}`
+    );
+  }
+
+  // `dados`: { leituraId, querLembrete, campos: { tipo, seguradora, termina,
+  // corretora }, confirmados }.
+  guardarDeFora(pessoaId, dados) {
+    return axios.post(`${this.url}/pessoas/${pessoaId}/seguros_de_fora`, dados);
+  }
+
+  // Só o seguro de outra corretora se apaga.
+  apagar(id) {
+    return axios.delete(`${this.url}/seguros/${id}`);
+  }
+
+  // #2899 (E6.6) — seu seguro em palavras simples.
+  palavras(id) {
+    return axios.get(`${this.url}/seguros/${id}/palavras`);
+  }
+
+  escreverPalavras(id) {
+    return axios.post(`${this.url}/seguros/${id}/palavras/escrever`);
+  }
+
+  salvarPalavras(id, texto) {
+    return axios.put(`${this.url}/seguros/${id}/palavras`, { texto });
+  }
+
+  enviarPalavras(id) {
+    return axios.post(`${this.url}/seguros/${id}/palavras/enviar`);
+  }
+
   // #2898 — a renovação no funil. Os ajustes da conta (em que funil e etapa a
   // renovação aparece, quantos dias antes, as mensagens) e o que a tela
   // precisa para mostrá-los.

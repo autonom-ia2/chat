@@ -16,7 +16,8 @@
       "EM_RENOVACAO": "Renewing",
       "RENOVADO": "Renewed",
       "DESCONHECIDO": "Policy",
-      "CANCELADO": "Cancelled"
+      "CANCELADO": "Cancelled",
+      "DE_FORA": "From another broker"
     },
     "CAMPOS": {
       "TIPO": "Type of insurance",
@@ -207,7 +208,8 @@
         "DESFEITO": "Undone.",
         "NAO_PODE_FECHAR_A_RENOVACAO": "You do not have permission to change the renewal of this policy. Ask an account administrator or whoever is in charge of renewals.",
         "NAO_DEU": "I could not do that. Try again.",
-        "DESFAZER": "Undo"
+        "DESFAZER": "Undo",
+        "PALAVRAS_ENVIADAS": "Message sent in the conversation."
       },
       "DADOS": {
         "TITULO": "Policy details",
@@ -236,7 +238,8 @@
         "NAO_RENOVOU": "Did not renew",
         "GUARDAR_APOLICE_NOVA": "Save the new policy",
         "DESFAZER_RENOVACAO": "Undo the renewal result",
-        "MAIS": "More options for this policy"
+        "MAIS": "More options for this policy",
+        "APAGAR_DE_FORA": "Delete this policy"
       }
     },
     "CORRIGIR": {
@@ -305,7 +308,9 @@
         "APOLICE_NOVA": "New policy saved.",
         "DESFEZ_DESFECHO": "Renewal result undone. The policy is in renewal again.",
         "CHEGOU_PDF": "Arrived from a PDF.",
-        "CHEGOU_DE_NOVO_PDF": "Updated from a PDF."
+        "CHEGOU_DE_NOVO_PDF": "Updated from a PDF.",
+        "CHEGOU_DE_FORA": "Saved as a policy from another broker.",
+        "PALAVRAS_ENVIADAS": "The policy in plain words was sent to the client."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
@@ -542,7 +547,12 @@
       "ITEM_FECHADO": "This PDF can no longer be changed. I refreshed the screen.",
       "CAMPO_INVALIDO": "I did not understand what was typed. Check it and save again.",
       "NADA_PARA_TRAZER": "No PDF is ready to come in yet. Fill in what is missing, or leave the PDF out.",
-      "NAO_PODE_DESFAZER": "These PDFs can no longer be undone."
+      "NAO_PODE_DESFAZER": "These PDFs can no longer be undone.",
+      "SEGURO_DE_FORA_REPETIDO": "This policy is already saved on this profile, with the same insurer, the same type and the same end date. Nothing was saved again.",
+      "NAO_E_DE_FORA": "Only a policy from another broker can be deleted. The screen was refreshed.",
+      "NAO_DEU_PARA_ESCREVER": "I could not write the text right now. Try again.",
+      "SEM_CONVERSA": "This client has no conversation here. Copy the text and send it another way.",
+      "FORA_DA_JANELA": "The conversation with the client is closed for messages right now. Copy the text and send it another way."
     },
     "TRAZER": {
       "BOTAO": "Bring policies",
@@ -729,6 +739,80 @@
         },
         "QUANDO": "{quando} · {situacao}"
       }
+    },
+    "DE_FORA": {
+      "ENTRADA": "Save a policy from another broker",
+      "TITULO": "Policy from another broker",
+      "ERRO_ABRIR": "I could not open this right now. Try again.",
+      "QUAL_ARQUIVO": "Which PDF is the policy?",
+      "DA_CONVERSA": "PDFs received in the conversation",
+      "APOIO": "I read the PDF and show what I found before saving.",
+      "LENDO": "Reading the PDF… this can take a few minutes.",
+      "O_QUE_LI": "What I read in the PDF",
+      "CONFIRA_APOIO": "Check and fix what is needed. What I did not find stays blank for you to fill in.",
+      "ESCOLHA": "Choose the type",
+      "FALTA_TIPO": "Choose the policy type.",
+      "FALTA_SEGURADORA": "Write the insurer.",
+      "FALTA_TERMINA": "Choose the date the policy ends.",
+      "NAO_ACHEI": "Not found in the PDF. Write it here.",
+      "NAO_ACHEI_DATA": "I did not find this date in the PDF. Pick it on the calendar.",
+      "CORRETORA": "Broker that holds the policy today",
+      "TAMBEM": "Also found in the PDF",
+      "CAMPO_E_VALOR": "{campo}: {valor}",
+      "CONFIRA": "Check: I am not sure about this value. It is only saved if you say it is right.",
+      "ESTA_CERTO": "It is right",
+      "OUTRO_ARQUIVO": "Choose another PDF",
+      "QUER": "Does {nome} want the renewal reminder?",
+      "QUER_SEM_NOME": "Does the client want the renewal reminder?",
+      "QUER_APOIO": "With the reminder, this policy joins the renewals when it is close to ending, like the policies in your book. Without it, the policy is only kept on the profile.",
+      "SIM": "Yes, wants the reminder",
+      "NAO": "No, just save it",
+      "FALTA_RESPOSTA": "Say whether {nome} wants the reminder.",
+      "FALTA_RESPOSTA_SEM_NOME": "Say whether the client wants the reminder.",
+      "GUARDAR": "Save the policy",
+      "NAO_LEU": "I could not read this PDF. Try again.",
+      "NAO_GUARDOU": "I could not save the policy. Try again.",
+      "NAO_DEU_PARA_LER": "I could not read this PDF. Try again, or ask the client for the policy PDF, not a scanned copy.",
+      "DESLIGADA": "PDF reading is not available on this account.",
+      "TEXTO_LONGO": "The insurer or the broker is too long. Use fewer words and save again.",
+      "GUARDADO": "Policy from another broker saved on the profile.",
+      "GUARDADO_COM_LEMBRETE": "Policy from another broker saved on the profile, with the renewal reminder.",
+      "DESFEITO": "Undone. The policy left the profile.",
+      "APAGAR": {
+        "TITULO": "Delete this policy from another broker?",
+        "AVISO": "The policy and its PDF leave the profile and do not come back. If you need it later, save it again.",
+        "CONFIRMAR": "Delete the policy",
+        "VOLTAR": "Go back"
+      }
+    },
+    "PALAVRAS": {
+      "TITULO": "Your policy in plain words",
+      "NAO_ABRIU": "I could not open this right now. Try again.",
+      "APOIO": "A short text about the policy, the way {nome} will read it: what is covered and when it ends. You read it, can change it and send it.",
+      "APOIO_SEM_NOME": "A short text about the policy, the way the client will read it: what is covered and when it ends. You read it, can change it and send it.",
+      "ESCREVENDO": "Writing the text… this takes a few seconds.",
+      "ESCREVER": "Write for {nome}",
+      "ESCREVER_SEM_NOME": "Write for the client",
+      "TEXTO": "The message text",
+      "FALTA_TEXTO": "Write the text before saving.",
+      "TEXTO_LONGO": "The text is too long. Use fewer words and save again.",
+      "DESLIGADA": "This is not available on this account.",
+      "SALVAR": "Save the text",
+      "VOLTAR": "Go back",
+      "ENVIADO": "Sent on {data} at {hora}.",
+      "FORA_DA_JANELA": "The conversation with the client is closed for messages right now: replies are only allowed up to 24 hours after their last message. Copy the text and send it another way.",
+      "SEM_CONVERSA": "{nome} has no conversation here. Copy the text and send it another way.",
+      "SEM_CONVERSA_SEM_NOME": "The client has no conversation here. Copy the text and send it another way.",
+      "ENVIAR": "Send to {nome}",
+      "ENVIAR_SEM_NOME": "Send to the client",
+      "ENVIAR_DE_NOVO": "Send to {nome} again",
+      "ENVIAR_DE_NOVO_SEM_NOME": "Send to the client again",
+      "COPIAR": "Copy the text",
+      "COPIADO": "Text copied.",
+      "NAO_COPIOU": "I could not copy. Select the text and copy it by hand.",
+      "ALTERAR": "Change the text",
+      "ESCREVER_DE_NOVO": "Write again",
+      "NAO_DEU": "I could not do that. Try again."
     }
   }
 }

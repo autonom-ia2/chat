@@ -16,7 +16,8 @@
       "EM_RENOVACAO": "Em renovação",
       "RENOVADO": "Renovado",
       "DESCONHECIDO": "Seguro",
-      "CANCELADO": "Cancelado"
+      "CANCELADO": "Cancelado",
+      "DE_FORA": "De outra corretora"
     },
     "CAMPOS": {
       "TIPO": "Tipo de seguro",
@@ -207,7 +208,8 @@
         "DESFEITO": "Desfeito.",
         "NAO_PODE_FECHAR_A_RENOVACAO": "Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.",
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
-        "DESFAZER": "Desfazer"
+        "DESFAZER": "Desfazer",
+        "PALAVRAS_ENVIADAS": "Mensagem enviada na conversa."
       },
       "DADOS": {
         "TITULO": "Dados do seguro",
@@ -236,7 +238,8 @@
         "NAO_RENOVOU": "Não renovou",
         "GUARDAR_APOLICE_NOVA": "Guardar a apólice nova",
         "DESFAZER_RENOVACAO": "Desfazer o resultado da renovação",
-        "MAIS": "Mais opções deste seguro"
+        "MAIS": "Mais opções deste seguro",
+        "APAGAR_DE_FORA": "Apagar este seguro"
       }
     },
     "CORRIGIR": {
@@ -305,7 +308,9 @@
         "APOLICE_NOVA": "Apólice nova guardada.",
         "DESFEZ_DESFECHO": "Resultado da renovação desfeito. O seguro voltou a estar em renovação.",
         "CHEGOU_PDF": "Chegou por PDF.",
-        "CHEGOU_DE_NOVO_PDF": "Atualizado por PDF."
+        "CHEGOU_DE_NOVO_PDF": "Atualizado por PDF.",
+        "CHEGOU_DE_FORA": "Guardado como seguro de outra corretora.",
+        "PALAVRAS_ENVIADAS": "O seguro em palavras simples foi enviado ao cliente."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
@@ -542,7 +547,12 @@
       "ITEM_FECHADO": "Este PDF não pode mais ser mudado. Atualizei a tela.",
       "CAMPO_INVALIDO": "Não entendi o que foi escrito. Confira e salve de novo.",
       "NADA_PARA_TRAZER": "Nenhum PDF está pronto para entrar ainda. Preencha o que falta ou deixe o PDF de fora.",
-      "NAO_PODE_DESFAZER": "Estes PDFs não podem mais ser desfeitos."
+      "NAO_PODE_DESFAZER": "Estes PDFs não podem mais ser desfeitos.",
+      "SEGURO_DE_FORA_REPETIDO": "Este seguro já está guardado nesta ficha, com a mesma seguradora, o mesmo tipo e a mesma data de término. Nada foi guardado de novo.",
+      "NAO_E_DE_FORA": "Só dá para apagar um seguro de outra corretora. Atualizei a tela.",
+      "NAO_DEU_PARA_ESCREVER": "Não consegui escrever o texto agora. Tente de novo.",
+      "SEM_CONVERSA": "Este cliente não tem conversa aqui. Copie o texto e mande por outro caminho.",
+      "FORA_DA_JANELA": "A conversa com o cliente está fechada para mensagens agora. Copie o texto e mande por outro caminho."
     },
     "TRAZER": {
       "BOTAO": "Trazer seguros",
@@ -729,6 +739,80 @@
         },
         "QUANDO": "{quando} · {situacao}"
       }
+    },
+    "DE_FORA": {
+      "ENTRADA": "Guardar seguro de outra corretora",
+      "TITULO": "Seguro de outra corretora",
+      "ERRO_ABRIR": "Não consegui abrir isto agora. Tente de novo.",
+      "QUAL_ARQUIVO": "Qual é o PDF do seguro?",
+      "DA_CONVERSA": "PDFs que chegaram na conversa",
+      "APOIO": "Eu leio o PDF e mostro o que achei antes de guardar.",
+      "LENDO": "Lendo o PDF… isso pode levar alguns minutos.",
+      "O_QUE_LI": "O que eu li no PDF",
+      "CONFIRA_APOIO": "Confira e corrija o que for preciso. O que eu não achei fica em branco para você escrever.",
+      "ESCOLHA": "Escolha o tipo",
+      "FALTA_TIPO": "Escolha o tipo de seguro.",
+      "FALTA_SEGURADORA": "Escreva a seguradora.",
+      "FALTA_TERMINA": "Escolha a data em que o seguro termina.",
+      "NAO_ACHEI": "Não achei no PDF. Escreva aqui.",
+      "NAO_ACHEI_DATA": "Não achei essa data no PDF. Escolha no calendário.",
+      "CORRETORA": "Corretora em que o seguro está hoje",
+      "TAMBEM": "Também achei no PDF",
+      "CAMPO_E_VALOR": "{campo}: {valor}",
+      "CONFIRA": "Confira: não tenho certeza deste valor. Ele só é guardado se você disser que está certo.",
+      "ESTA_CERTO": "Está certo",
+      "OUTRO_ARQUIVO": "Escolher outro PDF",
+      "QUER": "{nome} quer o lembrete da renovação?",
+      "QUER_SEM_NOME": "O cliente quer o lembrete da renovação?",
+      "QUER_APOIO": "Com o lembrete, este seguro entra nas renovações quando estiver perto de vencer, como os seguros da sua carteira. Sem o lembrete, ele só fica guardado na ficha.",
+      "SIM": "Sim, quer o lembrete",
+      "NAO": "Não, só guardar",
+      "FALTA_RESPOSTA": "Diga se {nome} quer o lembrete.",
+      "FALTA_RESPOSTA_SEM_NOME": "Diga se o cliente quer o lembrete.",
+      "GUARDAR": "Guardar o seguro",
+      "NAO_LEU": "Não consegui ler este PDF. Tente de novo.",
+      "NAO_GUARDOU": "Não consegui guardar o seguro. Tente de novo.",
+      "NAO_DEU_PARA_LER": "Não consegui ler este PDF. Tente de novo, ou peça ao cliente o PDF da apólice, não a cópia escaneada.",
+      "DESLIGADA": "A leitura de PDF não está disponível nesta conta.",
+      "TEXTO_LONGO": "A seguradora ou a corretora ficou comprida demais. Escreva com menos palavras e guarde de novo.",
+      "GUARDADO": "Seguro de outra corretora guardado na ficha.",
+      "GUARDADO_COM_LEMBRETE": "Seguro de outra corretora guardado na ficha, com o lembrete da renovação.",
+      "DESFEITO": "Desfeito. O seguro saiu da ficha.",
+      "APAGAR": {
+        "TITULO": "Apagar este seguro de outra corretora?",
+        "AVISO": "O seguro e o PDF dele saem da ficha e não voltam. Se precisar dele depois, guarde de novo.",
+        "CONFIRMAR": "Apagar o seguro",
+        "VOLTAR": "Voltar"
+      }
+    },
+    "PALAVRAS": {
+      "TITULO": "Seu seguro em palavras simples",
+      "NAO_ABRIU": "Não consegui abrir isto agora. Tente de novo.",
+      "APOIO": "Um texto curto sobre o seguro, do jeito que {nome} vai ler: o que está segurado e quando vence. Você lê, pode alterar e manda.",
+      "APOIO_SEM_NOME": "Um texto curto sobre o seguro, do jeito que o cliente vai ler: o que está segurado e quando vence. Você lê, pode alterar e manda.",
+      "ESCREVENDO": "Escrevendo o texto… isso leva alguns segundos.",
+      "ESCREVER": "Escrever para {nome}",
+      "ESCREVER_SEM_NOME": "Escrever para o cliente",
+      "TEXTO": "O texto da mensagem",
+      "FALTA_TEXTO": "Escreva o texto antes de salvar.",
+      "TEXTO_LONGO": "O texto ficou comprido demais. Escreva com menos palavras e salve de novo.",
+      "DESLIGADA": "Isto não está disponível nesta conta.",
+      "SALVAR": "Salvar o texto",
+      "VOLTAR": "Voltar",
+      "ENVIADO": "Enviado em {data}, às {hora}.",
+      "FORA_DA_JANELA": "A conversa com o cliente está fechada para mensagens agora: só dá para responder até 24 horas depois da última mensagem dele. Copie o texto e mande por outro caminho.",
+      "SEM_CONVERSA": "{nome} não tem conversa aqui. Copie o texto e mande por outro caminho.",
+      "SEM_CONVERSA_SEM_NOME": "O cliente não tem conversa aqui. Copie o texto e mande por outro caminho.",
+      "ENVIAR": "Enviar a {nome}",
+      "ENVIAR_SEM_NOME": "Enviar ao cliente",
+      "ENVIAR_DE_NOVO": "Enviar de novo a {nome}",
+      "ENVIAR_DE_NOVO_SEM_NOME": "Enviar de novo ao cliente",
+      "COPIAR": "Copiar o texto",
+      "COPIADO": "Texto copiado.",
+      "NAO_COPIOU": "Não consegui copiar. Selecione o texto e copie à mão.",
+      "ALTERAR": "Alterar o texto",
+      "ESCREVER_DE_NOVO": "Escrever de novo",
+      "NAO_DEU": "Não consegui fazer isso. Tente de novo."
     }
   }
 }

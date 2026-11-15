@@ -16,6 +16,9 @@
 // renovação: só aparecem para quem enxerga esse card (`renovacao.cardId`).
 // Para quem não enxerga, a renovação é só leitura
 // (carteira/situacaoDaRenovacao.js) e o rodapé é o de um seguro comum.
+// #2899 (E6.5) — o seguro de outra corretora (`deFora`) não se cancela: no
+// lugar de "Marcar como cancelado", o "⋯" tem "Apagar este seguro", em
+// vermelho (a gaveta pergunta antes).
 import { estaValendo, renovacaoAberta } from '../fonte/selosDoSeguro';
 import {
   faltaApoliceNova,
@@ -35,10 +38,22 @@ export const DO_RODAPE = {
   NAO_RENOVOU: 'NAO_RENOVOU',
   GUARDAR_APOLICE_NOVA: 'GUARDAR_APOLICE_NOVA',
   DESFAZER_RENOVACAO: 'DESFAZER_RENOVACAO',
+  APAGAR_DE_FORA: 'APAGAR_DE_FORA',
 };
 
 // O que não tem volta fácil aparece em vermelho no "⋯".
-export const DESTRUTIVOS = [DO_RODAPE.APAGAR_PDF, DO_RODAPE.MARCAR_CANCELADO];
+export const DESTRUTIVOS = [
+  DO_RODAPE.APAGAR_PDF,
+  DO_RODAPE.MARCAR_CANCELADO,
+  DO_RODAPE.APAGAR_DE_FORA,
+];
+
+const cancelarOuDesfazer = seguro => {
+  if (seguro.deFora) return DO_RODAPE.APAGAR_DE_FORA;
+  return seguro.canceladoEm
+    ? DO_RODAPE.DESFAZER_CANCELAMENTO
+    : DO_RODAPE.MARCAR_CANCELADO;
+};
 
 const azulDe = (seguro, valendo) => {
   if (seguro.temPdf) return DO_RODAPE.VER_PDF;
@@ -75,15 +90,13 @@ export const rodapeDoSeguro = (
     };
   }
   const valendo = estaValendo(seguro, agora);
-  const cancelarOuDesfazer = seguro.canceladoEm
-    ? DO_RODAPE.DESFAZER_CANCELAMENTO
-    : DO_RODAPE.MARCAR_CANCELADO;
+  const fimDoMenu = cancelarOuDesfazer(seguro);
   const mexeNaRenovacao = !seguro.canceladoEm && !renovacaoSoDeLeitura(seguro);
   if (renovacaoAberta(seguro) && mexeNaRenovacao) {
     return {
       azul: DO_RODAPE.RENOVOU,
       secundario: DO_RODAPE.NAO_RENOVOU,
-      menu: [...pdfECorrigirNoMenu(seguro), cancelarOuDesfazer],
+      menu: [...pdfECorrigirNoMenu(seguro), fimDoMenu],
     };
   }
   const desfazer =
@@ -98,6 +111,6 @@ export const rodapeDoSeguro = (
       ? DO_RODAPE.GUARDAR_APOLICE_NOVA
       : azulDe(seguro, valendo),
     secundario: DO_RODAPE.CORRIGIR,
-    menu: [...doPdf, ...desfazer, cancelarOuDesfazer],
+    menu: [...doPdf, ...desfazer, fimDoMenu],
   };
 };

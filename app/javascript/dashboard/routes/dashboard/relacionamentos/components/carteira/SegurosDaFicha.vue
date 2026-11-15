@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, useTemplateRef, watch } from 'vue';
+import { onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -11,8 +11,10 @@ import {
   ESTADOS_DOS_SEGUROS as ESTADOS,
   useSegurosDe,
 } from '../../carteira/useSegurosDe';
+import { leituraDePdf } from '../../carteira/leituraDePdf';
 import { useVerPdf } from '../../carteira/useVerPdf';
 import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
+import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import SecaoSeguros from './SecaoSeguros.vue';
 
@@ -22,6 +24,9 @@ import SecaoSeguros from './SecaoSeguros.vue';
 // fonte da carteira. `demo` é o estado da demonstração que a ficha leu do
 // endereço (nulo fora dela). Quem não pode ver os seguros não vê o bloco; quem
 // só pode ver a pessoa (`podeEditar` falso) lê e abre o PDF, sem mudar nada.
+// #2899 (E6.5) — na ficha da pessoa, quem pode editar, na conta que lê PDF,
+// tem embaixo do bloco "Guardar seguro de outra corretora". A ficha da empresa
+// não tem: o seguro de fora é sempre da pessoa.
 const props = defineProps({
   donoId: { type: Number, required: true },
   daEmpresa: { type: Boolean, default: false },
@@ -29,6 +34,8 @@ const props = defineProps({
   podeEditar: { type: Boolean, default: false },
   podeExportar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
+  // O nome da pessoa da ficha, para as perguntas do seguro de outra corretora.
+  nome: { type: String, default: '' },
 });
 const emit = defineEmits(['abrirSegurado']);
 
@@ -44,6 +51,7 @@ const { apolice, abrir, fechar } = useApoliceNaUrl();
 const abrirCard = cardId => router.push(destinoDoCard(cardId, fonte.usaDemo));
 const verPdfDe = useVerPdf(fonte);
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
+const lePdf = ref(false);
 
 const lista = useSegurosDe(() =>
   props.daEmpresa ? fonte.daEmpresa(props.donoId) : fonte.daPessoa(props.donoId)
@@ -61,7 +69,12 @@ const aoGuardarPdf = () => {
 };
 
 watch(() => props.donoId, lista.carregar);
-onMounted(lista.carregar);
+onMounted(async () => {
+  lista.carregar();
+  if (props.podeEditar && !props.daEmpresa) {
+    lePdf.value = await leituraDePdf({ demo: fonte.usaDemo, fonte });
+  }
+});
 </script>
 
 <template>
@@ -76,7 +89,16 @@ onMounted(lista.carregar);
     @pdf="verPdf"
     @guardar="dialogoDoPdf?.abrir($event)"
     @tentar="lista.carregar"
-  />
+  >
+    <template v-if="lePdf && podeEditar && !daEmpresa" #rodape>
+      <EntradaDeFora
+        :pessoa-id="donoId"
+        :fonte="fonte"
+        :nome="nome"
+        @mudou="lista.atualizar"
+      />
+    </template>
+  </SecaoSeguros>
   <GavetaDoSeguro
     :apolice-id="apolice"
     :fonte="fonte"

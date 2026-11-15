@@ -15,6 +15,7 @@ import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../ficha/GavetaLateral.vue';
 import MenuMaisAcoes from '../lista/MenuMaisAcoes.vue';
+import { leituraDePdf } from '../../carteira/leituraDePdf';
 import { chaveDaRecusa, seguroJaMudou } from '../../carteira/recusas';
 import {
   DESTRUTIVOS,
@@ -35,6 +36,7 @@ import FraseDoSeguro from './FraseDoSeguro.vue';
 import HistoriaDoSeguro from './HistoriaDoSeguro.vue';
 import RenovacaoDoSeguro from './RenovacaoDoSeguro.vue';
 import DialogoMotivo from './renovacao/DialogoMotivo.vue';
+import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 
 // #2897 — a gaveta do seguro: tudo de um seguro e o que dá para fazer com ele.
 // O rodapé (à vista também no celular) tem no máximo UM botão azul: "Ver PDF",
@@ -54,6 +56,10 @@ import DialogoMotivo from './renovacao/DialogoMotivo.vue';
 // confirmação: o aviso traz "Desfazer", e o "⋯" guarda "Desfazer a renovação",
 // sem prazo. Depois de renovar, o azul é "Guardar a apólice nova": o mesmo
 // formulário do Corrigir, já com o que não muda de um ano para o outro.
+// #2899 — na conta que lê PDF, quem pode editar a pessoa tem "Seu seguro em
+// palavras simples" (E6.6) no seguro da carteira que não está cancelado. O
+// seguro de outra corretora (E6.5) tem "Apagar este seguro" no "⋯", com a
+// pergunta antes; apagado, a gaveta fecha.
 const props = defineProps({
   apoliceId: { type: Number, default: null },
   fonte: { type: Object, required: true },
@@ -97,8 +103,25 @@ const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
 const dialogoDeApagar = useTemplateRef('dialogoDeApagar');
 const dialogoDeSair = useTemplateRef('dialogoDeSair');
 const dialogoDoMotivo = useTemplateRef('dialogoDoMotivo');
+const dialogoDeApagarDeFora = useTemplateRef('dialogoDeApagarDeFora');
+// A conta lê PDF? Perguntado uma vez, na primeira abertura; na dúvida, não.
+const lePdf = ref(false);
+let perguntouSeLe = false;
+const apagandoDeFora = ref(false);
+const alertaDeApagarDeFora = ref('');
 
 const pronto = computed(() => aberto.estado.value === ESTADOS.PRONTO);
+const comPalavras = computed(
+  () =>
+    lePdf.value &&
+    props.podeEditar &&
+    !seguro.value.deFora &&
+    !seguro.value.canceladoEm
+);
+const primeiroNome = computed(() => {
+  const nome = seguro.value?.pessoa?.name || '';
+  return nome.trim().split(' ')[0];
+});
 const tipo = computed(() => (seguro.value ? textos.tipo(seguro.value) : ''));
 const titulo = computed(() => {
   if (aberto.estado.value === ESTADOS.CARREGANDO) return tg('CARREGANDO');
@@ -280,6 +303,39 @@ const apagarPdf = async () => {
   alertaDeApagar.value = t(chaveDaRecusa(aberto.recusa.value, NAO_DEU));
 };
 
+const perguntarSeLe = async () => {
+  lePdf.value = await leituraDePdf({
+    demo: props.fonte.usaDemo,
+    fonte: props.fonte,
+  });
+};
+
+const perguntarSeApagaDeFora = () => {
+  alertaDeApagarDeFora.value = '';
+  dialogoDeApagarDeFora.value?.abrir();
+};
+// Apagou: a gaveta fecha e quem abriu relê. Não apagou: a frase fica dentro da
+// pergunta, que continua aberta.
+const apagarDeFora = async () => {
+  if (apagandoDeFora.value) return;
+  apagandoDeFora.value = true;
+  alertaDeApagarDeFora.value = '';
+  try {
+    await props.fonte.apagarDeFora(props.apoliceId);
+    dialogoDeApagarDeFora.value?.fechar();
+    emit('mudou');
+    emit('fechar');
+  } catch {
+    alertaDeApagarDeFora.value = t(NAO_DEU);
+  } finally {
+    apagandoDeFora.value = false;
+  }
+};
+const aoEnviarPalavras = () => {
+  aberto.carregarHistoria();
+  dizer(tg('AVISOS.PALAVRAS_ENVIADAS'));
+};
+
 const abrirCorrecao = async () => {
   dizer('');
   try {
@@ -376,6 +432,10 @@ const DO_SEGURO = {
     icone: 'i-lucide-rotate-ccw',
     fazer: desfazerRenovacao,
   },
+  [DO_RODAPE.APAGAR_DE_FORA]: {
+    icone: 'i-lucide-trash-2',
+    fazer: perguntarSeApagaDeFora,
+  },
 };
 // O `data-carteira` do botão ao lado do azul, e o que deixa o azul girando.
 const MARCA_DO_SECUNDARIO = {
@@ -407,7 +467,11 @@ watch(
     paraApoliceNova.value = false;
     saidaPendente.value = null;
     dizer('');
-    if (id) aberto.carregar();
+    if (!id) return;
+    aberto.carregar();
+    if (perguntouSeLe) return;
+    perguntouSeLe = true;
+    perguntarSeLe();
   },
   { immediate: true }
 );
@@ -484,6 +548,13 @@ onMounted(() => {
           @dizer-motivo="perguntarMotivo"
         />
         <DadosDoSeguro :seguro="seguro" :agora="agora" />
+        <PalavrasSimples
+          v-if="comPalavras"
+          :seguro-id="seguro.id"
+          :fonte="fonte"
+          :nome="primeiroNome"
+          @mudou="aoEnviarPalavras"
+        />
         <HistoriaDoSeguro
           :itens="aberto.historia.value"
           :estado="aberto.estadoDaHistoria.value"
@@ -605,5 +676,16 @@ onMounted(() => {
       @fechou="saidaPendente = null"
     />
     <DialogoMotivo ref="dialogoDoMotivo" @escolher="guardarMotivo" />
+    <DialogoDeConfirmacao
+      ref="dialogoDeApagarDeFora"
+      marca="apagar-de-fora"
+      :titulo="tCarteira('DE_FORA.APAGAR.TITULO')"
+      :aviso="tCarteira('DE_FORA.APAGAR.AVISO')"
+      :confirmar="tCarteira('DE_FORA.APAGAR.CONFIRMAR')"
+      :voltar="tCarteira('DE_FORA.APAGAR.VOLTAR')"
+      :ocupado="apagandoDeFora"
+      :alerta="alertaDeApagarDeFora"
+      @confirmar="apagarDeFora"
+    />
   </template>
 </template>

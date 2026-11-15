@@ -10,6 +10,8 @@ import LinhaDoSeguroNaFicha from './LinhaDoSeguroNaFicha.vue';
 // #2897 — o bloco Seguros da ficha: o que a pessoa (ou a empresa) tem com a
 // corretora, o que pede atenção primeiro. É leitura: não tem botão cheio. Vazio
 // é só uma frase; o erro fica dentro do cartão e o resto da ficha continua.
+// #2899 (E6.5) — o slot `rodape` fica no fim do cartão (a entrada "Guardar
+// seguro de outra corretora", quando quem usa a põe).
 const props = defineProps({
   seguros: { type: Array, required: true },
   estado: { type: String, default: ESTADOS.PRONTO },
@@ -65,5 +67,8 @@ const titulo = computed(() => {
         @guardar="emit('guardar', $event)"
       />
     </ul>
+    <div v-if="$slots.rodape" class="mt-3">
+      <slot name="rodape" />
+    </div>
   </CartaoDaSecao>
 </template>
