@@ -8,6 +8,10 @@ module Autonomia::Guide::SoNaTelaDosModulos
     # #2858 F7: o Experimente da vitrine de ferramentas prontas e a leitura do pedido dele.
     ::Autonomia::FerramentasProntas::SO_NA_TELA_DO_GUIA,
     # #2897: guardar e tirar o PDF de um seguro é envio de arquivo, e o link do PDF é assinado.
-    ::Carteira::Pdf::SO_NA_TELA_DO_GUIA
+    ::Carteira::Pdf::SO_NA_TELA_DO_GUIA,
+    # #2899 (E6.5 e E6.6): ler e guardar o seguro de outra corretora, apagá-lo, escrever o seguro em palavras simples
+    # (chamada paga) e mandá-lo ao cliente.
+    ::Carteira::DeFora::SO_NA_TELA_DO_GUIA,
+    ::Carteira::Palavras::SO_NA_TELA_DO_GUIA
   ).freeze
 end

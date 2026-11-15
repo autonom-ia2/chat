@@ -151,7 +151,7 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
         'temPdf' => false, 'canceladoEm' => nil, 'corrigidoAMao' => [],
         'renovadoEm' => nil, 'motivo' => nil, 'motivoEscrito' => nil, 'parcelaAbertaEm' => nil, 'renovacao' => nil, 'endosso' => nil,
         'apoliceNova' => false,
-        'deFora' => false, 'corretora' => '', 'lembreteEm' => nil
+        'deFora' => false, 'corretora' => '', 'lembreteAceitoEm' => nil
       }
     end
 

@@ -1191,7 +1191,8 @@ Rails.application.routes.draw do
             # Seguros, a gaveta de um seguro com as escritas dela e o PDF, e os seguros da ficha da pessoa e da empresa.
             # #2898 (E5.3) — "Apólice nova" feita à mão, a partir do seguro que ela renovou.
             post 'seguros', to: 'seguros/apolices_novas#create'
-            resources :seguros, only: [:index, :show, :update] do
+            # #2899 (E6.5) — apagar só o seguro de outra corretora (o "Desfazer" e o "Apagar este seguro" da gaveta).
+            resources :seguros, only: [:index, :show, :update, :destroy] do
               collection do
                 get :todos
                 get :contagens
@@ -1216,6 +1217,11 @@ Rails.application.routes.draw do
                 # campos escolhidos é o POST :pdf, com `leituraId` e `usar`.
                 post 'pdf/leitura', to: 'seguros/pdf_leituras#create'
                 get 'pdf/leitura/:leitura_id', to: 'seguros/pdf_leituras#show'
+                # #2899 (E6.6) — seu seguro em palavras simples: o texto e por onde ele sai, escrever, guardar e mandar.
+                get :palavras, to: 'seguros/palavras#show'
+                put :palavras, to: 'seguros/palavras#update'
+                post 'palavras/escrever', to: 'seguros/palavras#escrever'
+                post 'palavras/enviar', to: 'seguros/palavras#enviar'
                 # #2898 (E5.3) — como terminou a renovação: fecham ou reabrem o card de renovação do seguro.
                 post :renovou, to: 'seguros/desfechos#renovou'
                 post :nao_renovou, to: 'seguros/desfechos#nao_renovou'
@@ -1223,6 +1229,11 @@ Rails.application.routes.draw do
               end
             end
             get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
+            # #2899 (E6.5) — o seguro de outra corretora vira lembrete: os PDFs das conversas, ler, a leitura e guardar.
+            get 'pessoas/:id/seguros_de_fora/arquivos', to: 'pessoas/seguros_de_fora#arquivos'
+            post 'pessoas/:id/seguros_de_fora/leitura', to: 'pessoas/seguros_de_fora#ler'
+            get 'pessoas/:id/seguros_de_fora/leitura/:leitura_id', to: 'pessoas/seguros_de_fora#leitura'
+            post 'pessoas/:id/seguros_de_fora', to: 'pessoas/seguros_de_fora#create'
             get 'empresas/:id/seguros', to: 'empresas/seguros#index' if ChatwootApp.enterprise?
           end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]

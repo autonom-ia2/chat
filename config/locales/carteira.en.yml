@@ -5,6 +5,10 @@ en:
     renovacao:
       card:
         titulo: 'Renewal · %{seguradora}'
+    palavras:
+      oi: 'Hi, %{nome}!'
+      oi_sem_nome: 'Hi!'
+      vale: 'What is written in your policy is what counts.'
   notifications:
     notification_title:
       carteira_renovacao: 'Insurance policies entered renewal'

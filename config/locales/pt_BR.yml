@@ -1303,6 +1303,8 @@ pt_BR:
         ready_tool_test: 'O teste de uma ferramenta pronta só se faz na tela: No automático › Ferramentas prontas › abra o cartão › Experimente.'
         seguro_pdf: 'O PDF de um seguro só se guarda, tira ou abre na tela: Relacionamentos › Seguros › abra o seguro.'
         seguros_por_pdf: 'Trazer seguros por PDFs só se faz na tela: Relacionamentos › Trazer › Por PDFs das apólices.'
+        seguro_de_fora: 'O seguro de outra corretora só se lê, guarda ou apaga na tela: abra a pessoa (ou o painel da conversa) › Seguros › Guardar seguro de outra corretora.'
+        seguro_palavras: 'O seguro em palavras simples só se escreve e se manda ao cliente na tela: Relacionamentos › Seguros › abra o seguro › Seu seguro em palavras simples.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'

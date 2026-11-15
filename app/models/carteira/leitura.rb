@@ -14,11 +14,13 @@
 # O banco só lista as origens. Os estados crescem com quem grava (o anexar, o trazer por PDFs, a busca no conector) e
 # são validados aqui.
 #
-# Duas entradas gravam leitura de PDF, e o `totais` diz de qual ela é (é uma contagem, como tudo ali):
+# Três entradas gravam leitura de PDF, e o `totais` diz de qual ela é (é uma contagem, como tudo ali):
 # - `anexar`: o PDF de UM seguro que já existe, anexado na gaveta para ver o que mudou (Carteira::Pdf::Ler). Um item só,
 #   que já nasce com a apólice. Nunca é trazida nem aparece no histórico; sai quando o PDF é guardado;
 # - `pdfs`: os PDFs que a corretora enviou em Trazer (Carteira::Trazer::Pdfs::Receber), com quantos foram. É o lote que
-#   o Conferir mostra, o histórico lista e o Desfazer desfaz (`do_trazer`).
+#   o Conferir mostra, o histórico lista e o Desfazer desfaz (`do_trazer`);
+# - `de_fora`: o PDF de um seguro que a pessoa tem em OUTRA corretora (E6.5, Carteira::DeFora::Ler). Um item só, já com o
+#   contato da tela e sem apólice. Nunca é trazida nem aparece no histórico; sai quando o seguro de fora é guardado.
 class Carteira::Leitura < ApplicationRecord
   self.table_name = 'carteira_leituras'
 
@@ -29,6 +31,7 @@ class Carteira::Leitura < ApplicationRecord
   # As marcas de entrada, em `totais` (ver acima).
   DO_ANEXAR = 'anexar'.freeze
   DO_TRAZER = 'pdfs'.freeze
+  DO_DE_FORA = 'de_fora'.freeze
   # Os itens guardam dado de cliente (o que foi lido e o PDF). Saem este tanto de dias depois de a leitura ser
   # confirmada; a que ninguém confirmou conta a partir da última vez em que foi mexida (abandonada).
   DIAS_DE_GUARDA_DOS_ITENS = 30
@@ -47,6 +50,8 @@ class Carteira::Leitura < ApplicationRecord
   scope :do_anexar, -> { where(origem: 'pdf').where("carteira_leituras.totais ->> '#{DO_ANEXAR}' IS NOT NULL") }
   # Os lotes de Trazer por PDFs (nunca a leitura do anexar).
   scope :do_trazer, -> { where(origem: 'pdf').where("carteira_leituras.totais ->> '#{DO_TRAZER}' IS NOT NULL") }
+  # As leituras do PDF de um seguro de outra corretora (E6.5).
+  scope :do_de_fora, -> { where(origem: 'pdf').where("carteira_leituras.totais ->> '#{DO_DE_FORA}' IS NOT NULL") }
 
   # As leituras cujos itens já passaram do prazo de guarda.
   scope :com_a_guarda_vencida, lambda { |agora = Time.current|

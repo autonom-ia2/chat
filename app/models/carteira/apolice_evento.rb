@@ -23,7 +23,9 @@ class Carteira::ApoliceEvento < ApplicationRecord
   ].freeze
   # E6 (#2899): chegou por PDF (Trazer por PDFs) e chegou de novo por PDF, com o que mudou (Trazer por PDFs, ou o PDF
   # anexado na gaveta em que a pessoa escolheu usar o que o PDF diz). `valores.leitura` é o lote que trouxe.
-  DA_E6 = %w[chegou_pdf chegou_de_novo_pdf].freeze
+  # `chegou_de_fora` (E6.5): o seguro que a pessoa tem em outra corretora foi guardado pelo PDF; `valores.lembrete` diz se
+  # a pessoa quis o lembrete da renovação.
+  DA_E6 = %w[chegou_pdf chegou_de_novo_pdf chegou_de_fora].freeze
   TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6).freeze
 
   belongs_to :apolice, class_name: 'Carteira::Apolice', inverse_of: :eventos

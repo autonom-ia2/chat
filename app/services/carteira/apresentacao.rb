@@ -13,11 +13,14 @@
 # `desfecho`: nem o id, nem o funil, nem a etapa, nem o dono, para a carteira não contar que existe um card num funil
 # que a pessoa não abre.
 #
+# O seguro de outra corretora (E6.5, #2899): `deFora`, a corretora em que ele está (`corretora`, texto vazio quando não se
+# sabe) e quando a pessoa quis o lembrete da renovação (`lembreteAceitoEm`, em segundos; nulo sem lembrete). O seguro em
+# palavras simples (E6.6) não vem aqui: a gaveta o pede à parte (GET seguros/:id/palavras), e a lista não carrega texto.
+#
 # O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
-# endosso, seguro de outra corretora) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por
-# dado ausente.
+# endosso) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por dado ausente.
 class Carteira::Apresentacao
-  DAS_PROXIMAS_ENTREGAS = { parcelaAbertaEm: nil, endosso: nil, deFora: false, corretora: '', lembreteEm: nil }.freeze
+  DAS_PROXIMAS_ENTREGAS = { parcelaAbertaEm: nil, endosso: nil }.freeze
   RENOVOU = 'renovou'.freeze
   NAO_RENOVOU = 'nao_renovou'.freeze
 
@@ -37,7 +40,9 @@ class Carteira::Apresentacao
   # donos deles que ainda são da conta, em outra.
   def de_cada(apolices)
     visiveis = cards_visiveis(apolices)
-    apolices.map { |apolice| do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), DAS_PROXIMAS_ENTREGAS) }
+    apolices.map do |apolice|
+      do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), de_fora(apolice), DAS_PROXIMAS_ENTREGAS)
+    end
   end
 
   # O bloco Seguros da ficha: o que pede atenção primeiro.
@@ -57,6 +62,10 @@ class Carteira::Apresentacao
   def da_situacao(apolice)
     { selo: Carteira::Selo.de(apolice, hoje: @hoje), dias: Carteira::Selo.dias(apolice, hoje: @hoje), origem: origem(apolice),
       temPdf: apolice.pdf.attached?, canceladoEm: apolice.cancelado_em&.to_i, corrigidoAMao: apolice.corrigido_a_mao }
+  end
+
+  def de_fora(apolice)
+    { deFora: apolice.de_fora, corretora: apolice.corretora_de_fora.to_s, lembreteAceitoEm: apolice.lembrete_aceito_em&.to_i }
   end
 
   # { id do card que a pessoa enxerga => o dono dele ainda é da conta? }
