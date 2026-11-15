@@ -1,21 +1,45 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 // #2899 (E6.4) — a primeira pergunta de "Trazer" na conta que lê PDF: trazer
 // por planilha (o caminho de sempre) ou por PDFs das apólices. São dois links
 // grandes; o caminho escolhido fica no endereço (`?como=`), e voltar do
 // navegador traz a pergunta de novo.
-defineProps({
-  // { planilha, pdfs }: as rotas de cada caminho.
+//
+// #2900 (E7.3) — na conta que pode trazer do Agger, o caminho "Do Agger"
+// (`?como=agger`). A porta passa os caminhos que a conta tem.
+const props = defineProps({
+  // { planilha, pdfs, agger }: as rotas de cada caminho.
   rotas: { type: Object, required: true },
+  // Os caminhos que a conta tem, na ordem da tela.
+  caminhos: { type: Array, default: () => ['planilha', 'pdfs'] },
 });
 
 const { t } = useI18n();
-const tw = chave => t(`RELACIONAMENTOS_CARTEIRA.PDFS.COMO.${chave}`);
 const CAMINHOS = [
-  { id: 'planilha', icone: 'i-lucide-sheet' },
-  { id: 'pdfs', icone: 'i-lucide-files' },
+  {
+    id: 'planilha',
+    icone: 'i-lucide-sheet',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PLANILHA.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PLANILHA.APOIO'),
+  },
+  {
+    id: 'pdfs',
+    icone: 'i-lucide-files',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PDFS.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PDFS.APOIO'),
+  },
+  {
+    id: 'agger',
+    icone: 'i-lucide-cloud-download',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.AGGER.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.AGGER.APOIO'),
+  },
 ];
+const daConta = computed(() =>
+  CAMINHOS.filter(caminho => props.caminhos.includes(caminho.id))
+);
 </script>
 
 <template>
@@ -28,10 +52,13 @@ const CAMINHOS = [
       tabindex="-1"
       class="m-0 text-2xl font-semibold text-n-slate-12"
     >
-      {{ tw('TITULO') }}
+      {{ t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.TITULO') }}
     </h1>
-    <ul class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2">
-      <li v-for="caminho in CAMINHOS" :key="caminho.id">
+    <ul
+      class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2"
+      :class="{ 'lg:grid-cols-3': daConta.length > 2 }"
+    >
+      <li v-for="caminho in daConta" :key="caminho.id">
         <router-link
           :to="rotas[caminho.id]"
           :data-como="caminho.id"
@@ -44,10 +71,10 @@ const CAMINHOS = [
             <span class="size-6" :class="caminho.icone" />
           </span>
           <span class="text-lg font-semibold">
-            {{ tw(`${caminho.id.toUpperCase()}.TITULO`) }}
+            {{ caminho.titulo() }}
           </span>
           <span class="text-base text-n-slate-11">
-            {{ tw(`${caminho.id.toUpperCase()}.APOIO`) }}
+            {{ caminho.apoio() }}
           </span>
         </router-link>
       </li>

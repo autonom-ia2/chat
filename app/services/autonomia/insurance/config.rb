@@ -27,6 +27,16 @@ module Autonomia::Insurance::Config
     master_enabled? && account_enabled?(account)
   end
 
+  # A CONEXÃO COM O AGGER SEM A COTAÇÃO (E7, #2900; decisão do Rodrigo de 13/11). A conta pode conectar o Agger pela
+  # Cotação ou pela carteira de seguros (trazer as apólices que a corretora já tem lá). É uma conexão só por conta, com
+  # uma sessão só: as duas portas mostram o mesmo estado. Vale para a rota de conexão e para os jobs que a mantêm viva
+  # (healthcheck e descoberta). As ferramentas da Lia continuam presas a `enabled?`: conta só com a carteira não cota.
+  def self.conexao_permitida?(account)
+    return false if account.blank?
+
+    enabled?(account) || ::Carteira::Conector.disponivel?(account)
+  end
+
   # Marca da conta, independente da ENV — é o que o SuperAdmin exibe e alterna.
   def self.account_enabled?(account)
     BOOLEAN.cast(account.internal_attributes.to_h[INTERNAL_ATTR_KEY]) || false

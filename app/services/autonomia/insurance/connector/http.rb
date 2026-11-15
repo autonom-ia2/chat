@@ -5,7 +5,11 @@
 # credencial da própria instância. NÃO existe Function URL nem endpoint público — a política da
 # organização bloqueia URL pública, e manter assim é o desenho correto: a única forma de chamar o
 # serviço é ser a máquina do chat2you. `x-service-token` viaja dentro do evento como segunda camada.
-class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::Client
+class Autonomia::Insurance::Connector::Http < Autonomia::Insurance::Connector::Client # rubocop:disable Metrics/ClassLength
+  # As quatro operações da carteira da corretora (E7, #2900) moram num módulo próprio; a classe passou do teto só pela
+  # linha que as inclui.
+  include CarteiraDaCorretora
+
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 60 # login no AGGER ~3 s; descoberta de produtos ~8 s; folga para cold start
   # A CONFERÊNCIA CORRE DENTRO DO TURNO e por isso não pode usar o teto de 60 s: ela é a única

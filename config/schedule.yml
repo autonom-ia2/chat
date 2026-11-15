@@ -486,3 +486,11 @@ carteira_limpeza_das_leituras_job:
   cron: '40 4 * * *'
   class: 'Carteira::LimpezaDasLeiturasJob'
   queue: scheduled_jobs
+
+# A busca de todo dia no Agger da carteira de seguros (#2900, E7): começa, para cada conta que ligou "Buscar novos seguros
+# todo dia" e tem o Agger pronto, a busca dos últimos 7 dias, que entra sozinha na carteira. De madrugada no Brasil
+# (06:20 UTC), quando a corretora não está usando a plataforma; cada conta anda no seu job, uma chamada por vez.
+carteira_conector_busca_diaria_job:
+  cron: '20 6 * * *'
+  class: 'Carteira::Conector::BuscaDiariaJob'
+  queue: scheduled_jobs

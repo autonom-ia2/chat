@@ -17,6 +17,11 @@ import TrazerListaPage from './TrazerListaPage.vue';
 // #2899 (E6.4) — na conta que lê PDF, a porta pergunta antes como trazer
 // (`?como=planilha` ou `?como=pdfs`). Quem já está numa lista (`?leitura=`)
 // segue nela. Sem a leitura, nada muda: só a tela das listas.
+//
+// #2900 (E7.3) — na conta que pode trazer do Agger, o caminho "Do Agger"
+// (`?como=agger`) entra na pergunta, com ou sem a leitura de PDF. Quem já está
+// numa busca (`?busca=`) segue nela. O resumo da carteira diz os caminhos
+// (carteira/caminhosDeTrazer.js).
 const props = defineProps({
   // De onde vem o que os seguros pedem. A rota não passa nada: vale o import.
   baixarSeguros: {
@@ -31,13 +36,19 @@ const contaDeSeguros = useContaDeSeguros(demo).value;
 
 const seguros = shallowRef(null);
 const naoBaixou = ref(false);
-const lePdf = ref(false);
+const caminhos = ref({
+  pdfs: false,
+  agger: false,
+  aggerLigado: false,
+  aggerPedeLogin: false,
+});
 
 const baixar = async () => {
   naoBaixou.value = false;
   try {
     const baixado = await props.baixarSeguros();
-    lePdf.value = (await baixado.leituraDePdf?.({ demo })) === true;
+    caminhos.value =
+      (await baixado.caminhosDeTrazer?.({ demo })) ?? caminhos.value;
     seguros.value = baixado;
   } catch {
     naoBaixou.value = true;
@@ -45,15 +56,22 @@ const baixar = async () => {
 };
 
 const QUERY_DA_LISTA = ['leitura', 'planilha'];
+const daConta = computed(() =>
+  ['planilha', 'pdfs', 'agger'].filter(
+    id => id === 'planilha' || caminhos.value[id]
+  )
+);
 const como = computed(() => {
-  if (!lePdf.value) return 'planilha';
-  if (route.query.como) return route.query.como;
+  if (daConta.value.length === 1) return 'planilha';
+  if (daConta.value.includes(route.query.como)) return route.query.como;
+  if (route.query.busca && caminhos.value.agger) return 'agger';
   return QUERY_DA_LISTA.some(chave => route.query[chave]) ? 'planilha' : '';
 });
-const rotasDoComo = computed(() => ({
-  planilha: { query: { ...route.query, como: 'planilha' } },
-  pdfs: { query: { ...route.query, como: 'pdfs' } },
-}));
+const rotasDoComo = computed(() =>
+  Object.fromEntries(
+    daConta.value.map(id => [id, { query: { ...route.query, como: id } }])
+  )
+);
 
 if (contaDeSeguros) baixar();
 </script>
@@ -65,8 +83,15 @@ if (contaDeSeguros) baixar();
       :is="seguros.ComoTrazer"
       v-if="como === ''"
       :rotas="rotasDoComo"
+      :caminhos="daConta"
     />
     <component :is="seguros.TrazerPdfs" v-else-if="como === 'pdfs'" />
+    <component
+      :is="seguros.TrazerDoAgger"
+      v-else-if="como === 'agger'"
+      :ligado="caminhos.aggerLigado"
+      :pede-login="caminhos.aggerPedeLogin"
+    />
     <TrazerListaPage v-else :seguros="seguros" />
   </template>
   <section

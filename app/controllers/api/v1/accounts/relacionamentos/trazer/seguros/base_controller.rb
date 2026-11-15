@@ -17,8 +17,10 @@ class Api::V1::Accounts::Relacionamentos::Trazer::Seguros::BaseController < Api:
     @lote = lotes.find(params[:leitura_id] || params[:id])
   end
 
+  # O lote de PDFs, ou a busca no Agger (E7, #2900), cada um no formato que a tela dele lê.
   def responder_conferir
     response.headers['Cache-Control'] = 'private, no-store'
-    render json: ::Carteira::Trazer::Pdfs::Conferir.new(@lote).call
+    conferir = @lote.origem == 'conector' ? ::Carteira::Conector::Conferir : ::Carteira::Trazer::Pdfs::Conferir
+    render json: conferir.new(@lote).call
   end
 end

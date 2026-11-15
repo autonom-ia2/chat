@@ -53,6 +53,15 @@ class Api::V1::Accounts::Autonomia::Insurance::ConnectionController < Api::V1::A
 
   private
 
+  # A CONEXÃO TAMBÉM É DA CARTEIRA DE SEGUROS (E7, #2900; decisão do Rodrigo de 13/11, "Agger sem Cotação"). A conta que
+  # só tem a carteira conecta o Agger por aqui para trazer os seguros dela, e não ganha cotação: o resto do módulo
+  # (agente de cotação, medida) continua só com a Cotação (`BaseController`). Uma conexão só por conta, nas duas portas.
+  def ensure_feature_enabled
+    return if ::Autonomia::Insurance::Config.conexao_permitida?(Current.account)
+
+    render json: { error: 'autonomia.insurance.disabled' }, status: :not_found
+  end
+
   # Login e status, sem varredura, com a espera curta da tela.
   def sincronizar!
     ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false, espera_do_login: ESPERA_DO_LOGIN_NA_TELA).call

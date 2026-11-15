@@ -18,7 +18,11 @@
 class Carteira::LeituraItem < ApplicationRecord
   self.table_name = 'carteira_leitura_itens'
 
-  ESTADOS = %w[lendo lido recusado falhou fora trazido nao_entrou].freeze
+  # pedido (E7, #2900): o item 0 da busca no conector, que guarda o andamento do pedido e nunca vira seguro
+  # (Carteira::Conector::Pedido). igual (E7): o registro da busca que não mudou nada no seguro que já estava na carteira;
+  # fica sem `apolice` (Carteira::Conector::Gravar), para não segurar o Desfazer de quem criou o seguro. repetido (E7): o
+  # registro da busca que um mais novo do mesmo seguro (o endosso) substituiu; também nunca vira seguro.
+  ESTADOS = %w[lendo lido recusado falhou fora trazido nao_entrou pedido igual repetido].freeze
 
   belongs_to :account
   belongs_to :leitura, class_name: 'Carteira::Leitura', inverse_of: :itens

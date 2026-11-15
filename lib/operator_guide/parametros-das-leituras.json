@@ -2530,6 +2530,10 @@
     "controller": "api/v1/accounts/relacionamentos/trazer/listas#previa_do_desfazer",
     "parametros": []
   },
+  "relacionamentos/trazer/seguros/busca_diaria": {
+    "controller": "api/v1/accounts/relacionamentos/trazer/seguros/buscas#busca_diaria",
+    "parametros": []
+  },
   "relacionamentos/trazer/seguros/leituras": {
     "controller": "api/v1/accounts/relacionamentos/trazer/seguros/leituras#index",
     "parametros": []

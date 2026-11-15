@@ -40,6 +40,22 @@ class Carteira::Trazer::TipoDoRamo
     def segredo
       @segredo ||= Rails.application.key_generator.generate_key(SAL, 32)
     end
+
+    # { ramo agrupado => o tipo mais frequente nas apólices da conta }. No empate, o primeiro em ordem alfabética. A
+    # busca no conector (E7, #2900) decide o tipo pela mesma régua (Carteira::Conector::TiposDoRamo).
+    def da_conta(account_id)
+      contagem = Carteira::Apolice.where(account_id: account_id).where.not(ramo_original: nil).where.not(tipo: OUTRO)
+                                  .group(:ramo_original, :tipo).count
+      por_ramo = contagem.group_by { |(ramo, _tipo), _quantas| agrupado(ramo) }
+      por_ramo.transform_values { |pares| mais_frequente(pares) }
+    end
+
+    private
+
+    def mais_frequente(pares)
+      somas = pares.each_with_object(Hash.new(0)) { |((_ramo, tipo), quantas), soma| soma[tipo] += quantas }
+      somas.min_by { |tipo, quantas| [-quantas, tipo] }.first
+    end
   end
 
   def initialize(importacao, pergunta: nil)
@@ -76,17 +92,8 @@ class Carteira::Trazer::TipoDoRamo
     ramos.select { |ramo| ramo.length <= TAMANHO && ramo.count('0-9') <= DIGITOS && ramo.exclude?(ARROBA) }
   end
 
-  # { ramo agrupado => o tipo mais frequente nas apólices da conta }. No empate, o primeiro em ordem alfabética.
   def tipos_da_conta
-    contagem = Carteira::Apolice.where(account_id: @importacao.account_id).where.not(ramo_original: nil).where.not(tipo: OUTRO)
-                                .group(:ramo_original, :tipo).count
-    por_ramo = contagem.group_by { |(ramo, _tipo), _quantas| self.class.agrupado(ramo) }
-    por_ramo.transform_values { |pares| mais_frequente(pares) }
-  end
-
-  def mais_frequente(pares)
-    somas = pares.each_with_object(Hash.new(0)) { |((_ramo, tipo), quantas), soma| soma[tipo] += quantas }
-    somas.min_by { |tipo, quantas| [-quantas, tipo] }.first
+    self.class.da_conta(@importacao.account_id)
   end
 
   def guardados

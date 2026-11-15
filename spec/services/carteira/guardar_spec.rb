@@ -328,12 +328,22 @@ RSpec.describe Carteira::Guardar do
   end
 
   describe 'o que o gravador recusa' do
+    # A apólice feita à mão é a única origem sem primeiro passo próprio: quem a cria diz o dela em `chegada:`. O conector
+    # (E7, #2900) tem o seu, `chegou_agger`.
     it 'ao ser criado: a origem que não existe e a fonte sem primeiro passo da história' do
       expect { described_class.new(account, origem: 'email') }.to raise_error(ArgumentError, 'origem')
-      expect { described_class.new(account, origem: 'conector') }.to raise_error(ArgumentError, 'chegada')
+      expect { described_class.new(account, origem: 'manual') }.to raise_error(ArgumentError, 'chegada')
       expect { described_class.new(account, origem: 'conector', chegada: 'inventado') }.to raise_error(ArgumentError, 'chegada')
       expect(described_class.new(account, origem: 'planilha')).to be_a(described_class)
       expect(described_class.new(account, origem: 'pdf')).to be_a(described_class)
+      expect(described_class.new(account, origem: 'manual', chegada: 'apolice_nova')).to be_a(described_class)
+    end
+
+    it 'o conector tem o primeiro passo dele: a apólice que nasce dele começa com chegou_agger' do
+      apolice = described_class.new(account, origem: 'conector', user: user).call(dados, contato: pessoa).apolice
+
+      expect(apolice.origem).to eq('conector')
+      expect(passos(apolice)).to eq(['chegou_agger'])
     end
 
     it 'ao ser criado: o usuário que não é da conta e a importação de outra conta' do

@@ -12181,7 +12181,7 @@
     "modelo": "Autonomia::Insurance::Connection",
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:18",
-      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:74",
+      "app/controllers/api/v1/accounts/autonomia/insurance/connection_controller.rb:83",
       "app/controllers/api/v1/accounts/autonomia/insurance/base_controller.rb:19"
     ],
     "sem_corpo": false

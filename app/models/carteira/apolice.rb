@@ -42,6 +42,12 @@ class Carteira::Apolice < ApplicationRecord
   # seguro de outra corretora que vira lembrete; `palavras_texto` e `palavras_enviadas_em`, do seguro em palavras simples.
   belongs_to :leitura, class_name: 'Carteira::Leitura', optional: true, inverse_of: :apolices
   validate :leitura_da_conta, if: :will_save_change_to_leitura_id?
+  # E7 (#2900): `origem_ref` é a referência do registro na origem (o conector). É por ela que a busca seguinte acha o mesmo
+  # seguro em vez de criar outro (índice único [conta, origem, origem_ref] no banco). Texto vazio vira nulo: vazio não é
+  # referência de nada, e duas apólices com '' bateriam no índice.
+  ORIGEM_REF_MAXIMO = 255
+  normalizes :origem_ref, with: ->(ref) { ref.to_s.strip.presence }
+  validates :origem_ref, length: { maximum: ORIGEM_REF_MAXIMO }
 
   validates :tipo, inclusion: { in: TIPOS }
   validates :origem, inclusion: { in: ORIGENS }

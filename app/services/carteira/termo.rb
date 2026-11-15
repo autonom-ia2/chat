@@ -7,7 +7,8 @@
 # cima da guardada com começo e fim diferentes. Duplicar aparece na tela e se conserta; sobrescrever o termo errado
 # destrói em silêncio. Sem começo de vigência, só o fim igual diz que é a mesma.
 #
-# `escolher` diz qual dos termos guardados é o dos dados que chegam, para quem grava (Carteira::Guardar). Com mais de
+# `escolher` diz qual dos termos guardados é o dos dados que chegam, para quem grava (Carteira::Guardar), e `achar` faz
+# a mesma pergunta direto à carteira da conta. Com mais de
 # um termo guardado que bate (um pelo começo, outro pelo fim; ou dois pelo mesmo começo) não há desempate: é ambíguo,
 # e quem grava recusa. A única exceção é o reenvio idêntico: quando exatamente UM deles é igual aos dados no começo e
 # no fim, é ele. Sem ela, a apólice que ficou com dois termos de mesmo começo (uma correção à mão, por exemplo) seria
@@ -24,6 +25,17 @@ module Carteira::Termo
 
   def mesmo_comeco?(uma, outra)
     uma[:inicio_vigencia].present? && uma[:inicio_vigencia] == outra[:inicio_vigencia]
+  end
+
+  # A apólice da conta que é a dos dados (na forma do banco, Carteira::Guardar::Dados): as de mesma seguradora e mesmo
+  # número (as chaves), e entre elas a do mesmo termo (`escolher`). Sem número, nil. `travar`: quem grava trava as
+  # achadas até gravar (Carteira::Guardar); quem só pergunta de quem é o seguro não trava
+  # (Carteira::Conector::PessoaDoRegistro). As duas perguntas usam esta mesma regra.
+  def achar(account_id, dados, travar: false)
+    return if dados[:numero_chave].blank?
+
+    guardados = Carteira::Apolice.where(account_id: account_id, **dados.slice(:seguradora_chave, :numero_chave)).order(:id)
+    escolher((travar ? guardados.lock : guardados).to_a, dados)
   end
 
   # guardados: os registros com a mesma seguradora e o mesmo número. Devolve o que é a mesma apólice dos dados, nil

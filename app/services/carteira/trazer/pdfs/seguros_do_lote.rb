@@ -28,14 +28,18 @@ class Carteira::Trazer::Pdfs::SegurosDoLote
   SEM_OUTRA_LEITURA = 'NOT EXISTS (SELECT 1 FROM carteira_leitura_itens item WHERE item.apolice_id = carteira_apolices.id ' \
                       'AND item.leitura_id <> ?)'.freeze
 
+  # A busca no conector (E7, #2900) é desfeita pela mesma regra: a origem dos seguros e o passo do "chegou de novo" são
+  # os da origem da leitura (`conector` e `chegou_de_novo`, com a leitura em `valores`).
   def initialize(leitura)
     @leitura = leitura
     @conta_id = leitura.account_id
     @marca = leitura.id.to_s
+    @origem = leitura.origem
+    @de_novo = Carteira::Guardar::DE_NOVO_DA.fetch(@origem, Carteira::Guardar::DE_NOVO)
   end
 
   def saem
-    criados.where(origem: 'pdf', de_fora: false).where(**(DEPOIS_DO_LOTE - [:leitura_id]).index_with { nil }).where(DA_LISTA::COMO_CHEGOU)
+    criados.where(origem: @origem, de_fora: false).where(**(DEPOIS_DO_LOTE - [:leitura_id]).index_with { nil }).where(DA_LISTA::COMO_CHEGOU)
            .where(DA_LISTA::SEM_APOLICE_NOVA).where(SO_PASSOS_DO_LOTE, @marca).where(SEM_OUTRA_LEITURA, @leitura.id)
   end
 
@@ -90,7 +94,7 @@ class Carteira::Trazer::Pdfs::SegurosDoLote
   end
 
   def completados
-    tocados = Carteira::ApoliceEvento.where(tipo: [DE_NOVO, Carteira::Pdf::ANEXADO])
+    tocados = Carteira::ApoliceEvento.where(tipo: [@de_novo, Carteira::Pdf::ANEXADO])
                                      .where("carteira_apolice_eventos.valores ->> 'leitura' = ?", @marca).select(:apolice_id)
     Carteira::Apolice.where(account_id: @conta_id, id: tocados).where('carteira_apolices.leitura_id IS DISTINCT FROM ?', @leitura.id)
   end

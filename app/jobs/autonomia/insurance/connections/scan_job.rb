@@ -14,7 +14,8 @@ class Autonomia::Insurance::Connections::ScanJob < ApplicationJob
   def perform(connection_id)
     connection = ::Autonomia::Insurance::Connection.find_by(id: connection_id)
     return if connection.nil?
-    return unless ::Autonomia::Insurance::Config.enabled?(connection.account)
+    # E7 (#2900): a conexão da conta que só tem a carteira também é mantida.
+    return unless ::Autonomia::Insurance::Config.conexao_permitida?(connection.account)
 
     ::Autonomia::Insurance::Connections::Sync.new(connection).call
   rescue StandardError => e

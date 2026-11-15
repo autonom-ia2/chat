@@ -31,6 +31,12 @@
 #   apólice não mudaram. A apólice de origem `manual` só é completada pelas fontes.
 # - A origem `manual` só CRIA: quem edita à mão a apólice que já existe é a gaveta (Carteira::Corrigir).
 # - Seguradora e número são a identidade (foi por eles que a apólice foi achada): ficam como estavam.
+# - Com `origem_ref` (E7, #2900: a referência do registro no conector), a apólice é achada primeiro pela referência, se
+#   ela é do mesmo termo dos dados (Carteira::Termo): o mesmo registro de novo (inclusive o endosso, que mantém a
+#   referência) atualiza a mesma apólice e nunca cria outra. A referência de OUTRO termo (a renovação que manteve a
+#   referência) não serve: a apólice é procurada pelo número, como sempre, e sem ela nasce outra. A referência fica com o
+#   termo mais novo (a anterior perde a dela), porque é ele que a busca de todo dia vai trazer de novo; o termo velho
+#   continua achado pelo número.
 #
 # Recusas com código (CustomExceptions::CarteiraRecusa), sem tocar em nada:
 # - `termo_ambiguo`: há mais de um termo guardado que pode ser o dos dados, e o gravador não adivinha (Carteira::Termo).
@@ -59,7 +65,7 @@ class Carteira::Guardar
   # As fontes que disputam os campos, da mais fraca para a mais forte. A apólice feita à mão fica acima de todas.
   FORCA = %w[planilha pdf conector].freeze
   # O primeiro passo da história de cada fonte. A fonte que não está aqui diz o dela em `chegada:`.
-  CHEGOU = { 'planilha' => 'chegou_planilha', 'pdf' => 'chegou_pdf' }.freeze
+  CHEGOU = { 'planilha' => 'chegou_planilha', 'pdf' => 'chegou_pdf', 'conector' => 'chegou_agger' }.freeze
   DE_NOVO = 'chegou_de_novo'.freeze
   # O passo de quando a apólice chega de novo e muda, da fonte que tem o seu. As outras usam DE_NOVO.
   DE_NOVO_DA = { 'pdf' => 'chegou_de_novo_pdf' }.freeze
@@ -88,11 +94,14 @@ class Carteira::Guardar
     conferir_a_fonte
   end
 
-  def call(dados, contato:, empresa: nil)
+  # origem_ref: a referência do registro na origem (E7, #2900: o `ref` do conector). Com ela, a apólice é achada primeiro
+  # por ela, e a que nasce ou ainda não tinha referência passa a ter.
+  def call(dados, contato:, empresa: nil, origem_ref: nil)
     dados = Carteira::Guardar::Dados.call(dados)
     raise ArgumentError, 'contato' unless contato.is_a?(Contact)
     raise ArgumentError, 'empresa' unless empresa.nil? || empresa.is_a?(Company)
 
+    @origem_ref = referencia(origem_ref)
     tentativas = 0
     begin
       Carteira::Apolice.transaction(requires_new: true) { gravar(dados, contato, empresa) }
@@ -103,6 +112,12 @@ class Carteira::Guardar
   end
 
   private
+
+  def referencia(origem_ref)
+    raise ArgumentError, 'origem_ref' unless origem_ref.nil? || origem_ref.is_a?(String)
+
+    origem_ref.presence
+  end
 
   def conferir_a_fonte
     raise ArgumentError, 'account' unless @account.is_a?(Account)
@@ -120,28 +135,40 @@ class Carteira::Guardar
   end
 
   def gravar(dados, contato, empresa)
-    guardada = achar(dados)
-    return Resultado.new(apolice: criar(dados, contato, empresa), situacao: NOVA) unless guardada
+    com_a_referencia = pela_referencia
+    guardada = do_mesmo_termo(com_a_referencia, dados) || achar(dados)
+    return Resultado.new(apolice: criar(dados, contato, empresa, com_a_referencia), situacao: NOVA) unless guardada
 
     recusar(DE_OUTRA_PESSOA) unless guardada.contact_id == contato.id
     return Resultado.new(apolice: guardada, situacao: CANCELADA) if guardada.cancelado_em
 
     recusar(REPETIDA) if @origem == MANUAL
+    dar_a_referencia(guardada, com_a_referencia)
     atualizar(guardada, dados)
   end
 
   # Trava as apólices de mesma seguradora e número e escolhe, entre elas, a do termo dos dados.
   def achar(dados)
-    return if dados[:numero_chave].blank?
-
-    guardadas = Carteira::Apolice.where(account_id: @account.id, **dados.slice(:seguradora_chave, :numero_chave)).lock.order(:id).to_a
-    achada = Carteira::Termo.escolher(guardadas, dados)
+    achada = Carteira::Termo.achar(@account.id, dados, travar: true)
     achada == Carteira::Termo::AMBIGUO ? recusar(TERMO_AMBIGUO) : achada
   end
 
-  def criar(dados, contato, empresa)
+  # A apólice da conta com esta referência na origem (E7). Travada, como a achada pelo número.
+  def pela_referencia
+    return if @origem_ref.nil?
+
+    Carteira::Apolice.where(account_id: @account.id, origem_ref: @origem_ref).lock.order(:id).first
+  end
+
+  # A apólice da referência só é a dos dados quando é do mesmo termo (G4 do #3030).
+  def do_mesmo_termo(apolice, dados)
+    apolice if apolice && Carteira::Termo.escolher([apolice], dados) == apolice
+  end
+
+  def criar(dados, contato, empresa, com_a_referencia = nil)
     apolice = Carteira::Apolice.create!(
-      dados.merge(account: @account, contact: contato, company: empresa, origem: @origem, campaign_import: @importacao, leitura: @leitura)
+      dados.merge(account: @account, contact: contato, company: empresa, origem: @origem, campaign_import: @importacao, leitura: @leitura,
+                  origem_ref: referencia_da_que_nasce(com_a_referencia, dados))
     )
     registrar(apolice, @chegada, valores: @valores)
     apolice
@@ -164,6 +191,23 @@ class Carteira::Guardar
 
   def forca(origem)
     FORCA.index(origem) || FORCA.size
+  end
+
+  # A apólice achada pelo número que ainda não tinha referência passa a ter a da origem: a próxima chegada a acha por ela.
+  # A referência não é dado da apólice (não entra na história nem muda a situação). A que já tem outra fica com a dela, e
+  # a referência que já é de outro termo fica com ele.
+  def dar_a_referencia(apolice, com_a_referencia)
+    apolice.update!(origem_ref: @origem_ref) if @origem_ref && apolice.origem_ref.nil? && com_a_referencia.nil?
+  end
+
+  # O termo que nasce com a referência que já é de outro: fica com ela se termina depois (a renovação), e a anterior a
+  # perde; o termo mais velho que chega depois nasce sem ela.
+  def referencia_da_que_nasce(com_a_referencia, dados)
+    return @origem_ref if com_a_referencia.nil?
+    return if dados[:fim_vigencia].nil? || dados[:fim_vigencia] <= com_a_referencia.fim_vigencia
+
+    com_a_referencia.update!(origem_ref: nil)
+    @origem_ref
   end
 
   def registrar(apolice, tipo, valores:, mudancas: nil)

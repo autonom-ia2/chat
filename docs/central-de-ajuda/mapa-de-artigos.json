@@ -2607,6 +2607,26 @@
      ],
      "revisar": false,
      "nota": "Issue #2899 (E6.5 e E6.6 do épico #1240). Não há rota nova: a entrada do seguro de outra corretora fica no bloco Seguros da ficha e do painel da conversa, e as palavras simples ficam na gaveta do seguro. Tudo só aparece na conta com a leitura de PDF liberada (resumo da carteira com leituraDePdf)."
+    },
+    {
+     "id": "09.28",
+     "titulo": "Trazer seguros do Agger, com a busca de todo dia",
+     "para_que_serve": "Na conta que pode trazer do Agger: buscar os seguros da corretora direto no Agger com o login dela, conferir e trazer; depois, deixar a busca de todo dia trazer os seguros novos sozinha, e desfazer uma busca.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [],
+     "me_leve_ate_la": {
+      "rota": "relacionamentos_trazer",
+      "destaque": null
+     },
+     "requer": "carteira_seguros",
+     "prints": [],
+     "fontes": [
+      "porques: Trazer seguros do Agger, com a busca de todo dia (carteira de seguros)"
+     ],
+     "revisar": false,
+     "nota": "Issue #2900 (E7 do épico #1240). Não há rota nova: Trazer do Agger é a tela de Trazer (?como=agger). Só aparece na conta que pode trazer do Agger (resumo da carteira com aggerDisponivel)."
     }
    ]
   },
