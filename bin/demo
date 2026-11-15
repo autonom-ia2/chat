@@ -28,6 +28,23 @@ AQUI=''
 CARGA_MAX=20
 RAM_MIN_GB=3
 SWAP_MAX_MIB_S=1
+# Conferência curta em outro Mac (demo registrada, demos vivas, ferramentas): tempo limite de verdade, em segundos.
+# O ConnectTimeout do ssh só cobre até a saudação do servidor; a conexão que abre e fica presa na negociação ele não
+# derruba (medido em 15/11/2026, OpenSSH 10.5). Naquele dia um up ficou 30 min parado assim (#3031). Estourou o
+# limite, a máquina conta como "não respondeu".
+LIMITE_SONDA_S=15
+# Chamada longa (pnpm install, banco, rsync) não cabe em LIMITE_SONDA_S e não leva teto: matar o ssh no meio deixaria
+# o comando rodando do outro lado. Antes de cada uma o kit abre uma conexão de teste com o limite curto (responde);
+# só se ela responder a chamada longa parte. Depois de conectado, o ssh derruba a conexão que parar de responder
+# (4 sinais de 15 s sem resposta). Sobra descoberta: o outro Mac travar no instante entre o teste e a chamada.
+SSH_OPCOES=(-o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+# Limite que o rodar_em aplica ao ssh; vazio = sem limite. Só o sondar_em preenche. Zerado aqui para que variável
+# do ambiente de quem chama não mude nada.
+LIMITE_S=''
+# `maccluster status` consulta o outro Mac; não pode prender o kit.
+LIMITE_MEDIR_S=30
+# Máquinas que não responderam à conferência curta e que este comando dispensou (dispensar_muda), entre espaços.
+MUDAS=' '
 RAIZ_DEMOS=/Users/Shared/chat2you-demos
 PREFIXO_SNAPSHOT=/Users/Shared/maccluster-workspaces/chat2you/
 KIT=$(cd "${BASH_SOURCE[0]%/*}/../script/demo" && pwd -P) || { echo "bin/demo: não achei script/demo" >&2; exit 1; }
@@ -70,17 +87,61 @@ maquina_valida() {
 
 # Roda um comando de shell na máquina $1: por ssh, ou direto quando ela é este Mac. Neste Mac o ambiente vai limpo,
 # como o que o ssh entrega: nenhuma variável da sessão (RAILS_ENV, PG*, DATABASE_URL) entra no kit.
+# Com LIMITE_S (sondar_em), o ssh morre nesse tanto de segundos e o comando sai com 124; 5 s depois vem o KILL. O -f
+# do timeout é obrigatório: sem ele o timeout cria um grupo de processos, o ssh sai do primeiro plano do terminal e
+# para (SIGTTIN) ao ler dele, o que viraria "não respondeu" em máquina saudável.
+# Sem LIMITE_S, a chamada a outro Mac só parte depois de uma conexão de teste responder (ver SSH_OPCOES).
 rodar_em() {
   local eu
   if [ "$1" = "$AQUI" ]; then
     eu=${USER:-$(/usr/bin/id -un)} || falha "id falhou; não sei quem sou"
     /usr/bin/env -i HOME="$HOME" USER="$eu" LOGNAME="$eu" PATH=/usr/bin:/bin:/usr/sbin:/sbin \
       TMPDIR="${TMPDIR:-/tmp}" /bin/bash -c "$2"
+  elif [ -n "$LIMITE_S" ]; then
+    /usr/bin/timeout -f -k 5 "$LIMITE_S" ssh "${SSH_OPCOES[@]}" "$1" "$2"
   else
-    ssh -o BatchMode=yes "$1" "$2"
+    responde "$1" || return 1
+    # O comando ($2) já chega montado por quem chamou; é para expandir aqui mesmo.
+    # shellcheck disable=SC2029
+    ssh "${SSH_OPCOES[@]}" "$1" "$2"
   fi
 }
 remoto() { rodar_em "$HOST" "$1"; }
+# O rodar_em com o tempo limite da conferência curta. Só para comando que termina em um instante.
+sondar_em() {
+  local LIMITE_S=$LIMITE_SONDA_S
+  rodar_em "$@"
+}
+# A máquina $1 atende uma conexão nova dentro do limite curto? A entrada vem de /dev/null: quem chama pode estar
+# recebendo um tar pela entrada, e o teste não pode consumi-lo. Não responde: avisa e devolve 1; quem chamou para.
+responde() {
+  sondar_em "$1" true < /dev/null && return 0
+  echo "bin/demo: o $1 não respondeu em $LIMITE_SONDA_S s; não rodei o comando nele" >&2
+  return 1
+}
+
+muda() {
+  case "$MUDAS" in *" $1 "*) return 0 ;; esac
+  return 1
+}
+
+# A conferência curta na máquina $1 falhou ou passou do limite. Se DEMO_MAQUINA aponta a outra e $1 é outro Mac,
+# avisa o que ficou sem conferir ($2), anota em MUDAS (ninguém volta a chamá-la: cada tentativa custaria outro
+# LIMITE_SONDA_S) e devolve 0: o comando segue (#3031). Sem DEMO_MAQUINA, se $1 é a própria máquina forçada ou se
+# é este Mac (aqui não há rede no caminho: falha é defeito, não silêncio), devolve 1 e quem chamou para.
+dispensar_muda() {
+  [ -n "${DEMO_MAQUINA:-}" ] || return 1
+  [ "$1" != "$DEMO_MAQUINA" ] || return 1
+  [ "$1" != "$AQUI" ] || return 1
+  echo "bin/demo: aviso: a conferência no $1 falhou ou passou de $LIMITE_SONDA_S s. Com DEMO_MAQUINA=$DEMO_MAQUINA eu sigo sem ele." >&2
+  echo "bin/demo: aviso: NÃO conferi $2." >&2
+  MUDAS+="$1 "
+}
+
+# Comando de shell que extrai em $1 o tar que chega pela entrada e depois lê o que sobrou dela. O tar do macOS sai
+# assim que acha o fim do pacote, sem ler o enchimento do último bloco; quem envia leva EPIPE ("tar: Write error")
+# e, com pipefail, o comando falhava com tudo já extraído (#3032). Por ssh não aparecia: o sshd lê a entrada toda.
+extrair_em() { printf "/usr/bin/tar -C '%s' -xf - && /bin/cat > /dev/null" "$1"; }
 
 # O comando vira uma linha só: cada argumento vai escapado com %q para chegar inteiro na máquina da demo.
 # DEMO_ONDE diz ao no_m2.sh em qual máquina ele está (só para as mensagens).
@@ -94,15 +155,16 @@ no_m2() {
 # Leva o script/demo desta worktree para a pasta da demo na máquina dela (o kit roda de lá, não do snapshot).
 enviar_kit() {
   remoto "/bin/mkdir -p '$RAIZ_DEMOS/$slug/kit'" || falha "não criei a pasta do kit no $HOST"
-  /usr/bin/tar -C "$KIT" -cf - . | remoto "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/kit' -xf -" ||
-    falha "não levei o kit ao $HOST"
+  local extrair
+  extrair=$(extrair_em "$RAIZ_DEMOS/$slug/kit") || falha "não montei o comando do tar"
+  /usr/bin/tar -C "$KIT" -cf - . | remoto "$extrair" || falha "não levei o kit ao $HOST"
 }
 
-# A demo $slug está registrada (demo.env) na máquina $1? Responde "sim", "nao" ou "sem-resposta" (ssh falhou: rede,
-# máquina desligada). Erro nunca vira "nao".
+# A demo $slug está registrada (demo.env) na máquina $1? Responde "sim", "nao" ou "sem-resposta" (ssh falhou ou
+# passou de LIMITE_SONDA_S: rede, máquina desligada, conexão presa). Erro nunca vira "nao".
 registrada_em() {
   local resposta
-  if ! resposta=$(rodar_em "$1" "if test -f '$RAIZ_DEMOS/$slug/demo.env'; then echo sim; else echo nao; fi"); then
+  if ! resposta=$(sondar_em "$1" "if test -f '$RAIZ_DEMOS/$slug/demo.env'; then echo sim; else echo nao; fi" < /dev/null); then
     echo sem-resposta
     return 0
   fi
@@ -138,16 +200,22 @@ achar_maquina() {
 exigir_demo_registrada() { achar_maquina; }
 
 # Demos vivas na máquina $1, uma por linha: "<slug> <o que está ligado>". Só leitura (script/demo/vivas.sh).
-vivas_em() { rodar_em "$1" /bin/bash < "$KIT/vivas.sh"; }
+vivas_em() { sondar_em "$1" /bin/bash < "$KIT/vivas.sh"; }
 
 # Todas as demos vivas em VIVAS, uma por linha: "<slug> <máquina> <o que está ligado>". As duas máquinas têm de
-# responder: sem isso não dá para afirmar que não há demo viva.
+# responder: sem isso não dá para afirmar que não há demo viva. A exceção é a máquina dispensada (dispensar_muda).
 listar_vivas() {
   local m saida
   VIVAS=''
+  # Arquivo do kit que falte neste Mac é defeito daqui: não pode passar por silêncio do outro Mac.
+  [ -r "$KIT/vivas.sh" ] || falha "não achei $KIT/vivas.sh"
   for m in "${MAQUINAS[@]}"; do
-    saida=$(vivas_em "$m" | /usr/bin/awk -v m="$m" 'NF { print $1, m, $2 }') ||
-      falha "não consegui ver as demos vivas no $m; sem isso não sei se já há demo ligada. Nada subiu."
+    ! muda "$m" || continue
+    if ! saida=$(vivas_em "$m" | /usr/bin/awk -v m="$m" 'NF { print $1, m, $2 }'); then
+      dispensar_muda "$m" "se há demo viva lá (o limite é 1, somando ${MAQUINAS[*]})" ||
+        falha "não consegui ver as demos vivas no $m; sem isso não sei se já há demo ligada. Nada subiu."
+      continue
+    fi
     [ -z "$saida" ] || VIVAS+="$saida"$'\n'
   done
 }
@@ -162,17 +230,25 @@ listar_faltas() {
   local m saida
   FALTAS=''
   COM_FALTA=' '
+  [ -r "$KIT/ferramentas.sh" ] || falha "não achei $KIT/ferramentas.sh"
   for m in "${MAQUINAS[@]}"; do
-    saida=$({ /bin/cat "$KIT/ferramentas.sh" && echo ferramentas_que_faltam; } | rodar_em "$m" /bin/bash |
-      /usr/bin/awk -v m="$m" 'substr($0, 1, 1) == "/" { print m, $0 }') ||
-      falha "não consegui conferir as ferramentas do kit no $m"
+    ! muda "$m" || continue
+    if ! saida=$({ /bin/cat "$KIT/ferramentas.sh" && echo ferramentas_que_faltam; } | sondar_em "$m" /bin/bash |
+      /usr/bin/awk -v m="$m" 'substr($0, 1, 1) == "/" { print m, $0 }'); then
+      dispensar_muda "$m" "as ferramentas do kit nele" || falha "não consegui conferir as ferramentas do kit no $m"
+      continue
+    fi
     [ -z "$saida" ] || { FALTAS+="$saida"$'\n'; COM_FALTA+="$m "; }
   done
 }
 
 descrever_faltas() {
+  local m conferidas=''
+  for m in "${MAQUINAS[@]}"; do
+    muda "$m" || conferidas+=" $m"
+  done
   if [ -z "$FALTAS" ]; then
-    echo "  ferramentas do kit: completas em ${MAQUINAS[*]}"
+    echo "  ferramentas do kit: completas em${conferidas}"
   else
     printf %s "$FALTAS" | /usr/bin/awk '{ printf "  %s: FALTA ferramenta do kit: %s\n", $1, $2 }'
   fi
@@ -183,7 +259,8 @@ descrever_faltas() {
 # Campo ausente ou saída estranha para tudo: nunca vira "serve".
 medir() {
   local saida
-  saida=$(maccluster status --json) || falha "maccluster status falhou; não sei a carga das máquinas"
+  saida=$(/usr/bin/timeout -f -k 5 "$LIMITE_MEDIR_S" maccluster status --json) ||
+    falha "maccluster status falhou ou passou de $LIMITE_MEDIR_S s; não sei a carga das máquinas"
   MEDIDA=$(printf %s "$saida" | /usr/bin/python3 -I -c 'import json, sys
 carga_max, ram_min, swap_max = (float(v) for v in sys.argv[1:4])
 nos = json.load(sys.stdin)["nodes"]
@@ -235,7 +312,14 @@ maquina_do_up() {
     resposta=$(registrada_em "$m") || exit 1
     case "$resposta" in
       sim) JA_REGISTRADA="$JA_REGISTRADA $m" ;;
-      sem-resposta) falha "não consegui falar com o $m. Sem as duas máquinas não sei se já há demo ligada. Nada subiu." ;;
+      sem-resposta)
+        [ "$m" != "$AQUI" ] || falha "a conferência neste Mac ($m) falhou. Nada subiu."
+        [ "${DEMO_MAQUINA:-}" != "$m" ] ||
+          falha "o $m, a máquina que você forçou, não respondeu em $LIMITE_SONDA_S s. Nada subiu."
+        dispensar_muda "$m" "se a demo $slug já existe lá nem se há demo viva lá (o limite é 1, somando ${MAQUINAS[*]})" ||
+          falha "o $m não respondeu em $LIMITE_SONDA_S s. Sem as duas máquinas não sei se já há demo ligada. Nada subiu.
+Se a demo vai para a máquina que responde, force-a, com o OK da Orquestração Deploy: DEMO_MAQUINA=<máquina> bin/demo up $slug"
+        ;;
     esac
   done
   JA_REGISTRADA=${JA_REGISTRADA# }
@@ -351,13 +435,15 @@ sys.exit(0 if ok else 1)' "$snapdir" "$WT" || falha "o snapshot $snapdir não é
   fi
   no_m2 clonar-base "$slug" "$snapdir" || falha "não consegui preparar a cópia no $HOST"
   echo "rsync da diferença para o $HOST ..."
-  local estatisticas
-  estatisticas=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" --stats "$snapdir/" "$HOST:$snapdir/") ||
-    falha "rsync para o $HOST falhou"
+  local estatisticas ssh_do_rsync="ssh ${SSH_OPCOES[*]}"
+  responde "$HOST" || falha "rsync para o $HOST nem começou"
+  estatisticas=$(/usr/bin/rsync -a --checksum --delete -e "$ssh_do_rsync" "${EXCLUIR_RSYNC[@]}" --stats \
+    "$snapdir/" "$HOST:$snapdir/") || falha "rsync para o $HOST falhou"
   printf '%s\n' "$estatisticas" | /usr/bin/grep -i 'files transferred\|total transferred\|sent ' || :
   local resto
-  resto=$(/usr/bin/rsync -a --checksum --delete "${EXCLUIR_RSYNC[@]}" -n -i "$snapdir/" "$HOST:$snapdir/") ||
-    falha "não consegui conferir a cópia no $HOST"
+  responde "$HOST" || falha "não consegui conferir a cópia no $HOST"
+  resto=$(/usr/bin/rsync -a --checksum --delete -e "$ssh_do_rsync" "${EXCLUIR_RSYNC[@]}" -n -i \
+    "$snapdir/" "$HOST:$snapdir/") || falha "não consegui conferir a cópia no $HOST"
   [ -z "$resto" ] || { echo "$resto" | /usr/bin/head -10; falha "cópia no $HOST diverge do snapshot depois do rsync"; }
   echo "snapshot no $HOST igual ao do $AQUI: $SNAP"
 }
@@ -473,7 +559,9 @@ cmd_sync() {
     case "$f" in config/vite.json | vite.config.* | tailwind.config.* | postcss.config.*) vite=true ;; esac
   done
   if [ ${#copiar[@]} -gt 0 ]; then
-    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | remoto "/usr/bin/tar -C '$snap' -xf -" ||
+    local extrair
+    extrair=$(extrair_em "$snap") || falha "não montei o comando do tar"
+    /usr/bin/tar -C "$WT" -cf - -- "${copiar[@]}" | remoto "$extrair" ||
       falha "não copiei os arquivos para o snapshot no $HOST"
   fi
   for f in "${apagar[@]+"${apagar[@]}"}"; do
@@ -513,10 +601,10 @@ cmd_seed() {
   exigir_demo
   enviar_kit
   remoto "/bin/mkdir -p '$RAIZ_DEMOS/$slug/seeds'" || falha "não criei a pasta dos seeds no $HOST"
-  local pasta=. nome=${arquivo##*/}
+  local pasta=. nome=${arquivo##*/} extrair
   case "$arquivo" in */*) pasta=${arquivo%/*} ;; esac
-  /usr/bin/tar -C "$pasta" -cf - -- "$nome" |
-    remoto "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/seeds' -xf -" || falha "não levei o seed ao $HOST"
+  extrair=$(extrair_em "$RAIZ_DEMOS/$slug/seeds") || falha "não montei o comando do tar"
+  /usr/bin/tar -C "$pasta" -cf - -- "$nome" | remoto "$extrair" || falha "não levei o seed ao $HOST"
   no_m2 semear "$slug" "$nome"
 }
 
@@ -590,8 +678,9 @@ cmd_prints() {
   [ -n "$recebidos" ] && [ -d "$recebidos" ] || falha "mktemp não criou a pasta"
   # shellcheck disable=SC2064
   trap "/bin/rm -rf '$recebidos'" EXIT
-  remoto "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." | /usr/bin/tar -C "$recebidos" -xf - ||
-    falha "não trouxe os prints do $HOST"
+  # Quem extrai lê o resto da entrada, como no extrair_em (#3032).
+  remoto "/usr/bin/tar -C '$RAIZ_DEMOS/$slug/prints-saida' -cf - ." |
+    { /usr/bin/tar -C "$recebidos" -xf - && /bin/cat > /dev/null; } || falha "não trouxe os prints do $HOST"
   estranhos=$(/usr/bin/find "$recebidos" ! -type f ! -type d) || falha "find falhou nos prints recebidos"
   [ -z "$estranhos" ] || falha "os prints trouxeram algo que não é arquivo nem pasta (link?): $estranhos"
   /bin/mkdir -p "$WT/$pasta" || falha "não criei $WT/$pasta"
@@ -661,23 +750,27 @@ cmd_down() {
 }
 
 cmd_maquinas() {
-  local escolha
+  local escolha nenhuma="demos vivas: nenhuma"
   medir
   listar_vivas
   listar_faltas
   echo "máquinas:"
   descrever_medida
   descrever_faltas
+  if [ "$MUDAS" != ' ' ]; then
+    echo "  sem resposta (demos vivas e ferramentas NÃO conferidas):${MUDAS% }"
+    nenhuma+=" nas máquinas que responderam"
+  fi
   escolha=$(melhor_maquina "${DEMO_MAQUINA:-${MAQUINAS[*]}}") || falha "awk falhou escolhendo a máquina"
   if [ -n "$VIVAS" ]; then
     echo "demos vivas (o limite é 1, somando ${MAQUINAS[*]}):"
     mostrar_vivas "$VIVAS"
     echo "um up de outra demo agora seria recusado: já há demo viva"
   elif [ -n "$escolha" ]; then
-    echo "demos vivas: nenhuma"
+    echo "$nenhuma"
     echo "um up de demo nova agora iria para: $escolha"
   else
-    echo "demos vivas: nenhuma"
+    echo "$nenhuma"
     echo "um up agora seria recusado: nenhuma máquina dentro do limite e com as ferramentas do kit"
   fi
   echo "Antes de qualquer up: perguntar à Orquestração Deploy e esperar o OK."
@@ -688,6 +781,7 @@ case "${DEMO_MAQUINA:-}" in
   '') ;;
   *) maquina_valida "$DEMO_MAQUINA" || falha "DEMO_MAQUINA='$DEMO_MAQUINA' não vale: use uma de ${MAQUINAS[*]}" ;;
 esac
+[ -x /usr/bin/timeout ] || falha "falta /usr/bin/timeout neste Mac; sem ele a conferência do outro Mac pode travar"
 AQUI=$(maccluster node) || falha "maccluster node falhou; não sei em qual Mac estou"
 maquina_valida "$AQUI" || falha "maccluster node devolveu '$AQUI'; esperava uma de ${MAQUINAS[*]}"
 if [ "$1" = maquinas ]; then
