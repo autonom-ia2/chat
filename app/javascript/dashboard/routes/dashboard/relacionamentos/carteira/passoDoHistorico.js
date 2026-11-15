@@ -36,6 +36,10 @@ export const PASSOS_COM_FRASE = [
   // #2899 — o seguro que chegou por PDF e o que um PDF atualizou.
   'chegou_pdf',
   'chegou_de_novo_pdf',
+  // #2899 (E6.5 e E6.6) — o seguro de outra corretora guardado pelo PDF e o
+  // seguro em palavras simples mandado ao cliente.
+  'chegou_de_fora',
+  'palavras_enviadas',
 ];
 export const PASSO_SEM_NOME = 'PASSO_SEM_NOME';
 // Alguém desfez o "Renovou" ou o "Não renovou": `valores.anterior` diz qual.

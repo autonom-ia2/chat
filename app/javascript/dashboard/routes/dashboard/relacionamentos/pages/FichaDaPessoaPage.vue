@@ -300,6 +300,7 @@ watch(
               <SegurosDaFicha
                 :dono-id="id"
                 :demo="demo"
+                :nome="nome"
                 :pode-editar="podeEditar"
                 :pode-exportar="podeExportar"
                 :agora="agora"

@@ -326,14 +326,18 @@ describe('a parte "Renovação" da gaveta do seguro', () => {
   });
 });
 
+// O SeloDoSeguro tem duas raízes (o selo do seguro e, ao lado, "De outra
+// corretora"): o selo do seguro se acha pela marca dele, não pela raiz.
 describe('o selo de um seguro que a tela não conhece', () => {
+  const seloDoSeguro = w => w.get('[data-carteira="selo"]');
+
   it('vira "Seguro" em cor neutra, sem mostrar a chave do catálogo', () => {
     const w = montar(SeloDoSeguro, {
       seguro: { id: 7, selo: 'suspenso', dias: 5 },
     });
 
     expect(w.text()).toBe('Seguro');
-    expect(w.attributes('data-selo')).toBe('neutro');
+    expect(seloDoSeguro(w).attributes('data-selo')).toBe('neutro');
   });
 
   it('o selo conhecido continua com o nome e a cor dele', () => {
@@ -342,7 +346,7 @@ describe('o selo de um seguro que a tela não conhece', () => {
     });
 
     expect(w.text()).toBe('Em renovação');
-    expect(w.attributes('data-selo')).toBe('azul');
+    expect(seloDoSeguro(w).attributes('data-selo')).toBe('azul');
   });
 });
 

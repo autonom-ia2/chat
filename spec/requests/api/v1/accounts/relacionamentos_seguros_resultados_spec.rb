@@ -133,6 +133,17 @@ RSpec.describe 'Carteira de seguros: resultados das renovações', type: :reques
     )
   end
 
+  it 'o seguro de outra corretora que venceu não conta como retenção nem entra no grupo "Não renovaram"' do
+    montar_carteira
+    seguro('EX-DE-FORA', -15, de_fora: true, corretora_de_fora: 'Corretora Exemplo')
+    seguro('EX-DE-FORA-COM-LEMBRETE', -16, de_fora: true, corretora_de_fora: 'Corretora Exemplo', lembrete_aceito_em: agora)
+
+    periodos = ler['periodos']
+
+    expect(periodos.pluck('venceram', 'naoRenovou')).to eq([[4, 3], [5, 3], [6, 4]])
+    expect(ler('seguros', grupo: 'nao_renovaram_30')['itens'].pluck('numero')).to eq(%w[EX-CARO EX-SO-VENCEU EX-OUTRO])
+  end
+
   it 'faz o mesmo número de consultas com a carteira pequena e com a grande' do
     montar_carteira
     do_admin = admin.create_new_auth_token

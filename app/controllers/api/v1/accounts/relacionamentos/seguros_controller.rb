@@ -1,11 +1,12 @@
 # A aba Seguros de Relacionamentos e a gaveta de um seguro (E4, #2897). Leituras: a página, o número de cada grupo, a
 # consulta inteira ("Marcar todas"), a frase do topo, as opções de filtro, um seguro e a história dele. Escritas da
 # gaveta: corrigir, marcar como cancelado e voltar a ativo; cada uma devolve o seguro como ficou. O PDF fica em
-# seguros/pdf_controller.rb.
+# seguros/pdf_controller.rb. Apagar (E6.5, #2899) é só do seguro de outra corretora (Carteira::DeFora::Apagar): o da
+# carteira responde `nao_e_de_fora`; responde 204.
 class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts::Relacionamentos::CarteiraController
   DA_LISTA = %i[index todos contagens].freeze
   LEITURAS_DE_UM = %i[show historia].freeze
-  ESCRITAS = %i[update cancelar voltar_a_ativo].freeze
+  ESCRITAS = %i[update cancelar voltar_a_ativo destroy].freeze
   CAMPOS = ::Carteira::Campos::COLUNAS.keys.freeze
 
   before_action :sem_parametros, except: DA_LISTA + ESCRITAS
@@ -46,6 +47,12 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
 
   def update
     responder_seguro(::Carteira::Corrigir.new(@seguro, corpo(*CAMPOS), user: Current.user).call)
+  end
+
+  def destroy
+    corpo
+    ::Carteira::DeFora::Apagar.new(@seguro, user: Current.user).call
+    head :no_content
   end
 
   def cancelar

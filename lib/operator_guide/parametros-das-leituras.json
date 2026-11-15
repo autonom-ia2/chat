@@ -2420,6 +2420,10 @@
     "controller": "api/v1/accounts/relacionamentos/pessoas/seguros#index",
     "parametros": []
   },
+  "relacionamentos/pessoas/:id/seguros_de_fora/arquivos": {
+    "controller": "api/v1/accounts/relacionamentos/pessoas/seguros_de_fora#arquivos",
+    "parametros": []
+  },
   "relacionamentos/pessoas/contagens": {
     "controller": "api/v1/accounts/relacionamentos/pessoas#contagens",
     "parametros": [
@@ -2460,6 +2464,10 @@
   },
   "relacionamentos/seguros/:id/historia": {
     "controller": "api/v1/accounts/relacionamentos/seguros#historia",
+    "parametros": []
+  },
+  "relacionamentos/seguros/:id/palavras": {
+    "controller": "api/v1/accounts/relacionamentos/seguros/palavras#show",
     "parametros": []
   },
   "relacionamentos/seguros/contagens": {

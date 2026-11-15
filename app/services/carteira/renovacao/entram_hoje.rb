@@ -15,6 +15,9 @@
 # renovações em andamento nascerem nele. O funil arquivado continua existindo (pode ser restaurado) e não libera. O
 # passo sem o funil guardado impede sempre.
 #
+# O seguro de outra corretora (E6.5, `de_fora`) só entra quando a pessoa quis o lembrete (`lembrete_aceito_em`): sem
+# ele, nunca ganha card nem mensagem.
+#
 # É a idempotência da rotina: quem já tem card não entra de novo, então rodar duas vezes no mesmo dia não cria card
 # repetido. A leitura usa o índice [account_id, fim_vigencia] e anda em lotes pelo id, para a carteira grande não ir
 # inteira para a memória.
@@ -22,6 +25,7 @@ class Carteira::Renovacao::EntramHoje
   LOTE = 500
   SEM_RENOVACAO = { cancelado_em: nil, crm_card_id: nil, renovacao_card_removido_em: nil, renovado_em: nil, nao_renovou_em: nil }.freeze
   DO_SEGURO = 'carteira_apolice_eventos.apolice_id = carteira_apolices.id'.freeze
+  COM_LEMBRETE_SE_DE_FORA = 'carteira_apolices.de_fora = FALSE OR carteira_apolices.lembrete_aceito_em IS NOT NULL'.freeze
   COM_O_FUNIL_DE_PE = "carteira_apolice_eventos.valores->>'funil' IS NULL OR EXISTS (SELECT 1 FROM crm_pipelines " \
                       "WHERE crm_pipelines.id = CAST(carteira_apolice_eventos.valores->>'funil' AS bigint))".freeze
 
@@ -33,7 +37,7 @@ class Carteira::Renovacao::EntramHoje
   def seguros
     hoje = Carteira::Selo.hoje(@account)
     Carteira::Apolice.where(account_id: @account.id, fim_vigencia: hoje..(hoje + @dias_antes)).where(SEM_RENOVACAO)
-                     .where(self.class.cards_que_impedem.where(DO_SEGURO).arel.exists.not)
+                     .where(COM_LEMBRETE_SE_DE_FORA).where(self.class.cards_que_impedem.where(DO_SEGURO).arel.exists.not)
   end
 
   def cada(&)
@@ -42,7 +46,8 @@ class Carteira::Renovacao::EntramHoje
 
   # O seguro, relido sob a trava, ainda entra? (CriarCard confere de novo antes de criar.)
   def self.entra?(apolice)
-    SEM_RENOVACAO.keys.all? { |coluna| apolice[coluna].nil? } && !cards_que_impedem.exists?(apolice_id: apolice.id)
+    SEM_RENOVACAO.keys.all? { |coluna| apolice[coluna].nil? } && (!apolice.de_fora || apolice.lembrete_aceito_em.present?) &&
+      !cards_que_impedem.exists?(apolice_id: apolice.id)
   end
 
   # Os passos "card de renovação nasceu" (um por card criado, Carteira::Renovacao::CriarCard) que ainda impedem outro

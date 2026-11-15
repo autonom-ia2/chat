@@ -8378,7 +8378,7 @@
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#update",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:48",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
@@ -20706,7 +20706,7 @@
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#cancelar",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:51",
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:58",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
@@ -20746,7 +20746,7 @@
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#voltar_a_ativo",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:56",
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:63",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],
@@ -28562,7 +28562,17 @@
     "completo": true,
     "controller": "api/v1/accounts/relacionamentos/seguros#update",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:47",
+      "app/controllers/api/v1/accounts/relacionamentos/seguros_controller.rb:48",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
+      "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
+    ],
+    "sem_corpo": false
+  },
+  "PUT relacionamentos/seguros/:id/palavras": {
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/seguros/palavras#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/seguros/palavras_controller.rb:28",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:57",
       "app/controllers/api/v1/accounts/relacionamentos/carteira_controller.rb:33"
     ],

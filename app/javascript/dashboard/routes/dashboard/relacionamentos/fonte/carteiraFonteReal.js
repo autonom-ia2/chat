@@ -151,26 +151,61 @@ const mudancaDoPdf = mudanca =>
       }
     : mudanca;
 
-const lerPdf = async (id, arquivo) => {
-  const { leituraId } = await noServidor(() => SegurosAPI.lerPdf(id, arquivo));
+// Pergunta pela leitura até ela sair de "lendo" e devolve a resposta final.
+const esperarALeitura = async perguntar => {
   for (let vez = 0; vez < TENTATIVAS; vez += 1) {
     // eslint-disable-next-line no-await-in-loop
     await esperarUmPouco();
     // eslint-disable-next-line no-await-in-loop
-    const leitura = await noServidor(() =>
-      SegurosAPI.leituraDoPdf(id, leituraId)
-    );
+    const leitura = await noServidor(perguntar);
     if (leitura.recusa) throw recusaDaLeitura(leitura.recusa);
-    if (leitura.estado !== LENDO) {
-      return {
-        leituraId,
-        outraApolice: Boolean(leitura.outraApolice),
-        mudancas: (leitura.mudancas || []).map(mudancaDoPdf),
-      };
-    }
+    if (leitura.estado !== LENDO) return leitura;
   }
   throw recusaDaLeitura('nao_deu_para_ler');
 };
+
+const lerPdf = async (id, arquivo) => {
+  const { leituraId } = await noServidor(() => SegurosAPI.lerPdf(id, arquivo));
+  const leitura = await esperarALeitura(() =>
+    SegurosAPI.leituraDoPdf(id, leituraId)
+  );
+  return {
+    leituraId,
+    outraApolice: Boolean(leitura.outraApolice),
+    mudancas: (leitura.mudancas || []).map(mudancaDoPdf),
+  };
+};
+
+// #2899 (E6.5) — o seguro de outra corretora. `origem` é `{ arquivo }` (o PDF
+// escolhido no computador) ou `{ anexoId }` (um PDF da conversa). Devolve
+// `{ leituraId, lido: { tipo, seguradora, termina, corretora }, tambem }`,
+// com `termina` em segundos (nulo: não achei) e as datas de `tambem` também.
+const doTambem = item =>
+  ehData(item.campo) ? { ...item, valor: doCampoDeData(item.valor) } : item;
+
+const lerDeFora = async (pessoaId, origem) => {
+  const { leituraId } = await noServidor(() =>
+    SegurosAPI.lerDeFora(pessoaId, origem)
+  );
+  const leitura = await esperarALeitura(() =>
+    SegurosAPI.leituraDeFora(pessoaId, leituraId)
+  );
+  const lido = leitura.lido || {};
+  return {
+    leituraId,
+    lido: { ...lido, termina: doCampoDeData(lido.termina) },
+    tambem: (leitura.tambem || []).map(doTambem),
+  };
+};
+
+// O que a tela conferiu, como o servidor lê: a data volta a ser "AAAA-MM-DD".
+const guardarDeFora = (pessoaId, { campos, ...resto }) =>
+  umSeguro(() =>
+    SegurosAPI.guardarDeFora(pessoaId, {
+      ...resto,
+      campos: { ...campos, termina: paraCampoDeData(campos.termina) },
+    })
+  );
 
 export const carteiraFonteReal = () => ({
   usaDemo: false,
@@ -219,4 +254,18 @@ export const carteiraFonteReal = () => ({
       SegurosAPI.criar({ anteriorId: id, ...correcaoDoServidor(dados) })
     ),
   pdf: async id => (await noServidor(() => SegurosAPI.linkDoPdf(id))).url,
+  // #2899 (E6.5) — o seguro de outra corretora: os PDFs das conversas da
+  // pessoa, ler, guardar (devolve o seguro) e apagar.
+  arquivosDeFora: pessoaId =>
+    noServidor(() => SegurosAPI.arquivosDeFora(pessoaId)),
+  lerDeFora,
+  guardarDeFora,
+  apagarDeFora: id => noServidor(() => SegurosAPI.apagar(id)),
+  // #2899 (E6.6) — seu seguro em palavras simples: cada uma devolve
+  // `{ texto, enviadoEm, vale, envio }`.
+  palavras: id => noServidor(() => SegurosAPI.palavras(id)),
+  escreverPalavras: id => noServidor(() => SegurosAPI.escreverPalavras(id)),
+  salvarPalavras: (id, texto) =>
+    noServidor(() => SegurosAPI.salvarPalavras(id, texto)),
+  enviarPalavras: id => noServidor(() => SegurosAPI.enviarPalavras(id)),
 });

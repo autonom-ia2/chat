@@ -12,7 +12,9 @@ import {
   ESTADOS_DOS_SEGUROS as ESTADOS,
   useSegurosDe,
 } from '../../carteira/useSegurosDe';
+import { leituraDePdf } from '../../carteira/leituraDePdf';
 import { useVerPdf } from '../../carteira/useVerPdf';
+import EntradaDeFora from './EntradaDeFora.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import LinhaDoSeguroNoPainel from './LinhaDoSeguroNoPainel.vue';
 
@@ -33,6 +35,13 @@ import LinhaDoSeguroNoPainel from './LinhaDoSeguroNoPainel.vue';
 // Corrigir, cancelar e guardar o PDF ficam na ficha: "Ver na ficha" leva à
 // pessoa, e o nome do segurado, dentro da gaveta, leva à ficha dele já com
 // este seguro aberto.
+//
+// #2899 (E6.5) — a única escrita daqui: "Guardar seguro de outra corretora",
+// na conta que lê PDF e para quem pode editar a pessoa. Aí o bloco aparece
+// mesmo sem seguro nenhum (quem ainda não é cliente costuma ter o seguro em
+// outro lugar). Quem decide se pode é o servidor: a entrada só aparece depois
+// que a lista de PDFs da conversa respondeu (ela pede poder editar a pessoa e a
+// leitura liberada); sem isso, o painel fica como era.
 const props = defineProps({
   contactId: { type: [Number, String], default: null },
 });
@@ -49,14 +58,21 @@ const lista = useSegurosDe(() => fonte.daPessoa(props.contactId));
 
 const apoliceAberta = ref(null);
 const todosAVista = ref(false);
+// A conta lê PDF (perguntado uma vez) e quem atende pode guardar o seguro de
+// outra corretora desta pessoa (perguntado a cada pessoa).
+let lePdf = null;
+const guardaDeFora = ref(false);
 
 const comErro = computed(() => lista.estado.value === ESTADOS.ERRO);
 const seguros = computed(() =>
   lista.estado.value === ESTADOS.PRONTO ? lista.seguros.value : []
 );
 const visivel = computed(
-  () => Boolean(props.contactId) && (comErro.value || seguros.value.length > 0)
+  () =>
+    Boolean(props.contactId) &&
+    (comErro.value || seguros.value.length > 0 || guardaDeFora.value)
 );
+const nomeDaPessoa = computed(() => seguros.value[0]?.pessoa?.name || '');
 const outros = computed(() => seguros.value.length - A_VISTA);
 const naTela = computed(() =>
   todosAVista.value ? seguros.value : seguros.value.slice(0, A_VISTA)
@@ -85,13 +101,27 @@ const abrirSegurado = ({ tipo, id }) =>
     query: { apolice: String(apoliceAberta.value) },
   });
 
+const perguntarSeGuardaDeFora = async id => {
+  guardaDeFora.value = false;
+  lePdf = lePdf ?? leituraDePdf({ fonte });
+  if (!(await lePdf)) return;
+  try {
+    await fonte.arquivosDeFora(id);
+    guardaDeFora.value = id === props.contactId;
+  } catch {
+    guardaDeFora.value = false;
+  }
+};
+
 // Outra conversa, outra pessoa: o que estava aberto era da anterior.
 watch(
   () => props.contactId,
   id => {
     apoliceAberta.value = null;
     todosAVista.value = false;
-    if (id) lista.carregar();
+    if (!id) return;
+    lista.carregar();
+    perguntarSeGuardaDeFora(id);
   },
   { immediate: true }
 );
@@ -109,7 +139,7 @@ watch(
       @tentar="lista.carregar"
     />
     <template v-else>
-      <ul class="flex flex-col gap-2 p-0 m-0 list-none">
+      <ul v-if="naTela.length" class="flex flex-col gap-2 p-0 m-0 list-none">
         <LinhaDoSeguroNoPainel
           v-for="seguro in naTela"
           :key="seguro.id"
@@ -133,6 +163,7 @@ watch(
           @click="todosAVista = !todosAVista"
         />
         <Button
+          v-if="seguros.length"
           variant="link"
           color="blue"
           size="sm"
@@ -140,6 +171,14 @@ watch(
           data-carteira="painel-ver-ficha"
           :label="tp('VER_NA_FICHA')"
           @click="verNaFicha"
+        />
+        <EntradaDeFora
+          v-if="guardaDeFora"
+          :pessoa-id="Number(contactId)"
+          :fonte="fonte"
+          :nome="nomeDaPessoa"
+          marca="painel-guardar-de-fora"
+          @mudou="lista.atualizar"
         />
       </div>
     </template>

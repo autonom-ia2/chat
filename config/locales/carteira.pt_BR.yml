@@ -5,6 +5,10 @@ pt_BR:
     renovacao:
       card:
         titulo: 'Renovação · %{seguradora}'
+    palavras:
+      oi: 'Oi, %{nome}!'
+      oi_sem_nome: 'Oi!'
+      vale: 'Vale o que está escrito na sua apólice.'
   notifications:
     notification_title:
       carteira_renovacao: 'Seguros entraram em renovação'

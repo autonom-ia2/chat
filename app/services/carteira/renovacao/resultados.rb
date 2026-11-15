@@ -4,7 +4,8 @@
 #
 # As contas:
 # - `venceram`: seguros não cancelados cujo fim caiu no período (de N dias atrás até ontem). O cancelado não entra: ele
-#   não chegou ao fim;
+#   não chegou ao fim. O seguro de outra corretora (`de_fora`) também não: a corretora não o renova, então ele não
+#   conta como retenção;
 # - `renovou`: desses, os que têm "Renovou";
 # - `naoRenovou`: o resto, tenha alguém dito "não renovou" ou não. É o mesmo conjunto do grupo "Não renovaram nos
 #   últimos N dias" da aba Seguros (Carteira::Consulta::TEMPORARIOS), para a tela e a lista mostrarem os mesmos seguros;
@@ -59,7 +60,7 @@ class Carteira::Renovacao::Resultados
 
   # Tudo que terminou no período mais longo; cada número filtra o período dele.
   def venceram
-    Carteira::Apolice.where(account_id: @account.id, cancelado_em: nil, fim_vigencia: (@hoje - PERIODOS.max)...@hoje)
+    Carteira::Apolice.where(account_id: @account.id, cancelado_em: nil, de_fora: false, fim_vigencia: (@hoje - PERIODOS.max)...@hoje)
   end
 
   # As condições de um número de cada coisa contada no total: venceram, renovou e cada motivo.

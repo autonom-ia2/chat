@@ -22,6 +22,8 @@ module VarreduraDeEnviosEmNomeDePessoa
     'app/services/crm/meta_ads/instagram_private_reply.rb#Crm::MetaAds::InstagramPrivateReply#record!' =>
       'responder no privado (#2196): quem gere os anúncios clica no comentário; remetente é ele (Current.user). O da IA ' \
       '(#2212, actor ai) vai sem remetente e com a marca Registro::MARCA (marca_da_ia)',
+    'app/services/carteira/palavras/enviar.rb#Carteira::Palavras::Enviar#mandar' =>
+      'seu seguro em palavras simples (#2899): só no clique da pessoa na gaveta (nada sai sozinho, decisão P1); remetente é ela (Current.user)',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>

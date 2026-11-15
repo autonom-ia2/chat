@@ -56,6 +56,13 @@ export const CODIGOS_DE_RECUSA = [
   'nada_para_trazer',
   'nao_pode_desfazer',
   'lote_grande',
+  // #2899 (E6.5) — o seguro de outra corretora.
+  'seguro_de_fora_repetido',
+  'nao_e_de_fora',
+  // #2899 (E6.6) — seu seguro em palavras simples.
+  'nao_deu_para_escrever',
+  'sem_conversa',
+  'fora_da_janela',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela

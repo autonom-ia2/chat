@@ -14,6 +14,8 @@ import { chaveDoSelo, tomDoSelo } from '../../carteira/tomDoSelo';
 // Na linha de um seguro o selo diz só "Vencido". Fora dela (a lista de pessoas)
 // quem usa manda o texto inteiro em `rotulo` ("Seguro vencido"): sozinho, ao
 // lado do nome de uma pessoa, "Vencido" não diz o quê.
+// #2899 (E6.5) — o seguro que a pessoa tem em outra corretora ganha, ao lado,
+// o selo neutro "De outra corretora", em todo lugar que mostra o selo.
 const props = defineProps({
   seguro: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
@@ -30,5 +32,8 @@ const tom = computed(() =>
 <template>
   <SeloDeEstado data-carteira="selo" :tom="tom" :data-selo-da-carteira="selo">
     {{ rotulo || t(chaveDoSelo(selo)) }}
+  </SeloDeEstado>
+  <SeloDeEstado v-if="seguro.deFora" data-carteira="selo-de-fora" tom="neutro">
+    {{ t('RELACIONAMENTOS_CARTEIRA.SELOS.DE_FORA') }}
   </SeloDeEstado>
 </template>
