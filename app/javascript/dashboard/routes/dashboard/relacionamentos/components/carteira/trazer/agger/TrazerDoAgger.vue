@@ -1,0 +1,358 @@
+<script setup>
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  useTemplateRef,
+  watch,
+} from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
+import Button from 'dashboard/components-next/button/Button.vue';
+import { trazerAggerFonte } from '../../../../fonte/trazerAggerFonte';
+import {
+  ETAPAS_DO_AGGER,
+  PEDE_LOGIN,
+  PEDIR_LOGIN,
+  useBuscaNoAgger,
+} from '../../../../carteira/useBuscaNoAgger';
+import {
+  BOTAO_DISCRETO_DO_HEROI,
+  BOTAO_PRINCIPAL_DO_HEROI,
+} from '../../../../carteira/botoesDoHeroi';
+import HeroiEscuro from '../../../comum/HeroiEscuro.vue';
+import BuscaDeTodoDia from './BuscaDeTodoDia.vue';
+import DialogoDoLoginNoAgger from './DialogoDoLoginNoAgger.vue';
+import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
+import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
+
+// #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
+// corretora no Agger. Se a conta ainda não conectou o Agger, uma janela pede
+// só o login e a senha. A busca roda no servidor (a pessoa pode sair e
+// voltar), cada seguradora que precisa de algo ganha um aviso com o que fazer,
+// e o Conferir mostra os mesmos números do Trazer por PDFs antes de qualquer
+// coisa entrar. Depois, a busca de todo dia traz os seguros novos sozinha (o
+// interruptor liga e desliga) e as buscas já feitas ficam embaixo, com
+// Desfazer.
+//
+// Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
+// que fazer fica no lugar. Toda espera que pode falhar tem "Tentar de novo". A
+// cada etapa nova, o foco vai ao título.
+const props = defineProps({
+  fonte: { type: Object, default: () => trazerAggerFonte() },
+  // O login do Agger da conta já foi aceito (o resumo da carteira).
+  ligado: { type: Boolean, default: false },
+});
+
+const { t } = useI18n();
+const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER';
+const ta = (chave, valores, plural) =>
+  plural === undefined
+    ? t(`${BASE}.${chave}`, valores)
+    : t(`${BASE}.${chave}`, valores, plural);
+const route = useRoute();
+const router = useRouter();
+const titulo = useTemplateRef('titulo');
+const login = useTemplateRef('login');
+const historico = useTemplateRef('historico');
+
+const busca = useBuscaNoAgger(props.fonte, {
+  ligado: props.ligado,
+  aoMudarBusca: id =>
+    router.replace({ query: { ...route.query, busca: id ?? undefined } }),
+});
+const {
+  etapa,
+  busca: atual,
+  andamento,
+  erro,
+  ocupado,
+  semAcompanhar,
+  parado,
+} = busca;
+
+const parou = computed(() => atual.value?.estado === 'parou');
+const pedeLogin = computed(
+  () => parou.value && atual.value?.motivo === PEDE_LOGIN
+);
+const motivoDaParada = computed(() =>
+  pedeLogin.value ? 'PEDE_LOGIN' : 'FALHOU'
+);
+const podeTentarDeNovo = computed(
+  () =>
+    semAcompanhar.value || parado.value || (parou.value && !pedeLogin.value)
+);
+const rotuloDeTrazer = seguros =>
+  ta('CONFERIR.TRAZER', { count: seguros }, seguros);
+const seguradoras = computed(() => atual.value?.porSeguradora ?? []);
+const chegaram = computed(() => ({
+  seguros: andamento.value?.seguros ?? 0,
+  pessoas: andamento.value?.pessoas ?? 0,
+  pessoasNovas: andamento.value?.pessoasNovas ?? 0,
+}));
+const fraseDoPronto = computed(() =>
+  [
+    t(
+      'RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.CHEGARAM',
+      { count: chegaram.value.seguros },
+      chegaram.value.seguros
+    ),
+    t(
+      'RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.DE_PESSOAS',
+      { count: chegaram.value.pessoas },
+      chegaram.value.pessoas
+    ),
+  ].join(' ')
+);
+
+watch(etapa, async () => {
+  await nextTick();
+  titulo.value?.focus();
+});
+
+// Sem o login aceito, a janela do login abre antes da primeira busca.
+const comecar = async () => {
+  if ((await busca.comecar()) === PEDIR_LOGIN) login.value?.abrir();
+};
+
+const continuar = id => {
+  router.replace({ query: { ...route.query, busca: id } });
+  busca.abrir(id);
+};
+
+const voltarAoInicio = () => {
+  busca.recomecar();
+  historico.value?.carregar();
+};
+
+const verOsSeguros = () =>
+  router.push({ name: 'relationships_home', query: { aba: 'seguros' } });
+
+if (route.query.busca) busca.abrir(Number(route.query.busca));
+onBeforeUnmount(busca.parar);
+</script>
+
+<template>
+  <section
+    data-relacionamentos="trazer-agger"
+    class="flex flex-col w-full h-full overflow-y-auto bg-n-surface-1"
+  >
+    <div
+      class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
+    >
+      <h1
+        ref="titulo"
+        data-titulo-da-tela
+        tabindex="-1"
+        class="m-0 text-2xl font-semibold text-n-slate-12"
+      >
+        {{ ta('TITULO') }}
+      </h1>
+      <p v-if="erro" role="alert" class="m-0 text-base text-n-ruby-11">
+        {{ t(erro) }}
+      </p>
+
+      <template v-if="etapa === ETAPAS_DO_AGGER.INICIO">
+        <p class="m-0 text-lg text-n-slate-11">{{ ta('APOIO') }}</p>
+        <Button
+          size="lg"
+          type="button"
+          data-carteira="buscar-no-agger"
+          class="self-start !h-14 !px-8 !text-lg"
+          :is-loading="ocupado"
+          :label="ta('BUSCAR')"
+          @click="comecar"
+        />
+        <BuscaDeTodoDia :fonte="fonte" />
+        <HistoricoDasBuscas
+          ref="historico"
+          :fonte="fonte"
+          @continuar="continuar"
+        />
+      </template>
+
+      <template v-else-if="etapa === ETAPAS_DO_AGGER.BUSCANDO">
+        <p
+          v-if="!parou"
+          role="status"
+          aria-busy="true"
+          data-carteira="buscando-no-agger"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
+          {{ ta('BUSCANDO') }}
+        </p>
+        <div
+          v-else
+          role="status"
+          data-carteira="busca-parou"
+          class="flex flex-col gap-2 p-6 border rounded-3xl border-n-amber-6 bg-n-amber-2"
+        >
+          <span class="text-lg font-medium text-n-slate-12">
+            {{ ta(`PAROU.${motivoDaParada}`) }}
+          </span>
+          <span class="text-base text-n-slate-11">
+            {{ ta(`PAROU.${motivoDaParada}_FAZER`) }}
+          </span>
+        </div>
+        <SeguradorasDaBusca
+          :seguradoras="seguradoras"
+          :ocupado="ocupado"
+          @tentar="busca.deNovo"
+        />
+        <p
+          v-if="parado && !parou && !semAcompanhar"
+          data-carteira="busca-parada"
+          class="m-0 text-base text-n-slate-11"
+        >
+          {{ ta('PARADO') }}
+        </p>
+        <Button
+          v-if="pedeLogin"
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="entrar-no-agger"
+          :label="ta('ENTRAR')"
+          @click="login?.abrir()"
+        />
+        <Button
+          v-if="podeTentarDeNovo"
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="tentar-de-novo"
+          :is-loading="ocupado"
+          :label="ta('TENTAR_DE_NOVO')"
+          @click="busca.tentarDeNovo"
+        />
+      </template>
+
+      <template v-else-if="etapa === ETAPAS_DO_AGGER.CONFERIR">
+        <p data-carteira="numeros-do-agger" class="m-0 text-lg text-n-slate-12">
+          {{
+            ta('CONFERIR.ENTRAM', {
+              seguros: atual.seguros,
+              pessoas: atual.pessoas,
+            })
+          }}
+        </p>
+        <ul
+          class="flex flex-wrap gap-2 p-0 m-0 text-sm list-none text-n-slate-11"
+        >
+          <li v-if="atual.pessoasNovas" data-carteira="pessoas-novas">
+            {{
+              ta(
+                'CONFERIR.PESSOAS_NOVAS',
+                { count: atual.pessoasNovas },
+                atual.pessoasNovas
+              )
+            }}
+          </li>
+          <li v-if="atual.semTelefone" data-carteira="sem-telefone">
+            {{
+              ta(
+                'CONFERIR.SEM_TELEFONE',
+                { count: atual.semTelefone },
+                atual.semTelefone
+              )
+            }}
+          </li>
+          <li v-if="atual.naoDeuParaTrazer" data-carteira="nao-deu-para-trazer">
+            {{
+              ta(
+                'CONFERIR.NAO_DEU',
+                { count: atual.naoDeuParaTrazer },
+                atual.naoDeuParaTrazer
+              )
+            }}
+          </li>
+        </ul>
+        <SeguradorasDaBusca
+          :seguradoras="seguradoras"
+          :ocupado="ocupado"
+          @tentar="busca.deNovo"
+        />
+        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Button
+            slate
+            faded
+            size="lg"
+            type="button"
+            data-carteira="buscar-de-novo"
+            :label="ta('CONFERIR.DE_NOVO')"
+            @click="busca.deNovo"
+          />
+          <Button
+            v-if="atual.seguros"
+            size="lg"
+            type="button"
+            data-carteira="trazer-do-agger"
+            :is-loading="ocupado"
+            :label="rotuloDeTrazer(atual.seguros)"
+            @click="busca.trazer"
+          />
+          <p
+            v-else
+            data-carteira="nada-para-trazer"
+            class="m-0 text-base text-n-slate-11 sm:self-center sm:text-end"
+          >
+            {{ ta('CONFERIR.NADA') }}
+          </p>
+        </div>
+      </template>
+
+      <template v-else-if="etapa === ETAPAS_DO_AGGER.TRAZENDO">
+        <p
+          role="status"
+          aria-busy="true"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
+        >
+          {{ ta('TRAZENDO', { porcentagem: andamento?.porcentagem ?? 0 }) }}
+        </p>
+        <p
+          v-if="parado && !semAcompanhar"
+          data-carteira="trazendo-parado"
+          class="m-0 text-base text-n-slate-11"
+        >
+          {{ ta('PARADO') }}
+        </p>
+        <Button
+          v-if="semAcompanhar || parado"
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="tentar-de-novo"
+          :label="ta('TENTAR_DE_NOVO')"
+          @click="busca.tentarDeNovo"
+        />
+      </template>
+
+      <template v-else>
+        <HeroiEscuro data-carteira="pronto-do-agger">
+          <template #frase>
+            <span class="tabular-nums text-balance">{{ fraseDoPronto }}</span>
+          </template>
+          <template #apoio>{{ ta('PRONTO.APOIO') }}</template>
+          <template #acao>
+            <Button
+              size="lg"
+              data-carteira="ver-os-seguros"
+              :class="BOTAO_PRINCIPAL_DO_HEROI"
+              :label="t('RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.VER')"
+              @click="verOsSeguros"
+            />
+            <Button
+              size="lg"
+              data-carteira="voltar-ao-inicio"
+              :class="BOTAO_DISCRETO_DO_HEROI"
+              :label="ta('PRONTO.VOLTAR')"
+              @click="voltarAoInicio"
+            />
+          </template>
+        </HeroiEscuro>
+        <BuscaDeTodoDia :fonte="fonte" />
+      </template>
+    </div>
+    <DialogoDoLoginNoAgger ref="login" :conectar="busca.conectar" />
+  </section>
+</template>

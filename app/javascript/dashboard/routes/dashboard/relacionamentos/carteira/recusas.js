@@ -63,6 +63,8 @@ export const CODIGOS_DE_RECUSA = [
   'nao_deu_para_escrever',
   'sem_conversa',
   'fora_da_janela',
+  // #2900 (E7) — trazer do Agger.
+  'agger_desligado',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela

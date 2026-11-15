@@ -11,3 +11,8 @@ export { default as TrazerSeguros } from '../components/carteira/trazer/TrazerSe
 export { default as TrazerPdfs } from '../components/carteira/trazer/pdfs/TrazerPdfs.vue';
 export { default as ComoTrazer } from '../components/carteira/trazer/pdfs/ComoTrazer.vue';
 export { leituraDePdf } from './leituraDePdf';
+
+// #2900 (E7.3) — "Trazer do Agger": a tela e quem diz os caminhos da conta
+// (o resumo da carteira: PDFs e Agger, numa pergunta só).
+export { default as TrazerDoAgger } from '../components/carteira/trazer/agger/TrazerDoAgger.vue';
+export { caminhosDeTrazer } from './caminhosDeTrazer';
