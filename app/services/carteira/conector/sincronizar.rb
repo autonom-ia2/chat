@@ -184,12 +184,14 @@ class Carteira::Conector::Sincronizar
     totais['fatias_total'].to_i > totais['fatias_pedidas'].to_i ? ESPERA_DAS_FATIAS : ESPERA_DO_ANDAMENTO
   end
 
-  # `fatias: { pedidas, total }` (opcional). Fora do formato, ou ausente, a busca só anda: nada muda nos totais.
+  # `fatias: { pedidas, total }` (opcional). Fora do formato, ou ausente, a busca só anda: nada muda nos totais. A busca
+  # é tocada sempre, mesmo com as fatias iguais às de antes: é o `updated_at` que diz que ela anda (PARADA).
   def guardar_fatias(fatias)
     pedidas, total = fatias.values_at('pedidas', 'total') if fatias.is_a?(Hash)
     return tocar unless pedidas.is_a?(Integer) && total.is_a?(Integer) && total.positive?
 
-    @leitura.reload.update!(totais: @leitura.totais.to_h.merge('fatias_pedidas' => pedidas.clamp(0, total), 'fatias_total' => total))
+    totais = @leitura.reload.totais.to_h.merge('fatias_pedidas' => pedidas.clamp(0, total), 'fatias_total' => total)
+    @leitura.update!(totais: totais, updated_at: Time.current)
   end
 
   def ler_pagina

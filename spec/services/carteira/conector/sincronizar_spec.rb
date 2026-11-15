@@ -274,6 +274,15 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect(Carteira::Conector::Conferir.new(leitura).call).to include(fatias: nil)
     end
 
+    it 'o andamento com as mesmas fatias de antes ainda conta como andamento: a busca não parece parada' do
+      leitura = described_class.primeira(account, user: admin)
+      portal = portal_com_fatias(leitura, { 'pedidas' => 37, 'total' => 37 })
+      2.times { described_class.new(leitura.reload, portal: portal).passo }
+      travel(5.minutes)
+
+      expect { described_class.new(leitura.reload, portal: portal).passo }.to(change { leitura.reload.updated_at })
+    end
+
     it 'a falha passageira com fatia por pedir tenta de novo logo, para o adapter não perder a sequência' do
       leitura = described_class.primeira(account, user: admin)
       portal = portal_com_fatias(leitura, { 'pedidas' => 3, 'total' => 37 })
