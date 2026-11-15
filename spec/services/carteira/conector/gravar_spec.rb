@@ -10,8 +10,9 @@ RSpec.describe Carteira::Conector::Gravar, :aggregate_failures do
   let(:agora) { Time.utc(2026, 11, 12, 15) }
   let(:account) { conta_com_carteira(reporting_timezone: 'America/Sao_Paulo', locale: 'pt_BR') }
   let(:admin) { create(:user, account: account, role: :administrator) }
-  # O começo da vigência que o conector de mentira põe em todos os registros.
-  let(:comeco) { agora.to_date.prev_year + 10 }
+  # O começo da vigência que o conector de mentira põe em todos os registros (parte do começo do mês, que não anda dia a
+  # dia: o mesmo registro buscado amanhã tem as mesmas datas).
+  let(:comeco) { agora.to_date.beginning_of_month.prev_year + 40 }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 

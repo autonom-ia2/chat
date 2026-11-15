@@ -41,8 +41,8 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // cada etapa nova, o foco vai ao título.
 //
 // Escrever o login do Agger é de quem pode mexer na Cotação
-// (`insurance_manage`, como o servidor). Sem essa permissão, a tela não oferece
-// a janela do login: diz para pedir a quem administra a conta.
+// (`insurance_manage`, como o servidor). Sem essa permissão, a tela não
+// oferece a janela do login: diz para pedir a quem administra a conta.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerAggerFonte() },
   // O login do Agger da conta já foi aceito (o resumo da carteira).
@@ -81,18 +81,23 @@ const {
 } = busca;
 
 const parou = computed(() => atual.value?.estado === 'parou');
-const pedeLogin = computed(
+// A busca parou porque o Agger recusou o login (a prop `pedeLogin` é o mesmo,
+// mas da conta, vindo do resumo).
+const parouPeloLogin = computed(
   () => parou.value && atual.value?.motivo === PEDE_LOGIN
 );
 const motivoDaParada = computed(() =>
-  pedeLogin.value ? 'PEDE_LOGIN' : 'FALHOU'
+  parouPeloLogin.value ? 'PEDE_LOGIN' : 'FALHOU'
 );
 const podeTentarDeNovo = computed(
-  () => semAcompanhar.value || parado.value || (parou.value && !pedeLogin.value)
+  () =>
+    semAcompanhar.value ||
+    parado.value ||
+    (parou.value && !parouPeloLogin.value)
 );
 // O que fazer quando a busca parou. Sem poder escrever o login, pedir.
 const fazerDaParada = computed(() =>
-  pedeLogin.value && !podeLigar.value
+  parouPeloLogin.value && !podeLigar.value
     ? ta('PECA_AO_ADMIN')
     : ta(`PAROU.${motivoDaParada.value}_FAZER`)
 );
@@ -249,7 +254,7 @@ onBeforeUnmount(busca.parar);
           {{ ta('PARADO') }}
         </p>
         <Button
-          v-if="pedeLogin && podeLigar"
+          v-if="parouPeloLogin && podeLigar"
           size="lg"
           type="button"
           class="self-start"

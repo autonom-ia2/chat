@@ -7,7 +7,11 @@
 #   em que a corretora nunca guardou o login (`sem_login`);
 # - a lista vem em duas páginas, com um item sem `ref` (não dá para trazer), um endosso da mesma apólice (mesmo `ref`)
 #   e um registro que o adapter não leu (`ignorados`). `total` é itens + ignorados, como no adapter;
-# - o documento devolve um endereço que não existe fora do teste: baixar falha, e a falha não pode travar o lote.
+# - o documento devolve um endereço que não existe fora do teste: baixar falha, e a falha não pode travar o lote;
+# - as datas NÃO andam com o relógio a cada dia (`base`): o mesmo registro buscado amanhã é o mesmo seguro, com as mesmas
+#   datas, como no Agger. Se andassem, a busca de todo dia traria um "termo novo" de cada seguro por dia
+#   (Carteira::Termo), e o seguro nasceria de novo. Elas partem do começo do mês e só mudam na virada dele; o seguro
+#   termina 40 dias depois desse começo, então ainda vale em qualquer dia do mês.
 module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
   BUSCANDO_POR = 5.seconds
   PREFIXO = 'mock-carteira'.freeze
@@ -83,7 +87,7 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
 
   # O endosso da apólice da primeira página (o mesmo `ref`) mudou o valor.
   def segunda_pagina
-    endosso = { 'numero' => '1', 'data' => Date.current.prev_month.iso8601 }
+    endosso = { 'numero' => '1', 'data' => base.prev_month.iso8601 }
     [
       apolice('mock-ref-1', '1001', 'Seguradora Azul (exemplo)', 'Automóvel',
               segurado('Pessoa Exemplo Um', '10020030088', 'pessoa.um@exemplo.test'),
@@ -93,6 +97,10 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
     ]
   end
 
+  def base
+    Date.current.beginning_of_month
+  end
+
   def segurado(nome, documento, email)
     { 'nome' => nome, 'documento' => documento, 'email' => email }
   end
@@ -100,7 +108,7 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
   # rubocop:disable Metrics/ParameterLists -- um item fictício inteiro, com o que muda de um para o outro
   def apolice(ref, numero, seguradora, ramo, segurado, item: nil, endosso: nil, premio: 240_000)
     # rubocop:enable Metrics/ParameterLists
-    inicio = Date.current.prev_year + 10
+    inicio = base.prev_year + 40
     { 'ref' => ref, 'numero' => numero, 'seguradora' => seguradora, 'ramo' => ramo, 'inicio_vigencia' => inicio.iso8601,
       'fim_vigencia' => (inicio + 1.year).iso8601, 'emissao' => (inicio - 5).iso8601, 'premio_centavos' => premio,
       'segurado' => segurado, 'item' => item, 'endosso' => endosso, 'parcelas' => nil, 'pdf_ref' => ref && "mock-pdf-#{ref}" }
