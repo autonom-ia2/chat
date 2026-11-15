@@ -10,7 +10,7 @@
 # Com a renovação (E5, #2898): o grupo "Em renovação" (a mesma regra do selo, Carteira::Selo, só com as colunas da
 # apólice), o filtro "quem cuida" (o dono do card de renovação, só entre os cards que quem pede enxerga no quadro) e os
 # grupos temporários "Não renovaram nos últimos N dias", que só existem quando a tela de resultados leva até eles:
-# terminaram nesse período sem renovar.
+# terminaram nesse período sem renovar. O seguro de outra corretora (E6.5) fica de fora deles: não é retenção da corretora.
 class Carteira::Consulta < Relacionamentos::Consulta
   ORDEM_DA_CARTEIRA = 'vence_primeiro'.freeze
   VENCE_EM = [7, 30, 90].freeze
@@ -26,7 +26,7 @@ class Carteira::Consulta < Relacionamentos::Consulta
     'em_renovacao' => EM_RENOVACAO, 'vencido' => VENCIDO, 'sem_telefone' => "COALESCE(contacts.phone_number, '') = ''"
   ).freeze
   TEMPORARIOS = NAO_RENOVARAM_EM.to_h do |dias|
-    ["nao_renovaram_#{dias}", "#{VENCIDO} AND carteira_apolices.fim_vigencia >= :ha_#{dias}_dias"]
+    ["nao_renovaram_#{dias}", "#{VENCIDO} AND carteira_apolices.de_fora = FALSE AND carteira_apolices.fim_vigencia >= :ha_#{dias}_dias"]
   end.freeze
   # Quem ainda vale vem antes, do que termina mais cedo ao mais tarde; depois os outros, do que terminou há menos tempo
   # ao mais antigo. O id desempata: sem ele a página 2 repetiria ou pularia seguro.

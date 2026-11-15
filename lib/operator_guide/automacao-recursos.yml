@@ -737,6 +737,12 @@ fora:
       - relacionamentos/seguros/renovacoes
       - relacionamentos/seguros/desfechos
       - relacionamentos/seguros/apolices_novas
+  - motivo: >-
+      Seu seguro em palavras simples (#2899, E6.6): guardar o texto ajustado é ação de pessoa, na gaveta do seguro. Escrever
+      o texto chama IA paga e mandar o texto fala com o cliente; as duas só se fazem pelo clique na tela, nunca como
+      passo de automação, e por isso não chegam ao catálogo (Acoes::SO_NA_TELA).
+    recursos:
+      - relacionamentos/seguros/palavras
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

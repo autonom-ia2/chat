@@ -398,10 +398,11 @@ describe('o rodapé da gaveta', () => {
     expect(rodape(vencidoNoServidor).azul).toBeNull();
   });
 
-  it('o que não tem volta fácil é apagar o PDF e marcar como cancelado', () => {
+  it('o que não tem volta fácil é apagar o PDF, marcar como cancelado e apagar o seguro de outra corretora', () => {
     expect(DESTRUTIVOS).toEqual([
       DO_RODAPE.APAGAR_PDF,
       DO_RODAPE.MARCAR_CANCELADO,
+      DO_RODAPE.APAGAR_DE_FORA,
     ]);
   });
 

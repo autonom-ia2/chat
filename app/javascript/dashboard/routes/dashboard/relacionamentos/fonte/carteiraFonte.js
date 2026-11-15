@@ -14,6 +14,7 @@ import {
   GRUPO_PADRAO_DE_SEGUROS,
   seguroPertenceAoGrupo,
 } from './gruposDeSeguros';
+import { DIA_EM_MS } from './grupos';
 import { POR_PAGINA, combinaComBusca, esperar } from './listaFonte';
 import {
   DEMO_CARREGANDO,
@@ -153,6 +154,27 @@ const ESCRITAS = [
 const PDF_DA_DEMO = 'about:blank';
 const ARQUIVO_DA_DEMO = { name: 'apolice-de-exemplo.pdf' };
 
+// #2899 (E6.5 e E6.6) — a demonstração do seguro de outra corretora e das
+// palavras simples: tudo inventado, só na memória, e nada é lido nem enviado de
+// verdade. Os arquivos da conversa e o que a leitura achou são sempre os mesmos.
+const ARQUIVOS_DE_FORA_DA_DEMO = [
+  { id: 1, nome: 'apolice-de-exemplo.pdf' },
+  { id: 2, nome: 'seguro-do-carro-exemplo.pdf' },
+];
+const TERMINA_DE_FORA_EM_DIAS = 101;
+const SEGURADORA_DE_FORA_DA_DEMO = 'Seguradora Exemplo';
+const MS_POR_SEGUNDO = 1000;
+const PRIMEIRO_DE_FORA_GUARDADO = 8000;
+const LEITURA_DE_FORA_DA_DEMO = 1;
+const FRASE_DO_FIM_DA_DEMO = 'Vale o que está escrito na sua apólice.';
+const TEXTO_DAS_PALAVRAS_DA_DEMO =
+  'Oi! Este é o seu seguro do carro. Ele cobre o que está escrito na apólice e vale até a data do vencimento.';
+const ENVIO_DA_DEMO = 'conversa';
+
+// Daqui a `dias` (ou agora, sem dias), em segundos, como o servidor devolve.
+const emSegundosDaDemo = (dias = 0) =>
+  Math.floor((Date.now() + dias * DIA_EM_MS) / MS_POR_SEGUNDO);
+
 const erroDaDemo = () =>
   Object.assign(new Error('A demonstração pediu o erro desta peça.'), {
     name: 'ERRO_DA_DEMO',
@@ -202,6 +224,26 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
     nome =>
     async (id, ...resto) =>
       (await umSeguro(id))[nome](id, ...resto);
+
+  // O que a demonstração guardou: os seguros de outra corretora e o texto das
+  // palavras simples de cada seguro.
+  let guardadosDeFora = [];
+  let palavrasDosSeguros = new Map();
+  const palavrasDe = id => palavrasDosSeguros.get(id) ?? { texto: null };
+  const guardarPalavras = (id, mudou) => {
+    const novas = { ...palavrasDe(id), ...mudou };
+    palavrasDosSeguros = new Map(palavrasDosSeguros).set(id, novas);
+    return {
+      texto: novas.texto,
+      enviadoEm: novas.enviadoEm ?? null,
+      vale: FRASE_DO_FIM_DA_DEMO,
+      envio: ENVIO_DA_DEMO,
+    };
+  };
+  const palavrasDoSeguro = async id => {
+    await umSeguro(id);
+    return guardarPalavras(id, {});
+  };
 
   return {
     usaDemo: true,
@@ -291,6 +333,59 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
     async pdf(id) {
       await umSeguro(id);
       return PDF_DA_DEMO;
+    },
+    // #2899 (E6.5) — o seguro de outra corretora: os PDFs da conversa, ler,
+    // guardar (devolve o seguro) e apagar.
+    async arquivosDeFora() {
+      await demo();
+      return ARQUIVOS_DE_FORA_DA_DEMO;
+    },
+    async lerDeFora() {
+      await demo();
+      return {
+        leituraId: LEITURA_DE_FORA_DA_DEMO,
+        lido: {
+          tipo: 'auto',
+          seguradora: SEGURADORA_DE_FORA_DA_DEMO,
+          termina: emSegundosDaDemo(TERMINA_DE_FORA_EM_DIAS),
+          corretora: 'Corretora Exemplo',
+        },
+        tambem: [],
+      };
+    },
+    async guardarDeFora(pessoaId, { campos, querLembrete }) {
+      await demo();
+      const guardado = {
+        id: PRIMEIRO_DE_FORA_GUARDADO + guardadosDeFora.length,
+        pessoaId,
+        deFora: true,
+        corretora: campos.corretora,
+        lembreteAceitoEm: querLembrete ? emSegundosDaDemo() : null,
+        tipo: campos.tipo,
+        seguradora: campos.seguradora,
+        termina: campos.termina,
+      };
+      guardadosDeFora = [...guardadosDeFora, guardado];
+      return guardado;
+    },
+    async apagarDeFora(id) {
+      await demo();
+      guardadosDeFora = guardadosDeFora.filter(item => item.id !== id);
+    },
+    // #2899 (E6.6) — seu seguro em palavras simples: cada uma devolve
+    // `{ texto, enviadoEm, vale, envio }`.
+    palavras: palavrasDoSeguro,
+    async escreverPalavras(id) {
+      await umSeguro(id);
+      return guardarPalavras(id, { texto: TEXTO_DAS_PALAVRAS_DA_DEMO });
+    },
+    async salvarPalavras(id, texto) {
+      await umSeguro(id);
+      return guardarPalavras(id, { texto });
+    },
+    async enviarPalavras(id) {
+      await umSeguro(id);
+      return guardarPalavras(id, { enviadoEm: emSegundosDaDemo() });
     },
   };
 };

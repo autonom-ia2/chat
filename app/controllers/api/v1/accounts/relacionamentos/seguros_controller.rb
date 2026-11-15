@@ -51,7 +51,7 @@ class Api::V1::Accounts::Relacionamentos::SegurosController < Api::V1::Accounts:
 
   def destroy
     corpo
-    ::Carteira::DeFora::Apagar.new(@seguro).call
+    ::Carteira::DeFora::Apagar.new(@seguro, user: Current.user).call
     head :no_content
   end
 

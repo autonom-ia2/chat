@@ -18,7 +18,7 @@ class Carteira::Palavras::Escrever
   FEATURE = 'carteira_palavras'.freeze
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   EFFORT = 'low'.freeze
-  TIMEOUT = 40
+  TIMEOUT = 12
   MAX_OUTPUT_TOKENS = 1_500
   FALHAS_DA_CHAMADA = Carteira::Leitor::Campos::FALHAS_DA_CHAMADA
   SCHEMA = { name: FEATURE,

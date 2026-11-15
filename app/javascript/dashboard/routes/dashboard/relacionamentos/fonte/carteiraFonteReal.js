@@ -262,7 +262,7 @@ export const carteiraFonteReal = () => ({
   guardarDeFora,
   apagarDeFora: id => noServidor(() => SegurosAPI.apagar(id)),
   // #2899 (E6.6) — seu seguro em palavras simples: cada uma devolve
-  // `{ texto, enviadoEm, vale, envio, conversaId }`.
+  // `{ texto, enviadoEm, vale, envio }`.
   palavras: id => noServidor(() => SegurosAPI.palavras(id)),
   escreverPalavras: id => noServidor(() => SegurosAPI.escreverPalavras(id)),
   salvarPalavras: (id, texto) =>

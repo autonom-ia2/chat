@@ -44,6 +44,7 @@ class Carteira::Renovacao::Ajustes
 
   def valendo
     Carteira::Apolice.where(account_id: @account.id).where(Carteira::Consulta::VALENDO, hoje: @hoje)
+                     .where(Carteira::Renovacao::EntramHoje::COM_LEMBRETE_SE_DE_FORA)
   end
 
   # Do que termina antes para o que termina depois.

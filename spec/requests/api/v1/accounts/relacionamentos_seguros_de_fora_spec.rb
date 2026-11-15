@@ -224,6 +224,19 @@ RSpec.describe 'Carteira de seguros: seguro de outra corretora', type: :request 
       expect(Carteira::Apolice.exists?(seguro.id)).to be(false)
     end
 
+    it 'apaga o seguro que já tinha card de renovação e deixa o card arquivado' do
+      ajustes = escolher_funil_de_renovacao(account, user: admin)
+      seguro = criar_apolice(pessoa, seguradora: 'Seguradora Exemplo', fim_vigencia: Date.new(2027, 3, 10), de_fora: true,
+                                     lembrete_aceito_em: Time.current)
+      card = por_em_renovacao(seguro, ajustes)
+
+      delete "#{base}/seguros/#{seguro.id}", headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:no_content)
+      expect(Carteira::Apolice.exists?(seguro.id)).to be(false)
+      expect(card.reload).to be_archived
+    end
+
     it 'não apaga o seguro da carteira da corretora: ele se cancela, não some' do
       seguro = criar_apolice(pessoa, seguradora: 'Seguradora Exemplo', numero: 'EX-000333', fim_vigencia: Date.new(2027, 3, 10))
 
