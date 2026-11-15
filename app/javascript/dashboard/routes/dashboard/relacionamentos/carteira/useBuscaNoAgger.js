@@ -15,6 +15,9 @@
 // acompanha de novo ou pede o "Trazer" outra vez (o servidor é idempotente).
 // Quando o Agger recusou o login (`busca.motivo === PEDE_LOGIN`), a tela pede
 // o login de novo e, com ele aceito, busca de novo.
+//
+// "Buscar de novo" volta direto ao "Buscando", sem os avisos das seguradoras
+// da busca anterior (#2900, E7.5): eles não valem para a busca que anda.
 import { ref } from 'vue';
 import { chaveDaRecusaDoAgger, codigoDaRecusa } from './recusas';
 
@@ -113,7 +116,9 @@ export const useBuscaNoAgger = (
     busca.value = atual;
     etapa.value = ESTADO_DA_ETAPA[atual.estado] || ETAPAS_DO_AGGER.PRONTO;
     if (atual.estado === 'lendo') {
-      marcarAvanco(JSON.stringify([atual.recebidos, atual.porSeguradora]));
+      marcarAvanco(
+        JSON.stringify([atual.recebidos, atual.porSeguradora, atual.fatias])
+      );
       relogio = setTimeout(
         () => comBusca(id).catch(falhouAoAcompanhar),
         PERGUNTA_MS
@@ -170,12 +175,15 @@ export const useBuscaNoAgger = (
 
   const deNovo = async () => {
     parar();
-    const conferir = await tentar(() => fonte.deNovo(busca.value.id));
+    const { id } = busca.value;
+    const conferir = await tentar(() => fonte.deNovo(id));
     if (!conferir) {
       semAcompanhar.value = true;
       return;
     }
-    await abrir(busca.value.id);
+    busca.value = { id, estado: 'lendo', porSeguradora: [] };
+    etapa.value = ETAPAS_DO_AGGER.BUSCANDO;
+    await abrir(id);
   };
 
   // A janela do login: devolve o que o Agger respondeu (LOGIN). Aceito, segue

@@ -21,7 +21,9 @@ import {
   BOTAO_DISCRETO_DO_HEROI,
   BOTAO_PRINCIPAL_DO_HEROI,
 } from '../../../../carteira/botoesDoHeroi';
+import { todasComAviso } from '../../../../carteira/avisosDasSeguradoras';
 import HeroiEscuro from '../../../comum/HeroiEscuro.vue';
+import AndamentoDaBusca from './AndamentoDaBusca.vue';
 import BuscaDeTodoDia from './BuscaDeTodoDia.vue';
 import DialogoDoLoginNoAgger from './DialogoDoLoginNoAgger.vue';
 import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
@@ -30,11 +32,12 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
 // corretora no Agger. Se a conta ainda não conectou o Agger, uma janela pede
 // só o login e a senha. A busca roda no servidor (a pessoa pode sair e
-// voltar), cada seguradora que precisa de algo ganha um aviso com o que fazer,
-// e o Conferir mostra os mesmos números do Trazer por PDFs antes de qualquer
-// coisa entrar. Depois, a busca de todo dia traz os seguros novos sozinha (o
-// interruptor liga e desliga) e as buscas já feitas ficam embaixo, com
-// Desfazer.
+// voltar) e mostra "mês X de Y" quando o servidor diz. O Conferir começa pelo
+// que importa — quantos seguros entram, de quantas pessoas, e o "Trazer" — e
+// as seguradoras que não buscaram seguros novos viram uma linha calma, com o
+// detalhe atrás de "Ver quais" (#2900, E7.5). Depois, a busca de todo dia traz
+// os seguros novos sozinha (o interruptor liga e desliga) e as buscas já
+// feitas ficam embaixo, com Desfazer.
 //
 // Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
 // que fazer fica no lugar. Toda espera que pode falhar tem "Tentar de novo". A
@@ -132,6 +135,19 @@ const fraseDoTrazendo = computed(() =>
   })
 );
 const seguradoras = computed(() => atual.value?.porSeguradora ?? []);
+const temDetalhes = computed(() =>
+  ['jaNaCarteira', 'pessoasNovas', 'semTelefone', 'naoDeuParaTrazer'].some(
+    numero => atual.value?.[numero]
+  )
+);
+// Nada veio: nenhum seguro, nenhum registro, e todas as seguradoras com aviso.
+// A frase do que fazer fica com os avisos, sem os números zerados.
+const nadaVeio = computed(
+  () =>
+    !atual.value?.seguros &&
+    !atual.value?.naoDeuParaTrazer &&
+    todasComAviso(seguradoras.value)
+);
 const chegaram = computed(() => ({
   seguros: andamento.value?.seguros ?? 0,
   pessoas: andamento.value?.pessoas ?? 0,
@@ -234,15 +250,7 @@ onBeforeUnmount(busca.parar);
       </template>
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.BUSCANDO">
-        <p
-          v-if="!parou"
-          role="status"
-          aria-busy="true"
-          data-carteira="buscando-no-agger"
-          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
-        >
-          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCANDO') }}
-        </p>
+        <AndamentoDaBusca v-if="!parou" :fatias="atual?.fatias ?? null" />
         <div
           v-else
           role="status"
@@ -256,11 +264,6 @@ onBeforeUnmount(busca.parar);
             {{ fazerDaParada }}
           </span>
         </div>
-        <SeguradorasDaBusca
-          :seguradoras="seguradoras"
-          :ocupado="ocupado"
-          @tentar="busca.deNovo"
-        />
         <p
           v-if="parado && !parou && !semAcompanhar"
           data-carteira="busca-parada"
@@ -290,81 +293,96 @@ onBeforeUnmount(busca.parar);
       </template>
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.CONFERIR">
-        <p data-carteira="numeros-do-agger" class="m-0 text-lg text-n-slate-12">
-          {{ fraseDosNumeros }}
-        </p>
-        <ul
-          class="flex flex-wrap gap-2 p-0 m-0 text-sm list-none text-n-slate-11"
+        <div
+          v-if="!nadaVeio"
+          data-carteira="conferir-do-agger"
+          class="flex flex-col gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
         >
-          <li v-if="atual.jaNaCarteira" data-carteira="ja-na-carteira">
-            {{
-              t(
-                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.JA_NA_CARTEIRA',
-                { count: atual.jaNaCarteira },
-                atual.jaNaCarteira
-              )
-            }}
-          </li>
-          <li v-if="atual.pessoasNovas" data-carteira="pessoas-novas">
-            {{
-              t(
-                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.PESSOAS_NOVAS',
-                { count: atual.pessoasNovas },
-                atual.pessoasNovas
-              )
-            }}
-          </li>
-          <li v-if="atual.semTelefone" data-carteira="sem-telefone">
-            {{
-              t(
-                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.SEM_TELEFONE',
-                { count: atual.semTelefone },
-                atual.semTelefone
-              )
-            }}
-          </li>
-          <li v-if="atual.naoDeuParaTrazer" data-carteira="nao-deu-para-trazer">
-            {{
-              t(
-                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NAO_DEU',
-                { count: atual.naoDeuParaTrazer },
-                atual.naoDeuParaTrazer
-              )
-            }}
-          </li>
-        </ul>
-        <SeguradorasDaBusca
-          :seguradoras="seguradoras"
-          :ocupado="ocupado"
-          @tentar="busca.deNovo"
-        />
-        <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-          <Button
-            slate
-            faded
-            size="lg"
-            type="button"
-            data-carteira="buscar-de-novo"
-            :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.DE_NOVO')"
-            @click="busca.deNovo"
-          />
+          <p
+            v-if="atual.seguros"
+            data-carteira="numeros-do-agger"
+            class="m-0 text-xl font-semibold tabular-nums text-n-slate-12 text-balance"
+          >
+            {{ fraseDosNumeros }}
+          </p>
+          <p
+            v-else
+            data-carteira="nada-para-trazer"
+            class="m-0 text-lg text-n-slate-12 text-pretty"
+          >
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NADA') }}
+          </p>
           <Button
             v-if="atual.seguros"
             size="lg"
             type="button"
+            class="self-start"
             data-carteira="trazer-do-agger"
             :is-loading="ocupado"
             :label="rotuloDeTrazer(atual.seguros)"
             @click="busca.trazer"
           />
-          <p
-            v-else
-            data-carteira="nada-para-trazer"
-            class="m-0 text-base text-n-slate-11 sm:self-center sm:text-end"
+          <ul
+            v-if="temDetalhes"
+            class="flex flex-wrap p-0 m-0 text-sm list-none gap-x-4 gap-y-2 text-n-slate-11"
           >
-            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NADA') }}
-          </p>
+            <li v-if="atual.jaNaCarteira" data-carteira="ja-na-carteira">
+              {{
+                t(
+                  'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.JA_NA_CARTEIRA',
+                  { count: atual.jaNaCarteira },
+                  atual.jaNaCarteira
+                )
+              }}
+            </li>
+            <li v-if="atual.pessoasNovas" data-carteira="pessoas-novas">
+              {{
+                t(
+                  'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.PESSOAS_NOVAS',
+                  { count: atual.pessoasNovas },
+                  atual.pessoasNovas
+                )
+              }}
+            </li>
+            <li v-if="atual.semTelefone" data-carteira="sem-telefone">
+              {{
+                t(
+                  'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.SEM_TELEFONE',
+                  { count: atual.semTelefone },
+                  atual.semTelefone
+                )
+              }}
+            </li>
+            <li
+              v-if="atual.naoDeuParaTrazer"
+              data-carteira="nao-deu-para-trazer"
+            >
+              {{
+                t(
+                  'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NAO_DEU',
+                  { count: atual.naoDeuParaTrazer },
+                  atual.naoDeuParaTrazer
+                )
+              }}
+            </li>
+          </ul>
         </div>
+        <SeguradorasDaBusca
+          :seguradoras="seguradoras"
+          :nada-veio="nadaVeio"
+          :ocupado="ocupado"
+          @tentar="busca.deNovo"
+        />
+        <Button
+          slate
+          faded
+          size="lg"
+          type="button"
+          class="self-start"
+          data-carteira="buscar-de-novo"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.DE_NOVO')"
+          @click="busca.deNovo"
+        />
       </template>
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.TRAZENDO">
