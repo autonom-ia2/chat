@@ -17,11 +17,25 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const tw = chave => t(`RELACIONAMENTOS_CARTEIRA.PDFS.COMO.${chave}`);
 const CAMINHOS = [
-  { id: 'planilha', icone: 'i-lucide-sheet' },
-  { id: 'pdfs', icone: 'i-lucide-files' },
-  { id: 'agger', icone: 'i-lucide-cloud-download' },
+  {
+    id: 'planilha',
+    icone: 'i-lucide-sheet',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PLANILHA.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PLANILHA.APOIO'),
+  },
+  {
+    id: 'pdfs',
+    icone: 'i-lucide-files',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PDFS.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.PDFS.APOIO'),
+  },
+  {
+    id: 'agger',
+    icone: 'i-lucide-cloud-download',
+    titulo: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.AGGER.TITULO'),
+    apoio: () => t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.AGGER.APOIO'),
+  },
 ];
 const daConta = computed(() =>
   CAMINHOS.filter(caminho => props.caminhos.includes(caminho.id))
@@ -38,7 +52,7 @@ const daConta = computed(() =>
       tabindex="-1"
       class="m-0 text-2xl font-semibold text-n-slate-12"
     >
-      {{ tw('TITULO') }}
+      {{ t('RELACIONAMENTOS_CARTEIRA.PDFS.COMO.TITULO') }}
     </h1>
     <ul
       class="grid gap-4 p-0 m-0 list-none sm:grid-cols-2"
@@ -57,10 +71,10 @@ const daConta = computed(() =>
             <span class="size-6" :class="caminho.icone" />
           </span>
           <span class="text-lg font-semibold">
-            {{ tw(`${caminho.id.toUpperCase()}.TITULO`) }}
+            {{ caminho.titulo() }}
           </span>
           <span class="text-base text-n-slate-11">
-            {{ tw(`${caminho.id.toUpperCase()}.APOIO`) }}
+            {{ caminho.apoio() }}
           </span>
         </router-link>
       </li>

@@ -24,7 +24,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN';
+const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.NAO_DEU';
 const dialogo = useTemplateRef('dialogo');
 const login = ref('');
 const senha = ref('');
@@ -32,7 +32,9 @@ const alerta = ref('');
 const ocupado = ref(false);
 const foraDoAr = ref(false);
 const rotuloDeEntrar = computed(() =>
-  t(foraDoAr.value ? `${BASE}.TENTAR_DE_NOVO` : `${BASE}.ENTRAR`)
+  foraDoAr.value
+    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.TENTAR_DE_NOVO')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.ENTRAR')
 );
 
 const limpar = () => {
@@ -46,13 +48,13 @@ const fraseDaFalha = falha => {
   if (falha?.name === SEM_ACESSO) {
     return t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN');
   }
-  return t(chaveDaRecusaDoAgger(codigoDaRecusa(falha), `${BASE}.NAO_DEU`));
+  return t(chaveDaRecusaDoAgger(codigoDaRecusa(falha), NAO_DEU));
 };
 
 const entrar = async () => {
   if (ocupado.value) return;
   if (!login.value.trim() || !senha.value) {
-    alerta.value = t(`${BASE}.FALTA`);
+    alerta.value = t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.FALTA');
     return;
   }
   ocupado.value = true;
@@ -67,9 +69,9 @@ const entrar = async () => {
       return;
     }
     foraDoAr.value = resposta === LOGIN.FORA_DO_AR;
-    alerta.value = t(
-      foraDoAr.value ? `${BASE}.FORA_DO_AR` : `${BASE}.RECUSADO`
-    );
+    alerta.value = foraDoAr.value
+      ? t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.FORA_DO_AR')
+      : t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.RECUSADO');
   } catch (falha) {
     foraDoAr.value = false;
     alerta.value = fraseDaFalha(falha);
@@ -89,7 +91,7 @@ defineExpose({
     type="edit"
     width="md"
     :confirm-button-label="rotuloDeEntrar"
-    :cancel-button-label="t(`${BASE}.VOLTAR`)"
+    :cancel-button-label="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.VOLTAR')"
     :is-loading="ocupado"
     :close-on-outside-click="false"
     @confirm="entrar"
@@ -97,8 +99,8 @@ defineExpose({
   >
     <div data-carteira="login-do-agger" class="flex flex-col gap-4">
       <TituloDoDialogo
-        :titulo="t(`${BASE}.TITULO`)"
-        :aviso="t(`${BASE}.PARA_QUE`)"
+        :titulo="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.TITULO')"
+        :aviso="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.PARA_QUE')"
       />
       <Input
         id="carteira-agger-login"
@@ -106,7 +108,7 @@ defineExpose({
         type="text"
         autocomplete="username"
         custom-input-class="!h-11"
-        :label="t(`${BASE}.CAMPO_LOGIN`)"
+        :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.CAMPO_LOGIN')"
       />
       <Input
         id="carteira-agger-senha"
@@ -114,7 +116,7 @@ defineExpose({
         type="password"
         autocomplete="current-password"
         custom-input-class="!h-11"
-        :label="t(`${BASE}.CAMPO_SENHA`)"
+        :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.CAMPO_SENHA')"
       />
       <p
         v-if="alerta"

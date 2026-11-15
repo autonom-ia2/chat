@@ -52,11 +52,6 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER';
-const ta = (chave, valores, plural) =>
-  plural === undefined
-    ? t(`${BASE}.${chave}`, valores)
-    : t(`${BASE}.${chave}`, valores, plural);
 const route = useRoute();
 const router = useRouter();
 const titulo = useTemplateRef('titulo');
@@ -86,8 +81,10 @@ const parou = computed(() => atual.value?.estado === 'parou');
 const parouPeloLogin = computed(
   () => parou.value && atual.value?.motivo === PEDE_LOGIN
 );
-const motivoDaParada = computed(() =>
-  parouPeloLogin.value ? 'PEDE_LOGIN' : 'FALHOU'
+const fraseDaParada = computed(() =>
+  parouPeloLogin.value
+    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.PAROU.PEDE_LOGIN')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.PAROU.FALHOU')
 );
 const podeTentarDeNovo = computed(
   () =>
@@ -96,27 +93,43 @@ const podeTentarDeNovo = computed(
     (parou.value && !parouPeloLogin.value)
 );
 // O que fazer quando a busca parou. Sem poder escrever o login, pedir.
-const fazerDaParada = computed(() =>
-  parouPeloLogin.value && !podeLigar.value
-    ? ta('PECA_AO_ADMIN')
-    : ta(`PAROU.${motivoDaParada.value}_FAZER`)
-);
+const fazerDaParada = computed(() => {
+  if (parouPeloLogin.value && !podeLigar.value) {
+    return t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN');
+  }
+  return parouPeloLogin.value
+    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.PAROU.PEDE_LOGIN_FAZER')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.PAROU.FALHOU_FAZER');
+});
 // Sem o login aceito e sem poder escrevê-lo, não há janela para abrir.
 const pedirAoAdmin = computed(() => !conectado.value && !podeLigar.value);
 const loginRecusadoNaConta = computed(
   () => props.pedeLogin && !conectado.value
 );
 const rotuloDeTrazer = seguros =>
-  ta('CONFERIR.TRAZER', { count: seguros }, seguros);
+  t(
+    'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.TRAZER',
+    { count: seguros },
+    seguros
+  );
 const fraseDosNumeros = computed(() =>
   [
-    ta('CONFERIR.ENTRAM', { count: atual.value.seguros }, atual.value.seguros),
-    ta(
-      'CONFERIR.DE_PESSOAS',
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.ENTRAM',
+      { count: atual.value.seguros },
+      atual.value.seguros
+    ),
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.DE_PESSOAS',
       { count: atual.value.pessoas },
       atual.value.pessoas
     ),
   ].join(' ')
+);
+const fraseDoTrazendo = computed(() =>
+  t('RELACIONAMENTOS_CARTEIRA.AGGER.TRAZENDO', {
+    porcentagem: andamento.value?.porcentagem ?? 0,
+  })
 );
 const seguradoras = computed(() => atual.value?.porSeguradora ?? []);
 const chegaram = computed(() => ({
@@ -180,20 +193,22 @@ onBeforeUnmount(busca.parar);
         tabindex="-1"
         class="m-0 text-2xl font-semibold text-n-slate-12"
       >
-        {{ ta('TITULO') }}
+        {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.TITULO') }}
       </h1>
       <p v-if="erro" role="alert" class="m-0 text-base text-n-ruby-11">
         {{ t(erro) }}
       </p>
 
       <template v-if="etapa === ETAPAS_DO_AGGER.INICIO">
-        <p class="m-0 text-lg text-n-slate-11">{{ ta('APOIO') }}</p>
+        <p class="m-0 text-lg text-n-slate-11">
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.APOIO') }}
+        </p>
         <p
           v-if="pedirAoAdmin"
           data-carteira="peca-ao-admin"
           class="m-0 text-base font-medium text-n-slate-12"
         >
-          {{ ta('PECA_AO_ADMIN') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN') }}
         </p>
         <Button
           v-else
@@ -202,7 +217,7 @@ onBeforeUnmount(busca.parar);
           data-carteira="buscar-no-agger"
           class="self-start !h-14 !px-8 !text-lg"
           :is-loading="ocupado"
-          :label="ta('BUSCAR')"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCAR')"
           @click="comecar"
         />
         <BuscaDeTodoDia
@@ -226,7 +241,7 @@ onBeforeUnmount(busca.parar);
           data-carteira="buscando-no-agger"
           class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
         >
-          {{ ta('BUSCANDO') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCANDO') }}
         </p>
         <div
           v-else
@@ -235,7 +250,7 @@ onBeforeUnmount(busca.parar);
           class="flex flex-col gap-2 p-6 border rounded-3xl border-n-amber-6 bg-n-amber-2"
         >
           <span class="text-lg font-medium text-n-slate-12">
-            {{ ta(`PAROU.${motivoDaParada}`) }}
+            {{ fraseDaParada }}
           </span>
           <span class="text-base text-n-slate-11">
             {{ fazerDaParada }}
@@ -251,7 +266,7 @@ onBeforeUnmount(busca.parar);
           data-carteira="busca-parada"
           class="m-0 text-base text-n-slate-11"
         >
-          {{ ta('PARADO') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PARADO') }}
         </p>
         <Button
           v-if="parouPeloLogin && podeLigar"
@@ -259,7 +274,7 @@ onBeforeUnmount(busca.parar);
           type="button"
           class="self-start"
           data-carteira="entrar-no-agger"
-          :label="ta('ENTRAR')"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.ENTRAR')"
           @click="login?.abrir()"
         />
         <Button
@@ -269,7 +284,7 @@ onBeforeUnmount(busca.parar);
           class="self-start"
           data-carteira="tentar-de-novo"
           :is-loading="ocupado"
-          :label="ta('TENTAR_DE_NOVO')"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.TENTAR_DE_NOVO')"
           @click="busca.tentarDeNovo"
         />
       </template>
@@ -283,8 +298,8 @@ onBeforeUnmount(busca.parar);
         >
           <li v-if="atual.jaNaCarteira" data-carteira="ja-na-carteira">
             {{
-              ta(
-                'CONFERIR.JA_NA_CARTEIRA',
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.JA_NA_CARTEIRA',
                 { count: atual.jaNaCarteira },
                 atual.jaNaCarteira
               )
@@ -292,8 +307,8 @@ onBeforeUnmount(busca.parar);
           </li>
           <li v-if="atual.pessoasNovas" data-carteira="pessoas-novas">
             {{
-              ta(
-                'CONFERIR.PESSOAS_NOVAS',
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.PESSOAS_NOVAS',
                 { count: atual.pessoasNovas },
                 atual.pessoasNovas
               )
@@ -301,8 +316,8 @@ onBeforeUnmount(busca.parar);
           </li>
           <li v-if="atual.semTelefone" data-carteira="sem-telefone">
             {{
-              ta(
-                'CONFERIR.SEM_TELEFONE',
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.SEM_TELEFONE',
                 { count: atual.semTelefone },
                 atual.semTelefone
               )
@@ -310,8 +325,8 @@ onBeforeUnmount(busca.parar);
           </li>
           <li v-if="atual.naoDeuParaTrazer" data-carteira="nao-deu-para-trazer">
             {{
-              ta(
-                'CONFERIR.NAO_DEU',
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NAO_DEU',
                 { count: atual.naoDeuParaTrazer },
                 atual.naoDeuParaTrazer
               )
@@ -330,7 +345,7 @@ onBeforeUnmount(busca.parar);
             size="lg"
             type="button"
             data-carteira="buscar-de-novo"
-            :label="ta('CONFERIR.DE_NOVO')"
+            :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.DE_NOVO')"
             @click="busca.deNovo"
           />
           <Button
@@ -347,7 +362,7 @@ onBeforeUnmount(busca.parar);
             data-carteira="nada-para-trazer"
             class="m-0 text-base text-n-slate-11 sm:self-center sm:text-end"
           >
-            {{ ta('CONFERIR.NADA') }}
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NADA') }}
           </p>
         </div>
       </template>
@@ -358,14 +373,14 @@ onBeforeUnmount(busca.parar);
           aria-busy="true"
           class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
         >
-          {{ ta('TRAZENDO', { porcentagem: andamento?.porcentagem ?? 0 }) }}
+          {{ fraseDoTrazendo }}
         </p>
         <p
           v-if="parado && !semAcompanhar"
           data-carteira="trazendo-parado"
           class="m-0 text-base text-n-slate-11"
         >
-          {{ ta('PARADO') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PARADO') }}
         </p>
         <Button
           v-if="semAcompanhar || parado"
@@ -373,7 +388,7 @@ onBeforeUnmount(busca.parar);
           type="button"
           class="self-start"
           data-carteira="tentar-de-novo"
-          :label="ta('TENTAR_DE_NOVO')"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.TENTAR_DE_NOVO')"
           @click="busca.tentarDeNovo"
         />
       </template>
@@ -383,7 +398,9 @@ onBeforeUnmount(busca.parar);
           <template #frase>
             <span class="tabular-nums text-balance">{{ fraseDoPronto }}</span>
           </template>
-          <template #apoio>{{ ta('PRONTO.APOIO') }}</template>
+          <template #apoio>
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.APOIO') }}
+          </template>
           <template #acao>
             <Button
               size="lg"
@@ -396,7 +413,7 @@ onBeforeUnmount(busca.parar);
               size="lg"
               data-carteira="voltar-ao-inicio"
               :class="BOTAO_DISCRETO_DO_HEROI"
-              :label="ta('PRONTO.VOLTAR')"
+              :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.VOLTAR')"
               @click="voltarAoInicio"
             />
           </template>

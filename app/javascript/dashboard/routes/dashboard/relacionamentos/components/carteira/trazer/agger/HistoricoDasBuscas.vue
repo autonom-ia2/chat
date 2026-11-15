@@ -12,7 +12,6 @@ import DialogoDeConfirmacao from '../../DialogoDeConfirmacao.vue';
 // sozinhas. A que ainda está buscando ou no Conferir tem "Continuar"; a
 // trazida, dentro da guarda, tem "Desfazer", que antes mostra o que sai e o que
 // fica (a mesma prévia dos PDFs: só sai o que veio na busca e ninguém mexeu).
-// A prévia diz só as partes que não são zero, cada uma no singular ou plural.
 const props = defineProps({
   fonte: { type: Object, required: true },
 });
@@ -20,20 +19,63 @@ const emit = defineEmits(['continuar']);
 
 const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.AGGER.NAO_DEU';
 const CONTINUA = ['lendo', 'parou', 'lida', 'trazendo'];
-const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO';
-const PARTES_DA_PREVIA = [
-  ['SAEM', 'saem'],
-  ['VOLTAM', 'voltam'],
-  ['FICAM', 'ficam'],
-  ['PESSOAS_SAEM', 'pessoasSaem'],
-  ['PESSOAS_FICAM', 'pessoasFicam'],
-];
 
 const { t, locale } = useI18n();
-const th = (chave, valores, plural) =>
-  plural === undefined
-    ? t(`${BASE}.${chave}`, valores)
-    : t(`${BASE}.${chave}`, valores, plural);
+// Cada parte da prévia do Desfazer, no singular ou no plural; só entra a que
+// não é zero.
+const PARTES_DA_PREVIA = {
+  saem: count =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.SAEM',
+      { count },
+      count
+    ),
+  voltam: count =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.VOLTAM',
+      { count },
+      count
+    ),
+  ficam: count =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.FICAM',
+      { count },
+      count
+    ),
+  pessoasSaem: count =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.PESSOAS_SAEM',
+      { count },
+      count
+    ),
+  pessoasFicam: count =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.PESSOAS_FICAM',
+      { count },
+      count
+    ),
+};
+const SITUACOES = {
+  lendo: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.LENDO'),
+  parou: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.PAROU'),
+  lida: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.LIDA'),
+  trazendo: () =>
+    t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.TRAZENDO'),
+  trazida: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.TRAZIDA'),
+  desfazendo: () =>
+    t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.DESFAZENDO'),
+  desfeita: () =>
+    t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.SITUACAO.DESFEITA'),
+};
+const linhaDiaria = count =>
+  t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.LINHA_DIARIA', { count }, count);
+const linhaDaBusca = count =>
+  t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.LINHA', { count }, count);
+const textosDaPrevia = computed(() => ({
+  titulo: t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.TITULO'),
+  confirmar: t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.CONFIRMAR'),
+  voltar: t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.VOLTAR'),
+}));
 const buscas = ref([]);
 const erro = ref('');
 const ocupado = ref(false);
@@ -53,12 +95,14 @@ const falhou = falha => {
 
 const avisoDaPrevia = computed(() => {
   if (!previa.value) return '';
-  const comNumero = PARTES_DA_PREVIA.filter(([, campo]) => previa.value[campo]);
-  const partes = comNumero.map(([chave, campo]) => {
-    const count = previa.value[campo];
-    return th(`PREVIA.AVISO.${chave}`, { count }, count);
-  });
-  return partes.length ? partes.join(' ') : th('PREVIA.AVISO.NADA');
+  const campos = Object.keys(PARTES_DA_PREVIA);
+  const comNumero = campos.filter(campo => previa.value[campo]);
+  const partes = comNumero.map(campo =>
+    PARTES_DA_PREVIA[campo](previa.value[campo])
+  );
+  return partes.length
+    ? partes.join(' ')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.PREVIA.AVISO.NADA');
 });
 
 const carregar = async () => {
@@ -96,7 +140,7 @@ const desfazer = async () => {
 };
 
 const linha = ({ diaria, seguros }) =>
-  th(diaria ? 'LINHA_DIARIA' : 'LINHA', { count: seguros }, seguros);
+  diaria ? linhaDiaria(seguros) : linhaDaBusca(seguros);
 
 onMounted(carregar);
 defineExpose({ carregar });
@@ -109,7 +153,7 @@ defineExpose({ carregar });
     :class="{ hidden: !buscas.length && !erro }"
   >
     <h2 class="m-0 text-lg font-semibold text-n-slate-12">
-      {{ th('TITULO') }}
+      {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.TITULO') }}
     </h2>
     <template v-if="erro">
       <p role="alert" class="m-0 text-base text-n-ruby-11">{{ t(erro) }}</p>
@@ -135,9 +179,9 @@ defineExpose({ carregar });
           </span>
           <span class="text-sm text-n-slate-11">
             {{
-              th('QUANDO', {
+              t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.QUANDO', {
                 quando: quando(busca.quando),
-                situacao: th(`SITUACAO.${busca.situacao.toUpperCase()}`),
+                situacao: SITUACOES[busca.situacao](),
               })
             }}
           </span>
@@ -149,7 +193,7 @@ defineExpose({ carregar });
           class="self-start px-4 text-sm font-medium border rounded-xl min-h-11 border-n-weak text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="emit('continuar', busca.id)"
         >
-          {{ th('CONTINUAR') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.CONTINUAR') }}
         </button>
         <button
           v-else-if="busca.podeDesfazer"
@@ -158,17 +202,17 @@ defineExpose({ carregar });
           class="self-start px-4 text-sm font-medium border rounded-xl min-h-11 border-n-weak text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="pedirDesfazer(busca)"
         >
-          {{ th('DESFAZER') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.HISTORICO.DESFAZER') }}
         </button>
       </li>
     </ul>
     <DialogoDeConfirmacao
       ref="dialogo"
       marca="desfazer-busca"
-      :titulo="th('PREVIA.TITULO')"
+      :titulo="textosDaPrevia.titulo"
       :aviso="avisoDaPrevia"
-      :confirmar="th('PREVIA.CONFIRMAR')"
-      :voltar="th('PREVIA.VOLTAR')"
+      :confirmar="textosDaPrevia.confirmar"
+      :voltar="textosDaPrevia.voltar"
       :ocupado="ocupado"
       @confirmar="desfazer"
       @fechou="escolhida = null"

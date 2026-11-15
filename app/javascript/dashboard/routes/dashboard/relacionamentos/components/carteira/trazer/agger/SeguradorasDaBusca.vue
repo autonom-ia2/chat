@@ -17,31 +17,51 @@ const emit = defineEmits(['tentar']);
 
 const { t } = useI18n();
 const id = useId();
-const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA';
-const COM_AVISO = ['pede_login', 'sem_login', 'falhou'];
-
-const frase = ({ nome, situacao }) => {
-  const chave = `${BASE}.${situacao.toUpperCase()}`;
-  return nome ? t(`${chave}.FRASE`, { nome }) : t(`${chave}.FRASE_SEM_NOME`);
+// As frases de cada situação que tem aviso, com as chaves escritas por inteiro.
+const TEXTOS = {
+  pede_login: {
+    frase: nome =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.PEDE_LOGIN.FRASE', { nome }),
+    semNome: () =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.PEDE_LOGIN.FRASE_SEM_NOME'),
+    fazer: () =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.PEDE_LOGIN.FAZER'),
+  },
+  sem_login: {
+    frase: nome =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.SEM_LOGIN.FRASE', { nome }),
+    semNome: () =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.SEM_LOGIN.FRASE_SEM_NOME'),
+    fazer: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.SEM_LOGIN.FAZER'),
+  },
+  falhou: {
+    frase: nome =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.FALHOU.FRASE', { nome }),
+    semNome: () =>
+      t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.FALHOU.FRASE_SEM_NOME'),
+    fazer: () => t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.FALHOU.FAZER'),
+  },
 };
 
 const avisos = computed(() =>
   props.seguradoras
-    .filter(seguradora => COM_AVISO.includes(seguradora.situacao))
+    .filter(seguradora => TEXTOS[seguradora.situacao])
     .map((seguradora, indice) => ({
       chave: `${id}-${indice}`,
       situacao: seguradora.situacao,
-      frase: frase(seguradora),
-      fazer: t(`${BASE}.${seguradora.situacao.toUpperCase()}.FAZER`),
+      frase: seguradora.nome
+        ? TEXTOS[seguradora.situacao].frase(seguradora.nome)
+        : TEXTOS[seguradora.situacao].semNome(),
+      fazer: TEXTOS[seguradora.situacao].fazer(),
     }))
 );
 </script>
 
 <template>
   <ul
-    v-if="avisos.length"
     data-carteira="seguradoras-da-busca"
     class="flex flex-col gap-3 p-0 m-0 list-none"
+    :class="{ hidden: !avisos.length }"
   >
     <li
       v-for="aviso in avisos"
@@ -62,7 +82,7 @@ const avisos = computed(() =>
         :aria-busy="ocupado"
         @click="emit('tentar')"
       >
-        {{ t(`${BASE}.TENTAR`) }}
+        {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORA.TENTAR') }}
       </button>
     </li>
   </ul>

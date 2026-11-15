@@ -23,7 +23,6 @@ const props = defineProps({
 const emit = defineEmits(['entrar']);
 
 const { t } = useI18n();
-const BASE = 'RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA';
 const ligado = ref(false);
 const jaTrouxe = ref(false);
 const carregou = ref(false);
@@ -31,8 +30,17 @@ const ocupado = ref(false);
 const erro = ref('');
 const fazerComOLogin = computed(() =>
   props.podeLigar
-    ? `${BASE}.PEDE_LOGIN_FAZER`
-    : 'RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN'
+    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA.PEDE_LOGIN_FAZER')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN')
+);
+const fraseDoInterruptor = computed(() =>
+  ligado.value
+    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA.LIGADO')
+    : t('RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA.DESLIGADO')
+);
+// Aparece depois da primeira busca trazida, ou para dizer que não deu.
+const aparece = computed(
+  () => (carregou.value && jaTrouxe.value) || Boolean(erro.value)
 );
 
 const falhou = falha => {
@@ -76,9 +84,9 @@ defineExpose({ carregar });
 
 <template>
   <section
-    v-if="(carregou && jaTrouxe) || erro"
     data-carteira="busca-de-todo-dia"
     class="flex flex-col gap-2"
+    :class="{ hidden: !aparece }"
   >
     <button
       v-if="carregou"
@@ -91,7 +99,9 @@ defineExpose({ carregar });
       class="flex items-center justify-between w-full gap-4 p-4 text-start border rounded-2xl min-h-11 border-n-weak bg-n-solid-1 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       @click="trocar"
     >
-      <span class="text-base font-medium">{{ t(`${BASE}.ROTULO`) }}</span>
+      <span class="text-base font-medium">
+        {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA.ROTULO') }}
+      </span>
       <span
         aria-hidden="true"
         class="relative inline-flex items-center flex-shrink-0 h-7 transition-colors rounded-full w-12"
@@ -111,10 +121,10 @@ defineExpose({ carregar });
       class="flex flex-col gap-2 p-4 border rounded-2xl border-n-amber-6 bg-n-amber-2"
     >
       <span class="text-base font-medium text-n-slate-12">
-        {{ t(`${BASE}.PEDE_LOGIN`) }}
+        {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.TODO_DIA.PEDE_LOGIN') }}
       </span>
       <span class="text-sm text-n-slate-11">
-        {{ t(fazerComOLogin) }}
+        {{ fazerComOLogin }}
       </span>
       <button
         v-if="podeLigar"
@@ -131,7 +141,7 @@ defineExpose({ carregar });
       id="carteira-agger-todo-dia-apoio"
       class="m-0 text-sm text-n-slate-11"
     >
-      {{ t(ligado ? `${BASE}.LIGADO` : `${BASE}.DESLIGADO`) }}
+      {{ fraseDoInterruptor }}
     </p>
     <template v-if="erro">
       <p role="alert" class="m-0 text-base text-n-ruby-11">{{ t(erro) }}</p>
