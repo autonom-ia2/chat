@@ -57,8 +57,8 @@ RSpec.describe Autonomia::Agents::BuildThread do
       expect(conversa.state.slice('actuation', 'with_knowledge')).to eq('actuation' => 'external', 'with_knowledge' => false)
     end
 
-    it 'abre os três modelos do piloto' do
-      %w[seguro_auto seguro_garantia transporte_carga].each do |chave|
+    it 'abre o modelo de cada ramo' do
+      Autonomia::Agents::ModelosDeRamo.chaves.each do |chave|
         expect(abrir(modelo: chave).state.dig(chave_da_marca, 'chave')).to eq(chave)
       end
     end

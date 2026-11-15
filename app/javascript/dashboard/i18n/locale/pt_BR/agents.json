@@ -698,6 +698,102 @@
             "TEXTO": "Prédios e condomínios de casas. Pede os dados do condomínio e do prédio.",
             "CLIENTE": "Sou síndico e preciso do seguro do prédio",
             "AGENTE": "Vamos lá! É um seguro novo ou a renovação de um que já existe?"
+          },
+          "RESIDENCIAL": {
+            "TITULO": "Seguro residencial",
+            "TEXTO": "Casa e apartamento, próprio ou alugado. Pede o CEP, o imóvel e o que segurar.",
+            "CLIENTE": "Quero fazer o seguro da minha casa",
+            "AGENTE": "Claro! Qual o CPF de quem vai contratar o seguro?"
+          },
+          "VIDA": {
+            "TITULO": "Seguro de vida",
+            "TEXTO": "Apoio em dinheiro para a família. Pede os dados de quem vai ter o seguro e o valor.",
+            "CLIENTE": "Quero fazer um seguro de vida",
+            "AGENTE": "Claro! Qual é o seu CPF? É pedido no cadastro da cotação."
+          },
+          "SAUDE": {
+            "TITULO": "Plano de saúde",
+            "TEXTO": "Individual, familiar e empresarial. Pede quem entra no plano e onde vão usar.",
+            "CLIENTE": "Quero um plano de saúde para a minha família",
+            "AGENTE": "Vamos lá! Quantas pessoas vão entrar no plano?"
+          },
+          "EMPRESARIAL": {
+            "TITULO": "Seguro empresarial",
+            "TEXTO": "Loja, escritório, fábrica e depósito. Pede o CNPJ, o endereço e o que proteger.",
+            "CLIENTE": "Preciso de seguro para a minha loja",
+            "AGENTE": "Claro! Esse seguro é novo ou é para renovar um que está vencendo?"
+          },
+          "ALUGUEL": {
+            "TITULO": "Seguro aluguel",
+            "TEXTO": "Fiança para alugar casa, apartamento ou ponto comercial. Pede quem aluga, o imóvel e a renda.",
+            "CLIENTE": "Preciso de um seguro fiança para alugar um apartamento",
+            "AGENTE": "Vamos lá! É um seguro novo ou a renovação de um que já existe?"
+          },
+          "VIAGEM": {
+            "TITULO": "Seguro viagem",
+            "TEXTO": "Viagem pelo Brasil e para fora. Pede o destino, as datas e quem vai viajar.",
+            "CLIENTE": "Preciso de seguro para uma viagem em dezembro",
+            "AGENTE": "Boa viagem! A viagem é pelo Brasil ou para fora?"
+          },
+          "CELULAR": {
+            "TITULO": "Seguro de celular",
+            "TEXTO": "Roubo, furto e quebra. Pede a marca, o modelo e a nota do celular.",
+            "CLIENTE": "Quero seguro para o meu celular novo",
+            "AGENTE": "Vamos lá! Qual é a marca do celular?"
+          },
+          "BIKE": {
+            "TITULO": "Seguro de bike",
+            "TEXTO": "Bike comum e elétrica. Pede a marca, o modelo, a nota e como usa.",
+            "CLIENTE": "Quero segurar a minha bicicleta",
+            "AGENTE": "Ótimo! É um seguro novo ou a renovação de um que você já tem?"
+          },
+          "VIDA_GRUPO": {
+            "TITULO": "Vida em grupo",
+            "TEXTO": "Seguro de vida da empresa para os funcionários. Pede o CNPJ e quem entra no seguro.",
+            "CLIENTE": "Quero um seguro de vida para os meus funcionários",
+            "AGENTE": "Ótimo! Qual é o CNPJ da empresa?"
+          },
+          "ACIDENTES": {
+            "TITULO": "Acidentes pessoais",
+            "TEXTO": "Proteção em caso de acidente, com invalidez e despesas. Pede quem vai ter o seguro e o trabalho.",
+            "CLIENTE": "Quero um seguro contra acidentes",
+            "AGENTE": "Claro! O seguro é para você ou para outra pessoa?"
+          },
+          "RC_PROFISSIONAL": {
+            "TITULO": "RC profissional",
+            "TEXTO": "Erro no trabalho de médico, dentista, advogado, engenheiro e outros. Pede a profissão e o faturamento.",
+            "CLIENTE": "Sou dentista e quero um seguro para erro profissional",
+            "AGENTE": "Claro! O seguro é para você, como pessoa física, ou para a sua empresa?"
+          },
+          "RC_GERAL": {
+            "TITULO": "Responsabilidade civil",
+            "TEXTO": "Danos que a empresa ou o trabalho causem a outras pessoas. Pede a atividade e o valor do seguro.",
+            "CLIENTE": "Um cliente pediu que eu tenha seguro de responsabilidade civil",
+            "AGENTE": "Posso ajudar. Você vai fazer o seguro no seu nome ou no nome de uma empresa?"
+          },
+          "CIBERNETICO": {
+            "TITULO": "Seguro cibernético",
+            "TEXTO": "Ataque hacker e vazamento de dados. Pede o CNPJ, o faturamento e os cuidados de segurança.",
+            "CLIENTE": "Quero proteger a minha empresa contra ataque hacker",
+            "AGENTE": "Posso ajudar. Qual o CNPJ da empresa?"
+          },
+          "ENGENHARIA": {
+            "TITULO": "Riscos de engenharia",
+            "TEXTO": "Obra nova, reforma e montagem. Pede o tipo de obra, as datas e o valor.",
+            "CLIENTE": "Vou começar uma obra e preciso de seguro",
+            "AGENTE": "Vamos lá! Que tipo de obra é: construção nova, reforma, ampliação ou outra?"
+          },
+          "RURAL": {
+            "TITULO": "Seguro rural",
+            "TEXTO": "Lavoura, animais, máquinas e construções da propriedade. Pede o que segurar e a área.",
+            "CLIENTE": "Quero fazer o seguro da minha lavoura de soja",
+            "AGENTE": "Claro! É um seguro novo ou a renovação de um que você já tem?"
+          },
+          "AVIACAO": {
+            "TITULO": "Seguro aeronáutico",
+            "TEXTO": "Avião, helicóptero e danos a outras pessoas. Pede a aeronave, o uso e o piloto.",
+            "CLIENTE": "Preciso do seguro do meu avião",
+            "AGENTE": "Posso ajudar. O que você quer proteger: o próprio avião, os danos a outras pessoas, ou os dois?"
           }
         },
         "CRIAR": {

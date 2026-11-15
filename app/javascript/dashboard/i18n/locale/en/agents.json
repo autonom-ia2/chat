@@ -698,6 +698,102 @@
             "TEXTO": "Apartment buildings and gated communities. Asks for the condominium and building details.",
             "CLIENTE": "I manage a building and need its insurance",
             "AGENTE": "Let's do it! Is this a new policy or the renewal of one you already have?"
+          },
+          "RESIDENCIAL": {
+            "TITULO": "Home insurance",
+            "TEXTO": "House and apartment, owned or rented. Asks for the postal code, the property and what to cover.",
+            "CLIENTE": "I want to insure my house",
+            "AGENTE": "Sure! What is the tax ID of the person taking out the policy?"
+          },
+          "VIDA": {
+            "TITULO": "Life insurance",
+            "TEXTO": "Financial support for the family. Asks for the insured person's details and the amount.",
+            "CLIENTE": "I want to take out life insurance",
+            "AGENTE": "Sure! What is your tax ID? It is needed to register the quote."
+          },
+          "SAUDE": {
+            "TITULO": "Health plan",
+            "TEXTO": "Individual, family and business. Asks who joins the plan and where they will use it.",
+            "CLIENTE": "I want a health plan for my family",
+            "AGENTE": "Let's go! How many people will join the plan?"
+          },
+          "EMPRESARIAL": {
+            "TITULO": "Business insurance",
+            "TEXTO": "Shop, office, factory and warehouse. Asks for the company tax ID, the address and what to protect.",
+            "CLIENTE": "I need insurance for my shop",
+            "AGENTE": "Sure! Is this a new policy or a renewal of one that is expiring?"
+          },
+          "ALUGUEL": {
+            "TITULO": "Rent guarantee insurance",
+            "TEXTO": "Guarantee to rent a house, apartment or shop. Asks who rents, the property and the income.",
+            "CLIENTE": "I need rent guarantee insurance to rent an apartment",
+            "AGENTE": "Let's go! Is this a new policy or the renewal of one you already have?"
+          },
+          "VIAGEM": {
+            "TITULO": "Travel insurance",
+            "TEXTO": "Trips within Brazil and abroad. Asks for the destination, the dates and who is travelling.",
+            "CLIENTE": "I need insurance for a trip in December",
+            "AGENTE": "Have a good trip! Is the trip within Brazil or abroad?"
+          },
+          "CELULAR": {
+            "TITULO": "Phone insurance",
+            "TEXTO": "Robbery, theft and damage. Asks for the phone's brand, model and invoice.",
+            "CLIENTE": "I want insurance for my new phone",
+            "AGENTE": "Let's go! What is the phone's brand?"
+          },
+          "BIKE": {
+            "TITULO": "Bike insurance",
+            "TEXTO": "Regular and electric bikes. Asks for the brand, model, invoice and how it is used.",
+            "CLIENTE": "I want to insure my bicycle",
+            "AGENTE": "Great! Is this a new policy or the renewal of one you already have?"
+          },
+          "VIDA_GRUPO": {
+            "TITULO": "Group life insurance",
+            "TEXTO": "Company life insurance for employees. Asks for the company tax ID and who joins.",
+            "CLIENTE": "I want life insurance for my employees",
+            "AGENTE": "Great! What is the company's tax ID?"
+          },
+          "ACIDENTES": {
+            "TITULO": "Personal accident",
+            "TEXTO": "Protection in case of accident, with disability and expenses. Asks who is insured and their work.",
+            "CLIENTE": "I want accident insurance",
+            "AGENTE": "Sure! Is the insurance for you or for someone else?"
+          },
+          "RC_PROFISSIONAL": {
+            "TITULO": "Professional liability",
+            "TEXTO": "Work mistakes by doctors, dentists, lawyers, engineers and others. Asks for the profession and the revenue.",
+            "CLIENTE": "I am a dentist and want insurance for professional mistakes",
+            "AGENTE": "Sure! Is the insurance for you as an individual or for your company?"
+          },
+          "RC_GERAL": {
+            "TITULO": "General liability",
+            "TEXTO": "Damage the company or the work causes to other people. Asks for the activity and the coverage amount.",
+            "CLIENTE": "A client asked me to have liability insurance",
+            "AGENTE": "I can help. Will the policy be in your name or in a company's name?"
+          },
+          "CIBERNETICO": {
+            "TITULO": "Cyber insurance",
+            "TEXTO": "Hacker attacks and data leaks. Asks for the company tax ID, the revenue and the security measures.",
+            "CLIENTE": "I want to protect my company against hacker attacks",
+            "AGENTE": "I can help. What is the company's tax ID?"
+          },
+          "ENGENHARIA": {
+            "TITULO": "Construction risks",
+            "TEXTO": "New builds, renovations and installations. Asks for the type of work, the dates and the value.",
+            "CLIENTE": "I am starting a construction and need insurance",
+            "AGENTE": "Let's go! What type of work is it: new build, renovation, extension or other?"
+          },
+          "RURAL": {
+            "TITULO": "Rural insurance",
+            "TEXTO": "Crops, animals, machinery and farm buildings. Asks what to insure and the area.",
+            "CLIENTE": "I want to insure my soybean crop",
+            "AGENTE": "Sure! Is this a new policy or the renewal of one you already have?"
+          },
+          "AVIACAO": {
+            "TITULO": "Aviation insurance",
+            "TEXTO": "Airplanes, helicopters and damage to other people. Asks for the aircraft, its use and the pilot.",
+            "CLIENTE": "I need insurance for my airplane",
+            "AGENTE": "I can help. What do you want to protect: the aircraft itself, damage to other people, or both?"
           }
         },
         "CRIAR": {

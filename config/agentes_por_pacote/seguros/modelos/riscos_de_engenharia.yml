@@ -1,0 +1,207 @@
+chave: riscos_de_engenharia
+tipo: sdr
+nome_padrao: "Assistente de Seguro de Obras"
+ramo: "Seguro de riscos de engenharia (obras)"
+seguradoras_sugeridas: "Mapfre, Sompo, AIG e Chubb"
+blocos:
+  - nome: "A obra"
+    perguntas:
+      - texto: "Que tipo de obra é: construção nova, reforma, ampliação, demolição, instalação ou montagem, obra industrial ou outra?"
+        ligada: true
+      - texto: "Me conta em poucas palavras o que vai ser feito na obra."
+        se: "a pessoa ainda não tiver descrito a obra"
+        segue: true
+      - texto: "O imóvel fica ocupado ou alugado durante a reforma?"
+        se: "for reforma"
+        segue: true
+      - texto: "A obra já começou, ou ainda está no planejamento?"
+        ligada: true
+      - texto: "O que já foi feito na obra até agora?"
+        se: "a obra já tiver começado"
+        segue: true
+      - texto: "Aconteceu algum problema na obra até aqui?"
+        se: "a obra já tiver começado"
+        segue: true
+      - texto: "Tem parte da obra já entregue ou funcionando?"
+  - nome: "Datas e valor"
+    perguntas:
+      - texto: "Em que dia a obra começa, ou começou?"
+        ligada: true
+      - texto: "Quanto tempo a obra deve levar?"
+        ligada: true
+      - texto: "Qual o valor total da obra, contando mão de obra, material e o que o dono vai comprar?"
+        ligada: true
+      - texto: "Como a obra vai ser tocada: por empreitada global (a construtora cuida de tudo por um preço fechado), por administração (o dono paga os custos e a construtora administra) ou de outro jeito?"
+  - nome: "Seguro que já existe"
+    perguntas:
+      - texto: "Qual a seguradora do seguro que a obra tem hoje?"
+        se: "a obra já tiver seguro e a ideia for estender o prazo"
+      - texto: "Em que dia vence o seguro que a obra tem hoje?"
+        se: "a obra já tiver seguro e a ideia for estender o prazo"
+  - nome: "Quem fica no seguro"
+    perguntas:
+      - texto: "O seguro fica no nome de quem: do dono da obra, da construtora ou dos dois?"
+        ligada: true
+      - texto: "Qual o CNPJ da construtora ou empreiteira da obra? Se não souber, o nome dela."
+        se: "o seguro for no nome do dono da obra"
+        segue: true
+      - texto: "Qual o CNPJ de quem fica no seguro? Se for pessoa, o CPF."
+        ligada: true
+      - texto: "Qual o nome completo ou a razão social de quem fica no seguro?"
+        se: "a consulta do CPF ou do CNPJ não trouxer isso"
+        segue: true
+        ligada: true
+      - texto: "Qual o endereço de quem fica no seguro?"
+        se: "a consulta do CPF ou do CNPJ não trouxer isso"
+        segue: true
+      - texto: "O que faz a empresa que fica no seguro?"
+        se: "for empresa e a consulta do CNPJ não trouxer isso"
+        segue: true
+      - texto: "Quem são os donos e os administradores da empresa que fica no seguro? É pedido no cadastro."
+        se: "for empresa e a consulta do CNPJ não trouxer isso"
+        segue: true
+      - texto: "Algum dono ou administrador da empresa que fica no seguro tem ou teve cargo público importante? É pedido no cadastro."
+        se: "for empresa"
+        segue: true
+      - texto: "Você tem ou teve cargo público importante? É pedido no cadastro."
+        se: "for pessoa"
+        segue: true
+      - texto: "Consegue me passar como está a situação financeira e o patrimônio da empresa que fica no seguro? É pedido no cadastro."
+        se: "for empresa"
+        segue: true
+  - nome: "Quem trabalha na obra"
+    perguntas:
+      - texto: "Que outras empresas vão trabalhar na obra, além da principal? Se não tiver, tudo bem."
+      - texto: "Quem é o engenheiro ou arquiteto responsável pela obra?"
+  - nome: "O lugar da obra"
+    perguntas:
+      - texto: "Qual o CEP da obra?"
+        ligada: true
+      - texto: "Qual o número do terreno da obra, ou um ponto de referência?"
+      - texto: "O lugar da obra costuma alagar?"
+      - texto: "Tem barranco perto da obra?"
+      - texto: "Tem construção que já existia no terreno da obra?"
+      - texto: "Tem prédio colado na obra?"
+      - texto: "A obra vai fazer vibração perto de casas ou prédios vizinhos, como estaca, demolição ou escavação?"
+      - texto: "A obra fica num condomínio?"
+  - nome: "Quem pede o seguro"
+    perguntas:
+      - texto: "O síndico, a prefeitura ou quem contratou a obra pediu o certificado do seguro?"
+      - texto: "É obra pública ou de licitação?"
+      - texto: "Pediram também o seguro garantia, que garante o cumprimento do contrato da obra?"
+        se: "for obra pública ou de licitação"
+        segue: true
+      - texto: "Tem banco financiando a obra?"
+      - texto: "Tem outra empresa que precisa aparecer no documento do seguro da obra?"
+  - nome: "Máquinas e materiais"
+    perguntas:
+      - texto: "Vão usar máquinas ou equipamentos na obra?"
+      - texto: "Quais máquinas ou equipamentos vão usar na obra?"
+        se: "forem usar máquinas"
+        segue: true
+      - texto: "Quanto valem, mais ou menos, as máquinas ou equipamentos que vão usar na obra?"
+        se: "forem usar máquinas"
+        segue: true
+      - texto: "As máquinas da obra ficam paradas num lugar ou rodam pelo canteiro?"
+        se: "forem usar máquinas"
+        segue: true
+      - texto: "Vai instalar alguma máquina ou equipamento novo na obra?"
+      - texto: "Vai ter fase de testes antes da entrega da instalação ou montagem?"
+        se: "for instalação ou montagem"
+      - texto: "Quantos dias devem durar os testes da instalação ou montagem?"
+        se: "for instalação ou montagem e tiver testes"
+        segue: true
+      - texto: "Vai guardar material ou equipamento da obra fora do canteiro?"
+  - nome: "Segurança no canteiro"
+    perguntas:
+      - texto: "Vai ter barracão ou andaime na obra?"
+      - texto: "Tem trabalho em altura na obra?"
+      - texto: "Que cuidados de segurança vocês têm no canteiro da obra, como extintor, plano de emergência, controle de solda e de cigarro e treinamento?"
+  - nome: "Proteções extras"
+    perguntas:
+      - texto: "Quer escolher as proteções extras do seguro, ou prefere que a equipe sugira?"
+      - texto: "Quer incluir os riscos do fabricante da máquina nova, que a equipe explica?"
+        se: "a pessoa quiser escolher e for instalar máquina nova"
+        segue: true
+      - texto: "Quer incluir as ferramentas menores da obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir danos a vizinhos e a outras pessoas causados pela obra (a responsabilidade civil da obra)?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir danos entre as empresas que trabalham na obra (a responsabilidade civil cruzada)?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir acidente com empregado da obra (a responsabilidade do empregador)?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir erro de projeto da obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir a retirada do entulho depois de um acidente ou estrago na obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir danos por tumulto e greve na obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir o prejuízo pelo atraso que um acidente ou estrago na obra causar (lucros cessantes)?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer proteção depois da entrega, com manutenção e incêndio nos dias seguintes ao fim da obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir o pagamento do perito em caso de acidente ou estrago na obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir despesas extraordinárias da obra, que a equipe explica?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir afretamento de aeronaves, que a equipe explica?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Vai ter computador e equipamento de escritório no canteiro da obra, para incluir no seguro?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer cobrir também a parte da obra que já está funcionando?"
+        se: "a pessoa quiser escolher e tiver parte da obra já funcionando"
+        segue: true
+      - texto: "Quer incluir o custo de refazer documentos perdidos num acidente ou estrago na obra?"
+        se: "a pessoa quiser escolher"
+        segue: true
+      - texto: "Quer incluir o poço que a obra vai perfurar?"
+        se: "a pessoa quiser escolher e a obra tiver perfuração de poço"
+        segue: true
+      - texto: "Quer incluir a pesquisa de vazamento da tubulação da obra?"
+        se: "a pessoa quiser escolher e a obra tiver tubulação"
+        segue: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "A equipe pode te responder por aqui mesmo, ou prefere outro número ou e-mail?"
+documentos:
+  - "Contrato da obra, com a planilha de preços e a descrição dos serviços."
+  - "Plantas e especificações da obra."
+  - "Cronograma da obra, com as etapas e os gastos de cada uma."
+ja_vem:
+  - fonte: cnpj
+    usar_quando: "Use quando o cliente informar o CNPJ de quem fica no seguro ou da construtora, para achar a razão social, o endereço, a atividade, a situação e, se vier, os sócios da empresa sem perguntar. Anote para a equipe como achado pela consulta. Não repita o dado para o cliente nem peça confirmação. Se o número não for válido, peça uma vez, com calma, para ele conferir os números. Se não achar, não diga isso: anote e siga com as perguntas."
+  - fonte: cep
+    usar_quando: "Use quando o cliente informar o CEP da obra, para achar a rua, o bairro e a cidade sem pedir o endereço inteiro. Se ele só souber a rua e a cidade, use para achar o CEP. Anote para a equipe e não repita o endereço ao cliente. Se o CEP não trouxer endereço, peça a rua e a cidade da obra, sem dizer que a busca falhou."
+  - fonte: cpf
+    usar_quando: "Use quando o cliente informar o CPF de quem fica no seguro, para conferir se o número foi digitado certo antes de passar para a equipe. Anote o resultado para a equipe. Se o número não for válido, peça uma vez, com calma, para ele conferir os números."
+  - fonte: feriados
+    usar_quando: "Use quando o cliente disser o dia em que a obra começa, para contar os dias úteis até o início, na cidade da obra, e anotar esse número para a equipe. Não comente o prazo com o cliente nem prometa que dá tempo."
+tambem:
+  - fonte: localizacao
+    usar_quando: "Use quando o cliente mandar a localização do canteiro, para achar a cidade da obra e anotar para a equipe. Não repita a cidade para o cliente nem peça confirmação. Se não achar, não diga isso: peça o CEP da obra."
+  - fonte: cidades
+    usar_quando: "Use quando o cliente escrever o nome da cidade da obra, para conferir o nome certo e o estado e anotar para a equipe. Não repita a cidade nem peça confirmação. Se não achar, anote como ele escreveu e siga."
+  - fonte: chuva
+    usar_quando: "Use quando o cliente avisar de um dano na obra por chuva, alagamento ou vendaval, para anotar quanto choveu no dia e no local da obra e passar junto com o aviso para a equipe. Não diga o resultado ao cliente e não use para dizer se o seguro cobre."
+premium:
+  - certidoes_empresa
+  - raio_x_empresa
+  - risco_endereco
+teste:
+  - "Quanto fica o seguro de uma reforma de 300 mil?"
+  - "Vou construir um prédio de 4 andares no CEP 01001-000, começa mês que vem"
+  - "Choveu muito e caiu o muro da obra"

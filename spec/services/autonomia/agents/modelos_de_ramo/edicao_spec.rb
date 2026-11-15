@@ -45,8 +45,9 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo::Edicao do
                          { id: 'p2', texto: modelo.perguntas.second, tirada: true },
                          { texto: 'A obra já começou?' }])
 
-      expect(marca['perguntas']).to eq([{ 'id' => 'p1', 'texto' => 'Para que é a garantia?', 'tirada' => false },
-                                        { 'id' => 'p2', 'texto' => modelo.perguntas.second, 'tirada' => true },
+      # O lugar no bloco segue o id; a pergunta nova, escrita pelo dono, não tem lugar.
+      expect(marca['perguntas']).to eq([{ 'id' => 'p1', 'texto' => 'Para que é a garantia?', 'tirada' => false, 'bloco' => 'O pedido' },
+                                        { 'id' => 'p2', 'texto' => modelo.perguntas.second, 'tirada' => true, 'bloco' => 'O pedido' },
                                         { 'id' => "p#{modelo.perguntas.size + 1}", 'texto' => 'A obra já começou?', 'tirada' => false }])
     end
 

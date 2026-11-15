@@ -3,17 +3,35 @@ tipo: sdr
 nome_padrao: "Assistente de Seguro de Carga"
 ramo: "Seguro de transporte de carga"
 seguradoras_sugeridas: "Tokio Marine, Sompo e AXA"
-perguntas:
-  - "Você leva carga de outros e cobra frete, ou a carga é sua?"
-  - "Qual o CNPJ da empresa?"
-  - "Que mercadorias vocês levam? As principais."
-  - "De onde para onde? Só no Brasil ou também para fora?"
-  - "Quanto vale, em média, a carga de uma viagem? E a maior que já foi num caminhão só?"
-  - "Quantas viagens por mês, mais ou menos?"
-  - "Quantos veículos são próprios e quantos são de agregados ou autônomos?"
-  - "Como protegem a carga: rastreador, empresa de gerenciamento de risco, escolta?"
-  - "Já tem seguro de carga? Qual a seguradora, quando vence e se teve roubo ou acidente com carga nos últimos anos."
-  - "Quem cuida disso na empresa, e qual o melhor contato?"
+blocos:
+  - nome: "A empresa e a carga"
+    perguntas:
+      - texto: "Você leva carga de outros e cobra frete, ou a carga é sua?"
+        ligada: true
+      - texto: "Qual o CNPJ da empresa?"
+        ligada: true
+      - texto: "Que mercadorias vocês levam? As principais."
+        ligada: true
+      - texto: "De onde para onde? Só no Brasil ou também para fora?"
+        ligada: true
+  - nome: "Valores e viagens"
+    perguntas:
+      - texto: "Quanto vale, em média, a carga de uma viagem? E a maior que já foi num caminhão só?"
+        ligada: true
+      - texto: "Quantas viagens por mês, mais ou menos?"
+        ligada: true
+      - texto: "Quantos veículos são próprios e quantos são de agregados ou autônomos?"
+        ligada: true
+  - nome: "Proteção e histórico"
+    perguntas:
+      - texto: "Como protegem a carga: rastreador, empresa de gerenciamento de risco, escolta?"
+        ligada: true
+      - texto: "Já tem seguro de carga? Qual a seguradora, quando vence e se teve roubo ou acidente com carga nos últimos anos."
+        ligada: true
+  - nome: "Contato"
+    perguntas:
+      - texto: "Quem cuida disso na empresa, e qual o melhor contato?"
+        ligada: true
 documentos:
   - "Cartão do CNPJ e, para transportadora, o comprovante do registro na ANTT."
   - "Capa das apólices atuais e a lista de sinistros dos últimos anos."

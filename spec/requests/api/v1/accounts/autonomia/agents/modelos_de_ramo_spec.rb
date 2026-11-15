@@ -51,7 +51,8 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
 
   describe 'GET /autonomia/modelos_de_ramo' do
     it 'lista as chaves dos modelos para a conta de seguros com a flag' do
-      expect(listar).to eq('modelos' => %w[seguro_auto seguro_condominio seguro_garantia transporte_carga])
+      expect(listar).to eq('modelos' => Autonomia::Agents::ModelosDeRamo.chaves.sort)
+      expect(listar['modelos'].size).to eq(20)
       expect(response).to have_http_status(:ok)
     end
 
@@ -65,7 +66,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
     end
 
     it 'deixa ler quem tem a função de ver os agentes e recusa o agente comum' do
-      expect(listar(com_funcao(%w[autonomia_view]))['modelos'].size).to eq(4)
+      expect(listar(com_funcao(%w[autonomia_view]))['modelos'].size).to eq(20)
 
       listar(create(:user, account: account, role: :agent))
       expect(response).to have_http_status(:unauthorized)
@@ -111,7 +112,7 @@ RSpec.describe 'Modelos de agente prontos por ramo', type: :request do
       pronto = ver['modelo_pronto']
 
       expect(pronto.keys).to eq(%w[chave ramo nome_padrao seguradoras_sugeridas perguntas documentos ferramentas tambem tiradas premium teste])
-      expect(pronto['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false)
+      expect(pronto['perguntas'].first).to eq('id' => 'p1', 'texto' => modelo.perguntas.first, 'tirada' => false, 'bloco' => 'O pedido')
       expect(pronto['documentos'].size).to eq(modelo.documentos.size)
       expect(pronto['ferramentas']).to eq(modelo.ja_vem.reject { |f| f.fonte == 'compras_governo' }
                                                 .map { |f| { 'fonte' => f.fonte, 'usar_quando' => f.usar_quando } })
