@@ -12,6 +12,8 @@ module Autonomia::Guide::SoNaTelaDosModulos
     # #2899 (E6.5 e E6.6): ler e guardar o seguro de outra corretora, apagá-lo, escrever o seguro em palavras simples
     # (chamada paga) e mandá-lo ao cliente.
     ::Carteira::DeFora::SO_NA_TELA_DO_GUIA,
-    ::Carteira::Palavras::SO_NA_TELA_DO_GUIA
+    ::Carteira::Palavras::SO_NA_TELA_DO_GUIA,
+    # #2900 (E7): buscar os seguros no Agger, buscar de novo e ligar a busca de todo dia (que passa a gravar sozinha).
+    ::Carteira::Conector::SO_NA_TELA_DO_GUIA
   ).freeze
 end

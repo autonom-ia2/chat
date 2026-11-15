@@ -810,6 +810,7 @@ en:
         ready_tool_test: 'Testing a ready-made tool is only done on screen: On autopilot › Ready-made tools › open the card › Try it.'
         seguro_pdf: 'The PDF of an insurance policy is only saved, removed or opened on screen: Relationships › Insurance › open the policy.'
         seguros_por_pdf: 'Bringing policies from PDFs is only done on screen: Relationships › Bring › From policy PDFs.'
+        seguros_do_agger: 'Bringing policies from Agger, searching again and turning the daily search on or off is only done on screen: Relationships › Bring › From Agger.'
         seguro_de_fora: 'A policy from another broker is only read, saved or deleted on screen: open the person (or the conversation panel) › Insurance › Save a policy from another broker.'
         seguro_palavras: 'The policy in plain words is only written and sent to the client on screen: Relationships › Insurance › open the policy › Your policy in plain words.'
       admin_only: 'Only an account admin can do this.'

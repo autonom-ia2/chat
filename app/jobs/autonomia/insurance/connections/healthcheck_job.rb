@@ -88,7 +88,8 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   # consulta o portal, grava status e `last_healthcheck_at`, e NUNCA levanta — falha vira estado
   # consultável na tela, que é o que o corretor precisa ver. `varrer:` só para a varredura presa.
   def check(connection, varrer: false)
-    return unless ::Autonomia::Insurance::Config.enabled?(connection.account)
+    # E7 (#2900): a conexão da conta que só tem a carteira também é mantida.
+    return unless ::Autonomia::Insurance::Config.conexao_permitida?(connection.account)
 
     ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: varrer).call
   rescue StandardError => e

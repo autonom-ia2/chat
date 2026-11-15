@@ -1175,13 +1175,20 @@ Rails.application.routes.draw do
               end
               # #2899 (E6.3) — Trazer por PDFs: enviar os PDFs, conferir o lote (escrever o que faltou, confirmar ou
               # recusar o contato, deixar um PDF de fora), trazer, o andamento, os lotes já enviados e o desfazer.
+              # #2900 (E7) — Trazer pelo Agger: começar a busca e "Buscar novos seguros todo dia". A busca é uma leitura:
+              # acompanhar, conferir, trazer, buscar de novo (`de_novo`), o histórico (`?origem=conector`) e o desfazer são
+              # as rotas das leituras.
               namespace :seguros do
+                post :busca, to: 'buscas#create'
+                get :busca_diaria, to: 'buscas#busca_diaria'
+                put :busca_diaria, to: 'buscas#mudar_busca_diaria'
                 resources :leituras, only: [:index, :show, :create] do
                   member do
                     post :trazer
                     get :andamento
                     get :previa_do_desfazer
                     post :desfazer
+                    post :de_novo
                   end
                   resources :itens, only: [:update]
                 end

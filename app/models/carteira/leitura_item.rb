@@ -18,7 +18,9 @@
 class Carteira::LeituraItem < ApplicationRecord
   self.table_name = 'carteira_leitura_itens'
 
-  ESTADOS = %w[lendo lido recusado falhou fora trazido nao_entrou].freeze
+  # pedido (E7, #2900): o item 0 da busca no conector, que guarda o andamento do pedido e nunca vira seguro
+  # (Carteira::Conector::Pedido).
+  ESTADOS = %w[lendo lido recusado falhou fora trazido nao_entrou pedido].freeze
 
   belongs_to :account
   belongs_to :leitura, class_name: 'Carteira::Leitura', inverse_of: :itens

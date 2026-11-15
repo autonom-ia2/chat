@@ -14,6 +14,10 @@
 # O banco só lista as origens. Os estados crescem com quem grava (o anexar, o trazer por PDFs, a busca no conector) e
 # são validados aqui.
 #
+# A busca no conector (E7, #2900) é a leitura de origem `conector`: cada registro que o conector devolveu é um item, e
+# o primeiro item (`posicao` 0, estado `pedido`) guarda o andamento do pedido (Carteira::Conector::Pedido). `totais` diz
+# se ela é a primeira busca (PRIMEIRA) ou a de todo dia (DIARIA).
+#
 # Três entradas gravam leitura de PDF, e o `totais` diz de qual ela é (é uma contagem, como tudo ali):
 # - `anexar`: o PDF de UM seguro que já existe, anexado na gaveta para ver o que mudou (Carteira::Pdf::Ler). Um item só,
 #   que já nasce com a apólice. Nunca é trazida nem aparece no histórico; sai quando o PDF é guardado;
@@ -27,11 +31,16 @@ class Carteira::Leitura < ApplicationRecord
   ORIGENS = %w[pdf conector].freeze
   # lendo: os itens ainda estão sendo lidos. lida: pronta para conferir. trazendo: gravando as apólices. trazida:
   # confirmada (`confirmada_em`). desfazendo: o Desfazer está rodando. desfeita: o Desfazer rodou (`desfeita_em`).
-  ESTADOS = %w[lendo lida trazendo trazida desfazendo desfeita].freeze
+  # parou (E7, #2900): a busca no conector parou num erro (o login do Agger recusado, o Agger fora do ar); a pessoa
+  # tenta de novo pela tela, e a busca continua de onde estava.
+  ESTADOS = %w[lendo lida trazendo trazida desfazendo desfeita parou].freeze
   # As marcas de entrada, em `totais` (ver acima).
   DO_ANEXAR = 'anexar'.freeze
   DO_TRAZER = 'pdfs'.freeze
   DO_DE_FORA = 'de_fora'.freeze
+  # E7 (#2900): a busca no conector é a primeira (36 meses, passa pelo Conferir) ou a de todo dia (7 dias, entra sozinha).
+  PRIMEIRA = 'primeira'.freeze
+  DIARIA = 'diaria'.freeze
   # Os itens guardam dado de cliente (o que foi lido e o PDF). Saem este tanto de dias depois de a leitura ser
   # confirmada; a que ninguém confirmou conta a partir da última vez em que foi mexida (abandonada).
   DIAS_DE_GUARDA_DOS_ITENS = 30
@@ -52,6 +61,10 @@ class Carteira::Leitura < ApplicationRecord
   scope :do_trazer, -> { where(origem: 'pdf').where("carteira_leituras.totais ->> '#{DO_TRAZER}' IS NOT NULL") }
   # As leituras do PDF de um seguro de outra corretora (E6.5).
   scope :do_de_fora, -> { where(origem: 'pdf').where("carteira_leituras.totais ->> '#{DO_DE_FORA}' IS NOT NULL") }
+  # As buscas no conector (E7, #2900): a primeira e as de todo dia.
+  scope :do_conector, -> { where(origem: 'conector') }
+  # Os lotes que o histórico lista e o Desfazer desfaz: os de Trazer por PDFs e as buscas no conector.
+  scope :do_lote, -> { do_trazer.or(do_conector) }
 
   # As leituras cujos itens já passaram do prazo de guarda.
   scope :com_a_guarda_vencida, lambda { |agora = Time.current|

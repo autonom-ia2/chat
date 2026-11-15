@@ -3,20 +3,19 @@
 # - do lote de Trazer por PDFs saem só os itens. O lote fica, sem dado de cliente (só contagens), porque é por ele que
 #   as apólices que ele criou se ligam e o Desfazer as acha;
 # - a leitura do anexar que ninguém terminou e o lote que ficou no Conferir sem ser trazido saem inteiros: não criaram
-#   nada.
+#   nada. A busca no conector (E7, #2900) segue a mesma regra: a trazida fica, sem os itens; a que não foi trazida sai.
 # Sempre com `destroy`, em lote pequeno, para o PDF de cada item sair junto (a cascata do banco não apaga arquivo).
 # Rodar de novo é seguro: o que saiu não existe mais.
 class Carteira::LimpezaDasLeiturasJob < ApplicationJob
   queue_as :scheduled_jobs
   BLOCO = 100
-  # O lote que nunca saiu do Conferir.
-  NAO_TRAZIDO = %w[lendo lida].freeze
+  # O lote que nunca saiu do Conferir (a busca no conector parada também: ela não gravou nada).
+  NAO_TRAZIDO = %w[lendo lida parou].freeze
 
   def perform
     agora = Time.current
     Carteira::LeituraItem.vencidos(agora).find_each(batch_size: BLOCO, &:destroy!)
-    trazidos = Carteira::Leitura.do_trazer.where.not(estado: NAO_TRAZIDO)
-    Carteira::Leitura.com_a_guarda_vencida(agora).where(origem: 'pdf').where.not(id: trazidos.select(:id))
-                     .find_each(batch_size: BLOCO, &:destroy!)
+    trazidos = Carteira::Leitura.do_lote.where.not(estado: NAO_TRAZIDO)
+    Carteira::Leitura.com_a_guarda_vencida(agora).where.not(id: trazidos.select(:id)).find_each(batch_size: BLOCO, &:destroy!)
   end
 end

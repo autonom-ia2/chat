@@ -1,0 +1,173 @@
+require 'rails_helper'
+
+# E7 (#2900) — a busca dos seguros no conector, passo a passo, com o conector de mentira (Mock::CarteiraDaCorretora: duas
+# páginas, um registro sem referência, um endosso da mesma apólice e um registro que o adapter não leu). Tudo fictício;
+# nenhuma chamada paga: o tipo de cada ramo vem de uma pergunta falsa.
+RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
+  include ActiveJob::TestHelper
+
+  let(:account) { conta_com_carteira }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+
+  before do
+    enable_test_encryption!
+    sem_pergunta_paga_do_ramo
+  end
+
+  def conectar!(conta = account)
+    conectar_agger!(conta)
+  end
+
+  def andar_ate_o_fim(leitura, portal: nil)
+    andar_a_busca(leitura, portal: portal)
+  end
+
+  describe 'a primeira busca' do
+    before { conectar! }
+
+    it 'pede os últimos 36 meses, põe o job na fila só com o id e devolve a mesma busca enquanto ela anda' do
+      leitura = nil
+      expect { leitura = described_class.primeira(account, user: admin) }.to have_enqueued_job(Carteira::Conector::BuscaJob).with(kind_of(Integer))
+
+      pedido = Carteira::Conector::Pedido.new(leitura)
+      hoje = Carteira::Selo.hoje(account)
+      expect([pedido.desde, pedido.ate]).to eq([(hoje - 36.months).iso8601, hoje.iso8601])
+      expect(leitura).to have_attributes(origem: 'conector', estado: 'lendo', user: admin)
+      expect(described_class.primeira(account, user: admin)).to eq(leitura)
+      expect(enqueued_jobs.pluck('arguments').flatten).to all(be_a(Integer))
+    end
+
+    it 'lê as duas páginas e termina no Conferir; a conta fecha: registros + ignorados = total do conector' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+
+      expect(leitura.estado).to eq('lida')
+      itens = leitura.itens.where.not(estado: 'pedido')
+      expect(itens.where(estado: 'lido').count).to eq(4)
+      expect(itens.where(estado: 'falhou').count).to eq(1)
+      totais = leitura.totais
+      expect(totais.values_at('recebidos', 'repetidos', 'ignorados', 'total')).to eq([5, 0, 1, 6])
+      expect(itens.count + totais['repetidos'] + totais['ignorados']).to eq(totais['total'])
+      expect(itens.where(estado: 'lido').map { |item| item.campos['tipo'] }).to match_array(%w[auto residencial auto empresarial])
+    end
+
+    it 'o registro sem referência não dá para trazer, e as seguradoras ficam com nome e situação só' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+
+      expect(leitura.itens.find_by(estado: 'falhou').campos['ref']).to be_nil
+      expect(Carteira::Conector::Pedido.new(leitura).por_seguradora).to eq(
+        [{ 'nome' => 'Seguradora Azul (exemplo)', 'situacao' => 'pronta' }, { 'nome' => 'Seguradora Verde (exemplo)', 'situacao' => 'pronta' },
+         { 'nome' => 'Seguradora Sol (exemplo)', 'situacao' => 'pede_login' }, { 'nome' => nil, 'situacao' => 'sem_login' }]
+      )
+    end
+
+    it 'o Conferir conta como os PDFs: seguros, pessoas, sem telefone e o que não deu para trazer' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+
+      conferir = Carteira::Conector::Conferir.new(leitura).call
+      expect(conferir).to include(estado: 'lida', seguros: 3, pessoas: 3, pessoasNovas: 3, semTelefone: 3, naoDeuParaTrazer: 2, total: 6)
+      expect(conferir[:porSeguradora].size).to eq(4)
+    end
+
+    it 'buscar de novo uma busca já lida pede o mesmo período e não repete registro' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+
+      expect { described_class.de_novo(leitura) }.to have_enqueued_job(Carteira::Conector::BuscaJob)
+      leitura = andar_ate_o_fim(leitura)
+
+      expect(leitura.estado).to eq('lida')
+      expect(leitura.itens.where(estado: 'lido').count).to eq(4)
+      expect(leitura.itens.where(estado: 'falhou').count).to eq(1)
+      expect(leitura.totais.values_at('recebidos', 'repetidos')).to eq([5, 4])
+    end
+  end
+
+  describe 'quando o conector recusa ou cai' do
+    before { conectar! }
+
+    # Um portal que deixa o conector de mentira responder, menos na operação escolhida.
+    def portal_que_falha(leitura, kind, vezes: 99)
+      portal = Carteira::Conector::Portal.new(leitura.account)
+      falhas = 0
+      allow(portal).to receive(:pedir).and_wrap_original do |original, **args|
+        falhas += 1
+        raise Autonomia::Insurance::Connector::Error.new(kind, 'falha de exemplo') if falhas <= vezes
+
+        original.call(**args)
+      end
+      portal
+    end
+
+    it 'o login recusado para a busca com o motivo de entrar de novo; o Conferir diz o motivo' do
+      leitura = described_class.primeira(account, user: admin)
+      andar_ate_o_fim(leitura, portal: portal_que_falha(leitura, :auth_required))
+
+      expect(leitura.reload.estado).to eq('parou')
+      expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'parou', motivo: 'agger_pede_login')
+    end
+
+    it 'o Agger fora do ar é tentado de novo, e depois de 3 vezes a busca para com "não deu"' do
+      leitura = described_class.primeira(account, user: admin)
+      allow(Rails.logger).to receive(:warn)
+      andar_ate_o_fim(leitura, portal: portal_que_falha(leitura, :unavailable))
+
+      expect(leitura.reload.estado).to eq('parou')
+      expect(Carteira::Conector::Conferir.new(leitura).call[:motivo]).to eq('agger_falhou')
+      expect(Rails.logger).to have_received(:warn).with("[carteira][conector] leitura=#{leitura.id} erro=unavailable").exactly(3).times
+    end
+
+    it 'uma falha passageira não para a busca, e a busca parada continua pelo "buscar de novo"' do
+      leitura = described_class.primeira(account, user: admin)
+      allow(Rails.logger).to receive(:warn)
+      expect(andar_ate_o_fim(leitura, portal: portal_que_falha(leitura, :timeout, vezes: 1)).estado).to eq('lida')
+
+      outra = create(:carteira_leitura, account: account, origem: 'conector', estado: 'parou', totais: { 'primeira' => 1, 'parou' => 1 })
+      Carteira::Conector::Pedido.criar!(outra, desde: Date.new(2026, 1, 1), ate: Date.new(2026, 2, 1))
+      described_class.de_novo(outra)
+      expect(outra.reload).to have_attributes(estado: 'lendo')
+      expect(outra.totais.keys).to eq(['primeira'])
+    end
+
+    it 'a sessão recusada é renovada UMA vez por operação, nunca em laço' do
+      leitura = described_class.primeira(account, user: admin)
+      connector = Autonomia::Insurance::Connector::Mock.new
+      allow(connector).to receive(:portfolio_sync_start).and_raise(Autonomia::Insurance::Connector::Error.new(:auth_required, 'sessão'))
+      allow(connector).to receive(:open_session).and_call_original
+
+      described_class.new(leitura, portal: Carteira::Conector::Portal.new(account, connector: connector)).passo
+
+      expect(connector).to have_received(:portfolio_sync_start).twice
+      expect(connector).to have_received(:open_session).once
+      expect(leitura.reload.estado).to eq('parou')
+    end
+  end
+
+  describe 'a busca de todo dia' do
+    before { conectar! }
+
+    it 'pede os últimos 7 dias e, no fim, vai sozinha para a gravação' do
+      leitura = described_class.diaria(account)
+      pedido = Carteira::Conector::Pedido.new(leitura)
+      expect(Date.iso8601(pedido.ate) - Date.iso8601(pedido.desde)).to eq(7)
+
+      expect { andar_ate_o_fim(leitura) }.to have_enqueued_job(Carteira::Conector::GravarJob).with(leitura.id)
+      expect(leitura.reload).to have_attributes(estado: 'trazendo', user: nil)
+      expect(leitura.totais['para_trazer']).to eq(4)
+    end
+
+    it 'a rotina só busca nas contas com o interruptor ligado e o login aceito' do
+      outra = conta_com_carteira
+      conectar!(outra)
+      Carteira::Conector::BuscaDiaria.new(account).mudar!(true)
+      Carteira::Conector::BuscaDiaria.new(outra).mudar!(false)
+
+      expect { Carteira::Conector::BuscaDiariaJob.perform_now }.to have_enqueued_job(Carteira::Conector::BuscaJob).exactly(:once)
+      expect(Carteira::Leitura.do_conector.pluck(:account_id)).to eq([account.id])
+    end
+  end
+
+  it 'sem o login do Agger, recusa agger_desligado' do
+    expect { described_class.primeira(account, user: admin) }.to raise_error(CustomExceptions::CarteiraRecusa) { |erro|
+      expect(erro.codigo).to eq('agger_desligado')
+    }
+  end
+end
