@@ -1956,7 +1956,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
     t.datetime "lembrete_aceito_em"
     t.text "palavras_texto"
     t.datetime "palavras_enviadas_em"
+    t.string "origem_ref"
+    t.date "parcela_aberta_em"
     t.index ["account_id", "fim_vigencia"], name: "index_carteira_apolices_on_account_id_and_fim_vigencia"
+    t.index ["account_id", "origem", "origem_ref"], name: "idx_carteira_apolices_origem_ref", unique: true, where: "(origem_ref IS NOT NULL)"
     t.index ["account_id", "seguradora_chave", "numero_chave", "fim_vigencia"], name: "idx_carteira_apolices_seguradora_numero_vigencia", unique: true, where: "(numero_chave IS NOT NULL)"
     t.index ["apolice_anterior_id"], name: "idx_carteira_apolices_apolice_anterior", where: "(apolice_anterior_id IS NOT NULL)"
     t.index ["campaign_import_id"], name: "index_carteira_apolices_on_campaign_import_id", where: "(campaign_import_id IS NOT NULL)"
@@ -2014,6 +2017,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "busca_diaria", default: false, null: false
     t.index ["account_id"], name: "index_carteira_renovacao_configs_on_account_id", unique: true
     t.index ["pipeline_id"], name: "index_carteira_renovacao_configs_on_pipeline_id"
     t.index ["stage_id"], name: "index_carteira_renovacao_configs_on_stage_id"
