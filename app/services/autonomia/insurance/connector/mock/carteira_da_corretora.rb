@@ -3,6 +3,9 @@
 #
 # O que o mock ensina, porque a tela e a sincronização precisam lidar com tudo isso:
 # - a busca DEMORA: o `sync_id` carrega o instante do pedido, e o andamento fica `buscando` por `BUSCANDO_POR`;
+# - o período sai em FATIAS de um mês (a mais nova termina em `ate`: 36 meses são 37 fatias, 7 dias são uma), como no
+#   adapter, e o andamento diz `fatias: { pedidas, total }`. O `sync_id` carrega quantas são; aqui sai uma fatia por
+#   FATIA_POR de relógio (no adapter, uma por pergunta de andamento), e o pedido fica `buscando` até a última sair;
 # - cada seguradora termina de um jeito: duas prontas, uma que pediu para entrar de novo (`pede_login`) e uma, sem nome,
 #   em que a corretora nunca guardou o login (`sem_login`);
 # - a lista vem em duas páginas, com um item sem `ref` (não dá para trazer), um endosso da mesma apólice (mesmo `ref`)
@@ -14,6 +17,9 @@
 #   termina 40 dias depois desse começo, então ainda vale em qualquer dia do mês.
 module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
   BUSCANDO_POR = 5.seconds
+  FATIA_POR = 1.second
+  # O período mais longo que o adapter aceita.
+  MESES_NO_MAXIMO = 37
   PREFIXO = 'mock-carteira'.freeze
   SEGUNDA_PAGINA = 'mock-pagina-2'.freeze
   SEGURADORAS = [
@@ -29,8 +35,9 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
     require_session!(session)
     datas = [desde, ate].map { |data| Date.iso8601(data.to_s) }
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'periodo fora do formato') if datas.first > datas.last
+    raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'periodo longo demais') if datas.first < datas.last - MESES_NO_MAXIMO.months
 
-    { 'sync_id' => "#{PREFIXO}:#{Time.current.to_i}", 'status' => 'buscando' }
+    { 'sync_id' => "#{PREFIXO}:#{Time.current.to_i}:#{fatias_do_periodo(*datas)}", 'status' => 'buscando' }
   rescue Date::Error
     raise ::Autonomia::Insurance::Connector::Error.new(:validation, 'periodo fora do formato')
   end
@@ -38,11 +45,13 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
   def portfolio_sync_status(provider:, session:, sync_id:)
     require_provider!(provider)
     require_session!(session)
-    if buscando?(sync_id)
-      return { 'status' => 'buscando', 'por_seguradora' => SEGURADORAS.map { |seguradora| seguradora.merge('situacao' => 'buscando') } }
+    fatias = fatias_do_pedido(sync_id)
+    if buscando?(sync_id, fatias)
+      return { 'status' => 'buscando', 'por_seguradora' => SEGURADORAS.map { |seguradora| seguradora.merge('situacao' => 'buscando') },
+               'fatias' => fatias }
     end
 
-    { 'status' => 'pronta', 'por_seguradora' => SEGURADORAS.map(&:dup) }
+    { 'status' => 'pronta', 'por_seguradora' => SEGURADORAS.map(&:dup), 'fatias' => fatias }
   end
 
   def portfolio_policies(provider:, session:, sync_id:, cursor: nil)
@@ -64,9 +73,26 @@ module Autonomia::Insurance::Connector::Mock::CarteiraDaCorretora
 
   private
 
-  def buscando?(sync_id)
+  def buscando?(sync_id, fatias)
+    fatias['pedidas'] < fatias['total'] || segundos_do_pedido(sync_id) < BUSCANDO_POR.to_i
+  end
+
+  # A mais nova sai no pedido; depois, uma a cada FATIA_POR, até a última.
+  def fatias_do_pedido(sync_id)
+    total = [sync_id.to_s.split(':')[2].to_i, 1].max
+    { 'pedidas' => [1 + (segundos_do_pedido(sync_id) / FATIA_POR.to_i), total].min, 'total' => total }
+  end
+
+  def segundos_do_pedido(sync_id)
     exigir_sync!(sync_id)
-    Time.current.to_i - sync_id.to_s.split(':').last.to_i < BUSCANDO_POR.to_i
+    Time.current.to_i - sync_id.to_s.split(':')[1].to_i
+  end
+
+  # Cada fatia vai de um dia até a véspera do mesmo dia no mês seguinte, e a mais nova termina em `ate`.
+  def fatias_do_periodo(desde, ate)
+    fatias = 1
+    fatias += 1 while ate - fatias.months >= desde
+    fatias
   end
 
   def exigir_sync!(sync_id)

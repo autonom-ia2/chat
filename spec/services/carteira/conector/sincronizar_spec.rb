@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # E7 (#2900) — a busca dos seguros no conector, passo a passo, com o conector de mentira (Mock::CarteiraDaCorretora: duas
-# páginas, um registro sem referência, um endosso da mesma apólice e um registro que o adapter não leu). Tudo fictício;
-# nenhuma chamada paga: o tipo de cada ramo vem de uma pergunta falsa.
+# páginas, um registro sem referência, um endosso da mesma apólice, um registro que o adapter não leu e o período em
+# fatias de um mês). Tudo fictício; nenhuma chamada paga: o tipo de cada ramo vem de uma pergunta falsa.
 RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
   include ActiveJob::TestHelper
 
@@ -187,6 +187,112 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect(connector).to have_received(:portfolio_sync_start).twice
       expect(connector).to have_received(:open_session).once
       expect(leitura.reload.estado).to eq('parou')
+    end
+  end
+
+  # E7.5 — a prova real: o robô do Agger falhou em todas as seguradoras, e os seguros que o Agger já tinha não vinham.
+  describe 'quando o robô do Agger falha em todas as seguradoras' do
+    before { conectar! }
+
+    def registro(ref, seguradora, documento)
+      { 'ref' => ref, 'numero' => "N-#{ref}", 'seguradora' => seguradora, 'ramo' => 'Automóvel', 'inicio_vigencia' => '2026-03-10',
+        'fim_vigencia' => '2027-03-10', 'emissao' => '2026-03-01', 'premio_centavos' => 150_000,
+        'segurado' => { 'nome' => "Pessoa #{ref}", 'documento' => documento, 'email' => nil }, 'item' => nil, 'endosso' => nil,
+        'parcelas' => nil, 'pdf_ref' => nil }
+    end
+
+    # O pedido termina `falhou`, e a lista do Agger tem 3 registros: duas linhas iguais (a mesma apólice, sem endosso) e
+    # uma de outra seguradora.
+    def portal_com_o_pedido_falhou(leitura)
+      portal = Carteira::Conector::Portal.new(leitura.account)
+      allow(portal).to receive(:andamento)
+        .and_return('status' => 'falhou', 'por_seguradora' => [{ 'nome' => 'Seguradora Azul (exemplo)', 'situacao' => 'falhou' }])
+      itens = [registro('falhou-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
+               registro('falhou-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
+               registro('falhou-ref-2', 'Seguradora Verde (exemplo)', '40050060007')]
+      allow(portal).to receive(:apolices).and_return('itens' => itens, 'proximo_cursor' => nil, 'total' => 3, 'ignorados' => 0)
+      portal
+    end
+
+    it 'lê a lista mesmo assim: os 3 registros chegam ao Conferir, a linha repetida conta uma vez, e a conta fecha' do
+      inicio = described_class.primeira(account, user: admin)
+      leitura = andar_ate_o_fim(inicio, portal: portal_com_o_pedido_falhou(inicio))
+
+      expect(leitura.estado).to eq('lida')
+      expect(leitura.itens.where(estado: 'lido').count).to eq(2)
+      expect(leitura.totais.values_at('recebidos', 'repetidos', 'ignorados', 'total')).to eq([3, 1, 0, 3])
+      conferir = Carteira::Conector::Conferir.new(leitura).call
+      expect(conferir).to include(seguros: 2, pessoas: 2, naoDeuParaTrazer: 0, ignorados: 0, repetidos: 1, total: 3)
+      expect(conferir[:porSeguradora]).to eq([{ nome: 'Seguradora Azul (exemplo)', situacao: 'falhou' }])
+      entram = conferir[:seguros]
+      nao_deu = conferir[:naoDeuParaTrazer] - conferir[:ignorados]
+      expect(entram + nao_deu + conferir[:ignorados] + conferir[:repetidos]).to eq(conferir[:total])
+    end
+
+    it 'a de todo dia também: os seguros que já estavam no Agger vão para a gravação' do
+      inicio = described_class.diaria(account)
+      leitura = andar_ate_o_fim(inicio, portal: portal_com_o_pedido_falhou(inicio))
+
+      expect(leitura.estado).to eq('trazendo')
+      expect(leitura.totais['para_trazer']).to eq(2)
+    end
+  end
+
+  # E7.5 — o adapter pede o período em fatias de um mês, uma por pergunta de andamento, e só pede a seguinte se a
+  # anterior saiu há poucos minutos: enquanto falta fatia, a busca pergunta logo.
+  describe 'o período em fatias de um mês' do
+    before { conectar! }
+
+    def portal_com_fatias(leitura, *fatias)
+      portal = Carteira::Conector::Portal.new(leitura.account)
+      allow(portal).to receive(:andamento)
+        .and_return(*fatias.map { |fatia| { 'status' => 'buscando', 'por_seguradora' => [], 'fatias' => fatia } })
+      portal
+    end
+
+    it 'enquanto falta pedir fatia, pergunta de novo em 20 segundos e guarda as fatias para a tela; depois, a espera de sempre' do
+      leitura = described_class.primeira(account, user: admin)
+      portal = portal_com_fatias(leitura, { 'pedidas' => 5, 'total' => 37 }, { 'pedidas' => 37, 'total' => 37 })
+
+      expect(described_class.new(leitura, portal: portal).passo).to eq(20.seconds)
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(20.seconds)
+      expect(leitura.reload.totais).to include('fatias_pedidas' => 5, 'fatias_total' => 37)
+      expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'lendo', fatias: { pedidas: 5, total: 37 })
+
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(1.minute)
+      expect(Carteira::Conector::Conferir.new(leitura.reload).call[:fatias]).to eq(pedidas: 37, total: 37)
+    end
+
+    it 'sem fatias no andamento (o adapter de antes), tudo como era: um minuto de espera e nada novo nos totais' do
+      leitura = described_class.diaria(account)
+      portal = Carteira::Conector::Portal.new(account)
+      allow(portal).to receive(:andamento).and_return('status' => 'buscando', 'por_seguradora' => [])
+
+      expect(described_class.new(leitura, portal: portal).passo).to eq(1.minute)
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(1.minute)
+      expect(leitura.reload.totais.keys).not_to include('fatias_pedidas', 'fatias_total')
+      expect(Carteira::Conector::Conferir.new(leitura).call).to include(fatias: nil)
+    end
+
+    it 'a falha passageira com fatia por pedir tenta de novo logo, para o adapter não perder a sequência' do
+      leitura = described_class.primeira(account, user: admin)
+      portal = portal_com_fatias(leitura, { 'pedidas' => 3, 'total' => 37 })
+      2.times { described_class.new(leitura.reload, portal: portal).passo }
+      allow(portal).to receive(:andamento).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, 'falha de exemplo'))
+      allow(Rails.logger).to receive(:warn)
+
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(20.seconds)
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(40.seconds)
+    end
+
+    it 'buscar de novo uma busca já lida recomeça as fatias, e o pedido novo não leva as seguradoras do anterior' do
+      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
+      expect(leitura.totais).to include('fatias_pedidas' => 37, 'fatias_total' => 37)
+
+      described_class.de_novo(leitura)
+
+      expect(leitura.reload.totais.keys).not_to include('fatias_pedidas', 'fatias_total')
+      expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'lendo', porSeguradora: [], fatias: nil)
     end
   end
 

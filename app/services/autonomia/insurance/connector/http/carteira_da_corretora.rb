@@ -5,6 +5,7 @@ module Autonomia::Insurance::Connector::Http::CarteiraDaCorretora
     invoke("/v1/#{provider}/portfolio/sync/start", { session: session, desde: desde, ate: ate })
   end
 
+  # `fatias: { pedidas, total }` (opcional, #2900 E7.5) volta como veio: a tradução não muda chave que já é snake_case.
   def portfolio_sync_status(provider:, session:, sync_id:)
     invoke("/v1/#{provider}/portfolio/sync/status", { session: session, syncId: sync_id })
   end

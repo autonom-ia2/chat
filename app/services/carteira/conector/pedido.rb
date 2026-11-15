@@ -47,9 +47,10 @@ class Carteira::Conector::Pedido
     mudar!('cursor' => cursor, 'pagina' => pagina + 1)
   end
 
-  # Buscar de novo: o mesmo período, um pedido novo. As seguradoras ficam até o próximo andamento chegar.
+  # Buscar de novo: o mesmo período, um pedido novo. As seguradoras do pedido anterior saem junto: enquanto a busca nova
+  # anda, a tela não mostra aviso da busca velha (#2900, E7.5).
   def de_novo!
-    mudar!('sync_id' => nil, 'status' => nil, 'cursor' => nil, 'pagina' => 0)
+    mudar!('sync_id' => nil, 'status' => nil, 'cursor' => nil, 'pagina' => 0, 'por_seguradora' => [])
   end
 
   private

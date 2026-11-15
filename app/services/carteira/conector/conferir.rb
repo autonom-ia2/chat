@@ -1,7 +1,8 @@
 # A busca no conector como a tela lê (E7, #2900): enquanto busca, o andamento de cada seguradora; depois, o Conferir, com
 # os mesmos números do Trazer por PDFs.
 #
-#   { id:, origem: 'conector', estado: 'lendo' | 'parou', diaria:, porSeguradora: [{ nome:, situacao: }], motivo:, recebidos: }
+#   { id:, origem: 'conector', estado: 'lendo' | 'parou', diaria:, porSeguradora: [{ nome:, situacao: }], motivo:, recebidos:,
+#     fatias: { pedidas:, total: } | nil }
 #   { id:, origem: 'conector', estado: 'lida' | 'trazendo' | 'trazida' | 'desfazendo' | 'desfeita', diaria:, porSeguradora:,
 #     seguros:, pessoas:, pessoasNovas:, semTelefone:, jaNaCarteira:, naoDeuParaTrazer:, ignorados:, repetidos:,
 #     porTipo: { 'auto' => 3 }, total: }
@@ -15,6 +16,8 @@
 # - `total`: quantos registros o conector disse que havia no período. A conta fecha:
 #   seguros + (naoDeuParaTrazer - ignorados) + ignorados + repetidos = total.
 # - `motivo` (só na busca parada): `agger_pede_login` (o login do Agger foi recusado) ou `agger_falhou`.
+# - `fatias` (só enquanto busca): quantos meses do período o Agger já pediu às seguradoras, e quantos são, para a tela
+#   dizer "mês X de Y". Nulo quando o adapter não informa (Carteira::Conector::Sincronizar).
 #
 # OS NÚMEROS DO CONFERIR SÃO CALCULADOS NO JOB (`calcular!`, no fim da busca: Carteira::Conector::Sincronizar) e ficam em
 # `totais` (só contagens, com o prefixo CHAVE). A requisição só lê: nada de procurar a pessoa de cada registro dentro dela
@@ -34,7 +37,7 @@ class Carteira::Conector::Conferir
   def call
     base = { id: @leitura.id, origem: 'conector', estado: @leitura.estado, diaria: @totais.key?(Carteira::Leitura::DIARIA),
              porSeguradora: por_seguradora }
-    return base.merge(motivo: motivo, recebidos: @totais['recebidos'].to_i) if BUSCANDO.include?(@leitura.estado)
+    return base.merge(motivo: motivo, recebidos: @totais['recebidos'].to_i, fatias: fatias) if BUSCANDO.include?(@leitura.estado)
     return base.merge(numeros) if @leitura.estado == 'lida'
 
     base.merge(trazidos)
@@ -66,6 +69,11 @@ class Carteira::Conector::Conferir
 
   def motivo
     MOTIVOS.find { |codigo| @totais["motivo_#{codigo}"].to_i.positive? } if @leitura.estado == 'parou'
+  end
+
+  def fatias
+    total = @totais['fatias_total'].to_i
+    { pedidas: @totais['fatias_pedidas'].to_i, total: total } if total.positive?
   end
 
   def numeros

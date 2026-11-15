@@ -70,9 +70,14 @@ class Autonomia::Insurance::Connector::Client
   # Nomes e formas nossos; o que a plataforma chama de quê fica no adapter. Todas com a mesma sessão da cotação, e
   # UM pedido por vez: quem chama não pede páginas em paralelo nem em rajada.
   #   portfolio_sync_start  -> { sync_id:, status: buscando|pronta|falhou }   (desde/ate AAAA-MM-DD, até 37 meses)
-  #   portfolio_sync_status -> { status:, por_seguradora: [{ codigo:, nome: (pode ser nil), situacao: }] }
+  #   portfolio_sync_status -> { status:, por_seguradora: [{ codigo:, nome: (pode ser nil), situacao: }],
+  #                              fatias: { pedidas:, total: } (opcional) }
   #                            situacao: pronta | buscando | pede_login | sem_login | falhou
-  #   portfolio_policies    -> { itens: [...], proximo_cursor:, total:, ignorados: }
+  #                            fatias: o período sai em fatias de um mês, uma por chamada de andamento; o adapter só pede
+  #                            a seguinte se a anterior saiu há poucos minutos, então quem chama pergunta logo enquanto
+  #                            `pedidas < total` (Carteira::Conector::Sincronizar::ESPERA_DAS_FATIAS).
+  #   portfolio_policies    -> { itens: [...], proximo_cursor:, total:, ignorados: }   (com o pedido pronta OU falhou:
+  #                            a lista é o que a plataforma já tem, e não depende do robô ter buscado nas seguradoras)
   #   portfolio_document    -> { url: }
   # `sync_id`, `cursor` e `pdf_ref` são opacos: guardamos e devolvemos. O `pdf_ref` e a `url` levam o número da
   # apólice: nunca vão para log, argumento de job, cache ou resposta de API. Item (já em snake_case): ref (pode ser

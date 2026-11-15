@@ -16,10 +16,17 @@
 # conector por passo, nunca em rajada.
 # 1. sem pedido: pede o período (`portfolio_sync_start`);
 # 2. pedido buscando: pergunta o andamento (`portfolio_sync_status`) e guarda como cada seguradora está;
-# 3. pedido pronto: lê uma página (`portfolio_policies`) e passa para a seguinte;
+# 3. pedido que terminou, `pronta` OU `falhou`: lê uma página (`portfolio_policies`) e passa para a seguinte. O pedido
+#    é o robô do Agger buscando seguros NOVOS nas seguradoras; a lista é o que o Agger JÁ TEM, e não depende dele. Com
+#    o robô falhando em todas as seguradoras, os seguros que já estavam no Agger vêm do mesmo jeito (#2900, E7.5);
 # 4. sem página seguinte: decide o tipo de cada seguro e termina (`lida`, com os números do Conferir já calculados:
 #    Carteira::Conector::Conferir#calcular!; a de todo dia já vai para a gravação).
-# O pedido que falhou inteiro (nenhuma seguradora pronta) também termina, sem seguro: a tela diz o que fazer em cada uma.
+#
+# O pedido sai em fatias de um mês, uma por pergunta de andamento (o adapter decide; `fatias: { pedidas, total }` no
+# andamento, campo opcional). Enquanto falta pedir alguma fatia, a espera entre os passos é curta (ESPERA_DAS_FATIAS):
+# o adapter só pede a fatia seguinte se a anterior saiu há poucos minutos, e a busca de 36 meses não pode parar no
+# meio. As fatias vão para `totais` (`fatias_pedidas`, `fatias_total`), e a tela mostra "mês X de Y". Sem `fatias`
+# (adapter antigo), a espera é a de sempre.
 #
 # Erros: o login do Agger recusado (depois da renovação da sessão, que é uma só por operação) para a busca com o motivo
 # `agger_pede_login`; o Agger fora do ar ou lento é tentado de novo até TENTATIVAS vezes, e depois para com `agger_falhou`.
@@ -28,6 +35,8 @@ class Carteira::Conector::Sincronizar
   MESES_DA_PRIMEIRA = 36
   DIAS_DA_DIARIA = 7
   ESPERA_DO_ANDAMENTO = 1.minute
+  # Enquanto o adapter ainda tem fatia do período para pedir (ele pede uma por pergunta de andamento).
+  ESPERA_DAS_FATIAS = 20.seconds
   ESPERA_DA_PAGINA = 2.seconds
   TENTATIVAS = 3
   PEDE_LOGIN = 'agger_pede_login'.freeze
@@ -37,6 +46,8 @@ class Carteira::Conector::Sincronizar
   PARADA = 10.minutes
   # O que a lista de um pedido conta (Carteira::Conector::Ler e o total que o conector informa).
   CONTAS_DA_LISTA = %w[recebidos repetidos ja_lidos ignorados total].freeze
+  # Quantas fatias do período o adapter já pediu, e quantas são (o andamento, `fatias`).
+  FATIAS = %w[fatias_pedidas fatias_total].freeze
 
   class << self
     def primeira(account, user:)
@@ -64,12 +75,12 @@ class Carteira::Conector::Sincronizar
     private
 
     # A busca parada (ou que não anda há PARADA) continua de onde estava. A que terminou pede o período de novo, e as contas
-    # da lista e os números do Conferir recomeçam: cada pedido tem o seu total.
+    # da lista, as fatias e os números do Conferir recomeçam: cada pedido tem o seu total.
     def totais_de_novo(leitura)
       totais = leitura.totais.to_h.except('parou', 'tentativas').reject { |chave, _| chave.start_with?('motivo_agger') }
       return totais unless leitura.estado == 'lida'
 
-      totais.except(*CONTAS_DA_LISTA).reject { |chave, _| chave.start_with?(Carteira::Conector::Conferir::CHAVE) }
+      totais.except(*CONTAS_DA_LISTA, *FATIAS).reject { |chave, _| chave.start_with?(Carteira::Conector::Conferir::CHAVE) }
     end
 
     # Os registros que não deram para trazer voltam na lista nova (o sem referência não tem como ser reconhecido como
@@ -136,28 +147,49 @@ class Carteira::Conector::Sincronizar
 
   private
 
+  # O pedido terminado lê a lista, tenha o robô ficado pronto ou falhado (`status_de` só deixa os três).
   def andar
     return pedir unless @pedido.sync_id
     return acompanhar if @pedido.status == 'buscando'
-    return ler_pagina if @pedido.status == 'pronta'
 
-    terminar
+    ler_pagina
   end
 
+  # O período de mais de um mês sai em fatias: a primeira pergunta de andamento já pede a segunda.
   def pedir
     resposta = @portal.pedir(desde: @pedido.desde, ate: @pedido.ate)
     sync_id = resposta['sync_id']
     raise Autonomia::Insurance::Connector::Error.new(:protocol, 'pedido sem identificador') if sync_id.blank?
 
     @pedido.pedido!(sync_id.to_s, status_de(resposta['status']))
-    ESPERA_DO_ANDAMENTO
+    periodo_em_fatias? ? ESPERA_DAS_FATIAS : ESPERA_DO_ANDAMENTO
   end
 
   def acompanhar
     resposta = @portal.andamento(@pedido.sync_id)
     @pedido.andamento!(status_de(resposta['status']), resposta['por_seguradora'])
-    tocar
-    @pedido.status == 'buscando' ? ESPERA_DO_ANDAMENTO : 0.seconds
+    guardar_fatias(resposta['fatias'])
+    @pedido.status == 'buscando' ? espera_do_andamento : 0.seconds
+  end
+
+  # Cada fatia vai de um dia até a véspera do mesmo dia no mês seguinte, e a mais nova termina em `ate` (o adapter).
+  def periodo_em_fatias?
+    Date.iso8601(@pedido.desde.to_s) <= Date.iso8601(@pedido.ate.to_s) - 1.month
+  rescue Date::Error
+    false
+  end
+
+  def espera_do_andamento
+    totais = @leitura.totais.to_h
+    totais['fatias_total'].to_i > totais['fatias_pedidas'].to_i ? ESPERA_DAS_FATIAS : ESPERA_DO_ANDAMENTO
+  end
+
+  # `fatias: { pedidas, total }` (opcional). Fora do formato, ou ausente, a busca só anda: nada muda nos totais.
+  def guardar_fatias(fatias)
+    pedidas, total = fatias.values_at('pedidas', 'total') if fatias.is_a?(Hash)
+    return tocar unless pedidas.is_a?(Integer) && total.is_a?(Integer) && total.positive?
+
+    @leitura.reload.update!(totais: @leitura.totais.to_h.merge('fatias_pedidas' => pedidas.clamp(0, total), 'fatias_total' => total))
   end
 
   def ler_pagina
@@ -211,7 +243,7 @@ class Carteira::Conector::Sincronizar
     return parar(FALHOU) if tentativas >= TENTATIVAS
 
     @leitura.update!(totais: @leitura.totais.to_h.merge('tentativas' => tentativas))
-    ESPERA_DO_ANDAMENTO * tentativas
+    espera_do_andamento * tentativas
   end
 
   def zerar_tentativas
