@@ -1,7 +1,9 @@
 # Os números do Conferir de uma busca no conector (E7, #2900), calculados no job (Carteira::Conector::Conferir#calcular!),
 # nunca na requisição: a pessoa de cada registro é procurada sem criar ninguém (Carteira::Conector::PessoaDoRegistro#achar),
-# uma vez por referência e documento. Devolve só contagens ({ 'seguros' => 3, ..., 'tipo_auto' => 2 }), que é o que
-# `totais` guarda. O que cada número quer dizer está em Carteira::Conector::Conferir.
+# uma vez por seguro e documento. Um seguro é a referência com o começo da vigência (a apólice e os endossos dela; a
+# renovação que mantém a referência é outro), como no gravador (Carteira::Conector::Gravar). Devolve só contagens
+# ({ 'seguros' => 3, ..., 'tipo_auto' => 2 }), que é o que `totais` guarda. O que cada número quer dizer está em
+# Carteira::Conector::Conferir.
 class Carteira::Conector::Conferir::Contagem
   def initialize(leitura)
     @leitura = leitura
@@ -10,7 +12,7 @@ class Carteira::Conector::Conferir::Contagem
 
   def call
     prontas = vistas.select { |vista| vista[:pronto] }
-    seguros = prontas.uniq { |vista| vista[:ref] }
+    seguros = prontas.uniq { |vista| vista[:seguro] }
     { 'seguros' => seguros.size, 'ja_na_carteira' => seguros.count { |vista| vista[:dono]&.ja_na_carteira },
       'nao_deu' => falharam + (vistas.size - prontas.size), 'repetidos' => prontas.size - seguros.size, 'prontos' => prontas.size,
       **das_pessoas(prontas), **por_tipo(prontas) }
@@ -26,7 +28,7 @@ class Carteira::Conector::Conferir::Contagem
 
   # O tipo de cada seguro, pelo último registro dele (o endosso mais novo).
   def por_tipo(prontas)
-    tipos = prontas.reverse.uniq { |vista| vista[:ref] }.map { |vista| vista[:lido].certo('tipo') || Carteira::Conector::TiposDoRamo::OUTRO }
+    tipos = prontas.reverse.uniq { |vista| vista[:seguro] }.map { |vista| vista[:lido].certo('tipo') || Carteira::Conector::TiposDoRamo::OUTRO }
     tipos.tally.transform_keys { |tipo| "tipo_#{tipo}" }
   end
 
@@ -41,11 +43,12 @@ class Carteira::Conector::Conferir::Contagem
     end
   end
 
-  # A pessoa de cada registro, sem criar ninguém: a mesma referência ou o mesmo documento é perguntado uma vez só.
+  # A pessoa de cada registro, sem criar ninguém: o mesmo seguro com o mesmo documento é perguntado uma vez só.
   def vista(lido, donos)
-    chave_de_busca = [lido.valor('ref'), lido.certo('segurado_documento')]
+    seguro = [lido.valor('ref'), lido.valor('inicio_vigencia')]
+    chave_de_busca = [seguro, lido.certo('segurado_documento')]
     dono = donos.fetch(chave_de_busca) { donos[chave_de_busca] = @pessoas.achar(lido) }
-    { lido: lido, ref: lido.valor('ref'), dono: dono, pronto: dono.present? || @pessoas.nasce?(lido),
+    { lido: lido, seguro: seguro, dono: dono, pronto: dono.present? || @pessoas.nasce?(lido),
       chave: dono ? "pessoa:#{dono.pessoa.id}" : "nova:#{lido.certo('segurado_documento')}" }
   end
 end

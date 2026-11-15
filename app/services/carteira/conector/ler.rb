@@ -2,10 +2,11 @@
 # (Carteira::ItemLido: os nomes do leitor de PDF, os valores na forma do banco). O conector já entrega os campos
 # separados, então nada fica "a confirmar": o que veio no formato certo vale, e o que veio fora dele não vem.
 #
-# - `pagina(itens, ignorados:)`: os registros de uma página. O registro que já é item (o mesmo `ref` e o mesmo endosso)
-#   não vira outro: no mesmo pedido, é contado em `repetidos`; vindo de um pedido anterior desta busca ("Buscar de novo"
-#   pede o período inteiro outra vez), em `ja_lidos`, porque o item dele já está contado. O que o adapter não leu vem
-#   contado em `ignorados`. Assim, para cada pedido, o Conferir fecha com o `total` do conector.
+# - `pagina(itens, ignorados:)`: os registros de uma página. O registro que já é item (o mesmo `ref`, o mesmo começo da
+#   vigência e o mesmo endosso) não vira outro: no mesmo pedido, é contado em `repetidos`; vindo de um pedido anterior
+#   desta busca ("Buscar de novo" pede o período inteiro outra vez), em `ja_lidos`, porque o item dele já está contado.
+#   O que o adapter não leu vem contado em `ignorados`. Assim, para cada pedido, o Conferir fecha com o `total` do
+#   conector.
 # - O item sem `ref` fica `falhou` ("não deu para trazer"): sem a referência, a busca seguinte não acharia o mesmo
 #   seguro e criaria outro. O sem seguradora ou sem fim da vigência também: o seguro não entra sem eles.
 # - `tipos!`: no fim da busca, o tipo de cada item sai do ramo (Carteira::Conector::TiposDoRamo). O item cujo tipo foi
@@ -58,10 +59,13 @@ class Carteira::Conector::Ler
   end
 
   # 'repetidos' (o mesmo registro já veio neste pedido), 'ja_lidos' (veio num pedido anterior desta busca) ou nil (é novo).
+  # O começo da vigência faz parte: a renovação que mantém o `ref` é outro termo, outro seguro (Carteira::Termo), e
+  # precisa virar item para ser gravada e se ligar ao termo anterior.
   def ja_veio(registro)
     return unless registro.is_a?(Hash) && texto(registro['ref'])
 
     posicoes = @leitura.itens.where("carteira_leitura_itens.campos ->> 'ref' = ?", texto(registro['ref']))
+                       .where("COALESCE(carteira_leitura_itens.campos ->> 'inicio_vigencia', '') = ?", data(registro['inicio_vigencia']).to_s)
                        .where("COALESCE(carteira_leitura_itens.campos ->> 'endosso', '') = ?", endosso(registro).to_s).pluck(:posicao)
     return if posicoes.empty?
 
