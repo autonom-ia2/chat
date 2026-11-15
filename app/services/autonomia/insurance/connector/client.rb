@@ -65,4 +65,32 @@ class Autonomia::Insurance::Connector::Client
   def quote_proposal(provider:, session:, quote_id:, insurer_code: nil)
     raise NotImplementedError
   end
+
+  # A CARTEIRA DA CORRETORA (E7, #2900): trazer as apólices que a corretora já tem na plataforma, sem cotar nada.
+  # Nomes e formas nossos; o que a plataforma chama de quê fica no adapter. Todas com a mesma sessão da cotação, e
+  # UM pedido por vez: quem chama não pede páginas em paralelo nem em rajada.
+  #   portfolio_sync_start  -> { sync_id:, status: buscando|pronta|falhou }   (desde/ate AAAA-MM-DD, até 37 meses)
+  #   portfolio_sync_status -> { status:, por_seguradora: [{ codigo:, nome: (pode ser nil), situacao: }] }
+  #                            situacao: pronta | buscando | pede_login | sem_login | falhou
+  #   portfolio_policies    -> { itens: [...], proximo_cursor:, total:, ignorados: }
+  #   portfolio_document    -> { url: }
+  # `sync_id`, `cursor` e `pdf_ref` são opacos: guardamos e devolvemos. O `pdf_ref` e a `url` levam o número da
+  # apólice: nunca vão para log, argumento de job, cache ou resposta de API. Item (já em snake_case): ref (pode ser
+  # nil), numero, seguradora, ramo, inicio_vigencia, fim_vigencia, emissao, premio_centavos,
+  # segurado { nome, documento, email }, item, endosso { numero, data } | nil, parcelas | nil, pdf_ref.
+  def portfolio_sync_start(provider:, session:, desde:, ate:)
+    raise NotImplementedError
+  end
+
+  def portfolio_sync_status(provider:, session:, sync_id:)
+    raise NotImplementedError
+  end
+
+  def portfolio_policies(provider:, session:, sync_id:, cursor: nil)
+    raise NotImplementedError
+  end
+
+  def portfolio_document(provider:, session:, ref:)
+    raise NotImplementedError
+  end
 end

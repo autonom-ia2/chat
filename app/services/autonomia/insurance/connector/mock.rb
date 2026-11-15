@@ -4,6 +4,8 @@
 # Superclasse qualificada: na forma compacta o escopo léxico é o topo e `Base` seria o módulo global ::Base.
 class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::Client
   include Leituras
+  # A carteira da corretora (E7, #2900), com dados fictícios: `mock/carteira_da_corretora.rb`.
+  include CarteiraDaCorretora
 
   # Única operação que consome credencial, igual ao adapter real.
   def open_session(provider:, username:, password:)
