@@ -1,13 +1,11 @@
 // #2900 (E7.5) — quais seguradoras da busca no Agger ganham aviso, na ordem
-// em que os grupos aparecem na tela. A seguradora pronta (ou ainda buscando)
-// não ganha aviso.
-export const SITUACOES_COM_AVISO = ['pede_login', 'sem_login', 'falhou'];
+// em que os grupos aparecem na tela. Só as que têm evidência no cadastro de
+// logins do Agger: o login guardado não vale mais (`pede_login`) ou a
+// corretora não guardou o login (`sem_login`). Qualquer outra situação não
+// ganha aviso: sem evidência, a tela não diz nada.
+export const SITUACOES_COM_AVISO = ['pede_login', 'sem_login'];
 
 export const comAviso = seguradoras =>
   seguradoras.filter(seguradora =>
     SITUACOES_COM_AVISO.includes(seguradora.situacao)
   );
-
-// Todas as seguradoras da busca ficaram com aviso: nenhuma buscou nada novo.
-export const todasComAviso = seguradoras =>
-  seguradoras.length > 0 && comAviso(seguradoras).length === seguradoras.length;

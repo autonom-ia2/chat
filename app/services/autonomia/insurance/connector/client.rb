@@ -69,15 +69,15 @@ class Autonomia::Insurance::Connector::Client
   # A CARTEIRA DA CORRETORA (E7, #2900): trazer as apólices que a corretora já tem na plataforma, sem cotar nada.
   # Nomes e formas nossos; o que a plataforma chama de quê fica no adapter. Todas com a mesma sessão da cotação, e
   # UM pedido por vez: quem chama não pede páginas em paralelo nem em rajada.
-  #   portfolio_sync_start  -> { sync_id:, status: buscando|pronta|falhou }   (desde/ate AAAA-MM-DD, até 37 meses)
-  #   portfolio_sync_status -> { status:, por_seguradora: [{ codigo:, nome: (pode ser nil), situacao: }],
-  #                              fatias: { pedidas:, total: } (opcional) }
-  #                            situacao: pronta | buscando | pede_login | sem_login | falhou
-  #                            fatias: o período sai em fatias de um mês, uma por chamada de andamento; o adapter só pede
-  #                            a seguinte se a anterior saiu há poucos minutos, então quem chama pergunta logo enquanto
-  #                            `pedidas < total` (Carteira::Conector::Sincronizar::ESPERA_DAS_FATIAS).
-  #   portfolio_policies    -> { itens: [...], proximo_cursor:, total:, ignorados: }   (com o pedido pronta OU falhou:
-  #                            a lista é o que a plataforma já tem, e não depende do robô ter buscado nas seguradoras)
+  #   portfolio_sync_start  -> { sync_id:, status: buscando|pronta|falhou,
+  #                              por_seguradora: [{ codigo:, nome: (pode ser nil), situacao: sem_login|pede_login }] (opcional) }
+  #                            (desde/ate AAAA-MM-DD, até 37 meses). `por_seguradora` só vem com evidência do cadastro de
+  #                            logins da corretora; lista vazia = cadastro lido, nada a avisar; sem o campo = não deu para
+  #                            ler (ou adapter de antes), e nada se deduz.
+  #   portfolio_sync_status -> { status:, por_seguradora: [{ codigo:, nome:, situacao: }] }   (só a busca pedida antes
+  #                            de 15/11/2026 ainda pergunta: Carteira::Conector::Sincronizar::PRAZO_DO_ROBO)
+  #   portfolio_policies    -> { itens: [...], proximo_cursor:, total:, ignorados: }   (logo depois do pedido: a lista é o
+  #                            que a plataforma já tem, e não espera o robô buscar nas seguradoras)
   #   portfolio_document    -> { url: }
   # `sync_id`, `cursor` e `pdf_ref` são opacos: guardamos e devolvemos. O `pdf_ref` e a `url` levam o número da
   # apólice: nunca vão para log, argumento de job, cache ou resposta de API. Item (já em snake_case): ref (pode ser

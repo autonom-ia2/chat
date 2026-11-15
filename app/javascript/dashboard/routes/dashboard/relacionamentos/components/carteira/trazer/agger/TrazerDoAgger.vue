@@ -21,9 +21,7 @@ import {
   BOTAO_DISCRETO_DO_HEROI,
   BOTAO_PRINCIPAL_DO_HEROI,
 } from '../../../../carteira/botoesDoHeroi';
-import { todasComAviso } from '../../../../carteira/avisosDasSeguradoras';
 import HeroiEscuro from '../../../comum/HeroiEscuro.vue';
-import AndamentoDaBusca from './AndamentoDaBusca.vue';
 import BuscaDeTodoDia from './BuscaDeTodoDia.vue';
 import DialogoDoLoginNoAgger from './DialogoDoLoginNoAgger.vue';
 import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
@@ -32,12 +30,13 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
 // corretora no Agger. Se a conta ainda não conectou o Agger, uma janela pede
 // só o login e a senha. A busca roda no servidor (a pessoa pode sair e
-// voltar) e mostra "mês X de Y" quando o servidor diz. O Conferir começa pelo
-// que importa — quantos seguros entram, de quantas pessoas, e o "Trazer" — e
-// as seguradoras que não buscaram seguros novos viram uma linha calma, com o
-// detalhe atrás de "Ver quais" (#2900, E7.5). Depois, a busca de todo dia traz
-// os seguros novos sozinha (o interruptor liga e desliga) e as buscas já
-// feitas ficam embaixo, com Desfazer.
+// voltar) e traz na hora o que o Agger já tem, sem esperar o robô do Agger
+// buscar nas seguradoras (#2900, E7.5). O Conferir começa pelo que importa —
+// quantos seguros entram, de quantas pessoas, e o "Trazer" — e as seguradoras
+// com o login faltando ou recusado no Agger (só com evidência) viram uma linha
+// calma, com o detalhe atrás de "Ver quais seguradoras". Depois, a busca de
+// todo dia traz os seguros novos sozinha (o interruptor liga e desliga) e as
+// buscas já feitas ficam embaixo, com Desfazer.
 //
 // Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
 // que fazer fica no lugar. Toda espera que pode falhar tem "Tentar de novo". A
@@ -95,6 +94,9 @@ const podeTentarDeNovo = computed(
     parado.value ||
     (parou.value && !parouPeloLogin.value)
 );
+// O leitor de tela ouve "ocupado" só enquanto o servidor trabalha de fato: não
+// na busca que parou, nem quando a espera emperrou e pede "Tentar de novo".
+const trabalhando = computed(() => !semAcompanhar.value && !parado.value);
 // O que fazer quando a busca parou. Sem poder escrever o login, pedir.
 const fazerDaParada = computed(() => {
   if (parouPeloLogin.value && !podeLigar.value) {
@@ -139,14 +141,6 @@ const temDetalhes = computed(() =>
   ['jaNaCarteira', 'pessoasNovas', 'semTelefone', 'naoDeuParaTrazer'].some(
     numero => atual.value?.[numero]
   )
-);
-// Nada veio: nenhum seguro, nenhum registro, e todas as seguradoras com aviso.
-// A frase do que fazer fica com os avisos, sem os números zerados.
-const nadaVeio = computed(
-  () =>
-    !atual.value?.seguros &&
-    !atual.value?.naoDeuParaTrazer &&
-    todasComAviso(seguradoras.value)
 );
 const chegaram = computed(() => ({
   seguros: andamento.value?.seguros ?? 0,
@@ -250,7 +244,15 @@ onBeforeUnmount(busca.parar);
       </template>
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.BUSCANDO">
-        <AndamentoDaBusca v-if="!parou" :fatias="atual?.fatias ?? null" />
+        <p
+          v-if="!parou"
+          role="status"
+          data-carteira="buscando-no-agger"
+          :aria-busy="trabalhando ? 'true' : 'false'"
+          class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12 text-balance"
+        >
+          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCANDO') }}
+        </p>
         <div
           v-else
           role="status"
@@ -294,7 +296,6 @@ onBeforeUnmount(busca.parar);
 
       <template v-else-if="etapa === ETAPAS_DO_AGGER.CONFERIR">
         <div
-          v-if="!nadaVeio"
           data-carteira="conferir-do-agger"
           class="flex flex-col gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
         >
@@ -322,6 +323,13 @@ onBeforeUnmount(busca.parar);
             :label="rotuloDeTrazer(atual.seguros)"
             @click="busca.trazer"
           />
+          <p
+            v-if="atual.seguros"
+            data-carteira="depois-do-agger"
+            class="m-0 text-sm text-n-slate-11 text-pretty"
+          >
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.DEPOIS') }}
+          </p>
           <ul
             v-if="temDetalhes"
             class="flex flex-wrap p-0 m-0 text-sm list-none gap-x-4 gap-y-2 text-n-slate-11"
@@ -367,12 +375,7 @@ onBeforeUnmount(busca.parar);
             </li>
           </ul>
         </div>
-        <SeguradorasDaBusca
-          :seguradoras="seguradoras"
-          :nada-veio="nadaVeio"
-          :ocupado="ocupado"
-          @tentar="busca.deNovo"
-        />
+        <SeguradorasDaBusca :seguradoras="seguradoras" />
         <Button
           slate
           faded
@@ -388,7 +391,7 @@ onBeforeUnmount(busca.parar);
       <template v-else-if="etapa === ETAPAS_DO_AGGER.TRAZENDO">
         <p
           role="status"
-          aria-busy="true"
+          :aria-busy="trabalhando ? 'true' : 'false'"
           class="p-8 m-0 text-lg text-center border rounded-3xl border-n-weak bg-n-solid-1 text-n-slate-12"
         >
           {{ fraseDoTrazendo }}

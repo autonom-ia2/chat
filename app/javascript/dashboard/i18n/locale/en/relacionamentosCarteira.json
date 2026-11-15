@@ -750,9 +750,7 @@
       "APOIO": "I look up your clients' policies in Agger and show what I found before anything comes in.",
       "BUSCAR": "Bring my policies from Agger",
       "BUSCANDO": "Looking up your policies… You can leave this page: the search continues.",
-      "MES": "Searching month {mes} of {total}",
-      "BARRA": "Progress of the Agger search",
-      "PARADO": "This is taking longer than usual. Tap \"Try again\" and I will continue where I stopped.",
+      "PARADO": "This is taking longer than usual. Tap \"Try again\".",
       "NAO_DEU": "I could not do that. Try again.",
       "TENTAR_DE_NOVO": "Try again",
       "ENTRAR": "Sign in to Agger",
@@ -771,16 +769,13 @@
         "FALHOU_FAZER": "Tap \"Try again\". The policies already here stay as they are."
       },
       "SEGURADORAS": {
-        "LINHA": "Agger did not look for new policies at {count} insurer right now. The ones already in Agger came in. | Agger did not look for new policies at {count} insurers right now. The ones already in Agger came in.",
-        "NADA_VEIO": "No policy came in this time: Agger could not search the insurers right now. See what to do for each one and search again later.",
+        "LINHA": "{count} insurer needs your login in Agger to bring new policies. | {count} insurers need your login in Agger to bring new policies.",
         "VER_QUAIS": "See which insurers",
         "ESCONDER": "Hide",
         "UMA": "one insurer | {count} insurers",
         "MAIS": "one more insurer | {count} more insurers",
         "PEDE_LOGIN": "Sign in to this insurer again, in Agger. On the next search, its policies come along. | Sign in to these insurers again, in Agger. On the next search, their policies come along.",
-        "SEM_LOGIN": "Save this insurer's login in Agger. On the next search, its policies come along. | Save these insurers' logins in Agger. On the next search, their policies come along.",
-        "FALHOU": "Agger could not search this insurer right now. Try again later. | Agger could not search these insurers right now. Try again later.",
-        "TENTAR": "Try again"
+        "SEM_LOGIN": "Save this insurer's login in Agger. On the next search, its policies come along. | Save these insurers' logins in Agger. On the next search, their policies come along."
       },
       "CONFERIR": {
         "ENTRAM": "{count} policy is ready to come in, | {count} policies are ready to come in,",
@@ -791,7 +786,8 @@
         "NAO_DEU": "{count} could not be brought | {count} could not be brought",
         "DE_NOVO": "Search again",
         "TRAZER": "Bring {count} policy from Agger | Bring {count} policies from Agger",
-        "NADA": "No policy is ready to come in. Check Agger and tap \"Search again\"."
+        "DEPOIS": "New policies that Agger brings later come in on their own with the daily search.",
+        "NADA": "There are no policies to bring from Agger yet. Tap \"Search again\" later."
       },
       "PRONTO": {
         "APOIO": "With the switch below on, I look up new policies in Agger every day.",

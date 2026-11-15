@@ -6,23 +6,16 @@ import {
   comAviso,
 } from '../../../../carteira/avisosDasSeguradoras';
 
-// #2900 (E7.3, E7.5) — o que houve com as seguradoras na busca no Agger, numa
-// linha calma: "O Agger não buscou seguros novos em 13 seguradoras agora. Os
-// que já estavam no Agger vieram." O detalhe fica atrás de "Ver quais", em
-// grupos por situação, cada grupo com os nomes e uma frase do que fazer; o
-// grupo das que não responderam tem "Tentar de novo". Seguradora sem nome
-// entra como "uma seguradora" (ou "mais uma", depois das que têm nome). Tudo
-// bem com todas: nada aparece.
-//
-// `nadaVeio`: a busca não trouxe nenhum seguro e todas as seguradoras ficaram
-// com aviso. A linha vira a frase do que fazer, sem culpar ninguém.
+// #2900 (E7.3, E7.5) — as seguradoras com evidência de login faltando ou
+// recusado no Agger, numa linha calma: "2 seguradoras precisam do seu login no
+// Agger para trazer seguros novos." O detalhe fica atrás de "Ver quais
+// seguradoras", em grupos pelo que fazer, cada grupo com os nomes e a frase do
+// que fazer. Seguradora sem nome entra como "uma seguradora" (ou "mais uma",
+// depois das que têm nome). Sem evidência, nada aparece.
 const props = defineProps({
   // [{ nome, situacao }]
   seguradoras: { type: Array, default: () => [] },
-  nadaVeio: { type: Boolean, default: false },
-  ocupado: { type: Boolean, default: false },
 });
-const emit = defineEmits(['tentar']);
 
 const { t, locale } = useI18n();
 const id = useId();
@@ -38,12 +31,6 @@ const FAZER = {
   sem_login: quantas =>
     t(
       'RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.SEM_LOGIN',
-      { count: quantas },
-      quantas
-    ),
-  falhou: quantas =>
-    t(
-      'RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.FALHOU',
       { count: quantas },
       quantas
     ),
@@ -94,13 +81,11 @@ const grupos = computed(() =>
 );
 
 const frase = computed(() =>
-  props.nadaVeio
-    ? t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.NADA_VEIO')
-    : t(
-        'RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.LINHA',
-        { count: avisos.value.length },
-        avisos.value.length
-      )
+  t(
+    'RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.LINHA',
+    { count: avisos.value.length },
+    avisos.value.length
+  )
 );
 </script>
 
@@ -152,20 +137,9 @@ const frase = computed(() =>
         >
           {{ grupo.nomes }}
         </span>
-        <span :id="grupo.chave" class="text-sm text-n-slate-11 text-pretty">
+        <span class="text-sm text-n-slate-11 text-pretty">
           {{ grupo.fazer }}
         </span>
-        <button
-          v-if="grupo.situacao === 'falhou'"
-          type="button"
-          data-carteira="tentar-seguradora"
-          class="self-start px-4 mt-1 text-sm font-medium border rounded-xl min-h-11 border-n-weak bg-n-solid-1 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          :aria-describedby="grupo.chave"
-          :aria-busy="ocupado ? 'true' : 'false'"
-          @click="emit('tentar')"
-        >
-          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.SEGURADORAS.TENTAR') }}
-        </button>
       </li>
     </ul>
   </section>

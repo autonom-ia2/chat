@@ -1,8 +1,9 @@
 require 'rails_helper'
 
 # E7 (#2900) — a busca dos seguros no conector, passo a passo, com o conector de mentira (Mock::CarteiraDaCorretora: duas
-# páginas, um registro sem referência, um endosso da mesma apólice, um registro que o adapter não leu e o período em
-# fatias de um mês). Tudo fictício; nenhuma chamada paga: o tipo de cada ramo vem de uma pergunta falsa.
+# páginas, um registro sem referência, um endosso da mesma apólice, um registro que o adapter não leu e os avisos do
+# pedido). Desde a E7.5, a busca traz na hora o que o Agger já tem, sem esperar o robô. Tudo fictício; nenhuma chamada
+# paga: o tipo de cada ramo vem de uma pergunta falsa.
 RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
   include ActiveJob::TestHelper
 
@@ -53,13 +54,12 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect(itens.where(estado: 'lido').map { |item| item.campos['tipo'] }).to match_array(%w[auto residencial auto empresarial])
     end
 
-    it 'o registro sem referência não dá para trazer, e as seguradoras ficam com nome e situação só' do
+    it 'o registro sem referência não dá para trazer, e os avisos do pedido ficam com nome e situação só' do
       leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
 
       expect(leitura.itens.find_by(estado: 'falhou').campos['ref']).to be_nil
       expect(Carteira::Conector::Pedido.new(leitura).por_seguradora).to eq(
-        [{ 'nome' => 'Seguradora Azul (exemplo)', 'situacao' => 'pronta' }, { 'nome' => 'Seguradora Verde (exemplo)', 'situacao' => 'pronta' },
-         { 'nome' => 'Seguradora Sol (exemplo)', 'situacao' => 'pede_login' }, { 'nome' => nil, 'situacao' => 'sem_login' }]
+        [{ 'nome' => 'Seguradora Sol (exemplo)', 'situacao' => 'pede_login' }, { 'nome' => nil, 'situacao' => 'sem_login' }]
       )
     end
 
@@ -71,7 +71,7 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
                                   ignorados: 1, repetidos: 1, jaNaCarteira: 0, porTipo: { 'auto' => 1, 'residencial' => 1, 'empresarial' => 1 })
       nao_deu = conferir[:naoDeuParaTrazer] - conferir[:ignorados]
       expect(conferir[:seguros] + nao_deu + conferir[:ignorados] + conferir[:repetidos]).to eq(conferir[:total])
-      expect(conferir[:porSeguradora].size).to eq(4)
+      expect(conferir[:porSeguradora].size).to eq(2)
     end
 
     it 'os números do Conferir são calculados no job: a requisição só lê, sem procurar a pessoa de nenhum registro' do
@@ -190,8 +190,9 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
     end
   end
 
-  # E7.5 — a prova real: o robô do Agger falhou em todas as seguradoras, e os seguros que o Agger já tinha não vinham.
-  describe 'quando o robô do Agger falha em todas as seguradoras' do
+  # E7.5 — a prova real: o robô do Agger não buscou nas seguradoras, e os seguros que o Agger já tinha não vinham. Agora
+  # a busca lê a lista logo depois do pedido, sem perguntar pelo robô.
+  describe 'traz na hora o que o Agger já tem, sem esperar o robô' do
     before { conectar! }
 
     def registro(ref, seguradora, documento)
@@ -201,121 +202,161 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
         'parcelas' => nil, 'pdf_ref' => nil }
     end
 
-    # O pedido termina `falhou`, e a lista do Agger tem 3 registros: duas linhas iguais (a mesma apólice, sem endosso) e
-    # uma de outra seguradora.
-    def portal_com_o_pedido_falhou(leitura)
+    # O pedido volta como `pedido` manda, e a lista do Agger tem 3 registros: duas linhas iguais (a mesma apólice, sem
+    # endosso) e uma de outra seguradora. O andamento não pode ser perguntado.
+    def portal_sem_robo(leitura, pedido: { 'sync_id' => 'exemplo-1', 'status' => 'buscando' })
       portal = Carteira::Conector::Portal.new(leitura.account)
+      allow(portal).to receive(:pedir).and_return(pedido)
       allow(portal).to receive(:andamento)
-        .and_return('status' => 'falhou', 'por_seguradora' => [{ 'nome' => 'Seguradora Azul (exemplo)', 'situacao' => 'falhou' }])
-      itens = [registro('falhou-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
-               registro('falhou-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
-               registro('falhou-ref-2', 'Seguradora Verde (exemplo)', '40050060007')]
+      itens = [registro('agora-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
+               registro('agora-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
+               registro('agora-ref-2', 'Seguradora Verde (exemplo)', '40050060007')]
       allow(portal).to receive(:apolices).and_return('itens' => itens, 'proximo_cursor' => nil, 'total' => 3, 'ignorados' => 0)
       portal
     end
 
-    it 'lê a lista mesmo assim: os 3 registros chegam ao Conferir, a linha repetida conta uma vez, e a conta fecha' do
+    it 'lê a lista logo depois do pedido: os 3 registros chegam ao Conferir, a linha repetida conta uma vez, e a conta fecha' do
       inicio = described_class.primeira(account, user: admin)
-      leitura = andar_ate_o_fim(inicio, portal: portal_com_o_pedido_falhou(inicio))
+      portal = portal_sem_robo(inicio)
 
+      expect(described_class.new(inicio, portal: portal).passo).to eq(2.seconds)
+      expect(described_class.new(inicio.reload, portal: portal).passo).to be_nil
+      leitura = inicio.reload
+
+      expect(portal).not_to have_received(:andamento)
       expect(leitura.estado).to eq('lida')
       expect(leitura.itens.where(estado: 'lido').count).to eq(2)
       expect(leitura.totais.values_at('recebidos', 'repetidos', 'ignorados', 'total')).to eq([3, 1, 0, 3])
       conferir = Carteira::Conector::Conferir.new(leitura).call
-      expect(conferir).to include(seguros: 2, pessoas: 2, naoDeuParaTrazer: 0, ignorados: 0, repetidos: 1, total: 3)
-      expect(conferir[:porSeguradora]).to eq([{ nome: 'Seguradora Azul (exemplo)', situacao: 'falhou' }])
+      expect(conferir).to include(seguros: 2, pessoas: 2, naoDeuParaTrazer: 0, ignorados: 0, repetidos: 1, total: 3, porSeguradora: [])
       entram = conferir[:seguros]
       nao_deu = conferir[:naoDeuParaTrazer] - conferir[:ignorados]
       expect(entram + nao_deu + conferir[:ignorados] + conferir[:repetidos]).to eq(conferir[:total])
     end
 
-    it 'a de todo dia também: os seguros que já estavam no Agger vão para a gravação' do
+    it 'a de todo dia também: os seguros que já estavam no Agger vão para a gravação, sem perguntar pelo robô' do
       inicio = described_class.diaria(account)
-      leitura = andar_ate_o_fim(inicio, portal: portal_com_o_pedido_falhou(inicio))
+      portal = portal_sem_robo(inicio)
+      leitura = andar_ate_o_fim(inicio, portal: portal)
 
+      expect(portal).not_to have_received(:andamento)
       expect(leitura.estado).to eq('trazendo')
       expect(leitura.totais['para_trazer']).to eq(2)
     end
+
+    it 'só a evidência vira aviso: a situação sem problema, a desconhecida e o pedido sem o campo não avisam nada' do
+      pedido = { 'sync_id' => 'exemplo-2', 'status' => 'falhou',
+                 'por_seguradora' => [{ 'codigo' => '1', 'nome' => 'Seguradora Lua (exemplo)', 'situacao' => 'sem_login' },
+                                      { 'codigo' => '2', 'nome' => 'Seguradora Mar (exemplo)', 'situacao' => 'pronta' },
+                                      { 'codigo' => '3', 'nome' => 'Seguradora Rio (exemplo)', 'situacao' => 'outra' }, 'fora do formato'] }
+      com_aviso = described_class.primeira(account, user: admin)
+      andar_ate_o_fim(com_aviso, portal: portal_sem_robo(com_aviso, pedido: pedido))
+      expect(Carteira::Conector::Conferir.new(com_aviso.reload).call[:porSeguradora])
+        .to eq([{ nome: 'Seguradora Lua (exemplo)', situacao: 'sem_login' }])
+
+      sem_campo = described_class.diaria(account)
+      andar_ate_o_fim(sem_campo, portal: portal_sem_robo(sem_campo))
+      expect(Carteira::Conector::Conferir.new(sem_campo.reload).call[:porSeguradora]).to eq([])
+    end
   end
 
-  # E7.5 — o adapter pede o período em fatias de um mês, uma por pergunta de andamento, e só pede a seguinte se a
-  # anterior saiu há poucos minutos: enquanto falta fatia, a busca pergunta logo.
-  describe 'o período em fatias de um mês' do
+  # E7.5 — a busca pedida antes desta regra (o pedido ainda `buscando`) segue perguntando pelo robô, mas com prazo: nada
+  # fica preso esperando por ele.
+  describe 'a busca pedida antes, que ainda espera o robô' do
     before { conectar! }
 
-    def portal_com_fatias(leitura, *fatias)
+    def pedido_de_antes!(leitura)
+      item = leitura.itens.find_by!(estado: 'pedido')
+      item.update!(campos: item.campos.merge('sync_id' => "mock-carteira:#{Time.current.to_i}", 'status' => 'buscando',
+                                             'pagina' => 0, 'desde_posicao' => 1))
+    end
+
+    def portal_com_robo(leitura, *status)
       portal = Carteira::Conector::Portal.new(leitura.account)
-      allow(portal).to receive(:andamento)
-        .and_return(*fatias.map { |fatia| { 'status' => 'buscando', 'por_seguradora' => [], 'fatias' => fatia } })
+      allow(portal).to receive(:andamento).and_return(*status.map { |um| { 'status' => um, 'por_seguradora' => [] } })
       portal
     end
 
-    it 'enquanto falta pedir fatia, pergunta de novo em 20 segundos e guarda as fatias para a tela; depois, a espera de sempre' do
+    it 'pergunta o andamento enquanto o robô busca e lê a lista quando ele termina; o andamento não vira aviso' do
       leitura = described_class.primeira(account, user: admin)
-      portal = portal_com_fatias(leitura, { 'pedidas' => 5, 'total' => 37 }, { 'pedidas' => 37, 'total' => 37 })
-
-      expect(described_class.new(leitura, portal: portal).passo).to eq(20.seconds)
-      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(20.seconds)
-      expect(leitura.reload.totais).to include('fatias_pedidas' => 5, 'fatias_total' => 37)
-      expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'lendo', fatias: { pedidas: 5, total: 37 })
-
-      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(1.minute)
-      expect(Carteira::Conector::Conferir.new(leitura.reload).call[:fatias]).to eq(pedidas: 37, total: 37)
-    end
-
-    it 'sem fatias no andamento (o adapter de antes), tudo como era: um minuto de espera e nada novo nos totais' do
-      leitura = described_class.diaria(account)
+      pedido_de_antes!(leitura)
       portal = Carteira::Conector::Portal.new(account)
-      allow(portal).to receive(:andamento).and_return('status' => 'buscando', 'por_seguradora' => [])
+      allow(portal).to receive(:andamento).and_return({ 'status' => 'buscando', 'por_seguradora' => [] },
+                                                      { 'status' => 'pronta', 'por_seguradora' => [{ 'nome' => nil, 'situacao' => 'sem_login' }] })
 
       expect(described_class.new(leitura, portal: portal).passo).to eq(1.minute)
-      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(1.minute)
-      expect(leitura.reload.totais.keys).not_to include('fatias_pedidas', 'fatias_total')
-      expect(Carteira::Conector::Conferir.new(leitura).call).to include(fatias: nil)
+      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(0.seconds)
+      leitura = andar_ate_o_fim(leitura, portal: portal)
+
+      expect(portal).to have_received(:andamento).twice
+      expect(leitura.estado).to eq('lida')
+      expect(leitura.itens.where(estado: 'lido').count).to eq(4)
+      expect(Carteira::Conector::Conferir.new(leitura).call[:porSeguradora]).to eq([])
     end
 
-    it 'o andamento com as mesmas fatias de antes ainda conta como andamento: a busca não parece parada' do
+    it 'com o robô pendente depois do prazo (2 horas do começo da busca), para de perguntar, lê a lista e termina' do
       leitura = described_class.primeira(account, user: admin)
-      portal = portal_com_fatias(leitura, { 'pedidas' => 37, 'total' => 37 })
-      2.times { described_class.new(leitura.reload, portal: portal).passo }
+      pedido_de_antes!(leitura)
+      portal = portal_com_robo(leitura, 'buscando')
+
+      expect(described_class.new(leitura, portal: portal).passo).to eq(1.minute)
+      travel(described_class::PRAZO_DO_ROBO + 1.minute)
+      leitura = andar_ate_o_fim(leitura, portal: portal)
+
+      expect(portal).to have_received(:andamento).once
+      expect(leitura.estado).to eq('lida')
+      expect(leitura.itens.where(estado: 'lido').count).to eq(4)
+    end
+
+    it 'cada pergunta ao robô conta como andamento: a busca não parece parada' do
+      leitura = described_class.primeira(account, user: admin)
+      pedido_de_antes!(leitura)
+      portal = portal_com_robo(leitura, 'buscando')
       travel(5.minutes)
 
       expect { described_class.new(leitura.reload, portal: portal).passo }.to(change { leitura.reload.updated_at })
     end
 
-    it 'a falha passageira com fatia por pedir tenta de novo logo, para o adapter não perder a sequência' do
+    it 'a busca de antes já lida: o aviso guardado pelo andamento antigo não aparece, e buscar de novo pede do jeito novo' do
       leitura = described_class.primeira(account, user: admin)
-      portal = portal_com_fatias(leitura, { 'pedidas' => 3, 'total' => 37 })
-      2.times { described_class.new(leitura.reload, portal: portal).passo }
-      allow(portal).to receive(:andamento).and_raise(Autonomia::Insurance::Connector::Error.new(:timeout, 'falha de exemplo'))
-      allow(Rails.logger).to receive(:warn)
-
-      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(20.seconds)
-      expect(described_class.new(leitura.reload, portal: portal).passo).to eq(40.seconds)
-    end
-
-    it 'buscar de novo uma busca já lida recomeça as fatias, e o pedido novo não leva as seguradoras do anterior' do
-      leitura = andar_ate_o_fim(described_class.primeira(account, user: admin))
-      expect(leitura.totais).to include('fatias_pedidas' => 37, 'fatias_total' => 37)
+      pedido_de_antes!(leitura)
+      item = leitura.itens.find_by!(estado: 'pedido')
+      item.update!(campos: item.campos.merge('status' => 'pronta', 'por_seguradora' => [{ 'nome' => nil, 'situacao' => 'sem_login' }]))
+      leitura.update!(estado: 'lida')
+      expect(Carteira::Conector::Conferir.new(leitura).call[:porSeguradora]).to eq([])
 
       described_class.de_novo(leitura)
-
-      expect(leitura.reload.totais.keys).not_to include('fatias_pedidas', 'fatias_total')
-      expect(Carteira::Conector::Conferir.new(leitura).call).to include(estado: 'lendo', porSeguradora: [], fatias: nil)
+      pedido = Carteira::Conector::Pedido.new(leitura.reload)
+      expect([pedido.sync_id, pedido.status]).to eq([nil, nil])
+      expect(andar_ate_o_fim(leitura).estado).to eq('lida')
     end
   end
 
   describe 'a busca de todo dia' do
     before { conectar! }
 
-    it 'pede os últimos 7 dias e, no fim, vai sozinha para a gravação' do
+    it 'pede os últimos 30 dias e, no fim, vai sozinha para a gravação' do
       leitura = described_class.diaria(account)
       pedido = Carteira::Conector::Pedido.new(leitura)
-      expect(Date.iso8601(pedido.ate) - Date.iso8601(pedido.desde)).to eq(7)
+      expect(Date.iso8601(pedido.ate) - Date.iso8601(pedido.desde)).to eq(30)
 
       expect { andar_ate_o_fim(leitura) }.to have_enqueued_job(Carteira::Conector::GravarJob).with(leitura.id)
       expect(leitura.reload).to have_attributes(estado: 'trazendo', user: nil)
       expect(leitura.totais['para_trazer']).to eq(4)
+    end
+
+    # Os 30 dias se sobrepõem de um dia para o outro de propósito (o que o robô trouxer depois entra): o mesmo registro
+    # visto de novo não vira outro seguro nem outra pessoa.
+    it 'a de amanhã vê os mesmos registros nos 30 dias, e não duplica seguro nem pessoa' do
+      # No meio do mês: as datas do conector de mentira só mudam na virada dele.
+      travel_to(Time.current.beginning_of_month + 9.days + 12.hours)
+      gravar_a_busca(andar_ate_o_fim(described_class.diaria(account)))
+      expect(Carteira::Apolice.where(account_id: account.id).count).to eq(3)
+      travel(1.day)
+
+      expect { gravar_a_busca(andar_ate_o_fim(described_class.diaria(account))) }
+        .not_to(change { [Carteira::Apolice.where(account_id: account.id).count, account.contacts.count] })
+      expect(Carteira::Leitura.do_conector.where(account_id: account.id).count).to eq(2)
     end
 
     it 'a rotina só busca nas contas com o interruptor ligado e o login aceito' do
