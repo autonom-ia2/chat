@@ -34,7 +34,13 @@ O kit não substitui essa conversa. Ele só recusa o que a regra já proíbe:
   ligado conta: desligue com `bin/demo down <slug>`. Religar a própria demo não esbarra nela mesma, mas passa pelo
   limite da máquina onde ela mora.
 - **As duas máquinas têm de responder no `up`.** Sem falar com uma delas, o kit não tem como afirmar que não há
-  demo viva, e recusa.
+  demo viva, e recusa. Cada conferência no outro Mac (demo registrada, demos vivas, ferramentas) tem **15 segundos**
+  de tempo limite (`LIMITE_SONDA_S`): conexão que abre e fica presa conta como "não respondeu". A recusa diz como
+  forçar a máquina que responde. A medição (`maccluster status`) tem 30 segundos.
+- **Exceção: máquina forçada e o outro Mac mudo.** Com `DEMO_MAQUINA`, se a conferência no outro Mac falhar ou
+  passar do limite, o `up` **avisa e segue**. O aviso diz o que ficou sem conferir: se a demo já existe lá e se há
+  demo viva lá, que conta para o limite de 1. Quem deu o OK do `up` responde por essa parte. Se quem não responde
+  é a própria máquina forçada, o `up` para.
 - **Demo que já existe não muda de máquina.** Banco e pasta moram onde ela nasceu. Para trocar: `down --apagar` e
   `up` de novo.
 - **Os outros comandos acham a máquina sozinhos**: procuram o `demo.env` da demo nas duas. `bin/demo status <slug>`
@@ -220,6 +226,8 @@ entrada → todas as conversas):
 | **Snapshot não chega ao M2** ("réplica pendente: remote_mode") | Com o M2 fora de casa, o MacCluster não replica snapshot (transferência grande). | O kit tira o snapshot só no Mac de onde é chamado e monta o do outro por clone APFS + `rsync` da diferença (em geral poucos MB). |
 | **Vite demora na 1a página** | A primeira visita compila o painel. | O `up` espera até 15 min pelo login; o `prints` dá até 5 min por página (`DEMO_TIMEOUT_MS`). |
 | **Lançador de gem que falta** ("bundler: command not found: vite") | O Ruby compartilhado do MacCluster guarda um lançador por executável de gem em `ruby-3.4.4/bin`. Em 12/11/2026 o do M4 tinha 27 e o do M2, 79: as gems estavam instaladas no M4, mas sem os lançadores (entre eles `vite`, `puma`, `rackup`). O `bundle exec vite` não achou o comando. | O kit não usa mais lançador de gem: chama `ruby bin/rails` e `ruby bin/vite` do próprio app. Os lançadores que faltam no M4 são assunto do instalador do MacCluster, não do kit. |
+| **`up` parado, sem mensagem** (15/11/2026: 30 minutos) | O ssh para o outro Mac abria a conexão e ficava preso na negociação. O `ConnectTimeout` do ssh não cobre isso, e o kit esperava para sempre. | Conferência curta no outro Mac tem 15 s de limite (`/usr/bin/timeout -f`); estourou, a máquina conta como muda. Com `DEMO_MAQUINA`, o outro Mac mudo vira aviso e o `up` segue. As chamadas longas (`pnpm install`, banco, `rsync`) não levam teto, porque matar o ssh no meio deixaria o comando rodando do outro lado; antes de cada uma o kit abre uma conexão de teste com os mesmos 15 s e só segue se ela responder. Depois de conectado, o ssh derruba a conexão que parar de responder (`ServerAlive`, cerca de 1 minuto). Fica descoberto só o outro Mac travar no instante entre o teste e a chamada. |
+| **"tar: Write error"** e "não levei o kit" com a demo no próprio Mac | O `tar` que extrai sai ao achar o fim do pacote, sem ler o enchimento do último bloco; o que envia leva `EPIPE` e, com `pipefail`, o comando falha com tudo já extraído. Por ssh não aparece: o `sshd` lê a entrada toda. | Quem extrai lê o resto da entrada depois do `tar -xf -` (envio do kit, `sync`, `seed` e `prints`). |
 | **Gem nova** | O Ruby do MacCluster tem as gems do `Gemfile.lock` da `main`. | O `sync` recusa mudança de `Gemfile`; demo que precisa de gem nova não é caso deste kit. |
 
 ## Checagem de uso (`lsof +D`)
