@@ -8,7 +8,8 @@
 #   O que o adapter não leu vem contado em `ignorados`. Assim, para cada pedido, o Conferir fecha com o `total` do
 #   conector.
 # - O item sem `ref` fica `falhou` ("não deu para trazer"): sem a referência, a busca seguinte não acharia o mesmo
-#   seguro e criaria outro. O sem seguradora ou sem fim da vigência também: o seguro não entra sem eles.
+#   seguro e criaria outro. O sem seguradora ou sem fim da vigência também: o seguro não entra sem eles. E o que começa
+#   depois de terminar (a mesma régua de Carteira::Apolice): o gravador o recusaria, e o Conferir não pode prometê-lo.
 # - `tipos!`: no fim da busca, o tipo de cada item sai do ramo (Carteira::Conector::TiposDoRamo). O item cujo tipo foi
 #   respondido (pela conta ou pelo modelo) fica marcado (TiposDoRamo::RESPONDIDO): a próxima busca não pergunta de novo.
 #
@@ -55,7 +56,12 @@ class Carteira::Conector::Ler
   end
 
   def pode_entrar?(campos)
-    campos['ref'].present? && campos['seguradora'].present? && campos['fim_vigencia'].present?
+    campos['ref'].present? && campos['seguradora'].present? && campos['fim_vigencia'].present? && datas_em_ordem?(campos)
+  end
+
+  # As datas já vêm na forma do banco (aaaa-mm-dd): comparar o texto é comparar a data.
+  def datas_em_ordem?(campos)
+    campos['inicio_vigencia'].nil? || campos['inicio_vigencia'] <= campos['fim_vigencia']
   end
 
   # 'repetidos' (o mesmo registro já veio neste pedido), 'ja_lidos' (veio num pedido anterior desta busca) ou nil (é novo).

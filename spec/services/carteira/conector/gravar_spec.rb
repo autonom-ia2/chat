@@ -128,6 +128,21 @@ RSpec.describe Carteira::Conector::Gravar, :aggregate_failures do
 
     expect(item.reload.estado).to eq('nao_entrou')
     expect(leitura.reload.totais).to include('motivo_sem_pessoa' => 1, 'nao_entraram' => 1, 'seguros' => 2)
+    # E7.6 — a tela do fim diz por quê: o andamento abre o `naoEntraram` pelo motivo, e a soma fecha.
+    expect(Carteira::Trazer::Pdfs::Andamento.new(leitura).call)
+      .to include(naoEntraram: 1, naoEntraramPorque: { semDocumento: 1, dadosErrados: 0, outros: 0 })
+  end
+
+  # E7.6 (#2900) — a prova real: o Agger mandou o começo da vigência depois do fim. O Conferir prometia o seguro e o
+  # gravador o recusava (Carteira::Apolice). Agora ele não dá para trazer desde a leitura, como o sem data.
+  it 'o registro que começa depois de terminar não dá para trazer, e o que tem as datas certas segue' do
+    inicio = comeco + 10
+    invertido = registro(ref: 'exemplo-invertido', inicio: inicio).merge('fim_vigencia' => (inicio - 1).iso8601)
+    mesmo_dia = registro(ref: 'exemplo-mesmo-dia', inicio: inicio, numero: '2002').merge('fim_vigencia' => inicio.iso8601)
+    leitura = busca_com(invertido, mesmo_dia)
+
+    expect(leitura.itens.where(estado: 'falhou').map { |item| item.campos['ref'] }).to eq(['exemplo-invertido'])
+    expect(leitura.itens.where(estado: 'lido').map { |item| item.campos['ref'] }).to eq(['exemplo-mesmo-dia'])
   end
 
   it 'desfazer a busca tira os seguros e as pessoas que ela trouxe e em que ninguém mexeu' do

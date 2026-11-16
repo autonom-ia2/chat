@@ -17,14 +17,11 @@ import {
   PEDIR_LOGIN,
   useBuscaNoAgger,
 } from '../../../../carteira/useBuscaNoAgger';
-import {
-  BOTAO_DISCRETO_DO_HEROI,
-  BOTAO_PRINCIPAL_DO_HEROI,
-} from '../../../../carteira/botoesDoHeroi';
-import HeroiEscuro from '../../../comum/HeroiEscuro.vue';
 import BuscaDeTodoDia from './BuscaDeTodoDia.vue';
 import DialogoDoLoginNoAgger from './DialogoDoLoginNoAgger.vue';
 import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
+import PorQueNaoDeu from './PorQueNaoDeu.vue';
+import ProntoDoAgger from './ProntoDoAgger.vue';
 import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 
 // #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
@@ -34,9 +31,11 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // buscar nas seguradoras (#2900, E7.5). O Conferir começa pelo que importa —
 // quantos seguros entram, de quantas pessoas, e o "Trazer" — e as seguradoras
 // com o login faltando ou recusado no Agger (só com evidência) viram uma linha
-// calma, com o detalhe atrás de "Ver quais seguradoras". Depois, a busca de
-// todo dia traz os seguros novos sozinha (o interruptor liga e desliga) e as
-// buscas já feitas ficam embaixo, com Desfazer.
+// calma, com o detalhe atrás de "Ver quais seguradoras"; o que não deu para
+// trazer tem "Ver por quê" (#2900, E7.6). O fim diz o que entrou e, do que não
+// entrou, por quê (ProntoDoAgger). Depois, a busca de todo dia traz os seguros
+// novos sozinha (o interruptor liga e desliga) e as buscas já feitas ficam
+// embaixo, com Desfazer.
 //
 // Sem botão desligado: sem seguro pronto, o "Trazer" não aparece e a frase do
 // que fazer fica no lugar. Toda espera que pode falhar tem "Tentar de novo". A
@@ -138,28 +137,9 @@ const fraseDoTrazendo = computed(() =>
 );
 const seguradoras = computed(() => atual.value?.porSeguradora ?? []);
 const temDetalhes = computed(() =>
-  ['jaNaCarteira', 'pessoasNovas', 'semTelefone', 'naoDeuParaTrazer'].some(
+  ['jaNaCarteira', 'pessoasNovas', 'semTelefone'].some(
     numero => atual.value?.[numero]
   )
-);
-const chegaram = computed(() => ({
-  seguros: andamento.value?.seguros ?? 0,
-  pessoas: andamento.value?.pessoas ?? 0,
-  pessoasNovas: andamento.value?.pessoasNovas ?? 0,
-}));
-const fraseDoPronto = computed(() =>
-  [
-    t(
-      'RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.CHEGARAM',
-      { count: chegaram.value.seguros },
-      chegaram.value.seguros
-    ),
-    t(
-      'RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.DE_PESSOAS',
-      { count: chegaram.value.pessoas },
-      chegaram.value.pessoas
-    ),
-  ].join(' ')
 );
 
 watch(etapa, async () => {
@@ -361,20 +341,12 @@ onBeforeUnmount(busca.parar);
                 )
               }}
             </li>
-            <li
-              v-if="atual.naoDeuParaTrazer"
-              data-carteira="nao-deu-para-trazer"
-            >
-              {{
-                t(
-                  'RELACIONAMENTOS_CARTEIRA.AGGER.CONFERIR.NAO_DEU',
-                  { count: atual.naoDeuParaTrazer },
-                  atual.naoDeuParaTrazer
-                )
-              }}
-            </li>
           </ul>
         </div>
+        <PorQueNaoDeu
+          :total="atual.naoDeuParaTrazer ?? 0"
+          :porque="atual.naoDeuPorque ?? null"
+        />
         <SeguradorasDaBusca :seguradoras="seguradoras" />
         <Button
           slate
@@ -415,30 +387,13 @@ onBeforeUnmount(busca.parar);
       </template>
 
       <template v-else>
-        <HeroiEscuro data-carteira="pronto-do-agger">
-          <template #frase>
-            <span class="tabular-nums text-balance">{{ fraseDoPronto }}</span>
-          </template>
-          <template #apoio>
-            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.APOIO') }}
-          </template>
-          <template #acao>
-            <Button
-              size="lg"
-              data-carteira="ver-os-seguros"
-              :class="BOTAO_PRINCIPAL_DO_HEROI"
-              :label="t('RELACIONAMENTOS_CARTEIRA.TRAZER.PRONTO.VER')"
-              @click="verOsSeguros"
-            />
-            <Button
-              size="lg"
-              data-carteira="voltar-ao-inicio"
-              :class="BOTAO_DISCRETO_DO_HEROI"
-              :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.VOLTAR')"
-              @click="voltarAoInicio"
-            />
-          </template>
-        </HeroiEscuro>
+        <ProntoDoAgger
+          :andamento="andamento ?? {}"
+          :ocupado="ocupado"
+          @buscar="comecar"
+          @ver="verOsSeguros"
+          @voltar="voltarAoInicio"
+        />
         <BuscaDeTodoDia
           :fonte="fonte"
           :pede-login="loginRecusadoNaConta"

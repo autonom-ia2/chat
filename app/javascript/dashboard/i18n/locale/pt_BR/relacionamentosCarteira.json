@@ -789,9 +789,26 @@
         "DEPOIS": "Seguros novos que o Agger trouxer depois entram sozinhos na busca de todo dia.",
         "NADA": "Ainda não há seguros para trazer do Agger. Toque em \"Buscar de novo\" mais tarde."
       },
+      "POR_QUE": {
+        "VER": "Ver por quê",
+        "ESCONDER": "Esconder",
+        "QUANTOS": "{count} seguro | {count} seguros",
+        "SEM_DADOS": "Faltam dados desse seguro no Agger, como as datas. Quando o Agger tiver, ele entra na próxima busca. | Faltam dados desses seguros no Agger, como as datas. Quando o Agger tiver, eles entram na próxima busca.",
+        "SEM_DOCUMENTO": "O Agger não tem o CPF ou CNPJ dessa pessoa, e sem ele eu não sei quem é. Guarde no Agger e toque em \"Buscar de novo\". | O Agger não tem o CPF ou CNPJ dessas pessoas, e sem ele eu não sei quem é cada uma. Guarde no Agger e toque em \"Buscar de novo\".",
+        "NAO_LEU": "O Agger mandou esse seguro de um jeito que eu não consigo ler. | O Agger mandou esses seguros de um jeito que eu não consigo ler."
+      },
       "PRONTO": {
         "APOIO": "Com o interruptor abaixo ligado, eu busco os seguros novos no Agger todo dia.",
-        "VOLTAR": "Ver as buscas"
+        "VOLTAR": "Ver as buscas",
+        "NENHUM": "Nenhum seguro entrou.",
+        "JA_ESTAVAM": "Os seguros desta busca já estavam na carteira, sem mudança.",
+        "NAO_ENTRARAM": "{count} seguro não entrou. | {count} seguros não entraram.",
+        "BUSCAR_DE_NOVO": "Buscar de novo",
+        "PORQUE": {
+          "SEM_DOCUMENTO": "{count} seguro não tem o CPF ou CNPJ da pessoa no Agger, e sem ele eu não sei de quem é. Guarde no Agger e toque em \"Buscar de novo\". | {count} seguros não têm o CPF ou CNPJ da pessoa no Agger, e sem ele eu não sei de quem são. Guarde no Agger e toque em \"Buscar de novo\".",
+          "DADOS_ERRADOS": "{count} seguro tem dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros têm dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\".",
+          "OUTROS": "{count} seguro não deu para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez. | {count} seguros não deram para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez."
+        }
       },
       "TODO_DIA": {
         "ROTULO": "Buscar novos seguros todo dia",
