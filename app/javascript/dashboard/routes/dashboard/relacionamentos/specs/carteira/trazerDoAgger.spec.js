@@ -364,11 +364,11 @@ describe('o que não deu para trazer, no Conferir', () => {
     ]);
     expect(grupos[0].text()).toContain('10 seguros');
     expect(grupos[0].text()).toContain(
-      'Faltam dados desses seguros no Agger, como as datas.'
+      'Faltam dados desses seguros no Agger, ou eles não batem, como as datas.'
     );
     expect(grupos[1].text()).toContain('2 seguros');
     expect(grupos[1].text()).toContain(
-      'O Agger não tem o CPF ou CNPJ dessas pessoas'
+      'O Agger não tem o CPF ou CNPJ certo dessas pessoas, ou o nome delas'
     );
   });
 
@@ -405,7 +405,12 @@ describe('o fim do "Trazer do Agger"', () => {
       seguros: 0,
       pessoas: 0,
       naoEntraram: 3,
-      naoEntraramPorque: { semDocumento: 0, dadosErrados: 3, outros: 0 },
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 3,
+        conferir: 0,
+        outros: 0,
+      },
     });
 
     expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
@@ -428,7 +433,12 @@ describe('o fim do "Trazer do Agger"', () => {
       seguros: 2,
       pessoas: 2,
       naoEntraram: 1,
-      naoEntraramPorque: { semDocumento: 1, dadosErrados: 0, outros: 0 },
+      naoEntraramPorque: {
+        semDocumento: 1,
+        dadosErrados: 0,
+        conferir: 0,
+        outros: 0,
+      },
     });
 
     expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
@@ -438,8 +448,62 @@ describe('o fim do "Trazer do Agger"', () => {
     const naoEntraram = w.get('[data-carteira="nao-entraram"]');
     expect(naoEntraram.text()).toContain('1 seguro não entrou.');
     expect(naoEntraram.get('[data-motivo="semDocumento"]').text()).toContain(
-      '1 seguro não tem o CPF ou CNPJ da pessoa no Agger'
+      '1 seguro não tem no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela'
     );
+  });
+
+  it('nenhum entrou e todos batem com um seguro da carteira: diz conferir na carteira, e o botão é "Ver os seguros"', () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 2,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 2,
+        outros: 0,
+      },
+    });
+
+    expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
+      'Nenhum seguro entrou.'
+    );
+    const conferir = w.get('[data-motivo="conferir"]').text();
+    expect(conferir).toBe(
+      '2 seguros batem com outros que já estão na carteira (de outra pessoa ou com o mesmo número). Confira na carteira.'
+    );
+    expect(conferir).not.toContain('Buscar de novo');
+    expect(w.find('[data-carteira="buscar-de-novo-no-pronto"]').exists()).toBe(
+      false
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(true);
+  });
+
+  it('nenhum entrou, uns batem com a carteira e outros não deram para guardar: "Buscar de novo" volta', () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 3,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 2,
+        outros: 1,
+      },
+    });
+
+    const motivos = w.findAll('[data-motivo]');
+    expect(motivos.map(motivo => motivo.attributes('data-motivo'))).toEqual([
+      'conferir',
+      'outros',
+    ]);
+    expect(w.get('[data-motivo="outros"]').text()).toContain(
+      'Toque em "Buscar de novo" para tentar outra vez.'
+    );
+    expect(w.find('[data-carteira="buscar-de-novo-no-pronto"]').exists()).toBe(
+      true
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(false);
   });
 
   it('nada entrou porque tudo já estava na carteira: diz isso, e "Ver os seguros" continua', () => {
@@ -447,7 +511,12 @@ describe('o fim do "Trazer do Agger"', () => {
       seguros: 0,
       pessoas: 0,
       naoEntraram: 0,
-      naoEntraramPorque: { semDocumento: 0, dadosErrados: 0, outros: 0 },
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 0,
+        outros: 0,
+      },
     });
 
     expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(

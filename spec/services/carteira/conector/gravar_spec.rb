@@ -130,7 +130,20 @@ RSpec.describe Carteira::Conector::Gravar, :aggregate_failures do
     expect(leitura.reload.totais).to include('motivo_sem_pessoa' => 1, 'nao_entraram' => 1, 'seguros' => 2)
     # E7.6 — a tela do fim diz por quê: o andamento abre o `naoEntraram` pelo motivo, e a soma fecha.
     expect(Carteira::Trazer::Pdfs::Andamento.new(leitura).call)
-      .to include(naoEntraram: 1, naoEntraramPorque: { semDocumento: 1, dadosErrados: 0, outros: 0 })
+      .to include(naoEntraram: 1, naoEntraramPorque: { semDocumento: 1, dadosErrados: 0, conferir: 0, outros: 0 })
+  end
+
+  # E7.6 (#2900) — o que bate com um seguro que já está na carteira (de outra pessoa, com o mesmo número ou sem como saber
+  # qual termo é) buscar de novo não resolve: fica à parte do que sobra, que buscar de novo pode resolver.
+  it 'o andamento separa o que é conferir na carteira do que buscar de novo resolve, e a soma fecha' do
+    totais = { 'nao_entraram' => 6, 'motivo_sem_pessoa' => 1, 'motivo_invalido' => 1, 'motivo_apolice_de_outra_pessoa' => 1,
+               'motivo_termo_ambiguo' => 1, 'motivo_apolice_repetida' => 1, 'motivo_falha' => 1 }
+    leitura = create(:carteira_leitura, account: account, origem: 'conector', estado: 'trazida', confirmada_em: Time.current,
+                                        totais: totais)
+
+    porque = Carteira::Trazer::Pdfs::Andamento.new(leitura).call[:naoEntraramPorque]
+    expect(porque).to eq(semDocumento: 1, dadosErrados: 1, conferir: 3, outros: 1)
+    expect(porque.values.sum).to eq(6)
   end
 
   # E7.6 (#2900) — a prova real: o Agger mandou o começo da vigência depois do fim. O Conferir prometia o seguro e o

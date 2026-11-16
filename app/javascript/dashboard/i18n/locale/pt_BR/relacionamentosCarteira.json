@@ -793,8 +793,8 @@
         "VER": "Ver por quê",
         "ESCONDER": "Esconder",
         "QUANTOS": "{count} seguro | {count} seguros",
-        "SEM_DADOS": "Faltam dados desse seguro no Agger, como as datas. Quando o Agger tiver, ele entra na próxima busca. | Faltam dados desses seguros no Agger, como as datas. Quando o Agger tiver, eles entram na próxima busca.",
-        "SEM_DOCUMENTO": "O Agger não tem o CPF ou CNPJ dessa pessoa, e sem ele eu não sei quem é. Guarde no Agger e toque em \"Buscar de novo\". | O Agger não tem o CPF ou CNPJ dessas pessoas, e sem ele eu não sei quem é cada uma. Guarde no Agger e toque em \"Buscar de novo\".",
+        "SEM_DADOS": "Faltam dados desse seguro no Agger, ou eles não batem, como as datas. Quando o Agger acertar, ele entra na próxima busca. | Faltam dados desses seguros no Agger, ou eles não batem, como as datas. Quando o Agger acertar, eles entram na próxima busca.",
+        "SEM_DOCUMENTO": "O Agger não tem o CPF ou CNPJ certo dessa pessoa, ou o nome dela, e sem isso eu não sei quem é. Confira no Agger e toque em \"Buscar de novo\". | O Agger não tem o CPF ou CNPJ certo dessas pessoas, ou o nome delas, e sem isso eu não sei quem é cada uma. Confira no Agger e toque em \"Buscar de novo\".",
         "NAO_LEU": "O Agger mandou esse seguro de um jeito que eu não consigo ler. | O Agger mandou esses seguros de um jeito que eu não consigo ler."
       },
       "PRONTO": {
@@ -805,8 +805,9 @@
         "NAO_ENTRARAM": "{count} seguro não entrou. | {count} seguros não entraram.",
         "BUSCAR_DE_NOVO": "Buscar de novo",
         "PORQUE": {
-          "SEM_DOCUMENTO": "{count} seguro não tem o CPF ou CNPJ da pessoa no Agger, e sem ele eu não sei de quem é. Guarde no Agger e toque em \"Buscar de novo\". | {count} seguros não têm o CPF ou CNPJ da pessoa no Agger, e sem ele eu não sei de quem são. Guarde no Agger e toque em \"Buscar de novo\".",
+          "SEM_DOCUMENTO": "{count} seguro não tem no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem é. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros não têm no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem são. Confira no Agger e toque em \"Buscar de novo\".",
           "DADOS_ERRADOS": "{count} seguro tem dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros têm dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\".",
+          "CONFERIR": "{count} seguro bate com outro que já está na carteira (de outra pessoa ou com o mesmo número). Confira na carteira. | {count} seguros batem com outros que já estão na carteira (de outra pessoa ou com o mesmo número). Confira na carteira.",
           "OUTROS": "{count} seguro não deu para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez. | {count} seguros não deram para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez."
         }
       },

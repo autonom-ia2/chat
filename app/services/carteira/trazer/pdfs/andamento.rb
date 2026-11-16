@@ -1,14 +1,17 @@
 # O andamento de um lote de PDFs depois do "Trazer" (E6.3, #2899), como a tela lê:
 #
 #   { id:, estado: 'trazendo' | 'trazida' | 'desfazendo' | 'desfeita', porcentagem:, seguros:, pessoas:, pessoasNovas:,
-#     naoEntraram:, naoEntraramPorque: { semDocumento:, dadosErrados:, outros: } }
+#     naoEntraram:, naoEntraramPorque: { semDocumento:, dadosErrados:, conferir:, outros: } }
 #
 # Enquanto grava, a porcentagem é dos PDFs prontos que já passaram (entraram ou não); os números são os de agora.
 # `naoEntraramPorque` (só depois de gravar) abre o `naoEntraram` pelo motivo que o gravador contou (`motivo_<código>`),
-# para a tela dizer por quê (a busca no Agger, #2900): sem a pessoa (`sem_pessoa`: sem CPF/CNPJ e sem seguro guardado),
-# com dado que o seguro recusa (`invalido`) e o resto. A soma é o `naoEntraram`.
+# para a tela dizer por quê (a busca no Agger, #2900): sem a pessoa (`sem_pessoa`: sem CPF/CNPJ certo ou sem nome, e sem
+# seguro guardado), com dado que o seguro recusa (`invalido`), o que bate com um seguro que já está na carteira (CONFERIR:
+# de outra pessoa, com o mesmo número ou sem como saber qual termo é; buscar de novo não resolve, é conferir na carteira)
+# e o resto (`outros`: a falha inesperada, que buscar de novo pode resolver). A soma é o `naoEntraram`.
 class Carteira::Trazer::Pdfs::Andamento
   PASSARAM = %w[trazido nao_entrou].freeze
+  CONFERIR = [Carteira::Guardar::TERMO_AMBIGUO, Carteira::Guardar::DE_OUTRA_PESSOA, Carteira::Guardar::REPETIDA].freeze
 
   def initialize(leitura)
     @leitura = leitura
@@ -33,8 +36,9 @@ class Carteira::Trazer::Pdfs::Andamento
   def porque(totais)
     sem_documento = totais['motivo_sem_pessoa'].to_i
     dados_errados = totais['motivo_invalido'].to_i
-    { semDocumento: sem_documento, dadosErrados: dados_errados,
-      outros: [totais['nao_entraram'].to_i - sem_documento - dados_errados, 0].max }
+    conferir = CONFERIR.sum { |codigo| totais["motivo_#{codigo}"].to_i }
+    { semDocumento: sem_documento, dadosErrados: dados_errados, conferir: conferir,
+      outros: [totais['nao_entraram'].to_i - sem_documento - dados_errados - conferir, 0].max }
   end
 
   def porcentagem(totais)

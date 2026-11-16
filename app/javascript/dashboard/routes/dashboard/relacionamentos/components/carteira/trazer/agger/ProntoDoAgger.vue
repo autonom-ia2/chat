@@ -14,7 +14,8 @@ import HeroiEscuro from '../../../comum/HeroiEscuro.vue';
 //
 // - Nenhum entrou e o gravador recusou algum: "Nenhum seguro entrou.", o
 //   porquê de cada grupo com o que fazer, e "Buscar de novo" no lugar de "Ver
-//   os seguros" (não há o que ver).
+//   os seguros" (não há o que ver). Se todos batem com um seguro que já está
+//   na carteira, buscar de novo não resolve: o botão é "Ver os seguros".
 // - Entraram alguns e outros não: o título de sempre, e embaixo uma linha
 //   calma "{n} não entraram" com o porquê.
 // - Nada entrou porque tudo já estava na carteira, sem mudança: diz isso, e
@@ -51,6 +52,15 @@ const MOTIVOS = [
       ),
   ],
   [
+    'conferir',
+    quantos =>
+      t(
+        'RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.PORQUE.CONFERIR',
+        { count: quantos },
+        quantos
+      ),
+  ],
+  [
     'outros',
     quantos =>
       t(
@@ -75,6 +85,15 @@ const porque = computed(() => {
     frase: fraseDoMotivo(motivos[motivo]),
   }));
 });
+// O que bate com um seguro da carteira se confere na carteira: buscar de novo
+// não resolve. Quando todos os que não entraram são assim, o botão principal
+// volta a ser "Ver os seguros".
+const soConferir = computed(
+  () =>
+    porque.value.length > 0 &&
+    porque.value.every(item => item.motivo === 'conferir')
+);
+const buscarDeNovo = computed(() => nenhum.value && !soConferir.value);
 
 const frase = computed(() => {
   if (nenhum.value) return t('RELACIONAMENTOS_CARTEIRA.AGGER.PRONTO.NENHUM');
@@ -129,7 +148,7 @@ const linhaDosQueNaoEntraram = computed(() =>
       </template>
       <template #acao>
         <Button
-          v-if="nenhum"
+          v-if="buscarDeNovo"
           size="lg"
           data-carteira="buscar-de-novo-no-pronto"
           :class="BOTAO_PRINCIPAL_DO_HEROI"
