@@ -33,6 +33,9 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
                  'confirmar com um especialista. NÃO responda de memória.'.freeze
   OUT_OF_SCOPE = 'A pergunta não é sobre as condições gerais de um seguro. Não use esta consulta para ' \
                  'responder; siga a conversa.'.freeze
+  # Trecho sem seguradora identificada: não dá para dizer de quem é a regra, então ela não sai.
+  WHICH_INSURER = 'A consulta não identificou a seguradora. Pergunte ao cliente de qual seguradora ele está ' \
+                  'falando antes de responder.'.freeze
   CATALOG_MAX = 15
 
   class << self
@@ -51,13 +54,19 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
       'Consulta as condições gerais registradas na SUSEP para responder o que uma seguradora ' \
         'cobre, exclui ou condiciona, comparar a mesma regra entre seguradoras ou achar o PDF das ' \
         'condições. Use quando o cliente perguntar sobre cobertura, franquia, carro reserva, ' \
-        'assistência, prazo ou exclusão. Sempre informe a seguradora.'
+        'assistência, prazo ou exclusão. Informe a seguradora que o cliente citou. Sem seguradora, a ' \
+        'consulta só diz quais seguradoras têm aquele seguro registrado na base.'
     end
 
+    # A seguradora é opcional SÓ para o catálogo ("quem tem fiança locatícia?", decisão do Rodrigo em
+    # 16/11/2026). Dúvida de cobertura sem seguradora continua pedindo o nome ao cliente: a regra muda
+    # de uma para outra, e responder sem dizer de quem é a regra vira promessa errada.
     def params
       [
-        { 'name' => 'seguradora', 'type' => 'string',
-          'description' => 'Nome da seguradora, como o cliente falou. Ex.: "Bradesco", "HDI", "Porto".' },
+        { 'name' => 'seguradora', 'type' => 'string', 'required' => false,
+          'description' => 'Nome da seguradora, como o cliente falou. Ex.: "Bradesco", "HDI", "Porto". ' \
+                           'null só quando o cliente pergunta quais seguradoras têm um seguro. Dúvida de ' \
+                           'cobertura sem seguradora: pergunte ao cliente qual é, antes de consultar.' },
         { 'name' => 'pergunta', 'type' => 'string',
           'description' => 'A dúvida do cliente com as palavras dele, em pergunta completa. Se a mensagem ' \
                            'não diz a seguradora ou o seguro (carro, residencial, vida...), junte em frase o ' \
@@ -76,17 +85,13 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
   end
 
   def call
-    if insurer.blank?
-      return recusar('condicoes_sem_seguradora', 'Informe a seguradora para eu consultar as condições gerais.',
-                     faltando: ['seguradora'])
-    end
     return recusar('condicoes_sem_pergunta', 'Informe a dúvida do cliente para eu consultar.', faltando: ['pergunta']) if question.blank?
 
     describe(client.ask(question: question, api_key: GENERAL_CONDITIONS.account_key(account)))
   rescue GENERAL_CONDITIONS::InsurerNotFound
     # Lacuna de cobertura da base, não falha: a seguradora existe no mundo, só não temos o contrato dela.
-    "Não tenho as condições gerais da #{insurer} na base. Confirme o nome com o cliente; se " \
-    'estiver certo, diga que vai checar com um especialista.'
+    "Não tenho as condições gerais #{insurer.present? ? "da #{insurer}" : 'dessa seguradora'} na base. " \
+    'Confirme o nome com o cliente; se estiver certo, diga que vai checar com um especialista.'
   rescue GENERAL_CONDITIONS::Error => e
     # NUNCA ecoar a mensagem crua ao cliente: o modelo lê o código e escala.
     Rails.logger.warn("[autonomia][native_tool] general_conditions failed account=#{account.id} #{e.message}")
@@ -110,6 +115,7 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
     return product_missing(answer) if answer.notice['codigo'] == 'seguradora_sem_o_produto'
     return failed(answer) if answer.status == 'failed'
     return unresolved(answer) unless answer.usable?
+    return WHICH_INSURER if answer.insurer.blank?
 
     # A resposta carrega SEMPRE de qual seguradora é a regra: sem isso o agente cita a cláusula de
     # uma e o cliente entende que vale para todas as opções do comparativo.
@@ -169,7 +175,7 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
   #     âncora) -> lacuna da busca, que NÃO é "o contrato não cobre".
   def unresolved(answer)
     if !answer.resolved && answer.suggestions.any?
-      "Não identifiquei a seguradora \"#{insurer}\". Pergunte ao cliente se é uma destas: " \
+      "Não identifiquei a seguradora \"#{insurer.presence || answer.insurer}\". Pergunte ao cliente se é uma destas: " \
         "#{answer.suggestions.first(3).join(', ')}."
     else
       "Não encontrei nas condições gerais da #{answer.insurer.presence || insurer} um trecho que responda " \
@@ -217,8 +223,9 @@ class Autonomia::Agents::Tools::Native::InsuranceGeneralConditions < Autonomia::
 
     pairs = answer.catalog.first(CATALOG_MAX).map { |company, product| "#{company} (#{product})" }
     more = answer.catalog.size > CATALOG_MAX ? " e mais #{answer.catalog.size - CATALOG_MAX}" : ''
-    "Condições gerais registradas nesta base: #{pairs.join(', ')}#{more}. A base mostra o que foi " \
-      'registrado na SUSEP, não o que cada seguradora vende hoje nem com quem a corretora trabalha.'
+    "Condições gerais guardadas nesta base: #{pairs.join(', ')}#{more}. A base tem as condições gerais " \
+      'guardadas a partir dos registros da SUSEP: não é a lista completa do mercado, não diz o que cada ' \
+      'seguradora vende hoje nem com quem a corretora trabalha.'
   end
 
   # O PDF oficial. Um pedido genérico costuma achar vários contratos da mesma seguradora; qual vale

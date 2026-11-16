@@ -75,22 +75,24 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceGeneralConditions do
       expect(body).not_to have_key('insurance_type')
     end
 
-    it 'has only seguradora and pergunta, both required and never null: the branch goes inside the question' do
+    it 'has only seguradora and pergunta, the insurer nullable for the catalog: the branch goes inside the question' do
       # Arrange
       schema = described_class.openai_schema[:parameters]
 
-      # Act / Assert — o `ramo` saiu (#3035); um opcional mal declarado derrubou a chamada em 08/09/2026
+      # Act / Assert — o `ramo` saiu (#3035); um opcional mal declarado derrubou a chamada em 08/09/2026,
+      # por isso o opcional fica em `required` com o tipo aceitando null
       expect(schema[:properties].keys).to eq(%w[seguradora pergunta])
       expect(schema[:required]).to eq(%w[seguradora pergunta])
-      expect(schema[:properties].values.pluck('type')).to all(eq('string'))
+      expect(schema[:properties]['seguradora']['type']).to eq(%w[string null])
+      expect(schema[:properties]['pergunta']['type']).to eq('string')
     end
 
-    it 'asks for the insurer instead of querying without it' do
+    it 'asks for the question instead of querying without it' do
       # Arrange / Act
-      out = described_class.new(agent: agent, params: params.merge('seguradora' => '')).call
+      out = described_class.new(agent: agent, params: params.merge('pergunta' => ' ')).call
 
       # Assert
-      expect(out).to match(/informe a seguradora/i)
+      expect(out).to match(/informe a dúvida/i)
       expect(WebMock).not_to have_requested(:post, /perguntar/)
     end
   end
@@ -182,6 +184,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceGeneralConditions do
       # Assert
       expect(out).not_to match(/Não identifiquei a seguradora/)
       expect(out).to match(/NÃO quer dizer que o contrato não cobre/)
+    end
+
+    it 'holds a clause back when the query did not say whose rule it is' do
+      # Arrange — seguradora opcional (catálogo): uma dúvida de cobertura sem nome não pode sair sem dono
+      stub_query('interpreted' => { 'insurers' => [] })
+
+      # Act
+      out = described_class.new(agent: agent, params: params.merge('seguradora' => nil)).call
+
+      # Assert
+      expect(out).to match(/Pergunte ao cliente de qual seguradora/)
+      expect(out).not_to include('Trecho das condições gerais')
     end
 
     it 'asks which company when the product is in a sister brand' do
@@ -351,17 +365,21 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceGeneralConditions do
     end
   end
 
-  it 'lists who has the product in the catalog without promising sale' do
-    # Arrange — o catálogo não tem síntese; quem responde são os pares de `availability`
+  it 'lists who has the product in the catalog without an insurer and without promising sale' do
+    # Arrange — o catálogo não tem síntese; quem responde são os pares de `availability`. "Quem tem?"
+    # não cita seguradora: o modelo manda null (decisão do Rodrigo, 16/11/2026)
     stub_body(real_body('catalogo'))
+    question = 'Quais seguradoras têm seguro de automóvel casco?'
 
     # Act
-    out = tool.call
+    out = described_class.new(agent: agent, params: { 'seguradora' => nil, 'pergunta' => question }).call
 
     # Assert
+    expect(requested_question['pergunta']).to eq(question)
     expect(out).to include('Akad Seguros S.A. (Automóvel - Casco)')
     expect(out).to include('Alfa Seguradora (Automóvel - Casco)')
-    expect(out).to match(/não o que cada seguradora vende hoje/i)
+    expect(out).to match(/não é a lista completa do mercado/i)
+    expect(out).to match(/não diz o que cada seguradora vende hoje nem com quem a corretora trabalha/i)
     expect(out).not_to include('151')
   end
 
@@ -376,6 +394,17 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceGeneralConditions do
       # Assert
       expect(out).to match(/não tenho as condições gerais da Zorblax/i)
       expect(out).not_to match(/não respondeu agora/i)
+    end
+
+    it 'names no insurer in the gap when the model sent none' do
+      # Arrange — a seguradora veio só dentro da pergunta
+      stub_body(real_body('seguradora_inexistente'), status: 404)
+
+      # Act
+      out = described_class.new(agent: agent, params: params.merge('seguradora' => nil)).call
+
+      # Assert
+      expect(out).to match(/não tenho as condições gerais dessa seguradora/i)
     end
 
     it 'escalates when the account key is refused, without logging the key' do
