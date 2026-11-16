@@ -4,13 +4,17 @@
 #   { id:, origem: 'conector', estado: 'lendo' | 'parou', diaria:, porSeguradora: [{ nome:, situacao: }], motivo:, recebidos: }
 #   { id:, origem: 'conector', estado: 'lida' | 'trazendo' | 'trazida' | 'desfazendo' | 'desfeita', diaria:, porSeguradora:,
 #     seguros:, pessoas:, pessoasNovas:, semTelefone:, jaNaCarteira:, naoDeuParaTrazer:, ignorados:, repetidos:,
-#     porTipo: { 'auto' => 3 }, total: }
+#     porTipo: { 'auto' => 3 }, total:, naoDeuPorque: { semDados:, semDocumento:, naoLeu: } }
 #
 # - `seguros`: os seguros prontos para entrar (os registros da mesma referência, como o endosso, são um seguro só), e
 #   `pessoas`, de quantas pessoas. `semTelefone`: quantas dessas pessoas ficam sem telefone (a plataforma não o tem: a
 #   pessoa que nasce agora nasce sem). `jaNaCarteira`: dos seguros, quantos já estão na carteira e só são atualizados.
 # - `naoDeuParaTrazer`: os registros que não entram: sem referência, sem seguradora ou fim da vigência, sem documento do
 #   segurado (nunca se casa pessoa pelo nome), mais os que o conector não conseguiu ler (`ignorados`, também à parte).
+# - `naoDeuPorque` (só no Conferir, estado `lida`): o `naoDeuParaTrazer` aberto pelo motivo, para a tela dizer o que
+#   fazer. `semDados`: falta dado do seguro no conector (referência, seguradora ou data certa); `semDocumento`: falta o
+#   CPF/CNPJ do segurado; `naoLeu`: os `ignorados`. A soma é o `naoDeuParaTrazer`. A busca calculada antes destas
+#   contagens não traz o campo, e a tela não mostra motivo nenhum.
 # - `repetidos`: os registros que não são seguro a mais: o endosso (e o mesmo registro de novo) de um seguro já contado.
 # - `total`: quantos registros o conector disse que havia no período. A conta fecha:
 #   seguros + (naoDeuParaTrazer - ignorados) + ignorados + repetidos = total.
@@ -26,7 +30,7 @@ class Carteira::Conector::Conferir
   MOTIVOS = [Carteira::Conector::Sincronizar::PEDE_LOGIN, Carteira::Conector::Sincronizar::FALHOU].freeze
   CHAVE = 'conferir_'.freeze
   TIPO = "#{CHAVE}tipo_".freeze
-  NUMEROS = %w[seguros pessoas pessoas_novas sem_telefone ja_na_carteira nao_deu repetidos prontos].freeze
+  NUMEROS = %w[seguros pessoas pessoas_novas sem_telefone ja_na_carteira nao_deu sem_dados sem_documento repetidos prontos].freeze
 
   def initialize(leitura)
     @leitura = leitura
@@ -37,7 +41,7 @@ class Carteira::Conector::Conferir
     base = { id: @leitura.id, origem: 'conector', estado: @leitura.estado, diaria: @totais.key?(Carteira::Leitura::DIARIA),
              porSeguradora: por_seguradora }
     return base.merge(motivo: motivo, recebidos: @totais['recebidos'].to_i) if BUSCANDO.include?(@leitura.estado)
-    return base.merge(numeros) if @leitura.estado == 'lida'
+    return base.merge(numeros, nao_deu_porque) if @leitura.estado == 'lida'
 
     base.merge(trazidos)
   end
@@ -74,6 +78,12 @@ class Carteira::Conector::Conferir
     { seguros: numero('seguros'), pessoas: numero('pessoas'), pessoasNovas: numero('pessoas_novas'), semTelefone: numero('sem_telefone'),
       jaNaCarteira: numero('ja_na_carteira'), naoDeuParaTrazer: numero('nao_deu') + ignorados, ignorados: ignorados,
       repetidos: numero('repetidos') + @totais['repetidos'].to_i, porTipo: por_tipo, total: @totais['total'].to_i }
+  end
+
+  def nao_deu_porque
+    return {} unless @totais.key?("#{CHAVE}sem_dados")
+
+    { naoDeuPorque: { semDados: numero('sem_dados'), semDocumento: numero('sem_documento'), naoLeu: ignorados } }
   end
 
   def trazidos

@@ -789,9 +789,27 @@
         "DEPOIS": "New policies that Agger brings later come in on their own with the daily search.",
         "NADA": "There are no policies to bring from Agger yet. Tap \"Search again\" later."
       },
+      "POR_QUE": {
+        "VER": "See why",
+        "ESCONDER": "Hide",
+        "QUANTOS": "{count} policy | {count} policies",
+        "SEM_DADOS": "Some details of this policy are missing in Agger, or they do not add up, like the dates. When Agger fixes them, it comes in on the next search. | Some details of these policies are missing in Agger, or they do not add up, like the dates. When Agger fixes them, they come in on the next search.",
+        "SEM_DOCUMENTO": "Agger does not have the right tax ID for this person, or their name, and without it I do not know who they are. Check it in Agger and tap \"Search again\". | Agger does not have the right tax IDs for these people, or their names, and without them I do not know who each one is. Check them in Agger and tap \"Search again\".",
+        "NAO_LEU": "Agger sent this policy in a way I cannot read. | Agger sent these policies in a way I cannot read."
+      },
       "PRONTO": {
         "APOIO": "With the switch below on, I look up new policies in Agger every day.",
-        "VOLTAR": "See the searches"
+        "VOLTAR": "See the searches",
+        "NENHUM": "No policy came in.",
+        "JA_ESTAVAM": "The policies from this search were already in your book, unchanged.",
+        "NAO_ENTRARAM": "{count} policy did not come in. | {count} policies did not come in.",
+        "BUSCAR_DE_NOVO": "Search again",
+        "PORQUE": {
+          "SEM_DOCUMENTO": "{count} policy does not have the right tax ID for the person in Agger, or their name, and without it I do not know whose it is. Check it in Agger and tap \"Search again\". | {count} policies do not have the right tax ID for the person in Agger, or their name, and without it I do not know whose they are. Check them in Agger and tap \"Search again\".",
+          "DADOS_ERRADOS": "{count} policy has details that do not add up in Agger, like the dates. Check it in Agger and tap \"Search again\". | {count} policies have details that do not add up in Agger, like the dates. Check them in Agger and tap \"Search again\".",
+          "CONFERIR": "{count} policy matches another one already in your book (from another person or with the same number). Check it in your book. | {count} policies match others already in your book (from another person or with the same number). Check them in your book.",
+          "OUTROS": "{count} policy could not be saved right now. Tap \"Search again\" to try once more. | {count} policies could not be saved right now. Tap \"Search again\" to try once more."
+        }
       },
       "TODO_DIA": {
         "ROTULO": "Look up new policies every day",

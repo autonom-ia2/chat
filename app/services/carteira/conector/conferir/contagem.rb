@@ -15,10 +15,16 @@ class Carteira::Conector::Conferir::Contagem
     seguros = prontas.uniq { |vista| vista[:seguro] }
     { 'seguros' => seguros.size, 'ja_na_carteira' => seguros.count { |vista| vista[:dono]&.ja_na_carteira },
       'nao_deu' => falharam + (vistas.size - prontas.size), 'repetidos' => prontas.size - seguros.size, 'prontos' => prontas.size,
-      **das_pessoas(prontas), **por_tipo(prontas) }
+      **por_que_nao_deu(prontas), **das_pessoas(prontas), **por_tipo(prontas) }
   end
 
   private
+
+  # Por que não deu, à parte: falta dado do seguro no conector (o item `falhou`: sem referência, seguradora ou data
+  # certa) ou falta o CPF/CNPJ (lido, mas sem dono e sem como nascer). Somados, são o `nao_deu`.
+  def por_que_nao_deu(prontas)
+    { 'sem_dados' => falharam, 'sem_documento' => vistas.size - prontas.size }
+  end
 
   def das_pessoas(prontas)
     pessoas = prontas.uniq { |vista| vista[:chave] }
@@ -33,7 +39,7 @@ class Carteira::Conector::Conferir::Contagem
   end
 
   def falharam
-    @leitura.itens.where(estado: Carteira::Conector::Ler::FALHOU).count
+    @falharam ||= @leitura.itens.where(estado: Carteira::Conector::Ler::FALHOU).count
   end
 
   def vistas

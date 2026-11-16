@@ -14,13 +14,16 @@ import {
 import { chaveDaRecusaDoAgger } from '../../carteira/recusas';
 import { trazerAggerFonte } from '../../fonte/trazerAggerFonte';
 import SeguradorasDaBusca from '../../components/carteira/trazer/agger/SeguradorasDaBusca.vue';
+import PorQueNaoDeu from '../../components/carteira/trazer/agger/PorQueNaoDeu.vue';
+import ProntoDoAgger from '../../components/carteira/trazer/agger/ProntoDoAgger.vue';
 import { recusa } from './apoio';
 
-// #2900 (E7.3, E7.5) — "Trazer do Agger" na tela: o caminho do botão ao
+// #2900 (E7.3, E7.5, E7.6) — "Trazer do Agger" na tela: o caminho do botão ao
 // pronto, o "Tentar de novo" que começa uma busca nova, a linha calma das
 // seguradoras (só com evidência) com o detalhe atrás de "Ver quais
-// seguradoras" e quem diz os caminhos da conta. As fontes são de mentira: nada
-// aqui fala com o servidor nem com IA.
+// seguradoras", o "Ver por quê" do que não deu para trazer, o fim que diz o
+// que não entrou e por quê, e quem diz os caminhos da conta. As fontes são de
+// mentira: nada aqui fala com o servidor nem com IA.
 withFullI18n('pt_BR');
 vi.mock('dashboard/api/relacionamentosSeguros', () => ({ default: {} }));
 vi.mock('dashboard/api/relacionamentosTrazerPdfs', () => ({ default: {} }));
@@ -325,6 +328,202 @@ describe('as seguradoras com o login faltando ou recusado no Agger', () => {
     expect(w.get('[data-situacao="sem_login"]').text()).toContain(
       'Guarde no Agger o login dessas seguradoras.'
     );
+  });
+});
+
+describe('o que não deu para trazer, no Conferir', () => {
+  const linha = props => mount(PorQueNaoDeu, { props });
+
+  it('a linha tem "Ver por quê" fechado; dentro, um grupo por motivo, com quantos e o que fazer', async () => {
+    const w = linha({
+      total: 12,
+      porque: { semDados: 10, semDocumento: 2, naoLeu: 0 },
+    });
+
+    expect(w.get('[data-carteira="linha-do-nao-deu"]').text()).toBe(
+      '12 não deram para trazer'
+    );
+    const ver = w.get('[data-carteira="ver-por-que"]');
+    expect(ver.element.tagName).toBe('BUTTON');
+    expect(ver.attributes('type')).toBe('button');
+    expect(ver.classes()).toContain('min-h-11');
+    expect(ver.text()).toBe('Ver por quê');
+    expect(ver.attributes('aria-expanded')).toBe('false');
+    const motivos = () => w.get('[data-carteira="motivos-do-nao-deu"]');
+    expect(ver.attributes('aria-controls')).toBe(motivos().attributes('id'));
+    expect(motivos().attributes('style')).toContain('display: none');
+
+    await ver.trigger('click');
+    expect(motivos().attributes('style') ?? '').not.toContain('display: none');
+    expect(ver.attributes('aria-expanded')).toBe('true');
+    expect(ver.text()).toBe('Esconder');
+    const grupos = w.findAll('[data-motivo]');
+    expect(grupos.map(grupo => grupo.attributes('data-motivo'))).toEqual([
+      'semDados',
+      'semDocumento',
+    ]);
+    expect(grupos[0].text()).toContain('10 seguros');
+    expect(grupos[0].text()).toContain(
+      'Faltam dados desses seguros no Agger, ou eles não batem, como as datas.'
+    );
+    expect(grupos[1].text()).toContain('2 seguros');
+    expect(grupos[1].text()).toContain(
+      'O Agger não tem o CPF ou CNPJ certo dessas pessoas, ou o nome delas'
+    );
+  });
+
+  it('o seguro que o Agger mandou sem dar para ler tem a sua frase', async () => {
+    const w = linha({
+      total: 1,
+      porque: { semDados: 0, semDocumento: 0, naoLeu: 1 },
+    });
+    await w.get('[data-carteira="ver-por-que"]').trigger('click');
+
+    expect(w.get('[data-motivo="naoLeu"]').text()).toContain(
+      'O Agger mandou esse seguro de um jeito que eu não consigo ler.'
+    );
+  });
+
+  it('a busca calculada antes dos motivos fica só com a linha, sem botão; sem nada, nada aparece', () => {
+    const antiga = linha({ total: 2, porque: null });
+    expect(antiga.get('[data-carteira="linha-do-nao-deu"]').text()).toBe(
+      '2 não deram para trazer'
+    );
+    expect(antiga.find('[data-carteira="ver-por-que"]').exists()).toBe(false);
+
+    expect(
+      linha({ total: 0 }).find('[data-carteira="nao-deu-para-trazer"]').exists()
+    ).toBe(false);
+  });
+});
+
+describe('o fim do "Trazer do Agger"', () => {
+  const fim = andamento => mount(ProntoDoAgger, { props: { andamento } });
+
+  it('nenhum entrou: diz isso e por quê, e o botão é "Buscar de novo", sem "Ver os seguros"', async () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 3,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 3,
+        conferir: 0,
+        outros: 0,
+      },
+    });
+
+    expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
+      'Nenhum seguro entrou.'
+    );
+    expect(w.get('[data-motivo="dadosErrados"]').text()).toBe(
+      '3 seguros têm dados que não batem no Agger, como as datas. Confira no Agger e toque em "Buscar de novo".'
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(false);
+    expect(w.text()).not.toContain('0 seguros');
+    const buscar = w.get('[data-carteira="buscar-de-novo-no-pronto"]');
+    expect(buscar.text()).toBe('Buscar de novo');
+
+    await buscar.trigger('click');
+    expect(w.emitted('buscar')).toHaveLength(1);
+  });
+
+  it('entraram alguns e outros não: o título de sempre e uma linha calma com o porquê', () => {
+    const w = fim({
+      seguros: 2,
+      pessoas: 2,
+      naoEntraram: 1,
+      naoEntraramPorque: {
+        semDocumento: 1,
+        dadosErrados: 0,
+        conferir: 0,
+        outros: 0,
+      },
+    });
+
+    expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
+      '2 seguros chegaram, de 2 pessoas.'
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(true);
+    const naoEntraram = w.get('[data-carteira="nao-entraram"]');
+    expect(naoEntraram.text()).toContain('1 seguro não entrou.');
+    expect(naoEntraram.get('[data-motivo="semDocumento"]').text()).toContain(
+      '1 seguro não tem no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela'
+    );
+  });
+
+  it('nenhum entrou e todos batem com um seguro da carteira: diz conferir na carteira, e o botão é "Ver os seguros"', () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 2,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 2,
+        outros: 0,
+      },
+    });
+
+    expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
+      'Nenhum seguro entrou.'
+    );
+    const conferir = w.get('[data-motivo="conferir"]').text();
+    expect(conferir).toBe(
+      '2 seguros batem com outros que já estão na carteira (de outra pessoa ou com o mesmo número). Confira na carteira.'
+    );
+    expect(conferir).not.toContain('Buscar de novo');
+    expect(w.find('[data-carteira="buscar-de-novo-no-pronto"]').exists()).toBe(
+      false
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(true);
+  });
+
+  it('nenhum entrou, uns batem com a carteira e outros não deram para guardar: "Buscar de novo" volta', () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 3,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 2,
+        outros: 1,
+      },
+    });
+
+    const motivos = w.findAll('[data-motivo]');
+    expect(motivos.map(motivo => motivo.attributes('data-motivo'))).toEqual([
+      'conferir',
+      'outros',
+    ]);
+    expect(w.get('[data-motivo="outros"]').text()).toContain(
+      'Toque em "Buscar de novo" para tentar outra vez.'
+    );
+    expect(w.find('[data-carteira="buscar-de-novo-no-pronto"]').exists()).toBe(
+      true
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(false);
+  });
+
+  it('nada entrou porque tudo já estava na carteira: diz isso, e "Ver os seguros" continua', () => {
+    const w = fim({
+      seguros: 0,
+      pessoas: 0,
+      naoEntraram: 0,
+      naoEntraramPorque: {
+        semDocumento: 0,
+        dadosErrados: 0,
+        conferir: 0,
+        outros: 0,
+      },
+    });
+
+    expect(w.get('[data-carteira="frase-do-pronto"]').text()).toBe(
+      'Os seguros desta busca já estavam na carteira, sem mudança.'
+    );
+    expect(w.find('[data-carteira="ver-os-seguros"]').exists()).toBe(true);
+    expect(w.find('[data-carteira="nao-entraram"]').exists()).toBe(false);
   });
 });
 

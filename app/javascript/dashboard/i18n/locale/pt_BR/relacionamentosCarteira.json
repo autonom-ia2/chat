@@ -789,9 +789,27 @@
         "DEPOIS": "Seguros novos que o Agger trouxer depois entram sozinhos na busca de todo dia.",
         "NADA": "Ainda não há seguros para trazer do Agger. Toque em \"Buscar de novo\" mais tarde."
       },
+      "POR_QUE": {
+        "VER": "Ver por quê",
+        "ESCONDER": "Esconder",
+        "QUANTOS": "{count} seguro | {count} seguros",
+        "SEM_DADOS": "Faltam dados desse seguro no Agger, ou eles não batem, como as datas. Quando o Agger acertar, ele entra na próxima busca. | Faltam dados desses seguros no Agger, ou eles não batem, como as datas. Quando o Agger acertar, eles entram na próxima busca.",
+        "SEM_DOCUMENTO": "O Agger não tem o CPF ou CNPJ certo dessa pessoa, ou o nome dela, e sem isso eu não sei quem é. Confira no Agger e toque em \"Buscar de novo\". | O Agger não tem o CPF ou CNPJ certo dessas pessoas, ou o nome delas, e sem isso eu não sei quem é cada uma. Confira no Agger e toque em \"Buscar de novo\".",
+        "NAO_LEU": "O Agger mandou esse seguro de um jeito que eu não consigo ler. | O Agger mandou esses seguros de um jeito que eu não consigo ler."
+      },
       "PRONTO": {
         "APOIO": "Com o interruptor abaixo ligado, eu busco os seguros novos no Agger todo dia.",
-        "VOLTAR": "Ver as buscas"
+        "VOLTAR": "Ver as buscas",
+        "NENHUM": "Nenhum seguro entrou.",
+        "JA_ESTAVAM": "Os seguros desta busca já estavam na carteira, sem mudança.",
+        "NAO_ENTRARAM": "{count} seguro não entrou. | {count} seguros não entraram.",
+        "BUSCAR_DE_NOVO": "Buscar de novo",
+        "PORQUE": {
+          "SEM_DOCUMENTO": "{count} seguro não tem no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem é. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros não têm no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem são. Confira no Agger e toque em \"Buscar de novo\".",
+          "DADOS_ERRADOS": "{count} seguro tem dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros têm dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\".",
+          "CONFERIR": "{count} seguro bate com outro que já está na carteira (de outra pessoa ou com o mesmo número). Confira na carteira. | {count} seguros batem com outros que já estão na carteira (de outra pessoa ou com o mesmo número). Confira na carteira.",
+          "OUTROS": "{count} seguro não deu para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez. | {count} seguros não deram para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez."
+        }
       },
       "TODO_DIA": {
         "ROTULO": "Buscar novos seguros todo dia",

@@ -68,7 +68,8 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
 
       conferir = Carteira::Conector::Conferir.new(leitura).call
       expect(conferir).to include(estado: 'lida', seguros: 3, pessoas: 3, pessoasNovas: 3, semTelefone: 3, naoDeuParaTrazer: 2, total: 6,
-                                  ignorados: 1, repetidos: 1, jaNaCarteira: 0, porTipo: { 'auto' => 1, 'residencial' => 1, 'empresarial' => 1 })
+                                  ignorados: 1, repetidos: 1, jaNaCarteira: 0, porTipo: { 'auto' => 1, 'residencial' => 1, 'empresarial' => 1 },
+                                  naoDeuPorque: { semDados: 1, semDocumento: 0, naoLeu: 1 })
       nao_deu = conferir[:naoDeuParaTrazer] - conferir[:ignorados]
       expect(conferir[:seguros] + nao_deu + conferir[:ignorados] + conferir[:repetidos]).to eq(conferir[:total])
       expect(conferir[:porSeguradora].size).to eq(2)
@@ -242,6 +243,36 @@ RSpec.describe Carteira::Conector::Sincronizar, :aggregate_failures do
       expect(portal).not_to have_received(:andamento)
       expect(leitura.estado).to eq('trazendo')
       expect(leitura.totais['para_trazer']).to eq(2)
+    end
+
+    # E7.6 — a prova real: o Conferir prometia o seguro com as datas invertidas, e o gravador o recusava. Agora o Conferir
+    # diz por que não deu, e os motivos fecham com o total do que não deu.
+    it 'o Conferir abre o que não deu pelo motivo: falta dado do seguro, falta o CPF/CNPJ, o conector não leu' do
+      inicio = described_class.primeira(account, user: admin)
+      portal = Carteira::Conector::Portal.new(inicio.account)
+      allow(portal).to receive(:pedir).and_return({ 'sync_id' => 'exemplo-3', 'status' => 'buscando' })
+      allow(portal).to receive(:andamento)
+      itens = [registro('porque-ref-1', 'Seguradora Azul (exemplo)', '10020030088'),
+               registro('porque-ref-2', 'Seguradora Verde (exemplo)', '40050060007').merge('inicio_vigencia' => '2027-03-11'),
+               registro('porque-ref-3', 'Seguradora Azul (exemplo)', nil)]
+      allow(portal).to receive(:apolices).and_return('itens' => itens, 'proximo_cursor' => nil, 'total' => 4, 'ignorados' => 1)
+      leitura = andar_ate_o_fim(inicio, portal: portal)
+
+      conferir = Carteira::Conector::Conferir.new(leitura).call
+      expect(conferir).to include(estado: 'lida', seguros: 1, naoDeuParaTrazer: 3, ignorados: 1, total: 4,
+                                  naoDeuPorque: { semDados: 1, semDocumento: 1, naoLeu: 1 })
+      expect(conferir[:naoDeuPorque].values.sum).to eq(conferir[:naoDeuParaTrazer])
+      expect(Carteira::Conector::Conferir.new(leitura).prontos).to eq(1)
+    end
+
+    it 'a busca calculada antes dos motivos não traz o campo: a tela não mostra motivo nenhum' do
+      inicio = described_class.primeira(account, user: admin)
+      leitura = andar_ate_o_fim(inicio, portal: portal_sem_robo(inicio))
+      leitura.update!(totais: leitura.totais.except('conferir_sem_dados', 'conferir_sem_documento'))
+
+      conferir = Carteira::Conector::Conferir.new(leitura).call
+      expect(conferir).to include(seguros: 2, naoDeuParaTrazer: 0)
+      expect(conferir).not_to have_key(:naoDeuPorque)
     end
 
     it 'só a evidência vira aviso: a situação sem problema, a desconhecida e o pedido sem o campo não avisam nada' do
