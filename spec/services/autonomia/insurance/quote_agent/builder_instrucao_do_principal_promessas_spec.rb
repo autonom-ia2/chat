@@ -481,6 +481,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # corretora que ainda não conectou (ou cuja conexão caiu) continua respondendo dúvida. O contraste
   # com a cotação, no mesmo agente e no mesmo estado, é o que dá sentido à afirmação.
   describe 'a ferramenta chega ao agente sem conexão com o portal (termo 3)' do
+    # Desde o #3035 a ferramenta também exige a chave de IA da própria conta; aqui ela existe, e o que
+    # se prova é só a independência da conexão com o portal.
+    before do
+      allow(Autonomia::Insurance::GeneralConditions::Client).to receive(:account_key).and_return('sk-conta-do-cliente-0123456789')
+    end
+
     it 'available_for? é verdadeiro com o módulo ligado e sem conexão AGGER' do
       agente = construir
 
