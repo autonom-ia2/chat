@@ -16,9 +16,11 @@ import { trazerAggerFonte } from '../../fonte/trazerAggerFonte';
 import SeguradorasDaBusca from '../../components/carteira/trazer/agger/SeguradorasDaBusca.vue';
 import { recusa } from './apoio';
 
-// #2900 (E7.3) — "Trazer do Agger" na tela: o caminho do botão ao pronto, os
-// avisos de cada seguradora com as frases do produto e quem diz os caminhos da
-// conta. As fontes são de mentira: nada aqui fala com o servidor nem com IA.
+// #2900 (E7.3, E7.5) — "Trazer do Agger" na tela: o caminho do botão ao
+// pronto, o "Tentar de novo" que começa uma busca nova, a linha calma das
+// seguradoras (só com evidência) com o detalhe atrás de "Ver quais
+// seguradoras" e quem diz os caminhos da conta. As fontes são de mentira: nada
+// aqui fala com o servidor nem com IA.
 withFullI18n('pt_BR');
 vi.mock('dashboard/api/relacionamentosSeguros', () => ({ default: {} }));
 vi.mock('dashboard/api/relacionamentosTrazerPdfs', () => ({ default: {} }));
@@ -106,16 +108,56 @@ describe('useBuscaNoAgger', () => {
     expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.CONFERIR);
   });
 
-  it('o acompanhamento que falha e a busca que não anda têm "Tentar de novo"', async () => {
+  it('"Buscar de novo" volta direto ao "Buscando", sem os avisos da busca anterior', async () => {
+    const comAvisos = {
+      ...lida,
+      porSeguradora: [
+        { nome: 'Seguradora Sol (exemplo)', situacao: 'pede_login' },
+      ],
+    };
+    let responder;
+    const fonte = {
+      busca: vi
+        .fn()
+        .mockResolvedValueOnce(comAvisos)
+        .mockReturnValue(
+          new Promise(resolver => {
+            responder = resolver;
+          })
+        ),
+      deNovo: vi.fn().mockResolvedValue(lendo()),
+    };
+    const busca = useBuscaNoAgger(fonte, { ligado: true });
+
+    await busca.abrir(5);
+    expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.CONFERIR);
+
+    const pedido = busca.deNovo();
+    await vi.waitFor(() => expect(fonte.busca).toHaveBeenCalledTimes(2));
+    expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.BUSCANDO);
+    expect(busca.busca.value).toEqual({
+      id: 5,
+      estado: 'lendo',
+      porSeguradora: [],
+    });
+    responder(lendo({ recebidos: 3 }));
+    await pedido;
+    expect(busca.busca.value.recebidos).toBe(3);
+    busca.parar();
+  });
+
+  it('"Tentar de novo" começa uma busca nova, pelo mesmo caminho do botão grande', async () => {
     const fonte = {
       busca: vi
         .fn()
         .mockResolvedValueOnce(lendo())
         .mockRejectedValueOnce(new Error('rede'))
-        .mockResolvedValue(lendo()),
-      deNovo: vi.fn().mockResolvedValue(lendo()),
+        .mockResolvedValue(lendo({ id: 6 })),
+      buscar: vi.fn().mockResolvedValue({ leituraId: 6 }),
+      deNovo: vi.fn(),
     };
-    const busca = useBuscaNoAgger(fonte, { ligado: true });
+    const aoMudarBusca = vi.fn();
+    const busca = useBuscaNoAgger(fonte, { ligado: true, aoMudarBusca });
 
     await busca.abrir(5);
     await vi.advanceTimersByTimeAsync(2000);
@@ -123,13 +165,39 @@ describe('useBuscaNoAgger', () => {
     expect(busca.erro.value).toBe('RELACIONAMENTOS_CARTEIRA.AGGER.NAO_DEU');
 
     await busca.tentarDeNovo();
+    expect(fonte.buscar).toHaveBeenCalledTimes(1);
+    expect(fonte.deNovo).not.toHaveBeenCalled();
+    expect(aoMudarBusca).toHaveBeenLastCalledWith(6);
+    expect(fonte.busca).toHaveBeenLastCalledWith(6);
+    expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.BUSCANDO);
     expect(busca.semAcompanhar.value).toBe(false);
+    expect(busca.erro.value).toBe('');
+
     await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
     expect(busca.parado.value).toBe(true);
+    await busca.tentarDeNovo();
+    expect(fonte.buscar).toHaveBeenCalledTimes(2);
+    expect(busca.parado.value).toBe(false);
+    busca.parar();
+  });
+
+  it('"Tentar de novo" na busca que parou também começa uma busca nova', async () => {
+    const parou = lendo({ estado: 'parou', motivo: 'agger_falhou' });
+    const fonte = {
+      busca: vi.fn().mockResolvedValueOnce(parou).mockResolvedValue(lida),
+      buscar: vi.fn().mockResolvedValue({ leituraId: 7 }),
+      deNovo: vi.fn(),
+    };
+    const busca = useBuscaNoAgger(fonte, { ligado: true });
+
+    await busca.abrir(5);
+    expect(busca.busca.value.estado).toBe('parou');
 
     await busca.tentarDeNovo();
-    expect(fonte.deNovo).toHaveBeenCalledWith(5);
-    busca.parar();
+    expect(fonte.buscar).toHaveBeenCalledTimes(1);
+    expect(fonte.deNovo).not.toHaveBeenCalled();
+    expect(fonte.busca).toHaveBeenLastCalledWith(7);
+    expect(busca.etapa.value).toBe(ETAPAS_DO_AGGER.CONFERIR);
   });
 
   it('a recusa do servidor vira a frase do código', async () => {
@@ -174,42 +242,89 @@ describe('a resposta do Agger ao login', () => {
   });
 });
 
-describe('os avisos das seguradoras', () => {
+describe('as seguradoras com o login faltando ou recusado no Agger', () => {
   const avisos = seguradoras =>
     mount(SeguradorasDaBusca, { props: { seguradoras } });
+  const variadas = [
+    { nome: 'Seguradora Azul (exemplo)', situacao: 'pronta' },
+    { nome: 'Seguradora Sol (exemplo)', situacao: 'pede_login' },
+    { nome: 'Seguradora Lua (exemplo)', situacao: 'sem_login' },
+    { nome: 'Seguradora Mar (exemplo)', situacao: 'sem_login' },
+    { nome: null, situacao: 'sem_login' },
+    { nome: 'Seguradora Rio (exemplo)', situacao: 'falhou' },
+  ];
 
-  it('diz o que houve com cada seguradora, em palavras simples, e só onde há o que fazer', () => {
+  it('sem evidência, nenhum aviso: nem a seguradora pronta, nem a que só não respondeu', () => {
     const w = avisos([
       { nome: 'Seguradora Azul (exemplo)', situacao: 'pronta' },
-      { nome: 'Seguradora Sol (exemplo)', situacao: 'pede_login' },
-      { nome: 'Seguradora Lua (exemplo)', situacao: 'sem_login' },
-      { nome: 'Seguradora Mar (exemplo)', situacao: 'falhou' },
+      { nome: 'Seguradora Verde (exemplo)', situacao: 'buscando' },
+      { nome: 'Seguradora Rio (exemplo)', situacao: 'falhou' },
     ]);
-    const frases = w.findAll('li').map(li => li.find('span').text());
 
-    expect(frases).toEqual([
-      'A Seguradora Sol (exemplo) pediu para você entrar de novo no Agger',
-      'Seu login da Seguradora Lua (exemplo) não está guardado no Agger',
-      'Não deu para buscar na Seguradora Mar (exemplo) agora',
-    ]);
-    const tentar = w.findAll('[data-carteira="tentar-seguradora"]');
-    expect(tentar).toHaveLength(1);
-    expect(tentar[0].text()).toBe('Tentar de novo');
-    expect(tentar[0].attributes('disabled')).toBeUndefined();
+    expect(w.find('[data-carteira="seguradoras-da-busca"]').exists()).toBe(
+      false
+    );
   });
 
-  it('a seguradora sem nome é "uma seguradora", e "Tentar de novo" pede a busca de novo', async () => {
+  it('é uma linha calma só, com "Ver quais seguradoras" fechado; os grupos ficam escondidos até abrir', async () => {
+    const w = avisos(variadas);
+
+    expect(w.get('[data-carteira="frase-das-seguradoras"]').text()).toBe(
+      '4 seguradoras precisam do seu login no Agger para trazer seguros novos.'
+    );
+    const ver = w.get('[data-carteira="ver-quais"]');
+    expect(ver.element.tagName).toBe('BUTTON');
+    expect(ver.attributes('type')).toBe('button');
+    expect(ver.classes()).toContain('min-h-11');
+    expect(ver.text()).toBe('Ver quais seguradoras');
+    expect(ver.attributes('aria-expanded')).toBe('false');
+    const grupos = () => w.get('[data-carteira="grupos-das-seguradoras"]');
+    expect(ver.attributes('aria-controls')).toBe(grupos().attributes('id'));
+    expect(grupos().attributes('style')).toContain('display: none');
+
+    await ver.trigger('click');
+    expect(grupos().attributes('style') ?? '').not.toContain('display: none');
+    expect(ver.attributes('aria-expanded')).toBe('true');
+    expect(ver.text()).toBe('Esconder');
+  });
+
+  it('dentro, um grupo pelo que fazer, com os nomes e a frase do que fazer', async () => {
+    const w = avisos(variadas);
+    await w.get('[data-carteira="ver-quais"]').trigger('click');
+    const grupos = w.findAll('[data-situacao]');
+
+    expect(grupos.map(grupo => grupo.attributes('data-situacao'))).toEqual([
+      'pede_login',
+      'sem_login',
+    ]);
+    expect(
+      grupos.map(grupo => grupo.get('[data-carteira="nomes-do-grupo"]').text())
+    ).toEqual([
+      'Seguradora Sol (exemplo)',
+      'Seguradora Lua (exemplo), Seguradora Mar (exemplo) e mais uma seguradora',
+    ]);
+    expect(grupos[0].text()).toContain(
+      'Entre de novo nessa seguradora, no Agger.'
+    );
+    expect(grupos[1].text()).toContain(
+      'Guarde no Agger o login dessas seguradoras.'
+    );
+    expect(w.text()).not.toContain('Seguradora Rio (exemplo)');
+  });
+
+  it('a seguradora sem nome é "uma seguradora"', async () => {
     const w = avisos([
       { nome: null, situacao: 'sem_login' },
-      { nome: null, situacao: 'falhou' },
+      { nome: null, situacao: 'sem_login' },
     ]);
+    await w.get('[data-carteira="ver-quais"]').trigger('click');
 
-    expect(w.findAll('li').map(li => li.find('span').text())).toEqual([
-      'Seu login de uma seguradora não está guardado no Agger',
-      'Não deu para buscar em uma seguradora agora',
-    ]);
-    await w.get('[data-carteira="tentar-seguradora"]').trigger('click');
-    expect(w.emitted('tentar')).toHaveLength(1);
+    expect(w.get('[data-carteira="nomes-do-grupo"]').text()).toBe(
+      '2 seguradoras'
+    );
+    expect(w.get('[data-situacao="sem_login"]').text()).toContain(
+      'Guarde no Agger o login dessas seguradoras.'
+    );
   });
 });
 

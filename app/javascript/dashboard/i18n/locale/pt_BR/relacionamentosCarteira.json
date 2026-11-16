@@ -750,7 +750,7 @@
       "APOIO": "Eu busco no Agger os seguros dos seus clientes e mostro o que achei antes de qualquer coisa entrar.",
       "BUSCAR": "Trazer meus seguros do Agger",
       "BUSCANDO": "Buscando seus seguros… Pode sair desta página: a busca continua.",
-      "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\" para eu continuar de onde parei.",
+      "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\".",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "ENTRAR": "Entrar no Agger",
@@ -768,23 +768,14 @@
         "FALHOU": "Não deu para buscar no Agger agora.",
         "FALHOU_FAZER": "Toque em \"Tentar de novo\". Os seguros que já estão aqui ficam como estão."
       },
-      "SEGURADORA": {
-        "PEDE_LOGIN": {
-          "FRASE": "A {nome} pediu para você entrar de novo no Agger",
-          "FRASE_SEM_NOME": "Uma seguradora pediu para você entrar de novo no Agger",
-          "FAZER": "Abra o Agger e entre de novo nessa seguradora. Na próxima busca, os seguros dela vêm junto."
-        },
-        "SEM_LOGIN": {
-          "FRASE": "Seu login da {nome} não está guardado no Agger",
-          "FRASE_SEM_NOME": "Seu login de uma seguradora não está guardado no Agger",
-          "FAZER": "Guarde no Agger o login que você usa nessa seguradora. Na próxima busca, os seguros dela vêm junto."
-        },
-        "FALHOU": {
-          "FRASE": "Não deu para buscar na {nome} agora",
-          "FRASE_SEM_NOME": "Não deu para buscar em uma seguradora agora",
-          "FAZER": "Toque em \"Tentar de novo\" para eu buscar outra vez."
-        },
-        "TENTAR": "Tentar de novo"
+      "SEGURADORAS": {
+        "LINHA": "{count} seguradora precisa do seu login no Agger para trazer seguros novos. | {count} seguradoras precisam do seu login no Agger para trazer seguros novos.",
+        "VER_QUAIS": "Ver quais seguradoras",
+        "ESCONDER": "Esconder",
+        "UMA": "uma seguradora | {count} seguradoras",
+        "MAIS": "mais uma seguradora | mais {count} seguradoras",
+        "PEDE_LOGIN": "Entre de novo nessa seguradora, no Agger. Na próxima busca, os seguros dela vêm junto. | Entre de novo nessas seguradoras, no Agger. Na próxima busca, os seguros delas vêm junto.",
+        "SEM_LOGIN": "Guarde no Agger o login dessa seguradora. Na próxima busca, os seguros dela vêm junto. | Guarde no Agger o login dessas seguradoras. Na próxima busca, os seguros delas vêm junto."
       },
       "CONFERIR": {
         "ENTRAM": "{count} seguro pronto para entrar, | {count} seguros prontos para entrar,",
@@ -795,7 +786,8 @@
         "NAO_DEU": "{count} não deu para trazer | {count} não deram para trazer",
         "DE_NOVO": "Buscar de novo",
         "TRAZER": "Trazer {count} seguro do Agger | Trazer {count} seguros do Agger",
-        "NADA": "Nenhum seguro está pronto para entrar. Confira o Agger e toque em \"Buscar de novo\"."
+        "DEPOIS": "Seguros novos que o Agger trouxer depois entram sozinhos na busca de todo dia.",
+        "NADA": "Ainda não há seguros para trazer do Agger. Toque em \"Buscar de novo\" mais tarde."
       },
       "PRONTO": {
         "APOIO": "Com o interruptor abaixo ligado, eu busco os seguros novos no Agger todo dia.",

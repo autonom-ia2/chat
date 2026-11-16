@@ -1,5 +1,5 @@
-# A busca no conector como a tela lê (E7, #2900): enquanto busca, o andamento de cada seguradora; depois, o Conferir, com
-# os mesmos números do Trazer por PDFs.
+# A busca no conector como a tela lê (E7, #2900): enquanto busca, quantos registros chegaram; depois, o Conferir, com os
+# mesmos números do Trazer por PDFs.
 #
 #   { id:, origem: 'conector', estado: 'lendo' | 'parou', diaria:, porSeguradora: [{ nome:, situacao: }], motivo:, recebidos: }
 #   { id:, origem: 'conector', estado: 'lida' | 'trazendo' | 'trazida' | 'desfazendo' | 'desfeita', diaria:, porSeguradora:,
@@ -14,6 +14,8 @@
 # - `repetidos`: os registros que não são seguro a mais: o endosso (e o mesmo registro de novo) de um seguro já contado.
 # - `total`: quantos registros o conector disse que havia no período. A conta fecha:
 #   seguros + (naoDeuParaTrazer - ignorados) + ignorados + repetidos = total.
+# - `porSeguradora`: só as seguradoras com evidência de login faltando (`sem_login`) ou recusado (`pede_login`), do
+#   pedido (Carteira::Conector::Pedido). Vazio: nada a avisar.
 # - `motivo` (só na busca parada): `agger_pede_login` (o login do Agger foi recusado) ou `agger_falhou`.
 #
 # OS NÚMEROS DO CONFERIR SÃO CALCULADOS NO JOB (`calcular!`, no fim da busca: Carteira::Conector::Sincronizar) e ficam em
