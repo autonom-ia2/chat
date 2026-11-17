@@ -47,7 +47,11 @@ Rails.application.config.filter_parameters += [
   # guarda são dados do cliente. O número da apólice, a seguradora e o bem (que costuma trazer a placa) não vão para o log,
   # nem o `arquivo` enviado (o log mostraria o nome do arquivo); `valor` e `busca` já saem filtrados acima. O filtro casa
   # qualquer chave que contenha "numero", "seguradora", "bem" ou "arquivo": em outro endpoint, só o log perde o valor.
-  :numero, :seguradora, :bem, :arquivo
+  :numero, :seguradora, :bem, :arquivo,
+  # #3043 — os dados do segurado para a cotação da renovação (PATCH relacionamentos/seguros/:id e POST apolices_novas):
+  # nascimento, sexo, CEP, placa e classe de bônus são dados do cliente e não vão para o log. O filtro casa qualquer chave
+  # que contenha "nascimento", "sexo", "cep", "placa" ou "bonus": em outro endpoint, só o log perde o valor.
+  :nascimento, :sexo, :cep, :placa, :bonus
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
