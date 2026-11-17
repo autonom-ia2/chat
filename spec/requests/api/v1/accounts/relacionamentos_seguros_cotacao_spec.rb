@@ -12,7 +12,8 @@ RSpec.describe 'Carteira de seguros: cotação da renovação', type: :request d
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
-  def guardar(dados, quem: admin)
+  # As escolhas vêm soltas (`guardar(quemCota: 'robo')`): no Ruby 3 elas chegam como keywords, junto de `quem:`.
+  def guardar(quem: admin, **dados)
     put ajustes_path, params: dados, headers: quem.create_new_auth_token, as: :json
   end
 
