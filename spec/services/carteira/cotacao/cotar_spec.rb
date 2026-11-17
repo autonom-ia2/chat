@@ -57,6 +57,33 @@ RSpec.describe Carteira::Cotacao::Cotar do
     expect(tarefa.title).to include('classe de bônus')
   end
 
+  # E8.1 (#3043): o seguro com PDF tem os dados do segurado escritos nele. A cotação lê o PDF uma vez e monta a entrada
+  # de novo; o que ele não traz (o CPF) segue faltando. O modelo é um dublê.
+  it 'faltou dado com o PDF no seguro: lê o PDF uma vez, e o que ele trouxe deixa de faltar' do
+    cliente = instance_double(Crm::Ai::ResponsesClient)
+    resposta = Carteira::Leitor::Campos.schema[:schema][:required].index_with { nil }.merge(
+      'e_apolice' => true, 'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'segurado_sexo_escrito' => 'Feminino',
+      'cep' => '12345-678', 'placa' => 'EXM0A00', 'bonus_classe' => 5, 'bonus_trecho' => 'Classe de bônus: 5'
+    )
+    allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-da-conta' })
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+    allow(cliente).to receive(:create).and_return({ text: resposta.to_json, usage: {} })
+    Carteira::Leitor::Liberado.ligar!(account)
+    seguro.pdf.attach(io: File.open(Rails.root.join('spec/fixtures/carteira/apolice_auto.pdf')), filename: 'apolice-exemplo.pdf',
+                      content_type: 'application/pdf')
+
+    cotar
+
+    expect(cliente).to have_received(:create).once
+    expect(seguro.reload).to have_attributes(segurado_nascimento: '1985-03-15', segurado_sexo: 'F', cep: '12345678', placa: 'EXM0A00',
+                                             bonus_classe: 5)
+    expect(nao_saiu).to include('motivo' => 'faltou_dado')
+    expect(nao_saiu['faltam']).to include('insured.document')
+    expect(nao_saiu['faltam']).not_to include('quotation.bonusClass', 'insured.birthDate', 'insured.gender', 'address.zipCode', 'vehicle.plate')
+    expect(tipos_da_historia(seguro)).to include('dados_lidos_pdf')
+  end
+
   it 'o código da seguradora anterior só pela lista da conexão: o nome que bate com um da lista não falta' do
     cotar
 

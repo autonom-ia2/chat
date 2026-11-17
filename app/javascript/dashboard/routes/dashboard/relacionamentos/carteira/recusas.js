@@ -89,6 +89,12 @@ export const CODIGOS_DE_RECUSA = [
   'caixa_invalida',
   'caixa_distribui',
   ...ENVIO_DA_PROPOSTA,
+  // #3043 (E8.1) — os dados do segurado no "Corrigir o seguro".
+  'nascimento_invalido',
+  'sexo_invalido',
+  'cep_invalido',
+  'placa_invalida',
+  'bonus_invalido',
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela

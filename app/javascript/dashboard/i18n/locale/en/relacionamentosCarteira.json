@@ -26,7 +26,12 @@
       "COMECA": "Starts",
       "TERMINA": "Ends",
       "VALOR": "Price the client pays",
-      "BEM": "What is insured"
+      "BEM": "What is insured",
+      "NASCIMENTO": "Insured date of birth",
+      "SEXO": "Insured sex",
+      "CEP": "ZIP code (CEP)",
+      "PLACA": "Vehicle plate",
+      "BONUS": "Bonus class"
     },
     "GRUPOS": {
       "TODOS": {
@@ -223,6 +228,11 @@
         "TERMINA": "Ends",
         "VALOR": "Price the client pays",
         "BEM": "What is insured",
+        "NASCIMENTO": "Insured date of birth",
+        "SEXO": "Insured sex",
+        "CEP": "ZIP code (CEP)",
+        "PLACA": "Vehicle plate",
+        "BONUS": "Bonus class",
         "ORIGEM": "How it arrived",
         "POR_PLANILHA": "Arrived from a spreadsheet, on {data}",
         "CHEGOU_EM": "Arrived on {data}",
@@ -256,6 +266,14 @@
       "TERMINA": "Ends",
       "VALOR": "Price the client pays (R$)",
       "BEM": "What is insured",
+      "DADOS_DA_COTACAO": "Details for the quote",
+      "APOIO_DA_COTACAO": "With these details, the renewal can be quoted without anyone on the team. Copy them from the policy. Leave blank what you do not know.",
+      "NASCIMENTO": "Insured date of birth",
+      "SEXO": "Insured sex",
+      "SEXO_NAO_INFORMADO": "Not informed",
+      "CEP": "Insured ZIP code (CEP)",
+      "PLACA": "Vehicle plate",
+      "BONUS": "Bonus class",
       "APOIO": "What you fix here stays this way, even if this policy arrives again in another spreadsheet.",
       "APOIO_DA_APOLICE_NOVA": "It already comes with what does not change from one year to the next. Check the dates and the amount. If the insurer has not sent the policy number yet, save without it and fill it in later, under Fix.",
       "SALVAR": "Save",
@@ -269,7 +287,11 @@
         "TERMINA": "Choose when the policy ends.",
         "TERMINA_ANTES": "The policy cannot end before it starts. Check both dates.",
         "VALOR": "Type the price the client pays in reais, like 1.250,00. If you do not know it, leave it blank.",
-        "OUTRA_SEGURADORA": "Type the insurer name."
+        "OUTRA_SEGURADORA": "Type the insurer name.",
+        "NASCIMENTO": "That date does not work. Pick in the calendar the day the insured was born.",
+        "CEP": "Type the ZIP code with 8 digits, like 12345-678. If you do not know it, leave it blank.",
+        "PLACA": "Type the plate with 7 letters and digits, like ABC1D23. If you do not know it, leave it blank.",
+        "BONUS": "Type the bonus class as written on the policy, a number from 0 to 10. If you do not know it, leave it blank."
       },
       "SAIR": {
         "TITULO": "Leave without saving?",
@@ -286,6 +308,7 @@
       "TITULO": "History",
       "ERRO": "I could not show the history. Try again.",
       "MUDOU_DE_PARA": "{item}: was {antes}, now {depois}",
+      "MUDOU_SEM_VALOR": "{item}: changed",
       "NAO_INFORMADO": "not informed",
       "EXPORTAR": "Export",
       "ARQUIVO": {
@@ -321,7 +344,8 @@
         "PROPOSTA_NAO_SAIU": "The renewal quote did not produce a proposal.",
         "PROPOSTA_PRONTA": "The renewal proposal is ready.",
         "PROPOSTA_ENVIADA": "The renewal proposal was sent to the client.",
-        "PROPOSTA_ENVIADA_SOZINHA": "The renewal proposal went out to the client on its own."
+        "PROPOSTA_ENVIADA_SOZINHA": "The renewal proposal went out to the client on its own.",
+        "DADOS_LIDOS_PDF": "Insured details read from the saved PDF, for the quote."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
@@ -429,6 +453,7 @@
       },
       "AVISADA": "The team was told on the renewal card.",
       "OUTROS_DADOS": "other policy details",
+      "COMO_COMPLETAR": "Attach the policy PDF or fix the policy by hand.",
       "CAMPOS": {
         "PRODUTO": "type of insurance",
         "QUOTATION_PREVIOUSINSURERCODE": "previous insurer",
@@ -446,7 +471,8 @@
         "RENOVACAO_FIMVIGENCIA": "policy end date",
         "RENOVACAO_BONUS": "bonus class",
         "SEGURADO_CPFCNPJ": "insured's CPF or CNPJ",
-        "SEGURADO_NOME": "insured's name"
+        "SEGURADO_NOME": "insured's name",
+        "SEGURADO_CEP": "ZIP code (CEP)"
       },
       "ENVIAR": "Send proposal",
       "ENVIAR_DE_NOVO": "Send again",
@@ -682,7 +708,12 @@
       "SEM_MODELO": "The proposal did not go out: its message is not approved yet on the chosen WhatsApp. Send again once it is approved.",
       "SEM_TELEFONE": "The proposal did not go out: the client has no phone number. Add the phone number to their profile and send again.",
       "CAMPO_VAZIO": "The proposal did not go out: the client has no name. Add the name to their profile and send again.",
-      "SEM_CARD": "The proposal did not go out: the renewal card no longer exists."
+      "SEM_CARD": "The proposal did not go out: the renewal card no longer exists.",
+      "NASCIMENTO_INVALIDO": "That date of birth does not work. Pick in the calendar the day the insured was born and save again.",
+      "SEXO_INVALIDO": "Choose the insured sex from the list and save again.",
+      "CEP_INVALIDO": "The ZIP code needs 8 digits. Check it and save again.",
+      "PLACA_INVALIDA": "The plate needs 7 letters and digits. Check it and save again.",
+      "BONUS_INVALIDO": "The bonus class is a number from 0 to 10. Check the policy and save again."
     },
     "TRAZER": {
       "BOTAO": "Bring policies",
@@ -1064,6 +1095,11 @@
       "ALTERAR": "Change the text",
       "ESCREVER_DE_NOVO": "Write again",
       "NAO_DEU": "I could not do that. Try again."
-    }
+    },
+    "SEXOS": {
+      "F": "Female",
+      "M": "Male"
+    },
+    "CLASSE_DE_BONUS": "Class {classe}"
   }
 }

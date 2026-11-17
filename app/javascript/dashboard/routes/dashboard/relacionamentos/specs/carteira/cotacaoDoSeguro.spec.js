@@ -115,6 +115,36 @@ describe('a linha de situação, por etapa e motivo', () => {
     );
   });
 
+  // #3043 (E8.1) — faltou algo que a apólice traz: a tela ensina o caminho.
+  it('faltou dado da apólice: ensina a anexar o PDF ou corrigir à mão', () => {
+    const w = montar(
+      cotacaoCom({
+        etapa: 'proposta_nao_saiu',
+        motivo: 'faltou_dado',
+        faltam: ['insured.document', 'segurado.cep'],
+      })
+    );
+
+    expect(situacao(w)).toBe(
+      'Não deu para cotar: falta CPF ou CNPJ do segurado e CEP.'
+    );
+    expect(w.get(daCarteira('como-completar')).text()).toBe(
+      'Anexe o PDF da apólice ou corrija o seguro à mão.'
+    );
+  });
+
+  it('faltou só o que a apólice não traz: sem a frase do caminho', () => {
+    const w = montar(
+      cotacaoCom({
+        etapa: 'proposta_nao_saiu',
+        motivo: 'faltou_dado',
+        faltam: ['insured.document'],
+      })
+    );
+
+    expect(w.find(daCarteira('como-completar')).exists()).toBe(false);
+  });
+
   it('o campo que a tela não sabe nomear vira "outros dados do seguro"', () => {
     const w = montar(
       cotacaoCom({
@@ -317,7 +347,18 @@ describe('as puras', () => {
     expect(camposQueFaltam(['insured.name', 'insured.name', 'x.y'])).toEqual({
       campos: ['INSURED_NAME'],
       outros: true,
+      daApolice: false,
     });
+  });
+
+  // #3043 (E8.1) — o que a apólice traz escrito.
+  it('daApolice diz quando faltou algo que a apólice traz', () => {
+    expect(camposQueFaltam(['segurado.cep', 'renovacao.bonus'])).toEqual({
+      campos: ['SEGURADO_CEP', 'RENOVACAO_BONUS'],
+      outros: false,
+      daApolice: true,
+    });
+    expect(camposQueFaltam(['insured.document']).daApolice).toBe(false);
   });
 
   it('dois campos com o mesmo nome em português aparecem uma vez só', () => {

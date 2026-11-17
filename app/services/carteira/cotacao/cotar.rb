@@ -7,7 +7,9 @@
 # 2. a conexão com o portal e o Agente de Cotação da conta (`sem_conexao`, `sem_agente`);
 # 3. o envio da proposta pode sair (Carteira::Cotacao::Envio#conferir!: recusa, caixa, modelo aprovado): proposta que não
 #    sai não se paga (decisão D7). Motivo `envio`, com o do envio em `detalhe`;
-# 4. a entrada (Carteira::Cotacao::Entrada): faltou dado, `faltou_dado` com os nomes dos campos;
+# 4. a entrada (Carteira::Cotacao::Entrada): faltou dado, `faltou_dado` com os nomes dos campos. Antes de desistir, se
+#    falta algum dado do segurado que a apólice traz e o seguro tem PDF, o PDF é lido uma vez nesta vigência
+#    (Carteira::Cotacao::DadosDoPdf, E8.1 #3043) e a entrada é montada de novo com o que ele preencheu;
 # 5. a conferência gratuita da ferramenta de cotação (`precheck` e `pedido` de Native::InsuranceQuote, a mesma instância,
 #    uma chamada só, e o `start` também sai dela): o que ela diz que falta é `faltou_dado`; outra recusa dela vira o
 #    motivo dela; sem resposta do
@@ -57,7 +59,7 @@ class Carteira::Cotacao::Cotar
   # A conferência é a da ferramenta (`precheck` e `pedido`, a mesma instância e uma chamada só ao conferente).
   def seguir(conexao, agente)
     Carteira::Cotacao::Envio.new(@apolice, @config).conferir!(Carteira::Cotacao::Proposta::FINALIDADE)
-    entrada = Carteira::Cotacao::Entrada.new(@apolice, conexao).call
+    entrada = montar_entrada(conexao)
     return faltou(entrada.faltam) if entrada.faltam.any?
 
     ferramenta = Quote.new(agent: agente, params: entrada.params)
@@ -66,6 +68,13 @@ class Carteira::Cotacao::Cotar
     return conferencia_caiu if ferramenta.pedido.nil?
 
     submeter(agente, entrada, ferramenta)
+  end
+
+  def montar_entrada(conexao)
+    entrada = Carteira::Cotacao::Entrada.new(@apolice, conexao).call
+    return entrada if entrada.faltam.empty? || !Carteira::Cotacao::DadosDoPdf.new(@apolice).call(entrada.faltam)
+
+    Carteira::Cotacao::Entrada.new(@apolice.reload, conexao).call
   end
 
   def recusada(conferencia)

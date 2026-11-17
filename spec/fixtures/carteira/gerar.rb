@@ -2,9 +2,15 @@
 # documentos (com dígito verificador inválido de propósito), telefones, e-mails (.invalid), placas e endereços.
 # Nunca ponha dado real neste arquivo: o repositório é público.
 #
-#   bundle exec ruby spec/fixtures/carteira/gerar.rb
+#   bundle exec ruby spec/fixtures/carteira/gerar.rb                      # todos
+#   bundle exec ruby spec/fixtures/carteira/gerar.rb apolice_auto.pdf     # só os arquivos pedidos
 #
-# O PDF escaneado precisa do `pdftoppm` (poppler) para virar imagem. O gabarito de cada arquivo está em gabarito.json.
+# O PDF escaneado precisa do `pdftoppm` (poppler) para virar imagem: sem ele, gere só os outros pelo nome.
+#
+# E8.1 (#3043): as armadilhas dos dados do segurado da cotação. No auto, o nascimento do segurado com o ano em dois
+# dígitos e o do condutor ao lado (outro nascimento, outro sexo), o CEP do segurado e o da corretora, e a classe de bônus
+# com um percentual de bônus ao lado. No empresarial, a empresa segurada (sem nascimento nem sexo), o CEP do risco e o da
+# corretora. A vida escaneada não tem placa nem bônus. O gabarito de cada arquivo está em gabarito.json.
 # A apólice de 160 páginas não é arquivo: os specs a montam na hora (spec/support/carteira_pdf_longo.rb).
 require 'prawn'
 require 'open3'
@@ -27,12 +33,15 @@ AUTO = [
    'Apólice nº: EX-2026.001234        Proposta nº: 998877', 'Ramo: 0531 - Automóvel - Casco',
    'Data de emissão: 10/11/2026', 'Vigência: das 24h de 12/11/2026 às 24h de 12/11/2027', '',
    'DADOS DO SEGURADO', 'Nome: Marina Exemplo de Souza        CPF: 123.456.789-00',
-   'Endereço: Rua das Amostras, 100 - Centro - Cidade Exemplo/EX',
+   'Data de nascimento: 15/03/85        Sexo: Feminino',
+   'Endereço: Rua das Amostras, 100 - Centro - Cidade Exemplo/EX - CEP 12345-678',
    'Telefone: (11) 99999-0001        E-mail: marina.exemplo@exemplo.invalid', '',
+   'CONDUTOR PRINCIPAL', 'Nome: Carlos Exemplo de Souza        Nascimento: 02/07/1990        Sexo: Masculino', '',
    'VEÍCULO SEGURADO', 'Marca/Modelo: Veículo Modelo Exemplo 1.0        Ano: 2024        Placa: EXM0A00', '',
+   'BÔNUS', 'Classe de bônus: 5        Bônus: 10% de desconto', '',
    'PRÊMIO', 'Prêmio líquido: R$ 2.100,00        IOF: R$ 154,98        Prêmio total: R$ 2.254,98',
    'Forma de pagamento: 6 parcelas de R$ 375,83', '',
-   'CORRETOR', 'Corretora Amostra de Seguros Ltda.',
+   'CORRETOR', 'Corretora Amostra de Seguros Ltda. - Rua da Corretora, 50 - CEP 98765-432',
    'Telefone: (11) 3000-0002        E-mail: contato@corretora-amostra.invalid', '',
    'Central de atendimento da seguradora: 0800 000 0003'],
   ['SEGURADORA EXEMPLO S.A.        Apólice nº: EX-2026.001234', '',
@@ -46,9 +55,10 @@ EMPRESARIAL = [
    'Número da apólice: 77.0118.0005678', 'Ramo: 0118 - Compreensivo Empresarial',
    'Emitida em 20/12/2026', 'Vigência: 01/01/2027 a 01/01/2028', '',
    'SEGURADO', 'Razão social: Padaria Amostra Ltda.        CNPJ: 12.345.678/0001-00', '',
-   'LOCAL DO RISCO', 'Avenida do Exemplo, 250 - Bairro Modelo - Cidade Exemplo/EX', '',
+   'LOCAL DO RISCO', 'Avenida do Exemplo, 250 - Bairro Modelo - Cidade Exemplo/EX - CEP 54321-000', '',
+   'Classe de bônus: 3', '',
    'PRÊMIO TOTAL: R$ 5.000,00 em 10 parcelas de R$ 500,00', '',
-   'CORRETOR: Corretora Amostra de Seguros Ltda. - (11) 3000-0002'],
+   'CORRETOR: Corretora Amostra de Seguros Ltda. - (11) 3000-0002 - CEP 98765-432'],
   ['VISTORIA E INSPEÇÃO DE RISCO', '',
    'Contato para agendar a vistoria: Sr. Carlos Modelo, (11) 98888-0005, vistoria@exemplo.invalid', '',
    'COBERTURAS', 'Incêndio, raio e explosão: R$ 800.000,00', 'Danos elétricos: R$ 50.000,00']
@@ -100,8 +110,14 @@ def escaneada(nome, paginas)
   end
 end
 
-pdf('apolice_auto.pdf', AUTO)
-pdf('apolice_empresarial.pdf', EMPRESARIAL)
-pdf('apolice_contato_so_do_corretor.pdf', SO_CONTATO_DO_CORRETOR)
-pdf('nao_e_apolice.pdf', NAO_E_APOLICE)
-escaneada('apolice_escaneada.pdf', ESCANEADA)
+PEDIDOS = ARGV
+
+def gerar?(nome)
+  PEDIDOS.empty? || PEDIDOS.include?(nome)
+end
+
+pdf('apolice_auto.pdf', AUTO) if gerar?('apolice_auto.pdf')
+pdf('apolice_empresarial.pdf', EMPRESARIAL) if gerar?('apolice_empresarial.pdf')
+pdf('apolice_contato_so_do_corretor.pdf', SO_CONTATO_DO_CORRETOR) if gerar?('apolice_contato_so_do_corretor.pdf')
+pdf('nao_e_apolice.pdf', NAO_E_APOLICE) if gerar?('nao_e_apolice.pdf')
+escaneada('apolice_escaneada.pdf', ESCANEADA) if gerar?('apolice_escaneada.pdf')

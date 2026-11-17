@@ -1313,6 +1313,11 @@ describe('a apólice nova', () => {
       termina: '2027-11-29',
       valor: '',
       bem: 'Carro hatch prata',
+      nascimento: '',
+      sexo: '',
+      cep: '',
+      placa: '',
+      bonus: '',
     });
   });
 

@@ -18,7 +18,9 @@ RSpec.describe Rake::Task do
         'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498, 'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00',
         'corretora' => 'Corretora Amostra de Seguros Ltda.', 'segurado_nome' => 'Marina Exemplo de Souza',
         'segurado_documento' => '123.456.789-00', 'segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 1,
-        'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1
+        'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1,
+        'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'segurado_sexo_escrito' => 'Feminino', 'cep' => '12345-678',
+        'placa' => 'EXM0A00', 'bonus_classe' => 5, 'bonus_trecho' => 'Classe de bônus: 5'
       ),
       # O contato da vistoria está numa página sem o CNPJ: um modelo que o desse como do segurado é barrado pelo leitor.
       '77.0118.0005678' => da_seguradora.merge(
@@ -27,14 +29,15 @@ RSpec.describe Rake::Task do
         'bem' => 'Avenida do Exemplo, 250 - Bairro Modelo', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
         'segurado_nome' => 'Padaria Amostra Ltda.', 'segurado_documento' => '12.345.678/0001-00',
         'segurado_telefone' => '(11) 98888-0005', 'segurado_telefone_pagina' => 2,
-        'segurado_email' => 'vistoria@exemplo.invalid', 'segurado_email_pagina' => 2
+        'segurado_email' => 'vistoria@exemplo.invalid', 'segurado_email_pagina' => 2,
+        'cep' => '54321-000', 'bonus_classe' => 3, 'bonus_trecho' => 'Classe de bônus: 3'
       ),
       # Na página do CPF só há o contato do corretor e o 0800: o modelo que acerta não devolve contato do segurado.
       'EX-2026.004455' => da_seguradora.merge(
         'tipo' => 'auto', 'numero' => 'EX-2026.004455', 'inicio_vigencia' => '2027-01-05', 'fim_vigencia' => '2028-01-05',
         'valor_centavos' => 312_050, 'bem' => 'Veículo Exemplo Sedan 2.0 2025 Placa EXM1B11',
         'corretora' => 'Corretora Amostra de Seguros Ltda.', 'segurado_nome' => 'Bruno Amostra Pereira',
-        'segurado_documento' => '222.333.444-00'
+        'segurado_documento' => '222.333.444-00', 'placa' => 'EXM1B11'
       ),
       'COMUNICADO DE ASSEMBLEIA' => { 'e_apolice' => false },
       'VD-0093.004321' => da_seguradora.merge(

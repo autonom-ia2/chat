@@ -133,17 +133,30 @@ const CAMPOS_COM_NOME = [
   'renovacao.bonus',
   'segurado.cpfCnpj',
   'segurado.nome',
+  'segurado.cep',
+];
+// #3043 (E8.1) — os dados que a apólice traz escrita: quando um deles falta, a
+// frase ensina o caminho (anexar o PDF da apólice ou corrigir o seguro à mão).
+const DA_APOLICE = [
+  'quotation.bonusClass',
+  'insured.birthDate',
+  'insured.gender',
+  'address.zipCode',
+  'vehicle.plate',
+  'renovacao.bonus',
+  'segurado.cep',
 ];
 export const chaveDoCampo = campo => campo.split('.').join('_').toUpperCase();
 
 // Os campos que faltaram, em chaves do catálogo, sem repetir (dois nomes do
 // servidor podem ter o mesmo nome em português). `outros`: faltou também algo
-// que a tela não sabe nomear.
+// que a tela não sabe nomear. `daApolice`: faltou algo que a apólice traz.
 export const camposQueFaltam = (faltam = []) => {
   const conhecidos = faltam.filter(campo => CAMPOS_COM_NOME.includes(campo));
   return {
     campos: [...new Set(conhecidos.map(chaveDoCampo))],
     outros: conhecidos.length < faltam.length,
+    daApolice: faltam.some(campo => DA_APOLICE.includes(campo)),
   };
 };
 

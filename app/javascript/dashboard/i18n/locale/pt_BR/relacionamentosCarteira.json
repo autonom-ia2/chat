@@ -26,7 +26,12 @@
       "COMECA": "Começa",
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga",
-      "BEM": "O que está segurado"
+      "BEM": "O que está segurado",
+      "NASCIMENTO": "Nascimento do segurado",
+      "SEXO": "Sexo do segurado",
+      "CEP": "CEP",
+      "PLACA": "Placa do veículo",
+      "BONUS": "Classe de bônus"
     },
     "GRUPOS": {
       "TODOS": {
@@ -223,6 +228,11 @@
         "TERMINA": "Termina",
         "VALOR": "Valor que o cliente paga",
         "BEM": "O que está segurado",
+        "NASCIMENTO": "Nascimento do segurado",
+        "SEXO": "Sexo do segurado",
+        "CEP": "CEP",
+        "PLACA": "Placa do veículo",
+        "BONUS": "Classe de bônus",
         "ORIGEM": "Como chegou",
         "POR_PLANILHA": "Chegou por planilha, em {data}",
         "CHEGOU_EM": "Chegou em {data}",
@@ -256,6 +266,14 @@
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga (R$)",
       "BEM": "O que está segurado",
+      "DADOS_DA_COTACAO": "Dados para a cotação",
+      "APOIO_DA_COTACAO": "Com estes dados, a renovação pode ser cotada sem ninguém da equipe. Copie da apólice. O que não souber, deixe em branco.",
+      "NASCIMENTO": "Nascimento do segurado",
+      "SEXO": "Sexo do segurado",
+      "SEXO_NAO_INFORMADO": "Não informado",
+      "CEP": "CEP do segurado",
+      "PLACA": "Placa do veículo",
+      "BONUS": "Classe de bônus",
       "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo em outra planilha.",
       "APOIO_DA_APOLICE_NOVA": "Já veio com o que não muda de um ano para o outro. Confira as datas e o valor. Se a seguradora ainda não mandou o número da apólice, salve sem ele e preencha depois, em Corrigir.",
       "SALVAR": "Salvar",
@@ -269,7 +287,11 @@
         "TERMINA": "Escolha quando o seguro termina.",
         "TERMINA_ANTES": "O seguro não pode terminar antes de começar. Confira as duas datas.",
         "VALOR": "Escreva o valor que o cliente paga em reais, como 1.250,00. Se não souber, deixe em branco.",
-        "OUTRA_SEGURADORA": "Escreva o nome da seguradora."
+        "OUTRA_SEGURADORA": "Escreva o nome da seguradora.",
+        "NASCIMENTO": "Essa data não serve. Escolha no calendário o dia em que o segurado nasceu.",
+        "CEP": "Escreva o CEP com 8 números, como 12345-678. Se não souber, deixe em branco.",
+        "PLACA": "Escreva a placa com 7 letras e números, como ABC1D23. Se não souber, deixe em branco.",
+        "BONUS": "Escreva a classe de bônus como está na apólice, um número de 0 a 10. Se não souber, deixe em branco."
       },
       "SAIR": {
         "TITULO": "Sair sem salvar?",
@@ -286,6 +308,7 @@
       "TITULO": "Histórico",
       "ERRO": "Não consegui mostrar o histórico. Tente de novo.",
       "MUDOU_DE_PARA": "{item}: era {antes}, ficou {depois}",
+      "MUDOU_SEM_VALOR": "{item}: mudou",
       "NAO_INFORMADO": "não informado",
       "EXPORTAR": "Exportar",
       "ARQUIVO": {
@@ -321,7 +344,8 @@
         "PROPOSTA_NAO_SAIU": "A cotação da renovação não deu proposta.",
         "PROPOSTA_PRONTA": "A proposta de renovação ficou pronta.",
         "PROPOSTA_ENVIADA": "A proposta de renovação foi enviada ao cliente.",
-        "PROPOSTA_ENVIADA_SOZINHA": "A proposta de renovação saiu sozinha para o cliente."
+        "PROPOSTA_ENVIADA_SOZINHA": "A proposta de renovação saiu sozinha para o cliente.",
+        "DADOS_LIDOS_PDF": "Dados do segurado lidos do PDF guardado, para a cotação."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
@@ -429,6 +453,7 @@
       },
       "AVISADA": "A equipe foi avisada no card da renovação.",
       "OUTROS_DADOS": "outros dados do seguro",
+      "COMO_COMPLETAR": "Anexe o PDF da apólice ou corrija o seguro à mão.",
       "CAMPOS": {
         "PRODUTO": "tipo do seguro",
         "QUOTATION_PREVIOUSINSURERCODE": "seguradora anterior",
@@ -446,7 +471,8 @@
         "RENOVACAO_FIMVIGENCIA": "fim da vigência",
         "RENOVACAO_BONUS": "classe de bônus",
         "SEGURADO_CPFCNPJ": "CPF ou CNPJ do segurado",
-        "SEGURADO_NOME": "nome do segurado"
+        "SEGURADO_NOME": "nome do segurado",
+        "SEGURADO_CEP": "CEP"
       },
       "ENVIAR": "Enviar proposta",
       "ENVIAR_DE_NOVO": "Enviar de novo",
@@ -682,7 +708,12 @@
       "SEM_MODELO": "A proposta não saiu: a mensagem dela ainda não está aprovada no WhatsApp escolhido. Envie de novo quando ela for aprovada.",
       "SEM_TELEFONE": "A proposta não saiu: o cliente não tem telefone. Escreva o telefone na ficha dele e envie de novo.",
       "CAMPO_VAZIO": "A proposta não saiu: o cliente não tem nome. Escreva o nome na ficha dele e envie de novo.",
-      "SEM_CARD": "A proposta não saiu: o card da renovação não existe mais."
+      "SEM_CARD": "A proposta não saiu: o card da renovação não existe mais.",
+      "NASCIMENTO_INVALIDO": "Essa data de nascimento não serve. Escolha no calendário o dia em que o segurado nasceu e salve de novo.",
+      "SEXO_INVALIDO": "Escolha o sexo do segurado na lista e salve de novo.",
+      "CEP_INVALIDO": "O CEP precisa ter 8 números. Confira o CEP e salve de novo.",
+      "PLACA_INVALIDA": "A placa precisa ter 7 letras e números. Confira a placa e salve de novo.",
+      "BONUS_INVALIDO": "A classe de bônus é um número de 0 a 10. Confira na apólice e salve de novo."
     },
     "TRAZER": {
       "BOTAO": "Trazer seguros",
@@ -1064,6 +1095,11 @@
       "ALTERAR": "Alterar o texto",
       "ESCREVER_DE_NOVO": "Escrever de novo",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo."
-    }
+    },
+    "SEXOS": {
+      "F": "Feminino",
+      "M": "Masculino"
+    },
+    "CLASSE_DE_BONUS": "Classe {classe}"
   }
 }

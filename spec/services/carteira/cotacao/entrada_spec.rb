@@ -22,6 +22,61 @@ RSpec.describe Carteira::Cotacao::Entrada do
     expect(entrada_de(marina, 'auto').faltam).to include('insured.birthDate', 'insured.gender')
   end
 
+  # E8.1 (#3043): os dados do segurado que a carteira passou a guardar.
+  describe 'nascimento, sexo, CEP, placa e classe de bônus' do
+    let(:marina) { create(:contact, account: account, name: 'Marina Exemplo', phone_number: '+5511900000023') }
+    let(:do_segurado) { { segurado_nascimento: '1985-03-15', segurado_sexo: 'F', cep: '12345678', placa: 'EXM0A00', bonus_classe: 5 } }
+
+    def seguro_de(pessoa, tipo, **campos)
+      criar_apolice(pessoa, tipo: tipo, seguradora: 'HDI', numero: 'EX-000001', fim_vigencia: 30.days.from_now.to_date, **campos)
+    end
+
+    def ramo_com(*campos)
+      allow(Autonomia::Agents::Tools::Native::InsuranceQuote).to receive(:schema_da_conexao).and_return('campos' => campos)
+    end
+
+    it 'auto, segurado pessoa com tudo guardado: os cinco vão nos parâmetros e só falta o que a carteira não tem' do
+      Relacionamentos::Documentos.new(account).guardar(marina, '529.982.247-25')
+
+      entrada = described_class.new(seguro_de(marina, 'auto', **do_segurado), conexao).call
+
+      expect(entrada.params).to include('cep' => '12345678', 'insured' => { 'birthDate' => '1985-03-15', 'gender' => 'F' },
+                                        'vehicle' => { 'plate' => 'EXM0A00' })
+      expect(entrada.params['quotation']).to include('bonusClass' => 5)
+      expect(entrada.faltam).to eq(['quotation.previousInsurerCode'])
+    end
+
+    it 'auto, empresa segurada: o nascimento e o sexo guardados não vão, e seguem faltando' do
+      empresa = create(:company, account: account, name: 'Padaria Amostra Ltda.')
+
+      entrada = described_class.new(seguro_de(marina, 'auto', company: empresa, **do_segurado), conexao).call
+
+      expect(entrada.params.keys).not_to include('insured')
+      expect(entrada.faltam).to include('insured.birthDate', 'insured.gender')
+      expect(entrada.faltam).not_to include('address.zipCode', 'vehicle.plate', 'quotation.bonusClass')
+    end
+
+    it 'outros ramos: a classe de bônus só vai quando é um dos valores da lista do formulário; fora dela, falta' do
+      ramo_com({ 'campo' => 'renovacao.bonus', 'valores' => { '4' => 'Classe 4', '5' => 'Classe 5' } })
+
+      na_lista = described_class.new(seguro_de(marina, 'residencial', bonus_classe: 5), conexao).call
+      fora = described_class.new(seguro_de(marina, 'residencial', numero: 'EX-000002', bonus_classe: 7), conexao).call
+
+      expect([na_lista.params['renovacao']['bonus'], na_lista.faltam.include?('renovacao.bonus')]).to eq([5, false])
+      expect([fora.params['renovacao'].key?('bonus'), fora.faltam.include?('renovacao.bonus')]).to eq([false, true])
+    end
+
+    it 'outros ramos: o CEP vai pelo atalho e deixa de faltar no formulário que o pede' do
+      ramo_com({ 'campo' => 'segurado.cep', 'obrigatorio' => true, 'origem' => 'cliente' })
+
+      sem_cep = described_class.new(seguro_de(marina, 'residencial'), conexao).call
+      com_cep = described_class.new(seguro_de(marina, 'residencial', numero: 'EX-000002', cep: '12345678'), conexao).call
+
+      expect(sem_cep.faltam).to include('segurado.cep')
+      expect([com_cep.params['cep'], com_cep.faltam.include?('segurado.cep')]).to eq(['12345678', false])
+    end
+  end
+
   it 'outros ramos: sem o nome do segurado, ele falta mesmo quando o formulário do ramo não o pede' do
     sem_nome = create(:contact, account: account, name: '', phone_number: '+5511900000024')
 

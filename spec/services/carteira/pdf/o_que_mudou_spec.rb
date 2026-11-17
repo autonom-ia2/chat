@@ -60,6 +60,41 @@ RSpec.describe Carteira::Pdf::OQueMudou do
     expect(resposta[:mudancas].pluck(:campo)).to include('numero', 'termina')
   end
 
+  # E8.1 (#3043): os dados do segurado da cotação aparecem no "o que mudou" como os outros campos.
+  describe 'nascimento, sexo, CEP, placa e classe de bônus' do
+    let(:do_pdf) do
+      { 'seguradora' => 'Seguradora Exemplo', 'numero' => 'EX-000111', 'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F',
+        'cep' => '12345678', 'placa' => 'EXM0A00', 'bonus_classe' => 5 }
+    end
+
+    it 'o que o PDF traz de diferente vem escolhido; o que ele não achou não é mudança' do
+      apolice.update!(cep: '12345678', segurado_sexo: 'M')
+      item = item_lido(do_pdf.except('placa'))
+
+      resposta = mudancas(item)
+
+      expect(resposta[:mudancas].pluck(:campo)).to eq(%w[nascimento sexo bonus])
+      expect(linha(resposta, 'nascimento')).to include(antes: nil, noPdf: '1985-03-15', usar: true)
+      expect(linha(resposta, 'bonus')).to include(antes: nil, noPdf: 5, usar: true)
+    end
+
+    it 'aceitar grava os escolhidos; a história leva o antes e o depois da placa e do bônus, e do nascimento e do CEP só que mudaram' do
+      apolice.update!(cep: '01001000')
+      item_lido(do_pdf)
+
+      Carteira::Pdf::Aceitar.new(apolice, user: user).call(leitura.id, %w[nascimento cep placa bonus])
+
+      apolice.reload
+      expect(apolice).to have_attributes(segurado_nascimento: '1985-03-15', segurado_sexo: nil, cep: '12345678', placa: 'EXM0A00',
+                                         bonus_classe: 5)
+      evento = apolice.eventos.find_by(tipo: 'chegou_de_novo_pdf')
+      expect(evento.mudancas).to eq([{ 'campo' => 'nascimento', 'antes_vazio' => true }, { 'campo' => 'cep', 'antes_vazio' => false },
+                                     { 'campo' => 'placa', 'antes' => nil, 'depois' => 'EXM0A00' },
+                                     { 'campo' => 'bonus', 'antes' => nil, 'depois' => 5 }])
+      expect(evento.attributes.to_json).not_to include('1985-03-15', '12345678', '01001000')
+    end
+  end
+
   describe Carteira::Pdf::Aceitar do
     it 'grava só os campos escolhidos, passa o PDF e mantém o corrigido à mão protegido (D3)' do
       apolice.update!(corrigido_a_mao: ['bem'])

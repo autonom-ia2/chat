@@ -77,6 +77,7 @@ const NOMES_DOS_CAMPOS = {
     t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.SEGURADO_CPFCNPJ'),
   SEGURADO_NOME: () =>
     t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.SEGURADO_NOME'),
+  SEGURADO_CEP: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.SEGURADO_CEP'),
 };
 const MOTIVOS = {
   CONFERENCIA_CAIU: () =>
@@ -160,6 +161,12 @@ const frase = computed(() => {
   return (FRASES[id] ?? SITUACOES_SIMPLES[id])(situacao.value);
 });
 
+// #3043 (E8.1) — faltou algo que a apólice traz escrito: a frase de baixo
+// ensina o caminho (anexar o PDF da apólice ou corrigir o seguro à mão).
+const ensinaOCaminho = computed(
+  () => situacao.value.id === S.FALTAM && situacao.value.daApolice
+);
+
 // A pergunta "Algo mudou?" que não saiu diz por quê, quando a tela sabe.
 const porQueNaoSaiu = computed(() =>
   situacao.value.id === S.PERGUNTA_NAO_SAIU && situacao.value.motivo
@@ -204,6 +211,13 @@ const rotuloDoEnvio = computed(() =>
       class="m-0 text-base break-words text-n-slate-12"
     >
       {{ frase }}
+    </p>
+    <p
+      v-if="ensinaOCaminho"
+      data-carteira="como-completar"
+      class="m-0 text-base break-words text-n-slate-11"
+    >
+      {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.COMO_COMPLETAR') }}
     </p>
     <p
       v-if="porQueNaoSaiu"

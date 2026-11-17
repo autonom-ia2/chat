@@ -95,6 +95,19 @@ RSpec.describe Carteira::Trazer::SegurosDaLista, :aggregate_failures, type: :req
       expect(que_voltam(segunda)).to eq([['EX-001234', { 'valor_centavos' => 341_000 }]])
     end
 
+    # E8.1 (#3043): do nascimento, do sexo e do CEP a história não guarda o valor, só se antes estava vazio.
+    it 'o dado pessoal do segurado volta a vazio quando estava vazio antes; com valor antes, o seguro fica como está' do
+      importacao = trazer_tudo(planilha_de(seguros_bons))
+      passo = carro.eventos.find_by!(campaign_import_id: importacao.id)
+      carro.reload.update!(cep: '12345678')
+
+      passo.update!(mudancas: passo.mudancas + [{ 'campo' => 'cep', 'antes_vazio' => true }])
+      expect(que_voltam(importacao)).to eq([['EX-001234', { 'valor_centavos' => 100_000, 'cep' => nil }]])
+
+      passo.update!(mudancas: passo.mudancas[0...-1] + [{ 'campo' => 'cep', 'antes_vazio' => false }])
+      expect(que_voltam(importacao)).to eq([])
+    end
+
     it 'não volta se alguém mudou o campo depois, se o seguro foi cancelado ou se veio um passo de outra origem' do
       importacao = trazer_tudo(planilha_de(seguros_bons))
 
