@@ -127,14 +127,16 @@ class Carteira::Trazer::Pdfs::SegurosDoLote
     de_antes
   end
 
+  # O dado pessoal do segurado (E8.1) só volta quando estava vazio antes do lote (Carteira::Campos.desfeito).
   def voltar_campo(apolice, mudanca, de_antes)
     coluna = Carteira::Campos::COLUNAS[mudanca['campo']]
     return false unless coluna
 
     agora = de_antes.fetch(coluna) { Carteira::Campos.guardado(apolice[coluna]) }
-    return false unless agora == mudanca['depois']
+    volta, antes = Carteira::Campos.desfeito(mudanca, agora)
+    return false unless volta
 
-    de_antes[coluna] = mudanca['antes']
+    de_antes[coluna] = antes
     true
   end
 

@@ -9,8 +9,9 @@
 # - Cada campo escolhido recebe o valor do PDF. O campo corrigido à mão continua marcado como corrigido (decisão D3: foi
 #   decisão de gente). A vigência que termina antes de começar é recusada (`termina_antes`), sem gravar nada; a
 #   seguradora, o número e o fim que já são de outro seguro da conta, `apolice_repetida`.
-# - Com campo mudado, a história ganha `chegou_de_novo_pdf` com o antes e o depois; a origem do seguro sobe para `pdf`
-#   quando era mais fraca (a planilha), como no gravador único.
+# - Com campo mudado, a história ganha `chegou_de_novo_pdf` com o antes e o depois (do nascimento, do sexo e do CEP do
+#   segurado, só que mudaram: Carteira::Campos.mudanca); a origem do seguro sobe para `pdf` quando era mais fraca (a
+#   planilha), como no gravador único.
 # - O PDF do item vai para o seguro (troca o que estava, como guardar outro PDF) e a história ganha `pdf_anexado`. O
 #   arquivo não é copiado: o mesmo arquivo passa do item para o seguro, e a leitura sai.
 # Tudo numa transação, com o seguro travado.
@@ -55,7 +56,7 @@ class Carteira::Pdf::Aceitar
 
     novos = valores.transform_keys { |campo| coluna(campo) }
     conferir_vigencia(novos)
-    mudancas = valores.map { |campo, depois| { campo: campo, antes: Carteira::Campos.guardado(@apolice[coluna(campo)]), depois: depois } }
+    mudancas = valores.map { |campo, depois| Carteira::Campos.mudanca(campo, Carteira::Campos.guardado(@apolice[coluna(campo)]), depois) }
     @apolice.update!(com_as_chaves(novos).merge(origem: origem))
     @apolice.eventos.create!(tipo: DE_NOVO, quando: Time.current, user: @user, valores: {}, mudancas: mudancas)
   end

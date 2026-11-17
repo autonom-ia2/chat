@@ -153,6 +153,7 @@ class Carteira::Trazer::SegurosDaLista
   end
 
   # mudancas: da mais nova para a mais velha. Cada campo tem de estar com o valor que a lista pôs; aí volta ao de antes.
+  # O dado pessoal do segurado (E8.1) só volta quando estava vazio antes (Carteira::Campos.desfeito).
   def desfazer_mudancas(apolice, mudancas)
     de_antes = {}
     mudancas.each do |mudanca|
@@ -160,9 +161,10 @@ class Carteira::Trazer::SegurosDaLista
       return nil if coluna.nil?
 
       agora = de_antes.fetch(coluna) { Carteira::Campos.guardado(apolice[coluna]) }
-      return nil unless agora == mudanca['depois']
+      volta, antes = Carteira::Campos.desfeito(mudanca, agora)
+      return nil unless volta
 
-      de_antes[coluna] = mudanca['antes']
+      de_antes[coluna] = antes
     end
     de_antes.presence
   end
