@@ -321,6 +321,9 @@ const fonteDemo = ({ estado, peca, carregarDemo, atraso }) => {
     },
     seguro: async id => (await umSeguro(id)).seguroPorId(id),
     historia: async id => (await umSeguro(id)).historiaDoSeguro(id),
+    // #2901 (E8) — a demonstração não tem cotação, e o "Enviar proposta" não
+    // aparece nela: enviar devolve o seguro como está, e nada sai.
+    enviarProposta: async id => (await umSeguro(id)).seguroPorId(id),
     ...Object.fromEntries(ESCRITAS.map(nome => [nome, escrita(nome)])),
     // #2899 (E6.2) — a demonstração não lê PDF (o resumo dela não liga a
     // leitura): ler devolve "nada mudou" e guardar o lido guarda o PDF.
