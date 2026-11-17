@@ -11,6 +11,10 @@
 #      (com "Lia responde", quem pergunta é a Lia, no turno normal dela).
 # 2. A mensagem seguinte do segurado na mesma conversa, depois do "Mudou algo": entra na história como
 #    `cliente_respondeu` (só o id da mensagem, nunca o texto) e avisa a equipe. Uma vez por vigência.
+#
+# Nos dois casos, com "Lia responde" e a conversa com alguém da equipe (`assignee_id`), a Lia não vai responder: a equipe
+# recebe o aviso `conversa_com_pessoa`, uma vez por seguro e vigência. É aqui que a Lia falha de fato, qualquer que seja
+# o caminho que deu a conversa a alguém (distribuição da caixa, regra de automação, alguém da equipe).
 class Carteira::Cotacao::Resposta
   RESPONDEU = 'respondeu_algo_mudou'.freeze
   CLIENTE_RESPONDEU = 'cliente_respondeu'.freeze
@@ -31,6 +35,8 @@ class Carteira::Cotacao::Resposta
   def botao(resposta)
     apolice, config = da_marca
     return if apolice.nil?
+
+    avisar_se_a_lia_nao_responde(apolice, config)
     return unless primeiro_toque!(apolice, resposta)
 
     resposta == Carteira::Cotacao::NADA_MUDOU ? cotar(apolice) : mudou(apolice, config)
@@ -76,11 +82,22 @@ class Carteira::Cotacao::Resposta
     toque = toque_mudou
     return if toque.nil?
 
-    apolice = toque.apolice
-    return unless Carteira::Cotacao.da_vigencia(apolice.id, apolice.fim_vigencia.iso8601)
+    apolice, config = Carteira::Cotacao.da_vigencia(toque.apolice_id, toque.apolice.fim_vigencia.iso8601)
+    return if apolice.nil?
+
+    avisar_se_a_lia_nao_responde(apolice, config)
     return unless primeira_resposta!(apolice)
 
     Carteira::Cotacao::Aviso.new(apolice, CLIENTE_RESPONDEU).call
+  end
+
+  def avisar_se_a_lia_nao_responde(apolice, config)
+    pessoa = @message.conversation.assignee
+    return if pessoa.nil? || config.quem_responde != Carteira::RenovacaoConfig::LIA
+
+    agente = Carteira::Cotacao.agente(apolice.account)&.name
+    Carteira::Cotacao::Aviso.new(apolice, Carteira::Cotacao::Aviso::CONVERSA_COM_PESSOA,
+                                 textos: { pessoa: pessoa.name, agente: agente.to_s }, uma_vez: true).call
   end
 
   def toque_mudou

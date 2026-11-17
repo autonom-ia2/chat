@@ -12,13 +12,12 @@
 # - `sem_card` / `campo_vazio`: o card de renovação sumiu, ou uma variável do modelo ficaria vazia (o primeiro nome do
 #   contato sem nome, por exemplo). A Meta recusaria o modelo com a variável vazia.
 #
-# A mensagem vai na conversa aberta do contato nessa caixa, ou numa conversa nova (ContactInbox + ConversationBuilder,
-# como o aviso do Agendamento). A cotação NUNCA atribui nem tira responsável da conversa: quem responde depois é a Lia
-# (se ela está na caixa e a conta escolheu "Lia responde") ou a equipe. Com "Lia responde", serve primeiro a conversa
-# aberta SEM responsável, porque a Lia não responde conversa que está com alguém. A caixa que entrega toda conversa nova
-# a alguém da equipe (Carteira::Cotacao.caixa_distribui?, que os ajustes recusam com a Lia, mas pode ter mudado depois)
-# não abre outra conversa a cada envio: sem conversa livre, usa a aberta que houver, o envio segue e a equipe é avisada
-# uma vez por seguro e vigência (`caixa_distribui`). Toda mensagem leva a marca da cotação em
+# A mensagem vai na conversa aberta mais recente do contato nessa caixa, com ou sem responsável, ou numa conversa nova
+# só quando não há nenhuma aberta (ContactInbox + ConversationBuilder, como o aviso do Agendamento): nunca uma conversa
+# por envio. A cotação NUNCA atribui nem tira responsável da conversa: quem responde depois é a Lia (se ela está na
+# caixa e a conta escolheu "Lia responde") ou a equipe. A Lia não responde conversa que está com alguém; quem percebe é
+# a resposta do segurado (Carteira::Cotacao::Resposta, aviso `conversa_com_pessoa`), porque a caixa pode dar a conversa a
+# alguém depois, por distribuição ou por regra de automação. Toda mensagem leva a marca da cotação em
 # `content_attributes` (`carteira_renovacao: { apolice_id:, etapa: }`), que é por onde a resposta é casada
 # (Carteira::CotacaoRespostaListener). O que sai sozinho vai sem remetente; o envio da proposta pelo clique no card vai
 # com quem clicou. Nada do conteúdo vai para log.
@@ -118,22 +117,8 @@ class Carteira::Cotacao::Envio
   end
 
   def conversa!(caixa)
-    abertas = Conversation.where(account_id: caixa.account_id, inbox_id: caixa.id, contact_id: contato.id, status: %i[open pending])
-                          .order(:id)
-    return abertas.last || abrir_conversa(caixa) unless lia_responde?
-
-    distribui = Carteira::Cotacao.caixa_distribui?(caixa)
-    avisar_que_distribui if distribui
-    abertas.where(assignee_id: nil).last || (abertas.last if distribui) || abrir_conversa(caixa)
-  end
-
-  def lia_responde?
-    @config.quem_responde == Carteira::RenovacaoConfig::LIA
-  end
-
-  def avisar_que_distribui
-    agente = Carteira::Cotacao.agente(@apolice.account)&.name
-    Carteira::Cotacao::Aviso.new(@apolice, Carteira::Cotacao::Aviso::CAIXA_DISTRIBUI, textos: { agente: agente.to_s }, uma_vez: true).call
+    Conversation.where(account_id: caixa.account_id, inbox_id: caixa.id, contact_id: contato.id, status: %i[open pending])
+                .order(:id).last || abrir_conversa(caixa)
   end
 
   def abrir_conversa(caixa)

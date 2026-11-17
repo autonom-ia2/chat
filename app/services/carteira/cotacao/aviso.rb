@@ -6,8 +6,8 @@
 # Motivos (`MOTIVOS`, cada um com a frase de leigo em `carteira.cotacao.avisos`): o "Algo mudou?" ou a proposta que não
 # saiu (com o motivo do envio), o segurado que disse que mudou algo, o que respondeu depois, o dado que faltou para cotar
 # (com os nomes dos campos), a conferência que caiu três vezes, a cotação que não trouxe preço, a proposta que não se
-# sabe se chegou e a caixa que entrega toda conversa nova a alguém quando era a Lia quem ia responder (`textos`: o nome
-# do agente, só no título).
+# sabe se chegou e a resposta do segurado numa conversa que está com alguém quando era a Lia quem ia responder
+# (`textos`: o nome de quem está com a conversa e o do agente, só no título).
 #
 # A atividade entra SEMPRE (é o registro no card, `carteira_cotacao_aviso`); a tarefa sai UMA vez por seguro, vigência e
 # motivo. Card que sumiu: nada a avisar. O título leva o nome do contato (é a lista de tarefas da equipe) e nunca o
@@ -15,12 +15,12 @@
 class Carteira::Cotacao::Aviso
   SOURCE = 'carteira_cotacao'.freeze
   ATIVIDADE = 'carteira_cotacao_aviso'.freeze
-  CAIXA_DISTRIBUI = 'caixa_distribui'.freeze
+  CONVERSA_COM_PESSOA = 'conversa_com_pessoa'.freeze
   MOTIVOS = (%w[algo_mudou_nao_saiu mudou cliente_respondeu faltou_dado conferencia_caiu proposta_nao_saiu sem_preco] +
-             ['proposta_incerta', CAIXA_DISTRIBUI]).freeze
+             ['proposta_incerta', CONVERSA_COM_PESSOA]).freeze
 
   # detalhe: o motivo do envio que não saiu (Carteira::Cotacao::Envio::NaoSaiu); faltam: os nomes dos campos; textos: o que
-  # mais a frase do motivo pede (`agente`); uma_vez: nem a atividade entra de novo quando a tarefa já saiu.
+  # mais a frase do motivo pede (`pessoa`, `agente`); uma_vez: nem a atividade entra de novo quando a tarefa já saiu.
   def initialize(apolice, motivo, detalhe: nil, faltam: [], textos: {}, uma_vez: false) # rubocop:disable Metrics/ParameterLists
     @apolice = apolice
     @motivo = motivo.to_s

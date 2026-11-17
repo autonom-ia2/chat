@@ -127,4 +127,36 @@ RSpec.describe Carteira::Cotacao::Resposta do
     allow(described_class).to receive(:new).and_raise(StandardError, 'falhou')
     expect { Carteira::CotacaoRespostaListener.instance.message_created(evento) }.not_to raise_error
   end
+
+  # Com "Lia responde", a resposta numa conversa que está com alguém da equipe avisa uma vez: a Lia não vai responder ali.
+  describe 'Lia responde, e a conversa está com alguém da equipe' do
+    let(:atendente) { create(:user, account: account, role: :agent, name: 'Paula Exemplo') }
+    let(:ajustes) { cotacao_ligada(account, user: admin, caixa: caixa, quem_cota: 'lia', quem_responde: 'lia') }
+
+    def avisos_da_conversa
+      Crm::FollowUp.where(account_id: account.id).select { |tarefa| tarefa.metadata['motivo'] == 'conversa_com_pessoa' }
+    end
+
+    before do
+      agente_de_cotacao(account)
+      create(:inbox_member, user: atendente, inbox: caixa)
+      modelo.conversation.update!(assignee: atendente)
+    end
+
+    it 'avisa a equipe uma vez, com o nome de quem está com a conversa e o do agente' do
+      responder(tocar(modelo, 'renovacao_mudou', titulo: 'Mudou algo'))
+      responder(recebida('Troquei de carro.'))
+
+      expect(avisos_da_conversa.size).to eq(1)
+      expect(avisos_da_conversa.first.title).to include('Paula Exemplo', 'Lia Exemplo')
+    end
+
+    it 'com a conversa sem responsável, não avisa' do
+      modelo.conversation.update!(assignee: nil)
+
+      responder(tocar(modelo, 'renovacao_mudou', titulo: 'Mudou algo'))
+
+      expect(avisos_da_conversa).to be_empty
+    end
+  end
 end
