@@ -568,7 +568,7 @@ onMounted(() => {
           @dizer-motivo="perguntarMotivo"
         />
         <CotacaoDoSeguro
-          v-if="seguro.cotacao"
+          v-if="seguro.cotacao?.etapa"
           :seguro="seguro"
           :pode-enviar="comEnviar"
           :enviando="aberto.ocupado.value === 'enviarProposta'"

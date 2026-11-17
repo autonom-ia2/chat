@@ -22,7 +22,7 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // enviada, quem pode (carteira/cotacaoDaRenovacao.js, `podeEnviarProposta`)
 // tem "Enviar proposta": nada vai ao cliente antes desse clique. Quem manda é
 // a gaveta, que diz o que houve no rodapé. Só existe no seguro que tem
-// cotação.
+// cotação: quem a usa só a monta quando há etapa (`cotacao.etapa`).
 const props = defineProps({
   seguro: { type: Object, required: true },
   podeEnviar: { type: Boolean, default: false },
@@ -191,7 +191,6 @@ const rotuloDoEnvio = computed(() =>
 
 <template>
   <section
-    v-if="situacao"
     data-carteira="cotacao-do-seguro"
     :data-etapa="cotacao.etapa"
     :aria-labelledby="idDoTitulo"
