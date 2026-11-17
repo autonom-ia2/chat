@@ -216,6 +216,36 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   describe 'retrieval_query override' do
+    it 'contextualizes quantity corrections in both the simulator and the shared answering engine', :aggregate_failures do
+      agent = create_agent('with_knowledge' => true)
+      question = 'Qual o valor do plano Equipe para 15 usuarios?'
+      query = 'Na verdade, serão só 2 usuários.'
+      history = [{ role: 'user', content: question }, { role: 'assistant', content: 'O valor anterior era R$ 80.' }]
+      retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).twice
+        .with(hash_including(query: query, history: history)).and_call_original
+
+      described_class.new(agent: agent, query: query, history: history, trust_instruction: true).answer
+      Autonomia::Agents::Playground.new(agent: agent, message: query, history: history).run
+
+      expect(retriever).to have_received(:retrieve).twice
+        .with("#{query}\n#{question}", top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
+    end
+
+    it 'keeps an explicit retrieval query instead of replacing it with conversational context' do
+      agent = create_agent('with_knowledge' => true)
+      retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
+      history = [{ role: 'user', content: 'Quanto custa o plano Equipe?' }]
+
+      described_class.new(agent: agent, query: 'Vou fazer só de 10.', history: history,
+                          retrieval_query: 'consulta explicita', trust_instruction: true).answer
+
+      expect(retriever).to have_received(:retrieve)
+        .with('consulta explicita', top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
+    end
+
     it 'retrieves with the bare question when the composed query embeds context first' do
       # Arrange — copiloto chat: query composta = transcrição antes do pedido real
       agent = create_agent('with_knowledge' => true)
@@ -241,6 +271,39 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       # Act
       described_class.new(agent: agent, query: 'oi', trust_instruction: true).answer
+    end
+  end
+
+  describe 'retrieval diagnostics' do
+    it 'records retrieved IDs separately from valid used IDs without message content', :aggregate_failures do
+      agent = create_agent('with_knowledge' => true)
+      answerer = described_class.new(agent: agent, query: 'private customer query')
+      snippets = [Struct.new(:id).new(101), Struct.new(:id).new(102)]
+      parsed = { 'used_snippet_ids' => [102, 'private token', 999], 'should_handoff' => true,
+                 'answered_from_knowledge' => false, 'reply' => 'private reply', 'handoff_reason' => 'private reason' }
+      allow(Rails.logger).to receive(:info)
+
+      answerer.send(:log_retrieval, snippets, parsed)
+
+      expect(Rails.logger).to have_received(:info).with(satisfy do |line|
+        JSON.parse(line) == {
+          'event' => 'autonomia.agents.retrieval', 'agent_id' => agent.id, 'feature' => 'agente_resposta',
+          'retrieval_query_overridden' => false, 'retrieved_snippet_ids' => [101, 102], 'used_snippet_ids' => [102],
+          'model_handoff' => true, 'answered_from_knowledge' => false, 'generation_failed' => false
+        }
+      end)
+    end
+
+    it 'records failed generation with no used snippets' do
+      agent = create_agent('with_knowledge' => true)
+      answerer = described_class.new(agent: agent, query: 'oi')
+      allow(Rails.logger).to receive(:info)
+
+      answerer.send(:log_retrieval, [], nil)
+
+      expect(Rails.logger).to have_received(:info).with(satisfy do |line|
+        JSON.parse(line).slice('used_snippet_ids', 'generation_failed') == { 'used_snippet_ids' => [], 'generation_failed' => true }
+      end)
     end
   end
 
