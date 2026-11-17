@@ -33,9 +33,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'Qual prazo voce prefere?')
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: '3')
       original_history = responder.send(:history)
-      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
-        query: '3', history: original_history, retrieval_query: "3\nQuero analisar amostras\nQual prazo voce prefere?"
-      )).and_return(answerer)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(
+        hash_including(query: '3', history: original_history, retrieval_query: "3\nQuero analisar amostras\nQual prazo voce prefere?")
+      ).and_return(answerer)
 
       responder.send(:answer)
 
@@ -48,10 +48,10 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Ainda nao configurei')
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'não')
       original_history = responder.send(:history)
-      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
-        query: 'não', history: original_history,
-        retrieval_query: "não\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?"
-      )).and_return(answerer)
+      expected_query = "não\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?"
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(
+        hash_including(query: 'não', history: original_history, retrieval_query: expected_query)
+      ).and_return(answerer)
 
       responder.send(:answer)
 
@@ -61,9 +61,9 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     it 'does not invent prior context when the first turn contains only incoming messages' do
       create(:message, account: account, conversation: conversation, message_type: :incoming, content: '3')
       original_history = responder.send(:history)
-      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
-        query: '3', history: original_history, retrieval_query: '3'
-      )).and_return(answerer)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(
+        hash_including(query: '3', history: original_history, retrieval_query: '3')
+      ).and_return(answerer)
 
       responder.send(:answer)
     end
