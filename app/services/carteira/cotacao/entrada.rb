@@ -34,6 +34,9 @@ class Carteira::Cotacao::Entrada
   OBRIGATORIOS_DE_AUTO = %w[insured.name insured.document insured.birthDate insured.gender address.zipCode].freeze
   # O que a busca paga do segurado acharia nos outros ramos (em auto, já está em OBRIGATORIOS_DE_AUTO).
   NOME_NOS_RAMOS = 'segurado.nome'.freeze
+  # O que a busca paga do segurado acha pelo documento (InsuranceQuote::Veiculo#busca_do_segurado?), em auto e nos
+  # outros ramos. `entrada_spec` prende esta lista à da ferramenta: se a busca passar a procurar outro campo, ele falha.
+  BUSCADOS_PELO_DOCUMENTO = { AUTO => %w[insured.name insured.birthDate insured.gender], nil => [NOME_NOS_RAMOS] }.freeze
   VEICULO = %w[plate fipeCode chassis].freeze
   PLACA = 'vehicle.plate'.freeze
 

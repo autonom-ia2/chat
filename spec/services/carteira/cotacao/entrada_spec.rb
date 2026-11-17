@@ -33,4 +33,45 @@ RSpec.describe Carteira::Cotacao::Entrada do
 
     expect(entrada_de(marina, 'residencial').faltam).not_to include('segurado.nome')
   end
+
+  # A lista da Entrada presa à da ferramenta (InsuranceQuote::Veiculo#busca_do_segurado?, que não muda aqui): com tudo o
+  # que a Entrada exige do segurado, a busca paga não roda; faltando qualquer um, roda. Se a busca passar a procurar outro
+  # campo do segurado, o primeiro caso de cada ramo falha.
+  describe 'amarrada à busca paga da ferramenta de cotação' do
+    let(:buscados) { described_class::BUSCADOS_PELO_DOCUMENTO }
+
+    def busca_paga?(produto, entrada)
+      ferramenta = Autonomia::Agents::Tools::Native::InsuranceQuote.new(agent: nil, params: { 'produto' => produto })
+      allow(ferramenta).to receive_messages(entrada: entrada,
+                                            quote_input: instance_double(Autonomia::Insurance::QuoteInput, auto?: produto == 'auto'))
+      ferramenta.send(:busca_do_segurado?)
+    end
+
+    def com(caminhos, documento)
+      caminhos.each_with_object(documento.deep_dup) do |caminho, entrada|
+        grupo, campo = caminho.split('.')
+        (entrada[grupo] ||= {})[campo] = 'Exemplo'
+      end
+    end
+
+    it 'auto: o que a busca acha está nos obrigatórios da Entrada' do
+      expect(described_class::OBRIGATORIOS_DE_AUTO).to include(*buscados['auto'])
+    end
+
+    it 'auto: com tudo o que a Entrada exige, a busca não roda; faltando um, roda' do
+      documento = { 'insured' => { 'document' => '52998224725' } }
+
+      expect(busca_paga?('auto', com(buscados['auto'], documento))).to be(false)
+      buscados['auto'].each do |faltando|
+        expect(busca_paga?('auto', com(buscados['auto'] - [faltando], documento))).to be(true)
+      end
+    end
+
+    it 'outros ramos: com o nome, a busca não roda; sem ele, roda' do
+      documento = { 'segurado' => { 'cpfCnpj' => '52998224725' } }
+
+      expect(busca_paga?('residencial', com(buscados[nil], documento))).to be(false)
+      expect(busca_paga?('residencial', documento)).to be(true)
+    end
+  end
 end
