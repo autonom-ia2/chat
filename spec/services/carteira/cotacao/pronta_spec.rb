@@ -78,7 +78,7 @@ RSpec.describe Carteira::Cotacao::Pronta do
       fechar
 
       expect(proposta_enviada).to have_attributes(inbox_id: caixa.id, sender_id: nil, private: false)
-      expect(seguro.eventos.find_by(tipo: 'proposta_enviada_sozinha').valores['mensagem']).to eq(proposta_enviada.id)
+      expect(seguro.eventos.find_by(tipo: 'proposta_enviada_sozinha').valores['mensagem_id']).to eq(proposta_enviada.id)
       expect(Whatsapp::Templates::HeaderMedia).to have_received(:dispatch_file).with(pdf, caixa)
     end
   end
