@@ -35,6 +35,8 @@ class Carteira::Renovacao::CriarCard
 
       apolice.update!(crm_card: criar(apolice))
       apolice.eventos.create!(tipo: NASCEU, quando: Time.current, valores: do_nascimento)
+      # E8 (#2901): com a cotação da renovação ligada, o card novo pede a cotação (depois do commit).
+      Carteira::Cotacao::Gatilho.card_nasceu(@account, @config, apolice)
       true
     end
   end

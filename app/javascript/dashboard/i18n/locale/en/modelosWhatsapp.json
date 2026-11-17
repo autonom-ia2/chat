@@ -175,6 +175,7 @@
       "PARADA": "stopped by the template",
       "SISTEMA": {
         "agendamento": "Used by the platform in the booking notices.",
+        "carteira": "Used by the platform in the insurance renewals.",
         "anuncios": "Used by the platform in the Ads notices.",
         "cobranca": "Used by the platform in the pipeline's payment reminders.",
         "satisfacao": "Used by the platform in the satisfaction survey after a conversation."

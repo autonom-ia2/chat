@@ -14,6 +14,8 @@ module Autonomia::Guide::SoNaTelaDosModulos
     ::Carteira::DeFora::SO_NA_TELA_DO_GUIA,
     ::Carteira::Palavras::SO_NA_TELA_DO_GUIA,
     # #2900 (E7): buscar os seguros no Agger, buscar de novo e ligar a busca de todo dia (que passa a gravar sozinha).
-    ::Carteira::Conector::SO_NA_TELA_DO_GUIA
+    ::Carteira::Conector::SO_NA_TELA_DO_GUIA,
+    # #2901 (E8): mandar a proposta de renovação ao cliente é o clique de "Enviar" no card.
+    ::Carteira::Cotacao::SO_NA_TELA_DO_GUIA
   ).freeze
 end

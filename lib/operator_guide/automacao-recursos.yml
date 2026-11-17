@@ -743,6 +743,12 @@ fora:
       passo de automação, e por isso não chegam ao catálogo (Acoes::SO_NA_TELA).
     recursos:
       - relacionamentos/seguros/palavras
+  - motivo: >-
+      Cotação da renovação (#2901, E8): mandar a proposta de renovação ao cliente é o clique de uma pessoa em "Enviar"
+      na renovação do seguro (modo "uma pessoa confere e envia"); no modo sozinho quem manda é a própria cotação. Nunca
+      passo de automação, e por isso não chega ao catálogo (Acoes::SO_NA_TELA).
+    recursos:
+      - relacionamentos/seguros/propostas
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules

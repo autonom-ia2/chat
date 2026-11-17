@@ -19,15 +19,19 @@ module Whatsapp::Templates::Finalidades
   class SemBase < StandardError; end
 
   # `categoria`: UTILITY nos prontos do catálogo; o modelo que a IA escreve por tipo (#1587) pode ser MARKETING.
-  Pronto = Data.define(:finalidade, :nome, :nome_amigavel, :dono, :idioma, :texto, :campos, :botoes, :categoria) do
-    def initialize(categoria: Whatsapp::Templates::Finalidades::CATEGORIA, **)
-      super(categoria: categoria, **)
+  # `topo` (#2901, opcional): o formato de mídia do topo (`DOCUMENT` na proposta da renovação), ou nil sem topo. O
+  # arquivo de exemplo que a Meta pede para analisar vai pelo `header_handle` de `corpo` (`MediaUpload`/`upload_media`).
+  Pronto = Data.define(:finalidade, :nome, :nome_amigavel, :dono, :idioma, :texto, :campos, :botoes, :categoria, :topo) do
+    def initialize(categoria: Whatsapp::Templates::Finalidades::CATEGORIA, topo: nil, **)
+      super(categoria: categoria, topo: topo, **)
     end
 
-    # O pedido de criação no formato da Meta (o mesmo que a tela de Modelos manda ao `MetaClient`).
-    def corpo
+    # O pedido de criação no formato da Meta (o mesmo que a tela de Modelos manda ao `MetaClient`). Com `topo`, o
+    # `header_handle` é o do arquivo de exemplo já subido à Meta.
+    def corpo(header_handle: nil)
       exemplos = campos.values.map { |campo| Whatsapp::Templates::Finalidades.exemplo(campo) }
       components = [{ type: 'BODY', text: texto, example: { body_text: [exemplos] } }]
+      components.unshift({ type: 'HEADER', format: topo, example: { header_handle: [header_handle] } }) if topo
       components << { type: 'BUTTONS', buttons: botoes_da_meta } if botoes.any?
       { name: nome, language: idioma, category: categoria, components: components }
     end
@@ -128,6 +132,6 @@ module Whatsapp::Templates::Finalidades
   def montar(finalidade, dono, variante)
     campos = variante[:campos].each_with_index.to_h { |campo, index| [(index + 1).to_s, campo] }
     Pronto.new(finalidade: finalidade, nome: variante[:nome], nome_amigavel: variante[:amigavel], dono: dono, idioma: IDIOMA,
-               texto: variante[:texto], campos: campos, botoes: variante.fetch(:botoes, []))
+               texto: variante[:texto], campos: campos, botoes: variante.fetch(:botoes, []), topo: variante[:topo])
   end
 end

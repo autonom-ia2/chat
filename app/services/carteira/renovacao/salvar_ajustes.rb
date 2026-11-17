@@ -4,10 +4,13 @@
 # Quem manda o funil fica como quem escolheu (é quem cuida dos cards, Carteira::Renovacao::CriarCard); quem só muda os
 # dias ou as mensagens não, e quem tira a escolha tira também quem escolheu.
 #
+# As escolhas da cotação da renovação (E8, #2901: quem cota, quem envia, quem responde e a caixa) são conferidas em
+# Carteira::Cotacao::Escolhas e entram na mesma gravação.
+#
 # Cada coisa que não dá para guardar vira a recusa dela (CustomExceptions::CarteiraRecusa), que nunca repete o que foi
 # mandado. Os cards não nascem aqui: a rotina (Carteira::Renovacao::RotinaJob) os cria na próxima passada.
 class Carteira::Renovacao::SalvarAjustes
-  CAMPOS = %w[funilId etapaId dias mensagens].freeze
+  CAMPOS = (%w[funilId etapaId dias mensagens] + Carteira::Cotacao::Escolhas::CAMPOS).freeze
   ONDE = %w[funilId etapaId].freeze
 
   # funis: os funis que quem pede enxerga.
@@ -19,7 +22,7 @@ class Carteira::Renovacao::SalvarAjustes
   end
 
   def call
-    novos = onde.merge(dias).merge(mensagens)
+    novos = onde.merge(dias).merge(mensagens).merge(Carteira::Cotacao::Escolhas.new(@account, @dados).call)
     guardar(novos)
   rescue ActiveRecord::RecordNotUnique
     # Duas pessoas guardando a primeira escolha da conta ao mesmo tempo: a segunda grava por cima da linha que nasceu.
