@@ -24,6 +24,9 @@ module VarreduraDeEnviosEmNomeDePessoa
       '(#2212, actor ai) vai sem remetente e com a marca Registro::MARCA (marca_da_ia)',
     'app/services/carteira/palavras/enviar.rb#Carteira::Palavras::Enviar#mandar' =>
       'seu seguro em palavras simples (#2899): só no clique da pessoa na gaveta (nada sai sozinho, decisão P1); remetente é ela (Current.user)',
+    'app/services/carteira/cotacao/envio.rb#Carteira::Cotacao::Envio#mandar_pela_pessoa' =>
+      'proposta de renovação (#2901): só no clique de "Enviar" da pessoa, no modo em que ela confere e envia; remetente é ' \
+      'ela (Current.user). O que a cotação manda sozinha vai sem remetente (Envio#mandar e #texto)',
     'lib/integrations/slack/slack_message_helper.rb#Integrations::Slack::SlackMessageHelper#create_message' =>
       'a pessoa responde pelo Slack',
     'lib/integrations/dyte/processor_service.rb#Integrations::Dyte::ProcessorService#create_a_dyte_integration_message' =>
