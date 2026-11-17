@@ -12,6 +12,12 @@
 # - os obrigatórios do ramo. Auto: nome, CPF/CNPJ, nascimento, sexo, CEP e placa (ou FIPE ou chassi). Demais ramos: os
 #   campos obrigatórios que o cliente informa no formulário do ramo.
 #
+# A BUSCA PAGA DO SEGURADO NUNCA RODA AQUI. A conferência da ferramenta chama `quote/enrich` quando o documento veio e
+# falta o que a busca acha por ele (InsuranceQuote::Veiculo#busca_do_segurado?): em auto, nome, nascimento ou sexo; nos
+# outros ramos, o nome. Esses campos estão SEMPRE em `faltam` quando a carteira não os tem, mesmo que o formulário do
+# ramo não os peça, e a renovação nunca chega à conferência sem eles: o robô usa só o que a carteira tem, e as novas
+# tentativas da conferência (CotarJob) não pagam de novo.
+#
 # -> `Resultado` com o produto, os parâmetros da ferramenta e `faltam` (só os NOMES dos campos, no formato do adapter;
 # vazio quando dá para cotar). O CPF sai do documento guardado da pessoa (ou da empresa segurada), nunca de texto.
 class Carteira::Cotacao::Entrada
@@ -26,6 +32,8 @@ class Carteira::Cotacao::Entrada
     nil => { grupo: 'renovacao', seguradora: 'seguradoraAnterior', numero: 'numeroApolice', fim: 'fimVigencia', bonus: 'bonus' }
   }.freeze
   OBRIGATORIOS_DE_AUTO = %w[insured.name insured.document insured.birthDate insured.gender address.zipCode].freeze
+  # O que a busca paga do segurado acharia nos outros ramos (em auto, já está em OBRIGATORIOS_DE_AUTO).
+  NOME_NOS_RAMOS = 'segurado.nome'.freeze
   VEICULO = %w[plate fipeCode chassis].freeze
   PLACA = 'vehicle.plate'.freeze
 
@@ -106,11 +114,16 @@ class Carteira::Cotacao::Entrada
     VEICULO.any? { |nome| veiculo[nome].present? } ? faltando : faltando + [PLACA]
   end
 
-  # Demais ramos: o obrigatório que o cliente informa, fora o que já vai (o CPF e o nome do segurado).
+  # Demais ramos: o obrigatório que o cliente informa, fora o que já vai (o CPF e o nome do segurado), e o nome sempre que
+  # não vai (é o que a busca paga acharia).
   def faltam_do_ramo(params)
-    tem = { 'segurado.cpfCnpj' => params['cpf'], 'segurado.nome' => params['nome'] }
+    tem = { 'segurado.cpfCnpj' => params['cpf'], NOME_NOS_RAMOS => params['nome'] }
+    do_formulario = obrigatorios_do_cliente.reject { |caminho| caminho.start_with?('renovacao.') || tem[caminho].present? }
+    params['nome'].present? ? do_formulario : (do_formulario | [NOME_NOS_RAMOS])
+  end
+
+  def obrigatorios_do_cliente
     Array(@schema.to_h['campos']).select { |item| item.is_a?(Hash) && item['obrigatorio'] && item['origem'] == 'cliente' }
                                  .map { |item| item['campo'].to_s }
-                                 .reject { |caminho| caminho.start_with?('renovacao.') || tem[caminho].present? }
   end
 end

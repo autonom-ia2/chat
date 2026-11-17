@@ -173,6 +173,16 @@ RSpec.describe Carteira::Cotacao::Cotar do
       expect(nao_saiu).to include('motivo' => 'conferencia_caiu')
       expect(execucoes).to be_empty
     end
+
+    it 'a busca paga do segurado nunca roda, nem nas três tentativas com o conferente fora' do
+      allow_any_instance_of(conector).to receive(:quote_validate).and_raise(conferente_fora)
+      expect_any_instance_of(conector).not_to receive(:quote_enrich)
+
+      (1..3).each { |tentativa| cotar(tentativa: tentativa) }
+
+      expect(seguro.eventos.where(tipo: 'proposta_nao_saiu').count).to eq(3)
+      expect(execucoes).to be_empty
+    end
     # rubocop:enable RSpec/AnyInstance
   end
 
