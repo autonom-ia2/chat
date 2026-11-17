@@ -24,6 +24,51 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
+  describe 'retrieval history for the current incoming turn' do
+    let(:answerer) { instance_double(Autonomia::Agents::Answerer, answer: nil) }
+    let(:responder) { described_class.new(conversation: conversation, agent_inbox: agent_inbox) }
+
+    it 'uses the preceding question for a numeric reply while preserving the full model history' do
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Quero analisar amostras')
+      create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'Qual prazo voce prefere?')
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: '3')
+      original_history = responder.send(:history)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
+        query: '3', history: original_history, retrieval_query: "3\nQuero analisar amostras\nQual prazo voce prefere?"
+      )).and_return(answerer)
+
+      responder.send(:answer)
+
+      expect(original_history.last).to eq(role: 'user', content: '3')
+    end
+
+    it 'excludes all current incoming messages from the search history for a negative reply' do
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Como configuro o plano Equipe?')
+      create(:message, account: account, conversation: conversation, message_type: :outgoing, content: 'Voce sabe importar seus usuarios?')
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Ainda nao configurei')
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'não')
+      original_history = responder.send(:history)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
+        query: 'não', history: original_history,
+        retrieval_query: "não\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?"
+      )).and_return(answerer)
+
+      responder.send(:answer)
+
+      expect(original_history.last(2).pluck(:content)).to eq(['Ainda nao configurei', 'não'])
+    end
+
+    it 'does not invent prior context when the first turn contains only incoming messages' do
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: '3')
+      original_history = responder.send(:history)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(hash_including(
+        query: '3', history: original_history, retrieval_query: '3'
+      )).and_return(answerer)
+
+      responder.send(:answer)
+    end
+  end
+
   describe 'pre-answer eligibility recheck (C4)' do
     it 'never calls the LLM when the conversation became ineligible before answering' do
       # Arrange: humano assumiu a conversa entre o debounce e o perform

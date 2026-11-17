@@ -45,3 +45,12 @@ A composicao da busca e deterministica e limitada a formas curtas de continuidad
 - O checkout desse job agora tem teto de cinco minutos. `GIT_HTTP_LOW_SPEED_LIMIT=1024` e `GIT_HTTP_LOW_SPEED_TIME=60`, limitados ao passo, abortam transferencias HTTP sem progresso suficiente e permitem as tentativas internas do checkout. O teto do job e todos os gates permanecem intactos.
 - Semantica das variaveis conferida na documentacao oficial do Git: `https://github.com/git/git/blob/v2.43.0/Documentation/config/http.txt` (`http.lowSpeedLimit`, `http.lowSpeedTime`).
 - YAML conferido localmente: checkout continua `actions/checkout@v4`, limites presentes somente no passo e teto do job preservado em 40 minutos. Nenhuma alteracao nos workflows de deploy, IAM, banco ou EC2.
+
+## Historico do atendimento real: revisao da PR 3045
+
+- O `Responder#history` inclui as mensagens incoming do turno atual; o Playground recebe somente os turnos anteriores. A busca de numero ou sim/nao rejeitava a pergunta anterior no atendimento, pois o ultimo item ja era do cliente.
+- `Responder#answer` agora separa uma copia sem os itens `user` finais exclusivamente para construir `retrieval_query`. A pergunta e o historico completos seguem intactos para o Answerer/modelo. Nao ha busca extra no banco, alteracao da instrucao nem chamada paga adicional.
+- Tres specs de integracao cobrem numero, negativa com varias mensagens incoming pendentes e primeiro turno sem pergunta anterior. O simulador e o override explicito dos outros callers nao mudam.
+- Prova local isolada: dois cenarios falharam antes e passaram depois; 8 testes/28 assercoes passaram, alem dos 17 exemplos RSpec da busca. Como o Ruby 2.6 deste Mac nao interpreta os metodos endless existentes no Responder, o harness temporario executa apenas o metodo `answer` real extraido do arquivo, com dependencias de framework substituidas. A execucao completa da classe e dos novos specs Rails depende do CI com Ruby 3.4.4.
+- Na rodada anterior `44193873658`, o shard 11 falhou na instalacao apt de `libvips42 poppler-utils ffmpeg`, apos tres tentativas limitadas. Criacao do banco e RSpec nem iniciaram; o `NoDatabaseError` posterior foi do passo de diagnostico de formatos, nao a causa inicial. Nao foi registrada falha de exemplo nesse shard.
+- O usuario desativou o merge automatico, confirmado pela API (`autoMergeRequest=null`, sem entrada na fila). A autorizacao cobre publicar a correcao e repetir/conferir o CI, sem merge ou deploy e sem reativar o merge automatico.
