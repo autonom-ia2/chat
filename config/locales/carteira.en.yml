@@ -20,6 +20,7 @@ en:
         conferencia_caiu: 'The renewal of %{nome} was not quoted: the quote check did not answer after 3 tries.'
         proposta_nao_saiu: 'The renewal proposal of %{nome} did not go out.'
         sem_preco: 'The renewal quote of %{nome} came back with no price.'
+        conversa_com_pessoa: 'The renewal conversation of %{nome} is with %{pessoa}, so %{agente} will not reply.'
         faltam: 'Missing: %{campos}.'
         motivos:
           contato_recusou: 'The client refused messages or is blocked.'

@@ -13,8 +13,11 @@
 #   contato sem nome, por exemplo). A Meta recusaria o modelo com a variável vazia.
 #
 # A mensagem vai na conversa aberta do contato nessa caixa, ou numa conversa nova (ContactInbox + ConversationBuilder,
-# como o aviso do Agendamento). A cotação NUNCA atribui responsável à conversa: quem responde depois é a Lia (se ela
-# está na caixa e a conta escolheu "Lia responde") ou a equipe. Toda mensagem leva a marca da cotação em
+# como o aviso do Agendamento). A cotação NUNCA atribui nem tira responsável da conversa: quem responde depois é a Lia
+# (se ela está na caixa e a conta escolheu "Lia responde") ou a equipe. Com "Lia responde", só serve conversa aberta SEM
+# responsável, porque a Lia não responde conversa que está com alguém; sem uma, abre outra. Se a distribuição automática
+# da caixa puser alguém na conversa nova, ela fica com essa pessoa, o envio segue e a equipe é avisada de que a Lia não
+# vai responder (motivo `conversa_com_pessoa`, só com o nome de quem ficou com a conversa). Toda mensagem leva a marca da cotação em
 # `content_attributes` (`carteira_renovacao: { apolice_id:, etapa: }`), que é por onde a resposta é casada
 # (Carteira::CotacaoRespostaListener). O que sai sozinho vai sem remetente; o envio da proposta pelo clique no card vai
 # com quem clicou. Nada do conteúdo vai para log.
@@ -114,8 +117,24 @@ class Carteira::Cotacao::Envio
   end
 
   def conversa!(caixa)
-    Conversation.where(account_id: caixa.account_id, inbox_id: caixa.id, contact_id: contato.id, status: %i[open pending])
-                .order(:id).last || abrir_conversa(caixa)
+    abertas = Conversation.where(account_id: caixa.account_id, inbox_id: caixa.id, contact_id: contato.id, status: %i[open pending])
+    abertas = abertas.where(assignee_id: nil) if lia_responde?
+    abertas.order(:id).last || abrir_conversa(caixa).tap { |nova| avisar_se_ficou_com_alguem(nova) }
+  end
+
+  def lia_responde?
+    @config.quem_responde == Carteira::RenovacaoConfig::LIA
+  end
+
+  # A distribuição automática da caixa pode pôr alguém na conversa que acabou de abrir. A cotação não tira a pessoa: avisa
+  # a equipe de que a Lia não vai responder.
+  def avisar_se_ficou_com_alguem(conversa)
+    pessoa = conversa.reload.assignee if lia_responde?
+    return if pessoa.nil?
+
+    agente = Carteira::Cotacao.agente(@apolice.account)&.name
+    Carteira::Cotacao::Aviso.new(@apolice, Carteira::Cotacao::Aviso::CONVERSA_COM_PESSOA,
+                                 textos: { pessoa: pessoa.name, agente: agente.to_s }).call
   end
 
   def abrir_conversa(caixa)

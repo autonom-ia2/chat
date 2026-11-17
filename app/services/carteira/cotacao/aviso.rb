@@ -5,7 +5,8 @@
 #
 # Motivos (`MOTIVOS`, cada um com a frase de leigo em `carteira.cotacao.avisos`): o "Algo mudou?" ou a proposta que não
 # saiu (com o motivo do envio), o segurado que disse que mudou algo, o que respondeu depois, o dado que faltou para cotar
-# (com os nomes dos campos), a conferência que caiu três vezes e a cotação que não trouxe preço.
+# (com os nomes dos campos), a conferência que caiu três vezes, a cotação que não trouxe preço e a conversa que a caixa
+# deu a alguém quando era a Lia quem ia responder (`textos`: o nome dessa pessoa e o do agente, só no título).
 #
 # A atividade entra SEMPRE (é o registro no card, `carteira_cotacao_aviso`); a tarefa sai UMA vez por seguro, vigência e
 # motivo. Card que sumiu: nada a avisar. O título leva o nome do contato (é a lista de tarefas da equipe) e nunca o
@@ -13,14 +14,18 @@
 class Carteira::Cotacao::Aviso
   SOURCE = 'carteira_cotacao'.freeze
   ATIVIDADE = 'carteira_cotacao_aviso'.freeze
-  MOTIVOS = %w[algo_mudou_nao_saiu mudou cliente_respondeu faltou_dado conferencia_caiu proposta_nao_saiu sem_preco].freeze
+  CONVERSA_COM_PESSOA = 'conversa_com_pessoa'.freeze
+  MOTIVOS = (%w[algo_mudou_nao_saiu mudou cliente_respondeu faltou_dado conferencia_caiu proposta_nao_saiu sem_preco] +
+             [CONVERSA_COM_PESSOA]).freeze
 
-  # detalhe: o motivo do envio que não saiu (Carteira::Cotacao::Envio::NaoSaiu); faltam: os nomes dos campos.
-  def initialize(apolice, motivo, detalhe: nil, faltam: [])
+  # detalhe: o motivo do envio que não saiu (Carteira::Cotacao::Envio::NaoSaiu); faltam: os nomes dos campos; textos: o que
+  # mais a frase do motivo pede (`pessoa`, `agente`).
+  def initialize(apolice, motivo, detalhe: nil, faltam: [], textos: {})
     @apolice = apolice
     @motivo = motivo.to_s
     @detalhe = detalhe
     @faltam = Array(faltam)
+    @textos = textos.to_h.symbolize_keys
   end
 
   def call
@@ -63,7 +68,7 @@ class Carteira::Cotacao::Aviso
 
   def titulo(card)
     nome = card.contact&.name.presence || card.title
-    frase = I18n.t("carteira.cotacao.avisos.#{@motivo}", nome: nome, locale: locale)
+    frase = I18n.t("carteira.cotacao.avisos.#{@motivo}", **@textos, nome: nome, locale: locale)
     [frase, motivo_texto, faltam_texto].compact.join(' ')
   end
 
