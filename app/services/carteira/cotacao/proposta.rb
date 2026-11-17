@@ -13,7 +13,8 @@
 # - qualquer outra falha depois da chamada: a mensagem pode ter saído. Nada de `proposta_nao_saiu`: o passo fica
 #   `incerta` e a equipe é avisada para conferir na conversa. Nada sai de novo sozinho;
 # - o passo sem `mensagem_id` há mais de MINUTOS_PARA_INCERTA (o processo caiu entre a reserva e o envio) também é
-#   incerto. Incerta, a tela oferece "Enviar de novo", que grava um passo novo e manda.
+#   incerto: a reserva agenda Carteira::Cotacao::ConferirEnvioJob para esse prazo, que marca e avisa a equipe, uma vez.
+#   Incerta, a tela oferece "Enviar de novo", que grava um passo novo e manda.
 # No clique, o que impede vira recusa para a tela (CustomExceptions::CarteiraRecusa): `cotacao_desligada`,
 # `proposta_ja_enviada`, `sem_proposta`, o motivo do envio que não saiu ou `proposta_incerta`. Sozinho, nada é levantado.
 class Carteira::Cotacao::Proposta
@@ -58,6 +59,19 @@ class Carteira::Cotacao::Proposta
     valores['mensagem_id'].blank? && passo.quando < MINUTOS_PARA_INCERTA.minutes.ago
   end
 
+  # Passado MINUTOS_PARA_INCERTA da reserva (ConferirEnvioJob): o passo ainda sem `mensagem_id` vira incerto e a equipe é
+  # avisada. Uma vez só: relido sob a trava, o passo que já saiu ou já está incerto não muda.
+  def self.conferir_envio(passo)
+    marcou = passo.with_lock do
+      valores = passo.valores.to_h
+      next false if valores['mensagem_id'].present? || valores['incerta']
+
+      passo.update!(valores: valores.merge('incerta' => true))
+      true
+    end
+    Carteira::Cotacao::Aviso.new(passo.apolice, INCERTA).call if marcou
+  end
+
   private
 
   def envio
@@ -71,13 +85,23 @@ class Carteira::Cotacao::Proposta
     nao_saiu(e.message)
   end
 
-  # Sob a trava, só o passo: relido, e o do envio gravado com quem clicou antes de qualquer coisa sair. -> [passo, PDF].
+  # Sob a trava, só o passo: relido, e o do envio gravado com quem clicou antes de qualquer coisa sair. Depois, a
+  # conferência do prazo fica agendada. -> [passo, PDF].
   def reservar!
-    @apolice.with_lock(requires_new: true) do
+    passo, blob = @apolice.with_lock(requires_new: true) do
       parar('proposta_ja_enviada') if self.class.enviada?(@apolice)
       blob = arquivo || parar('sem_proposta')
       [Carteira::Cotacao.registrar(@apolice, @user ? ENVIADA : SOZINHA, user: @user), blob]
     end
+    agendar_conferencia(passo)
+    [passo, blob]
+  end
+
+  # Sem a conferência agendada, a tela ainda mostra a proposta incerta depois do prazo; só o aviso à equipe não sai.
+  def agendar_conferencia(passo)
+    Carteira::Cotacao::ConferirEnvioJob.set(wait: MINUTOS_PARA_INCERTA.minutes).perform_later(passo.id)
+  rescue StandardError => e
+    Rails.logger.error("[carteira][cotacao] conferencia do envio nao agendada apolice=#{@apolice.id} #{e.class}")
   end
 
   # Fora da trava: a mensagem com o PDF no topo, e o id dela no passo.
@@ -92,12 +116,19 @@ class Carteira::Cotacao::Proposta
     incerta(passo, e)
   end
 
-  # Pode ter saído: sem `proposta_nao_saiu`, que deixaria mandar em dobro. A equipe confere na conversa.
+  # Pode ter saído: sem `proposta_nao_saiu`, que deixaria mandar em dobro. A equipe é avisada antes de qualquer outra
+  # gravação, e o que falhar aqui vai só para o log técnico (sem dado do cliente): a tela recebe `proposta_incerta`.
   def incerta(passo, erro)
     Rails.logger.warn("[carteira][cotacao] proposta incerta apolice=#{@apolice.id} #{erro.class}")
-    marcar(passo, 'incerta' => true)
-    Carteira::Cotacao::Aviso.new(@apolice, INCERTA).call
+    sem_derrubar('aviso da proposta incerta') { Carteira::Cotacao::Aviso.new(@apolice, INCERTA).call }
+    sem_derrubar('proposta incerta nao marcada') { marcar(passo, 'incerta' => true) }
     parar(INCERTA)
+  end
+
+  def sem_derrubar(o_que)
+    yield
+  rescue StandardError => e
+    Rails.logger.error("[carteira][cotacao] #{o_que} apolice=#{@apolice.id} #{e.class}")
   end
 
   def marcar(passo, valores)

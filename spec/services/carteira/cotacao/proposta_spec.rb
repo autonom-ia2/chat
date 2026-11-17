@@ -76,6 +76,11 @@ RSpec.describe Carteira::Cotacao::Proposta do
     expect(seguro.eventos.find_by(tipo: 'proposta_enviada').valores).to include('mensagem_id' => propostas.sole.id)
   end
 
+  it 'a reserva agenda a conferência do envio para MINUTOS_PARA_INCERTA depois' do
+    expect { clicar }.to have_enqueued_job(Carteira::Cotacao::ConferirEnvioJob)
+      .with(kind_of(Integer)).at(a_value_within(5.seconds).of(described_class::MINUTOS_PARA_INCERTA.minutes.from_now))
+  end
+
   # A primeira tentativa falha com `erro`; as seguintes mandam de verdade.
   def falhar_a_primeira(erro)
     tentativas = 0
@@ -124,6 +129,13 @@ RSpec.describe Carteira::Cotacao::Proposta do
       expect(seguro.eventos.where(tipo: 'proposta_enviada').sole.valores).to include('incerta' => true)
       expect(avisos).to include('proposta_incerta')
       expect(Carteira::Cotacao::Situacao.new([seguro.reload]).call[seguro.id]).to include(incerta: true, podeEnviar: true)
+    end
+
+    it 'a gravação de incerta falha: a equipe é avisada antes e a tela recebe proposta_incerta, sem erro 500' do
+      allow_any_instance_of(Carteira::ApoliceEvento).to receive(:update!).and_raise(ActiveRecord::StatementInvalid) # rubocop:disable RSpec/AnyInstance
+
+      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa, 'proposta_incerta')
+      expect(avisos).to include('proposta_incerta')
     end
 
     it '"Enviar de novo" grava um passo novo e manda' do
