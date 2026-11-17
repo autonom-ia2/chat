@@ -9,7 +9,8 @@
 #    sai não se paga (decisão D7). Motivo `envio`, com o do envio em `detalhe`;
 # 4. a entrada (Carteira::Cotacao::Entrada): faltou dado, `faltou_dado` com os nomes dos campos;
 # 5. a conferência gratuita da ferramenta de cotação (`precheck` e `pedido` de Native::InsuranceQuote, a mesma instância,
-#    uma chamada só): o que ela diz que falta é `faltou_dado`; outra recusa dela vira o motivo dela; sem resposta do
+#    uma chamada só, e o `start` também sai dela): o que ela diz que falta é `faltou_dado`; outra recusa dela vira o
+#    motivo dela; sem resposta do
 #    conferente (`pedido` nulo) é `conferencia_caiu`, e a cotação é tentada de novo depois de ESPERA_DA_CONFERENCIA, até
 #    TENTATIVAS vezes (o aviso à equipe só na última).
 #
@@ -64,7 +65,7 @@ class Carteira::Cotacao::Cotar
     return recusada(conferencia) if conferencia
     return conferencia_caiu if ferramenta.pedido.nil?
 
-    submeter(agente, entrada)
+    submeter(agente, entrada, ferramenta)
   end
 
   def recusada(conferencia)
@@ -83,11 +84,14 @@ class Carteira::Cotacao::Cotar
     nil
   end
 
-  def submeter(agente, entrada)
+  # A cotação sai pela MESMA ferramenta que conferiu: a conferência fica guardada nela, e o `start` não chama o conferente
+  # de novo. Uma ferramenta nova conferiria outra vez, e o conferente que caísse ali deixaria a cotação paga sair sem
+  # conferência. O `start` não lê a execução (`run`): ela só serve ao acompanhamento (AcompanharJob monta a sua).
+  def submeter(agente, entrada, ferramenta)
     return unless pedir!
 
     run = abrir(agente, entrada)
-    handle = Quote.new(agent: agente, params: entrada.params, run: run).start
+    handle = ferramenta.start
     return recusada_no_envio(run, handle) if handle['quote_id'].blank?
 
     run.record_attempt!(handle: handle)

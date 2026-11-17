@@ -127,6 +127,55 @@ RSpec.describe Carteira::Cotacao::Cotar do
     end
   end
 
+  # A conferência de verdade da ferramenta: só o conferente (`quote/validate`) e a busca paga do segurado são do conector
+  # falso; o resto que a ferramenta olha antes (ramo, formulário, consulta da placa) fica de fora.
+  describe 'pela conferência da própria ferramenta' do
+    let(:conector) { Autonomia::Insurance::Connector::Mock }
+    let(:conferente_fora) { Autonomia::Insurance::Connector::Error.new(:timeout, 'conferente fora') }
+    let(:entrada_completa) do
+      segurado = { 'document' => '52998224725', 'name' => 'Marina Exemplo', 'birthDate' => '1990-01-01', 'gender' => 'F' }
+      Carteira::Cotacao::Entrada::Resultado.new(produto: 'auto', faltam: [],
+                                                params: { 'produto' => 'auto', 'item' => 'renovação carro', 'insured' => segurado,
+                                                          'address' => { 'zipCode' => '01001000' },
+                                                          'vehicle' => { 'plate' => 'ABC1D23' } })
+    end
+
+    # rubocop:disable RSpec/AnyInstance
+    before do
+      allow_any_instance_of(Carteira::Cotacao::Entrada).to receive(:call).and_return(entrada_completa)
+      allow_any_instance_of(quote).to receive_messages(conferencia_sem_especialista: nil, recusa_de_entrada: nil,
+                                                       recusa_do_envio: nil, problemas_locais: [])
+      allow_any_instance_of(quote).to receive(:com_veiculo) { |_ferramenta, dados| dados }
+    end
+
+    it 'cota pela mesma conferência: o envio não chama o conferente de novo, e o que cairia ali não deixa sair sem conferir' do
+      chamadas = 0
+      allow_any_instance_of(conector).to receive(:quote_validate) do
+        chamadas += 1
+        raise conferente_fora if chamadas > 1
+
+        { 'valido' => true, 'problemas' => [], 'entrada' => { 'insured' => { 'document' => '52998224725' } } }
+      end
+      allow_any_instance_of(quote).to receive(:submeter).and_return('quote_id' => 'cotacao-exemplo')
+
+      cotar
+
+      expect(chamadas).to eq(1)
+      expect(execucoes.sole.handle).to include('quote_id' => 'cotacao-exemplo')
+    end
+
+    it 'o conferente fora: a cotação paga não sai' do
+      allow_any_instance_of(conector).to receive(:quote_validate).and_raise(conferente_fora)
+      expect_any_instance_of(quote).not_to receive(:submeter)
+
+      cotar
+
+      expect(nao_saiu).to include('motivo' => 'conferencia_caiu')
+      expect(execucoes).to be_empty
+    end
+    # rubocop:enable RSpec/AnyInstance
+  end
+
   it 'sem o Agente de Cotação: não cota e avisa' do
     Autonomia::Agents::Agent.where(account_id: account.id).delete_all
 
