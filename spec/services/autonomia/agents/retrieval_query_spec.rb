@@ -134,7 +134,7 @@ RSpec.describe Autonomia::Agents::RetrievalQuery do
   end
 
   it 'bounds the search hint without mutating the original messages' do
-    question = 'Qual o valor do plano Equipe? ' + ('x' * 1000)
+    question = "Qual o valor do plano Equipe? #{'x' * 1000}"
     turns = [{ role: 'user', content: question }]
     query = 'Vou fazer só de 10.'
 

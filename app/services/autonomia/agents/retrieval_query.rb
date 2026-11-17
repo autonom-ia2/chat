@@ -41,14 +41,18 @@ class Autonomia::Agents::RetrievalQuery
   end
 
   def subject_context
-    turns = @history.reverse.select do |turn|
-      text = turn[:content].to_s.strip
-      turn[:role] == 'user' && !text.empty? && !short_answer?(text) && !QUANTITY_CHANGE.match?(text)
-    end
+    turns = @history.reverse.select { |turn| subject_turn?(turn) }
     latest = turns.first&.fetch(:content).to_s
     # A short detail (species, model, etc.) needs the previous subject; a complete question stands on its own.
     count = latest.include?('?') || latest.split.size > DETAIL_WORDS ? 1 : 2
     turns.first(count).map { |turn| turn[:content].to_s }
+  end
+
+  def subject_turn?(turn)
+    return false unless turn[:role] == 'user'
+
+    text = turn[:content].to_s.strip
+    !text.empty? && !short_answer?(text) && !QUANTITY_CHANGE.match?(text)
   end
 
   def last_question

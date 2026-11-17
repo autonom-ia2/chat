@@ -257,14 +257,14 @@ RSpec.describe Autonomia::Agents::Answerer do
       history = [{ role: 'user', content: question }, { role: 'assistant', content: 'O valor anterior era R$ 80.' }]
       retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
       allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
-      expect(Autonomia::Agents::PromptBuilder).to receive(:new).twice
-        .with(hash_including(query: query, history: history)).and_call_original
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(query: query, history: history)).twice.and_call_original
 
       described_class.new(agent: agent, query: query, history: history, trust_instruction: true).answer
       Autonomia::Agents::Playground.new(agent: agent, message: query, history: history).run
 
-      expect(retriever).to have_received(:retrieve).twice
-        .with("#{query}\n#{question}", top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
+      expect(retriever).to have_received(:retrieve).with(
+        "#{query}\n#{question}", top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true
+      ).twice
     end
 
     it 'keeps an explicit retrieval query instead of replacing it with conversational context' do

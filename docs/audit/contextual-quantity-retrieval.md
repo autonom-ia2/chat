@@ -34,11 +34,14 @@ A composicao da busca e deterministica e limitada a formas curtas de continuidad
 - Um detalhe curto do cliente (ate quatro palavras, sem ponto de interrogacao) conserva tambem o assunto anterior: no maximo dois turnos do cliente, mais a ultima pergunta. Pergunta completa ou mensagem mais longa continua sendo o assunto principal, sem puxar o assunto anterior.
 - Permanecem os limites de oito mensagens de historico, 400 caracteres por pista e 160 caracteres na resposta curta. Nao ha regra de preco, produto, empresa, exame ou prazo especifico no codigo.
 - RSpec isolado da busca: 17 exemplos, zero falhas. Specs de integracao do Answerer adicionados para escolha de prazo no simulador e resposta negativa no motor compartilhado; execucao Rails local continua bloqueada pelo runtime deste Mac.
+- O RuboCop do CI e informativo: embora o job tenha concluido com sucesso, apontou cinco avisos nos nossos arquivos (complexidade da selecao de assunto e formatacao de specs). A selecao do turno ganhou um predicado nomeado e a formatacao foi ajustada, sem desabilitar cops nem alterar comportamento.
+- A rodada funcional `44189369659`, commit `40ed6f459a9052c63a9fb81d6a054014ec158472`, concluiu com sucesso os 12 shards e agregador RSpec, Vitest e demais jobs. A limpeza posterior de lint passou novamente pelos 17 exemplos isolados e 5 verificacoes de callers/metadados; o push dessa limpeza exige sua propria rodada de CI.
 
 ## Bloqueio do CI, nao falha de deploy
 
 - Na rodada `44167554317`, job `134337826122` (`RSpec (6/12)`), o `git fetch` do checkout comecou em 20:17:34 UTC e terminou em 20:53:22 UTC: aproximadamente 36 minutos. O RSpec iniciou somente em 20:54:42 e foi cancelado pelo teto de 40 minutos do job, sem falha de exemplo registrada.
 - O agregador `RSpec` falhou porque recebeu `PARTES=cancelled`. Os outros onze shards, Vitest e demais verificacoes terminaram com sucesso. Nao houve deploy desta PR, que permanece aberta.
+- Os ultimos deploys reais da main, `44137225375` (Autonomia) e `44137225417` (Hub2You), terminaram com sucesso para `c9d7d24f7a36834d9da95932c7ad3e646e069fc6`. O bloqueio identificado e o check do PR, nao esses deploys.
 - O checkout desse job agora tem teto de cinco minutos. `GIT_HTTP_LOW_SPEED_LIMIT=1024` e `GIT_HTTP_LOW_SPEED_TIME=60`, limitados ao passo, abortam transferencias HTTP sem progresso suficiente e permitem as tentativas internas do checkout. O teto do job e todos os gates permanecem intactos.
 - Semantica das variaveis conferida na documentacao oficial do Git: `https://github.com/git/git/blob/v2.43.0/Documentation/config/http.txt` (`http.lowSpeedLimit`, `http.lowSpeedTime`).
 - YAML conferido localmente: checkout continua `actions/checkout@v4`, limites presentes somente no passo e teto do job preservado em 40 minutos. Nenhuma alteracao nos workflows de deploy, IAM, banco ou EC2.
