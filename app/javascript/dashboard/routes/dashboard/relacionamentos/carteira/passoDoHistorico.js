@@ -52,6 +52,9 @@ export const PASSOS_COM_FRASE = [
   'proposta_pronta',
   'proposta_enviada',
   'proposta_enviada_sozinha',
+  // #3043 (E8.1) — a cotação leu o PDF guardado para achar os dados do
+  // segurado. Nenhum valor lido vem no passo.
+  'dados_lidos_pdf',
 ];
 export const PASSO_SEM_NOME = 'PASSO_SEM_NOME';
 // Alguém desfez o "Renovou" ou o "Não renovou": `valores.anterior` diz qual.

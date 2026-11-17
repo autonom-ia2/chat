@@ -42,12 +42,18 @@ const escrito = (campo, conteudo) =>
     ? th('NAO_INFORMADO')
     : textos.doCampo(campo, conteudo);
 
-const mudancaEscrita = ({ campo, antes, depois }) =>
-  th('MUDOU_DE_PARA', {
-    item: t(`RELACIONAMENTOS_CARTEIRA.CAMPOS.${campo.toUpperCase()}`),
+// #3043 — do nascimento, do sexo e do CEP do segurado a história guarda só
+// que mudaram, sem o valor: "Data de nascimento do segurado: mudou".
+const mudancaEscrita = mudanca => {
+  const { campo, antes, depois } = mudanca;
+  const item = t(`RELACIONAMENTOS_CARTEIRA.CAMPOS.${campo.toUpperCase()}`);
+  if (!('depois' in mudanca)) return th('MUDOU_SEM_VALOR', { item });
+  return th('MUDOU_DE_PARA', {
+    item,
     antes: escrito(campo, antes),
     depois: escrito(campo, depois),
   });
+};
 
 // O detalhe de um passo, do jeito que a frase escreve: o motivo pelo nome
 // dele, o número da apólice anterior como "nº …", e o motivo escrito e o nome

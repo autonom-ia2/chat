@@ -2,9 +2,10 @@
 // (dashboard/api/relacionamentosSeguros.js), no formato que as peças da tela
 // usam. Duas traduções moram aqui, e só aqui:
 //
-//   1. datas. O servidor fala `comeca` e `termina` como "AAAA-MM-DD" (data sem
-//      hora, na leitura e na escrita). As peças guardam a data em segundos, ao
-//      meio-dia do relógio de quem lê: formatada, ela cai sempre no mesmo dia.
+//   1. datas. O servidor fala `comeca`, `termina` e `nascimento` (#3043) como
+//      "AAAA-MM-DD" (data sem hora, na leitura e na escrita). As peças guardam
+//      a data em segundos, ao meio-dia do relógio de quem lê: formatada, ela
+//      cai sempre no mesmo dia.
 //      A ida e a volta usam o mesmo relógio (carteira/formatosDoSeguro.js), e
 //      nenhuma passa por UTC. `selo` e `dias` vêm prontos, no dia da conta, e
 //      seguem como vieram. O que é instante (quando chegou, quando foi
@@ -27,17 +28,26 @@ import { preenchido } from '../lista/filtros';
 
 // ---- datas -----------------------------------------------------------------
 
-const CAMPOS_DE_DATA = ['comeca', 'termina'];
+const CAMPOS_DE_DATA = ['comeca', 'termina', 'nascimento'];
 const ehData = campo => CAMPOS_DE_DATA.includes(campo);
+
+// #3043 — o nascimento do segurado só quando o servidor o manda.
+const nascimentoDaTela = seguro =>
+  'nascimento' in seguro
+    ? { nascimento: doCampoDeData(seguro.nascimento) }
+    : {};
 
 const seguroDaTela = seguro => ({
   ...seguro,
   comeca: doCampoDeData(seguro.comeca),
   termina: doCampoDeData(seguro.termina),
+  ...nascimentoDaTela(seguro),
 });
 
+// #3043 — do nascimento, a história guarda só que mudou (sem antes nem
+// depois): segue como veio.
 const mudancaDaTela = mudanca =>
-  ehData(mudanca.campo)
+  ehData(mudanca.campo) && 'depois' in mudanca
     ? {
         ...mudanca,
         antes: doCampoDeData(mudanca.antes),

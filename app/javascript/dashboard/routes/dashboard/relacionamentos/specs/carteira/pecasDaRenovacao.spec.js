@@ -816,6 +816,37 @@ describe('o histórico com a renovação e o "Exportar"', () => {
     });
   });
 
+  // #3043 (E8.1) — do nascimento, do sexo e do CEP a história não guarda o
+  // valor: diz só que mudou. A placa e a classe de bônus têm antes e depois.
+  it('os dados do segurado: o pessoal só "mudou", o resto com antes e depois', () => {
+    const w = abrir({
+      itens: [
+        passo('corrigido', {
+          mudancas: [
+            { campo: 'nascimento', antes_vazio: true },
+            { campo: 'cep', antes_vazio: false },
+            { campo: 'placa', antes: null, depois: 'EXM0A00' },
+            { campo: 'bonus', antes: 4, depois: 5 },
+          ],
+        }),
+        passo('dados_lidos_pdf'),
+      ],
+    });
+    const [corrigido, lido] = frases(w);
+
+    expect(corrigido).toContain('Nascimento do segurado: mudou');
+    expect(corrigido).toContain('CEP: mudou');
+    expect(corrigido).toContain(
+      'Placa do veículo: era não informado, ficou EXM0A00'
+    );
+    expect(corrigido).toContain(
+      'Classe de bônus: era Classe 4, ficou Classe 5'
+    );
+    expect(lido).toContain(
+      'Dados do segurado lidos do PDF guardado, para a cotação.'
+    );
+  });
+
   it('desfazer o resultado conta o que foi desfeito e quem desfez', () => {
     const w = abrir({
       itens: [
