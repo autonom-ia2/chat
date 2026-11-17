@@ -13,5 +13,11 @@ describe 'Filtro do log: dados do segurado da carteira' do
       'tipo' => 'auto'
     )
   end
+
+  it 'o CEP sai só pela chave exata: accepted e exception continuam no log' do
+    filtro = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+
+    expect(filtro.filter('accepted' => 'true', 'exception' => 'x')).to eq('accepted' => 'true', 'exception' => 'x')
+  end
 end
 # rubocop:enable RSpec/DescribeClass

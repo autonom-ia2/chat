@@ -50,8 +50,16 @@ Rails.application.config.filter_parameters += [
   :numero, :seguradora, :bem, :arquivo,
   # #3043 — os dados do segurado para a cotação da renovação (PATCH relacionamentos/seguros/:id e POST apolices_novas):
   # nascimento, sexo, CEP, placa e classe de bônus são dados do cliente e não vão para o log. O filtro casa qualquer chave
-  # que contenha "nascimento", "sexo", "cep", "placa" ou "bonus": em outro endpoint, só o log perde o valor.
-  :nascimento, :sexo, :cep, :placa, :bonus
+  # que contenha "nascimento", "sexo", "placa" ou "bonus": em outro endpoint, só o log perde o valor. O CEP vai pela
+  # chave exata (abaixo): "cep" está dentro de "accepted", "exception" e outras que não são dado do cliente.
+  :nascimento, :sexo, :placa, :bonus
+]
+
+# #3043 — o CEP do segurado, só pela chave exata `cep`.
+Rails.application.config.filter_parameters += [
+  lambda do |chave, valor|
+    valor.replace('[FILTERED]') if chave.to_s == 'cep' && valor.is_a?(String)
+  end
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'
