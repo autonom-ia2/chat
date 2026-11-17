@@ -101,7 +101,9 @@ const salvar = async w => {
 };
 const cartao = w => w.find(daCarteira('ajuste-cotacao'));
 const rotulos = (w, marca) =>
-  escolhaEm(w, marca).props('options').map(opcao => opcao.label);
+  escolhaEm(w, marca)
+    .props('options')
+    .map(opcao => opcao.label);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
