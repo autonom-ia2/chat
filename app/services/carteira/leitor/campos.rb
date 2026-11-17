@@ -88,7 +88,7 @@ class Carteira::Leitor::Campos
     - numero: o número da apólice, como está escrito, com os pontos e traços. Não é o número da proposta, do endosso, do item, do certificado de registro nem o código da seguradora ou do ramo.
     - inicio_vigencia e fim_vigencia: o começo e o fim da vigência do seguro, no formato AAAA-MM-DD. Não é a data de emissão nem a de vencimento de parcela.
     - valor_centavos: o prêmio total do seguro (o total a pagar, com impostos), em centavos, como número inteiro: "R$ 1.234,56" vira 123456. Não é o valor de uma parcela, o prêmio líquido, a importância segurada nem a franquia. Sem o prêmio total escrito: null.
-    - bem: o que está segurado, copiado de UM trecho contínuo da página, do jeito que está escrito, sem pular palavra, sem trocar a ordem e sem resumir (o veículo com a placa, o endereço do imóvel). Seguro de vida ou sem bem descrito: null.
+    - bem: o que está segurado, copiado de UM trecho contínuo da página, do jeito que está escrito, sem pular palavra, sem trocar a ordem e sem resumir (o veículo com a placa, o endereço do imóvel). A placa continua dentro do bem mesmo que também vá no campo placa. Seguro de vida ou sem bem descrito: null.
     - corretora: o nome da corretora de seguros ou do corretor que aparece na apólice, como está escrito. Senão null.
     - segurado_nome: o nome do segurado (a pessoa ou a empresa dona do seguro), como está escrito. Não é o condutor, o beneficiário, o estipulante nem o corretor.
     - segurado_documento: o CPF ou o CNPJ do segurado, como está escrito. Não é o documento do corretor, da seguradora nem de outra pessoa.
@@ -96,7 +96,7 @@ class Carteira::Leitor::Campos
     - segurado_telefone_pagina: o "numero" da página em que esse telefone está escrito. Sem telefone: null.
     - segurado_email: o e-mail de contato do próprio segurado, como está escrito. Nunca o e-mail da seguradora, da corretora ou do corretor. Se não estiver claro que é do segurado: null.
     - segurado_email_pagina: o "numero" da página em que esse e-mail está escrito. Sem e-mail: null.
-    - segurado_nascimento: a data de nascimento do próprio segurado, no formato AAAA-MM-DD. Nunca a do condutor, do beneficiário, do estipulante ou do corretor. Segurado que é empresa: null.
+    - segurado_nascimento: a data de nascimento do próprio segurado, no formato AAAA-MM-DD. Nascimento é sempre no passado: com o ano escrito em dois dígitos, escreva o ano com quatro dígitos ("15/03/85" vira 1985-03-15). Nunca a do condutor, do beneficiário, do estipulante ou do corretor. Segurado que é empresa: null.
     - segurado_sexo: o sexo do próprio segurado, "F" (feminino) ou "M" (masculino), só quando está escrito na apólice como dado do segurado. Nunca o do condutor ou de outra pessoa. Segurado que é empresa, ou sem o sexo escrito: null.
     - segurado_sexo_escrito: a palavra ou a letra de onde você tirou o sexo, copiada como está na página (por exemplo "Masculino"). Sem sexo: null.
     - cep: o CEP do endereço do segurado ou do local do risco (no seguro de veículo, o CEP de pernoite), com os dígitos como estão escritos. Nunca o CEP da seguradora, da corretora, do corretor ou de outra pessoa. Se não estiver claro de quem é o CEP: null.
