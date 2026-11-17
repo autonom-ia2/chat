@@ -67,6 +67,25 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
 
       responder.send(:answer)
     end
+
+    it 'keeps a team message mapped as user instead of reusing an older assistant question' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      teammate = create(:user, account: account, role: :agent)
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: 'Quero analisar amostras')
+      create(:message, account: account, conversation: conversation, message_type: :outgoing,
+                       sender: agent_bot, content: 'Qual prazo voce prefere?')
+      create(:message, account: account, conversation: conversation, message_type: :outgoing,
+                       sender: teammate, content: 'Estou conferindo uma nova solicitacao.')
+      create(:message, account: account, conversation: conversation, message_type: :incoming, content: '3')
+      original_history = responder.send(:history)
+      expect(Autonomia::Agents::Answerer).to receive(:new).with(
+        hash_including(query: '3', history: original_history, retrieval_query: '3')
+      ).and_return(answerer)
+
+      responder.send(:answer)
+
+      expect(original_history[-2][:role]).to eq('user')
+    end
   end
 
   describe 'pre-answer eligibility recheck (C4)' do

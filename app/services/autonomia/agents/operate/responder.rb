@@ -509,7 +509,7 @@ module Autonomia
           question = query
           turns = history
           # Only retrieval excludes the pending incoming turn; the model still receives every message unchanged.
-          prior_turns = turns.reverse.drop_while { |turn| turn[:role] == 'user' }.reverse
+          prior_turns = turns.first(turns.length - current_turn_incoming.length)
           ::Autonomia::Agents::Answerer.new(
             agent: @agent,
             query: question,
