@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { useIdioma } from '../../ficha/idioma';
 import {
   SITUACOES_DA_COTACAO as S,
+  VARIACOES as V,
   emReais,
   equipeFoiAvisada,
   mostraAProposta,
@@ -29,8 +30,6 @@ const props = defineProps({
 const emit = defineEmits(['enviar']);
 
 const { t } = useI18n();
-const tc = (chave, valores) =>
-  t(`RELACIONAMENTOS_CARTEIRA.COTACAO.${chave}`, valores);
 const textos = useTextosDoSeguro();
 const idioma = useIdioma();
 const idDoTitulo = useId();
@@ -39,53 +38,145 @@ const cotacao = computed(() => props.seguro.cotacao);
 const situacao = computed(() => situacaoDaCotacao(cotacao.value));
 const valor = centavos => textos.valor(emReais(centavos));
 
+// As frases do catálogo, cada uma pela chave inteira: o nome de cada campo que
+// faltou (pela chave de carteira/cotacaoDaRenovacao.js, `camposQueFaltam`), o
+// motivo da cotação que não saiu e o da pergunta que não saiu.
+const NOMES_DOS_CAMPOS = {
+  PRODUTO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.PRODUTO'),
+  QUOTATION_PREVIOUSINSURERCODE: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.QUOTATION_PREVIOUSINSURERCODE'),
+  QUOTATION_PREVIOUSPOLICYNUMBER: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.QUOTATION_PREVIOUSPOLICYNUMBER'),
+  QUOTATION_PREVIOUSPOLICYENDDATE: () =>
+    t(
+      'RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.QUOTATION_PREVIOUSPOLICYENDDATE'
+    ),
+  QUOTATION_BONUSCLASS: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.QUOTATION_BONUSCLASS'),
+  INSURED_NAME: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.INSURED_NAME'),
+  INSURED_DOCUMENT: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.INSURED_DOCUMENT'),
+  INSURED_BIRTHDATE: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.INSURED_BIRTHDATE'),
+  INSURED_GENDER: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.INSURED_GENDER'),
+  ADDRESS_ZIPCODE: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.ADDRESS_ZIPCODE'),
+  VEHICLE_PLATE: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.VEHICLE_PLATE'),
+  RENOVACAO_SEGURADORAANTERIOR: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.RENOVACAO_SEGURADORAANTERIOR'),
+  RENOVACAO_NUMEROAPOLICE: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.RENOVACAO_NUMEROAPOLICE'),
+  RENOVACAO_FIMVIGENCIA: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.RENOVACAO_FIMVIGENCIA'),
+  RENOVACAO_BONUS: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.RENOVACAO_BONUS'),
+  SEGURADO_CPFCNPJ: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.SEGURADO_CPFCNPJ'),
+  SEGURADO_NOME: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.CAMPOS.SEGURADO_NOME'),
+};
+const MOTIVOS = {
+  CONFERENCIA_CAIU: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.CONFERENCIA_CAIU'),
+  SEM_CONEXAO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.SEM_CONEXAO'),
+  SEM_AGENTE: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.SEM_AGENTE'),
+  COTACAO_FALHOU: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.COTACAO_FALHOU'),
+  SEM_PRECO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.SEM_PRECO'),
+  SEM_PDF: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.SEM_PDF'),
+  ENVIO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.MOTIVO.ENVIO'),
+};
+const MOTIVOS_DO_ENVIO = {
+  CONTATO_RECUSOU: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.CONTATO_RECUSOU'),
+  SEM_CAIXA: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.SEM_CAIXA'),
+  SEM_MODELO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.SEM_MODELO'),
+  SEM_TELEFONE: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.SEM_TELEFONE'),
+  CAMPO_VAZIO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.CAMPO_VAZIO'),
+  SEM_CARD: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIO.SEM_CARD'),
+};
+const SITUACOES_SIMPLES = {
+  PERGUNTOU: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.PERGUNTOU'),
+  PERGUNTA_NAO_SAIU: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.PERGUNTA_NAO_SAIU'),
+  NADA_MUDOU: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.NADA_MUDOU'),
+  MUDOU: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.MUDOU'),
+  CLIENTE_CONTOU: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.CLIENTE_CONTOU'),
+  COTANDO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.COTANDO'),
+  NAO_SAIU_SEM_MOTIVO: () =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.NAO_SAIU_SEM_MOTIVO'),
+  ANDANDO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.ANDANDO'),
+};
+const VARIACOES = {
+  [V.SUBIU]: percentual =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.VARIACAO.SUBIU', { percentual }),
+  [V.CAIU]: percentual =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.VARIACAO.CAIU', { percentual }),
+  [V.IGUAL]: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.VARIACAO.IGUAL'),
+};
+
 // "nascimento do segurado, CEP e placa do veículo", no idioma do painel. Dois
 // campos com o mesmo nome em português aparecem uma vez só.
 const emLista = nomes =>
   new Intl.ListFormat(idioma.value, { type: 'conjunction' }).format(nomes);
 const camposEscritos = ({ campos, outros }) => {
-  const nomes = new Set(campos.map(campo => tc(`CAMPOS.${campo}`)));
-  if (outros) nomes.add(tc('OUTROS_DADOS'));
+  const nomes = new Set(campos.map(campo => NOMES_DOS_CAMPOS[campo]()));
+  if (outros) nomes.add(t('RELACIONAMENTOS_CARTEIRA.COTACAO.OUTROS_DADOS'));
   return emLista([...nomes]);
 };
 
-const daProposta = (chave, { premioCentavos, seguradora }) =>
-  seguradora
-    ? tc(chave, { valor: valor(premioCentavos), seguradora })
-    : tc(`${chave}_SEM_SEGURADORA`, { valor: valor(premioCentavos) });
+const daProposta = ({ premioCentavos, seguradora }) => ({
+  valor: valor(premioCentavos),
+  seguradora,
+});
+const propostaPronta = s =>
+  s.seguradora
+    ? t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.PRONTA', daProposta(s))
+    : t(
+        'RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.PRONTA_SEM_SEGURADORA',
+        daProposta(s)
+      );
+const quando = s => ({ data: textos.dataInteira(s.enviadaEm) });
 
 const FRASES = {
-  [S.PERGUNTA_NAO_SAIU]: () => tc('SITUACAO.PERGUNTA_NAO_SAIU'),
-  [S.FALTAM]: s => tc('SITUACAO.FALTAM', { campos: camposEscritos(s) }),
-  [S.NAO_SAIU]: s => tc(`MOTIVO.${s.motivo.toUpperCase()}`),
-  [S.PRONTA]: s => daProposta('SITUACAO.PRONTA', s),
+  [S.FALTAM]: s =>
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.FALTAM', {
+      campos: camposEscritos(s),
+    }),
+  [S.NAO_SAIU]: s => MOTIVOS[s.motivo.toUpperCase()](),
+  [S.PRONTA]: propostaPronta,
   [S.ENVIADA]: s =>
-    tc('SITUACAO.ENVIADA', { data: textos.dataInteira(s.enviadaEm) }),
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.ENVIADA', quando(s)),
   [S.ENVIADA_SOZINHA]: s =>
-    tc('SITUACAO.ENVIADA_SOZINHA', { data: textos.dataInteira(s.enviadaEm) }),
+    t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.ENVIADA_SOZINHA', quando(s)),
 };
 const frase = computed(() => {
-  const escrever = FRASES[situacao.value.id];
-  return escrever
-    ? escrever(situacao.value)
-    : tc(`SITUACAO.${situacao.value.id}`);
+  const { id } = situacao.value;
+  return (FRASES[id] ?? SITUACOES_SIMPLES[id])(situacao.value);
 });
 
 // A pergunta "Algo mudou?" que não saiu diz por quê, quando a tela sabe.
 const porQueNaoSaiu = computed(() =>
   situacao.value.id === S.PERGUNTA_NAO_SAIU && situacao.value.motivo
-    ? tc(`ENVIO.${situacao.value.motivo.toUpperCase()}`)
+    ? MOTIVOS_DO_ENVIO[situacao.value.motivo.toUpperCase()]()
     : ''
 );
-const proposta = computed(() =>
-  mostraAProposta(cotacao.value) ? daProposta('PROPOSTA', cotacao.value) : ''
-);
+const proposta = computed(() => {
+  if (!mostraAProposta(cotacao.value)) return '';
+  return cotacao.value.seguradora
+    ? t('RELACIONAMENTOS_CARTEIRA.COTACAO.PROPOSTA', daProposta(cotacao.value))
+    : t(
+        'RELACIONAMENTOS_CARTEIRA.COTACAO.PROPOSTA_SEM_SEGURADORA',
+        daProposta(cotacao.value)
+      );
+});
 const variacao = computed(() => {
   const achada = variacaoDaCotacao(cotacao.value);
   return achada
-    ? tc(`VARIACAO.${achada.id}`, {
-        percentual: textos.percentual(achada.percentual),
-      })
+    ? VARIACOES[achada.id](textos.percentual(achada.percentual))
     : '';
 });
 const avisada = computed(() => equipeFoiAvisada(situacao.value));
@@ -100,7 +191,7 @@ const avisada = computed(() => equipeFoiAvisada(situacao.value));
     class="flex flex-col gap-3"
   >
     <h3 :id="idDoTitulo" class="m-0 text-base font-semibold text-n-slate-12">
-      {{ tc('TITULO') }}
+      {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.TITULO') }}
     </h3>
     <p
       data-carteira="situacao-da-cotacao"
@@ -134,7 +225,7 @@ const avisada = computed(() => equipeFoiAvisada(situacao.value));
       data-carteira="equipe-avisada"
       class="m-0 text-sm break-words text-n-slate-11"
     >
-      {{ tc('AVISADA') }}
+      {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.AVISADA') }}
     </p>
     <div v-if="podeEnviar" class="flex flex-col items-start gap-2">
       <!-- `faded`, como os botões das outras partes da gaveta: o único azul
@@ -146,10 +237,12 @@ const avisada = computed(() => equipeFoiAvisada(situacao.value));
         class="w-full sm:w-auto"
         data-carteira="enviar-proposta"
         :is-loading="enviando"
-        :label="tc('ENVIAR')"
+        :label="t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR')"
         @click="emit('enviar')"
       />
-      <p class="m-0 text-sm text-n-slate-11">{{ tc('ENVIAR_APOIO') }}</p>
+      <p class="m-0 text-sm text-n-slate-11">
+        {{ t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR_APOIO') }}
+      </p>
     </div>
   </section>
 </template>

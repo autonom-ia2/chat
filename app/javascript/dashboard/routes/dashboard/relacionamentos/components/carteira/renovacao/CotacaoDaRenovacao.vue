@@ -8,6 +8,7 @@ import {
   QUEM_COTA,
   QUEM_ENVIA,
   QUEM_RESPONDE,
+  SO_NINGUEM,
   agenteForaDaCaixa,
   caixaEscolhida,
   porQueSoNinguem,
@@ -36,33 +37,60 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
-const tc = (chave, valores) =>
-  t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.${chave}`, valores);
 const id = useId();
 
 const agente = computed(() => props.conta.agente || '');
 const caixas = computed(() => props.conta.caixas ?? []);
 const soNinguem = computed(() => porQueSoNinguem(props.conta));
+// Por que só "Ninguém", pela chave inteira do catálogo.
+const POR_QUE_SO_NINGUEM = {
+  [SO_NINGUEM.SEM_AGENTE]: () =>
+    t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.SO_NINGUEM.SEM_AGENTE'),
+  [SO_NINGUEM.SEM_CAIXA]: () =>
+    t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.SO_NINGUEM.SEM_CAIXA'),
+};
+const fraseDoSoNinguem = computed(() =>
+  soNinguem.value ? POR_QUE_SO_NINGUEM[soNinguem.value]() : ''
+);
 const cota = computed(() => roboCota(props.modelValue));
 const faltaCaixa = computed(() => props.falta === FALTAS.CAIXA);
 
 const opcoesDeQuemCota = computed(() => [
-  { value: QUEM_COTA.NINGUEM, label: tc('QUEM_COTA.NINGUEM') },
-  { value: QUEM_COTA.ROBO, label: tc('QUEM_COTA.ROBO') },
+  {
+    value: QUEM_COTA.NINGUEM,
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.NINGUEM'),
+  },
+  {
+    value: QUEM_COTA.ROBO,
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.ROBO'),
+  },
   {
     value: QUEM_COTA.LIA,
-    label: tc('QUEM_COTA.LIA', { agente: agente.value }),
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.LIA', {
+      agente: agente.value,
+    }),
   },
 ]);
 const opcoesDeQuemEnvia = computed(() => [
-  { value: QUEM_ENVIA.PESSOA, label: tc('QUEM_ENVIA.PESSOA') },
-  { value: QUEM_ENVIA.SOZINHO, label: tc('QUEM_ENVIA.SOZINHO') },
+  {
+    value: QUEM_ENVIA.PESSOA,
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.PESSOA'),
+  },
+  {
+    value: QUEM_ENVIA.SOZINHO,
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.SOZINHO'),
+  },
 ]);
 const opcoesDeQuemResponde = computed(() => [
-  { value: QUEM_RESPONDE.EQUIPE, label: tc('QUEM_RESPONDE.EQUIPE') },
+  {
+    value: QUEM_RESPONDE.EQUIPE,
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_RESPONDE.EQUIPE'),
+  },
   {
     value: QUEM_RESPONDE.LIA,
-    label: tc('QUEM_RESPONDE.LIA', { agente: agente.value }),
+    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_RESPONDE.LIA', {
+      agente: agente.value,
+    }),
   },
 ]);
 const opcoesDeCaixa = computed(() =>
@@ -71,12 +99,12 @@ const opcoesDeCaixa = computed(() =>
 
 const apoioDoEnvio = computed(() =>
   props.modelValue.quemEnvia === QUEM_ENVIA.SOZINHO
-    ? tc('QUEM_ENVIA.APOIO_SOZINHO')
-    : tc('QUEM_ENVIA.APOIO_PESSOA')
+    ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.APOIO_SOZINHO')
+    : t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.APOIO_PESSOA')
 );
 const avisoDoAgente = computed(() =>
   agenteForaDaCaixa(props.modelValue, caixas.value)
-    ? tc('AVISO_DO_AGENTE', {
+    ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.AVISO_DO_AGENTE', {
         agente: agente.value,
         caixa: caixaEscolhida(caixas.value, props.modelValue.caixaId).nome,
       })
@@ -101,26 +129,30 @@ defineExpose({
       class="flex flex-col gap-2"
     >
       <p class="m-0 text-base text-n-slate-11">
-        {{ tc('QUEM_COTA.PERGUNTA') }}
+        {{ t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.PERGUNTA') }}
       </p>
       <p class="m-0 text-base font-medium text-n-slate-12">
-        {{ tc('QUEM_COTA.NINGUEM') }}
+        {{ t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.NINGUEM') }}
       </p>
       <p class="m-0 text-sm text-n-slate-11">
-        {{ tc(`SO_NINGUEM.${soNinguem}`) }}
+        {{ fraseDoSoNinguem }}
       </p>
     </div>
     <template v-else>
-      <p class="m-0 text-base text-n-slate-11">{{ tc('APOIO') }}</p>
+      <p class="m-0 text-base text-n-slate-11">
+        {{ t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.APOIO') }}
+      </p>
       <div data-carteira="escolher-quem-cota" class="flex flex-col gap-2">
         <label :for="`${id}-quem-cota`" class="text-base text-n-slate-12">
-          {{ tc('QUEM_COTA.PERGUNTA') }}
+          {{ t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.PERGUNTA') }}
         </label>
         <ChoiceSelect
           :trigger-id="`${id}-quem-cota`"
           :model-value="modelValue.quemCota"
           :options="opcoesDeQuemCota"
-          :aria-label="tc('QUEM_COTA.PERGUNTA')"
+          :aria-label="
+            t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.PERGUNTA')
+          "
           wrap-selected
           @update:model-value="mudar('quemCota', $event)"
         />
@@ -128,13 +160,17 @@ defineExpose({
       <template v-if="cota">
         <div data-carteira="escolher-quem-envia" class="flex flex-col gap-2">
           <label :for="`${id}-quem-envia`" class="text-base text-n-slate-12">
-            {{ tc('QUEM_ENVIA.PERGUNTA') }}
+            {{
+              t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.PERGUNTA')
+            }}
           </label>
           <ChoiceSelect
             :trigger-id="`${id}-quem-envia`"
             :model-value="modelValue.quemEnvia"
             :options="opcoesDeQuemEnvia"
-            :aria-label="tc('QUEM_ENVIA.PERGUNTA')"
+            :aria-label="
+              t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.PERGUNTA')
+            "
             wrap-selected
             @update:model-value="mudar('quemEnvia', $event)"
           />
@@ -144,27 +180,39 @@ defineExpose({
         </div>
         <div data-carteira="escolher-quem-responde" class="flex flex-col gap-2">
           <label :for="`${id}-quem-responde`" class="text-base text-n-slate-12">
-            {{ tc('QUEM_RESPONDE.PERGUNTA') }}
+            {{
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_RESPONDE.PERGUNTA'
+              )
+            }}
           </label>
           <ChoiceSelect
             :trigger-id="`${id}-quem-responde`"
             :model-value="modelValue.quemResponde"
             :options="opcoesDeQuemResponde"
-            :aria-label="tc('QUEM_RESPONDE.PERGUNTA')"
+            :aria-label="
+              t(
+                'RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_RESPONDE.PERGUNTA'
+              )
+            "
             wrap-selected
             @update:model-value="mudar('quemResponde', $event)"
           />
         </div>
         <div data-carteira="escolher-caixa" class="flex flex-col gap-2">
           <label :for="`${id}-caixa`" class="text-base text-n-slate-12">
-            {{ tc('CAIXA.PERGUNTA') }}
+            {{ t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.CAIXA.PERGUNTA') }}
           </label>
           <ChoiceSelect
             :trigger-id="`${id}-caixa`"
             :model-value="modelValue.caixaId"
             :options="opcoesDeCaixa"
-            :aria-label="tc('CAIXA.PERGUNTA')"
-            :placeholder="tc('CAIXA.ESCOLHA')"
+            :aria-label="
+              t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.CAIXA.PERGUNTA')
+            "
+            :placeholder="
+              t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.CAIXA.ESCOLHA')
+            "
             :invalid="faltaCaixa"
             :described-by="faltaCaixa ? idDoAviso : undefined"
             wrap-selected
@@ -188,10 +236,18 @@ defineExpose({
       class="flex flex-col gap-1 pt-4 border-t border-n-weak"
     >
       <p class="m-0 text-base font-medium text-n-slate-12">
-        {{ tc('CONSUMO.COTACOES', { count: consumo.cotacoes }) }}
+        {{
+          t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.CONSUMO.COTACOES', {
+            count: consumo.cotacoes,
+          })
+        }}
       </p>
       <p class="m-0 text-sm text-n-slate-11">
-        {{ tc('CONSUMO.COM_PRECO', { count: consumo.seguradorasComPreco }) }}
+        {{
+          t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.CONSUMO.COM_PRECO', {
+            count: consumo.seguradorasComPreco,
+          })
+        }}
       </p>
     </div>
   </div>
