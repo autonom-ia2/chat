@@ -44,6 +44,58 @@ RSpec.describe Autonomia::Agents::RetrievalQuery do
     expect(described_class.new(query: '3', history: turns).call).to eq("3\nHow many licenses of Team do you need?")
   end
 
+  it 'keeps the service and customer details when a number selects a deadline instead of a quantity' do
+    turns = [{ role: 'user', content: 'Quero fazer analise de amostras' },
+             { role: 'assistant', content: 'Qual o material e quantas amostras?' },
+             { role: 'user', content: 'sangue.3' },
+             { role: 'assistant', content: 'Temos prazos de 1, 3 e 7 dias. Qual prazo voce prefere?' }]
+
+    expect(described_class.new(query: '3', history: turns).call)
+      .to eq("3\nsangue.3\nQuero fazer analise de amostras\nQual prazo voce prefere?")
+  end
+
+  it 'uses the latest question for a negative answer about a procedure' do
+    turns = [{ role: 'user', content: 'Quero fazer analise de amostras' },
+             { role: 'assistant', content: 'Voce ja sabe como realizar a coleta?' }]
+
+    expect(described_class.new(query: 'não', history: turns).call)
+      .to eq("não\nQuero fazer analise de amostras\nVoce ja sabe como realizar a coleta?")
+  end
+
+  it 'supports yes and no in another segment without copying the previous quote' do
+    turns = [{ role: 'user', content: 'Como configuro o plano Equipe?' },
+             { role: 'assistant', content: 'O preco anterior era R$ 80. Voce sabe importar seus usuarios?' }]
+
+    %w[sim não yes no].each do |query|
+      expect(described_class.new(query: query, history: turns).call)
+        .to eq("#{query}\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?")
+    end
+  end
+
+  it 'ignores previous short replies when finding the customer subject' do
+    turns = [{ role: 'user', content: 'Como configuro o plano Equipe?' },
+             { role: 'assistant', content: 'Ja criou o cadastro?' },
+             { role: 'user', content: 'sim' },
+             { role: 'assistant', content: 'Voce sabe importar seus usuarios?' }]
+
+    expect(described_class.new(query: 'não.', history: turns).call)
+      .to eq("não.\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?")
+  end
+
+  it 'does not carry a yes or no into a conversation without a question' do
+    %w[sim não yes no].each do |query|
+      expect(described_class.new(query: query, history: history).call).to eq(query)
+    end
+  end
+
+  it 'bounds each customer detail as well as the last question' do
+    question = "Qual #{'x' * 600}?"
+    turns = [{ role: 'user', content: subject_question }, { role: 'assistant', content: question }]
+
+    expect(described_class.new(query: '3', history: turns).call)
+      .to eq("3\n#{subject_question}\n#{question[0, described_class::HISTORY_ITEM_CHARS]}")
+  end
+
   it 'retains the original subject through repeated corrections and split assistant replies' do
     turns = history + [{ role: 'assistant', content: 'O prazo e 4 dias.' },
                        { role: 'user', content: 'Vou fazer só de 10.' },

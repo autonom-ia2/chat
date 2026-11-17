@@ -216,6 +216,40 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   describe 'retrieval_query override' do
+    it 'retrieves the service and deadline question for a numeric choice while keeping the original prompt', :aggregate_failures do
+      agent = create_agent('with_knowledge' => true)
+      history = [{ role: 'user', content: 'Quero fazer analise de amostras' },
+                 { role: 'assistant', content: 'Qual o material e quantas amostras?' },
+                 { role: 'user', content: 'sangue.3' },
+                 { role: 'assistant', content: 'Temos prazos de 1, 3 e 7 dias. Qual prazo voce prefere?' }]
+      retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new)
+        .with(hash_including(query: '3', history: history)).and_call_original
+
+      Autonomia::Agents::Playground.new(agent: agent, message: '3', history: history).run
+
+      expect(retriever).to have_received(:retrieve)
+        .with("3\nsangue.3\nQuero fazer analise de amostras\nQual prazo voce prefere?",
+              top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
+    end
+
+    it 'retrieves procedure context for a negative reply without changing the model question', :aggregate_failures do
+      agent = create_agent('with_knowledge' => true)
+      history = [{ role: 'user', content: 'Como configuro o plano Equipe?' },
+                 { role: 'assistant', content: 'O preco anterior era R$ 80. Voce sabe importar seus usuarios?' }]
+      retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
+      allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new)
+        .with(hash_including(query: 'não', history: history)).and_call_original
+
+      described_class.new(agent: agent, query: 'não', history: history, trust_instruction: true).answer
+
+      expect(retriever).to have_received(:retrieve)
+        .with("não\nComo configuro o plano Equipe?\nVoce sabe importar seus usuarios?",
+              top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
+    end
+
     it 'contextualizes quantity corrections in both the simulator and the shared answering engine', :aggregate_failures do
       agent = create_agent('with_knowledge' => true)
       question = 'Qual o valor do plano Equipe para 15 usuarios?'

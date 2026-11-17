@@ -1,6 +1,6 @@
 class Autonomia::Agents::RetrievalQuery
-  QUANTITY_QUESTION = /\b(?:quant[oa]s|qual (?:é )?a quantidade|how many)\b[^.!?]*\?\s*\z/i
   NUMBER = /\A[0-9]{1,9}\z/
+  YES_NO = /\A(?:sim|n[ãa]o|yes|no)[.!]?\z/i
   QUANTITY_CHANGE = /\A
     (?:
       (?:na\s+verdade|agora|actually)[,:]?\s+(?:(?:quero|ser[áa]|ser[ãa]o|vou\s+fazer|make\s+it)\s+)?|
@@ -12,6 +12,7 @@ class Autonomia::Agents::RetrievalQuery
   HISTORY_MESSAGES = 8
   HISTORY_ITEM_CHARS = 400
   FOLLOWUP_CHARS = 160
+  DETAIL_WORDS = 4
 
   def initialize(query:, history: [])
     @query = query
@@ -19,28 +20,41 @@ class Autonomia::Agents::RetrievalQuery
   end
 
   def call
-    return @query unless quantity_followup?
+    return @query unless contextual_followup?
 
-    # Only the customer's subject and the last quantity question guide retrieval; old assistant quotes are not facts.
-    subject = @history.reverse.find do |turn|
-      text = turn[:content].to_s.strip
-      turn[:role] == 'user' && !text.empty? && !NUMBER.match?(text) && !QUANTITY_CHANGE.match?(text)
-    end
-    context = [subject, quantity_question].compact.map { |turn| turn[:content].to_s[0, HISTORY_ITEM_CHARS] }
+    # Customer details and the last question guide search, never the assistant's previous quote or answer.
+    context = [*subject_context, last_question].compact.map { |text| text[0, HISTORY_ITEM_CHARS] }
     context.empty? ? @query : [@query, *context].join("\n")
   end
 
   private
 
-  def quantity_followup?
+  def contextual_followup?
     text = @query.to_s.strip
     return false if text.length > FOLLOWUP_CHARS
 
-    QUANTITY_CHANGE.match?(text) || (NUMBER.match?(text) && quantity_question)
+    QUANTITY_CHANGE.match?(text) || (short_answer?(text) && last_question)
   end
 
-  def quantity_question
+  def short_answer?(text)
+    NUMBER.match?(text) || YES_NO.match?(text)
+  end
+
+  def subject_context
+    turns = @history.reverse.select do |turn|
+      text = turn[:content].to_s.strip
+      turn[:role] == 'user' && !text.empty? && !short_answer?(text) && !QUANTITY_CHANGE.match?(text)
+    end
+    latest = turns.first&.fetch(:content).to_s
+    # A short detail (species, model, etc.) needs the previous subject; a complete question stands on its own.
+    count = latest.include?('?') || latest.split.size > DETAIL_WORDS ? 1 : 2
+    turns.first(count).map { |turn| turn[:content].to_s }
+  end
+
+  def last_question
     turn = @history.last
-    turn if turn && turn[:role] == 'assistant' && QUANTITY_QUESTION.match?(turn[:content].to_s)
+    return unless turn && turn[:role] == 'assistant'
+
+    turn[:content].to_s[/([^.!?\n]+\?)\s*\z/, 1]&.strip
   end
 end

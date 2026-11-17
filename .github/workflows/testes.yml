@@ -260,7 +260,14 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=6144
 
     steps:
-      - uses: actions/checkout@v4
+      # Um fetch parado consumiu 36 dos 40 min do job (#3045), cancelando o RSpec sem falha de exemplo.
+      # O Git aborta a transferencia sem progresso e o checkout pode usar suas tentativas internas, dentro de 5 min.
+      - name: Baixar codigo com transferencia limitada
+        uses: actions/checkout@v4
+        timeout-minutes: 5
+        env:
+          GIT_HTTP_LOW_SPEED_LIMIT: '1024'
+          GIT_HTTP_LOW_SPEED_TIME: '60'
 
       - uses: ruby/setup-ruby@v1
         with:

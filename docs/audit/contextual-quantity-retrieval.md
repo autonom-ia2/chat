@@ -25,4 +25,20 @@ Data: 2026-11-17. Escopo: busca de conhecimento, sem mudanca de instrucao, preco
 
 ## Risco residual
 
-A composicao da busca e deterministica e limitada a formas curtas de quantidade. Ela nao garante qual trecho o retriever encontrara nem qual resposta o modelo gerara. A validacao funcional com IA fica para depois do workflow aprovado e exige autorizacao propria. O novo log permite distinguir falta de recuperacao de uma decisao do modelo de nao usar trechos recuperados.
+A composicao da busca e deterministica e limitada a formas curtas de continuidade. Ela nao garante qual trecho o retriever encontrara nem qual resposta o modelo gerara. A validacao funcional com IA fica para depois do workflow aprovado e exige autorizacao propria. O novo log permite distinguir falta de recuperacao de uma decisao do modelo de nao usar trechos recuperados.
+
+## Ampliacao da PR 3045
+
+- A primeira implementacao nao contextualizava um numero como escolha de prazo nem uma resposta `sim`/`nao` a uma pergunta de procedimento. Seis exemplos novos foram adicionados; cinco falharam antes do ajuste.
+- Numero ou `sim`/`nao` so ganham contexto quando o ultimo turno do assistente termina com uma pergunta. A pista usa apenas essa ultima pergunta, sem as afirmacoes ou cotacoes que a antecedem.
+- Um detalhe curto do cliente (ate quatro palavras, sem ponto de interrogacao) conserva tambem o assunto anterior: no maximo dois turnos do cliente, mais a ultima pergunta. Pergunta completa ou mensagem mais longa continua sendo o assunto principal, sem puxar o assunto anterior.
+- Permanecem os limites de oito mensagens de historico, 400 caracteres por pista e 160 caracteres na resposta curta. Nao ha regra de preco, produto, empresa, exame ou prazo especifico no codigo.
+- RSpec isolado da busca: 17 exemplos, zero falhas. Specs de integracao do Answerer adicionados para escolha de prazo no simulador e resposta negativa no motor compartilhado; execucao Rails local continua bloqueada pelo runtime deste Mac.
+
+## Bloqueio do CI, nao falha de deploy
+
+- Na rodada `44167554317`, job `134337826122` (`RSpec (6/12)`), o `git fetch` do checkout comecou em 20:17:34 UTC e terminou em 20:53:22 UTC: aproximadamente 36 minutos. O RSpec iniciou somente em 20:54:42 e foi cancelado pelo teto de 40 minutos do job, sem falha de exemplo registrada.
+- O agregador `RSpec` falhou porque recebeu `PARTES=cancelled`. Os outros onze shards, Vitest e demais verificacoes terminaram com sucesso. Nao houve deploy desta PR, que permanece aberta.
+- O checkout desse job agora tem teto de cinco minutos. `GIT_HTTP_LOW_SPEED_LIMIT=1024` e `GIT_HTTP_LOW_SPEED_TIME=60`, limitados ao passo, abortam transferencias HTTP sem progresso suficiente e permitem as tentativas internas do checkout. O teto do job e todos os gates permanecem intactos.
+- Semantica das variaveis conferida na documentacao oficial do Git: `https://github.com/git/git/blob/v2.43.0/Documentation/config/http.txt` (`http.lowSpeedLimit`, `http.lowSpeedTime`).
+- YAML conferido localmente: checkout continua `actions/checkout@v4`, limites presentes somente no passo e teto do job preservado em 40 minutos. Nenhuma alteracao nos workflows de deploy, IAM, banco ou EC2.
