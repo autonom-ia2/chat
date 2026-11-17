@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_17_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_17_150000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1958,6 +1958,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_120000) do
     t.datetime "palavras_enviadas_em"
     t.string "origem_ref"
     t.date "parcela_aberta_em"
+    t.text "segurado_nascimento"
+    t.string "segurado_sexo"
+    t.string "cep"
+    t.string "placa"
+    t.integer "bonus_classe", limit: 2
     t.index ["account_id", "fim_vigencia"], name: "index_carteira_apolices_on_account_id_and_fim_vigencia"
     t.index ["account_id", "origem", "origem_ref"], name: "idx_carteira_apolices_origem_ref", unique: true, where: "(origem_ref IS NOT NULL)"
     t.index ["account_id", "seguradora_chave", "numero_chave", "fim_vigencia"], name: "idx_carteira_apolices_seguradora_numero_vigencia", unique: true, where: "(numero_chave IS NOT NULL)"
@@ -1969,9 +1974,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_120000) do
     t.index ["leitura_id"], name: "idx_carteira_apolices_leitura", where: "(leitura_id IS NOT NULL)"
     t.check_constraint "(numero IS NULL) = (numero_chave IS NULL)", name: "carteira_apolices_numero"
     t.check_constraint "apolice_anterior_id <> id", name: "carteira_apolices_anterior_nao_e_ela"
+    t.check_constraint "bonus_classe >= 0 AND bonus_classe <= 10", name: "carteira_apolices_bonus"
     t.check_constraint "inicio_vigencia IS NULL OR fim_vigencia >= inicio_vigencia", name: "carteira_apolices_vigencia"
+    t.check_constraint "length(cep::text) = 8 AND translate(cep::text, '0123456789'::text, ''::text) = ''::text", name: "carteira_apolices_cep"
     t.check_constraint "numero_chave::text <> ''::text AND seguradora_chave::text <> ''::text", name: "carteira_apolices_chaves"
     t.check_constraint "origem::text = ANY ('{planilha,manual,pdf,conector}'::text[])", name: "carteira_apolices_origem"
+    t.check_constraint "segurado_sexo::text = ANY ('{F,M}'::text[])", name: "carteira_apolices_sexo"
     t.check_constraint "tipo::text = ANY ('{auto,residencial,vida,empresarial,outro}'::text[])", name: "carteira_apolices_tipo"
     t.check_constraint "valor_centavos IS NULL OR valor_centavos >= 0", name: "carteira_apolices_valor"
   end

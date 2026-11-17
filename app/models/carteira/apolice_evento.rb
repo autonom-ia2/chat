@@ -26,7 +26,10 @@ class Carteira::ApoliceEvento < ApplicationRecord
   # `chegou_de_fora` (E6.5): o seguro que a pessoa tem em outra corretora foi guardado pelo PDF; `valores.lembrete` diz se
   # a pessoa quis o lembrete da renovação.
   DA_E6 = %w[chegou_pdf chegou_de_novo_pdf chegou_de_fora].freeze
-  TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6).freeze
+  # E8.1 (#3043): a cotação leu o PDF que já estava no seguro para achar os dados do segurado. `valores.vigencia` é a
+  # vigência da leitura (uma por vigência); nenhum valor lido vai para a história.
+  DA_E8 = %w[dados_lidos_pdf].freeze
+  TIPOS = (DA_E4 + DAS_PROXIMAS + DA_E6 + DA_E8).freeze
 
   belongs_to :apolice, class_name: 'Carteira::Apolice', inverse_of: :eventos
   belongs_to :user, optional: true
