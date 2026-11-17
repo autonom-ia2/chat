@@ -6,6 +6,7 @@ import { useIdioma } from '../ficha/idioma';
 import {
   formatarDataInteira,
   formatarHora,
+  formatarPercentual,
   formatarValor,
 } from './formatosDoSeguro';
 import { quandoDoSeguro } from './quandoDoSeguro';
@@ -67,5 +68,6 @@ export const useTextosDoSeguro = () => {
     dataInteira,
     valor,
     hora: segundos => formatarHora(segundos, idioma.value),
+    percentual: pontos => formatarPercentual(pontos, idioma.value),
   };
 };

@@ -42,6 +42,10 @@ class Whatsapp::Templates::Garantir
   APROVADO = 'APPROVED'.freeze
   # O `URI` não aceita as chaves da variável: a URL do botão é comparada até o `{{1}}`, e o marcador à parte.
   VARIAVEL_DA_URL = '{{1}}'.freeze
+  # O arquivo de exemplo de cada formato de topo que um pronto pode ter (#2901: a proposta da renovação, DOCUMENT).
+  TOPOS_DE_EXEMPLO = {
+    'DOCUMENT' => { arquivo: Rails.root.join('lib/whatsapp_templates/exemplo-de-proposta.pdf').to_s, tipo: 'application/pdf' }
+  }.freeze
 
   def self.call(inbox:, finalidade:, idioma: nil, criar: true, **opcoes)
     new(inbox: inbox, pronto: Finalidades.pronto(finalidade, **opcoes), idioma: idioma, criar: criar).call
@@ -145,10 +149,12 @@ class Whatsapp::Templates::Garantir
   end
 
   # O perfil é conferido ANTES de falar com a Meta (como no `Manager`): perfil inválido não deixa modelo lá sem perfil aqui.
+  # Pronto com topo de documento (#2901): o arquivo de exemplo sobe antes, e o handle vai no pedido de criação.
   def criar_na_meta
-    corpo = @pronto.corpo.deep_stringify_keys
-    return indisponivel('formato') if Whatsapp::Templates::SubmitFormat.problems(corpo).any?
     return falha('perfil_invalido') unless montar_perfil.valid?
+
+    corpo = @pronto.corpo(header_handle: handle_do_topo).deep_stringify_keys
+    return indisponivel('formato') if Whatsapp::Templates::SubmitFormat.problems(corpo).any?
 
     template = MetaClient.new(inbox: @inbox).create(corpo).template
     Whatsapp::Templates::ChannelList.upsert!(channel, template)
@@ -158,6 +164,16 @@ class Whatsapp::Templates::Garantir
     falha('meta_fora')
   rescue MetaClient::MetaError => e
     falha(e.code == 'permission_denied' ? 'sem_permissao' : 'meta_recusou')
+  end
+
+  # O arquivo de exemplo do topo, subido à Meta para a análise (o mesmo caminho do upload da tela de Modelos). Fictício.
+  def handle_do_topo
+    exemplo = TOPOS_DE_EXEMPLO[@pronto.topo]
+    return if exemplo.nil?
+
+    File.open(exemplo[:arquivo], 'rb') do |io|
+      MetaClient.new(inbox: @inbox).upload_media(io: io, file_name: File.basename(exemplo[:arquivo]), content_type: exemplo[:tipo])
+    end
   end
 
   # O perfil do sistema existe sempre que o modelo está na lista (também quando ele entrou por outro caminho, ou quando

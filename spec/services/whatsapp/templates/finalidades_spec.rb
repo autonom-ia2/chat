@@ -41,9 +41,10 @@ RSpec.describe Whatsapp::Templates::Finalidades do
     expect(sem.campos).to eq('1' => 'cliente.primeiro_nome', '2' => 'negocio.titulo', '3' => 'negocio.prazo')
   end
 
+  # O pronto com topo de arquivo (a proposta da renovação, E8) leva o exemplo do topo que o Garantir sobe à Meta.
   it 'todo pronto é UTILITY e passa na conferência da Meta (SubmitFormat) e na do envio (SendableFormat)' do
     prontos.each do |pronto|
-      template = pronto.corpo.deep_stringify_keys
+      template = pronto.corpo(header_handle: ('h-exemplo' if pronto.topo)).deep_stringify_keys
       expect(template['category']).to eq('UTILITY')
       expect(Whatsapp::Templates::SubmitFormat.problems(template)).to eq([]), pronto.nome
       expect(Whatsapp::Templates::SendableFormat.sendable?(template)).to be(true), pronto.nome

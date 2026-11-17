@@ -1234,7 +1234,7 @@ describe('os passos da renovação no histórico', () => {
     }
   );
 
-  it.each(['proposta_enviada', 'passo_de_amanha', '', undefined, null])(
+  it.each(['endosso_guardado', 'passo_de_amanha', '', undefined, null])(
     'o passo que a tela não conhece (%j) vira a frase neutra, nunca a chave crua',
     tipo => {
       expect(fraseDoPasso({ tipo, valores: { anterior: 'renovou' } })).toEqual({

@@ -209,7 +209,9 @@
         "NAO_PODE_FECHAR_A_RENOVACAO": "Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.",
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
         "DESFAZER": "Desfazer",
-        "PALAVRAS_ENVIADAS": "Mensagem enviada na conversa."
+        "PALAVRAS_ENVIADAS": "Mensagem enviada na conversa.",
+        "PROPOSTA_ENVIADA": "Proposta enviada ao cliente.",
+        "NAO_PODE_ENVIAR_A_PROPOSTA": "Você não pode enviar esta proposta. Quem envia precisa poder alterar a pessoa e ver o card da renovação no CRM."
       },
       "DADOS": {
         "TITULO": "Dados do seguro",
@@ -310,7 +312,16 @@
         "CHEGOU_PDF": "Chegou por PDF.",
         "CHEGOU_DE_NOVO_PDF": "Atualizado por PDF.",
         "CHEGOU_DE_FORA": "Guardado como seguro de outra corretora.",
-        "PALAVRAS_ENVIADAS": "O seguro em palavras simples foi enviado ao cliente."
+        "PALAVRAS_ENVIADAS": "O seguro em palavras simples foi enviado ao cliente.",
+        "COTACAO_PEDIDA": "Perguntamos ao cliente se algo mudou no seguro.",
+        "ALGO_MUDOU_NAO_SAIU": "A pergunta \"Algo mudou?\" não saiu.",
+        "RESPONDEU_ALGO_MUDOU": "O cliente respondeu se algo mudou.",
+        "CLIENTE_RESPONDEU": "O cliente contou o que mudou.",
+        "PROPOSTA_PEDIDA": "A cotação da renovação começou nas seguradoras.",
+        "PROPOSTA_NAO_SAIU": "A cotação da renovação não deu proposta.",
+        "PROPOSTA_PRONTA": "A proposta de renovação ficou pronta.",
+        "PROPOSTA_ENVIADA": "A proposta de renovação foi enviada ao cliente.",
+        "PROPOSTA_ENVIADA_SOZINHA": "A proposta de renovação saiu sozinha para o cliente."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
@@ -374,6 +385,73 @@
         "BOTAO": "Escolher o funil"
       }
     },
+    "COTACAO": {
+      "TITULO": "Cotação",
+      "SITUACAO": {
+        "PERGUNTOU": "Perguntamos ao cliente se algo mudou no seguro.",
+        "PERGUNTA_NAO_SAIU": "A pergunta ao cliente não saiu.",
+        "NADA_MUDOU": "O cliente disse que nada mudou. A cotação vai começar.",
+        "MUDOU": "O cliente disse que algo mudou. A cotação parou para alguém ver o que mudou.",
+        "CLIENTE_CONTOU": "O cliente contou o que mudou. Veja na conversa.",
+        "COTANDO": "Estamos cotando a renovação nas seguradoras.",
+        "FALTAM": "Não deu para cotar: falta {campos}.",
+        "NAO_SAIU_SEM_MOTIVO": "Não deu para cotar esta renovação.",
+        "PRONTA": "Proposta pronta: {valor}, {seguradora}.",
+        "PRONTA_SEM_SEGURADORA": "Proposta pronta: {valor}.",
+        "ENVIADA": "A proposta foi enviada ao cliente em {data}.",
+        "ENVIADA_SOZINHA": "A proposta saiu sozinha em {data}.",
+        "ANDANDO": "A cotação da renovação está em andamento.",
+        "INCERTA": "Não sabemos se a proposta chegou. Confira na conversa; se não chegou, envie de novo."
+      },
+      "MOTIVO": {
+        "CONFERENCIA_CAIU": "A conferência da cotação não respondeu. Tentamos de novo sozinhos e, se não der, a equipe é avisada no card.",
+        "SEM_CONEXAO": "Não deu para cotar: a conexão com o portal de cotação não está pronta.",
+        "SEM_AGENTE": "Não deu para cotar: a conta não tem o Agente de Cotação.",
+        "COTACAO_FALHOU": "A cotação não terminou no portal.",
+        "SEM_PRECO": "Nenhuma seguradora deu preço para esta renovação.",
+        "SEM_PDF": "A cotação deu preço, mas o PDF da proposta não veio.",
+        "ENVIO": "A proposta não saiu para o cliente."
+      },
+      "ENVIO": {
+        "CONTATO_RECUSOU": "O cliente recusou mensagens ou está bloqueado.",
+        "SEM_CAIXA": "Nenhum WhatsApp foi escolhido em Ajustar renovações.",
+        "SEM_MODELO": "A mensagem ainda não está aprovada no WhatsApp escolhido.",
+        "SEM_TELEFONE": "O cliente não tem telefone na ficha.",
+        "CAMPO_VAZIO": "O cliente não tem nome na ficha.",
+        "SEM_CARD": "O card da renovação não existe mais."
+      },
+      "PROPOSTA": "Proposta: {valor}, {seguradora}.",
+      "PROPOSTA_SEM_SEGURADORA": "Proposta: {valor}.",
+      "VARIACAO": {
+        "SUBIU": "Subiu {percentual} em relação ao ano passado.",
+        "CAIU": "Caiu {percentual} em relação ao ano passado.",
+        "IGUAL": "Ficou igual ao ano passado."
+      },
+      "AVISADA": "A equipe foi avisada no card da renovação.",
+      "OUTROS_DADOS": "outros dados do seguro",
+      "CAMPOS": {
+        "PRODUTO": "tipo do seguro",
+        "QUOTATION_PREVIOUSINSURERCODE": "seguradora anterior",
+        "QUOTATION_PREVIOUSPOLICYNUMBER": "número da apólice",
+        "QUOTATION_PREVIOUSPOLICYENDDATE": "fim da vigência",
+        "QUOTATION_BONUSCLASS": "classe de bônus",
+        "INSURED_NAME": "nome do segurado",
+        "INSURED_DOCUMENT": "CPF ou CNPJ do segurado",
+        "INSURED_BIRTHDATE": "nascimento do segurado",
+        "INSURED_GENDER": "sexo do segurado",
+        "ADDRESS_ZIPCODE": "CEP",
+        "VEHICLE_PLATE": "placa do veículo",
+        "RENOVACAO_SEGURADORAANTERIOR": "seguradora anterior",
+        "RENOVACAO_NUMEROAPOLICE": "número da apólice",
+        "RENOVACAO_FIMVIGENCIA": "fim da vigência",
+        "RENOVACAO_BONUS": "classe de bônus",
+        "SEGURADO_CPFCNPJ": "CPF ou CNPJ do segurado",
+        "SEGURADO_NOME": "nome do segurado"
+      },
+      "ENVIAR": "Enviar proposta",
+      "ENVIAR_DE_NOVO": "Enviar de novo",
+      "ENVIAR_APOIO": "A proposta só vai ao cliente quando você clicar."
+    },
     "AJUSTES": {
       "TITULO": "Ajustar renovações",
       "APOIO": "Mude o que quiser e salve.",
@@ -393,7 +471,8 @@
         "FUNIL": "Escolha o funil em que as renovações ficam.",
         "ETAPA": "Escolha a etapa em que a renovação entra.",
         "SEM_ETAPA": "Esse funil não tem etapa para a renovação entrar. Escolha outro funil ou crie uma etapa nele no CRM.",
-        "DIAS": "Escreva quantos dias antes, a partir de 1."
+        "DIAS": "Escreva quantos dias antes, a partir de 1.",
+        "CAIXA": "Escolha por qual WhatsApp o robô fala com o cliente."
       },
       "ONDE": {
         "TITULO": "Onde ficam as renovações?",
@@ -419,6 +498,42 @@
         "MANDAR": "Mandar",
         "NAO_MANDAR": "Não mandar",
         "APOIO": "Esta escolha vale para todos os seguros da conta."
+      },
+      "COTACAO": {
+        "TITULO": "Cotação da renovação",
+        "APOIO": "Quando um seguro entra em renovação, o robô pergunta ao cliente se algo mudou e cota a renovação nas seguradoras.",
+        "QUEM_COTA": {
+          "PERGUNTA": "Quem faz a cotação?",
+          "NINGUEM": "Ninguém, cotação manual",
+          "ROBO": "O robô cota sozinho",
+          "LIA": "O robô cota e {agente} responde"
+        },
+        "SO_NINGUEM": {
+          "SEM_AGENTE": "O robô cota quando a conta tiver o Agente de Cotação. Até lá, a cotação é feita pela equipe.",
+          "SEM_CAIXA": "O robô cota quando a conta tiver um WhatsApp oficial conectado. Até lá, a cotação é feita pela equipe."
+        },
+        "QUEM_ENVIA": {
+          "PERGUNTA": "Como a proposta sai?",
+          "PESSOA": "Uma pessoa confere e aperta Enviar",
+          "SOZINHO": "Sai sozinha",
+          "APOIO_PESSOA": "A proposta fica pronta no seguro e só vai ao cliente quando alguém clicar em Enviar proposta.",
+          "APOIO_SOZINHO": "A proposta vai para o cliente assim que fica pronta, sem ninguém conferir antes."
+        },
+        "QUEM_RESPONDE": {
+          "PERGUNTA": "Quem responde o cliente?",
+          "EQUIPE": "A equipe",
+          "LIA": "{agente}"
+        },
+        "CAIXA": {
+          "PERGUNTA": "Por qual WhatsApp?",
+          "ESCOLHA": "Escolha o WhatsApp"
+        },
+        "AVISO_DO_AGENTE": "{agente} não está no WhatsApp {caixa}. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
+        "AVISO_DA_DISTRIBUICAO": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí {agente} não responde. Desligue a entrega automática desse WhatsApp ou escolha 'A equipe'.",
+        "CONSUMO": {
+          "COTACOES": "Cotações neste mês: {count}",
+          "COM_PRECO": "Seguradoras com preço: {count}"
+        }
       },
       "PAROU": {
         "ARQUIVADO": "O funil das renovações foi arquivado. Escolha outro para as renovações voltarem a aparecer.",
@@ -553,7 +668,21 @@
       "NAO_DEU_PARA_ESCREVER": "Não consegui escrever o texto agora. Tente de novo.",
       "SEM_CONVERSA": "Este cliente não tem conversa aqui. Copie o texto e mande por outro caminho.",
       "FORA_DA_JANELA": "A conversa com o cliente está fechada para mensagens agora. Copie o texto e mande por outro caminho.",
-      "AGGER_DESLIGADO": "Trazer do Agger não está ligado nesta conta."
+      "AGGER_DESLIGADO": "Trazer do Agger não está ligado nesta conta.",
+      "COTACAO_DESLIGADA": "A cotação da renovação está desligada nesta conta. Veja em Ajustar renovações.",
+      "ESCOLHA_INVALIDA": "Essa escolha não vale. Escolha de novo e salve.",
+      "SEM_AGENTE_DE_COTACAO": "A conta não tem mais o Agente de Cotação. Atualizei a tela: escolha de novo e salve.",
+      "CAIXA_INVALIDA": "Esse WhatsApp não serve mais para a cotação. Atualizei a tela: escolha outro WhatsApp e salve.",
+      "CAIXA_DISTRIBUI": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí o agente não responde. Atualizei a tela: desligue a entrega automática desse WhatsApp ou escolha 'A equipe' e salve.",
+      "PROPOSTA_JA_ENVIADA": "Essa proposta já foi enviada ao cliente. Atualizei a tela.",
+      "PROPOSTA_INCERTA": "Não sabemos se a proposta chegou. Atualizei a tela: confira na conversa.",
+      "SEM_PROPOSTA": "Ainda não há proposta pronta para enviar. Atualizei a tela.",
+      "CONTATO_RECUSOU": "A proposta não saiu: o cliente recusou mensagens ou está bloqueado.",
+      "SEM_CAIXA": "A proposta não saiu: escolha por qual WhatsApp ela sai em Ajustar renovações e envie de novo.",
+      "SEM_MODELO": "A proposta não saiu: a mensagem dela ainda não está aprovada no WhatsApp escolhido. Envie de novo quando ela for aprovada.",
+      "SEM_TELEFONE": "A proposta não saiu: o cliente não tem telefone. Escreva o telefone na ficha dele e envie de novo.",
+      "CAMPO_VAZIO": "A proposta não saiu: o cliente não tem nome. Escreva o nome na ficha dele e envie de novo.",
+      "SEM_CARD": "A proposta não saiu: o card da renovação não existe mais."
     },
     "TRAZER": {
       "BOTAO": "Trazer seguros",

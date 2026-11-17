@@ -209,7 +209,9 @@
         "NAO_PODE_FECHAR_A_RENOVACAO": "You do not have permission to change the renewal of this policy. Ask an account administrator or whoever is in charge of renewals.",
         "NAO_DEU": "I could not do that. Try again.",
         "DESFAZER": "Undo",
-        "PALAVRAS_ENVIADAS": "Message sent in the conversation."
+        "PALAVRAS_ENVIADAS": "Message sent in the conversation.",
+        "PROPOSTA_ENVIADA": "Proposal sent to the client.",
+        "NAO_PODE_ENVIAR_A_PROPOSTA": "You cannot send this proposal. Whoever sends it must be able to change the person and see the renewal card in the CRM."
       },
       "DADOS": {
         "TITULO": "Policy details",
@@ -310,7 +312,16 @@
         "CHEGOU_PDF": "Arrived from a PDF.",
         "CHEGOU_DE_NOVO_PDF": "Updated from a PDF.",
         "CHEGOU_DE_FORA": "Saved as a policy from another broker.",
-        "PALAVRAS_ENVIADAS": "The policy in plain words was sent to the client."
+        "PALAVRAS_ENVIADAS": "The policy in plain words was sent to the client.",
+        "COTACAO_PEDIDA": "We asked the client if anything changed in the policy.",
+        "ALGO_MUDOU_NAO_SAIU": "The \"Did anything change?\" question did not go out.",
+        "RESPONDEU_ALGO_MUDOU": "The client answered if anything changed.",
+        "CLIENTE_RESPONDEU": "The client said what changed.",
+        "PROPOSTA_PEDIDA": "The renewal quote started with the insurers.",
+        "PROPOSTA_NAO_SAIU": "The renewal quote did not produce a proposal.",
+        "PROPOSTA_PRONTA": "The renewal proposal is ready.",
+        "PROPOSTA_ENVIADA": "The renewal proposal was sent to the client.",
+        "PROPOSTA_ENVIADA_SOZINHA": "The renewal proposal went out to the client on its own."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "The renewal started. In charge: {cuida}.",
@@ -374,6 +385,73 @@
         "BOTAO": "Choose the pipeline"
       }
     },
+    "COTACAO": {
+      "TITULO": "Quote",
+      "SITUACAO": {
+        "PERGUNTOU": "We asked the client if anything changed in the policy.",
+        "PERGUNTA_NAO_SAIU": "The question to the client did not go out.",
+        "NADA_MUDOU": "The client said nothing changed. The quote is about to start.",
+        "MUDOU": "The client said something changed. The quote stopped so someone can see what changed.",
+        "CLIENTE_CONTOU": "The client said what changed. See the conversation.",
+        "COTANDO": "We are quoting the renewal with the insurers.",
+        "FALTAM": "Could not quote: missing {campos}.",
+        "NAO_SAIU_SEM_MOTIVO": "Could not quote this renewal.",
+        "PRONTA": "Proposal ready: {valor}, {seguradora}.",
+        "PRONTA_SEM_SEGURADORA": "Proposal ready: {valor}.",
+        "ENVIADA": "The proposal was sent to the client on {data}.",
+        "ENVIADA_SOZINHA": "The proposal went out on its own on {data}.",
+        "ANDANDO": "The renewal quote is in progress.",
+        "INCERTA": "We don't know if the proposal reached the client. Check the conversation; if it didn't arrive, send it again."
+      },
+      "MOTIVO": {
+        "CONFERENCIA_CAIU": "The quote check did not answer. We try again on our own and, if it still fails, the team is told on the card.",
+        "SEM_CONEXAO": "Could not quote: the connection to the quote portal is not ready.",
+        "SEM_AGENTE": "Could not quote: the account does not have the Quote Agent.",
+        "COTACAO_FALHOU": "The quote did not finish on the portal.",
+        "SEM_PRECO": "No insurer gave a price for this renewal.",
+        "SEM_PDF": "The quote has a price, but the proposal PDF did not come.",
+        "ENVIO": "The proposal did not go out to the client."
+      },
+      "ENVIO": {
+        "CONTATO_RECUSOU": "The client refused messages or is blocked.",
+        "SEM_CAIXA": "No WhatsApp was chosen in Adjust renewals.",
+        "SEM_MODELO": "The message is not approved yet on the chosen WhatsApp.",
+        "SEM_TELEFONE": "The client has no phone number on their profile.",
+        "CAMPO_VAZIO": "The client has no name on their profile.",
+        "SEM_CARD": "The renewal card no longer exists."
+      },
+      "PROPOSTA": "Proposal: {valor}, {seguradora}.",
+      "PROPOSTA_SEM_SEGURADORA": "Proposal: {valor}.",
+      "VARIACAO": {
+        "SUBIU": "Up {percentual} from last year.",
+        "CAIU": "Down {percentual} from last year.",
+        "IGUAL": "Same as last year."
+      },
+      "AVISADA": "The team was told on the renewal card.",
+      "OUTROS_DADOS": "other policy details",
+      "CAMPOS": {
+        "PRODUTO": "type of insurance",
+        "QUOTATION_PREVIOUSINSURERCODE": "previous insurer",
+        "QUOTATION_PREVIOUSPOLICYNUMBER": "policy number",
+        "QUOTATION_PREVIOUSPOLICYENDDATE": "policy end date",
+        "QUOTATION_BONUSCLASS": "bonus class",
+        "INSURED_NAME": "insured's name",
+        "INSURED_DOCUMENT": "insured's CPF or CNPJ",
+        "INSURED_BIRTHDATE": "insured's date of birth",
+        "INSURED_GENDER": "insured's sex",
+        "ADDRESS_ZIPCODE": "ZIP code (CEP)",
+        "VEHICLE_PLATE": "vehicle plate",
+        "RENOVACAO_SEGURADORAANTERIOR": "previous insurer",
+        "RENOVACAO_NUMEROAPOLICE": "policy number",
+        "RENOVACAO_FIMVIGENCIA": "policy end date",
+        "RENOVACAO_BONUS": "bonus class",
+        "SEGURADO_CPFCNPJ": "insured's CPF or CNPJ",
+        "SEGURADO_NOME": "insured's name"
+      },
+      "ENVIAR": "Send proposal",
+      "ENVIAR_DE_NOVO": "Send again",
+      "ENVIAR_APOIO": "The proposal only goes to the client when you click."
+    },
     "AJUSTES": {
       "TITULO": "Renewal settings",
       "APOIO": "Change what you want and save.",
@@ -393,7 +471,8 @@
         "FUNIL": "Choose the pipeline where renewals stay.",
         "ETAPA": "Choose the stage where the renewal enters.",
         "SEM_ETAPA": "That pipeline has no stage for the renewal to enter. Choose another pipeline or create a stage in it in the CRM.",
-        "DIAS": "Type how many days before, starting from 1."
+        "DIAS": "Type how many days before, starting from 1.",
+        "CAIXA": "Choose which WhatsApp the robot uses to talk to the client."
       },
       "ONDE": {
         "TITULO": "Where do renewals stay?",
@@ -419,6 +498,42 @@
         "MANDAR": "Send",
         "NAO_MANDAR": "Do not send",
         "APOIO": "This choice applies to every policy in the account."
+      },
+      "COTACAO": {
+        "TITULO": "Renewal quote",
+        "APOIO": "When a policy starts renewing, the robot asks the client if anything changed and quotes the renewal with the insurers.",
+        "QUEM_COTA": {
+          "PERGUNTA": "Who does the quote?",
+          "NINGUEM": "Nobody, manual quote",
+          "ROBO": "The robot quotes on its own",
+          "LIA": "The robot quotes and {agente} replies"
+        },
+        "SO_NINGUEM": {
+          "SEM_AGENTE": "The robot quotes once the account has the Quote Agent. Until then, the team does the quote.",
+          "SEM_CAIXA": "The robot quotes once the account has an official WhatsApp connected. Until then, the team does the quote."
+        },
+        "QUEM_ENVIA": {
+          "PERGUNTA": "How does the proposal go out?",
+          "PESSOA": "A person checks it and clicks Send",
+          "SOZINHO": "It goes out on its own",
+          "APOIO_PESSOA": "The proposal waits on the policy and only goes to the client when someone clicks Send proposal.",
+          "APOIO_SOZINHO": "The proposal goes to the client as soon as it is ready, with nobody checking it first."
+        },
+        "QUEM_RESPONDE": {
+          "PERGUNTA": "Who replies to the client?",
+          "EQUIPE": "The team",
+          "LIA": "{agente}"
+        },
+        "CAIXA": {
+          "PERGUNTA": "Through which WhatsApp?",
+          "ESCOLHA": "Choose the WhatsApp"
+        },
+        "AVISO_DO_AGENTE": "{agente} is not on the WhatsApp {caixa}. Turn {agente} on for that WhatsApp in Agents, or choose another WhatsApp, so no reply from the client is left unanswered.",
+        "AVISO_DA_DISTRIBUICAO": "This WhatsApp hands every new conversation to someone on the team, and then {agente} does not reply. Turn off automatic assignment for this WhatsApp or choose 'The team'.",
+        "CONSUMO": {
+          "COTACOES": "Quotes this month: {count}",
+          "COM_PRECO": "Insurers with a price: {count}"
+        }
       },
       "PAROU": {
         "ARQUIVADO": "The renewals pipeline was archived. Choose another one so renewals show up again.",
@@ -553,7 +668,21 @@
       "NAO_DEU_PARA_ESCREVER": "I could not write the text right now. Try again.",
       "SEM_CONVERSA": "This client has no conversation here. Copy the text and send it another way.",
       "FORA_DA_JANELA": "The conversation with the client is closed for messages right now. Copy the text and send it another way.",
-      "AGGER_DESLIGADO": "Bringing from Agger is not on for this account."
+      "AGGER_DESLIGADO": "Bringing from Agger is not on for this account.",
+      "COTACAO_DESLIGADA": "The renewal quote is turned off for this account. Check Adjust renewals.",
+      "ESCOLHA_INVALIDA": "That choice is not valid. Choose again and save.",
+      "SEM_AGENTE_DE_COTACAO": "The account no longer has the Quote Agent. I refreshed the screen: choose again and save.",
+      "CAIXA_INVALIDA": "That WhatsApp can no longer be used for the quote. I refreshed the screen: choose another WhatsApp and save.",
+      "CAIXA_DISTRIBUI": "This WhatsApp hands every new conversation to someone on the team, and then the agent does not reply. I refreshed the screen: turn off automatic assignment for this WhatsApp or choose 'The team', and save.",
+      "PROPOSTA_JA_ENVIADA": "This proposal was already sent to the client. I refreshed the screen.",
+      "PROPOSTA_INCERTA": "We don't know if the proposal reached the client. I refreshed the screen: check the conversation.",
+      "SEM_PROPOSTA": "There is no proposal ready to send yet. I refreshed the screen.",
+      "CONTATO_RECUSOU": "The proposal did not go out: the client refused messages or is blocked.",
+      "SEM_CAIXA": "The proposal did not go out: choose which WhatsApp it goes through in Adjust renewals and send again.",
+      "SEM_MODELO": "The proposal did not go out: its message is not approved yet on the chosen WhatsApp. Send again once it is approved.",
+      "SEM_TELEFONE": "The proposal did not go out: the client has no phone number. Add the phone number to their profile and send again.",
+      "CAMPO_VAZIO": "The proposal did not go out: the client has no name. Add the name to their profile and send again.",
+      "SEM_CARD": "The proposal did not go out: the renewal card no longer exists."
     },
     "TRAZER": {
       "BOTAO": "Bring policies",

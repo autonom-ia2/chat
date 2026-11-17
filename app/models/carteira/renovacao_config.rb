@@ -9,6 +9,11 @@
 # outra conta, a etapa de outro funil e a pessoa que não é da conta. `user` é quem escolheu o funil por último: só muda
 # junto com o funil, e sai quando alguém tira a escolha (Carteira::Renovacao::SalvarAjustes). É por ele que se sabe que
 # a escolha sumiu: sobrou quem escolheu, sem o funil.
+#
+# A cotação da renovação (E8, #2901): quem cota (`robo`, `lia` ou `ninguem`), quem envia a proposta (`pessoa` ou
+# `sozinho`), quem responde o segurado (`lia` ou `equipe`) e a caixa do WhatsApp oficial por onde as mensagens saem
+# (`inbox`). O banco só confere que a caixa existe; aqui se recusa a de outra conta. Se a conta pode escolher `robo` ou
+# `lia` (tem o Agente de Cotação) é regra de quem grava (Carteira::Renovacao::SalvarAjustes).
 class Carteira::RenovacaoConfig < ApplicationRecord
   self.table_name = 'carteira_renovacao_configs'
 
@@ -21,11 +26,22 @@ class Carteira::RenovacaoConfig < ApplicationRecord
   NUNCA_FEITA = 'nunca_feita'.freeze
   FUNIL_ARQUIVADO = 'funil_arquivado'.freeze
   SUMIU = 'sumiu'.freeze
+  # A cotação da renovação (E8).
+  NINGUEM = 'ninguem'.freeze
+  ROBO = 'robo'.freeze
+  LIA = 'lia'.freeze
+  QUEM_COTA = [ROBO, LIA, NINGUEM].freeze
+  PESSOA = 'pessoa'.freeze
+  SOZINHO = 'sozinho'.freeze
+  QUEM_ENVIA = [PESSOA, SOZINHO].freeze
+  EQUIPE = 'equipe'.freeze
+  QUEM_RESPONDE = [LIA, EQUIPE].freeze
 
   belongs_to :account
   belongs_to :pipeline, class_name: 'Crm::Pipeline', optional: true
   belongs_to :stage, class_name: 'Crm::PipelineStage', optional: true
   belongs_to :user, optional: true
+  belongs_to :inbox, optional: true
   # O aviso da carteira no sino tem esta linha como ator: sem ela, o aviso não tem o que abrir.
   has_many :notifications, as: :primary_actor, dependent: :delete_all
 
@@ -34,6 +50,10 @@ class Carteira::RenovacaoConfig < ApplicationRecord
   validates :mensagens, inclusion: { in: MENSAGENS }
   validate :funil_e_etapa_da_conta, if: -> { will_save_change_to_pipeline_id? || will_save_change_to_stage_id? }
   validate :pessoa_da_conta, if: :will_save_change_to_user_id?
+  validates :quem_cota, inclusion: { in: QUEM_COTA }
+  validates :quem_envia, inclusion: { in: QUEM_ENVIA }
+  validates :quem_responde, inclusion: { in: QUEM_RESPONDE }
+  validate :caixa_da_conta, if: :will_save_change_to_inbox_id?
 
   # O aviso da carteira no sino (Notification `carteira_renovacao`) tem esta linha como ator: só o id, sem dado de cliente.
   def push_event_data
@@ -66,5 +86,9 @@ class Carteira::RenovacaoConfig < ApplicationRecord
 
   def pessoa_da_conta
     errors.add(:user, :invalid) if user && !AccountUser.exists?(account_id: account_id, user_id: user.id)
+  end
+
+  def caixa_da_conta
+    errors.add(:inbox, :invalid) if inbox && inbox.account_id != account_id
   end
 end

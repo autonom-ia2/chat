@@ -276,7 +276,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         %w[bike auto].each do |ramo|
           post "/super_admin/accounts/#{account.id}/toggle_insurance_ramo", params: { ramo: ramo, enabled: true }
 
-          expect(flash[:alert]).to eq("Ramo desconhecido")
+          expect(flash[:alert]).to eq('Ramo desconhecido')
           expect(Autonomia::Insurance::Config.ramo_liberado?(account.reload, ramo)).to be false
         end
       end
@@ -370,6 +370,52 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         end
 
         expect(Account.count).to eq(total_accounts - 1)
+      end
+    end
+  end
+
+  # As chaves da carteira de seguros por conta (E6 #2899 e E8 #2901): a leitura de PDF e a cotação da renovação.
+  describe 'POST /super_admin/accounts/{account_id}/toggle_carteira' do
+    it 'sem login não liga nada' do
+      post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'cotacao', enabled: true }
+
+      expect(response).to have_http_status(:redirect)
+      expect(Carteira::Cotacao::Liberada.para?(account.reload)).to be false
+    end
+
+    context 'when it is an authenticated user' do
+      before { sign_in(super_admin, scope: :super_admin) }
+
+      it 'liga e desliga a cotação da renovação, sem mexer na leitura de PDF' do
+        post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'cotacao', enabled: true }
+        expect(flash[:notice]).to eq('Insurance renewal quote enabled')
+        expect([Carteira::Cotacao::Liberada.para?(account.reload), Carteira::Leitor::Liberado.para?(account)]).to eq([true, false])
+
+        post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'cotacao', enabled: false }
+        expect(flash[:notice]).to eq('Insurance renewal quote disabled')
+        expect(Carteira::Cotacao::Liberada.para?(account.reload)).to be false
+      end
+
+      it 'liga e desliga a leitura de PDF' do
+        post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'leitura', enabled: true }
+        expect(flash[:notice]).to eq('Insurance policy PDF reading enabled')
+        expect([Carteira::Leitor::Liberado.para?(account.reload), Carteira::Cotacao::Liberada.para?(account)]).to eq([true, false])
+
+        post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'leitura', enabled: false }
+        expect(Carteira::Leitor::Liberado.para?(account.reload)).to be false
+      end
+
+      it 'recusa chave desconhecida sem repetir o valor' do
+        post "/super_admin/accounts/#{account.id}/toggle_carteira", params: { chave: 'outra<b>', enabled: true }
+
+        expect(flash[:alert]).to eq('Unknown insurance key')
+        expect(account.reload.internal_attributes.to_h.keys).not_to include('outra<b>')
+      end
+
+      it 'mostra os dois botões na página da conta' do
+        get "/super_admin/accounts/#{account.id}"
+
+        expect(response.body).to include('Enable Insurance policy PDF reading', 'Enable Insurance renewal quote')
       end
     end
   end

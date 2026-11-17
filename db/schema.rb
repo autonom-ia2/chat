@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_17_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2018,7 +2018,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "busca_diaria", default: false, null: false
+    t.string "quem_cota", default: "ninguem", null: false
+    t.string "quem_envia", default: "pessoa", null: false
+    t.string "quem_responde", default: "equipe", null: false
+    t.bigint "inbox_id"
     t.index ["account_id"], name: "index_carteira_renovacao_configs_on_account_id", unique: true
+    t.index ["inbox_id"], name: "index_carteira_renovacao_configs_on_inbox_id"
     t.index ["pipeline_id"], name: "index_carteira_renovacao_configs_on_pipeline_id"
     t.index ["stage_id"], name: "index_carteira_renovacao_configs_on_stage_id"
     t.index ["user_id"], name: "index_carteira_renovacao_configs_on_user_id"
@@ -5201,6 +5206,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_13_190000) do
   add_foreign_key "carteira_renovacao_configs", "accounts"
   add_foreign_key "carteira_renovacao_configs", "crm_pipeline_stages", column: "stage_id", on_delete: :nullify
   add_foreign_key "carteira_renovacao_configs", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "carteira_renovacao_configs", "inboxes", on_delete: :nullify
   add_foreign_key "carteira_renovacao_configs", "users", on_delete: :nullify
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "conversa_canal_email_lido_caixas", "accounts", on_delete: :cascade

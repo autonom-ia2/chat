@@ -16,10 +16,16 @@
 //   semPermissao: quem olha não pode mudar os ajustes.
 // A fonte soma `funilParou` ('' | ARQUIVADO | APAGADO): o funil escolhido
 // deixou de servir. Quem lê o sinal do servidor é carteira/funilDasRenovacoes.js.
-// O que mais vier na resposta (o que é da cotação, de outra entrega) passa
-// direto e a tela não lê.
+// O que mais vier na resposta passa direto.
+// #2901 (E8) — com a cotação da renovação ligada na conta, o servidor manda
+// também `cotacaoLiberada`, `cotaSozinha` (a conta tem o Agente de Cotação),
+// `agente` (o nome dele), `caixas` ([{ id, nome, liaLigada }]) e, em `ajustes`,
+// as escolhas da cotação (`quemCota`, `quemEnvia`, `quemResponde`, `caixaId`).
+// Elas entram no "mudou" e voltam no salvar; sem a chave, nada disso vem nem
+// vai. `cotacoes()` é o consumo de cotações do mês (só contagens).
 import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import { temMensagens } from '../carteira/ajustesDaRenovacao';
+import { escolhasDaCotacao } from '../carteira/cotacaoDaRenovacao';
 import { funilParou } from '../carteira/funilDasRenovacoes';
 import { noServidor } from './carteiraFonteReal';
 
@@ -32,10 +38,19 @@ const ondeEQuando = ({ funilId = null, etapaId = null, dias }) => ({
   etapaId,
   dias,
 });
-const ajustesDaTela = ajustes =>
-  temMensagens(ajustes)
-    ? { ...ondeEQuando(ajustes), mensagens: ajustes.mensagens }
-    : ondeEQuando(ajustes);
+const ajustesDaTela = ajustes => ({
+  ...ondeEQuando(ajustes),
+  ...(temMensagens(ajustes) ? { mensagens: ajustes.mensagens } : {}),
+  ...escolhasDaCotacao(ajustes),
+});
+
+// Do que ficou guardado, só as escolhas que foram mandadas.
+const soAsMandadas = (mandados, guardados) =>
+  Object.fromEntries(
+    Object.entries(ajustesDaTela(guardados)).filter(
+      ([chave]) => chave in mandados
+    )
+  );
 
 export const renovacoesFonteReal = () => ({
   usaDemo: false,
@@ -48,15 +63,15 @@ export const renovacoesFonteReal = () => ({
     };
   },
   // O que volta é o que ficou guardado, com as mesmas escolhas que foram
-  // mandadas: quem não tinha o cartão de mensagens continua sem ele.
+  // mandadas: quem não tinha o cartão de mensagens (ou o da cotação) continua
+  // sem ele.
   async salvar(ajustes) {
     const mandados = ajustesDaTela(ajustes);
     const guardados = await noServidor(() =>
       SegurosAPI.salvarRenovacoes(mandados)
     );
-    return temMensagens(mandados)
-      ? ajustesDaTela(guardados)
-      : ondeEQuando(guardados);
+    return soAsMandadas(mandados, guardados);
   },
   resultados: () => noServidor(() => SegurosAPI.resultados()),
+  cotacoes: () => noServidor(() => SegurosAPI.cotacoes()),
 });

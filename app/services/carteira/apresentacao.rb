@@ -17,6 +17,10 @@
 # sabe) e quando a pessoa quis o lembrete da renovação (`lembreteAceitoEm`, em segundos; nulo sem lembrete). O seguro em
 # palavras simples (E6.6) não vem aqui: a gaveta o pede à parte (GET seguros/:id/palavras), e a lista não carrega texto.
 #
+# A cotação da renovação (E8, #2901): com a chave da cotação na conta (Carteira::Cotacao::Liberada), cada seguro ganha
+# `cotacao` (Carteira::Cotacao::Situacao: a etapa, o que faltou, a proposta, a variação contra o ano passado e se dá para
+# enviar). Sem a chave, a chave nem vem: o formato é o da E5.
+#
 # O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
 # endosso) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por dado ausente.
 class Carteira::Apresentacao
@@ -40,8 +44,10 @@ class Carteira::Apresentacao
   # donos deles que ainda são da conta, em outra.
   def de_cada(apolices)
     visiveis = cards_visiveis(apolices)
+    cotacoes = Carteira::Cotacao::Liberada.para?(@account) ? Carteira::Cotacao::Situacao.new(apolices).call : nil
     apolices.map do |apolice|
-      do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), de_fora(apolice), DAS_PROXIMAS_ENTREGAS)
+      linha = do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), de_fora(apolice), DAS_PROXIMAS_ENTREGAS)
+      cotacoes ? linha.merge(cotacao: cotacoes[apolice.id]) : linha
     end
   end
 

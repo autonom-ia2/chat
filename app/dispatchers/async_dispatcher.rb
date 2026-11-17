@@ -29,6 +29,8 @@ class AsyncDispatcher < BaseDispatcher
       Crm::BookingNoticeToldListener.instance,
       # #1524: o toque em "Parar avisos" no modelo do aviso para os avisos do contato.
       Crm::BookingNoticeStopReplyListener.instance,
+      # #2901: a resposta do segurado ao "Algo mudou?" da renovação; atrás da chave da cotação da conta.
+      Carteira::CotacaoRespostaListener.instance,
       # #1601: a memória das IAs (autoria das mensagens); só enfileira, atrás da flag `memoria_ia`.
       Crm::MemoriaListener.instance,
       # #1813: o e-mail recebido completa o contato; só enfileira, atrás da flag `contato_pelo_email`.
