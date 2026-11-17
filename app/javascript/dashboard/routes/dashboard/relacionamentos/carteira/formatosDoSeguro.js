@@ -20,6 +20,15 @@ export const formatarValor = (valor, idioma) =>
     currency: 'BRL',
   }).format(valor ?? 0);
 
+// #2901 (E8) — "12%" ou "12,5%": a variação da proposta contra o ano passado,
+// com uma casa no máximo. `percentual` vem em pontos (12.5 = 12,5%).
+const PONTOS_POR_INTEIRO = 100;
+export const formatarPercentual = (percentual, idioma) =>
+  comFormatador(Intl.NumberFormat, idioma, {
+    style: 'percent',
+    maximumFractionDigits: 1,
+  }).format((percentual ?? 0) / PONTOS_POR_INTEIRO);
+
 // "29/11/2026".
 export const formatarDataInteira = (segundos, idioma) =>
   comFormatador(Intl.DateTimeFormat, idioma, {

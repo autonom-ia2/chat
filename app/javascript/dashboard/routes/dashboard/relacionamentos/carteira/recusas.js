@@ -8,6 +8,21 @@ export const RECUSADO = 'RECUSADO';
 // enviar e o servidor responde o mesmo código.
 export const ARQUIVO_GRANDE = 'arquivo_grande';
 
+// #2901 (E8) — o que impediu a proposta de sair no "Enviar proposta": a
+// proposta já saiu ou não está pronta, ou o envio não saiu (o cliente recusou
+// mensagens, falta o WhatsApp, a mensagem não está aprovada, falta telefone ou
+// nome, o card sumiu). Em todos, a cotação do seguro mudou: a gaveta relê.
+const ENVIO_DA_PROPOSTA = [
+  'proposta_ja_enviada',
+  'sem_proposta',
+  'contato_recusou',
+  'sem_caixa',
+  'sem_modelo',
+  'sem_telefone',
+  'campo_vazio',
+  'sem_card',
+];
+
 export const CODIGOS_DE_RECUSA = [
   'falta_numero',
   'falta_seguradora',
@@ -65,6 +80,12 @@ export const CODIGOS_DE_RECUSA = [
   'fora_da_janela',
   // #2900 (E7) — trazer do Agger.
   'agger_desligado',
+  // #2901 (E8) — a cotação da renovação: os ajustes dela e "Enviar proposta".
+  'cotacao_desligada',
+  'escolha_invalida',
+  'sem_agente_de_cotacao',
+  'caixa_invalida',
+  ...ENVIO_DA_PROPOSTA,
 ];
 
 // O seguro mudou por outro caminho (outra pessoa, outra aba): o que a tela
@@ -80,6 +101,10 @@ const SEGURO_JA_MUDOU = [
   'sem_desfecho',
   'ja_tem_apolice_nova',
   'anterior_cancelada',
+  // #2901 (E8) — a cotação foi desligada, ou a proposta saiu, sumiu ou não
+  // saiu por outro caminho.
+  'cotacao_desligada',
+  ...ENVIO_DA_PROPOSTA,
 ];
 
 export const codigoDaRecusa = falha =>

@@ -28,6 +28,7 @@ import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CampoDeDias from '../components/carteira/renovacao/CampoDeDias.vue';
 import CartaoDeAjuste from '../components/carteira/renovacao/CartaoDeAjuste.vue';
+import CotacaoDaRenovacao from '../components/carteira/renovacao/CotacaoDaRenovacao.vue';
 import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsRenovacoes.vue';
 
 // #2898 — "Ajustar renovações": em que funil a renovação de cada seguro
@@ -45,6 +46,9 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // O funil escolhido que foi arquivado ou apagado (carteira/funilDasRenovacoes.js)
 // para as renovações: o aviso no topo do cartão do funil diz isso e pede outro
 // funil; o Salvar pede o funil enquanto a pessoa não escolhe.
+// #2901 (E8) — com a cotação da renovação ligada na conta (`cotacaoLiberada`),
+// soma-se o cartão "Cotação da renovação" (CotacaoDaRenovacao.vue), que entra
+// no mesmo Salvar. Sem a chave, a tela é a da E5.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
@@ -61,6 +65,7 @@ const { conta, rascunho } = tela;
 
 const raiz = useTemplateRef('raiz');
 const onde = useTemplateRef('onde');
+const cotacao = useTemplateRef('cotacao');
 // O que o Salvar tem a dizer: { tipo: 'alerta' | 'feito', texto }.
 const recado = ref({ tipo: '', texto: '' });
 const falta = ref('');
@@ -77,6 +82,8 @@ const temFunilQueServe = computed(
 );
 // O cartão das mensagens só é montado quando o servidor manda a escolha.
 const comMensagens = computed(() => temMensagens(rascunho.value));
+// O da cotação, quando a chave dela está ligada na conta.
+const comCotacao = computed(() => Boolean(conta.value?.cotacaoLiberada));
 
 const opcoesDeMensagens = computed(() => [
   { id: MENSAGENS.MANDAR, rotulo: ta('MENSAGENS.MANDAR') },
@@ -123,12 +130,23 @@ const focarOQueFalta = async () => {
     document.getElementById(`${id}-dias`)?.focus();
     return;
   }
+  if (falta.value === FALTAS.CAIXA) {
+    cotacao.value?.focar();
+    return;
+  }
   onde.value?.focar(falta.value);
 };
 
-// O funil ou a etapa que o servidor recusou já não existe: a tela relê os
-// funis da conta, e o aviso continua dizendo o que fazer.
-const FUNIS_MUDARAM = ['funil_desconhecido', 'etapa_de_outro_funil'];
+// O funil ou a etapa que o servidor recusou já não existe (ou o WhatsApp, ou o
+// Agente de Cotação, ou a própria cotação, que foi desligada): a tela relê o
+// que a conta tem, e o aviso continua dizendo o que fazer.
+const CONTA_MUDOU = [
+  'funil_desconhecido',
+  'etapa_de_outro_funil',
+  'caixa_invalida',
+  'sem_agente_de_cotacao',
+  'cotacao_desligada',
+];
 
 // Um pedido por vez: o segundo clique, com o primeiro ainda a caminho, não
 // manda outro pedido nem troca o "Ajustes salvos." por um alerta.
@@ -152,7 +170,7 @@ const salvar = async () => {
   alertar(
     t(chaveDaRecusa(codigo, 'RELACIONAMENTOS_CARTEIRA.AJUSTES.ERRO_SALVAR'))
   );
-  if (FUNIS_MUDARAM.includes(codigo)) tela.carregar();
+  if (CONTA_MUDOU.includes(codigo)) tela.carregar();
 };
 
 const voltar = () =>
@@ -295,6 +313,22 @@ onMounted(async () => {
               <p class="m-0 text-sm text-n-slate-11">
                 {{ ta('MENSAGENS.APOIO') }}
               </p>
+            </CartaoDeAjuste>
+
+            <CartaoDeAjuste
+              v-if="comCotacao"
+              marca="ajuste-cotacao"
+              :titulo="ta('COTACAO.TITULO')"
+            >
+              <CotacaoDaRenovacao
+                ref="cotacao"
+                :model-value="rascunho"
+                :conta="conta"
+                :consumo="tela.consumo.value"
+                :falta="falta"
+                :id-do-aviso="`${id}-recado`"
+                @update:model-value="mudar"
+              />
             </CartaoDeAjuste>
           </template>
         </template>

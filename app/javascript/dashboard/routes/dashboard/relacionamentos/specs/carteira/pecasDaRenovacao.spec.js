@@ -855,7 +855,7 @@ describe('o histórico com a renovação e o "Exportar"', () => {
     expect(cancelado).toContain('Seguro marcado como cancelado.');
   });
 
-  it.each(['proposta_enviada', 'passo_de_amanha'])(
+  it.each(['endosso_guardado', 'passo_de_amanha'])(
     'o passo %s, que a tela ainda não conhece, vira uma frase neutra: nunca a chave crua',
     async tipo => {
       const w = abrir({

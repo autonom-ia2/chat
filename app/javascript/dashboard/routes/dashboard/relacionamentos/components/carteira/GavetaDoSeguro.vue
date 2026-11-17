@@ -15,6 +15,7 @@ import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../ficha/GavetaLateral.vue';
 import MenuMaisAcoes from '../lista/MenuMaisAcoes.vue';
+import { podeEnviarProposta } from '../../carteira/cotacaoDaRenovacao';
 import { leituraDePdf } from '../../carteira/leituraDePdf';
 import { chaveDaRecusa, seguroJaMudou } from '../../carteira/recusas';
 import {
@@ -29,6 +30,7 @@ import { useVerPdf } from '../../carteira/useVerPdf';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../ficha/useEstadoDaFicha';
 import AvisoComDesfazer from './AvisoComDesfazer.vue';
 import CorrigirSeguro from './CorrigirSeguro.vue';
+import CotacaoDoSeguro from './CotacaoDoSeguro.vue';
 import DadosDoSeguro from './DadosDoSeguro.vue';
 import DialogoAnexarPdf from './DialogoAnexarPdf.vue';
 import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
@@ -60,6 +62,11 @@ import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 // palavras simples" (E6.6) no seguro da carteira que não está cancelado. O
 // seguro de outra corretora (E6.5) tem "Apagar este seguro" no "⋯", com a
 // pergunta antes; apagado, a gaveta fecha.
+// #2901 (E8) — na conta com a cotação da renovação, o seguro que tem cotação
+// mostra em que pé ela está, abaixo da renovação, com "Enviar proposta" quando
+// ela está pronta (CotacaoDoSeguro.vue). Enviar não pede confirmação: o clique
+// é a conferência. O aviso diz que saiu; a recusa diz o que fazer, e a gaveta
+// relê o seguro, que já mostra a cotação de agora.
 const props = defineProps({
   apoliceId: { type: Number, default: null },
   fonte: { type: Object, required: true },
@@ -74,6 +81,9 @@ const NAO_DEU = 'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_DEU';
 const NAO_PODE_FECHAR =
   'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_PODE_FECHAR_A_RENOVACAO';
 const NAO_SALVOU = 'RELACIONAMENTOS_CARTEIRA.CORRIGIR.ERRO_AO_SALVAR';
+// Enviar a proposta pede poder alterar a pessoa e enxergar o card no quadro.
+const NAO_PODE_ENVIAR =
+  'RELACIONAMENTOS_CARTEIRA.GAVETA.AVISOS.NAO_PODE_ENVIAR_A_PROPOSTA';
 
 const { t } = useI18n();
 const tCarteira = (chave, valores) =>
@@ -247,6 +257,16 @@ const guardarMotivo = escolha =>
         tg('AVISOS.NAO_RENOVOU'),
         desfazerNoAviso
       );
+const comEnviar = computed(() =>
+  podeEnviarProposta(seguro.value, props.podeEditar)
+);
+const enviarProposta = () =>
+  agir(
+    aberto.enviarProposta,
+    tg('AVISOS.PROPOSTA_ENVIADA'),
+    null,
+    NAO_PODE_ENVIAR
+  );
 const perguntarMotivo = () => {
   if (emAndamento()) return;
   dialogoDoMotivo.value?.abrir();
@@ -546,6 +566,13 @@ onMounted(() => {
           :pode-editar="podeEditar"
           @abrir-card="emit('abrirCard', $event)"
           @dizer-motivo="perguntarMotivo"
+        />
+        <CotacaoDoSeguro
+          v-if="seguro.cotacao"
+          :seguro="seguro"
+          :pode-enviar="comEnviar"
+          :enviando="aberto.ocupado.value === 'enviarProposta'"
+          @enviar="enviarProposta"
         />
         <DadosDoSeguro :seguro="seguro" :agora="agora" />
         <PalavrasSimples

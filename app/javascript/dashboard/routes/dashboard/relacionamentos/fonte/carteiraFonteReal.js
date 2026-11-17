@@ -248,6 +248,9 @@ export const carteiraFonteReal = () => ({
   renovou: id => umSeguro(() => SegurosAPI.renovou(id)),
   naoRenovou: (id, dados) => umSeguro(() => SegurosAPI.naoRenovou(id, dados)),
   desfazerDesfecho: id => umSeguro(() => SegurosAPI.desfazerDesfecho(id)),
+  // #2901 (E8) — "Enviar proposta" da cotação da renovação: devolve o seguro
+  // como ficou (com a cotação de agora).
+  enviarProposta: id => umSeguro(() => SegurosAPI.enviarProposta(id)),
   // A apólice nova do seguro `id`, escrita à mão: devolve o seguro NOVO.
   apoliceNova: (id, dados) =>
     umSeguro(() =>

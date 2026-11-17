@@ -6,10 +6,38 @@
 // `funilParou` ('' | ARQUIVADO | APAGADO, carteira/funilDasRenovacoes.js): o
 // funil guardado deixou de servir. O rascunho começa sem funil, e guardar outro
 // tira o aviso.
+// #2901 (E8) — com a cotação da renovação ligada (`cotacaoLiberada`), a tela
+// lê também o consumo de cotações do mês (`consumo`, ou null enquanto não
+// chegou ou se não deu para ler: é só leitura, e o resto da tela não depende
+// dele). Se o robô cotava e a conta perdeu o Agente de Cotação ou o WhatsApp
+// oficial, o rascunho começa em "Ninguém", que é o que a tela consegue mostrar.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
 import { ajustesMudaram, semOFunil } from './ajustesDaRenovacao';
+import {
+  QUEM_COTA,
+  caixaEscolhida,
+  roboCota,
+  roboPodeCotar,
+  temEscolhasDaCotacao,
+} from './cotacaoDaRenovacao';
 import { codigoDaRecusa } from './recusas';
+
+// O WhatsApp guardado que saiu da conta (ou deixou de ser oficial) também sai
+// do rascunho: a pessoa escolhe outro.
+const cotacaoDoRascunho = (ajustes, conta) => {
+  if (!temEscolhasDaCotacao(ajustes)) return { ...ajustes };
+  const caixaId = caixaEscolhida(conta.caixas, ajustes.caixaId)
+    ? ajustes.caixaId
+    : null;
+  const quemCota =
+    roboCota(ajustes) && !roboPodeCotar(conta)
+      ? QUEM_COTA.NINGUEM
+      : ajustes.quemCota;
+  return { ...ajustes, quemCota, caixaId };
+};
+const rascunhoDe = (ajustes, conta) =>
+  cotacaoDoRascunho(conta.funilParou ? semOFunil(ajustes) : ajustes, conta);
 
 export const useAjustesDaRenovacao = fonte => {
   const { estado, carregar } = useEstadoDaFicha();
@@ -19,13 +47,23 @@ export const useAjustesDaRenovacao = fonte => {
   const rascunho = ref(null);
   const salvando = ref(false);
   const recusa = ref('');
+  const consumo = ref(null);
+
+  const lerConsumo = async () => {
+    try {
+      consumo.value = await fonte.cotacoes();
+    } catch {
+      consumo.value = null;
+    }
+  };
 
   const buscar = async aindaVale => {
     const { ajustes, ...resto } = await fonte.ajustes();
     if (!aindaVale()) return false;
     conta.value = resto;
     salvos.value = ajustes;
-    rascunho.value = resto.funilParou ? semOFunil(ajustes) : { ...ajustes };
+    rascunho.value = rascunhoDe(ajustes, resto);
+    if (resto.cotacaoLiberada && fonte.cotacoes) lerConsumo();
     return true;
   };
 
@@ -52,6 +90,7 @@ export const useAjustesDaRenovacao = fonte => {
     rascunho,
     salvando,
     recusa,
+    consumo,
     // A conta já tinha escolhido onde ficam as renovações antes de abrir a tela.
     jaEscolheu: computed(() => Boolean(salvos.value?.funilId)),
     funilParou: computed(() => conta.value?.funilParou || ''),

@@ -3,6 +3,11 @@
 // que funil e etapa a renovação aparece, quantos dias antes do fim e se as
 // mensagens antes de vencer saem. Dias e mensagens já nascem respondidos; o
 // funil é a única escolha que a corretora precisa fazer para a renovação andar.
+// #2901 (E8) — com a cotação da renovação ligada na conta, somam-se as escolhas
+// dela (carteira/cotacaoDaRenovacao.js): quem cota, como a proposta sai, quem
+// responde o cliente e por qual WhatsApp.
+import { ESCOLHAS_DA_COTACAO, faltaCaixa } from './cotacaoDaRenovacao';
+
 export const MENSAGENS = { MANDAR: 'mandar', NAO_MANDAR: 'nao_mandar' };
 
 // A escolha das mensagens só existe quando o servidor a manda (a conta que tem
@@ -63,22 +68,23 @@ export const funilSemEtapa = (funis = [], funilId = null) =>
 
 // O que falta para guardar os ajustes: '' = nada. A ordem é a da tela. No
 // funil sem etapa não adianta pedir a etapa: o que falta é outro funil (ou
-// criar a etapa no CRM).
+// criar a etapa no CRM). Com o robô cotando, falta também o WhatsApp por onde
+// as mensagens dele saem.
 export const FALTAS = {
   FUNIL: 'FUNIL',
   ETAPA: 'ETAPA',
   SEM_ETAPA: 'SEM_ETAPA',
   DIAS: 'DIAS',
+  CAIXA: 'CAIXA',
 };
-export const faltaNosAjustes = (
-  { funilId, etapaId, dias } = {},
-  funis = []
-) => {
+export const faltaNosAjustes = (ajustes = {}, funis = []) => {
+  const { funilId, etapaId, dias } = ajustes;
   if (!funilId) return FALTAS.FUNIL;
   if (!etapaId) {
     return funilSemEtapa(funis, funilId) ? FALTAS.SEM_ETAPA : FALTAS.ETAPA;
   }
-  return dias ? '' : FALTAS.DIAS;
+  if (!dias) return FALTAS.DIAS;
+  return faltaCaixa(ajustes) ? FALTAS.CAIXA : '';
 };
 
 // O funil que parou de servir (arquivado ou apagado) deixa de ser a escolha: a
@@ -96,5 +102,9 @@ export const comOFunil = (ajustes, funis, funilId) => ({
   etapaId: etapasDoFunil(funis, funilId)[0]?.id ?? null,
 });
 
+const CHAVES_DOS_AJUSTES = [
+  ...Object.keys(AJUSTES_PADRAO),
+  ...ESCOLHAS_DA_COTACAO,
+];
 export const ajustesMudaram = (antes = {}, agora = {}) =>
-  Object.keys(AJUSTES_PADRAO).some(chave => antes[chave] !== agora[chave]);
+  CHAVES_DOS_AJUSTES.some(chave => antes[chave] !== agora[chave]);
