@@ -63,8 +63,11 @@ module Carteira::Cotacao
     passo(apolice, 'respondeu_algo_mudou')&.valores.to_h['resposta'] == MUDOU
   end
 
-  def registrar(apolice, tipo, valores = {}, user: nil)
-    apolice.eventos.create!(tipo: tipo, quando: Time.current, user: user, valores: { vigencia: apolice.fim_vigencia.iso8601 }.merge(valores))
+  # Um passo da história nesta vigência. Os valores vêm num hash (`registrar(a, tipo, { motivo: x })`) ou soltos
+  # (`registrar(a, tipo, motivo: x)`): no Ruby 3 as chaves soltas chegam como keywords, e as duas formas se juntam aqui.
+  def registrar(apolice, tipo, valores = {}, user: nil, **mais)
+    dados = { vigencia: apolice.fim_vigencia.iso8601 }.merge(valores.to_h.symbolize_keys, mais)
+    apolice.eventos.create!(tipo: tipo, quando: Time.current, user: user, valores: dados)
   end
 
   # A marca de uma mensagem: { 'apolice_id' =>, 'etapa' => } ou {}.
