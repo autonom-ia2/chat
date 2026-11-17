@@ -153,6 +153,7 @@ export const SITUACOES_DA_COTACAO = {
   ENVIADA: 'ENVIADA',
   ENVIADA_SOZINHA: 'ENVIADA_SOZINHA',
   ANDANDO: 'ANDANDO',
+  INCERTA: 'INCERTA',
 };
 const S = SITUACOES_DA_COTACAO;
 
@@ -197,9 +198,11 @@ const PELA_ETAPA = {
 
 // A frase principal da cotação de um seguro: `{ id, ...o que ela precisa }`,
 // ou null quando o seguro não tem cotação. A etapa que a tela ainda não
-// conhece diz só que a cotação está andando.
+// conhece diz só que a cotação está andando. A proposta que não se sabe se
+// chegou (`incerta`) pede para conferir na conversa, qualquer que seja a etapa.
 export const situacaoDaCotacao = cotacao => {
   if (!cotacao?.etapa) return null;
+  if (cotacao.incerta) return { id: S.INCERTA };
   const daEtapa = PELA_ETAPA[cotacao.etapa];
   return daEtapa ? daEtapa(cotacao) : { id: S.ANDANDO };
 };
@@ -234,6 +237,9 @@ const PEDEM_ALGUEM = [
 export const equipeFoiAvisada = situacao =>
   PEDEM_ALGUEM.includes(situacao?.id) ||
   (situacao?.id === S.NAO_SAIU && situacao.motivo !== 'conferencia_caiu');
+
+// A proposta que não se sabe se chegou: o botão diz "Enviar de novo".
+export const enviaDeNovo = cotacao => Boolean(cotacao?.incerta);
 
 // O botão "Enviar proposta": só com a proposta pronta e ainda não enviada, para
 // quem pode alterar a pessoa e enxerga o card da renovação no funil (o

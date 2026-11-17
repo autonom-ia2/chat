@@ -400,7 +400,8 @@
         "PRONTA_SEM_SEGURADORA": "Proposal ready: {valor}.",
         "ENVIADA": "The proposal was sent to the client on {data}.",
         "ENVIADA_SOZINHA": "The proposal went out on its own on {data}.",
-        "ANDANDO": "The renewal quote is in progress."
+        "ANDANDO": "The renewal quote is in progress.",
+        "INCERTA": "We don't know if the proposal reached the client. Check the conversation; if it didn't arrive, send it again."
       },
       "MOTIVO": {
         "CONFERENCIA_CAIU": "The quote check did not answer. We try again on our own and, if it still fails, the team is told on the card.",
@@ -448,6 +449,7 @@
         "SEGURADO_NOME": "insured's name"
       },
       "ENVIAR": "Send proposal",
+      "ENVIAR_DE_NOVO": "Send again",
       "ENVIAR_APOIO": "The proposal only goes to the client when you click."
     },
     "AJUSTES": {
@@ -671,6 +673,7 @@
       "SEM_AGENTE_DE_COTACAO": "The account no longer has the Quote Agent. I refreshed the screen: choose again and save.",
       "CAIXA_INVALIDA": "That WhatsApp can no longer be used for the quote. I refreshed the screen: choose another WhatsApp and save.",
       "PROPOSTA_JA_ENVIADA": "This proposal was already sent to the client. I refreshed the screen.",
+      "PROPOSTA_INCERTA": "We don't know if the proposal reached the client. I refreshed the screen: check the conversation.",
       "SEM_PROPOSTA": "There is no proposal ready to send yet. I refreshed the screen.",
       "CONTATO_RECUSOU": "The proposal did not go out: the client refused messages or is blocked.",
       "SEM_CAIXA": "The proposal did not go out: choose which WhatsApp it goes through in Adjust renewals and send again.",

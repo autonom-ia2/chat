@@ -400,7 +400,8 @@
         "PRONTA_SEM_SEGURADORA": "Proposta pronta: {valor}.",
         "ENVIADA": "A proposta foi enviada ao cliente em {data}.",
         "ENVIADA_SOZINHA": "A proposta saiu sozinha em {data}.",
-        "ANDANDO": "A cotação da renovação está em andamento."
+        "ANDANDO": "A cotação da renovação está em andamento.",
+        "INCERTA": "Não sabemos se a proposta chegou. Confira na conversa; se não chegou, envie de novo."
       },
       "MOTIVO": {
         "CONFERENCIA_CAIU": "A conferência da cotação não respondeu. Tentamos de novo sozinhos e, se não der, a equipe é avisada no card.",
@@ -448,6 +449,7 @@
         "SEGURADO_NOME": "nome do segurado"
       },
       "ENVIAR": "Enviar proposta",
+      "ENVIAR_DE_NOVO": "Enviar de novo",
       "ENVIAR_APOIO": "A proposta só vai ao cliente quando você clicar."
     },
     "AJUSTES": {
@@ -671,6 +673,7 @@
       "SEM_AGENTE_DE_COTACAO": "A conta não tem mais o Agente de Cotação. Atualizei a tela: escolha de novo e salve.",
       "CAIXA_INVALIDA": "Esse WhatsApp não serve mais para a cotação. Atualizei a tela: escolha outro WhatsApp e salve.",
       "PROPOSTA_JA_ENVIADA": "Essa proposta já foi enviada ao cliente. Atualizei a tela.",
+      "PROPOSTA_INCERTA": "Não sabemos se a proposta chegou. Atualizei a tela: confira na conversa.",
       "SEM_PROPOSTA": "Ainda não há proposta pronta para enviar. Atualizei a tela.",
       "CONTATO_RECUSOU": "A proposta não saiu: o cliente recusou mensagens ou está bloqueado.",
       "SEM_CAIXA": "A proposta não saiu: escolha por qual WhatsApp ela sai em Ajustar renovações e envie de novo.",

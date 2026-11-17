@@ -20,6 +20,7 @@ pt_BR:
         conferencia_caiu: 'A renovação de %{nome} não foi cotada: a conferência da cotação não respondeu em 3 tentativas.'
         proposta_nao_saiu: 'A proposta de renovação de %{nome} não saiu.'
         sem_preco: 'A cotação da renovação de %{nome} voltou sem preço.'
+        proposta_incerta: 'Não sabemos se a proposta de renovação de %{nome} chegou. Confira na conversa.'
         conversa_com_pessoa: 'A conversa da renovação de %{nome} ficou com %{pessoa}, então %{agente} não vai responder.'
         faltam: 'Falta: %{campos}.'
         motivos:

@@ -7,6 +7,7 @@ import {
   SITUACOES_DA_COTACAO as S,
   VARIACOES as V,
   emReais,
+  enviaDeNovo,
   equipeFoiAvisada,
   mostraAProposta,
   situacaoDaCotacao,
@@ -109,6 +110,7 @@ const SITUACOES_SIMPLES = {
   NAO_SAIU_SEM_MOTIVO: () =>
     t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.NAO_SAIU_SEM_MOTIVO'),
   ANDANDO: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.ANDANDO'),
+  INCERTA: () => t('RELACIONAMENTOS_CARTEIRA.COTACAO.SITUACAO.INCERTA'),
 };
 const VARIACOES = {
   [V.SUBIU]: percentual =>
@@ -180,6 +182,11 @@ const variacao = computed(() => {
     : '';
 });
 const avisada = computed(() => equipeFoiAvisada(situacao.value));
+const rotuloDoEnvio = computed(() =>
+  enviaDeNovo(cotacao.value)
+    ? t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR_DE_NOVO')
+    : t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR')
+);
 </script>
 
 <template>
@@ -237,7 +244,7 @@ const avisada = computed(() => equipeFoiAvisada(situacao.value));
         class="w-full sm:w-auto"
         data-carteira="enviar-proposta"
         :is-loading="enviando"
-        :label="t('RELACIONAMENTOS_CARTEIRA.COTACAO.ENVIAR')"
+        :label="rotuloDoEnvio"
         @click="emit('enviar')"
       />
       <p class="m-0 text-sm text-n-slate-11">

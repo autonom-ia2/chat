@@ -9,7 +9,9 @@
 #   tela formata). Sem valor anterior ou sem proposta, nulo;
 # - `enviadaEm`: quando a proposta saiu (em segundos), sozinha ou pelo clique; `podeEnviar`: há proposta pronta e ela
 #   ainda não saiu (o botão "Enviar" do card). O envio que não saiu depois do passo do envio (`proposta_nao_saiu`) desfaz
-#   o envio: a proposta volta a poder ser enviada.
+#   o envio: a proposta volta a poder ser enviada;
+# - `incerta`: não se sabe se a proposta chegou (Carteira::Cotacao::Proposta.incerta?): a tela pede para conferir na
+#   conversa e oferece "Enviar de novo" (`podeEnviar`).
 # Os passos de uma página saem numa consulta só.
 class Carteira::Cotacao::Situacao
   TIPOS = %w[cotacao_pedida algo_mudou_nao_saiu respondeu_algo_mudou cliente_respondeu proposta_pedida proposta_nao_saiu
@@ -65,9 +67,11 @@ class Carteira::Cotacao::Situacao
     { motivo: valores['motivo'], faltam: Array(valores['faltam']) }
   end
 
-  def da_proposta(apolice, pronta, enviada)
+  def da_proposta(apolice, pronta, envio)
     premio = pronta['premio_centavos']
+    incerta = envio.present? && Carteira::Cotacao::Proposta.incerta?(envio)
+    enviada = envio unless incerta
     { premioCentavos: premio, seguradora: pronta['seguradora'], variacaoPercentual: self.class.variacao(premio, apolice.valor_centavos),
-      enviadaEm: enviada&.quando&.to_i, podeEnviar: pronta.present? && enviada.nil? }
+      enviadaEm: enviada&.quando&.to_i, podeEnviar: pronta.present? && enviada.nil?, incerta: incerta }
   end
 end

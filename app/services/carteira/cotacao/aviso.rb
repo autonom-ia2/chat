@@ -16,7 +16,7 @@ class Carteira::Cotacao::Aviso
   ATIVIDADE = 'carteira_cotacao_aviso'.freeze
   CONVERSA_COM_PESSOA = 'conversa_com_pessoa'.freeze
   MOTIVOS = (%w[algo_mudou_nao_saiu mudou cliente_respondeu faltou_dado conferencia_caiu proposta_nao_saiu sem_preco] +
-             [CONVERSA_COM_PESSOA]).freeze
+             [CONVERSA_COM_PESSOA, 'proposta_incerta']).freeze
 
   # detalhe: o motivo do envio que não saiu (Carteira::Cotacao::Envio::NaoSaiu); faltam: os nomes dos campos; textos: o que
   # mais a frase do motivo pede (`pessoa`, `agente`).

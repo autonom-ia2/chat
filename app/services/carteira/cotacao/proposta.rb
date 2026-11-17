@@ -4,19 +4,25 @@
 # (Carteira::Cotacao::Envio: recusa relida do banco, caixa, modelo aprovado).
 #
 # Duas portas: sozinho (`quem_envia = sozinho`, logo que a proposta fica pronta; passo `proposta_enviada_sozinha`) e o
-# clique em "Enviar" no card (`user`; passo `proposta_enviada` com quem clicou). Uma vez só por vigência, e nada sai em
-# dobro: sob a trava do seguro só se confere o passo e se grava o do envio, ANTES de qualquer coisa sair, e a transação
-# fecha ali; a mensagem à Meta sai depois, fora da trava. O segundo clique (ou a passada sozinha) encontra o passo e
-# para. No clique, o que impede vira recusa para a tela (CustomExceptions::CarteiraRecusa): `cotacao_desligada`,
-# `proposta_ja_enviada`, `sem_proposta` ou o motivo do envio que não saiu. Sozinho, nada é levantado.
-# O envio que não saiu (antes da trava, nas conferências, ou depois, na mensagem) fica na história (`proposta_nao_saiu`,
-# motivo `envio`) e avisa a equipe, nas duas portas. Esse passo vem depois do passo do envio, e por isso a proposta volta
-# a poder ser enviada (`enviada?` olha o último dos dois).
+# clique em "Enviar" no card (`user`; passo `proposta_enviada` com quem clicou). No máximo uma vez, com o estado honesto:
+# - sob a trava do seguro só se confere o passo e se grava o do envio, ANTES de qualquer coisa sair, e a transação fecha
+#   ali; a mensagem sai depois, fora da trava. O segundo clique (ou a passada sozinha) encontra o passo e para;
+# - saiu: o id da mensagem entra no passo (`mensagem_id`);
+# - falha clara, sem mensagem (Carteira::Cotacao::Envio::NaoSaiu, antes da trava ou depois): `proposta_nao_saiu` com o
+#   motivo e o aviso à equipe, e o Enviar volta (é o último passo do envio);
+# - qualquer outra falha depois da chamada: a mensagem pode ter saído. Nada de `proposta_nao_saiu`: o passo fica
+#   `incerta` e a equipe é avisada para conferir na conversa. Nada sai de novo sozinho;
+# - o passo sem `mensagem_id` há mais de MINUTOS_PARA_INCERTA (o processo caiu entre a reserva e o envio) também é
+#   incerto. Incerta, a tela oferece "Enviar de novo", que grava um passo novo e manda.
+# No clique, o que impede vira recusa para a tela (CustomExceptions::CarteiraRecusa): `cotacao_desligada`,
+# `proposta_ja_enviada`, `sem_proposta`, o motivo do envio que não saiu ou `proposta_incerta`. Sozinho, nada é levantado.
 class Carteira::Cotacao::Proposta
   FINALIDADE = 'renovacao_proposta'.freeze
   ENVIADA = 'proposta_enviada'.freeze
   SOZINHA = 'proposta_enviada_sozinha'.freeze
   NAO_SAIU = 'proposta_nao_saiu'.freeze
+  INCERTA = 'proposta_incerta'.freeze
+  MINUTOS_PARA_INCERTA = 10
   # O que impede o envio, antes de qualquer coisa sair.
   class Parou < StandardError; end
 
@@ -30,18 +36,26 @@ class Carteira::Cotacao::Proposta
   def enviar
     parar('cotacao_desligada') unless Carteira::Cotacao.aberta?(@apolice.account, @config)
     conferir!
-    mandar(reservar!)
+    mandar(*reservar!)
   rescue Parou => e
     raise CustomExceptions::CarteiraRecusa, e.message if @user
 
     nil
   end
 
-  # A proposta saiu nesta vigência, por uma das duas portas, e o que veio depois não foi um envio que não saiu.
+  # A proposta saiu nesta vigência, por uma das duas portas: o último passo do envio é um envio, e não é incerto.
   def self.enviada?(apolice)
     ultimo = apolice.eventos.where(tipo: [ENVIADA, SOZINHA, NAO_SAIU])
                     .where("valores->>'vigencia' = ?", apolice.fim_vigencia.iso8601).order(:quando, :id).last
-    [ENVIADA, SOZINHA].include?(ultimo&.tipo)
+    [ENVIADA, SOZINHA].include?(ultimo&.tipo) && !incerta?(ultimo)
+  end
+
+  # O passo do envio que não se sabe se saiu: a falha veio depois da chamada, ou o id da mensagem não entrou a tempo.
+  def self.incerta?(passo)
+    valores = passo.valores.to_h
+    return true if valores['incerta']
+
+    valores['mensagem_id'].blank? && passo.quando < MINUTOS_PARA_INCERTA.minutes.ago
   end
 
   private
@@ -57,26 +71,37 @@ class Carteira::Cotacao::Proposta
     nao_saiu(e.message)
   end
 
-  # Sob a trava, só o passo: relido, e o do envio gravado com quem clicou antes de qualquer coisa sair. -> o PDF.
+  # Sob a trava, só o passo: relido, e o do envio gravado com quem clicou antes de qualquer coisa sair. -> [passo, PDF].
   def reservar!
     @apolice.with_lock(requires_new: true) do
       parar('proposta_ja_enviada') if self.class.enviada?(@apolice)
       blob = arquivo || parar('sem_proposta')
-      Carteira::Cotacao.registrar(@apolice, @user ? ENVIADA : SOZINHA, user: @user)
-      blob
+      [Carteira::Cotacao.registrar(@apolice, @user ? ENVIADA : SOZINHA, user: @user), blob]
     end
   end
 
-  # Fora da trava: a mensagem com o PDF no topo. Falhou, o passo `proposta_nao_saiu` vem depois do envio e deixa tentar
-  # de novo.
-  def mandar(blob)
+  # Fora da trava: a mensagem com o PDF no topo, e o id dela no passo.
+  def mandar(passo, blob)
     topo = ->(caixa) { Whatsapp::Templates::HeaderMedia.dispatch_file(blob, caixa).merge('media_type' => 'document') }
-    envio.modelo(FINALIDADE, Carteira::Cotacao::ETAPA_PROPOSTA, topo: topo)
+    mensagem = envio.modelo(FINALIDADE, Carteira::Cotacao::ETAPA_PROPOSTA, topo: topo)
+    marcar(passo, 'mensagem_id' => mensagem.id)
+    mensagem
   rescue Carteira::Cotacao::Envio::NaoSaiu => e
     nao_saiu(e.message)
   rescue StandardError => e
-    Rails.logger.warn("[carteira][cotacao] proposta nao saiu apolice=#{@apolice.id} #{e.class}")
-    nao_saiu('erro')
+    incerta(passo, e)
+  end
+
+  # Pode ter saído: sem `proposta_nao_saiu`, que deixaria mandar em dobro. A equipe confere na conversa.
+  def incerta(passo, erro)
+    Rails.logger.warn("[carteira][cotacao] proposta incerta apolice=#{@apolice.id} #{erro.class}")
+    marcar(passo, 'incerta' => true)
+    Carteira::Cotacao::Aviso.new(@apolice, INCERTA).call
+    parar(INCERTA)
+  end
+
+  def marcar(passo, valores)
+    passo.update!(valores: passo.valores.to_h.merge(valores))
   end
 
   # O PDF da proposta pronta desta vigência: o anexo da nota privada que a guardou.

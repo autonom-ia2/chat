@@ -11,9 +11,11 @@ export const ARQUIVO_GRANDE = 'arquivo_grande';
 // #2901 (E8) — o que impediu a proposta de sair no "Enviar proposta": a
 // proposta já saiu ou não está pronta, ou o envio não saiu (o cliente recusou
 // mensagens, falta o WhatsApp, a mensagem não está aprovada, falta telefone ou
-// nome, o card sumiu). Em todos, a cotação do seguro mudou: a gaveta relê.
+// nome, o card sumiu), ou não se sabe se ela chegou. Em todos, a cotação do
+// seguro mudou: a gaveta relê.
 const ENVIO_DA_PROPOSTA = [
   'proposta_ja_enviada',
+  'proposta_incerta',
   'sem_proposta',
   'contato_recusou',
   'sem_caixa',

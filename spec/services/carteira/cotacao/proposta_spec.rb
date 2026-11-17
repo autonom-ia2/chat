@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# E8 (#2901): o envio da proposta de renovação. O passo do envio entra sob a trava ANTES de a mensagem sair, e a
-# mensagem sai fora da trava: dois cliques ao mesmo tempo mandam uma vez só, e a mensagem que falha deixa a história
-# com o envio que não saiu e a proposta pronta para tentar de novo. Tudo fictício; a Meta é dublê.
+# E8 (#2901): o envio da proposta de renovação, no máximo uma vez e com o estado honesto. O passo do envio entra sob a
+# trava ANTES de a mensagem sair, e a mensagem sai fora da trava: dois cliques ao mesmo tempo mandam uma vez só. A falha
+# clara deixa enviar de novo; a falha depois da chamada, ou o passo que ficou sem o id da mensagem, é incerta: nada sai
+# sozinho, a equipe confere e a tela oferece "Enviar de novo". Tudo fictício; a Meta é dublê.
 RSpec.describe Carteira::Cotacao::Proposta do
   let(:account) { conta_com_carteira(locale: 'pt_BR') }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -72,25 +73,33 @@ RSpec.describe Carteira::Cotacao::Proposta do
     expect(propostas.size).to eq(1)
     expect(seguro.eventos.where(tipo: 'proposta_enviada').count).to eq(1)
     expect(seguro.eventos.find_by(tipo: 'proposta_enviada')).to have_attributes(user_id: admin.id)
+    expect(seguro.eventos.find_by(tipo: 'proposta_enviada').valores).to include('mensagem_id' => propostas.sole.id)
   end
 
-  describe 'a mensagem falha depois do passo do envio' do
-    before do
-      tentativas = 0
-      allow_any_instance_of(Carteira::Cotacao::Envio).to receive(:modelo).and_wrap_original do |original, *args, **opcoes| # rubocop:disable RSpec/AnyInstance
-        tentativas += 1
-        raise StandardError, 'Meta fora do ar' if tentativas == 1
+  # A primeira tentativa falha com `erro`; as seguintes mandam de verdade.
+  def falhar_a_primeira(erro)
+    tentativas = 0
+    allow_any_instance_of(Carteira::Cotacao::Envio).to receive(:modelo).and_wrap_original do |original, *args, **opcoes| # rubocop:disable RSpec/AnyInstance
+      tentativas += 1
+      raise erro if tentativas == 1
 
-        original.call(*args, **opcoes)
-      end
+      original.call(*args, **opcoes)
     end
+  end
+
+  def avisos
+    Crm::FollowUp.where(account_id: account.id).map { |tarefa| tarefa.metadata['motivo'] }
+  end
+
+  describe 'falha clara do envio, sem mensagem' do
+    before { falhar_a_primeira(Carteira::Cotacao::Envio::NaoSaiu.new('sem_modelo')) }
 
     it 'o envio que não saiu fica na história, depois do passo do envio, e a equipe é avisada' do
-      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa)
+      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa, 'sem_modelo')
 
       expect(tipos_da_historia(seguro).last(2)).to eq(%w[proposta_enviada proposta_nao_saiu])
-      expect(seguro.eventos.where(tipo: 'proposta_nao_saiu').last.valores).to include('motivo' => 'envio', 'detalhe' => 'erro')
-      expect(Crm::FollowUp.where(account_id: account.id).map { |tarefa| tarefa.metadata['motivo'] }).to include('proposta_nao_saiu')
+      expect(seguro.eventos.where(tipo: 'proposta_nao_saiu').last.valores).to include('motivo' => 'envio', 'detalhe' => 'sem_modelo')
+      expect(avisos).to include('proposta_nao_saiu')
       expect(propostas).to be_empty
     end
 
@@ -102,6 +111,50 @@ RSpec.describe Carteira::Cotacao::Proposta do
 
       expect(propostas.size).to eq(1)
       expect([described_class.enviada?(seguro.reload), pode_enviar?]).to eq([true, false])
+    end
+  end
+
+  describe 'falha depois da chamada (a mensagem pode ter saído)' do
+    before { falhar_a_primeira(StandardError.new('resposta perdida')) }
+
+    it 'não grava "não saiu", não manda de novo sozinho, avisa a equipe e a cotação fica incerta' do
+      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa, 'proposta_incerta')
+
+      expect(tipos_da_historia(seguro)).not_to include('proposta_nao_saiu')
+      expect(seguro.eventos.where(tipo: 'proposta_enviada').sole.valores).to include('incerta' => true)
+      expect(avisos).to include('proposta_incerta')
+      expect(Carteira::Cotacao::Situacao.new([seguro.reload]).call[seguro.id]).to include(incerta: true, podeEnviar: true)
+    end
+
+    it '"Enviar de novo" grava um passo novo e manda' do
+      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa)
+
+      clicar
+
+      expect(propostas.size).to eq(1)
+      expect(seguro.eventos.where(tipo: 'proposta_enviada').count).to eq(2)
+      expect([described_class.enviada?(seguro.reload), pode_enviar?]).to eq([true, false])
+    end
+  end
+
+  describe 'o passo do envio ficou sem o id da mensagem (o processo caiu entre a reserva e o envio)' do
+    before { Carteira::Cotacao.registrar(seguro, 'proposta_enviada', user: admin) }
+
+    it 'antes de MINUTOS_PARA_INCERTA, ainda conta como enviada e o segundo clique para' do
+      travel(described_class::MINUTOS_PARA_INCERTA.minutes - 1.minute)
+
+      expect(pode_enviar?).to be(false)
+      expect { clicar }.to raise_error(CustomExceptions::CarteiraRecusa, 'proposta_ja_enviada')
+    end
+
+    it 'depois de MINUTOS_PARA_INCERTA, fica incerta e oferece "Enviar de novo", que manda' do
+      travel(described_class::MINUTOS_PARA_INCERTA.minutes + 1.minute)
+
+      expect(Carteira::Cotacao::Situacao.new([seguro.reload]).call[seguro.id]).to include(incerta: true, podeEnviar: true)
+
+      clicar
+
+      expect(propostas.size).to eq(1)
     end
   end
 end

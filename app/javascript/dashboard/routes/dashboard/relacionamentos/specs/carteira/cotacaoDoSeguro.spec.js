@@ -248,6 +248,23 @@ describe('"Enviar proposta"', () => {
     expect(w.emitted('enviar')).toHaveLength(1);
   });
 
+  it('incerta: pede para conferir na conversa e oferece "Enviar de novo"', () => {
+    const incerta = cotacaoCom({
+      etapa: 'proposta_enviada',
+      premioCentavos: 100000,
+      podeEnviar: true,
+      incerta: true,
+    });
+
+    const w = montar(incerta, { podeEnviar: true });
+
+    expect(situacao(w)).toBe(
+      'Não sabemos se a proposta chegou. Confira na conversa; se não chegou, envie de novo.'
+    );
+    expect(w.get(daCarteira('enviar-proposta')).text()).toBe('Enviar de novo');
+    expect(situacaoDaCotacao(incerta)).toEqual({ id: 'INCERTA' });
+  });
+
   it('pode enviar: proposta pronta, quem altera a pessoa e vê o card, seguro não cancelado', () => {
     const seguro = seguroCom(pronta);
     const jaEnviada = seguroCom({ ...pronta, podeEnviar: false });
