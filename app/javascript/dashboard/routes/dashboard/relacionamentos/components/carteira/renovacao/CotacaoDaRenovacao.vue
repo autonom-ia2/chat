@@ -10,6 +10,7 @@ import {
   QUEM_RESPONDE,
   SO_NINGUEM,
   agenteForaDaCaixa,
+  caixaDistribui,
   caixaEscolhida,
   porQueSoNinguem,
   roboCota,
@@ -22,12 +23,13 @@ import {
 // Agente de Cotação, ou sem WhatsApp oficial, lê só "Ninguém, cotação manual"
 // e a frase do porquê: nenhuma opção desligada. O nome do agente é o da conta.
 // Antes de salvar, a tela avisa quando o agente vai responder e não está no
-// WhatsApp escolhido. Embaixo, quantas cotações a conta fez no mês (só
-// contagens, sem dinheiro).
+// WhatsApp escolhido, ou quando esse WhatsApp entrega toda conversa nova a
+// alguém da equipe (aí o agente não responde). Embaixo, quantas cotações a
+// conta fez no mês (só contagens, sem dinheiro).
 //   v-model: os ajustes inteiros (só as escolhas da cotação mudam aqui)
 const props = defineProps({
   modelValue: { type: Object, required: true },
-  // { cotaSozinha, agente, caixas: [{ id, nome, liaLigada }] }
+  // { cotaSozinha, agente, caixas: [{ id, nome, liaLigada, distribui }] }
   conta: { type: Object, required: true },
   // { cotacoes, seguradorasComPreco } ou null
   consumo: { type: Object, default: null },
@@ -107,6 +109,14 @@ const avisoDoAgente = computed(() =>
     ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.AVISO_DO_AGENTE', {
         agente: agente.value,
         caixa: caixaEscolhida(caixas.value, props.modelValue.caixaId).nome,
+      })
+    : ''
+);
+
+const avisoDaDistribuicao = computed(() =>
+  caixaDistribui(props.modelValue, caixas.value)
+    ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.AVISO_DA_DISTRIBUICAO', {
+        agente: agente.value,
       })
     : ''
 );
@@ -226,6 +236,14 @@ defineExpose({
           data-carteira="aviso-do-agente"
         >
           {{ avisoDoAgente }}
+        </Banner>
+        <Banner
+          v-if="avisoDaDistribuicao"
+          color="amber"
+          role="alert"
+          data-carteira="aviso-da-distribuicao"
+        >
+          {{ avisoDaDistribuicao }}
         </Banner>
       </template>
     </template>

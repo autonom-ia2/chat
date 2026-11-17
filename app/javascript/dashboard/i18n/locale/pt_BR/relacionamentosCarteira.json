@@ -529,6 +529,7 @@
           "ESCOLHA": "Escolha o WhatsApp"
         },
         "AVISO_DO_AGENTE": "{agente} não está no WhatsApp {caixa}. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
+        "AVISO_DA_DISTRIBUICAO": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí {agente} não responde. Desligue a entrega automática desse WhatsApp ou escolha 'A equipe'.",
         "CONSUMO": {
           "COTACOES": "Cotações neste mês: {count}",
           "COM_PRECO": "Seguradoras com preço: {count}"
@@ -672,6 +673,7 @@
       "ESCOLHA_INVALIDA": "Essa escolha não vale. Escolha de novo e salve.",
       "SEM_AGENTE_DE_COTACAO": "A conta não tem mais o Agente de Cotação. Atualizei a tela: escolha de novo e salve.",
       "CAIXA_INVALIDA": "Esse WhatsApp não serve mais para a cotação. Atualizei a tela: escolha outro WhatsApp e salve.",
+      "CAIXA_DISTRIBUI": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí o agente não responde. Atualizei a tela: desligue a entrega automática desse WhatsApp ou escolha 'A equipe' e salve.",
       "PROPOSTA_JA_ENVIADA": "Essa proposta já foi enviada ao cliente. Atualizei a tela.",
       "PROPOSTA_INCERTA": "Não sabemos se a proposta chegou. Atualizei a tela: confira na conversa.",
       "SEM_PROPOSTA": "Ainda não há proposta pronta para enviar. Atualizei a tela.",

@@ -53,6 +53,12 @@ module Carteira::Cotacao
     agente.present? && inbox_id.present? && Autonomia::Agents::AgentInbox.kept.exists?(autonomia_agent_id: agente.id, inbox_id: inbox_id)
   end
 
+  # A caixa entrega toda conversa nova a alguém da equipe (a distribuição automática, a antiga e a nova, que só rodam com
+  # `enable_auto_assignment`). A Lia não responde conversa que está com alguém.
+  def caixa_distribui?(inbox)
+    inbox.present? && inbox.enable_auto_assignment?
+  end
+
   # O passo da história desta vigência, ou nil.
   def passo(apolice, tipo)
     apolice.eventos.where(tipo: tipo).where("valores->>'vigencia' = ?", apolice.fim_vigencia.iso8601).order(:quando, :id).last

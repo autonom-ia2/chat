@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# E8 (#2901): a conversa em que a cotação da renovação fala com o segurado. Com "Lia responde", só serve conversa sem
-# responsável (a Lia não responde conversa que está com alguém); a conversa nova que a caixa der a alguém fica com a
-# pessoa, o envio segue e a equipe é avisada. Com "a equipe responde", nada muda. Tudo fictício; a Meta é dublê.
+# E8 (#2901): a conversa em que a cotação da renovação fala com o segurado. Com "Lia responde", serve primeiro a conversa
+# sem responsável (a Lia não responde conversa que está com alguém). A caixa que entrega toda conversa nova a alguém da
+# equipe não abre outra conversa a cada envio: o envio segue na aberta e a equipe é avisada uma vez. Com "a equipe
+# responde", nada muda. Tudo fictício; a Meta é dublê.
 RSpec.describe Carteira::Cotacao::Envio do
   let(:account) { conta_com_carteira(locale: 'pt_BR') }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -11,11 +12,13 @@ RSpec.describe Carteira::Cotacao::Envio do
   let(:marina) { create(:contact, account: account, name: 'Marina Exemplo', phone_number: '+5511900000023') }
   let(:seguro) { criar_apolice(marina, tipo: 'auto', seguradora: 'HDI', numero: 'EX-000001', fim_vigencia: 30.days.from_now.to_date) }
   let(:quem_responde) { 'lia' }
+  let(:distribui) { false }
   let(:ajustes) { cotacao_ligada(account, user: admin, caixa: caixa, quem_cota: 'lia', quem_responde: quem_responde) }
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
   before do
+    caixa.update!(enable_auto_assignment: distribui)
     agente_de_cotacao(account)
     create(:inbox_member, user: atendente, inbox: caixa)
     aprovar_modelos(caixa, 'renovacao_algo_mudou', 'renovacao_proposta')
@@ -30,11 +33,11 @@ RSpec.describe Carteira::Cotacao::Envio do
     create(:conversation, account: account, inbox: caixa, contact: marina, assignee: assignee, status: :open)
   end
 
-  def aviso_da_conversa
-    Crm::FollowUp.where(account_id: account.id).find { |tarefa| tarefa.metadata['motivo'] == 'conversa_com_pessoa' }
+  def avisos_da_caixa
+    Crm::FollowUp.where(account_id: account.id).select { |tarefa| tarefa.metadata['motivo'] == 'caixa_distribui' }
   end
 
-  describe 'Lia responde' do
+  describe 'Lia responde, numa caixa que não distribui' do
     it 'não usa a conversa que está com alguém da equipe: abre outra' do
       com_alguem = conversa_aberta(assignee: atendente)
 
@@ -43,6 +46,7 @@ RSpec.describe Carteira::Cotacao::Envio do
       expect(conversa).not_to eq(com_alguem)
       expect(conversa).to have_attributes(inbox_id: caixa.id, contact_id: marina.id, assignee_id: nil)
       expect(com_alguem.reload.assignee).to eq(atendente)
+      expect(avisos_da_caixa).to be_empty
     end
 
     it 'usa a conversa aberta sem responsável' do
@@ -51,29 +55,34 @@ RSpec.describe Carteira::Cotacao::Envio do
 
       expect(envio.conversa).to eq(livre)
     end
+  end
 
-    it 'a conversa nova que a caixa deu a alguém: fica com a pessoa, a mensagem sai e a equipe é avisada com o nome dela' do
-      allow_any_instance_of(ConversationBuilder).to receive(:perform).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
-        original.call(*args).tap { |nova| nova.update!(assignee: atendente) }
-      end
+  describe 'Lia responde, numa caixa que passou a distribuir depois dos ajustes' do
+    let(:distribui) { true }
 
-      mensagem = envio.modelo('renovacao_algo_mudou', Carteira::Cotacao::ETAPA_ALGO_MUDOU)
+    it 'a mensagem sai na conversa aberta, sem abrir outra, e a equipe é avisada uma vez com o nome do agente' do
+      com_alguem = conversa_aberta(assignee: atendente)
 
-      expect(mensagem).to be_persisted
-      expect(mensagem.conversation.reload.assignee).to eq(atendente)
-      expect(aviso_da_conversa.title).to include('Paula Exemplo', 'Lia Exemplo')
-      expect(tipos_da_historia(seguro)).not_to include('algo_mudou_nao_saiu', 'proposta_nao_saiu')
+      primeira = envio.modelo('renovacao_algo_mudou', Carteira::Cotacao::ETAPA_ALGO_MUDOU)
+      envio.conversa
+
+      expect(primeira.conversation).to eq(com_alguem)
+      expect(Conversation.where(contact_id: marina.id, inbox_id: caixa.id).count).to eq(1)
+      expect(avisos_da_caixa.size).to eq(1)
+      expect(avisos_da_caixa.first.title).to include('Lia Exemplo')
+      expect(com_alguem.reload.assignee).to eq(atendente)
     end
   end
 
   describe 'a equipe responde' do
     let(:quem_responde) { 'equipe' }
+    let(:distribui) { true }
 
     it 'usa a conversa aberta mesmo com alguém da equipe, sem aviso' do
       com_alguem = conversa_aberta(assignee: atendente)
 
       expect(envio.conversa).to eq(com_alguem)
-      expect(aviso_da_conversa).to be_nil
+      expect(avisos_da_caixa).to be_empty
     end
   end
 end

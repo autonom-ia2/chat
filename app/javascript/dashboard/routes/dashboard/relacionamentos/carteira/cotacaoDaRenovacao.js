@@ -65,6 +65,14 @@ export const agenteForaDaCaixa = (ajustes, caixas = []) => {
   return Boolean(caixa) && !caixa.liaLigada;
 };
 
+// O agente vai responder, mas o WhatsApp escolhido entrega toda conversa nova a
+// alguém da equipe, e o agente não responde conversa que está com alguém. A
+// tela avisa antes de salvar; o servidor recusa (`caixa_distribui`).
+export const caixaDistribui = (ajustes, caixas = []) => {
+  if (!roboCota(ajustes) || !agenteResponde(ajustes)) return false;
+  return Boolean(caixaEscolhida(caixas, ajustes.caixaId)?.distribui);
+};
+
 // O robô cota e falta escolher por qual WhatsApp as mensagens saem.
 export const faltaCaixa = ajustes => roboCota(ajustes) && !ajustes.caixaId;
 

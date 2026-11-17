@@ -21,7 +21,7 @@ pt_BR:
         proposta_nao_saiu: 'A proposta de renovação de %{nome} não saiu.'
         sem_preco: 'A cotação da renovação de %{nome} voltou sem preço.'
         proposta_incerta: 'Não sabemos se a proposta de renovação de %{nome} chegou. Confira na conversa.'
-        conversa_com_pessoa: 'A conversa da renovação de %{nome} ficou com %{pessoa}, então %{agente} não vai responder.'
+        caixa_distribui: 'O WhatsApp da renovação de %{nome} entrega toda conversa nova a alguém da equipe, e aí %{agente} não responde. Desligue a entrega automática desse WhatsApp ou escolha "A equipe" em Ajustar renovações.'
         faltam: 'Falta: %{campos}.'
         motivos:
           contato_recusou: 'O cliente recusou mensagens ou está bloqueado.'

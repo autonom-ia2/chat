@@ -329,6 +329,41 @@ describe('o aviso do agente fora do WhatsApp', () => {
   });
 });
 
+describe('o aviso do WhatsApp que entrega a conversa a alguém da equipe', () => {
+  const COM_DISTRIBUICAO = [
+    { id: 5, nome: 'WhatsApp da loja', liaLigada: true, distribui: true },
+  ];
+
+  it('aparece antes de salvar quando o agente responde nesse WhatsApp', async () => {
+    servidorResponde({
+      ajustes: { ...ESCOLHAS, quemCota: 'robo' },
+      caixas: COM_DISTRIBUICAO,
+    });
+    const w = await abrir();
+
+    await escolher(w, 'escolher-quem-responde', 'lia');
+    await escolher(w, 'escolher-caixa', 5);
+
+    const aviso = w.get(daCarteira('aviso-da-distribuicao'));
+    expect(aviso.text()).toContain('entrega toda conversa nova');
+    expect(aviso.text()).toContain('Nina não responde');
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+  });
+
+  it('não aparece com a equipe respondendo', async () => {
+    servidorResponde({
+      ajustes: { ...ESCOLHAS, quemCota: 'robo' },
+      caixas: COM_DISTRIBUICAO,
+    });
+    const w = await abrir();
+
+    await escolher(w, 'escolher-quem-responde', 'equipe');
+    await escolher(w, 'escolher-caixa', 5);
+
+    expect(w.find(daCarteira('aviso-da-distribuicao')).exists()).toBe(false);
+  });
+});
+
 describe('as cotações do mês', () => {
   it('mostra só as contagens, sem dinheiro', async () => {
     servidorResponde();

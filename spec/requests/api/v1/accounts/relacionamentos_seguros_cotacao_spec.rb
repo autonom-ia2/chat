@@ -48,12 +48,13 @@ RSpec.describe 'Carteira de seguros: cotação da renovação', type: :request d
           'ajustes' => { 'funilId' => nil, 'etapaId' => nil, 'dias' => 60, 'quemCota' => 'ninguem', 'quemEnvia' => 'pessoa',
                          'quemResponde' => 'equipe', 'caixaId' => nil },
           'cotaSozinha' => true, 'cotaSemConversa' => false, 'agente' => 'Lia Exemplo', 'cotacaoLiberada' => true,
-          'caixas' => [{ 'id' => caixa.id, 'nome' => 'WhatsApp oficial', 'liaLigada' => true }]
+          'caixas' => [{ 'id' => caixa.id, 'nome' => 'WhatsApp oficial', 'liaLigada' => true, 'distribui' => true }]
         )
       end
 
       it 'guarda quem cota, quem envia, quem responde e a caixa' do
         agente_de_cotacao(account)
+        caixa.update!(enable_auto_assignment: false)
 
         guardar(quemCota: 'lia', quemEnvia: 'sozinho', quemResponde: 'lia', caixaId: caixa.id)
 
@@ -63,6 +64,24 @@ RSpec.describe 'Carteira de seguros: cotação da renovação', type: :request d
 
         guardar(caixaId: nil)
         expect(config.reload.inbox_id).to be_nil
+      end
+
+      it 'a Lia respondendo numa caixa que entrega toda conversa nova a alguém da equipe: recusa sem repetir o valor' do
+        agente_de_cotacao(account)
+
+        guardar(quemCota: 'robo', quemResponde: 'lia', caixaId: caixa.id)
+        expect([response.status, response.parsed_body]).to eq([422, { 'error' => 'caixa_distribui' }])
+        expect(config&.quem_responde).not_to eq('lia')
+
+        guardar(quemCota: 'robo', quemResponde: 'equipe', caixaId: caixa.id)
+        expect(response).to have_http_status(:ok)
+
+        guardar(quemResponde: 'lia')
+        expect(response.parsed_body).to eq('error' => 'caixa_distribui')
+
+        caixa.update!(enable_auto_assignment: false)
+        guardar(quemResponde: 'lia')
+        expect(config.reload.quem_responde).to eq('lia')
       end
 
       it 'robô ou Lia sem o Agente de Cotação na conta: recusa com motivo próprio' do

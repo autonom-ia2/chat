@@ -21,7 +21,7 @@ en:
         proposta_nao_saiu: 'The renewal proposal of %{nome} did not go out.'
         sem_preco: 'The renewal quote of %{nome} came back with no price.'
         proposta_incerta: 'We do not know if the renewal proposal of %{nome} arrived. Check the conversation.'
-        conversa_com_pessoa: 'The renewal conversation of %{nome} is with %{pessoa}, so %{agente} will not reply.'
+        caixa_distribui: 'The renewal WhatsApp of %{nome} hands every new conversation to someone on the team, so %{agente} does not reply. Turn off automatic assignment for that WhatsApp or choose "The team" in Adjust renewals.'
         faltam: 'Missing: %{campos}.'
         motivos:
           contato_recusou: 'The client refused messages or is blocked.'

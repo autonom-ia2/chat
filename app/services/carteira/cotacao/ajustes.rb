@@ -8,7 +8,8 @@
 # - `agente`: o nome do Agente de Cotação da conta, ou nulo;
 # - `cotacaoLiberada`: true (a tela mostra o cartão da cotação);
 # - `caixas`: as caixas do WhatsApp oficial da conta (as únicas por onde o modelo sai), cada uma com `liaLigada`, para a
-#   tela avisar antes quando a escolha é "Lia responde" e a Lia não está naquela caixa.
+#   tela avisar antes quando a escolha é "Lia responde" e a Lia não está naquela caixa, e `distribui`, para avisar antes
+#   quando a caixa entrega toda conversa nova a alguém da equipe (Carteira::Cotacao.caixa_distribui?).
 # As escolhas guardadas (`quemCota`, `quemEnvia`, `quemResponde`, `caixaId`) vão em `ajustes` (`guardados`).
 class Carteira::Cotacao::Ajustes
   DESLIGADA = { aggerLigado: false, cotaSozinha: false, cotaSemConversa: false, agente: nil }.freeze
@@ -36,6 +37,8 @@ class Carteira::Cotacao::Ajustes
     com_lia = agente ? Autonomia::Agents::AgentInbox.kept.where(autonomia_agent_id: agente.id).pluck(:inbox_id) : []
     @account.inboxes.where(channel_type: 'Channel::Whatsapp').includes(:channel).order(:id)
             .select { |caixa| Whatsapp::Templates::MetaClient.supported?(caixa) }
-            .map { |caixa| { id: caixa.id, nome: caixa.name, liaLigada: com_lia.include?(caixa.id) } }
+            .map do |caixa|
+              { id: caixa.id, nome: caixa.name, liaLigada: com_lia.include?(caixa.id), distribui: Carteira::Cotacao.caixa_distribui?(caixa) }
+            end
   end
 end

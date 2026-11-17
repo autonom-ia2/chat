@@ -87,6 +87,7 @@ export const CODIGOS_DE_RECUSA = [
   'escolha_invalida',
   'sem_agente_de_cotacao',
   'caixa_invalida',
+  'caixa_distribui',
   ...ENVIO_DA_PROPOSTA,
 ];
 

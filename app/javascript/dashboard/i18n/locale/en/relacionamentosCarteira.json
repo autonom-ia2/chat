@@ -529,6 +529,7 @@
           "ESCOLHA": "Choose the WhatsApp"
         },
         "AVISO_DO_AGENTE": "{agente} is not on the WhatsApp {caixa}. Turn {agente} on for that WhatsApp in Agents, or choose another WhatsApp, so no reply from the client is left unanswered.",
+        "AVISO_DA_DISTRIBUICAO": "This WhatsApp hands every new conversation to someone on the team, and then {agente} does not reply. Turn off automatic assignment for this WhatsApp or choose 'The team'.",
         "CONSUMO": {
           "COTACOES": "Quotes this month: {count}",
           "COM_PRECO": "Insurers with a price: {count}"
@@ -672,6 +673,7 @@
       "ESCOLHA_INVALIDA": "That choice is not valid. Choose again and save.",
       "SEM_AGENTE_DE_COTACAO": "The account no longer has the Quote Agent. I refreshed the screen: choose again and save.",
       "CAIXA_INVALIDA": "That WhatsApp can no longer be used for the quote. I refreshed the screen: choose another WhatsApp and save.",
+      "CAIXA_DISTRIBUI": "This WhatsApp hands every new conversation to someone on the team, and then the agent does not reply. I refreshed the screen: turn off automatic assignment for this WhatsApp or choose 'The team', and save.",
       "PROPOSTA_JA_ENVIADA": "This proposal was already sent to the client. I refreshed the screen.",
       "PROPOSTA_INCERTA": "We don't know if the proposal reached the client. I refreshed the screen: check the conversation.",
       "SEM_PROPOSTA": "There is no proposal ready to send yet. I refreshed the screen.",

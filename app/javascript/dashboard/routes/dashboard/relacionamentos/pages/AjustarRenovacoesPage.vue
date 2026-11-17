@@ -144,6 +144,7 @@ const CONTA_MUDOU = [
   'funil_desconhecido',
   'etapa_de_outro_funil',
   'caixa_invalida',
+  'caixa_distribui',
   'sem_agente_de_cotacao',
   'cotacao_desligada',
 ];

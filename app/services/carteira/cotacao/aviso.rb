@@ -5,8 +5,9 @@
 #
 # Motivos (`MOTIVOS`, cada um com a frase de leigo em `carteira.cotacao.avisos`): o "Algo mudou?" ou a proposta que não
 # saiu (com o motivo do envio), o segurado que disse que mudou algo, o que respondeu depois, o dado que faltou para cotar
-# (com os nomes dos campos), a conferência que caiu três vezes, a cotação que não trouxe preço e a conversa que a caixa
-# deu a alguém quando era a Lia quem ia responder (`textos`: o nome dessa pessoa e o do agente, só no título).
+# (com os nomes dos campos), a conferência que caiu três vezes, a cotação que não trouxe preço, a proposta que não se
+# sabe se chegou e a caixa que entrega toda conversa nova a alguém quando era a Lia quem ia responder (`textos`: o nome
+# do agente, só no título).
 #
 # A atividade entra SEMPRE (é o registro no card, `carteira_cotacao_aviso`); a tarefa sai UMA vez por seguro, vigência e
 # motivo. Card que sumiu: nada a avisar. O título leva o nome do contato (é a lista de tarefas da equipe) e nunca o
@@ -14,25 +15,26 @@
 class Carteira::Cotacao::Aviso
   SOURCE = 'carteira_cotacao'.freeze
   ATIVIDADE = 'carteira_cotacao_aviso'.freeze
-  CONVERSA_COM_PESSOA = 'conversa_com_pessoa'.freeze
+  CAIXA_DISTRIBUI = 'caixa_distribui'.freeze
   MOTIVOS = (%w[algo_mudou_nao_saiu mudou cliente_respondeu faltou_dado conferencia_caiu proposta_nao_saiu sem_preco] +
-             [CONVERSA_COM_PESSOA, 'proposta_incerta']).freeze
+             ['proposta_incerta', CAIXA_DISTRIBUI]).freeze
 
   # detalhe: o motivo do envio que não saiu (Carteira::Cotacao::Envio::NaoSaiu); faltam: os nomes dos campos; textos: o que
-  # mais a frase do motivo pede (`pessoa`, `agente`).
-  def initialize(apolice, motivo, detalhe: nil, faltam: [], textos: {})
+  # mais a frase do motivo pede (`agente`); uma_vez: nem a atividade entra de novo quando a tarefa já saiu.
+  def initialize(apolice, motivo, detalhe: nil, faltam: [], textos: {}, uma_vez: false) # rubocop:disable Metrics/ParameterLists
     @apolice = apolice
     @motivo = motivo.to_s
     @detalhe = detalhe
     @faltam = Array(faltam)
     @textos = textos.to_h.symbolize_keys
+    @uma_vez = uma_vez
   end
 
   def call
     raise ArgumentError, "motivo desconhecido: #{@motivo}" unless MOTIVOS.include?(@motivo)
 
     card = @apolice.crm_card
-    return if card.nil?
+    return if card.nil? || (@uma_vez && ja_avisado?(card))
 
     Crm::ActivityLogger.new(card: card, actor: nil, event_type: ATIVIDADE, payload: payload).perform
     criar_tarefa!(card) unless ja_avisado?(card)
