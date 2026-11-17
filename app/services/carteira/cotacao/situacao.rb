@@ -8,13 +8,15 @@
 # - `variacaoPercentual`: a proposta contra o valor do seguro que vence (`valor_centavos`), em %, com uma casa (número; a
 #   tela formata). Sem valor anterior ou sem proposta, nulo;
 # - `enviadaEm`: quando a proposta saiu (em segundos), sozinha ou pelo clique; `podeEnviar`: há proposta pronta e ela
-#   ainda não saiu (o botão "Enviar" do card).
+#   ainda não saiu (o botão "Enviar" do card). O envio que não saiu depois do passo do envio (`proposta_nao_saiu`) desfaz
+#   o envio: a proposta volta a poder ser enviada.
 # Os passos de uma página saem numa consulta só.
 class Carteira::Cotacao::Situacao
   TIPOS = %w[cotacao_pedida algo_mudou_nao_saiu respondeu_algo_mudou cliente_respondeu proposta_pedida proposta_nao_saiu
              proposta_pronta proposta_enviada proposta_enviada_sozinha].freeze
   NAO_SAIU = %w[algo_mudou_nao_saiu proposta_nao_saiu].freeze
   ENVIADA = %w[proposta_enviada proposta_enviada_sozinha].freeze
+  DO_ENVIO = (ENVIADA + %w[proposta_nao_saiu]).freeze
 
   # -> a variação em %, com uma casa, ou nil.
   def self.variacao(premio_centavos, valor_centavos)
@@ -43,8 +45,13 @@ class Carteira::Cotacao::Situacao
     ultimo = passos.last
     pronta = passos.reverse.find { |passo| passo.tipo == Carteira::Cotacao::Pronta::PRONTA }&.valores
     pronta = pronta.to_h
-    enviada = passos.find { |passo| ENVIADA.include?(passo.tipo) }
-    { etapa: ultimo.tipo, resposta: resposta(passos) }.merge(do_ultimo(ultimo), da_proposta(apolice, pronta, enviada))
+    { etapa: ultimo.tipo, resposta: resposta(passos) }.merge(do_ultimo(ultimo), da_proposta(apolice, pronta, enviada(passos)))
+  end
+
+  # O último passo do envio, quando ele é um envio (e não o envio que não saiu, que deixa enviar de novo).
+  def enviada(passos)
+    envio = passos.reverse.find { |passo| DO_ENVIO.include?(passo.tipo) }
+    envio if ENVIADA.include?(envio&.tipo)
   end
 
   def resposta(passos)
