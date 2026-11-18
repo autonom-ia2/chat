@@ -9,14 +9,14 @@ linha no histórico.
 
 ## Como ligar
 
-1. Ligar a flag `automacao_passos_novos` na conta (no painel local, pelo kit
-   `bin/demo`). Ela está no fim da `feature_flags_ext_2` de
-   `config/features.yml`. A Orquestração reservou a posição 47 (1 << 46) em
-   12/11, logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
-   **Exceção à regra de 07/11** (flag nova nasce ligada em todas): esta fica
-   **desligada em produção**, ligada só na conta de demonstração, até o motor
-   dos seis passos estar completo. Desligar é o rollback: quem espera resposta
-   num destes passos para naquele ponto, sem mandar nada.
+1. A flag `automacao_passos_novos` está **ligada em todas as contas desde
+   13/11** (ordem do Rodrigo; a Orquestração ligou nas contas existentes das
+   duas stacks, com backup do valor anterior, e `enabled: true` faz a conta nova
+   nascer com ela). No painel local, ligar pelo kit `bin/demo`. Ela fica na
+   posição 47 (1 << 46) da `feature_flags_ext_2` de `config/features.yml`,
+   logo depois da `agente_ferramentas_prontas_ip_proprio` (46, #2945).
+   Desligar é o rollback: quem espera resposta num destes passos para naquele
+   ponto, sem mandar nada.
 2. Abrir **Automações › Montar do zero** (ou uma automação já salva) com quem tem
    `automation_manage`. Escolher qualquer gatilho.
 3. Tocar no **+** do Confira. Os 6 passos aparecem misturados aos de hoje, cada
@@ -35,8 +35,8 @@ três (#2931, #2935, #2936) também já são de verdade (seção "Já de verdade
 - **Flag.** `automacao_passos_novos`, no fim de `config/features.yml`. O bit
   reservado é o 47 (1 << 46), logo depois de
   `agente_ferramentas_prontas_ip_proprio` (46, #2945), como
-  `spec/models/account_spec.rb` confere. **Desligada em
-  produção** (exceção à regra de 07/11). Desligada depois de ligada: o salvar
+  `spec/models/account_spec.rb` confere. **Ligada em todas as contas desde
+  13/11.** Desligada depois de ligada: o salvar
   recusa a receita com um dos três e o motor para a execução que chega num deles
   (`passos_novos_desligados`). É o rollback: também não abre as filhas de um
   "para cada" cujo job já estava na fila, e a filha da lista ou a execução do
@@ -330,8 +330,10 @@ nenhum dos seis passos tem mais o aviso "em teste" nem o Salvar desligado.
 
 ## O que fica para a implementação
 
-- Ligar a flag em produção só com o OK do Rodrigo, depois da conferência dos
-  seis passos na conta de demonstração.
+- A flag foi ligada em todas as contas em 13/11, por ordem do Rodrigo, **sem**
+  a conferência em tela real e sem os prints 390/1440 que ela pedia. Essa
+  conferência segue aberta na #2982: um caso de cada passo e o "Parar para
+  este card" no uso real. Estado completo: `docs/automacao/estado-2414.md`.
 
 ## Arquivos
 
