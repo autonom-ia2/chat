@@ -75,8 +75,8 @@ RSpec.describe 'Carteira de seguros: escritas', type: :request do
       expect(nao_mudou).to be(true)
     end
 
-    it 'responde 404 com a chave da carteira desligada e não muda nada' do
-      account.disable_features!('carteira_seguros')
+    it 'responde 404 em conta fora do nicho corretora e não muda nada' do
+      sem_a_carteira!(account)
 
       escritas.each do |nome, pedir|
         pedir.call

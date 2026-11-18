@@ -1,11 +1,22 @@
 # Carteira de seguros (E4, #2897): o que os specs da carteira repetem. Os dados são sempre fictícios.
 module CarteiraHelpers
-  # A conta que tem a carteira: a chave ligada e corretora de seguros (Carteira::Acesso).
+  # A conta que tem a carteira: corretora de seguros (Carteira::Acesso; sem chave desde a E9, #2902).
   def conta_com_carteira(**dados)
-    create(:account, **dados).tap do |conta|
-      Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
-      conta.enable_features!('carteira_seguros')
-    end
+    create(:account, **dados).tap { |conta| com_a_carteira!(conta) }
+  end
+
+  # A conta passa a ser corretora de seguros, e ganha a carteira.
+  def com_a_carteira!(conta)
+    Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
+    conta.save!
+    conta
+  end
+
+  # A conta sai do nicho corretora (vai para o geral), e fica sem a carteira: é o que fecha a carteira desde a E9.
+  def sem_a_carteira!(conta)
+    Autonomia::Agents::Nicho.atribuir(conta, nicho: 'geral', perfil: nil)
+    conta.save!
+    conta
   end
 
   # Uma apólice da pessoa, na conta dela. A seguradora e o número levam a forma de comparação certa, como quem grava.

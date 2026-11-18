@@ -267,9 +267,9 @@ RSpec.describe Carteira::Renovacao::DaContaJob do
   it 'não cria nada sem a carteira, sem o CRM, sem escolha ou com o funil arquivado' do
     seguro = criar_apolice(marina, numero: 'EX-000040', fim_vigencia: hoje + 30)
 
-    account.disable_features!('carteira_seguros')
+    sem_a_carteira!(account)
     rodar
-    account.enable_features!('carteira_seguros')
+    com_a_carteira!(account)
     with_modified_env(CRM_KANBAN_ENABLED: 'false') { rodar }
     config.update!(pipeline: nil, stage: nil)
     rodar

@@ -1433,14 +1433,15 @@
   enabled: true
   column: feature_flags_ext_2
 
-# Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
-# Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
-# Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:
-# desligar a flag na conta. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
+# Carteira de seguros (E4, #2897, épico #1240). Virou o padrão na E9 (#2902, decisão do Rodrigo em 18/11): o código não
+# lê mais a flag e a carteira (a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa) é de toda conta
+# corretora de seguros (Carteira::Acesso). Sem migration: com a leitura fora, o bit não decide mais nada. A entrada fica,
+# marcada `deprecated`: o bit é a posição. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
 - name: carteira_seguros
   display_name: Relacionamentos › carteira de seguros
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
+  deprecated: true
 
 # Agentes: modelos prontos por ramo de seguro (#2881). Ligada, e só em conta com o pacote `seguros`: "Criar agente"
 # oferece os agentes prontos de seguro auto, seguro garantia e transporte de carga. O agente nasce como comercial

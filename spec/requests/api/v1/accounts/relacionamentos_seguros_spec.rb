@@ -62,19 +62,9 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       end
     end
 
-    it 'responde 404 com a chave da carteira desligada' do
-      account.disable_features!('carteira_seguros')
-
-      (leituras + ["seguros/#{seguro.id}/pdf"]).each do |caminho|
-        ler(caminho)
-
-        expect(response).to have_http_status(:not_found), caminho
-      end
-    end
-
-    # E9 (#2902): as telas novas de Relacionamentos são de todas as contas; a flag antiga não fecha a carteira.
-    it 'atende com a flag antiga das telas novas desligada' do
-      account.disable_features!('relacionamentos_novo')
+    # E9 (#2902): as flags antigas (telas novas e carteira) saíram do código; só o nicho corretora fecha a carteira.
+    it 'atende com as flags antigas desligadas' do
+      account.disable_features!('relacionamentos_novo', 'carteira_seguros')
 
       leituras.each do |caminho|
         ler(caminho)
@@ -103,7 +93,7 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       end
 
       expect(tem.call).to be(true)
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
       expect(tem.call).to be(false)
     end
   end

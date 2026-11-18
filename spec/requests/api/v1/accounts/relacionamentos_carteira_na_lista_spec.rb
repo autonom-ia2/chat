@@ -51,7 +51,7 @@ RSpec.describe 'Carteira de seguros na lista de pessoas', type: :request do
       get "#{base}/seguros/resumo_por_dono", params: { pessoa_ids: [marina.id] }
       expect(response).to have_http_status(:unauthorized)
 
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
       ler('seguros/resumo_por_dono', pessoa_ids: [marina.id])
       expect(response).to have_http_status(:not_found)
     end
@@ -95,7 +95,7 @@ RSpec.describe 'Carteira de seguros na lista de pessoas', type: :request do
   end
 
   describe 'GET pessoas, na conta sem a carteira' do
-    before { account.disable_features!('carteira_seguros') }
+    before { sem_a_carteira!(account) }
 
     it 'não tem o grupo nem procura nos seguros: a lista fica como era' do
       ler('pessoas', grupo: 'so_um_seguro')
