@@ -1,13 +1,12 @@
-# Base das leituras da Lista nova de Relacionamentos (#2894) e da ficha (#2895): só com a chave da conta ligada (404 sem
-# ela) e com a mesma permissão de ver contatos de hoje. Pedido que a lista não conhece (grupo, ordem, página, filtro)
-# responde 422; a ficha não aceita parâmetro nenhum.
+# Base das leituras da Lista nova de Relacionamentos (#2894) e da ficha (#2895), com a mesma permissão de ver contatos
+# de hoje. Desde a E9 (#2902) são as telas de todas as contas, sem chave. Pedido que a lista não conhece (grupo, ordem,
+# página, filtro) responde 422; a ficha não aceita parâmetro nenhum.
 class Api::V1::Accounts::Relacionamentos::BaseController < Api::V1::Accounts::BaseController
   CHAVES_DO_PEDIDO = %w[grupo busca ordem pagina filtros].freeze
 
   # De quem a pessoa precisa poder ver a lista (a policy de hoje); a aba Empresas troca por Company.
   class_attribute :registro_da_permissao, instance_writer: false, default: Contact
 
-  before_action :exigir_chave
   before_action :conferir_permissao
 
   rescue_from ::Relacionamentos::PedidoInvalido do |erro|
@@ -15,10 +14,6 @@ class Api::V1::Accounts::Relacionamentos::BaseController < Api::V1::Accounts::Ba
   end
 
   private
-
-  def exigir_chave
-    head :not_found unless Current.account.feature_enabled?('relacionamentos_novo')
-  end
 
   def conferir_permissao
     authorize(registro_da_permissao, :index?)

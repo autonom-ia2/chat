@@ -23,8 +23,6 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
 
   around { |example| with_modified_env(variaveis) { example.run } }
 
-  before { account.enable_features!('relacionamentos_novo') }
-
   def cabecalhos(quem)
     quem.create_new_auth_token
   end
@@ -113,18 +111,6 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
       expect(response).to have_http_status(:unauthorized)
       get "#{base}/listas/#{importacao.id}/andamento"
       expect(response).to have_http_status(:unauthorized)
-    end
-
-    it 'responde 404 em todas as rotas com a chave da conta desligada' do
-      rotas = cada_rota(admin)
-      account.disable_features!('relacionamentos_novo')
-
-      rotas.each do |nome, pedir|
-        pedir.call
-
-        expect(response).to have_http_status(:not_found), nome
-      end
-      expect(account.campaign_imports.count).to eq(1)
     end
 
     describe 'com a importação por planilha desligada na instalação' do
@@ -368,7 +354,6 @@ RSpec.describe 'Trazer minha lista (Relacionamentos)', :aggregate_failures, type
 
     it 'responde 404 para a leitura de outra conta, da automação, de Públicos, da tela antiga e para a lista já trazida' do
       outra_conta = create(:account)
-      outra_conta.enable_features!('relacionamentos_novo')
       de_fora = [
         lista(situacao: :ready_to_confirm, conta: outra_conta, opcoes: { 'trazer' => {} }),
         lista(situacao: :ready_to_confirm, opcoes: { 'trazer' => {}, 'origem' => CampaignImport::AUTOMATION_ORIGIN }),

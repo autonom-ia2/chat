@@ -2321,13 +2321,13 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Ver a lista de pessoas e empresas (Relacionamentos novo)"
      ],
      "revisar": false,
-     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; a flag relacionamentos_novo escolhe a lista nova. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md. Desde a #2970, o Conversar da linha e o Mandar mensagem da barra ficam escondidos até serem de verdade."
+     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; desde a E9 (#2902) ela abre sempre a lista nova, sem a flag relacionamentos_novo. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md. Desde a #2970, o Conversar da linha e o Mandar mensagem da barra ficam escondidos até serem de verdade."
     },
     {
      "id": "09.15",
@@ -2343,7 +2343,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Abrir a ficha da pessoa (Relacionamentos novo)"
@@ -2365,7 +2365,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Abrir a ficha da empresa (Relacionamentos novo)"
@@ -2387,7 +2387,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"
@@ -2409,7 +2409,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"
@@ -2431,7 +2431,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"

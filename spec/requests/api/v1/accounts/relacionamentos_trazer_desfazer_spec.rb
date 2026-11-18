@@ -13,8 +13,6 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
 
   around { |example| with_modified_env(variaveis) { example.run } }
 
-  before { account.enable_features!('relacionamentos_novo') }
-
   def cabecalhos(quem)
     quem.create_new_auth_token
   end
@@ -225,18 +223,6 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
       expect(response).to have_http_status(:accepted)
     end
 
-    it 'responde 404 com a chave da conta desligada' do
-      importacao = trazer_lista
-      account.disable_features!('relacionamentos_novo')
-
-      rotas.each do |nome, pedir|
-        pedir.call(importacao, user)
-
-        expect(response).to have_http_status(:not_found), nome
-      end
-      nada_foi_desfeito(importacao)
-    end
-
     describe 'com a importação por planilha desligada na instalação' do
       let(:variaveis) { ligadas.merge('CAMPAIGN_IMPORT_ENABLED' => 'false') }
 
@@ -255,7 +241,7 @@ RSpec.describe 'Trazer minha lista: desfazer (Relacionamentos)', :aggregate_fail
     it 'responde 404 para a lista de outra conta, a da automação e o rascunho' do
       outra = create(:account)
       dono = create(:user, account: outra, role: :administrator)
-      outra.enable_features!('companies', 'relacionamentos_novo')
+      outra.enable_features!('companies')
       de_fora = trazer_lista(conta: outra, quem: dono)
       da_automacao = trazer_lista
       da_automacao.update!(options: da_automacao.options.merge('origem' => CampaignImport::AUTOMATION_ORIGIN))

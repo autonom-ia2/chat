@@ -9,10 +9,7 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
   let(:agora) { Time.zone.parse('2026-11-11 12:00:00') }
   let(:leituras) { %w[pessoas pessoas/contagens pessoas/todas resumo opcoes_de_filtro] }
 
-  before do
-    account.enable_features!('relacionamentos_novo')
-    travel_to(agora)
-  end
+  before { travel_to(agora) }
 
   def ler(caminho, **params)
     get "#{base}/#{caminho}", params: params, headers: agente.create_new_auth_token
@@ -37,13 +34,14 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
     end
   end
 
-  it 'responde 404 com a chave da conta desligada' do
+  # E9 (#2902): as telas novas são de todas as contas; a flag antiga desligada não fecha mais nada.
+  it 'continua aberta com a flag antiga desligada' do
     account.disable_features!('relacionamentos_novo')
 
     leituras.each do |caminho|
       ler(caminho)
 
-      expect(response).to have_http_status(:not_found), caminho
+      expect(response).not_to have_http_status(:not_found), caminho
     end
   end
 
@@ -153,7 +151,6 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
 
     it 'não deixa ler a conta de outra pessoa' do
       outra = create(:account)
-      outra.enable_features!('relacionamentos_novo')
 
       get "/api/v1/accounts/#{outra.id}/relacionamentos/pessoas", headers: agente.create_new_auth_token
 

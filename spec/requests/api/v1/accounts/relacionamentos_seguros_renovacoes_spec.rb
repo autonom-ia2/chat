@@ -231,7 +231,7 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
 
     it 'responde 404 sem a carteira: chave desligada ou conta que não é corretora de seguros' do
       comum = create(:account)
-      comum.enable_features!('relacionamentos_novo', 'carteira_seguros')
+      comum.enable_features!('carteira_seguros')
       dono = create(:user, account: comum, role: :administrator)
       account.disable_features!('carteira_seguros')
 

@@ -1,10 +1,10 @@
 # Carteira de seguros (E4, #2897): o que os specs da carteira repetem. Os dados são sempre fictícios.
 module CarteiraHelpers
-  # A conta que tem a carteira: as duas chaves ligadas e corretora de seguros (Carteira::Acesso).
+  # A conta que tem a carteira: a chave ligada e corretora de seguros (Carteira::Acesso).
   def conta_com_carteira(**dados)
     create(:account, **dados).tap do |conta|
       Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
-      conta.enable_features!('relacionamentos_novo', 'carteira_seguros')
+      conta.enable_features!('carteira_seguros')
     end
   end
 

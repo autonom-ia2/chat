@@ -393,9 +393,9 @@ volta como problema aberto.
 
 ### Rotas
 
-Base: `/api/v1/accounts/:account_id/relacionamentos/trazer`. Todas, leituras inclusive, pedem a chave de conta
-`relacionamentos_novo` (`404` sem ela), as duas flags de instalação da tabela "Quando vale" (`404` sem elas) e
-`ContactPolicy#import?` (`401` sem ela). Só enxergam importações de contatos por arquivo da própria conta e com a
+Base: `/api/v1/accounts/:account_id/relacionamentos/trazer`. Todas, leituras inclusive, pedem as duas flags de
+instalação da tabela "Quando vale" (`404` sem elas) e `ContactPolicy#import?` (`401` sem ela). A chave de conta
+`relacionamentos_novo` deixou de ser lida na E9 (#2902): as telas novas são de todas as contas. Só enxergam importações de contatos por arquivo da própria conta e com a
 marca: as da Automação, os Públicos, as da tela "Importar contatos" e as de outra conta respondem `404`. A resposta já
 vem no formato da tela.
 

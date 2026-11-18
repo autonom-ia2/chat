@@ -38,9 +38,9 @@ RSpec.describe Autonomia::CentralDeAjuda::Leitura do
   describe 'artigo que pede a carteira de seguros' do
     before { artigo('09.20', 'Ver os seguros', 'requer' => 'carteira_seguros') }
 
-    it 'aparece para a corretora de seguros com a carteira e as telas novas de Relacionamentos' do
+    it 'aparece para a corretora de seguros com a carteira' do
       Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
-      conta.enable_features!('relacionamentos_novo', 'carteira_seguros')
+      conta.enable_features!('carteira_seguros')
 
       expect(leitura.artigos.size).to eq(1)
     end

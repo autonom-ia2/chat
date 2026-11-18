@@ -10,11 +10,10 @@ const AjustarRenovacoesPage = () => import('./pages/AjustarRenovacoesPage.vue');
 const ResultadosDasRenovacoesPage = () =>
   import('./pages/ResultadosDasRenovacoesPage.vue');
 
-// #2894 — as telas novas de Relacionamentos, atrás de relacionamentos_novo. A
-// lista não ganha rota: ela é a própria `relationships_home` (ver
-// relationships/routes.js), que escolhe a tela pela flag. Mesmas permissões da
-// página de hoje; "Trazer minha lista" (#2896) é só de quem pode importar
-// contato.
+// #2894 — as telas novas de Relacionamentos, de todas as contas desde a E9
+// (#2902). A lista não ganha rota: ela é a própria `relationships_home` (ver
+// relationships/routes.js). Mesmas permissões da página de hoje; "Trazer minha
+// lista" (#2896) é só de quem pode importar contato.
 // #2898 — "Ajustar renovações" e "Resultados das renovações" são da carteira
 // de seguros: a conta sem ela, se chegar pelo endereço, volta para a lista sem
 // chamar rota nenhuma (a própria página decide, com useContaDeSeguros).
@@ -41,15 +40,12 @@ export const PERMISSOES_DOS_AJUSTES = [
   'crm_manage_pipelines',
   'crm_admin',
 ];
-const FLAG = FEATURE_FLAGS.RELACIONAMENTOS_NOVO;
-// As mesmas flags da lista (`relationships_home`): a tela nova mora dentro do
+const FLAG = FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION;
+// A mesma flag da lista (`relationships_home`): a tela nova mora dentro do
 // menu de Relacionamentos, então quem não o tem não chega nas fichas por link.
 // Quem leva a uma destas telas de fora (a importação de contatos de hoje,
-// #2896) confere as mesmas flags antes.
-export const FLAGS_DAS_TELAS_NOVAS = [
-  FLAG,
-  FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
-];
+// #2896) confere a mesma flag antes.
+export const FLAGS_DAS_TELAS_NOVAS = [FLAG];
 
 const rota = (path, name, component, permissions = PERMISSIONS) => ({
   path: frontendURL(`accounts/:accountId/relacionamentos/${path}`),

@@ -109,7 +109,6 @@ RSpec.describe 'Carteira de seguros: leitura de PDF', type: :request do
 
   it 'não existe para a conta sem a carteira' do
     sem_carteira = create(:account)
-    sem_carteira.enable_features!('relacionamentos_novo')
     quem = create(:user, account: sem_carteira, role: :administrator)
 
     caminho = "/api/v1/accounts/#{sem_carteira.id}/relacionamentos/trazer/seguros/leituras"

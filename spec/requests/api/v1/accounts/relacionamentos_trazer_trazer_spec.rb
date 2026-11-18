@@ -209,16 +209,8 @@ RSpec.describe 'Trazer minha lista: trazer e quem pode entrar (Relacionamentos)'
       [agente, agente(permissoes: ['contact_view'])].each { |pessoa| expect_recusadas(importacao, pessoa, :unauthorized) }
     end
 
-    it 'responde 404 com a chave da conta desligada' do
-      importacao = ler_planilha(com_problemas)
-      account.disable_features!('relacionamentos_novo')
-
-      expect_recusadas(importacao, admin, :not_found)
-    end
-
     it 'responde 404 para a leitura de outra conta, para a importação da tela antiga e para a da automação' do
       outra_conta = create(:account)
-      outra_conta.enable_features!('relacionamentos_novo')
       de_fora = create(:user, account: outra_conta, role: :administrator)
       importacao = ler_planilha(com_problemas)
 
