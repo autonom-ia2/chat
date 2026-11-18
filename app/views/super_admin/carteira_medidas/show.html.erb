@@ -1,0 +1,169 @@
+<%#
+  A medição de uso da carteira de seguros (E9, #2902). Só contagens, por conta: nome e id da conta (dado do nosso
+  cliente, que o Super Admin já mostra) e números. Nenhum dado de pessoa, apólice ou dinheiro. O período troca por
+  link, sem lista de escolha. Cada célula de número leva `data-medida`, que é por onde o spec lê a tabela.
+%>
+<%
+  periodos = { 'este_mes' => 'Este mês', 'mes_passado' => 'Mês passado' }
+  origens = { 'planilha' => 'Planilha', 'manual' => 'À mão', 'pdf' => 'PDF', 'conector' => 'Agger' }
+  passos = { 'cotacao_pedida' => 'Começou', 'proposta_pedida' => 'Cotou', 'proposta_pronta' => 'Proposta pronta',
+             'proposta_enviada' => 'Enviada', 'proposta_enviada_sozinha' => 'Saiu sozinha', 'proposta_nao_saiu' => 'Não saiu' }
+  lotes = { 'pdf' => 'Lotes de PDF', 'conector' => 'Buscas no Agger' }
+  passos_de_pdf = { 'chegou_pdf' => 'Chegou por PDF', 'dados_lidos_pdf' => 'PDF lido na cotação' }
+  celula = 'px-3 py-2 text-right text-slate-700'
+  motivos = ->(contagem) { contagem.map { |motivo, quantos| "#{motivo}: #{quantos}" }.join(' · ').presence || '—' }
+%>
+<div class="p-8">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">Carteira de seguros: uso</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Só contagens, por conta. Cada conta é lida no fuso dela (coluna <strong>Fuso</strong>): o mês começa e termina no
+      relógio dela. Leitura: nada aqui liga, desliga ou limita.
+    </p>
+  </div>
+
+  <nav class="mt-6 flex gap-2" aria-label="Período">
+    <% periodos.each do |valor, nome| %>
+      <% atual = valor == @periodo %>
+      <%= link_to nome, super_admin_carteira_medida_path(periodo: valor),
+                  'aria-current': (atual ? 'page' : nil),
+                  class: "rounded px-4 py-2 text-sm font-medium #{atual ? 'bg-woot-500 text-white' : 'border border-slate-300 text-slate-700 hover:bg-slate-50'}" %>
+    <% end %>
+  </nav>
+
+  <p class="mt-4 text-xs text-slate-500">
+    Seguros e "em aberto" são a foto de agora. Renovações fechadas, cotação e leitura de PDF contam o período escolhido.
+  </p>
+
+  <div class="mt-4 overflow-x-auto rounded border border-slate-200 bg-white">
+    <table class="w-full text-left text-sm">
+      <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-3 py-2" colspan="3"></th>
+          <th class="px-3 py-2 text-center" colspan="6">Seguros na carteira</th>
+          <th class="px-3 py-2 text-center" colspan="3">Renovações</th>
+          <th class="px-3 py-2 text-center" colspan="6">Cotação da renovação</th>
+          <th class="px-3 py-2 text-center" colspan="4">Leitura de PDF</th>
+          <th class="px-3 py-2 text-center" colspan="2">Chaves</th>
+        </tr>
+        <tr>
+          <th class="px-3 py-2">Conta</th>
+          <th class="px-3 py-2">Fuso</th>
+          <th class="px-3 py-2">Período</th>
+          <% origens.each_value do |nome| %><th class="px-3 py-2 text-right"><%= nome %></th><% end %>
+          <th class="px-3 py-2 text-right">De outra corretora</th>
+          <th class="px-3 py-2 text-right">Cancelados</th>
+          <th class="px-3 py-2 text-right">Em aberto</th>
+          <th class="px-3 py-2 text-right">Renovaram</th>
+          <th class="px-3 py-2 text-right">Não renovaram</th>
+          <% passos.each_value do |nome| %><th class="px-3 py-2 text-right"><%= nome %></th><% end %>
+          <% lotes.each_value do |nome| %><th class="px-3 py-2 text-right"><%= nome %></th><% end %>
+          <% passos_de_pdf.each_value do |nome| %><th class="px-3 py-2 text-right"><%= nome %></th><% end %>
+          <th class="px-3 py-2 text-center">Leitura</th>
+          <th class="px-3 py-2 text-center">Cotação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @linhas.each do |linha| %>
+          <tr class="border-b border-slate-100" data-conta="<%= linha[:conta_id] %>">
+            <td class="px-3 py-2 font-medium text-slate-900">
+              <%= @contas[linha[:conta_id]]&.name || "conta #{linha[:conta_id]}" %>
+              <span class="text-slate-400">#<%= linha[:conta_id] %></span>
+            </td>
+            <td class="px-3 py-2 text-slate-500"><%= linha[:fuso] %></td>
+            <td class="px-3 py-2 text-slate-500"><%= l(linha[:inicio]) %> a <%= l(linha[:fim]) %></td>
+            <% origens.each_key do |origem| %>
+              <td class="<%= celula %>" data-medida="origem.<%= origem %>"><%= linha[:seguros][:por_origem][origem] %></td>
+            <% end %>
+            <td class="<%= celula %>" data-medida="de_fora"><%= linha[:seguros][:de_fora] %></td>
+            <td class="<%= celula %>" data-medida="cancelados"><%= linha[:seguros][:cancelados] %></td>
+            <td class="<%= celula %>" data-medida="em_aberto"><%= linha[:renovacoes][:em_aberto] %></td>
+            <td class="<%= celula %>" data-medida="renovadas"><%= linha[:renovacoes][:renovadas] %></td>
+            <td class="<%= celula %>" data-medida="nao_renovadas"><%= linha[:renovacoes][:nao_renovadas] %></td>
+            <% passos.each_key do |passo| %>
+              <td class="<%= celula %>" data-medida="cotacao.<%= passo %>"><%= linha[:cotacao][:passos][passo] %></td>
+            <% end %>
+            <% lotes.each_key do |origem| %>
+              <td class="<%= celula %>" data-medida="lotes.<%= origem %>"><%= linha[:leitura][:lotes][origem] %></td>
+            <% end %>
+            <% passos_de_pdf.each_key do |passo| %>
+              <td class="<%= celula %>" data-medida="leitura.<%= passo %>"><%= linha[:leitura][:passos][passo] %></td>
+            <% end %>
+            <% %i[leitura cotacao].each do |chave| %>
+              <td class="px-3 py-2 text-center text-slate-700" data-medida="chave.<%= chave %>"><%= linha[:chaves][chave] ? 'Sim' : '—' %></td>
+            <% end %>
+          </tr>
+        <% end %>
+        <% if @linhas.empty? %>
+          <tr><td colspan="24" class="px-3 py-6 text-center text-slate-500">Nenhuma conta usa a carteira de seguros.</td></tr>
+        <% else %>
+          <tr class="bg-slate-50 font-semibold" data-conta="total">
+            <td class="px-3 py-2 text-slate-900" colspan="3">Total (<%= @linhas.size %> contas, cada uma no fuso dela)</td>
+            <% origens.each_key do |origem| %>
+              <td class="<%= celula %>" data-medida="origem.<%= origem %>"><%= @total[:seguros][:por_origem][origem] %></td>
+            <% end %>
+            <td class="<%= celula %>" data-medida="de_fora"><%= @total[:seguros][:de_fora] %></td>
+            <td class="<%= celula %>" data-medida="cancelados"><%= @total[:seguros][:cancelados] %></td>
+            <td class="<%= celula %>" data-medida="em_aberto"><%= @total[:renovacoes][:em_aberto] %></td>
+            <td class="<%= celula %>" data-medida="renovadas"><%= @total[:renovacoes][:renovadas] %></td>
+            <td class="<%= celula %>" data-medida="nao_renovadas"><%= @total[:renovacoes][:nao_renovadas] %></td>
+            <% passos.each_key do |passo| %>
+              <td class="<%= celula %>" data-medida="cotacao.<%= passo %>"><%= @total[:cotacao][:passos][passo] %></td>
+            <% end %>
+            <% lotes.each_key do |origem| %>
+              <td class="<%= celula %>" data-medida="lotes.<%= origem %>"><%= @total[:leitura][:lotes][origem] %></td>
+            <% end %>
+            <% passos_de_pdf.each_key do |passo| %>
+              <td class="<%= celula %>" data-medida="leitura.<%= passo %>"><%= @total[:leitura][:passos][passo] %></td>
+            <% end %>
+            <% %i[leitura cotacao].each do |chave| %>
+              <td class="px-3 py-2 text-center text-slate-700" data-medida="chave.<%= chave %>"><%= @total[:contas][chave] %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if @total %>
+    <p class="mt-4 text-sm text-slate-700" data-medida="contas_com_seguro">
+      Contas com seguro: <strong><%= @total[:contas][:tem_seguro] %></strong> ·
+      com a leitura de PDF liberada: <strong><%= @total[:contas][:leitura] %></strong> ·
+      com a cotação da renovação liberada: <strong><%= @total[:contas][:cotacao] %></strong>
+    </p>
+
+    <h2 class="mt-8 text-lg font-semibold text-slate-900">Por motivo</h2>
+    <div class="mt-2 overflow-x-auto rounded border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-3 py-2">Conta</th>
+            <th class="px-3 py-2">Não renovou, por motivo</th>
+            <th class="px-3 py-2">Proposta não saiu, por motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @linhas.each do |linha| %>
+            <tr class="border-b border-slate-100" data-motivos="<%= linha[:conta_id] %>">
+              <td class="px-3 py-2 text-slate-900">#<%= linha[:conta_id] %></td>
+              <td class="px-3 py-2 text-slate-700"><%= motivos.call(linha[:renovacoes][:nao_renovadas_por_motivo]) %></td>
+              <td class="px-3 py-2 text-slate-700"><%= motivos.call(linha[:cotacao][:nao_saiu_por_motivo]) %></td>
+            </tr>
+          <% end %>
+          <tr class="bg-slate-50 font-semibold" data-motivos="total">
+            <td class="px-3 py-2 text-slate-900">Total</td>
+            <td class="px-3 py-2 text-slate-700"><%= motivos.call(@total[:renovacoes][:nao_renovadas_por_motivo]) %></td>
+            <td class="px-3 py-2 text-slate-700"><%= motivos.call(@total[:cotacao][:nao_saiu_por_motivo]) %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <p class="mt-4 text-xs text-slate-500">
+    <strong>Seguros na carteira</strong>: os que não foram cancelados nem renovados (o renovado dá lugar à apólice nova),
+    por onde chegaram; os de outra corretora e os cancelados ficam à parte. <strong>Em aberto</strong>: renovação com card
+    no funil, ainda valendo. <strong>Começou</strong>: a renovação perguntou ao cliente se algo mudou;
+    <strong>Cotou</strong>: a cotação foi pedida às seguradoras. <strong>Chaves</strong>: liberadas pelo Super Admin, por conta.
+  </p>
+</div>

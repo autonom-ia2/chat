@@ -1122,7 +1122,7 @@ Rails.application.routes.draw do
             resource :configuration, only: [:show, :update], controller: 'configurations'
             patch ':entity/:id/values', to: 'values#update'
           end
-          # #2894 — leituras da Lista nova de Relacionamentos (chave relacionamentos_novo). Empresa é do Enterprise.
+          # #2894 — leituras da Lista nova de Relacionamentos (de todas as contas desde a E9, #2902). Empresa é do Enterprise.
           namespace :relacionamentos do
             # #2895 — as leituras da ficha (show e as de `member`), cada uma no formato que a tela lê.
             resources :pessoas, only: [:index, :show] do
@@ -1800,6 +1800,8 @@ Rails.application.routes.draw do
       # Medir para cobrar e para mostrar retorno (entrega 7): cotações e SEGURADORAS ACIONADAS por
       # corretora e por período. Leitura — nada aqui limita volume.
       resource :insurance_measurement, only: [:show]
+      # E9 (#2902): o uso da carteira de seguros por conta e por mês, só contagens. Leitura.
+      resource :carteira_medida, only: [:show]
 
       # order of resources affect the order of sidebar navigation in super admin
       resources :accounts, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
