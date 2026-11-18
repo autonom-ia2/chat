@@ -127,10 +127,65 @@ RSpec.describe Autonomia::Agents::RetrievalQuery do
       .to eq('Serão apenas 5.')
   end
 
-  it 'does not look beyond the bounded history window' do
-    turns = history + Array.new(described_class::HISTORY_MESSAGES) { { role: 'assistant', content: 'Certo.' } }
+  it 'keeps the service and detail through 3 to 10 to 2 with split replies' do
+    turns = [{ role: 'user', content: 'Quero fazer analise de amostras' },
+             { role: 'assistant', content: 'Qual o material e quantas amostras?' },
+             { role: 'user', content: 'sangue.3' },
+             { role: 'assistant', content: 'Temos diferentes prazos.' },
+             { role: 'assistant', content: 'Qual prazo voce prefere?' },
+             { role: 'user', content: '3' },
+             { role: 'assistant', content: 'O valor anterior era R$ 42 por amostra.' },
+             { role: 'assistant', content: 'Voce ja sabe como realizar a coleta?' },
+             { role: 'user', content: 'Na verdade, serão só 10 amostras.' },
+             { role: 'assistant', content: 'O total anterior era R$ 420.' },
+             { role: 'assistant', content: 'Voce ja sabe como realizar a coleta?' }]
 
-    expect(described_class.new(query: 'Vou fazer só de 10.', history: turns).call).to eq('Vou fazer só de 10.')
+    expect(described_class.new(query: 'Serão apenas 2 amostras.', history: turns).call)
+      .to eq("Serão apenas 2 amostras.\nsangue.3\nQuero fazer analise de amostras")
+  end
+
+  it 'does not append an unrelated assistant question to a quantity correction' do
+    turns = history + [{ role: 'assistant', content: 'Voce sabe realizar a coleta?' }]
+
+    expect(described_class.new(query: 'Serão apenas 2 amostras.', history: turns).call)
+      .to eq("Serão apenas 2 amostras.\n#{subject_question}")
+  end
+
+  it 'counts customer interactions rather than assistant bubbles at the interaction boundary' do
+    corrections = Array.new(Autonomia::Agents::Config::HISTORY_MAX_INTERACOES - 1) do
+      [{ role: 'user', content: 'Vou fazer só de 10.' }, { role: 'assistant', content: 'Certo.' }]
+    end.flatten
+
+    expect(described_class.new(query: 'Serão apenas 2.', history: history + corrections).call)
+      .to eq("Serão apenas 2.\n#{subject_question}")
+  end
+
+  it 'does not look beyond the customer interaction window' do
+    corrections = Array.new(Autonomia::Agents::Config::HISTORY_MAX_INTERACOES) do
+      { role: 'user', content: 'Vou fazer só de 10.' }
+    end
+
+    expect(described_class.new(query: 'Serão apenas 2.', history: history + corrections).call).to eq('Serão apenas 2.')
+  end
+
+  it 'does not look beyond the raw message safety limit' do
+    turns = [history.first] + Array.new(Autonomia::Agents::Config::HISTORY_MAX_MESSAGES - 1) do
+      { role: 'assistant', content: 'Certo.' }
+    end
+
+    expect(described_class.new(query: 'Vou fazer só de 10.', history: turns).call)
+      .to eq("Vou fazer só de 10.\n#{subject_question}")
+    expect(described_class.new(query: 'Vou fazer só de 10.', history: turns + [history.last]).call).to eq('Vou fazer só de 10.')
+  end
+
+  it 'uses the latest topic and its detail after many assistant bubbles' do
+    turns = history + [{ role: 'user', content: 'Quero contratar o plano Empresa' },
+                       { role: 'assistant', content: 'Qual modalidade?' },
+                       { role: 'user', content: 'anual' }] +
+            Array.new(10) { { role: 'assistant', content: 'Certo.' } }
+
+    expect(described_class.new(query: 'Serão apenas 2 usuários.', history: turns).call)
+      .to eq("Serão apenas 2 usuários.\nanual\nQuero contratar o plano Empresa")
   end
 
   it 'bounds the search hint without mutating the original messages' do

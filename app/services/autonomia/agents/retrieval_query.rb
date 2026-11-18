@@ -9,25 +9,32 @@ class Autonomia::Agents::RetrievalQuery
     )
     (?:(?:s[óo]|apenas|somente|only|just)\s+)?(?:de\s+)?[0-9]{1,9}
     (?:\s+\p{L}[\p{L}-]*(?:\s+\p{L}[\p{L}-]*){0,2})?[.!]?\z/ix
-  HISTORY_MESSAGES = 8
   HISTORY_ITEM_CHARS = 400
   FOLLOWUP_CHARS = 160
   DETAIL_WORDS = 4
 
   def initialize(query:, history: [])
     @query = query
-    @history = Array(history).last(HISTORY_MESSAGES)
+    @history = bounded_history(history)
   end
 
   def call
     return @query unless contextual_followup?
 
-    # Customer details and the last question guide search, never the assistant's previous quote or answer.
-    context = [*subject_context, last_question].compact.map { |text| text[0, HISTORY_ITEM_CHARS] }
+    # Only a bare number or yes/no needs the assistant's question to identify what it answers.
+    question = last_question if short_answer?(@query.to_s.strip)
+    context = [*subject_context, question].compact.map { |text| text[0, HISTORY_ITEM_CHARS] }
     context.empty? ? @query : [@query, *context].join("\n")
   end
 
   private
+
+  def bounded_history(history)
+    config = ::Autonomia::Agents::Config
+    turns = Array(history).last(config::HISTORY_MAX_MESSAGES)
+    customer_indexes = turns.each_index.select { |index| turns[index][:role] == 'user' }
+    turns.drop(customer_indexes[-config::HISTORY_MAX_INTERACOES] || 0)
+  end
 
   def contextual_followup?
     text = @query.to_s.strip
