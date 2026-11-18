@@ -56,7 +56,6 @@ module Autonomia::Agents::Tools::Recusa
     'especialista_sem_resposta' => 'o modelo do especialista falhou ou não devolveu o formato combinado',
     'especialista_falhou' => 'o especialista levantou uma exceção',
     'especialista_nao_concluiu' => 'o especialista respondeu vazio, sem resposta e sem pendência',
-    'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
     'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente',
     'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta',
     # Conversa 7150 (26/09/2026): a corretora trabalha com o ramo, mas não há especialista dele nesta conta.

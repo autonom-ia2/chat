@@ -46,6 +46,8 @@ RSpec.describe Autonomia::Agents::Answerer do
     conexao.store_session!({ 'multicalculoToken' => 'multi' }, expires_at: 3.hours.from_now)
     # Sem base de conhecimento: o retrieval não é o assunto deste spec e chamaria embedding.
     agente.update!(config: agente.config.merge('with_knowledge' => false))
+    # A consulta às condições gerais só entra no catálogo com a chave da própria conta (#3035).
+    allow(Autonomia::Insurance::GeneralConditions::Client).to receive(:account_key).and_return('sk-conta-do-cliente-0123456789')
   end
 
   def cotou(code, name, amount)

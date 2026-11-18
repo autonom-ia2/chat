@@ -1,0 +1,25 @@
+{
+  "encaminhamento": {
+    "rota": "consulta",
+    "seguradoras": [
+      "Seguradora Zorblax"
+    ],
+    "seguradoras_lidas": [
+      {
+        "como_escrito": "Seguradora Zorblax",
+        "nome": "Seguradora Zorblax",
+        "serve_para_varias": false
+      }
+    ],
+    "produto": "Automóvel - Casco",
+    "processos": [],
+    "motivo": "Pergunta sobre cobertura de vidro traseiro nas condições de uma seguradora.",
+    "modelo": "gpt-6-luna"
+  },
+  "resposta": {
+    "error": {
+      "code": "insurer_not_found",
+      "message": "Insurer not found for name: 'Seguradora Zorblax'"
+    }
+  }
+}

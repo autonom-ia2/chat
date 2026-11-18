@@ -1,0 +1,85 @@
+{
+  "encaminhamento": {
+    "rota": "consulta",
+    "seguradoras": [
+      "Porto Seguro"
+    ],
+    "seguradoras_lidas": [
+      {
+        "como_escrito": "Porto Seguro",
+        "nome": "Porto Seguro",
+        "serve_para_varias": false
+      }
+    ],
+    "produto": "Residencial",
+    "processos": [],
+    "motivo": "Pergunta sobre a franquia de uma cobertura nas condições do seguro residencial de uma seguradora específica.",
+    "modelo": "gpt-6-luna"
+  },
+  "resposta": {
+    "query_text": "No seguro residencial da Porto Seguro, a cobertura de danos elétricos tem franquia?",
+    "profile_name": "baseline_default",
+    "answer_text": "O trecho não confirma se a cobertura de danos elétricos tem franquia especificamente. Nas condições gerais do processo SUSEP 15414.652124/2021-13, a franquia é descontada da indenização quando houver, e seu valor consta no certificado; a cobertura de danos elétricos é descrita, mas esses trechos não dizem se ela prevê franquia.",
+    "answer_status": "answered",
+    "used_context_count": 2,
+    "used_citation_labels": [
+      "docver:a7de727e section p65 r29",
+      "docver:a7de727e section p16 r15"
+    ],
+    "warnings": [
+      "context_budget_exhausted",
+      "model_marked_partial"
+    ],
+    "model_provider": "openai",
+    "model_name": "gpt-6-luna",
+    "prompt_version": "answer-synthesis-v10",
+    "generated_at": "2026-11-15T21:09:12.968951+00:00",
+    "grounded": true,
+    "truncated": false,
+    "contracts": {
+      "in_scope": 3,
+      "in_context": [
+        "15414.000573/2006-42",
+        "15414.100639/2004-31",
+        "15414.652124/2021-13"
+      ],
+      "cited": [
+        "15414.652124/2021-13"
+      ]
+    },
+    "resolved_insurer": {
+      "insurer_id": "fac4494b-c792-4d54-aa8c-9b64b38a4677",
+      "insurer_name": "Porto Seguro",
+      "lob_id": null,
+      "lob_name": null,
+      "process_count": 103
+    },
+    "interpreted": {
+      "product": {
+        "sent": "Residencial",
+        "resolved": "Residencial",
+        "did_you_mean": [],
+        "applied": false
+      },
+      "lob": {
+        "sent": null,
+        "resolved": null,
+        "did_you_mean": [],
+        "applied": false
+      },
+      "insurers": [
+        {
+          "sent": "Porto Seguro",
+          "resolved": [
+            "Porto Seguro"
+          ],
+          "widened": false,
+          "did_you_mean": [],
+          "documents_matched": 103
+        }
+      ],
+      "processes_matched": 3,
+      "warnings": []
+    }
+  }
+}
