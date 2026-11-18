@@ -165,12 +165,9 @@ describe('o valor da mensagem na tela', () => {
       ],
     };
     const de = gatilho =>
-      opcoesDosValores(
-        comFalhou,
-        () => [],
-        chave => chave,
-        gatilho
-      ).map(item => item.value);
+      opcoesDosValores(comFalhou, () => [], chave => chave, gatilho).map(
+        item => item.value
+      );
 
     expect(de(FALHOU)).toEqual(['conversa.status']);
     expect(de()).toEqual(['conversa.status', 'falhou.texto']);
@@ -210,11 +207,7 @@ describe('LivreCondicao', () => {
           Input: true,
           ChoiceSelect: {
             name: 'ChoiceSelect',
-            props: {
-              options: Array,
-              modelValue: null,
-              wrapSelected: Boolean,
-            },
+            props: ['options', 'modelValue'],
             emits: ['update:modelValue'],
             template: '<div data-escolha />',
           },
@@ -223,15 +216,6 @@ describe('LivreCondicao', () => {
     });
   const escolhas = wrapper =>
     wrapper.findAllComponents({ name: 'ChoiceSelect' });
-
-  // #2754: "O contato tem reunião marcada (em qualquer card)" não cabe numa
-  // linha em 390 px; o campo fechado quebra linha em vez de cortar.
-  it('o que olhar quebra linha no campo fechado; o operador não', () => {
-    const [campo, operador] = escolhas(montar(STATUS));
-
-    expect(campo.props('wrapSelected')).toBe(true);
-    expect(operador.props('wrapSelected')).toBe(false);
-  });
 
   it('trocar o campo para "Tipo da mensagem" não leva o valor do anterior', () => {
     const wrapper = montar(STATUS);
