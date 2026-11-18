@@ -93,7 +93,9 @@ RSpec.describe DeleteObjectJob do
                                           fim_vigencia: 1.year.from_now.to_date, origem: 'planilha')
     historia = linha!('carteira_apolice_eventos', apolice_id: apolice, tipo: 'chegou_planilha', quando: Time.current)
     # E5 (#2898): a escolha de onde ficam as renovações, e uma apólice que renovou a anterior (chave para a própria tabela).
-    linha!('carteira_renovacao_configs', account_id: account.id, pipeline_id: pipeline.id, stage_id: stage.id, user_id: user.id)
+    # E8 (#2901): a caixa por onde a cotação manda (chave para a caixa com SET NULL, que sai no pré-apagar das caixas).
+    linha!('carteira_renovacao_configs', account_id: account.id, pipeline_id: pipeline.id, stage_id: stage.id, user_id: user.id,
+                                         inbox_id: inbox.id)
     linha!('carteira_apolices', account_id: account.id, contact_id: contact.id, tipo: 'auto', seguradora: 'Seguradora Exemplo',
                                 seguradora_chave: 'seguradoraexemplo', numero: 'EX-001235', numero_chave: 'EX001235',
                                 fim_vigencia: 2.years.from_now.to_date, origem: 'manual', apolice_anterior_id: apolice)

@@ -157,13 +157,25 @@ class RelacionamentosSegurosAPI extends ApiClient {
     return axios.get(`${this.url}/seguros/renovacoes`);
   }
 
-  // `ajustes`: { funilId, etapaId, dias, mensagens }.
+  // `ajustes`: { funilId, etapaId, dias, mensagens } e, com a cotação da
+  // renovação ligada, { quemCota, quemEnvia, quemResponde, caixaId }.
   salvarRenovacoes(ajustes) {
     return axios.put(`${this.url}/seguros/renovacoes`, ajustes);
   }
 
   resultados() {
     return axios.get(`${this.url}/seguros/resultados`);
+  }
+
+  // #2901 (E8) — a cotação da renovação: o consumo de cotações do mês (só
+  // contagens) e "Enviar proposta" no seguro (devolve o seguro, já com a
+  // cotação de agora).
+  cotacoes() {
+    return axios.get(`${this.url}/seguros/cotacoes`);
+  }
+
+  enviarProposta(id) {
+    return axios.post(`${this.url}/seguros/${id}/enviar_proposta`);
   }
 
   renovou(id) {

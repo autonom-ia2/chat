@@ -202,11 +202,70 @@ RSpec.describe 'Carteira de seguros: escritas', type: :request do
     end
 
     it 'responde 422, sem repetir o que foi mandado, para campo que a correção não conhece ou que chega em formato errado' do
-      [{ placa: 'EXE0X00' }, { valor: [3410] }, { bem: { nome: 'Carro Exemplo 2023' } }, { contact_id: 1 }, { cancelado_em: nil }].each do |pedido|
+      pedidos = [{ chassi: 'EXE0X00' }, { valor: [3410] }, { placa: ['EXM0A00'] }, { bonus: { classe: 5 } }, { bem: { nome: 'Carro Exemplo 2023' } },
+                 { contact_id: 1 }, { cancelado_em: nil }]
+      pedidos.each do |pedido|
         corrigir(pedido)
 
         expect(response).to have_http_status(:unprocessable_entity), pedido.to_s
         expect(response.parsed_body).to eq('error' => 'pedido_invalido'), pedido.to_s
+      end
+      expect(nao_mudou).to be(true)
+    end
+  end
+
+  # E8.1 (#3043): nascimento, sexo, CEP, placa e classe de bônus, que a cotação da renovação pede.
+  describe 'corrigir os dados do segurado da cotação' do
+    it 'grava o que a pessoa escreveu, na forma da coluna, e devolve no seguro' do
+      corrigir({ nascimento: '1985-03-15', sexo: 'F', cep: '12345-678', placa: 'exm-0a00', bonus: '5' })
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('nascimento' => '1985-03-15', 'sexo' => 'F', 'cep' => '12345678', 'placa' => 'EXM0A00',
+                                              'bonus' => 5, 'corrigidoAMao' => %w[nascimento sexo cep placa bonus])
+      expect(seguro.reload).to have_attributes(segurado_nascimento: '1985-03-15', segurado_sexo: 'F', cep: '12345678', placa: 'EXM0A00',
+                                               bonus_classe: 5)
+    end
+
+    it 'a história guarda o antes e o depois da placa e do bônus, e do nascimento, do sexo e do CEP só que mudaram' do
+      seguro.update!(segurado_nascimento: '1980-01-01', cep: '01001000')
+
+      corrigir({ nascimento: '1985-03-15', sexo: 'M', cep: '12345678', placa: 'EXM0A00', bonus: 5 })
+
+      evento = seguro.eventos.sole
+      expect(evento.mudancas).to eq(
+        [{ 'campo' => 'nascimento', 'antes_vazio' => false }, { 'campo' => 'sexo', 'antes_vazio' => true },
+         { 'campo' => 'cep', 'antes_vazio' => false }, { 'campo' => 'placa', 'antes' => nil, 'depois' => 'EXM0A00' },
+         { 'campo' => 'bonus', 'antes' => nil, 'depois' => 5 }]
+      )
+      expect(evento.attributes.to_json).not_to include('1985-03-15', '1980-01-01', '12345678', '01001000')
+    end
+
+    it 'em branco apaga o que estava guardado' do
+      seguro.update!(segurado_nascimento: '1985-03-15', segurado_sexo: 'F', cep: '12345678', placa: 'EXM0A00', bonus_classe: 5)
+
+      corrigir({ nascimento: '', sexo: nil, cep: ' ', placa: '', bonus: '' })
+
+      expect(response).to have_http_status(:ok)
+      expect(seguro.reload).to have_attributes(segurado_nascimento: nil, segurado_sexo: nil, cep: nil, placa: nil, bonus_classe: nil)
+    end
+
+    it 'recusa com o código de cada um, sem repetir o que foi mandado e sem gravar nada' do
+      recusas = {
+        'nascimento_invalido' => [{ nascimento: '15/03/1985' }, { nascimento: '1985-02-30' }, { nascimento: '2026-11-13' },
+                                  { nascimento: '1899-12-31' }, { nascimento: '1985-3-5' }],
+        'sexo_invalido' => [{ sexo: 'X' }, { sexo: 'f' }, { sexo: 'Feminino' }],
+        'cep_invalido' => [{ cep: '1234-567' }, { cep: '123456789' }, { cep: '12345-67a' }],
+        'placa_invalida' => [{ placa: 'EXM0A0' }, { placa: '1234567' }, { placa: 'EX@0A00' }],
+        'bonus_invalido' => [{ bonus: 11 }, { bonus: -1 }, { bonus: '5.0' }, { bonus: 'cinco' }]
+      }
+
+      recusas.each do |codigo, pedidos|
+        pedidos.each do |pedido|
+          corrigir(pedido.merge(bem: 'Carro Exemplo 2023'))
+
+          expect(response).to have_http_status(:unprocessable_entity), "#{codigo} #{pedido}"
+          expect(response.parsed_body).to eq('error' => codigo), pedido.to_s
+        end
       end
       expect(nao_mudou).to be(true)
     end

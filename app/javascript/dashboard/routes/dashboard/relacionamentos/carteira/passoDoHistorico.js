@@ -40,6 +40,21 @@ export const PASSOS_COM_FRASE = [
   // seguro em palavras simples mandado ao cliente.
   'chegou_de_fora',
   'palavras_enviadas',
+  // #2901 (E8) — a cotação da renovação: a pergunta "Algo mudou?" e a
+  // resposta, a cotação, a proposta e o envio dela. O detalhe (o motivo, o
+  // preço) fica na parte Cotação da gaveta: aqui vai só o que aconteceu.
+  'cotacao_pedida',
+  'algo_mudou_nao_saiu',
+  'respondeu_algo_mudou',
+  'cliente_respondeu',
+  'proposta_pedida',
+  'proposta_nao_saiu',
+  'proposta_pronta',
+  'proposta_enviada',
+  'proposta_enviada_sozinha',
+  // #3043 (E8.1) — a cotação leu o PDF guardado para achar os dados do
+  // segurado. Nenhum valor lido vem no passo.
+  'dados_lidos_pdf',
 ];
 export const PASSO_SEM_NOME = 'PASSO_SEM_NOME';
 // Alguém desfez o "Renovou" ou o "Não renovou": `valores.anterior` diz qual.

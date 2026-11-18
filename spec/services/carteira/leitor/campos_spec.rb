@@ -65,6 +65,43 @@ RSpec.describe Carteira::Leitor::Campos do
     expect(esquema[:properties]['tipo'][:enum]).to eq(Carteira::Apolice::TIPOS + [nil])
   end
 
+  # E8.1 (#3043): os dados do segurado da cotação.
+  describe 'nascimento, sexo, CEP, placa e classe de bônus' do
+    let(:do_segurado) do
+      [pagina.new(numero: 1, texto: "Segurado: Marina Exemplo. Data de nascimento: 15/03/85. Sexo: Feminino. CEP 12345-678.\n" \
+                                    'Placa: EXM-0A00. Classe de bônus: 5. Bônus: 10% de desconto.')]
+    end
+
+    it 'o esquema pede cada um com o seu null, e o sexo numa lista fechada' do
+      novos = %w[segurado_nascimento segurado_sexo segurado_sexo_escrito cep placa bonus_classe bonus_trecho]
+
+      expect(esquema[:required]).to include(*novos)
+      expect(esquema[:properties]['segurado_sexo']).to eq(type: %w[string null], enum: %w[F M] + [nil])
+      expect(esquema[:properties]['bonus_classe']).to eq(type: %w[integer null])
+      expect(described_class::INSTRUCTIONS).to include('segurado_nascimento:', 'bonus_trecho:', 'Nunca o CEP da seguradora, da corretora')
+    end
+
+    it 'o que está escrito passa, na forma da coluna; a palavra do sexo e o trecho do bônus não viram campo' do
+      responde('e_apolice' => true, 'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'segurado_sexo_escrito' => 'Feminino',
+               'cep' => '12345-678', 'placa' => 'EXM-0A00', 'bonus_classe' => 5, 'bonus_trecho' => 'Classe de bônus: 5')
+
+      campos = pergunta.ler(do_segurado).campos
+
+      expect(campos).to include('segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'cep' => '12345678', 'placa' => 'EXM0A00',
+                                'bonus_classe' => 5)
+      expect(campos.keys).not_to include('segurado_sexo_escrito', 'bonus_trecho')
+    end
+
+    it 'o que não está escrito, o sexo sem a palavra e o bônus fora do trecho viram null' do
+      responde('e_apolice' => true, 'segurado_nascimento' => '1985-03-16', 'segurado_sexo' => 'F', 'segurado_sexo_escrito' => nil,
+               'cep' => '98765-432', 'placa' => 'EXM0A01', 'bonus_classe' => 7, 'bonus_trecho' => 'Classe de bônus: 5')
+
+      campos = pergunta.ler(do_segurado).campos
+
+      expect(campos.values_at('segurado_nascimento', 'segurado_sexo', 'cep', 'placa', 'bonus_classe')).to all(be_nil)
+    end
+  end
+
   it 'manda só as páginas recebidas, com o número de cada uma, e as instruções fixas' do
     responde('e_apolice' => true)
 
@@ -88,7 +125,8 @@ RSpec.describe Carteira::Leitor::Campos do
     expect(lido.e_apolice).to be(true)
     expect(lido.campos).to eq('tipo' => 'auto', 'ramo_original' => nil, 'seguradora' => 'Seguradora Exemplo S.A.', 'numero' => 'EX-2026.001234',
                               'inicio_vigencia' => nil, 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498, 'bem' => nil,
-                              'corretora' => nil, 'segurado_nome' => nil, 'segurado_documento' => '12345678900')
+                              'corretora' => nil, 'segurado_nome' => nil, 'segurado_documento' => '12345678900',
+                              'segurado_nascimento' => nil, 'cep' => nil, 'placa' => nil, 'segurado_sexo' => nil, 'bonus_classe' => nil)
     expect(lido.a_confirmar).to eq({})
     expect(lido.resposta).to include('segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 7)
   end

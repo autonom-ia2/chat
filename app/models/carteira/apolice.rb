@@ -61,6 +61,8 @@ class Carteira::Apolice < ApplicationRecord
   validate :um_desfecho_so
   validate :motivo_com_o_desfecho
   validate :card_e_anterior_da_conta, if: -> { will_save_change_to_crm_card_id? || will_save_change_to_apolice_anterior_id? }
+  # E8.1 (#3043): nascimento, sexo, CEP, placa e classe de bônus, para a cotação da renovação.
+  include Carteira::DadosDoSegurado
 
   private
 

@@ -1306,6 +1306,7 @@ pt_BR:
         seguros_do_agger: 'Trazer seguros do Agger, buscar de novo e ligar ou desligar a busca de todo dia só se faz na tela: Relacionamentos › Trazer › Do Agger.'
         seguro_de_fora: 'O seguro de outra corretora só se lê, guarda ou apaga na tela: abra a pessoa (ou o painel da conversa) › Seguros › Guardar seguro de outra corretora.'
         seguro_palavras: 'O seguro em palavras simples só se escreve e se manda ao cliente na tela: Relacionamentos › Seguros › abra o seguro › Seu seguro em palavras simples.'
+        seguro_proposta: 'A proposta de renovação só se manda ao cliente na tela, no botão Enviar da renovação do seguro.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
       stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'

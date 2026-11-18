@@ -2480,6 +2480,10 @@
       "pagina"
     ]
   },
+  "relacionamentos/seguros/cotacoes": {
+    "controller": "api/v1/accounts/relacionamentos/seguros/cotacoes#show",
+    "parametros": []
+  },
   "relacionamentos/seguros/opcoes_de_filtro": {
     "controller": "api/v1/accounts/relacionamentos/seguros#opcoes_de_filtro",
     "parametros": []

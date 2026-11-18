@@ -1212,6 +1212,8 @@ Rails.application.routes.draw do
                 put :renovacoes, to: 'seguros/renovacoes#update'
                 # #2898 (E5.4) — os resultados das renovações: venceram, renovaram e por que não, por período.
                 get :resultados, to: 'seguros/resultados#show'
+                # #2901 (E8) — o consumo de cotações do mês no cartão da cotação da renovação (só contagens).
+                get :cotacoes, to: 'seguros/cotacoes#show'
               end
               member do
                 get :historia
@@ -1233,6 +1235,8 @@ Rails.application.routes.draw do
                 post :renovou, to: 'seguros/desfechos#renovou'
                 post :nao_renovou, to: 'seguros/desfechos#nao_renovou'
                 post :desfazer_desfecho, to: 'seguros/desfechos#desfazer'
+                # #2901 (E8) — "Enviar" a proposta de renovação pelo card (modo `pessoa`: nada sai antes do clique).
+                post :enviar_proposta, to: 'seguros/propostas#create'
               end
             end
             get 'pessoas/:id/seguros', to: 'pessoas/seguros#index'
@@ -1806,6 +1810,8 @@ Rails.application.routes.draw do
         post :toggle_prospecting_score_engine, on: :member
         post :toggle_insurance, on: :member
         post :toggle_insurance_ramo, on: :member
+        # #2899 e #2901 — as chaves da carteira de seguros: leitura de PDF e cotação da renovação.
+        post :toggle_carteira, on: :member
       end
       resources :prospecting_scoring_profiles, except: [:show]
       resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do

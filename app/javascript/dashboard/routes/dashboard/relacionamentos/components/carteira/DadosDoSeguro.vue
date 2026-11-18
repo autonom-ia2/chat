@@ -10,6 +10,9 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // que mostrar. De quem é o seguro fica no topo da gaveta (FraseDoSeguro.vue).
 // "Como chegou" diz só de onde e quando: o nome do arquivo da planilha não
 // aparece, porque costuma trazer nome de cliente ou CPF.
+// #3043 (E8.1) — os dados do segurado que a cotação da renovação usa
+// (nascimento, sexo, CEP, placa e classe de bônus) só aparecem quando o seguro
+// os tem: o que falta não vira "Não informado".
 const props = defineProps({
   seguro: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
@@ -31,6 +34,8 @@ const origem = computed(() => {
 
 const dataOuNada = segundos =>
   segundos === null ? '' : textos.dataInteira(segundos);
+const temValor = valor => valor !== null && valor !== undefined && valor !== '';
+const seTiver = (valor, escrever) => (temValor(valor) ? escrever(valor) : '');
 
 const linhas = computed(() => {
   const { seguro } = props;
@@ -46,6 +51,23 @@ const linhas = computed(() => {
       valor: seguro.valor === null ? '' : textos.valor(seguro.valor),
     },
     { chave: 'bem', valor: seguro.bem },
+    {
+      chave: 'nascimento',
+      valor: seTiver(seguro.nascimento, textos.dataInteira),
+      soComValor: true,
+    },
+    {
+      chave: 'sexo',
+      valor: seTiver(seguro.sexo, textos.sexo),
+      soComValor: true,
+    },
+    { chave: 'cep', valor: seTiver(seguro.cep, textos.cep), soComValor: true },
+    { chave: 'placa', valor: seguro.placa, soComValor: true },
+    {
+      chave: 'bonus',
+      valor: seTiver(seguro.bonus, textos.bonus),
+      soComValor: true,
+    },
     { chave: 'origem', valor: origem.value },
   ]
     .filter(linha => linha.valor || !linha.soComValor)

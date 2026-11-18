@@ -25,7 +25,9 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
   end
 
   # Ligada há uma semana: os casos que não são sobre o instante de ligar não dependem dele.
-  def de_tempo(tipo, ligada: 1.week.ago, **parametros)
+  def ligada_padrao = 1.week.ago
+
+  def de_tempo(tipo, ligada: ligada_padrao, **parametros)
     gatilho = { 'tipo' => tipo, **parametros.transform_keys(&:to_s) }
     travel_to(ligada) { automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: gatilho) }
   end
@@ -112,6 +114,10 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
 
     # 09:00 em Tóquio; o servidor está em outro fuso.
     def as_9h_da_conta(&) = travel_to(fuso.local(2026, 11, 10, 9, 0), &)
+
+    # Estes casos viajam para datas fixas; "uma semana atrás" do relógio real passou delas em 16/11/2026 e a automação
+    # aparecia ligada depois da ocorrência. Ligada numa data fixa antes de todas as do bloco.
+    def ligada_padrao = fuso.local(2026, 11, 1, 0, 0)
 
     it 'antes: 30 dias antes da data, a partir da hora, no fuso da conta', :aggregate_failures do
       definicao = de_tempo('contato.data', campo: 'vencimento', dias: 30, quando: 'antes', hora: 8)

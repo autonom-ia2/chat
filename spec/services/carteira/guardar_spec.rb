@@ -157,6 +157,27 @@ RSpec.describe Carteira::Guardar do
       expect(passos(primeira)).to eq(%w[chegou_planilha])
     end
 
+    # E8.1 (#3043): os dados do segurado da cotação seguem as mesmas regras; nascimento, sexo e CEP entram na história sem
+    # o valor.
+    it 'os dados do segurado da cotação: preenche o vazio, e a história guarda o valor só da placa e do bônus' do
+      do_segurado = { segurado_nascimento: '1985-03-15', segurado_sexo: 'F', cep: '12345678', placa: 'EXM0A00', bonus_classe: 5 }
+
+      resultado = guardar(**do_segurado)
+
+      expect(resultado.situacao).to eq('atualizada')
+      expect(primeira.reload).to have_attributes(do_segurado)
+      expect(ultimas_mudancas(primeira)).to eq(
+        [{ 'campo' => 'nascimento', 'antes_vazio' => true }, { 'campo' => 'sexo', 'antes_vazio' => true },
+         { 'campo' => 'cep', 'antes_vazio' => true }, { 'campo' => 'placa', 'antes' => nil, 'depois' => 'EXM0A00' },
+         { 'campo' => 'bonus', 'antes' => nil, 'depois' => 5 }]
+      )
+      expect(primeira.eventos.last.attributes.to_json).not_to include('1985-03-15', '12345678')
+    end
+
+    it 'recusa a classe de bônus que não é inteiro, como o valor' do
+      expect { guardar(bonus_classe: '5') }.to raise_error(ArgumentError, 'bonus_classe')
+    end
+
     it 'o campo corrigido à mão não muda; os outros mudam' do
       primeira.update!(valor_centavos: 400_000, corrigido_a_mao: ['valor'])
 

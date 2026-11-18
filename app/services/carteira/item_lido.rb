@@ -19,7 +19,9 @@ class Carteira::ItemLido
   # campo da gaveta => nome do leitor
   DA_TELA = {
     'tipo' => 'tipo', 'seguradora' => 'seguradora', 'numero' => 'numero', 'comeca' => 'inicio_vigencia',
-    'termina' => 'fim_vigencia', 'valor' => 'valor_centavos', 'bem' => 'bem'
+    'termina' => 'fim_vigencia', 'valor' => 'valor_centavos', 'bem' => 'bem',
+    # E8.1 (#3043): os dados do segurado que a cotação da renovação pede.
+    'nascimento' => 'segurado_nascimento', 'sexo' => 'segurado_sexo', 'cep' => 'cep', 'placa' => 'placa', 'bonus' => 'bonus_classe'
   }.freeze
   # A marca, guardada no item ao trazer, de que a pessoa nasceu com este lote (o Desfazer só tira quem o lote criou).
   PESSOA_NOVA = 'pessoa_nova_em'.freeze

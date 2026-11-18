@@ -9,10 +9,14 @@ import {
 } from '../../carteira/apoliceNova';
 import {
   OUTRA_SEGURADORA,
+  SEXOS,
+  cepComMascara,
   dadosParaCorrigir,
   faltasDoFormulario,
   formularioDoSeguro,
+  placaComMascara,
   primeiroCampoQueFalta,
+  temNascimentoESexo,
 } from '../../carteira/formularioDoSeguro';
 import { TIPOS_DE_SEGURO, chaveDoTipo } from '../../carteira/tiposDeSeguro';
 import CampoDoSeguro from './CampoDoSeguro.vue';
@@ -27,6 +31,11 @@ import CampoDoSeguro from './CampoDoSeguro.vue';
 // seguro que renovou (carteira/apoliceNova.js): nasce com o que não muda de um
 // ano para o outro e emite tudo o que foi preenchido. O número pode ficar para
 // depois, e o rótulo do campo diz isso.
+// #3043 (E8.1) — "Dados para a cotação": nascimento e sexo do segurado (só no
+// seguro de pessoa), CEP, placa (só no seguro de veículo, ou quando já tem) e
+// classe de bônus. É o caminho do seguro que chegou sem PDF. O sexo é escolha
+// do componente da casa, nunca a lista nativa; CEP e placa ganham máscara
+// enquanto a pessoa digita. A apólice nova não mostra esta parte.
 const props = defineProps({
   seguro: { type: Object, required: true },
   // As seguradoras que a conta já tem (a lista da escolha).
@@ -56,8 +65,13 @@ const dadosDe = campos =>
 const tentou = ref(false);
 const nadaMudou = ref(false);
 
+const MASCARAS = { cep: cepComMascara, placa: placaComMascara };
 const mudar = (campo, valor) => {
-  formulario.value = { ...formulario.value, [campo]: valor };
+  const mascara = MASCARAS[campo];
+  formulario.value = {
+    ...formulario.value,
+    [campo]: mascara ? mascara(valor) : valor,
+  };
   nadaMudou.value = false;
 };
 
@@ -77,6 +91,19 @@ const opcoesDeSeguradora = computed(() => [
 const outraEscolhida = computed(
   () => formulario.value.seguradora === OUTRA_SEGURADORA
 );
+
+// #3043 — os dados para a cotação.
+const comNascimentoESexo = temNascimentoESexo(props.seguro);
+const comPlaca = computed(
+  () => formulario.value.tipo === 'auto' || Boolean(inicial.placa)
+);
+const opcoesDeSexo = computed(() => [
+  { value: '', label: ca('SEXO_NAO_INFORMADO') },
+  ...SEXOS.map(letra => ({
+    value: letra,
+    label: t(`RELACIONAMENTOS_CARTEIRA.SEXOS.${letra}`),
+  })),
+]);
 
 const focar = async campo => {
   await nextTick();
@@ -177,6 +204,74 @@ const TEXTOS = [
       :model-value="formulario[item.campo]"
       @update:model-value="mudar(item.campo, $event)"
     />
+    <fieldset
+      v-if="!apoliceNova"
+      data-carteira="dados-para-a-cotacao"
+      class="flex flex-col min-w-0 gap-5 p-0 m-0 border-0"
+    >
+      <legend class="p-0 mb-1 text-base font-semibold text-n-slate-12">
+        {{ ca('DADOS_DA_COTACAO') }}
+      </legend>
+      <p class="m-0 text-sm text-n-slate-11">
+        {{ ca('APOIO_DA_COTACAO') }}
+      </p>
+      <CampoDoSeguro
+        v-if="comNascimentoESexo"
+        :id="idDe('nascimento')"
+        data-campo="nascimento"
+        type="date"
+        :rotulo="ca('NASCIMENTO')"
+        :falta="falta('nascimento')"
+        :model-value="formulario.nascimento"
+        @update:model-value="mudar('nascimento', $event)"
+      />
+      <div v-if="comNascimentoESexo" class="flex flex-col gap-1.5">
+        <label :for="idDe('sexo')" class="text-sm font-medium text-n-slate-12">
+          {{ ca('SEXO') }}
+        </label>
+        <ChoiceSelect
+          :model-value="formulario.sexo"
+          :options="opcoesDeSexo"
+          :trigger-id="idDe('sexo')"
+          :aria-label="ca('SEXO')"
+          @update:model-value="mudar('sexo', $event)"
+        />
+      </div>
+      <CampoDoSeguro
+        :id="idDe('cep')"
+        data-campo="cep"
+        inputmode="numeric"
+        autocomplete="off"
+        maxlength="9"
+        :rotulo="ca('CEP')"
+        :falta="falta('cep')"
+        :model-value="formulario.cep"
+        @update:model-value="mudar('cep', $event)"
+      />
+      <CampoDoSeguro
+        v-if="comPlaca"
+        :id="idDe('placa')"
+        data-campo="placa"
+        autocomplete="off"
+        autocapitalize="characters"
+        maxlength="8"
+        :rotulo="ca('PLACA')"
+        :falta="falta('placa')"
+        :model-value="formulario.placa"
+        @update:model-value="mudar('placa', $event)"
+      />
+      <CampoDoSeguro
+        :id="idDe('bonus')"
+        data-campo="bonus"
+        inputmode="numeric"
+        autocomplete="off"
+        maxlength="2"
+        :rotulo="ca('BONUS')"
+        :falta="falta('bonus')"
+        :model-value="formulario.bonus"
+        @update:model-value="mudar('bonus', $event)"
+      />
+    </fieldset>
     <p class="m-0 text-sm text-n-slate-11">
       {{ ca(apoliceNova ? 'APOIO_DA_APOLICE_NOVA' : 'APOIO') }}
     </p>

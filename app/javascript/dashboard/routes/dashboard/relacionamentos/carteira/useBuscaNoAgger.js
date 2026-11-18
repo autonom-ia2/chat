@@ -11,10 +11,14 @@
 //
 // Toda espera que pode falhar tem saída: quando o acompanhamento falha
 // (`semAcompanhar`), a busca parou no servidor (`busca.estado === 'parou'`) ou
-// não anda há tempo demais (`parado`), `tentarDeNovo` retoma — busca de novo,
-// acompanha de novo ou pede o "Trazer" outra vez (o servidor é idempotente).
-// Quando o Agger recusou o login (`busca.motivo === PEDE_LOGIN`), a tela pede
-// o login de novo e, com ele aceito, busca de novo.
+// não anda há tempo demais (`parado`), `tentarDeNovo` começa uma busca nova,
+// pelo mesmo caminho do botão grande (#2900, E7.5); no "Trazendo", pede o
+// "Trazer" outra vez (o servidor é idempotente). Quando o Agger recusou o
+// login (`busca.motivo === PEDE_LOGIN`), a tela pede o login de novo e, com
+// ele aceito, busca de novo.
+//
+// "Buscar de novo" volta direto ao "Buscando", sem os avisos das seguradoras
+// da busca anterior (#2900, E7.5): eles não valem para a busca que anda.
 import { ref } from 'vue';
 import { chaveDaRecusaDoAgger, codigoDaRecusa } from './recusas';
 
@@ -150,6 +154,7 @@ export const useBuscaNoAgger = (
   };
 
   const comecarBusca = async () => {
+    parar();
     const criada = await tentar(() => fonte.buscar());
     if (!criada) return;
     aoMudarBusca(criada.leituraId);
@@ -170,12 +175,15 @@ export const useBuscaNoAgger = (
 
   const deNovo = async () => {
     parar();
-    const conferir = await tentar(() => fonte.deNovo(busca.value.id));
+    const { id } = busca.value;
+    const conferir = await tentar(() => fonte.deNovo(id));
     if (!conferir) {
       semAcompanhar.value = true;
       return;
     }
-    await abrir(busca.value.id);
+    busca.value = { id, estado: 'lendo', porSeguradora: [] };
+    etapa.value = ETAPAS_DO_AGGER.BUSCANDO;
+    await abrir(id);
   };
 
   // A janela do login: devolve o que o Agger respondeu (LOGIN). Aceito, segue
@@ -203,13 +211,12 @@ export const useBuscaNoAgger = (
     await comAndamento(busca.value.id).catch(falhouAoAcompanhar);
   };
 
-  // "Tentar de novo": no "Trazendo", pede o Trazer outra vez; na busca que
-  // parou ou não anda, busca de novo; quando só o acompanhamento falhou,
-  // acompanha de novo.
+  // "Tentar de novo": no "Trazendo", pede o Trazer outra vez; na busca,
+  // começa uma busca nova, como o botão grande. Se uma busca da conta ainda
+  // anda de fato, o servidor devolve essa mesma, e a tela volta a acompanhá-la.
   const tentarDeNovo = () => {
     if (etapa.value === ETAPAS_DO_AGGER.TRAZENDO) return trazer();
-    if (busca.value?.estado === 'parou' || parado.value) return deNovo();
-    return abrir(busca.value.id);
+    return comecarBusca();
   };
 
   const recomecar = () => {

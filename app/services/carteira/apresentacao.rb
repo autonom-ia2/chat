@@ -17,6 +17,13 @@
 # sabe) e quando a pessoa quis o lembrete da renovação (`lembreteAceitoEm`, em segundos; nulo sem lembrete). O seguro em
 # palavras simples (E6.6) não vem aqui: a gaveta o pede à parte (GET seguros/:id/palavras), e a lista não carrega texto.
 #
+# A cotação da renovação (E8, #2901): com a chave da cotação na conta (Carteira::Cotacao::Liberada), cada seguro ganha
+# `cotacao` (Carteira::Cotacao::Situacao: a etapa, o que faltou, a proposta, a variação contra o ano passado e se dá para
+# enviar). Sem a chave, a chave nem vem: o formato é o da E5.
+#
+# Os dados do segurado da cotação (E8.1, #3043): `nascimento` (AAAA-MM-DD, data sem hora), `sexo` (F ou M), `cep` (só os
+# dígitos), `placa` e `bonus` (a classe, inteiro). Nulos quando o seguro não tem: a tela não mostra o que falta.
+#
 # O documento do segurado fica nulo até a decisão de onde o CPF e o CNPJ moram. O que é das próximas entregas (parcela,
 # endosso) vem vazio, com a chave presente: as peças da tela leem essas chaves e somem por dado ausente.
 class Carteira::Apresentacao
@@ -40,8 +47,11 @@ class Carteira::Apresentacao
   # donos deles que ainda são da conta, em outra.
   def de_cada(apolices)
     visiveis = cards_visiveis(apolices)
+    cotacoes = Carteira::Cotacao::Liberada.para?(@account) ? Carteira::Cotacao::Situacao.new(apolices).call : nil
     apolices.map do |apolice|
-      do_seguro(apolice).merge(da_situacao(apolice), da_renovacao(apolice, visiveis), de_fora(apolice), DAS_PROXIMAS_ENTREGAS)
+      linha = do_seguro(apolice).merge(do_segurado(apolice), da_situacao(apolice), da_renovacao(apolice, visiveis), de_fora(apolice),
+                                       DAS_PROXIMAS_ENTREGAS)
+      cotacoes ? linha.merge(cotacao: cotacoes[apolice.id]) : linha
     end
   end
 
@@ -57,6 +67,11 @@ class Carteira::Apresentacao
       tipo: apolice.tipo, ramoOriginal: apolice.ramo_original, seguradora: apolice.seguradora, numero: apolice.numero,
       valor: Carteira::Campos.em_reais(apolice.valor_centavos), bem: apolice.bem,
       comeca: apolice.inicio_vigencia&.iso8601, termina: apolice.fim_vigencia.iso8601 }
+  end
+
+  def do_segurado(apolice)
+    { nascimento: apolice.segurado_nascimento, sexo: apolice.segurado_sexo, cep: apolice.cep, placa: apolice.placa,
+      bonus: apolice.bonus_classe }
   end
 
   def da_situacao(apolice)

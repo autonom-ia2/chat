@@ -48,7 +48,8 @@ RSpec.describe 'Carteira de seguros: trazer do Agger', :aggregate_failures, type
       andar_a_busca(Carteira::Leitura.find(id))
       get "#{base}/leituras/#{id}", headers: admin.create_new_auth_token
       corpo = response.parsed_body
-      expect(corpo).to include('estado' => 'lida', 'seguros' => 3, 'pessoas' => 3, 'semTelefone' => 3, 'naoDeuParaTrazer' => 2)
+      expect(corpo).to include('estado' => 'lida', 'seguros' => 3, 'pessoas' => 3, 'semTelefone' => 3, 'naoDeuParaTrazer' => 2,
+                               'naoDeuPorque' => { 'semDados' => 1, 'semDocumento' => 0, 'naoLeu' => 1 })
       expect(corpo['porSeguradora']).to include({ 'nome' => nil, 'situacao' => 'sem_login' },
                                                 { 'nome' => 'Seguradora Sol (exemplo)', 'situacao' => 'pede_login' })
       expect(corpo.to_s).not_to include('mock-pdf', 'exemplo.test', '10020030088')

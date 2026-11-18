@@ -175,6 +175,7 @@
       "PARADA": "parada pelo modelo",
       "SISTEMA": {
         "agendamento": "Usado pelo sistema nos avisos do agendamento.",
+        "carteira": "Usado pelo sistema nas renovações de seguro.",
         "anuncios": "Usado pelo sistema nos avisos de Anúncios.",
         "cobranca": "Usado pelo sistema nos avisos de cobrança do funil.",
         "satisfacao": "Usado pelo sistema na pesquisa de satisfação depois do atendimento."

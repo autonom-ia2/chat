@@ -1,6 +1,7 @@
 # "Corrigir" da gaveta do seguro (E4, #2897): grava só os campos que a pessoa mudou, deixa na história o antes e o
 # depois de cada um e marca o campo como corrigido à mão, para a próxima importação da planilha não desfazer a correção.
-# Mandar o mesmo valor não é correção: não grava nem entra na história.
+# Mandar o mesmo valor não é correção: não grava nem entra na história. Do nascimento, do sexo e do CEP do segurado
+# (E8.1, #3043), a história guarda só que mudaram, nunca o valor (Carteira::Campos.mudanca).
 #
 # A apólice fica travada do começo ao fim: duas correções ao mesmo tempo não contam a mesma mudança duas vezes. A
 # transação é própria (savepoint), para a recusa do índice único não derrubar a de quem chamou. Outra apólice da conta
@@ -44,7 +45,7 @@ class Carteira::Corrigir
 
       antes = Carteira::Campos.guardado(@apolice[coluna])
       depois = Carteira::Campos.guardado(novos[coluna])
-      { campo: campo, antes: antes, depois: depois } unless antes == depois
+      Carteira::Campos.mudanca(campo, antes, depois) unless antes == depois
     end
   end
 
