@@ -280,7 +280,7 @@ RSpec.describe 'Fechamento #2414 · reunião: lembrete antes e reunião do conta
       Crm::Cards::Closer.new(card: outro_ganho, actor: doutora, result: 'won').perform
       drenar
       esperando = Autonomia::Automacao::Execucao.find_by!(automacao_id: resposta['id'], alvo: outro_ganho)
-      allow(Autonomia::Automacao::Escuta).to receive(:reservar).and_call_original
+      allow(Autonomia::Automacao::Escuta).to receive(:reservar).and_wrap_original { |m, e| File.write('/tmp/reuniao_dbg.txt', "#{e.id} #{esperando.id}\n" + caller.grep(/app\//).first(8).join("\n") + "\n---\n", mode: 'a'); m.call(e) }
 
       marca(novo_card('Júlia - Entrevistas'), pagina: entrevistas)
 
