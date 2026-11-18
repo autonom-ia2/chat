@@ -166,6 +166,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Testar normalizacao dos mirrors apt
+        run: python3 .github/scripts/test_apt_install.py
+
       - name: Testar o planejador
         run: python3 .github/scripts/test_rspec_plan.py
 
