@@ -141,7 +141,7 @@ RSpec.describe Crm::Webhooks::Emitter do
     end
 
     it 'does not dispatch for an account that no longer has the insurance portfolio' do
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
 
       outcomes.each_key { |event_type| emit_for(renewal_card, event_type) }
 

@@ -13,8 +13,6 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
-  before { account.enable_features!('relacionamentos_novo') }
-
   def pessoa(nome, conta: account, **dados)
     create(:contact, account: conta, name: nome, **dados)
   end
@@ -53,18 +51,12 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
     end
   end
 
-  it 'responde 404 com a chave da conta desligada' do
+  # E9 (#2902): as telas novas são de todas as contas; a flag antiga desligada não fecha mais nada.
+  it 'continua aberta com a flag antiga desligada' do
     account.disable_features!('relacionamentos_novo')
 
     ler_funis(quem: admin)
-    expect(response).to have_http_status(:not_found)
-
-    escritas.each do |caminho|
-      pedir(caminho, quem: admin, pessoa_ids: [pessoa('Ana Albuquerino').id])
-
-      expect(response).to have_http_status(:not_found), caminho
-    end
-    expect(account.contacts.count).to eq(3)
+    expect(response).not_to have_http_status(:not_found)
   end
 
   it 'não atende quem é de outra conta' do

@@ -25,7 +25,7 @@ RSpec.describe 'Ficha de Relacionamentos: empresa e funções', type: :request d
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
   before do
-    account.enable_features!('relacionamentos_novo', 'companies')
+    account.enable_features!('companies')
     travel_to(agora)
     create(:inbox_member, user: agente, inbox: caixa)
   end
@@ -74,13 +74,14 @@ RSpec.describe 'Ficha de Relacionamentos: empresa e funções', type: :request d
       end
     end
 
-    it 'responde 404 com a chave da conta desligada' do
+    # E9 (#2902): as telas novas são de todas as contas; a flag antiga desligada não fecha mais nada.
+    it 'continua aberta com a flag antiga desligada' do
       account.disable_features!('relacionamentos_novo')
 
       leituras_da_empresa.each do |caminho|
         ler(caminho)
 
-        expect(response).to have_http_status(:not_found), caminho
+        expect(response).not_to have_http_status(:not_found), caminho
       end
     end
 

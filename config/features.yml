@@ -1377,14 +1377,15 @@
   enabled: false
   column: feature_flags_ext_2
 
-# Relacionamentos: as telas novas (#2894, épico #1240). Ligada: o menu Relacionamentos abre a lista nova de pessoas e
-# empresas, a ficha nova da pessoa e da empresa e "Trazer minha lista". Desligada: as telas atuais, sem mudança nenhuma.
-# Sem migration. Rollback: desligar a flag na conta. Posição 45 (17592186044416, 1 << 44), confirmada pela
-# Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
+# Relacionamentos: as telas novas (#2894, épico #1240). Virou o padrão na E9 (#2902): o código não lê mais a flag (o
+# menu Relacionamentos abre sempre a lista nova, a ficha nova e "Trazer minha lista") e a migration 20261118100000 a
+# ligou em todas as contas e nas novas. A entrada fica, marcada `deprecated`: o bit é a posição. Posição 45
+# (17592186044416, 1 << 44), confirmada pela Orquestração em 12/11, depois da agente_ferramentas_prontas_premium (#2905, 44).
 - name: relacionamentos_novo
   display_name: Relacionamentos › telas novas
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
+  deprecated: true
 
 # Agentes: ferramentas prontas, IP próprio das consultas grátis (#2942, parte do #2858). Ligada (junto com
 # `agente_ferramentas_prontas`): as consultas grátis da conta (CEP, CNPJ, FIPE e as outras fontes públicas) saem por um IP
@@ -1432,14 +1433,15 @@
   enabled: true
   column: feature_flags_ext_2
 
-# Carteira de seguros (E4, #2897, épico #1240). Ligada, e só em conta corretora de seguros que já tem as telas novas de
-# Relacionamentos (Carteira::Acesso): a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa.
-# Desligada: nada disso aparece e as rotas da carteira respondem 404. Nasce desligada em todas as contas. Rollback:
-# desligar a flag na conta. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
+# Carteira de seguros (E4, #2897, épico #1240). Virou o padrão na E9 (#2902, decisão do Rodrigo em 18/11): o código não
+# lê mais a flag e a carteira (a aba Seguros, o bloco Seguros na ficha e os seguros no painel da conversa) é de toda conta
+# corretora de seguros (Carteira::Acesso). Sem migration: com a leitura fora, o bit não decide mais nada. A entrada fica,
+# marcada `deprecated`: o bit é a posição. Posição pela ordem deste arquivo: 49 (281474976710656, 1 << 48).
 - name: carteira_seguros
   display_name: Relacionamentos › carteira de seguros
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2
+  deprecated: true
 
 # Agentes: modelos prontos por ramo de seguro (#2881). Ligada, e só em conta com o pacote `seguros`: "Criar agente"
 # oferece os agentes prontos de seguro auto, seguro garantia e transporte de carga. O agente nasce como comercial

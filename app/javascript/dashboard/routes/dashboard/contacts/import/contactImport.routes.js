@@ -3,9 +3,10 @@
 // (the validation and import jobs); with either off the menu keeps Chatwoot's own import
 // dialog and this address goes back to Contacts.
 //
-// Trazer minha lista (#2896): on accounts with the new Relacionamentos screens, "Importar
-// contatos" and "Importações" lead to that screen instead (it reads the spreadsheet and keeps
-// the history of what was brought in). Without those flags everything here stays as it was.
+// Trazer minha lista (#2896): on accounts with the Relacionamentos menu (every account has the
+// new screens since #2902), "Importar contatos" and "Importações" lead to that screen instead (it
+// reads the spreadsheet and keeps the history of what was brought in). Without the menu flag
+// everything here stays as it was.
 import store from 'dashboard/store';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';

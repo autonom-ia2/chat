@@ -425,7 +425,7 @@ RSpec.describe 'Carteira de seguros: renovação de um seguro', type: :request d
     end
 
     it 'responde 404 sem a carteira' do
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
 
       respostas = acoes.map do |nome|
         acao(nome)

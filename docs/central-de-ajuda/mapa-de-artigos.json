@@ -2321,13 +2321,13 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Ver a lista de pessoas e empresas (Relacionamentos novo)"
      ],
      "revisar": false,
-     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; a flag relacionamentos_novo escolhe a lista nova. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md. Desde a #2970, o Conversar da linha e o Mandar mensagem da barra ficam escondidos até serem de verdade."
+     "nota": "Issue #2894 (E1 do épico #1240). A rota é a mesma do 09.11; desde a E9 (#2902) ela abre sempre a lista nova, sem a flag relacionamentos_novo. 'Falou há pouco' e 'Sumiu' contarem só mensagem que a pessoa mandou é decisão de produto registrada no porques.md. Desde a #2970, o Conversar da linha e o Mandar mensagem da barra ficam escondidos até serem de verdade."
     },
     {
      "id": "09.15",
@@ -2343,7 +2343,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Abrir a ficha da pessoa (Relacionamentos novo)"
@@ -2365,7 +2365,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Abrir a ficha da empresa (Relacionamentos novo)"
@@ -2387,7 +2387,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"
@@ -2409,7 +2409,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"
@@ -2431,7 +2431,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "relacionamentos_novo",
+     "requer": "relationships_navigation",
      "prints": [],
      "fontes": [
       "porques: Trazer minha lista de pessoas (planilha)"
@@ -2451,14 +2451,14 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Ver a aba Seguros e quem vence primeiro (carteira de seguros)",
       "porques: Ver os seguros de uma pessoa ou de uma empresa (carteira de seguros)"
      ],
      "revisar": false,
-     "nota": "Issue #2897 (E4 do épico #1240). Não há rota nova: a aba é ?aba=seguros na rota da lista. A numeração pula de 09.17 para 09.20 de propósito. O portão é Carteira::Acesso (a chave carteira_seguros, as telas novas e a conta ser corretora de seguros). A aba não marca seguros e não manda mensagem; quem pode trazer lista tem no topo o botão de trazer seguros (09.22)."
+     "nota": "Issue #2897 (E4 do épico #1240). Não há rota nova: a aba é ?aba=seguros na rota da lista. A numeração pula de 09.17 para 09.20 de propósito. O portão é Carteira::Acesso: a conta ser corretora de seguros (sem chave desde a E9, #2902). A aba não marca seguros e não manda mensagem; quem pode trazer lista tem no topo o botão de trazer seguros (09.22)."
     },
     {
      "id": "09.21",
@@ -2472,7 +2472,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Corrigir os dados de um seguro ou marcar como cancelado (carteira de seguros)",
@@ -2493,7 +2493,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Trazer uma planilha com seguros (carteira de seguros)"
@@ -2513,7 +2513,7 @@
       "rota": "home",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Ver os seguros de quem está na conversa (carteira de seguros)"
@@ -2535,7 +2535,7 @@
       "rota": "relacionamentos_renovacoes",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Ajustar as renovações: funil, dias antes do fim e mensagens (carteira de seguros)",
@@ -2558,7 +2558,7 @@
       "rota": "relacionamentos_resultados",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Ver os resultados das renovações (carteira de seguros)"
@@ -2578,7 +2578,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Anexar o PDF de um seguro e ver o que mudou (carteira de seguros com leitura de PDF)",
@@ -2599,7 +2599,7 @@
       "rota": "relationships_home",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Guardar o seguro que a pessoa tem em outra corretora e lembrar da renovação (carteira de seguros com leitura de PDF)",
@@ -2620,7 +2620,7 @@
       "rota": "relacionamentos_trazer",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Trazer seguros do Agger, com a busca de todo dia (carteira de seguros)"
@@ -2640,7 +2640,7 @@
       "rota": "relacionamentos_renovacoes",
       "destaque": null
      },
-     "requer": "carteira_seguros",
+     "requer": "carteira_de_seguros",
      "prints": [],
      "fontes": [
       "porques: Cotação da renovação: quem cota, como a proposta sai e quem responde o cliente (carteira de seguros)"

@@ -34,18 +34,19 @@ RSpec.describe Autonomia::CentralDeAjuda::Leitura do
     end
   end
 
-  # #2897: o artigo da carteira de seguros segue o mesmo portão da tela (Carteira::Acesso), não só a chave.
+  # #2897: o artigo da carteira de seguros segue o mesmo portão da tela (Carteira::Acesso): toda conta corretora, sem
+  # chave desde a E9 (#2902).
   describe 'artigo que pede a carteira de seguros' do
-    before { artigo('09.20', 'Ver os seguros', 'requer' => 'carteira_seguros') }
+    before { artigo('09.20', 'Ver os seguros', 'requer' => 'carteira_de_seguros') }
 
-    it 'aparece para a corretora de seguros com a carteira e as telas novas de Relacionamentos' do
+    it 'aparece para a corretora de seguros' do
       Autonomia::Agents::Nicho.atribuir(conta, nicho: 'seguros', perfil: 'corretora')
-      conta.enable_features!('relacionamentos_novo', 'carteira_seguros')
+      conta.save!
 
       expect(leitura.artigos.size).to eq(1)
     end
 
-    it 'não aparece para a conta que só tem a chave ligada' do
+    it 'não aparece para a conta que não é corretora, mesmo com a flag antiga ligada' do
       conta.enable_features!('carteira_seguros')
 
       expect(leitura.artigos).to be_empty

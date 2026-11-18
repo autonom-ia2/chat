@@ -142,7 +142,7 @@ RSpec.describe 'Carteira de seguros: funções e empresa', type: :request do
       account.disable_features!('companies')
       da_empresa
       expect(response).to have_http_status(:forbidden)
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
       da_empresa
       expect(response).to have_http_status(:not_found)
     end

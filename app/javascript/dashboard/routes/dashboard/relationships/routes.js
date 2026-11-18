@@ -2,16 +2,17 @@ import { frontendURL } from 'dashboard/helper/URLHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
 
-// #2894 — a porta escolhe, pela flag relacionamentos_novo, entre a lista nova e a página de hoje.
-const RelacionamentosInicio = () =>
-  import('../relacionamentos/pages/RelacionamentosInicio.vue');
+// #2894 — a porta de Relacionamentos abre a lista nova de pessoas e empresas, de
+// todas as contas desde a E9 (#2902). A aba Empresas é `?aba=empresas` nesta
+// mesma rota.
+const ListaPage = () => import('../relacionamentos/pages/ListaPage.vue');
 const CompanyMediaView = () => import('./CompanyMediaView.vue');
 
 export const routes = [
   {
     path: frontendURL('accounts/:accountId/relationships'),
     name: 'relationships_home',
-    component: RelacionamentosInicio,
+    component: ListaPage,
     meta: {
       featureFlag: FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
       permissions: [

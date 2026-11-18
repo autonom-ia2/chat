@@ -250,7 +250,6 @@ RSpec.describe 'Carteira de seguros: seguro de outra corretora', type: :request 
 
   it 'não existe para a conta sem a carteira' do
     sem_carteira = create(:account)
-    sem_carteira.enable_features!('relacionamentos_novo')
     quem = create(:user, account: sem_carteira, role: :administrator)
     alguem = create(:contact, account: sem_carteira)
 

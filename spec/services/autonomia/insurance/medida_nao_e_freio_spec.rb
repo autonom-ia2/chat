@@ -17,12 +17,15 @@ RSpec.describe Autonomia::Insurance::Medida do
   # Onde a medida PODE aparecer: ela mesma, a porta da conta (a corretora vê o retorno), a página do
   # Super Admin (a operação cobra) e o cartão das cotações do mês em "Ajustar renovações" (E8, #2901:
   # Carteira::Cotacao::Consumo, só contagens para a corretora ler, lido só pelo GET seguros/cotacoes; nada
-  # da cotação da renovação o consulta para decidir se cota). Nenhum arquivo de ferramenta, job ou aceite.
+  # da cotação da renovação o consulta para decidir se cota). A medição de uso da carteira (E9, #2902:
+  # Carteira::Medida, lida só pela página do Super Admin) usa dela só o fuso da conta. Nenhum arquivo de ferramenta, job
+  # ou aceite.
   let(:leitores) do
     ['app/controllers/api/v1/accounts/autonomia/insurance/measurement_controller.rb',
      'app/controllers/super_admin/insurance_measurements_controller.rb',
      'app/services/autonomia/insurance/medida.rb',
      'app/services/carteira/cotacao/consumo.rb',
+     'app/services/carteira/medida.rb',
      'app/views/super_admin/insurance_measurements/show.html.erb']
   end
 

@@ -14,8 +14,8 @@ class Autonomia::CentralDeAjuda::Leitura
     'autonomia_agents' => ->(conta) { ::Autonomia::Agents::Config.enabled?(conta) },
     'autonomia_prospecting' => ->(conta) { ::Autonomia::Prospecting::Config.enabled?(conta) },
     'autonomia_insurance' => ->(conta) { ::Autonomia::Insurance::Config.enabled?(conta) },
-    # A carteira de seguros não é só a chave: pede também as telas novas de Relacionamentos e conta corretora (#2897).
-    'carteira_seguros' => ->(conta) { ::Carteira::Acesso.liberada?(conta) }
+    # A carteira de seguros é de toda conta corretora (#2897; sem chave desde a E9, #2902).
+    'carteira_de_seguros' => ->(conta) { ::Carteira::Acesso.liberada?(conta) }
   }.freeze
 
   def self.ref_de(id) = id.to_s.tr('.', '-')

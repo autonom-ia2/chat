@@ -25,7 +25,7 @@ RSpec.describe Carteira::Cotacao::Gatilho do
 
   it 'sem a carteira na conta, nada é pedido' do
     ajustes = cotacao_ligada(account, user: admin, caixa: caixa)
-    account.disable_features!('carteira_seguros')
+    sem_a_carteira!(account)
 
     expect(Carteira::Cotacao.aberta?(account.reload, ajustes)).to be(false)
   end

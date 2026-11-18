@@ -228,7 +228,7 @@ RSpec.describe Carteira::RenovacaoListener do
     end
 
     it 'na conta sem a carteira não faz consulta nenhuma, nem no emissor nem no ouvinte, mesmo com card de seguro' do
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
 
       expect([consultas_da_carteira { perguntar(card) }, consultas_do_ouvinte(card)]).to eq([0, 0])
       expect(perguntar(card)).to be(false)
@@ -248,7 +248,7 @@ RSpec.describe Carteira::RenovacaoListener do
     end
 
     it 'a conta que ficou sem a carteira não tem o seguro mexido quando o card fecha' do
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
 
       fechar('won')
 

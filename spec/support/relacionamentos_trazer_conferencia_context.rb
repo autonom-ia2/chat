@@ -19,7 +19,7 @@ RSpec.shared_context 'with trazer conferencia' do
 
   around { |example| with_modified_env(variaveis) { example.run } }
 
-  before { account.enable_features!('relacionamentos_novo', 'companies') }
+  before { account.enable_features!('companies') }
 
   def cabecalhos(quem)
     quem.create_new_auth_token
