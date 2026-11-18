@@ -250,11 +250,19 @@ RSpec.describe Autonomia::Agents::Answerer do
               top_k: Autonomia::Agents::Config::ANSWER_TOP_K, por_palavra_sem_vetor: true)
     end
 
-    it 'contextualizes quantity corrections in both the simulator and the shared answering engine', :aggregate_failures do
+    it 'retains the subject across split replies in both the simulator and the shared answering engine', :aggregate_failures do
       agent = create_agent('with_knowledge' => true)
       question = 'Qual o valor do plano Equipe para 15 usuarios?'
       query = 'Na verdade, serão só 2 usuários.'
-      history = [{ role: 'user', content: question }, { role: 'assistant', content: 'O valor anterior era R$ 80.' }]
+      history = [{ role: 'user', content: question }, { role: 'assistant', content: 'O valor anterior era R$ 80.' },
+                 { role: 'assistant', content: 'Voce sabe importar seus usuarios?' },
+                 { role: 'user', content: 'Na verdade, serão só 10 usuários.' },
+                 { role: 'assistant', content: 'O total anterior era R$ 800.' },
+                 { role: 'assistant', content: 'O plano tem diferentes prazos.' },
+                 { role: 'assistant', content: 'Qual prazo voce prefere?' },
+                 { role: 'user', content: '3' },
+                 { role: 'assistant', content: 'Prazo selecionado.' },
+                 { role: 'assistant', content: 'Voce sabe importar seus usuarios?' }]
       retriever = instance_double(Autonomia::Agents::Retriever, retrieve: [])
       allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever)
       expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(query: query, history: history)).twice.and_call_original
