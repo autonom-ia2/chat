@@ -1,7 +1,8 @@
 // Campanhas menu of the new journey (#993, PRD D17). Sidebar.vue only hands its current
 // children here: with the flag off they come back untouched; with it on the group shows
 // Público, Campanha, Modelos, Links e QR codes, Anúncios da Meta (#1068, when its flag is on)
-// and Gestão de campanhas, in this order, reusing the existing entries for the last four.
+// and Gestão de campanhas, in this order, reusing the existing entries for the last four; then Limite de mensagens
+// (#3063).
 const KEPT_ENTRIES = [
   'Campaign WhatsApp Templates',
   'Campaign Links and QR codes',
@@ -52,5 +53,12 @@ export const withCampaignJourney = (
       ],
     },
     ...kept,
+    // #3063: limite de mensagens por cliente e horário de envio.
+    {
+      name: 'Campaign Message Limit',
+      label: t('CAMPAIGN_JOURNEY.SIDEBAR.RITMO'),
+      to: accountScopedRoute('campaigns_journey_ritmo'),
+      activeOn: ['campaigns_journey_ritmo'],
+    },
   ];
 };

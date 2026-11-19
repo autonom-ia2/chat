@@ -35,6 +35,7 @@ describe('Campanhas menu (PRD D17, A5)', () => {
       'Campaign WhatsApp Templates',
       'Campaign Links and QR codes',
       'Campaign Management',
+      'Campaign Message Limit',
     ]);
     expect(items[0].label).toBe('CAMPAIGN_JOURNEY.SIDEBAR.AUDIENCES');
     expect(items[0].to).toEqual({ name: 'campaigns_journey_audiences' });
@@ -55,6 +56,7 @@ describe('Campanhas menu (PRD D17, A5)', () => {
       'Campaign Links and QR codes',
       'Campaign Meta Ads',
       'Campaign Management',
+      'Campaign Message Limit',
     ]);
   });
 
@@ -85,6 +87,7 @@ describe('Campanhas menu (PRD D17, A5)', () => {
       'Campaign Audiences',
       'Campaign Journey',
       'Campaign WhatsApp Templates',
+      'Campaign Message Limit',
     ]);
   });
 

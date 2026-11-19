@@ -599,6 +599,7 @@ const MENU_DE_SEMPRE = [
       'Campaign Links and QR codes',
       'Campaign Meta Ads',
       'Campaign Management',
+      'Campaign Message Limit',
     ],
   },
   { name: 'CentralDeAjuda', children: [] },

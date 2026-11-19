@@ -494,3 +494,10 @@ carteira_conector_busca_diaria_job:
   cron: '20 6 * * *'
   class: 'Carteira::Conector::BuscaDiariaJob'
   queue: scheduled_jobs
+
+# executed every 5 minutes; devolve ao envio os destinatários de campanha adiados pelo limite por cliente ou pelo
+# horário de envio da conta e apaga o contador velho (#3063, item 2).
+autonomia_ritmo_de_envio_varredura_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::RitmoDeEnvio::VarreduraJob'
+  queue: scheduled_jobs

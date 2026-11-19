@@ -33,16 +33,19 @@ module Autonomia::Automacao::EsperaDeResposta
     desligado = Esperam.desligado(passo, @account)
     return encerrar(passo['id'], 'parada', desligado) if desligado
 
-    retomando ? conferir_resposta(passo) : perguntar(passo)
+    retomando && !voltou_do_ritmo?(passo) ? conferir_resposta(passo) : perguntar(passo)
   end
 
   def classe_que_espera(passo) = Esperam.classe(passo).new(execucao: @execucao, passo: passo, alvo: alvo, acesso: @acesso)
 
+  # #3063: a primeira pergunta da reunião e da pesquisa passa pelo limite por cliente e pelo horário de envio
+  # (RitmoNoExecutor); a aprovação pergunta à equipe e não passa.
   def perguntar(passo)
-    resultado = classe_que_espera(passo).perguntar
-    return esperar_quem_responde(passo, resultado.dados) if resultado.tipo == :esperar
+    pelo_ritmo(passo, -> { classe_que_espera(passo).perguntar }) do |resultado|
+      next esperar_quem_responde(passo, resultado.dados) if resultado.tipo == :esperar
 
-    depois_da_pergunta(passo, resultado)
+      depois_da_pergunta(passo, resultado)
+    end
   end
 
   # O que não espera: o galho na hora (ninguém para aprovar, pesquisa recente), o pulo, a janela fechada, o robô.

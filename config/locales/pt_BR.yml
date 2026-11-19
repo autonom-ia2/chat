@@ -1088,6 +1088,7 @@ pt_BR:
         modelo_faltou_valor: "A janela estava fechada, e um valor que o modelo pede estava vazio nesta conversa. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_texto_longo: "A janela estava fechada, e o modelo com os valores no lugar passou dos 1024 caracteres que o WhatsApp aceita. A mensagem não foi mandada, e a automação parou nesta conversa."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
+        adiado_pelo_ritmo: "Ainda não mandou: o cliente já recebeu o máximo de mensagens que a conta permite no período, ou está fora do horário de envio. Manda sozinho quando puder."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         retorno_sem_responsavel: "O retorno não foi criado: ele era para o responsável, e ninguém é responsável aqui."

@@ -362,6 +362,20 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(corpos).to be_empty
     end
 
+    # #3063: fora do limite por cliente, o escrever ao cliente espera a vaga sem pagar a IA.
+    it 'no limite por cliente, o escrever ao cliente espera sem chamar a IA', :aggregate_failures do
+      ligar_mensagens(account)
+      account.update_columns(settings: account.settings.to_h.merge('ritmo_de_envio' => { 'limite' => { 'mensagens' => 1, 'dias' => 7 } })) # rubocop:disable Rails/SkipsModelValidations
+      Autonomia::EnvioAoCliente.create!(account: account, contact: contato, origem: 'campanha_email', enviado_em: 1.day.ago)
+      create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: admin, content: 'Já vejo para você')
+      openai_devolve({ 'texto' => 'oi' })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [escrever('mensagem')]))
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['esperando', [%w[p1 ok adiado_pelo_ritmo]]])
+      expect(corpos).to be_empty
+    end
+
     it 'destino sugestão: uma nota privada para a equipe revisar, sem a flag da F4', :aggregate_failures do
       openai_devolve({ 'texto' => 'Obrigado pelo contato!' })
 
