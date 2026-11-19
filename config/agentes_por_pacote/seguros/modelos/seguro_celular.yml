@@ -17,9 +17,6 @@ blocos:
       - texto: "Há quanto tempo o celular está em uso?"
         ligada: true
       - texto: "O celular foi comprado novo, usado ou recondicionado, aquele revisado para voltar à venda?"
-      - texto: "Em que data o celular foi comprado?"
-        se: "o celular tiver sido comprado usado ou recondicionado, ou a pessoa não lembrar bem do tempo de uso"
-        segue: true
       - texto: "O celular está funcionando normalmente, sem dano?"
       - texto: "Qual é o IMEI do celular, o número que identifica o aparelho? Para ver, digite *#06#; mande todos se houver mais de um."
   - nome: "Nota e origem"

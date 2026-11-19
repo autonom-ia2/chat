@@ -7,9 +7,7 @@ blocos:
   - nome: "Quem contrata"
     perguntas:
       - texto: "Qual o CPF de quem vai contratar o seguro, ou o CNPJ se for em nome de empresa?"
-        ligada: true
       - texto: "Qual o nome completo de quem contrata, como está no documento?"
-        ligada: true
   - nome: "Endereço"
     perguntas:
       - texto: "Qual o CEP do imóvel que quer segurar?"
@@ -24,18 +22,11 @@ blocos:
         ligada: true
       - texto: "Qual o número do imóvel?"
         ligada: true
+      - texto: "O endereço tem complemento, como apartamento, bloco ou casa dos fundos?"
+        ligada: true
   - nome: "O imóvel"
     perguntas:
       - texto: "É casa, casa em condomínio fechado ou apartamento?"
-        ligada: true
-      - texto: "Qual o número do apartamento?"
-        se: "for apartamento"
-        segue: true
-        ligada: true
-      - texto: "Qual o bloco do apartamento?"
-        se: "for apartamento"
-        segue: true
-        ligada: true
       - texto: "O apartamento fica no térreo, na cobertura ou em outro andar?"
         se: "for apartamento"
         segue: true
@@ -66,7 +57,7 @@ blocos:
         se: "a pessoa tocar na segurança"
   - nome: "O que segurar"
     perguntas:
-      - texto: "Quanto você quer segurar, em reais?"
+      - texto: "Qual valor quer para a proteção contra incêndio? É quanto custaria reconstruir o imóvel com tudo o que tem dentro."
         ligada: true
       - texto: "Quer incluir no seguro a construção, as coisas de dentro do imóvel ou os dois?"
         se: "a pessoa tocar no que quer proteger"
@@ -76,7 +67,6 @@ blocos:
   - nome: "Novo ou renovação"
     perguntas:
       - texto: "É um seguro novo ou a renovação de um que você já tem?"
-        ligada: true
       - texto: "Qual a seguradora de hoje, a que está na apólice, o documento do seguro?"
         se: "for renovação"
         segue: true
@@ -191,22 +181,22 @@ documentos:
   - "Contrato de aluguel, se o dono quiser incluir os bens dele no imóvel alugado; a equipe confirma a necessidade."
 ja_vem:
   - fonte: cep
-    usar_quando: "Use o CEP do imóvel para completar rua, bairro, cidade e estado na ficha. Se o cliente só souber o endereço, busque o CEP com os dados que ele forneceu. CEP válido sem rua ou bairro: pergunte só o dado ausente, um por vez. Se falhar ou não achar, anote a pendência e passe para a equipe sem dizer ao cliente que não achou. Não recite resultados nem peça confirmação."
-  - fonte: cpf
-    usar_quando: "Use o CPF informado para validar apenas o número; não busca nome. Se o resultado indicar CPF inválido, peça para conferir o número. Falha ou ausência de resultado não é CPF inválido: registre a pendência e passe para a equipe, sem anunciar a falha. Não recite resultados nem peça confirmação de dado consultado."
+    usar_quando: "Use o CEP do imóvel para completar rua, bairro, cidade e estado na ficha. Se o cliente só souber o endereço, busque o CEP com os dados que ele forneceu. CEP válido sem rua ou bairro: pergunte só o dado ausente, um por vez. Se falhar ou não achar, anote a pendência para a equipe e siga a coleta, sem dizer ao cliente que não achou. Não recite resultados nem peça confirmação."
 tambem:
+  - fonte: cpf
+    usar_quando: "Use o CPF informado para validar apenas o número; não busca nome. Se o resultado indicar CPF inválido, peça para conferir o número. Falha ou ausência de resultado não é CPF inválido: registre a pendência e siga a coleta, sem anunciar a falha. Não recite resultados nem peça confirmação de dado consultado."
   - fonte: cnpj
-    usar_quando: "Use o CNPJ de quem contrata para obter razão social, atividade e situação cadastral na Receita. Anote para a equipe e pule razão social e atividade se respondidas; situação cadastral não responde à pergunta financeira. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre e passe para a equipe sem anunciar ao cliente."
+    usar_quando: "Use o CNPJ de quem contrata para obter razão social, atividade e situação cadastral na Receita. Anote para a equipe e pule razão social e atividade se respondidas; situação cadastral não responde à pergunta financeira. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre a pendência e siga, sem anunciar ao cliente."
   - fonte: cidades
-    usar_quando: "Use quando o cliente fornecer a cidade do imóvel e for necessário identificar cidade e estado. Se o nome for ambíguo, peça só o estado que falta. Anote para a equipe, sem recitar resultado nem pedir confirmação. Se falhar ou não achar, registre e passe para a equipe sem anunciar ao cliente."
+    usar_quando: "Use quando o cliente fornecer a cidade do imóvel e for necessário identificar cidade e estado. Se o nome for ambíguo, peça só o estado que falta. Anote para a equipe, sem recitar resultado nem pedir confirmação. Se falhar ou não achar, registre a pendência e siga, sem anunciar ao cliente."
   - fonte: localizacao
-    usar_quando: "Use a localização enviada no WhatsApp para obter cidade e estado do imóvel e anotar para a equipe. Isso não fornece rua nem número. Peça só os dados que ainda faltam; CEP pode vir da consulta pelo endereço informado. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre e passe para a equipe sem anunciar ao cliente."
+    usar_quando: "Use a localização enviada no WhatsApp para obter cidade e estado do imóvel e anotar para a equipe. Isso não fornece rua nem número. Peça só os dados que ainda faltam; CEP pode vir da consulta pelo endereço informado. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre a pendência e siga, sem anunciar ao cliente."
   - fonte: corretor_susep
-    usar_quando: "Use quando o cliente citar outro corretor e fornecer os dados disponíveis para a consulta, conforme ela aceitar. Anote o resultado somente para a equipe; não recite nem peça confirmação. Se falhar ou não achar, registre a pendência e passe para a equipe sem anunciar ao cliente. Registro e CNPJ da própria corretora vêm do ESCOPO, não desta consulta."
+    usar_quando: "Use quando o cliente citar outro corretor e fornecer os dados disponíveis para a consulta, conforme ela aceitar. Anote o resultado somente para a equipe; não recite nem peça confirmação. Se falhar ou não achar, registre a pendência e siga, sem anunciar ao cliente. Registro e CNPJ da própria corretora vêm do ESCOPO, não desta consulta."
   - fonte: chuva
-    usar_quando: "Use local e data já informados no aviso de enchente, alagamento ou temporal para anotar a chuva do dia para a equipe. Não use para decidir cobertura, não atrase socorro nem passagem para a equipe e não peça dados extras só para consultar. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre e encaminhe sem anunciar ao cliente."
+    usar_quando: "Use local e data já informados no aviso de enchente, alagamento ou temporal para anotar a chuva do dia para a equipe. Não use para decidir cobertura, não atrase socorro nem passagem para a equipe e não peça dados extras só para consultar. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre e siga, sem anunciar ao cliente."
   - fonte: queimadas
-    usar_quando: "Use o local já informado de imóvel rural, sítio ou chácara para anotar registros de queimadas na região para a equipe. Não decide aceitação ou cobertura. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre e passe para a equipe sem anunciar ao cliente."
+    usar_quando: "Use o local já informado de imóvel rural, sítio ou chácara para anotar registros de queimadas na região para a equipe. Não decide aceitação ou cobertura. Não recite resultados nem peça confirmação. Se falhar ou não achar, registre a pendência e siga, sem anunciar ao cliente."
 premium:
   - risco_endereco
   - imovel_rural

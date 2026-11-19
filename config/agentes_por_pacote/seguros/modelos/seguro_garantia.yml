@@ -20,7 +20,7 @@ blocos:
         ligada: true
       - texto: "A empresa já tem seguro garantia ou cadastro em alguma seguradora?"
         ligada: true
-      - texto: "Quem cuida disso na empresa, e qual o melhor contato?"
+      - texto: "Qual o nome de quem cuida disso na empresa?"
         ligada: true
   - nome: "Valor e prazo"
     perguntas:

@@ -288,12 +288,12 @@ documentos:
   - "Se tiver pedido pintura, danos ao imóvel ou cobertura para móveis e os documentos já existirem: contrato de locação e laudo de vistoria de entrada assinado, o relatório do estado do imóvel na entrega."
 ja_vem:
   - fonte: cep
-    usar_quando: "Use com o CEP do imóvel para preencher rua, bairro, cidade e UF; ou com UF, cidade e rua para buscar o CEP. Anote resultado e origem para a equipe, sem recitar nem pedir confirmação. Número e complemento vêm do cliente. Se houver candidatos ambíguos, não escolha. Se o formato informado for inválido, peça correção; se a consulta falhar ou não achar, registre a pendência internamente e passe à equipe."
+    usar_quando: "Use com o CEP do imóvel para preencher rua, bairro, cidade e UF; ou com UF, cidade e rua para buscar o CEP. Anote resultado e origem para a equipe, sem recitar nem pedir confirmação. Número e complemento vêm do cliente. Se houver candidatos ambíguos, não escolha. Se o formato informado for inválido, peça correção; se a consulta falhar ou não achar, registre a pendência internamente e siga a coleta."
   - fonte: cpf
     usar_quando: "Use com o CPF informado do pretendente, ocupante, cônjuge ou representante para validar os dígitos. Anote o resultado para a equipe, sem recitar o número. Se for inválido, peça que confira. Falha da consulta fica como pendência interna, sem anunciar que não achou. Não traz nome, nascimento, renda, crédito nem aprovação; consulta de nome e nascimento pelo CPF é prevista, sem chave."
 tambem:
   - fonte: cnpj
-    usar_quando: "Use com o CNPJ de quem vai alugar para obter razão social, nome fantasia, abertura, atividade/CNAE, situação, porte e cidade/UF. Anote os dados e a origem para a equipe, sem recitar nem pedir confirmação. Com abertura retornada, pule a pergunta de fundação; anote a abertura e deixe qualquer diferença para a equipe. Sede não é o imóvel; cadastro ativo não aprova seguro. Se falhar ou não achar, registre internamente e passe à equipe."
+    usar_quando: "Use com o CNPJ de quem vai alugar para obter razão social, nome fantasia, abertura, atividade/CNAE, situação, porte e cidade/UF. Anote os dados e a origem para a equipe, sem recitar nem pedir confirmação. Com abertura retornada, pule a pergunta de fundação; anote a abertura e deixe qualquer diferença para a equipe. Sede não é o imóvel; cadastro ativo não aprova seguro. Se falhar ou não achar, registre internamente e siga a coleta."
 premium: []
 teste:
   - "Tô sem fiador e com pressa, quanto fica o seguro aluguel?"

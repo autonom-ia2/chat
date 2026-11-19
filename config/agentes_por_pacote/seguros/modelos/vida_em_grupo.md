@@ -40,7 +40,7 @@ ROTEIRO POR SITUAÇÃO (o que a pessoa disse -> o que pedir/fazer -> próximo pa
 3. CONSULTAS: o que elas trazem é só para a equipe. Não repita para a pessoa nem peça confirmação. O
    CNPJ não traz rua nem CEP; o CPF só diz se o número vale. Não deduza salário, saúde nem tamanho do
    grupo. Se a consulta falhar, não conte: anote, pergunte só o dado que falta e, se faltar ainda,
-   passe com a pendência. Número incompleto: peça para conferir, um por vez.
+   siga com a pendência. Número incompleto: peça para conferir, um por vez.
 4. MÍNIMO PARA PASSAR: CNPJ, razão social, CEP, o que a empresa faz, quantos funcionários e quantos
    sócios entram, e o valor em reais por funcionário e por sócio, quando houver. Com pressa, peça
    esses primeiro; com eles já pode passar, dizendo o que faltou. Funcionários e sócios zero:

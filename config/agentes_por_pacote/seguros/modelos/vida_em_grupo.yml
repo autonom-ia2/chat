@@ -293,16 +293,16 @@ ja_vem:
   - fonte: cnpj
     usar_quando: "Use quando o cliente informar o CNPJ da empresa, para completar razão social, nome usado, situação, abertura, atividade, porte, cidade e UF sem perguntar de novo. Anote para a equipe como \"achado pelo CNPJ, não confirmado com o cliente\". Não traz rua nem CEP. Situação diferente de ativa fica só para a equipe. Número incompleto: peça que confira. Se não achar, peça só o dado que falta, sem dizer que não achou."
   - fonte: cep
-    usar_quando: "Use quando o cliente informar o CEP da empresa ou de uma pessoa participante, ou quando rua e cidade já estiverem disponíveis, para completar o endereço. Anote o retorno para a equipe, marcado como \"achado pelo CEP, não confirmado com o cliente\", e pule só o que ele respondeu. Se falhar ou não achar, anote a falha e passe à equipe, sem repetir resultado nem pedir confirmação."
+    usar_quando: "Use quando o cliente informar o CEP da empresa ou de uma pessoa participante, ou quando rua e cidade já estiverem disponíveis, para completar o endereço. Anote o retorno para a equipe, marcado como \"achado pelo CEP, não confirmado com o cliente\", e pule só o que ele respondeu. Se falhar ou não achar, anote a falha para a equipe e siga, sem repetir resultado nem pedir confirmação."
   - fonte: cpf
-    usar_quando: "Use quando o cliente informar o CPF do responsável, de participante ou de beneficiário, para conferir se o número é válido. Anote o resultado para a equipe. Se o formato não for válido, peça que confira o número; se a consulta falhar, anote a falha e passe à equipe, sem dizer o resultado da consulta."
+    usar_quando: "Use quando o cliente informar o CPF do responsável, de participante ou de beneficiário, para conferir se o número é válido. Anote o resultado para a equipe. Se o formato não for válido, peça que confira o número; se a consulta falhar, anote a falha para a equipe e siga, sem dizer o resultado da consulta."
   - fonte: feriados
-    usar_quando: "Use se a empresa já tiver seguro de vida em grupo hoje e houver data de vencimento e local pertinente, para anotar à equipe a contagem de dias úteis. Não transforme a contagem em promessa de início, cotação ou emissão. Se falhar, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+    usar_quando: "Use se a empresa já tiver seguro de vida em grupo hoje e houver data de vencimento e local pertinente, para anotar à equipe a contagem de dias úteis. Não transforme a contagem em promessa de início, cotação ou emissão. Se falhar, anote a falha para a equipe e siga, sem dizer o resultado ao cliente."
 tambem:
   - fonte: cidades
-    usar_quando: "Use quando a cidade da empresa, do participante ou do beneficiário precisar ser normalizada, para anotar o município e a UF corretos para a equipe. Não use o retorno para afirmar onde a pessoa mora. Se falhar, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+    usar_quando: "Use quando a cidade da empresa, do participante ou do beneficiário precisar ser normalizada, para anotar o município e a UF corretos para a equipe. Não use o retorno para afirmar onde a pessoa mora. Se falhar, anote a falha para a equipe e siga, sem dizer o resultado ao cliente."
   - fonte: localizacao
-    usar_quando: "Use quando o cliente enviar uma localização pertinente ao endereço da empresa ou de participante, para anotar município e UF à equipe. Não infira número, CEP, vínculo ou residência. Se falhar ou não identificar o local, anote a falha e passe à equipe, sem dizer o resultado ao cliente."
+    usar_quando: "Use quando o cliente enviar uma localização pertinente ao endereço da empresa ou de participante, para anotar município e UF à equipe. Não infira número, CEP, vínculo ou residência. Se falhar ou não identificar o local, anote a falha para a equipe e siga, sem dizer o resultado ao cliente."
 premium:
   - conferir_pessoa
   - raio_x_empresa
