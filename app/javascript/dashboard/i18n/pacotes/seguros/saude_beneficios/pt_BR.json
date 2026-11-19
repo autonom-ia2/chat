@@ -1254,8 +1254,14 @@
   "RESULT_JOURNEY": {
     "OVERVIEW": {
       "TOTALS": {
-        "DEALS_NOTE": "cards com marca de campanha · {won} implantados"
+        "DEALS_NOTE": "cards com marca de campanha · {won} implantados",
+        "REVENUE": "Prêmio implantado",
+        "REVENUE_NOTE": "prêmio dos {won} implantados · na renovação, o da apólice nova"
       }
+    },
+    "CRM": {
+      "DEALS": "{cards} cards no CRM · {won} implantados",
+      "WON_VALUE": "{value} de prêmio"
     }
   },
   "AGENT_MGMT": {

@@ -1,17 +1,33 @@
 <script setup>
 // "Quem respondeu já aparece no CRM com a marca Campanha: <nome>" + "Ver no CRM" (#1007, PRD §6.5),
 // which opens the Kanban filtered by this campaign's mark (K6 filter of #1002).
+// #3063: what the campaign turned into there — cards, won and, for who sees sales values, the R$ of the won
+// (on a renewal whose new policy arrived, its premium).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { crmKanbanRoute } from './resultMetrics';
+import { crmKanbanRoute, wonValueText } from './resultMetrics';
 
 const props = defineProps({
   name: { type: String, required: true },
   crm: { type: Object, default: () => ({}) },
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = computed(() => crmKanbanRoute(props.crm.source_id));
+const deals = computed(() => props.crm.deals || null);
+const dealsText = computed(() => {
+  if (!deals.value) return '';
+  const number = new Intl.NumberFormat(locale.value.replace('_', '-'));
+  return t('RESULT_JOURNEY.CRM.DEALS', {
+    cards: number.format(deals.value.cards),
+    won: number.format(deals.value.won),
+  });
+});
+const wonValue = computed(() =>
+  deals.value
+    ? wonValueText(deals.value.won_value, locale.value.replace('_', '-'))
+    : null
+);
 </script>
 
 <template>
@@ -31,6 +47,20 @@ const route = computed(() => crmKanbanRoute(props.crm.source_id));
         {{ t('RESULT_JOURNEY.CRM.BAND') }}
         <strong>{{ t('RESULT_JOURNEY.CRM.MARK', { name }) }}</strong>
       </span>
+    </p>
+    <p
+      v-if="deals"
+      class="mb-0 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-n-slate-11"
+      data-crm-deals
+    >
+      <strong
+        v-if="wonValue"
+        class="text-lg font-semibold tabular-nums text-n-slate-12"
+        data-crm-won-value
+      >
+        {{ t('RESULT_JOURNEY.CRM.WON_VALUE', { value: wonValue }) }}
+      </strong>
+      <span class="tabular-nums">{{ dealsText }}</span>
     </p>
     <router-link
       v-if="crm.enabled && crm.source_id"

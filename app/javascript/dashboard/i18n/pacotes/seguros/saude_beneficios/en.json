@@ -1254,8 +1254,14 @@
   "RESULT_JOURNEY": {
     "OVERVIEW": {
       "TOTALS": {
-        "DEALS_NOTE": "cards with a campaign mark · {won} implemented"
+        "DEALS_NOTE": "cards with a campaign mark · {won} implemented",
+        "REVENUE": "Premium implemented",
+        "REVENUE_NOTE": "premium of the {won} implemented · on a renewal, the new policy’s"
       }
+    },
+    "CRM": {
+      "DEALS": "{cards} cards in the CRM · {won} implemented",
+      "WON_VALUE": "{value} in premium"
     }
   },
   "AGENT_MGMT": {

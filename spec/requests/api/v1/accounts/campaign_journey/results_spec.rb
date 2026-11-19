@@ -66,7 +66,24 @@ RSpec.describe 'Campaign journey results API (#1007)', :aggregate_failures, type
                                 'queued' => 0, 'replied' => 1)
       expect(totals.values_at('sent', 'failed', 'skipped', 'queued').sum).to eq(totals['audience'])
       expect(payload['campaign']).to include('channel' => 'whatsapp_official', 'name' => 'Renovação auto', 'template_name' => 'renovacao_auto_v2')
-      expect(payload['crm']).to eq('source_id' => "campaign:whatsapp:#{whatsapp_campaign.id}", 'enabled' => true)
+      expect(payload['crm']).to eq('source_id' => "campaign:whatsapp:#{whatsapp_campaign.id}", 'enabled' => true,
+                                   'deals' => { 'cards' => 0, 'won' => 0, 'won_value' => [] })
+    end
+
+    # #3063: o que a campanha virou no CRM, em R$ para quem vê valor de venda; só as contagens para quem não vê.
+    it 'shows the won cards of the campaign in R$ only to who sees sales values' do
+      conversation = replied!(ana, whatsapp_campaign)
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Ana — renovação', conversation_id: conversation.id,
+                                contact: ana, status: :won, value_cents: 180_000)
+
+      get result_path('whatsapp_official', whatsapp_campaign.display_id), headers: headers, as: :json
+      expect(response.parsed_body.dig('payload', 'crm', 'deals'))
+        .to eq('cards' => 1, 'won' => 1, 'won_value' => [{ 'currency' => 'BRL', 'cents' => 180_000 }])
+
+      get result_path('whatsapp_official', whatsapp_campaign.display_id), headers: headers(viewer), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body.dig('payload', 'crm', 'deals')).to eq('cards' => 1, 'won' => 1, 'won_value' => nil)
     end
 
     it 'lists people with masked phone, reason and the conversation of who replied (E3)' do

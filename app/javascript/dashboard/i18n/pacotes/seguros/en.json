@@ -171,8 +171,14 @@
   "RESULT_JOURNEY": {
     "OVERVIEW": {
       "TOTALS": {
-        "DEALS_NOTE": "cards with a campaign mark · {won} closed"
+        "DEALS_NOTE": "cards with a campaign mark · {won} closed",
+        "REVENUE": "Premium closed",
+        "REVENUE_NOTE": "premium of the {won} closed · on a renewal, the new policy’s"
       }
+    },
+    "CRM": {
+      "DEALS": "{cards} cards in the CRM · {won} closed",
+      "WON_VALUE": "{value} in premium"
     }
   },
   "AUTOMATION": {

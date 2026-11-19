@@ -171,8 +171,14 @@
   "RESULT_JOURNEY": {
     "OVERVIEW": {
       "TOTALS": {
-        "DEALS_NOTE": "cards com marca de campanha · {won} fecharam"
+        "DEALS_NOTE": "cards com marca de campanha · {won} fecharam",
+        "REVENUE": "Prêmio fechado",
+        "REVENUE_NOTE": "prêmio dos {won} que fecharam · na renovação, o da apólice nova"
       }
+    },
+    "CRM": {
+      "DEALS": "{cards} cards no CRM · {won} fecharam",
+      "WON_VALUE": "{value} de prêmio"
     }
   },
   "AUTOMATION": {

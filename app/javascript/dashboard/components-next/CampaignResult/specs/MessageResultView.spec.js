@@ -65,7 +65,15 @@ const result = (overrides = {}) => ({
     'skipped',
     'replied',
   ],
-  crm: { source_id: 'campaign:whatsapp:11', enabled: true },
+  crm: {
+    source_id: 'campaign:whatsapp:11',
+    enabled: true,
+    deals: {
+      cards: 3,
+      won: 1,
+      won_value: [{ currency: 'BRL', cents: 180000 }],
+    },
+  },
 });
 
 const rows = [
@@ -189,6 +197,13 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
 
     expect(wrapper.find('[data-crm-band]').text()).toContain(
       'Campaign: Renovação auto'
+    );
+    // #3063: what the campaign turned into in the CRM, with the R$ of the won cards.
+    expect(wrapper.find('[data-crm-deals]').text()).toContain(
+      '3 cards in the CRM · 1 won'
+    );
+    expect(wrapper.find('[data-crm-won-value]').text()).toBe(
+      'R$1,800 in sales'
     );
     expect(
       JSON.parse(wrapper.find('[data-crm-link]').attributes('data-to'))

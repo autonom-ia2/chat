@@ -39,7 +39,9 @@
       "PILL": "CRM",
       "BAND": "Quem respondeu já aparece no CRM com a marca",
       "MARK": "Campanha: {name}",
-      "OPEN": "Ver no CRM"
+      "OPEN": "Ver no CRM",
+      "DEALS": "{cards} cards no CRM · {won} ganhos",
+      "WON_VALUE": "{value} em vendas"
     },
     "PEOPLE": {
       "TITLE": "Pessoas",
@@ -113,6 +115,8 @@
         "REPLIED_NOTE": "{rate} das alcançadas · todos no CRM",
         "DEALS": "Viraram cards no CRM",
         "DEALS_NOTE": "cards com marca de campanha · {won} ganhos",
+        "REVENUE": "Vendas fechadas",
+        "REVENUE_NOTE": "em R$, nos {won} cards ganhos",
         "EMAIL_HEALTH": "Saúde do e-mail",
         "EMAIL_HEALTH_NOTE": "bounce permanente · limite 5% · reclamações {complaints} (limite 0,1%)"
       },
