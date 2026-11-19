@@ -29,7 +29,7 @@ RSpec.describe Autonomia::Agents::ModelosDeRamo do
       end
     end
 
-    it 'guarda o roteiro cru em até 8.000 bytes, com cada marcador uma vez e sozinho na linha' do
+    it 'guarda o roteiro cru em até 10.000 bytes, com cada marcador uma vez e sozinho na linha' do
       ramos.each do |chave|
         roteiro = described_class.buscar(chave).roteiro
         linhas = roteiro.lines.map(&:strip)
