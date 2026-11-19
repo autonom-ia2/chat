@@ -2594,7 +2594,7 @@
 - titulo: Criar uma pessoa ou alterar as informações dela pela lista (Relacionamentos novo)
 - rota: relationships_home
 - intent: Como cadastro uma pessoa nova?; Onde adiciono um cliente à mão?; Como corrijo o telefone de alguém sem abrir a ficha?; Por que diz que já existe outra pessoa com este e-mail?; Cadê o Adicionar contato na lista nova?
-- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Nova pessoa, ao lado das abas. Para alterar, o lápis no fim da linha da pessoa.
+- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Nova pessoa, ao lado das abas (no celular, no botão Ações, ao lado das abas). Para alterar, o lápis no fim da linha da pessoa.
 - pre_requisitos: poder editar contatos (administrador, agente, ou função com gerenciar contatos)
 - passos: 1. Abra Relacionamentos na aba Pessoas; 2. Clique em Nova pessoa; 3. Escreva o nome e, se souber, o telefone, o e-mail, o CPF, a cidade e a empresa; 4. Clique em Guardar pessoa; 5. No aviso que aparece, clique em Abrir ficha para ir à ficha dela; 6. Para alterar alguém, clique no lápis da linha, mude o que precisa e clique em Salvar.
 - gotchas: o nome é o único campo obrigatório; se já existe outra pessoa com o mesmo e-mail ou o mesmo telefone, a gaveta não fecha e avisa embaixo do campo, e o aviso some quando você muda o que escreveu; criar uma pessoa não começa conversa com ela; a pessoa nova entra na lista na hora; o lápis abre a mesma gaveta Alterar informações da ficha da pessoa; País, a descrição e o vínculo com uma empresa cadastrada ainda são mudados só pela lista de Contatos antiga; quem não pode editar contatos não vê Nova pessoa nem o lápis.
@@ -2603,7 +2603,7 @@
 - titulo: Baixar a planilha da lista de pessoas (Relacionamentos novo)
 - rota: relationships_home
 - intent: Como baixo a lista de clientes em planilha?; Como exporto só os clientes que sumiram?; Da para tirar a lista que estou vendo em CSV?; Onde fica Exportar contatos na lista nova?; Para onde vai a planilha?
-- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Baixar planilha, ao lado das abas.
+- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Baixar planilha, ao lado das abas (no celular, no botão Ações, ao lado das abas).
 - pre_requisitos: administrador ou função com exportar contatos
 - passos: 1. Abra Relacionamentos na aba Pessoas; 2. Deixe na tela a lista que você quer: escolha o grupo, busque e use Mais filtros; 3. Clique em Baixar planilha; 4. Confira em Lista: qual lista vai e quantas pessoas; 5. Clique em Mandar por e-mail; 6. Abra o e-mail que chega em alguns minutos e clique no link para baixar.
 - gotchas: a planilha leva exatamente quem está na lista da tela (grupo, busca e filtros) e na mesma ordem, não só a página que está aberta; cada linha leva nome, e-mail, telefone e etiquetas da pessoa; a planilha vai para o e-mail de quem pediu, não para o de outra pessoa da equipe; editar contatos não dá direito a baixar, e agente sem função personalizada não baixa; a conta sem nenhuma pessoa não mostra o botão.

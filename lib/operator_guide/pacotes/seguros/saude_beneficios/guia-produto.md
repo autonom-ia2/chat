@@ -2749,7 +2749,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar uma pessoa ou alterar as informações dela pela lista (Relacionamentos novo)
 - intent: Como cadastro uma pessoa nova?; Onde adiciono um cliente à mão?; Como corrijo o telefone de alguém sem abrir a ficha?; Por que diz que já existe outra pessoa com este e-mail?; Cadê o Adicionar contato na lista nova?
-- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Nova pessoa, ao lado das abas. Para alterar, o lápis no fim da linha da pessoa.
+- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Nova pessoa, ao lado das abas (no celular, no botão Ações, ao lado das abas). Para alterar, o lápis no fim da linha da pessoa.
 - rota: `relationships_home` - `/app/accounts/:accountId/relationships`
 - gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
 - pre_requisitos: poder editar contatos (administrador, agente, ou função com gerenciar contatos)
@@ -2759,7 +2759,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Baixar a planilha da lista de pessoas (Relacionamentos novo)
 - intent: Como baixo a lista de clientes em planilha?; Como exporto só os clientes que sumiram?; Da para tirar a lista que estou vendo em CSV?; Onde fica Exportar contatos na lista nova?; Para onde vai a planilha?
-- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Baixar planilha, ao lado das abas.
+- onde_fica: Menu lateral > Relacionamentos > aba Pessoas > botão Baixar planilha, ao lado das abas (no celular, no botão Ações, ao lado das abas).
 - rota: `relationships_home` - `/app/accounts/:accountId/relationships`
 - gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
 - pre_requisitos: administrador ou função com exportar contatos

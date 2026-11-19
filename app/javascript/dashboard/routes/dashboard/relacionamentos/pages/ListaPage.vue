@@ -400,11 +400,11 @@ const baixarNaAba = computed(
     !contaVazia.value &&
     podeBaixar.value
 );
+// #3057 — as abas sublinhadas: a linha fina embaixo delas atravessa a linha
+// inteira, por baixo das ações também.
+const abasAVista = computed(() => temAbas.value && !contaVazia.value);
 const temLinhaDasAbas = computed(
-  () =>
-    (temAbas.value && !contaVazia.value) ||
-    criarNaAba.value ||
-    baixarNaAba.value
+  () => abasAVista.value || criarNaAba.value || baixarNaAba.value
 );
 
 const tituloDaGaveta = computed(() =>
@@ -505,10 +505,13 @@ watch(naAbaDeSeguros, estaNela => {
           />
           <div
             v-if="temLinhaDasAbas"
-            class="flex flex-wrap items-center justify-between gap-3"
+            data-relacionamentos="linha-das-abas"
+            class="flex items-center justify-between gap-3"
+            :class="{ 'border-b border-n-weak': abasAVista }"
           >
             <AbasDaLista
-              v-if="temAbas && !contaVazia"
+              v-if="abasAVista"
+              class="min-w-0 -mb-px"
               :com-empresas="temEmpresas"
               :com-seguros="temSeguros"
               :model-value="aba"
@@ -516,7 +519,7 @@ watch(naAbaDeSeguros, estaNela => {
             />
             <AcoesDaAba
               v-if="criarNaAba || baixarNaAba"
-              class="sm:ms-auto"
+              class="ms-auto shrink-0"
               :pode-criar="criarNaAba"
               :pode-baixar="baixarNaAba"
               @criar="gaveta.abrirNova"

@@ -242,18 +242,53 @@ describe('BarraDeControles com as ordens agrupadas', () => {
 });
 
 describe('AcoesDaAba', () => {
-  it('mostra só o que a pessoa pode, e cada botão avisa o seu', async () => {
-    const w = mount(AcoesDaAba, {
-      props: { podeCriar: true, podeBaixar: true },
-    });
-    expect(w.findAll('button').map(b => b.text())).toEqual([
-      'Baixar planilha',
-      'Nova pessoa',
+  const montar = props => mount(AcoesDaAba, { props });
+
+  it('com as duas: os botões com nome (sm em diante) e o menu "Ações" no celular', async () => {
+    const w = montar({ podeCriar: true, podeBaixar: true });
+    const nova = w.get('[data-relacionamentos="nova-pessoa"]');
+    const baixar = w.get('[data-relacionamentos="baixar-planilha"]');
+    expect(nova.text()).toBe('Nova pessoa');
+    expect(baixar.text()).toBe('Baixar planilha');
+    const botoes = nova.element.parentElement.classList;
+    expect([botoes.contains('hidden'), botoes.contains('sm:flex')]).toEqual([
+      true,
+      true,
     ]);
-    await w.get('[data-relacionamentos="nova-pessoa"]').trigger('click');
-    await w.get('[data-relacionamentos="baixar-planilha"]').trigger('click');
+    const celular = w.get('[data-relacionamentos="acoes-no-celular"]');
+    expect(celular.classes()).toContain('sm:hidden');
+    expect(celular.get('[aria-haspopup="menu"]').text()).toBe('Ações');
+    await nova.trigger('click');
+    await baixar.trigger('click');
     expect(w.emitted('criar')).toHaveLength(1);
     expect(w.emitted('baixar')).toHaveLength(1);
+  });
+
+  it('o menu do celular tem as duas, com nome, e cada uma avisa a sua', async () => {
+    const w = montar({ podeCriar: true, podeBaixar: true });
+    const celular = w.get('[data-relacionamentos="acoes-no-celular"]');
+    await celular.get('[aria-haspopup="menu"]').trigger('click');
+    expect(celular.findAll('[role="menuitem"]').map(i => i.text())).toEqual([
+      'Nova pessoa',
+      'Baixar planilha',
+    ]);
+    await celular.get('[data-acao="baixar"]').trigger('click');
+    expect(w.emitted('baixar')).toHaveLength(1);
+    expect(w.emitted('criar')).toBeUndefined();
+  });
+
+  it('com uma só, ela fica à vista também no celular, sem menu', () => {
+    const w = montar({ podeCriar: true });
+    expect(w.find('[data-relacionamentos="acoes-no-celular"]').exists()).toBe(
+      false
+    );
+    expect(
+      w.get('[data-relacionamentos="nova-pessoa"]').element.parentElement
+        .classList
+    ).not.toContain('hidden');
+    expect(w.find('[data-relacionamentos="baixar-planilha"]').exists()).toBe(
+      false
+    );
   });
 });
 

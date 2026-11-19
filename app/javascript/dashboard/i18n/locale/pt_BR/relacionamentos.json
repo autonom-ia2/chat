@@ -83,7 +83,8 @@
       },
       "TOPO": {
         "NOVA_PESSOA": "Nova pessoa",
-        "BAIXAR": "Baixar planilha"
+        "BAIXAR": "Baixar planilha",
+        "ACOES": "Ações"
       },
       "NOVA_PESSOA": {
         "TITULO": "Nova pessoa",

@@ -83,7 +83,8 @@
       },
       "TOPO": {
         "NOVA_PESSOA": "New person",
-        "BAIXAR": "Download spreadsheet"
+        "BAIXAR": "Download spreadsheet",
+        "ACOES": "Actions"
       },
       "NOVA_PESSOA": {
         "TITULO": "New person",
