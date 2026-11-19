@@ -88,9 +88,10 @@ pode ver (`Conversations::PermissionFilterService`).
   campanha do Kanban. Conta todos os contatos da conta, mesmo de conversas que o agente não vê.
 - **Viraram negócio no CRM** (Gestão): cards do CRM ligados (conversa principal ou
   `crm_card_conversations`) a uma conversa marcada pelas campanhas do período — os mesmos cards que o
-  Kanban mostra filtrado pela campanha. "ganhos" = parte fechada como ganho ou resolvido (inclusive arquivada
-  depois de fechada), a mesma leitura que a carteira usa para "renovou". `null` com o CRM desligado. Também no
-  resultado de cada campanha (`crm.deals`, #3063).
+  Kanban mostra filtrado pela campanha. "ganhos" = parte que fechou venda: ganho (inclusive arquivado depois de
+  ganho) ou, na renovação da carteira, resolvido com a apólice nova já ligada. Resolvido sem apólice nova é
+  fechamento de atendimento, não venda, e fica fora. `null` com o CRM desligado. Também no resultado de cada
+  campanha (`crm.deals`, #3063). Com acesso por funil (#1148), só os funis que a pessoa vê nos relatórios.
 - **Valor ganho** (`won_value`, #3063): R$ dos cards ganhos, por moeda, maior primeiro. No card de renovação cuja
   apólice nova já chegou (a anterior guarda o card em `crm_card_id`; a nova aponta para ela em `apolice_anterior_id`),
   vale o **prêmio** da apólice nova (decisão do Rodrigo, 19/11: prêmio, não comissão); apólice nova cancelada ou sem

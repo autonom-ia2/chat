@@ -52,7 +52,7 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
     return payload.merge(deals: nil) unless payload[:enabled]
 
     replies = ::CampaignJourney::ResultReplies.new(Current.account, @result.source_id)
-    payload.merge(deals: replies.deals(with_value: ::Crm::ValorDeVenda.ve?(Current.account_user)))
+    payload.merge(deals: replies.deals_for(user: Current.user, account_user: Current.account_user))
   end
 
   def authorize_result

@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# #3063 — o resultado da campanha em R$: o valor dos cards ganhos (ou resolvidos) com a marca da campanha; no card de
-# renovação cuja apólice nova já chegou, o prêmio dela.
+# #3063 — o resultado da campanha em R$: o valor dos cards que fecharam venda com a marca da campanha (ganhos, ou
+# resolvidos na renovação com a apólice nova já na carteira); no card de renovação cuja apólice nova chegou, o prêmio dela.
 RSpec.describe CampaignJourney::ResultReplies, '#deals', :aggregate_failures do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
@@ -41,17 +41,27 @@ RSpec.describe CampaignJourney::ResultReplies, '#deals', :aggregate_failures do
                               cancelado_em: (Time.current if cancelled))
   end
 
-  it 'sums the won and resolved cards, with the premium of the new policy when it already arrived' do
+  it 'sums the won cards and the renewals with the new policy in, with the premium of the new policy' do
     card('Ana', status: :won, value_cents: 50_000)
     renewed = card('Bia', status: :resolved, value_cents: 10_000, pipeline_and_stage: service)
     renewal(renewed, premium: 120_000)
     card('Caio', status: :lost, value_cents: 99_900)
     card('Davi', status: :open, value_cents: 77_700)
-    card('Eva', status: :won, value_cents: 5_000, currency: 'USD')
+    card('Eva', status: :won, value_cents: 5_000, currency: ' usd ')
+    card('Fábio', status: :resolved, value_cents: 30_000, pipeline_and_stage: service)
 
     deals = described_class.new(account, source_id).deals(with_value: true)
 
-    expect(deals).to eq(cards: 5, won: 3, won_value: [{ currency: 'BRL', cents: 170_000 }, { currency: 'USD', cents: 5_000 }])
+    expect(deals).to eq(cards: 6, won: 3, won_value: [{ currency: 'BRL', cents: 170_000 }, { currency: 'USD', cents: 5_000 }])
+  end
+
+  it 'leaves out the funnels the reader does not see' do
+    card('Ana', status: :won, value_cents: 50_000)
+    renewal(card('Bia', status: :resolved, value_cents: 0, pipeline_and_stage: service), premium: 120_000)
+
+    deals = described_class.new(account, source_id).deals(with_value: true, pipeline_ids: [sale.first.id])
+
+    expect(deals).to eq(cards: 1, won: 1, won_value: [{ currency: 'BRL', cents: 50_000 }])
   end
 
   it 'keeps the card value when the new policy was cancelled or has no premium' do

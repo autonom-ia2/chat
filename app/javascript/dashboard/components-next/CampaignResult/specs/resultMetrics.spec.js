@@ -118,5 +118,8 @@ describe('campaign result helpers (#1007)', () => {
     ).toBe('R$\u00a01.700 + US$\u00a050');
     expect(wonValueText([], 'pt-BR')).toBe('R$\u00a00');
     expect(wonValueText(null, 'pt-BR')).toBeNull();
+    expect(wonValueText([{ currency: 'REAIS', cents: 990000 }], 'pt-BR')).toBe(
+      'REAIS 9.900'
+    );
   });
 });

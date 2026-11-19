@@ -20,10 +20,10 @@ class CampaignJourney::CampaignOverview
   MAX_CAMPAIGNS = 500
   F = CampaignJourney::ResultFinder
 
-  # with_value: the reader sees sales values (Crm::ValorDeVenda); without it the deals keep the counts only.
-  def initialize(account:, days: DEFAULT_PERIOD, channel: nil, page: 1, with_value: false)
+  # reader: { user:, account_user: } — who reads; the deals follow what this person sees (ResultReplies#deals_for).
+  def initialize(account:, reader:, days: DEFAULT_PERIOD, channel: nil, page: 1)
     @account = account
-    @with_value = with_value
+    @reader = reader
     @days = PERIODS.include?(days.to_i) ? days.to_i : DEFAULT_PERIOD
     @channel = F::CHANNELS.include?(channel.to_s) ? channel.to_s : nil
     @page = [page.to_i, 1].max
@@ -73,7 +73,7 @@ class CampaignJourney::CampaignOverview
       campaigns: rows.size,
       reached: rows.sum { |row| row[:delivered] || row[:sent] },
       replied: rows.sum { |row| row[:replied] },
-      deals: Crm::Config.enabled? ? CampaignJourney::ResultReplies.new(@account, rows.pluck(:source_id)).deals(with_value: @with_value) : nil,
+      deals: Crm::Config.enabled? ? CampaignJourney::ResultReplies.new(@account, rows.pluck(:source_id)).deals_for(**@reader) : nil,
       email_health: emails.any? ? email_health : nil
     }
   end

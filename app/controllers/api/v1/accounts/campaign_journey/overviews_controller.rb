@@ -11,7 +11,7 @@ class Api::V1::Accounts::CampaignJourney::OverviewsController < Api::V1::Account
     render json: {
       payload: ::CampaignJourney::CampaignOverview.new(
         account: Current.account, days: params[:days], channel: params[:channel], page: params[:page],
-        with_value: ::Crm::ValorDeVenda.ve?(Current.account_user)
+        reader: { user: Current.user, account_user: Current.account_user }
       ).call
     }
   end
