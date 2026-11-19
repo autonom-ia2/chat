@@ -124,7 +124,7 @@
         "FRASE_SEM_BLOCO": "Use a block",
         "ENSAIO": "Would go into the block and: {passos}.",
         "HISTORICO": "Used the block “{bloco}”.",
-        "VAZIO": "You don't have any blocks yet.",
+        "VAZIO": "You have no blocks yet. To create one, open the automations list and tap “Use as a block” on the automation you want to reuse.",
         "VAZIO_BOTAO": "See my automations",
         "QUAL": "Which block to use",
         "O_QUE_FAZ": "What this block does",

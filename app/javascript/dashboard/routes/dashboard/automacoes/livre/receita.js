@@ -163,19 +163,29 @@ export const registroPronto = registro => {
 // "Em outro registro" (G18), sem passo dentro: o esquema recusa até a pessoa
 // completar pelo próprio Confira. #2932–#2934: o passo novo com motor precisa
 // estar montado, e o "para cada", de pelo menos um passo em cada um.
-const incompleto = passo => {
-  if (temMotor(passo))
-    return (
-      !passoNovoPronto(passo) ||
-      (passo.tipo === 'repetir_lista' && !passo.cada?.length)
-    );
+// #2982: devolve o que falta no passo, para o aviso dizer qual passo e o quê
+// (o aviso único falava do "Se" até quando o incompleto era o "para cada").
+export const motivoIncompleto = passo => {
+  if (temMotor(passo)) {
+    if (!passoNovoPronto(passo)) return 'NOVO';
+    return passo.tipo === 'repetir_lista' && !passo.cada?.length
+      ? 'CADA'
+      : null;
+  }
   if (passo.tipo === 'em_outro_registro')
-    return !passo.passos?.length || !registroPronto(passo.registro);
-  return (
-    (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
-    (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length))
-  );
+    return !passo.passos?.length || !registroPronto(passo.registro)
+      ? 'OUTRO_REGISTRO'
+      : null;
+  if (passo.tipo === 'se')
+    return !passo.condicao || !passo.entao?.length ? 'SE' : null;
+  if (passo.tipo === 'esperar_ate') return passo.condicao ? null : 'ESPERAR';
+  return null;
 };
+
+const incompleto = passo => Boolean(motivoIncompleto(passo));
+
+export const primeiroIncompleto = (passos = []) =>
+  todosOsPassos(passos).find(incompleto) || null;
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
 // e "Esperar até" completos. Os seis passos novos (#2931–#2936) salvam como
