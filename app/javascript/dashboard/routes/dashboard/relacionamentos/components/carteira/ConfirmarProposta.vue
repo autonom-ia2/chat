@@ -2,7 +2,11 @@
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { destinoDoCard } from '../../carteira/cardNoCrm';
-import { caixaEscolhida, emReais } from '../../carteira/cotacaoDaRenovacao';
+import {
+  caixaEscolhida,
+  emReais,
+  nomeDaCaixaNaFrase,
+} from '../../carteira/cotacaoDaRenovacao';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { renovacoesFonteReal } from '../../fonte/renovacoesFonteReal';
 import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
@@ -64,7 +68,9 @@ const lerCaixa = async () => {
   if (props.demo) return;
   try {
     const { caixas, ajustes } = await props.fonteDasRenovacoes.ajustes();
-    caixa.value = caixaEscolhida(caixas, ajustes?.caixaId)?.nome ?? '';
+    caixa.value = nomeDaCaixaNaFrase(
+      caixaEscolhida(caixas, ajustes?.caixaId)?.nome ?? ''
+    );
   } catch {
     caixa.value = '';
   }

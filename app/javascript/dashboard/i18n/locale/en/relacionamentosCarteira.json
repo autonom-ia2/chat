@@ -559,8 +559,7 @@
         "QUEM_COTA": {
           "PERGUNTA": "Who does the quote?",
           "NINGUEM": "Nobody, manual quote",
-          "ROBO": "The robot quotes on its own",
-          "LIA": "The robot quotes and {agente} replies"
+          "ROBO": "The robot quotes"
         },
         "SO_NINGUEM": {
           "SEM_AGENTE": "The robot quotes once the account has the Quote Agent. Until then, the team does the quote.",

@@ -185,8 +185,7 @@ describe('as três escolhas e o WhatsApp', () => {
     expect(cartao(w).get('h2').text()).toBe('Cotação da renovação');
     expect(rotulos(w, 'escolher-quem-cota')).toEqual([
       'Ninguém, cotação manual',
-      'O robô cota sozinho',
-      'O robô cota e Nina responde',
+      'O robô cota',
     ]);
     expect(w.find(daCarteira('escolher-quem-envia')).exists()).toBe(false);
     expect(w.find(daCarteira('escolher-caixa')).exists()).toBe(false);
@@ -205,12 +204,28 @@ describe('as três escolhas e o WhatsApp', () => {
     expect(w.findAll('select')).toHaveLength(0);
   });
 
+  it('o "lia" que o servidor guardou aparece como "O robô cota" e não conta como mudança', async () => {
+    servidorResponde({
+      ajustes: { ...ESCOLHAS, quemCota: 'lia', caixaId: 5 },
+    });
+
+    const w = await abrir();
+
+    expect(escolhaEm(w, 'escolher-quem-cota').props('modelValue')).toBe('robo');
+    expect(w.get(daCarteira('escolher-quem-responde')).exists()).toBe(true);
+    expect(w.find(daCarteira('aviso-do-agente')).exists()).toBe(false);
+
+    servidorGuarda();
+    await salvar(w);
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+  });
+
   it('salva as quatro escolhas junto com o resto dos ajustes', async () => {
     servidorResponde();
     servidorGuarda();
     const w = await abrir();
 
-    await escolher(w, 'escolher-quem-cota', 'lia');
+    await escolher(w, 'escolher-quem-cota', 'robo');
     await escolher(w, 'escolher-quem-envia', 'sozinho');
     await escolher(w, 'escolher-quem-responde', 'lia');
     await escolher(w, 'escolher-caixa', 5);
@@ -220,7 +235,7 @@ describe('as três escolhas e o WhatsApp', () => {
       funilId: 1,
       etapaId: 11,
       dias: 60,
-      quemCota: 'lia',
+      quemCota: 'robo',
       quemEnvia: 'sozinho',
       quemResponde: 'lia',
       caixaId: 5,
@@ -293,7 +308,6 @@ describe('a conta que não pode pôr o robô para cotar', () => {
       expect(so.text()).toContain('Ninguém, cotação manual');
       expect(so.text()).toContain(frase);
       expect(w.find(daCarteira('escolher-quem-cota')).exists()).toBe(false);
-      expect(w.text()).not.toContain('O robô cota sozinho');
       expect(cartao(w).findAll('button[disabled]')).toHaveLength(0);
     }
   );

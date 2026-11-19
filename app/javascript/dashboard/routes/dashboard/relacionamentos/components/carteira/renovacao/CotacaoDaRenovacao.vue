@@ -66,12 +66,6 @@ const opcoesDeQuemCota = computed(() => [
     value: QUEM_COTA.ROBO,
     label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.ROBO'),
   },
-  {
-    value: QUEM_COTA.LIA,
-    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.LIA', {
-      agente: agente.value,
-    }),
-  },
 ]);
 const opcoesDeQuemEnvia = computed(() => [
   {

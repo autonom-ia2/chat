@@ -512,4 +512,32 @@ describe('o rodapé com a proposta pronta', () => {
 
     expect(pergunta(w).text()).toContain('pelo WhatsApp Renovações:');
   });
+
+  it('a caixa que já se chama "WhatsApp …" não repete a palavra', async () => {
+    SegurosAPI.renovacoes.mockResolvedValue({
+      data: {
+        ajustes: {
+          funilId: 1,
+          etapaId: 11,
+          dias: 60,
+          quemCota: 'robo',
+          quemEnvia: 'pessoa',
+          quemResponde: 'equipe',
+          caixaId: 6,
+        },
+        funis: [],
+        caixas: [{ id: 6, nome: 'WhatsApp Renovações', liaLigada: false }],
+        cotacaoLiberada: true,
+      },
+    });
+    const w = await abrir(COM_PROPOSTA, {
+      fonte: fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() }),
+    });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+    await assentar();
+
+    expect(pergunta(w).text()).toContain('pelo WhatsApp Renovações:');
+    expect(pergunta(w).text()).not.toContain('WhatsApp WhatsApp');
+  });
 });

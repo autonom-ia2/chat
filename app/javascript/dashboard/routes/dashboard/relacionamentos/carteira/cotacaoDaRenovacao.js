@@ -23,11 +23,17 @@ export const ESCOLHAS_DA_COTACAO = [
 export const temEscolhasDaCotacao = ajustes =>
   Object.values(QUEM_COTA).includes(ajustes?.quemCota);
 
-// Só as escolhas da cotação, quando vieram ({} sem elas).
+// Só as escolhas da cotação, quando vieram ({} sem elas). O servidor ainda
+// aceita `lia` em quem cota, mas cota igual a `robo`: quem decide se o agente
+// responde é só "Quem responde o cliente?". Por isso a tela não oferece mais
+// "O robô cota e o agente responde" (Rodrigo, 19/11) e mostra `lia` como "O
+// robô cota".
+const quemCotaNaTela = quemCota =>
+  quemCota === QUEM_COTA.LIA ? QUEM_COTA.ROBO : quemCota;
 export const escolhasDaCotacao = ajustes =>
   temEscolhasDaCotacao(ajustes)
     ? {
-        quemCota: ajustes.quemCota,
+        quemCota: quemCotaNaTela(ajustes.quemCota),
         quemEnvia: ajustes.quemEnvia,
         quemResponde: ajustes.quemResponde,
         caixaId: ajustes.caixaId ?? null,
@@ -48,14 +54,24 @@ export const roboPodeCotar = conta => !porQueSoNinguem(conta);
 export const roboCota = ajustes =>
   temEscolhasDaCotacao(ajustes) && ajustes.quemCota !== QUEM_COTA.NINGUEM;
 
-// Quem responde o cliente depois é o agente (pela escolha de quem cota ou de
-// quem responde).
+// Quem responde o cliente depois é o agente: só pela escolha de quem responde
+// (é ela que o servidor lê).
 export const agenteResponde = ajustes =>
-  ajustes?.quemCota === QUEM_COTA.LIA ||
   ajustes?.quemResponde === QUEM_RESPONDE.LIA;
 
 export const caixaEscolhida = (caixas = [], caixaId = null) =>
   caixas.find(caixa => caixa.id === caixaId) ?? null;
+
+// O nome da caixa para a frase "pelo WhatsApp {caixa}": sem o "WhatsApp" do
+// começo, que a frase já diz ("WhatsApp Renovações" vira "Renovações", e não
+// "pelo WhatsApp WhatsApp Renovações"). Só "WhatsApp" vira '' (a frase sem o
+// nome).
+const WHATSAPP = 'whatsapp';
+export const nomeDaCaixaNaFrase = (nome = '') => {
+  const limpo = nome.trim();
+  if (!limpo.toLowerCase().startsWith(WHATSAPP)) return limpo;
+  return limpo.slice(WHATSAPP.length).trim();
+};
 
 // O agente vai responder, mas não está ligado no WhatsApp escolhido: a
 // resposta do cliente ficaria sem ninguém. A tela avisa antes de salvar.

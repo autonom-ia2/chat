@@ -559,8 +559,7 @@
         "QUEM_COTA": {
           "PERGUNTA": "Quem faz a cotação?",
           "NINGUEM": "Ninguém, cotação manual",
-          "ROBO": "O robô cota sozinho",
-          "LIA": "O robô cota e {agente} responde"
+          "ROBO": "O robô cota"
         },
         "SO_NINGUEM": {
           "SEM_AGENTE": "O robô cota quando a conta tiver o Agente de Cotação. Até lá, a cotação é feita pela equipe.",

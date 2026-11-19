@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import CotacaoDoSeguro from '../../components/carteira/CotacaoDoSeguro.vue';
 import {
   camposQueFaltam,
+  nomeDaCaixaNaFrase,
   podeEnviarProposta,
   situacaoDaCotacao,
   variacaoDaCotacao,
@@ -389,5 +390,19 @@ describe('as puras', () => {
     ].forEach(tipo => {
       expect(fraseDoPasso({ tipo }).chave).toBe(`TIPOS.${tipo.toUpperCase()}`);
     });
+  });
+});
+
+describe('o nome da caixa na frase "pelo WhatsApp {caixa}"', () => {
+  it('tira o "WhatsApp" do começo para a frase não repetir', () => {
+    expect(nomeDaCaixaNaFrase('WhatsApp Renovações')).toBe('Renovações');
+    expect(nomeDaCaixaNaFrase('whatsapp da loja')).toBe('da loja');
+    expect(nomeDaCaixaNaFrase('WhatsApp')).toBe('');
+  });
+
+  it('deixa como está o nome que não começa com "WhatsApp"', () => {
+    expect(nomeDaCaixaNaFrase('Renovações')).toBe('Renovações');
+    expect(nomeDaCaixaNaFrase('Loja no WhatsApp')).toBe('Loja no WhatsApp');
+    expect(nomeDaCaixaNaFrase()).toBe('');
   });
 });
