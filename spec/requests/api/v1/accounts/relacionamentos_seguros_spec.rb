@@ -62,7 +62,7 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       end
     end
 
-    # E9 (#2902): as flags antigas (telas novas e carteira) saíram do código; só o nicho corretora fecha a carteira.
+    # E9 (#2902): as flags antigas (telas novas e carteira) saíram do código; só sair do nicho seguros fecha a carteira.
     it 'atende com as flags antigas desligadas' do
       account.disable_features!('relacionamentos_novo', 'carteira_seguros')
 
@@ -73,16 +73,26 @@ RSpec.describe 'Carteira de seguros: leituras', type: :request do
       end
     end
 
-    it 'responde 404 em conta fora do segmento: nicho geral e seguros que não é corretora' do
-      [%w[geral], %w[seguros saude_beneficios]].each do |nicho, perfil|
-        Autonomia::Agents::Nicho.atribuir(account, nicho: nicho, perfil: perfil)
-        account.save!
+    it 'responde 404 em conta fora do nicho seguros' do
+      Autonomia::Agents::Nicho.atribuir(account, nicho: 'geral', perfil: nil)
+      account.save!
 
-        (leituras + ["seguros/#{seguro.id}/pdf"]).each do |caminho|
-          ler(caminho)
+      (leituras + ["seguros/#{seguro.id}/pdf"]).each do |caminho|
+        ler(caminho)
 
-          expect(response).to have_http_status(:not_found), "#{caminho} em #{nicho}"
-        end
+        expect(response).to have_http_status(:not_found), caminho
+      end
+    end
+
+    # #3053: a carteira vale para todo perfil de seguros, não só para a corretora.
+    it 'atende a conta de seguros que não é corretora' do
+      Autonomia::Agents::Nicho.atribuir(account, nicho: 'seguros', perfil: 'saude_beneficios')
+      account.save!
+
+      leituras.each do |caminho|
+        ler(caminho)
+
+        expect(response).to have_http_status(:ok), caminho
       end
     end
 
