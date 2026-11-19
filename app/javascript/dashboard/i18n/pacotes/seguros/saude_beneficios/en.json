@@ -1256,7 +1256,7 @@
       "TOTALS": {
         "DEALS_NOTE": "cards with a campaign mark · {won} implemented",
         "REVENUE": "Premium implemented",
-        "REVENUE_NOTE": "premium of the {won} implemented · on a renewal, the new policy’s"
+        "REVENUE_NOTE": "premium of the {won} implemented · on a renewal, the new plan’s"
       }
     },
     "CRM": {

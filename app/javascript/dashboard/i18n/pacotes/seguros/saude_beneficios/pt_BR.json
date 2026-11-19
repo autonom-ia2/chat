@@ -1256,7 +1256,7 @@
       "TOTALS": {
         "DEALS_NOTE": "cards com marca de campanha · {won} implantados",
         "REVENUE": "Prêmio implantado",
-        "REVENUE_NOTE": "prêmio dos {won} implantados · na renovação, o da apólice nova"
+        "REVENUE_NOTE": "prêmio dos {won} implantados · na renovação, o do plano novo"
       }
     },
     "CRM": {
