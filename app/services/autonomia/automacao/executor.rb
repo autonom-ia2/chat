@@ -94,8 +94,6 @@ class Autonomia::Automacao::Executor
   def andar
     passo = @execucao.cursor.blank? ? @roteiro.primeiro : @roteiro.passo(@execucao.cursor)
     @retomando = @execucao.cursor.present?
-    # A rodada da partida, antes de qualquer espera (RitmoNoExecutor).
-    @primeira_rodada = !@retomando
     while passo && !@parou
       passo = sem_origem?(passo) ? pular_sem_origem(passo) : dar(passo)
       @retomando = false

@@ -4,33 +4,36 @@
 #   primeira pergunta da reunião e da pesquisa. A pergunta que sai depois que o cliente respondeu ao modelo vem na
 #   retomada, por outro caminho, e não passa aqui;
 # - consulta antes, contagem depois: o porteiro só conta o passo que mandou de fato (`mensagem_id` no resultado);
-# - isenta a resposta a quem acabou de escrever: gatilho de entrada do cliente (a mensagem nova que ENTROU, ou a conversa
-#   nova que o cliente começou), com o passo na primeira rodada, antes de qualquer espera. "Mensagem nova" seguida de
-#   "esperar 3 dias" e mensagem é iniciativa da empresa e passa pelo porteiro;
+# - resposta a quem está esperando não conta nem espera: a última mensagem pública da conversa onde o passo manda é do
+#   cliente. Vale para qualquer gatilho e qualquer ponto da receita (a resposta da primeira rodada, o galho "a cada
+#   mensagem" do "esperar até", a mensagem depois de "esperar a resposta", o "decidir" que leu a resposta). Decidido uma
+#   vez por passo, antes de mandar: depois do envio a última passa a ser a da empresa. Sem conversa ainda (o e-mail que
+#   abre uma conversa nova), não é resposta;
 # - fora do limite ou do horário: a execução espera até a hora (sem contar tentativa) e o histórico diz por quê.
 module Autonomia::Automacao::RitmoNoExecutor
   PASSOS_QUE_PERGUNTAM_AO_CLIENTE = %w[reuniao pesquisa].freeze
   ORIGEM_POR_PASSO = Hash.new('automacao_mensagem').merge('email' => 'automacao_email').freeze
   MOTIVO = 'adiado_pelo_ritmo'.freeze
-  EVENTO_DA_MENSAGEM = 'mensagem:'.freeze
+  # O lado da empresa nas mensagens públicas: a saída e a do robô do chat do site.
+  DA_EMPRESA = %w[outgoing template].freeze
 
   private
 
-  # O envio de um passo pelo ritmo: no passo ao cliente, adiado nada roda; senão `envio` manda, a mensagem que saiu conta,
-  # e o bloco segue com o resultado. Nos outros passos, só manda e segue.
+  # O envio de um passo pelo ritmo: no passo ao cliente, adiado nada roda; senão `envio` manda, a mensagem que saiu conta
+  # (fora da resposta a quem está esperando), e o bloco segue com o resultado. Nos outros passos, só manda e segue.
   def pelo_ritmo(passo, envio)
     return yield(envio.call) unless ao_cliente?(passo)
-    return if adiado_pelo_ritmo?(passo)
+
+    resposta = cliente_esperando_resposta?(passo)
+    return if !resposta && adiado_pelo_ritmo?(passo)
 
     resultado = envio.call
-    contar_no_ritmo(passo, resultado)
+    contar_no_ritmo(passo, resultado) unless resposta
     yield resultado
   end
 
   # true quando adiou: a rodada parou e o passo roda de novo na hora.
   def adiado_pelo_ritmo?(passo)
-    return false if isento_do_ritmo?
-
     ate = ::Autonomia::RitmoDeEnvio::Porteiro.quando(account: @account, contact: contato_do_ritmo)
     return false unless ate
 
@@ -46,7 +49,7 @@ module Autonomia::Automacao::RitmoNoExecutor
   end
 
   def contar_no_ritmo(passo, resultado)
-    return if resultado.dados.to_h['mensagem_id'].blank? || isento_do_ritmo?
+    return if resultado.dados.to_h['mensagem_id'].blank?
 
     ::Autonomia::RitmoDeEnvio::Porteiro.contar!(account: @account, contact_id: contato_do_ritmo&.id,
                                                 origem: ORIGEM_POR_PASSO[passo['tipo']])
@@ -61,34 +64,17 @@ module Autonomia::Automacao::RitmoNoExecutor
     end
   end
 
-  def contato_do_ritmo = ::Autonomia::Automacao::Contexto.de(alvo).contato
+  def contato_do_ritmo = contexto.contato
 
-  def isento_do_ritmo?
-    return @isento_do_ritmo if defined?(@isento_do_ritmo)
+  # A última mensagem pública (do cliente ou da empresa) da conversa onde o passo manda é do cliente. O e-mail abre uma
+  # conversa nova: nunca é resposta.
+  def cliente_esperando_resposta?(passo)
+    return false if passo['tipo'] == 'email'
 
-    @isento_do_ritmo = @primeira_rodada == true && cliente_puxou_a_conversa?
-  end
+    conversa = contexto.conversa
+    return false unless conversa
 
-  def cliente_puxou_a_conversa?
-    case @execucao.versao.receita.to_h.dig('gatilho', 'tipo')
-    when 'mensagem.criada' then mensagem_do_gatilho&.incoming?
-    when 'conversa.criada' then primeira_mensagem_da_conversa&.incoming?
-    else false
-    end
-  end
-
-  # A Partida guarda em `evento` a marca "mensagem:<id>" da mensagem que disparou.
-  def mensagem_do_gatilho
-    evento = @execucao.evento.to_s
-    return unless evento.start_with?(EVENTO_DA_MENSAGEM)
-
-    @account.messages.find_by(id: evento.delete_prefix(EVENTO_DA_MENSAGEM))
-  end
-
-  def primeira_mensagem_da_conversa
-    conversa = @execucao.alvo
-    return unless conversa.is_a?(Conversation)
-
-    conversa.messages.where(message_type: %i[incoming outgoing]).order(:id).first
+    ultima = conversa.messages.where(private: false, message_type: ['incoming', *DA_EMPRESA]).reorder(id: :desc).first
+    ultima&.incoming? || false
   end
 end

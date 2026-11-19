@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #3063, item 2: o limite de mensagens por cliente da conta vale para a mensagem que a automação manda por iniciativa da
-# empresa. Fora dele, a execução espera a vaga (sem descartar nem contar tentativa); a resposta a quem acabou de escrever
-# não espera nem conta (combinado com a Automação Ultra, 19/11).
+# empresa. Fora dele, a execução espera a vaga (sem descartar nem contar tentativa). Resposta a quem está esperando (a
+# última mensagem pública da conversa é do cliente) não espera nem conta (combinado com a Automação Ultra, 19/11).
 RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -73,7 +73,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     expect(contados.count).to eq(1)
   end
 
-  it 'a mensagem depois de uma espera é iniciativa da empresa: passa pelo limite', :aggregate_failures do
+  it 'depois de uma espera em que ninguém respondeu, a resposta atrasada sai e não conta', :aggregate_failures do
     chegou_ao_limite
     entrou = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'quero cotar')
     definicao = automacao_ligada(account, admin, [esperar_passo('e1', 1, 'horas'), oi], gatilho: { 'tipo' => 'mensagem.criada' })
@@ -81,7 +81,60 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
 
     travel_to(2.hours.from_now) { varrer }
 
-    expect(publicas.count).to eq(0)
+    expect(publicas.count).to eq(1)
+    expect(execucao.reload.estado).to eq('concluida')
+    expect(contados.count).to eq(1)
+  end
+
+  it 'se a equipe respondeu durante a espera, a mensagem seguinte é iniciativa da empresa: passa pelo limite', :aggregate_failures do
+    chegou_ao_limite
+    entrou = create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'quero cotar')
+    definicao = automacao_ligada(account, admin, [esperar_passo('e1', 1, 'horas'), oi], gatilho: { 'tipo' => 'mensagem.criada' })
+    execucao = rodar(definicao, chave_gatilho: 'mensagem.criada', mensagem: entrou)
+    create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: admin, content: 'Já te mando')
+
+    travel_to(2.hours.from_now) { varrer }
+
+    expect(publicas.count).to eq(1)
     expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando p1])
+  end
+
+  it 'nota interna da equipe não conta como resposta: o cliente segue esperando', :aggregate_failures do
+    chegou_ao_limite
+    create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'quero cotar')
+    create(:message, conversation: conversa, account: account, message_type: :outgoing, private: true, sender: admin, content: 'vejo já')
+
+    execucao = rodar(automacao_ligada(account, admin, [oi]))
+
+    expect(publicas.count).to eq(1)
+    expect(execucao.reload.estado).to eq('concluida')
+  end
+
+  describe 'o galho "a cada mensagem" do "esperar até" (G63)' do
+    let(:listener) { Autonomia::AutomacaoListener.instance }
+    let(:urgente) { { 'campo' => { '$valor' => 'conversa.prioridade' }, 'op' => 'igual', 'valor' => 'urgent' } }
+    let(:espera) do
+      { 'id' => 'espera', 'tipo' => 'esperar_ate', 'condicao' => urgente, 'prazo' => 'sem_prazo',
+        'a_cada_mensagem' => [mensagem_passo('resp', 'Recebi, já vejo para você.')] }
+    end
+
+    def cliente_escreve
+      mensagem = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :incoming,
+                                  sender: contato, content: 'e aí?')
+      perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+        listener.message_created(Events::Base.new('message.created', Time.zone.now, message: mensagem))
+      end
+    end
+
+    it 'no limite, responde na hora a cada mensagem do cliente, sem contar', :aggregate_failures do
+      chegou_ao_limite
+      execucao = rodar(automacao_ligada(account, admin, [espera]))
+
+      cliente_escreve
+
+      expect(publicas.pluck(:content)).to eq(['Recebi, já vejo para você.'])
+      expect(contados.count).to eq(1)
+      expect([execucao.reload.estado, execucao.cursor]).to eq(%w[esperando espera])
+    end
   end
 end
