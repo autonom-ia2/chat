@@ -7,7 +7,8 @@
 #   da janela para a categoria do modelo (EnvioForaDaJanela::Regras.impedimento_do_contato);
 # - `sem_caixa`: a conta não escolheu caixa, ou a escolhida deixou de ser do WhatsApp oficial;
 # - `sem_modelo`: o modelo da Finalidade não está aprovado nessa caixa (Whatsapp::Templates::Garantir, sem criar: mandar
-#   o modelo à Meta é decisão de fora daqui);
+#   o modelo à Meta é decisão de fora daqui). Fora da lista da caixa, a autocura pede os modelos sem esperar
+#   (Carteira::Cotacao::Modelos.curar, #3055);
 # - `sem_telefone`: o contato não tem telefone para abrir conversa na caixa;
 # - `sem_card` / `campo_vazio`: o card de renovação sumiu, ou uma variável do modelo ficaria vazia (o primeiro nome do
 #   contato sem nome, por exemplo). A Meta recusaria o modelo com a variável vazia.
@@ -85,8 +86,10 @@ class Carteira::Cotacao::Envio
 
   def pronto!(caixa, finalidade)
     pronto = Whatsapp::Templates::Garantir.call(inbox: caixa, finalidade: finalidade, criar: false)
-    recusar('sem_modelo') unless pronto[:status] == :pronto
-    pronto
+    return pronto if pronto[:status] == :pronto
+
+    Carteira::Cotacao::Modelos.curar(@config, pronto)
+    recusar('sem_modelo')
   end
 
   # As variáveis do corpo pelo catálogo de campos do card de renovação (o primeiro nome do contato, o fim da vigência).

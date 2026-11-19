@@ -2,7 +2,7 @@
 # 1 hora antes, com os botões "Ver meu horário" e "Parar avisos" (`Whatsapp::Templates::Finalidades::Agendamento`).
 #
 # Quem enfileira: o dono ligar o Aviso de serviço (`whatsapp_templates.consentimento_ligado`, initializer
-# `crm_booking_notice_templates.rb`), publicar uma página ou trocar a caixa de avisos de uma página publicada
+# `whatsapp_templates_consentimento_ligado.rb`), publicar uma página ou trocar a caixa de avisos de uma página publicada
 # (`Crm::BookingNoticeTemplateEnsure`). Fora da requisição, porque fala com a Meta.
 #
 # Só com o agendamento novo ligado na conta e o Aviso de serviço ligado (`WhatsappTemplateConsent.ativo?`). Caixas: as
