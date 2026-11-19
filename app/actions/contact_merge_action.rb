@@ -143,7 +143,7 @@ class ContactMergeAction
     # attributes in base contact are given preference
     merged_attributes = mergee_contact_attributes.deep_merge(base_contact_attributes)
     @mergee_contact.reload
-    merged_attributes = merged_attributes.merge(inherited_attributes)
+    merged_attributes = merged_attributes.merge(inherited_attributes).merge(inherited_labels)
 
     @mergee_contact.destroy!
     Rails.configuration.dispatcher.dispatch(CONTACT_MERGED, Time.zone.now, contact: @base_contact,
@@ -160,6 +160,19 @@ class ContactMergeAction
   # O que é da pessoa e passa do absorvido para o que fica: a recusa de mensagens, ser cliente e a marca "Este contato é".
   def inherited_attributes
     inherited_opt_out.merge(inherited_customer).merge(inherited_relacao)
+  end
+
+  # #3071: as etiquetas são da pessoa. Sem isto, as do absorvido sumiriam com o destroy! dele. O que fica passa a ter as
+  # dele e as do absorvido que ele não tinha, sem diferenciar maiúscula ("VIP" e "vip" são uma só), e grava junto com
+  # os outros atributos, num update só. Lidas depois do lock! dos dois, que relê as listas. Vale para todo merge, inclusive
+  # o automático do identify (contato que se identifica com o e-mail ou o telefone de outro): etiqueta não some em merge
+  # nenhum. O Contacts::NinthDigitMergeAction devolve {}, porque o Contacts::NinthDigitDuplicateMerger já juntou antes.
+  def inherited_labels
+    known = @base_contact.label_list.map(&:downcase)
+    extra = @mergee_contact.label_list.uniq(&:downcase).reject { |label| known.include?(label.downcase) }
+    return {} if extra.empty?
+
+    { 'label_list' => @base_contact.label_list + extra }
   end
 
   def inherited_customer

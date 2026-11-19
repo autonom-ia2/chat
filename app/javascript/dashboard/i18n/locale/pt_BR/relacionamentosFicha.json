@@ -63,16 +63,17 @@
       "DESMARCAR_CLIENTE": "Não é mais cliente",
       "JUNTAR": "Juntar com outra pessoa",
       "BLOQUEAR": "Bloquear",
-      "APAGAR": "Apagar"
+      "APAGAR": "Apagar",
+      "NAO_QUER": "Marcar que não quer mensagens",
+      "DESBLOQUEAR": "Desbloquear",
+      "LIGAR": "Ligar",
+      "MUDAR_ETIQUETAS": "Mudar etiquetas",
+      "POR_ETIQUETA": "Pôr etiqueta",
+      "LEMBRETE_TITULO": "Falar com {nome}"
     },
     "AVISOS": {
-      "CONVERSAR": "Aqui abre a conversa com {nome}.",
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",
-      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}.",
-      "VER_TODAS": "Aqui abrem todas as conversas com {nome}.",
-      "JUNTAR": "Aqui você escolhe com quem juntar {nome}.",
-      "BLOQUEAR": "Aqui você confirma que quer bloquear {nome}.",
-      "APAGAR": "Aqui você confirma que quer apagar {nome}."
+      "LEMBRETE": "Aqui você agenda um lembrete sobre {nome}."
     },
     "FAIXA": {
       "TEXTO": "Não quer receber mensagens desde {data}. {origem}",
@@ -85,7 +86,7 @@
       "LIBERADO": "Pronto. {nome} pode receber mensagens de novo.",
       "ERRO": "Não consegui liberar. Tente de novo.",
       "ORIGEM": {
-        "manual": "Alguém da equipe marcou aqui.",
+        "manual": "Marcado pela equipe nesta ficha.",
         "campaign_reply": "Pediu ao responder uma campanha.",
         "follow_up_reply": "Pediu ao responder uma mensagem automática.",
         "email_unsubscribe": "Pediu por e-mail.",
@@ -111,7 +112,9 @@
         "resolvida": "Resolvida",
         "adiada": "Adiada",
         "outra": "Outra situação"
-      }
+      },
+      "VER_MENOS": "Ver menos",
+      "MAIS_RECENTES": "Estas são as {count} conversas mais recentes."
     },
     "CARDS": {
       "TITULO": "Cards",
@@ -143,7 +146,14 @@
       "ERRO": "Não consegui salvar a nota. Tente de novo.",
       "VAZIO": "Nenhuma nota ainda.",
       "POR": "{autor} · {quando}",
-      "ESCREVA_ANTES": "Escreva a nota antes de salvar."
+      "ESCREVA_ANTES": "Escreva a nota antes de salvar.",
+      "APAGAR": "Apagar nota",
+      "APAGAR_ROTULO": "Apagar a nota “{texto}”",
+      "APAGAR_TITULO": "Apagar esta nota?",
+      "APAGAR_AVISO": "“{texto}” sai da ficha de {nome}. Não dá para desfazer.",
+      "APAGAR_CONFIRMAR": "Apagar nota",
+      "APAGADA": "Nota apagada.",
+      "ERRO_APAGAR": "Não consegui apagar a nota. Tente de novo."
     },
     "ARQUIVOS": {
       "TITULO": "Arquivos",
@@ -220,6 +230,75 @@
       },
       "CNPJ": "CNPJ",
       "SITE": "Site"
+    },
+    "APAGAR": {
+      "TITULO": "Apagar {nome}?",
+      "AVISO": "A ficha de {nome} sai do sistema, com as conversas, as mensagens e as notas.",
+      "CONFIRMAR": "Apagar {nome}",
+      "APAGADA": "A ficha de {nome} foi apagada.",
+      "ERRO": "Não consegui apagar {nome}. Tente de novo daqui a pouco.",
+      "SEGUROS": "O seguro de {nome} também sai, com o PDF. | Os {count} seguros de {nome} também saem, com o PDF.",
+      "CARDS": "Os cards continuam no funil, sem a pessoa.",
+      "CARDS_SEM_DADOS": "Os cards continuam no funil, sem os dados da pessoa, e as reuniões marcadas são canceladas.",
+      "NAO_VOLTA": "Não dá para desfazer."
+    },
+    "BLOQUEIO": {
+      "TITULO": "Bloquear {nome}?",
+      "AVISO": "Se {nome} mandar mensagem, a mensagem fica guardada e ninguém da equipe é avisado. Também sai das campanhas. Dá para desbloquear quando quiser.",
+      "CONFIRMAR": "Bloquear",
+      "BLOQUEADA": "Pronto. A ficha de {nome} está bloqueada.",
+      "ERRO_BLOQUEAR": "Não consegui bloquear. Tente de novo.",
+      "DESBLOQUEADA": "Pronto. A ficha de {nome} está desbloqueada.",
+      "ERRO_DESBLOQUEAR": "Não consegui desbloquear. Tente de novo.",
+      "FAIXA": "A ficha de {nome} está bloqueada.",
+      "FAIXA_APOIO": "Se {nome} mandar mensagem, a mensagem fica guardada e ninguém é avisado."
+    },
+    "NAO_QUER": {
+      "TITULO": "Marcar que {nome} não quer mensagens?",
+      "AVISO": "{nome} sai das campanhas e não recebe mais mensagens automáticas. Se {nome} escrever, você responde normalmente.",
+      "CONFIRMAR": "Marcar que não quer",
+      "MARCADO": "Pronto. {nome} não vai mais receber campanhas nem mensagens automáticas.",
+      "ERRO": "Não consegui marcar. Tente de novo."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Etiquetas de {nome}",
+      "AVISO": "Marque as que {nome} deve ter. Desmarque para tirar.",
+      "SALVAR": "Salvar etiquetas",
+      "ERRO": "Não consegui salvar as etiquetas. Tente de novo.",
+      "SEM_ETIQUETAS": "A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.",
+      "NAO_CARREGOU": "Não consegui mostrar as etiquetas. Tente de novo.",
+      "APAGADA_DA_CONTA": "não existe mais na conta",
+      "VOLTARAM": "Pronto. As etiquetas voltaram a ser como antes.",
+      "PRONTO": "Pronto.",
+      "ENTROU": "Entrou: {etiquetas}.",
+      "SAIU": "Saiu: {etiquetas}."
+    },
+    "JUNTAR": {
+      "TITULO": "Juntar {nome} com outra pessoa",
+      "AVISO": "Use quando a mesma pessoa tem duas fichas. A ficha de {nome} fica; a que você escolher deixa de existir. Procure pelo nome, telefone ou e-mail.",
+      "BUSCA": "Procurar a outra ficha",
+      "PLACEHOLDER": "Nome, telefone ou e-mail",
+      "DIGITE": "Digite o nome, o telefone ou o e-mail da outra ficha.",
+      "PROCURANDO": "Procurando…",
+      "NINGUEM": "Não achei ninguém com “{termo}”. Confira o que você digitou.",
+      "ERRO_BUSCA": "Não consegui procurar agora. Tente de novo.",
+      "RESULTADOS": "Fichas encontradas",
+      "ESCOLHA": "Escolha a outra ficha na lista.",
+      "SEM_CONTATO": "Sem telefone e sem e-mail",
+      "CONTINUAR": "Continuar",
+      "CONFIRMA_TITULO": "Juntar as duas fichas?",
+      "FICA": "Fica",
+      "SAI": "Deixa de existir",
+      "O_QUE_PASSA": "Tudo o que é de {sai} passa para {fica}: conversas, notas, etiquetas e cards.",
+      "O_QUE_FICA": "O nome, o telefone e o e-mail de {fica} continuam. O que faltar vem de {sai}.",
+      "NAO_VOLTA": "A ficha de {sai} deixa de existir. Não dá para desfazer.",
+      "CONFIRMAR": "Juntar fichas",
+      "VOLTAR": "Voltar",
+      "JUNTADAS": "Pronto. Tudo de {sai} agora está na ficha de {fica}.",
+      "ERRO": "Não consegui juntar as fichas. Tente de novo.",
+      "O_QUE_PASSA_COM_SEGUROS": "Tudo o que é de {sai} passa para {fica}: conversas, notas, etiquetas, cards e seguros.",
+      "PERDE_TELEFONE": "O telefone {telefone} de {sai} não fica na ficha. Anote antes, se precisar.",
+      "PERDE_EMAIL": "O e-mail {email} de {sai} não fica na ficha. Anote antes, se precisar."
     }
   }
 }

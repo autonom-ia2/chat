@@ -37,7 +37,7 @@ const props = defineProps({
   // O nome da pessoa da ficha, para as perguntas do seguro de outra corretora.
   nome: { type: String, default: '' },
 });
-const emit = defineEmits(['abrirSegurado']);
+const emit = defineEmits(['abrirSegurado', 'quantos']);
 
 const { t } = useI18n();
 const route = useRoute();
@@ -69,6 +69,12 @@ const aoGuardarPdf = () => {
 };
 
 watch(() => props.donoId, lista.carregar);
+// #3071 — quantos seguros a pessoa tem: o "Apagar" da ficha diz que eles saem.
+watch(
+  () => lista.seguros.value.length,
+  quantos => emit('quantos', quantos),
+  { immediate: true }
+);
 onMounted(async () => {
   lista.carregar();
   if (props.podeEditar && !props.daEmpresa) {

@@ -1,6 +1,9 @@
+import AccountActionsAPI from 'dashboard/api/accountActions';
 import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
+import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { fichaFonte } from '../../fonte/fichaFonte';
 
@@ -19,6 +22,7 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     pessoasDaEmpresa: vi.fn(),
     conversasDaEmpresa: vi.fn(),
     cardsDaEmpresa: vi.fn(),
+    pessoas: vi.fn(),
   },
 }));
 vi.mock('dashboard/api/contacts', () => ({
@@ -27,11 +31,20 @@ vi.mock('dashboard/api/contacts', () => ({
     markCustomer: vi.fn(),
     removeCustomer: vi.fn(),
     removeOptOut: vi.fn(),
+    markOptOut: vi.fn(),
+    delete: vi.fn(),
   },
 }));
-vi.mock('dashboard/api/contactNotes', () => ({
-  default: { create: vi.fn() },
+vi.mock('dashboard/api/etiquetasDoContato', () => ({
+  default: { alterar: vi.fn() },
 }));
+vi.mock('dashboard/api/contactNotes', () => ({
+  default: { create: vi.fn(), delete: vi.fn() },
+}));
+vi.mock('dashboard/api/accountActions', () => ({
+  default: { merge: vi.fn() },
+}));
+vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('dashboard/api/companies', () => ({
   default: { update: vi.fn() },
 }));
@@ -72,7 +85,7 @@ afterEach(() => {
 });
 
 describe('leituras', () => {
-  it('não é a demonstração e tem os 16 métodos', () => {
+  it('não é a demonstração e tem os métodos de leitura e de escrita', () => {
     const fonte = real();
     expect(fonte.usaDemo).toBe(false);
     [...LEITURAS, ...ESCRITAS].forEach(([metodo]) =>
@@ -196,6 +209,83 @@ describe('escritas da pessoa', () => {
     });
     expect(ContactNotesAPI.create).toHaveBeenCalledWith(7, 'Ligar amanhã.');
     expect(RelacionamentosAPI.pessoa).not.toHaveBeenCalled();
+  });
+});
+
+// #3071 — as ações que vieram da ficha antiga, pelos endpoints dela.
+describe('ações da ficha antiga', () => {
+  const relida = { ...ANA, name: 'Ana Maria' };
+  beforeEach(() => {
+    RelacionamentosAPI.pessoa.mockResolvedValue({ data: relida });
+  });
+
+  it.each([
+    ['marcarNaoQuer', () => ContactAPI.markOptOut, [7], [7]],
+    ['bloquear', () => ContactAPI.update, [7], [7, { blocked: true }]],
+    ['desbloquear', () => ContactAPI.update, [7], [7, { blocked: false }]],
+    [
+      'alterarEtiquetas',
+      () => EtiquetasDoContatoAPI.alterar,
+      [7, { por: ['site'], tirar: ['feira'] }],
+      [7, { por: ['site'], tirar: ['feira'] }],
+    ],
+  ])(
+    '%s escreve pelo contato e relê a pessoa',
+    async (metodo, api, args, chamado) => {
+      api().mockResolvedValue({ data: {} });
+      expect(await real()[metodo](...args)).toEqual(relida);
+      expect(api()).toHaveBeenCalledWith(...chamado);
+      expect(RelacionamentosAPI.pessoa).toHaveBeenCalledWith(7);
+    }
+  );
+
+  it('juntar: a pessoa da ficha é a que fica (base), a escolhida é absorvida', async () => {
+    AccountActionsAPI.merge.mockResolvedValue({ data: {} });
+    expect(await real().juntar(7, 8)).toEqual(relida);
+    expect(AccountActionsAPI.merge).toHaveBeenCalledWith(7, 8);
+  });
+
+  it('apagar e apagar nota não releem nada', async () => {
+    ContactAPI.delete.mockResolvedValue({ data: {} });
+    ContactNotesAPI.delete.mockResolvedValue({ data: {} });
+    await real().apagar(7);
+    await real().apagarNota(7, 31);
+    expect(ContactAPI.delete).toHaveBeenCalledWith(7);
+    expect(ContactNotesAPI.delete).toHaveBeenCalledWith(7, 31);
+    expect(RelacionamentosAPI.pessoa).not.toHaveBeenCalled();
+  });
+
+  it('o 422 do apagar sobe com a frase do servidor', async () => {
+    const recusa = Object.assign(new Error('422'), {
+      response: { status: 422, data: { message: 'Está online.' } },
+    });
+    ContactAPI.delete.mockRejectedValue(recusa);
+    await expect(real().apagar(7)).rejects.toBe(recusa);
+  });
+
+  it('buscar pessoas usa a busca da lista e tira a própria pessoa', async () => {
+    RelacionamentosAPI.pessoas.mockResolvedValue({
+      data: { itens: [ANA, { id: 8, name: 'Bruno' }], total: 2 },
+    });
+    expect(await real().buscarPessoas('an', 7)).toEqual([
+      { id: 8, name: 'Bruno' },
+    ]);
+    expect(RelacionamentosAPI.pessoas).toHaveBeenCalledWith({ busca: 'an' });
+  });
+
+  it('as etiquetas da conta vêm com a cor, em ordem alfabética', async () => {
+    LabelsAPI.get.mockResolvedValue({
+      data: {
+        payload: [
+          { title: 'site', color: '#111' },
+          { title: 'feira', color: '#222' },
+        ],
+      },
+    });
+    expect(await real().etiquetasDaConta()).toEqual([
+      { nome: 'feira', cor: '#222' },
+      { nome: 'site', cor: '#111' },
+    ]);
   });
 });
 

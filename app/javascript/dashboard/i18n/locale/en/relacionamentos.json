@@ -237,7 +237,8 @@
       "CONVERSAR": "Chat",
       "GRUPOS": "Groups",
       "ERRO_DA_TELA": "I couldn't load this.",
-      "ENTENDI": "Got it"
+      "ENTENDI": "Got it",
+      "FECHAR_AVISO": "Close notice"
     },
     "GRUPOS": {
       "TODOS": {
