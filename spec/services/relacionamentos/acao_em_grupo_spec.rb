@@ -132,6 +132,17 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
 
       expect(etiquetar).to eq(aplicadas: 2, de_fora: [de_fora(carla, 'nao_existe_mais')])
     end
+
+    # #3062 — o aviso diz quantas pessoas mudaram: quem já tinha a etiqueta não conta e não é regravada.
+    it 'quem já tinha a etiqueta não conta como feita e não muda o updated_at' do
+      ana.update_labels(%w[feira])
+      antes = 2.days.ago.change(usec: 0)
+      ana.update_column(:updated_at, antes) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(etiquetar).to eq(aplicadas: 2, de_fora: [])
+      expect(ana.reload.updated_at).to eq(antes)
+      expect([bruno, carla].map { |contato| contato.reload.label_list }).to eq([%w[feira], %w[feira]])
+    end
   end
 
   # #3062 — tirar as etiquetas escolhidas das pessoas marcadas, uma por uma, deixando as outras.
@@ -146,9 +157,13 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
       described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: ['feira']).call
     end
 
-    it 'tira só a etiqueta escolhida; quem não tinha conta como feita' do
-      expect(tirar).to eq(tiradas: 3, de_fora: [])
+    it 'tira só a etiqueta escolhida; quem não tinha não conta como feita e não muda o updated_at' do
+      antes = 2.days.ago.change(usec: 0)
+      carla.update_column(:updated_at, antes) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(tirar).to eq(tiradas: 2, de_fora: [])
       expect([ana, bruno, carla].map { |contato| contato.reload.label_list }).to eq([%w[site], %w[site], []])
+      expect(carla.updated_at).to eq(antes)
     end
 
     it 'deixa de fora a pessoa com dado antigo que não passa mais na validação; das outras tira' do
@@ -158,8 +173,17 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
       expect([ana, bruno].map { |contato| contato.reload.label_list.sort }).to eq([%w[site], %w[feira site]])
     end
 
-    it 'recusa etiqueta que a conta não tem, antes de mexer em alguém' do
-      acao = described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: %w[feira evento])
+    # A etiqueta apagada da conta continua nas pessoas; tirar é o jeito de limpar.
+    it 'tira etiqueta que a conta já apagou' do
+      Label.find_by!(account: account, title: 'site').destroy!
+      acao = described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: %w[site])
+
+      expect(acao.call).to eq(tiradas: 2, de_fora: [])
+      expect([ana, bruno].map { |contato| contato.reload.label_list }).to eq([%w[feira], %w[feira]])
+    end
+
+    it 'recusa o pedido sem etiqueta, antes de mexer em alguém' do
+      acao = described_class.new(account: account, user: admin, pessoa_ids: todos, etiquetas: [])
 
       expect { acao.call }.to raise_error(Relacionamentos::PedidoInvalido, 'etiqueta desconhecida')
       expect(ana.reload.label_list.sort).to eq(%w[feira site])

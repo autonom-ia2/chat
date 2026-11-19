@@ -29,6 +29,7 @@
       },
       "ORDENAR": {
         "ROTULO": "Sort",
+        "NO_BOTAO": "Sort: {ordem}",
         "ULTIMA_CONVERSA": "Last chat",
         "NOME": "Name",
         "MAIS_NOVOS": "Newest",
@@ -84,27 +85,27 @@
       "TOPO": {
         "NOVA_PESSOA": "New person",
         "BAIXAR": "Download spreadsheet",
-        "ACOES": "Actions"
+        "BAIXAR_NO_FIM": "Download this list as a spreadsheet"
       },
       "NOVA_PESSOA": {
         "TITULO": "New person",
         "SALVAR": "Save person",
         "CRIADA": "{nome} is on your list.",
-        "ABRIR_FICHA": "Open profile",
         "ERRO": "I couldn't save. Please try again."
       },
       "EDITAR": {
         "SALVO": "{nome}’s details saved."
       },
       "PLANILHA": {
-        "TITULO": "Download this list as a spreadsheet",
-        "TEXTO": "I will build a spreadsheet with {count} person and send the link to your email. | I will build a spreadsheet with {count} people and send the link to your email.",
+        "TITULO": "Get this list as a spreadsheet",
+        "TEXTO": "I will build a spreadsheet with {count} person and send the link to {email}. | I will build a spreadsheet with {count} people and send the link to {email}.",
         "O_QUE_VAI": "It has name, email, phone and labels, in the order shown on screen.",
         "QUAL_LISTA": "List: {lista}",
         "BUSCA": "search “{busca}”",
         "FILTROS": "{count} filter | {count} filters",
         "CONFIRMAR": "Send by email",
         "ENVIADA": "Done. The spreadsheet will reach {email} in a few minutes.",
+        "ESPERAR": "You just asked for a spreadsheet. You can ask for another one in a few minutes.",
         "ERRO": "I couldn't request the spreadsheet. Please try again."
       },
       "EXEMPLO": {
@@ -182,18 +183,23 @@
       },
       "ETIQUETA": {
         "TITULO": "Labels",
+        "PARA_QUEM": "For the person you selected. | For the {count} people you selected.",
         "MODO": "What should I do with the labels?",
         "COLOCAR": "Add",
         "TIRAR": "Remove",
         "PERGUNTA_COLOCAR": "Which labels to add?",
         "PERGUNTA_TIRAR": "Which labels to remove?",
-        "BOTAO_COLOCAR": "Add labels | Add {count} label | Add {count} labels",
-        "BOTAO_TIRAR": "Remove labels | Remove {count} label | Remove {count} labels",
-        "APLICADA": "Done: added {etiquetas} to {count} person. | Done: added {etiquetas} to {count} people.",
-        "TIRADA": "Done: removed {etiquetas} from {count} person. | Done: removed {etiquetas} from {count} people.",
+        "BOTAO_COLOCAR": "Add to {count} person | Add to {count} people",
+        "BOTAO_TIRAR": "Remove from {count} person | Remove from {count} people",
+        "QUANTAS": "{count} person | {count} people",
+        "APLICADA": "Nothing changed: everyone you selected already had {etiquetas}. | Done: I added {etiquetas} to {count} person. | Done: I added {etiquetas} to {count} people.",
+        "TIRADA": "Nothing changed: nobody you selected had {etiquetas}. | Done: I removed {etiquetas} from {count} person. | Done: I removed {etiquetas} from {count} people.",
+        "DEVOLVIDAS": "Done: the labels are back on the people who had them.",
+        "ERRO_AO_DEVOLVER": "I could not put the labels back. Try again.",
         "ERRO": "I couldn't change the labels. Please try again.",
         "FALTA_ESCOLHER": "Choose at least one label.",
-        "SEM_ETIQUETAS": "The account has no labels yet. An administrator creates them in Settings, Labels."
+        "SEM_ETIQUETAS": "The account has no labels yet. An administrator creates them in Settings, Labels.",
+        "NINGUEM_TEM": "Nobody you selected has a label."
       },
       "APAGAR": {
         "TITULO": "Delete {count} person? | Delete {count} people?",
@@ -263,7 +269,7 @@
         "EXPLICACAO": "People who asked not to receive messages. Nobody here gets a campaign."
       },
       "ATIVOS_AGORA": {
-        "NOME": "Active now",
+        "NOME": "On your site now",
         "EXPLICACAO": "Who has the chat on your website open right now."
       },
       "EMPRESAS_TODAS": {

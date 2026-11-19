@@ -1,7 +1,7 @@
 # "Etiquetar" da Lista nova de Relacionamentos (#2894): põe as etiquetas em cada pessoa marcada, sem tirar as que ela
 # já tem. Quem etiqueta é o serviço do lote de hoje (Contacts::BulkAssignLabelsService), chamado pessoa por pessoa para a
 # resposta sair com a contagem e a falha de uma não largar as outras. Só etiqueta que a conta tem.
-# #3062 — várias etiquetas de uma vez; "Tirar etiquetas" (TirarEtiqueta) usa a mesma conferência.
+# #3062 — várias etiquetas de uma vez. Quem já tinha todas não muda (nem o updated_at) e não entra na conta de feitas.
 class Relacionamentos::AplicarEtiqueta < Relacionamentos::AcaoEmGrupo
   def initialize(etiquetas:, **)
     super(**)
@@ -21,6 +21,8 @@ class Relacionamentos::AplicarEtiqueta < Relacionamentos::AcaoEmGrupo
   end
 
   def fazer(pessoa_id)
+    return SEM_MUDANCA if (@etiquetas - @account.contacts.find(pessoa_id).label_list).empty?
+
     feito = Contacts::BulkAssignLabelsService.new(account: @account, contact_ids: [pessoa_id], labels: @etiquetas).perform
     NAO_EXISTE_MAIS unless feito[:updated_contact_ids].include?(pessoa_id)
   end

@@ -23,9 +23,10 @@ import { segundaLinhaDaPessoa } from '../../lista/segundaLinhaDaPessoa';
 // de tela continua lendo todos). Ficam à vista, nesta ordem: "Não quer
 // mensagens" (é um alerta), o do seguro e "Cliente".
 // #3062 — a edição rápida da lista de contatos de hoje: o lápis no fim da linha
-// abre "Alterar informações" sem sair da lista. Fica sempre à vista e discreto
-// (sem fundo), com o nome da pessoa no rótulo para o leitor de tela; só existe
-// com `podeEditar`.
+// abre "Alterar informações" sem sair da lista. Fica à vista e discreto (sem
+// fundo), com o nome da pessoa no rótulo para o leitor de tela; só existe com
+// `podeEditar`. No celular ele some: o alvo de 44 px apertava a linha, e tocar
+// nela já abre a ficha, que tem "Alterar informações".
 const props = defineProps({
   pessoa: { type: Object, required: true },
   marcada: { type: Boolean, default: false },
@@ -151,7 +152,7 @@ const noCelular = selo =>
       v-if="podeEditar"
       ghost
       slate
-      class="relative z-10 size-11 shrink-0"
+      class="relative z-10 hidden size-11 shrink-0 sm:inline-flex"
       icon="i-lucide-pencil"
       data-relacionamentos="editar"
       :aria-label="

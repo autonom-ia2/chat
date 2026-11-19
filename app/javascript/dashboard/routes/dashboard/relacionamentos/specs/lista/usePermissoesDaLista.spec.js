@@ -148,6 +148,20 @@ describe('Nova pessoa, editar e baixar planilha', () => {
     expect(assento()).toMatchObject({ editar: true, exportar: false });
   });
 
+  // Achado do revisor do #3062: a função personalizada também tem papel
+  // `agent` na conta, mas as permissões que o servidor manda para ela são as
+  // chaves da função mais `custom_role`, sem `agent`
+  // (enterprise/app/models/enterprise/account_user.rb). Sem contact_manage o
+  // servidor responde 403 (Relationships::RecordPermissions): a tela esconde.
+  it('função personalizada sem contact_manage não vê Nova pessoa, lápis nem Etiquetas', () => {
+    const semManage = assento({
+      papel: 'agent',
+      funcao: 3,
+      chaves: ['custom_role', 'contact_view', 'conversation_manage'],
+    });
+    expect(semManage).toMatchObject({ editar: false, etiquetar: false });
+  });
+
   it('função personalizada: editar pede contact_manage; baixar, contact_export', () => {
     expect(
       assento({ funcao: 3, chaves: ['custom_role', 'contact_manage'] })

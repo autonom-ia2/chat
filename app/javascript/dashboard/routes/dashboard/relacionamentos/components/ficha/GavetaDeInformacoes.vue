@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, toRef, watch } from 'vue';
+import { computed, ref, toRef, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useFormularioDaPessoa } from '../../ficha/useFormularioDaPessoa';
+import DialogoDeConfirmacao from '../carteira/DialogoDeConfirmacao.vue';
 import CamposDaPessoa from './CamposDaPessoa.vue';
 import GavetaLateral from './GavetaLateral.vue';
 
@@ -13,6 +14,9 @@ import GavetaLateral from './GavetaLateral.vue';
 // `errosDoServidor` ({ campo: chave do erro }) é o que o servidor recusou, como
 // o e-mail ou o telefone repetido: fica embaixo do campo enquanto ele continuar
 // com o mesmo valor, e some quando a pessoa corrige.
+// #3062 — fechar pelo X, pelo Esc ou pelo fundo com algo escrito pergunta antes
+// ("Sair sem salvar?", com "Continuar escrevendo"); sem nada mudado, fecha
+// direto. "Cancelar" é a escolha de sair e fecha sem perguntar.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   pessoa: { type: Object, default: null },
@@ -28,6 +32,7 @@ const { t } = useI18n();
 const {
   formulario,
   erros,
+  mexido,
   abrir,
   mudar,
   mudarRede,
@@ -69,6 +74,19 @@ const errosNaTela = computed(() => ({
   ...erros.value,
 }));
 
+const dialogoDeSair = useTemplateRef('dialogoDeSair');
+const fecharOuPerguntar = () => {
+  if (!mexido.value) {
+    emit('fechar');
+    return;
+  }
+  dialogoDeSair.value?.abrir();
+};
+const sairSemSalvar = () => {
+  dialogoDeSair.value?.fechar();
+  emit('fechar');
+};
+
 const salvar = () => {
   const dados = dadosSeValido();
   if (dados) emit('salvar', dados);
@@ -81,7 +99,7 @@ const salvar = () => {
     largura="sm:w-[32rem]"
     :aberta="aberta && Boolean(formulario)"
     :titulo="titulo || t('RELACIONAMENTOS_FICHA.GAVETA.TITULO')"
-    @fechar="emit('fechar')"
+    @fechar="fecharOuPerguntar"
   >
     <CamposDaPessoa
       v-if="formulario"
@@ -108,4 +126,14 @@ const salvar = () => {
       />
     </template>
   </GavetaLateral>
+  <DialogoDeConfirmacao
+    ref="dialogoDeSair"
+    marca="sair-sem-salvar"
+    empilhado
+    :titulo="t('RELACIONAMENTOS_FICHA.GAVETA.SAIR.TITULO')"
+    :aviso="t('RELACIONAMENTOS_FICHA.GAVETA.SAIR.AVISO')"
+    :confirmar="t('RELACIONAMENTOS_FICHA.GAVETA.SAIR.CONFIRMAR')"
+    :voltar="t('RELACIONAMENTOS_FICHA.GAVETA.SAIR.VOLTAR')"
+    @confirmar="sairSemSalvar"
+  />
 </template>

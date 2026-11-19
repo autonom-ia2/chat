@@ -68,10 +68,30 @@ describe('#RelacionamentosAPI', () => {
 
   it.each([
     ['criarCards', 'cards', { pessoa_ids: [1, 2], funil_id: 3, etapa_id: 4 }],
-    ['aplicarEtiqueta', 'etiqueta', { pessoa_ids: [1], etiqueta: 'feira' }],
+    // #3062 — várias etiquetas de uma vez, para pôr e para tirar.
+    [
+      'aplicarEtiqueta',
+      'etiqueta',
+      { pessoa_ids: [1], etiquetas: ['feira', 'site'] },
+    ],
+    [
+      'tirarEtiqueta',
+      'etiqueta/tirar',
+      { pessoa_ids: [1], etiquetas: ['site'] },
+    ],
     ['apagar', 'apagar', { pessoa_ids: [1, 2] }],
   ])('%s escreve em %s com o corpo como veio', (metodo, caminho, corpo) => {
     relacionamentos[metodo](corpo);
     expect(axiosMock.post).toHaveBeenCalledWith(`${BASE}/${caminho}`, corpo);
+  });
+
+  // #3062 — a planilha leva a consulta da tela nos params, como a leitura.
+  it('exportarPessoas pede a planilha com a consulta nos params', () => {
+    relacionamentos.exportarPessoas({ grupo: 'clientes', busca: 'ana' });
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${BASE}/pessoas/exportar`,
+      null,
+      { params: { grupo: 'clientes', busca: 'ana' } }
+    );
   });
 });

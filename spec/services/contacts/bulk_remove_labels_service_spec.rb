@@ -41,6 +41,17 @@ RSpec.describe Contacts::BulkRemoveLabelsService do
     expect(result[:updated_contact_ids]).to contain_exactly(contact_one.id, contact_two.id)
   end
 
+  it 'skips contacts without any of the labels, keeping their updated_at' do
+    contact_two.update_labels(%w[priority])
+    before_update = 2.days.ago.change(usec: 0)
+    contact_two.update_column(:updated_at, before_update) # rubocop:disable Rails/SkipsModelValidations
+
+    result = service.perform
+
+    expect(result[:updated_contact_ids]).to contain_exactly(contact_one.id)
+    expect(contact_two.reload.updated_at).to eq(before_update)
+  end
+
   it 'returns success with no updates when labels are blank' do
     result = described_class.new(
       account: account,

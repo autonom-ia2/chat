@@ -9,7 +9,7 @@
 //
 // Distribuição das pessoas: 120 clientes · 96 falaram nos últimos 30 dias · 42
 // sumiram há 1 a 3 meses · 71 há mais de 3 meses · 71 nunca conversaram · 9 não
-// querem mensagens · 4 sem telefone · 3 ativos agora (#3062). Cliente e "não
+// querem mensagens · 4 sem telefone · 3 no site agora (#3062). Cliente e "não
 // quer mensagens" cruzam com os quatro grupos de conversa. Empresas: 14 com
 // cliente, 5 sem ninguém.
 import { cnpjFalso, cpfFalso } from './documentosFalsos';
@@ -25,7 +25,7 @@ const TOTAL_QUE_SUMIU_1_A_3_MESES = 42;
 const TOTAL_QUE_SUMIU_MAIS_DE_3_MESES = 71;
 const TOTAL_NAO_QUER_MENSAGENS = 9;
 const TOTAL_SEM_TELEFONE = 4;
-// #3062 — "Ativos agora": quem falou há pouco e está com o chat aberto.
+// #3062 — "No site agora": quem falou há pouco e está com o chat aberto.
 const TOTAL_ATIVOS_AGORA = 3;
 const EMPRESAS_COM_CLIENTE = 14;
 const EMPRESAS_SEM_PESSOAS = 5;

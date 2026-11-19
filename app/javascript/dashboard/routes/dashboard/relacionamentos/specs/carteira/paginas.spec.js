@@ -24,6 +24,18 @@ import {
 // de verdade: `carregarPecas` as carrega antes, e a montagem fica só por conta
 // do relógio falso.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3062 — "Baixar planilha" diz para qual e-mail vai: o de quem está no painel.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMapGetter: chave =>
+      ref(
+        chave === 'getCurrentUser'
+          ? { email: 'voce@exemplo.com.br' }
+          : undefined
+      ),
+  };
+});
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./apoio')).DialogoFalso,
 }));

@@ -9,7 +9,9 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // botão principal. `marcaConfirmar` põe o `data-relacionamentos` do botão
 // principal, para o robô de print. O corpo extra vai no slot `default`. Com
 // `soEntendi` o diálogo só explica: um botão "Entendi" que fecha (sem confirmar).
-// Nenhum botão fica desligado por falta de algo; só `carregando` o desliga.
+// Nenhum botão fica desligado por falta de algo; só `carregando` o desliga, ou
+// `desligado` quando o pedido não pode ser feito agora (#3062: a planilha
+// pedida há pouco, com o aviso dizendo por quê).
 defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
@@ -18,6 +20,7 @@ defineProps({
   entendi: { type: String, default: '' },
   marcaConfirmar: { type: String, default: '' },
   carregando: { type: Boolean, default: false },
+  desligado: { type: Boolean, default: false },
   soEntendi: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirm']);
@@ -57,7 +60,7 @@ defineExpose({
           class="w-full"
           type="submit"
           :is-loading="carregando"
-          :disabled="carregando"
+          :disabled="carregando || desligado"
           :label="confirmar"
         />
       </div>

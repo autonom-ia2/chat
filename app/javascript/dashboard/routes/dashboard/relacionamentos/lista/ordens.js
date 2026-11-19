@@ -2,7 +2,8 @@ import { ORDENS } from '../fonte/listaFonte';
 
 // #3062 — as ordens da aba Pessoas: as sete da lista de contatos de hoje
 // (última conversa, nome, e-mail, empresa, cidade, país e quando chegou), cada
-// uma nos dois sentidos. O valor é o nome que o servidor conhece
+// uma nos dois sentidos, na ordem de uso (as de data primeiro, e-mail por
+// último). O valor é o nome que o servidor conhece
 // (Relacionamentos::ConsultaDePessoas). A aba Empresas segue com as três de
 // sempre (ORDENS).
 const ORDEM = 'RELACIONAMENTOS.LISTA.ORDENAR';
@@ -15,15 +16,15 @@ export const CAMPOS_DE_ORDEM = [
     ordem(ORDENS.ULTIMA_CONVERSA, 'RECENTE'),
     ordem('conversa_mais_antiga', 'ANTIGA'),
   ]),
-  campo('NOME', [ordem(ORDENS.NOME, 'A_Z'), ordem('nome_z_a', 'Z_A')]),
-  campo('EMAIL', [ordem('email_a_z', 'A_Z'), ordem('email_z_a', 'Z_A')]),
-  campo('EMPRESA', [ordem('empresa_a_z', 'A_Z'), ordem('empresa_z_a', 'Z_A')]),
-  campo('CIDADE', [ordem('cidade_a_z', 'A_Z'), ordem('cidade_z_a', 'Z_A')]),
-  campo('PAIS', [ordem('pais_a_z', 'A_Z'), ordem('pais_z_a', 'Z_A')]),
   campo('CHEGADA', [
     ordem(ORDENS.MAIS_NOVOS, 'RECENTE'),
     ordem('mais_antigos', 'ANTIGA'),
   ]),
+  campo('NOME', [ordem(ORDENS.NOME, 'A_Z'), ordem('nome_z_a', 'Z_A')]),
+  campo('CIDADE', [ordem('cidade_a_z', 'A_Z'), ordem('cidade_z_a', 'Z_A')]),
+  campo('EMPRESA', [ordem('empresa_a_z', 'A_Z'), ordem('empresa_z_a', 'Z_A')]),
+  campo('PAIS', [ordem('pais_a_z', 'A_Z'), ordem('pais_z_a', 'Z_A')]),
+  campo('EMAIL', [ordem('email_a_z', 'A_Z'), ordem('email_z_a', 'Z_A')]),
 ];
 
 // As escolhas da lista, agrupadas por campo (o `groups` do ChoiceSelect). O
@@ -64,6 +65,9 @@ const NA_PREFERENCIA = {
 
 export const CHAVE_DA_PREFERENCIA = 'contacts_sort_by';
 
+// A preferência que a lista nova não tem (a de hoje também ordena por telefone,
+// `phone_number`) abre pela última conversa e não é regravada: só a escolha da
+// pessoa grava (useOrdemGuardada), e a lista de hoje segue na dela.
 export const ordemDaPreferencia = guardada =>
   Object.keys(NA_PREFERENCIA).find(
     valor => NA_PREFERENCIA[valor] === guardada

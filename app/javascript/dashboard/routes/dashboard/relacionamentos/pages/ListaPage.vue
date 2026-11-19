@@ -28,6 +28,7 @@ import DialogoEtiqueta from '../components/lista/DialogoEtiqueta.vue';
 import DialogoMandarMensagem from '../components/lista/DialogoMandarMensagem.vue';
 import DialogoPlanilha from '../components/lista/DialogoPlanilha.vue';
 import GavetaDeInformacoes from '../components/ficha/GavetaDeInformacoes.vue';
+import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
 import EstadoSemAcesso from '../components/lista/EstadoSemAcesso.vue';
 import EstadoSemResultado from '../components/lista/EstadoSemResultado.vue';
 import LinhasDeExemplo from '../components/lista/LinhasDeExemplo.vue';
@@ -58,6 +59,7 @@ import { useMarcados } from '../lista/useMarcados';
 import { gruposDeOrdem } from '../lista/ordens';
 import { useOrdemGuardada } from '../lista/useOrdemGuardada';
 import { usePessoaNaGaveta } from '../lista/usePessoaNaGaveta';
+import { useDevolverEtiquetas } from '../lista/useDevolverEtiquetas';
 
 // #2897 — a aba Seguros só é baixada quando abre: quem não tem a carteira (ou
 // não abre a aba) não carrega a tela dela.
@@ -85,8 +87,10 @@ const SeloDoSeguro = defineAsyncComponent(
 // #3062 — paridade com a lista de contatos de hoje, na aba Pessoas: "Nova
 // pessoa" e "Baixar planilha" ao lado das abas, "Etiquetas" (colocar e tirar
 // várias) na barra de ação em grupo, as sete ordens guardadas por pessoa da
-// equipe, o grupo "Ativos agora", o lápis de editar na linha e as pessoas
-// marcadas indo para o Guia (#934).
+// equipe, o grupo "No site agora", o lápis de editar na linha e as pessoas
+// marcadas indo para o Guia (#934). No celular, "Nova pessoa" fica à vista
+// acima das abas e "Baixar planilha" vira a última linha da lista; o lápis
+// some (tocar na linha abre a ficha).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -300,13 +304,27 @@ const fraseSemAcesso = computed(() =>
     ? t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO_EMPRESAS')
     : t('RELACIONAMENTOS.LISTA.ESTADOS.SEM_ACESSO')
 );
+// Tirar etiquetas: o aviso com "Desfazer" fica no lugar da barra até a próxima
+// ação (marcar alguém de novo o tira).
+const devolucao = useDevolverEtiquetas({
+  acoes,
+  t,
+  aoDevolver: () => lista.atualizar(),
+});
+watch(marcados.quantos, quantas => {
+  if (quantas) devolucao.limpar();
+});
+
 // Região viva única e permanente: o leitor de tela só anuncia o que muda dentro
 // de uma região que já estava na página, não a que nasce junto com o texto.
-const avisoDaLista = computed(() =>
-  !lista.erro.value && !lista.carregando.value && semResultado.value
+// O aviso de "Tirar etiquetas" (com "Desfazer") também é lido por aqui: a
+// faixa dele nasce junto com o texto.
+const avisoDaLista = computed(() => {
+  if (devolucao.texto.value) return devolucao.texto.value;
+  return !lista.erro.value && !lista.carregando.value && semResultado.value
     ? semResultado.value.frase
-    : ''
-);
+    : '';
+});
 
 // #3057 — a aba de onde a pessoa saiu vai junto (`?aba=`): a volta de "Como
 // trazer" leva de novo a ela (VoltarDoTrazer).
@@ -355,24 +373,15 @@ const dialogoDeApagar = useTemplateRef('dialogoDeApagar');
 const dialogoDaPlanilha = useTemplateRef('dialogoDaPlanilha');
 
 // "Nova pessoa" e o lápis da linha: a gaveta "Alterar informações" da ficha.
-// Depois de criar, a lista volta do começo e o aviso leva à ficha nova; depois
-// de editar, a lista se atualiza sem sair do lugar.
+// Depois de criar, abre a ficha nova (o próximo passo de quem acabou de
+// cadastrar); depois de editar, a lista se atualiza sem sair do lugar.
 const gaveta = usePessoaNaGaveta({
   acoes,
   aoCriar: criada => {
     useAlert(
-      t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.CRIADA', { nome: criada.name }),
-      {
-        type: 'link',
-        to: {
-          name: 'relacionamentos_pessoa',
-          params: { contactId: criada.id },
-        },
-        message: t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.ABRIR_FICHA'),
-        duration: 6000,
-      }
+      t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.CRIADA', { nome: criada.name })
     );
-    lista.recarregar();
+    abrirPessoa(criada);
   },
   aoSalvar: dados => {
     useAlert(t('RELACIONAMENTOS.LISTA.EDITAR.SALVO', { nome: dados.name }));
@@ -408,7 +417,11 @@ const temLinhaDasAbas = computed(
 );
 
 const tituloDaGaveta = computed(() =>
-  gaveta.ehNova.value ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.TITULO') : ''
+  gaveta.ehNova.value
+    ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.TITULO')
+    : t('RELACIONAMENTOS.LISTA.LINHA.EDITAR', {
+        nome: gaveta.pessoa.value?.name ?? '',
+      })
 );
 const salvarDaGaveta = computed(() =>
   gaveta.ehNova.value ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.SALVAR') : ''
@@ -503,15 +516,17 @@ watch(naAbaDeSeguros, estaNela => {
             @trazer="trazer"
             @ver-grupo="verGrupo"
           />
+          <!-- No celular as ações sobem para cima das abas, e as abas levam a
+          própria linha: com três abas e "Nova pessoa" lado a lado não cabe. -->
           <div
             v-if="temLinhaDasAbas"
             data-relacionamentos="linha-das-abas"
-            class="flex items-center justify-between gap-3"
-            :class="{ 'border-b border-n-weak': abasAVista }"
+            class="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap"
+            :class="{ 'sm:border-b sm:border-n-weak': abasAVista }"
           >
             <AbasDaLista
               v-if="abasAVista"
-              class="min-w-0 -mb-px"
+              class="w-full min-w-0 sm:w-auto sm:-mb-px"
               :com-empresas="temEmpresas"
               :com-seguros="temSeguros"
               :model-value="aba"
@@ -519,7 +534,7 @@ watch(naAbaDeSeguros, estaNela => {
             />
             <AcoesDaAba
               v-if="criarNaAba || baixarNaAba"
-              class="ms-auto shrink-0"
+              class="order-first ms-auto shrink-0 sm:order-none"
               :pode-criar="criarNaAba"
               :pode-baixar="baixarNaAba"
               @criar="gaveta.abrirNova"
@@ -650,6 +665,17 @@ watch(naAbaDeSeguros, estaNela => {
                   :carregando="lista.carregandoMais.value"
                   @mais="lista.mostrarMais"
                 />
+                <Button
+                  v-if="baixarNaAba"
+                  slate
+                  faded
+                  icon="i-lucide-download"
+                  class="w-full min-h-11 sm:hidden"
+                  data-relacionamentos="baixar-no-fim"
+                  aria-haspopup="dialog"
+                  :label="t('RELACIONAMENTOS.LISTA.TOPO.BAIXAR_NO_FIM')"
+                  @click="dialogoDaPlanilha.abrir()"
+                />
               </template>
             </div>
           </template>
@@ -677,6 +703,14 @@ watch(naAbaDeSeguros, estaNela => {
             @fechar="marcados.limpar"
           />
         </transition>
+        <AvisoComDesfazer
+          v-if="devolucao.texto.value"
+          class="sticky z-30 bottom-4 ms-20 md:ms-0"
+          :texto="devolucao.texto.value"
+          :pode-desfazer="devolucao.podeDesfazer.value"
+          :desfazendo="devolucao.desfazendo.value"
+          @desfazer="devolucao.desfazer"
+        />
       </div>
     </main>
 
@@ -707,6 +741,7 @@ watch(naAbaDeSeguros, estaNela => {
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
       @concluido="acoesEmGrupo.depoisDeAgir"
+      @tirou="devolucao.mostrar"
     />
     <DialogoApagar
       ref="dialogoDeApagar"

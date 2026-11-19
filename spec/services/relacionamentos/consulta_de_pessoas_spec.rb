@@ -250,8 +250,8 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     end
   end
 
-  # #3062 — "Ativos agora": quem está com o chat do site aberto, a mesma presença que a lista de contatos de hoje lê.
-  describe 'grupo ativos agora' do
+  # #3062 — "No site agora": quem está com o chat do site aberto, a mesma presença que a lista de contatos de hoje lê.
+  describe 'grupo no site agora' do
     it 'traz só quem está online agora, na lista e na contagem' do
       ana = pessoa('Ana Albuquerino')
       pessoa('Bruno Brandolim')
@@ -263,6 +263,29 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
 
     it 'sem ninguém online, o grupo vem vazio' do
       pessoa('Ana Albuquerino')
+
+      expect(nomes(grupo: 'ativos_agora')).to be_empty
+      expect(consulta.contagens).to include('ativos_agora' => 0)
+    end
+
+    # Paridade com ContactsController#active, que lê a conta inteira: o visitante do chat do site, ainda sem e-mail nem
+    # telefone, aparece neste grupo (e só nele).
+    it 'mostra o visitante anônimo do chat do site, como a lista de hoje' do
+      visitante = create(:contact, account: account, name: 'Visitante do site')
+      visitante.update_columns(contact_type: 0) # rubocop:disable Rails/SkipsModelValidations
+      pessoa('Ana Albuquerino')
+      OnlineStatusTracker.update_presence(account.id, 'Contact', visitante.id)
+
+      expect(nomes(grupo: 'ativos_agora')).to eq(['Visitante do site'])
+      expect(consulta.contagens).to include('todos' => 1, 'ativos_agora' => 1)
+      expect(consulta(grupo: 'ativos_agora').total).to eq(1)
+      expect(consulta(grupo: 'ativos_agora').todos.pluck(:name)).to eq(['Visitante do site'])
+    end
+
+    it 'não mostra quem está online em outra conta' do
+      de_la = create(:contact, account: create(:account), name: 'De outra conta', email: 'outra@example.com')
+      OnlineStatusTracker.update_presence(de_la.account_id, 'Contact', de_la.id)
+      OnlineStatusTracker.update_presence(account.id, 'Contact', de_la.id)
 
       expect(nomes(grupo: 'ativos_agora')).to be_empty
       expect(consulta.contagens).to include('ativos_agora' => 0)
@@ -311,7 +334,19 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
       todas = consulta(ordem: 'nome', pagina: '2').todos
 
       expect(todas.pluck(:name)).to eq(%w[Ana Bruno Carla Diego Elisa])
-      expect(todas.first.keys).to eq(%i[id name phone_number blocked opted_out_at])
+      expect(todas.first.keys).to eq(%i[id name phone_number blocked opted_out_at labels])
+    end
+
+    # #3062 — "Tirar etiquetas" mostra quantas das marcadas têm cada etiqueta, também depois de "Marcar todas".
+    it '"todas" traz as etiquetas de cada pessoa, numa consulta só' do
+      Contact.find_by!(name: 'Ana').update_labels(%w[feira site])
+      Contact.find_by!(name: 'Bruno').update_labels(%w[site])
+      lendo = consulta(ordem: 'nome')
+      todas = nil
+
+      expect(consultas_feitas { todas = lendo.todos }).to eq(2)
+      expect(todas.to_h { |pessoa| [pessoa[:name], pessoa[:labels].sort] })
+        .to eq('Ana' => %w[feira site], 'Bruno' => %w[site], 'Carla' => [], 'Diego' => [], 'Elisa' => [])
     end
   end
 

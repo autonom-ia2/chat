@@ -29,6 +29,7 @@
       },
       "ORDENAR": {
         "ROTULO": "Ordenar",
+        "NO_BOTAO": "Ordem: {ordem}",
         "ULTIMA_CONVERSA": "Última conversa",
         "NOME": "Nome",
         "MAIS_NOVOS": "Mais novos",
@@ -84,27 +85,27 @@
       "TOPO": {
         "NOVA_PESSOA": "Nova pessoa",
         "BAIXAR": "Baixar planilha",
-        "ACOES": "Ações"
+        "BAIXAR_NO_FIM": "Baixar esta lista em planilha"
       },
       "NOVA_PESSOA": {
         "TITULO": "Nova pessoa",
-        "SALVAR": "Guardar pessoa",
+        "SALVAR": "Salvar pessoa",
         "CRIADA": "{nome} está na sua lista.",
-        "ABRIR_FICHA": "Abrir ficha",
         "ERRO": "Não consegui guardar. Tente de novo."
       },
       "EDITAR": {
         "SALVO": "Informações de {nome} salvas."
       },
       "PLANILHA": {
-        "TITULO": "Baixar planilha desta lista",
-        "TEXTO": "Vou montar uma planilha com {count} pessoa e mandar o link para o seu e-mail. | Vou montar uma planilha com {count} pessoas e mandar o link para o seu e-mail.",
+        "TITULO": "Receber esta lista em planilha",
+        "TEXTO": "Vou montar uma planilha com {count} pessoa e mandar o link para {email}. | Vou montar uma planilha com {count} pessoas e mandar o link para {email}.",
         "O_QUE_VAI": "Vai nome, e-mail, telefone e etiquetas, na ordem que está na tela.",
         "QUAL_LISTA": "Lista: {lista}",
         "BUSCA": "busca “{busca}”",
         "FILTROS": "{count} filtro | {count} filtros",
         "CONFIRMAR": "Mandar por e-mail",
         "ENVIADA": "Pronto. A planilha chega em {email} em alguns minutos.",
+        "ESPERAR": "Você acabou de pedir uma planilha. Dá para pedir outra daqui a alguns minutos.",
         "ERRO": "Não consegui pedir a planilha. Tente de novo."
       },
       "EXEMPLO": {
@@ -182,18 +183,23 @@
       },
       "ETIQUETA": {
         "TITULO": "Etiquetas",
+        "PARA_QUEM": "Para a pessoa que você marcou. | Para as {count} pessoas que você marcou.",
         "MODO": "O que fazer com as etiquetas?",
         "COLOCAR": "Colocar",
         "TIRAR": "Tirar",
         "PERGUNTA_COLOCAR": "Quais etiquetas colocar?",
         "PERGUNTA_TIRAR": "Quais etiquetas tirar?",
-        "BOTAO_COLOCAR": "Colocar etiquetas | Colocar {count} etiqueta | Colocar {count} etiquetas",
-        "BOTAO_TIRAR": "Tirar etiquetas | Tirar {count} etiqueta | Tirar {count} etiquetas",
-        "APLICADA": "Pronto: coloquei {etiquetas} em {count} pessoa. | Pronto: coloquei {etiquetas} em {count} pessoas.",
-        "TIRADA": "Pronto: tirei {etiquetas} de {count} pessoa. | Pronto: tirei {etiquetas} de {count} pessoas.",
+        "BOTAO_COLOCAR": "Colocar em {count} pessoa | Colocar em {count} pessoas",
+        "BOTAO_TIRAR": "Tirar de {count} pessoa | Tirar de {count} pessoas",
+        "QUANTAS": "{count} pessoa | {count} pessoas",
+        "APLICADA": "Ninguém mudou: quem você marcou já tinha {etiquetas}. | Pronto: coloquei {etiquetas} em {count} pessoa. | Pronto: coloquei {etiquetas} em {count} pessoas.",
+        "TIRADA": "Ninguém mudou: quem você marcou não tinha {etiquetas}. | Pronto: tirei {etiquetas} de {count} pessoa. | Pronto: tirei {etiquetas} de {count} pessoas.",
+        "DEVOLVIDAS": "Pronto: as etiquetas voltaram para quem tinha.",
+        "ERRO_AO_DEVOLVER": "Não consegui devolver as etiquetas. Tente de novo.",
         "ERRO": "Não consegui mexer nas etiquetas. Tente de novo.",
         "FALTA_ESCOLHER": "Escolha pelo menos uma etiqueta.",
-        "SEM_ETIQUETAS": "A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas."
+        "SEM_ETIQUETAS": "A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.",
+        "NINGUEM_TEM": "Ninguém que você marcou tem etiqueta."
       },
       "APAGAR": {
         "TITULO": "Apagar {count} pessoa? | Apagar {count} pessoas?",
@@ -263,7 +269,7 @@
         "EXPLICACAO": "Quem pediu para não receber. Ninguém daqui recebe campanha."
       },
       "ATIVOS_AGORA": {
-        "NOME": "Ativos agora",
+        "NOME": "No site agora",
         "EXPLICACAO": "Quem está com o chat do seu site aberto agora."
       },
       "EMPRESAS_TODAS": {

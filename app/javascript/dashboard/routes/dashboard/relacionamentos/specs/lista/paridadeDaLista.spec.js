@@ -60,15 +60,15 @@ afterEach(() => {
 });
 
 describe('ordens da aba Pessoas', () => {
-  it('são as sete da lista de hoje, cada uma nos dois sentidos', () => {
+  it('são as sete da lista de hoje, na ordem de uso, cada uma nos dois sentidos', () => {
     expect(CAMPOS_DE_ORDEM.map(({ chave }) => chave)).toEqual([
       'ULTIMA_CONVERSA',
-      'NOME',
-      'EMAIL',
-      'EMPRESA',
-      'CIDADE',
-      'PAIS',
       'CHEGADA',
+      'NOME',
+      'CIDADE',
+      'EMPRESA',
+      'PAIS',
+      'EMAIL',
     ]);
     CAMPOS_DE_ORDEM.forEach(({ ordens }) => expect(ordens).toHaveLength(2));
   });
@@ -94,20 +94,33 @@ describe('ordens da aba Pessoas', () => {
     const grupos = gruposDeOrdem(comT());
     expect(grupos.map(({ label }) => label)).toEqual([
       'Última conversa',
-      'Nome',
-      'E-mail',
-      'Empresa',
-      'Cidade',
-      'País',
       'Quando chegou',
+      'Nome',
+      'Cidade',
+      'Empresa',
+      'País',
+      'E-mail',
     ]);
-    const cidade = grupos[4].options;
+    const cidade = grupos[3].options;
     expect(cidade.map(({ label }) => label)).toEqual(['De A a Z', 'De Z a A']);
     expect(cidade[1].shortLabel).toBe('Cidade, de Z a A');
   });
 });
 
 describe('useOrdemGuardada', () => {
+  // Achado do revisor do #3062: a lista de hoje também ordena por telefone,
+  // que a nova não tem. Abrir a lista nova não pode trocar a preferência.
+  it('preferência que a lista nova não tem fica como está até a pessoa escolher', () => {
+    preferencias.valores = { contacts_sort_by: 'phone_number' };
+    const { ordemDaAba, guardar } = useOrdemGuardada({ demo: false });
+    expect(ordemDaAba('pessoas')).toBe('ultima_conversa');
+    expect(preferencias.gravar).not.toHaveBeenCalled();
+    guardar('nome', 'pessoas');
+    expect(preferencias.gravar).toHaveBeenCalledWith({
+      contacts_sort_by: 'name',
+    });
+  });
+
   it('Pessoas abre na guardada; Empresas sempre pela última conversa', () => {
     preferencias.valores = { contacts_sort_by: 'email' };
     const { ordemDaAba } = useOrdemGuardada({ demo: false });
@@ -244,51 +257,73 @@ describe('BarraDeControles com as ordens agrupadas', () => {
 describe('AcoesDaAba', () => {
   const montar = props => mount(AcoesDaAba, { props });
 
-  it('com as duas: os botões com nome (sm em diante) e o menu "Ações" no celular', async () => {
+  // #3062 (diretor de arte) — sem menu "Ações": "Nova pessoa" é sempre um
+  // botão à vista; "Baixar planilha" só de sm em diante (no celular ele é a
+  // última linha da lista).
+  it('"Nova pessoa" à vista sempre; "Baixar planilha" só de sm em diante', async () => {
     const w = montar({ podeCriar: true, podeBaixar: true });
     const nova = w.get('[data-relacionamentos="nova-pessoa"]');
     const baixar = w.get('[data-relacionamentos="baixar-planilha"]');
     expect(nova.text()).toBe('Nova pessoa');
+    expect(nova.classes()).not.toContain('hidden');
     expect(baixar.text()).toBe('Baixar planilha');
-    const botoes = nova.element.parentElement.classList;
-    expect([botoes.contains('hidden'), botoes.contains('sm:flex')]).toEqual([
-      true,
-      true,
-    ]);
-    const celular = w.get('[data-relacionamentos="acoes-no-celular"]');
-    expect(celular.classes()).toContain('sm:hidden');
-    expect(celular.get('[aria-haspopup="menu"]').text()).toBe('Ações');
+    expect(baixar.classes()).toEqual(
+      expect.arrayContaining(['hidden', 'sm:inline-flex'])
+    );
+    expect(w.find('[aria-haspopup="menu"]').exists()).toBe(false);
     await nova.trigger('click');
     await baixar.trigger('click');
     expect(w.emitted('criar')).toHaveLength(1);
     expect(w.emitted('baixar')).toHaveLength(1);
   });
 
-  it('o menu do celular tem as duas, com nome, e cada uma avisa a sua', async () => {
-    const w = montar({ podeCriar: true, podeBaixar: true });
-    const celular = w.get('[data-relacionamentos="acoes-no-celular"]');
-    await celular.get('[aria-haspopup="menu"]').trigger('click');
-    expect(celular.findAll('[role="menuitem"]').map(i => i.text())).toEqual([
-      'Nova pessoa',
-      'Baixar planilha',
-    ]);
-    await celular.get('[data-acao="baixar"]').trigger('click');
-    expect(w.emitted('baixar')).toHaveLength(1);
-    expect(w.emitted('criar')).toBeUndefined();
-  });
-
-  it('com uma só, ela fica à vista também no celular, sem menu', () => {
+  it('cada uma só para quem pode', () => {
     const w = montar({ podeCriar: true });
-    expect(w.find('[data-relacionamentos="acoes-no-celular"]').exists()).toBe(
-      false
-    );
-    expect(
-      w.get('[data-relacionamentos="nova-pessoa"]').element.parentElement
-        .classList
-    ).not.toContain('hidden');
     expect(w.find('[data-relacionamentos="baixar-planilha"]').exists()).toBe(
       false
     );
+    expect(w.find('[data-relacionamentos="nova-pessoa"]').exists()).toBe(true);
+  });
+});
+
+describe('BarraDeControles: a ordem no celular', () => {
+  it('abaixo de sm o botão diz "Ordem: …"; de sm em diante, só a ordem', async () => {
+    const largura = { valor: 390 };
+    const original = window.matchMedia;
+    // O seletor pergunta "(max-width: 639.9px)" (useBreakpoints().smaller).
+    window.matchMedia = consulta => ({
+      matches: largura.valor <= parseFloat(consulta.split('max-width:')[1]),
+      media: consulta,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    });
+    const grupos = gruposDeOrdem(comT());
+    const opcaoDe = w =>
+      w
+        .getComponent(ChoiceSelect)
+        .props('groups')
+        .flatMap(({ options }) => options)
+        .find(({ value }) => value === 'cidade_z_a');
+    const celular = mount(BarraDeControles, {
+      props: {
+        ordem: 'cidade_z_a',
+        placeholder: 'Buscar',
+        gruposDeOrdem: grupos,
+      },
+    });
+    expect(opcaoDe(celular).shortLabel).toBe('Ordem: Cidade, de Z a A');
+    largura.valor = 1440;
+    const larga = mount(BarraDeControles, {
+      props: {
+        ordem: 'cidade_z_a',
+        placeholder: 'Buscar',
+        gruposDeOrdem: grupos,
+      },
+    });
+    expect(opcaoDe(larga).shortLabel).toBe('Cidade, de Z a A');
+    window.matchMedia = original;
   });
 });
 
@@ -301,11 +336,14 @@ describe('LinhaDePessoa: o lápis de editar', () => {
     labels: [],
   };
 
-  it('quem pode editar vê o lápis com o nome da pessoa, e ele avisa', async () => {
+  it('quem pode editar vê o lápis com o nome da pessoa, e ele avisa; no celular ele some', async () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: ANA, agora: Date.now(), podeEditar: true },
     });
     const lapis = w.get('[data-relacionamentos="editar"]');
+    expect(lapis.classes()).toEqual(
+      expect.arrayContaining(['hidden', 'sm:inline-flex'])
+    );
     expect(lapis.attributes('aria-label')).toBe(
       'Alterar informações de Ana Albuquerino'
     );

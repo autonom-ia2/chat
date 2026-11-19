@@ -9,6 +9,18 @@ import ListaPage from '../../pages/ListaPage.vue';
 // A lista de Relacionamentos inteira (#2894), com a base fictícia e o texto de
 // verdade em pt_BR: cheio, vazio, carregando, erro, ações e navegação.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3062 — "Baixar planilha" diz para qual e-mail vai: o de quem está no painel.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMapGetter: chave =>
+      ref(
+        chave === 'getCurrentUser'
+          ? { email: 'voce@exemplo.com.br' }
+          : undefined
+      ),
+  };
+});
 // A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
 // têm teste próprio em specs/carteira). Quem diz isso é a conta, pelo caminho
 // de verdade: o estado da demonstração (`CHEIA`) e, fora dela, o que o servidor
@@ -297,7 +309,7 @@ describe('ListaPage: cheia', () => {
       'Sumiu há mais de 3 meses 71',
       'Nunca conversou 71',
       'Não quer mensagens 9',
-      'Ativos agora 3',
+      'No site agora 3',
     ]);
     expect(pilula(w, 'todos').attributes('aria-pressed')).toBe('true');
     expect(w.get(marca('explicacao-do-grupo')).text()).toBe('');

@@ -5,8 +5,9 @@
 # Na conta que tem a carteira de seguros, a lista ganha o grupo "Só tem um seguro" e a busca pelo número da apólice e
 # pelo bem segurado (Carteira::NaListaDePessoas). Nas outras, nada muda: nem grupo, nem condição, nem consulta a mais.
 #
-# #3062 — paridade com a lista de contatos de hoje: o grupo "Ativos agora" (quem está com o chat do site aberto, a
-# mesma leitura de ContactsController#active), as sete ordens dela, cada uma nos dois sentidos, e a consulta inteira
+# #3062 — paridade com a lista de contatos de hoje: o grupo "No site agora" (quem está com o chat do site aberto, a
+# mesma leitura de ContactsController#active, que lê a conta inteira e por isso mostra o visitante anônimo), as sete
+# ordens dela, cada uma nos dois sentidos, e a consulta inteira
 # para "Baixar planilha" (Account::ContactsExportJob).
 class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
   GRUPOS = {
@@ -58,10 +59,21 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     'mais_antigos' => 'contacts.created_at ASC, contacts.id'
   }.freeze
 
-  # A consulta inteira, para "Marcar todas as N": só o que as ações em grupo leem de cada pessoa.
+  # O grupo "No site agora" conta sobre a conta inteira, como a lista dele; os outros, sobre a base de hoje.
+  # Sem ninguém no site agora, não há o que contar: a contagem continua sendo uma consulta só.
+  def contagens
+    da_base = grupos.except('ativos_agora').transform_values { |condicao| com_os_cortes(condicao) }
+    Relacionamentos::ContagemPorGrupo.call(consultados(self.class.base(@account)), da_base)
+                                     .merge('ativos_agora' => contar_no_site_agora)
+  end
+
+  # A consulta inteira, para "Marcar todas as N": só o que as ações em grupo leem de cada pessoa. As etiquetas vão junto
+  # para "Tirar etiquetas" mostrar quantas das marcadas têm cada uma.
   def todos
+    etiquetas = etiquetas_de(do_grupo)
     ordenados.pluck(:id, :name, :phone_number, :blocked, :opted_out_at).map do |id, name, phone_number, blocked, opted_out_at|
-      { id: id, name: name, phone_number: phone_number, blocked: blocked, opted_out_at: opted_out_at&.to_i }
+      { id: id, name: name, phone_number: phone_number, blocked: blocked, opted_out_at: opted_out_at&.to_i,
+        labels: etiquetas.fetch(id, []) }
     end
   end
 
@@ -93,8 +105,23 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     ::OnlineStatusTracker.get_available_contact_ids(@account.id).map(&:to_i)
   end
 
-  def consultados
-    base = self.class.base(@account)
+  # "No site agora" lê a conta inteira (ContactsController#active): o visitante do chat do site, ainda sem e-mail nem
+  # telefone, aparece nele. Os outros grupos leem a base da lista de contatos de hoje.
+  def contar_no_site_agora
+    return 0 if cortes[:ativos_agora].empty?
+
+    consultados(@account.contacts).where(com_os_cortes(GRUPOS['ativos_agora'])).count
+  end
+
+  # As etiquetas de cada pessoa do escopo, numa consulta só, como a linha lê (etiqueta com dono não é da pessoa).
+  def etiquetas_de(escopo)
+    ActsAsTaggableOn::Tagging.joins(:tag)
+                             .where(taggable_type: 'Contact', context: 'labels', tagger_id: nil, taggable_id: escopo.select('contacts.id'))
+                             .pluck(:taggable_id, 'tags.name')
+                             .group_by(&:first).transform_values { |pares| pares.map(&:last) }
+  end
+
+  def consultados(base = grupo == 'ativos_agora' ? @account.contacts : self.class.base(@account))
     carteira.buscados(buscados(base, textos: TEXTOS, numeros: NUMEROS), base, @pedido[:busca])
             .where(da_empresa).where(com_a_etiqueta).where(da_cidade).where(que_chegou)
   end

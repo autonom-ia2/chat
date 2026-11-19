@@ -294,10 +294,30 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos', type: :request do
       expect([ana, bruno, carla].map { |contato| contato.reload.label_list }).to eq([%w[site], [], %w[feira]])
     end
 
-    it 'responde 422 e não mexe em ninguém com etiqueta que a conta não tem' do
+    it 'conta só quem tinha a etiqueta' do
+      ana = pessoa('Ana Albuquerino').tap { |contato| contato.update_labels(%w[feira]) }
+      bruno = pessoa('Bruno Brandolim')
+
+      pedir('etiqueta/tirar', pessoa_ids: [ana.id, bruno.id], etiquetas: ['feira'])
+
+      expect(response.parsed_body).to eq('tiradas' => 1, 'de_fora' => [])
+    end
+
+    # A etiqueta apagada da conta continua nas pessoas: "Tirar" mostra e tira (achado do revisor do #3062).
+    it 'tira etiqueta que a conta não tem mais' do
+      ana = pessoa('Ana Albuquerino').tap { |contato| contato.update_labels(%w[feira evento]) }
+
+      pedir('etiqueta/tirar', pessoa_ids: [ana.id], etiquetas: %w[evento])
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('tiradas' => 1, 'de_fora' => [])
+      expect(ana.reload.label_list).to eq(%w[feira])
+    end
+
+    it 'responde 422 sem etiqueta, sem mexer em ninguém' do
       ana = pessoa('Ana Albuquerino').tap { |contato| contato.update_labels(%w[feira]) }
 
-      pedir('etiqueta/tirar', pessoa_ids: [ana.id], etiquetas: %w[feira evento])
+      pedir('etiqueta/tirar', pessoa_ids: [ana.id], etiquetas: [])
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body).to eq('error' => 'etiqueta desconhecida')

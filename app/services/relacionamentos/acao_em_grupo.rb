@@ -12,6 +12,9 @@ class Relacionamentos::AcaoEmGrupo
   NAO_EXISTE_MAIS = 'nao_existe_mais'.freeze
   DADOS_INVALIDOS = 'dados_invalidos'.freeze
   ERRO = 'erro'.freeze
+  # #3062 — a pessoa já estava como o pedido quer (já tinha a etiqueta, ou não tinha a que era para tirar): não muda, não
+  # conta como feita e não fica de fora. Assim o aviso diz quantas pessoas mudaram de verdade.
+  SEM_MUDANCA = :sem_mudanca
   # Falha que é daquela pessoa naquele momento (trava, registro que não gravou ou não saiu). Consulta que o banco recusa
   # (ActiveRecord::StatementInvalid) é defeito de programa e estoura.
   FALHAS_DA_VEZ = [ActiveRecord::Deadlocked, ActiveRecord::LockWaitTimeout, ActiveRecord::RecordNotSaved,
@@ -27,11 +30,11 @@ class Relacionamentos::AcaoEmGrupo
   def call
     nomes = nomes_das_pessoas
     preparar
-    de_fora = @pessoa_ids.filter_map do |pessoa_id|
-      motivo = nomes.key?(pessoa_id) ? tentar(pessoa_id) : NAO_EXISTE_MAIS
-      { id: pessoa_id, nome: nomes[pessoa_id], motivo: motivo } if motivo
+    motivos = @pessoa_ids.index_with { |pessoa_id| nomes.key?(pessoa_id) ? tentar(pessoa_id) : NAO_EXISTE_MAIS }
+    de_fora = motivos.filter_map do |pessoa_id, motivo|
+      { id: pessoa_id, nome: nomes[pessoa_id], motivo: motivo } if motivo && motivo != SEM_MUDANCA
     end
-    { contagem => @pessoa_ids.size - de_fora.size, :de_fora => de_fora }
+    { contagem => motivos.values.count(&:nil?), :de_fora => de_fora }
   end
 
   private
@@ -49,7 +52,7 @@ class Relacionamentos::AcaoEmGrupo
     @pessoa_ids.each_slice(FATIA).flat_map { |ids| @account.contacts.where(id: ids).pluck(:id, :name) }.to_h
   end
 
-  # O motivo de a pessoa ficar de fora, ou nil quando deu certo.
+  # O motivo de a pessoa ficar de fora, SEM_MUDANCA quando ela já estava como o pedido quer, ou nil quando deu certo.
   def tentar(pessoa_id)
     fazer(pessoa_id)
   rescue ActiveRecord::RecordNotFound

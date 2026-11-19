@@ -199,8 +199,14 @@
         "EMAIL": "Check the e-mail. Something seems to be missing.",
         "CPF": "Check the personal tax ID. It has 11 numbers.",
         "CNPJ": "Check the company tax ID. It has 14 numbers.",
-        "EMAIL_REPETIDO": "Another person already has this email.",
-        "TELEFONE_REPETIDO": "Another person already has this phone."
+        "EMAIL_REPETIDO": "This email is already on another person's profile. Look for it in the list search or remove the email here.",
+        "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here."
+      },
+      "SAIR": {
+        "TITULO": "Leave without saving?",
+        "AVISO": "What you wrote will not be saved.",
+        "CONFIRMAR": "Leave without saving",
+        "VOLTAR": "Keep writing"
       },
       "REDE": {
         "linkedin": "LinkedIn",
