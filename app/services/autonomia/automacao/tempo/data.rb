@@ -15,7 +15,8 @@
 #
 # O campo guarda o dia como a tela grava (AAAA-MM-DD); o valor antigo com a hora (AAAA-MM-DDT…) vale pelo dia escrito,
 # como a tela mostra (attributeDate.js). Valor em outro formato não casa e é ignorado. Uma vez por dia, a varredura
-# conta quantos alvos têm o campo em formato inválido e põe a contagem no log, sem o valor, que é dado do cliente.
+# conta quantos alvos têm o campo em formato inválido e põe a contagem no log e no aviso do editor (DatasInvalidas,
+# #2556), sem o valor, que é dado do cliente. Sem inválido, o aviso some.
 class Autonomia::Automacao::Tempo::Data
   DESFECHOS_DO_CARD = %w[won resolved].freeze
   # Os 10 primeiros caracteres têm o formato AAAA-MM-DD: só dígitos e hífens, com os hífens no lugar.
@@ -75,13 +76,14 @@ class Autonomia::Automacao::Tempo::Data
     mes_dia == '02-28' && !dia.leap? ? [mes_dia, '02-29'] : [mes_dia]
   end
 
-  # Uma vez por automação e dia (a trava no Redis vale 1 dia).
+  # Uma vez por automação e dia (a trava no Redis vale 1 dia). Grava sempre, inclusive o zero: é o que apaga o aviso.
   def contar_invalidos
     return unless Redis::Alfred.set("automacao:tempo:datas_invalidas:#{@definicao.id}:#{@agora.to_date.iso8601}", 1,
                                     nx: true, ex: 1.day.to_i)
 
     quantos = escopo.where("coalesce(custom_attributes ->> :campo, '') <> ''", campo: campo)
                     .where.not(FORMATO_DO_DIA, campo: campo).count
+    ::Autonomia::Automacao::Tempo::DatasInvalidas.gravar(@definicao, quantos: quantos, tipo: tipo, campo: campo, dia: @agora.to_date)
     return if quantos.zero?
 
     Rails.logger.warn("[automacao][tempo] datas_invalidas conta=#{@definicao.account_id} automacao=#{@definicao.id} quantos=#{quantos}")
