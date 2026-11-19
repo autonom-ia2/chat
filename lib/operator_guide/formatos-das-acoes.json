@@ -8503,7 +8503,7 @@
     "modelo": "Account",
     "origem": [
       "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:29"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
     ],
     "sem_corpo": false
   },
@@ -28691,7 +28691,7 @@
     "modelo": "Account",
     "origem": [
       "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:17",
-      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:29"
+      "app/controllers/api/v1/accounts/ritmo_de_envio_controller.rb:30"
     ],
     "sem_corpo": false
   },

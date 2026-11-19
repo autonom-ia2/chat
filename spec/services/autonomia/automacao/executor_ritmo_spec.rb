@@ -110,6 +110,18 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     expect(execucao.reload.estado).to eq('concluida')
   end
 
+  it 'o balão automático da caixa (saudação, pedido de e-mail) não é resposta: o cliente segue esperando', :aggregate_failures do
+    chegou_ao_limite
+    create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'quero cotar')
+    create(:message, conversation: conversa, account: account, message_type: :template, sender: nil, content: 'Olá! Já te atendemos.')
+
+    execucao = rodar(automacao_ligada(account, admin, [oi]))
+
+    expect(publicas.count).to eq(1)
+    expect(execucao.reload.estado).to eq('concluida')
+    expect(contados.count).to eq(1)
+  end
+
   describe 'o galho "a cada mensagem" do "esperar até" (G63)' do
     let(:listener) { Autonomia::AutomacaoListener.instance }
     let(:urgente) { { 'campo' => { '$valor' => 'conversa.prioridade' }, 'op' => 'igual', 'valor' => 'urgent' } }

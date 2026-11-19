@@ -11,11 +11,10 @@
 #   abre uma conversa nova), não é resposta;
 # - fora do limite ou do horário: a execução espera até a hora (sem contar tentativa) e o histórico diz por quê.
 module Autonomia::Automacao::RitmoNoExecutor
-  PASSOS_QUE_PERGUNTAM_AO_CLIENTE = %w[reuniao pesquisa].freeze
+  PASSOS_QUE_PERGUNTAM_AO_CLIENTE = [::Autonomia::Automacao::PassosQueEsperam::REUNIAO,
+                                     ::Autonomia::Automacao::PassosQueEsperam::PESQUISA].freeze
   ORIGEM_POR_PASSO = Hash.new('automacao_mensagem').merge('email' => 'automacao_email').freeze
   MOTIVO = 'adiado_pelo_ritmo'.freeze
-  # O lado da empresa nas mensagens públicas: a saída e a do robô do chat do site.
-  DA_EMPRESA = %w[outgoing template].freeze
 
   private
 
@@ -66,15 +65,17 @@ module Autonomia::Automacao::RitmoNoExecutor
 
   def contato_do_ritmo = contexto.contato
 
-  # A última mensagem pública (do cliente ou da empresa) da conversa onde o passo manda é do cliente. O e-mail abre uma
-  # conversa nova: nunca é resposta.
+  # A última mensagem pública (do cliente ou da equipe, robô incluído) da conversa onde o passo manda é do cliente. O
+  # balão automático da caixa (`template`: saudação, fora do horário, pedido de e-mail, pesquisa de satisfação) sai
+  # sozinho logo depois que o cliente escreve e não responde nada: fica de fora, com a nota interna e a atividade. O
+  # e-mail abre uma conversa nova: nunca é resposta.
   def cliente_esperando_resposta?(passo)
     return false if passo['tipo'] == 'email'
 
     conversa = contexto.conversa
     return false unless conversa
 
-    ultima = conversa.messages.where(private: false, message_type: ['incoming', *DA_EMPRESA]).reorder(id: :desc).first
+    ultima = conversa.messages.where(private: false, message_type: %w[incoming outgoing]).reorder(id: :desc).first
     ultima&.incoming? || false
   end
 end
