@@ -1827,7 +1827,7 @@ describe('DialogoEtiqueta', () => {
     await escolherModo(w, 'tirar');
     expect(w.get('legend:not(.sr-only)').text()).toBe('Quais etiquetas tirar?');
     const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
-    expect(linhas.map(linha => linha.text())).toEqual(['site · 2 pessoas']);
+    expect(linhas.map(linha => linha.text())).toEqual(['site· 2 pessoas']);
     await marcar(w, 'site');
     expect(w.get('[data-confirmar]').text()).toBe('Tirar de 3 pessoas');
     await w.get('[data-confirmar]').trigger('click');
@@ -1869,8 +1869,8 @@ describe('DialogoEtiqueta', () => {
     await escolherModo(w, 'tirar');
     const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
     expect(linhas.map(linha => linha.text())).toEqual([
-      'antiga · 1 pessoa',
-      'feira · 1 pessoa',
+      'antiga· 1 pessoa',
+      'feira· 1 pessoa',
     ]);
     expect(
       linhas[0].get('span[aria-hidden="true"]').attributes('style')

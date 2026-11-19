@@ -290,7 +290,6 @@ defineExpose({ abrir });
                   data-relacionamentos="quantas-tem"
                   class="text-sm text-n-slate-11 shrink-0"
                 >
-                  ·
                   {{
                     t(
                       `${ET}.QUANTAS`,

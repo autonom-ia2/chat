@@ -913,7 +913,7 @@ describe('paridade com a lista de contatos de hoje', () => {
     await w.get('[data-modo="tirar"]').setValue(true);
     // Ana só tem "feira": "site" nem aparece.
     expect(w.find('[data-etiqueta="site"]').exists()).toBe(false);
-    expect(w.get(marca('etiquetas')).text()).toContain('feira · 1 pessoa');
+    expect(w.get(marca('etiquetas')).text()).toContain('feira· 1 pessoa');
     await w.get('[data-etiqueta="feira"] input').setValue(true);
     expect(w.get('[data-confirmar]').text()).toBe('Tirar de 1 pessoa');
     await w.get('[data-confirmar]').trigger('click');

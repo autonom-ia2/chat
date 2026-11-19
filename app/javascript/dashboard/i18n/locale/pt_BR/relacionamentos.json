@@ -191,7 +191,7 @@
         "PERGUNTA_TIRAR": "Quais etiquetas tirar?",
         "BOTAO_COLOCAR": "Colocar em {count} pessoa | Colocar em {count} pessoas",
         "BOTAO_TIRAR": "Tirar de {count} pessoa | Tirar de {count} pessoas",
-        "QUANTAS": "{count} pessoa | {count} pessoas",
+        "QUANTAS": "· {count} pessoa | · {count} pessoas",
         "APLICADA": "Ninguém mudou: quem você marcou já tinha {etiquetas}. | Pronto: coloquei {etiquetas} em {count} pessoa. | Pronto: coloquei {etiquetas} em {count} pessoas.",
         "TIRADA": "Ninguém mudou: quem você marcou não tinha {etiquetas}. | Pronto: tirei {etiquetas} de {count} pessoa. | Pronto: tirei {etiquetas} de {count} pessoas.",
         "DEVOLVIDAS": "Pronto: as etiquetas voltaram para quem tinha.",

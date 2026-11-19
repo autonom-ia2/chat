@@ -191,7 +191,7 @@
         "PERGUNTA_TIRAR": "Which labels to remove?",
         "BOTAO_COLOCAR": "Add to {count} person | Add to {count} people",
         "BOTAO_TIRAR": "Remove from {count} person | Remove from {count} people",
-        "QUANTAS": "{count} person | {count} people",
+        "QUANTAS": "· {count} person | · {count} people",
         "APLICADA": "Nothing changed: everyone you selected already had {etiquetas}. | Done: I added {etiquetas} to {count} person. | Done: I added {etiquetas} to {count} people.",
         "TIRADA": "Nothing changed: nobody you selected had {etiquetas}. | Done: I removed {etiquetas} from {count} person. | Done: I removed {etiquetas} from {count} people.",
         "DEVOLVIDAS": "Done: the labels are back on the people who had them.",
