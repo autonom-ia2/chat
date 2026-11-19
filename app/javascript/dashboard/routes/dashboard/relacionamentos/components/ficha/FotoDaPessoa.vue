@@ -14,8 +14,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 //  - "Voltar como estava" desfaz a troca ou o remover, antes de salvar.
 // A prévia da foto escolhida é solta da memória quando sai da tela (remover,
 // voltar como estava, outra foto ou a gaveta fechada).
+// #3078 — a gaveta da empresa usa a mesma peça: a foto da empresa é quadrada
+// (`redonda` falso), como no cabeçalho dela, e o `marca` muda o nome dela.
 const props = defineProps({
   nome: { type: String, default: '' },
+  redonda: { type: Boolean, default: true },
+  marca: { type: String, default: 'foto-da-pessoa' },
   // A foto gravada hoje (thumbnail).
   atual: { type: String, default: '' },
   // A troca pedida: { arquivo, previa }, { tirar: true } ou null.
@@ -87,15 +91,12 @@ const manter = () => {
 </script>
 
 <template>
-  <div
-    data-relacionamentos="foto-da-pessoa"
-    class="flex items-start min-w-0 gap-4"
-  >
+  <div :data-relacionamentos="marca" class="flex items-start min-w-0 gap-4">
     <Avatar
       :name="nome"
       :src="naTela"
       :size="72"
-      rounded-full
+      :rounded-full="redonda"
       class="shrink-0"
     />
     <div class="flex flex-col min-w-0 gap-2">

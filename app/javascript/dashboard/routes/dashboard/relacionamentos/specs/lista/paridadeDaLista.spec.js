@@ -121,19 +121,28 @@ describe('useOrdemGuardada', () => {
     });
   });
 
-  it('Pessoas abre na guardada; Empresas sempre pela última conversa', () => {
-    preferencias.valores = { contacts_sort_by: 'email' };
+  // #3078 — Empresas abre na guardada pela lista de Empresas de hoje
+  // (`companies_sort_by`); sem nada guardado, pela última conversa.
+  it('cada aba abre na própria preferência', () => {
+    preferencias.valores = {
+      contacts_sort_by: 'email',
+      companies_sort_by: '-contacts_count',
+    };
     const { ordemDaAba } = useOrdemGuardada({ demo: false });
     expect(ordemDaAba('pessoas')).toBe('email_a_z');
+    expect(ordemDaAba('empresas')).toBe('mais_pessoas');
+    preferencias.valores = { contacts_sort_by: 'email' };
     expect(ordemDaAba('empresas')).toBe('ultima_conversa');
   });
 
-  it('grava só a ordem de Pessoas e nunca na demonstração', () => {
+  it('grava cada aba na preferência dela e nunca na demonstração', () => {
     useOrdemGuardada({ demo: false }).guardar('pais_z_a', 'pessoas');
-    useOrdemGuardada({ demo: false }).guardar('nome', 'empresas');
+    useOrdemGuardada({ demo: false }).guardar('site_z_a', 'empresas');
     useOrdemGuardada({ demo: true }).guardar('nome', 'pessoas');
+    useOrdemGuardada({ demo: true }).guardar('nome', 'empresas');
     expect(preferencias.gravar.mock.calls).toEqual([
       [{ contacts_sort_by: '-country' }],
+      [{ companies_sort_by: '-domain' }],
     ]);
   });
 });

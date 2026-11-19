@@ -10,7 +10,11 @@
       "MOSTRANDO_PARTE": "Mostrando {mostradas} de {total} pessoas.",
       "INFORMACOES": {
         "PESSOAS": "Pessoas",
-        "CLIENTES": "Clientes"
+        "CLIENTES": "Clientes",
+        "CIDADE": "Cidade",
+        "SOBRE": "O que a empresa faz",
+        "DESDE": "Cadastrada em",
+        "ULTIMA_CONVERSA": "Última conversa"
       },
       "CONVERSAR": "Aqui abre uma conversa com alguém de {nome}.",
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",
@@ -24,6 +28,61 @@
         "AVISO": "Vou abrir a mensagem para essas pessoas.",
         "SEM_PESSOAS": "Esta empresa ainda não tem pessoas.",
         "ENTENDI": "Entendi"
+      },
+      "VISITAR_SITE": "Abrir o site {site} numa aba nova",
+      "GAVETA": {
+        "SOBRE": "O que a empresa faz",
+        "SOBRE_EXEMPLO": "Ex.: padaria do bairro, atende de segunda a sábado.",
+        "SOBRE_AJUDA": "O que aconteceu em cada conversa vai nas notas de cada pessoa."
+      },
+      "NOTAS": {
+        "EXPLICACAO": "Aqui ficam as notas das pessoas desta empresa. Para escrever uma nota, abra a ficha da pessoa.",
+        "VAZIO": "Ninguém desta empresa tem nota ainda."
+      },
+      "MIDIAS": {
+        "TITULO": "Mídias",
+        "VER_TODAS": "Ver todas ({total})",
+        "VAZIO": "Nenhuma foto, documento, áudio ou vídeo foi trocado com esta empresa ainda."
+      },
+      "POR": {
+        "BOTAO": "Pôr pessoa",
+        "TITULO": "Pôr pessoa em {empresa}",
+        "AVISO": "Procure pelo nome, telefone ou e-mail. Aparece só quem ainda não está nesta empresa.",
+        "PLACEHOLDER": "Nome, telefone ou e-mail",
+        "BUSCA": "Procurar pessoa",
+        "PROCURANDO": "Procurando...",
+        "ERRO_BUSCA": "Não consegui procurar agora.",
+        "DIGITE": "Escreva pelo menos 2 letras ou números.",
+        "NINGUEM": "Ninguém encontrado com “{termo}”.",
+        "RESULTADOS": "Pessoas encontradas",
+        "SEM_CONTATO": "Sem telefone e sem e-mail",
+        "ESTA_EM": "Está em {empresa}",
+        "SEM_EMPRESA": "Sem empresa",
+        "MUDA": "{nome} sai de {de} e entra em {para}. Uma pessoa fica numa empresa só.",
+        "ESCOLHA": "Toque numa pessoa da lista para escolher.",
+        "CONFIRMAR": "Pôr na empresa",
+        "ERRO": "Não consegui pôr a pessoa na empresa. Tente de novo.",
+        "ENTROU": "{nome} entrou em {empresa}.",
+        "MUDOU": "{nome} saiu de {de} e entrou em {empresa}.",
+        "DESFEITO": "Pronto. {nome} saiu de {empresa} de novo."
+      },
+      "TIRAR": {
+        "BOTAO": "Tirar da empresa",
+        "ROTULO": "Tirar {nome} da empresa",
+        "SAIU": "{nome} saiu de {empresa}. A pessoa continua na sua lista.",
+        "VOLTOU": "Pronto. {nome} voltou para {empresa}.",
+        "ERRO": "Não consegui tirar {nome} da empresa. Tente de novo."
+      },
+      "APAGAR": {
+        "TITULO": "Apagar {nome}?",
+        "AVISO": "A empresa {nome} sai da sua lista.",
+        "PESSOAS": "A {count} pessoa desta empresa continua na lista, sem empresa, com as conversas. | As {count} pessoas desta empresa continuam na lista, sem empresa, com as conversas.",
+        "LEMBRETES": "Os lembretes e os documentos guardados na empresa saem junto.",
+        "SEGUROS": "Os seguros desta empresa continuam guardados, mas sem a empresa ligada a eles.",
+        "NAO_VOLTA": "Isto não volta.",
+        "CONFIRMAR": "Apagar",
+        "ERRO": "Não consegui apagar {nome}. Tente de novo.",
+        "APAGADA": "{nome} foi apagada."
       }
     },
     "VOLTAR": {
@@ -69,7 +128,8 @@
       "LIGAR": "Ligar",
       "MUDAR_ETIQUETAS": "Mudar etiquetas",
       "POR_ETIQUETA": "Pôr etiqueta",
-      "LEMBRETE_TITULO": "Falar com {nome}"
+      "LEMBRETE_TITULO": "Falar com {nome}",
+      "APAGAR_EMPRESA": "Apagar empresa"
     },
     "AVISOS": {
       "NOVO_CARD": "Aqui abre um card novo para {nome}.",

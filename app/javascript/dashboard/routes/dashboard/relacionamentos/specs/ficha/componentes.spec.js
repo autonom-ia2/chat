@@ -1297,11 +1297,10 @@ describe('ficha da empresa: celular', () => {
     expect(baixo.get('span.tabular-nums').classes()).toContain(
       'whitespace-nowrap'
     );
-    const site = baixo.get('[title]');
-    expect(site.attributes('title')).toBe(empresa.domain);
-    expect(site.classes()).toEqual(
-      expect.arrayContaining(['truncate', 'whitespace-nowrap'])
-    );
+    // #3078 — o site é um link ("Visitar site"); o texto é uma linha só.
+    const site = baixo.get('[data-relacionamentos="site-da-empresa"]');
+    expect(site.attributes('href')).toBe(`https://${empresa.domain}/`);
+    expect(site.get('span').classes()).toContain('truncate');
     expect(site.classes()).not.toContain('break-all');
     expect(w.findAllComponents({ name: 'Avatar' })).toHaveLength(2);
   });
@@ -1325,8 +1324,10 @@ describe('ficha da empresa: celular', () => {
     expect(
       w.get('[data-relacionamentos="selos-da-pessoa"]').classes()
     ).toContain('col-start-2');
+    // #3078 — os ícones da linha (conversar e tirar) ficam juntos no canto.
     expect(
-      w.get('[data-relacionamentos="conversar-com-pessoa"]').classes()
+      w.get('[data-relacionamentos="conversar-com-pessoa"]').element
+        .parentElement.className
     ).toContain('absolute');
     expect(linha.classes()).toEqual(
       expect.arrayContaining(['pe-14', 'md:pe-2'])

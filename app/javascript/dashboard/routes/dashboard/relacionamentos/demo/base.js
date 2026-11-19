@@ -365,6 +365,9 @@ const esqueletoDasEmpresas = agora => {
       name: nome,
       domain: `${apelido(nome, '-')}.${DOMINIO_DE_EMAIL}`,
       cnpj: cnpjFalso(k + 1),
+      // #3078 — a cidade da empresa, para o "Mais filtros" da aba Empresas.
+      city: CIDADES[k % CIDADES.length],
+      thumbnail: '',
       created_at: diasAtras(agora, 30 + k * 11),
       papel,
     };

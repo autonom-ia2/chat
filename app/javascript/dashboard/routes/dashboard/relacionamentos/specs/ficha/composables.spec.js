@@ -434,7 +434,7 @@ describe('useFichaDaEmpresa: salvar com guarda de geração', () => {
     velha.resolver({ id: 1, name: 'Velha' });
     await salvando;
     expect(ficha.empresa.value).toMatchObject({ id: 2, name: 'E2' });
-    expect(ficha.ocupado.value).toBe('');
+    expect(ficha.algumOcupado.value).toBe(false);
   });
 
   it('sem troca de id, salvar atualiza a empresa', async () => {

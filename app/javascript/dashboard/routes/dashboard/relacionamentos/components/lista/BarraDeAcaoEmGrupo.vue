@@ -15,6 +15,8 @@ import MenuMaisAcoes from './MenuMaisAcoes.vue';
 // demonstração). Sem ele a barra não fala de quem recebe, fica numa linha só no
 // celular ("N marcadas", "⋯" e ×) e, de `sm` para cima, mostra Criar cards e
 // Etiqueta lado a lado, sem botão preenchido.
+// #3078 — quando "Apagar" é a única ação (a aba Empresas, ou quem só pode
+// apagar), ele fica à vista como botão: ninguém abre um menu para uma escolha.
 const props = defineProps({
   quantas: { type: Number, required: true },
   // A conta de quem recebe (`contaDaMensagem`); sem ela, só "N marcadas".
@@ -90,6 +92,13 @@ const itensDoMenu = computed(() =>
     },
   ].filter(item => item.pode)
 );
+const soApagar = computed(
+  () =>
+    props.podeApagar &&
+    !props.podeMandarMensagem &&
+    !props.podeCriarCards &&
+    !props.podeEtiquetar
+);
 // Sem "Apagar", o que sobra no menu só existe no celular: de `sm` para cima o
 // "⋯" abriria vazio, então some junto.
 const menuSoNoCelular = computed(() =>
@@ -141,8 +150,19 @@ const menuSoNoCelular = computed(() =>
       :label="t('RELACIONAMENTOS.LISTA.BARRA.ETIQUETA')"
       @click="emit('etiqueta')"
     />
+    <Button
+      v-if="soApagar"
+      slate
+      faded
+      size="lg"
+      class="order-2 sm:order-5 !text-n-ruby-11"
+      icon="i-lucide-trash-2"
+      data-relacionamentos="apagar"
+      :label="t('RELACIONAMENTOS.LISTA.BARRA.APAGAR')"
+      @click="emit('apagar')"
+    />
     <MenuMaisAcoes
-      v-if="itensDoMenu.length"
+      v-else-if="itensDoMenu.length"
       class="order-2 sm:order-5"
       :class="{ 'sm:hidden': menuSoNoCelular }"
       :itens="itensDoMenu"

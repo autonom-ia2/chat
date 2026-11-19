@@ -52,3 +52,18 @@ export const pessoaPassaNosFiltros = (
   }
   return !preenchido(chegouEm) || chegouNoPeriodo(pessoa, chegouEm, agora);
 };
+
+// #3078 — "Mais filtros" da aba Empresas: cidade e quando chegou (a lista
+// antiga de Empresas não filtrava; são os dois da aba Pessoas que existem na
+// empresa). Os outros não se aplicam e não vão ao servidor.
+export const FILTROS_DAS_EMPRESAS = Object.freeze(['cidade', 'chegouEm']);
+
+export const empresaPassaNosFiltros = (
+  empresa,
+  filtros = {},
+  agora = Date.now()
+) => {
+  const { cidade, chegouEm } = filtros;
+  if (preenchido(cidade) && empresa.city !== cidade) return false;
+  return !preenchido(chegouEm) || chegouNoPeriodo(empresa, chegouEm, agora);
+};

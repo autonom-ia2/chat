@@ -40,13 +40,17 @@
           "EMPRESA": "Company",
           "CIDADE": "City",
           "PAIS": "Country",
-          "CHEGADA": "When they arrived"
+          "CHEGADA": "When they arrived",
+          "SITE": "Website",
+          "PESSOAS": "Number of people"
         },
         "SENTIDOS": {
           "RECENTE": "Most recent first",
           "ANTIGA": "Oldest first",
           "A_Z": "A to Z",
-          "Z_A": "Z to A"
+          "Z_A": "Z to A",
+          "MAIS": "Most people first",
+          "MENOS": "Fewest people first"
         },
         "ESCOLHIDA": {
           "ULTIMA_CONVERSA_RECENTE": "Most recent conversation",
@@ -62,7 +66,11 @@
           "PAIS_A_Z": "Country, A to Z",
           "PAIS_Z_A": "Country, Z to A",
           "CHEGADA_RECENTE": "Newest arrivals first",
-          "CHEGADA_ANTIGA": "Oldest arrivals first"
+          "CHEGADA_ANTIGA": "Oldest arrivals first",
+          "SITE_A_Z": "Website, A to Z",
+          "SITE_Z_A": "Website, Z to A",
+          "PESSOAS_MAIS": "Most people first",
+          "PESSOAS_MENOS": "Fewest people first"
         }
       },
       "FILTROS": {
@@ -85,7 +93,8 @@
       "TOPO": {
         "NOVA_PESSOA": "New person",
         "BAIXAR": "Download spreadsheet",
-        "BAIXAR_NO_FIM": "Download this list as a spreadsheet"
+        "BAIXAR_NO_FIM": "Download this list as a spreadsheet",
+        "NOVA_EMPRESA": "New company"
       },
       "NOVA_PESSOA": {
         "TITULO": "New person",
@@ -220,7 +229,20 @@
         "FILTROS_SEM_RESULTADO": "I couldn't find anyone with these filters.",
         "LIMPAR_FILTROS": "Clear filters"
       },
-      "ERRO_DA_TELA": "I couldn't show the people."
+      "ERRO_DA_TELA": "I couldn't show the people.",
+      "NOVA_EMPRESA": {
+        "TITULO": "New company",
+        "SALVAR": "Create company",
+        "CRIADA": "{nome} was created.",
+        "ERRO": "I couldn’t create the company. Try again."
+      },
+      "APAGAR_EMPRESAS": {
+        "TITULO": "Delete {count} company? | Delete {count} companies?",
+        "AVISO": "The people in these companies stay on the list, without a company. This can’t be undone.",
+        "CONFIRMAR": "Delete",
+        "APAGADAS": "{count} company deleted. | {count} companies deleted.",
+        "ERRO": "I couldn’t delete. Try again."
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Try again",

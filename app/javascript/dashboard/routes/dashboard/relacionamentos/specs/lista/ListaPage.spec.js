@@ -3,6 +3,7 @@ import { withFullI18n } from 'test-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRoute, useRouter } from 'vue-router';
 import { DEMO_FORA_DO_SEGMENTO, usarDemo } from '../../fonte/modoDemo';
+import { esquecerApagadas } from '../../fonte/empresasApagadas';
 import MarcarTodas from '../../components/lista/MarcarTodas.vue';
 import ListaPage from '../../pages/ListaPage.vue';
 
@@ -200,6 +201,7 @@ afterEach(() => {
   trocas.listar = null;
   trocas.listarTodos = null;
   vi.clearAllMocks();
+  esquecerApagadas();
   expect(carteira.pecasBaixadas).toEqual([]);
 });
 
@@ -787,11 +789,87 @@ describe('ListaPage: aba Empresas', () => {
     expect(w.text()).toContain('Mostrando 25 de 38');
   });
 
-  it('não tem caixa de marcar, barra nem "Mais filtros"', async () => {
+  // #3078 — o que a lista antiga de Empresas tinha, mais apagar em grupo.
+  it('marca empresas para apagar: a barra só tem "Apagar", à vista, e o diálogo fala de empresa', async () => {
     const w = await montar({ query: { aba: 'empresas' } });
-    expect(w.findAll(marca('marcar'))).toHaveLength(0);
-    expect(w.find(marca('mais-filtros')).exists()).toBe(false);
+    expect(w.findAll(marca('marcar'))).toHaveLength(25);
     expect(w.find(marca('barra')).exists()).toBe(false);
+    await w.findAll(marca('marcar'))[0].find('input').setValue(true);
+    await w.findAll(marca('marcar'))[1].find('input').setValue(true);
+    const barra = w.get(marca('barra'));
+    expect(barra.text()).toContain('2 marcadas');
+    expect(barra.find(marca('mandar-mensagem')).exists()).toBe(false);
+    expect(barra.find(marca('criar-cards')).exists()).toBe(false);
+    expect(barra.find(marca('etiqueta')).exists()).toBe(false);
+    expect(barra.find(marca('mais-acoes')).exists()).toBe(false);
+    await barra.get(marca('apagar')).trigger('click');
+    expect(w.get('[data-dialogo-falso] h3').text()).toBe('Apagar 2 empresas?');
+    expect(w.get('[data-dialogo-falso] p').text()).toContain(
+      'continuam na lista, sem empresa'
+    );
+  });
+
+  it('tem "Mais filtros" com cidade e quando chegou, e "Nova empresa"', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    expect(w.find(marca('mais-filtros')).exists()).toBe(true);
+    expect(w.find(marca('nova-empresa')).exists()).toBe(true);
+    expect(w.find(marca('nova-pessoa')).exists()).toBe(false);
+    expect(w.find(marca('baixar-planilha')).exists()).toBe(false);
+  });
+
+  it('"Mais filtros" tem só a cidade (das empresas) e quando chegou, e filtra', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('mais-filtros')).trigger('click');
+    await assentar();
+    const gaveta = w.get(marca('gaveta-filtros'));
+    expect(gaveta.findAll('label').map(l => l.text())).toEqual([
+      'Cidade',
+      'Chegou em',
+    ]);
+    const campos = gaveta.findAllComponents({ name: 'ChoiceSelect' });
+    const cidades = campos[0].props('options');
+    expect(cidades.length).toBeGreaterThan(1);
+    campos[0].vm.$emit('update:modelValue', cidades[1].value);
+    await w.vm.$nextTick();
+    await gaveta
+      .findAll('button')
+      .find(b => b.text() === 'Ver resultado')
+      .trigger('click');
+    await assentar();
+    expect(textoDe(w, marca('mais-filtros'))).toBe('Mais filtros · 1');
+    expect(w.text()).not.toContain('de 38');
+    expect(linhas(w).length).toBeGreaterThan(0);
+    linhas(w).forEach(linha =>
+      expect(linha.text()).toContain(cidades[1].label)
+    );
+  });
+
+  it('"Nova empresa" abre a gaveta vazia; criar avisa e abre a ficha nova', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    await w.get(marca('nova-empresa')).trigger('click');
+    await w.vm.$nextTick();
+    const gaveta = w.get(marca('gaveta-nova-empresa'));
+    expect(gaveta.text()).toContain('Nova empresa');
+    await gaveta.get('[data-foco]').setValue('Padaria Nova');
+    await w.get(marca('salvar-empresa')).trigger('click');
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith('Padaria Nova foi criada.');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'relacionamentos_empresa',
+      params: { companyId: expect.any(Number) },
+    });
+  });
+
+  it('apagar as marcadas tira as empresas da lista', async () => {
+    const w = await montar({ query: { aba: 'empresas' } });
+    const primeira = linhas(w)[0].get('button').text();
+    await w.findAll(marca('marcar'))[0].find('input').setValue(true);
+    await w.get(`${marca('barra')} ${marca('apagar')}`).trigger('click');
+    await w.get('[data-dialogo-falso] [data-confirmar]').trigger('click');
+    await assentar();
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith('1 empresa apagada.');
+    expect(linhas(w).map(l => l.get('button').text())).not.toContain(primeira);
   });
 
   it('sair da página (a rota deixa de ser a lista) não dispara carga', async () => {

@@ -11,9 +11,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // No celular "Nova pessoa" continua um botão à vista (a página o põe acima das
 // abas) e "Baixar planilha" sai daqui: vira a última linha da lista ("Baixar
 // esta lista em planilha"), onde quem acabou de ver a lista procura.
+// #3078 — na aba Empresas o botão é "Nova empresa" (`deEmpresas`), o "Criar
+// empresa" da lista antiga.
 defineProps({
   podeCriar: { type: Boolean, default: false },
   podeBaixar: { type: Boolean, default: false },
+  deEmpresas: { type: Boolean, default: false },
 });
 const emit = defineEmits(['criar', 'baixar']);
 
@@ -40,10 +43,10 @@ const ALVO =
     <Button
       v-if="podeCriar"
       :class="ALVO"
-      icon="i-lucide-user-plus"
-      data-relacionamentos="nova-pessoa"
+      :icon="deEmpresas ? 'i-lucide-building-2' : 'i-lucide-user-plus'"
+      :data-relacionamentos="deEmpresas ? 'nova-empresa' : 'nova-pessoa'"
       aria-haspopup="dialog"
-      :label="t(`${TOPO}.NOVA_PESSOA`)"
+      :label="t(`${TOPO}.${deEmpresas ? 'NOVA_EMPRESA' : 'NOVA_PESSOA'}`)"
       @click="emit('criar')"
     />
   </div>

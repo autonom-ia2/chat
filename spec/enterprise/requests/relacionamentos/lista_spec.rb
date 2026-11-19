@@ -75,7 +75,8 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
       expect(response.parsed_body).to eq(
         'total' => 1, 'tem_mais' => false,
         'itens' => [{ 'id' => padaria.id, 'name' => 'Padaria Bom Dia', 'domain' => 'padaria-bom-dia.exemplo.com.br',
-                      'cnpj' => '12.345.678/0001-00', 'created_at' => (agora - 30.days).to_i, 'contacts_count' => 2,
+                      'cnpj' => '12.345.678/0001-00', 'city' => 'Campinas', 'thumbnail' => '',
+                      'created_at' => (agora - 30.days).to_i, 'contacts_count' => 2,
                       'customers_count' => 1, 'last_activity_at' => (agora - 2.days).to_i }]
       )
     end
@@ -93,9 +94,10 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
       expect(response.parsed_body).to eq('todas' => 2, 'com_clientes' => 1, 'sem_pessoas' => 1, 'sem_conversa_3_meses' => 2)
     end
 
-    it 'responde 422 para pedido malformado e para filtro, que a aba Empresas não tem' do
+    it 'responde 422 para pedido malformado e para filtro que a aba Empresas não tem' do
       { { grupo: ['todas'] } => 'grupo em formato inválido', { busca: { a: 'b' } } => 'busca em formato inválido',
-        { filtros: 'abc' } => 'filtros em formato inválido', { filtros: { cidade: 'Campinas' } } => 'filtro desconhecido: cidade',
+        { filtros: 'abc' } => 'filtros em formato inválido', { filtros: { etiqueta: 'feira' } } => 'filtro desconhecido: etiqueta',
+        { filtros: { chegou_em: 'ontem' } } => 'chegou_em desconhecido: ontem',
         { pagina: '99999999999999999999' } => 'pagina inválida: 99999999999999999999' }.each do |params, mensagem|
         leituras_de_empresa.each do |caminho|
           ler(caminho, **params)
@@ -104,6 +106,19 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
           expect(response.parsed_body).to eq('error' => mensagem)
         end
       end
+    end
+
+    # #3078 — os filtros de "Mais filtros" da aba Empresas valem na lista e nas contagens.
+    it 'filtra pela cidade e por quando chegou, na lista e nas contagens' do
+      empresa('Padaria Ana', created_at: agora - 3.days, additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Bruno', created_at: agora - 40.days, additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Carla', created_at: agora - 3.days, additional_attributes: { city: 'Santos' })
+
+      ler('empresas', filtros: { cidade: 'Campinas', chegou_em: 'ultimos_7' })
+      expect(response.parsed_body['itens'].pluck('name')).to eq(['Padaria Ana'])
+
+      ler('empresas/contagens', filtros: { cidade: 'Campinas' })
+      expect(response.parsed_body).to include('todas' => 2)
     end
 
     it 'responde 422 para grupo que não é de empresa' do
@@ -135,6 +150,21 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
       expect(response.parsed_body['empresas'].pluck('value')).to all(be_an(Integer))
     end
 
+    # #3078 — as cidades das empresas, para o "Mais filtros" da aba Empresas.
+    it 'a gaveta oferece as cidades das empresas da conta, sem repetir e sem vazio' do
+      empresa('Padaria Ana', additional_attributes: { city: 'Santos' })
+      empresa('Padaria Bruno', additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Carla', additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Diego', additional_attributes: { city: '' })
+      create(:company, account: create(:account), name: 'De outra conta', additional_attributes: { city: 'Recife' })
+
+      ler('opcoes_de_filtro')
+
+      expect(response.parsed_body['cidades_das_empresas']).to eq(
+        [{ 'value' => 'Campinas', 'label' => 'Campinas' }, { 'value' => 'Santos', 'label' => 'Santos' }]
+      )
+    end
+
     it 'sem Empresas ligado na conta, o resumo e a gaveta vêm sem empresa nenhuma' do
       account.disable_features!('companies')
 
@@ -143,6 +173,7 @@ RSpec.describe 'Lista de Relacionamentos: empresas e funções', type: :request 
 
       ler('opcoes_de_filtro')
       expect(response.parsed_body['empresas']).to eq([])
+      expect(response.parsed_body).not_to have_key('cidades_das_empresas')
     end
   end
 

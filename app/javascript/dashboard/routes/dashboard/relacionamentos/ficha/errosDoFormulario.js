@@ -43,8 +43,11 @@ export const errosDoFormulario = (inicial, atual, tipos = {}) => {
 
 const TAMANHO_CNPJ = 14;
 
-// Só cobra o CNPJ se a pessoa mexeu nele; vazio é permitido (limpar).
-export const errosDaEmpresa = (inicial, atual) => {
+// Só cobra o CNPJ e o site se a pessoa mexeu neles; vazio é permitido (limpar).
+// #3078 — o site aceita "padaria.com.br" ou "https://padaria.com.br" (quem
+// confere é atributos.js#linkCompleto), e os campos do tipo link da empresa
+// seguem a regra da pessoa.
+export const errosDaEmpresa = (inicial, atual, tipos = {}) => {
   const erros = {};
   if (!atual.nome.trim()) erros.nome = 'NOME';
   const digitos = soDigitos(atual.cnpj);
@@ -55,5 +58,9 @@ export const errosDaEmpresa = (inicial, atual) => {
   ) {
     erros.cnpj = 'CNPJ';
   }
-  return erros;
+  const site = atual.site.trim();
+  if (site && mudou(inicial, atual, 'site') && !linkCompleto(site)) {
+    erros.site = 'LINK';
+  }
+  return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
 };

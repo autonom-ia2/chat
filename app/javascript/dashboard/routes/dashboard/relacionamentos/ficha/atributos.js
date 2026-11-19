@@ -1,6 +1,7 @@
 // #3075 — os campos personalizados da pessoa, lidos das definições da conta
 // (custom_attribute_definitions, attribute_model contact_attribute). Funções
-// puras, sem mutar o que recebem.
+// puras, sem mutar o que recebem. #3078 — e os da empresa (company_attribute,
+// área `company_details` do configurador), pela mesma regra.
 //
 // Cada campo sai como { id, chave, rotulo, tipo, opcoes, valor, principal } (o
 // solto, sem definição, não tem `id`):
@@ -41,9 +42,19 @@ const foraDaFicha = chave =>
 
 const tipoConhecido = tipo => (TIPOS.includes(tipo) ? tipo : 'text');
 
-const doContato = definicao =>
-  definicao.attribute_model === 'contact_attribute' &&
-  !foraDaFicha(definicao.attribute_key);
+// #3078 — a empresa tem os campos dela (attribute_model company_attribute); o
+// CPF e os internos da WAHA são só da pessoa.
+export const MODELOS = {
+  pessoa: 'contact_attribute',
+  empresa: 'company_attribute',
+};
+
+const foraDoModelo = (modelo, chave) =>
+  modelo === MODELOS.pessoa && foraDaFicha(chave);
+
+const doModelo = modelo => definicao =>
+  definicao.attribute_model === modelo &&
+  !foraDoModelo(modelo, definicao.attribute_key);
 
 const campoDaDefinicao = (definicao, valores, escolhidos) => {
   const valor = valores[definicao.attribute_key];
@@ -61,13 +72,14 @@ const campoDaDefinicao = (definicao, valores, escolhidos) => {
 // `definicoes`: as da conta, como o servidor manda (snake_case), inclusive as
 // que estão fora da tela (para o valor delas não virar campo solto).
 // `escolhidos`: os ids que o configurador pôs na ficha.
-// `valores`: os custom_attributes da pessoa.
-export const camposDaPessoa = ({
+// `valores`: os custom_attributes da pessoa (ou da empresa, com `modelo`).
+export const camposDoRegistro = ({
   definicoes = [],
   escolhidos = [],
   valores = {},
+  modelo = MODELOS.pessoa,
 }) => {
-  const daConta = definicoes.filter(doContato);
+  const daConta = definicoes.filter(doModelo(modelo));
   const ids = new Set(escolhidos);
   const conhecidas = new Set(daConta.map(d => d.attribute_key));
   const comDefinicao = naTela(daConta).map(definicao =>
@@ -76,7 +88,9 @@ export const camposDaPessoa = ({
   const soltos = Object.entries(valores)
     .filter(
       ([chave, valor]) =>
-        !foraDaFicha(chave) && !conhecidas.has(chave) && temValor(valor)
+        !foraDoModelo(modelo, chave) &&
+        !conhecidas.has(chave) &&
+        temValor(valor)
     )
     .map(([chave, valor]) => ({
       chave,
@@ -96,6 +110,12 @@ export const camposDaPessoa = ({
     ...comDefinicao.filter(campo => !campo.principal),
   ];
 };
+
+export const camposDaPessoa = dados =>
+  camposDoRegistro({ ...dados, modelo: MODELOS.pessoa });
+
+export const camposDaEmpresa = dados =>
+  camposDoRegistro({ ...dados, modelo: MODELOS.empresa });
 
 // O link só vira link de verdade com http ou https (nada de javascript:).
 export const linkSeguro = valor => {

@@ -24,7 +24,6 @@ import {
 } from '../../ficha/rotulos';
 import {
   formularioDaPessoa,
-  linhasDaEmpresa,
   linhasDaPessoa,
   nomeDaInformacao,
   pedidoParaSalvar,
@@ -724,22 +723,6 @@ describe('origens liberáveis', () => {
       .find(l => l.includes('UNDOABLE_SOURCES = %w['));
     const valores = linha.split('%w[')[1].split(']')[0].split(' ');
     expect([...ORIGENS_LIBERAVEIS].sort()).toEqual([...valores].sort());
-  });
-});
-
-describe('informações da empresa', () => {
-  it('formata o CNPJ e conta pessoas e clientes', () => {
-    const linhas = linhasDaEmpresa({
-      cnpj: '11222333000181',
-      domain: 'x.exemplo.com.br',
-      contacts_count: 3,
-      customers_count: 1,
-    });
-    // CNPJ e site ficam só no cabeçalho.
-    expect(linhas.map(l => [l.chave, l.valor])).toEqual([
-      ['pessoas', '3'],
-      ['clientes', '1'],
-    ]);
   });
 });
 

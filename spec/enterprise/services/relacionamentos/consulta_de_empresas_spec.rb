@@ -110,6 +110,54 @@ RSpec.describe Relacionamentos::ConsultaDeEmpresas do
     it 'as mais novas primeiro' do
       expect(nomes(ordem: 'mais_novos')).to eq(['Ótica Hortêncio', 'Costura Fina', 'mercado da Esquina'])
     end
+
+    # #3078 — as ordens da lista de Empresas de hoje, nos dois sentidos.
+    it 'nos dois sentidos de nome, de conversa e de chegada' do
+      expect(nomes(ordem: 'nome_z_a')).to eq(['Ótica Hortêncio', 'mercado da Esquina', 'Costura Fina'])
+      expect(nomes(ordem: 'conversa_mais_antiga')).to eq(['Ótica Hortêncio', 'mercado da Esquina', 'Costura Fina'])
+      expect(nomes(ordem: 'mais_antigos')).to eq(['mercado da Esquina', 'Costura Fina', 'Ótica Hortêncio'])
+    end
+
+    it 'por site, com quem não tem site no fim nos dois sentidos' do
+      Company.find_by(name: 'Ótica Hortêncio').update!(domain: 'otica.exemplo.com.br')
+      Company.find_by(name: 'Costura Fina').update!(domain: 'costura.exemplo.com.br')
+
+      expect(nomes(ordem: 'site_a_z')).to eq(['Costura Fina', 'Ótica Hortêncio', 'mercado da Esquina'])
+      expect(nomes(ordem: 'site_z_a')).to eq(['Ótica Hortêncio', 'Costura Fina', 'mercado da Esquina'])
+    end
+
+    it 'por número de pessoas, nos dois sentidos' do
+      2.times { pessoa_da(Company.find_by(name: 'Costura Fina')) }
+      pessoa_da(Company.find_by(name: 'Ótica Hortêncio'))
+
+      expect(nomes(ordem: 'mais_pessoas')).to eq(['Costura Fina', 'Ótica Hortêncio', 'mercado da Esquina'])
+      expect(nomes(ordem: 'menos_pessoas')).to eq(['mercado da Esquina', 'Ótica Hortêncio', 'Costura Fina'])
+    end
+  end
+
+  # #3078 — "Mais filtros" da aba Empresas: cidade e quando chegou.
+  describe 'filtros' do
+    before do
+      empresa('Padaria Ana', created_at: agora - 3.days, additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Bruno', created_at: agora - 40.days, additional_attributes: { city: 'Campinas' })
+      empresa('Padaria Carla', created_at: agora - 3.days, additional_attributes: { city: 'Santos' })
+    end
+
+    it 'pela cidade exata e por quando chegou, juntos' do
+      expect(nomes(filtros: { cidade: 'Campinas' })).to contain_exactly('Padaria Ana', 'Padaria Bruno')
+      expect(nomes(filtros: { chegou_em: 'ultimos_7' })).to contain_exactly('Padaria Ana', 'Padaria Carla')
+      expect(nomes(filtros: { cidade: 'Campinas', chegou_em: 'ultimos_7' })).to contain_exactly('Padaria Ana')
+    end
+
+    it 'filtro vazio é "qualquer", e as contagens seguem os filtros' do
+      expect(nomes(filtros: { cidade: '', chegou_em: '' })).to contain_exactly('Padaria Ana', 'Padaria Bruno', 'Padaria Carla')
+      expect(consulta(filtros: { cidade: 'Santos' }).contagens).to include('todas' => 1)
+    end
+
+    it 'recusa período de chegada que não existe' do
+      expect { consulta(filtros: { chegou_em: 'ontem' }) }
+        .to raise_error(Relacionamentos::PedidoInvalido, 'chegou_em desconhecido: ontem')
+    end
   end
 
   describe 'página e contagens' do

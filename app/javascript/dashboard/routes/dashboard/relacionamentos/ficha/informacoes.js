@@ -4,7 +4,7 @@
 // (additional_attributes.country_code, country e description), a empresa
 // cadastrada (company_id), a foto e os campos personalizados com o tipo de cada
 // um (ficha/atributos.js).
-import { formatarCnpj, formatarCpf } from './formatos';
+import { formatarCpf } from './formatos';
 import { soDigitos } from '../fonte/texto';
 import {
   CHAVE_DO_CPF,
@@ -123,7 +123,7 @@ const comVaziosExplicitos = (atual, inicial) =>
 // (o servidor junta com o que já havia); os que tinham valor e ficaram vazios
 // vão em `apagar`, e saem de verdade da ficha (destroy_custom_attributes), como
 // o "Apagar" da ficha antiga. O que ninguém mexeu não vai.
-const atributosMudados = (atual, inicial) => {
+export const atributosMudados = (atual, inicial) => {
   const chaves = [...new Set([...Object.keys(atual), ...Object.keys(inicial)])];
   const mudadas = chaves.filter(chave => atual[chave] !== inicial[chave]);
   return {
@@ -164,7 +164,7 @@ const paisMudado = (formulario, inicial) =>
 // gaveta abriu. `tipos` ({ chave: tipo }): o link escrito sem "https://" vai
 // completo (dos dois lados, para o link antigo sem "https://" não contar como
 // mudado).
-const comLinksCompletos = (atributos, tipos) =>
+export const comLinksCompletos = (atributos, tipos) =>
   Object.fromEntries(
     Object.entries(atributos).map(([chave, valor]) => [
       chave,
@@ -219,21 +219,5 @@ export const pedidoParaSalvar = (
   };
 };
 
-// CNPJ e site ficam só no cabeçalho da empresa.
-export const linhasDaEmpresa = empresa => [
-  { chave: 'pessoas', valor: String(empresa.contacts_count ?? 0) },
-  { chave: 'clientes', valor: String(empresa.customers_count ?? 0) },
-];
-
-// A gaveta "Alterar" da empresa: nome, CNPJ e site. O CNPJ vai só com os números.
-export const formularioDaEmpresa = empresa => ({
-  nome: empresa.name ?? '',
-  cnpj: formatarCnpj(empresa.cnpj ?? ''),
-  site: empresa.domain ?? '',
-});
-
-export const dadosDaEmpresaParaSalvar = formulario => ({
-  name: formulario.nome.trim(),
-  cnpj: soDigitos(formulario.cnpj),
-  domain: formulario.site.trim(),
-});
+// #3078 — a empresa (as informações, o formulário e o pedido) mora em
+// ficha/informacoesDaEmpresa.js.

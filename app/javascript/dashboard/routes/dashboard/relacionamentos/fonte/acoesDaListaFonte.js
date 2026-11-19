@@ -1,6 +1,9 @@
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
+import { apagarEmpresas } from './apagarEmpresas';
 import { emFatias } from './emFatias';
+import { lembrarApagada } from './empresasApagadas';
+import { criarEmpresa } from './gravarEmpresa';
 import { alterarPessoa, buscarEmpresas, criarPessoa } from './gravarPessoa';
 import { normalizado } from './texto';
 import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
@@ -23,6 +26,13 @@ import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
 //     gravado por fonte/gravarPessoa.js). O que o servidor recusa sobe como
 //     veio (lista/recusaDoContato.js lê o 422);
 //   - #3075 — buscarEmpresas(termo): as empresas da conta, para a gaveta.
+//
+// #3078 — e o que a lista antiga de Empresas fazia:
+//   - apagarEmpresas(lote): as empresas marcadas, uma a uma
+//     (fonte/apagarEmpresas.js), no formato das outras ações em grupo;
+//   - criarEmpresa(pedido, retomada): "Nova empresa", com o pedido da gaveta
+//     da empresa (ficha/informacoesDaEmpresa.js#pedidoDaEmpresa), gravado por
+//     fonte/gravarEmpresa.js.
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/acoesDaLista.js')
   : null;
@@ -68,6 +78,19 @@ const fonteDemo = ({ carregarDemo, atraso }) => {
     aplicarEtiqueta: lote => simular(lote, 'aplicadas'),
     tirarEtiqueta: lote => simular(lote, 'tiradas'),
     apagar: lote => simular(lote, 'apagadas'),
+    // A lista da demonstração deixa de mostrar as apagadas, como a real.
+    async apagarEmpresas(lote) {
+      const feito = await simular(lote, 'apagadas');
+      const faltam = new Set(feito.faltam.map(({ id }) => id));
+      lote.pessoas
+        .filter(({ id }) => !faltam.has(id))
+        .forEach(({ id }) => lembrarApagada(id));
+      return feito;
+    },
+    async criarEmpresa({ empresa }) {
+      await esperar(atraso);
+      return { id: Date.now(), name: empresa.name };
+    },
     async exportar() {
       await esperar(atraso);
       return { email: 'voce@exemplo.com.br' };
@@ -146,6 +169,8 @@ const fonteReal = () => ({
   criarPessoa,
   salvarPessoa: alterarPessoa,
   buscarEmpresas,
+  apagarEmpresas,
+  criarEmpresa,
 });
 
 export const acoesDaListaFonte = ({

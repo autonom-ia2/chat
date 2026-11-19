@@ -3,7 +3,6 @@ import {
   computed,
   defineAsyncComponent,
   onMounted,
-  ref,
   useTemplateRef,
   watch,
 } from 'vue';
@@ -39,6 +38,7 @@ import LinhaDePessoa from '../components/lista/LinhaDePessoa.vue';
 import ListaDeLinhas from '../components/lista/ListaDeLinhas.vue';
 import MarcarTodas from '../components/lista/MarcarTodas.vue';
 import MostrarMais from '../components/lista/MostrarMais.vue';
+import NovaEmpresaNaLista from '../components/lista/NovaEmpresaNaLista.vue';
 import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
@@ -48,7 +48,7 @@ import { usarDemo } from '../fonte/modoDemo';
 import { chaveDoSeloDaPessoa } from '../carteira/tomDoSelo';
 import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
-import { ehSemAcesso } from '../lista/falhas';
+import { useGavetaDeFiltros } from '../lista/useGavetaDeFiltros';
 import { PAINEL_DAS_ABAS, idDaAba } from '../lista/idsDasAbas';
 import { contaDaMensagem } from '../lista/quemFicaDeFora';
 import { useRolarPilula } from '../lista/useRolarPilula';
@@ -56,7 +56,7 @@ import { useAcoesEmGrupo } from '../lista/useAcoesEmGrupo';
 import { usePermissoesDaLista } from '../lista/usePermissoesDaLista';
 import { useLista } from '../lista/useLista';
 import { useMarcados } from '../lista/useMarcados';
-import { gruposDeOrdem } from '../lista/ordens';
+import { CAMPOS_DE_ORDEM_DAS_EMPRESAS, gruposDeOrdem } from '../lista/ordens';
 import { useOrdemGuardada } from '../lista/useOrdemGuardada';
 import { usePessoaNaGaveta } from '../lista/usePessoaNaGaveta';
 import { useCamposDaConta } from '../ficha/useCamposDaConta';
@@ -92,6 +92,10 @@ const SeloDoSeguro = defineAsyncComponent(
 // marcadas indo para o Guia (#934). No celular, "Nova pessoa" fica à vista
 // acima das abas e "Baixar planilha" vira a última linha da lista; o lápis
 // some (tocar na linha abre a ficha).
+// #3078 — a aba Empresas com o que a lista antiga de Empresas tinha: "Nova
+// empresa", as cinco ordens guardadas dela, "Mais filtros" (cidade e quando
+// chegou), a foto e a cidade na linha, e marcar empresas para apagar (a única
+// ação em grupo de empresa; "Marcar todas" fica só em Pessoas).
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -160,15 +164,17 @@ const naDemonstracao = Boolean(demo);
 const podeMarcar = computed(
   () => podeCriarCards.value || podeEtiquetar.value || podeApagar.value
 );
+// Empresa marcada só serve para apagar.
+const podeMarcarEmpresas = podeApagar;
 // #2896 — "Trazer minha lista" só aparece para quem pode importar contato.
 const podeTrazer = computed(() => Boolean(demo) || permissoes.podeTrazer.value);
 
 const marcados = useMarcados();
 // #934 — as pessoas marcadas vão ao Guia ("põe a etiqueta nesses"), como na
-// lista de contatos de hoje.
+// lista de contatos de hoje; na aba Empresas, as empresas marcadas.
 declararContexto({
   selecionados: () => ({
-    recurso: 'contacts',
+    recurso: ehEmpresas.value ? 'companies' : 'contacts',
     ids: marcados.pessoas.value.map(({ id }) => id),
   }),
 });
@@ -188,7 +194,11 @@ const mudarOrdem = nova => {
   ordemGuardada.guardar(nova, aba.value);
   return lista.mudarOrdem(nova);
 };
-const ordensDaAba = computed(() => (ehEmpresas.value ? [] : gruposDeOrdem(t)));
+const ordensDaAba = computed(() =>
+  ehEmpresas.value
+    ? gruposDeOrdem(t, CAMPOS_DE_ORDEM_DAS_EMPRESAS)
+    : gruposDeOrdem(t)
+);
 // O resumo dos seguros da pessoa da linha (nulo para quem não tem seguro) e o
 // texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
 // renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
@@ -409,12 +419,14 @@ const gaveta = usePessoaNaGaveta({
     );
   },
 });
-// As ações ao lado das abas só existem em Pessoas, para quem pode, e com a
-// lista à vista: sem acesso não há o que criar nem baixar; sem ninguém, não há
-// o que baixar.
-const criarNaAba = computed(
-  () => !ehEmpresas.value && !lista.semAcesso.value && podeEditar.value
-);
+// As ações ao lado das abas só existem para quem pode e com a lista à vista:
+// sem acesso não há o que criar nem baixar; sem ninguém, não há o que baixar.
+// "Baixar planilha" é só de Pessoas (a lista antiga de Empresas não tinha);
+// criar existe nas duas (#3078: "Nova empresa").
+const criarNaAba = computed(() => !lista.semAcesso.value && podeEditar.value);
+const novaEmpresa = useTemplateRef('novaEmpresa');
+const criar = () =>
+  ehEmpresas.value ? novaEmpresa.value?.abrir() : gaveta.abrirNova();
 const baixarNaAba = computed(
   () =>
     !ehEmpresas.value &&
@@ -440,34 +452,16 @@ const salvarDaGaveta = computed(() =>
   gaveta.ehNova.value ? t('RELACIONAMENTOS.LISTA.NOVA_PESSOA.SALVAR') : ''
 );
 
-const gavetaAberta = ref(false);
-const opcoesDeFiltro = ref({ empresas: [], etiquetas: [], cidades: [] });
-const abrirFiltros = async () => {
-  gavetaAberta.value = true;
-  try {
-    opcoesDeFiltro.value = await listaFonte({ demo }).opcoesDeFiltro();
-  } catch (falha) {
-    useAlert(
-      ehSemAcesso(falha)
-        ? fraseSemAcesso.value
-        : t('RELACIONAMENTOS.COMUM.ERRO_GENERICO')
-    );
-  }
-};
-const aplicarFiltros = novos => {
-  gavetaAberta.value = false;
-  lista.mudarFiltros(novos);
-};
-const limparFiltros = () => {
-  gavetaAberta.value = false;
-  lista.limparFiltros();
-};
+const maisFiltros = useGavetaDeFiltros({
+  lista,
+  lerOpcoes: () => listaFonte({ demo }).opcoesDeFiltro(),
+  fraseSemAcesso: () => fraseSemAcesso.value,
+  erroGenerico: () => t('RELACIONAMENTOS.COMUM.ERRO_GENERICO'),
+});
 
 // Com gente marcada a barra de ação fica colada no rodapé: a lista ganha folga
 // do tamanho dela, e abaixo de `md` a barra deixa livre o canto do botão ☰.
-const barraVisivel = computed(
-  () => marcados.quantos.value > 0 && !ehEmpresas.value
-);
+const barraVisivel = computed(() => marcados.quantos.value > 0);
 
 const raiz = useTemplateRef('raiz');
 useRolarPilula(raiz, lista.grupo);
@@ -550,7 +544,8 @@ watch(naAbaDeSeguros, estaNela => {
               class="order-first ms-auto shrink-0 sm:order-none"
               :pode-criar="criarNaAba"
               :pode-baixar="baixarNaAba"
-              @criar="gaveta.abrirNova"
+              :de-empresas="ehEmpresas"
+              @criar="criar"
               @baixar="dialogoDaPlanilha.abrir()"
             />
           </div>
@@ -584,12 +579,11 @@ watch(naAbaDeSeguros, estaNela => {
                 :ordem="lista.ordem.value"
                 :grupos-de-ordem="ordensDaAba"
                 :filtros-ativos="lista.filtrosAtivos.value"
-                :com-filtros="!ehEmpresas"
                 :placeholder="placeholder"
                 :placeholder-curto="placeholderCurto"
                 @update:busca="lista.mudarBusca"
                 @update:ordem="mudarOrdem"
-                @abrir-filtros="abrirFiltros"
+                @abrir-filtros="maisFiltros.abrir"
               />
               <EstadoSemAcesso
                 v-if="lista.semAcesso.value"
@@ -645,6 +639,9 @@ watch(naAbaDeSeguros, estaNela => {
                       v-for="empresa in lista.itens.value"
                       :key="empresa.id"
                       :empresa="empresa"
+                      :marcada="marcados.ehMarcado(empresa.id)"
+                      :pode-marcar="podeMarcarEmpresas"
+                      @alternar="marcados.alternar"
                       @abrir="abrirEmpresa"
                     />
                   </template>
@@ -704,10 +701,10 @@ watch(naAbaDeSeguros, estaNela => {
             v-if="barraVisivel"
             class="sticky z-30 mt-auto bottom-4 ms-20 md:ms-0"
             :quantas="marcados.quantos.value"
-            :conta="contaDeMarcados"
-            :pode-mandar-mensagem="naDemonstracao"
-            :pode-criar-cards="podeCriarCards"
-            :pode-etiquetar="podeEtiquetar"
+            :conta="ehEmpresas ? null : contaDeMarcados"
+            :pode-mandar-mensagem="naDemonstracao && !ehEmpresas"
+            :pode-criar-cards="podeCriarCards && !ehEmpresas"
+            :pode-etiquetar="podeEtiquetar && !ehEmpresas"
             :pode-apagar="podeApagar"
             @mandar-mensagem="dialogoDeMensagem.abrir()"
             @criar-cards="dialogoDeCards.abrir()"
@@ -728,12 +725,13 @@ watch(naAbaDeSeguros, estaNela => {
     </main>
 
     <GavetaDeFiltros
-      :aberta="gavetaAberta"
+      :aberta="maisFiltros.aberta.value"
+      :de-empresas="ehEmpresas"
       :filtros="lista.filtros.value"
-      :opcoes="opcoesDeFiltro"
-      @fechar="gavetaAberta = false"
-      @aplicar="aplicarFiltros"
-      @limpar="limparFiltros"
+      :opcoes="maisFiltros.opcoes.value"
+      @fechar="maisFiltros.aberta.value = false"
+      @aplicar="maisFiltros.aplicar"
+      @limpar="maisFiltros.limpar"
     />
     <!-- #2970: sem "Mandar mensagem" fora da demonstração, nada abre isto. -->
     <DialogoMandarMensagem
@@ -760,6 +758,7 @@ watch(naAbaDeSeguros, estaNela => {
       ref="dialogoDeApagar"
       :pessoas="marcados.pessoas.value"
       :acoes="acoes"
+      :de-empresas="ehEmpresas"
       @concluido="acoesEmGrupo.depoisDeAgir"
     />
     <DialogoPlanilha
@@ -785,6 +784,12 @@ watch(naAbaDeSeguros, estaNela => {
       marca="gaveta-da-pessoa"
       @fechar="gaveta.fechar"
       @salvar="gaveta.salvar"
+    />
+    <NovaEmpresaNaLista
+      v-if="podeEditar && temEmpresas"
+      ref="novaEmpresa"
+      :acoes="acoes"
+      @criada="abrirEmpresa"
     />
   </section>
 </template>

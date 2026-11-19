@@ -68,6 +68,7 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
     podeExportar: { value: false },
     podeApagar: { value: false },
     podeCriarLembrete: { value: false },
+    podeVerMidias: { value: false },
   }),
 }));
 // #3071 — as caixas da conta (para "Ligar") vêm do store: aqui não há voz.
@@ -107,7 +108,7 @@ vi.mock('dashboard/api/contactNotes', () => ({
   default: { create: vi.fn() },
 }));
 vi.mock('dashboard/api/companies', () => ({
-  default: { update: vi.fn() },
+  default: { update: vi.fn(), listNotes: vi.fn(), listMedia: vi.fn() },
 }));
 
 withFullI18n('pt_BR');
@@ -197,10 +198,16 @@ const erroHttp = status =>
   Object.assign(new Error(`Request failed with status code ${status}`), {
     response: { status, data: { error: 'pedido recusado' } },
   });
-const servidorResponde = () =>
+const servidorResponde = () => {
   Object.entries({ ...DA_PESSOA, ...DA_EMPRESA }).forEach(([metodo, data]) =>
     RelacionamentosAPI[metodo].mockResolvedValue({ data })
   );
+  // #3078 — as notas das pessoas da empresa vêm da rota de empresas.
+  CompanyAPI.listNotes.mockResolvedValue({ data: { payload: [] } });
+  CompanyAPI.listMedia.mockResolvedValue({
+    data: { payload: [], meta: { total: 0 } },
+  });
+};
 
 let aberta;
 const abrir = async (Pagina, params) => {
@@ -680,7 +687,9 @@ describe('ficha da empresa com os dados do servidor', () => {
       company: {
         name: 'Padaria Nova',
         domain: 'padaria-bom-dia.exemplo.com.br',
-        additional_attributes: { cnpj: '11222333000181' },
+        description: null,
+        additional_attributes: { cnpj: '11222333000181', city: null },
+        custom_attributes: {},
       },
     });
     expect(w.get('h1').text()).toBe('Padaria Nova');
@@ -695,7 +704,14 @@ describe('ficha da empresa com os dados do servidor', () => {
     expect(w.find(marca('conversar-com-pessoa')).exists()).toBe(false);
     expect(w.findAll(`${marca('conversas')} li`)).toHaveLength(1);
     expect(w.get(marca('conversas')).text()).not.toContain('Ver todas');
-    expect(w.find(`${marca('conversas')} button`).exists()).toBe(false);
+    // #3078 — o histórico é de verdade: cada conversa abre.
+    await w.get(`${marca('conversas')} li button`).trigger('click');
+    expect(contexto.empurrar).toHaveBeenCalledWith({
+      name: 'inbox_conversation',
+      params: { conversation_id: CONVERSAS[1].id },
+      query: undefined,
+    });
+    contexto.empurrar.mockClear();
     expect(w.find(marca('alterar-empresa')).exists()).toBe(true);
     await w.get(marca('pessoa-da-empresa')).trigger('click');
     expect(contexto.empurrar).toHaveBeenCalledWith({

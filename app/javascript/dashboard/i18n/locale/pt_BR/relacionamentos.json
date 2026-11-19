@@ -40,13 +40,17 @@
           "EMPRESA": "Empresa",
           "CIDADE": "Cidade",
           "PAIS": "País",
-          "CHEGADA": "Quando chegou"
+          "CHEGADA": "Quando chegou",
+          "SITE": "Site",
+          "PESSOAS": "Número de pessoas"
         },
         "SENTIDOS": {
           "RECENTE": "Mais recente primeiro",
           "ANTIGA": "Mais antiga primeiro",
           "A_Z": "De A a Z",
-          "Z_A": "De Z a A"
+          "Z_A": "De Z a A",
+          "MAIS": "Mais pessoas primeiro",
+          "MENOS": "Menos pessoas primeiro"
         },
         "ESCOLHIDA": {
           "ULTIMA_CONVERSA_RECENTE": "Conversa mais recente",
@@ -62,7 +66,11 @@
           "PAIS_A_Z": "País, de A a Z",
           "PAIS_Z_A": "País, de Z a A",
           "CHEGADA_RECENTE": "Quem chegou por último",
-          "CHEGADA_ANTIGA": "Quem chegou primeiro"
+          "CHEGADA_ANTIGA": "Quem chegou primeiro",
+          "SITE_A_Z": "Site, de A a Z",
+          "SITE_Z_A": "Site, de Z a A",
+          "PESSOAS_MAIS": "Mais pessoas primeiro",
+          "PESSOAS_MENOS": "Menos pessoas primeiro"
         }
       },
       "FILTROS": {
@@ -85,7 +93,8 @@
       "TOPO": {
         "NOVA_PESSOA": "Nova pessoa",
         "BAIXAR": "Baixar planilha",
-        "BAIXAR_NO_FIM": "Baixar esta lista em planilha"
+        "BAIXAR_NO_FIM": "Baixar esta lista em planilha",
+        "NOVA_EMPRESA": "Nova empresa"
       },
       "NOVA_PESSOA": {
         "TITULO": "Nova pessoa",
@@ -220,7 +229,20 @@
         "FILTROS_SEM_RESULTADO": "Não achei ninguém com esses filtros.",
         "LIMPAR_FILTROS": "Limpar filtros"
       },
-      "ERRO_DA_TELA": "Não consegui mostrar as pessoas."
+      "ERRO_DA_TELA": "Não consegui mostrar as pessoas.",
+      "NOVA_EMPRESA": {
+        "TITULO": "Nova empresa",
+        "SALVAR": "Criar empresa",
+        "CRIADA": "{nome} foi criada.",
+        "ERRO": "Não consegui criar a empresa. Tente de novo."
+      },
+      "APAGAR_EMPRESAS": {
+        "TITULO": "Apagar {count} empresa? | Apagar {count} empresas?",
+        "AVISO": "As pessoas dessas empresas continuam na lista, sem empresa. Isto não volta.",
+        "CONFIRMAR": "Apagar",
+        "APAGADAS": "{count} empresa apagada. | {count} empresas apagadas.",
+        "ERRO": "Não consegui apagar. Tente de novo."
+      }
     },
     "COMUM": {
       "TENTAR_DE_NOVO": "Tentar de novo",

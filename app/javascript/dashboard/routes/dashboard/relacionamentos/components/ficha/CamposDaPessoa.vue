@@ -7,7 +7,7 @@ import { REDES } from '../../ficha/informacoes';
 import { opcoesDePais } from '../../ficha/paises';
 import { useIdioma } from '../../ficha/idioma';
 import CampoDeTexto from './CampoDeTexto.vue';
-import CampoDoAtributo from './CampoDoAtributo.vue';
+import CamposDaConta from './CamposDaConta.vue';
 import EscolhaDaEmpresa from './EscolhaDaEmpresa.vue';
 import FotoDaPessoa from './FotoDaPessoa.vue';
 
@@ -21,7 +21,8 @@ import FotoDaPessoa from './FotoDaPessoa.vue';
 // um. Os que aparecem na ficha (`campos` com `principal`) vêm primeiro; os
 // outros ficam atrás de "Mais campos", que abre sozinho quando um deles tem
 // erro. O nome escrito na busca da empresa e ainda não escolhido sobe como
-// `mudar('empresaPendente', nome)`.
+// `mudar('empresaPendente', nome)`. #3078 — os campos da conta moram em
+// CamposDaConta (a gaveta da empresa usa o mesmo).
 const props = defineProps({
   formulario: { type: Object, required: true },
   // O formulário de quando a gaveta abriu: o que cada campo tinha.
@@ -44,9 +45,7 @@ const emit = defineEmits([
 const { t } = useI18n();
 const idioma = useIdioma();
 const redesAbertas = ref(false);
-const maisAbertos = ref(false);
 const idDasRedes = useId();
-const idDosMais = useId();
 const idDoPais = useId();
 const ra = chave => t(`RELACIONAMENTOS_FICHA.GAVETA.${chave}`);
 const mensagem = campo => (campo ? ra(`ERRO.${campo}`) : '');
@@ -73,13 +72,6 @@ const empresa = computed(() => ({
   nome: props.formulario.empresa,
   nova: props.formulario.empresaNova,
 }));
-const principais = computed(() =>
-  props.campos.filter(campo => campo.principal)
-);
-const outros = computed(() => props.campos.filter(campo => !campo.principal));
-const erroNosOutros = computed(() =>
-  outros.value.some(campo => props.erros[`atributo:${campo.chave}`])
-);
 </script>
 
 <template>
@@ -178,64 +170,13 @@ const erroNosOutros = computed(() =>
       </div>
     </div>
 
-    <template v-if="campos.length">
-      <div
-        data-relacionamentos="campos-da-conta"
-        class="flex flex-col gap-5 pt-5 border-t border-n-weak"
-      >
-        <h3 class="m-0 text-base font-semibold text-n-slate-12">
-          {{ ra('OUTRAS') }}
-        </h3>
-        <CampoDoAtributo
-          v-for="campo in principais"
-          :key="campo.chave"
-          :campo="campo"
-          :valor="formulario.atributos[campo.chave] ?? ''"
-          :valor-inicial="inicial.atributos[campo.chave] ?? ''"
-          :erro="erros[`atributo:${campo.chave}`]"
-          @mudar="valor => emit('mudarAtributo', campo.chave, valor)"
-        />
-        <div v-if="outros.length" class="flex flex-col gap-5">
-          <button
-            type="button"
-            data-relacionamentos="mais-campos"
-            :aria-expanded="maisAbertos || erroNosOutros ? 'true' : 'false'"
-            :aria-controls="idDosMais"
-            class="inline-flex items-center gap-2 p-0 text-base font-medium bg-transparent border-0 text-start min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            @click="maisAbertos = !maisAbertos"
-          >
-            {{
-              t(
-                'RELACIONAMENTOS_FICHA.GAVETA.MAIS_CAMPOS',
-                { count: outros.length },
-                outros.length
-              )
-            }}
-            <span
-              class="size-4 i-lucide-chevron-right rtl:rotate-180"
-              :class="{
-                'rotate-90 rtl:rotate-90': maisAbertos || erroNosOutros,
-              }"
-              aria-hidden="true"
-            />
-          </button>
-          <div
-            v-show="maisAbertos || erroNosOutros"
-            :id="idDosMais"
-            class="flex flex-col gap-5"
-          >
-            <CampoDoAtributo
-              v-for="campo in outros"
-              :key="campo.chave"
-              :campo="campo"
-              :valor="formulario.atributos[campo.chave] ?? ''"
-              :valor-inicial="inicial.atributos[campo.chave] ?? ''"
-              :erro="erros[`atributo:${campo.chave}`]"
-              @mudar="valor => emit('mudarAtributo', campo.chave, valor)"
-            />
-          </div>
-        </div>
-      </div>
-    </template>
+    <CamposDaConta
+      v-if="campos.length"
+      :campos="campos"
+      :valores="formulario.atributos"
+      :iniciais="inicial.atributos"
+      :erros="erros"
+      @mudar="(chave, valor) => emit('mudarAtributo', chave, valor)"
+    />
   </form>
 </template>

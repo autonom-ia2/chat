@@ -91,6 +91,7 @@ vi.mock('../../ficha/usePermissoesDaFicha', async () => {
       podeAjustarRenovacoes: ref(false),
       podeApagar: ref(false),
       podeCriarLembrete: ref(false),
+      podeVerMidias: ref(false),
     }),
   };
 });
@@ -110,6 +111,14 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     pessoasDaEmpresa: vi.fn(),
     conversasDaEmpresa: vi.fn(),
     cardsDaEmpresa: vi.fn(),
+  },
+}));
+// #3078 — a ficha da empresa lê as notas das pessoas dela pela rota de
+// empresas: aqui não há nenhuma.
+vi.mock('dashboard/api/companies', () => ({
+  default: {
+    listNotes: async () => ({ data: { payload: [] } }),
+    listMedia: async () => ({ data: { payload: [], meta: { total: 0 } } }),
   },
 }));
 vi.mock('dashboard/api/relacionamentosSeguros', () => ({
