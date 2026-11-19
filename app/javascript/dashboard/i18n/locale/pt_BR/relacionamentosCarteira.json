@@ -1,6 +1,10 @@
 {
   "RELACIONAMENTOS_CARTEIRA": {
     "TITULO": "Seguros",
+    "VOLTAR": {
+      "TEXTO": "Seguros",
+      "ROTULO": "Voltar aos seguros"
+    },
     "ABA": "Seguros",
     "NUMERO_DA_APOLICE": "nº {numero}",
     "TIPOS": {
@@ -12,6 +16,7 @@
     },
     "SELOS": {
       "ATIVO": "Ativo",
+      "VENCE_LOGO": "Vence logo",
       "VENCIDO": "Vencido",
       "EM_RENOVACAO": "Em renovação",
       "RENOVADO": "Renovado",
@@ -128,6 +133,7 @@
       },
       "SELOS": {
         "ATIVO": "Seguro ativo",
+        "VENCE_LOGO": "Seguro vence logo",
         "VENCIDO": "Seguro vencido",
         "EM_RENOVACAO": "Seguro em renovação",
         "RENOVADO": "Seguro renovado",
@@ -240,6 +246,7 @@
       },
       "RODAPE": {
         "VER_PDF": "Ver PDF",
+        "CONVERSAR": "Conversar com {nome}",
         "GUARDAR_PDF": "Guardar o PDF",
         "GUARDAR_OUTRO_PDF": "Guardar outro PDF",
         "APAGAR_PDF": "Apagar o PDF",
@@ -476,7 +483,15 @@
       },
       "ENVIAR": "Enviar proposta",
       "ENVIAR_DE_NOVO": "Enviar de novo",
-      "ENVIAR_APOIO": "A proposta só vai ao cliente quando você clicar."
+      "ENVIAR_APOIO": "A proposta só vai ao cliente quando você clicar.",
+      "CONFIRMAR": {
+        "TITULO": "Enviar a proposta?",
+        "PARA": "Vai para {nome} pelo WhatsApp {caixa}.",
+        "PARA_SEM_CAIXA": "Vai para {nome} pelo WhatsApp das renovações.",
+        "VER_PDF": "Ver o PDF no card da renovação",
+        "ENVIAR": "Enviar agora",
+        "VOLTAR": "Voltar"
+      }
     },
     "AJUSTES": {
       "TITULO": "Ajustar renovações",
@@ -503,6 +518,10 @@
       "ONDE": {
         "TITULO": "Onde ficam as renovações?",
         "SEM_FUNIL": "Sua conta ainda não tem funil. Crie um funil no CRM e volte aqui para escolher.",
+        "SEM_FUNIL_CRIAR": "Sua conta ainda não tem funil. Eu crio o funil de renovações para você, já com as etapas.",
+        "CRIAR_FUNIL": "Criar o funil de renovações para mim",
+        "FUNIL_CRIADO": "Criei o funil {funil}. Ele já está escolhido: é só salvar.",
+        "ERRO_CRIAR_FUNIL": "Não consegui criar o funil. Tente de novo.",
         "SEM_ETAPA": "Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.",
         "ABRIR_CRM": "Abrir o CRM",
         "FUNIL": "Funil",

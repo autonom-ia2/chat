@@ -38,6 +38,7 @@ import { acoesDaListaFonte } from '../fonte/acoesDaListaFonte';
 import { ABAS, GRUPO_PADRAO, gruposDaAba } from '../fonte/grupos';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
 import { listaFonte } from '../fonte/listaFonte';
+import { diasParaTerminar } from '../fonte/selosDoSeguro';
 import { usarDemo } from '../fonte/modoDemo';
 import { chaveDoSeloDaPessoa } from '../carteira/tomDoSelo';
 import { useCarteiraNaLista } from '../carteira/useCarteiraNaLista';
@@ -154,8 +155,10 @@ const lista = useLista({
 // texto do selo dela: "Seguro vencido", "Seguro em renovação", "Seguro
 // renovado", "Seguro ativo" ou "Seguro cancelado" (os cinco selos da carteira).
 const seguroDe = ({ id }) => carteira.daPessoa(id);
-// O selo que a tela não conhece vira só "Seguro" (carteira/tomDoSelo.js).
-const rotuloDoSeguro = ({ selo }) => t(chaveDoSeloDaPessoa(selo));
+// O selo que a tela não conhece vira só "Seguro", e o ativo que termina em até
+// 30 dias diz "Seguro vence logo" (carteira/tomDoSelo.js).
+const rotuloDoSeguro = seguro =>
+  t(chaveDoSeloDaPessoa(seguro.selo, diasParaTerminar(seguro)));
 
 // Trocar de aba fecha a gaveta do seguro que estiver aberta (`?apolice=`).
 const DA_ABA = ['aba', 'apolice'];

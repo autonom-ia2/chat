@@ -31,6 +31,17 @@ vi.mock('../../carteira/usePodeAjustarRenovacoes', async () => {
   const { computed } = await import('vue');
   return { usePodeAjustarRenovacoes: () => computed(() => true) };
 });
+// "Criar o funil de renovações" (#3057) mora no CRM; aqui a conta tem funil.
+vi.mock('../../carteira/useCriarFunilDeRenovacoes', async () => {
+  const { computed, ref } = await import('vue');
+  return {
+    useCriarFunilDeRenovacoes: () => ({
+      podeCriar: computed(() => false),
+      criando: ref(false),
+      criar: vi.fn(),
+    }),
+  };
+});
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, params: {} });

@@ -16,6 +16,7 @@ import {
 } from '../../../../carteira/useLeituraDePdfs';
 import SoltarPdf from '../../SoltarPdf.vue';
 import ProntoDeSeguros from '../ProntoDeSeguros.vue';
+import VoltarAosSeguros from '../VoltarAosSeguros.vue';
 import HistoricoDosPdfs from './HistoricoDosPdfs.vue';
 import ItemDoPdf from './ItemDoPdf.vue';
 
@@ -30,6 +31,7 @@ import ItemDoPdf from './ItemDoPdf.vue';
 // que fazer fica no lugar. Enquanto envia ou lê, a zona de soltar não aceita
 // outro envio. Se o acompanhamento falha ou o lote para de andar, "Tentar de
 // novo" retoma o mesmo lote. A cada etapa nova, o foco vai ao título.
+// #3057 — no topo, o caminho de volta à aba Seguros (VoltarAosSeguros).
 const props = defineProps({
   fonte: { type: Object, default: () => trazerPdfsFonte() },
 });
@@ -92,6 +94,7 @@ onBeforeUnmount(leitura.parar);
     <div
       class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
     >
+      <VoltarAosSeguros />
       <h1
         ref="titulo"
         data-titulo-da-tela

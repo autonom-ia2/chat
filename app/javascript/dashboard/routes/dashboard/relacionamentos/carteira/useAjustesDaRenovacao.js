@@ -11,9 +11,12 @@
 // chegou ou se não deu para ler: é só leitura, e o resto da tela não depende
 // dele). Se o robô cotava e a conta perdeu o Agente de Cotação ou o WhatsApp
 // oficial, o rascunho começa em "Ninguém", que é o que a tela consegue mostrar.
+// #3057 — `escolherFunilNovo(id)`: o funil acabou de ser criado. Relê os funis
+// da conta, sem voltar ao "carregando", e deixa o novo escolhido no rascunho,
+// com a primeira etapa. O que estava guardado não muda: quem guarda é o Salvar.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
-import { ajustesMudaram, semOFunil } from './ajustesDaRenovacao';
+import { ajustesMudaram, comOFunil, semOFunil } from './ajustesDaRenovacao';
 import {
   QUEM_COTA,
   caixaEscolhida,
@@ -84,6 +87,12 @@ export const useAjustesDaRenovacao = fonte => {
     }
   };
 
+  const escolherFunilNovo = async funilId => {
+    const { ajustes, ...resto } = await fonte.ajustes();
+    conta.value = resto;
+    rascunho.value = comOFunil(rascunho.value, resto.funis, funilId);
+  };
+
   return {
     estado,
     conta,
@@ -97,5 +106,6 @@ export const useAjustesDaRenovacao = fonte => {
     mudou: computed(() => ajustesMudaram(salvos.value, rascunho.value)),
     carregar: () => carregar(buscar),
     salvar,
+    escolherFunilNovo,
   };
 };

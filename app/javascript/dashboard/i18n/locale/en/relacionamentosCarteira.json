@@ -1,6 +1,10 @@
 {
   "RELACIONAMENTOS_CARTEIRA": {
     "TITULO": "Insurance",
+    "VOLTAR": {
+      "TEXTO": "Policies",
+      "ROTULO": "Back to the policies"
+    },
     "ABA": "Insurance",
     "NUMERO_DA_APOLICE": "no. {numero}",
     "TIPOS": {
@@ -12,6 +16,7 @@
     },
     "SELOS": {
       "ATIVO": "Active",
+      "VENCE_LOGO": "Ends soon",
       "VENCIDO": "Expired",
       "EM_RENOVACAO": "Renewing",
       "RENOVADO": "Renewed",
@@ -128,6 +133,7 @@
       },
       "SELOS": {
         "ATIVO": "Active policy",
+        "VENCE_LOGO": "Policy ends soon",
         "VENCIDO": "Expired policy",
         "EM_RENOVACAO": "Policy in renewal",
         "RENOVADO": "Renewed policy",
@@ -240,6 +246,7 @@
       },
       "RODAPE": {
         "VER_PDF": "See PDF",
+        "CONVERSAR": "Chat with {nome}",
         "GUARDAR_PDF": "Save the PDF",
         "GUARDAR_OUTRO_PDF": "Save another PDF",
         "APAGAR_PDF": "Delete the PDF",
@@ -476,7 +483,15 @@
       },
       "ENVIAR": "Send proposal",
       "ENVIAR_DE_NOVO": "Send again",
-      "ENVIAR_APOIO": "The proposal only goes to the client when you click."
+      "ENVIAR_APOIO": "The proposal only goes to the client when you click.",
+      "CONFIRMAR": {
+        "TITULO": "Send the proposal?",
+        "PARA": "It goes to {nome} through the WhatsApp {caixa}.",
+        "PARA_SEM_CAIXA": "It goes to {nome} through the renewals WhatsApp.",
+        "VER_PDF": "See the PDF on the renewal card",
+        "ENVIAR": "Send now",
+        "VOLTAR": "Back"
+      }
     },
     "AJUSTES": {
       "TITULO": "Renewal settings",
@@ -503,6 +518,10 @@
       "ONDE": {
         "TITULO": "Where do renewals stay?",
         "SEM_FUNIL": "Your account has no pipeline yet. Create a pipeline in the CRM and come back here to choose.",
+        "SEM_FUNIL_CRIAR": "Your account has no pipeline yet. I can create the renewal pipeline for you, with the stages ready.",
+        "CRIAR_FUNIL": "Create the renewal pipeline for me",
+        "FUNIL_CRIADO": "I created the {funil} pipeline. It is already chosen: just save.",
+        "ERRO_CRIAR_FUNIL": "I could not create the pipeline. Try again.",
         "SEM_ETAPA": "That pipeline has no stage yet. Choose another pipeline, or create a stage in it in the CRM and come back here.",
         "ABRIR_CRM": "Open the CRM",
         "FUNIL": "Pipeline",

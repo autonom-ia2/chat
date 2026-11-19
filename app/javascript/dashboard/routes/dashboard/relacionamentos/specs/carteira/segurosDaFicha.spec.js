@@ -157,7 +157,7 @@ describe('o bloco Seguros da ficha da pessoa', () => {
     const primeira = linha(w, COM_PDF);
 
     expect(primeira.get('button').text()).toBe('Auto');
-    expect(primeira.get(daCarteira('selo')).text()).toBe('Ativo');
+    expect(primeira.get(daCarteira('selo')).text()).toBe('Vence logo');
     expect(primeira.text()).toContain('Seguradora Atlântica · nº AT-000451');
     expect(primeira.text()).toContain('Vence em 18 dias · ');
     const numero = primeira.get(daCarteira('numero-da-apolice'));

@@ -24,6 +24,7 @@ import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 import { useRolarPilula } from '../../lista/useRolarPilula';
 import { destinoDoCard } from '../../carteira/cardNoCrm';
 import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
+import { useConversarComPessoa } from '../../carteira/useConversarComPessoa';
 import { useListaDeSeguros } from '../../carteira/useListaDeSeguros';
 import ControlesDeSeguros from './ControlesDeSeguros.vue';
 import GavetaDeFiltrosDeSeguros from './GavetaDeFiltrosDeSeguros.vue';
@@ -108,6 +109,8 @@ const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
 const ajustarRenovacoes = () =>
   router.push({ name: 'relacionamentos_renovacoes' });
 const abrirCard = cardId => router.push(destinoDoCard(cardId, fonte.usaDemo));
+// #3057 — "Conversar" da linha: a conversa mais recente da pessoa do seguro.
+const conversar = useConversarComPessoa({ demo: fonte.usaDemo });
 
 const abrirSegurado = ({ tipo, id }) =>
   router.push(
@@ -244,7 +247,9 @@ onMounted(lista.iniciar);
                   :key="seguro.id"
                   :seguro="seguro"
                   :diz-sem-telefone="lista.grupo.value === GRUPO_SEM_TELEFONE"
+                  :pode-conversar="Boolean(seguro.pessoa?.id)"
                   @abrir="abrir($event.id)"
+                  @conversar="conversar($event.pessoa)"
                 />
               </ListaDeLinhas>
               <MostrarMais
@@ -273,6 +278,7 @@ onMounted(lista.iniciar);
       :fonte="fonte"
       :pode-editar="podeEditar"
       :pode-exportar="podeExportar"
+      pode-conversar
       @fechar="fechar"
       @mudou="lista.atualizar"
       @abrir-segurado="abrirSegurado"

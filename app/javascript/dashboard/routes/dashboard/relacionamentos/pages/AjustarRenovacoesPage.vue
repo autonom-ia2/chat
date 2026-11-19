@@ -15,6 +15,7 @@ import {
 import { chaveDaRecusa } from '../carteira/recusas';
 import { useAjustesDaRenovacao } from '../carteira/useAjustesDaRenovacao';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
+import { useCriarFunilDeRenovacoes } from '../carteira/useCriarFunilDeRenovacoes';
 import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../ficha/useEstadoDaFicha';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
@@ -24,6 +25,7 @@ import { renovacoesFonte } from '../fonte/renovacoesFonte';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
+import AvisoVivo from '../components/ficha/AvisoVivo.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
 import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CampoDeDias from '../components/carteira/renovacao/CampoDeDias.vue';
@@ -49,6 +51,13 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // #2901 (E8) — com a cotação da renovação ligada na conta (`cotacaoLiberada`),
 // soma-se o cartão "Cotação da renovação" (CotacaoDaRenovacao.vue), que entra
 // no mesmo Salvar. Sem a chave, a tela é a da E5.
+// #3057 — a conta sem funil não manda mais a pessoa ao CRM para voltar depois:
+// quem pode criar funil no CRM ganha "Criar o funil de renovações para mim"
+// (carteira/useCriarFunilDeRenovacoes.js, o mesmo caminho do CRM com o modelo
+// Renovação). Criado, o funil e a primeira etapa já ficam escolhidos, e o
+// recado no cartão pede só o Salvar. A tela não salva sozinha: a regra dela é
+// uma ação só, Salvar, e a pessoa ainda vê os dias e as mensagens antes de
+// guardar. Na demonstração a conta sempre tem funis, e o botão não existe.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
@@ -62,6 +71,7 @@ const podeAjustar = usePodeAjustarRenovacoes();
 const fonte = renovacoesFonte({ demo, peca: pecaPedida(route.query) });
 const tela = useAjustesDaRenovacao(fonte);
 const { conta, rascunho } = tela;
+const funilNovo = useCriarFunilDeRenovacoes();
 
 const raiz = useTemplateRef('raiz');
 const onde = useTemplateRef('onde');
@@ -69,6 +79,8 @@ const cotacao = useTemplateRef('cotacao');
 // O que o Salvar tem a dizer: { tipo: 'alerta' | 'feito', texto }.
 const recado = ref({ tipo: '', texto: '' });
 const falta = ref('');
+// O que o "Criar o funil" tem a dizer, no cartão do funil.
+const recadoDoFunil = ref({ tipo: '', texto: '' });
 
 const pronto = computed(() => tela.estado.value === ESTADOS.PRONTO);
 // Na demonstração tudo aparece, como na lista e na ficha.
@@ -76,6 +88,12 @@ const podeMudar = computed(
   () => (fonte.usaDemo || podeAjustar.value) && !conta.value?.semPermissao
 );
 const temFunis = computed(() => Boolean(conta.value?.funis?.length));
+const funilCriado = computed(() =>
+  recadoDoFunil.value.tipo === 'feito' ? recadoDoFunil.value.texto : ''
+);
+const podeCriarFunil = computed(
+  () => !fonte.usaDemo && funilNovo.podeCriar.value
+);
 // A conta já escolheu, e o funil escolhido ainda serve.
 const temFunilQueServe = computed(
   () => tela.jaEscolheu.value && !tela.funilParou.value
@@ -112,8 +130,11 @@ const escolhaDeHoje = computed(() => {
     : ta('HOJE_SEM_FUNIL');
 });
 
+const SEM_RECADO = Object.freeze({ tipo: '', texto: '' });
+// Mexer em qualquer escolha, ou salvar, tira também o recado do funil criado.
 const semRecado = () => {
-  recado.value = { tipo: '', texto: '' };
+  recado.value = SEM_RECADO;
+  recadoDoFunil.value = SEM_RECADO;
   falta.value = '';
 };
 const mudar = novo => {
@@ -164,6 +185,7 @@ const salvar = async () => {
     return;
   }
   if (await tela.salvar()) {
+    recadoDoFunil.value = SEM_RECADO;
     recado.value = { tipo: 'feito', texto: ta('SALVO') };
     return;
   }
@@ -172,6 +194,43 @@ const salvar = async () => {
     t(chaveDaRecusa(codigo, 'RELACIONAMENTOS_CARTEIRA.AJUSTES.ERRO_SALVAR'))
   );
   if (CONTA_MUDOU.includes(codigo)) tela.carregar();
+};
+
+// Criou: o funil e a primeira etapa ficam escolhidos, e o foco vai ao funil
+// (o leitor de tela ouve qual é). Se a releitura dos funis falha depois de
+// criar, a tela recarrega e o funil novo aparece na lista para escolher.
+const escolherOFunilCriado = async funil => {
+  try {
+    await tela.escolherFunilNovo(funil.id);
+  } catch {
+    tela.carregar();
+    return;
+  }
+  semRecado();
+  recadoDoFunil.value = {
+    tipo: 'feito',
+    texto: ta('ONDE.FUNIL_CRIADO', { funil: funil.name }),
+  };
+  await nextTick();
+  onde.value?.focar(FALTAS.FUNIL);
+};
+// Não criou: o recado diz para tentar de novo, e a tela relê o que a conta tem
+// (o funil pode ter nascido sem uma parte das etapas).
+const criarFunil = async () => {
+  if (funilNovo.criando.value) return;
+  recadoDoFunil.value = SEM_RECADO;
+  let funil;
+  try {
+    funil = await funilNovo.criar();
+  } catch {
+    recadoDoFunil.value = {
+      tipo: 'alerta',
+      texto: ta('ONDE.ERRO_CRIAR_FUNIL'),
+    };
+    tela.carregar();
+    return;
+  }
+  await escolherOFunilCriado(funil);
 };
 
 const voltar = () =>
@@ -267,9 +326,31 @@ onMounted(async () => {
               :funis="conta.funis"
               :falta="falta"
               :id-do-aviso="`${id}-recado`"
+              :pode-criar="podeCriarFunil"
+              :criando="funilNovo.criando.value"
               @update:model-value="mudar"
               @abrir-crm="abrirCrm"
+              @criar-funil="criarFunil"
             />
+            <!-- A região viva nasce vazia (é assim que o leitor de tela anuncia
+                 o texto que chega) e não ocupa lugar; o recado à vista vem à
+                 parte. -->
+            <AvisoVivo :texto="funilCriado" />
+            <p
+              v-if="funilCriado"
+              data-carteira="funil-criado"
+              class="m-0 text-base font-medium text-n-teal-11"
+            >
+              {{ funilCriado }}
+            </p>
+            <p
+              v-if="recadoDoFunil.tipo === 'alerta'"
+              data-carteira="funil-nao-criado"
+              role="alert"
+              class="m-0 text-base font-medium text-n-ruby-11"
+            >
+              {{ recadoDoFunil.texto }}
+            </p>
           </CartaoDeAjuste>
 
           <template v-if="temFunis">

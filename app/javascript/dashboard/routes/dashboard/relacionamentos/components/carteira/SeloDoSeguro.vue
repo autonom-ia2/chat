@@ -6,8 +6,8 @@ import { diasParaTerminar, seloDoSeguro } from '../../fonte/selosDoSeguro';
 import { chaveDoSelo, tomDoSelo } from '../../carteira/tomDoSelo';
 
 // #2897 — o selo de um seguro: Ativo, Vencido ou Cancelado. A cor e o texto
-// saem de uma regra só (carteira/tomDoSelo.js): o ativo que vence logo fica em
-// âmbar.
+// saem de uma regra só (carteira/tomDoSelo.js): o ativo que vence logo diz
+// "Vence logo", em âmbar (#3057).
 // #2898 — a renovação soma Em renovação (azul) e Renovado (verde). Os cinco
 // chegam em todo lugar que mostra o selo: a aba Seguros, a ficha, o painel da
 // conversa e a lista de pessoas.
@@ -24,14 +24,13 @@ const props = defineProps({
 
 const { t } = useI18n();
 const selo = computed(() => seloDoSeguro(props.seguro, props.agora));
-const tom = computed(() =>
-  tomDoSelo(selo.value, diasParaTerminar(props.seguro, props.agora))
-);
+const dias = computed(() => diasParaTerminar(props.seguro, props.agora));
+const tom = computed(() => tomDoSelo(selo.value, dias.value));
 </script>
 
 <template>
   <SeloDeEstado data-carteira="selo" :tom="tom" :data-selo-da-carteira="selo">
-    {{ rotulo || t(chaveDoSelo(selo)) }}
+    {{ rotulo || t(chaveDoSelo(selo, dias)) }}
   </SeloDeEstado>
   <SeloDeEstado v-if="seguro.deFora" data-carteira="selo-de-fora" tom="neutro">
     {{ t('RELACIONAMENTOS_CARTEIRA.SELOS.DE_FORA') }}

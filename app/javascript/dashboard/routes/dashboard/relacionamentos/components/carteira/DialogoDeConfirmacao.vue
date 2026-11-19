@@ -9,6 +9,9 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // Quem usa age ao ouvir `confirmar` e fecha o diálogo (`fechar`) quando deu
 // certo; se não deu, passa a frase em `alerta` e o diálogo continua aberto, com
 // ela dentro.
+// #3057 — `tipo` "edit" deixa o botão de confirmar azul (o passo não destrói
+// nada, como enviar a proposta); sem ele, vermelho. O que mais a pergunta
+// precisa mostrar (um link, por exemplo) vai no slot, abaixo do aviso.
 defineProps({
   // O `data-carteira` do diálogo.
   marca: { type: String, required: true },
@@ -18,6 +21,7 @@ defineProps({
   voltar: { type: String, required: true },
   ocupado: { type: Boolean, default: false },
   alerta: { type: String, default: '' },
+  tipo: { type: String, default: 'alert' },
 });
 const emit = defineEmits(['confirmar', 'fechou']);
 
@@ -32,7 +36,7 @@ defineExpose({
 <template>
   <Dialog
     ref="dialogo"
-    type="alert"
+    :type="tipo"
     width="sm"
     :confirm-button-label="confirmar"
     :cancel-button-label="voltar"
@@ -43,6 +47,7 @@ defineExpose({
   >
     <div :data-carteira="marca" class="flex flex-col gap-3">
       <TituloDoDialogo :titulo="titulo" :aviso="aviso" />
+      <slot />
       <p
         v-if="alerta"
         role="alert"

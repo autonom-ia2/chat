@@ -23,6 +23,7 @@ import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
 import PorQueNaoDeu from './PorQueNaoDeu.vue';
 import ProntoDoAgger from './ProntoDoAgger.vue';
 import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
+import VoltarAosSeguros from '../VoltarAosSeguros.vue';
 
 // #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
 // corretora no Agger. Se a conta ainda não conectou o Agger, uma janela pede
@@ -44,6 +45,8 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // Escrever o login do Agger é de quem pode mexer na Cotação
 // (`insurance_manage`, como o servidor). Sem essa permissão, a tela não
 // oferece a janela do login: diz para pedir a quem administra a conta.
+//
+// #3057 — no topo, o caminho de volta à aba Seguros (VoltarAosSeguros).
 const props = defineProps({
   fonte: { type: Object, default: () => trazerAggerFonte() },
   // O login do Agger da conta já foi aceito (o resumo da carteira).
@@ -177,6 +180,7 @@ onBeforeUnmount(busca.parar);
     <div
       class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
     >
+      <VoltarAosSeguros />
       <h1
         ref="titulo"
         data-titulo-da-tela

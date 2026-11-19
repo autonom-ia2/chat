@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import VoltarAosSeguros from '../VoltarAosSeguros.vue';
 
 // #2899 (E6.4) — a primeira pergunta de "Trazer" na conta que lê PDF: trazer
 // por planilha (o caminho de sempre) ou por PDFs das apólices. São dois links
@@ -9,6 +10,8 @@ import { useI18n } from 'vue-i18n';
 //
 // #2900 (E7.3) — na conta que pode trazer do Agger, o caminho "Do Agger"
 // (`?como=agger`). A porta passa os caminhos que a conta tem.
+//
+// #3057 — no topo, o caminho de volta à aba Seguros (VoltarAosSeguros).
 const props = defineProps({
   // { planilha, pdfs, agger }: as rotas de cada caminho.
   rotas: { type: Object, required: true },
@@ -47,6 +50,7 @@ const daConta = computed(() =>
     data-carteira="como-trazer"
     class="flex flex-col w-full max-w-3xl gap-6 px-5 pt-8 mx-auto md:px-8 md:pt-10"
   >
+    <VoltarAosSeguros />
     <h1
       data-titulo-da-tela
       tabindex="-1"

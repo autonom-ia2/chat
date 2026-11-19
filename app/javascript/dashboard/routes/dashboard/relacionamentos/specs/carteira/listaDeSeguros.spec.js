@@ -232,11 +232,28 @@ describe('os grupos e a lista', () => {
     const [primeira] = linhas(w);
 
     expect(linhas(w)).toHaveLength(POR_PAGINA);
-    expect(primeira.find(daCarteira('selo')).text()).toBe('Ativo');
+    // #3057 — o ativo que termina em até 30 dias diz "Vence logo".
+    expect(primeira.find(daCarteira('selo')).text()).toBe('Vence logo');
     expect(primeira.text()).toContain('vence em 3 dias');
-    // Nada de caixinha nem de atalho: a linha só abre o seguro.
+    // Nada de caixinha: a linha abre o seguro e tem "Conversar" (o botão no
+    // desktop e o ícone no celular).
     expect(primeira.find('input').exists()).toBe(false);
-    expect(primeira.findAll('button')).toHaveLength(1);
+    expect(primeira.findAll('button')).toHaveLength(3);
+    expect(textoDe(primeira, daCarteira('conversar'))).toBe('Conversar');
+  });
+
+  // #3057 — "Conversar" da linha não abre a gaveta. Na demonstração as
+  // pessoas são inventadas: o clique só avisa.
+  it('"Conversar" da linha avisa na demonstração, sem abrir a gaveta', async () => {
+    const w = await abrir();
+    const [primeira] = linhas(w);
+    const nome = primeira.get('button').text();
+
+    await primeira.get(daCarteira('conversar-icone')).trigger('click');
+    await assentar();
+
+    expect(useAlert).toHaveBeenCalledWith(`Abrindo a conversa com ${nome}`);
+    expect(roteador.push).not.toHaveBeenCalled();
   });
 
   it('"Mostrar mais" traz a página seguinte', async () => {
@@ -560,7 +577,10 @@ describe('fora da demonstração (o servidor)', () => {
     const w = await abrir({ demo: null, query: { apolice: '7' } });
 
     expect(SegurosAPI.seguro).toHaveBeenCalledWith(7);
-    expect(textoDe(w, daCarteira('gaveta-acao'))).toBe('Ver PDF');
+    // #3057 — vence em 17 dias: o azul é conversar (falar não muda o seguro),
+    // e o PDF fica ao lado.
+    expect(textoDe(w, daCarteira('gaveta-acao'))).toBe('Conversar com Ana');
+    expect(textoDe(w, daCarteira('ver-pdf'))).toBe('Ver PDF');
     expect(w.find(daCarteira('corrigir')).exists()).toBe(false);
     expect(w.find(daCarteira('mais-do-seguro')).exists()).toBe(false);
   });

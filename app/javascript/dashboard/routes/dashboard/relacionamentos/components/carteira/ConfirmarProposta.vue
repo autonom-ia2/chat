@@ -1,0 +1,87 @@
+<script setup>
+import { computed, ref, useTemplateRef } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { destinoDoCard } from '../../carteira/cardNoCrm';
+import { caixaEscolhida } from '../../carteira/cotacaoDaRenovacao';
+import { renovacoesFonteReal } from '../../fonte/renovacoesFonteReal';
+import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
+
+// #3057 — a pergunta antes de "Enviar proposta", na gaveta do seguro: para
+// quem vai ("Vai para Ana pelo WhatsApp Vendas"), o link para ver o PDF da
+// proposta e "Enviar agora" ou "Voltar". Nada sai antes do "Enviar agora";
+// quem manda é a gaveta, pelo mesmo pedido de sempre.
+// O WhatsApp é o que a conta escolheu em "Ajustar renovações" (é por ele que a
+// proposta sai): a pergunta lê os ajustes ao abrir. Se não deu para ler (ou na
+// demonstração), a frase diz só "pelo WhatsApp das renovações".
+// O PDF da proposta mora no card da renovação, no CRM (o servidor o guarda lá,
+// numa nota que o cliente não vê): o link abre o card em outra aba, e a
+// pergunta continua aberta aqui.
+const props = defineProps({
+  seguro: { type: Object, default: null },
+  demo: { type: Boolean, default: false },
+  ocupado: { type: Boolean, default: false },
+  // De onde vêm os ajustes das renovações (o WhatsApp escolhido).
+  fonteDasRenovacoes: { type: Object, default: () => renovacoesFonteReal() },
+});
+const emit = defineEmits(['confirmar']);
+
+const { t } = useI18n();
+const tc = (chave, valores) =>
+  t(`RELACIONAMENTOS_CARTEIRA.COTACAO.CONFIRMAR.${chave}`, valores);
+const dialogo = useTemplateRef('dialogo');
+const caixa = ref('');
+
+const nome = computed(() => props.seguro?.pessoa?.name || '');
+const aviso = computed(() =>
+  caixa.value
+    ? tc('PARA', { nome: nome.value, caixa: caixa.value })
+    : tc('PARA_SEM_CAIXA', { nome: nome.value })
+);
+const cardId = computed(() => props.seguro?.renovacao?.cardId ?? null);
+
+const lerCaixa = async () => {
+  if (props.demo) return;
+  try {
+    const { caixas, ajustes } = await props.fonteDasRenovacoes.ajustes();
+    caixa.value = caixaEscolhida(caixas, ajustes?.caixaId)?.nome ?? '';
+  } catch {
+    caixa.value = '';
+  }
+};
+
+defineExpose({
+  abrir: () => {
+    caixa.value = '';
+    dialogo.value?.abrir();
+    lerCaixa();
+  },
+  fechar: () => dialogo.value?.fechar(),
+});
+</script>
+
+<template>
+  <DialogoDeConfirmacao
+    ref="dialogo"
+    marca="confirmar-proposta"
+    tipo="edit"
+    :titulo="tc('TITULO')"
+    :aviso="aviso"
+    :confirmar="tc('ENVIAR')"
+    :voltar="tc('VOLTAR')"
+    :ocupado="ocupado"
+    @confirmar="emit('confirmar')"
+  >
+    <router-link
+      v-if="cardId"
+      :to="destinoDoCard(cardId, demo)"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-carteira="ver-pdf-da-proposta"
+      class="inline-flex items-center self-start gap-1 text-base font-medium rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+    >
+      <span class="size-4 i-lucide-file-text" aria-hidden="true" />
+      {{ tc('VER_PDF') }}
+      <span class="size-4 i-lucide-external-link" aria-hidden="true" />
+    </router-link>
+  </DialogoDeConfirmacao>
+</template>
