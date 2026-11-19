@@ -582,6 +582,7 @@
           "ESCOLHA": "Escolha o WhatsApp"
         },
         "AVISO_DO_AGENTE": "{agente} não está no WhatsApp {caixa}. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
+        "AVISO_DO_AGENTE_SEM_NOME": "{agente} não está nesse WhatsApp. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
         "AVISO_DA_DISTRIBUICAO": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí {agente} não responde. Desligue a entrega automática desse WhatsApp ou escolha 'A equipe'.",
         "CONSUMO": {
           "COTACOES": "Cotações neste mês: {count}",

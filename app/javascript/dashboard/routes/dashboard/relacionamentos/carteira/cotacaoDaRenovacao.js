@@ -64,13 +64,13 @@ export const caixaEscolhida = (caixas = [], caixaId = null) =>
 
 // O nome da caixa para a frase "pelo WhatsApp {caixa}": sem o "WhatsApp" do
 // começo, que a frase já diz ("WhatsApp Renovações" vira "Renovações", e não
-// "pelo WhatsApp WhatsApp Renovações"). Só "WhatsApp" vira '' (a frase sem o
-// nome).
+// "pelo WhatsApp WhatsApp Renovações"). Só a palavra inteira sai
+// ("Whatsappzinho" fica). Só "WhatsApp" vira '' (a frase sem o nome).
 const WHATSAPP = 'whatsapp';
 export const nomeDaCaixaNaFrase = (nome = '') => {
-  const limpo = nome.trim();
-  if (!limpo.toLowerCase().startsWith(WHATSAPP)) return limpo;
-  return limpo.slice(WHATSAPP.length).trim();
+  const [primeira = '', ...resto] = (nome ?? '').trim().split(' ');
+  if (primeira.toLowerCase() !== WHATSAPP) return (nome ?? '').trim();
+  return resto.join(' ').trim();
 };
 
 // O agente vai responder, mas não está ligado no WhatsApp escolhido: a

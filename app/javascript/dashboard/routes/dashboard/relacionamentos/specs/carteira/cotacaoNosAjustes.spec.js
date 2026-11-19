@@ -338,9 +338,7 @@ describe('o aviso do agente fora do WhatsApp', () => {
     await escolher(w, 'escolher-caixa', 6);
 
     const aviso = w.get(daCarteira('aviso-do-agente'));
-    expect(aviso.text()).toContain(
-      'Nina não está no WhatsApp WhatsApp do plantão'
-    );
+    expect(aviso.text()).toContain('Nina não está no WhatsApp do plantão');
     expect(aviso.text()).toContain('Agentes');
     expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
   });

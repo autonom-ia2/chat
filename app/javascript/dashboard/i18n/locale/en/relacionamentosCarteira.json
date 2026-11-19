@@ -582,6 +582,7 @@
           "ESCOLHA": "Choose the WhatsApp"
         },
         "AVISO_DO_AGENTE": "{agente} is not on the WhatsApp {caixa}. Turn {agente} on for that WhatsApp in Agents, or choose another WhatsApp, so no reply from the client is left unanswered.",
+        "AVISO_DO_AGENTE_SEM_NOME": "{agente} is not on that WhatsApp. Turn {agente} on for that WhatsApp in Agents, or choose another WhatsApp, so no reply from the client is left unanswered.",
         "AVISO_DA_DISTRIBUICAO": "This WhatsApp hands every new conversation to someone on the team, and then {agente} does not reply. Turn off automatic assignment for this WhatsApp or choose 'The team'.",
         "CONSUMO": {
           "COTACOES": "Quotes this month: {count}",

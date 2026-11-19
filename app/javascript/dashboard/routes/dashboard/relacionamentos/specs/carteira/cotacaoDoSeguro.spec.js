@@ -404,5 +404,10 @@ describe('o nome da caixa na frase "pelo WhatsApp {caixa}"', () => {
     expect(nomeDaCaixaNaFrase('Renovações')).toBe('Renovações');
     expect(nomeDaCaixaNaFrase('Loja no WhatsApp')).toBe('Loja no WhatsApp');
     expect(nomeDaCaixaNaFrase()).toBe('');
+    expect(nomeDaCaixaNaFrase(null)).toBe('');
+    expect(nomeDaCaixaNaFrase('Whatsappzinho Vendas')).toBe(
+      'Whatsappzinho Vendas'
+    );
+    expect(nomeDaCaixaNaFrase('WhatsApp-Vendas')).toBe('WhatsApp-Vendas');
   });
 });
