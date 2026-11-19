@@ -28,7 +28,8 @@ Links antigos `…/campaigns/management?email_campaign=<id>` abrem o Resultado d
                 "audience": { "id": 3, "name": "…" } },
   "totals": { "audience": 14, "sent": 12, "delivered": 11, "read": 7, "failed": 1, "skipped": 1, "queued": 0, "replied": 3 },
   "filters": ["queued", "sent", "delivered", "read", "failed", "skipped", "replied"],
-  "crm": { "source_id": "campaign:whatsapp:11", "enabled": true } } }
+  "crm": { "source_id": "campaign:whatsapp:11", "enabled": true,
+           "deals": { "cards": 3, "won": 1, "won_value": [{ "currency": "BRL", "cents": 180000 }] } } } }
 ```
 
 E-mail: `totals = { eligible, delivered, bounced, not_sent, replied }` (`CampaignJourney::EmailResultTotals`
@@ -55,7 +56,7 @@ topo. Taxas em %, `null` sem envio. `period` fora da lista → 422 `campaign_jou
 canal que não é e-mail → 404. A avaliação de 7 dias da conta (todas as campanhas) fica em "Ver detalhes".
 
 `GET …/campaign_journey/overview?days=7|30|90&channel=&page=` →
-`{ period, channel, totals: { campaigns, reached, replied, deals: { cards, won } | null,
+`{ period, channel, totals: { campaigns, reached, replied, deals: { cards, won, won_value } | null,
 email_health: { hard_bounce_rate, complaint_rate, sent, bounce_limit, complaint_limit } | null },
 campaigns: [{ channel, id, name, status, sent_at, sent, delivered, engagement: { kind, count, rate } | null,
 replied, reply_rate, email: { click_rate, hard_bounce_rate, unsubscribe_rate } | null }], meta }`.
@@ -87,7 +88,16 @@ pode ver (`Conversations::PermissionFilterService`).
   campanha do Kanban. Conta todos os contatos da conta, mesmo de conversas que o agente não vê.
 - **Viraram negócio no CRM** (Gestão): cards do CRM ligados (conversa principal ou
   `crm_card_conversations`) a uma conversa marcada pelas campanhas do período — os mesmos cards que o
-  Kanban mostra filtrado pela campanha. "ganhos" = parte com `status = won`. `null` com o CRM desligado.
+  Kanban mostra filtrado pela campanha. "ganhos" = parte que fechou venda: ganho (inclusive arquivado depois de
+  ganho) ou, na renovação da carteira, resolvido com a apólice nova já ligada. Resolvido sem apólice nova é
+  fechamento de atendimento, não venda, e fica fora. `null` com o CRM desligado. Também no resultado de cada
+  campanha (`crm.deals`, #3063). Com acesso por funil (#1148), só os funis que a pessoa vê nos relatórios.
+- **Valor ganho** (`won_value`, #3063): R$ dos cards ganhos, por moeda, maior primeiro. No card de renovação cuja
+  apólice nova já chegou (a anterior guarda o card em `crm_card_id`; a nova aponta para ela em `apolice_anterior_id`),
+  vale o **prêmio** da apólice nova (decisão do Rodrigo, 19/11: prêmio, não comissão); apólice nova cancelada ou sem
+  prêmio, e card sem apólice, valem o valor do card. A apólice nova costuma chegar dias depois do ganho, então o número
+  pode subir depois. `null` para quem não vê valor de venda (`Crm::ValorDeVenda`, chave `sales_value_view`): as
+  contagens ficam.
 - **Pessoas alcançadas** (Gestão): soma de Entregues; no WhatsApp API, que não confirma entrega, Enviadas.
 - **Campanha no período** (Gestão): e-mail que saiu do rascunho/agendamento, datado por `sent_at`
   (senão `scheduled_at`, senão `created_at`); WhatsApp Oficial/SMS com envio em andamento ou concluído,

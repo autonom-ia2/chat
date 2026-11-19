@@ -7,6 +7,7 @@ import {
   resultBalance,
   resultRoute,
   statusTabs,
+  wonValueText,
 } from '../resultMetrics';
 
 describe('campaign result helpers (#1007)', () => {
@@ -102,5 +103,23 @@ describe('campaign result helpers (#1007)', () => {
     expect(journeyStatus('email', 'sent')).toBe('completed');
     expect(journeyStatus('whatsapp_api', 'running')).toBe('sending');
     expect(journeyStatus('whatsapp_official', 'processing')).toBe('sending');
+  });
+
+  // #3063: the R$ of the won cards, one amount per currency; R$ 0 when nothing won; null when hidden.
+  it('formats the won value of a campaign', () => {
+    expect(
+      wonValueText(
+        [
+          { currency: 'BRL', cents: 170000 },
+          { currency: 'USD', cents: 5000 },
+        ],
+        'pt-BR'
+      )
+    ).toBe('R$\u00a01.700 + US$\u00a050');
+    expect(wonValueText([], 'pt-BR')).toBe('R$\u00a00');
+    expect(wonValueText(null, 'pt-BR')).toBeNull();
+    expect(wonValueText([{ currency: 'REAIS', cents: 990000 }], 'pt-BR')).toBe(
+      'REAIS 9.900'
+    );
   });
 });
