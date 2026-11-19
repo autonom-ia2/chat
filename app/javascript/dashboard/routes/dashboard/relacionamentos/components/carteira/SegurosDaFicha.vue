@@ -105,7 +105,6 @@ onMounted(async () => {
     :pode-editar="podeEditar"
     :pode-exportar="podeExportar"
     :agora="agora"
-    pode-conversar
     @fechar="fechar"
     @mudou="lista.atualizar"
     @abrir-segurado="emit('abrirSegurado', $event)"

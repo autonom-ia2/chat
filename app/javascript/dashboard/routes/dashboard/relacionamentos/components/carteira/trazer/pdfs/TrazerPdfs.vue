@@ -16,7 +16,9 @@ import {
 } from '../../../../carteira/useLeituraDePdfs';
 import SoltarPdf from '../../SoltarPdf.vue';
 import ProntoDeSeguros from '../ProntoDeSeguros.vue';
-import VoltarAosSeguros from '../VoltarAosSeguros.vue';
+import EtapasDoTrazer from '../EtapasDoTrazer.vue';
+import LinhaDeConfianca from '../LinhaDeConfianca.vue';
+import VoltarDoTrazer from '../VoltarDoTrazer.vue';
 import HistoricoDosPdfs from './HistoricoDosPdfs.vue';
 import ItemDoPdf from './ItemDoPdf.vue';
 
@@ -31,7 +33,9 @@ import ItemDoPdf from './ItemDoPdf.vue';
 // que fazer fica no lugar. Enquanto envia ou lê, a zona de soltar não aceita
 // outro envio. Se o acompanhamento falha ou o lote para de andar, "Tentar de
 // novo" retoma o mesmo lote. A cada etapa nova, o foco vai ao título.
-// #3057 — no topo, o caminho de volta à aba Seguros (VoltarAosSeguros).
+// #3057 — no topo, a volta a "Como trazer" (VoltarDoTrazer) e as etapas da
+// jornada (Enviar → Conferir → Pronto: enviar e ler são "Enviar"; conferir e
+// trazer, "Conferir"). Embaixo do título, a linha de confiança.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerPdfsFonte() },
 });
@@ -52,6 +56,16 @@ const leitura = useLeituraDePdfs(props.fonte, {
 });
 const { etapa, lote, andamento, erro, ocupado, semAcompanhar, parado } =
   leitura;
+
+const ETAPAS_DA_JORNADA = ['ENVIAR', 'CONFERIR', 'PRONTO'];
+const NA_JORNADA = {
+  [ETAPAS_DOS_PDFS.ENVIAR]: 0,
+  [ETAPAS_DOS_PDFS.LENDO]: 0,
+  [ETAPAS_DOS_PDFS.CONFERIR]: 1,
+  [ETAPAS_DOS_PDFS.TRAZENDO]: 1,
+  [ETAPAS_DOS_PDFS.PRONTO]: 2,
+};
+const naJornada = computed(() => NA_JORNADA[etapa.value] ?? 0);
 
 const rotuloDeTrazer = seguros =>
   tp('CONFERIR.TRAZER', { count: seguros }, seguros);
@@ -94,15 +108,19 @@ onBeforeUnmount(leitura.parar);
     <div
       class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
     >
-      <VoltarAosSeguros />
-      <h1
-        ref="titulo"
-        data-titulo-da-tela
-        tabindex="-1"
-        class="m-0 text-2xl font-semibold text-n-slate-12"
-      >
-        {{ tp('TITULO') }}
-      </h1>
+      <VoltarDoTrazer para="como" />
+      <EtapasDoTrazer :etapas="ETAPAS_DA_JORNADA" :atual="naJornada" />
+      <div class="flex flex-col gap-2">
+        <h1
+          ref="titulo"
+          data-titulo-da-tela
+          tabindex="-1"
+          class="m-0 text-3xl font-bold tracking-tight outline-none md:text-4xl text-n-slate-12 text-balance"
+        >
+          {{ tp('TITULO') }}
+        </h1>
+        <LinhaDeConfianca />
+      </div>
       <p v-if="erro" role="alert" class="m-0 text-base text-n-ruby-11">
         {{ t(erro) }}
       </p>

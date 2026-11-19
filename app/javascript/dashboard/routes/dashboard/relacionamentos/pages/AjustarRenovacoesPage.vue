@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, useId, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import {
@@ -15,7 +15,10 @@ import {
 import { chaveDaRecusa } from '../carteira/recusas';
 import { useAjustesDaRenovacao } from '../carteira/useAjustesDaRenovacao';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
-import { useCriarFunilDeRenovacoes } from '../carteira/useCriarFunilDeRenovacoes';
+import {
+  FUNIL_INCOMPLETO,
+  useCriarFunilDeRenovacoes,
+} from '../carteira/useCriarFunilDeRenovacoes';
 import { usePodeAjustarRenovacoes } from '../carteira/usePodeAjustarRenovacoes';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../ficha/useEstadoDaFicha';
 import { ABA_SEGUROS } from '../fonte/gruposDeSeguros';
@@ -31,6 +34,7 @@ import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CampoDeDias from '../components/carteira/renovacao/CampoDeDias.vue';
 import CartaoDeAjuste from '../components/carteira/renovacao/CartaoDeAjuste.vue';
 import CotacaoDaRenovacao from '../components/carteira/renovacao/CotacaoDaRenovacao.vue';
+import DialogoDeConfirmacao from '../components/carteira/DialogoDeConfirmacao.vue';
 import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsRenovacoes.vue';
 
 // #2898 — "Ajustar renovações": em que funil a renovação de cada seguro
@@ -58,6 +62,13 @@ import OndeFicamAsRenovacoes from '../components/carteira/renovacao/OndeFicamAsR
 // recado no cartão pede só o Salvar. A tela não salva sozinha: a regra dela é
 // uma ação só, Salvar, e a pessoa ainda vê os dias e as mensagens antes de
 // guardar. Na demonstração a conta sempre tem funis, e o botão não existe.
+// Se o funil nasceu mas uma etapa falhou (carteira/useCriarFunilDeRenovacoes.js,
+// FUNIL_INCOMPLETO), "tente de novo" criaria outro funil: o recado manda
+// conferir o funil no CRM, e o que nasceu fica escolhido. "Tente de novo" é só
+// para a falha antes de o funil existir.
+// Sair da tela com algo não salvo pergunta antes ("Sair sem salvar?"), com
+// "Salvar ajustes" e "Sair sem salvar". A tela nunca salva sozinha: salvar,
+// aqui, é o toque da pessoa. Esc só fecha a pergunta.
 const { t } = useI18n();
 const ta = (chave, valores, plural) =>
   t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.${chave}`, valores, plural);
@@ -81,6 +92,10 @@ const recado = ref({ tipo: '', texto: '' });
 const falta = ref('');
 // O que o "Criar o funil" tem a dizer, no cartão do funil.
 const recadoDoFunil = ref({ tipo: '', texto: '' });
+const dialogoDeSair = useTemplateRef('dialogoDeSair');
+// Para onde a pessoa ia quando a tela perguntou "Sair sem salvar?".
+const saidaPendente = ref(null);
+let saiSemSalvar = false;
 
 const pronto = computed(() => tela.estado.value === ESTADOS.PRONTO);
 // Na demonstração tudo aparece, como na lista e na ficha.
@@ -172,34 +187,37 @@ const CONTA_MUDOU = [
 
 // Um pedido por vez: o segundo clique, com o primeiro ainda a caminho, não
 // manda outro pedido nem troca o "Ajustes salvos." por um alerta.
+// Devolve se guardou.
 const salvar = async () => {
-  if (tela.salvando.value) return;
+  if (tela.salvando.value) return false;
   falta.value = faltaNosAjustes(rascunho.value, conta.value.funis);
   if (falta.value) {
     alertar(ta(`FALTA.${falta.value}`));
     focarOQueFalta();
-    return;
+    return false;
   }
   if (!tela.mudou.value) {
     alertar(ta('NADA_MUDOU'));
-    return;
+    return false;
   }
   if (await tela.salvar()) {
     recadoDoFunil.value = SEM_RECADO;
     recado.value = { tipo: 'feito', texto: ta('SALVO') };
-    return;
+    return true;
   }
   const codigo = tela.recusa.value;
   alertar(
     t(chaveDaRecusa(codigo, 'RELACIONAMENTOS_CARTEIRA.AJUSTES.ERRO_SALVAR'))
   );
   if (CONTA_MUDOU.includes(codigo)) tela.carregar();
+  return false;
 };
 
 // Criou: o funil e a primeira etapa ficam escolhidos, e o foco vai ao funil
 // (o leitor de tela ouve qual é). Se a releitura dos funis falha depois de
 // criar, a tela recarrega e o funil novo aparece na lista para escolher.
-const escolherOFunilCriado = async funil => {
+// O recado diz se ficou faltando alguma etapa (`incompleto`).
+const escolherOFunilCriado = async (funil, incompleto = false) => {
   try {
     await tela.escolherFunilNovo(funil.id);
   } catch {
@@ -207,10 +225,15 @@ const escolherOFunilCriado = async funil => {
     return;
   }
   semRecado();
-  recadoDoFunil.value = {
-    tipo: 'feito',
-    texto: ta('ONDE.FUNIL_CRIADO', { funil: funil.name }),
-  };
+  recadoDoFunil.value = incompleto
+    ? {
+        tipo: 'alerta',
+        texto: ta('ONDE.FUNIL_INCOMPLETO', { funil: funil.name }),
+      }
+    : {
+        tipo: 'feito',
+        texto: ta('ONDE.FUNIL_CRIADO', { funil: funil.name }),
+      };
   await nextTick();
   onde.value?.focar(FALTAS.FUNIL);
 };
@@ -222,7 +245,11 @@ const criarFunil = async () => {
   let funil;
   try {
     funil = await funilNovo.criar();
-  } catch {
+  } catch (falha) {
+    if (falha?.name === FUNIL_INCOMPLETO) {
+      await escolherOFunilCriado(falha.funil, true);
+      return;
+    }
     recadoDoFunil.value = {
       tipo: 'alerta',
       texto: ta('ONDE.ERRO_CRIAR_FUNIL'),
@@ -236,6 +263,35 @@ const criarFunil = async () => {
 const voltar = () =>
   router.push({ name: 'relationships_home', query: { aba: ABA_SEGUROS } });
 const abrirCrm = () => router.push({ name: 'crm_kanban_index' });
+
+const temAlgoSemSalvar = () =>
+  pronto.value && podeMudar.value && tela.mudou.value;
+onBeforeRouteLeave(destino => {
+  if (saiSemSalvar || !temAlgoSemSalvar()) return true;
+  saidaPendente.value = destino;
+  dialogoDeSair.value?.abrir();
+  return false;
+});
+const seguirSaida = () => {
+  const destino = saidaPendente.value;
+  saidaPendente.value = null;
+  dialogoDeSair.value?.fechar();
+  if (destino) router.push(destino);
+};
+const sairSemSalvar = () => {
+  saiSemSalvar = true;
+  seguirSaida();
+};
+// Salvou: segue para onde ia. Não salvou: a pergunta fecha e o rodapé diz o
+// que falta ou o que houve, como no Salvar de sempre.
+const salvarESair = async () => {
+  if (await salvar()) {
+    seguirSaida();
+    return;
+  }
+  saidaPendente.value = null;
+  dialogoDeSair.value?.fechar();
+};
 
 onMounted(async () => {
   if (!temCarteira.value) {
@@ -458,5 +514,39 @@ onMounted(async () => {
         </div>
       </footer>
     </main>
+    <DialogoDeConfirmacao
+      ref="dialogoDeSair"
+      marca="sair-dos-ajustes"
+      tipo="edit"
+      :titulo="ta('SAIR.TITULO')"
+      :aviso="ta('SAIR.AVISO')"
+      :confirmar="ta('SAIR.SALVAR')"
+      :voltar="ta('SAIR.SAIR')"
+      :ocupado="tela.salvando.value"
+      @confirmar="salvarESair"
+      @fechou="saidaPendente = null"
+    >
+      <template #rodape>
+        <div class="flex flex-col-reverse w-full gap-3 sm:flex-row">
+          <Button
+            slate
+            faded
+            type="button"
+            class="w-full"
+            data-carteira="sair-sem-salvar"
+            :label="ta('SAIR.SAIR')"
+            @click="sairSemSalvar"
+          />
+          <Button
+            type="button"
+            class="w-full"
+            data-carteira="salvar-e-sair"
+            :is-loading="tela.salvando.value"
+            :label="ta('SAIR.SALVAR')"
+            @click="salvarESair"
+          />
+        </div>
+      </template>
+    </DialogoDeConfirmacao>
   </section>
 </template>

@@ -10,9 +10,11 @@ import { ORDENS_DE_SEGUROS } from '../../fonte/carteiraFonte';
 // #2897 — a faixa de controles da aba Seguros: busca, ordem e "Mais filtros".
 // No celular a busca ocupa a linha inteira e a ordem e os filtros descem. Os
 // dois têm 44 px de alvo de toque: a escolha da ordem já traz a área dela
-// (ChoiceSelect) e o botão sobe dos 40 px da casa para 44.
+// (ChoiceSelect) e o botão também.
 // #2898 — os dois atalhos discretos da renovação: "Resultados" e, para quem
 // pode alterar, "Ajustar renovações". Em 390 px eles moram no menu "⋯".
+// #3057 — os controles têm a altura dos campos do design system (h-10), todos
+// iguais; a área de toque dos botões continua com 44 px (o ::before).
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -93,7 +95,7 @@ const rotuloDosFiltros = computed(() =>
       <Button
         slate
         faded
-        class="shrink-0 whitespace-nowrap !h-11"
+        class="relative shrink-0 whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-0.5"
         icon="i-lucide-sliders-horizontal"
         data-carteira="mais-filtros"
         aria-haspopup="dialog"
@@ -115,7 +117,7 @@ const rotuloDosFiltros = computed(() =>
         :key="atalho.id"
         slate
         faded
-        class="shrink-0 whitespace-nowrap !h-11"
+        class="relative shrink-0 whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-0.5"
         :icon="atalho.icone"
         :data-carteira="atalho.id"
         :label="atalho.rotulo"

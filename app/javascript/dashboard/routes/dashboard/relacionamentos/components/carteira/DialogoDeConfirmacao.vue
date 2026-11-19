@@ -12,6 +12,9 @@ import TituloDoDialogo from '../comum/TituloDoDialogo.vue';
 // #3057 — `tipo` "edit" deixa o botão de confirmar azul (o passo não destrói
 // nada, como enviar a proposta); sem ele, vermelho. O que mais a pergunta
 // precisa mostrar (um link, por exemplo) vai no slot, abaixo do aviso.
+// #3057 — quando as duas saídas são ações (como "Salvar ajustes" e "Sair sem
+// salvar"), quem usa põe os botões no slot `rodape`: aí Esc e o fechar só
+// fecham a pergunta, sem fazer nenhuma das duas.
 defineProps({
   // O `data-carteira` do diálogo.
   marca: { type: String, required: true },
@@ -57,5 +60,8 @@ defineExpose({
         {{ alerta }}
       </p>
     </div>
+    <template v-if="$slots.rodape" #footer>
+      <slot name="rodape" />
+    </template>
   </Dialog>
 </template>

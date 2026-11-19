@@ -63,7 +63,8 @@
         "PESSOAS_DA_EMPRESA": "Ninguém ainda | {count} pessoa | {count} pessoas",
         "MARCAR": "Marcar {nome}",
         "CONVERSAR_COM": "Conversar com {nome}",
-        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}"
+        "ABRINDO_CONVERSA": "Abrindo a conversa com {nome}",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Mostrar mais",

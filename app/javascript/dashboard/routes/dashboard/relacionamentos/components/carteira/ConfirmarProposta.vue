@@ -2,7 +2,8 @@
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { destinoDoCard } from '../../carteira/cardNoCrm';
-import { caixaEscolhida } from '../../carteira/cotacaoDaRenovacao';
+import { caixaEscolhida, emReais } from '../../carteira/cotacaoDaRenovacao';
+import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { renovacoesFonteReal } from '../../fonte/renovacoesFonteReal';
 import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
 
@@ -16,6 +17,12 @@ import DialogoDeConfirmacao from './DialogoDeConfirmacao.vue';
 // O PDF da proposta mora no card da renovação, no CRM (o servidor o guarda lá,
 // numa nota que o cliente não vê): o link abre o card em outra aba, e a
 // pergunta continua aberta aqui.
+// #3057 (2ª rodada) — a frase diz tudo o que vai: "Vai para Ana pelo WhatsApp
+// Vendas: a proposta de R$ 1.234,00, da Porto, com o PDF." (valor e
+// seguradora são os da cotação que a gaveta já tem). O nome do WhatsApp é lido
+// ANTES de abrir a pergunta (`abrir` espera a leitura), para a frase não pular
+// de "das renovações" para o nome com ela aberta. O link diz para onde leva: a
+// proposta no CRM, em outra aba.
 const props = defineProps({
   seguro: { type: Object, default: null },
   demo: { type: Boolean, default: false },
@@ -31,12 +38,26 @@ const tc = (chave, valores) =>
 const dialogo = useTemplateRef('dialogo');
 const caixa = ref('');
 
+const textos = useTextosDoSeguro();
+
 const nome = computed(() => props.seguro?.pessoa?.name || '');
-const aviso = computed(() =>
-  caixa.value
-    ? tc('PARA', { nome: nome.value, caixa: caixa.value })
-    : tc('PARA_SEM_CAIXA', { nome: nome.value })
-);
+const cotacao = computed(() => props.seguro?.cotacao ?? {});
+const aviso = computed(() => {
+  const { premioCentavos, seguradora } = cotacao.value;
+  const chave = [
+    'PARA',
+    caixa.value ? '' : 'SEM_CAIXA',
+    seguradora ? '' : 'SEM_SEGURADORA',
+  ]
+    .filter(Boolean)
+    .join('_');
+  return tc(chave, {
+    nome: nome.value,
+    caixa: caixa.value,
+    seguradora,
+    valor: textos.valor(emReais(premioCentavos ?? 0)),
+  });
+});
 const cardId = computed(() => props.seguro?.renovacao?.cardId ?? null);
 
 const lerCaixa = async () => {
@@ -50,10 +71,11 @@ const lerCaixa = async () => {
 };
 
 defineExpose({
-  abrir: () => {
+  // Espera o nome do WhatsApp e só então abre.
+  abrir: async () => {
     caixa.value = '';
+    await lerCaixa();
     dialogo.value?.abrir();
-    lerCaixa();
   },
   fechar: () => dialogo.value?.fechar(),
 });

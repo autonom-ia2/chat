@@ -7,7 +7,13 @@ import AjustarRenovacoesPage from '../../pages/AjustarRenovacoesPage.vue';
 import { FUNIL_PAROU, funilParou } from '../../carteira/funilDasRenovacoes';
 import { esquecerAjustesDaDemo } from '../../demo/carteiraAjustes';
 import { usarDemo } from '../../fonte/modoDemo';
-import { assentar, carregarDemonstracao, daCarteira, erroHttp } from './apoio';
+import {
+  DialogoFalso,
+  assentar,
+  carregarDemonstracao,
+  daCarteira,
+  erroHttp,
+} from './apoio';
 
 // "Ajustar renovações" (#2898) com o texto de verdade em pt_BR: em que funil e
 // etapa a renovação aparece, quantos dias antes do fim e se as mensagens saem.
@@ -40,6 +46,7 @@ const criacao = vi.hoisted(() => ({ podeCriar: false, criar: null }));
 vi.mock('../../carteira/useCriarFunilDeRenovacoes', async () => {
   const { computed, ref } = await import('vue');
   return {
+    FUNIL_INCOMPLETO: 'FunilIncompleto',
     useCriarFunilDeRenovacoes: () => {
       const criando = ref(false);
       return {
@@ -63,11 +70,20 @@ vi.mock('../../carteira/funilDasRenovacoes', async importOriginal => ({
   ...(await importOriginal()),
   funilParou: vi.fn(() => ''),
 }));
+// A guarda de saída da tela (onBeforeRouteLeave) fica guardada para o teste
+// chamar como o roteador chamaria.
+const saida = vi.hoisted(() => ({ guarda: null }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, params: {} });
   const roteador = { push: vi.fn(), replace: vi.fn() };
-  return { useRoute: () => rota, useRouter: () => roteador };
+  return {
+    useRoute: () => rota,
+    useRouter: () => roteador,
+    onBeforeRouteLeave: guarda => {
+      saida.guarda = guarda;
+    },
+  };
 });
 
 withFullI18n('pt_BR');
@@ -108,12 +124,24 @@ const servidorGuarda = () =>
     data: ajustes,
   }));
 
+// A largura da tela, para o que muda no celular (useMediaQuery).
+const larguraDaTela = larga => {
+  window.matchMedia = vi.fn().mockImplementation(consulta => ({
+    matches: larga,
+    media: consulta,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  }));
+};
+
 let aberta;
 const abrir = async ({ demo = null } = {}) => {
   usarDemo.mockReturnValue(demo);
   aberta = mount(AjustarRenovacoesPage, {
     attachTo: document.body,
-    global: { stubs: { transition: true } },
+    global: { stubs: { transition: true, Dialog: DialogoFalso } },
   });
   await assentar();
   return aberta;
@@ -157,6 +185,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  delete window.matchMedia;
+  saida.guarda = null;
   aberta?.unmount();
   aberta = null;
   esquecerAjustesDaDemo();
@@ -419,6 +449,7 @@ describe('conta sem funil, para quem pode criar funil', () => {
   });
 
   it('oferece criar o funil em azul, e "Abrir o CRM" vira um link ao lado', async () => {
+    larguraDaTela(true);
     servidorResponde({ ajustes: SEM_ESCOLHA, funis: [] });
     const w = await abrir();
 
@@ -447,7 +478,7 @@ describe('conta sem funil, para quem pode criar funil', () => {
 
     expect(criacao.criar).toHaveBeenCalledTimes(1);
     expect(w.get(daCarteira('funil-criado')).text()).toBe(
-      'Criei o funil Renovação. Ele já está escolhido: é só salvar.'
+      'Criei o funil Renovação e já deixei escolhido. Falta tocar em Salvar ajustes, lá embaixo.'
     );
     expect(escolhas(w)[0].props('modelValue')).toBe(9);
     expect(escolhas(w)[1].props('modelValue')).toBe(91);
@@ -493,6 +524,119 @@ describe('conta sem funil, para quem pode criar funil', () => {
     );
     expect(SegurosAPI.renovacoes).toHaveBeenCalledTimes(2);
     expect(w.find(daCarteira('criar-funil')).exists()).toBe(true);
+  });
+  it('no celular o botão tem o texto curto, que cabe inteiro', async () => {
+    larguraDaTela(false);
+    servidorResponde({ ajustes: SEM_ESCOLHA, funis: [] });
+    const w = await abrir();
+
+    expect(w.get(daCarteira('criar-funil')).text()).toBe(
+      'Criar o funil para mim'
+    );
+  });
+
+  it('o funil nasceu mas faltou etapa: manda conferir no CRM, sem "tente de novo", e deixa o funil escolhido', async () => {
+    semFunilEDepoisONovo();
+    criacao.criar.mockRejectedValue(
+      Object.assign(new Error('FunilIncompleto'), {
+        name: 'FunilIncompleto',
+        funil: { id: 9, name: 'Renovação' },
+      })
+    );
+    const w = await abrir();
+
+    await clicar(w, daCarteira('criar-funil'));
+
+    const recado = w.get(daCarteira('funil-nao-criado'));
+    expect(recado.text()).toBe(
+      'Criei o funil, mas faltou alguma etapa. Confira o funil Renovação no CRM.'
+    );
+    expect(recado.text()).not.toContain('Tente de novo');
+    expect(recado.attributes('role')).toBe('alert');
+    expect(SegurosAPI.renovacoes).toHaveBeenCalledTimes(2);
+    expect(escolhas(w)[0].props('modelValue')).toBe(9);
+    expect(escolhas(w)[1].props('modelValue')).toBe(91);
+    expect(w.find(daCarteira('funil-criado')).exists()).toBe(false);
+  });
+});
+
+// #3057 — sair da tela com algo não salvo pergunta antes. A tela não salva
+// sozinha: "Salvar ajustes" é um toque da pessoa.
+describe('sair sem salvar', () => {
+  const DESTINO = { name: 'relationships_home', query: { aba: 'seguros' } };
+  const mudarOsDias = async w => {
+    await escreverDias(w, '45');
+  };
+
+  it('sem nada mudado, sai direto', async () => {
+    servidorResponde();
+    await abrir();
+
+    expect(saida.guarda(DESTINO)).toBe(true);
+  });
+
+  it('com algo mudado, não sai e pergunta, com as duas saídas', async () => {
+    servidorResponde();
+    const w = await abrir();
+    await mudarOsDias(w);
+
+    expect(saida.guarda(DESTINO)).toBe(false);
+    await assentar();
+
+    const pergunta = w.get(daCarteira('sair-dos-ajustes'));
+    expect(pergunta.text()).toContain('Sair sem salvar?');
+    expect(pergunta.text()).toContain(
+      'As renovações só começam a aparecer depois de salvar.'
+    );
+    expect(w.get(daCarteira('salvar-e-sair')).text()).toBe('Salvar ajustes');
+    expect(w.get(daCarteira('sair-sem-salvar')).text()).toBe('Sair sem salvar');
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+  });
+
+  it('"Sair sem salvar" segue para onde ia, sem guardar nada', async () => {
+    servidorResponde();
+    const w = await abrir();
+    await mudarOsDias(w);
+    saida.guarda(DESTINO);
+    await assentar();
+
+    await clicar(w, daCarteira('sair-sem-salvar'));
+
+    expect(roteador.push).toHaveBeenCalledWith(DESTINO);
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+    expect(saida.guarda(DESTINO)).toBe(true);
+  });
+
+  it('"Salvar ajustes" guarda e segue para onde ia', async () => {
+    servidorResponde();
+    servidorGuarda();
+    const w = await abrir();
+    await mudarOsDias(w);
+    saida.guarda(DESTINO);
+    await assentar();
+
+    await clicar(w, daCarteira('salvar-e-sair'));
+
+    expect(SegurosAPI.salvarRenovacoes).toHaveBeenCalledWith({
+      ...ESCOLHAS,
+      dias: 45,
+    });
+    expect(roteador.push).toHaveBeenCalledWith(DESTINO);
+  });
+
+  it('"Salvar ajustes" com algo faltando fica na tela e diz o que falta', async () => {
+    servidorResponde();
+    const w = await abrir();
+    await escreverDias(w, '0');
+    saida.guarda(DESTINO);
+    await assentar();
+
+    await clicar(w, daCarteira('salvar-e-sair'));
+
+    expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
+    expect(roteador.push).not.toHaveBeenCalled();
+    expect(w.find(daCarteira('sair-dos-ajustes')).exists()).toBe(false);
+    expect(temAlerta(w)).toBe(true);
   });
 });
 

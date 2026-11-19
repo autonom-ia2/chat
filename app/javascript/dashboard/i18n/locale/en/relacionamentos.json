@@ -63,7 +63,8 @@
         "PESSOAS_DA_EMPRESA": "No one yet | {count} person | {count} people",
         "MARCAR": "Select {nome}",
         "CONVERSAR_COM": "Chat with {nome}",
-        "ABRINDO_CONVERSA": "Opening the chat with {nome}"
+        "ABRINDO_CONVERSA": "Opening the chat with {nome}",
+        "MAIS_SELOS": "+{n}"
       },
       "MOSTRAR_MAIS": {
         "BOTAO": "Show more",

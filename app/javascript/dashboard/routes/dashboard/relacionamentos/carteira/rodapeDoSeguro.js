@@ -25,6 +25,10 @@
 // "Guardar o PDF" quando falta). "Corrigir" desce para o "⋯". Quem só pode ver
 // a pessoa também conversa (falar não muda o seguro), e o PDF fica ao lado
 // quando há. Só onde a gaveta pode conversar (`podeConversar`).
+// #3057 (2ª rodada) — com a renovação aberta e a proposta da cotação pronta
+// para sair (`podeEnviar`, carteira/cotacaoDaRenovacao.js#podeEnviarProposta),
+// o próximo passo é mandá-la: o azul é "Enviar proposta" (que pergunta antes),
+// "Renovou" fica ao lado e "Não renovou" desce para o "⋯".
 import {
   diasParaTerminar,
   estaValendo,
@@ -40,6 +44,7 @@ import { venceLogo } from './tomDoSelo';
 
 export const DO_RODAPE = {
   CONVERSAR: 'CONVERSAR',
+  ENVIAR_PROPOSTA: 'ENVIAR_PROPOSTA',
   VER_PDF: 'VER_PDF',
   GUARDAR_PDF: 'GUARDAR_PDF',
   GUARDAR_OUTRO_PDF: 'GUARDAR_OUTRO_PDF',
@@ -98,7 +103,12 @@ const pedeConversa = (seguro, agora) =>
 
 export const rodapeDoSeguro = (
   seguro,
-  { podeEditar = true, podeConversar = false, agora = Date.now() } = {}
+  {
+    podeEditar = true,
+    podeConversar = false,
+    podeEnviar = false,
+    agora = Date.now(),
+  } = {}
 ) => {
   const conversa = podeConversar && pedeConversa(seguro, agora);
   if (!podeEditar) {
@@ -110,6 +120,13 @@ export const rodapeDoSeguro = (
   const valendo = estaValendo(seguro, agora);
   const fimDoMenu = cancelarOuDesfazer(seguro);
   const mexeNaRenovacao = !seguro.canceladoEm && !renovacaoSoDeLeitura(seguro);
+  if (renovacaoAberta(seguro) && mexeNaRenovacao && podeEnviar) {
+    return {
+      azul: DO_RODAPE.ENVIAR_PROPOSTA,
+      secundario: DO_RODAPE.RENOVOU,
+      menu: [DO_RODAPE.NAO_RENOVOU, ...pdfECorrigirNoMenu(seguro), fimDoMenu],
+    };
+  }
   if (renovacaoAberta(seguro) && mexeNaRenovacao) {
     return {
       azul: DO_RODAPE.RENOVOU,

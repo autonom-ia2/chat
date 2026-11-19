@@ -11,6 +11,12 @@ import { useI18n } from 'vue-i18n';
 //
 // #2899 (E6.4) — com `varios`, aceita vários PDFs de uma vez e entrega
 // `arquivos` (a lista), e o convite fala em PDFs.
+//
+// #3057 — redesenho: ícone forte, o convite de arrastar (no celular, "Toque
+// para escolher"), e o que parece um botão azul "Escolher os PDFs" dentro da
+// área. A área toda continua sendo um botão só (não há botão dentro de botão).
+// No celular o "Escolher os PDFs" sai: o "Toque para escolher os PDFs" já é o
+// convite, e repetir a mesma ação duas vezes só confunde.
 const props = defineProps({
   apoio: { type: String, required: true },
   varios: { type: Boolean, default: false },
@@ -68,13 +74,32 @@ const aoSoltar = evento => {
       @drop.prevent="aoSoltar"
     >
       <span
-        class="flex items-center justify-center rounded-full pointer-events-none size-16 bg-n-blue-3 text-n-blue-11"
+        class="flex items-center justify-center pointer-events-none size-16 rounded-2xl bg-n-blue-9 text-white shadow-md"
         aria-hidden="true"
       >
-        <span class="i-lucide-file-text size-8" />
+        <span class="i-lucide-file-up size-8" />
       </span>
-      <span class="text-xl font-semibold pointer-events-none text-n-slate-12">
-        {{ tp(varios ? 'SOLTAR_VARIOS' : 'SOLTAR') }}
+      <span
+        class="hidden text-xl font-semibold pointer-events-none sm:inline text-n-slate-12"
+      >
+        {{ tp(varios ? 'ARRASTE_VARIOS' : 'ARRASTE') }}
+      </span>
+      <span
+        class="text-xl font-semibold pointer-events-none sm:hidden text-n-slate-12"
+      >
+        {{ tp(varios ? 'TOQUE_VARIOS' : 'TOQUE') }}
+      </span>
+      <span
+        class="hidden text-sm pointer-events-none sm:inline text-n-slate-10"
+      >
+        {{ tp('OU') }}
+      </span>
+      <span
+        data-carteira="escolher-pdfs"
+        class="items-center hidden gap-2 px-6 text-base font-medium text-white sm:inline-flex rounded-xl pointer-events-none h-11 bg-n-brand"
+      >
+        <span class="i-lucide-folder-open size-5" aria-hidden="true" />
+        {{ tp(varios ? 'ESCOLHER_VARIOS' : 'ESCOLHER') }}
       </span>
       <span
         :id="`${id}-apoio`"

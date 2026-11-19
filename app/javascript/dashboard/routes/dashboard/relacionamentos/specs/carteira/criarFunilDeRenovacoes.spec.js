@@ -2,6 +2,7 @@ import { defineComponent } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import {
+  FUNIL_INCOMPLETO,
   MODELO_DAS_RENOVACOES,
   useCriarFunilDeRenovacoes,
 } from '../../carteira/useCriarFunilDeRenovacoes';
@@ -10,7 +11,7 @@ import {
 // modelo Renovação: o mesmo pedido que a gaveta de funil monta
 // (useFunilModelo + payloadDoFunil) e a mesma ação do CRM que grava. A loja e a
 // permissão do CRM são de mentira; os textos são os de verdade em pt_BR.
-const loja = vi.hoisted(() => ({ dispatch: null, pacote: null }));
+const loja = vi.hoisted(() => ({ dispatch: null, pacote: null, funis: [] }));
 vi.mock('vuex', async importOriginal => ({
   ...(await importOriginal()),
   useStore: () => ({
@@ -18,6 +19,9 @@ vi.mock('vuex', async importOriginal => ({
     getters: {
       getCurrentAccountId: 1,
       'accounts/getAccount': () => ({ id: 1, autonomia_pacote: loja.pacote }),
+      get 'crmKanban/getPipelines'() {
+        return loja.funis;
+      },
     },
   }),
 }));
@@ -52,7 +56,33 @@ const usar = () => {
 beforeEach(() => {
   loja.dispatch = vi.fn(async () => ({ id: 9, name: 'Renovação' }));
   loja.pacote = null;
+  loja.funis = [{ id: 1, name: 'Vendas' }];
   crm.gerenciaFunis = true;
+});
+
+// A ação do CRM grava o funil, põe na lista do CRM e só depois grava as
+// etapas: se uma etapa falha, o funil já existe.
+describe('quando o pedido falha', () => {
+  it('antes de o funil nascer, devolve o erro do pedido', async () => {
+    const falha = new Error('Request failed with status code 500');
+    loja.dispatch = vi.fn(async () => {
+      throw falha;
+    });
+
+    await expect(usar().criar()).rejects.toBe(falha);
+  });
+
+  it('com o funil já na lista do CRM, diz que ele nasceu sem todas as etapas', async () => {
+    loja.dispatch = vi.fn(async () => {
+      loja.funis = [{ id: 9, name: 'Renovação' }, ...loja.funis];
+      throw new Error('Request failed with status code 422');
+    });
+
+    await expect(usar().criar()).rejects.toMatchObject({
+      name: FUNIL_INCOMPLETO,
+      funil: { id: 9, name: 'Renovação' },
+    });
+  });
 });
 
 describe('quem pode criar o funil', () => {

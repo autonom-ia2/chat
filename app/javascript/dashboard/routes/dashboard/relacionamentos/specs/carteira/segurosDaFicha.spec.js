@@ -145,6 +145,15 @@ afterEach(() => {
 });
 
 describe('o bloco Seguros da ficha da pessoa', () => {
+  // #3057 — a ficha já tem o "Conversar" dela: a gaveta aberta daqui não
+  // ganha outro.
+  it('a gaveta aberta da ficha não oferece "Conversar"', async () => {
+    const w = await abrir();
+    expect(
+      w.findComponent({ name: 'GavetaDoSeguro' }).props('podeConversar')
+    ).toBe(false);
+  });
+
   it('mostra os seguros dela em ordem de urgência, com a contagem no título', async () => {
     const w = await abrir();
 

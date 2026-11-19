@@ -1,5 +1,6 @@
 <script setup>
 import { computed, useId } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -34,6 +35,12 @@ const emit = defineEmits(['update:modelValue', 'abrirCrm', 'criarFunil']);
 
 const { t } = useI18n();
 const to = chave => t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.ONDE.${chave}`);
+// #3057 — no celular o rótulo inteiro não cabe no botão (o Button corta com
+// "…"): lá ele é "Criar o funil para mim".
+const telaLarga = useMediaQuery('(min-width: 640px)');
+const rotuloDeCriar = computed(() =>
+  to(telaLarga.value ? 'CRIAR_FUNIL' : 'CRIAR_FUNIL_CURTO')
+);
 const id = useId();
 
 const paraEscolher = lista =>
@@ -80,7 +87,7 @@ defineExpose({
         class="w-full sm:w-auto"
         data-carteira="criar-funil"
         :is-loading="criando"
-        :label="to('CRIAR_FUNIL')"
+        :label="rotuloDeCriar"
         @click="emit('criarFunil')"
       />
       <Button

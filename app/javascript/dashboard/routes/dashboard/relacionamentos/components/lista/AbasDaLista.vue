@@ -10,6 +10,10 @@ import { PAINEL_DAS_ABAS, idDaAba } from '../../lista/idsDasAbas';
 // Tab. A escolha mora na URL (quem usa liga o v-model à rota).
 // #2897 — com `comSeguros` (conta que tem a carteira de seguros), mais uma aba:
 // Seguros. Conta sem Empresas (`comEmpresas` falso) fica com Pessoas · Seguros.
+// #3057 — redesenho: abas sublinhadas, como as da lista de conversas
+// (components-next/Conversation/ListaDeConversas/ListaAbas.vue), sobre uma linha
+// fina. A escolhida tem o texto forte e o traço da marca embaixo. Antes era um
+// grupo cinza que, dentro da coluna da página, esticava na largura toda.
 const props = defineProps({
   modelValue: { type: String, required: true },
   comEmpresas: { type: Boolean, default: true },
@@ -58,7 +62,8 @@ const aoTeclar = evento => {
     ref="lista"
     role="tablist"
     :aria-label="t('RELACIONAMENTOS.LISTA.ABAS.ROTULO')"
-    class="inline-flex gap-1 p-1 rounded-xl bg-n-alpha-1"
+    data-relacionamentos="abas"
+    class="flex items-end gap-6 overflow-x-auto border-b border-n-weak"
     @keydown="aoTeclar"
   >
     <button
@@ -71,11 +76,11 @@ const aoTeclar = evento => {
       :aria-selected="modelValue === aba ? 'true' : 'false'"
       :aria-controls="PAINEL_DAS_ABAS"
       :tabindex="modelValue === aba ? 0 : -1"
-      class="px-5 text-sm font-medium transition-colors rounded-lg min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      class="relative px-0.5 text-base bg-transparent border-0 rounded-t-md whitespace-nowrap min-h-12 transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
       :class="
         modelValue === aba
-          ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
-          : 'text-n-slate-11 hover:text-n-slate-12'
+          ? 'font-semibold text-n-slate-12 after:bg-n-brand'
+          : 'font-medium text-n-slate-11 hover:text-n-slate-12 after:bg-transparent hover:after:bg-n-slate-6'
       "
       @click="emit('update:modelValue', aba)"
     >

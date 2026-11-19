@@ -43,6 +43,8 @@ export const DialogoFalso = defineComponent({
               props.title ? h('h3', props.title) : null,
               props.description ? h('p', props.description) : null,
               slots.default?.(),
+              // O rodapé próprio de quem usa (#3057), além dos dois botões.
+              slots.footer?.(),
               props.showCancelButton
                 ? h(
                     'button',

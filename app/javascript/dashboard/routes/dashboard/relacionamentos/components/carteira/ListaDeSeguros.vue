@@ -27,6 +27,7 @@ import { useApoliceNaUrl } from '../../carteira/useApoliceNaUrl';
 import { useConversarComPessoa } from '../../carteira/useConversarComPessoa';
 import { useListaDeSeguros } from '../../carteira/useListaDeSeguros';
 import ControlesDeSeguros from './ControlesDeSeguros.vue';
+import ConversaNova from './ConversaNova.vue';
 import GavetaDeFiltrosDeSeguros from './GavetaDeFiltrosDeSeguros.vue';
 import GavetaDoSeguro from './GavetaDoSeguro.vue';
 import HeroiDeSeguros from './HeroiDeSeguros.vue';
@@ -109,8 +110,14 @@ const verResultados = () => router.push({ name: 'relacionamentos_resultados' });
 const ajustarRenovacoes = () =>
   router.push({ name: 'relacionamentos_renovacoes' });
 const abrirCard = cardId => router.push(destinoDoCard(cardId, fonte.usaDemo));
-// #3057 — "Conversar" da linha: a conversa mais recente da pessoa do seguro.
-const conversar = useConversarComPessoa({ demo: fonte.usaDemo });
+// #3057 — "Conversar" da linha: a conversa mais recente da pessoa do seguro;
+// sem conversa, a "Nova conversa" já com ela (ConversaNova).
+const conversaNova = useTemplateRef('conversaNova');
+const conversar = useConversarComPessoa({
+  demo: fonte.usaDemo,
+  abrirConversaNova: async pessoaId =>
+    Boolean(await conversaNova.value?.abrir(pessoaId)),
+});
 
 const abrirSegurado = ({ tipo, id }) =>
   router.push(
@@ -199,6 +206,7 @@ onMounted(lista.iniciar);
             />
             <div data-carteira="grupos" class="flex flex-col">
               <PilulasDeGrupo
+                sem-vazios
                 :grupos="grupos"
                 :model-value="lista.grupo.value"
                 @update:model-value="lista.escolherGrupo"
@@ -284,5 +292,6 @@ onMounted(lista.iniciar);
       @abrir-segurado="abrirSegurado"
       @abrir-card="abrirCard"
     />
+    <ConversaNova ref="conversaNova" />
   </main>
 </template>

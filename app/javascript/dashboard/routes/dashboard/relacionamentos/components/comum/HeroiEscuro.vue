@@ -3,6 +3,11 @@
 // principal (com uma linha de apoio opcional entre as duas). Ação discreta, se
 // houver, vai no mesmo slot, ao lado da principal. Mesmo desenho do herói de
 // Automações e do Resumo de hoje (token bg-n-heroi).
+// #3057 — com `titulo`, a frase é o título da tela (h1, recebe o foco ao abrir
+// a tela, como os outros `data-titulo-da-tela`).
+defineProps({
+  titulo: { type: Boolean, default: false },
+});
 </script>
 
 <template>
@@ -19,12 +24,15 @@
       class="absolute rounded-full pointer-events-none end-32 -bottom-36 size-56 border-[2rem] border-n-blue-7 opacity-10"
     />
     <div class="relative flex flex-col max-w-4xl gap-6">
-      <p
+      <component
+        :is="titulo ? 'h1' : 'p'"
         data-heroi-frase
-        class="m-0 text-3xl font-bold leading-tight tracking-tight text-white md:text-4xl"
+        :data-titulo-da-tela="titulo ? '' : undefined"
+        :tabindex="titulo ? -1 : undefined"
+        class="m-0 text-3xl font-bold leading-tight tracking-tight text-white outline-none md:text-4xl text-balance"
       >
         <slot name="frase" />
-      </p>
+      </component>
       <p
         v-if="$slots.apoio"
         data-heroi-apoio

@@ -13,6 +13,12 @@
 // no catálogo base do CRM, em todo idioma.
 // `podeCriar` é a regra do botão "Criar funil" do CRM (canManagePipelines).
 // `criar()` devolve o funil criado ({ id, name, … }) ou lança o erro do pedido.
+// A ação do CRM grava o funil e só depois as etapas, uma a uma: se uma etapa
+// falha, o funil já existe (e já está na lista do CRM, que a ação atualiza
+// assim que ele nasce). Sem mexer na ação, a diferença aparece na lista: um
+// funil que não estava lá antes do pedido nasceu. Nesse caso `criar()` lança
+// `{ name: FUNIL_INCOMPLETO, funil }`, para a tela não mandar "tentar de novo"
+// (criaria outro funil) e deixar o que nasceu escolhido.
 import { computed, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
@@ -26,6 +32,7 @@ import {
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 
 export const MODELO_DAS_RENOVACOES = 'RENOVACAO';
+export const FUNIL_INCOMPLETO = 'FunilIncompleto';
 // A IA da etapa fica com o padrão do servidor: nada de frase pedida daqui.
 const SEM_IA = computed(() => false);
 
@@ -59,9 +66,11 @@ export const useCriarFunilDeRenovacoes = () => {
     pacote,
   });
   const criando = ref(false);
+  const funisDaConta = () => store.getters['crmKanban/getPipelines'] || [];
 
   const criar = async () => {
     criando.value = true;
+    const antes = new Set(funisDaConta().map(funil => funil.id));
     try {
       escolherModelo(MODELO_DAS_RENOVACOES);
       return await store.dispatch(
@@ -74,6 +83,13 @@ export const useCriarFunilDeRenovacoes = () => {
           modelo: modelo.value,
         })
       );
+    } catch (falha) {
+      const nasceu = funisDaConta().find(funil => !antes.has(funil.id));
+      if (!nasceu) throw falha;
+      throw Object.assign(new Error(FUNIL_INCOMPLETO, { cause: falha }), {
+        name: FUNIL_INCOMPLETO,
+        funil: nasceu,
+      });
     } finally {
       criando.value = false;
     }

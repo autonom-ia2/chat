@@ -4,7 +4,7 @@ import SegurosAPI from 'dashboard/api/relacionamentosSeguros';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import AjustarRenovacoesPage from '../../pages/AjustarRenovacoesPage.vue';
 import { usarDemo } from '../../fonte/modoDemo';
-import { assentar, daCarteira, erroHttp } from './apoio';
+import { DialogoFalso, assentar, daCarteira, erroHttp } from './apoio';
 
 // "Cotação da renovação" em "Ajustar renovações" (#2901, E8), com o texto de
 // verdade em pt_BR: quem faz a cotação, como a proposta sai, quem responde o
@@ -35,6 +35,7 @@ vi.mock('../../carteira/usePodeAjustarRenovacoes', async () => {
 vi.mock('../../carteira/useCriarFunilDeRenovacoes', async () => {
   const { computed, ref } = await import('vue');
   return {
+    FUNIL_INCOMPLETO: 'FunilIncompleto',
     useCriarFunilDeRenovacoes: () => ({
       podeCriar: computed(() => false),
       criando: ref(false),
@@ -46,7 +47,11 @@ vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, params: {} });
   const roteador = { push: vi.fn(), replace: vi.fn() };
-  return { useRoute: () => rota, useRouter: () => roteador };
+  return {
+    useRoute: () => rota,
+    useRouter: () => roteador,
+    onBeforeRouteLeave: () => {},
+  };
 });
 
 withFullI18n('pt_BR');
@@ -95,7 +100,7 @@ const abrir = async () => {
   usarDemo.mockReturnValue(null);
   aberta = mount(AjustarRenovacoesPage, {
     attachTo: document.body,
-    global: { stubs: { transition: true } },
+    global: { stubs: { transition: true, Dialog: DialogoFalso } },
   });
   await assentar();
   return aberta;

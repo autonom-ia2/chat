@@ -2,8 +2,10 @@
   "RELACIONAMENTOS_CARTEIRA": {
     "TITULO": "Seguros",
     "VOLTAR": {
-      "TEXTO": "Seguros",
-      "ROTULO": "Voltar aos seguros"
+      "PESSOAS": "Voltar para Pessoas",
+      "EMPRESAS": "Voltar para Empresas",
+      "SEGUROS": "Voltar para Seguros",
+      "COMO": "Voltar e escolher outro jeito"
     },
     "ABA": "Seguros",
     "NUMERO_DA_APOLICE": "nº {numero}",
@@ -258,8 +260,11 @@
         "GUARDAR_APOLICE_NOVA": "Guardar a apólice nova",
         "DESFAZER_RENOVACAO": "Desfazer o resultado da renovação",
         "MAIS": "Mais opções deste seguro",
-        "APAGAR_DE_FORA": "Apagar este seguro"
-      }
+        "APAGAR_DE_FORA": "Apagar este seguro",
+        "ENVIAR_PROPOSTA": "Enviar proposta",
+        "ENVIAR_DE_NOVO": "Enviar de novo"
+      },
+      "SEM_CONVERSA": "Vocês ainda não conversaram por aqui. O telefone está na ficha."
     },
     "CORRIGIR": {
       "TITULO": "Corrigir o seguro {tipo}",
@@ -481,16 +486,16 @@
         "SEGURADO_NOME": "nome do segurado",
         "SEGURADO_CEP": "CEP"
       },
-      "ENVIAR": "Enviar proposta",
-      "ENVIAR_DE_NOVO": "Enviar de novo",
       "ENVIAR_APOIO": "A proposta só vai ao cliente quando você clicar.",
       "CONFIRMAR": {
         "TITULO": "Enviar a proposta?",
-        "PARA": "Vai para {nome} pelo WhatsApp {caixa}.",
-        "PARA_SEM_CAIXA": "Vai para {nome} pelo WhatsApp das renovações.",
-        "VER_PDF": "Ver o PDF no card da renovação",
+        "PARA": "Vai para {nome} pelo WhatsApp {caixa}: a proposta de {valor}, da {seguradora}, com o PDF.",
+        "PARA_SEM_CAIXA": "Vai para {nome} pelo WhatsApp das renovações: a proposta de {valor}, da {seguradora}, com o PDF.",
+        "VER_PDF": "Ver a proposta no CRM (abre em outra aba)",
         "ENVIAR": "Enviar agora",
-        "VOLTAR": "Voltar"
+        "VOLTAR": "Voltar",
+        "PARA_SEM_SEGURADORA": "Vai para {nome} pelo WhatsApp {caixa}: a proposta de {valor}, com o PDF.",
+        "PARA_SEM_CAIXA_SEM_SEGURADORA": "Vai para {nome} pelo WhatsApp das renovações: a proposta de {valor}, com o PDF."
       }
     },
     "AJUSTES": {
@@ -520,7 +525,7 @@
         "SEM_FUNIL": "Sua conta ainda não tem funil. Crie um funil no CRM e volte aqui para escolher.",
         "SEM_FUNIL_CRIAR": "Sua conta ainda não tem funil. Eu crio o funil de renovações para você, já com as etapas.",
         "CRIAR_FUNIL": "Criar o funil de renovações para mim",
-        "FUNIL_CRIADO": "Criei o funil {funil}. Ele já está escolhido: é só salvar.",
+        "FUNIL_CRIADO": "Criei o funil {funil} e já deixei escolhido. Falta tocar em Salvar ajustes, lá embaixo.",
         "ERRO_CRIAR_FUNIL": "Não consegui criar o funil. Tente de novo.",
         "SEM_ETAPA": "Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.",
         "ABRIR_CRM": "Abrir o CRM",
@@ -528,7 +533,9 @@
         "ESCOLHA_O_FUNIL": "Escolha o funil",
         "ETAPA": "Em qual etapa a renovação entra?",
         "ESCOLHA_A_ETAPA": "Escolha a etapa",
-        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher. Enquanto ninguém escolhe, nenhuma renovação aparece."
+        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher. Enquanto ninguém escolhe, nenhuma renovação aparece.",
+        "FUNIL_INCOMPLETO": "Criei o funil, mas faltou alguma etapa. Confira o funil {funil} no CRM.",
+        "CRIAR_FUNIL_CURTO": "Criar o funil para mim"
       },
       "DIAS": {
         "TITULO": "Quantos dias antes do fim?",
@@ -587,6 +594,12 @@
       "HOJE_PAROU": {
         "ARQUIVADO": "O funil das renovações foi arquivado. Até alguém escolher outro, nenhuma renovação aparece.",
         "APAGADO": "O funil ou a etapa das renovações não existe mais. Até alguém escolher outro funil, nenhuma renovação aparece."
+      },
+      "SAIR": {
+        "TITULO": "Sair sem salvar?",
+        "AVISO": "As renovações só começam a aparecer depois de salvar.",
+        "SALVAR": "Salvar ajustes",
+        "SAIR": "Sair sem salvar"
       }
     },
     "RESULTADOS": {
@@ -625,7 +638,6 @@
     "PDF": {
       "TITULO": "Guardar o PDF do seguro {tipo}",
       "TITULO_OUTRO": "Guardar outro PDF do seguro {tipo}",
-      "SOLTAR": "Arraste o PDF aqui ou clique para escolher",
       "APOIO": "Assim que você escolher, o PDF fica guardado neste seguro.",
       "APOIO_OUTRO": "Depois de escolher, você confirma a troca.",
       "GUARDANDO": "Guardando o PDF…",
@@ -662,7 +674,13 @@
         "GUARDAR": "Guardar",
         "MANTER": "Manter como está"
       },
-      "SOLTAR_VARIOS": "Arraste os PDFs para cá ou clique para escolher"
+      "ARRASTE": "Arraste o PDF para cá",
+      "ARRASTE_VARIOS": "Arraste os PDFs para cá",
+      "TOQUE": "Toque para escolher o PDF",
+      "TOQUE_VARIOS": "Toque para escolher os PDFs",
+      "ESCOLHER": "Escolher o PDF",
+      "ESCOLHER_VARIOS": "Escolher os PDFs",
+      "OU": "ou"
     },
     "RECUSAS": {
       "FALTA_NUMERO": "Falta o número da apólice. Escreva o número e salve de novo.",
@@ -845,19 +863,21 @@
       "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\" para eu continuar de onde parei.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "COMO": {
-        "TITULO": "Como você quer trazer seus clientes?",
+        "TITULO": "Escolha o que você tem em mãos",
         "PLANILHA": {
-          "TITULO": "Por planilha",
-          "APOIO": "Uma lista de clientes e seguros em Excel ou CSV."
+          "TITULO": "Planilha do Excel ou do Google Planilhas",
+          "APOIO": "Uma lista com seus clientes e os seguros de cada um."
         },
         "PDFS": {
-          "TITULO": "Por PDFs das apólices",
-          "APOIO": "Os PDFs das apólices que as seguradoras mandaram. Eu leio cada um para você."
+          "TITULO": "Os PDFs que a seguradora mandou",
+          "APOIO": "Você escolhe os PDFs das apólices e eu leio cada um para você."
         },
         "AGGER": {
-          "TITULO": "Do Agger",
-          "APOIO": "Eu busco seus seguros direto no Agger, com o seu login."
-        }
+          "TITULO": "Meus seguros no Agger",
+          "APOIO": "O Agger é o sistema onde a corretora guarda os seguros. Com o seu login, eu trago tudo de lá."
+        },
+        "APOIO": "Seus clientes e os seguros deles entram na carteira.",
+        "MAIS_FACIL": "O jeito mais fácil"
       },
       "CONFERIR": {
         "ENTRAM": "{seguros} seguros prontos para entrar, de {pessoas} pessoas.",
@@ -999,7 +1019,7 @@
       },
       "LOGIN": {
         "TITULO": "Entrar no Agger",
-        "PARA_QUE": "Use o mesmo login e a mesma senha que você usa no Agger. Eles servem só para eu buscar os seus seguros lá, e a senha fica guardada em segredo.",
+        "PARA_QUE": "Use o mesmo login e a mesma senha que você usa no Agger. Eles servem só para eu buscar os seus seguros lá.",
         "CAMPO_LOGIN": "Login do Agger",
         "CAMPO_SENHA": "Senha do Agger",
         "ENTRAR": "Entrar e buscar",
@@ -1008,7 +1028,11 @@
         "FALTA": "Escreva o login e a senha do Agger.",
         "RECUSADO": "O Agger não aceitou esse login e essa senha. Confira e tente de novo.",
         "FORA_DO_AR": "O Agger está fora do ar agora. Tente de novo mais tarde.",
-        "NAO_DEU": "Não consegui falar com o Agger agora. Tente de novo."
+        "NAO_DEU": "Não consegui falar com o Agger agora. Tente de novo.",
+        "AJUDA_LOGIN": "O mesmo que você digita para entrar no Agger.",
+        "AJUDA_SENHA": "A senha fica guardada em segredo.",
+        "MOSTRAR_SENHA": "Mostrar a senha",
+        "ESCONDER_SENHA": "Esconder a senha"
       },
       "HISTORICO": {
         "TITULO": "Buscas no Agger",
@@ -1039,7 +1063,13 @@
           "VOLTAR": "Voltar"
         },
         "QUANDO": "{quando} · {situacao}"
-      }
+      },
+      "PASSOS": {
+        "UM": "Você entra com o login e a senha do Agger.",
+        "DOIS": "Eu busco no Agger os seguros dos seus clientes.",
+        "TRES": "Você confere tudo antes de qualquer coisa entrar."
+      },
+      "SELO": "Sua senha fica guardada em segredo e serve só para buscar seus seguros."
     },
     "DE_FORA": {
       "ENTRADA": "Guardar seguro de outra corretora",
@@ -1119,6 +1149,14 @@
       "F": "Feminino",
       "M": "Masculino"
     },
-    "CLASSE_DE_BONUS": "Classe {classe}"
+    "CLASSE_DE_BONUS": "Classe {classe}",
+    "ETAPAS": {
+      "ROTULO": "Onde você está",
+      "ENVIAR": "Enviar",
+      "BUSCAR": "Buscar",
+      "CONFERIR": "Conferir",
+      "PRONTO": "Pronto"
+    },
+    "CONFIANCA": "Nada entra antes de você conferir."
   }
 }

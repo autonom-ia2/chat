@@ -37,6 +37,21 @@ vi.mock('dashboard/api/relacionamentosSeguros', () => ({
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: { conversasDaPessoa: vi.fn() },
 }));
+// A "Nova conversa" (components/carteira/ConversaNova.vue, com teste próprio)
+// é de mentira: cada teste diz se ela abriu.
+const conversaNova = vi.hoisted(() => ({ abrir: null }));
+vi.mock('../../components/carteira/ConversaNova.vue', async () => {
+  const { defineComponent } = await import('vue');
+  return {
+    default: defineComponent({
+      name: 'ConversaNova',
+      setup(_, { expose }) {
+        expose({ abrir: (...args) => conversaNova.abrir(...args) });
+        return () => null;
+      },
+    }),
+  };
+});
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');
   const rota = reactive({ query: {}, params: {} });
@@ -142,6 +157,7 @@ beforeEach(() => {
   RelacionamentosAPI.conversasDaPessoa.mockReset();
   SegurosAPI.renovacoes.mockReset();
   useAlert.mockClear();
+  conversaNova.abrir = vi.fn().mockResolvedValue(true);
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -188,30 +204,39 @@ describe('o seguro que vence logo, sem renovação aberta', () => {
     });
   });
 
-  it('quem nunca conversou vai para a ficha da pessoa', async () => {
+  // #3057 (2ª rodada) — a ficha esconde o "Conversar" de quem não tem
+  // conversa: a gaveta abre a "Nova conversa" já com a pessoa.
+  it('quem nunca conversou: abre a "Nova conversa" já com a pessoa', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({ data: [] });
     const w = await abrir(VENCE_LOGO, { podeConversar: true });
 
     await clicar(w, daCarteira('gaveta-acao'));
 
-    expect(roteador.push).toHaveBeenCalledWith({
-      name: 'relacionamentos_pessoa',
-      params: { contactId: 23 },
-      query: undefined,
-    });
+    expect(conversaNova.abrir).toHaveBeenCalledWith(23);
+    expect(roteador.push).not.toHaveBeenCalled();
+    expect(useAlert).not.toHaveBeenCalled();
   });
 
-  it('se as conversas não vêm, também vai para a ficha (que diz o que houve)', async () => {
+  it('se as conversas não vêm, também abre a "Nova conversa"', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(500));
     const w = await abrir(VENCE_LOGO, { podeConversar: true });
 
     await clicar(w, daCarteira('gaveta-acao'));
 
-    expect(roteador.push).toHaveBeenCalledWith({
-      name: 'relacionamentos_pessoa',
-      params: { contactId: 23 },
-      query: undefined,
-    });
+    expect(conversaNova.abrir).toHaveBeenCalledWith(23);
+  });
+
+  it('se a "Nova conversa" não abre, diz que ainda não conversaram e onde está o telefone', async () => {
+    RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({ data: [] });
+    conversaNova.abrir.mockResolvedValue(false);
+    const w = await abrir(VENCE_LOGO, { podeConversar: true });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Vocês ainda não conversaram por aqui. O telefone está na ficha.'
+    );
+    expect(roteador.push).not.toHaveBeenCalled();
   });
 
   it('na demonstração o clique só avisa', async () => {
@@ -263,7 +288,7 @@ describe('o seguro que vence logo, sem renovação aberta', () => {
     expect(azul(w).text()).toBe('Ver PDF');
   });
 
-  it('com a renovação aberta, o azul é "Renovou"', async () => {
+  it('com a renovação aberta e sem proposta para enviar, o azul é "Renovou"', async () => {
     const w = await abrir(
       { ...VENCE_LOGO, selo: 'em_renovacao', renovacao: RENOVACAO },
       { podeConversar: true }
@@ -272,6 +297,12 @@ describe('o seguro que vence logo, sem renovação aberta', () => {
     expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.RENOVOU);
   });
 });
+
+// R$ 2.500,00 do jeito que o painel escreve (com o espaço do Intl).
+const REAIS_2500 = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+}).format(2500);
 
 describe('"Enviar proposta" pergunta antes', () => {
   const comAjustes = caixaId =>
@@ -300,15 +331,15 @@ describe('"Enviar proposta" pergunta antes', () => {
     const fonte = fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() });
     const w = await abrir(COM_PROPOSTA, { fonte });
 
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
     expect(fonte.enviarProposta).not.toHaveBeenCalled();
     expect(pergunta(w).text()).toContain('Enviar a proposta?');
     expect(pergunta(w).text()).toContain(
-      'Vai para Ana Albuquerino pelo WhatsApp Renovações.'
+      `Vai para Ana Albuquerino pelo WhatsApp Renovações: a proposta de ${REAIS_2500}, da Seguradora Atlântica, com o PDF.`
     );
     const pdf = w.getComponent(RouterLinkStub);
-    expect(pdf.text()).toBe('Ver o PDF no card da renovação');
+    expect(pdf.text()).toBe('Ver a proposta no CRM (abre em outra aba)');
     expect(pdf.props('to')).toEqual({
       name: 'crm_kanban_index',
       query: { card_id: '88' },
@@ -326,7 +357,7 @@ describe('"Enviar proposta" pergunta antes', () => {
       enviarProposta: vi.fn().mockResolvedValue(ENVIADA),
     });
     const w = await abrir(COM_PROPOSTA, { fonte });
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
     await clicar(w, '[data-confirmar]');
 
@@ -342,7 +373,7 @@ describe('"Enviar proposta" pergunta antes', () => {
     comAjustes(6);
     const fonte = fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() });
     const w = await abrir(COM_PROPOSTA, { fonte });
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
     await clicar(w, '[data-cancelar]');
 
@@ -356,7 +387,7 @@ describe('"Enviar proposta" pergunta antes', () => {
       enviarProposta: vi.fn().mockRejectedValue(recusa('sem_modelo')),
     });
     const w = await abrir(COM_PROPOSTA, { fonte });
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
     await clicar(w, '[data-confirmar]');
 
@@ -370,10 +401,10 @@ describe('"Enviar proposta" pergunta antes', () => {
       fonte: fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() }),
     });
 
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
     expect(pergunta(w).text()).toContain(
-      'Vai para Ana Albuquerino pelo WhatsApp das renovações.'
+      `Vai para Ana Albuquerino pelo WhatsApp das renovações: a proposta de ${REAIS_2500}, da Seguradora Atlântica, com o PDF.`
     );
   });
 
@@ -383,8 +414,83 @@ describe('"Enviar proposta" pergunta antes', () => {
       fonte: fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() }),
     });
 
-    await clicar(w, daCarteira('enviar-proposta'));
+    await clicar(w, daCarteira('gaveta-acao'));
 
-    expect(pergunta(w).text()).toContain('pelo WhatsApp das renovações.');
+    expect(pergunta(w).text()).toContain('pelo WhatsApp das renovações:');
+  });
+});
+
+// #3057 (2ª rodada) — com a renovação aberta e a proposta pronta, mandar a
+// proposta é o próximo passo: ela é o azul do rodapé, "Renovou" fica ao lado e
+// "Não renovou" desce para o "⋯". O botão claro saiu de dentro da Cotação.
+describe('o rodapé com a proposta pronta', () => {
+  it('o azul é "Enviar proposta", "Renovou" ao lado, "Não renovou" no "⋯"', async () => {
+    const w = await abrir(COM_PROPOSTA);
+
+    expect(azul(w).text()).toBe('Enviar proposta');
+    expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.ENVIAR_PROPOSTA);
+    expect(textoDe(w, daCarteira('renovou'))).toBe('Renovou');
+    expect(
+      w.find(daCarteira('cotacao-do-seguro')).findAll('button')
+    ).toHaveLength(0);
+    await abrirMenu(w);
+    expect(doMenu(w)[0]).toBe(DO_RODAPE.NAO_RENOVOU);
+    expect(doMenu(w)).toContain(DO_RODAPE.CORRIGIR);
+  });
+
+  it('a proposta que talvez não chegou é enviada "de novo"', async () => {
+    const w = await abrir({
+      ...COM_PROPOSTA,
+      cotacao: {
+        ...COM_PROPOSTA.cotacao,
+        etapa: 'proposta_enviada',
+        incerta: true,
+      },
+    });
+
+    expect(azul(w).text()).toBe('Enviar de novo');
+  });
+
+  it('depois de enviada, o azul volta a ser "Renovou"', async () => {
+    const w = await abrir(ENVIADA);
+
+    expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.RENOVOU);
+  });
+
+  it('a pergunta só abre depois de ler o nome do WhatsApp; até lá, o azul gira', async () => {
+    let responder;
+    SegurosAPI.renovacoes.mockReturnValue(
+      new Promise(resolve => {
+        responder = resolve;
+      })
+    );
+    const w = await abrir(COM_PROPOSTA, {
+      fonte: fonteDe(COM_PROPOSTA, { enviarProposta: vi.fn() }),
+    });
+
+    await clicar(w, daCarteira('gaveta-acao'));
+
+    expect(pergunta(w).exists()).toBe(false);
+    expect(azul(w).find('.animate-spin').exists()).toBe(true);
+
+    responder({
+      data: {
+        ajustes: {
+          funilId: 1,
+          etapaId: 11,
+          dias: 60,
+          quemCota: 'robo',
+          quemEnvia: 'pessoa',
+          quemResponde: 'equipe',
+          caixaId: 6,
+        },
+        funis: [],
+        caixas: [{ id: 6, nome: 'Renovações', liaLigada: false }],
+        cotacaoLiberada: true,
+      },
+    });
+    await assentar();
+
+    expect(pergunta(w).text()).toContain('pelo WhatsApp Renovações:');
   });
 });
