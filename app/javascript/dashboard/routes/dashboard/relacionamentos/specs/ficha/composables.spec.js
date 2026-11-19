@@ -220,6 +220,40 @@ describe('useFichaDaPessoa', () => {
     expect(ficha.algumOcupado.value).toBe(false);
   });
 
+  // #3075
+  it('segundo "Salvar" enquanto o primeiro está no ar não manda de novo', async () => {
+    const salvando = adiada();
+    const fonte = fonteDaPessoa({ salvar: vi.fn(() => salvando.promessa) });
+    const ficha = useFichaDaPessoa(fonte, ref(1));
+    await ficha.carregar();
+    const primeiro = ficha.salvar({});
+    expect(await ficha.salvar({})).toBe(false);
+    salvando.resolver(pessoa);
+    expect(await primeiro).toBe(true);
+    expect(fonte.salvar).toHaveBeenCalledTimes(1);
+  });
+
+  it('parou no meio: a ficha mostra a pessoa gravada e a próxima tentativa leva a retomada', async () => {
+    const gravada = { ...pessoa, name: 'Ana Maria' };
+    const feito = { empresa: null, pessoa: { id: 1 }, contato: '{}' };
+    const parou = Object.assign(new Error('500'), {
+      name: 'GravouEmParte',
+      response: { status: 500 },
+      retomada: { ...feito, pessoaNaFicha: gravada },
+    });
+    const fonte = fonteDaPessoa({
+      salvar: vi.fn().mockRejectedValueOnce(parou).mockResolvedValue(gravada),
+    });
+    const ficha = useFichaDaPessoa(fonte, ref(1));
+    await ficha.carregar();
+    expect(await ficha.salvar({ a: 1 })).toBe(false);
+    expect(ficha.pessoa.value).toEqual(gravada);
+    expect(ficha.retomada.value).toEqual(feito);
+    expect(await ficha.salvar({ a: 1 })).toBe(true);
+    expect(fonte.salvar).toHaveBeenLastCalledWith(1, { a: 1 }, feito);
+    expect(ficha.retomada.value).toBeNull();
+  });
+
   it('marcar como cliente troca a pessoa e relê os cards', async () => {
     const fonte = fonteDaPessoa();
     const ficha = useFichaDaPessoa(fonte, ref(1));

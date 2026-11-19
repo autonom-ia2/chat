@@ -22,6 +22,9 @@ import GavetaLateral from './GavetaLateral.vue';
 // cadastrada (`comEmpresas`, com `buscarEmpresas` para a escolha) e os campos
 // personalizados da conta (`definicoes`, com os `escolhidos` do configurador).
 // "Salvar" emite o pedido inteiro (ficha/informacoes.js#pedidoParaSalvar).
+// `empresaCadastrada` ({ id, nome }): a empresa nova que a fonte já cadastrou
+// numa tentativa que parou no meio. A escolha passa a apontar para ela, e o
+// próximo "Salvar" não cadastra outra.
 const props = defineProps({
   aberta: { type: Boolean, default: false },
   pessoa: { type: Object, default: null },
@@ -34,6 +37,7 @@ const props = defineProps({
   buscarEmpresas: { type: Function, default: null },
   definicoes: { type: Array, default: () => [] },
   escolhidos: { type: Array, default: () => [] },
+  empresaCadastrada: { type: Object, default: null },
 });
 const emit = defineEmits(['fechar', 'salvar']);
 
@@ -86,6 +90,12 @@ watch(
   },
   { immediate: true }
 );
+
+watch(toRef(props, 'empresaCadastrada'), cadastrada => {
+  if (cadastrada && formulario.value?.empresaNova) {
+    mudarEmpresa({ ...cadastrada, nova: false });
+  }
+});
 
 // Cada recusa guarda o valor que o campo tinha: o aviso vale só para ele.
 watch(toRef(props, 'errosDoServidor'), novos => {

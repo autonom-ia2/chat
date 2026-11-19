@@ -3,12 +3,15 @@
 // Devolve a chave de tradução do problema (dentro de RELACIONAMENTOS_FICHA.GAVETA.ERRO).
 import { soDigitos } from '../fonte/texto';
 import { cpfValido, emailValido } from './validacao';
-import { linkSeguro, temValor } from './atributos';
+import { linkCompleto, temValor } from './atributos';
 
 const mudou = (inicial, atual, campo) => inicial[campo] !== atual[campo];
 
-// #3075 — o campo personalizado do tipo link só aceita endereço com http ou
-// https (o mesmo que a ficha deixa abrir). O erro fica em `atributo:<chave>`.
+// #3075 — o campo personalizado do tipo link aceita o endereço com ou sem o
+// "https://" (ficha/atributos.js#linkCompleto); o erro, só quando nem assim é
+// um endereço de site. O erro fica em `atributo:<chave>`.
+// A empresa escrita na busca e não escolhida da lista (`empresaPendente`) trava
+// o "Salvar": sem isso, o nome escrito se perderia calado.
 const errosDosLinks = (inicial, atual, tipos) =>
   Object.fromEntries(
     Object.entries(atual.atributos ?? {})
@@ -17,7 +20,7 @@ const errosDosLinks = (inicial, atual, tipos) =>
           tipos[chave] === 'link' &&
           temValor(valor) &&
           valor !== inicial.atributos?.[chave] &&
-          !linkSeguro(valor)
+          !linkCompleto(valor)
       )
       .map(([chave]) => [`atributo:${chave}`, 'LINK'])
   );
@@ -31,6 +34,9 @@ export const errosDoFormulario = (inicial, atual, tipos = {}) => {
   }
   if (atual.cpf && mudou(inicial, atual, 'cpf') && !cpfValido(atual.cpf)) {
     erros.cpf = 'CPF';
+  }
+  if (String(atual.empresaPendente ?? '').trim()) {
+    erros.empresa = 'EMPRESA_SEM_ESCOLHA';
   }
   return { ...erros, ...errosDosLinks(inicial, atual, tipos) };
 };

@@ -27,7 +27,7 @@ import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
-import { alterarPessoa, buscarEmpresas } from './gravarPessoa';
+import { GRAVOU_EM_PARTE, alterarPessoa, buscarEmpresas } from './gravarPessoa';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 
 const CARREGAR_DEMO = import.meta.env.DEV
@@ -183,8 +183,24 @@ const fonteReal = () => ({
     noServidor(() => RelacionamentosAPI.conversasDaEmpresa(id)),
   cardsDaEmpresa: id => noServidor(() => RelacionamentosAPI.cardsDaEmpresa(id)),
   // `pedido` vem da gaveta (ficha/informacoes.js#pedidoParaSalvar).
-  async salvar(id, pedido) {
-    await comNomeNaFalha(() => alterarPessoa(id, pedido));
+  // `retomada`: o que a tentativa anterior já gravou (fonte/gravarPessoa.js).
+  // Se a pessoa ficou gravada e um passo depois falhou (a foto, os campos que
+  // saem), a falha sobe com a pessoa relida em `retomada.pessoaNaFicha`: a
+  // ficha mostra como ela ficou.
+  async salvar(id, pedido, retomada = null) {
+    try {
+      await alterarPessoa(id, pedido, retomada);
+    } catch (falha) {
+      if (falha?.name !== GRAVOU_EM_PARTE) throw comNome(falha);
+      if (!falha.retomada.pessoa) throw falha;
+      // Se nem a releitura vier, a falha sobe do mesmo jeito, sem a pessoa.
+      const pessoaNaFicha = await lerPessoa(id).catch(() => null);
+      throw Object.assign(new Error(falha.message, { cause: falha.cause }), {
+        name: GRAVOU_EM_PARTE,
+        response: falha.response,
+        retomada: { ...falha.retomada, pessoaNaFicha },
+      });
+    }
     return lerPessoa(id);
   },
   buscarEmpresas: termo => comNomeNaFalha(() => buscarEmpresas(termo)),

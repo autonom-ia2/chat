@@ -1,5 +1,13 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, useId } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  toRef,
+  useId,
+  watch,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { normalizado } from '../../fonte/texto';
@@ -14,15 +22,22 @@ import { normalizado } from '../../fonte/texto';
 //    "Salvar" da gaveta (fonte/gravarPessoa.js), e "Cancelar" não deixa
 //    empresa solta para trás.
 // Nada é alterado aqui: cada escolha sobe por `mudar` como { id, nome, nova }.
+// O nome escrito na busca e ainda não escolhido sobe por `pendente` (vazio
+// quando não há): a gaveta não salva com ele pendente e mostra `erro` embaixo
+// da busca, que recebe o foco. Enquanto espera a busca, a lista some, para
+// ninguém tocar em "Cadastrar" com o resultado velho. Depois de "Tirar da
+// empresa", "Manter" devolve a empresa de quando a gaveta abriu.
 const props = defineProps({
   // { id, nome, nova }: a do formulário agora.
   empresa: { type: Object, required: true },
-  // O nome da empresa de quando a gaveta abriu ('' sem empresa).
-  nomeInicial: { type: String, default: '' },
+  // { id, nome } de quando a gaveta abriu (nome '' sem empresa).
+  empresaInicial: { type: Object, default: () => ({ id: null, nome: '' }) },
   // (termo) => Promise<[{ id, nome }]>.
   buscar: { type: Function, required: true },
+  // A frase do erro, já traduzida, ou ''.
+  erro: { type: String, default: '' },
 });
-const emit = defineEmits(['mudar']);
+const emit = defineEmits(['mudar', 'pendente']);
 
 const ESPERA_AO_DIGITAR_MS = 300;
 
@@ -55,8 +70,13 @@ const podeCadastrar = computed(
     )
 );
 const vaiSair = computed(
-  () => !temEmpresa.value && props.nomeInicial !== '' && !trocando.value
+  () => !temEmpresa.value && props.empresaInicial.nome !== '' && !trocando.value
 );
+const nomeParaManter = computed(() =>
+  trocando.value ? props.empresa.nome : props.empresaInicial.nome
+);
+
+const avisarPendente = () => emit('pendente', nomeDigitado.value);
 
 const procurar = async () => {
   pedido += 1;
@@ -83,7 +103,11 @@ const procurar = async () => {
 
 const aoDigitar = evento => {
   termo.value = evento.target.value;
+  avisarPendente();
   clearTimeout(relogio);
+  // A busca que estava no ar já não vale: o nome mudou.
+  pedido += 1;
+  procurando.value = nomeDigitado.value !== '';
   relogio = setTimeout(procurar, ESPERA_AO_DIGITAR_MS);
 };
 onBeforeUnmount(() => clearTimeout(relogio));
@@ -104,6 +128,7 @@ const trocar = () => {
   trocando.value = true;
   // Na ficha que só tem o nome, a busca já começa por ele.
   termo.value = soNome.value ? props.empresa.nome : '';
+  avisarPendente();
   achadas.value = [];
   procurar();
   focarBusca();
@@ -112,16 +137,25 @@ const trocar = () => {
 const escolher = escolhida => {
   trocando.value = false;
   termo.value = '';
+  avisarPendente();
   achadas.value = [];
   emit('mudar', escolhida);
   focarTrocar();
 };
 
-const cancelar = () => {
+const manter = () => {
+  if (!trocando.value) {
+    emit('mudar', { ...props.empresaInicial, nova: false });
+  }
   trocando.value = false;
   termo.value = '';
+  avisarPendente();
   focarTrocar();
 };
+
+watch(toRef(props, 'erro'), (agora, antes) => {
+  if (agora && !antes) focarBusca();
+});
 
 const tirar = () => {
   emit('mudar', { id: null, nome: '', nova: false });
@@ -203,12 +237,22 @@ const tirar = () => {
           data-relacionamentos="busca-da-empresa"
           :value="termo"
           :placeholder="ea('PLACEHOLDER')"
-          :aria-describedby="`${id}-estado`"
+          :aria-describedby="erro ? `${id}-erro ${id}-estado` : `${id}-estado`"
+          :aria-invalid="erro ? 'true' : undefined"
           class="block w-full h-11 !mb-0 text-sm border-0 rounded-lg reset-base outline outline-1 outline-offset-[-1px] outline-n-weak hover:outline-n-slate-6 bg-n-alpha-black2 text-n-slate-12 placeholder:text-n-slate-10 focus:outline-n-brand ltr:!pl-10 rtl:!pr-10 [&::-webkit-search-cancel-button]:hidden"
           @input="aoDigitar"
           @keydown.enter.prevent="procurar"
         />
       </div>
+      <p
+        v-if="erro"
+        :id="`${id}-erro`"
+        role="alert"
+        data-relacionamentos="erro-da-empresa"
+        class="m-0 mt-2 text-sm text-n-ruby-11"
+      >
+        {{ erro }}
+      </p>
       <div
         :id="`${id}-estado`"
         role="status"
@@ -229,7 +273,9 @@ const tirar = () => {
         </div>
         <p v-else-if="!nomeDigitado" class="m-0">
           {{
-            vaiSair ? ea('VAI_SAIR', { empresa: nomeInicial }) : ea('DIGITE')
+            vaiSair
+              ? ea('VAI_SAIR', { empresa: empresaInicial.nome })
+              : ea('DIGITE')
           }}
         </p>
         <p v-else-if="!achadas.length" class="m-0">
@@ -276,14 +322,14 @@ const tirar = () => {
         </li>
       </ul>
       <Button
-        v-if="trocando"
+        v-if="trocando || vaiSair"
         data-relacionamentos="cancelar-troca-de-empresa"
         slate
         ghost
         type="button"
         class="!h-11 mt-2 self-start"
-        :label="ea('MANTER', { empresa: empresa.nome })"
-        @click="cancelar"
+        :label="ea('MANTER', { empresa: nomeParaManter })"
+        @click="manter"
       />
     </template>
   </div>

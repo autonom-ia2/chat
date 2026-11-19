@@ -10,8 +10,10 @@ import Button from 'dashboard/components-next/button/Button.vue';
 //  - "Pôr foto" / "Trocar foto" abre a escolha de arquivo do aparelho. Aceita o
 //    que o servidor aceita (JPG, PNG, GIF e WEBP, até 15 MB, Avatarable); o que
 //    não serve diz o que fazer, e a foto de antes continua;
-//  - "Tirar foto" deixa as iniciais no lugar e diz que a foto sai ao salvar;
-//  - "Voltar como estava" desfaz a troca ou o tirar, antes de salvar.
+//  - "Remover foto" deixa as iniciais no lugar e diz que a foto sai ao salvar;
+//  - "Voltar como estava" desfaz a troca ou o remover, antes de salvar.
+// A prévia da foto escolhida é solta da memória quando sai da tela (remover,
+// voltar como estava, outra foto ou a gaveta fechada).
 const props = defineProps({
   nome: { type: String, default: '' },
   // A foto gravada hoje (thumbnail).
@@ -73,11 +75,13 @@ const aoEscolher = evento => {
 
 const tirar = () => {
   erro.value = '';
+  largarPrevia();
   emit('mudar', { tirar: true });
 };
 
 const manter = () => {
   erro.value = '';
+  largarPrevia();
   emit('mudar', null);
 };
 </script>
@@ -85,7 +89,7 @@ const manter = () => {
 <template>
   <div
     data-relacionamentos="foto-da-pessoa"
-    class="flex items-center min-w-0 gap-4"
+    class="flex items-start min-w-0 gap-4"
   >
     <Avatar
       :name="nome"

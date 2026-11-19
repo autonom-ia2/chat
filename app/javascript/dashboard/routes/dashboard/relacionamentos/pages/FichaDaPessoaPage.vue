@@ -238,15 +238,24 @@ const guardarNota = async texto => {
   );
 };
 
+// #3075 — se a pessoa ficou gravada e só a foto (ou um campo que sai) falhou,
+// o aviso diz isso: "Salvar" de novo repete só o que faltou.
 const salvar = async pedido => {
+  if (ficha.ocupadoEm('salvar')) return;
   const certo = await ficha.salvar(pedido);
   if (certo) gavetaAberta.value = false;
   resultado(
     certo,
     'RELACIONAMENTOS_FICHA.GAVETA.SALVO',
-    'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
+    ficha.retomada.value?.pessoa
+      ? 'RELACIONAMENTOS_FICHA.GAVETA.SALVOU_EM_PARTE'
+      : 'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
   );
 };
+// Cada vez que a gaveta abre, o salvar começa do zero.
+watch(gavetaAberta, aberta => {
+  if (aberta) ficha.esquecerRetomada();
+});
 
 // O "desfazer" de cada ação: { certo, frase }.
 const desfeito = async (acao, certo, erro) => {
@@ -674,6 +683,7 @@ watch(
       :aberta="gavetaAberta"
       :pessoa="ficha.pessoa.value"
       :salvando="ficha.ocupadoEm('salvar')"
+      :empresa-cadastrada="ficha.retomada.value?.empresa ?? null"
       :com-empresas="comEmpresas"
       :buscar-empresas="fonte.buscarEmpresas"
       :definicoes="camposDaConta.definicoes.value"

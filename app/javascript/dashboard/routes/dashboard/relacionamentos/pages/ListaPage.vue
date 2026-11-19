@@ -392,14 +392,22 @@ const gaveta = usePessoaNaGaveta({
     useAlert(t('RELACIONAMENTOS.LISTA.EDITAR.SALVO', { nome: dados.name }));
     lista.atualizar();
   },
-  aoFalhar: nova =>
+  // #3075 — `parcial`: a pessoa ficou gravada e só a foto (ou um campo que
+  // sai) falhou. A lista já a mostra; "Salvar" de novo repete só o que faltou.
+  aoFalhar: (nova, { parcial = false } = {}) => {
+    if (parcial) {
+      useAlert(t('RELACIONAMENTOS_FICHA.GAVETA.SALVOU_EM_PARTE'));
+      lista.atualizar();
+      return;
+    }
     useAlert(
       t(
         nova
           ? 'RELACIONAMENTOS.LISTA.NOVA_PESSOA.ERRO'
           : 'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
       )
-    ),
+    );
+  },
 });
 // As ações ao lado das abas só existem em Pessoas, para quem pode, e com a
 // lista à vista: sem acesso não há o que criar nem baixar; sem ninguém, não há
@@ -770,6 +778,7 @@ watch(naAbaDeSeguros, estaNela => {
       :titulo="tituloDaGaveta"
       :rotulo-salvar="salvarDaGaveta"
       :erros-do-servidor="gaveta.errosDoServidor.value"
+      :empresa-cadastrada="gaveta.empresaCadastrada.value"
       :com-empresas="temEmpresas"
       :buscar-empresas="acoes.buscarEmpresas"
       :definicoes="camposDaConta.definicoes.value"

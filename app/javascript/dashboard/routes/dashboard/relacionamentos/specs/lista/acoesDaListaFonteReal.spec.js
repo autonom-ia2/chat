@@ -348,6 +348,7 @@ describe('planilha e pessoa', () => {
   });
 
   it('criarPessoa com empresa nova e foto: cadastra, cria e põe a foto na criada', async () => {
+    CompanyAPI.search.mockResolvedValue({ data: { payload: [] } });
     CompanyAPI.create.mockResolvedValue({
       data: { payload: { id: 4, name: 'Oficina do Bruno' } },
     });
@@ -370,6 +371,35 @@ describe('planilha e pessoa', () => {
     const [id, corpo] = ContactAPI.update.mock.calls[0];
     expect(id).toBe(9);
     expect(corpo.get('avatar')).toBeInstanceOf(File);
+  });
+
+  it('foto que falha depois da pessoa criada: a nova tentativa não cria outra pessoa', async () => {
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: { id: 9, name: 'Bruno' } } },
+    });
+    ContactAPI.update.mockRejectedValueOnce(
+      Object.assign(new Error('500'), { response: { status: 500 } })
+    );
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    const comFoto = pedido(
+      { name: 'Bruno', additional_attributes: {} },
+      { foto: { arquivo, previa: 'blob:x' } }
+    );
+    const falha = await real()
+      .criarPessoa(comFoto)
+      .catch(erro => erro);
+    expect(falha.name).toBe('GravouEmParte');
+    expect(falha.retomada.pessoa).toEqual({ id: 9, name: 'Bruno' });
+
+    ContactAPI.update.mockResolvedValue({ data: { payload: { id: 9 } } });
+    expect(await real().criarPessoa(comFoto, falha.retomada)).toEqual({
+      id: 9,
+      name: 'Bruno',
+    });
+    expect(ContactAPI.create).toHaveBeenCalledTimes(1);
+    const [id, corpo] = ContactAPI.update.mock.calls.at(-1);
+    expect(id).toBe(9);
+    expect(corpo).toBeInstanceOf(FormData);
   });
 
   it('salvarPessoa grava no contato pelo id', async () => {

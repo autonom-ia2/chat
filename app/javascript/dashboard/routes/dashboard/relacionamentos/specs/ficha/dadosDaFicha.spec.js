@@ -127,16 +127,67 @@ describe('gaveta: campos personalizados com o tipo de cada um', () => {
     expect(pedido.apagar).toEqual([]);
   });
 
-  it('"Apagar" esvazia o campo, diz o que acontece e o campo sai ao salvar', async () => {
+  it('"Limpar" esvazia a escolha, diz o que acontece e "Voltar como estava" desfaz', async () => {
     const w = montar();
     const vip = w.get('[data-atributo="vip"]');
-    await vip.get(marca('apagar-atributo')).trigger('click');
+    expect(vip.get(marca('limpar-atributo')).text()).toBe(
+      'RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LIMPAR'
+    );
+    await vip.get(marca('limpar-atributo')).trigger('click');
     expect(vip.get(marca('ajuda-do-campo')).text()).toBe(
       'RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.VAI_SAIR'
     );
-    expect(vip.find(marca('apagar-atributo')).exists()).toBe(false);
+    expect(vip.find(marca('limpar-atributo')).exists()).toBe(false);
+    await vip.get(marca('voltar-atributo')).trigger('click');
+    expect(vip.find(marca('ajuda-do-campo')).exists()).toBe(false);
+    expect((await salvar(w)).apagar).toEqual([]);
+    await vip.get(marca('limpar-atributo')).trigger('click');
     const pedido = await salvar(w);
     expect(pedido.apagar).toEqual(['vip']);
+    expect(pedido.contato.custom_attributes).toEqual({});
+  });
+
+  it('campo de escrever não tem "Limpar": apagar o texto basta, e o aviso aparece', async () => {
+    const w = montar();
+    const filhos = w.get('[data-atributo="filhos"]');
+    expect(filhos.find(marca('limpar-atributo')).exists()).toBe(false);
+    await filhos.get('input').setValue('');
+    expect(filhos.get(marca('ajuda-do-campo')).exists()).toBe(true);
+    expect(filhos.find(marca('voltar-atributo')).exists()).toBe(true);
+    expect((await salvar(w)).apagar).toEqual(['filhos']);
+  });
+
+  it('número que o navegador não lê não apaga o valor', async () => {
+    const w = montar();
+    const campo = w.get('[data-atributo="filhos"] input');
+    Object.defineProperty(campo.element, 'validity', {
+      value: { badInput: true },
+      configurable: true,
+    });
+    await campo.setValue('');
+    expect(
+      w
+        .find(
+          '[data-atributo="filhos"] [data-relacionamentos="ajuda-do-campo"]'
+        )
+        .exists()
+    ).toBe(false);
+    const pedido = await salvar(w);
+    expect(pedido.apagar).toEqual([]);
+    expect(pedido.contato.custom_attributes).toEqual({});
+  });
+
+  it('data gravada em outro formato aparece como está, sem sumir', async () => {
+    const w = montar({
+      pessoa: pessoa({
+        custom_attributes: { cpf: '52998224725', aniversario: '12/05/1990' },
+      }),
+    });
+    const campo = w.get('[data-atributo="aniversario"] input');
+    expect(campo.attributes('type')).toBe('text');
+    expect(campo.element.value).toBe('12/05/1990');
+    const pedido = await salvar(w);
+    expect(pedido.apagar).toEqual([]);
     expect(pedido.contato.custom_attributes).toEqual({});
   });
 
@@ -156,20 +207,37 @@ describe('gaveta: campos personalizados com o tipo de cada um', () => {
     });
   });
 
-  it('link que não abre não salva e diz o que fazer', async () => {
+  it('link sem "https://" é aceito e vai completo; o que não é site não salva', async () => {
     const w = montar();
     await w.get(marca('mais-campos')).trigger('click');
-    await w.get('[data-atributo="site"] input').setValue('exemplo.com.br');
+    const campo = w.get('[data-atributo="site"] input');
+    expect(campo.attributes('placeholder')).toBe(
+      'RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LINK_EXEMPLO'
+    );
+    await campo.setValue('padaria bom dia');
     await w.get(marca('salvar-informacoes')).trigger('click');
     expect(w.emitted('salvar')).toBeUndefined();
     expect(w.get('[data-atributo="site"]').text()).toContain(
       'RELACIONAMENTOS_FICHA.GAVETA.ERRO.LINK'
     );
-    await w.get('[data-atributo="site"] input').setValue('https://ana.com.br');
+    await campo.setValue('ana.com.br');
     const pedido = await salvar(w);
     expect(pedido.contato.custom_attributes).toEqual({
       site: 'https://ana.com.br',
     });
+  });
+
+  it('"Mais campos" abre sozinho quando um campo de lá tem erro', async () => {
+    const w = montar();
+    const botao = w.get(marca('mais-campos'));
+    await botao.trigger('click');
+    await w.get('[data-atributo="site"] input').setValue('padaria bom dia');
+    await botao.trigger('click');
+    const painel = w.get(`#${botao.attributes('aria-controls')}`);
+    expect(painel.isVisible()).toBe(false);
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    expect(painel.isVisible()).toBe(true);
+    expect(botao.attributes('aria-expanded')).toBe('true');
   });
 });
 
@@ -268,6 +336,49 @@ describe('gaveta: empresa cadastrada', () => {
     );
   });
 
+  it('nome escrito e não escolhido não salva: o erro diz o que fazer e a busca recebe o foco', async () => {
+    const w = montar();
+    await w.get(marca('tirar-empresa')).trigger('click');
+    await procurar(w, 'oficina');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    await flushPromises();
+    expect(w.emitted('salvar')).toBeUndefined();
+    expect(w.get(marca('erro-da-empresa')).text()).toBe(
+      'RELACIONAMENTOS_FICHA.GAVETA.ERRO.EMPRESA_SEM_ESCOLHA'
+    );
+    expect(document.activeElement).toBe(
+      w.get(marca('busca-da-empresa')).element
+    );
+    await w.get('[data-empresa="9"]').trigger('click');
+    expect(w.find(marca('erro-da-empresa')).exists()).toBe(false);
+    expect((await salvar(w)).contato.company_id).toBe(9);
+  });
+
+  it('depois de Tirar, "Manter" devolve a empresa de quando a gaveta abriu', async () => {
+    const w = montar();
+    await w.get(marca('tirar-empresa')).trigger('click');
+    const manter = w.get(marca('cancelar-troca-de-empresa'));
+    expect(manter.text()).toContain('EMPRESA_ESCOLHA.MANTER');
+    expect(manter.text()).toContain('Padaria Dornelaz');
+    await manter.trigger('click');
+    expect(w.get(marca('empresa-escolhida')).text()).toContain(
+      'Padaria Dornelaz'
+    );
+    const pedido = await salvar(w);
+    expect(pedido.contato).not.toHaveProperty('company_id');
+  });
+
+  it('a empresa nova já cadastrada numa tentativa anterior não é cadastrada de novo', async () => {
+    const w = montar({ pessoa: pessoa({ company_id: null }) });
+    await w.get(marca('tirar-empresa')).trigger('click');
+    await procurar(w, 'quitanda');
+    await w.get(marca('cadastrar-empresa')).trigger('click');
+    await w.setProps({ empresaCadastrada: { id: 40, nome: 'quitanda' } });
+    const pedido = await salvar(w);
+    expect(pedido.empresaNova).toBeNull();
+    expect(pedido.contato.company_id).toBe(40);
+  });
+
   it('sem a chave `companies`, a empresa é o nome escrito, como antes', async () => {
     const w = montar({ comEmpresas: false });
     expect(w.find(marca('escolha-da-empresa')).exists()).toBe(false);
@@ -324,8 +435,19 @@ describe('gaveta: foto, país e "Sobre a pessoa"', () => {
     expect((await salvar(w)).foto).toBeNull();
   });
 
-  it('Tirar foto diz que sai ao salvar; "Voltar como estava" desfaz', async () => {
+  it('a prévia da foto escolhida é solta ao remover ou voltar como estava', async () => {
     const w = montar();
+    await escolherArquivo(w, new File(['x'], 'a.png', { type: 'image/png' }));
+    await w.get(marca('tirar-foto')).trigger('click');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:previa');
+    expect(w.find(marca('tirar-foto')).exists()).toBe(false);
+  });
+
+  it('Remover foto diz que sai ao salvar; "Voltar como estava" desfaz', async () => {
+    const w = montar();
+    expect(w.get(marca('tirar-foto')).text()).toBe(
+      'RELACIONAMENTOS_FICHA.GAVETA.FOTO.TIRAR'
+    );
     await w.get(marca('tirar-foto')).trigger('click');
     expect(w.get(marca('aviso-da-foto')).text()).toBe(
       'RELACIONAMENTOS_FICHA.GAVETA.FOTO.VAI_SAIR'
@@ -333,6 +455,14 @@ describe('gaveta: foto, país e "Sobre a pessoa"', () => {
     expect((await salvar(w)).foto).toEqual({ tirar: true });
     await w.get(marca('manter-foto')).trigger('click');
     expect((await salvar(w)).foto).toBeNull();
+  });
+
+  it('"Sobre a pessoa" explica o que vai ali e o que vai em Notas', () => {
+    const w = montar();
+    const campo = w.get(marca('sobre-a-pessoa')).element.closest('div');
+    expect(campo.textContent).toContain(
+      'RELACIONAMENTOS_FICHA.GAVETA.SOBRE_AJUDA'
+    );
   });
 
   it('país pela escolha da casa e "Sobre a pessoa" numa caixa de texto', async () => {

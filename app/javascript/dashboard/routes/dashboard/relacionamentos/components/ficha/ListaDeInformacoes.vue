@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatAttributeDate } from 'dashboard/helper/attributeDate';
-import { linkSeguro, temValor } from '../../ficha/atributos';
+import { linkCompleto, linkSeguro, temValor } from '../../ficha/atributos';
 import { useIdioma } from '../../ficha/idioma';
 import BotaoCopiar from './BotaoCopiar.vue';
 
@@ -47,7 +47,9 @@ const textoDe = ({ tipo, valor }) => {
   return String(valor);
 };
 
-const linkDe = linha => (linha.tipo === 'link' ? linkSeguro(linha.valor) : '');
+// O link gravado sem "https://" (antes desta tela) também abre.
+const linkDe = linha =>
+  linha.tipo === 'link' ? linkSeguro(linkCompleto(linha.valor)) : '';
 </script>
 
 <template>
@@ -77,7 +79,7 @@ const linkDe = linha => (linha.tipo === 'link' ? linkSeguro(linha.valor) : '');
             :href="linkDe(linha)"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 font-medium break-all text-n-blue-11 hover:underline min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            class="inline-flex items-center gap-1 -my-2.5 font-medium break-all text-n-blue-11 hover:underline min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           >
             {{ linha.valor }}
             <span

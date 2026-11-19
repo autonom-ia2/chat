@@ -192,7 +192,8 @@ describe('usePessoaNaGaveta', () => {
     expect(gaveta.ehNova.value).toBe(true);
     await gaveta.salvar(pedido({ name: 'Bia' }));
     expect(criarPessoa).toHaveBeenCalledWith(
-      pedido({ name: 'Bia', additional_attributes: {} })
+      pedido({ name: 'Bia', additional_attributes: {} }),
+      null
     );
     expect(gaveta.aberta.value).toBe(false);
     expect(avisos.aoCriar).toHaveBeenCalledWith({ id: 9, name: 'Bia' });
@@ -204,7 +205,11 @@ describe('usePessoaNaGaveta', () => {
     gaveta.abrirEdicao({ id: 3, name: 'Ana' });
     expect(gaveta.ehNova.value).toBe(false);
     await gaveta.salvar(pedido({ name: 'Ana Maria' }));
-    expect(salvarPessoa).toHaveBeenCalledWith(3, pedido({ name: 'Ana Maria' }));
+    expect(salvarPessoa).toHaveBeenCalledWith(
+      3,
+      pedido({ name: 'Ana Maria' }),
+      null
+    );
     expect(avisos.aoSalvar).toHaveBeenCalledWith({ name: 'Ana Maria' });
   });
 
@@ -226,7 +231,41 @@ describe('usePessoaNaGaveta', () => {
     gaveta.abrirEdicao({ id: 3 });
     await gaveta.salvar(pedido({ name: 'Ana' }));
     expect(gaveta.aberta.value).toBe(true);
-    expect(avisos.aoFalhar).toHaveBeenCalledWith(false);
+    expect(avisos.aoFalhar).toHaveBeenCalledWith(false, { parcial: false });
+  });
+
+  it('parou no meio: guarda o que já foi gravado, avisa e a próxima tentativa leva a retomada', async () => {
+    const retomada = {
+      empresa: { id: 40, nome: 'Quitanda' },
+      pessoa: { id: 9, name: 'Bia' },
+      contato: '{}',
+    };
+    const parou = Object.assign(new Error('500'), {
+      name: 'GravouEmParte',
+      response: { status: 500 },
+      retomada,
+    });
+    const criarPessoa = vi
+      .fn()
+      .mockRejectedValueOnce(parou)
+      .mockResolvedValue({ id: 9, name: 'Bia' });
+    const { gaveta, avisos } = montar({ criarPessoa });
+    gaveta.abrirNova();
+    await gaveta.salvar(pedido({ name: 'Bia' }));
+    expect(gaveta.aberta.value).toBe(true);
+    expect(gaveta.empresaCadastrada.value).toEqual({
+      id: 40,
+      nome: 'Quitanda',
+    });
+    expect(avisos.aoFalhar).toHaveBeenCalledWith(true, { parcial: true });
+    await gaveta.salvar(pedido({ name: 'Bia' }));
+    expect(criarPessoa).toHaveBeenLastCalledWith(
+      pedido({ name: 'Bia', additional_attributes: {} }),
+      retomada
+    );
+    expect(avisos.aoCriar).toHaveBeenCalledWith({ id: 9, name: 'Bia' });
+    gaveta.abrirNova();
+    expect(gaveta.empresaCadastrada.value).toBeNull();
   });
 
   it('clique duplo em salvar manda uma vez só', async () => {

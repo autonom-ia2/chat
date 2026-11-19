@@ -30,7 +30,11 @@ import {
   pedidoParaSalvar,
   redesPreenchidas,
 } from '../../ficha/informacoes';
-import { camposDaPessoa, linkSeguro } from '../../ficha/atributos';
+import {
+  camposDaPessoa,
+  linkCompleto,
+  linkSeguro,
+} from '../../ficha/atributos';
 import {
   nomeDoPais,
   nomeGravadoDoPais,
@@ -161,7 +165,28 @@ describe('errosDoFormulario', () => {
     ).toEqual({});
   });
 
-  // #3075 — o campo personalizado do tipo link só aceita http e https.
+  // #3075 — o campo personalizado do tipo link aceita o endereço sem "https://".
+  it('link sem "https://" passa; o que não é site é cobrado', () => {
+    const comLinks = { ...inicial, atributos: { site: '' } };
+    const tipos = { site: 'link' };
+    const com = site => ({ ...comLinks, atributos: { site } });
+    expect(errosDoFormulario(comLinks, com('seusite.com.br'), tipos)).toEqual(
+      {}
+    );
+    expect(errosDoFormulario(comLinks, com('padaria bom dia'), tipos)).toEqual({
+      'atributo:site': 'LINK',
+    });
+  });
+
+  it('empresa escrita e não escolhida trava o salvar', () => {
+    expect(
+      errosDoFormulario(inicial, { ...inicial, empresaPendente: ' Quitanda ' })
+    ).toEqual({ empresa: 'EMPRESA_SEM_ESCOLHA' });
+    expect(
+      errosDoFormulario(inicial, { ...inicial, empresaPendente: '  ' })
+    ).toEqual({});
+  });
+
   it('cobra o link novo que não abre; o antigo e o vazio passam', () => {
     const comLinks = { ...inicial, atributos: { site: 'velho', outro: 'x' } };
     const tipos = { site: 'link', outro: 'text' };
@@ -335,6 +360,28 @@ describe('informações da pessoa', () => {
     );
     expect(contato.phone_number).toBeNull();
     expect(contato.email).toBeNull();
+  });
+});
+
+describe('pedidoParaSalvar: link completo', () => {
+  const pessoa = {
+    name: 'Ana',
+    additional_attributes: {},
+    custom_attributes: { site: 'velho.com.br', blog: '' },
+  };
+  const tipos = { site: 'link', blog: 'link' };
+  it('o link novo sem "https://" vai completo; o antigo sem ele não conta como mudado', () => {
+    const inicial = formularioDaPessoa(pessoa);
+    expect(
+      pedidoParaSalvar(inicial, inicial, { tipos }).contato.custom_attributes
+    ).toEqual({});
+    const atual = {
+      ...inicial,
+      atributos: { ...inicial.atributos, blog: 'ana.blog.br' },
+    };
+    expect(
+      pedidoParaSalvar(atual, inicial, { tipos }).contato.custom_attributes
+    ).toEqual({ blog: 'https://ana.blog.br' });
   });
 });
 
@@ -528,6 +575,16 @@ describe('camposDaPessoa', () => {
     expect(linkSeguro(LINK_PERIGOSO)).toBe('');
     expect(linkSeguro('exemplo.com.br')).toBe('');
   });
+
+  it('o link escrito sem "https://" ganha o começo; o que não é site fica vazio', () => {
+    expect(linkCompleto('https://exemplo.com.br')).toBe(
+      'https://exemplo.com.br'
+    );
+    expect(linkCompleto(' exemplo.com.br ')).toBe('https://exemplo.com.br');
+    expect(linkCompleto('padaria bom dia')).toBe('');
+    expect(linkCompleto(LINK_PERIGOSO)).toBe('');
+    expect(linkCompleto('')).toBe('');
+  });
 });
 
 describe('país', () => {
@@ -538,14 +595,21 @@ describe('país', () => {
     expect(nomeGravadoDoPais('BR')).toBe('Brazil');
   });
 
-  it('a escolha começa por "Não informado" e segue em ordem alfabética', () => {
-    const [primeira, ...resto] = opcoesDePais('pt-BR', 'Não informado');
-    expect(primeira).toEqual({ value: '', label: 'Não informado' });
+  it('a escolha começa pelo país padrão do telefone e segue em ordem alfabética', () => {
+    const [padrao, ...resto] = opcoesDePais('pt-BR', 'Não informado');
+    expect(padrao.value).toBe('BR');
+    expect(padrao.label).toContain('Brasil');
     const nomes = resto.map(opcao => opcao.searchLabel);
     expect(nomes).toEqual(
       [...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR'))
     );
-    expect(resto.find(opcao => opcao.value === 'BR').label).toContain('Brasil');
+    expect(resto.some(opcao => opcao.value === '')).toBe(false);
+  });
+
+  it('"Não informado" só aparece, em primeiro, quando há país escolhido', () => {
+    const [limpar, padrao] = opcoesDePais('pt-BR', 'Não informado', 'PT');
+    expect(limpar).toEqual({ value: '', label: 'Não informado' });
+    expect(padrao.value).toBe('BR');
   });
 });
 

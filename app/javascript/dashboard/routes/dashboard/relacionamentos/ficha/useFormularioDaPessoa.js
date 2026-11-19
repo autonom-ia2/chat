@@ -4,7 +4,8 @@
 // #3062 — `mexido`: o formulário já não é o que abriu (quem fecha a gaveta com
 // algo escrito ouve "Sair sem salvar?"). Escrever e apagar de volta não conta.
 // #3075 — e a empresa cadastrada, a foto e os campos personalizados com tipo.
-// `tiposDosCampos` ({ chave: tipo }) diz quais campos são link, para conferir.
+// `tiposDosCampos` ({ chave: tipo }) diz quais campos são link, para conferir
+// e completar com "https://".
 import { computed, ref } from 'vue';
 import { formularioDaPessoa, pedidoParaSalvar } from './informacoes';
 import { errosDoFormulario } from './errosDoFormulario';
@@ -60,6 +61,7 @@ export const useFormularioDaPessoa = ({
       ? null
       : pedidoParaSalvar(formulario.value, inicial.value, {
           comEmpresas: comEmpresas(),
+          tipos: tiposDosCampos(),
         });
   };
 

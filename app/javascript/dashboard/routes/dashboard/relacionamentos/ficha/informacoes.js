@@ -6,7 +6,12 @@
 // um (ficha/atributos.js).
 import { formatarCnpj, formatarCpf } from './formatos';
 import { soDigitos } from '../fonte/texto';
-import { CHAVE_DO_CPF, nomeDaInformacao, temValor } from './atributos';
+import {
+  CHAVE_DO_CPF,
+  linkCompleto,
+  nomeDaInformacao,
+  temValor,
+} from './atributos';
 import { nomeGravadoDoPais, paisNaTela } from './paises';
 
 export { nomeDaInformacao };
@@ -35,8 +40,9 @@ export const linhasDaPessoa = (
 ) => {
   const adicionais = pessoa.additional_attributes ?? {};
   const cpf = pessoa.custom_attributes?.[CHAVE_DO_CPF];
-  // CPF e cidade aparecem sempre (com "Não informado"); país e "Sobre a
-  // pessoa", só preenchidos.
+  // A regra da tela: aparece sempre, com "Não informado" quando vazio, o que a
+  // conta pede (CPF, cidade e os campos escolhidos no configurador); o resto
+  // (país, "Sobre a pessoa" e os outros campos da conta) só quando preenchido.
   const fixas = [
     { chave: 'cpf', valor: cpf ? formatarCpf(cpf) : '', copiar: true },
     { chave: 'cidade', valor: adicionais.city },
@@ -88,6 +94,8 @@ export const formularioDaPessoa = pessoa => {
     empresa: adicionais.company_name ?? '',
     empresaId: pessoa.company_id ?? null,
     empresaNova: false,
+    // O nome escrito na busca da empresa e ainda não escolhido da lista.
+    empresaPendente: '',
     foto: null,
     redes: Object.fromEntries(REDES.map(rede => [rede, perfis[rede] ?? ''])),
     // Rede que a gaveta não mostra: vai e volta sem ninguém mexer.
@@ -153,18 +161,33 @@ const paisMudado = (formulario, inicial) =>
 // O pedido que a fonte grava (fonte/gravarPessoa.js): `contato` no formato do
 // contato no servidor e, à parte, o que não cabe nele: a empresa nova, a foto e
 // os campos personalizados que saem. `inicial` é o formulário de quando a
-// gaveta abriu.
+// gaveta abriu. `tipos` ({ chave: tipo }): o link escrito sem "https://" vai
+// completo (dos dois lados, para o link antigo sem "https://" não contar como
+// mudado).
+const comLinksCompletos = (atributos, tipos) =>
+  Object.fromEntries(
+    Object.entries(atributos).map(([chave, valor]) => [
+      chave,
+      tipos[chave] === 'link' && linkCompleto(valor)
+        ? linkCompleto(valor)
+        : valor,
+    ])
+  );
+
 export const pedidoParaSalvar = (
   formulario,
   inicial = formulario,
-  { comEmpresas = false } = {}
+  { comEmpresas = false, tipos = {} } = {}
 ) => {
   const atributos = atributosMudados(
     {
       [CHAVE_DO_CPF]: cpfComoAtributo(formulario.cpf),
-      ...formulario.atributos,
+      ...comLinksCompletos(formulario.atributos, tipos),
     },
-    { [CHAVE_DO_CPF]: cpfComoAtributo(inicial.cpf), ...inicial.atributos }
+    {
+      [CHAVE_DO_CPF]: cpfComoAtributo(inicial.cpf),
+      ...comLinksCompletos(inicial.atributos, tipos),
+    }
   );
   return {
     contato: {

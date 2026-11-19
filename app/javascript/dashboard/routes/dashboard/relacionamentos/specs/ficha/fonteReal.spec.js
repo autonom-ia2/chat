@@ -156,6 +156,7 @@ describe('escritas da pessoa', () => {
   const relida = { ...ANA, name: 'Ana Maria' };
   beforeEach(() => {
     RelacionamentosAPI.pessoa.mockResolvedValue({ data: relida });
+    CompanyAPI.search.mockResolvedValue({ data: { payload: [] } });
   });
 
   // #3075 — o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar).
@@ -190,6 +191,7 @@ describe('escritas da pessoa', () => {
     });
     ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
     await real().salvar(7, pedido({ empresaNova: 'Padaria Nova' }));
+    expect(CompanyAPI.search).toHaveBeenCalledWith('Padaria Nova');
     expect(CompanyAPI.create).toHaveBeenCalledWith({
       company: { name: 'Padaria Nova' },
     });
@@ -201,6 +203,75 @@ describe('escritas da pessoa', () => {
         company_name: 'Padaria Nova',
       },
     });
+  });
+
+  it('empresa nova com o nome de uma que já existe usa a que existe', async () => {
+    CompanyAPI.search.mockResolvedValue({
+      data: {
+        payload: [
+          { id: 11, name: 'Padaria Nova Era' },
+          { id: 12, name: 'PADARIA NOVA' },
+        ],
+      },
+    });
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    await real().salvar(7, pedido({ empresaNova: ' padaria nova ' }));
+    expect(CompanyAPI.create).not.toHaveBeenCalled();
+    expect(ContactAPI.update).toHaveBeenCalledWith(7, {
+      ...contato,
+      company_id: 12,
+      additional_attributes: {
+        ...contato.additional_attributes,
+        company_name: 'PADARIA NOVA',
+      },
+    });
+  });
+
+  it('pessoa recusada depois da empresa cadastrada: a falha leva a empresa, e a nova tentativa não cadastra outra', async () => {
+    CompanyAPI.create.mockResolvedValue({
+      data: { payload: { id: 31, name: 'Padaria Nova' } },
+    });
+    ContactAPI.update.mockRejectedValueOnce(erroHttp(422));
+    const falha = await real()
+      .salvar(7, pedido({ empresaNova: 'Padaria Nova' }))
+      .catch(erro => erro);
+    expect(falha.name).toBe('GravouEmParte');
+    expect(falha.response.status).toBe(422);
+    expect(falha.retomada.empresa).toEqual({ id: 31, nome: 'Padaria Nova' });
+    expect(falha.retomada.pessoa).toBeNull();
+
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    await real().salvar(
+      7,
+      pedido({ empresaNova: 'Padaria Nova' }),
+      falha.retomada
+    );
+    expect(CompanyAPI.create).toHaveBeenCalledTimes(1);
+    expect(ContactAPI.update).toHaveBeenLastCalledWith(
+      7,
+      expect.objectContaining({ company_id: 31 })
+    );
+  });
+
+  it('foto que falha depois da pessoa gravada: a ficha recebe a pessoa e a nova tentativa só manda a foto', async () => {
+    ContactAPI.update
+      .mockResolvedValueOnce({ data: { payload: { id: 7 } } })
+      .mockRejectedValueOnce(erroHttp(500));
+    const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+    const comFoto = pedido({ foto: { arquivo, previa: 'blob:x' } });
+    const falha = await real()
+      .salvar(7, comFoto)
+      .catch(erro => erro);
+    expect(falha.name).toBe('GravouEmParte');
+    expect(falha.retomada.pessoa).toEqual({ id: 7 });
+    expect(falha.retomada.pessoaNaFicha).toEqual(relida);
+
+    ContactAPI.update.mockClear();
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    const { pessoaNaFicha: _relida, ...retomada } = falha.retomada;
+    await real().salvar(7, comFoto, retomada);
+    expect(ContactAPI.update).toHaveBeenCalledTimes(1);
+    expect(ContactAPI.update.mock.calls[0][1]).toBeInstanceOf(FormData);
   });
 
   it('a empresa que não foi cadastrada não deixa a pessoa pela metade', async () => {

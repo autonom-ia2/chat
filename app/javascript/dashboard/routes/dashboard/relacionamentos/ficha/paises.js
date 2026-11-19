@@ -3,6 +3,7 @@
 // casa (shared/constants/countries.js). Na tela o nome sai no idioma do painel
 // pelo Intl, com a bandeira na frente.
 import countries from 'shared/constants/countries';
+import { PAIS_PADRAO } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 const nomesNoIdioma = new Map();
 const nomesDoIdioma = idioma => {
@@ -33,14 +34,19 @@ export const paisNaTela = (adicionais, idioma) =>
 export const nomeGravadoDoPais = codigo =>
   countries.find(item => item.id === codigo)?.name ?? '';
 
-// As opções da escolha, em ordem alfabética no idioma do painel. `nenhum` é o
-// texto da primeira opção, que deixa o país em branco.
-export const opcoesDePais = (idioma, nenhum) => [
-  { value: '', label: nenhum },
-  ...countries
+// As opções da escolha: o país padrão do telefone (o mesmo do CampoDeTelefone)
+// logo no começo, e os outros em ordem alfabética no idioma do painel. `nenhum`
+// é o texto da opção que deixa o país em branco: só entra quando há um país
+// escolhido (sem país, a escolha mostra o texto de "escolha o país").
+export const opcoesDePais = (idioma, nenhum, atual = '') => {
+  const todas = countries
     .map(({ id, emoji }) => {
       const nome = nomeDoPais(id, idioma);
       return { value: id, label: `${emoji} ${nome}`, searchLabel: nome };
     })
-    .sort((a, b) => a.searchLabel.localeCompare(b.searchLabel, idioma)),
-];
+    .sort((a, b) => a.searchLabel.localeCompare(b.searchLabel, idioma));
+  const padrao = todas.filter(opcao => opcao.value === PAIS_PADRAO);
+  const resto = todas.filter(opcao => opcao.value !== PAIS_PADRAO);
+  const limpar = atual ? [{ value: '', label: nenhum }] : [];
+  return [...limpar, ...padrao, ...resto];
+};

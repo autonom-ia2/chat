@@ -19,7 +19,9 @@ import FotoDaPessoa from './FotoDaPessoa.vue';
 // cadastrada (com a chave `companies`; sem ela, o nome escrito, como antes),
 // "Sobre a pessoa" e os campos personalizados com o controle do tipo de cada
 // um. Os que aparecem na ficha (`campos` com `principal`) vêm primeiro; os
-// outros ficam atrás de "Mais campos".
+// outros ficam atrás de "Mais campos", que abre sozinho quando um deles tem
+// erro. O nome escrito na busca da empresa e ainda não escolhido sobe como
+// `mudar('empresaPendente', nome)`.
 const props = defineProps({
   formulario: { type: Object, required: true },
   // O formulário de quando a gaveta abriu: o que cada campo tinha.
@@ -56,7 +58,13 @@ const CAMPOS_DE_TEXTO = [
   { campo: 'cidade', rotulo: 'CIDADE' },
 ];
 
-const paises = computed(() => opcoesDePais(idioma.value, ra('PAIS_NENHUM')));
+const paises = computed(() =>
+  opcoesDePais(idioma.value, ra('PAIS_NENHUM'), props.formulario.pais)
+);
+const empresaInicial = computed(() => ({
+  id: props.inicial.empresaId,
+  nome: props.inicial.empresa,
+}));
 const comEscolhaDeEmpresa = computed(
   () => props.comEmpresas && Boolean(props.buscarEmpresas)
 );
@@ -69,6 +77,9 @@ const principais = computed(() =>
   props.campos.filter(campo => campo.principal)
 );
 const outros = computed(() => props.campos.filter(campo => !campo.principal));
+const erroNosOutros = computed(() =>
+  outros.value.some(campo => props.erros[`atributo:${campo.chave}`])
+);
 </script>
 
 <template>
@@ -108,7 +119,7 @@ const outros = computed(() => props.campos.filter(campo => !campo.principal));
         :options="paises"
         :trigger-id="idDoPais"
         :aria-label="ra('PAIS_ONDE_MORA')"
-        :placeholder="ra('PAIS_NENHUM')"
+        :placeholder="ra('PAIS_ESCOLHA')"
         class="w-full"
         @update:model-value="codigo => emit('mudar', 'pais', codigo)"
       />
@@ -117,9 +128,11 @@ const outros = computed(() => props.campos.filter(campo => !campo.principal));
     <EscolhaDaEmpresa
       v-if="comEscolhaDeEmpresa"
       :empresa="empresa"
-      :nome-inicial="inicial.empresa"
+      :empresa-inicial="empresaInicial"
       :buscar="buscarEmpresas"
+      :erro="mensagem(erros.empresa)"
       @mudar="escolhida => emit('mudarEmpresa', escolhida)"
+      @pendente="nome => emit('mudar', 'empresaPendente', nome)"
     />
     <CampoDeTexto
       v-else
@@ -133,6 +146,7 @@ const outros = computed(() => props.campos.filter(campo => !campo.principal));
       :rotulo="ra('SOBRE')"
       :linhas="3"
       :placeholder="ra('SOBRE_EXEMPLO')"
+      :ajuda="ra('SOBRE_AJUDA')"
       data-relacionamentos="sobre-a-pessoa"
       @update:model-value="texto => emit('mudar', 'sobre', texto)"
     />
@@ -185,7 +199,7 @@ const outros = computed(() => props.campos.filter(campo => !campo.principal));
           <button
             type="button"
             data-relacionamentos="mais-campos"
-            :aria-expanded="maisAbertos ? 'true' : 'false'"
+            :aria-expanded="maisAbertos || erroNosOutros ? 'true' : 'false'"
             :aria-controls="idDosMais"
             class="inline-flex items-center gap-2 p-0 text-base font-medium bg-transparent border-0 text-start min-h-11 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             @click="maisAbertos = !maisAbertos"
@@ -199,11 +213,17 @@ const outros = computed(() => props.campos.filter(campo => !campo.principal));
             }}
             <span
               class="size-4 i-lucide-chevron-right rtl:rotate-180"
-              :class="{ 'rotate-90 rtl:rotate-90': maisAbertos }"
+              :class="{
+                'rotate-90 rtl:rotate-90': maisAbertos || erroNosOutros,
+              }"
               aria-hidden="true"
             />
           </button>
-          <div v-show="maisAbertos" :id="idDosMais" class="flex flex-col gap-5">
+          <div
+            v-show="maisAbertos || erroNosOutros"
+            :id="idDosMais"
+            class="flex flex-col gap-5"
+          >
             <CampoDoAtributo
               v-for="campo in outros"
               :key="campo.chave"

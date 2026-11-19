@@ -8,14 +8,21 @@ import { temValor } from '../../ficha/atributos';
 import CampoDeTexto from './CampoDeTexto.vue';
 
 // #3075 — um campo personalizado na gaveta, com o controle do tipo dele:
-//  - texto e link: campo de texto (o link pede o endereço com https://);
-//  - número: campo de número (sobe como número);
+//  - texto e link: campo de texto (o link aceita "seusite.com.br"; o
+//    "https://" entra ao salvar);
+//  - número: campo de número (sobe como número). O que o navegador não
+//    consegue ler como número é ignorado: o valor só fica vazio quando o campo
+//    está vazio de verdade;
 //  - data: o campo de data do navegador, como o resto da ficha (sobe como
-//    "AAAA-MM-DD", o formato que a ficha antiga grava);
+//    "AAAA-MM-DD", o formato que a ficha antiga grava). A data gravada em outro
+//    formato (por importação, por exemplo) aparece como está, num campo de
+//    texto: o campo de data não a mostraria, e ela se perderia sem ninguém ver;
 //  - lista e "sim ou não": a escolha da casa (ChoiceSelect), sem <select>.
-// "Apagar" aparece quando o campo tem valor e o esvazia; a linha de baixo diz
-// que ele fica em branco quando a pessoa salvar. Não altera nada: cada mudança
-// sobe por `mudar`.
+// "Limpar" (só na data, na lista e no "sim ou não", onde não dá para apagar
+// escrevendo) esvazia o campo. Quando o campo tinha valor e ficou vazio, a
+// linha de baixo diz que ele fica em branco ao salvar, e "Voltar como estava"
+// devolve o valor de quando a gaveta abriu. Não altera nada: cada mudança sobe
+// por `mudar`.
 const props = defineProps({
   // { chave, rotulo, tipo, opcoes }.
   campo: { type: Object, required: true },
@@ -41,25 +48,52 @@ const opcoes = computed(() =>
     : props.campo.opcoes.map(opcao => ({ value: opcao, label: opcao }))
 );
 
+// A data que o campo de data consegue mostrar ('' se não há ou não serve).
+const dataDoCampo = computed(() =>
+  props.campo.tipo === 'date' ? attributeDate(props.valor) : ''
+);
+const dataEmOutroFormato = computed(
+  () =>
+    props.campo.tipo === 'date' && temValor(props.valor) && !dataDoCampo.value
+);
+const ehData = computed(
+  () => props.campo.tipo === 'date' && !dataEmOutroFormato.value
+);
+const temLimpar = computed(
+  () => (ehEscolha.value || ehData.value) && temValor(props.valor)
+);
+
 const PELO_TIPO = {
-  link: { type: 'url', inputmode: 'url', placeholder: 'https://' },
+  link: {
+    type: 'url',
+    inputmode: 'url',
+    autocapitalize: 'off',
+    placeholder: ga('ATRIBUTO.LINK_EXEMPLO'),
+  },
   number: { type: 'number', inputmode: 'decimal', step: 'any' },
-  date: { type: 'date' },
 };
-const atributosDoCampo = computed(() => PELO_TIPO[props.campo.tipo] ?? {});
+const atributosDoCampo = computed(() => {
+  if (ehData.value) return { type: 'date' };
+  return PELO_TIPO[props.campo.tipo] ?? { type: 'text' };
+});
 
 const textoNoCampo = computed(() => {
   if (!temValor(props.valor)) return '';
-  return props.campo.tipo === 'date'
-    ? attributeDate(props.valor)
-    : String(props.valor);
+  return ehData.value ? dataDoCampo.value : String(props.valor);
 });
 
+// O número vem do próprio campo: com letra no meio o navegador entrega '' e
+// marca `badInput`, e isso não pode apagar o valor.
+const aoDigitarNumero = evento => {
+  const alvo = evento.target;
+  if (alvo.validity?.badInput) return;
+  emit('mudar', alvo.value === '' ? '' : Number(alvo.value));
+};
+const ouvintes = computed(() =>
+  props.campo.tipo === 'number' ? { onInput: aoDigitarNumero } : {}
+);
 const aoEscrever = texto => {
-  if (props.campo.tipo === 'number' && texto !== '') {
-    emit('mudar', Number(texto));
-    return;
-  }
+  if (props.campo.tipo === 'number') return;
   emit('mudar', texto);
 };
 
@@ -68,6 +102,7 @@ const vaiSair = computed(
 );
 const ajuda = computed(() => (vaiSair.value ? ga('ATRIBUTO.VAI_SAIR') : ''));
 const mensagem = computed(() => (props.erro ? ga(`ERRO.${props.erro}`) : ''));
+const voltar = () => emit('mudar', props.valorInicial);
 </script>
 
 <template>
@@ -81,16 +116,16 @@ const mensagem = computed(() => (props.erro ? ga(`ERRO.${props.erro}`) : ''));
           {{ campo.rotulo }}
         </label>
         <Button
-          v-if="temValor(valor)"
-          data-relacionamentos="apagar-atributo"
+          v-if="temLimpar"
+          data-relacionamentos="limpar-atributo"
           slate
           ghost
           type="button"
           icon="i-lucide-eraser"
           class="!h-11 -my-2 -me-3 shrink-0"
-          :label="ga('ATRIBUTO.APAGAR')"
+          :label="ga('ATRIBUTO.LIMPAR')"
           :aria-label="
-            t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.APAGAR_O', {
+            t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LIMPAR_O', {
               campo: campo.rotulo,
             })
           "
@@ -123,20 +158,20 @@ const mensagem = computed(() => (props.erro ? ga(`ERRO.${props.erro}`) : ''));
       :rotulo="campo.rotulo"
       :erro="mensagem"
       :ajuda="ajuda"
-      v-bind="atributosDoCampo"
+      v-bind="{ ...atributosDoCampo, ...ouvintes }"
       @update:model-value="aoEscrever"
     >
-      <template v-if="temValor(valor)" #acao>
+      <template v-if="temLimpar" #acao>
         <Button
-          data-relacionamentos="apagar-atributo"
+          data-relacionamentos="limpar-atributo"
           slate
           ghost
           type="button"
           icon="i-lucide-eraser"
           class="!h-11 -my-2 -me-3 shrink-0"
-          :label="ga('ATRIBUTO.APAGAR')"
+          :label="ga('ATRIBUTO.LIMPAR')"
           :aria-label="
-            t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.APAGAR_O', {
+            t('RELACIONAMENTOS_FICHA.GAVETA.ATRIBUTO.LIMPAR_O', {
               campo: campo.rotulo,
             })
           "
@@ -144,5 +179,15 @@ const mensagem = computed(() => (props.erro ? ga(`ERRO.${props.erro}`) : ''));
         />
       </template>
     </CampoDeTexto>
+    <Button
+      v-if="vaiSair"
+      data-relacionamentos="voltar-atributo"
+      slate
+      ghost
+      type="button"
+      class="!h-11 mt-1 -ms-3 self-start"
+      :label="ga('FOTO.MANTER')"
+      @click="voltar"
+    />
   </div>
 </template>
