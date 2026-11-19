@@ -132,7 +132,8 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos: funções', type: 
       pedir('pessoas/exportar', quem: quem)
 
       expect(response).to have_http_status(:accepted)
-      expect(response.parsed_body).to eq('email' => quem.email)
+      expect(response.parsed_body).to eq('email' => quem.email,
+                                         'espera' => Api::V1::Accounts::Relacionamentos::PessoasController::ESPERA_DA_PLANILHA.to_i)
       expect(Account::ContactsExportJob).to have_been_enqueued.with(account.id, quem.id, nil, { relacionamentos: {} })
     end
   end

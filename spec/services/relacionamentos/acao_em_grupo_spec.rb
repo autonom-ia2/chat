@@ -169,7 +169,8 @@ RSpec.describe Relacionamentos::AcaoEmGrupo do
     it 'deixa de fora a pessoa com dado antigo que não passa mais na validação; das outras tira' do
       bruno.update_column(:phone_number, '123') # rubocop:disable Rails/SkipsModelValidations
 
-      expect(tirar).to eq(tiradas: 2, de_fora: [de_fora(bruno, 'dados_invalidos')])
+      # Só Ana tinha "feira" e perdeu; Carla não tinha, e Bruno ficou de fora.
+      expect(tirar).to eq(tiradas: 1, de_fora: [de_fora(bruno, 'dados_invalidos')])
       expect([ana, bruno].map { |contato| contato.reload.label_list.sort }).to eq([%w[site], %w[feira site]])
     end
 

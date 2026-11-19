@@ -67,13 +67,20 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
                                      .merge('ativos_agora' => contar_no_site_agora)
   end
 
-  # A consulta inteira, para "Marcar todas as N": só o que as ações em grupo leem de cada pessoa. As etiquetas vão junto
-  # para "Tirar etiquetas" mostrar quantas das marcadas têm cada uma.
+  # As etiquetas de cada pessoa, na mesma consulta da lista, como a linha lê (etiqueta com dono não é da pessoa).
+  ETIQUETAS_DA_PESSOA = <<~SQL.squish.freeze
+    ARRAY(SELECT tags.name FROM taggings INNER JOIN tags ON tags.id = taggings.tag_id
+          WHERE taggings.taggable_type = 'Contact' AND taggings.context = 'labels' AND taggings.tagger_id IS NULL
+            AND taggings.taggable_id = contacts.id ORDER BY tags.name)
+  SQL
+
+  # A consulta inteira, para "Marcar todas as N": só o que as ações em grupo leem de cada pessoa. As etiquetas vão junto,
+  # na mesma consulta, para "Tirar etiquetas" mostrar quantas das marcadas têm cada uma.
   def todos
-    etiquetas = etiquetas_de(do_grupo)
-    ordenados.pluck(:id, :name, :phone_number, :blocked, :opted_out_at).map do |id, name, phone_number, blocked, opted_out_at|
-      { id: id, name: name, phone_number: phone_number, blocked: blocked, opted_out_at: opted_out_at&.to_i,
-        labels: etiquetas.fetch(id, []) }
+    campos = %i[id name phone_number blocked opted_out_at labels]
+    ordenados.pluck(*campos.first(5), Arel.sql(ETIQUETAS_DA_PESSOA)).map do |linha|
+      pessoa = campos.zip(linha).to_h
+      pessoa.merge(opted_out_at: pessoa[:opted_out_at]&.to_i)
     end
   end
 
@@ -111,14 +118,6 @@ class Relacionamentos::ConsultaDePessoas < Relacionamentos::Consulta
     return 0 if cortes[:ativos_agora].empty?
 
     consultados(@account.contacts).where(com_os_cortes(GRUPOS['ativos_agora'])).count
-  end
-
-  # As etiquetas de cada pessoa do escopo, numa consulta só, como a linha lê (etiqueta com dono não é da pessoa).
-  def etiquetas_de(escopo)
-    ActsAsTaggableOn::Tagging.joins(:tag)
-                             .where(taggable_type: 'Contact', context: 'labels', tagger_id: nil, taggable_id: escopo.select('contacts.id'))
-                             .pluck(:taggable_id, 'tags.name')
-                             .group_by(&:first).transform_values { |pares| pares.map(&:last) }
   end
 
   def consultados(base = grupo == 'ativos_agora' ? @account.contacts : self.class.base(@account))
