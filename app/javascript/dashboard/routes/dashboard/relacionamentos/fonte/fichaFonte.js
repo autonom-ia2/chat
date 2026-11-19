@@ -11,6 +11,9 @@
 //      bloquear e desbloquear (o PATCH do contato, campo `blocked`), apagar
 //      (DELETE contacts/:id), pôr e tirar etiqueta (contacts/:id/labels/alterar,
 //      só o que mudou), apagar nota e marcar "não quer mensagens" (opt_out);
+//      #3075 — salvar grava o pedido inteiro da gaveta (fonte/gravarPessoa.js:
+//      empresa nova, foto e campos que saem) e `buscarEmpresas` acha as
+//      empresas da conta para a escolha da gaveta;
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/ficha.js), a escrita só
 //      fica na memória e tudo demora um instante, como a rede.
@@ -24,6 +27,7 @@ import EtiquetasDoContatoAPI from 'dashboard/api/etiquetasDoContato';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
+import { GRAVOU_EM_PARTE, alterarPessoa, buscarEmpresas } from './gravarPessoa';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
 
 const CARREGAR_DEMO = import.meta.env.DEV
@@ -47,6 +51,7 @@ const LEITURAS = {
   cardsDaEmpresa: [],
   etiquetasDaConta: [],
   buscarPessoas: [],
+  buscarEmpresas: [],
 };
 const ESCRITAS = [
   'salvar',
@@ -112,6 +117,16 @@ const comNome = falha => {
     : falha;
 };
 
+// #3075 — como `noServidor` (abaixo), para quem já devolve o que interessa
+// (fonte/gravarPessoa.js).
+const comNomeNaFalha = async acao => {
+  try {
+    return await acao();
+  } catch (falha) {
+    throw comNome(falha);
+  }
+};
+
 // `pedido()` é uma ida ao servidor: devolve o corpo da resposta.
 const noServidor = async pedido => {
   try {
@@ -167,11 +182,28 @@ const fonteReal = () => ({
   conversasDaEmpresa: id =>
     noServidor(() => RelacionamentosAPI.conversasDaEmpresa(id)),
   cardsDaEmpresa: id => noServidor(() => RelacionamentosAPI.cardsDaEmpresa(id)),
-  // `dados` já vem no formato do contato (ficha/informacoes.js).
-  async salvar(id, dados) {
-    await noServidor(() => ContactAPI.update(id, dados));
+  // `pedido` vem da gaveta (ficha/informacoes.js#pedidoParaSalvar).
+  // `retomada`: o que a tentativa anterior já gravou (fonte/gravarPessoa.js).
+  // Se a pessoa ficou gravada e um passo depois falhou (a foto, os campos que
+  // saem), a falha sobe com a pessoa relida em `retomada.pessoaNaFicha`: a
+  // ficha mostra como ela ficou.
+  async salvar(id, pedido, retomada = null) {
+    try {
+      await alterarPessoa(id, pedido, retomada);
+    } catch (falha) {
+      if (falha?.name !== GRAVOU_EM_PARTE) throw comNome(falha);
+      if (!falha.retomada.pessoa) throw falha;
+      // Se nem a releitura vier, a falha sobe do mesmo jeito, sem a pessoa.
+      const pessoaNaFicha = await lerPessoa(id).catch(() => null);
+      throw Object.assign(new Error(falha.message, { cause: falha.cause }), {
+        name: GRAVOU_EM_PARTE,
+        response: falha.response,
+        retomada: { ...falha.retomada, pessoaNaFicha },
+      });
+    }
     return lerPessoa(id);
   },
+  buscarEmpresas: termo => comNomeNaFalha(() => buscarEmpresas(termo)),
   async marcarCliente(id) {
     await noServidor(() => ContactAPI.markCustomer(id));
     return lerPessoa(id);

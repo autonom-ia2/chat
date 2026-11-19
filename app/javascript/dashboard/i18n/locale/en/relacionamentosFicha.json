@@ -175,7 +175,13 @@
       "CNPJ": "Company tax ID",
       "SITE": "Website",
       "PESSOAS": "People",
-      "CLIENTES": "Customers"
+      "CLIENTES": "Customers",
+      "PAIS": "Country",
+      "SOBRE": "About this person",
+      "SIM": "Yes",
+      "NAO": "No",
+      "SO_LEITURA": "You can see this information, but you cannot change it.",
+      "ESCOLHER_CAMPOS": "Choose profile fields"
     },
     "ORIGEM": {
       "TITULO": "Where they came from",
@@ -204,13 +210,16 @@
       "SALVAR": "Save",
       "SALVO": "Details saved.",
       "ERRO_AO_SALVAR": "I could not save. Try again.",
+      "SALVOU_EM_PARTE": "The details were saved, but one part did not go through: the photo or a field to clear. Tap Save again.",
       "ERRO": {
         "NOME": "Write the name.",
         "EMAIL": "Check the e-mail. Something seems to be missing.",
         "CPF": "Check the personal tax ID. It has 11 numbers.",
         "CNPJ": "Check the company tax ID. It has 14 numbers.",
         "EMAIL_REPETIDO": "This email is already on another person's profile. Look for it in the list search or remove the email here.",
-        "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here."
+        "TELEFONE_REPETIDO": "This phone is already on another person's profile. Look for it in the list search or remove the phone here.",
+        "LINK": "This website address is not right. Write it like this: yoursite.com",
+        "EMPRESA_SEM_ESCOLHA": "Tap the company name in the list to choose it. If it is not there, tap “Register as a new company”."
       },
       "SAIR": {
         "TITULO": "Leave without saving?",
@@ -229,7 +238,50 @@
         "github": "GitHub"
       },
       "CNPJ": "Company tax ID",
-      "SITE": "Website"
+      "SITE": "Website",
+      "PAIS_ONDE_MORA": "Country",
+      "PAIS_NENHUM": "Not provided",
+      "PAIS_ESCOLHA": "Choose the country",
+      "SOBRE": "About this person",
+      "SOBRE_EXEMPLO": "E.g.: prefers to talk on WhatsApp in the afternoon.",
+      "SOBRE_AJUDA": "How the person is. What happened in each conversation goes in Notes.",
+      "MAIS_CAMPOS": "More fields ({count})",
+      "ATRIBUTO": {
+        "SIM": "Yes",
+        "NAO": "No",
+        "ESCOLHA": "Choose an option",
+        "LIMPAR": "Clear",
+        "LIMPAR_O": "Clear what is in {campo}",
+        "LINK_EXEMPLO": "E.g.: yoursite.com",
+        "VAI_SAIR": "This field will be blank when you save."
+      },
+      "FOTO": {
+        "POR": "Add photo",
+        "TROCAR": "Change photo",
+        "TIRAR": "Remove photo",
+        "MANTER": "Undo",
+        "VAI_SAIR": "The photo is removed when you save. The initials of the name show instead.",
+        "VAI_ENTRAR": "The new photo is used when you save.",
+        "ERRO_TIPO": "This photo does not work. Choose a JPG, PNG, GIF or WEBP photo.",
+        "ERRO_TAMANHO": "This photo is too big. Choose one up to 15 MB."
+      },
+      "EMPRESA_ESCOLHA": {
+        "ROTULO": "Company",
+        "PLACEHOLDER": "Type the company name",
+        "DIGITE": "Type the name to search the registered companies.",
+        "PROCURANDO": "Searching…",
+        "ERRO": "Could not search right now. Try again.",
+        "NENHUMA": "No registered company matches “{termo}”.",
+        "ACHADAS": "Companies found",
+        "CADASTRAR": "Register “{nome}” as a new company",
+        "NOVA": "New company: it is registered when you save.",
+        "SO_NOME": "Only the name is written here. Link it to a registered company to open the company profile.",
+        "LIGAR": "Link to a company",
+        "TROCAR": "Change",
+        "TIRAR": "Remove from company",
+        "MANTER": "Keep {empresa}",
+        "VAI_SAIR": "This person leaves {empresa} when you save. To add another one, search for the name above and tap it."
+      }
     },
     "APAGAR": {
       "TITULO": "Delete {nome}?",

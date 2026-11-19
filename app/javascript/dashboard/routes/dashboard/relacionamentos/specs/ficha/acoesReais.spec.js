@@ -13,7 +13,12 @@ import FichaDaPessoaPage from '../../pages/FichaDaPessoaPage.vue';
 // escreve pelo endpoint que a ficha antiga usava, pergunta antes quando apaga
 // ou restringe, diz o que aconteceu e, quando dá, oferece "Desfazer".
 const contexto = vi.hoisted(() => ({ params: {}, empurrar: vi.fn() }));
-const pode = vi.hoisted(() => ({ apagar: false, lembrete: false }));
+const pode = vi.hoisted(() => ({
+  apagar: false,
+  lembrete: false,
+  editar: true,
+}));
+const daConta = vi.hoisted(() => ({ definicoes: [] }));
 const conta = vi.hoisted(() => ({ carteira: false, flags: [] }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -54,7 +59,11 @@ vi.mock('../../fonte/modoDemo', async importOriginal => ({
 }));
 vi.mock('../../ficha/usePermissoesDaFicha', () => ({
   usePermissoesDaFicha: () => ({
-    podeEditar: { value: true },
+    podeEditar: {
+      get value() {
+        return pode.editar;
+      },
+    },
     podeCriarCards: { value: true },
     podeExportar: { value: false },
     podeApagar: {
@@ -89,6 +98,25 @@ vi.mock(
 vi.mock('../../components/carteira/ConversaNova.vue', () => ({
   default: { render: () => null, methods: { abrir: async () => false } },
 }));
+// #3075 — os campos personalizados da conta vêm do store.
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () => ({
+    get value() {
+      return daConta.definicoes;
+    },
+  }),
+}));
+// #3075 — "Este contato é" é a escolha da ficha antiga; aqui só se vê se veio.
+vi.mock(
+  'dashboard/components-next/contato-relacao/EscolhaDaRelacao.vue',
+  () => ({
+    default: {
+      props: ['contactId', 'podeEditar'],
+      template:
+        '<p data-escolha-da-relacao :data-pessoa="contactId" :data-pode-editar="String(podeEditar)" />',
+    },
+  })
+);
 vi.mock('dashboard/api/relacionamentos', () => ({
   default: {
     pessoa: vi.fn(),
@@ -205,6 +233,8 @@ const desfazer = async w => {
 beforeEach(() => {
   pode.apagar = false;
   pode.lembrete = false;
+  pode.editar = true;
+  daConta.definicoes = [];
   conta.carteira = false;
   conta.flags = [];
   servidorResponde();
@@ -682,5 +712,121 @@ describe('Ligar e Lembrete', () => {
   it('sem a permissão, não tem Lembrete', async () => {
     const w = await abrirPessoa();
     expect(w.find(marca('lembrete')).exists()).toBe(false);
+  });
+});
+
+describe('#3075 — os dados da ficha antiga', () => {
+  const definicao = (id, chave, tipo, nome) => ({
+    id,
+    attribute_model: 'contact_attribute',
+    attribute_key: chave,
+    attribute_display_name: nome,
+    attribute_display_type: tipo,
+    attribute_values: [],
+  });
+  const COMPLETA = {
+    ...ANA,
+    company_id: 3,
+    additional_attributes: {
+      city: 'Santos',
+      company_name: 'Padaria Dornelaz',
+      country_code: 'BR',
+      country: 'Brazil',
+      description: 'Prefere conversar à tarde.',
+    },
+    custom_attributes: {
+      aniversario: '1990-05-12',
+      vip: true,
+      site: 'https://padariadornelaz.com.br',
+    },
+  };
+  beforeEach(() => {
+    daConta.definicoes = [
+      definicao(1, 'aniversario', 'date', 'Aniversário'),
+      definicao(2, 'vip', 'checkbox', 'Cliente VIP'),
+      definicao(3, 'site', 'link', 'Site da padaria'),
+      definicao(4, 'apelido', 'text', 'Apelido'),
+    ];
+    servidorResponde(COMPLETA);
+  });
+  const informacao = (w, chave) => w.get(`[data-informacao="${chave}"]`);
+  const valor = (w, chave) => informacao(w, chave).get('dd').text();
+  const nome = (w, chave) => informacao(w, chave).get('dt').text();
+
+  it('Informações mostra país, "Sobre a pessoa" e os campos com o nome e o tipo', async () => {
+    const w = await abrirPessoa();
+    expect([nome(w, 'pais'), valor(w, 'pais')]).toEqual(['País', 'Brasil']);
+    expect([nome(w, 'sobre'), valor(w, 'sobre')]).toEqual([
+      'Sobre a pessoa',
+      'Prefere conversar à tarde.',
+    ]);
+    expect([
+      nome(w, 'conta:aniversario'),
+      valor(w, 'conta:aniversario'),
+    ]).toEqual(['Aniversário', '12/05/1990']);
+    expect([nome(w, 'conta:vip'), valor(w, 'conta:vip')]).toEqual([
+      'Cliente VIP',
+      'Sim',
+    ]);
+    expect(informacao(w, 'conta:site').get('a').attributes('href')).toBe(
+      'https://padariadornelaz.com.br/'
+    );
+    // Sem valor e fora da escolha do configurador: não aparece.
+    expect(w.find('[data-informacao="conta:apelido"]').exists()).toBe(false);
+  });
+
+  it('quem só pode ver lê tudo e o aviso, sem nenhum botão de mudar', async () => {
+    pode.editar = false;
+    const w = await abrirPessoa();
+    expect(w.get(marca('so-leitura')).text()).toBe(
+      'Você pode ver estas informações, mas não pode mudar.'
+    );
+    expect(valor(w, 'conta:vip')).toBe('Sim');
+    expect(w.find(marca('alterar')).exists()).toBe(false);
+    expect(w.find(marca('mais-acoes')).exists()).toBe(false);
+    expect(w.find(marca('mudar-etiquetas')).exists()).toBe(false);
+    expect(w.find(marca('escolher-campos')).exists()).toBe(false);
+    expect(w.find(marca('empresa-da-pessoa')).text()).toBe('Padaria Dornelaz');
+  });
+
+  it('"Este contato é" só com a chave `contato_relacao`, e só lê para quem só vê', async () => {
+    let w = await abrirPessoa();
+    expect(w.find(marca('este-contato-e')).exists()).toBe(false);
+    w.unmount();
+
+    conta.flags = ['contato_relacao'];
+    pode.editar = false;
+    w = await abrirPessoa();
+    const secao = w.get(marca('este-contato-e'));
+    expect(secao.text()).toContain('Este contato é');
+    expect(secao.get('[data-escolha-da-relacao]').attributes()).toMatchObject({
+      'data-pessoa': '7',
+      'data-pode-editar': 'false',
+    });
+  });
+
+  it('a gaveta abre com a foto, o país, "Sobre a pessoa" e os campos da conta', async () => {
+    const w = await abrirPessoa();
+    await w.get(marca('alterar')).trigger('click');
+    await flushPromises();
+    const gaveta = document.body.querySelector(
+      '[data-relacionamentos="gaveta-informacoes"]'
+    );
+    expect(
+      gaveta.querySelector('[data-relacionamentos="foto-da-pessoa"]')
+    ).not.toBeNull();
+    expect(
+      gaveta.querySelector('[data-relacionamentos="pais-da-pessoa"]')
+        .textContent
+    ).toContain('Brasil');
+    expect(
+      gaveta.querySelector('textarea[data-relacionamentos="sobre-a-pessoa"]')
+        .value
+    ).toBe('Prefere conversar à tarde.');
+    expect(
+      [...gaveta.querySelectorAll('[data-atributo]')].map(
+        campo => campo.dataset.atributo
+      )
+    ).toEqual(['aniversario', 'vip', 'site', 'apelido']);
   });
 });

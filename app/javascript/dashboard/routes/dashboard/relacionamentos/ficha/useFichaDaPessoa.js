@@ -12,6 +12,7 @@
 // `false`, para a tela dizer que não deu.
 import { computed, ref } from 'vue';
 import { reportarSemDados } from 'dashboard/helper/sentryPrivacy';
+import { GRAVOU_EM_PARTE } from '../fonte/gravarPessoa';
 import { NAO_ACHEI, SEM_ACESSO } from './falhas';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
 import { usePartesDaFicha } from './usePartesDaFicha';
@@ -24,6 +25,7 @@ const veioDoServidor = falha =>
     falha?.isAxiosError ||
       falha?.response ||
       falha?.cause?.response ||
+      falha?.cause?.isAxiosError ||
       FALHAS_COM_NOME.includes(falha?.name)
   );
 
@@ -116,11 +118,32 @@ export const useFichaDaPessoa = (fonte, id) => {
       partes.trocar('notas', [nota, ...partes.valores.value.notas]);
     });
 
-  const salvar = dados =>
-    executar('salvar', async aindaVale => {
-      const salva = await fonte.salvar(id.value, dados);
-      if (aindaVale()) pessoa.value = salva;
+  // #3075 — `retomada` guarda o que a última tentativa de salvar já gravou
+  // (fonte/gravarPessoa.js): a próxima repete só o que faltou. Se a pessoa
+  // ficou gravada e a foto (ou um campo que sai) falhou, a ficha já mostra a
+  // pessoa como ficou, e a tela avisa que uma parte não entrou. Um segundo
+  // "Salvar" enquanto o primeiro está no ar não faz nada.
+  const retomada = ref(null);
+  const guardarRetomada = (falha, aindaVale) => {
+    if (falha?.name !== GRAVOU_EM_PARTE || !aindaVale()) return;
+    const { pessoaNaFicha, ...feito } = falha.retomada;
+    retomada.value = feito;
+    if (pessoaNaFicha) pessoa.value = pessoaNaFicha;
+  };
+  const salvar = async dados => {
+    if (ocupados.value.has('salvar')) return false;
+    return executar('salvar', async aindaVale => {
+      try {
+        const salva = await fonte.salvar(id.value, dados, retomada.value);
+        if (!aindaVale()) return;
+        pessoa.value = salva;
+        retomada.value = null;
+      } catch (falha) {
+        guardarRetomada(falha, aindaVale);
+        throw falha;
+      }
     });
+  };
 
   const liberar = () =>
     executar('liberar', async aindaVale => {
@@ -186,6 +209,10 @@ export const useFichaDaPessoa = (fonte, id) => {
     desmarcarCliente,
     guardarNota,
     salvar,
+    retomada,
+    esquecerRetomada: () => {
+      retomada.value = null;
+    },
     liberar,
     marcarNaoQuer,
     bloquear,

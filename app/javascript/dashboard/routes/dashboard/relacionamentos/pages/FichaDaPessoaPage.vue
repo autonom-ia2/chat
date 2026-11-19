@@ -13,6 +13,7 @@ import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoComDesfazer from '../components/carteira/AvisoComDesfazer.vue';
@@ -29,15 +30,18 @@ import FaixaNaoQuer from '../components/ficha/FaixaNaoQuer.vue';
 import GavetaDeInformacoes from '../components/ficha/GavetaDeInformacoes.vue';
 import GavetaDoCard from '../components/ficha/GavetaDoCard.vue';
 import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
+import SecaoEsteContatoE from '../components/ficha/SecaoEsteContatoE.vue';
 import { fichaFonte } from '../fonte/fichaFonte';
 import { usarDemo } from '../fonte/modoDemo';
 import { useContaDeSeguros } from '../carteira/useContaDeSeguros';
 import { useConversarComPessoa } from '../carteira/useConversarComPessoa';
 import { trechoCurto } from '../ficha/formatos';
 import { useIdioma } from '../ficha/idioma';
+import { camposDaPessoa } from '../ficha/atributos';
 import { linhasDaPessoa, redesPreenchidas } from '../ficha/informacoes';
 import { useAcoesDaFicha } from '../ficha/useAcoesDaFicha';
 import { useAvisoVivo } from '../ficha/useAvisoVivo';
+import { useCamposDaConta } from '../ficha/useCamposDaConta';
 import { useDesfazerNaFicha } from '../ficha/useDesfazerNaFicha';
 import {
   ESTADOS_DA_FICHA as ESTADOS,
@@ -81,6 +85,14 @@ const LembreteGaveta = defineAsyncComponent(
 // a lista; depois de juntar, fica na mesma pessoa, já com o que veio da outra.
 // Na demonstração tudo isso roda na memória (demo/ficha.js); só a conversa e o
 // lembrete avisam, porque as pessoas são inventadas.
+// #3075 — os dados que a ficha antiga tinha: em Informações, país, "Sobre a
+// pessoa" e os campos personalizados com o nome e o tipo de cada um (os
+// escolhidos pelo configurador e os que têm valor); "Escolher campos" abre o
+// configurador da ficha antiga (FieldConfigurator, área contact_details) para
+// quem pode; "Este contato é" (chave `contato_relacao`) vem depois de
+// Informações. A gaveta ganha a foto, o país, "Sobre a pessoa", a empresa
+// cadastrada (chave `companies`) e os campos com o controle de cada tipo. Quem
+// só pode ver lê tudo isso e o aviso de que não pode mudar.
 const { t } = useI18n();
 const route = useRoute();
 const idioma = useIdioma();
@@ -105,6 +117,18 @@ const podeCriarCards = computed(
 );
 const id = computed(() => Number(route.params?.contactId));
 const ficha = useFichaDaPessoa(fonte, id);
+const camposDaConta = useCamposDaConta();
+const comEmpresas = computed(
+  () => fonte.usaDemo || isCloudFeatureEnabled(FEATURE_FLAGS.COMPANIES)
+);
+// Na demonstração as pessoas são inventadas: a escolha lê do servidor.
+const comRelacao = computed(
+  () => !fonte.usaDemo && isCloudFeatureEnabled(FEATURE_FLAGS.CONTATO_RELACAO)
+);
+const podeEscolherCampos = computed(
+  () => !fonte.usaDemo && camposDaConta.podeEscolher.value
+);
+const configurador = useTemplateRef('configurador');
 const agora = Date.now();
 
 const gavetaAberta = ref(false);
@@ -135,8 +159,22 @@ const {
 
 const nome = computed(() => ficha.pessoa.value?.name ?? '');
 const primeiroNome = computed(() => nome.value.trim().split(' ')[0]);
+const campos = computed(() =>
+  ficha.pessoa.value
+    ? camposDaPessoa({
+        definicoes: camposDaConta.definicoes.value,
+        escolhidos: camposDaConta.escolhidos.value,
+        valores: ficha.pessoa.value.custom_attributes ?? {},
+      })
+    : []
+);
 const linhas = computed(() =>
-  ficha.pessoa.value ? linhasDaPessoa(ficha.pessoa.value) : []
+  ficha.pessoa.value
+    ? linhasDaPessoa(ficha.pessoa.value, {
+        idioma: idioma.value,
+        campos: campos.value,
+      })
+    : []
 );
 const redes = computed(() =>
   ficha.pessoa.value ? redesPreenchidas(ficha.pessoa.value) : []
@@ -200,15 +238,24 @@ const guardarNota = async texto => {
   );
 };
 
-const salvar = async dados => {
-  const certo = await ficha.salvar(dados);
+// #3075 — se a pessoa ficou gravada e só a foto (ou um campo que sai) falhou,
+// o aviso diz isso: "Salvar" de novo repete só o que faltou.
+const salvar = async pedido => {
+  if (ficha.ocupadoEm('salvar')) return;
+  const certo = await ficha.salvar(pedido);
   if (certo) gavetaAberta.value = false;
   resultado(
     certo,
     'RELACIONAMENTOS_FICHA.GAVETA.SALVO',
-    'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
+    ficha.retomada.value?.pessoa
+      ? 'RELACIONAMENTOS_FICHA.GAVETA.SALVOU_EM_PARTE'
+      : 'RELACIONAMENTOS_FICHA.GAVETA.ERRO_AO_SALVAR'
   );
 };
+// Cada vez que a gaveta abre, o salvar começa do zero.
+watch(gavetaAberta, aberta => {
+  if (aberta) ficha.esquecerRetomada();
+});
 
 // O "desfazer" de cada ação: { certo, frase }.
 const desfeito = async (acao, certo, erro) => {
@@ -599,6 +646,7 @@ watch(
             :guardando-nota="ficha.ocupadoEm('guardarNota')"
             :falhas="ficha.falhas.value"
             :pode-editar="podeEditar"
+            :pode-escolher-campos="podeEscolherCampos"
             pode-abrir-conversas
             @tentar="ficha.relerParte"
             @abrir-conversa="abrirConversa"
@@ -606,6 +654,7 @@ watch(
             @abrir-card="card => (cardAberto = card)"
             @guardar-nota="guardarNota"
             @alterar="gavetaAberta = true"
+            @escolher-campos="configurador?.open()"
           >
             <template v-if="comSeguros" #antes>
               <SegurosDaFicha
@@ -619,6 +668,12 @@ watch(
                 @quantos="quantos => (quantosSeguros = quantos)"
               />
             </template>
+            <template v-if="comRelacao" #lado>
+              <SecaoEsteContatoE
+                :pessoa-id="ficha.pessoa.value.id"
+                :pode-editar="podeEditar"
+              />
+            </template>
           </CorpoDaFichaDaPessoa>
         </div>
       </div>
@@ -628,8 +683,20 @@ watch(
       :aberta="gavetaAberta"
       :pessoa="ficha.pessoa.value"
       :salvando="ficha.ocupadoEm('salvar')"
+      :empresa-cadastrada="ficha.retomada.value?.empresa ?? null"
+      :com-empresas="comEmpresas"
+      :buscar-empresas="fonte.buscarEmpresas"
+      :definicoes="camposDaConta.definicoes.value"
+      :escolhidos="camposDaConta.escolhidos.value"
       @fechar="gavetaAberta = false"
       @salvar="salvar"
+    />
+    <FieldConfigurator
+      v-if="podeEscolherCampos && podeEditar"
+      ref="configurador"
+      entity="contact"
+      surface="contact_details"
+      :show-actions="false"
     />
     <GavetaDoCard
       :card="cardAberto"

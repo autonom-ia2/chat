@@ -1,7 +1,8 @@
-import ContactAPI from 'dashboard/api/contacts';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { emFatias } from './emFatias';
+import { alterarPessoa, buscarEmpresas, criarPessoa } from './gravarPessoa';
+import { normalizado } from './texto';
 import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
 
 // #2894 — de onde as ações em grupo da lista de Relacionamentos escrevem (criar
@@ -17,9 +18,11 @@ import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
 //   - etiquetas: várias de uma vez (`etiquetas`), para pôr ou tirar;
 //   - exportar(consulta): "Baixar planilha" da lista na tela. Devolve
 //     { email }, para onde a planilha vai;
-//   - criarPessoa(dados) e salvarPessoa(id, dados): "Nova pessoa" e "Editar"
-//     da linha, com `dados` no formato do contato (ficha/informacoes.js). O que
-//     o servidor recusa sobe como veio (lista/recusaDoContato.js lê o 422).
+//   - criarPessoa(pedido) e salvarPessoa(id, pedido): "Nova pessoa" e "Editar"
+//     da linha, com o pedido da gaveta (ficha/informacoes.js#pedidoParaSalvar,
+//     gravado por fonte/gravarPessoa.js). O que o servidor recusa sobe como
+//     veio (lista/recusaDoContato.js lê o 422);
+//   - #3075 — buscarEmpresas(termo): as empresas da conta, para a gaveta.
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/acoesDaLista.js')
   : null;
@@ -69,13 +72,20 @@ const fonteDemo = ({ carregarDemo, atraso }) => {
       await esperar(atraso);
       return { email: 'voce@exemplo.com.br' };
     },
-    async criarPessoa({ name }) {
+    async criarPessoa({ contato }) {
       await esperar(atraso);
-      return { id: Date.now(), name };
+      return { id: Date.now(), name: contato.name };
     },
-    async salvarPessoa(id, { name }) {
+    async salvarPessoa(id, { contato }) {
       await esperar(atraso);
-      return { id, name };
+      return { id, name: contato.name };
+    },
+    async buscarEmpresas(termo) {
+      await esperar(atraso);
+      const { EMPRESAS_DA_BUSCA } = await carregarDemo();
+      return EMPRESAS_DA_BUSCA.filter(item =>
+        normalizado(item.nome).includes(normalizado(termo))
+      );
     },
   };
 };
@@ -133,14 +143,9 @@ const fonteReal = () => ({
     const params = paramsDoPedido({ ...consulta, pagina: undefined });
     return (await RelacionamentosAPI.exportarPessoas(params)).data;
   },
-  async criarPessoa(dados) {
-    const { data } = await ContactAPI.create(dados);
-    return data.payload.contact;
-  },
-  async salvarPessoa(id, dados) {
-    const { data } = await ContactAPI.update(id, dados);
-    return data.payload;
-  },
+  criarPessoa,
+  salvarPessoa: alterarPessoa,
+  buscarEmpresas,
 });
 
 export const acoesDaListaFonte = ({

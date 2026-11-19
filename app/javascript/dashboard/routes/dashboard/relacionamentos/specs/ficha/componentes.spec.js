@@ -1195,13 +1195,12 @@ describe('GavetaDeInformacoes', () => {
     const w = montar();
     await w.get('[data-foco]').setValue('Ana Maria');
     await w.get('[data-relacionamentos="salvar-informacoes"]').trigger('click');
-    const [dados] = w.emitted('salvar')[0];
-    expect(dados.name).toBe('Ana Maria');
-    expect(dados.additional_attributes.city).toBe('Santos');
-    expect(dados.custom_attributes).toMatchObject({
-      cpf: '52998224725',
-      melhor_horario: 'Tarde',
-    });
+    const [pedido] = w.emitted('salvar')[0];
+    expect(pedido.contato.name).toBe('Ana Maria');
+    expect(pedido.contato.additional_attributes.city).toBe('Santos');
+    // #3075 — o que ninguém mexeu não vai de novo (o servidor junta).
+    expect(pedido.contato.custom_attributes).toEqual({});
+    expect(pedido).toMatchObject({ empresaNova: null, foto: null, apagar: [] });
   });
 
   it('Cancelar e Esc fecham', async () => {
