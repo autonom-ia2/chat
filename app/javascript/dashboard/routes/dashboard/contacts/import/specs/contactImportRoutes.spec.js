@@ -42,8 +42,9 @@ const ON = {
   CAMPAIGN_IMPORT_ENABLED: 'true',
 };
 
-// The flags the new screen's own route asks for (relacionamentos.routes.js).
-const NEW_RELATIONSHIPS = ['relacionamentos_novo', 'relationships_navigation'];
+// The flag the new screen's own route asks for (relacionamentos.routes.js). Since #2902 the new
+// screens are every account's; only the Relacionamentos menu flag decides.
+const NEW_RELATIONSHIPS = ['relationships_navigation'];
 const accountWith = (flags, account = { id: 1 }) => {
   store.getters['accounts/getAccount'] = () => account;
   store.getters['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
@@ -202,8 +203,8 @@ describe(
       });
     });
 
-    it.each([[['relacionamentos_novo']], [['relationships_navigation']]])(
-      'account with only %o: stays on the old screens (the new one would not open)',
+    it.each([[[]], [['relacionamentos_novo']]])(
+      'account with %o (no Relacionamentos menu): stays on the old screens (the new one would not open)',
       async flags => {
         window.globalConfig = ON;
         accountWith(flags);

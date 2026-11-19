@@ -5,30 +5,37 @@
 # - `primeira(account, user:)`: os últimos MESES_DA_PRIMEIRA meses. Termina no Conferir: a pessoa confere e traz, como
 #   nos PDFs;
 # - `diaria(account)`: os últimos DIAS_DA_DIARIA dias. Entra sozinha (Carteira::Conector::Gravar) e aparece no histórico,
-#   com Desfazer;
-# - `de_novo(leitura)`: a busca que parou num erro continua de onde estava; a que terminou com alguma seguradora sem
-#   vir pede de novo o mesmo período (os registros que já chegaram não se repetem).
+#   com Desfazer. Os 30 dias de um dia se sobrepõem aos do dia anterior de propósito: pegam o que o robô do Agger trouxer
+#   depois da busca, e o mesmo registro visto de novo não vira outro seguro (a referência e o endosso, em Carteira::Guardar);
+# - `de_novo(leitura)`: a busca que parou num erro continua de onde estava; a que terminou pede de novo o mesmo período
+#   (os registros que já chegaram não se repetem).
 # Enquanto uma busca da conta anda, pedir outra DO MESMO TIPO devolve a mesma (a primeira nunca devolve uma de todo dia, e
 # vice-versa). A que não anda há PARADA (o processo morreu, o job se perdeu) é retomada ali: a rotina de todo dia não fica
 # presa numa busca parada. Sem conexão pronta: `agger_desligado`.
 #
 # Andar (`passo`, no Carteira::Conector::BuscaJob, que se reagenda com a espera que o passo devolve): UMA chamada ao
-# conector por passo, nunca em rajada.
-# 1. sem pedido: pede o período (`portfolio_sync_start`);
-# 2. pedido buscando: pergunta o andamento (`portfolio_sync_status`) e guarda como cada seguradora está;
-# 3. pedido pronto: lê uma página (`portfolio_policies`) e passa para a seguinte;
-# 4. sem página seguinte: decide o tipo de cada seguro e termina (`lida`, com os números do Conferir já calculados:
+# conector por passo, nunca em rajada. TRAZ NA HORA O QUE O AGGER JÁ TEM, sem esperar o robô (#2900, E7.5, decisão do
+# Rodrigo em 15/11/2026):
+# 1. sem pedido: pede o período (`portfolio_sync_start`). O adapter pede ao robô do Agger só o mês mais recente, e pode
+#    devolver `por_seguradora`, as seguradoras com evidência de login faltando ou recusado (Carteira::Conector::Pedido);
+# 2. com o pedido feito: lê uma página (`portfolio_policies`) e passa para a seguinte. A lista é o que o Agger JÁ TEM, e
+#    não depende do robô: o que ele buscar depois chega na busca de todo dia;
+# 3. sem página seguinte: decide o tipo de cada seguro e termina (`lida`, com os números do Conferir já calculados:
 #    Carteira::Conector::Conferir#calcular!; a de todo dia já vai para a gravação).
-# O pedido que falhou inteiro (nenhuma seguradora pronta) também termina, sem seguro: a tela diz o que fazer em cada uma.
+# A busca pedida antes desta regra, com o pedido ainda `buscando`, continua perguntando o andamento
+# (`portfolio_sync_status`) até o robô terminar, mas só até PRAZO_DO_ROBO depois do começo da busca: aí lê a lista do
+# mesmo jeito. Nenhuma busca fica presa esperando o robô.
 #
 # Erros: o login do Agger recusado (depois da renovação da sessão, que é uma só por operação) para a busca com o motivo
 # `agger_pede_login`; o Agger fora do ar ou lento é tentado de novo até TENTATIVAS vezes, e depois para com `agger_falhou`.
 # A busca parada (`parou`) volta pelo `de_novo`. No registro, só o id da leitura e a categoria do erro.
 class Carteira::Conector::Sincronizar
   MESES_DA_PRIMEIRA = 36
-  DIAS_DA_DIARIA = 7
+  DIAS_DA_DIARIA = 30
   ESPERA_DO_ANDAMENTO = 1.minute
   ESPERA_DA_PAGINA = 2.seconds
+  # A busca de antes desta regra espera o robô no máximo este tanto, contado do começo da busca; depois, lê a lista.
+  PRAZO_DO_ROBO = 2.hours
   TENTATIVAS = 3
   PEDE_LOGIN = 'agger_pede_login'.freeze
   FALHOU = 'agger_falhou'.freeze
@@ -136,26 +143,29 @@ class Carteira::Conector::Sincronizar
 
   private
 
+  # O pedido feito lê a lista na hora. Só a busca de antes, com o robô ainda buscando e dentro do prazo, espera.
   def andar
     return pedir unless @pedido.sync_id
-    return acompanhar if @pedido.status == 'buscando'
-    return ler_pagina if @pedido.status == 'pronta'
+    return acompanhar if @pedido.status == 'buscando' && @pedido.comecou_em > PRAZO_DO_ROBO.ago
 
-    terminar
+    ler_pagina
   end
 
+  # O `status` do pedido não é guardado: a lista não espera o robô.
   def pedir
     resposta = @portal.pedir(desde: @pedido.desde, ate: @pedido.ate)
     sync_id = resposta['sync_id']
     raise Autonomia::Insurance::Connector::Error.new(:protocol, 'pedido sem identificador') if sync_id.blank?
 
-    @pedido.pedido!(sync_id.to_s, status_de(resposta['status']))
-    ESPERA_DO_ANDAMENTO
+    @pedido.pedido!(sync_id.to_s, avisos: resposta['por_seguradora'])
+    ESPERA_DA_PAGINA
   end
 
+  # Só a busca de antes. As seguradoras do andamento não viram aviso: a evidência do login é a do pedido. A busca é
+  # tocada a cada pergunta: é o `updated_at` que diz que ela anda (PARADA).
   def acompanhar
     resposta = @portal.andamento(@pedido.sync_id)
-    @pedido.andamento!(status_de(resposta['status']), resposta['por_seguradora'])
+    @pedido.andamento!(status_de(resposta['status']))
     tocar
     @pedido.status == 'buscando' ? ESPERA_DO_ANDAMENTO : 0.seconds
   end

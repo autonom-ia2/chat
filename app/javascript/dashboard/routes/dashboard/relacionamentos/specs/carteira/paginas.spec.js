@@ -319,8 +319,10 @@ describe('a aba Seguros na lista de Relacionamentos', () => {
 
     await clicar(w, daCarteira('heroi-trazer'));
 
+    // A aba de origem vai junto: a volta de "Como trazer" leva de novo a ela.
     expect(roteador.push).toHaveBeenLastCalledWith({
       name: 'relacionamentos_trazer',
+      query: { aba: 'seguros' },
     });
   });
 

@@ -129,11 +129,20 @@ module ManualDoPrincipal
     # chega aqui quando ela terminar", e a Lia a devolveu quase igual ao cliente: "O comparativo chega por
     # aqui assim que ficar pronto" (conversa 6984). Processo sem sujeito; agora é ela quem continua.
     'você continua com a cotação dela' => -> { !CONDICOES_GERAIS.async? && COTACAO.async? },
-    # Perguntar de qual seguradora é a dúvida não é capricho: o parâmetro é obrigatório no schema, e
-    # sem ele a ferramenta recusa antes de consultar (`condicoes_sem_seguradora`).
+    # Perguntar de qual seguradora é a dúvida não é capricho. Desde o #3035 a seguradora é opcional
+    # (só para o catálogo), e o que sustenta a frase é a ferramenta: um trecho sem seguradora
+    # identificada não sai, e ela manda perguntar (`WHICH_INSURER`, exercitado em
+    # `insurance_general_conditions_spec`). O parâmetro diz o mesmo ao modelo.
     'Se ela não disse de qual seguradora' => lambda {
-      CONDICOES_GERAIS.openai_schema[:parameters][:required].include?('seguradora') &&
-        CONDICOES_GERAIS.params.find { |p| p['name'] == 'seguradora' }['required'] != false
+      CONDICOES_GERAIS.const_defined?(:WHICH_INSURER) &&
+        CONDICOES_GERAIS.params.find { |p| p['name'] == 'seguradora' }['description']
+                        .include?('Dúvida de cobertura sem seguradora: pergunte ao cliente')
+    },
+    # "Quem tem o seguro X" vai à base sem seguradora (decisão do Rodrigo, 16/11/2026): só é possível
+    # porque o schema aceita null na seguradora e a ferramenta lê a rota `catalogo` da API.
+    'quais seguradoras têm' => lambda {
+      CONDICOES_GERAIS.openai_schema[:parameters][:properties]['seguradora']['type'] == %w[string null] &&
+        CONDICOES_GERAIS.private_method_defined?(:describe_catalog)
     },
     # Voltar ao especialista quando o dado muda é o que o código faz: a abertura compara a identidade
     # do pedido (`ToolRun::PEDIDO`, gravada na abertura) e barra o repetido (entrega 10) — dado
@@ -481,6 +490,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # corretora que ainda não conectou (ou cuja conexão caiu) continua respondendo dúvida. O contraste
   # com a cotação, no mesmo agente e no mesmo estado, é o que dá sentido à afirmação.
   describe 'a ferramenta chega ao agente sem conexão com o portal (termo 3)' do
+    # Desde o #3035 a ferramenta também exige a chave de IA da própria conta; aqui ela existe, e o que
+    # se prova é só a independência da conexão com o portal.
+    before do
+      allow(Autonomia::Insurance::GeneralConditions::Client).to receive(:account_key).and_return('sk-conta-do-cliente-0123456789')
+    end
+
     it 'available_for? é verdadeiro com o módulo ligado e sem conexão AGGER' do
       agente = construir
 
@@ -532,6 +547,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # 21/09/2026 (`b5bbc4c0…` -> `99684ba9…`): a promessa de que a cotação segue virou fala da Lia na
   # primeira pessoa, e a âncora da tabela foi trocada junto. Pela paridade da jornada (`befd61f2…` -> `8d987440…`,
   # 25/09/2026): saem as crases de consultar_condicoes_gerais e de consultar_produtos_cotacao, com os nomes intactos.
+  # Pelo catálogo do #3035 (`8d987440…` -> `d8d912e0…`, 16/11/2026, texto aprovado pelo Rodrigo): "quem tem o seguro X"
+  # consulta sem seguradora, e a regra de cobertura continua por seguradora. A tabela ganhou a âncora nova.
   describe 'a §7.1 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_duvida(texto) }
 
@@ -542,12 +559,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'está no arquivo e é extraída inteira' do
       expect(secao).to be_present
       expect(secao).to start_with('### 7.1 ')
-      expect(secao).to end_with("A consulta é por seguradora, e sem esse nome não existe resposta.\n")
+      expect(secao).to end_with("O que a corretora atende sai de consultar_produtos_cotacao.\n")
     end
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('8d987440c707db36ff868f8288d12d23')
+      expect(Digest::MD5.hexdigest(secao)).to eq('d8d912e06c9e39656b59d846ee77015e')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.

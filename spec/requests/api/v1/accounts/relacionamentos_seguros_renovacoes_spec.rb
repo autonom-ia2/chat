@@ -229,11 +229,10 @@ RSpec.describe 'Carteira de seguros: ajustar renovações', type: :request do
       expect([sem_login_ao_ler, response.status]).to eq([401, 401])
     end
 
-    it 'responde 404 sem a carteira: chave desligada ou conta que não é corretora de seguros' do
+    it 'responde 404 sem a carteira: conta que saiu do nicho seguros ou que nunca foi de seguros' do
       comum = create(:account)
-      comum.enable_features!('relacionamentos_novo', 'carteira_seguros')
       dono = create(:user, account: comum, role: :administrator)
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
 
       respostas = [-> { ler }, -> { guardar({ dias: 30 }) },
                    -> { get "/api/v1/accounts/#{comum.id}/relacionamentos/seguros/renovacoes", headers: dono.create_new_auth_token }].map do |pedir|

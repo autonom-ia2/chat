@@ -23,6 +23,10 @@ class AutonomiaSourcesAPI extends ApiClient {
     return axios.get(`${this.url}/${agentId}/sources`);
   }
 
+  getFile(agentId, sourceId) {
+    return axios.get(`${this.url}/${agentId}/sources/${sourceId}/file`);
+  }
+
   // `descriptor` is either { url } for a link or { file } for an upload. Both
   // are mapped to the backend contract (wrapped `source[...]` + top-level file).
   create(agentId, descriptor = {}) {

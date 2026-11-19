@@ -13,7 +13,9 @@
 #     do segurado, e nenhuma conferência de valor separa um do outro. Eles nunca estão em `campos`;
 #   - `valor_centavos`, quando o valor está escrito na página mas sem "R$" antes: pode ser outra medida. Com o "R$"
 #     ele sai em `campos`;
-# - `duvidas`: os nomes que ficaram sem valor nenhum ("não achei"). O leitor nunca chuta.
+# - `duvidas`: os nomes que ficaram sem valor nenhum ("não achei"). O leitor nunca chuta. Os dados do segurado da
+#   cotação (DO_SEGURADO, E8.1 #3043) não entram: faltam em muitos ramos (vida não tem placa), ninguém precisa conferi-los
+#   e o "não achei" deles é só nulo em `campos`.
 #
 # - `lido?`: o arquivo é uma apólice e foi lido.
 # - `recusa`: por que não leu. `leitura_desligada` (a conta não tem a leitura liberada), `nao_e_apolice` (o arquivo não
@@ -30,7 +32,9 @@ class Carteira::Leitor::Resultado
   NAO_E_APOLICE = 'nao_e_apolice'.freeze
   NAO_DEU = 'nao_deu_para_ler'.freeze
   RECUSAS = [DESLIGADA, NAO_E_APOLICE, NAO_DEU].freeze
-  DA_APOLICE = %w[tipo ramo_original seguradora numero inicio_vigencia fim_vigencia valor_centavos bem].freeze
+  # E8.1 (#3043): os dados do segurado que a cotação da renovação pede. Os nomes são os das colunas da apólice.
+  DO_SEGURADO = Carteira::DadosDoSegurado::COLUNAS.map(&:to_s).freeze
+  DA_APOLICE = (%w[tipo ramo_original seguradora numero inicio_vigencia fim_vigencia valor_centavos bem] + DO_SEGURADO).freeze
   # `corretora` é a corretora que aparece na apólice (serve ao seguro de outra corretora).
   CAMPOS = (DA_APOLICE + %w[corretora segurado_nome segurado_documento]).freeze
   CONTATO = %w[segurado_telefone segurado_email].freeze
@@ -72,7 +76,7 @@ class Carteira::Leitor::Resultado
   def duvidas
     return [] unless lido?
 
-    NOMES.reject { |nome| campos[nome] || valores_a_confirmar.key?(nome) }
+    (NOMES - DO_SEGURADO).reject { |nome| campos[nome] || valores_a_confirmar.key?(nome) }
   end
 
   # Os dados da apólice como Carteira::Guardar recebe, com as chaves de comparação.

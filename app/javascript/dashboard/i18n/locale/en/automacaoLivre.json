@@ -331,7 +331,11 @@
       "DESCARTAR": "Discard changes",
       "DESCARTOU": "Changes discarded.",
       "CONFLITO": "Someone else saved first. Your changes were not saved.",
-      "VER_NOVA": "See the new version"
+      "VER_NOVA": "See the new version",
+      "DATAS_INVALIDAS": {
+        "CONTATOS": "{n} contact was left out because the “{campo}” field has the date written the wrong way: fix the date on that contact. | {n} contacts were left out because the “{campo}” field has the date written the wrong way: fix the date on those contacts.",
+        "CARDS": "{n} card was left out because the “{campo}” field has the date written the wrong way: fix the date on that card. | {n} cards were left out because the “{campo}” field has the date written the wrong way: fix the date on those cards."
+      }
     },
     "CONFIRA": {
       "QUANDO": "When",
@@ -571,7 +575,13 @@
         "CANCELAR": "Not now",
         "LIGAR": "Turn on"
       },
-      "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+      "COMPLETAR": {
+        "SE": "The “If” step is incomplete: choose the condition and add at least one step under “Then”.",
+        "ESPERAR": "The “Wait until something happens” step is incomplete: choose the condition.",
+        "OUTRO_REGISTRO": "The “Do it on the linked contact or cards” step is incomplete: choose where to do it and add at least one step inside it.",
+        "CADA": "The “{nome}” step is incomplete: add at least one step under “For each one in the list”.",
+        "NOVO": "The “{nome}” step is incomplete: tap Change on it and fill in what is missing."
+      }
     },
     "CRIADO": {
       "CONTATO": "Contact created by this automation",

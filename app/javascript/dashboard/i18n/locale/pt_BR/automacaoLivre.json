@@ -331,7 +331,11 @@
       "DESCARTAR": "Descartar mudanças",
       "DESCARTOU": "Mudanças descartadas.",
       "CONFLITO": "Outra pessoa salvou antes. Suas mudanças não foram salvas.",
-      "VER_NOVA": "Ver a versão nova"
+      "VER_NOVA": "Ver a versão nova",
+      "DATAS_INVALIDAS": {
+        "CONTATOS": "{n} contato ficou de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesse contato. | {n} contatos ficaram de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesses contatos.",
+        "CARDS": "{n} card ficou de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesse card. | {n} cards ficaram de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesses cards."
+      }
     },
     "CONFIRA": {
       "QUANDO": "Quando",
@@ -571,7 +575,13 @@
         "CANCELAR": "Agora não",
         "LIGAR": "Ligar"
       },
-      "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
+      "COMPLETAR": {
+        "SE": "Falta completar o passo “Se”: escolha a condição e ponha pelo menos um passo em “Então”.",
+        "ESPERAR": "Falta completar o passo “Esperar até algo acontecer”: escolha a condição.",
+        "OUTRO_REGISTRO": "Falta completar o passo “Fazer no contato ou nos cards ligados”: escolha onde fazer e ponha pelo menos um passo dentro dele.",
+        "CADA": "Falta completar o passo “{nome}”: ponha pelo menos um passo em “Em cada um da lista”.",
+        "NOVO": "Falta completar o passo “{nome}”: toque em Alterar nele e preencha o que falta."
+      }
     },
     "CRIADO": {
       "CONTATO": "Contato criado por esta automação",

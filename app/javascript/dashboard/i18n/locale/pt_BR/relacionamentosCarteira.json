@@ -1,6 +1,12 @@
 {
   "RELACIONAMENTOS_CARTEIRA": {
     "TITULO": "Seguros",
+    "VOLTAR": {
+      "PESSOAS": "Voltar para Pessoas",
+      "EMPRESAS": "Voltar para Empresas",
+      "SEGUROS": "Voltar para Seguros",
+      "COMO": "Voltar e escolher outro jeito"
+    },
     "ABA": "Seguros",
     "NUMERO_DA_APOLICE": "nº {numero}",
     "TIPOS": {
@@ -12,12 +18,14 @@
     },
     "SELOS": {
       "ATIVO": "Ativo",
+      "VENCE_LOGO": "Vence logo",
       "VENCIDO": "Vencido",
       "EM_RENOVACAO": "Em renovação",
       "RENOVADO": "Renovado",
       "DESCONHECIDO": "Seguro",
       "CANCELADO": "Cancelado",
-      "DE_FORA": "De outra corretora"
+      "DE_FORA": "De outra corretora",
+      "VENCE_EM_DIAS": "Vence hoje | Vence amanhã | Vence em {count} dias"
     },
     "CAMPOS": {
       "TIPO": "Tipo de seguro",
@@ -26,7 +34,12 @@
       "COMECA": "Começa",
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga",
-      "BEM": "O que está segurado"
+      "BEM": "O que está segurado",
+      "NASCIMENTO": "Nascimento do segurado",
+      "SEXO": "Sexo do segurado",
+      "CEP": "CEP",
+      "PLACA": "Placa do veículo",
+      "BONUS": "Classe de bônus"
     },
     "GRUPOS": {
       "TODOS": {
@@ -82,9 +95,7 @@
     "LISTA": {
       "BUSCA": "Buscar por nome ou número da apólice",
       "BUSCA_CURTA": "Buscar seguro",
-      "RESULTADOS": "Resultados",
       "AJUSTAR": "Ajustar renovações",
-      "MAIS": "Mais opções da carteira",
       "ORDENAR": {
         "ROTULO": "Ordenar",
         "VENCE_PRIMEIRO": "Vence primeiro",
@@ -113,7 +124,9 @@
       "LIMPAR_BUSCA": "Limpar busca",
       "ERRO": "Não consegui mostrar os seguros. Tente de novo.",
       "SEM_ACESSO": "Você não tem acesso aos seguros desta conta.",
-      "EXEMPLO_LEGENDA": "Sua lista de seguros vai ficar assim:"
+      "EXEMPLO_LEGENDA": "Sua lista de seguros vai ficar assim:",
+      "RENOVACOES": "Renovações",
+      "VER_RESULTADOS": "Ver como foram as renovações"
     },
     "PESSOAS": {
       "BUSCA": "Buscar por nome, telefone, documento ou apólice",
@@ -123,6 +136,7 @@
       },
       "SELOS": {
         "ATIVO": "Seguro ativo",
+        "VENCE_LOGO": "Seguro vence logo",
         "VENCIDO": "Seguro vencido",
         "EM_RENOVACAO": "Seguro em renovação",
         "RENOVADO": "Seguro renovado",
@@ -209,7 +223,9 @@
         "NAO_PODE_FECHAR_A_RENOVACAO": "Você não tem permissão para mexer na renovação deste seguro. Peça a um administrador da conta ou a quem cuida das renovações.",
         "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
         "DESFAZER": "Desfazer",
-        "PALAVRAS_ENVIADAS": "Mensagem enviada na conversa."
+        "PALAVRAS_ENVIADAS": "Mensagem enviada na conversa.",
+        "PROPOSTA_ENVIADA": "Proposta enviada ao cliente.",
+        "NAO_PODE_ENVIAR_A_PROPOSTA": "Você não pode enviar esta proposta. Quem envia precisa poder alterar a pessoa e ver o card da renovação no CRM."
       },
       "DADOS": {
         "TITULO": "Dados do seguro",
@@ -221,6 +237,11 @@
         "TERMINA": "Termina",
         "VALOR": "Valor que o cliente paga",
         "BEM": "O que está segurado",
+        "NASCIMENTO": "Nascimento do segurado",
+        "SEXO": "Sexo do segurado",
+        "CEP": "CEP",
+        "PLACA": "Placa do veículo",
+        "BONUS": "Classe de bônus",
         "ORIGEM": "Como chegou",
         "POR_PLANILHA": "Chegou por planilha, em {data}",
         "CHEGOU_EM": "Chegou em {data}",
@@ -228,19 +249,24 @@
       },
       "RODAPE": {
         "VER_PDF": "Ver PDF",
+        "CONVERSAR": "Conversar com {nome}",
         "GUARDAR_PDF": "Guardar o PDF",
         "GUARDAR_OUTRO_PDF": "Guardar outro PDF",
         "APAGAR_PDF": "Apagar o PDF",
         "CORRIGIR": "Corrigir",
         "MARCAR_CANCELADO": "Marcar como cancelado",
         "DESFAZER_CANCELAMENTO": "Desfazer o cancelamento",
-        "RENOVOU": "Renovou",
+        "RENOVOU": "Cliente renovou",
         "NAO_RENOVOU": "Não renovou",
         "GUARDAR_APOLICE_NOVA": "Guardar a apólice nova",
         "DESFAZER_RENOVACAO": "Desfazer o resultado da renovação",
         "MAIS": "Mais opções deste seguro",
-        "APAGAR_DE_FORA": "Apagar este seguro"
-      }
+        "APAGAR_DE_FORA": "Apagar este seguro",
+        "ENVIAR_PROPOSTA": "Enviar proposta",
+        "ENVIAR_DE_NOVO": "Enviar de novo"
+      },
+      "SEM_CONVERSA": "Vocês ainda não conversaram por aqui. O telefone está na ficha.",
+      "CONVERSAS_NAO_LIDAS": "Não consegui ver as conversas dessa pessoa agora. Tente de novo."
     },
     "CORRIGIR": {
       "TITULO": "Corrigir o seguro {tipo}",
@@ -254,6 +280,14 @@
       "TERMINA": "Termina",
       "VALOR": "Valor que o cliente paga (R$)",
       "BEM": "O que está segurado",
+      "DADOS_DA_COTACAO": "Dados para a cotação",
+      "APOIO_DA_COTACAO": "Com estes dados, a renovação pode ser cotada sem ninguém da equipe. Copie da apólice. O que não souber, deixe em branco.",
+      "NASCIMENTO": "Nascimento do segurado",
+      "SEXO": "Sexo do segurado",
+      "SEXO_NAO_INFORMADO": "Não informado",
+      "CEP": "CEP do segurado",
+      "PLACA": "Placa do veículo",
+      "BONUS": "Classe de bônus",
       "APOIO": "O que você corrigir aqui fica assim, mesmo se este seguro chegar de novo em outra planilha.",
       "APOIO_DA_APOLICE_NOVA": "Já veio com o que não muda de um ano para o outro. Confira as datas e o valor. Se a seguradora ainda não mandou o número da apólice, salve sem ele e preencha depois, em Corrigir.",
       "SALVAR": "Salvar",
@@ -267,7 +301,11 @@
         "TERMINA": "Escolha quando o seguro termina.",
         "TERMINA_ANTES": "O seguro não pode terminar antes de começar. Confira as duas datas.",
         "VALOR": "Escreva o valor que o cliente paga em reais, como 1.250,00. Se não souber, deixe em branco.",
-        "OUTRA_SEGURADORA": "Escreva o nome da seguradora."
+        "OUTRA_SEGURADORA": "Escreva o nome da seguradora.",
+        "NASCIMENTO": "Essa data não serve. Escolha no calendário o dia em que o segurado nasceu.",
+        "CEP": "Escreva o CEP com 8 números, como 12345-678. Se não souber, deixe em branco.",
+        "PLACA": "Escreva a placa com 7 letras e números, como ABC1D23. Se não souber, deixe em branco.",
+        "BONUS": "Escreva a classe de bônus como está na apólice, um número de 0 a 10. Se não souber, deixe em branco."
       },
       "SAIR": {
         "TITULO": "Sair sem salvar?",
@@ -284,6 +322,7 @@
       "TITULO": "Histórico",
       "ERRO": "Não consegui mostrar o histórico. Tente de novo.",
       "MUDOU_DE_PARA": "{item}: era {antes}, ficou {depois}",
+      "MUDOU_SEM_VALOR": "{item}: mudou",
       "NAO_INFORMADO": "não informado",
       "EXPORTAR": "Exportar",
       "ARQUIVO": {
@@ -310,7 +349,17 @@
         "CHEGOU_PDF": "Chegou por PDF.",
         "CHEGOU_DE_NOVO_PDF": "Atualizado por PDF.",
         "CHEGOU_DE_FORA": "Guardado como seguro de outra corretora.",
-        "PALAVRAS_ENVIADAS": "O seguro em palavras simples foi enviado ao cliente."
+        "PALAVRAS_ENVIADAS": "O seguro em palavras simples foi enviado ao cliente.",
+        "COTACAO_PEDIDA": "Perguntamos ao cliente se algo mudou no seguro.",
+        "ALGO_MUDOU_NAO_SAIU": "A pergunta \"Algo mudou?\" não saiu.",
+        "RESPONDEU_ALGO_MUDOU": "O cliente respondeu se algo mudou.",
+        "CLIENTE_RESPONDEU": "O cliente contou o que mudou.",
+        "PROPOSTA_PEDIDA": "A cotação da renovação começou nas seguradoras.",
+        "PROPOSTA_NAO_SAIU": "A cotação da renovação não deu proposta.",
+        "PROPOSTA_PRONTA": "A proposta de renovação ficou pronta.",
+        "PROPOSTA_ENVIADA": "A proposta de renovação foi enviada ao cliente.",
+        "PROPOSTA_ENVIADA_SOZINHA": "A proposta de renovação saiu sozinha para o cliente.",
+        "DADOS_LIDOS_PDF": "Dados do segurado lidos do PDF guardado, para a cotação."
       },
       "TIPOS_COM": {
         "RENOVACAO_CARD_NASCEU": "A renovação começou. Quem cuida: {cuida}.",
@@ -328,9 +377,9 @@
       "TITULO": "Renovação",
       "QUEM_CUIDA": "Quem cuida: {nome}",
       "DIZER_O_MOTIVO": "Dizer por que não renovou",
-      "ABRIR_NO_CRM": "Abrir no CRM",
+      "ABRIR_NO_CRM": "Ver o cartão da renovação",
       "SITUACAO": {
-        "EM_ETAPA": "Está no funil {funil}, na etapa {etapa}.",
+        "EM_ETAPA": "A renovação está em “{etapa}”.",
         "EM_ANDAMENTO": "A renovação está em andamento. Quem cuida dela marca se renovou ou não.",
         "RENOVOU_FALTA": "Renovou. Falta guardar a apólice nova.",
         "RENOVOU": "Renovou. A apólice nova já está guardada.",
@@ -374,11 +423,87 @@
         "BOTAO": "Escolher o funil"
       }
     },
+    "COTACAO": {
+      "TITULO": "Cotação",
+      "SITUACAO": {
+        "PERGUNTOU": "Perguntamos ao cliente se algo mudou no seguro.",
+        "PERGUNTA_NAO_SAIU": "A pergunta ao cliente não saiu.",
+        "NADA_MUDOU": "O cliente disse que nada mudou. A cotação vai começar.",
+        "MUDOU": "O cliente disse que algo mudou. A cotação parou para alguém ver o que mudou.",
+        "CLIENTE_CONTOU": "O cliente contou o que mudou. Veja na conversa.",
+        "COTANDO": "Estamos cotando a renovação nas seguradoras.",
+        "FALTAM": "Não deu para cotar: falta {campos}.",
+        "NAO_SAIU_SEM_MOTIVO": "Não deu para cotar esta renovação.",
+        "PRONTA": "Proposta pronta: {valor}, {seguradora}.",
+        "PRONTA_SEM_SEGURADORA": "Proposta pronta: {valor}.",
+        "ENVIADA": "A proposta foi enviada ao cliente em {data}.",
+        "ENVIADA_SOZINHA": "A proposta saiu sozinha em {data}.",
+        "ANDANDO": "A cotação da renovação está em andamento.",
+        "INCERTA": "Não sabemos se a proposta chegou. Confira na conversa; se não chegou, envie de novo."
+      },
+      "MOTIVO": {
+        "CONFERENCIA_CAIU": "A conferência da cotação não respondeu. Tentamos de novo sozinhos e, se não der, a equipe é avisada no card.",
+        "SEM_CONEXAO": "Não deu para cotar: a conexão com o portal de cotação não está pronta.",
+        "SEM_AGENTE": "Não deu para cotar: a conta não tem o Agente de Cotação.",
+        "COTACAO_FALHOU": "A cotação não terminou no portal.",
+        "SEM_PRECO": "Nenhuma seguradora deu preço para esta renovação.",
+        "SEM_PDF": "A cotação deu preço, mas o PDF da proposta não veio.",
+        "ENVIO": "A proposta não saiu para o cliente."
+      },
+      "ENVIO": {
+        "CONTATO_RECUSOU": "O cliente recusou mensagens ou está bloqueado.",
+        "SEM_CAIXA": "Nenhum WhatsApp foi escolhido em Ajustar renovações.",
+        "SEM_MODELO": "A mensagem ainda não está aprovada no WhatsApp escolhido.",
+        "SEM_TELEFONE": "O cliente não tem telefone na ficha.",
+        "CAMPO_VAZIO": "O cliente não tem nome na ficha.",
+        "SEM_CARD": "O card da renovação não existe mais."
+      },
+      "PROPOSTA": "Proposta: {valor}, {seguradora}.",
+      "PROPOSTA_SEM_SEGURADORA": "Proposta: {valor}.",
+      "VARIACAO": {
+        "SUBIU": "Subiu {percentual} em relação ao ano passado.",
+        "CAIU": "Caiu {percentual} em relação ao ano passado.",
+        "IGUAL": "Ficou igual ao ano passado."
+      },
+      "AVISADA": "A equipe foi avisada no card da renovação.",
+      "OUTROS_DADOS": "outros dados do seguro",
+      "COMO_COMPLETAR": "Anexe o PDF da apólice ou corrija o seguro à mão.",
+      "CAMPOS": {
+        "PRODUTO": "tipo do seguro",
+        "QUOTATION_PREVIOUSINSURERCODE": "seguradora anterior",
+        "QUOTATION_PREVIOUSPOLICYNUMBER": "número da apólice",
+        "QUOTATION_PREVIOUSPOLICYENDDATE": "fim da vigência",
+        "QUOTATION_BONUSCLASS": "classe de bônus",
+        "INSURED_NAME": "nome do segurado",
+        "INSURED_DOCUMENT": "CPF ou CNPJ do segurado",
+        "INSURED_BIRTHDATE": "nascimento do segurado",
+        "INSURED_GENDER": "sexo do segurado",
+        "ADDRESS_ZIPCODE": "CEP",
+        "VEHICLE_PLATE": "placa do veículo",
+        "RENOVACAO_SEGURADORAANTERIOR": "seguradora anterior",
+        "RENOVACAO_NUMEROAPOLICE": "número da apólice",
+        "RENOVACAO_FIMVIGENCIA": "fim da vigência",
+        "RENOVACAO_BONUS": "classe de bônus",
+        "SEGURADO_CPFCNPJ": "CPF ou CNPJ do segurado",
+        "SEGURADO_NOME": "nome do segurado",
+        "SEGURADO_CEP": "CEP"
+      },
+      "ENVIAR_APOIO": "A proposta só vai ao cliente quando você tocar em Enviar proposta.",
+      "CONFIRMAR": {
+        "TITULO": "Enviar a proposta?",
+        "PARA": "Vai para {nome} pelo WhatsApp {caixa}: a proposta de {valor}, da {seguradora}, com o PDF.",
+        "PARA_SEM_CAIXA": "Vai para {nome} pelo WhatsApp das renovações: a proposta de {valor}, da {seguradora}, com o PDF.",
+        "VER_PDF": "Ver a proposta no CRM (abre em outra aba)",
+        "ENVIAR": "Enviar agora",
+        "VOLTAR": "Voltar",
+        "PARA_SEM_SEGURADORA": "Vai para {nome} pelo WhatsApp {caixa}: a proposta de {valor}, com o PDF.",
+        "PARA_SEM_CAIXA_SEM_SEGURADORA": "Vai para {nome} pelo WhatsApp das renovações: a proposta de {valor}, com o PDF."
+      }
+    },
     "AJUSTES": {
       "TITULO": "Ajustar renovações",
       "APOIO": "Mude o que quiser e salve.",
       "APOIO_SEM_FUNIL": "Escolha em que funil as renovações ficam. Até lá, nenhuma renovação aparece.",
-      "VOLTAR": "Seguros",
       "VOLTAR_ROTULO": "Voltar aos seguros",
       "ERRO": "Não consegui abrir os ajustes. Tente de novo.",
       "SALVAR": "Salvar ajustes",
@@ -393,18 +518,26 @@
         "FUNIL": "Escolha o funil em que as renovações ficam.",
         "ETAPA": "Escolha a etapa em que a renovação entra.",
         "SEM_ETAPA": "Esse funil não tem etapa para a renovação entrar. Escolha outro funil ou crie uma etapa nele no CRM.",
-        "DIAS": "Escreva quantos dias antes, a partir de 1."
+        "DIAS": "Escreva quantos dias antes, a partir de 1.",
+        "CAIXA": "Escolha por qual WhatsApp o robô fala com o cliente."
       },
       "ONDE": {
         "TITULO": "Onde ficam as renovações?",
         "SEM_FUNIL": "Sua conta ainda não tem funil. Crie um funil no CRM e volte aqui para escolher.",
+        "SEM_FUNIL_CRIAR": "Sua conta ainda não tem um funil. Funil é o quadro do CRM onde cada renovação vira um cartão. Eu crio um pronto para você.",
+        "CRIAR_FUNIL": "Criar o funil de renovações para mim",
+        "FUNIL_CRIADO": "Criei o funil {funil} e já deixei escolhido. Falta tocar em Salvar ajustes, lá embaixo.",
+        "ERRO_CRIAR_FUNIL": "Não consegui criar o funil. Tente de novo.",
         "SEM_ETAPA": "Esse funil ainda não tem etapa. Escolha outro funil, ou crie uma etapa nele no CRM e volte aqui.",
         "ABRIR_CRM": "Abrir o CRM",
         "FUNIL": "Funil",
         "ESCOLHA_O_FUNIL": "Escolha o funil",
         "ETAPA": "Em qual etapa a renovação entra?",
         "ESCOLHA_A_ETAPA": "Escolha a etapa",
-        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher. Enquanto ninguém escolhe, nenhuma renovação aparece."
+        "APOIO": "A renovação de cada seguro que chega perto do fim aparece no funil, na etapa que você escolher.",
+        "FUNIL_INCOMPLETO": "O funil {funil} foi criado. Confira as etapas no CRM.",
+        "CRIAR_FUNIL_CURTO": "Criar o funil para mim",
+        "FUNIL_SEM_ESCOLHA": "Criei o funil {funil}, mas não consegui deixá-lo escolhido. Escolha o funil {funil} na lista."
       },
       "DIAS": {
         "TITULO": "Quantos dias antes do fim?",
@@ -420,6 +553,42 @@
         "NAO_MANDAR": "Não mandar",
         "APOIO": "Esta escolha vale para todos os seguros da conta."
       },
+      "COTACAO": {
+        "TITULO": "Cotação da renovação",
+        "APOIO": "Quando um seguro entra em renovação, o robô pergunta ao cliente se algo mudou e cota a renovação nas seguradoras.",
+        "QUEM_COTA": {
+          "PERGUNTA": "Quem faz a cotação?",
+          "NINGUEM": "Ninguém, cotação manual",
+          "ROBO": "O robô cota"
+        },
+        "SO_NINGUEM": {
+          "SEM_AGENTE": "O robô cota quando a conta tiver o Agente de Cotação. Até lá, a cotação é feita pela equipe.",
+          "SEM_CAIXA": "O robô cota quando a conta tiver um WhatsApp oficial conectado. Até lá, a cotação é feita pela equipe."
+        },
+        "QUEM_ENVIA": {
+          "PERGUNTA": "Como a proposta sai?",
+          "PESSOA": "Uma pessoa confere e aperta Enviar",
+          "SOZINHO": "Sai sozinha",
+          "APOIO_PESSOA": "A proposta fica pronta no seguro e só vai ao cliente quando alguém clicar em Enviar proposta.",
+          "APOIO_SOZINHO": "A proposta vai para o cliente assim que fica pronta, sem ninguém conferir antes."
+        },
+        "QUEM_RESPONDE": {
+          "PERGUNTA": "Quem responde o cliente?",
+          "EQUIPE": "A equipe",
+          "LIA": "{agente}"
+        },
+        "CAIXA": {
+          "PERGUNTA": "Por qual WhatsApp?",
+          "ESCOLHA": "Escolha o WhatsApp"
+        },
+        "AVISO_DO_AGENTE": "{agente} não está no WhatsApp {caixa}. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
+        "AVISO_DO_AGENTE_SEM_NOME": "{agente} não está nesse WhatsApp. Ligue {agente} nesse WhatsApp em Agentes, ou escolha outro WhatsApp, para nenhuma resposta do cliente ficar sem ninguém.",
+        "AVISO_DA_DISTRIBUICAO": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí {agente} não responde. Desligue a entrega automática desse WhatsApp ou escolha 'A equipe'.",
+        "CONSUMO": {
+          "COTACOES": "Cotações neste mês: {count}",
+          "COM_PRECO": "Seguradoras com preço: {count}"
+        }
+      },
       "PAROU": {
         "ARQUIVADO": "O funil das renovações foi arquivado. Escolha outro para as renovações voltarem a aparecer.",
         "APAGADO": "O funil ou a etapa das renovações não existe mais. Escolha outro funil para as renovações voltarem a aparecer."
@@ -427,6 +596,12 @@
       "HOJE_PAROU": {
         "ARQUIVADO": "O funil das renovações foi arquivado. Até alguém escolher outro, nenhuma renovação aparece.",
         "APAGADO": "O funil ou a etapa das renovações não existe mais. Até alguém escolher outro funil, nenhuma renovação aparece."
+      },
+      "SAIR": {
+        "TITULO": "Sair sem salvar?",
+        "AVISO": "As renovações só começam a aparecer depois de salvar.",
+        "SALVAR": "Salvar ajustes",
+        "SAIR": "Sair sem salvar"
       }
     },
     "RESULTADOS": {
@@ -465,7 +640,6 @@
     "PDF": {
       "TITULO": "Guardar o PDF do seguro {tipo}",
       "TITULO_OUTRO": "Guardar outro PDF do seguro {tipo}",
-      "SOLTAR": "Arraste o PDF aqui ou clique para escolher",
       "APOIO": "Assim que você escolher, o PDF fica guardado neste seguro.",
       "APOIO_OUTRO": "Depois de escolher, você confirma a troca.",
       "GUARDANDO": "Guardando o PDF…",
@@ -502,7 +676,13 @@
         "GUARDAR": "Guardar",
         "MANTER": "Manter como está"
       },
-      "SOLTAR_VARIOS": "Arraste os PDFs para cá ou clique para escolher"
+      "ARRASTE": "Arraste o PDF para cá",
+      "ARRASTE_VARIOS": "Arraste os PDFs para cá",
+      "TOQUE": "Toque para escolher o PDF",
+      "TOQUE_VARIOS": "Toque para escolher os PDFs",
+      "ESCOLHER": "Escolher o PDF",
+      "ESCOLHER_VARIOS": "Escolher os PDFs",
+      "OU": "ou"
     },
     "RECUSAS": {
       "FALTA_NUMERO": "Falta o número da apólice. Escreva o número e salve de novo.",
@@ -553,7 +733,26 @@
       "NAO_DEU_PARA_ESCREVER": "Não consegui escrever o texto agora. Tente de novo.",
       "SEM_CONVERSA": "Este cliente não tem conversa aqui. Copie o texto e mande por outro caminho.",
       "FORA_DA_JANELA": "A conversa com o cliente está fechada para mensagens agora. Copie o texto e mande por outro caminho.",
-      "AGGER_DESLIGADO": "Trazer do Agger não está ligado nesta conta."
+      "AGGER_DESLIGADO": "Trazer do Agger não está ligado nesta conta.",
+      "COTACAO_DESLIGADA": "A cotação da renovação está desligada nesta conta. Veja em Ajustar renovações.",
+      "ESCOLHA_INVALIDA": "Essa escolha não vale. Escolha de novo e salve.",
+      "SEM_AGENTE_DE_COTACAO": "A conta não tem mais o Agente de Cotação. Atualizei a tela: escolha de novo e salve.",
+      "CAIXA_INVALIDA": "Esse WhatsApp não serve mais para a cotação. Atualizei a tela: escolha outro WhatsApp e salve.",
+      "CAIXA_DISTRIBUI": "Este WhatsApp entrega toda conversa nova a alguém da equipe, e aí o agente não responde. Atualizei a tela: desligue a entrega automática desse WhatsApp ou escolha 'A equipe' e salve.",
+      "PROPOSTA_JA_ENVIADA": "Essa proposta já foi enviada ao cliente. Atualizei a tela.",
+      "PROPOSTA_INCERTA": "Não sabemos se a proposta chegou. Atualizei a tela: confira na conversa.",
+      "SEM_PROPOSTA": "Ainda não há proposta pronta para enviar. Atualizei a tela.",
+      "CONTATO_RECUSOU": "A proposta não saiu: o cliente recusou mensagens ou está bloqueado.",
+      "SEM_CAIXA": "A proposta não saiu: escolha por qual WhatsApp ela sai em Ajustar renovações e envie de novo.",
+      "SEM_MODELO": "A proposta não saiu: a mensagem dela ainda não está aprovada no WhatsApp escolhido. Envie de novo quando ela for aprovada.",
+      "SEM_TELEFONE": "A proposta não saiu: o cliente não tem telefone. Escreva o telefone na ficha dele e envie de novo.",
+      "CAMPO_VAZIO": "A proposta não saiu: o cliente não tem nome. Escreva o nome na ficha dele e envie de novo.",
+      "SEM_CARD": "A proposta não saiu: o card da renovação não existe mais.",
+      "NASCIMENTO_INVALIDO": "Essa data de nascimento não serve. Escolha no calendário o dia em que o segurado nasceu e salve de novo.",
+      "SEXO_INVALIDO": "Escolha o sexo do segurado na lista e salve de novo.",
+      "CEP_INVALIDO": "O CEP precisa ter 8 números. Confira o CEP e salve de novo.",
+      "PLACA_INVALIDA": "A placa precisa ter 7 letras e números. Confira a placa e salve de novo.",
+      "BONUS_INVALIDO": "A classe de bônus é um número de 0 a 10. Confira na apólice e salve de novo."
     },
     "TRAZER": {
       "BOTAO": "Trazer seguros",
@@ -658,7 +857,7 @@
     },
     "PDFS": {
       "TITULO": "Trazer seguros por PDFs",
-      "APOIO": "Escolha os PDFs das apólices. Eu leio cada um e mostro o que achei antes de qualquer coisa entrar.",
+      "APOIO": "Escolha os PDFs das apólices. Eu leio cada um para você.",
       "ENVIANDO": "Enviando os PDFs…",
       "LENDO": "Lendo os PDFs… {lidos} de {total} lidos. Pode sair desta página: a leitura continua.",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
@@ -668,17 +867,19 @@
       "COMO": {
         "TITULO": "Como você quer trazer seus clientes?",
         "PLANILHA": {
-          "TITULO": "Por planilha",
-          "APOIO": "Uma lista de clientes e seguros em Excel ou CSV."
+          "TITULO": "Planilha do Excel ou do Google Planilhas",
+          "APOIO": "Uma lista com seus clientes e os seguros de cada um."
         },
         "PDFS": {
-          "TITULO": "Por PDFs das apólices",
-          "APOIO": "Os PDFs das apólices que as seguradoras mandaram. Eu leio cada um para você."
+          "TITULO": "Os PDFs que a seguradora mandou",
+          "APOIO": "Você escolhe os PDFs das apólices e eu leio cada um para você."
         },
         "AGGER": {
-          "TITULO": "Do Agger",
-          "APOIO": "Eu busco seus seguros direto no Agger, com o seu login."
-        }
+          "TITULO": "Meus seguros no Agger",
+          "APOIO": "O Agger é o sistema onde a corretora guarda os seguros. Com o seu login, eu trago tudo de lá."
+        },
+        "APOIO": "Seus clientes e os seguros deles entram na carteira.",
+        "MAIS_FACIL": "O jeito mais fácil"
       },
       "CONFERIR": {
         "ENTRAM": "{seguros} seguros prontos para entrar, de {pessoas} pessoas.",
@@ -747,10 +948,10 @@
     },
     "AGGER": {
       "TITULO": "Trazer seus seguros do Agger",
-      "APOIO": "Eu busco no Agger os seguros dos seus clientes e mostro o que achei antes de qualquer coisa entrar.",
+      "APOIO": "Eu busco no Agger os seguros dos seus clientes. Você confere antes de qualquer coisa entrar.",
       "BUSCAR": "Trazer meus seguros do Agger",
       "BUSCANDO": "Buscando seus seguros… Pode sair desta página: a busca continua.",
-      "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\" para eu continuar de onde parei.",
+      "PARADO": "Está demorando mais do que o normal. Toque em \"Tentar de novo\".",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "ENTRAR": "Entrar no Agger",
@@ -768,23 +969,14 @@
         "FALHOU": "Não deu para buscar no Agger agora.",
         "FALHOU_FAZER": "Toque em \"Tentar de novo\". Os seguros que já estão aqui ficam como estão."
       },
-      "SEGURADORA": {
-        "PEDE_LOGIN": {
-          "FRASE": "A {nome} pediu para você entrar de novo no Agger",
-          "FRASE_SEM_NOME": "Uma seguradora pediu para você entrar de novo no Agger",
-          "FAZER": "Abra o Agger e entre de novo nessa seguradora. Na próxima busca, os seguros dela vêm junto."
-        },
-        "SEM_LOGIN": {
-          "FRASE": "Seu login da {nome} não está guardado no Agger",
-          "FRASE_SEM_NOME": "Seu login de uma seguradora não está guardado no Agger",
-          "FAZER": "Guarde no Agger o login que você usa nessa seguradora. Na próxima busca, os seguros dela vêm junto."
-        },
-        "FALHOU": {
-          "FRASE": "Não deu para buscar na {nome} agora",
-          "FRASE_SEM_NOME": "Não deu para buscar em uma seguradora agora",
-          "FAZER": "Toque em \"Tentar de novo\" para eu buscar outra vez."
-        },
-        "TENTAR": "Tentar de novo"
+      "SEGURADORAS": {
+        "LINHA": "{count} seguradora precisa do seu login no Agger para trazer seguros novos. | {count} seguradoras precisam do seu login no Agger para trazer seguros novos.",
+        "VER_QUAIS": "Ver quais seguradoras",
+        "ESCONDER": "Esconder",
+        "UMA": "uma seguradora | {count} seguradoras",
+        "MAIS": "mais uma seguradora | mais {count} seguradoras",
+        "PEDE_LOGIN": "Entre de novo nessa seguradora, no Agger. Na próxima busca, os seguros dela vêm junto. | Entre de novo nessas seguradoras, no Agger. Na próxima busca, os seguros delas vêm junto.",
+        "SEM_LOGIN": "Guarde no Agger o login dessa seguradora. Na próxima busca, os seguros dela vêm junto. | Guarde no Agger o login dessas seguradoras. Na próxima busca, os seguros delas vêm junto."
       },
       "CONFERIR": {
         "ENTRAM": "{count} seguro pronto para entrar, | {count} seguros prontos para entrar,",
@@ -795,11 +987,30 @@
         "NAO_DEU": "{count} não deu para trazer | {count} não deram para trazer",
         "DE_NOVO": "Buscar de novo",
         "TRAZER": "Trazer {count} seguro do Agger | Trazer {count} seguros do Agger",
-        "NADA": "Nenhum seguro está pronto para entrar. Confira o Agger e toque em \"Buscar de novo\"."
+        "DEPOIS": "Seguros novos que o Agger trouxer depois entram sozinhos na busca de todo dia.",
+        "NADA": "Ainda não há seguros para trazer do Agger. Toque em \"Buscar de novo\" mais tarde."
+      },
+      "POR_QUE": {
+        "VER": "Ver por quê",
+        "ESCONDER": "Esconder",
+        "QUANTOS": "{count} seguro | {count} seguros",
+        "SEM_DADOS": "Faltam dados desse seguro no Agger, ou eles não batem, como as datas. Quando o Agger acertar, ele entra na próxima busca. | Faltam dados desses seguros no Agger, ou eles não batem, como as datas. Quando o Agger acertar, eles entram na próxima busca.",
+        "SEM_DOCUMENTO": "O Agger não tem o CPF ou CNPJ certo dessa pessoa, ou o nome dela, e sem isso eu não sei quem é. Confira no Agger e toque em \"Buscar de novo\". | O Agger não tem o CPF ou CNPJ certo dessas pessoas, ou o nome delas, e sem isso eu não sei quem é cada uma. Confira no Agger e toque em \"Buscar de novo\".",
+        "NAO_LEU": "O Agger mandou esse seguro de um jeito que eu não consigo ler. | O Agger mandou esses seguros de um jeito que eu não consigo ler."
       },
       "PRONTO": {
         "APOIO": "Com o interruptor abaixo ligado, eu busco os seguros novos no Agger todo dia.",
-        "VOLTAR": "Ver as buscas"
+        "VOLTAR": "Ver as buscas",
+        "NENHUM": "Nenhum seguro entrou.",
+        "JA_ESTAVAM": "Os seguros desta busca já estavam na carteira, sem mudança.",
+        "NAO_ENTRARAM": "{count} seguro não entrou. | {count} seguros não entraram.",
+        "BUSCAR_DE_NOVO": "Buscar de novo",
+        "PORQUE": {
+          "SEM_DOCUMENTO": "{count} seguro não tem no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem é. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros não têm no Agger o CPF ou CNPJ certo da pessoa, ou o nome dela, e sem isso eu não sei de quem são. Confira no Agger e toque em \"Buscar de novo\".",
+          "DADOS_ERRADOS": "{count} seguro tem dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\". | {count} seguros têm dados que não batem no Agger, como as datas. Confira no Agger e toque em \"Buscar de novo\".",
+          "CONFERIR": "{count} seguro bate com outro que já está na carteira (de outra pessoa ou com o mesmo número). Confira na carteira. | {count} seguros batem com outros que já estão na carteira (de outra pessoa ou com o mesmo número). Confira na carteira.",
+          "OUTROS": "{count} seguro não deu para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez. | {count} seguros não deram para guardar agora. Toque em \"Buscar de novo\" para tentar outra vez."
+        }
       },
       "TODO_DIA": {
         "ROTULO": "Buscar novos seguros todo dia",
@@ -810,7 +1021,7 @@
       },
       "LOGIN": {
         "TITULO": "Entrar no Agger",
-        "PARA_QUE": "Use o mesmo login e a mesma senha que você usa no Agger. Eles servem só para eu buscar os seus seguros lá, e a senha fica guardada em segredo.",
+        "PARA_QUE": "Use o mesmo login e a mesma senha que você usa no Agger.",
         "CAMPO_LOGIN": "Login do Agger",
         "CAMPO_SENHA": "Senha do Agger",
         "ENTRAR": "Entrar e buscar",
@@ -819,7 +1030,10 @@
         "FALTA": "Escreva o login e a senha do Agger.",
         "RECUSADO": "O Agger não aceitou esse login e essa senha. Confira e tente de novo.",
         "FORA_DO_AR": "O Agger está fora do ar agora. Tente de novo mais tarde.",
-        "NAO_DEU": "Não consegui falar com o Agger agora. Tente de novo."
+        "NAO_DEU": "Não consegui falar com o Agger agora. Tente de novo.",
+        "AJUDA_SENHA": "A senha fica guardada em segredo.",
+        "MOSTRAR_SENHA": "Mostrar a senha",
+        "ESCONDER_SENHA": "Esconder a senha"
       },
       "HISTORICO": {
         "TITULO": "Buscas no Agger",
@@ -850,7 +1064,8 @@
           "VOLTAR": "Voltar"
         },
         "QUANDO": "{quando} · {situacao}"
-      }
+      },
+      "SELO": "Sua senha fica guardada em segredo e serve só para buscar seus seguros."
     },
     "DE_FORA": {
       "ENTRADA": "Guardar seguro de outra corretora",
@@ -925,6 +1140,19 @@
       "ALTERAR": "Alterar o texto",
       "ESCREVER_DE_NOVO": "Escrever de novo",
       "NAO_DEU": "Não consegui fazer isso. Tente de novo."
-    }
+    },
+    "SEXOS": {
+      "F": "Feminino",
+      "M": "Masculino"
+    },
+    "CLASSE_DE_BONUS": "Classe {classe}",
+    "ETAPAS": {
+      "ROTULO": "Onde você está",
+      "ENVIAR": "Enviar",
+      "BUSCAR": "Buscar",
+      "CONFERIR": "Conferir",
+      "PRONTO": "Pronto"
+    },
+    "CONFIANCA": "Nada entra antes de você conferir."
   }
 }

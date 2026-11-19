@@ -1,5 +1,5 @@
 {
-  "aviso": "Gabarito dos PDFs fictícios do leitor de apólice (E6, #2899). Tudo inventado; os PDFs saem de gerar.rb. Cada campo traz o valor esperado na forma do banco; null quer dizer que o leitor NÃO pode devolver valor ali; {\"contem\": [...]} aceita qualquer valor que contenha os trechos. Campo que não aparece no caso não é conferido. O contato do segurado (telefone e e-mail) só é esperado onde ele está escrito como do segurado: telefone e e-mail do corretor, da central e do 0800 que estejam na mesma página do CPF têm de ficar em null.",
+  "aviso": "Gabarito dos PDFs fictícios do leitor de apólice (E6, #2899). Tudo inventado; os PDFs saem de gerar.rb. Cada campo traz o valor esperado na forma do banco; null quer dizer que o leitor NÃO pode devolver valor ali; {\"contem\": [...]} aceita qualquer valor que contenha os trechos. Campo que não aparece no caso não é conferido. O contato do segurado (telefone e e-mail) só é esperado onde ele está escrito como do segurado: telefone e e-mail do corretor, da central e do 0800 que estejam na mesma página do CPF têm de ficar em null. Os dados do segurado da cotação (E8.1, #3043) seguem a mesma régua: nascimento em AAAA-MM-DD (nunca o do condutor), sexo F ou M, CEP só com os dígitos (do segurado ou do risco, nunca o da corretora), placa em maiúsculas sem traço e a classe de bônus (nunca o percentual ao lado dela).",
   "casos": [
     {
       "nome": "auto, tudo na primeira página",
@@ -26,7 +26,12 @@
         "segurado_nome": "Marina Exemplo de Souza",
         "segurado_documento": "12345678900",
         "segurado_telefone": "11999990001",
-        "segurado_email": "marina.exemplo@exemplo.invalid"
+        "segurado_email": "marina.exemplo@exemplo.invalid",
+        "segurado_nascimento": "1985-03-15",
+        "segurado_sexo": "F",
+        "cep": "12345678",
+        "placa": "EXM0A00",
+        "bonus_classe": 5
       }
     },
     {
@@ -54,7 +59,12 @@
         "segurado_nome": "Padaria Amostra Ltda.",
         "segurado_documento": "12345678000100",
         "segurado_telefone": null,
-        "segurado_email": null
+        "segurado_email": null,
+        "segurado_nascimento": null,
+        "segurado_sexo": null,
+        "cep": "54321000",
+        "placa": null,
+        "bonus_classe": 3
       }
     },
     {
@@ -77,7 +87,12 @@
         "segurado_nome": "Bruno Amostra Pereira",
         "segurado_documento": "22233344400",
         "segurado_telefone": null,
-        "segurado_email": null
+        "segurado_email": null,
+        "segurado_nascimento": null,
+        "segurado_sexo": null,
+        "cep": null,
+        "placa": "EXM1B11",
+        "bonus_classe": null
       }
     },
     {
@@ -101,7 +116,12 @@
         "segurado_nome": "Paulo Modelo Ferreira",
         "segurado_documento": "11122233300",
         "segurado_telefone": "21977770007",
-        "segurado_email": "paulo.modelo@exemplo.invalid"
+        "segurado_email": "paulo.modelo@exemplo.invalid",
+        "segurado_nascimento": null,
+        "segurado_sexo": null,
+        "cep": null,
+        "placa": null,
+        "bonus_classe": null
       }
     }
   ]

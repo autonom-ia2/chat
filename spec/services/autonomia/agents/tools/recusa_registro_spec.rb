@@ -599,13 +599,8 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           bound_para(Autonomia::Agents::Tools::Native::InsuranceCapabilities).execute({ 'arguments' => '{}' }, delivery: delivery)
         }
       },
+      # Desde o #3035 a seguradora é opcional (catálogo): a única recusa que sobra é a da pergunta vazia.
       'insurance_general_conditions.rb#call#1' => {
-        espera: { motivo: 'condicoes_sem_seguradora', slug: 'consultar_condicoes_gerais', faltando: 'seguradora' },
-        dispara: lambda {
-          bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions).execute({ 'arguments' => '{}' }, delivery: delivery)
-        }
-      },
-      'insurance_general_conditions.rb#call#2' => {
         espera: { motivo: 'condicoes_sem_pergunta', slug: 'consultar_condicoes_gerais', faltando: 'pergunta' },
         dispara: lambda {
           bound_para(Autonomia::Agents::Tools::Native::InsuranceGeneralConditions)

@@ -135,6 +135,8 @@ export const useSeguroAberto = (fonte, id) => {
     renovou: acao('renovou'),
     naoRenovou: acao('naoRenovou'),
     desfazerDesfecho: acao('desfazerDesfecho'),
+    // #2901 (E8) — "Enviar proposta" da cotação da renovação.
+    enviarProposta: acao('enviarProposta'),
     guardarApoliceNova,
   };
 };

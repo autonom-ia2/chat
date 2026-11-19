@@ -145,6 +145,15 @@ afterEach(() => {
 });
 
 describe('o bloco Seguros da ficha da pessoa', () => {
+  // #3057 — a ficha já tem o "Conversar" dela: a gaveta aberta daqui não
+  // ganha outro.
+  it('a gaveta aberta da ficha não oferece "Conversar"', async () => {
+    const w = await abrir();
+    expect(
+      w.findComponent({ name: 'GavetaDoSeguro' }).props('podeConversar')
+    ).toBe(false);
+  });
+
   it('mostra os seguros dela em ordem de urgência, com a contagem no título', async () => {
     const w = await abrir();
 
@@ -157,7 +166,7 @@ describe('o bloco Seguros da ficha da pessoa', () => {
     const primeira = linha(w, COM_PDF);
 
     expect(primeira.get('button').text()).toBe('Auto');
-    expect(primeira.get(daCarteira('selo')).text()).toBe('Ativo');
+    expect(primeira.get(daCarteira('selo')).text()).toBe('Vence logo');
     expect(primeira.text()).toContain('Seguradora Atlântica · nº AT-000451');
     expect(primeira.text()).toContain('Vence em 18 dias · ');
     const numero = primeira.get(daCarteira('numero-da-apolice'));

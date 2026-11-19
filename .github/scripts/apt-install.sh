@@ -8,11 +8,11 @@ ATTEMPTS=3
 ATTEMPT_TIMEOUT=240
 APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o DPkg::Lock::Timeout=60)
 
-# O espelho da Azure (primeiro do mirrorlist do runner) entrega a 10-50 KB/s nos dias ruins; o oficial respondeu
-# na hora nas mesmas falhas. Troca só o host, mantendo a ordem e as prioridades do arquivo do runner.
+# Os espelhos regionais da Azure/AWS podem esgotar as tentativas antes de baixar os conversores (#3045).
+# Usa o oficial por HTTPS, mantendo caminhos, ordem e prioridades do arquivo do runner.
 MIRRORS=/etc/apt/apt-mirrors.txt
 if [ -f "$MIRRORS" ]; then
-  sudo sed -i 's#http://azure.archive.ubuntu.com/#http://archive.ubuntu.com/#' "$MIRRORS"
+  sudo sed -i -E 's#https?://(azure|[a-z0-9-]+\.ec2)\.archive\.ubuntu\.com/#https://archive.ubuntu.com/#g' "$MIRRORS"
   cat "$MIRRORS"
 fi
 

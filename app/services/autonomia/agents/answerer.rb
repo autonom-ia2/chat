@@ -99,7 +99,8 @@ module Autonomia
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
         # do embedding. O caller passa aqui só a pergunta, usada exclusivamente no retrieval.
-        @retrieval_query = retrieval_query.to_s.presence || @query
+        # Sem override, respostas curtas de quantidade retomam o assunto na busca, não na pergunta enviada ao modelo.
+        @retrieval_query = retrieval_query.to_s.presence || RetrievalQuery.new(query: @query, history: history).call
         # Trechos que entram sempre, antes dos que a busca achar (o Guia: os fluxos da tela em que a
         # pessoa está). Vazio para os demais agentes: nada muda para eles.
         @fixos = Array(fixos)
@@ -153,6 +154,7 @@ module Autonomia
         @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
         parsed = generate(snippets)
+        log_retrieval(snippets, parsed)
         return trust_instruction_result(conferir_fala(parsed), snippets) if @trust_instruction
         return safe_handoff if parsed.nil?
 
@@ -344,6 +346,18 @@ module Autonomia
 
         ids = @fixos.map(&:id)
         (@fixos + achados.reject { |trecho| ids.include?(trecho.id) }).first(Config::ANSWER_TOP_K)
+      end
+
+      def log_retrieval(snippets, parsed)
+        ids = snippets.map(&:id)
+        Rails.logger.info({
+          event: 'autonomia.agents.retrieval', agent_id: @agent.id, feature: @feature,
+          retrieval_query_overridden: @retrieval_query != @query,
+          retrieved_snippet_ids: ids, used_snippet_ids: ids & Array(parsed&.dig('used_snippet_ids')),
+          model_handoff: parsed&.dig('should_handoff') == true,
+          answered_from_knowledge: parsed&.dig('answered_from_knowledge') == true,
+          generation_failed: parsed.nil?
+        }.to_json)
       end
 
       # Roda o LLM (síncrono, schema, gpt-6.1-sol) e devolve o hash parseado, ou nil em qualquer

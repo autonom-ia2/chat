@@ -156,6 +156,23 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
                   notice: "Autonomia Insurance #{ramo} #{enabled ? 'enabled' : 'disabled'}")
   end
 
+  # As chaves da carteira de seguros por conta, que nascem desligadas: a leitura de apólice por PDF (E6, #2899, chamada
+  # paga) e a cotação da renovação (E8, #2901). `chave`: `leitura` ou `cotacao`.
+  CHAVES_DA_CARTEIRA = { 'leitura' => [Carteira::Leitor::Liberado, 'Insurance policy PDF reading'],
+                         'cotacao' => [Carteira::Cotacao::Liberada, 'Insurance renewal quote'] }.freeze
+
+  def toggle_carteira
+    chave, nome = CHAVES_DA_CARTEIRA[params[:chave].to_s]
+    # O valor recebido não volta na mensagem: o painel mostra o flash sem escapar (revisão da #604).
+    # rubocop:disable Rails/I18nLocaleTexts
+    return redirect_back(fallback_location: [namespace, requested_resource], alert: 'Unknown insurance key') if chave.nil?
+    # rubocop:enable Rails/I18nLocaleTexts
+
+    enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+    enabled ? chave.ligar!(requested_resource) : chave.desligar!(requested_resource)
+    redirect_back(fallback_location: [namespace, requested_resource], notice: "#{nome} #{enabled ? 'enabled' : 'disabled'}")
+  end
+
   def destroy
     account = Account.find(params[:id])
 

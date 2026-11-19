@@ -182,7 +182,7 @@ describe('o que a gaveta mostra de um seguro em renovação', () => {
     expect(selo(w)).toBe('em_renovacao');
     expect(textoDe(w, daCarteira('selo'))).toBe('Em renovação');
     expect(textoDe(w, `${daCarteira('renovacao')} h3`)).toBe('Renovação');
-    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(situacao(w)).toBe('A renovação está em “A vencer”.');
     expect(textoDe(w, daCarteira('quem-cuida'))).toBe(
       'Quem cuida: Bruna Teixeirão'
     );
@@ -191,7 +191,7 @@ describe('o que a gaveta mostra de um seguro em renovação', () => {
   it('o azul é "Renovou", "Não renovou" fica ao lado e o resto vai para o "⋯"', async () => {
     const w = await abrirDoServidor(EM_RENOVACAO);
 
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.RENOVOU);
     expect(w.findAll(daCarteira('gaveta-acao'))).toHaveLength(1);
     expect(textoDe(w, daCarteira('nao-renovou'))).toBe('Não renovou');
@@ -263,7 +263,7 @@ describe('o que a gaveta mostra de um seguro em renovação', () => {
   it('com o card à vista, "Renovou" e "Não renovou" continuam no rodapé', async () => {
     const w = await abrirDoServidor(EM_RENOVACAO);
 
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(textoDe(w, daCarteira('nao-renovou'))).toBe('Não renovou');
   });
 
@@ -273,7 +273,7 @@ describe('o que a gaveta mostra de um seguro em renovação', () => {
       renovacao: { ...RENOVACAO, cuida: null, cuidaId: null },
     });
 
-    expect(situacao(w)).toBe('Está no funil Renovação, na etapa A vencer.');
+    expect(situacao(w)).toBe('A renovação está em “A vencer”.');
     expect(w.find(daCarteira('quem-cuida')).exists()).toBe(false);
     expect(w.find(daCarteira('abrir-no-crm')).exists()).toBe(true);
   });
@@ -340,7 +340,7 @@ describe('"Renovou"', () => {
     expect(desfazerDesfecho).toHaveBeenCalledTimes(1);
     expect(desfazerDesfecho.mock.calls[0][0]).toBe(7);
     expect(avisoVivo(w)).toBe('Desfeito.');
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(w.emitted('mudou')).toHaveLength(2);
   });
 
@@ -428,7 +428,7 @@ describe('"Renovou"', () => {
     await clicar(w, daCarteira('gaveta-acao'));
 
     expect(alerta(w)).toBe(NAO_PODE_FECHAR);
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(selo(w)).toBe('em_renovacao');
     expect(w.emitted('mudou')).toBeUndefined();
   });
@@ -453,7 +453,7 @@ describe('"Renovou"', () => {
     await clicar(w, daCarteira('gaveta-acao'));
 
     expect(alerta(w)).toBe('Não consegui fazer isso. Tente de novo.');
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(w.emitted('mudou')).toBeUndefined();
   });
 });
@@ -536,7 +536,7 @@ describe('"Não renovou" e o motivo em um toque', () => {
 
     expect(naoRenovou).not.toHaveBeenCalled();
     expect(motivoAberto(w)).toBe(false);
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
   });
 
   it('quem não renovou continua com o selo do seguro e ganha o desfazer no "⋯"', async () => {
@@ -566,7 +566,7 @@ describe('"Não renovou" e o motivo em um toque', () => {
       'Resultado desfeito. O seguro voltou a estar em renovação.'
     );
     expect(w.find(daCarteira('desfazer')).exists()).toBe(false);
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
   });
 });
 
@@ -905,7 +905,7 @@ describe('na carteira fictícia, do começo ao fim', () => {
     const w = await abrirDaDemo(ABERTA_NA_DEMO);
 
     expect(selo(w)).toBe('em_renovacao');
-    expect(situacao(w)).toContain('Está no funil Renovação, na etapa ');
+    expect(situacao(w)).toContain('A renovação está em “');
 
     await clicar(w, daCarteira('gaveta-acao'));
 
@@ -918,7 +918,7 @@ describe('na carteira fictícia, do começo ao fim', () => {
 
     // Como no servidor, a história não perde o passo: ganha o do desfazer.
     expect(selo(w)).toBe('em_renovacao');
-    expect(azul(w).text()).toBe('Renovou');
+    expect(azul(w).text()).toBe('Cliente renovou');
     expect(historico(w)[0]).toContain(
       'O "Renovou" foi desfeito. O seguro voltou a estar em renovação.'
     );

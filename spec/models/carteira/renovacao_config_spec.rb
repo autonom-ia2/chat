@@ -104,4 +104,29 @@ RSpec.describe Carteira::RenovacaoConfig do
 
     expect(ajustes.reload).to have_attributes(pipeline_id: nil, stage_id: nil, user_id: nil, escolha: 'nunca_feita')
   end
+
+  # E8 (#2901): a cotação da renovação. Nasce sem ninguém cotando, com uma pessoa enviando e a equipe respondendo.
+  describe 'escolhas da cotação' do
+    it 'nasce com ninguém cotando, uma pessoa enviando, a equipe respondendo e sem caixa' do
+      expect(described_class.create!(account: account).reload)
+        .to have_attributes(quem_cota: 'ninguem', quem_envia: 'pessoa', quem_responde: 'equipe', inbox_id: nil)
+    end
+
+    it 'só aceita os valores das listas' do
+      ajustes = described_class.new(account: account, quem_cota: 'todos', quem_envia: 'ninguem', quem_responde: 'robo')
+
+      expect(ajustes).not_to be_valid
+      expect(ajustes.errors.attribute_names).to include(:quem_cota, :quem_envia, :quem_responde)
+    end
+
+    it 'recusa a caixa de outra conta, e a caixa apagada só anula a coluna' do
+      de_outra = described_class.new(account: account, inbox: create(:inbox, account: create(:account)))
+      expect(de_outra).not_to be_valid
+
+      caixa = create(:inbox, account: account)
+      ajustes = described_class.create!(account: account, inbox: caixa)
+      Inbox.where(id: caixa.id).delete_all
+      expect(ajustes.reload.inbox_id).to be_nil
+    end
+  end
 end

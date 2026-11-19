@@ -2,7 +2,12 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { falta as faltaNaReceita } from '../receita';
+import {
+  falta as faltaNaReceita,
+  motivoIncompleto,
+  primeiroIncompleto,
+} from '../receita';
+import { chaveDoPasso, ehPassoNovo } from '../passosNovos/passosNovos';
 
 // #2414 F5 — a ação principal da tela: ligar. Desligada, um botão grande; ligada,
 // a confirmação e "Desligar" (sempre funciona). Sem gatilho ou sem passo, o botão
@@ -25,8 +30,18 @@ const emit = defineEmits(['ligar', 'desligar', 'guardar']);
 
 const { t } = useI18n();
 
+// #2982: o passo incompleto aparece pelo nome, com o que falta nele.
+const faltaNoPasso = () => {
+  const passo = primeiroIncompleto(props.receita.passos);
+  const nome = ehPassoNovo(passo) ? t(`${chaveDoPasso(passo.tipo)}.NOME`) : '';
+  return t(`AUTOMACAO_LIVRE.LIGAR.COMPLETAR.${motivoIncompleto(passo)}`, {
+    nome,
+  });
+};
+
 const falta = computed(() => {
   const chave = faltaNaReceita(props.receita);
+  if (chave === 'COMPLETAR') return faltaNoPasso();
   return chave ? t(`AUTOMACAO_LIVRE.LIGAR.FALTA_${chave}`) : '';
 });
 </script>

@@ -12,7 +12,6 @@ RSpec.describe 'Ações em grupo da Lista de Relacionamentos: funções', type: 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
   before do
-    account.enable_features!('relacionamentos_novo')
     create(:label, account: account, title: 'feira')
   end
 

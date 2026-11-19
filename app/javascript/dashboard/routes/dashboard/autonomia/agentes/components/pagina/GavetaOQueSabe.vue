@@ -470,6 +470,7 @@ const tudoCerto = computed(
         :key="fonte.id"
         :fonte="fonte"
         :nome-agente="nome"
+        mostrar-original
         :relendo="fonte.id in relendo"
         :estado="estadoDe(fonte)"
         :reler-parado="podeGerenciar && paradoAlemDoTeto(fonte)"

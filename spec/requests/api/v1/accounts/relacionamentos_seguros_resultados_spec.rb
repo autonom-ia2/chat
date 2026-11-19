@@ -173,7 +173,7 @@ RSpec.describe 'Carteira de seguros: resultados das renovações', type: :reques
       sem_login = response.status
       ler(dias: 30)
       com_parametro = [response.status, response.parsed_body]
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
       ler
 
       expect([sem_login, com_parametro, response.status]).to eq([401, [422, { 'error' => 'pedido_invalido' }], 404])

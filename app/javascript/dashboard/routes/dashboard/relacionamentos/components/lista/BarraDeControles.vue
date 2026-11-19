@@ -9,6 +9,8 @@ import CampoDeBusca from './CampoDeBusca.vue';
 // #2894 — a faixa de controles acima da lista: busca, ordem e "Mais filtros".
 // Na aba Empresas não há "Mais filtros" (empresa, etiqueta e cidade são de
 // pessoa).
+// #3057 — busca, ordem e "Mais filtros" na mesma altura (h-10) e no mesmo
+// canto; a área de toque do botão continua com 44 px (o ::before).
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -73,7 +75,7 @@ const rotuloDosFiltros = computed(() =>
         v-if="comFiltros"
         slate
         faded
-        class="shrink-0 whitespace-nowrap"
+        class="relative shrink-0 whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
         icon="i-lucide-sliders-horizontal"
         data-relacionamentos="mais-filtros"
         aria-haspopup="dialog"

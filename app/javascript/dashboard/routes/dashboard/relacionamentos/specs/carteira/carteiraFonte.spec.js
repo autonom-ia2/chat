@@ -389,6 +389,12 @@ describe('um seguro e a história', () => {
   it('o "PDF" da demonstração é uma página em branco', async () => {
     expect(await fonte().pdf(SEGURO_COM_PDF)).toBe('about:blank');
   });
+
+  it('enviar a proposta na demonstração não muda o seguro', async () => {
+    expect(await fonte().enviarProposta(SEGURO_COM_PDF)).toEqual(
+      await fonte().seguro(SEGURO_COM_PDF)
+    );
+  });
 });
 
 describe('escritas (só na memória)', () => {

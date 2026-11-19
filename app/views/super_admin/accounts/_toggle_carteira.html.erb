@@ -1,0 +1,28 @@
+<section class="main-content__body">
+  <hr/>
+  <p class="font-medium">Insurance portfolio keys</p>
+  <p>
+    Per-account keys of the insurance portfolio. Both start disabled and only work in an account that has the portfolio
+    (insurance broker with the portfolio feature on).
+  </p>
+  <% [
+       ['leitura', Carteira::Leitor::Liberado, 'Insurance policy PDF reading',
+        'Reads insurance policies from PDFs with AI (each reading is a paid call).'],
+       ['cotacao', Carteira::Cotacao::Liberada, 'Insurance renewal quote',
+        'Asks the client "Did anything change?" and quotes the renewal when the renewal card is born (each quote is a paid query in the portal).']
+     ].each do |chave, modulo, nome, descricao| %>
+    <% enabled = modulo.para?(page.resource) %>
+    <%= form_for([:toggle_carteira, namespace, page.resource], method: :post, html: { class: "form" }) do |f| %>
+      <div class="form-actions">
+        <div class="pb-3">
+          <p class="font-medium"><%= nome %></p>
+          <p><%= descricao %></p>
+          <p>Current status: <strong><%= enabled ? 'Enabled' : 'Disabled' %></strong></p>
+        </div>
+        <%= hidden_field_tag :chave, chave %>
+        <%= hidden_field_tag :enabled, (!enabled).to_s %>
+        <%= f.submit(enabled ? "Disable #{nome}" : "Enable #{nome}") %>
+      </div>
+    <% end %>
+  <% end %>
+</section>

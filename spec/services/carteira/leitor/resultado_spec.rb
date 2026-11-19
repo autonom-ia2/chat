@@ -55,8 +55,9 @@ RSpec.describe Carteira::Leitor::Resultado do
 
       com_valor, sem_valor = misto.campos.partition { |_nome, valor| valor }.map { |pares| pares.map(&:first) }
       expect(misto.campos.keys & misto.a_confirmar).to eq([])
-      expect(sem_valor).to eq(misto.duvidas - described_class::CONTATO)
-      expect((com_valor + misto.a_confirmar + misto.duvidas).sort).to eq(described_class::NOMES.sort)
+      # Os dados do segurado da cotação (E8.1) sem valor são só nulo, nunca dúvida.
+      expect(sem_valor - described_class::DO_SEGURADO).to eq(misto.duvidas - described_class::CONTATO)
+      expect((com_valor + misto.a_confirmar + misto.duvidas).sort).to eq((described_class::NOMES - described_class::DO_SEGURADO).sort)
       expect(misto.duvidas).to eq(%w[ramo_original inicio_vigencia bem corretora segurado_email])
     end
 
@@ -94,10 +95,23 @@ RSpec.describe Carteira::Leitor::Resultado do
   it 'entrega os dados da apólice como o gravador recebe, com as chaves de comparação' do
     expect(resultado.dados_da_apolice).to eq(
       tipo: 'auto', ramo_original: nil, seguradora: 'Seguradora Exemplo S.A.', numero: 'EX-2026.001234', inicio_vigencia: nil,
-      fim_vigencia: '2027-11-12', valor_centavos: 225_498, bem: nil, seguradora_chave: 'seguradoraexemplosa', numero_chave: 'EX2026001234'
+      fim_vigencia: '2027-11-12', valor_centavos: 225_498, bem: nil, segurado_nascimento: nil, segurado_sexo: nil, cep: nil, placa: nil,
+      bonus_classe: nil, seguradora_chave: 'seguradoraexemplosa', numero_chave: 'EX2026001234'
     )
     sem_numero = described_class.lido(campos: lidos.except('numero', 'seguradora'), paginas_total: 1, paginas_enviadas: [1])
     expect(sem_numero.dados_da_apolice).to include(numero: nil, numero_chave: nil, seguradora_chave: nil)
+  end
+
+  # E8.1 (#3043): nascimento, sexo, CEP, placa e classe de bônus vão para o gravador com os nomes das colunas, e o
+  # "não achei" deles não é dúvida (vida não tem placa; empresa não tem nascimento).
+  it 'os dados do segurado da cotação vão nos dados da apólice e nunca entram nas dúvidas' do
+    do_segurado = { 'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'cep' => '12345678', 'placa' => 'EXM0A00',
+                    'bonus_classe' => 5 }
+    com_dados = described_class.lido(campos: lidos.merge(do_segurado), paginas_total: 2, paginas_enviadas: [1])
+
+    expect(com_dados.dados_da_apolice).to include(do_segurado.symbolize_keys)
+    expect([com_dados.duvidas, resultado.duvidas]).to all(eq(%w[ramo_original inicio_vigencia bem corretora segurado_telefone segurado_email]))
+    expect(com_dados.as_json.to_s).not_to include('1985-03-15', '12345678', 'EXM0A00')
   end
 
   it 'recusado: sem campo e sem dúvida, só com as recusas conhecidas' do

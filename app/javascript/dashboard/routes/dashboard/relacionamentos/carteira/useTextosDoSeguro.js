@@ -2,10 +2,12 @@
 // a frase de tempo (lista ou ficha) e os formatos no idioma do painel.
 import { useI18n } from 'vue-i18n';
 import { formatarDiaMes } from '../ficha/formatos';
+import { cepComMascara } from './formularioDoSeguro';
 import { useIdioma } from '../ficha/idioma';
 import {
   formatarDataInteira,
   formatarHora,
+  formatarPercentual,
   formatarValor,
 } from './formatosDoSeguro';
 import { quandoDoSeguro } from './quandoDoSeguro';
@@ -38,12 +40,22 @@ export const useTextosDoSeguro = () => {
     });
   };
 
+  // #3043 — os dados do segurado: o sexo por extenso, o CEP com o traço e a
+  // classe de bônus como "Classe 5".
+  const sexo = letra => t(`RELACIONAMENTOS_CARTEIRA.SEXOS.${letra}`);
+  const bonus = classe =>
+    t('RELACIONAMENTOS_CARTEIRA.CLASSE_DE_BONUS', { classe });
+
   // Um valor de um campo do seguro, do jeito que a tela escreve.
   const FORMATOS = {
     valor,
     comeca: dataInteira,
     termina: dataInteira,
     tipo: nome => t(chaveDoTipo(nome)),
+    nascimento: dataInteira,
+    sexo,
+    cep: cepComMascara,
+    bonus,
   };
   const doCampo = (campo, conteudo) =>
     campo in FORMATOS ? FORMATOS[campo](conteudo) : String(conteudo);
@@ -66,6 +78,10 @@ export const useTextosDoSeguro = () => {
     diaMes,
     dataInteira,
     valor,
+    sexo,
+    bonus,
+    cep: cepComMascara,
     hora: segundos => formatarHora(segundos, idioma.value),
+    percentual: pontos => formatarPercentual(pontos, idioma.value),
   };
 };

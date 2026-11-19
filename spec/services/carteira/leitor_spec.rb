@@ -16,7 +16,9 @@ RSpec.describe Carteira::Leitor do
       'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
       'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '123.456.789-00',
       'segurado_telefone' => '(11) 99999-0001', 'segurado_telefone_pagina' => 1,
-      'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1 }
+      'segurado_email' => 'marina.exemplo@exemplo.invalid', 'segurado_email_pagina' => 1,
+      'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'segurado_sexo_escrito' => 'Feminino', 'cep' => '12345-678',
+      'placa' => 'EXM0A00', 'bonus_classe' => 5, 'bonus_trecho' => 'Classe de bônus: 5' }
   end
 
   before do
@@ -105,7 +107,8 @@ RSpec.describe Carteira::Leitor do
       'tipo' => 'auto', 'ramo_original' => '0531 - Automóvel - Casco', 'seguradora' => 'SEGURADORA EXEMPLO S.A.',
       'numero' => 'EX-2026.001234', 'inicio_vigencia' => '2026-11-12', 'fim_vigencia' => '2027-11-12', 'valor_centavos' => 225_498,
       'bem' => 'Veículo Modelo Exemplo 1.0 Ano: 2024 Placa: EXM0A00', 'corretora' => 'Corretora Amostra de Seguros Ltda.',
-      'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '12345678900'
+      'segurado_nome' => 'Marina Exemplo de Souza', 'segurado_documento' => '12345678900',
+      'segurado_nascimento' => '1985-03-15', 'segurado_sexo' => 'F', 'cep' => '12345678', 'placa' => 'EXM0A00', 'bonus_classe' => 5
     )
     expect(resultado).to have_attributes(recusa: nil, duvidas: [], a_confirmar: %w[segurado_telefone segurado_email], paginas_total: 2,
                                          paginas_enviadas: [1, 2])
@@ -163,6 +166,20 @@ RSpec.describe Carteira::Leitor do
 
       expect(resultado.campos.slice(*pedacos.keys).values).to all(be_nil)
       expect(resultado.duvidas).to eq(%w[numero valor_centavos bem corretora segurado_nome])
+    end
+
+    # E8.1 (#3043): os dados do segurado da cotação passam pela âncora como os outros, mas faltam em muitos ramos e
+    # ninguém precisa conferi-los: o "não achei" deles é só nulo, fora das dúvidas.
+    it 'os dados do segurado que não estão escritos viram nulo e não entram nas dúvidas' do
+      inventados = { 'segurado_nascimento' => '1985-03-16', 'segurado_sexo' => 'M', 'segurado_sexo_escrito' => nil, 'cep' => '12345-679',
+                     'placa' => 'ABC1D23', 'bonus_classe' => 7, 'bonus_trecho' => 'Classe de bônus: 5' }
+      modelo_responde(do_auto.merge(inventados))
+
+      resultado = ler('apolice_auto.pdf')
+
+      expect(resultado.campos.slice(*Carteira::Leitor::Resultado::DO_SEGURADO).values).to all(be_nil)
+      expect(resultado.duvidas).to eq([])
+      expect(resultado.dados_da_apolice).to include(segurado_nascimento: nil, cep: nil, bonus_classe: nil)
     end
 
     it 'valor que não é número inteiro de centavos não passa' do

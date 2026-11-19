@@ -1,0 +1,96 @@
+{
+  "encaminhamento": {
+    "rota": "documentos",
+    "seguradoras": [
+      "Tokio Marine"
+    ],
+    "seguradoras_lidas": [
+      {
+        "como_escrito": "Tokio Marine",
+        "nome": "Tokio Marine",
+        "serve_para_varias": false
+      }
+    ],
+    "produto": "Residencial",
+    "processos": [],
+    "motivo": "Solicita o PDF oficial das condições gerais do seguro residencial da Tokio Marine.",
+    "modelo": "gpt-6-luna"
+  },
+  "resposta": {
+    "kind": "susep_foundation.documents.v1",
+    "documents": [
+      {
+        "process_susep": "15414.001600/2005-13",
+        "insurer": "Tokio Marine",
+        "product": "Residencial",
+        "version_label": "15414001600200513 - CG = NL.pdf",
+        "ingested_at": "2026-04-17",
+        "url": "https://www2.susep.gov.br/safe/menumercado/REP2/Produto.aspx/DownloadConsultaPublica/489293",
+        "size_bytes": 591622,
+        "pdf_url": "https://agent.autonomia.site/documents/pdf/f7bf252e-284b-59c4-a138-990c1f1acf78",
+        "file_name": "Condições Gerais - Tokio Marine - Residencial - 15414.001600-2005-13.pdf"
+      },
+      {
+        "process_susep": "15414.100910/2004-39",
+        "insurer": "Tokio Marine",
+        "product": "Residencial",
+        "version_label": "15414100910200439 - CG.pdf",
+        "ingested_at": "2026-09-03",
+        "url": "https://www2.susep.gov.br/safe/menumercado/REP2/Produto.aspx/DownloadConsultaPublica/509975",
+        "size_bytes": 1113939,
+        "pdf_url": "https://agent.autonomia.site/documents/pdf/0ee4a135-0d26-5953-a5e4-c47713cb2d60",
+        "file_name": "Condições Gerais - Tokio Marine - Residencial - 15414.100910-2004-39.pdf"
+      },
+      {
+        "process_susep": "15414.613464/2022-18",
+        "insurer": "Tokio Marine",
+        "product": "Residencial",
+        "version_label": "15414613464202218 - CG = NL.pdf",
+        "ingested_at": "2026-04-17",
+        "url": "https://www2.susep.gov.br/safe/menumercado/REP2/Produto.aspx/DownloadConsultaPublica/489295",
+        "size_bytes": 548920,
+        "pdf_url": "https://agent.autonomia.site/documents/pdf/586a02b7-6cc8-5d28-8f29-15ef505e6d1e",
+        "file_name": "Condições Gerais - Tokio Marine - Residencial - 15414.613464-2022-18.pdf"
+      },
+      {
+        "process_susep": "15414.900298/2015-50",
+        "insurer": "Tokio Marine",
+        "product": "Residencial",
+        "version_label": "15414900298201550 - CG.pdf",
+        "ingested_at": "2026-05-13",
+        "url": "https://www2.susep.gov.br/safe/menumercado/REP2/Produto.aspx/DownloadConsultaPublica/506179",
+        "size_bytes": 880904,
+        "pdf_url": "https://agent.autonomia.site/documents/pdf/e8c41170-9333-50b4-a459-114f3c0ff61a",
+        "file_name": "Condições Gerais - Tokio Marine - Residencial - 15414.900298-2015-50.pdf"
+      }
+    ],
+    "total": 4,
+    "truncated": false,
+    "note": "Somente a baseline atual desta base para cada processo — é a última versão que a reconciliação com a SUSEP promoveu, não uma declaração de vigência jurídica. Um pedido genérico costuma corresponder a vários processos: escolha pelo número SUSEP.",
+    "interpreted": {
+      "product": {
+        "sent": "Residencial",
+        "resolved": "Residencial",
+        "did_you_mean": [],
+        "applied": true
+      },
+      "lob": {
+        "sent": null,
+        "resolved": null,
+        "did_you_mean": [],
+        "applied": false
+      },
+      "insurers": [
+        {
+          "sent": "Tokio Marine",
+          "resolved": [
+            "Tokio Marine"
+          ],
+          "widened": false
+        }
+      ],
+      "processes_matched": null,
+      "warnings": []
+    }
+  }
+}

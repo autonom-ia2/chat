@@ -8,37 +8,18 @@ import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import PilulasDeGrupo from '../components/comum/PilulasDeGrupo.vue';
-import RelacionamentosInicio from '../pages/RelacionamentosInicio.vue';
 import { routes } from '../relacionamentos.routes';
+import { routes as rotasDaPorta } from '../../relationships/routes';
 
 // As peças comuns e a porta de Relacionamentos (#2894). Cada tela tem o spec dela em
 // specs/lista, specs/ficha e specs/trazer.
-const flagsLigadas = vi.hoisted(() => new Set());
-const carregamentos = vi.hoisted(() => ({ lista: 0 }));
-
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
 vi.mock('dashboard/store', () => ({
   default: { getters: {}, dispatch: vi.fn() },
 }));
-// Conta quantas vezes o módulo da tela nova foi carregado: com a flag desligada
-// ele não pode nem entrar no pacote da porta.
-vi.mock('../pages/ListaPage.vue', () => {
-  carregamentos.lista += 1;
-  return {
-    __esModule: true,
-    default: { name: 'ListaPage', template: '<div data-pagina-nova />' },
-  };
-});
-vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({
-    isCloudFeatureEnabled: flag => flagsLigadas.has(flag),
-  }),
-}));
-vi.mock('../../relationships/RelationshipsHome.vue', () => ({
-  default: {
-    name: 'RelationshipsHome',
-    template: '<div data-pagina-antiga />',
-  },
+vi.mock('../pages/ListaPage.vue', () => ({
+  __esModule: true,
+  default: { name: 'ListaPage', template: '<div data-pagina-nova />' },
 }));
 
 // Com a máquina carregada, o primeiro mount do arquivo passa dos 5 s padrão.
@@ -205,15 +186,22 @@ describe('PilulasDeGrupo: sinal de que a fila continua', () => {
     expect(degrades(w)).toEqual({ direita: false, esquerda: true });
   });
 
+  // #3057 (revisão) — de md para cima a fileira volta a quebrar em linhas;
+  // no celular rola de lado, com o degradê e sem seta (a seta cobria o texto).
   it('a partir de md a fileira quebra em linhas, sem rolagem e sem degradê', async () => {
     const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
     expect(w.get('ul').classes()).toEqual(
-      expect.arrayContaining(['md:flex-wrap', 'md:overflow-visible'])
+      expect.arrayContaining([
+        'overflow-x-auto',
+        'md:flex-wrap',
+        'md:overflow-visible',
+      ])
     );
     await medir(w.get('ul'), { largura: 300, conteudo: 900, rolou: 300 });
     ['direita', 'esquerda'].forEach(lado =>
       expect(w.get(`[data-degrade="${lado}"]`).classes()).toContain('md:hidden')
     );
+    expect(w.find('.i-lucide-chevron-right').exists()).toBe(false);
   });
 
   it('a pílula focada rola para longe da borda com degradê', () => {
@@ -259,29 +247,19 @@ describe('PilulasDeGrupo', () => {
   });
 });
 
-describe('RelacionamentosInicio', () => {
-  afterEach(() => flagsLigadas.clear());
+// E9 (#2902): a porta de Relacionamentos abre sempre a lista nova, sem flag.
+describe('porta de Relacionamentos', () => {
+  const porta = rotasDaPorta.find(rota => rota.name === 'relationships_home');
 
-  // Primeiro de todos: depois dele o módulo da lista já foi carregado.
-  it('com a flag desligada, nem carrega o módulo da lista nova', async () => {
-    const w = mount(RelacionamentosInicio);
-    await flushPromises();
-    expect(w.find('[data-pagina-antiga]').exists()).toBe(true);
-    expect(carregamentos.lista).toBe(0);
-  });
-
-  it('abre a lista nova com relacionamentos_novo ligada', async () => {
-    flagsLigadas.add(FEATURE_FLAGS.RELACIONAMENTOS_NOVO);
-    const w = mount(RelacionamentosInicio);
+  it('abre a lista nova de pessoas e empresas', async () => {
+    const { default: pagina } = await porta.component();
+    const w = mount(pagina);
     await flushPromises();
     expect(w.find('[data-pagina-nova]').exists()).toBe(true);
-    expect(w.find('[data-pagina-antiga]').exists()).toBe(false);
   });
 
-  it('abre a página de hoje com a flag desligada', () => {
-    const w = mount(RelacionamentosInicio);
-    expect(w.find('[data-pagina-antiga]').exists()).toBe(true);
-    expect(w.find('[data-pagina-nova]').exists()).toBe(false);
+  it('pede só a flag do menu de Relacionamentos', () => {
+    expect(porta.meta.featureFlag).toBe(FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION);
   });
 });
 
@@ -294,18 +272,15 @@ describe('rotas de Relacionamentos', () => {
   };
 
   it.each(routes.map(rota => [rota.name, rota]))(
-    '%s pede as mesmas flags da lista: relacionamentos_novo e relationships_navigation',
+    '%s pede a mesma flag da lista: relationships_navigation',
     async (_nome, rota) => {
       const next = vi.fn();
-      comFlags([FEATURE_FLAGS.RELACIONAMENTOS_NOVO]);
+      comFlags([]);
       await rota.beforeEnter(para, {}, next);
       expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
 
       const liberada = vi.fn();
-      comFlags([
-        FEATURE_FLAGS.RELACIONAMENTOS_NOVO,
-        FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION,
-      ]);
+      comFlags([FEATURE_FLAGS.RELATIONSHIPS_NAVIGATION]);
       await rota.beforeEnter(para, {}, liberada);
       expect(liberada).toHaveBeenCalledWith();
     }
@@ -399,5 +374,56 @@ describe('quem chega às telas da renovação', () => {
       'contact_manage',
       'attribute_manage',
     ]);
+  });
+});
+
+// #3057 — grupo com 0 não aparece nas listas de Relacionamentos (`semVazios`):
+// o primeiro ("Todos") e o escolhido ficam sempre; o escolhido com 0 fica
+// apagado. Sem `semVazios`, todos aparecem.
+describe('PilulasDeGrupo: grupos zerados', () => {
+  const grupos = [
+    { id: 'todos', nome: 'Todos', total: 0 },
+    { id: 'clientes', nome: 'Clientes', total: 3 },
+    { id: 'so_um', nome: 'Só tem um seguro', total: 0 },
+    { id: 'sumiu', nome: 'Sumiu', total: 0 },
+    { id: 'sem_numero', nome: 'Sem número' },
+  ];
+  const ids = w =>
+    w.findAll('[data-grupo]').map(b => b.attributes('data-grupo'));
+
+  it('com semVazios, esconde os zerados, mas "Todos" fica', () => {
+    const w = mount(PilulasDeGrupo, {
+      props: { grupos, modelValue: 'clientes', semVazios: true },
+    });
+    expect(ids(w)).toEqual(['todos', 'clientes', 'sem_numero']);
+  });
+
+  it('o grupo escolhido fica mesmo com 0, apagado', () => {
+    const w = mount(PilulasDeGrupo, {
+      props: { grupos, modelValue: 'sumiu', semVazios: true },
+    });
+    expect(ids(w)).toEqual(['todos', 'clientes', 'sumiu', 'sem_numero']);
+    const sumiu = w.get('[data-grupo="sumiu"]');
+    expect(sumiu.attributes('data-vazio')).toBe('');
+    expect(sumiu.attributes('aria-pressed')).toBe('true');
+    const todos = w.get('[data-grupo="todos"]');
+    expect(todos.attributes('data-vazio')).toBe('');
+    expect(todos.get('span').classes()).toContain('text-n-slate-10');
+  });
+
+  it('sem semVazios, todos aparecem', () => {
+    const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'todos' } });
+    expect(ids(w)).toHaveLength(5);
+  });
+
+  it('o número fica em tom suave e a escolhida em tinta escura', () => {
+    const w = mount(PilulasDeGrupo, {
+      props: { grupos, modelValue: 'clientes', semVazios: true },
+    });
+    const escolhida = w.get('[data-grupo="clientes"] > span');
+    expect(escolhida.classes()).toContain('bg-n-slate-12');
+    expect(w.get('[data-grupo="todos"] > span > span').classes()).toContain(
+      'text-n-slate-10'
+    );
   });
 });

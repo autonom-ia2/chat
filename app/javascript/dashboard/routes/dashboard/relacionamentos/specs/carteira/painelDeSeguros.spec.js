@@ -149,7 +149,7 @@ describe('os seguros de quem está na conversa', () => {
     const primeira = linha(w, VENCE_LOGO.id);
 
     expect(primeira.get('button').text()).toBe('Auto');
-    expect(primeira.get(daCarteira('selo')).text()).toBe('Ativo');
+    expect(primeira.get(daCarteira('selo')).text()).toBe('Vence logo');
     expect(primeira.text()).toContain('Seguradora Atlântica');
     expect(textoDe(primeira, daCarteira('painel-quando'))).toBe(
       'Vence em 17 dias · 29/11/2026'

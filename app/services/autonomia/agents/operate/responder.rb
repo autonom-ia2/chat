@@ -506,10 +506,15 @@ module Autonomia
         # MULTIMODAL (Onda 2 / Track B): passa as imagens/figurinhas do turno como input_image; a
         # transcrição de áudio já vem embutida em `query`.
         def answer
+          question = query
+          turns = history
+          # Only retrieval excludes the pending incoming turn; the model still receives every message unchanged.
+          prior_turns = turns.first(turns.length - current_turn_incoming.length)
           ::Autonomia::Agents::Answerer.new(
             agent: @agent,
-            query: query,
-            history: history,
+            query: question,
+            history: turns,
+            retrieval_query: ::Autonomia::Agents::RetrievalQuery.new(query: question, history: prior_turns).call,
             images: media.images,
             documents: media.documents,
             trust_instruction: true,

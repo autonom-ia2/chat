@@ -14,12 +14,18 @@ require 'rails_helper'
 # POR AST (Prism), como a varredura de recusas: busca textual acusaria o comentário que EXPLICA a
 # decisão — e uma guarda que reprova a explicação apaga o motivo junto com a regra.
 RSpec.describe Autonomia::Insurance::Medida do
-  # Onde a medida PODE aparecer: ela mesma, a porta da conta (a corretora vê o retorno) e a página do
-  # Super Admin (a operação cobra). Nenhum arquivo de ferramenta, job ou aceite.
+  # Onde a medida PODE aparecer: ela mesma, a porta da conta (a corretora vê o retorno), a página do
+  # Super Admin (a operação cobra) e o cartão das cotações do mês em "Ajustar renovações" (E8, #2901:
+  # Carteira::Cotacao::Consumo, só contagens para a corretora ler, lido só pelo GET seguros/cotacoes; nada
+  # da cotação da renovação o consulta para decidir se cota). A medição de uso da carteira (E9, #2902:
+  # Carteira::Medida, lida só pela página do Super Admin) usa dela só o fuso da conta. Nenhum arquivo de ferramenta, job
+  # ou aceite.
   let(:leitores) do
     ['app/controllers/api/v1/accounts/autonomia/insurance/measurement_controller.rb',
      'app/controllers/super_admin/insurance_measurements_controller.rb',
      'app/services/autonomia/insurance/medida.rb',
+     'app/services/carteira/cotacao/consumo.rb',
+     'app/services/carteira/medida.rb',
      'app/views/super_admin/insurance_measurements/show.html.erb']
   end
 

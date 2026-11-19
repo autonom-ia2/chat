@@ -324,6 +324,8 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     it 'não faz uma consulta por pessoa para etiquetas e foto' do
       3.times { |n| pessoa("Pessoa #{n}").update_labels(%w[feira]) }
       ler = -> { consulta.itens.each { |item| [item.label_taggings.map(&:tag), item.avatar.attached?] } }
+      # A primeira leitura aquece o que é da conta e da instalação (o nicho da carteira, #2902), não de cada pessoa.
+      ler.call
       com_tres = consultas_feitas(&ler)
       4.times { |n| pessoa("Outra #{n}").update_labels(%w[site]) }
 
@@ -442,10 +444,10 @@ RSpec.describe Relacionamentos::ConsultaDePessoas do
     end
 
     describe 'com a carteira desligada' do
-      # A conta já tem seguros gravados; desligar a chave tem de devolver a lista de antes, inteira.
+      # A conta já tem seguros gravados; sair do nicho seguros tem de devolver a lista de antes, inteira.
       before do
         com_seguros('Marina Exemplo', { numero: 'EX-001234', bem: 'Carro Exemplo 2022' })
-        account.disable_features!('carteira_seguros')
+        sem_a_carteira!(account)
       end
 
       def sql_de(&)

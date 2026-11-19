@@ -124,7 +124,7 @@
         "FRASE_SEM_BLOCO": "Usar um bloco",
         "ENSAIO": "Entraria no bloco e faria: {passos}.",
         "HISTORICO": "Usou o bloco “{bloco}”.",
-        "VAZIO": "Você ainda não tem blocos.",
+        "VAZIO": "Você ainda não tem blocos. Para criar um, abra a lista de automações e toque em “Usar como bloco” na automação que você quer reaproveitar.",
         "VAZIO_BOTAO": "Ver minhas automações",
         "QUAL": "Qual bloco usar",
         "O_QUE_FAZ": "O que este bloco faz",

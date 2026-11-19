@@ -1,12 +1,13 @@
 require 'rails_helper'
 
-# Assinante do `whatsapp_templates.consentimento_ligado` (#1524, contrato do #1603), em
-# `config/initializers/crm_booking_notice_templates.rb`.
+# Assinante do `whatsapp_templates.consentimento_ligado` (#1524 e #3055, contrato do #1603), em
+# `config/initializers/whatsapp_templates_consentimento_ligado.rb`: o Agendamento e a cotação da renovação.
 RSpec.describe 'assinante de whatsapp_templates.consentimento_ligado', type: :job do
   include ActiveJob::TestHelper
 
   let(:account) { create(:account) }
   let(:job) { Crm::BookingV2::NoticeTemplateEnsureJob }
+  let(:job_da_carteira) { Carteira::Cotacao::ModelosJob }
 
   # Ligar o Aviso de serviço é o que autoriza criar: o agendamento reage enfileirando a criação para a conta.
   it 'evento com marca utility: enfileira a criação da conta' do
@@ -15,11 +16,22 @@ RSpec.describe 'assinante de whatsapp_templates.consentimento_ligado', type: :jo
     end.to have_enqueued_job(job).with(account.id)
   end
 
+  # Os 2 modelos da cotação da renovação também são de utilidade: a carteira reage ao mesmo evento (o job reconfere se
+  # a cotação está aberta e qual é a caixa).
+  it 'evento com marca utility: enfileira também os modelos da cotação da renovação' do
+    expect do
+      ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: account.id, marca: 'utility')
+    end.to have_enqueued_job(job_da_carteira).with(account.id)
+  end
+
   # Divulgação não autoriza modelo de utilidade: os avisos do agendamento não dependem dela.
   it 'evento com marca marketing: não enfileira' do
     expect do
       ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: account.id, marca: 'marketing')
     end.not_to have_enqueued_job(job)
+    expect do
+      ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: account.id, marca: 'marketing')
+    end.not_to have_enqueued_job(job_da_carteira)
   end
 
   # Evento sem conta não tem para quem criar: nada vai para a fila (o job sairia vazio).
@@ -47,5 +59,17 @@ RSpec.describe 'assinante de whatsapp_templates.consentimento_ligado', type: :jo
       ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: account.id, marca: 'utility')
     end.not_to raise_error
     expect(tracker).to have_received(:capture_exception)
+  end
+
+  # A fila que falha para um job não pode deixar o outro sem o pedido: cada um é enfileirado por conta própria.
+  it 'erro ao enfileirar o do Agendamento: o da carteira ainda vai para a fila' do
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+    allow(job).to receive(:perform_later).and_raise(StandardError)
+
+    expect do
+      ActiveSupport::Notifications.instrument('whatsapp_templates.consentimento_ligado', account_id: account.id, marca: 'utility')
+    end.to have_enqueued_job(job_da_carteira).with(account.id)
+    expect(tracker).to have_received(:capture_exception).once
   end
 end

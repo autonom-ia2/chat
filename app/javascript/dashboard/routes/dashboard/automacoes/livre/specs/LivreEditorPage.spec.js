@@ -269,6 +269,29 @@ describe('LivreEditorPage', () => {
     if (chave) expect(aviso.text()).toBe(`AUTOMACAO_LIVRE.EDITOR.${chave}`);
   });
 
+  // #2556: o gatilho de data deixou contatos de fora pela data escrita errada.
+  it.each([
+    [
+      'com contatos de fora',
+      { quantos: 12, alvo: 'contato', campo: 'Aniversário' },
+      true,
+    ],
+    ['sem aviso', undefined, false],
+  ])('%s: aviso das datas no topo', async (_caso, datas, aparece) => {
+    AutomacoesAPI.show.mockResolvedValue({
+      data: salva(datas ? { datas_invalidas: datas } : {}),
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    const aviso = wrapper.find('[data-datas-invalidas]');
+    expect(aviso.exists()).toBe(aparece);
+    if (aparece)
+      expect(aviso.text()).toBe(
+        'AUTOMACAO_LIVRE.EDITOR.DATAS_INVALIDAS.CONTATOS'
+      );
+  });
+
   // Abre o passo p1 e salva no painel com outra duração: só a tela muda.
   const trocarDuracao = async (wrapper, valor) => {
     wrapper.findComponent(LivreConfira).vm.$emit('alterar', 'p1');

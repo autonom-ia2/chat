@@ -270,7 +270,7 @@ RSpec.describe 'Carteira de seguros: apólice nova à mão', type: :request do
     it 'responde 401 sem login e 404 sem a carteira' do
       post caminho, params: da_nova, as: :json
       sem_login = response.status
-      account.disable_features!('carteira_seguros')
+      sem_a_carteira!(account)
       guardar
 
       expect([sem_login, response.status, seguros.count]).to eq([401, 404, 1])
