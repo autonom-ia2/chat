@@ -57,6 +57,8 @@ class Account::ContactsExportJob < ApplicationJob
   end
 
   def contacts
+    return pessoas_da_lista_nova if @params.present? && @params[:relacionamentos].present?
+
     if @params.present? && @params[:payload].present? && @params[:payload].any?
       result = ::Contacts::FilterService.new(@account, @account_user, @params).perform
       result[:contacts]
@@ -65,6 +67,12 @@ class Account::ContactsExportJob < ApplicationJob
     else
       @account.contacts.resolved_contacts(use_crm_v2: @account.feature_enabled?('crm_v2'))
     end
+  end
+
+  # #3062 — "Baixar planilha" da lista nova de Relacionamentos: a mesma consulta da tela (grupo, busca, filtros e ordem),
+  # conferida pelo controller antes de entrar na fila.
+  def pessoas_da_lista_nova
+    ::Relacionamentos::ConsultaDePessoas.new(@account, @params[:relacionamentos]).para_exportar
   end
 
   def valid_headers(column_names)

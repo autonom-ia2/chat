@@ -47,6 +47,7 @@ const CAMPOS_DE_TEXTO = [
         :model-value="formulario.telefone"
         :label="ra('TELEFONE')"
         :rotulo-do-pais="ra('PAIS')"
+        :erro="mensagem(erros.telefone)"
         @update:model-value="valor => emit('mudar', 'telefone', valor)"
       />
     </template>

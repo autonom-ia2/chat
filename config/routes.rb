@@ -1130,6 +1130,8 @@ Rails.application.routes.draw do
               collection do
                 get :contagens
                 get :todas
+                # #3062 — "Baixar planilha": a consulta da tela vai por e-mail (Account::ContactsExportJob).
+                post :exportar
               end
               member do
                 get :conversas
@@ -1155,6 +1157,8 @@ Rails.application.routes.draw do
             get :funis, to: 'funis#index'
             post :cards, to: 'cards#create'
             post :etiqueta, to: 'etiqueta#create'
+            # #3062 — "Tirar etiquetas" das pessoas marcadas.
+            post 'etiqueta/tirar', to: 'etiqueta#tirar'
             post :apagar, to: 'apagar#create'
             # #2896 — Trazer minha lista: enviar e ler a planilha, responder às perguntas, trocar o destino de uma coluna,
             # consertar ou deixar de fora uma linha, trazer, as listas já trazidas, o andamento de uma e o desfazer de

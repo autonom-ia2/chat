@@ -1,7 +1,8 @@
+import ContactAPI from 'dashboard/api/contacts';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { emFatias } from './emFatias';
-import { ATRASO_DA_DEMO_MS, esperar } from './listaFonte';
+import { ATRASO_DA_DEMO_MS, esperar, paramsDoPedido } from './listaFonte';
 
 // #2894 — de onde as ações em grupo da lista de Relacionamentos escrevem (criar
 // cards, etiquetar, apagar). Mesmo desenho de listaFonte.js: fora da
@@ -10,7 +11,15 @@ import { ATRASO_DA_DEMO_MS, esperar } from './listaFonte';
 //
 // As três escritas recebem { pessoas, aoAndar, deveParar } (mais o que a ação
 // pede) e devolvem o mesmo formato nas duas fontes (ver emFatias.js):
-//   { criados | aplicadas | apagadas, deFora: [{ id, nome, motivo }], faltam, erro }
+//   { criados | aplicadas | tiradas | apagadas, deFora: [{ id, nome, motivo }], faltam, erro }
+//
+// #3062 — e o que a lista ganhou da lista de contatos de hoje:
+//   - etiquetas: várias de uma vez (`etiquetas`), para pôr ou tirar;
+//   - exportar(consulta): "Baixar planilha" da lista na tela. Devolve
+//     { email }, para onde a planilha vai;
+//   - criarPessoa(dados) e salvarPessoa(id, dados): "Nova pessoa" e "Editar"
+//     da linha, com `dados` no formato do contato (ficha/informacoes.js). O que
+//     o servidor recusa sobe como veio (lista/recusaDoContato.js lê o 422).
 const CARREGAR_DEMO = import.meta.env.DEV
   ? () => import('../demo/acoesDaLista.js')
   : null;
@@ -54,7 +63,20 @@ const fonteDemo = ({ carregarDemo, atraso }) => {
       );
     },
     aplicarEtiqueta: lote => simular(lote, 'aplicadas'),
+    tirarEtiqueta: lote => simular(lote, 'tiradas'),
     apagar: lote => simular(lote, 'apagadas'),
+    async exportar() {
+      await esperar(atraso);
+      return { email: 'voce@exemplo.com.br' };
+    },
+    async criarPessoa({ name }) {
+      await esperar(atraso);
+      return { id: Date.now(), name };
+    },
+    async salvarPessoa(id, { name }) {
+      await esperar(atraso);
+      return { id, name };
+    },
   };
 };
 
@@ -78,13 +100,13 @@ const fonteReal = () => ({
   async funis() {
     return (await RelacionamentosAPI.funis()).data;
   },
-  // As etiquetas da conta, pelo mesmo cliente (com cache) e na mesma ordem que
-  // o resto do painel usa (store/modules/labels.js).
+  // As etiquetas da conta, com a cor, pelo mesmo cliente (com cache) e na
+  // mesma ordem que o resto do painel usa (store/modules/labels.js).
   async etiquetas() {
     const { data } = await LabelsAPI.get(true);
     return data.payload
-      .map(({ title }) => title)
-      .sort((a, b) => a.localeCompare(b));
+      .map(({ title, color }) => ({ nome: title, cor: color }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   },
   criarCards: ({ funilId, etapaId, ...lote }) =>
     noServidor(lote, 'criados', ids =>
@@ -94,14 +116,31 @@ const fonteReal = () => ({
         etapa_id: etapaId,
       })
     ),
-  aplicarEtiqueta: ({ etiqueta, ...lote }) =>
+  aplicarEtiqueta: ({ etiquetas, ...lote }) =>
     noServidor(lote, 'aplicadas', ids =>
-      RelacionamentosAPI.aplicarEtiqueta({ pessoa_ids: ids, etiqueta })
+      RelacionamentosAPI.aplicarEtiqueta({ pessoa_ids: ids, etiquetas })
+    ),
+  tirarEtiqueta: ({ etiquetas, ...lote }) =>
+    noServidor(lote, 'tiradas', ids =>
+      RelacionamentosAPI.tirarEtiqueta({ pessoa_ids: ids, etiquetas })
     ),
   apagar: lote =>
     noServidor(lote, 'apagadas', ids =>
       RelacionamentosAPI.apagar({ pessoa_ids: ids })
     ),
+  // A consulta da tela sem a página: a planilha leva todo mundo dela.
+  async exportar(consulta) {
+    const params = paramsDoPedido({ ...consulta, pagina: undefined });
+    return (await RelacionamentosAPI.exportarPessoas(params)).data;
+  },
+  async criarPessoa(dados) {
+    const { data } = await ContactAPI.create(dados);
+    return data.payload.contact;
+  },
+  async salvarPessoa(id, dados) {
+    const { data } = await ContactAPI.update(id, dados);
+    return data.payload;
+  },
 });
 
 export const acoesDaListaFonte = ({

@@ -40,10 +40,13 @@ export const usePermissoesDaLista = () => {
         canManageCards.value
     ),
     podeEtiquetar: computed(() => checkPermissions(QUEM_EDITA_CONTATO)),
+    // #3062 — "Nova pessoa" e "Editar" da linha: a regra de criar e editar
+    // contato da lista de hoje (ContactMoreActions.vue e ContactPolicy).
+    podeEditar: computed(() => checkPermissions(QUEM_EDITA_CONTATO)),
     podeApagar: computed(() => checkPermissions(QUEM_APAGA_CONTATO)),
     podeTrazer: computed(() => checkPermissions(QUEM_TRAZ_LISTA)),
     // #2898 — exportar o histórico de um seguro segue a regra de exportar
-    // contatos.
+    // contatos; #3062 — "Baixar planilha" da lista também.
     podeExportar: computed(() => checkPermissions(QUEM_EXPORTA_CONTATO)),
     // #2898 — mudar onde ficam as renovações pede as duas chaves que o
     // servidor pede (carteira/usePodeAjustarRenovacoes.js).

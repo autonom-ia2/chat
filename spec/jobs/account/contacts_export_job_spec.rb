@@ -173,6 +173,16 @@ RSpec.describe Account::ContactsExportJob do
       expect(csv_data.length).to eq(4)
     end
 
+    # #3062 — "Baixar planilha" da lista nova de Relacionamentos: a mesma consulta da tela, na ordem dela.
+    it 'exports the people of the new Relacionamentos list, with its search and order' do
+      pedido = { 'grupo' => 'todos', 'busca' => 'looped', 'ordem' => 'email_z_a' }.with_indifferent_access
+      described_class.perform_now(account.id, user.id, %w[email], { relacionamentos: pedido })
+
+      csv_content = account.contacts_export.download.force_encoding('UTF-8').delete_prefix("\xEF\xBB\xBF")
+      emails = CSV.parse(csv_content, headers: true).pluck('email')
+      expect(emails).to eq(account.contacts.where('email LIKE ?', 'looped%').pluck(:email).sort.reverse)
+    end
+
     it 'returns filtered data when a single filter is provided' do
       described_class.perform_now(account.id, user.id, [], single_filter.with_indifferent_access)
       csv_data = CSV.parse(account.contacts_export.download, headers: true)

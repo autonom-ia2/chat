@@ -198,7 +198,15 @@
         "NOME": "Escreva o nome.",
         "EMAIL": "Confira o e-mail. Parece que falta algo.",
         "CPF": "Confira o CPF. São 11 números.",
-        "CNPJ": "Confira o CNPJ. São 14 números."
+        "CNPJ": "Confira o CNPJ. São 14 números.",
+        "EMAIL_REPETIDO": "Este e-mail já está na ficha de outra pessoa. Procure esse e-mail na busca da lista ou apague o e-mail daqui.",
+        "TELEFONE_REPETIDO": "Este telefone já está na ficha de outra pessoa. Procure esse telefone na busca da lista ou apague o telefone daqui."
+      },
+      "SAIR": {
+        "TITULO": "Sair sem salvar?",
+        "AVISO": "O que você escreveu não fica guardado.",
+        "CONFIRMAR": "Sair sem salvar",
+        "VOLTAR": "Continuar escrevendo"
       },
       "REDE": {
         "linkedin": "LinkedIn",

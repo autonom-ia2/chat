@@ -31,6 +31,9 @@ defineProps({
   tipo: { type: String, default: 'alert' },
   // O aviso no tamanho do texto principal (comum/TituloDoDialogo.vue).
   avisoForte: { type: Boolean, default: false },
+  // #3062 — um botão embaixo do outro, para rótulos longos como "Continuar
+  // escrevendo", que não cabem lado a lado.
+  empilhado: { type: Boolean, default: false },
 });
 const emit = defineEmits(['confirmar', 'fechou']);
 
@@ -72,7 +75,10 @@ defineExpose({
     </div>
     <template #footer>
       <slot name="rodape">
-        <div class="flex items-center w-full gap-3">
+        <div
+          class="flex w-full gap-3"
+          :class="empilhado ? 'flex-col' : 'items-center'"
+        >
           <Button
             slate
             faded

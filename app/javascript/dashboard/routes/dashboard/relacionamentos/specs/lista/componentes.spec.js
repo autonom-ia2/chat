@@ -396,7 +396,7 @@ describe('BarraDeControles', () => {
     expect(rotulo.classes()).toEqual(
       expect.arrayContaining(['sr-only', 'sm:not-sr-only'])
     );
-    expect(rotulo.element.parentElement.classList).toContain('flex-1');
+    expect(w.getComponent(ChoiceSelect).classes()).toContain('flex-1');
     expect(w.get('[data-relacionamentos="mais-filtros"]').classes()).toEqual(
       expect.arrayContaining(['shrink-0', 'whitespace-nowrap'])
     );
@@ -415,17 +415,25 @@ describe('BarraDeControles', () => {
     expect(w.get('input').classes()).not.toContain('min-h-11');
   });
 
-  it('a busca ocupa a linha inteira no celular; ordem e filtros ficam juntos na de baixo', () => {
+  it('no celular a busca divide a linha com "Mais filtros" e a ordem ganha a de baixo inteira', () => {
     const w = mount(BarraDeControles, {
       props: { ordem: 'ultima_conversa', placeholder: 'Buscar' },
     });
-    expect(
-      w.get('[data-relacionamentos="busca"]').element.parentElement.classList
-    ).toContain('w-full');
-    const grupo = w.get('[data-relacionamentos="mais-filtros"]').element
-      .parentElement;
-    expect(grupo.classList).toContain('w-full');
-    expect(grupo.querySelector('label')).not.toBeNull();
+    const filtros = w.get('[data-relacionamentos="mais-filtros"]').element;
+    const barra = filtros.parentElement;
+    const busca = w.get('[data-relacionamentos="busca"]').element;
+    expect(barra.contains(busca)).toBe(true);
+    const ordem = w.getComponent(ChoiceSelect).element.parentElement;
+    expect(ordem.parentElement).toBe(barra);
+    expect([...ordem.classList]).toEqual(
+      expect.arrayContaining([
+        'order-last',
+        'w-full',
+        'md:order-none',
+        'md:w-auto',
+      ])
+    );
+    expect(ordem.querySelector('label')).not.toBeNull();
   });
 
   const montar = (props = {}) =>
@@ -1687,6 +1695,8 @@ describe('DialogoCriarCards', () => {
 
 describe('DialogoEtiqueta', () => {
   comRelogioFalso();
+  const FEIRA = { nome: 'feira', cor: '#1F6FEB' };
+  const SITE = { nome: 'site', cor: '#0F766E' };
   const montar = (pessoas = lote(3)) =>
     mount(DialogoEtiqueta, {
       props: {
@@ -1698,6 +1708,22 @@ describe('DialogoEtiqueta', () => {
     w.vm.abrir();
     await assentar();
   };
+  const marcar = async (w, nome) => {
+    await w.get(`[data-etiqueta="${nome}"] input`).setValue(true);
+  };
+  const escolherModo = async (w, modo) => {
+    await w.get(`[data-modo="${modo}"]`).setValue(true);
+  };
+
+  it('no celular os botões ficam um embaixo do outro, o de confirmar em cima', async () => {
+    const w = montar();
+    await abrir(w);
+    const rodape = w.get('[data-confirmar]').element.parentElement;
+    expect(rodape.contains(w.get('[data-cancelar]').element)).toBe(true);
+    expect([...rodape.classList]).toEqual(
+      expect.arrayContaining(['flex-col-reverse', 'sm:flex-row'])
+    );
+  });
 
   it('sem etiqueta escolhida o botão não fica desligado: o clique diz o que falta e não fecha', async () => {
     const aplicarEtiqueta = vi.fn();
@@ -1705,39 +1731,239 @@ describe('DialogoEtiqueta', () => {
       attachTo: document.body,
       props: {
         pessoas: lote(3),
-        acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+        acoes: { etiquetas: async () => [FEIRA, SITE], aplicarEtiqueta },
       },
     });
     await abrir(w);
     expect(w.get('[data-confirmar]').attributes('disabled')).toBeUndefined();
-    expect(w.get('label').text()).toBe('Qual etiqueta?');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 3 pessoas');
+    expect(w.get('legend:not(.sr-only)').text()).toBe(
+      'Quais etiquetas colocar?'
+    );
     const aviso = w.get('[data-relacionamentos="etiqueta-falta"]');
     expect(aviso.attributes('role')).toBe('alert');
     expect(aviso.text()).toBe('');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
-    expect(aviso.text()).toBe('Escolha uma etiqueta.');
+    expect(aviso.text()).toBe('Escolha pelo menos uma etiqueta.');
     expect(aplicarEtiqueta).not.toHaveBeenCalled();
     expect(w.find('[data-dialogo-falso]').exists()).toBe(true);
     expect(w.emitted('concluido')).toBeUndefined();
-    expect(document.activeElement).toBe(w.get('button[aria-haspopup]').element);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    expect(document.activeElement).toBe(
+      w.get('[data-etiqueta="feira"] input').element
+    );
+    await marcar(w, 'feira');
     expect(aviso.text()).toBe('');
     w.unmount();
   });
 
-  it('coloca a etiqueta, avisa com a contagem, fecha e conclui', async () => {
+  // #3062 (diretor de arte) — quantas pessoas, no alto e no botão, contando
+  // quem veio de "Marcar todas".
+  it('cada etiqueta é uma caixa de marcar com a cor dela; o alto e o botão dizem para quantas pessoas', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(240),
+        acoes: { etiquetas: async () => [FEIRA, SITE] },
+      },
+    });
+    await abrir(w);
+    expect(w.text()).toContain('Para as 240 pessoas que você marcou.');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual(['feira', 'site']);
+    expect(
+      linhas[0].get('span[aria-hidden="true"]').attributes('style')
+    ).toContain('background-color');
+    await marcar(w, 'feira');
+    await marcar(w, 'site');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 240 pessoas');
+  });
+
+  it('para uma pessoa só, o texto fica no singular', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(1),
+        acoes: { etiquetas: async () => [FEIRA] },
+      },
+    });
+    await abrir(w);
+    expect(w.text()).toContain('Para a pessoa que você marcou.');
+    expect(w.get('[data-confirmar]').text()).toBe('Colocar em 1 pessoa');
+  });
+
+  it('coloca várias etiquetas, avisa com a contagem, fecha e conclui', async () => {
     const w = montar();
     await abrir(w);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    await marcar(w, 'feira');
+    await marcar(w, 'site');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
     expect(useAlert).toHaveBeenCalledWith(
-      'Etiqueta “feira” colocada em 3 pessoas.'
+      'Pronto: coloquei “feira” e “site” em 3 pessoas.'
     );
     expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+  });
+
+  it('em "Tirar", pergunta quais tirar, mostra só as que as marcadas têm e tira as escolhidas', async () => {
+    const tirarEtiqueta = vi.fn().mockResolvedValue({
+      tiradas: 2,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const aplicarEtiqueta = vi.fn();
+    const pessoas = lote(3, i => ({ labels: i < 2 ? ['site'] : [] }));
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas,
+        acoes: {
+          etiquetas: async () => [FEIRA, SITE],
+          aplicarEtiqueta,
+          tirarEtiqueta,
+        },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    expect(w.get('legend:not(.sr-only)').text()).toBe('Quais etiquetas tirar?');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual(['site· 2 pessoas']);
+    await marcar(w, 'site');
+    expect(w.get('[data-confirmar]').text()).toBe('Tirar de 3 pessoas');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(aplicarEtiqueta).not.toHaveBeenCalled();
+    expect(tirarEtiqueta.mock.calls[0][0]).toMatchObject({
+      pessoas,
+      etiquetas: ['site'],
+    });
+    // O aviso vai para a página, com "Desfazer": quem tinha "site" (1 e 2).
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(w.emitted('tirou')).toEqual([
+      [
+        {
+          frase: 'Pronto: tirei “site” de 2 pessoas.',
+          devolver: [{ etiqueta: 'site', ids: [1, 2] }],
+        },
+      ],
+    ]);
+    expect(w.emitted('concluido')).toHaveLength(1);
+    expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
+  });
+
+  it('"Tirar" mostra a etiqueta que a conta já apagou, com quantas têm; ela não volta no "Desfazer"', async () => {
+    const tirarEtiqueta = vi.fn().mockResolvedValue({
+      tiradas: 1,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const pessoas = lote(2, i => ({ labels: i ? ['antiga'] : ['feira'] }));
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas,
+        acoes: { etiquetas: async () => [FEIRA, SITE], tirarEtiqueta },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    const linhas = w.findAll('[data-relacionamentos="etiquetas"] li');
+    expect(linhas.map(linha => linha.text())).toEqual([
+      'antiga· 1 pessoa',
+      'feira· 1 pessoa',
+    ]);
+    expect(
+      linhas[0].get('span[aria-hidden="true"]').attributes('style')
+    ).toBeUndefined();
+    await marcar(w, 'antiga');
+    await marcar(w, 'feira');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(w.emitted('tirou')[0][0].devolver).toEqual([
+      { etiqueta: 'feira', ids: [1] },
+    ]);
+  });
+
+  it('"Tirar" sem ninguém com etiqueta diz isso e o botão só fecha', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(2),
+        acoes: { etiquetas: async () => [FEIRA] },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    expect(w.get('[data-relacionamentos="sem-opcoes"]').text()).toBe(
+      'Ninguém que você marcou tem etiqueta.'
+    );
+    expect(w.get('[data-confirmar]').text()).toBe('Fechar');
+  });
+
+  // #3062 (diretor de arte, crítico) — a etiqueta marcada em "Colocar" não
+  // pode ir junto para "Tirar" sem a pessoa ver.
+  it('trocar entre Colocar e Tirar zera a escolha', async () => {
+    const pessoas = lote(2, () => ({ labels: ['feira'] }));
+    const w = mount(DialogoEtiqueta, {
+      props: { pessoas, acoes: { etiquetas: async () => [FEIRA, SITE] } },
+    });
+    await abrir(w);
+    await marcar(w, 'feira');
+    await escolherModo(w, 'tirar');
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+    await marcar(w, 'feira');
+    await escolherModo(w, 'colocar');
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+  });
+
+  it('ninguém mudou: o aviso diz isso, sem "Pronto"', async () => {
+    const aplicarEtiqueta = vi.fn().mockResolvedValue({
+      aplicadas: 0,
+      deFora: [],
+      faltam: [],
+      erro: null,
+    });
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(2),
+        acoes: { etiquetas: async () => [FEIRA], aplicarEtiqueta },
+      },
+    });
+    await abrir(w);
+    await marcar(w, 'feira');
+    await w.get('[data-confirmar]').trigger('click');
+    await assentar();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Ninguém mudou: quem você marcou já tinha “feira”.'
+    );
+  });
+
+  it('abre sempre em "Colocar" e sem nada escolhido', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: {
+        pessoas: lote(3, () => ({ labels: ['feira'] })),
+        acoes: { etiquetas: async () => [FEIRA, SITE] },
+      },
+    });
+    await abrir(w);
+    await escolherModo(w, 'tirar');
+    await marcar(w, 'feira');
+    w.getComponent({ name: 'DialogoFalso' }).vm.$emit('close');
+    await abrir(w);
+    expect(w.get('[data-modo="colocar"]').element.checked).toBe(true);
+    expect(w.get('[data-etiqueta="feira"] input').element.checked).toBe(false);
+  });
+
+  it('conta sem etiquetas: diz onde criar, e o botão só fecha', async () => {
+    const w = mount(DialogoEtiqueta, {
+      props: { pessoas: lote(3), acoes: { etiquetas: async () => [] } },
+    });
+    await abrir(w);
+    expect(w.get('[data-relacionamentos="sem-etiquetas"]').text()).toBe(
+      'A conta ainda não tem etiquetas. Quem administra cria em Configurações, Etiquetas.'
+    );
+    expect(w.find('[data-cancelar]').exists()).toBe(false);
+    expect(w.get('[data-confirmar]').text()).toBe('Fechar');
+    await w.get('[data-confirmar]').trigger('click');
     expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
   });
 
@@ -1747,12 +1973,11 @@ describe('DialogoEtiqueta', () => {
       const w = mount(DialogoEtiqueta, {
         props: {
           pessoas: todas,
-          acoes: { etiquetas: async () => ['feira'], aplicarEtiqueta },
+          acoes: { etiquetas: async () => [FEIRA], aplicarEtiqueta },
         },
       });
       await abrir(w);
-      w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-      await w.vm.$nextTick();
+      await marcar(w, 'feira');
       await w.get('[data-confirmar]').trigger('click');
       await assentar();
       return w;
@@ -1771,9 +1996,9 @@ describe('DialogoEtiqueta', () => {
           )
       );
       expect(useAlert).not.toHaveBeenCalled();
-      expect(texto(w)).toContain('Etiqueta “feira” colocada em 119 pessoas.');
+      expect(texto(w)).toContain('Pronto: coloquei “feira” em 119 pessoas.');
       expect(texto(w)).toContain('Pessoa sem nome · Não existe mais');
-      expect(texto(w)).not.toContain('Qual etiqueta?');
+      expect(texto(w)).not.toContain('Quais etiquetas colocar?');
       expect(w.find('[data-cancelar]').exists()).toBe(false);
       expect(w.get('[data-confirmar]').text()).toBe('Pronto');
       await w.get('[data-confirmar]').trigger('click');
@@ -1781,13 +2006,13 @@ describe('DialogoEtiqueta', () => {
       expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
     });
 
-    it('parou no meio: diz o que fez e o que falta; tentar de novo manda só quem falta, com a mesma etiqueta', async () => {
+    it('parou no meio: diz o que fez e o que falta; tentar de novo manda só quem falta, com as mesmas etiquetas', async () => {
       const aplicarEtiqueta = vi
         .fn()
         .mockResolvedValueOnce(parouNoMeio('aplicadas', 50, todas.slice(50)))
         .mockResolvedValueOnce(inteiro('aplicadas', 70));
       const w = await escolherEAplicar(aplicarEtiqueta);
-      expect(texto(w)).toContain('Etiqueta “feira” colocada em 50 pessoas.');
+      expect(texto(w)).toContain('Pronto: coloquei “feira” em 50 pessoas.');
       expect(w.get('[data-relacionamentos="ainda-nao"]').text()).toBe(
         '70 ainda não. Deu erro no meio do caminho.'
       );
@@ -1799,10 +2024,10 @@ describe('DialogoEtiqueta', () => {
       await assentar();
       expect(aplicarEtiqueta.mock.calls[1][0]).toMatchObject({
         pessoas: todas.slice(50),
-        etiqueta: 'feira',
+        etiquetas: ['feira'],
       });
       expect(useAlert).toHaveBeenCalledWith(
-        'Etiqueta “feira” colocada em 120 pessoas.'
+        'Pronto: coloquei “feira” em 120 pessoas.'
       );
       expect(w.emitted('concluido')).toEqual([[[]]]);
       expect(w.find('[data-dialogo-falso]').exists()).toBe(false);
@@ -1824,17 +2049,16 @@ describe('DialogoEtiqueta', () => {
 
   it('se a fonte falha, avisa e não conclui', async () => {
     const acoes = {
-      etiquetas: async () => ['feira'],
+      etiquetas: async () => [FEIRA],
       aplicarEtiqueta: vi.fn().mockRejectedValue(new Error('x')),
     };
     const w = mount(DialogoEtiqueta, { props: { pessoas: lote(1), acoes } });
     await abrir(w);
-    w.getComponent(ChoiceSelect).vm.$emit('update:modelValue', 'feira');
-    await w.vm.$nextTick();
+    await marcar(w, 'feira');
     await w.get('[data-confirmar]').trigger('click');
     await assentar();
     expect(useAlert).toHaveBeenCalledWith(
-      'Não consegui colocar a etiqueta. Tente de novo.'
+      'Não consegui mexer nas etiquetas. Tente de novo.'
     );
     expect(w.emitted('concluido')).toBeUndefined();
   });
