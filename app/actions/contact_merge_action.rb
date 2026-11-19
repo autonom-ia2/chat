@@ -29,6 +29,7 @@ class ContactMergeAction
       merge_prospecting_leads
       merge_carteira_apolices
       merge_crm_records
+      merge_labels
       merge_and_remove_mergee_contact
     end
     @base_contact
@@ -56,6 +57,15 @@ class ContactMergeAction
 
   def merge_messages
     Message.where(sender: @mergee_contact).update(sender: @base_contact)
+  end
+
+  # #3071: as etiquetas são da pessoa. Sem isto, as do absorvido sumiriam com o destroy! dele; o que fica passa a ter as
+  # dele e as do absorvido, sem repetir.
+  def merge_labels
+    novas = @mergee_contact.label_list - @base_contact.label_list
+    return if novas.empty?
+
+    @base_contact.update!(label_list: @base_contact.label_list + novas)
   end
 
   def merge_contact_inboxes
