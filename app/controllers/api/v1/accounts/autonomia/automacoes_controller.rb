@@ -46,7 +46,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # (Definicao#salvar_versao!), para a tela avisar antes. Só no show: na lista, seria uma conta por bloco.
   def show
     pausaria = ::Autonomia::Automacao::Bloco.ligadas_por_outras(@automacao, Current.user).map(&:nome) if @automacao.bloco
-    render json: para_tela(@automacao, receita: true, pausa: pausa_de(@automacao)).merge({ bloco_pausaria: pausaria }.compact)
+    render json: para_o_editor(@automacao, bloco_pausaria: pausaria)
   end
 
   def create
@@ -70,7 +70,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
       @automacao.update!(nome: params[:nome]) if params.key?(:nome)
       salvar_versao_nova! if params.key?(:receita)
     end
-    render json: para_tela(@automacao.reload, receita: true, pausa: pausa_de(@automacao))
+    render json: para_o_editor(@automacao.reload)
   rescue ActiveRecord::RecordInvalid => e
     recusar(e.record)
   end
@@ -251,18 +251,8 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
            status: :unprocessable_entity
   end
 
-  def pausa_de(automacao) = ::Autonomia::Automacao::Pausa.das([automacao])[automacao.id]
+  # O que a tela recebe (Autonomia::Automacao::ParaTela, #2556): o editor leva também a pausa e o aviso das datas.
+  def para_o_editor(automacao, **extra) = ::Autonomia::Automacao::ParaTela.do_editor(automacao, Current.account_user, **extra)
 
-  # `pausa` (#2572): o motivo com que o motor a desligou, para a tela mostrar "Assumir e religar". Ligar e desligar
-  # respondem sem ela: ligada não está pausada, e a tela só oferece desligar a que está ligada.
-  def para_tela(automacao, receita: false, pausa: nil)
-    versao = automacao.versao_ativa
-    {
-      id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem, bloco: automacao.bloco,
-      ligada_por: automacao.ligada_por&.slice(:id, :name), atualizada_em: automacao.updated_at,
-      pausa: ::Autonomia::Automacao::Pausa.para_tela(pausa),
-      versao: versao && { id: versao.id, numero: versao.numero, autor_id: versao.autor_id, criada_em: versao.created_at,
-                          receita: (versao.receita_para_tela(Current.account_user) if receita) }.compact
-    }
-  end
+  def para_tela(automacao, **opcoes) = ::Autonomia::Automacao::ParaTela.de(automacao, Current.account_user, **opcoes)
 end

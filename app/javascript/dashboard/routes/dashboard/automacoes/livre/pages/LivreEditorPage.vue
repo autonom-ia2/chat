@@ -21,6 +21,7 @@ import LivreConfirmarLigar from '../components/LivreConfirmarLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
 import LivreEnsaio from '../components/LivreEnsaio.vue';
 import LivrePortas from '../components/LivrePortas.vue';
+import LivreDatasInvalidas from '../components/LivreDatasInvalidas.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import {
   carregarCatalogo,
@@ -517,6 +518,7 @@ onMounted(() => {
           <Banner v-if="avisoDeLigada" data-ligada role="status" color="slate">
             {{ avisoDeLigada }}
           </Banner>
+          <LivreDatasInvalidas :aviso="automacao?.datas_invalidas || null" />
 
           <header class="flex flex-col gap-2">
             <Input

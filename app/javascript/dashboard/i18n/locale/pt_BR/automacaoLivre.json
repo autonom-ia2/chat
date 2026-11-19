@@ -331,7 +331,11 @@
       "DESCARTAR": "Descartar mudanças",
       "DESCARTOU": "Mudanças descartadas.",
       "CONFLITO": "Outra pessoa salvou antes. Suas mudanças não foram salvas.",
-      "VER_NOVA": "Ver a versão nova"
+      "VER_NOVA": "Ver a versão nova",
+      "DATAS_INVALIDAS": {
+        "CONTATOS": "{n} contato ficou de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesse contato. | {n} contatos ficaram de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesses contatos.",
+        "CARDS": "{n} card ficou de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesse card. | {n} cards ficaram de fora porque o campo “{campo}” está com a data escrita errada: corrija a data nesses cards."
+      }
     },
     "CONFIRA": {
       "QUANDO": "Quando",
