@@ -1,6 +1,8 @@
 // #2894 — o estado do formulário "Alterar informações". Cada mudança cria um
 // formulário novo (nada é alterado no lugar). Os erros só aparecem depois da
 // primeira tentativa de salvar e acompanham o que a pessoa corrige.
+// #3062 — `mexido`: o formulário já não é o que abriu (quem fecha a gaveta com
+// algo escrito ouve "Sair sem salvar?"). Escrever e apagar de volta não conta.
 import { computed, ref } from 'vue';
 import { dadosParaSalvar, formularioDaPessoa } from './informacoes';
 import { errosDoFormulario } from './errosDoFormulario';
@@ -30,6 +32,12 @@ export const useFormularioDaPessoa = () => {
       : {}
   );
 
+  const mexido = computed(
+    () =>
+      Boolean(inicial.value) &&
+      JSON.stringify(formulario.value) !== JSON.stringify(inicial.value)
+  );
+
   // Os dados prontos para a fonte, ou `null` se algum campo precisa de conserto.
   const dadosSeValido = () => {
     tentou.value = true;
@@ -42,6 +50,7 @@ export const useFormularioDaPessoa = () => {
   return {
     formulario,
     erros,
+    mexido,
     abrir,
     mudar,
     mudarRede,

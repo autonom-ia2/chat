@@ -21,6 +21,9 @@ export const GRUPOS_DE_PESSOAS = [
   grupo('sumiu_mais_de_3_meses', 'SUMIU_MAIS_DE_3_MESES'),
   grupo('nunca_conversou', 'NUNCA_CONVERSOU'),
   grupo('nao_quer_mensagens', 'NAO_QUER_MENSAGENS'),
+  // #3062 — quem está com o chat do site aberto agora (a visão "Ativos" da
+  // lista de contatos de hoje). Quem diz é o servidor, pela presença do chat.
+  grupo('ativos_agora', 'ATIVOS_AGORA'),
 ];
 
 export const GRUPOS_DE_EMPRESAS = [
@@ -79,6 +82,7 @@ const REGRAS_DE_PESSOA = {
     dias !== null && dias > LIMITE_SUMIU_DIAS,
   nunca_conversou: (pessoa, dias) => dias === null,
   nao_quer_mensagens: pessoa => Boolean(pessoa.opted_out_at),
+  ativos_agora: pessoa => pessoa.availability_status === 'online',
 };
 
 const REGRAS_DE_EMPRESA = {

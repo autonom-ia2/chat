@@ -708,10 +708,13 @@ fora:
       - autonomia/tarefas
   - motivo: >-
       Ação em grupo da Lista de Relacionamentos (#2894): grava em muitas pessoas de uma vez, e a pessoa confirma antes
-      (Acoes::SEM_DESFAZER). A automação cria card e põe etiqueta uma pessoa por vez, pelos passos dela.
+      (Acoes::SEM_DESFAZER). A automação cria card e põe etiqueta uma pessoa por vez, pelos passos dela. Tirar
+      etiquetas em grupo (#3062) é a mesma ação em lote. "Baixar planilha" (#3062) manda a lista inteira para o e-mail
+      de quem pediu: é pedido de pessoa na tela, não passo de automação.
     recursos:
       - relacionamentos/cards
       - relacionamentos/etiqueta
+      - relacionamentos/pessoas
   - motivo: >-
       Trazer minha lista (#2896): a pessoa envia a planilha, confere o que foi lido e traz pela tela. Enviar e trazer
       gravam em lote, num job; colunas, respostas e linhas só valem dentro dessa conferência. Desfazer uma lista

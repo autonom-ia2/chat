@@ -24,6 +24,18 @@ import {
 // de verdade: `carregarPecas` as carrega antes, e a montagem fica só por conta
 // do relógio falso.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3062 — "Baixar planilha" diz para qual e-mail vai: o de quem está no painel.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMapGetter: chave =>
+      ref(
+        chave === 'getCurrentUser'
+          ? { email: 'voce@exemplo.com.br' }
+          : undefined
+      ),
+  };
+});
 vi.mock('dashboard/components-next/dialog/Dialog.vue', async () => ({
   default: (await import('./apoio')).DialogoFalso,
 }));
@@ -53,9 +65,18 @@ vi.mock('../../lista/usePermissoesDaLista', async () => {
       podeEtiquetar: ref(false),
       podeApagar: ref(false),
       podeTrazer: ref(false),
+      podeEditar: ref(false),
+      podeExportar: ref(false),
     }),
   };
 });
+// #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: { value: {} },
+    updateUISettings: vi.fn(),
+  }),
+}));
 vi.mock('../../ficha/usePermissoesDaFicha', async () => {
   const { ref } = await import('vue');
   return {

@@ -168,7 +168,7 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
 
       expect(response.parsed_body).to eq(
         'todos' => 2, 'clientes' => 1, 'falou_ha_pouco' => 1, 'sumiu_1_a_3_meses' => 1, 'sumiu_mais_de_3_meses' => 0,
-        'nunca_conversou' => 0, 'nao_quer_mensagens' => 0
+        'nunca_conversou' => 0, 'nao_quer_mensagens' => 0, 'ativos_agora' => 0
       )
     end
   end
@@ -176,7 +176,7 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
   describe 'GET pessoas/todas' do
     it 'devolve a consulta inteira, só com o que as ações em grupo leem' do
       ana = pessoa('Ana Albuquerino', phone_number: '+5511910310001', opted_out_at: agora - 1.day, opt_out_source: 'manual')
-      bruno = pessoa('Bruno Brandolim', blocked: true)
+      bruno = pessoa('Bruno Brandolim', blocked: true).tap { |contato| contato.update_labels(%w[feira]) }
       carla = pessoa('Carla Carvalhedo', contact_type: :customer)
 
       ler('pessoas/todas', busca: 'a', ordem: 'nome', grupo: 'todos', pagina: 7)
@@ -185,9 +185,11 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
         'total' => 3,
         'itens' => [
           { 'id' => ana.id, 'name' => 'Ana Albuquerino', 'phone_number' => '+5511910310001', 'blocked' => false,
-            'opted_out_at' => (agora - 1.day).to_i },
-          { 'id' => bruno.id, 'name' => 'Bruno Brandolim', 'phone_number' => nil, 'blocked' => true, 'opted_out_at' => nil },
-          { 'id' => carla.id, 'name' => 'Carla Carvalhedo', 'phone_number' => nil, 'blocked' => false, 'opted_out_at' => nil }
+            'opted_out_at' => (agora - 1.day).to_i, 'labels' => [] },
+          { 'id' => bruno.id, 'name' => 'Bruno Brandolim', 'phone_number' => nil, 'blocked' => true, 'opted_out_at' => nil,
+            'labels' => ['feira'] },
+          { 'id' => carla.id, 'name' => 'Carla Carvalhedo', 'phone_number' => nil, 'blocked' => false, 'opted_out_at' => nil,
+            'labels' => [] }
         ]
       )
     end
@@ -226,6 +228,74 @@ RSpec.describe 'Lista de Relacionamentos', type: :request do
           expect(response.parsed_body).to eq('error' => mensagem)
         end
       end
+    end
+  end
+
+  # #3062 — "Baixar planilha": a consulta da tela vai para a fila da planilha que a lista de contatos de hoje manda
+  # por e-mail. A página não vai: a planilha leva a consulta inteira.
+  describe 'POST pessoas/exportar' do
+    let(:admin) { create(:user, account: account, role: :administrator) }
+    let(:trava) { "RELACIONAMENTOS_PLANILHA::#{account.id}::#{admin.id}" }
+
+    before { Redis::Alfred.delete(trava) }
+    after { Redis::Alfred.delete(trava) }
+
+    def exportar(quem: admin, **params)
+      post "#{base}/pessoas/exportar", params: params, headers: quem.create_new_auth_token
+    end
+
+    it 'põe na fila a consulta da tela, sem a página, e diz para qual e-mail a planilha vai' do
+      exportar(grupo: 'clientes', busca: 'ana', ordem: 'nome_z_a', pagina: '3', filtros: { cidade: 'Campinas' })
+
+      expect(response).to have_http_status(:accepted)
+      expect(response.parsed_body).to eq('email' => admin.email, 'espera' => 300)
+      pedido = { 'grupo' => 'clientes', 'busca' => 'ana', 'ordem' => 'nome_z_a', 'filtros' => { 'cidade' => 'Campinas' } }
+      expect(Account::ContactsExportJob).to have_been_enqueued.with(account.id, admin.id, nil, { relacionamentos: pedido })
+    end
+
+    # Cada pedido é uma consulta inteira e um e-mail: o segundo, no prazo, não vai para a fila (achado do revisor).
+    it 'segura o segundo pedido da mesma pessoa por alguns minutos, dizendo quanto falta' do
+      exportar(grupo: 'clientes')
+      exportar(grupo: 'todos')
+
+      expect(response).to have_http_status(:too_many_requests)
+      expect(response.parsed_body['error']).to eq('planilha_pedida_ha_pouco')
+      expect(response.parsed_body['espera']).to be_between(1, 300)
+      expect(Account::ContactsExportJob).to have_been_enqueued.exactly(:once)
+    end
+
+    it 'a trava é de cada pessoa: outra pessoa da conta pede a dela' do
+      outra = create(:user, account: account, role: :administrator)
+      exportar(grupo: 'clientes')
+      exportar(quem: outra, grupo: 'clientes')
+
+      expect(response).to have_http_status(:accepted)
+      expect(Account::ContactsExportJob).to have_been_enqueued.twice
+    ensure
+      Redis::Alfred.delete("RELACIONAMENTOS_PLANILHA::#{account.id}::#{outra.id}")
+    end
+
+    it 'pedido recusado (422) não trava o seguinte' do
+      exportar(grupo: 'vips')
+      exportar(grupo: 'clientes')
+
+      expect(response).to have_http_status(:accepted)
+    end
+
+    it 'é só de quem pode exportar contatos, como na lista de hoje' do
+      exportar(quem: agente)
+
+      expect(response).to have_http_status(:unauthorized)
+      expect(Account::ContactsExportJob).not_to have_been_enqueued
+    end
+
+    it 'responde 422 ao pedido que a lista não conhece, sem pôr nada na fila' do
+      [{ grupo: 'vips' }, { ordem: 'aleatoria' }, { filtros: { inventado: '1' } }].each do |params|
+        exportar(**params)
+
+        expect(response).to have_http_status(:unprocessable_entity), params.to_s
+      end
+      expect(Account::ContactsExportJob).not_to have_been_enqueued
     end
   end
 

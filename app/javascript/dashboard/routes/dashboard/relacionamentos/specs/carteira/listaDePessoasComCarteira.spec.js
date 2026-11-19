@@ -41,9 +41,18 @@ vi.mock('../../lista/usePermissoesDaLista', async () => {
       podeEtiquetar: ref(false),
       podeApagar: ref(false),
       podeTrazer: ref(false),
+      podeEditar: ref(false),
+      podeExportar: ref(false),
     }),
   };
 });
+// #3062 — a ordem da aba Pessoas fica nas preferências do usuário (store).
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: { value: {} },
+    updateUISettings: vi.fn(),
+  }),
+}));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
 vi.mock('vue-router', async () => {
   const { reactive } = await import('vue');

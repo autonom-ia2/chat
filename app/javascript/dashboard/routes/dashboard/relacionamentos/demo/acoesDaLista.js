@@ -21,12 +21,13 @@ export const FUNIS = [
   },
 ];
 
+// #3062 — com a cor, como a conta guarda (o pontinho ao lado do nome).
 export const ETIQUETAS = [
-  'clientes-2025',
-  'indicação',
-  'feira',
-  'site',
-  'evento',
+  { nome: 'clientes-2025', cor: '#2F7D5B' },
+  { nome: 'evento', cor: '#B45309' },
+  { nome: 'feira', cor: '#1F6FEB' },
+  { nome: 'indicação', cor: '#8E44AD' },
+  { nome: 'site', cor: '#0F766E' },
 ];
 
 // A cada 9 pessoas, uma já tem card no funil: deixa o aviso "ficou de fora"

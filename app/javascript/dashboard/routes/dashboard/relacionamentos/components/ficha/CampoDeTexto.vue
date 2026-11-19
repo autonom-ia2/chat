@@ -39,7 +39,7 @@ const idDoErro = `${id}-erro`;
     <p
       :id="idDoErro"
       aria-live="polite"
-      class="min-w-0 mb-0 text-label-small text-n-ruby-9 break-words"
+      class="min-w-0 mb-0 text-sm text-n-ruby-9 break-words"
       :class="erro ? 'mt-2' : 'mt-0'"
     >
       {{ erro }}

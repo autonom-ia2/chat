@@ -20707,7 +20707,9 @@
   },
   "POST relacionamentos/etiqueta": {
     "campos": {
-      "etiqueta": {},
+      "etiquetas": {
+        "tipo": "lista"
+      },
       "pessoa_ids": {
         "tipo": "lista"
       }
@@ -20716,8 +20718,51 @@
     "controller": "api/v1/accounts/relacionamentos/etiqueta#create",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:5",
-      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:7"
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:6",
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/etiqueta/tirar": {
+    "campos": {
+      "etiquetas": {
+        "tipo": "lista"
+      },
+      "pessoa_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/etiqueta#tirar",
+    "modelo": "Contact",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:10",
+      "app/controllers/api/v1/accounts/relacionamentos/etiqueta_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
+  "POST relacionamentos/pessoas/exportar": {
+    "campos": {
+      "busca": {},
+      "filtros": {
+        "campos": {
+          "chegou_em": {},
+          "cidade": {},
+          "empresa": {},
+          "etiqueta": {}
+        },
+        "tipo": "objeto"
+      },
+      "grupo": {},
+      "ordem": {},
+      "pagina": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/relacionamentos/pessoas#exportar",
+    "modelo": "Account",
+    "origem": [
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:33",
+      "app/controllers/api/v1/accounts/relacionamentos/pessoas_controller.rb:72"
     ],
     "sem_corpo": false
   },

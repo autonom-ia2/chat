@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
+import ContactAPI from 'dashboard/api/contacts';
+import { contextoAtual } from 'dashboard/composables/useContextoDaTela';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import ListaPage from '../../pages/ListaPage.vue';
 
@@ -20,9 +22,40 @@ const pode = vi.hoisted(() => ({
   etiquetar: true,
   apagar: true,
   trazer: true,
+  editar: true,
+  exportar: true,
+}));
+// #3062 — a ordem guardada nas preferências do usuário (a mesma chave da lista
+// de contatos de hoje).
+const preferencias = vi.hoisted(() => ({
+  valores: {},
+  gravar: vi.fn(),
+}));
+vi.mock('dashboard/composables/useUISettings', () => ({
+  useUISettings: () => ({
+    uiSettings: {
+      get value() {
+        return preferencias.valores;
+      },
+    },
+    updateUISettings: preferencias.gravar,
+  }),
 }));
 
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #3062 — "Baixar planilha" diz para qual e-mail vai antes de pedir: o de quem
+// está no painel.
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return {
+    useMapGetter: chave =>
+      ref(
+        chave === 'getCurrentUser'
+          ? { email: 'voce@exemplo.com.br' }
+          : undefined
+      ),
+  };
+});
 // A conta destes testes não tem a carteira de seguros (a aba e o bloco Seguros
 // têm teste próprio em specs/carteira). Quem diz isso é a conta que o servidor
 // manda, pelo caminho de verdade: nada aqui troca `useContaDeSeguros`. A peça
@@ -67,6 +100,16 @@ vi.mock('../../lista/usePermissoesDaLista', () => ({
         return pode.trazer;
       },
     },
+    podeEditar: {
+      get value() {
+        return pode.editar;
+      },
+    },
+    podeExportar: {
+      get value() {
+        return pode.exportar;
+      },
+    },
   }),
 }));
 vi.mock('dashboard/api/labels', () => ({ default: { get: vi.fn() } }));
@@ -92,8 +135,13 @@ vi.mock('dashboard/api/relacionamentos', () => ({
     funis: vi.fn(),
     criarCards: vi.fn(),
     aplicarEtiqueta: vi.fn(),
+    tirarEtiqueta: vi.fn(),
+    exportarPessoas: vi.fn(),
     apagar: vi.fn(),
   },
+}));
+vi.mock('dashboard/api/contacts', () => ({
+  default: { create: vi.fn(), update: vi.fn() },
 }));
 
 withFullI18n('pt_BR');
@@ -175,6 +223,9 @@ beforeEach(() => {
   pode.etiquetar = true;
   pode.apagar = true;
   pode.trazer = true;
+  pode.editar = true;
+  pode.exportar = true;
+  preferencias.valores = {};
   servidorResponde();
 });
 
@@ -437,14 +488,17 @@ describe('ações em grupo: quem vê o quê', () => {
 // #2970 — "recurso que não existe é invisível": fora da demonstração, a
 // conversa pela linha e a mensagem em grupo ainda não são de verdade.
 describe('o que ainda só simula não aparece', () => {
-  it('a linha não tem "Conversar": só a caixa de marcar e o nome', async () => {
+  it('a linha não tem "Conversar": só a caixa de marcar, o nome e o lápis de editar', async () => {
     const w = await abrir();
     const linha = w.get(marca('linha'));
     expect(linha.text()).not.toContain('Conversar');
     expect(
       linha.find('button[aria-label="Conversar com Ana Albuquerino"]').exists()
     ).toBe(false);
-    expect(linha.findAll('button')).toHaveLength(1);
+    expect(linha.findAll('button')).toHaveLength(2);
+    expect(linha.get(marca('editar')).attributes('aria-label')).toBe(
+      'Alterar informações de Ana Albuquerino'
+    );
     expect(linha.find(marca('marcar')).exists()).toBe(true);
   });
 
@@ -496,9 +550,9 @@ describe('ações em grupo: escrevem no servidor e a lista recarrega', () => {
     expect(w.find(marca('barra')).exists()).toBe(false);
   });
 
-  it('etiquetar: lê as etiquetas da conta, manda a escolhida e recarrega', async () => {
+  it('etiquetar: lê as etiquetas da conta, manda as escolhidas e recarrega', async () => {
     LabelsAPI.get.mockResolvedValue({
-      data: { payload: [{ title: 'feira' }] },
+      data: { payload: [{ title: 'feira', color: '#1F6FEB' }] },
     });
     RelacionamentosAPI.aplicarEtiqueta.mockResolvedValue({
       data: { aplicadas: 1, de_fora: [] },
@@ -507,15 +561,12 @@ describe('ações em grupo: escrevem no servidor e a lista recarrega', () => {
     await marcarAna(w);
     await w.get(marca('etiqueta')).trigger('click');
     await flushPromises();
-    w.getComponent({ name: 'DialogoEtiqueta' })
-      .getComponent({ name: 'ChoiceSelect' })
-      .vm.$emit('update:modelValue', 'feira');
-    await flushPromises();
+    await w.get('[data-etiqueta="feira"] input').setValue(true);
     await w.get('[data-confirmar]').trigger('click');
     await flushPromises();
     expect(RelacionamentosAPI.aplicarEtiqueta).toHaveBeenCalledWith({
       pessoa_ids: [1],
-      etiqueta: 'feira',
+      etiquetas: ['feira'],
     });
     expect(leituras()).toEqual([2, 2, 2]);
     expect(w.find(marca('barra')).exists()).toBe(false);
@@ -633,5 +684,305 @@ describe('Trazer minha lista: quem vê', () => {
     expect(
       w.findAll('button').filter(b => b.text() === 'Trazer minha lista')
     ).toHaveLength(0);
+  });
+});
+
+// #3062 — o que a lista de contatos de hoje fazia e a lista nova passa a fazer
+// de verdade, fora da demonstração.
+describe('paridade com a lista de contatos de hoje', () => {
+  const gaveta = '[data-relacionamentos="gaveta-da-pessoa"]';
+  const recusa = atributos =>
+    Object.assign(new Error('Request failed with status code 422'), {
+      response: { status: 422, data: { attributes: atributos } },
+    });
+
+  it('"Nova pessoa" abre a gaveta vazia, cria pelo contato, avisa e abre a ficha nova', async () => {
+    ContactAPI.create.mockResolvedValue({
+      data: { payload: { contact: { id: 77, name: 'Bia Souza' } } },
+    });
+    const w = await abrir();
+    await w.get(marca('nova-pessoa')).trigger('click');
+    expect(w.get(gaveta).text()).toContain('Nova pessoa');
+    await w.get(`${gaveta} [data-foco]`).setValue('Bia Souza');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    await flushPromises();
+    expect(ContactAPI.create).toHaveBeenCalledWith({
+      name: 'Bia Souza',
+      email: null,
+      phone_number: null,
+      additional_attributes: { social_profiles: {} },
+      custom_attributes: {},
+    });
+    expect(useAlert).toHaveBeenCalledWith('Bia Souza está na sua lista.');
+    expect(roteador.push).toHaveBeenCalledWith({
+      name: 'relacionamentos_pessoa',
+      params: { contactId: 77 },
+    });
+    expect(w.find(`${gaveta} [data-foco]`).exists()).toBe(false);
+  });
+
+  // #3062 (diretor de arte) — fechar com algo escrito pergunta antes.
+  it('fechar a gaveta com algo escrito pergunta "Sair sem salvar?"; sem nada, fecha direto', async () => {
+    const w = await abrir();
+    const fecharPeloX = () =>
+      w.get(`${gaveta} [aria-label="Fechar"]`).trigger('click');
+    const pergunta = '[data-carteira="sair-sem-salvar"]';
+    await w.get(marca('nova-pessoa')).trigger('click');
+    await fecharPeloX();
+    expect(w.find(`${gaveta} [data-foco]`).exists()).toBe(false);
+    expect(w.find(pergunta).exists()).toBe(false);
+
+    await w.get(marca('nova-pessoa')).trigger('click');
+    await w.get(`${gaveta} [data-foco]`).setValue('Bia');
+    await fecharPeloX();
+    expect(w.get(pergunta).text()).toContain('Sair sem salvar?');
+    expect(w.get('[data-carteira="dialogo-voltar"]').text()).toBe(
+      'Continuar escrevendo'
+    );
+    // "Continuar escrevendo" não cabe ao lado: um botão embaixo do outro.
+    expect(
+      w.get('[data-carteira="dialogo-voltar"]').element.parentElement.classList
+    ).toContain('flex-col');
+    await w.get('[data-carteira="dialogo-voltar"]').trigger('click');
+    expect(w.get(`${gaveta} [data-foco]`).element.value).toBe('Bia');
+
+    await w.get(`${gaveta} [data-foco]`).trigger('keydown', { key: 'Escape' });
+    expect(w.find(pergunta).exists()).toBe(true);
+    await w.get(`[data-rodape-proprio]`).trigger('submit');
+    expect(w.find(`${gaveta} [data-foco]`).exists()).toBe(false);
+    expect(ContactAPI.create).not.toHaveBeenCalled();
+  });
+
+  it('e-mail repetido: a gaveta fica aberta e diz embaixo do campo, sem aviso geral', async () => {
+    ContactAPI.create.mockRejectedValue(recusa(['email']));
+    const w = await abrir();
+    await w.get(marca('nova-pessoa')).trigger('click');
+    await w.get(`${gaveta} [data-foco]`).setValue('Bia Souza');
+    await w.get(`${gaveta} input[type="email"]`).setValue('ana@exemplo.com');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    await flushPromises();
+    const repetido =
+      'Este e-mail já está na ficha de outra pessoa. Procure esse e-mail na busca da lista ou apague o e-mail daqui.';
+    expect(w.get(gaveta).text()).toContain(repetido);
+    expect(useAlert).not.toHaveBeenCalled();
+    await w.get(`${gaveta} input[type="email"]`).setValue('bia@exemplo.com');
+    expect(w.get(gaveta).text()).not.toContain(repetido);
+  });
+
+  it('quem não pode editar contato não vê "Nova pessoa" nem o lápis da linha', async () => {
+    pode.editar = false;
+    const w = await abrir();
+    expect(w.find(marca('nova-pessoa')).exists()).toBe(false);
+    expect(w.find(marca('editar')).exists()).toBe(false);
+    expect(w.find(gaveta).exists()).toBe(false);
+  });
+
+  it('o lápis da linha abre a gaveta com a pessoa, salva pelo contato e atualiza a lista', async () => {
+    ContactAPI.update.mockResolvedValue({ data: { payload: {} } });
+    const w = await abrir();
+    await w.get(marca('editar')).trigger('click');
+    expect(w.get(gaveta).text()).toContain(
+      'Alterar informações de Ana Albuquerino'
+    );
+    expect(w.get(`${gaveta} [data-foco]`).element.value).toBe(
+      'Ana Albuquerino'
+    );
+    await w.get(`${gaveta} [data-foco]`).setValue('Ana Maria Albuquerino');
+    await w.get(marca('salvar-informacoes')).trigger('click');
+    await flushPromises();
+    expect(ContactAPI.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ name: 'Ana Maria Albuquerino' })
+    );
+    expect(useAlert).toHaveBeenCalledWith(
+      'Informações de Ana Maria Albuquerino salvas.'
+    );
+    expect(RelacionamentosAPI.pessoas).toHaveBeenCalledTimes(2);
+  });
+
+  it('"Baixar planilha" diz qual lista vai e para qual e-mail, e manda a consulta da tela, sem a página', async () => {
+    RelacionamentosAPI.exportarPessoas.mockResolvedValue({
+      data: { email: 'voce@exemplo.com.br', espera: 300 },
+    });
+    const w = await abrir();
+    await w.get('[data-grupo="clientes"]').trigger('click');
+    await w.get(marca('busca')).setValue('ana');
+    await new Promise(resolve => {
+      setTimeout(resolve, 350);
+    });
+    await flushPromises();
+    await w.get(marca('baixar-planilha')).trigger('click');
+    expect(w.text()).toContain('Receber esta lista em planilha');
+    expect(w.text()).toContain(
+      'Vou montar uma planilha com 1 pessoa e mandar o link para voce@exemplo.com.br.'
+    );
+    expect(w.get(marca('dialogo-planilha')).text()).toContain(
+      'Lista: Clientes · busca “ana”'
+    );
+    await w.get(marca('mandar-planilha')).trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.exportarPessoas).toHaveBeenCalledWith({
+      grupo: 'clientes',
+      busca: 'ana',
+      ordem: 'ultima_conversa',
+    });
+    expect(useAlert).toHaveBeenCalledWith(
+      'Pronto. A planilha chega em voce@exemplo.com.br em alguns minutos.'
+    );
+    expect(w.find(marca('dialogo-planilha')).exists()).toBe(false);
+    // Pedida há pouco: o botão fica desligado e o diálogo diz por quê.
+    await w.get(marca('baixar-planilha')).trigger('click');
+    expect(
+      w.get(marca('mandar-planilha')).attributes('disabled')
+    ).toBeDefined();
+    expect(w.get(marca('planilha-espera')).text()).toBe(
+      'Você acabou de pedir uma planilha. Dá para pedir outra daqui a alguns minutos.'
+    );
+  });
+
+  it('o servidor segura a planilha pedida há pouco (429): o diálogo fica aberto e diz por quê', async () => {
+    RelacionamentosAPI.exportarPessoas.mockRejectedValue(
+      Object.assign(new Error('429'), {
+        response: {
+          status: 429,
+          data: { error: 'planilha_pedida_ha_pouco', espera: 120 },
+        },
+      })
+    );
+    const w = await abrir();
+    await w.get(marca('baixar-planilha')).trigger('click');
+    await w.get(marca('mandar-planilha')).trigger('click');
+    await flushPromises();
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(w.get(marca('planilha-espera')).text()).toContain(
+      'Você acabou de pedir uma planilha.'
+    );
+    expect(
+      w.get(marca('mandar-planilha')).attributes('disabled')
+    ).toBeDefined();
+  });
+
+  it('no celular "Baixar planilha" é a última linha da lista', async () => {
+    const w = await abrir();
+    const noFim = w.get(marca('baixar-no-fim'));
+    expect(noFim.text()).toBe('Baixar esta lista em planilha');
+    expect(noFim.classes()).toContain('sm:hidden');
+    await noFim.trigger('click');
+    expect(w.find(marca('dialogo-planilha')).exists()).toBe(true);
+  });
+
+  it('quem não pode exportar contato não vê "Baixar planilha"', async () => {
+    pode.exportar = false;
+    const w = await abrir();
+    expect(w.find(marca('baixar-planilha')).exists()).toBe(false);
+    expect(w.find(marca('baixar-no-fim')).exists()).toBe(false);
+    expect(w.find(marca('nova-pessoa')).exists()).toBe(true);
+  });
+
+  it('a planilha que falha avisa e o diálogo fica aberto', async () => {
+    RelacionamentosAPI.exportarPessoas.mockRejectedValue(erroHttp(500));
+    const w = await abrir();
+    await w.get(marca('baixar-planilha')).trigger('click');
+    await w.get(marca('mandar-planilha')).trigger('click');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não consegui pedir a planilha. Tente de novo.'
+    );
+    expect(w.find(marca('dialogo-planilha')).exists()).toBe(true);
+  });
+
+  it('tirar etiquetas: manda as escolhidas, avisa com "Desfazer", e desfazer recoloca em quem tinha', async () => {
+    LabelsAPI.get.mockResolvedValue({
+      data: {
+        payload: [
+          { title: 'site', color: '#000000' },
+          { title: 'feira', color: '#1F6FEB' },
+        ],
+      },
+    });
+    RelacionamentosAPI.tirarEtiqueta.mockResolvedValue({
+      data: { tiradas: 1, de_fora: [] },
+    });
+    RelacionamentosAPI.aplicarEtiqueta.mockResolvedValue({
+      data: { aplicadas: 1, de_fora: [] },
+    });
+    const w = await abrir();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    await w.get(marca('etiqueta')).trigger('click');
+    await flushPromises();
+    await w.get('[data-modo="tirar"]').setValue(true);
+    // Ana só tem "feira": "site" nem aparece.
+    expect(w.find('[data-etiqueta="site"]').exists()).toBe(false);
+    expect(w.get(marca('etiquetas')).text()).toContain('feira· 1 pessoa');
+    await w.get('[data-etiqueta="feira"] input').setValue(true);
+    expect(w.get('[data-confirmar]').text()).toBe('Tirar de 1 pessoa');
+    await w.get('[data-confirmar]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.tirarEtiqueta).toHaveBeenCalledWith({
+      pessoa_ids: [1],
+      etiquetas: ['feira'],
+    });
+    expect(RelacionamentosAPI.aplicarEtiqueta).not.toHaveBeenCalled();
+    expect(useAlert).not.toHaveBeenCalled();
+    const aviso = '[data-carteira="aviso-vivo"]';
+    expect(w.get(aviso).text()).toContain('Pronto: tirei “feira” de 1 pessoa.');
+    expect(w.get(marca('aviso-da-lista')).text()).toBe(
+      'Pronto: tirei “feira” de 1 pessoa.'
+    );
+    await w.get('[data-carteira="desfazer"]').trigger('click');
+    await flushPromises();
+    expect(RelacionamentosAPI.aplicarEtiqueta).toHaveBeenCalledWith({
+      pessoa_ids: [1],
+      etiquetas: ['feira'],
+    });
+    expect(w.get(aviso).text()).toBe(
+      'Pronto: as etiquetas voltaram para quem tinha.'
+    );
+    expect(w.find('[data-carteira="desfazer"]').exists()).toBe(false);
+    // Marcar alguém de novo é a próxima ação: o aviso sai.
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    expect(w.find(aviso).exists()).toBe(false);
+  });
+
+  it('abre na ordem guardada e grava a nova na mesma preferência da lista de hoje', async () => {
+    preferencias.valores = { contacts_sort_by: '-city' };
+    const w = await abrir();
+    expect(paramsDe('pessoas')[0]).toEqual(
+      expect.objectContaining({ ordem: 'cidade_z_a' })
+    );
+    await w.get('[role="option"][data-value="email_a_z"]').trigger('click');
+    await flushPromises();
+    expect(preferencias.gravar).toHaveBeenCalledWith({
+      contacts_sort_by: 'email',
+    });
+    expect(paramsDe('pessoas').at(-1)).toEqual(
+      expect.objectContaining({ ordem: 'email_a_z' })
+    );
+  });
+
+  it('"No site agora" pede ao servidor o grupo de quem está online', async () => {
+    RelacionamentosAPI.contagensDePessoas.mockResolvedValue({
+      data: { todos: 1, clientes: 1, ativos_agora: 1 },
+    });
+    const w = await abrir();
+    expect(w.get('[data-grupo="ativos_agora"]').text()).toContain(
+      'No site agora'
+    );
+    await w.get('[data-grupo="ativos_agora"]').trigger('click');
+    await flushPromises();
+    expect(paramsDe('pessoas').at(-1)).toEqual(
+      expect.objectContaining({ grupo: 'ativos_agora' })
+    );
+  });
+
+  it('as pessoas marcadas vão para o Guia como contexto da tela', async () => {
+    const w = await abrir();
+    expect(contextoAtual(rota).selecionados).toBeUndefined();
+    await w.get(`${marca('marcar')} input`).setValue(true);
+    expect(contextoAtual(rota).selecionados).toEqual({
+      recurso: 'contacts',
+      ids: [1],
+      total: 1,
+    });
   });
 });
