@@ -245,6 +245,20 @@ describe('AbasDaLista', () => {
     );
   });
 
+  // #3057 — abas sublinhadas: a escolhida tem o texto forte e o traço da marca.
+  it('a escolhida é a sublinhada, com o texto forte', () => {
+    const w = mount(AbasDaLista, {
+      props: { modelValue: 'seguros', comSeguros: true },
+    });
+    const [pessoas, , seguros] = w.findAll('[role="tab"]');
+    expect(seguros.classes()).toEqual(
+      expect.arrayContaining(['font-semibold', 'after:bg-n-brand'])
+    );
+    expect(pessoas.classes()).toContain('after:bg-transparent');
+    expect(w.get('[role="tablist"]').classes()).toContain('border-b');
+    expect(w.get('[role="tablist"]').classes()).not.toContain('bg-n-alpha-1');
+  });
+
   it('troca de aba ao clicar', async () => {
     const w = mount(AbasDaLista, { props: { modelValue: 'pessoas' } });
     await w.get('[data-relacionamentos="aba-empresas"]').trigger('click');
@@ -456,6 +470,39 @@ describe('BarraDeControles', () => {
 });
 
 describe('LinhaDePessoa', () => {
+  // #3057 — no celular, no máximo 2 selos à vista; o resto vira "+N". O
+  // leitor de tela continua lendo todos (os de fora ficam só fora da vista).
+  it('com 3 selos, o menos importante sai da vista no celular e vira "+1"', () => {
+    const w = mount(LinhaDePessoa, {
+      props: {
+        pessoa: pessoa({
+          contact_type: 'customer',
+          opted_out_at: diasAtras(1),
+        }),
+        agora: AGORA,
+      },
+      slots: { selos: '<span data-selo-do-seguro>Seguro vence logo</span>' },
+    });
+    const cliente = w.findAll('span').find(selo => selo.text() === 'Cliente');
+    expect(cliente.classes()).toContain('max-sm:sr-only');
+    expect(
+      w.get('[data-selo-do-seguro]').element.parentElement.className
+    ).not.toContain('max-sm:sr-only');
+    const mais = w.get('[data-relacionamentos="mais-selos"]');
+    expect(mais.text()).toBe('+1');
+    expect(mais.classes()).toContain('sm:hidden');
+    expect(mais.attributes('aria-hidden')).toBe('true');
+  });
+
+  it('com até 2 selos, todos à vista e sem "+N"', () => {
+    const w = mount(LinhaDePessoa, {
+      props: { pessoa: pessoa({ contact_type: 'customer' }), agora: AGORA },
+      slots: { selos: '<span>Seguro ativo</span>' },
+    });
+    expect(w.find('[data-relacionamentos="mais-selos"]').exists()).toBe(false);
+    expect(w.html()).not.toContain('max-sm:sr-only');
+  });
+
   it('mostra nome, telefone, empresa e quando falou', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
@@ -463,11 +510,14 @@ describe('LinhaDePessoa', () => {
     expect(w.attributes('data-relacionamentos')).toBe('linha');
     expect(w.text()).toContain('Ana Albuquerino');
     expect(w.text()).toContain(
-      '+55 11 91031-0001 · Padaria Brandolim · Falou há 3 dias'
+      '+55 11 91031-0001 · Falou há 3 dias · Padaria Brandolim'
     );
   });
 
-  it('cada informação é um bloco no celular; o "·" só aparece de sm para cima, entre blocos', () => {
+  // #3057 (revisão) — no celular, 2 linhas e não 4: o telefone numa linha;
+  // "Falou…" e a empresa na de baixo, a empresa cortada com "…". O "·" só
+  // aparece entre partes da mesma linha: nunca pendurado no fim de uma.
+  it('no celular o telefone fica numa linha e "Falou…" e a empresa na outra; de sm para cima, uma linha com "·"', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
     });
@@ -475,23 +525,21 @@ describe('LinhaDePessoa', () => {
     expect(filhos.map(f => f.text())).toEqual([
       '+55 11 91031-0001',
       '·',
-      'Padaria Brandolim',
-      '·',
       'Falou há 3 dias',
+      '·',
+      'Padaria Brandolim',
     ]);
-    const separadores = filhos.filter(f => f.text() === '·');
-    separadores.forEach(f =>
-      expect(f.classes()).toEqual(
-        expect.arrayContaining(['hidden', 'sm:inline'])
-      )
+    const [telefone, depoisDoTelefone, falou, antesDaEmpresa, empresa] = filhos;
+    expect(telefone.classes()).toEqual([
+      'max-sm:basis-full',
+      'max-sm:truncate',
+    ]);
+    expect(depoisDoTelefone.classes()).toEqual(['hidden', 'sm:inline']);
+    expect(falou.classes()).toEqual(['max-sm:whitespace-nowrap']);
+    expect(antesDaEmpresa.classes()).toEqual(['whitespace-pre']);
+    expect(empresa.classes()).toEqual(
+      expect.arrayContaining(['max-sm:flex-1', 'max-sm:truncate'])
     );
-    filhos
-      .filter(f => f.text() !== '·')
-      .forEach(f =>
-        expect(f.classes()).toEqual(
-          expect.arrayContaining(['block', 'sm:inline'])
-        )
-      );
   });
 
   it('sem empresa, sobra um "·" só entre o telefone e o "Falou há…"', () => {

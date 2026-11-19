@@ -28,6 +28,45 @@ export const DialogoFalso = defineComponent({
       aberto.value = false;
     };
     expose({ open, close });
+    const confirmar = () => emit('confirm');
+    // O rodapé próprio de quem usa (#footer) toma o lugar dos dois botões,
+    // como no de verdade, e mora num <form>: o botão `type="submit"` dele
+    // confirma.
+    const botoes = () => [
+      props.showCancelButton
+        ? h(
+            'button',
+            { type: 'button', 'data-cancelar': '', onClick: close },
+            props.cancelButtonLabel
+          )
+        : null,
+      h(
+        'button',
+        {
+          type: 'button',
+          'data-confirmar': '',
+          disabled: props.disableConfirmButton,
+          onClick: confirmar,
+        },
+        props.confirmButtonLabel
+      ),
+    ];
+    const rodape = () =>
+      slots.footer
+        ? [
+            h(
+              'form',
+              {
+                'data-rodape-proprio': '',
+                onSubmit: evento => {
+                  evento.preventDefault();
+                  confirmar();
+                },
+              },
+              slots.footer()
+            ),
+          ]
+        : botoes();
     return () =>
       aberto.value
         ? h(
@@ -43,23 +82,7 @@ export const DialogoFalso = defineComponent({
               props.title ? h('h3', props.title) : null,
               props.description ? h('p', props.description) : null,
               slots.default?.(),
-              props.showCancelButton
-                ? h(
-                    'button',
-                    { type: 'button', 'data-cancelar': '', onClick: close },
-                    props.cancelButtonLabel
-                  )
-                : null,
-              h(
-                'button',
-                {
-                  type: 'button',
-                  'data-confirmar': '',
-                  disabled: props.disableConfirmButton,
-                  onClick: () => emit('confirm'),
-                },
-                props.confirmButtonLabel
-              ),
+              ...rodape(),
             ]
           )
         : null;

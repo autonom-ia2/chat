@@ -393,14 +393,22 @@ describe('o filtro "Quem cuida" em "Mais filtros"', () => {
 });
 
 describe('os atalhos da carteira', () => {
-  it('"Resultados" e "Ajustar renovações" levam cada um à sua tela', async () => {
+  const MENU = '[data-carteira="renovacoes"]';
+  const doMenu = (w, acao) => `${MENU} [role="menuitem"][data-acao="${acao}"]`;
+  const abrirMenu = w => clicar(w, `${MENU} [aria-haspopup="menu"]`);
+
+  it('"Renovações ▾" leva a "Ver como foram" e a "Ajustar renovações"', async () => {
     const w = await abrir();
 
-    expect(textoDe(w, daCarteira('resultados'))).toBe('Resultados');
-    expect(textoDe(w, daCarteira('ajustar'))).toBe('Ajustar renovações');
+    expect(textoDe(w, doMenu(w, 'resultados'))).toBe(
+      'Ver como foram as renovações'
+    );
+    expect(textoDe(w, doMenu(w, 'ajustar'))).toBe('Ajustar renovações');
 
-    await clicar(w, daCarteira('resultados'));
-    await clicar(w, daCarteira('ajustar'));
+    await abrirMenu(w);
+    await clicar(w, doMenu(w, 'resultados'));
+    await abrirMenu(w);
+    await clicar(w, doMenu(w, 'ajustar'));
 
     expect(roteador.push.mock.calls).toEqual([
       [{ name: 'relacionamentos_resultados' }],
@@ -408,14 +416,14 @@ describe('os atalhos da carteira', () => {
     ]);
   });
 
-  it('quem não pode mudar os ajustes só vê "Resultados", e os ajustes nem são lidos', async () => {
+  it('quem não pode mudar os ajustes só vê "Ver como foram", e os ajustes nem são lidos', async () => {
     permissoes.ajusta = false;
     servidorResponde({ ajustes: { ...AJUSTES, funilId: null, etapaId: null } });
 
     const w = await abrirNoServidor();
 
-    expect(w.find(daCarteira('resultados')).exists()).toBe(true);
-    expect(w.find(daCarteira('ajustar')).exists()).toBe(false);
+    expect(w.find(doMenu(w, 'resultados')).exists()).toBe(true);
+    expect(w.find(doMenu(w, 'ajustar')).exists()).toBe(false);
     expect(w.find(daCarteira('convite-das-renovacoes')).exists()).toBe(false);
     expect(SegurosAPI.renovacoes).not.toHaveBeenCalled();
   });

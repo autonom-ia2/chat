@@ -19,14 +19,32 @@
 // #2899 (E6.5) — o seguro de outra corretora (`deFora`) não se cancela: no
 // lugar de "Marcar como cancelado", o "⋯" tem "Apagar este seguro", em
 // vermelho (a gaveta pergunta antes).
-import { estaValendo, renovacaoAberta } from '../fonte/selosDoSeguro';
+// #3057 — o seguro que vence logo (ativo e termina em até 30 dias,
+// carteira/tomDoSelo.js) e não tem renovação aberta pede uma conversa com o
+// cliente: o azul é "Conversar com {nome}" e o PDF fica ao lado ("Ver PDF", ou
+// "Guardar o PDF" quando falta). "Corrigir" desce para o "⋯". Quem só pode ver
+// a pessoa também conversa (falar não muda o seguro), e o PDF fica ao lado
+// quando há. Só onde a gaveta pode conversar (`podeConversar`).
+// #3057 (2ª rodada) — com a renovação aberta e a proposta da cotação pronta
+// para sair (`podeEnviar`, carteira/cotacaoDaRenovacao.js#podeEnviarProposta),
+// o próximo passo é mandá-la: o azul é "Enviar proposta" (que pergunta antes),
+// "Renovou" fica ao lado e "Não renovou" desce para o "⋯".
+import {
+  diasParaTerminar,
+  estaValendo,
+  renovacaoAberta,
+  seloDoSeguro,
+} from '../fonte/selosDoSeguro';
 import {
   faltaApoliceNova,
   renovacaoSoDeLeitura,
   terminou,
 } from './situacaoDaRenovacao';
+import { venceLogo } from './tomDoSelo';
 
 export const DO_RODAPE = {
+  CONVERSAR: 'CONVERSAR',
+  ENVIAR_PROPOSTA: 'ENVIAR_PROPOSTA',
   VER_PDF: 'VER_PDF',
   GUARDAR_PDF: 'GUARDAR_PDF',
   GUARDAR_OUTRO_PDF: 'GUARDAR_OUTRO_PDF',
@@ -78,20 +96,37 @@ const pdfECorrigirNoMenu = seguro => {
   return [primeiro, DO_RODAPE.CORRIGIR, ...resto];
 };
 
+// Vence logo e ninguém está cuidando da renovação: hora de conversar.
+const pedeConversa = (seguro, agora) =>
+  !renovacaoAberta(seguro) &&
+  venceLogo(seloDoSeguro(seguro, agora), diasParaTerminar(seguro, agora));
+
 export const rodapeDoSeguro = (
   seguro,
-  { podeEditar = true, agora = Date.now() } = {}
+  {
+    podeEditar = true,
+    podeConversar = false,
+    podeEnviar = false,
+    agora = Date.now(),
+  } = {}
 ) => {
+  const conversa = podeConversar && pedeConversa(seguro, agora);
   if (!podeEditar) {
-    return {
-      azul: seguro.temPdf ? DO_RODAPE.VER_PDF : null,
-      secundario: null,
-      menu: [],
-    };
+    const pdf = seguro.temPdf ? DO_RODAPE.VER_PDF : null;
+    return conversa
+      ? { azul: DO_RODAPE.CONVERSAR, secundario: pdf, menu: [] }
+      : { azul: pdf, secundario: null, menu: [] };
   }
   const valendo = estaValendo(seguro, agora);
   const fimDoMenu = cancelarOuDesfazer(seguro);
   const mexeNaRenovacao = !seguro.canceladoEm && !renovacaoSoDeLeitura(seguro);
+  if (renovacaoAberta(seguro) && mexeNaRenovacao && podeEnviar) {
+    return {
+      azul: DO_RODAPE.ENVIAR_PROPOSTA,
+      secundario: DO_RODAPE.RENOVOU,
+      menu: [DO_RODAPE.NAO_RENOVOU, ...pdfECorrigirNoMenu(seguro), fimDoMenu],
+    };
+  }
   if (renovacaoAberta(seguro) && mexeNaRenovacao) {
     return {
       azul: DO_RODAPE.RENOVOU,
@@ -106,6 +141,14 @@ export const rodapeDoSeguro = (
   const doPdf = guardaANova
     ? pdfNoMenuInteiro(seguro)
     : doPdfNoMenu(seguro, valendo);
+  if (conversa && !guardaANova) {
+    const [pdfAoLado, ...pdfNoMenu] = pdfNoMenuInteiro(seguro);
+    return {
+      azul: DO_RODAPE.CONVERSAR,
+      secundario: pdfAoLado,
+      menu: [DO_RODAPE.CORRIGIR, ...pdfNoMenu, ...desfazer, fimDoMenu],
+    };
+  }
   return {
     azul: guardaANova
       ? DO_RODAPE.GUARDAR_APOLICE_NOVA

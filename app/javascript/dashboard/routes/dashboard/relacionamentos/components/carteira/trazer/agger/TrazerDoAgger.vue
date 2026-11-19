@@ -23,6 +23,8 @@ import HistoricoDasBuscas from './HistoricoDasBuscas.vue';
 import PorQueNaoDeu from './PorQueNaoDeu.vue';
 import ProntoDoAgger from './ProntoDoAgger.vue';
 import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
+import EtapasDoTrazer from '../EtapasDoTrazer.vue';
+import VoltarDoTrazer from '../VoltarDoTrazer.vue';
 
 // #2900 (E7.3) — "Trazer do Agger": um botão grande busca os seguros da
 // corretora no Agger. Se a conta ainda não conectou o Agger, uma janela pede
@@ -44,6 +46,11 @@ import SeguradorasDaBusca from './SeguradorasDaBusca.vue';
 // Escrever o login do Agger é de quem pode mexer na Cotação
 // (`insurance_manage`, como o servidor). Sem essa permissão, a tela não
 // oferece a janela do login: diz para pedir a quem administra a conta.
+//
+// #3057 — no topo, a volta a "Como trazer" (VoltarDoTrazer) e as etapas da
+// jornada (Buscar → Conferir → Pronto). O começo explica numa frase o que
+// acontece, mostra o selo de confiança (a senha fica guardada em segredo e
+// serve só para buscar os seguros) e o botão principal, grande.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerAggerFonte() },
   // O login do Agger da conta já foi aceito (o resumo da carteira).
@@ -142,6 +149,16 @@ const temDetalhes = computed(() =>
   )
 );
 
+const ETAPAS_DA_JORNADA = ['BUSCAR', 'CONFERIR', 'PRONTO'];
+const NA_JORNADA = {
+  [ETAPAS_DO_AGGER.INICIO]: 0,
+  [ETAPAS_DO_AGGER.BUSCANDO]: 0,
+  [ETAPAS_DO_AGGER.CONFERIR]: 1,
+  [ETAPAS_DO_AGGER.TRAZENDO]: 1,
+  [ETAPAS_DO_AGGER.PRONTO]: 2,
+};
+const naJornada = computed(() => NA_JORNADA[etapa.value] ?? 0);
+
 watch(etapa, async () => {
   await nextTick();
   titulo.value?.focus();
@@ -177,11 +194,13 @@ onBeforeUnmount(busca.parar);
     <div
       class="flex flex-col w-full max-w-3xl gap-6 px-5 py-8 mx-auto md:px-8 md:py-10"
     >
+      <VoltarDoTrazer para="como" />
+      <EtapasDoTrazer :etapas="ETAPAS_DA_JORNADA" :atual="naJornada" />
       <h1
         ref="titulo"
         data-titulo-da-tela
         tabindex="-1"
-        class="m-0 text-2xl font-semibold text-n-slate-12"
+        class="m-0 text-3xl font-bold tracking-tight outline-none md:text-4xl text-n-slate-12 text-balance"
       >
         {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.TITULO') }}
       </h1>
@@ -190,26 +209,42 @@ onBeforeUnmount(busca.parar);
       </p>
 
       <template v-if="etapa === ETAPAS_DO_AGGER.INICIO">
-        <p class="m-0 text-lg text-n-slate-11">
-          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.APOIO') }}
-        </p>
-        <p
-          v-if="pedirAoAdmin"
-          data-carteira="peca-ao-admin"
-          class="m-0 text-base font-medium text-n-slate-12"
+        <div
+          data-carteira="inicio-do-agger"
+          class="flex flex-col gap-6 p-5 shadow-sm sm:p-8 rounded-3xl bg-n-solid-1 ring-1 ring-n-weak"
         >
-          {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN') }}
-        </p>
-        <Button
-          v-else
-          size="lg"
-          type="button"
-          data-carteira="buscar-no-agger"
-          class="self-start !h-14 !px-8 !text-lg"
-          :is-loading="ocupado"
-          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCAR')"
-          @click="comecar"
-        />
+          <p class="m-0 text-lg text-n-slate-12 text-pretty">
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.APOIO') }}
+          </p>
+          <p
+            data-carteira="selo-do-agger"
+            class="flex items-start gap-3 p-4 m-0 text-sm font-medium rounded-2xl bg-n-teal-2 text-n-teal-11 ring-1 ring-inset ring-n-teal-5"
+          >
+            <span
+              class="i-lucide-lock-keyhole size-5 shrink-0"
+              aria-hidden="true"
+            />
+            <span>{{ t('RELACIONAMENTOS_CARTEIRA.AGGER.SELO') }}</span>
+          </p>
+          <p
+            v-if="pedirAoAdmin"
+            data-carteira="peca-ao-admin"
+            class="m-0 text-base font-medium text-n-slate-12"
+          >
+            {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.PECA_AO_ADMIN') }}
+          </p>
+          <Button
+            v-else
+            size="lg"
+            type="button"
+            icon="i-lucide-cloud-download"
+            data-carteira="buscar-no-agger"
+            class="w-full sm:w-auto sm:self-start !h-14 !px-4 !text-base sm:!px-8 sm:!text-lg"
+            :is-loading="ocupado"
+            :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.BUSCAR')"
+            @click="comecar"
+          />
+        </div>
         <BuscaDeTodoDia
           :fonte="fonte"
           :pede-login="loginRecusadoNaConta"

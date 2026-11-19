@@ -15,7 +15,10 @@ import EsqueletoDeLista from '../comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../comum/VazioComUmBotao.vue';
 import GavetaLateral from '../ficha/GavetaLateral.vue';
 import MenuMaisAcoes from '../lista/MenuMaisAcoes.vue';
-import { podeEnviarProposta } from '../../carteira/cotacaoDaRenovacao';
+import {
+  enviaDeNovo,
+  podeEnviarProposta,
+} from '../../carteira/cotacaoDaRenovacao';
 import { leituraDePdf } from '../../carteira/leituraDePdf';
 import { chaveDaRecusa, seguroJaMudou } from '../../carteira/recusas';
 import {
@@ -24,11 +27,14 @@ import {
   rodapeDoSeguro,
 } from '../../carteira/rodapeDoSeguro';
 import { naoRenovou } from '../../carteira/situacaoDaRenovacao';
+import { useConversarComPessoa } from '../../carteira/useConversarComPessoa';
 import { useSeguroAberto } from '../../carteira/useSeguroAberto';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 import { useVerPdf } from '../../carteira/useVerPdf';
 import { ESTADOS_DA_FICHA as ESTADOS } from '../../ficha/useEstadoDaFicha';
 import AvisoComDesfazer from './AvisoComDesfazer.vue';
+import ConfirmarProposta from './ConfirmarProposta.vue';
+import ConversaNova from './ConversaNova.vue';
 import CorrigirSeguro from './CorrigirSeguro.vue';
 import CotacaoDoSeguro from './CotacaoDoSeguro.vue';
 import DadosDoSeguro from './DadosDoSeguro.vue';
@@ -64,14 +70,25 @@ import PalavrasSimples from './renovacao/PalavrasSimples.vue';
 // pergunta antes; apagado, a gaveta fecha.
 // #2901 (E8) — na conta com a cotação da renovação, o seguro que tem cotação
 // mostra em que pé ela está, abaixo da renovação, com "Enviar proposta" quando
-// ela está pronta (CotacaoDoSeguro.vue). Enviar não pede confirmação: o clique
-// é a conferência. O aviso diz que saiu; a recusa diz o que fazer, e a gaveta
-// relê o seguro, que já mostra a cotação de agora.
+// ela está pronta (CotacaoDoSeguro.vue). O aviso diz que saiu; a recusa diz o
+// que fazer, e a gaveta relê o seguro, que já mostra a cotação de agora.
+// #3057 — "Enviar proposta" pergunta antes (ConfirmarProposta.vue): para quem
+// vai, por qual WhatsApp, o PDF da proposta, "Enviar agora" e "Voltar". O
+// envio é o mesmo pedido de antes. E onde a gaveta pode conversar
+// (`podeConversar`: a aba Seguros e a ficha; no painel da conversa a pessoa já
+// está no chat), o seguro que vence logo sem renovação aberta tem o azul
+// "Conversar com {nome}", com o PDF ao lado (carteira/rodapeDoSeguro.js).
+// #3057 (2ª rodada) — "Conversar" com quem não tem conversa abre a "Nova
+// conversa" já com a pessoa (ConversaNova). Com a renovação aberta e a
+// proposta pronta, "Enviar proposta" é o azul do rodapé (saiu de dentro da
+// Cotação); a pergunta só abre depois de ler o nome do WhatsApp, e o azul gira
+// enquanto isso.
 const props = defineProps({
   apoliceId: { type: Number, default: null },
   fonte: { type: Object, required: true },
   podeEditar: { type: Boolean, default: false },
   podeExportar: { type: Boolean, default: false },
+  podeConversar: { type: Boolean, default: false },
   agora: { type: Number, default: () => Date.now() },
 });
 const emit = defineEmits(['fechar', 'mudou', 'abrirSegurado', 'abrirCard']);
@@ -94,6 +111,12 @@ const textos = useTextosDoSeguro();
 const aberto = useSeguroAberto(props.fonte, toRef(props, 'apoliceId'));
 const { seguro } = aberto;
 const verPdfDe = useVerPdf(props.fonte);
+const conversaNova = useTemplateRef('conversaNova');
+const conversarCom = useConversarComPessoa({
+  demo: props.fonte.usaDemo,
+  abrirConversaNova: async pessoaId =>
+    Boolean(await conversaNova.value?.abrir(pessoaId)),
+});
 
 const corrigindo = ref(false);
 // O formulário aberto é o da apólice nova, e não o de corrigir este seguro.
@@ -107,6 +130,8 @@ const alertaDeApagar = ref('');
 // Para onde a pessoa ia quando a gaveta perguntou "Sair sem salvar?".
 const saidaPendente = ref(null);
 const abrindoPdf = ref(false);
+// A pergunta do "Enviar proposta" lendo o nome do WhatsApp antes de abrir.
+const preparandoProposta = ref(false);
 const corpo = useTemplateRef('corpo');
 const formulario = useTemplateRef('formulario');
 const dialogoDoPdf = useTemplateRef('dialogoDoPdf');
@@ -114,6 +139,7 @@ const dialogoDeApagar = useTemplateRef('dialogoDeApagar');
 const dialogoDeSair = useTemplateRef('dialogoDeSair');
 const dialogoDoMotivo = useTemplateRef('dialogoDoMotivo');
 const dialogoDeApagarDeFora = useTemplateRef('dialogoDeApagarDeFora');
+const dialogoDaProposta = useTemplateRef('dialogoDaProposta');
 // A conta lê PDF? Perguntado uma vez, na primeira abertura; na dúvida, não.
 const lePdf = ref(false);
 let perguntouSeLe = false;
@@ -147,9 +173,16 @@ const titulo = computed(() => {
     seguradora: seguro.value.seguradora,
   });
 });
+const comEnviar = computed(() =>
+  podeEnviarProposta(seguro.value, props.podeEditar)
+);
 const rodape = computed(() =>
   rodapeDoSeguro(seguro.value, {
     podeEditar: props.podeEditar,
+    // Só com a pessoa do seguro: sem ela não há com quem conversar (igual à
+    // linha da aba Seguros).
+    podeConversar: props.podeConversar && Boolean(seguro.value?.pessoa?.id),
+    podeEnviar: comEnviar.value,
     agora: props.agora,
   })
 );
@@ -257,16 +290,27 @@ const guardarMotivo = escolha =>
         tg('AVISOS.NAO_RENOVOU'),
         desfazerNoAviso
       );
-const comEnviar = computed(() =>
-  podeEnviarProposta(seguro.value, props.podeEditar)
-);
-const enviarProposta = () =>
-  agir(
+const perguntarSeEnvia = async () => {
+  if (emAndamento() || preparandoProposta.value) return;
+  preparandoProposta.value = true;
+  try {
+    await dialogoDaProposta.value?.abrir();
+  } finally {
+    preparandoProposta.value = false;
+  }
+};
+// Saiu ou não, a pergunta fecha quando a resposta chega: o rodapé diz que saiu
+// ou o que fazer.
+const enviarProposta = async () => {
+  await agir(
     aberto.enviarProposta,
     tg('AVISOS.PROPOSTA_ENVIADA'),
     null,
     NAO_PODE_ENVIAR
   );
+  dialogoDaProposta.value?.fechar();
+};
+const conversar = () => conversarCom(seguro.value.pessoa);
 const perguntarMotivo = () => {
   if (emAndamento()) return;
   dialogoDoMotivo.value?.abrir();
@@ -423,6 +467,14 @@ const salvarCorrecao = async dados => {
 
 // O que cada nome do rodapé (carteira/rodapeDoSeguro.js) faz e como aparece.
 const DO_SEGURO = {
+  [DO_RODAPE.CONVERSAR]: {
+    icone: 'i-lucide-message-circle',
+    fazer: conversar,
+  },
+  [DO_RODAPE.ENVIAR_PROPOSTA]: {
+    icone: 'i-lucide-send',
+    fazer: perguntarSeEnvia,
+  },
   [DO_RODAPE.VER_PDF]: { icone: 'i-lucide-file-text', fazer: verPdf },
   [DO_RODAPE.GUARDAR_PDF]: { icone: 'i-lucide-paperclip', fazer: guardarPdf },
   [DO_RODAPE.GUARDAR_OUTRO_PDF]: {
@@ -461,16 +513,34 @@ const DO_SEGURO = {
 const MARCA_DO_SECUNDARIO = {
   [DO_RODAPE.CORRIGIR]: 'corrigir',
   [DO_RODAPE.NAO_RENOVOU]: 'nao-renovou',
+  [DO_RODAPE.RENOVOU]: 'renovou',
+  [DO_RODAPE.VER_PDF]: 'ver-pdf',
+  [DO_RODAPE.GUARDAR_PDF]: 'guardar-pdf',
 };
 const azulOcupado = computed(
   () =>
     (rodape.value.azul === DO_RODAPE.VER_PDF && abrindoPdf.value) ||
     (rodape.value.azul === DO_RODAPE.RENOVOU &&
+      aberto.ocupado.value === 'renovou') ||
+    (rodape.value.azul === DO_RODAPE.ENVIAR_PROPOSTA &&
+      (preparandoProposta.value || aberto.ocupado.value === 'enviarProposta'))
+);
+const secundarioOcupado = computed(
+  () =>
+    (rodape.value.secundario === DO_RODAPE.VER_PDF && abrindoPdf.value) ||
+    (rodape.value.secundario === DO_RODAPE.RENOVOU &&
       aberto.ocupado.value === 'renovou')
 );
 const SALVANDO = ['corrigir', 'apoliceNova'];
 const fazer = nome => DO_SEGURO[nome].fazer();
-const rotuloDe = nome => tg(`RODAPE.${nome}`);
+// "Conversar com Ana": o primeiro nome de quem conversa.
+// A proposta que pode ter saído sem confirmação é enviada "de novo".
+const chaveDoRotulo = id =>
+  id === DO_RODAPE.ENVIAR_PROPOSTA && enviaDeNovo(seguro.value?.cotacao)
+    ? 'ENVIAR_DE_NOVO'
+    : id;
+const rotuloDe = id =>
+  tg(`RODAPE.${chaveDoRotulo(id)}`, { nome: primeiroNome.value });
 const itensDoMenu = computed(() =>
   rodape.value.menu.map(id => ({
     id,
@@ -571,8 +641,6 @@ onMounted(() => {
           v-if="seguro.cotacao?.etapa"
           :seguro="seguro"
           :pode-enviar="comEnviar"
-          :enviando="aberto.ocupado.value === 'enviarProposta'"
-          @enviar="enviarProposta"
         />
         <DadosDoSeguro :seguro="seguro" :agora="agora" />
         <PalavrasSimples
@@ -655,10 +723,11 @@ onMounted(() => {
               size="lg"
               class="flex-1 sm:flex-none whitespace-nowrap"
               :data-carteira="MARCA_DO_SECUNDARIO[rodape.secundario]"
+              :is-loading="secundarioOcupado"
               :label="rotuloDe(rodape.secundario)"
               @click="fazer(rodape.secundario)"
             />
-            <div data-carteira="mais-do-seguro">
+            <div v-if="itensDoMenu.length" data-carteira="mais-do-seguro">
               <MenuMaisAcoes
                 tamanho="lg"
                 :rotulo="tg('RODAPE.MAIS')"
@@ -671,6 +740,7 @@ onMounted(() => {
       </div>
     </template>
   </GavetaLateral>
+  <ConversaNova v-if="podeConversar" ref="conversaNova" />
   <template v-if="podeEditar">
     <DialogoAnexarPdf
       ref="dialogoDoPdf"
@@ -703,6 +773,13 @@ onMounted(() => {
       @fechou="saidaPendente = null"
     />
     <DialogoMotivo ref="dialogoDoMotivo" @escolher="guardarMotivo" />
+    <ConfirmarProposta
+      ref="dialogoDaProposta"
+      :seguro="seguro"
+      :demo="fonte.usaDemo"
+      :ocupado="aberto.ocupado.value === 'enviarProposta'"
+      @confirmar="enviarProposta"
+    />
     <DialogoDeConfirmacao
       ref="dialogoDeApagarDeFora"
       marca="apagar-de-fora"

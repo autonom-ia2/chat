@@ -12,9 +12,14 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // ou 'lg' (48 px, ao lado de botões grandes, como no rodapé de uma gaveta).
 // #2898 — `paraBaixo` abre a lista para baixo (o "⋯" que mora no alto da tela).
 // O item não quebra em duas linhas: o menu alarga até caber o maior texto.
+// #3057 — `texto` troca o "⋯" por um botão com nome e a setinha ("Renovações
+// ▾"), com a mesma lista embaixo. A área de toque continua com 44 px.
+// A lista fica acima das linhas da lista (os botões delas têm z-10) e se
+// alinha ao fim do botão pela direção do texto (`end-0`).
 const props = defineProps({
   itens: { type: Array, required: true },
   rotulo: { type: String, default: '' },
+  texto: { type: String, default: '' },
   paraBaixo: { type: Boolean, default: false },
   tamanho: {
     type: String,
@@ -95,6 +100,22 @@ onClickOutside(raiz, () => {
 <template>
   <div ref="raiz" class="relative" @keydown="aoTeclar" @focusout="aoSairDoFoco">
     <Button
+      v-if="texto"
+      slate
+      faded
+      :size="tamanho"
+      class="relative w-full whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
+      icon="i-lucide-chevron-down"
+      trailing-icon
+      data-relacionamentos="mais-acoes"
+      aria-haspopup="menu"
+      :aria-expanded="aberto ? 'true' : 'false'"
+      :aria-controls="idDoMenu"
+      :label="texto"
+      @click="alternar"
+    />
+    <Button
+      v-else
       slate
       faded
       :size="tamanho"
@@ -111,7 +132,7 @@ onClickOutside(raiz, () => {
       v-show="aberto"
       :id="idDoMenu"
       role="menu"
-      class="absolute z-10 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak ltr:right-0 rtl:left-0"
+      class="absolute z-20 flex min-w-52 flex-col gap-1 rounded-xl bg-n-solid-1 p-2 shadow-xl ring-1 ring-n-weak end-0"
       :class="paraBaixo ? 'top-full mt-2' : 'bottom-full mb-2'"
     >
       <button

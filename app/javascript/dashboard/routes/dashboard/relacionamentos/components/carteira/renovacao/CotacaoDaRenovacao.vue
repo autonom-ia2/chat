@@ -12,6 +12,7 @@ import {
   agenteForaDaCaixa,
   caixaDistribui,
   caixaEscolhida,
+  nomeDaCaixaNaFrase,
   porQueSoNinguem,
   roboCota,
 } from '../../../carteira/cotacaoDaRenovacao';
@@ -66,12 +67,6 @@ const opcoesDeQuemCota = computed(() => [
     value: QUEM_COTA.ROBO,
     label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.ROBO'),
   },
-  {
-    value: QUEM_COTA.LIA,
-    label: t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_COTA.LIA', {
-      agente: agente.value,
-    }),
-  },
 ]);
 const opcoesDeQuemEnvia = computed(() => [
   {
@@ -104,14 +99,17 @@ const apoioDoEnvio = computed(() =>
     ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.APOIO_SOZINHO')
     : t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.QUEM_ENVIA.APOIO_PESSOA')
 );
-const avisoDoAgente = computed(() =>
-  agenteForaDaCaixa(props.modelValue, caixas.value)
-    ? t('RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.AVISO_DO_AGENTE', {
-        agente: agente.value,
-        caixa: caixaEscolhida(caixas.value, props.modelValue.caixaId).nome,
-      })
-    : ''
-);
+const avisoDoAgente = computed(() => {
+  if (!agenteForaDaCaixa(props.modelValue, caixas.value)) return '';
+  const caixa = nomeDaCaixaNaFrase(
+    caixaEscolhida(caixas.value, props.modelValue.caixaId)?.nome
+  );
+  const chave = caixa ? 'AVISO_DO_AGENTE' : 'AVISO_DO_AGENTE_SEM_NOME';
+  return t(`RELACIONAMENTOS_CARTEIRA.AJUSTES.COTACAO.${chave}`, {
+    agente: agente.value,
+    caixa,
+  });
+});
 
 const avisoDaDistribuicao = computed(() =>
   caixaDistribui(props.modelValue, caixas.value)
