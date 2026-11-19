@@ -62,7 +62,17 @@ vi.mock('../../ficha/usePermissoesDaFicha', () => ({
     podeEditar: { value: true },
     podeCriarCards: { value: true },
     podeExportar: { value: false },
+    podeApagar: { value: true },
+    podeCriarLembrete: { value: true },
   }),
+}));
+// #3071 — as caixas da conta (para "Ligar") vêm do store; aqui não há voz.
+vi.mock('dashboard/composables/store', () => ({
+  useMapGetter: () => ({ value: [] }),
+}));
+// A "Nova conversa" lê o contato do store: na demonstração ela nunca abre.
+vi.mock('../../components/carteira/ConversaNova.vue', () => ({
+  default: { render: () => null, methods: { abrir: async () => false } },
 }));
 // Fora da demonstração (`demo` nulo) a ficha lê do servidor: aqui ele não
 // responde, para os testes do estado de erro.
@@ -195,10 +205,8 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'mais-acoes').exists()).toBe(true);
     expect(marca(w, 'alterar').exists()).toBe(true);
     expect(marca(w, 'conversas').findAll('li')).toHaveLength(3);
-    // A demonstração mostra o desenho inteiro, com o que ainda só avisa (fora
-    // dela, não: #2970, em paginasReal.spec.js).
+    // A demonstração mostra o desenho inteiro.
     expect(marca(w, 'cabecalho').text()).toContain('ACOES.LEMBRETE');
-    expect(marca(w, 'conversas').text()).toContain('CONVERSAS.VER_TODAS');
     expect(w.findAll('[data-relacionamentos="card"]').length).toBeGreaterThan(
       0
     );
@@ -334,8 +342,7 @@ describe('FichaDaPessoaPage', () => {
     expect(marca(w, 'cards').find('button').exists()).toBe(false);
     expect(marca(w, 'arquivos').find('li').exists()).toBe(false);
     expect(marca(w, 'marcar-cliente').exists()).toBe(true);
-    // A demonstração mostra o desenho inteiro: "Conversar" aparece mesmo sem
-    // conversa (fora dela, não: #2970, em paginasReal.spec.js).
+    // #3071 — "Conversar" aparece sempre, até sem conversa.
     expect(marca(w, 'conversar').exists()).toBe(true);
   });
 
@@ -400,16 +407,14 @@ describe('FichaDaPessoaPage', () => {
     expect(w.get('h1').text()).toBe('Nome Novo da Silva');
   });
 
-  it('"Alterar informações" do ⋯ também abre a gaveta; as outras só avisam', async () => {
+  it('"Alterar informações" do ⋯ também abre a gaveta; Juntar abre a busca da outra ficha', async () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
     await marca(w, 'mais-acoes').trigger('click');
-    await w.findAll('.n-dropdown-item button')[2].trigger('click');
-    expect(useAlert).toHaveBeenCalledWith(
-      expect.stringContaining('AVISOS.JUNTAR')
-    );
+    await w.get('[data-mais="juntar"]').trigger('click');
+    expect(marca(w, 'dialogo-juntar').text()).toContain('JUNTAR.TITULO');
     expect(marca(w, 'gaveta-informacoes').exists()).toBe(false);
     await marca(w, 'mais-acoes').trigger('click');
-    await w.findAll('.n-dropdown-item button')[0].trigger('click');
+    await w.get('[data-mais="alterar"]').trigger('click');
     expect(marca(w, 'gaveta-informacoes').exists()).toBe(true);
   });
 
@@ -434,7 +439,7 @@ describe('FichaDaPessoaPage', () => {
     const w = await abrirPessoa(ID_CLIENTE_COMPLETO);
     await marca(w, 'conversar').trigger('click');
     expect(useAlert).toHaveBeenCalledWith(
-      expect.stringContaining('AVISOS.CONVERSAR')
+      expect.stringContaining('LINHA.ABRINDO_CONVERSA')
     );
   });
 

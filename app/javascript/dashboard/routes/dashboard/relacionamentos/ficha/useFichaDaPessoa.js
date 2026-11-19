@@ -2,6 +2,9 @@
 // composable fala com a fonte e guarda o resultado. Cada ação devolve `true` se
 // deu certo e `false` se falhou; quem chama decide o aviso. Só a leitura da
 // pessoa decide o estado da ficha; as outras partes falham sozinhas (`falhas`).
+// #3071 — e as ações que vieram da ficha antiga. `motivo` guarda a frase que o
+// servidor mandou na última falha (o DELETE do contato diz por que não apagou,
+// por exemplo), ou vazio: quem chama mostra a frase dele no lugar da genérica.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from './useEstadoDaFicha';
 import { usePartesDaFicha } from './usePartesDaFicha';
@@ -18,6 +21,7 @@ export const useFichaDaPessoa = (fonte, id) => {
   const { estado, carregar, geracao } = useEstadoDaFicha();
   const pessoa = ref(null);
   const ocupado = ref('');
+  const motivo = ref('');
   const partes = usePartesDaFicha({
     leitores: Object.fromEntries(
       Object.keys(PARTES_VAZIAS).map(nome => [
@@ -46,11 +50,17 @@ export const useFichaDaPessoa = (fonte, id) => {
   // que está na tela.
   const executar = async (nome, acao) => {
     ocupado.value = nome;
+    motivo.value = '';
     const geracaoDoPedido = geracao();
     try {
       await acao(() => geracaoDoPedido === geracao());
       return true;
-    } catch {
+    } catch (falha) {
+      const frase = falha?.cause?.response?.data?.message;
+      motivo.value =
+        typeof frase === 'string'
+          ? frase
+          : (falha?.response?.data?.message ?? '');
       return false;
     } finally {
       ocupado.value = '';
@@ -90,6 +100,45 @@ export const useFichaDaPessoa = (fonte, id) => {
       if (aindaVale()) pessoa.value = liberada;
     });
 
+  // As escritas que devolvem a pessoa como ficou.
+  const trocarPessoa = (nome, escrever) =>
+    executar(nome, async aindaVale => {
+      const nova = await escrever();
+      if (aindaVale()) pessoa.value = nova;
+    });
+
+  const marcarNaoQuer = () =>
+    trocarPessoa('marcarNaoQuer', () => fonte.marcarNaoQuer(id.value));
+  const bloquear = () =>
+    trocarPessoa('bloquear', () => fonte.bloquear(id.value));
+  const desbloquear = () =>
+    trocarPessoa('desbloquear', () => fonte.desbloquear(id.value));
+  const trocarEtiquetas = etiquetas =>
+    trocarPessoa('etiquetas', () => fonte.trocarEtiquetas(id.value, etiquetas));
+
+  // Depois de apagar, a página sai da ficha: não há o que guardar.
+  const apagar = () => executar('apagar', () => fonte.apagar(id.value));
+
+  // A outra pessoa trouxe conversas, notas, cards e arquivos: a ficha relê tudo.
+  const juntar = outraId =>
+    executar('juntar', async aindaVale => {
+      const junta = await fonte.juntar(id.value, outraId);
+      if (!aindaVale()) return;
+      pessoa.value = junta;
+      const lidas = await partes.lerTodas();
+      if (aindaVale()) partes.guardarTodas(lidas);
+    });
+
+  const apagarNota = notaId =>
+    executar('apagarNota', async aindaVale => {
+      await fonte.apagarNota(id.value, notaId);
+      if (!aindaVale()) return;
+      partes.trocar(
+        'notas',
+        partes.valores.value.notas.filter(nota => nota.id !== notaId)
+      );
+    });
+
   return {
     estado,
     pessoa,
@@ -100,6 +149,7 @@ export const useFichaDaPessoa = (fonte, id) => {
     origem: computed(() => partes.valores.value.origem),
     falhas: partes.falhas,
     ocupado,
+    motivo,
     carregar: () => carregar(buscar),
     relerParte: partes.reler,
     marcarCliente,
@@ -107,5 +157,12 @@ export const useFichaDaPessoa = (fonte, id) => {
     guardarNota,
     salvar,
     liberar,
+    marcarNaoQuer,
+    bloquear,
+    desbloquear,
+    trocarEtiquetas,
+    apagar,
+    juntar,
+    apagarNota,
   };
 };

@@ -63,16 +63,16 @@
       "DESMARCAR_CLIENTE": "No longer a customer",
       "JUNTAR": "Merge with another person",
       "BLOQUEAR": "Block",
-      "APAGAR": "Delete"
+      "APAGAR": "Delete",
+      "NAO_QUER": "Doesn't want messages",
+      "DESBLOQUEAR": "Unblock",
+      "LIGAR": "Call",
+      "MUDAR_ETIQUETAS": "Change labels",
+      "POR_ETIQUETA": "Add label"
     },
     "AVISOS": {
-      "CONVERSAR": "This opens the conversation with {nome}.",
       "NOVO_CARD": "This opens a new card for {nome}.",
-      "LEMBRETE": "This is where you set a reminder about {nome}.",
-      "VER_TODAS": "This opens all conversations with {nome}.",
-      "JUNTAR": "This is where you choose who to merge {nome} with.",
-      "BLOQUEAR": "This is where you confirm blocking {nome}.",
-      "APAGAR": "This is where you confirm deleting {nome}."
+      "LEMBRETE": "This is where you set a reminder about {nome}."
     },
     "FAIXA": {
       "TEXTO": "Does not want messages since {data}. {origem}",
@@ -111,7 +111,9 @@
         "resolvida": "Resolved",
         "adiada": "Snoozed",
         "outra": "Other status"
-      }
+      },
+      "VER_MENOS": "See less",
+      "MAIS_RECENTES": "These are the {count} most recent conversations."
     },
     "CARDS": {
       "TITULO": "Cards",
@@ -143,7 +145,14 @@
       "ERRO": "I could not save the note. Try again.",
       "VAZIO": "No notes yet.",
       "POR": "{autor} · {quando}",
-      "ESCREVA_ANTES": "Write the note before saving."
+      "ESCREVA_ANTES": "Write the note before saving.",
+      "APAGAR": "Delete note",
+      "APAGAR_ROTULO": "Delete the note “{texto}”",
+      "APAGAR_TITULO": "Delete this note?",
+      "APAGAR_AVISO": "“{texto}” leaves {nome}'s record. This can't be undone.",
+      "APAGAR_CONFIRMAR": "Delete note",
+      "APAGADA": "Note deleted.",
+      "ERRO_APAGAR": "Couldn't delete the note. Try again."
     },
     "ARQUIVOS": {
       "TITULO": "Files",
@@ -220,6 +229,66 @@
       },
       "CNPJ": "Company tax ID",
       "SITE": "Website"
+    },
+    "APAGAR": {
+      "TITULO": "Delete {nome}?",
+      "AVISO": "{nome}'s record leaves the system, with the conversations, messages and notes. This can't be undone.",
+      "CONFIRMAR": "Delete {nome}",
+      "APAGADA": "{nome}'s record was deleted.",
+      "ERRO": "Couldn't delete {nome}. Try again in a moment."
+    },
+    "BLOQUEIO": {
+      "TITULO": "Block {nome}?",
+      "AVISO": "Whatever {nome} sends arrives closed and nobody on the team is notified. They also leave campaigns. You can unblock whenever you want.",
+      "CONFIRMAR": "Block",
+      "BLOQUEADA": "Done. {nome}'s record is blocked.",
+      "ERRO_BLOQUEAR": "Couldn't block. Try again.",
+      "DESBLOQUEADA": "Done. {nome}'s record is unblocked.",
+      "ERRO_DESBLOQUEAR": "Couldn't unblock. Try again.",
+      "FAIXA": "{nome}'s record is blocked.",
+      "FAIXA_APOIO": "Whatever {nome} sends arrives closed and nobody on the team is notified."
+    },
+    "NAO_QUER": {
+      "TITULO": "Mark that {nome} doesn't want messages?",
+      "AVISO": "{nome} leaves campaigns and no longer gets automatic messages. If {nome} writes, you reply as usual.",
+      "CONFIRMAR": "Yes, mark",
+      "MARCADO": "Done. {nome} will no longer get campaigns or automatic messages.",
+      "ERRO": "Couldn't mark. Try again."
+    },
+    "ETIQUETAS": {
+      "TITULO": "{nome}'s labels",
+      "AVISO": "Check the ones {nome} should have. Uncheck to remove.",
+      "SALVAR": "Save labels",
+      "SALVAS": "Done. {nome}'s labels were saved.",
+      "ERRO": "Couldn't save the labels. Try again.",
+      "SEM_ETIQUETAS": "The account has no labels yet. An admin creates them in Settings, Labels.",
+      "NAO_CARREGOU": "Couldn't show the labels. Try again.",
+      "APAGADA_DA_CONTA": "no longer exists in the account",
+      "VOLTARAM": "Done. The labels are back to how they were."
+    },
+    "JUNTAR": {
+      "TITULO": "Merge {nome} with another person",
+      "AVISO": "Use it when the same person has two records. Look for the other one by name, phone or e-mail.",
+      "BUSCA": "Look for the other record",
+      "PLACEHOLDER": "Name, phone or e-mail",
+      "DIGITE": "Type the name, phone or e-mail of the other record.",
+      "PROCURANDO": "Looking…",
+      "NINGUEM": "Nobody found for “{termo}”. Check what you typed.",
+      "ERRO_BUSCA": "Couldn't search right now. Try again.",
+      "RESULTADOS": "Records found",
+      "ESCOLHA": "Pick the other record in the list.",
+      "SEM_CONTATO": "No phone and no e-mail",
+      "CONTINUAR": "Continue",
+      "CONFIRMA_TITULO": "Merge the two records?",
+      "FICA": "Stays",
+      "SAI": "Stops existing",
+      "O_QUE_PASSA": "Everything that belongs to {sai} (conversations, notes, labels and cards) moves to {fica}'s record.",
+      "O_QUE_FICA": "{fica}'s name, phone and e-mail stay. Whatever is missing comes from {sai}.",
+      "NAO_VOLTA": "{sai}'s record stops existing. This can't be undone.",
+      "CONFIRMAR": "Merge records",
+      "VOLTAR": "Back",
+      "JUNTADAS": "Done. Everything from {sai} is now in {fica}'s record.",
+      "ERRO": "Couldn't merge the records. Try again."
     }
   }
 }

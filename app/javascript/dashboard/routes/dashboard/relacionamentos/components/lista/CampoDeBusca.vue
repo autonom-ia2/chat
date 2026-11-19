@@ -13,6 +13,8 @@ const props = defineProps({
   placeholder: { type: String, required: true },
   // Texto menor para tela estreita (o completo não cabe em 390 px).
   placeholderCurto: { type: String, default: '' },
+  // #3071 — o nome do campo para o leitor de tela (a lista usa o padrão).
+  rotulo: { type: String, default: '' },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -76,7 +78,7 @@ onBeforeUnmount(parar);
       data-relacionamentos="busca"
       autocomplete="off"
       :placeholder="textoDoCampo"
-      :aria-label="t('RELACIONAMENTOS.LISTA.BUSCA.ROTULO')"
+      :aria-label="rotulo || t('RELACIONAMENTOS.LISTA.BUSCA.ROTULO')"
       class="w-full h-10 !mb-0 rounded-lg border-0 bg-n-alpha-black2 text-base text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-2 focus:outline-n-brand !pl-12 !pr-12 [&::-webkit-search-cancel-button]:hidden"
       @input="aoDigitar"
       @keydown.enter.prevent="avisar"

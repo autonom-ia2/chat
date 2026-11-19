@@ -281,3 +281,67 @@ describe('cards e notas fictícios', () => {
     });
   });
 });
+
+// #3071 — as ações que vieram da ficha antiga também rodam na demonstração,
+// só na memória.
+describe('ações da ficha antiga na demonstração', () => {
+  it('bloquear e desbloquear trocam o bloqueio', async () => {
+    expect((await fonte.bloquear(ID_CLIENTE_COMPLETO)).blocked).toBe(true);
+    expect((await fonte.desbloquear(ID_CLIENTE_COMPLETO)).blocked).toBe(false);
+  });
+
+  it('marcar "não quer mensagens" põe a recusa manual, e liberar a tira', async () => {
+    const marcada = await fonte.marcarNaoQuer(ID_NUNCA_CONVERSOU);
+    expect(marcada.opted_out_at).toBeTruthy();
+    expect(marcada.opt_out_source).toBe('manual');
+    expect(
+      (await fonte.liberarMensagens(ID_NUNCA_CONVERSOU)).opted_out_at
+    ).toBeNull();
+  });
+
+  it('trocar etiquetas grava a lista inteira', async () => {
+    const pessoa = await fonte.trocarEtiquetas(ID_CLIENTE_COMPLETO, ['site']);
+    expect(pessoa.labels).toEqual(['site']);
+  });
+
+  it('apagar nota tira só ela', async () => {
+    const [primeira, ...resto] = await fonte.notas(ID_CLIENTE_COMPLETO);
+    await fonte.apagarNota(ID_CLIENTE_COMPLETO, primeira.id);
+    expect(await fonte.notas(ID_CLIENTE_COMPLETO)).toEqual(resto);
+  });
+
+  it('apagar some com a pessoa', async () => {
+    await fonte.apagar(ID_NUNCA_CONVERSOU);
+    expect(await fonte.pessoa(ID_NUNCA_CONVERSOU)).toBeNull();
+  });
+
+  it('juntar: a outra some, e as conversas e etiquetas dela vêm para a que fica', async () => {
+    const antes = await fonte.conversas(ID_CLIENTE_COMPLETO);
+    const daOutra = await fonte.conversas(ID_RECUSOU_MANUAL);
+    const outra = await fonte.pessoa(ID_RECUSOU_MANUAL);
+    const junta = await fonte.juntar(ID_CLIENTE_COMPLETO, ID_RECUSOU_MANUAL);
+    expect(await fonte.pessoa(ID_RECUSOU_MANUAL)).toBeNull();
+    expect(await fonte.conversas(ID_CLIENTE_COMPLETO)).toHaveLength(
+      antes.length + daOutra.length
+    );
+    outra.labels.forEach(etiqueta => expect(junta.labels).toContain(etiqueta));
+  });
+
+  it('buscar pessoas acha pelo nome sem acento e tira a própria pessoa', async () => {
+    const alguem = pessoas()[0];
+    const primeiroNome = alguem.name.split(' ')[0];
+    const achadas = await fonte.buscarPessoas(primeiroNome, alguem.id);
+    expect(achadas.map(({ id }) => id)).not.toContain(alguem.id);
+    achadas.forEach(item =>
+      expect(semAcento(item.name).toLowerCase()).toContain(
+        semAcento(primeiroNome).toLowerCase()
+      )
+    );
+  });
+
+  it('as etiquetas da conta vêm com a cor', async () => {
+    const etiquetas = await fonte.etiquetasDaConta();
+    expect(etiquetas.length).toBeGreaterThan(0);
+    etiquetas.forEach(item => expect(item.cor).toBeTruthy());
+  });
+});

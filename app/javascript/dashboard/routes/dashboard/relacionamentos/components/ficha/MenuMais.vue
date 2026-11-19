@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   DropdownBody,
@@ -7,48 +7,19 @@ import {
   DropdownItem,
 } from 'dashboard/components-next/dropdown-menu/base';
 
-// #2894 — o "⋯" da ficha: Alterar informações, Não é mais cliente, Juntar com
-// outra pessoa, Bloquear e Apagar. É o menu suspenso da casa; os itens são
-// botões, então Tab e Enter funcionam, e Esc fecha e devolve o foco ao "⋯".
-// Emite `acao` com o nome da escolha: alterar, desmarcar, juntar, bloquear ou
-// apagar. "Não é mais cliente" só aparece para quem é cliente (`ehCliente`).
-// Quem só pode ver o contato (`podeAlterar` falso) não tem "Alterar
-// informações" nem "Não é mais cliente".
-// #2970 — o que ainda não é de verdade não aparece: Juntar, Bloquear e Apagar
-// daqui só avisam, então só existem com `naDemonstracao`. Quem usa só desenha
-// o menu com dois itens ou mais (ver `CabecalhoDaPessoa`).
-const props = defineProps({
-  podeAlterar: { type: Boolean, default: true },
-  ehCliente: { type: Boolean, default: false },
-  naDemonstracao: { type: Boolean, default: false },
+// #2894 — o "⋯" da ficha. É o menu suspenso da casa; os itens são botões,
+// então Tab e Enter funcionam, e Esc fecha e devolve o foco ao "⋯". Emite
+// `acao` com o nome da escolha.
+// #3071 — quem decide quais itens aparecem é o cabeçalho (`itens`, cada um com
+// `evento`, a `chave` do texto em RELACIONAMENTOS_FICHA.ACOES, o `icone` e,
+// para o que apaga, `perigo`, que pinta o item de vermelho).
+defineProps({
+  itens: { type: Array, required: true },
 });
 const emit = defineEmits(['acao']);
 
 const { t } = useI18n();
 const raizDoMenu = ref(null);
-
-const ITENS = [
-  { evento: 'alterar', chave: 'ALTERAR_INFORMACOES', icone: 'i-lucide-pencil' },
-  {
-    evento: 'desmarcar',
-    chave: 'DESMARCAR_CLIENTE',
-    icone: 'i-lucide-user-minus',
-  },
-  { evento: 'juntar', chave: 'JUNTAR', icone: 'i-lucide-git-merge' },
-  { evento: 'bloquear', chave: 'BLOQUEAR', icone: 'i-lucide-ban' },
-  { evento: 'apagar', chave: 'APAGAR', icone: 'i-lucide-trash-2' },
-];
-// Quando cada item aparece; os que não estão aqui aparecem sempre.
-const APARECE = {
-  alterar: () => props.podeAlterar,
-  desmarcar: () => props.podeAlterar && props.ehCliente,
-  juntar: () => props.naDemonstracao,
-  bloquear: () => props.naDemonstracao,
-  apagar: () => props.naDemonstracao,
-};
-const itensDoMenu = computed(() =>
-  ITENS.filter(item => APARECE[item.evento]?.() ?? true)
-);
 
 const botaoDoMenu = () =>
   raizDoMenu.value?.querySelector('[data-relacionamentos="mais-acoes"]');
@@ -119,12 +90,14 @@ const aoTeclar = evento => {
       </template>
       <DropdownBody class="top-12 ltr:right-0 rtl:left-0 min-w-64 z-50">
         <DropdownItem
-          v-for="item in itensDoMenu"
+          v-for="item in itens"
           :key="item.evento"
           :icon="item.icone"
           :label="t(`RELACIONAMENTOS_FICHA.ACOES.${item.chave}`)"
           :click="() => escolher(item.evento)"
+          :data-mais="item.evento"
           class="min-h-11"
+          :class="{ 'text-n-ruby-11 [&_*]:!text-n-ruby-11': item.perigo }"
         />
       </DropdownBody>
     </DropdownContainer>

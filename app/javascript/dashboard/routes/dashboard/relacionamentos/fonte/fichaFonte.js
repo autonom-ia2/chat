@@ -6,14 +6,21 @@
 //      empresa pela leitura da ficha e devolve isso. O que o servidor recusa
 //      ganha nome (ficha/falhas.js): 404 é NAO_ACHEI, 401 e 403 são SEM_ACESSO;
 //      o resto sobe como veio;
+//      #3071 — e as ações que vieram da ficha antiga: juntar com outra pessoa
+//      (actions/contact_merge: a pessoa da ficha fica, a outra é absorvida),
+//      bloquear e desbloquear (o PATCH do contato, campo `blocked`), apagar
+//      (DELETE contacts/:id), pôr e tirar etiqueta (contacts/:id/labels, com a
+//      lista inteira), apagar nota e marcar "não quer mensagens" (opt_out);
 //   2. demonstração: com `?demo=<estado>` (modoDemo.js) e só no ambiente de
 //      desenvolvimento. Os dados são inventados (demo/ficha.js), a escrita só
 //      fica na memória e tudo demora um instante, como a rede.
 // O `import.meta.env.DEV` vira `false` no build de produção: o ramo some e os
 // dados fictícios nem entram no pacote.
+import AccountActionsAPI from 'dashboard/api/accountActions';
 import CompanyAPI from 'dashboard/api/companies';
 import ContactNotesAPI from 'dashboard/api/contactNotes';
 import ContactAPI from 'dashboard/api/contacts';
+import LabelsAPI from 'dashboard/api/labels';
 import RelacionamentosAPI from 'dashboard/api/relacionamentos';
 import { NAO_ACHEI, SEM_ACESSO } from '../ficha/falhas';
 import { demoCarregando, esperarParaSempre } from './modoDemo';
@@ -37,6 +44,8 @@ const LEITURAS = {
   pessoasDaEmpresa: [],
   conversasDaEmpresa: [],
   cardsDaEmpresa: [],
+  etiquetasDaConta: [],
+  buscarPessoas: [],
 };
 const ESCRITAS = [
   'salvar',
@@ -45,6 +54,13 @@ const ESCRITAS = [
   'desmarcarCliente',
   'guardarNota',
   'liberarMensagens',
+  'marcarNaoQuer',
+  'bloquear',
+  'desbloquear',
+  'apagar',
+  'juntar',
+  'trocarEtiquetas',
+  'apagarNota',
 ];
 const METODOS = [...Object.keys(LEITURAS), ...ESCRITAS];
 
@@ -127,6 +143,15 @@ const corpoDaEmpresa = ({ name, cnpj, domain }) => ({
   },
 });
 
+// Para escolher com quem juntar: a busca da lista nova (nome, telefone, e-mail,
+// empresa, CPF), sem a própria pessoa.
+const buscarPessoas = async (termo, semId) => {
+  const { itens } = await noServidor(() =>
+    RelacionamentosAPI.pessoas({ busca: termo })
+  );
+  return itens.filter(item => item.id !== semId);
+};
+
 const fonteReal = () => ({
   usaDemo: false,
   pessoa: lerPessoa,
@@ -157,6 +182,42 @@ const fonteReal = () => ({
   async liberarMensagens(id) {
     await noServidor(() => ContactAPI.removeOptOut(id));
     return lerPessoa(id);
+  },
+  async marcarNaoQuer(id) {
+    await noServidor(() => ContactAPI.markOptOut(id));
+    return lerPessoa(id);
+  },
+  async bloquear(id) {
+    await noServidor(() => ContactAPI.update(id, { blocked: true }));
+    return lerPessoa(id);
+  },
+  async desbloquear(id) {
+    await noServidor(() => ContactAPI.update(id, { blocked: false }));
+    return lerPessoa(id);
+  },
+  async apagar(id) {
+    await noServidor(() => ContactAPI.delete(id));
+  },
+  // A pessoa da ficha (`id`) fica; a escolhida (`outraId`) é absorvida.
+  async juntar(id, outraId) {
+    await noServidor(() => AccountActionsAPI.merge(id, outraId));
+    return lerPessoa(id);
+  },
+  // As etiquetas da conta, com a cor, como a lista lê (acoesDaListaFonte.js).
+  async etiquetasDaConta() {
+    const { data } = await LabelsAPI.get(true);
+    return data.payload
+      .map(({ title, color }) => ({ nome: title, cor: color }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  },
+  buscarPessoas,
+  // A lista inteira de etiquetas que a pessoa passa a ter.
+  async trocarEtiquetas(id, etiquetas) {
+    await noServidor(() => ContactAPI.updateContactLabels(id, etiquetas));
+    return lerPessoa(id);
+  },
+  async apagarNota(id, notaId) {
+    await noServidor(() => ContactNotesAPI.delete(id, notaId));
   },
   async guardarNota(id, texto) {
     return notaDaTela(
