@@ -200,10 +200,10 @@ describe('message campaign result (#1007, PRD §6.5, O2)', () => {
     );
     // #3063: what the campaign turned into in the CRM, with the R$ of the won cards.
     expect(wrapper.find('[data-crm-deals]').text()).toContain(
-      '3 cards in the CRM · 1 won'
+      '3 cards · 1 became a sale'
     );
     expect(wrapper.find('[data-crm-won-value]').text()).toBe(
-      'R$1,800 in sales'
+      'R$1,800 in closed sales'
     );
     expect(
       JSON.parse(wrapper.find('[data-crm-link]').attributes('data-to'))

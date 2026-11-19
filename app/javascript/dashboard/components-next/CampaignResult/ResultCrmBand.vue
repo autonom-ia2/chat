@@ -23,6 +23,7 @@ const dealsText = computed(() => {
     won: number.format(deals.value.won),
   });
 });
+const noSale = computed(() => deals.value?.won === 0);
 const wonValue = computed(() =>
   deals.value
     ? wonValueText(deals.value.won_value, locale.value.replace('_', '-'))
@@ -35,33 +36,43 @@ const wonValue = computed(() =>
     class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-n-blue-6 bg-n-blue-2 px-5 py-4"
     data-crm-band
   >
-    <p
-      class="mb-0 flex min-w-0 flex-wrap items-center gap-2 text-sm text-n-slate-12"
-    >
-      <span
-        class="inline-flex rounded-full bg-n-blue-3 px-2 py-0.5 text-xs font-semibold text-n-blue-11"
+    <div class="flex min-w-0 flex-col gap-1">
+      <p
+        v-if="deals"
+        class="mb-0 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-n-slate-11"
+        data-crm-deals
       >
-        {{ t('RESULT_JOURNEY.CRM.PILL') }}
-      </span>
-      <span class="min-w-0 break-words">
-        {{ t('RESULT_JOURNEY.CRM.BAND') }}
-        <strong>{{ t('RESULT_JOURNEY.CRM.MARK', { name }) }}</strong>
-      </span>
-    </p>
-    <p
-      v-if="deals"
-      class="mb-0 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-n-slate-11"
-      data-crm-deals
-    >
-      <strong
-        v-if="wonValue"
-        class="text-lg font-semibold tabular-nums text-n-slate-12"
-        data-crm-won-value
+        <strong
+          v-if="noSale"
+          class="text-sm font-medium text-n-slate-11"
+          data-crm-no-sale
+        >
+          {{ t('RESULT_JOURNEY.CRM.NO_SALE') }}
+        </strong>
+        <strong
+          v-else-if="wonValue"
+          class="text-lg font-semibold tabular-nums text-n-slate-12"
+          data-crm-won-value
+        >
+          {{ t('RESULT_JOURNEY.CRM.WON_VALUE', { value: wonValue }) }}
+        </strong>
+        <span class="tabular-nums">{{ dealsText }}</span>
+      </p>
+      <p
+        class="mb-0 flex min-w-0 flex-wrap items-center gap-2"
+        :class="deals ? 'text-xs text-n-slate-11' : 'text-sm text-n-slate-12'"
       >
-        {{ t('RESULT_JOURNEY.CRM.WON_VALUE', { value: wonValue }) }}
-      </strong>
-      <span class="tabular-nums">{{ dealsText }}</span>
-    </p>
+        <span
+          class="inline-flex rounded-full bg-n-blue-3 px-2 py-0.5 text-xs font-semibold text-n-blue-11"
+        >
+          {{ t('RESULT_JOURNEY.CRM.PILL') }}
+        </span>
+        <span class="min-w-0 break-words">
+          {{ t('RESULT_JOURNEY.CRM.BAND') }}
+          <strong>{{ t('RESULT_JOURNEY.CRM.MARK', { name }) }}</strong>
+        </span>
+      </p>
+    </div>
     <router-link
       v-if="crm.enabled && crm.source_id"
       :to="route"

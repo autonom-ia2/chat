@@ -40,8 +40,9 @@
       "BAND": "Whoever replied already shows in the CRM with the mark",
       "MARK": "Campaign: {name}",
       "OPEN": "See in the CRM",
-      "DEALS": "{cards} cards in the CRM · {won} won",
-      "WON_VALUE": "{value} in sales"
+      "DEALS": "{cards} cards · {won} became a sale",
+      "WON_VALUE": "{value} in closed sales",
+      "NO_SALE": "No closed sale yet"
     },
     "PEOPLE": {
       "TITLE": "People",
@@ -114,9 +115,9 @@
         "REPLIED": "Replied",
         "REPLIED_NOTE": "{rate} of those reached · all in the CRM",
         "DEALS": "Became CRM cards",
-        "DEALS_NOTE": "cards with a campaign mark · {won} won",
+        "DEALS_NOTE": "cards with a campaign mark · {won} became a sale",
         "REVENUE": "Closed sales",
-        "REVENUE_NOTE": "in money, from the {won} won cards",
+        "REVENUE_NOTE": "total of the {won} closed sales",
         "EMAIL_HEALTH": "E-mail health",
         "EMAIL_HEALTH_NOTE": "permanent bounce · limit 5% · complaints {complaints} (limit 0.1%)"
       },

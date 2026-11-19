@@ -119,6 +119,7 @@ const kpis = computed(() => {
         key: 'revenue',
         label: t(`${NS}.TOTALS.REVENUE`),
         display: revenue,
+        wide: true,
         note: t(`${NS}.TOTALS.REVENUE_NOTE`, { won: number(value.deals.won) }),
       });
     }

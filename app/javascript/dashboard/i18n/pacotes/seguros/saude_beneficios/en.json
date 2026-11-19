@@ -1256,12 +1256,13 @@
       "TOTALS": {
         "DEALS_NOTE": "cards with a campaign mark · {won} implemented",
         "REVENUE": "Premium implemented",
-        "REVENUE_NOTE": "premium of the {won} implemented · on a renewal, the new plan’s"
+        "REVENUE_NOTE": "total premium of the {won} implemented. On a renewal, the new plan’s counts."
       }
     },
     "CRM": {
-      "DEALS": "{cards} cards in the CRM · {won} implemented",
-      "WON_VALUE": "{value} in premium"
+      "DEALS": "{cards} cards · {won} implemented",
+      "WON_VALUE": "{value} in premium",
+      "NO_SALE": "No plan implemented yet"
     }
   },
   "AGENT_MGMT": {

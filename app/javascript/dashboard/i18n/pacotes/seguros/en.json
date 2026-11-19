@@ -173,12 +173,13 @@
       "TOTALS": {
         "DEALS_NOTE": "cards with a campaign mark · {won} closed",
         "REVENUE": "Premium closed",
-        "REVENUE_NOTE": "premium of the {won} closed · on a renewal, the new policy’s"
+        "REVENUE_NOTE": "total premium of the {won} policies closed. On a renewal, the new policy’s counts."
       }
     },
     "CRM": {
-      "DEALS": "{cards} cards in the CRM · {won} closed",
-      "WON_VALUE": "{value} in premium"
+      "DEALS": "{cards} cards · {won} policies closed",
+      "WON_VALUE": "{value} in premium",
+      "NO_SALE": "No policy closed yet"
     }
   },
   "AUTOMATION": {

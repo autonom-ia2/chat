@@ -1256,12 +1256,13 @@
       "TOTALS": {
         "DEALS_NOTE": "cards com marca de campanha · {won} implantados",
         "REVENUE": "Prêmio implantado",
-        "REVENUE_NOTE": "prêmio dos {won} implantados · na renovação, o do plano novo"
+        "REVENUE_NOTE": "soma do prêmio dos {won} implantados. Na renovação, conta o do plano novo."
       }
     },
     "CRM": {
-      "DEALS": "{cards} cards no CRM · {won} implantados",
-      "WON_VALUE": "{value} de prêmio"
+      "DEALS": "{cards} cards · {won} implantados",
+      "WON_VALUE": "{value} de prêmio",
+      "NO_SALE": "Nenhum plano implantado ainda"
     }
   },
   "AGENT_MGMT": {
