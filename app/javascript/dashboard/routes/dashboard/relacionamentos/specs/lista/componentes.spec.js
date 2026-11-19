@@ -510,13 +510,14 @@ describe('LinhaDePessoa', () => {
     expect(w.attributes('data-relacionamentos')).toBe('linha');
     expect(w.text()).toContain('Ana Albuquerino');
     expect(w.text()).toContain(
-      '+55 11 91031-0001 · Padaria Brandolim · Falou há 3 dias'
+      '+55 11 91031-0001 · Falou há 3 dias · Padaria Brandolim'
     );
   });
 
-  // #3057 (revisão) — no celular, 2 linhas e não 4: telefone e "Falou…"
-  // juntos, com "·"; a empresa desce para a última linha, cortada com "…".
-  it('no celular telefone e "Falou…" ficam juntos e a empresa desce; de sm para cima, uma linha com "·"', () => {
+  // #3057 (revisão) — no celular, 2 linhas e não 4: o telefone numa linha;
+  // "Falou…" e a empresa na de baixo, a empresa cortada com "…". O "·" só
+  // aparece entre partes da mesma linha: nunca pendurado no fim de uma.
+  it('no celular o telefone fica numa linha e "Falou…" e a empresa na outra; de sm para cima, uma linha com "·"', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
     });
@@ -524,21 +525,21 @@ describe('LinhaDePessoa', () => {
     expect(filhos.map(f => f.text())).toEqual([
       '+55 11 91031-0001',
       '·',
-      'Padaria Brandolim',
-      '·',
       'Falou há 3 dias',
+      '·',
+      'Padaria Brandolim',
     ]);
-    const [, antesDaEmpresa, empresa, antesDoFalou, falou] = filhos;
-    expect(antesDaEmpresa.classes()).toEqual(['hidden', 'sm:inline']);
-    expect(antesDoFalou.classes()).toEqual(['whitespace-pre']);
+    const [telefone, depoisDoTelefone, falou, antesDaEmpresa, empresa] = filhos;
+    expect(telefone.classes()).toEqual([
+      'max-sm:basis-full',
+      'max-sm:truncate',
+    ]);
+    expect(depoisDoTelefone.classes()).toEqual(['hidden', 'sm:inline']);
+    expect(falou.classes()).toEqual(['max-sm:whitespace-nowrap']);
+    expect(antesDaEmpresa.classes()).toEqual(['whitespace-pre']);
     expect(empresa.classes()).toEqual(
-      expect.arrayContaining([
-        'max-sm:order-last',
-        'max-sm:basis-full',
-        'max-sm:truncate',
-      ])
+      expect.arrayContaining(['max-sm:flex-1', 'max-sm:truncate'])
     );
-    expect(falou.classes()).toContain('max-sm:whitespace-nowrap');
   });
 
   it('sem empresa, sobra um "·" só entre o telefone e o "Falou há…"', () => {

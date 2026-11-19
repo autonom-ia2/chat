@@ -16,7 +16,9 @@ import { ORDENS_DE_SEGUROS } from '../../fonte/carteiraFonte';
 // #3057 — os controles têm a altura dos campos do design system (h-10), todos
 // iguais; a área de toque dos botões continua com 44 px (o ::before). Os dois
 // atalhos da renovação moram num botão-menu só, "Renovações ▾" (no celular
-// também), para não disputar com a busca, a ordem e os filtros.
+// também), para não disputar com a busca, a ordem e os filtros. No celular a
+// ordem ganha a linha dela e "Mais filtros" e "Renovações" dividem a de baixo:
+// os três numa linha só espremiam a ordem até sobrar uma letra.
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -81,8 +83,12 @@ const rotuloDosFiltros = computed(() =>
         @update:model-value="emit('update:busca', $event)"
       />
     </div>
-    <div class="flex items-center w-full gap-3 md:w-auto">
-      <div class="flex items-center flex-1 min-w-0 gap-2 md:flex-none">
+    <div
+      class="flex flex-wrap items-center w-full gap-3 md:w-auto md:flex-nowrap"
+    >
+      <div
+        class="flex items-center flex-1 min-w-0 gap-2 max-sm:basis-full md:flex-none"
+      >
         <label
           :for="idDaOrdem"
           class="text-sm sr-only text-n-slate-11 sm:not-sr-only"
@@ -101,15 +107,16 @@ const rotuloDosFiltros = computed(() =>
       <Button
         slate
         faded
-        class="relative shrink-0 whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
+        class="relative shrink-0 whitespace-nowrap max-sm:flex-1 before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
         icon="i-lucide-sliders-horizontal"
         data-carteira="mais-filtros"
         aria-haspopup="dialog"
         :label="rotuloDosFiltros"
         @click="emit('abrirFiltros')"
       />
-      <div data-carteira="renovacoes" class="shrink-0">
+      <div data-carteira="renovacoes" class="shrink-0 max-sm:flex-1">
         <MenuMaisAcoes
+          class="w-full"
           :texto="ca('RENOVACOES')"
           :itens="atalhos"
           para-baixo

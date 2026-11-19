@@ -44,10 +44,11 @@ const quando = () => {
   }
   return textos.quando(props.seguro, props.agora);
 };
-// No celular, "Auto · Seguradora" numa linha e o vencimento na outra.
+// No celular, "Auto · Seguradora" numa linha (a seguradora cortada com "…" se
+// não couber) e o vencimento na outra.
 const partes = computed(() => [
   tipo.value,
-  props.seguro.seguradora,
+  { texto: props.seguro.seguradora, corta: true },
   {
     texto: props.dizSemTelefone ? ca('SEM_TELEFONE') : quando(),
     sozinha: true,
