@@ -1202,6 +1202,9 @@
     },
     "LIVE_CHAT": {
       "URL_PLACEHOLDER": "https://www.suacorretora.com.br/planos-de-saude"
+    },
+    "RITMO": {
+      "FORA_DA_CONTA": "Não entram nessa conta: o aviso de renovação do plano, as respostas a quem acabou de escrever e as conversas da sua equipe."
     }
   },
   "MACROS": {

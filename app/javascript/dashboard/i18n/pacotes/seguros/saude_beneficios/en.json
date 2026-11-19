@@ -1202,6 +1202,9 @@
     },
     "LIVE_CHAT": {
       "URL_PLACEHOLDER": "https://www.yourbrokerage.com/health-plans"
+    },
+    "RITMO": {
+      "FORA_DA_CONTA": "Not counted: the plan renewal notice, replies to someone who just wrote and your team’s conversations."
     }
   },
   "MACROS": {
