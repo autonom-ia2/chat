@@ -9,6 +9,8 @@ class Autonomia::Agents::SourceFile
   end
 
   def url
+    return unless @blob.service.exist?(@blob.key)
+
     disposition = INLINE_TYPES.include?(@blob.content_type) ? :inline : :attachment
     @blob.url(expires_in: URL_TTL, disposition: disposition)
   end

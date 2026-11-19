@@ -54,10 +54,12 @@ Guide, translations and Instagram integration checks passed. Automated code and
 security reviews completed without findings.
 
 The additional bounded email-regression workflow passed its behavioral tests but
-blocked on one Style/SafeNavigation offense in the new controller. The follow-up
-uses an explicit attachment guard before checking the storage object. Final CI
-must confirm this cleanup on the updated head; initial green tests are not final
-head verification.
+blocked on one Style/SafeNavigation offense in the new controller. Splitting that
+guard then exposed the controller's ABC-size limit. The final cleanup keeps the
+attachment guard in the controller and the storage existence check in SourceFile,
+alongside URL expiration and disposition. A service example covers missing
+storage without URL generation. Final CI must confirm this cleanup on the
+updated head; initial green tests are not final head verification.
 
 No merge, deployment, production Rails, paid AI test, or direct production access
 performed for this implementation.
