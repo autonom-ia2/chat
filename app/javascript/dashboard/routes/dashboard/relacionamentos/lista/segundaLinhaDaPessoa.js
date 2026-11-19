@@ -13,9 +13,14 @@ const quandoFalou = (pessoa, agora, t) => {
     : t(quando.chave, { count: quando.count }, quando.count);
 };
 
-export const segundaLinhaDaPessoa = (pessoa, agora, t) =>
-  [
+// #3057 (revisão) — a empresa vem com `sozinha`: no celular ela desce para a
+// última linha, cortada se não couber, e telefone e "Falou" ficam juntos
+// (components/lista/SegundaLinha.vue).
+export const segundaLinhaDaPessoa = (pessoa, agora, t) => {
+  const empresa = pessoa.additional_attributes?.company_name;
+  return [
     formatarTelefone(pessoa.phone_number) || t(`${LINHA}.SEM_TELEFONE`),
-    pessoa.additional_attributes?.company_name,
+    empresa && { texto: empresa, sozinha: true },
     quandoFalou(pessoa, agora, t),
   ].filter(Boolean);
+};

@@ -275,7 +275,7 @@ describe('"Enviar proposta"', () => {
     expect(w.find(daCarteira('enviar-proposta')).exists()).toBe(false);
     expect(w.findAll('button')).toHaveLength(0);
     expect(w.get(daCarteira('enviar-apoio')).text()).toBe(
-      'A proposta só vai ao cliente quando você clicar.'
+      'A proposta só vai ao cliente quando você tocar em Enviar proposta.'
     );
   });
 

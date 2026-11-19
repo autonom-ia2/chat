@@ -14,6 +14,8 @@
 // #3057 — `escolherFunilNovo(id)`: o funil acabou de ser criado. Relê os funis
 // da conta, sem voltar ao "carregando", e deixa o novo escolhido no rascunho,
 // com a primeira etapa. O que estava guardado não muda: quem guarda é o Salvar.
+// `relerConta()`: relê só o que a conta tem (os funis), sem tocar no rascunho:
+// o que a pessoa mexeu e não salvou continua na tela.
 import { computed, ref } from 'vue';
 import { useEstadoDaFicha } from '../ficha/useEstadoDaFicha';
 import { ajustesMudaram, comOFunil, semOFunil } from './ajustesDaRenovacao';
@@ -87,9 +89,14 @@ export const useAjustesDaRenovacao = fonte => {
     }
   };
 
-  const escolherFunilNovo = async funilId => {
+  const relerConta = async () => {
     const { ajustes, ...resto } = await fonte.ajustes();
     conta.value = resto;
+    return resto;
+  };
+
+  const escolherFunilNovo = async funilId => {
+    const resto = await relerConta();
     rascunho.value = comOFunil(rascunho.value, resto.funis, funilId);
   };
 
@@ -106,6 +113,7 @@ export const useAjustesDaRenovacao = fonte => {
     mudou: computed(() => ajustesMudaram(salvos.value, rascunho.value)),
     carregar: () => carregar(buscar),
     salvar,
+    relerConta,
     escolherFunilNovo,
   };
 };

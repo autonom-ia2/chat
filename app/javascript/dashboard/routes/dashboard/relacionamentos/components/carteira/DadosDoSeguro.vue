@@ -3,6 +3,7 @@ import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import BotaoCopiar from '../ficha/BotaoCopiar.vue';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
+import { ehTipoOutro } from '../../carteira/tiposDeSeguro';
 
 // #2897 — "Dados do seguro": a lista "nome: valor" da gaveta. O número da
 // apólice fica à vista, com copiar. O que falta mostra "Não informado"; a linha
@@ -13,6 +14,9 @@ import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
 // #3043 (E8.1) — os dados do segurado que a cotação da renovação usa
 // (nascimento, sexo, CEP, placa e classe de bônus) só aparecem quando o seguro
 // os tem: o que falta não vira "Não informado".
+// #3057 (revisão) — "Na planilha estava como" só aparece no seguro de tipo
+// "Outro": é aí que ela diz o que é o seguro (o tipo não foi reconhecido). Nos
+// outros tipos ela só repetia o tipo com outra grafia.
 const props = defineProps({
   seguro: { type: Object, required: true },
   agora: { type: Number, default: () => Date.now() },
@@ -41,7 +45,11 @@ const linhas = computed(() => {
   const { seguro } = props;
   return [
     { chave: 'tipo', valor: textos.tipo(seguro) },
-    { chave: 'ramo', valor: seguro.ramoOriginal, soComValor: true },
+    {
+      chave: 'ramo',
+      valor: ehTipoOutro(seguro.tipo) ? seguro.ramoOriginal : '',
+      soComValor: true,
+    },
     { chave: 'seguradora', valor: seguro.seguradora },
     { chave: 'numero', valor: seguro.numero, copiar: true, inteiro: true },
     { chave: 'comeca', valor: dataOuNada(seguro.comeca) },

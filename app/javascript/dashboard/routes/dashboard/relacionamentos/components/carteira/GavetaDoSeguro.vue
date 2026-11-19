@@ -179,7 +179,9 @@ const comEnviar = computed(() =>
 const rodape = computed(() =>
   rodapeDoSeguro(seguro.value, {
     podeEditar: props.podeEditar,
-    podeConversar: props.podeConversar,
+    // Só com a pessoa do seguro: sem ela não há com quem conversar (igual à
+    // linha da aba Seguros).
+    podeConversar: props.podeConversar && Boolean(seguro.value?.pessoa?.id),
     podeEnviar: comEnviar.value,
     agora: props.agora,
   })

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
+import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TituloDoDialogo from '../../../comum/TituloDoDialogo.vue';
@@ -24,6 +25,8 @@ import { SEM_ACESSO } from '../../../../ficha/falhas';
 // campo com rótulo e ajuda; "Mostrar a senha" dentro do campo (fecha de novo
 // ao fechar a janela); o recado de erro numa faixa com ícone, em palavras de
 // gente. Entrar é o botão azul, girando enquanto o Agger responde.
+// #3057 (revisão) — um aviso de segredo só (o cadeado embaixo da senha); os
+// botões do rodapé têm 44 px (size lg).
 const props = defineProps({
   conectar: { type: Function, required: true },
 });
@@ -129,9 +132,7 @@ defineExpose({
         type="text"
         autocomplete="username"
         custom-input-class="!h-11 !text-base"
-        wrap-message
         :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.CAMPO_LOGIN')"
-        :message="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.AJUDA_LOGIN')"
       />
       <div class="flex flex-col gap-1">
         <div class="relative">
@@ -175,5 +176,28 @@ defineExpose({
         <span>{{ alerta }}</span>
       </p>
     </div>
+    <template #footer>
+      <div class="flex items-center w-full gap-3">
+        <Button
+          slate
+          faded
+          size="lg"
+          type="button"
+          class="w-full"
+          data-carteira="voltar-do-login"
+          :label="t('RELACIONAMENTOS_CARTEIRA.AGGER.LOGIN.VOLTAR')"
+          @click="dialogo?.close()"
+        />
+        <Button
+          size="lg"
+          type="submit"
+          class="w-full"
+          data-carteira="entrar-no-agger"
+          :label="rotuloDeEntrar"
+          :is-loading="ocupado"
+          :disabled="ocupado"
+        />
+      </div>
+    </template>
   </Dialog>
 </template>

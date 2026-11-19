@@ -5,6 +5,8 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import SegundaLinha from '../lista/SegundaLinha.vue';
 import { useTextosDoSeguro } from '../../carteira/useTextosDoSeguro';
+import { diasParaTerminar, seloDoSeguro } from '../../fonte/selosDoSeguro';
+import { venceLogo } from '../../carteira/tomDoSelo';
 import SeloDoSeguro from './SeloDoSeguro.vue';
 
 // #2897 — um seguro na lista: iniciais e nome de quem é o segurado (inteiro,
@@ -15,6 +17,8 @@ import SeloDoSeguro from './SeloDoSeguro.vue';
 // (lista/LinhaDePessoa.vue): fica por cima e não abre a gaveta. No desktop,
 // sempre à vista e discreto; no celular, só o ícone de balão. Quem conversa é
 // a pessoa (`seguro.pessoa`), mesmo quando o segurado é a empresa dela.
+// #3057 (revisão) — quem vence logo diz o prazo no selo ("Vence em 3 dias") e
+// a linha de baixo diz só a data.
 const props = defineProps({
   seguro: { type: Object, required: true },
   // No grupo "Sem telefone", é isso que a linha diz no lugar do vencimento.
@@ -32,12 +36,22 @@ const ca = (chave, valores) =>
 const tipo = computed(() => textos.tipo(props.seguro));
 const nome = computed(() => props.seguro.segurado.nome);
 const comQuem = computed(() => props.seguro.pessoa?.name || nome.value);
+// O seguro que vence logo já diz o prazo no selo: embaixo fica só a data.
+const quando = () => {
+  const dias = diasParaTerminar(props.seguro, props.agora);
+  if (venceLogo(seloDoSeguro(props.seguro, props.agora), dias)) {
+    return textos.dataInteira(props.seguro.termina);
+  }
+  return textos.quando(props.seguro, props.agora);
+};
+// No celular, "Auto · Seguradora" numa linha e o vencimento na outra.
 const partes = computed(() => [
   tipo.value,
   props.seguro.seguradora,
-  props.dizSemTelefone
-    ? ca('SEM_TELEFONE')
-    : textos.quando(props.seguro, props.agora),
+  {
+    texto: props.dizSemTelefone ? ca('SEM_TELEFONE') : quando(),
+    sozinha: true,
+  },
 ]);
 </script>
 
@@ -62,7 +76,7 @@ const partes = computed(() => [
         >
           {{ nome }}
         </button>
-        <SeloDoSeguro :seguro="seguro" :agora="agora" />
+        <SeloDoSeguro :seguro="seguro" :agora="agora" com-prazo />
       </div>
       <SegundaLinha :partes="partes" />
     </div>
@@ -73,6 +87,9 @@ const partes = computed(() => [
       class="relative z-10 hidden sm:inline-flex"
       data-carteira="conversar"
       :label="t('RELACIONAMENTOS.COMUM.CONVERSAR')"
+      :aria-label="
+        t('RELACIONAMENTOS.LISTA.LINHA.CONVERSAR_COM', { nome: comQuem })
+      "
       @click="emit('conversar', seguro)"
     />
     <Button

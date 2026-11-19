@@ -188,6 +188,17 @@ describe('o seguro que vence logo, sem renovação aberta', () => {
     ]);
   });
 
+  // Revisão: sem a pessoa (o seguro é de uma empresa sem contato), não há com
+  // quem conversar, mesmo para quem pode.
+  it('sem a pessoa, não oferece "Conversar"', async () => {
+    const w = await abrir(
+      { ...VENCE_LOGO, pessoaId: null, pessoa: null },
+      { podeConversar: true }
+    );
+
+    expect(w.text()).not.toContain('Conversar com');
+  });
+
   it('"Conversar" abre a conversa mais recente da pessoa', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockResolvedValue({
       data: [{ id: 412 }, { id: 300 }],
@@ -217,13 +228,19 @@ describe('o seguro que vence logo, sem renovação aberta', () => {
     expect(useAlert).not.toHaveBeenCalled();
   });
 
-  it('se as conversas não vêm, também abre a "Nova conversa"', async () => {
+  // Revisão: sem saber se já há conversa, abrir uma nova duplicaria a de
+  // quem já conversa. Avisa e para.
+  it('se as conversas não vêm, avisa e não abre conversa nenhuma', async () => {
     RelacionamentosAPI.conversasDaPessoa.mockRejectedValue(erroHttp(500));
     const w = await abrir(VENCE_LOGO, { podeConversar: true });
 
     await clicar(w, daCarteira('gaveta-acao'));
 
-    expect(conversaNova.abrir).toHaveBeenCalledWith(23);
+    expect(useAlert).toHaveBeenCalledWith(
+      'Não consegui ver as conversas dessa pessoa agora. Tente de novo.'
+    );
+    expect(conversaNova.abrir).not.toHaveBeenCalled();
+    expect(roteador.push).not.toHaveBeenCalled();
   });
 
   it('se a "Nova conversa" não abre, diz que ainda não conversaram e onde está o telefone', async () => {
@@ -345,8 +362,10 @@ describe('"Enviar proposta" pergunta antes', () => {
       query: { card_id: '88' },
     });
     expect(pdf.attributes('target')).toBe('_blank');
-    expect(textoDe(w, '[data-confirmar]')).toBe('Enviar agora');
-    expect(textoDe(w, '[data-cancelar]')).toBe('Voltar');
+    expect(textoDe(w, '[data-carteira="dialogo-confirmar"]')).toBe(
+      'Enviar agora'
+    );
+    expect(textoDe(w, '[data-carteira="dialogo-voltar"]')).toBe('Voltar');
     // Enviar não destrói nada: o botão de confirmar é o azul.
     expect(w.get('[data-dialogo-falso]').attributes('data-tipo')).toBe('edit');
   });
@@ -359,7 +378,7 @@ describe('"Enviar proposta" pergunta antes', () => {
     const w = await abrir(COM_PROPOSTA, { fonte });
     await clicar(w, daCarteira('gaveta-acao'));
 
-    await clicar(w, '[data-confirmar]');
+    await clicar(w, '[data-carteira="dialogo-confirmar"]');
 
     expect(fonte.enviarProposta).toHaveBeenCalledTimes(1);
     expect(fonte.enviarProposta).toHaveBeenCalledWith(7, undefined);
@@ -375,7 +394,7 @@ describe('"Enviar proposta" pergunta antes', () => {
     const w = await abrir(COM_PROPOSTA, { fonte });
     await clicar(w, daCarteira('gaveta-acao'));
 
-    await clicar(w, '[data-cancelar]');
+    await clicar(w, '[data-carteira="dialogo-voltar"]');
 
     expect(pergunta(w).exists()).toBe(false);
     expect(fonte.enviarProposta).not.toHaveBeenCalled();
@@ -389,7 +408,7 @@ describe('"Enviar proposta" pergunta antes', () => {
     const w = await abrir(COM_PROPOSTA, { fonte });
     await clicar(w, daCarteira('gaveta-acao'));
 
-    await clicar(w, '[data-confirmar]');
+    await clicar(w, '[data-carteira="dialogo-confirmar"]');
 
     expect(pergunta(w).exists()).toBe(false);
     expect(w.find(daCarteira('alerta-da-gaveta')).exists()).toBe(true);
@@ -429,7 +448,7 @@ describe('o rodapé com a proposta pronta', () => {
 
     expect(azul(w).text()).toBe('Enviar proposta');
     expect(azul(w).attributes('data-acao')).toBe(DO_RODAPE.ENVIAR_PROPOSTA);
-    expect(textoDe(w, daCarteira('renovou'))).toBe('Renovou');
+    expect(textoDe(w, daCarteira('renovou'))).toBe('Cliente renovou');
     expect(
       w.find(daCarteira('cotacao-do-seguro')).findAll('button')
     ).toHaveLength(0);

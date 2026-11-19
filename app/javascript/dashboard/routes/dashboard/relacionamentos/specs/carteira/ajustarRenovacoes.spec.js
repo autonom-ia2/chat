@@ -454,7 +454,7 @@ describe('conta sem funil, para quem pode criar funil', () => {
     const w = await abrir();
 
     expect(w.get(daCarteira('sem-funil')).text()).toContain(
-      'Sua conta ainda não tem funil. Eu crio o funil de renovações para você, já com as etapas.'
+      'Sua conta ainda não tem um funil. Funil é o quadro do CRM onde cada renovação vira um cartão. Eu crio um pronto para você.'
     );
     expect(w.get(daCarteira('criar-funil')).text()).toBe(
       'Criar o funil de renovações para mim'
@@ -549,7 +549,7 @@ describe('conta sem funil, para quem pode criar funil', () => {
 
     const recado = w.get(daCarteira('funil-nao-criado'));
     expect(recado.text()).toBe(
-      'Criei o funil, mas faltou alguma etapa. Confira o funil Renovação no CRM.'
+      'O funil Renovação foi criado. Confira as etapas no CRM.'
     );
     expect(recado.text()).not.toContain('Tente de novo');
     expect(recado.attributes('role')).toBe('alert');
@@ -557,6 +557,31 @@ describe('conta sem funil, para quem pode criar funil', () => {
     expect(escolhas(w)[0].props('modelValue')).toBe(9);
     expect(escolhas(w)[1].props('modelValue')).toBe(91);
     expect(w.find(daCarteira('funil-criado')).exists()).toBe(false);
+  });
+
+  // Revisão: criou o funil mas a releitura falhou. A tela não recarrega (o
+  // que apagaria o recado e o que a pessoa mexeu): fica e diz o que fazer.
+  it('criou mas não releu: fica na tela e manda escolher o funil na lista', async () => {
+    SegurosAPI.renovacoes
+      .mockResolvedValueOnce({
+        data: doServidor({ ajustes: SEM_ESCOLHA, funis: [] }),
+      })
+      .mockRejectedValue(new Error('500'));
+    criacao.criar.mockRejectedValue(
+      Object.assign(new Error('FunilIncompleto'), {
+        name: 'FunilIncompleto',
+        funil: { id: 9, name: 'Renovação' },
+      })
+    );
+    const w = await abrir();
+
+    await clicar(w, daCarteira('criar-funil'));
+
+    expect(w.get(daCarteira('funil-nao-criado')).text()).toBe(
+      'Criei o funil Renovação, mas não consegui deixá-lo escolhido. Escolha o funil Renovação na lista.'
+    );
+    expect(w.find(daCarteira('erro')).exists()).toBe(false);
+    expect(w.find(daCarteira('sem-funil')).exists()).toBe(true);
   });
 });
 
@@ -600,11 +625,48 @@ describe('sair sem salvar', () => {
     saida.guarda(DESTINO);
     await assentar();
 
+    // O roteador de verdade chama a guarda durante o push.
+    let passouNaGuarda;
+    roteador.push.mockImplementationOnce(async destino => {
+      passouNaGuarda = saida.guarda(destino);
+    });
+
     await clicar(w, daCarteira('sair-sem-salvar'));
 
     expect(roteador.push).toHaveBeenCalledWith(DESTINO);
+    expect(passouNaGuarda).toBe(true);
     expect(SegurosAPI.salvarRenovacoes).not.toHaveBeenCalled();
-    expect(saida.guarda(DESTINO)).toBe(true);
+  });
+
+  it('depois de sair (ou da navegação falhar), a guarda volta a perguntar', async () => {
+    servidorResponde();
+    const w = await abrir();
+    await mudarOsDias(w);
+    saida.guarda(DESTINO);
+    await assentar();
+    // vue-router devolve a falha (navegação cancelada) em vez de rejeitar.
+    roteador.push.mockResolvedValueOnce({ type: 4 });
+
+    await clicar(w, daCarteira('sair-sem-salvar'));
+    await assentar();
+
+    expect(saida.guarda(DESTINO)).toBe(false);
+  });
+
+  // Revisão: fechar a aba ou recarregar com algo não salvo também pergunta
+  // (o navegador mostra a pergunta dele).
+  it('fechar a aba com algo mudado pede ao navegador que pergunte; sem nada mudado, não', async () => {
+    servidorResponde();
+    const w = await abrir();
+    const fecharAAba = () => {
+      const evento = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(evento);
+      return evento.defaultPrevented;
+    };
+
+    expect(fecharAAba()).toBe(false);
+    await mudarOsDias(w);
+    expect(fecharAAba()).toBe(true);
   });
 
   it('"Salvar ajustes" guarda e segue para onde ia', async () => {

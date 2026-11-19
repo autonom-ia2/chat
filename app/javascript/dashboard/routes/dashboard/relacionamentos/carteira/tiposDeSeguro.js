@@ -18,6 +18,9 @@ const ICONES = {
 
 const conhecido = tipo => (TIPOS_DE_SEGURO.includes(tipo) ? tipo : 'outro');
 
+// O tipo que a tela não reconhece (ou "outro" mesmo): o nome dele é "Outro".
+export const ehTipoOutro = tipo => conhecido(tipo) === 'outro';
+
 export const iconeDoTipo = tipo => ICONES[conhecido(tipo)];
 
 export const chaveDoTipo = tipo =>

@@ -12,11 +12,15 @@ import { usePodeComecarConversa } from 'dashboard/components-next/NovaConversa/u
 // e leem o contato do store: `abrir` busca o contato (contacts/show, a mesma
 // leitura da página do contato) e aciona o gatilho, um botão escondido.
 // Devolve `false` quando não abriu: quem olha só lê conversas (#1800), ou o
-// contato não veio.
+// contato não veio. As duas telas alternam no clique (abrem e fecham): o
+// gatilho guarda o `isOpen` que elas mandam, `abrir` só clica se ainda está
+// fechada e devolve o que ficou de verdade.
 const store = useStore();
 const podeComecar = usePodeComecarConversa();
 const contatoId = ref(null);
 const gatilho = useTemplateRef('gatilho');
+
+const estaAberta = () => gatilho.value?.dataset.aberta === 'true';
 
 const abrir = async pessoaId => {
   if (!podeComecar.value) return false;
@@ -28,8 +32,9 @@ const abrir = async pessoaId => {
   contatoId.value = String(pessoaId);
   await nextTick();
   if (!gatilho.value) return false;
-  gatilho.value.click();
-  return true;
+  if (!estaAberta()) gatilho.value.click();
+  await nextTick();
+  return estaAberta();
 };
 
 defineExpose({ abrir });
@@ -37,9 +42,10 @@ defineExpose({ abrir });
 
 <template>
   <NovaConversaEntrada v-if="contatoId" :contact-id="contatoId">
-    <template #trigger>
+    <template #trigger="{ isOpen }">
       <button
         ref="gatilho"
+        :data-aberta="String(Boolean(isOpen))"
         type="button"
         tabindex="-1"
         aria-hidden="true"

@@ -232,14 +232,23 @@ describe('os grupos e a lista', () => {
     const [primeira] = linhas(w);
 
     expect(linhas(w)).toHaveLength(POR_PAGINA);
-    // #3057 — o ativo que termina em até 30 dias diz "Vence logo".
-    expect(primeira.find(daCarteira('selo')).text()).toBe('Vence logo');
-    expect(primeira.text()).toContain('vence em 3 dias');
+    // #3057 — o ativo que termina em até 30 dias diz o prazo no selo, e a
+    // segunda linha fica só com a data.
+    expect(primeira.find(daCarteira('selo')).text()).toBe('Vence em 3 dias');
+    const segunda = primeira.get('[data-segunda-linha]').text();
+    expect(segunda).not.toContain('vence em');
+    const DIA_MS = 24 * 60 * 60 * 1000;
+    const daquiATresDias = new Date(Date.now() + 3 * DIA_MS);
+    expect(segunda).toContain(daquiATresDias.toLocaleDateString('pt-BR'));
     // Nada de caixinha: a linha abre o seguro e tem "Conversar" (o botão no
     // desktop e o ícone no celular).
     expect(primeira.find('input').exists()).toBe(false);
     expect(primeira.findAll('button')).toHaveLength(3);
     expect(textoDe(primeira, daCarteira('conversar'))).toBe('Conversar');
+    // O leitor de tela ouve com quem, também no desktop.
+    expect(
+      primeira.get(daCarteira('conversar')).attributes('aria-label')
+    ).toContain('Conversar com ');
   });
 
   // #3057 — "Conversar" da linha não abre a gaveta. Na demonstração as
@@ -510,7 +519,12 @@ describe('fora da demonstração (o servidor)', () => {
       'Você tem 1 seguro. Ele não vence nos próximos 7 dias.'
     );
     expect(nomes(w)).toEqual(['Ana Albuquerino']);
-    expect(linhas(w)[0].text()).toContain('vence em 17 dias (29/11');
+    expect(linhas(w)[0].find(daCarteira('selo')).text()).toBe(
+      'Vence em 17 dias'
+    );
+    expect(linhas(w)[0].get('[data-segunda-linha]').text()).toContain(
+      '29/11/2026'
+    );
   });
 
   it('sem nada vencendo na semana e com vencidos, o herói fala deles e leva ao grupo', async () => {

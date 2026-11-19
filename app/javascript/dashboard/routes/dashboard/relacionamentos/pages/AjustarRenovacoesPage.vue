@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, useId, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
+import { useEventListener } from '@vueuse/core';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import {
@@ -29,7 +30,7 @@ import ErroComTentarDeNovo from '../components/comum/ErroComTentarDeNovo.vue';
 import EsqueletoDeLista from '../components/comum/EsqueletoDeLista.vue';
 import VazioComUmBotao from '../components/comum/VazioComUmBotao.vue';
 import AvisoVivo from '../components/ficha/AvisoVivo.vue';
-import LinkDeVolta from '../components/ficha/LinkDeVolta.vue';
+import VoltarDoTrazer from '../components/carteira/trazer/VoltarDoTrazer.vue';
 import CartoesDeEscolha from '../components/trazer/CartoesDeEscolha.vue';
 import CampoDeDias from '../components/carteira/renovacao/CampoDeDias.vue';
 import CartaoDeAjuste from '../components/carteira/renovacao/CartaoDeAjuste.vue';
@@ -214,31 +215,48 @@ const salvar = async () => {
 };
 
 // Criou: o funil e a primeira etapa ficam escolhidos, e o foco vai ao funil
-// (o leitor de tela ouve qual é). Se a releitura dos funis falha depois de
-// criar, a tela recarrega e o funil novo aparece na lista para escolher.
-// O recado diz se ficou faltando alguma etapa (`incompleto`).
+// (o leitor de tela ouve qual é). O recado diz se é para conferir as etapas
+// no CRM (`incompleto`). Se a releitura dos funis falha depois de criar, o
+// rascunho fica como a pessoa deixou (nada de recarregar a tela, que apagaria
+// o que ela mexeu) e o recado manda escolher o funil novo na lista.
+const recadoDoCriado = (funil, incompleto) => {
+  if (incompleto) {
+    return {
+      tipo: 'alerta',
+      texto: ta('ONDE.FUNIL_INCOMPLETO', { funil: funil.name }),
+    };
+  }
+  return {
+    tipo: 'feito',
+    texto: ta('ONDE.FUNIL_CRIADO', { funil: funil.name }),
+  };
+};
+// Relê só a conta; se nem isso deu, o recado já diz o que fazer.
+const relerAConta = async () => {
+  try {
+    await tela.relerConta();
+  } catch {
+    // O recado na tela já explica; a lista de funis fica como estava.
+  }
+};
 const escolherOFunilCriado = async (funil, incompleto = false) => {
+  semRecado();
   try {
     await tela.escolherFunilNovo(funil.id);
   } catch {
-    tela.carregar();
+    recadoDoFunil.value = {
+      tipo: 'alerta',
+      texto: ta('ONDE.FUNIL_SEM_ESCOLHA', { funil: funil.name }),
+    };
+    await relerAConta();
     return;
   }
-  semRecado();
-  recadoDoFunil.value = incompleto
-    ? {
-        tipo: 'alerta',
-        texto: ta('ONDE.FUNIL_INCOMPLETO', { funil: funil.name }),
-      }
-    : {
-        tipo: 'feito',
-        texto: ta('ONDE.FUNIL_CRIADO', { funil: funil.name }),
-      };
+  recadoDoFunil.value = recadoDoCriado(funil, incompleto);
   await nextTick();
   onde.value?.focar(FALTAS.FUNIL);
 };
-// Não criou: o recado diz para tentar de novo, e a tela relê o que a conta tem
-// (o funil pode ter nascido sem uma parte das etapas).
+// Não criou: o recado diz para tentar de novo, e a tela relê só a conta (o
+// rascunho fica como a pessoa deixou).
 const criarFunil = async () => {
   if (funilNovo.criando.value) return;
   recadoDoFunil.value = SEM_RECADO;
@@ -254,7 +272,7 @@ const criarFunil = async () => {
       tipo: 'alerta',
       texto: ta('ONDE.ERRO_CRIAR_FUNIL'),
     };
-    tela.carregar();
+    await relerAConta();
     return;
   }
   await escolherOFunilCriado(funil);
@@ -272,11 +290,17 @@ onBeforeRouteLeave(destino => {
   dialogoDeSair.value?.abrir();
   return false;
 });
-const seguirSaida = () => {
+// A licença de sair sem perguntar vale só para esta saída: se a navegação
+// não acontecer, a próxima saída pergunta de novo.
+const seguirSaida = async () => {
   const destino = saidaPendente.value;
   saidaPendente.value = null;
   dialogoDeSair.value?.fechar();
-  if (destino) router.push(destino);
+  try {
+    if (destino) await router.push(destino);
+  } finally {
+    saiSemSalvar = false;
+  }
 };
 const sairSemSalvar = () => {
   saiSemSalvar = true;
@@ -286,12 +310,21 @@ const sairSemSalvar = () => {
 // que falta ou o que houve, como no Salvar de sempre.
 const salvarESair = async () => {
   if (await salvar()) {
-    seguirSaida();
+    await seguirSaida();
     return;
   }
   saidaPendente.value = null;
   dialogoDeSair.value?.fechar();
 };
+
+// Fechar a aba ou recarregar com algo não salvo: o navegador pergunta antes.
+useEventListener(window, 'beforeunload', evento => {
+  if (!temAlgoSemSalvar()) return;
+  evento.preventDefault();
+  // Navegadores mais antigos só perguntam com o returnValue preenchido.
+  // eslint-disable-next-line no-param-reassign
+  evento.returnValue = '';
+});
 
 onMounted(async () => {
   if (!temCarteira.value) {
@@ -314,11 +347,7 @@ onMounted(async () => {
       <div
         class="flex flex-col flex-1 w-full max-w-3xl gap-6 px-5 pt-8 pb-10 mx-auto md:px-8 md:pt-10"
       >
-        <LinkDeVolta
-          :texto="ta('VOLTAR')"
-          :rotulo="ta('VOLTAR_ROTULO')"
-          @voltar="voltar"
-        />
+        <VoltarDoTrazer :aba="ABA_SEGUROS" />
         <div class="flex flex-col gap-2">
           <h1
             data-titulo-da-tela
@@ -412,7 +441,7 @@ onMounted(async () => {
           <template v-if="temFunis">
             <CartaoDeAjuste marca="ajuste-dias" :titulo="ta('DIAS.TITULO')">
               <div class="flex flex-col gap-2">
-                <label :for="`${id}-dias`" class="text-base text-n-slate-12">
+                <label :for="`${id}-dias`" class="sr-only">
                   {{ ta('DIAS.ROTULO') }}
                 </label>
                 <div data-carteira="dias-antes">
@@ -531,6 +560,7 @@ onMounted(async () => {
           <Button
             slate
             faded
+            size="lg"
             type="button"
             class="w-full"
             data-carteira="sair-sem-salvar"
@@ -538,6 +568,7 @@ onMounted(async () => {
             @click="sairSemSalvar"
           />
           <Button
+            size="lg"
             type="button"
             class="w-full"
             data-carteira="salvar-e-sair"

@@ -13,7 +13,7 @@ import { DialogoFalso } from './apoio';
 // aba de onde a pessoa veio (`?aba=`); PDFs e Agger voltam a "Como trazer". As
 // fontes ficam esperando para sempre: aqui só importa o topo das telas. Junto,
 // o redesenho: os caminhos do mais fácil para o mais trabalhoso, as etapas da
-// jornada, o começo do Agger em 3 passos e a janela do login.
+// jornada, o começo do Agger numa frase e a janela do login.
 vi.mock('dashboard/api/relacionamentosTrazerPdfs', () => ({ default: {} }));
 vi.mock('dashboard/api/relacionamentosTrazerAgger', () => ({ default: {} }));
 vi.mock('dashboard/api/autonomiaInsurance', () => ({ default: {} }));
@@ -136,7 +136,7 @@ describe('"Como trazer"', () => {
       caminhos: ['planilha', 'pdfs', 'agger'],
     });
 
-    expect(w.get('h1').text()).toBe('Escolha o que você tem em mãos');
+    expect(w.get('h1').text()).toBe('Como você quer trazer seus clientes?');
     const caminhos = w.findAll('[data-como]');
     expect(caminhos.map(c => c.attributes('data-como'))).toEqual([
       'agger',
@@ -170,16 +170,13 @@ describe('"Como trazer"', () => {
 });
 
 describe('"Do Agger": o começo', () => {
-  it('explica em 3 passos, mostra o selo da senha e o botão grande', async () => {
+  it('explica numa frase, mostra o selo da senha e o botão grande', async () => {
     const w = await montar(TrazerDoAgger, { fonte: fonteParada() });
 
-    expect(
-      w.findAll('[data-carteira="passos-do-agger"] li').map(p => p.text())
-    ).toEqual([
-      '1Você entra com o login e a senha do Agger.',
-      '2Eu busco no Agger os seguros dos seus clientes.',
-      '3Você confere tudo antes de qualquer coisa entrar.',
-    ]);
+    expect(w.find('[data-carteira="passos-do-agger"]').exists()).toBe(false);
+    expect(w.get('[data-carteira="inicio-do-agger"]').text()).toContain(
+      'Eu busco no Agger os seguros dos seus clientes. Você confere antes de qualquer coisa entrar.'
+    );
     expect(w.get('[data-carteira="selo-do-agger"]').text()).toBe(
       'Sua senha fica guardada em segredo e serve só para buscar seus seguros.'
     );
@@ -198,26 +195,27 @@ describe('a janela do login do Agger', () => {
   };
   const senha = w => w.get('#carteira-agger-senha');
 
-  it('tem cabeçalho com a frase de confiança e cada campo com rótulo e ajuda', async () => {
+  it('tem cabeçalho com a frase de apoio e cada campo com rótulo', async () => {
     const w = await abrirJanela(vi.fn());
     const janela = w.get('[data-carteira="login-do-agger"]');
 
     expect(janela.text()).toContain('Entrar no Agger');
     expect(janela.text()).toContain(
-      'Eles servem só para eu buscar os seus seguros lá.'
+      'Use o mesmo login e a mesma senha que você usa no Agger.'
     );
+    // Um só aviso de segredo: o cadeado embaixo da senha.
+    expect(janela.text()).not.toContain('servem só');
     expect(w.get('label[for="carteira-agger-login"]').text()).toBe(
       'Login do Agger'
-    );
-    expect(janela.text()).toContain(
-      'O mesmo que você digita para entrar no Agger.'
     );
     expect(w.get('label[for="carteira-agger-senha"]').text()).toBe(
       'Senha do Agger'
     );
     expect(janela.text()).toContain('A senha fica guardada em segredo.');
-    expect(w.get('[data-confirmar]').text()).toBe('Entrar e buscar');
-    expect(w.get('[data-cancelar]').text()).toBe('Voltar');
+    expect(w.get('[data-carteira="entrar-no-agger"]').text()).toBe(
+      'Entrar e buscar'
+    );
+    expect(w.get('[data-carteira="voltar-do-login"]').text()).toBe('Voltar');
   });
 
   it('"Mostrar a senha" mostra e esconde, e a senha volta escondida ao fechar', async () => {
@@ -230,7 +228,7 @@ describe('a janela do login do Agger', () => {
     expect(senha(w).attributes('type')).toBe('text');
     expect(olho().attributes('aria-label')).toBe('Esconder a senha');
 
-    await w.get('[data-cancelar]').trigger('click');
+    await w.get('[data-carteira="voltar-do-login"]').trigger('click');
     w.vm.abrir();
     await flushPromises();
     expect(senha(w).attributes('type')).toBe('password');
@@ -242,7 +240,7 @@ describe('a janela do login do Agger', () => {
     await w.get('#carteira-agger-login').setValue('exemplo');
     await senha(w).setValue('segredo-de-teste');
 
-    await w.get('[data-confirmar]').trigger('click');
+    await w.get('[data-carteira="entrar-no-agger"]').trigger('click');
     await flushPromises();
 
     const alerta = w.get('[data-carteira="alerta-do-login"]');
@@ -257,7 +255,7 @@ describe('a janela do login do Agger', () => {
     await w.get('#carteira-agger-login').setValue('exemplo');
     await senha(w).setValue('segredo-de-teste');
 
-    await w.get('[data-confirmar]').trigger('click');
+    await w.get('[data-carteira="entrar-no-agger"]').trigger('click');
     await flushPromises();
 
     expect(w.get('[data-dialogo-falso]').attributes('data-carregando')).toBe(

@@ -48,8 +48,8 @@ import VoltarDoTrazer from '../VoltarDoTrazer.vue';
 // oferece a janela do login: diz para pedir a quem administra a conta.
 //
 // #3057 — no topo, a volta a "Como trazer" (VoltarDoTrazer) e as etapas da
-// jornada (Buscar → Conferir → Pronto). O começo explica em 3 passos curtos o
-// que acontece, mostra o selo de confiança (a senha fica guardada em segredo e
+// jornada (Buscar → Conferir → Pronto). O começo explica numa frase o que
+// acontece, mostra o selo de confiança (a senha fica guardada em segredo e
 // serve só para buscar os seguros) e o botão principal, grande.
 const props = defineProps({
   fonte: { type: Object, default: () => trazerAggerFonte() },
@@ -158,7 +158,6 @@ const NA_JORNADA = {
   [ETAPAS_DO_AGGER.PRONTO]: 2,
 };
 const naJornada = computed(() => NA_JORNADA[etapa.value] ?? 0);
-const PASSOS = ['UM', 'DOIS', 'TRES'];
 
 watch(etapa, async () => {
   await nextTick();
@@ -217,26 +216,6 @@ onBeforeUnmount(busca.parar);
           <p class="m-0 text-lg text-n-slate-12 text-pretty">
             {{ t('RELACIONAMENTOS_CARTEIRA.AGGER.APOIO') }}
           </p>
-          <ol
-            data-carteira="passos-do-agger"
-            class="flex flex-col gap-4 p-0 m-0 list-none"
-          >
-            <li
-              v-for="(passo, indice) in PASSOS"
-              :key="passo"
-              class="flex items-start gap-3"
-            >
-              <span
-                aria-hidden="true"
-                class="flex items-center justify-center text-sm font-semibold rounded-full size-8 shrink-0 bg-n-blue-3 text-n-blue-11 tabular-nums"
-              >
-                {{ indice + 1 }}
-              </span>
-              <span class="pt-1 text-base text-n-slate-12 text-pretty">
-                {{ t(`RELACIONAMENTOS_CARTEIRA.AGGER.PASSOS.${passo}`) }}
-              </span>
-            </li>
-          </ol>
           <p
             data-carteira="selo-do-agger"
             class="flex items-start gap-3 p-4 m-0 text-sm font-medium rounded-2xl bg-n-teal-2 text-n-teal-11 ring-1 ring-inset ring-n-teal-5"

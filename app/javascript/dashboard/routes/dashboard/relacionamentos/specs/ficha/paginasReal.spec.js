@@ -527,7 +527,7 @@ describe('ficha da pessoa: escritas', () => {
     const w = await abrirPessoa();
     RelacionamentosAPI.pessoa.mockResolvedValue({ data: ANA });
     await w.get(marca('liberar')).trigger('click');
-    await w.get('[data-confirmar]').trigger('click');
+    await w.get(marca('liberar-confirmar')).trigger('click');
     await flushPromises();
     expect(ContactAPI.removeOptOut).toHaveBeenCalledWith(7);
     expect(w.find(marca('faixa-nao-quer')).exists()).toBe(false);

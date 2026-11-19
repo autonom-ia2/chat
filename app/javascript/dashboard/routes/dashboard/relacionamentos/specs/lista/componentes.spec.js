@@ -514,7 +514,9 @@ describe('LinhaDePessoa', () => {
     );
   });
 
-  it('cada informação é um bloco no celular; o "·" só aparece de sm para cima, entre blocos', () => {
+  // #3057 (revisão) — no celular, 2 linhas e não 4: telefone e "Falou…"
+  // juntos, com "·"; a empresa desce para a última linha, cortada com "…".
+  it('no celular telefone e "Falou…" ficam juntos e a empresa desce; de sm para cima, uma linha com "·"', () => {
     const w = mount(LinhaDePessoa, {
       props: { pessoa: pessoa(), agora: AGORA },
     });
@@ -526,19 +528,17 @@ describe('LinhaDePessoa', () => {
       '·',
       'Falou há 3 dias',
     ]);
-    const separadores = filhos.filter(f => f.text() === '·');
-    separadores.forEach(f =>
-      expect(f.classes()).toEqual(
-        expect.arrayContaining(['hidden', 'sm:inline'])
-      )
+    const [, antesDaEmpresa, empresa, antesDoFalou, falou] = filhos;
+    expect(antesDaEmpresa.classes()).toEqual(['hidden', 'sm:inline']);
+    expect(antesDoFalou.classes()).toEqual(['whitespace-pre']);
+    expect(empresa.classes()).toEqual(
+      expect.arrayContaining([
+        'max-sm:order-last',
+        'max-sm:basis-full',
+        'max-sm:truncate',
+      ])
     );
-    filhos
-      .filter(f => f.text() !== '·')
-      .forEach(f =>
-        expect(f.classes()).toEqual(
-          expect.arrayContaining(['block', 'sm:inline'])
-        )
-      );
+    expect(falou.classes()).toContain('max-sm:whitespace-nowrap');
   });
 
   it('sem empresa, sobra um "·" só entre o telefone e o "Falou há…"', () => {

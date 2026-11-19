@@ -13,12 +13,15 @@
 // no catálogo base do CRM, em todo idioma.
 // `podeCriar` é a regra do botão "Criar funil" do CRM (canManagePipelines).
 // `criar()` devolve o funil criado ({ id, name, … }) ou lança o erro do pedido.
-// A ação do CRM grava o funil e só depois as etapas, uma a uma: se uma etapa
-// falha, o funil já existe (e já está na lista do CRM, que a ação atualiza
-// assim que ele nasce). Sem mexer na ação, a diferença aparece na lista: um
-// funil que não estava lá antes do pedido nasceu. Nesse caso `criar()` lança
+// A ação do CRM grava o funil e só depois as etapas, a ordem delas e a
+// releitura dos funis e do quadro: se qualquer passo depois do funil falha, o
+// funil já existe (e já está na lista do CRM, que a ação atualiza assim que
+// ele nasce). Sem mexer na ação, a diferença aparece na lista: um funil que
+// não estava lá antes do pedido nasceu. Nesse caso `criar()` lança
 // `{ name: FUNIL_INCOMPLETO, funil }`, para a tela não mandar "tentar de novo"
-// (criaria outro funil) e deixar o que nasceu escolhido.
+// (criaria outro funil) e deixar o que nasceu escolhido. Como a falha pode ter
+// sido numa etapa ou só numa releitura, a tela usa um texto neutro: o funil
+// foi criado, confira as etapas no CRM.
 import { computed, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';

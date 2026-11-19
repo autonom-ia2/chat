@@ -34,7 +34,11 @@ vi.mock(
           if (aberta.value) ponte.aberturas.push(props.contactId);
         };
         return () =>
-          h('span', { 'data-ponte': '', onClick: alternar }, slots.trigger?.());
+          h(
+            'span',
+            { 'data-ponte': '', onClick: alternar },
+            slots.trigger?.({ isOpen: aberta.value })
+          );
       },
     }),
   })
@@ -88,6 +92,23 @@ describe('ConversaNova', () => {
     expect(await w.vm.abrir(23)).toBe(false);
     expect(loja.dispatch).not.toHaveBeenCalled();
     expect(ponte.aberturas).toEqual([]);
+  });
+
+  // Revisão: o gatilho alterna. Se a "Nova conversa" já está aberta, um
+  // clique a fecharia; a tela lê o estado do gatilho antes e depois.
+  it('já aberta: não clica de novo (não fecha) e devolve o estado real', async () => {
+    const w = montar();
+    await w.vm.abrir(23);
+    await flushPromises();
+
+    const abriu = await w.vm.abrir(23);
+    await flushPromises();
+
+    expect(abriu).toBe(true);
+    expect(ponte.aberturas).toEqual(['23']);
+    expect(
+      w.get('[data-carteira="abrir-conversa-nova"]').attributes('data-aberta')
+    ).toBe('true');
   });
 
   it('o contato não veio: não abre e devolve false', async () => {

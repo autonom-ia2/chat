@@ -2,8 +2,9 @@
 // gaveta do seguro. É o "Conversar" da ficha (pages/FichaDaPessoaPage.vue):
 // abre a conversa mais recente da pessoa, pela mesma leitura (as conversas que
 // quem olha pode ler, fonte/fichaFonte.js) e pela mesma rota
-// (ficha/useAcoesDaFicha.js). Se a leitura das conversas falha, conta como
-// "sem conversa" (abaixo). Na demonstração as pessoas são
+// (ficha/useAcoesDaFicha.js). Se a leitura das conversas falha, o aviso diz
+// que não deu para ver as conversas e nada abre: abrir uma conversa nova para
+// quem talvez já tenha conversa criaria outra. Na demonstração as pessoas são
 // inventadas: o clique só avisa, como na lista de pessoas.
 //   conversar(pessoa): pessoa = { id, name }
 // #3057 (2ª rodada) — quem ainda não conversou não vai mais para a ficha (lá o
@@ -25,12 +26,8 @@ export const useConversarComPessoa = ({
   const fonte = fichaFonte();
 
   const conversaMaisRecente = async pessoaId => {
-    try {
-      const [maisRecente] = await fonte.conversas(pessoaId);
-      return maisRecente ?? null;
-    } catch {
-      return null;
-    }
+    const [maisRecente] = await fonte.conversas(pessoaId);
+    return maisRecente ?? null;
   };
 
   return async pessoa => {
@@ -40,7 +37,13 @@ export const useConversarComPessoa = ({
       );
       return;
     }
-    const conversa = await conversaMaisRecente(pessoa.id);
+    let conversa;
+    try {
+      conversa = await conversaMaisRecente(pessoa.id);
+    } catch {
+      useAlert(t('RELACIONAMENTOS_CARTEIRA.GAVETA.CONVERSAS_NAO_LIDAS'));
+      return;
+    }
     if (conversa) {
       acoes.abrirConversa(conversa.id);
       return;

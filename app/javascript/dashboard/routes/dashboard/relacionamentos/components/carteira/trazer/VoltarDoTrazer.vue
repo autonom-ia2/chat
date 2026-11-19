@@ -13,12 +13,15 @@ import { ABA_SEGUROS } from '../../../fonte/gruposDeSeguros';
 // carregam junto. Sem aba no endereço, é Pessoas, a aba que a lista abre.
 // `para="como"` (PDFs e Agger) volta à pergunta "Como trazer", na mesma aba de
 // origem, sem o lote ou a busca em andamento (eles continuam no histórico).
+// #3057 (revisão) — `aba` fixa a aba de volta, para a tela que só tem uma
+// origem ("Ajustar renovações" volta sempre para Seguros).
 const props = defineProps({
   para: {
     type: String,
     default: 'origem',
     validator: valor => ['origem', 'como'].includes(valor),
   },
+  aba: { type: String, default: '' },
 });
 
 const { t } = useI18n();
@@ -30,9 +33,10 @@ const NOME_DA_ABA = {
   [ABAS.EMPRESAS]: 'EMPRESAS',
   [ABA_SEGUROS]: 'SEGUROS',
 };
-const abaDeOrigem = computed(() =>
-  NOME_DA_ABA[route.query.aba] ? route.query.aba : ABAS.PESSOAS
-);
+const abaDeOrigem = computed(() => {
+  const aba = props.aba || route.query.aba;
+  return NOME_DA_ABA[aba] ? aba : ABAS.PESSOAS;
+});
 const naAbaDeOrigem = computed(() =>
   abaDeOrigem.value === ABAS.PESSOAS ? {} : { aba: abaDeOrigem.value }
 );

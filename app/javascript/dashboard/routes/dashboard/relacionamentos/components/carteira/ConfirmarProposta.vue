@@ -88,6 +88,7 @@ defineExpose({
     tipo="edit"
     :titulo="tc('TITULO')"
     :aviso="aviso"
+    aviso-forte
     :confirmar="tc('ENVIAR')"
     :voltar="tc('VOLTAR')"
     :ocupado="ocupado"
@@ -99,7 +100,7 @@ defineExpose({
       target="_blank"
       rel="noopener noreferrer"
       data-carteira="ver-pdf-da-proposta"
-      class="inline-flex items-center self-start gap-1 text-base font-medium rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      class="inline-flex items-center self-start gap-1 text-sm font-medium rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
     >
       <span class="size-4 i-lucide-file-text" aria-hidden="true" />
       {{ tc('VER_PDF') }}

@@ -12,9 +12,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // ou 'lg' (48 px, ao lado de botões grandes, como no rodapé de uma gaveta).
 // #2898 — `paraBaixo` abre a lista para baixo (o "⋯" que mora no alto da tela).
 // O item não quebra em duas linhas: o menu alarga até caber o maior texto.
+// #3057 — `texto` troca o "⋯" por um botão com nome e a setinha ("Renovações
+// ▾"), com a mesma lista embaixo. A área de toque continua com 44 px.
 const props = defineProps({
   itens: { type: Array, required: true },
   rotulo: { type: String, default: '' },
+  texto: { type: String, default: '' },
   paraBaixo: { type: Boolean, default: false },
   tamanho: {
     type: String,
@@ -95,6 +98,22 @@ onClickOutside(raiz, () => {
 <template>
   <div ref="raiz" class="relative" @keydown="aoTeclar" @focusout="aoSairDoFoco">
     <Button
+      v-if="texto"
+      slate
+      faded
+      :size="tamanho"
+      class="relative whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
+      icon="i-lucide-chevron-down"
+      trailing-icon
+      data-relacionamentos="mais-acoes"
+      aria-haspopup="menu"
+      :aria-expanded="aberto ? 'true' : 'false'"
+      :aria-controls="idDoMenu"
+      :label="texto"
+      @click="alternar"
+    />
+    <Button
+      v-else
       slate
       faded
       :size="tamanho"

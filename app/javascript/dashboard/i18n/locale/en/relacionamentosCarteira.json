@@ -24,7 +24,8 @@
       "RENOVADO": "Renewed",
       "DESCONHECIDO": "Policy",
       "CANCELADO": "Cancelled",
-      "DE_FORA": "From another broker"
+      "DE_FORA": "From another broker",
+      "VENCE_EM_DIAS": "Ends today | Ends tomorrow | Ends in {count} days"
     },
     "CAMPOS": {
       "TIPO": "Type of insurance",
@@ -94,9 +95,7 @@
     "LISTA": {
       "BUSCA": "Search by name or policy number",
       "BUSCA_CURTA": "Search policy",
-      "RESULTADOS": "Results",
       "AJUSTAR": "Renewal settings",
-      "MAIS": "More options for the policies",
       "ORDENAR": {
         "ROTULO": "Sort",
         "VENCE_PRIMEIRO": "Ends first",
@@ -125,7 +124,9 @@
       "LIMPAR_BUSCA": "Clear search",
       "ERRO": "I could not show the policies. Try again.",
       "SEM_ACESSO": "You do not have access to this account's policies.",
-      "EXEMPLO_LEGENDA": "Your list of policies will look like this:"
+      "EXEMPLO_LEGENDA": "Your list of policies will look like this:",
+      "RENOVACOES": "Renewals",
+      "VER_RESULTADOS": "See how the renewals went"
     },
     "PESSOAS": {
       "BUSCA": "Search by name, phone, document or policy",
@@ -255,7 +256,7 @@
         "CORRIGIR": "Fix",
         "MARCAR_CANCELADO": "Mark as cancelled",
         "DESFAZER_CANCELAMENTO": "Undo the cancellation",
-        "RENOVOU": "Renewed",
+        "RENOVOU": "Client renewed",
         "NAO_RENOVOU": "Did not renew",
         "GUARDAR_APOLICE_NOVA": "Save the new policy",
         "DESFAZER_RENOVACAO": "Undo the renewal result",
@@ -264,7 +265,8 @@
         "ENVIAR_PROPOSTA": "Send proposal",
         "ENVIAR_DE_NOVO": "Send again"
       },
-      "SEM_CONVERSA": "You have not talked here yet. The phone number is on the person’s page."
+      "SEM_CONVERSA": "You have not talked here yet. The phone number is on the person’s page.",
+      "CONVERSAS_NAO_LIDAS": "I could not check this person’s conversations right now. Try again."
     },
     "CORRIGIR": {
       "TITULO": "Fix the {tipo} policy",
@@ -375,9 +377,9 @@
       "TITULO": "Renewal",
       "QUEM_CUIDA": "In charge: {nome}",
       "DIZER_O_MOTIVO": "Say why it did not renew",
-      "ABRIR_NO_CRM": "Open in the CRM",
+      "ABRIR_NO_CRM": "See the renewal card",
       "SITUACAO": {
-        "EM_ETAPA": "It is in the {funil} pipeline, at the {etapa} stage.",
+        "EM_ETAPA": "The renewal is at “{etapa}”.",
         "EM_ANDAMENTO": "The renewal is in progress. Whoever is in charge of it records whether it renewed or not.",
         "RENOVOU_FALTA": "Renewed. The new policy still has to be saved.",
         "RENOVOU": "Renewed. The new policy is already saved.",
@@ -486,7 +488,7 @@
         "SEGURADO_NOME": "insured's name",
         "SEGURADO_CEP": "ZIP code (CEP)"
       },
-      "ENVIAR_APOIO": "The proposal only goes to the client when you click.",
+      "ENVIAR_APOIO": "The proposal only goes to the client when you tap Send proposal.",
       "CONFIRMAR": {
         "TITULO": "Send the proposal?",
         "PARA": "It goes to {nome} through the WhatsApp {caixa}: the {valor} proposal, from {seguradora}, with the PDF.",
@@ -502,7 +504,6 @@
       "TITULO": "Renewal settings",
       "APOIO": "Change what you want and save.",
       "APOIO_SEM_FUNIL": "Choose the pipeline where renewals stay. Until then, no renewal shows up.",
-      "VOLTAR": "Policies",
       "VOLTAR_ROTULO": "Back to the policies",
       "ERRO": "I could not open the settings. Try again.",
       "SALVAR": "Save settings",
@@ -523,7 +524,7 @@
       "ONDE": {
         "TITULO": "Where do renewals stay?",
         "SEM_FUNIL": "Your account has no pipeline yet. Create a pipeline in the CRM and come back here to choose.",
-        "SEM_FUNIL_CRIAR": "Your account has no pipeline yet. I can create the renewal pipeline for you, with the stages ready.",
+        "SEM_FUNIL_CRIAR": "Your account has no pipeline yet. A pipeline is the CRM board where each renewal becomes a card. I create one ready for you.",
         "CRIAR_FUNIL": "Create the renewal pipeline for me",
         "FUNIL_CRIADO": "I created the {funil} pipeline and already chose it. Now tap Save settings, down below.",
         "ERRO_CRIAR_FUNIL": "I could not create the pipeline. Try again.",
@@ -533,9 +534,10 @@
         "ESCOLHA_O_FUNIL": "Choose the pipeline",
         "ETAPA": "At which stage does the renewal enter?",
         "ESCOLHA_A_ETAPA": "Choose the stage",
-        "APOIO": "The renewal of each policy that gets close to the end shows up in the pipeline, at the stage you choose. While nobody chooses, no renewal shows up.",
-        "FUNIL_INCOMPLETO": "I created the pipeline, but a stage is missing. Check the {funil} pipeline in the CRM.",
-        "CRIAR_FUNIL_CURTO": "Create the pipeline for me"
+        "APOIO": "The renewal of each policy that gets close to the end shows up in the pipeline, at the stage you choose.",
+        "FUNIL_INCOMPLETO": "The {funil} pipeline was created. Check its stages in the CRM.",
+        "CRIAR_FUNIL_CURTO": "Create the pipeline for me",
+        "FUNIL_SEM_ESCOLHA": "I created the {funil} pipeline, but could not select it. Choose the {funil} pipeline in the list."
       },
       "DIAS": {
         "TITULO": "How many days before the end?",
@@ -855,7 +857,7 @@
     },
     "PDFS": {
       "TITULO": "Bring policies from PDFs",
-      "APOIO": "Choose the policy PDFs. I read each one and show what I found before anything comes in.",
+      "APOIO": "Choose the policy PDFs. I read each one for you.",
       "ENVIANDO": "Sending the PDFs…",
       "LENDO": "Reading the PDFs… {lidos} of {total} read. You can leave this page: the reading continues.",
       "NAO_DEU": "I could not do that. Try again.",
@@ -863,7 +865,7 @@
       "PARADO": "This is taking longer than usual. Tap \"Try again\" and I will continue where I stopped.",
       "TENTAR_DE_NOVO": "Try again",
       "COMO": {
-        "TITULO": "Choose what you have at hand",
+        "TITULO": "How do you want to bring in your clients?",
         "PLANILHA": {
           "TITULO": "An Excel or Google Sheets spreadsheet",
           "APOIO": "A list with your clients and the policies of each one."
@@ -946,7 +948,7 @@
     },
     "AGGER": {
       "TITULO": "Bring your policies from Agger",
-      "APOIO": "I look up your clients' policies in Agger and show what I found before anything comes in.",
+      "APOIO": "I look up your clients’ policies in Agger. You check them before anything comes in.",
       "BUSCAR": "Bring my policies from Agger",
       "BUSCANDO": "Looking up your policies… You can leave this page: the search continues.",
       "PARADO": "This is taking longer than usual. Tap \"Try again\".",
@@ -1019,7 +1021,7 @@
       },
       "LOGIN": {
         "TITULO": "Sign in to Agger",
-        "PARA_QUE": "Use the same login and password you use in Agger. They are used only for me to look up your policies there.",
+        "PARA_QUE": "Use the same login and password you use in Agger.",
         "CAMPO_LOGIN": "Agger login",
         "CAMPO_SENHA": "Agger password",
         "ENTRAR": "Sign in and search",
@@ -1029,7 +1031,6 @@
         "RECUSADO": "Agger did not accept this login and password. Check them and try again.",
         "FORA_DO_AR": "Agger is down right now. Try again later.",
         "NAO_DEU": "I could not reach Agger right now. Try again.",
-        "AJUDA_LOGIN": "The same one you type to sign in to Agger.",
         "AJUDA_SENHA": "Your password is kept secret.",
         "MOSTRAR_SENHA": "Show the password",
         "ESCONDER_SENHA": "Hide the password"
@@ -1063,11 +1064,6 @@
           "VOLTAR": "Back"
         },
         "QUANDO": "{quando} · {situacao}"
-      },
-      "PASSOS": {
-        "UM": "You sign in with your Agger login and password.",
-        "DOIS": "I look up your clients’ policies in Agger.",
-        "TRES": "You check everything before anything comes in."
       },
       "SELO": "Your password is kept secret and is used only to look up your policies."
     },

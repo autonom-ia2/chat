@@ -61,7 +61,7 @@ const aoSoltar = evento => {
       type="button"
       data-carteira="soltar-pdf"
       :aria-describedby="`${id}-apoio`"
-      class="flex flex-col items-center justify-center gap-4 p-8 text-center transition-colors border-2 min-h-56 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
+      class="flex flex-col items-center justify-center gap-4 p-8 text-center group transition-colors border-2 min-h-56 rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand"
       :class="
         arrastando
           ? 'border-solid border-n-blue-9 bg-n-blue-2'
@@ -96,7 +96,7 @@ const aoSoltar = evento => {
       </span>
       <span
         data-carteira="escolher-pdfs"
-        class="items-center hidden gap-2 px-6 text-base font-medium text-white sm:inline-flex rounded-xl pointer-events-none h-11 bg-n-brand"
+        class="items-center hidden gap-2 px-6 text-base font-medium text-white sm:inline-flex rounded-lg pointer-events-none h-11 bg-n-blue-11 group-hover:bg-n-blue-12"
       >
         <span class="i-lucide-folder-open size-5" aria-hidden="true" />
         {{ tp(varios ? 'ESCOLHER_VARIOS' : 'ESCOLHER') }}

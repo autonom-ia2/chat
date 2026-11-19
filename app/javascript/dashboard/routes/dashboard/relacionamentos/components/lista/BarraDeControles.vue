@@ -75,7 +75,7 @@ const rotuloDosFiltros = computed(() =>
         v-if="comFiltros"
         slate
         faded
-        class="relative shrink-0 whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-0.5"
+        class="relative shrink-0 whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
         icon="i-lucide-sliders-horizontal"
         data-relacionamentos="mais-filtros"
         aria-haspopup="dialog"

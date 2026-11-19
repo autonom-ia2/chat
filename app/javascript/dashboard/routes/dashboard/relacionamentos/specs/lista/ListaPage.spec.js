@@ -417,8 +417,7 @@ describe('ListaPage: cheia', () => {
     });
   });
 
-  // #3057 — a fila é de uma linha só também no desktop: rola igual.
-  it('de md em diante a fila também rola a pílula escolhida para dentro', async () => {
+  it('de md em diante a fileira quebra em linhas: não há o que rolar', async () => {
     const rolou = vi.fn();
     const original = HTMLElement.prototype.scrollIntoView;
     HTMLElement.prototype.scrollIntoView = rolou;
@@ -433,7 +432,7 @@ describe('ListaPage: cheia', () => {
     await assentar();
     HTMLElement.prototype.scrollIntoView = original;
     delete window.matchMedia;
-    expect(rolou).toHaveBeenCalled();
+    expect(rolou).not.toHaveBeenCalled();
   });
 
   it('"Trazer minha lista" discreto leva à tela de trazer', async () => {

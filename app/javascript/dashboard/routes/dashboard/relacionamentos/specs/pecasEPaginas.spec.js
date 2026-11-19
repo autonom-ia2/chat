@@ -186,20 +186,22 @@ describe('PilulasDeGrupo: sinal de que a fila continua', () => {
     expect(degrades(w)).toEqual({ direita: false, esquerda: true });
   });
 
-  // #3057 — uma linha só em toda largura: no desktop também rola de lado e
-  // mostra o degradê (com a seta) quando continua.
-  it('em toda largura a fileira fica numa linha só, com rolagem e degradê', async () => {
+  // #3057 (revisão) — de md para cima a fileira volta a quebrar em linhas;
+  // no celular rola de lado, com o degradê e sem seta (a seta cobria o texto).
+  it('a partir de md a fileira quebra em linhas, sem rolagem e sem degradê', async () => {
     const w = mount(PilulasDeGrupo, { props: { grupos, modelValue: 'a' } });
-    const classes = w.get('ul').classes();
-    expect(classes).toContain('overflow-x-auto');
-    expect(classes).not.toContain('md:flex-wrap');
-    expect(classes).not.toContain('flex-wrap');
+    expect(w.get('ul').classes()).toEqual(
+      expect.arrayContaining([
+        'overflow-x-auto',
+        'md:flex-wrap',
+        'md:overflow-visible',
+      ])
+    );
     await medir(w.get('ul'), { largura: 300, conteudo: 900, rolou: 300 });
     ['direita', 'esquerda'].forEach(lado =>
-      expect(w.get(`[data-degrade="${lado}"]`).classes()).not.toContain(
-        'md:hidden'
-      )
+      expect(w.get(`[data-degrade="${lado}"]`).classes()).toContain('md:hidden')
     );
+    expect(w.find('.i-lucide-chevron-right').exists()).toBe(false);
   });
 
   it('a pílula focada rola para longe da borda com degradê', () => {

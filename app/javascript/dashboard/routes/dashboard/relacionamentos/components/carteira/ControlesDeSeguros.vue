@@ -14,7 +14,9 @@ import { ORDENS_DE_SEGUROS } from '../../fonte/carteiraFonte';
 // #2898 — os dois atalhos discretos da renovação: "Resultados" e, para quem
 // pode alterar, "Ajustar renovações". Em 390 px eles moram no menu "⋯".
 // #3057 — os controles têm a altura dos campos do design system (h-10), todos
-// iguais; a área de toque dos botões continua com 44 px (o ::before).
+// iguais; a área de toque dos botões continua com 44 px (o ::before). Os dois
+// atalhos da renovação moram num botão-menu só, "Renovações ▾" (no celular
+// também), para não disputar com a busca, a ordem e os filtros.
 const props = defineProps({
   busca: { type: String, default: '' },
   ordem: { type: String, required: true },
@@ -44,7 +46,11 @@ const opcoesDeOrdem = computed(() => [
 ]);
 
 const ATALHOS = [
-  { id: 'resultados', chave: 'RESULTADOS', icone: 'i-lucide-chart-column' },
+  {
+    id: 'resultados',
+    chave: 'VER_RESULTADOS',
+    icone: 'i-lucide-chart-column',
+  },
   { id: 'ajustar', chave: 'AJUSTAR', icone: 'i-lucide-settings-2' },
 ];
 // Cada atalho avisa a página com o próprio evento, escrito por extenso.
@@ -95,34 +101,21 @@ const rotuloDosFiltros = computed(() =>
       <Button
         slate
         faded
-        class="relative shrink-0 whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-0.5"
+        class="relative shrink-0 whitespace-nowrap before:absolute before:content-[''] before:inset-x-0 before:-inset-y-0.5"
         icon="i-lucide-sliders-horizontal"
         data-carteira="mais-filtros"
         aria-haspopup="dialog"
         :label="rotuloDosFiltros"
         @click="emit('abrirFiltros')"
       />
-      <div data-carteira="mais-da-carteira" class="sm:hidden">
+      <div data-carteira="renovacoes" class="shrink-0">
         <MenuMaisAcoes
-          :rotulo="ca('MAIS')"
+          :texto="ca('RENOVACOES')"
           :itens="atalhos"
           para-baixo
           @escolher="AVISAR[$event]()"
         />
       </div>
-    </div>
-    <div class="hidden gap-3 sm:flex">
-      <Button
-        v-for="atalho in atalhos"
-        :key="atalho.id"
-        slate
-        faded
-        class="relative shrink-0 whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-0.5"
-        :icon="atalho.icone"
-        :data-carteira="atalho.id"
-        :label="atalho.rotulo"
-        @click="AVISAR[atalho.id]()"
-      />
     </div>
   </div>
 </template>
