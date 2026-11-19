@@ -80,6 +80,23 @@ RSpec.describe Autonomia::Automacao::Tempo::DatasInvalidas, :automacao_motor do
     expect(described_class.para_tela(definicao.reload)).to be_nil
   end
 
+  # Revisão do #3058: o aviso é só informação. Sem Redis, a gravação falha calada (só a classe no log) e a varredura
+  # dispara os alvos do dia mesmo assim.
+  it 'segue disparando os alvos válidos quando a gravação do aviso falha', :aggregate_failures do
+    ligada = travel_to(Time.zone.local(2026, 11, 1)) { automacao_ligada(account, admin, [passo], gatilho: gatilho) }
+    no_dia = create(:contact, account: account, custom_attributes: { 'aniversario' => '2026-11-10' })
+    allow(Redis::Alfred).to receive(:set).and_call_original
+    allow(Redis::Alfred).to receive(:set).with(described_class.chave(ligada.id), any_args).and_raise(Redis::CannotConnectError)
+    allow(Rails.logger).to receive(:warn)
+    disparados = []
+
+    Autonomia::Automacao::Tempo::Data.new(definicao: ligada, gatilho: gatilho, agora: Time.zone.local(2026, 11, 10, 10))
+                                     .cada { |alvo, _marca| disparados << alvo }
+
+    expect(disparados).to eq([no_dia])
+    expect(Rails.logger).to have_received(:warn).with('[automacao][tempo] datas_invalidas_aviso sem_redis erro=Redis::CannotConnectError')
+  end
+
   it 'no gatilho do card, diz card e o nome do campo do card' do
     create(:custom_attribute_definition, account: account, attribute_key: 'renovacao', attribute_display_name: 'Renovação',
                                          attribute_model: 'card_attribute', attribute_display_type: 'date')

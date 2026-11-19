@@ -35,6 +35,42 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes datas inválidas', :aut
     expect(response.parsed_body).not_to have_key('datas_invalidas')
   end
 
+  # Revisão do #3058: a varredura só roda nas ligadas e desligar não apaga a chave; a desligada não avisa.
+  it 'a automação desligada responde sem o aviso' do
+    avisos.gravar(definicao, quantos: 12, tipo: 'contato.data', campo: 'aniversario', dia: Time.current.to_date)
+    definicao.desligar!
+
+    get "#{base}/#{definicao.id}", headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).not_to have_key('datas_invalidas')
+  end
+
+  it 'a automação de outra conta dá 404, sem o aviso', :aggregate_failures do
+    outra = create(:account)
+    da_outra = automacao_ligada(outra, create(:user, account: outra, role: :administrator), passos)
+    avisos.gravar(da_outra, quantos: 12, tipo: 'contato.data', campo: 'aniversario', dia: Time.current.to_date)
+
+    get "#{base}/#{da_outra.id}", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(response.body).not_to include('datas_invalidas')
+  end
+
+  # O aviso é só informação: o Redis fora do ar não derruba abrir nem salvar o editor.
+  it 'com o Redis fora do ar, abrir e salvar respondem sem o aviso', :aggregate_failures do
+    avisos.gravar(definicao, quantos: 12, tipo: 'contato.data', campo: 'aniversario', dia: Time.current.to_date)
+    allow(Redis::Alfred).to receive(:get).and_call_original
+    allow(Redis::Alfred).to receive(:get).with(avisos.chave(definicao.id)).and_raise(Redis::CannotConnectError)
+
+    get "#{base}/#{definicao.id}", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).not_to have_key('datas_invalidas')
+
+    patch "#{base}/#{definicao.id}", params: { nome: 'Parabéns' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).not_to have_key('datas_invalidas')
+  end
+
   it 'salvar a automação devolve o aviso junto, para a tela não perdê-lo' do
     avisos.gravar(definicao, quantos: 3, tipo: 'contato.data', campo: 'aniversario', dia: Time.current.to_date)
 
